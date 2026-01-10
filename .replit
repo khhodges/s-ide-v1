@@ -1,2 +1,26 @@
+modules = ["haskell-ghc9.8"]
 [agent]
 expertMode = true
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Run Haskell"
+
+[[workflows.workflow]]
+name = "Run Haskell"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "runghc main.hs"
+
+[workflows.workflow.metadata]
+outputType = "console"
