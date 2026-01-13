@@ -29,7 +29,7 @@ computeFlags op a b result = CondFlags {
     flagC = case op of
         "ADD" -> result < a
         "SUB" -> a >= b
-        "NEG" -> b /= 0
+        "NEG" -> b == 0
         _     -> False,
     flagV = case op of
         "ADD" -> signedOverflowAdd a b result
