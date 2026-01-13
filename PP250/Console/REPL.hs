@@ -2,23 +2,44 @@
 -- PP250.Console.REPL: Interactive Console / Read-Eval-Print Loop
 -- =========================================================================
 -- Provides the interactive command-line interface to the PP250 simulator.
+-- Supports full ARM-style instruction set.
 
 module PP250.Console.REPL (
     runConsole
 ) where
 
 import qualified Data.Map as Map
+import Data.Word (Word64)
 import System.IO (hFlush, stdout)
 import Text.Printf (printf)
 
 import PP250.Core.Types
 import PP250.Core.Utils
 import PP250.Console.HUD (displayHUD, showHelp)
-import PP250.Instructions.Arithmetic (instrEXECUTE_Math)
+import PP250.Instructions.Arithmetic
+import PP250.Instructions.Logic
+import PP250.Instructions.Shift
+import PP250.Instructions.Compare
+import PP250.Instructions.Branch
 import PP250.Instructions.LoadSave (instrLOAD, instrSAVE)
 import PP250.Instructions.Call (instrCALL)
 import PP250.Instructions.Return (instrRETURN)
 import PP250.Instructions.Change (instrCHANGE)
+
+-- | Format flags for display
+formatFlags :: ConditionFlags -> String
+formatFlags flags = "[" ++ (if flagN flags then "N" else "-") 
+                        ++ (if flagZ flags then "Z" else "-")
+                        ++ (if flagC flags then "C" else "-")
+                        ++ (if flagV flags then "V" else "-") ++ "]"
+
+-- | Show result of a 2-operand instruction
+showResult2 :: CPUState -> CPUState -> Int -> IO ()
+showResult2 oldCpu newCpu d = do
+    let oldVal = Map.findWithDefault 0 d (d_regs oldCpu)
+    let newVal = Map.findWithDefault 0 d (d_regs newCpu)
+    putStrLn $ "   [OK] DR" ++ show d ++ ": 0x" ++ printf "%X" oldVal ++ " -> 0x" ++ printf "%X" newVal
+    putStrLn $ "        Flags: " ++ formatFlags (condFlags newCpu)
 
 -- | Main console loop: Read-Eval-Print Loop (REPL)
 runConsole :: CPUState -> IO ()
@@ -29,9 +50,7 @@ runConsole cpu = do
     
     case words input of
         ["EXIT"] -> putStrLn "--- SHUTDOWN ---"
-        
         ["HELP"] -> showHelp >> runConsole cpu
-        
         ["HUD"] -> displayHUD cpu >> runConsole cpu
         
         ["NS"] -> do
@@ -68,6 +87,200 @@ runConsole cpu = do
             putStrLn $ "| V (Overflow): " ++ padNoTrunc 56 v ++ " |"
             putStrLn "+------------------------------------------------------------------------+"
             runConsole cpu
+
+        -- ================= ARITHMETIC INSTRUCTIONS =================
+        
+        ["ADD", dStr, sStr] -> case (readInt dStr, readInt sStr) of
+            (Just d, Just s) -> do
+                let newCpu = instrADD cpu d s
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["SUB", dStr, sStr] -> case (readInt dStr, readInt sStr) of
+            (Just d, Just s) -> do
+                let newCpu = instrSUB cpu d s
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["MUL", dStr, sStr] -> case (readInt dStr, readInt sStr) of
+            (Just d, Just s) -> do
+                let newCpu = instrMUL cpu d s
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["MOV", dStr, sStr] -> case (readInt dStr, readInt sStr) of
+            (Just d, Just s) -> do
+                let newCpu = instrMOV cpu d s
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["MVN", dStr, sStr] -> case (readInt dStr, readInt sStr) of
+            (Just d, Just s) -> do
+                let newCpu = instrMVN cpu d s
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["NEG", dStr, sStr] -> case (readInt dStr, readInt sStr) of
+            (Just d, Just s) -> do
+                let newCpu = instrNEG cpu d s
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["ADDI", dStr, immStr] -> case (readInt dStr, readInt immStr) of
+            (Just d, Just imm) -> do
+                let newCpu = instrADDI cpu d (fromIntegral imm)
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Arguments" >> runConsole cpu
+
+        ["SUBI", dStr, immStr] -> case (readInt dStr, readInt immStr) of
+            (Just d, Just imm) -> do
+                let newCpu = instrSUBI cpu d (fromIntegral imm)
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Arguments" >> runConsole cpu
+
+        -- ================= LOGIC INSTRUCTIONS =================
+        
+        ["AND", dStr, sStr] -> case (readInt dStr, readInt sStr) of
+            (Just d, Just s) -> do
+                let newCpu = instrAND cpu d s
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["ORR", dStr, sStr] -> case (readInt dStr, readInt sStr) of
+            (Just d, Just s) -> do
+                let newCpu = instrORR cpu d s
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["EOR", dStr, sStr] -> case (readInt dStr, readInt sStr) of
+            (Just d, Just s) -> do
+                let newCpu = instrEOR cpu d s
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["BIC", dStr, sStr] -> case (readInt dStr, readInt sStr) of
+            (Just d, Just s) -> do
+                let newCpu = instrBIC cpu d s
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["NOT", dStr, sStr] -> case (readInt dStr, readInt sStr) of
+            (Just d, Just s) -> do
+                let newCpu = instrNOT cpu d s
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        -- ================= SHIFT INSTRUCTIONS =================
+        
+        ["LSL", dStr, sStr, aStr] -> case (readInt dStr, readInt sStr, readInt aStr) of
+            (Just d, Just s, Just a) -> do
+                let newCpu = instrLSL cpu d s a
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Arguments" >> runConsole cpu
+
+        ["LSR", dStr, sStr, aStr] -> case (readInt dStr, readInt sStr, readInt aStr) of
+            (Just d, Just s, Just a) -> do
+                let newCpu = instrLSR cpu d s a
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Arguments" >> runConsole cpu
+
+        ["ASR", dStr, sStr, aStr] -> case (readInt dStr, readInt sStr, readInt aStr) of
+            (Just d, Just s, Just a) -> do
+                let newCpu = instrASR cpu d s a
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Arguments" >> runConsole cpu
+
+        ["ROR", dStr, sStr, aStr] -> case (readInt dStr, readInt sStr, readInt aStr) of
+            (Just d, Just s, Just a) -> do
+                let newCpu = instrROR cpu d s a
+                showResult2 cpu newCpu d
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Arguments" >> runConsole cpu
+
+        -- ================= COMPARE INSTRUCTIONS =================
+        
+        ["CMP", aStr, bStr] -> case (readInt aStr, readInt bStr) of
+            (Just a, Just b) -> do
+                let newCpu = instrCMP cpu a b
+                putStrLn $ "   [OK] CMP DR" ++ show a ++ ", DR" ++ show b
+                putStrLn $ "        Flags: " ++ formatFlags (condFlags newCpu)
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["CMN", aStr, bStr] -> case (readInt aStr, readInt bStr) of
+            (Just a, Just b) -> do
+                let newCpu = instrCMN cpu a b
+                putStrLn $ "   [OK] CMN DR" ++ show a ++ ", DR" ++ show b
+                putStrLn $ "        Flags: " ++ formatFlags (condFlags newCpu)
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["TST", aStr, bStr] -> case (readInt aStr, readInt bStr) of
+            (Just a, Just b) -> do
+                let newCpu = instrTST cpu a b
+                putStrLn $ "   [OK] TST DR" ++ show a ++ ", DR" ++ show b
+                putStrLn $ "        Flags: " ++ formatFlags (condFlags newCpu)
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["TEQ", aStr, bStr] -> case (readInt aStr, readInt bStr) of
+            (Just a, Just b) -> do
+                let newCpu = instrTEQ cpu a b
+                putStrLn $ "   [OK] TEQ DR" ++ show a ++ ", DR" ++ show b
+                putStrLn $ "        Flags: " ++ formatFlags (condFlags newCpu)
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        -- ================= BRANCH INSTRUCTIONS =================
+        
+        ["B", offsetStr] -> case readInt offsetStr of
+            Just offset -> case instrB cpu "" offset of
+                Right newCpu -> do
+                    putStrLn $ "   [OK] B " ++ show offset ++ " (Unconditional)"
+                    putStrLn $ "        IP: " ++ show (ip_Offset newCpu)
+                    runConsole newCpu
+                Left e -> putStrLn ("[TRAP] " ++ e) >> runConsole cpu
+            _ -> putStrLn "[ERROR] Invalid Offset" >> runConsole cpu
+
+        ["B", condStr, offsetStr] -> case readInt offsetStr of
+            Just offset -> do
+                let taken = checkCondition (condFlags cpu) condStr
+                case instrB cpu condStr offset of
+                    Right newCpu -> do
+                        if taken 
+                            then putStrLn $ "   [OK] B." ++ condStr ++ " " ++ show offset ++ " (Taken)"
+                            else putStrLn $ "   [OK] B." ++ condStr ++ " " ++ show offset ++ " (Not Taken)"
+                        putStrLn $ "        IP: " ++ show (ip_Offset newCpu)
+                        runConsole newCpu
+                    Left e -> putStrLn ("[TRAP] " ++ e) >> runConsole cpu
+            _ -> putStrLn "[ERROR] Invalid Offset" >> runConsole cpu
+
+        ["BL", offsetStr] -> case readInt offsetStr of
+            Just offset -> case instrBL cpu "" offset of
+                Right newCpu -> do
+                    putStrLn $ "   [OK] BL " ++ show offset ++ " (Link saved to DR7)"
+                    putStrLn $ "        IP: " ++ show (ip_Offset newCpu)
+                    runConsole newCpu
+                Left e -> putStrLn ("[TRAP] " ++ e) >> runConsole cpu
+            _ -> putStrLn "[ERROR] Invalid Offset" >> runConsole cpu
+
+        -- ================= CAPABILITY INSTRUCTIONS =================
         
         ("CHANGE":xStr:_) -> case readInt xStr of
             Just x  -> do
@@ -76,22 +289,6 @@ runConsole cpu = do
                     Right newCpu -> runConsole newCpu
                     Left err     -> putStrLn ("[TRAP] " ++ err) >> runConsole cpu
             Nothing -> putStrLn "[ERROR] Invalid Argument (Expected Integer)" >> runConsole cpu
-            
-        (op:dStr:sStr:_) | op `elem` ["ADD", "SUB", "POW"] -> 
-            case (readInt dStr, readInt sStr) of
-                (Just d, Just s) -> do
-                    let newCpu = instrEXECUTE_Math cpu op d s
-                    let oldVal = Map.findWithDefault 0 d (d_regs cpu)
-                    let newVal = Map.findWithDefault 0 d (d_regs newCpu)
-                    let flags = condFlags newCpu
-                    let flagStr = "[" ++ (if flagN flags then "N" else "-") 
-                                      ++ (if flagZ flags then "Z" else "-")
-                                      ++ (if flagC flags then "C" else "-")
-                                      ++ (if flagV flags then "V" else "-") ++ "]"
-                    putStrLn $ "   [OK] DR" ++ show d ++ ": 0x" ++ printf "%X" oldVal ++ " -> 0x" ++ printf "%X" newVal
-                    putStrLn $ "        Flags: " ++ flagStr
-                    runConsole newCpu
-                _                -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
 
         ("LOAD":dStr:sStr:iStr:_) -> 
             case (readInt dStr, readInt sStr, readInt iStr) of
