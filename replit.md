@@ -147,6 +147,8 @@ Used with conditional branches (e.g., `B EQ 10` branches if equal).
 | SWITCH reg | Set CR15 (Namespace) to capability in CR[reg] |
 
 ## Recent Changes
+- 2026-01-13: Added Capability DNS Editor with MINT function for creating new capabilities with custom size/permissions
+- 2026-01-13: Added Interactive Tutorial with 5 lessons on capability-based security concepts
 - 2026-01-13: Added Assembly Editor with code editor, example programs, and step execution
 - 2026-01-13: Added Instruction Visualizer with animated data flow and step-by-step execution
 - 2026-01-13: Added B (Bind) permission for persistent namespace storage
