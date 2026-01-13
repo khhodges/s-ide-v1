@@ -249,6 +249,7 @@ showHelp = do
     putStrLn "+------------------------+---------------------------------------------+"
     putStrLn "| HELP                   | Show this help message                      |"
     putStrLn "| HUD                    | Display the system telemetry panel          |"
+    putStrLn "| NS                     | Display namespace capability (CR15)         |"
     putStrLn "| ADD  <dest> <src>      | DR[dest] = DR[dest] + DR[src]               |"
     putStrLn "| SUB  <dest> <src>      | DR[dest] = DR[dest] - DR[src]               |"
     putStrLn "| POW  <dest> <src>      | DR[dest] = DR[dest] ^ DR[src]               |"
@@ -270,6 +271,16 @@ runConsole cpu = do
         ["HELP"] -> showHelp >> runConsole cpu
         
         ["HUD"] -> displayHUD cpu >> runConsole cpu
+        
+        ["NS"] -> do
+            let ns = cr15_NS cpu
+            putStrLn "\n+----------------------- CR15 NAMESPACE -------------------------+"
+            putStrLn $ "| Name:        " ++ padNoTrunc 49 (cachedName ns) ++ " |"
+            putStrLn $ "| Location:    " ++ padNoTrunc 49 (formatLoc (cachedLoc ns)) ++ " |"
+            putStrLn $ "| Permissions: " ++ padNoTrunc 49 (permString (activePerms ns)) ++ " |"
+            putStrLn $ "| Locked:      " ++ padNoTrunc 49 (show (isLocked ns)) ++ " |"
+            putStrLn "+----------------------------------------------------------------+"
+            runConsole cpu
         
         -- CHANGE Process
         ("CHANGE":xStr:_) -> case readInt xStr of
