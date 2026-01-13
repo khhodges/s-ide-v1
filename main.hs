@@ -101,9 +101,9 @@ displayHUD cpu = do
     printCR i = do
         let reg = Map.findWithDefault emptyCR i (c_regs cpu)
         let role = case i of 7 -> "NUCLEUS (CODE)     "; 6 -> "TOOL INSTANCE      "; _ -> "GENERAL CAPABILITY "
-        let name = if cachedName reg == "NULL" then pad 21 "NULL" else pad 21 (cachedName reg)
+        let name = if cachedName reg == "NULL" then padNoTrunc 25 "NULL" else padNoTrunc 25 (cachedName reg)
         let pStr = if cachedName reg == "NULL" then "--- ---" else take 7 (permString (activePerms reg))
-        let locStr = pad 11 (formatLoc (cachedLoc reg))
+        let locStr = padNoTrunc 11 (formatLoc (cachedLoc reg))
         putStrLn $ "| CR" ++ pad 2 (show i) ++ " | " ++ role ++ " | " ++ name ++ " | " ++ pStr ++ " | " ++ locStr ++ " |"
 
 emptyCR :: ContextRegister
