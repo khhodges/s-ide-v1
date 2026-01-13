@@ -205,6 +205,80 @@ main {
     font-family: 'Consolas', monospace;
 }
 
+.boot-sequence {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.boot-sequence h3 {
+    color: var(--warning);
+    font-size: 0.9rem;
+    margin-bottom: 0.8rem;
+}
+
+.boot-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.boot-step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--bg-input);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    border-left: 3px solid var(--border);
+    transition: all 0.3s;
+}
+
+.boot-step span {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--border);
+    border-radius: 50%;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+.boot-step.active {
+    color: var(--text-primary);
+    border-left-color: var(--accent);
+    background: rgba(168, 85, 247, 0.15);
+}
+
+.boot-step.active span {
+    background: var(--accent);
+    color: #1a1a2e;
+}
+
+.boot-step.done {
+    color: var(--success);
+    border-left-color: var(--success);
+}
+
+.boot-step.done span {
+    background: var(--success);
+    color: #1a1a2e;
+}
+
+.boot-status {
+    margin-top: 0.8rem;
+    padding: 0.5rem;
+    background: var(--bg-dark);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
 .flag-display {
     display: flex;
     justify-content: space-around;

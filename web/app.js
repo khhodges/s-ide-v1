@@ -3,6 +3,128 @@ function switchView(viewId) {
     document.getElementById(viewId).classList.add('active');
 }
 
+// ==================== BOOT SEQUENCE ====================
+
+let bootState = {
+    step: 0,
+    complete: false
+};
+
+const bootSteps = [
+    {
+        name: "Hardware Reset",
+        description: "Power energized. Clearing all registers to NULL...",
+        action: () => {
+            simulator.reset();
+        }
+    },
+    {
+        name: "Load Nucleus",
+        description: "Loading kernel code capability into CR7...",
+        action: () => {
+            simulator.contextRegs[7] = {
+                name: "NUCLEUS",
+                location: { type: "Literal", name: "kernel.code" },
+                perms: ["R", "X", "E"],
+                locked: true,
+                goldenKey: generateGoldenKey()
+            };
+        }
+    },
+    {
+        name: "Load Namespace",
+        description: "Setting CR15 with system namespace capability...",
+        action: () => {
+            simulator.cr15 = {
+                name: "SYSTEM_NS",
+                location: { type: "Literal", name: "system.namespace" },
+                perms: ["R", "L", "S", "E", "B"],
+                locked: true,
+                goldenKey: generateGoldenKey()
+            };
+        }
+    },
+    {
+        name: "Initialize Thread",
+        description: "Creating user thread capability in CR8...",
+        action: () => {
+            simulator.cr8 = {
+                name: "USER_MAIN",
+                location: { type: "Local", offset: 0x1000 },
+                perms: ["R", "W"],
+                locked: false,
+                goldenKey: generateGoldenKey()
+            };
+            simulator.contextRegs[6] = {
+                name: "C-LIST",
+                location: { type: "Local", offset: 0x500 },
+                perms: ["R", "L", "S"],
+                locked: false,
+                goldenKey: generateGoldenKey()
+            };
+        }
+    }
+];
+
+function stepInstruction() {
+    if (bootState.step < 4) {
+        executeBootStep(bootState.step);
+        bootState.step++;
+        updateBootDisplay();
+        updateDisplay();
+        updateCapabilityExplorer();
+        
+        if (bootState.step >= 4) {
+            bootState.complete = true;
+            log('Boot sequence complete - system ready', 'success');
+        }
+    } else {
+        log('System already booted. Use Reset to restart.', 'info');
+    }
+}
+
+function executeBootStep(stepNum) {
+    const step = bootSteps[stepNum];
+    step.action();
+    log(`[BOOT ${stepNum + 1}] ${step.name}: ${step.description}`, 'info');
+}
+
+function updateBootDisplay() {
+    for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById(`bootStep${i}`);
+        if (!el) continue;
+        
+        el.classList.remove('active', 'done');
+        if (i < bootState.step) {
+            el.classList.add('done');
+        } else if (i === bootState.step) {
+            el.classList.add('active');
+        }
+    }
+    
+    const status = document.getElementById('bootStatus');
+    if (status) {
+        if (bootState.step === 0) {
+            status.textContent = 'Press Step to begin boot sequence';
+        } else if (bootState.step < 4) {
+            status.textContent = bootSteps[bootState.step - 1].description;
+        } else {
+            status.textContent = 'Boot complete - System ready';
+            status.style.color = 'var(--success)';
+        }
+    }
+}
+
+function resetCPU() {
+    simulator.reset();
+    bootState.step = 0;
+    bootState.complete = false;
+    updateBootDisplay();
+    updateDisplay();
+    updateCapabilityExplorer();
+    log('System reset - all registers cleared', 'info');
+}
+
 function updateDisplay() {
     updateContextRegisters();
     updateDataRegisters();
