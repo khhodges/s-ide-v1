@@ -1234,3 +1234,530 @@ function saveCR7() {
     editorLog(`CR7 updated: ${name} [${perms.join('')}]`, 'success');
     log(`CR7 capability saved: ${name}`, 'success');
 }
+
+const tutorialState = {
+    currentLesson: 0,
+    currentStep: 0,
+    completedLessons: new Set()
+};
+
+const lessons = [
+    {
+        title: "Introduction to Capabilities",
+        steps: [
+            {
+                text: `<h3>What is a Capability?</h3>
+                <p>In traditional security systems, access control is managed through <strong>Access Control Lists (ACLs)</strong> - lists that define who can access what resources.</p>
+                <p>The PP250 uses a fundamentally different approach: <strong>Capability-Based Security</strong>.</p>
+                <div class="key-concept">
+                    <strong>Key Concept:</strong> A capability is an unforgeable token that grants specific rights to a resource. If you have the token, you have the access - no need to check lists or permissions separately.
+                </div>`,
+                demo: `<div class="demo-title">Golden Token Example</div>
+                <div class="demo-content">
+                    <div class="demo-visual">
+                        <div class="golden-token-demo">
+                            <div class="token-label">192-bit Golden Token</div>
+                            <div class="token-key" id="demoToken1">A3F2-91B4-CC87-D2E1-9087-54AB</div>
+                        </div>
+                    </div>
+                    <div class="demo-explanation">
+                        <p>This is a <strong>Golden Token</strong> - a cryptographic key that cannot be forged or guessed.</p>
+                        <p>Each capability in the PP250 has its own unique Golden Token that proves authenticity.</p>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>The Seven Permissions</h3>
+                <p>Each capability grants specific permissions. The PP250 uses seven permission types:</p>
+                <ul>
+                    <li><code>R</code> - <strong>Read</strong>: View data or code</li>
+                    <li><code>W</code> - <strong>Write</strong>: Modify data</li>
+                    <li><code>X</code> - <strong>Execute</strong>: Run as code</li>
+                    <li><code>L</code> - <strong>Load</strong>: Load capabilities from children</li>
+                    <li><code>S</code> - <strong>Store</strong>: Store capabilities to children</li>
+                    <li><code>E</code> - <strong>Enter</strong>: Switch namespace or call procedure</li>
+                    <li><code>B</code> - <strong>Bind</strong>: Save token to namespace DNA (persistent storage)</li>
+                </ul>`,
+                demo: `<div class="demo-title">Permission Badges</div>
+                <div class="demo-content">
+                    <div class="demo-visual">
+                        <div class="permission-demo">
+                            <span class="perm-demo-badge" style="background: #4ade80; color: #1a1a2e;">R</span>
+                            <span class="perm-demo-badge" style="background: #f87171; color: #1a1a2e;">W</span>
+                            <span class="perm-demo-badge" style="background: #60a5fa; color: #1a1a2e;">X</span>
+                            <span class="perm-demo-badge" style="background: #c084fc; color: #1a1a2e;">L</span>
+                            <span class="perm-demo-badge" style="background: #fb923c; color: #1a1a2e;">S</span>
+                            <span class="perm-demo-badge" style="background: #fbbf24; color: #1a1a2e;">E</span>
+                            <span class="perm-demo-badge" style="background: #2dd4bf; color: #1a1a2e;">B</span>
+                        </div>
+                    </div>
+                    <div class="demo-explanation">
+                        <p>Permissions can be combined. For example, a file might have <code>RW</code> (read and write) while executable code has <code>RXE</code> (read, execute, enter).</p>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Why Capabilities Matter</h3>
+                <p>Traditional security has a fundamental flaw called the <strong>"Confused Deputy"</strong> problem:</p>
+                <div class="highlight">
+                    A trusted program (the deputy) can be tricked into misusing its authority on behalf of a malicious actor.
+                </div>
+                <p>Capabilities solve this because:</p>
+                <ul>
+                    <li>Authority is always explicit - you must present the capability</li>
+                    <li>Delegation is controlled - you can only give away what you have</li>
+                    <li>No ambient authority - programs only have the capabilities they're given</li>
+                </ul>`,
+                interactive: {
+                    type: "quiz",
+                    question: "What makes a capability different from a traditional permission?",
+                    options: [
+                        "Capabilities are stored in a database",
+                        "Capabilities are unforgeable tokens that must be presented to gain access",
+                        "Capabilities are just passwords",
+                        "Capabilities only work with files"
+                    ],
+                    correct: 1,
+                    feedback: {
+                        correct: "Correct! Capabilities are unforgeable tokens. Having the token IS having the access.",
+                        incorrect: "Not quite. Capabilities are unforgeable tokens - if you have the token, you have the access."
+                    }
+                }
+            }
+        ]
+    },
+    {
+        title: "The Boot Sequence",
+        steps: [
+            {
+                text: `<h3>Starting the PP250</h3>
+                <p>When the PP250 powers on, it goes through a <strong>4-step boot sequence</strong> to establish a secure foundation.</p>
+                <p>This sequence ensures that the system starts in a known, secure state with proper capabilities in place.</p>
+                <div class="key-concept">
+                    <strong>Why it matters:</strong> Each step builds upon the previous one, creating a chain of trust from hardware to user space.
+                </div>`,
+                demo: `<div class="demo-title">Boot Sequence Steps</div>
+                <div class="demo-content">
+                    <div class="demo-visual">
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div style="padding: 0.8rem; background: var(--bg-panel); border-radius: 4px; border-left: 3px solid var(--accent);">1. Hardware Reset</div>
+                            <div style="padding: 0.8rem; background: var(--bg-panel); border-radius: 4px; border-left: 3px solid var(--warning);">2. Load Nucleus</div>
+                            <div style="padding: 0.8rem; background: var(--bg-panel); border-radius: 4px; border-left: 3px solid var(--success);">3. Load Namespace</div>
+                            <div style="padding: 0.8rem; background: var(--bg-panel); border-radius: 4px; border-left: 3px solid #60a5fa;">4. Initialize Thread</div>
+                        </div>
+                    </div>
+                    <div class="demo-explanation">
+                        <p>Each step adds essential capabilities to the system, building up from bare hardware to a fully operational environment.</p>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Step 1: Hardware Reset</h3>
+                <p>All registers are cleared to <code>NULL</code>. This ensures no leftover data from previous sessions.</p>
+                <h3>Step 2: Load Nucleus</h3>
+                <p>The kernel code capability is loaded into <code>CR7</code>. This is the core operating system code with <code>RXE</code> permissions.</p>
+                <h3>Step 3: Load Namespace</h3>
+                <p><code>CR15</code> receives the system namespace capability with <code>RLSEB</code> permissions - the root of all accessible resources.</p>
+                <h3>Step 4: Initialize Thread</h3>
+                <p><code>CR8</code> gets the user thread capability, and <code>CR6</code> receives the C-List (capability list) for user access.</p>`,
+                demo: `<div class="demo-title">Register States After Boot</div>
+                <div class="demo-content">
+                    <div class="demo-visual register-demo">
+                        <div class="reg-demo-item"><span class="reg-demo-name">CR7</span><span class="reg-demo-value">NUCLEUS [RXE]</span></div>
+                        <div class="reg-demo-item"><span class="reg-demo-name">CR15</span><span class="reg-demo-value">SYSTEM_NS [RLSEB]</span></div>
+                        <div class="reg-demo-item"><span class="reg-demo-name">CR8</span><span class="reg-demo-value">USER_MAIN [RW]</span></div>
+                        <div class="reg-demo-item"><span class="reg-demo-name">CR6</span><span class="reg-demo-value">C-LIST [RLS]</span></div>
+                    </div>
+                    <div class="demo-explanation">
+                        <p>After boot, these four registers hold the essential capabilities needed to run the system securely.</p>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Try It Yourself</h3>
+                <p>You can experience the boot sequence in the simulator:</p>
+                <ol>
+                    <li>Go to the <strong>CPU State Dashboard</strong></li>
+                    <li>Click <strong>Step</strong> to advance through each boot stage</li>
+                    <li>Watch how registers change from NULL to active capabilities</li>
+                    <li>Or click <strong>Run</strong> to complete all steps at once</li>
+                </ol>
+                <div class="highlight">
+                    After booting, check the <strong>Capability Explorer</strong> to see the Golden Tokens that were created!
+                </div>`,
+                interactive: {
+                    type: "quiz",
+                    question: "Which register holds the kernel (Nucleus) capability after boot?",
+                    options: ["CR0", "CR6", "CR7", "CR15"],
+                    correct: 2,
+                    feedback: {
+                        correct: "Correct! CR7 holds the Nucleus (kernel code) capability.",
+                        incorrect: "Not quite. CR7 is designated for the Nucleus capability."
+                    }
+                }
+            }
+        ]
+    },
+    {
+        title: "Context & Data Registers",
+        steps: [
+            {
+                text: `<h3>Two Types of Registers</h3>
+                <p>The PP250 has two distinct register types, each serving a different purpose:</p>
+                <ul>
+                    <li><strong>Context Registers (CR0-CR7)</strong>: Hold capabilities (access rights)</li>
+                    <li><strong>Data Registers (DR0-DR7)</strong>: Hold 64-bit numeric values</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Key Insight:</strong> This separation enforces security at the hardware level. You cannot accidentally treat a number as a capability or vice versa.
+                </div>`,
+                demo: `<div class="demo-title">Register Comparison</div>
+                <div class="demo-content">
+                    <div class="demo-visual">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div style="background: rgba(233, 69, 96, 0.2); padding: 1rem; border-radius: 6px;">
+                                <div style="color: var(--accent); font-weight: bold; margin-bottom: 0.5rem;">Context Registers</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">CR0-CR7, CR8, CR15</div>
+                                <div style="font-size: 0.85rem; color: var(--text-primary); margin-top: 0.3rem;">Hold capabilities</div>
+                            </div>
+                            <div style="background: rgba(74, 222, 128, 0.2); padding: 1rem; border-radius: 6px;">
+                                <div style="color: var(--success); font-weight: bold; margin-bottom: 0.5rem;">Data Registers</div>
+                                <div style="font-size: 0.85rem; color: var(--text-secondary);">DR0-DR7</div>
+                                <div style="font-size: 0.85rem; color: var(--text-primary); margin-top: 0.3rem;">Hold 64-bit numbers</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Special Context Registers</h3>
+                <p>Some context registers have special roles:</p>
+                <ul>
+                    <li><code>CR6</code> - <strong>C-List LCA</strong>: Points to your list of available capabilities</li>
+                    <li><code>CR7</code> - <strong>Nucleus</strong>: The kernel/OS code capability</li>
+                    <li><code>CR8</code> - <strong>Thread</strong>: Your current process/user identity</li>
+                    <li><code>CR15</code> - <strong>Namespace</strong>: The root of accessible resources</li>
+                </ul>
+                <div class="highlight">
+                    CR0-CR5 are general-purpose capability registers you can use for your own capabilities.
+                </div>`,
+                demo: `<div class="demo-title">Special Register Roles</div>
+                <div class="demo-content">
+                    <div class="demo-visual register-demo">
+                        <div class="reg-demo-item"><span class="reg-demo-name">CR6</span><span class="reg-demo-value">C-List (Your capabilities)</span></div>
+                        <div class="reg-demo-item"><span class="reg-demo-name">CR7</span><span class="reg-demo-value">Nucleus (Kernel)</span></div>
+                        <div class="reg-demo-item"><span class="reg-demo-name">CR8</span><span class="reg-demo-value">Thread (Your identity)</span></div>
+                        <div class="reg-demo-item"><span class="reg-demo-name">CR15</span><span class="reg-demo-value">Namespace (Root scope)</span></div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Data Register Operations</h3>
+                <p>Data registers support arithmetic and logic operations:</p>
+                <ul>
+                    <li><strong>Arithmetic:</strong> ADD, SUB, MUL, NEG, ADDI, SUBI</li>
+                    <li><strong>Logic:</strong> AND, ORR, EOR, NOT, BIC</li>
+                    <li><strong>Shifts:</strong> LSL, LSR, ASR, ROR</li>
+                    <li><strong>Compare:</strong> CMP, CMN, TST, TEQ</li>
+                </ul>
+                <p>These operations set <strong>NZCV flags</strong> (Negative, Zero, Carry, Overflow) for conditional branching.</p>`,
+                interactive: {
+                    type: "quiz",
+                    question: "What type of data do Context Registers hold?",
+                    options: [
+                        "64-bit numbers",
+                        "Capabilities (access rights with Golden Tokens)",
+                        "Text strings",
+                        "Memory addresses only"
+                    ],
+                    correct: 1,
+                    feedback: {
+                        correct: "Correct! Context Registers hold capabilities - unforgeable tokens granting access rights.",
+                        incorrect: "Not quite. Context Registers specifically hold capabilities, not regular data."
+                    }
+                }
+            }
+        ]
+    },
+    {
+        title: "Capability Operations",
+        steps: [
+            {
+                text: `<h3>Working with Capabilities</h3>
+                <p>The PP250 provides special instructions for capability manipulation:</p>
+                <ul>
+                    <li><code>LOAD d s i</code> - Load capability from memory into register</li>
+                    <li><code>SAVE d s</code> - Save capability from register to memory</li>
+                    <li><code>CALL reg</code> - Enter a procedure using the capability in reg</li>
+                    <li><code>RETURN</code> - Exit current procedure</li>
+                    <li><code>SWITCH reg</code> - Change namespace to capability in reg</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Important:</strong> These operations always check permissions. You cannot SAVE without the B (Bind) permission!
+                </div>`,
+                demo: `<div class="demo-title">Capability Flow</div>
+                <div class="demo-content">
+                    <div class="demo-visual">
+                        <div style="display: flex; align-items: center; gap: 1rem; justify-content: center;">
+                            <div style="padding: 0.8rem; background: var(--bg-panel); border-radius: 4px; border: 1px solid var(--accent);">Memory</div>
+                            <div style="color: var(--accent);">LOAD &rarr;</div>
+                            <div style="padding: 0.8rem; background: var(--accent); color: white; border-radius: 4px;">CR</div>
+                            <div style="color: var(--success);">&rarr; SAVE</div>
+                            <div style="padding: 0.8rem; background: var(--bg-panel); border-radius: 4px; border: 1px solid var(--success);">Memory</div>
+                        </div>
+                    </div>
+                    <div class="demo-explanation">
+                        <p>LOAD brings capabilities into registers for use. SAVE (with B permission) stores them persistently.</p>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>The CALL and RETURN Pattern</h3>
+                <p>To execute protected code:</p>
+                <ol>
+                    <li>Load the code capability into a context register</li>
+                    <li>Use <code>CALL</code> to enter the procedure</li>
+                    <li>The procedure executes with its own capability scope</li>
+                    <li><code>RETURN</code> exits and restores the previous context</li>
+                </ol>
+                <div class="highlight">
+                    CALL requires the <code>E</code> (Enter) permission on the capability. This controls who can invoke what code.
+                </div>`,
+                demo: `<div class="demo-title">Procedure Call Flow</div>
+                <div class="demo-content">
+                    <div class="demo-visual">
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
+                            <div style="padding: 0.5rem 1rem; background: var(--bg-panel); border-radius: 4px;">User Code</div>
+                            <div style="color: var(--accent);">&darr; CALL [RXE capability]</div>
+                            <div style="padding: 0.5rem 1rem; background: var(--accent); color: white; border-radius: 4px;">Protected Procedure</div>
+                            <div style="color: var(--success);">&darr; RETURN</div>
+                            <div style="padding: 0.5rem 1rem; background: var(--bg-panel); border-radius: 4px;">Back to User Code</div>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Namespace Switching</h3>
+                <p>The <code>SWITCH</code> instruction changes the current namespace (CR15):</p>
+                <ul>
+                    <li>Effectively changes "where you are" in the system</li>
+                    <li>Determines what resources you can see and access</li>
+                    <li>Requires <code>E</code> (Enter) permission on the target capability</li>
+                </ul>
+                <p>This enables secure isolation between different parts of the system.</p>`,
+                interactive: {
+                    type: "quiz",
+                    question: "Which permission is required to use CALL or SWITCH on a capability?",
+                    options: ["R (Read)", "W (Write)", "X (Execute)", "E (Enter)"],
+                    correct: 3,
+                    feedback: {
+                        correct: "Correct! The E (Enter) permission is required for CALL and SWITCH operations.",
+                        incorrect: "Not quite. The E (Enter) permission specifically controls entry into procedures and namespaces."
+                    }
+                }
+            }
+        ]
+    },
+    {
+        title: "Security Boundaries",
+        steps: [
+            {
+                text: `<h3>How Capabilities Enforce Security</h3>
+                <p>The PP250's security comes from strict capability checking at every operation:</p>
+                <ul>
+                    <li><strong>No capability = No access</strong>: Without the right token, operations fail</li>
+                    <li><strong>Permission checking</strong>: Each operation requires specific permissions</li>
+                    <li><strong>Unforgeable tokens</strong>: 192-bit Golden Keys cannot be guessed</li>
+                    <li><strong>No privilege escalation</strong>: You cannot gain permissions you weren't given</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>The Principle of Least Privilege</strong>: Every component gets only the capabilities it needs - nothing more.
+                </div>`,
+                demo: `<div class="demo-title">Access Denied Example</div>
+                <div class="demo-content">
+                    <div class="demo-visual">
+                        <div style="background: rgba(248, 113, 113, 0.2); padding: 1rem; border-radius: 6px; border: 1px solid var(--error);">
+                            <div style="color: var(--error); font-weight: bold;">Attempted: SAVE without B permission</div>
+                            <div style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem;">Result: Operation denied - missing Bind permission</div>
+                        </div>
+                    </div>
+                    <div class="demo-explanation">
+                        <p>Even if you have a valid capability, operations fail if you lack the specific permission required.</p>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>The Confused Deputy Problem - Solved</h3>
+                <p>Traditional systems suffer from the "Confused Deputy" vulnerability:</p>
+                <div class="highlight">
+                    A privileged program is tricked into misusing its authority for an attacker's benefit.
+                </div>
+                <p>Capabilities prevent this because:</p>
+                <ul>
+                    <li>Authority must be explicitly passed with each request</li>
+                    <li>A program can only use capabilities it was given</li>
+                    <li>No ambient authority means no unintended privilege use</li>
+                </ul>`,
+                demo: `<div class="demo-title">Traditional vs Capability Security</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: rgba(248, 113, 113, 0.15); padding: 1rem; border-radius: 6px;">
+                            <div style="color: var(--error); font-weight: bold; margin-bottom: 0.5rem;">Traditional (Vulnerable)</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">"I'm the compiler, let me write anywhere I have access to"</div>
+                        </div>
+                        <div style="background: rgba(74, 222, 128, 0.15); padding: 1rem; border-radius: 6px;">
+                            <div style="color: var(--success); font-weight: bold; margin-bottom: 0.5rem;">Capability (Secure)</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">"Write to THIS specific file using THIS capability"</div>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Congratulations!</h3>
+                <p>You've learned the fundamentals of capability-based security:</p>
+                <ul>
+                    <li>Capabilities are unforgeable tokens granting specific access</li>
+                    <li>The 7 permissions (R, W, X, L, S, E, B) control what you can do</li>
+                    <li>The boot sequence establishes the secure foundation</li>
+                    <li>Context and Data registers serve different purposes</li>
+                    <li>Capability operations require proper permissions</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Next Steps:</strong> Try the simulator! Use the CPU State Dashboard to boot the system, explore the Capability Explorer, and write programs in the Assembly Editor.
+                </div>`,
+                interactive: {
+                    type: "quiz",
+                    question: "What is the main advantage of capability-based security over traditional ACLs?",
+                    options: [
+                        "It's faster",
+                        "It uses less memory",
+                        "Authority is explicit and cannot be misused through confused deputy attacks",
+                        "It's easier to configure"
+                    ],
+                    correct: 2,
+                    feedback: {
+                        correct: "Correct! Capabilities make authority explicit, preventing confused deputy attacks and unintended privilege use.",
+                        incorrect: "Not quite. The key advantage is that capabilities make authority explicit, preventing confused deputy attacks."
+                    }
+                }
+            }
+        ]
+    }
+];
+
+function loadLesson(lessonIndex) {
+    tutorialState.currentLesson = lessonIndex;
+    tutorialState.currentStep = 0;
+    
+    document.querySelectorAll('.lesson-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === lessonIndex);
+    });
+    
+    renderCurrentStep();
+}
+
+function renderCurrentStep() {
+    const lesson = lessons[tutorialState.currentLesson];
+    const step = lesson.steps[tutorialState.currentStep];
+    
+    document.getElementById('lessonTitle').textContent = lesson.title;
+    document.getElementById('lessonText').innerHTML = step.text || '';
+    document.getElementById('lessonDemo').innerHTML = step.demo || '';
+    
+    const interactiveContainer = document.getElementById('lessonInteractive');
+    if (step.interactive) {
+        renderInteractive(step.interactive, interactiveContainer);
+    } else {
+        interactiveContainer.innerHTML = '';
+    }
+    
+    document.getElementById('stepIndicator').textContent = 
+        `Step ${tutorialState.currentStep + 1} of ${lesson.steps.length}`;
+    
+    document.getElementById('prevBtn').disabled = tutorialState.currentStep === 0;
+    document.getElementById('nextBtn').disabled = tutorialState.currentStep >= lesson.steps.length - 1;
+}
+
+function renderInteractive(interactive, container) {
+    if (interactive.type === 'quiz') {
+        let html = `<div class="interactive-title">Quick Check</div>`;
+        html += `<div class="quiz-question">${interactive.question}</div>`;
+        html += `<div class="quiz-options">`;
+        interactive.options.forEach((opt, i) => {
+            html += `<button class="quiz-option" onclick="checkAnswer(${i}, ${interactive.correct})">${opt}</button>`;
+        });
+        html += `</div>`;
+        html += `<div class="quiz-feedback" id="quizFeedback" style="display: none;"></div>`;
+        container.innerHTML = html;
+    }
+}
+
+function checkAnswer(selected, correct) {
+    const options = document.querySelectorAll('.quiz-option');
+    const feedback = document.getElementById('quizFeedback');
+    const lesson = lessons[tutorialState.currentLesson];
+    const step = lesson.steps[tutorialState.currentStep];
+    
+    options.forEach((opt, i) => {
+        opt.disabled = true;
+        if (i === correct) {
+            opt.classList.add('correct');
+        } else if (i === selected && selected !== correct) {
+            opt.classList.add('incorrect');
+        }
+    });
+    
+    feedback.style.display = 'block';
+    if (selected === correct) {
+        feedback.className = 'quiz-feedback correct';
+        feedback.textContent = step.interactive.feedback.correct;
+    } else {
+        feedback.className = 'quiz-feedback incorrect';
+        feedback.textContent = step.interactive.feedback.incorrect;
+    }
+}
+
+function prevStep() {
+    if (tutorialState.currentStep > 0) {
+        tutorialState.currentStep--;
+        renderCurrentStep();
+    }
+}
+
+function nextStep() {
+    const lesson = lessons[tutorialState.currentLesson];
+    if (tutorialState.currentStep < lesson.steps.length - 1) {
+        tutorialState.currentStep++;
+        renderCurrentStep();
+    }
+}
+
+function completeLesson() {
+    tutorialState.completedLessons.add(tutorialState.currentLesson);
+    
+    document.querySelectorAll('.lesson-btn').forEach((btn, i) => {
+        if (tutorialState.completedLessons.has(i)) {
+            btn.classList.add('completed');
+        }
+    });
+    
+    const progress = (tutorialState.completedLessons.size / lessons.length) * 100;
+    document.getElementById('tutorialProgress').style.width = `${progress}%`;
+    document.getElementById('progressText').textContent = 
+        `${tutorialState.completedLessons.size} / ${lessons.length} completed`;
+    
+    if (tutorialState.currentLesson < lessons.length - 1) {
+        loadLesson(tutorialState.currentLesson + 1);
+    }
+}
+
+function tryInSimulator() {
+    switchView('dashboard');
+    document.getElementById('viewSelect').value = 'dashboard';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (lessons.length > 0) {
+        loadLesson(0);
+    }
+});
