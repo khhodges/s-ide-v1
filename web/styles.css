@@ -2459,3 +2459,273 @@ main {
 .boot-step[data-tooltip] {
     cursor: help;
 }
+
+/* ==================== CONTEXT MENU ==================== */
+
+.context-menu {
+    position: fixed;
+    background: linear-gradient(135deg, #1e1e2e 0%, #252538 100%);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    min-width: 180px;
+    z-index: 2000;
+    display: none;
+    padding: 0.5rem 0;
+    animation: menuFadeIn 0.15s ease;
+}
+
+@keyframes menuFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.context-menu.visible {
+    display: block;
+}
+
+.context-menu-item {
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    transition: background 0.15s ease;
+}
+
+.context-menu-item:hover {
+    background: rgba(233, 69, 96, 0.2);
+}
+
+.context-menu-item .menu-icon {
+    width: 16px;
+    text-align: center;
+    color: var(--accent);
+}
+
+.context-menu-separator {
+    height: 1px;
+    background: var(--border);
+    margin: 0.4rem 0;
+}
+
+.context-menu-item.disabled {
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.context-menu-item.disabled:hover {
+    background: none;
+}
+
+/* ==================== OBJECT MODAL ==================== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 3000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    animation: overlayFadeIn 0.2s ease;
+}
+
+@keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-overlay.visible {
+    display: flex;
+}
+
+.modal-content {
+    background: linear-gradient(135deg, var(--bg-panel) 0%, #1a1a2e 100%);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    padding: 1.5rem;
+    min-width: 400px;
+    max-width: 500px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    animation: modalSlideIn 0.2s ease;
+}
+
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    color: var(--accent);
+    font-size: 1.2rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.15s ease;
+}
+
+.modal-close:hover {
+    color: var(--accent);
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.modal-field label {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.modal-field input,
+.modal-field select {
+    padding: 0.6rem 0.8rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.modal-field input:focus,
+.modal-field select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.modal-perms {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.modal-perm-check {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.modal-perm-check:hover {
+    border-color: var(--accent);
+}
+
+.modal-perm-check input {
+    display: none;
+}
+
+.modal-perm-check input:checked + span {
+    color: var(--accent);
+    font-weight: bold;
+}
+
+.modal-perm-check span {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    margin-top: 1.2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.modal-btn {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.modal-btn-cancel {
+    background: var(--bg-input);
+    color: var(--text-secondary);
+}
+
+.modal-btn-cancel:hover {
+    background: var(--border);
+    color: var(--text-primary);
+}
+
+.modal-btn-confirm {
+    background: var(--accent);
+    color: white;
+}
+
+.modal-btn-confirm:hover {
+    background: #d13652;
+}
+
+/* Namespace objects with right-click support */
+.ns-object {
+    cursor: context-menu;
+}
+
+.ns-object:hover {
+    background: rgba(233, 69, 96, 0.15);
+}
+
+.hier-item {
+    cursor: context-menu;
+}
+
+.hier-item:hover > .hier-node {
+    background: rgba(233, 69, 96, 0.15);
+}
+
+.ns-dynamic-tag,
+.hier-custom-tag {
+    font-size: 0.7rem;
+    color: var(--warning);
+    font-style: italic;
+}
+
+.hier-dynamic {
+    border-left: 2px solid var(--warning);
+}
+
+.ns-data,
+.ns-clist,
+.ns-gt {
+    border-left: 3px solid var(--warning);
+}

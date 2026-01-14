@@ -668,6 +668,110 @@ ADD 0 1      ; DR0 = DR0 + DR1"></textarea>
         </section>
     </main>
 
+    <!-- Context Menu -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-menu-item" onclick="contextMenuAction('add')">
+            <span class="menu-icon">+</span>
+            <span>Add Child Object</span>
+        </div>
+        <div class="context-menu-item" onclick="contextMenuAction('edit')">
+            <span class="menu-icon">✎</span>
+            <span>Edit Object</span>
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" onclick="contextMenuAction('link')">
+            <span class="menu-icon">⟿</span>
+            <span>Link to C-List</span>
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" onclick="contextMenuAction('delete')">
+            <span class="menu-icon">✕</span>
+            <span>Remove Object</span>
+        </div>
+    </div>
+
+    <!-- Add/Edit Object Modal -->
+    <div class="modal-overlay" id="objectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add New Object</h3>
+                <button class="modal-close" onclick="closeObjectModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <label>Object Name</label>
+                    <input type="text" id="modalObjName" placeholder="e.g., MyData, FileAccess">
+                </div>
+                <div class="modal-field">
+                    <label>Object Type</label>
+                    <select id="modalObjType">
+                        <option value="Data">Data (storage)</option>
+                        <option value="C-List">C-List (capability container)</option>
+                        <option value="GT">GT (Golden Token function)</option>
+                        <option value="Thread">Thread</option>
+                        <option value="Abstraction">Abstraction</option>
+                    </select>
+                </div>
+                <div class="modal-field">
+                    <label>Size (bytes)</label>
+                    <select id="modalObjSize">
+                        <option value="256">256 bytes</option>
+                        <option value="512">512 bytes</option>
+                        <option value="1024" selected>1 KB</option>
+                        <option value="2048">2 KB</option>
+                        <option value="4096">4 KB</option>
+                    </select>
+                </div>
+                <div class="modal-field">
+                    <label>Permissions</label>
+                    <div class="modal-perms">
+                        <label class="modal-perm-check"><input type="checkbox" id="modalPermR" checked><span>R</span></label>
+                        <label class="modal-perm-check"><input type="checkbox" id="modalPermW"><span>W</span></label>
+                        <label class="modal-perm-check"><input type="checkbox" id="modalPermX"><span>X</span></label>
+                        <label class="modal-perm-check"><input type="checkbox" id="modalPermL"><span>L</span></label>
+                        <label class="modal-perm-check"><input type="checkbox" id="modalPermS"><span>S</span></label>
+                        <label class="modal-perm-check"><input type="checkbox" id="modalPermE"><span>E</span></label>
+                        <label class="modal-perm-check"><input type="checkbox" id="modalPermB"><span>B</span></label>
+                    </div>
+                </div>
+                <div class="modal-field">
+                    <label>Parent Object</label>
+                    <select id="modalParent">
+                        <option value="Boot">Boot (root)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" onclick="closeObjectModal()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmObjectModal()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Link Object Modal -->
+    <div class="modal-overlay" id="linkModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Link to C-List</h3>
+                <button class="modal-close" onclick="closeLinkModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <label>Source Object</label>
+                    <input type="text" id="linkSource" readonly>
+                </div>
+                <div class="modal-field">
+                    <label>Link To (Target C-List)</label>
+                    <select id="linkTarget"></select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-cancel" onclick="closeLinkModal()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmLinkModal()">Link</button>
+            </div>
+        </div>
+    </div>
+
     <script src="simulator.js"></script>
     <script src="app.js"></script>
 </body>

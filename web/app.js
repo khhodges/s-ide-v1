@@ -244,14 +244,16 @@ function updateNamespaceDisplay() {
         'Abstraction': 'Protected object containing function Golden Tokens.'
     };
     
-    namespaceObjects.forEach(obj => {
+    const allObjects = [...namespaceObjects, ...dynamicObjects];
+    allObjects.forEach(obj => {
         const permStr = obj.perms.join('');
-        const typeClass = obj.type.toLowerCase();
+        const typeClass = obj.type.toLowerCase().replace('-', '');
         const tooltip = typeTooltips[obj.type] || 'Namespace object with capability-controlled access.';
+        const dynamicTag = obj.dynamic ? ' <span class="ns-dynamic-tag">(custom)</span>' : '';
         nsHtml += `
-            <div class="ns-object ns-${typeClass}" data-tooltip="${tooltip}">
+            <div class="ns-object ns-${typeClass}" data-name="${obj.name}" data-type="${obj.type}" data-tooltip="${tooltip}">
                 <div class="ns-obj-header">
-                    <span class="ns-obj-name">${obj.name}</span>
+                    <span class="ns-obj-name">${obj.name}${dynamicTag}</span>
                     <span class="ns-obj-type">${obj.type}</span>
                 </div>
                 <div class="ns-obj-details">
@@ -265,11 +267,41 @@ function updateNamespaceDisplay() {
     nsPanel.innerHTML = nsHtml;
     
     hierPanel.innerHTML = buildHierarchyTree();
+    
+    attachContextMenuListeners();
+}
+
+function renderDynamicChildren(parentName) {
+    let html = '';
+    const children = dynamicObjects.filter(o => o.parent === parentName);
+    const clistChildren = dynamicCLists[parentName] || [];
+    
+    if (children.length === 0 && clistChildren.length === 0) return '';
+    
+    html += '<div class="hier-clist">';
+    
+    clistChildren.forEach(item => {
+        html += `<div class="hier-item hier-gt" data-name="${item.name}" data-type="${item.type}" data-tooltip="Linked: ${item.name}">${item.name}</div>`;
+    });
+    
+    children.forEach(obj => {
+        html += `<div class="hier-item" data-name="${obj.name}" data-type="${obj.type}">`;
+        html += `<div class="hier-node hier-dynamic" data-tooltip="Custom object: ${obj.type}">`;
+        html += `<div class="hier-label">${obj.name} <span class="hier-custom-tag">(custom)</span></div>`;
+        html += '</div>';
+        html += renderDynamicChildren(obj.name);
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    return html;
 }
 
 function buildHierarchyTree() {
-    let html = '<div class="hier-node hier-root" data-tooltip="Root namespace abstraction. Contains all threads and protected abstractions.">';
+    let html = '<div class="hier-item" data-name="Boot" data-type="Root">';
+    html += '<div class="hier-node hier-root" data-tooltip="Root namespace abstraction. Contains all threads and protected abstractions.">';
     html += '<div class="hier-label">Boot</div>';
+    html += '</div>';
     html += '<div class="hier-children">';
     
     html += '<div class="hier-group">';
@@ -277,15 +309,18 @@ function buildHierarchyTree() {
     ['Kenneth', 'Matthew', 'Daniel'].forEach(name => {
         const isActive = simulator.cr8 && simulator.cr8.name === name;
         const activeText = isActive ? ' (ACTIVE - currently executing)' : '';
+        html += `<div class="hier-item" data-name="${name}" data-type="Thread">`;
         html += `<div class="hier-node hier-thread ${isActive ? 'hier-active' : ''}" data-tooltip="User identity with its own C-List of capabilities.${activeText}">`;
         html += `<div class="hier-label">${name}</div>`;
+        html += '</div>';
         if (threadCLists[name]) {
             html += '<div class="hier-clist">';
             threadCLists[name].clist.forEach(item => {
-                html += `<div class="hier-gt" data-tooltip="Golden Token granting access to ${item.name} abstraction.">${item.name}</div>`;
+                html += `<div class="hier-item hier-gt" data-name="${item.name}" data-type="${item.type}" data-tooltip="Golden Token granting access to ${item.name}.">${item.name}</div>`;
             });
             html += '</div>';
         }
+        html += renderDynamicChildren(name);
         html += '</div>';
     });
     html += '</div>';
@@ -297,17 +332,30 @@ function buildHierarchyTree() {
         'Abacus': 'Integer math functions (ADD, SUB, MUL, DIV, MOD, ABS, NEG, INC, DEC)'
     };
     ['SlideRule', 'Abacus'].forEach(name => {
+        html += `<div class="hier-item" data-name="${name}" data-type="Abstraction">`;
         html += `<div class="hier-node hier-abstraction" data-tooltip="${abstractionDescs[name]}">`;
         html += `<div class="hier-label">${name}</div>`;
+        html += '</div>';
         if (abstractionCLists[name]) {
             html += '<div class="hier-clist">';
             abstractionCLists[name].clist.forEach(item => {
                 if (item.type === 'Function') {
-                    html += `<div class="hier-gt hier-func" data-tooltip="Golden Token granting permission to invoke ${item.name} function.">${item.name}</div>`;
+                    html += `<div class="hier-item hier-gt hier-func" data-name="${item.name}" data-type="Function" data-tooltip="Golden Token granting permission to invoke ${item.name} function.">${item.name}</div>`;
                 }
             });
             html += '</div>';
         }
+        html += renderDynamicChildren(name);
+        html += '</div>';
+    });
+    
+    html += '<div class="hier-group-label" data-tooltip="User-created objects in the Boot namespace.">Custom Objects</div>';
+    dynamicObjects.filter(obj => obj.parent === 'Boot').forEach(obj => {
+        html += `<div class="hier-item" data-name="${obj.name}" data-type="${obj.type}">`;
+        html += `<div class="hier-node hier-dynamic" data-tooltip="Custom object: ${obj.type}">`;
+        html += `<div class="hier-label">${obj.name} <span class="hier-custom-tag">(custom)</span></div>`;
+        html += '</div>';
+        html += renderDynamicChildren(obj.name);
         html += '</div>';
     });
     html += '</div>';
@@ -2248,3 +2296,406 @@ document.addEventListener('DOMContentLoaded', function() {
         loadLesson(0);
     }
 });
+
+// ==================== CONTEXT MENU & OBJECT MANAGEMENT ====================
+
+let contextMenuState = {
+    targetObject: null,
+    targetType: null,
+    editMode: false
+};
+
+let dynamicObjects = [];
+let nextAddress = 0x8000;
+
+function hideContextMenu() {
+    document.getElementById('contextMenu').classList.remove('visible');
+}
+
+function showContextMenu(e, objectName, objectType) {
+    e.preventDefault();
+    contextMenuState.targetObject = objectName;
+    contextMenuState.targetType = objectType;
+    
+    const menu = document.getElementById('contextMenu');
+    menu.style.left = `${e.clientX}px`;
+    menu.style.top = `${e.clientY}px`;
+    menu.classList.add('visible');
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.context-menu')) {
+        hideContextMenu();
+    }
+});
+
+document.addEventListener('contextmenu', function(e) {
+    if (!e.target.closest('.ns-object') && !e.target.closest('.hier-item')) {
+        hideContextMenu();
+    }
+});
+
+function contextMenuAction(action) {
+    hideContextMenu();
+    
+    switch(action) {
+        case 'add':
+            openAddObjectModal();
+            break;
+        case 'edit':
+            openEditObjectModal();
+            break;
+        case 'link':
+            openLinkModal();
+            break;
+        case 'delete':
+            deleteObject();
+            break;
+    }
+}
+
+function openAddObjectModal() {
+    contextMenuState.editMode = false;
+    document.getElementById('modalTitle').textContent = 'Add New Object';
+    document.getElementById('objectModal').querySelector('.modal-btn-confirm').textContent = 'Create';
+    
+    document.getElementById('modalObjName').value = '';
+    document.getElementById('modalObjType').value = 'Data';
+    document.getElementById('modalObjSize').value = '1024';
+    
+    ['R', 'W', 'X', 'L', 'S', 'E', 'B'].forEach(p => {
+        document.getElementById(`modalPerm${p}`).checked = (p === 'R');
+    });
+    
+    populateParentSelect();
+    document.getElementById('modalParent').value = contextMenuState.targetObject || 'Boot';
+    
+    document.getElementById('objectModal').classList.add('visible');
+}
+
+function openEditObjectModal() {
+    contextMenuState.editMode = true;
+    document.getElementById('modalTitle').textContent = 'Edit Object';
+    document.getElementById('objectModal').querySelector('.modal-btn-confirm').textContent = 'Save';
+    
+    const obj = findObject(contextMenuState.targetObject);
+    if (!obj) {
+        log('Object not found for editing', 'error');
+        return;
+    }
+    
+    if (!obj.dynamic) {
+        log('Cannot edit built-in objects', 'warning');
+        return;
+    }
+    
+    document.getElementById('modalObjName').value = obj.name;
+    document.getElementById('modalObjType').value = obj.type;
+    document.getElementById('modalObjSize').value = obj.size.toString();
+    
+    ['R', 'W', 'X', 'L', 'S', 'E', 'B'].forEach(p => {
+        document.getElementById(`modalPerm${p}`).checked = obj.perms.includes(p);
+    });
+    
+    populateParentSelect();
+    document.getElementById('modalParent').value = obj.parent || 'Boot';
+    
+    document.getElementById('objectModal').classList.add('visible');
+}
+
+function closeObjectModal() {
+    document.getElementById('objectModal').classList.remove('visible');
+}
+
+function confirmObjectModal() {
+    const name = document.getElementById('modalObjName').value.trim();
+    if (!name) {
+        log('Object name is required', 'error');
+        return;
+    }
+    
+    const type = document.getElementById('modalObjType').value;
+    const size = parseInt(document.getElementById('modalObjSize').value);
+    const parent = document.getElementById('modalParent').value;
+    
+    const perms = [];
+    ['R', 'W', 'X', 'L', 'S', 'E', 'B'].forEach(p => {
+        if (document.getElementById(`modalPerm${p}`).checked) {
+            perms.push(p);
+        }
+    });
+    
+    if (contextMenuState.editMode) {
+        updateObject(contextMenuState.targetObject, { name, type, size, perms, parent });
+    } else {
+        createObject(name, type, size, perms, parent);
+    }
+    
+    closeObjectModal();
+    updateNamespaceDisplay();
+}
+
+function findObject(name) {
+    let obj = namespaceObjects.find(o => o.name === name);
+    if (!obj) {
+        obj = dynamicObjects.find(o => o.name === name);
+    }
+    return obj;
+}
+
+function getAllObjects() {
+    return [...namespaceObjects, ...dynamicObjects];
+}
+
+function allocateAddress(size) {
+    const alignedSize = Math.ceil(size / 0x1000) * 0x1000;
+    const addr = nextAddress;
+    nextAddress += alignedSize;
+    return addr;
+}
+
+function createObject(name, type, size, perms, parentName) {
+    if (findObject(name)) {
+        log(`Object "${name}" already exists`, 'error');
+        return;
+    }
+    
+    const location = allocateAddress(size);
+    const newObj = {
+        location,
+        name,
+        type,
+        perms,
+        size,
+        parent: parentName,
+        dynamic: true
+    };
+    
+    dynamicObjects.push(newObj);
+    
+    addToCList(parentName, name, type, perms);
+    
+    log(`Created object "${name}" at 0x${location.toString(16).toUpperCase().padStart(4, '0')}`, 'info');
+}
+
+function findAllCListReferences(name) {
+    const refs = [];
+    
+    if (bootNamespace.clist.some(c => c.name === name)) {
+        refs.push({ parent: 'Boot', type: 'boot' });
+    }
+    
+    Object.keys(threadCLists).forEach(threadName => {
+        if (threadCLists[threadName].clist.some(c => c.name === name)) {
+            refs.push({ parent: threadName, type: 'thread' });
+        }
+    });
+    
+    Object.keys(abstractionCLists).forEach(absName => {
+        if (abstractionCLists[absName].clist.some(c => c.name === name)) {
+            refs.push({ parent: absName, type: 'abstraction' });
+        }
+    });
+    
+    Object.keys(dynamicCLists).forEach(dynName => {
+        if (dynamicCLists[dynName].some(c => c.name === name)) {
+            refs.push({ parent: dynName, type: 'dynamic' });
+        }
+    });
+    
+    return refs;
+}
+
+function updateObject(oldName, updates) {
+    let obj = dynamicObjects.find(o => o.name === oldName);
+    if (obj) {
+        const oldParent = obj.parent;
+        const parentChanged = oldParent !== updates.parent;
+        
+        const allRefs = findAllCListReferences(oldName);
+        
+        removeFromCLists(oldName);
+        
+        if (oldName !== updates.name && dynamicCLists[oldName]) {
+            dynamicCLists[updates.name] = dynamicCLists[oldName];
+            delete dynamicCLists[oldName];
+        }
+        
+        Object.assign(obj, updates);
+        
+        const addedParents = new Set();
+        
+        allRefs.forEach(ref => {
+            if (parentChanged && ref.parent === oldParent) {
+                return;
+            }
+            if (!addedParents.has(ref.parent)) {
+                addToCList(ref.parent, updates.name, updates.type, updates.perms);
+                addedParents.add(ref.parent);
+            }
+        });
+        
+        if (!addedParents.has(updates.parent)) {
+            addToCList(updates.parent, updates.name, updates.type, updates.perms);
+        }
+        
+        dynamicObjects.forEach(child => {
+            if (child.parent === oldName) {
+                child.parent = updates.name;
+            }
+        });
+        
+        log(`Updated object "${updates.name}"`, 'info');
+    } else {
+        log('Cannot edit built-in objects', 'warning');
+    }
+}
+
+function deleteObjectRecursive(name) {
+    const children = dynamicObjects.filter(o => o.parent === name);
+    children.forEach(child => {
+        deleteObjectRecursive(child.name);
+    });
+    
+    const idx = dynamicObjects.findIndex(o => o.name === name);
+    if (idx >= 0) {
+        dynamicObjects.splice(idx, 1);
+    }
+    
+    removeFromCLists(name);
+    
+    if (dynamicCLists[name]) {
+        delete dynamicCLists[name];
+    }
+}
+
+function deleteObject() {
+    const name = contextMenuState.targetObject;
+    const obj = dynamicObjects.find(o => o.name === name);
+    
+    if (obj) {
+        deleteObjectRecursive(name);
+        log(`Deleted object "${name}" and its children`, 'info');
+        updateNamespaceDisplay();
+    } else {
+        log('Cannot delete built-in objects', 'warning');
+    }
+}
+
+let dynamicCLists = {};
+
+function addToCList(parentName, childName, childType, childPerms) {
+    const entry = {
+        name: childName,
+        type: childType,
+        perms: childPerms
+    };
+    
+    if (threadCLists[parentName]) {
+        threadCLists[parentName].clist.push(entry);
+    } else if (abstractionCLists[parentName]) {
+        abstractionCLists[parentName].clist.push(entry);
+    } else if (parentName === 'Boot') {
+        bootNamespace.clist.push({
+            name: childName,
+            type: childType,
+            ref: `dynamic.${childName.toLowerCase()}`
+        });
+    } else {
+        if (!dynamicCLists[parentName]) {
+            dynamicCLists[parentName] = [];
+        }
+        dynamicCLists[parentName].push(entry);
+    }
+}
+
+function removeFromCLists(name) {
+    bootNamespace.clist = bootNamespace.clist.filter(c => c.name !== name);
+    
+    Object.values(threadCLists).forEach(thread => {
+        thread.clist = thread.clist.filter(c => c.name !== name);
+    });
+    
+    Object.values(abstractionCLists).forEach(abs => {
+        abs.clist = abs.clist.filter(c => c.name !== name);
+    });
+    
+    Object.keys(dynamicCLists).forEach(key => {
+        dynamicCLists[key] = dynamicCLists[key].filter(c => c.name !== name);
+    });
+}
+
+function populateParentSelect() {
+    const select = document.getElementById('modalParent');
+    select.innerHTML = '<option value="Boot">Boot (root)</option>';
+    
+    Object.keys(threadCLists).forEach(name => {
+        select.innerHTML += `<option value="${name}">${name} (Thread)</option>`;
+    });
+    
+    Object.keys(abstractionCLists).forEach(name => {
+        select.innerHTML += `<option value="${name}">${name} (Abstraction)</option>`;
+    });
+    
+    dynamicObjects.filter(o => o.type === 'C-List' || o.type === 'Abstraction').forEach(obj => {
+        select.innerHTML += `<option value="${obj.name}">${obj.name} (${obj.type})</option>`;
+    });
+}
+
+function openLinkModal() {
+    document.getElementById('linkSource').value = contextMenuState.targetObject;
+    
+    const targetSelect = document.getElementById('linkTarget');
+    targetSelect.innerHTML = '';
+    
+    targetSelect.innerHTML += '<option value="Boot">Boot (root)</option>';
+    Object.keys(threadCLists).forEach(name => {
+        if (name !== contextMenuState.targetObject) {
+            targetSelect.innerHTML += `<option value="${name}">${name}</option>`;
+        }
+    });
+    Object.keys(abstractionCLists).forEach(name => {
+        if (name !== contextMenuState.targetObject) {
+            targetSelect.innerHTML += `<option value="${name}">${name}</option>`;
+        }
+    });
+    
+    document.getElementById('linkModal').classList.add('visible');
+}
+
+function closeLinkModal() {
+    document.getElementById('linkModal').classList.remove('visible');
+}
+
+function confirmLinkModal() {
+    const source = document.getElementById('linkSource').value;
+    const target = document.getElementById('linkTarget').value;
+    
+    const obj = findObject(source);
+    if (obj) {
+        addToCList(target, source, obj.type, obj.perms || ['R']);
+        log(`Linked "${source}" to ${target}'s C-List`, 'info');
+        updateNamespaceDisplay();
+    }
+    
+    closeLinkModal();
+}
+
+function attachContextMenuListeners() {
+    document.querySelectorAll('.ns-object').forEach(el => {
+        el.addEventListener('contextmenu', function(e) {
+            const name = this.dataset.name;
+            const type = this.dataset.type;
+            showContextMenu(e, name, type);
+        });
+    });
+    
+    document.querySelectorAll('.hier-item').forEach(el => {
+        el.addEventListener('contextmenu', function(e) {
+            e.stopPropagation();
+            const name = this.dataset.name;
+            const type = this.dataset.type || 'unknown';
+            showContextMenu(e, name, type);
+        });
+    });
+}
