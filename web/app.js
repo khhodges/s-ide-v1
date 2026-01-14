@@ -2550,6 +2550,8 @@ function confirmObjectModal() {
     
     closeObjectModal();
     updateNamespaceDisplay();
+    updateCapabilityExplorer();
+    updateDisplay();
 }
 
 function findObject(name) {
@@ -2682,6 +2684,30 @@ function updateObject(oldName, updates) {
     
     log(`Updated object "${updates.name}"`, 'info');
     saveToStorage();
+    syncSimulatorCapabilities(oldName, updates);
+}
+
+function syncSimulatorCapabilities(oldName, updates) {
+    const updateCap = (cap) => {
+        if (cap && cap.name === oldName) {
+            cap.name = updates.name;
+            cap.perms = updates.perms;
+            if (updates.size) {
+                cap.location = { type: "Local", offset: updates.location || cap.location?.offset || 0 };
+            }
+        }
+    };
+    
+    updateCap(simulator.cr15);
+    updateCap(simulator.cr8);
+    
+    for (let i = 0; i < 8; i++) {
+        updateCap(simulator.contextRegs[i]);
+    }
+    
+    if (simulator.clist) {
+        simulator.clist.forEach(updateCap);
+    }
 }
 
 function deleteObjectRecursive(name) {
@@ -2711,6 +2737,8 @@ function deleteObject() {
         log(`Deleted object "${name}" and its children`, 'info');
         saveToStorage();
         updateNamespaceDisplay();
+        updateCapabilityExplorer();
+        updateDisplay();
     } else {
         log('Cannot delete built-in objects', 'warning');
     }
