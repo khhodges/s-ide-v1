@@ -633,6 +633,7 @@ function executeCommand() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    loadFromStorage();
     updateDisplay();
     updateInstrHelp();
     updateCapabilityExplorer();
@@ -2307,11 +2308,62 @@ let contextMenuState = {
 
 let dynamicObjects = [];
 let nextAddress = 0x8000;
+let dynamicCLists = {};
 
 let selectedObject = {
     name: null,
     type: null
 };
+
+function saveToStorage() {
+    const state = {
+        dynamicObjects,
+        dynamicCLists,
+        nextAddress,
+        namespaceModifications: namespaceObjects.map(o => ({
+            name: o.name,
+            type: o.type,
+            size: o.size,
+            perms: o.perms
+        }))
+    };
+    localStorage.setItem('pp250_namespace_state', JSON.stringify(state));
+}
+
+function loadFromStorage() {
+    try {
+        const saved = localStorage.getItem('pp250_namespace_state');
+        if (saved) {
+            const state = JSON.parse(saved);
+            dynamicObjects = state.dynamicObjects || [];
+            dynamicCLists = state.dynamicCLists || {};
+            nextAddress = state.nextAddress || 0x8000;
+            
+            if (state.namespaceModifications) {
+                state.namespaceModifications.forEach(mod => {
+                    const obj = namespaceObjects.find(o => o.name === mod.name);
+                    if (obj) {
+                        obj.type = mod.type;
+                        obj.size = mod.size;
+                        obj.perms = mod.perms;
+                    }
+                });
+            }
+            
+            log('Restored saved namespace state', 'info');
+        }
+    } catch (e) {
+        console.error('Failed to load saved state:', e);
+    }
+}
+
+function clearStoredState() {
+    localStorage.removeItem('pp250_namespace_state');
+    dynamicObjects = [];
+    dynamicCLists = {};
+    nextAddress = 0x8000;
+    log('Cleared stored namespace state', 'info');
+}
 
 function selectObject(name, type) {
     selectedObject.name = name;
@@ -2541,6 +2593,7 @@ function createObject(name, type, size, perms, parentName) {
     addToCList(parentName, name, type, perms);
     
     log(`Created object "${name}" at 0x${location.toString(16).toUpperCase().padStart(4, '0')}`, 'info');
+    saveToStorage();
 }
 
 function findAllCListReferences(name) {
@@ -2628,6 +2681,7 @@ function updateObject(oldName, updates) {
     });
     
     log(`Updated object "${updates.name}"`, 'info');
+    saveToStorage();
 }
 
 function deleteObjectRecursive(name) {
@@ -2655,13 +2709,12 @@ function deleteObject() {
     if (obj) {
         deleteObjectRecursive(name);
         log(`Deleted object "${name}" and its children`, 'info');
+        saveToStorage();
         updateNamespaceDisplay();
     } else {
         log('Cannot delete built-in objects', 'warning');
     }
 }
-
-let dynamicCLists = {};
 
 function addToCList(parentName, childName, childType, childPerms) {
     const entry = {
