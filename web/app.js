@@ -28,11 +28,11 @@ const bootNamespace = {
 
 const namespaceObjects = [
     { location: 0x0000, name: "Boot", type: "Abstraction", perms: ["R", "L", "S", "E", "B"], size: 4096 },
-    { location: 0x1000, name: "Kenneth", type: "Thread", perms: ["R", "W", "E"], size: 1024 },
-    { location: 0x1400, name: "Matthew", type: "Thread", perms: ["R", "W", "E"], size: 1024 },
-    { location: 0x1800, name: "Daniel", type: "Thread", perms: ["R", "W", "E"], size: 1024 },
-    { location: 0x2000, name: "SlideRule", type: "Abstraction", perms: ["R", "L", "E"], size: 2048 },
-    { location: 0x2800, name: "Abacus", type: "Abstraction", perms: ["R", "L", "E"], size: 2048 }
+    { location: 0x2000, name: "Kenneth", type: "Thread", perms: ["R", "W", "E"], size: 1024 },
+    { location: 0x3000, name: "Matthew", type: "Thread", perms: ["R", "W", "E"], size: 1024 },
+    { location: 0x4000, name: "Daniel", type: "Thread", perms: ["R", "W", "E"], size: 1024 },
+    { location: 0x5000, name: "SlideRule", type: "Abstraction", perms: ["R", "L", "E"], size: 2048 },
+    { location: 0x6000, name: "Abacus", type: "Abstraction", perms: ["R", "L", "E"], size: 2048 }
 ];
 
 const threadCLists = {
