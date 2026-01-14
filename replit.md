@@ -165,6 +165,7 @@ Used with conditional branches (e.g., `B EQ 10` branches if equal).
 | SWITCH reg | Set CR15 (Namespace) to capability in CR[reg] |
 
 ## Recent Changes
+- 2026-01-14: Added popup help tooltips for all UI elements (hover to see explanations)
 - 2026-01-14: Added Namespace Browser with flat object list and C-List hierarchy visualization
 - 2026-01-14: Added Boot Namespace with Boot root abstraction
 - 2026-01-14: Added Thread C-Lists for Kenneth, Matthew, and Daniel

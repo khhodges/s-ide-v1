@@ -238,19 +238,26 @@ function updateNamespaceDisplay() {
     }
     
     let nsHtml = '<div class="ns-header">Namespace Objects (CR15: ' + simulator.cr15.name + ')</div>';
+    const typeTooltips = {
+        'Root': 'Root namespace abstraction containing the entire Boot system.',
+        'Thread': 'User identity with its own C-List of capabilities.',
+        'Abstraction': 'Protected object containing function Golden Tokens.'
+    };
+    
     namespaceObjects.forEach(obj => {
         const permStr = obj.perms.join('');
         const typeClass = obj.type.toLowerCase();
+        const tooltip = typeTooltips[obj.type] || 'Namespace object with capability-controlled access.';
         nsHtml += `
-            <div class="ns-object ns-${typeClass}">
+            <div class="ns-object ns-${typeClass}" data-tooltip="${tooltip}">
                 <div class="ns-obj-header">
                     <span class="ns-obj-name">${obj.name}</span>
                     <span class="ns-obj-type">${obj.type}</span>
                 </div>
                 <div class="ns-obj-details">
-                    <span class="ns-obj-loc">0x${obj.location.toString(16).toUpperCase().padStart(4, '0')}</span>
-                    <span class="ns-obj-size">${obj.size}B</span>
-                    <span class="ns-obj-perms">${permStr}</span>
+                    <span class="ns-obj-loc" data-tooltip="Memory location address">0x${obj.location.toString(16).toUpperCase().padStart(4, '0')}</span>
+                    <span class="ns-obj-size" data-tooltip="Object size in bytes">${obj.size}B</span>
+                    <span class="ns-obj-perms" data-tooltip="Permission flags: R=Read, W=Write, X=Execute, L=Load, S=Store, E=Enter, B=Bind">${permStr}</span>
                 </div>
             </div>
         `;
@@ -261,20 +268,21 @@ function updateNamespaceDisplay() {
 }
 
 function buildHierarchyTree() {
-    let html = '<div class="hier-node hier-root">';
+    let html = '<div class="hier-node hier-root" data-tooltip="Root namespace abstraction. Contains all threads and protected abstractions.">';
     html += '<div class="hier-label">Boot</div>';
     html += '<div class="hier-children">';
     
     html += '<div class="hier-group">';
-    html += '<div class="hier-group-label">Threads</div>';
+    html += '<div class="hier-group-label" data-tooltip="User identities that can execute code with their own C-List permissions.">Threads</div>';
     ['Kenneth', 'Matthew', 'Daniel'].forEach(name => {
         const isActive = simulator.cr8 && simulator.cr8.name === name;
-        html += `<div class="hier-node hier-thread ${isActive ? 'hier-active' : ''}">`;
+        const activeText = isActive ? ' (ACTIVE - currently executing)' : '';
+        html += `<div class="hier-node hier-thread ${isActive ? 'hier-active' : ''}" data-tooltip="User identity with its own C-List of capabilities.${activeText}">`;
         html += `<div class="hier-label">${name}</div>`;
         if (threadCLists[name]) {
             html += '<div class="hier-clist">';
             threadCLists[name].clist.forEach(item => {
-                html += `<div class="hier-gt">${item.name}</div>`;
+                html += `<div class="hier-gt" data-tooltip="Golden Token granting access to ${item.name} abstraction.">${item.name}</div>`;
             });
             html += '</div>';
         }
@@ -283,15 +291,19 @@ function buildHierarchyTree() {
     html += '</div>';
     
     html += '<div class="hier-group">';
-    html += '<div class="hier-group-label">Abstractions</div>';
+    html += '<div class="hier-group-label" data-tooltip="Protected objects containing function Golden Tokens.">Abstractions</div>';
+    const abstractionDescs = {
+        'SlideRule': 'Floating-point math functions (ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW)',
+        'Abacus': 'Integer math functions (ADD, SUB, MUL, DIV, MOD, ABS, NEG, INC, DEC)'
+    };
     ['SlideRule', 'Abacus'].forEach(name => {
-        html += `<div class="hier-node hier-abstraction">`;
+        html += `<div class="hier-node hier-abstraction" data-tooltip="${abstractionDescs[name]}">`;
         html += `<div class="hier-label">${name}</div>`;
         if (abstractionCLists[name]) {
             html += '<div class="hier-clist">';
             abstractionCLists[name].clist.forEach(item => {
                 if (item.type === 'Function') {
-                    html += `<div class="hier-gt hier-func">${item.name}</div>`;
+                    html += `<div class="hier-gt hier-func" data-tooltip="Golden Token granting permission to invoke ${item.name} function.">${item.name}</div>`;
                 }
             });
             html += '</div>';
@@ -311,6 +323,17 @@ function updateDisplay() {
     updateFlags();
 }
 
+const crTooltips = {
+    0: 'General-purpose capability register. Holds Golden Tokens for accessing protected resources.',
+    1: 'General-purpose capability register. Holds Golden Tokens for accessing protected resources.',
+    2: 'General-purpose capability register. Holds Golden Tokens for accessing protected resources.',
+    3: 'General-purpose capability register. Holds Golden Tokens for accessing protected resources.',
+    4: 'General-purpose capability register. Holds Golden Tokens for accessing protected resources.',
+    5: 'General-purpose capability register. Holds Golden Tokens for accessing protected resources.',
+    6: 'C-LIST LCA: Lowest Common Ancestor pointer. References the capability list for current context.',
+    7: 'NUCLEUS: Hardware protection ring. Contains the trusted kernel capability.'
+};
+
 function updateContextRegisters() {
     const container = document.getElementById('contextRegs');
     container.innerHTML = '';
@@ -324,14 +347,21 @@ function updateContextRegisters() {
         const reg = simulator.contextRegs[i];
         const isNull = reg.name === 'NULL';
         const role = roles[i] || 'GENERAL';
+        const tooltip = crTooltips[i];
+        const permTooltip = reg.perms.length > 0 ? 
+            `Permissions: ${reg.perms.map(p => {
+                const permNames = {R:'Read', W:'Write', X:'Execute', L:'Load', S:'Store', E:'Enter', B:'Bind'};
+                return permNames[p] || p;
+            }).join(', ')}` : 'No capability loaded. Register is empty.';
         
         const row = document.createElement('div');
         row.className = `register-row ${isNull ? 'null' : ''}`;
+        row.setAttribute('data-tooltip', tooltip);
         row.innerHTML = `
             <span class="name">CR${i}</span>
             <span class="role">${role}</span>
             <span class="value">${reg.name}</span>
-            <span class="perms">${reg.perms.join('') || '---'}</span>
+            <span class="perms" data-tooltip="${permTooltip}">${reg.perms.join('') || '---'}</span>
         `;
         container.appendChild(row);
     }
@@ -347,6 +377,7 @@ function updateDataRegisters() {
         
         const row = document.createElement('div');
         row.className = 'register-row';
+        row.setAttribute('data-tooltip', '64-bit data register. Holds numeric values for arithmetic operations.');
         row.innerHTML = `
             <span class="name">DR${i}</span>
             <span class="value">0x${hexStr}</span>

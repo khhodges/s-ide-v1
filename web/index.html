@@ -26,9 +26,9 @@
             </select>
         </div>
         <div class="action-buttons">
-            <button onclick="resetCPU()" class="btn btn-reset">Reset</button>
-            <button onclick="stepInstruction()" class="btn btn-step">Step</button>
-            <button onclick="runBootSequence()" class="btn btn-run">Run</button>
+            <button onclick="resetCPU()" class="btn btn-reset" data-tooltip="Reset CPU to initial state. Clears all registers and flags.">Reset</button>
+            <button onclick="stepInstruction()" class="btn btn-step" data-tooltip="Execute one instruction and pause.">Step</button>
+            <button onclick="runBootSequence()" class="btn btn-run" data-tooltip="Execute boot sequence or run instructions continuously.">Run</button>
         </div>
     </nav>
 
@@ -48,19 +48,19 @@
                 <div class="panel system-state">
                     <h2>System State</h2>
                     <div class="state-info">
-                        <div class="state-row">
+                        <div class="state-row" data-tooltip="Root capability defining the current namespace scope. All access is relative to this.">
                             <span class="label">CR15 (Namespace):</span>
                             <span id="cr15Name" class="value">NULL</span>
                         </div>
-                        <div class="state-row">
+                        <div class="state-row" data-tooltip="Current thread identity. Determines which user/process is executing.">
                             <span class="label">CR8 (Thread):</span>
                             <span id="cr8Name" class="value">NULL</span>
                         </div>
-                        <div class="state-row">
+                        <div class="state-row" data-tooltip="Instruction Pointer. Address of the next instruction to execute.">
                             <span class="label">IP (Instruction Ptr):</span>
                             <span id="ipValue" class="value">0</span>
                         </div>
-                        <div class="state-row">
+                        <div class="state-row" data-tooltip="Current call stack depth. Increases with CALL, decreases with RETURN.">
                             <span class="label">Stack Depth:</span>
                             <span id="stackDepth" class="value">0</span>
                         </div>
@@ -69,10 +69,10 @@
                     <div class="boot-sequence">
                         <h3>Boot Sequence</h3>
                         <div class="boot-steps">
-                            <div class="boot-step" id="bootStep1"><span>1</span> Hardware Reset</div>
-                            <div class="boot-step" id="bootStep2"><span>2</span> Load Nucleus</div>
-                            <div class="boot-step" id="bootStep3"><span>3</span> Load Namespace</div>
-                            <div class="boot-step" id="bootStep4"><span>4</span> Initialize Thread</div>
+                            <div class="boot-step" id="bootStep1" data-tooltip="Step 1: Clear all registers and initialize CPU state."><span>1</span> Hardware Reset</div>
+                            <div class="boot-step" id="bootStep2" data-tooltip="Step 2: Load trusted kernel capability into CR7."><span>2</span> Load Nucleus</div>
+                            <div class="boot-step" id="bootStep3" data-tooltip="Step 3: Establish root namespace in CR15 for access control."><span>3</span> Load Namespace</div>
+                            <div class="boot-step" id="bootStep4" data-tooltip="Step 4: Set current thread identity in CR8 (default: Kenneth)."><span>4</span> Initialize Thread</div>
                         </div>
                         <div class="boot-status" id="bootStatus">Press Step to begin boot sequence</div>
                     </div>
@@ -81,19 +81,19 @@
                 <div class="panel flags">
                     <h2>Condition Flags (NZCV)</h2>
                     <div class="flag-display">
-                        <div class="flag" id="flagN" title="Negative: Result has sign bit set">
+                        <div class="flag" id="flagN" data-tooltip="Negative flag. Set when result has sign bit set (negative number).">
                             <span class="flag-letter">N</span>
                             <span class="flag-name">Negative</span>
                         </div>
-                        <div class="flag" id="flagZ" title="Zero: Result is zero">
+                        <div class="flag" id="flagZ" data-tooltip="Zero flag. Set when result equals zero.">
                             <span class="flag-letter">Z</span>
                             <span class="flag-name">Zero</span>
                         </div>
-                        <div class="flag" id="flagC" title="Carry: Unsigned overflow">
+                        <div class="flag" id="flagC" data-tooltip="Carry flag. Set on unsigned overflow (ADD) or no borrow (SUB).">
                             <span class="flag-letter">C</span>
                             <span class="flag-name">Carry</span>
                         </div>
-                        <div class="flag" id="flagV" title="Overflow: Signed overflow">
+                        <div class="flag" id="flagV" data-tooltip="Overflow flag. Set when signed arithmetic overflows.">
                             <span class="flag-letter">V</span>
                             <span class="flag-name">Overflow</span>
                         </div>
@@ -187,23 +187,23 @@
                 <div class="tutorial-sidebar">
                     <h2>Lessons</h2>
                     <div class="lesson-list">
-                        <button class="lesson-btn active" onclick="loadLesson(0)">
+                        <button class="lesson-btn active" onclick="loadLesson(0)" data-tooltip="Learn what Golden Tokens are and how they control access.">
                             <span class="lesson-num">1</span>
                             <span class="lesson-title">Introduction to Capabilities</span>
                         </button>
-                        <button class="lesson-btn" onclick="loadLesson(1)">
+                        <button class="lesson-btn" onclick="loadLesson(1)" data-tooltip="Understand the 4-step boot sequence that initializes the system.">
                             <span class="lesson-num">2</span>
                             <span class="lesson-title">The Boot Sequence</span>
                         </button>
-                        <button class="lesson-btn" onclick="loadLesson(2)">
+                        <button class="lesson-btn" onclick="loadLesson(2)" data-tooltip="Learn the difference between capability registers and data registers.">
                             <span class="lesson-num">3</span>
                             <span class="lesson-title">Context & Data Registers</span>
                         </button>
-                        <button class="lesson-btn" onclick="loadLesson(3)">
+                        <button class="lesson-btn" onclick="loadLesson(3)" data-tooltip="Master LOAD, SAVE, CALL, and RETURN instructions.">
                             <span class="lesson-num">4</span>
                             <span class="lesson-title">Capability Operations</span>
                         </button>
-                        <button class="lesson-btn" onclick="loadLesson(4)">
+                        <button class="lesson-btn" onclick="loadLesson(4)" data-tooltip="Understand how capabilities enforce security boundaries.">
                             <span class="lesson-num">5</span>
                             <span class="lesson-title">Security Boundaries</span>
                         </button>
@@ -279,9 +279,9 @@
                     <div class="viz-operands" id="vizOperands"></div>
                     
                     <div class="viz-buttons">
-                        <button onclick="setupVisualization()" class="btn btn-setup">Setup</button>
-                        <button onclick="runVisualization()" class="btn btn-run" id="vizRunBtn" disabled>Animate</button>
-                        <button onclick="resetVisualization()" class="btn btn-reset">Reset</button>
+                        <button onclick="setupVisualization()" class="btn btn-setup" data-tooltip="Initialize registers with sample values for the selected instruction.">Setup</button>
+                        <button onclick="runVisualization()" class="btn btn-run" id="vizRunBtn" disabled data-tooltip="Watch the instruction execute step by step with animations.">Animate</button>
+                        <button onclick="resetVisualization()" class="btn btn-reset" data-tooltip="Clear the visualization and start over.">Reset</button>
                     </div>
                 </div>
                 
@@ -319,10 +319,10 @@
                     <div class="viz-flags-panel">
                         <h3>Condition Flags</h3>
                         <div class="viz-flags">
-                            <div class="viz-flag" id="vizFlagN"><span>N</span><div class="viz-flag-desc">Negative</div></div>
-                            <div class="viz-flag" id="vizFlagZ"><span>Z</span><div class="viz-flag-desc">Zero</div></div>
-                            <div class="viz-flag" id="vizFlagC"><span>C</span><div class="viz-flag-desc">Carry</div></div>
-                            <div class="viz-flag" id="vizFlagV"><span>V</span><div class="viz-flag-desc">Overflow</div></div>
+                            <div class="viz-flag" id="vizFlagN" data-tooltip="Negative flag. Set when result is negative."><span>N</span><div class="viz-flag-desc">Negative</div></div>
+                            <div class="viz-flag" id="vizFlagZ" data-tooltip="Zero flag. Set when result equals zero."><span>Z</span><div class="viz-flag-desc">Zero</div></div>
+                            <div class="viz-flag" id="vizFlagC" data-tooltip="Carry flag. Set on unsigned overflow."><span>C</span><div class="viz-flag-desc">Carry</div></div>
+                            <div class="viz-flag" id="vizFlagV" data-tooltip="Overflow flag. Set on signed overflow."><span>V</span><div class="viz-flag-desc">Overflow</div></div>
                         </div>
                     </div>
                     
@@ -357,7 +357,7 @@
                         <div class="token-list" id="clistTokens"></div>
                     </div>
                     
-                    <button onclick="createSampleCapabilities()" class="btn btn-create">Load Sample Capabilities</button>
+                    <button onclick="createSampleCapabilities()" class="btn btn-create" data-tooltip="Load example Golden Tokens to explore capability structure.">Load Sample Capabilities</button>
                 </div>
                 
                 <div class="cap-main">
@@ -369,49 +369,49 @@
                     <div class="permission-legend">
                         <h3>Permission Reference</h3>
                         <div class="perm-grid">
-                            <div class="perm-item">
+                            <div class="perm-item" data-tooltip="Read permission allows loading data or code from the protected object.">
                                 <span class="perm-badge perm-r">R</span>
                                 <div class="perm-info">
                                     <strong>Read</strong>
                                     <span>Load data from this object</span>
                                 </div>
                             </div>
-                            <div class="perm-item">
+                            <div class="perm-item" data-tooltip="Write permission allows modifying data in the protected object.">
                                 <span class="perm-badge perm-w">W</span>
                                 <div class="perm-info">
                                     <strong>Write</strong>
                                     <span>Save data to this object</span>
                                 </div>
                             </div>
-                            <div class="perm-item">
+                            <div class="perm-item" data-tooltip="Execute permission allows running code from the protected object.">
                                 <span class="perm-badge perm-x">X</span>
                                 <div class="perm-info">
                                     <strong>Execute</strong>
                                     <span>Run code from this object</span>
                                 </div>
                             </div>
-                            <div class="perm-item">
+                            <div class="perm-item" data-tooltip="Load permission allows retrieving child capabilities from the object.">
                                 <span class="perm-badge perm-l">L</span>
                                 <div class="perm-info">
                                     <strong>Load</strong>
                                     <span>Load child capabilities</span>
                                 </div>
                             </div>
-                            <div class="perm-item">
+                            <div class="perm-item" data-tooltip="Store permission allows saving capabilities to the object's children.">
                                 <span class="perm-badge perm-s">S</span>
                                 <div class="perm-info">
                                     <strong>Store</strong>
                                     <span>Store capabilities to children</span>
                                 </div>
                             </div>
-                            <div class="perm-item">
+                            <div class="perm-item" data-tooltip="Enter permission allows switching namespace or calling procedures.">
                                 <span class="perm-badge perm-e">E</span>
                                 <div class="perm-info">
                                     <strong>Enter</strong>
                                     <span>Switch namespace / call procedure</span>
                                 </div>
                             </div>
-                            <div class="perm-item">
+                            <div class="perm-item" data-tooltip="Bind permission allows saving the token permanently to namespace DNA.">
                                 <span class="perm-badge perm-b">B</span>
                                 <div class="perm-info">
                                     <strong>Bind</strong>
@@ -503,7 +503,7 @@
                             </select>
                         </div>
                         
-                        <button onclick="mintCapability()" class="btn btn-mint">MINT Capability</button>
+                        <button onclick="mintCapability()" class="btn btn-mint" data-tooltip="Create a new Golden Token with the specified permissions and store it in the target register.">MINT Capability</button>
                     </div>
                 </div>
                 
@@ -566,15 +566,15 @@
                             <span id="cr7Key" class="golden-key-display">Not initialized</span>
                         </div>
                         <div class="cr7-actions">
-                            <button onclick="loadCR7()" class="btn btn-load">Load CR7</button>
-                            <button onclick="saveCR7()" class="btn btn-save">Save CR7</button>
+                            <button onclick="loadCR7()" class="btn btn-load" data-tooltip="Load the current CR7 nucleus capability settings.">Load CR7</button>
+                            <button onclick="saveCR7()" class="btn btn-save" data-tooltip="Save the configured capability to CR7 nucleus register.">Save CR7</button>
                         </div>
                     </div>
                     
                     <div class="editor-controls">
-                        <button onclick="runProgram()" class="btn btn-run-prog">Run Program</button>
-                        <button onclick="stepProgram()" class="btn btn-step-prog" id="stepBtn">Step</button>
-                        <button onclick="resetProgram()" class="btn btn-reset-prog">Reset</button>
+                        <button onclick="runProgram()" class="btn btn-run-prog" data-tooltip="Execute the entire program from beginning to end.">Run Program</button>
+                        <button onclick="stepProgram()" class="btn btn-step-prog" id="stepBtn" data-tooltip="Execute one instruction at a time and pause.">Step</button>
+                        <button onclick="resetProgram()" class="btn btn-reset-prog" data-tooltip="Reset program counter and clear execution state.">Reset</button>
                     </div>
                     
                     <div class="editor-status">
@@ -590,45 +590,45 @@
                     
                     <div class="editor-examples">
                         <div class="paradigm-tabs">
-                            <button class="paradigm-tab active" onclick="switchParadigm('church')">CHURCH</button>
-                            <button class="paradigm-tab" onclick="switchParadigm('turing')">TURING</button>
+                            <button class="paradigm-tab active" onclick="switchParadigm('church')" data-tooltip="Lambda/capability paradigm: CALL, RETURN, LOAD, SAVE operations.">CHURCH</button>
+                            <button class="paradigm-tab" onclick="switchParadigm('turing')" data-tooltip="Traditional sequential paradigm: loops, branches, arithmetic.">TURING</button>
                         </div>
                         <div id="churchExamples" class="paradigm-content active">
                             <p class="paradigm-desc">Capability-based Call/Return Protocol</p>
                             <div class="example-list">
-                                <button onclick="loadExample('callerCode')" class="btn-example">Caller Code</button>
-                                <button onclick="loadExample('guardCode')" class="btn-example">Guard Code</button>
+                                <button onclick="loadExample('callerCode')" class="btn-example" data-tooltip="Example: Load GT from C-List and invoke procedure with CALL.">Caller Code</button>
+                                <button onclick="loadExample('guardCode')" class="btn-example" data-tooltip="Example: Validate gifted GT with TPERM before trusting it.">Guard Code</button>
                             </div>
                         </div>
                         <div id="turingExamples" class="paradigm-content">
                             <p class="paradigm-desc">Traditional Sequential Code</p>
                             <div class="example-list">
-                                <button onclick="loadExample('counter')" class="btn-example">Counter Loop</button>
-                                <button onclick="loadExample('fibonacci')" class="btn-example">Fibonacci</button>
-                                <button onclick="loadExample('multiply')" class="btn-example">Multiply</button>
-                                <button onclick="loadExample('flags')" class="btn-example">Flag Demo</button>
+                                <button onclick="loadExample('counter')" class="btn-example" data-tooltip="Example: Simple loop counting from 0 to N.">Counter Loop</button>
+                                <button onclick="loadExample('fibonacci')" class="btn-example" data-tooltip="Example: Calculate Fibonacci sequence numbers.">Fibonacci</button>
+                                <button onclick="loadExample('multiply')" class="btn-example" data-tooltip="Example: Multiply two numbers using repeated addition.">Multiply</button>
+                                <button onclick="loadExample('flags')" class="btn-example" data-tooltip="Example: Demonstrate NZCV condition flag behavior.">Flag Demo</button>
                             </div>
                         </div>
                     </div>
                     
                     <div class="editor-help">
                         <h3>Quick Reference</h3>
-                        <div class="help-section">
+                        <div class="help-section" data-tooltip="ADD: dest += src, SUB: dest -= src, MUL: dest *= src, NEG: dest = -src">
                             <strong>Arithmetic:</strong> ADD, SUB, MUL, NEG
                         </div>
-                        <div class="help-section">
+                        <div class="help-section" data-tooltip="AND: bitwise AND, ORR: bitwise OR, EOR: bitwise XOR, NOT: bitwise NOT">
                             <strong>Logic:</strong> AND, ORR, EOR, NOT
                         </div>
-                        <div class="help-section">
+                        <div class="help-section" data-tooltip="MOV: copy register, MVN: copy NOT, ADDI/SUBI: add/sub immediate value">
                             <strong>Move:</strong> MOV, MVN, ADDI, SUBI
                         </div>
-                        <div class="help-section">
+                        <div class="help-section" data-tooltip="CMP: compare (flags only), CMN: compare negative, TST: test bits, TEQ: test equal">
                             <strong>Compare:</strong> CMP, CMN, TST, TEQ
                         </div>
-                        <div class="help-section">
+                        <div class="help-section" data-tooltip="LOAD: get GT from C-List, SAVE: store to C-List, CALL: invoke procedure, RETURN: exit procedure">
                             <strong>Capability:</strong> LOAD, SAVE, CALL, RETURN
                         </div>
-                        <div class="help-section">
+                        <div class="help-section" data-tooltip="Use semicolon to add comments to your code. Everything after ; is ignored.">
                             <strong>Comments:</strong> ; semicolon
                         </div>
                     </div>
