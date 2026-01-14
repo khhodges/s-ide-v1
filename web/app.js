@@ -953,28 +953,57 @@ CMP 2 0       ; Compare 5 < 10: N=1 (negative result)
 ADDI 3 0      ; DR3 = 0
 SUB 3 0       ; DR3 = 0 - 10: N=1, C=0 (borrow)`,
 
-    funcDispatch: `; Function Dispatch with GT Literals
-; DR0 = function selector (GT literal)
-; CALL validates E permission automatically
-; Offset 0 dispatches based on selector
+    callerCode: `; ========== CALLER CODE ==========
+; Prepares GT literal and arguments
+; then invokes CALL to capability
 
-; Setup: Set selector in DR0
-ADDI 0 2      ; DR0 = 2 (select function 2)
-ADDI 1 1      ; DR1 = function ID 1
-ADDI 2 2      ; DR2 = function ID 2
-ADDI 3 3      ; DR3 = function ID 3
+; Step 1: Load GT literal (function ID)
+ADDI 0 2      ; DR0 = GT literal 2 (SELECT_WRITE)
 
-; Dispatch table (offset 0 entry point)
-CMP 0 1       ; Is selector == 1?
-; B EQ 20     ; Branch to func1 if equal
-CMP 0 2       ; Is selector == 2?
-; B EQ 30     ; Branch to func2 if equal
-CMP 0 3       ; Is selector == 3?
-; B EQ 40     ; Branch to func3 if equal
+; Step 2: Prepare arguments
+ADDI 1 100    ; DR1 = arg1 (address)
+ADDI 2 42     ; DR2 = arg2 (value)
 
-; Each function has its own body
-; Meta-machine CALL already validated E
-; No permission check needed here`
+; Step 3: Execute CALL
+; Meta-machine validates E permission
+CALL 0        ; Call via CR0 capability
+
+; -------- CONTEXT SWITCH --------
+; Control transfers to Guard Code
+; Line numbers restart at offset 0
+; ================================
+
+; Step 4: After RETURN
+; DR0 = status (0=OK, 1=ERR)
+; DR1-DR3 = return values
+; DR4-DR7 = GT vars (GT0-GT3)`,
+
+    guardCode: `; ========== GUARD CODE ==========
+; Entry point at offset 0
+; CALL already validated E permission
+; Dispatch based on GT literal in DR0
+
+; Offset 0: Read GT selector
+; (DR0 contains GT literal from caller)
+
+; GT Dispatch Table
+ADDI 3 1      ; DR3 = GT_READ (1)
+ADDI 4 2      ; DR4 = GT_WRITE (2)
+ADDI 5 3      ; DR5 = GT_DELETE (3)
+
+CMP 0 3       ; Is GT == READ?
+; B EQ func_read
+CMP 0 4       ; Is GT == WRITE?
+; B EQ func_write
+CMP 0 5       ; Is GT == DELETE?
+; B EQ func_delete
+
+; ========== RETURN PROTOCOL ==========
+; DR0 = return status (0=OK, 1=ERR)
+; DR1-DR3 = return values
+; DR4-DR7 = GT variables (GT0-GT3)
+; RETURN unwinds to caller context
+RETURN`
 };
 
 function setupCodeEditor() {
