@@ -11,6 +11,94 @@ function generateGoldenKey() {
     return key.match(/.{1,8}/g).join('-');
 }
 
+// ==================== BOOT NAMESPACE ====================
+
+const bootNamespace = {
+    name: "Boot",
+    location: 0x0000,
+    description: "Root abstraction of the PP250 system",
+    clist: [
+        { name: "Kenneth", type: "Thread", ref: "threads.kenneth" },
+        { name: "Matthew", type: "Thread", ref: "threads.matthew" },
+        { name: "Daniel", type: "Thread", ref: "threads.daniel" },
+        { name: "SlideRule", type: "Abstraction", ref: "abstractions.sliderule" },
+        { name: "Abacus", type: "Abstraction", ref: "abstractions.abacus" }
+    ]
+};
+
+const namespaceObjects = [
+    { location: 0x0000, name: "Boot", type: "Abstraction", perms: ["R", "L", "S", "E", "B"], size: 4096 },
+    { location: 0x1000, name: "Kenneth", type: "Thread", perms: ["R", "W", "E"], size: 1024 },
+    { location: 0x1400, name: "Matthew", type: "Thread", perms: ["R", "W", "E"], size: 1024 },
+    { location: 0x1800, name: "Daniel", type: "Thread", perms: ["R", "W", "E"], size: 1024 },
+    { location: 0x2000, name: "SlideRule", type: "Abstraction", perms: ["R", "L", "E"], size: 2048 },
+    { location: 0x2800, name: "Abacus", type: "Abstraction", perms: ["R", "L", "E"], size: 2048 }
+];
+
+const threadCLists = {
+    Kenneth: {
+        name: "Kenneth",
+        description: "User thread with access to math abstractions",
+        clist: [
+            { name: "SlideRule", type: "Abstraction", perms: ["R", "L", "E"] },
+            { name: "Abacus", type: "Abstraction", perms: ["R", "L", "E"] },
+            { name: "LocalData", type: "Data", perms: ["R", "W"] }
+        ]
+    },
+    Matthew: {
+        name: "Matthew",
+        description: "User thread with limited access",
+        clist: [
+            { name: "Abacus", type: "Abstraction", perms: ["R", "E"] },
+            { name: "LocalData", type: "Data", perms: ["R", "W"] }
+        ]
+    },
+    Daniel: {
+        name: "Daniel",
+        description: "User thread with SlideRule access",
+        clist: [
+            { name: "SlideRule", type: "Abstraction", perms: ["R", "E"] },
+            { name: "LocalData", type: "Data", perms: ["R", "W"] }
+        ]
+    }
+};
+
+const abstractionCLists = {
+    SlideRule: {
+        name: "SlideRule",
+        description: "Logarithmic math operations abstraction",
+        clist: [
+            { name: "GT_ADD", type: "Function", perms: ["R", "X", "E"], desc: "Addition" },
+            { name: "GT_SUB", type: "Function", perms: ["R", "X", "E"], desc: "Subtraction" },
+            { name: "GT_MUL", type: "Function", perms: ["R", "X", "E"], desc: "Multiplication" },
+            { name: "GT_DIV", type: "Function", perms: ["R", "X", "E"], desc: "Division" },
+            { name: "GT_LOG", type: "Function", perms: ["R", "X", "E"], desc: "Logarithm" },
+            { name: "GT_EXP", type: "Function", perms: ["R", "X", "E"], desc: "Exponent" },
+            { name: "GT_SQRT", type: "Function", perms: ["R", "X", "E"], desc: "Square Root" },
+            { name: "GT_POW", type: "Function", perms: ["R", "X", "E"], desc: "Power" },
+            { name: "LocalCode", type: "Code", perms: ["R", "X"] },
+            { name: "LocalData", type: "Data", perms: ["R", "W"] }
+        ]
+    },
+    Abacus: {
+        name: "Abacus",
+        description: "Integer arithmetic operations abstraction",
+        clist: [
+            { name: "GT_ADD", type: "Function", perms: ["R", "X", "E"], desc: "Integer Add" },
+            { name: "GT_SUB", type: "Function", perms: ["R", "X", "E"], desc: "Integer Subtract" },
+            { name: "GT_MUL", type: "Function", perms: ["R", "X", "E"], desc: "Integer Multiply" },
+            { name: "GT_DIV", type: "Function", perms: ["R", "X", "E"], desc: "Integer Divide" },
+            { name: "GT_MOD", type: "Function", perms: ["R", "X", "E"], desc: "Modulo" },
+            { name: "GT_ABS", type: "Function", perms: ["R", "X", "E"], desc: "Absolute Value" },
+            { name: "GT_NEG", type: "Function", perms: ["R", "X", "E"], desc: "Negate" },
+            { name: "GT_INC", type: "Function", perms: ["R", "X", "E"], desc: "Increment" },
+            { name: "GT_DEC", type: "Function", perms: ["R", "X", "E"], desc: "Decrement" },
+            { name: "LocalCode", type: "Code", perms: ["R", "X"] },
+            { name: "LocalData", type: "Data", perms: ["R", "W"] }
+        ]
+    }
+};
+
 // ==================== BOOT SEQUENCE ====================
 
 let bootState = {
@@ -41,27 +129,30 @@ const bootSteps = [
     },
     {
         name: "Load Namespace",
-        description: "Setting CR15 with system namespace capability...",
+        description: "Setting CR15 with Boot namespace capability...",
         action: () => {
             simulator.cr15 = {
-                name: "SYSTEM_NS",
-                location: { type: "Literal", name: "system.namespace" },
+                name: "Boot",
+                location: { type: "Local", offset: 0x0000 },
                 perms: ["R", "L", "S", "E", "B"],
                 locked: true,
-                goldenKey: generateGoldenKey()
+                goldenKey: generateGoldenKey(),
+                clist: bootNamespace.clist
             };
+            updateNamespaceDisplay();
         }
     },
     {
         name: "Initialize Thread",
-        description: "Creating user thread capability in CR8...",
+        description: "Creating Kenneth thread capability in CR8...",
         action: () => {
             simulator.cr8 = {
-                name: "USER_MAIN",
+                name: "Kenneth",
                 location: { type: "Local", offset: 0x1000 },
-                perms: ["R", "W"],
+                perms: ["R", "W", "E"],
                 locked: false,
-                goldenKey: generateGoldenKey()
+                goldenKey: generateGoldenKey(),
+                clist: threadCLists.Kenneth.clist
             };
             simulator.contextRegs[6] = {
                 name: "C-LIST",
@@ -70,6 +161,7 @@ const bootSteps = [
                 locked: false,
                 goldenKey: generateGoldenKey()
             };
+            updateNamespaceDisplay();
         }
     }
 ];
@@ -130,7 +222,86 @@ function resetCPU() {
     updateBootDisplay();
     updateDisplay();
     updateCapabilityExplorer();
+    updateNamespaceDisplay();
     log('System reset - all registers cleared', 'info');
+}
+
+function updateNamespaceDisplay() {
+    const nsPanel = document.getElementById('namespaceList');
+    const hierPanel = document.getElementById('hierarchyTree');
+    if (!nsPanel || !hierPanel) return;
+    
+    if (!simulator.cr15 || simulator.cr15.name === 'NULL') {
+        nsPanel.innerHTML = '<div class="ns-empty">Namespace not loaded</div>';
+        hierPanel.innerHTML = '<div class="ns-empty">Boot system to view hierarchy</div>';
+        return;
+    }
+    
+    let nsHtml = '<div class="ns-header">Namespace Objects (CR15: ' + simulator.cr15.name + ')</div>';
+    namespaceObjects.forEach(obj => {
+        const permStr = obj.perms.join('');
+        const typeClass = obj.type.toLowerCase();
+        nsHtml += `
+            <div class="ns-object ns-${typeClass}">
+                <div class="ns-obj-header">
+                    <span class="ns-obj-name">${obj.name}</span>
+                    <span class="ns-obj-type">${obj.type}</span>
+                </div>
+                <div class="ns-obj-details">
+                    <span class="ns-obj-loc">0x${obj.location.toString(16).toUpperCase().padStart(4, '0')}</span>
+                    <span class="ns-obj-size">${obj.size}B</span>
+                    <span class="ns-obj-perms">${permStr}</span>
+                </div>
+            </div>
+        `;
+    });
+    nsPanel.innerHTML = nsHtml;
+    
+    hierPanel.innerHTML = buildHierarchyTree();
+}
+
+function buildHierarchyTree() {
+    let html = '<div class="hier-node hier-root">';
+    html += '<div class="hier-label">Boot</div>';
+    html += '<div class="hier-children">';
+    
+    html += '<div class="hier-group">';
+    html += '<div class="hier-group-label">Threads</div>';
+    ['Kenneth', 'Matthew', 'Daniel'].forEach(name => {
+        const isActive = simulator.cr8 && simulator.cr8.name === name;
+        html += `<div class="hier-node hier-thread ${isActive ? 'hier-active' : ''}">`;
+        html += `<div class="hier-label">${name}</div>`;
+        if (threadCLists[name]) {
+            html += '<div class="hier-clist">';
+            threadCLists[name].clist.forEach(item => {
+                html += `<div class="hier-gt">${item.name}</div>`;
+            });
+            html += '</div>';
+        }
+        html += '</div>';
+    });
+    html += '</div>';
+    
+    html += '<div class="hier-group">';
+    html += '<div class="hier-group-label">Abstractions</div>';
+    ['SlideRule', 'Abacus'].forEach(name => {
+        html += `<div class="hier-node hier-abstraction">`;
+        html += `<div class="hier-label">${name}</div>`;
+        if (abstractionCLists[name]) {
+            html += '<div class="hier-clist">';
+            abstractionCLists[name].clist.forEach(item => {
+                if (item.type === 'Function') {
+                    html += `<div class="hier-gt hier-func">${item.name}</div>`;
+                }
+            });
+            html += '</div>';
+        }
+        html += '</div>';
+    });
+    html += '</div>';
+    
+    html += '</div></div>';
+    return html;
 }
 
 function updateDisplay() {
@@ -891,6 +1062,20 @@ document.addEventListener('DOMContentLoaded', () => {
     updateVizInstruction();
     setupCodeEditor();
 });
+
+// ==================== PARADIGM TABS ====================
+
+function switchParadigm(paradigm) {
+    document.querySelectorAll('.paradigm-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.paradigm-content').forEach(c => c.classList.remove('active'));
+    
+    document.querySelector(`.paradigm-tab[onclick*="${paradigm}"]`).classList.add('active');
+    document.getElementById(`${paradigm}Examples`).classList.add('active');
+    
+    if (paradigm === 'church') {
+        loadExample('callerCode');
+    }
+}
 
 // ==================== ASSEMBLY EDITOR ====================
 

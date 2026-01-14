@@ -1877,6 +1877,58 @@ main {
     gap: 0.3rem;
 }
 
+.paradigm-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1rem;
+}
+
+.paradigm-tab {
+    flex: 1;
+    padding: 0.6rem 0.8rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.paradigm-tab:first-child {
+    border-radius: 4px 0 0 4px;
+}
+
+.paradigm-tab:last-child {
+    border-radius: 0 4px 4px 0;
+    border-left: none;
+}
+
+.paradigm-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.paradigm-tab:hover:not(.active) {
+    background: var(--border);
+}
+
+.paradigm-content {
+    display: none;
+}
+
+.paradigm-content.active {
+    display: block;
+}
+
+.paradigm-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.8rem;
+    font-style: italic;
+}
+
 .btn-example {
     display: block;
     width: 100%;
@@ -2120,5 +2172,202 @@ main {
     
     .flag-display {
         flex-wrap: wrap;
+    }
+}
+
+/* ==================== NAMESPACE BROWSER ==================== */
+
+.namespace-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    min-height: calc(100vh - 200px);
+}
+
+.ns-panel {
+    background: var(--bg-panel);
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid var(--border);
+    overflow-y: auto;
+    max-height: calc(100vh - 200px);
+}
+
+.ns-panel h2 {
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+}
+
+.ns-intro {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+.ns-empty {
+    color: var(--text-secondary);
+    font-style: italic;
+    text-align: center;
+    padding: 2rem;
+}
+
+.ns-header {
+    color: var(--warning);
+    font-weight: bold;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.ns-object {
+    background: var(--bg-input);
+    border-radius: 6px;
+    padding: 0.8rem;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid var(--border);
+    transition: all 0.2s;
+}
+
+.ns-object:hover {
+    border-left-color: var(--accent);
+}
+
+.ns-abstraction {
+    border-left-color: var(--accent);
+}
+
+.ns-thread {
+    border-left-color: var(--success);
+}
+
+.ns-obj-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+.ns-obj-name {
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.ns-obj-type {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    background: var(--bg-dark);
+    color: var(--text-secondary);
+}
+
+.ns-obj-details {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-family: 'Consolas', monospace;
+}
+
+.ns-obj-loc {
+    color: var(--warning);
+}
+
+.ns-obj-perms {
+    color: var(--success);
+}
+
+/* Hierarchy Tree */
+
+.hier-container {
+    padding: 0.5rem;
+}
+
+.hier-node {
+    margin-bottom: 0.5rem;
+}
+
+.hier-root > .hier-label {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--accent);
+    padding: 0.8rem;
+    background: linear-gradient(135deg, var(--bg-input) 0%, var(--bg-dark) 100%);
+    border-radius: 8px;
+    border: 2px solid var(--accent);
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.hier-children {
+    padding-left: 1rem;
+    border-left: 2px dashed var(--border);
+    margin-left: 1rem;
+}
+
+.hier-group {
+    margin-bottom: 1.5rem;
+}
+
+.hier-group-label {
+    color: var(--warning);
+    font-size: 0.85rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    padding: 0.3rem 0.6rem;
+    background: var(--bg-dark);
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.hier-thread > .hier-label,
+.hier-abstraction > .hier-label {
+    padding: 0.6rem 1rem;
+    background: var(--bg-input);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-weight: bold;
+    margin-bottom: 0.3rem;
+}
+
+.hier-thread > .hier-label {
+    color: var(--success);
+    border-left: 3px solid var(--success);
+}
+
+.hier-abstraction > .hier-label {
+    color: var(--accent);
+    border-left: 3px solid var(--accent);
+}
+
+.hier-active > .hier-label {
+    background: rgba(74, 222, 128, 0.15);
+    border-color: var(--success);
+    box-shadow: 0 0 10px rgba(74, 222, 128, 0.2);
+}
+
+.hier-clist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    padding: 0.5rem;
+    padding-left: 1rem;
+}
+
+.hier-gt {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--bg-dark);
+    border-radius: 3px;
+    color: var(--text-secondary);
+}
+
+.hier-func {
+    color: var(--warning);
+    border: 1px solid var(--warning);
+}
+
+@media (max-width: 900px) {
+    .namespace-layout {
+        grid-template-columns: 1fr;
     }
 }

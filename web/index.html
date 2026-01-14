@@ -17,6 +17,7 @@
             <label for="viewSelect">View:</label>
             <select id="viewSelect" onchange="switchView(this.value)">
                 <option value="dashboard">CPU State Dashboard</option>
+                <option value="namespace">Namespace Browser</option>
                 <option value="tutorial">Interactive Tutorial</option>
                 <option value="visualizer">Instruction Visualizer</option>
                 <option value="capabilities">Capability Explorer</option>
@@ -157,6 +158,26 @@
                 <div class="panel output-panel">
                     <h2>Output Log</h2>
                     <div class="output-log" id="outputLog"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="namespace" class="view">
+            <div class="namespace-layout">
+                <div class="ns-panel ns-objects">
+                    <h2>Namespace Objects</h2>
+                    <p class="ns-intro">Flat list of all objects by location and metadata</p>
+                    <div class="ns-list" id="namespaceList">
+                        <div class="ns-empty">Boot system to view namespace</div>
+                    </div>
+                </div>
+                
+                <div class="ns-panel ns-hierarchy">
+                    <h2>C-List Hierarchy</h2>
+                    <p class="ns-intro">Tree structure from C-List connections</p>
+                    <div class="hier-container" id="hierarchyTree">
+                        <div class="ns-empty">Boot system to view hierarchy</div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -568,17 +589,25 @@
                     </div>
                     
                     <div class="editor-examples">
-                        <h3>Example Programs</h3>
-                        <div class="example-list">
-                            <button onclick="loadExample('counter')" class="btn-example">Counter Loop</button>
-                            <button onclick="loadExample('fibonacci')" class="btn-example">Fibonacci</button>
-                            <button onclick="loadExample('multiply')" class="btn-example">Multiply</button>
-                            <button onclick="loadExample('flags')" class="btn-example">Flag Demo</button>
+                        <div class="paradigm-tabs">
+                            <button class="paradigm-tab active" onclick="switchParadigm('church')">CHURCH</button>
+                            <button class="paradigm-tab" onclick="switchParadigm('turing')">TURING</button>
                         </div>
-                        <h3>CALL Protocol</h3>
-                        <div class="example-list">
-                            <button onclick="loadExample('callerCode')" class="btn-example">Caller Code</button>
-                            <button onclick="loadExample('guardCode')" class="btn-example">Guard Code</button>
+                        <div id="churchExamples" class="paradigm-content active">
+                            <p class="paradigm-desc">Capability-based Call/Return Protocol</p>
+                            <div class="example-list">
+                                <button onclick="loadExample('callerCode')" class="btn-example">Caller Code</button>
+                                <button onclick="loadExample('guardCode')" class="btn-example">Guard Code</button>
+                            </div>
+                        </div>
+                        <div id="turingExamples" class="paradigm-content">
+                            <p class="paradigm-desc">Traditional Sequential Code</p>
+                            <div class="example-list">
+                                <button onclick="loadExample('counter')" class="btn-example">Counter Loop</button>
+                                <button onclick="loadExample('fibonacci')" class="btn-example">Fibonacci</button>
+                                <button onclick="loadExample('multiply')" class="btn-example">Multiply</button>
+                                <button onclick="loadExample('flags')" class="btn-example">Flag Demo</button>
+                            </div>
                         </div>
                     </div>
                     

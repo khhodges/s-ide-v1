@@ -165,6 +165,12 @@ Used with conditional branches (e.g., `B EQ 10` branches if equal).
 | SWITCH reg | Set CR15 (Namespace) to capability in CR[reg] |
 
 ## Recent Changes
+- 2026-01-14: Added Namespace Browser with flat object list and C-List hierarchy visualization
+- 2026-01-14: Added Boot Namespace with Boot root abstraction
+- 2026-01-14: Added Thread C-Lists for Kenneth, Matthew, and Daniel
+- 2026-01-14: Added SlideRule abstraction with math function GTs (ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW)
+- 2026-01-14: Added Abacus abstraction with integer math function GTs (ADD, SUB, MUL, DIV, MOD, ABS, NEG, INC, DEC)
+- 2026-01-14: Reorganized Assembly Editor with CHURCH/TURING tabs (CHURCH as default)
 - 2026-01-14: Enhanced Command Input with categorized dropdown for all instructions (Arithmetic, Logic, Shifts, Compare, Branch, Capability Church)
 - 2026-01-14: Added Church Instructions to web simulator (LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH) with permission checking
 - 2026-01-14: Added condition code dropdown for branch instructions (EQ/NE/GT/LT/CS/CC/MI/PL/VS/VC/HI/LS/GE/LE)
