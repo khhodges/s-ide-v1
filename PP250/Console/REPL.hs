@@ -26,6 +26,7 @@ import PP250.Instructions.Call (instrCALL)
 import PP250.Instructions.Return (instrRETURN)
 import PP250.Instructions.Change (instrCHANGE)
 import PP250.Instructions.Switch (instrSWITCH)
+import PP250.Instructions.PermTest (instrTPERM)
 
 -- | Format flags for display
 formatFlags :: ConditionFlags -> String
@@ -247,6 +248,30 @@ runConsole cpu = do
                 putStrLn $ "        Flags: " ++ formatFlags (condFlags newCpu)
                 runConsole newCpu
             _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        -- ================= PERMISSION TEST INSTRUCTION =================
+        
+        ["TPERM", crStr, maskStr] -> case readInt crStr of
+            Just cr -> do
+                let newCpu = instrTPERM cpu cr maskStr Nothing
+                let z = if flagZ (condFlags newCpu) then "PASS" else "FAIL"
+                putStrLn $ "   [OK] TPERM CR" ++ show cr ++ " " ++ maskStr ++ " -> " ++ z
+                putStrLn $ "        Flags: " ++ formatFlags (condFlags newCpu)
+                putStrLn $ "        (Z=1: all perms present, C=1: perms OK, N=1: no perms)"
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Register Index" >> runConsole cpu
+
+        ["TPERM", crStr, maskStr, "BOUNDS", offsetStr] -> case (readInt crStr, readInt offsetStr) of
+            (Just cr, Just offset) -> do
+                let newCpu = instrTPERM cpu cr maskStr (Just offset)
+                let z = if flagZ (condFlags newCpu) then "PASS" else "FAIL"
+                let c = if flagC (condFlags newCpu) then "OK" else "FAIL"
+                let v = if flagV (condFlags newCpu) then "OK" else "FAIL"
+                putStrLn $ "   [OK] TPERM CR" ++ show cr ++ " " ++ maskStr ++ " BOUNDS " ++ show offset ++ " -> " ++ z
+                putStrLn $ "        Perms: " ++ c ++ ", Bounds: " ++ v
+                putStrLn $ "        Flags: " ++ formatFlags (condFlags newCpu)
+                runConsole newCpu
+            _ -> putStrLn "[ERROR] Invalid Arguments" >> runConsole cpu
 
         -- ================= BRANCH INSTRUCTIONS =================
         

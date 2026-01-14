@@ -303,6 +303,40 @@ class PP250Simulator {
                 return `Tested DR${a} XOR DR${b}`;
             }
             
+            case "TPERM": {
+                const [crIdx, mask, boundsOffset] = args;
+                
+                if (crIdx < 0 || (crIdx > 7 && crIdx !== 8 && crIdx !== 15)) {
+                    return `Error: Invalid CR index ${crIdx} (valid: 0-7, 8, 15)`;
+                }
+                
+                const cr = crIdx < 8 ? this.contextRegs[crIdx] : 
+                           crIdx === 8 ? this.cr8 : 
+                           this.cr15;
+                
+                const validPerms = ['R', 'W', 'X', 'L', 'S', 'E', 'B'];
+                const requiredPerms = mask.toUpperCase().split('').filter(p => validPerms.includes(p));
+                const actualPerms = cr.perms || [];
+                
+                const permsOK = requiredPerms.every(p => actualPerms.includes(p));
+                
+                const capSize = cr.name === "NULL" ? 0 : 
+                               (cr.size || (cr.location.type === "Local" ? 4096 : 65536));
+                const boundsOK = boundsOffset === undefined || boundsOffset <= capSize;
+                
+                const allOK = permsOK && boundsOK;
+                const hasAnyPerm = actualPerms.length > 0;
+                
+                this.flags.N = !hasAnyPerm;
+                this.flags.Z = allOK;
+                this.flags.C = permsOK;
+                this.flags.V = boundsOK;
+                
+                const result = allOK ? "PASS" : "FAIL";
+                const boundsStr = boundsOffset !== undefined ? ` BOUNDS ${boundsOffset}` : "";
+                return `TPERM CR${crIdx} ${mask}${boundsStr} -> ${result}`;
+            }
+            
             default:
                 return `Unknown instruction: ${instr}`;
         }

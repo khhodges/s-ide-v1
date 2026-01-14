@@ -15,6 +15,7 @@ PP250/
 │   ├── Logic.hs            # AND, ORR, EOR, BIC, NOT
 │   ├── Shift.hs            # LSL, LSR, ASR, ROR
 │   ├── Compare.hs          # CMP, CMN, TST, TEQ + condition checker
+│   ├── PermTest.hs         # TPERM - permission/bounds validation
 │   ├── Branch.hs           # B, BL with condition codes
 │   ├── Switch.hs           # SWITCH instruction (namespace relocation)
 │   ├── LoadSave.hs         # LOAD, SAVE capability operations
@@ -103,6 +104,23 @@ Then open http://localhost:5000 in your browser.
 | TST a b | Test bits DR[a] AND DR[b] |
 | TEQ a b | Test equal DR[a] XOR DR[b] |
 
+### Permission Test (validates gifted capabilities)
+| Command | Description |
+|---------|-------------|
+| TPERM cr mask | Test if CR[cr] has ALL permissions in mask |
+| TPERM cr mask BOUNDS n | Also verify offset n <= capability size |
+
+**Mask format:** Any combination of `R`, `W`, `X`, `L`, `S`, `E`, `B`
+- Example: `TPERM 0 RW` - Check if CR0 has Read and Write
+- Example: `TPERM 1 LSE BOUNDS 512` - Check CR1 has L+S+E and 512 <= size
+
+**Flags set:**
+- Z=1 if all checks pass (capability is safe to use)
+- Z=0 if any check fails (reject the capability)
+- C=1 if permissions OK, V=1 if bounds OK, N=1 if no permissions
+
+**Purpose:** Validate gifted Golden Tokens aren't malware tricks before trusting them.
+
 ### Branch
 | Command | Description |
 |---------|-------------|
@@ -147,6 +165,7 @@ Used with conditional branches (e.g., `B EQ 10` branches if equal).
 | SWITCH reg | Set CR15 (Namespace) to capability in CR[reg] |
 
 ## Recent Changes
+- 2026-01-14: Added TPERM instruction for validating gifted capabilities (permission mask + optional bounds check)
 - 2026-01-13: Added Capability DNS Editor with MINT function for creating new capabilities with custom size/permissions
 - 2026-01-13: Added Interactive Tutorial with 5 lessons on capability-based security concepts
 - 2026-01-13: Added Assembly Editor with code editor, example programs, and step execution
