@@ -34,19 +34,30 @@
 
     <main id="mainContent">
         <section id="dashboard" class="view active">
+            <div class="boot-sequence-banner">
+                <span class="boot-label">Boot Sequence:</span>
+                <div class="boot-steps-horizontal">
+                    <div class="boot-step" id="bootStep1" data-tooltip="Step 1: Clear all registers and initialize CPU state."><span>1</span> Hardware Reset</div>
+                    <div class="boot-step" id="bootStep2" data-tooltip="Step 2: Load trusted kernel capability into CR7."><span>2</span> Load Nucleus</div>
+                    <div class="boot-step" id="bootStep3" data-tooltip="Step 3: Establish root namespace in CR15 for access control."><span>3</span> Load Namespace</div>
+                    <div class="boot-step" id="bootStep4" data-tooltip="Step 4: Set current thread identity in CR8 (default: Kenneth)."><span>4</span> Initialize Thread</div>
+                </div>
+                <div class="boot-status" id="bootStatus">Press Step to begin</div>
+            </div>
+            
             <div class="dashboard-grid">
                 <div class="panel context-registers">
-                    <h2>Context Registers (Capabilities)</h2>
+                    <h2>Church Registers</h2>
                     <div class="register-list" id="contextRegs"></div>
                 </div>
 
                 <div class="panel data-registers">
-                    <h2>Data Registers (64-bit)</h2>
+                    <h2>Turing Registers</h2>
                     <div class="register-list" id="dataRegs"></div>
                 </div>
 
                 <div class="panel system-state">
-                    <h2>Functional State</h2>
+                    <h2>Lambda Registers</h2>
                     <div class="state-info">
                         <div class="state-row" data-tooltip="Root capability defining the current namespace scope. All access is relative to this.">
                             <span class="label">CR15 (Namespace):</span>
@@ -72,17 +83,6 @@
                             <span class="label">Stack Depth:</span>
                             <span id="stackDepth" class="value">0</span>
                         </div>
-                    </div>
-                    
-                    <div class="boot-sequence">
-                        <h3>Boot Sequence</h3>
-                        <div class="boot-steps">
-                            <div class="boot-step" id="bootStep1" data-tooltip="Step 1: Clear all registers and initialize CPU state."><span>1</span> Hardware Reset</div>
-                            <div class="boot-step" id="bootStep2" data-tooltip="Step 2: Load trusted kernel capability into CR7."><span>2</span> Load Nucleus</div>
-                            <div class="boot-step" id="bootStep3" data-tooltip="Step 3: Establish root namespace in CR15 for access control."><span>3</span> Load Namespace</div>
-                            <div class="boot-step" id="bootStep4" data-tooltip="Step 4: Set current thread identity in CR8 (default: Kenneth)."><span>4</span> Initialize Thread</div>
-                        </div>
-                        <div class="boot-status" id="bootStatus">Press Step to begin boot sequence</div>
                     </div>
                 </div>
 

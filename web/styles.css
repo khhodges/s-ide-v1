@@ -280,6 +280,55 @@ main {
     text-align: center;
 }
 
+.boot-sequence-banner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.8rem 1rem;
+    background: var(--bg-panel);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.boot-label {
+    color: var(--warning);
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.boot-steps-horizontal {
+    display: flex;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.boot-sequence-banner .boot-step {
+    flex: 1;
+    justify-content: center;
+    border-left: none;
+    border-bottom: 3px solid var(--border);
+    font-size: 0.75rem;
+    padding: 0.4rem 0.5rem;
+}
+
+.boot-sequence-banner .boot-step.active {
+    border-bottom-color: var(--accent);
+    border-left: none;
+}
+
+.boot-sequence-banner .boot-step.done {
+    border-bottom-color: var(--success);
+    border-left: none;
+}
+
+.boot-sequence-banner .boot-status {
+    margin-top: 0;
+    padding: 0.4rem 0.8rem;
+    min-width: 120px;
+}
+
 .flag-display-container {
     display: flex;
     flex-direction: column;
