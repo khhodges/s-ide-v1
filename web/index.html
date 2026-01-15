@@ -11,7 +11,7 @@
         <header>
             <h1>CTMM Simulator</h1>
             <nav class="controls">
-                <div class="view-selector" data-tooltip="Switch between different views of the CTMM simulator">
+                <div class="view-selector tooltip-bottom" data-tooltip="Switch between different views of the CTMM simulator">
                     <select id="viewSelect" onchange="switchView(this.value)">
                         <option value="dashboard">Dashboard</option>
                         <option value="namespace">Namespace</option>
@@ -21,9 +21,9 @@
                     </select>
                 </div>
                 <div class="action-buttons">
-                    <button onclick="resetCPU()" class="btn btn-reset" data-tooltip="Clear all registers and reset CPU state">Reset</button>
-                    <button onclick="stepInstruction()" class="btn btn-step" data-tooltip="Execute next instruction or boot step">Step</button>
-                    <button onclick="runBootSequence()" class="btn btn-run" data-tooltip="Run boot sequence to initialize system">Run</button>
+                    <button onclick="resetCPU()" class="btn btn-reset tooltip-bottom" data-tooltip="Clear all registers and reset CPU state">Reset</button>
+                    <button onclick="stepInstruction()" class="btn btn-step tooltip-bottom" data-tooltip="Execute next instruction or boot step">Step</button>
+                    <button onclick="runBootSequence()" class="btn btn-run tooltip-bottom" data-tooltip="Run boot sequence to initialize system">Run</button>
                 </div>
             </nav>
         </header>
