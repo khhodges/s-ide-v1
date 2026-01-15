@@ -3197,3 +3197,22 @@ function attachContextMenuListeners() {
         });
     });
 }
+
+// ==================== TOOLTIP AUTO-FADE ====================
+// Hide tooltips after 5 seconds of mouse inactivity
+let tooltipFadeTimer = null;
+const TOOLTIP_FADE_DELAY = 5000;
+
+function resetTooltipFadeTimer() {
+    document.body.classList.remove('tooltip-hidden');
+    if (tooltipFadeTimer) {
+        clearTimeout(tooltipFadeTimer);
+    }
+    tooltipFadeTimer = setTimeout(() => {
+        document.body.classList.add('tooltip-hidden');
+    }, TOOLTIP_FADE_DELAY);
+}
+
+document.addEventListener('mousemove', resetTooltipFadeTimer);
+document.addEventListener('mouseenter', resetTooltipFadeTimer, true);
+resetTooltipFadeTimer();

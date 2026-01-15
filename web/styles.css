@@ -2898,6 +2898,12 @@ main {
     opacity: 1;
 }
 
+body.tooltip-hidden [data-tooltip]:hover::before,
+body.tooltip-hidden [data-tooltip]:hover::after {
+    visibility: hidden;
+    opacity: 0;
+}
+
 [data-tooltip].tooltip-right::before {
     left: auto;
     right: 0;
