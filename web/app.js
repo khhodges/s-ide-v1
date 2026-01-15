@@ -3281,8 +3281,8 @@ const codeTemplates = {
 ; Fixed-point combinator for recursion via capabilities
 ; Y = λf.(λx.f(x x))(λx.f(x x))
 ; ================================================
-; CR6 = Nodal C-List (where GTs are stored)
-; CR5 = Thread context
+; CR6 = Nodal C-List (GTs for current node)
+; CR5 = Thread C-List (thread parameters, constants, C/D objects)
 
 ; Setup: Load the self-referencing GT from C-List (CR6)
 LOAD 0 6 0        ; CR0 = GT to self from nodal C-List
@@ -3311,7 +3311,8 @@ MOV 0 0           ; NOP - handle error`,
 ; fact(n) = n * fact(n-1), fact(0) = 1
 ; Input: DR0 = n, Output: DR0 = n!
 ; ================================================
-; CR6 = Nodal C-List (GTs stored here)
+; CR6 = Nodal C-List (GTs for current node)
+; CR5 = Thread C-List (thread parameters, constants, C/D objects)
 
 ; Base case check
 CMP 0 0           ; Compare DR0 with 0
@@ -3363,8 +3364,8 @@ RETURN            ; Return with error`,
 ; TRUE  = λx.λy.x  (select first)
 ; FALSE = λx.λy.y  (select second)
 ; ================================================
-; CR6 = Nodal C-List (GTs stored here)
-; CR5 = Thread context
+; CR6 = Nodal C-List (GTs for current node)
+; CR5 = Thread C-List (thread parameters, constants, C/D objects)
 
 ; TRUE: Returns first argument (CR1)
 true:
@@ -3398,8 +3399,8 @@ RETURN`,
 ; 1 = λf.λx.f x         (apply f once)
 ; n = λf.λx.f^n x       (apply f n times)
 ; ================================================
-; CR6 = Nodal C-List (GTs stored here)
-; CR5 = Thread context
+; CR6 = Nodal C-List (GTs for current node)
+; CR5 = Thread C-List (thread parameters, constants, C/D objects)
 
 ; ZERO: λf.λx.x (identity on x)
 zero:
@@ -3442,7 +3443,8 @@ RETURN`,
 ; FST  = λp. p TRUE
 ; SND  = λp. p FALSE
 ; ================================================
-; CR6 = Nodal C-List (GTs stored here)
+; CR6 = Nodal C-List (GTs for current node)
+; CR5 = Thread C-List (thread parameters, constants, C/D objects)
 
 ; PAIR: Create a pair from two values
 ; Input: CR1=first, CR2=second
@@ -3480,8 +3482,8 @@ RETURN`,
 ; Ω = ω ω = (λx.x x)(λx.x x) -> infinite loop
 ; WARNING: This will not terminate!
 ; ================================================
-; CR6 = Nodal C-List (GTs stored here)
-; CR5 = Thread context
+; CR6 = Nodal C-List (GTs for current node)
+; CR5 = Thread C-List (thread parameters, constants, C/D objects)
 
 ; Self-application: λx.x x
 omega:
