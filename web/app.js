@@ -2106,6 +2106,19 @@ function dnsLog(message, type = 'info') {
 function saveCR7() {
     const name = document.getElementById('cr7Name').value.trim() || 'NUCLEUS';
     const locationStr = document.getElementById('cr7Location').value.trim();
+    const errorEl = document.getElementById('cr7Error');
+    
+    if (!name) {
+        errorEl.textContent = 'Error: Name required';
+        errorEl.style.display = 'block';
+        return;
+    }
+    if (!locationStr) {
+        errorEl.textContent = 'Error: Location required';
+        errorEl.style.display = 'block';
+        return;
+    }
+    errorEl.style.display = 'none';
     
     let location;
     if (locationStr.startsWith('local:')) {
@@ -2115,14 +2128,7 @@ function saveCR7() {
         location = { type: 'Literal', name: locationStr || 'kernel.code' };
     }
     
-    const perms = [];
-    if (document.getElementById('cr7PermR').checked) perms.push('R');
-    if (document.getElementById('cr7PermW').checked) perms.push('W');
-    if (document.getElementById('cr7PermX').checked) perms.push('X');
-    if (document.getElementById('cr7PermL').checked) perms.push('L');
-    if (document.getElementById('cr7PermS').checked) perms.push('S');
-    if (document.getElementById('cr7PermE').checked) perms.push('E');
-    if (document.getElementById('cr7PermB').checked) perms.push('B');
+    const perms = ['X', 'R'];
     
     const existingKey = simulator.contextRegs[7].goldenKey;
     const goldenKey = existingKey || generateGoldenKey();
