@@ -1,15 +1,15 @@
 -- =========================================================================
--- PP250.Instructions.Switch: Namespace Relocation
+-- CTMM.Instructions.Switch: Namespace Relocation
 -- =========================================================================
 -- The SWITCH instruction updates CR15 (Namespace Register), defining
 -- the "Universe" of accessible objects for the process.
 
-module PP250.Instructions.Switch (
+module CTMM.Instructions.Switch (
     instrSWITCH
 ) where
 
 import qualified Data.Map as Map
-import PP250.Core.Types
+import CTMM.Core.Types
 
 instrSWITCH :: CPUState -> Int -> Either String CPUState
 instrSWITCH cpu srcIdx = 

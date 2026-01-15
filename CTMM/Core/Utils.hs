@@ -1,10 +1,10 @@
 -- =========================================================================
--- PP250.Core.Utils: Utility Functions for the PP250 Meta-Machine
+-- CTMM.Core.Utils: Utility Functions for the CTMM Meta-Machine
 -- =========================================================================
 -- This module provides shared utility functions used across the simulator,
 -- including string formatting, permission display, and key locking.
 
-module PP250.Core.Utils (
+module CTMM.Core.Utils (
     pad,
     padNoTrunc,
     permString,
@@ -14,7 +14,7 @@ module PP250.Core.Utils (
     readInt
 ) where
 
-import PP250.Core.Types
+import CTMM.Core.Types
 import Text.Read (readMaybe)
 
 -- | Pad a string to exactly n characters, truncating if too long.

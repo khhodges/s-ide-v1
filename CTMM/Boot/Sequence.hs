@@ -1,9 +1,9 @@
 -- =========================================================================
--- PP250.Boot.Sequence: System Boot Sequence
+-- CTMM.Boot.Sequence: System Boot Sequence
 -- =========================================================================
--- Implements the 4-step boot sequence that initializes the PP250 system.
+-- Implements the 4-step boot sequence that initializes the CTMM system.
 
-module PP250.Boot.Sequence (
+module CTMM.Boot.Sequence (
     bootStep1_HardwareReset,
     bootStep2_LoadNamespace,
     bootStep3_LoadThread,
@@ -11,8 +11,8 @@ module PP250.Boot.Sequence (
 ) where
 
 import qualified Data.Map as Map
-import PP250.Core.Types
-import PP250.Console.HUD (displayHUD)
+import CTMM.Core.Types
+import CTMM.Console.HUD (displayHUD)
 
 -- | BOOT STEP 1: Hardware Reset
 -- Clears all registers to their null/zero state.

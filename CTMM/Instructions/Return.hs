@@ -1,14 +1,14 @@
 -- =========================================================================
--- PP250.Instructions.Return: Procedure Exit
+-- CTMM.Instructions.Return: Procedure Exit
 -- =========================================================================
 -- Implements the RETURN instruction for capability-protected procedure return.
 
-module PP250.Instructions.Return (
+module CTMM.Instructions.Return (
     instrRETURN
 ) where
 
 import qualified Data.Map as Map
-import PP250.Core.Types
+import CTMM.Core.Types
 
 -- | RETURN Instruction: Exit from a Procedure
 -- Implements capability-protected procedure return:

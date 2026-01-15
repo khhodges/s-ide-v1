@@ -1,11 +1,11 @@
 -- =========================================================================
--- PP250.Core.Types: Shared Data Types for the PP250 Meta-Machine
+-- CTMM.Core.Types: Shared Data Types for the CTMM Meta-Machine
 -- =========================================================================
--- This module defines all core data structures used throughout the PP250
+-- This module defines all core data structures used throughout the CTMM
 -- simulator. These types model the capability-based architecture where
 -- all access is controlled through "Golden Tokens" (capability keys).
 
-module PP250.Core.Types (
+module CTMM.Core.Types (
     Location(..),
     Permission(..),
     ContextRegister(..),
@@ -41,7 +41,7 @@ data Permission =
     deriving (Show, Eq)
 
 -- | ContextRegister represents a "Golden Token" - the fundamental
--- capability key in the PP250 system. Each register contains:
+-- capability key in the CTMM system. Each register contains:
 --   cachedLoc   - The memory location this capability points to
 --   cachedName  - A human-readable name for the referenced object
 --   activePerms - List of permissions granted by this capability
@@ -90,7 +90,7 @@ data StackFrame = Frame {
     savedOffset :: Int
 } deriving (Show)
 
--- | CPUState is the complete state of the PP250 processor at any moment.
+-- | CPUState is the complete state of the CTMM processor at any moment.
 -- This is the central data structure passed through all operations:
 --   c_regs      - Working set of 8 context registers (CR0-CR7)
 --   d_regs      - 8 data registers for numeric computation (DR0-DR7)

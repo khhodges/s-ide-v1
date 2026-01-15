@@ -1,10 +1,10 @@
 -- =========================================================================
--- PP250.Instructions.Arithmetic: ARM-style Arithmetic Operations
+-- CTMM.Instructions.Arithmetic: ARM-style Arithmetic Operations
 -- =========================================================================
 -- Implements arithmetic instructions with flag updates matching ARM semantics.
 -- All operations update NZCV condition flags.
 
-module PP250.Instructions.Arithmetic (
+module CTMM.Instructions.Arithmetic (
     instrADD,
     instrSUB,
     instrMUL,
@@ -19,7 +19,7 @@ module PP250.Instructions.Arithmetic (
 import qualified Data.Map as Map
 import Data.Word (Word64)
 import Data.Bits (testBit, complement)
-import PP250.Core.Types
+import CTMM.Core.Types
 
 -- | Compute ARM-style NZCV condition flags for a result.
 computeFlags :: String -> Word64 -> Word64 -> Word64 -> ConditionFlags

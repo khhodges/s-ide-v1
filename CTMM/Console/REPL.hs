@@ -1,10 +1,10 @@
 -- =========================================================================
--- PP250.Console.REPL: Interactive Console / Read-Eval-Print Loop
+-- CTMM.Console.REPL: Interactive Console / Read-Eval-Print Loop
 -- =========================================================================
--- Provides the interactive command-line interface to the PP250 simulator.
+-- Provides the interactive command-line interface to the CTMM simulator.
 -- Supports full ARM-style instruction set.
 
-module PP250.Console.REPL (
+module CTMM.Console.REPL (
     runConsole
 ) where
 
@@ -13,20 +13,20 @@ import Data.Word (Word64)
 import System.IO (hFlush, stdout)
 import Text.Printf (printf)
 
-import PP250.Core.Types
-import PP250.Core.Utils
-import PP250.Console.HUD (displayHUD, showHelp)
-import PP250.Instructions.Arithmetic
-import PP250.Instructions.Logic
-import PP250.Instructions.Shift
-import PP250.Instructions.Compare
-import PP250.Instructions.Branch
-import PP250.Instructions.LoadSave (instrLOAD, instrSAVE)
-import PP250.Instructions.Call (instrCALL)
-import PP250.Instructions.Return (instrRETURN)
-import PP250.Instructions.Change (instrCHANGE)
-import PP250.Instructions.Switch (instrSWITCH)
-import PP250.Instructions.PermTest (instrTPERM)
+import CTMM.Core.Types
+import CTMM.Core.Utils
+import CTMM.Console.HUD (displayHUD, showHelp)
+import CTMM.Instructions.Arithmetic
+import CTMM.Instructions.Logic
+import CTMM.Instructions.Shift
+import CTMM.Instructions.Compare
+import CTMM.Instructions.Branch
+import CTMM.Instructions.LoadSave (instrLOAD, instrSAVE)
+import CTMM.Instructions.Call (instrCALL)
+import CTMM.Instructions.Return (instrRETURN)
+import CTMM.Instructions.Change (instrCHANGE)
+import CTMM.Instructions.Switch (instrSWITCH)
+import CTMM.Instructions.PermTest (instrTPERM)
 
 -- | Format flags for display
 formatFlags :: ConditionFlags -> String

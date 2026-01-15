@@ -1,10 +1,10 @@
 -- =========================================================================
--- PP250.Instructions.Compare: ARM-style Compare and Test Operations
+-- CTMM.Instructions.Compare: ARM-style Compare and Test Operations
 -- =========================================================================
 -- Implements comparison instructions that only set flags (no result stored).
 -- CMP, CMN, TST, TEQ operations for conditional execution support.
 
-module PP250.Instructions.Compare (
+module CTMM.Instructions.Compare (
     instrCMP,
     instrCMN,
     instrTST,
@@ -15,7 +15,7 @@ module PP250.Instructions.Compare (
 import qualified Data.Map as Map
 import Data.Word (Word64)
 import Data.Bits ((.&.), xor, testBit)
-import PP250.Core.Types
+import CTMM.Core.Types
 
 -- | Helper for signed overflow detection in subtraction
 signedOverflowSub :: Word64 -> Word64 -> Word64 -> Bool

@@ -12,22 +12,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Run Haskell"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "CTMM Web Simulator"
-
-[[workflows.workflow]]
-name = "Run Haskell"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "console"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "runghc -i. metaMachine.hs"
 
 [[workflows.workflow]]
 name = "CTMM Web Simulator"

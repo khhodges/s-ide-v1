@@ -1,15 +1,15 @@
 -- =========================================================================
--- PP250.Instructions.LoadSave: Capability Load and Save Operations
+-- CTMM.Instructions.LoadSave: Capability Load and Save Operations
 -- =========================================================================
 -- Implements LOAD and SAVE instructions for capability manipulation.
 
-module PP250.Instructions.LoadSave (
+module CTMM.Instructions.LoadSave (
     instrLOAD,
     instrSAVE
 ) where
 
 import qualified Data.Map as Map
-import PP250.Core.Types
+import CTMM.Core.Types
 
 -- | LOAD Instruction: Load a Capability
 -- Loads a new capability into a context register. Requires PermLoad

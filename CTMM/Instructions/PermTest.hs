@@ -1,15 +1,15 @@
 -- =========================================================================
--- PP250.Instructions.PermTest: Permission Test Instruction
+-- CTMM.Instructions.PermTest: Permission Test Instruction
 -- =========================================================================
 -- Implements TPERM for testing capability permissions and bounds.
 -- Primary purpose: Validate gifted GTs aren't malware tricks.
 
-module PP250.Instructions.PermTest (
+module CTMM.Instructions.PermTest (
     instrTPERM
 ) where
 
 import qualified Data.Map as Map
-import PP250.Core.Types
+import CTMM.Core.Types
 
 -- | Parse a permission mask string into a list of Permission values
 -- Mask is a string like "RW", "LSE", "RWXLSEB"

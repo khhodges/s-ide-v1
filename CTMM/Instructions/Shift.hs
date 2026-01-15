@@ -1,11 +1,11 @@
 -- =========================================================================
--- PP250.Instructions.Shift: ARM-style Shift and Rotate Operations
+-- CTMM.Instructions.Shift: ARM-style Shift and Rotate Operations
 -- =========================================================================
 -- Implements bit shift and rotate instructions.
 -- LSL (Logical Shift Left), LSR (Logical Shift Right),
 -- ASR (Arithmetic Shift Right), ROR (Rotate Right)
 
-module PP250.Instructions.Shift (
+module CTMM.Instructions.Shift (
     instrLSL,
     instrLSR,
     instrASR,
@@ -15,7 +15,7 @@ module PP250.Instructions.Shift (
 import qualified Data.Map as Map
 import Data.Word (Word64)
 import Data.Bits (shiftL, shiftR, testBit, (.|.), (.&.), complement)
-import PP250.Core.Types
+import CTMM.Core.Types
 
 -- | LSL: Logical Shift Left - DR[dest] = DR[src] << amount
 -- Shifts bits left, fills with zeros on right

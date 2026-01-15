@@ -6,7 +6,7 @@ A simulator for the CTMM (Church-Turing Meta-Machine) capability-based architect
 ## Project Structure
 ```
 metaMachine.hs              # Main entry point
-PP250/
+CTMM/
 ├── Core/
 │   ├── Types.hs            # Shared data types (CPUState, ContextRegister, etc.)
 │   └── Utils.hs            # Utility functions (formatting, key operations)

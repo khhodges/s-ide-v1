@@ -1,22 +1,22 @@
 -- =========================================================================
--- PP250.Console.HUD: Head-Up Display / System Telemetry
+-- CTMM.Console.HUD: Head-Up Display / System Telemetry
 -- =========================================================================
 -- Provides the visual display of CPU state for debugging and monitoring.
 
-module PP250.Console.HUD (
+module CTMM.Console.HUD (
     displayHUD,
     showHelp
 ) where
 
 import qualified Data.Map as Map
 import Text.Printf (printf)
-import PP250.Core.Types
-import PP250.Core.Utils
+import CTMM.Core.Types
+import CTMM.Core.Utils
 
 -- | Display the complete system telemetry HUD.
 displayHUD :: CPUState -> IO ()
 displayHUD cpu = do
-    putStrLn "\n========================== PP250 SYSTEM TELEMETRY =========================="
+    putStrLn "\n========================== CTMM SYSTEM TELEMETRY =========================="
     putStrLn "|  CONTEXT REGISTERS (WORKING SET)                                         |"
     putStrLn "+-----+---------------------+-----------------------+---------+-------------+"
     putStrLn "| ID  | REGISTER ROLE       | OBJECT NAME           | RWX LSE | LOCATION    |"
@@ -68,7 +68,7 @@ printCR cpu i = do
 -- | Display the command reference help screen with full ARM instruction set.
 showHelp :: IO ()
 showHelp = do
-    putStrLn "\n============================= PP250 COMMAND REFERENCE =============================="
+    putStrLn "\n============================= CTMM COMMAND REFERENCE =============================="
     putStrLn ""
     putStrLn "  SYSTEM COMMANDS"
     putStrLn "  ---------------"

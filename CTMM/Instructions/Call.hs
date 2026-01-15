@@ -1,21 +1,21 @@
 -- =========================================================================
--- PP250.Instructions.Call: Procedure Entry
+-- CTMM.Instructions.Call: Procedure Entry
 -- =========================================================================
 -- Implements the CALL instruction for capability-protected procedure entry.
 
-module PP250.Instructions.Call (
+module CTMM.Instructions.Call (
     instrCALL
 ) where
 
 import qualified Data.Map as Map
-import PP250.Core.Types
+import CTMM.Core.Types
 
 -- | CALL Instruction: Enter a Procedure / Lambda Abstraction
 -- Implements capability-protected procedure entry:
 --   1. Checks for 'Enter' permission on target capability
 --   2. Pushes current context (CR6, CR7, IP) onto the link stack
 --   3. Enters target: Target becomes CR6, new code loaded into CR7
--- This is how the PP250 implements safe procedure calls - the caller
+-- This is how the CTMM implements safe procedure calls - the caller
 -- cannot enter code without explicit Enter permission granted by the callee.
 instrCALL :: CPUState -> Int -> Either String CPUState
 instrCALL cpu targetIdx = 

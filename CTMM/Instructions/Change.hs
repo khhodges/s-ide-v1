@@ -1,19 +1,19 @@
 -- =========================================================================
--- PP250.Instructions.Change: Process/Thread Context Switch
+-- CTMM.Instructions.Change: Process/Thread Context Switch
 -- =========================================================================
 -- Implements the CHANGE instruction for capability-protected context switching.
 
-module PP250.Instructions.Change (
+module CTMM.Instructions.Change (
     instrCHANGE
 ) where
 
 import qualified Data.Map as Map
-import PP250.Core.Types
-import PP250.Core.Utils (storeKey, fetchKey)
+import CTMM.Core.Types
+import CTMM.Core.Utils (storeKey, fetchKey)
 
 -- | CHANGE Instruction: Context Switch / Process Switch
 -- Saves the current thread's state and restores a different thread
--- specified by the offset into the C-List. This is how the PP250
+-- specified by the offset into the C-List. This is how the CTMM
 -- implements multitasking - by swapping complete execution contexts.
 -- Returns Either an error message (Left) or the new CPU state (Right).
 instrCHANGE :: CPUState -> Int -> IO (Either String CPUState)

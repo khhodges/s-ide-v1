@@ -1,18 +1,18 @@
 -- =========================================================================
--- PP250.Instructions.Branch: ARM-style Branch Operations
+-- CTMM.Instructions.Branch: ARM-style Branch Operations
 -- =========================================================================
 -- Implements conditional and unconditional branching.
 -- B (Branch), BL (Branch with Link) with condition code support.
 
-module PP250.Instructions.Branch (
+module CTMM.Instructions.Branch (
     instrB,
     instrBL
 ) where
 
 import qualified Data.Map as Map
 import Data.Word (Word64)
-import PP250.Core.Types
-import PP250.Instructions.Compare (checkCondition)
+import CTMM.Core.Types
+import CTMM.Instructions.Compare (checkCondition)
 
 -- | B: Branch - Jump to a new instruction offset
 -- Can be conditional based on NZCV flags

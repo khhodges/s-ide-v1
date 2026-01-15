@@ -1,10 +1,10 @@
 -- =========================================================================
--- PP250.Instructions.Logic: ARM-style Logical Operations
+-- CTMM.Instructions.Logic: ARM-style Logical Operations
 -- =========================================================================
 -- Implements bitwise logic instructions with flag updates.
 -- AND, ORR (OR), EOR (XOR), BIC (bit clear), NOT operations.
 
-module PP250.Instructions.Logic (
+module CTMM.Instructions.Logic (
     instrAND,
     instrORR,
     instrEOR,
@@ -15,7 +15,7 @@ module PP250.Instructions.Logic (
 import qualified Data.Map as Map
 import Data.Word (Word64)
 import Data.Bits ((.&.), (.|.), xor, complement)
-import PP250.Core.Types
+import CTMM.Core.Types
 
 -- | Helper to compute flags for logical operations
 -- Logical ops set N and Z, preserve C and V
