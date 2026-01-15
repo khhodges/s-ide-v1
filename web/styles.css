@@ -3076,8 +3076,28 @@ body.tooltip-hidden [data-tooltip]:hover::after {
 /* ==================== CODE EDITOR CONTEXT MENU ==================== */
 
 .code-context-menu {
-    min-width: 200px;
+    min-width: 160px;
     overflow: visible;
+}
+
+.code-context-menu .context-menu-header {
+    padding: 4px 8px !important;
+    font-size: 10px !important;
+}
+
+.code-context-menu > .context-menu-item {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    gap: 6px !important;
+}
+
+.code-context-menu .submenu .context-menu-item {
+    padding: 3px 8px !important;
+    font-size: 10px !important;
+}
+
+.code-context-menu .context-menu-separator {
+    margin: 2px 0 !important;
 }
 
 .context-menu-header {
