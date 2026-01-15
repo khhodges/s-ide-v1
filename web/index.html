@@ -7,30 +7,27 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>
-        <h1>Church-Turing Meta-Machine (CTMM) Simulator</h1>
-        <p class="subtitle">Failsafe Capability-Based Security Architecture</p>
-    </header>
-
-    <nav class="controls">
-        <div class="view-selector">
-            <label for="viewSelect">View:</label>
-            <select id="viewSelect" onchange="switchView(this.value)">
-                <option value="dashboard">CPU State Dashboard</option>
-                <option value="namespace">Namespace Browser</option>
-                <option value="tutorial">Interactive Tutorial</option>
-                <option value="visualizer">Instruction Visualizer</option>
-                <option value="capabilities">Capability Explorer</option>
-                <option value="dnseditor">Capability DNS Editor</option>
-                <option value="editor">Assembly Editor</option>
-            </select>
-        </div>
-        <div class="action-buttons">
-            <button onclick="resetCPU()" class="btn btn-reset" data-tooltip="Reset CPU to initial state. Clears all registers and flags.">Reset</button>
-            <button onclick="stepInstruction()" class="btn btn-step" data-tooltip="Execute one instruction and pause.">Step</button>
-            <button onclick="runBootSequence()" class="btn btn-run" data-tooltip="Execute boot sequence or run instructions continuously.">Run</button>
-        </div>
-    </nav>
+    <div class="fixed-toolbar">
+        <header>
+            <h1>CTMM Simulator</h1>
+            <nav class="controls">
+                <div class="view-selector">
+                    <select id="viewSelect" onchange="switchView(this.value)">
+                        <option value="dashboard">Dashboard</option>
+                        <option value="namespace">Namespace</option>
+                        <option value="editor">Assembly</option>
+                        <option value="capabilities">Capabilities</option>
+                        <option value="tutorial">Tutorial</option>
+                    </select>
+                </div>
+                <div class="action-buttons">
+                    <button onclick="resetCPU()" class="btn btn-reset">Reset</button>
+                    <button onclick="stepInstruction()" class="btn btn-step">Step</button>
+                    <button onclick="runBootSequence()" class="btn btn-run">Run</button>
+                </div>
+            </nav>
+        </header>
+    </div>
 
     <main id="mainContent">
         <section id="dashboard" class="view active">
@@ -222,37 +219,19 @@
 
         <section id="tutorial" class="view">
             <div class="tutorial-layout">
-                <div class="tutorial-sidebar">
-                    <h2>Lessons</h2>
-                    <div class="lesson-list">
-                        <button class="lesson-btn active" onclick="loadLesson(0)" data-tooltip="Learn what Golden Tokens are and how they control access.">
-                            <span class="lesson-num">1</span>
-                            <span class="lesson-title">Introduction to Capabilities</span>
-                        </button>
-                        <button class="lesson-btn" onclick="loadLesson(1)" data-tooltip="Understand the 4-step boot sequence that initializes the system.">
-                            <span class="lesson-num">2</span>
-                            <span class="lesson-title">The Boot Sequence</span>
-                        </button>
-                        <button class="lesson-btn" onclick="loadLesson(2)" data-tooltip="Learn the difference between capability registers and data registers.">
-                            <span class="lesson-num">3</span>
-                            <span class="lesson-title">Context & Data Registers</span>
-                        </button>
-                        <button class="lesson-btn" onclick="loadLesson(3)" data-tooltip="Master LOAD, SAVE, CALL, and RETURN instructions.">
-                            <span class="lesson-num">4</span>
-                            <span class="lesson-title">Capability Operations</span>
-                        </button>
-                        <button class="lesson-btn" onclick="loadLesson(4)" data-tooltip="Understand how capabilities enforce security boundaries.">
-                            <span class="lesson-num">5</span>
-                            <span class="lesson-title">Security Boundaries</span>
-                        </button>
-                    </div>
-                    
-                    <div class="tutorial-progress">
-                        <h3>Progress</h3>
-                        <div class="progress-bar">
+                <div class="tutorial-nav-bar">
+                    <select id="lessonSelect" onchange="loadLesson(this.selectedIndex)">
+                        <option value="0">1. Capabilities</option>
+                        <option value="1">2. Boot Sequence</option>
+                        <option value="2">3. Registers</option>
+                        <option value="3">4. Operations</option>
+                        <option value="4">5. Security</option>
+                    </select>
+                    <div class="progress-mini">
+                        <div class="progress-bar-mini">
                             <div class="progress-fill" id="tutorialProgress" style="width: 0%"></div>
                         </div>
-                        <span class="progress-text" id="progressText">0 / 5 completed</span>
+                        <span id="progressText">0/5</span>
                     </div>
                 </div>
                 
@@ -376,29 +355,33 @@
 
         <section id="capabilities" class="view">
             <div class="capabilities-layout">
-                <div class="cap-sidebar">
-                    <h2>Golden Tokens</h2>
-                    <p class="cap-intro">192-bit capability keys that grant access rights</p>
-                    
-                    <div class="cap-section">
-                        <h3>System Registers</h3>
-                        <div class="token-list" id="systemTokens"></div>
-                    </div>
-                    
-                    <div class="cap-section">
-                        <h3>Context Registers (CR0-CR7)</h3>
-                        <div class="token-list" id="contextTokens"></div>
-                    </div>
-                    
-                    <div class="cap-section">
-                        <h3>C-List (Scope Capabilities)</h3>
-                        <div class="token-list" id="clistTokens"></div>
-                    </div>
-                    
-                    <button onclick="createSampleCapabilities()" class="btn btn-create" data-tooltip="Load example Golden Tokens to explore capability structure.">Load Sample Capabilities</button>
+                <div class="cap-nav-bar">
+                    <select id="capViewSelect" onchange="switchCapView(this.value)">
+                        <option value="system">System Registers</option>
+                        <option value="context">Context (CR0-CR7)</option>
+                        <option value="clist">C-List</option>
+                    </select>
+                    <button onclick="createSampleCapabilities()" class="btn btn-step">Load Samples</button>
                 </div>
-                
-                <div class="cap-main">
+                <div class="cap-content-area">
+                    <div class="cap-sidebar">
+                        <div class="cap-section" id="capSystemSection">
+                            <h3>System</h3>
+                            <div class="token-list" id="systemTokens"></div>
+                        </div>
+                        
+                        <div class="cap-section" id="capContextSection">
+                            <h3>Context</h3>
+                            <div class="token-list" id="contextTokens"></div>
+                        </div>
+                        
+                        <div class="cap-section" id="capClistSection">
+                            <h3>C-List</h3>
+                            <div class="token-list" id="clistTokens"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="cap-main">
                     <div class="cap-detail-panel" id="capDetailPanel">
                         <h2>Select a Golden Token</h2>
                         <p class="cap-hint">Click on any capability token to view its details</p>
@@ -458,11 +441,12 @@
                             </div>
                         </div>
                     </div>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <section id="dnseditor" class="view">
+        <section id="dnseditor" class="view" style="display:none;">
             <div class="dns-layout">
                 <div class="dns-panel dns-mint">
                     <h2>MINT New Capability</h2>

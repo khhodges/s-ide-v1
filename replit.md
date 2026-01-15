@@ -191,6 +191,10 @@ Used with conditional branches (e.g., `B EQ 10` branches if equal).
 | SWITCH reg | Set CR15 (Namespace) to capability in CR[reg] |
 
 ## Recent Changes
+- 2026-01-15: Simplified UI with fixed top toolbar (non-scrolling) and minimal sidebar
+- 2026-01-15: Consolidated view selector and action buttons into single header row
+- 2026-01-15: Removed Visualizer and DNS Editor from main nav (streamlined to 5 views)
+- 2026-01-15: Tutorial now uses dropdown for lesson selection instead of sidebar list
 - 2026-01-15: Added IEEE 754 Binary64 compliance to all SlideRule (Float) functions
 - 2026-01-15: Added NaN propagation, Infinity handling, and FPSR flag documentation
 - 2026-01-15: Added special case handling (0/0=NaN, Inf-Inf=NaN, 0*Inf=NaN, etc.)

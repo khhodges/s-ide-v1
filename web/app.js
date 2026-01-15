@@ -3,6 +3,20 @@ function switchView(viewId) {
     document.getElementById(viewId).classList.add('active');
 }
 
+function switchCapView(section) {
+    const sections = {
+        system: 'capSystemSection',
+        context: 'capContextSection',
+        clist: 'capClistSection'
+    };
+    Object.values(sections).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    const target = document.getElementById(sections[section]);
+    if (target) target.style.display = 'block';
+}
+
 function generateGoldenKey() {
     let key = '';
     for (let i = 0; i < 48; i++) {
