@@ -3275,6 +3275,87 @@ function hideCodeContextMenu() {
     document.getElementById('codeContextMenu').classList.remove('visible');
 }
 
+const codeTemplates = {
+    'ycombinator': `; ================================================
+; Y-COMBINATOR using Golden Tokens
+; Fixed-point combinator for recursion via capabilities
+; Y = λf.(λx.f(x x))(λx.f(x x))
+; ================================================
+
+; Setup: Load the self-referencing GT into CR0
+LOAD 0 15 0       ; CR0 = GT to self (the function to recurse)
+
+; Step 1: Create inner lambda (λx.f(x x))
+; The GT in CR0 points to code that will call itself
+TPERM 0 X         ; Verify CR0 has Execute permission
+B NE error        ; Branch to error if not executable
+
+; Step 2: Apply f to (x x) - self-application via CALL
+CALL 0            ; Execute the GT - this is (x x)
+
+; Step 3: The called function receives its own GT
+; enabling recursion without explicit self-reference
+; The callee can CALL CR0 to recurse
+
+; On return, result is in DR0
+RETURN            ; Return from Y-combinator application
+
+error:
+; Security trap - invalid capability
+MOV 0 0           ; NOP - handle error`,
+
+    'factorial': `; ================================================
+; FACTORIAL using recursive GT calls
+; fact(n) = n * fact(n-1), fact(0) = 1
+; Input: DR0 = n, Output: DR0 = n!
+; ================================================
+
+; Base case check
+CMP 0 0           ; Compare DR0 with 0
+B EQ base_case    ; If n == 0, return 1
+
+; Recursive case: n * fact(n-1)
+MOV 1 0           ; DR1 = n (save for multiplication)
+SUBI 0 1          ; DR0 = n - 1
+
+; Load recursive GT and call
+LOAD 0 15 0       ; CR0 = GT to factorial function
+TPERM 0 X         ; Verify execute permission
+CALL 0            ; Recurse: DR0 = fact(n-1)
+
+; Multiply: n * fact(n-1)
+MUL 0 1           ; DR0 = DR0 * DR1 = fact(n-1) * n
+RETURN
+
+base_case:
+ADDI 0 1          ; DR0 = 1 (0! = 1)
+RETURN`,
+
+    'capcheck': `; ================================================
+; CAPABILITY VALIDATION PATTERN
+; Safely check a gifted GT before use
+; ================================================
+
+; Step 1: Test required permissions (RWX)
+TPERM 0 RWX       ; Check CR0 has Read+Write+Execute
+B NE reject       ; If missing permissions, reject
+
+; Step 2: Test bounds (optional size check)
+TPERM 0 R BOUNDS 1024  ; Verify size >= 1024 bytes
+B NE reject       ; If too small, reject
+
+; Step 3: Capability is valid - proceed
+LOAD 1 0 0        ; Use the validated capability
+; ... safe operations here ...
+RETURN
+
+reject:
+; Capability failed validation - potential malware
+NEG 0 0           ; Set error flag (DR0 = 0)
+SUBI 0 1          ; DR0 = -1 (error code)
+RETURN            ; Return with error`
+};
+
 const instructionComments = {
     'ADD': 'Add: DR[dest] = DR[dest] + DR[src]',
     'SUB': 'Subtract: DR[dest] = DR[dest] - DR[src]',
@@ -3329,6 +3410,39 @@ function insertInstruction(instr, operands) {
     
     if (!isEmptyLine) {
         insertText = '\n' + insertText;
+    }
+    
+    const newText = text.substring(0, pos) + insertText + text.substring(pos);
+    editor.value = newText;
+    
+    const newPos = pos + insertText.length;
+    editor.selectionStart = newPos;
+    editor.selectionEnd = newPos;
+    editor.focus();
+    
+    hideCodeContextMenu();
+    
+    if (typeof updateLineNumbers === 'function') {
+        updateLineNumbers();
+    }
+}
+
+function insertTemplate(templateName) {
+    const editor = document.getElementById('codeEditor');
+    const template = codeTemplates[templateName];
+    
+    if (!template) {
+        console.error('Template not found:', templateName);
+        return;
+    }
+    
+    const text = editor.value;
+    const pos = codeEditorCursorPos;
+    
+    let insertText = template;
+    
+    if (pos > 0 && text[pos - 1] !== '\n') {
+        insertText = '\n\n' + insertText;
     }
     
     const newText = text.substring(0, pos) + insertText + text.substring(pos);
