@@ -380,18 +380,20 @@ main {
     border: 1px solid var(--border);
     margin-bottom: 0.6rem;
     flex-wrap: wrap;
-}
-
-.boot-label {
-    color: var(--warning);
-    font-weight: 600;
-    font-size: 0.8rem;
+    overflow: visible;
 }
 
 .boot-steps-horizontal {
     display: flex;
     gap: 0.4rem;
     flex: 1;
+    overflow: visible;
+}
+
+.boot-label {
+    color: var(--warning);
+    font-weight: 600;
+    font-size: 0.8rem;
 }
 
 .boot-sequence-banner .boot-step {
