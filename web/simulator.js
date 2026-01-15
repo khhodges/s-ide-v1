@@ -10,7 +10,7 @@ class PP250Simulator {
         }
         
         this.dataRegs = {};
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 16; i++) {
             this.dataRegs[i] = BigInt(0);
         }
         

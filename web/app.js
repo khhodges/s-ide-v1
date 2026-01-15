@@ -417,11 +417,35 @@ function updateContextRegisters() {
     }
 }
 
+let dataRegPage = 0;
+
+function showDataRegPage(page) {
+    dataRegPage = page;
+    updateDataRegisters();
+    
+    const prevBtn = document.getElementById('drPrev');
+    const nextBtn = document.getElementById('drNext');
+    const label = document.getElementById('drPageLabel');
+    
+    if (page === 0) {
+        prevBtn.disabled = true;
+        nextBtn.disabled = false;
+        label.textContent = '0-7';
+    } else {
+        prevBtn.disabled = false;
+        nextBtn.disabled = true;
+        label.textContent = '8-15';
+    }
+}
+
 function updateDataRegisters() {
     const container = document.getElementById('dataRegs');
     container.innerHTML = '';
     
-    for (let i = 0; i < 8; i++) {
+    const startIdx = dataRegPage * 8;
+    const endIdx = startIdx + 8;
+    
+    for (let i = startIdx; i < endIdx; i++) {
         const value = simulator.dataRegs[i];
         const hexStr = value.toString(16).toUpperCase().padStart(16, '0');
         
