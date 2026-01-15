@@ -1,6 +1,15 @@
+let savedEditorContent = '';
+
 function switchView(viewId) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(viewId).classList.add('active');
+    
+    if (viewId === 'editor') {
+        const editor = document.getElementById('codeEditor');
+        if (editor && savedEditorContent === '') {
+            savedEditorContent = editor.value;
+        }
+    }
 }
 
 function switchCapView(section) {
@@ -1856,8 +1865,6 @@ RETURN        ; Return to caller context
               ; Restores caller's state from stack
               ; Execution continues after CALL`
 };
-
-let savedEditorContent = '';
 
 function setupCodeEditor() {
     const editor = document.getElementById('codeEditor');
