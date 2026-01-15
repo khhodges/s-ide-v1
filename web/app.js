@@ -3230,3 +3230,70 @@ function resetTooltipFadeTimer() {
 document.addEventListener('mousemove', resetTooltipFadeTimer);
 document.addEventListener('mouseenter', resetTooltipFadeTimer, true);
 resetTooltipFadeTimer();
+
+// ==================== CODE EDITOR CONTEXT MENU ====================
+let codeEditorCursorPos = 0;
+
+function showCodeContextMenu(e) {
+    e.preventDefault();
+    const menu = document.getElementById('codeContextMenu');
+    const editor = document.getElementById('codeEditor');
+    
+    codeEditorCursorPos = editor.selectionStart;
+    
+    menu.style.left = e.pageX + 'px';
+    menu.style.top = e.pageY + 'px';
+    menu.classList.add('visible');
+    
+    document.getElementById('contextMenu').classList.remove('visible');
+}
+
+function hideCodeContextMenu() {
+    document.getElementById('codeContextMenu').classList.remove('visible');
+}
+
+function insertInstruction(instr, operands) {
+    const editor = document.getElementById('codeEditor');
+    const text = editor.value;
+    const pos = codeEditorCursorPos;
+    
+    let lineStart = text.lastIndexOf('\n', pos - 1) + 1;
+    let lineEnd = text.indexOf('\n', pos);
+    if (lineEnd === -1) lineEnd = text.length;
+    
+    const currentLine = text.substring(lineStart, lineEnd).trim();
+    const isEmptyLine = currentLine === '';
+    
+    let insertText = operands ? `${instr} ${operands}` : instr;
+    
+    if (!isEmptyLine) {
+        insertText = '\n' + insertText;
+    }
+    
+    const newText = text.substring(0, pos) + insertText + text.substring(pos);
+    editor.value = newText;
+    
+    const newPos = pos + insertText.length;
+    editor.selectionStart = newPos;
+    editor.selectionEnd = newPos;
+    editor.focus();
+    
+    hideCodeContextMenu();
+    
+    if (typeof updateLineNumbers === 'function') {
+        updateLineNumbers();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const codeEditor = document.getElementById('codeEditor');
+    if (codeEditor) {
+        codeEditor.addEventListener('contextmenu', showCodeContextMenu);
+    }
+    
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.code-context-menu')) {
+            hideCodeContextMenu();
+        }
+    });
+});
