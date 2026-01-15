@@ -3075,30 +3075,34 @@ body.tooltip-hidden [data-tooltip]:hover::after {
 
 /* ==================== CODE EDITOR CONTEXT MENU ==================== */
 
+/* BASE: Minimum width and allow submenus to overflow */
 .code-context-menu {
-    min-width: 160px;
-    overflow: visible;
+    min-width: 160px;  /* Narrower menu width */
+    overflow: visible; /* Allow submenus to extend beyond menu bounds */
 }
 
+/* COMPACT MENU STYLES - Delete this block to restore original sizes */
+/* START COMPACT STYLES */
 .code-context-menu .context-menu-header {
-    padding: 4px 8px !important;
-    font-size: 10px !important;
+    padding: 4px 8px !important;  /* Reduced from 0.5rem 1rem */
+    font-size: 10px !important;   /* Reduced from 0.85rem (~13.6px) */
 }
 
 .code-context-menu > .context-menu-item {
-    padding: 4px 8px !important;
-    font-size: 11px !important;
-    gap: 6px !important;
+    padding: 4px 8px !important;  /* Reduced from 0.6rem 1rem */
+    font-size: 11px !important;   /* Reduced from 0.9rem (~14.4px) */
+    gap: 6px !important;          /* Reduced from 0.6rem */
 }
 
 .code-context-menu .submenu .context-menu-item {
-    padding: 3px 8px !important;
-    font-size: 10px !important;
+    padding: 3px 8px !important;  /* Reduced from 0.5rem 1rem */
+    font-size: 10px !important;   /* Reduced from 0.85rem (~13.6px) */
 }
 
 .code-context-menu .context-menu-separator {
-    margin: 2px 0 !important;
+    margin: 2px 0 !important;     /* Reduced separator spacing */
 }
+/* END COMPACT STYLES */
 
 .context-menu-header {
     padding: 0.3rem 0.8rem;
