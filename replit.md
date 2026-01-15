@@ -191,6 +191,9 @@ Used with conditional branches (e.g., `B EQ 10` branches if equal).
 | SWITCH reg | Set CR15 (Namespace) to capability in CR[reg] |
 
 ## Recent Changes
+- 2026-01-15: Assembly Editor redesigned with fixed horizontal toolbar (no sidebar)
+- 2026-01-15: Examples moved to Command Input dropdown menu
+- 2026-01-15: Removed Quick Reference and Church/Turing paradigm tabs from Assembly
 - 2026-01-15: Simplified UI with fixed top toolbar (non-scrolling) and minimal sidebar
 - 2026-01-15: Consolidated view selector and action buttons into single header row
 - 2026-01-15: Removed Visualizer and DNS Editor from main nav (streamlined to 5 views)
