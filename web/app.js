@@ -1857,17 +1857,48 @@ RETURN        ; Return to caller context
               ; Execution continues after CALL`
 };
 
+let savedEditorContent = '';
+
 function setupCodeEditor() {
     const editor = document.getElementById('codeEditor');
     if (!editor) return;
     
-    editor.addEventListener('input', updateLineNumbers);
+    editor.addEventListener('input', () => {
+        updateLineNumbers();
+        checkEditorModified();
+    });
     editor.addEventListener('scroll', syncScroll);
     editor.addEventListener('keydown', handleTab);
     editor.addEventListener('click', updateLineInfo);
     editor.addEventListener('keyup', updateLineInfo);
     
+    savedEditorContent = editor.value;
     updateLineNumbers();
+}
+
+function checkEditorModified() {
+    const editor = document.getElementById('codeEditor');
+    if (!editor) return;
+    
+    if (editor.value !== savedEditorContent) {
+        editor.classList.remove('editor-saved');
+        editor.classList.add('editor-modified');
+    } else {
+        editor.classList.remove('editor-modified');
+    }
+}
+
+function markEditorSaved() {
+    const editor = document.getElementById('codeEditor');
+    if (!editor) return;
+    
+    savedEditorContent = editor.value;
+    editor.classList.remove('editor-modified');
+    editor.classList.add('editor-saved');
+    
+    setTimeout(() => {
+        editor.classList.remove('editor-saved');
+    }, 2000);
 }
 
 function updateLineNumbers() {
@@ -1969,6 +2000,7 @@ function runProgram() {
         return;
     }
     
+    markEditorSaved();
     clearEditorConsole();
     editorLog('Running program...', 'info');
     simulator.reset();
@@ -1992,6 +2024,7 @@ function stepProgram() {
         editorState.program = parseProgram(code);
         editorState.pc = 0;
         simulator.reset();
+        markEditorSaved();
         clearEditorConsole();
         editorLog('Starting step execution...', 'info');
         updateParsedView();
@@ -2180,6 +2213,7 @@ function loadExample(name) {
     const code = examplePrograms[name];
     if (code) {
         document.getElementById('codeEditor').value = code;
+        savedEditorContent = code;
         updateLineNumbers();
         resetProgram();
         editorLog(`Loaded example: ${name}`, 'success');

@@ -2711,13 +2711,24 @@ main {
     flex: 1;
     padding: 1rem;
     background: var(--bg-input);
-    border: none;
+    border: 2px solid transparent;
     color: var(--text-primary);
     font-family: 'Consolas', monospace;
     font-size: 0.9rem;
     line-height: 1.5;
     resize: none;
     outline: none;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#codeEditor.editor-modified {
+    border-color: #f59e0b;
+    box-shadow: inset 0 0 8px rgba(245, 158, 11, 0.2);
+}
+
+#codeEditor.editor-saved {
+    border-color: #10b981;
+    box-shadow: inset 0 0 8px rgba(16, 185, 129, 0.2);
 }
 
 #codeEditor::placeholder {
