@@ -3186,6 +3186,16 @@ body.tooltip-hidden [data-tooltip]:hover::after {
     bottom: calc(100% + 10px);
 }
 
+.btn[data-tooltip].tooltip-bottom::before {
+    bottom: auto;
+    top: calc(100% + 8px);
+}
+
+.btn[data-tooltip].tooltip-bottom::after {
+    bottom: auto;
+    top: calc(100% + 2px);
+}
+
 .register-row[data-tooltip] {
     cursor: help;
 }
