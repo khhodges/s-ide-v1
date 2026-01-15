@@ -2854,6 +2854,12 @@ main {
     border: 1px solid var(--warning);
 }
 
+.hier-const {
+    color: #9b59b6;
+    border: 1px solid #9b59b6;
+    font-style: italic;
+}
+
 @media (max-width: 900px) {
     .namespace-layout {
         grid-template-columns: 1fr;

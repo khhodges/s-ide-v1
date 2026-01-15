@@ -130,7 +130,8 @@ const bootNamespace = {
         { name: "Matthew", type: "Thread", ref: "threads.matthew" },
         { name: "Daniel", type: "Thread", ref: "threads.daniel" },
         { name: "SlideRule", type: "Abstraction", ref: "abstractions.sliderule" },
-        { name: "Abacus", type: "Abstraction", ref: "abstractions.abacus" }
+        { name: "Abacus", type: "Abstraction", ref: "abstractions.abacus" },
+        { name: "Circle", type: "Abstraction", ref: "abstractions.circle" }
     ]
 };
 
@@ -140,7 +141,8 @@ const namespaceObjects = [
     { location: 0x3000, name: "Matthew", type: "Thread", perms: ["R", "W", "E"], size: 1024 },
     { location: 0x4000, name: "Daniel", type: "Thread", perms: ["R", "W", "E"], size: 1024 },
     { location: 0x5000, name: "SlideRule", type: "Abstraction", perms: ["R", "L", "E"], size: 2048 },
-    { location: 0x6000, name: "Abacus", type: "Abstraction", perms: ["R", "L", "E"], size: 2048 }
+    { location: 0x6000, name: "Abacus", type: "Abstraction", perms: ["R", "L", "E"], size: 2048 },
+    { location: 0x7000, name: "Circle", type: "Abstraction", perms: ["R", "L", "E"], size: 2048 }
 ];
 
 const threadCLists = {
@@ -150,6 +152,7 @@ const threadCLists = {
         clist: [
             { name: "SlideRule", type: "Abstraction", perms: ["R", "L", "E"] },
             { name: "Abacus", type: "Abstraction", perms: ["R", "L", "E"] },
+            { name: "Circle", type: "Abstraction", perms: ["R", "L", "E"] },
             { name: "LocalData", type: "Data", perms: ["R", "W"] }
         ]
     },
@@ -201,6 +204,19 @@ const abstractionCLists = {
             { name: "GT_NEG", type: "Function", perms: ["R", "X", "E"], desc: "Negate" },
             { name: "GT_INC", type: "Function", perms: ["R", "X", "E"], desc: "Increment" },
             { name: "GT_DEC", type: "Function", perms: ["R", "X", "E"], desc: "Decrement" },
+            { name: "LocalCode", type: "Code", perms: ["R", "X"] },
+            { name: "LocalData", type: "Data", perms: ["R", "W"] }
+        ]
+    },
+    Circle: {
+        name: "Circle",
+        description: "Circle geometry abstraction with PI constant",
+        clist: [
+            { name: "GT_PI", type: "Constant", perms: ["R"], desc: "PI = 3.14159265358979", value: 3.14159265358979 },
+            { name: "GT_TWO_PI", type: "Constant", perms: ["R"], desc: "2*PI = 6.28318530717958", value: 6.28318530717958 },
+            { name: "GT_CIRCUMFERENCE", type: "Function", perms: ["R", "X", "E"], desc: "C = 2*PI*r" },
+            { name: "GT_AREA", type: "Function", perms: ["R", "X", "E"], desc: "A = PI*r^2" },
+            { name: "GT_DIAMETER", type: "Function", perms: ["R", "X", "E"], desc: "D = 2*r" },
             { name: "LocalCode", type: "Code", perms: ["R", "X"] },
             { name: "LocalData", type: "Data", perms: ["R", "W"] }
         ]
@@ -439,9 +455,10 @@ function buildHierarchyTree() {
     html += '<div class="hier-group-label" data-tooltip="Protected objects containing function Golden Tokens.">Abstractions</div>';
     const abstractionDescs = {
         'SlideRule': 'Floating-point math functions (ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW)',
-        'Abacus': 'Integer math functions (ADD, SUB, MUL, DIV, MOD, ABS, NEG, INC, DEC)'
+        'Abacus': 'Integer math functions (ADD, SUB, MUL, DIV, MOD, ABS, NEG, INC, DEC)',
+        'Circle': 'Circle geometry with PI constant (CIRCUMFERENCE, AREA, DIAMETER)'
     };
-    ['SlideRule', 'Abacus'].forEach(name => {
+    ['SlideRule', 'Abacus', 'Circle'].forEach(name => {
         html += `<div class="hier-item" data-name="${name}" data-type="Abstraction">`;
         html += `<div class="hier-node hier-abstraction" data-tooltip="${abstractionDescs[name]}">`;
         html += `<div class="hier-label">${name}</div>`;
@@ -451,6 +468,8 @@ function buildHierarchyTree() {
             abstractionCLists[name].clist.forEach(item => {
                 if (item.type === 'Function') {
                     html += `<div class="hier-item hier-gt hier-func" data-name="${item.name}" data-type="Function" data-tooltip="Golden Token granting permission to invoke ${item.name} function.">${item.name}</div>`;
+                } else if (item.type === 'Constant') {
+                    html += `<div class="hier-item hier-gt hier-const" data-name="${item.name}" data-type="Constant" data-tooltip="GT Constant: ${item.desc}" data-value="${item.value}">${item.name}</div>`;
                 }
             });
             html += '</div>';
