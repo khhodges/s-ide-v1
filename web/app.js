@@ -1047,6 +1047,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             switchView('capabilities');
+            // Re-render the Capabilities Explorer with the updated clist
+            updateCapabilityExplorer();
             // After switching, select CR6 in the explorer (use longer timeout for DOM update)
             setTimeout(() => {
                 if (cr6Cap) {
