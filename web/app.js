@@ -2807,7 +2807,7 @@ const lessons = [
                 text: `<h3>Step 1: Hardware Reset</h3>
                 <p>All registers are cleared to <code>NULL</code>. This ensures no leftover data from previous sessions.</p>
                 <h3>Step 2: Load Namespace</h3>
-                <p><code>CR15</code> receives the system namespace capability with <code>RLSEB</code> permissions - the root of all accessible resources.</p>
+                <p><code>CR15</code> receives the system namespace capability with <code>RM</code> permissions - the root of all accessible resources. The M (Meta-Machine) permission marks hardware-level access.</p>
                 <h3>Step 3: Initialize Thread</h3>
                 <p><code>CR8</code> gets the user thread capability, and <code>CR6</code> receives the C-List (capability list) for user access.</p>
                 <h3>Step 4: Load Nucleus</h3>
@@ -2816,9 +2816,9 @@ const lessons = [
                 <div class="demo-content">
                     <div class="demo-visual register-demo">
                         <div class="reg-demo-item"><span class="reg-demo-name">CR7</span><span class="reg-demo-value">NUCLEUS [RXE]</span></div>
-                        <div class="reg-demo-item"><span class="reg-demo-name">CR15</span><span class="reg-demo-value">SYSTEM_NS [RLSEB]</span></div>
-                        <div class="reg-demo-item"><span class="reg-demo-name">CR8</span><span class="reg-demo-value">USER_MAIN [RW]</span></div>
-                        <div class="reg-demo-item"><span class="reg-demo-name">CR6</span><span class="reg-demo-value">C-LIST [RLS]</span></div>
+                        <div class="reg-demo-item"><span class="reg-demo-name">CR15</span><span class="reg-demo-value">NAMESPACE [RM]</span></div>
+                        <div class="reg-demo-item"><span class="reg-demo-name">CR8</span><span class="reg-demo-value">KENNETH [RWEM]</span></div>
+                        <div class="reg-demo-item"><span class="reg-demo-name">CR6</span><span class="reg-demo-value">BOOT [E]</span></div>
                     </div>
                     <div class="demo-explanation">
                         <p>After boot, these four registers hold the essential capabilities needed to run the system securely.</p>
