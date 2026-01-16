@@ -1025,11 +1025,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // CR6 click handler - switch to Capabilities Explorer
+    // CR6 click handler - switch to Capabilities Explorer and show CR6 detail
     const cr6Row = document.getElementById('cr6Row');
     if (cr6Row) {
         cr6Row.addEventListener('click', () => {
             switchView('capabilities');
+            // After switching, select CR6 in the explorer
+            setTimeout(() => {
+                const cr6Cap = simulator.contextRegs[6];
+                if (cr6Cap) {
+                    showCapabilityDetail(null, cr6Cap, 'CR6');
+                    // Highlight the CR6 card
+                    document.querySelectorAll('.token-card').forEach(card => {
+                        const regBadge = card.querySelector('.token-reg');
+                        if (regBadge && regBadge.textContent === 'CR6') {
+                            card.classList.add('selected');
+                        }
+                    });
+                }
+            }, 50);
             log('Switched to Capabilities Explorer (CR6 C-List)', 'info');
         });
     }
