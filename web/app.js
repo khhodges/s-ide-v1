@@ -2090,6 +2090,11 @@ function markEditorSaved() {
     }, 2000);
 }
 
+function saveCode() {
+    markEditorSaved();
+    editorLog('Code saved to ' + editorState.currentLinkage + '.asm', 'success');
+}
+
 function updateLineNumbers() {
     const editor = document.getElementById('codeEditor');
     const lineNumbers = document.getElementById('lineNumbers');
