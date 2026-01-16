@@ -82,7 +82,7 @@ function generateGoldenKey() {
 
 const PERM_BITS = {
     R: 0x0001, W: 0x0002, X: 0x0004, L: 0x0008,
-    S: 0x0010, E: 0x0020, B: 0x0040, M: 0x0080
+    S: 0x0010, E: 0x0020, B: 0x0040, M: 0x0080, F: 0x0100
 };
 
 function encodeGoldenToken(offset, perms, spare = 0) {
@@ -194,6 +194,13 @@ function formatWord(value) {
     return '0x' + BigInt(value).toString(16).toUpperCase().padStart(16, '0');
 }
 
+function formatLocation(value, isFar) {
+    if (isFar && typeof value === 'string') {
+        return value;
+    }
+    return formatWord(value);
+}
+
 // ==================== BOOT NAMESPACE ====================
 
 // Boot C-List at Namespace offset 1
@@ -233,31 +240,40 @@ const bootNamespace = {
 const namespaceObjects = [
     // Offset 0: Namespace self-reference (M=Meta-Machine only for hardware-level)
     { offset: 0, location: 0x0000, name: "Namespace", type: "System", perms: ["M"], size: 4096,
-      word1_location: 0x0000, word2_limit: 4096, word3_seals: 0n },
+      word1_location: 0x0000, word2_limit: 4096, word3_seals: 0n,
+      tooltip: "Hardware-managed Namespace Table - root of all capability addressing. M permission grants Meta-Machine access." },
     // Offset 1: Boot C-List abstraction
     { offset: 1, location: 0x1000, name: "Boot", type: "C-List", perms: ["E"], size: 1024,
-      word1_location: 0x1000, word2_limit: 1024, word3_seals: 0n },
+      word1_location: 0x1000, word2_limit: 1024, word3_seals: 0n,
+      tooltip: "Boot Capability List - initial C-List loaded during system bootstrap containing thread and abstraction GTs." },
     // Offset 2: Kenneth thread (M=Meta-Machine only for hardware-level)
     { offset: 2, location: 0x2000, name: "Kenneth", type: "Thread", perms: ["M"], size: 1024,
-      word1_location: 0x2000, word2_limit: 1024, word3_seals: 0n },
+      word1_location: 0x2000, word2_limit: 1024, word3_seals: 0n,
+      tooltip: "User thread identity for Kenneth. M permission indicates hardware-level thread descriptor. Cannot be directly accessed by software." },
     // Offset 3: Boot/Access.asm (Nucleus code)
     { offset: 3, location: 0x3000, name: "Access", type: "Code", perms: ["R", "X"], size: 512,
-      word1_location: 0x3000, word2_limit: 512, word3_seals: 0n, linkage: "Boot/Access.asm" },
+      word1_location: 0x3000, word2_limit: 512, word3_seals: 0n, linkage: "Boot/Access.asm",
+      tooltip: "Nucleus kernel code - provides secure entry points for system calls. R+X permissions enable reading and execution." },
     // Offset 4: Matthew thread (M=Meta-Machine only for hardware-level)
     { offset: 4, location: 0x4000, name: "Matthew", type: "Thread", perms: ["M"], size: 1024,
-      word1_location: 0x4000, word2_limit: 1024, word3_seals: 0n },
+      word1_location: 0x4000, word2_limit: 1024, word3_seals: 0n,
+      tooltip: "User thread identity for Matthew. M permission indicates hardware-level thread descriptor. Cannot be directly accessed by software." },
     // Offset 5: Daniel thread (M=Meta-Machine only for hardware-level)
     { offset: 5, location: 0x5000, name: "Daniel", type: "Thread", perms: ["M"], size: 1024,
-      word1_location: 0x5000, word2_limit: 1024, word3_seals: 0n },
+      word1_location: 0x5000, word2_limit: 1024, word3_seals: 0n,
+      tooltip: "User thread identity for Daniel. M permission indicates hardware-level thread descriptor. Cannot be directly accessed by software." },
     // Offset 6: SlideRule abstraction
     { offset: 6, location: 0x6000, name: "SlideRule", type: "Abstraction", perms: ["E"], size: 2048,
-      word1_location: 0x6000, word2_limit: 2048, word3_seals: 0n },
+      word1_location: 0x6000, word2_limit: 2048, word3_seals: 0n,
+      tooltip: "SlideRule abstraction - IEEE 754 floating-point math operations (ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW). E permission enables CALL entry." },
     // Offset 7: Abacus abstraction
     { offset: 7, location: 0x7000, name: "Abacus", type: "Abstraction", perms: ["E"], size: 2048,
-      word1_location: 0x7000, word2_limit: 2048, word3_seals: 0n },
+      word1_location: 0x7000, word2_limit: 2048, word3_seals: 0n,
+      tooltip: "Abacus abstraction - 64-bit integer arithmetic operations (ADD, SUB, MUL, DIV, MOD, NEG, ABS, CMP). E permission enables CALL entry." },
     // Offset 8: Circle abstraction
     { offset: 8, location: 0x8000, name: "Circle", type: "Abstraction", perms: ["E"], size: 2048,
-      word1_location: 0x8000, word2_limit: 2048, word3_seals: 0n }
+      word1_location: 0x8000, word2_limit: 2048, word3_seals: 0n,
+      tooltip: "Circle abstraction - geometric calculations (AREA, CIRCUMFERENCE, ARC_LENGTH, SECTOR_AREA, CHORD_LENGTH). E permission enables CALL entry." }
 ];
 
 const threadCLists = {
@@ -804,7 +820,7 @@ function updateContextRegisters() {
         const tooltip = crTooltips[i];
         const permTooltip = reg.perms.length > 0 ? 
             `Permissions: ${reg.perms.map(p => {
-                const permNames = {R:'Read', W:'Write', X:'Execute', L:'Load', S:'Store', E:'Enter', B:'Bind', M:'Meta-Machine'};
+                const permNames = {R:'Read', W:'Write', X:'Execute', L:'Load', S:'Store', E:'Enter', B:'Bind', M:'Meta-Machine', F:'Far (Remote URL)'};
                 return permNames[p] || p;
             }).join(', ')}` : 'No capability loaded. Register is empty.';
         
@@ -1086,11 +1102,14 @@ function createTokenCard(cap, regLabel) {
     card.className = `token-card ${isNull ? 'null-cap' : ''}`;
     card.onclick = (evt) => showCapabilityDetail(evt, cap, regLabel);
     
-    const allPerms = ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M'];
+    const allPerms = ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M', 'F'];
     const permBadges = allPerms.map(p => {
         const hasIt = cap.perms.includes(p);
         return `<span class="perm-badge perm-${p.toLowerCase()} ${hasIt ? '' : 'inactive'}">${p}</span>`;
     }).join('');
+    
+    const tooltip = cap.tooltip || getObjectTooltip(cap.name, cap.type);
+    card.setAttribute('data-tooltip', tooltip);
     
     card.innerHTML = `
         <div class="token-header">
@@ -1102,6 +1121,22 @@ function createTokenCard(cap, regLabel) {
     `;
     
     return card;
+}
+
+function getObjectTooltip(name, type) {
+    const tooltips = {
+        'Namespace': 'Hardware-managed Namespace Table - root of all capability addressing',
+        'Boot': 'Boot Capability List - initial C-List loaded during system bootstrap',
+        'Kenneth': 'User thread identity for Kenneth - M permission for hardware-level access',
+        'Matthew': 'User thread identity for Matthew - M permission for hardware-level access',
+        'Daniel': 'User thread identity for Daniel - M permission for hardware-level access',
+        'SlideRule': 'IEEE 754 floating-point math abstraction (ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW)',
+        'Abacus': '64-bit integer arithmetic abstraction (ADD, SUB, MUL, DIV, MOD, NEG, ABS, CMP)',
+        'Circle': 'Geometric calculations abstraction (AREA, CIRCUMFERENCE, ARC_LENGTH, SECTOR_AREA)',
+        'Access': 'Nucleus kernel code - secure entry points for system calls',
+        'NULL': 'Null capability - no access rights, typically indicates uninitialized register'
+    };
+    return tooltips[name] || `${type || 'Object'}: ${name}`;
 }
 
 let currentEditingCap = null;
@@ -1117,10 +1152,10 @@ function showCapabilityDetail(evt, cap, regLabel) {
     currentEditingRegLabel = regLabel;
     
     const panel = document.getElementById('capDetailPanel');
-    const allPerms = ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M'];
+    const allPerms = ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M', 'F'];
     const permNames = {
         R: 'Read', W: 'Write', X: 'Execute',
-        L: 'Load', S: 'Store', E: 'Enter', B: 'Bind', M: 'Meta-Machine'
+        L: 'Load', S: 'Store', E: 'Enter', B: 'Bind', M: 'Meta-Machine', F: 'Far (Remote URL)'
     };
     
     const offset = cap.location.offset || 0;
@@ -1177,7 +1212,7 @@ function showCapabilityDetail(evt, cap, regLabel) {
                         <input type="text" id="gtSpare" class="field-input" value="0x${spare.toString(16).toUpperCase().padStart(4, '0')}" onchange="updateGTFromEditor()">
                     </div>
                     <div class="field-group field-right">
-                        <span class="field-label" data-tooltip="Bits 32-47: Permission flags (R=Read, W=Write, X=Execute, L=Load, S=Save, E=Enter, B=Bind, M=Meta-Machine)">Perms [32:47]</span>
+                        <span class="field-label" data-tooltip="Bits 32-47: Permission flags (R=Read, W=Write, X=Execute, L=Load, S=Save, E=Enter, B=Bind, M=Meta-Machine, F=Far/Remote URL)">Perms [32:47]</span>
                         <div class="perm-checkboxes">${permCheckboxes}</div>
                         <span class="perm-hex">= 0x${gtDecoded.permBits.toString(16).toUpperCase().padStart(4, '0')}</span>
                     </div>
@@ -1185,28 +1220,28 @@ function showCapabilityDetail(evt, cap, regLabel) {
             </div>
             
             <div class="word-row nmd-row">
-                <div class="word-key" data-tooltip="Namespace Descriptor Word 1 - Physical memory address or URL of the object">W1</div>
+                <div class="word-key" data-tooltip="Namespace Descriptor Word 1 - ${cap.perms.includes('F') ? 'Remote URL location' : 'Physical memory address'}">W1</div>
                 <div class="hex-btns">
-                    <button class="hex-btn" data-tooltip="Big-Endian (MSB first): ${formatWord(cap.nsEntry.word1_location)}" id="w1HexBtn">Hex</button>
-                    <button class="le-btn" data-tooltip="Little-Endian (LSB first, ARM byte order): ${formatLittleEndian(cap.nsEntry.word1_location)}" id="w1LeBtn">LE</button>
+                    ${cap.perms.includes('F') ? '<span class="hex-btn-disabled" data-tooltip="URL mode - hex display not applicable">--</span>' : `<button class="hex-btn" data-tooltip="Big-Endian (MSB first): ${formatWord(cap.nsEntry.word1_location)}" id="w1HexBtn">Hex</button>`}
+                    ${cap.perms.includes('F') ? '<span class="hex-btn-disabled" data-tooltip="URL mode - LE display not applicable">--</span>' : `<button class="le-btn" data-tooltip="Little-Endian (LSB first, ARM byte order): ${formatLittleEndian(cap.nsEntry.word1_location)}" id="w1LeBtn">LE</button>`}
                 </div>
                 <div class="word-fields">
                     <div class="field-group field-right-full">
-                        <span class="field-label" data-tooltip="Physical memory address or URL where the object data resides">Location (Physical Address)</span>
-                        <input type="text" id="nsLocation" class="field-input field-wide" value="${formatWord(cap.nsEntry.word1_location)}" onchange="updateNSFromEditor()">
+                        <span class="field-label" data-tooltip="${cap.perms.includes('F') ? 'Remote URL location (F bit set)' : 'Physical memory address (local)'}">${cap.perms.includes('F') ? 'Location (URL)' : 'Location (Address)'}</span>
+                        <input type="text" id="nsLocation" class="field-input field-wide ${cap.perms.includes('F') ? 'url-field' : ''}" value="${formatLocation(cap.nsEntry.word1_location, cap.perms.includes('F'))}" onchange="updateNSFromEditor()">
                     </div>
                 </div>
             </div>
             
             <div class="word-row nmd-row">
-                <div class="word-key" data-tooltip="Namespace Descriptor Word 2 - Size limit of the object in bytes">W2</div>
+                <div class="word-key" data-tooltip="Namespace Descriptor Word 2 - ${cap.perms.includes('F') ? 'Content length in bytes' : 'Size limit in bytes'}">W2</div>
                 <div class="hex-btns">
                     <button class="hex-btn" data-tooltip="Big-Endian (MSB first): ${formatWord(cap.nsEntry.word2_limit)}" id="w2HexBtn">Hex</button>
                     <button class="le-btn" data-tooltip="Little-Endian (LSB first, ARM byte order): ${formatLittleEndian(cap.nsEntry.word2_limit)}" id="w2LeBtn">LE</button>
                 </div>
                 <div class="word-fields">
                     <div class="field-group field-right-full">
-                        <span class="field-label" data-tooltip="Maximum size of the object in bytes - hardware enforces bounds checking">Limit (${Number(cap.nsEntry.word2_limit)} bytes)</span>
+                        <span class="field-label" data-tooltip="${cap.perms.includes('F') ? 'Content length for remote resource' : 'Maximum size - hardware enforces bounds checking'}">${cap.perms.includes('F') ? 'Length' : 'Limit'} (${Number(cap.nsEntry.word2_limit)} bytes)</span>
                         <input type="text" id="nsLimit" class="field-input field-wide" value="${formatWord(cap.nsEntry.word2_limit)}" onchange="updateNSFromEditor()">
                     </div>
                 </div>
@@ -1229,8 +1264,10 @@ function showCapabilityDetail(evt, cap, regLabel) {
                     </div>
                     <div class="field-group field-right mac-field ${macValidation.valid ? 'mac-valid' : 'mac-invalid'}" data-tooltip="${macPopupContent}">
                         <span class="field-label" data-tooltip="Bits 48-63: Message Authentication Code - hardware validates integrity on LOAD">MAC [48:63]</span>
-                        <span id="nsMACValue" class="mac-value">${macValidation.valid ? '✓' : '⚠'} 0x${getMACFromSeals(cap.nsEntry).toString(16).toUpperCase().padStart(4, '0')}</span>
-                        <button class="btn-recalc-mini" onclick="recalculateMAC()" title="Recalculate MAC">↻</button>
+                        <div class="mac-inline">
+                            <span id="nsMACValue" class="mac-value">${macValidation.valid ? '✓' : '⚠'} 0x${getMACFromSeals(cap.nsEntry).toString(16).toUpperCase().padStart(4, '0')}</span>
+                            <button class="btn-recalc-mini" onclick="recalculateMAC()" title="Recalculate MAC">↻</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1277,7 +1314,13 @@ function updateNSFromEditor() {
     const metaStr = document.getElementById('nsMeta').value;
     const typeVal = document.getElementById('nsType').value;
     
-    const location = BigInt(parseInt(locationStr, 16) || parseInt(locationStr, 10) || 0);
+    const isFar = currentEditingCap.perms.includes('F');
+    let location;
+    if (isFar && !locationStr.startsWith('0x')) {
+        location = locationStr;
+    } else {
+        location = BigInt(parseInt(locationStr, 16) || parseInt(locationStr, 10) || 0);
+    }
     const limit = BigInt(parseInt(limitStr, 16) || parseInt(limitStr, 10) || 0);
     const meta = parseInt(metaStr, 16) || parseInt(metaStr, 10) || 0;
     const typeCode = Object.entries(OBJECT_TYPES).find(([k, v]) => v === typeVal)?.[0] || 0x0004;

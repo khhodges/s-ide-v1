@@ -64,6 +64,10 @@ The web interface is composed of five distinct views, accessible via a dropdown:
 - 2026-01-16: Each row shows: Key | Hex/LE buttons | Fields with explanatory tooltips on all labels
 - 2026-01-16: Removed yellow gradient from GT row, kept gold border for distinction
 - 2026-01-16: MAC validation now shows as hover popup tooltip instead of separate section
+- 2026-01-16: Added F (Far) permission bit - indicates remote URL location vs local memory address (bit 0x0100)
+- 2026-01-16: W1/W2 display adapts based on F bit: shows "Location (URL)" when F set, "Location (Address)" when clear
+- 2026-01-16: MAC recalculate button moved inline to right of MAC value
+- 2026-01-16: Added explanatory tooltips for all namespace objects (Kenneth, Matthew, Daniel, Boot, SlideRule, Abacus, Circle)
 - 2026-01-16: Added M (Meta-Machine) permission bit to distinguish hardware-level access (Namespace, Threads) from software-level permissions
 - 2026-01-16: M is now the ONLY permission on Namespace (offset 0) and all Thread entries (Kenneth, Matthew, Daniel) - no other permissions when M is set
 - 2026-01-16: Removed Context section from Capabilities Explorer - now only System and C-List views

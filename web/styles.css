@@ -761,6 +761,7 @@ main {
 .perm-e { background: #ec4899; }
 .perm-b { background: #14b8a6; }
 .perm-m { background: #7c3aed; }
+.perm-f { background: #06b6d4; }
 
 .cap-main {
     display: flex;
@@ -922,6 +923,19 @@ main {
     border-color: var(--accent);
 }
 
+.hex-btn-disabled {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: 'Consolas', monospace;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+    color: var(--text-muted);
+    text-align: center;
+    min-width: 32px;
+    opacity: 0.5;
+}
+
 .word-row.gt-row {
     background: var(--bg-dark);
     border-color: var(--warning);
@@ -1020,6 +1034,17 @@ main {
     display: flex;
     align-items: center;
     gap: 0.3rem;
+}
+
+.mac-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.url-field {
+    text-align: left;
+    font-family: inherit;
 }
 
 .btn-recalc-mini {
