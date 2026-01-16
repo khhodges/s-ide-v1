@@ -1145,42 +1145,27 @@ function showCapabilityDetail(evt, cap, regLabel) {
     panel.innerHTML = `
         <h2>${cap.name} <span class="reg-badge">${regLabel}</span></h2>
         
-        <div class="gt-section">
-            <h3 class="section-title">Golden Token (64-bit Key)</h3>
-            <div class="gt-hex-display">
-                <span class="gt-label">Hex:</span>
-                <code id="gtHexValue">${formatGTHex(gt)}</code>
-            </div>
-            
-            <div class="gt-bit-layout">
-                <div class="bit-field" data-tooltip="Index into Namespace Table (0-4,294,967,295)">
-                    <div class="bit-header">
-                        <span class="bit-range">[0:31]</span>
-                        <span class="bit-name">Offset</span>
-                    </div>
-                    <input type="text" id="gtOffset" class="bit-input" value="0x${offset.toString(16).toUpperCase()}" onchange="updateGTFromEditor()">
+        <div class="gt-section gt-compact">
+            <h3 class="section-title">Golden Token (64-bit)</h3>
+            <div class="gt-64bit-row">
+                <div class="gt-64bit-hex" data-tooltip="Full 64-bit Golden Token: Spare[48:63] | Perms[32:47] | Offset[0:31]">
+                    <code id="gtHexValue">${formatGTHex(gt)}</code>
                 </div>
-                
-                <div class="bit-field" data-tooltip="Permission bits: R/W/X/L/S/E/B/M (M=Meta-Machine for hardware-level access; can downgrade without recalculating MAC)">
-                    <div class="bit-header">
-                        <span class="bit-range">[32:47]</span>
-                        <span class="bit-name">Permissions</span>
-                    </div>
-                    <div class="perm-checkboxes">${permCheckboxes}</div>
-                    <div class="perm-hex">= 0x${gtDecoded.permBits.toString(16).toUpperCase().padStart(4, '0')}</div>
-                </div>
-                
-                <div class="bit-field" data-tooltip="Reserved for future use (Thread ID, flags)">
-                    <div class="bit-header">
-                        <span class="bit-range">[48:63]</span>
-                        <span class="bit-name">Spare</span>
-                    </div>
-                    <input type="text" id="gtSpare" class="bit-input" value="0x${spare.toString(16).toUpperCase().padStart(4, '0')}" onchange="updateGTFromEditor()">
+                <div class="gt-64bit-fields">
+                    <span class="gt-field" data-tooltip="Namespace offset [0:31]">
+                        <label>Off:</label>
+                        <input type="text" id="gtOffset" class="gt-mini-input" value="0x${offset.toString(16).toUpperCase()}" onchange="updateGTFromEditor()">
+                    </span>
+                    <span class="gt-field" data-tooltip="Spare bits [48:63]">
+                        <label>Sp:</label>
+                        <input type="text" id="gtSpare" class="gt-mini-input" value="0x${spare.toString(16).toUpperCase().padStart(4, '0')}" onchange="updateGTFromEditor()">
+                    </span>
                 </div>
             </div>
-            
-            <div class="gt-security-note">
-                <strong>Security Rule:</strong> MAC does not cover permissions. You can downgrade rights (turn off bits) without recalculating the crypto signature.
+            <div class="gt-perms-row">
+                <span class="gt-perms-label">Perms [32:47]:</span>
+                <div class="perm-checkboxes">${permCheckboxes}</div>
+                <span class="perm-hex">= 0x${gtDecoded.permBits.toString(16).toUpperCase().padStart(4, '0')}</span>
             </div>
         </div>
         

@@ -864,6 +864,75 @@ main {
     border: 1px solid var(--border);
 }
 
+.gt-compact {
+    padding: 0.8rem;
+}
+
+.gt-64bit-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.6rem;
+}
+
+.gt-64bit-hex {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+    padding: 0.5rem 0.8rem;
+    border-radius: 6px;
+    flex: 1;
+}
+
+.gt-64bit-hex code {
+    color: #1a1a2e;
+    font-family: 'Consolas', monospace;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.gt-64bit-fields {
+    display: flex;
+    gap: 0.6rem;
+}
+
+.gt-field {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.gt-field label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+.gt-mini-input {
+    width: 70px;
+    padding: 0.3rem 0.4rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--success);
+    font-family: 'Consolas', monospace;
+    font-size: 0.75rem;
+}
+
+.gt-mini-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.gt-perms-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.gt-perms-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
 .section-title {
     color: var(--warning);
     font-size: 0.95rem;
