@@ -882,17 +882,32 @@ main {
     padding: 0.6rem 0.8rem;
 }
 
-.hex-btn {
+.hex-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.hex-btn, .le-btn {
     background: var(--bg-input);
     border: 1px solid var(--border);
     border-radius: 4px;
-    color: var(--warning);
     font-family: 'Consolas', monospace;
-    font-size: 0.7rem;
-    padding: 0.3rem 0.5rem;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
     cursor: pointer;
     transition: all 0.2s;
     position: relative;
+    text-align: center;
+    min-width: 32px;
+}
+
+.hex-btn {
+    color: var(--warning);
+}
+
+.le-btn {
+    color: var(--accent);
 }
 
 .hex-btn:hover {
@@ -901,8 +916,14 @@ main {
     border-color: var(--warning);
 }
 
+.le-btn:hover {
+    background: var(--accent);
+    color: var(--bg-dark);
+    border-color: var(--accent);
+}
+
 .word-row.gt-row {
-    background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
+    background: var(--bg-dark);
     border-color: var(--warning);
 }
 

@@ -112,6 +112,17 @@ function formatGTHex(gt) {
     return '0x' + BigInt(gt).toString(16).toUpperCase().padStart(16, '0');
 }
 
+function formatLittleEndian(value) {
+    // Mask to 64 bits to ensure consistent word size
+    const masked = BigInt(value) & BigInt('0xFFFFFFFFFFFFFFFF');
+    const hex = masked.toString(16).toUpperCase().padStart(16, '0');
+    const bytes = [];
+    for (let i = 0; i < 16; i += 2) {
+        bytes.push(hex.substring(i, i + 2));
+    }
+    return '0x' + bytes.reverse().join('');
+}
+
 function formatGTBinary(gt) {
     return BigInt(gt).toString(2).padStart(64, '0');
 }
@@ -1151,61 +1162,73 @@ function showCapabilityDetail(evt, cap, regLabel) {
         
         <div class="word-stack">
             <div class="word-row gt-row">
-                <div class="word-key">GT</div>
-                <button class="hex-btn" data-tooltip="${formatGTHex(gt)}" id="gtHexBtn">Hex</button>
+                <div class="word-key" data-tooltip="Golden Token - 64-bit capability key that grants access rights">GT</div>
+                <div class="hex-btns">
+                    <button class="hex-btn" data-tooltip="Big-Endian (MSB first): ${formatGTHex(gt)}" id="gtHexBtn">Hex</button>
+                    <button class="le-btn" data-tooltip="Little-Endian (LSB first, ARM byte order): ${formatLittleEndian(gt)}" id="gtLeBtn">LE</button>
+                </div>
                 <div class="word-fields">
                     <div class="field-group field-left">
-                        <span class="field-label">Perms [32:47]</span>
-                        <div class="perm-checkboxes">${permCheckboxes}</div>
-                        <span class="perm-hex">= 0x${gtDecoded.permBits.toString(16).toUpperCase().padStart(4, '0')}</span>
+                        <span class="field-label" data-tooltip="Bits 0-31: Index into the Namespace Table pointing to the object descriptor">Offset [0:31]</span>
+                        <input type="text" id="gtOffset" class="field-input" value="0x${offset.toString(16).toUpperCase().padStart(8, '0')}" onchange="updateGTFromEditor()">
                     </div>
                     <div class="field-group field-center">
-                        <span class="field-label">Spare [48:63]</span>
+                        <span class="field-label" data-tooltip="Bits 48-63: Reserved for future use">Spare [48:63]</span>
                         <input type="text" id="gtSpare" class="field-input" value="0x${spare.toString(16).toUpperCase().padStart(4, '0')}" onchange="updateGTFromEditor()">
                     </div>
                     <div class="field-group field-right">
-                        <span class="field-label">Offset [0:31]</span>
-                        <input type="text" id="gtOffset" class="field-input" value="0x${offset.toString(16).toUpperCase().padStart(8, '0')}" onchange="updateGTFromEditor()">
+                        <span class="field-label" data-tooltip="Bits 32-47: Permission flags (R=Read, W=Write, X=Execute, L=Load, S=Save, E=Enter, B=Bind, M=Meta-Machine)">Perms [32:47]</span>
+                        <div class="perm-checkboxes">${permCheckboxes}</div>
+                        <span class="perm-hex">= 0x${gtDecoded.permBits.toString(16).toUpperCase().padStart(4, '0')}</span>
                     </div>
                 </div>
             </div>
             
             <div class="word-row nmd-row">
-                <div class="word-key">W1</div>
-                <button class="hex-btn" data-tooltip="${formatWord(cap.nsEntry.word1_location)}" id="w1HexBtn">Hex</button>
+                <div class="word-key" data-tooltip="Namespace Descriptor Word 1 - Physical memory address or URL of the object">W1</div>
+                <div class="hex-btns">
+                    <button class="hex-btn" data-tooltip="Big-Endian (MSB first): ${formatWord(cap.nsEntry.word1_location)}" id="w1HexBtn">Hex</button>
+                    <button class="le-btn" data-tooltip="Little-Endian (LSB first, ARM byte order): ${formatLittleEndian(cap.nsEntry.word1_location)}" id="w1LeBtn">LE</button>
+                </div>
                 <div class="word-fields">
                     <div class="field-group field-right-full">
-                        <span class="field-label">Location (Physical Address)</span>
+                        <span class="field-label" data-tooltip="Physical memory address or URL where the object data resides">Location (Physical Address)</span>
                         <input type="text" id="nsLocation" class="field-input field-wide" value="${formatWord(cap.nsEntry.word1_location)}" onchange="updateNSFromEditor()">
                     </div>
                 </div>
             </div>
             
             <div class="word-row nmd-row">
-                <div class="word-key">W2</div>
-                <button class="hex-btn" data-tooltip="${formatWord(cap.nsEntry.word2_limit)}" id="w2HexBtn">Hex</button>
+                <div class="word-key" data-tooltip="Namespace Descriptor Word 2 - Size limit of the object in bytes">W2</div>
+                <div class="hex-btns">
+                    <button class="hex-btn" data-tooltip="Big-Endian (MSB first): ${formatWord(cap.nsEntry.word2_limit)}" id="w2HexBtn">Hex</button>
+                    <button class="le-btn" data-tooltip="Little-Endian (LSB first, ARM byte order): ${formatLittleEndian(cap.nsEntry.word2_limit)}" id="w2LeBtn">LE</button>
+                </div>
                 <div class="word-fields">
                     <div class="field-group field-right-full">
-                        <span class="field-label">Limit (${Number(cap.nsEntry.word2_limit)} bytes)</span>
+                        <span class="field-label" data-tooltip="Maximum size of the object in bytes - hardware enforces bounds checking">Limit (${Number(cap.nsEntry.word2_limit)} bytes)</span>
                         <input type="text" id="nsLimit" class="field-input field-wide" value="${formatWord(cap.nsEntry.word2_limit)}" onchange="updateNSFromEditor()">
                     </div>
                 </div>
             </div>
             
             <div class="word-row nmd-row">
-                <div class="word-key">W3</div>
-                <button class="hex-btn" data-tooltip="${formatWord(cap.nsEntry.word3_seals)}" id="w3HexBtn">Hex</button>
+                <div class="word-key" data-tooltip="Namespace Descriptor Word 3 - Seals containing metadata, type, and MAC for integrity">W3</div>
+                <div class="hex-btns">
+                    <button class="hex-btn" data-tooltip="Big-Endian (MSB first): ${formatWord(cap.nsEntry.word3_seals)}" id="w3HexBtn">Hex</button>
+                    <button class="le-btn" data-tooltip="Little-Endian (LSB first, ARM byte order): ${formatLittleEndian(cap.nsEntry.word3_seals)}" id="w3LeBtn">LE</button>
+                </div>
                 <div class="word-fields">
                     <div class="field-group field-left">
-                        <span class="field-label">Meta [0:31]</span>
+                        <span class="field-label" data-tooltip="Bits 0-31: Object metadata (creation time, version, etc.)">Meta [0:31]</span>
                         <input type="text" id="nsMeta" class="field-input" value="0x${(Number(cap.nsEntry.word3_seals) & 0xFFFFFFFF).toString(16).toUpperCase().padStart(8, '0')}" onchange="updateNSFromEditor()">
                     </div>
                     <div class="field-group field-center">
-                        <span class="field-label">Type [32:47]</span>
+                        <span class="field-label" data-tooltip="Bits 32-47: Object type identifier (Code, Data, CList, Thread, etc.)">Type [32:47]</span>
                         <select id="nsType" class="field-select" onchange="updateNSFromEditor()">${typeOptions}</select>
                     </div>
                     <div class="field-group field-right mac-field ${macValidation.valid ? 'mac-valid' : 'mac-invalid'}" data-tooltip="${macPopupContent}">
-                        <span class="field-label">MAC [48:63]</span>
+                        <span class="field-label" data-tooltip="Bits 48-63: Message Authentication Code - hardware validates integrity on LOAD">MAC [48:63]</span>
                         <span id="nsMACValue" class="mac-value">${macValidation.valid ? '✓' : '⚠'} 0x${getMACFromSeals(cap.nsEntry).toString(16).toUpperCase().padStart(4, '0')}</span>
                         <button class="btn-recalc-mini" onclick="recalculateMAC()" title="Recalculate MAC">↻</button>
                     </div>
@@ -1234,7 +1257,9 @@ function updateGTFromEditor() {
     
     const gt = encodeGoldenToken(offset, perms, spare);
     const gtHexBtn = document.getElementById('gtHexBtn');
-    if (gtHexBtn) gtHexBtn.setAttribute('data-tooltip', formatGTHex(gt));
+    const gtLeBtn = document.getElementById('gtLeBtn');
+    if (gtHexBtn) gtHexBtn.setAttribute('data-tooltip', `Big-Endian (MSB first): ${formatGTHex(gt)}`);
+    if (gtLeBtn) gtLeBtn.setAttribute('data-tooltip', `Little-Endian (LSB first, ARM byte order): ${formatLittleEndian(gt)}`);
     
     const gtDecoded = decodeGoldenToken(gt);
     document.querySelector('.perm-hex').textContent = `= 0x${gtDecoded.permBits.toString(16).toUpperCase().padStart(4, '0')}`;
@@ -1264,6 +1289,24 @@ function updateNSFromEditor() {
     currentEditingCap.nsEntry.word3_seals = BigInt(meta & 0xFFFFFFFF) | 
                                              (BigInt(typeCode) << BigInt(32)) |
                                              (BigInt(storedMAC) << BigInt(48));
+    
+    // Update W1 Hex/LE tooltips
+    const w1HexBtn = document.getElementById('w1HexBtn');
+    const w1LeBtn = document.getElementById('w1LeBtn');
+    if (w1HexBtn) w1HexBtn.setAttribute('data-tooltip', `Big-Endian (MSB first): ${formatWord(location)}`);
+    if (w1LeBtn) w1LeBtn.setAttribute('data-tooltip', `Little-Endian (LSB first, ARM byte order): ${formatLittleEndian(location)}`);
+    
+    // Update W2 Hex/LE tooltips
+    const w2HexBtn = document.getElementById('w2HexBtn');
+    const w2LeBtn = document.getElementById('w2LeBtn');
+    if (w2HexBtn) w2HexBtn.setAttribute('data-tooltip', `Big-Endian (MSB first): ${formatWord(limit)}`);
+    if (w2LeBtn) w2LeBtn.setAttribute('data-tooltip', `Little-Endian (LSB first, ARM byte order): ${formatLittleEndian(limit)}`);
+    
+    // Update W3 Hex/LE tooltips
+    const w3HexBtn = document.getElementById('w3HexBtn');
+    const w3LeBtn = document.getElementById('w3LeBtn');
+    if (w3HexBtn) w3HexBtn.setAttribute('data-tooltip', `Big-Endian (MSB first): ${formatWord(currentEditingCap.nsEntry.word3_seals)}`);
+    if (w3LeBtn) w3LeBtn.setAttribute('data-tooltip', `Little-Endian (LSB first, ARM byte order): ${formatLittleEndian(currentEditingCap.nsEntry.word3_seals)}`);
     
     updateMACValidationDisplay();
 }
