@@ -1712,13 +1712,14 @@ function updateEditorToolbar() {
     const permsEl = document.getElementById('editorPerms');
     const headerEl = document.getElementById('editorHeaderFilename');
     
-    const linkageWithExt = editorState.currentLinkage + '.asm';
+    const linkageWithExt = editorState.currentLinkage.endsWith('.asm') ? editorState.currentLinkage : editorState.currentLinkage + '.asm';
     if (pathEl) pathEl.textContent = linkageWithExt;
     if (permsEl) permsEl.textContent = editorState.currentPerms;
     
     // Extract filename from linkage path for editor header
     const parts = editorState.currentLinkage.split('/');
-    const filename = parts[parts.length - 1] + '.asm';
+    let filename = parts[parts.length - 1];
+    if (!filename.endsWith('.asm')) filename += '.asm';
     if (headerEl) headerEl.textContent = filename;
 }
 
@@ -2092,7 +2093,8 @@ function markEditorSaved() {
 
 function saveCode() {
     markEditorSaved();
-    editorLog('Code saved to ' + editorState.currentLinkage + '.asm', 'success');
+    const savePath = editorState.currentLinkage.endsWith('.asm') ? editorState.currentLinkage : editorState.currentLinkage + '.asm';
+    editorLog('Code saved to ' + savePath, 'success');
 }
 
 function updateLineNumbers() {
