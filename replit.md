@@ -101,3 +101,10 @@ The web interface is composed of five distinct views, accessible via a dropdown:
 - 2026-01-17: Removed h2 title from capability detail panel - hierarchy path is now the title
 - 2026-01-17: Current capability name highlighted in blue in hierarchy path (larger font, bold)
 - 2026-01-17: Changed "Loaded" to "Locked/Unlocked" status indicator with lock icons (🔒/🔓)
+- 2026-01-17: Lock status now based on register assignment: loaded in register = Unlocked, not loaded = Locked
+- 2026-01-17: Updated lock tooltips: Locked = "Navigate to the C-List parent and perform Load GT to unlock access rights", Unlocked = "Unlocked for use as Permissions allow"
+- 2026-01-17: Replaced CSS tooltips with JavaScript floating tooltip system to avoid clipping in scrollable containers
+- 2026-01-17: Renamed "System" section in Capabilities Explorer to "Context Register"
+- 2026-01-17: Added 16 clickable CR buttons (CR0-CR15) in 4x4 grid layout with special labels (NS, TH, NU, CL)
+- 2026-01-17: CR buttons show green highlight when loaded with GT, dimmed when empty
+- 2026-01-17: Clicking loaded CR button shows GT details in right panel with proper hierarchy path
