@@ -3652,6 +3652,21 @@ body.tooltip-hidden [data-tooltip]:hover::after {
     cursor: help;
 }
 
+/* Ensure state-row and boot-step tooltips appear below */
+.state-row[data-tooltip].tooltip-bottom::before,
+.boot-step-btn[data-tooltip].tooltip-bottom::before {
+    bottom: auto;
+    top: calc(100% + 8px);
+}
+
+.state-row[data-tooltip].tooltip-bottom::after,
+.boot-step-btn[data-tooltip].tooltip-bottom::after {
+    bottom: auto;
+    top: calc(100% + 2px);
+    border-top-color: transparent;
+    border-bottom-color: var(--accent);
+}
+
 /* ==================== NAMESPACE TOOLBAR ==================== */
 
 .namespace-toolbar {
