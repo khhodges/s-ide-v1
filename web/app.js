@@ -1061,8 +1061,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Convert clist entries to capability objects for display
                 simulator.clist = cr6Cap.clist.map(entry => {
                     const nsObj = namespaceObjects.find(o => o.offset === entry.nsOffset);
-                    // Determine locked status based on type
-                    const isLocked = entry.type === 'Abstraction' || entry.type === 'Code';
+                    // Determine locked status based on type (Abstractions are locked system resources)
+                    const isLocked = entry.type === 'Abstraction';
                     return {
                         name: entry.name,
                         type: entry.type || 'Unknown',
