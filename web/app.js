@@ -1312,11 +1312,11 @@ function showCapabilityDetail(evt, cap, regLabel) {
     
     panel.innerHTML = `
         <div class="cap-title-bar">
-            <div class="cap-hierarchy-title" data-tooltip="Capability hierarchy path from Namespace root">
-                ${hierarchyHtml}
-            </div>
             <div class="cap-lock-status">
                 ${lockStatusHtml}
+            </div>
+            <div class="cap-hierarchy-title" data-tooltip="Capability hierarchy path from Namespace root">
+                ${hierarchyHtml}
             </div>
         </div>
         
@@ -1643,11 +1643,12 @@ function showEmptyRegisterDetail(regIndex) {
     
     panel.innerHTML = `
         <div class="cap-title-bar">
-            <div class="cap-hierarchy-title" data-tooltip="Empty context register">
-                <span class="hier-item hier-current">CR${regIndex} - Empty Context Register</span>
-            </div>
             <div class="cap-lock-status">
                 <span class="lock-status locked" data-tooltip="Register is empty - no capability loaded">🔒 Empty</span>
+                <span class="reg-badge-small" data-tooltip="Context Register ${regIndex}">CR${regIndex}</span>
+            </div>
+            <div class="cap-hierarchy-title" data-tooltip="Empty context register">
+                <span class="hier-item hier-current">Empty Context Register</span>
             </div>
         </div>
         
