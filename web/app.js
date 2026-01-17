@@ -1061,6 +1061,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Convert clist entries to capability objects for display
                 simulator.clist = cr6Cap.clist.map(entry => {
                     const nsObj = namespaceObjects.find(o => o.offset === entry.nsOffset);
+                    // Determine locked status based on type
+                    const isLocked = entry.type === 'Abstraction' || entry.type === 'Code';
                     return {
                         name: entry.name,
                         type: entry.type || 'Unknown',
@@ -1068,7 +1070,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         location: { type: "Local", offset: nsObj ? nsObj.word1_location : 0 },
                         perms: entry.perms || [],
                         size: nsObj ? nsObj.word2_limit : 0,
-                        goldenKey: generateGoldenKey()
+                        goldenKey: generateGoldenKey(),
+                        locked: isLocked
                     };
                 });
             }
