@@ -110,3 +110,6 @@ The web interface is composed of five distinct views, accessible via a dropdown:
 - 2026-01-17: Clicking loaded CR button shows GT details in right panel with proper hierarchy path
 - 2026-01-17: Removed two-character labels (NS, TH, NU, CL) from CR buttons - now just numbers
 - 2026-01-17: CR buttons now color-coded by type: brown=Namespace, purple=Thread, blue=C-List, orange=Code, green=Abstraction
+- 2026-01-17: CR button grid now 8 per row (2 rows total) with smaller buttons
+- 2026-01-17: Threads (Kenneth, Matthew, Daniel) shown directly under Namespace in hierarchy, not under Boot
+- 2026-01-17: Removed dropdown and "Load Samples" button from Capabilities Explorer
