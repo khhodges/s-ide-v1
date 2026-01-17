@@ -36,11 +36,13 @@ body {
     z-index: 1000;
     background: var(--bg-panel);
     border-bottom: 2px solid var(--accent);
+    overflow: visible;
 }
 
 header {
     background: transparent;
     padding: 0.4rem 1rem;
+    overflow: visible;
     display: flex;
     align-items: center;
     justify-content: space-between;
