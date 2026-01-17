@@ -113,3 +113,4 @@ The web interface is composed of five distinct views, accessible via a dropdown:
 - 2026-01-17: CR button grid now 8 per row (2 rows total) with smaller buttons
 - 2026-01-17: Threads (Kenneth, Matthew, Daniel) shown directly under Namespace in hierarchy, not under Boot
 - 2026-01-17: Removed dropdown and "Load Samples" button from Capabilities Explorer
+- 2026-01-17: Empty CR buttons now clickable - shows NULL status with W1-W3 hidden and helpful message

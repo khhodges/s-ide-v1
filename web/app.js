@@ -1589,9 +1589,7 @@ function updateCapabilityExplorer() {
         btn.innerHTML = `<span class="cr-num">${i}</span>`;
         btn.setAttribute('data-tooltip', hasGT ? `CR${i}: ${reg.name} [${(reg.perms || []).join('')}]` : `CR${i}: Empty`);
         
-        if (hasGT) {
-            btn.onclick = () => selectContextRegister(i);
-        }
+        btn.onclick = () => selectContextRegister(i, hasGT);
         
         crGrid.appendChild(btn);
     }
@@ -1608,9 +1606,15 @@ function updateCapabilityExplorer() {
     }
 }
 
-function selectContextRegister(regIndex) {
+function selectContextRegister(regIndex, hasGT) {
     const reg = getContextRegister(regIndex);
-    if (!reg || !reg.name || reg.name === 'NULL') return;
+    const regLabel = `CR${regIndex}`;
+    
+    // Handle empty register - show NULL details
+    if (!hasGT || !reg || !reg.name || reg.name === 'NULL') {
+        showEmptyRegisterDetail(regIndex);
+        return;
+    }
     
     // Build capability with required location.offset for showCapabilityDetail
     const cap = {
@@ -1631,8 +1635,41 @@ function selectContextRegister(regIndex) {
     }
     
     // Use the existing showCapabilityDetail function with register label
-    const regLabel = `CR${regIndex}`;
     showCapabilityDetail(null, cap, regLabel);
+}
+
+function showEmptyRegisterDetail(regIndex) {
+    const panel = document.getElementById('capDetailPanel');
+    
+    panel.innerHTML = `
+        <div class="cap-title-bar">
+            <div class="cap-hierarchy-title" data-tooltip="Empty context register">
+                <span class="hier-item">Namespace</span>
+                <span class="hier-arrow">→</span>
+                <span class="hier-item hier-current">CR${regIndex}</span>
+            </div>
+            <div class="cap-lock-status">
+                <span class="lock-status locked" data-tooltip="Register is empty - no capability loaded">🔒 Empty</span>
+            </div>
+        </div>
+        
+        <div class="gt-editor">
+            <div class="gt-row gt-header-row">
+                <div class="gt-row-label">GT</div>
+                <div class="gt-hex-btns"></div>
+                <div class="gt-fields">
+                    <div class="gt-field">
+                        <span class="gt-field-label" data-tooltip="No Golden Token loaded">NULL</span>
+                    </div>
+                </div>
+            </div>
+            
+            <p style="color: var(--text-secondary); font-style: italic; padding: 1rem; text-align: center;">
+                No capability loaded in CR${regIndex}.<br>
+                Use LOAD instruction to load a capability from C-List.
+            </p>
+        </div>
+    `;
 }
 
 function createSampleCapabilities() {
