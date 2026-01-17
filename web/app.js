@@ -1290,19 +1290,18 @@ function showCapabilityDetail(evt, cap, regLabel) {
         `<span class="hier-item ${i === hierarchy.length - 1 ? 'hier-current' : ''}" data-tooltip="${h.type} at offset ${h.offset}">${h.name}</span>`
     ).join('<span class="hier-arrow">→</span>');
     
-    const registerHtml = registers.length > 0 
-        ? registers.map(r => `<span class="reg-assign" data-tooltip="${r.desc}">${r.reg}</span>`).join(' ')
-        : '<span class="reg-none">Not loaded</span>';
+    const isLocked = cap.locked === true;
+    const lockStatusHtml = isLocked 
+        ? '<span class="lock-status locked" data-tooltip="Capability is locked - cannot be modified">🔒 Locked</span>'
+        : '<span class="lock-status unlocked" data-tooltip="Capability is unlocked - can be modified">🔓 Unlocked</span>';
     
     panel.innerHTML = `
-        <h2>${cap.name} <span class="reg-badge">${regLabel}</span></h2>
-        
-        <div class="cap-info-bar">
-            <div class="cap-hierarchy" data-tooltip="Capability hierarchy path from Namespace root">
-                <span class="info-label">Path:</span> ${hierarchyHtml}
+        <div class="cap-title-bar">
+            <div class="cap-hierarchy-title" data-tooltip="Capability hierarchy path from Namespace root">
+                ${hierarchyHtml}
             </div>
-            <div class="cap-registers" data-tooltip="Registers currently holding this capability">
-                <span class="info-label">Loaded:</span> ${registerHtml}
+            <div class="cap-lock-status">
+                ${lockStatusHtml}
             </div>
         </div>
         

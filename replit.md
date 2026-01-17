@@ -97,3 +97,7 @@ The web interface is composed of five distinct views, accessible via a dropdown:
 - 2026-01-17: Added capability info bar showing: Path (hierarchy from Namespace root) and Loaded (register assignments)
 - 2026-01-17: Hierarchy path shows clickable items with arrows (Namespace → Boot → Object), current item highlighted in blue
 - 2026-01-17: Register assignments shown as green badges (CR15, CR8, CR6, etc.) or "Not loaded" if unassigned
+- 2026-01-17: C-List entries now show descriptive type labels ([0] Code, [1] Thread, [2] Abstraction) instead of generic indices
+- 2026-01-17: Removed h2 title from capability detail panel - hierarchy path is now the title
+- 2026-01-17: Current capability name highlighted in blue in hierarchy path (larger font, bold)
+- 2026-01-17: Changed "Loaded" to "Locked/Unlocked" status indicator with lock icons (🔒/🔓)
