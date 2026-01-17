@@ -1244,6 +1244,7 @@ function getRegisterAssignment(cap) {
         assignments.push({ reg: 'CR8', desc: 'Current Thread' });
         if (cap.perms && cap.perms.includes('M')) {
             assignments.push({ reg: 'Thread', desc: 'Thread identity (M permission)' });
+            assignments.push({ reg: 'Running', desc: 'Thread is active in CR8' });
         }
     }
     if (simulator.contextRegs[7] && simulator.contextRegs[7].name === cap.name) {
@@ -1276,6 +1277,9 @@ function getRegisterAssignment(cap) {
                 assignments.push({ reg: statusLabel, desc: 'Code status from metadata' });
             } else if (regCap.type === 'Thread' || regCap.perms?.includes('M')) {
                 assignments.push({ reg: 'Thread', desc: 'Thread identity' });
+                // Check if this thread is in CR8 (running) or not (suspended)
+                const isInCR8 = simulator.cr8 && simulator.cr8.name === cap.name;
+                assignments.push({ reg: isInCR8 ? 'Running' : 'Suspended', desc: isInCR8 ? 'Thread is active in CR8' : 'Thread is not loaded in CR8' });
             } else if (regCap.type === 'Abstraction') {
                 assignments.push({ reg: 'Abstraction', desc: 'Protected abstraction' });
             } else if (regCap.type === 'C-List') {
@@ -1299,6 +1303,9 @@ function getRegisterAssignment(cap) {
                 assignments.push({ reg: statusLabel, desc: 'Code status from metadata' });
             } else if (clistEntry.type === 'Thread' || clistEntry.perms?.includes('M')) {
                 assignments.push({ reg: 'Thread', desc: 'Thread identity capability' });
+                // Check if this thread is in CR8 (running) or not (suspended)
+                const isInCR8 = simulator.cr8 && simulator.cr8.name === cap.name;
+                assignments.push({ reg: isInCR8 ? 'Running' : 'Suspended', desc: isInCR8 ? 'Thread is active in CR8' : 'Thread is not loaded in CR8' });
             } else if (clistEntry.type === 'Abstraction') {
                 assignments.push({ reg: 'Abstraction', desc: 'Protected abstraction capability' });
             } else if (clistEntry.type === 'C-List') {
