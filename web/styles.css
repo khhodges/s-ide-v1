@@ -874,7 +874,7 @@ main {
 
 .word-row {
     display: grid;
-    grid-template-columns: 40px 50px 1fr;
+    grid-template-columns: 50px 50px 1fr;
     gap: 0.8rem;
     align-items: start;
     background: var(--bg-dark);
@@ -997,7 +997,8 @@ main {
 }
 
 .field-input.field-wide {
-    width: 140px;
+    width: 180px;
+    text-align: left;
 }
 
 .field-input:focus {
