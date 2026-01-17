@@ -1142,6 +1142,96 @@ function getObjectTooltip(name, type) {
 let currentEditingCap = null;
 let currentEditingRegLabel = null;
 
+function getCapabilityHierarchy(cap) {
+    const hierarchy = [];
+    
+    // Check if this capability is in the Boot C-List
+    const bootCListEntry = bootCList.entries.find(e => e.name === cap.name);
+    if (bootCListEntry) {
+        hierarchy.push({ name: 'Namespace', type: 'Root', offset: 0 });
+        hierarchy.push({ name: 'Boot', type: 'C-List', offset: 1 });
+        hierarchy.push({ name: cap.name, type: cap.type || bootCListEntry.type, offset: bootCListEntry.nsOffset });
+        return hierarchy;
+    }
+    
+    // Check if it's the Namespace itself
+    if (cap.name === 'Namespace' || cap.location?.offset === 0) {
+        hierarchy.push({ name: 'Namespace', type: 'Root', offset: 0 });
+        return hierarchy;
+    }
+    
+    // Check if it's the Boot C-List
+    if (cap.name === 'Boot') {
+        hierarchy.push({ name: 'Namespace', type: 'Root', offset: 0 });
+        hierarchy.push({ name: 'Boot', type: 'C-List', offset: 1 });
+        return hierarchy;
+    }
+    
+    // Check thread C-Lists
+    for (const [threadName, threadData] of Object.entries(threadCLists)) {
+        const threadEntry = threadData.clist.find(e => e.name === cap.name);
+        if (threadEntry) {
+            hierarchy.push({ name: 'Namespace', type: 'Root', offset: 0 });
+            hierarchy.push({ name: 'Boot', type: 'C-List', offset: 1 });
+            hierarchy.push({ name: threadName, type: 'Thread', offset: threadData.clist === threadCLists.Kenneth?.clist ? 2 : 
+                            threadName === 'Matthew' ? 4 : threadName === 'Daniel' ? 5 : 0 });
+            hierarchy.push({ name: cap.name, type: threadEntry.type, offset: 0 });
+            return hierarchy;
+        }
+    }
+    
+    // Check abstraction C-Lists
+    for (const [absName, absData] of Object.entries(abstractionCLists)) {
+        const absEntry = absData.clist.find(e => e.name === cap.name);
+        if (absEntry) {
+            hierarchy.push({ name: 'Namespace', type: 'Root', offset: 0 });
+            hierarchy.push({ name: 'Boot', type: 'C-List', offset: 1 });
+            hierarchy.push({ name: absName, type: 'Abstraction', offset: 0 });
+            hierarchy.push({ name: cap.name, type: absEntry.type, offset: 0 });
+            return hierarchy;
+        }
+    }
+    
+    // Default: just the capability itself
+    hierarchy.push({ name: cap.name, type: cap.type || 'Unknown', offset: cap.location?.offset || 0 });
+    return hierarchy;
+}
+
+function getRegisterAssignment(cap) {
+    const assignments = [];
+    
+    // Check special registers
+    if (simulator.cr15 && simulator.cr15.name === cap.name) {
+        assignments.push({ reg: 'CR15', desc: 'Namespace Root' });
+    }
+    if (simulator.cr8 && simulator.cr8.name === cap.name) {
+        assignments.push({ reg: 'CR8', desc: 'Current Thread' });
+    }
+    if (simulator.contextRegs[7] && simulator.contextRegs[7].name === cap.name) {
+        assignments.push({ reg: 'CR7', desc: 'Nucleus' });
+    }
+    if (simulator.contextRegs[6] && simulator.contextRegs[6].name === cap.name) {
+        assignments.push({ reg: 'CR6', desc: 'C-List' });
+    }
+    
+    // Check other context registers
+    for (let i = 0; i < 6; i++) {
+        if (simulator.contextRegs[i] && simulator.contextRegs[i].name === cap.name) {
+            assignments.push({ reg: `CR${i}`, desc: 'Context Register' });
+        }
+    }
+    
+    // Check if it's in the current C-List
+    if (simulator.clist) {
+        const clistIndex = simulator.clist.findIndex(c => c.name === cap.name);
+        if (clistIndex >= 0) {
+            assignments.push({ reg: `C-List[${clistIndex}]`, desc: 'Boot C-List Entry' });
+        }
+    }
+    
+    return assignments;
+}
+
 function showCapabilityDetail(evt, cap, regLabel) {
     document.querySelectorAll('.token-card').forEach(c => c.classList.remove('selected'));
     if (evt && evt.currentTarget) {
@@ -1192,8 +1282,29 @@ function showCapabilityDetail(evt, cap, regLabel) {
         ? `MAC Valid | Stored: 0x${macValidation.stored.toString(16).toUpperCase().padStart(4, '0')} | Calculated: 0x${macValidation.calculated.toString(16).toUpperCase().padStart(4, '0')}`
         : `SECURITY TRAP! MAC Mismatch | Stored: 0x${macValidation.stored.toString(16).toUpperCase().padStart(4, '0')} | Calculated: 0x${macValidation.calculated.toString(16).toUpperCase().padStart(4, '0')}`;
     
+    // Get hierarchy and register info
+    const hierarchy = getCapabilityHierarchy(cap);
+    const registers = getRegisterAssignment(cap);
+    
+    const hierarchyHtml = hierarchy.map((h, i) => 
+        `<span class="hier-item ${i === hierarchy.length - 1 ? 'hier-current' : ''}" data-tooltip="${h.type} at offset ${h.offset}">${h.name}</span>`
+    ).join('<span class="hier-arrow">→</span>');
+    
+    const registerHtml = registers.length > 0 
+        ? registers.map(r => `<span class="reg-assign" data-tooltip="${r.desc}">${r.reg}</span>`).join(' ')
+        : '<span class="reg-none">Not loaded</span>';
+    
     panel.innerHTML = `
         <h2>${cap.name} <span class="reg-badge">${regLabel}</span></h2>
+        
+        <div class="cap-info-bar">
+            <div class="cap-hierarchy" data-tooltip="Capability hierarchy path from Namespace root">
+                <span class="info-label">Path:</span> ${hierarchyHtml}
+            </div>
+            <div class="cap-registers" data-tooltip="Registers currently holding this capability">
+                <span class="info-label">Loaded:</span> ${registerHtml}
+            </div>
+        </div>
         
         <div class="word-stack">
             <div class="word-row gt-row">

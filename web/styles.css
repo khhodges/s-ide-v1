@@ -1005,6 +1005,62 @@ main {
     width: 100%;
 }
 
+/* Capability Info Bar */
+.cap-info-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+.cap-hierarchy, .cap-registers {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.info-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.hier-item {
+    padding: 0.15rem 0.4rem;
+    background: var(--bg-light);
+    border-radius: 3px;
+    color: var(--text-secondary);
+}
+
+.hier-item.hier-current {
+    background: var(--accent-blue);
+    color: white;
+    font-weight: 500;
+}
+
+.hier-arrow {
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+}
+
+.reg-assign {
+    padding: 0.15rem 0.5rem;
+    background: var(--accent-green);
+    color: white;
+    border-radius: 3px;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+.reg-none {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
 .field-input {
     padding: 0.25rem 0.4rem;
     background: var(--bg-input);

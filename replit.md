@@ -91,3 +91,9 @@ The web interface is composed of five distinct views, accessible via a dropdown:
 - 2026-01-16: Removed Reset button - "Fault Restart" (boot step 1) now handles state save and reset
 - 2026-01-16: View selector changed from dropdown to horizontal row of buttons
 - 2026-01-16: Simplified Dashboard - removed Command Input and Output Log, now pure Thread View
+- 2026-01-17: Increased left column width in word rows from 60px to 80px for better label visibility
+- 2026-01-17: Permission hex value now right-justified on header row using flex layout (field-label-row class)
+- 2026-01-17: Clicking GT tokens in left panel updates right detail panel with hierarchy path and register assignments
+- 2026-01-17: Added capability info bar showing: Path (hierarchy from Namespace root) and Loaded (register assignments)
+- 2026-01-17: Hierarchy path shows clickable items with arrows (Namespace → Boot → Object), current item highlighted in blue
+- 2026-01-17: Register assignments shown as green badges (CR15, CR8, CR6, etc.) or "Not loaded" if unassigned
