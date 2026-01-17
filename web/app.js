@@ -1233,18 +1233,29 @@ function getCapabilityHierarchy(cap) {
 function getRegisterAssignment(cap) {
     const assignments = [];
     
-    // Check special registers
+    // Check special registers with type indicators
     if (simulator.cr15 && simulator.cr15.name === cap.name) {
+        // CR15 is Namespace - show type if M permission is set
+        if (cap.perms && cap.perms.includes('M')) {
+            assignments.push({ reg: 'Namespace', desc: 'Namespace root (M permission)' });
+        }
         assignments.push({ reg: 'CR15', desc: 'Namespace Root' });
     }
     if (simulator.cr8 && simulator.cr8.name === cap.name) {
+        // CR8 is Thread - show type if M permission is set
+        if (cap.perms && cap.perms.includes('M')) {
+            assignments.push({ reg: 'Thread', desc: 'Thread identity (M permission)' });
+        }
         assignments.push({ reg: 'CR8', desc: 'Current Thread' });
     }
     if (simulator.contextRegs[7] && simulator.contextRegs[7].name === cap.name) {
         assignments.push({ reg: 'CR7', desc: 'Nucleus' });
     }
     if (simulator.contextRegs[6] && simulator.contextRegs[6].name === cap.name) {
-        assignments.push({ reg: 'CR6', desc: 'C-List' });
+        // CR6 is C-List - show size
+        const clistSize = simulator.clist ? simulator.clist.length : 0;
+        assignments.push({ reg: `C-List [${clistSize}]`, desc: `Capability list with ${clistSize} entries` });
+        assignments.push({ reg: 'CR6', desc: 'Current C-List' });
     }
     
     // Check other context registers
