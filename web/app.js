@@ -1293,7 +1293,9 @@ function showCapabilityDetail(evt, cap, regLabel) {
         `<span class="hier-item ${i === hierarchy.length - 1 ? 'hier-current' : ''}" data-tooltip="${h.type} at offset ${h.offset}">${h.name}</span>`
     ).join('<span class="hier-arrow">→</span>');
     
-    const isLocked = cap.locked === true;
+    // Capability is unlocked if it's loaded in any register, otherwise check the locked property
+    const isLoaded = registers.length > 0;
+    const isLocked = !isLoaded && cap.locked === true;
     const registerBadges = registers.length > 0 
         ? registers.map(r => `<span class="reg-badge-small" data-tooltip="${r.desc}">${r.reg}</span>`).join(' ')
         : '';
