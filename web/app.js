@@ -2,6 +2,29 @@ let savedEditorContent = '';
 let viewHistory = [];
 let currentView = 'dashboard';
 
+// Code status values stored in metadata field (bits 0-7)
+const CODE_STATUS = {
+    EMPTY: 0x00,      // No code loaded
+    DRAFT: 0x01,      // Code is being developed
+    COMPILED: 0x02,   // Successfully compiled
+    TESTED: 0x03,     // Has passed testing
+    APPROVED: 0x04,   // Approved for production use
+    SIGNED: 0x05      // Cryptographically signed
+};
+
+function getCodeStatusLabel(metadata) {
+    const statusCode = metadata & 0xFF;
+    switch (statusCode) {
+        case CODE_STATUS.EMPTY: return 'Empty';
+        case CODE_STATUS.DRAFT: return 'Draft';
+        case CODE_STATUS.COMPILED: return 'Compiled';
+        case CODE_STATUS.TESTED: return 'Tested';
+        case CODE_STATUS.APPROVED: return 'Approved';
+        case CODE_STATUS.SIGNED: return 'Signed';
+        default: return 'Unknown';
+    }
+}
+
 function switchView(viewId, addToHistory = true) {
     // Add current view to history before switching (if not going back)
     if (addToHistory && currentView !== viewId) {
@@ -1235,7 +1258,15 @@ function getRegisterAssignment(cap) {
     if (simulator.clist) {
         const clistIndex = simulator.clist.findIndex(c => c.name === cap.name);
         if (clistIndex >= 0) {
-            assignments.push({ reg: `C-List[${clistIndex}]`, desc: 'Boot C-List Entry' });
+            const clistEntry = simulator.clist[clistIndex];
+            // For executable code, show code status from metadata instead of C-List[x]
+            if (clistEntry.perms && clistEntry.perms.includes('X')) {
+                const metadata = clistEntry.nsEntry ? Number(clistEntry.nsEntry.word3_seals & BigInt(0xFFFFFFFF)) : 0;
+                const statusLabel = getCodeStatusLabel(metadata);
+                assignments.push({ reg: `Code: ${statusLabel}`, desc: `Executable code status from metadata` });
+            } else {
+                assignments.push({ reg: `C-List[${clistIndex}]`, desc: 'Boot C-List Entry' });
+            }
         }
     }
     
