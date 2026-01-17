@@ -1644,9 +1644,7 @@ function showEmptyRegisterDetail(regIndex) {
     panel.innerHTML = `
         <div class="cap-title-bar">
             <div class="cap-hierarchy-title" data-tooltip="Empty context register">
-                <span class="hier-item">Namespace</span>
-                <span class="hier-arrow">→</span>
-                <span class="hier-item hier-current">CR${regIndex}</span>
+                <span class="hier-item hier-current">CR${regIndex} - Empty Context Register</span>
             </div>
             <div class="cap-lock-status">
                 <span class="lock-status locked" data-tooltip="Register is empty - no capability loaded">🔒 Empty</span>
