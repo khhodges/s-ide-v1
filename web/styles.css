@@ -741,6 +741,71 @@ main {
     transform: scale(1.05);
 }
 
+.cr-btn.cr-namespace {
+    background: linear-gradient(135deg, #3d2a1a 0%, #2a1a0a 100%);
+    border-color: #cd853f;
+    color: #cd853f;
+    cursor: pointer;
+}
+
+.cr-btn.cr-namespace:hover {
+    background: linear-gradient(135deg, #4d3a2a 0%, #3a2a1a 100%);
+    box-shadow: 0 0 8px rgba(205, 133, 63, 0.3);
+    transform: scale(1.05);
+}
+
+.cr-btn.cr-thread {
+    background: linear-gradient(135deg, #2a1a3d 0%, #1a0a2a 100%);
+    border-color: #9370db;
+    color: #9370db;
+    cursor: pointer;
+}
+
+.cr-btn.cr-thread:hover {
+    background: linear-gradient(135deg, #3a2a4d 0%, #2a1a3a 100%);
+    box-shadow: 0 0 8px rgba(147, 112, 219, 0.3);
+    transform: scale(1.05);
+}
+
+.cr-btn.cr-clist {
+    background: linear-gradient(135deg, #1a2a4d 0%, #0a1a3a 100%);
+    border-color: #5dade2;
+    color: #5dade2;
+    cursor: pointer;
+}
+
+.cr-btn.cr-clist:hover {
+    background: linear-gradient(135deg, #2a3a5d 0%, #1a2a4a 100%);
+    box-shadow: 0 0 8px rgba(93, 173, 226, 0.3);
+    transform: scale(1.05);
+}
+
+.cr-btn.cr-code {
+    background: linear-gradient(135deg, #4d3a1a 0%, #3a2a0a 100%);
+    border-color: #f39c12;
+    color: #f39c12;
+    cursor: pointer;
+}
+
+.cr-btn.cr-code:hover {
+    background: linear-gradient(135deg, #5d4a2a 0%, #4a3a1a 100%);
+    box-shadow: 0 0 8px rgba(243, 156, 18, 0.3);
+    transform: scale(1.05);
+}
+
+.cr-btn.cr-abstraction {
+    background: linear-gradient(135deg, #1a4d2a 0%, #0a3a1a 100%);
+    border-color: #58d68d;
+    color: #58d68d;
+    cursor: pointer;
+}
+
+.cr-btn.cr-abstraction:hover {
+    background: linear-gradient(135deg, #2a5d3a 0%, #1a4a2a 100%);
+    box-shadow: 0 0 8px rgba(88, 214, 141, 0.3);
+    transform: scale(1.05);
+}
+
 .cr-btn.cr-empty {
     opacity: 0.5;
 }

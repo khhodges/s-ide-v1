@@ -1552,16 +1552,34 @@ function updateCapabilityExplorer() {
     
     if (!crGrid) return;
     
-    // Render 16 CR buttons
+    // Render 16 CR buttons with type-based color coding
     crGrid.innerHTML = '';
     for (let i = 0; i < 16; i++) {
         const reg = getContextRegister(i);
         const hasGT = reg && reg.name && reg.name !== 'NULL';
-        const specialLabel = i === 15 ? 'NS' : i === 8 ? 'TH' : i === 7 ? 'NU' : i === 6 ? 'CL' : null;
+        
+        // Determine type class for color coding
+        let typeClass = 'cr-empty';
+        if (hasGT) {
+            const type = getCapabilityTypeLabel(reg);
+            if (type === 'Namespace' || reg.name === 'Namespace' || reg.name === 'SYSTEM_ROOT') {
+                typeClass = 'cr-namespace';
+            } else if (type === 'Thread' || reg.perms?.includes('M')) {
+                typeClass = 'cr-thread';
+            } else if (type === 'C-List') {
+                typeClass = 'cr-clist';
+            } else if (type === 'Code' || type === 'Nucleus') {
+                typeClass = 'cr-code';
+            } else if (type === 'Abstraction') {
+                typeClass = 'cr-abstraction';
+            } else {
+                typeClass = 'cr-loaded';
+            }
+        }
         
         const btn = document.createElement('button');
-        btn.className = `cr-btn ${hasGT ? 'cr-loaded' : 'cr-empty'}`;
-        btn.innerHTML = `<span class="cr-num">${i}</span>${specialLabel ? `<span class="cr-label">${specialLabel}</span>` : ''}`;
+        btn.className = `cr-btn ${typeClass}`;
+        btn.innerHTML = `<span class="cr-num">${i}</span>`;
         btn.setAttribute('data-tooltip', hasGT ? `CR${i}: ${reg.name} [${(reg.perms || []).join('')}]` : `CR${i}: Empty`);
         
         if (hasGT) {

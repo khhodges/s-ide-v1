@@ -108,3 +108,5 @@ The web interface is composed of five distinct views, accessible via a dropdown:
 - 2026-01-17: Added 16 clickable CR buttons (CR0-CR15) in 4x4 grid layout with special labels (NS, TH, NU, CL)
 - 2026-01-17: CR buttons show green highlight when loaded with GT, dimmed when empty
 - 2026-01-17: Clicking loaded CR button shows GT details in right panel with proper hierarchy path
+- 2026-01-17: Removed two-character labels (NS, TH, NU, CL) from CR buttons - now just numbers
+- 2026-01-17: CR buttons now color-coded by type: brown=Namespace, purple=Thread, blue=C-List, orange=Code, green=Abstraction
