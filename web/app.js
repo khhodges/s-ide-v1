@@ -3807,6 +3807,72 @@ const lessons = [
                 </div>`
             },
             {
+                text: `<h3>Shared Privileges - Eliminated</h3>
+                <p>Traditional operating systems use <strong>shared privilege levels</strong> (Ring 0-3, user/kernel mode):</p>
+                <div class="highlight">
+                    All code at the same privilege level can access all resources at that level - a massive attack surface.
+                </div>
+                <p>This creates fundamental vulnerabilities:</p>
+                <ul>
+                    <li><strong>Kernel exploits</strong>: One bug gives access to EVERYTHING in Ring 0</li>
+                    <li><strong>Driver vulnerabilities</strong>: Trusted drivers run with full kernel privilege</li>
+                    <li><strong>Lateral movement</strong>: Compromising one process aids attacking others at same level</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>CTMM Solution:</strong> No shared privileges exist. Each Golden Token grants specific access to specific resources. There is no "privilege level" - only individual capabilities.
+                </div>`,
+                demo: `<div class="demo-title">Shared Privileges vs Capabilities</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: rgba(248, 113, 113, 0.15); padding: 1rem; border-radius: 6px;">
+                            <div style="color: var(--error); font-weight: bold; margin-bottom: 0.5rem;">Ring 0 (All or Nothing)</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Kernel mode = access to ALL memory, ALL devices, ALL processes</div>
+                        </div>
+                        <div style="background: rgba(74, 222, 128, 0.15); padding: 1rem; border-radius: 6px;">
+                            <div style="color: var(--success); font-weight: bold; margin-bottom: 0.5rem;">Capabilities (Precise)</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Each GT grants access to ONE specific resource with specific permissions</div>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Return-Oriented Programming (ROP) - Defeated</h3>
+                <p><strong>ROP attacks</strong> exploit the fundamental flaw of mixed code and data:</p>
+                <div class="highlight">
+                    Attackers chain existing code fragments ("gadgets") ending in RET to build malicious programs without injecting new code.
+                </div>
+                <p>Why ROP works on traditional systems:</p>
+                <ul>
+                    <li><strong>Flat memory</strong>: Code and return addresses share the same space</li>
+                    <li><strong>Unprotected stack</strong>: Return addresses can be overwritten</li>
+                    <li><strong>Executable code reuse</strong>: Any code in memory can be "jumped to"</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>CTMM Solution:</strong> The CALL/RETURN mechanism uses Golden Tokens, not memory addresses. You cannot CALL code without holding a valid capability with E (Enter) permission. Return addresses are protected by hardware - there is no stack to overflow.
+                </div>`,
+                demo: `<div class="demo-title">ROP Attack vs CTMM Protection</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: rgba(248, 113, 113, 0.15); padding: 1rem; border-radius: 6px;">
+                            <div style="color: var(--error); font-weight: bold; margin-bottom: 0.5rem;">Traditional Stack</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); font-family: monospace;">
+                                RET addr → gadget1<br/>
+                                RET addr → gadget2<br/>
+                                RET addr → system()
+                            </div>
+                        </div>
+                        <div style="background: rgba(74, 222, 128, 0.15); padding: 1rem; border-radius: 6px;">
+                            <div style="color: var(--success); font-weight: bold; margin-bottom: 0.5rem;">CTMM Protected</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); font-family: monospace;">
+                                CALL requires GT with [E]<br/>
+                                No GT = No execution<br/>
+                                Hardware-protected returns
+                            </div>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
                 text: `<h3>Congratulations!</h3>
                 <p>You've learned the fundamentals of capability-based security:</p>
                 <ul>
