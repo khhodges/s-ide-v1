@@ -4488,89 +4488,254 @@ body.tooltip-hidden [data-tooltip]:hover::after {
     font-size: 1.3rem;
 }
 
-.instr-intro {
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
+.instr-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Binary Format Card */
+.instr-format-card {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.instr-format-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.instr-format-name {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.instr-format-syntax {
+    font-family: 'Consolas', 'Courier New', monospace;
     font-size: 0.85rem;
+    color: var(--success);
+    padding: 0.2rem 0.6rem;
+    background: rgba(74, 222, 128, 0.1);
+    border-radius: 4px;
+}
+
+.instr-format-brief {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.3rem;
+}
+
+.instr-format-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
     line-height: 1.4;
 }
 
-.instr-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 0.5rem;
-}
-
-.instr-card {
-    background: var(--bg-input);
-    border: 1px solid var(--border);
+/* Bit Diagram */
+.bit-diagram {
+    background: var(--bg-dark);
     border-radius: 6px;
-    padding: 0.6rem 0.8rem;
-    cursor: pointer;
-    transition: all 0.2s;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
 }
 
-.instr-card:hover {
-    border-color: var(--accent);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(233, 69, 96, 0.2);
+.bit-fields {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
 }
 
-.instr-card .instr-name {
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--accent);
+.bit-field {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.4rem 0.2rem;
+    border-right: 1px solid var(--border);
+    background: var(--bg-panel);
+    min-width: 0;
+}
+
+.bit-field:last-child {
+    border-right: none;
+}
+
+.bit-field.bit-fixed {
+    background: rgba(233, 69, 96, 0.15);
+}
+
+.bit-range {
+    font-family: 'Consolas', monospace;
+    font-size: 0.6rem;
+    color: var(--text-muted);
     margin-bottom: 0.2rem;
 }
 
-.instr-card .instr-brief {
+.bit-name {
+    font-family: 'Consolas', monospace;
     font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    word-break: break-all;
+}
+
+.bit-width {
+    font-family: 'Consolas', monospace;
+    font-size: 0.6rem;
+    color: var(--accent);
+    margin-top: 0.2rem;
+}
+
+/* Field Descriptions */
+.field-descs {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.3rem;
+}
+
+.field-desc-item {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+}
+
+.field-desc-name {
+    font-family: 'Consolas', monospace;
+    color: var(--accent);
+    font-weight: 600;
+    min-width: 60px;
+}
+
+.field-desc-text {
     color: var(--text-secondary);
-    line-height: 1.2;
 }
 
-.instr-card .instr-syntax {
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 0.65rem;
-    color: var(--success);
-    margin-top: 0.3rem;
-    padding: 0.2rem 0.4rem;
-    background: rgba(74, 222, 128, 0.1);
-    border-radius: 3px;
+/* Variants Section */
+.instr-variants {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
 }
 
-/* Instruction category headers */
-.instr-category {
-    grid-column: 1 / -1;
-    font-size: 0.8rem;
+.variant-label,
+.opcode-label,
+.cond-label {
+    font-size: 0.75rem;
     font-weight: 600;
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding: 0.3rem 0;
-    margin-top: 0.3rem;
-    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.4rem;
 }
 
-.instr-category:first-child {
-    margin-top: 0;
+.variant-item {
+    display: flex;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    padding: 0.25rem 0;
 }
 
-/* Permission badge in instruction cards */
-.instr-perm-badge {
-    display: inline-block;
+.variant-name {
+    font-family: 'Consolas', monospace;
+    color: var(--success);
+    font-weight: 600;
+    min-width: 70px;
+}
+
+.variant-fields {
+    color: var(--text-secondary);
+    font-family: 'Consolas', monospace;
     font-size: 0.7rem;
-    padding: 0.15rem 0.4rem;
-    border-radius: 3px;
-    margin-left: 0.3rem;
-    font-weight: 500;
 }
 
-.instr-perm-badge.perm-e { background: #27ae60; color: white; }
-.instr-perm-badge.perm-m { background: #8e44ad; color: white; }
-.instr-perm-badge.perm-x { background: #e74c3c; color: white; }
-.instr-perm-badge.perm-rw { background: #3498db; color: white; }
+/* Opcodes Section */
+.instr-opcodes {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+}
+
+.opcode-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.3rem;
+}
+
+.opcode-item {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    align-items: baseline;
+}
+
+.opcode-code {
+    font-family: 'Consolas', monospace;
+    color: var(--accent);
+    background: rgba(233, 69, 96, 0.15);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-size: 0.65rem;
+}
+
+.opcode-name {
+    font-family: 'Consolas', monospace;
+    color: var(--success);
+    font-weight: 600;
+    min-width: 40px;
+}
+
+.opcode-desc {
+    color: var(--text-secondary);
+}
+
+/* Conditions Section */
+.instr-conditions {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+}
+
+.cond-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.3rem;
+}
+
+.cond-item {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    align-items: baseline;
+}
+
+.cond-code {
+    font-family: 'Consolas', monospace;
+    color: var(--warning);
+    background: rgba(251, 191, 36, 0.15);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-size: 0.65rem;
+}
+
+.cond-name {
+    font-family: 'Consolas', monospace;
+    color: var(--success);
+    font-weight: 600;
+    min-width: 25px;
+}
+
+.cond-desc {
+    color: var(--text-secondary);
+}
 
 /* Math type badges for abstractions */
 .math-type-badge {

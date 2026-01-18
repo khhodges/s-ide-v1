@@ -52,6 +52,10 @@ The web interface is composed of five distinct views:
 
 ## Recent Changes
 
+- 2026-01-18: Instructions page redesigned as ARM binary format design reference with visual bit-field diagrams
+- 2026-01-18: Each instruction shows 32-bit encoding with field names, bit positions, widths, and variants
+- 2026-01-18: Church instructions: LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, MINT with binary formats
+- 2026-01-18: Turing instructions: Data Processing, Multiply, Branch, Load/Store, Shift with ARM-style encoding
 - 2026-01-18: Added Instructions view with Church/Turing tabs and hover tooltips
 - 2026-01-18: Comprehensive permission validation: M clears software perms, Data/Capability mutually exclusive
 - 2026-01-18: Boot C-List corrected: Access=[X], Threads=[M], Abstractions=[E,B]

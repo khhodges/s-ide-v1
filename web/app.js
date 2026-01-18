@@ -6816,76 +6816,267 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ============ Instructions View ============
 
-const churchInstructions = [
-    { cat: "Capability Access", name: "LOAD", brief: "Load GT from C-List to CR", syntax: "LOAD CRd, [CR6+idx]", 
-      tooltip: "Load Golden Token from C-List (indexed by CR6) into destination Context Register. Requires L permission (internally via CALL)." },
-    { cat: "Capability Access", name: "SAVE", brief: "Save CR to C-List slot", syntax: "SAVE CRs, [CR6+idx]", 
-      tooltip: "Save Context Register GT back to C-List slot. Requires S permission (internally via CALL)." },
-    { cat: "Control Flow", name: "CALL", brief: "Enter code object", syntax: "CALL CRs", 
-      tooltip: "Enter code object with E permission. Temporarily elevates M bit to allow microcode L/S operations. Pushes return address, sets IP=0." },
-    { cat: "Control Flow", name: "RETURN", brief: "Return from call", syntax: "RETURN", 
-      tooltip: "Return from CALL. Pops return address, restores caller context. GT in CR0 is released unless SAVEd first." },
-    { cat: "Thread Control", name: "CHANGE", brief: "Switch thread identity", syntax: "CHANGE nsOffset", 
-      tooltip: "Switch current thread (CR8) to thread at namespace offset. Requires M permission on target thread entry." },
-    { cat: "Thread Control", name: "SWITCH", brief: "Switch C-List context", syntax: "SWITCH CRs", 
-      tooltip: "Switch C-List (CR6) to new capability. Changes accessible capabilities for current thread." },
-    { cat: "Permission Test", name: "TPERM", brief: "Test GT permissions", syntax: "TPERM CRs, permMask", 
-      tooltip: "Test if CR has required permissions. Sets flags: Z=all pass, C=perms OK, V=bounds OK, N=no perms. P and B flags updated." }
+const churchInstrFormats = [
+    {
+        name: "LOAD",
+        brief: "Load GT from C-List to CR",
+        syntax: "LOAD CRd, [CR6+idx]",
+        desc: "Load Golden Token from C-List into Context Register. Requires L permission.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code (AL=always)" },
+            { name: "Op", bits: 6, value: "000001", desc: "LOAD opcode" },
+            { name: "CRd", bits: 4, desc: "Destination CR (0-15)" },
+            { name: "CR6", bits: 4, value: "0110", desc: "C-List base register" },
+            { name: "Index", bits: 14, desc: "C-List slot offset" }
+        ],
+        variants: [
+            { name: "Direct", fields: { Index: "Literal offset 0-16383" } },
+            { name: "Register", fields: { Index: "DRn[13:0] indirect" } }
+        ]
+    },
+    {
+        name: "SAVE",
+        brief: "Save CR to C-List slot",
+        syntax: "SAVE CRs, [CR6+idx]",
+        desc: "Save Context Register GT back to C-List. Requires S permission.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "Op", bits: 6, value: "000010", desc: "SAVE opcode" },
+            { name: "CRs", bits: 4, desc: "Source CR (0-15)" },
+            { name: "CR6", bits: 4, value: "0110", desc: "C-List base" },
+            { name: "Index", bits: 14, desc: "C-List slot offset" }
+        ],
+        variants: [
+            { name: "Direct", fields: { Index: "Literal offset 0-16383" } },
+            { name: "Register", fields: { Index: "DRn[13:0] indirect" } }
+        ]
+    },
+    {
+        name: "CALL",
+        brief: "Enter code object",
+        syntax: "CALL CRs",
+        desc: "Enter code object with E permission. Elevates M bit for microcode L/S.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "Op", bits: 6, value: "000011", desc: "CALL opcode" },
+            { name: "CRs", bits: 4, desc: "Code capability register" },
+            { name: "L", bits: 1, desc: "Link bit (save return)" },
+            { name: "Reserved", bits: 17, value: "0", desc: "Must be zero" }
+        ],
+        variants: [
+            { name: "CALL", fields: { L: "0 = no link" } },
+            { name: "CALLL", fields: { L: "1 = save return address" } }
+        ]
+    },
+    {
+        name: "RETURN",
+        brief: "Return from call",
+        syntax: "RETURN",
+        desc: "Return from CALL. Pops return address, restores caller context.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "Op", bits: 6, value: "000100", desc: "RETURN opcode" },
+            { name: "Reserved", bits: 22, value: "0", desc: "Must be zero" }
+        ],
+        variants: []
+    },
+    {
+        name: "CHANGE",
+        brief: "Switch thread identity",
+        syntax: "CHANGE nsOffset",
+        desc: "Switch current thread (CR8) to thread at namespace offset. Requires M.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "Op", bits: 6, value: "000101", desc: "CHANGE opcode" },
+            { name: "Reserved", bits: 6, value: "0", desc: "Must be zero" },
+            { name: "NSOffset", bits: 16, desc: "Namespace table offset" }
+        ],
+        variants: [
+            { name: "Direct", fields: { NSOffset: "Literal NS offset" } },
+            { name: "Indirect", fields: { NSOffset: "From DRn[15:0]" } }
+        ]
+    },
+    {
+        name: "SWITCH",
+        brief: "Switch C-List context",
+        syntax: "SWITCH CRs",
+        desc: "Switch C-List (CR6) to new capability. Changes accessible capabilities.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "Op", bits: 6, value: "000110", desc: "SWITCH opcode" },
+            { name: "CRs", bits: 4, desc: "New C-List capability" },
+            { name: "Reserved", bits: 18, value: "0", desc: "Must be zero" }
+        ],
+        variants: []
+    },
+    {
+        name: "TPERM",
+        brief: "Test GT permissions",
+        syntax: "TPERM CRs, permMask",
+        desc: "Test if CR has required permissions. Sets Z,C,V,N flags.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "Op", bits: 6, value: "000111", desc: "TPERM opcode" },
+            { name: "CRs", bits: 4, desc: "CR to test" },
+            { name: "Perms", bits: 9, desc: "Permission mask (RWXLSEBMF)" },
+            { name: "Reserved", bits: 9, value: "0", desc: "Must be zero" }
+        ],
+        variants: [
+            { name: "All", fields: { Perms: "All 9 permission bits" } },
+            { name: "Subset", fields: { Perms: "Specific permissions only" } }
+        ]
+    },
+    {
+        name: "MINT",
+        brief: "Create new capability",
+        syntax: "MINT CRd, perms, size",
+        desc: "Mint new Golden Token in next free Namespace slot.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "Op", bits: 6, value: "001000", desc: "MINT opcode" },
+            { name: "CRd", bits: 4, desc: "Destination CR for new GT" },
+            { name: "Perms", bits: 9, desc: "Initial permissions" },
+            { name: "Size", bits: 9, desc: "Object size (encoded)" }
+        ],
+        variants: [
+            { name: "Fixed", fields: { Size: "Encoded size 0-511" } },
+            { name: "Register", fields: { Size: "From DRn[8:0]" } }
+        ]
+    }
 ];
 
-const turingInstructions = [
-    { cat: "Arithmetic", name: "ADD", brief: "Add registers", syntax: "ADD DRd, DRn, DRm", 
-      tooltip: "DRd = DRn + DRm. Sets N,Z,C,V flags. C=carry out, V=signed overflow." },
-    { cat: "Arithmetic", name: "SUB", brief: "Subtract registers", syntax: "SUB DRd, DRn, DRm", 
-      tooltip: "DRd = DRn - DRm. Sets N,Z,C,V flags. C=no borrow, V=signed overflow." },
-    { cat: "Arithmetic", name: "MUL", brief: "Multiply registers", syntax: "MUL DRd, DRn, DRm", 
-      tooltip: "DRd = (DRn * DRm) lower 64 bits. Sets N,Z flags." },
-    { cat: "Arithmetic", name: "NEG", brief: "Negate register", syntax: "NEG DRd, DRn", 
-      tooltip: "DRd = -DRn (two's complement). Sets N,Z,C,V flags." },
-    { cat: "Logic", name: "AND", brief: "Bitwise AND", syntax: "AND DRd, DRn, DRm", 
-      tooltip: "DRd = DRn & DRm. Sets N,Z flags. C,V unchanged." },
-    { cat: "Logic", name: "ORR", brief: "Bitwise OR", syntax: "ORR DRd, DRn, DRm", 
-      tooltip: "DRd = DRn | DRm. Sets N,Z flags. C,V unchanged." },
-    { cat: "Logic", name: "EOR", brief: "Bitwise XOR", syntax: "EOR DRd, DRn, DRm", 
-      tooltip: "DRd = DRn ^ DRm. Sets N,Z flags. C,V unchanged." },
-    { cat: "Logic", name: "NOT", brief: "Bitwise NOT", syntax: "NOT DRd, DRn", 
-      tooltip: "DRd = ~DRn (one's complement). Sets N,Z flags." },
-    { cat: "Logic", name: "BIC", brief: "Bit clear", syntax: "BIC DRd, DRn, DRm", 
-      tooltip: "DRd = DRn & ~DRm. Clears bits in DRn where DRm has 1s. Sets N,Z flags." },
-    { cat: "Data Movement", name: "MOV", brief: "Move value", syntax: "MOV DRd, DRn | #imm", 
-      tooltip: "DRd = DRn or immediate value. Sets N,Z flags if S suffix." },
-    { cat: "Data Movement", name: "MVN", brief: "Move NOT", syntax: "MVN DRd, DRn", 
-      tooltip: "DRd = ~DRn. Move bitwise NOT of source. Sets N,Z flags." },
-    { cat: "Shifts", name: "LSL", brief: "Logical shift left", syntax: "LSL DRd, DRn, #amt", 
-      tooltip: "DRd = DRn << amt. Zeros shifted in from right. C=last bit shifted out." },
-    { cat: "Shifts", name: "LSR", brief: "Logical shift right", syntax: "LSR DRd, DRn, #amt", 
-      tooltip: "DRd = DRn >> amt (unsigned). Zeros shifted in from left. C=last bit shifted out." },
-    { cat: "Shifts", name: "ASR", brief: "Arithmetic shift right", syntax: "ASR DRd, DRn, #amt", 
-      tooltip: "DRd = DRn >> amt (signed). Sign bit replicated. Preserves sign for division by 2^n." },
-    { cat: "Shifts", name: "ROR", brief: "Rotate right", syntax: "ROR DRd, DRn, #amt", 
-      tooltip: "DRd = DRn rotated right by amt bits. Bits wrap around from LSB to MSB." },
-    { cat: "Compare", name: "CMP", brief: "Compare registers", syntax: "CMP DRn, DRm", 
-      tooltip: "Computes DRn - DRm, sets N,Z,C,V flags, discards result. Use before conditional branch." },
-    { cat: "Compare", name: "CMN", brief: "Compare negative", syntax: "CMN DRn, DRm", 
-      tooltip: "Computes DRn + DRm, sets flags, discards result. Tests if DRn equals -DRm." },
-    { cat: "Compare", name: "TST", brief: "Test bits", syntax: "TST DRn, DRm", 
-      tooltip: "Computes DRn & DRm, sets N,Z flags, discards result. Tests if any bits are set." },
-    { cat: "Compare", name: "TEQ", brief: "Test equivalence", syntax: "TEQ DRn, DRm", 
-      tooltip: "Computes DRn ^ DRm, sets N,Z flags, discards result. Tests if registers are equal." },
-    { cat: "Branch", name: "B", brief: "Branch unconditional", syntax: "B label", 
-      tooltip: "Jump to label. IP = label address. Use condition codes: BEQ, BNE, BGT, BLT, etc." },
-    { cat: "Branch", name: "BL", brief: "Branch with link", syntax: "BL label", 
-      tooltip: "Save return address in LR (DR14), then jump to label. Used for subroutine calls." },
-    { cat: "Branch", name: "BX", brief: "Branch exchange", syntax: "BX DRn", 
-      tooltip: "Branch to address in DRn. Can switch between instruction sets." },
-    { cat: "Condition", name: "EQ/NE", brief: "Equal / Not equal", syntax: "BEQ / BNE", 
-      tooltip: "EQ: Z=1 (equal). NE: Z=0 (not equal). Based on last CMP/TST result." },
-    { cat: "Condition", name: "GT/LT", brief: "Greater / Less than", syntax: "BGT / BLT", 
-      tooltip: "GT: Z=0 & N=V (signed >). LT: N!=V (signed <). For signed comparisons." },
-    { cat: "Condition", name: "GE/LE", brief: "Greater or equal / Less or equal", syntax: "BGE / BLE", 
-      tooltip: "GE: N=V (signed >=). LE: Z=1 | N!=V (signed <=). For signed comparisons." },
-    { cat: "Condition", name: "HI/LS", brief: "Higher / Lower or same", syntax: "BHI / BLS", 
-      tooltip: "HI: C=1 & Z=0 (unsigned >). LS: C=0 | Z=1 (unsigned <=). For unsigned comparisons." }
+const turingInstrFormats = [
+    {
+        name: "Data Processing",
+        brief: "ADD, SUB, AND, ORR, EOR, etc.",
+        syntax: "OP{cond}{S} DRd, DRn, DRm/#imm",
+        desc: "ARM-style ALU operations on Data Registers with optional flag updates.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code (4 bits)" },
+            { name: "00", bits: 2, value: "00", desc: "Data processing ID" },
+            { name: "I", bits: 1, desc: "Immediate flag (1=imm)" },
+            { name: "Opcode", bits: 4, desc: "Operation: ADD=0100" },
+            { name: "S", bits: 1, desc: "Set flags (1=yes)" },
+            { name: "DRn", bits: 4, desc: "First operand register" },
+            { name: "DRd", bits: 4, desc: "Destination register" },
+            { name: "Operand2", bits: 12, desc: "Shift/Imm (see variants)" }
+        ],
+        variants: [
+            { name: "Register", fields: { I: "0", Operand2: "Shift[11:5] | Type[6:5] | DRm[3:0]" } },
+            { name: "Immediate", fields: { I: "1", Operand2: "Rotate[11:8] | Imm8[7:0]" } }
+        ],
+        opcodes: [
+            { code: "0000", name: "AND", desc: "Rd = Rn & Op2" },
+            { code: "0001", name: "EOR", desc: "Rd = Rn ^ Op2" },
+            { code: "0010", name: "SUB", desc: "Rd = Rn - Op2" },
+            { code: "0100", name: "ADD", desc: "Rd = Rn + Op2" },
+            { code: "1010", name: "CMP", desc: "Rn - Op2 (flags only)" },
+            { code: "1100", name: "ORR", desc: "Rd = Rn | Op2" },
+            { code: "1101", name: "MOV", desc: "Rd = Op2" },
+            { code: "1110", name: "BIC", desc: "Rd = Rn & ~Op2" },
+            { code: "1111", name: "MVN", desc: "Rd = ~Op2" }
+        ]
+    },
+    {
+        name: "Multiply",
+        brief: "MUL, MLA, UMULL, SMULL",
+        syntax: "MUL{cond}{S} DRd, DRn, DRm",
+        desc: "32/64-bit multiply operations with optional accumulate.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "0000", bits: 4, value: "0000", desc: "Multiply ID" },
+            { name: "A", bits: 1, desc: "Accumulate flag" },
+            { name: "S", bits: 1, desc: "Set flags" },
+            { name: "DRd", bits: 4, desc: "Destination (lo)" },
+            { name: "DRa", bits: 4, desc: "Accumulate reg" },
+            { name: "DRm", bits: 4, desc: "Multiplier" },
+            { name: "1001", bits: 4, value: "1001", desc: "Multiply signature" },
+            { name: "DRn", bits: 4, desc: "Multiplicand" },
+            { name: "U", bits: 1, desc: "Unsigned flag" },
+            { name: "L", bits: 1, desc: "Long (64-bit)" }
+        ],
+        variants: [
+            { name: "MUL", fields: { A: "0", U: "x", L: "0" } },
+            { name: "MLA", fields: { A: "1", U: "x", L: "0" } },
+            { name: "UMULL", fields: { A: "0", U: "1", L: "1" } },
+            { name: "SMULL", fields: { A: "0", U: "0", L: "1" } }
+        ]
+    },
+    {
+        name: "Branch",
+        brief: "B, BL, BX",
+        syntax: "B{cond} offset / BL{cond} offset",
+        desc: "PC-relative branch with optional link (subroutine call).",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "101", bits: 3, value: "101", desc: "Branch ID" },
+            { name: "L", bits: 1, desc: "Link bit (1=BL)" },
+            { name: "Offset", bits: 24, desc: "Signed offset (<<2)" }
+        ],
+        variants: [
+            { name: "B", fields: { L: "0 = Branch only" } },
+            { name: "BL", fields: { L: "1 = Save LR, branch" } }
+        ],
+        conditions: [
+            { code: "0000", name: "EQ", desc: "Z=1 (equal)" },
+            { code: "0001", name: "NE", desc: "Z=0 (not equal)" },
+            { code: "1010", name: "GE", desc: "N=V (>=)" },
+            { code: "1011", name: "LT", desc: "N!=V (<)" },
+            { code: "1100", name: "GT", desc: "Z=0, N=V (>)" },
+            { code: "1101", name: "LE", desc: "Z=1 or N!=V (<=)" },
+            { code: "1110", name: "AL", desc: "Always execute" }
+        ]
+    },
+    {
+        name: "Load/Store",
+        brief: "LDR, STR (Data Registers)",
+        syntax: "LDR{cond} DRd, [DRn, #offset]",
+        desc: "Load/Store Data Register from memory via capability bounds.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "01", bits: 2, value: "01", desc: "Load/Store ID" },
+            { name: "I", bits: 1, desc: "Immediate offset" },
+            { name: "P", bits: 1, desc: "Pre/post index" },
+            { name: "U", bits: 1, desc: "Up/down offset" },
+            { name: "B", bits: 1, desc: "Byte/word" },
+            { name: "W", bits: 1, desc: "Writeback" },
+            { name: "L", bits: 1, desc: "Load/Store (1=load)" },
+            { name: "DRn", bits: 4, desc: "Base register" },
+            { name: "DRd", bits: 4, desc: "Src/Dest register" },
+            { name: "Offset", bits: 12, desc: "Offset (imm or reg)" }
+        ],
+        variants: [
+            { name: "LDR", fields: { L: "1", B: "0 = 64-bit word" } },
+            { name: "STR", fields: { L: "0", B: "0 = 64-bit word" } },
+            { name: "LDRB", fields: { L: "1", B: "1 = byte" } },
+            { name: "STRB", fields: { L: "0", B: "1 = byte" } }
+        ]
+    },
+    {
+        name: "Shift",
+        brief: "LSL, LSR, ASR, ROR",
+        syntax: "LSL{cond}{S} DRd, DRn, #amt/DRm",
+        desc: "Logical/arithmetic shifts and rotates. Encoded via Data Processing.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "00", bits: 2, value: "00", desc: "Data processing" },
+            { name: "0", bits: 1, value: "0", desc: "Register mode" },
+            { name: "1101", bits: 4, value: "1101", desc: "MOV opcode" },
+            { name: "S", bits: 1, desc: "Set flags" },
+            { name: "0000", bits: 4, value: "0000", desc: "Rn unused" },
+            { name: "DRd", bits: 4, desc: "Destination" },
+            { name: "Shift", bits: 5, desc: "Shift amount" },
+            { name: "Type", bits: 2, desc: "Shift type" },
+            { name: "0", bits: 1, value: "0", desc: "Immediate shift" },
+            { name: "DRm", bits: 4, desc: "Source register" }
+        ],
+        variants: [
+            { name: "LSL", fields: { Type: "00 = Logical left" } },
+            { name: "LSR", fields: { Type: "01 = Logical right" } },
+            { name: "ASR", fields: { Type: "10 = Arithmetic right" } },
+            { name: "ROR", fields: { Type: "11 = Rotate right" } }
+        ]
+    }
 ];
 
 function switchInstrTab(tab) {
@@ -6907,37 +7098,118 @@ function switchInstrTab(tab) {
     }
 }
 
-function renderInstructionGrid(instructions, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
+function renderBitField(field, startBit, totalBits) {
+    const endBit = startBit - field.bits + 1;
+    const width = (field.bits / totalBits) * 100;
+    const bitRange = field.bits === 1 ? `${startBit}` : `${startBit}:${endBit}`;
+    const hasValue = field.value !== undefined;
     
-    container.innerHTML = '';
-    let currentCat = '';
+    return `
+        <div class="bit-field ${hasValue ? 'bit-fixed' : ''}" style="flex: 0 0 ${width.toFixed(2)}%;">
+            <div class="bit-range">${bitRange}</div>
+            <div class="bit-name">${field.name}</div>
+            <div class="bit-width">${field.bits}</div>
+        </div>
+    `;
+}
+
+function renderInstrFormat(instr) {
+    const totalBits = instr.format.reduce((sum, f) => sum + f.bits, 0);
+    let bitPos = totalBits - 1;
+    const fieldsHtml = instr.format.map(field => {
+        const html = renderBitField(field, bitPos, totalBits);
+        bitPos -= field.bits;
+        return html;
+    }).join('');
     
-    instructions.forEach(instr => {
-        if (instr.cat !== currentCat) {
-            currentCat = instr.cat;
-            const catHeader = document.createElement('div');
-            catHeader.className = 'instr-category';
-            catHeader.textContent = currentCat;
-            container.appendChild(catHeader);
-        }
-        
-        const card = document.createElement('div');
-        card.className = 'instr-card';
-        card.setAttribute('data-tooltip', instr.tooltip);
-        card.innerHTML = `
-            <div class="instr-name">${instr.name}</div>
-            <div class="instr-brief">${instr.brief}</div>
-            <div class="instr-syntax">${instr.syntax}</div>
+    let variantsHtml = '';
+    if (instr.variants && instr.variants.length > 0) {
+        variantsHtml = `
+            <div class="instr-variants">
+                <div class="variant-label">Variants:</div>
+                ${instr.variants.map(v => `
+                    <div class="variant-item">
+                        <span class="variant-name">${v.name}</span>
+                        <span class="variant-fields">${Object.entries(v.fields).map(([k, val]) => `${k}=${val}`).join(', ')}</span>
+                    </div>
+                `).join('')}
+            </div>
         `;
-        container.appendChild(card);
-    });
+    }
+    
+    let opcodesHtml = '';
+    if (instr.opcodes) {
+        opcodesHtml = `
+            <div class="instr-opcodes">
+                <div class="opcode-label">Opcodes:</div>
+                <div class="opcode-grid">
+                    ${instr.opcodes.map(op => `
+                        <div class="opcode-item">
+                            <span class="opcode-code">${op.code}</span>
+                            <span class="opcode-name">${op.name}</span>
+                            <span class="opcode-desc">${op.desc}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    let conditionsHtml = '';
+    if (instr.conditions) {
+        conditionsHtml = `
+            <div class="instr-conditions">
+                <div class="cond-label">Conditions:</div>
+                <div class="cond-grid">
+                    ${instr.conditions.map(c => `
+                        <div class="cond-item">
+                            <span class="cond-code">${c.code}</span>
+                            <span class="cond-name">${c.name}</span>
+                            <span class="cond-desc">${c.desc}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="instr-format-card">
+            <div class="instr-format-header">
+                <span class="instr-format-name">${instr.name}</span>
+                <span class="instr-format-syntax">${instr.syntax}</span>
+            </div>
+            <div class="instr-format-brief">${instr.brief}</div>
+            <div class="instr-format-desc">${instr.desc}</div>
+            <div class="bit-diagram">
+                <div class="bit-fields">${fieldsHtml}</div>
+                <div class="field-descs">
+                    ${instr.format.map(f => `
+                        <div class="field-desc-item">
+                            <span class="field-desc-name">${f.name}</span>
+                            <span class="field-desc-text">${f.desc}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ${variantsHtml}
+            ${opcodesHtml}
+            ${conditionsHtml}
+        </div>
+    `;
 }
 
 function initInstructionsView() {
-    renderInstructionGrid(churchInstructions, 'churchInstrGrid');
-    renderInstructionGrid(turingInstructions, 'turingInstrGrid');
+    const churchGrid = document.getElementById('churchInstrGrid');
+    const turingGrid = document.getElementById('turingInstrGrid');
+    
+    if (churchGrid) {
+        churchGrid.innerHTML = churchInstrFormats.map(renderInstrFormat).join('');
+    }
+    
+    if (turingGrid) {
+        turingGrid.innerHTML = turingInstrFormats.map(renderInstrFormat).join('');
+    }
 }
 
 // Initialize instructions view on load
