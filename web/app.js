@@ -1,5 +1,4 @@
 let savedEditorContent = '';
-let viewHistory = [];
 let currentView = 'dashboard';
 
 // Code status values stored in metadata field (bits 0-7)
@@ -25,22 +24,12 @@ function getCodeStatusLabel(metadata) {
     }
 }
 
-function switchView(viewId, addToHistory = true) {
-    // Add current view to history before switching (if not going back)
-    if (addToHistory && currentView !== viewId) {
-        viewHistory.push(currentView);
-        // Keep history limited to last 20 views
-        if (viewHistory.length > 20) {
-            viewHistory.shift();
-        }
-    }
-    
+function switchView(viewId) {
     currentView = viewId;
     
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(viewId).classList.add('active');
     
-    // Update view button active states
     document.querySelectorAll('.view-buttons .btn-view').forEach(btn => {
         btn.classList.remove('active');
     });
@@ -48,9 +37,6 @@ function switchView(viewId, addToHistory = true) {
     if (activeBtn) {
         activeBtn.classList.add('active');
     }
-    
-    // Update back button state
-    updateBackButton();
     
     if (viewId === 'editor') {
         const editor = document.getElementById('codeEditor');
@@ -60,20 +46,6 @@ function switchView(viewId, addToHistory = true) {
         if (typeof updateEditorToolbar === 'function') {
             updateEditorToolbar();
         }
-    }
-}
-
-function goBack() {
-    if (viewHistory.length > 0) {
-        const previousView = viewHistory.pop();
-        switchView(previousView, false); // Don't add to history when going back
-    }
-}
-
-function updateBackButton() {
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) {
-        backBtn.disabled = viewHistory.length === 0;
     }
 }
 
