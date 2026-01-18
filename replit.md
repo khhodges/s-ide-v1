@@ -49,3 +49,12 @@ The web interface is composed of five distinct views:
 -   **Python HTTP Server**: Serves the web interface files.
 -   **Haskell GHC**: For the console-based simulator backend.
 -   **`localStorage`**: Browser API used for client-side state persistence.
+
+## Recent Changes
+
+- 2026-01-18: Added Instructions view with Church/Turing tabs and hover tooltips
+- 2026-01-18: Comprehensive permission validation: M clears software perms, Data/Capability mutually exclusive
+- 2026-01-18: Boot C-List corrected: Access=[X], Threads=[M], Abstractions=[E,B]
+- 2026-01-18: Added math type documentation with visual badges: Abacus [INTEGER], SlideRule [FLOAT], Circle [GEOMETRY]
+- 2026-01-18: Enhanced tooltips explain CALL usage for integer vs float operations
+- 2026-01-18: Added "Capability-Based Math" step to Tutorial explaining how CALL determines math type

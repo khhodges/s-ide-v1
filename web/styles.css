@@ -4577,3 +4577,30 @@ body.tooltip-hidden [data-tooltip]:hover::after {
 .instr-perm-badge.perm-m { background: #8e44ad; color: white; }
 .instr-perm-badge.perm-x { background: #e74c3c; color: white; }
 .instr-perm-badge.perm-rw { background: #3498db; color: white; }
+
+/* Math type badges for abstractions */
+.math-type-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    margin-right: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.math-type-badge.math-float {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+}
+
+.math-type-badge.math-integer {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+    color: white;
+}
+
+.math-type-badge.math-geometry {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    color: white;
+}

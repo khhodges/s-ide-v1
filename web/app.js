@@ -260,15 +260,15 @@ const namespaceObjects = [
     // Offset 6: SlideRule abstraction
     { offset: 6, name: "SlideRule", type: "Abstraction",
       word1_location: 0x5000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "SlideRule abstraction - IEEE 754 floating-point math operations." },
+      tooltip: "SlideRule [FLOAT] - IEEE 754 floating-point math. Use CALL to invoke: ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW. Requires E permission." },
     // Offset 7: Abacus abstraction
     { offset: 7, name: "Abacus", type: "Abstraction",
       word1_location: 0x6000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "Abacus abstraction - 64-bit integer arithmetic operations." },
+      tooltip: "Abacus [INTEGER] - 64-bit integer arithmetic. Use CALL to invoke: ADD, SUB, MUL, DIV, MOD, ABS, NEG, INC, DEC. Requires E permission." },
     // Offset 8: Circle abstraction
     { offset: 8, name: "Circle", type: "Abstraction",
       word1_location: 0x7000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "Circle abstraction - geometric calculations." }
+      tooltip: "Circle [GEOMETRY] - Circle calculations using SlideRule floats. PI, TWO_PI constants, CIRCUMFERENCE, AREA, DIAMETER functions." }
 ];
 
 // Boot C-List at Namespace offset 2
@@ -476,46 +476,49 @@ const threadCLists = {
 const abstractionCLists = {
     SlideRule: {
         name: "SlideRule",
-        description: "Logarithmic math operations abstraction",
+        mathType: "FLOAT",
+        description: "IEEE 754 floating-point operations. CALL this abstraction for float math.",
         clist: [
-            { name: "GT_ADD", type: "Function", perms: ["R", "X"], desc: "Addition", base: 0x5100, size: 256 },
-            { name: "GT_SUB", type: "Function", perms: ["R", "X"], desc: "Subtraction", base: 0x5200, size: 256 },
-            { name: "GT_MUL", type: "Function", perms: ["R", "X"], desc: "Multiplication", base: 0x5300, size: 256 },
-            { name: "GT_DIV", type: "Function", perms: ["R", "X"], desc: "Division", base: 0x5400, size: 384 },
-            { name: "GT_LOG", type: "Function", perms: ["R", "X"], desc: "Logarithm", base: 0x5580, size: 256 },
-            { name: "GT_EXP", type: "Function", perms: ["R", "X"], desc: "Exponent", base: 0x5680, size: 256 },
-            { name: "GT_SQRT", type: "Function", perms: ["R", "X"], desc: "Square Root", base: 0x5780, size: 256 },
-            { name: "GT_POW", type: "Function", perms: ["R", "X"], desc: "Power", base: 0x5880, size: 320 },
+            { name: "GT_ADD", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: a + b", base: 0x5100, size: 256 },
+            { name: "GT_SUB", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: a - b", base: 0x5200, size: 256 },
+            { name: "GT_MUL", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: a * b", base: 0x5300, size: 256 },
+            { name: "GT_DIV", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: a / b", base: 0x5400, size: 384 },
+            { name: "GT_LOG", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: ln(x)", base: 0x5580, size: 256 },
+            { name: "GT_EXP", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: e^x", base: 0x5680, size: 256 },
+            { name: "GT_SQRT", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: sqrt(x)", base: 0x5780, size: 256 },
+            { name: "GT_POW", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: x^y", base: 0x5880, size: 320 },
             { name: "LocalCode", type: "Code", perms: ["R", "X"], base: 0x5000, size: 256 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0x5A00, size: 512 }
         ]
     },
     Abacus: {
         name: "Abacus",
-        description: "Integer arithmetic operations abstraction",
+        mathType: "INTEGER",
+        description: "64-bit integer arithmetic operations. CALL this abstraction for integer math.",
         clist: [
-            { name: "GT_ADD", type: "Function", perms: ["R", "X"], desc: "Integer Add", base: 0x6100, size: 192 },
-            { name: "GT_SUB", type: "Function", perms: ["R", "X"], desc: "Integer Subtract", base: 0x6200, size: 192 },
-            { name: "GT_MUL", type: "Function", perms: ["R", "X"], desc: "Integer Multiply", base: 0x6300, size: 192 },
-            { name: "GT_DIV", type: "Function", perms: ["R", "X"], desc: "Integer Divide", base: 0x6400, size: 320 },
-            { name: "GT_MOD", type: "Function", perms: ["R", "X"], desc: "Modulo", base: 0x6580, size: 256 },
-            { name: "GT_ABS", type: "Function", perms: ["R", "X"], desc: "Absolute Value", base: 0x6680, size: 128 },
-            { name: "GT_NEG", type: "Function", perms: ["R", "X"], desc: "Negate", base: 0x6700, size: 128 },
-            { name: "GT_INC", type: "Function", perms: ["R", "X"], desc: "Increment", base: 0x6780, size: 64 },
-            { name: "GT_DEC", type: "Function", perms: ["R", "X"], desc: "Decrement", base: 0x67C0, size: 64 },
+            { name: "GT_ADD", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a + b", base: 0x6100, size: 192 },
+            { name: "GT_SUB", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a - b", base: 0x6200, size: 192 },
+            { name: "GT_MUL", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a * b", base: 0x6300, size: 192 },
+            { name: "GT_DIV", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a / b", base: 0x6400, size: 320 },
+            { name: "GT_MOD", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a mod b", base: 0x6580, size: 256 },
+            { name: "GT_ABS", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: |a|", base: 0x6680, size: 128 },
+            { name: "GT_NEG", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: -a", base: 0x6700, size: 128 },
+            { name: "GT_INC", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a + 1", base: 0x6780, size: 64 },
+            { name: "GT_DEC", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a - 1", base: 0x67C0, size: 64 },
             { name: "LocalCode", type: "Code", perms: ["R", "X"], base: 0x6000, size: 256 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0x6800, size: 512 }
         ]
     },
     Circle: {
         name: "Circle",
-        description: "Circle geometry abstraction with PI constant",
+        mathType: "GEOMETRY",
+        description: "Circle geometry using float math. Provides PI constants and circle functions.",
         clist: [
-            { name: "GT_PI", type: "Constant", perms: ["R"], desc: "PI = 3.14159265358979", value: 3.14159265358979, base: 0x7000, size: 8 },
-            { name: "GT_TWO_PI", type: "Constant", perms: ["R"], desc: "2*PI = 6.28318530717958", value: 6.28318530717958, base: 0x7008, size: 8 },
-            { name: "GT_CIRCUMFERENCE", type: "Function", perms: ["R", "X"], desc: "C = 2*PI*r", base: 0x7100, size: 192 },
-            { name: "GT_AREA", type: "Function", perms: ["R", "X"], desc: "A = PI*r^2", base: 0x7200, size: 192 },
-            { name: "GT_DIAMETER", type: "Function", perms: ["R", "X"], desc: "D = 2*r", base: 0x7300, size: 128 },
+            { name: "GT_PI", type: "Constant", mathType: "float", perms: ["R"], desc: "Float: PI = 3.14159...", value: 3.14159265358979, base: 0x7000, size: 8 },
+            { name: "GT_TWO_PI", type: "Constant", mathType: "float", perms: ["R"], desc: "Float: 2*PI = 6.28318...", value: 6.28318530717958, base: 0x7008, size: 8 },
+            { name: "GT_CIRCUMFERENCE", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: C = 2*PI*r", base: 0x7100, size: 192 },
+            { name: "GT_AREA", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: A = PI*r^2", base: 0x7200, size: 192 },
+            { name: "GT_DIAMETER", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: D = 2*r", base: 0x7300, size: 128 },
             { name: "LocalCode", type: "Code", perms: ["R", "X"], base: 0x7080, size: 128 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0x7400, size: 512 }
         ]
@@ -938,16 +941,22 @@ function buildHierarchyTree() {
     html += '<div class="hier-group">';
     html += '<div class="hier-group-label" data-tooltip="Protected objects containing function Golden Tokens.">Abstractions</div>';
     const abstractionDescs = {
-        'SlideRule': 'Floating-point math functions (ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW)',
-        'Abacus': 'Integer math functions (ADD, SUB, MUL, DIV, MOD, ABS, NEG, INC, DEC)',
-        'Circle': 'Circle geometry with PI constant (CIRCUMFERENCE, AREA, DIAMETER)'
+        'SlideRule': '[FLOAT] IEEE 754 floating-point. CALL to use: ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW',
+        'Abacus': '[INTEGER] 64-bit integer arithmetic. CALL to use: ADD, SUB, MUL, DIV, MOD, ABS, NEG, INC, DEC',
+        'Circle': '[GEOMETRY] Circle calculations (uses floats). PI, TWO_PI, CIRCUMFERENCE, AREA, DIAMETER'
+    };
+    const mathTypeBadges = {
+        'SlideRule': 'FLOAT',
+        'Abacus': 'INTEGER',
+        'Circle': 'GEOMETRY'
     };
     ['SlideRule', 'Abacus', 'Circle'].forEach(name => {
         const gtEntry = getBootGT(name);
         const absPerms = gtEntry ? `[${gtEntry.perms.join('')}]` : '[E]';
+        const mathBadge = mathTypeBadges[name];
         html += `<div class="hier-item" data-name="${name}" data-type="Abstraction">`;
-        html += `<div class="hier-node hier-abstraction" data-tooltip="Abstraction ${absPerms} (Enter-only) | ${abstractionDescs[name]}">`;
-        html += `<div class="hier-label">${name}</div>`;
+        html += `<div class="hier-node hier-abstraction" data-tooltip="Abstraction ${absPerms} (Enter via CALL) | ${abstractionDescs[name]}">`;
+        html += `<div class="hier-label"><span class="math-type-badge math-${mathBadge.toLowerCase()}">${mathBadge}</span> ${name}</div>`;
         html += '</div>';
         if (abstractionCLists[name]) {
             html += '<div class="hier-clist">';
@@ -956,10 +965,12 @@ function buildHierarchyTree() {
                     const permsStr = item.perms ? `[${item.perms.join('')}]` : '[RX]';
                     const baseStr = item.base !== undefined ? `0x${item.base.toString(16).toUpperCase()}` : '0x0000';
                     const sizeStr = item.size || 0;
-                    html += `<div class="hier-item hier-gt hier-func" data-name="${item.name}" data-type="Function" data-parent="${name}" data-base="${item.base || 0}" data-size="${item.size || 0}" data-tooltip="Code GT ${permsStr} | Base: ${baseStr} | Size: ${sizeStr} bytes | Click to view code">${item.name}</div>`;
+                    const mathTypeLabel = item.mathType === 'float' ? 'Float' : item.mathType === 'int64' ? 'Int64' : '';
+                    const mathDesc = item.desc || (mathTypeLabel ? `${mathTypeLabel} operation` : 'Function');
+                    html += `<div class="hier-item hier-gt hier-func" data-name="${item.name}" data-type="Function" data-parent="${name}" data-base="${item.base || 0}" data-size="${item.size || 0}" data-tooltip="${mathDesc} | ${permsStr} | Base: ${baseStr} | Size: ${sizeStr}B | Click to view code">${item.name}</div>`;
                 } else if (item.type === 'Constant') {
                     const baseStr = item.base !== undefined ? `0x${item.base.toString(16).toUpperCase()}` : '0x0000';
-                    html += `<div class="hier-item hier-gt hier-const" data-name="${item.name}" data-type="Constant" data-parent="${name}" data-tooltip="GT Constant [R] | ${item.desc} | Base: ${baseStr}" data-value="${item.value}">${item.name}</div>`;
+                    html += `<div class="hier-item hier-gt hier-const" data-name="${item.name}" data-type="Constant" data-parent="${name}" data-tooltip="${item.desc} | [R] | Base: ${baseStr}" data-value="${item.value}">${item.name}</div>`;
                 }
             });
             html += '</div>';
@@ -3688,6 +3699,34 @@ const lessons = [
                             <div style="color: var(--success);">&darr; RETURN</div>
                             <div style="padding: 0.5rem 1rem; background: var(--bg-panel); border-radius: 4px;">Back to User Code</div>
                         </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Capability-Based Math: Integer vs Float</h3>
+                <p>In the CTMM, even basic arithmetic is controlled by capabilities. Programs distinguish between integer and floating-point math by <strong>which abstraction they CALL</strong>:</p>
+                <ul>
+                    <li><strong style="color: #e67e22;">Abacus</strong> - 64-bit integer arithmetic (ADD, SUB, MUL, DIV, MOD, ABS, NEG)</li>
+                    <li><strong style="color: #3498db;">SlideRule</strong> - IEEE 754 floating-point (ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW)</li>
+                    <li><strong style="color: #9b59b6;">Circle</strong> - Geometry using floats (PI, CIRCUMFERENCE, AREA, DIAMETER)</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Key Insight:</strong> There are no separate integer/float opcodes. The <em>capability you hold</em> determines the math type. No capability = no math!
+                </div>`,
+                demo: `<div class="demo-title">Math via CALL</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: rgba(230, 126, 34, 0.15); padding: 1rem; border-radius: 6px; border-left: 3px solid #e67e22;">
+                            <div style="color: #e67e22; font-weight: bold; margin-bottom: 0.5rem;">Integer Math</div>
+                            <code style="font-size: 0.8rem; color: var(--text-secondary);">LOAD CR1, Abacus<br/>CALL CR1  ; Enter int64 ADD</code>
+                        </div>
+                        <div style="background: rgba(52, 152, 219, 0.15); padding: 1rem; border-radius: 6px; border-left: 3px solid #3498db;">
+                            <div style="color: #3498db; font-weight: bold; margin-bottom: 0.5rem;">Float Math</div>
+                            <code style="font-size: 0.8rem; color: var(--text-secondary);">LOAD CR1, SlideRule<br/>CALL CR1  ; Enter IEEE754 ADD</code>
+                        </div>
+                    </div>
+                    <div class="demo-explanation">
+                        <p>Both use "ADD" but produce different results based on which abstraction (and thus which hardware) they invoke.</p>
                     </div>
                 </div>`
             },
