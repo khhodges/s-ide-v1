@@ -3929,7 +3929,6 @@ function renderCurrentStep() {
         return;
     }
     
-    document.getElementById('lessonTitle').textContent = lesson.title;
     document.getElementById('lessonText').innerHTML = step.text || '';
     document.getElementById('lessonDemo').innerHTML = step.demo || '';
     
@@ -3939,13 +3938,6 @@ function renderCurrentStep() {
     } else {
         interactiveContainer.innerHTML = '';
     }
-    
-    document.getElementById('stepIndicator').textContent = 
-        `Step ${tutorialState.currentStep + 1} of ${lesson.steps.length}`;
-    
-    // Disable prev at first step of lesson, next at last step of lesson
-    document.getElementById('prevBtn').disabled = tutorialState.currentStep === 0;
-    document.getElementById('nextBtn').disabled = tutorialState.currentStep >= lesson.steps.length - 1;
 }
 
 function renderInteractive(interactive, container) {
@@ -3987,20 +3979,6 @@ function checkAnswer(selected, correct) {
     }
 }
 
-function prevStep() {
-    if (tutorialState.currentStep > 0) {
-        tutorialState.currentStep--;
-        renderCurrentStep();
-    }
-}
-
-function nextStep() {
-    const lesson = lessons[tutorialState.currentLesson];
-    if (tutorialState.currentStep < lesson.steps.length - 1) {
-        tutorialState.currentStep++;
-        renderCurrentStep();
-    }
-}
 
 function completeLesson() {
     tutorialState.completedLessons.add(tutorialState.currentLesson);

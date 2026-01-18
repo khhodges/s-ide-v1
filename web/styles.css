@@ -2134,48 +2134,31 @@ main {
 }
 
 .lesson-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border);
     margin-bottom: 1.5rem;
 }
 
-.lesson-header h2 {
+.lesson-title-select {
+    font-size: 1.4rem;
+    font-weight: bold;
     color: var(--accent);
-    margin: 0;
-}
-
-.lesson-nav {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.btn-nav {
-    padding: 0.5rem 1rem;
-    background: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--text-primary);
+    background: transparent;
+    border: none;
     cursor: pointer;
-    transition: all 0.2s;
+    padding: 0.3rem 0;
+    width: 100%;
 }
 
-.btn-nav:hover:not(:disabled) {
-    border-color: var(--accent);
-    color: var(--accent);
+.lesson-title-select:hover {
+    color: var(--text-primary);
 }
 
-.btn-nav:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-#stepIndicator {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
+.lesson-title-select option {
+    background: var(--bg-panel);
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: normal;
 }
 
 .lesson-content {
