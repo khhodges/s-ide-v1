@@ -6765,7 +6765,7 @@ const churchInstructions = [
     { cat: "Capability Access", name: "LOAD", brief: "Load GT from C-List to CR", syntax: "LOAD CRd, [CR6+idx]", 
       tooltip: "Load Golden Token from C-List (indexed by CR6) into destination Context Register. Requires L permission (internally via CALL)." },
     { cat: "Capability Access", name: "SAVE", brief: "Save CR to C-List slot", syntax: "SAVE CRs, [CR6+idx]", 
-      tooltip: "Save Context Register GT back to C-List slot. Requires S permission (internally via CALL). Used to persist MINT results." },
+      tooltip: "Save Context Register GT back to C-List slot. Requires S permission (internally via CALL)." },
     { cat: "Control Flow", name: "CALL", brief: "Enter code object", syntax: "CALL CRs", 
       tooltip: "Enter code object with E permission. Temporarily elevates M bit to allow microcode L/S operations. Pushes return address, sets IP=0." },
     { cat: "Control Flow", name: "RETURN", brief: "Return from call", syntax: "RETURN", 
@@ -6774,8 +6774,6 @@ const churchInstructions = [
       tooltip: "Switch current thread (CR8) to thread at namespace offset. Requires M permission on target thread entry." },
     { cat: "Thread Control", name: "SWITCH", brief: "Switch C-List context", syntax: "SWITCH CRs", 
       tooltip: "Switch C-List (CR6) to new capability. Changes accessible capabilities for current thread." },
-    { cat: "Capability Creation", name: "MINT", brief: "Create new GT in CR0", syntax: "MINT perms, size", 
-      tooltip: "Allocate next free namespace slot, create 3-word entry (W1:loc, W2:size, W3:seals), generate GT with specified permissions. Result in CR0 - use SAVE to persist." },
     { cat: "Permission Test", name: "TPERM", brief: "Test GT permissions", syntax: "TPERM CRs, permMask", 
       tooltip: "Test if CR has required permissions. Sets flags: Z=all pass, C=perms OK, V=bounds OK, N=no perms. P and B flags updated." }
 ];
