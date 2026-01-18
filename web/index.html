@@ -132,7 +132,7 @@
                 <div class="toolbar-buttons">
                     <button class="btn btn-toolbar tooltip-bottom" onclick="toolbarAction('add')" data-tooltip="Add new object as child of selected">+ Add</button>
                     <button class="btn btn-toolbar tooltip-bottom" onclick="toolbarAction('edit')" data-tooltip="Edit selected object properties">Edit</button>
-                    <button class="btn btn-toolbar tooltip-bottom" onclick="toolbarAction('link')" data-tooltip="Link selected object to another C-List">Link</button>
+                    <button class="btn btn-toolbar tooltip-bottom" onclick="toolbarAction('link')" data-tooltip="MINT a new Golden Token capability">MINT</button>
                     <button class="btn btn-toolbar btn-danger tooltip-bottom" onclick="toolbarAction('delete')" data-tooltip="Delete selected object from namespace">Delete</button>
                     <span class="toolbar-separator"></span>
                     <button class="btn btn-toolbar tooltip-bottom" onclick="exportNamespaceState()" data-tooltip="Export namespace state to JSON file">Export</button>
@@ -503,8 +503,8 @@ ADD 0 1      ; DR0 = DR0 + DR1"></textarea>
         </div>
         <div class="context-menu-separator"></div>
         <div class="context-menu-item" onclick="contextMenuAction('link')">
-            <span class="menu-icon">⟿</span>
-            <span>Link to C-List</span>
+            <span class="menu-icon">🔑</span>
+            <span>MINT Capability</span>
         </div>
         <div class="context-menu-separator"></div>
         <div class="context-menu-item" onclick="contextMenuAction('delete')">
@@ -705,26 +705,29 @@ ADD 0 1      ; DR0 = DR0 + DR1"></textarea>
         </div>
     </div>
 
-    <!-- Link Object Modal -->
+    <!-- MINT Capability Modal -->
     <div class="modal-overlay" id="linkModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Link to C-List</h3>
+                <h3>MINT New Capability</h3>
                 <button class="modal-close" onclick="closeLinkModal()">&times;</button>
             </div>
             <div class="modal-body">
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    MINT creates a new Golden Token capability. This will open the Capabilities Explorer to configure the new capability's properties.
+                </p>
                 <div class="modal-field">
-                    <label>Source Object</label>
+                    <label>Source Object to MINT from</label>
                     <input type="text" id="linkSource" readonly>
                 </div>
                 <div class="modal-field">
-                    <label>Link To (Target C-List)</label>
+                    <label>Target C-List for new capability</label>
                     <select id="linkTarget"></select>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="modal-btn modal-btn-cancel" onclick="closeLinkModal()">Cancel</button>
-                <button class="modal-btn modal-btn-confirm" onclick="confirmLinkModal()">Link</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmLinkModal()">MINT</button>
             </div>
         </div>
     </div>

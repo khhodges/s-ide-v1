@@ -4576,14 +4576,49 @@ function confirmLinkModal() {
     const source = document.getElementById('linkSource').value;
     const target = document.getElementById('linkTarget').value;
     
-    const obj = findObject(source);
-    if (obj) {
-        addToCList(target, source, obj.type, obj.perms || ['R']);
-        log(`Linked "${source}" to ${target}'s C-List`, 'info');
-        updateNamespaceDisplay();
-    }
-    
     closeLinkModal();
+    
+    // Switch to Capabilities view
+    switchView('capabilities');
+    
+    // Open the Add New Capability modal with pre-populated values
+    setTimeout(() => {
+        openAddCapabilityModal();
+        
+        // Pre-populate the modal with source info
+        const obj = findObject(source);
+        if (obj) {
+            document.getElementById('modalObjName').value = source + '_copy';
+            document.getElementById('modalObjType').value = obj.type;
+            document.getElementById('modalObjSize').value = obj.size ? obj.size.toString() : '1024';
+            
+            // Set the parent to the target C-List
+            const parentSelect = document.getElementById('modalParent');
+            if (parentSelect) {
+                for (let i = 0; i < parentSelect.options.length; i++) {
+                    if (parentSelect.options[i].value === target) {
+                        parentSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            
+            // Update permissions based on type
+            updatePermissionsForType(obj.type);
+            
+            // Set permissions from source
+            if (obj.perms) {
+                ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M', 'F'].forEach(p => {
+                    const checkbox = document.getElementById('perm' + p);
+                    if (checkbox) {
+                        checkbox.checked = obj.perms.includes(p);
+                    }
+                });
+            }
+        }
+        
+        log(`MINT: Opening capability editor for "${source}" -> ${target}`, 'info');
+    }, 100);
 }
 
 const functionBetaCode = {
