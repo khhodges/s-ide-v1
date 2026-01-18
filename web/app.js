@@ -4553,15 +4553,17 @@ function openLinkModal() {
     const targetSelect = document.getElementById('linkTarget');
     targetSelect.innerHTML = '';
     
-    targetSelect.innerHTML += '<option value="Boot">Boot (root)</option>';
+    // Option to only load in CR0 without adding to a C-List
+    targetSelect.innerHTML += '<option value="">(CR0 only - do not add to C-List)</option>';
+    targetSelect.innerHTML += '<option value="Boot">Boot (root C-List)</option>';
     Object.keys(threadCLists).forEach(name => {
         if (name !== contextMenuState.targetObject) {
-            targetSelect.innerHTML += `<option value="${name}">${name}</option>`;
+            targetSelect.innerHTML += `<option value="${name}">${name} (Thread)</option>`;
         }
     });
     Object.keys(abstractionCLists).forEach(name => {
         if (name !== contextMenuState.targetObject) {
-            targetSelect.innerHTML += `<option value="${name}">${name}</option>`;
+            targetSelect.innerHTML += `<option value="${name}">${name} (Abstraction)</option>`;
         }
     });
     
@@ -4572,53 +4574,110 @@ function closeLinkModal() {
     document.getElementById('linkModal').classList.remove('visible');
 }
 
+// Find the next free offset in the namespace table
+function getNextFreeNamespaceOffset() {
+    let maxOffset = 0;
+    namespaceObjects.forEach(obj => {
+        if (obj.offset > maxOffset) {
+            maxOffset = obj.offset;
+        }
+    });
+    return maxOffset + 1;
+}
+
+// MINT: Create a new Golden Token capability
 function confirmLinkModal() {
     const source = document.getElementById('linkSource').value;
     const target = document.getElementById('linkTarget').value;
     
     closeLinkModal();
     
-    // Switch to Capabilities view
+    // Find source object to copy properties from
+    const sourceObj = findObject(source);
+    if (!sourceObj) {
+        log(`MINT ERROR: Source object "${source}" not found`, 'error');
+        return;
+    }
+    
+    // Get next free namespace slot
+    const newOffset = getNextFreeNamespaceOffset();
+    const newLocation = newOffset * 0x1000; // Each object gets 4K address space
+    
+    // Generate unique name for minted capability
+    const mintedName = `${source}_minted_${newOffset}`;
+    
+    // Create new namespace entry (3-word format)
+    const newNamespaceEntry = {
+        offset: newOffset,
+        location: newLocation,
+        name: mintedName,
+        type: sourceObj.type || 'Data',
+        perms: sourceObj.perms ? [...sourceObj.perms] : ['R'],
+        size: sourceObj.size || 1024,
+        word1_location: newLocation,
+        word2_limit: sourceObj.size || 1024,
+        word3_seals: 0n,
+        tooltip: `MINTED from ${source}. Created by MINT operation at offset ${newOffset}.`,
+        mintedFrom: source,
+        mintedAt: new Date().toISOString()
+    };
+    
+    // Add to namespace table
+    namespaceObjects.push(newNamespaceEntry);
+    
+    // Create GT structure for CR0
+    const permsValue = calculatePermissionBits(newNamespaceEntry.perms);
+    const newGT = {
+        name: mintedName,
+        type: newNamespaceEntry.type,
+        perms: newNamespaceEntry.perms,
+        nsOffset: newOffset,
+        location: { offset: newOffset },
+        offset: newOffset,
+        permissions: permsValue,
+        spare: 0,
+        description: `GT for ${mintedName} (MINTED from ${source})`,
+        // 64-bit GT: Offset[0:31] | Spare[32:47] | Perms[48:63]
+        value: BigInt(newOffset) | (BigInt(permsValue) << 48n)
+    };
+    
+    // Load the new GT into CR0 (return value register)
+    contextRegisters[0] = newGT;
+    
+    // Add to target C-List if specified
+    if (target) {
+        addToCList(target, mintedName, newNamespaceEntry.type, newNamespaceEntry.perms);
+    }
+    
+    // Update displays
+    updateNamespaceDisplay();
+    updateRegisterDisplay();
+    
+    // Switch to Capabilities view to show the result
     switchView('capabilities');
     
-    // Open the Add New Capability modal with pre-populated values
+    // Select and display the new capability
     setTimeout(() => {
-        openAddCapabilityModal();
-        
-        // Pre-populate the modal with source info
-        const obj = findObject(source);
-        if (obj) {
-            document.getElementById('modalObjName').value = source + '_copy';
-            document.getElementById('modalObjType').value = obj.type;
-            document.getElementById('modalObjSize').value = obj.size ? obj.size.toString() : '1024';
-            
-            // Set the parent to the target C-List
-            const parentSelect = document.getElementById('modalParent');
-            if (parentSelect) {
-                for (let i = 0; i < parentSelect.options.length; i++) {
-                    if (parentSelect.options[i].value === target) {
-                        parentSelect.selectedIndex = i;
-                        break;
-                    }
-                }
-            }
-            
-            // Update permissions based on type
-            updatePermissionsForType(obj.type);
-            
-            // Set permissions from source
-            if (obj.perms) {
-                ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M', 'F'].forEach(p => {
-                    const checkbox = document.getElementById('perm' + p);
-                    if (checkbox) {
-                        checkbox.checked = obj.perms.includes(p);
-                    }
-                });
-            }
-        }
-        
-        log(`MINT: Opening capability editor for "${source}" -> ${target}`, 'info');
+        updateCapabilityDetail(newGT);
+        log(`MINT: Created GT for "${mintedName}" at NS offset ${newOffset}, loaded in CR0`, 'info');
     }, 100);
+}
+
+// Calculate permission bits from permission array
+function calculatePermissionBits(perms) {
+    const permBits = {
+        'R': 0x0001, 'W': 0x0002, 'X': 0x0004, 'L': 0x0008,
+        'S': 0x0010, 'E': 0x0020, 'B': 0x0040, 'M': 0x0080, 'F': 0x0100
+    };
+    let value = 0;
+    if (perms) {
+        perms.forEach(p => {
+            if (permBits[p]) {
+                value |= permBits[p];
+            }
+        });
+    }
+    return value;
 }
 
 const functionBetaCode = {

@@ -121,3 +121,8 @@ The web interface is composed of five distinct views, accessible via a dropdown:
 - 2026-01-17: Updated Tutorial with new "Golden Token Structure" lesson covering GT bit layout and 3-word Namespace Entry
 - 2026-01-17: Tutorial now explains 9 permissions including M (Meta-Machine) and F (Far)
 - 2026-01-17: Tutorial covers MAC validation, W3 Seals structure (Meta/Type/MAC), and Little-Endian format
+- 2026-01-18: MINT operation now creates GT in next free Namespace slot and returns in CR0
+- 2026-01-18: MINT allocates namespace offset, creates 3-word entry (W1, W2, W3), generates GT with source permissions
+- 2026-01-18: New GT automatically linked to running Thread through CR0
+- 2026-01-18: MINT modal shows explanation of operation steps and optional C-List target
+- 2026-01-18: Renamed "Link" to "MINT" in toolbar and context menu with 🔑 icon

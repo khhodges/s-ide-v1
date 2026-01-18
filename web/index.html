@@ -709,30 +709,43 @@ ADD 0 1      ; DR0 = DR0 + DR1"></textarea>
     <div class="modal-overlay" id="linkModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>MINT New Capability</h3>
+                <h3>🔑 MINT New Capability</h3>
                 <button class="modal-close" onclick="closeLinkModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-                    MINT creates a new Golden Token capability. This will open the Capabilities Explorer to configure the new capability's properties.
+                    MINT creates a new Golden Token in the next free Namespace slot and returns it in CR0. The new capability is linked to the running Thread.
                 </p>
                 <div class="modal-field">
-                    <label>Source Object to MINT from</label>
+                    <label>Source Object</label>
                     <input type="text" id="linkSource" readonly>
                 </div>
                 <div class="modal-field">
-                    <label>Target C-List for new capability</label>
-                    <select id="linkTarget"></select>
+                    <label>Add to C-List (optional)</label>
+                    <select id="linkTarget">
+                        <option value="">(CR0 only - do not add to C-List)</option>
+                    </select>
+                </div>
+                <div class="mint-info" style="background: var(--bg-tertiary); padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem;">
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                        <strong>MINT will:</strong>
+                        <ul style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
+                            <li>Allocate next free Namespace offset</li>
+                            <li>Create 3-word Namespace entry (W1, W2, W3)</li>
+                            <li>Generate GT with source permissions</li>
+                            <li>Load new GT into CR0</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="modal-btn modal-btn-cancel" onclick="closeLinkModal()">Cancel</button>
-                <button class="modal-btn modal-btn-confirm" onclick="confirmLinkModal()">MINT</button>
+                <button class="modal-btn modal-btn-confirm" onclick="confirmLinkModal()">🔑 MINT</button>
             </div>
         </div>
     </div>
 
-    <script src="simulator.js?v=20260117t"></script>
-    <script src="app.js?v=20260117t"></script>
+    <script src="simulator.js?v=20260118a"></script>
+    <script src="app.js?v=20260118a"></script>
 </body>
 </html>
