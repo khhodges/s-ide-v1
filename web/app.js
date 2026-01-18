@@ -3865,11 +3865,32 @@ function renderCurrentStep() {
         interactiveContainer.innerHTML = '';
     }
     
-    document.getElementById('stepIndicator').textContent = 
-        `Step ${tutorialState.currentStep + 1} of ${lesson.steps.length}`;
+    // Calculate total steps and current global step
+    let totalSteps = 0;
+    let currentGlobalStep = 0;
+    for (let i = 0; i < lessons.length; i++) {
+        if (i < tutorialState.currentLesson) {
+            currentGlobalStep += lessons[i].steps.length;
+        }
+        totalSteps += lessons[i].steps.length;
+    }
+    currentGlobalStep += tutorialState.currentStep + 1;
     
-    document.getElementById('prevBtn').disabled = tutorialState.currentStep === 0;
-    document.getElementById('nextBtn').disabled = tutorialState.currentStep >= lesson.steps.length - 1;
+    document.getElementById('stepIndicator').textContent = 
+        `${lesson.title} - Step ${tutorialState.currentStep + 1}/${lesson.steps.length}`;
+    
+    // Update progress bar
+    const progressPercent = (currentGlobalStep / totalSteps) * 100;
+    document.getElementById('tutorialProgress').style.width = `${progressPercent}%`;
+    document.getElementById('progressText').textContent = `${currentGlobalStep}/${totalSteps}`;
+    
+    // Disable prev at very start, next at very end
+    const isFirstStep = tutorialState.currentLesson === 0 && tutorialState.currentStep === 0;
+    const isLastStep = tutorialState.currentLesson === lessons.length - 1 && 
+                       tutorialState.currentStep >= lesson.steps.length - 1;
+    
+    document.getElementById('prevBtn').disabled = isFirstStep;
+    document.getElementById('nextBtn').disabled = isLastStep;
 }
 
 function renderInteractive(interactive, container) {
@@ -3915,6 +3936,12 @@ function prevStep() {
     if (tutorialState.currentStep > 0) {
         tutorialState.currentStep--;
         renderCurrentStep();
+    } else if (tutorialState.currentLesson > 0) {
+        // Go to previous lesson's last step
+        tutorialState.currentLesson--;
+        const prevLesson = lessons[tutorialState.currentLesson];
+        tutorialState.currentStep = prevLesson.steps.length - 1;
+        renderCurrentStep();
     }
 }
 
@@ -3922,6 +3949,11 @@ function nextStep() {
     const lesson = lessons[tutorialState.currentLesson];
     if (tutorialState.currentStep < lesson.steps.length - 1) {
         tutorialState.currentStep++;
+        renderCurrentStep();
+    } else if (tutorialState.currentLesson < lessons.length - 1) {
+        // Advance to next lesson's first step
+        tutorialState.currentLesson++;
+        tutorialState.currentStep = 0;
         renderCurrentStep();
     }
 }
