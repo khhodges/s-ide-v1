@@ -130,3 +130,10 @@ The web interface is composed of five distinct views, accessible via a dropdown:
 - 2026-01-18: Delete confirmation popup now shows comprehensive impact analysis with severity levels
 - 2026-01-18: Delete warnings include: critical (cannot delete), danger (significant impact), warning (minor impact), safe
 - 2026-01-18: Delete checks for register assignments (CR0-CR15), child objects, C-List references, and type-specific impacts
+- 2026-01-18: MAJOR REFACTOR: Namespace objects now contain only raw 3-word entries (W1, W2, W3) without embedded permissions
+- 2026-01-18: Boot C-List is now the AUTHORITATIVE source for all GT definitions (offset, permissions, metadata)
+- 2026-01-18: Namespace offsets reorganized: 0=Namespace, 1=Access.asm, 2=Boot C-List, 3=Kenneth, 4=Matthew, 5=Daniel, 6-8=Abstractions
+- 2026-01-18: Boot sequence refactored: Step 3a uses CHANGE for Thread (first), Step 3b uses CALL HWGT to load CR6+CR7+IP=0
+- 2026-01-18: Added coldRestart flag to bypass SAVE operations on cold restart (prevents double-fault)
+- 2026-01-18: Helper functions added: getBootGT(), getNSEntry(), buildGTFromCList() for GT lookups through C-List
+- 2026-01-18: UI now resolves permissions through Boot C-List lookups instead of namespace object properties

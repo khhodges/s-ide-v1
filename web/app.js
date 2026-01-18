@@ -226,78 +226,124 @@ function formatLocation(value, isFar) {
 
 // ==================== BOOT NAMESPACE ====================
 
-// Boot C-List at Namespace offset 1
-// Each entry is a GT pointing to a namespace offset
+// Boot state including cold restart detection
+let coldRestart = true;
+
+// Namespace Table: Raw 3-word entries (W1: Location, W2: Limit, W3: Seals/MAC)
+// GT permissions are defined in Boot C-List, NOT here
+// Offset = index into this table
+const namespaceObjects = [
+    // Offset 0: Namespace self-reference
+    { offset: 0, name: "Namespace", type: "System", 
+      word1_location: 0x0000, word2_limit: 0x10000, word3_seals: 0n,
+      tooltip: "Hardware-managed Namespace Table - root of all capability addressing." },
+    // Offset 1: Access.asm (Nucleus code)
+    { offset: 1, name: "Access", type: "Code", linkage: "Boot/Access.asm",
+      word1_location: 0x1000, word2_limit: 0x1000, word3_seals: 0n,
+      tooltip: "Nucleus kernel code - provides secure entry points for system calls." },
+    // Offset 2: Boot C-List
+    { offset: 2, name: "Boot", type: "C-List",
+      word1_location: 0x2000, word2_limit: 0x0100, word3_seals: 0n,
+      tooltip: "Boot Capability List - initial C-List loaded during system bootstrap." },
+    // Offset 3: Kenneth thread
+    { offset: 3, name: "Kenneth", type: "Thread",
+      word1_location: 0x3000, word2_limit: 0x0800, word3_seals: 0n,
+      tooltip: "User thread identity for Kenneth." },
+    // Offset 4: Matthew thread
+    { offset: 4, name: "Matthew", type: "Thread",
+      word1_location: 0x3800, word2_limit: 0x0800, word3_seals: 0n,
+      tooltip: "User thread identity for Matthew." },
+    // Offset 5: Daniel thread
+    { offset: 5, name: "Daniel", type: "Thread",
+      word1_location: 0x4000, word2_limit: 0x0800, word3_seals: 0n,
+      tooltip: "User thread identity for Daniel." },
+    // Offset 6: SlideRule abstraction
+    { offset: 6, name: "SlideRule", type: "Abstraction",
+      word1_location: 0x5000, word2_limit: 0x1000, word3_seals: 0n,
+      tooltip: "SlideRule abstraction - IEEE 754 floating-point math operations." },
+    // Offset 7: Abacus abstraction
+    { offset: 7, name: "Abacus", type: "Abstraction",
+      word1_location: 0x6000, word2_limit: 0x1000, word3_seals: 0n,
+      tooltip: "Abacus abstraction - 64-bit integer arithmetic operations." },
+    // Offset 8: Circle abstraction
+    { offset: 8, name: "Circle", type: "Abstraction",
+      word1_location: 0x7000, word2_limit: 0x1000, word3_seals: 0n,
+      tooltip: "Circle abstraction - geometric calculations." }
+];
+
+// Boot C-List at Namespace offset 2
+// This is the AUTHORITATIVE source for all GT definitions (offset, permissions, metadata)
+// Each entry is a GT pointing to a namespace offset with specific access rights
 const bootCList = {
     name: "Boot",
     description: "Root abstraction C-List of the CTMM system",
-    nsOffset: 1,  // Boot is at Namespace offset 1
+    nsOffset: 2,  // Boot C-List is at Namespace offset 2
     entries: [
-        // Index 0: Nucleus code (GT pointing to namespace offset 3)
-        { index: 0, name: "Access", nsOffset: 3, perms: ["R", "X"], type: "Code", desc: "Nucleus code" },
-        // Index 1: Kenneth thread (GT pointing to namespace offset 2, M=Meta-Machine only)
-        { index: 1, name: "Kenneth", nsOffset: 2, perms: ["M"], type: "Thread", desc: "User thread" },
-        // Index 2: Matthew thread (GT pointing to namespace offset 4, M=Meta-Machine only)
-        { index: 2, name: "Matthew", nsOffset: 4, perms: ["M"], type: "Thread", desc: "User thread" },
-        // Index 3: Daniel thread (GT pointing to namespace offset 5, M=Meta-Machine only)
-        { index: 3, name: "Daniel", nsOffset: 5, perms: ["M"], type: "Thread", desc: "User thread" },
-        // Index 4: SlideRule abstraction (GT pointing to namespace offset 6)
-        { index: 4, name: "SlideRule", nsOffset: 6, perms: ["E"], type: "Abstraction", desc: "Float operations" },
-        // Index 5: Abacus abstraction (GT pointing to namespace offset 7)
-        { index: 5, name: "Abacus", nsOffset: 7, perms: ["E"], type: "Abstraction", desc: "Integer operations" },
-        // Index 6: Circle abstraction (GT pointing to namespace offset 8)
-        { index: 6, name: "Circle", nsOffset: 8, perms: ["E"], type: "Abstraction", desc: "Geometry operations" }
+        // Index 0: Access.asm (Nucleus code) - GT pointing to NS offset 1
+        { index: 0, name: "Access", nsOffset: 1, perms: ["R", "X", "E"], type: "Code", 
+          desc: "Nucleus entry code", size: 0x1000 },
+        // Index 1: Kenneth thread - GT pointing to NS offset 3
+        { index: 1, name: "Kenneth", nsOffset: 3, perms: ["R", "W", "M"], type: "Thread", 
+          desc: "Primary user identity", size: 0x0800 },
+        // Index 2: Matthew thread - GT pointing to NS offset 4
+        { index: 2, name: "Matthew", nsOffset: 4, perms: ["R", "W", "M"], type: "Thread", 
+          desc: "Secondary user identity", size: 0x0800 },
+        // Index 3: Daniel thread - GT pointing to NS offset 5
+        { index: 3, name: "Daniel", nsOffset: 5, perms: ["R", "W", "M"], type: "Thread", 
+          desc: "Tertiary user identity", size: 0x0800 },
+        // Index 4: SlideRule abstraction - GT pointing to NS offset 6
+        { index: 4, name: "SlideRule", nsOffset: 6, perms: ["R", "X", "E", "B"], type: "Abstraction", 
+          desc: "IEEE 754 float operations", size: 0x1000 },
+        // Index 5: Abacus abstraction - GT pointing to NS offset 7
+        { index: 5, name: "Abacus", nsOffset: 7, perms: ["R", "X", "E", "B"], type: "Abstraction", 
+          desc: "64-bit integer operations", size: 0x1000 },
+        // Index 6: Circle abstraction - GT pointing to NS offset 8
+        { index: 6, name: "Circle", nsOffset: 8, perms: ["R", "X", "E", "B"], type: "Abstraction", 
+          desc: "Geometric calculations", size: 0x1000 }
     ]
 };
+
+// Helper to get GT from Boot C-List by name
+function getBootGT(name) {
+    return bootCList.entries.find(e => e.name === name);
+}
+
+// Helper to get namespace entry by offset
+function getNSEntry(offset) {
+    return namespaceObjects.find(o => o.offset === offset);
+}
+
+// Helper to build a full GT from Boot C-List entry
+function buildGTFromCList(entry) {
+    if (!entry) return null;
+    const nsEntry = getNSEntry(entry.nsOffset);
+    if (!nsEntry) {
+        console.warn(`Namespace entry not found for offset ${entry.nsOffset}`);
+        return null;
+    }
+    return {
+        name: entry.name,
+        nsOffset: entry.nsOffset,
+        type: entry.type,
+        perms: entry.perms,
+        location: { type: "Local", offset: nsEntry.word1_location },
+        size: entry.size || nsEntry.word2_limit,
+        word1: nsEntry.word1_location,
+        word2: nsEntry.word2_limit,
+        word3: nsEntry.word3_seals,
+        goldenKey: generateGoldenKey(),
+        locked: false,
+        desc: entry.desc
+    };
+}
 
 // Legacy format for compatibility
 const bootNamespace = {
     name: "Boot",
-    location: 0x1000,
+    location: 0x2000,
     description: "Root abstraction of the CTMM system",
-    clist: bootCList.entries.map(e => ({ name: e.name, type: e.type, ref: `ns.offset.${e.nsOffset}` }))
+    clist: bootCList.entries.map(e => ({ name: e.name, type: e.type, perms: e.perms, ref: `ns.offset.${e.nsOffset}` }))
 };
-
-// Namespace Table: 3-word entries (Location, Limit, Seals/MAC)
-// offset = index into this table
-const namespaceObjects = [
-    // Offset 0: Namespace self-reference (M=Meta-Machine only for hardware-level)
-    { offset: 0, location: 0x0000, name: "Namespace", type: "System", perms: ["M"], size: 4096,
-      word1_location: 0x0000, word2_limit: 4096, word3_seals: 0n,
-      tooltip: "Hardware-managed Namespace Table - root of all capability addressing. M permission grants Meta-Machine access." },
-    // Offset 1: Boot C-List abstraction
-    { offset: 1, location: 0x1000, name: "Boot", type: "C-List", perms: ["E"], size: 1024,
-      word1_location: 0x1000, word2_limit: 1024, word3_seals: 0n,
-      tooltip: "Boot Capability List - initial C-List loaded during system bootstrap containing thread and abstraction GTs." },
-    // Offset 2: Kenneth thread (M=Meta-Machine only for hardware-level)
-    { offset: 2, location: 0x2000, name: "Kenneth", type: "Thread", perms: ["M"], size: 1024,
-      word1_location: 0x2000, word2_limit: 1024, word3_seals: 0n,
-      tooltip: "User thread identity for Kenneth. M permission indicates hardware-level thread descriptor. Cannot be directly accessed by software." },
-    // Offset 3: Boot/Access.asm (Nucleus code)
-    { offset: 3, location: 0x3000, name: "Access", type: "Code", perms: ["R", "X"], size: 512,
-      word1_location: 0x3000, word2_limit: 512, word3_seals: 0n, linkage: "Boot/Access.asm",
-      tooltip: "Nucleus kernel code - provides secure entry points for system calls. R+X permissions enable reading and execution." },
-    // Offset 4: Matthew thread (M=Meta-Machine only for hardware-level)
-    { offset: 4, location: 0x4000, name: "Matthew", type: "Thread", perms: ["M"], size: 1024,
-      word1_location: 0x4000, word2_limit: 1024, word3_seals: 0n,
-      tooltip: "User thread identity for Matthew. M permission indicates hardware-level thread descriptor. Cannot be directly accessed by software." },
-    // Offset 5: Daniel thread (M=Meta-Machine only for hardware-level)
-    { offset: 5, location: 0x5000, name: "Daniel", type: "Thread", perms: ["M"], size: 1024,
-      word1_location: 0x5000, word2_limit: 1024, word3_seals: 0n,
-      tooltip: "User thread identity for Daniel. M permission indicates hardware-level thread descriptor. Cannot be directly accessed by software." },
-    // Offset 6: SlideRule abstraction
-    { offset: 6, location: 0x6000, name: "SlideRule", type: "Abstraction", perms: ["E"], size: 2048,
-      word1_location: 0x6000, word2_limit: 2048, word3_seals: 0n,
-      tooltip: "SlideRule abstraction - IEEE 754 floating-point math operations (ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW). E permission enables CALL entry." },
-    // Offset 7: Abacus abstraction
-    { offset: 7, location: 0x7000, name: "Abacus", type: "Abstraction", perms: ["E"], size: 2048,
-      word1_location: 0x7000, word2_limit: 2048, word3_seals: 0n,
-      tooltip: "Abacus abstraction - 64-bit integer arithmetic operations (ADD, SUB, MUL, DIV, MOD, NEG, ABS, CMP). E permission enables CALL entry." },
-    // Offset 8: Circle abstraction
-    { offset: 8, location: 0x8000, name: "Circle", type: "Abstraction", perms: ["E"], size: 2048,
-      word1_location: 0x8000, word2_limit: 2048, word3_seals: 0n,
-      tooltip: "Circle abstraction - geometric calculations (AREA, CIRCUMFERENCE, ARC_LENGTH, SECTOR_AREA, CHORD_LENGTH). E permission enables CALL entry." }
-];
 
 const threadCLists = {
     Kenneth: {
@@ -384,96 +430,126 @@ let bootState = {
     complete: false
 };
 
+// ==================== BOOT SEQUENCE ====================
+// Step 1: CLEAR_ALL, set cold_restart flag
+// Step 2: LOAD_NS → CR15 (Namespace GT at offset 0)
+// Step 3a: CHANGE 3 → CR8 (Kenneth thread FIRST)
+// Step 3b: CALL HWGT → loads CR6 from NS[2], CR7 from NS[1], IP=0
+// Step 4: Clear cold_restart flag, execution begins
+
 const bootSteps = [
     {
         name: "Fault Restart",
-        description: "Unrecoverable fault. Saving state, clearing registers...",
+        description: "CLEAR_ALL: Saving state, clearing registers, setting cold_restart...",
         action: () => {
-            // Save thread state before reset (simulates fault recovery)
-            saveThreadState();
+            // Save thread state before reset (skip on cold restart)
+            if (!coldRestart) {
+                saveThreadState();
+            }
             simulator.reset();
+            coldRestart = true;  // Set cold restart flag
             // Clear editor to match reset state - no code loaded
             setEditorCode('', '', '');
         }
     },
     {
         name: "Load Namespace",
-        description: "Setting CR15 with Namespace capability (offset 0)...",
+        description: "LOAD_NS CR15: Loading Namespace capability (offset 0, perms M+L)...",
         action: () => {
             // CR15 = GT pointing to Namespace offset 0 (self-reference)
-            const nsObj = namespaceObjects.find(o => o.offset === 0);
+            // Namespace GT has M (Meta-Machine) and L (Load) permissions for boot
+            const nsEntry = getNSEntry(0);
             simulator.cr15 = {
                 name: "Namespace",
                 nsOffset: 0,
-                location: { type: "Local", offset: nsObj.word1_location },
-                perms: nsObj.perms,
+                type: "System",
+                location: { type: "Local", offset: nsEntry.word1_location },
+                perms: ["M", "L"],  // Meta-Machine + Load for boot operations
                 locked: true,
                 goldenKey: generateGoldenKey(),
-                word1: nsObj.word1_location,
-                word2: nsObj.word2_limit,
-                word3: nsObj.word3_seals
+                word1: nsEntry.word1_location,
+                word2: nsEntry.word2_limit,
+                word3: nsEntry.word3_seals
             };
             updateNamespaceDisplay();
         }
     },
     {
-        name: "Initialize Thread",
-        description: "Loading CR6 (Boot C-List) and CR8 (Kenneth thread)...",
+        name: "Switch Thread",
+        description: "CHANGE 3: Switching to Kenneth thread (NS offset 3)...",
         action: () => {
-            // CR6 = GT pointing to Namespace offset 1 (Boot C-List)
-            const bootObj = namespaceObjects.find(o => o.offset === 1);
-            const clistCount = bootCList.entries.length;
-            simulator.contextRegs[6] = {
-                name: "Boot",
-                nsOffset: 1,
-                type: "C-List",
-                location: { type: "Local", offset: bootObj.word1_location },
-                perms: bootObj.perms,
-                locked: false,
-                goldenKey: generateGoldenKey(),
-                clistCount: clistCount,
-                clist: bootCList.entries
-            };
-            
-            // CR8 = GT pointing to Namespace offset 2 (Kenneth thread)
-            // Found via Boot C-List index 1
-            const kennethEntry = bootCList.entries.find(e => e.name === "Kenneth");
-            const kennethObj = namespaceObjects.find(o => o.offset === kennethEntry.nsOffset);
+            // CHANGE instruction switches CR8 directly to Thread at NS offset 3
+            // This happens FIRST before loading C-List
+            const kennethEntry = getBootGT("Kenneth");
+            const kennethNS = getNSEntry(kennethEntry.nsOffset);
             simulator.cr8 = {
                 name: "Kenneth",
                 nsOffset: kennethEntry.nsOffset,
-                location: { type: "Local", offset: kennethObj.word1_location },
+                type: "Thread",
+                location: { type: "Local", offset: kennethNS.word1_location },
                 perms: kennethEntry.perms,
                 locked: false,
                 goldenKey: generateGoldenKey(),
+                word1: kennethNS.word1_location,
+                word2: kennethNS.word2_limit,
+                word3: kennethNS.word3_seals,
                 clist: threadCLists.Kenneth.clist
             };
             updateNamespaceDisplay();
         }
     },
     {
-        name: "Load Nucleus",
-        description: "Loading CR7 from C-List[0] (Access code at offset 3)...",
+        name: "Call Boot",
+        description: "CALL HWGT: Loading CR6←NS[2], CR7←NS[1], IP=0...",
         action: () => {
-            // CR7 = GT from Boot C-List index 0, pointing to Namespace offset 3
-            const nucleusEntry = bootCList.entries[0]; // Index 0 = Access/Nucleus
-            const nucleusObj = namespaceObjects.find(o => o.offset === nucleusEntry.nsOffset);
+            // CALL HWGT triggers hardwired load sequence:
+            // 1. LOAD CR6 from NS offset 2 (Boot C-List)
+            const bootNS = getNSEntry(2);
+            const clistCount = bootCList.entries.length;
+            simulator.contextRegs[6] = {
+                name: "Boot",
+                nsOffset: 2,
+                type: "C-List",
+                location: { type: "Local", offset: bootNS.word1_location },
+                perms: ["R", "L", "E"],  // Read, Load, Enter for C-List
+                locked: false,
+                goldenKey: generateGoldenKey(),
+                word1: bootNS.word1_location,
+                word2: bootNS.word2_limit,
+                word3: bootNS.word3_seals,
+                clistCount: clistCount,
+                clist: bootCList.entries
+            };
+            
+            // 2. LOAD CR7 from NS offset 1 (Access.asm/Nucleus)
+            const accessEntry = getBootGT("Access");
+            const accessNS = getNSEntry(accessEntry.nsOffset);
             simulator.contextRegs[7] = {
-                name: nucleusEntry.name,
-                nsOffset: nucleusEntry.nsOffset,
+                name: accessEntry.name,
+                nsOffset: accessEntry.nsOffset,
                 type: "Code",
-                location: { type: "Local", offset: nucleusObj.word1_location },
-                perms: nucleusEntry.perms,
+                location: { type: "Local", offset: accessNS.word1_location },
+                perms: accessEntry.perms,
                 locked: true,
                 goldenKey: generateGoldenKey(),
-                linkage: nucleusObj.linkage || "Boot/Access.asm",
-                base: nucleusObj.word1_location,
-                size: nucleusObj.word2_limit
+                word1: accessNS.word1_location,
+                word2: accessNS.word2_limit,
+                word3: accessNS.word3_seals,
+                linkage: accessNS.linkage || "Boot/Access.asm",
+                base: accessNS.word1_location,
+                size: accessNS.word2_limit
             };
+            
+            // 3. IP = 0 (thread runs from first instruction)
+            simulator.ip = 0;
+            
+            // 4. Clear cold restart flag - boot complete
+            coldRestart = false;
+            
             updateSystemState();
             
-            // Update editor to show Nucleus linkage (no code defined yet)
-            setEditorCode('', 'Boot/Access.asm', '[RX]');
+            // Update editor to show Nucleus linkage
+            setEditorCode('', 'Boot/Access.asm', '[RXE]');
         }
     }
 ];
@@ -665,12 +741,15 @@ function updateNamespaceDisplay() {
     
     const allObjects = [...namespaceObjects, ...dynamicObjects];
     allObjects.forEach(obj => {
-        const permStr = obj.perms.join('');
+        // Look up permissions from Boot C-List (authoritative source for GTs)
+        const gtEntry = getBootGT(obj.name);
+        const perms = obj.perms || (gtEntry ? gtEntry.perms : []);
+        const permStr = perms.join('');
         const typeClass = obj.type.toLowerCase().replace('-', '');
         const baseTypeTooltip = typeTooltips[obj.type] || 'Namespace object with capability-controlled access.';
         const offset = obj.offset !== undefined ? obj.offset : '?';
-        const word1 = obj.word1_location !== undefined ? `0x${obj.word1_location.toString(16).toUpperCase().padStart(4, '0')}` : `0x${obj.location.toString(16).toUpperCase().padStart(4, '0')}`;
-        const word2 = obj.word2_limit !== undefined ? obj.word2_limit : obj.size;
+        const word1 = obj.word1_location !== undefined ? `0x${obj.word1_location.toString(16).toUpperCase().padStart(4, '0')}` : `0x${(obj.location || 0).toString(16).toUpperCase().padStart(4, '0')}`;
+        const word2 = obj.word2_limit !== undefined ? obj.word2_limit : (obj.size || 0);
         const tooltip = `Offset ${offset}: ${obj.type} [${permStr}] | ${baseTypeTooltip}`;
         const dynamicTag = obj.dynamic ? ' <span class="ns-dynamic-tag">(custom)</span>' : '';
         nsHtml += `
@@ -765,8 +844,8 @@ function buildHierarchyTree() {
         'Circle': 'Circle geometry with PI constant (CIRCUMFERENCE, AREA, DIAMETER)'
     };
     ['SlideRule', 'Abacus', 'Circle'].forEach(name => {
-        const absObj = namespaceObjects.find(o => o.name === name);
-        const absPerms = absObj ? `[${absObj.perms.join('')}]` : '[E]';
+        const gtEntry = getBootGT(name);
+        const absPerms = gtEntry ? `[${gtEntry.perms.join('')}]` : '[E]';
         html += `<div class="hier-item" data-name="${name}" data-type="Abstraction">`;
         html += `<div class="hier-node hier-abstraction" data-tooltip="Abstraction ${absPerms} (Enter-only) | ${abstractionDescs[name]}">`;
         html += `<div class="hier-label">${name}</div>`;
@@ -3922,13 +4001,13 @@ function showContextMenu(e, objectName, objectType) {
 }
 
 document.addEventListener('click', function(e) {
-    if (!e.target.closest('.context-menu')) {
+    if (e.target && e.target.closest && !e.target.closest('.context-menu')) {
         hideContextMenu();
     }
 });
 
 document.addEventListener('contextmenu', function(e) {
-    if (!e.target.closest('.ns-object') && !e.target.closest('.hier-item')) {
+    if (e.target && e.target.closest && !e.target.closest('.ns-object') && !e.target.closest('.hier-item')) {
         hideContextMenu();
     }
 });
@@ -6020,6 +6099,7 @@ function hideFloatingTooltip() {
 // Attach tooltip listeners to elements with data-tooltip
 function initDynamicTooltips() {
     document.addEventListener('mouseenter', (e) => {
+        if (!e.target || !e.target.closest) return;
         const target = e.target.closest('[data-tooltip]');
         if (target) {
             showFloatingTooltip(target);
@@ -6027,6 +6107,7 @@ function initDynamicTooltips() {
     }, true);
     
     document.addEventListener('mouseleave', (e) => {
+        if (!e.target || !e.target.closest) return;
         const target = e.target.closest('[data-tooltip]');
         if (target) {
             hideFloatingTooltip();
@@ -6497,7 +6578,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('.code-context-menu')) {
+        if (e.target && e.target.closest && !e.target.closest('.code-context-menu')) {
             hideCodeContextMenu();
         }
     });
