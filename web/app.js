@@ -3874,6 +3874,176 @@ const lessons = [
                 }
             }
         ]
+    },
+    {
+        title: "Lambda Combinators",
+        steps: [
+            {
+                text: `<h3>Lambda Calculus and Capabilities</h3>
+                <p>Alonzo Church's <strong>lambda calculus</strong> is the theoretical foundation for all computation. In CTMM, lambda expressions become Golden Tokens:</p>
+                <ul>
+                    <li><strong>Lambda abstraction</strong> (λx.body) = A GT pointing to executable code</li>
+                    <li><strong>Application</strong> (f x) = CALL instruction with arguments in registers</li>
+                    <li><strong>Binding</strong> = Loading GTs from C-Lists into Context Registers</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Key Insight:</strong> Every lambda becomes a capability. You can only apply functions you have tokens for.
+                </div>`,
+                demo: `<div class="demo-title">Lambda as Capability</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: rgba(147, 51, 234, 0.15); padding: 1rem; border-radius: 6px; border-left: 3px solid #9333ea;">
+                            <div style="color: #9333ea; font-weight: bold; margin-bottom: 0.5rem;">Lambda Calculus</div>
+                            <code style="font-size: 0.9rem;">λf.λx. f x</code>
+                        </div>
+                        <div style="background: rgba(234, 179, 8, 0.15); padding: 1rem; border-radius: 6px; border-left: 3px solid #eab308;">
+                            <div style="color: #eab308; font-weight: bold; margin-bottom: 0.5rem;">CTMM Assembly</div>
+                            <code style="font-size: 0.85rem;">LOAD CR0, [CR6+0]<br/>CALL CR0</code>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Church Booleans</h3>
+                <p>In lambda calculus, booleans are functions that select between two arguments:</p>
+                <ul>
+                    <li><strong>TRUE</strong> = λx.λy.x (returns first argument)</li>
+                    <li><strong>FALSE</strong> = λx.λy.y (returns second argument)</li>
+                    <li><strong>IF-THEN-ELSE</strong> = λb.λt.λf. b t f (applies boolean to branches)</li>
+                </ul>
+                <p>In CTMM, each boolean is a GT. Calling it with two argument GTs returns one of them.</p>`,
+                demo: `<div class="demo-title">Church Boolean Implementation</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem; overflow-x: auto;">
+; TRUE: Returns first argument
+true:
+    LOAD CR0, [CR1+0]    ; CR0 = first arg
+    RETURN
+
+; FALSE: Returns second argument  
+false:
+    LOAD CR0, [CR2+0]    ; CR0 = second arg
+    RETURN
+
+; IF b THEN t ELSE f
+if_then_else:
+    CALL CR0             ; Call bool with t,f in CR1,CR2
+    RETURN</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Church Numerals</h3>
+                <p>Numbers as functions that apply f to x n times:</p>
+                <ul>
+                    <li><strong>ZERO</strong> = λf.λx. x (apply f zero times)</li>
+                    <li><strong>ONE</strong> = λf.λx. f x (apply f once)</li>
+                    <li><strong>TWO</strong> = λf.λx. f (f x) (apply f twice)</li>
+                    <li><strong>SUCC</strong> = λn.λf.λx. f (n f x) (add one)</li>
+                </ul>
+                <p>Each numeral is a GT. Calling it with function and base GTs produces the result.</p>`,
+                demo: `<div class="demo-title">Church Numeral Implementation</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem; overflow-x: auto;">
+; ZERO: Identity on x (ignore f)
+zero:
+    LOAD CR0, [CR2+0]    ; Return x unchanged
+    RETURN
+
+; SUCC: Add one to numeral n
+; Input: CR0=n, CR1=f, CR2=x
+succ:
+    LOAD CR3, [CR0+0]    ; Save n
+    CALL CR3             ; (n f x) -> CR0
+    LOAD CR3, [CR0+0]    ; Save result
+    LOAD CR0, [CR1+0]    ; CR0 = f
+    CALL CR0             ; f(n f x)
+    RETURN</pre>
+                </div>`
+            },
+            {
+                text: `<h3>The Y Combinator</h3>
+                <p>The <strong>Y combinator</strong> enables recursion without explicit self-reference:</p>
+                <div class="highlight">
+                    Y = λf. (λx. f (x x)) (λx. f (x x))
+                </div>
+                <p>In CTMM, a GT in the C-List can point back to the current code block, enabling the self-application pattern (x x) through CALL.</p>`,
+                demo: `<div class="demo-title">Y Combinator Pattern</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem; overflow-x: auto;">
+; Y-COMBINATOR: Fixed-point for recursion
+; CR6[0] contains GT pointing to this code
+
+; Load self-reference from C-List
+LOAD CR0, [CR6+0]    ; CR0 = GT to self
+
+; Self-application: (x x)
+CALL CR0             ; Execute self
+
+; The called code receives its own GT
+; enabling recursion via CALL CR0
+
+RETURN</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Pairs (CONS)</h3>
+                <p>Pairs store two values using closures:</p>
+                <ul>
+                    <li><strong>PAIR</strong> = λa.λb.λf. f a b (create pair)</li>
+                    <li><strong>FST</strong> = λp. p TRUE (get first element)</li>
+                    <li><strong>SND</strong> = λp. p FALSE (get second element)</li>
+                </ul>
+                <p>A pair is a GT that, when called with a selector (TRUE or FALSE), returns the corresponding element.</p>`,
+                demo: `<div class="demo-title">Pair Implementation</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem; overflow-x: auto;">
+; PAIR: Returns selector function capturing a,b
+pair:
+    LOAD CR0, [CR6+0]    ; GT to pair_select
+    RETURN
+
+; Called when pair applied to selector
+pair_select:
+    CALL CR0             ; Selector chooses CR1 or CR2
+    RETURN
+
+; FST: Get first element
+fst:
+    LOAD CR1, [CR6+1]    ; TRUE GT
+    CALL CR0             ; pair(TRUE)
+    RETURN</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Try the Examples</h3>
+                <p>The Assembly Editor includes working implementations of these lambda combinators:</p>
+                <ul>
+                    <li><strong>Y-Combinator</strong> - Self-referencing recursion pattern</li>
+                    <li><strong>Factorial</strong> - Recursive calculation using Y pattern</li>
+                    <li><strong>Church Booleans</strong> - TRUE, FALSE, IF-THEN-ELSE, NOT</li>
+                    <li><strong>Church Numerals</strong> - ZERO, SUCC, ADD</li>
+                    <li><strong>Pairs</strong> - CONS, FST, SND (CAR/CDR)</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Try It:</strong> Go to Assembly Editor → Lambda Examples tab to load and run these programs.
+                </div>`,
+                interactive: {
+                    type: "quiz",
+                    question: "How does CTMM implement lambda application (f x)?",
+                    options: [
+                        "Using the APPLY instruction",
+                        "Using the CALL instruction with the function GT",
+                        "By copying code directly",
+                        "Through shared memory"
+                    ],
+                    correct: 1,
+                    feedback: {
+                        correct: "Correct! Lambda application becomes CALL with the function's Golden Token. Arguments are passed in registers.",
+                        incorrect: "Not quite. In CTMM, lambda application (f x) is implemented using CALL with the function's GT."
+                    }
+                }
+            }
+        ]
     }
 ];
 
