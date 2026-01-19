@@ -3219,6 +3219,65 @@ main {
     border-color: var(--error);
 }
 
+.btn-save-tutorial {
+    padding: 0.5rem 1rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    opacity: 0.6;
+}
+
+.btn-save-tutorial.has-changes {
+    background: var(--success);
+    color: white;
+    opacity: 1;
+    border-color: var(--success);
+}
+
+.btn-save-tutorial:hover {
+    opacity: 1;
+}
+
+.btn-reset-tutorial {
+    padding: 0.5rem 1rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    opacity: 0.6;
+}
+
+.btn-reset-tutorial:hover {
+    background: var(--warning);
+    color: var(--bg-dark);
+    opacity: 1;
+    border-color: var(--warning);
+}
+
+.lesson-text[contenteditable="true"],
+.lesson-demo[contenteditable="true"] {
+    outline: none;
+    border: 1px dashed transparent;
+    transition: border-color 0.2s;
+}
+
+.lesson-text[contenteditable="true"]:focus,
+.lesson-demo[contenteditable="true"]:focus {
+    border-color: var(--accent);
+}
+
+.lesson-text[contenteditable="true"]:hover,
+.lesson-demo[contenteditable="true"]:hover {
+    border-color: var(--border);
+}
+
 .btn-save {
     flex: 1;
     padding: 0.5rem;

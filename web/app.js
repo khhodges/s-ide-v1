@@ -3548,7 +3548,8 @@ function saveCR7() {
 const tutorialState = {
     currentLesson: 0,
     currentStep: 0,
-    completedLessons: new Set()
+    completedLessons: new Set(),
+    hasUnsavedChanges: false
 };
 
 const lessons = [
@@ -5668,8 +5669,20 @@ function renderCurrentStep() {
         return;
     }
     
-    document.getElementById('lessonText').innerHTML = step.text || '';
-    document.getElementById('lessonDemo').innerHTML = step.demo || '';
+    const lessonKey = `tutorial_${tutorialState.currentLesson}_${tutorialState.currentStep}`;
+    const savedEdits = JSON.parse(localStorage.getItem('tutorialEdits') || '{}');
+    
+    const lessonTextEl = document.getElementById('lessonText');
+    const lessonDemoEl = document.getElementById('lessonDemo');
+    
+    lessonTextEl.innerHTML = savedEdits[lessonKey + '_text'] || step.text || '';
+    lessonDemoEl.innerHTML = savedEdits[lessonKey + '_demo'] || step.demo || '';
+    
+    lessonTextEl.contentEditable = 'true';
+    lessonDemoEl.contentEditable = 'true';
+    
+    lessonTextEl.addEventListener('input', () => tutorialState.hasUnsavedChanges = true);
+    lessonDemoEl.addEventListener('input', () => tutorialState.hasUnsavedChanges = true);
     
     const interactiveContainer = document.getElementById('lessonInteractive');
     if (step.interactive) {
@@ -5689,6 +5702,9 @@ function renderCurrentStep() {
     const nextBtn = document.getElementById('nextStepBtn');
     if (prevBtn) prevBtn.disabled = tutorialState.currentStep === 0;
     if (nextBtn) nextBtn.disabled = tutorialState.currentStep >= lesson.steps.length - 1;
+    
+    tutorialState.hasUnsavedChanges = false;
+    updateTutorialSaveButton();
 }
 
 function tutorialPrevStep() {
@@ -5703,6 +5719,50 @@ function tutorialNextStep() {
     if (lesson && tutorialState.currentStep < lesson.steps.length - 1) {
         tutorialState.currentStep++;
         renderCurrentStep();
+    }
+}
+
+function saveTutorialEdits() {
+    const lessonKey = `tutorial_${tutorialState.currentLesson}_${tutorialState.currentStep}`;
+    const savedEdits = JSON.parse(localStorage.getItem('tutorialEdits') || '{}');
+    
+    const lessonTextEl = document.getElementById('lessonText');
+    const lessonDemoEl = document.getElementById('lessonDemo');
+    
+    savedEdits[lessonKey + '_text'] = lessonTextEl.innerHTML;
+    savedEdits[lessonKey + '_demo'] = lessonDemoEl.innerHTML;
+    
+    localStorage.setItem('tutorialEdits', JSON.stringify(savedEdits));
+    tutorialState.hasUnsavedChanges = false;
+    updateTutorialSaveButton();
+    
+    log('Tutorial edits saved', 'success');
+}
+
+function resetTutorialStep() {
+    const lessonKey = `tutorial_${tutorialState.currentLesson}_${tutorialState.currentStep}`;
+    const savedEdits = JSON.parse(localStorage.getItem('tutorialEdits') || '{}');
+    
+    delete savedEdits[lessonKey + '_text'];
+    delete savedEdits[lessonKey + '_demo'];
+    
+    localStorage.setItem('tutorialEdits', JSON.stringify(savedEdits));
+    tutorialState.hasUnsavedChanges = false;
+    
+    renderCurrentStep();
+    log('Tutorial step reset to original', 'info');
+}
+
+function updateTutorialSaveButton() {
+    const saveBtn = document.getElementById('saveTutorialBtn');
+    if (saveBtn) {
+        if (tutorialState.hasUnsavedChanges) {
+            saveBtn.classList.add('has-changes');
+            saveBtn.textContent = 'Save Edits *';
+        } else {
+            saveBtn.classList.remove('has-changes');
+            saveBtn.textContent = 'Save Edits';
+        }
     }
 }
 
