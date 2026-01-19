@@ -52,10 +52,9 @@ The web interface is composed of five distinct views:
 
 ## Recent Changes
 
-- 2026-01-19: LOAD/SAVE use programmable CRn field; only CALL elevates M-bit after secure entry, subtended C-Lists need L/S permission
-- 2026-01-19: CALL requires E permission ONLY for opaque entry hiding implementation from inspection
-- 2026-01-19: CR7 CODE block (C-List offset 0) documented as requiring X+R permissions
-- 2026-01-19: SWITCH/CHANGE have Mode bit for direct vs C-List lookup to navigate DNA hierarchy
+- 2026-01-19: LOAD/SAVE add I bit for immediate (0-8191) vs register addressing, Index field now 13 bits
+- 2026-01-19: All Church instruction descriptions now purely mechanistic - no policy language
+- 2026-01-19: SWITCH/CHANGE have Mode bit for direct vs C-List lookup addressing
 - 2026-01-19: Bit fields have hover tooltips explaining each field's purpose and encoding
 - 2026-01-18: Instructions page redesigned as ARM binary format design reference with visual bit-field diagrams
 - 2026-01-18: Each instruction shows 32-bit encoding with field names, bit positions, widths, and variants
