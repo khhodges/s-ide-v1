@@ -2134,9 +2134,13 @@ main {
 }
 
 .lesson-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border);
     margin-bottom: 1.5rem;
+    flex-wrap: wrap;
 }
 
 .lesson-title-select {
@@ -2356,10 +2360,9 @@ main {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 1.5rem;
-    padding: 1rem 0;
-    margin-top: 1rem;
-    border-top: 1px solid var(--border);
+    gap: 1rem;
+    padding: 0;
+    margin-left: auto;
 }
 
 .lesson-step-nav .btn-step {
