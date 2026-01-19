@@ -6818,57 +6818,54 @@ const churchInstrFormats = [
         name: "LOAD",
         brief: "Load GT from C-List to CR",
         syntax: "LOAD CRd, [CRn+idx]",
-        desc: "Load Golden Token from C-List into Context Register. CR6 is the current C-List; subtended C-Lists require L permission on the source GT.",
+        desc: "Copy Golden Token from C-List slot into Context Register.",
         format: [
             { name: "Cond", bits: 4, desc: "Condition code (AL=always)" },
             { name: "Op", bits: 6, value: "000001", desc: "LOAD opcode" },
             { name: "CRd", bits: 4, desc: "Destination CR (0-15)" },
             { name: "CRn", bits: 4, desc: "Source C-List register (0-15)" },
-            { name: "Index", bits: 14, desc: "C-List slot offset" }
+            { name: "I", bits: 1, desc: "0=immediate offset, 1=register" },
+            { name: "Index", bits: 13, desc: "Offset or DR number" }
         ],
         variants: [
-            { name: "Direct", fields: { Index: "Literal offset 0-16383" } },
-            { name: "Register", fields: { Index: "DRn[13:0] indirect" } },
-            { name: "CR6 (current)", fields: { CRn: "6 - current C-List" } },
-            { name: "Subtended", fields: { CRn: "0-15 - requires L permission" } }
+            { name: "Immediate", fields: { I: "0", Index: "Literal offset 0-8191" } },
+            { name: "Register", fields: { I: "1", Index: "Index[3:0] = DR number" } }
         ]
     },
     {
         name: "SAVE",
         brief: "Save CR to C-List slot",
         syntax: "SAVE CRs, [CRn+idx]",
-        desc: "Save Context Register GT to C-List slot. CR6 is the current C-List; subtended C-Lists require S permission on the target GT.",
+        desc: "Copy Context Register GT into C-List slot.",
         format: [
             { name: "Cond", bits: 4, desc: "Condition code" },
             { name: "Op", bits: 6, value: "000010", desc: "SAVE opcode" },
             { name: "CRs", bits: 4, desc: "Source CR (0-15)" },
             { name: "CRn", bits: 4, desc: "Target C-List register (0-15)" },
-            { name: "Index", bits: 14, desc: "C-List slot offset" }
+            { name: "I", bits: 1, desc: "0=immediate offset, 1=register" },
+            { name: "Index", bits: 13, desc: "Offset or DR number" }
         ],
         variants: [
-            { name: "Direct", fields: { Index: "Literal offset 0-16383" } },
-            { name: "Register", fields: { Index: "DRn[13:0] indirect" } },
-            { name: "CR6 (current)", fields: { CRn: "6 - current C-List" } },
-            { name: "Subtended", fields: { CRn: "0-15 - requires S permission" } }
+            { name: "Immediate", fields: { I: "0", Index: "Literal offset 0-8191" } },
+            { name: "Register", fields: { I: "1", Index: "Index[3:0] = DR number" } }
         ]
     },
     {
         name: "CALL",
-        brief: "Enter abstraction (E only)",
+        brief: "Enter abstraction",
         syntax: "CALL CRs",
-        desc: "Enter abstraction via opaque entry point. Requires E permission ONLY - hides implementation from all inspection. M bit elevated internally after entry for microcode L/S.",
+        desc: "Transfer control to abstraction entry point. Pushes return state, switches context.",
         format: [
             { name: "Cond", bits: 4, desc: "Condition code" },
             { name: "Op", bits: 6, value: "000011", desc: "CALL opcode" },
-            { name: "CRs", bits: 4, desc: "Abstraction capability (E perm)" },
+            { name: "CRs", bits: 4, desc: "Abstraction capability" },
             { name: "L", bits: 1, desc: "Link bit (save return)" },
             { name: "Reserved", bits: 17, value: "0", desc: "Must be zero" }
         ],
         variants: [
             { name: "CALL", fields: { L: "0 = no link" } },
             { name: "CALLL", fields: { L: "1 = save return address" } }
-        ],
-        notes: "E permission provides opaque entry hiding implementation. CR7 CODE block (C-List offset 0) requires X+R permissions."
+        ]
     },
     {
         name: "RETURN",
@@ -6886,54 +6883,52 @@ const churchInstrFormats = [
         name: "CHANGE",
         brief: "Switch thread identity",
         syntax: "CHANGE CRn, idx | CHANGE nsOffset",
-        desc: "Switch current thread (CR8). Can select from DNA hierarchy via C-List GT or direct namespace offset. Requires M permission on target.",
+        desc: "Load new thread capability into CR8.",
         format: [
             { name: "Cond", bits: 4, desc: "Condition code" },
             { name: "Op", bits: 6, value: "000101", desc: "CHANGE opcode" },
-            { name: "Mode", bits: 1, desc: "0=NS offset, 1=C-List" },
+            { name: "Mode", bits: 1, desc: "0=NS offset, 1=C-List lookup" },
             { name: "CRn", bits: 4, desc: "Source C-List (Mode=1)" },
             { name: "Idx/Offset", bits: 17, desc: "C-List index or NS offset" }
         ],
         variants: [
-            { name: "Direct NS", fields: { Mode: "0", Idx: "Namespace offset" } },
-            { name: "C-List", fields: { Mode: "1", CRn: "Source C-List, Idx: slot" } },
-            { name: "DNA hierarchy", fields: { Mode: "1", CRn: "Subtended C-List GT" } }
+            { name: "NS Offset", fields: { Mode: "0", Idx: "Namespace offset" } },
+            { name: "C-List", fields: { Mode: "1", CRn: "C-List register, Idx: slot" } }
         ]
     },
     {
         name: "SWITCH",
         brief: "Switch C-List context",
         syntax: "SWITCH CRs | SWITCH CRn, idx",
-        desc: "Switch C-List (CR6) to new capability. Can select from DNA hierarchy via source C-List GT. Changes accessible capabilities for thread.",
+        desc: "Load new C-List capability into CR6.",
         format: [
             { name: "Cond", bits: 4, desc: "Condition code" },
             { name: "Op", bits: 6, value: "000110", desc: "SWITCH opcode" },
             { name: "Mode", bits: 1, desc: "0=direct CR, 1=C-List lookup" },
-            { name: "CRs", bits: 4, desc: "Direct source CR (Mode=0)" },
+            { name: "CRs", bits: 4, desc: "Source CR (Mode=0)" },
             { name: "CRn", bits: 4, desc: "Source C-List (Mode=1)" },
             { name: "Index", bits: 13, desc: "C-List slot index (Mode=1)" }
         ],
         variants: [
-            { name: "Direct", fields: { Mode: "0", CRs: "CR holding new C-List" } },
-            { name: "C-List lookup", fields: { Mode: "1", CRn: "Source C-List, Index: slot" } },
-            { name: "DNA hierarchy", fields: { Mode: "1", CRn: "Navigate subtended C-Lists" } }
+            { name: "Direct", fields: { Mode: "0", CRs: "CR containing C-List GT" } },
+            { name: "C-List lookup", fields: { Mode: "1", CRn: "C-List register, Index: slot" } }
         ]
     },
     {
         name: "TPERM",
         brief: "Test GT permissions",
         syntax: "TPERM CRs, permMask",
-        desc: "Test if CR has required permissions. Sets Z,C,V,N flags.",
+        desc: "Compare CR permission bits against mask. Sets condition flags.",
         format: [
             { name: "Cond", bits: 4, desc: "Condition code" },
             { name: "Op", bits: 6, value: "000111", desc: "TPERM opcode" },
             { name: "CRs", bits: 4, desc: "CR to test" },
-            { name: "Perms", bits: 9, desc: "Permission mask (RWXLSEBMF)" },
+            { name: "Perms", bits: 9, desc: "Permission mask (9 bits)" },
             { name: "Reserved", bits: 9, value: "0", desc: "Must be zero" }
         ],
         variants: [
-            { name: "All", fields: { Perms: "All 9 permission bits" } },
-            { name: "Subset", fields: { Perms: "Specific permissions only" } }
+            { name: "Full mask", fields: { Perms: "All 9 permission bits" } },
+            { name: "Partial mask", fields: { Perms: "Selected bits only" } }
         ]
     },
     {
