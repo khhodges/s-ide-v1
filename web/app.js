@@ -3063,7 +3063,7 @@ function loadExample(name) {
         if (isTuring) {
             switchParadigm('turing');
         } else if (isLambda) {
-            switchParadigm('lambda');
+            switchParadigm('church');
         }
     }
 }
