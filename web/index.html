@@ -186,6 +186,12 @@
                         <div class="lesson-interactive" id="lessonInteractive"></div>
                     </div>
                     
+                    <div class="lesson-step-nav">
+                        <button onclick="tutorialPrevStep()" class="btn btn-step" id="prevStepBtn">← Previous</button>
+                        <span class="step-indicator" id="stepIndicator">Step 1 of 5</span>
+                        <button onclick="tutorialNextStep()" class="btn btn-step" id="nextStepBtn">Next →</button>
+                    </div>
+                    
                     <div class="lesson-footer">
                         <button onclick="tryInSimulator()" class="btn btn-try" id="tryBtn" data-tooltip="Open the simulator with this example">Try in Simulator</button>
                         <button onclick="completeLesson()" class="btn btn-complete" id="completeBtn" data-tooltip="Mark this lesson as completed">Mark Complete</button>

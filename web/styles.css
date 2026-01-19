@@ -2352,6 +2352,44 @@ main {
     color: var(--error);
 }
 
+.lesson-step-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 0;
+    margin-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.lesson-step-nav .btn-step {
+    padding: 0.5rem 1rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.lesson-step-nav .btn-step:hover:not(:disabled) {
+    background: var(--accent);
+    color: #1a1a2e;
+    border-color: var(--accent);
+}
+
+.lesson-step-nav .btn-step:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.step-indicator {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    min-width: 100px;
+    text-align: center;
+}
+
 .lesson-footer {
     display: flex;
     justify-content: flex-end;

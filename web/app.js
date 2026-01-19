@@ -4747,6 +4747,33 @@ function renderCurrentStep() {
     } else {
         interactiveContainer.innerHTML = '';
     }
+    
+    // Update step indicator
+    const stepIndicator = document.getElementById('stepIndicator');
+    if (stepIndicator) {
+        stepIndicator.textContent = `Step ${tutorialState.currentStep + 1} of ${lesson.steps.length}`;
+    }
+    
+    // Update button states
+    const prevBtn = document.getElementById('prevStepBtn');
+    const nextBtn = document.getElementById('nextStepBtn');
+    if (prevBtn) prevBtn.disabled = tutorialState.currentStep === 0;
+    if (nextBtn) nextBtn.disabled = tutorialState.currentStep >= lesson.steps.length - 1;
+}
+
+function tutorialPrevStep() {
+    if (tutorialState.currentStep > 0) {
+        tutorialState.currentStep--;
+        renderCurrentStep();
+    }
+}
+
+function tutorialNextStep() {
+    const lesson = lessons[tutorialState.currentLesson];
+    if (lesson && tutorialState.currentStep < lesson.steps.length - 1) {
+        tutorialState.currentStep++;
+        renderCurrentStep();
+    }
 }
 
 function renderInteractive(interactive, container) {
