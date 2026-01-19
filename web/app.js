@@ -623,7 +623,7 @@ const bootSteps = [
             updateSystemState();
             
             // Update editor to show Nucleus linkage
-            setEditorCode('', 'Boot/Access.asm', '[RXE]');
+            setEditorCode('', 'Boot/Access.asm', '[X]');
         }
     }
 ];
@@ -3496,11 +3496,11 @@ const lessons = [
                 <h3>Step 3: Initialize Thread</h3>
                 <p><code>CR8</code> gets the user thread capability, and <code>CR6</code> receives the C-List (capability list) for user access.</p>
                 <h3>Step 4: Load Nucleus</h3>
-                <p>The kernel code capability is loaded into <code>CR7</code>. This is the core operating system code with <code>RXE</code> permissions.</p>`,
+                <p>The kernel code capability is loaded into <code>CR7</code>. This is the core operating system code with <code>X</code> permission (data access to code object).</p>`,
                 demo: `<div class="demo-title">Register States After Boot</div>
                 <div class="demo-content">
                     <div class="demo-visual register-demo">
-                        <div class="reg-demo-item"><span class="reg-demo-name">CR7</span><span class="reg-demo-value">NUCLEUS [RXE]</span></div>
+                        <div class="reg-demo-item"><span class="reg-demo-name">CR7</span><span class="reg-demo-value">NUCLEUS [X]</span></div>
                         <div class="reg-demo-item"><span class="reg-demo-name">CR15</span><span class="reg-demo-value">NAMESPACE [M]</span></div>
                         <div class="reg-demo-item"><span class="reg-demo-name">CR8</span><span class="reg-demo-value">KENNETH [M]</span></div>
                         <div class="reg-demo-item"><span class="reg-demo-name">CR6</span><span class="reg-demo-value">BOOT [E]</span></div>
@@ -3665,7 +3665,7 @@ const lessons = [
                     <div class="demo-visual">
                         <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
                             <div style="padding: 0.5rem 1rem; background: var(--bg-panel); border-radius: 4px;">User Code</div>
-                            <div style="color: var(--accent);">&darr; CALL [RXE capability]</div>
+                            <div style="color: var(--accent);">&darr; CALL [X capability]</div>
                             <div style="padding: 0.5rem 1rem; background: var(--accent); color: white; border-radius: 4px;">Protected Procedure</div>
                             <div style="color: var(--success);">&darr; RETURN</div>
                             <div style="padding: 0.5rem 1rem; background: var(--bg-panel); border-radius: 4px;">Back to User Code</div>
