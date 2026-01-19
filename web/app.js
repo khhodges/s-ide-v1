@@ -2922,6 +2922,22 @@ function markEditorSaved() {
     }, 2000);
 }
 
+function clearCode() {
+    const editor = document.getElementById('codeEditor');
+    if (!editor) return;
+    
+    // Save current state to history before clearing
+    capturePreChangeState();
+    
+    editor.value = '';
+    savedEditorContent = '';
+    autoLoadedAccessAsm = false;
+    updateLineNumbers();
+    localStorage.removeItem('ctmm_editor_content');
+    pushCodeHistory('');
+    editorLog('Code cleared', 'info');
+}
+
 function saveCode() {
     markEditorSaved();
     const savePath = editorState.currentLinkage.endsWith('.asm') ? editorState.currentLinkage : editorState.currentLinkage + '.asm';

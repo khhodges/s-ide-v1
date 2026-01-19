@@ -3198,6 +3198,24 @@ main {
     color: var(--bg-dark);
 }
 
+.btn-clear {
+    flex: 1;
+    padding: 0.5rem;
+    background: var(--text-muted);
+    border: none;
+    border-radius: 4px;
+    color: var(--bg-dark);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.btn-clear:hover {
+    background: var(--error);
+    color: white;
+}
+
 .btn-save {
     flex: 1;
     padding: 0.5rem;
