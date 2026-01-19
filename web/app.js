@@ -4044,6 +4044,331 @@ fst:
                 }
             }
         ]
+    },
+    {
+        title: "Assembly Editor",
+        steps: [
+            {
+                text: `<h3>The Assembly Editor</h3>
+                <p>The Assembly Editor is where you write and execute CTMM programs. It provides:</p>
+                <ul>
+                    <li><strong>Code Editor</strong> - Write CTMM assembly with syntax highlighting</li>
+                    <li><strong>Example Programs</strong> - Pre-built examples in Turing and Lambda tabs</li>
+                    <li><strong>Output Panel</strong> - See execution results and logs</li>
+                    <li><strong>Instruction Palette</strong> - Quick reference for available instructions</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Tip:</strong> Your code is automatically saved to browser storage, so you won't lose work between sessions.
+                </div>`,
+                demo: `<div class="demo-title">Editor Layout</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px;">
+                            <div style="color: var(--text-primary); font-weight: bold; margin-bottom: 0.5rem;">Left Panel</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Code editor with line numbers and syntax highlighting</div>
+                        </div>
+                        <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px;">
+                            <div style="color: var(--text-primary); font-weight: bold; margin-bottom: 0.5rem;">Right Panel</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">Output tabs: Console, Registers, Memory</div>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Instruction Syntax</h3>
+                <p>CTMM assembly uses a simple syntax:</p>
+                <ul>
+                    <li><strong>Comments</strong>: Lines starting with <code>;</code></li>
+                    <li><strong>Labels</strong>: Names ending with <code>:</code> (e.g., <code>loop:</code>)</li>
+                    <li><strong>Instructions</strong>: <code>OPCODE operands</code></li>
+                </ul>
+                <p>Registers are referenced by number:</p>
+                <ul>
+                    <li><strong>DR0-DR15</strong>: Data registers for values</li>
+                    <li><strong>CR0-CR15</strong>: Context registers for capabilities</li>
+                </ul>`,
+                demo: `<div class="demo-title">Syntax Examples</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.85rem;">
+; This is a comment
+start:              ; This is a label
+    ADDI 0 5        ; DR0 = 5 (immediate)
+    ADD 1 0         ; DR1 = DR1 + DR0
+    CMP 0 1         ; Compare DR0 with DR1
+    B EQ done       ; Branch if equal
+    B start         ; Loop back
+done:
+    RETURN          ; Return from call</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Turing Examples</h3>
+                <p>The <strong>Turing Examples</strong> tab contains programs using data operations:</p>
+                <ul>
+                    <li><strong>Counter Loop</strong> - Basic counting with flags and branching</li>
+                    <li><strong>Fibonacci</strong> - Calculate Fibonacci sequence</li>
+                    <li><strong>Multiply</strong> - Multiplication by repeated addition</li>
+                    <li><strong>NZCV Flags</strong> - Demonstrate condition flags</li>
+                    <li><strong>Caller Code</strong> - How to invoke abstractions via CALL</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Try It:</strong> Go to Assembly Editor → Turing Examples → Select any example to load it into the editor.
+                </div>`,
+                demo: `<div class="demo-title">Counter Loop Example</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem;">
+; Count from 0 to 5
+ADDI 0 0      ; DR0 = 0 (counter)
+ADDI 1 5      ; DR1 = 5 (limit)
+ADDI 2 1      ; DR2 = 1 (increment)
+
+loop:
+ADD 0 2       ; counter++
+CMP 0 1       ; compare to limit
+B LT loop     ; loop while < 5
+; Final: DR0 = 5</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Lambda Examples</h3>
+                <p>The <strong>Lambda Examples</strong> tab contains Church lambda calculus implementations:</p>
+                <ul>
+                    <li><strong>Y-Combinator</strong> - Fixed-point combinator for recursion</li>
+                    <li><strong>Factorial</strong> - Recursive n! using Y pattern</li>
+                    <li><strong>Capability Check</strong> - Validate GT permissions before use</li>
+                    <li><strong>Church Booleans</strong> - TRUE, FALSE, IF-THEN-ELSE, NOT</li>
+                    <li><strong>Church Numerals</strong> - ZERO, SUCC, ADD</li>
+                    <li><strong>Pairs</strong> - CONS, FST, SND (CAR/CDR)</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Key Pattern:</strong> All lambda examples use GTs in the C-List (CR6) to reference functions, enabling recursion and higher-order programming.
+                </div>`,
+                demo: `<div class="demo-title">Factorial Example</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem;">
+; fact(n) = n * fact(n-1)
+CMP 0 0           ; n == 0?
+B EQ base_case
+
+MOV 1 0           ; save n
+SUBI 0 1          ; n - 1
+LOAD 0 6 0        ; GT to self
+CALL 0            ; recurse
+MUL 0 1           ; n * fact(n-1)
+RETURN
+
+base_case:
+ADDI 0 1          ; return 1
+RETURN</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Running Programs</h3>
+                <p>After loading or writing code:</p>
+                <ol>
+                    <li><strong>Boot the system</strong> - Use Dashboard → Run Boot Sequence</li>
+                    <li><strong>Step through code</strong> - Click Step to execute one instruction</li>
+                    <li><strong>Run continuously</strong> - Click Run to execute until halt or breakpoint</li>
+                    <li><strong>Watch registers</strong> - Monitor DR and CR values in the Dashboard</li>
+                </ol>
+                <p>The Output panel shows execution logs and any errors.</p>`,
+                interactive: {
+                    type: "quiz",
+                    question: "What tab contains the Y-Combinator and Church Boolean examples?",
+                    options: [
+                        "Turing Examples",
+                        "Lambda Examples",
+                        "Instructions",
+                        "Namespace"
+                    ],
+                    correct: 1,
+                    feedback: {
+                        correct: "Correct! Lambda Examples contains Church lambda calculus implementations including Y-Combinator, Church Booleans, and Church Numerals.",
+                        incorrect: "Not quite. The Lambda Examples tab contains the Church lambda calculus implementations."
+                    }
+                }
+            }
+        ]
+    },
+    {
+        title: "Example Programs",
+        steps: [
+            {
+                text: `<h3>Counter Loop</h3>
+                <p>The simplest example demonstrates <strong>loop control</strong> using flags:</p>
+                <ul>
+                    <li>Initialize a counter (DR0) and limit (DR1)</li>
+                    <li>Increment counter each iteration</li>
+                    <li>Compare counter to limit</li>
+                    <li>Branch back while counter < limit</li>
+                </ul>
+                <p>This teaches the fundamental pattern: <strong>init → loop body → compare → branch</strong></p>`,
+                demo: `<div class="demo-title">Counter Pattern</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.85rem;">
+ADDI 0 0      ; DR0 = 0 (counter)
+ADDI 1 5      ; DR1 = 5 (limit)
+ADDI 2 1      ; DR2 = 1 (step)
+
+loop:
+ADD 0 2       ; counter += step
+CMP 0 1       ; counter - limit
+B LT loop     ; if < 0, keep looping
+
+; Result: DR0 = 5</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Fibonacci Sequence</h3>
+                <p>Calculates F(n) = F(n-1) + F(n-2) iteratively:</p>
+                <ul>
+                    <li>DR0 holds F(n-1), DR1 holds F(n)</li>
+                    <li>Each step: compute sum, then shift values</li>
+                    <li>Produces sequence: 0, 1, 1, 2, 3, 5, 8, 13...</li>
+                </ul>
+                <p>Demonstrates <strong>multi-register coordination</strong> and the shift pattern.</p>`,
+                demo: `<div class="demo-title">Fibonacci Pattern</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.85rem;">
+ADDI 0 0      ; DR0 = F(0) = 0
+ADDI 1 1      ; DR1 = F(1) = 1
+
+; Each iteration:
+MOV 2 0       ; temp = F(n-1)
+ADD 2 1       ; temp = F(n-1) + F(n)
+MOV 0 1       ; shift: F(n-1) = old F(n)
+MOV 1 2       ; F(n) = temp
+
+; Repeat to generate sequence</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Multiplication</h3>
+                <p>Multiplies without a MUL instruction using <strong>repeated addition</strong>:</p>
+                <ul>
+                    <li>6 × 7 = 6+6+6+6+6+6+6 = 42</li>
+                    <li>Add multiplicand to result, decrement counter</li>
+                    <li>Stop when counter reaches zero (Z flag set)</li>
+                </ul>
+                <p>Shows how complex operations can be built from simple primitives.</p>`,
+                demo: `<div class="demo-title">Multiply Pattern</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.85rem;">
+ADDI 0 0      ; DR0 = result = 0
+ADDI 1 6      ; DR1 = multiplicand
+ADDI 2 7      ; DR2 = multiplier (counter)
+ADDI 3 1      ; DR3 = decrement
+
+loop:
+ADD 0 1       ; result += multiplicand
+SUB 2 3       ; counter--
+B NE loop     ; loop until counter = 0
+
+; Result: DR0 = 42</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Y-Combinator</h3>
+                <p>The <strong>Y combinator</strong> enables recursion without naming the function:</p>
+                <div class="highlight">
+                    Y = λf. (λx. f (x x)) (λx. f (x x))
+                </div>
+                <p>In CTMM, this works by storing a GT to the current code in the C-List:</p>
+                <ul>
+                    <li>Load self-referencing GT from CR6[0]</li>
+                    <li>CALL the GT to execute self</li>
+                    <li>The called code receives its own GT, enabling recursion</li>
+                </ul>`,
+                demo: `<div class="demo-title">Y-Combinator Pattern</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.85rem;">
+; Y-COMBINATOR for recursion
+; CR6[0] = GT pointing to this code
+
+LOAD 0 6 0        ; CR0 = GT to self
+TPERM 0 X         ; Verify executable
+B NE error        ; Branch if not
+
+CALL 0            ; Self-application (x x)
+; Called code receives its own GT
+; enabling f(x x) pattern
+
+RETURN</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Factorial with Recursion</h3>
+                <p>Combines the Y pattern with actual computation:</p>
+                <ul>
+                    <li><strong>Base case</strong>: If n=0, return 1</li>
+                    <li><strong>Recursive case</strong>: n × fact(n-1)</li>
+                    <li>Uses LOAD to get self-reference, CALL to recurse</li>
+                </ul>
+                <p>This demonstrates <strong>real recursive algorithms</strong> in CTMM assembly.</p>`,
+                demo: `<div class="demo-title">Factorial Implementation</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.85rem;">
+; Input: DR0 = n
+; Output: DR0 = n!
+
+CMP 0 0           ; n == 0?
+B EQ base         ; yes: return 1
+
+MOV 1 0           ; DR1 = n (save)
+SUBI 0 1          ; DR0 = n-1
+LOAD 0 6 0        ; CR0 = GT to self
+CALL 0            ; DR0 = fact(n-1)
+MUL 0 1           ; DR0 = (n-1)! * n
+RETURN
+
+base:
+ADDI 0 1          ; return 1
+RETURN</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Capability Validation</h3>
+                <p>Before using a gifted GT, <strong>validate it</strong>:</p>
+                <ul>
+                    <li><strong>TPERM</strong> - Test if GT has required permissions</li>
+                    <li><strong>Branch on failure</strong> - Reject invalid capabilities</li>
+                    <li><strong>Proceed if valid</strong> - Use the capability safely</li>
+                </ul>
+                <p>This is the defensive programming pattern for secure capability usage.</p>`,
+                demo: `<div class="demo-title">Capability Check Pattern</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.85rem;">
+; Validate CR0 before use
+
+TPERM 0 RWX       ; Has R+W+X?
+B NE reject       ; No: reject
+
+; Safe to use
+LOAD 1 0 0        ; Use capability
+; ... operations ...
+RETURN
+
+reject:
+SUBI 0 1          ; DR0 = -1 (error)
+RETURN</pre>
+                </div>`,
+                interactive: {
+                    type: "quiz",
+                    question: "Why should you validate a gifted capability before using it?",
+                    options: [
+                        "To make the code run faster",
+                        "To check if it has the permissions you need",
+                        "To convert it to a different type",
+                        "To copy it to another register"
+                    ],
+                    correct: 1,
+                    feedback: {
+                        correct: "Correct! You must verify a capability has the permissions you need before attempting operations that require those permissions.",
+                        incorrect: "Not quite. Validation ensures the capability has the permissions required for your intended operations."
+                    }
+                }
+            }
+        ]
     }
 ];
 
