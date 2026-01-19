@@ -3050,12 +3050,21 @@ function updateChurchRegisters() {
 }
 
 function loadExample(name) {
+    const isTuring = examplePrograms.hasOwnProperty(name);
+    const isLambda = codeTemplates.hasOwnProperty(name);
     const code = examplePrograms[name] || codeTemplates[name];
     if (code) {
         setEditorCode(code, `Boot/Examples/${name}`, '[RX]');
         savedEditorContent = code;
         resetProgram();
         editorLog(`Loaded example: ${name}`, 'success');
+        
+        // Update paradigm tab to match loaded example
+        if (isTuring) {
+            switchParadigm('turing');
+        } else if (isLambda) {
+            switchParadigm('lambda');
+        }
     }
 }
 
