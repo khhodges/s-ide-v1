@@ -52,6 +52,7 @@ The web interface is composed of five distinct views:
 
 ## Recent Changes
 
+- 2026-01-19: Added Performance Benefits tutorial: GT validation overhead, Y-Combinator recursion, Church encodings, capability caching
 - 2026-01-19: Added Example Programs tutorial: Counter, Fibonacci, Multiply, Y-Combinator, Factorial, Capability Validation
 - 2026-01-19: Added Assembly Editor tutorial: Editor interface, syntax, Turing/Lambda examples, running programs
 - 2026-01-19: Added Lambda Combinators tutorial: Church Booleans, Church Numerals, Y-Combinator, Pairs

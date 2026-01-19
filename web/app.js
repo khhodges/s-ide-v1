@@ -4368,6 +4368,170 @@ RETURN</pre>
                 }
             }
         ]
+    },
+    {
+        title: "Performance Benefits",
+        steps: [
+            {
+                text: `<h3>Why Golden Tokens Improve Performance</h3>
+                <p>Traditional systems waste cycles on <strong>security checks at every operation</strong>. CTMM's capability architecture provides performance advantages:</p>
+                <ul>
+                    <li><strong>Single validation</strong> - Permissions checked once when GT is created, not on every use</li>
+                    <li><strong>Hardware-enforced</strong> - No software overhead for access control</li>
+                    <li><strong>Direct dispatch</strong> - CALL jumps directly to validated code location</li>
+                    <li><strong>No context switches</strong> - Capabilities eliminate kernel trap overhead</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Key Insight:</strong> Security becomes a compile-time/mint-time cost, not a runtime cost.
+                </div>`,
+                demo: `<div class="demo-title">Traditional vs. Capability Access</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: var(--bg-tertiary); padding: 0.8rem; border-radius: 6px;">
+                            <div style="color: var(--warning); font-weight: bold; margin-bottom: 0.5rem;">Traditional (Slow)</div>
+                            <pre style="font-size: 0.75rem; margin: 0;">1. System call trap
+2. Check user ID
+3. Check ACL table
+4. Validate operation
+5. Perform access
+6. Return to user</pre>
+                        </div>
+                        <div style="background: var(--bg-tertiary); padding: 0.8rem; border-radius: 6px;">
+                            <div style="color: var(--success); font-weight: bold; margin-bottom: 0.5rem;">CTMM (Fast)</div>
+                            <pre style="font-size: 0.75rem; margin: 0;">1. LOAD/CALL with GT
+   (hardware validates
+    permissions in
+    single cycle)
+2. Done</pre>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Y-Combinator: Zero-Cost Recursion</h3>
+                <p>In traditional systems, recursion involves:</p>
+                <ul>
+                    <li>Function pointer lookups through symbol tables</li>
+                    <li>Dynamic dispatch overhead</li>
+                    <li>Stack frame allocation with security checks</li>
+                </ul>
+                <p>With <strong>Golden Tokens</strong>, recursion is a single CALL instruction:</p>
+                <ul>
+                    <li>GT already contains validated code location</li>
+                    <li>No symbol resolution needed</li>
+                    <li>Hardware manages secure stack frames</li>
+                </ul>`,
+                demo: `<div class="demo-title">Y-Combinator Performance</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem;">
+; Recursion via GT is ONE instruction:
+LOAD 0 6 0    ; Get self-reference GT
+CALL 0        ; Direct jump - no lookup!
+
+; The GT encodes:
+; - Code location (immediate)
+; - Execute permission (validated)
+; - Bounds (hardware-checked)
+
+; Compare to traditional:
+; - Lookup "factorial" in symbol table
+; - Check if caller has permission
+; - Validate stack space
+; - THEN jump to code</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Church Encodings: Data as Code</h3>
+                <p>Church Booleans and Numerals represent data as <strong>executable functions</strong>:</p>
+                <ul>
+                    <li><strong>TRUE</strong> = GT that returns first argument</li>
+                    <li><strong>FALSE</strong> = GT that returns second argument</li>
+                    <li><strong>Numbers</strong> = GTs that apply a function N times</li>
+                </ul>
+                <p>Performance benefit: <strong>No type checking overhead</strong>. The GT itself IS the type - calling it performs the correct operation automatically.</p>`,
+                demo: `<div class="demo-title">Data = Validated Code</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem;">
+; IF-THEN-ELSE with Church Booleans:
+; CR0 = bool, CR1 = then, CR2 = else
+
+CALL 0        ; That's it! One instruction.
+
+; bool IS the selector function:
+; - If TRUE: returns CR1 (then branch)
+; - If FALSE: returns CR2 (else branch)
+
+; No runtime type check needed:
+; The GT's existence proves it's valid
+; The GT's permissions prove it's safe</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Capability Caching</h3>
+                <p>Once a GT is loaded into a Context Register, it stays validated:</p>
+                <ul>
+                    <li><strong>CR6</strong> holds frequently-used GTs (C-List)</li>
+                    <li><strong>Repeated calls</strong> reuse the same validated token</li>
+                    <li><strong>No re-validation</strong> needed between calls</li>
+                </ul>
+                <p>This is like having a "fast path" that bypasses all security checks after the first access.</p>`,
+                demo: `<div class="demo-title">Factorial Loop Performance</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem;">
+; Computing 10! with cached GT:
+
+LOAD 0 6 0    ; Load GT once (validated)
+
+loop:
+  ; ... compute step ...
+  CALL 0      ; Reuse same GT - instant!
+  ; ... 
+  B loop      ; No re-validation needed
+
+; 10 recursive calls = 10 CALL instructions
+; NOT 10 × (lookup + permission check + ...)
+; Speedup: potentially 10-100x</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Parallel Execution Potential</h3>
+                <p>Because GTs encode complete access rights, the hardware can:</p>
+                <ul>
+                    <li><strong>Prefetch</strong> - Load target code before CALL completes</li>
+                    <li><strong>Speculate</strong> - Begin execution knowing permissions are valid</li>
+                    <li><strong>Parallelize</strong> - Independent GTs can execute concurrently</li>
+                </ul>
+                <p>Traditional systems must serialize through security checkpoints. CTMM's design enables modern CPU optimizations.</p>`,
+                demo: `<div class="demo-title">Hardware Optimization</div>
+                <div class="demo-content">
+                    <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px;">
+                        <div style="margin-bottom: 0.5rem; font-weight: bold; color: var(--accent);">What the CPU sees:</div>
+                        <pre style="font-size: 0.8rem; margin: 0;">
+GT = { location: 0x5000, perms: RX, valid: ✓ }
+
+CALL GT →
+  ├─ Prefetch code at 0x5000 (parallel)
+  ├─ Allocate stack frame (parallel)
+  └─ Jump when ready (no wait)</pre>
+                    </div>
+                </div>`,
+                interactive: {
+                    type: "quiz",
+                    question: "Why is Y-Combinator recursion faster with Golden Tokens?",
+                    options: [
+                        "GTs use less memory than function pointers",
+                        "The recursive GT is pre-validated, eliminating per-call security checks",
+                        "Church calculus is inherently faster than imperative code",
+                        "CTMM uses a faster CPU clock"
+                    ],
+                    correct: 1,
+                    feedback: {
+                        correct: "Correct! The GT contains pre-validated permissions and location, so each recursive CALL is a direct jump without security overhead.",
+                        incorrect: "Not quite. The key benefit is that the GT's permissions are validated once at creation time, not on every recursive call."
+                    }
+                }
+            }
+        ]
     }
 ];
 
