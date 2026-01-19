@@ -8138,6 +8138,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // Global Ctrl+Z handler for editor view
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+            // Only handle if we're on the editor view
+            if (currentView === 'editor') {
+                e.preventDefault();
+                e.stopPropagation();
+                undoCodeChange();
+            }
+        }
+    });
+    
     // Initialize currentView from DOM to sync with actual active view
     const activeView = document.querySelector('.view.active');
     if (activeView) {
