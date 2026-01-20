@@ -5766,6 +5766,54 @@ function updateTutorialSaveButton() {
     }
 }
 
+function exportAllTutorials() {
+    const savedEdits = JSON.parse(localStorage.getItem('tutorialEdits') || '{}');
+    
+    const exportData = {
+        version: '1.0',
+        exportDate: new Date().toISOString(),
+        lessonTitles: lessons.map(l => l.title),
+        edits: savedEdits
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ctmm-tutorials-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    log('Tutorial edits exported', 'success');
+}
+
+function importAllTutorials(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const importData = JSON.parse(e.target.result);
+            
+            if (!importData.edits) {
+                log('Invalid tutorial file format', 'error');
+                return;
+            }
+            
+            localStorage.setItem('tutorialEdits', JSON.stringify(importData.edits));
+            renderCurrentStep();
+            log(`Imported ${Object.keys(importData.edits).length / 2} tutorial edits`, 'success');
+        } catch (err) {
+            log('Failed to parse tutorial file', 'error');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
 function renderInteractive(interactive, container) {
     if (interactive.type === 'quiz') {
         let html = `<div class="interactive-title">Quick Check</div>`;
