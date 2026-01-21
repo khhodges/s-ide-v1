@@ -3277,12 +3277,14 @@ function executeEditorInstruction(instr) {
     try {
         let result;
         switch (op) {
+            // Turing: Two-operand arithmetic/logic
             case 'ADD':
             case 'SUB':
             case 'MUL':
             case 'AND':
             case 'ORR':
             case 'EOR':
+            case 'BIC':
             case 'MOV':
             case 'MVN':
             case 'NEG':
@@ -3293,16 +3295,86 @@ function executeEditorInstruction(instr) {
             case 'TEQ':
                 result = simulator.execute(op, args[0], args[1]);
                 break;
+            
+            // Turing: Immediate arithmetic
             case 'ADDI':
             case 'SUBI':
                 result = simulator.execute(op, args[0], args[1]);
                 break;
+            
+            // Turing: Shift operations
             case 'LSL':
             case 'LSR':
             case 'ASR':
             case 'ROR':
                 result = simulator.execute(op, args[0], args[1], args[2]);
                 break;
+            
+            // Turing: Branch instructions
+            case 'B': {
+                const target = args[0];
+                const cond = args[1] || 'AL';
+                if (simulator.checkCondition(cond)) {
+                    const targetLine = findLabel(target);
+                    if (targetLine >= 0) {
+                        editorState.pc = targetLine;
+                        result = `Branch to ${target} (line ${targetLine})`;
+                    } else {
+                        result = `FAULT: Label '${target}' not found`;
+                    }
+                } else {
+                    result = `Branch not taken (${cond} failed)`;
+                    editorState.pc++;
+                }
+                editorLog(`[${line}] ${op} ${args.join(' ')}: ${result}`, 'exec');
+                updateEditorStatus();
+                return;
+            }
+            
+            case 'BL': {
+                const target = args[0];
+                const targetLine = findLabel(target);
+                if (targetLine >= 0) {
+                    simulator.setDataReg(14, BigInt(editorState.pc + 1));
+                    editorState.pc = targetLine;
+                    result = `Branch with link to ${target}, LR=${editorState.pc}`;
+                } else {
+                    result = `FAULT: Label '${target}' not found`;
+                }
+                editorLog(`[${line}] ${op} ${args.join(' ')}: ${result}`, 'exec');
+                updateEditorStatus();
+                return;
+            }
+            
+            // Church: Capability instructions
+            case 'LOAD':
+                result = simulator.execute(op, args[0], args[1], args[2]);
+                break;
+            
+            case 'SAVE':
+                result = simulator.execute(op, args[0], args[1]);
+                break;
+            
+            case 'CALL':
+                result = simulator.execute(op, args[0]);
+                break;
+            
+            case 'RETURN':
+                result = simulator.execute(op);
+                break;
+            
+            case 'CHANGE':
+                result = simulator.execute(op, args[0], args[1]);
+                break;
+            
+            case 'SWITCH':
+                result = simulator.execute(op, args[0]);
+                break;
+            
+            case 'TPERM':
+                result = simulator.execute(op, args[0], args[1], args[2]);
+                break;
+            
             default:
                 result = `Unknown instruction: ${op}`;
         }
@@ -3310,6 +3382,15 @@ function executeEditorInstruction(instr) {
     } catch (e) {
         editorLog(`[${line}] Error: ${e.message}`, 'error');
     }
+}
+
+function findLabel(label) {
+    for (let i = 0; i < editorState.program.length; i++) {
+        if (editorState.program[i].label === label) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 function resetProgram(preserveLinkage = true) {
