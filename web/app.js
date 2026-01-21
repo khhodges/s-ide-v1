@@ -1432,6 +1432,7 @@ function getObjectTooltip(name, type) {
 let currentEditingCap = null;
 let currentEditingRegLabel = null;
 let currentEditingClistIndex = -1;
+let currentExecutionLine = -1;
 
 function getCapabilityHierarchy(cap) {
     const hierarchy = [];
@@ -3065,15 +3066,18 @@ function saveCode() {
     editorLog('Code saved to ' + savePath, 'success');
 }
 
-function updateLineNumbers(highlightLine = -1) {
+function updateLineNumbers(highlightLine = null) {
     const editor = document.getElementById('codeEditor');
     const lineNumbers = document.getElementById('lineNumbers');
     if (!editor || !lineNumbers) return;
     
+    // Use passed line or fall back to stored execution line
+    const lineToHighlight = highlightLine !== null ? highlightLine : currentExecutionLine;
+    
     const lines = editor.value.split('\n').length;
     let nums = [];
     for (let i = 1; i <= lines; i++) {
-        const isHighlighted = i === highlightLine;
+        const isHighlighted = i === lineToHighlight;
         nums.push(`<span class="${isHighlighted ? 'exec-line' : ''}">${i}</span>`);
     }
     lineNumbers.innerHTML = nums.join('');
@@ -3585,6 +3589,7 @@ function findLabel(label) {
 function resetProgram(preserveLinkage = true) {
     editorState.program = [];
     editorState.pc = 0;
+    currentExecutionLine = -1;
     simulator.softReset();
     
     clearEditorConsole();
@@ -3593,6 +3598,7 @@ function resetProgram(preserveLinkage = true) {
     
     updateEditorStatus();
     updateEditorRegisters();
+    updateLineNumbers();
     updateDisplay();
     
     const parsed = document.getElementById('editorParsed');
@@ -3668,21 +3674,26 @@ function highlightCurrentLine() {
     if (!parsed) return;
     
     // Find the source line number for the current instruction
-    let sourceLine = -1;
+    currentExecutionLine = -1;
     if (editorState.program && editorState.program[editorState.pc]) {
-        sourceLine = editorState.program[editorState.pc].line;
+        currentExecutionLine = editorState.program[editorState.pc].line;
     }
     
     // Highlight line number in the code editor gutter
-    updateLineNumbers(sourceLine);
+    updateLineNumbers(currentExecutionLine);
     
     // Scroll the code editor to show the current line
     const editor = document.getElementById('codeEditor');
-    if (editor && sourceLine > 0) {
-        const lines = editor.value.split('\n');
-        const lineHeight = parseInt(getComputedStyle(editor).lineHeight) || 18;
-        const targetScroll = (sourceLine - 1) * lineHeight - editor.clientHeight / 2 + lineHeight;
+    if (editor && currentExecutionLine > 0) {
+        const lineHeight = 18; // Fixed line height for consistency
+        const targetScroll = (currentExecutionLine - 1) * lineHeight - editor.clientHeight / 2 + lineHeight;
         editor.scrollTop = Math.max(0, targetScroll);
+        
+        // Also sync line numbers scroll
+        const lineNumbers = document.getElementById('lineNumbers');
+        if (lineNumbers) {
+            lineNumbers.scrollTop = editor.scrollTop;
+        }
     }
     
     // Highlight in parsed view
