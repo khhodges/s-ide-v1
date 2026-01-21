@@ -452,9 +452,9 @@ class CTMMSimulator {
                 if (!src || src.name === 'NULL') {
                     return `FAULT: CR${srcCR} [NULL] - no capability loaded`;
                 }
-                if (!src.perms.includes('L')) {
+                if (!src.perms.includes('L') && !src.perms.includes('M')) {
                     const permStr = src.perms.length > 0 ? `[${src.perms.join('')}]` : '[no perms]';
-                    return `FAULT: CR${srcCR} ${permStr} "${src.name}" lacks Load (L) permission`;
+                    return `FAULT: Source CR${srcCR} ${permStr} "${src.name}" lacks Load (L) or Master (M) permission`;
                 }
                 
                 // Get the capability from source's clist at given index
@@ -506,13 +506,13 @@ class CTMMSimulator {
                 if (!src || src.name === 'NULL') {
                     return `FAULT: CR${srcCR} [NULL] - no capability loaded (source)`;
                 }
-                if (!dest.perms.includes('S')) {
+                if (!dest.perms.includes('S') && !dest.perms.includes('M')) {
                     const permStr = dest.perms.length > 0 ? `[${dest.perms.join('')}]` : '[no perms]';
-                    return `FAULT: CR${destCR} ${permStr} "${dest.name}" lacks Save (S) permission`;
+                    return `FAULT: Dest CR${destCR} ${permStr} "${dest.name}" lacks Save (S) or Master (M) permission`;
                 }
-                if (!src.perms.includes('B')) {
+                if (!src.perms.includes('B') && !src.perms.includes('M')) {
                     const permStr = src.perms.length > 0 ? `[${src.perms.join('')}]` : '[no perms]';
-                    return `FAULT: CR${srcCR} ${permStr} "${src.name}" lacks Bind (B) permission`;
+                    return `FAULT: Source CR${srcCR} ${permStr} "${src.name}" lacks Bind (B) or Master (M) permission`;
                 }
                 return `Saved GT from CR${srcCR} to CR${destCR}[${idx || 0}] (B-bit validated)`;
             }
