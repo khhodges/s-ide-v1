@@ -668,7 +668,7 @@ const bootSteps = [
                 nsOffset: 2,
                 type: "C-List",
                 location: { type: "Local", offset: bootNS.word1_location },
-                perms: ["E"],  // Enter only - M added after successful CALL
+                perms: ["E", "M"],  // Enter + Meta after successful boot
                 locked: false,
                 goldenKey: generateGoldenKey(),
                 word1: bootNS.word1_location,
