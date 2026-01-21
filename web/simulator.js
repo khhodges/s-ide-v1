@@ -18,6 +18,7 @@ class CTMMSimulator {
         this.cr8 = this.createNullCapability();
         this.ip = 0;
         this.stackDepth = 0;
+        this.callStack = [];
         
         this.flags = { N: false, Z: false, C: false, V: false };
     }
@@ -416,34 +417,89 @@ class CTMMSimulator {
             }
             
             case "SAVE": {
-                const [destCR, srcDR] = args;
+                const [destCR, srcCR, idx] = args;
                 const dest = destCR < 8 ? this.contextRegs[destCR] : 
                             destCR === 8 ? this.cr8 : this.cr15;
+                const src = srcCR < 8 ? this.contextRegs[srcCR] : 
+                           srcCR === 8 ? this.cr8 : this.cr15;
                 
                 if (!dest.perms.includes('S')) {
-                    return `Error: CR${destCR} lacks Store permission (S required for capability operations)`;
+                    return `FAULT: CR${destCR} lacks Save permission (S required on destination C-List)`;
                 }
-                return `Saved DR${srcDR} (0x${this.dataRegs[srcDR].toString(16)}) via CR${destCR}`;
+                if (!src.perms.includes('B')) {
+                    return `FAULT: CR${srcCR} lacks Bind permission (B required to save GT)`;
+                }
+                return `Saved GT from CR${srcCR} to CR${destCR}[${idx || 0}] (B-bit validated)`;
             }
             
             case "CALL": {
-                const [crIdx] = args;
+                const [crIdx, maskField] = args;
                 const cr = crIdx < 8 ? this.contextRegs[crIdx] : 
                           crIdx === 8 ? this.cr8 : this.cr15;
                 
                 if (!cr.perms.includes('E')) {
-                    return `Error: CR${crIdx} lacks Enter permission`;
+                    return `FAULT: CR${crIdx} lacks Enter permission`;
                 }
+                
+                this.callStack.push({
+                    returnPI: this.ip + 1,
+                    cr6: this.contextRegs[6] ? { ...this.contextRegs[6] } : null,
+                    cr7: this.contextRegs[7] ? { ...this.contextRegs[7] } : null,
+                    boundGTs: []
+                });
+                
+                const mask = maskField || 0;
+                let clearedRegs = [];
+                for (let i = 0; i < 16; i++) {
+                    if ((mask >> i) & 1) {
+                        this.dataRegs[i] = 0n;
+                        clearedRegs.push(`DR${i}`);
+                    }
+                }
+                
+                this.contextRegs[6] = {
+                    name: `CLIST_${cr.name}`,
+                    location: cr.location,
+                    perms: [...cr.perms],
+                    locked: false,
+                    goldenKey: this.generateKey(),
+                    isNodalCList: true
+                };
+                
+                this.contextRegs[7] = {
+                    name: `ACCESS_${cr.name}`,
+                    location: { type: 'Code', offset: 0 },
+                    perms: ['X'],
+                    locked: false,
+                    goldenKey: this.generateKey()
+                };
+                
                 this.stackDepth++;
-                return `Called procedure in CR${crIdx} (${cr.name}), stack depth: ${this.stackDepth}`;
+                const clearMsg = clearedRegs.length > 0 ? `, cleared: ${clearedRegs.join(',')}` : '';
+                return `CALL CR${crIdx} (${cr.name}): pushed frame, loaded CR6 (nodal C-List), CR7 (Access Code)${clearMsg}`;
             }
             
             case "RETURN": {
-                if (this.stackDepth > 0) {
+                if (this.stackDepth > 0 && this.callStack.length > 0) {
+                    const frame = this.callStack.pop();
                     this.stackDepth--;
-                    return `Returned from procedure, stack depth: ${this.stackDepth}`;
+                    
+                    if (frame.cr6) this.contextRegs[6] = frame.cr6;
+                    if (frame.cr7) this.contextRegs[7] = frame.cr7;
+                    
+                    let surrendered = [];
+                    for (let i = 0; i < 8; i++) {
+                        const cr = this.contextRegs[i];
+                        if (cr && cr.boundDuringCall) {
+                            this.contextRegs[i] = { name: 'NULL', perms: [], location: null, locked: true };
+                            surrendered.push(`CR${i}`);
+                        }
+                    }
+                    
+                    const surrenderMsg = surrendered.length > 0 ? `, surrendered bound GTs: ${surrendered.join(',')}` : '';
+                    return `RETURN: restored CR6/CR7, stack depth: ${this.stackDepth}${surrenderMsg}`;
                 }
-                return `Error: Stack underflow - no procedure to return from`;
+                return `FAULT: Stack underflow - no procedure to return from`;
             }
             
             case "CHANGE": {
