@@ -1157,12 +1157,13 @@ function updateSystemState() {
     // CR8: Thread - show name
     document.getElementById('cr8Name').textContent = simulator.cr8?.name || 'NULL';
     
-    // CR6: C-List - show name with [n] count
+    // CR6: C-List - show name with [perms] and (count)
     const cr6 = simulator.contextRegs[6];
     let cr6Text = 'NULL';
     if (cr6 && cr6.name && cr6.name !== 'NULL') {
         const count = cr6.clistCount !== undefined ? cr6.clistCount : (cr6.clist?.length || 0);
-        cr6Text = `${cr6.name} [${count}]`;
+        const perms = cr6.perms && cr6.perms.length > 0 ? `[${cr6.perms.join('')}]` : '';
+        cr6Text = `${cr6.name} ${perms} (${count})`;
     }
     document.getElementById('cr6Name').textContent = cr6Text;
     
@@ -3318,7 +3319,7 @@ function updateEditorRegisters() {
             if (reg && reg.perms && reg.perms.length > 0) {
                 if (i === 6) {
                     const count = reg.clistCount !== undefined ? reg.clistCount : (reg.clist?.length || 0);
-                    permsDisplay = `[${count}]`;
+                    permsDisplay = `[${reg.perms.join('')}] (${count})`;
                 } else if (i === 7) {
                     permsDisplay = `[${reg.perms.join('')}]`;
                 } else {
