@@ -2982,9 +2982,9 @@ function updateLineNumbers() {
     const lines = editor.value.split('\n').length;
     let nums = [];
     for (let i = 1; i <= lines; i++) {
-        nums.push(i);
+        nums.push(`<div>${i}</div>`);
     }
-    lineNumbers.innerHTML = nums.join('<br>');
+    lineNumbers.innerHTML = nums.join('');
 }
 
 function syncScroll() {

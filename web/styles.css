@@ -3502,7 +3502,7 @@ main {
 }
 
 .line-numbers {
-    padding: 1rem 0.8rem;
+    padding: 1rem 0.5rem 1rem 0.5rem;
     background: var(--bg-dark);
     color: var(--text-secondary);
     font-family: 'Consolas', monospace;
@@ -3512,8 +3512,11 @@ main {
     user-select: none;
     border-right: 1px solid var(--border);
     min-width: 40px;
-    white-space: pre;
-    overflow-y: auto;
+    overflow-y: hidden;
+}
+
+.line-numbers div {
+    height: 1.35em;
 }
 
 #codeEditor {
