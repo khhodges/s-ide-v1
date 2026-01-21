@@ -3518,6 +3518,15 @@ main {
     line-height: calc(0.9rem * 1.5);
 }
 
+.line-numbers span.exec-line {
+    background: var(--accent);
+    color: var(--bg-dark);
+    font-weight: bold;
+    border-radius: 2px;
+    margin-right: -0.5rem;
+    padding-right: 0.5rem;
+}
+
 #codeEditor {
     flex: 1;
     padding: 1rem;

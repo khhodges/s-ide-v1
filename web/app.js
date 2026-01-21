@@ -3065,7 +3065,7 @@ function saveCode() {
     editorLog('Code saved to ' + savePath, 'success');
 }
 
-function updateLineNumbers() {
+function updateLineNumbers(highlightLine = -1) {
     const editor = document.getElementById('codeEditor');
     const lineNumbers = document.getElementById('lineNumbers');
     if (!editor || !lineNumbers) return;
@@ -3073,7 +3073,8 @@ function updateLineNumbers() {
     const lines = editor.value.split('\n').length;
     let nums = [];
     for (let i = 1; i <= lines; i++) {
-        nums.push(`<span>${i}</span>`);
+        const isHighlighted = i === highlightLine;
+        nums.push(`<span class="${isHighlighted ? 'exec-line' : ''}">${i}</span>`);
     }
     lineNumbers.innerHTML = nums.join('');
 }
@@ -3666,6 +3667,25 @@ function highlightCurrentLine() {
     const parsed = document.getElementById('editorParsed');
     if (!parsed) return;
     
+    // Find the source line number for the current instruction
+    let sourceLine = -1;
+    if (editorState.program && editorState.program[editorState.pc]) {
+        sourceLine = editorState.program[editorState.pc].line;
+    }
+    
+    // Highlight line number in the code editor gutter
+    updateLineNumbers(sourceLine);
+    
+    // Scroll the code editor to show the current line
+    const editor = document.getElementById('codeEditor');
+    if (editor && sourceLine > 0) {
+        const lines = editor.value.split('\n');
+        const lineHeight = parseInt(getComputedStyle(editor).lineHeight) || 18;
+        const targetScroll = (sourceLine - 1) * lineHeight - editor.clientHeight / 2 + lineHeight;
+        editor.scrollTop = Math.max(0, targetScroll);
+    }
+    
+    // Highlight in parsed view
     parsed.querySelectorAll('.parsed-line').forEach((el, i) => {
         const isCurrent = i === editorState.pc;
         el.classList.toggle('current-line', isCurrent);
