@@ -457,10 +457,14 @@ class CTMMSimulator {
                     }
                 }
                 
+                const nodalPerms = [...cr.perms];
+                if (!nodalPerms.includes('M')) {
+                    nodalPerms.push('M');  // Append M after successful CALL
+                }
                 this.contextRegs[6] = {
                     name: `CLIST_${cr.name}`,
                     location: cr.location,
-                    perms: [...cr.perms],
+                    perms: nodalPerms,
                     locked: false,
                     goldenKey: this.generateKey(),
                     isNodalCList: true

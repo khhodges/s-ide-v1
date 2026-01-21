@@ -60,6 +60,9 @@ The web interface is composed of five distinct views:
 - 2026-01-21: Register panel updates live during Step/Run execution
 - 2026-01-21: DR values show last 8 hex digits with full 16-digit tooltip on hover
 - 2026-01-21: CR6/CR7 show role labels (C-List/Nucleus) for quick identification
+- 2026-01-21: Removed all illegal RLE permission combinations from codebase
+- 2026-01-21: C-List entries for abstractions now start with [E] only, M appended after successful CALL
+- 2026-01-21: CALL instruction updated to append M permission to nodal C-List automatically
 - 2026-01-20: Updated Church instructions to 6 + TPERM format per user specification
 - 2026-01-20: LOAD requires L (Load) permission, SAVE requires S (Save) on dest + B (Bind) on source
 - 2026-01-20: CALL requires E (Enter), adds Mask field clearing, loads CR6 (nodal C-List) + CR7 (Access Code)

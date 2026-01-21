@@ -668,7 +668,7 @@ const bootSteps = [
                 nsOffset: 2,
                 type: "C-List",
                 location: { type: "Local", offset: bootNS.word1_location },
-                perms: ["R", "L", "E"],  // Read, Load, Enter for C-List
+                perms: ["E"],  // Enter only - M added after successful CALL
                 locked: false,
                 goldenKey: generateGoldenKey(),
                 word1: bootNS.word1_location,
@@ -2011,7 +2011,7 @@ function createSampleCapabilities() {
     simulator.cr15 = {
         name: "SYSTEM_ROOT",
         location: { type: "Literal", name: "system.namespace" },
-        perms: ["R", "L", "S", "E", "B"],
+        perms: ["M"],  // Meta permission for namespace root
         locked: true,
         goldenKey: generateGoldenKey()
     };
@@ -2051,7 +2051,7 @@ function createSampleCapabilities() {
     simulator.contextRegs[6] = {
         name: "UserCList",
         location: { type: "Local", offset: 0x300 },
-        perms: ["R", "L", "S", "B"],
+        perms: ["E"],  // Enter only - M added after successful CALL
         locked: false,
         goldenKey: generateGoldenKey()
     };
@@ -2059,7 +2059,7 @@ function createSampleCapabilities() {
     simulator.contextRegs[7] = {
         name: "KernelCode",
         location: { type: "Literal", name: "kernel.entry" },
-        perms: ["R", "X", "E"],
+        perms: ["X"],  // Execute permission for code
         locked: true,
         goldenKey: generateGoldenKey()
     };
@@ -2082,7 +2082,7 @@ function createSampleCapabilities() {
         {
             name: "FileSystem",
             location: { type: "Local", offset: 0x400 },
-            perms: ["R", "W", "L", "S"],
+            perms: ["L", "S"],  // Load/Save for capability operations
             locked: false,
             goldenKey: generateGoldenKey()
         }
