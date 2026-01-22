@@ -55,6 +55,7 @@ The web interface is composed of five distinct views:
 
 ## Recent Changes
 
+- 2026-01-22: Added Common Mask Patterns table to "14-Bit API Boundary" tutorial step with 5 pattern examples
 - 2026-01-22: Added CALL/RETURN mask setup code examples to tutorial: MOV/LSL/ORR pattern, common mask patterns
 - 2026-01-22: CALL/RETURN instructions now have 14-bit register mask fields (8 bits DR0-7 + 6 bits CR0-5) to prevent information leakage
 - 2026-01-22: DR8-15 always cleared on CALL/RETURN (never used for API), CR6-7 fixed by Lambda Calculus

@@ -5642,10 +5642,19 @@ RETURN DR1           ; Return with mask
                 text: `<h3>The 14-Bit API Boundary</h3>
                 <p>The register mask creates a <strong>hardware-enforced API boundary</strong> between caller and callee:</p>
                 <ul>
-                    <li><strong>8 bits for DR0-7</strong> - Which data registers pass through</li>
-                    <li><strong>6 bits for CR0-5</strong> - Which capability registers pass through</li>
-                    <li><strong>Total: 14 bits</strong> - Encoded in CALL and RETURN instruction formats</li>
+                    <li><strong>8 bits for DR0-7</strong> - Which data registers pass through (bit=1 clears register)</li>
+                    <li><strong>6 bits for CR0-5</strong> - Which capability registers pass through (bit=1 clears register)</li>
+                    <li><strong>Total: 14 bits</strong> - Combined as <code>(DR_mask &lt;&lt; 6) | CR_mask</code></li>
                 </ul>
+                <h4>Common Mask Patterns</h4>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 1rem 0;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.5rem; text-align: left;">Pattern</th><th style="padding: 0.5rem;">DR Mask</th><th style="padding: 0.5rem;">CR Mask</th><th style="padding: 0.5rem;">Combined</th></tr>
+                    <tr><td style="padding: 0.5rem;">Full clear (pass nothing)</td><td style="text-align: center;">0xFF</td><td style="text-align: center;">0x3F</td><td style="text-align: center; font-family: monospace;">0x3FFF</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="padding: 0.5rem;">Pass all (clear nothing)</td><td style="text-align: center;">0x00</td><td style="text-align: center;">0x00</td><td style="text-align: center; font-family: monospace;">0x0000</td></tr>
+                    <tr><td style="padding: 0.5rem;">Pass DR0 only, no caps</td><td style="text-align: center;">0xFE</td><td style="text-align: center;">0x3F</td><td style="text-align: center; font-family: monospace;">0x3FBF</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="padding: 0.5rem;">Pass DR0-1, no caps</td><td style="text-align: center;">0xFC</td><td style="text-align: center;">0x3F</td><td style="text-align: center; font-family: monospace;">0x3F3F</td></tr>
+                    <tr><td style="padding: 0.5rem;">Pass DR0 + CR0</td><td style="text-align: center;">0xFE</td><td style="text-align: center;">0x3E</td><td style="text-align: center; font-family: monospace;">0x3FBE</td></tr>
+                </table>
                 <p><strong>Why this prevents malware:</strong></p>
                 <ul>
                     <li>Malicious callee cannot read caller's <strong>private variables</strong> (DR2-7 cleared)</li>
