@@ -55,7 +55,7 @@ The web interface is composed of five distinct views:
 
 ## Recent Changes
 
-- 2026-01-22: Call Stack panel added to Dashboard below Condition Flags showing all stack frames
+- 2026-01-22: Combined "Flags & Stack" panel merges condition flags and call stack into single tile
 - 2026-01-22: Condition Flags (NZCV + P/B) now update after each instruction step
 - 2026-01-22: Renamed IP/PC to NIA (Next Instruction Address) throughout simulator and UI
 - 2026-01-22: Stack depth now shows word count (x3 per frame: returnNIA, CR6, CR7)
