@@ -5601,17 +5601,41 @@ CR15 = Namespace</pre>
                 demo: `<div class="demo-title">Register Mask Examples</div>
                 <div class="demo-content">
                     <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem;">
-; CALL with mask - pass only DR0, DR1 (arguments)
-CALL CR0, 0b11111100_00111111
-;          DR mask: 11111100 = clear DR2-7, keep DR0-1
-;          CR mask: 00111111 = clear CR0-5 (pass no caps)
-; DR8-15 always auto-cleared
+; === MASK SETUP FOR CALL ===
+; Goal: Pass DR0-1 (two args), clear all capabilities
+; DR mask: bit=1 means CLEAR that register
+;   keep DR0-1, clear DR2-7 → 0b11111100 = 0xFC
+; CR mask: clear all CR0-5 → 0b00111111 = 0x3F
+; Combined: (DR_mask << 6) | CR_mask
+MOV DR2, #0xFC       ; DR mask (use DR2 as temp)
+LSL DR2, DR2, #6     ; Shift left 6 bits
+ORR DR2, DR2, #0x3F  ; OR with CR mask
+; DR2 now holds mask = 0x3F3F
+; Load arguments into DR0 and DR1
+MOV DR0, #42         ; First argument
+MOV DR1, #10         ; Second argument  
+CALL CR0, DR2        ; Call with mask in DR2
 
-; RETURN with mask - return only DR0 (result)
-RETURN 0b11111110_00111111
-;        DR mask: 11111110 = clear DR1-7, keep DR0
-;        CR mask: 00111111 = clear CR0-5
-; Callee's private data cannot leak back</pre>
+; === MASK SETUP FOR RETURN ===
+; Goal: Return only DR0 (result), clear rest
+; DR mask: keep DR0, clear DR1-7 → 0b11111110 = 0xFE
+; CR mask: clear all CR0-5 → 0b00111111 = 0x3F
+MOV DR1, #0xFE       ; DR mask
+LSL DR1, DR1, #6     ; Shift left 6 bits
+ORR DR1, DR1, #0x3F  ; OR with CR mask
+; DR1 now holds mask = 0x3FBF
+RETURN DR1           ; Return with mask
+
+; === COMMON MASK PATTERNS ===
+; Format: (DR_mask << 6) | CR_mask
+; Full clear (pass nothing):
+;   DR=0xFF, CR=0x3F → 0x3FFF
+; Pass all (clear nothing):
+;   DR=0x00, CR=0x00 → 0x0000
+; Pass DR0 only, no caps:
+;   DR=0xFE, CR=0x3F → 0x3FBF
+; Pass DR0-1, no caps:
+;   DR=0xFC, CR=0x3F → 0x3F3F</pre>
                 </div>`
             },
             {
