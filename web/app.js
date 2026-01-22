@@ -2627,20 +2627,17 @@ let editorState = {
 };
 
 function updateEditorToolbar() {
-    const selectEl = document.getElementById('editorFileSelect');
+    const pathEl = document.getElementById('editorFilePath');
     const permsEl = document.getElementById('editorPerms');
-    const headerEl = document.getElementById('editorHeaderFilename');
+    const selectEl = document.getElementById('editorFileSelect');
     
+    const linkageWithExt = editorState.currentLinkage.endsWith('.asm') ? editorState.currentLinkage : editorState.currentLinkage + '.asm';
+    if (pathEl) pathEl.textContent = linkageWithExt;
     if (permsEl) permsEl.textContent = editorState.currentPerms;
-    
-    // Extract filename from linkage path for editor header
-    const parts = editorState.currentLinkage.split('/');
-    let filename = parts[parts.length - 1];
-    if (!filename.endsWith('.asm')) filename += '.asm';
-    if (headerEl) headerEl.textContent = filename;
     
     // Update dropdown selection to match current file
     if (selectEl && editorState.currentLinkage) {
+        const parts = editorState.currentLinkage.split('/');
         const key = parts[parts.length - 1];
         selectEl.value = key;
     }

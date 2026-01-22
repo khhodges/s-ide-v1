@@ -2828,40 +2828,38 @@ main {
     font-weight: 500;
 }
 
-.editor-file-select {
-    background: var(--surface-light);
+.editor-file-dropdown {
+    background: var(--bg-dark);
     color: var(--accent);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 0.3rem 0.5rem;
+    border: none;
+    border-radius: 0;
+    padding: 0;
     font-size: 0.85rem;
     font-family: 'Fira Code', monospace;
     cursor: pointer;
-    min-width: 180px;
-    max-width: 280px;
+    min-width: 160px;
 }
 
-.editor-file-select:hover {
-    border-color: var(--accent);
+.editor-file-dropdown:hover {
+    color: #fff;
 }
 
-.editor-file-select:focus {
+.editor-file-dropdown:focus {
     outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
 }
 
-.editor-file-select option {
-    background: var(--surface);
-    color: var(--text-primary);
-    padding: 0.3rem;
+.editor-file-dropdown option {
+    background: #1a1a2e;
+    color: #e0e0e0;
+    padding: 0.4rem 0.6rem;
 }
 
-.editor-file-select optgroup {
-    background: var(--surface-dark);
-    color: var(--text-secondary);
+.editor-file-dropdown optgroup {
+    background: #0f0f1a;
+    color: #888;
     font-weight: 600;
     font-style: normal;
+    padding: 0.3rem 0;
 }
 
 .perm-badge-green {
