@@ -2696,14 +2696,16 @@ function selectCodeFile(name) {
     let code = examplePrograms[name] || codeTemplates[name] || functionBetaCode[name];
     if (!code) return;
     
-    // Determine linkage path based on source
+    // Determine linkage path based on source and parent abstraction
     let linkage;
     if (examplePrograms[name]) {
         linkage = `Boot/Examples/${name}`;
     } else if (codeTemplates[name]) {
         linkage = `Boot/Lambda/${name}`;
     } else if (functionBetaCode[name]) {
-        linkage = `Boot/Functions/${name}`;
+        // Map GT_* functions to their parent abstractions
+        const parentAbstraction = getParentAbstraction(name);
+        linkage = `Boot/${parentAbstraction}/${name}`;
     }
     
     capturePreChangeState();
@@ -2712,6 +2714,31 @@ function selectCodeFile(name) {
     pushCodeHistory(code);
     resetProgram();
     editorLog(`Loaded: ${name}.asm`, 'success');
+}
+
+function getParentAbstraction(funcName) {
+    // Circle functions
+    if (['GT_CIRCUMFERENCE', 'GT_AREA', 'GT_DIAMETER'].includes(funcName)) {
+        return 'Circle';
+    }
+    // SlideRule (float) functions - includes basic arithmetic and transcendentals
+    if (['GT_LOG', 'GT_EXP', 'GT_SQRT', 'GT_POW', 'GT_ADD', 'GT_SUB', 'GT_MUL', 'GT_DIV', 'GT_MOD', 'GT_ABS', 'GT_NEG', 'GT_INC', 'GT_DEC'].includes(funcName)) {
+        return 'SlideRule';
+    }
+    // Abacus (integer) functions - prefixed with Abacus_
+    if (funcName.startsWith('Abacus_GT_')) {
+        return 'Abacus';
+    }
+    // CapabilityManager
+    if (funcName === 'GT_CREATE') {
+        return 'CapabilityManager';
+    }
+    // DateTime
+    if (funcName === 'GT_DATETIME') {
+        return 'DateTime';
+    }
+    // Default fallback - use Nucleus for unknown functions
+    return 'Nucleus';
 }
 
 const examplePrograms = {
