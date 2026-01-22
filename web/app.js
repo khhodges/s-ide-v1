@@ -323,7 +323,11 @@ const namespaceObjects = [
     // Offset 8: Circle abstraction
     { offset: 8, name: "Circle", type: "Abstraction",
       word1_location: 0x7000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "Circle [GEOMETRY] - Circle calculations using SlideRule floats. PI, TWO_PI constants, CIRCUMFERENCE, AREA, DIAMETER functions." }
+      tooltip: "Circle [GEOMETRY] - Circle calculations using SlideRule floats. PI, TWO_PI constants, CIRCUMFERENCE, AREA, DIAMETER functions." },
+    // Offset 9: CapabilityManager abstraction
+    { offset: 9, name: "CapabilityManager", type: "Abstraction",
+      word1_location: 0x8000, word2_limit: 0x1000, word3_seals: 0n,
+      tooltip: "CapabilityManager [CAPABILITY] - Creates new Golden Tokens. API: DR0=type (0=Data, 1=C-List), DR1=size. Returns CR0 with [RWXB] or [LSEB]." }
 ];
 
 // Boot C-List at Namespace offset 2
@@ -357,7 +361,11 @@ const bootCList = {
           desc: "64-bit integer operations", size: 0x1000 },
         // Index 6: Circle abstraction - GT pointing to NS offset 8
         { index: 6, name: "Circle", nsOffset: 8, perms: ["E", "B"], type: "Abstraction", 
-          desc: "Geometric calculations", size: 0x1000 }
+          desc: "Geometric calculations", size: 0x1000 },
+        // Index 7: CapabilityManager abstraction - GT pointing to NS offset 9
+        // E = Enter only (minimal privilege for calling)
+        { index: 7, name: "CapabilityManager", nsOffset: 9, perms: ["E"], type: "Abstraction", 
+          desc: "Creates new Golden Tokens", size: 0x1000 }
     ]
 };
 
@@ -576,6 +584,16 @@ const abstractionCLists = {
             { name: "GT_DIAMETER", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: D = 2*r", base: 0x7300, size: 128 },
             { name: "LocalCode", type: "Code", perms: ["R", "X"], base: 0x7080, size: 128 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0x7400, size: 512 }
+        ]
+    },
+    CapabilityManager: {
+        name: "CapabilityManager",
+        mathType: "CAPABILITY",
+        description: "Creates new Golden Tokens. API: DR0=type (0=Data, 1=C-List), DR1=size. Returns CR0 with full type permissions + Bind.",
+        clist: [
+            { name: "GT_CREATE", type: "Function", perms: ["R", "X"], desc: "Create new GT: DR0=type, DR1=size → CR0", base: 0x8100, size: 512 },
+            { name: "LocalCode", type: "Code", perms: ["R", "X"], base: 0x8000, size: 256 },
+            { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0x8600, size: 512 }
         ]
     }
 };
@@ -1004,14 +1022,16 @@ function buildHierarchyTree() {
     const abstractionDescs = {
         'SlideRule': '[FLOAT] IEEE 754 floating-point. CALL to use: ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW',
         'Abacus': '[INTEGER] 64-bit integer arithmetic. CALL to use: ADD, SUB, MUL, DIV, MOD, ABS, NEG, INC, DEC',
-        'Circle': '[GEOMETRY] Circle calculations (uses floats). PI, TWO_PI, CIRCUMFERENCE, AREA, DIAMETER'
+        'Circle': '[GEOMETRY] Circle calculations (uses floats). PI, TWO_PI, CIRCUMFERENCE, AREA, DIAMETER',
+        'CapabilityManager': '[CAPABILITY] Creates new Golden Tokens. DR0=type (0=Data, 1=C-List), DR1=size → CR0'
     };
     const mathTypeBadges = {
         'SlideRule': 'FLOAT',
         'Abacus': 'INTEGER',
-        'Circle': 'GEOMETRY'
+        'Circle': 'GEOMETRY',
+        'CapabilityManager': 'CAPABILITY'
     };
-    ['SlideRule', 'Abacus', 'Circle'].forEach(name => {
+    ['SlideRule', 'Abacus', 'Circle', 'CapabilityManager'].forEach(name => {
         const gtEntry = getBootGT(name);
         const absPerms = gtEntry ? `[${gtEntry.perms.join('')}]` : '[E]';
         const mathBadge = mathTypeBadges[name];
@@ -2001,7 +2021,7 @@ function getCapabilityTypeLabel(cap) {
     if (type === 'Code' || name === 'Access' || name.endsWith('.asm')) {
         return 'Code';
     }
-    if (type === 'Abstraction' || ['SlideRule', 'Abacus', 'Circle'].includes(name)) {
+    if (type === 'Abstraction' || ['SlideRule', 'Abacus', 'Circle', 'CapabilityManager'].includes(name)) {
         return 'Abstraction';
     }
     if (type === 'C-List' || name === 'Boot') {

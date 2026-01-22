@@ -39,7 +39,13 @@ The web interface is composed of five distinct views:
 
 ### Key Features
 
--   **Built-in Abstractions**: Includes `Boot` (root namespace), `Threads` (user identities), `SlideRule` (IEEE 754 float operations), `Abacus` (64-bit integer operations), and `Circle` (geometric calculations).
+-   **Built-in Abstractions**: Includes `Boot` (root namespace), `Threads` (user identities), `SlideRule` (IEEE 754 float operations), `Abacus` (64-bit integer operations), `Circle` (geometric calculations), and `CapabilityManager` (GT creation).
+-   **CapabilityManager Abstraction**: Creates new Golden Tokens for objects.
+    -   **Namespace Position**: Offset 9, child of Boot, sibling to other abstractions
+    -   **Boot C-List Entry**: [E] permission (Enter only)
+    -   **API**: DR0 = type (0=Data, 1=C-List), DR1 = size in words
+    -   **Output**: CR0 = new Golden Token with full type-appropriate permissions + Bind
+    -   **Returned Permissions**: Data type returns [R,W,X,B], C-List type returns [L,S,E,B]
 -   **Instruction Set**: Comprehensive set of Church-specific (LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM) and Turing-specific (Arithmetic, Logic, Shifts, Compare, Branch) instructions.
 -   **Condition Codes**: ARM-style condition flags for conditional execution.
 -   **State Persistence**: Automatic saving and restoring of simulator state using local storage.
