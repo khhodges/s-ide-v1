@@ -6000,6 +6000,162 @@ FAULT             ; Uniform failure</pre>
                 }
             }
         ]
+    },
+    {
+        title: "Branch Instructions",
+        steps: [
+            {
+                text: `<h3>Branch Instructions Overview</h3>
+                <p>The <strong>Branch instructions</strong> are Turing-side control flow operations that allow conditional and unconditional jumps in program execution.</p>
+                <p>There are <strong>2 Branch instructions</strong>:</p>
+                <ul>
+                    <li><strong>B [condition] label</strong> - Conditional branch to a label</li>
+                    <li><strong>BL label</strong> - Branch with Link (saves return address in DR7)</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Key Insight:</strong> Branch conditions check the <strong>NZCV flags</strong> set by comparison and arithmetic instructions (CMP, SUBS, etc.). This is the ARM-style conditional execution model.
+                </div>`,
+                demo: `<div class="demo-title">Branch Instruction Syntax</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: var(--bg-tertiary); padding: 0.8rem; border-radius: 6px;">
+                            <div style="color: var(--accent); font-weight: bold; margin-bottom: 0.5rem;">B - Conditional Branch</div>
+                            <pre style="font-size: 0.75rem; margin: 0;">B label       ; Always branch
+BEQ label     ; Branch if equal (Z=1)
+BNE label     ; Branch if not equal (Z=0)
+BGT label     ; Branch if greater than
+BLT label     ; Branch if less than</pre>
+                        </div>
+                        <div style="background: var(--bg-tertiary); padding: 0.8rem; border-radius: 6px;">
+                            <div style="color: var(--success); font-weight: bold; margin-bottom: 0.5rem;">BL - Branch with Link</div>
+                            <pre style="font-size: 0.75rem; margin: 0;">BL subroutine  ; Save return addr to DR7
+               ; then jump to subroutine
+               
+; Return by jumping to DR7:
+; (use B with register addressing)</pre>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Condition Codes</h3>
+                <p>Branch conditions check the <strong>NZCV flags</strong> (Negative, Zero, Carry, Overflow) set by comparison and arithmetic instructions.</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.5rem; text-align: left;">Condition</th><th style="padding: 0.5rem; text-align: left;">Meaning</th><th style="padding: 0.5rem; text-align: left;">Flag Test</th></tr>
+                    <tr><td style="padding: 0.4rem; color: var(--accent);"><strong>EQ</strong></td><td>Equal / Zero</td><td>Z = 1</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="padding: 0.4rem; color: var(--accent);"><strong>NE</strong></td><td>Not Equal</td><td>Z = 0</td></tr>
+                    <tr><td style="padding: 0.4rem; color: var(--accent);"><strong>CS/HS</strong></td><td>Carry Set / Unsigned >=</td><td>C = 1</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="padding: 0.4rem; color: var(--accent);"><strong>CC/LO</strong></td><td>Carry Clear / Unsigned <</td><td>C = 0</td></tr>
+                    <tr><td style="padding: 0.4rem; color: var(--accent);"><strong>MI</strong></td><td>Minus (Negative)</td><td>N = 1</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="padding: 0.4rem; color: var(--accent);"><strong>PL</strong></td><td>Plus (Positive/Zero)</td><td>N = 0</td></tr>
+                    <tr><td style="padding: 0.4rem; color: var(--accent);"><strong>VS</strong></td><td>Overflow Set</td><td>V = 1</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="padding: 0.4rem; color: var(--accent);"><strong>VC</strong></td><td>Overflow Clear</td><td>V = 0</td></tr>
+                </table>`,
+                demo: `<div class="demo-title">Extended Condition Codes</div>
+                <div class="demo-content">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                        <tr style="background: var(--bg-tertiary);"><th style="padding: 0.5rem; text-align: left;">Condition</th><th style="padding: 0.5rem; text-align: left;">Meaning</th><th style="padding: 0.5rem; text-align: left;">Flag Test</th></tr>
+                        <tr><td style="padding: 0.4rem; color: var(--warning);"><strong>HI</strong></td><td>Unsigned Higher</td><td>C = 1 AND Z = 0</td></tr>
+                        <tr style="background: var(--bg-tertiary);"><td style="padding: 0.4rem; color: var(--warning);"><strong>LS</strong></td><td>Unsigned Lower/Same</td><td>C = 0 OR Z = 1</td></tr>
+                        <tr><td style="padding: 0.4rem; color: var(--success);"><strong>GE</strong></td><td>Signed >=</td><td>N = V</td></tr>
+                        <tr style="background: var(--bg-tertiary);"><td style="padding: 0.4rem; color: var(--success);"><strong>LT</strong></td><td>Signed <</td><td>N ≠ V</td></tr>
+                        <tr><td style="padding: 0.4rem; color: var(--success);"><strong>GT</strong></td><td>Signed ></td><td>Z = 0 AND N = V</td></tr>
+                        <tr style="background: var(--bg-tertiary);"><td style="padding: 0.4rem; color: var(--success);"><strong>LE</strong></td><td>Signed <=</td><td>Z = 1 OR N ≠ V</td></tr>
+                        <tr><td style="padding: 0.4rem; color: var(--text-muted);"><strong>AL</strong></td><td>Always</td><td>Always true</td></tr>
+                    </table>
+                </div>`
+            },
+            {
+                text: `<h3>Branch Instruction Examples</h3>
+                <p>Here are practical examples showing how branch instructions work with condition codes:</p>
+                <div class="key-concept">
+                    <strong>Remember:</strong> You must set the flags with a comparison (CMP) or flag-setting arithmetic (SUBS, ADDS) <em>before</em> the conditional branch.
+                </div>`,
+                demo: `<div class="demo-title">Branch Test Cases</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem;">
+; Test 1: Equal condition
+    MOV DR0, #5
+    CMP DR0, #5      ; Sets Z=1 (equal)
+    BEQ equal_case   ; Taken (Z=1)
+    
+; Test 2: Not equal  
+    MOV DR0, #3
+    CMP DR0, #5      ; Sets Z=0 (not equal)
+    BNE not_equal    ; Taken (Z=0)
+
+; Test 3: Unsigned comparison
+    MOV DR0, #10
+    CMP DR0, #5      ; 10 > 5, sets C=1
+    BHI higher       ; Taken (C=1 AND Z=0)
+
+; Test 4: Signed comparison
+    MOV DR0, #-5
+    CMP DR0, #3      ; -5 < 3
+    BLT less_than    ; Taken (N ≠ V)
+
+; Test 5: Loop with counter
+loop:
+    SUBS DR1, DR1, #1  ; Decrement, set flags
+    BNE loop           ; Loop while DR1 ≠ 0</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Loop Patterns</h3>
+                <p>Loops are implemented using conditional branches that jump backward in the code:</p>
+                <ul>
+                    <li><strong>Counter loops</strong> - Decrement a register until zero</li>
+                    <li><strong>Sentinel loops</strong> - Compare against a termination value</li>
+                    <li><strong>Flag-based loops</strong> - Check a condition flag each iteration</li>
+                </ul>
+                <div class="key-concept" style="border-color: var(--warning);">
+                    <strong>Performance Note:</strong> Use <code>SUBS</code> instead of <code>SUB</code> followed by <code>CMP</code> - the S suffix sets flags automatically, saving an instruction.
+                </div>`,
+                demo: `<div class="demo-title">Common Loop Patterns</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem;">
+; Pattern 1: Count down to zero
+    MOV DR0, #10         ; Counter = 10
+countdown:
+    ; ... loop body ...
+    SUBS DR0, DR0, #1    ; Counter--
+    BNE countdown        ; Repeat if not zero
+
+; Pattern 2: Count up to limit
+    MOV DR0, #0          ; Counter = 0
+    MOV DR1, #100        ; Limit = 100
+countup:
+    ; ... loop body ...
+    ADD DR0, DR0, #1     ; Counter++
+    CMP DR0, DR1         ; Compare to limit
+    BLT countup          ; Repeat if < limit
+
+; Pattern 3: Subroutine call
+    BL myFunction        ; Call, save return in DR7
+    ; ... continues here after return ...
+
+myFunction:
+    ; ... function body ...
+    MOV PC, DR7          ; Return to caller</pre>
+                </div>`
+            },
+            {
+                quiz: {
+                    question: "Which condition code should you use to branch when the result of a CMP is that the first operand is less than the second (signed comparison)?",
+                    options: [
+                        "BLO (Branch if Lower)",
+                        "BLT (Branch if Less Than)",
+                        "BMI (Branch if Minus)",
+                        "BNE (Branch if Not Equal)"
+                    ],
+                    correct: 1,
+                    feedback: {
+                        correct: "Correct! BLT (Branch if Less Than) is for signed comparisons and checks if N ≠ V. BLO is for unsigned comparisons.",
+                        incorrect: "Not quite. BLT is the correct choice for signed less-than comparison. BLO is for unsigned, BMI only checks if negative, and BNE checks inequality."
+                    }
+                }
+            }
+        ]
     }
 ];
 
