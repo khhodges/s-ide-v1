@@ -55,6 +55,10 @@ The web interface is composed of five distinct views:
 
 ## Recent Changes
 
+- 2026-01-22: Added Church Indicators & TPERM tutorial: P/B flags, TPERM instruction, failsafe validation patterns
+- 2026-01-22: Added Branch Instructions tutorial: B/BL instructions, condition codes, loop patterns
+- 2026-01-22: M (Master) permission now grants authority for LOAD/SAVE operations (hardware-level access)
+- 2026-01-22: FAULT messages now identify Source/Dest for permission errors
 - 2026-01-21: Enhanced TPERM instruction with index validation against object W2 limit (namespace metadata size)
 - 2026-01-21: TPERM syntax now: TPERM CRs, permMask [, index] - sets Z=1 if all pass, C=perms OK, V=bounds OK
 - 2026-01-21: Assembly Editor now displays hardware registers (CR0-CR7, DR0-DR15, NZCV flags) matching Dashboard layout

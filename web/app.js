@@ -6140,6 +6140,171 @@ myFunction:
                 </div>`
             }
         ]
+    },
+    {
+        title: "Church Indicators & TPERM",
+        steps: [
+            {
+                text: `<h3>Church Indicators Overview</h3>
+                <p>The CTMM has two sets of condition flags:</p>
+                <ul>
+                    <li><strong>Turing Flags (NZCV)</strong> - Set by arithmetic and comparison instructions</li>
+                    <li><strong>Church Flags (P, B)</strong> - Set by capability validation instructions</li>
+                </ul>
+                <p>The <strong>Church Indicators</strong> are capability-specific status flags that report the result of permission and bounds checking:</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 1rem 0;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.5rem; text-align: left;">Flag</th><th style="padding: 0.5rem; text-align: left;">Name</th><th style="padding: 0.5rem; text-align: left;">Meaning</th></tr>
+                    <tr><td style="padding: 0.5rem; color: var(--accent);"><strong>P</strong></td><td>Perm OK</td><td>Permission check passed - the GT has the required permissions</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="padding: 0.5rem; color: var(--accent);"><strong>B</strong></td><td>Bounds OK</td><td>Bounds check passed - the index is within the object's limit</td></tr>
+                </table>
+                <div class="key-concept">
+                    <strong>Key Insight:</strong> Church indicators complement Turing flags - use <strong>NZCV</strong> for arithmetic/logic operations, <strong>P/B</strong> for capability validation before sensitive operations.
+                </div>`,
+                demo: `<div class="demo-title">Two Flag Sets in the CTMM</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: var(--bg-tertiary); padding: 0.8rem; border-radius: 6px;">
+                            <div style="color: var(--success); font-weight: bold; margin-bottom: 0.5rem;">Turing Flags (NZCV)</div>
+                            <pre style="font-size: 0.75rem; margin: 0;">N - Negative (result < 0)
+Z - Zero (result = 0)
+C - Carry (unsigned overflow)
+V - Overflow (signed overflow)
+
+Set by: CMP, SUBS, ADDS, etc.</pre>
+                        </div>
+                        <div style="background: var(--bg-tertiary); padding: 0.8rem; border-radius: 6px;">
+                            <div style="color: var(--accent); font-weight: bold; margin-bottom: 0.5rem;">Church Flags (P, B)</div>
+                            <pre style="font-size: 0.75rem; margin: 0;">P - Perm OK (has permissions)
+B - Bounds OK (index valid)
+
+Z flag also used:
+Z=1 when BOTH P and B pass
+
+Set by: TPERM instruction</pre>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>The TPERM Instruction</h3>
+                <p><strong>TPERM</strong> (Test Permissions) validates a Golden Token's permissions and optionally checks bounds:</p>
+                <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.85rem; margin: 1rem 0;">TPERM CRs, permMask [, index]</pre>
+                <p><strong>Parameters:</strong></p>
+                <ul>
+                    <li><strong>CRs</strong> - Context Register to test (0-15)</li>
+                    <li><strong>permMask</strong> - Permission bits to check (R, W, X, L, S, E, B, M, F)</li>
+                    <li><strong>index</strong> - Optional index for bounds checking against W2 limit</li>
+                </ul>
+                <p><strong>Flags Set:</strong></p>
+                <ul>
+                    <li><strong>P = 1</strong> if GT has ALL specified permissions</li>
+                    <li><strong>B = 1</strong> if index is within bounds (or no index specified)</li>
+                    <li><strong>Z = 1</strong> if BOTH P and B pass (all checks successful)</li>
+                </ul>`,
+                demo: `<div class="demo-title">TPERM Instruction Examples</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem;">
+; Test for Enter permission only
+TPERM CR0, E         ; P=1 if CR0 has E perm
+                     ; B=1 (no bounds check)
+                     ; Z=1 if P=1 AND B=1
+
+; Test for Read and Write permissions
+TPERM CR1, RW        ; P=1 if CR1 has BOTH R and W
+                     ; Z=1 if all checks pass
+
+; Test permissions with bounds check
+TPERM CR6, L, 5      ; P=1 if CR6 has L perm
+                     ; B=1 if 5 < object limit
+                     ; Z=1 if BOTH pass
+
+; Test for multiple permissions
+TPERM CR6, LS        ; P=1 if CR6 has BOTH L and S
+                     ; Tests for Load + Save access</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Failsafe Validation Pattern</h3>
+                <p>The Church indicators enable a <strong>failsafe validation pattern</strong> - always test permissions before performing sensitive operations:</p>
+                <div class="key-concept" style="border-color: var(--warning);">
+                    <strong>Security Rule:</strong> Never trust a capability without validation. Use TPERM to check permissions before CALL, LOAD, or SAVE operations.
+                </div>
+                <p><strong>Why This Matters:</strong></p>
+                <ul>
+                    <li>Capabilities may have been modified or restricted</li>
+                    <li>Bounds may have changed due to object resizing</li>
+                    <li>Failsafe design requires explicit validation</li>
+                    <li>Z=0 means "unsafe to proceed" - branch to fault handler</li>
+                </ul>`,
+                demo: `<div class="demo-title">Failsafe Validation Examples</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem;">
+; Pattern 1: Validate before CALL
+validate_call:
+    TPERM CR0, E         ; Test for Enter permission
+    BEQ safe_call        ; Z=1 means safe to proceed
+    B fault_handler      ; Z=0 means validation failed
+
+safe_call:
+    CALL 0 0             ; Safe to call now
+
+; Pattern 2: Validate before LOAD
+validate_load:
+    TPERM CR6, L, 3      ; Test Load perm + bounds
+    BNE access_fault     ; Z=0 means FAULT
+    LOAD 0 6 3           ; Safe to load entry 3
+
+; Pattern 3: Full access validation
+access_check:
+    TPERM CR0, RWX       ; Need R, W, and X
+    BEQ full_access      ; All permissions granted
+    TPERM CR0, R         ; Fallback: read-only?
+    BEQ readonly_access  ; Read access granted
+    B no_access          ; No access at all</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Conditional Execution with Church Flags</h3>
+                <p>After TPERM, you can use <strong>conditional branches</strong> based on the Z flag:</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; margin: 1rem 0;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.5rem; text-align: left;">Branch</th><th style="padding: 0.5rem; text-align: left;">Condition</th><th style="padding: 0.5rem; text-align: left;">Meaning</th></tr>
+                    <tr><td style="padding: 0.5rem; color: var(--success);"><strong>BEQ</strong></td><td>Z = 1</td><td>Both permission and bounds checks passed</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="padding: 0.5rem; color: var(--error);"><strong>BNE</strong></td><td>Z = 0</td><td>At least one check failed - FAULT</td></tr>
+                </table>
+                <div class="key-concept">
+                    <strong>Best Practice:</strong> Always use BNE to branch to a fault handler when Z=0. This follows the failsafe principle - fail securely rather than continue with invalid capabilities.
+                </div>`,
+                demo: `<div class="demo-title">Complete Validation Workflow</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 6px; font-size: 0.8rem;">
+; Access.asm - Capability Validation Entry Point
+; This is the standard entry for all abstraction calls
+
+access_entry:
+    ; Step 1: Validate caller's capability
+    TPERM CR0, E         ; Must have Enter permission
+    BNE first_fault      ; No E -> FAULT
+    
+    ; Step 2: Validate index bounds
+    TPERM CR6, M, DR0    ; Check C-List bounds
+    BNE first_fault      ; Out of bounds -> FAULT
+    
+    ; Step 3: Load and validate target
+    LOAD 1 6 DR0         ; Load target capability
+    TPERM CR1, X         ; Must be executable
+    BNE first_fault      ; Not executable -> FAULT
+    
+    ; All checks passed - safe to proceed
+    CALL 1 0             ; Enter the abstraction
+    RETURN               ; Return to caller
+
+first_fault:
+    ; Single fault handler - no information leakage
+    ; Just FAULT, no error codes or details
+    B fault_handler</pre>
+                </div>`
+            }
+        ]
     }
 ];
 
