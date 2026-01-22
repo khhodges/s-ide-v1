@@ -1064,6 +1064,7 @@ function updateDisplay() {
     updateDataRegisters();
     updateSystemState();
     updateFlags();
+    updateStackPanel();
 }
 
 const crTooltips = {
@@ -1370,45 +1371,58 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Stack depth click handler - show stack popup
+    // Stack depth click handler - scroll to stack panel
     const stackDepthRow = document.getElementById('stackDepthRow');
     if (stackDepthRow) {
-        stackDepthRow.addEventListener('click', (e) => showStackPopup(e.currentTarget));
+        stackDepthRow.addEventListener('click', () => {
+            const stackPanel = document.querySelector('.panel.call-stack');
+            if (stackPanel) {
+                stackPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
     }
     
-    // Editor stack indicator click handler
+    // Editor stack indicator click handler - switch to dashboard and scroll to stack
     const editorStackIndicator = document.getElementById('editorStackIndicator');
     if (editorStackIndicator) {
-        editorStackIndicator.addEventListener('click', (e) => showStackPopup(e.currentTarget));
+        editorStackIndicator.addEventListener('click', () => {
+            switchView('dashboard');
+            setTimeout(() => {
+                const stackPanel = document.querySelector('.panel.call-stack');
+                if (stackPanel) {
+                    stackPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+        });
     }
 });
 
-// Stack popup to show all call stack entries
-function showStackPopup(targetElement) {
-    // Remove any existing popup
-    const existingPopup = document.querySelector('.stack-popup');
-    if (existingPopup) {
-        existingPopup.remove();
-        return; // Toggle off if already showing
-    }
+// Update the stack panel in the Dashboard with current call stack frames
+function updateStackPanel() {
+    const stackList = document.getElementById('stackList');
+    const stackWordCount = document.getElementById('stackWordCount');
+    if (!stackList) return;
     
     const callStack = simulator.callStack;
+    const wordCount = callStack.length * 3;
+    
+    // Update word count display
+    if (stackWordCount) {
+        stackWordCount.textContent = `(${wordCount} words)`;
+    }
+    
+    // Also update Dashboard and Editor stack displays
+    const stackDepthEl = document.getElementById('stackDepth');
+    if (stackDepthEl) {
+        stackDepthEl.textContent = `${wordCount} words`;
+    }
+    const editorStackDepth = document.getElementById('editorStackDepth');
+    if (editorStackDepth) {
+        editorStackDepth.textContent = wordCount;
+    }
     
     if (callStack.length === 0) {
-        // Show empty stack message
-        const popup = document.createElement('div');
-        popup.className = 'stack-popup';
-        popup.innerHTML = `
-            <div class="stack-popup-header">
-                <span>Call Stack (0 words)</span>
-                <button class="stack-popup-close" onclick="this.closest('.stack-popup').remove()">&times;</button>
-            </div>
-            <div class="stack-popup-content">
-                <div class="stack-empty">Stack is empty</div>
-            </div>
-        `;
-        document.body.appendChild(popup);
-        positionStackPopup(popup, targetElement);
+        stackList.innerHTML = '<div class="stack-empty">Stack is empty</div>';
         return;
     }
     
@@ -1443,42 +1457,7 @@ function showStackPopup(targetElement) {
         `;
     });
     
-    const popup = document.createElement('div');
-    popup.className = 'stack-popup';
-    popup.innerHTML = `
-        <div class="stack-popup-header">
-            <span>Call Stack (${callStack.length * 3} words)</span>
-            <button class="stack-popup-close" onclick="this.closest('.stack-popup').remove()">&times;</button>
-        </div>
-        <div class="stack-popup-content">
-            ${framesHtml}
-        </div>
-    `;
-    document.body.appendChild(popup);
-    positionStackPopup(popup, targetElement);
-    
-    // Close on click outside
-    setTimeout(() => {
-        document.addEventListener('click', function closeStackPopup(e) {
-            if (!popup.contains(e.target) && !e.target.closest('#stackDepthRow') && !e.target.closest('#editorStackIndicator')) {
-                popup.remove();
-                document.removeEventListener('click', closeStackPopup);
-            }
-        });
-    }, 100);
-}
-
-function positionStackPopup(popup, targetElement) {
-    // Position near the clicked element
-    if (targetElement) {
-        const rect = targetElement.getBoundingClientRect();
-        popup.style.top = `${rect.bottom + 10}px`;
-        popup.style.left = `${Math.max(10, rect.left - 50)}px`;
-    } else {
-        popup.style.top = '100px';
-        popup.style.left = '50%';
-        popup.style.transform = 'translateX(-50%)';
-    }
+    stackList.innerHTML = framesHtml;
 }
 
 // ==================== CAPABILITY EXPLORER ====================
@@ -3743,6 +3722,10 @@ function updateEditorStatus() {
     
     const status = editorState.nia >= editorState.program.length ? 'Completed' : 'Running';
     document.getElementById('editorStatus').textContent = status;
+    
+    // Update Dashboard panels with current state
+    updateFlags();
+    updateStackPanel();
 }
 
 function updateEditorRegisters() {

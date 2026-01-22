@@ -5129,55 +5129,29 @@ body.tooltip-hidden [data-tooltip]:hover::after {
     line-height: 1.4;
 }
 
-/* Stack Popup */
-.stack-popup {
-    position: fixed;
-    z-index: 2000;
-    background: var(--bg-panel);
-    border: 1px solid var(--accent);
-    border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    min-width: 280px;
-    max-width: 400px;
-    max-height: 60vh;
-    overflow: hidden;
-    animation: popupFadeIn 0.15s ease-out;
+/* Call Stack Panel */
+.panel.call-stack {
+    margin-top: 1rem;
 }
 
-@keyframes popupFadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.stack-popup-header {
+.panel.call-stack h2 {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 1rem;
-    background: var(--bg-input);
-    border-bottom: 1px solid var(--border);
-    font-weight: 600;
-    color: var(--accent);
+    gap: 0.5rem;
 }
 
-.stack-popup-close {
-    background: none;
-    border: none;
+.stack-word-count {
+    font-size: 0.75rem;
+    font-weight: normal;
     color: var(--text-secondary);
-    font-size: 1.25rem;
-    cursor: pointer;
-    padding: 0 0.25rem;
-    line-height: 1;
 }
 
-.stack-popup-close:hover {
-    color: var(--error);
-}
-
-.stack-popup-content {
-    padding: 0.5rem;
+.stack-list {
+    max-height: 200px;
     overflow-y: auto;
-    max-height: calc(60vh - 50px);
+    padding: 0.5rem;
+    background: var(--bg-dark);
+    border-radius: 6px;
 }
 
 .stack-empty {
@@ -5185,10 +5159,11 @@ body.tooltip-hidden [data-tooltip]:hover::after {
     text-align: center;
     color: var(--text-secondary);
     font-style: italic;
+    font-size: 0.85rem;
 }
 
 .stack-frame {
-    background: var(--bg-dark);
+    background: var(--bg-panel);
     border: 1px solid var(--border);
     border-radius: 6px;
     margin-bottom: 0.5rem;
@@ -5201,9 +5176,9 @@ body.tooltip-hidden [data-tooltip]:hover::after {
 
 .stack-frame-header {
     background: var(--bg-input);
-    padding: 0.4rem 0.75rem;
+    padding: 0.35rem 0.6rem;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: var(--accent);
     border-bottom: 1px solid var(--border);
 }
@@ -5211,10 +5186,10 @@ body.tooltip-hidden [data-tooltip]:hover::after {
 .stack-word {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.75rem;
+    gap: 0.4rem;
+    padding: 0.25rem 0.6rem;
     border-bottom: 1px solid var(--border);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
 }
 
 .stack-word:last-child {
@@ -5224,19 +5199,22 @@ body.tooltip-hidden [data-tooltip]:hover::after {
 .stack-word-label {
     color: var(--text-secondary);
     font-family: 'Courier New', monospace;
-    min-width: 2rem;
+    min-width: 1.8rem;
 }
 
 .stack-word-name {
     color: var(--warning);
     font-weight: 500;
-    min-width: 5rem;
+    min-width: 4.5rem;
 }
 
 .stack-word-value {
     color: var(--text-primary);
     font-family: 'Courier New', monospace;
     flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Stack indicator in Assembly Editor toolbar */
