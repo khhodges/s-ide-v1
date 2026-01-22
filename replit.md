@@ -29,13 +29,15 @@ The CTMM simulator provides both a Haskell console interface and a primary web-b
 
 ### Web Interface (UI/UX)
 
-The web interface is composed of five distinct views:
+The web interface is composed of seven distinct views:
 
 1.  **Dashboard**: Displays Thread View with registers (Church CR0-CR15 and Turing DR0-DR15), condition flags, and boot sequence.
 2.  **Namespace Browser**: Visual exploration of the capability namespace, displaying objects, C-List hierarchy, and management tools.
 3.  **Assembly Editor**: Syntax-highlighted code editor for CTMM assembly with example programs and output tabs.
 4.  **Capabilities Explorer**: Detailed view of Golden Token structure, interactive editing of bit fields, and live MAC validation. Includes Context Register buttons for quick access to GT details.
-5.  **Tutorial**: Interactive lessons explaining CTMM concepts, Golden Tokens, permissions, and guided examples.
+5.  **Instructions**: ARM binary format design reference with visual bit-field diagrams for Church and Turing instructions.
+6.  **Tutorial**: Interactive lessons explaining CTMM concepts, Golden Tokens, permissions, and guided examples.
+7.  **Code Browser**: Source code viewer with file tree panel, syntax highlighting for JS/CSS/HTML/Python, line numbers, search, and navigation tools.
 
 ### Key Features
 
@@ -61,6 +63,7 @@ The web interface is composed of five distinct views:
 
 ## Recent Changes
 
+- 2026-01-22: Added Code Browser view with file tree, syntax highlighting, search, Go to Line, and Copy functionality
 - 2026-01-22: Click function names (GT_CREATE, GT_AREA, etc.) in Namespace Browser to load code and switch to Assembly view
 - 2026-01-22: Added GT_CREATE implementation code for CapabilityManager with correct permission encoding (Data=0x47, C-List=0x78)
 - 2026-01-22: Added CapMgr example button to Assembly Editor demonstrating object creation with failsafe TPERM validation
