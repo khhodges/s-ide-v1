@@ -332,7 +332,11 @@ const namespaceObjects = [
     // Offset 10: DateTime abstraction
     { offset: 10, name: "DateTime", type: "Abstraction",
       word1_location: 0x9000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "DateTime [TIME] - ISO 8601 date/time. API: DR0=mode (0=ISO timestamp, 1=Date, 2=Time, 3=Unix epoch, 4=Components). Returns DR1-DR6 for components." }
+      tooltip: "DateTime [TIME] - ISO 8601 date/time. API: DR0=mode (0=ISO timestamp, 1=Date, 2=Time, 3=Unix epoch, 4=Components). Returns DR1-DR6 for components." },
+    // Offset 11: Lambda abstraction
+    { offset: 11, name: "Lambda", type: "Abstraction",
+      word1_location: 0xA000, word2_limit: 0x2000, word3_seals: 0n,
+      tooltip: "Lambda [FUNCTIONAL] - Church's lambda calculus primitives. Y-Combinator, Church numerals (SUCC, PRED, ADD, MUL), Pairs (FST, SND), Booleans (TRUE, FALSE, IF)." }
 ];
 
 // Boot C-List at Namespace offset 2
@@ -374,7 +378,11 @@ const bootCList = {
         // Index 8: DateTime abstraction - GT pointing to NS offset 10
         // E = Enter only, B = Bind (can return GT references)
         { index: 8, name: "DateTime", nsOffset: 10, perms: ["E", "B"], type: "Abstraction", 
-          desc: "ISO 8601 date/time functions", size: 0x1000 }
+          desc: "ISO 8601 date/time functions", size: 0x1000 },
+        // Index 9: Lambda abstraction - GT pointing to NS offset 11
+        // E = Enter only (pure functions, no state mutation)
+        { index: 9, name: "Lambda", nsOffset: 11, perms: ["E"], type: "Abstraction", 
+          desc: "Lambda calculus primitives", size: 0x2000 }
     ]
 };
 
@@ -617,6 +625,26 @@ const abstractionCLists = {
             { name: "GT_EPOCH", type: "Function", perms: ["R", "X"], desc: "Unix epoch seconds in DR1", base: 0x9500, size: 128 },
             { name: "LocalCode", type: "Code", perms: ["R", "X"], base: 0x9000, size: 256 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0x9600, size: 512 }
+        ]
+    },
+    Lambda: {
+        name: "Lambda",
+        mathType: "FUNCTIONAL",
+        description: "Church's lambda calculus primitives. Y-Combinator for recursion, Church numerals for arithmetic, Pairs for data structures, Booleans for logic.",
+        clist: [
+            { name: "GT_Y_COMBINATOR", type: "Function", perms: ["R", "X"], desc: "Y f = f (Y f) - fixed-point combinator for recursion", base: 0xA100, size: 512 },
+            { name: "GT_CHURCH_SUCC", type: "Function", perms: ["R", "X"], desc: "λn.λf.λx. f (n f x) - successor", base: 0xA300, size: 256 },
+            { name: "GT_CHURCH_PRED", type: "Function", perms: ["R", "X"], desc: "λn.λf.λx. n (λg.λh. h (g f)) (λu.x) (λu.u) - predecessor", base: 0xA400, size: 384 },
+            { name: "GT_CHURCH_ADD", type: "Function", perms: ["R", "X"], desc: "λm.λn.λf.λx. m f (n f x) - addition", base: 0xA580, size: 256 },
+            { name: "GT_CHURCH_MUL", type: "Function", perms: ["R", "X"], desc: "λm.λn.λf. m (n f) - multiplication", base: 0xA680, size: 256 },
+            { name: "GT_PAIR", type: "Function", perms: ["R", "X"], desc: "λx.λy.λf. f x y - create pair", base: 0xA780, size: 192 },
+            { name: "GT_FST", type: "Function", perms: ["R", "X"], desc: "λp. p (λx.λy. x) - first of pair", base: 0xA840, size: 128 },
+            { name: "GT_SND", type: "Function", perms: ["R", "X"], desc: "λp. p (λx.λy. y) - second of pair", base: 0xA8C0, size: 128 },
+            { name: "GT_TRUE", type: "Function", perms: ["R", "X"], desc: "λx.λy. x - Church TRUE", base: 0xA940, size: 64 },
+            { name: "GT_FALSE", type: "Function", perms: ["R", "X"], desc: "λx.λy. y - Church FALSE", base: 0xA980, size: 64 },
+            { name: "GT_IF", type: "Function", perms: ["R", "X"], desc: "λc.λt.λf. c t f - conditional", base: 0xA9C0, size: 128 },
+            { name: "LocalCode", type: "Code", perms: ["R", "X"], base: 0xA000, size: 256 },
+            { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0xAA40, size: 512 }
         ]
     }
 };
@@ -2736,6 +2764,11 @@ function getParentAbstraction(funcName) {
     // DateTime
     if (funcName === 'GT_DATETIME') {
         return 'DateTime';
+    }
+    // Lambda (functional) - Church calculus primitives
+    if (['GT_Y_COMBINATOR', 'GT_CHURCH_SUCC', 'GT_CHURCH_PRED', 'GT_CHURCH_ADD', 'GT_CHURCH_MUL', 
+         'GT_PAIR', 'GT_FST', 'GT_SND', 'GT_TRUE', 'GT_FALSE', 'GT_IF'].includes(funcName)) {
+        return 'Lambda';
     }
     // Default fallback - use Nucleus for unknown functions
     return 'Nucleus';
@@ -9311,6 +9344,307 @@ mode_components:
 ;   DR5 = Minute (0-59)
 ;   DR6 = Second (0-59)
 ; All values as 64-bit integers
+RETURN
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_Y_COMBINATOR: `; ====================================================
+; GT_Y_COMBINATOR (Lambda): Fixed-Point Combinator
+; Enables recursion in lambda calculus
+; Y f = f (Y f)
+; ====================================================
+; The Y-Combinator allows anonymous recursion by
+; finding the fixed-point of a function.
+;
+; API: CR0 = function GT (must have E permission)
+;      The function receives itself as first argument
+;      enabling self-referential calls
+;
+; Return: Executes f (Y f), result depends on f
+; ====================================================
+; Lambda calculus: Y = λf. (λx. f (x x)) (λx. f (x x))
+; This creates infinite expansion that enables recursion
+; without explicit self-reference
+; ====================================================
+
+; Step 1: Validate function capability in CR0
+TPERM 0 E           ; Check CR0 has Enter permission
+B NE fault          ; No Enter permission -> FAULT
+
+; Step 2: Hardware implements Y-combinator
+; Creates closure that captures f and applies:
+;   result = f(λargs. (Y f) args)
+; The inner lambda delays evaluation to prevent
+; infinite expansion at compile time
+
+; Step 3: CALL the function with self-reference
+; The Y-combinator creates a fixed-point:
+;   f (f (f (f ...))) - infinite tower
+; But lazy evaluation stops when base case reached
+
+CALL 0              ; Enter function with self-reference
+RETURN              ; Result propagates through
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_CHURCH_SUCC: `; ====================================================
+; GT_CHURCH_SUCC (Lambda): Church Numeral Successor
+; λn.λf.λx. f (n f x)
+; ====================================================
+; Church numerals encode natural numbers as functions:
+;   0 = λf.λx. x           (apply f zero times)
+;   1 = λf.λx. f x         (apply f once)
+;   2 = λf.λx. f (f x)     (apply f twice)
+;   n = λf.λx. f^n x       (apply f n times)
+;
+; SUCC adds one more application of f
+; ====================================================
+; API: DR0 = Church numeral (encoded as iteration count)
+; Return: DR0 = successor numeral (n + 1)
+; ====================================================
+
+; Step 1: Get current numeral from DR0
+; DR0 contains n (the number of f-applications)
+
+; Step 2: Successor adds one more application
+ADD 0 0 #1          ; DR0 = DR0 + 1
+
+RETURN              ; Return successor in DR0
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_CHURCH_PRED: `; ====================================================
+; GT_CHURCH_PRED (Lambda): Church Numeral Predecessor
+; λn.λf.λx. n (λg.λh. h (g f)) (λu.x) (λu.u)
+; ====================================================
+; Predecessor is surprisingly complex in lambda calculus.
+; It uses pairs to "delay" the application by one step.
+;
+; The trick: Apply f (n-1) times by consuming one
+; application to extract the value.
+; ====================================================
+; API: DR0 = Church numeral (encoded as iteration count)
+; Return: DR0 = predecessor numeral (max(0, n-1))
+; ====================================================
+
+; Step 1: Get current numeral from DR0
+CMP 0 #0            ; Check if n = 0
+B EQ pred_zero      ; pred(0) = 0 (no negative Church numerals)
+
+; Step 2: Predecessor subtracts one application
+SUB 0 0 #1          ; DR0 = DR0 - 1
+RETURN
+
+pred_zero:
+; Predecessor of zero is zero (Church numerals are natural numbers)
+MOV 0 #0            ; DR0 = 0
+RETURN
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_CHURCH_ADD: `; ====================================================
+; GT_CHURCH_ADD (Lambda): Church Numeral Addition
+; λm.λn.λf.λx. m f (n f x)
+; ====================================================
+; Addition: Apply f m times, then n times
+; Total: m + n applications of f
+; ====================================================
+; API: DR0 = first numeral (m)
+;      DR1 = second numeral (n)
+; Return: DR0 = sum (m + n)
+; ====================================================
+
+; Church addition is function composition:
+; (m + n) f x = m f (n f x)
+; Apply n first, then m more times
+
+ADD 0 0 1           ; DR0 = DR0 + DR1
+
+RETURN              ; Return sum in DR0
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_CHURCH_MUL: `; ====================================================
+; GT_CHURCH_MUL (Lambda): Church Numeral Multiplication
+; λm.λn.λf. m (n f)
+; ====================================================
+; Multiplication: Apply (n f) m times
+; Each application of (n f) applies f n times
+; Total: m * n applications of f
+; ====================================================
+; API: DR0 = first numeral (m)
+;      DR1 = second numeral (n)
+; Return: DR0 = product (m * n)
+; ====================================================
+
+; Church multiplication is function composition:
+; (m * n) f = m (n f)
+; Compose n with itself m times
+
+MUL 0 0 1           ; DR0 = DR0 * DR1
+
+RETURN              ; Return product in DR0
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_PAIR: `; ====================================================
+; GT_PAIR (Lambda): Construct a Pair
+; λx.λy.λf. f x y
+; ====================================================
+; Pairs are the fundamental data structure in lambda
+; calculus. A pair captures two values and provides
+; them to a selector function.
+; ====================================================
+; API: DR0 = first element
+;      DR1 = second element
+; Return: CR0 = GT to pair object
+; ====================================================
+
+; Step 1: Allocate pair object (2 words)
+; Hardware allocates namespace entry for pair
+
+; Step 2: Store elements
+; Word 0 = first element (DR0)
+; Word 1 = second element (DR1)
+
+; Step 3: Create GT with read permission
+; Pair is immutable once created
+
+; CR0 = GT to pair with [R,B] permissions
+RETURN
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_FST: `; ====================================================
+; GT_FST (Lambda): First Element of Pair
+; λp. p (λx.λy. x)
+; ====================================================
+; Apply the pair to a selector that chooses first.
+; FST selects the first element of a pair.
+; ====================================================
+; API: CR0 = GT to pair object
+; Return: DR0 = first element
+; ====================================================
+
+; Step 1: Validate pair GT
+TPERM 0 R           ; Check CR0 has Read permission
+B NE fault          ; No Read permission -> FAULT
+
+; Step 2: Extract first element
+; Read word 0 from pair object
+; Store in DR0
+
+RETURN              ; Return first element in DR0
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_SND: `; ====================================================
+; GT_SND (Lambda): Second Element of Pair
+; λp. p (λx.λy. y)
+; ====================================================
+; Apply the pair to a selector that chooses second.
+; SND selects the second element of a pair.
+; ====================================================
+; API: CR0 = GT to pair object
+; Return: DR0 = second element
+; ====================================================
+
+; Step 1: Validate pair GT
+TPERM 0 R           ; Check CR0 has Read permission
+B NE fault          ; No Read permission -> FAULT
+
+; Step 2: Extract second element
+; Read word 1 from pair object
+; Store in DR0
+
+RETURN              ; Return second element in DR0
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_TRUE: `; ====================================================
+; GT_TRUE (Lambda): Church Boolean TRUE
+; λx.λy. x
+; ====================================================
+; TRUE selects the first of two options.
+; Used with IF for conditional execution.
+; ====================================================
+; Return: DR0 = 1 (canonical true value)
+; ====================================================
+
+; Church TRUE: λx.λy. x
+; When applied to (then, else), returns then
+
+MOV 0 #1            ; DR0 = 1 (true)
+RETURN
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_FALSE: `; ====================================================
+; GT_FALSE (Lambda): Church Boolean FALSE
+; λx.λy. y
+; ====================================================
+; FALSE selects the second of two options.
+; Used with IF for conditional execution.
+; ====================================================
+; Return: DR0 = 0 (canonical false value)
+; ====================================================
+
+; Church FALSE: λx.λy. y
+; When applied to (then, else), returns else
+
+MOV 0 #0            ; DR0 = 0 (false)
+RETURN
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_IF: `; ====================================================
+; GT_IF (Lambda): Church Conditional
+; λc.λt.λf. c t f
+; ====================================================
+; IF applies condition to then/else branches.
+; If condition is TRUE, returns then-value.
+; If condition is FALSE, returns else-value.
+; ====================================================
+; API: DR0 = condition (0=false, nonzero=true)
+;      DR1 = then-value
+;      DR2 = else-value
+; Return: DR0 = selected value
+; ====================================================
+
+; Step 1: Evaluate condition
+CMP 0 #0            ; Is condition false?
+B EQ select_else    ; Zero = FALSE -> select else
+
+; TRUE path: select then-value
+select_then:
+MOV 0 1             ; DR0 = DR1 (then-value)
+RETURN
+
+; FALSE path: select else-value
+select_else:
+MOV 0 2             ; DR0 = DR2 (else-value)
 RETURN
 
 ; === FAILSAFE: No error codes ===

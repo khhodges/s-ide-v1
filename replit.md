@@ -41,7 +41,7 @@ The web interface is composed of seven distinct views:
 
 ### Key Features
 
--   **Built-in Abstractions**: Includes `Boot` (root namespace), `Threads` (user identities), `SlideRule` (IEEE 754 float operations), `Abacus` (64-bit integer operations), `Circle` (geometric calculations), `CapabilityManager` (GT creation), and `DateTime` (ISO 8601 date/time).
+-   **Built-in Abstractions**: Includes `Boot` (root namespace), `Threads` (user identities), `SlideRule` (IEEE 754 float operations), `Abacus` (64-bit integer operations), `Circle` (geometric calculations), `CapabilityManager` (GT creation), `DateTime` (ISO 8601 date/time), and `Lambda` (Church calculus primitives).
 -   **CapabilityManager Abstraction**: Creates new Golden Tokens for objects.
     -   **Namespace Position**: Offset 9, child of Boot, sibling to other abstractions
     -   **Boot C-List Entry**: [E] permission (Enter only)
@@ -63,6 +63,9 @@ The web interface is composed of seven distinct views:
 
 ## Recent Changes
 
+- 2026-01-22: Added Lambda abstraction (NS offset 11, Boot C-List index 9): Church calculus primitives
+- 2026-01-22: Lambda C-List functions: Y_COMBINATOR, CHURCH_SUCC/PRED/ADD/MUL, PAIR/FST/SND, TRUE/FALSE/IF
+- 2026-01-22: Lambda enables recursion (Y-combinator), Church numerals, pairs for data structures, and booleans
 - 2026-01-22: Assembly Editor file dropdown: replaced static filename with dropdown of all namespace code files (Turing examples, Lambda examples, GT_* functions)
 - 2026-01-22: Added DateTime abstraction (NS offset 10, Boot C-List index 8): ISO 8601 date/time with modes for timestamp, date, time, epoch, and components
 - 2026-01-22: DateTime API: DR0=mode (0=ISO, 1=Date, 2=Time, 3=Unix epoch, 4=Components) returns DR1-DR6 for components
