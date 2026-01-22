@@ -5518,3 +5518,81 @@ body.tooltip-hidden [data-tooltip]:hover::after {
     background: rgba(233, 69, 96, 0.3);
     border-bottom: 2px solid var(--accent);
 }
+
+/* ==================== AUTHENTICATION ====================*/
+
+.auth-section {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.auth-loading {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.auth-logged-out {
+    display: flex;
+    align-items: center;
+}
+
+.auth-logged-in {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-login {
+    background: var(--success);
+    color: var(--bg-dark);
+    padding: 0.4rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.85rem;
+    transition: opacity 0.2s;
+}
+
+.btn-login:hover {
+    opacity: 0.85;
+}
+
+.user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent);
+}
+
+.user-name {
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.btn-save {
+    background: var(--success);
+    color: var(--bg-dark);
+}
+
+.btn-logout {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    text-decoration: none;
+}
+
+.btn-logout:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: white;
+}
+
+.header-right {
+    margin-left: auto;
+}

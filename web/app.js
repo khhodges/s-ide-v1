@@ -1,5 +1,6 @@
 let savedEditorContent = '';
 let currentView = 'dashboard';
+let currentUser = null;
 
 // Track if editor has been initialized with default content
 let editorInitialized = false;
@@ -10376,3 +10377,129 @@ function executeCodeSearch() {
     }
     resultsEl.textContent = matchCount > 0 ? `${matchCount} matches` : 'No matches';
 }
+
+// ==================== AUTHENTICATION ====================
+
+async function checkAuthStatus() {
+    try {
+        const response = await fetch('/api/user');
+        const data = await response.json();
+        
+        document.getElementById('authLoading').style.display = 'none';
+        
+        if (data.authenticated) {
+            currentUser = data;
+            document.getElementById('authLoggedIn').style.display = 'flex';
+            document.getElementById('authLoggedOut').style.display = 'none';
+            
+            const avatar = document.getElementById('userAvatar');
+            if (data.profile_image_url) {
+                avatar.src = data.profile_image_url;
+                avatar.style.display = 'block';
+            } else {
+                avatar.style.display = 'none';
+            }
+            
+            const userName = document.getElementById('userName');
+            userName.textContent = data.first_name || data.email || 'User';
+            
+            console.log('[INFO] Logged in as:', data.email || data.id);
+        } else {
+            currentUser = null;
+            document.getElementById('authLoggedIn').style.display = 'none';
+            document.getElementById('authLoggedOut').style.display = 'flex';
+        }
+    } catch (err) {
+        console.error('Auth check failed:', err);
+        document.getElementById('authLoading').style.display = 'none';
+        document.getElementById('authLoggedOut').style.display = 'flex';
+    }
+}
+
+async function saveStateToServer() {
+    if (!currentUser) {
+        alert('Please sign in to save your state');
+        return;
+    }
+    
+    try {
+        const stateData = {
+            namespace: window.namespaceObjects || {},
+            bootCList: window.bootCList || [],
+            contextRegisters: window.contextRegisters || {},
+            dataRegisters: window.dataRegisters || {},
+            flags: window.simulatorState?.flags || {},
+            callStack: window.callStack || []
+        };
+        
+        const editor = document.getElementById('codeEditor');
+        const assemblyCode = editor ? editor.value : '';
+        
+        const response = await fetch('/api/state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: 'default',
+                state_data: JSON.stringify(stateData),
+                assembly_code: assemblyCode
+            })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            editorLog('State saved to your account', 'success');
+        } else {
+            editorLog('Failed to save state', 'error');
+        }
+    } catch (err) {
+        console.error('Save failed:', err);
+        editorLog('Save failed: ' + err.message, 'error');
+    }
+}
+
+async function loadStateFromServer() {
+    if (!currentUser) {
+        alert('Please sign in to load your saved state');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/state?name=default');
+        const result = await response.json();
+        
+        if (result.found) {
+            const stateData = JSON.parse(result.state_data);
+            
+            if (stateData.namespace) window.namespaceObjects = stateData.namespace;
+            if (stateData.bootCList) window.bootCList = stateData.bootCList;
+            if (stateData.contextRegisters) window.contextRegisters = stateData.contextRegisters;
+            if (stateData.dataRegisters) window.dataRegisters = stateData.dataRegisters;
+            if (stateData.flags && window.simulatorState) window.simulatorState.flags = stateData.flags;
+            if (stateData.callStack) window.callStack = stateData.callStack;
+            
+            if (result.assembly_code) {
+                const editor = document.getElementById('codeEditor');
+                if (editor) {
+                    editor.value = result.assembly_code;
+                    savedEditorContent = result.assembly_code;
+                    updateLineNumbers();
+                }
+            }
+            
+            updateContextRegistersDisplay();
+            updateDataRegistersDisplay();
+            updateFlagsDisplay();
+            updateStackDisplay();
+            editorLog('State loaded from your account', 'success');
+        } else {
+            editorLog('No saved state found', 'info');
+        }
+    } catch (err) {
+        console.error('Load failed:', err);
+        editorLog('Load failed: ' + err.message, 'error');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuthStatus();
+});

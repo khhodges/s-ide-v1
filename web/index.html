@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Church-Turing Meta-Machine (CTMM) Simulator</title>
-    <link rel="stylesheet" href="styles.css?v=20260122d">
+    <link rel="stylesheet" href="styles.css?v=20260122e">
 </head>
 <body>
     <div class="fixed-toolbar">
@@ -20,7 +20,21 @@
                     <button onclick="switchView('tutorial')" class="btn btn-view tooltip-bottom" id="viewBtn-tutorial" data-tooltip="Learn CTMM concepts">Tutorial</button>
                     <button onclick="switchView('code')" class="btn btn-view tooltip-bottom" id="viewBtn-code" data-tooltip="Browse simulator source code">Code</button>
                 </div>
-                <div class="header-right"></div>
+                <div class="header-right">
+                    <div id="authSection" class="auth-section">
+                        <div id="authLoading" class="auth-loading">Loading...</div>
+                        <div id="authLoggedOut" class="auth-logged-out" style="display: none;">
+                            <a href="/auth/login" class="btn btn-login">Sign In</a>
+                        </div>
+                        <div id="authLoggedIn" class="auth-logged-in" style="display: none;">
+                            <img id="userAvatar" src="" alt="User" class="user-avatar">
+                            <span id="userName" class="user-name"></span>
+                            <button onclick="saveStateToServer()" class="btn btn-small btn-save" data-tooltip="Save state to your account">Save</button>
+                            <button onclick="loadStateFromServer()" class="btn btn-small" data-tooltip="Load your saved state">Load</button>
+                            <a href="/auth/logout" class="btn btn-small btn-logout">Sign Out</a>
+                        </div>
+                    </div>
+                </div>
             </nav>
         </header>
     </div>
@@ -764,6 +778,6 @@ ADD 0 1      ; DR0 = DR0 + DR1"></textarea>
     </div>
 
     <script src="simulator.js?v=20260122a"></script>
-    <script src="app.js?v=20260122u"></script>
+    <script src="app.js?v=20260122v"></script>
 </body>
 </html>
