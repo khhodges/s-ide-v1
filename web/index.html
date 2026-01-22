@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Church-Turing Meta-Machine (CTMM) Simulator</title>
-    <link rel="stylesheet" href="styles.css?v=20260122c">
+    <link rel="stylesheet" href="styles.css?v=20260122d">
 </head>
 <body>
     <div class="fixed-toolbar">
@@ -18,6 +18,7 @@
                     <button onclick="switchView('capabilities')" class="btn btn-view tooltip-bottom" id="viewBtn-capabilities" data-tooltip="Explore Golden Tokens">Capabilities</button>
                     <button onclick="switchView('instructions')" class="btn btn-view tooltip-bottom" id="viewBtn-instructions" data-tooltip="View Church and Turing instruction sets">Instructions</button>
                     <button onclick="switchView('tutorial')" class="btn btn-view tooltip-bottom" id="viewBtn-tutorial" data-tooltip="Learn CTMM concepts">Tutorial</button>
+                    <button onclick="switchView('code')" class="btn btn-view tooltip-bottom" id="viewBtn-code" data-tooltip="Browse simulator source code">Code</button>
                 </div>
                 <div class="header-right"></div>
             </nav>
@@ -464,6 +465,93 @@ ADD 0 1      ; DR0 = DR0 + DR1"></textarea>
                 </div>
             </div>
         </section>
+
+        <section id="code" class="view">
+            <div class="code-browser-layout">
+                <div class="file-tree-panel">
+                    <h3>Source Files</h3>
+                    <div class="file-tree" id="fileTree">
+                        <div class="file-folder" data-expanded="true">
+                            <span class="folder-icon">📁</span> web/
+                            <div class="folder-children">
+                                <div class="file-item" data-file="app.js" onclick="loadSourceFile('app.js')">
+                                    <span class="file-icon">📄</span> app.js
+                                    <span class="file-size">~430KB</span>
+                                </div>
+                                <div class="file-item" data-file="simulator.js" onclick="loadSourceFile('simulator.js')">
+                                    <span class="file-icon">📄</span> simulator.js
+                                    <span class="file-size">~26KB</span>
+                                </div>
+                                <div class="file-item" data-file="index.html" onclick="loadSourceFile('index.html')">
+                                    <span class="file-icon">📄</span> index.html
+                                    <span class="file-size">~44KB</span>
+                                </div>
+                                <div class="file-item" data-file="styles.css" onclick="loadSourceFile('styles.css')">
+                                    <span class="file-icon">📄</span> styles.css
+                                    <span class="file-size">~98KB</span>
+                                </div>
+                                <div class="file-item" data-file="server.py" onclick="loadSourceFile('server.py')">
+                                    <span class="file-icon">🐍</span> server.py
+                                    <span class="file-size">~1KB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="file-tree-footer">
+                        <div class="search-box">
+                            <input type="text" id="codeSearchInput" placeholder="Search code..." onkeyup="searchInCode(event)">
+                            <button onclick="executeCodeSearch()" class="search-btn">🔍</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="code-viewer-panel">
+                    <div class="code-viewer-header">
+                        <span class="current-file" id="currentFileName">Select a file to view</span>
+                        <div class="code-nav-buttons">
+                            <button onclick="scrollToLine()" class="btn btn-small" data-tooltip="Jump to line number">Go to Line</button>
+                            <button onclick="copyCodeToClipboard()" class="btn btn-small" data-tooltip="Copy visible code">Copy</button>
+                        </div>
+                    </div>
+                    <div class="code-viewer-content" id="codeViewerContent">
+                        <div class="code-welcome">
+                            <h2>CTMM Simulator Source Code</h2>
+                            <p>Click on a file in the left panel to browse the source code.</p>
+                            <div class="code-stats">
+                                <div class="stat-item">
+                                    <span class="stat-value">~10,000</span>
+                                    <span class="stat-label">Lines in app.js</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value">5</span>
+                                    <span class="stat-label">Source Files</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-value">~600KB</span>
+                                    <span class="stat-label">Total Code</span>
+                                </div>
+                            </div>
+                            <div class="file-descriptions">
+                                <div class="file-desc">
+                                    <strong>app.js</strong> - Main application: namespace objects, boot C-List, abstraction C-Lists, tutorials, examples, UI
+                                </div>
+                                <div class="file-desc">
+                                    <strong>simulator.js</strong> - Execution engine: instruction parsing, register operations, CALL/RETURN stack
+                                </div>
+                                <div class="file-desc">
+                                    <strong>index.html</strong> - Page structure: all views, modals, context menus
+                                </div>
+                                <div class="file-desc">
+                                    <strong>styles.css</strong> - Visual styling: dark theme, panels, animations
+                                </div>
+                                <div class="file-desc">
+                                    <strong>server.py</strong> - Simple HTTP server for local development
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Context Menu -->
@@ -676,6 +764,6 @@ ADD 0 1      ; DR0 = DR0 + DR1"></textarea>
     </div>
 
     <script src="simulator.js?v=20260122a"></script>
-    <script src="app.js?v=20260122t"></script>
+    <script src="app.js?v=20260122u"></script>
 </body>
 </html>

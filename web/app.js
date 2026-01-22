@@ -10220,3 +10220,159 @@ function initInstructionsView() {
 document.addEventListener('DOMContentLoaded', () => {
     initInstructionsView();
 });
+
+// ==================== CODE BROWSER ====================
+
+let currentSourceFile = null;
+let sourceCodeCache = {};
+
+async function loadSourceFile(filename) {
+    document.querySelectorAll('.file-item').forEach(el => el.classList.remove('active'));
+    const fileItem = document.querySelector(`.file-item[data-file="${filename}"]`);
+    if (fileItem) fileItem.classList.add('active');
+    
+    document.getElementById('currentFileName').textContent = `web/${filename}`;
+    currentSourceFile = filename;
+    
+    const viewer = document.getElementById('codeViewerContent');
+    viewer.innerHTML = '<div class="code-welcome"><p>Loading...</p></div>';
+    
+    try {
+        let code;
+        if (sourceCodeCache[filename]) {
+            code = sourceCodeCache[filename];
+        } else {
+            const response = await fetch(`/${filename}?t=${Date.now()}`);
+            if (!response.ok) throw new Error('File not found');
+            code = await response.text();
+            sourceCodeCache[filename] = code;
+        }
+        
+        displaySourceCode(code, filename);
+    } catch (err) {
+        viewer.innerHTML = `<div class="code-welcome"><p style="color: var(--danger);">Error loading file: ${err.message}</p></div>`;
+    }
+}
+
+function displaySourceCode(code, filename) {
+    const viewer = document.getElementById('codeViewerContent');
+    const lines = code.split('\n');
+    const extension = filename.split('.').pop();
+    
+    let html = '<div class="source-code-display">';
+    lines.forEach((line, i) => {
+        const lineNum = i + 1;
+        const highlightedLine = syntaxHighlight(escapeHtml(line), extension);
+        html += `<div class="code-line" data-line="${lineNum}">`;
+        html += `<span class="line-number">${lineNum}</span>`;
+        html += `<span class="line-content">${highlightedLine || ' '}</span>`;
+        html += '</div>';
+    });
+    html += '</div>';
+    
+    viewer.innerHTML = html;
+}
+
+function escapeHtml(text) {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function syntaxHighlight(line, ext) {
+    if (ext === 'js') {
+        line = line.replace(/(\/\/.*$)/g, '<span class="comment">$1</span>');
+        line = line.replace(/\b(const|let|var|function|return|if|else|for|while|switch|case|break|continue|new|this|class|extends|import|export|from|async|await|try|catch|throw|typeof|instanceof|in|of|true|false|null|undefined)\b/g, '<span class="keyword">$1</span>');
+        line = line.replace(/(['"`])(?:(?!\1)[^\\]|\\.)*?\1/g, '<span class="string">$&</span>');
+        line = line.replace(/\b(\d+\.?\d*)\b/g, '<span class="number">$1</span>');
+        line = line.replace(/(\w+)\s*\(/g, '<span class="function">$1</span>(');
+    } else if (ext === 'css') {
+        line = line.replace(/(\/\*.*?\*\/)/g, '<span class="comment">$1</span>');
+        line = line.replace(/([a-z-]+)\s*:/g, '<span class="property">$1</span>:');
+        line = line.replace(/(#[0-9a-fA-F]{3,8})\b/g, '<span class="number">$1</span>');
+        line = line.replace(/(\d+(?:px|rem|em|%|vh|vw|deg|s|ms)?)/g, '<span class="number">$1</span>');
+    } else if (ext === 'html') {
+        line = line.replace(/(&lt;!--.*?--&gt;)/g, '<span class="comment">$1</span>');
+        line = line.replace(/(&lt;\/?)([\w-]+)/g, '$1<span class="keyword">$2</span>');
+        line = line.replace(/([\w-]+)=/g, '<span class="property">$1</span>=');
+        line = line.replace(/(".*?")/g, '<span class="string">$1</span>');
+    } else if (ext === 'py') {
+        line = line.replace(/(#.*$)/g, '<span class="comment">$1</span>');
+        line = line.replace(/\b(def|class|import|from|return|if|elif|else|for|while|try|except|with|as|pass|break|continue|True|False|None|and|or|not|in|is|lambda)\b/g, '<span class="keyword">$1</span>');
+        line = line.replace(/(['"])(?:(?!\1)[^\\]|\\.)*?\1/g, '<span class="string">$&</span>');
+        line = line.replace(/\b(\d+\.?\d*)\b/g, '<span class="number">$1</span>');
+    }
+    return line;
+}
+
+function scrollToLine() {
+    const lineNum = prompt('Enter line number:');
+    if (lineNum && !isNaN(lineNum)) {
+        const line = document.querySelector(`.code-line[data-line="${lineNum}"]`);
+        if (line) {
+            line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            line.style.background = 'rgba(233, 69, 96, 0.3)';
+            setTimeout(() => { line.style.background = ''; }, 2000);
+        }
+    }
+}
+
+function copyCodeToClipboard() {
+    if (!currentSourceFile || !sourceCodeCache[currentSourceFile]) {
+        alert('No file loaded');
+        return;
+    }
+    navigator.clipboard.writeText(sourceCodeCache[currentSourceFile]).then(() => {
+        alert('Code copied to clipboard!');
+    }).catch(err => {
+        alert('Failed to copy: ' + err);
+    });
+}
+
+function searchInCode(event) {
+    if (event.key === 'Enter') {
+        executeCodeSearch();
+    }
+}
+
+function executeCodeSearch() {
+    const query = document.getElementById('codeSearchInput').value.trim().toLowerCase();
+    if (!query) return;
+    
+    if (!currentSourceFile || !sourceCodeCache[currentSourceFile]) {
+        alert('Load a file first to search');
+        return;
+    }
+    
+    const lines = document.querySelectorAll('.code-line');
+    let matchCount = 0;
+    let firstMatch = null;
+    
+    lines.forEach(line => {
+        const content = line.querySelector('.line-content');
+        const text = content.textContent.toLowerCase();
+        if (text.includes(query)) {
+            matchCount++;
+            line.classList.add('search-match');
+            if (!firstMatch) firstMatch = line;
+        } else {
+            line.classList.remove('search-match');
+        }
+    });
+    
+    if (firstMatch) {
+        firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    const header = document.querySelector('.code-viewer-header');
+    let resultsEl = header.querySelector('.search-results');
+    if (!resultsEl) {
+        resultsEl = document.createElement('span');
+        resultsEl.className = 'search-results';
+        header.insertBefore(resultsEl, header.firstChild.nextSibling);
+    }
+    resultsEl.textContent = matchCount > 0 ? `${matchCount} matches` : 'No matches';
+}
