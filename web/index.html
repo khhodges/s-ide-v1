@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Church-Turing Meta-Machine (CTMM) Simulator</title>
-    <link rel="stylesheet" href="styles.css?v=20260122h">
+    <link rel="stylesheet" href="styles.css?v=20260125a">
 </head>
 <body>
     <div class="fixed-toolbar">
@@ -29,9 +29,15 @@
                         <div id="authLoggedIn" class="auth-logged-in" style="display: none;">
                             <img id="userAvatar" src="" alt="User" class="user-avatar">
                             <span id="userName" class="user-name"></span>
-                            <button onclick="saveStateToServer()" class="btn btn-small btn-save" data-tooltip="Save state to your account">Save</button>
-                            <button onclick="loadStateFromServer()" class="btn btn-small" data-tooltip="Load your saved state">Load</button>
-                            <a href="/auth/logout" class="btn btn-small btn-logout">Sign Out</a>
+                            <div class="user-menu-container">
+                                <button class="btn btn-menu" onclick="toggleUserMenu()" title="User menu">&#8942;</button>
+                                <div id="userMenu" class="user-dropdown-menu">
+                                    <button onclick="saveStateToServer(); toggleUserMenu();">Save State</button>
+                                    <button onclick="loadStateFromServer(); toggleUserMenu();">Load State</button>
+                                    <hr>
+                                    <a href="/auth/logout">Sign Out</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -781,6 +787,6 @@ ADD 0 1      ; DR0 = DR0 + DR1"></textarea>
     </div>
 
     <script src="simulator.js?v=20260122a"></script>
-    <script src="app.js?v=20260122ac"></script>
+    <script src="app.js?v=20260125a"></script>
 </body>
 </html>

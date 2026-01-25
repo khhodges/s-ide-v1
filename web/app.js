@@ -10991,6 +10991,21 @@ function executeCodeSearch() {
 
 // ==================== AUTHENTICATION ====================
 
+function toggleUserMenu() {
+    const menu = document.getElementById('userMenu');
+    menu.classList.toggle('show');
+}
+
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('userMenu');
+    const menuBtn = e.target.closest('.btn-menu');
+    const menuContainer = e.target.closest('.user-menu-container');
+    
+    if (!menuBtn && !menuContainer && menu) {
+        menu.classList.remove('show');
+    }
+});
+
 async function checkAuthStatus() {
     try {
         const response = await fetch('/api/user');

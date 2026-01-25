@@ -5640,3 +5640,75 @@ body.tooltip-hidden [data-tooltip]:hover::after {
 .header-right {
     margin-left: auto;
 }
+
+.user-menu-container {
+    position: relative;
+}
+
+.btn-menu {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    border-radius: 4px;
+    line-height: 1;
+}
+
+.btn-menu:hover {
+    background: var(--bg-tertiary);
+}
+
+.user-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    min-width: 140px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.user-dropdown-menu.show {
+    display: block;
+}
+
+.user-dropdown-menu button,
+.user-dropdown-menu a {
+    display: block;
+    width: 100%;
+    padding: 0.6rem 1rem;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.user-dropdown-menu button:hover,
+.user-dropdown-menu a:hover {
+    background: var(--bg-tertiary);
+}
+
+.user-dropdown-menu hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0;
+}
+
+.user-dropdown-menu a:last-child {
+    color: var(--danger);
+}
+
+.user-dropdown-menu a:last-child:hover {
+    background: var(--danger);
+    color: white;
+}
