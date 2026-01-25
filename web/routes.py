@@ -27,6 +27,10 @@ def make_session_permanent():
 def index():
     return send_from_directory('.', 'index.html')
 
+@app.route('/images/<path:filename>')
+def serve_images(filename):
+    return send_from_directory('images', filename)
+
 @app.route('/api/user')
 def get_user():
     if current_user.is_authenticated:
