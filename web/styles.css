@@ -5773,6 +5773,12 @@ body.tooltip-hidden [data-tooltip]:hover::after {
     margin-bottom: 3rem;
 }
 
+.landing-left-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
 .landing-description {
     background: var(--bg-panel);
     padding: 2rem;
@@ -5903,8 +5909,11 @@ body.tooltip-hidden [data-tooltip]:hover::after {
 }
 
 .books-section {
-    margin-top: 2rem;
     text-align: center;
+    background: var(--bg-panel);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
 }
 
 .books-section h3 {
@@ -5923,7 +5932,9 @@ body.tooltip-hidden [data-tooltip]:hover::after {
 }
 
 .book-cover-image {
-    max-width: 200px;
+    width: 200px;
+    height: auto;
+    display: block;
     border-radius: 8px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     transition: box-shadow 0.3s ease;
