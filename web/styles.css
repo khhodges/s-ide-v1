@@ -156,6 +156,12 @@ nav.controls {
     border-color: var(--accent);
 }
 
+.btn-view.btn-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .action-buttons {
     display: flex;
     gap: 0.4rem;

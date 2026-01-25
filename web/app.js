@@ -96,6 +96,11 @@ function getCodeStatusLabel(metadata) {
 }
 
 function switchView(viewId) {
+    if (!currentUser && viewId !== 'tutorial') {
+        window.location.href = '/auth/replit_auth';
+        return;
+    }
+    
     currentView = viewId;
     
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -11019,6 +11024,22 @@ document.addEventListener('click', function(e) {
     }
 });
 
+function updateViewButtonsAuth(isAuthenticated) {
+    const protectedViews = ['dashboard', 'namespace', 'editor', 'capabilities', 'instructions', 'code'];
+    protectedViews.forEach(viewId => {
+        const btn = document.getElementById(`viewBtn-${viewId}`);
+        if (btn) {
+            if (isAuthenticated) {
+                btn.classList.remove('btn-disabled');
+                btn.removeAttribute('title');
+            } else {
+                btn.classList.add('btn-disabled');
+                btn.title = 'Sign in to access';
+            }
+        }
+    });
+}
+
 async function checkAuthStatus() {
     try {
         const response = await fetch('/api/user');
@@ -11053,6 +11074,7 @@ async function checkAuthStatus() {
             console.log('[INFO] Logged in as:', data.email || data.id);
             
             checkEnvironment();
+            updateViewButtonsAuth(true);
         } else {
             checkEnvironment();
             currentUser = null;
@@ -11063,6 +11085,7 @@ async function checkAuthStatus() {
             landingPage.style.display = 'block';
             mainContent.style.display = 'none';
             document.body.classList.add('landing-mode');
+            updateViewButtonsAuth(false);
         }
     } catch (err) {
         console.error('Auth check failed:', err);
