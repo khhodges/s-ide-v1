@@ -5828,6 +5828,39 @@ body.tooltip-hidden [data-tooltip]:hover::after {
     font-size: 1.4rem;
 }
 
+.cloomc-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.cloomc-section h2 {
+    color: var(--accent);
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+}
+
+.cloomc-section p {
+    color: var(--text-primary);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+}
+
+.cloomc-section em {
+    color: var(--accent);
+    font-style: italic;
+}
+
+.text-warning {
+    color: var(--warning);
+    font-weight: 600;
+}
+
+.text-success {
+    color: var(--success);
+    font-weight: 600;
+}
+
 .example-code {
     margin-bottom: 1.5rem;
 }
