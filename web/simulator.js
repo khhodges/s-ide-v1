@@ -374,7 +374,7 @@ class CTMMSimulator {
                     return `TPERM CR${crIdx} [NULL] - no capability loaded (Z=0)`;
                 }
                 
-                const validPerms = ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M', 'F'];
+                const validPerms = ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M', 'F', 'G'];
                 const maskString = String(maskStr);
                 const requiredPerms = maskString.toUpperCase().split('').filter(p => validPerms.includes(p));
                 const actualPerms = cr.perms || [];
@@ -459,8 +459,18 @@ class CTMMSimulator {
                 
                 // Get the capability from source's clist at given index
                 let loadedCap = null;
+                // Check if source is a Namespace entry (has M permission or is CR15)
+                // In CTMM, Namespace entries have M permission - only these participate in GC
+                const isNamespaceAccess = src.perms.includes('M') || srcCR === 15;
                 if (src.clist && idx < src.clist.length) {
                     const entry = src.clist[idx];
+                    // Reset G bit if set (deterministic garbage collection)
+                    // Only incurs overhead when G=TRUE and accessing Namespace entry
+                    // The L/M permission check above validates the key before this point
+                    // This signals to software that a valid key exists for this entry
+                    if (isNamespaceAccess && entry.perms && entry.perms.includes('G')) {
+                        entry.perms = entry.perms.filter(p => p !== 'G');
+                    }
                     loadedCap = {
                         name: entry.name || `Entry_${idx}`,
                         location: entry.location || { type: 'Local', offset: idx * 256 },

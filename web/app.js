@@ -174,12 +174,12 @@ function generateGoldenKey() {
 
 // ==================== GOLDEN TOKEN (64-bit) STRUCTURE ====================
 // Bits 0-31:  Offset (index into Namespace Table)
-// Bits 32-47: Permissions (R/W/X/L/S/E/B/M on/off bits - M=Meta-Machine for hardware-level)
+// Bits 32-47: Permissions (R/W/X/L/S/E/B/M/F/G on/off bits - M=Meta-Machine for hardware-level)
 // Bits 48-63: Spare (future flags or Thread ID)
 
 const PERM_BITS = {
     R: 0x0001, W: 0x0002, X: 0x0004, L: 0x0008,
-    S: 0x0010, E: 0x0020, B: 0x0040, M: 0x0080, F: 0x0100
+    S: 0x0010, E: 0x0020, B: 0x0040, M: 0x0080, F: 0x0100, G: 0x0200
 };
 
 function encodeGoldenToken(offset, perms, spare = 0) {
@@ -1187,7 +1187,7 @@ function updateContextRegisters() {
         const tooltip = crTooltips[i];
         const permTooltip = reg.perms.length > 0 ? 
             `Permissions: ${reg.perms.map(p => {
-                const permNames = {R:'Read', W:'Write', X:'Execute', L:'Load', S:'Store', E:'Enter', B:'Bind', M:'Meta-Machine', F:'Far (Remote URL)'};
+                const permNames = {R:'Read', W:'Write', X:'Execute', L:'Load', S:'Store', E:'Enter', B:'Bind', M:'Meta-Machine', F:'Far (Remote URL)', G:'Garbage (GC flag)'};
                 return permNames[p] || p;
             }).join(', ')}` : 'No capability loaded. Register is empty.';
         
@@ -1790,10 +1790,10 @@ function showCapabilityDetail(evt, cap, regLabel) {
     }
     
     const panel = document.getElementById('capDetailPanel');
-    const allPerms = ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M', 'F'];
+    const allPerms = ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M', 'F', 'G'];
     const permNames = {
         R: 'Read', W: 'Write', X: 'Execute',
-        L: 'Load', S: 'Store', E: 'Enter', B: 'Bind', M: 'Meta-Machine', F: 'Far (Remote URL)'
+        L: 'Load', S: 'Store', E: 'Enter', B: 'Bind', M: 'Meta-Machine', F: 'Far (Remote URL)', G: 'Garbage (GC flag)'
     };
     
     const offset = cap.location.offset || 0;
@@ -1876,7 +1876,7 @@ function showCapabilityDetail(evt, cap, regLabel) {
                     </div>
                     <div class="field-group field-right">
                         <div class="field-label-row">
-                            <span class="field-label" data-tooltip="Bits 48-63: Permission flags (R=Read, W=Write, X=Execute, L=Load, S=Save, E=Enter, B=Bind, M=Meta-Machine, F=Far/Remote URL)">Perms [48:63]</span>
+                            <span class="field-label" data-tooltip="Bits 48-63: Permission flags (R=Read, W=Write, X=Execute, L=Load, S=Save, E=Enter, B=Bind, M=Meta-Machine, F=Far/Remote, G=Garbage/GC)">Perms [48:63]</span>
                             <span class="perm-hex">= 0x${gtDecoded.permBits.toString(16).toUpperCase().padStart(4, '0')}</span>
                         </div>
                         <div class="perm-checkboxes">${permCheckboxes}</div>
@@ -4290,6 +4290,7 @@ const lessons = [
                     <li><code>B</code> - <strong>Bind</strong>: Save token to namespace DNA (persistent storage)</li>
                     <li><code>M</code> - <strong>Meta-Machine</strong>: Hardware-level access (Namespace, Threads only)</li>
                     <li><code>F</code> - <strong>Far</strong>: Indicates remote URL location vs local memory</li>
+                    <li><code>G</code> - <strong>Garbage</strong>: Deterministic GC flag - reset to FALSE when Namespace entry touched by valid key</li>
                 </ul>`,
                 demo: `<div class="demo-title">Permission Badges</div>
                 <div class="demo-content">
@@ -4847,7 +4848,7 @@ const lessons = [
                 <p>You've learned the fundamentals of capability-based security:</p>
                 <ul>
                     <li>Capabilities are unforgeable tokens granting specific access</li>
-                    <li>The 8 permissions (R, W, X, L, S, E, B, M) control what you can do. M=Meta-Machine distinguishes hardware-level access.</li>
+                    <li>The 10 permissions (R, W, X, L, S, E, B, M, F, G) control what you can do. M=Meta-Machine distinguishes hardware-level access, F=Far for remote URLs, G=Garbage for deterministic GC.</li>
                     <li>The boot sequence establishes the secure foundation</li>
                     <li>Context and Data registers serve different purposes</li>
                     <li>Capability operations require proper permissions</li>
@@ -7356,7 +7357,7 @@ function openAddObjectModal() {
     document.getElementById('modalObjType').value = 'Data';
     document.getElementById('modalObjSize').value = '1024';
     
-    ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M'].forEach(p => {
+    ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M', 'G'].forEach(p => {
         const el = document.getElementById(`modalPerm${p}`);
         if (el) el.checked = (p === 'R');
     });
@@ -7388,7 +7389,7 @@ function openEditObjectModal() {
     
     updatePermissionsForType(obj.type);
     
-    ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M'].forEach(p => {
+    ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M', 'G'].forEach(p => {
         const checkbox = document.getElementById(`modalPerm${p}`);
         if (checkbox && !checkbox.disabled) {
             checkbox.checked = obj.perms.includes(p);
@@ -7427,7 +7428,7 @@ function showAddCapabilityModal() {
     updatePermissionsForType('Data');
     
     // Set default permissions
-    ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M'].forEach(p => {
+    ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M', 'G'].forEach(p => {
         const checkbox = document.getElementById(`modalPerm${p}`);
         if (checkbox) {
             checkbox.checked = (p === 'R'); // Only R checked by default
@@ -7677,7 +7678,7 @@ function confirmObjectModal() {
     const parent = document.getElementById('modalParent').value;
     
     let perms = [];
-    ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M'].forEach(p => {
+    ['R', 'W', 'X', 'L', 'S', 'E', 'B', 'M', 'G'].forEach(p => {
         const el = document.getElementById(`modalPerm${p}`);
         if (el && el.checked) {
             perms.push(p);
