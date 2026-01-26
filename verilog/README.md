@@ -115,9 +115,35 @@ Word 3: Seals/MAC (64 bits)
 3. **INIT_THRD**: Initialize thread identity in CR8
 4. **LOAD_NUC**: Load CR6 (Boot C-List) and CR7 (Nucleus)
 
-## LOAD Instruction Microcode
+## LOAD Subroutine - Shared Trusted Microcode
 
-The LOAD instruction (`LOAD CRd, [CRn + Index]`) fetches a capability from a C-List and loads it into a destination register. The microcode sequence is:
+The LOAD subroutine (`ctmm_load_subroutine.sv`) is the **intended single trusted microcode** for all capability fetching. This minimizes the Trusted Computing Base (TCB) - Church instructions that need to fetch capabilities will share this verified code:
+
+| Instruction | Uses LOAD Subroutine For | Status |
+|-------------|--------------------------|--------|
+| **LOAD**    | Fetch capability into destination register | Implemented |
+| **CALL**    | Fetch procedure capability, then transfer control | Planned |
+| **RETURN**  | Fetch return capability from stack | Planned |
+| **CHANGE**  | Fetch new thread identity into CR8 | Planned |
+| **SWITCH**  | Fetch new namespace capability into CR15 | Planned |
+
+### Subroutine Interface
+
+```systemverilog
+// Caller provides:
+input  sub_start,           // Start subroutine
+input  sub_cr_src,          // Source register (CRn)
+input  sub_index,           // C-List index
+
+// Subroutine returns:
+output sub_done,            // Completed successfully
+output sub_fault,           // Caused a fault
+output sub_result,          // Fetched capability (4 words)
+```
+
+### Microcode Sequence
+
+The LOAD subroutine (`LOAD CRd, [CRn + Index]`) fetches a capability from a C-List. The microcode sequence is:
 
 | Step | State         | Description                                      |
 |------|---------------|--------------------------------------------------|
