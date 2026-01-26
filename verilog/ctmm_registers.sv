@@ -9,8 +9,8 @@
 //
 // Special Registers:
 //   CR6:  Current C-List
-//   CR7:  Nucleus (kernel capability)
-//   CR8:  CLOOMC Nucleus (Function Abstraction Code)
+//   CR7:  CLOOMC Nucleus (Function Abstraction Code)
+//   CR8:  Suspended Thread State
 //   CR15: Namespace root
 //
 // Data Registers (DR0-DR15): 64-bit data values for Turing operations
@@ -48,8 +48,8 @@ module ctmm_registers
     
     // Special register direct access (for fast paths)
     output capability_reg_t cr6_clist,        // CR6: Current C-List
-    output capability_reg_t cr7_nucleus,      // CR7: Nucleus
-    output capability_reg_t cr8_cloomc,       // CR8: CLOOMC Nucleus (Function Abstraction Code)
+    output capability_reg_t cr7_cloomc,       // CR7: CLOOMC Nucleus (Function Abstraction Code)
+    output capability_reg_t cr8_thread,       // CR8: Suspended Thread State
     output capability_reg_t cr15_namespace,   // CR15: Namespace root
     
     // ========================================================================
@@ -100,8 +100,8 @@ module ctmm_registers
     
     // Special register outputs
     assign cr6_clist     = cap_regs[CR_CLIST];
-    assign cr7_nucleus   = cap_regs[CR_NUCLEUS];
-    assign cr8_cloomc    = cap_regs[CR_CLOOMC];
+    assign cr7_cloomc    = cap_regs[CR_CLOOMC];
+    assign cr8_thread    = cap_regs[CR_THREAD];
     assign cr15_namespace= cap_regs[CR_NAMESPACE];
     
     // Full register write and word-level write

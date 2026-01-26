@@ -64,7 +64,7 @@ module ctmm_core
     logic [3:0]  cr_rd_addr, cr_wr_addr;
     golden_token_t cr_rd_data, cr_wr_data;
     logic        cr_wr_en;
-    golden_token_t cr6_clist, cr7_nucleus, cr8_cloomc, cr15_namespace;
+    golden_token_t cr6_clist, cr7_cloomc, cr8_thread, cr15_namespace;
     golden_token_t cr6_wr_data, cr7_wr_data, cr8_wr_data, cr15_wr_data;
     logic        cr6_wr_en, cr7_wr_en, cr8_wr_en, cr15_wr_en;
     
@@ -134,8 +134,8 @@ module ctmm_core
         .cr_wr_data     (cr_wr_data),
         .cr_wr_en       (cr_wr_en),
         .cr6_clist      (cr6_clist),
-        .cr7_nucleus    (cr7_nucleus),
-        .cr8_cloomc     (cr8_cloomc),
+        .cr7_cloomc     (cr7_cloomc),
+        .cr8_thread     (cr8_thread),
         .cr15_namespace (cr15_namespace),
         .cr6_wr_data    (cr6_wr_data),
         .cr6_wr_en      (cr6_wr_en),

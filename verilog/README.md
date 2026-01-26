@@ -63,8 +63,8 @@ Word 3: Seals/MAC (64 bits)
 |----------|----------------|-----------------------------------|
 | CR0-CR5  | General        | General purpose capability storage |
 | CR6      | C-List         | Current Capability List pointer   |
-| CR7      | Nucleus        | Kernel/supervisor capability      |
-| CR8      | CLOOMC Nucleus | Function Abstraction Code         |
+| CR7      | CLOOMC Nucleus | Function Abstraction Code         |
+| CR8      | Thread         | Suspended Thread State            |
 | CR9-CR14 | General        | General purpose capability storage |
 | CR15     | Namespace      | Namespace root capability         |
 
