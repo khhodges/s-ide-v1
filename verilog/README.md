@@ -121,21 +121,28 @@ The LOAD instruction (`LOAD CRd, [CRn + Index]`) fetches a capability from a C-L
 
 | Step | State         | Description                                      |
 |------|---------------|--------------------------------------------------|
-| 1    | CHECK_L       | Check CRn has M or L permission; if valid, CRd.Word1 = CRn.Location + Index |
+| 1    | CHECK_L       | Check CRn has M or L permission                  |
 | 2    | CHECK_BOUNDS  | Verify Index < CRn.Limit                         |
-| 3    | FETCH_W0      | Fetch Word 0 (GT) from memory at CRd.Word1       |
-| 4    | FETCH_W1      | Fetch Word 1 (Location) from memory              |
-| 5    | FETCH_W2      | Fetch Word 2 (Limit) from memory                 |
-| 6    | FETCH_W3      | Fetch Word 3 (Seals/MAC) from memory             |
-| 7    | CHECK_MAC     | Validate MAC (calculated hash vs Seals)          |
-| 8    | RESET_G       | Reset G bit if namespace access (M or L set)     |
-| 9    | WRITE_DST     | Write all 4 words to destination CRd             |
-| 10   | COMPLETE      | Advance NIA, instruction complete                |
+| 3    | FETCH_W0      | Fetch GT from CRn[Index] → CRd.W0                |
+| 4    | CALC_ADDR     | Check CRd.W0 (GT) has M permission for CR15 access |
+| 5    | FETCH_W1      | Fetch W1 (Location) from Namespace at GT.Offset  |
+| 6    | FETCH_W2      | Fetch W2 (Limit) from Namespace                  |
+| 7    | FETCH_W3      | Fetch W3 (Seals/MAC) from Namespace              |
+| 8    | CHECK_MAC     | Validate MAC (calculated hash vs Seals)          |
+| 9    | RESET_G       | Reset G bit on GT                                |
+| 10   | WRITE_DST     | Write all 4 words to destination CRd             |
+| 11   | COMPLETE      | Advance NIA, instruction complete                |
+
+**Key Points:**
+- CRd.W0 = GT fetched from CRn[Index] (the Golden Token)
+- CRd.W1, W2, W3 = fetched from CR15 (Namespace) using GT.Offset
+- CR15 access requires M permission on the GT
 
 **Fault Conditions:**
 - NULL capability access → FAULT_NULL_CAP
-- L or M permission missing → FAULT_PERM_L
-- Index >= Limit → FAULT_BOUNDS
+- M or L permission missing on CRn → FAULT_PERM_L
+- Index >= CRn.Limit → FAULT_BOUNDS
+- M permission missing on GT for Namespace → FAULT_PERM_M
 - MAC mismatch → FAULT_MAC
 
 ## Garbage Collection

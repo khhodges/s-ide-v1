@@ -5,17 +5,18 @@
 //   LOAD CRd, [CRn + Index]
 //
 // Microcode Sequence:
-//   Step 1: Check CRn has M or L permission; if valid, CRd.Word1 = CRn.Location + Index
-//   Step 2: Check bounds: Index < CRn.Limit
-//   Step 3: Fetch Word 0 (GT) from C-List memory at CRd.Word1
-//   Step 4: Fetch Word 1 (Location) from C-List memory
-//   Step 5: Fetch Word 2 (Limit) from C-List memory  
-//   Step 6: Fetch Word 3 (Seals) from C-List memory
+//   Step 1: Check CRn has M or L permission; fetch GT from CRn[Index] → CRd.W0
+//   Step 2: Check bounds: Index < CRn.Limit  
+//   Step 3: Check CRd.W0 (GT) has M permission to access CR15 (Namespace)
+//   Step 4: Fetch Word 1 (Location) from Namespace at CRd.W0.Offset
+//   Step 5: Fetch Word 2 (Limit) from Namespace
+//   Step 6: Fetch Word 3 (Seals) from Namespace
 //   Step 7: Validate MAC (calculated hash vs Seals)
-//   Step 8: Reset G bit if namespace access (M or L permission set)
+//   Step 8: Reset G bit if namespace access (M permission set)
 //   Step 9: Write all 4 words to destination CRd
 //   Step 10: Advance NIA, instruction complete
 //
+// Note: CR15 (Namespace) access requires M permission on the GT
 // Each step takes 1 clock cycle (synchronous memory assumed)
 // ============================================================================
 
@@ -44,11 +45,14 @@ module ctmm_load_microcode
     output capability_reg_t cr_wr_data,       // Full 256-bit data to write
     output logic        cr_wr_en,             // Write enable
     
-    // Memory interface (for fetching from C-List)
-    output logic [63:0] mem_addr,             // Memory address
-    output logic        mem_rd_en,            // Read enable
-    input  logic [63:0] mem_rd_data,          // Read data (one 64-bit word)
-    input  logic        mem_rd_valid,         // Read data valid
+    // CR15 (Namespace) interface - for fetching W1, W2, W3
+    input  capability_reg_t cr15_namespace,   // CR15 Namespace register
+    
+    // Namespace memory interface (for fetching from Namespace table)
+    output logic [63:0] ns_addr,              // Namespace memory address
+    output logic        ns_rd_en,             // Read enable
+    input  logic [63:0] ns_rd_data,           // Read data (one 64-bit word)
+    input  logic        ns_rd_valid,          // Read data valid
     
     // G bit reset interface
     output logic        g_bit_reset,          // Signal to reset G bit in namespace
@@ -69,8 +73,8 @@ module ctmm_load_microcode
     // Latched source capability register (CRn)
     capability_reg_t src_cap;
     
-    // Fetched destination capability (from C-List memory)
-    capability_reg_t fetched_cap;
+    // Building destination capability (CRd)
+    capability_reg_t dst_cap;
     
     // ========================================================================
     // State Register
@@ -101,7 +105,7 @@ module ctmm_load_microcode
     end
     
     // ========================================================================
-    // Source Capability Latching (Step 1)
+    // Source Capability Latching
     // ========================================================================
     
     always_ff @(posedge clk or negedge rst_n) begin
@@ -113,64 +117,58 @@ module ctmm_load_microcode
     end
     
     // ========================================================================
-    // Step 1: CRd.Word1 = CRn.Location + Index
-    // This is the computed location stored in CRd after permission check
+    // Step 1: CRd.W0 = GT from CRn[Index]
+    // The GT (Golden Token) is fetched from the C-List at CRn.Location + Index
+    // This GT will be used to access the Namespace (CR15) in subsequent steps
     // ========================================================================
     
-    // Memory fetch starts at computed_location (defined in next state logic)
-    // Each word is 8 bytes, so fetch addresses are:
-    //   Word 0: computed_location
-    //   Word 1: computed_location + 8
-    //   Word 2: computed_location + 16
-    //   Word 3: computed_location + 24
+    // Address in CRn's C-List: CRn.Location + (Index * 8) for GT fetch
+    logic [63:0] clist_gt_addr;
+    assign clist_gt_addr = src_cap.word1_location + ({56'h0, index_reg} << 3);
     
     // ========================================================================
-    // Memory Fetch State Machine
+    // Destination Capability Building State Machine
     // ========================================================================
     
-    logic [1:0] word_counter;  // Which word we're fetching (0-3)
-    logic [63:0] fetch_base_addr;  // Latched base address for fetching
+    logic [1:0] ns_word_counter;  // Which namespace word we're fetching (1-3)
     
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            word_counter <= 2'd0;
-            fetched_cap <= CR_NULL;
-            fetch_base_addr <= 64'h0;
+            dst_cap <= CR_NULL;
+            ns_word_counter <= 2'd0;
         end else begin
             case (state)
-                LOAD_CHECK_L: begin
-                    // Latch the computed location when permission check passes
-                    if (has_load_permission && !src_is_null) begin
-                        fetch_base_addr <= computed_location;
-                    end
-                    word_counter <= 2'd0;
-                    fetched_cap <= CR_NULL;
+                LOAD_IDLE: begin
+                    dst_cap <= CR_NULL;
+                    ns_word_counter <= 2'd0;
                 end
                 
+                // Step 1: Fetch GT from C-List → CRd.W0
                 LOAD_FETCH_W0: begin
-                    if (mem_rd_valid) begin
-                        fetched_cap.word0_gt <= mem_rd_data;
-                        word_counter <= 2'd1;
+                    if (ns_rd_valid) begin
+                        dst_cap.word0_gt <= ns_rd_data;  // GT goes into Word 0
+                        ns_word_counter <= 2'd1;
                     end
                 end
                 
+                // Steps 4-6: Fetch W1, W2, W3 from Namespace using GT.Offset
                 LOAD_FETCH_W1: begin
-                    if (mem_rd_valid) begin
-                        fetched_cap.word1_location <= mem_rd_data;
-                        word_counter <= 2'd2;
+                    if (ns_rd_valid) begin
+                        dst_cap.word1_location <= ns_rd_data;
+                        ns_word_counter <= 2'd2;
                     end
                 end
                 
                 LOAD_FETCH_W2: begin
-                    if (mem_rd_valid) begin
-                        fetched_cap.word2_limit <= mem_rd_data;
-                        word_counter <= 2'd3;
+                    if (ns_rd_valid) begin
+                        dst_cap.word2_limit <= ns_rd_data;
+                        ns_word_counter <= 2'd3;
                     end
                 end
                 
                 LOAD_FETCH_W3: begin
-                    if (mem_rd_valid) begin
-                        fetched_cap.word3_seals <= mem_rd_data;
+                    if (ns_rd_valid) begin
+                        dst_cap.word3_seals <= ns_rd_data;
                     end
                 end
                 
@@ -185,7 +183,7 @@ module ctmm_load_microcode
     // Permission and Bounds Checking
     // ========================================================================
     
-    // Check L or M permission on source capability (required to load GT into CRd)
+    // Check L or M permission on source capability CRn (required to fetch GT)
     logic has_l_permission;
     logic has_m_permission;
     logic has_load_permission;
@@ -193,34 +191,46 @@ module ctmm_load_microcode
     assign has_m_permission = src_cap.word0_gt.perms[PERM_M];
     assign has_load_permission = has_l_permission || has_m_permission;
     
-    // Check bounds: Index must be less than Limit
+    // Check bounds: Index must be less than CRn.Limit
     logic bounds_ok;
     assign bounds_ok = ({56'h0, index_reg} < src_cap.word2_limit);
     
-    // Check if source is null capability
+    // Check if source CRn is null capability
     logic src_is_null;
     assign src_is_null = (src_cap.word0_gt == GT_NULL);
     
-    // Check if this is a namespace access (for G bit reset)
-    logic is_namespace_access;
-    assign is_namespace_access = fetched_cap.word0_gt.perms[PERM_M] || 
-                                  fetched_cap.word0_gt.perms[PERM_L];
+    // Check M permission on fetched GT (required to access Namespace CR15)
+    logic gt_has_m_permission;
+    assign gt_has_m_permission = dst_cap.word0_gt.perms[PERM_M];
     
-    // Check G bit on fetched capability
-    logic fetched_has_g_bit;
-    assign fetched_has_g_bit = fetched_cap.word0_gt.perms[PERM_G];
+    // Check G bit on fetched GT
+    logic gt_has_g_bit;
+    assign gt_has_g_bit = dst_cap.word0_gt.perms[PERM_G];
     
     // ========================================================================
-    // MAC Validation (simplified - would compute hash in real implementation)
+    // Namespace Address Calculation
+    // ========================================================================
+    
+    // Namespace base from CR15.Location
+    logic [63:0] ns_base_addr;
+    assign ns_base_addr = cr15_namespace.word1_location;
+    
+    // Namespace entry address = CR15.Location + (GT.Offset * 24)
+    // Each namespace entry is 3 words (192 bits = 24 bytes)
+    logic [63:0] ns_entry_addr;
+    assign ns_entry_addr = ns_base_addr + ({32'h0, dst_cap.word0_gt.offset} * 64'd24);
+    
+    // ========================================================================
+    // MAC Validation
     // ========================================================================
     
     logic [63:0] calculated_mac;
     logic mac_valid;
     
-    // Simplified MAC: XOR of first 3 words (real impl would use SHA/HMAC)
-    assign calculated_mac = fetched_cap.word0_gt ^ 
-                            fetched_cap.word1_location ^ 
-                            fetched_cap.word2_limit;
+    // Simplified MAC: XOR of first 3 words
+    assign calculated_mac = dst_cap.word0_gt ^ 
+                            dst_cap.word1_location ^ 
+                            dst_cap.word2_limit;
     
     // For now, accept any MAC (real impl would compare against word3_seals)
     assign mac_valid = 1'b1;  // TODO: implement full MAC validation
@@ -228,10 +238,6 @@ module ctmm_load_microcode
     // ========================================================================
     // Next State Logic
     // ========================================================================
-    
-    // Computed address for CRd.Word1 = CRn.Location + Index
-    logic [63:0] computed_location;
-    assign computed_location = src_cap.word1_location + {56'h0, index_reg};
     
     always_comb begin
         next_state = state;
@@ -242,66 +248,82 @@ module ctmm_load_microcode
                     next_state = LOAD_FETCH_SRC;
             end
             
-            // Step 1: Read CRn and check M or L permission
-            // If valid, CRd.Word1 = CRn.Location + Index
+            // Read CRn register
             LOAD_FETCH_SRC: begin
                 next_state = LOAD_CHECK_L;
             end
             
+            // Step 1: Check M or L permission on CRn
             LOAD_CHECK_L: begin
                 if (src_is_null)
                     next_state = LOAD_FAULT;  // Null capability fault
                 else if (!has_load_permission)
-                    next_state = LOAD_FAULT;  // M or L permission required
+                    next_state = LOAD_FAULT;  // M or L permission required on CRn
                 else
-                    next_state = LOAD_CHECK_BOUNDS;  // Permission OK, address computed
+                    next_state = LOAD_CHECK_BOUNDS;
             end
             
-            // Step 2: Check bounds (Index < CRn.Limit)
+            // Step 2: Check bounds
             LOAD_CHECK_BOUNDS: begin
                 if (!bounds_ok)
                     next_state = LOAD_FAULT;  // Bounds check failed
                 else
-                    next_state = LOAD_FETCH_W0;
+                    next_state = LOAD_FETCH_W0;  // Fetch GT from C-List
             end
             
+            // Step 1 continued: Fetch GT from CRn[Index] → CRd.W0
             LOAD_FETCH_W0: begin
-                if (mem_rd_valid)
-                    next_state = LOAD_FETCH_W1;
+                if (ns_rd_valid)
+                    next_state = LOAD_CALC_ADDR;  // GT fetched, now check M permission
             end
             
+            // Step 3: Check GT has M permission to access CR15 Namespace
+            LOAD_CALC_ADDR: begin
+                if (!gt_has_m_permission)
+                    next_state = LOAD_FAULT;  // M permission required for Namespace access
+                else
+                    next_state = LOAD_FETCH_W1;  // Begin namespace fetch
+            end
+            
+            // Step 4: Fetch W1 (Location) from Namespace
             LOAD_FETCH_W1: begin
-                if (mem_rd_valid)
+                if (ns_rd_valid)
                     next_state = LOAD_FETCH_W2;
             end
             
+            // Step 5: Fetch W2 (Limit) from Namespace
             LOAD_FETCH_W2: begin
-                if (mem_rd_valid)
+                if (ns_rd_valid)
                     next_state = LOAD_FETCH_W3;
             end
             
+            // Step 6: Fetch W3 (Seals) from Namespace
             LOAD_FETCH_W3: begin
-                if (mem_rd_valid)
+                if (ns_rd_valid)
                     next_state = LOAD_CHECK_MAC;
             end
             
+            // Step 7: Validate MAC
             LOAD_CHECK_MAC: begin
                 if (!mac_valid)
                     next_state = LOAD_FAULT;  // MAC validation failed
-                else if (is_namespace_access && fetched_has_g_bit)
+                else if (gt_has_g_bit)
                     next_state = LOAD_RESET_G;
                 else
                     next_state = LOAD_WRITE_DST;
             end
             
+            // Step 8: Reset G bit
             LOAD_RESET_G: begin
                 next_state = LOAD_WRITE_DST;
             end
             
+            // Step 9: Write to CRd
             LOAD_WRITE_DST: begin
                 next_state = LOAD_COMPLETE;
             end
             
+            // Step 10: Complete
             LOAD_COMPLETE: begin
                 next_state = LOAD_IDLE;
             end
@@ -329,12 +351,17 @@ module ctmm_load_microcode
                     if (src_is_null)
                         fault_type_reg <= FAULT_NULL_CAP;
                     else if (!has_load_permission)
-                        fault_type_reg <= FAULT_PERM_L;  // L or M permission required
+                        fault_type_reg <= FAULT_PERM_L;  // M or L required on CRn
                 end
                 
                 LOAD_CHECK_BOUNDS: begin
                     if (!bounds_ok)
                         fault_type_reg <= FAULT_BOUNDS;
+                end
+                
+                LOAD_CALC_ADDR: begin
+                    if (!gt_has_m_permission)
+                        fault_type_reg <= FAULT_PERM_M;  // M required for Namespace
                 end
                 
                 LOAD_CHECK_MAC: begin
@@ -364,35 +391,48 @@ module ctmm_load_microcode
     assign load_complete = (state == LOAD_COMPLETE);
     assign load_fault = (state == LOAD_FAULT);
     
-    // Register read address (for Step 1: fetch source CR)
+    // Register read address
     assign cr_rd_addr = (state == LOAD_FETCH_SRC) ? cr_src_reg : 4'd0;
     
-    // Register write (Step 11: write to destination CR)
+    // Register write
     assign cr_wr_addr = cr_dst_reg;
     
     // Write data with G bit cleared if needed
     always_comb begin
-        cr_wr_data = fetched_cap;
-        // If we went through RESET_G state, clear the G bit
-        if (is_namespace_access) begin
+        cr_wr_data = dst_cap;
+        // Clear G bit after namespace access
+        if (gt_has_m_permission) begin
             cr_wr_data.word0_gt.perms[PERM_G] = 1'b0;
         end
     end
     
     assign cr_wr_en = (state == LOAD_WRITE_DST);
     
-    // Memory interface
-    // Address is fetch_base_addr + (word_counter * 8 bytes)
-    // fetch_base_addr = CRn.Location + Index (computed in Step 1)
-    assign mem_addr = fetch_base_addr + ({62'h0, word_counter} << 3);
+    // ========================================================================
+    // Namespace Memory Interface
+    // ========================================================================
     
-    assign mem_rd_en = (state == LOAD_FETCH_W0) ||
-                       (state == LOAD_FETCH_W1) ||
-                       (state == LOAD_FETCH_W2) ||
-                       (state == LOAD_FETCH_W3);
+    // Address selection based on state:
+    // - FETCH_W0: C-List address (CRn.Location + Index*8) to get GT
+    // - FETCH_W1/W2/W3: Namespace address (CR15.Location + GT.Offset*24 + word*8)
+    always_comb begin
+        ns_addr = 64'h0;
+        case (state)
+            LOAD_FETCH_W0: ns_addr = clist_gt_addr;  // Fetch GT from C-List
+            LOAD_FETCH_W1: ns_addr = ns_entry_addr;  // Fetch W1 from Namespace
+            LOAD_FETCH_W2: ns_addr = ns_entry_addr + 64'd8;   // W2
+            LOAD_FETCH_W3: ns_addr = ns_entry_addr + 64'd16;  // W3
+            default: ns_addr = 64'h0;
+        endcase
+    end
+    
+    assign ns_rd_en = (state == LOAD_FETCH_W0) ||
+                      (state == LOAD_FETCH_W1) ||
+                      (state == LOAD_FETCH_W2) ||
+                      (state == LOAD_FETCH_W3);
     
     // G bit reset output
     assign g_bit_reset = (state == LOAD_RESET_G);
-    assign g_bit_ns_offset = fetched_cap.word0_gt.offset;
+    assign g_bit_ns_offset = dst_cap.word0_gt.offset;
 
 endmodule
