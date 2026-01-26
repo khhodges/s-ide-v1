@@ -9,13 +9,17 @@
 //   Step 2: Check bounds: Index < CRn.Limit  
 //   Step 3: Fetch GT from CRn[Index] → CRd.W0
 //   Step 4: Check GT.offset < CR15.limit AND CR15 = M
-//   Step 5: Fetch Word 1 (Location) from Namespace at GT.Offset
-//   Step 6: Fetch Word 2 (Limit) from Namespace
-//   Step 7: Fetch Word 3 (Seals) from Namespace
+//   Step 5: Fetch Word 1 (Location) from CR15.Location + GT.offset
+//   Step 6: Fetch Word 2 (Limit) from CR15.Location + GT.offset + 8
+//   Step 7: Fetch Word 3 (Seals) from CR15.Location + GT.offset + 16
 //   Step 8: Validate MAC (calculated hash vs Seals)
 //   Step 9: Reset G bit in CR15[GT.offset].Word3.Gbit
 //   Step 10: Write all 4 words to destination CRd
 //   Step 11: Advance NIA, instruction complete
+//
+// Note: GT.offset is a direct memory offset (bytes), not an index.
+//       This provides hardware error detection - bit errors in the offset
+//       will likely fail bounds check rather than accessing wrong entry.
 // Each step takes 1 clock cycle (synchronous memory assumed)
 // ============================================================================
 
@@ -218,10 +222,10 @@ module ctmm_load_microcode
     logic [63:0] ns_base_addr;
     assign ns_base_addr = cr15_namespace.word1_location;
     
-    // Namespace entry address = CR15.Location + (GT.Offset * 24)
-    // Each namespace entry is 3 words (192 bits = 24 bytes)
+    // Namespace entry address = CR15.Location + GT.offset (direct memory offset)
+    // GT.offset is a byte offset, not an index - provides hardware error detection
     logic [63:0] ns_entry_addr;
-    assign ns_entry_addr = ns_base_addr + ({32'h0, dst_cap.word0_gt.offset} * 64'd24);
+    assign ns_entry_addr = ns_base_addr + {32'h0, dst_cap.word0_gt.offset};
     
     // ========================================================================
     // MAC Validation

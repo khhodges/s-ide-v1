@@ -125,9 +125,9 @@ The LOAD instruction (`LOAD CRd, [CRn + Index]`) fetches a capability from a C-L
 | 2    | CHECK_BOUNDS  | Verify Index < CRn.Limit                         |
 | 3    | FETCH_W0      | Fetch GT from CRn[Index] → CRd.W0                |
 | 4    | CALC_ADDR     | Check GT.offset < CR15.limit AND CR15 = M        |
-| 5    | FETCH_W1      | Fetch W1 (Location) from Namespace at GT.Offset  |
-| 6    | FETCH_W2      | Fetch W2 (Limit) from Namespace                  |
-| 7    | FETCH_W3      | Fetch W3 (Seals/MAC) from Namespace              |
+| 5    | FETCH_W1      | Fetch W1 (Location) from CR15.Location + GT.offset |
+| 6    | FETCH_W2      | Fetch W2 (Limit) from CR15.Location + GT.offset + 8 |
+| 7    | FETCH_W3      | Fetch W3 (Seals/MAC) from CR15.Location + GT.offset + 16 |
 | 8    | CHECK_MAC     | Validate MAC (calculated hash vs Seals)          |
 | 9    | RESET_G       | Reset G bit in CR15[GT.offset].Word3.Gbit        |
 | 10   | WRITE_DST     | Write all 4 words to destination CRd             |
@@ -135,8 +135,9 @@ The LOAD instruction (`LOAD CRd, [CRn + Index]`) fetches a capability from a C-L
 
 **Key Points:**
 - CRd.W0 = GT fetched from CRn[Index] (the Golden Token)
-- CRd.W1, W2, W3 = fetched from CR15 (Namespace) using GT.Offset
+- CRd.W1, W2, W3 = fetched from CR15 (Namespace) at GT.offset
 - Step 4 validates: GT.offset < CR15.limit AND CR15 has M permission
+- **GT.offset is a direct memory offset (bytes), not an index** - this provides hardware error detection: bit errors in the offset will likely fail the bounds check rather than silently accessing the wrong entry
 
 **Fault Conditions:**
 - NULL capability access → FAULT_NULL_CAP
