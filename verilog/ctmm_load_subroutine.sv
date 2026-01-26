@@ -3,14 +3,17 @@
 // ============================================================================
 // This is the TRUSTED microcode subroutine used by all Church instructions
 // that need to fetch a capability from a C-List:
-//   - LOAD: Fetches capability into destination register
-//   - CALL: Fetches procedure capability, then transfers control
-//   - RETURN: Fetches return capability from stack
-//   - CHANGE: Fetches new thread identity
-//   - SWITCH: Fetches new namespace capability
+//   - LOAD: sub_cr_dst = user-specified destination
+//   - CALL: sub_cr_dst = CR7 (Nucleus)
+//   - RETURN: sub_cr_dst = return register
+//   - CHANGE: sub_cr_dst = CR8 (Thread)
+//   - SWITCH: sub_cr_dst = CR15 (Namespace)
 //
 // Minimizing this trusted code base is critical for security.
 // All capability fetching goes through this single verified subroutine.
+//
+// KEY OPTIMIZATION: The subroutine writes directly to the destination
+// register, avoiding a second bus transfer through the caller.
 //
 // Microcode Sequence:
 //   Step 1: Check CRn has M or L permission
@@ -40,18 +43,25 @@ module ctmm_load_subroutine
     // ========================================================================
     input  logic        sub_start,            // Start subroutine execution
     input  logic [3:0]  sub_cr_src,           // Source register (CRn)
+    input  logic [3:0]  sub_cr_dst,           // Destination register (CRd) - written directly
     input  logic [7:0]  sub_index,            // C-List index
     output logic        sub_busy,             // Subroutine in progress
     output logic        sub_done,             // Subroutine completed successfully
     output logic        sub_fault,            // Subroutine caused a fault
     output fault_type_t sub_fault_type,       // Type of fault
-    output capability_reg_t sub_result,       // Fetched capability (valid when sub_done)
     
     // ========================================================================
     // Capability Register Read Interface
     // ========================================================================
     output logic [3:0]  cr_rd_addr,           // Register to read
     input  capability_reg_t cr_rd_data,       // Full 256-bit register data
+    
+    // ========================================================================
+    // Capability Register Write Interface - Direct write to destination
+    // ========================================================================
+    output logic [3:0]  cr_wr_addr,           // Destination register (CRd)
+    output capability_reg_t cr_wr_data,       // Fetched capability with G bit cleared
+    output logic        cr_wr_en,             // Write enable (asserted on completion)
     
     // ========================================================================
     // CR15 (Namespace) Interface
@@ -97,6 +107,7 @@ module ctmm_load_subroutine
     
     // Latched operands
     logic [3:0]  cr_src_reg;
+    logic [3:0]  cr_dst_reg;
     logic [7:0]  index_reg;
     
     // Latched source capability register (CRn)
@@ -124,9 +135,11 @@ module ctmm_load_subroutine
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             cr_src_reg <= 4'd0;
+            cr_dst_reg <= 4'd0;
             index_reg <= 8'd0;
         end else if (state == SUB_IDLE && sub_start) begin
             cr_src_reg <= sub_cr_src;
+            cr_dst_reg <= sub_cr_dst;
             index_reg <= sub_index;
         end
     end
@@ -392,14 +405,30 @@ module ctmm_load_subroutine
     assign sub_fault = (state == SUB_FAULT);
     assign sub_fault_type = fault_type_reg;
     
-    // Result capability with G bit cleared
-    always_comb begin
-        sub_result = result_cap;
-        sub_result.word0_gt.perms[PERM_G] = 1'b0;  // Always clear G bit in output
-    end
-    
     // Register read address
     assign cr_rd_addr = (state == SUB_FETCH_SRC) ? cr_src_reg : 4'd0;
+    
+    // ========================================================================
+    // Direct Write to Destination Register - Single Bus Transfer
+    // ========================================================================
+    // The subroutine writes directly to the destination CR on completion,
+    // avoiding a second bus transfer through the caller.
+    //
+    // TIMING: cr_wr_en is asserted for one cycle in SUB_COMPLETE state.
+    // The register file must be designed to capture data on rising edge
+    // when cr_wr_en is high (standard synchronous write).
+    // ========================================================================
+    
+    assign cr_wr_addr = cr_dst_reg;
+    
+    // Write data with G bit cleared
+    always_comb begin
+        cr_wr_data = result_cap;
+        cr_wr_data.word0_gt.perms[PERM_G] = 1'b0;  // Always clear G bit
+    end
+    
+    // Write enable on successful completion (one cycle pulse)
+    assign cr_wr_en = (state == SUB_COMPLETE);
     
     // ========================================================================
     // Memory Interface

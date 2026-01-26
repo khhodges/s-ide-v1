@@ -133,13 +133,25 @@ The LOAD subroutine (`ctmm_load_subroutine.sv`) is the **intended single trusted
 // Caller provides:
 input  sub_start,           // Start subroutine
 input  sub_cr_src,          // Source register (CRn)
+input  sub_cr_dst,          // Destination register (CRd) - written directly
 input  sub_index,           // C-List index
 
-// Subroutine returns:
+// Subroutine signals:
 output sub_done,            // Completed successfully
 output sub_fault,           // Caused a fault
-output sub_result,          // Fetched capability (4 words)
+
+// Direct register write (single bus transfer):
+output cr_wr_addr,          // Destination register
+output cr_wr_data,          // Fetched capability with G bit cleared
+output cr_wr_en,            // Write enable (on completion)
 ```
+
+**Key Optimization:** The subroutine writes directly to the destination register, avoiding a second bus transfer through the caller. Each Church instruction just specifies the destination:
+- **LOAD**: User-specified CRd
+- **CALL**: CR7 (Nucleus)
+- **RETURN**: Return register
+- **CHANGE**: CR8 (Thread)
+- **SWITCH**: CR15 (Namespace)
 
 ### Microcode Sequence
 
@@ -149,21 +161,22 @@ The LOAD subroutine (`LOAD CRd, [CRn + Index]`) fetches a capability from a C-Li
 |------|---------------|--------------------------------------------------|
 | 1    | CHECK_L       | Check CRn has M or L permission                  |
 | 2    | CHECK_BOUNDS  | Verify Index < CRn.Limit                         |
-| 3    | FETCH_W0      | Fetch GT from CRn[Index] → CRd.W0                |
-| 4    | CALC_ADDR     | Check GT.offset < CR15.limit AND CR15 = M        |
+| 3    | FETCH_W0      | Fetch GT from CRn[Index] → result.W0             |
+| 4    | CHECK_NS      | Check GT.offset < CR15.limit AND CR15 = M        |
 | 5    | FETCH_W1      | Fetch W1 (Location) from CR15.Location + GT.offset |
 | 6    | FETCH_W2      | Fetch W2 (Limit) from CR15.Location + GT.offset + 8 |
 | 7    | FETCH_W3      | Fetch W3 (Seals/MAC) from CR15.Location + GT.offset + 16 |
 | 8    | CHECK_MAC     | Validate MAC (calculated hash vs Seals)          |
 | 9    | RESET_G       | Reset G bit in CR15[GT.offset].Word3.Gbit        |
-| 10   | WRITE_DST     | Write all 4 words to destination CRd             |
-| 11   | COMPLETE      | Advance NIA, instruction complete                |
+| 10   | COMPLETE      | Write all 4 words to CRd, assert sub_done        |
 
 **Key Points:**
+- Result is written directly to destination register in COMPLETE state (single bus transfer)
+- cr_wr_en is asserted for one cycle in COMPLETE - register file must capture on rising edge
 - CRd.W0 = GT fetched from CRn[Index] (the Golden Token)
 - CRd.W1, W2, W3 = fetched from CR15 (Namespace) at GT.offset
 - Step 4 validates: GT.offset < CR15.limit AND CR15 has M permission
-- **GT.offset is a direct memory offset (bytes), not an index** - this provides hardware error detection: bit errors in the offset will likely fail the bounds check rather than silently accessing the wrong entry
+- **GT.offset is a direct memory offset (bytes), not an index** - this provides hardware error detection
 
 **Fault Conditions:**
 - NULL capability access → FAULT_NULL_CAP
