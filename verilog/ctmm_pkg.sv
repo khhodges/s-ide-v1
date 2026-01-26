@@ -90,7 +90,7 @@ package ctmm_pkg;
     // Special Capability Register indices
     localparam logic [3:0] CR_CLIST     = 4'd6;   // CR6: Current C-List
     localparam logic [3:0] CR_NUCLEUS   = 4'd7;   // CR7: Nucleus (kernel)
-    localparam logic [3:0] CR_THREAD    = 4'd8;   // CR8: Thread identity
+    localparam logic [3:0] CR_CLOOMC    = 4'd8;   // CR8: CLOOMC Nucleus (Function Abstraction Code)
     localparam logic [3:0] CR_NAMESPACE = 4'd15;  // CR15: Namespace root
     
     // ========================================================================

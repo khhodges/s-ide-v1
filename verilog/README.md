@@ -59,14 +59,14 @@ Word 3: Seals/MAC (64 bits)
 ## Register Architecture
 
 ### Capability Registers (Church) - 16 x 256-bit
-| Register | Name      | Purpose                           |
-|----------|-----------|-----------------------------------|
-| CR0-CR5  | General   | General purpose capability storage |
-| CR6      | C-List    | Current Capability List pointer   |
-| CR7      | Nucleus   | Kernel/supervisor capability      |
-| CR8      | Thread    | Thread identity capability        |
-| CR9-CR14 | General   | General purpose capability storage |
-| CR15     | Namespace | Namespace root capability         |
+| Register | Name           | Purpose                           |
+|----------|----------------|-----------------------------------|
+| CR0-CR5  | General        | General purpose capability storage |
+| CR6      | C-List         | Current Capability List pointer   |
+| CR7      | Nucleus        | Kernel/supervisor capability      |
+| CR8      | CLOOMC Nucleus | Function Abstraction Code         |
+| CR9-CR14 | General        | General purpose capability storage |
+| CR15     | Namespace      | Namespace root capability         |
 
 ### Data Registers (Turing) - 16 x 64-bit
 - **DR0-DR15**: 64-bit data registers for arithmetic/logic operations
