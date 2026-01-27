@@ -20,6 +20,7 @@ verilog/
 ├── ctmm_mload.sv         # mLoad micro-routine (shared trusted code)
 ├── ctmm_load.sv          # LOAD Church-Instruction (uses mLoad)
 ├── ctmm_switch.sv        # SWITCH Church-Instruction (uses mLoad)
+├── ctmm_save.sv          # SAVE Church-Instruction (GT write)
 ├── ctmm_perm_check.sv    # Permission checking unit
 ├── ctmm_gc_unit.sv       # Garbage collection unit with G bit
 ├── ctmm_decoder.sv       # Instruction decoder
@@ -128,6 +129,13 @@ The mLoad micro-routine (`ctmm_mload.sv`) is the **single trusted microcode** fo
 | **RETURN**  | Fetch return capability from stack | Planned |
 | **CHANGE**  | Fetch new thread identity into CR8 | Planned |
 | **SWITCH**  | Fetch new namespace capability into CR15 | Implemented |
+
+### Non-mLoad Church Instructions
+
+| Instruction | Description | Status |
+|-------------|-------------|--------|
+| **SAVE**    | Write GT from source CR to C-List[Index] | Implemented |
+| **TPERM**   | Trim permissions on a capability | Planned |
 
 ### mLoad Interface
 
