@@ -43,8 +43,10 @@ module ctmm_load
     output logic        mem_rd_en,            // Read enable
     input  logic [63:0] mem_rd_data,          // Read data
     input  logic        mem_rd_valid,         // Read data valid
-    output logic        mem_wr_en,            // Write enable (for C-List update)
-    output logic [63:0] mem_wr_data,          // Write data (GT with G=0)
+    
+    // CR8 (Thread) update interface
+    output logic        cr8_wr_en,            // Write enable for CR8.W0
+    output logic [63:0] cr8_wr_data,          // GT with G=0
     
     // G bit reset interface
     output logic        g_bit_reset,
@@ -106,8 +108,10 @@ module ctmm_load
         .mem_rd_en      (mem_rd_en),
         .mem_rd_data    (mem_rd_data),
         .mem_rd_valid   (mem_rd_valid),
-        .mem_wr_en      (mem_wr_en),
-        .mem_wr_data    (mem_wr_data),
+        
+        // CR8 (Thread) update
+        .cr8_wr_en      (cr8_wr_en),
+        .cr8_wr_data    (cr8_wr_data),
         
         // G bit reset
         .g_bit_reset    (g_bit_reset),

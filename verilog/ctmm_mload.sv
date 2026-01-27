@@ -25,7 +25,7 @@
 //   Step 7: Fetch Word 3 (Seals) from CR15.Location + GT.offset + 16
 //   Step 8: Validate MAC (calculated hash vs Seals)
 //   Step 9: If G=1, reset G bit in CR15[GT.offset].Word3.Gbit
-//   Step 10: If G=1, write GT with G=0 back to CRn[Index] (keep C-List in sync)
+//   Step 10: If G=1, write GT with G=0 to CR8 (Thread) to keep state synchronized
 //   Step 11: Write capability to CRd, signal done
 //
 // Note: GT.offset is a direct memory offset (bytes), not an index.
@@ -76,8 +76,12 @@ module ctmm_mload
     output logic        mem_rd_en,            // Read enable
     input  logic [63:0] mem_rd_data,          // Read data (one 64-bit word)
     input  logic        mem_rd_valid,         // Read data valid
-    output logic        mem_wr_en,            // Write enable (for C-List update)
-    output logic [63:0] mem_wr_data,          // Write data (GT with G=0)
+    
+    // ========================================================================
+    // CR8 (Thread) Update Interface - updates Thread.W0 with GT (G=0)
+    // ========================================================================
+    output logic        cr8_wr_en,            // Write enable for CR8.W0
+    output logic [63:0] cr8_wr_data,          // GT with G=0
     
     // ========================================================================
     // G Bit Reset Interface - writes to CR15[GT.offset].Word3.Gbit
@@ -102,7 +106,7 @@ module ctmm_mload
         SUB_FETCH_W3,
         SUB_CHECK_MAC,
         SUB_RESET_G,
-        SUB_UPDATE_CLIST,    // Write GT with G=0 back to CRn[Index]
+        SUB_UPDATE_CR8,      // Write GT with G=0 to CR8 (Thread)
         SUB_COMPLETE,
         SUB_FAULT
     } sub_state_t;
@@ -340,11 +344,11 @@ module ctmm_mload
             end
             
             SUB_RESET_G: begin
-                next_state = SUB_UPDATE_CLIST;
+                next_state = SUB_UPDATE_CR8;
             end
             
-            SUB_UPDATE_CLIST: begin
-                // Write GT with G=0 back to CRn[Index] to keep C-List synchronized
+            SUB_UPDATE_CR8: begin
+                // Write GT with G=0 to CR8 (Thread) to keep machine state synchronized
                 next_state = SUB_COMPLETE;
             end
             
@@ -450,7 +454,6 @@ module ctmm_mload
             SUB_FETCH_W1:     mem_addr = ns_entry_addr;
             SUB_FETCH_W2:     mem_addr = ns_entry_addr + 64'd8;
             SUB_FETCH_W3:     mem_addr = ns_entry_addr + 64'd16;
-            SUB_UPDATE_CLIST: mem_addr = clist_gt_addr;  // Write back to same C-List location
             default:          mem_addr = 64'h0;
         endcase
     end
@@ -460,16 +463,18 @@ module ctmm_mload
                        (state == SUB_FETCH_W2) ||
                        (state == SUB_FETCH_W3);
     
-    // C-List update: write GT with G=0 back to CRn[Index]
-    assign mem_wr_en = (state == SUB_UPDATE_CLIST);
+    // ========================================================================
+    // CR8 (Thread) Update - write GT with G=0 to Thread.W0
+    // ========================================================================
     
-    // Write data: the original GT with G bit cleared
     logic [63:0] gt_with_g_cleared;
     always_comb begin
         gt_with_g_cleared = result_cap.word0_gt;
         gt_with_g_cleared[PERM_G + 48] = 1'b0;  // Clear G bit in permissions field
     end
-    assign mem_wr_data = gt_with_g_cleared;
+    
+    assign cr8_wr_en = (state == SUB_UPDATE_CR8);
+    assign cr8_wr_data = gt_with_g_cleared;
     
     // G bit reset output - writes to CR15[GT.offset].Word3.Gbit
     assign g_bit_reset = (state == SUB_RESET_G);
