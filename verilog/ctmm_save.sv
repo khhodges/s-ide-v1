@@ -11,8 +11,9 @@
 // SAVE Steps (optimized):
 //   Step 1: Verify CRd in 0-6 AND initiate register read (parallel)
 //   Step 2: Verify CRd has S (Save) permission
-//   Step 3: Verify Index < CRd.Limit
-//   Step 4: Write CRs.Word0 (GT) to CRd.Location + Index*8
+//   Step 3: Verify CRs has B (Bound) permission - GT must allow being saved
+//   Step 4: Verify Index < CRd.Limit
+//   Step 5: Write CRs.Word0 (GT) to CRd.Location + Index*8
 //
 // Note: SAVE does not use mLoad - it's a simpler write-only operation.
 // No MAC validation or G bit handling needed.
@@ -20,6 +21,7 @@
 // FAULT conditions:
 //   - Destination CRd not in range 0-6
 //   - Destination CRd lacks S permission
+//   - Source CRs lacks B permission (GT cannot be saved)
 //   - Index >= CRd.Limit (out of bounds)
 // ============================================================================
 
@@ -100,14 +102,18 @@ module ctmm_save
     
     logic dst_in_range;
     logic dst_has_s_perm;
+    logic src_has_b_perm;
     logic index_in_bounds;
     logic [9:0] dst_perms;
+    logic [9:0] src_perms;
     logic [63:0] dst_limit;
     logic [63:0] dst_location;
     
     assign dst_in_range = (cr_dst <= MAX_CLIST_REG);
-    assign dst_perms = dst_reg_latched.word0_gt[57:48];  // Permission bits from GT
+    assign dst_perms = dst_reg_latched.word0_gt[57:48];  // Permission bits from destination GT
+    assign src_perms = src_reg_latched.word0_gt[57:48];  // Permission bits from source GT
     assign dst_has_s_perm = dst_perms[PERM_S];
+    assign src_has_b_perm = src_perms[PERM_B];           // Source must have B (Bound) to be saved
     assign dst_limit = dst_reg_latched.word2_limit;
     assign dst_location = dst_reg_latched.word1_location;
     assign index_in_bounds = ({56'b0, index} < dst_limit);
@@ -138,8 +144,11 @@ module ctmm_save
             fault_type_latched <= FAULT_PERM;  // Invalid destination register
         end else if (state == SAVE_CHECK_S_BOUNDS && !dst_has_s_perm) begin
             fault_latched <= 1'b1;
-            fault_type_latched <= FAULT_PERM;  // Missing S permission
-        end else if (state == SAVE_CHECK_S_BOUNDS && dst_has_s_perm && !index_in_bounds) begin
+            fault_type_latched <= FAULT_PERM;  // Missing S permission on destination
+        end else if (state == SAVE_CHECK_S_BOUNDS && dst_has_s_perm && !src_has_b_perm) begin
+            fault_latched <= 1'b1;
+            fault_type_latched <= FAULT_PERM;  // Missing B permission on source (cannot be saved)
+        end else if (state == SAVE_CHECK_S_BOUNDS && dst_has_s_perm && src_has_b_perm && !index_in_bounds) begin
             fault_latched <= 1'b1;
             fault_type_latched <= FAULT_BOUNDS;  // Index out of bounds
         end
@@ -191,9 +200,10 @@ module ctmm_save
             end
             
             SAVE_CHECK_S_BOUNDS: begin
-                // Step 2+3: Verify S permission AND bounds (combined)
+                // Step 2+3+4: Verify S permission, B permission, AND bounds
                 // Source data also latched in this cycle
-                if (!dst_has_s_perm || !index_in_bounds)
+                // Checks: dst.S (can save to), src.B (can be saved), bounds
+                if (!dst_has_s_perm || !src_has_b_perm || !index_in_bounds)
                     next_state = SAVE_IDLE;  // Fault
                 else
                     next_state = SAVE_WRITE_GT;
