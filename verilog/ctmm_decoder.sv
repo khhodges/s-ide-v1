@@ -120,20 +120,19 @@ module ctmm_decoder
     // Bits [15:0]  = permission mask
     assign perm_mask = operand_field[15:0];
     
-    // CALL: CR_src, index, mask (uses spare bits for isolation mask)
+    // CALL: CR_src, index, mask (CALL always uses cond=AL, so steal cond bits)
     // Standard Church layout: [21:19]=dst, [18:16]=src, [15:8]=index
-    // CALL uses: src=cr_src, index=clist_index, dst bits + spare for mask
+    // CALL uses: src=cr_src, index=clist_index
     //
-    // Spare bits for CALL mask:
-    // Bits [21:19] = spare (dst not used by CALL) - 3 bits
+    // Spare bits for CALL mask (15 total):
+    // Bits [31:28] = cond field (always AL for CALL) - 4 bits
+    // Bits [21:19] = dst (not used by CALL) - 3 bits
     // Bits [7:0]   = spare - 8 bits
-    // Total: 11 spare bits
     //
-    // call_mask format: [13:8]=CR0-5, [7:0]=DR0-7
-    // Encoding: CR[5:0]={[21:19],[7:5]}, DR[7:0]=[7:0] with [4:0] from spare
-    // Simplified: use [7:0] for DR0-7, [21:19]+[4:2] for CR0-5
-    assign call_mask = {operand_field[21:19], operand_field[7:5],  // CR0-5
-                        operand_field[4:0], 3'b111};               // DR0-7 (DR5-7 preserve)
+    // call_mask format: [13:8]=CR0-5, [7:0]=DR0-7 (14 bits needed)
+    // Encoding: DR[7:0]=[7:0], CR[5:0]=[31:28]+[21:19] with bit[19] for CR5
+    assign call_mask = {instruction[31:28], instruction[21:19],  // CR0-5 (6 bits, 1 spare)
+                        operand_field[7:0]};                      // DR0-7 (8 bits)
     
     // ========================================================================
     // Turing Instruction Decode
