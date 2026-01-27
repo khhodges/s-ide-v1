@@ -138,6 +138,12 @@ The mLoad micro-routine (`ctmm_mload.sv`) is the **single trusted microcode** fo
 | Cond  | Opcode | CR1-3  | CRs   | Index | CR4-5 | DR1-5 | CR0 |
 ```
 
+**Note:** Bit 18 is reserved (formerly link bit).
+
+**Permission Requirements:**
+- Source GT must have **L (Limit)** permission to enter the abstraction
+- CALL **sets M (Machine)** on the loaded capability for internal abstraction functions
+
 **Instruction bits for MASK (11 bits, bit=1 → PRESERVE):**
 - `[0]` = CR0 preserve
 - `[21:19]` = CR1-CR3 preserve

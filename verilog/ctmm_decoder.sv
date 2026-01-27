@@ -123,6 +123,8 @@ module ctmm_decoder
     // CALL: CR_src, index, mask (uses 11 spare bits)
     // Standard Church layout: [21:19]=dst, [18:16]=src, [15:8]=index
     // CALL uses: src=cr_src, index=clist_index
+    // Bit [18] is reserved (formerly link bit)
+    // CALL requires L permission on source GT, sets M on loaded capability
     //
     // Fixed register behaviors (NOT in mask):
     //   DR0: always preserved (primary argument)

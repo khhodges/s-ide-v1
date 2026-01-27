@@ -10537,7 +10537,7 @@ const churchInstrFormats = [
             { name: "Cond", bits: 4, desc: "Condition code" },
             { name: "Op", bits: 6, value: "000011", desc: "CALL opcode" },
             { name: "CRs", bits: 3, desc: "Abstraction capability (0-7)" },
-            { name: "L", bits: 1, desc: "Link bit (save return)" },
+            { name: "Reserved", bits: 1, value: "0", desc: "Reserved for future use" },
             { name: "DR", bits: 8, desc: "DR0-7 clear mask (1=clear, prevents leakage to callee)" },
             { name: "CR", bits: 6, desc: "CR0-5 clear mask (1=clear, prevents leakage to callee)" },
             { name: "Reserved", bits: 4, value: "0", desc: "Reserved for future use" }

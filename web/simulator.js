@@ -535,9 +535,9 @@ class CTMMSimulator {
                 if (!cr || cr.name === 'NULL') {
                     return `FAULT: CR${crIdx} [NULL] - no capability loaded`;
                 }
-                if (!cr.perms.includes('E')) {
+                if (!cr.perms.includes('L')) {
                     const permStr = cr.perms.length > 0 ? `[${cr.perms.join('')}]` : '[no perms]';
-                    return `FAULT: Source CR${crIdx} ${permStr} "${cr.name}" lacks Enter (E) permission`;
+                    return `FAULT: Source CR${crIdx} ${permStr} "${cr.name}" lacks Limit (L) permission for CALL`;
                 }
                 
                 this.callStack.push({
