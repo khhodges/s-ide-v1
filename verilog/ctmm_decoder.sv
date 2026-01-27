@@ -32,6 +32,7 @@ module ctmm_decoder
     output logic [3:0]  cr_dst,           // Destination CR
     output logic [7:0]  clist_index,      // C-List index
     output logic [15:0] perm_mask,        // Permission mask for TPERM
+    output logic [13:0] call_mask,        // CALL preserve mask: [7:0]=DR0-7, [13:8]=CR0-5
     
     // Turing instruction decoded fields
     output turing_opcode_t turing_op,
@@ -117,6 +118,17 @@ module ctmm_decoder
     // Bits [21:18] = CR to test
     // Bits [15:0]  = permission mask
     assign perm_mask = operand_field[15:0];
+    
+    // CALL: CR_src, index, mask (uses spare bits for isolation mask)
+    // Bits [17:14] = src CR (C-List to call from)
+    // Bits [13:6]  = C-List index (8 bits = 256 entries)
+    // Bits [21:18] = CR preserve mask for CR0-CR3 (4 bits)
+    // Bits [5:0]   = DR preserve mask for DR0-DR5 (6 bits)
+    // Spare bits encode 10 registers; DR6-7 default preserve, CR4-5 default clear
+    //
+    // call_mask format: [13:8]=CR0-5, [7:0]=DR0-7
+    // Encoding: CR[3:0]=[21:18], CR[5:4]=00, DR[5:0]=[5:0], DR[7:6]=11
+    assign call_mask = {2'b00, operand_field[21:18], 2'b11, operand_field[5:0]};
     
     // ========================================================================
     // Turing Instruction Decode
