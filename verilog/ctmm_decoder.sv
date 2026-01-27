@@ -120,19 +120,29 @@ module ctmm_decoder
     // Bits [15:0]  = permission mask
     assign perm_mask = operand_field[15:0];
     
-    // CALL: CR_src, index, mask (CALL always uses cond=AL, so steal cond bits)
+    // CALL: CR_src, index, mask (uses 11 spare bits)
     // Standard Church layout: [21:19]=dst, [18:16]=src, [15:8]=index
     // CALL uses: src=cr_src, index=clist_index
     //
-    // Spare bits for CALL mask (15 total):
-    // Bits [31:28] = cond field (always AL for CALL) - 4 bits
-    // Bits [21:19] = dst (not used by CALL) - 3 bits
-    // Bits [7:0]   = spare - 8 bits
+    // Fixed register behaviors (no mask bits needed):
+    //   DR0: always preserved (primary argument)
+    //   DR6-DR7: always cleared
+    //   DR8-DR15: always cleared
     //
-    // call_mask format: [13:8]=CR0-5, [7:0]=DR0-7 (14 bits needed)
-    // Encoding: DR[7:0]=[7:0], CR[5:0]=[31:28]+[21:19] with bit[19] for CR5
-    assign call_mask = {instruction[31:28], instruction[21:19],  // CR0-5 (6 bits, 1 spare)
-                        operand_field[7:0]};                      // DR0-7 (8 bits)
+    // Spare bits for CALL mask (11 total):
+    //   Bits [21:19] = CR1-CR3 preserve (3 bits)
+    //   Bits [7:6]   = CR4-CR5 preserve (2 bits)
+    //   Bits [5:1]   = DR1-DR5 preserve (5 bits)
+    //   Bit  [0]     = CR0 preserve (1 bit, default=1 preserve)
+    //
+    // call_mask format: [13:8]=CR0-5, [7:0]=DR0-7
+    // bit=1 means PRESERVE, bit=0 means CLEAR
+    assign call_mask = {operand_field[0],                    // CR0 (optional, default preserve)
+                        operand_field[21:19],                // CR1-CR3
+                        operand_field[7:6],                  // CR4-CR5
+                        1'b1,                                // DR0 always preserved
+                        operand_field[5:1],                  // DR1-DR5
+                        2'b00};                              // DR6-DR7 always cleared
     
     // ========================================================================
     // Turing Instruction Decode
