@@ -84,7 +84,12 @@ module ctmm_core
     logic [9:0]  clist_index;
     logic [9:0]  call_mask;
     logic        imm_mode;
+    logic [2:0]  switch_target;       // SWITCH target: 0=CR8, 7=CR15
     logic [15:0] perm_mask;
+    
+    // SWITCH module signals
+    logic        switch_start, switch_busy, switch_complete, switch_fault;
+    fault_type_t switch_fault_type;
     
     // Effective CALL mask: I=1 uses embedded 10-bit, I=0 uses DR15
     logic [63:0] effective_call_mask;
@@ -204,6 +209,7 @@ module ctmm_core
         .tperm_preset   (),  // Unused for now
         .call_mask      (call_mask),
         .imm_mode       (imm_mode),
+        .switch_target  (switch_target),
         .turing_op      (turing_op),
         .dr_src1        (dr_src1),
         .dr_src2        (dr_src2),
@@ -386,9 +392,36 @@ module ctmm_core
             end
             
             default: begin
-                // No writes
+                // No boot writes after completion
             end
         endcase
+        
+        // Runtime SWITCH/CHANGE instruction handling (after boot)
+        // NOTE: This simplified implementation assumes single-cycle memory access.
+        // Production silicon would require:
+        // 1. Dedicated execution pipeline stage parallel to LOAD/SAVE
+        // 2. Memory read stall/handshake for I=1 C-List lookup
+        // 3. Full CR9-CR14 register storage paths
+        // Current scope captures architectural concepts for simulation.
+        if (boot_complete && exec_enable && is_church_op && all_checks_pass &&
+            (church_op == OP_SWITCH || church_op == OP_CHANGE)) begin
+            // SWITCH: Copy capability to target CR8-CR15
+            // CHANGE: Create new thread GT and load to CR8 (target=0)
+            // Source: I=0 uses cr_rd_data, I=1 uses clist_rd_data
+            // For CHANGE, target is always 0 (CR8)
+            
+            if (church_op == OP_CHANGE || switch_target == 3'b000) begin
+                // Target is CR8 (Thread)
+                cr8_wr_en = 1'b1;
+                cr8_wr_data = imm_mode ? clist_rd_data : cr_rd_data;
+            end else if (switch_target == 3'b111) begin
+                // Target is CR15 (Namespace)
+                cr15_wr_en = 1'b1;
+                cr15_wr_data = imm_mode ? clist_rd_data : cr_rd_data;
+            end
+            // CR9-CR14: FAULT - targets 1-6 not implemented (reserved for future)
+            // Currently silently ignored; could trigger FAULT_INVAL_TARGET
+        end
     end
     
     // ========================================================================
@@ -416,7 +449,9 @@ module ctmm_core
     assign clist_addr = gc_busy ? gc_ns_addr : 
                         (is_church_op ? {cr_rd_data.offset[23:0], clist_index} : 32'h0);
     assign clist_rd_en = gc_busy ? gc_ns_rd_en :
-                         (exec_enable && is_church_op && (church_op == OP_LOAD));
+                         (exec_enable && is_church_op && 
+                          ((church_op == OP_LOAD) || 
+                           (imm_mode && (church_op == OP_SWITCH || church_op == OP_CHANGE))));
     assign clist_wr_data = gc_busy ? gc_ns_wr_data : cr_rd_data;
     assign clist_wr_en = gc_busy ? gc_ns_wr_en :
                          (exec_enable && is_church_op && (church_op == OP_SAVE) && all_checks_pass);
@@ -427,6 +462,8 @@ module ctmm_core
     assign required_perms = (church_op == OP_LOAD) ? (PERM_MASK_L | PERM_MASK_M) :
                             (church_op == OP_SAVE) ? PERM_MASK_S :
                             (church_op == OP_CALL) ? PERM_MASK_E :
+                            (church_op == OP_SWITCH) ? PERM_MASK_L :
+                            (church_op == OP_CHANGE) ? PERM_MASK_L :
                             16'h0;
     assign perm_check_valid = exec_enable && is_church_op;
     assign access_index = {24'h0, clist_index};

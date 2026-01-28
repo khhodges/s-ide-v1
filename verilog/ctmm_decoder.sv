@@ -36,6 +36,7 @@ module ctmm_decoder
     output logic [3:0]  tperm_preset,     // TPERM preset mask code
     output logic [9:0]  call_mask,        // CALL permission mask (10 bits when I=1)
     output logic        imm_mode,         // I bit - immediate mode flag
+    output logic [2:0]  switch_target,    // SWITCH target: 0=CR8, 7=CR15
     
     // Turing instruction decoded fields
     output turing_opcode_t turing_op,
@@ -153,6 +154,10 @@ module ctmm_decoder
     assign cr_dst = operand_field[21:19];
     assign cr_src = operand_field[18:16];
     assign clist_index = operand_field[15:6];
+    
+    // SWITCH/CHANGE target field (same bits as cr_src, different semantic)
+    // Target: 0=CR8, 1=CR9, 2=CR10, 3-6=CR11-14, 7=CR15
+    assign switch_target = operand_field[18:16];
     
     // TPERM preset code
     assign tperm_preset = operand_field[3:0];
