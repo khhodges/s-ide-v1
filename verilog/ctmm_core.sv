@@ -80,11 +80,17 @@ module ctmm_core
     logic        exec_enable, is_church_op, is_turing_op;
     church_opcode_t church_op;
     turing_opcode_t turing_op;
-    logic [3:0]  cr_src, cr_dst;
-    logic [7:0]  clist_index;
+    logic [2:0]  cr_src, cr_dst;
+    logic [9:0]  clist_index;
+    logic [9:0]  call_mask;
+    logic        imm_mode;
     logic [15:0] perm_mask;
+    
+    // Effective CALL mask: I=1 uses embedded 10-bit, I=0 uses DR15
+    logic [63:0] effective_call_mask;
     logic [3:0]  dr_src1, dr_src2, dr_dst;
     logic [15:0] immediate;
+    logic [21:0] ldi_immediate;
     logic        use_immediate;
     logic [15:0] branch_offset;
     fault_type_t decoder_fault;
@@ -159,6 +165,26 @@ module ctmm_core
     );
     
     // ========================================================================
+    // CALL Mask Selection (I-bit)
+    // ========================================================================
+    // I=1: Use embedded 10-bit mask (zero-extended)
+    // I=0: Use DR15 as full 64-bit mask
+    // ========================================================================
+    
+    logic [63:0] dr15_value;
+    assign dr15_value = dr_rd_data2;  // Assumes DR15 is read via dr_rd_addr2
+    
+    always_comb begin
+        if (imm_mode) begin
+            // I=1: Embedded 10-bit permission mask, zero-extended
+            effective_call_mask = {54'h0, call_mask};
+        end else begin
+            // I=0: Use DR15 as the full permission mask
+            effective_call_mask = dr15_value;
+        end
+    end
+    
+    // ========================================================================
     // Instruction Decoder Instantiation
     // ========================================================================
     
@@ -175,12 +201,15 @@ module ctmm_core
         .cr_src         (cr_src),
         .cr_dst         (cr_dst),
         .clist_index    (clist_index),
-        .perm_mask      (perm_mask),
+        .tperm_preset   (),  // Unused for now
+        .call_mask      (call_mask),
+        .imm_mode       (imm_mode),
         .turing_op      (turing_op),
         .dr_src1        (dr_src1),
         .dr_src2        (dr_src2),
         .dr_dst         (dr_dst),
         .immediate      (immediate),
+        .ldi_immediate  (ldi_immediate),
         .use_immediate  (use_immediate),
         .branch_offset  (branch_offset),
         .fault          (decoder_fault),
@@ -474,8 +503,14 @@ module ctmm_core
                 end
                 
                 OP_B: begin
-                    nia_next = nia_reg + {{16{branch_offset[15]}}, branch_offset};
+                    nia_next = nia_reg + {{46{branch_offset[17]}}, branch_offset};
                     nia_wr_en = 1'b1;
+                end
+                
+                OP_LDI: begin
+                    // Load Immediate: 22-bit value zero-extended to 64 bits
+                    dr_wr_data = {42'h0, ldi_immediate};
+                    dr_wr_en = 1'b1;
                 end
                 
                 default: begin
