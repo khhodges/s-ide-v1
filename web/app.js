@@ -6843,6 +6843,455 @@ CALL 1 0             ; CALL CapabilityManager
                 </div>`
             }
         ]
+    },
+    {
+        title: "Atomic Operations (LOADX/SAVEX)",
+        steps: [
+            {
+                text: `<h3>Lock-Free Synchronization</h3>
+                <p>In multi-threaded systems, multiple threads may try to update the same capability simultaneously. Traditional locks are slow and can deadlock.</p>
+                <p>CTMM provides <strong>atomic load/store operations</strong> for lock-free synchronization:</p>
+                <ul>
+                    <li><code>LOADX</code> - Load Exclusive: Load a GT and set an exclusive monitor</li>
+                    <li><code>SAVEX</code> - Store Exclusive: Conditionally store if monitor is still valid</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Key Insight:</strong> These follow ARM's LDREX/STREX semantics. The hardware tracks whether another thread has modified the location since your LOADX.
+                </div>`,
+                demo: `<div class="demo-title">Exclusive Monitor Concept</div>
+                <div class="demo-content">
+                    <div class="demo-visual">
+                        <div style="display: flex; gap: 2rem; justify-content: center; align-items: center;">
+                            <div style="text-align: center; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px;">
+                                <div style="font-weight: bold; color: var(--accent);">Thread 0</div>
+                                <div style="font-family: monospace; margin-top: 0.5rem;">LOADX CR0, [CR6+5]</div>
+                                <div style="color: #4ade80; font-size: 0.8rem; margin-top: 0.3rem;">Monitor SET</div>
+                            </div>
+                            <div style="font-size: 2rem;">→</div>
+                            <div style="text-align: center; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px;">
+                                <div style="font-weight: bold; color: var(--accent);">Memory</div>
+                                <div style="font-family: monospace; margin-top: 0.5rem;">C-List[5]</div>
+                                <div style="color: #f59e0b; font-size: 0.8rem; margin-top: 0.3rem;">Monitored</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="demo-explanation">
+                        <p>Each thread has its own exclusive monitor. When you LOADX, the hardware remembers which address you're watching.</p>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>LOADX - Load Exclusive</h3>
+                <p><code>LOADX CRd, [CRn+idx]</code> performs two operations:</p>
+                <ol>
+                    <li>Loads the GT from C-List slot into destination CR (same as LOAD)</li>
+                    <li>Sets the per-thread exclusive monitor for that address</li>
+                </ol>
+                <div class="highlight">
+                    The monitor tracks: "I loaded from this address. Tell me if someone else writes here."
+                </div>
+                <p><strong>Permission required:</strong> Source CR must have <code>L</code> (Load) permission.</p>`,
+                demo: `<div class="demo-title">LOADX Binary Format</div>
+                <div class="demo-content">
+                    <div style="display: flex; gap: 0.3rem; justify-content: center; font-family: monospace; font-size: 0.8rem;">
+                        <div style="background: #6366f1; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>Cond</div><div>4</div>
+                        </div>
+                        <div style="background: #8b5cf6; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>001000</div><div>6</div>
+                        </div>
+                        <div style="background: #4ade80; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>CRd</div><div>3</div>
+                        </div>
+                        <div style="background: #f59e0b; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>CRn</div><div>3</div>
+                        </div>
+                        <div style="background: #94a3b8; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>Rsv</div><div>3</div>
+                        </div>
+                        <div style="background: #60a5fa; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>Index</div><div>13</div>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>SAVEX - Store Exclusive</h3>
+                <p><code>SAVEX DRd, CRs, [CRn+idx]</code> is a conditional store:</p>
+                <ol>
+                    <li>Checks if the exclusive monitor is still valid for that address</li>
+                    <li>If valid: stores the GT and sets DRd = 0 (success)</li>
+                    <li>If invalid: does NOT store and sets DRd = 1 (failure)</li>
+                </ol>
+                <div class="key-concept">
+                    <strong>Critical:</strong> The monitor becomes invalid if:
+                    <ul>
+                        <li>Another thread writes to that address</li>
+                        <li>A context switch (CHANGE) occurs</li>
+                        <li>An interrupt happens</li>
+                    </ul>
+                </div>`,
+                demo: `<div class="demo-title">SAVEX Success/Fail</div>
+                <div class="demo-content">
+                    <div class="demo-visual" style="display: flex; gap: 2rem; justify-content: center;">
+                        <div style="text-align: center; padding: 1rem; background: #16a34a22; border: 1px solid #4ade80; border-radius: 8px;">
+                            <div style="color: #4ade80; font-weight: bold;">Success (DR=0)</div>
+                            <div style="font-size: 0.85rem; margin-top: 0.5rem;">Monitor valid<br>GT stored</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: #dc262622; border: 1px solid #f87171; border-radius: 8px;">
+                            <div style="color: #f87171; font-weight: bold;">Failure (DR=1)</div>
+                            <div style="font-size: 0.85rem; margin-top: 0.5rem;">Monitor cleared<br>Must retry</div>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Atomic Compare-and-Swap Pattern</h3>
+                <p>The classic use case is implementing a lock-free update:</p>`,
+                demo: `<div class="demo-title">Lock-Free GT Update</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 4px; font-size: 0.8rem;">
+; Atomically update GT at C-List[5]
+; Uses LOADX/SAVEX for lock-free operation
+
+retry:
+    LOADX CR0, [CR6+5]   ; Load GT, set monitor
+    
+    ; Modify the capability (e.g., restrict perms)
+    TPERM CR0, RW        ; Keep only R,W perms
+    
+    ; Try to store back
+    SAVEX DR0, CR0, [CR6+5]  ; Conditional store
+    
+    ; Check result
+    CMP DR0, #1          ; Did it fail?
+    BEQ retry            ; Yes - someone else wrote, retry
+    
+    ; Success! GT atomically updated</pre>
+                    <div class="demo-explanation">
+                        <p>If another thread modifies C-List[5] between our LOADX and SAVEX, the monitor is cleared and SAVEX fails. We simply retry.</p>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>16 Per-Thread Monitors</h3>
+                <p>CTMM supports <strong>16 concurrent threads</strong>, each with its own exclusive monitor:</p>
+                <ul>
+                    <li>Thread ID is stored in CR8 (Thread identity register)</li>
+                    <li>Each thread can have exactly ONE active monitor</li>
+                    <li>A new LOADX replaces the previous monitor</li>
+                </ul>
+                <div class="highlight">
+                    This design enables true parallel lock-free programming on multi-core CTMM systems.
+                </div>`,
+                interactive: {
+                    type: "quiz",
+                    question: "What happens if SAVEX fails?",
+                    options: [
+                        "The system crashes with a FAULT",
+                        "The destination register is set to 1 and you should retry",
+                        "The GT is stored anyway with corrupted data",
+                        "The thread is terminated"
+                    ],
+                    correct: 1,
+                    feedback: {
+                        correct: "Correct! SAVEX is non-destructive on failure. DR=1 signals you should retry the LOADX/modify/SAVEX sequence.",
+                        incorrect: "Not quite. SAVEX simply sets DR=1 on failure, allowing you to retry the atomic operation."
+                    }
+                }
+            }
+        ]
+    },
+    {
+        title: "Multiple Register Operations (LDM/STM)",
+        steps: [
+            {
+                text: `<h3>Efficient Bulk Transfers</h3>
+                <p>Context switches and procedure calls often need to save/restore multiple Context Registers. Doing this one at a time is slow.</p>
+                <p>CTMM provides bulk operations:</p>
+                <ul>
+                    <li><code>LDM</code> - Load Multiple: Load several CRs from consecutive C-List slots</li>
+                    <li><code>STM</code> - Store Multiple: Store several CRs to consecutive C-List slots</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Security:</strong> Each individual load/store goes through mLoad/mSave validation. LDM/STM cannot bypass capability security!
+                </div>`,
+                demo: `<div class="demo-title">Bulk vs Individual Operations</div>
+                <div class="demo-content">
+                    <div class="demo-visual" style="display: flex; gap: 2rem; justify-content: center;">
+                        <div style="text-align: center;">
+                            <div style="color: #f87171; font-weight: bold; margin-bottom: 0.5rem;">Slow (6 instructions)</div>
+                            <pre style="background: var(--bg-tertiary); padding: 0.5rem; font-size: 0.75rem; border-radius: 4px;">LOAD CR0, [CR6+0]
+LOAD CR1, [CR6+1]
+LOAD CR2, [CR6+2]
+LOAD CR3, [CR6+3]
+LOAD CR4, [CR6+4]
+LOAD CR5, [CR6+5]</pre>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="color: #4ade80; font-weight: bold; margin-bottom: 0.5rem;">Fast (1 instruction)</div>
+                            <pre style="background: var(--bg-tertiary); padding: 0.5rem; font-size: 0.75rem; border-radius: 4px;">LDM CR6, {CR0-CR5}
+
+
+
+
+</pre>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>LDM - Load Multiple</h3>
+                <p><code>LDM CRn, {register-list}</code> loads multiple CRs from consecutive C-List entries:</p>
+                <ul>
+                    <li><strong>CRn</strong>: Base C-List register (must have L permission)</li>
+                    <li><strong>{register-list}</strong>: Bitmask of CR0-CR7 to load</li>
+                </ul>
+                <div class="highlight">
+                    Only CR0-CR7 can be loaded (3-bit encoding). CR8-CR15 are protected system registers.
+                </div>`,
+                demo: `<div class="demo-title">LDM Binary Format</div>
+                <div class="demo-content">
+                    <div style="display: flex; gap: 0.3rem; justify-content: center; font-family: monospace; font-size: 0.8rem; flex-wrap: wrap;">
+                        <div style="background: #6366f1; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>Cond</div><div>4</div>
+                        </div>
+                        <div style="background: #8b5cf6; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>001010</div><div>6</div>
+                        </div>
+                        <div style="background: #4ade80; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>CRn</div><div>3</div>
+                        </div>
+                        <div style="background: #f59e0b; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>U</div><div>1</div>
+                        </div>
+                        <div style="background: #60a5fa; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>W</div><div>1</div>
+                        </div>
+                        <div style="background: #94a3b8; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>Reserved</div><div>9</div>
+                        </div>
+                        <div style="background: #c084fc; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>RegList</div><div>8</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; font-size: 0.85rem;">
+                        <strong>U</strong>: Direction (0=descending, 1=ascending)<br>
+                        <strong>W</strong>: Writeback base register<br>
+                        <strong>RegList</strong>: Bit i = load CR[i]
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>STM - Store Multiple</h3>
+                <p><code>STM CRn, {register-list}</code> stores multiple CRs to consecutive C-List entries:</p>
+                <ul>
+                    <li><strong>CRn</strong>: Base C-List register (must have S permission)</li>
+                    <li><strong>{register-list}</strong>: Bitmask of CR0-CR7 to store</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>B-bit validation:</strong> Each CR being stored must have the <code>B</code> (Bind) permission, just like individual SAVE operations.
+                </div>`,
+                demo: `<div class="demo-title">Context Save/Restore Pattern</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 4px; font-size: 0.8rem;">
+; Save context before interrupt
+STM CR6, {CR0-CR5}   ; Save all user CRs to C-List
+
+; ... handle interrupt ...
+
+; Restore context after interrupt
+LDM CR6, {CR0-CR5}   ; Restore all user CRs from C-List</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Security: mLoad and mSave</h3>
+                <p>LDM/STM are NOT shortcuts that bypass security. Each register transfer internally calls:</p>
+                <ul>
+                    <li><strong>mLoad</strong>: Permission check (L), bounds check, MAC validation</li>
+                    <li><strong>mSave</strong>: Permission check (S), B-bit validation, bounds check</li>
+                </ul>
+                <div class="highlight">
+                    If ANY single transfer fails validation, the entire LDM/STM faults. No partial updates occur.
+                </div>`,
+                interactive: {
+                    type: "quiz",
+                    question: "Can LDM be used to load CR15 (Namespace register)?",
+                    options: [
+                        "Yes, just include bit 15 in the register list",
+                        "No, CR8-CR15 are protected system registers not addressable by instructions",
+                        "Yes, but only with M (Meta) permission",
+                        "No, LDM only works with data registers"
+                    ],
+                    correct: 1,
+                    feedback: {
+                        correct: "Correct! The 3-bit CR encoding (0-7) physically prevents instructions from addressing CR8-CR15. This is a hardware security boundary.",
+                        incorrect: "Not quite. CR8-CR15 are protected by the 3-bit instruction encoding - they simply cannot be addressed by any instruction."
+                    }
+                }
+            }
+        ]
+    },
+    {
+        title: "LDI and TPERM Presets",
+        steps: [
+            {
+                text: `<h3>LDI - Load Immediate</h3>
+                <p><code>LDI DRd, #imm22</code> loads a 22-bit constant directly into a data register:</p>
+                <ul>
+                    <li><strong>DRd</strong>: Destination data register (0-15)</li>
+                    <li><strong>imm22</strong>: 22-bit immediate value (0 to 4,194,303)</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Zero-extended:</strong> The 22-bit value is zero-extended to 64 bits. For larger constants, use multiple LDI with shifts.
+                </div>`,
+                demo: `<div class="demo-title">LDI Binary Format</div>
+                <div class="demo-content">
+                    <div style="display: flex; gap: 0.3rem; justify-content: center; font-family: monospace; font-size: 0.8rem;">
+                        <div style="background: #6366f1; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>Cond</div><div>4</div>
+                        </div>
+                        <div style="background: #8b5cf6; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>001100</div><div>6</div>
+                        </div>
+                        <div style="background: #4ade80; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>DRd</div><div>4</div>
+                        </div>
+                        <div style="background: #60a5fa; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>Imm22</div><div>22</div>
+                        </div>
+                    </div>
+                    <pre style="background: var(--bg-tertiary); padding: 0.8rem; margin-top: 1rem; border-radius: 4px; font-size: 0.8rem;">
+; Load constants into data registers
+LDI DR0, #1000       ; DR0 = 1000
+LDI DR1, #0x3FFFFF   ; DR1 = 4194303 (max 22-bit)</pre>
+                </div>`
+            },
+            {
+                text: `<h3>TPERM Presets Overview</h3>
+                <p>Instead of specifying a 10-bit permission mask, TPERM can use <strong>preset codes</strong> for common patterns:</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 0.5rem 0;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">Code</th><th>Name</th><th>Permissions</th><th>Category</th></tr>
+                    <tr><td style="text-align: center;">0</td><td>CLEAR</td><td>(none)</td><td>-</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="text-align: center;">1</td><td>R</td><td>R</td><td>Data</td></tr>
+                    <tr><td style="text-align: center;">2</td><td>RW</td><td>R,W</td><td>Data</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="text-align: center;">3</td><td>X</td><td>X</td><td>Data</td></tr>
+                    <tr><td style="text-align: center;">4</td><td>RX</td><td>R,X</td><td>Data</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="text-align: center;">5</td><td>RWX</td><td>R,W,X</td><td>Data</td></tr>
+                </table>
+                <div class="highlight">
+                    Presets 0-5 cover common <strong>data access patterns</strong>.
+                </div>`,
+                demo: `<div class="demo-title">Data Presets</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 4px; font-size: 0.8rem;">
+; Using TPERM with preset codes
+TPERM CR0, #0        ; Test for CLEAR (no perms)
+TPERM CR1, #2        ; Test for RW access
+TPERM CR2, #5        ; Test for full RWX access</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Lambda Permission Presets (6-12)</h3>
+                <p>Presets 6-12 test the <strong>Lambda permissions</strong> individually, in order:</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 0.5rem 0;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">Code</th><th>Name</th><th>Permission</th><th>Meaning</th></tr>
+                    <tr><td style="text-align: center; background: #c084fc22;">6</td><td>L</td><td><span style="background: #c084fc; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">L</span></td><td>Load capability</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="text-align: center; background: #fb923c22;">7</td><td>S</td><td><span style="background: #fb923c; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">S</span></td><td>Save capability</td></tr>
+                    <tr><td style="text-align: center; background: #fbbf2422;">8</td><td>E</td><td><span style="background: #fbbf24; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">E</span></td><td>Enter abstraction</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="text-align: center; background: #2dd4bf22;">9</td><td>B</td><td><span style="background: #2dd4bf; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">B</span></td><td>Bind (delegate)</td></tr>
+                    <tr><td style="text-align: center; background: #a855f722;">10</td><td>M</td><td><span style="background: #a855f7; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">M</span></td><td>Meta/internal</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="text-align: center; background: #06b6d422;">11</td><td>F</td><td><span style="background: #06b6d4; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">F</span></td><td>Foreign/remote</td></tr>
+                    <tr><td style="text-align: center; background: #84cc1622;">12</td><td>G</td><td><span style="background: #84cc16; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">G</span></td><td>GC marking</td></tr>
+                </table>
+                <div class="key-concept">
+                    <strong>Order:</strong> Codes 6-12 follow the Lambda permission order: <strong>L, S, E, B, M, F, G</strong>
+                </div>`,
+                demo: `<div class="demo-title">Lambda Permission Tests</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 4px; font-size: 0.8rem;">
+; Test individual Lambda permissions
+TPERM CR0, #6        ; Has L (Load)?
+BEQ can_load         ; Yes - can load from this C-List
+
+TPERM CR1, #9        ; Has B (Bind)?
+BEQ can_delegate     ; Yes - can delegate this GT</pre>
+                </div>`
+            },
+            {
+                text: `<h3>Preset 13: LS Combo</h3>
+                <p>Preset 13 tests for <strong>Load + Save</strong> together - a common pattern for C-List management:</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 0.5rem 0;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.4rem;">Code</th><th>Name</th><th>Permissions</th><th>Use Case</th></tr>
+                    <tr><td style="text-align: center;">13</td><td>LS</td><td><span style="background: #c084fc; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">L</span> <span style="background: #fb923c; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">S</span></td><td>Full C-List access</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="text-align: center;">14-15</td><td>RESERVED</td><td colspan="2" style="color: #f87171;">FAULT if used</td></tr>
+                </table>`,
+                demo: `<div class="demo-title">LS Permission Check</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 4px; font-size: 0.8rem;">
+; Check if we can fully manage a C-List
+TPERM CR0, #13       ; Has L+S permissions?
+BNE access_denied    ; No - can't modify this C-List
+
+; We have full C-List access
+LOAD CR1, [CR0+0]    ; Load from it
+SAVE CR1, [CR0+1]    ; Save to it</pre>
+                </div>`
+            },
+            {
+                text: `<h3>TPERM Binary Format with Presets</h3>
+                <p>TPERM has a P-bit to select between mask mode and preset mode:</p>
+                <ul>
+                    <li><strong>P=0</strong>: Use 10-bit explicit permission mask</li>
+                    <li><strong>P=1</strong>: Use 4-bit preset code (0-13)</li>
+                </ul>`,
+                demo: `<div class="demo-title">TPERM Format</div>
+                <div class="demo-content">
+                    <div style="display: flex; gap: 0.3rem; justify-content: center; font-family: monospace; font-size: 0.75rem; flex-wrap: wrap;">
+                        <div style="background: #6366f1; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>Cond</div><div>4</div>
+                        </div>
+                        <div style="background: #8b5cf6; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>000111</div><div>6</div>
+                        </div>
+                        <div style="background: #4ade80; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>CRs</div><div>3</div>
+                        </div>
+                        <div style="background: #f59e0b; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>P</div><div>1</div>
+                        </div>
+                        <div style="background: #60a5fa; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>I</div><div>1</div>
+                        </div>
+                        <div style="background: #c084fc; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>Perms/Preset</div><div>10</div>
+                        </div>
+                        <div style="background: #94a3b8; padding: 0.4rem; border-radius: 4px; text-align: center;">
+                            <div>Index</div><div>8</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; font-size: 0.85rem;">
+                        <strong>P=0</strong>: Perms = 10-bit mask (R,W,X,L,S,E,B,M,F,G)<br>
+                        <strong>P=1</strong>: Perms[3:0] = preset code (0-13)
+                    </div>
+                </div>`,
+                interactive: {
+                    type: "quiz",
+                    question: "Which preset code tests for the E (Enter) permission?",
+                    options: [
+                        "Code 5 (RWX)",
+                        "Code 6 (L)",
+                        "Code 8 (E)",
+                        "Code 13 (LS)"
+                    ],
+                    correct: 2,
+                    feedback: {
+                        correct: "Correct! Preset codes 6-12 follow the Lambda permission order (L,S,E,B,M,F,G), so E is at code 8.",
+                        incorrect: "Remember: codes 6-12 follow Lambda order (L,S,E,B,M,F,G). E is the 3rd Lambda permission, so it's at code 6+2=8."
+                    }
+                }
+            }
+        ]
     }
 ];
 
