@@ -27,10 +27,11 @@ module ctmm_decoder
     output logic        is_church_op,     // Church (capability) operation
     output logic        is_turing_op,     // Turing (data) operation
     
-    // Church instruction decoded fields (4-bit CR for 16 registers)
+    // Church instruction decoded fields (3-bit CR for 8 registers)
+    // CR0-CR7 addressable by instructions; CR8-CR15 are protected/special
     output church_opcode_t church_op,
-    output logic [3:0]  cr_src,           // Source CR (4 bits: CR0-CR15)
-    output logic [3:0]  cr_dst,           // Destination CR (4 bits: CR0-CR15)
+    output logic [2:0]  cr_src,           // Source CR (3 bits: CR0-CR7)
+    output logic [2:0]  cr_dst,           // Destination CR (3 bits: CR0-CR7)
     output logic [9:0]  clist_index,      // C-List index (10 bits: 1024 entries)
     output logic [3:0]  tperm_preset,     // TPERM preset mask code
     output logic [9:0]  call_mask,        // CALL permission mask (10 bits when I=1)
@@ -116,52 +117,54 @@ module ctmm_decoder
     // ========================================================================
     // Church Instruction Decode
     // ========================================================================
-    // Format with 4-bit CR fields (supports CR0-CR15):
+    // Format with 3-bit CR fields (CR0-CR7 only for security):
+    // CR8-CR15 are protected registers not directly addressable
     //
     // LOAD/SAVE/LOADX/SAVEX:
-    //   [21:18] = CRd (4 bits)
-    //   [17:14] = CRn (4 bits) 
-    //   [13:4]  = Index (10 bits: 1024 entries)
+    //   [21:19] = CRd (3 bits: CR0-CR7)
+    //   [18:16] = CRn (3 bits: CR0-CR7)
+    //   [15:6]  = Index (10 bits: 1024 entries)
+    //   [5:4]   = Reserved
     //   [3:0]   = For SAVEX: DRd result register
     //
     // CALL (I=1 embedded mask):
-    //   [21:18] = CRd return (4 bits)
-    //   [17:14] = CRn target (4 bits)
-    //   [13:4]  = Permission mask (10 bits)
-    //   [3:0]   = Reserved
+    //   [21:19] = CRd return (3 bits)
+    //   [18:16] = CRn target (3 bits)
+    //   [15:6]  = Permission mask (10 bits)
+    //   [5:0]   = Reserved
     //   I=0: Use DR15 as 64-bit mask
     //
     // TPERM:
-    //   [21:18] = CRd destination (4 bits)
-    //   [17:14] = CRs source (4 bits)
+    //   [21:19] = CRd destination (3 bits)
+    //   [18:16] = CRs source (3 bits)
     //   [3:0]   = Preset code (4 bits)
     //
     // LDM/STM:
-    //   [21:18] = CRn base (4 bits)
-    //   [15:0]  = Register list (16 bits)
+    //   [21:19] = CRn base (3 bits)
+    //   [7:0]   = Register list (8 bits: CR0-CR7 only)
     //
     // RETURN:
-    //   [21:18] = CRn return capability (4 bits)
+    //   [21:19] = CRn return capability (3 bits)
     // ========================================================================
     
     assign church_op = church_opcode_t'(opcode_field);
     
-    // Common field extraction (4-bit CR fields)
-    assign cr_dst = operand_field[21:18];
-    assign cr_src = operand_field[17:14];
-    assign clist_index = operand_field[13:4];
+    // Common field extraction (3-bit CR fields for security)
+    assign cr_dst = operand_field[21:19];
+    assign cr_src = operand_field[18:16];
+    assign clist_index = operand_field[15:6];
     
     // TPERM preset code
     assign tperm_preset = operand_field[3:0];
     
     // CALL mask (10 bits when I=1, use DR15 when I=0)
-    assign call_mask = operand_field[13:4];
+    assign call_mask = operand_field[15:6];
     
     // SAVEX result register
     assign excl_result_dr = operand_field[3:0];
     
-    // LDM/STM register list
-    assign reg_list = operand_field[15:0];
+    // LDM/STM register list (8 bits for CR0-CR7 only)
+    assign reg_list = {8'h00, operand_field[7:0]};
     
     // ========================================================================
     // Turing Instruction Decode

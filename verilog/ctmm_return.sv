@@ -34,7 +34,7 @@ module ctmm_return
     
     // Control interface
     input  logic        return_start,         // Start RETURN execution
-    input  logic [3:0]  cr_src,               // Source register (4-bit: CR0-CR15)
+    input  logic [2:0]  cr_src,               // Source register (3-bit: CR0-CR7)
     output logic        busy,                 // RETURN in progress
     output logic        complete,             // RETURN finished
     output logic        fault_valid,          // RETURN caused a fault
@@ -205,8 +205,8 @@ module ctmm_return
     assign fault_valid = fault_flag;
     assign fault_type = fault_latched;
     
-    // CR read (source register) - 4-bit address
-    assign cr_rd_addr = cr_src;
+    // CR read (source register) - 3-bit CR expanded to 4-bit address
+    assign cr_rd_addr = {1'b0, cr_src};
     
     // CR write (restore CR6 or CR7 with full GT)
     // Note: Full capability restoration requires namespace fetch via mLoad

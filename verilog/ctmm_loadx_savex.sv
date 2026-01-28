@@ -31,9 +31,9 @@ module ctmm_loadx_savex
     // Control interface
     input  logic        loadx_start,          // Start LOADX execution
     input  logic        savex_start,          // Start SAVEX execution
-    input  logic [3:0]  cr_src,               // Source register for SAVEX (4-bit: CR0-CR15)
-    input  logic [3:0]  cr_base,              // Base register (CRn) (4-bit: CR0-CR15)
-    input  logic [3:0]  cr_dst,               // Destination register for LOADX (4-bit: CR0-CR15)
+    input  logic [2:0]  cr_src,               // Source register for SAVEX (3-bit: CR0-CR7)
+    input  logic [2:0]  cr_base,              // Base register (CRn) (3-bit: CR0-CR7)
+    input  logic [2:0]  cr_dst,               // Destination register for LOADX (3-bit: CR0-CR7)
     input  logic [9:0]  offset,               // C-List index (10 bits: 1024 entries)
     input  logic [3:0]  result_dr,            // DR to store SAVEX result (0=success, 1=fail)
     input  logic [3:0]  thread_id,            // Current thread ID
@@ -328,17 +328,17 @@ module ctmm_loadx_savex
     assign fault_valid = fault_flag;
     assign fault_type = fault_latched;
     
-    // CR read address (4-bit addresses)
+    // CR read address (3-bit CR expanded to 4-bit address)
     always_comb begin
         case (state)
-            LOADX_READ_BASE, SAVEX_READ_BASE: cr_rd_addr = cr_base;
-            SAVEX_CHECK_MONITOR: cr_rd_addr = cr_src;
+            LOADX_READ_BASE, SAVEX_READ_BASE: cr_rd_addr = {1'b0, cr_base};
+            SAVEX_CHECK_MONITOR: cr_rd_addr = {1'b0, cr_src};
             default: cr_rd_addr = 4'h0;
         endcase
     end
     
     // CR write (LOADX destination)
-    assign cr_wr_addr = cr_dst;
+    assign cr_wr_addr = {1'b0, cr_dst};
     assign cr_wr_data = fetched_cap;
     assign cr_wr_en = (state == LOADX_WRITE_DST);
     

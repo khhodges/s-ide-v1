@@ -164,28 +164,30 @@ TPERM uses a 4-bit preset code to restrict permissions. Codes 14-15 are reserved
 
 ## Instruction Formats
 
-### Church Instructions (4-bit CR fields for CR0-CR15)
+### Church Instructions (3-bit CR fields for security)
+
+**Security Design**: Only CR0-CR7 are addressable by instructions. CR8-CR15 are protected special registers (Thread, Nucleus, C-List, Namespace) that cannot be directly manipulated, preventing privilege escalation attacks.
 
 #### LOAD/SAVE/LOADX
 ```
-| 31:27 | 26:23 | 22 | 21:18 | 17:14 | 13:4  | 3:0      |
-|-------|-------|----| ------|-------|-------|----------|
-| Opcode| Cond  | I  | CRd   | CRn   | Index | Reserved |
+| 31:27 | 26:23 | 22 | 21:19 | 18:16 | 15:6  | 5:4      | 3:0      |
+|-------|-------|----| ------|-------|-------|----------|----------|
+| Opcode| Cond  | I  | CRd   | CRn   | Index | Reserved | Reserved |
 ```
-- 4-bit CR fields support full CR0-CR15 range
+- 3-bit CR fields (CR0-CR7 only) for security
 - 10-bit index supports 1024 C-List entries
 
 #### SAVEX (Store-Exclusive)
 ```
-| 31:27 | 26:23 | 22 | 21:18 | 17:14 | 13:4  | 3:0 |
-|-------|-------|----| ------|-------|-------|-----|
-| Opcode| Cond  | I  | CRs   | CRn   | Index | DRd |
+| 31:27 | 26:23 | 22 | 21:19 | 18:16 | 15:6  | 5:4      | 3:0 |
+|-------|-------|----| ------|-------|-------|----------|-----|
+| Opcode| Cond  | I  | CRs   | CRn   | Index | Reserved | DRd |
 ```
 - DRd receives result: 0 = success, 1 = fail (monitor cleared)
 
 #### CALL
 ```
-| 31:27 | 26:23 | 22 | 21:18 | 17:14 | 13:4 | 3:0      |
+| 31:27 | 26:23 | 22 | 21:19 | 18:16 | 15:6 | 5:0      |
 |-------|-------|----| ------|-------|------|----------|
 | Opcode| Cond  | I  | CRret | CRtgt | Mask | Reserved |
 ```
@@ -194,25 +196,25 @@ TPERM uses a 4-bit preset code to restrict permissions. Codes 14-15 are reserved
 
 #### RETURN
 ```
-| 31:27 | 26:23 | 22 | 21:18 | 17:0     |
+| 31:27 | 26:23 | 22 | 21:19 | 18:0     |
 |-------|-------|----| ------|----------|
 | Opcode| Cond  | I  | CRn   | Reserved |
 ```
 
 #### TPERM
 ```
-| 31:27 | 26:23 | 22 | 21:18 | 17:14 | 13:4     | 3:0    |
+| 31:27 | 26:23 | 22 | 21:19 | 18:16 | 15:4     | 3:0    |
 |-------|-------|----| ------|-------|----------|--------|
 | Opcode| Cond  | I  | CRd   | CRs   | Reserved | Preset |
 ```
 
 #### LDM/STM (Load/Store Multiple)
 ```
-| 31:27 | 26:23 | 22 | 21:18 | 17:16    | 15:0     |
+| 31:27 | 26:23 | 22 | 21:19 | 18:8     | 7:0      |
 |-------|-------|----| ------|----------|----------|
 | Opcode| Cond  | I  | CRn   | Reserved | Reg List |
 ```
-- Reg List: 16-bit mask, bit i = include CRi
+- Reg List: 8-bit mask (CR0-CR7 only), bit i = include CRi
 - Security: Uses mLoad/mSave internally for each register
 
 ### Turing Instructions

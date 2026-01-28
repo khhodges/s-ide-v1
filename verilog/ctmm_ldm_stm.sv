@@ -34,7 +34,7 @@ module ctmm_ldm_stm
     // Control interface
     input  logic        ldm_start,            // Start LDM execution
     input  logic        stm_start,            // Start STM execution
-    input  logic [3:0]  cr_base,              // Base register (CRn) - 4 bits for CR0-CR15
+    input  logic [2:0]  cr_base,              // Base register (CRn) - 3 bits for CR0-CR7
     input  logic [15:0] reg_list,             // Register list mask
     output logic        busy,                 // Operation in progress
     output logic        complete,             // Operation finished
@@ -275,11 +275,11 @@ module ctmm_ldm_stm
     assign fault_valid = fault_flag;
     assign fault_type = fault_latched;
     
-    // CR read address (for reading register to save in STM)
+    // CR read address (3-bit CR expanded to 4-bit address)
     always_comb begin
         case (state)
-            READ_BASE: cr_rd_addr = cr_base;
-            START_MSAVE: cr_rd_addr = current_reg;
+            READ_BASE: cr_rd_addr = {1'b0, cr_base};
+            START_MSAVE: cr_rd_addr = current_reg;  // current_reg is 4-bit but limited to 0-7
             default: cr_rd_addr = 4'h0;
         endcase
     end
@@ -289,15 +289,15 @@ module ctmm_ldm_stm
     assign cr_wr_data = '0;
     assign cr_wr_en = 1'b0;
     
-    // mLoad interface (for LDM)
+    // mLoad interface (for LDM) - expand 3-bit CR to 4-bit
     assign mload_start = (state == START_MLOAD);
-    assign mload_src = cr_base;
+    assign mload_src = {1'b0, cr_base};
     assign mload_dst = current_reg;
     assign mload_index = current_index;
     
-    // mSave interface (for STM)
+    // mSave interface (for STM) - expand 3-bit CR to 4-bit
     assign msave_start = (state == START_MSAVE);
-    assign msave_dst = cr_base;
+    assign msave_dst = {1'b0, cr_base};
     assign msave_gt = store_gt;
     assign msave_index = current_index;
 
