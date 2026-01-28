@@ -10612,14 +10612,95 @@ const churchInstrFormats = [
             { name: "Cond", bits: 4, desc: "Condition code" },
             { name: "Op", bits: 6, value: "000111", desc: "TPERM opcode" },
             { name: "CRs", bits: 3, desc: "CR to test (0-7)" },
+            { name: "P", bits: 1, desc: "0=mask mode, 1=preset mode" },
             { name: "I", bits: 1, desc: "Index present (1=yes)" },
-            { name: "Perms", bits: 10, desc: "Permission mask (10 bits: R W X L S E B M F G)" },
-            { name: "Index", bits: 9, desc: "Access index to validate against W2 limit (if I=1)" }
+            { name: "Perms/Preset", bits: 10, desc: "P=0: Permission mask (10 bits). P=1: Preset[3:0] (0-13 valid, 14-15 reserved)" },
+            { name: "Index", bits: 8, desc: "Access index to validate against W2 limit (if I=1)" }
         ],
         variants: [
-            { name: "Perms only", fields: { I: "0", Perms: "Permission bits to test" } },
-            { name: "Perms + Index", fields: { I: "1", Perms: "Permission bits", Index: "Offset to validate < W2 limit" } }
-        ]
+            { name: "Mask mode", fields: { P: "0", Perms: "10-bit permission mask (R W X L S E B M F G)" } },
+            { name: "Preset mode", fields: { P: "1", Preset: "0=CLEAR, 1=RO, 2=RW, 3=RX, 4=RWX, 5=L, 6=LS, 7=LSE, 8=LSEB, 9=DATA+CAP, 10=FULL, 11=META, 12=ENTER, 13=LM" } }
+        ],
+        notes: "Preset codes 14-15 cause FAULT_TPERM_RSV. Presets reduce code size for common permission patterns."
+    },
+    {
+        name: "LOADX",
+        brief: "Load Exclusive (atomic)",
+        syntax: "LOADX CRd, [CRn+idx]",
+        desc: "Load GT from C-List and set exclusive monitor for current thread. Used with SAVEX for atomic read-modify-write operations.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "Op", bits: 6, value: "001000", desc: "LOADX opcode" },
+            { name: "CRd", bits: 3, desc: "Destination CR (0-7)" },
+            { name: "CRn", bits: 3, desc: "Source C-List register (0-7)" },
+            { name: "Reserved", bits: 3, value: "0", desc: "Reserved" },
+            { name: "Index", bits: 13, desc: "C-List slot index" }
+        ],
+        security: "Sets per-thread exclusive monitor. Monitor cleared by SAVEX, CHANGE, or interrupts. Enables lock-free synchronization.",
+        notes: "16 per-thread monitors (one per Thread ID 0-15). ARM LDREX semantics."
+    },
+    {
+        name: "SAVEX",
+        brief: "Store Exclusive (conditional)",
+        syntax: "SAVEX DRd, CRs, [CRn+idx]",
+        desc: "Conditionally store GT if exclusive monitor is still valid. Returns success/fail status in data register.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "Op", bits: 6, value: "001001", desc: "SAVEX opcode" },
+            { name: "DRd", bits: 4, desc: "Result register (0=success, 1=fail)" },
+            { name: "CRs", bits: 3, desc: "Source CR to store (0-7)" },
+            { name: "CRn", bits: 3, desc: "Target C-List register (0-7)" },
+            { name: "Index", bits: 12, desc: "C-List slot index" }
+        ],
+        security: "Atomic compare-and-swap for capabilities. Prevents race conditions in multi-threaded GT updates.",
+        notes: "DRd=0 on success (store completed), DRd=1 on failure (retry needed). Monitor always cleared after SAVEX."
+    },
+    {
+        name: "LDM",
+        brief: "Load Multiple CRs",
+        syntax: "LDM CRn, {CR0-CR7}",
+        desc: "Load multiple Context Registers from consecutive C-List entries. Each CR in register list uses mLoad with full permission/bounds/MAC validation.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "Op", bits: 6, value: "001010", desc: "LDM opcode" },
+            { name: "CRn", bits: 3, desc: "Base C-List register (0-7)" },
+            { name: "U", bits: 1, desc: "0=descending, 1=ascending" },
+            { name: "W", bits: 1, desc: "Writeback base register" },
+            { name: "Reserved", bits: 9, value: "0", desc: "Reserved" },
+            { name: "RegList", bits: 8, desc: "CR bitmask (bit i = CR[i])" }
+        ],
+        security: "Each load goes through mLoad subroutine - full capability security enforced. Cannot bypass permission checks.",
+        notes: "3-bit CR field means only CR0-CR7 addressable. CR8-CR15 (Thread, Nucleus, C-List, Namespace) are protected system registers."
+    },
+    {
+        name: "STM",
+        brief: "Store Multiple CRs",
+        syntax: "STM CRn, {CR0-CR7}",
+        desc: "Store multiple Context Registers to consecutive C-List entries. Each CR in register list uses mSave with full permission/bounds/MAC validation.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "Op", bits: 6, value: "001011", desc: "STM opcode" },
+            { name: "CRn", bits: 3, desc: "Base C-List register (0-7)" },
+            { name: "U", bits: 1, desc: "0=descending, 1=ascending" },
+            { name: "W", bits: 1, desc: "Writeback base register" },
+            { name: "Reserved", bits: 9, value: "0", desc: "Reserved" },
+            { name: "RegList", bits: 8, desc: "CR bitmask (bit i = CR[i])" }
+        ],
+        security: "Each store goes through mSave subroutine - B-bit binding validation enforced. Cannot bypass capability security model.",
+        notes: "3-bit CR field prevents instruction-level access to protected system registers CR8-CR15."
+    },
+    {
+        name: "LDI",
+        brief: "Load Immediate to DR",
+        syntax: "LDI DRd, #imm22",
+        desc: "Load 22-bit zero-extended immediate constant into data register. For larger constants, use LDI followed by shift/add.",
+        format: [
+            { name: "Cond", bits: 4, desc: "Condition code" },
+            { name: "Op", bits: 6, value: "001100", desc: "LDI opcode" },
+            { name: "DRd", bits: 4, desc: "Destination data register (0-15)" },
+            { name: "Imm22", bits: 22, desc: "22-bit immediate (0 to 4,194,303)" }
+        ],
+        notes: "Zero-extended to 64 bits. For full 64-bit constants, chain multiple LDI with LSL."
     }
 ];
 
