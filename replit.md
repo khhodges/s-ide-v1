@@ -3,6 +3,30 @@
 ## Overview
 This project is a comprehensive simulator for the Church-Turing Meta-Machine (CTMM) capability-based architecture. It implements Kenneth James Hamer-Hodges' failsafe security design, utilizing "Golden Tokens" (64-bit capability keys) for all access control. The system integrates concepts from Church's lambda calculus and Turing's computational model to provide a robust and secure execution environment. The simulator aims to provide a deep understanding of capability-based security, secure system design, and the foundational principles of computation through an interactive web interface. The project envisions providing an interactive web interface for understanding capability-based security, secure system design, and fundamental computational principles.
 
+## Frozen Architecture Decisions
+
+### Permission Domains (Mutually Exclusive)
+| Domain | Permissions | Purpose |
+|--------|-------------|---------|
+| **Church (Capability)** | L, S | Load/Save Golden Tokens from/to C-Lists |
+| **Turing (Data)** | R, W, X | Read/Write data, Execute code |
+| **Lambda** | E | Enter abstraction (invoke protected service) |
+| **Meta** | B, M, F, G | Bound, Machine, Foreign, Garbage collection |
+
+**Rules:**
+- L authorizes C-List traversal (loading capabilities)
+- S authorizes C-List modification (saving capabilities)
+- R, W, X are for data/code operations only - never for capability access
+- E is exclusively for entering abstractions - not for loading or data access
+- These domains are mutually exclusive by design
+
+### Instruction I-bit Variants
+Both CHANGE and SWITCH support I-bit variants:
+- **I=0**: Register source (CRs contains capability)
+- **I=1**: C-List lookup (CRn[idx] provides capability)
+
+CHANGE creates new thread GT → CR8; SWITCH copies capability → CR8-15.
+
 ## User Preferences
 - Tooltips positioned below for elements near top of viewport
 - Minimal UI with consolidated header controls
