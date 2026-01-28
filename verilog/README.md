@@ -19,11 +19,14 @@ verilog/
 ├── ctmm_registers.sv     # Register file (16 x 256-bit CRs, 16 x 64-bit DRs)
 ├── ctmm_mload.sv         # mLoad micro-routine (shared trusted code)
 ├── ctmm_load.sv          # LOAD Church-Instruction (uses mLoad)
+├── ctmm_loadx_savex.sv   # LOADX/SAVEX atomic operations with exclusive monitor
+├── ctmm_ldm_stm.sv       # LDM/STM Load/Store Multiple
 ├── ctmm_switch.sv        # SWITCH Church-Instruction (uses mLoad)
 ├── ctmm_msave.sv         # mSave micro-routine (shared trusted code)
 ├── ctmm_save.sv          # SAVE Church-Instruction (uses mSave)
 ├── ctmm_change.sv        # CHANGE Church-Instruction (uses mSave + mLoad)
 ├── ctmm_call.sv          # CALL Church-Instruction (uses mLoad)
+├── ctmm_return.sv        # RETURN Church-Instruction
 ├── ctmm_perm_check.sv    # Permission checking unit
 ├── ctmm_gc_unit.sv       # Garbage collection unit with G bit
 ├── ctmm_decoder.sv       # Instruction decoder
@@ -31,6 +34,21 @@ verilog/
 ├── ctmm_tb.sv            # Testbench
 └── README.md             # This file
 ```
+
+## Standardized Instruction Format (32-bit)
+
+All CTMM instructions use a standardized format:
+
+```
+| 31:27 | 26:23 | 22 | 21:0     |
+|-------|-------|----|---------  |
+| Opcode| Cond  | I  | Operands |
+```
+
+- **Opcode** (5 bits): Instruction opcode (32 opcodes available)
+- **Cond** (4 bits): ARM-style condition code
+- **I** (1 bit): Immediate mode flag
+- **Operands** (22 bits): Instruction-specific operands
 
 ## Capability Register (CR) Format - 4 x 64-bit Words (256 bits)
 
@@ -82,37 +100,173 @@ Word 3: Seals/MAC (64 bits)
 ### Condition Flags
 - N (Negative), Z (Zero), C (Carry), V (Overflow)
 
-## Instruction Set
+## Complete Instruction Set
 
-### Church Instructions (Capability Operations)
-| Opcode | Mnemonic | Description |
-|--------|----------|-------------|
-| 000001 | LOAD     | Load capability from C-List |
-| 000010 | SAVE     | Save capability to C-List |
-| 000011 | CALL     | Call procedure via capability |
-| 000100 | RETURN   | Return from procedure |
-| 000101 | CHANGE   | Change thread identity |
-| 000110 | SWITCH   | Switch namespace |
-| 000111 | TPERM    | Test permissions |
+### Church Instructions (Capability Operations) - 5-bit Opcodes
 
-### Turing Instructions (Data Operations)
-| Opcode | Mnemonic | Description |
-|--------|----------|-------------|
-| 010000 | MOV      | Move data |
-| 010001 | ADD      | Add |
-| 010010 | SUB      | Subtract |
-| 010011 | MUL      | Multiply |
-| 010100 | DIV      | Divide |
-| 010101 | AND      | Bitwise AND |
-| 010110 | ORR      | Bitwise OR |
-| 010111 | EOR      | Bitwise XOR |
-| 011000 | LSL      | Logical Shift Left |
-| 011001 | LSR      | Logical Shift Right |
-| 011010 | ASR      | Arithmetic Shift Right |
-| 011011 | CMP      | Compare |
-| 011100 | TST      | Test bits |
-| 100000 | B        | Branch |
-| 100001 | BL       | Branch with Link |
+| Opcode | Binary  | Mnemonic | Description |
+|--------|---------|----------|-------------|
+| 01     | 00001   | LOAD     | Load capability from C-List |
+| 02     | 00010   | SAVE     | Save capability to C-List |
+| 03     | 00011   | CALL     | Call procedure (I=1: embedded mask, I=0: DR15 mask) |
+| 04     | 00100   | RETURN   | Return from procedure |
+| 05     | 00101   | CHANGE   | Change thread identity |
+| 06     | 00110   | SWITCH   | Switch namespace |
+| 07     | 00111   | TPERM    | Transfer/restrict permissions (4-bit preset) |
+| 08     | 01000   | LOADX    | Load-Exclusive (atomic with monitor) |
+| 09     | 01001   | SAVEX    | Store-Exclusive (conditional store) |
+| 10     | 01010   | LDM      | Load Multiple registers |
+| 11     | 01011   | STM      | Store Multiple registers |
+
+### Turing Instructions (Data Operations) - 5-bit Opcodes
+
+| Opcode | Binary  | Mnemonic | Description |
+|--------|---------|----------|-------------|
+| 16     | 10000   | MOV      | Move data |
+| 17     | 10001   | ADD      | Add (I=1: immediate, I=0: register) |
+| 18     | 10010   | SUB      | Subtract |
+| 19     | 10011   | MUL      | Multiply |
+| 20     | 10100   | DIV      | Divide |
+| 21     | 10101   | AND      | Bitwise AND |
+| 22     | 10110   | ORR      | Bitwise OR |
+| 23     | 10111   | EOR      | Bitwise XOR |
+| 24     | 11000   | LSL      | Logical Shift Left |
+| 25     | 11001   | LSR      | Logical Shift Right |
+| 26     | 11010   | ASR      | Arithmetic Shift Right |
+| 27     | 11011   | CMP      | Compare |
+| 28     | 11100   | TST      | Test bits |
+| 29     | 11101   | LDI      | Load Immediate (large constant) |
+| 30     | 11110   | B        | Branch |
+| 31     | 11111   | BL       | Branch with Link |
+
+## TPERM Preset Masks (4-bit Code)
+
+TPERM uses a 4-bit preset code to restrict permissions. Codes 14-15 are reserved and cause FAULT.
+
+| Code | Name  | Permission Bits | Use Case |
+|------|-------|-----------------|----------|
+| 0    | CLEAR | none            | Revoke all access |
+| 1    | R     | R               | Read-only data |
+| 2    | RW    | R,W             | Read-write data |
+| 3    | X     | X               | Execute code only |
+| 4    | RX    | R,X             | Read + execute |
+| 5    | RWX   | R,W,X           | Full data access |
+| 6    | E     | E               | Enter abstraction |
+| 7    | LS    | L,S             | Load + Save |
+| 8    | B     | B               | Bound (can delegate) |
+| 9    | LB    | L,B             | Load + Bind |
+| 10   | G     | G               | GC marking |
+| 11   | F     | F               | Foreign/remote |
+| 12   | M     | M               | Meta/internal |
+| 13   | LM    | L,M             | Load + Microcode (internal) |
+| 14   | -     | RESERVED        | Causes FAULT |
+| 15   | -     | RESERVED        | Causes FAULT |
+
+## Instruction Formats
+
+### Church Instructions (4-bit CR fields for CR0-CR15)
+
+#### LOAD/SAVE/LOADX
+```
+| 31:27 | 26:23 | 22 | 21:18 | 17:14 | 13:4  | 3:0      |
+|-------|-------|----| ------|-------|-------|----------|
+| Opcode| Cond  | I  | CRd   | CRn   | Index | Reserved |
+```
+- 4-bit CR fields support full CR0-CR15 range
+- 10-bit index supports 1024 C-List entries
+
+#### SAVEX (Store-Exclusive)
+```
+| 31:27 | 26:23 | 22 | 21:18 | 17:14 | 13:4  | 3:0 |
+|-------|-------|----| ------|-------|-------|-----|
+| Opcode| Cond  | I  | CRs   | CRn   | Index | DRd |
+```
+- DRd receives result: 0 = success, 1 = fail (monitor cleared)
+
+#### CALL
+```
+| 31:27 | 26:23 | 22 | 21:18 | 17:14 | 13:4 | 3:0      |
+|-------|-------|----| ------|-------|------|----------|
+| Opcode| Cond  | I  | CRret | CRtgt | Mask | Reserved |
+```
+- I=1: Use 10-bit embedded permission mask
+- I=0: Use DR15 as 64-bit permission mask
+
+#### RETURN
+```
+| 31:27 | 26:23 | 22 | 21:18 | 17:0     |
+|-------|-------|----| ------|----------|
+| Opcode| Cond  | I  | CRn   | Reserved |
+```
+
+#### TPERM
+```
+| 31:27 | 26:23 | 22 | 21:18 | 17:14 | 13:4     | 3:0    |
+|-------|-------|----| ------|-------|----------|--------|
+| Opcode| Cond  | I  | CRd   | CRs   | Reserved | Preset |
+```
+
+#### LDM/STM (Load/Store Multiple)
+```
+| 31:27 | 26:23 | 22 | 21:18 | 17:16    | 15:0     |
+|-------|-------|----| ------|----------|----------|
+| Opcode| Cond  | I  | CRn   | Reserved | Reg List |
+```
+- Reg List: 16-bit mask, bit i = include CRi
+- Security: Uses mLoad/mSave internally for each register
+
+### Turing Instructions
+
+#### Arithmetic/Logic (Register Mode, I=0)
+```
+| 31:27 | 26:23 | 22 | 21:18 | 17:14 | 13:10 | 9:0      |
+|-------|-------|----| ------|-------|-------|----------|
+| Opcode| Cond  | 0  | DRd   | DRn   | DRm   | Reserved |
+```
+
+#### Arithmetic/Logic (Immediate Mode, I=1)
+```
+| 31:27 | 26:23 | 22 | 21:18 | 17:14 | 13:0      |
+|-------|-------|----| ------|-------|-----------|
+| Opcode| Cond  | 1  | DRd   | DRn   | Immediate |
+```
+- 14-bit signed immediate value
+
+#### LDI (Load Immediate)
+```
+| 31:27 | 26:23 | 22 | 21:18 | 17:0      |
+|-------|-------|----| ------|-----------|
+| Opcode| Cond  | I  | DRd   | Immediate |
+```
+- 22-bit immediate (18 bits + I bit + cond bits can extend)
+
+#### Branch
+```
+| 31:27 | 26:23 | 22 | 21:18    | 17:0   |
+|-------|-------|----| ---------|--------|
+| Opcode| Cond  | I  | Reserved | Offset |
+```
+- 18-bit signed offset (word-aligned)
+
+## Atomic Operations (LOADX/SAVEX)
+
+ARM-style Load-Exclusive / Store-Exclusive for lock-free atomic operations:
+
+1. **LOADX CRd, [CRn, #offset]**
+   - Load capability from namespace
+   - Set exclusive monitor for that address
+   - Normal permission checks apply
+
+2. **SAVEX CRs, [CRn, #offset], DRd**
+   - Try to store capability back
+   - DRd = 0 if success (monitor still valid)
+   - DRd = 1 if fail (someone else accessed entry)
+   - Monitor cleared after SAVEX
+
+**Exclusive Monitor Logic:**
+- Per-thread flag tracking (namespace entry address, valid bit)
+- Cleared when another thread accesses monitored address
+- Enables lock-free synchronization on capabilities
 
 ## Boot Sequence
 
@@ -123,127 +277,9 @@ Word 3: Seals/MAC (64 bits)
 
 ## mLoad Micro-Routine - Shared Trusted Code
 
-The mLoad micro-routine (`ctmm_mload.sv`) is the **single trusted microcode** for all capability fetching. This minimizes the Trusted Computing Base (TCB) - all Church CLOOMC instructions that need to fetch capabilities share this verified code:
-
-| Instruction | Uses mLoad For | Status |
-|-------------|----------------|--------|
-| **LOAD**    | Fetch capability into destination register | Implemented |
-| **CALL**    | Two-phase load + isolation: CRs[Index]→CR6, CR6[0]→CR7, NIA=0, MASK-based clear | Implemented |
-
-### CALL Instruction Encoding
-
-```
-| 31:28 | 27:22  | 21:19  | 18:16 | 15:8  | 7:6   | 5:1   | 0   |
-|-------|--------|--------|-------|-------|-------|-------|-----|
-| Cond  | Opcode | CR1-3  | CRs   | Index | CR4-5 | DR1-5 | CR0 |
-```
-
-**Note:** Bit 18 is reserved (formerly link bit).
-
-**Permission Requirements:**
-- Source GT must have **L (Limit)** permission to enter the abstraction
-- CALL **sets M (Machine)** on the loaded capability for internal abstraction functions
-
-**Instruction bits for MASK (11 bits, bit=1 → PRESERVE):**
-- `[0]` = CR0 preserve
-- `[21:19]` = CR1-CR3 preserve
-- `[7:6]` = CR4-CR5 preserve
-- `[5:1]` = DR1-DR5 preserve
-
-**Decoded call_mask[10:0]:**
-```
-[10]   = bit[0]       // CR0
-[9:7]  = bits[21:19]  // CR1-CR3
-[6:5]  = bits[7:6]    // CR4-CR5
-[4:0]  = bits[5:1]    // DR1-DR5
-```
-
-**Fixed Register Behaviors (NOT in MASK):**
-- DR0: always preserved (primary argument)
-- DR6-DR7: always cleared
-- DR8-DR15: always cleared
-
-| Instruction | Uses mLoad For | Status |
-|-------------|----------------|--------|
-| **RETURN**  | Fetch return capability from stack | Planned |
-| **CHANGE**  | Fetch new thread identity into CR8 | Planned |
-| **SWITCH**  | Fetch new namespace capability into CR15 | Implemented |
-
-### mSave Micro-Routine - Shared Trusted Code for GT Saving
-
-The mSave micro-routine (`ctmm_msave.sv`) is the **single trusted microcode** for all GT saving operations:
-
-| Instruction | Uses mSave For | Status |
-|-------------|----------------|--------|
-| **SAVE**    | Write GT to C-List[Index] | Implemented |
-| **CHANGE**  | Full context switch (save CRs, load Thread, restore CRs) | Implemented |
-
-**mSave Permission Rule:**
-- Check dst.S (destination allows saving)
-- Check GT.M || GT.B (machine-level bypasses B check)
-- Check Index < Limit (bounds)
-
-### CHANGE Instruction - Full Context Switch
-
-The CHANGE instruction (`ctmm_change.sv`) performs a complete thread context switch:
-
-```
-CHANGE CRn[Index]   ; Switch to new thread at CRn[Index]
-```
-
-**Sequence (25 operations: Save 12 + Load 1 + Restore 12):**
-1. **Phase 1 - SAVE**: Save current CR states to Thread[CR8]
-   - For each CR in {0,1,2,3,4,5,6,9,10,11,12,13,14}: `mSave(dst=CR8, gt=CR[i].GT, idx=i)`
-2. **Phase 2 - LOAD**: Fetch new Thread identity
-   - `mLoad(src=CRn, dst=CR8, idx=Index)`
-3. **Phase 3 - RESTORE**: Load CR states from new Thread[CR8]
-   - For each CR in {0,1,2,3,4,5,6,9,10,11,12,13,14}: `mLoad(src=CR8, dst=i, idx=i)`
-
-**Reserved Registers (never saved/restored):**
-- CR7 = Nucleus (shared kernel)
-- CR8 = Thread (handled by CHANGE itself)
-- CR15 = Namespace (handled by SWITCH)
-
-**CHANGE_MASK Optimization:**
-- 16-bit mask allows skipping CRs during save/restore
-- Default skips CR7, CR8, CR15 (reserved)
-- Optional: Skip CR11-14 for faster context switch
-
-### Non-mLoad/mSave Church Instructions
-
-| Instruction | Description | Status |
-|-------------|-------------|--------|
-| **TPERM**   | Trim permissions on a capability | Planned |
-
-### mLoad Interface
-
-```systemverilog
-// Caller provides:
-input  sub_start,           // Start mLoad
-input  sub_cr_src,          // Source register (CRn)
-input  sub_cr_dst,          // Destination register (CRd) - written directly
-input  sub_index,           // C-List index
-
-// mLoad signals:
-output sub_done,            // Completed successfully
-output sub_fault,           // Caused a fault
-
-// Direct register write (single bus transfer):
-output cr_wr_addr,          // Destination register
-output cr_wr_data,          // Fetched capability with G bit cleared
-output cr_wr_en,            // Write enable (on completion)
-```
-
-**Key Optimization:** mLoad writes directly to the destination register, avoiding a second bus transfer through the caller. Each Church instruction just specifies its destination:
-- **LOAD**: User-specified CRd
-- **CALL**: CR7 (Nucleus)
-- **RETURN**: Return register
-- **CHANGE**: CR8 (Thread)
-- **SWITCH**: CR15 (Namespace)
+The mLoad micro-routine (`ctmm_mload.sv`) is the **single trusted microcode** for all capability fetching. This minimizes the Trusted Computing Base (TCB).
 
 ### mLoad Microcode Sequence
-
-The mLoad micro-routine fetches a capability from a C-List. The microcode sequence is:
 
 | Step | State         | Description                                      |
 |------|---------------|--------------------------------------------------|
@@ -255,24 +291,9 @@ The mLoad micro-routine fetches a capability from a C-List. The microcode sequen
 | 6    | FETCH_W2      | Fetch W2 (Limit) from CR15.Location + GT.offset + 8 |
 | 7    | FETCH_W3      | Fetch W3 (Seals/MAC) from CR15.Location + GT.offset + 16 |
 | 8    | CHECK_MAC     | Validate MAC (calculated hash vs Seals)          |
-| 9    | RESET_G       | **If G=1**: Reset G bit in CR15[GT.offset].Word3.Gbit |
-| 10   | UPDATE_THREAD | **Always**: Write GT with G=0 to Thread[CRd]     |
+| 9    | RESET_G       | If G=1: Reset G bit in CR15[GT.offset].Word3.Gbit |
+| 10   | UPDATE_THREAD | Write GT with G=0 to Thread[CRd]                 |
 | 11   | COMPLETE      | Write all 4 words to CRd, assert sub_done        |
-
-**Key Points:**
-- Result is written directly to destination register in COMPLETE state (single bus transfer)
-- cr_wr_en is asserted for one cycle in COMPLETE - register file must capture on rising edge
-- CRd.W0 = GT fetched from CRn[Index] (the Golden Token)
-- CRd.W1, W2, W3 = fetched from CR15 (Namespace) at GT.offset
-- Step 4 validates: GT.offset < CR15.limit AND CR15 has M permission
-- **GT.offset is a direct memory offset (bytes), not an index** - this provides hardware error detection
-
-**Fault Conditions:**
-- NULL capability access → FAULT_NULL_CAP
-- M or L permission missing on CRn → FAULT_PERM_L
-- Index >= CRn.Limit → FAULT_BOUNDS
-- GT.offset >= CR15.limit OR CR15 missing M → FAULT_BOUNDS/FAULT_PERM_M
-- MAC mismatch → FAULT_MAC
 
 ## Garbage Collection
 
@@ -286,13 +307,16 @@ The G bit enables deterministic garbage collection:
 
 Using Icarus Verilog:
 ```bash
-iverilog -g2012 -o ctmm_sim ctmm_pkg.sv ctmm_registers.sv ctmm_perm_check.sv ctmm_gc_unit.sv ctmm_decoder.sv ctmm_core.sv ctmm_tb.sv
+iverilog -g2012 -o ctmm_sim ctmm_pkg.sv ctmm_registers.sv ctmm_perm_check.sv \
+    ctmm_gc_unit.sv ctmm_decoder.sv ctmm_mload.sv ctmm_load.sv \
+    ctmm_loadx_savex.sv ctmm_ldm_stm.sv ctmm_return.sv \
+    ctmm_core.sv ctmm_tb.sv
 vvp ctmm_sim
 ```
 
 Using Verilator:
 ```bash
-verilator --binary -j 0 --top-module ctmm_tb ctmm_pkg.sv ctmm_registers.sv ctmm_perm_check.sv ctmm_gc_unit.sv ctmm_decoder.sv ctmm_core.sv ctmm_tb.sv
+verilator --binary -j 0 --top-module ctmm_tb *.sv
 ./obj_dir/Vctmm_tb
 ```
 
@@ -312,6 +336,8 @@ The design is synthesizable for FPGA or ASIC targets. Key synthesis consideratio
 3. **MAC Validation**: Optional hardware MAC check for integrity
 4. **Null Capability Detection**: NULL GT access causes FAULT
 5. **Single FAULT Path**: All security violations use same FAULT mechanism
+6. **TPERM Restrictions**: Codes 14-15 cause FAULT to prevent bypass
+7. **Exclusive Monitor**: LOADX/SAVEX for atomic operations
 
 ## License
 

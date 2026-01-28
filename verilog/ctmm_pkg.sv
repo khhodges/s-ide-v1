@@ -141,40 +141,101 @@ package ctmm_pkg;
     } cond_code_t;
     
     // ========================================================================
-    // Church Instructions (Capability Operations)
+    // Instruction Format (Standardized 32-bit)
+    // ========================================================================
+    // Bits [31:27] - Opcode (5 bits, 32 opcodes available)
+    // Bits [26:23] - Condition code (4 bits)
+    // Bit  [22]    - I bit (Immediate mode flag)
+    // Bits [21:0]  - Operands (instruction-specific)
     // ========================================================================
     
-    typedef enum logic [5:0] {
-        OP_LOAD   = 6'b000001,  // Load capability from C-List
-        OP_SAVE   = 6'b000010,  // Save capability to C-List
-        OP_CALL   = 6'b000011,  // Call procedure via capability
-        OP_RETURN = 6'b000100,  // Return from procedure
-        OP_CHANGE = 6'b000101,  // Change thread identity
-        OP_SWITCH = 6'b000110,  // Switch namespace
-        OP_TPERM  = 6'b000111   // Test permissions
+    // ========================================================================
+    // Church Instructions (Capability Operations) - 5-bit opcodes
+    // ========================================================================
+    
+    typedef enum logic [4:0] {
+        OP_LOAD   = 5'b00001,   // Load capability from C-List
+        OP_SAVE   = 5'b00010,   // Save capability to C-List
+        OP_CALL   = 5'b00011,   // Call procedure via capability (I=1: embedded mask, I=0: DR15)
+        OP_RETURN = 5'b00100,   // Return from procedure
+        OP_CHANGE = 5'b00101,   // Change thread identity
+        OP_SWITCH = 5'b00110,   // Switch namespace
+        OP_TPERM  = 5'b00111,   // Transfer/restrict permissions (4-bit preset code)
+        OP_LOADX  = 5'b01000,   // Load-Exclusive (atomic load with monitor)
+        OP_SAVEX  = 5'b01001,   // Store-Exclusive (conditional store, result in DRd)
+        OP_LDM    = 5'b01010,   // Load Multiple registers
+        OP_STM    = 5'b01011    // Store Multiple registers
     } church_opcode_t;
     
     // ========================================================================
-    // Turing Instructions (Data Operations)
+    // Turing Instructions (Data Operations) - 5-bit opcodes
     // ========================================================================
     
-    typedef enum logic [5:0] {
-        OP_MOV    = 6'b010000,  // Move data
-        OP_ADD    = 6'b010001,  // Add
-        OP_SUB    = 6'b010010,  // Subtract
-        OP_MUL    = 6'b010011,  // Multiply
-        OP_DIV    = 6'b010100,  // Divide
-        OP_AND    = 6'b010101,  // Bitwise AND
-        OP_ORR    = 6'b010110,  // Bitwise OR
-        OP_EOR    = 6'b010111,  // Bitwise XOR
-        OP_LSL    = 6'b011000,  // Logical Shift Left
-        OP_LSR    = 6'b011001,  // Logical Shift Right
-        OP_ASR    = 6'b011010,  // Arithmetic Shift Right
-        OP_CMP    = 6'b011011,  // Compare
-        OP_TST    = 6'b011100,  // Test bits
-        OP_B      = 6'b100000,  // Branch
-        OP_BL     = 6'b100001   // Branch with Link
+    typedef enum logic [4:0] {
+        OP_MOV    = 5'b10000,   // Move data
+        OP_ADD    = 5'b10001,   // Add (I=1: immediate, I=0: register)
+        OP_SUB    = 5'b10010,   // Subtract
+        OP_MUL    = 5'b10011,   // Multiply
+        OP_DIV    = 5'b10100,   // Divide
+        OP_AND    = 5'b10101,   // Bitwise AND
+        OP_ORR    = 5'b10110,   // Bitwise OR
+        OP_EOR    = 5'b10111,   // Bitwise XOR
+        OP_LSL    = 5'b11000,   // Logical Shift Left
+        OP_LSR    = 5'b11001,   // Logical Shift Right
+        OP_ASR    = 5'b11010,   // Arithmetic Shift Right
+        OP_CMP    = 5'b11011,   // Compare
+        OP_TST    = 5'b11100,   // Test bits
+        OP_LDI    = 5'b11101,   // Load Immediate (large constant)
+        OP_B      = 5'b11110,   // Branch
+        OP_BL     = 5'b11111    // Branch with Link
     } turing_opcode_t;
+    
+    // ========================================================================
+    // TPERM Preset Masks (4-bit code for common permission combinations)
+    // ========================================================================
+    // These are restriction-only masks - can only AND (remove) permissions
+    // Codes 14-15 are RESERVED and cause FAULT if used
+    // ========================================================================
+    
+    typedef enum logic [3:0] {
+        TPERM_CLEAR = 4'd0,     // No permissions (revoke all)
+        TPERM_R     = 4'd1,     // Read only
+        TPERM_RW    = 4'd2,     // Read + Write
+        TPERM_X     = 4'd3,     // Execute code only
+        TPERM_RX    = 4'd4,     // Read + Execute
+        TPERM_RWX   = 4'd5,     // Read + Write + Execute (full data)
+        TPERM_E     = 4'd6,     // Enter abstraction
+        TPERM_LS    = 4'd7,     // Load + Save capabilities
+        TPERM_B     = 4'd8,     // Bound (can delegate)
+        TPERM_LB    = 4'd9,     // Load + Bind
+        TPERM_G     = 4'd10,    // GC marking
+        TPERM_F     = 4'd11,    // Foreign/remote
+        TPERM_M     = 4'd12,    // Meta/internal
+        TPERM_LM    = 4'd13,    // Load + Microcode (internal)
+        TPERM_RSV1  = 4'd14,    // RESERVED - causes FAULT
+        TPERM_RSV2  = 4'd15     // RESERVED - causes FAULT
+    } tperm_preset_t;
+    
+    // TPERM preset mask values (actual permission bits to AND)
+    function automatic logic [15:0] get_tperm_mask(tperm_preset_t preset);
+        case (preset)
+            TPERM_CLEAR: return 16'h0000;                              // None
+            TPERM_R:     return PERM_MASK_R;                           // R
+            TPERM_RW:    return PERM_MASK_R | PERM_MASK_W;             // R,W
+            TPERM_X:     return PERM_MASK_X;                           // X
+            TPERM_RX:    return PERM_MASK_R | PERM_MASK_X;             // R,X
+            TPERM_RWX:   return PERM_MASK_R | PERM_MASK_W | PERM_MASK_X; // R,W,X
+            TPERM_E:     return PERM_MASK_E;                           // E
+            TPERM_LS:    return PERM_MASK_L | PERM_MASK_S;             // L,S
+            TPERM_B:     return PERM_MASK_B;                           // B
+            TPERM_LB:    return PERM_MASK_L | PERM_MASK_B;             // L,B
+            TPERM_G:     return PERM_MASK_G;                           // G
+            TPERM_F:     return PERM_MASK_F;                           // F
+            TPERM_M:     return PERM_MASK_M;                           // M
+            TPERM_LM:    return PERM_MASK_L | PERM_MASK_M;             // L,M
+            default:     return 16'hFFFF;                              // Invalid - will fault
+        endcase
+    endfunction
     
     // ========================================================================
     // Fault Types
@@ -192,8 +253,26 @@ package ctmm_pkg;
         FAULT_NULL_CAP    = 4'h8,  // Null capability access
         FAULT_BOUNDS      = 4'h9,  // Bounds check failed
         FAULT_MAC         = 4'hA,  // MAC validation failed
-        FAULT_INVALID_OP  = 4'hB   // Invalid opcode
+        FAULT_INVALID_OP  = 4'hB,  // Invalid opcode
+        FAULT_TPERM_RSV   = 4'hC,  // Reserved TPERM code (14 or 15)
+        FAULT_EXCL_FAIL   = 4'hD   // Store-Exclusive failed (for status only)
     } fault_type_t;
+    
+    // ========================================================================
+    // Exclusive Monitor States (for LOADX/SAVEX atomic operations)
+    // ========================================================================
+    
+    typedef enum logic [1:0] {
+        EXCL_IDLE     = 2'b00,    // No exclusive access active
+        EXCL_ACTIVE   = 2'b01,    // Exclusive monitor set by LOADX
+        EXCL_CLEARED  = 2'b10     // Monitor cleared by external access
+    } excl_monitor_state_t;
+    
+    typedef struct packed {
+        excl_monitor_state_t state;
+        logic [31:0]         addr;     // Monitored namespace entry address
+        logic [3:0]          thread_id; // Thread that owns the monitor
+    } excl_monitor_t;
     
     // ========================================================================
     // Boot Sequence States
