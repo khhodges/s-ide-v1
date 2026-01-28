@@ -107,15 +107,33 @@ This document maps each instruction across all implementation layers for verific
 | Register | Purpose           | Instruction Addressable | Notes |
 |----------|-------------------|-------------------------|-------|
 | CR0-CR7  | User capabilities | Yes (3-bit encoding)    | Normal instruction access |
-| CR8      | Thread identity   | No                      | Set by CHANGE only |
+| CR8      | Thread identity   | Boot only               | Hardwired GT at offset 3, M permission |
 | CR9-CR14 | Reserved          | No                      | Future use |
-| CR15     | Namespace root    | No                      | Boot-time only |
-| CR6      | Current C-List    | Read-only via instr     | Set by SWITCH |
-| CR7      | Nucleus           | Read-only via instr     | Boot-time only |
+| CR15     | Namespace root    | Boot only               | Hardwired GT at offset 0, M permission |
+| CR6      | Current C-List    | Read via LOAD/SWITCH    | Modified by SWITCH |
+| CR7      | Nucleus           | Read via LOAD           | Boot-time initialization |
+
+### Boot Sequence CR8/CR15 Initialization
+
+The boot sequence is the **only** time CR8 and CR15 can be addressed:
+
+1. **CR15 (Namespace)**: Loaded from hardwired boot GT at offset 0
+   - Permissions: M only (Meta-machine access)
+   - Points to the root Namespace table
+
+2. **CR8 (Thread)**: Loaded from hardwired boot GT at offset 3
+   - Permissions: M only (Meta-machine access)
+   - Identifies the current thread
+
+After boot completes:
+- CR8 can only be modified via CHANGE instruction
+- CR15 is immutable (root namespace)
+- 3-bit instruction encoding physically prevents addressing CR8-CR15
 
 ### Verification Points
 
-- [ ] JS: Check CR index validation in LOAD/SAVE/LDM/STM (must be 0-7)
+- [ ] JS: Check CR index validation in LOAD/SAVE/LDM/STM (must be 0-7 after boot)
+- [ ] JS: Verify boot sequence loads CR8/CR15 with M-only permissions
 - [ ] Verilog: Check CRd/CRn field width (3 bits) in decoder
 - [ ] Tutorial: Verify explanation of CR8-15 protection
 
@@ -139,7 +157,9 @@ This document maps each instruction across all implementation layers for verific
 | Opcode width | UI (app.js) | All Church instructions showed 6-bit opcodes, should be 5-bit | FIXED |
 | Index width | UI (app.js) | LOAD/SAVE showed 13-bit index, should be 10-bit (1024 entries) | FIXED |
 | Bit order | UI (app.js) | Format showed Cond before Op, should be Op first per Verilog [31:27] | FIXED |
-| CR8/CR15 access | JS Simulator | LOAD allows writing to CR8/CR15 as special cases | REVIEW NEEDED |
+| CR8/CR15 access | JS Simulator | LOAD allows writing to CR8/CR15 - OK for boot, but should be restricted after | DOCUMENTED |
+| Boot GT permissions | JS Simulator | Boot GTs for CR8/CR15 should have M permission only | VERIFY |
+| Boot offsets | JS Simulator | CR15=offset 0, CR8=offset 3 (hardwired) | VERIFY |
 
 ---
 
