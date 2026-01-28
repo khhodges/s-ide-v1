@@ -204,14 +204,15 @@ package ctmm_pkg;
         TPERM_X     = 4'd3,     // Execute code only
         TPERM_RX    = 4'd4,     // Read + Execute
         TPERM_RWX   = 4'd5,     // Read + Write + Execute (full data)
-        TPERM_E     = 4'd6,     // Enter abstraction
-        TPERM_LS    = 4'd7,     // Load + Save capabilities
-        TPERM_B     = 4'd8,     // Bound (can delegate)
-        TPERM_RSV0  = 4'd9,     // RESERVED - causes FAULT
-        TPERM_G     = 4'd10,    // GC marking
+        // Lambda permission order: L, S, E, B, M, F, G
+        TPERM_L     = 4'd6,     // Load capability
+        TPERM_S     = 4'd7,     // Save capability
+        TPERM_E     = 4'd8,     // Enter abstraction
+        TPERM_B     = 4'd9,     // Bind (can delegate)
+        TPERM_M     = 4'd10,    // Meta/internal
         TPERM_F     = 4'd11,    // Foreign/remote
-        TPERM_M     = 4'd12,    // Meta/internal
-        TPERM_LM    = 4'd13,    // Load + Microcode (internal)
+        TPERM_G     = 4'd12,    // GC marking
+        TPERM_LS    = 4'd13,    // Load + Save (common combo)
         TPERM_RSV1  = 4'd14,    // RESERVED - causes FAULT
         TPERM_RSV2  = 4'd15     // RESERVED - causes FAULT
     } tperm_preset_t;
@@ -225,14 +226,15 @@ package ctmm_pkg;
             TPERM_X:     return PERM_MASK_X;                           // X
             TPERM_RX:    return PERM_MASK_R | PERM_MASK_X;             // R,X
             TPERM_RWX:   return PERM_MASK_R | PERM_MASK_W | PERM_MASK_X; // R,W,X
+            // Lambda permission order: L, S, E, B, M, F, G
+            TPERM_L:     return PERM_MASK_L;                           // L
+            TPERM_S:     return PERM_MASK_S;                           // S
             TPERM_E:     return PERM_MASK_E;                           // E
-            TPERM_LS:    return PERM_MASK_L | PERM_MASK_S;             // L,S
             TPERM_B:     return PERM_MASK_B;                           // B
-            TPERM_RSV0:  return 16'hFFFF;                              // RESERVED - will fault
-            TPERM_G:     return PERM_MASK_G;                           // G
-            TPERM_F:     return PERM_MASK_F;                           // F
             TPERM_M:     return PERM_MASK_M;                           // M
-            TPERM_LM:    return PERM_MASK_L | PERM_MASK_M;             // L,M
+            TPERM_F:     return PERM_MASK_F;                           // F
+            TPERM_G:     return PERM_MASK_G;                           // G
+            TPERM_LS:    return PERM_MASK_L | PERM_MASK_S;             // L,S combo
             default:     return 16'hFFFF;                              // Invalid - will fault
         endcase
     endfunction

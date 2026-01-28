@@ -10619,9 +10619,9 @@ const churchInstrFormats = [
         ],
         variants: [
             { name: "Mask mode", fields: { P: "0", Perms: "10-bit permission mask (R W X L S E B M F G)" } },
-            { name: "Preset mode", fields: { P: "1", Preset: "0=CLEAR, 1=R, 2=RW, 3=X, 4=RX, 5=RWX, 6=E, 7=LS, 8=B, 10=G, 11=F, 12=M, 13=LM" } }
+            { name: "Preset mode", fields: { P: "1", Preset: "0=CLEAR, 1=R, 2=RW, 3=X, 4=RX, 5=RWX, 6=L, 7=S, 8=E, 9=B, 10=M, 11=F, 12=G, 13=LS" } }
         ],
-        notes: "Preset codes 9, 14, 15 cause FAULT_TPERM_RSV. Presets reduce code size for common permission patterns."
+        notes: "Codes 6-12 match Lambda permission order (L,S,E,B,M,F,G). Codes 14-15 cause FAULT_TPERM_RSV."
     },
     {
         name: "LOADX",
