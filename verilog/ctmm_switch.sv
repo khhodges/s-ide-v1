@@ -36,9 +36,9 @@ module ctmm_switch
     
     // Control interface
     input  logic        switch_start,         // Start SWITCH execution
-    input  logic [3:0]  cr_src,               // Source register (CRs) - CR0-CR7
+    input  logic [2:0]  cr_src,               // Source register (CRn) - CR0-CR7 (3-bit)
     input  logic [2:0]  target,               // Target system register: 0=CR8, 7=CR15
-    input  logic [7:0]  index,                // C-List index
+    input  logic [9:0]  index,                // C-List index (10-bit, 0-1023)
     output logic        switch_busy,          // SWITCH in progress
     output logic        switch_complete,      // SWITCH finished successfully
     output logic        switch_fault,         // SWITCH caused a fault
@@ -184,9 +184,9 @@ module ctmm_switch
         
         // Subroutine interface - destination from target field
         .sub_start      (sub_start),
-        .sub_cr_src     (cr_src),
+        .sub_cr_src     ({1'b0, cr_src}),    // Pad 3-bit to 4-bit for mLoad
         .sub_cr_dst     (dest_cr),           // CR8 + target (0-7) = CR8-CR15
-        .sub_index      (index),
+        .sub_index      (index[7:0]),        // mLoad uses 8-bit index (TODO: extend mLoad to 10-bit)
         .sub_busy       (sub_busy),
         .sub_done       (sub_done),
         .sub_fault      (sub_fault),

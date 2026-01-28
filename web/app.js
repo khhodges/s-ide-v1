@@ -11042,10 +11042,9 @@ const churchInstrFormats = [
             { name: "Op", bits: 5, value: "00110", desc: "SWITCH opcode" },
             { name: "Cond", bits: 4, desc: "Condition code" },
             { name: "I", bits: 1, desc: "0=direct CR, 1=C-List lookup" },
-            { name: "CRs", bits: 3, desc: "Source CR (0-7, when I=0)" },
-            { name: "CRn", bits: 3, desc: "Source C-List (0-7, when I=1)" },
+            { name: "CRn", bits: 3, desc: "Source CR/C-List (0-7)" },
             { name: "Target", bits: 3, desc: "Destination: 0=CR8, 1=CR9, 2=CR10, 3-6=CR11-14, 7=CR15" },
-            { name: "Index", bits: 7, desc: "C-List slot index (when I=1, 0-127)" },
+            { name: "Index", bits: 10, desc: "C-List slot index (when I=1, 0-1023)" },
             { name: "Reserved", bits: 6, value: "0", desc: "Reserved" }
         ],
         variants: [
