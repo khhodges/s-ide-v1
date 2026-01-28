@@ -43,7 +43,11 @@ The web interface is composed of seven distinct views:
 
 -   **Built-in Abstractions**: Includes `Boot` (root namespace), `Threads` (user identities), `SlideRule` (IEEE 754 float operations), `Abacus` (64-bit integer operations), `Circle` (geometric calculations), `CapabilityManager` (GT creation), `DateTime` (ISO 8601 date/time), and `Lambda` (Church calculus primitives).
 -   **CapabilityManager Abstraction**: Creates new Golden Tokens for objects with specific permissions.
--   **Instruction Set**: Comprehensive set of Church-specific (LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM) and Turing-specific (Arithmetic, Logic, Shifts, Compare, Branch) instructions.
+-   **Instruction Set**: Comprehensive set of Church-specific (LOAD, SAVE, LOADX, SAVEX, LDM, STM, CALL, RETURN, CHANGE, SWITCH, TPERM) and Turing-specific (Arithmetic, Logic, Shifts, Compare, Branch, LDI) instructions.
+    -   **LOADX/SAVEX**: Atomic load/store with per-thread exclusive monitors for lock-free synchronization
+    -   **LDM/STM**: Load/Store Multiple CRs with mLoad/mSave security validation
+    -   **LDI**: Load 22-bit immediate constant into data register
+    -   **TPERM Presets**: 14 preset codes (0-13) for common permission patterns (CLEAR, RO, RW, RX, RWX, L, LS, LSE, LSEB, DATA+CAP, FULL, META, ENTER, LM)
 -   **Condition Codes**: ARM-style condition flags for conditional execution.
 -   **State Persistence**: Automatic saving and restoring of simulator state using local storage, with export/import functionality.
 -   **Permission Management**: Permission validation rules are implemented, defining categories (Data, Capability, Protected, Meta) and ensuring normalization across all mutation paths.
