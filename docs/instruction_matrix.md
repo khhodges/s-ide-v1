@@ -4,6 +4,8 @@ This document maps each instruction across all implementation layers for verific
 
 ## Legend
 - **Opcode**: 5-bit binary opcode from Verilog
+- **Cycles**: Minimum execution cycles (N = number of registers for LDM/STM)
+- **Latency**: Total latency including memory access (+mem = memory-dependent)
 - **JS Line**: Line number in `web/simulator.js`
 - **Verilog**: Definition in `verilog/ctmm_pkg.sv`
 - **UI Def**: Definition in `web/app.js` (churchInstrFormats/turingInstrFormats)
@@ -13,19 +15,19 @@ This document maps each instruction across all implementation layers for verific
 
 ## Church Instructions (Capability Operations)
 
-| Instruction | Opcode | Binary | JS Line | Verilog Line | UI Defined | Tutorial |
-|-------------|--------|--------|---------|--------------|------------|----------|
-| LOAD        | 01     | 00001  | 478     | 157          | Yes        | Lesson 4 |
-| SAVE        | 02     | 00010  | 537     | 158          | Yes        | Lesson 4 |
-| CALL        | 03     | 00011  | 743     | 159          | Yes        | Lesson 4 |
-| RETURN      | 04     | 00100  | 821     | 160          | Yes        | Lesson 4 |
-| CHANGE      | 05     | 00101  | 844     | 161          | Yes        | Lesson 4 |
-| SWITCH      | 06     | 00110  | 856     | 162          | Yes        | Lesson 4 |
-| TPERM       | 07     | 00111  | 385     | 163          | Yes        | Lesson 7 |
-| LOADX       | 08     | 01000  | 561     | 164          | Yes        | Lesson 5 |
-| SAVEX       | 09     | 01001  | 608     | 165          | Yes        | Lesson 5 |
-| LDM         | 10     | 01010  | 641     | 166          | Yes        | Lesson 6 |
-| STM         | 11     | 01011  | 677     | 167          | Yes        | Lesson 6 |
+| Instruction | Opcode | Binary | Cycles | Latency | JS Line | Verilog Line | UI Defined | Tutorial |
+|:------------|:-------|:-------|:-------|:--------|:--------|:-------------|:-----------|:---------|
+| LOAD        | 01     | 00001  | 3      | 3+mem   | 478     | 157          | Yes        | Lesson 4 |
+| SAVE        | 02     | 00010  | 3      | 3+mem   | 537     | 158          | Yes        | Lesson 4 |
+| CALL        | 03     | 00011  | 4      | 4+mem   | 743     | 159          | Yes        | Lesson 4 |
+| RETURN      | 04     | 00100  | 3      | 3+mem   | 821     | 160          | Yes        | Lesson 4 |
+| CHANGE      | 05     | 00101  | 2      | 2+mem   | 844     | 161          | Yes        | Lesson 4 |
+| SWITCH      | 06     | 00110  | 2      | 2+mem   | 856     | 162          | Yes        | Lesson 4 |
+| TPERM       | 07     | 00111  | 1      | 1       | 385     | 163          | Yes        | Lesson 7 |
+| LOADX       | 08     | 01000  | 4      | 4+mem   | 561     | 164          | Yes        | Lesson 5 |
+| SAVEX       | 09     | 01001  | 4      | 4+mem   | 608     | 165          | Yes        | Lesson 5 |
+| LDM         | 10     | 01010  | 2+N    | 2+N×mem | 641     | 166          | Yes        | Lesson 6 |
+| STM         | 11     | 01011  | 2+N    | 2+N×mem | 677     | 167          | Yes        | Lesson 6 |
 
 ### Verification Checklist - Church Instructions
 
@@ -45,24 +47,24 @@ This document maps each instruction across all implementation layers for verific
 
 ## Turing Instructions (Data Operations)
 
-| Instruction | Opcode | Binary | JS Line | Verilog Line | UI Defined | Tutorial |
-|-------------|--------|--------|---------|--------------|------------|----------|
-| MOV         | 16     | 10000  | TBD     | 175          | Yes        | -        |
-| ADD         | 17     | 10001  | TBD     | 176          | Yes        | -        |
-| SUB         | 18     | 10010  | TBD     | 177          | Yes        | -        |
-| MUL         | 19     | 10011  | TBD     | 178          | Yes        | -        |
-| DIV         | 20     | 10100  | TBD     | 179          | Yes        | -        |
-| AND         | 21     | 10101  | TBD     | 180          | Yes        | -        |
-| ORR         | 22     | 10110  | TBD     | 181          | Yes        | -        |
-| EOR         | 23     | 10111  | TBD     | 182          | Yes        | -        |
-| LSL         | 24     | 11000  | TBD     | 183          | Yes        | -        |
-| LSR         | 25     | 11001  | TBD     | 184          | Yes        | -        |
-| ASR         | 26     | 11010  | TBD     | 185          | Yes        | -        |
-| CMP         | 27     | 11011  | TBD     | 186          | Yes        | -        |
-| TST         | 28     | 11100  | TBD     | 187          | Yes        | -        |
-| LDI         | 29     | 11101  | 700     | 188          | Yes        | Lesson 7 |
-| B           | 30     | 11110  | TBD     | 189          | Yes        | -        |
-| BL          | 31     | 11111  | TBD     | 190          | Yes        | -        |
+| Instruction | Opcode | Binary | Cycles | Latency | JS Line | Verilog Line | UI Defined | Tutorial |
+|:------------|:-------|:-------|:-------|:--------|:--------|:-------------|:-----------|:---------|
+| MOV         | 16     | 10000  | 1      | 1       | TBD     | 175          | Yes        | -        |
+| ADD         | 17     | 10001  | 1      | 1       | TBD     | 176          | Yes        | -        |
+| SUB         | 18     | 10010  | 1      | 1       | TBD     | 177          | Yes        | -        |
+| MUL         | 19     | 10011  | 3      | 3       | TBD     | 178          | Yes        | -        |
+| DIV         | 20     | 10100  | 12     | 12      | TBD     | 179          | Yes        | -        |
+| AND         | 21     | 10101  | 1      | 1       | TBD     | 180          | Yes        | -        |
+| ORR         | 22     | 10110  | 1      | 1       | TBD     | 181          | Yes        | -        |
+| EOR         | 23     | 10111  | 1      | 1       | TBD     | 182          | Yes        | -        |
+| LSL         | 24     | 11000  | 1      | 1       | TBD     | 183          | Yes        | -        |
+| LSR         | 25     | 11001  | 1      | 1       | TBD     | 184          | Yes        | -        |
+| ASR         | 26     | 11010  | 1      | 1       | TBD     | 185          | Yes        | -        |
+| CMP         | 27     | 11011  | 1      | 1       | TBD     | 186          | Yes        | -        |
+| TST         | 28     | 11100  | 1      | 1       | TBD     | 187          | Yes        | -        |
+| LDI         | 29     | 11101  | 1      | 1       | 700     | 188          | Yes        | Lesson 7 |
+| B           | 30     | 11110  | 1      | 1-3     | TBD     | 189          | Yes        | -        |
+| BL          | 31     | 11111  | 1      | 1-3     | TBD     | 190          | Yes        | -        |
 
 ### Verification Checklist - Turing Instructions
 
@@ -80,7 +82,7 @@ This document maps each instruction across all implementation layers for verific
 ## TPERM Preset Codes
 
 | Code | Name  | Permissions | Category | Verified JS | Verified Verilog |
-|------|-------|-------------|----------|-------------|------------------|
+|:-----|:------|:------------|:---------|:------------|:-----------------|
 | 0    | CLEAR | (none)      | -        | [ ]         | [ ]              |
 | 1    | R     | R           | Data     | [ ]         | [ ]              |
 | 2    | RW    | R,W         | Data     | [ ]         | [ ]              |
@@ -105,7 +107,7 @@ This document maps each instruction across all implementation layers for verific
 ### CR Register Accessibility
 
 | Register | Purpose           | Instruction Addressable | Notes |
-|----------|-------------------|-------------------------|-------|
+|:---------|:------------------|:------------------------|:------|
 | CR0-CR7  | User capabilities | Yes (3-bit encoding)    | Normal instruction access |
 | CR8      | Thread identity   | Boot only               | Hardwired GT at offset 3, M permission |
 | CR9-CR14 | Reserved          | No                      | Future use |
@@ -153,7 +155,7 @@ After boot completes:
 ## Discrepancies Found
 
 | Issue | Location | Description | Status |
-|-------|----------|-------------|--------|
+|:------|:---------|:------------|:-------|
 | Opcode width | UI (app.js) | All Church instructions showed 6-bit opcodes, should be 5-bit | FIXED |
 | Index width | UI (app.js) | LOAD/SAVE showed 13-bit index, should be 10-bit (1024 entries) | FIXED |
 | Bit order | UI (app.js) | Format showed Cond before Op, should be Op first per Verilog [31:27] | FIXED |
@@ -191,14 +193,14 @@ After boot completes:
 ### I-bit Variants
 
 | I | Source | Example |
-|---|--------|---------|
+|:--|:-------|:--------|
 | 0 | Register | `SWITCH CR2, CR9` - Copy GT from CR2 to CR9 |
 | 1 | C-List | `SWITCH CR6[5], CR15` - Lookup entry 5 in CR6's C-List, copy to CR15 |
 
 ### Target Field Mapping
 
 | Target | Register | Purpose |
-|--------|----------|---------|
+|:-------|:---------|:--------|
 | 000 | CR8 | Thread identity (CHANGE always uses this) |
 | 001 | CR9 | Interrupt handler thread |
 | 010 | CR10 | Double fault recovery thread |
