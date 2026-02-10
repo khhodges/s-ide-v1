@@ -373,79 +373,96 @@
                 <div class="instr-section">
                     <h2>Church Capability Extensions</h2>
 
-                    <h3>Church Instruction Format (custom-0)</h3>
-                    <p style="color:#a0a0a0; font-size:12px; margin-bottom:10px;">All Church instructions use RISC-V custom-0 opcode (0x0B). Hover over each field for details.</p>
+                    <p style="color:#a0a0a0; font-size:12px; margin-bottom:16px;">Church instructions use 4 dedicated opcodes. LOAD, CALL, and SAVE use a J-type format with 15-bit immediate index and 3-bit CR fields. RETURN, CHANGE, and SWITCH share the custom-0 opcode with R-type format. Hover over each field for details.</p>
+
+                    <h3>Dedicated-Opcode Instructions (J-type Church format)</h3>
                     <div class="format-diagrams">
                         <div class="format-row">
-                            <span class="format-label">LOAD:</span>
+                            <span class="format-label">LOAD (0x2B):</span>
                             <div class="bit-fields">
-                                <span class="bit-field field-funct7" data-bits="31:25" data-tooltip="funct7 (Reserved)|Bits [31:25] — 7 bits|Reserved for future use. Currently ignored by the simulator. Could encode additional modifiers in future extensions.">0000000</span>
-                                <span class="bit-field field-reserved" data-bits="24:20" data-tooltip="rs2 (Unused)|Bits [24:20] — 5 bits|Not used by CAP.LOAD. The source C-List is always CR6 (implied). This field is ignored.">-----</span>
-                                <span class="bit-field field-rs1" data-bits="19:15" data-tooltip="rs1 (Index Register)|Bits [19:15] — 5 bits|Data register (x0-x31) containing the namespace index. The value in x[rs1] is used to look up the capability entry in the namespace table.">rs1</span>
-                                <span class="bit-field field-funct3" data-bits="14:12" data-tooltip="funct3 = 000 (LOAD)|Bits [14:12] — 3 bits|Church instruction selector. 000 = CAP.LOAD. Selects the Load Capability operation from the 6 Church instructions.">000</span>
-                                <span class="bit-field field-church-cr" data-bits="11:7" data-tooltip="cr_dst (Destination CR)|Bits [9:7] — 3 bits (within rd[4:0])|Destination capability register CR0-CR7. Only 3 bits are used (bits [9:7]) — this limits addressing to CR0-CR7, preventing direct access to system registers CR8-CR15.">cr_dst</span>
-                                <span class="bit-field field-opcode" data-bits="6:0" data-tooltip="opcode = 0x0B (custom-0)|Bits [6:0] — 7 bits|RISC-V custom-0 opcode: 0001011. This is one of four opcode slots reserved by RISC-V for user-defined extensions. All 6 Church instructions share this opcode.">0001011</span>
+                                <span class="bit-field field-imm" data-bits="31:17" data-tooltip="index[14:0] (Namespace Index)|Bits [31:17] — 15 bits|Immediate namespace index (0-32767). Directly addresses the capability entry to load from the C-List identified by CRs. No register indirection needed.">index[14:0]</span>
+                                <span class="bit-field field-church-cr" data-bits="14:12" data-tooltip="CRs (Source C-List)|Bits [14:12] — 3 bits|Source capability register CR0-CR7 holding the C-List Golden Token. Must have L (Load) permission. Typically CR6 for the current C-List.">CRs</span>
+                                <span class="bit-field field-church-cr" data-bits="11:9" data-tooltip="CRd (Destination CR)|Bits [11:9] — 3 bits|Destination capability register CR0-CR7. The loaded capability (all 4 words) is written here. Only 3 bits — system registers CR8-CR15 are not addressable." style="flex:0.8">CRd</span>
+                                <span class="bit-field field-opcode" data-bits="8:0" data-tooltip="opcode = 0x2B (custom-1)|Bits [6:0] — 7 bits|RISC-V custom-1 opcode: 0101011. Dedicated opcode for CAP.LOAD, separate from other Church instructions." style="flex:2.2">0101011</span>
                             </div>
                         </div>
                         <div class="format-row">
-                            <span class="format-label">SAVE:</span>
+                            <span class="format-label">CALL (0x5B):</span>
                             <div class="bit-fields">
-                                <span class="bit-field field-funct7" data-bits="31:25" data-tooltip="funct7 (Reserved)|Bits [31:25] — 7 bits|Reserved for future use. Currently ignored.">0000000</span>
-                                <span class="bit-field field-church-cr" data-bits="24:20" data-tooltip="cr_src (Source CR)|Bits [22:20] — 3 bits (within rs2[4:0])|Source capability register CR0-CR7 containing the Golden Token to save. Only 3 bits used — system registers CR8-CR15 are not addressable.">cr_src</span>
-                                <span class="bit-field field-rs1" data-bits="19:15" data-tooltip="rs1 (Index Register)|Bits [19:15] — 5 bits|Data register (x0-x31) containing the namespace index. The capability from cr_src is written to namespace table at this index.">rs1</span>
-                                <span class="bit-field field-funct3" data-bits="14:12" data-tooltip="funct3 = 001 (SAVE)|Bits [14:12] — 3 bits|Church instruction selector. 001 = CAP.SAVE. Selects the Save Capability operation.">001</span>
-                                <span class="bit-field field-reserved" data-bits="11:7" data-tooltip="rd (Unused)|Bits [11:7] — 5 bits|Not used by CAP.SAVE. The destination is always the namespace table (addressed by rs1). This field is ignored.">-----</span>
-                                <span class="bit-field field-opcode" data-bits="6:0" data-tooltip="opcode = 0x0B (custom-0)|Bits [6:0] — 7 bits|RISC-V custom-0 opcode: 0001011.">0001011</span>
+                                <span class="bit-field field-reserved" data-bits="31:15" data-tooltip="(Reserved)|Bits [31:15] — 17 bits|Reserved for future use. Currently ignored by the simulator.">----- reserved -----</span>
+                                <span class="bit-field field-church-cr" data-bits="14:12" data-tooltip="CRs (Target CR)|Bits [14:12] — 3 bits|Capability register CR0-CR7 holding the Golden Token for the abstraction to call. Must have E (Enter) permission. The GT's namespace index identifies the callee's code and C-List.">CRs</span>
+                                <span class="bit-field field-reserved" data-bits="11:7" data-tooltip="(Reserved)|Bits [11:7] — 5 bits|Reserved. CALL saves return context (CR5, CR6, CR7, PC) onto the internal call stack, not to a register.">-----</span>
+                                <span class="bit-field field-opcode" data-bits="6:0" data-tooltip="opcode = 0x5B (custom-2)|Bits [6:0] — 7 bits|RISC-V custom-2 opcode: 1011011. Dedicated opcode for CAP.CALL.">1011011</span>
                             </div>
                         </div>
                         <div class="format-row">
-                            <span class="format-label">CALL:</span>
+                            <span class="format-label">SAVE (0x7B):</span>
                             <div class="bit-fields">
-                                <span class="bit-field field-funct7" data-bits="31:25" data-tooltip="funct7 (Reserved)|Bits [31:25] — 7 bits|Reserved. Could encode a register clearing mask in future extensions (as Sim-64 CTMM does).">0000000</span>
-                                <span class="bit-field field-church-cr" data-bits="24:20" data-tooltip="cr_src (Target CR)|Bits [22:20] — 3 bits (within rs2[4:0])|Capability register CR0-CR7 holding the Golden Token for the abstraction to call. Must have E (Enter) permission.">cr_src</span>
-                                <span class="bit-field field-rs1" data-bits="19:15" data-tooltip="rs1 (Unused)|Bits [19:15] — 5 bits|Not used by the current CAP.CALL implementation. Reserved for future use.">rs1</span>
-                                <span class="bit-field field-funct3" data-bits="14:12" data-tooltip="funct3 = 010 (CALL)|Bits [14:12] — 3 bits|Church instruction selector. 010 = CAP.CALL. Invokes a protected abstraction, pushing return context onto the call stack.">010</span>
-                                <span class="bit-field field-reserved" data-bits="11:7" data-tooltip="rd (Unused)|Bits [11:7] — 5 bits|Not used by CAP.CALL. Return state is saved on an internal stack, not written to a register.">-----</span>
-                                <span class="bit-field field-opcode" data-bits="6:0" data-tooltip="opcode = 0x0B (custom-0)|Bits [6:0] — 7 bits|RISC-V custom-0 opcode: 0001011.">0001011</span>
+                                <span class="bit-field field-imm" data-bits="31:17" data-tooltip="index[14:0] (Namespace Index)|Bits [31:17] — 15 bits|Immediate namespace index (0-32767). Destination slot in the namespace table where the capability from CRsrc is stored.">index[14:0]</span>
+                                <span class="bit-field field-church-cr" data-bits="14:12" data-tooltip="CRdst (Destination C-List)|Bits [14:12] — 3 bits|Capability register CR0-CR7 holding the C-List Golden Token. Must have S (Save) permission. Identifies which namespace the capability is saved into.">CRdst</span>
+                                <span class="bit-field field-church-cr" data-bits="11:9" data-tooltip="CRsrc (Source CR)|Bits [11:9] — 3 bits|Source capability register CR0-CR7 containing the Golden Token to save. All 4 words of the CR are written to the namespace entry." style="flex:0.8">CRsrc</span>
+                                <span class="bit-field field-opcode" data-bits="8:0" data-tooltip="opcode = 0x7B (custom-3)|Bits [6:0] — 7 bits|RISC-V custom-3 opcode: 1111011. Dedicated opcode for CAP.SAVE." style="flex:2.2">1111011</span>
                             </div>
                         </div>
+                    </div>
+
+                    <h3>Custom-0 Instructions (R-type format, opcode 0x0B)</h3>
+                    <div class="format-diagrams">
                         <div class="format-row">
                             <span class="format-label">RETURN:</span>
                             <div class="bit-fields">
-                                <span class="bit-field field-funct7" data-bits="31:25" data-tooltip="funct7 (Unused)|Bits [31:25] — 7 bits|Not used. RETURN takes no operands — it pops the most recent saved context from the call stack.">0000000</span>
+                                <span class="bit-field field-funct7" data-bits="31:25" data-tooltip="funct7 (Unused)|Bits [31:25] — 7 bits|Not used. RETURN takes no operands — it pops CR5, CR6, CR7, and PC from the call stack.">0000000</span>
                                 <span class="bit-field field-reserved" data-bits="24:20" data-tooltip="rs2 (Unused)|Bits [24:20] — 5 bits|Not used. RETURN has no source register.">-----</span>
-                                <span class="bit-field field-reserved" data-bits="19:15" data-tooltip="rs1 (Unused)|Bits [19:15] — 5 bits|Not used. RETURN has no source register.">-----</span>
-                                <span class="bit-field field-funct3" data-bits="14:12" data-tooltip="funct3 = 011 (RETURN)|Bits [14:12] — 3 bits|Church instruction selector. 011 = CAP.RETURN. Restores CR6, CR7, and PC from the call stack. FAULTs on stack underflow.">011</span>
-                                <span class="bit-field field-reserved" data-bits="11:7" data-tooltip="rd (Unused)|Bits [11:7] — 5 bits|Not used. Context is restored from the stack, not written to a specific register.">-----</span>
-                                <span class="bit-field field-opcode" data-bits="6:0" data-tooltip="opcode = 0x0B (custom-0)|Bits [6:0] — 7 bits|RISC-V custom-0 opcode: 0001011.">0001011</span>
+                                <span class="bit-field field-reserved" data-bits="19:15" data-tooltip="rs1 (Unused)|Bits [19:15] — 5 bits|Not used.">-----</span>
+                                <span class="bit-field field-funct3" data-bits="14:12" data-tooltip="funct3 = 000 (RETURN)|Bits [14:12] — 3 bits|Church instruction selector within custom-0. 000 = CAP.RETURN. Restores CR5, CR6, CR7, and PC from the call stack. Sets M-bit on restored CR6. FAULTs on stack underflow.">000</span>
+                                <span class="bit-field field-reserved" data-bits="11:7" data-tooltip="rd (Unused)|Bits [11:7] — 5 bits|Not used. Context is restored from the stack.">-----</span>
+                                <span class="bit-field field-opcode" data-bits="6:0" data-tooltip="opcode = 0x0B (custom-0)|Bits [6:0] — 7 bits|RISC-V custom-0 opcode: 0001011. Shared by RETURN, CHANGE, and SWITCH.">0001011</span>
                             </div>
                         </div>
                         <div class="format-row">
                             <span class="format-label">CHANGE:</span>
                             <div class="bit-fields">
-                                <span class="bit-field field-funct7" data-bits="31:25" data-tooltip="funct7 (Reserved)|Bits [31:25] — 7 bits|Reserved for future use. Could encode I-bit variant for C-List lookup mode (as Sim-64 CTMM does).">0000000</span>
-                                <span class="bit-field field-church-cr" data-bits="24:20" data-tooltip="cr_src (Source CR)|Bits [22:20] — 3 bits (within rs2[4:0])|Source capability register CR0-CR7 containing the capability to copy into CR8 (Thread). Must have M (Machine) permission.">cr_src</span>
-                                <span class="bit-field field-rs1" data-bits="19:15" data-tooltip="rs1 (Unused)|Bits [19:15] — 5 bits|Not used by the current implementation. Reserved for future use.">rs1</span>
-                                <span class="bit-field field-funct3" data-bits="14:12" data-tooltip="funct3 = 100 (CHANGE)|Bits [14:12] — 3 bits|Church instruction selector. 100 = CAP.CHANGE. Copies a capability to CR8 (Thread identity register) for context switching.">100</span>
-                                <span class="bit-field field-reserved" data-bits="11:7" data-tooltip="rd (Unused)|Bits [11:7] — 5 bits|Not used. The destination is always CR8 (Thread) — hardwired, not selectable.">-----</span>
+                                <span class="bit-field field-funct7" data-bits="31:25" data-tooltip="funct7 (Reserved)|Bits [31:25] — 7 bits|Reserved for future use.">0000000</span>
+                                <span class="bit-field field-church-cr" data-bits="24:20" data-tooltip="cr_src (Source CR)|Bits [22:20] — 3 bits (within rs2[4:0])|Capability register CR0-CR7 holding the target thread's GT. Must have E (Enter) permission. CHANGE performs a full atomic swap of x0-x31 and CR0-CR8 between the current and target thread.">cr_src</span>
+                                <span class="bit-field field-reserved" data-bits="19:15" data-tooltip="rs1 (Unused)|Bits [19:15] — 5 bits|Not used.">-----</span>
+                                <span class="bit-field field-funct3" data-bits="14:12" data-tooltip="funct3 = 001 (CHANGE)|Bits [14:12] — 3 bits|Church instruction selector. 001 = CAP.CHANGE. Atomically swaps the entire thread context (x0-x31, CR0-CR8, PC) with the target thread identified by cr_src's GT index.">001</span>
+                                <span class="bit-field field-reserved" data-bits="11:7" data-tooltip="rd (Unused)|Bits [11:7] — 5 bits|Not used. CHANGE writes to all registers atomically from the thread table.">-----</span>
                                 <span class="bit-field field-opcode" data-bits="6:0" data-tooltip="opcode = 0x0B (custom-0)|Bits [6:0] — 7 bits|RISC-V custom-0 opcode: 0001011.">0001011</span>
                             </div>
                         </div>
                         <div class="format-row">
                             <span class="format-label">SWITCH:</span>
                             <div class="bit-fields">
-                                <span class="bit-field field-funct7" data-bits="31:25" data-tooltip="funct7 (Reserved)|Bits [31:25] — 7 bits|Reserved for future use. Currently ignored.">0000000</span>
-                                <span class="bit-field field-church-tgt" data-bits="24:22" data-tooltip="tgt (Switch Target)|Bits [24:22] — 3 bits (top 3 bits of rs2 field)|Target system register selector. Decoded as (instruction >>> 22) & 0x7. Maps to CR8+tgt: 0=CR8 (Thread), 1=CR9 (Interrupt), 2=CR10 (DFault), 3-6=CR11-14 (future), 7=CR15 (Namespace). This is the ONLY instruction that can write to system registers." style="flex:0.8">tgt</span>
-                                <span class="bit-field field-church-cr" data-bits="22:20" data-tooltip="cr_src (Source CR)|Bits [22:20] — 3 bits (low 3 bits of rs2 field)|Source capability register CR0-CR7. Must have M (Machine) permission. Note: bit 22 is shared with the tgt field — in practice this works because cr_src values 0-7 and tgt values 0-7 are independently decoded from overlapping bit positions." style="flex:0.8">cr_src</span>
-                                <span class="bit-field field-rs1" data-bits="19:15" data-tooltip="rs1 (Unused)|Bits [19:15] — 5 bits|Not used by the current implementation. Reserved for future use.">rs1</span>
-                                <span class="bit-field field-funct3" data-bits="14:12" data-tooltip="funct3 = 101 (SWITCH)|Bits [14:12] — 3 bits|Church instruction selector. 101 = CAP.SWITCH. The only instruction that can modify system registers CR8-CR15, making it the privilege gate.">101</span>
-                                <span class="bit-field field-reserved" data-bits="11:7" data-tooltip="rd (Unused)|Bits [11:7] — 5 bits|Not used. The destination is determined by the tgt field (bits [24:22]), not rd.">-----</span>
+                                <span class="bit-field field-church-tgt" data-bits="24:22" data-tooltip="tgt (Switch Target)|Bits [24:22] — 3 bits (top 3 bits of funct7/rs2)|Target system register selector. Maps to CR8+tgt: 0=CR8 (Thread), 1=CR9 (Interrupt), 2=CR10 (DFault), 3-6=CR11-14 (future), 7=CR15 (Namespace). This is the ONLY instruction that can write to system registers.">tgt</span>
+                                <span class="bit-field field-church-cr" data-bits="22:20" data-tooltip="cr_src (Source CR)|Bits [22:20] — 3 bits (within rs2[4:0])|Source capability register CR0-CR7. Must have M (Machine) permission.">cr_src</span>
+                                <span class="bit-field field-reserved" data-bits="19:15" data-tooltip="rs1 (Unused)|Bits [19:15] — 5 bits|Not used.">-----</span>
+                                <span class="bit-field field-funct3" data-bits="14:12" data-tooltip="funct3 = 010 (SWITCH)|Bits [14:12] — 3 bits|Church instruction selector. 010 = CAP.SWITCH. The only instruction that can modify system registers CR8-CR15, making it the privilege gate.">010</span>
+                                <span class="bit-field field-reserved" data-bits="11:7" data-tooltip="rd (Unused)|Bits [11:7] — 5 bits|Not used. Destination is determined by tgt field.">-----</span>
                                 <span class="bit-field field-opcode" data-bits="6:0" data-tooltip="opcode = 0x0B (custom-0)|Bits [6:0] — 7 bits|RISC-V custom-0 opcode: 0001011.">0001011</span>
                             </div>
                         </div>
                     </div>
 
-                    <h3>funct3 Encoding Map</h3>
+                    <h3>Church Opcode Map</h3>
+                    <table class="instr-table">
+                        <thead>
+                            <tr>
+                                <th>Opcode</th>
+                                <th>Format</th>
+                                <th>Mnemonic</th>
+                                <th>Description</th>
+                                <th>Required Permission</th>
+                                <th>Syntax</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>0x2B</td><td>J-type</td><td>CAP.LOAD</td><td>Load capability from namespace into CR</td><td>L (Load) on CRs</td><td>CAP.LOAD CRd, CRs, index</td></tr>
+                            <tr><td>0x5B</td><td>J-type</td><td>CAP.CALL</td><td>Protected call through capability</td><td>E (Enter) on CRs</td><td>CAP.CALL CRs</td></tr>
+                            <tr><td>0x7B</td><td>J-type</td><td>CAP.SAVE</td><td>Save capability from CR to namespace</td><td>S (Save) on CRdst</td><td>CAP.SAVE CRsrc, CRdst, index</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Custom-0 funct3 Encoding (opcode 0x0B)</h3>
                     <table class="instr-table">
                         <thead>
                             <tr>
@@ -453,18 +470,52 @@
                                 <th>Mnemonic</th>
                                 <th>Description</th>
                                 <th>Required Permission</th>
-                                <th>Operands</th>
+                                <th>Syntax</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td>000</td><td>CAP.LOAD</td><td>Load capability from namespace into CR</td><td>L (Load) on CR6</td><td>cr_dst, rs1 (index)</td></tr>
-                            <tr><td>001</td><td>CAP.SAVE</td><td>Save capability from CR to namespace</td><td>S (Save) on CR6</td><td>cr_src, rs1 (index)</td></tr>
-                            <tr><td>010</td><td>CAP.CALL</td><td>Protected call through capability</td><td>E (Enter) on cr_src</td><td>cr_src</td></tr>
-                            <tr><td>011</td><td>CAP.RETURN</td><td>Return from protected call</td><td>(none)</td><td>(none)</td></tr>
-                            <tr><td>100</td><td>CAP.CHANGE</td><td>Copy capability to CR8 (Thread)</td><td>M (Machine) on cr_src</td><td>cr_src</td></tr>
-                            <tr><td>101</td><td>CAP.SWITCH</td><td>Copy capability to system register CR8-CR15</td><td>M (Machine) on cr_src</td><td>cr_src, tgt[24:22]</td></tr>
-                            <tr style="color:#666"><td>110</td><td>(reserved)</td><td>Available for future Church instruction</td><td>-</td><td>-</td></tr>
-                            <tr style="color:#666"><td>111</td><td>(reserved)</td><td>Available for future Church instruction</td><td>-</td><td>-</td></tr>
+                            <tr><td>000</td><td>CAP.RETURN</td><td>Return from protected call (pops CR5+CR6+CR7+PC)</td><td>(none)</td><td>CAP.RETURN</td></tr>
+                            <tr><td>001</td><td>CAP.CHANGE</td><td>Atomic thread swap (x0-x31, CR0-CR8, PC)</td><td>E (Enter) on cr_src</td><td>CAP.CHANGE CRs</td></tr>
+                            <tr><td>010</td><td>CAP.SWITCH</td><td>Copy capability to system register CR8-CR15</td><td>M (Machine) on cr_src</td><td>CAP.SWITCH CRs, CR8-CR15</td></tr>
+                            <tr style="color:#666"><td>011-111</td><td>(reserved)</td><td>Available for future Church instructions</td><td>-</td><td>-</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Call Frame Model</h3>
+                    <table class="instr-table">
+                        <thead>
+                            <tr>
+                                <th>Register</th>
+                                <th>Role</th>
+                                <th>On CALL</th>
+                                <th>On RETURN</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>CR5</td><td>Save Area</td><td>Pushed to call stack, then cleared</td><td>Restored from call stack</td></tr>
+                            <tr><td>CR6</td><td>C-List</td><td>Pushed; set to callee's C-List (M-bit set)</td><td>Restored; M-bit set on restored value</td></tr>
+                            <tr><td>CR7</td><td>Nucleus</td><td>Pushed; set to callee's code (M-bit set)</td><td>Restored from call stack</td></tr>
+                            <tr><td>PC</td><td>Program Counter</td><td>Pushed; set to callee's entry point</td><td>Restored to caller PC + 4</td></tr>
+                            <tr><td>x0-x31</td><td>Data Registers</td><td>Software clears before CALL</td><td>Software clears before RETURN</td></tr>
+                            <tr><td>CR0-CR4</td><td>User CRs</td><td>Software clears (caller responsibility)</td><td>Software clears (callee responsibility)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Permission Domain Separation</h3>
+                    <table class="instr-table">
+                        <thead>
+                            <tr>
+                                <th>Domain</th>
+                                <th>Bits</th>
+                                <th>Purpose</th>
+                                <th>Mutual Exclusion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Church</td><td>L, S</td><td>Load/Save Golden Tokens</td><td>Cannot appear with R, W, X on same GT</td></tr>
+                            <tr><td>Turing</td><td>R, W, X</td><td>Read/Write data, Execute code</td><td>Cannot appear with L, S on same GT</td></tr>
+                            <tr><td>Lambda</td><td>E</td><td>Enter abstraction (CALL target)</td><td>Independent</td></tr>
+                            <tr><td>Meta</td><td>B, M, F, G</td><td>System operations</td><td>Independent</td></tr>
                         </tbody>
                     </table>
                 </div>

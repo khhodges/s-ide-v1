@@ -85,7 +85,7 @@ This project contains two independent capability-based security simulators. They
 | **Base ISA** | Custom CTMM (ARM-style encoding) | RISC-V RV32I (standard RISC-V encoding) |
 | **Instruction Width** | 32-bit (5-bit opcode) | 32-bit (7-bit opcode, RISC-V format) |
 | **Church Instructions** | LOAD, SAVE, LOADX, SAVEX, LDM, STM, CALL, RETURN, CHANGE, SWITCH, TPERM (11) | CAP.LOAD, CAP.SAVE, CAP.CALL, CAP.RETURN, CAP.CHANGE, CAP.SWITCH (6) |
-| **Church Opcode Space** | Dedicated 5-bit opcodes | RISC-V custom-0 opcode (0x0B) with funct3 |
+| **Church Opcode Space** | Dedicated 5-bit opcodes | 4 RISC-V custom opcodes: 0x2B (LOAD), 0x5B (CALL), 0x7B (SAVE), 0x0B (RETURN/CHANGE/SWITCH) |
 | **Condition Codes** | ARM-style (N, Z, C, V) on all instructions | None (RISC-V uses explicit branch instructions) |
 | **Namespace Entries** | 3 words (Location, Limit, Seals) | 3 × 32-bit words (Location, Limit, VersionSeals) |
 | **Max Namespace Entries** | Offset-dependent | 32,768 (15-bit index) |
@@ -138,7 +138,17 @@ The `riscv_cap/` directory contains the standalone web-based Sim-32 simulator.
 -   **RV32I Base**: Full integer instruction set (R, I, S, B, U, J types) with x0-x31 data registers
 -   **16 Capability Registers**: CR0-CR15, each 128-bit (4 × 32-bit words). CR6=C-List, CR7=Nucleus, CR8=Thread, CR15=Namespace
 -   **32-bit Golden Token Format**: [31:27] Version (5 bits), [26:12] Index (15 bits), [11:2] Permissions (G,F,M,B,S,E,L,X,W,R), [1:0] Type (Inform/Outform/Literal/Abstract)
--   **6 Church Instructions**: CAP.LOAD, CAP.SAVE, CAP.CALL, CAP.RETURN, CAP.CHANGE, CAP.SWITCH (using RISC-V custom-0 opcode 0x0B)
+-   **6 Church Instructions across 4 opcodes**:
+    -   **0x2B (LOAD)**: J-type, `CAP.LOAD CRd, CRs, index` — loads capability from namespace into CR. CRs must have L permission.
+    -   **0x5B (CALL)**: J-type, `CAP.CALL CRs` — protected call. Pushes CR5+CR6+CR7+PC to call stack. Sets callee CR6 with M-bit, CR7 from abstraction. Clears CR5.
+    -   **0x7B (SAVE)**: J-type, `CAP.SAVE CRsrc, CRdst, index` — saves capability to namespace. CRdst must have S permission.
+    -   **0x0B (custom-0)**: R-type, funct3 selects: 000=RETURN, 001=CHANGE, 010=SWITCH
+-   **CR5 Save Area**: Programmer-controlled register for call frame data. Hardware pushes/restores CR5 on CALL/RETURN.
+-   **Call Stack**: Internal stack stores {CR5, CR6, CR7, PC} frames. RETURN restores and sets M-bit on CR6.
+-   **CHANGE**: Full atomic thread swap — saves current x0-x31, CR0-CR8, PC to thread table, loads target thread context. CR9-CR15 unchanged. Requires E (Enter) permission.
+-   **Thread Table**: Stores complete thread contexts indexed by GT namespace index. Created on first CHANGE.
+-   **Register Clearing**: Software responsibility — caller clears before CALL, callee clears before RETURN. Not hardware-enforced.
+-   **Permission Domain Separation**: Church (L,S) and Turing (R,W,X) bits are mutually exclusive on the same GT. CR5 with L,S can hold a GT with R,W inside (layered save area).
 -   **Namespace Table**: Up to 32,768 entries, each 3 × 32-bit words (Location, Limit, VersionSeals). Slot address = Index × 3
 
 ### File Structure

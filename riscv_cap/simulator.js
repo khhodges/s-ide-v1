@@ -18,7 +18,8 @@ class RiscVCapSimulator {
         this.stepCount = 0;
         this.output = '';
         this.breakpoints = new Set();
-        this.history = [];
+        this.callStack = [];
+        this.threadTable = {};
         this.bootComplete = false;
 
         this._initNamespaceTable();
@@ -409,9 +410,21 @@ class RiscVCapSimulator {
                 break;
             }
 
-            // Church Capability Instructions (custom-0)
-            case 0x0B: {
-                this._executeChurch(d);
+            // Church Capability Instructions
+            case 0x0B: { // custom-0: RETURN, CHANGE, SWITCH
+                this._executeChurchCustom0(d);
+                break;
+            }
+            case 0x2B: { // custom-1: LOAD
+                this._executeChurchLoad(d);
+                break;
+            }
+            case 0x5B: { // custom-2: CALL
+                this._executeChurchCall(d);
+                break;
+            }
+            case 0x7B: { // custom-3: SAVE
+                this._executeChurchSave(d);
                 break;
             }
 
@@ -423,116 +436,174 @@ class RiscVCapSimulator {
         this.x[0] = 0;
     }
 
-    _executeChurch(d) {
-        const { funct3, rs1, rs2, rd, funct7 } = d;
-        const crDst = rd & 0x7;
+    _executeChurchLoad(d) {
+        const crDst = (d.raw >>> 9) & 0x7;
+        const crSrc = (d.raw >>> 12) & 0x7;
+        const index = (d.raw >>> 17) & 0x7FFF;
+
+        const clistGT = this.cr[crSrc].word0;
+        if (!this.checkPermission(clistGT, 'L')) {
+            this.fault('PERMISSION', `LOAD: CR${crSrc} lacks L permission`);
+            return;
+        }
+        if (index >= this.namespaceTable.length) {
+            this.fault('BOUNDS', `LOAD: index ${index} out of bounds`);
+            return;
+        }
+        const entry = this.namespaceTable[index];
+        if (entry) {
+            const srcPerms = this.parseGT(clistGT).permissions;
+            this.cr[crDst].word0 = this.createGT(
+                (entry.versionSeals >>> 27) & 0x1F,
+                index,
+                { R: srcPerms.R, W: srcPerms.W, X: srcPerms.X,
+                  L: srcPerms.L, S: srcPerms.S, E: srcPerms.E,
+                  B: srcPerms.B, M: 0, F: srcPerms.F, G: srcPerms.G },
+                0
+            );
+            this.cr[crDst].word1 = entry.location >>> 0;
+            this.cr[crDst].word2 = entry.limit >>> 0;
+            this.cr[crDst].word3 = entry.versionSeals >>> 0;
+        }
+        this.pc = (this.pc + 4) >>> 0;
+        this.x[0] = 0;
+    }
+
+    _executeChurchSave(d) {
+        const crSrcCap = (d.raw >>> 9) & 0x7;
+        const crDstList = (d.raw >>> 12) & 0x7;
+        const index = (d.raw >>> 17) & 0x7FFF;
+
+        const clistGT = this.cr[crDstList].word0;
+        if (!this.checkPermission(clistGT, 'S')) {
+            this.fault('PERMISSION', `SAVE: CR${crDstList} lacks S permission`);
+            return;
+        }
+        if (index >= 32768) {
+            this.fault('BOUNDS', `SAVE: index ${index} out of bounds`);
+            return;
+        }
+        while (this.namespaceTable.length <= index) {
+            this.namespaceTable.push({ location: 0, limit: 0, versionSeals: 0 });
+        }
+        const srcCR = this.cr[crSrcCap];
+        this.namespaceTable[index] = {
+            location: srcCR.word1 >>> 0,
+            limit: srcCR.word2 >>> 0,
+            versionSeals: srcCR.word3 >>> 0,
+        };
+        this.pc = (this.pc + 4) >>> 0;
+        this.x[0] = 0;
+    }
+
+    _executeChurchCall(d) {
+        const crSrc = (d.raw >>> 12) & 0x7;
+
+        const targetGT = this.cr[crSrc].word0;
+        if (!this.checkPermission(targetGT, 'E')) {
+            this.fault('PERMISSION', `CALL: CR${crSrc} lacks E (Enter) permission`);
+            return;
+        }
+        if (!this.validateGT(targetGT)) {
+            this.fault('VALIDATION', `CALL: GT version mismatch on CR${crSrc}`);
+            return;
+        }
+        this.callStack.push({
+            pc: this.pc,
+            cr5: { ...this.cr[5] },
+            cr6: { ...this.cr[6] },
+            cr7: { ...this.cr[7] },
+        });
+        const parsed = this.parseGT(targetGT);
+        if (parsed.index < this.namespaceTable.length) {
+            const entry = this.namespaceTable[parsed.index];
+            const calleePerms = this.parseGT(targetGT).permissions;
+            this.cr[6].word0 = this.createGT(
+                parsed.version, parsed.index,
+                { R:0, W:0, X:0, L: calleePerms.L, S: calleePerms.S,
+                  E:0, B:0, M:1, F:0, G:0 },
+                3
+            );
+            this.cr[6].word1 = entry.location >>> 0;
+            this.cr[6].word2 = entry.limit >>> 0;
+            this.cr[6].word3 = entry.versionSeals >>> 0;
+            this.cr[7].word0 = this.createGT(
+                parsed.version, parsed.index,
+                { R: calleePerms.R, W: calleePerms.W, X: calleePerms.X,
+                  L:0, S:0, E: calleePerms.E, B:0, M:1, F:0, G:0 },
+                3
+            );
+            this.cr[7].word1 = entry.location >>> 0;
+            this.cr[7].word2 = entry.limit >>> 0;
+            this.cr[7].word3 = entry.versionSeals >>> 0;
+            this.pc = entry.location >>> 0;
+        } else {
+            this.fault('BOUNDS', `CALL: namespace index ${parsed.index} out of bounds`);
+            return;
+        }
+        this.cr[5] = { word0: 0, word1: 0, word2: 0, word3: 0 };
+        this.x[0] = 0;
+    }
+
+    _executeChurchCustom0(d) {
+        const { funct3, rs2 } = d;
         const crSrc = rs2 & 0x7;
         const switchTarget = (d.raw >>> 22) & 0x7;
 
         switch (funct3) {
-            case 0x0: { // LOAD
-                const clistGT = this.cr[6].word0;
-                if (!this.checkPermission(clistGT, 'L')) {
-                    this.fault('PERMISSION', `LOAD: CR6 (C-List) lacks L permission`);
-                    return;
-                }
-                const idx = this.x[rs1] >>> 0;
-                const slotAddr = idx * 3;
-                if (idx >= this.namespaceTable.length) {
-                    this.fault('BOUNDS', `LOAD: C-List index ${idx} out of bounds`);
-                    return;
-                }
-                const entry = this.namespaceTable[idx];
-                if (entry) {
-                    this.cr[crDst].word0 = this.createGT(
-                        (entry.versionSeals >>> 27) & 0x1F,
-                        idx,
-                        { R:1, W:0, X:0, L:0, S:0, E:0, B:0, M:0, F:0, G:0 },
-                        0
-                    );
-                    this.cr[crDst].word1 = entry.location >>> 0;
-                    this.cr[crDst].word2 = entry.limit >>> 0;
-                    this.cr[crDst].word3 = entry.versionSeals >>> 0;
-                }
-                this.pc = (this.pc + 4) >>> 0;
-                break;
-            }
-
-            case 0x1: { // SAVE
-                const clistGT = this.cr[6].word0;
-                if (!this.checkPermission(clistGT, 'S')) {
-                    this.fault('PERMISSION', `SAVE: CR6 (C-List) lacks S permission`);
-                    return;
-                }
-                const idx = this.x[rs1] >>> 0;
-                if (idx >= 32768) {
-                    this.fault('BOUNDS', `SAVE: C-List index ${idx} out of bounds`);
-                    return;
-                }
-                while (this.namespaceTable.length <= idx) {
-                    this.namespaceTable.push({ location: 0, limit: 0, versionSeals: 0 });
-                }
-                const srcCR = this.cr[crSrc];
-                const parsed = this.parseGT(srcCR.word0);
-                this.namespaceTable[idx] = {
-                    location: srcCR.word1 >>> 0,
-                    limit: srcCR.word2 >>> 0,
-                    versionSeals: srcCR.word3 >>> 0,
-                };
-                this.pc = (this.pc + 4) >>> 0;
-                break;
-            }
-
-            case 0x2: { // CALL
-                const targetGT = this.cr[crSrc].word0;
-                if (!this.checkPermission(targetGT, 'E')) {
-                    this.fault('PERMISSION', `CALL: CR${crSrc} lacks E (Enter) permission`);
-                    return;
-                }
-                if (!this.validateGT(targetGT)) {
-                    this.fault('VALIDATION', `CALL: GT version mismatch on CR${crSrc}`);
-                    return;
-                }
-                this.history.push({
-                    pc: this.pc,
-                    cr6: { ...this.cr[6] },
-                    cr7: { ...this.cr[7] },
-                    x: [...this.x],
-                });
-                const parsed = this.parseGT(targetGT);
-                if (parsed.index < this.namespaceTable.length) {
-                    const entry = this.namespaceTable[parsed.index];
-                    this.pc = entry.location >>> 0;
-                } else {
-                    this.pc = (this.pc + 4) >>> 0;
-                }
-                break;
-            }
-
-            case 0x3: { // RETURN
-                if (this.history.length === 0) {
+            case 0x0: { // RETURN
+                if (this.callStack.length === 0) {
                     this.fault('RETURN', `RETURN: No saved context to restore`);
                     return;
                 }
-                const saved = this.history.pop();
+                const saved = this.callStack.pop();
+                this.cr[5] = { ...saved.cr5 };
                 this.cr[6] = { ...saved.cr6 };
                 this.cr[7] = { ...saved.cr7 };
+                const cr6GT = this.parseGT(this.cr[6].word0);
+                const cr6Perms = cr6GT.permissions;
+                cr6Perms.M = 1;
+                this.cr[6].word0 = this.createGT(cr6GT.version, cr6GT.index, cr6Perms, cr6GT.type);
                 this.pc = (saved.pc + 4) >>> 0;
                 break;
             }
 
-            case 0x4: { // CHANGE
+            case 0x1: { // CHANGE
                 const threadGT = this.cr[crSrc].word0;
-                if (!this.checkPermission(threadGT, 'M')) {
-                    this.fault('PERMISSION', `CHANGE: CR${crSrc} lacks M permission`);
+                if (!this.checkPermission(threadGT, 'E')) {
+                    this.fault('PERMISSION', `CHANGE: CR${crSrc} lacks E (Enter) permission`);
                     return;
                 }
-                this.cr[8] = { ...this.cr[crSrc] };
-                this.pc = (this.pc + 4) >>> 0;
+                const parsed = this.parseGT(threadGT);
+                const threadId = parsed.index;
+                const currentThreadId = this.parseGT(this.cr[8].word0).index;
+                this.threadTable[currentThreadId] = {
+                    x: [...this.x],
+                    cr: this.cr.slice(0, 9).map(c => ({ ...c })),
+                    pc: (this.pc + 4) >>> 0,
+                };
+                const target = this.threadTable[threadId];
+                if (target) {
+                    for (let i = 0; i < 32; i++) this.x[i] = target.x[i];
+                    for (let i = 0; i <= 8; i++) this.cr[i] = { ...target.cr[i] };
+                    this.pc = target.pc;
+                } else {
+                    for (let i = 0; i < 32; i++) this.x[i] = 0;
+                    for (let i = 0; i <= 8; i++) {
+                        this.cr[i] = { word0: 0, word1: 0, word2: 0, word3: 0 };
+                    }
+                    this.cr[8] = { ...this.cr[crSrc] };
+                    if (parsed.index < this.namespaceTable.length) {
+                        const entry = this.namespaceTable[parsed.index];
+                        this.pc = entry.location >>> 0;
+                    } else {
+                        this.pc = 0;
+                    }
+                }
                 break;
             }
 
-            case 0x5: { // SWITCH
+            case 0x2: { // SWITCH
                 const srcGT = this.cr[crSrc].word0;
                 if (!this.checkPermission(srcGT, 'M')) {
                     this.fault('PERMISSION', `SWITCH: CR${crSrc} lacks M permission`);
@@ -549,7 +620,7 @@ class RiscVCapSimulator {
             }
 
             default:
-                this.fault('ILLEGAL', `Unknown Church funct3=${funct3}`);
+                this.fault('ILLEGAL', `Unknown Church custom-0 funct3=${funct3}`);
                 return;
         }
 
@@ -614,22 +685,32 @@ class RiscVCapSimulator {
                 if (imm === 1) return 'EBREAK';
                 return `SYSTEM 0x${imm.toString(16)}`;
             case 0x0B: {
-                const churchOps = ['LOAD', 'SAVE', 'CALL', 'RETURN', 'CHANGE', 'SWITCH'];
-                const name = churchOps[funct3] || '???';
-                const crDst = rd & 0x7;
                 const crSrc = rs2 & 0x7;
                 switch (funct3) {
-                    case 0: return `CAP.LOAD CR${crDst}, ${x(rs1)}`;
-                    case 1: return `CAP.SAVE CR${crSrc}, ${x(rs1)}`;
-                    case 2: return `CAP.CALL CR${crSrc}`;
-                    case 3: return `CAP.RETURN`;
-                    case 4: return `CAP.CHANGE CR${crSrc}`;
-                    case 5: {
+                    case 0: return `CAP.RETURN`;
+                    case 1: return `CAP.CHANGE CR${crSrc}`;
+                    case 2: {
                         const st = (d.raw >>> 22) & 0x7;
                         return `CAP.SWITCH CR${crSrc}, CR${8 + st}`;
                     }
                     default: return `C.??? funct3=${funct3}`;
                 }
+            }
+            case 0x2B: {
+                const crDst = (d.raw >>> 9) & 0x7;
+                const crS = (d.raw >>> 12) & 0x7;
+                const idx = (d.raw >>> 17) & 0x7FFF;
+                return `CAP.LOAD CR${crDst}, CR${crS}, ${idx}`;
+            }
+            case 0x5B: {
+                const crS = (d.raw >>> 12) & 0x7;
+                return `CAP.CALL CR${crS}`;
+            }
+            case 0x7B: {
+                const crSrcCap = (d.raw >>> 9) & 0x7;
+                const crDstList = (d.raw >>> 12) & 0x7;
+                const idx = (d.raw >>> 17) & 0x7FFF;
+                return `CAP.SAVE CR${crSrcCap}, CR${crDstList}, ${idx}`;
             }
             default:
                 return `??? (0x${instr.toString(16).padStart(8, '0')})`;

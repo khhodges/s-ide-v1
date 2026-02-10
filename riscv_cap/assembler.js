@@ -558,54 +558,68 @@ class RiscVAssembler {
         return this.encodeBType(imm, rs2, rs1, funct3, 0x63);
     }
 
+    encodeChurchJType(index, crField1, crField2, opcode) {
+        return (((index & 0x7FFF) << 17) |
+                ((crField1 & 0x7) << 12) |
+                ((crField2 & 0x7) << 9) |
+                (opcode & 0x7F)) >>> 0;
+    }
+
     _capLoad(args, lineNum) {
-        if (args.length !== 2) throw new Error(`CAP.LOAD requires 2 operands`);
-        const cr = this._parseCR(args[0]);
-        const rs1 = this._parseReg(args[1]);
-        if (cr < 0) throw new Error(`Invalid capability register: ${args[0]}`);
-        if (rs1 < 0) throw new Error(`Invalid register: ${args[1]}`);
-        return this.encodeRType(0, 0, rs1, 0x0, cr, 0x0B);
+        if (args.length !== 3) throw new Error(`CAP.LOAD requires 3 operands: CRd, CRs, index`);
+        const crDst = this._parseCR(args[0]);
+        const crSrc = this._parseCR(args[1]);
+        const index = this._parseImm(args[2], null, 0);
+        if (crDst < 0) throw new Error(`Invalid destination capability register: ${args[0]}`);
+        if (crSrc < 0) throw new Error(`Invalid source capability register: ${args[1]}`);
+        if (isNaN(index) || index < 0 || index > 32767) throw new Error(`Invalid index: ${args[2]} (must be 0-32767)`);
+        return this.encodeChurchJType(index, crSrc, crDst, 0x2B);
     }
 
     _capSave(args, lineNum) {
-        if (args.length !== 2) throw new Error(`CAP.SAVE requires 2 operands`);
-        const cr = this._parseCR(args[0]);
-        const rs1 = this._parseReg(args[1]);
-        if (cr < 0) throw new Error(`Invalid capability register: ${args[0]}`);
-        if (rs1 < 0) throw new Error(`Invalid register: ${args[1]}`);
-        return this.encodeRType(0, cr, rs1, 0x1, 0, 0x0B);
+        if (args.length !== 3) throw new Error(`CAP.SAVE requires 3 operands: CRsrc, CRdst_list, index`);
+        const crSrcCap = this._parseCR(args[0]);
+        const crDstList = this._parseCR(args[1]);
+        const index = this._parseImm(args[2], null, 0);
+        if (crSrcCap < 0) throw new Error(`Invalid source capability register: ${args[0]}`);
+        if (crDstList < 0) throw new Error(`Invalid destination C-List register: ${args[1]}`);
+        if (isNaN(index) || index < 0 || index > 32767) throw new Error(`Invalid index: ${args[2]} (must be 0-32767)`);
+        return this.encodeChurchJType(index, crDstList, crSrcCap, 0x7B);
     }
 
     _capCall(args, lineNum) {
-        if (args.length < 1) throw new Error(`CAP.CALL requires at least 1 operand`);
+        if (args.length !== 1) throw new Error(`CAP.CALL requires 1 operand: CRs`);
         const cr = this._parseCR(args[0]);
         if (cr < 0) throw new Error(`Invalid capability register: ${args[0]}`);
-        const rs1 = args.length > 1 ? this._parseReg(args[1]) : 0;
-        return this.encodeRType(0, cr, rs1 >= 0 ? rs1 : 0, 0x2, 0, 0x0B);
+        return (((cr & 0x7) << 12) | 0x5B) >>> 0;
     }
 
     _capReturn(lineNum) {
-        return this.encodeRType(0, 0, 0, 0x3, 0, 0x0B);
+        return this.encodeRType(0, 0, 0, 0x0, 0, 0x0B);
     }
 
     _capChange(args, lineNum) {
         if (args.length !== 1) throw new Error(`CAP.CHANGE requires 1 operand`);
         const cr = this._parseCR(args[0]);
         if (cr < 0) throw new Error(`Invalid capability register: ${args[0]}`);
-        return this.encodeRType(0, cr, 0, 0x4, 0, 0x0B);
+        return this.encodeRType(0, cr, 0, 0x1, 0, 0x0B);
     }
 
     _capSwitch(args, lineNum) {
-        if (args.length !== 2) throw new Error(`CAP.SWITCH requires 2 operands`);
+        if (args.length !== 2) throw new Error(`CAP.SWITCH requires 2 operands: CRs, CR8-CR15`);
         const cr = this._parseCR(args[0]);
-        if (cr < 0) throw new Error(`Invalid capability register: ${args[0]}`);
-        const targetImm = this._parseImm(args[1], null, 0);
-        if (isNaN(targetImm) || targetImm < 0 || targetImm > 7) throw new Error(`Invalid switch target: ${args[1]} (must be 0-7)`);
-        const funct7upper = (targetImm & 0x7) << 2;
+        if (cr < 0) throw new Error(`Invalid source capability register: ${args[0]}`);
+        const targetStr = args[1].toLowerCase().trim();
+        const targetMatch = targetStr.match(/^(?:cr|c)(\d+)$/);
+        if (!targetMatch) throw new Error(`Invalid target register: ${args[1]} (must be CR8-CR15)`);
+        const targetNum = parseInt(targetMatch[1]);
+        if (targetNum < 8 || targetNum > 15) throw new Error(`Invalid SWITCH target: ${args[1]} (must be CR8-CR15)`);
+        const switchOffset = targetNum - 8;
+        const funct7upper = (switchOffset & 0x7) << 2;
         return (((funct7upper & 0x7F) << 25) |
                 ((cr & 0x1F) << 20) |
                 (0 << 15) |
-                (0x5 << 12) |
+                (0x2 << 12) |
                 (0 << 7) |
                 0x0B) >>> 0;
     }
