@@ -34,13 +34,18 @@ class RiscVCapSimulator {
     _initNamespaceTable() {
         this.namespaceTable = [];
         const defaults = [
-            { location: 0x00000000, limit: 0x0000FFFF, versionSeals: 0x00000000 },
-            { location: 0x00000000, limit: 0x00003FFF, versionSeals: 0x00000000 },
-            { location: 0x00004000, limit: 0x00007FFF, versionSeals: 0x00000000 },
-            { location: 0x00008000, limit: 0x000000FF, versionSeals: 0x00000000 },
+            { location: 0x00000000, limit: 0x0000FFFF },
+            { location: 0x00000000, limit: 0x00003FFF },
+            { location: 0x00004000, limit: 0x00007FFF },
+            { location: 0x00008000, limit: 0x000000FF },
         ];
         for (let i = 0; i < defaults.length; i++) {
-            this.namespaceTable[i] = { ...defaults[i] };
+            const d = defaults[i];
+            this.namespaceTable[i] = {
+                location: d.location,
+                limit: d.limit,
+                versionSeals: this.makeVersionSeals(0, d.location, d.limit),
+            };
         }
     }
 
@@ -119,13 +124,34 @@ class RiscVCapSimulator {
         return parsed.permissions[requiredPerm] === 1;
     }
 
+    computeSeal(location, limit) {
+        let h = 0x5A5A5A5A;
+        h = ((h ^ location) * 0x01000193) >>> 0;
+        h = ((h ^ limit) * 0x01000193) >>> 0;
+        h = (h ^ (h >>> 16)) >>> 0;
+        return h & 0x07FFFFFF;
+    }
+
+    makeVersionSeals(version, location, limit) {
+        const seal = this.computeSeal(location, limit);
+        return (((version & 0x1F) << 27) | (seal & 0x07FFFFFF)) >>> 0;
+    }
+
+    validateMAC(entry) {
+        if (!entry) return false;
+        const storedSeal = entry.versionSeals & 0x07FFFFFF;
+        const computedSeal = this.computeSeal(entry.location, entry.limit);
+        return storedSeal === computedSeal;
+    }
+
     validateGT(gt) {
         const parsed = this.parseGT(gt);
         if (parsed.index >= this.namespaceTable.length) return false;
         const entry = this.namespaceTable[parsed.index];
         if (!entry) return false;
         const nsVersion = (entry.versionSeals >>> 27) & 0x1F;
-        return parsed.version === nsVersion;
+        if (parsed.version !== nsVersion) return false;
+        return this.validateMAC(entry);
     }
 
     getTypeName(type) {
@@ -449,12 +475,20 @@ class RiscVCapSimulator {
             this.fault('PERMISSION', `LOAD: CR${crSrc} lacks L permission`);
             return;
         }
+        if (!this.validateGT(clistGT)) {
+            this.fault('VALIDATION', `LOAD: GT validation failed on CR${crSrc} (version or MAC mismatch)`);
+            return;
+        }
         if (index >= this.namespaceTable.length) {
             this.fault('BOUNDS', `LOAD: index ${index} out of bounds`);
             return;
         }
         const entry = this.namespaceTable[index];
         if (entry) {
+            if (!this.validateMAC(entry)) {
+                this.fault('MAC', `LOAD: MAC seal validation failed for namespace entry ${index}`);
+                return;
+            }
             const srcPerms = this.parseGT(clistGT).permissions;
             this.cr[crDst].word0 = this.createGT(
                 (entry.versionSeals >>> 27) & 0x1F,
@@ -487,13 +521,17 @@ class RiscVCapSimulator {
             return;
         }
         while (this.namespaceTable.length <= index) {
-            this.namespaceTable.push({ location: 0, limit: 0, versionSeals: 0 });
+            const emptySeal = this.makeVersionSeals(0, 0, 0);
+            this.namespaceTable.push({ location: 0, limit: 0, versionSeals: emptySeal });
         }
         const srcCR = this.cr[crSrcCap];
+        const loc = srcCR.word1 >>> 0;
+        const lim = srcCR.word2 >>> 0;
+        const existingVersion = (this.namespaceTable[index].versionSeals >>> 27) & 0x1F;
         this.namespaceTable[index] = {
-            location: srcCR.word1 >>> 0,
-            limit: srcCR.word2 >>> 0,
-            versionSeals: srcCR.word3 >>> 0,
+            location: loc,
+            limit: lim,
+            versionSeals: this.makeVersionSeals(existingVersion, loc, lim),
         };
         this.pc = (this.pc + 4) >>> 0;
         this.x[0] = 0;
@@ -508,7 +546,7 @@ class RiscVCapSimulator {
             return;
         }
         if (!this.validateGT(targetGT)) {
-            this.fault('VALIDATION', `CALL: GT version mismatch on CR${crSrc}`);
+            this.fault('VALIDATION', `CALL: GT validation failed on CR${crSrc} (version or MAC mismatch)`);
             return;
         }
         if (this.callStack.length >= this.callStackMax) {
@@ -526,6 +564,10 @@ class RiscVCapSimulator {
         const parsed = this.parseGT(targetGT);
         if (parsed.index < this.namespaceTable.length) {
             const entry = this.namespaceTable[parsed.index];
+            if (!this.validateMAC(entry)) {
+                this.fault('MAC', `CALL: MAC seal validation failed for namespace entry ${parsed.index}`);
+                return;
+            }
             const calleePerms = this.parseGT(targetGT).permissions;
             this.cr[6].word0 = this.createGT(
                 parsed.version, parsed.index,
@@ -843,6 +885,7 @@ class RiscVCapSimulator {
             stackFrames: this.stackFrames,
             callStackDepth: this.callStack.length,
             callStackMax: this.callStackMax,
+            gcResults: this.gcResults || null,
         };
     }
 
@@ -897,6 +940,113 @@ class RiscVCapSimulator {
             x: [...h.x],
         }));
         this.emit('stateChange', this.getState());
+    }
+
+    // ===== Garbage Collection (Mark-Scan-Sweep) =====
+
+    gcMark() {
+        let marked = 0;
+        for (let i = 0; i < this.namespaceTable.length; i++) {
+            const entry = this.namespaceTable[i];
+            if (entry && (entry.location !== 0 || entry.limit !== 0)) {
+                const vs = entry.versionSeals;
+                const version = (vs >>> 27) & 0x1F;
+                entry.versionSeals = this.makeVersionSeals(version, entry.location, entry.limit);
+                entry._gcMarked = true;
+                marked++;
+            }
+        }
+        this.gcResults = this.gcResults || { marked: 0, scanned: 0, garbage: [] };
+        this.gcResults.marked = marked;
+        this.emit('gc', { phase: 'mark', marked });
+        this.emit('stateChange', this.getState());
+        return marked;
+    }
+
+    gcScan() {
+        let scanned = 0;
+        const reachable = new Set();
+
+        for (let i = 0; i < 16; i++) {
+            const gt = this.cr[i].word0;
+            const parsed = this.parseGT(gt);
+            if (parsed.index < this.namespaceTable.length && this.namespaceTable[parsed.index]) {
+                const entry = this.namespaceTable[parsed.index];
+                if (this.validateMAC(entry)) {
+                    const perms = parsed.permissions;
+                    if (perms.L || perms.M) {
+                        reachable.add(parsed.index);
+                    }
+                }
+            }
+        }
+
+        for (const frame of this.callStack) {
+            for (const crKey of ['cr5', 'cr6', 'cr7']) {
+                const cr = frame[crKey];
+                if (cr) {
+                    const parsed = this.parseGT(cr.word0);
+                    if (parsed.index < this.namespaceTable.length && this.namespaceTable[parsed.index]) {
+                        const perms = parsed.permissions;
+                        if (perms.L || perms.M) {
+                            reachable.add(parsed.index);
+                        }
+                    }
+                }
+            }
+        }
+
+        for (const idx of reachable) {
+            const entry = this.namespaceTable[idx];
+            if (entry && entry._gcMarked) {
+                entry._gcMarked = false;
+                scanned++;
+            }
+        }
+
+        this.gcResults = this.gcResults || { marked: 0, scanned: 0, garbage: [] };
+        this.gcResults.scanned = scanned;
+        this.emit('gc', { phase: 'scan', scanned });
+        this.emit('stateChange', this.getState());
+        return scanned;
+    }
+
+    gcSweep() {
+        const garbage = [];
+        for (let i = 0; i < this.namespaceTable.length; i++) {
+            const entry = this.namespaceTable[i];
+            if (entry && entry._gcMarked) {
+                garbage.push({
+                    index: i,
+                    location: entry.location,
+                    limit: entry.limit,
+                });
+                const version = ((entry.versionSeals >>> 27) & 0x1F);
+                const newVersion = (version + 1) & 0x1F;
+                entry.location = 0;
+                entry.limit = 0;
+                entry.versionSeals = this.makeVersionSeals(newVersion, 0, 0);
+                delete entry._gcMarked;
+            } else if (entry) {
+                delete entry._gcMarked;
+            }
+        }
+        this.gcResults = this.gcResults || { marked: 0, scanned: 0, garbage: [] };
+        this.gcResults.garbage = garbage;
+        this.emit('gc', { phase: 'sweep', garbage });
+        this.emit('stateChange', this.getState());
+        return garbage;
+    }
+
+    gcCycle() {
+        const marked = this.gcMark();
+        const scanned = this.gcScan();
+        const garbage = this.gcSweep();
+        const results = { marked, scanned, garbage };
+        this.gcResults = results;
+        this.emit('gc', { phase: 'complete', results });
+        this.emit('stateChange', this.getState());
+        return results;
     }
 
     // ===== Event System =====

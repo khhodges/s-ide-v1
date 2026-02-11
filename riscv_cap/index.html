@@ -110,6 +110,13 @@
                             <span class="stack-indicator" id="stack-frames" data-tooltip="Stack Frames|Set by RETURN microcode|Indicates at least one more RETURN frame can be popped. Cleared when call stack is empty.">Frames</span>
                             <span class="stack-depth" id="stack-depth" data-tooltip="Call Stack Depth|Current / Maximum|Number of active call frames on the internal call stack.">0/256</span>
                         </span>
+                        <span class="gc-controls">
+                            <button class="gc-btn" id="gc-mark-btn" onclick="gcMark()" data-tooltip="GC Mark|Phase 1 of 3|Marks all namespace entries as potentially garbage by setting internal G-flag.">Mark</button>
+                            <button class="gc-btn" id="gc-scan-btn" onclick="gcScan()" data-tooltip="GC Scan|Phase 2 of 3|Scans capability registers and call stack. Clears G-flag on entries reachable via valid keys (L or M permission).">Scan</button>
+                            <button class="gc-btn" id="gc-sweep-btn" onclick="gcSweep()" data-tooltip="GC Sweep|Phase 3 of 3|Sweeps entries still marked with G-flag. Reclaims unreachable entries and bumps their version to invalidate stale tokens.">Sweep</button>
+                            <button class="gc-btn gc-cycle-btn" id="gc-cycle-btn" onclick="gcCycle()" data-tooltip="GC Full Cycle|Mark → Scan → Sweep|Runs all three GC phases in sequence. Reports marked, scanned, and collected entries.">GC Cycle</button>
+                            <span class="gc-status" id="gc-status"></span>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -132,6 +139,7 @@
                             <th>Limit</th>
                             <th>Version</th>
                             <th>Seals</th>
+                            <th>MAC</th>
                         </tr>
                     </thead>
                     <tbody id="ns-table-body">
@@ -538,6 +546,46 @@
                             <tr><td>[31:15]</td><td>(Reserved)</td><td>Zero, available for future use</td></tr>
                         </tbody>
                     </table>
+
+                    <h3>MAC Seal Validation</h3>
+                    <table class="instr-table">
+                        <thead>
+                            <tr>
+                                <th>Field</th>
+                                <th>Bits</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Version</td><td>[31:27]</td><td>5-bit version tag. Bumped on GC sweep to invalidate stale tokens.</td></tr>
+                            <tr><td>Seal</td><td>[26:0]</td><td>27-bit FNV-style hash of Location and Limit. Hardware-enforced integrity check.</td></tr>
+                        </tbody>
+                    </table>
+                    <p style="color:#a0a0a0;font-size:13px;margin:8px 0;">
+                        MAC validation is checked on every LOAD and CALL operation. If the stored seal does not match the computed hash of the namespace entry's Location and Limit fields, the operation FAULTs. This prevents tampering with namespace entries and ensures Golden Token integrity.
+                    </p>
+                    <p style="color:#a0a0a0;font-size:13px;margin:8px 0;">
+                        SAVE recomputes the seal when writing to the namespace, preserving the existing version number.
+                    </p>
+
+                    <h3>Deterministic Garbage Collection (G-Bit)</h3>
+                    <table class="instr-table">
+                        <thead>
+                            <tr>
+                                <th>Phase</th>
+                                <th>Action</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>1. Mark</td><td>Set G-flag on all entries</td><td>Marks every non-empty namespace entry as potentially garbage.</td></tr>
+                            <tr><td>2. Scan</td><td>Clear G-flag on reachable entries</td><td>Walks CR0-CR15 and call stack. Clears G-flag on entries reachable via valid GTs with L or M permission.</td></tr>
+                            <tr><td>3. Sweep</td><td>Collect still-marked entries</td><td>Entries still marked with G-flag are garbage. Zeroed out and version bumped to invalidate stale tokens.</td></tr>
+                        </tbody>
+                    </table>
+                    <p style="color:#a0a0a0;font-size:13px;margin:8px 0;">
+                        The G permission bit enables deterministic garbage collection. The three-phase Mark-Scan-Sweep cycle can be run manually via the Dashboard buttons (Mark, Scan, Sweep, or full GC Cycle). Swept entries have their version number incremented, which causes any existing Golden Tokens referencing those entries to fail validation — preventing use-after-free.
+                    </p>
 
                     <h3>Permission Domain Separation</h3>
                     <table class="instr-table">

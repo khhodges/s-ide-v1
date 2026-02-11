@@ -67,6 +67,52 @@ function stopRun() {
     if (runInterval) { clearInterval(runInterval); runInterval = null; }
 }
 
+function gcMark() {
+    const marked = sim.gcMark();
+    updateGCStatus(`Mark: ${marked} entries marked`);
+    updateUI();
+    updateNamespaceView();
+}
+
+function gcScan() {
+    const scanned = sim.gcScan();
+    updateGCStatus(`Scan: ${scanned} entries cleared (reachable)`);
+    updateUI();
+    updateNamespaceView();
+}
+
+function gcSweep() {
+    const garbage = sim.gcSweep();
+    updateGCStatus(`Sweep: ${garbage.length} entries collected`);
+    if (garbage.length > 0) {
+        appendConsole(`[GC] Swept ${garbage.length} entries: ${garbage.map(g => `ns[${g.index}]`).join(', ')}`);
+    }
+    updateUI();
+    updateNamespaceView();
+}
+
+function gcCycle() {
+    const results = sim.gcCycle();
+    updateGCStatus(`Cycle: ${results.marked}M ${results.scanned}S ${results.garbage.length}G`);
+    if (results.garbage.length > 0) {
+        appendConsole(`[GC] Full cycle: marked=${results.marked}, scanned=${results.scanned}, collected=${results.garbage.length}`);
+        appendConsole(`[GC] Collected: ${results.garbage.map(g => `ns[${g.index}]`).join(', ')}`);
+    } else {
+        appendConsole(`[GC] Full cycle: marked=${results.marked}, scanned=${results.scanned}, no garbage found`);
+    }
+    updateUI();
+    updateNamespaceView();
+}
+
+function updateGCStatus(msg) {
+    const el = document.getElementById('gc-status');
+    if (el) {
+        el.textContent = msg;
+        el.classList.add('gc-flash');
+        setTimeout(() => el.classList.remove('gc-flash'), 1500);
+    }
+}
+
 function updateUI() {
     updateRegisters();
     updateCRDisplay();
@@ -248,7 +294,11 @@ function updateNamespaceView() {
         const tr = document.createElement('tr');
         const version = (entry.versionSeals >>> 27) & 0x1F;
         const seals = entry.versionSeals & 0x07FFFFFF;
-        tr.innerHTML = `<td>${i}</td><td>${toHex32(entry.location)}</td><td>${toHex32(entry.limit)}</td><td>${version}</td><td>${toHex32(seals)}</td>`;
+        const macValid = sim.validateMAC(entry);
+        const macBadge = macValid
+            ? '<span class="mac-badge mac-valid">MAC OK</span>'
+            : '<span class="mac-badge mac-invalid">MAC FAIL</span>';
+        tr.innerHTML = `<td>${i}</td><td>${toHex32(entry.location)}</td><td>${toHex32(entry.limit)}</td><td>${version}</td><td>${toHex32(seals)}</td><td>${macBadge}</td>`;
         tbody.appendChild(tr);
     });
 }

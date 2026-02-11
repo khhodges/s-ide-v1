@@ -92,8 +92,8 @@ This project contains two independent capability-based security simulators. They
 | **Permission Bits** | R, W, X, L, S, E, B, M, F, G (10 bits) | R, W, X, L, S, E, B, M, F, G (10 bits, same) |
 | **GT Type Field** | None (implicit) | 2-bit: Inform, Outform, Literal, Abstract |
 | **GT Version Field** | None | 5-bit version tag |
-| **MAC Validation** | Yes (hardware-enforced hash) | Simplified |
-| **Garbage Collection** | Full Mark-Scan-Sweep with G bit | G bit present in permissions |
+| **MAC Validation** | Yes (hardware-enforced hash) | Yes (27-bit FNV seal in VersionSeals, checked on LOAD/CALL) |
+| **Garbage Collection** | Full Mark-Scan-Sweep with G bit | Full Mark-Scan-Sweep with G bit (version bump on sweep) |
 | **Web Views** | 7 (Dashboard, Namespace, Assembly, Capabilities, Instructions, Tutorial, Code Browser) | 5 (Dashboard, Namespace, Assembly, Capabilities, Instructions) |
 | **Built-in Abstractions** | Boot, Threads, SlideRule, Abacus, Circle, CapabilityManager, DateTime, Lambda | Boot namespace with core objects |
 | **Hardware Implementations** | SystemVerilog (`verilog/`) + Amaranth HDL (`ctmm_amaranth/`) | Software simulation only |
@@ -152,6 +152,8 @@ The `riscv_cap/` directory contains the standalone web-based Sim-32 simulator.
 -   **Register Clearing**: Software responsibility — caller clears before CALL, callee clears before RETURN. Not hardware-enforced.
 -   **Permission Domain Separation**: Church (L,S) and Turing (R,W,X) bits are mutually exclusive on the same GT. CR5 with L,S can hold a GT with R,W inside (layered save area).
 -   **Namespace Table**: Up to 32,768 entries, each 3 × 32-bit words (Location, Limit, VersionSeals). Slot address = Index × 3
+-   **MAC Seal Validation**: VersionSeals word = [31:27] Version (5-bit) + [26:0] Seal (27-bit FNV hash of Location+Limit). Checked on every LOAD and CALL. SAVE recomputes the seal. MAC failure triggers FAULT.
+-   **Deterministic Garbage Collection**: Three-phase Mark-Scan-Sweep cycle using G-bit. Mark: flags all non-empty entries. Scan: clears flag on entries reachable via CRs/call stack with L or M permission. Sweep: reclaims still-flagged entries and bumps version (invalidating stale GTs). Dashboard provides Mark/Scan/Sweep/Cycle buttons.
 
 ### File Structure
 -   **main.py**: Flask web server (port 5000)
