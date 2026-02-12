@@ -15,6 +15,22 @@ This project develops a comprehensive simulator for the Church-Turing Meta-Machi
 
 ## Recent Changes (2026-02-12)
 
+### Network Transparency Architecture (Design Document)
+- New doc: `docs/network-transparency.md` — specifies symmetrical network transparency
+- GT Type field (Inform=00, Outform=01, Literal=10, Abstract=11) drives local vs remote behavior
+- R on Outform = object fetch (TRAP:CACHE_MISS → async fetch → retry)
+- W on Outform = modify locally, flush dirty object to home URL on eviction/GC
+- E on Outform Abstract = RPC call through encrypted tunnel
+- L, S, X on Outform = TRAP (future-safe extension points, no hardware change needed)
+- TRAP vs FAULT distinction: TRAP = recoverable architectural event, FAULT = security violation
+- Literal GT = handle to namespace entry holding symmetric crypto key for point-to-point tunnel
+- Key material in namespace entry Location/Limit fields, not in GT index bits
+- Symmetrical: Meta Machine is both client (fetch/flush/RPC) and server (serve/invoke/accept)
+- Tunnel revocation via GC sweep of Literal GT (version bump kills tunnel)
+- Design validation tests: `riscv_cap/tests/test_network_transparency.py` (32 tests)
+- F (Foreign/Far) permission was for network transparency — now removed from GT but concept lives in Type field
+
+
 ### GT Permission Reduction: 10 → 6 bits
 - Permissions reduced to 6 bits: R, W, X, L, S, E
 - M (Meta) is now transient — elevated by instructions (RETURN, CHANGE), not stored in GT
