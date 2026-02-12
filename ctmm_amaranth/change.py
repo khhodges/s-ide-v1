@@ -77,12 +77,26 @@ class CTMMChange(Elaboratable):
         crn_gt = View(GT_LAYOUT, crn_view.word0_gt)
         crn_has_l_perm = crn_gt.perms[PERM_L]
 
-        thread_view = View(CAP_REG_LAYOUT, self.cr8_thread)
-        thread_base = thread_view.word1_location
+        cr8_view = View(CAP_REG_LAYOUT, self.cr8_thread)
+        cr8_gt = View(GT_LAYOUT, cr8_view.word0_gt)
+        cr8_has_m_perm = cr8_gt.perms[PERM_M]
 
-        DR_OFFSET = 16
-        PC_OFFSET = 32
-        FLAGS_OFFSET = 33
+        thread_base = cr8_view.word1_location
+
+        cr7_base = Signal(64)
+
+        fetched_gt_latched = Signal(64)
+        fetched_gt_has_m = Signal()
+        fetched_gt_view = View(GT_LAYOUT, fetched_gt_latched)
+        m.d.comb += fetched_gt_has_m.eq(fetched_gt_view.perms[PERM_M])
+
+        DR_OFFSET = 0
+        PACKED_PC_OFFSET = 16
+
+        pc_offset = Signal(32)
+        packed_pc_word = Signal(64)
+        m.d.comb += pc_offset.eq(self.nia - cr7_base[:32])
+        m.d.comb += packed_pc_word.eq(Cat(pc_offset, self.flags, Const(0, 28)))
 
         mload_src = Signal(4)
         mload_dst = Signal(4)
@@ -132,8 +146,26 @@ class CTMMChange(Elaboratable):
                         cr_index.eq(0),
                         save_index.eq(0),
                     ]
-                    m.d.comb += self.cr_rd_addr.eq(self.cr_src)
-                    m.next = "READ_CRN"
+                    m.next = "CHECK_CR8_M"
+
+            with m.State("CHECK_CR8_M"):
+                with m.If(~cr8_has_m_perm):
+                    m.d.sync += [fault_latched.eq(1), fault_type_latched.eq(FaultType.PERM_M)]
+                    m.next = "FAULT"
+                with m.Else():
+                    m.d.comb += self.cr_rd_addr.eq(7)
+                    m.next = "READ_CR7"
+
+            with m.State("READ_CR7"):
+                m.d.comb += self.cr_rd_addr.eq(7)
+                m.next = "LATCH_CR7"
+
+            with m.State("LATCH_CR7"):
+                m.d.comb += self.cr_rd_addr.eq(7)
+                cr7_rd_view = View(CAP_REG_LAYOUT, self.cr_rd_data)
+                m.d.sync += cr7_base.eq(cr7_rd_view.word1_location)
+                m.d.comb += self.cr_rd_addr.eq(self.cr_src)
+                m.next = "READ_CRN"
 
             with m.State("READ_CRN"):
                 m.d.comb += self.cr_rd_addr.eq(self.cr_src)
@@ -158,22 +190,13 @@ class CTMMChange(Elaboratable):
                 with m.If(self.mem_wr_done):
                     m.d.sync += save_index.eq(save_index + 1)
                     with m.If(save_index >= 15):
-                        m.next = "SAVE_PC"
+                        m.next = "SAVE_PACKED_PC"
 
-            with m.State("SAVE_PC"):
+            with m.State("SAVE_PACKED_PC"):
                 m.d.comb += [
                     mem_wr_en_reg.eq(1),
-                    mem_wr_addr_reg.eq(thread_base + (PC_OFFSET << 3)),
-                    mem_wr_data_reg.eq(Cat(self.nia, Const(0, 32))),
-                ]
-                with m.If(self.mem_wr_done):
-                    m.next = "SAVE_FLAGS"
-
-            with m.State("SAVE_FLAGS"):
-                m.d.comb += [
-                    mem_wr_en_reg.eq(1),
-                    mem_wr_addr_reg.eq(thread_base + (FLAGS_OFFSET << 3)),
-                    mem_wr_data_reg.eq(Cat(self.flags, Const(0, 60))),
+                    mem_wr_addr_reg.eq(thread_base + (PACKED_PC_OFFSET << 3)),
+                    mem_wr_data_reg.eq(packed_pc_word),
                 ]
                 with m.If(self.mem_wr_done):
                     m.next = "LOAD_THREAD"
@@ -188,12 +211,20 @@ class CTMMChange(Elaboratable):
                 m.d.sync += [mload_done_latched.eq(0), mload_fault_latched.eq(0)]
                 with m.If(u_mload.sub_done):
                     m.d.sync += mload_done_latched.eq(1)
+                    m.d.sync += fetched_gt_latched.eq(self.cr_rd_data.word_select(0, 64))
                 with m.If(u_mload.sub_fault):
                     m.d.sync += mload_fault_latched.eq(1)
                     m.d.sync += [fault_latched.eq(1), fault_type_latched.eq(u_mload.sub_fault_type)]
                 with m.If(mload_fault_latched):
                     m.next = "FAULT"
                 with m.Elif(mload_done_latched):
+                    m.next = "CHECK_M_PERM"
+
+            with m.State("CHECK_M_PERM"):
+                with m.If(~fetched_gt_has_m):
+                    m.d.sync += [fault_latched.eq(1), fault_type_latched.eq(FaultType.PERM_M)]
+                    m.next = "FAULT"
+                with m.Else():
                     m.d.sync += cr_index.eq(0)
                     m.next = "RESTORE_CALL"
 

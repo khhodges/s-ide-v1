@@ -908,17 +908,17 @@ class CTMMSimulator {
             
             case "CHANGE": {
                 const [arg1, arg2] = args;
-                
-                this.exclusiveMonitors[this.currentThread] = { valid: false, addr: 0 };
-                
-                if (this.threadShadow && this.threadShadow[this.currentThread]) {
-                    this.threadShadow[this.currentThread].dr = { ...this.dataRegs };
-                    this.threadShadow[this.currentThread].nia = this.nia;
+
+                const cr8 = this._getCR(8);
+                if (!cr8 || !cr8.perms || !cr8.perms.includes('M')) {
+                    return `FAULT: PERMISSION: CR8 lacks M permission (save side)`;
                 }
-                
+
+                this.exclusiveMonitors[this.currentThread] = { valid: false, addr: 0 };
+
                 let sourceCap = null;
                 let sourceDesc = '';
-                
+
                 if (arg2 !== undefined) {
                     const crIdx = parseInt(arg1);
                     const index = parseInt(arg2);
@@ -939,15 +939,80 @@ class CTMMSimulator {
                     sourceCap = result.cap;
                     sourceDesc = `CR${crIdx}`;
                 }
-                
+
+                if (!sourceCap.perms || !sourceCap.perms.includes('M')) {
+                    return `FAULT: PERMISSION: target thread GT lacks M permission`;
+                }
+
+                const cr7 = this._getCR(7);
+                const cr7Base = (cr7 && cr7.location) ? cr7.location.offset || 0 : 0;
+                const pcOffset = this.nia - cr7Base;
+                const flagsBits = (this.flags.N ? 8 : 0) | (this.flags.Z ? 4 : 0) |
+                                  (this.flags.C ? 2 : 0) | (this.flags.V ? 1 : 0);
+                const packedPC = (pcOffset & 0x0FFFFFFF) | ((flagsBits & 0xF) << 28);
+
+                if (this.callStack.length > 0) {
+                    this.callStack[this.callStack.length - 1].returnNIA = packedPC;
+                }
+
+                if (!this.threadShadow) this.threadShadow = {};
+                const tid = this.currentThread;
+                if (!this.threadShadow[tid]) {
+                    this.threadShadow[tid] = { cr: {}, dr: {}, nia: this.nia };
+                    for (let i = 0; i < 16; i++) this.threadShadow[tid].cr[i] = this.createNullCapability();
+                    for (let i = 0; i < 16; i++) this.threadShadow[tid].dr[i] = 0n;
+                }
+                this.threadShadow[tid].dr = { ...this.dataRegs };
+                this.threadShadow[tid].callStack = this.callStack.map(f => ({...f}));
+                this.threadShadow[tid].packedPC = packedPC;
+                this.threadShadow[tid].stackDepth = this.stackDepth;
+
+                const targetId = sourceCap.name || sourceDesc;
+                const target = this.threadShadow[targetId];
+
+                if (target) {
+                    for (let i = 0; i < 16; i++) {
+                        this.dataRegs[i] = target.dr[i] !== undefined ? target.dr[i] : 0n;
+                    }
+
+                    if (target.callStack && target.callStack.length > 0) {
+                        this.callStack = target.callStack.map(f => ({...f}));
+                        this.stackDepth = target.stackDepth || target.callStack.length;
+                    } else {
+                        this.callStack = [];
+                        this.stackDepth = 0;
+                    }
+
+                    const targetPackedPC = target.packedPC || 0;
+                    const targetPcOffset = targetPackedPC & 0x0FFFFFFF;
+                    const targetFlagsBits = (targetPackedPC >>> 28) & 0xF;
+                    this.flags.N = !!(targetFlagsBits & 8);
+                    this.flags.Z = !!(targetFlagsBits & 4);
+                    this.flags.C = !!(targetFlagsBits & 2);
+                    this.flags.V = !!(targetFlagsBits & 1);
+
+                    const targetCR7 = target.cr[7];
+                    const targetCR7Base = (targetCR7 && targetCR7.location) ? targetCR7.location.offset || 0 : 0;
+                    this.nia = targetCR7Base + targetPcOffset;
+                } else {
+                    for (let i = 0; i < 16; i++) this.dataRegs[i] = 0n;
+                    this.callStack = [];
+                    this.stackDepth = 0;
+                    this.flags = { N: false, Z: false, C: false, V: false };
+                    this.nia = (sourceCap.location && sourceCap.location.offset) || 0;
+                }
+
                 this._setCR(8, {
                     name: `THREAD_${sourceCap.name}`,
                     location: sourceCap.location || { type: 'Local', offset: 0 },
-                    perms: ['R', 'W'],
+                    perms: sourceCap.perms || ['M'],
                     locked: false,
-                    goldenKey: this.generateKey()
+                    goldenKey: sourceCap.goldenKey || this.generateKey(),
+                    version: sourceCap.version,
+                    seal: sourceCap.seal
                 });
-                return `CHANGE: Created thread GT from ${sourceDesc}, exclusive monitor cleared`;
+                this.currentThread = targetId;
+                return `CHANGE: context switch from thread ${tid} to ${targetId} via ${sourceDesc}`;
             }
             
             case "SWITCH": {

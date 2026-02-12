@@ -691,47 +691,73 @@ class RiscVCapSimulator {
             }
 
             case 0x1: { // CHANGE
+                const cr8GT = this.cr[8].word0;
+                const cr8Parsed = this.parseGT(cr8GT);
+                if (!cr8Parsed.permissions.M) {
+                    this.fault('PERMISSION', `CHANGE: CR8 lacks M permission (save side)`);
+                    return;
+                }
+
                 const threadGT = this.cr[crSrc].word0;
-                const changeResult = this.mLoad(threadGT, 'E');
+                const changeResult = this.mLoad(threadGT, 'L');
                 if (!changeResult.ok) {
                     this.fault(changeResult.fault, `CHANGE: CR${crSrc}: ${changeResult.message}`);
                     return;
                 }
                 const parsed = changeResult.parsed;
+                if (!parsed.permissions.M) {
+                    this.fault('PERMISSION', `CHANGE: target thread GT lacks M permission`);
+                    return;
+                }
                 const threadId = parsed.index;
-                const currentThreadId = this.parseGT(this.cr[8].word0).index;
+                const currentThreadId = cr8Parsed.index;
+
                 if (!this.threadTable[currentThreadId]) {
                     this.threadTable[currentThreadId] = {
                         x: new Array(32).fill(0),
                         cr: [],
-                        pc: 0,
+                        callStack: [],
                     };
                     for (let i = 0; i < 16; i++) {
                         this.threadTable[currentThreadId].cr[i] = { word0: 0, word1: 0, word2: 0, word3: 0 };
                     }
                 }
+
+                const cr7Base = this.cr[7].word1 >>> 0;
+                const pcOffset = ((this.pc + 4) - cr7Base) >>> 0;
+                const packedPC = pcOffset & 0x0FFFFFFF;
+                if (this.callStack.length > 0) {
+                    this.callStack[this.callStack.length - 1].pc = packedPC;
+                }
+
                 this.threadTable[currentThreadId].x = [...this.x];
-                this.threadTable[currentThreadId].pc = (this.pc + 4) >>> 0;
+                this.threadTable[currentThreadId].callStack = this.callStack.map(f => ({...f}));
+                this.threadTable[currentThreadId].packedPC = packedPC;
+
                 const target = this.threadTable[threadId];
                 if (target) {
-                    for (let i = 0; i < 32; i++) this.x[i] = target.x[i];
-                    for (let i = 0; i <= 8; i++) {
-                        const savedGT = target.cr[i] ? target.cr[i].word0 : 0;
-                        if (savedGT !== 0) {
-                            const crResult = this.mLoad(savedGT, null, i);
-                            if (!crResult.ok) {
-                                this._clearCR(i);
-                            }
-                        } else {
-                            this._clearCR(i);
-                        }
+                    for (let i = 0; i < 32; i++) this.x[i] = target.x[i] || 0;
+
+                    if (target.callStack && target.callStack.length > 0) {
+                        this.callStack = target.callStack.map(f => ({...f}));
+                        this.stackFrames = this.callStack.length > 0;
+                        this.stackSpace = this.callStack.length < this.callStackMax;
+                    } else {
+                        this.callStack = [];
+                        this.stackFrames = false;
+                        this.stackSpace = true;
                     }
-                    this.pc = target.pc;
+
+                    const targetCR7Base = target.cr[7] ? target.cr[7].word1 >>> 0 : 0;
+                    const targetPackedPC = target.packedPC || 0;
+                    const targetPcOffset = targetPackedPC & 0x0FFFFFFF;
+                    this.pc = (targetCR7Base + targetPcOffset) >>> 0;
                 } else {
                     for (let i = 0; i < 32; i++) this.x[i] = 0;
-                    for (let i = 0; i <= 8; i++) {
-                        this._clearCR(i);
-                    }
+                    this.callStack = [];
+                    this.stackFrames = false;
+                    this.stackSpace = true;
+
                     this._writeCR(8, threadGT, changeResult.entry);
                     const nsResult = this.mLoadByIndex(parsed.index);
                     if (nsResult.ok) {
