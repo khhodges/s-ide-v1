@@ -8,7 +8,7 @@ Network transparency is the capability-secured mechanism by which the Meta Machi
 
 The architecture is **symmetrical**: the Meta Machine can both consume remote resources and serve its own resources to authorized remote parties.
 
-All remote communication uses an encrypted **point-to-point tunnel** keyed by a **Literal GT**, eliminating man-in-the-middle attacks and bypassing the overhead of the full TLS/certificate stack.
+Object fetch and flush (R/W on Outform) use **standard HTTPS** — the same browser mechanisms the web already uses (TLS, ETag, Cache-Control). This ensures interoperability with existing web infrastructure. RPC calls (E on Outform Abstract) between Meta Machines use an encrypted **point-to-point tunnel** keyed by a **Literal GT**, since both endpoints understand the capability protocol.
 
 ---
 
@@ -27,9 +27,9 @@ The Type field combines with permissions to determine behavior:
 
 | Type + Permission | Behavior |
 |-------------------|----------|
-| Outform + R | **Object fetch** — retrieve remote object into local cache |
-| Outform + W | **Object flush** — write dirty cached object back to home URL |
-| Outform + E (Abstract) | **RPC call** — invoke remote service through encrypted tunnel |
+| Outform + R | **Object fetch** — HTTPS GET from remote URL into local cache |
+| Outform + W | **Object flush** — HTTPS PUT dirty cached object back to home URL |
+| Outform + E (Abstract) | **RPC call** — invoke remote Meta Machine service through Literal GT encrypted tunnel |
 | Outform + L | **TRAP** — future extension for remote service discovery |
 | Outform + S | **TRAP** — future extension for remote capability delegation |
 | Outform + X | **TRAP** — nonsense case, safe |
@@ -68,10 +68,12 @@ When mLoad encounters an Outform entry that is not in the local cache:
 3. Check local cache for this namespace index
 4. Cache hit → return cached object (same as Inform access)
 5. Cache miss → TRAP: CACHE_MISS
-6. Trap handler initiates async fetch from home URL via encrypted tunnel
-7. Response stored in local cache with ETag/Last-Modified metadata
+6. Trap handler initiates HTTPS GET from home URL (standard browser mechanism)
+7. Response stored in local cache with ETag/Last-Modified/Cache-Control metadata
 8. Instruction retried → cache hit → succeeds
 ```
+
+Standard browser caching semantics apply: conditional GET with `If-None-Match` / `If-Modified-Since`, `Cache-Control` directives honored, TLS provides transport security. The Meta Machine adds capability-based access control on top of what the browser already provides.
 
 In auto-run mode, the simulator automatically retries after the fetch completes, making the network access transparent to the running program.
 
@@ -84,12 +86,13 @@ When a cached Outform object is modified:
 2. Modification applied to local cached copy
 3. Dirty bit set on namespace entry metadata
 4. On eviction, GC sweep, or explicit flush:
-   a. Dirty cached object written back to home URL (HTTP PUT/POST) via encrypted tunnel
-   b. Dirty bit cleared after successful flush
-   c. Safe to invalidate / bump version
+   a. Dirty cached object written back to home URL via HTTPS PUT/POST
+   b. Server validates ETag / version for conflict detection
+   c. Dirty bit cleared after successful flush
+   d. Safe to invalidate / bump version
 ```
 
-This is analogous to write-back caching in virtual memory, but for named objects rather than fixed-size pages. The URL is the "home address" and the local cache is the working copy.
+This is analogous to write-back caching in virtual memory, but for named objects rather than fixed-size pages. The URL is the "home address" and the local cache is the working copy. Standard HTTP conflict detection (ETag, `If-Match`) prevents lost updates.
 
 ---
 
@@ -122,9 +125,9 @@ Network transparency is **symmetrical** — the Meta Machine is both client and 
 
 | Operation | Permission | Network Action |
 |-----------|-----------|---------------|
-| Object fetch | R | HTTP GET from remote URL via tunnel |
-| Object flush | W | HTTP PUT to remote URL via tunnel |
-| RPC call | E | POST to remote /api/invoke via tunnel |
+| Object fetch | R | HTTPS GET from remote URL (standard browser mechanism) |
+| Object flush | W | HTTPS PUT to remote URL (standard browser mechanism) |
+| RPC call | E | POST to remote /api/invoke via Literal GT encrypted tunnel |
 
 ### Inbound (as server)
 
@@ -138,9 +141,9 @@ All inbound requests carry a GT that is validated through the same mLoad path �
 
 ---
 
-## Literal GT as Crypto Tunnel Key
+## Literal GT as RPC Tunnel Key
 
-The Literal GT (Type = 10) serves as the **handle to the symmetric encryption key** for point-to-point tunnels between namespaces. The GT itself uses the standard 32-bit format:
+The Literal GT (Type = 10) serves as the **handle to the symmetric encryption key** for point-to-point **RPC tunnels** between Meta Machines. Object fetch and flush use standard HTTPS and do not require Literal GTs. The GT itself uses the standard 32-bit format:
 
 ```
 Literal GT [31:0]:
@@ -202,10 +205,10 @@ Two Meta Machines ("me" and "mymother") each have their own namespace:
 ; CALL(CONNECT(me, mymother))
 ; One fail-safe CLOOMC instruction sequence:
 
-; Step 1: Load the tunnel key (Literal GT) from our C-List
+; Step 1: Load the RPC tunnel key (Literal GT) from our C-List
 CAP.LOAD  CR0, CR6, 4      ; CR0 = TunnelKey_Mother (Literal GT, index 4)
                             ;   → mLoad validates: L perm on CR6, MAC, version
-                            ;   → Result: CR0 holds the crypto key for the tunnel
+                            ;   → Result: CR0 holds the RPC tunnel key for mymother
 
 ; Step 2: Load the remote service GT from our C-List
 CAP.LOAD  CR1, CR6, 6      ; CR1 = Mother_Service (Outform/Abstract GT, index 6)
@@ -225,7 +228,7 @@ CAP.CALL  CR1              ; CALL on Outform Abstract GT
 
 ### What Happens Step by Step
 
-1. **CAP.LOAD CR0, CR6, 4**: The Literal GT at C-List index 4 is loaded into CR0. This establishes the crypto context — the tunnel key for communicating with "mymother". mLoad validates L permission on CR6, checks MAC and version.
+1. **CAP.LOAD CR0, CR6, 4**: The Literal GT at C-List index 4 is loaded into CR0. This establishes the RPC tunnel key for communicating with "mymother". Object fetch/flush would use standard HTTPS and not need this key — only RPC requires the tunnel. mLoad validates L permission on CR6, checks MAC and version.
 
 2. **CAP.LOAD CR1, CR6, 6**: The Outform Abstract GT at C-List index 6 is loaded into CR1. This is the handle to "mymother's" remote service. mLoad validates as usual.
 
@@ -306,19 +309,20 @@ These traps are **future-safe**: implementing the abstraction behind the trap re
 
 ---
 
-## Integration with Existing Cyberspace
+## Integration with Existing Web
 
-Network transparency is designed to bootstrap on top of today's internet:
+Network transparency is designed to interwork with the existing web, not replace it:
 
 | Capability Operation | Maps To |
 |---------------------|---------|
-| R on Outform (fetch) | HTTP GET to URL |
-| W on Outform (flush) | HTTP PUT/POST to URL |
-| E on Outform Abstract (RPC) | HTTPS POST to endpoint |
-| Literal GT tunnel key | Symmetric encryption layer replacing TLS |
-| GC version bump | Cache invalidation (ETag/Last-Modified alignment) |
-| MAC validation | Object integrity check (independent of transport) |
+| R on Outform (fetch) | HTTPS GET to URL (standard browser mechanism, TLS, ETag, Cache-Control) |
+| W on Outform (flush) | HTTPS PUT/POST to URL (standard browser mechanism, ETag/If-Match for conflicts) |
+| E on Outform Abstract (RPC) | Literal GT encrypted tunnel to remote Meta Machine endpoint |
+| GC version bump | Cache invalidation (aligned with ETag/Last-Modified) |
+| MAC validation | Object integrity check (independent of transport, enforced by mLoad) |
 
-The key insight: the Meta Machine's namespace becomes a **capability-secured overlay** on top of HTTP/HTTPS, adding unforgeable access control, automatic cache management, and cryptographic tunneling to what is otherwise a conventional web infrastructure.
+The key insight: object fetch and flush use **standard HTTPS** — the same mechanisms browsers have used for decades. The Meta Machine adds capability-based access control (R/W permission checks, MAC validation, version tracking) on top of what the web already provides. This means Outform objects can be fetched from any existing web server, CDN, or REST API without requiring the remote end to understand capabilities.
+
+RPC (E on Outform Abstract) is the only operation that requires both endpoints to be Meta Machines, since it involves serializing capability-secured register state through a Literal GT encrypted tunnel.
 
 This makes the architecture **media-tight** (content-type enforced), **data-tight** (R/W permissions enforced on every access), and **function-tight** (E permission required for every RPC invocation).
