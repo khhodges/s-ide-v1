@@ -29,6 +29,9 @@ The GT carries the value in its own bits. No namespace entry, no mLoad, no MAC c
 Direct GT-Literal [31:0]:
   [31:2]  Value   (30 bits) — the literal value itself
   [1:0]   Type=10 (2 bits)  — Literal
+
+(Standard GT uses [31:25] Version, [24:8] Index, [7:2] Permissions, [1:0] Type.
+ Direct GT-Literal reclaims all 30 upper bits as Value.)
 ```
 
 No Version field — there is no namespace entry to cross-check against. Revocation is not meaningful for a direct value; the value exists only while the register holds it.
@@ -45,8 +48,8 @@ The GT is a handle to a secret value stored in a namespace entry. The standard 3
 
 ```
 Indirect GT-Literal [31:0]:
-  [31:27] Version    (7 bits)  — Cross-checked against namespace entry version
-  [26:8]  Index      (17 bits) — Namespace index of the value entry
+  [31:25] Version    (7 bits)  — Cross-checked against namespace entry version
+  [24:8]  Index      (17 bits) — Namespace index of the value entry
   [7:2]   Permissions (6 bits) — Access control on the value
   [1:0]   Type = 10  (2 bits)  — Literal
 ```

@@ -47,6 +47,13 @@ This project develops a comprehensive simulator for the Church-Turing Meta-Machi
 - Security model: structural (LDL/STL/LAMBDA enforce type boundaries) not per-access (no mLoad validation needed)
 
 
+### Initial Patent Submission
+- New doc: `docs/patent-ctmm-lambda.md` — Initial patent filing for Church-Turing Meta-Machine
+- Covers: GT Type field, GT-Literal (direct and indirect), LDL/STL/LAMBDA instructions, structural security model
+- 12 claims covering the Type field, bit reclamation, new instructions, dual-form GT-Literal, two-tier execution, combinators, network transparency
+- Constructive examples with cycle-count performance analysis
+- 8 figure descriptions for patent drawings
+
 ### GT Permission Reduction: 10 → 6 bits
 - Permissions reduced to 6 bits: R, W, X, L, S, E
 - M (Meta) is now transient — elevated by instructions (RETURN, CHANGE), not stored in GT
