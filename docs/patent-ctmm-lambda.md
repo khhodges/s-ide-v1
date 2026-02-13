@@ -44,9 +44,75 @@ Capability-based architectures address the security problem by requiring unforge
 
 Existing capability architectures do not distinguish between references (names that point to resources) and values (data that is already fully computed). This conflation forces all data through the same validation path, regardless of whether validation is semantically meaningful. Church's lambda calculus provides the theoretical framework to resolve this: the distinction between values (fully reduced terms) and expressions (terms requiring evaluation) is fundamental to the calculus and maps directly onto the distinction between literal data and capability references.
 
-### Prior Art Limitations
+### Prior Art — PP250 Capability Architecture
 
-Previous capability architectures (Cambridge CAP, IBM System/38, Intel iAPX 432, CHERI) treat all capability register contents as references requiring validation. No prior architecture provides:
+The present invention builds upon a body of prior work in capability-based computer architecture developed principally at Plessey Telecommunications and subsequently at ITT/Standard Electric Corporation during the period 1969–1984. These patents established the foundational concepts of capability registers, memory protection through unforgeable tokens, segmented memory access, multi-processor capability systems, and information flow security. The present invention extends this foundation with innovations not disclosed or suggested by the prior art: a hardware-enforced type field distinguishing values from references, a lambda calculus instruction operating within the capability register file, bit reclamation for literal values, and structural security as a complement to per-access validation.
+
+#### A. Core Capability Architecture (Cotton, Plessey, 1969–1973)
+
+**DE2000066A1** — "Data processing arrangement" (Cotton, Plessey, priority 1969-01-02). Discloses a data processing arrangement using procedures divided into functions, each controlled by program instructions stored in a single memory area. Establishes the principle of function-level execution control within segmented memory.
+
+**DE2126206C3** — "Data processing device with memory protection arrangement" (Cotton, Cole, Plessey, priority 1970-05-26). Discloses a memory protection arrangement using capability registers, each storing a capability word that authorizes access to information segments in memory. Establishes the fundamental concept of capability registers mediating all memory access — the architectural ancestor of Golden Tokens.
+
+**DE2303596C2** — "Data processing arrangement" (Cotton, Plessey, priority 1972-01-26). Discloses a data processing arrangement with capability words stored in capability registers for accessing segments in main memory. Extends the capability register concept with refined access control semantics.
+
+**US3771146A** — "Data processing system interrupt arrangements" (Cotton, Williams, Cosserat, Plessey, priority 1972-01-26, granted 1973-11-06). Discloses interrupt handling arrangements in a capability-based data processing system, addressing the problem of secure context switching when interrupts occur during capability-protected execution.
+
+**CA945264A** — "Program interrupt facilities in data processing systems" (Cotton, Plessey, priority 1970-09-02, granted 1974-04-09). Discloses program interrupt facilities for capability-based systems, establishing mechanisms for asynchronous event handling within capability-protected execution environments.
+
+#### B. Multi-Processor Capability Systems (Boom, Arnold, Plessey, 1969–1974)
+
+**US3657736A** — "Method of assembling subroutines" (Boom, Plessey, priority 1969-01-02, granted 1972-04-18). Discloses intercommunication arrangements for multiprocessor systems of the distributed algorithm type, with input/output data wells for subroutine communication. Establishes the principle of structured data passing between computational units.
+
+**DE2230830C2** — "Data processing system" (Arnold, Boom, Plessey, priority 1971-06-24, granted 1985-03-21). Discloses a multi-processor data processing system with multiple peripheral devices, memory modules, and processor modules, each having dedicated access units. Establishes the architectural framework for multi-module capability-based systems.
+
+**CA958490A** — "Multi-processor data processing system" (Arnold, Boom, priority 1971-06-24, granted 1974-11-26). Canadian filing of the multi-processor architecture, covering the coordination of multiple processor modules within a capability-protected memory hierarchy.
+
+#### C. Memory Management and Deallocation (Venton, Plessey, 1975)
+
+**US4121286A** — "Data processing memory space allocation and deallocation arrangements" (Venton, Plessey, priority 1975-10-08, granted 1978-10-17). Discloses the mechanism for deallocating master capability table (MCT) entries when storage blocks are returned, and the problem of cancelling capability pointers that still exist in the live system. This patent is directly relevant to the present invention's garbage collection mechanism (PP250 three-phase Mark-Scan-Sweep), which addresses the same fundamental problem — invalidating stale capability references — through version bumping rather than explicit cancellation.
+
+#### D. Information Security and Data Handling (Hamer-Hodges, Plessey, 1976–1984)
+
+**MY8400351A** — "Information flow security mechanisms for data processing systems" (Hamer-Hodges, Plessey, priority 1976-07-30). Discloses information flow security mechanisms ensuring that data moves only through authorized paths within a capability-based system. Establishes the principle of hardware-enforced information flow control that the present invention extends through the GT Type field's enforcement of value-vs-reference flow boundaries.
+
+**CA1132251A** — "Data handling equipment for use with sequential access digital data storage" (Hamer-Hodges, priority 1976-11-17, granted 1982-09-21). Discloses a disc buffer peripheral access unit with a random access memory equivalent to one complete disc track, with command and status registers at sector boundaries. Addresses peripheral integration within capability-protected systems.
+
+**HK31983A** — "Improvements in or relating to information protection arrangements in data processing systems" (Hamer-Hodges, Plessey, priority 1977-05-04). Discloses refined information protection arrangements for capability-based data processing, extending the security model with additional protection mechanisms.
+
+#### E. Telecommunications Capability Systems (Cotton, Lawrence, ITT, 1978–1979)
+
+**DE2909762A1** — "Remote communication system" (Cotton, ITT/Standard Electric, priority 1978-03-17). Discloses capability-based principles applied to telecommunications switching, extending the PP250 architecture's concepts to distributed communication systems.
+
+**DD143994A5** — "Telecommunications switching system" (Lawrence, ITT/Standard Electric, priority 1979-04-05). Discloses a flexible telecommunications switching system with modular expansion capability, applying capability-based design principles to switching network architecture.
+
+#### F. Distinction from Prior Art
+
+The above prior art establishes capability registers (DE2126206C3), capability-mediated memory access (DE2303596C2), multi-processor capability systems (DE2230830C2), capability deallocation and reference invalidation (US4121286A), information flow security (MY8400351A), and interrupt handling within capability-protected environments (US3771146A, CA945264A).
+
+However, none of the prior art discloses or suggests:
+
+1. **A type field within the capability token** that architecturally distinguishes values from references at the hardware level, enabling different execution paths based on the semantic category of the token content (Claims 1, 9)
+
+2. **Bit reclamation** — reusing the version and permission fields of a capability token as value storage when the token carries a literal value rather than a reference, since version cross-checking and permission enforcement are semantically meaningless for self-contained values (Claim 2)
+
+3. **A lambda calculus application instruction** (LAMBDA) operating within the capability register file, applying an executable code body to a literal value argument without protection domain crossing, stack frame allocation, or namespace validation (Claims 5, 6)
+
+4. **Dedicated literal transfer instructions** (LDL, STL) that bridge between the data register domain and the capability register domain for literal values, with hardware type enforcement preventing misuse (Claims 3, 4)
+
+5. **Structural security** as a complement to per-access validation — where literal values are protected by instruction-level type boundaries rather than per-access MAC validation, version checking, and permission enforcement (Claim 8)
+
+6. **A dual-form literal** where the same type field supports both direct self-contained values (no namespace entry) and indirect namespace-backed handles to secrets (with full validation), distinguished by instruction context rather than additional type bits (Claim 7)
+
+7. **Network-transparent RPC** using an indirect literal as an encrypted tunnel key, where garbage collection of the literal instantly revokes the tunnel by bumping the namespace entry version (Claim 12)
+
+The prior art's capability registers hold references exclusively. The present invention's GT Type field transforms the capability register from a single-purpose reference holder into a four-way classified container that can hold references, values, remote handles, or callable abstractions, with the hardware enforcing the appropriate security model for each category.
+
+---
+
+### Prior Art Limitations — Academic Capability Architectures
+
+Beyond the PP250 patent family, academic capability architectures including Cambridge CAP (Wilkes and Needham, 1979), IBM System/38 (Berstis, 1980), Intel iAPX 432 (Pollack et al., 1981), and CHERI (Watson et al., 2015) treat all capability register contents as references requiring validation. No prior architecture provides:
 
 1. A hardware-enforced type field that distinguishes values from references at the instruction level
 2. A dedicated instruction for lambda calculus application within a capability-secured register file
