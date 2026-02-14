@@ -355,7 +355,11 @@ const namespaceObjects = [
     // Offset 11: Lambda abstraction
     { offset: 11, name: "Lambda", type: "Abstraction",
       word1_location: 0xA000, word2_limit: 0x2000, word3_seals: 0n,
-      tooltip: "Lambda [FUNCTIONAL] - Church's lambda calculus primitives. Y-Combinator, Church numerals (SUCC, PRED, ADD, MUL), Pairs (FST, SND), Booleans (TRUE, FALSE, IF)." }
+      tooltip: "Lambda [FUNCTIONAL] - Church's lambda calculus primitives. Y-Combinator, Church numerals (SUCC, PRED, ADD, MUL), Pairs (FST, SND), Booleans (TRUE, FALSE, IF)." },
+    // Offset 12: Mint abstraction
+    { offset: 12, name: "Mint", type: "Abstraction",
+      word1_location: 0xC000, word2_limit: 0x1000, word3_seals: 0n,
+      tooltip: "Mint [CAPABILITY FORGE] - Creates Golden Tokens with arbitrary permission sets. GT_MINT (general), GT_RESTRICT (derive subset), GT_REVOKE (bump version). Foundation for all capability creation." }
 ];
 
 // Boot C-List at Namespace offset 2
@@ -400,7 +404,11 @@ const bootCList = {
         // Index 9: Lambda abstraction - GT pointing to NS offset 11
         // E = Enter only (pure functions, no state mutation)
         { index: 9, name: "Lambda", nsOffset: 11, perms: ["E"], type: "Abstraction", 
-          desc: "Lambda calculus primitives", size: 0x2000 }
+          desc: "Lambda calculus primitives", size: 0x2000 },
+        // Index 10: Mint abstraction - GT pointing to NS offset 12
+        // E = Enter only (capability forge)
+        { index: 10, name: "Mint", nsOffset: 12, perms: ["E"], type: "Abstraction", 
+          desc: "Capability forge - arbitrary GT creation", size: 0x1000 }
     ]
 };
 
@@ -607,6 +615,19 @@ const abstractionCLists = {
             { name: "GT_IF", type: "Function", perms: ["R", "X"], desc: "λc.λt.λf. c t f - conditional", base: 0xA9C0, size: 128 },
             { name: "LocalCode", type: "Code", perms: ["R", "X"], base: 0xA000, size: 256 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0xAA40, size: 512 }
+        ]
+    },
+    Mint: {
+        name: "Mint",
+        mathType: "FORGE",
+        description: "Capability forge — mints Golden Tokens with arbitrary permission sets. GT_MINT creates new GTs, GT_RESTRICT derives subset permissions, GT_REVOKE bumps version to invalidate.",
+        clist: [
+            { name: "GT_MINT", type: "Function", perms: ["R", "X"], desc: "Mint new GT: DR0=perm mask (6-bit RWXLSE), DR1=type (0=Data,1=Code,2=C-List,3=Thread,4=Abstraction), DR2=size → CR0", base: 0xC100, size: 512 },
+            { name: "GT_RESTRICT", type: "Function", perms: ["R", "X"], desc: "Derive restricted GT: CR0=source GT, DR0=new perm mask (must be subset) → CR0=restricted GT", base: 0xC300, size: 512 },
+            { name: "GT_REVOKE", type: "Function", perms: ["R", "X"], desc: "Revoke GT: CR0=target GT → bumps namespace version, all copies FAULT on next mLoad", base: 0xC500, size: 256 },
+            { name: "GT_INSPECT", type: "Function", perms: ["R", "X"], desc: "Inspect GT metadata: CR0=target GT → DR0=perms, DR1=type, DR2=version, DR3=nsOffset", base: 0xC600, size: 256 },
+            { name: "LocalCode", type: "Code", perms: ["R", "X"], base: 0xC000, size: 256 },
+            { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0xC800, size: 512 }
         ]
     }
 };
@@ -1038,7 +1059,8 @@ function buildHierarchyTree() {
         'Circle': '[GEOMETRY] Circle calculations (uses floats). PI, TWO_PI, CIRCUMFERENCE, AREA, DIAMETER',
         'CapabilityManager': '[CAPABILITY] Creates new Golden Tokens. DR0=type (0=Data, 1=C-List), DR1=size → CR0',
         'DateTime': '[TIME] ISO 8601 date/time. DR0=mode (0=ISO, 1=Date, 2=Time, 3=Epoch, 4=Components) → DR1-DR6',
-        'Lambda': '[FUNCTIONAL] Church lambda calculus primitives. Y-Combinator, Church numerals, Pairs, Booleans'
+        'Lambda': '[FUNCTIONAL] Church lambda calculus primitives. Y-Combinator, Church numerals, Pairs, Booleans',
+        'Mint': '[FORGE] Capability forge. GT_MINT: DR0=perms DR1=type DR2=size → CR0. GT_RESTRICT: subset perms. GT_REVOKE: bump version. GT_INSPECT: read metadata'
     };
     const mathTypeBadges = {
         'SlideRule': 'FLOAT',
@@ -1046,9 +1068,10 @@ function buildHierarchyTree() {
         'Circle': 'GEOMETRY',
         'CapabilityManager': 'CAPABILITY',
         'DateTime': 'TIME',
-        'Lambda': 'FUNCTIONAL'
+        'Lambda': 'FUNCTIONAL',
+        'Mint': 'FORGE'
     };
-    ['SlideRule', 'Abacus', 'Circle', 'CapabilityManager', 'DateTime', 'Lambda'].forEach(name => {
+    ['SlideRule', 'Abacus', 'Circle', 'CapabilityManager', 'DateTime', 'Lambda', 'Mint'].forEach(name => {
         const gtEntry = getBootGT(name);
         const absPerms = gtEntry ? `[${gtEntry.perms.join('')}]` : '[E]';
         const mathBadge = mathTypeBadges[name];
@@ -2037,7 +2060,7 @@ function getCapabilityTypeLabel(cap) {
     if (type === 'Code' || name === 'Access' || name.endsWith('.asm')) {
         return 'Code';
     }
-    if (type === 'Abstraction' || ['SlideRule', 'Abacus', 'Circle', 'CapabilityManager', 'DateTime', 'Lambda'].includes(name)) {
+    if (type === 'Abstraction' || ['SlideRule', 'Abacus', 'Circle', 'CapabilityManager', 'DateTime', 'Lambda', 'Mint'].includes(name)) {
         return 'Abstraction';
     }
     if (type === 'C-List' || name === 'Boot') {
@@ -2075,7 +2098,7 @@ function updateCapabilityExplorer() {
     if (cr6Cap && cr6Cap.clist && cr6Cap.clist.length > 0) {
         simulator.clist = cr6Cap.clist.map(entry => {
             const nsObj = namespaceObjects.find(o => o.offset === entry.nsOffset);
-            const isAbstraction = ['Abacus', 'SlideRule', 'Circle', 'CapabilityManager', 'DateTime'].includes(entry.name) || 
+            const isAbstraction = ['Abacus', 'SlideRule', 'Circle', 'CapabilityManager', 'DateTime', 'Lambda', 'Mint'].includes(entry.name) || 
                                  (nsObj && nsObj.type === 'Abstraction');
             return {
                 name: entry.name,
@@ -2723,6 +2746,10 @@ function getParentAbstraction(funcName) {
     // CapabilityManager
     if (funcName === 'GT_CREATE') {
         return 'CapabilityManager';
+    }
+    // Mint (capability forge)
+    if (['GT_MINT', 'GT_RESTRICT', 'GT_REVOKE', 'GT_INSPECT'].includes(funcName)) {
+        return 'Mint';
     }
     // DateTime
     if (funcName === 'GT_DATETIME') {
@@ -6860,6 +6887,101 @@ CALL 1 0             ; CALL CapabilityManager
         ]
     },
     {
+        title: "Mint: The Capability Forge",
+        steps: [
+            {
+                text: `<h3>Beyond CapabilityManager</h3>
+                <p>The <strong>Mint</strong> abstraction is the general-purpose capability forge. While CapabilityManager creates only Data [RWX] or C-List [LSE] objects, Mint can create Golden Tokens with <em>any</em> combination of the 6 permission bits.</p>
+                <div class="key-concept">
+                    <strong>Key Concept:</strong> Mint is the foundation for all future capability creation. It provides four operations: GT_MINT (create), GT_RESTRICT (attenuate), GT_REVOKE (invalidate), and GT_INSPECT (read metadata).
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 1rem 0;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.5rem; text-align: left;">Property</th><th style="padding: 0.5rem; text-align: left;">Value</th></tr>
+                    <tr><td style="padding: 0.5rem;"><strong>Namespace Offset</strong></td><td>12</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="padding: 0.5rem;"><strong>Boot C-List Index</strong></td><td>10</td></tr>
+                    <tr><td style="padding: 0.5rem;"><strong>Boot C-List Perms</strong></td><td>[E] - Enter only (minimal privilege)</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="padding: 0.5rem;"><strong>Address Range</strong></td><td>0xC000 - 0xCFFF</td></tr>
+                </table>`,
+                demo: `<div class="demo-title">Mint in Namespace</div>
+                <div class="demo-content">
+                    <div class="demo-visual">
+                        <div class="hier-preview">
+                            <div style="padding: 0.5rem; background: var(--bg-tertiary); border-radius: 4px; margin: 0.25rem 0;">
+                                <span class="math-type-badge math-forge" style="font-size: 0.7rem; padding: 0.15rem 0.4rem;">FORGE</span>
+                                Mint [E]
+                            </div>
+                        </div>
+                    </div>
+                    <div class="demo-explanation">
+                        <p>Mint is a capability-protected abstraction. You need a GT with [E] permission to CALL it. This is the Golden Rule: even the capability forge itself is governed by capabilities.</p>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>GT_MINT: Arbitrary Permission Creation</h3>
+                <p>GT_MINT creates a new Golden Token with any combination of the 6 permission bits:</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 1rem 0;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.5rem;">Register</th><th style="padding: 0.5rem;">Input</th><th style="padding: 0.5rem;">Description</th></tr>
+                    <tr><td style="padding: 0.5rem;"><strong>DR0</strong></td><td>Perm Mask</td><td>6-bit mask: R(0x01) W(0x02) X(0x04) L(0x08) S(0x10) E(0x20)</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="padding: 0.5rem;"><strong>DR1</strong></td><td>Type</td><td>0=Data, 1=Code, 2=C-List, 3=Thread, 4=Abstraction</td></tr>
+                    <tr><td style="padding: 0.5rem;"><strong>DR2</strong></td><td>Size</td><td>Size in words (1-65536)</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="padding: 0.5rem;"><strong>CR0</strong></td><td>Return</td><td>New GT with requested permissions</td></tr>
+                </table>`,
+                demo: `<div class="demo-title">GT_MINT Usage</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 4px; font-size: 0.8rem;">
+; Create a read-only data object
+MOV DR0, #0x01       ; Perms = R only (bit 0)
+MOV DR1, #0          ; Type = Data
+MOV DR2, #128        ; Size = 128 words
+LOAD CR1, CR6, 10    ; CR1 = Mint [E] from C-List
+CALL 1               ; CALL Mint → GT_MINT
+; CR0 = new GT [R] for 128-word data object
+
+; Create a load-only C-List (no save, no enter)
+MOV DR0, #0x08       ; Perms = L only (bit 3)
+MOV DR1, #2          ; Type = C-List
+MOV DR2, #32         ; Size = 32 entries
+CALL 1               ; CALL Mint → GT_MINT
+; CR0 = new GT [L] — read-only C-List</pre>
+                </div>`
+            },
+            {
+                text: `<h3>GT_RESTRICT: Monotonic Attenuation</h3>
+                <p>GT_RESTRICT derives a new GT from an existing one with <em>fewer</em> permissions. This is the principle of <strong>monotonic attenuation</strong> — you can only reduce permissions, never escalate them.</p>
+                <div class="highlight">
+                    <strong>Security Guarantee:</strong> The new permission mask must be a strict subset of the source GT's permissions. Any attempt to add permissions not in the source FAULT immediately.
+                </div>`,
+                demo: `<div class="demo-title">GT_RESTRICT Usage</div>
+                <div class="demo-content">
+                    <pre style="background: var(--bg-tertiary); padding: 1rem; border-radius: 4px; font-size: 0.8rem;">
+; Start with a [R,W,X] data GT in CR0
+; Restrict it to read-only for sharing
+MOV DR0, #0x01       ; New perms = R only
+LOAD CR1, CR6, 10    ; CR1 = Mint [E]
+CALL 1               ; GT_RESTRICT
+; CR0 = same object, now [R] only
+; Original [R,W,X] GT is unaffected</pre>
+                </div>`
+            },
+            {
+                text: `<h3>GT_REVOKE: Deterministic Invalidation</h3>
+                <p>GT_REVOKE bumps the namespace entry's version number. Every existing GT pointing to that entry becomes instantly invalid — the next mLoad will detect a version mismatch and FAULT.</p>
+                <div class="key-concept">
+                    <strong>Total Revocation:</strong> There is no partial revoke. All copies, everywhere, become invalid simultaneously. This is deterministic capability revocation — fundamental to secure resource management.
+                </div>`,
+                demo: `<div class="demo-title">Revocation Flow</div>
+                <div class="demo-content">
+                    <div class="demo-visual" style="text-align: center; font-size: 0.85rem;">
+                        <div style="padding: 0.5rem; background: var(--bg-tertiary); border-radius: 4px; margin: 0.5rem 0;">GT v1 [RWX] &rarr; valid &#10003;</div>
+                        <div style="padding: 0.3rem; color: var(--accent);">GT_REVOKE bumps to v2</div>
+                        <div style="padding: 0.5rem; background: rgba(248, 113, 113, 0.2); border-radius: 4px; margin: 0.5rem 0; border: 1px solid rgba(248, 113, 113, 0.4);">GT v1 [RWX] &rarr; FAULT (version mismatch)</div>
+                    </div>
+                </div>`
+            }
+        ]
+    },
+    {
         title: "Atomic Operations (LOADX/SAVEX)",
         steps: [
             {
@@ -10222,6 +10344,216 @@ RETURN
 select_else:
 MOV 0 2             ; DR0 = DR2 (else-value)
 RETURN
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_MINT: `; ====================================================
+; GT_MINT (Mint): Create Golden Token with Arbitrary Perms
+; The fundamental capability creation primitive
+; ====================================================
+; API: DR0 = permission mask (6-bit: RWXLSE)
+;        Bit 0 = R (Read)    0x01
+;        Bit 1 = W (Write)   0x02
+;        Bit 2 = X (Execute) 0x04
+;        Bit 3 = L (Load)    0x08
+;        Bit 4 = S (Save)    0x10
+;        Bit 5 = E (Enter)   0x20
+;      DR1 = object type
+;        0 = Data, 1 = Code, 2 = C-List
+;        3 = Thread, 4 = Abstraction
+;      DR2 = size in words
+; Return: CR0 = new Golden Token with requested perms
+; ====================================================
+; Security: Only callable through mLoad with E perm.
+; The Mint abstraction is itself a capability —
+; you need a GT with [E] to reach GT_MINT.
+; This is the Golden Rule in action: no bypass.
+; ====================================================
+
+; === PARAMETER VALIDATION ===
+; Step 1: Validate permission mask (0x00-0x3F)
+MOV 3 #0x3F         ; Maximum valid perm mask
+CMP 0 3             ; DR0 <= 0x3F?
+B GT fault          ; Invalid perm mask -> FAULT
+CMP 0 #0            ; DR0 > 0? (must grant something)
+B EQ fault          ; Zero perms -> FAULT
+
+; Step 2: Validate object type (0-4)
+CMP 1 #0
+B MI fault          ; Negative type -> FAULT
+CMP 1 #4
+B GT fault          ; Type > 4 -> FAULT
+
+; Step 3: Validate size (1-65536 words)
+CMP 2 #0
+B LE fault          ; Size <= 0 -> FAULT
+MOV 3 #65536
+CMP 2 3
+B GT fault          ; Size > 65536 -> FAULT
+
+; === NAMESPACE ALLOCATION ===
+; Step 4: Find free namespace entry
+; Hardware searches for unused slot (version=0, valid=0)
+; Allocates 3-word descriptor:
+;   W0: Location (base address)
+;   W1: Limit (size - 1)
+;   W2: Seals (MAC + version + type bits)
+
+; Step 5: Compute MAC seal
+; MAC = FNV-1a(location, limit, version)
+; Hardware-protected — cannot be forged
+
+; === GOLDEN TOKEN CONSTRUCTION ===
+; Step 6: Build 64-bit Golden Token
+;   Bits 0-31:  Namespace offset
+;   Bits 32-37: Permission mask from DR0
+;   Bits 38-63: Version from namespace entry
+
+; Step 7: Store GT in CR0 for caller
+; CR0 now holds the new Golden Token
+; Caller owns exactly the permissions requested
+RETURN              ; Return with GT in CR0
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_RESTRICT: `; ====================================================
+; GT_RESTRICT (Mint): Derive Restricted Golden Token
+; Creates a new GT with subset permissions
+; ====================================================
+; API: CR0 = source Golden Token (to restrict)
+;      DR0 = new permission mask (must be subset)
+; Return: CR0 = restricted GT (same namespace entry,
+;         fewer permissions, same version)
+; ====================================================
+; Security: Cannot escalate — new perms must be a
+; strict subset of source perms. This is monotonic
+; permission attenuation (can only reduce, never add).
+; ====================================================
+
+; === VALIDATION ===
+; Step 1: Verify CR0 is valid (not NULL/revoked)
+; mLoad checks MAC, version, bounds automatically
+
+; Step 2: Extract source permissions
+; Read perm bits from CR0's GT encoding
+; Source perms in DR1 (set by microcode)
+
+; Step 3: Verify subset relationship
+; new_perms AND source_perms must equal new_perms
+; i.e., no bits in new_perms absent from source_perms
+AND 2 0 1           ; DR2 = DR0 AND DR1
+CMP 2 0             ; DR2 == DR0?
+B NE fault          ; Not a subset -> FAULT
+
+; Step 4: Verify non-empty result
+CMP 0 #0
+B EQ fault          ; Zero perms -> FAULT
+
+; === CONSTRUCT RESTRICTED GT ===
+; Step 5: Build new GT with same offset, new perms
+; Same namespace entry, same version
+; Only the permission field changes
+; CR0 = restricted GT
+RETURN              ; Return restricted GT in CR0
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_REVOKE: `; ====================================================
+; GT_REVOKE (Mint): Revoke a Golden Token
+; Bumps namespace version to invalidate all copies
+; ====================================================
+; API: CR0 = target Golden Token (to revoke)
+; Return: DR0 = 1 (success)
+; Effect: All existing copies of this GT will FAULT
+;         on next mLoad because version mismatch
+; ====================================================
+; Security: Revocation is immediate and total.
+; Every GT pointing to this namespace entry becomes
+; invalid. There is no "partial revoke" — version
+; bump invalidates ALL copies simultaneously.
+; This is deterministic capability revocation.
+; ====================================================
+
+; === VALIDATION ===
+; Step 1: Verify CR0 is valid
+; mLoad checks MAC, version, bounds
+
+; Step 2: Verify caller has authority to revoke
+; Caller must hold GT with sufficient permissions
+; (checked by mLoad on entry to Mint abstraction)
+
+; === REVOCATION ===
+; Step 3: Bump namespace entry version
+; Increment version field in W2 (Seals word)
+; All existing GTs now have stale version
+
+; Step 4: Recompute MAC with new version
+; MAC = FNV-1a(location, limit, new_version)
+; Ensures integrity of updated entry
+
+; Step 5: Invalidate CR0
+; Set CR0 = NULL GT (type=10, all perms zero)
+; Caller's own copy is also revoked
+
+; Step 6: Return success
+MOV 0 #1            ; DR0 = 1 (revoked)
+RETURN
+
+; === FAILSAFE: No error codes ===
+fault:
+    FAULT           ; Uniform failure - no information leakage`,
+
+    GT_INSPECT: `; ====================================================
+; GT_INSPECT (Mint): Read Golden Token Metadata
+; Non-destructive inspection of GT fields
+; ====================================================
+; API: CR0 = target Golden Token (to inspect)
+; Return: DR0 = permission mask (6-bit RWXLSE)
+;         DR1 = object type (0-4)
+;         DR2 = version number
+;         DR3 = namespace offset
+;         DR4 = GT type field (00=Inform, 01=Outform,
+;                              10=NULL, 11=Spare)
+; ====================================================
+; Security: Read-only. Does not modify the GT or
+; namespace entry. Requires valid GT in CR0
+; (mLoad validates on entry).
+; ====================================================
+
+; === VALIDATION ===
+; Step 1: Verify CR0 is valid
+; mLoad checks MAC, version, bounds
+; NULL/Spare GT types cause FAULT
+
+; === EXTRACTION ===
+; Step 2: Extract permission mask
+; Read bits 32-37 of 64-bit GT encoding
+; DR0 = 6-bit permission mask
+
+; Step 3: Determine object type from namespace
+; Read type metadata from W2 (Seals word)
+; DR1 = type code (0=Data, 1=Code, 2=C-List,
+;                  3=Thread, 4=Abstraction)
+
+; Step 4: Extract version
+; Read version field from GT bits 38-63
+; DR2 = version number
+
+; Step 5: Extract namespace offset
+; Read bits 0-31 of GT encoding
+; DR3 = namespace table offset
+
+; Step 6: Extract GT type field
+; Read 2-bit type from GT encoding
+; DR4 = type code (00/01/10/11)
+
+RETURN              ; Return metadata in DR0-DR4
 
 ; === FAILSAFE: No error codes ===
 fault:

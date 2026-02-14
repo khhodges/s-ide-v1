@@ -5381,6 +5381,12 @@ body.tooltip-hidden [data-tooltip]:hover::after {
     color: white;
 }
 
+.math-type-badge.math-forge {
+    background: linear-gradient(135deg, #f1c40f, #f39c12);
+    color: #1a1a2e;
+    font-weight: 700;
+}
+
 /* Instruction Security Notes */
 .instr-security {
     display: flex;

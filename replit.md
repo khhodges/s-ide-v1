@@ -47,7 +47,8 @@ The web interface provides seven views: Dashboard, Namespace Browser, Assembly E
 
 ### Key Features
 
--   **Built-in Abstractions**: Includes `Boot`, `Threads`, `SlideRule`, `Abacus`, `Circle`, `CapabilityManager`, `DateTime`, and `Lambda`.
+-   **Built-in Abstractions**: Includes `Boot`, `Threads`, `SlideRule`, `Abacus`, `Circle`, `CapabilityManager`, `DateTime`, `Lambda`, and `Mint`.
+-   **Mint Abstraction**: General-purpose capability forge at NS offset 12 (0xC000). Four functions: GT_MINT (create GT with arbitrary 6-bit perm mask), GT_RESTRICT (derive subset perms), GT_REVOKE (bump version to invalidate all copies), GT_INSPECT (read GT metadata). Complements CapabilityManager which only creates Data [RWX] or C-List [LSE].
 -   **Instruction Set**: Custom CTMM instruction set with Church-specific and Turing-specific instructions. All instructions use a 32-bit format. Only CR0-CR7 are instruction-addressable.
 -   **Condition Codes**: ARM-style condition flags for conditional execution.
 -   **State Persistence**: Automatic saving and restoring using browser local storage.
