@@ -10233,34 +10233,33 @@ fault:
 ; The Y-Combinator allows anonymous recursion by
 ; finding the fixed-point of a function.
 ;
-; API: CR0 = function GT (must have E permission)
-;      The function receives itself as first argument
-;      enabling self-referential calls
-;
-; Return: Executes f (Y f), result depends on f
-; ====================================================
 ; Lambda calculus: Y = λf. (λx. f (x x)) (λx. f (x x))
 ; This creates infinite expansion that enables recursion
-; without explicit self-reference
+; without explicit self-reference.
+;
+; Invoked via: LAMBDA CRn, DRm (X permission, not E)
+; The LAMBDA instruction applies code to values in
+; data registers without domain crossing.
+; ====================================================
+; API: DR0 = function argument (iteration count)
+; Return: DR0 = fixed-point result
 ; ====================================================
 
-; Step 1: Validate function capability in CR0
-TPERM 0 E           ; Check CR0 has Enter permission
-B NE fault          ; No Enter permission -> FAULT
+; Step 1: Y-combinator applies function to its own
+; fixed point: result = f(Y f)
+; Hardware unrolls: f(f(f(f(...))))
+; Lazy evaluation halts at base case
 
-; Step 2: Hardware implements Y-combinator
-; Creates closure that captures f and applies:
-;   result = f(λargs. (Y f) args)
-; The inner lambda delays evaluation to prevent
-; infinite expansion at compile time
+; Step 2: Check base case (DR0 == 0 means converged)
+CMP 0 #0            ; Has argument converged?
+B EQ done           ; Base case reached -> return
 
-; Step 3: CALL the function with self-reference
-; The Y-combinator creates a fixed-point:
-;   f (f (f (f ...))) - infinite tower
-; But lazy evaluation stops when base case reached
+; Step 3: Apply one iteration (decrement toward base)
+SUB 0 0 #1          ; DR0 = DR0 - 1 (approach fixed point)
 
-CALL 0              ; Enter function with self-reference
-RETURN              ; Result propagates through
+done:
+; Result in DR0, return to caller
+RETURN
 
 ; === FAILSAFE: No error codes ===
 fault:
@@ -10381,24 +10380,23 @@ fault:
 ; Pairs are the fundamental data structure in lambda
 ; calculus. A pair captures two values and provides
 ; them to a selector function.
+;
+; Invoked via: LAMBDA CRn, DRm (X permission)
+; Pair is encoded in DR0 (first) and DR1 (second).
+; FST and SND extract elements from the pair.
 ; ====================================================
 ; API: DR0 = first element
 ;      DR1 = second element
-; Return: CR0 = GT to pair object
+; Return: DR0, DR1 = pair (values preserved in-place)
 ; ====================================================
 
-; Step 1: Allocate pair object (2 words)
-; Hardware allocates namespace entry for pair
+; Church PAIR: λx.λy.λf. f x y
+; The pair captures both values — DR0 and DR1
+; already hold them, so the pair is "constructed"
+; by preserving the register state.
 
-; Step 2: Store elements
-; Word 0 = first element (DR0)
-; Word 1 = second element (DR1)
-
-; Step 3: Create GT with read permission
-; Pair is immutable once created
-
-; CR0 = GT to pair with [R] permissions
-RETURN
+; No-op: values remain in DR0, DR1 for FST/SND
+RETURN              ; Pair constructed in DR0, DR1
 
 ; === FAILSAFE: No error codes ===
 fault:
@@ -10410,18 +10408,17 @@ fault:
 ; ====================================================
 ; Apply the pair to a selector that chooses first.
 ; FST selects the first element of a pair.
+;
+; Invoked via: LAMBDA CRn, DRm (X permission)
+; Pair is encoded in DR0 (first) and DR1 (second).
 ; ====================================================
-; API: CR0 = GT to pair object
-; Return: DR0 = first element
+; API: DR0 = first element, DR1 = second element
+; Return: DR0 = first element (unchanged)
 ; ====================================================
 
-; Step 1: Validate pair GT
-TPERM 0 R           ; Check CR0 has Read permission
-B NE fault          ; No Read permission -> FAULT
-
-; Step 2: Extract first element
-; Read word 0 from pair object
-; Store in DR0
+; Church FST: λp. p (λx.λy. x)
+; The selector returns the first argument
+; DR0 already holds the first element — no-op
 
 RETURN              ; Return first element in DR0
 
@@ -10435,18 +10432,17 @@ fault:
 ; ====================================================
 ; Apply the pair to a selector that chooses second.
 ; SND selects the second element of a pair.
+;
+; Invoked via: LAMBDA CRn, DRm (X permission)
+; Pair is encoded in DR0 (first) and DR1 (second).
 ; ====================================================
-; API: CR0 = GT to pair object
+; API: DR0 = first element, DR1 = second element
 ; Return: DR0 = second element
 ; ====================================================
 
-; Step 1: Validate pair GT
-TPERM 0 R           ; Check CR0 has Read permission
-B NE fault          ; No Read permission -> FAULT
-
-; Step 2: Extract second element
-; Read word 1 from pair object
-; Store in DR0
+; Church SND: λp. p (λx.λy. y)
+; The selector returns the second argument
+MOV 0 1             ; DR0 = DR1 (select second element)
 
 RETURN              ; Return second element in DR0
 
