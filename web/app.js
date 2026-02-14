@@ -2852,13 +2852,15 @@ B GT fault        ; Exceeds max -> FAULT
 ; === ALL CHECKS PASSED ===
 ; Safe to proceed with protected operation
 ; (In real code: CALL CR0 enters the abstraction)
-; Program ends here - validation complete
+B done            ; Skip past fault handler
 
 ; === SINGLE FAILURE MODE ===
 ; All validation failures come here
 ; No error codes - no information leakage
 fault:
-FAULT             ; Uniform failure - triggers FirstFault`,
+FAULT             ; Uniform failure - triggers FirstFault
+
+done:`,
 
     firstfault: `; =============================================
 ; FIRSTFAULT.ASM - UNIFORM FAULT HANDLER
@@ -3831,9 +3833,27 @@ function executeEditorInstruction(instr) {
                         faultOccurred = true;
                     }
                 } else {
-                    result = `Branch not taken (${cond} failed)`;
+                    const isFaultGuard = String(target || '').toLowerCase() === 'fault';
+                    if (isFaultGuard) {
+                        const guardReasons = {
+                            'NE': 'values equal — permission check passed',
+                            'GT': 'not greater — bounds check passed',
+                            'GE': 'less than — check passed',
+                            'LT': 'not less — check passed',
+                            'LE': 'greater — check passed',
+                            'EQ': 'not equal — check passed',
+                            'CS': 'no carry — check passed',
+                            'CC': 'carry set — check passed',
+                            'MI': 'not negative — check passed',
+                            'PL': 'negative — check passed'
+                        };
+                        result = `OK: ${guardReasons[cond] || 'condition not met — check passed'}`;
+                    } else {
+                        result = `Branch not taken (${cond} not met)`;
+                    }
                 }
-                editorLog(`[${line}] ${op} ${args.join(' ')}: ${result}`, faultOccurred ? 'error' : 'exec');
+                const logLevel = faultOccurred ? 'error' : (String(target || '').toLowerCase() === 'fault' && !simulator.checkCondition(cond)) ? 'success' : 'exec';
+                editorLog(`[${line}] ${op} ${args.join(' ')}: ${result}`, logLevel);
                 updateEditorStatus();
                 return faultOccurred;
             }
