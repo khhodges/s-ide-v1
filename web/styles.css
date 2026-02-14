@@ -1017,6 +1017,112 @@ main {
     font-style: italic;
 }
 
+.cap-detail-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+}
+
+.cap-detail-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: var(--text-secondary);
+    padding: 0.4rem 1rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-family: var(--font-mono);
+    border-radius: 4px 4px 0 0;
+    transition: all 0.15s ease;
+    position: relative;
+    bottom: -1px;
+}
+
+.cap-detail-tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-input);
+}
+
+.cap-detail-tab.active {
+    color: var(--accent);
+    background: var(--bg-input);
+    border-color: var(--border);
+    border-bottom: 1px solid var(--bg-input);
+}
+
+.clist-tab-content {
+    width: 100%;
+}
+
+.clist-tab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.clist-tab-count {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+}
+
+.clist-tab-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.clist-tab-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    background: var(--bg-input);
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+    cursor: default;
+    transition: border-color 0.15s;
+}
+
+.clist-tab-entry:hover {
+    border-color: var(--accent);
+}
+
+.clist-tab-idx {
+    color: var(--text-secondary);
+    min-width: 2rem;
+}
+
+.clist-tab-name {
+    color: var(--text-primary);
+    flex: 1;
+    font-weight: 500;
+}
+
+.clist-tab-perms {
+    display: flex;
+    gap: 2px;
+}
+
+.clist-tab-perms .perm-badge {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.25rem;
+}
+
+.clist-tab-offset {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    min-width: 3.5rem;
+    text-align: right;
+}
+
 .cap-detail-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

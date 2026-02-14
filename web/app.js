@@ -1816,16 +1816,10 @@ function showCapabilityDetail(evt, cap, regLabel) {
         ? '<span class="lock-status locked" data-tooltip="Navigate to the C-List parent and perform Load GT to unlock access rights">🔒 Locked</span>'
         : `<span class="lock-status unlocked" data-tooltip="Unlocked for use as Permissions allow">🔓 Unlocked</span>${registerBadges ? ' ' + registerBadges : ''}`;
     
-    panel.innerHTML = `
-        <div class="cap-title-bar">
-            <div class="cap-lock-status">
-                ${lockStatusHtml}
-            </div>
-            <div class="cap-hierarchy-title" data-tooltip="Capability hierarchy path from Namespace root">
-                ${hierarchyHtml}
-            </div>
-        </div>
-        
+    const hasCList = cap.clist && cap.clist.length > 0;
+    const clistCount = hasCList ? cap.clist.length : 0;
+
+    const wordStackHtml = `
         <div class="word-stack">
             <div class="word-row gt-row">
                 <div class="word-key" data-tooltip="Golden Token - 64-bit capability key that grants access rights">GT</div>
@@ -1904,8 +1898,66 @@ function showCapabilityDetail(evt, cap, regLabel) {
                     </div>
                 </div>
             </div>
+        </div>`;
+
+    let clistTabHtml = '';
+    if (hasCList) {
+        const clistEntries = cap.clist.map((entry, i) => {
+            const allP = ['R', 'W', 'X', 'L', 'S', 'E'];
+            const badges = allP.map(p => {
+                const has = entry.perms && entry.perms.includes(p);
+                return `<span class="perm-badge perm-${p.toLowerCase()} ${has ? '' : 'inactive'}">${p}</span>`;
+            }).join('');
+            const nsOff = entry.nsOffset !== undefined ? `0x${entry.nsOffset.toString(16).toUpperCase()}` : '--';
+            return `<div class="clist-tab-entry" data-tooltip="${entry.type || 'Object'}: ${entry.name} at NS offset ${nsOff}">
+                <span class="clist-tab-idx">[${i}]</span>
+                <span class="clist-tab-name">${entry.name}</span>
+                <span class="clist-tab-perms">${badges}</span>
+                <span class="clist-tab-offset">${nsOff}</span>
+            </div>`;
+        }).join('');
+
+        clistTabHtml = `<div class="clist-tab-content" id="clistTabContent" style="display:none;">
+            <div class="clist-tab-header">
+                <span class="clist-tab-count">${clistCount} entries</span>
+            </div>
+            <div class="clist-tab-entries">${clistEntries}</div>
+        </div>`;
+    }
+
+    const tabBarHtml = hasCList ? `
+        <div class="cap-detail-tabs">
+            <button class="cap-detail-tab active" onclick="switchCapDetailTab('gt', this)" data-tooltip="Golden Token and Namespace Descriptor">GT</button>
+            <button class="cap-detail-tab" onclick="switchCapDetailTab('clist', this)" data-tooltip="C-List entries owned by this capability">GT-List (${clistCount})</button>
+        </div>` : '';
+
+    panel.innerHTML = `
+        <div class="cap-title-bar">
+            <div class="cap-lock-status">
+                ${lockStatusHtml}
+            </div>
+            <div class="cap-hierarchy-title" data-tooltip="Capability hierarchy path from Namespace root">
+                ${hierarchyHtml}
+            </div>
         </div>
+        ${tabBarHtml}
+        <div id="gtTabContent">${wordStackHtml}</div>
+        ${clistTabHtml}
     `;
+}
+
+function switchCapDetailTab(tab, btn) {
+    document.querySelectorAll('.cap-detail-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    const gtContent = document.getElementById('gtTabContent');
+    const clistContent = document.getElementById('clistTabContent');
+    if (tab === 'gt') {
+        if (gtContent) gtContent.style.display = '';
+        if (clistContent) clistContent.style.display = 'none';
+    } else {
+        if (gtContent) gtContent.style.display = 'none';
+        if (clistContent) clistContent.style.display = '';
+    }
 }
 
 function updateGTFromEditor() {
@@ -2167,13 +2219,11 @@ function selectContextRegister(regIndex, hasGT) {
     const reg = getContextRegister(regIndex);
     const regLabel = `CR${regIndex}`;
     
-    // Handle empty register - show NULL details
     if (!hasGT || !reg || !reg.name || reg.name === 'NULL') {
         showEmptyRegisterDetail(regIndex);
         return;
     }
     
-    // Build capability with required location.offset for showCapabilityDetail
     const cap = {
         name: reg.name,
         type: reg.type || getCapabilityTypeLabel(reg),
@@ -2183,15 +2233,14 @@ function selectContextRegister(regIndex, hasGT) {
         size: reg.size || 1024,
         nsOffset: reg.nsOffset || 0,
         nsEntry: reg.nsEntry,
-        goldenKey: reg.goldenKey
+        goldenKey: reg.goldenKey,
+        clist: reg.clist || null
     };
     
-    // Ensure location has offset
     if (!cap.location.offset && cap.location.offset !== 0) {
         cap.location.offset = cap.nsOffset || 0;
     }
     
-    // Use the existing showCapabilityDetail function with register label
     showCapabilityDetail(null, cap, regLabel);
 }
 
