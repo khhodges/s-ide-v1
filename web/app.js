@@ -3262,11 +3262,24 @@ function setupCodeEditor() {
     }
     
     if (savedContent) {
-        editor.value = savedContent;
-        savedEditorContent = savedContent;
-        lastSavedCode = savedContent;
-        if (savedLinkage) editorState.currentLinkage = savedLinkage;
-        if (savedPerms) editorState.currentPerms = savedPerms;
+        const isOldAccess = savedContent.includes('TPERM 0 RW') && savedContent.includes('TPERM 0 S') && savedContent.includes('ACCESS.ASM');
+        if (isOldAccess && typeof examplePrograms !== 'undefined' && examplePrograms.access) {
+            editor.value = examplePrograms.access;
+            savedEditorContent = examplePrograms.access;
+            lastSavedCode = examplePrograms.access;
+            localStorage.setItem('ctmm_editor_content', examplePrograms.access);
+            editorState.currentLinkage = 'Boot/Examples/access';
+            editorState.currentPerms = '[RX]';
+            localStorage.setItem('ctmm_editor_linkage', editorState.currentLinkage);
+            localStorage.setItem('ctmm_editor_perms', editorState.currentPerms);
+            editorLog('Updated Access.asm to current version', 'info');
+        } else {
+            editor.value = savedContent;
+            savedEditorContent = savedContent;
+            lastSavedCode = savedContent;
+        }
+        if (savedLinkage && !isOldAccess) editorState.currentLinkage = savedLinkage;
+        if (savedPerms && !isOldAccess) editorState.currentPerms = savedPerms;
         pushCodeHistory(savedContent);
         updateEditorToolbar();
         updateLineNumbers();
