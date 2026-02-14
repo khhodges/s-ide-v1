@@ -31,8 +31,10 @@ The CTMM simulator offers both a Haskell console interface and a web-based visua
 -   **Boot Sequence**: A 4-step secure initialization process.
 -   **Failsafe Security**: All validation failures route to a single FAULT handler.
 -   **Deterministic Garbage Collection (PP250)**: Three-phase Mark-Scan-Sweep. Mark sets G=1 on all namespace entries. Scan walks DNA tree via mLoad (resets G=0 on reachable entries). Sweep identifies entries still G=1 as garbage, bumps version.
--   **GT-Literals**: Direct GT-Literal (30-bit value, Type=10) and Indirect GT-Literal (namespace-backed handle). New Church instructions: LDL (Load Literal), STL (Store Literal), LAMBDA (application).
--   **Network Transparency**: GT-Literals can act as capability-secured handles for remote resources, supporting RPC, transparent login, and secure data handling via standard HTTPS for fetch/flush operations.
+-   **GT Type Field**: 2-bit field classifying GTs as Inform (00, local reference), Outform (01, remote reference), NULL (10, empty/invalid/revoked), or Spare (11, reserved). NULL provides unambiguous initialization, clean revocation, and GC clarity.
+-   **LAMBDA Instruction**: Lightweight in-scope code application — `LAMBDA CRn, x` uses X permission (not E), arguments/results in data registers. Machine-status fast path (zero stack access). Non-nestable on its own, nestable via CALL. Self-describing stack frames with 1-bit tag. Macro-like code reuse without duplication.
+-   **Domain Separation**: CRs hold capabilities exclusively, DRs hold values exclusively. No mixing ("oil and water"). mLoad is the single gate between domains. LAMBDA bridges them: GT with X permission (Church domain) applies code to values (Turing domain).
+-   **Network Transparency**: Outform GTs support remote resources via standard HTTPS for fetch/flush. RPC tunnels use cryptographic keys stored in standard namespace entries (accessed via CAP.LOAD with R permission).
 -   **Thread Table C-List Snippet**: Thread shadow tracks only CR0-CR7 (instruction-addressable registers).
 -   **CHANGE/RETURN Semantics**: `CHANGE` uses `CALL` microcode to push a call stack frame. `CALL` and `CHANGE` store the instruction address. `RETURN` adds step size and checks E permission on saved CR6 GT before revalidation.
 

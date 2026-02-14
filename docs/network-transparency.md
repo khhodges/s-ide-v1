@@ -1,8 +1,8 @@
 # Network Transparency
 
-> **Status**: Architectural design document. The GT Type field (Inform, Outform, Literal, Abstract) exists in the simulator's 32-bit GT format. Outform behavior, TRAP handling, and tunnel operations are not yet implemented in the simulator. This document specifies the planned design.
+> **Status**: Architectural design document. The GT Type field (Inform, Outform, NULL, Spare) exists in the simulator's 32-bit GT format. Outform behavior, TRAP handling, and tunnel operations are not yet implemented in the simulator. This document specifies the planned design.
 >
-> See also: [GT-Literals, Lambda Calculus, and the CLOOMC Value Domain](gt-literals.md) for the full GT-Literal specification, the LAMBDA instruction, and constructive examples.
+> See also: [GT Type Field and Domain Separation](gt-literals.md) for the Type field specification and the [LAMBDA Instruction Specification](lambda-instruction.md) for the lightweight code application mechanism.
 
 ## Overview
 
@@ -10,7 +10,7 @@ Network transparency is the capability-secured mechanism by which the Meta Machi
 
 The architecture is **symmetrical**: the Meta Machine can both consume remote resources and serve its own resources to authorized remote parties.
 
-Object fetch and flush (R/W on Outform) use **standard HTTPS** — the same browser mechanisms the web already uses (TLS, ETag, Cache-Control). This ensures interoperability with existing web infrastructure. RPC calls (E on Outform Abstract) between Meta Machines use an encrypted **point-to-point tunnel** keyed by a **Literal GT**, since both endpoints understand the capability protocol.
+Object fetch and flush (R/W on Outform) use **standard HTTPS** — the same browser mechanisms the web already uses (TLS, ETag, Cache-Control). This ensures interoperability with existing web infrastructure. RPC calls (E on Outform) between Meta Machines use an encrypted **point-to-point tunnel** keyed by a cryptographic key stored in a **namespace entry** (accessed via CAP.LOAD with R permission), since both endpoints understand the capability protocol.
 
 ---
 
@@ -22,8 +22,8 @@ The 2-bit Type field in the 32-bit Golden Token classifies each resource:
 |-------|------|-------------|
 | 00 | **Inform** | Local resource — data or code in the local namespace |
 | 01 | **Outform** | Remote resource — data or service at a network URL, accessed transparently |
-| 10 | **Literal** | GT-Literal — a value (direct: 30-bit self-contained) or a handle to a secret (indirect: namespace-backed). See [GT-Literals](gt-literals.md). |
-| 11 | **Abstract** | Abstract service — a callable abstraction (function or service entry point) |
+| 10 | **NULL** | Empty/invalid/revoked capability — any operation FAULTs |
+| 11 | **Spare** | Reserved for future use |
 
 The Type field combines with permissions to determine behavior:
 
@@ -31,7 +31,7 @@ The Type field combines with permissions to determine behavior:
 |-------------------|----------|
 | Outform + R | **Object fetch** — HTTPS GET from remote URL into local cache |
 | Outform + W | **Object flush** — HTTPS PUT dirty cached object back to home URL |
-| Outform + E (Abstract) | **RPC call** — invoke remote Meta Machine service through Literal GT encrypted tunnel |
+| Outform + E | **RPC call** — invoke remote Meta Machine service through namespace-stored encrypted tunnel key |
 | Outform + L | **TRAP** — future extension for remote service discovery |
 | Outform + S | **TRAP** — future extension for remote capability delegation |
 | Outform + X | **TRAP** — nonsense case, safe |
@@ -98,17 +98,17 @@ This is analogous to write-back caching in virtual memory, but for named objects
 
 ---
 
-## Case 2: RPC Tunnel (E on Outform Abstract)
+## Case 2: RPC Tunnel (E on Outform)
 
-When CALL targets an Outform entry with Abstract type:
+When CALL targets an Outform entry with E permission:
 
 ```
 1. E permission checked on GT → FAULT if denied
 2. Data registers (x0-x31) serialized as argument payload
-3. Payload encrypted using Literal GT tunnel key
+3. Payload encrypted using tunnel key from namespace entry (accessed via mLoad)
 4. Sent to remote Meta Machine's /api/invoke endpoint
 5. Remote machine:
-   a. Decrypts using its copy of the Literal GT key
+   a. Decrypts using its copy of the tunnel key from its own namespace entry
    b. Validates the incoming GT (MAC, version, permissions)
    c. Executes the abstraction locally
    d. Serializes result (data registers + condition flags)
@@ -129,7 +129,7 @@ Network transparency is **symmetrical** — the Meta Machine is both client and 
 |-----------|-----------|---------------|
 | Object fetch | R | HTTPS GET from remote URL (standard browser mechanism) |
 | Object flush | W | HTTPS PUT to remote URL (standard browser mechanism) |
-| RPC call | E | POST to remote /api/invoke via Literal GT encrypted tunnel |
+| RPC call | E | POST to remote /api/invoke via namespace-key encrypted tunnel |
 
 ### Inbound (as server)
 
@@ -143,25 +143,23 @@ All inbound requests carry a GT that is validated through the same mLoad path �
 
 ---
 
-## GT-Literals and RPC Tunnel Keys
+## RPC Tunnel Keys
 
-GT-Literals (Type = 10) come in two forms: **direct** (30-bit self-contained value) and **indirect** (namespace-backed handle to a secret). For the full GT-Literal specification, the LAMBDA instruction, and lambda calculus examples, see [GT-Literals, Lambda Calculus, and the CLOOMC Value Domain](gt-literals.md).
-
-In the context of network transparency, **indirect GT-Literals** serve as handles to cryptographic keys and credentials:
+Cryptographic keys for RPC tunnels are stored in standard **namespace entries**, accessed via CAP.LOAD with R permission through the normal mLoad validation path. No special GT type is needed — the protection is on the container (the namespace entry), not on the value itself.
 
 ### RPC Tunnel Key
 
-An indirect GT-Literal whose namespace entry holds a **symmetric encryption key** for point-to-point RPC tunnels between Meta Machines. Both communicating namespaces hold matching entries with the same key material (Location + Limit values).
+A namespace entry whose Location and Limit fields hold a **symmetric encryption key** for point-to-point RPC tunnels between Meta Machines. Both communicating namespaces hold matching entries with the same key material.
 
-- The Literal GT is loaded into a CR before a `CAP.CALL` on an Outform Abstract GT
-- The CALL instruction uses the key material to encrypt the serialized register payload
+- The tunnel key's GT (Inform type with R permission) is loaded into a CR before a `CAP.CALL` on an Outform GT
+- The CALL instruction reads the key material from the namespace entry (via mLoad) to encrypt the serialized register payload
 - The remote Meta Machine decrypts using its matching entry
-- **Revocation**: GC sweep bumps the version, killing the tunnel instantly
+- **Revocation**: GC sweep bumps the version on the namespace entry, killing the tunnel instantly
 - **No PKI required**: The capability *is* the trust — no certificate authorities needed
 
 ### Other Credential Use Cases (Conceptual)
 
-Indirect GT-Literals also serve as handles for transparent login credentials, session tokens, encryption keys for data at rest, and API key wrapping. These use cases share the same pattern: the GT is the handle, the namespace entry holds the secret, MAC protects integrity, and GC manages the lifecycle. See [GT-Literals](gt-literals.md) for details on each use case.
+Namespace entries also serve as containers for transparent login credentials, session tokens, encryption keys for data at rest, and API key wrapping. These use cases share the same pattern: the GT (Inform, R permission) is the handle, the namespace entry holds the secret, MAC protects integrity, and GC manages the lifecycle.
 
 ---
 
@@ -181,9 +179,9 @@ Two Meta Machines ("me" and "mymother") each have their own namespace:
 | 1 | C-List | Inform | Local capability list |
 | 2 | Code | Inform | Local code segment |
 | 3 | Thread | Inform | Current thread object |
-| 4 | TunnelKey_Mother | Literal | Crypto key for tunnel to "mymother" |
+| 4 | TunnelKey_Mother | Inform | Crypto key for tunnel to "mymother" (R permission) |
 | 5 | Mother_CList | Outform | Remote: mymother's published C-List |
-| 6 | Mother_Service | Outform/Abstract | Remote: a callable service on mymother |
+| 6 | Mother_Service | Outform | Remote: a callable service on mymother (E permission) |
 
 **"mymother" namespace:**
 
@@ -193,9 +191,9 @@ Two Meta Machines ("me" and "mymother") each have their own namespace:
 | 1 | C-List | Inform | Local capability list |
 | 2 | Code | Inform | Local code segment |
 | 3 | Thread | Inform | Current thread object |
-| 4 | TunnelKey_Child | Literal | Crypto key for tunnel to "me" (same key material) |
+| 4 | TunnelKey_Child | Inform | Crypto key for tunnel to "me" (same key material, R permission) |
 | 5 | Published_CList | Inform | Services available to authorized remote callers |
-| 6 | MyService | Abstract | The service implementation |
+| 6 | MyService | Inform | The service implementation (E permission) |
 
 ### The Instruction Sequence
 
@@ -203,21 +201,21 @@ Two Meta Machines ("me" and "mymother") each have their own namespace:
 ; CALL(CONNECT(me, mymother))
 ; One fail-safe CLOOMC instruction sequence:
 
-; Step 1: Load the RPC tunnel key (Literal GT) from our C-List
-CAP.LOAD  CR0, CR6, 4      ; CR0 = TunnelKey_Mother (Literal GT, index 4)
+; Step 1: Load the RPC tunnel key from our C-List
+CAP.LOAD  CR0, CR6, 4      ; CR0 = TunnelKey_Mother (Inform GT with R perm, index 4)
                             ;   → mLoad validates: L perm on CR6, MAC, version
-                            ;   → Result: CR0 holds the RPC tunnel key for mymother
+                            ;   → Result: CR0 holds GT referencing the tunnel key namespace entry
 
 ; Step 2: Load the remote service GT from our C-List
-CAP.LOAD  CR1, CR6, 6      ; CR1 = Mother_Service (Outform/Abstract GT, index 6)
+CAP.LOAD  CR1, CR6, 6      ; CR1 = Mother_Service (Outform GT with E perm, index 6)
                             ;   → mLoad validates: L perm on CR6, MAC, version
                             ;   → Result: CR1 holds GT pointing to mymother's service
 
 ; Step 3: Call the remote service — network-transparent RPC
-CAP.CALL  CR1              ; CALL on Outform Abstract GT
+CAP.CALL  CR1              ; CALL on Outform GT with E permission
                             ;   → E permission checked on CR1 → FAULT if denied
                             ;   → Data registers serialized as arguments
-                            ;   → Payload encrypted using TunnelKey_Mother (CR0)
+                            ;   → Payload encrypted using key from TunnelKey_Mother namespace entry (via CR0)
                             ;   → Sent to mymother via encrypted tunnel
                             ;   → mymother validates, executes, returns result
                             ;   → Response decrypted, data registers updated
@@ -226,13 +224,13 @@ CAP.CALL  CR1              ; CALL on Outform Abstract GT
 
 ### What Happens Step by Step
 
-1. **CAP.LOAD CR0, CR6, 4**: The Literal GT at C-List index 4 is loaded into CR0. This establishes the RPC tunnel key for communicating with "mymother". Object fetch/flush would use standard HTTPS and not need this key — only RPC requires the tunnel. mLoad validates L permission on CR6, checks MAC and version.
+1. **CAP.LOAD CR0, CR6, 4**: The Inform GT at C-List index 4 (with R permission on the tunnel key namespace entry) is loaded into CR0. This establishes the RPC tunnel key for communicating with "mymother". Object fetch/flush would use standard HTTPS and not need this key — only RPC requires the tunnel. mLoad validates L permission on CR6, checks MAC and version.
 
-2. **CAP.LOAD CR1, CR6, 6**: The Outform Abstract GT at C-List index 6 is loaded into CR1. This is the handle to "mymother's" remote service. mLoad validates as usual.
+2. **CAP.LOAD CR1, CR6, 6**: The Outform GT at C-List index 6 (with E permission) is loaded into CR1. This is the handle to "mymother's" remote service. mLoad validates as usual.
 
-3. **CAP.CALL CR1**: The CALL instruction detects that CR1 holds an Outform Abstract GT:
+3. **CAP.CALL CR1**: The CALL instruction detects that CR1 holds an Outform GT:
    - Checks E (Enter) permission — FAULT if missing
-   - Looks up the Literal GT in CR0 as the tunnel key for this peer relationship
+   - Reads the tunnel key from CR0's namespace entry (via mLoad with R permission) for this peer relationship
    - Serializes x0-x31 as the argument payload
    - Encrypts with the tunnel key
    - Sends to mymother's endpoint
@@ -250,7 +248,7 @@ Every step is fail-safe:
 | MAC validation on any GT | FAULT: MAC — capability has been tampered with |
 | Version mismatch | FAULT: VERSION — capability refers to recycled namespace entry |
 | E permission on CALL (Step 3) | FAULT: PERMISSION — not authorized to invoke this service |
-| Tunnel key revoked (GC swept) | FAULT: VERSION — tunnel key GT has been invalidated |
+| Tunnel key revoked (GC swept) | FAULT: VERSION — tunnel key namespace entry version bumped, GT invalidated |
 | Remote validation fails | Remote FAULT — mymother refuses the request |
 | Man-in-the-middle attempt | Decryption fails — wrong key, message rejected |
 
@@ -259,8 +257,8 @@ Every step is fail-safe:
 To cut the connection between "me" and "mymother":
 
 ```
-; Garbage collection sweeps TunnelKey_Mother (index 4)
-; → Version bumped: old Literal GT in CR0 becomes invalid
+; Garbage collection sweeps TunnelKey_Mother namespace entry (index 4)
+; → Version bumped: GT in CR0 becomes invalid (version mismatch)
 ; → Any subsequent CALL using this tunnel key → FAULT: VERSION
 ; → The tunnel is dead — no new communication possible
 ; → mymother's copy (TunnelKey_Child) is independently GC-managed
@@ -315,12 +313,12 @@ Network transparency is designed to interwork with the existing web, not replace
 |---------------------|---------|
 | R on Outform (fetch) | HTTPS GET to URL (standard browser mechanism, TLS, ETag, Cache-Control) |
 | W on Outform (flush) | HTTPS PUT/POST to URL (standard browser mechanism, ETag/If-Match for conflicts) |
-| E on Outform Abstract (RPC) | Literal GT encrypted tunnel to remote Meta Machine endpoint |
+| E on Outform (RPC) | Namespace-stored key encrypted tunnel to remote Meta Machine endpoint |
 | GC version bump | Cache invalidation (aligned with ETag/Last-Modified) |
 | MAC validation | Object integrity check (independent of transport, enforced by mLoad) |
 
 The key insight: object fetch and flush use **standard HTTPS** — the same mechanisms browsers have used for decades. The Meta Machine adds capability-based access control (R/W permission checks, MAC validation, version tracking) on top of what the web already provides. This means Outform objects can be fetched from any existing web server, CDN, or REST API without requiring the remote end to understand capabilities.
 
-RPC (E on Outform Abstract) is the only operation that requires both endpoints to be Meta Machines, since it involves serializing capability-secured register state through a Literal GT encrypted tunnel.
+RPC (E on Outform) is the only operation that requires both endpoints to be Meta Machines, since it involves serializing capability-secured register state through a namespace-key encrypted tunnel.
 
 This makes the architecture **media-tight** (content-type enforced), **data-tight** (R/W permissions enforced on every access), and **function-tight** (E permission required for every RPC invocation).

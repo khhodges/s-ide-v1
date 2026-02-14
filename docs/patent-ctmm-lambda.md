@@ -1,6 +1,6 @@
 # INITIAL PATENT SUBMISSION
 
-## Church-Turing Meta-Machine: Hardware-Enforced Lambda Calculus with Capability-Secured Literal Values and the LAMBDA Instruction
+## Church-Turing Meta-Machine: Hardware-Enforced Lambda Calculus with the LAMBDA Instruction and NULL Capability Type
 
 ---
 
@@ -14,7 +14,7 @@
 
 ## TITLE OF THE INVENTION
 
-Church-Turing Meta-Machine: Hardware-Enforced Lambda Calculus with Capability-Secured Literal Values and the LAMBDA Instruction
+Church-Turing Meta-Machine: Hardware-Enforced Lambda Calculus with the LAMBDA Instruction and NULL Capability Type
 
 ---
 
@@ -26,7 +26,7 @@ This application relates to capability-based computer architecture, hardware-enf
 
 ## FIELD OF THE INVENTION
 
-The present invention relates generally to computer processor architecture and, more specifically, to a hardware architecture that unifies Church's lambda calculus value domain with Turing's computational model through capability-secured literal values (GT-Literals) and a dedicated LAMBDA instruction, achieving both provable security guarantees and significant performance improvements for pure computation within a capability-based protection system.
+The present invention relates generally to computer processor architecture and, more specifically, to a hardware architecture that unifies Church's lambda calculus with Turing's computational model through a dedicated lightweight LAMBDA instruction for in-scope code application, a NULL capability type for safe initialization and revocation, and self-describing stack frames with a 1-bit tag distinguishing LAMBDA frames from CALL frames, achieving both provable security guarantees and significant performance improvements for code reuse within a capability-based protection system.
 
 ---
 
@@ -38,15 +38,19 @@ Contemporary computer architectures, derived from von Neumann's 1945 stored-prog
 
 ### The Performance Problem
 
-Capability-based architectures address the security problem by requiring unforgeable tokens for every memory access, but they impose significant per-access validation overhead. Every capability dereference requires checking permissions, validating integrity seals (MAC), verifying version numbers, and performing namespace lookups. For pure computation — arithmetic on values, function application, loop iteration — this validation overhead is unnecessary and wasteful. The values being operated upon are not references to protected resources; they are simply data.
+Capability-based architectures address the security problem by requiring unforgeable tokens for every memory access, but they impose significant per-access validation overhead. Every capability dereference requires checking permissions, validating integrity seals (MAC), verifying version numbers, and performing namespace lookups. For lightweight code reuse — applying a small utility function that lives in the same protection domain — the full domain-crossing overhead of a CALL instruction (stack frame allocation, capability list switch, mLoad revalidation) is unnecessary and wasteful. The code body is already validated; it shares the same protection domain as the caller.
 
 ### The Conceptual Gap
 
-Existing capability architectures do not distinguish between references (names that point to resources) and values (data that is already fully computed). This conflation forces all data through the same validation path, regardless of whether validation is semantically meaningful. Church's lambda calculus provides the theoretical framework to resolve this: the distinction between values (fully reduced terms) and expressions (terms requiring evaluation) is fundamental to the calculus and maps directly onto the distinction between literal data and capability references.
+Existing capability architectures provide only one mechanism for invoking code: the heavyweight CALL instruction that crosses protection domain boundaries. This conflation of in-scope code application with cross-domain service invocation forces all function calls through the same expensive validation path, regardless of whether a domain crossing is semantically required. Church's lambda calculus provides the theoretical framework to resolve this: the distinction between function application within a scope (λ-application) and invocation across a boundary (service call) is fundamental to the calculus and maps directly onto the distinction between the LAMBDA instruction (X permission, same domain) and the CALL instruction (E permission, domain crossing).
+
+### The Initialization Problem
+
+Existing capability architectures lack a clean representation for "empty" or "invalid" capability registers. When a thread is created, when a capability is revoked, or when a register slot is freed, there is no architecturally distinct marker that hardware can recognize as "this register holds nothing." Without such a marker, garbage collection cannot distinguish an empty register from one holding a valid capability with index zero, initialization code must use ad-hoc sentinel values, and revocation cannot cleanly invalidate a register without leaving ambiguous state.
 
 ### Prior Art — PP250 Capability Architecture
 
-The present invention builds upon a body of prior work in capability-based computer architecture developed principally at Plessey Telecommunications and subsequently at ITT/Standard Electric Corporation during the period 1969–1984. These patents established the foundational concepts of capability registers, memory protection through unforgeable tokens, segmented memory access, multi-processor capability systems, and information flow security. The present invention extends this foundation with innovations not disclosed or suggested by the prior art: a hardware-enforced type field distinguishing values from references, a lambda calculus instruction operating within the capability register file, bit reclamation for literal values, and structural security as a complement to per-access validation.
+The present invention builds upon a body of prior work in capability-based computer architecture developed principally at Plessey Telecommunications and subsequently at ITT/Standard Electric Corporation during the period 1969–1984. These patents established the foundational concepts of capability registers, memory protection through unforgeable tokens, segmented memory access, multi-processor capability systems, and information flow security. The present invention extends this foundation with innovations not disclosed or suggested by the prior art: a NULL capability type for safe initialization and revocation, a lightweight LAMBDA instruction for in-scope code application with machine-status fast-path return, and self-describing stack frames with a 1-bit tag distinguishing LAMBDA from CALL frames.
 
 #### A. Core Capability Architecture (Cotton, Plessey, 1969–1973)
 
@@ -74,7 +78,7 @@ The present invention builds upon a body of prior work in capability-based compu
 
 #### D. Information Security and Data Handling (Hamer-Hodges, Plessey, 1976–1984)
 
-**MY8400351A** — "Information flow security mechanisms for data processing systems" (Hamer-Hodges, Plessey, priority 1976-07-30). Discloses information flow security mechanisms ensuring that data moves only through authorized paths within a capability-based system. Establishes the principle of hardware-enforced information flow control that the present invention extends through the GT Type field's enforcement of value-vs-reference flow boundaries.
+**MY8400351A** — "Information flow security mechanisms for data processing systems" (Hamer-Hodges, Plessey, priority 1976-07-30). Discloses information flow security mechanisms ensuring that data moves only through authorized paths within a capability-based system. Establishes the principle of hardware-enforced information flow control that the present invention extends through the GT Type field's enforcement of capability classification boundaries.
 
 **CA1132251A** — "Data handling equipment for use with sequential access digital data storage" (Hamer-Hodges, priority 1976-11-17, granted 1982-09-21). Discloses a disc buffer peripheral access unit with a random access memory equivalent to one complete disc track, with command and status registers at sector boundaries. Addresses peripheral integration within capability-protected systems.
 
@@ -92,52 +96,50 @@ The above prior art establishes capability registers (DE2126206C3), capability-m
 
 However, none of the prior art discloses or suggests:
 
-1. **A type field within the capability token** that architecturally distinguishes values from references at the hardware level, enabling different execution paths based on the semantic category of the token content (Claims 1, 9)
+1. **A NULL capability type** within the capability token's type field that architecturally represents an empty, invalid, or revoked capability register, detectable by hardware at every instruction, causing an immediate FAULT on any operation — enabling clean initialization, safe revocation, and unambiguous garbage collection scanning (Claims 1, 2)
 
-2. **Bit reclamation** — reusing the version and permission fields of a capability token as value storage when the token carries a literal value rather than a reference, since version cross-checking and permission enforcement are semantically meaningless for self-contained values (Claim 2)
+2. **A lightweight LAMBDA instruction** for in-scope code application that uses Execute (X) permission to branch to a code body within the same protection domain, passing arguments and receiving results through data registers, without stack frame allocation, capability list switching, or namespace revalidation — in contrast to the CALL instruction which uses Enter (E) permission and crosses protection domain boundaries (Claims 3, 4)
 
-3. **A lambda calculus application instruction** (LAMBDA) operating within the capability register file, applying an executable code body to a literal value argument without protection domain crossing, stack frame allocation, or namespace validation (Claims 5, 6)
+3. **A machine-status fast path** for LAMBDA return addresses, wherein the return PC and LAMBDA-active flag reside in machine status registers rather than the capability stack in the common case (LAMBDA → body → RETURN), achieving zero stack access for lightweight code application; with the stack accessed only when a CALL or CHANGE instruction intervenes during the LAMBDA body (Claim 5)
 
-4. **Dedicated literal transfer instructions** (LDL, STL) that bridge between the data register domain and the capability register domain for literal values, with hardware type enforcement preventing misuse (Claims 3, 4)
+4. **Self-describing stack frames with a 1-bit tag** distinguishing CALL frames from LAMBDA frames, enabling the RETURN instruction to determine the correct restoration path by inspecting the frame tag — restoring full domain context for CALL frames versus restoring only the program counter for LAMBDA frames (Claim 6)
 
-5. **Structural security** as a complement to per-access validation — where literal values are protected by instruction-level type boundaries rather than per-access MAC validation, version checking, and permission enforcement (Claim 8)
+5. **Non-nestable LAMBDA with CALL-mediated nesting**, wherein a second LAMBDA instruction while the LAMBDA-active flag is set causes a FAULT, but a CALL instruction during a LAMBDA body saves the LAMBDA machine status as part of its frame, clearing the LAMBDA-active flag and thereby permitting a nested LAMBDA within the called domain (Claim 7)
 
-6. **A dual-form literal** where the same type field supports both direct self-contained values (no namespace entry) and indirect namespace-backed handles to secrets (with full validation), distinguished by instruction context rather than additional type bits (Claim 7)
+6. **Network-transparent RPC** using cryptographic keys stored in standard namespace entries (accessed via CAP.LOAD with R permission), where garbage collection of the namespace entry instantly revokes the tunnel by bumping the version (Claim 10)
 
-7. **Network-transparent RPC** using an indirect literal as an encrypted tunnel key, where garbage collection of the literal instantly revokes the tunnel by bumping the namespace entry version (Claim 12)
-
-The prior art's capability registers hold references exclusively. The present invention's GT Type field transforms the capability register from a single-purpose reference holder into a four-way classified container that can hold references, values, remote handles, or callable abstractions, with the hardware enforcing the appropriate security model for each category.
+The prior art's capability registers hold references exclusively but lack a hardware-enforced NULL state for empty or invalid registers. The prior art provides only heavyweight domain-crossing invocation (CALL) for all code execution. The present invention's GT Type field adds a NULL type for safe initialization and revocation, and the LAMBDA instruction provides a lightweight in-scope code application path that complements the heavyweight CALL path — the Church-Turing marriage of lambda application within a domain and service invocation across domains.
 
 ---
 
 ### Prior Art Limitations — Academic Capability Architectures
 
-Beyond the PP250 patent family, academic capability architectures including Cambridge CAP (Wilkes and Needham, 1979), IBM System/38 (Berstis, 1980), Intel iAPX 432 (Pollack et al., 1981), and CHERI (Watson et al., 2015) treat all capability register contents as references requiring validation. No prior architecture provides:
+Beyond the PP250 patent family, academic capability architectures including Cambridge CAP (Wilkes and Needham, 1979), IBM System/38 (Berstis, 1980), Intel iAPX 432 (Pollack et al., 1981), and CHERI (Watson et al., 2015) treat all capability register contents as either valid references or raw data. No prior architecture provides:
 
-1. A hardware-enforced type field that distinguishes values from references at the instruction level
-2. A dedicated instruction for lambda calculus application within a capability-secured register file
-3. A mechanism to reclaim validation overhead bits (version, permissions) for value storage when validation is unnecessary
-4. Structural security (enforced by instruction boundaries) as a complement to per-access validation security
+1. A hardware-enforced NULL capability type that represents an empty or invalid register, distinct from any valid reference, detectable at every instruction
+2. A lightweight in-scope code application instruction (LAMBDA) that stays within the current protection domain using X permission, as distinct from a domain-crossing CALL using E permission
+3. Self-describing stack frames with a tag bit distinguishing lightweight LAMBDA frames from heavyweight CALL frames
+4. A machine-status fast path that avoids stack access entirely for the common LAMBDA → body → RETURN pattern
 
 ---
 
 ## SUMMARY OF THE INVENTION
 
-The present invention provides a processor architecture, the Church-Turing Meta-Machine (CTMM), that implements Church's lambda calculus value domain in hardware through:
+The present invention provides a processor architecture, the Church-Turing Meta-Machine (CTMM), that implements Church's lambda calculus in hardware through a clean separation of concerns and a lightweight code application mechanism:
 
-1. **Golden Token (GT) Type Field**: A 2-bit field in every capability token that architecturally distinguishes four categories: Inform (local reference), Outform (remote reference), Literal (value), and Abstract (callable entry point). The Type field determines the hardware execution path at every instruction.
+1. **Golden Token (GT) Type Field**: A 2-bit field in every capability token that architecturally classifies four categories: Inform (local reference), Outform (remote reference), NULL (empty/invalid), and Spare (reserved for future use). The Type field determines the hardware execution path at every instruction. The clean architectural rule is: capability registers (CRs) hold capabilities only, data registers (DRs) hold values only. No mixing.
 
-2. **GT-Literal (Type = 10)**: A capability register encoding that carries a direct 30-bit value with no version, permissions, or namespace reference. The GT-Literal is Church's value — a fully reduced term that requires no evaluation, no dereferencing, and no validation.
+2. **NULL Type (Type = 10)**: A capability register encoding that represents an empty, invalid, or revoked capability. Any operation on a NULL-typed GT causes an immediate FAULT. NULL enables clean initialization (freshly created threads have all CRs set to NULL), safe revocation (revoking a capability sets the register to NULL), and unambiguous garbage collection (the scanner can distinguish empty registers from valid capabilities with index zero).
 
-3. **LAMBDA Instruction**: A dedicated hardware instruction for Church's function application: `LAMBDA CRd, CRbody, CRarg`. The LAMBDA instruction applies an executable code body (X permission, same protection domain) to a GT-Literal argument, producing a GT-Literal result. Unlike CALL (E permission, domain crossing), LAMBDA stays within the current protection domain, avoiding stack frame allocation, capability list switching, and mLoad validation overhead.
+3. **LAMBDA Instruction**: A dedicated hardware instruction for Church's function application: `LAMBDA CRn, x`. CRn holds a Golden Token with X (Execute) permission pointing to a code body in the same protection domain. The data register x holds the argument. LAMBDA saves only the return address (PC+4) to a machine status register, sets the LAMBDA-active flag, and branches to the code body. Arguments and results flow through data registers. Unlike CALL (E permission, domain crossing, full stack frame), LAMBDA stays within the current protection domain with near-zero overhead — a macro that doesn't replicate the code base.
 
-4. **LDL and STL Instructions**: Bridge instructions between the Turing domain (data registers) and the Church domain (capability registers) for literal values. LDL creates a GT-Literal from a data register or immediate value. STL extracts a GT-Literal's value into a data register.
+4. **Machine-Status Fast Path**: In the common case (LAMBDA → body → RETURN), the return PC and LAMBDA-active flag live in machine status registers, not the capability stack. RETURN checks the LAMBDA-active flag: if set, it restores PC from the machine status register with zero stack access. The stack is only accessed when CALL or CHANGE intervenes during the LAMBDA body.
 
-5. **Dual-Form GT-Literal**: The same Type field (10) supports both direct GT-Literals (30-bit self-contained values, no namespace entry) and indirect GT-Literals (namespace-backed handles to larger secrets such as cryptographic keys, credentials, and tokens). The instruction context determines which form applies.
+5. **Self-Describing Stack Frames**: Every stack frame carries a 1-bit tag: CALL frame (0) or LAMBDA frame (1). When RETURN pops a frame from the stack (because the machine-status fast path was not available), the tag tells RETURN whether to perform full domain restoration (CALL) or simple PC restoration (LAMBDA). This makes the thread's call history self-describing.
 
-6. **Structural Security Model**: Direct GT-Literals are protected by instruction-level type enforcement rather than per-access validation. Only LDL can create a GT-Literal; only STL can extract its value; only LAMBDA can apply it as a function argument. A GT-Literal cannot be misinterpreted as a capability reference because the Type field prevents all reference-oriented instructions from accepting it.
+6. **Non-Nestable LAMBDA with CALL-Mediated Nesting**: A second LAMBDA while LAMBDA-active is set causes a FAULT, preventing uncontrolled nesting. However, a CALL during a LAMBDA body saves the LAMBDA machine status as part of the CALL frame, clears the LAMBDA-active flag, and thereby permits a nested LAMBDA within the called procedure. This provides controlled nesting through the existing CALL/RETURN infrastructure.
 
-The architecture achieves a 2-3× performance improvement for pure computation (arithmetic, function application, recursive computation, functional mapping) compared to the namespace-validated CALL/RETURN path, while maintaining the full security guarantees of the capability model for all reference-oriented operations.
+The architecture achieves macro-like code reuse efficiency — code exists once in memory, near-zero overhead per invocation, no code duplication — while maintaining the full security guarantees of the capability model for all reference-oriented operations. The Church-Turing marriage is explicit: the GT *is* the lambda (Church's λx.body), data registers hold arguments and results (Turing's computation), LAMBDA bridges them with X permission (execute code, same domain), and CALL bridges with E permission (enter domain, cross boundary).
 
 ---
 
@@ -145,11 +147,13 @@ The architecture achieves a 2-3× performance improvement for pure computation (
 
 ### 1. Architecture Overview
 
-The Church-Turing Meta-Machine (CTMM) is a processor architecture built on the principle that every computational resource — code, data, I/O, network objects, cryptographic keys — is accessed exclusively through unforgeable capability tokens called **Golden Tokens (GTs)**. The architecture integrates two foundational computational models:
+The Church-Turing Meta-Machine (CTMM) is a processor architecture built on the principle that every computational resource — code, data, I/O, network objects, cryptographic keys — is accessed exclusively through unforgeable capability tokens called **Golden Tokens (GTs)**. The architecture integrates two foundational computational models with a clean separation:
 
-- **Turing's model**: Data registers (x0-x31 in the 32-bit implementation, DR0-DR15 in the 64-bit implementation) hold numeric values and perform arithmetic, logic, comparison, and branching. This is the computational substrate.
+- **Turing's model**: Data registers (x0-x31 in the 32-bit implementation, DR0-DR15 in the 64-bit implementation) hold numeric values and perform arithmetic, logic, comparison, and branching. This is the computational substrate. Data registers hold values — and only values.
 
-- **Church's model**: Capability registers (CR0-CR15) hold Golden Tokens that name, protect, and mediate access to every resource. The GT's Type field classifies each token according to Church's distinction between values and expressions.
+- **Church's model**: Capability registers (CR0-CR15) hold Golden Tokens that name, protect, and mediate access to every resource. The GT's Type field classifies each token. Capability registers hold capabilities — and only capabilities.
+
+This clean separation is fundamental: CRs never hold raw values, DRs never hold capabilities. The LAMBDA instruction bridges the two domains by using a capability (the GT with X permission in a CR) to execute code that operates on values (arguments and results in DRs).
 
 The synthesis is expressed as the **Church-Lambda-Object-Oriented-Meta-Calculus (CLOOMC)**, which organizes GT permissions into three domains:
 
@@ -175,304 +179,385 @@ GT [31:0]:
 
 #### 2.2 GT Type Field
 
-The 2-bit Type field is the architectural innovation that enables the lambda calculus integration:
+The 2-bit Type field classifies every Golden Token:
 
 | Value | Type | Semantic Category | Hardware Behavior |
 |-------|------|------------------|-------------------|
 | 00 | Inform | Name (local) | Dereference through mLoad: validate MAC, version, permissions, namespace lookup |
 | 01 | Outform | Name (remote) | Dereference through HTTPS fetch/flush or RPC tunnel |
-| 10 | Literal | Value | Direct use: no dereferencing, no validation, no namespace access |
-| 11 | Abstract | Callable | Domain-crossing invocation via CALL with E permission |
+| 10 | NULL | Empty/invalid | FAULT on any operation — register is empty, revoked, or uninitialized |
+| 11 | Spare | Reserved | Reserved for future architectural extension; FAULT on any operation |
 
-This classification maps directly to Church's lambda calculus:
+This classification reflects the clean architectural separation:
 
-- **Inform** and **Outform** are *names* — they refer to something and require evaluation (dereferencing through the mLoad validation path or network fetch)
-- **Literal** is a *value* — it is already fully reduced and requires no evaluation
-- **Abstract** is a *function* — it is a callable entry point requiring application
+- **Inform** is a *local name* — it refers to a resource in the local namespace and requires evaluation (dereferencing through the mLoad validation path)
+- **Outform** is a *remote name* — it refers to a resource at a network location and requires evaluation (HTTPS fetch or RPC tunnel)
+- **NULL** is *nothing* — the register is empty. Any attempt to use it FAULTs immediately. This is the safe, unambiguous "no capability" state
+- **Spare** is *reserved* — available for future architectural extension without changing the existing type encodings
 
-The Type field is checked by hardware at every instruction, ensuring that values are never treated as references and references are never treated as values. This is Church's distinction between values and expressions, enforced at the transistor level.
+The Type field is checked by hardware at every instruction. A NULL or Spare GT cannot be dereferenced, loaded, saved, called, or used in any capability operation — the hardware rejects it before any validation path is entered.
 
-### 3. GT-Literal: The Value Domain
+#### 2.3 The NULL Type
 
-#### 3.1 Direct GT-Literal Format
+The NULL type (10) serves three critical architectural roles:
 
-When the Type field is 10 (Literal) and the GT is created by the LDL instruction, the remaining 30 bits encode the value directly:
+**Initialization**: When a thread is created, all capability registers that are not explicitly loaded with valid GTs are set to NULL. This provides a clean, unambiguous initial state — the hardware knows these registers hold nothing, rather than potentially valid capabilities with coincidental bit patterns.
 
-```
-Direct GT-Literal [31:0]:
-  [31:2]  Value   (30 bits) — The literal value itself
-  [1:0]   Type=10 (2 bits)  — Literal
-```
+**Revocation**: When a capability must be revoked (e.g., access rights withdrawn, resource deallocated), the capability register is set to NULL. Any subsequent attempt to use the revoked capability FAULTs immediately with a clear diagnostic: the register holds NULL, not a stale or forged reference.
 
-The Version field (7 bits) and Permissions field (6 bits) of the standard GT format are **reclaimed as value bits**. This is possible because:
+**Garbage Collection**: The NULL type enables the GC scanner to unambiguously distinguish empty registers from valid capabilities. Without NULL, a register holding all zeros could be confused with a valid Inform GT pointing to namespace index 0 with version 0 and no permissions. With NULL (Type = 10), the scanner knows immediately that the register does not reference any namespace entry and can be skipped.
 
-- **Version is meaningless**: There is no namespace entry to cross-check the version against. A direct value has no identity to revoke; it exists only as long as the register holds it.
-- **Permissions are unnecessary**: The value is self-contained. Access control is structural — whoever holds the capability register holds the value. The instructions that create and consume GT-Literals enforce the boundaries.
+### 3. The LAMBDA Instruction
 
-This yields **30 bits of value space** (integers 0 to 1,073,741,823, or signed -536,870,912 to +536,870,911), sufficient for the vast majority of computational operands, loop counters, boolean flags, enumeration values, hash values, and packed bit fields.
-
-#### 3.2 Indirect GT-Literal Format
-
-When the Type field is 10 (Literal) and the GT is created by CAP.LOAD from a namespace entry, the standard GT format applies:
+#### 3.1 Instruction Format
 
 ```
-Indirect GT-Literal [31:0]:
-  [31:25] Version     (7 bits)  — Cross-checked against namespace entry version
-  [24:8]  Index       (17 bits) — Namespace table index of the value entry
-  [7:2]   Permissions (6 bits)  — Access control on the value
-  [1:0]   Type = 10   (2 bits)  — Literal
+LAMBDA CRn, x
 ```
-
-The actual value (a cryptographic key, authentication credential, session token, API key, or other secret) resides in the namespace entry's **Location** and **Limit** fields. The entry's MAC seal provides integrity protection. Access requires the full mLoad validation path: version check, MAC check, permission check, namespace lookup.
-
-#### 3.3 Distinguishing Direct from Indirect
-
-The instruction determines the form:
-
-- **LDL** and **STL** operate on direct GT-Literals (30-bit self-contained values)
-- **CAP.LOAD** on a Literal-type namespace entry produces an indirect GT-Literal (namespace-backed handle)
-- **LAMBDA** consumes direct GT-Literals as arguments
-
-No additional bits are needed to distinguish the two forms. The instruction context is sufficient, and the hardware execution path follows the instruction, not a runtime flag.
-
-### 4. New Church Instructions
-
-#### 4.1 LDL — Load Literal
-
-```
-LDL CRd, rs1        ; CRd ← GT-Literal(rs1[29:0])
-LDL CRd, imm        ; CRd ← GT-Literal(imm[29:0])
-```
-
-**Operation**: Creates a direct GT-Literal in capability register CRd. The 30-bit value is taken from the lower 30 bits of data register rs1 (or from an immediate value). Bits [1:0] are set to 10 (Literal type). Bits [31:2] hold the value.
-
-**Cycle count**: 1 cycle. No namespace access, no mLoad, no MAC computation. Pure register write with type tagging.
-
-**Fault conditions**: None. Any 30-bit value can be wrapped as a GT-Literal.
-
-**Security**: The instruction creates a value, not a reference. The resulting GT-Literal cannot be passed to CAP.LOAD, CAP.CALL, or any instruction that expects a namespace reference — the Type field mismatch will cause a FAULT.
-
-#### 4.2 STL — Store Literal
-
-```
-STL rd, CRs         ; rd ← CRs.Value[29:0] (zero-extended to 32 bits)
-```
-
-**Operation**: Extracts the 30-bit value from the direct GT-Literal in capability register CRs into data register rd. The value is zero-extended to 32 bits.
-
-**Cycle count**: 1 cycle. Type check plus register read. No namespace access.
-
-**Fault conditions**: FAULT if CRs.Type ≠ 10 (Literal). This prevents extracting bits from a capability reference as if they were a value — a critical security boundary.
-
-**Security**: The type check ensures that only GT-Literals yield their value. An Inform, Outform, or Abstract GT cannot be unwrapped as a value. This prevents information leakage from capability references into the data register domain.
-
-#### 4.3 LAMBDA — Lambda Application
-
-```
-LAMBDA CRd, CRbody, CRarg
-```
-
-**Operation**: Applies the code body referenced by CRbody to the GT-Literal argument in CRarg, placing the result in CRd as a new direct GT-Literal. This is Church's function application: `CRd = (λx.body)(arg)`.
 
 **Operands**:
-- `CRbody`: A Golden Token with **X (Execute) permission** pointing to an executable code object (Inform type). This is the lambda body — a sequence of instructions.
-- `CRarg`: A **direct GT-Literal** holding the input value (the bound variable).
-- `CRd`: Receives the result as a new direct GT-Literal.
+- `CRn`: A capability register holding a Golden Token with **X (Execute) permission** pointing to an executable code object in the same protection domain (Inform type). This is Church's lambda — the code body λx.body.
+- `x`: A data register holding the argument value. This is the bound variable — the input to the function.
 
-**Execution sequence**:
+**Operation**: LAMBDA applies the code body referenced by CRn to the argument in data register x. It is Church's function application: (λx.body)(arg). The result is returned in data registers by the code body.
+
+#### 3.2 Execution Sequence
 
 ```
-Step 1: Verify CRbody.Type = Inform (00) or Abstract (11) → FAULT if Literal (10) or Outform (01)
-Step 2: Check X permission on CRbody → FAULT if X bit not set
-Step 3: Load CRbody code address into CR7 (code segment register)
-Step 4: Bind CRarg as the input argument
-Step 5: Branch to CRbody's code entry point
-Step 6: Body instructions execute, computing the result
-Step 7: Result written to CRd as a new direct GT-Literal
-Step 8: Execution continues at the instruction following LAMBDA
+Step 1: Verify CRn.Type = Inform (00) → FAULT if NULL (10), Outform (01), or Spare (11)
+Step 2: Check X permission on CRn → FAULT if X bit not set
+Step 3: Check LAMBDA-active flag in machine status → FAULT if already set (non-nestable)
+Step 4: Save return address (PC+4) to machine status register (LAMBDA_PC)
+Step 5: Set LAMBDA-active flag in machine status
+Step 6: Branch to CRn's code entry point
+Step 7: Body instructions execute using data registers for computation
+Step 8: Body executes RETURN → hardware detects LAMBDA-active flag
+Step 9: Restore PC from LAMBDA_PC machine status register
+Step 10: Clear LAMBDA-active flag
+Step 11: Execution continues at PC+4 (the instruction after LAMBDA)
 ```
 
-**Cycle count**: 2 cycles for setup (steps 1-5) plus body execution time. Compare to CAP.CALL at 10+ cycles (stack frame push, C-List switch, mLoad validation, domain crossing, RETURN revalidation).
+#### 3.3 Machine-Status Fast Path
 
-**Key distinction from CALL**: The LAMBDA instruction and the CALL instruction serve fundamentally different purposes:
+In the common case — LAMBDA → body → RETURN with no intervening CALL or CHANGE — the entire invocation uses zero stack access:
+
+- The return address (PC+4) is stored in the **LAMBDA_PC machine status register**, not pushed to the capability stack
+- The LAMBDA-active flag is a single bit in the **machine status register**, not a stack entry
+- RETURN checks the LAMBDA-active flag first: if set, it restores PC from LAMBDA_PC and clears the flag — no stack pop, no frame inspection, no mLoad revalidation
+
+This fast path makes LAMBDA as efficient as a branch-and-link instruction with a hardware return address register, while maintaining the capability security model (X permission is verified on entry).
+
+#### 3.4 Stack Interaction: When CALL Intervenes
+
+If a CALL instruction is executed during a LAMBDA body, the CALL instruction saves the LAMBDA machine status as part of its stack frame:
+
+```
+CALL stack frame (when LAMBDA-active):
+  [Tag = 0]           — CALL frame tag
+  [LAMBDA_PC]         — saved LAMBDA return address from machine status
+  [LAMBDA_active = 1] — saved LAMBDA-active flag
+  [CR5, CR6, CR7]     — saved capability registers (standard CALL save)
+  [PC_return]         — CALL return address
+```
+
+After saving, CALL clears the LAMBDA-active flag in machine status, because the called domain is a fresh context. This permits a nested LAMBDA within the called procedure.
+
+When the CALL RETURNs, the RETURN instruction restores the saved LAMBDA machine status from the CALL frame, re-establishing the LAMBDA-active flag and LAMBDA_PC. The LAMBDA body then continues, and its eventual RETURN uses the fast path.
+
+#### 3.5 Stack Interaction: When CHANGE Intervenes
+
+If a CHANGE instruction (thread context switch) occurs during a LAMBDA body, the CHANGE instruction saves the LAMBDA machine status to the thread memory object:
+
+```
+Thread context (LAMBDA-related fields):
+  [LAMBDA_PC]         — saved LAMBDA return address
+  [LAMBDA_active]     — saved LAMBDA-active flag
+```
+
+When the thread is resumed by a subsequent CHANGE, these fields are restored to machine status registers, and the LAMBDA body continues seamlessly.
+
+#### 3.6 Self-Describing Stack Frames
+
+Every frame on the capability stack carries a **1-bit tag** identifying its type:
+
+| Tag | Frame Type | Contents | RETURN Behavior |
+|-----|-----------|----------|----------------|
+| 0 | CALL frame | CR5, CR6, CR7, PC, LAMBDA state | Full domain restoration: restore CRs, switch C-List, revalidate via mLoad |
+| 1 | LAMBDA frame | PC only | Simple PC restoration: pop return address, resume |
+
+LAMBDA frames appear on the stack only when a CALL intervenes during a LAMBDA body and the LAMBDA state must be saved. In the common case (no CALL intervention), no LAMBDA frame is ever pushed — the machine-status fast path handles everything.
+
+The 1-bit tag makes the thread's execution history self-describing: by walking the stack and inspecting tags, the system can reconstruct the exact interleaving of LAMBDA and CALL invocations without external metadata.
+
+#### 3.7 Non-Nestable LAMBDA with CALL-Mediated Nesting
+
+LAMBDA is non-nestable on its own: if the LAMBDA-active flag is set in machine status and a second LAMBDA instruction is executed, the hardware generates a FAULT. This prevents uncontrolled nesting depth and eliminates the need for a hardware LAMBDA return stack.
+
+However, nesting is possible through CALL mediation:
+
+```
+LAMBDA CR2, x10        ; LAMBDA-active set, LAMBDA_PC saved
+  ; ... LAMBDA body ...
+  CALL CR5              ; saves LAMBDA state to stack, clears LAMBDA-active
+    ; ... called procedure ...
+    LAMBDA CR3, x11     ; permitted: LAMBDA-active was cleared by CALL
+      ; ... nested LAMBDA body ...
+      RETURN            ; fast path: restore from machine status
+    ; ... called procedure continues ...
+    RETURN              ; pops CALL frame, restores LAMBDA state
+  ; ... LAMBDA body continues ...
+  RETURN                ; fast path: restore from machine status (re-established by CALL RETURN)
+```
+
+This design provides controlled nesting: each nesting level is mediated by a CALL/RETURN pair that manages the LAMBDA state on the stack. The nesting depth is bounded by the stack depth, which is already managed by the capability architecture.
+
+#### 3.8 Key Distinction from CALL
+
+The LAMBDA instruction and the CALL instruction serve fundamentally different purposes:
 
 | Property | LAMBDA | CALL |
 |----------|--------|------|
 | Permission required | X (Execute) | E (Enter) |
 | Protection domain | Same (no C-List change) | Crosses to new domain |
-| Stack frame | None | Push CR5/CR6/CR7 + PC |
+| Stack frame (common case) | None (machine status registers) | Full (CR5/CR6/CR7 + PC + LAMBDA state) |
 | mLoad validation | None (body already validated) | Full path for new C-List |
 | CR6 (C-List) | Unchanged | Switched to callee's C-List |
-| Overhead | 2 cycles | 10+ cycles |
-| Purpose | Pure computation | Service invocation |
+| Arguments/results | Data registers (x0-x31) | Data registers (x0-x31) |
+| CR writes | None — LAMBDA does not write to CRs | mLoad writes to CRs during C-List switch |
+| Code reuse model | Macro-like: code once, invoke many times | Service: encapsulated domain with own C-List |
+| Overhead | ~2 cycles (verify + branch) | 10+ cycles (frame push + C-List switch + mLoad + branch) |
+| Purpose | In-scope code application | Cross-domain service invocation |
 
-LAMBDA is lightweight computation within a trust boundary. CALL is heavyweight domain crossing between trust boundaries. The distinction is Church's: application within a domain (λ) vs. invocation across a domain (E).
+LAMBDA is the lightweight path for code that lives in the same protection domain — a macro that doesn't replicate the code base. CALL is the heavyweight path for crossing into a different protection domain with its own capability list and namespace view.
 
-### 5. Security Model
+The distinction is Church's: application within a domain (λ-application, X permission) vs. invocation across a domain (service call, E permission).
 
-#### 5.1 Structural Security for Direct GT-Literals
+#### 3.9 The Golden Rule — Strengthened
 
-Direct GT-Literals are protected by **structural security** — the instruction set architecture itself prevents misuse:
+The **Golden Rule** of the CTMM architecture is: mLoad is the sole trusted path for all capability register writes that involve namespace dereferencing. The LAMBDA instruction strengthens this rule because LAMBDA does not write to capability registers at all. It branches to code and returns. Arguments and results flow through data registers, not capability registers. The capability register file is untouched by LAMBDA execution.
 
-1. **Creation boundary**: Only the LDL instruction can create a direct GT-Literal. Programs cannot construct one by writing arbitrary bits to a capability register. The hardware sets Type = 10 as part of the instruction's microcode.
+This makes LAMBDA safe by construction: it cannot forge, modify, or create capabilities. It merely executes code (verified by X permission check) on values (in data registers). The capability register file's integrity is preserved without any validation overhead.
 
-2. **Extraction boundary**: Only the STL instruction can extract a value from a GT-Literal. It verifies Type = 10 before yielding the value. A program cannot use STL to extract bits from a capability reference (Inform, Outform, Abstract) — the type check prevents this.
+### 4. Security Model
 
-3. **Application boundary**: The LAMBDA instruction verifies that CRarg has Type = Literal (10) and CRbody has X permission. A program cannot LAMBDA with a capability reference as the argument (wrong type) or a non-executable GT as the body (wrong permission).
+#### 4.1 Clean Separation: CRs = Capabilities, DRs = Values
 
-4. **Non-escalation**: A GT-Literal cannot be used where a capability reference is expected. Passing a GT-Literal to CAP.LOAD, CAP.SAVE, CAP.CALL, CAP.RETURN, or CAP.CHANGE will FAULT because these instructions require Type ≠ Literal.
+The CTMM architecture enforces a clean separation between the capability domain and the value domain:
 
-5. **Non-forgery**: A GT-Literal cannot be converted into a capability reference. There is no instruction that changes a GT's Type field. The Type is set at creation and is immutable for the lifetime of the register contents.
+- **Capability registers (CRs)** hold Golden Tokens exclusively. Every GT in a CR has a Type field (Inform, Outform, NULL, or Spare) and is subject to hardware type checking at every instruction. CRs never hold raw numeric values.
 
-This structural security model is complementary to the per-access validation model used for Inform, Outform, and Abstract GTs. Both models derive from the same 2-bit Type field — the hardware enforces the appropriate security model based on the Type.
+- **Data registers (DRs)** hold numeric values exclusively. DRs are the computational substrate for arithmetic, logic, comparison, and branching. DRs never hold capabilities.
 
-#### 5.2 Per-Access Security for Indirect GT-Literals
+This separation is enforced by the instruction set architecture:
 
-Indirect GT-Literals (namespace-backed handles to secrets) use the full mLoad validation path:
+- Church instructions (CAP.LOAD, CAP.SAVE, CALL, RETURN, CHANGE, SWITCH) operate on CRs and route through the mLoad validation path
+- Turing instructions (ADD, SUB, MUL, AND, OR, SLL, LW, SW, BEQ, etc.) operate on DRs and perform computation
+- The LAMBDA instruction bridges the two: it reads a capability (GT with X permission in a CR) and operates on values (arguments and results in DRs)
 
-1. **Version check**: The GT's version field must match the namespace entry's version field. Mismatch indicates the entry has been recycled (garbage collected and reallocated), and the GT is stale → FAULT: VERSION.
+There are no instructions that move raw values into capability registers or extract raw bits from capabilities into data registers. The domains are architecturally sealed.
 
-2. **MAC check**: The namespace entry's Message Authentication Code (a 25-bit FNV hash seal computed from the entry's Location and Limit fields) must validate. Failure indicates tampering → FAULT: MAC.
+#### 4.2 NULL Safety
 
-3. **Permission check**: The required permission (R, W, X, L, S, or E) must be present in the GT's permission field. Absence indicates unauthorized access → FAULT: PERMISSION.
+The NULL type provides fail-safe behavior for uninitialized, revoked, or empty capability registers:
 
-4. **GC integration**: The namespace entry's gBit (garbage collection bit) is reset to 0 on every mLoad access. During the Mark phase of garbage collection, all gBits are set to 1. Entries whose gBit is still 1 after the Scan phase are unreachable and can be swept (version bumped, invalidating all GTs that reference them).
+1. **Any operation on NULL FAULTs**: Attempting to dereference (CAP.LOAD), invoke (CALL), save (CAP.SAVE), load (CAP.LOAD as source), execute (LAMBDA), or otherwise use a NULL-typed GT causes an immediate hardware FAULT. There is no "undefined behavior" — the hardware catches every use of an invalid capability.
 
-### 6. The mLoad Master Validation Path
+2. **NULL is unforgeable**: The Type field (bits [1:0]) is set by hardware during initialization and revocation. Software cannot construct a NULL GT by writing arbitrary bits to a capability register — only mLoad and the hardware initialization/revocation path can set the Type field.
+
+3. **NULL is unambiguous**: The NULL type (10) is distinct from all valid capability types. A NULL GT cannot be confused with an Inform GT, an Outform GT, or a Spare GT. The 2-bit Type field makes the distinction at every instruction cycle.
+
+#### 4.3 LAMBDA Security
+
+The LAMBDA instruction maintains capability security through several mechanisms:
+
+1. **X permission check**: LAMBDA verifies that the target GT has X (Execute) permission before branching. Code without X permission cannot be invoked via LAMBDA.
+
+2. **Same-domain constraint**: LAMBDA requires Inform type (local reference). An Outform GT cannot be LAMBDA'd — remote code requires CALL with E permission through the RPC tunnel. This prevents LAMBDA from being used for unauthorized network access.
+
+3. **Non-escalation**: LAMBDA does not write to capability registers. It cannot forge, create, or modify GTs. The capability register file is untouched by LAMBDA execution. Only mLoad can write to CRs.
+
+4. **Non-nestable safety**: The LAMBDA-active FAULT on double-LAMBDA prevents uncontrolled stack growth and ensures the machine-status fast path is always correct (there is at most one pending LAMBDA return address in machine status).
+
+5. **CALL-mediated nesting**: When CALL saves the LAMBDA state to the stack, the saved state is protected by the capability stack's integrity — it cannot be tampered with by the called procedure. When CALL RETURNs, the LAMBDA state is restored from the stack with the same integrity guarantees as any CALL frame restoration.
+
+### 5. The mLoad Master Validation Path
 
 The mLoad function is the single trusted path for all namespace access in the CTMM architecture. Every Church instruction (CAP.LOAD, CAP.SAVE, CAP.CALL, CAP.RETURN, CAP.CHANGE, CAP.SWITCH) routes through mLoad. This is the **Golden Rule**: mLoad is the sole path for all capability register writes that involve namespace dereferencing.
 
-The GT-Literal and LAMBDA instruction are significant precisely because they provide a validated alternative path that **does not go through mLoad**. This is safe because:
+The LAMBDA instruction is significant precisely because it provides a validated code execution path that **does not go through mLoad**. This is safe because:
 
-- A direct GT-Literal is a value, not a reference — there is nothing to dereference
+- LAMBDA does not write to capability registers — it branches to code and returns through data registers
 - The LAMBDA body's X permission was validated when the body GT was loaded via mLoad (at an earlier point)
-- The structural security model prevents GT-Literals from being misused as references
+- The LAMBDA instruction verifies X permission on the GT before branching
+- The data registers used for arguments and results are in the Turing domain, not the Church domain
 
-This creates a two-tier execution model:
+This strengthens the Golden Rule rather than violating it: mLoad remains the sole path for all CR writes. LAMBDA does not write to CRs at all. The two mechanisms are complementary: mLoad gates capability access, LAMBDA gates code execution.
 
-| Tier | Path | Validation | Speed | Use |
-|------|------|-----------|-------|-----|
-| Reference tier | mLoad | Full (MAC, version, permissions, namespace) | 5+ cycles per access | Capability operations |
-| Value tier | LDL/STL/LAMBDA | Structural (Type field enforcement) | 1-2 cycles | Pure computation |
-
-The two tiers share the same register file (CR0-CR15) and the same Type field. The hardware determines the appropriate tier at every instruction based on the Type.
-
-### 7. Lambda Calculus Correspondence
+### 6. Lambda Calculus Correspondence
 
 The architecture implements a direct hardware correspondence with Church's lambda calculus:
 
 | Lambda Calculus Concept | CTMM Hardware Element |
 |------------------------|----------------------|
-| Value (fully reduced term) | Direct GT-Literal (30-bit value, Type = 10) |
-| Variable (bound name) | CRarg operand of LAMBDA instruction |
-| Abstraction (λx.body) | GT with X permission referencing code object |
-| Application ((λx.body) arg) | LAMBDA CRd, CRbody, CRarg instruction |
-| Free variable | GT-Literal or Inform GT in scope (available in CRs) |
-| Substitution | Bind CRarg, execute body, collect result |
-| Normal form | Direct GT-Literal — already reduced, no further evaluation possible |
+| Abstraction (λx.body) | GT with X permission referencing code object in a CR |
+| Variable (bound name) | Data register x holding the argument value |
+| Application ((λx.body) arg) | LAMBDA CRn, x instruction |
+| Free variable | Data registers and CRs in scope (available to the body) |
+| Substitution | Branch to body code, arguments in DRs, execute, return |
+| Result | Data register(s) holding the computed value after RETURN |
 
-The classical combinators map to specific CLOOMC patterns:
+The Church-Turing marriage is explicit in the instruction:
 
-- **I combinator** (λx.x): Identity. The body copies the argument to the result. Optimizable to a single register move (1 cycle).
-- **K combinator** (λx.λy.x): Constant. The inner body ignores its argument and returns the outer argument. Optimizable to a register copy (2 cycles).
-- **S combinator** (λf.λg.λx.f(x)(g(x))): Substitution. Three nested LAMBDAs with two inner applications. Demonstrates higher-order GT-Literal threading.
-- **Y combinator** (λf.(λx.f(x x))(λx.f(x x))): Fixed-point. Enables recursion through self-referencing LAMBDA chains without explicit loop instructions or CALL/RETURN overhead.
+- **The GT is the lambda**: Church's λx.body lives in a capability register as a GT with X permission. The GT names the code, the X permission authorizes execution, and the code body is the function's implementation. The GT *is* the closure — it binds the code to a namespace context.
 
-A hardware implementation may recognize I and K patterns and short-circuit them to single-cycle operations, bypassing the LAMBDA setup entirely.
+- **Data registers are the computation**: Turing's model — arithmetic, logic, comparison, branching — operates on data registers. The argument goes in, the result comes out. DRs are the computational substrate.
 
-### 8. Performance Analysis
+- **LAMBDA bridges them**: The LAMBDA instruction takes a Church entity (GT with X permission) and applies it to a Turing entity (value in a data register), producing a Turing result. X permission means "execute code, same domain." E permission (CALL) means "enter domain, cross boundary."
 
-#### 8.1 Cycle Count Comparison
+### 7. Constructive Examples
 
-| Operation | GT-Literal Path | mLoad/CALL Path | Speedup |
-|-----------|----------------|-----------------|---------|
-| Create value | LDL: 1 cycle | CAP.LOAD via mLoad: 5+ cycles | 5× |
-| Extract value | STL: 1 cycle | (not applicable — value already in DR) | — |
-| A = B + C (arithmetic) | 6 cycles total | 15+ cycles (2× mLoad + arithmetic + mStore) | 2.5× |
-| Square function | 6 cycles total | 16+ cycles (CALL + body + RETURN) | 2.7× |
-| Factorial(5) recursive | ~40 cycles | 80+ cycles (5× CALL/RETURN) | 2× |
-| Map over array (per element) | ~10 cycles | ~20 cycles (CALL/RETURN per element) | 2× |
+#### 7.1 Clamp Function — Macro-Like Code Reuse
 
-#### 8.2 Constructive Example: A = B + C
+The LAMBDA instruction enables a code body to exist once in memory and be invoked from multiple call sites with near-zero overhead — a macro that doesn't replicate the code base.
 
 ```asm
-; Using GT-Literals (6 cycles total)
-LDL   CR1, x5          ; CR1 = GT-Literal(5)  — 1 cycle
-LDL   CR2, x6          ; CR2 = GT-Literal(3)  — 1 cycle
-STL   x10, CR1         ; x10 = 5              — 1 cycle
-STL   x11, CR2         ; x11 = 3              — 1 cycle
-ADD   x12, x10, x11    ; x12 = 8              — 1 cycle
-LDL   CR0, x12         ; CR0 = GT-Literal(8)  — 1 cycle
+; clamp body lives once in memory at the code pointed to by CR2
+; CR2 holds a GT with X permission (Inform type, X bit set)
+; x10 holds the value to clamp to the range [0, 255]
 
-; Using namespace-backed values (15+ cycles)
-CAP.LOAD CR1, CR6, idx_B  ; mLoad: MAC + version + perm + lookup — 5+ cycles
-CAP.LOAD CR2, CR6, idx_C  ; mLoad: same — 5+ cycles
-; (extract, add, store back) — 5+ cycles
+LAMBDA CR2, x10         ; verify X perm, save PC+4 to LAMBDA_PC,
+                         ; set LAMBDA-active, branch to clamp body
+; returns here with x10 clamped to [0, 255]
+
+; --- clamp body (exists once in memory) ---
+clamp:
+  BGE  x10, x0, .not_neg  ; if x10 >= 0, skip
+  MV   x10, x0             ; clamp to 0
+  J    .check_high
+.not_neg:
+.check_high:
+  LI   x5, 255
+  BLE  x10, x5, .done      ; if x10 <= 255, done
+  LI   x10, 255            ; clamp to 255
+.done:
+  RETURN                    ; LAMBDA-active set → fast path:
+                            ;   restore PC from LAMBDA_PC, clear flag
+                            ;   zero stack access
 ```
 
-#### 8.3 Constructive Example: Lambda Application (Square Function)
+**Performance**: 2 cycles (LAMBDA verify + branch) + body execution (~5 cycles for clamp) + 1 cycle (RETURN fast path) = **~8 cycles total**.
+
+**Comparison with CALL/RETURN**: Push stack frame (3 cycles), switch C-List via mLoad (5 cycles), execute body (~5 cycles), RETURN with revalidation (5 cycles) = **18+ cycles**.
+
+**Speedup**: ~2.25× faster. LAMBDA avoids the domain-crossing overhead because the body executes in the same protection domain with X permission, not E.
+
+**Comparison with inline macro**: A traditional macro would replicate the clamp code at every call site, bloating the code segment. LAMBDA achieves the same performance as an inline macro (near-zero call overhead) without code duplication. The code exists once in memory and is invoked through the GT.
+
+#### 7.2 Multiple Invocations — Code Once, Use Many
 
 ```asm
-; LAMBDA path (6 cycles total)
-LDL    CR1, x7            ; CR1 = GT-Literal(7)           — 1 cycle
-LAMBDA CR0, CR3, CR1      ; CR0 = square(7) = GT-Literal(49) — 2 cycles setup
-; Body: STL + MUL + LDL                                    — 3 cycles
+; Process RGB pixel: clamp each channel
+; CR2 = GT with X permission pointing to clamp body
+; x10 = red channel, x11 = green channel, x12 = blue channel
 
-; CALL/RETURN path (16+ cycles)
-; Push stack frame (CR5/CR6/CR7 + PC)                      — 3 cycles
-; Switch C-List, mLoad validation                          — 5 cycles
-; Execute body                                             — 3 cycles
-; RETURN: pop frame, revalidate CR5/CR6/CR7 via mLoad      — 5+ cycles
+MV   x10, x20            ; load red value
+LAMBDA CR2, x10           ; clamp red → x10 clamped
+MV   x20, x10            ; store clamped red
+
+MV   x10, x21            ; load green value
+LAMBDA CR2, x10           ; clamp green → x10 clamped
+MV   x21, x10            ; store clamped green
+
+MV   x10, x22            ; load blue value
+LAMBDA CR2, x10           ; clamp blue → x10 clamped
+MV   x22, x10            ; store clamped blue
 ```
 
-#### 8.4 Constructive Example: Factorial via Y Combinator
+The clamp body exists once in memory. Three invocations, zero code duplication, near-zero overhead per invocation. Each LAMBDA uses the machine-status fast path (no stack access) because no CALL intervenes between the LAMBDA and its RETURN.
+
+#### 7.3 LAMBDA with CALL Nesting
 
 ```asm
-; Factorial of 5 using recursive LAMBDA
-LDL    CR1, x5            ; CR1 = GT-Literal(5)
-LAMBDA CR0, CR4, CR1      ; CR0 = factorial(5) = GT-Literal(120)
+; Process a value: clamp it, then log the result via a cross-domain service call
+; CR2 = GT with X permission pointing to process body
+; CR5 = GT with E permission pointing to logging service (different domain)
 
-; Factorial body (recursive, ~8 cycles per level):
-;   STL   x10, CRarg       ; extract argument
-;   BEQ   x10, x0, base    ; test base case
-;   ADDI  x11, x10, -1     ; N - 1
-;   LDL   CR1, x11         ; GT-Literal(N-1)
-;   LAMBDA CR2, CR4, CR1   ; recursive application
-;   STL   x12, CR2         ; extract sub-result
-;   MUL   x13, x10, x12    ; N * factorial(N-1)
-;   LDL   CRd, x13         ; return result
+LAMBDA CR2, x10           ; LAMBDA-active set, branch to process body
+
+; --- process body ---
+process:
+  ; First, clamp the value (cannot nest LAMBDA — LAMBDA-active is set)
+  ; Instead, do the clamp inline or use CALL:
+  BGE  x10, x0, .not_neg
+  MV   x10, x0
+  J    .check_high
+.not_neg:
+.check_high:
+  LI   x5, 255
+  BLE  x10, x5, .clamped
+  LI   x10, 255
+.clamped:
+
+  ; Now log the result via CALL (cross-domain service)
+  CALL CR5                 ; saves LAMBDA state to CALL frame, clears LAMBDA-active
+    ; ... logging service executes in its own domain ...
+    ; ... logging service RETURNs ...
+  ; CALL RETURN restores LAMBDA state: LAMBDA-active re-set, LAMBDA_PC restored
+
+  RETURN                   ; LAMBDA-active set → fast path: restore PC, clear flag
 ```
 
-**Performance**: 5 recursive levels × ~8 cycles = ~40 cycles (GT-Literal path) vs. 5 × 16+ cycles = 80+ cycles (CALL/RETURN path). Speedup: ~2×.
+This example demonstrates CALL-mediated interaction: the LAMBDA body can invoke cross-domain services via CALL, and the LAMBDA state is transparently saved and restored.
 
-#### 8.5 Constructive Example: Functional Map
+#### 7.4 Array Processing with LAMBDA
 
 ```asm
-; Apply "double" function to each element of a 5-element array
-; CR3 = GT with X permission pointing to "double" body
+; Apply a transformation to each element of an array
+; CR2 = GT with X permission pointing to transformation body
+; x20 = base address of input array (5 elements)
+; x21 = base address of output array
+
+ADDI  x22, x0, 5           ; x22 = count = 5
+ADDI  x23, x0, 0           ; x23 = index = 0
+
 loop:
-  LW    x26, 0(x25)        ; load input element
-  LDL   CR1, x26           ; wrap as GT-Literal — 1 cycle
-  LAMBDA CR0, CR3, CR1     ; apply double — 2 cycles setup + body
-  STL   x27, CR0           ; extract result — 1 cycle
-  SW    x27, 0(x28)        ; store output
+  BEQ   x23, x22, done     ; if index == count, done
+  SLL   x24, x23, 2        ; x24 = index * 4 (word offset)
+  ADD   x25, x20, x24      ; x25 = &input[index]
+  LW    x10, 0(x25)        ; x10 = input[index]
+
+  LAMBDA CR2, x10           ; apply transformation → x10 = result
+                             ; (machine-status fast path each iteration)
+
+  ADD   x26, x21, x24      ; x26 = &output[index]
+  SW    x10, 0(x26)        ; output[index] = result
+
+  ADDI  x23, x23, 1        ; index++
+  J     loop
+done:
 ```
 
-**Performance per element**: ~10 cycles (GT-Literal) vs. ~20 cycles (CALL/RETURN). Speedup: ~2×.
+**Performance per element**: 2 cycles (LAMBDA) + body execution + 1 cycle (RETURN fast path) + ~5 cycles (loop overhead) = **~12 cycles per element**.
 
-### 9. Network Transparency Integration
+**Comparison with CALL/RETURN per element**: ~22 cycles per element (full domain crossing each iteration).
+
+**Speedup**: ~1.8× faster for functional map patterns. Each iteration uses the machine-status fast path because no CALL intervenes between LAMBDA and RETURN within the loop body.
+
+### 8. Network Transparency Integration
 
 The GT Type field enables seamless network transparency through the Outform type (01). Outform GTs reference remote resources accessed via standard HTTPS:
 
 - **R on Outform**: Object fetch via standard HTTPS GET (browser mechanisms: TLS, ETag, Cache-Control)
 - **W on Outform**: Object flush via standard HTTPS PUT (ETag/If-Match for conflict detection)
-- **E on Outform Abstract**: RPC call through an encrypted point-to-point tunnel keyed by an indirect GT-Literal
+- **E on Outform**: RPC call through an encrypted point-to-point tunnel keyed by a cryptographic key stored in a standard namespace entry
 
-The RPC tunnel key is an indirect GT-Literal whose namespace entry holds a symmetric encryption key. Both communicating Meta Machines hold matching namespace entries with identical key material (Location + Limit values). The MAC seal ensures key integrity. The version field enables instant revocation: garbage-collecting the Literal GT bumps the version, killing the tunnel.
+The RPC tunnel key is stored in a namespace entry accessed via standard CAP.LOAD with R permission. Both communicating Meta Machines hold matching namespace entries with identical key material stored in the entry's Location and Limit fields. The MAC seal ensures key integrity. The version field enables instant revocation: garbage-collecting the namespace entry bumps the version, killing the tunnel.
+
+No special capability type is needed for cryptographic keys — they are simply namespace entries with R permission, protected by the same MAC, version, and permission checks as any other namespace entry. The clean design is: capabilities reference resources, and cryptographic keys are resources.
 
 Object fetch and flush use standard HTTPS — the same browser mechanisms the web has used for decades — ensuring interoperability with existing web servers, CDNs, and REST APIs without requiring the remote end to understand capabilities.
 
-### 10. Garbage Collection Integration
+### 9. Garbage Collection Integration
 
 The architecture employs deterministic three-phase garbage collection (designated PP250):
 
@@ -480,129 +565,140 @@ The architecture employs deterministic three-phase garbage collection (designate
 2. **Scan**: Walk the DNA tree from root registers via mLoad; each mLoad access resets gBit = 0 on the accessed entry
 3. **Sweep**: Entries with gBit still = 1 are unreachable; bump their version, invalidating all GTs that reference them
 
-Direct GT-Literals are not subject to garbage collection — they have no namespace entry and exist only for the lifetime of the capability register. This is architecturally correct: a value cannot be garbage because it has no identity to revoke.
+The NULL type integrates cleanly with garbage collection:
 
-Indirect GT-Literals (namespace-backed handles) participate fully in garbage collection. Sweeping an indirect GT-Literal's namespace entry bumps the version, instantly invalidating:
-- RPC tunnel keys (killing the encrypted tunnel)
-- Authentication credentials (revoking login access)
-- Session tokens (terminating the session)
-- Encryption keys (revoking decryption capability)
-- API keys (revoking access to third-party services)
+- **During scanning**: The GC scanner encounters NULL-typed CRs and skips them — there is no namespace entry to mark as reachable. Without the NULL type, the scanner would have to guess whether an all-zeros register is a valid Inform GT pointing to index 0 (which should be scanned) or an empty register (which should be skipped). NULL removes this ambiguity.
+
+- **After sweeping**: When a namespace entry is swept (version bumped), all GTs referencing that entry become stale. The system can optionally set the corresponding capability registers to NULL, providing a clean revocation that is unambiguous at the hardware level.
+
+- **LAMBDA body GTs**: The GT used by LAMBDA (CRn with X permission) is a standard Inform GT that participates fully in garbage collection. If the code object's namespace entry is swept while a LAMBDA body is executing, the entry's version is bumped, but the executing code continues because the instruction stream is already loaded. The GT in CRn becomes stale and cannot be used for a subsequent LAMBDA — the next LAMBDA attempt would go through mLoad verification and FAULT on the version mismatch.
+
+### 10. Performance Analysis
+
+#### 10.1 Cycle Count Comparison
+
+| Operation | LAMBDA Path | CALL Path | Speedup |
+|-----------|-------------|-----------|---------|
+| Simple function (clamp) | ~8 cycles | ~18 cycles | ~2.25× |
+| Array map (per element) | ~12 cycles | ~22 cycles | ~1.8× |
+| Chained invocations (3×) | ~24 cycles | ~54 cycles | ~2.25× |
+| LAMBDA with CALL nesting | ~20 cycles (LAMBDA + CALL + RETURN overhead) | ~22 cycles (all CALL) | ~1.1× |
+
+The speedup is largest for the common case: lightweight code reuse within a single protection domain. When CALL intervenes (cross-domain service invocation), the overhead of saving and restoring LAMBDA state reduces but does not eliminate the benefit.
+
+#### 10.2 The Machine-Status Fast Path Advantage
+
+The key performance insight is that in the common case (LAMBDA → body → RETURN), zero stack access occurs:
+
+| Step | LAMBDA Path | CALL Path |
+|------|-------------|-----------|
+| Entry | Verify X perm, save PC to status reg (2 cycles) | Push CR5/CR6/CR7/PC to stack, switch C-List (5+ cycles) |
+| Body | Execute code (N cycles) | Execute code (N cycles) |
+| Return | Check flag, restore PC from status reg (1 cycle) | Pop frame, revalidate CRs via mLoad (5+ cycles) |
+| **Total overhead** | **3 cycles** | **10+ cycles** |
+
+The machine-status fast path eliminates stack access entirely for the lightweight case, while CALL continues to provide the full domain-crossing infrastructure for heavyweight invocations.
 
 ---
 
 ## CLAIMS
 
-### Claim 1 — GT Type Field
+### Claim 1 — GT Type Field with NULL Type
 
-A processor architecture comprising a capability register file wherein each register holds a Golden Token (GT) having a Type field of at least two bits that architecturally classifies the token content as one of: a local reference (Inform), a remote reference (Outform), a literal value (Literal), or a callable abstraction (Abstract); wherein the Type field is checked by hardware at each instruction to determine the execution path, and wherein a Literal-typed token is prohibited by hardware from being processed as a reference and a reference-typed token is prohibited from being processed as a literal value.
+A processor architecture comprising a capability register file wherein each register holds a Golden Token (GT) having a Type field of at least two bits that architecturally classifies the token content as one of: a local reference (Inform, Type = 00), a remote reference (Outform, Type = 01), a null/empty/invalid capability (NULL, Type = 10), or a reserved future type (Spare, Type = 11); wherein the Type field is checked by hardware at each instruction to determine the execution path; and wherein a NULL-typed token causes an immediate hardware fault on any operation, providing an unambiguous representation for empty, uninitialized, or revoked capability registers.
 
-### Claim 2 — Direct GT-Literal with Bit Reclamation
+### Claim 2 — NULL Type for Initialization, Revocation, and Garbage Collection
 
-The architecture of Claim 1, wherein a Golden Token with Type = Literal created by a dedicated Load Literal instruction encodes a direct value in the bit fields that would otherwise hold Version and Permissions in a reference-typed token, thereby reclaiming those bits for value storage; and wherein said direct GT-Literal requires no namespace entry, no Message Authentication Code validation, no version cross-check, and no permission check for value access.
+The architecture of Claim 1, wherein the NULL type serves three architectural roles:
 
-### Claim 3 — LDL Instruction
+(a) initialization, wherein freshly created threads have all non-essential capability registers set to NULL, providing a clean and unambiguous initial state;
 
-The architecture of Claim 2, further comprising a Load Literal (LDL) instruction that creates a direct GT-Literal in a capability register by setting the Type field to Literal and storing a value from a data register or immediate operand in the remaining bits; wherein said instruction executes in a single clock cycle without accessing the namespace table or computing a Message Authentication Code.
+(b) revocation, wherein revoking a capability sets the corresponding register to NULL, causing any subsequent use to FAULT immediately rather than encountering ambiguous state;
 
-### Claim 4 — STL Instruction
+(c) garbage collection, wherein the GC scanner distinguishes NULL-typed registers (no namespace entry to scan) from valid Inform or Outform GTs (namespace entries to mark as reachable), eliminating the ambiguity between an empty register and a valid capability with index zero.
 
-The architecture of Claim 2, further comprising a Store Literal (STL) instruction that extracts the value from a direct GT-Literal in a capability register into a data register; wherein said instruction verifies the Type field equals Literal before yielding the value and generates a hardware fault if the Type field indicates any reference type (Inform, Outform, or Abstract), thereby preventing information leakage from capability references into the data register domain.
+### Claim 3 — LAMBDA Instruction
 
-### Claim 5 — LAMBDA Instruction
+The architecture of Claim 1, further comprising a LAMBDA instruction having two operands: a capability register (CRn) holding a Golden Token with Execute (X) permission referencing executable code, and a data register (x) holding an argument value; wherein said LAMBDA instruction:
 
-The architecture of Claim 1, further comprising a LAMBDA instruction having three operands: a destination capability register (CRd), a body capability register (CRbody) holding a Golden Token with Execute (X) permission referencing executable code, and an argument capability register (CRarg) holding a direct GT-Literal; wherein said LAMBDA instruction:
+(a) verifies that CRn holds a token of Inform type (00) with Execute (X) permission;
 
-(a) verifies that CRbody holds a token of Inform or Abstract type with Execute (X) permission;
+(b) saves the return address (PC+4) to a machine status register;
 
-(b) verifies that CRarg holds a GT-Literal (Type = Literal);
+(c) sets a LAMBDA-active flag in machine status;
 
-(c) loads the code referenced by CRbody for execution without changing the current protection domain (no capability list switch, no stack frame allocation);
+(d) branches to the code referenced by CRn for execution within the same protection domain, without changing the current capability list, without allocating a stack frame, and without performing namespace revalidation;
 
-(d) executes the code body with the GT-Literal argument bound as input;
+(e) allows the code body to operate on argument and result values through data registers without writing to capability registers;
 
-(e) produces a new direct GT-Literal result in CRd;
+thereby implementing Church's lambda calculus function application as a lightweight in-scope code invocation at reduced overhead compared to a domain-crossing CALL instruction, achieving macro-like code reuse without code duplication.
 
-thereby implementing Church's lambda calculus function application within a single protection domain at reduced overhead compared to a domain-crossing CALL instruction.
+### Claim 4 — LAMBDA vs. CALL Distinction
 
-### Claim 6 — LAMBDA vs. CALL Distinction
+The architecture of Claim 3, wherein the LAMBDA instruction uses Execute (X) permission and operates within the current protection domain without stack frame allocation or capability list switching; and wherein a separate CALL instruction uses Enter (E) permission and crosses protection domain boundaries with stack frame allocation, capability list switching, and full mLoad validation; said distinction corresponding to Church's lambda calculus application within a domain (λ-application) versus service invocation across domains (function call with domain crossing).
 
-The architecture of Claim 5, wherein the LAMBDA instruction uses Execute (X) permission and operates within the current protection domain without stack frame allocation or capability list switching; and wherein a separate CALL instruction uses Enter (E) permission and crosses protection domain boundaries with stack frame allocation, capability list switching, and full mLoad validation; said distinction corresponding to Church's lambda calculus application (within a domain) versus service invocation (across domains).
+### Claim 5 — Machine-Status Fast Path for LAMBDA Return
 
-### Claim 7 — Dual-Form GT-Literal
+The architecture of Claim 3, wherein the LAMBDA instruction stores the return address and LAMBDA-active flag in dedicated machine status registers rather than on the capability stack; and wherein the RETURN instruction, upon detecting the LAMBDA-active flag in machine status, restores the program counter from the machine status register and clears the LAMBDA-active flag, completing the return with zero stack access; said machine-status fast path providing the common-case execution path for LAMBDA invocations where no CALL or CHANGE instruction intervenes during the LAMBDA body.
 
-The architecture of Claim 1, wherein the Literal Type value supports both:
+### Claim 6 — Self-Describing Stack Frames with 1-Bit Tag
 
-(a) a direct form created by the LDL instruction, carrying a self-contained value with no namespace backing; and
+The architecture of Claims 3 and 4, wherein every frame on the capability stack carries a 1-bit tag identifying the frame as either a CALL frame (tag = 0) or a LAMBDA frame (tag = 1); and wherein the RETURN instruction, when popping a frame from the stack, inspects the tag to determine the restoration path — performing full domain restoration (capability register restoration, capability list switch, mLoad revalidation) for CALL frames, and performing simple program counter restoration for LAMBDA frames; said tag making the thread's execution history self-describing.
 
-(b) an indirect form created by loading a Literal-typed namespace entry via the mLoad validation path, serving as a capability-secured handle to a secret value (such as a cryptographic key, credential, or token) stored in the namespace entry's data fields;
+### Claim 7 — Non-Nestable LAMBDA with CALL-Mediated Nesting
 
-wherein the instruction context (LDL/STL for direct, CAP.LOAD for indirect) determines which form is operative without requiring additional type bits.
+The architecture of Claims 3 and 4, wherein a second LAMBDA instruction executed while the LAMBDA-active flag is set in machine status causes a hardware fault, preventing uncontrolled nesting; and wherein a CALL instruction executed during a LAMBDA body saves the LAMBDA machine status (return address and LAMBDA-active flag) as part of the CALL stack frame and clears the LAMBDA-active flag in machine status; thereby permitting a nested LAMBDA instruction within the called procedure, with the outer LAMBDA state preserved on the stack and restored when the CALL returns.
 
-### Claim 8 — Structural Security Model
+### Claim 8 — Clean CR/DR Separation
 
-The architecture of Claim 2, wherein security for direct GT-Literals is enforced structurally by the instruction set architecture rather than by per-access validation; wherein only the LDL instruction can create a direct GT-Literal, only the STL instruction can extract its value, and only the LAMBDA instruction can apply it as a function argument; and wherein a direct GT-Literal cannot be converted to a reference-typed token, passed to a reference-oriented instruction, or used to access the namespace table.
+The architecture of Claim 1, wherein capability registers hold exclusively Golden Tokens (capabilities) and data registers hold exclusively numeric values; wherein no instruction transfers raw numeric values into capability registers or extracts raw bit patterns from capability registers into data registers; and wherein the LAMBDA instruction bridges the two domains by using a capability (GT with X permission in a CR) to execute code that operates on values (arguments and results in data registers), without writing to capability registers during execution.
 
-### Claim 9 — Two-Tier Execution Model
+### Claim 9 — Network-Transparent RPC via Namespace-Stored Tunnel Key
 
-The architecture of Claims 1 and 5, comprising two execution tiers sharing a common capability register file:
+The architecture of Claim 1, wherein a cryptographic key for a point-to-point RPC tunnel between two Meta Machines is stored in a standard namespace entry, accessed via CAP.LOAD with Read (R) permission through the mLoad validation path; wherein both communicating machines hold namespace entries with matching key material; and wherein the CALL instruction, upon encountering an Outform GT with Enter (E) permission, serializes the data register state, encrypts the payload using the key material from the tunnel key's namespace entry, and transmits the encrypted payload to the remote machine for execution and return of results; and wherein garbage collection of the tunnel key's namespace entry (version bump) instantly revokes the tunnel by invalidating all copies of the GT that references the key entry.
 
-(a) a reference tier wherein Golden Tokens of Inform, Outform, or Abstract type are processed through a master validation function (mLoad) that checks Message Authentication Codes, version numbers, permissions, and namespace bounds; and
+### Claim 10 — LAMBDA as Macro-Like Code Reuse
 
-(b) a value tier wherein Golden Tokens of Literal type are processed through dedicated instructions (LDL, STL, LAMBDA) that enforce type boundaries without namespace access, MAC computation, or version checking;
-
-wherein the 2-bit Type field in each Golden Token determines which tier processes each instruction, and wherein both tiers coexist in the same register file, the same instruction stream, and the same protection domain.
-
-### Claim 10 — Lambda Calculus Combinators
-
-The architecture of Claim 5, wherein the LAMBDA instruction, LDL instruction, and STL instruction together enable hardware implementation of classical lambda calculus combinators including:
-
-(a) the identity combinator (I = λx.x) as a GT-Literal register transfer;
-
-(b) the constant combinator (K = λx.λy.x) as nested LAMBDA applications;
-
-(c) the fixed-point combinator (Y) as a self-referencing LAMBDA chain enabling recursion without explicit CALL/RETURN overhead;
-
-and wherein a hardware implementation may recognize said combinator patterns and optimize their execution to fewer cycles than the general LAMBDA path.
-
-### Claim 11 — Indirect GT-Literal for Cryptographic Operations
-
-The architecture of Claim 7, wherein an indirect GT-Literal serves as a capability-secured handle to cryptographic key material stored in a namespace entry's data fields; wherein said handle is subject to garbage collection (version bump invalidation), MAC integrity protection, and permission-controlled access; and wherein sweeping said GT-Literal during garbage collection instantly revokes the cryptographic capability by bumping the namespace entry version, thereby invalidating all copies of the handle.
-
-### Claim 12 — Network-Transparent RPC via GT-Literal Tunnel Key
-
-The architecture of Claims 7 and 11, wherein an indirect GT-Literal holds a symmetric encryption key for a point-to-point RPC tunnel between two Meta Machines; wherein both machines hold namespace entries with matching key material; and wherein the CALL instruction, upon encountering an Outform Abstract GT with Enter (E) permission, serializes the data register state, encrypts the payload using the key material from the tunnel key's namespace entry, and transmits the encrypted payload to the remote machine for execution and return of results.
+The architecture of Claim 3, wherein the LAMBDA instruction enables a code body stored once in memory to be invoked from multiple call sites with near-zero overhead per invocation and without code duplication; wherein each invocation uses the machine-status fast path (zero stack access) when no CALL or CHANGE intervenes during the code body; and wherein the code body receives arguments and returns results through data registers, operating as a reusable function that achieves the performance characteristics of an inline macro without replicating the code base.
 
 ---
 
 ## ABSTRACT
 
-A processor architecture, the Church-Turing Meta-Machine (CTMM), that integrates Church's lambda calculus value domain with Turing's computational model through hardware-enforced capability tokens (Golden Tokens). Each Golden Token contains a 2-bit Type field that architecturally distinguishes values (Literal) from references (Inform, Outform) and callables (Abstract), implementing Church's distinction between fully reduced terms and expressions requiring evaluation. A GT-Literal (Type = Literal) reclaims the Version and Permissions bit fields for direct value storage (30 bits), bypassing the namespace validation path (mLoad) entirely. Three new Church instructions — LDL (Load Literal), STL (Store Literal), and LAMBDA (lambda application) — operate on GT-Literals within a single protection domain using Execute (X) permission, achieving 2-3× speedup over the domain-crossing CALL/RETURN path for pure computation while maintaining full capability security through structural type enforcement. The same Literal type supports indirect namespace-backed handles for cryptographic keys, credentials, and tokens, enabling secure network transparency through encrypted RPC tunnels with instant revocation via garbage collection. The architecture unifies capability-based security, lambda calculus, and practical performance optimization in a single hardware mechanism governed by a 2-bit type field.
+A processor architecture, the Church-Turing Meta-Machine (CTMM), that integrates Church's lambda calculus with Turing's computational model through a clean separation of capabilities and values and a lightweight code application mechanism. Each Golden Token (GT) contains a 2-bit Type field classifying capabilities as: Inform (local reference), Outform (remote reference), NULL (empty/invalid), or Spare (reserved). The NULL type provides an unambiguous hardware-enforced representation for empty, uninitialized, or revoked capability registers, causing an immediate fault on any operation. Capability registers hold capabilities exclusively; data registers hold values exclusively. A LAMBDA instruction applies a code body (GT with Execute permission in a capability register) to an argument (value in a data register), executing within the same protection domain without stack frame allocation, capability list switching, or namespace revalidation — a macro that doesn't replicate the code base. A machine-status fast path stores the return address and LAMBDA-active flag in dedicated machine status registers, achieving zero stack access for the common LAMBDA → body → RETURN pattern. Self-describing stack frames with a 1-bit tag distinguish CALL frames from LAMBDA frames, enabling correct restoration on return. The LAMBDA instruction is non-nestable on its own (FAULT on double-LAMBDA) but supports controlled nesting through CALL mediation, where CALL saves and restores LAMBDA machine status as part of its frame. The architecture unifies capability-based security, lambda calculus code application, and practical code reuse in a single mechanism governed by a 2-bit type field, with the Church-Turing marriage expressed as: LAMBDA bridges Church (GT as λ) and Turing (DRs as computation) with X permission within a domain, while CALL bridges them with E permission across domains.
 
 ---
 
 ## DRAWINGS (Descriptions for Patent Figures)
 
-### Figure 1: GT Format Comparison
-Diagram showing the bit layout of all four GT types side by side: Inform (Version|Index|Permissions|Type=00), Outform (Version|Index|Permissions|Type=01), Direct GT-Literal (Value[29:0]|Type=10), Abstract (Version|Index|Permissions|Type=11). Highlights the bit reclamation in the Direct GT-Literal form.
+### Figure 1: GT Format and Type Field
 
-### Figure 2: Two-Tier Execution Model
-Flow diagram showing the instruction decode stage branching on the Type field: Type=10 routes to the value tier (LDL/STL/LAMBDA, no mLoad), Types 00/01/11 route to the reference tier (mLoad validation: MAC check → version check → permission check → namespace lookup → CR write).
+Diagram showing the bit layout of all four GT types side by side: Inform (Version|Index|Permissions|Type=00), Outform (Version|Index|Permissions|Type=01), NULL (all fields meaningless|Type=10), Spare (reserved|Type=11). Highlights the NULL type as architecturally distinct from all valid reference types.
 
-### Figure 3: LAMBDA vs. CALL Execution Paths
-Side-by-side comparison of LAMBDA (2-cycle setup, same domain, no stack frame) and CALL (10+ cycles, domain crossing, stack frame push, C-List switch, mLoad validation, RETURN revalidation).
+### Figure 2: LAMBDA vs. CALL Execution Paths
 
-### Figure 4: Lambda Calculus Correspondence
-Table mapping Church's lambda calculus concepts (value, variable, abstraction, application, normal form) to CTMM hardware elements (Direct GT-Literal, CRarg, X-permission GT, LAMBDA instruction, GT-Literal result).
+Side-by-side comparison of LAMBDA (~3 cycles overhead: X permission verify, save PC to machine status, branch, fast-path RETURN) and CALL (10+ cycles: stack frame push, C-List switch, mLoad validation, domain crossing, RETURN with revalidation). Shows the machine-status fast path for LAMBDA avoiding all stack access.
 
-### Figure 5: Constructive Example — A = B + C
-Annotated instruction sequence showing the 6-cycle GT-Literal path alongside the 15+ cycle namespace-backed path, with cycle counts for each step.
+### Figure 3: Machine-Status Fast Path
 
-### Figure 6: Factorial via Y Combinator
-Instruction trace showing recursive LAMBDA application for factorial(5), demonstrating the Y combinator pattern without CALL/RETURN overhead.
+Flow diagram showing LAMBDA entry (save PC+4 to LAMBDA_PC register, set LAMBDA-active flag) and RETURN behavior (check LAMBDA-active flag → if set: restore PC from LAMBDA_PC, clear flag, zero stack access → if not set: pop stack frame, check tag, restore accordingly).
 
-### Figure 7: Indirect GT-Literal as RPC Tunnel Key
-Diagram showing two Meta Machines with matching namespace entries (same key material in Location/Limit fields), connected by an encrypted tunnel. Shows the indirect GT-Literal format with Version/Index/Permissions fields, the namespace entry with Location/Limit/MAC fields, and the GC sweep revocation path.
+### Figure 4: Self-Describing Stack Frames
 
-### Figure 8: Security Model — Structural vs. Per-Access
-Diagram showing the two security models: structural security (instruction-level type enforcement for direct GT-Literals, with LDL/STL/LAMBDA as the only creation/extraction/application paths) and per-access security (mLoad validation for indirect GT-Literals and all reference-typed GTs).
+Diagram showing the capability stack with interleaved CALL frames (tag=0, full context: CR5/CR6/CR7/PC/LAMBDA state) and LAMBDA frames (tag=1, minimal: PC only). Shows RETURN inspecting the tag to determine the restoration path.
+
+### Figure 5: Non-Nestable LAMBDA with CALL-Mediated Nesting
+
+Sequence diagram showing: LAMBDA (sets LAMBDA-active) → body → CALL (saves LAMBDA state, clears flag) → nested LAMBDA (permitted) → RETURN (fast path) → CALL RETURN (restores LAMBDA state) → RETURN (fast path). Annotated with LAMBDA-active flag state at each step.
+
+### Figure 6: Lambda Calculus Correspondence
+
+Table mapping Church's lambda calculus concepts (abstraction, variable, application, substitution, result) to CTMM hardware elements (GT with X permission, data register argument, LAMBDA instruction, code body execution, data register result).
+
+### Figure 7: Constructive Example — Clamp Function
+
+Annotated instruction sequence showing the clamp function invoked via LAMBDA with cycle counts for each step, demonstrating macro-like code reuse: code exists once, invoked three times (RGB channels), zero stack access per invocation via machine-status fast path.
+
+### Figure 8: Network-Transparent RPC via Namespace Tunnel Key
+
+Diagram showing two Meta Machines with matching namespace entries (same key material in Location/Limit fields), connected by an encrypted tunnel. Shows the namespace entry accessed via standard CAP.LOAD with R permission, the CALL instruction encrypting the payload, and the GC sweep revocation path (version bump invalidates the GT, killing the tunnel).

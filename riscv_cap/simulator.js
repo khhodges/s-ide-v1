@@ -57,12 +57,12 @@ class RiscVCapSimulator {
             this.cr[i] = { word0: 0, word1: 0, word2: 0, word3: 0 };
         }
 
-        this.cr[15].word0 = this.createGT(0, 0, { R:0,W:0,X:0,L:0,S:0,E:0 }, 3);
+        this.cr[15].word0 = this.createGT(0, 0, { R:0,W:0,X:0,L:0,S:0,E:0 }, 0);
 
-        this.cr[8].word0 = this.createGT(0, 3, { R:0,W:0,X:0,L:0,S:0,E:0 }, 3);
+        this.cr[8].word0 = this.createGT(0, 3, { R:0,W:0,X:0,L:0,S:0,E:0 }, 0);
 
-        this.cr[7].word0 = this.createGT(0, 0, { R:0,W:0,X:0,L:0,S:0,E:1 }, 3);
-        this.cr[6].word0 = this.createGT(0, 1, { R:0,W:0,X:0,L:1,S:1,E:0 }, 3);
+        this.cr[7].word0 = this.createGT(0, 0, { R:0,W:0,X:0,L:0,S:0,E:1 }, 0);
+        this.cr[6].word0 = this.createGT(0, 1, { R:0,W:0,X:0,L:1,S:1,E:0 }, 0);
 
         this.bootComplete = true;
     }
@@ -224,7 +224,7 @@ class RiscVCapSimulator {
     }
 
     getTypeName(type) {
-        const names = ['Inform', 'Outform', 'Literal', 'Abstract'];
+        const names = ['Inform', 'Outform', 'NULL', 'Spare'];
         return names[type & 0x3];
     }
 

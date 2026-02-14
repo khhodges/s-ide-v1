@@ -849,12 +849,12 @@ main {
     color: #00b4d8;
 }
 
-.type-badge[data-type="literal"] {
+.type-badge[data-type="null"] {
     background: rgba(240, 165, 0, 0.2);
     color: #f0a500;
 }
 
-.type-badge[data-type="abstract"] {
+.type-badge[data-type="spare"] {
     background: rgba(155, 93, 229, 0.2);
     color: #9b5de5;
 }

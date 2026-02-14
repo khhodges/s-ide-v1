@@ -1,6 +1,14 @@
+> **ARCHIVED — February 14, 2026**
+>
+> This proposal has been **superseded** by the simplified LAMBDA instruction design. The lambda register window (CR12-CR15 aliased to x28-x31) has been set aside in favor of a clean domain separation: capability registers hold capabilities exclusively, data registers hold values exclusively. The LAMBDA instruction now operates as a lightweight in-scope call using X permission, with arguments and results passed through data registers. See [LAMBDA Instruction Specification](lambda-instruction.md) for the current design.
+>
+> This document is retained for historical reference only. None of the concepts below are part of the current architecture.
+
+---
+
 # DESIGN PROPOSAL: Lambda Register Window
 
-**Status**: PROPOSAL — Under consideration, not yet adopted. No changes to existing code, design docs, or patent filing.
+**Status**: ARCHIVED — Superseded by simplified LAMBDA instruction design (February 14, 2026). Retained for historical reference.
 
 **Date**: February 13, 2026
 
