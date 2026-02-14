@@ -3878,15 +3878,19 @@ function resetProgram(preserveLinkage = true) {
     editorState.nia = 0;
     currentExecutionLine = -1;
     simulator.softReset();
+    for (let i = 0; i < 8; i++) {
+        simulator.contextRegs[i] = simulator.createNullCapability();
+    }
     
     clearEditorConsole();
-    editorLog('Program reset', 'info');
+    editorLog('Program reset — capability registers cleared to NULL', 'info');
     editorLog('Write code and click Run or Step to execute', 'info');
     
     updateEditorStatus();
     updateEditorRegisters();
     updateLineNumbers();
     updateDisplay();
+    updateCapabilityExplorer();
     
     const parsed = document.getElementById('editorParsed');
     if (parsed) parsed.innerHTML = '';
