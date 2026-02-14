@@ -1350,6 +1350,8 @@ const instructionInfo = {
     SAVE: { operands: ['destCR', 'srcDR'], help: 'Save DR[src] to location via CR[dest]. Requires Save permission.', isCap: true },
     CALL: { operands: ['cr'], help: 'Call procedure in CR[reg]. Requires Enter permission. Pushes return frame.', isCap: true },
     RETURN: { operands: [], help: 'Return from procedure. Pops stack frame and restores CR6, CR7, NIA.', isCap: true },
+    LAMBDA: { operands: ['cr', 'dr'], help: 'Apply Church function in CR[cr] to DR[dr]. Requires X permission. Non-nestable. Result in DR[dr].', isCap: true },
+    HALT: { operands: [], help: 'Stop program execution cleanly.' },
     CHANGE: { operands: ['cr_or_index'], help: 'Create new thread GT and load into CR8. I=0: from CRs, I=1: from C-List[idx]. Clears exclusive monitors.', isCap: true },
     SWITCH: { operands: ['cr', 'target'], help: 'Copy capability to system register CR8-15. I=0: from CRs, I=1: from C-List[idx]. Target: 0=CR8...7=CR15.', isCap: true }
 };
@@ -2816,51 +2818,67 @@ function getParentAbstraction(funcName) {
 
 const examplePrograms = {
     access: `; =============================================
-; ACCESS.ASM - FAILSAFE INPUT VALIDATION
+; ACCESS.ASM - LAMBDA TEST HARNESS
 ; =============================================
-; Purpose: Generic input validation pattern that
-; checks capabilities and data WITHOUT leaking
-; information about which check failed.
+; Purpose: Demonstrates the LAMBDA instruction
+; applying Church functions to data registers.
+; LAMBDA uses X permission (not E like CALL),
+; is non-nestable, and operates in-place.
 ;
-; SECURITY PRINCIPLE: All failures branch to the
-; same FAULT handler - no error codes, no timing
-; differences, no information leakage.
+; Flow: Enter Lambda abstraction via CALL,
+; LOAD individual function GTs [R,X] from its
+; C-List, then apply with LAMBDA instruction.
 ;
-; Output:
-;   On success: Proceeds to protected operation
-;   On failure: FAULT (uniform, no leakage)
+; Output: DR0 holds result of each application
 ; =============================================
 
-; === SETUP: Load capability into CR0 ===
-; CR6 = current C-List (loaded by boot)
-; Load Abacus [E] into CR0 from C-List[5]
-LOAD 0 6 5        ; CR0 <- C-List[5] (Abacus)
+; === STEP 1: Enter Lambda Abstraction ===
+; Load Lambda [E] from root C-List index 9
+LOAD 0 6 9        ; CR0 <- C-List[9] (Lambda)
+TPERM 0 E         ; Verify Enter permission
+B NE fault        ; FAULT if missing
 
-; === CAPABILITY VALIDATION ===
-; Test that CR0 has required permission
-TPERM 0 E         ; Must have Enter
-B NE fault        ; Any failure -> FAULT
+; CALL Lambda to get its local C-List
+CALL 0            ; Enter Lambda scope
 
-; === DATA BOUNDS VALIDATION ===
-; DR0 = value to check, DR1 = maximum
-ADDI 0 42         ; DR0 = test value (42)
-ADDI 1 100        ; DR1 = max allowed (100)
-CMP 0 1           ; DR0 <= DR1?
-B GT fault        ; Exceeds max -> FAULT
+; === STEP 2: Load SUCC function [R,X] ===
+; Lambda C-List[1] = GT_CHURCH_SUCC
+LOAD 0 6 1        ; CR0 <- SUCC [R,X]
+TPERM 0 X         ; Verify eXecute permission
+B NE fault        ; FAULT if missing
 
-; === ALL CHECKS PASSED ===
-; Safe to proceed with protected operation
-; (In real code: CALL CR0 enters the abstraction)
-B done            ; Skip past fault handler
+; === STEP 3: LAMBDA SUCC ===
+; DR0 = 3, apply SUCC -> expect DR0 = 4
+ADDI 0 3          ; DR0 = 3
+LAMBDA 0 0        ; SUCC(3) -> DR0 = 4
 
-; === SINGLE FAILURE MODE ===
-; All validation failures come here
-; No error codes - no information leakage
+; === STEP 4: Load ADD function [R,X] ===
+; Lambda C-List[3] = GT_CHURCH_ADD
+LOAD 1 6 3        ; CR1 <- ADD [R,X]
+
+; === STEP 5: LAMBDA ADD ===
+; DR0 = 4 (from SUCC), set DR1 = 10
+ADDI 1 10         ; DR1 = 0+10 = 10
+LAMBDA 1 0        ; ADD(4, 10) -> DR0 = 14
+
+; === STEP 6: Load MUL function [R,X] ===
+; Lambda C-List[4] = GT_CHURCH_MUL
+LOAD 2 6 4        ; CR2 <- MUL [R,X]
+
+; === STEP 7: LAMBDA MUL ===
+; DR0 = 14 (from ADD), DR1 still 10
+; Need DR1 = 3: subtract 7 from 10
+SUBI 1 7          ; DR1 = 10-7 = 3
+LAMBDA 2 0        ; MUL(14, 3) -> DR0 = 42
+
+; === DONE: DR0 = 42 (the answer) ===
+B done
+
 fault:
-FAULT             ; Uniform failure - triggers FirstFault
+FAULT
 
 done:
-HALT              ; Execution complete`,
+HALT`,
 
     firstfault: `; =============================================
 ; FIRSTFAULT.ASM - UNIFORM FAULT HANDLER
@@ -3267,7 +3285,8 @@ function setupCodeEditor() {
         const isOldAccess = (savedContent.includes('TPERM 0 RW') && savedContent.includes('TPERM 0 S') && savedContent.includes('ACCESS.ASM'))
             || (savedContent.includes('LOAD 0 6 5') && savedContent.includes('TPERM 0 E') && savedContent.includes('RETURN'))
             || (savedContent.includes('ACCESS.ASM') && savedContent.includes('TPERM 0 E') && !savedContent.includes('B done'))
-            || (savedContent.includes('ACCESS.ASM') && savedContent.includes('TPERM 0 E') && !savedContent.includes('HALT'));
+            || (savedContent.includes('ACCESS.ASM') && savedContent.includes('TPERM 0 E') && !savedContent.includes('HALT'))
+            || (savedContent.includes('ACCESS.ASM') && savedContent.includes('FAILSAFE INPUT VALIDATION') && !savedContent.includes('LAMBDA'));
         if (isOldAccess && typeof examplePrograms !== 'undefined' && examplePrograms.access) {
             editor.value = examplePrograms.access;
             savedEditorContent = examplePrograms.access;
@@ -3936,6 +3955,10 @@ function executeEditorInstruction(instr) {
             
             case 'TPERM':
                 result = simulator.execute(op, args[0], args[1], args[2]);
+                break;
+            
+            case 'LAMBDA':
+                result = simulator.execute(op, args[0], args[1]);
                 break;
             
             case 'LABEL':
@@ -6189,12 +6212,13 @@ RETURN mask
             {
                 text: `<h3>Church Instructions Overview</h3>
                 <p>The <strong>Church instructions</strong> are the capability-manipulation half of the CTMM instruction set. Named after Alonzo Church, they embody the <strong>lambda calculus</strong> philosophy: everything is a function reference (capability).</p>
-                <p>There are <strong>6 Church instructions</strong> and an additional test instruction (<strong>TPERM</strong> - Test the permission and scope of a Golden Token):</p>
+                <p>There are <strong>7 Church instructions</strong> plus a test instruction (<strong>TPERM</strong> - Test the permission and scope of a Golden Token):</p>
                 <ul>
                     <li><strong>LOAD</strong> - Read a Golden Token from memory into a Context Register</li>
                     <li><strong>SAVE</strong> - Write a Golden Token from a Context Register to memory</li>
-                    <li><strong>CALL</strong> - Invoke code referenced by a Golden Token</li>
+                    <li><strong>CALL</strong> - Invoke code referenced by a Golden Token (E permission)</li>
                     <li><strong>RETURN</strong> - Return from invoked code to the caller</li>
+                    <li><strong>LAMBDA</strong> - Apply Church function in-place via X permission (non-nestable)</li>
                     <li><strong>CHANGE</strong> - Create new thread GT and write to CR8 (thread identity)</li>
                     <li><strong>SWITCH</strong> - Copy capability to system register CR8-CR15</li>
                 </ul>
@@ -6206,13 +6230,14 @@ RETURN mask
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div style="background: var(--bg-tertiary); padding: 0.8rem; border-radius: 6px;">
                             <div style="color: var(--accent); font-weight: bold; margin-bottom: 0.5rem;">Church Instructions operate on Golden Tokens (Capabilities)</div>
-                            <pre style="font-size: 0.75rem; margin: 0;">LOAD  - Get capability
-SAVE  - Store capability
-CALL  - Invoke via capability
+                            <pre style="font-size: 0.75rem; margin: 0;">LOAD   - Get capability
+SAVE   - Store capability
+CALL   - Invoke via capability (E)
 RETURN - Return control
+LAMBDA - Apply function (X)
 CHANGE - Switch C-List
 SWITCH - Switch thread
-TPERM - Test permissions and scope</pre>
+TPERM  - Test perms and scope</pre>
                         </div>
                         <div style="background: var(--bg-tertiary); padding: 0.8rem; border-radius: 6px;">
                             <div style="color: var(--success); font-weight: bold; margin-bottom: 0.5rem;">Turing Instructions operate on binary computation on data</div>
@@ -11405,7 +11430,9 @@ const instructionComments = {
     'RETURN': 'Return from procedure call',
     'CHANGE': 'Context switch to thread at offset',
     'SWITCH': 'Set CR15 namespace to capability in CR',
-    'TPERM': 'Test permissions and bounds on capability'
+    'TPERM': 'Test permissions and bounds on capability',
+    'LAMBDA': 'Apply Church function via X permission (non-nestable)',
+    'HALT': 'Stop program execution'
 };
 
 function insertInstruction(instr, operands) {

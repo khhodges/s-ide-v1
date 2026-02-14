@@ -22,6 +22,9 @@ class CTMMSimulator {
         
         this.flags = { N: false, Z: false, C: false, V: false };
         
+        this.lambdaActive = false;
+        this.lambdaReturnNIA = 0;
+        
         this.namespaceRegistry = {};
         this.nextVersion = 1;
         
@@ -57,7 +60,6 @@ class CTMMSimulator {
     }
     
     softReset() {
-        // Reset only data registers and flags, preserve context registers from boot
         this.dataRegs = {};
         for (let i = 0; i < 16; i++) {
             this.dataRegs[i] = BigInt(0);
@@ -68,6 +70,8 @@ class CTMMSimulator {
         this.callStack = [];
         
         this.flags = { N: false, Z: false, C: false, V: false };
+        this.lambdaActive = false;
+        this.lambdaReturnNIA = 0;
     }
 
     createNullCapability() {
@@ -774,6 +778,83 @@ class CTMMSimulator {
                 }
                 
                 return `TPERM_PRESET CR${destCR}, CR${srcCR}, #${presetCode}: [${srcPerms.join('')}] -> [${newPerms.join('')}]`;
+            }
+            
+            case "LAMBDA": {
+                const [crIdx, drIdx] = args;
+                const cr = this._getCR(crIdx);
+                
+                if (!cr || cr.name === 'NULL') {
+                    return `FAULT: NULL: CR${crIdx} - no capability loaded`;
+                }
+                
+                const typeField = cr.gtType || 0;
+                if (typeField === 2) {
+                    return `FAULT: TYPE: CR${crIdx} - NULL GT type (cannot LAMBDA)`;
+                }
+                if (typeField === 1) {
+                    return `FAULT: TYPE: CR${crIdx} - Outform GT (LAMBDA requires local Inform)`;
+                }
+                
+                if (!cr.perms.includes('X')) {
+                    return `FAULT: PERMISSION: CR${crIdx} "${cr.name}" - lacks X permission (LAMBDA requires X)`;
+                }
+                
+                if (this.lambdaActive) {
+                    return `FAULT: LAMBDA: non-nestable - LAMBDA already active (use CALL to nest)`;
+                }
+                
+                this.lambdaActive = true;
+                this.lambdaReturnNIA = this.nia + 1;
+                
+                const argVal = this.getDataReg(drIdx || 0);
+                const funcName = cr.name;
+                let resultVal = argVal;
+                let computeDesc = '';
+                
+                if (funcName === 'GT_CHURCH_SUCC' || funcName.includes('SUCC')) {
+                    resultVal = argVal + 1n;
+                    computeDesc = `SUCC(${argVal}) = ${resultVal}`;
+                } else if (funcName === 'GT_CHURCH_PRED' || funcName.includes('PRED')) {
+                    resultVal = argVal > 0n ? argVal - 1n : 0n;
+                    computeDesc = `PRED(${argVal}) = ${resultVal}`;
+                } else if (funcName === 'GT_CHURCH_ADD' || funcName.includes('ADD')) {
+                    const b = this.getDataReg(1);
+                    resultVal = argVal + b;
+                    computeDesc = `ADD(${argVal}, ${b}) = ${resultVal}`;
+                } else if (funcName === 'GT_CHURCH_MUL' || funcName.includes('MUL')) {
+                    const b = this.getDataReg(1);
+                    resultVal = argVal * b;
+                    computeDesc = `MUL(${argVal}, ${b}) = ${resultVal}`;
+                } else if (funcName === 'GT_TRUE' || funcName.includes('TRUE')) {
+                    computeDesc = `TRUE(${argVal}, DR1) = ${argVal} (select first)`;
+                } else if (funcName === 'GT_FALSE' || funcName.includes('FALSE')) {
+                    resultVal = this.getDataReg(1);
+                    computeDesc = `FALSE(DR0, ${resultVal}) = ${resultVal} (select second)`;
+                } else if (funcName === 'GT_PAIR' || funcName.includes('PAIR')) {
+                    const b = this.getDataReg(1);
+                    computeDesc = `PAIR(${argVal}, ${b}) — paired in DR0,DR1`;
+                } else if (funcName === 'GT_FST' || funcName.includes('FST')) {
+                    computeDesc = `FST = ${argVal} (first of pair)`;
+                } else if (funcName === 'GT_SND' || funcName.includes('SND')) {
+                    resultVal = this.getDataReg(1);
+                    computeDesc = `SND = ${resultVal} (second of pair)`;
+                } else if (funcName === 'GT_IF' || funcName.includes('IF')) {
+                    const cond = argVal !== 0n;
+                    const thenVal = this.getDataReg(1);
+                    const elseVal = this.getDataReg(2);
+                    resultVal = cond ? thenVal : elseVal;
+                    computeDesc = `IF(${argVal}, ${thenVal}, ${elseVal}) = ${resultVal}`;
+                } else {
+                    computeDesc = `λ ${funcName}(${argVal}) → applied`;
+                }
+                
+                this.setDataReg(drIdx || 0, resultVal & BigInt("0xFFFFFFFFFFFFFFFF"));
+                this.updateFlagsLogic(resultVal & BigInt("0xFFFFFFFFFFFFFFFF"));
+                
+                this.lambdaActive = false;
+                
+                return `LAMBDA CR${crIdx} DR${drIdx || 0}: X✓ → ${computeDesc}`;
             }
             
             case "CALL": {
