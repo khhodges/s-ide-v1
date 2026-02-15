@@ -7608,6 +7608,418 @@ SAVE CR1, [CR0+1]    ; Save to it</pre>
                 }
             }
         ]
+    },
+    {
+        title: "Hello Mum: The Holy Grail",
+        steps: [
+            {
+                text: `<h3>Why "Hello Mum" Replaces "Hello World"</h3>
+                <p>In 1978, "Hello World" proved one thing: <strong>a process can output text.</strong></p>
+                <p>It assumed a monolithic kernel with unrestricted hardware access, virtual memory managed by privileged page tables, and a superuser who can read, modify, or delete anything.</p>
+                <div class="key-concept">
+                    <strong>"Hello Mum" (2026)</strong> proves something far more profound: two people can communicate securely across different machine architectures, through an encrypted capability tunnel, with every step validated by hardware &mdash; <em>no operating system in the path, no virtual memory, no privileged hardware mode, no superuser.</em>
+                </div>
+                <p>This is <strong>the Holy Grail of computer science</strong> &mdash; secure communication as the atomic primitive, not text output.</p>`,
+                demo: `<div class="demo-title">Hello World vs Hello Mum</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: #1e1e2e; padding: 0.8rem; border-radius: 6px; border: 1px solid #f87171;">
+                            <div style="color: #f87171; font-weight: bold; margin-bottom: 0.5rem;">Hello World (1978)</div>
+                            <pre style="font-size: 0.7rem; margin: 0;">printf("Hello World\\n");</pre>
+                            <div style="color: #94a3b8; font-size: 0.7rem; margin-top: 0.5rem;">Requires: kernel, VM, root, syscalls</div>
+                        </div>
+                        <div style="background: #1e1e2e; padding: 0.8rem; border-radius: 6px; border: 1px solid #4ade80;">
+                            <div style="color: #4ade80; font-weight: bold; margin-bottom: 0.5rem;">Hello Mum (2026)</div>
+                            <pre style="font-size: 0.7rem; margin: 0;">CALL(CONNECT(me, mymother))</pre>
+                            <div style="color: #94a3b8; font-size: 0.7rem; margin-top: 0.5rem;">Requires: 1 instruction, 3 Golden Tokens</div>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>One Instruction, Three Tokens, Seven Zeroes</h3>
+                <p>From the caller's perspective, the entire program is <strong>one semantic action</strong>:</p>
+                <pre style="background: var(--bg-tertiary); padding: 0.6rem; border-radius: 4px; font-size: 0.9rem; text-align: center;">CALL(CONNECT(me, mymother))</pre>
+                <p>"Communicate with my mother." The caller does not think about registers, tunnels, encryption, or architecture differences. Church's lambda calculus says: apply an abstraction to arguments and receive results.</p>
+                <div class="highlight">
+                    The machine decomposes this one Church instruction into <strong>three Golden Tokens</strong>:
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 0.5rem 0;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">GT</th><th>Register</th><th>Type</th><th>Permission</th><th>Purpose</th></tr>
+                    <tr><td><strong>me</strong></td><td>CR8</td><td>Inform</td><td>&mdash;</td><td>Thread identity (who is calling)</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td><strong>tunnel key</strong></td><td>CR0</td><td>Inform</td><td><span style="background: #4ade80; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">R</span></td><td>Crypto key for encrypted channel</td></tr>
+                    <tr><td><strong>mymother</strong></td><td>CR1</td><td>Outform</td><td><span style="background: #fbbf24; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">E</span></td><td>Remote messaging service</td></tr>
+                </table>`,
+                demo: `<div class="demo-title">The Seven Zeroes</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; font-size: 0.75rem;">
+                        <div style="background: #1e293b; padding: 0.5rem; border-radius: 4px; border-left: 3px solid #4ade80;"><strong style="color: #4ade80;">Zero OS</strong><br>No kernel, no monolithic OS</div>
+                        <div style="background: #1e293b; padding: 0.5rem; border-radius: 4px; border-left: 3px solid #60a5fa;"><strong style="color: #60a5fa;">Zero VM</strong><br>No page tables, no TLB</div>
+                        <div style="background: #1e293b; padding: 0.5rem; border-radius: 4px; border-left: 3px solid #c084fc;"><strong style="color: #c084fc;">Zero Privilege</strong><br>No ring 0, no supervisor mode</div>
+                        <div style="background: #1e293b; padding: 0.5rem; border-radius: 4px; border-left: 3px solid #fbbf24;"><strong style="color: #fbbf24;">Zero Superuser</strong><br>No root, no admin, no god mode</div>
+                        <div style="background: #1e293b; padding: 0.5rem; border-radius: 4px; border-left: 3px solid #f87171;"><strong style="color: #f87171;">Zero Unauth Code</strong><br>Malware path eliminated</div>
+                        <div style="background: #1e293b; padding: 0.5rem; border-radius: 4px; border-left: 3px solid #fb923c;"><strong style="color: #fb923c;">Zero Unauth Data</strong><br>Ransomware path eliminated</div>
+                        <div style="background: #1e293b; padding: 0.5rem; border-radius: 4px; border-left: 3px solid #2dd4bf; grid-column: 1 / -1;"><strong style="color: #2dd4bf;">Zero Containment Escape</strong> &mdash; AI breakout path does not exist</div>
+                    </div>
+                    <div style="text-align: center; margin-top: 0.5rem; color: #94a3b8; font-size: 0.75rem;">All seven share one root cause: <strong>mLoad is the single trusted gate and nobody goes around it.</strong></div>
+                </div>`
+            },
+            {
+                text: `<h3>Two Machines, Two Architectures</h3>
+                <p>The proof-of-concept uses <strong>both simulators</strong> to demonstrate architecture independence:</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 0.5rem 0;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">Property</th><th>"me" (CTMM Sim-64)</th><th>"mymother" (RV32-Cap Sim-32)</th></tr>
+                    <tr><td>ISA</td><td>Custom CTMM</td><td>RISC-V RV32I + cap extensions</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td>Data registers</td><td>DR0-DR15 (64-bit)</td><td>x0-x31 (32-bit)</td></tr>
+                    <tr><td>Capability regs</td><td>CR0-CR15 (64-bit GTs)</td><td>CR0-CR15 (32-bit GTs)</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td>GT format</td><td>64-bit Golden Token</td><td>32-bit Golden Token</td></tr>
+                    <tr><td>mLoad path</td><td colspan="2" style="text-align: center; color: #4ade80;"><strong>Identical semantics</strong></td></tr>
+                </table>
+                <div class="key-concept">
+                    The architectures, ISAs, register widths, and GT formats are all different. But the <strong>capability semantics are identical</strong> &mdash; and that is what matters.
+                </div>`,
+                demo: `<div class="demo-title">ABI Descriptor: The Bridge</div>
+                <div class="demo-content">
+                    <div style="background: #1e1e2e; padding: 0.8rem; border-radius: 6px;">
+                        <div style="color: #fbbf24; font-weight: bold; margin-bottom: 0.5rem;">Register Mapping (ABI_Mum)</div>
+                        <pre style="font-size: 0.7rem; margin: 0; color: #e2e8f0;">Arguments:   DR0 &rarr; x10   DR1 &rarr; x11
+             DR2 &rarr; x12   DR3 &rarr; x13
+             DR4 &rarr; x14   DR5 &rarr; x15
+
+Returns:     x10  &rarr; DR0   x11 &rarr; DR1
+
+64-bit values: low 32 bits transmitted
+               high 32 truncated with flag</pre>
+                    </div>
+                    <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #94a3b8;">The ABI descriptor lives in a standard namespace entry, accessed through mLoad with R permission. Fetched once, cached locally. Cost vs network: <strong>0.005%</strong> &mdash; unmeasurable.</div>
+                </div>`
+            },
+            {
+                text: `<h3>Step 1: The C-List Setup</h3>
+                <p>When you load the Hello Mum example, the simulator configures <strong>"me"'s C-List</strong> in CR6 with exactly three Golden Tokens:</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 0.5rem 0;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">Index</th><th>Name</th><th>Type</th><th>Permission</th><th>Purpose</th></tr>
+                    <tr><td style="text-align: center;">[0]</td><td>Tunnel_Key_Mum</td><td>Inform</td><td><span style="background: #4ade80; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">R</span></td><td>HMAC-SHA256 tunnel key</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="text-align: center;">[1]</td><td>Mum_Messaging</td><td>Outform</td><td><span style="background: #c084fc; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">L</span> <span style="background: #fbbf24; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">E</span></td><td>Remote messaging service</td></tr>
+                    <tr><td style="text-align: center;">[2]</td><td>ABI_Mum</td><td>Inform</td><td><span style="background: #4ade80; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">R</span></td><td>Register mapping descriptor</td></tr>
+                </table>
+                <div class="highlight">
+                    Notice: the C-List has <strong>L, S, E</strong> permissions (Church domain). This allows mLoad to read entries (L), the CALL instruction to enter (E), and the system to save capabilities back (S). Domain separation is absolute: capabilities in CRs, values in DRs.
+                </div>
+                <p>Try it: Click the <strong>Hello Mum</strong> button in the Assembly Editor to load the example and configure the namespace.</p>`,
+                demo: `<div class="demo-title">Domain Separation</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+                        <div style="background: #1e293b; padding: 0.8rem; border-radius: 6px; border: 1px solid #c084fc;">
+                            <div style="color: #c084fc; font-weight: bold;">Church Domain (CRs)</div>
+                            <div style="font-size: 0.75rem; margin-top: 0.3rem;">
+                                CR0 = Tunnel Key [R]<br>
+                                CR1 = Messaging [L,E]<br>
+                                CR6 = Me_CList [L,S,E]<br>
+                                CR8 = Kenneth (Thread)
+                            </div>
+                        </div>
+                        <div style="background: #1e293b; padding: 0.8rem; border-radius: 6px; border: 1px solid #60a5fa;">
+                            <div style="color: #60a5fa; font-weight: bold;">Turing Domain (DRs)</div>
+                            <div style="font-size: 0.75rem; margin-top: 0.3rem;">
+                                DR0 = 'H' (72)<br>
+                                DR1 = 'e' (101)<br>
+                                DR2 = 'l' (108)<br>
+                                DR3 = 'l' (108)<br>
+                                DR4 = 'o' (111)<br>
+                                DR5 = 'M' (77)
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 0.5rem; font-size: 0.75rem; color: #94a3b8;">Oil and water: capabilities and values <strong>never mix</strong>. mLoad is the single gate between them.</div>
+                </div>`
+            },
+            {
+                text: `<h3>Step 2: LOAD the Tunnel Key</h3>
+                <p>The first instruction loads the tunnel key from the C-List:</p>
+                <pre style="background: var(--bg-tertiary); padding: 0.6rem; border-radius: 4px; font-size: 0.85rem;">LOAD 0 6 0    ; CR0 &larr; C-List[0] (Tunnel_Key_Mum)</pre>
+                <p>This is a <strong>Church instruction</strong>. Under the hood, the LOAD instruction triggers <strong>mLoad</strong> &mdash; the single trusted path for all namespace access:</p>
+                <ol style="font-size: 0.85rem;">
+                    <li><strong>Permission check:</strong> Does CR6 have L (Load) permission? Yes &rarr; proceed.</li>
+                    <li><strong>Bounds check:</strong> Is index 0 within the C-List? Yes (3 entries) &rarr; proceed.</li>
+                    <li><strong>MAC validation:</strong> Does the entry's MAC match its computed hash? Yes &rarr; entry is untampered.</li>
+                    <li><strong>Version check:</strong> Has the entry been recycled by GC? No &rarr; still valid.</li>
+                    <li><strong>Type check:</strong> Is the loaded GT NULL or Spare? No (it's Inform) &rarr; safe to write to CR.</li>
+                </ol>
+                <div class="key-concept">
+                    <strong>Golden Rule:</strong> mLoad is the <em>only</em> way to write a capability into a Context Register. No instruction, no microcode, no hardware path bypasses it. This is the foundation of failsafe security.
+                </div>`,
+                demo: `<div class="demo-title">mLoad Validation Chain</div>
+                <div class="demo-content">
+                    <div style="font-size: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
+                            <span style="background: #4ade80; color: #1a1a2e; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: bold;">1</span>
+                            <span>L permission on CR6 &rarr;</span>
+                            <span style="color: #4ade80;">PASS</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
+                            <span style="background: #4ade80; color: #1a1a2e; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: bold;">2</span>
+                            <span>Index 0 &lt; 3 (bounds) &rarr;</span>
+                            <span style="color: #4ade80;">PASS</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
+                            <span style="background: #4ade80; color: #1a1a2e; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: bold;">3</span>
+                            <span>FNV MAC = expected &rarr;</span>
+                            <span style="color: #4ade80;">PASS</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
+                            <span style="background: #4ade80; color: #1a1a2e; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: bold;">4</span>
+                            <span>Version matches registry &rarr;</span>
+                            <span style="color: #4ade80;">PASS</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
+                            <span style="background: #4ade80; color: #1a1a2e; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: bold;">5</span>
+                            <span>Type = Inform (not NULL/Spare) &rarr;</span>
+                            <span style="color: #4ade80;">PASS</span>
+                        </div>
+                        <div style="margin-top: 0.5rem; padding: 0.4rem; background: #16a34a22; border-radius: 4px; text-align: center; color: #4ade80; font-weight: bold;">
+                            CR0 = Tunnel_Key_Mum [R]
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Step 3: TPERM &mdash; Verify the Key</h3>
+                <p>Before using the tunnel key, the code verifies it has Read permission:</p>
+                <pre style="background: var(--bg-tertiary); padding: 0.6rem; border-radius: 4px; font-size: 0.85rem;">TPERM 0 R     ; Does CR0 have Read permission?
+B NE fault    ; If not &rarr; FAULT (uniform failure)</pre>
+                <p>TPERM tests the permission bits on a Context Register's GT without modifying anything. It sets condition flags:</p>
+                <ul style="font-size: 0.85rem;">
+                    <li><strong>Z=1</strong>: All requested permissions are present (EQ condition)</li>
+                    <li><strong>Z=0</strong>: One or more permissions are missing (NE condition)</li>
+                </ul>
+                <div class="highlight">
+                    The Branch NE (not-equal) instruction jumps to the fault handler if permissions are missing. The fault handler is a <strong>single, uniform</strong> failure point &mdash; no error codes, no information leakage. Attackers learn nothing.
+                </div>
+                <p>In this case, Tunnel_Key_Mum has [R] permission, so TPERM sets Z=1 and the branch is <strong>not taken</strong>. Execution continues.</p>`,
+                demo: `<div class="demo-title">Permission Test Flow</div>
+                <div class="demo-content">
+                    <div style="font-size: 0.8rem;">
+                        <div style="background: #1e1e2e; padding: 0.6rem; border-radius: 6px; margin-bottom: 0.5rem;">
+                            <span style="color: #94a3b8;">CR0:</span> <span style="color: #4ade80;">Tunnel_Key_Mum</span> <span style="background: #4ade80; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">R</span>
+                        </div>
+                        <div style="text-align: center; margin: 0.3rem 0;">
+                            <span style="color: #94a3b8;">TPERM 0 R &rarr; need [R], have [R]</span>
+                        </div>
+                        <div style="text-align: center; padding: 0.4rem; background: #16a34a22; border-radius: 4px; color: #4ade80; font-weight: bold;">
+                            Z=1 (PASS) &mdash; branch NOT taken
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Step 4: LOAD the Service GT</h3>
+                <p>Next, load mymother's messaging service from C-List index 1:</p>
+                <pre style="background: var(--bg-tertiary); padding: 0.6rem; border-radius: 4px; font-size: 0.85rem;">LOAD 1 6 1    ; CR1 &larr; C-List[1] (Mum_Messaging)
+TPERM 1 E     ; Does CR1 have Enter permission?
+B NE fault    ; If not &rarr; FAULT</pre>
+                <p>This loads an <strong>Outform GT</strong> &mdash; a capability that references a <em>remote</em> resource on another machine. The same mLoad validation chain runs:</p>
+                <ul style="font-size: 0.85rem;">
+                    <li>L permission on CR6 &rarr; PASS</li>
+                    <li>Bounds, MAC, version checks &rarr; PASS</li>
+                    <li>Outform type is valid for LOAD &rarr; CR1 gets the GT</li>
+                </ul>
+                <div class="key-concept">
+                    <strong>Outform GT:</strong> The key innovation for network transparency. An Outform looks like any other GT to the caller, but it references a service on a different machine. The caller doesn't know or care &mdash; they just CALL it.
+                </div>`,
+                demo: `<div class="demo-title">Inform vs Outform</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; font-size: 0.75rem;">
+                        <div style="background: #1e293b; padding: 0.6rem; border-radius: 6px; border: 1px solid #4ade80;">
+                            <div style="color: #4ade80; font-weight: bold;">Inform (Local)</div>
+                            <div style="margin-top: 0.3rem;">Points to a resource in <em>this</em> namespace.<br>Tunnel_Key_Mum [R]<br>ABI_Mum [R]</div>
+                        </div>
+                        <div style="background: #1e293b; padding: 0.6rem; border-radius: 6px; border: 1px solid #fbbf24;">
+                            <div style="color: #fbbf24; font-weight: bold;">Outform (Remote)</div>
+                            <div style="margin-top: 0.3rem;">Points to a service on a <em>different</em> machine.<br>Mum_Messaging [L,E]<br>Tunnel path: HTTPS</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 0.5rem; color: #94a3b8; font-size: 0.7rem;">Both use the same mLoad path. Both are validated identically. Network transparency.</div>
+                </div>`
+            },
+            {
+                text: `<h3>Step 5: Prepare the Message</h3>
+                <p>The message "Hello Mum" is placed into <strong>data registers</strong> &mdash; the Turing domain:</p>
+                <pre style="background: var(--bg-tertiary); padding: 0.6rem; border-radius: 4px; font-size: 0.85rem;">ADDI 0 72     ; DR0 = 'H' (ASCII 72)
+ADDI 1 101    ; DR1 = 'e' (ASCII 101)
+ADDI 2 108    ; DR2 = 'l' (ASCII 108)
+ADDI 3 108    ; DR3 = 'l' (ASCII 108)
+ADDI 4 111    ; DR4 = 'o' (ASCII 111)
+ADDI 5 77     ; DR5 = 'M' (ASCII 77)</pre>
+                <p>These are <strong>Turing instructions</strong> operating purely on values. No capabilities are involved. Domain separation is absolute:</p>
+                <ul style="font-size: 0.85rem;">
+                    <li><strong>CRs</strong> hold Golden Tokens (Church domain) &mdash; oil</li>
+                    <li><strong>DRs</strong> hold numeric values (Turing domain) &mdash; water</li>
+                    <li>They never mix. mLoad is the gate between them.</li>
+                </ul>`,
+                demo: `<div class="demo-title">Data Registers After Step 5</div>
+                <div class="demo-content">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; font-size: 0.75rem;">
+                        <div style="background: #1e293b; padding: 0.4rem; border-radius: 4px; text-align: center;"><strong>DR0</strong> = 72<br><span style="color: #60a5fa; font-size: 1.2rem;">'H'</span></div>
+                        <div style="background: #1e293b; padding: 0.4rem; border-radius: 4px; text-align: center;"><strong>DR1</strong> = 101<br><span style="color: #60a5fa; font-size: 1.2rem;">'e'</span></div>
+                        <div style="background: #1e293b; padding: 0.4rem; border-radius: 4px; text-align: center;"><strong>DR2</strong> = 108<br><span style="color: #60a5fa; font-size: 1.2rem;">'l'</span></div>
+                        <div style="background: #1e293b; padding: 0.4rem; border-radius: 4px; text-align: center;"><strong>DR3</strong> = 108<br><span style="color: #60a5fa; font-size: 1.2rem;">'l'</span></div>
+                        <div style="background: #1e293b; padding: 0.4rem; border-radius: 4px; text-align: center;"><strong>DR4</strong> = 111<br><span style="color: #60a5fa; font-size: 1.2rem;">'o'</span></div>
+                        <div style="background: #1e293b; padding: 0.4rem; border-radius: 4px; text-align: center;"><strong>DR5</strong> = 77<br><span style="color: #60a5fa; font-size: 1.2rem;">'M'</span></div>
+                    </div>
+                    <div style="text-align: center; margin-top: 0.5rem; font-weight: bold; color: #60a5fa; font-size: 0.9rem;">"H e l l o M"</div>
+                </div>`
+            },
+            {
+                text: `<h3>Step 6: CALL &mdash; The Holy Grail</h3>
+                <p>This is the moment. <strong>One Church instruction:</strong></p>
+                <pre style="background: var(--bg-tertiary); padding: 0.6rem; border-radius: 4px; font-size: 0.95rem; text-align: center; color: #4ade80;">CALL 1    ; CALL(CONNECT(me, mymother))</pre>
+                <p>When the machine executes CALL on CR1 (the Outform GT), the following happens <strong>automatically</strong>, entirely in hardware:</p>
+                <ol style="font-size: 0.85rem;">
+                    <li><strong>E permission checked</strong> on CR1 &rarr; validated by mLoad</li>
+                    <li><strong>Outform detected</strong> &rarr; tunnel path entered</li>
+                    <li><strong>Tunnel key read</strong> from CR0 via mLoad (R permission)</li>
+                    <li><strong>ABI descriptor loaded</strong> from namespace (R permission)</li>
+                    <li><strong>DR0-DR5 serialized</strong> per ABI arg_map to wire format</li>
+                    <li><strong>Payload encrypted</strong> with tunnel key (HMAC-SHA256)</li>
+                    <li><strong>Sent to mymother's endpoint</strong> via HTTPS</li>
+                    <li>mymother validates, executes, returns encrypted result</li>
+                    <li><strong>Response decrypted</strong> and deserialized into DR0</li>
+                </ol>
+                <div class="key-concept">
+                    <strong>The Holy Grail:</strong> The caller wrote one intent: "talk to Mum." The machine decomposed it into three GT operations. Two architectures collaborated. The caller saw: "I called a function and got a result." This is network transparency through Church's abstraction.
+                </div>`,
+                demo: `<div class="demo-title">CALL Execution Flow</div>
+                <div class="demo-content">
+                    <div style="font-size: 0.7rem;">
+                        <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem;">
+                            <span style="background: #6366f1; padding: 0.2rem 0.4rem; border-radius: 3px; color: white;">CALL 1</span>
+                            <span>&rarr;</span>
+                            <span style="color: #fbbf24;">E check on CR1</span>
+                            <span style="color: #4ade80;">PASS</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem;">
+                            <span style="width: 4rem;">&nbsp;</span>
+                            <span>&rarr;</span>
+                            <span style="color: #fbbf24;">Outform detected</span>
+                            <span style="color: #c084fc;">tunnel path</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem;">
+                            <span style="width: 4rem;">&nbsp;</span>
+                            <span>&rarr;</span>
+                            <span style="color: #4ade80;">Read tunnel key (CR0, R)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem;">
+                            <span style="width: 4rem;">&nbsp;</span>
+                            <span>&rarr;</span>
+                            <span style="color: #60a5fa;">ABI map: DR0-5 &rarr; x10-15</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.3rem;">
+                            <span style="width: 4rem;">&nbsp;</span>
+                            <span>&rarr;</span>
+                            <span style="color: #f87171;">Encrypt &amp; send via HTTPS</span>
+                        </div>
+                        <div style="margin-top: 0.4rem; padding: 0.4rem; background: #16a34a22; border-radius: 4px; text-align: center; color: #4ade80; font-weight: bold;">
+                            "Hello Mum" delivered &mdash; DR0 = acknowledgment
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Step 7: The Other Side (mymother)</h3>
+                <p>On mymother's RV32-Cap machine, the message arrives through the tunnel. The messaging service:</p>
+                <ol style="font-size: 0.85rem;">
+                    <li><strong>Decrypts</strong> the payload using the matching tunnel key</li>
+                    <li><strong>Validates</strong> the payload MAC (HMAC-SHA256)</li>
+                    <li><strong>ABI maps</strong> the incoming data: x10='H', x11='e', x12='l', etc.</li>
+                    <li><strong>Stores</strong> the message in the Inbox via CAP.STORE (W permission on CR2)</li>
+                    <li><strong>Returns</strong> acknowledgment in x10 (ack code: MESSAGE_RECEIVED)</li>
+                </ol>
+                <p>The service code <strong>never knows</strong> the caller was on a different architecture. It just executed a function and returned results.</p>
+                <div class="highlight">
+                    You can see the mymother side by clicking <strong>"MyMother &rarr;"</strong> in the top bar to open the RV32-Cap Simulator.
+                </div>`,
+                demo: `<div class="demo-title">mymother Receives</div>
+                <div class="demo-content">
+                    <pre style="background: #1e1e2e; padding: 0.6rem; border-radius: 6px; font-size: 0.7rem; color: #e2e8f0;">; mymother's RV32-Cap messaging service
+; Arguments arrive per ABI descriptor:
+;   x10 = 'H'  x11 = 'e'  x12 = 'l'
+;   x13 = 'l'  x14 = 'o'  x15 = 'M'
+
+; Validate message type
+BEQ   x13, x0, fault      ; type 0 invalid
+
+; Store in Inbox (capability-protected)
+CAP.LOAD  CR2, CR6, 7     ; CR2 = Inbox [R,W]
+CAP.STORE CR2, x10, 0     ; Write 'H'
+CAP.STORE CR2, x11, 4     ; Write 'e'
+
+; Return acknowledgment
+ADDI  x10, x0, 1          ; ack = MESSAGE_RECEIVED
+RETURN                     ; Back through tunnel</pre>
+                </div>`
+            },
+            {
+                text: `<h3>The Security Proof</h3>
+                <p>Every single step in the Hello Mum flow passes through mLoad. Every check that fails triggers a uniform <strong>FAULT</strong> &mdash; unrecoverable, no information leakage:</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.7rem; margin: 0.5rem 0;">
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">Step</th><th>Check</th><th>Failure</th></tr>
+                    <tr><td>LOAD CR0</td><td>L perm on CR6</td><td style="color: #f87171;">FAULT: PERMISSION</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td>LOAD CR0</td><td>MAC on entry 0</td><td style="color: #f87171;">FAULT: MAC</td></tr>
+                    <tr><td>LOAD CR0</td><td>Version on entry 0</td><td style="color: #f87171;">FAULT: VERSION</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td>LOAD CR1</td><td>L perm, MAC, version</td><td style="color: #f87171;">FAULT (same chain)</td></tr>
+                    <tr><td>CALL CR1</td><td>E perm on CR1</td><td style="color: #f87171;">FAULT: PERMISSION</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td>CALL CR1</td><td>R perm on tunnel key</td><td style="color: #f87171;">FAULT: PERMISSION</td></tr>
+                    <tr><td>CALL CR1</td><td>Encryption with key</td><td style="color: #f87171;">FAULT: CRYPTO</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td>CALL CR1</td><td>Response decryption</td><td style="color: #f87171;">FAULT: CRYPTO</td></tr>
+                </table>
+                <div class="key-concept">
+                    <strong>No path around mLoad.</strong> Every FAULT looks identical from outside &mdash; same timing, same behavior, same observable state. Attackers learn nothing. This is failsafe security.
+                </div>`,
+                demo: `<div class="demo-title">Why Each Zero Is Zero</div>
+                <div class="demo-content">
+                    <div style="font-size: 0.7rem; line-height: 1.6;">
+                        <div><strong style="color: #f87171;">Malware</strong> needs X permission on a valid GT to execute code. No GT? No execution. Escalation path eliminated.</div>
+                        <div style="margin-top: 0.3rem;"><strong style="color: #fb923c;">Ransomware</strong> needs W permission on every file it encrypts. No GT with W? Can't touch it. Mass encryption impossible.</div>
+                        <div style="margin-top: 0.3rem;"><strong style="color: #2dd4bf;">AI Breakout</strong> requires container/kernel escape. No container. No kernel. AI holds GTs for exactly what it's granted. Intelligence doesn't forge Golden Tokens.</div>
+                        <div style="margin-top: 0.5rem; padding: 0.4rem; background: #1e293b; border-radius: 4px; text-align: center;">
+                            <span style="color: #4ade80; font-weight: bold;">Root cause:</span> mLoad is the single trusted gate.<br>Nobody goes around it. Not even the Nucleus.
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Try It Yourself</h3>
+                <p>Now that you understand the flow, run it in the simulator:</p>
+                <ol>
+                    <li>Go to the <strong>Assembly Editor</strong> view</li>
+                    <li>Click the <strong>Hello Mum</strong> example button (under Church Examples)</li>
+                    <li>Click <strong>Step</strong> to trace each instruction</li>
+                    <li>Watch the Dashboard update as capabilities load into CRs</li>
+                    <li>Observe data registers fill with "Hello Mum" characters</li>
+                    <li>See the CALL instruction enter the tunnel</li>
+                </ol>
+                <div class="key-concept">
+                    <strong>What to observe:</strong> Each LOAD triggers an mLoad validation chain. Each TPERM confirms permissions before proceeding. The CALL instruction detects the Outform type and enters the tunnel path. The entire flow is <strong>one intent, three tokens, seven zeroes</strong>.
+                </div>
+                <p>Then open the <strong>RV32-Cap Simulator</strong> (MyMother link) to see the receiving side.</p>`,
+                interactive: {
+                    type: "quiz",
+                    question: "How many Golden Tokens does the Hello Mum proof require?",
+                    options: [
+                        "One (the CALL instruction)",
+                        "Two (tunnel key and service GT)",
+                        "Three (me, tunnel key, mymother)",
+                        "Seven (one for each zero)"
+                    ],
+                    correct: 2,
+                    feedback: {
+                        correct: "Correct! Three Golden Tokens: 'me' (CR8, thread identity), the tunnel key (CR0, R permission), and 'mymother' (CR1, Outform with E permission).",
+                        incorrect: "The answer is three: 'me' in CR8 (thread identity), the tunnel key in CR0 (R permission for crypto), and 'mymother' in CR1 (Outform GT with E permission for the remote service)."
+                    }
+                }
+            }
+        ]
     }
 ];
 
