@@ -4339,7 +4339,7 @@ function setupHelloMumNamespace() {
         ret_map: "x10→DR0"
     };
 
-    const meCList = simulator.createCapability("Me_CList", ["L", "S", "E"]);
+    const meCList = simulator.createCapability("Me_CList", ["E"]);
     meCList.type = "Inform";
     meCList.clist = [tunnelKey, mumService, abiDescriptor];
 
@@ -4356,7 +4356,7 @@ function setupHelloMumNamespace() {
         { name: "ABI_Mum", type: "Abstraction", perms: ["R"],
           word1_location: 0xA400, word2_limit: 0x100,
           tooltip: "ABI descriptor: DR0-DR5 (64-bit) → x10-x15 (32-bit)." },
-        { name: "Me_CList", type: "C-List", perms: ["L", "S", "E"],
+        { name: "Me_CList", type: "C-List", perms: ["E"],
           word1_location: 0xA500, word2_limit: 0x100,
           tooltip: "Hello Mum C-List for \"me\" — holds Tunnel Key, Messaging, ABI." }
     ];
@@ -4387,9 +4387,9 @@ function setupHelloMumNamespace() {
     log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
     log('HELLO MUM — Namespace configured', 'success');
     log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
-    log('CR6 = Me_CList [L,S,E] — "me" C-List', 'info');
+    log('CR6 = Me_CList [E] — "me" C-List (M elevated on CR by microcode)', 'info');
     log('  [0] Tunnel_Key_Mum  [R]   — Inform (tunnel crypto key)', 'info');
-    log('  [1] Mum_Messaging   [L,E] — Outform (remote service)', 'info');
+    log('  [1] Mum_Messaging   [E]   — Outform (remote messaging abstraction)', 'info');
     log('  [2] ABI_Mum         [R]   — Inform (register map)', 'info');
     log('', 'info');
     log('"me" = CTMM Sim-64 (DR0-DR15, 64-bit)', 'info');
@@ -7704,7 +7704,7 @@ Returns:     x10  &rarr; DR0   x11 &rarr; DR1
                     <tr><td style="text-align: center;">[2]</td><td>ABI_Mum</td><td>Inform</td><td><span style="background: #4ade80; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">R</span></td><td>Register mapping descriptor</td></tr>
                 </table>
                 <div class="highlight">
-                    Notice: the C-List has <strong>L, S, E</strong> permissions (Church domain). This allows mLoad to read entries (L), the CALL instruction to enter (E), and the system to save capabilities back (S). Domain separation is absolute: capabilities in CRs, values in DRs.
+                    Notice: the C-List GT has <strong>E</strong> permission only. Microcode elevates <strong>M</strong> on the CR during privileged operations (LOAD, SAVE, CHANGE). The M permission on CR6 is what allows mLoad to function &mdash; but M is <em>never</em> stored in the GT itself. Domain separation is absolute: capabilities in CRs, values in DRs.
                 </div>
                 <p>Try it: Click the <strong>Hello Mum</strong> button in the Assembly Editor to load the example and configure the namespace.</p>`,
                 demo: `<div class="demo-title">Domain Separation</div>
@@ -7715,8 +7715,8 @@ Returns:     x10  &rarr; DR0   x11 &rarr; DR1
                             <div style="font-size: 0.75rem; margin-top: 0.3rem;">
                                 CR0 = Tunnel Key [R]<br>
                                 CR1 = Messaging [E]<br>
-                                CR6 = Me_CList [L,S,E]<br>
-                                CR8 = Kenneth (Thread)
+                                CR6 = Me_CList [E] (M on CR)<br>
+                                CR8 = Kenneth [M] (Thread)
                             </div>
                         </div>
                         <div style="background: #1e293b; padding: 0.8rem; border-radius: 6px; border: 1px solid #60a5fa;">
@@ -7740,7 +7740,7 @@ Returns:     x10  &rarr; DR0   x11 &rarr; DR1
                 <pre style="background: var(--bg-tertiary); padding: 0.6rem; border-radius: 4px; font-size: 0.85rem;">LOAD 0 6 0    ; CR0 &larr; C-List[0] (Tunnel_Key_Mum)</pre>
                 <p>This is a <strong>Church instruction</strong>. Under the hood, the LOAD instruction triggers <strong>mLoad</strong> &mdash; the single trusted path for all namespace access:</p>
                 <ol style="font-size: 0.85rem;">
-                    <li><strong>Permission check:</strong> Does CR6 have L (Load) permission? Yes &rarr; proceed.</li>
+                    <li><strong>Permission check:</strong> Microcode elevates M on CR6 &rarr; M authorizes namespace access &rarr; proceed.</li>
                     <li><strong>Bounds check:</strong> Is index 0 within the C-List? Yes (3 entries) &rarr; proceed.</li>
                     <li><strong>MAC validation:</strong> Does the entry's MAC match its computed hash? Yes &rarr; entry is untampered.</li>
                     <li><strong>Version check:</strong> Has the entry been recycled by GC? No &rarr; still valid.</li>
@@ -7754,7 +7754,7 @@ Returns:     x10  &rarr; DR0   x11 &rarr; DR1
                     <div style="font-size: 0.75rem;">
                         <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
                             <span style="background: #4ade80; color: #1a1a2e; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: bold;">1</span>
-                            <span>L permission on CR6 &rarr;</span>
+                            <span>M elevated on CR6 &rarr;</span>
                             <span style="color: #4ade80;">PASS</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
