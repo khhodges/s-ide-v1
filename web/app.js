@@ -7747,7 +7747,7 @@ Returns:     x10  &rarr; DR0   x11 &rarr; DR1
                 <ol style="font-size: 0.85rem;">
                     <li><strong>Permission check:</strong> CR6 has M (elevated by CALL) &rarr; M authorizes namespace access &rarr; proceed.</li>
                     <li><strong>Bounds check:</strong> Is index 0 within the C-List? Yes (3 entries) &rarr; proceed.</li>
-                    <li><strong>MAC validation:</strong> Does the entry's MAC match its computed hash? Yes &rarr; entry is untampered.</li>
+                    <li><strong>MAC validation:</strong> Does the entry's Fowler-Noll-Vo (FNV) Message Authentication Code match its computed hash? Yes &rarr; entry is untampered.</li>
                     <li><strong>Version check:</strong> Has the entry been recycled by GC? No &rarr; still valid.</li>
                     <li><strong>Type check:</strong> Is the loaded GT NULL or Spare? No (it's Inform) &rarr; safe to write to CR.</li>
                 </ol>
@@ -7769,7 +7769,7 @@ Returns:     x10  &rarr; DR0   x11 &rarr; DR1
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
                             <span style="background: #4ade80; color: #1a1a2e; padding: 0.2rem 0.4rem; border-radius: 3px; font-weight: bold;">3</span>
-                            <span>FNV MAC = expected &rarr;</span>
+                            <span>Fowler-Noll-Vo Message Authentication Code = expected &rarr;</span>
                             <span style="color: #4ade80;">PASS</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
