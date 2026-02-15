@@ -4325,7 +4325,7 @@ function setupHelloMumNamespace() {
     tunnelKey.tunnelEndpoint = "mymother.namespace.local";
     tunnelKey.keyMaterial = "[HMAC-SHA256 tunnel key — hardware-protected]";
 
-    const mumService = simulator.createCapability("Mum_Messaging", ["L", "E"]);
+    const mumService = simulator.createCapability("Mum_Messaging", ["E"]);
     mumService.type = "Outform";
     mumService.remoteEndpoint = "https://mymother.ctmm.net/messaging";
     mumService.tunnelId = "tunnel_me_mum_001";
@@ -7646,9 +7646,9 @@ SAVE CR1, [CR0+1]    ; Save to it</pre>
                 </div>
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 0.5rem 0;">
                     <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">GT</th><th>Register</th><th>Type</th><th>Permission</th><th>Purpose</th></tr>
-                    <tr><td><strong>me</strong></td><td>CR8</td><td>Inform</td><td>&mdash;</td><td>Thread identity (who is calling)</td></tr>
+                    <tr><td><strong>me</strong></td><td>CR8</td><td>Inform</td><td><span style="background: #a855f7; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">M</span></td><td>Thread identity (microcode/metadata)</td></tr>
                     <tr style="background: var(--bg-tertiary);"><td><strong>tunnel key</strong></td><td>CR0</td><td>Inform</td><td><span style="background: #4ade80; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">R</span></td><td>Crypto key for encrypted channel</td></tr>
-                    <tr><td><strong>mymother</strong></td><td>CR1</td><td>Outform</td><td><span style="background: #fbbf24; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">E</span></td><td>Remote messaging service</td></tr>
+                    <tr><td><strong>mymother</strong></td><td>CR1</td><td>Outform</td><td><span style="background: #fbbf24; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">E</span></td><td>Remote messaging abstraction</td></tr>
                 </table>`,
                 demo: `<div class="demo-title">The Seven Zeroes</div>
                 <div class="demo-content">
@@ -7669,7 +7669,7 @@ SAVE CR1, [CR0+1]    ; Save to it</pre>
                 <p>The proof-of-concept uses <strong>both simulators</strong> to demonstrate architecture independence:</p>
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 0.5rem 0;">
                     <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">Property</th><th>"me" (CTMM Sim-64)</th><th>"mymother" (RV32-Cap Sim-32)</th></tr>
-                    <tr><td>ISA</td><td>Custom CTMM</td><td>RISC-V RV32I + cap extensions</td></tr>
+                    <tr><td>ISA</td><td>ARM-inspired CTMM</td><td>RISC-V RV32I + cap extensions</td></tr>
                     <tr style="background: var(--bg-tertiary);"><td>Data registers</td><td>DR0-DR15 (64-bit)</td><td>x0-x31 (32-bit)</td></tr>
                     <tr><td>Capability regs</td><td>CR0-CR15 (64-bit GTs)</td><td>CR0-CR15 (32-bit GTs)</td></tr>
                     <tr style="background: var(--bg-tertiary);"><td>GT format</td><td>64-bit Golden Token</td><td>32-bit Golden Token</td></tr>
@@ -7700,7 +7700,7 @@ Returns:     x10  &rarr; DR0   x11 &rarr; DR1
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 0.5rem 0;">
                     <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">Index</th><th>Name</th><th>Type</th><th>Permission</th><th>Purpose</th></tr>
                     <tr><td style="text-align: center;">[0]</td><td>Tunnel_Key_Mum</td><td>Inform</td><td><span style="background: #4ade80; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">R</span></td><td>HMAC-SHA256 tunnel key</td></tr>
-                    <tr style="background: var(--bg-tertiary);"><td style="text-align: center;">[1]</td><td>Mum_Messaging</td><td>Outform</td><td><span style="background: #c084fc; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">L</span> <span style="background: #fbbf24; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">E</span></td><td>Remote messaging service</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="text-align: center;">[1]</td><td>Mum_Messaging</td><td>Outform</td><td><span style="background: #fbbf24; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">E</span></td><td>Remote messaging abstraction</td></tr>
                     <tr><td style="text-align: center;">[2]</td><td>ABI_Mum</td><td>Inform</td><td><span style="background: #4ade80; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">R</span></td><td>Register mapping descriptor</td></tr>
                 </table>
                 <div class="highlight">
@@ -7714,7 +7714,7 @@ Returns:     x10  &rarr; DR0   x11 &rarr; DR1
                             <div style="color: #c084fc; font-weight: bold;">Church Domain (CRs)</div>
                             <div style="font-size: 0.75rem; margin-top: 0.3rem;">
                                 CR0 = Tunnel Key [R]<br>
-                                CR1 = Messaging [L,E]<br>
+                                CR1 = Messaging [E]<br>
                                 CR6 = Me_CList [L,S,E]<br>
                                 CR8 = Kenneth (Thread)
                             </div>
@@ -7836,7 +7836,7 @@ B NE fault    ; If not &rarr; FAULT</pre>
                         </div>
                         <div style="background: #1e293b; padding: 0.6rem; border-radius: 6px; border: 1px solid #fbbf24;">
                             <div style="color: #fbbf24; font-weight: bold;">Outform (Remote)</div>
-                            <div style="margin-top: 0.3rem;">Points to a service on a <em>different</em> machine.<br>Mum_Messaging [L,E]<br>Tunnel path: HTTPS</div>
+                            <div style="margin-top: 0.3rem;">Points to a service on a <em>different</em> machine.<br>Mum_Messaging [E]<br>Tunnel path: HTTPS</div>
                         </div>
                     </div>
                     <div style="text-align: center; margin-top: 0.5rem; color: #94a3b8; font-size: 0.7rem;">Both use the same mLoad path. Both are validated identically. Network transparency.</div>
