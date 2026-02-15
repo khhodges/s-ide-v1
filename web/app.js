@@ -4350,12 +4350,12 @@ function setupHelloMumNamespace() {
         { name: "Tunnel_Key_Mum", type: "Abstraction", perms: ["R"],
           word1_location: 0xA100, word2_limit: 0x100,
           tooltip: "HMAC-SHA256 tunnel key for encrypted channel to mymother." },
-        { name: "Mum_Messaging", type: "Abstraction", perms: ["L", "E"],
+        { name: "Mum_Messaging", type: "Abstraction", perms: ["E"],
           word1_location: 0xA200, word2_limit: 0x200,
-          tooltip: "Outform GT — remote messaging service on mymother (RV32-Cap)." },
+          tooltip: "Outform GT — remote messaging abstraction on mymother (RV32-Cap)." },
         { name: "ABI_Mum", type: "Abstraction", perms: ["R"],
           word1_location: 0xA400, word2_limit: 0x100,
-          tooltip: "ABI descriptor: DR0-DR5 (64-bit) → x10-x15 (32-bit)." },
+          tooltip: "ABI descriptor: DR0-DR8 (64-bit) → x10-x18 (32-bit)." },
         { name: "Me_CList", type: "C-List", perms: ["E"],
           word1_location: 0xA500, word2_limit: 0x100,
           tooltip: "Hello Mum C-List for \"me\" — holds Tunnel Key, Messaging, ABI." }
@@ -7700,43 +7700,32 @@ Returns:     x10  &rarr; DR0   x11 &rarr; DR1
                 text: `<h3>Step 1: The C-List Setup</h3>
                 <p>When you load the Hello Mum example, the simulator configures <strong>"me"'s C-List</strong> in CR6 with exactly three Golden Tokens:</p>
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 0.5rem 0;">
-                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">Index</th><th>Name</th><th>Type</th><th>Permission</th><th>Purpose</th></tr>
-                    <tr><td style="text-align: center;">[0]</td><td>Tunnel_Key_Mum</td><td>Inform</td><td><span style="background: #4ade80; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">R</span></td><td>HMAC-SHA256 tunnel key</td></tr>
-                    <tr style="background: var(--bg-tertiary);"><td style="text-align: center;">[1]</td><td>Mum_Messaging</td><td>Outform</td><td><span style="background: #fbbf24; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">E</span></td><td>Remote messaging abstraction</td></tr>
-                    <tr><td style="text-align: center;">[2]</td><td>ABI_Mum</td><td>Inform</td><td><span style="background: #4ade80; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">R</span></td><td>Register mapping descriptor</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">Index</th><th>Name</th><th>Type</th><th>Perm</th><th>NS Location</th></tr>
+                    <tr><td style="text-align: center;">[0]</td><td>Tunnel_Key_Mum</td><td>Inform</td><td><span style="background: #4ade80; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">R</span></td><td style="font-family: monospace; font-size: 0.75rem;">0xA100 (256 bytes)</td></tr>
+                    <tr style="background: var(--bg-tertiary);"><td style="text-align: center;">[1]</td><td>Mum_Messaging</td><td>Outform</td><td><span style="background: #fbbf24; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">E</span></td><td style="font-family: monospace; font-size: 0.75rem;">0xA200 (512 bytes)</td></tr>
+                    <tr><td style="text-align: center;">[2]</td><td>ABI_Mum</td><td>Inform</td><td><span style="background: #4ade80; color: #1a1a2e; padding: 0.1rem 0.3rem; border-radius: 3px;">R</span></td><td style="font-family: monospace; font-size: 0.75rem;">0xA400 (256 bytes)</td></tr>
                 </table>
+                <p style="font-size: 0.8rem;">The C-List itself (<strong>Me_CList</strong>) is at <code>0xA500</code>. All four entries sit within the <strong>Lambda abstraction</strong> region (NS offset 11, 0xA000&ndash;0xBFFF) of Kenneth's namespace DNA tree.</p>
                 <div class="highlight">
                     Notice: the C-List GT has <strong>E</strong> permission only. Three instructions have architectural approval to elevate <strong>M</strong> on a CR: <strong>CALL, RETURN, and CHANGE</strong>. M on the CR is what authorizes mLoad to access the namespace &mdash; but M is <em>never</em> stored in the GT itself. Domain separation is absolute: capabilities in CRs, values in DRs.
                 </div>
                 <p>Try it: Click the <strong>Hello Mum</strong> button in the Assembly Editor to load the example and configure the namespace.</p>`,
-                demo: `<div class="demo-title">Domain Separation</div>
+                demo: `<div class="demo-title">Namespace DNA Location</div>
                 <div class="demo-content">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
-                        <div style="background: #1e293b; padding: 0.8rem; border-radius: 6px; border: 1px solid #c084fc;">
-                            <div style="color: #c084fc; font-weight: bold;">Church Domain (CRs)</div>
-                            <div style="font-size: 0.75rem; margin-top: 0.3rem;">
-                                CR0 = Tunnel Key [R]<br>
-                                CR1 = Messaging [E]<br>
-                                CR6 = Me_CList [E] (M on CR)<br>
-                                CR8 = Kenneth [M] (Thread)
-                            </div>
-                        </div>
-                        <div style="background: #1e293b; padding: 0.8rem; border-radius: 6px; border: 1px solid #60a5fa;">
-                            <div style="color: #60a5fa; font-weight: bold;">Turing Domain (DRs)</div>
-                            <div style="font-size: 0.75rem; margin-top: 0.3rem;">
-                                DR0 = 'H' (72)<br>
-                                DR1 = 'e' (101)<br>
-                                DR2 = 'l' (108)<br>
-                                DR3 = 'l' (108)<br>
-                                DR4 = 'o' (111)<br>
-                                DR5 = ' ' (32)<br>
-                                DR6 = 'M' (77)<br>
-                                DR7 = 'u' (117)<br>
-                                DR8 = 'm' (109)
-                            </div>
-                        </div>
+                    <div style="background: #1e1e2e; padding: 0.6rem; border-radius: 6px; font-size: 0.7rem; font-family: monospace;">
+                        <div style="color: #94a3b8; margin-bottom: 0.4rem;">Kenneth's Namespace DNA Tree:</div>
+                        <div style="color: #60a5fa;">NS[0]  0x0000 Namespace (root)</div>
+                        <div style="color: #94a3b8;">NS[1]  0x1000 Access (Nucleus)</div>
+                        <div style="color: #94a3b8;">NS[2]  0x2000 Boot (C-List)</div>
+                        <div style="color: #fbbf24;">NS[3]  0x3000 Kenneth (Thread)</div>
+                        <div style="color: #94a3b8;">  &hellip;</div>
+                        <div style="color: #c084fc; font-weight: bold;">NS[11] 0xA000 Lambda (2000h region)</div>
+                        <div style="color: #4ade80; padding-left: 1.2rem;">&boxvr; 0xA100 Tunnel_Key_Mum [R]</div>
+                        <div style="color: #fbbf24; padding-left: 1.2rem;">&boxvr; 0xA200 Mum_Messaging [E]</div>
+                        <div style="color: #4ade80; padding-left: 1.2rem;">&boxvr; 0xA400 ABI_Mum [R]</div>
+                        <div style="color: #c084fc; padding-left: 1.2rem;">&boxur; 0xA500 Me_CList [E]</div>
                     </div>
-                    <div style="text-align: center; margin-top: 0.5rem; font-size: 0.75rem; color: #94a3b8;">Oil and water: capabilities and values <strong>never mix</strong>. mLoad is the single gate between them.</div>
+                    <div style="text-align: center; margin-top: 0.5rem; font-size: 0.7rem; color: #94a3b8;">All Hello Mum entries live within the Lambda region. GC Mark-Scan walks this tree via mLoad.</div>
                 </div>`
             },
             {
