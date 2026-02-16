@@ -685,10 +685,14 @@ ADD 0 1      ; DR0 = DR0 + DR1"></textarea>
                     <div class="editor-output-panel">
                         <div class="output-tabs">
                             <button class="output-tab active" onclick="switchOutputTab('console')" data-tooltip="Program output and status messages">Console</button>
+                            <button class="output-tab" onclick="switchOutputTab('trace')" data-tooltip="Last 127 instructions executed with result comments">Trace</button>
                         </div>
                         <div class="output-content" id="editorConsole">
                             <div class="console-line info">CTMM Assembly Editor Ready</div>
                             <div class="console-line info">Write code and click Run or Step to execute</div>
+                        </div>
+                        <div class="output-content hidden" id="editorTrace">
+                            <div class="console-line info">No instructions traced yet</div>
                         </div>
                     </div>
                 </div>

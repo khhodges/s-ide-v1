@@ -2946,6 +2946,76 @@ let editorState = {
     pausedAtBreakpoint: false
 };
 
+const TRACE_MAX = 127;
+let traceHistory = [];
+let traceSeq = 0;
+
+function traceRecord(line, op, args, result, linkage) {
+    const entry = {
+        seq: traceSeq++,
+        line: line,
+        op: op,
+        args: args.join(' '),
+        result: result || '',
+        linkage: linkage || editorState.currentLinkage,
+        fault: result && typeof result === 'string' && result.includes('FAULT')
+    };
+    traceHistory.push(entry);
+    if (traceHistory.length > TRACE_MAX) {
+        traceHistory.shift();
+    }
+}
+
+function clearTrace() {
+    traceHistory = [];
+    traceSeq = 0;
+    updateTraceView();
+}
+
+function updateTraceView() {
+    const container = document.getElementById('editorTrace');
+    if (!container) return;
+    container.innerHTML = '';
+    if (traceHistory.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'console-line info';
+        empty.textContent = 'No instructions traced yet';
+        container.appendChild(empty);
+        return;
+    }
+    const frag = document.createDocumentFragment();
+    for (let i = traceHistory.length - 1; i >= 0; i--) {
+        const e = traceHistory[i];
+        const row = document.createElement('div');
+        row.className = `trace-row${e.fault ? ' trace-fault' : ''}`;
+
+        const seqSpan = document.createElement('span');
+        seqSpan.className = 'trace-seq';
+        seqSpan.textContent = String(e.seq).padStart(4, ' ');
+
+        const lineSpan = document.createElement('span');
+        lineSpan.className = 'trace-line';
+        lineSpan.textContent = `L${e.line}`;
+
+        const instrSpan = document.createElement('span');
+        instrSpan.className = 'trace-instr';
+        instrSpan.textContent = e.args ? `${e.op} ${e.args}` : e.op;
+
+        const commentSpan = document.createElement('span');
+        commentSpan.className = 'trace-comment';
+        const shortResult = e.result.length > 60 ? e.result.substring(0, 57) + '...' : e.result;
+        commentSpan.textContent = `; ${shortResult}`;
+        commentSpan.title = e.result;
+
+        row.appendChild(seqSpan);
+        row.appendChild(lineSpan);
+        row.appendChild(instrSpan);
+        row.appendChild(commentSpan);
+        frag.appendChild(row);
+    }
+    container.appendChild(frag);
+}
+
 function updateEditorToolbar() {
     const pathEl = document.getElementById('editorFilePath');
     const permsEl = document.getElementById('editorPerms');
@@ -4503,7 +4573,9 @@ function executeEditorInstruction(instr) {
                 return false;
             
             case 'HALT':
+                traceRecord(line, 'HALT', [], 'Program stopped', editorState.currentLinkage);
                 editorLog(`[${line}] HALT: Program stopped`, 'success');
+                updateTraceView();
                 editorState.nia = editorState.program.length;
                 return false;
             
@@ -4517,10 +4589,14 @@ function executeEditorInstruction(instr) {
             faultOccurred = true;
         }
         
+        traceRecord(line, op, args, result, editorState.currentLinkage);
         editorLog(`[${line}] ${op} ${args.join(' ')}: ${result}`, faultOccurred ? 'error' : 'exec');
+        updateTraceView();
         return faultOccurred;
     } catch (e) {
+        traceRecord(line, op, args, e.message, editorState.currentLinkage);
         editorLog(`[${line}] Error: ${e.message}`, 'error');
+        updateTraceView();
         return true;
     }
 }
@@ -4548,6 +4624,7 @@ function resetProgram(preserveLinkage = true) {
     updateBootDisplay();
     
     clearEditorConsole();
+    clearTrace();
     editorLog('Program reset — capability registers cleared to NULL', 'info');
     editorLog('Write code and click Run or Step to execute', 'info');
     
@@ -4677,12 +4754,14 @@ function switchOutputTab(tab) {
     
     const contentIds = {
         console: 'editorConsole',
+        trace: 'editorTrace',
         turing: 'editorTuring',
         church: 'editorChurch'
     };
     const content = document.getElementById(contentIds[tab]);
     if (content) content.classList.remove('hidden');
     
+    if (tab === 'trace') updateTraceView();
     if (tab === 'turing') updateTuringRegisters();
     if (tab === 'church') updateChurchRegisters();
 }

@@ -4331,6 +4331,59 @@ main {
     border-radius: 3px;
 }
 
+.trace-row {
+    display: flex;
+    gap: 0.5em;
+    padding: 1px 0;
+    font-family: 'Consolas', monospace;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.trace-row:hover {
+    background: rgba(168, 85, 247, 0.08);
+}
+
+.trace-fault {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.trace-fault:hover {
+    background: rgba(239, 68, 68, 0.18);
+}
+
+.trace-seq {
+    color: var(--text-secondary);
+    opacity: 0.5;
+    min-width: 3em;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.trace-line {
+    color: var(--warning, #f59e0b);
+    min-width: 3em;
+    flex-shrink: 0;
+}
+
+.trace-instr {
+    color: var(--accent);
+    min-width: 12em;
+    flex-shrink: 0;
+    font-weight: 600;
+}
+
+.trace-comment {
+    color: var(--text-secondary);
+    opacity: 0.7;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
 .reg-display {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
