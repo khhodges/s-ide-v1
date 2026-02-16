@@ -4083,6 +4083,132 @@ function stepProgram() {
     updateCapabilityExplorer();
 }
 
+function showCR7Code() {
+    const cr6 = simulator.contextRegs[6];
+    const cr7 = simulator.contextRegs[7];
+    const cr5 = simulator.contextRegs[5];
+
+    let html = '<div class="cr7-overlay" id="cr7Overlay" onclick="if(event.target===this)closeCR7Overlay()">';
+    html += '<div class="cr7-panel">';
+    html += '<div class="cr7-panel-header">';
+    html += '<span>Simulator Context — Live State</span>';
+    html += '<button onclick="closeCR7Overlay()" class="cr7-close">&times;</button>';
+    html += '</div>';
+    html += '<div class="cr7-panel-body">';
+
+    html += '<div class="cr7-section">';
+    html += '<div class="cr7-section-title">CR7 — Active Nucleus [X]</div>';
+    if (cr7 && cr7.name !== 'NULL') {
+        const perms = cr7.perms ? `[${cr7.perms.join('')}]` : '[]';
+        html += `<div class="cr7-field"><span class="cr7-label">Name</span><span class="cr7-value">${cr7.name}</span></div>`;
+        html += `<div class="cr7-field"><span class="cr7-label">Perms</span><span class="cr7-value perm-badge-green">${perms}</span></div>`;
+        html += `<div class="cr7-field"><span class="cr7-label">Type</span><span class="cr7-value">${cr7.type || 'Code'}</span></div>`;
+        if (cr7.linkage) {
+            html += `<div class="cr7-field"><span class="cr7-label">Linkage</span><span class="cr7-value cr7-linkage">${cr7.linkage}</span></div>`;
+        }
+        if (cr7.base !== undefined) {
+            html += `<div class="cr7-field"><span class="cr7-label">Base</span><span class="cr7-value">0x${cr7.base.toString(16).toUpperCase()}</span></div>`;
+        }
+        if (cr7.size !== undefined) {
+            html += `<div class="cr7-field"><span class="cr7-label">Limit</span><span class="cr7-value">0x${cr7.size.toString(16).toUpperCase()}</span></div>`;
+        }
+        if (cr7.nsOffset !== undefined) {
+            html += `<div class="cr7-field"><span class="cr7-label">NS Offset</span><span class="cr7-value">${cr7.nsOffset}</span></div>`;
+        }
+        if (cr7.goldenKey) {
+            html += `<div class="cr7-field"><span class="cr7-label">Golden Key</span><span class="cr7-value cr7-key">${cr7.goldenKey}</span></div>`;
+        }
+    } else {
+        html += '<div class="cr7-empty">NULL — no code loaded</div>';
+    }
+    html += '</div>';
+
+    html += '<div class="cr7-section">';
+    html += '<div class="cr7-section-title">CR6 — Active C-List [E]</div>';
+    if (cr6 && cr6.name !== 'NULL') {
+        const perms6 = cr6.perms ? `[${cr6.perms.join('')}]` : '[]';
+        html += `<div class="cr7-field"><span class="cr7-label">Scope</span><span class="cr7-value">${cr6.name} ${perms6}</span></div>`;
+        if (cr6.clistCount !== undefined) {
+            html += `<div class="cr7-field"><span class="cr7-label">Entries</span><span class="cr7-value">${cr6.clistCount}</span></div>`;
+        }
+        if (cr6.clist && cr6.clist.length > 0) {
+            html += '<div class="cr7-clist">';
+            cr6.clist.forEach((entry, idx) => {
+                const ePerms = entry.perms ? `[${entry.perms.join('')}]` : '';
+                const eType = entry.type || '';
+                const eName = entry.name || `Entry_${idx}`;
+                const typeClass = eType === 'NULL' ? 'cr7-type-null' : eType === 'Code' ? 'cr7-type-code' : eType === 'Function' ? 'cr7-type-func' : 'cr7-type-abs';
+                html += `<div class="cr7-clist-entry">`;
+                html += `<span class="cr7-clist-idx">[${idx}]</span>`;
+                html += `<span class="cr7-clist-name">${eName}</span>`;
+                html += `<span class="cr7-clist-type ${typeClass}">${eType}</span>`;
+                html += `<span class="cr7-clist-perms">${ePerms}</span>`;
+                html += `</div>`;
+            });
+            html += '</div>';
+        }
+    } else {
+        html += '<div class="cr7-empty">NULL — no scope loaded</div>';
+    }
+    html += '</div>';
+
+    html += '<div class="cr7-section">';
+    html += '<div class="cr7-section-title">CR5 — Services [E] (stable)</div>';
+    if (cr5 && cr5.name !== 'NULL') {
+        html += `<div class="cr7-field"><span class="cr7-label">Name</span><span class="cr7-value">${cr5.name}</span></div>`;
+        if (cr5.clist && cr5.clist.length > 0) {
+            html += '<div class="cr7-clist">';
+            cr5.clist.forEach((entry, idx) => {
+                const ePerms = entry.perms ? `[${entry.perms.join('')}]` : '';
+                html += `<div class="cr7-clist-entry">`;
+                html += `<span class="cr7-clist-idx">[${idx}]</span>`;
+                html += `<span class="cr7-clist-name">${entry.name || `Entry_${idx}`}</span>`;
+                html += `<span class="cr7-clist-perms">${ePerms}</span>`;
+                html += `</div>`;
+            });
+            html += '</div>';
+        }
+    } else {
+        html += '<div class="cr7-empty">NULL — not loaded</div>';
+    }
+    html += '</div>';
+
+    html += '<div class="cr7-section">';
+    html += '<div class="cr7-section-title">CR0–CR4 (instruction-addressable)</div>';
+    html += '<div class="cr7-clist">';
+    for (let i = 0; i <= 4; i++) {
+        const cr = simulator.contextRegs[i];
+        const name = cr && cr.name !== 'NULL' ? cr.name : 'NULL';
+        const p = cr && cr.perms ? `[${cr.perms.join('')}]` : '';
+        const cls = name === 'NULL' ? 'cr7-type-null' : '';
+        html += `<div class="cr7-clist-entry">`;
+        html += `<span class="cr7-clist-idx">CR${i}</span>`;
+        html += `<span class="cr7-clist-name ${cls}">${name}</span>`;
+        html += `<span class="cr7-clist-perms">${p}</span>`;
+        html += `</div>`;
+    }
+    html += '</div></div>';
+
+    html += '<div class="cr7-section">';
+    html += '<div class="cr7-section-title">Execution</div>';
+    html += `<div class="cr7-field"><span class="cr7-label">NIA</span><span class="cr7-value">${editorState.nia}</span></div>`;
+    html += `<div class="cr7-field"><span class="cr7-label">Stack Depth</span><span class="cr7-value">${simulator.stackDepth || 0}</span></div>`;
+    const flags = simulator.flags;
+    html += `<div class="cr7-field"><span class="cr7-label">Flags</span><span class="cr7-value">N=${flags.N?1:0} Z=${flags.Z?1:0} C=${flags.C?1:0} V=${flags.V?1:0}</span></div>`;
+    html += '</div>';
+
+    html += '</div></div></div>';
+
+    const existing = document.getElementById('cr7Overlay');
+    if (existing) existing.remove();
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function closeCR7Overlay() {
+    const overlay = document.getElementById('cr7Overlay');
+    if (overlay) overlay.remove();
+}
+
 function resolveCallTarget(targetName) {
     const nsObj = namespaceObjects.find(o => o.name === targetName);
     if (!nsObj) return;

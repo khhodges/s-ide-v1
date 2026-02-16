@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Church-Turing Meta-Machine (CTMM) Simulator</title>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <link rel="stylesheet" href="styles.css?v=20260216d">
+    <link rel="stylesheet" href="styles.css?v=20260216e">
 </head>
 <body class="landing-mode">
     <div id="toast-container" class="toast-container"></div>
@@ -602,6 +602,7 @@ RETURN</pre>
                     <button onclick="resetProgram()" class="btn btn-sm btn-reset" data-tooltip="Clear program state and start over">Reset</button>
                 </div>
                 <div class="toolbar-group toolbar-toggles">
+                    <button onclick="showCR7Code()" class="btn btn-sm btn-cr7" id="showCR7Btn" data-tooltip="Show the active CR7 nucleus code and CR6 scope as seen by the simulator">CR7</button>
                     <button onclick="toggleExamplesPanel()" class="btn btn-sm btn-toggle" id="toggleExamples" data-tooltip="Show/hide examples panel">Examples</button>
                     <button onclick="toggleRegistersPanel()" class="btn btn-sm btn-toggle" id="toggleRegisters" data-tooltip="Show/hide registers panel">Registers</button>
                     <button onclick="toggleFullCode()" class="btn btn-sm btn-toggle btn-expand" id="toggleFullCode" data-tooltip="Expand code to full width">Expand</button>
@@ -1015,7 +1016,7 @@ ADD 0 1      ; DR0 = DR0 + DR1"></textarea>
         </div>
     </div>
 
-    <script src="simulator.js?v=20260216d"></script>
-    <script src="app.js?v=20260216d"></script>
+    <script src="simulator.js?v=20260216e"></script>
+    <script src="app.js?v=20260216e"></script>
 </body>
 </html>
