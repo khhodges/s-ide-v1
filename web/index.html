@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Church-Turing Meta-Machine (CTMM) Simulator</title>
     <link rel="icon" type="image/x-icon" href="images/favicon.ico">
-    <link rel="stylesheet" href="styles.css?v=20260216b">
+    <link rel="stylesheet" href="styles.css?v=20260216c">
 </head>
 <body class="landing-mode">
     <div id="toast-container" class="toast-container"></div>
@@ -597,7 +597,7 @@ RETURN</pre>
                 <div class="toolbar-group">
                     <button onclick="clearCode()" class="btn btn-sm btn-clear" data-tooltip="Clear all code from the editor">Clear</button>
                     <button onclick="saveCode()" class="btn btn-sm btn-save" data-tooltip="Save code to the current object in namespace">Save</button>
-                    <button onclick="runProgram()" class="btn btn-sm btn-run" data-tooltip="Execute the entire program at once">Run</button>
+                    <button onclick="runOrContinue()" class="btn btn-sm btn-run" data-tooltip="Execute program; stops at breakpoints (click line numbers to set)">Run</button>
                     <button onclick="stepProgram()" class="btn btn-sm btn-step" id="stepBtn" data-tooltip="Execute one instruction at a time">Step</button>
                     <button onclick="resetProgram()" class="btn btn-sm btn-reset" data-tooltip="Clear program state and start over">Reset</button>
                 </div>
@@ -1015,7 +1015,7 @@ ADD 0 1      ; DR0 = DR0 + DR1"></textarea>
         </div>
     </div>
 
-    <script src="simulator.js?v=20260216b"></script>
-    <script src="app.js?v=20260216b"></script>
+    <script src="simulator.js?v=20260216c"></script>
+    <script src="app.js?v=20260216c"></script>
 </body>
 </html>

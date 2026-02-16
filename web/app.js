@@ -2883,6 +2883,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateVizInstruction();
     setupCodeEditor();
     populateCodeFileDropdown();
+    initBreakpointClicks();
     
     const exBtn = document.getElementById('toggleExamples');
     const regBtn = document.getElementById('toggleRegisters');
@@ -2913,7 +2914,9 @@ let editorState = {
     running: false,
     parsed: [],
     currentLinkage: 'Boot/Nucleus',
-    currentPerms: '[RX]'
+    currentPerms: '[RX]',
+    breakpoints: new Set(),
+    pausedAtBreakpoint: false
 };
 
 function updateEditorToolbar() {
@@ -3649,16 +3652,42 @@ function updateLineNumbers(highlightLine = null) {
     const lineNumbers = document.getElementById('lineNumbers');
     if (!editor || !lineNumbers) return;
     
-    // Use passed line or fall back to stored execution line
     const lineToHighlight = highlightLine !== null ? highlightLine : currentExecutionLine;
     
     const lines = editor.value.split('\n').length;
     let nums = [];
     for (let i = 1; i <= lines; i++) {
         const isHighlighted = i === lineToHighlight;
-        nums.push(`<span class="${isHighlighted ? 'exec-line' : ''}">${i}</span>`);
+        const hasBP = editorState.breakpoints.has(i);
+        let cls = '';
+        if (isHighlighted && hasBP) cls = 'exec-line bp-line';
+        else if (isHighlighted) cls = 'exec-line';
+        else if (hasBP) cls = 'bp-line';
+        nums.push(`<span class="${cls}" data-line="${i}">${i}</span>`);
     }
     lineNumbers.innerHTML = nums.join('');
+}
+
+function toggleBreakpoint(lineNum) {
+    if (editorState.breakpoints.has(lineNum)) {
+        editorState.breakpoints.delete(lineNum);
+    } else {
+        editorState.breakpoints.add(lineNum);
+    }
+    updateLineNumbers();
+    updateParsedView();
+}
+
+function initBreakpointClicks() {
+    const lineNumbers = document.getElementById('lineNumbers');
+    if (!lineNumbers) return;
+    lineNumbers.addEventListener('click', (e) => {
+        const span = e.target.closest('span[data-line]');
+        if (span) {
+            const lineNum = parseInt(span.dataset.line);
+            if (!isNaN(lineNum)) toggleBreakpoint(lineNum);
+        }
+    });
 }
 
 function syncScroll() {
@@ -3936,32 +3965,60 @@ function ensureBooted() {
     }
 }
 
-function runProgram() {
-  try {
-    const code = document.getElementById('codeEditor').value;
-    editorState.program = parseProgram(code);
-    editorState.nia = 0;
-    
-    if (editorState.program.length === 0) {
-        editorLog('No instructions to execute', 'error');
-        return;
+function runOrContinue() {
+    if (editorState.pausedAtBreakpoint && editorState.program.length > 0 && editorState.nia < editorState.program.length) {
+        runProgram(true);
+    } else {
+        runProgram(false);
     }
-    
-    ensureBooted();
-    markEditorSaved();
-    clearEditorConsole();
-    editorLog('Running program...', 'info');
-    simulator.softReset();
+}
+
+function runProgram(continueFromCurrent = false) {
+  try {
+    if (!continueFromCurrent) {
+        const code = document.getElementById('codeEditor').value;
+        editorState.program = parseProgram(code);
+        editorState.nia = 0;
+        
+        if (editorState.program.length === 0) {
+            editorLog('No instructions to execute', 'error');
+            return;
+        }
+        
+        ensureBooted();
+        markEditorSaved();
+        clearEditorConsole();
+        simulator.softReset();
+    }
+
+    const hasBPs = editorState.breakpoints.size > 0;
+    editorState.pausedAtBreakpoint = false;
+    if (hasBPs) {
+        editorLog('Running to breakpoint...', 'info');
+    } else {
+        editorLog('Running program...', 'info');
+    }
     
     const MAX_INSTRUCTIONS = 10000;
     let count = 0;
+    let hitBreakpoint = false;
+    let skipFirstBPCheck = continueFromCurrent;
     
     while (editorState.nia < editorState.program.length) {
         if (count++ > MAX_INSTRUCTIONS) {
             editorLog('*** HALTED: Execution limit reached (possible infinite loop) ***', 'error');
             break;
         }
+
         const instr = editorState.program[editorState.nia];
+        if (hasBPs && !skipFirstBPCheck && editorState.breakpoints.has(instr.line)) {
+            hitBreakpoint = true;
+            editorState.pausedAtBreakpoint = true;
+            editorLog(`*** BREAKPOINT hit at line ${instr.line} ***`, 'info');
+            break;
+        }
+        skipFirstBPCheck = false;
+
         const faultOccurred = executeEditorInstruction(instr);
         editorState.nia++;
         
@@ -3976,11 +4033,16 @@ function runProgram() {
         }
     }
     
-    editorLog('Program completed successfully', 'success');
+    if (hitBreakpoint) {
+        editorLog('Use Step to single-step, or Run to continue to next breakpoint', 'info');
+    } else if (count <= MAX_INSTRUCTIONS) {
+        editorLog('Program completed successfully', 'success');
+    }
     updateEditorStatus();
     updateEditorRegisters();
     updateParsedView();
     updateDisplay();
+    highlightCurrentLine();
     updateCapabilityExplorer();
   } catch (e) {
     console.error('runProgram error:', e);
@@ -4225,6 +4287,7 @@ function findLabel(label) {
 function resetProgram(preserveLinkage = true) {
     editorState.program = [];
     editorState.nia = 0;
+    editorState.pausedAtBreakpoint = false;
     currentExecutionLine = -1;
     simulator.softReset();
     for (let i = 0; i < 8; i++) {
@@ -4307,8 +4370,10 @@ function updateParsedView() {
     let html = '';
     editorState.program.forEach((p, i) => {
         const current = i === editorState.nia ? 'current-line' : '';
-        html += `<div class="parsed-line ${current}">`;
-        html += `<span class="parsed-addr">${i.toString().padStart(2, '0')}</span>`;
+        const hasBP = editorState.breakpoints.has(p.line) ? 'has-breakpoint' : '';
+        html += `<div class="parsed-line ${current} ${hasBP}">`;
+        const bpDot = hasBP ? '<span class="bp-dot"></span>' : '';
+        html += `${bpDot}<span class="parsed-addr">${i.toString().padStart(2, '0')}</span>`;
         html += `<span class="parsed-instr">${p.instr}</span> `;
         html += `<span class="parsed-args">${p.args.join(', ')}</span>`;
         html += '</div>';

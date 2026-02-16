@@ -3910,7 +3910,7 @@ main {
 }
 
 .line-numbers {
-    padding: 1rem 0.5rem 1rem 0.5rem;
+    padding: 1rem 0.5rem 1rem 14px;
     background: var(--bg-dark);
     color: var(--text-secondary);
     font-family: 'Consolas', monospace;
@@ -3919,7 +3919,7 @@ main {
     text-align: right;
     user-select: none;
     border-right: 1px solid var(--border);
-    min-width: 40px;
+    min-width: 44px;
     overflow-y: auto;
 }
 
@@ -3927,12 +3927,61 @@ main {
     display: block;
     height: calc(0.9rem * 1.5);
     line-height: calc(0.9rem * 1.5);
+    cursor: pointer;
+    position: relative;
+    padding-right: 4px;
+}
+
+.line-numbers span:hover {
+    color: var(--text-primary);
 }
 
 .line-numbers span.exec-line {
     color: #ffff00;
     font-weight: bold;
     text-shadow: 0 0 4px #ffff00;
+}
+
+.line-numbers span.bp-line {
+    color: #ff4444;
+    font-weight: bold;
+}
+
+.line-numbers span.bp-line::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ff4444;
+}
+
+.line-numbers span.exec-line.bp-line {
+    color: #ffff00;
+    text-shadow: 0 0 4px #ffff00;
+}
+
+.line-numbers span.exec-line.bp-line::before {
+    background: #ff4444;
+    box-shadow: 0 0 4px #ff4444;
+}
+
+.parsed-line.has-breakpoint {
+    border-left: 3px solid #ff4444;
+    padding-left: 2px;
+}
+
+.bp-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ff4444;
+    margin-right: 4px;
+    vertical-align: middle;
 }
 
 #codeEditor {
