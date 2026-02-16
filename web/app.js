@@ -4766,7 +4766,9 @@ function executeEditorInstruction(instr) {
                 const haltDRs = [];
                 for (let i = 0; i <= 5; i++) haltDRs.push(Number(simulator.dataRegs[i] || 0n));
                 const haltMsg = haltDRs.map(c => String.fromCharCode(c & 0x7F)).join('');
-                if (haltMsg === 'HelloS') {
+                const isHelloSon = haltMsg === 'HelloS' ||
+                    (haltDRs[1] === 101 && haltDRs[2] === 108 && haltDRs[3] === 108 && haltDRs[4] === 111 && haltDRs[5] === 83);
+                if (isHelloSon) {
                     setTimeout(() => {
                         showTunnelMessage('receive', 'Hello Son', {
                             from: '<b>Priscilla</b> (RV32-Cap Sim-32)',

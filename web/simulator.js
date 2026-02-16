@@ -876,7 +876,6 @@ class CTMMSimulator {
                     for (let i = 0; i <= 5; i++) drVals.push(Number(this.dataRegs[i]));
                     const msg = drVals.map(c => String.fromCharCode(c & 0x7F)).join('');
                     for (let i = 0; i < 16; i++) this.dataRegs[i] = 0n;
-                    this.dataRegs[0] = 1n;
                     return `CALL CR${crIdx} (${cr.name}): [TUNNEL] Outform → encrypted tunnel to ${cr.remoteEndpoint || 'remote'}\n` +
                         `  Payload: DR0-DR5 = ${drVals.join(', ')} ("${msg}")\n` +
                         `  ABI mapping: DR0-DR15 (64-bit) → x0-x31 (32-bit)\n` +
