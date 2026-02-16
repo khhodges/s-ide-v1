@@ -8,7 +8,10 @@ const ABI_NAMES = ['zero','ra','sp','gp','tp','t0','t1','t2','s0','s1',
     't3','t4','t5','t6'];
 
 const CR_LABELS = {6:'C-List', 7:'Nucleus', 8:'Percilla', 15:'Namespace'};
-const NS_NAMES = {0:'Namespace', 1:'Nucleus', 2:'Boot C-List', 3:'Percilla'};
+const NS_NAMES = {0:'Namespace', 1:'Nucleus', 2:'Boot C-List', 3:'Percilla',
+    4:'Lambda', 5:'GT_CHURCH_SUCC', 6:'GT_CHURCH_PRED', 7:'GT_CHURCH_ADD',
+    8:'GT_CHURCH_MUL', 9:'GT_TRUE', 10:'GT_FALSE', 11:'GT_PAIR',
+    12:'GT_FST', 13:'GT_SND', 14:'GT_IF'};
 
 function toHex32(val) {
     return '0x' + ((val >>> 0).toString(16)).padStart(8, '0');
@@ -280,6 +283,77 @@ loop:
     addi t2, t2, 1       # i++
     bge  t0, t2, loop    # if N >= i, goto loop (i.e., while i <= N)
     ecall                 # halt`,
+
+        'access': `# =============================================
+# ACCESS.ASM — LAMBDA TEST HARNESS (RV32-Cap)
+# =============================================
+# Purpose: Demonstrates the CAP.LAMBDA instruction
+# applying Church functions to data registers.
+# CAP.LAMBDA uses X permission (not E like CAP.CALL),
+# is non-nestable, and operates in-place.
+#
+# Flow: Enter Lambda abstraction via CAP.CALL,
+# CAP.LOAD individual function GTs [R,X] from
+# the namespace, then apply with CAP.LAMBDA.
+#
+# Output: a0 (x10) holds result of each application
+#
+# Namespace layout:
+#   [4] = Lambda       [E]  (abstraction)
+#   [5] = GT_CHURCH_SUCC [R,X] (successor)
+#   [7] = GT_CHURCH_ADD  [R,X] (addition)
+#   [8] = GT_CHURCH_MUL  [R,X] (multiplication)
+# =============================================
+
+# === STEP 1: Enter Lambda Abstraction ===
+# Load Lambda [E] from namespace index 4
+    cap.load cr0, cr6, 4     # CR0 <- ns[4] (Lambda)
+    cap.tperm t0, cr0        # t0 = permission bits
+    andi t0, t0, 0x20        # isolate E bit (bit 5)
+    beqz t0, fault           # FAULT if no E permission
+
+# CALL Lambda to enter its scope
+    cap.call cr0             # Enter Lambda scope
+
+# === STEP 2: Load SUCC function [R,X] ===
+# Namespace index 5 = GT_CHURCH_SUCC
+    cap.load cr0, cr6, 5     # CR0 <- ns[5] (SUCC [R,X])
+    cap.tperm t0, cr0        # t0 = permission bits
+    andi t0, t0, 0x04        # isolate X bit (bit 2)
+    beqz t0, fault           # FAULT if no X permission
+
+# === STEP 3: LAMBDA SUCC ===
+# a0 = 3, apply SUCC -> expect a0 = 4
+    addi a0, zero, 3         # a0 = 3
+    cap.lambda cr0, a0       # SUCC(3) -> a0 = 4
+
+# === STEP 4: Load ADD function [R,X] ===
+# Namespace index 7 = GT_CHURCH_ADD
+    cap.load cr1, cr6, 7     # CR1 <- ns[7] (ADD [R,X])
+
+# === STEP 5: LAMBDA ADD ===
+# a0 = 4 (from SUCC), set a1 = 10
+    addi a1, zero, 10        # a1 = 10
+    cap.lambda cr1, a0       # ADD(4, 10) -> a0 = 14
+
+# === STEP 6: Load MUL function [R,X] ===
+# Namespace index 8 = GT_CHURCH_MUL
+    cap.load cr2, cr6, 8     # CR2 <- ns[8] (MUL [R,X])
+
+# === STEP 7: LAMBDA MUL ===
+# a0 = 14 (from ADD), a1 = 10
+# Need a1 = 3: set it
+    addi a1, zero, 3         # a1 = 3
+    cap.lambda cr2, a0       # MUL(14, 3) -> a0 = 42
+
+# === DONE: a0 = 42 (the answer) ===
+    j done
+
+fault:
+    ebreak                    # FAULT — uniform failure
+
+done:
+    ecall                     # HALT — a0 = 42`,
 
         'hello_mum': `# ================================================
 # HELLO MUM — "mymother" side (receiver)

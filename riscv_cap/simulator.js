@@ -24,6 +24,7 @@ class RiscVCapSimulator {
         this.stackFrames = false;
         this.threadTable = {};
         this.bootComplete = false;
+        this.lambdaActive = false;
 
         this._initNamespaceTable();
         this._bootSequence();
@@ -38,6 +39,17 @@ class RiscVCapSimulator {
             { location: 0x00000000, limit: 0x00003FFF },
             { location: 0x00004000, limit: 0x00007FFF },
             { location: 0x00008000, limit: 0x000000FF },
+            { location: 0x00010000, limit: 0x00010FFF, funcId: 'Lambda', entryPerms: {R:0,W:0,X:0,L:0,S:0,E:1} },
+            { location: 0x00011000, limit: 0x000110FF, funcId: 'GT_CHURCH_SUCC', entryPerms: {R:1,W:0,X:1,L:0,S:0,E:0} },
+            { location: 0x00011100, limit: 0x000111FF, funcId: 'GT_CHURCH_PRED', entryPerms: {R:1,W:0,X:1,L:0,S:0,E:0} },
+            { location: 0x00011200, limit: 0x000112FF, funcId: 'GT_CHURCH_ADD', entryPerms: {R:1,W:0,X:1,L:0,S:0,E:0} },
+            { location: 0x00011300, limit: 0x000113FF, funcId: 'GT_CHURCH_MUL', entryPerms: {R:1,W:0,X:1,L:0,S:0,E:0} },
+            { location: 0x00011400, limit: 0x000114FF, funcId: 'GT_TRUE', entryPerms: {R:1,W:0,X:1,L:0,S:0,E:0} },
+            { location: 0x00011500, limit: 0x000115FF, funcId: 'GT_FALSE', entryPerms: {R:1,W:0,X:1,L:0,S:0,E:0} },
+            { location: 0x00011600, limit: 0x000116FF, funcId: 'GT_PAIR', entryPerms: {R:1,W:0,X:1,L:0,S:0,E:0} },
+            { location: 0x00011700, limit: 0x000117FF, funcId: 'GT_FST', entryPerms: {R:1,W:0,X:1,L:0,S:0,E:0} },
+            { location: 0x00011800, limit: 0x000118FF, funcId: 'GT_SND', entryPerms: {R:1,W:0,X:1,L:0,S:0,E:0} },
+            { location: 0x00011900, limit: 0x000119FF, funcId: 'GT_IF', entryPerms: {R:1,W:0,X:1,L:0,S:0,E:0} },
         ];
         for (let i = 0; i < defaults.length; i++) {
             const d = defaults[i];
@@ -46,6 +58,8 @@ class RiscVCapSimulator {
                 limit: d.limit,
                 versionSeals: this.makeVersionSeals(0, d.location, d.limit),
                 gBit: 0,
+                funcId: d.funcId || null,
+                entryPerms: d.entryPerms || null,
             };
         }
     }
@@ -551,12 +565,12 @@ class RiscVCapSimulator {
             return;
         }
         const entry = targetResult.entry;
-        const srcPerms = clistResult.parsed.permissions;
+        const perms = entry.entryPerms || clistResult.parsed.permissions;
         const loadedGT = this.createGT(
             (entry.versionSeals >>> 25) & 0x7F,
             index,
-            { R: srcPerms.R, W: srcPerms.W, X: srcPerms.X,
-              L: srcPerms.L, S: srcPerms.S, E: srcPerms.E },
+            { R: perms.R, W: perms.W, X: perms.X,
+              L: perms.L, S: perms.S, E: perms.E },
             0
         );
         this._writeCR(crDst, loadedGT, entry);
@@ -794,6 +808,91 @@ class RiscVCapSimulator {
                 break;
             }
 
+            case 0x4: { // LAMBDA
+                const rd = (d.raw >>> 7) & 0x1F;
+                const crIdx = crSrc;
+                const gt = this.cr[crIdx].word0;
+
+                if (gt === 0) {
+                    this.fault('NULL', `LAMBDA: CR${crIdx} - no capability loaded`);
+                    return;
+                }
+
+                const parsed = this.parseGT(gt);
+
+                if (parsed.type === 2) {
+                    this.fault('TYPE', `LAMBDA: CR${crIdx} - NULL GT type`);
+                    return;
+                }
+                if (parsed.type === 1) {
+                    this.fault('TYPE', `LAMBDA: CR${crIdx} - Outform GT (LAMBDA requires local Inform)`);
+                    return;
+                }
+                if (!parsed.permissions.X) {
+                    this.fault('PERMISSION', `LAMBDA: CR${crIdx} - lacks X permission`);
+                    return;
+                }
+                if (this.lambdaActive) {
+                    this.fault('LAMBDA', `LAMBDA: non-nestable - LAMBDA already active`);
+                    return;
+                }
+
+                const lambdaResult = this.mLoad(gt, 'X');
+                if (!lambdaResult.ok) {
+                    this.fault(lambdaResult.fault, `LAMBDA: CR${crIdx}: ${lambdaResult.message}`);
+                    return;
+                }
+
+                this.lambdaActive = true;
+                const entry = lambdaResult.entry;
+                const funcId = entry.funcId || '';
+                const argVal = this.x[rd] | 0;
+                let resultVal = argVal;
+                let desc = '';
+
+                if (funcId === 'SUCC' || funcId === 'GT_CHURCH_SUCC') {
+                    resultVal = (argVal + 1) | 0;
+                    desc = `SUCC(${argVal}) = ${resultVal}`;
+                } else if (funcId === 'PRED' || funcId === 'GT_CHURCH_PRED') {
+                    resultVal = argVal > 0 ? (argVal - 1) | 0 : 0;
+                    desc = `PRED(${argVal}) = ${resultVal}`;
+                } else if (funcId === 'ADD' || funcId === 'GT_CHURCH_ADD') {
+                    const b = this.x[(rd + 1) & 0x1F] | 0;
+                    resultVal = (argVal + b) | 0;
+                    desc = `ADD(${argVal}, ${b}) = ${resultVal}`;
+                } else if (funcId === 'MUL' || funcId === 'GT_CHURCH_MUL') {
+                    const b = this.x[(rd + 1) & 0x1F] | 0;
+                    resultVal = Math.imul(argVal, b) | 0;
+                    desc = `MUL(${argVal}, ${b}) = ${resultVal}`;
+                } else if (funcId === 'TRUE' || funcId === 'GT_TRUE') {
+                    desc = `TRUE(${argVal}) = ${argVal}`;
+                } else if (funcId === 'FALSE' || funcId === 'GT_FALSE') {
+                    resultVal = this.x[(rd + 1) & 0x1F] | 0;
+                    desc = `FALSE → ${resultVal}`;
+                } else if (funcId === 'PAIR' || funcId === 'GT_PAIR') {
+                    desc = `PAIR(${argVal}, x${(rd+1)&0x1F})`;
+                } else if (funcId === 'FST' || funcId === 'GT_FST') {
+                    desc = `FST = ${argVal}`;
+                } else if (funcId === 'SND' || funcId === 'GT_SND') {
+                    resultVal = this.x[(rd + 1) & 0x1F] | 0;
+                    desc = `SND = ${resultVal}`;
+                } else if (funcId === 'IF' || funcId === 'GT_IF') {
+                    const thenVal = this.x[(rd + 1) & 0x1F] | 0;
+                    const elseVal = this.x[(rd + 2) & 0x1F] | 0;
+                    resultVal = argVal !== 0 ? thenVal : elseVal;
+                    desc = `IF(${argVal}, ${thenVal}, ${elseVal}) = ${resultVal}`;
+                } else {
+                    desc = `λ func[${parsed.index}](${argVal})`;
+                }
+
+                if (rd !== 0) this.x[rd] = resultVal >>> 0;
+                this.lambdaActive = false;
+                this.output += `[LAMBDA] ${desc}\n`;
+                this.emit('output', this.output);
+                this.pc = (this.pc + 4) >>> 0;
+                break;
+            }
+
             default:
                 this.fault('ILLEGAL', `Unknown Church custom-0 funct3=${funct3}`);
                 return;
@@ -869,6 +968,7 @@ class RiscVCapSimulator {
                         return `CAP.SWITCH CR${crSrc}, CR${8 + st}`;
                     }
                     case 3: return `CAP.TPERM ${x(rd)}, CR${crSrc}`;
+                    case 4: return `CAP.LAMBDA CR${crSrc}, ${x(rd)}`;
                     default: return `C.??? funct3=${funct3}`;
                 }
             }

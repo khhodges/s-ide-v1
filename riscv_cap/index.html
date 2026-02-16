@@ -167,6 +167,7 @@
                         <button class="btn btn-primary" id="btn-assemble">Assemble</button>
                         <button class="btn btn-primary" id="btn-load">Load</button>
                         <button class="btn btn-example" data-example="hello_mum" style="background: linear-gradient(135deg, #1a3a5c, #2a5a3c); border-color: #4a9; color: #7fd;">&#x1f30d; Hello Mum</button>
+                        <button class="btn btn-example" data-example="access" style="background: linear-gradient(135deg, #3a1a5c, #5c2a3a); border-color: #a4a; color: #f7d;">&#x03bb; Access.asm</button>
                         <button class="btn btn-example" data-example="arithmetic">Basic Arithmetic</button>
                         <button class="btn btn-example" data-example="capability">Capability Demo</button>
                         <button class="btn btn-example" data-example="loop">Loop Example</button>
@@ -505,7 +506,8 @@
                             <tr><td>001</td><td>CAP.CHANGE</td><td>Atomic thread swap (x0-x31, CR0-CR8, PC)</td><td>E (Enter) on cr_src</td><td>CAP.CHANGE CRs</td></tr>
                             <tr><td>010</td><td>CAP.SWITCH</td><td>Copy capability to system register CR8-CR15</td><td>GT validated (M transient)</td><td>CAP.SWITCH CRs, CR8-CR15</td></tr>
                             <tr><td>011</td><td>CAP.TPERM</td><td>Test GT permissions, validity, type, and stack indicators</td><td>(none)</td><td>CAP.TPERM rd, CRs</td></tr>
-                            <tr style="color:#666"><td>100-111</td><td>(reserved)</td><td>Available for future Church instructions</td><td>-</td><td>-</td></tr>
+                            <tr><td>100</td><td>CAP.LAMBDA</td><td>Apply function GT to data register (non-nestable, in-place)</td><td>X (Execute) on CRs</td><td>CAP.LAMBDA CRs, rd</td></tr>
+                            <tr style="color:#666"><td>101-111</td><td>(reserved)</td><td>Available for future Church instructions</td><td>-</td><td>-</td></tr>
                         </tbody>
                     </table>
 
