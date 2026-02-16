@@ -9,8 +9,8 @@ const ABI_NAMES = ['zero','ra','sp','gp','tp','t0','t1','t2','s0','s1',
     's2','s3','s4','s5','s6','s7','s8','s9','s10','s11',
     't3','t4','t5','t6'];
 
-const CR_LABELS = {6:'C-List', 7:'Nucleus', 8:'Percilla', 15:'Namespace'};
-const NS_NAMES = {0:'Namespace', 1:'Nucleus', 2:'Boot C-List', 3:'Percilla',
+const CR_LABELS = {6:'C-List', 7:'Nucleus', 8:'Priscilla', 15:'Namespace'};
+const NS_NAMES = {0:'Namespace', 1:'Nucleus', 2:'Boot C-List', 3:'Priscilla',
     4:'Lambda', 5:'GT_CHURCH_SUCC', 6:'GT_CHURCH_PRED', 7:'GT_CHURCH_ADD',
     8:'GT_CHURCH_MUL', 9:'GT_TRUE', 10:'GT_FALSE', 11:'GT_PAIR',
     12:'GT_FST', 13:'GT_SND', 14:'GT_IF',
@@ -406,14 +406,14 @@ done:
         'hello_mum': `# ================================================
 # HELLO MUM / HELLO SON — Bidirectional Tunnel
 # ================================================
-# Percilla's machine (RV32-Cap Sim-32) — "mymother"
+# Priscilla's machine (RV32-Cap Sim-32) — "mymother"
 #
 # PART 1: Receive "Hello Mum" from Kenneth (CTMM)
 #   Kenneth's CALL(CONNECT(me, mymother)) arrives
 #   via encrypted tunnel. ABI maps DR0-DR5 → x10-x15.
 #
 # PART 2: Send "Hello Son" back to Kenneth
-#   Percilla replies through the reverse tunnel.
+#   Priscilla replies through the reverse tunnel.
 #   CALL(CONNECT(mymother, son)) — symmetric flow.
 #
 # ONE Church instruction each direction.
@@ -530,7 +530,7 @@ function setupHelloMumNamespace() {
     appendConsole('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     appendConsole('HELLO MUM / HELLO SON — Bidirectional Tunnel');
     appendConsole('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    appendConsole('"mymother" (Percilla) = RV32-Cap Sim-32');
+    appendConsole('"mymother" (Priscilla) = RV32-Cap Sim-32');
     appendConsole('"me" (Kenneth)        = CTMM Sim-64');
     appendConsole('');
     appendConsole('Tunnel namespace entries (ns[15-20]):');

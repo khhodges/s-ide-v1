@@ -4672,7 +4672,7 @@ function executeEditorInstruction(instr) {
                         setTimeout(() => {
                             showTunnelMessage('send', displayMsg, {
                                 from: '<b>Kenneth</b> (CTMM Sim-64)',
-                                to: '<b>Percilla</b> (RV32-Cap Sim-32)',
+                                to: '<b>Priscilla</b> (RV32-Cap Sim-32)',
                                 items: [
                                     { label: 'Instruction', value: 'CALL(CONNECT(me, mymother))' },
                                     { label: 'Golden Tokens', value: '3 (Tunnel Key + Service + ABI)' },
@@ -4769,7 +4769,7 @@ function executeEditorInstruction(instr) {
                 if (haltMsg === 'HelloS') {
                     setTimeout(() => {
                         showTunnelMessage('receive', 'Hello Son', {
-                            from: '<b>Percilla</b> (RV32-Cap Sim-32)',
+                            from: '<b>Priscilla</b> (RV32-Cap Sim-32)',
                             to: '<b>Kenneth</b> (CTMM Sim-64)',
                             items: [
                                 { label: 'Source', value: 'Reverse tunnel from mymother' },
@@ -5161,7 +5161,7 @@ function setupHelloMumNamespace() {
           tooltip: "ABI descriptor: DR0-DR8 (64-bit) → x10-x18 (32-bit)." },
         { name: "Son_Inbox", type: "Data", perms: ["R", "W"],
           word1_location: 0xA600, word2_limit: 0x400,
-          tooltip: "Inbox for receiving \"Hello Son\" reply from mymother (Percilla)." },
+          tooltip: "Inbox for receiving \"Hello Son\" reply from mymother (Priscilla)." },
         { name: "Son_Receive", type: "Abstraction", perms: ["E"],
           word1_location: 0xA700, word2_limit: 0x100,
           tooltip: "Service handler for receiving reverse-tunnel messages from mymother." },
@@ -5204,10 +5204,10 @@ function setupHelloMumNamespace() {
     log('  [4] Son_Receive     [E]   — Inform (reply handler)', 'info');
     log('', 'info');
     log('"me" (Kenneth) = CTMM Sim-64 (DR0-DR15, 64-bit)', 'info');
-    log('"mymother" (Percilla) = RV32-Cap Sim-32 (x0-x31, 32-bit)', 'info');
+    log('"mymother" (Priscilla) = RV32-Cap Sim-32 (x0-x31, 32-bit)', 'info');
     log('', 'info');
-    log('PART 1: Send "Hello Mum" → mymother (Percilla)', 'info');
-    log('PART 2: Receive "Hello Son" ← mymother (Percilla)', 'info');
+    log('PART 1: Send "Hello Mum" → mymother (Priscilla)', 'info');
+    log('PART 2: Receive "Hello Son" ← mymother (Priscilla)', 'info');
     log('', 'info');
     log('Click Step to trace the bidirectional flow.', 'info');
     log('Open RV32-Cap Simulator for "mymother" side.', 'info');
@@ -12536,12 +12536,12 @@ RETURN
 ; ================================================
 ; Kenneth's machine (CTMM Sim-64) — "me"
 ;
-; PART 1: Send "Hello Mum" → mymother (Percilla)
+; PART 1: Send "Hello Mum" → mymother (Priscilla)
 ;   CALL(CONNECT(me, mymother)) — one Church instruction
 ;   THREE Golden Tokens: tunnel key, service, ABI
 ;
-; PART 2: Receive "Hello Son" ← mymother (Percilla)
-;   Percilla's reply arrives via reverse tunnel
+; PART 2: Receive "Hello Son" ← mymother (Priscilla)
+;   Priscilla's reply arrives via reverse tunnel
 ;   Son_Inbox [R,W] stores the incoming message
 ;
 ; SEVEN zeroes both directions: no OS, no VM,
@@ -12557,7 +12557,7 @@ RETURN
 ; ================================================
 
 ; ────────────────────────────────────────────
-; PART 1: SEND "Hello Mum" to Percilla
+; PART 1: SEND "Hello Mum" to Priscilla
 ; ────────────────────────────────────────────
 
 ; === Load tunnel key ===
@@ -12583,7 +12583,7 @@ ADDI 5 77         ; DR5 = 'M' (77)
 CALL 1            ; ONE instruction. Hello Mum sent.
 
 ; ────────────────────────────────────────────
-; PART 2: RECEIVE "Hello Son" from Percilla
+; PART 2: RECEIVE "Hello Son" from Priscilla
 ; ────────────────────────────────────────────
 
 ; === Load Son_Inbox to read reply ===
@@ -12602,7 +12602,7 @@ ADDI 4 111        ; DR4 = 'o' (111)
 ADDI 5 83         ; DR5 = 'S' (83)
 
 ; === Bidirectional tunnel complete ===
-; DR0-DR5 now holds "HelloS" from Percilla
+; DR0-DR5 now holds "HelloS" from Priscilla
 ; Both sides validated by mLoad. No OS. No privilege.
 HALT
 
