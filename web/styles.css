@@ -7157,3 +7157,42 @@ body.landing-mode .auth-section {
     margin-top: 0.5rem;
     line-height: 1.5;
 }
+
+.btn-tunnel-notify {
+    position: relative;
+    background: transparent;
+    border: 1px solid #00e676;
+    color: #00e676;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+    animation: notifyPulse 2s infinite;
+}
+
+.btn-tunnel-notify:hover {
+    background: rgba(0, 230, 118, 0.15);
+    transform: scale(1.05);
+}
+
+.tunnel-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #e53935;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    line-height: 16px;
+    border-radius: 50%;
+    text-align: center;
+    padding: 0 3px;
+}
+
+@keyframes notifyPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.4); }
+    50% { box-shadow: 0 0 12px 4px rgba(0, 230, 118, 0.2); }
+}

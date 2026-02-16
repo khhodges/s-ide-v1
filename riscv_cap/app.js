@@ -673,6 +673,30 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof data === 'string') appendConsole(data);
         else if (data && data.text) appendConsole(data.text);
     });
+    sim.on('tunnel', (data) => {
+        if (data.direction === 'send') {
+            const displayMsg = data.message === 'HelloS' ? 'Hello Son' : data.message;
+            const notification = {
+                target: 'ctmm',
+                message: displayMsg,
+                timestamp: Date.now(),
+                seen: false,
+                details: {
+                    from: '<b>Priscilla</b> (RV32-Cap Sim-32)',
+                    to: '<b>Kenneth</b> (CTMM Sim-64)',
+                    items: [
+                        { label: 'Instruction', value: 'CALL(CONNECT(mymother, son))' },
+                        { label: 'Golden Tokens', value: '3 (Tunnel Key + ABI + Reply Tunnel)' },
+                        { label: 'ABI Mapping', value: 'x10-x15 (32-bit) \u2192 DR0-DR5 (64-bit)' },
+                        { label: 'Payload', value: data.payload.map(c => String.fromCharCode(c & 0x7F)).join('') },
+                        { label: 'Result', value: 'x10 = 1 (ACK \u2014 remote acknowledged)' }
+                    ]
+                }
+            };
+            localStorage.setItem('rv32cap-tunnel-notification', JSON.stringify(notification));
+            appendConsole('[NOTIFICATION] "' + displayMsg + '" sent to Kenneth (CTMM) \u2014 notification posted');
+        }
+    });
 
     updateUI();
 

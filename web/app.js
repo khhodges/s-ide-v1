@@ -14164,7 +14164,67 @@ async function saveLandingContent() {
     }
 }
 
+let pendingTunnelMessages = [];
+
+function checkRv32TunnelNotifications() {
+    const raw = localStorage.getItem('rv32cap-tunnel-notification');
+    if (!raw) return;
+    try {
+        const notif = JSON.parse(raw);
+        if (notif && notif.target === 'ctmm' && !notif.seen) {
+            pendingTunnelMessages.push(notif);
+            notif.seen = true;
+            localStorage.setItem('rv32cap-tunnel-notification', JSON.stringify(notif));
+            updateCtmmNotifyBadge();
+        }
+    } catch(e) {}
+}
+
+function updateCtmmNotifyBadge() {
+    const btn = document.getElementById('btn-tunnel-notify');
+    const badge = document.getElementById('tunnel-badge');
+    if (!btn || !badge) return;
+    if (pendingTunnelMessages.length > 0) {
+        btn.style.display = 'inline-flex';
+        badge.textContent = pendingTunnelMessages.length;
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function showTunnelNotification() {
+    if (pendingTunnelMessages.length === 0) return;
+    const notif = pendingTunnelMessages.shift();
+    updateCtmmNotifyBadge();
+
+    const existing = document.getElementById('tunnelMsgOverlay');
+    if (existing) existing.remove();
+
+    const items = (notif.details && notif.details.items) || [];
+    const from = (notif.details && notif.details.from) || '<b>Priscilla</b> (RV32-Cap Sim-32)';
+    const to = (notif.details && notif.details.to) || '<b>Kenneth</b> (CTMM Sim-64)';
+    const message = notif.message || 'Hello Son';
+
+    showTunnelMessage('receive', message, {
+        from: from,
+        to: to,
+        items: items.length > 0 ? items : [
+            { label: 'Instruction', value: 'CALL(CONNECT(mymother, son))' },
+            { label: 'Golden Tokens', value: '3 (Tunnel Key + ABI + Reply Tunnel)' },
+            { label: 'ABI Mapping', value: 'x10-x15 (32-bit) \u2192 DR0-DR5 (64-bit)' }
+        ]
+    });
+}
+
+window.addEventListener('storage', (e) => {
+    if (e.key === 'rv32cap-tunnel-notification') {
+        checkRv32TunnelNotifications();
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     checkAuthStatus();
     loadLandingContent();
+    checkRv32TunnelNotifications();
+    setInterval(checkRv32TunnelNotifications, 2000);
 });

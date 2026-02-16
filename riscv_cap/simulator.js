@@ -642,6 +642,7 @@ class RiscVCapSimulator {
             this.output += `[TUNNEL] Message: "${msg}" → sent via encrypted tunnel\n`;
             this.output += `[TUNNEL] Remote acknowledged — tunnel return\n`;
             this.emit('output', this.output);
+            this.emit('tunnel', { direction: 'send', message: msg, payload: payload, funcName: funcName, crIdx: crSrc });
             this.x[10] = 1;
             this.pc = (this.pc + 4) >>> 0;
             this.x[0] = 0;
