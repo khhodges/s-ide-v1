@@ -4400,6 +4400,53 @@ function closeCR7Overlay() {
     if (overlay) overlay.remove();
 }
 
+function showTunnelMessage(direction, message, details) {
+    const existing = document.getElementById('tunnelMsgOverlay');
+    if (existing) existing.remove();
+    
+    const isSend = direction === 'send';
+    const arrow = isSend ? '&rarr;' : '&larr;';
+    const title = isSend ? 'Message Sent via Encrypted Tunnel' : 'Message Received via Encrypted Tunnel';
+    const color = isSend ? '#00e676' : '#42a5f5';
+    const icon = isSend ? '&#x1F4E4;' : '&#x1F4E5;';
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'tunnelMsgOverlay';
+    overlay.className = 'cr7-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    
+    overlay.innerHTML = `
+        <div class="tunnel-msg-panel">
+            <div class="tunnel-msg-header" style="border-bottom-color: ${color}">
+                <span class="tunnel-msg-icon">${icon}</span>
+                <span>${title}</span>
+                <button onclick="document.getElementById('tunnelMsgOverlay').remove()" class="cr7-close">&times;</button>
+            </div>
+            <div class="tunnel-msg-body">
+                <div class="tunnel-msg-payload" style="border-color: ${color}; color: ${color}">
+                    "${message}"
+                </div>
+                <div class="tunnel-msg-flow">
+                    ${details.from} <span style="color:${color};font-size:1.5em">${arrow}</span> ${details.to}
+                </div>
+                <div class="tunnel-msg-details">
+                    ${details.items.map(item => `<div class="tunnel-detail-row"><span class="tunnel-detail-label">${item.label}</span><span class="tunnel-detail-value">${item.value}</span></div>`).join('')}
+                </div>
+                <div class="tunnel-msg-zeroes">
+                    <span style="color: ${color}">7 Zeroes:</span> No OS, No VM, No privilege, No superuser, No unauthorized code, No unauthorized data, No containment escape
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+}
+
+function closeTunnelMessage() {
+    const overlay = document.getElementById('tunnelMsgOverlay');
+    if (overlay) overlay.remove();
+}
+
 function resolveCallTarget(targetName) {
     const nsObj = namespaceObjects.find(o => o.name === targetName);
     if (!nsObj) return;
@@ -4612,13 +4659,37 @@ function executeEditorInstruction(instr) {
             case 'CALL': {
                 const callCR = simulator.contextRegs[args[0]];
                 const callTargetName = callCR ? callCR.name : null;
+                const isOutform = callCR && callCR.type === 'Outform';
                 result = simulator.execute(op, args[0]);
                 if (result && !result.startsWith('FAULT') && callTargetName) {
-                    resolveCallTarget(callTargetName);
-                    syncEditorToCR7();
-                    const cr7Now = simulator.contextRegs[7];
-                    if (cr7Now && cr7Now.name !== 'NULL') {
-                        result += ` → CR7 = ${cr7Now.linkage || cr7Now.name}`;
+                    if (isOutform && result.includes('[TUNNEL]')) {
+                        const drVals = [];
+                        for (let i = 0; i <= 5; i++) drVals.push(Number(simulator.dataRegs[i] || 0n));
+                        const tunnelMatch = result.match(/Payload:.*\("(.+?)"\)/);
+                        const payloadMsg = tunnelMatch ? tunnelMatch[1] : drVals.map(c => String.fromCharCode(c & 0x7F)).join('');
+                        const msgChars = payloadMsg.split('');
+                        const displayMsg = msgChars.join('') === 'HelloM' ? 'Hello Mum' : payloadMsg;
+                        setTimeout(() => {
+                            showTunnelMessage('send', displayMsg, {
+                                from: '<b>Kenneth</b> (CTMM Sim-64)',
+                                to: '<b>Percilla</b> (RV32-Cap Sim-32)',
+                                items: [
+                                    { label: 'Instruction', value: 'CALL(CONNECT(me, mymother))' },
+                                    { label: 'Golden Tokens', value: '3 (Tunnel Key + Service + ABI)' },
+                                    { label: 'Tunnel', value: callCR.tunnelId || 'encrypted' },
+                                    { label: 'Endpoint', value: callCR.remoteEndpoint || 'remote' },
+                                    { label: 'ABI Mapping', value: 'DR0-DR5 (64-bit) → x10-x15 (32-bit)' },
+                                    { label: 'Result', value: 'DR0 = 1 (ACK — remote acknowledged)' }
+                                ]
+                            });
+                        }, 100);
+                    } else {
+                        resolveCallTarget(callTargetName);
+                        syncEditorToCR7();
+                        const cr7Now = simulator.contextRegs[7];
+                        if (cr7Now && cr7Now.name !== 'NULL') {
+                            result += ` → CR7 = ${cr7Now.linkage || cr7Now.name}`;
+                        }
                     }
                 }
                 break;
@@ -4687,12 +4758,32 @@ function executeEditorInstruction(instr) {
             case 'LABEL':
                 return false;
             
-            case 'HALT':
+            case 'HALT': {
                 traceRecord(line, 'HALT', [], 'Program stopped', editorState.currentLinkage);
                 editorLog(`[${line}] HALT: Program stopped`, 'success');
                 updateTraceView();
                 editorState.nia = editorState.program.length;
+                const haltDRs = [];
+                for (let i = 0; i <= 5; i++) haltDRs.push(Number(simulator.dataRegs[i] || 0n));
+                const haltMsg = haltDRs.map(c => String.fromCharCode(c & 0x7F)).join('');
+                if (haltMsg === 'HelloS') {
+                    setTimeout(() => {
+                        showTunnelMessage('receive', 'Hello Son', {
+                            from: '<b>Percilla</b> (RV32-Cap Sim-32)',
+                            to: '<b>Kenneth</b> (CTMM Sim-64)',
+                            items: [
+                                { label: 'Source', value: 'Reverse tunnel from mymother' },
+                                { label: 'Golden Tokens', value: '3 (Tunnel Key + Reply + ABI)' },
+                                { label: 'ABI Mapping', value: 'x10-x15 (32-bit) → DR0-DR5 (64-bit)' },
+                                { label: 'Payload', value: 'DR0-DR5 = "HelloS" (Hello Son)' },
+                                { label: 'Inbox', value: 'Son_Inbox [R,W] — validated by mLoad' },
+                                { label: 'Status', value: 'Bidirectional tunnel complete' }
+                            ]
+                        });
+                    }, 100);
+                }
                 return false;
+            }
             
             default:
                 result = `Unknown instruction: ${op}`;

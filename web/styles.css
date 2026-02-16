@@ -7059,3 +7059,101 @@ body.landing-mode .auth-section {
         opacity: 0;
     }
 }
+
+.tunnel-msg-panel {
+    background: var(--bg-dark, #1a1a2e);
+    border: 1px solid var(--border, #333);
+    border-radius: 12px;
+    width: 480px;
+    max-width: 95vw;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+    animation: tunnelMsgAppear 0.3s ease-out;
+    overflow: hidden;
+}
+
+@keyframes tunnelMsgAppear {
+    from {
+        transform: scale(0.85);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.tunnel-msg-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 2px solid #00e676;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary, #e0e0e0);
+}
+
+.tunnel-msg-icon {
+    font-size: 1.4rem;
+}
+
+.tunnel-msg-body {
+    padding: 1rem 1.25rem;
+}
+
+.tunnel-msg-payload {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    padding: 1rem;
+    margin: 0.5rem 0 1rem;
+    border: 2px solid #00e676;
+    border-radius: 8px;
+    background: rgba(0, 230, 118, 0.06);
+    letter-spacing: 0.05em;
+    font-family: 'Georgia', serif;
+}
+
+.tunnel-msg-flow {
+    text-align: center;
+    font-size: 0.95rem;
+    color: var(--text-secondary, #aaa);
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+}
+
+.tunnel-msg-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+}
+
+.tunnel-detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.tunnel-detail-label {
+    color: var(--text-secondary, #888);
+    min-width: 100px;
+}
+
+.tunnel-detail-value {
+    color: var(--text-primary, #e0e0e0);
+    text-align: right;
+}
+
+.tunnel-msg-zeroes {
+    font-size: 0.78rem;
+    color: var(--text-secondary, #888);
+    padding: 0.6rem 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    margin-top: 0.5rem;
+    line-height: 1.5;
+}
