@@ -1023,6 +1023,10 @@ function showTunnelNotification() {
             <div class="tunnel-msg-body">
                 <div class="tunnel-msg-timestamp">${timeStr}</div>
                 <div class="tunnel-msg-payload">"${safeMessage}"</div>
+                <div class="tunnel-reply-section">
+                    <input type="text" class="tunnel-reply-input" id="tunnelReplyInput" placeholder="Type a reply to Kenneth..." maxlength="200">
+                    <button class="tunnel-reply-btn" onclick="sendRv32Reply(document.getElementById('tunnelReplyInput').value)">Send Reply</button>
+                </div>
                 <div class="tunnel-msg-flow">
                     ${from} <span style="color:#42a5f5;font-size:1.5em">&rarr;</span> ${to}
                 </div>
@@ -1031,10 +1035,6 @@ function showTunnelNotification() {
                 </div>
                 <div class="tunnel-msg-zeroes">
                     <span style="color: #42a5f5">7 Zeroes:</span> No OS, No VM, No privilege, No superuser, No unauthorized code, No unauthorized data, No containment escape
-                </div>
-                <div class="tunnel-reply-section">
-                    <input type="text" class="tunnel-reply-input" id="tunnelReplyInput" placeholder="Type a reply to Kenneth..." maxlength="200">
-                    <button class="tunnel-reply-btn" onclick="sendRv32Reply(document.getElementById('tunnelReplyInput').value)">Send Reply</button>
                 </div>
             </div>
         </div>

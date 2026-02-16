@@ -4464,6 +4464,10 @@ function showTunnelMessage(direction, message, details, timestamp) {
                 <div class="tunnel-msg-payload" style="border-color: ${color}; color: ${color}">
                     "${safeMessage}"
                 </div>
+                <div class="tunnel-reply-section">
+                    <input type="text" class="tunnel-reply-input" id="tunnelReplyInput" placeholder="Type a reply to Priscilla..." maxlength="200">
+                    <button class="tunnel-reply-btn" onclick="sendCtmmReply(document.getElementById('tunnelReplyInput').value)" style="background: ${color}">Send Reply</button>
+                </div>
                 <div class="tunnel-msg-flow">
                     ${details.from} <span style="color:${color};font-size:1.5em">${arrow}</span> ${details.to}
                 </div>
@@ -4472,10 +4476,6 @@ function showTunnelMessage(direction, message, details, timestamp) {
                 </div>
                 <div class="tunnel-msg-zeroes">
                     <span style="color: ${color}">7 Zeroes:</span> No OS, No VM, No privilege, No superuser, No unauthorized code, No unauthorized data, No containment escape
-                </div>
-                <div class="tunnel-reply-section">
-                    <input type="text" class="tunnel-reply-input" id="tunnelReplyInput" placeholder="Type a reply to Priscilla..." maxlength="200">
-                    <button class="tunnel-reply-btn" onclick="sendCtmmReply(document.getElementById('tunnelReplyInput').value)" style="background: ${color}">Send Reply</button>
                 </div>
             </div>
         </div>

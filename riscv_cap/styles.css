@@ -1595,10 +1595,12 @@ main {
 
 .tunnel-reply-section {
     display: flex;
+    flex-direction: column;
     gap: 0.5rem;
     margin-top: 0.75rem;
     padding-top: 0.75rem;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 0.75rem;
 }
 
 .tunnel-reply-input {
