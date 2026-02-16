@@ -4978,6 +4978,17 @@ function loadExample(name) {
         resetProgram();
         
         if (name === 'hello_mum') {
+            if (!bootState.complete) {
+                for (let i = bootState.step; i < 4; i++) {
+                    executeBootStep(i);
+                    bootState.step = i + 1;
+                }
+                bootState.complete = true;
+                updateBootDisplay();
+                updateDisplay();
+                updateCapabilityExplorer();
+                log('Auto-boot complete — system ready for Hello Mum', 'success');
+            }
             setupHelloMumNamespace();
         }
         
