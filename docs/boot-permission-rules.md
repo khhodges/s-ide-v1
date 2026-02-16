@@ -18,17 +18,28 @@ The M (Meta/Microcode) permission is a **transient hardware elevation** — set 
 - **CR elevation: M only**
 - The Thread object is pure metadata — it holds the thread's identity, shadow C-List snippet, and scheduling state. Like the Namespace, it is isolated from all regular permissions. Only microcode (via M) can inspect or update thread state. No user instruction operates on CR8 directly.
 
-### CR6 — Current C-List
+### CR5 — Services C-List
 
 - **GT permission: E only**
 - **CR elevation: M added by microcode**
-- The GT grants only E (Enter) to the owner, meaning the only user-visible action is CALL. When the microcode processes a LOAD instruction, it temporarily elevates M on the CR, which allows the microcode to perform the L (Load) action internally — extracting a capability from the C-List and placing it into the destination CR. The GT itself never carries L; the microcode bridges that gap. This enforces the rule that users can only access C-List contents through the controlled mLoad path.
+- Stable — set at Thread creation by Boot, does not change on CALL/RETURN.
+- The Services C-List is the Thread's gateway to its available services. It contains `self` [E] (the Thread's own abstraction), which in turn contains the Namespace [E] and its methods (Mint, GC, Lookup, etc.). The Thread accesses services via `CALL(Thread.Method(...))`, which internally navigates self → Namespace → Method. The caller never sees the internal structure.
 
-### CR7 — Nucleus (CLOOMC Code)
+### CR6 — Active C-List
+
+- **GT permission: E only**
+- **CR elevation: M added by microcode**
+- Dynamic — switches on every CALL/RETURN.
+- The GT grants only E (Enter) to the owner, meaning the only user-visible action is CALL. When the microcode processes a LOAD instruction, it temporarily elevates M on the CR, which allows the microcode to perform the L (Load) action internally — extracting a capability from the C-List and placing it into the destination CR. The GT itself never carries L; the microcode bridges that gap. This enforces the rule that users can only access C-List contents through the controlled mLoad path.
+- CR6 contains **symbolic method names** — these are capability entries, not code references. The implementation details of each method are hidden behind the abstraction's nucleus (CR7).
+
+### CR7 — Active Nucleus (Method Code)
 
 - **GT permission: X (Execute)**
 - **Optional: R if the code region contains constants**
-- CR7 holds executable CLOOMC code (the Nucleus / Access.asm). X permission allows the processor to fetch and execute instructions from this region. R may be added when the code segment includes inline read-only constants. No L, S, or E — the Nucleus is code, not a capability container.
+- Dynamic — switches on every CALL/RETURN.
+- CR7 holds the currently executing method/code of the active abstraction. X permission allows the processor to fetch and execute instructions from this region. R may be added when the code segment includes inline read-only constants. No L, S, or E — the Nucleus is code, not a capability container.
+- CR7 resolves symbolic method names from CR6 into executable code blocks. The dispatch mechanism depends on the abstraction's chosen style: symbolic resolver (high-security), LAMBDA fast-path, or traditional compiled binary. See `docs/dispatch-styles.md`.
 
 ## The M Elevation Rule
 
@@ -40,19 +51,31 @@ The M (Meta/Microcode) permission is a **transient hardware elevation** — set 
 
 ## Domain Separation Summary
 
-| CR   | Object Type | GT Perms | CR Elevation | Rationale                                    |
-|------|-------------|----------|--------------|----------------------------------------------|
-| CR15 | Namespace   | —        | M            | Pure metadata, no user access                |
-| CR8  | Thread      | —        | M            | Pure metadata, no user access                |
-| CR6  | C-List      | E        | M (transient)| User can CALL; microcode does L internally   |
-| CR7  | Nucleus     | X (+R)   | —            | Executable code, optionally readable         |
+| CR   | Object Type      | GT Perms | CR Elevation | Stability | Rationale                                         |
+|------|------------------|----------|--------------|-----------|---------------------------------------------------|
+| CR15 | Namespace        | —        | M            | Stable    | Pure metadata, no user access                     |
+| CR8  | Thread           | —        | M            | Stable    | Pure metadata, no user access                     |
+| CR5  | Services C-List  | E        | M (transient)| Stable    | Thread's services gateway, set at boot            |
+| CR6  | Active C-List    | E        | M (transient)| Dynamic   | Current abstraction's symbolic method names       |
+| CR7  | Active Nucleus   | X (+R)   | —            | Dynamic   | Current method code, resolves CR6 symbols to code |
 
 ## Boot Sequence Permission Flow
 
 1. **Step 1 (Fault Restart)**: Clear all registers. Cold restart.
 2. **Step 2 (Load Namespace)**: Microcode writes CR15 with M elevation. GT has zero RWXLSE.
-3. **Step 3 (Switch Thread)**: Microcode writes CR8 with M elevation. GT has zero RWXLSE.
+3. **Step 3 (Switch Thread)**: Microcode writes CR8 with M elevation. GT has zero RWXLSE. Also writes CR5 with the Thread's Services C-List (GT has E only).
 4. **Step 4 (Call Boot)**: Microcode writes CR6 (GT has E only, CR gets M during LOAD operations) and CR7 (GT has X, optionally R). NIA set to 0.
+
+## Thread Creation via Mint
+
+When Boot creates a Thread (e.g., Kenneth, Matthew, Daniel), it uses `Namespace.Mint(Thread, size, access)`:
+
+1. Boot microcode has M elevation — it can access the Namespace before any Threads exist (the bootstrap chicken-and-egg).
+2. `Namespace.Mint` allocates a namespace entry for the new Thread (3-word descriptor: Location, Limit, Seals).
+3. Mint computes the MAC, initializes version to 0, assigns the offset.
+4. Boot places a Services C-List GT [E] in the new Thread's CR5.
+5. The Services C-List contains `self` [E] → Namespace [E] → Mint, GC, Lookup, etc.
+6. From this point, the Thread can call `CALL(Thread.Mint(type, size, access))` to allocate its own objects.
 
 ## Implications for LOAD Instruction
 
@@ -65,3 +88,18 @@ When user code executes `LOAD dest src idx`:
 6. The GT in the src CR still only shows E to the user.
 
 This is the single trusted path: mLoad is the only gate, and M is the key that only microcode holds.
+
+## Abstraction Nesting for Mint
+
+The call `CALL(Thread.Mint(type, size, access))` resolves internally as:
+
+```
+CR5 (Services C-List) → self (Thread abstraction) → Namespace → Mint(type, size, access)
+```
+
+1. Caller loads `self` from CR5's Services C-List.
+2. Thread abstraction checks the thread's resource budget (memory, namespace slots).
+3. Thread's microcode loads Mint from the Namespace's C-List (via CR5 → self → Namespace — all hidden from the caller).
+4. Namespace.Mint allocates the entry, computes MAC, returns GT in CR0.
+5. Thread updates its resource tally.
+6. Caller receives the new GT in CR0. Never sees the internal plumbing.

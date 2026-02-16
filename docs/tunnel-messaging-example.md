@@ -110,20 +110,62 @@ The architectures are different. The ISAs are different. The register widths are
 
 ---
 
-## 4. Namespace Setup
+## 4. Namespace Setup via CALL(Thread.Mint)
+
+All namespace entries below are created through `CALL(Thread.Mint(type, size, access))`. The caller never calls the Namespace directly — the Thread abstraction manages the budget and delegates internally:
+
+```
+CR5 (Services C-List) → self (Thread abstraction) → Namespace → Mint(type, size, access)
+```
+
+Boot microcode creates the first entries (Root, C-List, Code, Thread) before any Thread exists. Once Kenneth's Thread is running, it creates the Hello Mum entries (TunnelKey_Mum, Mum_Messaging, MessageBuffer, ABI_Mum) via `CALL(Thread.Mint(...))`, which uses **symbolic dispatch** (high-security style — see `docs/dispatch-styles.md`).
+
+### Minting the Hello Mum GTs
+
+```
+; Create the tunnel key — Turing domain [R], Abstraction type, 256 bytes
+MOV DR0, 0x01          ; access rights: R (Turing domain)
+MOV DR1, 4             ; type: Abstraction
+MOV DR2, 256           ; size: 256 bytes (crypto key)
+CALL(Thread.Mint)      ; → CR0 = Tunnel_Key_Mum GT [R]
+SAVE CR0, CR6, 4       ; store in C-List at index 4
+
+; Create the messaging service — Church domain [E], Abstraction type, 512 bytes
+MOV DR0, 0x20          ; access rights: E (Church domain)
+MOV DR1, 4             ; type: Abstraction
+MOV DR2, 512           ; size: 512 bytes
+CALL(Thread.Mint)      ; → CR0 = Mum_Messaging GT [E]
+SAVE CR0, CR6, 5       ; store in C-List at index 5
+
+; Create the message buffer — Turing domain [R,W], Data type, 1024 bytes
+MOV DR0, 0x03          ; access rights: R+W (Turing domain)
+MOV DR1, 0             ; type: Data
+MOV DR2, 1024          ; size: 1024 bytes
+CALL(Thread.Mint)      ; → CR0 = MessageBuffer GT [R,W]
+SAVE CR0, CR6, 6       ; store in C-List at index 6
+
+; Create the ABI descriptor — Turing domain [R], Abstraction type, 256 bytes
+MOV DR0, 0x01          ; access rights: R (Turing domain)
+MOV DR1, 4             ; type: Abstraction
+MOV DR2, 256           ; size: 256 bytes
+CALL(Thread.Mint)      ; → CR0 = ABI_Mum GT [R]
+SAVE CR0, CR6, 7       ; store in C-List at index 7
+```
+
+Each `CALL(Thread.Mint)` internally: validates domain purity (RWX or LSE, never both), checks the thread's memory budget, delegates to Namespace.Mint which allocates the 3-word descriptor (Location, Limit, Seals), computes the MAC, and returns the GT in CR0.
 
 ### "me" Namespace (CTMM Sim-64)
 
-| Index | Name | Type | Permissions | Description |
-|-------|------|------|-------------|-------------|
-| 0 | Root | Inform | R,L | Namespace root |
-| 1 | C-List | Inform | L,S | Thread's capability list |
-| 2 | Code | Inform | R,X | Code segment — the "Hello Mum" program |
-| 3 | Thread | Inform | R,W | Current thread object |
-| 4 | TunnelKey_Mum | Inform | R | Symmetric encryption key for tunnel to "mymother" |
-| 5 | Mum_Messaging | Outform | E | Remote: mymother's messaging service |
-| 6 | MessageBuffer | Inform | R,W | Local buffer for outgoing message payload |
-| 7 | ABI_Mum | Inform | R | ABI descriptor for mymother's architecture |
+| Index | Name | Type | Permissions | Minted By | Description |
+|-------|------|------|-------------|-----------|-------------|
+| 0 | Root | Inform | R,L | Boot | Namespace root |
+| 1 | C-List | Inform | L,S | Boot | Thread's capability list |
+| 2 | Code | Inform | R,X | Boot | Code segment — the "Hello Mum" program |
+| 3 | Thread | Inform | R,W | Boot | Current thread object |
+| 4 | TunnelKey_Mum | Inform | R | Thread.Mint | Symmetric encryption key for tunnel to "mymother" |
+| 5 | Mum_Messaging | Outform | E | Thread.Mint | Remote: mymother's messaging service |
+| 6 | MessageBuffer | Inform | R,W | Thread.Mint | Local buffer for outgoing message payload |
+| 7 | ABI_Mum | Inform | R | Thread.Mint | ABI descriptor for mymother's architecture |
 
 **Namespace entry format** (3 words per entry):
 

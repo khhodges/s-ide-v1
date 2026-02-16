@@ -22,12 +22,15 @@ The CTMM simulator offers both a Haskell console interface and a web-based visua
 
 -   **Capability-based Security**: Access control via "Golden Tokens" (GTs).
 -   **Register Architecture**:
-    -   **Context Registers (CR0-CR7)**: Hold Golden Tokens (instruction-addressable). CR15 for Namespace root, CR8 for Thread identity, CR7 for Nucleus, CR6 for current C-List.
+    -   **Context Registers (CR0-CR7)**: Hold Golden Tokens (instruction-addressable). CR15 for Namespace root, CR8 for Thread identity.
+    -   **CR5 — Services C-List [E]**: The Thread's available services, set at boot. Contains `self` [E] (the Thread's own abstraction, which contains the Namespace and its methods including Mint, GC, Lookup). Stable — does not change on CALL/RETURN.
+    -   **CR6 — Active C-List [E]**: The currently running abstraction's C-List. Dynamic — switches on every CALL/RETURN. Contains symbolic method names, not code references.
+    -   **CR7 — Active Nucleus [X]**: The currently executing method/code of the active abstraction. Dynamic — switches on every CALL/RETURN. Resolves symbolic names from CR6 to executable code blocks.
     -   **Data Registers (DR0-DR15)**: Hold 64-bit numeric values (Sim-64) or x0-x31 32-bit (Sim-32).
 -   **Golden Token Permissions**: 6 bits — R (Read), W (Write), X (Execute), L (Load), S (Save), E (Enter). M is transient (elevated by microcode on CR, never on GT). G is per-namespace-entry metadata.
 -   **Permission Domains**: Turing (R, W, X), Church (L, S), Lambda (E).
 -   **M Elevation Rule**: M is never stored in the GT — only on the CR during microcode execution. Microcode elevates M to perform privileged actions (LOAD, SAVE, CHANGE, etc.) then clears it. No user instruction can set, test, or observe M. See `docs/boot-permission-rules.md`.
--   **Boot CR Permissions**: CR15 (Namespace) = M only; CR8 (Thread) = M only; CR6 (C-List) = E only on GT, M elevated on CR by microcode; CR7 (Nucleus) = X (+R if constants).
+-   **Boot CR Permissions**: CR15 (Namespace) = M only; CR8 (Thread) = M only; CR6 (Active C-List) = E only on GT, M elevated on CR by microcode; CR7 (Active Nucleus) = X (+R if constants); CR5 (Services) = E only.
 -   **Namespace Entry**: A 3-word descriptor (Location, Limit, Seals) with per-entry gBit for GC.
 -   **MAC Validation**: Hardware-enforced security check during `LOAD`. FNV hash MAC computation.
 -   **mLoad Master Validation**: Single trusted path for all namespace access – every Church instruction routes through mLoad, which enforces permission check, bounds check, MAC validation, G-bit reset, and thread table shadow update.
@@ -44,14 +47,30 @@ The CTMM simulator offers both a Haskell console interface and a web-based visua
 -   **Thread Table C-List Snippet**: Thread shadow tracks only CR0-CR7 (instruction-addressable registers).
 -   **CHANGE/RETURN Semantics**: `CHANGE` uses `CALL` microcode to push a call stack frame. `CALL` and `CHANGE` store the instruction address. `RETURN` adds step size and checks E permission on saved CR6 GT before revalidation.
 
+### Abstraction Nesting and Mint
+
+-   **Mint is a Namespace method**, not a standalone abstraction. The Namespace owns all memory and is responsible for allocation and garbage collection.
+-   **Abstraction nesting**: Services C-List (CR5) → self [E] (Thread abstraction) → Namespace [E] → Mint(type, size, access). The caller sees only `CALL(Thread.Mint(type, size, access))`. The internal delegation (self → Namespace → Mint) is hidden.
+-   **GT_MINT API**: DR0 = access rights (domain-pure: Turing [RWX] or Church [LSE], never both), DR1 = object type, DR2 = size. Returns new GT in CR0. Thread microcode reads CR8 internally for memory accounting.
+-   **Thread as resource manager**: The Thread abstraction manages all per-thread scarce resources — memory budget, namespace slots, etc. It delegates to the Namespace for actual allocation but enforces budgets.
+
+### Three Dispatch Styles
+
+Abstractions can choose how CR7 resolves method calls, based on security/performance needs:
+
+1.  **Symbolic resolver** (high-security): CR7 is a dispatcher that resolves symbolic method names from CR6 to code blocks. Maximum isolation. Used by Hello Mum example.
+2.  **LAMBDA fast-path**: CR7 uses LAMBDA to jump directly to method code. No stack frame, machine-status fast path. Used by SlideRule/Abacus/Circle examples.
+3.  **Traditional compiled binary**: CR7 is a conventional compiled code object with standard method offsets. Fastest, familiar model. Used by Access.asm example.
+
+See `docs/dispatch-styles.md` for full specification.
+
 ### Web Interface (UI/UX)
 
 The web interface provides seven views: Dashboard, Namespace Browser, Assembly Editor, Capabilities Explorer, Instructions, Tutorial, and Code Browser. The styling is a dark-themed, IDE-like design.
 
 ### Key Features
 
--   **Built-in Abstractions**: Includes `Boot`, `Threads`, `SlideRule`, `Abacus`, `Circle`, `CapabilityManager`, `DateTime`, `Lambda`, and `Mint`.
--   **Mint Abstraction**: General-purpose capability forge at NS offset 12 (0xC000). Four functions: GT_MINT (create domain-pure GT — Turing [RWX] or Church [LSE], never both), GT_RESTRICT (derive subset perms), GT_REVOKE (bump version to invalidate all copies), GT_INSPECT (read GT metadata). Enforces RWX/LSE mutual exclusivity. Complements CapabilityManager which only creates Data [RWX] or C-List [LSE].
+-   **Built-in Abstractions**: Includes `Boot`, `Threads`, `SlideRule`, `Abacus`, `Circle`, `CapabilityManager`, `DateTime`, and `Lambda`. Mint is a method of the Namespace abstraction, accessed via `CALL(Thread.Mint(type, size, access))`.
 -   **Instruction Set**: Custom CTMM instruction set with Church-specific and Turing-specific instructions. All instructions use a 32-bit format. Only CR0-CR7 are instruction-addressable.
 -   **Condition Codes**: ARM-style condition flags for conditional execution.
 -   **State Persistence**: Automatic saving and restoring using browser local storage.
