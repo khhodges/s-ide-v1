@@ -355,11 +355,13 @@ const bootCList = {
     description: "Root abstraction C-List — symbolic entries for available abstractions",
     nsOffset: 3,
     entries: [
-        { index: 0, name: "Access", nsOffset: 4, perms: ["X"], type: "Code",
+        { index: 0, name: "NULL", nsOffset: -1, perms: [], type: "NULL",
+          desc: "NULL Golden Token — clears any CR when loaded", size: 0 },
+        { index: 1, name: "Access", nsOffset: 4, perms: ["X"], type: "Code",
           desc: "Boot nucleus code", size: 0x1000 },
-        { index: 1, name: "SlideRule", nsOffset: 5, perms: ["E"], type: "Abstraction",
+        { index: 2, name: "SlideRule", nsOffset: 5, perms: ["E"], type: "Abstraction",
           desc: "IEEE 754 float operations — LAMBDA dispatch", size: 0x1000 },
-        { index: 2, name: "Abacus", nsOffset: 6, perms: ["E"], type: "Abstraction",
+        { index: 3, name: "Abacus", nsOffset: 6, perms: ["E"], type: "Abstraction",
           desc: "64-bit integer operations — LAMBDA dispatch", size: 0x1000 }
     ]
 };
@@ -3139,13 +3141,14 @@ ADDI 6 0          ; DR6 = 0
 ADDI 7 0          ; DR7 = 0
 
 ; Step 3: Clear sensitive Context Registers
+; Load NULL GT from Boot C-List[0] into each CR
 ; Keep only CR7 (Nucleus), CR8 (Thread), CR15 (Namespace)
-CHANGE 0 NULL     ; CR0 = NULL
-CHANGE 1 NULL     ; CR1 = NULL
-CHANGE 2 NULL     ; CR2 = NULL
-CHANGE 3 NULL     ; CR3 = NULL
-CHANGE 4 NULL     ; CR4 = NULL
-CHANGE 5 NULL     ; CR5 = NULL
+LOAD 0 6 0        ; CR0 = NULL GT (from C-List[0])
+LOAD 1 6 0        ; CR1 = NULL GT
+LOAD 2 6 0        ; CR2 = NULL GT
+LOAD 3 6 0        ; CR3 = NULL GT
+LOAD 4 6 0        ; CR4 = NULL GT
+LOAD 5 6 0        ; CR5 = NULL GT
 ; CR6 (C-List) - cleared by Nucleus
 ; CR7 (Nucleus) - preserved for recovery
 ; CR8 (Thread) - preserved for audit
