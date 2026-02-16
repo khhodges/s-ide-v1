@@ -1477,9 +1477,11 @@ main {
     border-radius: 12px;
     width: 480px;
     max-width: 95vw;
+    max-height: 85vh;
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
     animation: tunnelMsgAppear 0.3s ease-out;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 @keyframes tunnelMsgAppear {
@@ -1519,6 +1521,9 @@ main {
 
 .tunnel-msg-body {
     padding: 1rem 1.25rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .tunnel-msg-payload {
