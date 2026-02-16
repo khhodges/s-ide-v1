@@ -185,6 +185,12 @@ class CTMMSimulator {
                 seal: entry.seal,
                 clist: entry.clist || null
             };
+            if (entry.type) loadedCap.type = entry.type;
+            if (entry.remoteEndpoint) loadedCap.remoteEndpoint = entry.remoteEndpoint;
+            if (entry.tunnelId) loadedCap.tunnelId = entry.tunnelId;
+            if (entry.tunnelEndpoint) loadedCap.tunnelEndpoint = entry.tunnelEndpoint;
+            if (entry.keyMaterial) loadedCap.keyMaterial = entry.keyMaterial;
+            if (entry.abiMap) loadedCap.abiMap = entry.abiMap;
 
             return { ok: true, cap: loadedCap, entry };
         }
