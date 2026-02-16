@@ -32,12 +32,17 @@
         <!-- Dashboard View -->
         <section id="view-dashboard" class="view active">
             <div class="dashboard-grid">
-                <div class="panel data-registers">
-                    <div class="pc-display">
-                        <span class="pc-label">PC</span>
-                        <span class="pc-value" id="pc-value">0x00000000</span>
+                <div class="left-column">
+                    <div class="panel console-panel">
+                        <h2>Console</h2>
+                        <pre id="console-output"></pre>
                     </div>
-                    <h2>Data Registers</h2>
+                    <div class="panel data-registers">
+                        <div class="pc-display">
+                            <span class="pc-label">PC</span>
+                            <span class="pc-value" id="pc-value">0x00000000</span>
+                        </div>
+                        <h2>Data Registers</h2>
                     <table class="register-table">
                         <thead>
                             <tr>
@@ -82,6 +87,7 @@
                             <tr><td>x31</td><td>t6</td><td>0x00000000</td><td>0</td></tr>
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 <div class="panel capability-registers">
@@ -123,10 +129,6 @@
                 </div>
             </div>
 
-            <div class="panel console-panel">
-                <h2>Console</h2>
-                <pre id="console-output"></pre>
-            </div>
         </section>
 
         <!-- Namespace Browser View -->
