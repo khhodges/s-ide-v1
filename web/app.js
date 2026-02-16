@@ -329,7 +329,22 @@ let namespaceObjects = [
       tooltip: "SlideRule [FLOAT] — IEEE 754 floating-point math. LAMBDA dispatch style." },
     { offset: 6, name: "Abacus", type: "Abstraction",
       word1_location: 0x6000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "Abacus [INTEGER] — 64-bit integer arithmetic. LAMBDA dispatch style." }
+      tooltip: "Abacus [INTEGER] — 64-bit integer arithmetic. LAMBDA dispatch style." },
+    { offset: 7, name: "Circle", type: "Abstraction",
+      word1_location: 0x7000, word2_limit: 0x1000, word3_seals: 0n,
+      tooltip: "Circle [GEOMETRY] — PI, circumference, area. LAMBDA dispatch style." },
+    { offset: 8, name: "Mint", type: "Abstraction",
+      word1_location: 0xC000, word2_limit: 0x1000, word3_seals: 0n,
+      tooltip: "Namespace Mint method — creates new GTs with domain-pure permissions via CALL(Thread.Mint)." },
+    { offset: 9, name: "CapabilityManager", type: "Abstraction",
+      word1_location: 0xD000, word2_limit: 0x1000, word3_seals: 0n,
+      tooltip: "CapabilityManager — simplified Mint: creates Data [RWX] or C-List [LSE] objects." },
+    { offset: 10, name: "DateTime", type: "Abstraction",
+      word1_location: 0x9000, word2_limit: 0x1000, word3_seals: 0n,
+      tooltip: "DateTime [TIME] — ISO 8601 date/time. DR0=mode → DR1-DR6 components." },
+    { offset: 11, name: "Lambda", type: "Abstraction",
+      word1_location: 0xA000, word2_limit: 0x2000, word3_seals: 0n,
+      tooltip: "Lambda [FUNCTIONAL] — Church calculus primitives: Y-Combinator, Church numerals, Pairs, Booleans." }
 ];
 
 // Services C-List at Namespace offset 2
@@ -364,7 +379,17 @@ const bootCList = {
         { index: 3, name: "SlideRule", nsOffset: 5, perms: ["E"], type: "Abstraction",
           desc: "IEEE 754 float operations — LAMBDA dispatch", size: 0x1000 },
         { index: 4, name: "Abacus", nsOffset: 6, perms: ["E"], type: "Abstraction",
-          desc: "64-bit integer operations — LAMBDA dispatch", size: 0x1000 }
+          desc: "64-bit integer operations — LAMBDA dispatch", size: 0x1000 },
+        { index: 5, name: "Circle", nsOffset: 7, perms: ["E"], type: "Abstraction",
+          desc: "Circle geometry — PI, circumference, area. LAMBDA dispatch", size: 0x1000 },
+        { index: 6, name: "Mint", nsOffset: 8, perms: ["E"], type: "Abstraction",
+          desc: "Namespace Mint method — creates new GTs. CALL(Thread.Mint(type, size, access))", size: 0x1000 },
+        { index: 7, name: "CapabilityManager", nsOffset: 9, perms: ["E"], type: "Abstraction",
+          desc: "Creates Data [RWX] and C-List [LSE] objects. Simplified Mint interface", size: 0x1000 },
+        { index: 8, name: "DateTime", nsOffset: 10, perms: ["E"], type: "Abstraction",
+          desc: "ISO 8601 date/time. DR0=mode → DR1-DR6 components", size: 0x1000 },
+        { index: 9, name: "Lambda", nsOffset: 11, perms: ["E"], type: "Abstraction",
+          desc: "Church lambda calculus primitives — Y-Combinator, Church numerals, Pairs, Booleans", size: 0x2000 }
     ]
 };
 
@@ -545,6 +570,17 @@ const abstractionCLists = {
             { name: "GT_IF", type: "Function", perms: ["R", "X"], desc: "λc.λt.λf. c t f - conditional", base: 0xA9C0, size: 128 },
             { name: "LocalCode", type: "Code", perms: ["R", "X"], base: 0xA000, size: 256 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0xAA40, size: 512 }
+        ]
+    },
+    CapabilityManager: {
+        name: "CapabilityManager",
+        mathType: "SYSTEM",
+        description: "Simplified capability forge — creates Data [RWX] or C-List [LSE] objects. API: DR0=type (0=Data, 1=C-List), DR1=size in words. Returns new GT in CR0.",
+        clist: [
+            { name: "GT_CREATE", type: "Function", perms: ["R", "X"], desc: "Create new object: DR0=type (0=Data, 1=C-List), DR1=size → CR0=new GT", base: 0xD100, size: 384 },
+            { name: "GT_DESTROY", type: "Function", perms: ["R", "X"], desc: "Destroy object: CR0=target GT → revokes and reclaims", base: 0xD280, size: 256 },
+            { name: "LocalCode", type: "Code", perms: ["R", "X"], base: 0xD000, size: 256 },
+            { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0xD380, size: 256 }
         ]
     },
     Mint: {
@@ -1019,6 +1055,8 @@ function buildHierarchyTree() {
             'SlideRule': 'FLOAT',
             'Abacus': 'INTEGER',
             'Circle': 'GEOMETRY',
+            'Mint': 'SYSTEM',
+            'CapabilityManager': 'SYSTEM',
             'DateTime': 'TIME',
             'Lambda': 'FUNCTIONAL'
         };
