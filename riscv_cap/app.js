@@ -1,6 +1,7 @@
 let sim = null;
 let asm = null;
 let runInterval = null;
+let codeLoaded = false;
 
 const ABI_NAMES = ['zero','ra','sp','gp','tp','t0','t1','t2','s0','s1',
     'a0','a1','a2','a3','a4','a5','a6','a7',
@@ -34,6 +35,7 @@ function switchView(viewName) {
 function doReset() {
     stopRun();
     sim.reset();
+    codeLoaded = false;
     clearConsole();
     updateUI();
     switchView('dashboard');
@@ -41,6 +43,16 @@ function doReset() {
 
 function doStep() {
     stopRun();
+    if (!codeLoaded) {
+        appendConsole('[ERROR] No code loaded. Use Assembly view: write or pick an example, then Assemble + Load.');
+        switchView('dashboard');
+        return;
+    }
+    if (sim.halted) {
+        appendConsole('[INFO] Halted. Click Reset to restart.');
+        switchView('dashboard');
+        return;
+    }
     const result = sim.step();
     if (result && result.disasm) {
         appendConsole(`[${sim.stepCount}] ${toHex32(sim.pc - 4)}: ${result.disasm}`);
@@ -51,6 +63,16 @@ function doStep() {
 
 function doRun() {
     if (runInterval) return;
+    if (!codeLoaded) {
+        appendConsole('[ERROR] No code loaded. Use Assembly view: write or pick an example, then Assemble + Load.');
+        switchView('dashboard');
+        return;
+    }
+    if (sim.halted) {
+        appendConsole('[INFO] Halted. Click Reset to restart.');
+        switchView('dashboard');
+        return;
+    }
     runInterval = setInterval(() => {
         for (let i = 0; i < 100; i++) {
             const result = sim.step();
@@ -237,8 +259,9 @@ function doLoad() {
     }
     sim.reset();
     sim.loadProgram(result.bytes);
+    codeLoaded = true;
     clearConsole();
-    appendConsole(`Loaded ${result.bytes.length} bytes`);
+    appendConsole(`Loaded ${result.bytes.length} bytes — Ready to Step or Run`);
     updateUI();
     switchView('dashboard');
 }

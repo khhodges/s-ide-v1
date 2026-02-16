@@ -3,7 +3,7 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'web'))
 
-from flask import Blueprint, send_from_directory, jsonify, Response
+from flask import Blueprint, send_from_directory, jsonify, Response, make_response
 
 from app import app
 
@@ -15,7 +15,9 @@ rv32_bp = Blueprint('rv32', __name__, url_prefix='/rv32')
 
 @rv32_bp.route('/')
 def rv32_index():
-    return send_from_directory(RV32_DIR, 'index.html')
+    resp = make_response(send_from_directory(RV32_DIR, 'index.html'))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
 
 @rv32_bp.route('/api/docs')
 def rv32_list_docs():
@@ -45,7 +47,10 @@ def rv32_get_doc(filename):
 
 @rv32_bp.route('/<path:path>')
 def rv32_static(path):
-    return send_from_directory(RV32_DIR, path)
+    resp = make_response(send_from_directory(RV32_DIR, path))
+    if path.endswith(('.js', '.css', '.html')):
+        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
 
 app.register_blueprint(rv32_bp)
 
