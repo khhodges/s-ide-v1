@@ -305,110 +305,62 @@ function formatLocation(value, isFar) {
 let coldRestart = true;
 
 // Namespace Table: Raw 3-word entries (W1: Location, W2: Limit, W3: Seals/MAC)
-// GT permissions are defined in Boot C-List, NOT here
+// GT permissions are defined in Boot C-List or Services C-List, NOT here
 // Offset = index into this table
-const namespaceObjects = [
-    // Offset 0: Namespace self-reference
-    { offset: 0, name: "Namespace", type: "System", 
+// Minimal boot namespace — grows at runtime via CALL(Thread.Mint(type, size, access))
+let namespaceObjects = [
+    { offset: 0, name: "Namespace", type: "System",
       word1_location: 0x0000, word2_limit: 0x10000, word3_seals: 0n,
-      tooltip: "Hardware-managed Namespace Table - root of all capability addressing." },
-    // Offset 1: Access.asm (Nucleus code)
-    { offset: 1, name: "Access", type: "Code", linkage: "Boot/Access.asm",
-      word1_location: 0x1000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "Nucleus kernel code - provides secure entry points for system calls." },
-    // Offset 2: Boot C-List
-    { offset: 2, name: "Boot", type: "C-List",
+      tooltip: "Hardware-managed Namespace Table — root of all capability addressing. The single wired GT." },
+    { offset: 1, name: "Kenneth", type: "Thread",
+      word1_location: 0x1000, word2_limit: 0x0800, word3_seals: 0n,
+      tooltip: "Primary user thread identity. CR8 points here. M elevated on CR by microcode only." },
+    { offset: 2, name: "Services", type: "C-List",
       word1_location: 0x2000, word2_limit: 0x0100, word3_seals: 0n,
-      tooltip: "Boot Capability List - initial C-List loaded during system bootstrap." },
-    // Offset 3: Kenneth thread
-    { offset: 3, name: "Kenneth", type: "Thread",
-      word1_location: 0x3000, word2_limit: 0x0800, word3_seals: 0n,
-      tooltip: "User thread identity for Kenneth." },
-    // Offset 4: Matthew thread
-    { offset: 4, name: "Matthew", type: "Thread",
-      word1_location: 0x3800, word2_limit: 0x0800, word3_seals: 0n,
-      tooltip: "User thread identity for Matthew." },
-    // Offset 5: Daniel thread
-    { offset: 5, name: "Daniel", type: "Thread",
-      word1_location: 0x4000, word2_limit: 0x0800, word3_seals: 0n,
-      tooltip: "User thread identity for Daniel." },
-    // Offset 6: SlideRule abstraction
-    { offset: 6, name: "SlideRule", type: "Abstraction",
+      tooltip: "Services C-List — stable in CR5. Contains self[E] → Namespace[E] → Mint, GC, Lookup." },
+    { offset: 3, name: "Boot", type: "C-List",
+      word1_location: 0x3000, word2_limit: 0x0100, word3_seals: 0n,
+      tooltip: "Root abstraction C-List — loaded into CR6. Symbolic method names for available abstractions." },
+    { offset: 4, name: "Access", type: "Code", linkage: "Boot/Access.asm",
+      word1_location: 0x4000, word2_limit: 0x1000, word3_seals: 0n,
+      tooltip: "Boot nucleus code — loaded into CR7. Resolves symbolic names from CR6 to executable code." },
+    { offset: 5, name: "SlideRule", type: "Abstraction",
       word1_location: 0x5000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "SlideRule [FLOAT] - IEEE 754 floating-point math. Use CALL to invoke: ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW. Requires E permission." },
-    // Offset 7: Abacus abstraction
-    { offset: 7, name: "Abacus", type: "Abstraction",
+      tooltip: "SlideRule [FLOAT] — IEEE 754 floating-point math. LAMBDA dispatch style." },
+    { offset: 6, name: "Abacus", type: "Abstraction",
       word1_location: 0x6000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "Abacus [INTEGER] - 64-bit integer arithmetic. Use CALL to invoke: ADD, SUB, MUL, DIV, MOD, ABS, NEG, INC, DEC. Requires E permission." },
-    // Offset 8: Circle abstraction
-    { offset: 8, name: "Circle", type: "Abstraction",
-      word1_location: 0x7000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "Circle [GEOMETRY] - Circle calculations using SlideRule floats. PI, TWO_PI constants, CIRCUMFERENCE, AREA, DIAMETER functions." },
-    // Offset 9: CapabilityManager abstraction
-    { offset: 9, name: "CapabilityManager", type: "Abstraction",
-      word1_location: 0x8000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "CapabilityManager [CAPABILITY] - Creates new Golden Tokens. API: DR0=type (0=Data, 1=C-List), DR1=size. Returns CR0 with [RWXB] or [LSEB]." },
-    // Offset 10: DateTime abstraction
-    { offset: 10, name: "DateTime", type: "Abstraction",
-      word1_location: 0x9000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "DateTime [TIME] - ISO 8601 date/time. API: DR0=mode (0=ISO timestamp, 1=Date, 2=Time, 3=Unix epoch, 4=Components). Returns DR1-DR6 for components." },
-    // Offset 11: Lambda abstraction
-    { offset: 11, name: "Lambda", type: "Abstraction",
-      word1_location: 0xA000, word2_limit: 0x2000, word3_seals: 0n,
-      tooltip: "Lambda [FUNCTIONAL] - Church's lambda calculus primitives. Y-Combinator, Church numerals (SUCC, PRED, ADD, MUL), Pairs (FST, SND), Booleans (TRUE, FALSE, IF)." },
-    // Offset 12: Mint abstraction
-    { offset: 12, name: "Mint", type: "Abstraction",
-      word1_location: 0xC000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "Mint [CAPABILITY FORGE] - Creates domain-pure Golden Tokens (Turing [RWX] or Church [LSE], never both). GT_MINT (create), GT_RESTRICT (derive subset), GT_REVOKE (bump version). Foundation for all capability creation." }
+      tooltip: "Abacus [INTEGER] — 64-bit integer arithmetic. LAMBDA dispatch style." }
 ];
 
-// Boot C-List at Namespace offset 2
-// This is the AUTHORITATIVE source for all GT definitions (offset, permissions, metadata)
-// Each entry is a GT pointing to a namespace offset with specific access rights
+// Services C-List at Namespace offset 2
+// Stable in CR5 — set at boot, never changes on CALL/RETURN
+// Contains self[E] (Thread abstraction), which gives access to Namespace methods
+const servicesCList = {
+    name: "Services",
+    description: "Thread's available services — stable in CR5",
+    nsOffset: 2,
+    entries: [
+        { index: 0, name: "self", nsOffset: 1, perms: ["E"], type: "Thread",
+          desc: "Thread's own abstraction — gateway to Namespace.Mint, GC, Lookup" },
+        { index: 1, name: "Namespace", nsOffset: 0, perms: ["E"], type: "System",
+          desc: "Namespace abstraction — contains Mint, GC, Lookup methods (accessed via self)" }
+    ]
+};
+
+// Boot C-List at Namespace offset 3
+// Root abstraction C-List — loaded into CR6. Contains symbolic method names.
+// Dynamic — switches on every CALL/RETURN.
 const bootCList = {
     name: "Boot",
-    description: "Root abstraction C-List of the CTMM system",
-    nsOffset: 2,  // Boot C-List is at Namespace offset 2
+    description: "Root abstraction C-List — symbolic entries for available abstractions",
+    nsOffset: 3,
     entries: [
-        // Index 0: Access.asm (Nucleus code) - GT pointing to NS offset 1
-        // X = data permission to load code into CR7 (Nucleus register)
-        { index: 0, name: "Access", nsOffset: 1, perms: ["X"], type: "Code", 
-          desc: "Nucleus entry code", size: 0x1000 },
-        // Index 1: Kenneth thread - GT pointing to NS offset 3
-        { index: 1, name: "Kenneth", nsOffset: 3, perms: [], type: "Thread", 
-          desc: "Primary user identity", size: 0x0800 },
-        // Index 2: Matthew thread - GT pointing to NS offset 4
-        { index: 2, name: "Matthew", nsOffset: 4, perms: [], type: "Thread", 
-          desc: "Secondary user identity", size: 0x0800 },
-        // Index 3: Daniel thread - GT pointing to NS offset 5
-        { index: 3, name: "Daniel", nsOffset: 5, perms: [], type: "Thread", 
-          desc: "Tertiary user identity", size: 0x0800 },
-        // Index 4: SlideRule abstraction - GT pointing to NS offset 6
-        // E = Enter (external interface)
-        { index: 4, name: "SlideRule", nsOffset: 6, perms: ["E"], type: "Abstraction", 
-          desc: "IEEE 754 float operations", size: 0x1000 },
-        // Index 5: Abacus abstraction - GT pointing to NS offset 7
-        { index: 5, name: "Abacus", nsOffset: 7, perms: ["E"], type: "Abstraction", 
-          desc: "64-bit integer operations", size: 0x1000 },
-        // Index 6: Circle abstraction - GT pointing to NS offset 8
-        { index: 6, name: "Circle", nsOffset: 8, perms: ["E"], type: "Abstraction", 
-          desc: "Geometric calculations", size: 0x1000 },
-        // Index 7: CapabilityManager abstraction - GT pointing to NS offset 9
-        // E = Enter only (minimal privilege for calling)
-        { index: 7, name: "CapabilityManager", nsOffset: 9, perms: ["E"], type: "Abstraction", 
-          desc: "Creates new Golden Tokens", size: 0x1000 },
-        // Index 8: DateTime abstraction - GT pointing to NS offset 10
-        // E = Enter only
-        { index: 8, name: "DateTime", nsOffset: 10, perms: ["E"], type: "Abstraction", 
-          desc: "ISO 8601 date/time functions", size: 0x1000 },
-        // Index 9: Lambda abstraction - GT pointing to NS offset 11
-        // E = Enter only (pure functions, no state mutation)
-        { index: 9, name: "Lambda", nsOffset: 11, perms: ["E"], type: "Abstraction", 
-          desc: "Lambda calculus primitives", size: 0x2000 },
-        // Index 10: Mint abstraction - GT pointing to NS offset 12
-        // E = Enter only (capability forge)
-        { index: 10, name: "Mint", nsOffset: 12, perms: ["E"], type: "Abstraction", 
-          desc: "Capability forge - arbitrary GT creation", size: 0x1000 }
+        { index: 0, name: "Access", nsOffset: 4, perms: ["X"], type: "Code",
+          desc: "Boot nucleus code", size: 0x1000 },
+        { index: 1, name: "SlideRule", nsOffset: 5, perms: ["E"], type: "Abstraction",
+          desc: "IEEE 754 float operations — LAMBDA dispatch", size: 0x1000 },
+        { index: 2, name: "Abacus", nsOffset: 6, perms: ["E"], type: "Abstraction",
+          desc: "64-bit integer operations — LAMBDA dispatch", size: 0x1000 }
     ]
 };
 
@@ -454,7 +406,8 @@ function formatPerms(perms) {
 
 // Helper to get GT from Boot C-List by name
 function getBootGT(name) {
-    return bootCList.entries.find(e => e.name === name);
+    return bootCList.entries.find(e => e.name === name) ||
+           servicesCList.entries.find(e => e.name === name);
 }
 
 // Helper to get namespace entry by offset
@@ -489,7 +442,7 @@ function buildGTFromCList(entry) {
 // Legacy format for compatibility
 const bootNamespace = {
     name: "Boot",
-    location: 0x2000,
+    location: 0x3000,
     description: "Root abstraction of the CTMM system",
     clist: bootCList.entries.map(e => ({ name: e.name, type: e.type, perms: e.perms, ref: `ns.offset.${e.nsOffset}` }))
 };
@@ -497,27 +450,10 @@ const bootNamespace = {
 const threadCLists = {
     Kenneth: {
         name: "Kenneth",
-        description: "User thread with access to math abstractions",
+        description: "Primary thread — one thread at boot, others minted at runtime",
         clist: [
             { name: "SlideRule", type: "Abstraction", perms: ["E"] },
             { name: "Abacus", type: "Abstraction", perms: ["E"] },
-            { name: "Circle", type: "Abstraction", perms: ["E"] },
-            { name: "LocalData", type: "Data", perms: ["R", "W"] }
-        ]
-    },
-    Matthew: {
-        name: "Matthew",
-        description: "User thread with limited access",
-        clist: [
-            { name: "Abacus", type: "Abstraction", perms: ["E"] },
-            { name: "LocalData", type: "Data", perms: ["R", "W"] }
-        ]
-    },
-    Daniel: {
-        name: "Daniel",
-        description: "User thread with SlideRule access",
-        clist: [
-            { name: "SlideRule", type: "Abstraction", perms: ["E"] },
             { name: "LocalData", type: "Data", perms: ["R", "W"] }
         ]
     }
@@ -573,16 +509,6 @@ const abstractionCLists = {
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0x7400, size: 512 }
         ]
     },
-    CapabilityManager: {
-        name: "CapabilityManager",
-        mathType: "CAPABILITY",
-        description: "Creates new Golden Tokens. API: DR0=type (0=Data, 1=C-List), DR1=size. Returns CR0 with full type permissions.",
-        clist: [
-            { name: "GT_CREATE", type: "Function", perms: ["R", "X"], desc: "Create new GT: DR0=type, DR1=size → CR0", base: 0x8100, size: 512 },
-            { name: "LocalCode", type: "Code", perms: ["R", "X"], base: 0x8000, size: 256 },
-            { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0x8600, size: 512 }
-        ]
-    },
     DateTime: {
         name: "DateTime",
         mathType: "TIME",
@@ -620,7 +546,8 @@ const abstractionCLists = {
     Mint: {
         name: "Mint",
         mathType: "FORGE",
-        description: "Capability forge — mints domain-pure Golden Tokens (Turing [RWX] or Church [LSE], never both). GT_MINT creates new GTs, GT_RESTRICT derives subset permissions, GT_REVOKE bumps version to invalidate.",
+        description: "Namespace method (not standalone abstraction) — accessed via CALL(Thread.Mint(type, size, access)). Mints domain-pure Golden Tokens (Turing [RWX] or Church [LSE], never both).",
+        isNamespaceMethod: true,
         clist: [
             { name: "GT_MINT", type: "Function", perms: ["R", "X"], desc: "Mint new GT: DR0=domain-pure perm mask (Turing [RWX] or Church [LSE], never both), DR1=type (0=Data,1=Code,2=C-List,3=Thread,4=Abstraction), DR2=size → CR0", base: 0xC100, size: 512 },
             { name: "GT_RESTRICT", type: "Function", perms: ["R", "X"], desc: "Derive restricted GT: CR0=source GT, DR0=new perm mask (must be subset) → CR0=restricted GT", base: 0xC300, size: 512 },
@@ -641,38 +568,33 @@ let bootState = {
 
 // ==================== BOOT SEQUENCE ====================
 // Step 1: CLEAR_ALL, set cold_restart flag
-// Step 2: LOAD_NS → CR15 (Namespace GT at offset 0)
-// Step 3a: CHANGE 3 → CR8 (Kenneth thread FIRST)
-// Step 3b: CALL HWGT → loads CR6 from NS[2], CR7 from NS[1], NIA=0
-// Step 4: Clear cold_restart flag, execution begins
+// Step 2: LOAD_NS → CR15 (Namespace GT at offset 0 — the one wired GT)
+// Step 3: SWITCH_THREAD → CR8 (Kenneth at NS offset 1), CR5 ← Services C-List (NS offset 2)
+// Step 4: CALL_BOOT → CR6 ← Boot C-List (NS offset 3), CR7 ← Access code (NS offset 4), NIA=0
 
 const bootSteps = [
     {
         name: "Fault Restart",
         description: "CLEAR_ALL: Saving state, clearing registers, setting cold_restart...",
         action: () => {
-            // Save thread state before reset (skip on cold restart)
             if (!coldRestart) {
-                try { saveThreadState(); } catch(e) { /* BigInt or other serialization error - safe to skip */ }
+                try { saveThreadState(); } catch(e) {}
             }
             simulator.reset();
-            coldRestart = true;  // Set cold restart flag
-            // Note: Editor content preserved - user code is independent of boot state
+            coldRestart = true;
         }
     },
     {
         name: "Load Namespace",
-        description: "LOAD_NS CR15: Loading Namespace capability (offset 0, no GT perms — M elevated on CR by microcode)...",
+        description: "LOAD_NS CR15: Loading the single wired GT — Namespace (offset 0, no GT perms, M elevated on CR by microcode)...",
         action: () => {
-            // CR15 = GT pointing to Namespace offset 0 (self-reference)
-            // GT has NO permissions — M is elevated on CR15 by microcode only
             const nsEntry = getNSEntry(0);
             simulator.cr15 = {
                 name: "Namespace",
                 nsOffset: 0,
                 type: "System",
                 location: { type: "Local", offset: nsEntry.word1_location },
-                perms: [],  // No GT perms — M elevated on CR by microcode only
+                perms: [],
                 locked: true,
                 goldenKey: generateGoldenKey(),
                 word1: nsEntry.word1_location,
@@ -683,19 +605,16 @@ const bootSteps = [
         }
     },
     {
-        name: "Switch Thread",
-        description: "CHANGE 3: Switching to Kenneth thread (NS offset 3)...",
+        name: "Switch Thread + Load Services",
+        description: "CHANGE 1: CR8 ← Kenneth (NS offset 1), CR5 ← Services C-List [E] (NS offset 2, stable)...",
         action: () => {
-            // CHANGE instruction switches CR8 directly to Thread at NS offset 3
-            // This happens FIRST before loading C-List
-            const kennethEntry = getBootGT("Kenneth");
-            const kennethNS = getNSEntry(kennethEntry.nsOffset);
+            const kennethNS = getNSEntry(1);
             simulator.cr8 = {
                 name: "Kenneth",
-                nsOffset: kennethEntry.nsOffset,
+                nsOffset: 1,
                 type: "Thread",
                 location: { type: "Local", offset: kennethNS.word1_location },
-                perms: [],  // No GT perms — M elevated on CR by microcode only
+                perms: [],
                 locked: false,
                 goldenKey: generateGoldenKey(),
                 word1: kennethNS.word1_location,
@@ -703,23 +622,39 @@ const bootSteps = [
                 word3: kennethNS.word3_seals,
                 clist: threadCLists.Kenneth.clist
             };
+
+            const servicesNS = getNSEntry(2);
+            simulator.contextRegs[5] = {
+                name: "Services",
+                nsOffset: 2,
+                type: "C-List",
+                location: { type: "Local", offset: servicesNS.word1_location },
+                perms: ["E"],
+                locked: false,
+                goldenKey: generateGoldenKey(),
+                word1: servicesNS.word1_location,
+                word2: servicesNS.word2_limit,
+                word3: servicesNS.word3_seals,
+                clistCount: servicesCList.entries.length,
+                clist: servicesCList.entries,
+                isServices: true
+            };
+
             updateNamespaceDisplay();
         }
     },
     {
         name: "Call Boot",
-        description: "CALL HWGT: Loading CR6←NS[2], CR7←NS[1], NIA=0...",
+        description: "CALL HWGT: CR6 ← Boot C-List [E] (NS offset 3), CR7 ← Access code [X] (NS offset 4), NIA=0...",
         action: () => {
-            // CALL HWGT triggers hardwired load sequence:
-            // 1. LOAD CR6 from NS offset 2 (Boot C-List)
-            const bootNS = getNSEntry(2);
+            const bootNS = getNSEntry(3);
             const clistCount = bootCList.entries.length;
             simulator.contextRegs[6] = {
                 name: "Boot",
-                nsOffset: 2,
+                nsOffset: 3,
                 type: "C-List",
                 location: { type: "Local", offset: bootNS.word1_location },
-                perms: ["E"],  // E only — owner can CALL; microcode elevates M on CR for LOAD operations
+                perms: ["E"],
                 locked: false,
                 goldenKey: generateGoldenKey(),
                 word1: bootNS.word1_location,
@@ -728,16 +663,14 @@ const bootSteps = [
                 clistCount: clistCount,
                 clist: bootCList.entries
             };
-            
-            // 2. LOAD CR7 from NS offset 1 (Access.asm/Nucleus)
-            const accessEntry = getBootGT("Access");
-            const accessNS = getNSEntry(accessEntry.nsOffset);
+
+            const accessNS = getNSEntry(4);
             simulator.contextRegs[7] = {
-                name: accessEntry.name,
-                nsOffset: accessEntry.nsOffset,
+                name: "Access",
+                nsOffset: 4,
                 type: "Code",
                 location: { type: "Local", offset: accessNS.word1_location },
-                perms: accessEntry.perms,  // X (execute) — Nucleus holds CLOOMC code; R added if constants present
+                perms: ["X"],
                 locked: true,
                 goldenKey: generateGoldenKey(),
                 word1: accessNS.word1_location,
@@ -747,17 +680,12 @@ const bootSteps = [
                 base: accessNS.word1_location,
                 size: accessNS.word2_limit
             };
-            
-            // 3. NIA = 0 (thread runs from first instruction)
+
             simulator.nia = 0;
-            
-            // 4. Clear cold restart flag - boot complete
             coldRestart = false;
-            
+
             updateSystemState();
-            
-            // Update editor linkage display only if editor is empty
-            // Don't overwrite user's code
+
             const editor = document.getElementById('codeEditor');
             if (editor && editor.value.trim() === '') {
                 editorState.currentLinkage = 'Boot/Access.asm';
@@ -1024,98 +952,134 @@ function renderDynamicChildren(parentName) {
 
 function buildHierarchyTree() {
     let html = '<div class="hier-item" data-name="Boot" data-type="Root">';
-    html += '<div class="hier-node hier-root" data-tooltip="Root namespace abstraction. Contains all threads and protected abstractions.">';
+    html += '<div class="hier-node hier-root" data-tooltip="Root abstraction. Minimal boot namespace — grows via CALL(Thread.Mint).">';
     html += '<div class="hier-label">Boot</div>';
     html += '</div>';
     html += '<div class="hier-children">';
-    
-    html += '<div class="hier-group">';
-    html += '<div class="hier-group-label" data-tooltip="User identities that can execute code with their own C-List permissions.">Threads</div>';
-    ['Kenneth', 'Matthew', 'Daniel'].forEach(name => {
-        const isActive = simulator.cr8 && simulator.cr8.name === name;
-        const activeText = isActive ? ' (ACTIVE - currently executing)' : '';
-        html += `<div class="hier-item" data-name="${name}" data-type="Thread">`;
-        html += `<div class="hier-node hier-thread ${isActive ? 'hier-active' : ''}" data-tooltip="User identity with its own C-List of capabilities.${activeText}">`;
-        html += `<div class="hier-label">${name}</div>`;
-        html += '</div>';
-        if (threadCLists[name]) {
-            html += '<div class="hier-clist">';
-            threadCLists[name].clist.forEach(item => {
-                const permsStr = item.perms ? `[${item.perms.join('')}]` : '';
-                const typeDesc = item.type === 'Abstraction' ? 'Enter-only abstraction' : item.type;
-                html += `<div class="hier-item hier-gt" data-name="${item.name}" data-type="${item.type}" data-tooltip="GT ${permsStr} | ${typeDesc}: ${item.name}">${item.name}</div>`;
-            });
+
+    const bootThreads = namespaceObjects.filter(o => o.type === 'Thread' && !o.dynamic);
+    if (bootThreads.length > 0) {
+        html += '<div class="hier-group">';
+        html += '<div class="hier-group-label" data-tooltip="User thread identities. One thread at boot — others minted at runtime.">Threads</div>';
+        bootThreads.forEach(tObj => {
+            const name = tObj.name;
+            const isActive = simulator.cr8 && simulator.cr8.name === name;
+            const activeText = isActive ? ' (ACTIVE — currently executing)' : '';
+            html += `<div class="hier-item" data-name="${name}" data-type="Thread">`;
+            html += `<div class="hier-node hier-thread ${isActive ? 'hier-active' : ''}" data-tooltip="Thread identity. CR8 points here. M elevated on CR by microcode only.${activeText}">`;
+            html += `<div class="hier-label">${name}</div>`;
             html += '</div>';
-        }
-        html += renderDynamicChildren(name);
-        html += '</div>';
-    });
-    html += '</div>';
-    
-    html += '<div class="hier-group">';
-    html += '<div class="hier-group-label" data-tooltip="Protected objects containing function Golden Tokens.">Abstractions</div>';
-    const abstractionDescs = {
-        'SlideRule': '[FLOAT] IEEE 754 floating-point. CALL to use: ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW',
-        'Abacus': '[INTEGER] 64-bit integer arithmetic. CALL to use: ADD, SUB, MUL, DIV, MOD, ABS, NEG, INC, DEC',
-        'Circle': '[GEOMETRY] Circle calculations (uses floats). PI, TWO_PI, CIRCUMFERENCE, AREA, DIAMETER',
-        'CapabilityManager': '[CAPABILITY] Creates new Golden Tokens. DR0=type (0=Data, 1=C-List), DR1=size → CR0',
-        'DateTime': '[TIME] ISO 8601 date/time. DR0=mode (0=ISO, 1=Date, 2=Time, 3=Epoch, 4=Components) → DR1-DR6',
-        'Lambda': '[FUNCTIONAL] Church lambda calculus primitives. Y-Combinator, Church numerals, Pairs, Booleans',
-        'Mint': '[FORGE] Capability forge. Domain-pure only: Turing [RWX] or Church [LSE], never both. GT_MINT: DR0=perms DR1=type DR2=size → CR0. GT_RESTRICT: subset perms. GT_REVOKE: bump version. GT_INSPECT: read metadata'
-    };
-    const mathTypeBadges = {
-        'SlideRule': 'FLOAT',
-        'Abacus': 'INTEGER',
-        'Circle': 'GEOMETRY',
-        'CapabilityManager': 'CAPABILITY',
-        'DateTime': 'TIME',
-        'Lambda': 'FUNCTIONAL',
-        'Mint': 'FORGE'
-    };
-    ['SlideRule', 'Abacus', 'Circle', 'CapabilityManager', 'DateTime', 'Lambda', 'Mint'].forEach(name => {
-        const gtEntry = getBootGT(name);
-        const absPerms = gtEntry ? `[${gtEntry.perms.join('')}]` : '[E]';
-        const mathBadge = mathTypeBadges[name];
-        html += `<div class="hier-item" data-name="${name}" data-type="Abstraction">`;
-        html += `<div class="hier-node hier-abstraction" data-tooltip="Abstraction ${absPerms} (Enter via CALL) | ${abstractionDescs[name]}">`;
-        html += `<div class="hier-label"><span class="math-type-badge math-${mathBadge.toLowerCase()}">${mathBadge}</span> ${name}</div>`;
-        html += '</div>';
-        if (abstractionCLists[name]) {
-            html += '<div class="hier-clist">';
-            abstractionCLists[name].clist.forEach(item => {
-                if (item.type === 'Function') {
-                    const permsStr = item.perms ? `[${item.perms.join('')}]` : '[RX]';
-                    const baseStr = item.base !== undefined ? `0x${item.base.toString(16).toUpperCase()}` : '0x0000';
-                    const sizeStr = item.size || 0;
-                    const mathTypeLabel = item.mathType === 'float' ? 'Float' : item.mathType === 'int64' ? 'Int64' : '';
-                    const mathDesc = item.desc || (mathTypeLabel ? `${mathTypeLabel} operation` : 'Function');
-                    html += `<div class="hier-item hier-gt hier-func" data-name="${item.name}" data-type="Function" data-parent="${name}" data-base="${item.base || 0}" data-size="${item.size || 0}" data-tooltip="${mathDesc} | ${permsStr} | Base: ${baseStr} | Size: ${sizeStr}B | Click to view code">${item.name}</div>`;
-                } else if (item.type === 'Constant') {
-                    const baseStr = item.base !== undefined ? `0x${item.base.toString(16).toUpperCase()}` : '0x0000';
-                    html += `<div class="hier-item hier-gt hier-const" data-name="${item.name}" data-type="Constant" data-parent="${name}" data-tooltip="${item.desc} | [R] | Base: ${baseStr}" data-value="${item.value}">${item.name}</div>`;
-                }
-            });
+            if (threadCLists[name]) {
+                html += '<div class="hier-clist">';
+                threadCLists[name].clist.forEach(item => {
+                    const permsStr = item.perms ? `[${item.perms.join('')}]` : '';
+                    const typeDesc = item.type === 'Abstraction' ? 'Enter-only abstraction' : item.type;
+                    html += `<div class="hier-item hier-gt" data-name="${item.name}" data-type="${item.type}" data-tooltip="GT ${permsStr} | ${typeDesc}: ${item.name}">${item.name}</div>`;
+                });
+                html += '</div>';
+            }
+            html += renderDynamicChildren(name);
             html += '</div>';
-        }
-        html += renderDynamicChildren(name);
+        });
         html += '</div>';
+    }
+
+    html += '<div class="hier-group">';
+    html += '<div class="hier-group-label" data-tooltip="Services C-List (CR5, stable) — Thread\'s gateway to Namespace.Mint, GC, Lookup.">Services</div>';
+    servicesCList.entries.forEach(entry => {
+        const permsStr = `[${entry.perms.join('')}]`;
+        html += `<div class="hier-item hier-gt" data-name="${entry.name}" data-type="${entry.type}" data-tooltip="${entry.desc} ${permsStr}">${entry.name}</div>`;
     });
-    
-    html += '<div class="hier-group-label" data-tooltip="User-created objects in the Boot namespace.">Custom Objects</div>';
-    namespaceObjects.filter(obj => obj.dynamic && obj.parent === 'Boot').forEach(obj => {
-        const permsStr = obj.perms ? `[${obj.perms.join('')}]` : '';
-        const baseStr = obj.location !== undefined ? `Base: 0x${obj.location.toString(16).toUpperCase()}` : '';
-        const sizeStr = obj.size ? `Size: ${obj.size}` : '';
-        const details = [permsStr, baseStr, sizeStr].filter(s => s).join(' | ');
-        html += `<div class="hier-item" data-name="${obj.name}" data-type="${obj.type}">`;
-        html += `<div class="hier-node hier-dynamic" data-tooltip="Custom ${obj.type} ${details}">`;
-        html += `<div class="hier-label">${obj.name} <span class="hier-custom-tag">(custom)</span></div>`;
+
+    if (abstractionCLists.Mint) {
+        html += '<div class="hier-item" data-name="Mint" data-type="Namespace Method">';
+        html += '<div class="hier-node hier-abstraction" data-tooltip="Namespace method — accessed via CALL(Thread.Mint). Not a standalone abstraction.">';
+        html += '<div class="hier-label"><span class="math-type-badge math-forge">FORGE</span> Mint (Namespace method)</div>';
         html += '</div>';
-        html += renderDynamicChildren(obj.name);
-        html += '</div>';
-    });
+        html += '<div class="hier-clist">';
+        abstractionCLists.Mint.clist.forEach(item => {
+            if (item.type === 'Function') {
+                const permsStr = item.perms ? `[${item.perms.join('')}]` : '[RX]';
+                html += `<div class="hier-item hier-gt hier-func" data-name="${item.name}" data-type="Function" data-parent="Mint" data-base="${item.base || 0}" data-size="${item.size || 0}" data-tooltip="${item.desc} | ${permsStr} | Click to view code">${item.name}</div>`;
+            }
+        });
+        html += '</div></div>';
+    }
     html += '</div>';
-    
+
+    const bootAbstractions = namespaceObjects.filter(o => o.type === 'Abstraction' && !o.dynamic);
+    if (bootAbstractions.length > 0) {
+        html += '<div class="hier-group">';
+        html += '<div class="hier-group-label" data-tooltip="Boot-time abstractions. Others minted at runtime via CALL(Thread.Mint).">Abstractions</div>';
+        const mathTypeBadges = {
+            'SlideRule': 'FLOAT',
+            'Abacus': 'INTEGER',
+            'Circle': 'GEOMETRY',
+            'DateTime': 'TIME',
+            'Lambda': 'FUNCTIONAL'
+        };
+        bootAbstractions.forEach(aObj => {
+            const name = aObj.name;
+            const gtEntry = getBootGT(name);
+            const absPerms = gtEntry ? `[${gtEntry.perms.join('')}]` : '[E]';
+            const mathBadge = mathTypeBadges[name] || 'ABS';
+            html += `<div class="hier-item" data-name="${name}" data-type="Abstraction">`;
+            html += `<div class="hier-node hier-abstraction" data-tooltip="Abstraction ${absPerms} (Enter via CALL) | ${aObj.tooltip || name}">`;
+            html += `<div class="hier-label"><span class="math-type-badge math-${mathBadge.toLowerCase()}">${mathBadge}</span> ${name}</div>`;
+            html += '</div>';
+            if (abstractionCLists[name]) {
+                html += '<div class="hier-clist">';
+                abstractionCLists[name].clist.forEach(item => {
+                    if (item.type === 'Function') {
+                        const permsStr = item.perms ? `[${item.perms.join('')}]` : '[RX]';
+                        const baseStr = item.base !== undefined ? `0x${item.base.toString(16).toUpperCase()}` : '0x0000';
+                        const sizeStr = item.size || 0;
+                        const mathTypeLabel = item.mathType === 'float' ? 'Float' : item.mathType === 'int64' ? 'Int64' : '';
+                        const mathDesc = item.desc || (mathTypeLabel ? `${mathTypeLabel} operation` : 'Function');
+                        html += `<div class="hier-item hier-gt hier-func" data-name="${item.name}" data-type="Function" data-parent="${name}" data-base="${item.base || 0}" data-size="${item.size || 0}" data-tooltip="${mathDesc} | ${permsStr} | Base: ${baseStr} | Size: ${sizeStr}B | Click to view code">${item.name}</div>`;
+                    } else if (item.type === 'Constant') {
+                        const baseStr = item.base !== undefined ? `0x${item.base.toString(16).toUpperCase()}` : '0x0000';
+                        html += `<div class="hier-item hier-gt hier-const" data-name="${item.name}" data-type="Constant" data-parent="${name}" data-tooltip="${item.desc} | [R] | Base: ${baseStr}" data-value="${item.value}">${item.name}</div>`;
+                    }
+                });
+                html += '</div>';
+            }
+            html += renderDynamicChildren(name);
+            html += '</div>';
+        });
+
+        const runtimeAbstractions = ['Circle', 'DateTime', 'Lambda'].filter(n => abstractionCLists[n] && !namespaceObjects.find(o => o.name === n && !o.dynamic));
+        if (runtimeAbstractions.length > 0) {
+            html += '<div class="hier-group-label" data-tooltip="Not in boot namespace — available via CALL(Thread.Mint) at runtime.">Mintable (runtime)</div>';
+            runtimeAbstractions.forEach(name => {
+                const mathBadge = mathTypeBadges[name] || 'ABS';
+                html += `<div class="hier-item" data-name="${name}" data-type="Abstraction" style="opacity:0.6">`;
+                html += `<div class="hier-node hier-abstraction" data-tooltip="Mintable at runtime via CALL(Thread.Mint). Not in boot namespace.">`;
+                html += `<div class="hier-label"><span class="math-type-badge math-${mathBadge.toLowerCase()}">${mathBadge}</span> ${name} <span class="hier-custom-tag">(mintable)</span></div>`;
+                html += '</div></div>';
+            });
+        }
+
+        html += '</div>';
+    }
+
+    const dynamicRoots = namespaceObjects.filter(obj => obj.dynamic && obj.parent === 'Boot');
+    if (dynamicRoots.length > 0) {
+        html += '<div class="hier-group-label" data-tooltip="User-created objects in the Boot namespace.">Custom Objects</div>';
+        dynamicRoots.forEach(obj => {
+            const permsStr = obj.perms ? `[${obj.perms.join('')}]` : '';
+            const baseStr = obj.location !== undefined ? `Base: 0x${obj.location.toString(16).toUpperCase()}` : '';
+            const sizeStr = obj.size ? `Size: ${obj.size}` : '';
+            const details = [permsStr, baseStr, sizeStr].filter(s => s).join(' | ');
+            html += `<div class="hier-item" data-name="${obj.name}" data-type="${obj.type}">`;
+            html += `<div class="hier-node hier-dynamic" data-tooltip="Custom ${obj.type} ${details}">`;
+            html += `<div class="hier-label">${obj.name} <span class="hier-custom-tag">(custom)</span></div>`;
+            html += '</div>';
+            html += renderDynamicChildren(obj.name);
+            html += '</div>';
+        });
+    }
+
     html += '</div></div>';
     return html;
 }
@@ -1134,15 +1098,16 @@ const crTooltips = {
     2: 'General-purpose capability register. Holds Golden Tokens for accessing protected resources.',
     3: 'General-purpose capability register. Holds Golden Tokens for accessing protected resources.',
     4: 'General-purpose capability register. Holds Golden Tokens for accessing protected resources.',
-    5: 'General-purpose capability register. Holds Golden Tokens for accessing protected resources.',
-    6: 'C-LIST LCA: Lowest Common Ancestor pointer. References the capability list for current context.',
-    7: 'NUCLEUS: Hardware protection ring. Contains the trusted kernel capability.'
+    5: 'SERVICES C-LIST [E]: Thread services gateway. Stable — set at boot, never changes on CALL/RETURN. Contains self[E] → Namespace[E] → Mint, GC, Lookup.',
+    6: 'ACTIVE C-LIST [E]: Current abstraction\'s symbolic method names. Dynamic — switches on every CALL/RETURN.',
+    7: 'ACTIVE NUCLEUS [X]: Current method code. Dynamic — switches on every CALL/RETURN. Resolves CR6 symbols to executable code.'
 };
 
 function getCListForCR(crCap) {
     if (!crCap || crCap.name === 'NULL') return null;
     if (crCap.clist && crCap.clist.length > 0) return crCap.clist;
     const name = crCap.name.replace(/^CLIST_/, '');
+    if (name === 'Services') return servicesCList.entries;
     if (abstractionCLists[name]) return abstractionCLists[name].clist;
     if (threadCLists[name]) return threadCLists[name].clist;
     return null;
@@ -1582,13 +1547,12 @@ function getObjectTooltip(name, type) {
     const tooltips = {
         'Namespace': 'Hardware-managed Namespace Table - root of all capability addressing',
         'Boot': 'Boot Capability List - initial C-List loaded during system bootstrap',
-        'Kenneth': 'User thread identity for Kenneth - M permission for hardware-level access',
-        'Matthew': 'User thread identity for Matthew - M permission for hardware-level access',
-        'Daniel': 'User thread identity for Daniel - M permission for hardware-level access',
-        'SlideRule': 'IEEE 754 floating-point math abstraction (ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW)',
-        'Abacus': '64-bit integer arithmetic abstraction (ADD, SUB, MUL, DIV, MOD, NEG, ABS, CMP)',
-        'Circle': 'Geometric calculations abstraction (AREA, CIRCUMFERENCE, ARC_LENGTH, SECTOR_AREA)',
-        'Access': 'Nucleus kernel code - secure entry points for system calls',
+        'Kenneth': 'Primary thread identity — M elevated on CR by microcode only',
+        'Services': 'Services C-List — stable in CR5. Contains self[E] → Namespace → Mint, GC, Lookup',
+        'SlideRule': 'IEEE 754 floating-point math abstraction — LAMBDA dispatch (ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW)',
+        'Abacus': '64-bit integer arithmetic abstraction — LAMBDA dispatch (ADD, SUB, MUL, DIV, MOD, NEG, ABS, CMP)',
+        'Circle': 'Geometric calculations — mintable at runtime via CALL(Thread.Mint)',
+        'Access': 'Boot nucleus code — loaded into CR7. Resolves symbolic names from CR6 to executable code',
         'NULL': 'Null capability - no access rights, typically indicates uninitialized register'
     };
     return tooltips[name] || `${type || 'Object'}: ${name}`;
@@ -1608,37 +1572,47 @@ function getCapabilityHierarchy(cap) {
         return hierarchy;
     }
     
-    // Check if it's a Thread (default/system threads are directly under Namespace, not Boot)
-    const threadNames = ['Kenneth', 'Matthew', 'Daniel'];
-    if (cap.type === 'Thread' || threadNames.includes(cap.name)) {
+    // Check if it's a Thread
+    const nsThread = namespaceObjects.find(o => o.type === 'Thread' && o.name === cap.name);
+    if (cap.type === 'Thread' || nsThread) {
         hierarchy.push({ name: 'Namespace', type: 'Root', offset: 0 });
-        hierarchy.push({ name: cap.name, type: 'Thread', offset: cap.location?.offset || 0 });
+        hierarchy.push({ name: cap.name, type: 'Thread', offset: nsThread ? nsThread.offset : (cap.location?.offset || 0) });
         return hierarchy;
     }
-    
-    // Check if it's the Boot C-List
-    if (cap.name === 'Boot') {
+
+    // Check if it's a Services or Boot C-List
+    if (cap.name === 'Services' || cap.name === 'Boot') {
         hierarchy.push({ name: 'Namespace', type: 'Root', offset: 0 });
-        hierarchy.push({ name: 'Boot', type: 'C-List', offset: 1 });
+        const nsObj = namespaceObjects.find(o => o.name === cap.name);
+        hierarchy.push({ name: cap.name, type: 'C-List', offset: nsObj ? nsObj.offset : 0 });
         return hierarchy;
     }
-    
-    // Check if this capability is in the Boot C-List (excluding threads)
+
+    // Check if this capability is in the Boot C-List
     const bootCListEntry = bootCList.entries.find(e => e.name === cap.name);
-    if (bootCListEntry && bootCListEntry.type !== 'Thread') {
+    if (bootCListEntry) {
         hierarchy.push({ name: 'Namespace', type: 'Root', offset: 0 });
-        hierarchy.push({ name: 'Boot', type: 'C-List', offset: 1 });
+        hierarchy.push({ name: 'Boot', type: 'C-List', offset: bootCList.nsOffset });
         hierarchy.push({ name: cap.name, type: cap.type || bootCListEntry.type, offset: bootCListEntry.nsOffset });
         return hierarchy;
     }
-    
+
+    // Check Services C-List
+    const serviceEntry = servicesCList.entries.find(e => e.name === cap.name);
+    if (serviceEntry) {
+        hierarchy.push({ name: 'Namespace', type: 'Root', offset: 0 });
+        hierarchy.push({ name: 'Services', type: 'C-List', offset: servicesCList.nsOffset });
+        hierarchy.push({ name: cap.name, type: serviceEntry.type, offset: serviceEntry.nsOffset });
+        return hierarchy;
+    }
+
     // Check thread C-Lists
     for (const [threadName, threadData] of Object.entries(threadCLists)) {
         const threadEntry = threadData.clist.find(e => e.name === cap.name);
         if (threadEntry) {
             hierarchy.push({ name: 'Namespace', type: 'Root', offset: 0 });
-            hierarchy.push({ name: threadName, type: 'Thread', offset: threadName === 'Kenneth' ? 2 : 
-                            threadName === 'Matthew' ? 4 : threadName === 'Daniel' ? 5 : 0 });
+            const tNS = namespaceObjects.find(o => o.name === threadName);
+            hierarchy.push({ name: threadName, type: 'Thread', offset: tNS ? tNS.offset : 0 });
             hierarchy.push({ name: cap.name, type: threadEntry.type, offset: 0 });
             return hierarchy;
         }
@@ -2354,16 +2328,16 @@ function getCapabilityTypeLabel(cap) {
     const type = cap.type || '';
     const name = cap.name || '';
     
-    if (type === 'Thread' || ['Kenneth', 'Matthew', 'Daniel'].includes(name)) {
+    if (type === 'Thread' || namespaceObjects.some(o => o.type === 'Thread' && o.name === name)) {
         return 'Thread';
     }
     if (type === 'Code' || name === 'Access' || name.endsWith('.asm')) {
         return 'Code';
     }
-    if (type === 'Abstraction' || ['SlideRule', 'Abacus', 'Circle', 'CapabilityManager', 'DateTime', 'Lambda', 'Mint'].includes(name)) {
+    if (type === 'Abstraction' || abstractionCLists[name] !== undefined) {
         return 'Abstraction';
     }
-    if (type === 'C-List' || name === 'Boot') {
+    if (type === 'C-List' || name === 'Boot' || name === 'Services') {
         return 'C-List';
     }
     if (type === 'Data') {
@@ -2398,8 +2372,8 @@ function updateCapabilityExplorer() {
     if (cr6Cap && cr6Cap.clist && cr6Cap.clist.length > 0) {
         simulator.clist = cr6Cap.clist.map(entry => {
             const nsObj = namespaceObjects.find(o => o.offset === entry.nsOffset);
-            const isAbstraction = ['Abacus', 'SlideRule', 'Circle', 'CapabilityManager', 'DateTime', 'Lambda', 'Mint'].includes(entry.name) || 
-                                 (nsObj && nsObj.type === 'Abstraction');
+            const isAbstraction = (nsObj && nsObj.type === 'Abstraction') ||
+                                 (abstractionCLists[entry.name] !== undefined);
             return {
                 name: entry.name,
                 type: entry.type || (nsObj ? nsObj.type : 'Unknown'),
@@ -4412,7 +4386,7 @@ function updateChurchRegisters() {
     
     const crNames = {
         0: 'CR0', 1: 'CR1', 2: 'CR2', 3: 'CR3',
-        4: 'CR4', 5: 'CR5 (Nodal)', 6: 'CR6 (C-List)', 7: 'CR7 (Nucleus)',
+        4: 'CR4', 5: 'CR5 (Services)', 6: 'CR6 (Active C-List)', 7: 'CR7 (Nucleus)',
         8: 'CR8 (Thread)', 9: 'SPARE', 10: 'SPARE', 11: 'SPARE',
         12: 'SPARE', 13: 'SPARE', 14: 'SPARE', 15: 'CR15 (Namespace)'
     };

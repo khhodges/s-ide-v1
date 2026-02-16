@@ -867,7 +867,6 @@ class CTMMSimulator {
                 
                 this.callStack.push({
                     returnNIA: this.nia,
-                    cr5: this.contextRegs[5] ? { ...this.contextRegs[5] } : null,
                     cr6: this.contextRegs[6] ? { ...this.contextRegs[6] } : null,
                     cr7: this.contextRegs[7] ? { ...this.contextRegs[7] } : null,
                     boundGTs: []
@@ -889,7 +888,7 @@ class CTMMSimulator {
                 }
                 
                 let clearedCRs = [];
-                for (let i = 0; i <= 5; i++) {
+                for (let i = 0; i <= 4; i++) {
                     const preserve = (mask >> (i + 5)) & 1;
                     if (!preserve) {
                         this._clearCR(i);
@@ -926,17 +925,6 @@ class CTMMSimulator {
                     const frame = this.callStack.pop();
                     this.stackDepth--;
                     
-                    if (frame.cr5) {
-                        const cr5Result = this.mLoad(frame.cr5, null, undefined, true);
-                        if (cr5Result.ok) {
-                            this._setCR(5, cr5Result.cap);
-                        } else {
-                            this._clearCR(5);
-                        }
-                    } else {
-                        this._clearCR(5);
-                    }
-                    
                     if (frame.cr6) {
                         if (!frame.cr6.perms || !frame.cr6.perms.includes('E')) {
                             return `FAULT: PERMISSION: RETURN: saved CR6 lacks E permission`;
@@ -972,7 +960,7 @@ class CTMMSimulator {
                     
                     this.nia = frame.returnNIA + 1;
                     const surrenderMsg = surrendered.length > 0 ? `, surrendered bound GTs: ${surrendered.join(',')}` : '';
-                    return `RETURN: restored CR5/CR6/CR7 via mLoad, stack depth: ${this.stackDepth}${surrenderMsg}`;
+                    return `RETURN: restored CR6/CR7 via mLoad (CR5 stable), stack depth: ${this.stackDepth}${surrenderMsg}`;
                 }
                 return `FAULT: Stack underflow - no procedure to return from`;
             }
@@ -1008,7 +996,6 @@ class CTMMSimulator {
 
                 this.callStack.push({
                     returnNIA: this.nia,
-                    cr5: this.contextRegs[5] ? { ...this.contextRegs[5] } : null,
                     cr6: this.contextRegs[6] ? { ...this.contextRegs[6] } : null,
                     cr7: this.contextRegs[7] ? { ...this.contextRegs[7] } : null,
                 });
