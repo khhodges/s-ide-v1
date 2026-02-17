@@ -111,6 +111,12 @@ def figures_dispatch_styles():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
+@app.route('/figures/conventional-vs-ctmm')
+def figures_conventional_vs_ctmm():
+    resp = make_response(send_from_directory(FIGURES_DIR, 'conventional-vs-ctmm.html'))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
 @app.route('/figures/<path:path>')
 def figures_static(path):
     resp = make_response(send_from_directory(FIGURES_DIR, path))

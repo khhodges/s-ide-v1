@@ -13767,7 +13767,8 @@ function loadFigure(url) {
         '/figures/lambda-calculus-mapping': 'figures/lambda-calculus',
         '/figures/lambda-clamp-example': 'figures/lambda-clamp',
         '/figures/tunnel-architecture': 'figures/tunnel-arch',
-        '/figures/dispatch-styles-comparison': 'figures/dispatch-styles'
+        '/figures/dispatch-styles-comparison': 'figures/dispatch-styles',
+        '/figures/conventional-vs-ctmm': 'figures/conv-vs-ctmm'
     };
     const dataFile = figMap[url] || url.replace(/^\//, '');
     const fileItem = document.querySelector(`.file-item[data-file="${dataFile}"]`);
