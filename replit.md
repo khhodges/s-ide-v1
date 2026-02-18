@@ -64,13 +64,20 @@ The web interface features a dark-themed, IDE-like design with ten views: Dashbo
 -   **Sim-32 (RV32-Cap)**: RISC-V RV32I base ISA, 32-bit GTs, 17-bit index (131K entries), 7-bit version (128 GC generations), software simulation + Amaranth HDL hardware implementation (`rv32_cap_amaranth/`).
 -   **Sim-64 (CTMM)**: Custom ISA, 64-bit GTs, custom processor, with hardware implementations in Amaranth HDL and SystemVerilog.
 
+### Pure Church Computer REPL (`Church/`, `churchMachine.hs`)
+Interactive Haskell interpreter demonstrating the Pure Church Lambda Machine. GHCi acts as the lambda reducer; all computation goes through exactly six Church-domain instructions with Golden Token capability checking on every step.
+-   **Instruction Pipeline**: Every `Call(Abstraction.Method, args...)` executes: LOAD (namespace lookup, L permission) → TPERM (verify E) → CALL (enter scope, save context) → LOAD (C-List slot, L permission) → TPERM (verify X) → LAMBDA (Church reduction) → RETURN (restore scope).
+-   **Modules**: `Church/Types.hs` (GTs, permissions, faults), `Church/Primitives.hs` (Church-encoded arithmetic), `Church/Machine.hs` (six instructions with capability checking), `Church/Abstractions.hs` (Lambda and SlideRule C-Lists), `Church/REPL.hs` (interactive interpreter with symbolic Call syntax and Turing rejection).
+-   **Turing Rejection**: Any Turing-domain instruction (ADD, MOV, CMP, B, LDR, etc.) produces a FAULT — the instructions don't exist in this architecture.
+-   **Run**: `./churchMachine` or `ghci -i. churchMachine.hs` then type `main`.
+
 ### Unified Server Architecture
 Both simulators are served from a single Flask application, providing dedicated routes for each simulator, a test harness, and API endpoints for user authentication and state persistence.
 
 ## External Dependencies
 
 -   **Python/Flask**: Used for the unified web server.
--   **Haskell GHC**: Supports the console simulator.
+-   **Haskell GHC 9.4**: Supports the console simulator and the Pure Church Computer REPL (`churchMachine.hs`).
 -   **`localStorage`**: Browser API for client-side state persistence.
 -   **PostgreSQL**: Database for user accounts and simulator states.
 -   **Replit Auth**: For user authentication.

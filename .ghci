@@ -1,0 +1,5 @@
+:set -i.
+:set prompt "Church> "
+:load churchMachine.hs
+putStrLn "Church Computer loaded. Type 'main' to start the REPL."
+putStrLn "Or use modules directly: Church.Primitives, Church.Types, etc."
