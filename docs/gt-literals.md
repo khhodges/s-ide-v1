@@ -25,7 +25,7 @@ The 2-bit Type field in every Golden Token classifies four categories:
 A *local name* — a reference to a resource in the local namespace. The GT format holds:
 - **Version** (7 bits): Cross-checked against the namespace entry to detect revocation
 - **Index** (17 bits): The namespace table index
-- **Permissions** (6 bits): Access rights (R, W, X, L, S, E, M)
+- **Permissions** (6 bits): Access rights (R, W, X, L, S, E)
 
 Any instruction that uses an Inform GT goes through the mLoad validation path: MAC integrity check, version match, permission verification, namespace lookup. This ensures that every capability access is controlled, validated, and revocable.
 

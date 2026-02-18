@@ -1,15 +1,20 @@
 # Deterministic Garbage Collection
 
-## The G Permission Bit
+## The G-bit Liveness Mechanism
 
-The G (Garbage) permission bit is a flag on Golden Tokens that participates in the garbage collection process. Its behavior is unified across all implementations:
+G (Garbage) is a liveness flag used in the garbage collection process. It is **not** a GT permission bit -- it is part of the GC infrastructure. The two simulators implement G differently:
 
-- **On every namespace access** (LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH), the G bit is reset (cleared to 0) on the accessed namespace entry.
+- **Sim-64**: G is a 1-bit field in the 64-bit GT layout (bit 57). It is reset (cleared to 0) on every namespace access through mLoad, and set to 1 during the Mark phase.
+- **Sim-32**: G is tracked in the namespace entry, not in the GT itself. Liveness is determined by version matching -- when a namespace entry is swept, its 7-bit version is bumped, instantly invalidating all stale GTs.
+
+In both implementations, the liveness signal is integrated into the mLoad validation path:
+
+- **On every namespace access** (LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH), the liveness flag is reset on the accessed namespace entry.
 - This means that actively used entries automatically signal their liveness through normal program execution.
-- **During the Mark phase**, the G bit is set (to 1) on all non-empty namespace entries, marking them as potentially reclaimable.
-- **After Scan**, entries still marked with G=1 have not been accessed since the last Mark and are candidates for reclamation.
+- **During the Mark phase**, all non-empty namespace entries are marked as potentially reclaimable.
+- **After Scan**, entries not accessed since the last Mark are candidates for reclamation.
 
-This G-bit reset is enforced through the **mLoad master validation path** — every namespace access routes through mLoad, which always resets G as a side effect. This is true in software (both simulators), SystemVerilog, and Amaranth HDL implementations.
+This liveness reset is enforced through the **mLoad master validation path** -- every namespace access routes through mLoad, which always updates liveness as a side effect.
 
 ---
 
@@ -72,7 +77,7 @@ The Sweep phase reclaims entries that are still marked with G=1 after scanning.
 
 - Any namespace entry still marked after Scan is unreachable — no live capability register, call stack frame, or thread table entry references it.
 - The entry is cleared (reclaimed).
-- **Sim-32**: The entry's version is bumped (incremented within the 5-bit field), invalidating any stale Golden Tokens.
+- **Sim-32**: The entry's version is bumped (incremented within the 7-bit field), invalidating any stale Golden Tokens.
 - **Sim-64**: The entry is removed from the namespace tree.
 
 ---
@@ -108,7 +113,7 @@ In Sim-32, garbage collection uses the same G-bit mechanism through mLoad:
 - **mLoad resets G**: When mLoad validates a namespace access, it resets G=0 on the accessed entry. This happens during every LOAD, SAVE, CALL, RETURN, CHANGE, and SWITCH.
 - **mLoadByIndex resets G**: Direct namespace index access also resets G=0.
 - The three phases (Mark, Scan, Sweep) can be triggered independently through the Dashboard UI.
-- The namespace table is a flat array of up to 32,768 entries.
+- The namespace table is a flat array of up to 131,072 entries.
 
 ### Dashboard UI (Sim-32)
 
@@ -149,9 +154,9 @@ The mLoad module (`ctmm_amaranth/mload.py`) mirrors the SystemVerilog implementa
 | Aspect | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
 |--------|---------------|-------------------|
 | **G-bit Reset Trigger** | Every mLoad call (all Church instructions) | Every mLoad/mLoadByIndex call (all Church instructions) |
-| **Namespace Structure** | Hierarchical (tree of namespaces) | Flat table (up to 32,768 entries) |
+| **Namespace Structure** | Hierarchical (tree of namespaces) | Flat table (up to 131,072 entries) |
 | **Scan Algorithm** | DNA tree walk from CR15 root, no permission filtering | DNA tree walk from registers + call stack + thread table, no permission filtering |
-| **Version Bumping** | Not used (tree removal) | 5-bit version incremented on Sweep |
+| **Version Bumping** | Not used (tree removal) | 7-bit version incremented on Sweep |
 | **Token Invalidation** | Entry removal from tree | Version mismatch detection |
 | **User Control** | Dashboard buttons (Mark, Scan, Sweep, GC Cycle) | Dashboard buttons (Mark, Scan, Sweep, GC Cycle) |
 | **Hardware Support** | g_bit_reset/g_bit_addr signals in mLoad, SAVE, RETURN | g_bit_reset/g_bit_addr signals in mLoad, SAVE, RETURN |

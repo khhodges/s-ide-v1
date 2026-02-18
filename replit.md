@@ -43,9 +43,16 @@ The web interface features a dark-themed, IDE-like design with seven views: Dash
 -   **Instruction Set**: Custom 32-bit CTMM instruction set with Church-specific and Turing-specific operations, including ARM-style condition flags.
 -   **State Persistence**: Automatic saving and restoring of state using browser local storage.
 
+### Sim-32 GT Format
+-   32-bit Golden Token: Version(7) + Index(17) + Permissions(6) + Type(2)
+-   6 permission bits: R, W, X (Turing domain) | L, S, E (Church domain) -- domain purity enforced
+-   M (Machine) is transient microcode elevation, never stored in GT
+-   B (Bind) and F (Far/Foreign) are namespace entry metadata, not GT permission bits
+-   VersionSeals: Version(7) + FNV Seal(25) for integrity and GC
+
 ### Simulator Comparison
--   **Sim-64 (CTMM)**: Custom ISA, 64-bit GTs, custom processor, with hardware implementations.
--   **Sim-32 (RV32-Cap)**: RISC-V RV32I base ISA, 32-bit GTs, software simulation only.
+-   **Sim-32 (RV32-Cap)**: RISC-V RV32I base ISA, 32-bit GTs, 17-bit index (131K entries), 7-bit version (128 GC generations), software simulation only.
+-   **Sim-64 (CTMM)**: Custom ISA, 64-bit GTs, custom processor, with hardware implementations in Amaranth HDL and SystemVerilog.
 
 ### Unified Server Architecture
 Both simulators are served from a single Flask application, providing dedicated routes for each simulator, a test harness, and API endpoints for user authentication and state persistence.

@@ -16,7 +16,7 @@ These rules apply identically to both simulators:
 
 1. **CR0-CR7 Only**: Church instructions can only address CR0-CR7 via 3-bit register encoding. System registers CR8-CR15 are physically unreachable through instruction encoding.
 2. **SWITCH Is the Gate**: The only way to write to system registers CR8-CR15 is through the privileged SWITCH instruction.
-3. **Permission Domains Are Mutually Exclusive**: Church (L, S), Turing (R, W, X), Lambda (E), and Meta (B, M, F, G) permissions cannot be mixed within a single operation context.
+3. **Permission Domains Are Mutually Exclusive**: Turing (R, W, X) and Church (L, S, E) permissions cannot be mixed within a single operation context.
 4. **Failsafe FAULT**: Every validation failure (permission, bounds, version, MAC) routes to a FAULT handler.
 5. **C-List Mediation**: LOAD and SAVE operate through capability-mediated access, never through raw memory addressing.
 6. **mLoad Validation**: All namespace access routes through the mLoad trusted path, which always resets the G-bit on accessed entries.
@@ -45,10 +45,10 @@ These rules apply identically to both simulators:
 | Detail | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
 |--------|---------------|-------------------|
 | **Mnemonic** | `LOAD CRd, CRs, idx` | `CAP.LOAD CRd, CRs, index` |
-| **Source C-List** | Any CR (CRs) as C-List source, explicit index operand | Any CR (CRs) as source, 15-bit immediate index |
+| **Source C-List** | Any CR (CRs) as C-List source, explicit index operand | Any CR (CRs) as source, 17-bit immediate index |
 | **Permission Check** | L or M on source CR | L on source CR |
 | **GT Validation** | Implicit (capability object integrity) | Version match + MAC seal validation on source GT |
-| **MAC Validation** | Yes — hardware hash checked on loaded GT | Yes — 27-bit FNV seal in VersionSeals checked on target namespace entry |
+| **MAC Validation** | Yes — hardware hash checked on loaded GT | Yes — 25-bit FNV seal in VersionSeals checked on target namespace entry |
 | **G-bit Reset** | Yes — G bit cleared on namespace access via mLoad | Yes — G bit cleared on namespace access via mLoad |
 | **Bounds Check** | Against source C-List entry count | Against namespaceTable length |
 | **GT Width** | 64-bit (Offset + Permissions + Spare) | 32-bit (Version + Index + Permissions + Type) |
@@ -75,10 +75,10 @@ These rules apply identically to both simulators:
 | Detail | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
 |--------|---------------|-------------------|
 | **Mnemonic** | `SAVE CRd, CRs, idx` | `CAP.SAVE CRsrc, CRdst, index` |
-| **Destination** | Any CR (CRd) as C-List destination, explicit index | Any CR (CRdst) as destination, 15-bit immediate index |
+| **Destination** | Any CR (CRd) as C-List destination, explicit index | Any CR (CRdst) as destination, 17-bit immediate index |
 | **Permission Check (C-List)** | S or M on destination CR | S on destination CR |
 | **Permission Check (source)** | B or M on source CR (Bind permission required) | None |
-| **Bounds Check** | Against destination C-List size | Index must be < 32,768; namespace table auto-extends |
+| **Bounds Check** | Against destination C-List size | Index must be < 131,072; namespace table auto-extends |
 | **Seal Recompute** | N/A | Yes — MAC seal recomputed from Location+Limit, preserving existing version |
 | **G-bit Reset** | Yes — on accessed C-List namespace entry | Yes — on accessed C-List namespace entry |
 | **Storage** | Writes capability object into C-List entry | Writes CR word1 (location), word2 (limit), word3 (recomputed versionSeals) into namespace table |
@@ -213,12 +213,13 @@ These rules apply identically to both simulators:
 **Result Layout (rd)**:
 | Bits | Field | Description |
 |------|-------|-------------|
-| [9:0] | Permissions | R, W, X, L, S, E, B, M, F, G from CRs Golden Token |
-| [10] | stackFrames | 1 = at least one frame on call stack (RETURN safe) |
-| [11] | stackSpace | 1 = room for at least one more frame (CALL safe) |
-| [12] | Valid | 1 = GT passes version and MAC validation |
-| [14:13] | Type | GT type: 00=Inform, 01=Outform, 10=Literal, 11=Abstract |
-| [31:15] | (Reserved) | Zero |
+| [5:0] | Permissions | R, W, X, L, S, E from CRs Golden Token |
+| [10:6] | (Reserved) | Zero |
+| [11] | stackFrames | 1 = at least one frame on call stack (RETURN safe) |
+| [12] | stackSpace | 1 = room for at least one more frame (CALL safe) |
+| [13] | Valid | 1 = GT passes version and MAC validation |
+| [15:14] | Type | GT type: 00=Inform, 01=Outform, 10=NULL, 11=Spare |
+| [31:16] | (Reserved) | Zero |
 
 ---
 
@@ -286,7 +287,7 @@ No conditional execution — RISC-V uses explicit branch instructions instead.
 | **CHANGE permission** | None (I=0) / L (I=1 for C-List lookup) | E (Enter) on source CR |
 | **I-bit variants** | Yes — CHANGE and SWITCH support register (I=0) and C-List lookup (I=1) | No — register mode only |
 | **Bind validation** | SAVE requires B or M on source | Not enforced |
-| **MAC validation** | LOAD validates hardware hash | LOAD and CALL validate 27-bit FNV seal in VersionSeals; SAVE recomputes seal |
+| **MAC validation** | LOAD validates hardware hash | LOAD and CALL validate 25-bit FNV seal in VersionSeals; SAVE recomputes seal |
 | **G-bit reset** | All Church instructions reset G via mLoad on every namespace access | All Church instructions reset G via mLoad on every namespace access |
 | **Exclusive monitors** | CHANGE clears thread's exclusive monitor | Not implemented |
 | **Bound GT surrender** | RETURN clears CRs bound during CALL | Not implemented |
@@ -308,4 +309,4 @@ Both simulators enforce the same core security invariants:
 | G-bit reset on every access | mLoad always resets G=0, ensuring GC accuracy |
 | Failure handling | All violations route to FAULT handler |
 | Capability-mediated access | LOAD/SAVE go through C-List capabilities, never raw memory |
-| Mutually exclusive domains | Church (L,S) / Turing (R,W,X) / Lambda (E) / Meta (B,M,F,G) |
+| Mutually exclusive domains | Turing (R,W,X) / Church (L,S,E) |

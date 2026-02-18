@@ -19,14 +19,16 @@ Sim-64 uses 3-word entries where the Seals word contains a hardware-enforced MAC
 Sim-32 uses 3 x 32-bit word entries. The VersionSeals word combines two pieces of information:
 
 ```
-VersionSeals [31:0]:
-  [31:27] Version  (5 bits)  -- Current version of this entry
-  [26:0]  Seal     (27 bits) -- FNV hash of Location + Limit
+ VersionSeals [31:0]:
+  [31:25] Version  (7 bits)  -- 128 generations
+  [24:0]  Seal     (25 bits) -- FNV hash of Location + Limit
 ```
 
-The 27-bit FNV seal serves the same purpose as the Sim-64 MAC hash: it provides integrity verification for the namespace entry. The 5-bit version field enables garbage collection by allowing stale tokens to be detected and invalidated.
+The 25-bit FNV seal serves the same purpose as the Sim-64 MAC hash: it provides integrity verification for the namespace entry. The 7-bit version field enables garbage collection by allowing stale tokens to be detected and invalidated.
 
-The namespace table in Sim-32 supports up to 32,768 entries (limited by the 15-bit index field in the Golden Token). Each entry occupies 3 words, so the slot address is calculated as `Index x 3`.
+The namespace table in Sim-32 supports up to 131,072 entries (limited by the 17-bit index field in the Golden Token). Each entry occupies 3 words, so the slot address is calculated as `Index x 3`.
+
+**Note on B and F flags**: The B (Bind) and F (Far/Foreign) flags are namespace entry metadata stored in the namespace table entry, not permission bits in the Golden Token. B indicates whether the entry is bound to a specific C-List, and F marks foreign/remote proxy entries. These are properties of the namespace entry itself, not of the GT that references it.
 
 ---
 
@@ -72,7 +74,7 @@ mLoad(source_capability, required_permission, index, destCR):
 
   6. MAC/Seal Validation
      - Sim-64: Hardware MAC hash verification
-     - Sim-32: Version match + 27-bit FNV seal recomputation
+     - Sim-32: Version match + 25-bit FNV seal recomputation
      Failure → FAULT
 
   7. G-bit Reset
@@ -138,8 +140,8 @@ Validation occurs on every mLoad call — which means every Church instruction t
 
 When mLoad accesses a namespace entry:
 
-1. The **version** in the Golden Token (bits [31:27]) is compared against the version in the namespace entry's VersionSeals word (bits [31:27]). If they do not match, the token is stale and a FAULT is triggered.
-2. The **FNV seal** is recomputed from the entry's Location and Limit values and compared against the stored seal in VersionSeals (bits [26:0]). If they do not match, the entry has been corrupted and a FAULT is triggered.
+1. The **version** in the Golden Token (bits [31:25]) is compared against the version in the namespace entry's VersionSeals word (bits [31:25]). If they do not match, the token is stale and a FAULT is triggered.
+2. The **FNV seal** is recomputed from the entry's Location and Limit values and compared against the stored seal in VersionSeals (bits [24:0]). If they do not match, the entry has been corrupted and a FAULT is triggered.
 
 When a SAVE instruction writes to a namespace entry:
 
@@ -185,14 +187,14 @@ All resource access goes through capability-mediated C-Lists via the mLoad valid
 
 ### Mutually Exclusive Permission Domains
 
-The four permission domains (Church, Turing, Lambda, Meta) cannot be mixed within a single operation context. This prevents confused deputy attacks where a capability intended for one purpose is misused for another.
+The two mutually exclusive permission domains (Turing and Church) cannot be mixed within a single operation context. This prevents confused deputy attacks where a capability intended for one purpose is misused for another.
 
 | Domain | Permissions | Operations |
 |--------|-------------|------------|
-| Church | L, S | Load/Save Golden Tokens through C-Lists |
 | Turing | R, W, X | Read/Write data, Execute code |
-| Lambda | E | Enter abstractions (protected calls) |
-| Meta | B, M, F, G | Binding, machine privilege, foreign proxies, GC |
+| Church | L, S, E | Load/Save Golden Tokens through C-Lists, Enter abstractions |
+
+M (Machine) is a transient microcode elevation on the CR, never stored in the GT. B (Bind) and F (Far/Foreign) are namespace entry metadata, not GT permission bits. G is a GC flag managed by the mLoad pipeline.
 
 ### G-bit Reset as Security Invariant
 

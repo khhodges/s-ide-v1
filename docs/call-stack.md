@@ -74,12 +74,13 @@ The TPERM (Test Permission) instruction tests the permissions, validity, type, a
 
 | Bits | Field | Description |
 |------|-------|-------------|
-| [9:0] | Permissions | R, W, X, L, S, E, B, M, F, G from the CRs Golden Token |
-| [10] | stackFrames | 1 = at least one frame on call stack |
-| [11] | stackSpace | 1 = room for at least one more frame |
-| [12] | Valid | 1 = GT passes version and MAC validation |
-| [14:13] | Type | GT type: 00=Inform, 01=Outform, 10=Literal, 11=Abstract |
-| [31:15] | Reserved | Zero |
+| [5:0] | Permissions | R, W, X, L, S, E from the CRs Golden Token |
+| [7:6] | Reserved | Zero |
+| [8] | stackFrames | 1 = at least one frame on call stack |
+| [9] | stackSpace | 1 = room for at least one more frame |
+| [10] | Valid | 1 = GT passes version and MAC validation |
+| [12:11] | Type | GT type: 00=Inform, 01=Outform, 10=NULL, 11=Spare |
+| [31:13] | Reserved | Zero |
 
 TPERM allows software to inspect capability metadata and stack state without triggering a FAULT. This is useful for conditional logic: check whether a CALL is safe (stackSpace=1) before attempting it, or verify that a token has the required permissions before using it.
 

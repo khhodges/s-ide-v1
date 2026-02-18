@@ -20,10 +20,10 @@ The M (Meta/Microcode) permission is a **transient hardware elevation** — set 
 
 ### CR5 — Services C-List
 
-- **GT permission: E only**
+- **GT permission: L+S**
 - **CR elevation: M added by microcode**
 - Stable — set at Thread creation by Boot, does not change on CALL/RETURN.
-- The Services C-List is the Thread's gateway to its available services. It contains `self` [E] (the Thread's own abstraction), which in turn contains the Namespace [E] and its methods (Mint, GC, Lookup, etc.). The Thread accesses services via `CALL(Thread.Method(...))`, which internally navigates self → Namespace → Method. The caller never sees the internal structure.
+- The Services C-List is the Thread's gateway to its available services. It needs L (Load) to retrieve service capabilities and S (Save) to manage its entries. It contains `self` [E] (the Thread's own abstraction), which in turn contains the Namespace [E] and its methods (Mint, GC, Lookup, etc.). The Thread accesses services via `CALL(Thread.Method(...))`, which internally navigates self → Namespace → Method. The caller never sees the internal structure.
 
 ### CR6 — Active C-List
 
@@ -55,15 +55,17 @@ The M (Meta/Microcode) permission is a **transient hardware elevation** — set 
 |------|------------------|----------|--------------|-----------|---------------------------------------------------|
 | CR15 | Namespace        | —        | M            | Stable    | Pure metadata, no user access                     |
 | CR8  | Thread           | —        | M            | Stable    | Pure metadata, no user access                     |
-| CR5  | Services C-List  | E        | M (transient)| Stable    | Thread's services gateway, set at boot            |
+| CR5  | Services C-List  | L+S      | M (transient)| Stable    | Thread's services gateway, needs Load+Save        |
 | CR6  | Active C-List    | E        | M (transient)| Dynamic   | Current abstraction's symbolic method names       |
 | CR7  | Active Nucleus   | X (+R)   | —            | Dynamic   | Current method code, resolves CR6 symbols to code |
+
+The architecture defines two mutually exclusive permission domains: **Turing** (R, W, X) for data and code operations, and **Church** (L, S, E) for capability operations through C-Lists and abstraction entry. M is a transient microcode elevation, never stored in the GT. B (Bind) and F (Far/Foreign) are namespace entry metadata, not GT permission bits.
 
 ## Boot Sequence Permission Flow
 
 1. **Step 1 (Fault Restart)**: Clear all registers. Cold restart.
 2. **Step 2 (Load Namespace)**: Microcode writes CR15 with M elevation. GT has zero RWXLSE.
-3. **Step 3 (Switch Thread)**: Microcode writes CR8 with M elevation. GT has zero RWXLSE. Also writes CR5 with the Thread's Services C-List (GT has E only).
+3. **Step 3 (Switch Thread)**: Microcode writes CR8 with M elevation. GT has zero RWXLSE. Also writes CR5 with the Thread's Services C-List (GT has L+S).
 4. **Step 4 (Call Boot)**: Microcode writes CR6 (GT has E only, CR gets M during LOAD operations) and CR7 (GT has X, optionally R). NIA set to 0.
 
 ## Thread Creation via Mint
@@ -73,7 +75,7 @@ When Boot creates a Thread (e.g., Kenneth, Matthew, Daniel), it uses `Namespace.
 1. Boot microcode has M elevation — it can access the Namespace before any Threads exist (the bootstrap chicken-and-egg).
 2. `Namespace.Mint` allocates a namespace entry for the new Thread (3-word descriptor: Location, Limit, Seals).
 3. Mint computes the MAC, initializes version to 0, assigns the offset.
-4. Boot places a Services C-List GT [E] in the new Thread's CR5.
+4. Boot places a Services C-List GT [L+S] in the new Thread's CR5.
 5. The Services C-List contains `self` [E] → Namespace [E] → Mint, GC, Lookup, etc.
 6. From this point, the Thread can call `CALL(Thread.Mint(type, size, access))` to allocate its own objects.
 
