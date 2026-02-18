@@ -11,7 +11,8 @@ const mathTypeBadges = {
     'Lambda': 'FUNCTIONAL',
     'Constants': 'CONSTANT',
     'Stack': 'RPN',
-    'HP35': 'CALCULATOR'
+    'HP35': 'CALCULATOR',
+    'FamilyRegistry': 'NETWORK'
 };
 let currentUser = null;
 let viewingTutorialFromLanding = false;
@@ -386,7 +387,10 @@ let namespaceObjects = [
       tooltip: "Stack [RPN] — Church-encoded RPN stack using nested pairs. PUSH, POP, SWAP, DUP, PEEK, CLEAR. stack = PAIR(top, rest), empty = FALSE." },
     { offset: 14, name: "HP35", type: "Abstraction",
       word1_location: 0x10000, word2_limit: 0x2000, word3_seals: 0n,
-      tooltip: "HP35 [CALCULATOR] — HP-35 scientific calculator. Pure lambda calculus RPN engine. Digit entry, arithmetic (+,−,×,÷), scientific (√,sin,cos,log,exp), stack ops (ENTER,swap,CLR)." }
+      tooltip: "HP35 [CALCULATOR] — HP-35 scientific calculator. Pure lambda calculus RPN engine. Digit entry, arithmetic (+,−,×,÷), scientific (√,sin,cos,log,exp), stack ops (ENTER,swap,CLR)." },
+    { offset: 15, name: "FamilyRegistry", type: "Abstraction",
+      word1_location: 0x12000, word2_limit: 0x2000, word3_seals: 0n,
+      tooltip: "FamilyRegistry [NETWORK] — Secure machine-to-machine binding. Creates namespace entries with remote endpoint addresses at bind time. No DNS, no IP lookup — the capability IS the address. F(Far) flag for remote execution, B(Bind) for permanent binding." }
 ];
 
 // Services C-List at Namespace offset 2
@@ -435,7 +439,9 @@ const bootCList = {
         { index: 10, name: "Stack", nsOffset: 13, perms: ["E"], type: "Abstraction",
           desc: "Church-encoded RPN stack — PUSH, POP, SWAP, DUP, PEEK, CLEAR via nested pairs", size: 0x1000 },
         { index: 11, name: "HP35", nsOffset: 14, perms: ["E"], type: "Abstraction",
-          desc: "HP-35 scientific calculator — pure lambda calculus RPN engine", size: 0x2000 }
+          desc: "HP-35 scientific calculator — pure lambda calculus RPN engine", size: 0x2000 },
+        { index: 12, name: "FamilyRegistry", nsOffset: 15, perms: ["E"], type: "Abstraction",
+          desc: "Secure machine-to-machine binding — remote endpoint addresses at bind time", size: 0x2000 }
     ]
 };
 
@@ -682,6 +688,23 @@ const abstractionCLists = {
             { name: "GT_AVOGADRO", type: "Abstract", perms: [], desc: "N_A — Avogadro constant (6.02214076 × 10²³ mol⁻¹)", base: 0xE148, size: 0, value: 6.02214076e23, gtType: "Abstract" },
             { name: "GT_G", type: "Abstract", perms: [], desc: "G — gravitational constant (6.67430 × 10⁻¹¹ m³/(kg·s²))", base: 0xE150, size: 0, value: 6.67430e-11, gtType: "Abstract" },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0xEA00, size: 512 }
+        ]
+    },
+    FamilyRegistry: {
+        name: "FamilyRegistry",
+        mathType: "NETWORK",
+        description: "Secure machine-to-machine binding abstraction. Creates namespace entries with remote endpoint addresses at bind time — no DNS, no IP lookup. The capability IS the address. F(Far) flag distinguishes virtual memory caching (F=0, HTTP GET/PUT) from remote execution (F=1, encrypted tunnel). B(Bind) flag seals the binding permanently until GC revokes.",
+        methodSelector: { 0: 'REGISTER', 1: 'LOOKUP', 2: 'BIND', 3: 'REVOKE', 4: 'STATUS' },
+        clist: [
+            { name: "NULL", type: "NULL", perms: [], desc: "NULL Golden Token — clears any CR when loaded", size: 0 },
+            { name: "Access", type: "Code", perms: ["R", "X"], desc: "FamilyRegistry dispatcher — DR0=method selector for Register, Lookup, Bind, Revoke", base: 0x12000, size: 0x800 },
+            { name: "GT_REGISTER", type: "Function", perms: ["L", "E"], desc: "Register a family member: DR0=0, DR1=name, DR2=arch. Creates matching tunnel key pairs on both machines.", base: 0x12800, size: 0x200 },
+            { name: "GT_LOOKUP", type: "Function", perms: ["L", "E"], desc: "Lookup registered member: DR0=1, DR1=name. Returns remote endpoint address in DR0, architecture in DR1.", base: 0x12A00, size: 0x200 },
+            { name: "GT_BIND", type: "Function", perms: ["L", "E"], desc: "Bind remote endpoint: DR0=2, CR1=target. Creates Outform+Far namespace entry with remote address in location field, sets F=1 B=1 in limit word.", base: 0x12C00, size: 0x200 },
+            { name: "GT_REVOKE", type: "Function", perms: ["L", "E"], desc: "Revoke binding: DR0=3, CR1=target. Clears remote address, resets F and B flags. Entry becomes local-only.", base: 0x12E00, size: 0x200 },
+            { name: "GT_STATUS", type: "Function", perms: ["L", "E"], desc: "Query binding status: DR0=4, CR1=target. Returns F flag in DR0, B flag in DR1, remote address in DR2.", base: 0x13000, size: 0x200 },
+            { name: "RegistryTable", type: "Data", perms: ["R", "W"], desc: "Family member registry — maps names to remote endpoint addresses and architecture types", base: 0x13200, size: 0x800 },
+            { name: "LocalData", type: "Data", perms: ["R", "W"], desc: "Working storage for binding operations", base: 0x13A00, size: 512 }
         ]
     }
 };
@@ -1681,7 +1704,8 @@ function getObjectTooltip(name, type) {
         'NULL': 'Null capability - no access rights, typically indicates uninitialized register',
         'Constants': 'Physical/mathematical constants as Abstract GTs — unforgeable identity tokens for PI, E, PHI, c, h, k_B, N_A, G. Present Abstract GT in CR1 to retrieve value.',
         'Stack': 'Church-encoded RPN stack — PUSH, POP, SWAP, DUP, PEEK, CLEAR via nested pairs. stack = PAIR(top, rest), empty = FALSE.',
-        'HP35': 'HP-35 scientific calculator — pure lambda calculus RPN engine. All arithmetic via Church numerals, stack via nested pairs, constants via Abstract GTs.'
+        'HP35': 'HP-35 scientific calculator — pure lambda calculus RPN engine. All arithmetic via Church numerals, stack via nested pairs, constants via Abstract GTs.',
+        'FamilyRegistry': 'Secure machine-to-machine binding — creates namespace entries with remote endpoint addresses at bind time. No DNS, no IP lookup. The capability IS the address.'
     };
     return tooltips[name] || `${type || 'Object'}: ${name}`;
 }
@@ -4645,6 +4669,80 @@ function executeMethodSelector(absName, methodSelector) {
             case 'REVOKE': desc = `REVOKE(CR0) → version bumped, all copies invalidated`; result = 0; break;
             case 'INSPECT': desc = `INSPECT(CR0) → DR1=perms, DR2=type, DR3=version, DR4=offset`; result = 0; break;
         }
+    } else if (absName === 'FamilyRegistry') {
+        if (!window._familyRegistry) window._familyRegistry = {};
+        switch (methodName) {
+            case 'REGISTER': {
+                const nameCode = dr1;
+                const archCode = dr2;
+                const archName = archCode === 1 ? 'CTMM-64' : archCode === 2 ? 'RV32-Cap' : `arch-${archCode}`;
+                const remoteAddr = 0xC7440000 + nameCode;
+                window._familyRegistry[nameCode] = { name: nameCode, arch: archName, archCode: archCode, addr: remoteAddr, bound: false };
+                desc = `REGISTER(name=${nameCode}, arch=${archName}) → registered at 0x${remoteAddr.toString(16).toUpperCase()}, tunnel key pair created`;
+                result = 1; break;
+            }
+            case 'LOOKUP': {
+                const entry = window._familyRegistry[dr1];
+                if (entry) {
+                    simulator.dataRegs[1] = BigInt(entry.archCode);
+                    desc = `LOOKUP(${dr1}) → addr=0x${entry.addr.toString(16).toUpperCase()}, arch=${entry.arch}`;
+                    result = entry.addr;
+                } else {
+                    desc = `LOOKUP(${dr1}) → FAULT: not registered`;
+                    result = 0;
+                }
+                break;
+            }
+            case 'BIND': {
+                const cr1 = simulator.contextRegs[1];
+                if (cr1 && cr1.type === 'Outform') {
+                    cr1.far = true;
+                    cr1.bound = true;
+                    const regEntry = Object.values(window._familyRegistry).find(e => !e.bound);
+                    if (regEntry) {
+                        cr1.remoteAddr = regEntry.addr;
+                        regEntry.bound = true;
+                        const nsObj = namespaceObjects.find(o => o.name === cr1.name);
+                        if (nsObj) {
+                            nsObj.word2_limit = (nsObj.word2_limit & 0x1FFFF) | (1 << 31) | (1 << 30);
+                            nsObj.word1_location = regEntry.addr;
+                        }
+                        desc = `BIND(CR1=${cr1.name}) → F=1 B=1, location=0x${regEntry.addr.toString(16).toUpperCase()} written to namespace entry`;
+                    } else {
+                        desc = `BIND(CR1=${cr1.name}) → F=1 B=1, remote address bound`;
+                    }
+                } else {
+                    desc = `BIND(CR1) → FAULT: CR1 must be Outform type`;
+                }
+                result = 1; break;
+            }
+            case 'REVOKE': {
+                const cr1 = simulator.contextRegs[1];
+                if (cr1) {
+                    cr1.far = false;
+                    cr1.bound = false;
+                    const nsObj = namespaceObjects.find(o => o.name === cr1.name);
+                    if (nsObj) {
+                        nsObj.word2_limit = nsObj.word2_limit & 0x1FFFF;
+                    }
+                    desc = `REVOKE(CR1=${cr1.name}) → F=0 B=0, binding cleared`;
+                } else {
+                    desc = `REVOKE(CR1) → no capability to revoke`;
+                }
+                result = 1; break;
+            }
+            case 'STATUS': {
+                const cr1 = simulator.contextRegs[1];
+                const isBound = cr1 && cr1.bound;
+                const isFar = cr1 && cr1.far;
+                const addr = cr1 && cr1.remoteAddr ? cr1.remoteAddr : 0;
+                simulator.dataRegs[0] = BigInt(isFar ? 1 : 0);
+                simulator.dataRegs[1] = BigInt(isBound ? 1 : 0);
+                simulator.dataRegs[2] = BigInt(addr);
+                desc = `STATUS(CR1=${cr1?cr1.name:'NULL'}) → F=${isFar?1:0}, B=${isBound?1:0}, addr=0x${addr.toString(16).toUpperCase()}`;
+                result = isFar ? 1 : 0; break;
+            }
+        }
     }
     
     if (typeof result === 'bigint') {
@@ -5379,6 +5477,9 @@ function loadExample(name) {
 function setupHelloMumNamespace() {
     if (!ensureBooted()) return;
 
+    if (!window._familyRegistry) window._familyRegistry = {};
+    window._familyRegistry[1] = { name: 1, arch: 'RV32-Cap', archCode: 2, addr: 0xC7440001, bound: true };
+
     const tunnelKey = simulator.createCapability("Tunnel_Key_Mum", ["R"]);
     tunnelKey.type = "Inform";
     tunnelKey.tunnelEndpoint = "mymother.namespace.local";
@@ -5388,6 +5489,9 @@ function setupHelloMumNamespace() {
     mumService.type = "Outform";
     mumService.remoteEndpoint = "https://mymother.ctmm.net/messaging";
     mumService.tunnelId = "tunnel_me_mum_001";
+    mumService.far = true;
+    mumService.bound = true;
+    mumService.remoteAddr = 0xC7440001;
 
     const abiDescriptor = simulator.createCapability("ABI_Mum", ["R"]);
     abiDescriptor.type = "Inform";
@@ -5416,8 +5520,8 @@ function setupHelloMumNamespace() {
           word1_location: 0xA100, word2_limit: 0x100,
           tooltip: "HMAC-SHA256 tunnel key for encrypted channel to mymother." },
         { name: "Mum_Messaging", type: "Abstraction", perms: ["E"],
-          word1_location: 0xA200, word2_limit: 0x200,
-          tooltip: "Outform GT — remote messaging abstraction on mymother (RV32-Cap)." },
+          word1_location: 0xC7440001, word2_limit: (1 << 31) | (1 << 30) | 0x200,
+          tooltip: "Outform+Far GT — remote messaging to mymother (RV32-Cap) @ 0xC7440001. F=1 B=1. Address placed by FamilyRegistry at bind time." },
         { name: "ABI_Mum", type: "Abstraction", perms: ["R"],
           word1_location: 0xA400, word2_limit: 0x100,
           tooltip: "ABI descriptor: DR0-DR8 (64-bit) → x10-x18 (32-bit)." },
@@ -5458,12 +5562,27 @@ function setupHelloMumNamespace() {
     log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
     log('HELLO MUM / HELLO SON — Bidirectional Tunnel', 'success');
     log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+    log('', 'info');
+    log('--- BINDING PROVENANCE (FamilyRegistry) ---', 'info');
+    log('The FamilyRegistry abstraction (NS offset 15) created', 'info');
+    log('these entries at bind time via CALL(FamilyRegistry.Register):', 'info');
+    log('  1. Generated shared tunnel key material', 'info');
+    log('  2. Created matching Outform+Far entries on both machines', 'info');
+    log('  3. Set remote address in location field (0xC7440001)', 'info');
+    log('  4. Set F=1 (Far) + B=1 (Bound) in limit word', 'info');
+    log('  5. Sealed entries with MAC — binding is permanent', 'info');
+    log('     until GC revokes', 'info');
+    log('', 'info');
     log('CR6 = Me_CList [E] — "me" C-List:', 'info');
-    log('  [0] Tunnel_Key_Mum  [R]   — Inform (tunnel crypto key)', 'info');
-    log('  [1] Mum_Messaging   [E]   — Outform (remote messaging)', 'info');
-    log('  [2] ABI_Mum         [R]   — Inform (register map)', 'info');
-    log('  [3] Son_Inbox       [R,W] — Inform (receive reply)', 'info');
-    log('  [4] Son_Receive     [E]   — Inform (reply handler)', 'info');
+    log('  [0] Tunnel_Key_Mum  [R]     — Inform (tunnel crypto key)', 'info');
+    log('  [1] Mum_Messaging   [E,F,B] — Outform+Far to mymother @ 0xC7440001', 'info');
+    log('  [2] ABI_Mum         [R]     — Inform (register map)', 'info');
+    log('  [3] Son_Inbox       [R,W]   — Inform (receive reply)', 'info');
+    log('  [4] Son_Receive     [E]     — Inform (reply handler)', 'info');
+    log('', 'info');
+    log('Location field holds remote endpoint address,', 'info');
+    log('placed there by FamilyRegistry at bind time.', 'info');
+    log('No DNS. No IP lookup. The capability IS the address.', 'info');
     log('', 'info');
     log('"me" (Kenneth) = CTMM Sim-64 (DR0-DR15, 64-bit)', 'info');
     log('"mymother" (Priscilla) = RV32-Cap Sim-32 (x0-x31, 32-bit)', 'info');
