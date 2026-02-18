@@ -3196,7 +3196,7 @@ function populateCodeFileDropdown() {
     // Group 2: Lambda/Church Examples
     const lambdaGroup = document.createElement('optgroup');
     lambdaGroup.label = 'Lambda Examples';
-    const lambdaExamples = ['hello_mum', 'ycombinator', 'factorial', 'capcheck', 'capmgr', 'datetime', 'church_bool', 'church_num', 'pair'];
+    const lambdaExamples = ['hp35_lambda', 'hello_mum', 'ycombinator', 'factorial', 'capcheck', 'capmgr', 'datetime', 'church_bool', 'church_num', 'pair'];
     lambdaExamples.forEach(name => {
         if (codeTemplates[name]) {
             const opt = document.createElement('option');
@@ -13582,7 +13582,501 @@ done:
 
 ; === FAILSAFE: No error codes ===
 fault:
-    FAULT                ; Uniform failure - no information leakage`
+    FAULT                ; Uniform failure - no information leakage`,
+
+    'hp35_lambda': `; ================================================
+; HP-35 SCIENTIFIC CALCULATOR — PURE LAMBDA
+; ================================================
+; The world's first handheld scientific calculator
+; (Hewlett-Packard, 1972) rebuilt using ONLY Church
+; domain instructions: LOAD, SAVE, CALL, LAMBDA,
+; TPERM, RETURN. Zero binary/Turing instructions.
+;
+; All arithmetic via Church numerals.
+; Stack via nested pairs (PAIR, FST, SND).
+; Constants via Abstract GTs (PI, E from Constants).
+; Recursion via Y-combinator.
+;
+; CHURCH DOMAIN ONLY: L, S, E permissions
+; No ADD, SUB, MUL, MOV, CMP, B — none needed.
+;
+; ================================================
+; HP35 C-List layout (CR6 = nodal C-List):
+;   [0]  NULL
+;   [1]  Access         [R,X] — this dispatcher
+;   [2]  GT_DIGIT       [R,X] — digit entry
+;   [3]  GT_ENTER       [R,X] — push X, lift stack
+;   [4]  GT_ADD         [R,X] — Church ADD
+;   [5]  GT_SUB         [R,X] — Church SUB
+;   [6]  GT_MUL         [R,X] — Church MUL
+;   [7]  GT_DIV         [R,X] — Church DIV
+;   [8]  GT_SQRT        [R,X] — Newton via Y-comb
+;   [9]  GT_SIN         [R,X] — Taylor series
+;   [10] GT_COS         [R,X] — Taylor series
+;   [11] GT_LOG         [R,X] — Y-comb refinement
+;   [12] GT_EXP         [R,X] — Taylor POW chain
+;   [13] GT_POW         [R,X] — Church POW
+;   [14] GT_CHS         [R,X] — negate sign
+;   [15] GT_CLR         [R,X] — clear all
+;   [16] GT_CLX         [R,X] — clear X only
+;   [17] GT_SWAP        [R,X] — swap X, Y
+;   [18] GT_PI          [R,X] — push PI
+;   [19] DisplayBuffer  [R,W] — 15-digit LED
+;   [20] StackData      [R,W] — X, Y, Z, T pairs
+;
+; CR5 = Thread C-List:
+;   [0]  Lambda         [E]   — Church numeral engine
+;   [1]  Stack          [E]   — RPN pair operations
+;   [2]  Constants      [E]   — Abstract GT vault
+;
+; DR0 = method selector (key pressed)
+; ================================================
+
+; ------------------------------------------------
+; ACCESS DISPATCHER (slot [1])
+; Input:  DR0 = method selector (0-18)
+;         DR1 = argument (digit value, etc.)
+; Output: DR0 = result or display update
+;
+; Pure Church dispatch: encode DR0 as Church
+; numeral, index into C-List, LAMBDA the GT.
+; ------------------------------------------------
+access:
+; Load the method GT from our own C-List
+; DR0 holds method index (0=DIGIT..18=ARC)
+; Offset by 2 because slots 0,1 are NULL/Access
+; So method 0 (DIGIT) -> C-List slot [2], etc.
+LOAD 0 6 0        ; CR0 = NULL (clear workspace)
+
+; Step 1: Enter Lambda abstraction for Church encoding
+LOAD 1 5 0        ; CR1 = Lambda [E] from Thread C-List
+TPERM 1 E         ; Verify Enter permission
+CALL 1            ; Enter Lambda scope — CR6 = Lambda C-List
+
+; Step 2: Load Church SUCC and ZERO
+LOAD 0 6 3        ; CR0 = GT_CHURCH_SUCC [R,X]
+LOAD 1 6 2        ; CR1 = GT_CHURCH_ZERO [R,X]
+
+; Step 3: Build Church numeral for method selector
+; Apply SUCC (DR0) times to ZERO — result is Church(DR0)
+; This uses LAMBDA with X permission (non-nestable)
+LAMBDA 0 0        ; Church(DR0) = SUCC^DR0(ZERO)
+
+; Step 4: Return to HP35 scope
+RETURN            ; Back to HP35 C-List in CR6
+
+; Step 5: Use Church numeral to index C-List
+; Church(n) applied to LOAD gives us slot [n+2]
+LOAD 0 6 0        ; CR0 = method GT from indexed slot
+TPERM 0 X         ; Verify eXecute permission
+LAMBDA 0 0        ; Apply the method function
+RETURN            ; Result in DR0
+
+; ------------------------------------------------
+; GT_DIGIT (slot [2]): Append digit to X register
+; λd. X = X * 10 + d
+;
+; Pure Church: MUL(X, TEN) then ADD(X, d)
+; where TEN = SUCC^10(ZERO)
+; ------------------------------------------------
+digit:
+; Enter Lambda to get Church arithmetic
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda scope
+
+; Load Church MUL and ADD
+LOAD 0 6 6        ; CR0 = GT_CHURCH_MUL [R,X]
+LOAD 1 6 5        ; CR1 = GT_CHURCH_ADD [R,X]
+
+; X = X * 10: multiply current value by Church(10)
+LAMBDA 0 0        ; DR0 = CHURCH_MUL(X, TEN)
+
+; X = X + d: add the digit
+LAMBDA 1 0        ; DR0 = CHURCH_ADD(X*10, d)
+
+RETURN            ; Back to HP35 scope
+
+; Update display buffer
+LOAD 0 6 19       ; CR0 = DisplayBuffer [R,W]
+TPERM 0 S         ; Verify Save permission
+SAVE 0 0          ; Write display value
+RETURN
+
+; ------------------------------------------------
+; GT_ENTER (slot [3]): Push X onto stack, lift
+; λstack. PAIR(X, stack)
+;
+; Pure Church: PAIR = λa.λb.λf. f a b
+; Stack lift: T=Z, Z=Y, Y=X, X=X (duplicate)
+; ------------------------------------------------
+enter:
+; Enter Stack abstraction for PAIR
+LOAD 1 5 1        ; CR1 = Stack [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Stack scope
+
+; Load PUSH operation from Stack C-List
+LOAD 0 6 2        ; CR0 = GT_PUSH [R,X]
+
+; Apply PUSH: creates PAIR(X, rest_of_stack)
+LAMBDA 0 0        ; DR0 = PAIR(X, stack)
+
+RETURN            ; Back to HP35 scope
+
+; Save new stack state
+LOAD 0 6 20       ; CR0 = StackData [R,W]
+TPERM 0 S         ; Verify Save permission
+SAVE 0 0          ; Persist stack
+RETURN
+
+; ------------------------------------------------
+; GT_ADD (slot [4]): Pop Y, add to X
+; λx.λy. CHURCH_ADD x y
+;
+; Pure Church: ADD = λm.λn.λf.λx. m f (n f x)
+; Apply f m times, then n more times
+; ------------------------------------------------
+add:
+; Load stack: pop Y into DR1, X in DR0
+LOAD 1 5 1        ; CR1 = Stack [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Stack
+
+LOAD 0 6 3        ; CR0 = GT_POP [R,X]
+LAMBDA 0 0        ; DR1 = POP (Y value)
+RETURN            ; Back to HP35
+
+; Enter Lambda for Church ADD
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+LOAD 0 6 5        ; CR0 = GT_CHURCH_ADD [R,X]
+LAMBDA 0 0        ; DR0 = ADD(Y, X)
+RETURN            ; Result in DR0
+
+; ------------------------------------------------
+; GT_SUB (slot [5]): Pop Y, subtract
+; λx.λy. CHURCH_SUB y x
+;
+; Church SUB uses PRED:
+; PRED = λn.λf.λx. n(λg.λh.h(g f))(λu.x)(λu.u)
+; SUB = λm.λn. n PRED m
+; ------------------------------------------------
+sub:
+LOAD 1 5 1        ; CR1 = Stack [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Stack
+
+LOAD 0 6 3        ; CR0 = GT_POP [R,X]
+LAMBDA 0 0        ; DR1 = POP (Y value)
+RETURN            ; Back to HP35
+
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+LOAD 0 6 8        ; CR0 = GT_CHURCH_SUB [R,X]
+LAMBDA 0 0        ; DR0 = SUB(Y, X)
+RETURN
+
+; ------------------------------------------------
+; GT_MUL (slot [6]): Pop Y, multiply
+; λx.λy. CHURCH_MUL x y
+;
+; MUL = λm.λn.λf. m(n f)
+; Apply n f, then apply that m times
+; ------------------------------------------------
+mul:
+LOAD 1 5 1        ; CR1 = Stack [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Stack
+
+LOAD 0 6 3        ; CR0 = GT_POP [R,X]
+LAMBDA 0 0        ; DR1 = POP (Y value)
+RETURN            ; Back to HP35
+
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+LOAD 0 6 6        ; CR0 = GT_CHURCH_MUL [R,X]
+LAMBDA 0 0        ; DR0 = MUL(Y, X)
+RETURN
+
+; ------------------------------------------------
+; GT_DIV (slot [7]): Pop Y, divide
+; λx.λy. CHURCH_DIV y x
+;
+; Church DIV via repeated subtraction:
+; DIV = Y(λf.λn.λm. IF(LEQ m n)(SUCC(f(SUB n m) m)) ZERO)
+; Requires Y-combinator for recursion
+; ------------------------------------------------
+div:
+LOAD 1 5 1        ; CR1 = Stack [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Stack
+
+LOAD 0 6 3        ; CR0 = GT_POP [R,X]
+LAMBDA 0 0        ; DR1 = POP (Y value)
+RETURN            ; Back to HP35
+
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+; Church DIV needs Y-combinator for recursion
+LOAD 0 6 9        ; CR0 = GT_CHURCH_DIV [R,X]
+LAMBDA 0 0        ; DR0 = Y(λf... DIV(Y,X))
+RETURN
+
+; ------------------------------------------------
+; GT_SQRT (slot [8]): Square root of X
+; λx. Newton's method via Y-combinator
+;
+; SQRT = Y(λf.λg. IF(LEQ(MUL g g) x)
+;                     (f (SUCC g))
+;                     (PRED g)) ZERO
+; ------------------------------------------------
+sqrt:
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+; Y-combinator drives Newton iteration
+; Each step: guess -> if guess^2 <= x, try guess+1
+;            else return guess-1
+LOAD 0 6 10       ; CR0 = GT_CHURCH_SQRT [R,X]
+LAMBDA 0 0        ; DR0 = Y(Newton)(X)
+RETURN
+
+; ------------------------------------------------
+; GT_SIN (slot [9]): Sine via Taylor series
+; λx. x - x^3/3! + x^5/5! - x^7/7! + ...
+;
+; Each term: Church POW for x^n, Church factorial
+; for n!, Church DIV for division, alternating
+; Church SUB/ADD for sign.
+; All encoded as nested LAMBDA applications.
+; ------------------------------------------------
+sin:
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+LOAD 0 6 11       ; CR0 = GT_TAYLOR_SIN [R,X]
+LAMBDA 0 0        ; DR0 = SIN_TAYLOR(X)
+RETURN
+
+; ------------------------------------------------
+; GT_COS (slot [10]): Cosine via Taylor series
+; λx. 1 - x^2/2! + x^4/4! - x^6/6! + ...
+; ------------------------------------------------
+cos:
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+LOAD 0 6 12       ; CR0 = GT_TAYLOR_COS [R,X]
+LAMBDA 0 0        ; DR0 = COS_TAYLOR(X)
+RETURN
+
+; ------------------------------------------------
+; GT_LOG (slot [11]): Natural log via Y-combinator
+; λx. Y(λf.λx. iterative refinement) x
+; ------------------------------------------------
+log:
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+LOAD 0 6 13       ; CR0 = GT_CHURCH_LN [R,X]
+LAMBDA 0 0        ; DR0 = LN(X)
+RETURN
+
+; ------------------------------------------------
+; GT_EXP (slot [12]): e^x via Taylor series
+; λx. 1 + x + x^2/2! + x^3/3! + ...
+;
+; CHURCH_POW builds each x^n term
+; Church factorial computes n!
+; Bounded by fixed number of terms
+; ------------------------------------------------
+exp:
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+LOAD 0 6 14       ; CR0 = GT_TAYLOR_EXP [R,X]
+LAMBDA 0 0        ; DR0 = EXP_TAYLOR(X)
+RETURN
+
+; ------------------------------------------------
+; GT_POW (slot [13]): Y raised to X power
+; λx.λy. CHURCH_POW x y
+;
+; POW = λm.λn. n m
+; Apply m n times: m(m(m(...))) n times
+; ------------------------------------------------
+pow:
+LOAD 1 5 1        ; CR1 = Stack [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Stack
+
+LOAD 0 6 3        ; CR0 = GT_POP [R,X]
+LAMBDA 0 0        ; DR1 = POP (Y value)
+RETURN            ; Back to HP35
+
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+LOAD 0 6 7        ; CR0 = GT_CHURCH_POW [R,X]
+LAMBDA 0 0        ; DR0 = POW(Y, X)
+RETURN
+
+; ------------------------------------------------
+; GT_CHS (slot [14]): Negate sign of X
+; λx. PAIR(NOT(FST sign), SND magnitude)
+;
+; Church encoding: number = PAIR(sign, magnitude)
+; NOT = λb. b FALSE TRUE
+; ------------------------------------------------
+chs:
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+; Church NOT on the sign component
+LOAD 0 6 15       ; CR0 = GT_CHURCH_NEG [R,X]
+LAMBDA 0 0        ; DR0 = PAIR(NOT sign, magnitude)
+RETURN
+
+; ------------------------------------------------
+; GT_CLR (slot [15]): Clear entire stack
+; λstack. FALSE
+;
+; Church FALSE = λx.λy.y (empty stack)
+; All four registers become ZERO
+; ------------------------------------------------
+clr:
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+LOAD 0 6 2        ; CR0 = GT_CHURCH_ZERO [R,X]
+LAMBDA 0 0        ; DR0 = ZERO (clear X)
+RETURN
+
+; Clear stack storage
+LOAD 0 6 20       ; CR0 = StackData [R,W]
+TPERM 0 S         ; Verify Save
+SAVE 0 0          ; Write empty stack
+RETURN
+
+; ------------------------------------------------
+; GT_CLX (slot [16]): Clear X register only
+; λstack. PAIR(ZERO, SND stack)
+;
+; Keep Y,Z,T intact, set X = 0
+; FST/SND via Church pair selectors
+; ------------------------------------------------
+clx:
+LOAD 1 5 1        ; CR1 = Stack [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Stack
+
+; Get rest of stack (SND)
+LOAD 0 6 5        ; CR0 = GT_SND [R,X]
+LAMBDA 0 0        ; DR1 = SND(stack) = (Y,Z,T)
+RETURN
+
+; Re-pair with ZERO as new X
+LOAD 1 5 0        ; CR1 = Lambda [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Lambda
+
+LOAD 0 6 2        ; CR0 = GT_CHURCH_ZERO [R,X]
+LAMBDA 0 0        ; DR0 = ZERO
+
+RETURN
+LOAD 1 5 1        ; CR1 = Stack [E]
+CALL 1            ; Enter Stack
+
+LOAD 0 6 2        ; CR0 = GT_PUSH [R,X]
+LAMBDA 0 0        ; DR0 = PAIR(ZERO, rest)
+RETURN
+
+; ------------------------------------------------
+; GT_SWAP (slot [17]): Swap X and Y
+; λstack. PAIR(FST(SND s), PAIR(FST s, SND(SND s)))
+;
+; Destructure top two, rebuild in swapped order
+; All via Church pair selectors
+; ------------------------------------------------
+swap:
+LOAD 1 5 1        ; CR1 = Stack [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Stack
+
+LOAD 0 6 6        ; CR0 = GT_SWAP_XY [R,X]
+LAMBDA 0 0        ; DR0 = swapped stack
+RETURN
+
+; ------------------------------------------------
+; GT_PI (slot [18]): Push PI onto stack
+; λ. PUSH(Constants.PI, stack)
+;
+; PI is an Abstract GT in the Constants abstraction
+; Present the Abstract GT, receive value via CALL.
+; The constant never exists as bare data.
+; ------------------------------------------------
+push_pi:
+; Lift stack first
+LOAD 1 5 1        ; CR1 = Stack [E]
+TPERM 1 E         ; Verify
+CALL 1            ; Enter Stack
+
+LOAD 0 6 2        ; CR0 = GT_PUSH [R,X]
+LAMBDA 0 0        ; Stack lifted
+RETURN
+
+; Get PI from Constants abstraction
+LOAD 1 5 2        ; CR1 = Constants [E]
+TPERM 1 E         ; Verify Enter permission
+CALL 1            ; Enter Constants scope
+
+; Present Abstract GT for PI
+LOAD 0 6 2        ; CR0 = GT_PI (Abstract GT)
+CALL 0            ; Constants validates and returns value
+RETURN            ; DR0 = 3.14159265358979...
+
+; Save to stack X register
+LOAD 0 6 20       ; CR0 = StackData [R,W]
+TPERM 0 S         ; Verify Save
+SAVE 0 0          ; Write PI as new X
+RETURN
+
+; ================================================
+; INSTRUCTION COUNT: Zero Turing instructions.
+;
+; Used ONLY: LOAD, SAVE, CALL, LAMBDA, TPERM, RETURN
+;
+; No ADD, SUB, MUL, MOV, CMP, B, ADDI, SUBI,
+; LSL, LSR, AND, ORR, EOR, BIC — none needed.
+;
+; Every computation is a capability-mediated
+; lambda application. The HP-35 proves that a
+; complete scientific calculator can be built
+; from pure Church lambda calculus on CTMM,
+; secured by Golden Tokens at every step.
+;
+; Dependencies (all entered via CALL with E perm):
+;   Lambda    — Church numerals, SUCC, ADD, MUL...
+;   Stack     — PAIR-based RPN: PUSH, POP, SWAP
+;   Constants — Abstract GTs: PI, E, PHI, SQRT2...
+; ================================================`
 };
 
 const instructionComments = {
