@@ -338,13 +338,13 @@ let namespaceObjects = [
       tooltip: "Boot nucleus code — loaded into CR7. Resolves symbolic names from CR6 to executable code." },
     { offset: 5, name: "SlideRule", type: "Abstraction",
       word1_location: 0x5000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "SlideRule [FLOAT] — IEEE 754 floating-point math. LAMBDA dispatch style." },
+      tooltip: "SlideRule [FLOAT] — IEEE 754 floating-point math. Method-selector dispatch (DR0=method)." },
     { offset: 6, name: "Abacus", type: "Abstraction",
       word1_location: 0x6000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "Abacus [INTEGER] — 64-bit integer arithmetic. LAMBDA dispatch style." },
+      tooltip: "Abacus [INTEGER] — 64-bit integer arithmetic. Method-selector dispatch (DR0=method)." },
     { offset: 7, name: "Circle", type: "Abstraction",
       word1_location: 0x7000, word2_limit: 0x1000, word3_seals: 0n,
-      tooltip: "Circle [GEOMETRY] — PI, circumference, area. LAMBDA dispatch style." },
+      tooltip: "Circle [GEOMETRY] — PI, circumference, area. Method-selector dispatch (DR0=method)." },
     { offset: 8, name: "Mint", type: "Abstraction",
       word1_location: 0xC000, word2_limit: 0x1000, word3_seals: 0n,
       tooltip: "Namespace Mint method — creates new GTs with domain-pure permissions via CALL(Thread.Mint)." },
@@ -387,11 +387,11 @@ const bootCList = {
         { index: 1, name: "Access", nsOffset: 4, perms: ["R", "X"], type: "Code",
           desc: "Boot nucleus code — hardware-enforced CALL entry point (slot 1)", size: 0x1000 },
         { index: 2, name: "SlideRule", nsOffset: 5, perms: ["E"], type: "Abstraction",
-          desc: "IEEE 754 float operations — LAMBDA dispatch", size: 0x1000 },
+          desc: "IEEE 754 float operations — method-selector dispatch (DR0=method)", size: 0x1000 },
         { index: 3, name: "Abacus", nsOffset: 6, perms: ["E"], type: "Abstraction",
-          desc: "64-bit integer operations — LAMBDA dispatch", size: 0x1000 },
+          desc: "64-bit integer operations — method-selector dispatch (DR0=method)", size: 0x1000 },
         { index: 4, name: "Circle", nsOffset: 7, perms: ["E"], type: "Abstraction",
-          desc: "Circle geometry — PI, circumference, area. LAMBDA dispatch", size: 0x1000 },
+          desc: "Circle geometry — PI, circumference, area. method-selector dispatch (DR0=method)", size: 0x1000 },
         { index: 5, name: "Mint", nsOffset: 8, perms: ["E"], type: "Abstraction",
           desc: "Namespace Mint method — creates new GTs. CALL(Thread.Mint(type, size, access))", size: 0x1000 },
         { index: 6, name: "CapabilityManager", nsOffset: 9, perms: ["E"], type: "Abstraction",
@@ -498,67 +498,44 @@ const abstractionCLists = {
     SlideRule: {
         name: "SlideRule",
         mathType: "FLOAT",
-        description: "IEEE 754 floating-point operations. CALL this abstraction for float math. Slot [1] Access code is hardware-enforced entry point.",
+        description: "IEEE 754 floating-point math. DR0=method selector: 0=ADD, 1=SUB, 2=MUL, 3=DIV, 4=MOD, 5=LOG, 6=EXP, 7=SQRT, 8=POW. Args: DR1=a, DR2=b (binary ops). Result in DR0.",
+        methodSelector: { 0: 'ADD', 1: 'SUB', 2: 'MUL', 3: 'DIV', 4: 'MOD', 5: 'LOG', 6: 'EXP', 7: 'SQRT', 8: 'POW' },
         clist: [
             { name: "NULL", type: "NULL", perms: [], desc: "NULL Golden Token — clears any CR when loaded", size: 0 },
-            { name: "Access", type: "Code", perms: ["R", "X"], desc: "CLOOMC code block — hardware-enforced CALL entry point (slot 1)", base: 0x5000, size: 256 },
-            { name: "GT_ADD", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: a + b", base: 0x5100, size: 256 },
-            { name: "GT_SUB", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: a - b", base: 0x5200, size: 256 },
-            { name: "GT_MUL", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: a * b", base: 0x5300, size: 256 },
-            { name: "GT_DIV", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: a / b", base: 0x5400, size: 384 },
-            { name: "GT_LOG", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: ln(x)", base: 0x5580, size: 256 },
-            { name: "GT_EXP", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: e^x", base: 0x5680, size: 256 },
-            { name: "GT_SQRT", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: sqrt(x)", base: 0x5780, size: 256 },
-            { name: "GT_POW", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: x^y", base: 0x5880, size: 320 },
+            { name: "Access", type: "Code", perms: ["R", "X"], desc: "Method dispatcher — DR0 selects operation (0=ADD, 1=SUB, 2=MUL, 3=DIV, 4=MOD, 5=LOG, 6=EXP, 7=SQRT, 8=POW)", base: 0x5000, size: 0x1000 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0x5A00, size: 512 }
         ]
     },
     Abacus: {
         name: "Abacus",
         mathType: "INTEGER",
-        description: "64-bit integer arithmetic operations. CALL this abstraction for integer math. Slot [1] Access code is hardware-enforced entry point.",
+        description: "64-bit integer arithmetic. DR0=method selector: 0=ADD, 1=SUB, 2=MUL, 3=DIV, 4=MOD, 5=ABS, 6=NEG, 7=INC, 8=DEC. Args: DR1=a, DR2=b (binary ops). Result in DR0.",
+        methodSelector: { 0: 'ADD', 1: 'SUB', 2: 'MUL', 3: 'DIV', 4: 'MOD', 5: 'ABS', 6: 'NEG', 7: 'INC', 8: 'DEC' },
         clist: [
             { name: "NULL", type: "NULL", perms: [], desc: "NULL Golden Token — clears any CR when loaded", size: 0 },
-            { name: "Access", type: "Code", perms: ["R", "X"], desc: "CLOOMC code block — hardware-enforced CALL entry point (slot 1)", base: 0x6000, size: 256 },
-            { name: "GT_ADD", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a + b", base: 0x6100, size: 192 },
-            { name: "GT_SUB", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a - b", base: 0x6200, size: 192 },
-            { name: "GT_MUL", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a * b", base: 0x6300, size: 192 },
-            { name: "GT_DIV", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a / b", base: 0x6400, size: 320 },
-            { name: "GT_MOD", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a mod b", base: 0x6580, size: 256 },
-            { name: "GT_ABS", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: |a|", base: 0x6680, size: 128 },
-            { name: "GT_NEG", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: -a", base: 0x6700, size: 128 },
-            { name: "GT_INC", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a + 1", base: 0x6780, size: 64 },
-            { name: "GT_DEC", type: "Function", mathType: "int64", perms: ["R", "X"], desc: "Int64: a - 1", base: 0x67C0, size: 64 },
+            { name: "Access", type: "Code", perms: ["R", "X"], desc: "Method dispatcher — DR0 selects operation (0=ADD, 1=SUB, 2=MUL, 3=DIV, 4=MOD, 5=ABS, 6=NEG, 7=INC, 8=DEC)", base: 0x6000, size: 0x1000 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0x6800, size: 512 }
         ]
     },
     Circle: {
         name: "Circle",
         mathType: "GEOMETRY",
-        description: "Circle geometry using float math. Provides PI constants and circle functions. Slot [1] Access code is hardware-enforced entry point.",
+        description: "Circle geometry. DR0=method selector: 0=PI, 1=TWO_PI, 2=CIRCUMFERENCE, 3=AREA, 4=DIAMETER. DR1=radius for computation methods. Result in DR0.",
+        methodSelector: { 0: 'PI', 1: 'TWO_PI', 2: 'CIRCUMFERENCE', 3: 'AREA', 4: 'DIAMETER' },
         clist: [
             { name: "NULL", type: "NULL", perms: [], desc: "NULL Golden Token — clears any CR when loaded", size: 0 },
-            { name: "Access", type: "Code", perms: ["R", "X"], desc: "CLOOMC code block — hardware-enforced CALL entry point (slot 1)", base: 0x7080, size: 128 },
-            { name: "GT_PI", type: "Constant", mathType: "float", perms: ["R"], desc: "Float: PI = 3.14159...", value: 3.14159265358979, base: 0x7000, size: 8 },
-            { name: "GT_TWO_PI", type: "Constant", mathType: "float", perms: ["R"], desc: "Float: 2*PI = 6.28318...", value: 6.28318530717958, base: 0x7008, size: 8 },
-            { name: "GT_CIRCUMFERENCE", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: C = 2*PI*r", base: 0x7100, size: 192 },
-            { name: "GT_AREA", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: A = PI*r^2", base: 0x7200, size: 192 },
-            { name: "GT_DIAMETER", type: "Function", mathType: "float", perms: ["R", "X"], desc: "Float: D = 2*r", base: 0x7300, size: 128 },
+            { name: "Access", type: "Code", perms: ["R", "X"], desc: "Method dispatcher — DR0 selects operation (0=PI, 1=TWO_PI, 2=CIRCUMFERENCE, 3=AREA, 4=DIAMETER)", base: 0x7000, size: 0x1000 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0x7400, size: 512 }
         ]
     },
     DateTime: {
         name: "DateTime",
         mathType: "TIME",
-        description: "ISO 8601 date/time. API: DR0=mode (0=ISO timestamp, 1=Date, 2=Time, 3=Unix epoch, 4=Components). Components return in DR1-DR6. Slot [1] Access code is hardware-enforced entry point.",
+        description: "ISO 8601 date/time. DR0=method selector: 0=TIMESTAMP, 1=DATE, 2=TIME, 3=EPOCH, 4=COMPONENTS (DR1-DR6). Result in DR0 or DR1-DR6.",
+        methodSelector: { 0: 'TIMESTAMP', 1: 'DATE', 2: 'TIME', 3: 'EPOCH', 4: 'COMPONENTS' },
         clist: [
             { name: "NULL", type: "NULL", perms: [], desc: "NULL Golden Token — clears any CR when loaded", size: 0 },
-            { name: "Access", type: "Code", perms: ["R", "X"], desc: "CLOOMC code block — hardware-enforced CALL entry point (slot 1)", base: 0x9000, size: 256 },
-            { name: "GT_DATETIME", type: "Function", perms: ["R", "X"], desc: "Get date/time: DR0=mode → DR1-DR6 or string GT", base: 0x9100, size: 512 },
-            { name: "GT_TIMESTAMP", type: "Function", perms: ["R", "X"], desc: "ISO 8601 full timestamp string", base: 0x9200, size: 256 },
-            { name: "GT_DATE", type: "Function", perms: ["R", "X"], desc: "ISO 8601 date only (YYYY-MM-DD)", base: 0x9300, size: 256 },
-            { name: "GT_TIME", type: "Function", perms: ["R", "X"], desc: "ISO 8601 time only (HH:MM:SS)", base: 0x9400, size: 256 },
-            { name: "GT_EPOCH", type: "Function", perms: ["R", "X"], desc: "Unix epoch seconds in DR1", base: 0x9500, size: 128 },
+            { name: "Access", type: "Code", perms: ["R", "X"], desc: "Method dispatcher — DR0 selects mode (0=TIMESTAMP, 1=DATE, 2=TIME, 3=EPOCH, 4=COMPONENTS)", base: 0x9000, size: 0x1000 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0x9600, size: 512 }
         ]
     },
@@ -586,15 +563,12 @@ const abstractionCLists = {
     Mint: {
         name: "Mint",
         mathType: "FORGE",
-        description: "Namespace method (not standalone abstraction) — accessed via CALL(Thread.Mint(type, size, access)). Mints domain-pure Golden Tokens (Turing [RWX] or Church [LSE], never both). Slot [1] Access code is hardware-enforced entry point.",
+        description: "Capability forge. DR0=method selector: 0=MINT (DR1=perm,DR2=type,DR3=size→CR0), 1=RESTRICT (CR0=src,DR1=mask→CR0), 2=REVOKE (CR0=target), 3=INSPECT (CR0=target→DR1-DR4).",
         isNamespaceMethod: true,
+        methodSelector: { 0: 'MINT', 1: 'RESTRICT', 2: 'REVOKE', 3: 'INSPECT' },
         clist: [
             { name: "NULL", type: "NULL", perms: [], desc: "NULL Golden Token — clears any CR when loaded", size: 0 },
-            { name: "Access", type: "Code", perms: ["R", "X"], desc: "CLOOMC code block — hardware-enforced CALL entry point (slot 1)", base: 0xC000, size: 256 },
-            { name: "GT_MINT", type: "Function", perms: ["R", "X"], desc: "Mint new GT: DR0=domain-pure perm mask (Turing [RWX] or Church [LSE], never both), DR1=type (0=Data,1=Code,2=C-List,3=Thread,4=Abstraction), DR2=size → CR0", base: 0xC100, size: 512 },
-            { name: "GT_RESTRICT", type: "Function", perms: ["R", "X"], desc: "Derive restricted GT: CR0=source GT, DR0=new perm mask (must be subset) → CR0=restricted GT", base: 0xC300, size: 512 },
-            { name: "GT_REVOKE", type: "Function", perms: ["R", "X"], desc: "Revoke GT: CR0=target GT → bumps namespace version, all copies FAULT on next mLoad", base: 0xC500, size: 256 },
-            { name: "GT_INSPECT", type: "Function", perms: ["R", "X"], desc: "Inspect GT metadata: CR0=target GT → DR0=perms, DR1=type, DR2=version, DR3=nsOffset", base: 0xC600, size: 256 },
+            { name: "Access", type: "Code", perms: ["R", "X"], desc: "Method dispatcher — DR0 selects operation (0=MINT, 1=RESTRICT, 2=REVOKE, 3=INSPECT)", base: 0xC000, size: 0x1000 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0xC800, size: 512 }
         ]
     }
@@ -1317,12 +1291,7 @@ function updateSystemState() {
         const cr7Row = document.getElementById('cr7Row');
         if (cr7Row && cr7.linkage) {
             let codePreview = '';
-            const parentName = cr7.linkage.split('/')[1];
-            let codeKey = cr7.name;
-            if (parentName === 'Abacus' && ['GT_ADD', 'GT_SUB', 'GT_MUL', 'GT_DIV'].includes(cr7.name)) {
-                codeKey = 'Abacus_' + cr7.name;
-            }
-            const code = functionBetaCode[codeKey] || functionBetaCode[cr7.name];
+            const code = functionBetaCode[cr7.name];
             if (code) {
                 const lines = code.split('\n').filter(l => l.trim() && !l.trim().startsWith(';')).slice(0, 4);
                 codePreview = ' | Code: ' + lines.join(' / ');
@@ -1600,8 +1569,8 @@ function getObjectTooltip(name, type) {
         'Boot': 'Boot Capability List - initial C-List loaded during system bootstrap',
         'Kenneth': 'Primary thread identity — M elevated on CR by microcode only',
         'Services': 'Services C-List — stable in CR5. Contains self[E] → Namespace → Mint, GC, Lookup',
-        'SlideRule': 'IEEE 754 floating-point math abstraction — LAMBDA dispatch (ADD, SUB, MUL, DIV, LOG, EXP, SQRT, POW)',
-        'Abacus': '64-bit integer arithmetic abstraction — LAMBDA dispatch (ADD, SUB, MUL, DIV, MOD, NEG, ABS, CMP)',
+        'SlideRule': 'IEEE 754 floating-point math abstraction — Method-selector dispatch: DR0=method (0=ADD,1=SUB,2=MUL,3=DIV,4=MOD,5=LOG,6=EXP,7=SQRT,8=POW)',
+        'Abacus': '64-bit integer arithmetic abstraction — Method-selector dispatch: DR0=method (0=ADD,1=SUB,2=MUL,3=DIV,4=MOD,5=ABS,6=NEG,7=INC,8=DEC)',
         'Circle': 'Geometric calculations — mintable at runtime via CALL(Thread.Mint)',
         'Access': 'Boot nucleus code — loaded into CR7. Resolves symbolic names from CR6 to executable code',
         'NULL': 'Null capability - no access rights, typically indicates uninitialized register'
@@ -3142,31 +3111,7 @@ function selectCodeFile(name) {
 }
 
 function getParentAbstraction(funcName) {
-    // Circle functions
-    if (['GT_CIRCUMFERENCE', 'GT_AREA', 'GT_DIAMETER'].includes(funcName)) {
-        return 'Circle';
-    }
-    // SlideRule (float) functions - includes basic arithmetic and transcendentals
-    if (['GT_LOG', 'GT_EXP', 'GT_SQRT', 'GT_POW', 'GT_ADD', 'GT_SUB', 'GT_MUL', 'GT_DIV', 'GT_MOD', 'GT_ABS', 'GT_NEG', 'GT_INC', 'GT_DEC'].includes(funcName)) {
-        return 'SlideRule';
-    }
-    // Abacus (integer) functions - prefixed with Abacus_
-    if (funcName.startsWith('Abacus_GT_')) {
-        return 'Abacus';
-    }
-    // CapabilityManager
-    if (funcName === 'GT_CREATE') {
-        return 'CapabilityManager';
-    }
-    // Mint (capability forge)
-    if (['GT_MINT', 'GT_RESTRICT', 'GT_REVOKE', 'GT_INSPECT'].includes(funcName)) {
-        return 'Mint';
-    }
-    // DateTime
-    if (funcName === 'GT_DATETIME') {
-        return 'DateTime';
-    }
-    // Lambda (functional) - Church calculus primitives
+    // Lambda (functional) - Church calculus true macros (still in C-List)
     if (['GT_Y_COMBINATOR', 'GT_CHURCH_SUCC', 'GT_CHURCH_PRED', 'GT_CHURCH_ADD', 'GT_CHURCH_MUL', 
          'GT_PAIR', 'GT_FST', 'GT_SND', 'GT_TRUE', 'GT_FALSE', 'GT_IF'].includes(funcName)) {
         return 'Lambda';
@@ -4269,13 +4214,8 @@ function syncEditorToCR7() {
     editorState.currentLinkage = linkage;
     editorState.currentPerms = perms;
 
-    const parentName = linkage.split('/')[1] || '';
-    let codeKey = cr7.name;
-    if (parentName === 'Abacus' && ['GT_ADD', 'GT_SUB', 'GT_MUL', 'GT_DIV'].includes(cr7.name)) {
-        codeKey = 'Abacus_' + cr7.name;
-    }
     const nameLower = cr7.name.toLowerCase();
-    const code = functionBetaCode[codeKey] || functionBetaCode[cr7.name]
+    const code = functionBetaCode[cr7.name]
               || examplePrograms[cr7.name] || examplePrograms[nameLower]
               || codeTemplates[cr7.name] || codeTemplates[nameLower];
     if (code) {
@@ -4511,6 +4451,97 @@ function showTunnelMessage(direction, message, details, timestamp) {
 function closeTunnelMessage() {
     const overlay = document.getElementById('tunnelMsgOverlay');
     if (overlay) overlay.remove();
+}
+
+function executeMethodSelector(absName, methodSelector) {
+    const abs = abstractionCLists[absName];
+    if (!abs || !abs.methodSelector) return null;
+    
+    const dr0 = Number(simulator.dataRegs[0] || 0n);
+    const methodName = abs.methodSelector[dr0];
+    if (!methodName) return `FAULT: METHOD: ${absName} — invalid method selector DR0=${dr0}`;
+    
+    const dr1 = Number(simulator.dataRegs[1] || 0n);
+    const dr2 = Number(simulator.dataRegs[2] || 0n);
+    const dr3 = Number(simulator.dataRegs[3] || 0n);
+    let result = 0;
+    let desc = '';
+    
+    if (absName === 'SlideRule') {
+        switch (methodName) {
+            case 'ADD': result = dr1 + dr2; desc = `ADD(${dr1}, ${dr2}) = ${result}`; break;
+            case 'SUB': result = dr1 - dr2; desc = `SUB(${dr1}, ${dr2}) = ${result}`; break;
+            case 'MUL': result = dr1 * dr2; desc = `MUL(${dr1}, ${dr2}) = ${result}`; break;
+            case 'DIV': 
+                if (dr2 === 0) return `FAULT: DIV_BY_ZERO: SlideRule.DIV — DR2=0`;
+                result = dr1 / dr2; desc = `DIV(${dr1}, ${dr2}) = ${result}`; break;
+            case 'MOD':
+                if (dr2 === 0) return `FAULT: DIV_BY_ZERO: SlideRule.MOD — DR2=0`;
+                result = dr1 % dr2; desc = `MOD(${dr1}, ${dr2}) = ${result}`; break;
+            case 'LOG': result = Math.log(dr1); desc = `LOG(${dr1}) = ${result}`; break;
+            case 'EXP': result = Math.exp(dr1); desc = `EXP(${dr1}) = ${result}`; break;
+            case 'SQRT': result = Math.sqrt(dr1); desc = `SQRT(${dr1}) = ${result}`; break;
+            case 'POW': result = Math.pow(dr1, dr2); desc = `POW(${dr1}, ${dr2}) = ${result}`; break;
+        }
+    } else if (absName === 'Abacus') {
+        const a = BigInt(dr1), b = BigInt(dr2);
+        switch (methodName) {
+            case 'ADD': result = a + b; desc = `ADD(${dr1}, ${dr2}) = ${result}`; break;
+            case 'SUB': result = a - b; desc = `SUB(${dr1}, ${dr2}) = ${result}`; break;
+            case 'MUL': result = a * b; desc = `MUL(${dr1}, ${dr2}) = ${result}`; break;
+            case 'DIV':
+                if (b === 0n) return `FAULT: DIV_BY_ZERO: Abacus.DIV — DR2=0`;
+                result = a / b; desc = `DIV(${dr1}, ${dr2}) = ${result}`; break;
+            case 'MOD':
+                if (b === 0n) return `FAULT: DIV_BY_ZERO: Abacus.MOD — DR2=0`;
+                result = a % b; desc = `MOD(${dr1}, ${dr2}) = ${result}`; break;
+            case 'ABS': result = a < 0n ? -a : a; desc = `ABS(${dr1}) = ${result}`; break;
+            case 'NEG': result = -a; desc = `NEG(${dr1}) = ${result}`; break;
+            case 'INC': result = a + 1n; desc = `INC(${dr1}) = ${result}`; break;
+            case 'DEC': result = a - 1n; desc = `DEC(${dr1}) = ${result}`; break;
+        }
+    } else if (absName === 'Circle') {
+        const PI = 3.14159265358979;
+        switch (methodName) {
+            case 'PI': result = PI; desc = `PI = ${result}`; break;
+            case 'TWO_PI': result = 2 * PI; desc = `TWO_PI = ${result}`; break;
+            case 'CIRCUMFERENCE': result = 2 * PI * dr1; desc = `CIRCUMFERENCE(r=${dr1}) = ${result}`; break;
+            case 'AREA': result = PI * dr1 * dr1; desc = `AREA(r=${dr1}) = ${result}`; break;
+            case 'DIAMETER': result = 2 * dr1; desc = `DIAMETER(r=${dr1}) = ${result}`; break;
+        }
+    } else if (absName === 'DateTime') {
+        const now = new Date();
+        switch (methodName) {
+            case 'TIMESTAMP': desc = `TIMESTAMP = ${now.toISOString()}`; result = 0; break;
+            case 'DATE': desc = `DATE = ${now.toISOString().split('T')[0]}`; result = 0; break;
+            case 'TIME': desc = `TIME = ${now.toTimeString().split(' ')[0]}`; result = 0; break;
+            case 'EPOCH': result = Math.floor(now.getTime() / 1000); desc = `EPOCH = ${result}`; break;
+            case 'COMPONENTS':
+                simulator.dataRegs[1] = BigInt(now.getFullYear());
+                simulator.dataRegs[2] = BigInt(now.getMonth() + 1);
+                simulator.dataRegs[3] = BigInt(now.getDate());
+                simulator.dataRegs[4] = BigInt(now.getHours());
+                simulator.dataRegs[5] = BigInt(now.getMinutes());
+                simulator.dataRegs[6] = BigInt(now.getSeconds());
+                desc = `COMPONENTS → DR1-DR6 = ${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+                result = 0; break;
+        }
+    } else if (absName === 'Mint') {
+        switch (methodName) {
+            case 'MINT': desc = `MINT(perm=0x${dr1.toString(16)}, type=${dr2}, size=${dr3}) → new GT in CR0`; result = 0; break;
+            case 'RESTRICT': desc = `RESTRICT(CR0, mask=0x${dr1.toString(16)}) → restricted GT in CR0`; result = 0; break;
+            case 'REVOKE': desc = `REVOKE(CR0) → version bumped, all copies invalidated`; result = 0; break;
+            case 'INSPECT': desc = `INSPECT(CR0) → DR1=perms, DR2=type, DR3=version, DR4=offset`; result = 0; break;
+        }
+    }
+    
+    if (typeof result === 'bigint') {
+        simulator.dataRegs[0] = result & BigInt("0xFFFFFFFFFFFFFFFF");
+    } else {
+        simulator.dataRegs[0] = BigInt(Math.round(result)) & BigInt("0xFFFFFFFFFFFFFFFF");
+    }
+    
+    return `${absName}.${methodName}: ${desc}`;
 }
 
 function resolveCallTarget(targetName) {
@@ -4760,6 +4791,18 @@ function executeEditorInstruction(instr) {
                         result += '\n  [NOTIFICATION] Sent to Priscilla (RV32-Cap) \u2014 check her Sim-32 page';
                     } else {
                         resolveCallTarget(callTargetName);
+                        const absData = abstractionCLists[callTargetName];
+                        if (absData && absData.methodSelector) {
+                            const dispatchResult = executeMethodSelector(callTargetName);
+                            if (dispatchResult) {
+                                if (dispatchResult.startsWith('FAULT')) {
+                                    faultOccurred = true;
+                                    result = dispatchResult;
+                                } else {
+                                    result += ` → [DISPATCH] ${dispatchResult}`;
+                                }
+                            }
+                        }
                         syncEditorToCR7();
                         const cr7Now = simulator.contextRegs[7];
                         if (cr7Now && cr7Now.name !== 'NULL') {
@@ -4810,12 +4853,7 @@ function executeEditorInstruction(instr) {
                         editorState.currentLinkage = lambdaLinkage;
                         editorState.currentPerms = lambdaPerms;
 
-                        const lambdaParent = lambdaLinkage.split('/')[1] || '';
-                        let lambdaKey = lambdaCR.name;
-                        if (lambdaParent === 'Abacus' && ['GT_ADD', 'GT_SUB', 'GT_MUL', 'GT_DIV'].includes(lambdaCR.name)) {
-                            lambdaKey = 'Abacus_' + lambdaCR.name;
-                        }
-                        const lambdaCode = functionBetaCode[lambdaKey] || functionBetaCode[lambdaCR.name];
+                        const lambdaCode = functionBetaCode[lambdaCR.name];
                         if (lambdaCode) {
                             const editor = document.getElementById('codeEditor');
                             if (editor) {
@@ -5807,11 +5845,11 @@ const lessons = [
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div style="background: rgba(230, 126, 34, 0.15); padding: 1rem; border-radius: 6px; border-left: 3px solid #e67e22;">
                             <div style="color: #e67e22; font-weight: bold; margin-bottom: 0.5rem;">Integer Math</div>
-                            <code style="font-size: 0.8rem; color: var(--text-secondary);">LOAD CR1, Abacus<br/>CALL CR1  ; Enter int64 ADD</code>
+                            <code style="font-size: 0.8rem; color: var(--text-secondary);">LOAD CR1, Abacus<br/>ADDI 0 0  ; DR0=0 (ADD)<br/>CALL CR1  ; Dispatch int64 ADD</code>
                         </div>
                         <div style="background: rgba(52, 152, 219, 0.15); padding: 1rem; border-radius: 6px; border-left: 3px solid #3498db;">
                             <div style="color: #3498db; font-weight: bold; margin-bottom: 0.5rem;">Float Math</div>
-                            <code style="font-size: 0.8rem; color: var(--text-secondary);">LOAD CR1, SlideRule<br/>CALL CR1  ; Enter IEEE754 ADD</code>
+                            <code style="font-size: 0.8rem; color: var(--text-secondary);">LOAD CR1, SlideRule<br/>ADDI 0 0  ; DR0=0 (ADD)<br/>CALL CR1  ; Dispatch IEEE754 ADD</code>
                         </div>
                     </div>
                     <div class="demo-explanation">
@@ -7270,9 +7308,10 @@ CALL 2          ; DR0 = result after RETURN
 LOAD 0 6 0      ; CR0 = GT pointing to THIS code
 CALL 0          ; Recursive self-invocation
 
-; CALL to abstraction (math operation):
+; CALL to abstraction (method-selector dispatch):
 LOAD 0 6 3      ; CR0 = Abacus (integer math) GT
-CALL 0          ; Hardware integer operation</pre>
+ADDI 0 0        ; DR0 = 0 (ADD method selector)
+CALL 0          ; Dispatch: Access reads DR0, performs ADD</pre>
                 </div>`
             },
             {
@@ -11180,12 +11219,12 @@ B MI pow_neg_base   ; Handle negative base
 ; === VALIDATED COMPUTATION (IEEE 754) ===
 pow_compute:
 ; Power via: x^y = exp(y * ln(x))
-; This is the standard implementation
-LOAD 2 6 0          ; Load GT_LOG from C-List
-CALL 2              ; DR0 = ln(x)
+; Method-selector dispatch through Access code
+ADDI 0 5            ; DR0 = 5 (LOG method selector)
+CALL 1              ; DR0 = ln(x) via Access dispatcher
 MUL 0 1             ; DR0 = y * ln(x)
-LOAD 3 6 1          ; Load GT_EXP from C-List
-CALL 3              ; DR0 = exp(y * ln(x)) = x^y
+ADDI 0 6            ; DR0 = 6 (EXP method selector)
+CALL 1              ; DR0 = exp(y * ln(x)) = x^y via Access
 
 ; === IEEE 754 FPSR FLAGS ===
 ; Overflow: result > MAX_FLOAT -> +Inf
@@ -12098,7 +12137,7 @@ fault:
 
 function openFunctionInEditor(funcName, parentAbstraction) {
     let codeKey = funcName;
-    if (parentAbstraction === 'Abacus' && ['GT_ADD', 'GT_SUB', 'GT_MUL', 'GT_DIV'].includes(funcName)) {
+    if (parentAbstraction === 'Abacus' && funcName.startsWith('GT_')) {
         codeKey = 'Abacus_' + funcName;
     }
     const code = functionBetaCode[codeKey] || functionBetaCode[funcName];
@@ -12579,10 +12618,12 @@ MUL 0 1           ; DR0 = 2 * r
 RETURN
 
 ; ------------------------------------------------
-; Usage example:
-; LOAD 0 6 0      ; Load circumference GT from Circle C-List
-; ADDI 0 5        ; DR0 = radius = 5
-; CALL 0          ; Calculate circumference
+; Usage example (method-selector dispatch):
+; LOAD 0 6 4      ; Load Circle [E] from Boot C-List
+; CALL 0          ; Enter Circle scope
+; ADDI 0 2        ; DR0 = 2 (CIRCUMFERENCE method)
+; ADDI 1 5        ; DR1 = radius = 5
+; CALL 1          ; Access dispatcher: circumference(5)
 ; Result in DR0
 ; ------------------------------------------------`,
 

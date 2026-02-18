@@ -157,7 +157,7 @@
                         <h3>Y-Combinator (Fixed-Point Recursion)</h3>
                         <pre>; Y-Combinator enables recursion
 ; Y = λf.(λx.f(x x))(λx.f(x x))
-LOAD CR0, CR6, #9       ; Load Lambda abstraction
+LOAD CR0, CR6, #8       ; Load Lambda abstraction
 CALL CR0                ; Enter Lambda abstraction
 MOV DR0, #0             ; Y_COMBINATOR function
 CALL CR0                ; Execute Y-Combinator
@@ -168,7 +168,7 @@ RETURN                  ; Result in DR1</pre>
                         <h3>Church Numerals</h3>
                         <pre>; Church encoding: numbers as functions
 ; SUCC n = λf.λx.f(n f x)
-LOAD CR0, CR6, #9       ; Load Lambda abstraction
+LOAD CR0, CR6, #8       ; Load Lambda abstraction
 CALL CR0                ; Enter Lambda abstraction
 MOV DR0, #1             ; CHURCH_SUCC function
 MOV DR1, #5             ; Apply to number 5
@@ -180,7 +180,7 @@ RETURN</pre>
                         <h3>Church Booleans</h3>
                         <pre>; TRUE = λx.λy.x (select first)
 ; FALSE = λx.λy.y (select second)
-LOAD CR0, CR6, #9       ; Load Lambda abstraction
+LOAD CR0, CR6, #8       ; Load Lambda abstraction
 CALL CR0                ; Enter Lambda abstraction
 MOV DR0, #7             ; TRUE function
 MOV DR1, #42            ; First value
