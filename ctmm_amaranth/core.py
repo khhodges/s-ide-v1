@@ -10,6 +10,7 @@ from .gc_unit import CTMMGCUnit
 from .call import CTMMCall
 from .ret import CTMMReturn
 from .lambda_unit import CTMMLambda
+from .tperm import CTMMTperm
 
 
 class CTMMCore(Elaboratable):
@@ -60,6 +61,7 @@ class CTMMCore(Elaboratable):
         u_lambda = CTMMLambda()
         u_call = CTMMCall()
         u_return = CTMMReturn()
+        u_tperm = CTMMTperm()
         m.submodules.u_registers = u_regs
         m.submodules.u_decoder = u_decoder
         m.submodules.u_perm_check = u_perm
@@ -67,6 +69,7 @@ class CTMMCore(Elaboratable):
         m.submodules.u_lambda = u_lambda
         m.submodules.u_call = u_call
         m.submodules.u_return = u_return
+        m.submodules.u_tperm = u_tperm
 
         nia_reg = Signal(32)
         nia_next = Signal(32)
@@ -124,8 +127,9 @@ class CTMMCore(Elaboratable):
         )
 
         m.d.comb += u_regs.cr_rd_addr.eq(
-            Mux(lambda_start_sig, u_lambda.cr_rd_addr,
-                Cat(cr_src, Const(0, 1)))
+            Mux(u_tperm.tperm_busy, u_tperm.cr_rd_addr,
+                Mux(lambda_start_sig, u_lambda.cr_rd_addr,
+                    Cat(cr_src, Const(0, 1))))
         )
 
         cr_rd_gt = View(GT_LAYOUT, Signal(GT_LAYOUT))
@@ -404,7 +408,14 @@ class CTMMCore(Elaboratable):
         effective_target = Signal(3)
         m.d.comb += effective_target.eq(Mux(church_op == ChurchOpcode.CHANGE, 0, switch_target))
 
-        with m.If(switch_change_active):
+        with m.If(u_tperm.cr_wr_en):
+            for i in range(16):
+                with m.If(u_tperm.cr_wr_addr == i):
+                    m.d.comb += [
+                        runtime_wr_en[i].eq(1),
+                        runtime_wr_gt[i].eq(View(CAP_REG_LAYOUT, u_tperm.cr_wr_data).word0_gt),
+                    ]
+        with m.Elif(switch_change_active):
             for i in range(8):
                 with m.If(effective_target == i):
                     m.d.comb += [runtime_wr_en[8 + i].eq(1), runtime_wr_gt[8 + i].eq(switch_src_gt)]
@@ -421,6 +432,8 @@ class CTMMCore(Elaboratable):
             m.d.comb += [self.fault.eq(u_perm.fault_type), self.fault_valid.eq(1)]
         with m.Elif(u_lambda.lambda_fault):
             m.d.comb += [self.fault.eq(u_lambda.fault_type), self.fault_valid.eq(1)]
+        with m.Elif(u_tperm.tperm_fault):
+            m.d.comb += [self.fault.eq(u_tperm.fault_type), self.fault_valid.eq(1)]
         with m.Else():
             m.d.comb += [self.fault.eq(FaultType.NONE), self.fault_valid.eq(0)]
 
@@ -474,14 +487,26 @@ class CTMMCore(Elaboratable):
             u_lambda.saved_nia.eq(nia_reg + 4),
         ]
 
+        tperm_start_sig = Signal()
+        m.d.comb += tperm_start_sig.eq(
+            exec_enable & is_church_op & (church_op == ChurchOpcode.TPERM) & all_checks_pass
+        )
+
+        m.d.comb += [
+            u_tperm.tperm_start.eq(tperm_start_sig),
+            u_tperm.cr_target.eq(Cat(cr_dst, Const(0, 1))),
+            u_tperm.preset.eq(u_decoder.tperm_preset),
+            u_tperm.cr_rd_data.eq(u_regs.cr_rd_data),
+        ]
+
         CR5_STACK_DEPTH = 256
-        cr5_stack = Memory(shape=64, depth=CR5_STACK_DEPTH, init=[])
+        cr5_stack = Memory(width=64, depth=CR5_STACK_DEPTH, init=[])
         m.submodules.cr5_stack = cr5_stack
         cr5_stack_ptr = Signal(8, init=0)
         cr5_stack_empty = Signal()
         cr5_stack_full = Signal()
         cr5_stack_wr = cr5_stack.write_port()
-        cr5_stack_rd = cr5_stack.read_port(transparent_for=[cr5_stack_wr])
+        cr5_stack_rd = cr5_stack.read_port(transparent=True)
 
         m.d.comb += [
             cr5_stack_empty.eq(cr5_stack_ptr == 0),
@@ -493,7 +518,7 @@ class CTMMCore(Elaboratable):
             cr5_stack_wr.en.eq(0),
         ]
 
-        with m.If(u_call.complete & ~u_call.fault & ~cr5_stack_full):
+        with m.If(u_call.call_complete & ~u_call.call_fault & ~cr5_stack_full):
             m.d.comb += [
                 cr5_stack_wr.addr.eq(cr5_stack_ptr),
                 cr5_stack_wr.data.eq(u_call.saved_cr5_gt),

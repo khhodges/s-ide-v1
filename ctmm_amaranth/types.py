@@ -20,7 +20,7 @@ PERM_MASK_M = 1 << PERM_M
 GT_TYPE_INFORM  = 0b00
 GT_TYPE_OUTFORM = 0b01
 GT_TYPE_NULL    = 0b10
-GT_TYPE_SPARE   = 0b11
+GT_TYPE_ABSTRACT = 0b11
 
 DATA_PERMS = PERM_MASK_R | PERM_MASK_W | PERM_MASK_X
 CAP_PERMS = PERM_MASK_L | PERM_MASK_S | PERM_MASK_E
@@ -102,7 +102,7 @@ class TpermPreset(IntEnum):
     LE    = 10
     SE    = 11
     LSE   = 12
-    RWXL  = 13
+    RSV0  = 13
     RSV1  = 14
     RSV2  = 15
 
@@ -121,7 +121,7 @@ TPERM_MASKS = {
     TpermPreset.LE:    PERM_MASK_L | PERM_MASK_E,
     TpermPreset.SE:    PERM_MASK_S | PERM_MASK_E,
     TpermPreset.LSE:   PERM_MASK_L | PERM_MASK_S | PERM_MASK_E,
-    TpermPreset.RWXL:  0x0000,
+    TpermPreset.RSV0:  0x0000,
 }
 
 

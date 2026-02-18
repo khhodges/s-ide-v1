@@ -128,7 +128,7 @@ class CTMMDecoder(Elaboratable):
             with m.Elif((opcode_field == ChurchOpcode.TPERM) &
                          ((operand_field[0:4] == TpermPreset.RSV1) |
                           (operand_field[0:4] == TpermPreset.RSV2) |
-                          (operand_field[0:4] == TpermPreset.RWXL))):
+                          (operand_field[0:4] == TpermPreset.RSV0))):
                 m.d.comb += [
                     self.fault_valid.eq(1),
                     self.fault.eq(FaultType.TPERM_RSV),

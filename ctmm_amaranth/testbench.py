@@ -77,7 +77,7 @@ def run_testbench():
         inform_gt = build_gt(0x100, PERM_MASK_L, gt_type=GT_TYPE_INFORM)
         outform_gt = build_gt(0x200, PERM_MASK_E, gt_type=GT_TYPE_OUTFORM)
         null_gt = build_null_gt()
-        spare_gt = build_gt(0x300, 0, gt_type=GT_TYPE_SPARE)
+        abstract_gt = build_gt(0x300, 0, gt_type=GT_TYPE_ABSTRACT)
 
         gt_type_bits = (inform_gt >> 55) & 0x3
         assert gt_type_bits == GT_TYPE_INFORM, f"Inform type mismatch: {gt_type_bits}"
@@ -85,9 +85,9 @@ def run_testbench():
         assert gt_type_bits == GT_TYPE_OUTFORM, f"Outform type mismatch: {gt_type_bits}"
         gt_type_bits = (null_gt >> 55) & 0x3
         assert gt_type_bits == GT_TYPE_NULL, f"NULL type mismatch: {gt_type_bits}"
-        gt_type_bits = (spare_gt >> 55) & 0x3
-        assert gt_type_bits == GT_TYPE_SPARE, f"Spare type mismatch: {gt_type_bits}"
-        print("  PASS: GT type field encodes Inform/Outform/NULL/Spare correctly")
+        gt_type_bits = (abstract_gt >> 55) & 0x3
+        assert gt_type_bits == GT_TYPE_ABSTRACT, f"Abstract type mismatch: {gt_type_bits}"
+        print("  PASS: GT type field encodes Inform/Outform/NULL/Abstract correctly")
 
         perms_field = (inform_gt >> 58) & 0x3F
         assert perms_field == PERM_MASK_L, f"Perm mismatch: {perms_field}"
@@ -174,11 +174,11 @@ def run_testbench():
         print(f"  Encoded LAMBDA instruction: 0x{lambda_instr:08x}")
         print("  PASS: LAMBDA instruction encodes correctly")
 
-        print("\n[TEST 7] TPERM Domain Purity (RWXL Reserved)")
+        print("\n[TEST 7] TPERM Domain Purity (Reserved Presets)")
         print("-" * 50)
-        rwxl_mask = TPERM_MASKS[TpermPreset.RWXL]
-        assert rwxl_mask == 0, f"RWXL should be reserved (0), got 0x{rwxl_mask:04x}"
-        print("  PASS: RWXL preset is reserved (domain purity violation)")
+        rsv0_mask = TPERM_MASKS[TpermPreset.RSV0]
+        assert rsv0_mask == 0, f"RSV0 should be reserved (0), got 0x{rsv0_mask:04x}"
+        print("  PASS: RSV0 preset is reserved (causes FAULT_TPERM_RSV)")
 
         print("\n[TEST 8] Turing Instructions (LDI, ADD, CMP)")
         print("-" * 50)
