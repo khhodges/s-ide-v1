@@ -19,11 +19,13 @@ Sim-64 uses a 64-bit Golden Token with the following structure:
 
 | Field | Description |
 |-------|-------------|
-| **Offset** | Index into the namespace identifying the target resource |
-| **Permissions** | 10-bit permission field (R, W, X, L, S, E, B, M, F, G) |
-| **Spare** | Reserved bits for future use |
+| **Offset** (32 bits) | Index into the namespace identifying the target resource |
+| **Spare** (23 bits) | Version counter (bumped by GC sweep) |
+| **Type** (2 bits) | Inform (00), Outform (01), NULL (10), Spare (11) |
+| **G** (1 bit) | Garbage collection mark bit |
+| **Permissions** (6 bits) | R, W, X, L, S, E |
 
-The 64-bit GT is stored directly in capability registers CR0-CR15.
+The 64-bit GT is stored directly in capability registers CR0-CR15. The Sim-64 design is documented separately and will be finalised independently of Sim-32 -- each simulator swims in its own private space.
 
 ---
 
@@ -32,9 +34,9 @@ The 64-bit GT is stored directly in capability registers CR0-CR15.
 Sim-32 uses a 32-bit Golden Token with a precisely defined bit layout:
 
 ```
-[31:27] Version     (5 bits)  -- Version tag for GC invalidation
-[26:12] Index       (15 bits) -- Namespace entry index (0-32,767)
-[11:2]  Permissions (10 bits) -- G, F, M, B, S, E, L, X, W, R
+[31:25] Version     (7 bits)  -- Version tag for GC invalidation (128 generations)
+[24:8]  Index       (17 bits) -- Namespace entry index (0-131,071)
+[7:2]   Permissions (6 bits)  -- E, S, L, X, W, R
 [1:0]   Type        (2 bits)  -- Token type classification
 ```
 
@@ -49,64 +51,86 @@ Each capability register in Sim-32 is 128 bits wide (4 x 32-bit words):
 
 ---
 
-## Permission Bits
+## GT Permission Bits (Sim-32)
 
-Both simulators use the same 10 permission bits. Each bit independently enables a specific operation:
+The GT stores exactly 6 permission bits. These are the mutually exclusive access rights -- three for data operations (Turing domain) and three for capability operations (Church domain):
 
-| Bit | Name | Description |
-|-----|------|-------------|
-| R | Read | Read data from the referenced resource |
-| W | Write | Write data to the referenced resource |
-| X | Execute | Execute code at the referenced location |
-| L | Load | Load a Golden Token from a C-List |
-| S | Save | Save a Golden Token to a C-List |
-| E | Enter | Enter an abstraction (call a service) |
-| B | Bind | Bind a capability to a context |
-| M | Machine | Machine-level privileged operations |
-| F | Foreign | Foreign/remote capability (proxy) |
-| G | Garbage | Garbage collection management flag |
+| Bit | Position | Name | Domain | Description |
+|-----|----------|------|--------|-------------|
+| R | 0 | Read | Turing | Read data from the referenced resource |
+| W | 1 | Write | Turing | Write data to the referenced resource |
+| X | 2 | Execute | Turing | Execute code at the referenced location |
+| L | 3 | Load | Church | Load a Golden Token from a C-List via mLoad |
+| S | 4 | Save | Church | Save a Golden Token to a C-List via mSave |
+| E | 5 | Enter | Church | Enter an abstraction (call a service) |
 
----
+### Domain Purity
 
-## Permission Domains
+A GT may carry Turing permissions (R, W, X) **or** Church permissions (L, S, E), but **never both**. E (Enter) belongs to the Church domain. This is enforced in hardware at TPERM time -- any attempt to create a mixed-domain GT raises a DOMAIN_PURITY fault.
 
-Permissions are organized into four mutually exclusive domains. A single operation context uses permissions from only one domain:
+```
+Valid:   R, W, X, RW, RX, WX, RWX        (Turing pure)
+Valid:   L, S, E, LS, LE, SE, LSE         (Church pure)
+Invalid: RL, WL, XE, RE, WS, RWXE, RWXL  (any mix of {R,W,X} with {L,S,E})
+```
 
-| Domain | Bits | Purpose |
-|--------|------|---------|
-| **Church** | L, S | Capability management -- loading and saving Golden Tokens through C-Lists |
-| **Turing** | R, W, X | Data processing -- reading, writing, and executing computational resources |
-| **Lambda** | E | Abstraction entry -- invoking protected services and functions |
-| **Meta** | B, M, F, G | System management -- binding, machine privilege, foreign proxies, garbage collection |
+### M Permission -- Transient Microcode Elevation
 
-This separation ensures that a single token cannot simultaneously grant data access and capability management, preventing privilege confusion attacks.
+M is **not stored in the GT**. It exists only as a transient signal (`sub_m_elevated`) that microcode asserts during mLoad execution. When mLoad completes, M is gone. No user instruction can set, test, or observe M. This prevents privilege escalation.
 
 ---
 
-## GT Type Field (Sim-32 Only)
+## Namespace Entry Metadata
 
-Sim-32 includes a 2-bit type field in bits [1:0] of the Golden Token, classifying the nature of the referenced resource:
+The following metadata is **not** stored in the GT permission bits. It lives in the namespace entry (the slot), because it describes properties of the resource, not access rights on the token:
+
+| Flag | Name | Description |
+|------|------|-------------|
+| B | Bind | Whether this namespace entry's capability can be saved/bound to another C-List. A slot-level policy controlling capability propagation. |
+| F | Far/Foreign | Whether this namespace entry references a remote/foreign resource. Corresponds to the Outform GT type. A property of where the resource lives, not what you can do with it. |
+
+B and F are checked by the namespace management logic when capabilities are copied or accessed across boundaries, but they do not consume bits in the GT itself.
+
+---
+
+## GT Type Field
+
+Both Sim-32 and Sim-64 include a 2-bit type field classifying the nature of the referenced resource:
 
 | Value | Type | Description |
 |-------|------|-------------|
 | 00 | Inform | Local resource -- data or code residing in the local namespace |
 | 01 | Outform | Remote resource -- data or service accessible through a network proxy |
-| 10 | Literal | Literal value -- the token encodes a direct value, not a reference |
-| 11 | Abstract | Abstract service -- a callable abstraction (function or service entry point) |
+| 10 | NULL | Empty / invalid / revoked -- always faults on use |
+| 11 | Spare | Reserved for future use |
 
-Sim-64 does not have an explicit type field; the type is implicit in how the token is used.
+In Sim-32, the type field occupies bits [1:0] of the GT. In Sim-64, it occupies the gt_type field in the 64-bit layout.
+
+NULL is architecturally distinct from all valid reference types. A register holding all zeros could be confused with an Inform GT pointing to namespace index 0 with version 0 and no permissions -- but Type = 10 (NULL) is unambiguous. The hardware knows immediately the register does not reference any namespace entry.
 
 ---
 
-## GT Version Field (Sim-32 Only)
+## GT Version Field (Sim-32)
 
-Sim-32 includes a 5-bit version field in bits [31:27] of the Golden Token. This version tag is critical for garbage collection safety:
+Sim-32 includes a 7-bit version field in bits [31:25] of the Golden Token. This version tag is critical for garbage collection safety:
 
-- Each namespace entry has a corresponding version number stored in the VersionSeals word.
+- Each namespace entry has a corresponding version number stored in the VersionSeals word (also bits [31:25]).
 - When a GT is used (LOAD or CALL), the version in the GT must match the version in the namespace entry. A mismatch triggers a FAULT.
 - During garbage collection sweep, reclaimed entries have their version bumped. This automatically invalidates all outstanding GTs that reference the old version, preventing use-after-free vulnerabilities.
+- 7 bits gives 128 version generations before wraparound.
 
-Sim-64 does not use a version field; it relies on different GC mechanisms (G-bit clearing on access).
+Sim-64 uses a different GC mechanism (G-bit clearing on access through mLoad's RESET_G state).
+
+### VersionSeals Word (Sim-32)
+
+The word3 (VersionSeals) in each capability register and namespace entry combines the version with an integrity seal:
+
+```
+[31:25] Version  (7 bits)  -- Must match GT version
+[24:0]  Seal     (25 bits) -- FNV hash of Location and Limit for integrity
+```
+
+The 25-bit FNV seal serves the same purpose as the Sim-64 MAC: it provides integrity verification for the namespace entry.
 
 ---
 
