@@ -424,11 +424,11 @@ done:
 #
 # Namespace layout (ns[15-20]):
 #   [15] TunnelKey_Child [R]   — shared crypto key
-#   [16] Son_Messaging   [E]   — Outform to Kenneth
+#   [16] Son_Messaging   [E,F] — Outform+Far to Kenneth
 #   [17] ABI_Child       [R]   — register map x→DR
 #   [18] Inbox           [R,W] — received messages
 #   [19] Outbox          [R,W] — outgoing messages
-#   [20] Reply_Tunnel    [E]   — return path
+#   [20] Reply_Tunnel    [E,F] — Outform+Far return path
 # ================================================
 
 # ────────────────────────────────────────────
@@ -535,11 +535,11 @@ function setupHelloMumNamespace() {
     appendConsole('');
     appendConsole('Tunnel namespace entries (ns[15-20]):');
     appendConsole('  [15] TunnelKey_Child [R]   — shared crypto key');
-    appendConsole('  [16] Son_Messaging   [E]   — Outform to Kenneth');
+    appendConsole('  [16] Son_Messaging   [E,F] — Outform+Far to Kenneth (remote execution)');
     appendConsole('  [17] ABI_Child       [R]   — register map x→DR');
     appendConsole('  [18] Inbox           [R,W] — received messages');
     appendConsole('  [19] Outbox          [R,W] — outgoing messages');
-    appendConsole('  [20] Reply_Tunnel    [E]   — return path');
+    appendConsole('  [20] Reply_Tunnel    [E,F] — Outform+Far return path (remote execution)');
     appendConsole('');
     appendConsole('CR6 = C-List [R,W,L,S] — mymother C-List');
     appendConsole('');
@@ -565,8 +565,13 @@ function updateNamespaceView() {
             : '<span class="mac-badge mac-invalid">MAC FAIL</span>';
         const gBit = entry.gBit || 0;
         const gBadge = gBit ? '<span class="mac-badge mac-invalid">G</span>' : '<span class="mac-badge mac-valid">-</span>';
+        const limitRaw = entry.limit >>> 0;
+        const bFlag = (limitRaw >>> 31) & 1;
+        const fFlag = (limitRaw >>> 30) & 1;
+        const limitVal = limitRaw & 0x1FFFF;
+        const bfBadge = (bFlag || fFlag) ? `<span class="mac-badge" style="background:${fFlag ? '#e67e22' : '#3498db'};color:#fff;font-size:10px;">${bFlag ? 'B' : ''}${fFlag ? 'F' : ''}</span>` : '';
         const nsName = NS_NAMES[i] || '';
-        tr.innerHTML = `<td>${i}</td><td>${nsName}</td><td>${toHex32(entry.location)}</td><td>${toHex32(entry.limit)}</td><td>${version}</td><td>${toHex32(seals)}</td><td>${macBadge}</td><td>${gBadge}</td>`;
+        tr.innerHTML = `<td>${i}</td><td>${nsName}</td><td>${toHex32(entry.location)}</td><td>${toHex32(limitVal)}${bfBadge}</td><td>${version}</td><td>${toHex32(seals)}</td><td>${macBadge}</td><td>${gBadge}</td>`;
         tbody.appendChild(tr);
     });
 }

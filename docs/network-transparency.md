@@ -36,6 +36,20 @@ The Type field combines with permissions to determine behavior:
 | Outform + S | **TRAP** — future extension for remote capability delegation |
 | Outform + X | **TRAP** — nonsense case, safe |
 
+### F (Far/Foreign) Flag — Virtual Memory vs Remote Execution
+
+The F flag (bit 30 of the namespace entry limit word) distinguishes two fundamentally different Outform behaviors:
+
+| F Flag | Meaning | Mechanism |
+|--------|---------|-----------|
+| F=0 | **Virtual memory caching** — Outform acts as HTTP GET/PUT for transparent remote data access | Standard HTTPS. Data cached locally as if Inform. No remote address needed for execution. |
+| F=1 | **Remote execution (Far)** — Outform references a remote Meta Machine for RPC execution | Requires remote address. Encrypted tunnel via namespace-stored key. Used in Hello Mum demo. |
+
+The F flag is stored in the namespace entry's limit word at bit 30 (`word1_limit[30]=F`). When mLoad loads a capability into a CR, the entire limit word (including B and F flags) is cached in `CRn.word2`. Instructions can then check `CRn.word2[30]` for F without any additional memory read.
+
+- **Outform without F (F=0)**: CALL on this GT triggers a TRAP — the data is remote but there is no remote machine to execute on. R/W operations use standard HTTPS.
+- **Outform with F (F=1)**: CALL on this GT enters the tunnel path — the GT references a remote Meta Machine that will execute the invocation and return results.
+
 ---
 
 ## TRAP vs FAULT
