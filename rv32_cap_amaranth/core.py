@@ -635,14 +635,9 @@ class RV32CapCore(Elaboratable):
             m.d.comb += [self.fault.eq(FaultType.NONE), self.fault_valid.eq(0)]
 
         m.d.comb += [
-            self.ns_addr.eq(Mux(u_save.ns_rd_en, u_save.ns_rd_addr, 0)),
-            self.ns_rd_en.eq(u_save.ns_rd_en),
+            self.ns_addr.eq(0),
+            self.ns_rd_en.eq(0),
             self.ns_wr_en.eq(0),
-        ]
-
-        m.d.comb += [
-            u_save.ns_rd_data.eq(self.ns_rd_data[:32]),
-            u_save.ns_rd_valid.eq(self.ns_rd_en),
         ]
 
         return m

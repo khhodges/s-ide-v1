@@ -50,6 +50,7 @@ The web interface features a dark-themed, IDE-like design with seven views: Dash
 -   M (Machine) is transient microcode elevation, never stored in GT
 -   B (Bind) and F (Far/Foreign) are namespace entry metadata, not GT permission bits
 -   B and F stored in high bits of namespace entry limit word: word1_limit[31]=B, word1_limit[30]=F, word1_limit[16:0]=limit
+-   B and F are cached in CRn word2_limit when mLoad loads a capability — no extra memory read needed at SAVE time
 -   SAVE rule: SAVE writes a GT to a C-List slot only if B is true on the namespace entry AND the C-List capability has S permission. Faults with BIND if B=0, faults with PERM_S if S missing.
 -   VersionSeals: Version(7) + FNV Seal(25) for integrity and GC
 
