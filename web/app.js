@@ -356,7 +356,10 @@ let namespaceObjects = [
       tooltip: "DateTime [TIME] — ISO 8601 date/time. DR0=mode → DR1-DR6 components." },
     { offset: 11, name: "Lambda", type: "Abstraction",
       word1_location: 0xA000, word2_limit: 0x2000, word3_seals: 0n,
-      tooltip: "Lambda [FUNCTIONAL] — Church calculus primitives: Y-Combinator, Church numerals, Pairs, Booleans." }
+      tooltip: "Lambda [FUNCTIONAL] — Church calculus primitives: Y-Combinator, Church numerals, Pairs, Booleans." },
+    { offset: 12, name: "Constants", type: "Abstraction",
+      word1_location: 0xE000, word2_limit: 0x1000, word3_seals: 0n,
+      tooltip: "Constants [CONSTANT] — Physical and mathematical constants as Abstract GTs. Unforgeable, incorruptible identity tokens for PI, E, PHI, c, h, k_B, N_A, G." }
 ];
 
 // Services C-List at Namespace offset 2
@@ -399,7 +402,9 @@ const bootCList = {
         { index: 7, name: "DateTime", nsOffset: 10, perms: ["E"], type: "Abstraction",
           desc: "ISO 8601 date/time. DR0=mode → DR1-DR6 components", size: 0x1000 },
         { index: 8, name: "Lambda", nsOffset: 11, perms: ["E"], type: "Abstraction",
-          desc: "Church lambda calculus primitives — Y-Combinator, Church numerals, Pairs, Booleans", size: 0x2000 }
+          desc: "Church lambda calculus primitives — Y-Combinator, Church numerals, Pairs, Booleans", size: 0x2000 },
+        { index: 9, name: "Constants", nsOffset: 12, perms: ["E"], type: "Abstraction",
+          desc: "Physical/mathematical constants as Abstract GTs — PI, E, PHI, c, h, k_B, N_A, G", size: 0x1000 }
     ]
 };
 
@@ -489,7 +494,7 @@ const bootNamespace = {
 const threadCLists = {
     Kenneth: {
         name: "Kenneth",
-        description: "Primary thread — one thread at boot, others minted at runtime. Boot C-List (CR6) provides SlideRule, Abacus, Circle, DateTime, Lambda. Services C-List (CR5) provides self, Namespace, Mint.",
+        description: "Primary thread — one thread at boot, others minted at runtime. Boot C-List (CR6) provides SlideRule, Abacus, Circle, DateTime, Lambda, Constants. Services C-List (CR5) provides self, Namespace, Mint.",
         clist: []
     }
 };
@@ -570,6 +575,27 @@ const abstractionCLists = {
             { name: "NULL", type: "NULL", perms: [], desc: "NULL Golden Token — clears any CR when loaded", size: 0 },
             { name: "Access", type: "Code", perms: ["R", "X"], desc: "Method dispatcher — DR0 selects operation (0=MINT, 1=RESTRICT, 2=REVOKE, 3=INSPECT)", base: 0xC000, size: 0x1000 },
             { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0xC800, size: 512 }
+        ]
+    },
+    Constants: {
+        name: "Constants",
+        mathType: "CONSTANT",
+        description: "Physical and mathematical constants as Abstract GTs. Each constant is an unforgeable identity token — present the Abstract GT to retrieve the value. Constants cannot be corrupted because they never exist as bare data.",
+        clist: [
+            { name: "NULL", type: "NULL", perms: [], desc: "NULL Golden Token — clears any CR when loaded", size: 0 },
+            { name: "Access", type: "Code", perms: ["R", "X"], desc: "Constants dispatcher — validates Abstract GT in CR1 and returns value in DR0", base: 0xE000, size: 0x1000 },
+            { name: "GT_PI", type: "Abstract", perms: [], desc: "π — ratio of circle circumference to diameter (3.14159265358979...)", base: 0xE100, size: 0, value: Math.PI, gtType: "Abstract" },
+            { name: "GT_E", type: "Abstract", perms: [], desc: "e — Euler's number, base of natural logarithm (2.71828182845904...)", base: 0xE108, size: 0, value: Math.E, gtType: "Abstract" },
+            { name: "GT_PHI", type: "Abstract", perms: [], desc: "φ — golden ratio (1+√5)/2 (1.61803398874989...)", base: 0xE110, size: 0, value: (1 + Math.sqrt(5)) / 2, gtType: "Abstract" },
+            { name: "GT_SQRT2", type: "Abstract", perms: [], desc: "√2 — Pythagoras' constant (1.41421356237309...)", base: 0xE118, size: 0, value: Math.SQRT2, gtType: "Abstract" },
+            { name: "GT_LN2", type: "Abstract", perms: [], desc: "ln(2) — natural logarithm of 2 (0.69314718055994...)", base: 0xE120, size: 0, value: Math.LN2, gtType: "Abstract" },
+            { name: "GT_LN10", type: "Abstract", perms: [], desc: "ln(10) — natural logarithm of 10 (2.30258509299404...)", base: 0xE128, size: 0, value: Math.LN10, gtType: "Abstract" },
+            { name: "GT_C", type: "Abstract", perms: [], desc: "c — speed of light in vacuum (299,792,458 m/s)", base: 0xE130, size: 0, value: 299792458, gtType: "Abstract" },
+            { name: "GT_PLANCK", type: "Abstract", perms: [], desc: "h — Planck constant (6.62607015 × 10⁻³⁴ J·s)", base: 0xE138, size: 0, value: 6.62607015e-34, gtType: "Abstract" },
+            { name: "GT_BOLTZMANN", type: "Abstract", perms: [], desc: "k_B — Boltzmann constant (1.380649 × 10⁻²³ J/K)", base: 0xE140, size: 0, value: 1.380649e-23, gtType: "Abstract" },
+            { name: "GT_AVOGADRO", type: "Abstract", perms: [], desc: "N_A — Avogadro constant (6.02214076 × 10²³ mol⁻¹)", base: 0xE148, size: 0, value: 6.02214076e23, gtType: "Abstract" },
+            { name: "GT_G", type: "Abstract", perms: [], desc: "G — gravitational constant (6.67430 × 10⁻¹¹ m³/(kg·s²))", base: 0xE150, size: 0, value: 6.67430e-11, gtType: "Abstract" },
+            { name: "LocalData", type: "Data", perms: ["R", "W"], base: 0xEA00, size: 512 }
         ]
     }
 };
@@ -1041,7 +1067,8 @@ function buildHierarchyTree() {
             'Mint': 'SYSTEM',
             'CapabilityManager': 'SYSTEM',
             'DateTime': 'TIME',
-            'Lambda': 'FUNCTIONAL'
+            'Lambda': 'FUNCTIONAL',
+            'Constants': 'CONSTANT'
         };
         bootAbstractions.forEach(aObj => {
             const name = aObj.name;
@@ -1065,6 +1092,8 @@ function buildHierarchyTree() {
                     } else if (item.type === 'Constant') {
                         const baseStr = item.base !== undefined ? `0x${item.base.toString(16).toUpperCase()}` : '0x0000';
                         html += `<div class="hier-item hier-gt hier-const" data-name="${item.name}" data-type="Constant" data-parent="${name}" data-tooltip="${item.desc} | [R] | Base: ${baseStr}" data-value="${item.value}">${item.name}</div>`;
+                    } else if (item.type === 'Abstract') {
+                        html += `<div class="hier-item hier-gt hier-abstract" data-name="${item.name}" data-type="Abstract" data-parent="${name}" data-tooltip="${item.desc} | Abstract GT — identity only, no permissions" style="color: #f472b6;">${item.name}</div>`;
                     }
                 });
                 html += '</div>';
@@ -1573,7 +1602,8 @@ function getObjectTooltip(name, type) {
         'Abacus': '64-bit integer arithmetic abstraction — Method-selector dispatch: DR0=method (0=ADD,1=SUB,2=MUL,3=DIV,4=MOD,5=ABS,6=NEG,7=INC,8=DEC)',
         'Circle': 'Geometric calculations — mintable at runtime via CALL(Thread.Mint)',
         'Access': 'Boot nucleus code — loaded into CR7. Resolves symbolic names from CR6 to executable code',
-        'NULL': 'Null capability - no access rights, typically indicates uninitialized register'
+        'NULL': 'Null capability - no access rights, typically indicates uninitialized register',
+        'Constants': 'Physical/mathematical constants as Abstract GTs — unforgeable identity tokens for PI, E, PHI, c, h, k_B, N_A, G. Present Abstract GT in CR1 to retrieve value.'
     };
     return tooltips[name] || `${type || 'Object'}: ${name}`;
 }
@@ -4544,6 +4574,31 @@ function executeMethodSelector(absName, methodSelector) {
     return `${absName}.${methodName}: ${desc}`;
 }
 
+function executeConstantsDispatch() {
+    const constCList = abstractionCLists.Constants.clist;
+    const cr1 = simulator.contextRegs[1];
+    if (!cr1 || cr1.type !== 'Abstract') {
+        return `FAULT: TYPE_ABSTRACT — Constants requires Abstract GT in CR1, got ${cr1 ? cr1.type || 'unknown' : 'empty'}`;
+    }
+    if (!cr1.name || !cr1.name.startsWith('GT_')) {
+        return `FAULT: PROVENANCE — Abstract GT in CR1 not recognized (expected GT_* constant name)`;
+    }
+    const constEntry = constCList.find(e => e.name === cr1.name && e.type === 'Abstract');
+    if (!constEntry || constEntry.value === undefined) {
+        return `FAULT: INVALID_CONSTANT — Abstract GT "${cr1.name}" not recognized by Constants`;
+    }
+    const constNames = { GT_PI: 'π', GT_E: 'e', GT_PHI: 'φ', GT_SQRT2: '√2', GT_LN2: 'ln(2)', GT_LN10: 'ln(10)', GT_C: 'c', GT_PLANCK: 'h', GT_BOLTZMANN: 'k_B', GT_AVOGADRO: 'N_A', GT_G: 'G' };
+    const symbol = constNames[cr1.name] || cr1.name;
+    const value = constEntry.value;
+    if (Number.isInteger(value) || Math.abs(value) > 1) {
+        simulator.dataRegs[0] = BigInt(Math.round(value)) & BigInt("0xFFFFFFFFFFFFFFFF");
+    } else {
+        const ieee754Bits = new BigUint64Array(new Float64Array([value]).buffer);
+        simulator.dataRegs[0] = ieee754Bits[0];
+    }
+    return `Constants.${symbol}: ${value} → DR0`;
+}
+
 function resolveCallTarget(targetName) {
     const nsObj = namespaceObjects.find(o => o.name === targetName);
     if (!nsObj) return;
@@ -4794,6 +4849,16 @@ function executeEditorInstruction(instr) {
                         const absData = abstractionCLists[callTargetName];
                         if (absData && absData.methodSelector) {
                             const dispatchResult = executeMethodSelector(callTargetName);
+                            if (dispatchResult) {
+                                if (dispatchResult.startsWith('FAULT')) {
+                                    faultOccurred = true;
+                                    result = dispatchResult;
+                                } else {
+                                    result += ` → [DISPATCH] ${dispatchResult}`;
+                                }
+                            }
+                        } else if (callTargetName === 'Constants') {
+                            const dispatchResult = executeConstantsDispatch();
                             if (dispatchResult) {
                                 if (dispatchResult.startsWith('FAULT')) {
                                     faultOccurred = true;
@@ -9077,6 +9142,111 @@ RETURN                     ; Back through tunnel</pre>
                     feedback: {
                         correct: "Correct! Abstract GTs are a hardware-enforced type that can only exist in CRs. They cannot be copied to DRs, printed, logged, or extracted from the capability-safe path. This is fundamentally different from software tokens which are just data.",
                         incorrect: "The key insight is that Abstract GTs can only exist in Context Registers (CRs), never in Data Registers (DRs). Unlike software tokens (which are just data strings), an Abstract GT is a hardware-enforced type that cannot be copied, printed, or extracted from the capability path."
+                    }
+                }
+            }
+        ]
+    },
+    {
+        title: "Constants as Abstract GTs",
+        steps: [
+            {
+                text: `<h3>Why Constants Need Protection</h3>
+                <p>In conventional computers, a constant like <strong>&pi;</strong> is just a number sitting in memory or a register. Any bug, buffer overflow, or injection attack could <strong>corrupt it</strong> &mdash; and corrupted constants produce wrong answers silently.</p>
+                <p>The CTMM takes a different approach: physical and mathematical constants are <strong>Abstract Golden Tokens</strong> &mdash; unforgeable identity tokens that the Constants abstraction issued via Mint.</p>
+                <div class="key-concept">
+                    <strong>Key Insight:</strong> Constants never exist as bare data. Each constant is an Abstract GT (type 0b11) with <em>no permissions</em>. It carries only identity &mdash; the Constants abstraction knows what value that identity maps to.
+                </div>`,
+                demo: `<div class="demo-title">Conventional vs CTMM Constants</div>
+                <div class="demo-content">
+                    <div style="font-size: 0.75rem;">
+                        <div style="margin-bottom: 0.8rem;">
+                            <div style="color: #f87171; font-weight: bold; margin-bottom: 0.3rem;">Conventional (Bare Data)</div>
+                            <div style="padding: 0.4rem; background: #f8717122; border-radius: 4px; font-family: monospace; font-size: 0.7rem; color: #94a3b8;">
+                                pi = 3.14159265358979<br>
+                                // Stored in DR or memory<br>
+                                // Any code can overwrite it<br>
+                                // Buffer overflow corrupts it
+                            </div>
+                        </div>
+                        <div>
+                            <div style="color: #f472b6; font-weight: bold; margin-bottom: 0.3rem;">CTMM (Abstract GT)</div>
+                            <div style="padding: 0.4rem; background: #f472b622; border-radius: 4px; font-family: monospace; font-size: 0.7rem; color: #94a3b8;">
+                                LOAD CR1, CR0, #2  ; GT_PI<br>
+                                ; Abstract GT in CR1<br>
+                                ; Cannot exist in DR<br>
+                                ; Cannot be overwritten
+                            </div>
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Using the Constants Abstraction</h3>
+                <p>The Constants abstraction holds Abstract GTs for both <strong>mathematical constants</strong> (&pi;, e, &phi;, &radic;2, ln2, ln10) and <strong>physical constants</strong> (c, h, k<sub>B</sub>, N<sub>A</sub>, G).</p>
+                <p>To retrieve a constant value:</p>
+                <ol>
+                    <li><strong>LOAD</strong> the Constants abstraction into a CR from the Boot C-List (slot 9)</li>
+                    <li><strong>LOAD</strong> the desired Abstract GT from the Constants C-List into CR1</li>
+                    <li><strong>CALL</strong> the Constants abstraction &mdash; it validates the Abstract GT in CR1 and returns the value in DR0</li>
+                </ol>
+                <div class="key-concept">
+                    <strong>Level 3 Security:</strong> This is the highest method-selector dispatch level. The caller must hold the Abstract GT (capability gate) AND pass it via CR (hardware-enforced path). No integer or string guessing can bypass this.
+                </div>`,
+                demo: `<div class="demo-title">Constants Dispatch Pattern</div>
+                <div class="demo-content">
+                    <div style="font-size: 0.75rem;">
+                        <div style="padding: 0.5rem; background: #f472b622; border-radius: 4px; font-family: monospace; font-size: 0.7rem; color: #94a3b8;">
+                            ; Load Constants abstraction<br>
+                            LOAD CR0, CR6, #9  ; Constants [E]<br><br>
+                            ; Load GT_PI Abstract GT<br>
+                            LOAD CR1, CR0, #2  ; GT_PI<br><br>
+                            ; Retrieve value<br>
+                            CALL CR0           ; validates CR1<br>
+                            ; DR0 = 3.14159265...<br><br>
+                            ; Load GT_C (speed of light)<br>
+                            LOAD CR1, CR0, #8  ; GT_C<br>
+                            CALL CR0<br>
+                            ; DR0 = 299792458
+                        </div>
+                    </div>
+                </div>`
+            },
+            {
+                text: `<h3>Available Constants</h3>
+                <p>The Constants abstraction provides identity tokens for fundamental constants used in science and engineering:</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.8rem;">
+                    <div>
+                        <div style="color: #c084fc; font-weight: bold; margin-bottom: 0.3rem;">Mathematical</div>
+                        <div style="color: #94a3b8;"><strong style="color: #f472b6;">GT_PI</strong> &mdash; &pi; = 3.14159...</div>
+                        <div style="color: #94a3b8;"><strong style="color: #f472b6;">GT_E</strong> &mdash; e = 2.71828...</div>
+                        <div style="color: #94a3b8;"><strong style="color: #f472b6;">GT_PHI</strong> &mdash; &phi; = 1.61803...</div>
+                        <div style="color: #94a3b8;"><strong style="color: #f472b6;">GT_SQRT2</strong> &mdash; &radic;2 = 1.41421...</div>
+                        <div style="color: #94a3b8;"><strong style="color: #f472b6;">GT_LN2</strong> &mdash; ln(2) = 0.69314...</div>
+                        <div style="color: #94a3b8;"><strong style="color: #f472b6;">GT_LN10</strong> &mdash; ln(10) = 2.30258...</div>
+                    </div>
+                    <div>
+                        <div style="color: #c084fc; font-weight: bold; margin-bottom: 0.3rem;">Physical</div>
+                        <div style="color: #94a3b8;"><strong style="color: #f472b6;">GT_C</strong> &mdash; 299,792,458 m/s</div>
+                        <div style="color: #94a3b8;"><strong style="color: #f472b6;">GT_PLANCK</strong> &mdash; 6.626&times;10<sup>-34</sup> J&middot;s</div>
+                        <div style="color: #94a3b8;"><strong style="color: #f472b6;">GT_BOLTZMANN</strong> &mdash; 1.381&times;10<sup>-23</sup> J/K</div>
+                        <div style="color: #94a3b8;"><strong style="color: #f472b6;">GT_AVOGADRO</strong> &mdash; 6.022&times;10<sup>23</sup> /mol</div>
+                        <div style="color: #94a3b8;"><strong style="color: #f472b6;">GT_G</strong> &mdash; 6.674&times;10<sup>-11</sup> m&sup3;/(kg&middot;s&sup2;)</div>
+                    </div>
+                </div>`,
+                interactive: {
+                    type: "quiz",
+                    question: "Why are physical constants Abstract GTs instead of plain numbers?",
+                    options: [
+                        "They are too large to fit in Data Registers",
+                        "They cannot be corrupted — Abstract GTs carry identity, not data, and only exist in CRs",
+                        "They need encryption for security",
+                        "They change too frequently to store directly"
+                    ],
+                    correct: 1,
+                    feedback: {
+                        correct: "Correct! Abstract GTs are pure identity tokens in Context Registers. The constant's value is never exposed as bare data that could be corrupted by bugs, overflows, or attacks. Only the Constants abstraction can dereference the identity to a value.",
+                        incorrect: "The key insight is that Abstract GTs protect constants by making them identity tokens, not data. They can only exist in Context Registers, so no bug, overflow, or attack can corrupt them. The Constants abstraction is the only code that knows the identity-to-value mapping."
                     }
                 }
             }
@@ -13538,7 +13708,8 @@ const instructionTiming = {
                 { name: "SlideRule.fdiv", cycles: "40-60", best: 40, worst: 160, time: "20-80 ns", notes: "IEEE 754 FP divide" },
                 { name: "Circle.sin/cos", cycles: "50-80", best: 50, worst: 180, time: "25-90 ns", notes: "CORDIC algorithm" },
                 { name: "CapMgr.create", cycles: "100-200", best: 100, worst: 300, time: "50-150 ns", notes: "Namespace allocation + MAC" },
-                { name: "DateTime.now", cycles: "15-20", best: 15, worst: 120, time: "7.5-60 ns", notes: "Read system clock" }
+                { name: "DateTime.now", cycles: "15-20", best: 15, worst: 120, time: "7.5-60 ns", notes: "Read system clock" },
+                { name: "Constants.π", cycles: "14-18", best: 14, worst: 118, time: "7-59 ns", notes: "CALL + Abstract GT validate + lookup + RETURN" }
             ]
         }
     ]
@@ -13969,6 +14140,82 @@ function renderGtTypesReference() {
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div style="background: var(--surface); border: 1px solid #f472b6; border-radius: 8px; padding: 1rem;">
+                <h4 style="color: #f472b6; margin-bottom: 0.75rem;">Constants Abstraction — Physical Constants as Abstract GTs</h4>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+                    Physical and mathematical constants are not bare numbers in Data Registers. Each constant is an Abstract GT — an unforgeable identity token
+                    that the Constants abstraction issued. To retrieve a value, present the Abstract GT in CR1 and CALL Constants. The value appears in DR0.
+                    The constant can never be corrupted because it never exists as unprotected data.
+                </p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <h5 style="color: var(--text); margin-bottom: 0.5rem;">Mathematical Constants</h5>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                            <tbody>
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 0.3rem; color: #f472b6; font-family: monospace;">GT_PI</td>
+                                    <td style="padding: 0.3rem; color: var(--text-secondary);">3.14159265358979...</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 0.3rem; color: #f472b6; font-family: monospace;">GT_E</td>
+                                    <td style="padding: 0.3rem; color: var(--text-secondary);">2.71828182845904...</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 0.3rem; color: #f472b6; font-family: monospace;">GT_PHI</td>
+                                    <td style="padding: 0.3rem; color: var(--text-secondary);">1.61803398874989...</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 0.3rem; color: #f472b6; font-family: monospace;">GT_SQRT2</td>
+                                    <td style="padding: 0.3rem; color: var(--text-secondary);">1.41421356237309...</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 0.3rem; color: #f472b6; font-family: monospace;">GT_LN2</td>
+                                    <td style="padding: 0.3rem; color: var(--text-secondary);">0.69314718055994...</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0.3rem; color: #f472b6; font-family: monospace;">GT_LN10</td>
+                                    <td style="padding: 0.3rem; color: var(--text-secondary);">2.30258509299404...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h5 style="color: var(--text); margin-bottom: 0.5rem;">Physical Constants</h5>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                            <tbody>
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 0.3rem; color: #f472b6; font-family: monospace;">GT_C</td>
+                                    <td style="padding: 0.3rem; color: var(--text-secondary);">299,792,458 m/s</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 0.3rem; color: #f472b6; font-family: monospace;">GT_PLANCK</td>
+                                    <td style="padding: 0.3rem; color: var(--text-secondary);">6.626 x 10^-34 J-s</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 0.3rem; color: #f472b6; font-family: monospace;">GT_BOLTZMANN</td>
+                                    <td style="padding: 0.3rem; color: var(--text-secondary);">1.381 x 10^-23 J/K</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border);">
+                                    <td style="padding: 0.3rem; color: #f472b6; font-family: monospace;">GT_AVOGADRO</td>
+                                    <td style="padding: 0.3rem; color: var(--text-secondary);">6.022 x 10^23 /mol</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 0.3rem; color: #f472b6; font-family: monospace;">GT_G</td>
+                                    <td style="padding: 0.3rem; color: var(--text-secondary);">6.674 x 10^-11 m3/(kg-s2)</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem; padding: 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;">
+                    <div style="color: var(--text); font-weight: bold; font-size: 0.85rem; margin-bottom: 0.5rem;">Usage Pattern (Level 3 Security)</div>
+                    <pre style="color: var(--text-secondary); font-size: 0.8rem; margin: 0; font-family: monospace;">LOAD CR0, CR6, #9       ; Load Constants abstraction [E]
+LOAD CR1, CR0, #2       ; Load GT_PI Abstract GT into CR1
+CALL CR0                ; Enter Constants — validates CR1
+                        ; Result: DR0 = 3.14159265358979...</pre>
+                </div>
             </div>
         </div>
     `;

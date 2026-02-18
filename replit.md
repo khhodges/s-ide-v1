@@ -42,7 +42,8 @@ The web interface features a dark-themed, IDE-like design with seven views: Dash
 -   **Instructions View Tabs**: Church (capability opcodes), Turing (ARM-style opcodes), Timing (cycle counts), GT Types (Golden Token type system, Abstract GT reference, programmable method-selector security levels, namespace metadata flags, and Abstract GT vs software tokens comparison).
 
 ### Key Features
--   **Built-in Abstractions**: Includes `Boot`, `Threads`, `SlideRule`, `Abacus`, `Circle`, `CapabilityManager`, `DateTime`, `Lambda`, and `FamilyRegistry`.
+-   **Built-in Abstractions**: Includes `Boot`, `Threads`, `SlideRule`, `Abacus`, `Circle`, `CapabilityManager`, `DateTime`, `Lambda`, `Constants`, and `FamilyRegistry`.
+-   **Constants Abstraction**: Physical and mathematical constants (PI, E, PHI, SQRT2, LN2, LN10, c, h, k_B, N_A, G) as Abstract GTs — unforgeable identity tokens. Present Abstract GT in CR1, CALL Constants, value returned in DR0. Constants never exist as bare data.
 -   **Instruction Set**: Custom 32-bit CTMM instruction set with Church-specific and Turing-specific operations, including ARM-style condition flags.
 -   **State Persistence**: Automatic saving and restoring of state using browser local storage.
 
