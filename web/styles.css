@@ -7420,3 +7420,343 @@ body.landing-mode .auth-section {
 .tunnel-reply-btn:hover {
     opacity: 0.85;
 }
+
+.zoom-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 1rem;
+    height: calc(100vh - 120px);
+    padding: 0.5rem;
+}
+
+.zoom-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow-y: auto;
+}
+
+.zoom-gt-summary {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 0.75rem;
+}
+
+.zoom-gt-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.zoom-gt-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.zoom-gt-perms {
+    display: flex;
+    gap: 3px;
+}
+
+.zoom-gt-desc {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    line-height: 1.4;
+}
+
+.zoom-gt-meta {
+    display: flex;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    flex-wrap: wrap;
+}
+
+.zoom-gt-meta span {
+    background: rgba(255,255,255,0.04);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.zoom-methods {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+.zoom-methods-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    width: 100%;
+    margin-bottom: 2px;
+}
+
+.zoom-method-chip {
+    font-size: 0.7rem;
+    background: rgba(99,102,241,0.15);
+    color: #a5b4fc;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.zoom-abs-header {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.5rem;
+}
+
+.zoom-abstraction-list {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 0.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.zoom-abs-item {
+    padding: 0.4rem 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: background 0.15s;
+}
+
+.zoom-abs-item:hover {
+    background: rgba(255,255,255,0.06);
+}
+
+.zoom-abs-active {
+    background: rgba(99,102,241,0.15);
+    color: #e2e8f0;
+    border-left: 3px solid #6366f1;
+}
+
+.zoom-abs-cr6 {
+    box-shadow: inset 0 0 0 1px rgba(52,211,153,0.3);
+}
+
+.zoom-cr6-tag {
+    font-size: 0.65rem;
+    background: rgba(52,211,153,0.2);
+    color: #34d399;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+.zoom-main {
+    overflow-y: auto;
+}
+
+.zoom-clist-panel {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 0.75rem;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.zoom-clist-header h3 {
+    font-size: 0.95rem;
+    color: #e2e8f0;
+    margin: 0 0 0.5rem 0;
+}
+
+.zoom-clist-table {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.zoom-clist-row {
+    display: grid;
+    grid-template-columns: 40px 140px 80px 160px 100px 60px 1fr;
+    align-items: center;
+    padding: 0.4rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    transition: background 0.15s;
+}
+
+.zoom-clist-row:hover {
+    background: rgba(255,255,255,0.04);
+}
+
+.zoom-clist-row-header {
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.zoom-clist-row-header:hover {
+    background: transparent;
+}
+
+.zoom-row-active {
+    background: rgba(52,211,153,0.08);
+    border-left: 3px solid #34d399;
+}
+
+.zoom-col-idx {
+    font-family: 'JetBrains Mono', monospace;
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.zoom-col-name {
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.zoom-col-type {
+    font-size: 0.75rem;
+}
+
+.zoom-type-label {
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.zoom-type-null {
+    color: #475569;
+}
+
+.zoom-type-code {
+    color: #60a5fa;
+}
+
+.zoom-type-label.zoom-type-code {
+    background: rgba(96,165,250,0.12);
+}
+
+.zoom-type-data {
+    color: #fbbf24;
+}
+
+.zoom-type-label.zoom-type-data {
+    background: rgba(251,191,36,0.12);
+}
+
+.zoom-type-func {
+    color: #a78bfa;
+}
+
+.zoom-type-label.zoom-type-func {
+    background: rgba(167,139,250,0.12);
+}
+
+.zoom-type-const {
+    color: #2dd4bf;
+}
+
+.zoom-type-label.zoom-type-const {
+    background: rgba(45,212,191,0.12);
+}
+
+.zoom-type-abstract {
+    color: #f472b6;
+}
+
+.zoom-type-label.zoom-type-abstract {
+    background: rgba(244,114,182,0.12);
+}
+
+.zoom-type-label.zoom-type-null {
+    background: rgba(71,85,105,0.15);
+}
+
+.zoom-col-perms {
+    display: flex;
+    gap: 2px;
+}
+
+.zoom-col-addr, .zoom-col-size {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.zoom-col-desc {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zoom-cr6-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 4px rgba(52,211,153,0.5);
+}
+
+.zoom-cr6-legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    margin-top: 0.5rem;
+}
+
+.zoom-empty {
+    color: #64748b;
+    padding: 2rem;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.zoom-tab-btn {
+    background: rgba(99,102,241,0.15) !important;
+    color: #a5b4fc !important;
+    border-color: rgba(99,102,241,0.3) !important;
+}
+
+.zoom-tab-btn:hover {
+    background: rgba(99,102,241,0.25) !important;
+}
+
+@media (max-width: 900px) {
+    .zoom-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+    .zoom-clist-row {
+        grid-template-columns: 30px 100px 60px 120px 80px 50px 1fr;
+        font-size: 0.72rem;
+    }
+}

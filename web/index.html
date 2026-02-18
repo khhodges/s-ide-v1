@@ -19,6 +19,7 @@
                     <button onclick="switchView('namespace')" class="btn btn-view tooltip-bottom" id="viewBtn-namespace" data-tooltip="Browse namespace objects">Namespace</button>
                     <button onclick="switchView('editor')" class="btn btn-view tooltip-bottom" id="viewBtn-editor" data-tooltip="Edit assembly code">Assembly</button>
                     <button onclick="switchView('capabilities')" class="btn btn-view tooltip-bottom" id="viewBtn-capabilities" data-tooltip="Explore Golden Tokens">Capabilities</button>
+                    <button onclick="switchView('abstractionZoom')" class="btn btn-view tooltip-bottom" id="viewBtn-abstractionZoom" data-tooltip="Zoom into an abstraction — view its C-List and active CR6 entries">Zoom</button>
                     <button onclick="switchView('instructions')" class="btn btn-view tooltip-bottom" id="viewBtn-instructions" data-tooltip="View Church and Turing instruction sets">Instructions</button>
                     <button onclick="switchView('tutorial')" class="btn btn-view tooltip-bottom" id="viewBtn-tutorial" data-tooltip="Learn CTMM concepts">Tutorial</button>
                     <button onclick="switchView('code')" class="btn btn-view tooltip-bottom" id="viewBtn-code" data-tooltip="Browse simulator source code">Code</button>
@@ -548,6 +549,22 @@ RETURN</pre>
                         <p class="cap-hint">Click on any capability token to view its details</p>
                     </div>
                     
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="abstractionZoom" class="view">
+            <div class="zoom-layout">
+                <div class="zoom-sidebar">
+                    <div class="zoom-gt-summary" id="zoomGtSummary">
+                        <div class="zoom-empty">Click an abstraction with <span class="perm-badge perm-e">E</span> permission in the Namespace hierarchy or Capabilities view to zoom in.</div>
+                    </div>
+                    <div class="zoom-abstraction-list" id="zoomAbstractionList"></div>
+                </div>
+                <div class="zoom-main">
+                    <div class="zoom-clist-panel" id="zoomClistPanel">
+                        <div class="zoom-empty">Select an abstraction to view its C-List entries</div>
                     </div>
                 </div>
             </div>

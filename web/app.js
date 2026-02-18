@@ -1,5 +1,6 @@
 let savedEditorContent = '';
 let currentView = 'dashboard';
+let currentZoomAbstraction = null;
 let currentUser = null;
 let viewingTutorialFromLanding = false;
 
@@ -128,6 +129,10 @@ function switchView(viewId) {
     
     if (viewId === 'capabilities') {
         updateCapabilityExplorer();
+    }
+    
+    if (viewId === 'abstractionZoom') {
+        renderAbstractionZoom();
     }
     
     if (viewId === 'dashboard') {
@@ -2201,10 +2206,14 @@ function showCapabilityDetail(evt, cap, regLabel) {
 
     const contentTabInfo = getContentTabInfo(cap);
 
+    const hasE = cap.perms && cap.perms.includes('E') && abstractionCLists[cap.name];
+    const zoomBtnHtml = hasE ? `<button class="cap-detail-tab zoom-tab-btn" onclick="zoomToAbstraction('${cap.name}')" data-tooltip="Zoom into this abstraction's C-List">Zoom</button>` : '';
+
     const tabBarHtml = `
         <div class="cap-detail-tabs">
             <button class="cap-detail-tab" onclick="switchCapDetailTab('gt', this)" data-tooltip="Golden Token and Namespace Descriptor">GT</button>
             <button class="cap-detail-tab active" onclick="switchCapDetailTab('content', this)" data-tooltip="${contentTabInfo.tooltip}">${contentTabInfo.label}</button>
+            ${zoomBtnHtml}
         </div>`;
 
     panel.innerHTML = `
@@ -12499,6 +12508,8 @@ function attachContextMenuListeners() {
             
             if (type === 'Function') {
                 openFunctionInEditor(name, parent);
+            } else if (type === 'Abstraction' && abstractionCLists[name]) {
+                zoomToAbstraction(name);
             }
         });
         el.addEventListener('contextmenu', function(e) {
@@ -12509,6 +12520,148 @@ function attachContextMenuListeners() {
             showContextMenu(e, name, type);
         });
     });
+}
+
+function zoomToAbstraction(absName) {
+    if (!abstractionCLists[absName]) return;
+    currentZoomAbstraction = absName;
+    switchView('abstractionZoom');
+}
+
+function renderAbstractionZoom() {
+    const summaryPanel = document.getElementById('zoomGtSummary');
+    const listPanel = document.getElementById('zoomAbstractionList');
+    const mainPanel = document.getElementById('zoomClistPanel');
+    if (!summaryPanel || !mainPanel) return;
+
+    if (typeof abstractionCLists === 'undefined' || !abstractionCLists) {
+        summaryPanel.innerHTML = '<div class="zoom-empty">Boot the system first to view abstractions.</div>';
+        if (listPanel) listPanel.innerHTML = '';
+        mainPanel.innerHTML = '';
+        return;
+    }
+
+    if (!currentZoomAbstraction && simulator.contextRegs[6] && simulator.contextRegs[6].name && abstractionCLists[simulator.contextRegs[6].name]) {
+        currentZoomAbstraction = simulator.contextRegs[6].name;
+    }
+
+    const allAbstractions = Object.keys(abstractionCLists);
+    let listHtml = '<div class="zoom-abs-header">Abstractions</div>';
+    allAbstractions.forEach(name => {
+        const abs = abstractionCLists[name];
+        const mathBadge = mathTypeBadges[name] || 'ABS';
+        const isActive = currentZoomAbstraction === name;
+        const isCR6 = simulator.contextRegs[6] && simulator.contextRegs[6].name === name;
+        listHtml += `<div class="zoom-abs-item ${isActive ? 'zoom-abs-active' : ''} ${isCR6 ? 'zoom-abs-cr6' : ''}" onclick="currentZoomAbstraction='${name}';renderAbstractionZoom()">`;
+        listHtml += `<span class="math-type-badge math-${mathBadge.toLowerCase()}">${mathBadge}</span> ${name}`;
+        if (isCR6) listHtml += ' <span class="zoom-cr6-tag">CR6</span>';
+        listHtml += '</div>';
+    });
+    listPanel.innerHTML = listHtml;
+
+    if (!currentZoomAbstraction || !abstractionCLists[currentZoomAbstraction]) {
+        summaryPanel.innerHTML = '<div class="zoom-empty">Select an abstraction from the list to zoom in.</div>';
+        mainPanel.innerHTML = '<div class="zoom-empty">No abstraction selected</div>';
+        return;
+    }
+
+    const absName = currentZoomAbstraction;
+    const abs = abstractionCLists[absName];
+    const nsObj = namespaceObjects.find(o => o.name === absName);
+    const gtEntry = getBootGT(absName);
+    const mathBadge = mathTypeBadges[absName] || 'ABS';
+    const isCR6Active = simulator.contextRegs[6] && simulator.contextRegs[6].name === absName;
+    const permsStr = gtEntry ? gtEntry.perms.join('') : 'E';
+
+    let summaryHtml = '<div class="zoom-gt-card">';
+    summaryHtml += `<div class="zoom-gt-title"><span class="math-type-badge math-${mathBadge.toLowerCase()}">${mathBadge}</span> ${absName}`;
+    if (isCR6Active) summaryHtml += ' <span class="zoom-cr6-tag">CR6 Active</span>';
+    summaryHtml += '</div>';
+    summaryHtml += `<div class="zoom-gt-perms">`;
+    ['R','W','X','L','S','E'].forEach(p => {
+        const has = permsStr.includes(p);
+        summaryHtml += `<span class="perm-badge perm-${p.toLowerCase()} ${has ? '' : 'inactive'}">${p}</span>`;
+    });
+    summaryHtml += '</div>';
+    summaryHtml += `<div class="zoom-gt-desc">${abs.description || ''}</div>`;
+    if (nsObj) {
+        summaryHtml += '<div class="zoom-gt-meta">';
+        summaryHtml += `<span>Offset: ${nsObj.offset}</span>`;
+        summaryHtml += `<span>Base: 0x${(nsObj.base || 0).toString(16).toUpperCase()}</span>`;
+        summaryHtml += `<span>Size: ${nsObj.size || 0}B</span>`;
+        summaryHtml += '</div>';
+    }
+    if (abs.methodSelector) {
+        summaryHtml += '<div class="zoom-methods">';
+        summaryHtml += '<div class="zoom-methods-label">DR0 Method Selector:</div>';
+        const methods = Object.entries(abs.methodSelector).map(([k,v]) => `<span class="zoom-method-chip">${k}: ${v}</span>`).join('');
+        summaryHtml += methods;
+        summaryHtml += '</div>';
+    }
+    summaryHtml += '</div>';
+    summaryPanel.innerHTML = summaryHtml;
+
+    const cr6Clist = simulator.contextRegs[6] ? simulator.contextRegs[6].clist : null;
+    const cr6Names = new Set();
+    if (cr6Clist && isCR6Active) {
+        cr6Clist.forEach(entry => { if (entry && entry.name) cr6Names.add(entry.name); });
+    }
+
+    let mainHtml = '<div class="zoom-clist-header">';
+    mainHtml += `<h3>C-List Entries (${abs.clist.length} slots)</h3>`;
+    mainHtml += '</div>';
+    mainHtml += '<div class="zoom-clist-table">';
+    mainHtml += '<div class="zoom-clist-row zoom-clist-row-header">';
+    mainHtml += '<span class="zoom-col-idx">#</span>';
+    mainHtml += '<span class="zoom-col-name">Name</span>';
+    mainHtml += '<span class="zoom-col-type">Type</span>';
+    mainHtml += '<span class="zoom-col-perms">Permissions</span>';
+    mainHtml += '<span class="zoom-col-addr">Address</span>';
+    mainHtml += '<span class="zoom-col-size">Size</span>';
+    mainHtml += '<span class="zoom-col-desc">Description</span>';
+    mainHtml += '</div>';
+
+    abs.clist.forEach((entry, idx) => {
+        const inCR6 = cr6Names.has(entry.name);
+        const rowClass = inCR6 ? 'zoom-clist-row zoom-row-active' : 'zoom-clist-row';
+        const typeClass = entry.type === 'NULL' ? 'zoom-type-null' : 
+                          entry.type === 'Code' ? 'zoom-type-code' :
+                          entry.type === 'Data' ? 'zoom-type-data' :
+                          entry.type === 'Function' ? 'zoom-type-func' :
+                          entry.type === 'Constant' ? 'zoom-type-const' :
+                          entry.type === 'Abstract' ? 'zoom-type-abstract' : '';
+
+        mainHtml += `<div class="${rowClass}">`;
+        mainHtml += `<span class="zoom-col-idx">[${idx}]</span>`;
+        mainHtml += `<span class="zoom-col-name ${typeClass}">${entry.name}${inCR6 ? ' <span class="zoom-cr6-dot"></span>' : ''}</span>`;
+        mainHtml += `<span class="zoom-col-type"><span class="zoom-type-label ${typeClass}">${entry.type || '—'}</span></span>`;
+
+        let permHtml = '';
+        if (entry.perms && entry.perms.length > 0) {
+            ['R','W','X','L','S','E'].forEach(p => {
+                const has = entry.perms.includes(p);
+                permHtml += `<span class="perm-badge perm-${p.toLowerCase()} ${has ? '' : 'inactive'}">${p}</span>`;
+            });
+        } else {
+            permHtml = '<span style="color:#64748b;">—</span>';
+        }
+        mainHtml += `<span class="zoom-col-perms">${permHtml}</span>`;
+
+        const baseStr = entry.base !== undefined ? `0x${entry.base.toString(16).toUpperCase()}` : '—';
+        const sizeStr = entry.size ? `${entry.size}B` : '—';
+        mainHtml += `<span class="zoom-col-addr">${baseStr}</span>`;
+        mainHtml += `<span class="zoom-col-size">${sizeStr}</span>`;
+        mainHtml += `<span class="zoom-col-desc">${entry.desc || ''}</span>`;
+        mainHtml += '</div>';
+    });
+
+    mainHtml += '</div>';
+
+    if (isCR6Active) {
+        mainHtml += '<div class="zoom-cr6-legend"><span class="zoom-cr6-dot"></span> Currently loaded in CR6</div>';
+    }
+
+    mainPanel.innerHTML = mainHtml;
 }
 
 // ==================== DYNAMIC TOOLTIP SYSTEM ====================
