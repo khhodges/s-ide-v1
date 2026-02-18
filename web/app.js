@@ -1,6 +1,16 @@
 let savedEditorContent = '';
 let currentView = 'dashboard';
 let currentZoomAbstraction = null;
+const mathTypeBadges = {
+    'SlideRule': 'FLOAT',
+    'Abacus': 'INTEGER',
+    'Circle': 'GEOMETRY',
+    'Mint': 'SYSTEM',
+    'CapabilityManager': 'SYSTEM',
+    'DateTime': 'TIME',
+    'Lambda': 'FUNCTIONAL',
+    'Constants': 'CONSTANT'
+};
 let currentUser = null;
 let viewingTutorialFromLanding = false;
 
@@ -1065,16 +1075,6 @@ function buildHierarchyTree() {
     if (bootAbstractions.length > 0) {
         html += '<div class="hier-group">';
         html += '<div class="hier-group-label" data-tooltip="Boot-time abstractions. Others minted at runtime via CALL(Thread.Mint).">Abstractions</div>';
-        const mathTypeBadges = {
-            'SlideRule': 'FLOAT',
-            'Abacus': 'INTEGER',
-            'Circle': 'GEOMETRY',
-            'Mint': 'SYSTEM',
-            'CapabilityManager': 'SYSTEM',
-            'DateTime': 'TIME',
-            'Lambda': 'FUNCTIONAL',
-            'Constants': 'CONSTANT'
-        };
         bootAbstractions.forEach(aObj => {
             const name = aObj.name;
             const gtEntry = getBootGT(name);
