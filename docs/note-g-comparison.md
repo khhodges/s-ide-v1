@@ -25,14 +25,30 @@ Computing B₇ on the Analytical Engine. Reconstructed from Ada's published tabl
 | Inner loop | 13-23 | Compute Aₖ × Bₖ terms, accumulate | (n-2) times |
 | Finalize | 24-25 | Divide to get result, advance n | Once per Bernoulli number |
 
+**Variables**: 13 of the Engine's variable columns are actively used:
+
+| Variables | Role | Details |
+|-----------|------|---------|
+| V1, V2 | Constants | V1 = 1, V2 = 2 (never change) |
+| V3 | Parameter | n (incremented at op 25 for next number) |
+| V4, V5, V6 | Working | V4 = 2n-1, V5 = 2n+1, V6 decremented through loop |
+| V7 | Working | Denominator factor, incremented through loop |
+| V8 | Working | Ratio for coefficient update |
+| V10 | Counter | Loop counter, decremented from n-1 |
+| V11 | Accumulator | Builds coefficient Aₖ |
+| V12 | Working | Most recent Bₖ × Aₖ product |
+| V13 | Accumulator | Running sum of all terms |
+| V21-V24 | Results | Previously computed Bernoulli numbers (B₁, B₃, B₅) and result B₇ |
+
+Note: V9 is used in the inner loop (ops 17-20) as a second ratio variable. V14-V20 are skipped — the gap between working variables and result variables is deliberate, leaving room for additional Bernoulli numbers in a longer run.
+
 **Key characteristics**:
 - 25 operations using only +, -, ×, ÷
-- Variables V1-V3 hold constants and the parameter n
-- Working variables hold intermediate computations
-- Separate variables hold previously computed Bernoulli numbers
-- Operations 13-23 form a loop body (conditional backward jump if counter ≠ 0)
+- Op 1 stores its result in three variables simultaneously (V4, V5, V6) — exploiting the Engine's ability to copy a result to multiple columns
+- Operations 13-23 form a loop body with two inner sub-loops (ops 13-16 and 17-20 use the same logic with updated values)
+- The loop uses a conditional backward jump: if V10 ≠ 0 after op 23, execution returns to op 13
 - Superscript notation (²V₄) tracks each variable's assignment history — an innovation by Lovelace for documenting program state
-- One known bug: a division in the published table has its operands swapped (possibly a typesetting error, as the Engine was never built to test it)
+- One known bug: operation 4 in the published table shows V5 ÷ V4 but should be V4 ÷ V5 (possibly a typesetting error, as the Engine was never built to test it)
 
 **The algorithm**: Uses a recurrence relation where each new Bernoulli number is computed from all previous ones, via weighted sums with binomial-derived coefficients that are recalculated at each step.
 
@@ -75,7 +91,7 @@ These are different programs solving different problems on different machines 18
 | **Machine** | Analytical Engine (never built) | Pure Church Lambda Machine |
 | **Operations** | 25 | 16 |
 | **Operation types** | 4 (add, subtract, multiply, divide) | 6 Church instructions per pipeline |
-| **Variables** | V-numbered columns (gear columns) | Named let bindings |
+| **Variables** | 14 V-numbered columns (of 24 allocated) | 16 named let bindings |
 | **Variable style** | Numbered with state tracking (²V₄) | Named, immutable (n, prod1...) |
 | **Control flow** | Loops (ops 13-23 repeat) | Straight-line (no loops) |
 | **Computes** | B₇ (Bernoulli number) | Sum of squares 1²+2²+3²+4² = 30 |
