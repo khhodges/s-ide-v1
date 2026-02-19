@@ -10,6 +10,7 @@ from app import app
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DOCS_DIR = os.path.join(BASE_DIR, 'docs')
 RV32_DIR = os.path.join(BASE_DIR, 'riscv_cap')
+CHURCH_DIR = os.path.join(BASE_DIR, 'church_sim')
 TEST_DIR = os.path.join(BASE_DIR, 'test_harness')
 
 rv32_bp = Blueprint('rv32', __name__, url_prefix='/rv32')
@@ -54,6 +55,23 @@ def rv32_static(path):
     return resp
 
 app.register_blueprint(rv32_bp)
+
+church_bp = Blueprint('church', __name__, url_prefix='/church')
+
+@church_bp.route('/')
+def church_index():
+    resp = make_response(send_from_directory(CHURCH_DIR, 'index.html'))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
+@church_bp.route('/<path:path>')
+def church_static(path):
+    resp = make_response(send_from_directory(CHURCH_DIR, path))
+    if path.endswith(('.js', '.css', '.html')):
+        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
+app.register_blueprint(church_bp)
 
 @app.route('/test/')
 def test_harness():

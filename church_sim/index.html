@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pure Church Machine Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="fixed-toolbar">
+        <header>
+            <h1>Church Machine</h1>
+            <a href="/" class="btn-swap-sim" title="Switch to CTMM Sim-64">CTMM &rarr;</a>
+            <a href="/rv32/" class="btn-swap-sim" title="Switch to RV32-Cap Sim-32">RV32 &rarr;</a>
+            <nav class="controls">
+                <div class="view-buttons">
+                    <button onclick="switchView('dashboard')" class="btn btn-view active" id="viewBtn-dashboard">Dashboard</button>
+                    <button onclick="switchView('editor')" class="btn btn-view" id="viewBtn-editor">Assembly</button>
+                    <button onclick="switchView('namespace')" class="btn btn-view" id="viewBtn-namespace">Namespace</button>
+                    <button onclick="switchView('pipeline')" class="btn btn-view" id="viewBtn-pipeline">Pipeline</button>
+                    <button onclick="switchView('tutorial')" class="btn btn-view" id="viewBtn-tutorial">Tutorial</button>
+                    <button onclick="switchView('repl')" class="btn btn-view" id="viewBtn-repl">REPL</button>
+                </div>
+            </nav>
+        </header>
+    </div>
+
+    <div id="dashboard" class="view active">
+        <div class="dashboard-grid">
+            <div class="panel">
+                <div class="panel-title">Context Registers (CR0–CR15) — 128-bit Golden Token Holders</div>
+                <div id="crRegs"></div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">Data Registers (DR0–DR15) — 32-bit Values (DR0 = zero)</div>
+                <div id="drRegs"></div>
+            </div>
+            <div class="panel dashboard-full">
+                <div class="panel-title">Flags &amp; Status</div>
+                <div id="flagsDisplay"></div>
+            </div>
+            <div class="panel dashboard-full">
+                <div class="panel-title">Machine Architecture</div>
+                <div id="machineInfo"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="editor" class="view">
+        <div class="editor-layout">
+            <div class="editor-panel">
+                <div class="editor-toolbar">
+                    <button class="btn btn-primary" onclick="assembleAndLoad()">Assemble</button>
+                    <button class="btn btn-success" onclick="stepSim()">Step</button>
+                    <button class="btn btn-success" onclick="runSim()">Run</button>
+                    <button class="btn btn-warning" onclick="resetSim()">Reset</button>
+                    <span style="flex:1"></span>
+                    <button class="btn" onclick="loadExample('load_save')">Load/Save</button>
+                    <button class="btn" onclick="loadExample('bernoulli')">Bernoulli</button>
+                    <button class="btn" onclick="loadExample('conditional')">Conditional</button>
+                </div>
+                <textarea id="asmEditor" spellcheck="false"></textarea>
+            </div>
+            <div class="editor-panel">
+                <div class="panel-title">Console Output</div>
+                <div id="editorConsole">Ready. Write Church assembly and click Assemble.</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="namespace" class="view">
+        <div class="panel">
+            <div class="panel-title">Namespace Table — Golden Token Entries</div>
+            <div id="namespaceTable"></div>
+        </div>
+    </div>
+
+    <div id="pipeline" class="view">
+        <div class="panel">
+            <div id="pipelineContainer"></div>
+        </div>
+    </div>
+
+    <div id="tutorial" class="view">
+        <div id="tutorialView"></div>
+    </div>
+
+    <div id="repl" class="view">
+        <div class="repl-layout">
+            <div class="repl-panel">
+                <div class="panel-title">Church Computer REPL — Symbolic Mathematics</div>
+                <div id="replOutput">
+                    <div class="repl-info">Church Computer REPL — Pure Lambda Calculus</div>
+                    <div class="repl-info">Type HELP for commands. Every operation → 7-step security pipeline.</div>
+                    <div class="repl-info">═══════════════════════════════════════════════</div>
+                </div>
+                <div class="repl-input-bar">
+                    <span style="color:var(--church-gold);font-family:monospace;padding:0.5rem;">λ&gt;</span>
+                    <input type="text" id="replInput" placeholder="let n = succ(3)" onkeydown="replKeydown(event)">
+                    <button class="btn btn-primary" onclick="replExecute()">Enter</button>
+                </div>
+            </div>
+            <div class="repl-sidebar">
+                <div class="panel">
+                    <div class="panel-title">Quick Commands</div>
+                    <button class="btn" onclick="loadBernoulliInREPL()" style="width:100%;margin-bottom:0.5rem;">Run Bernoulli</button>
+                    <button class="btn" onclick="replExecute('HELP')" style="width:100%;margin-bottom:0.5rem;">Help</button>
+                    <button class="btn" onclick="replExecute('VARS')" style="width:100%;margin-bottom:0.5rem;">Show Variables</button>
+                    <button class="btn btn-warning" onclick="replExecute('CLEAR')" style="width:100%;">Clear All</button>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">Architecture</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);line-height:1.6;">
+                        <strong style="color:var(--church-gold);">8 Opcodes:</strong> LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA<br><br>
+                        <strong style="color:var(--church-gold);">Zero</strong> Turing instructions<br><br>
+                        <strong style="color:var(--church-gold);">7-Step Pipeline:</strong><br>
+                        LOAD → TPERM → CALL → LOAD → TPERM → LAMBDA → RETURN<br><br>
+                        <strong style="color:var(--church-gold);">Golden Token:</strong><br>
+                        Version(7) | Index(17) | Perms(6) | Type(2)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="simulator.js"></script>
+    <script src="assembler.js"></script>
+    <script src="pipeline.js"></script>
+    <script src="repl.js"></script>
+    <script src="tutorial.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

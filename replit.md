@@ -75,8 +75,17 @@ Interactive Haskell interpreter demonstrating the Pure Church Lambda Machine. GH
 -   **Turing Rejection**: Any Turing-domain instruction (ADD, MOV, CMP, B, LDR, etc.) produces a FAULT — the instructions don't exist in this architecture.
 -   **Run**: `./churchMachine` or `ghci -i. churchMachine.hs` then type `main`.
 
+### Church Machine Web Simulator (`church_sim/`)
+Interactive web-based Pure Church Lambda Machine simulator at `/church/`. Faithfully mirrors the `church_machine/` Amaranth HDL hardware implementation in JavaScript, proving computational completeness with zero Turing-domain instructions.
+-   **Files**: `simulator.js` (~664 lines, core machine model), `assembler.js` (Church assembly parser), `pipeline.js` (7-step security pipeline visualizer), `repl.js` (symbolic math REPL), `tutorial.js` (Bernoulli tutorial), `app.js` (view management), `styles.css`, `index.html`.
+-   **6 Views**: Dashboard (registers/GT display), Assembly Editor, Namespace Browser, Pipeline Visualizer, Tutorial, REPL.
+-   **Machine Model**: 16 CRs (128-bit), 16 DRs (32-bit, DR0=zero), 32-bit GT format, 8 opcodes (LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA), ARM-style condition codes.
+-   **7-Step Security Pipeline**: LOAD → TPERM(E) → CALL → LOAD → TPERM(X) → LAMBDA → RETURN — animated gate-by-gate execution trace.
+-   **Symbolic Math REPL**: `let x = 3 + 5`, `let y = sqrt(x)` — translated to Church-domain CALL sequences. Let bindings, ANS, VARS, CLEAR.
+-   **Bernoulli Tutorial**: 18-step interactive walkthrough proving 1²+2²+3²+4²=30 via Ada Lovelace's method (formula vs direct computation).
+
 ### Unified Server Architecture
-Both simulators are served from a single Flask application, providing dedicated routes for each simulator, a test harness, and API endpoints for user authentication and state persistence.
+All three simulators are served from a single Flask application (`unified_server.py`), providing dedicated routes (`/ctmm/`, `/rv32/`, `/church/`), a test harness (`/test/`), and API endpoints for user authentication and state persistence.
 
 ## External Dependencies
 
