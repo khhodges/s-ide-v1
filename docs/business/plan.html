@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Church Machine — Business Plan</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: #fafafa;
+    color: #1a1a2e;
+    line-height: 1.7;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 30px;
+}
+@media print {
+    body { padding: 20px; font-size: 11pt; }
+    .no-print { display: none; }
+    h1 { font-size: 22pt; }
+    h2 { page-break-before: always; font-size: 16pt; }
+    h2:first-of-type { page-break-before: avoid; }
+}
+h1 {
+    font-size: 2.4em;
+    color: #0d1b2a;
+    border-bottom: 3px solid #1b9aaa;
+    padding-bottom: 15px;
+    margin-bottom: 10px;
+}
+.subtitle {
+    font-size: 1.2em;
+    color: #555;
+    margin-bottom: 40px;
+    font-style: italic;
+}
+h2 {
+    font-size: 1.6em;
+    color: #0d1b2a;
+    margin-top: 50px;
+    margin-bottom: 20px;
+    border-left: 4px solid #1b9aaa;
+    padding-left: 15px;
+}
+h3 {
+    font-size: 1.2em;
+    color: #333;
+    margin-top: 30px;
+    margin-bottom: 12px;
+}
+p { margin-bottom: 16px; }
+ul, ol { margin-bottom: 16px; padding-left: 30px; }
+li { margin-bottom: 8px; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 0.95em;
+}
+th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+th {
+    background: #0d1b2a;
+    color: white;
+    font-weight: 600;
+}
+tr:nth-child(even) { background: #f0f4f8; }
+.highlight-box {
+    background: #e8f4f8;
+    border-left: 4px solid #1b9aaa;
+    padding: 20px 25px;
+    margin: 25px 0;
+    border-radius: 0 8px 8px 0;
+}
+.highlight-box p { margin-bottom: 8px; }
+.highlight-box p:last-child { margin-bottom: 0; }
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin: 25px 0;
+}
+.metric-card {
+    background: #0d1b2a;
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+.metric-card .value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #1b9aaa;
+}
+.metric-card .label {
+    font-size: 0.85em;
+    color: #aaa;
+    margin-top: 5px;
+}
+.toc { margin: 30px 0 40px; }
+.toc a {
+    color: #1b9aaa;
+    text-decoration: none;
+    display: block;
+    padding: 6px 0;
+    border-bottom: 1px dotted #ddd;
+}
+.toc a:hover { color: #0d1b2a; }
+.nav-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #0d1b2a;
+    padding: 10px 30px;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.nav-bar a {
+    color: #1b9aaa;
+    text-decoration: none;
+    font-family: sans-serif;
+    font-size: 0.9em;
+}
+.nav-bar span { color: white; font-family: sans-serif; font-weight: bold; }
+body { padding-top: 60px; }
+.quote {
+    font-style: italic;
+    font-size: 1.15em;
+    color: #444;
+    border-left: 3px solid #1b9aaa;
+    padding: 15px 20px;
+    margin: 25px 0;
+    background: #fafafa;
+}
+</style>
+</head>
+<body>
+
+<div class="nav-bar no-print">
+    <span>Church Machine</span>
+    <a href="/docs/business/deck.html">View Slide Deck &rarr;</a>
+</div>
+
+<h1>Church Machine</h1>
+<p class="subtitle">Business Plan &mdash; The World's First Failsafe Computing Platform for Children</p>
+
+<div class="toc">
+    <strong>Contents</strong>
+    <a href="#executive-summary">1. Executive Summary</a>
+    <a href="#problem">2. The Problem</a>
+    <a href="#solution">3. The Solution</a>
+    <a href="#product">4. Product Line</a>
+    <a href="#technology">5. Technology &amp; IP</a>
+    <a href="#market">6. Market Opportunity</a>
+    <a href="#business-model">7. Business Model</a>
+    <a href="#go-to-market">8. Go-to-Market Strategy</a>
+    <a href="#financials">9. Financial Projections</a>
+    <a href="#team">10. Team &amp; Requirements</a>
+    <a href="#timeline">11. Development Timeline</a>
+    <a href="#risks">12. Risks &amp; Mitigations</a>
+    <a href="#ask">13. The Ask</a>
+</div>
+
+<h2 id="executive-summary">1. Executive Summary</h2>
+
+<p>Church Machine Ltd develops hardware-enforced failsafe computing devices for children, starting with an educational handheld trainer and evolving into the world's first truly safe data phone for young people.</p>
+
+<p>Our technology is based on a patentable capability-based security architecture — the Pure Church Lambda Machine — which proves computational completeness using zero Turing-domain instructions. Unlike software-based parental controls that can be bypassed, our security is enforced by the hardware itself. Unsafe states are architecturally unrepresentable.</p>
+
+<div class="highlight-box">
+    <p><strong>Core Innovation:</strong> Golden Token capability architecture where every resource access — every file read, every network connection, every app launch — requires a hardware-verified cryptographic token. No token, no access. No exceptions, no overrides, no jailbreaks.</p>
+</div>
+
+<div class="metric-grid">
+    <div class="metric-card">
+        <div class="value">$4.2B</div>
+        <div class="label">Parental Control Market (2025)</div>
+    </div>
+    <div class="metric-card">
+        <div class="value">$89</div>
+        <div class="label">Target Retail Price</div>
+    </div>
+    <div class="metric-card">
+        <div class="value">18 mo</div>
+        <div class="label">Time to First Product</div>
+    </div>
+</div>
+
+<h2 id="problem">2. The Problem</h2>
+
+<h3>Children's Digital Safety Is Fundamentally Broken</h3>
+
+<p>Every device given to a child today — smartphones, tablets, laptops — runs on architectures designed in the 1970s with no concept of capability-based security. The result:</p>
+
+<ul>
+    <li><strong>Software filters fail.</strong> Parental control apps operate at the application layer, where they can be bypassed by VPNs, browser tricks, app sideloading, or simple configuration changes. A determined 10-year-old can defeat most parental controls in minutes.</li>
+    <li><strong>Stranger contact is default-on.</strong> Every phone has a publicly discoverable address (phone number, username, email). Children are contactable by anyone unless software explicitly blocks them — and blocking is never complete.</li>
+    <li><strong>Apps have excessive access.</strong> A calculator app can read contacts. A game can access the microphone. Permission models are coarse, confusing, and routinely bypassed by apps that technically comply while violating intent.</li>
+    <li><strong>The architecture enables abuse.</strong> Cyberbullying, predatory contact, inappropriate content, and data harvesting all exploit the same fundamental flaw: conventional computing architectures grant access by default and try to restrict it with software. This is backwards.</li>
+</ul>
+
+<div class="quote">
+    "Every cyber security breach in history has exploited the same architectural flaw: the absence of hardware-enforced capabilities. We don't need better filters. We need a better architecture."
+    <br>&mdash; Kenneth James Hamer-Hodges
+</div>
+
+<h3>Education Is Missing Secure Computing</h3>
+
+<p>Computer science education teaches children to code but not to think about security architecturally. Students learn Python and JavaScript — languages that run on fundamentally insecure platforms — without ever encountering the concept that computing could be safe by design.</p>
+
+<h2 id="solution">3. The Solution</h2>
+
+<h3>Hardware-Enforced Capability Security</h3>
+
+<p>The Church Machine replaces the conventional computing model with a capability-based architecture where:</p>
+
+<ul>
+    <li><strong>Every resource requires a Golden Token.</strong> Files, network connections, devices, abstractions (apps) — nothing is accessible without a hardware-verified capability token specifying exactly what permissions are granted.</li>
+    <li><strong>No bypass is possible.</strong> The security enforcement is in the processor hardware, not in software. There is no sudo, no admin mode, no privilege escalation. The architecture doesn't support it.</li>
+    <li><strong>Contact requires mutual binding.</strong> Two devices communicate only when both sides hold bound Golden Tokens pointing at each other. No token = invisible. Strangers cannot discover or contact the device.</li>
+    <li><strong>"Hello Mum" is a hardware guarantee.</strong> A physical button triggers a direct encrypted tunnel to the parent's device. This cannot be blocked, redirected, or faked by any software on either device.</li>
+</ul>
+
+<h3>What Makes This Different</h3>
+
+<table>
+    <tr><th>Feature</th><th>Conventional Device</th><th>Church Machine</th></tr>
+    <tr><td>Security model</td><td>Software filters (bypassable)</td><td>Hardware-enforced capabilities</td></tr>
+    <tr><td>Default access</td><td>Everything allowed, selectively blocked</td><td>Nothing allowed, selectively granted</td></tr>
+    <tr><td>Stranger contact</td><td>Possible unless blocked</td><td>Impossible without Golden Token</td></tr>
+    <tr><td>App permissions</td><td>Coarse, confusing, bypassable</td><td>Per-resource, hardware-checked</td></tr>
+    <tr><td>Jailbreak risk</td><td>Always possible</td><td>Architecturally impossible</td></tr>
+    <tr><td>Parent control</td><td>Software overlay (fragile)</td><td>Token issuance (absolute)</td></tr>
+</table>
+
+<h2 id="product">4. Product Line</h2>
+
+<h3>Phase 1: Church Machine Educational Trainer ($89-99)</h3>
+<p>A handheld device the size of a large smartphone with a 3.5" color display, dedicated opcode keys, and a numeric keypad. Children build and step through programs, watching capability security enforce itself in real time.</p>
+<ul>
+    <li>10 Church opcode keys (LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA, ELOADCALL, XLOADLAMBDA)</li>
+    <li>Context register selection keys (CR0-CR7)</li>
+    <li>STEP / RUN / RESET controls</li>
+    <li>Multiple views: Dashboard, Namespace Browser, Pipeline Visualizer</li>
+    <li>Built-in HP-35 calculator mode (security through lambda calculus)</li>
+    <li>USB-C for charging and PC connection (pairs with free web simulator)</li>
+    <li>Classroom kits available (10 units + teacher guide, $599-799)</li>
+</ul>
+
+<h3>Phase 2: Church Machine Data Phone ($149-199)</h3>
+<p>Evolution of the trainer into a data-only communication device.</p>
+<ul>
+    <li>4G LTE data modem (no voice — messaging and web only)</li>
+    <li>5" touchscreen with physical "Hello Mum" button</li>
+    <li>FamilyRegistry-based contact system (Golden Token binding)</li>
+    <li>Capability-gated messaging (each contact has specific permissions)</li>
+    <li>Safe web browser (parent-approved sites only, no JavaScript)</li>
+    <li>Educational apps as Church Machine abstractions</li>
+    <li>Monthly data plan ($5-10/month)</li>
+</ul>
+
+<h3>Phase 3: Church Machine Pro ($249-299)</h3>
+<p>Full-featured capability-secure device for older students and institutions.</p>
+<ul>
+    <li>Larger display, more storage, Bluetooth networking</li>
+    <li>Classroom mesh networking (FamilyRegistry device-to-device)</li>
+    <li>Developer mode for creating custom abstractions</li>
+    <li>Institutional deployment (schools, government, healthcare)</li>
+</ul>
+
+<h2 id="technology">5. Technology &amp; IP</h2>
+
+<h3>Core Technology Stack</h3>
+
+<table>
+    <tr><th>Component</th><th>Status</th><th>Description</th></tr>
+    <tr><td>Pure Church Lambda Machine</td><td>Working</td><td>10-opcode processor proving computational completeness without Turing instructions</td></tr>
+    <tr><td>Amaranth HDL Implementation</td><td>Working</td><td>23 modules, 729KB synthesizable Verilog, FPGA-ready</td></tr>
+    <tr><td>Fused Instructions</td><td>Working</td><td>ELOADCALL + XLOADLAMBDA: 57% cycle reduction with full security checks</td></tr>
+    <tr><td>Web Simulator</td><td>Working</td><td>Full interactive simulator with pipeline visualization, REPL, tutorial</td></tr>
+    <tr><td>FamilyRegistry</td><td>Designed</td><td>Secure device binding with cryptographic tunnel keys (web simulator abstraction)</td></tr>
+    <tr><td>Golden Token Architecture</td><td>Working</td><td>32-bit capability tokens with 6-bit permissions, domain purity enforcement</td></tr>
+    <tr><td>Programmable Abstractions</td><td>Working</td><td>Method sequence chaining with 84% cycle reduction</td></tr>
+</table>
+
+<h3>Patentable Innovations</h3>
+<ol>
+    <li><strong>Pure Church Lambda Machine</strong> — First processor architecture proving computational completeness using only Church-domain (lambda calculus) instructions with zero Turing-domain instructions</li>
+    <li><strong>Fused Capability Instructions</strong> — ELOADCALL and XLOADLAMBDA micro-sequencing: LOAD + permission check + execution in a single instruction with hardware-enforced security</li>
+    <li><strong>Golden Token Capability Architecture</strong> — Hardware-enforced access control where every resource access requires a cryptographically sealed capability token</li>
+    <li><strong>Programmable Abstraction Chaining</strong> — Method sequence execution within a single protected scope, enabling complex computations with minimal security boundary crossings</li>
+    <li><strong>FamilyRegistry Network Binding</strong> — Capability-based peer-to-peer communication where the token IS the address, eliminating DNS/IP discovery attack surfaces</li>
+</ol>
+
+<h2 id="market">6. Market Opportunity</h2>
+
+<h3>Market Segments</h3>
+
+<table>
+    <tr><th>Segment</th><th>Market Size</th><th>Growth</th><th>Our Entry</th></tr>
+    <tr><td>Parental Control Software</td><td>$4.2B (2025)</td><td>12% CAGR</td><td>Hardware replacement</td></tr>
+    <tr><td>Children's First Phone</td><td>$2.8B (2025)</td><td>15% CAGR</td><td>Failsafe alternative</td></tr>
+    <tr><td>STEM Education Hardware</td><td>$3.1B (2025)</td><td>14% CAGR</td><td>Security-focused curriculum</td></tr>
+    <tr><td>EdTech (K-12)</td><td>$18B (2025)</td><td>16% CAGR</td><td>Classroom trainer</td></tr>
+</table>
+
+<h3>Competitive Landscape</h3>
+<table>
+    <tr><th>Competitor</th><th>Approach</th><th>Limitation</th></tr>
+    <tr><td>Bark / Qustodio / Net Nanny</td><td>Software monitoring on standard devices</td><td>Bypassable; reactive, not preventive</td></tr>
+    <tr><td>Gabb Phone / Pinwheel</td><td>Stripped-down Android phones</td><td>Still conventional architecture; software controls</td></tr>
+    <tr><td>Light Phone</td><td>Minimal phone (calls + texts only)</td><td>Not educational; no safety architecture</td></tr>
+    <tr><td>micro:bit / Arduino</td><td>Educational microcontrollers</td><td>No security focus; no capability model</td></tr>
+    <tr><td><strong>Church Machine</strong></td><td><strong>Hardware-enforced capability security</strong></td><td><strong>New architecture — requires ecosystem building</strong></td></tr>
+</table>
+
+<h3>Target Customers</h3>
+<ul>
+    <li><strong>Primary:</strong> Parents of children ages 6-14 wanting a safe first computing device</li>
+    <li><strong>Secondary:</strong> Schools and educational institutions teaching computer science and cybersecurity</li>
+    <li><strong>Tertiary:</strong> Government and enterprise sectors requiring demonstrably secure computing</li>
+</ul>
+
+<h2 id="business-model">7. Business Model</h2>
+
+<h3>Revenue Streams</h3>
+
+<table>
+    <tr><th>Stream</th><th>Year 1</th><th>Year 2</th><th>Year 3</th></tr>
+    <tr><td>Educational Trainer sales</td><td>$500K</td><td>$1.2M</td><td>$2.0M</td></tr>
+    <tr><td>Classroom kits</td><td>$200K</td><td>$600K</td><td>$1.5M</td></tr>
+    <tr><td>Data Phone sales</td><td>—</td><td>$800K</td><td>$3.0M</td></tr>
+    <tr><td>Monthly data subscriptions</td><td>—</td><td>$100K</td><td>$600K</td></tr>
+    <tr><td>Curriculum licensing</td><td>$50K</td><td>$200K</td><td>$500K</td></tr>
+    <tr><td>Enterprise/government licensing</td><td>—</td><td>—</td><td>$500K</td></tr>
+    <tr><td><strong>Total Revenue</strong></td><td><strong>$750K</strong></td><td><strong>$2.9M</strong></td><td><strong>$8.1M</strong></td></tr>
+</table>
+
+<h3>Unit Economics (Educational Trainer)</h3>
+<div class="metric-grid">
+    <div class="metric-card">
+        <div class="value">$24</div>
+        <div class="label">Unit Cost (at 10K volume)</div>
+    </div>
+    <div class="metric-card">
+        <div class="value">$89</div>
+        <div class="label">Retail Price</div>
+    </div>
+    <div class="metric-card">
+        <div class="value">73%</div>
+        <div class="label">Gross Margin</div>
+    </div>
+</div>
+
+<h2 id="go-to-market">8. Go-to-Market Strategy</h2>
+
+<h3>Phase 1: Establish Credibility (Months 1-6)</h3>
+<ul>
+    <li>Release free web simulator as open educational resource</li>
+    <li>Partner with 5-10 pilot schools for classroom testing</li>
+    <li>Publish academic papers on capability-based security education</li>
+    <li>File provisional patents on core innovations</li>
+    <li>Present at education technology conferences (BETT, ISTE, CES Education)</li>
+</ul>
+
+<h3>Phase 2: Launch Trainer (Months 6-18)</h3>
+<ul>
+    <li>Crowdfunding campaign (Kickstarter/Indiegogo) — validates demand, generates press</li>
+    <li>Direct-to-school sales with curriculum integration package</li>
+    <li>Online retail (own website + Amazon Education)</li>
+    <li>Teacher training workshops and certification programme</li>
+</ul>
+
+<h3>Phase 3: Launch Data Phone (Months 18-30)</h3>
+<ul>
+    <li>Partner with MVNO for data plan bundling</li>
+    <li>Parent-focused marketing: "The first phone that's safe by design, not by filter"</li>
+    <li>Retail partnerships (specialist electronics, education retailers)</li>
+    <li>Referral programme (parent-to-parent)</li>
+</ul>
+
+<h2 id="financials">9. Financial Projections</h2>
+
+<h3>Three-Year Summary</h3>
+
+<table>
+    <tr><th></th><th>Year 1</th><th>Year 2</th><th>Year 3</th></tr>
+    <tr><td>Revenue</td><td>$750K</td><td>$2.9M</td><td>$8.1M</td></tr>
+    <tr><td>COGS</td><td>$320K</td><td>$1.0M</td><td>$2.4M</td></tr>
+    <tr><td>Gross Profit</td><td>$430K</td><td>$1.9M</td><td>$5.7M</td></tr>
+    <tr><td>Operating Expenses</td><td>$800K</td><td>$1.4M</td><td>$2.8M</td></tr>
+    <tr><td>EBITDA</td><td>($370K)</td><td>$500K</td><td>$2.9M</td></tr>
+    <tr><td>Units Shipped</td><td>6,000</td><td>18,000</td><td>52,000</td></tr>
+</table>
+
+<h3>Key Assumptions</h3>
+<ul>
+    <li>Average selling price declines 10% per year with volume</li>
+    <li>Component costs decline 15% per year with volume and design optimization</li>
+    <li>Data phone launch in Month 18 drives significant Year 2-3 growth</li>
+    <li>Subscription revenue grows as installed base accumulates</li>
+    <li>Operating expenses include 4-person engineering team, 2-person sales/marketing</li>
+</ul>
+
+<h2 id="team">10. Team &amp; Requirements</h2>
+
+<h3>Core Team Needed</h3>
+<table>
+    <tr><th>Role</th><th>Focus</th><th>When</th></tr>
+    <tr><td>Founder / Architect</td><td>Architecture, vision, IP</td><td>Now</td></tr>
+    <tr><td>FPGA / Hardware Engineer</td><td>Board design, FPGA integration, manufacturing</td><td>Month 1</td></tr>
+    <tr><td>Firmware Engineer</td><td>Boot loader, display driver, key input, UART</td><td>Month 3</td></tr>
+    <tr><td>Product Designer</td><td>Enclosure, UX, curriculum</td><td>Month 3</td></tr>
+    <tr><td>Sales / Partnerships</td><td>School pilots, crowdfunding, retail</td><td>Month 6</td></tr>
+    <tr><td>Cellular / Network Engineer</td><td>Modem integration, FamilyRegistry networking</td><td>Month 12</td></tr>
+</table>
+
+<h3>Advisory Board</h3>
+<ul>
+    <li>Children's online safety expert / advocate</li>
+    <li>Education technology curriculum specialist</li>
+    <li>Hardware manufacturing / supply chain advisor</li>
+    <li>Cybersecurity academic / researcher</li>
+</ul>
+
+<h2 id="timeline">11. Development Timeline</h2>
+
+<table>
+    <tr><th>Milestone</th><th>Target</th><th>Status</th></tr>
+    <tr><td>Web simulator (all 3 architectures)</td><td>Complete</td><td style="color: green;">Done</td></tr>
+    <tr><td>Amaranth HDL synthesis (729K Verilog)</td><td>Complete</td><td style="color: green;">Done</td></tr>
+    <tr><td>Fused instruction hardware</td><td>Complete</td><td style="color: green;">Done</td></tr>
+    <tr><td>Patent filings (provisional)</td><td>Month 1-3</td><td>Pending</td></tr>
+    <tr><td>FPGA prototype on dev board</td><td>Month 3-6</td><td>Pending</td></tr>
+    <tr><td>First handheld prototype (3D-printed case)</td><td>Month 6-9</td><td>Pending</td></tr>
+    <tr><td>Pilot school testing (5-10 schools)</td><td>Month 9-12</td><td>Pending</td></tr>
+    <tr><td>Production tooling + certification</td><td>Month 12-15</td><td>Pending</td></tr>
+    <tr><td>Educational Trainer ship date</td><td>Month 15-18</td><td>Pending</td></tr>
+    <tr><td>Data Phone prototype</td><td>Month 18-24</td><td>Pending</td></tr>
+    <tr><td>"Hello Mum" + safe browser</td><td>Month 24-30</td><td>Pending</td></tr>
+</table>
+
+<h2 id="risks">12. Risks &amp; Mitigations</h2>
+
+<table>
+    <tr><th>Risk</th><th>Impact</th><th>Mitigation</th></tr>
+    <tr><td>Hardware development delays</td><td>High</td><td>FPGA prototyping on commercial dev boards reduces risk; web simulator provides interim product</td></tr>
+    <tr><td>Market adoption — "too different"</td><td>Medium</td><td>Education market entry first (lower risk); free web simulator builds familiarity</td></tr>
+    <tr><td>Competition from big tech</td><td>Medium</td><td>Patent protection on core architecture; 3+ year head start; architecture is fundamentally different, not incrementally better</td></tr>
+    <tr><td>Manufacturing costs exceed projections</td><td>Medium</td><td>Start with minimal BOM; use existing FPGA modules; scale manufacturing with demand</td></tr>
+    <tr><td>Regulatory/certification delays</td><td>Medium</td><td>Begin FCC/CE process early; data phone uses certified modem modules</td></tr>
+    <tr><td>Limited app ecosystem</td><td>Low-Medium</td><td>Built-in abstractions cover core educational needs; safe browser provides web content access</td></tr>
+</table>
+
+<h2 id="ask">13. The Ask</h2>
+
+<h3>Seed Round: $500K - $750K</h3>
+
+<p>Funds will be used for:</p>
+
+<table>
+    <tr><th>Use</th><th>Amount</th><th>Purpose</th></tr>
+    <tr><td>Patent filings</td><td>$50K - $80K</td><td>Provisional + PCT filings for 5 core innovations</td></tr>
+    <tr><td>Hardware engineering</td><td>$150K - $200K</td><td>FPGA prototyping, board design, 3 prototype iterations</td></tr>
+    <tr><td>Team (12 months)</td><td>$200K - $300K</td><td>FPGA engineer + firmware engineer salaries</td></tr>
+    <tr><td>Manufacturing setup</td><td>$50K - $80K</td><td>Injection mold tooling, certification prep</td></tr>
+    <tr><td>Go-to-market</td><td>$50K - $90K</td><td>Crowdfunding campaign, pilot school programme, conference presence</td></tr>
+</table>
+
+<div class="highlight-box">
+    <p><strong>What investors get:</strong> A company with working technology (not a concept), a clear product roadmap from educational trainer to failsafe data phone, patentable IP in a growing market, and a founding team with deep architecture expertise.</p>
+    <p><strong>The opportunity:</strong> Define a new category — hardware-enforced safe computing for children — in a market desperately searching for solutions that actually work.</p>
+</div>
+
+<p style="text-align: center; margin-top: 60px; color: #888; font-size: 0.9em;">
+    Church Machine Ltd &mdash; Safe Computing by Design<br>
+    Contact: [contact details] &mdash; Web: [simulator URL]
+</p>
+
+</body>
+</html>

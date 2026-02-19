@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Church Machine — Investor Deck</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    background: #0d1b2a;
+    color: white;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+.slide-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.slide {
+    display: none;
+    width: 100%;
+    height: 100%;
+    padding: 60px 80px;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+}
+.slide.active { display: flex; }
+
+.slide-number {
+    position: absolute;
+    bottom: 20px;
+    right: 40px;
+    font-size: 0.85em;
+    color: #556;
+}
+
+.nav-hint {
+    position: fixed;
+    bottom: 20px;
+    left: 40px;
+    font-size: 0.8em;
+    color: #445;
+    z-index: 100;
+}
+
+h1 {
+    font-size: 3.5em;
+    font-weight: 700;
+    margin-bottom: 20px;
+    line-height: 1.1;
+}
+h1 .accent { color: #1b9aaa; }
+
+h2 {
+    font-size: 2.4em;
+    font-weight: 700;
+    margin-bottom: 30px;
+    color: #1b9aaa;
+}
+
+h3 {
+    font-size: 1.4em;
+    font-weight: 600;
+    margin-bottom: 15px;
+    margin-top: 20px;
+    color: #8ecae6;
+}
+
+.subtitle {
+    font-size: 1.5em;
+    color: #8899aa;
+    margin-bottom: 10px;
+    font-weight: 300;
+}
+
+p {
+    font-size: 1.15em;
+    line-height: 1.7;
+    color: #ccd;
+    margin-bottom: 15px;
+    max-width: 800px;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+ul li {
+    font-size: 1.15em;
+    line-height: 1.7;
+    color: #ccd;
+    padding: 8px 0;
+    padding-left: 30px;
+    position: relative;
+}
+ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 16px;
+    width: 12px;
+    height: 12px;
+    background: #1b9aaa;
+    border-radius: 50%;
+}
+
+.big-quote {
+    font-size: 1.6em;
+    font-style: italic;
+    color: #8ecae6;
+    border-left: 4px solid #1b9aaa;
+    padding: 20px 30px;
+    margin: 30px 0;
+    max-width: 750px;
+    line-height: 1.5;
+}
+.big-quote .attribution {
+    font-size: 0.65em;
+    color: #667;
+    font-style: normal;
+    margin-top: 15px;
+    display: block;
+}
+
+.stats-row {
+    display: flex;
+    gap: 40px;
+    margin: 30px 0;
+    flex-wrap: wrap;
+}
+.stat-box {
+    text-align: center;
+    flex: 1;
+    min-width: 150px;
+}
+.stat-box .number {
+    font-size: 3.5em;
+    font-weight: 800;
+    color: #1b9aaa;
+    line-height: 1;
+}
+.stat-box .label {
+    font-size: 0.95em;
+    color: #889;
+    margin-top: 8px;
+}
+
+.comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin: 20px 0;
+}
+.compare-col {
+    padding: 25px;
+    border-radius: 12px;
+}
+.compare-col.bad {
+    background: rgba(200, 50, 50, 0.15);
+    border: 1px solid rgba(200, 50, 50, 0.3);
+}
+.compare-col.good {
+    background: rgba(27, 154, 170, 0.15);
+    border: 1px solid rgba(27, 154, 170, 0.3);
+}
+.compare-col h3 { margin-top: 0; }
+.compare-col.bad h3 { color: #e07070; }
+.compare-col.good h3 { color: #1b9aaa; }
+.compare-col ul li { font-size: 1em; padding: 5px 0 5px 25px; }
+.compare-col ul li::before { width: 8px; height: 8px; top: 14px; }
+
+.product-card {
+    background: rgba(27, 154, 170, 0.1);
+    border: 1px solid rgba(27, 154, 170, 0.25);
+    border-radius: 12px;
+    padding: 25px 30px;
+    margin: 10px 0;
+}
+.product-card .price {
+    font-size: 2em;
+    font-weight: 800;
+    color: #1b9aaa;
+    float: right;
+    margin-top: -5px;
+}
+.product-card h3 { margin-top: 0; color: white; }
+.product-card p { font-size: 1em; margin-bottom: 5px; }
+
+.timeline-row {
+    display: flex;
+    gap: 0;
+    margin: 20px 0;
+    position: relative;
+}
+.timeline-row::before {
+    content: '';
+    position: absolute;
+    top: 35px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #1b9aaa;
+}
+.timeline-item {
+    flex: 1;
+    text-align: center;
+    padding: 0 10px;
+    position: relative;
+}
+.timeline-item .dot {
+    width: 16px;
+    height: 16px;
+    background: #1b9aaa;
+    border-radius: 50%;
+    margin: 28px auto 15px;
+    position: relative;
+    z-index: 1;
+}
+.timeline-item .dot.done { background: #2ecc71; }
+.timeline-item .time {
+    font-size: 0.85em;
+    color: #1b9aaa;
+    font-weight: 600;
+}
+.timeline-item .desc {
+    font-size: 0.9em;
+    color: #aab;
+    margin-top: 5px;
+    line-height: 1.3;
+}
+
+.financials-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+}
+.financials-table th {
+    text-align: left;
+    padding: 10px 15px;
+    color: #1b9aaa;
+    border-bottom: 2px solid #1b9aaa;
+    font-size: 1em;
+}
+.financials-table td {
+    padding: 10px 15px;
+    color: #ccd;
+    border-bottom: 1px solid #223;
+    font-size: 1em;
+}
+.financials-table tr:last-child td {
+    border-bottom: 2px solid #1b9aaa;
+    font-weight: 700;
+    color: white;
+}
+
+.use-of-funds {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin: 20px 0;
+}
+.fund-item {
+    background: rgba(27, 154, 170, 0.1);
+    border-radius: 8px;
+    padding: 15px 20px;
+    border-left: 3px solid #1b9aaa;
+}
+.fund-item .amount {
+    font-size: 1.4em;
+    font-weight: 700;
+    color: #1b9aaa;
+}
+.fund-item .purpose {
+    font-size: 0.9em;
+    color: #aab;
+    margin-top: 3px;
+}
+
+.cta-box {
+    background: linear-gradient(135deg, rgba(27, 154, 170, 0.2), rgba(27, 154, 170, 0.05));
+    border: 2px solid #1b9aaa;
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    margin-top: 20px;
+}
+.cta-box h2 { font-size: 2em; }
+.cta-box p { max-width: 600px; margin: 15px auto; }
+
+.device-art {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75em;
+    line-height: 1.2;
+    color: #1b9aaa;
+    background: rgba(27, 154, 170, 0.08);
+    padding: 15px 20px;
+    border-radius: 8px;
+    white-space: pre;
+    display: inline-block;
+}
+
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    align-items: start;
+}
+
+.pill {
+    display: inline-block;
+    background: rgba(27, 154, 170, 0.2);
+    color: #1b9aaa;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    margin: 3px;
+    border: 1px solid rgba(27, 154, 170, 0.3);
+}
+.pill.done { background: rgba(46, 204, 113, 0.2); color: #2ecc71; border-color: rgba(46, 204, 113, 0.3); }
+
+.logo-text {
+    font-size: 1.2em;
+    color: #556;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+}
+
+.slide-title {
+    background: linear-gradient(180deg, #0d1b2a 0%, #1a2d42 100%);
+}
+</style>
+</head>
+<body>
+
+<div class="nav-hint">Arrow keys or click to navigate &bull; <a href="/docs/business/plan.html" style="color:#1b9aaa;text-decoration:none;">Full Business Plan</a></div>
+
+<!-- SLIDE 1: Title -->
+<div class="slide active slide-title" id="s1">
+    <div class="logo-text">Church Machine</div>
+    <h1>Safe Computing<br><span class="accent">by Design</span></h1>
+    <p class="subtitle">The world's first hardware-enforced failsafe computing platform for children</p>
+    <p style="margin-top: 40px; color: #556;">Investor Presentation</p>
+    <span class="slide-number">1 / 15</span>
+</div>
+
+<!-- SLIDE 2: The Problem -->
+<div class="slide" id="s2">
+    <h2>The Problem</h2>
+    <div class="big-quote">
+        Every device given to a child today runs on architectures designed in the 1970s with no concept of capability-based security.
+    </div>
+    <ul>
+        <li>Parental control software is bypassed by a determined 10-year-old in minutes</li>
+        <li>Every phone has a publicly discoverable address — children are contactable by anyone</li>
+        <li>Apps routinely exceed their stated permissions</li>
+        <li>The architecture enables abuse — it grants access by default and tries to restrict with software</li>
+    </ul>
+    <span class="slide-number">2 / 15</span>
+</div>
+
+<!-- SLIDE 3: Why Filters Fail -->
+<div class="slide" id="s3">
+    <h2>Why Software Filters Fail</h2>
+    <div class="comparison-grid">
+        <div class="compare-col bad">
+            <h3>Today's Approach</h3>
+            <ul>
+                <li>Allow everything by default</li>
+                <li>Try to block the bad stuff</li>
+                <li>Software layer — can be bypassed</li>
+                <li>VPNs, sideloading, browser tricks</li>
+                <li>Reactive: fix after the damage</li>
+            </ul>
+        </div>
+        <div class="compare-col good">
+            <h3>Church Machine</h3>
+            <ul>
+                <li>Block everything by default</li>
+                <li>Selectively grant with tokens</li>
+                <li>Hardware layer — cannot be bypassed</li>
+                <li>No jailbreak, no admin override</li>
+                <li>Preventive: unsafe states are impossible</li>
+            </ul>
+        </div>
+    </div>
+    <span class="slide-number">3 / 15</span>
+</div>
+
+<!-- SLIDE 4: The Solution -->
+<div class="slide" id="s4">
+    <h2>Golden Token Architecture</h2>
+    <p>Every resource access requires a hardware-verified capability token. No token = no access. The processor physically cannot execute an unauthorized operation.</p>
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="number">0</div>
+            <div class="label">Bypass Paths</div>
+        </div>
+        <div class="stat-box">
+            <div class="number">0</div>
+            <div class="label">Privilege Escalation</div>
+        </div>
+        <div class="stat-box">
+            <div class="number">0</div>
+            <div class="label">Admin Overrides</div>
+        </div>
+    </div>
+    <ul>
+        <li><strong style="color:white;">Golden Tokens</strong> — 32-bit cryptographic capability tokens with 6-bit permissions</li>
+        <li><strong style="color:white;">Domain Purity</strong> — hardware enforces Church xor Turing, never both</li>
+        <li><strong style="color:white;">Failsafe Fault</strong> — every violation routes to a single hardware FAULT handler</li>
+    </ul>
+    <span class="slide-number">4 / 15</span>
+</div>
+
+<!-- SLIDE 5: Hello Mum -->
+<div class="slide" id="s5">
+    <h2>"Hello Mum" — Always Reachable</h2>
+    <div class="two-col">
+        <div>
+            <p>A physical button on the device that triggers a direct encrypted tunnel to the parent. This connection:</p>
+            <ul>
+                <li>Cannot be blocked by any app</li>
+                <li>Cannot be redirected or spoofed</li>
+                <li>Uses hardware-bound Golden Tokens</li>
+                <li>Works even if all other services are down</li>
+            </ul>
+            <p style="margin-top: 20px; color: #1b9aaa; font-weight: 600;">The capability IS the address. No DNS, no IP discovery, no attack surface.</p>
+        </div>
+        <div>
+            <h3>FamilyRegistry Security</h3>
+            <ul>
+                <li><strong style="color:white;">Mum:</strong> Full family access (L, S, E)</li>
+                <li><strong style="color:white;">School:</strong> Contact + apps (L, E)</li>
+                <li><strong style="color:white;">Friends:</strong> Message only (L)</li>
+                <li><strong style="color:white;">Strangers:</strong> No token = invisible</li>
+            </ul>
+            <p style="margin-top: 15px; font-size: 0.95em;">Without a Golden Token, nobody can discover or contact the device. It simply doesn't exist to them.</p>
+        </div>
+    </div>
+    <span class="slide-number">5 / 15</span>
+</div>
+
+<!-- SLIDE 6: Product Line -->
+<div class="slide" id="s6">
+    <h2>Product Roadmap</h2>
+    <div class="product-card">
+        <span class="price">$89</span>
+        <h3>Phase 1: Educational Trainer</h3>
+        <p>Handheld device with 3.5" display, 10 opcode keys, pipeline visualization. Teaches capability security hands-on. Pairs with free web simulator. Classroom kits available.</p>
+    </div>
+    <div class="product-card">
+        <span class="price">$149</span>
+        <h3>Phase 2: Failsafe Data Phone</h3>
+        <p>4G data modem, 5" touchscreen, "Hello Mum" button, capability-gated messaging, safe web browser. Every contact requires a Golden Token.</p>
+    </div>
+    <div class="product-card">
+        <span class="price">$249</span>
+        <h3>Phase 3: Church Machine Pro</h3>
+        <p>Full capability-secure device for older students and institutions. Developer mode, mesh networking, enterprise deployment.</p>
+    </div>
+    <span class="slide-number">6 / 15</span>
+</div>
+
+<!-- SLIDE 7: The Device -->
+<div class="slide" id="s7">
+    <h2>The Handheld Trainer</h2>
+    <div class="two-col">
+        <div>
+            <div class="device-art">
+ ┌──────────────────────────┐
+ │  ┌──────────────────┐    │
+ │  │                  │    │
+ │  │  3.5" COLOR LCD  │    │
+ │  │  Registers /     │    │
+ │  │  Pipeline / REPL │    │
+ │  │                  │    │
+ │  └──────────────────┘    │
+ │                          │
+ │  [LOAD][SAVE][CALL][RET] │
+ │  [CHNG][SWCH][TPRM][LAM]│
+ │  [ELOAD+CALL][XLOAD+LAM]│
+ │                          │
+ │  [CR0][CR1][CR2][CR3]    │
+ │  [CR4][CR5][CR6][CR7]    │
+ │                          │
+ │  [0][1][2][3][4]         │
+ │  [5][6][7][8][9]         │
+ │                          │
+ │  [STEP] [RUN]  [RESET]  │
+ │  [VIEW] [MENU] [ENTER]  │
+ │         ◄ ▲ ▼ ►         │
+ └──────────────────────────┘</div>
+        </div>
+        <div>
+            <h3>How Kids Use It</h3>
+            <ul>
+                <li><strong style="color:white;">Build:</strong> Press opcode keys to enter instructions</li>
+                <li><strong style="color:white;">Step:</strong> Execute one instruction at a time, watch security checks</li>
+                <li><strong style="color:white;">Break:</strong> Try unauthorized access, see hardware FAULT</li>
+                <li><strong style="color:white;">Race:</strong> Optimize from 63 to 10 cycles using fused instructions</li>
+                <li><strong style="color:white;">Calculate:</strong> Built-in HP-35 mode running through capability security</li>
+            </ul>
+            <h3>Key Lesson</h3>
+            <p>"Security that works by design, not by hope."</p>
+        </div>
+    </div>
+    <span class="slide-number">7 / 15</span>
+</div>
+
+<!-- SLIDE 8: Safe Browser -->
+<div class="slide" id="s8">
+    <h2>Safe Web Browser</h2>
+    <p>Not a filter. A fundamentally different architecture.</p>
+    <div class="comparison-grid">
+        <div class="compare-col bad">
+            <h3>Traditional Browser</h3>
+            <ul>
+                <li>Any URL accessible by default</li>
+                <li>JavaScript executes arbitrary code</li>
+                <li>Tracking scripts, ads, malware</li>
+                <li>Filter lists are always incomplete</li>
+                <li>URL bar invites exploration</li>
+            </ul>
+        </div>
+        <div class="compare-col good">
+            <h3>Church Machine Browser</h3>
+            <ul>
+                <li>Only Golden Token sites load</li>
+                <li>No JavaScript execution</li>
+                <li>No tracking, no ads possible</li>
+                <li>Parent binds each site explicitly</li>
+                <li>Bookshelf UI — no URL bar</li>
+            </ul>
+        </div>
+    </div>
+    <p style="margin-top: 15px;">Parent binds <span class="pill">wikipedia.org</span> <span class="pill">khanacademy.org</span> <span class="pill">scratch.mit.edu</span> — child sees tiles on a bookshelf. No way to reach unbounded sites. The hardware doesn't have the address.</p>
+    <span class="slide-number">8 / 15</span>
+</div>
+
+<!-- SLIDE 9: Technology Status -->
+<div class="slide" id="s9">
+    <h2>Technology — Built, Not Planned</h2>
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="number">729K</div>
+            <div class="label">Synthesizable Verilog</div>
+        </div>
+        <div class="stat-box">
+            <div class="number">23</div>
+            <div class="label">Hardware Modules</div>
+        </div>
+        <div class="stat-box">
+            <div class="number">10</div>
+            <div class="label">Church Opcodes</div>
+        </div>
+    </div>
+    <div style="margin-top: 15px;">
+        <span class="pill done">Pure Church Machine</span>
+        <span class="pill done">Amaranth HDL Synthesis</span>
+        <span class="pill done">Fused Instructions (57% faster)</span>
+        <span class="pill done">Programmable Abstractions (84% faster)</span>
+        <span class="pill done">Web Simulator (3 architectures)</span>
+        <span class="pill done">FamilyRegistry Design</span>
+        <span class="pill done">Golden Token Architecture</span>
+        <span class="pill done">Pipeline Visualizer</span>
+        <span class="pill done">Interactive Tutorial</span>
+        <span class="pill done">Symbolic Math REPL</span>
+    </div>
+    <p style="margin-top: 20px;">The processor architecture is working and generates synthesizable Verilog. This is not a concept — it's a functioning design ready for FPGA prototyping.</p>
+    <span class="slide-number">9 / 15</span>
+</div>
+
+<!-- SLIDE 10: IP -->
+<div class="slide" id="s10">
+    <h2>Patentable Innovations</h2>
+    <ul>
+        <li><strong style="color:white;">Pure Church Lambda Machine</strong> — First processor proving computational completeness with zero Turing-domain instructions</li>
+        <li><strong style="color:white;">Fused Capability Instructions</strong> — ELOADCALL / XLOADLAMBDA: permission check + execution in single hardware instruction</li>
+        <li><strong style="color:white;">Golden Token Architecture</strong> — Hardware-enforced 32-bit capability tokens with domain purity</li>
+        <li><strong style="color:white;">Programmable Abstraction Chaining</strong> — Method sequences within single protected scope</li>
+        <li><strong style="color:white;">FamilyRegistry Network Binding</strong> — Capability-based P2P where the token IS the address</li>
+    </ul>
+    <p style="margin-top: 20px;">Five distinct patent families covering the processor architecture, instruction set innovations, security model, and networking protocol.</p>
+    <span class="slide-number">10 / 15</span>
+</div>
+
+<!-- SLIDE 11: Market -->
+<div class="slide" id="s11">
+    <h2>Market Opportunity</h2>
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="number">$4.2B</div>
+            <div class="label">Parental Control Market</div>
+        </div>
+        <div class="stat-box">
+            <div class="number">$2.8B</div>
+            <div class="label">Children's First Phone</div>
+        </div>
+        <div class="stat-box">
+            <div class="number">$3.1B</div>
+            <div class="label">STEM Education Hardware</div>
+        </div>
+    </div>
+    <h3>Competitive Advantage</h3>
+    <ul>
+        <li><strong style="color:white;">vs. Bark / Qustodio:</strong> Hardware enforcement vs. software filters — fundamentally different, not incrementally better</li>
+        <li><strong style="color:white;">vs. Gabb / Pinwheel:</strong> New architecture vs. stripped-down Android — our security cannot be bypassed</li>
+        <li><strong style="color:white;">vs. micro:bit / Arduino:</strong> Security-first education vs. general-purpose maker boards</li>
+    </ul>
+    <span class="slide-number">11 / 15</span>
+</div>
+
+<!-- SLIDE 12: Timeline -->
+<div class="slide" id="s12">
+    <h2>Development Timeline</h2>
+    <div class="timeline-row">
+        <div class="timeline-item">
+            <div class="time">Done</div>
+            <div class="dot done"></div>
+            <div class="desc">Web Simulator<br>+ HDL Synthesis</div>
+        </div>
+        <div class="timeline-item">
+            <div class="time">Mo 1-3</div>
+            <div class="dot"></div>
+            <div class="desc">Patent Filings</div>
+        </div>
+        <div class="timeline-item">
+            <div class="time">Mo 3-6</div>
+            <div class="dot"></div>
+            <div class="desc">FPGA Prototype<br>on Dev Board</div>
+        </div>
+        <div class="timeline-item">
+            <div class="time">Mo 6-9</div>
+            <div class="dot"></div>
+            <div class="desc">First Handheld<br>Prototype</div>
+        </div>
+        <div class="timeline-item">
+            <div class="time">Mo 9-12</div>
+            <div class="dot"></div>
+            <div class="desc">Pilot Schools<br>Testing</div>
+        </div>
+        <div class="timeline-item">
+            <div class="time">Mo 15-18</div>
+            <div class="dot"></div>
+            <div class="desc">Trainer Ships</div>
+        </div>
+        <div class="timeline-item">
+            <div class="time">Mo 24-30</div>
+            <div class="dot"></div>
+            <div class="desc">Data Phone<br>+ Hello Mum</div>
+        </div>
+    </div>
+    <p style="margin-top: 30px;">Education market entry de-risks the hardware while building brand awareness. Data phone follows once the platform is proven in classrooms.</p>
+    <span class="slide-number">12 / 15</span>
+</div>
+
+<!-- SLIDE 13: Financials -->
+<div class="slide" id="s13">
+    <h2>Financial Projections</h2>
+    <table class="financials-table">
+        <tr><th></th><th>Year 1</th><th>Year 2</th><th>Year 3</th></tr>
+        <tr><td>Revenue</td><td>$750K</td><td>$2.9M</td><td>$8.1M</td></tr>
+        <tr><td>Gross Margin</td><td>57%</td><td>66%</td><td>70%</td></tr>
+        <tr><td>Units Shipped</td><td>6,000</td><td>18,000</td><td>52,000</td></tr>
+        <tr><td>EBITDA</td><td>($370K)</td><td>$500K</td><td>$2.9M</td></tr>
+    </table>
+    <div class="stats-row" style="margin-top: 20px;">
+        <div class="stat-box">
+            <div class="number">$24</div>
+            <div class="label">Unit Cost (10K vol.)</div>
+        </div>
+        <div class="stat-box">
+            <div class="number">$89</div>
+            <div class="label">Retail Price</div>
+        </div>
+        <div class="stat-box">
+            <div class="number">73%</div>
+            <div class="label">Gross Margin</div>
+        </div>
+    </div>
+    <span class="slide-number">13 / 15</span>
+</div>
+
+<!-- SLIDE 14: The Ask -->
+<div class="slide" id="s14">
+    <h2>Seed Round: $500K - $750K</h2>
+    <div class="use-of-funds">
+        <div class="fund-item">
+            <div class="amount">$50-80K</div>
+            <div class="purpose">Patent filings (5 families, provisional + PCT)</div>
+        </div>
+        <div class="fund-item">
+            <div class="amount">$150-200K</div>
+            <div class="purpose">Hardware engineering (FPGA, board, 3 iterations)</div>
+        </div>
+        <div class="fund-item">
+            <div class="amount">$200-300K</div>
+            <div class="purpose">Engineering team (12 months)</div>
+        </div>
+        <div class="fund-item">
+            <div class="amount">$50-80K</div>
+            <div class="purpose">Manufacturing setup + certification</div>
+        </div>
+        <div class="fund-item">
+            <div class="amount">$50-90K</div>
+            <div class="purpose">Go-to-market (crowdfunding, pilots, conferences)</div>
+        </div>
+    </div>
+    <p style="margin-top: 15px;"><strong style="color:white;">What you get:</strong> Working technology, clear product roadmap, patentable IP in a $10B+ combined market, and a founding team with deep architecture expertise.</p>
+    <span class="slide-number">14 / 15</span>
+</div>
+
+<!-- SLIDE 15: Close -->
+<div class="slide slide-title" id="s15">
+    <div class="logo-text">Church Machine</div>
+    <h1>The First Phone<br>That's <span class="accent">Safe by Design</span></h1>
+    <div class="big-quote" style="border-left: none; padding-left: 0;">
+        Not because of a filter that might fail.<br>
+        Because the hardware architecture makes it impossible.
+    </div>
+    <p style="margin-top: 30px; color: #556;">
+        Church Machine Ltd<br>
+        Contact: [contact details]<br>
+        Web Simulator: [URL]
+    </p>
+    <span class="slide-number">15 / 15</span>
+</div>
+
+<script>
+let current = 0;
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+
+function showSlide(n) {
+    slides[current].classList.remove('active');
+    current = ((n % total) + total) % total;
+    slides[current].classList.add('active');
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+        e.preventDefault();
+        showSlide(current + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        showSlide(current - 1);
+    } else if (e.key === 'Home') {
+        showSlide(0);
+    } else if (e.key === 'End') {
+        showSlide(total - 1);
+    }
+});
+
+document.addEventListener('click', (e) => {
+    if (e.target.tagName !== 'A') {
+        if (e.clientX > window.innerWidth / 2) {
+            showSlide(current + 1);
+        } else {
+            showSlide(current - 1);
+        }
+    }
+});
+
+let touchStartX = 0;
+document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) {
+        showSlide(current + (dx < 0 ? 1 : -1));
+    }
+});
+</script>
+
+</body>
+</html>
