@@ -8,7 +8,7 @@
 
 **Parent Application**: Church-Turing Meta-Machine: Hardware-Enforced Lambda Calculus with the LAMBDA Instruction, NULL Capability Type, and Atomic Abstraction Architecture (Filed February 12, 2026)
 
-**Classification**: Computer Architecture; Hardware Security; Capability-Based Computing; Lambda Calculus Processor; Vulnerability Elimination by Construction
+**Classification**: Computer Architecture; Hardware Security; Capability-Based Computing; Lambda Calculus Processor; Vulnerability Elimination by Construction; Interactive Programming Model
 
 ---
 
@@ -46,13 +46,15 @@ Capability-based architectures (Cambridge CAP, IBM System/38, CHERI, and the par
 
 The parent CTMM application discloses domain purity enforcement: Golden Token permissions are separated into Turing domain (R, W, X) and Church domain (L, S, E), and a GT cannot have permissions from both domains simultaneously. This separation was designed for architectural cleanliness.
 
-The present invention recognizes that domain purity can be extended to its logical conclusion: **an entire processor can operate with only Church-domain instructions available to software.** The inventor has demonstrated this through two complete proof implementations:
+The present invention recognizes that domain purity can be extended to its logical conclusion: **an entire processor can operate with only Church-domain instructions available to software.** The inventor has demonstrated this through three complete proof implementations:
 
 1. **HP-35 Scientific Calculator**: 179 instructions implementing the complete HP-35 (digit entry, four-function arithmetic, trigonometry via Taylor series, logarithms, exponentiation, square root via Newton-Y-combinator iteration, stack management, constant retrieval) — zero Turing-domain instructions.
 
 2. **SlideRule Arithmetic Engine**: 98 instructions implementing 9 arithmetic operations (ADD, SUB, MUL, DIV, MOD, LOG, EXP, SQRT, POW) — zero Turing-domain instructions.
 
-Both implementations use exclusively six Church-domain opcodes: LOAD (L permission), SAVE (S permission), CALL (E permission), RETURN, LAMBDA (X permission), and TPERM (permission verification). Every computation is performed through Church-encoded lambda reductions: arithmetic via Church numerals, control flow via Church booleans, data structures via Church pairs, recursion via Y-combinator.
+3. **Interactive Church Computer REPL (Read-Eval-Print Loop)**: A working Haskell implementation of the Pure Church Machine as an interactive programming environment, demonstrating that the architecture supports a complete programming model — not just fixed programs. The REPL executes arbitrary user-supplied Church-domain computations through the full 7-step capability-checked security pipeline (LOAD → TPERM → CALL → LOAD → TPERM → LAMBDA → RETURN), rejects all Turing-domain instructions with FAULT, and supports Ada Lovelace-style variable bindings for step-by-step named computation. A Bernoulli sum-of-squares program (following the style of Lovelace's Note G, 1843) demonstrates multi-step mathematical computation using only lambda calculus.
+
+All implementations use exclusively six Church-domain opcodes: LOAD (L permission), SAVE (S permission), CALL (E permission), RETURN, LAMBDA (X permission), and TPERM (permission verification). Every computation is performed through Church-encoded lambda reductions: arithmetic via Church numerals, control flow via Church booleans, data structures via Church pairs, recursion via Y-combinator.
 
 ---
 
@@ -149,6 +151,26 @@ Verified by automated parsing: 98 instructions, 0 Turing-domain, 98 Church-domai
 
 Notable: MOD is computed as SUB(a, MUL(b, DIV(a, b))) — composing three Church primitives without any Turing instruction. SQRT uses Y-combinator-driven linear search with Church LEQ comparison and SUCC/PRED stepping.
 
+### Software Proof: Interactive Church Computer REPL
+
+The Church Computer REPL is a Haskell implementation (~1,000 lines across 6 modules) that provides an interactive programming environment for the Pure Church Machine. It demonstrates that the architecture is not limited to pre-compiled programs but supports general-purpose interactive computation.
+
+**Programming Model — Ada Lovelace Variable Bindings**: The REPL supports named variable bindings following the style Ada Lovelace used in her Note G (1843) — widely recognized as the first computer program. Lovelace's method assigned names to each intermediate result in a step-by-step computation. The Church Computer reproduces this pattern:
+
+```
+let n = Call(Lambda.SUCC, 3)           -- n = 4
+let n_plus_1 = Call(Lambda.SUCC, n)    -- n_plus_1 = 5
+let product = Call(Lambda.MUL, n, n_plus_1)  -- product = 20
+```
+
+Each `let` binding executes a Church-domain computation through the full 7-step capability-checked pipeline, stores the result with a human-readable name, and makes it available to subsequent computations. The REPL also provides ANS (last result) for quick sequential computation, VARS (display all bindings), REGS (register state), and NS (namespace inspection).
+
+**Bernoulli Demonstration**: A `.church` program file (Church/bernoulli.church) computes the sum of squares 1² + 2² + 3² + 4² = 30 using Lovelace's step-by-step style: first via the closed-form formula n×(n+1)×(2n+1)/6, then via direct computation, verifying both paths produce 30. The program uses 17 named intermediate results across Lambda and SlideRule abstractions — all executed through pure Church-domain instructions with zero Turing instructions.
+
+**Turing Rejection**: Any Turing-domain instruction (ADD, MOV, CMP, B, LDR, STR, PUSH, POP, etc.) entered at the REPL or encountered in a program file produces an immediate FAULT — the instructions do not exist in this architecture. This is not a filter or check; the instruction set literally does not include them.
+
+**Error Handling**: Unknown variable references produce explicit error messages rather than silent failures, ensuring computational correctness. This mirrors the architecture's fail-safe security philosophy: every validation failure produces a visible fault, never a silent default.
+
 ### Hardware Proof: Synthesizable FPGA Implementation
 
 The Sim-32 Amaranth HDL implementation (~3,150 lines, 18 modules) has been synthesized to Verilog (29,000 lines) and successfully placed on an iCE40 HX8K FPGA target: 1,982 LUTs (26% utilization), 1,132 flip-flops, 10 BRAMs (31%). The existing core implements both Church and Turing domains; modification to a Church-only core would reduce the design by removing the ALU, condition flags, branch logic, and barrel shifter — resulting in a smaller, simpler, and more formally verifiable design.
@@ -237,6 +259,20 @@ The processor of Claim 17, comprising exactly three hardware functional blocks:
 
 wherein blocks (a) and (b) implement pure Church lambda calculus computation secured by capabilities, and block (c) provides the sole interface to the physical world; and wherein the total processor comprises fewer functional units than a conventional processor (no ALU, no condition logic, no branch unit), resulting in a smaller silicon area, lower power consumption, and a design amenable to formal verification.
 
+### Claim 23 — Interactive Pure Church Programming Model with Named Bindings
+
+A method of programming the pure Church lambda processor of Claim 17, wherein all computations are executed by the pure Church instruction set of Claim 17 and maintain the security properties of Claim 18, comprising:
+
+(a) an interactive execution environment (Read-Eval-Print Loop) wherein each user-supplied expression is parsed, dispatched to the processor's six Church-domain instructions, executed through the complete capability-checked instruction pipeline (LOAD → TPERM → CALL → LOAD → TPERM → LAMBDA → RETURN), and the result displayed;
+
+(b) named variable bindings, wherein the result of any Church-domain computation is stored with a programmer-assigned name and may be referenced as an argument in subsequent computations, following the step-by-step named-result programming style first described by Ada Lovelace in Note G (1843) for Babbage's Analytical Engine;
+
+(c) program file execution, wherein a sequence of named-binding statements is loaded from a file and executed in order, with variable scope persisting across statements, enabling multi-step mathematical computations expressed entirely in Church-domain instructions;
+
+(d) fail-safe error handling, wherein any reference to an undefined variable produces an explicit error rather than a silent default, and any Turing-domain instruction produces an immediate FAULT — mirroring the architecture's hardware fail-safe behavior in software;
+
+(e) wherein the programming model demonstrates that the pure Church lambda processor of Claim 17 supports general-purpose interactive programming, not merely fixed pre-compiled programs, while maintaining the security properties of Claim 18 for every computation.
+
 ---
 
 ## PRIOR ART DISTINCTION
@@ -273,3 +309,7 @@ Table mapping each vulnerability class (buffer overflow, ROP, code injection, pr
 ### Figure 20: HP-35 and SlideRule Opcode Distribution
 
 Bar chart showing both implementations: only LOAD, SAVE, CALL, RETURN, LAMBDA, TPERM used. Zero occurrences of ADD, SUB, MUL, MOV, CMP, B, or any other Turing-domain opcode.
+
+### Figure 21: Ada Lovelace Programming Model — Bernoulli Sum-of-Squares
+
+Annotated program listing showing the Church Computer executing a step-by-step computation following Lovelace's Note G style: 17 named variable bindings computing 1² + 2² + 3² + 4² = 30 two ways (closed-form formula and direct summation). Each binding shows the Call syntax, the 7-step capability pipeline traversed, and the named result stored. Annotations highlight: (a) every operation is pure Church-domain lambda calculus, (b) variables reference previous results by name, (c) Turing instructions (ADD, MUL, POW) are not used — their lambda equivalents (Lambda.SUCC, Lambda.MUL, Lambda.POW, SlideRule.ADD, SlideRule.DIV) are Church-encoded abstractions accessed via Golden Tokens.
