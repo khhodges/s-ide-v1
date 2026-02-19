@@ -5,6 +5,7 @@ module Church.REPL (
 import qualified Data.Map as Map
 import Data.Char (toUpper)
 import System.IO (hFlush, stdout)
+import Control.Exception (catch, IOException)
 import Church.Types
 import Church.Primitives
 import Church.Machine
@@ -32,9 +33,14 @@ helpText = do
     putStrLn "|  SYMBOLIC CALLS (high-level):                                            |"
     putStrLn "|    Call(SlideRule.ADD, 3, 5)     -- SlideRule arithmetic                  |"
     putStrLn "|    Call(SlideRule.SQRT, 16)      -- Square root via Y-combinator          |"
-    putStrLn "|    Call(SlideRule.MOD, 17, 5)    -- Modular arithmetic                    |"
-    putStrLn "|    Call(Lambda.SUCC, 7)          -- Church successor                      |"
     putStrLn "|    Call(Lambda.MUL, 4, 5)        -- Church multiplication                 |"
+    putStrLn "|                                                                          |"
+    putStrLn "|  VARIABLES (Ada Lovelace style):                                         |"
+    putStrLn "|    let x = Call(Lambda.POW, 3, 2)  -- store result as 'x'                |"
+    putStrLn "|    Call(SlideRule.ADD, x, y)        -- use variables as arguments         |"
+    putStrLn "|    Call(SlideRule.SQRT, ANS)        -- ANS = last result                  |"
+    putStrLn "|    VARS                             -- show all variables                 |"
+    putStrLn "|    CLEAR                            -- clear all variables                |"
     putStrLn "|                                                                          |"
     putStrLn "|  RAW INSTRUCTIONS (low-level):                                           |"
     putStrLn "|    LOAD  CR1 SlideRule           -- Load GT into context register         |"
@@ -53,18 +59,24 @@ helpText = do
     putStrLn "|    MOV DR0 DR1                   -- Attempt register transfer -> FAULT    |"
     putStrLn "|    B 100                         -- Attempt branch -> FAULT               |"
     putStrLn "|                                                                          |"
+    putStrLn "|  PROGRAMS:                                                               |"
+    putStrLn "|    RUN Church/bernoulli.church   -- run a program file                   |"
+    putStrLn "|                                                                          |"
     putStrLn "|  HELP, EXIT                                                              |"
     putStrLn "+--------------------------------------------------------------------------+"
     putStrLn ""
+
+type VarStore = Map.Map String Integer
 
 runChurchREPL :: IO ()
 runChurchREPL = do
     banner
     let ms = buildChurchMachine
-    loop ms
+    let vars = Map.empty :: VarStore
+    loop ms vars
 
-loop :: MachineState -> IO ()
-loop ms = do
+loop :: MachineState -> VarStore -> IO ()
+loop ms vars = do
     putStr "Church> "
     hFlush stdout
     input <- getLine
@@ -73,24 +85,30 @@ loop ms = do
     case upperTokens of
         ["EXIT"]   -> putStrLn "--- CHURCH COMPUTER SHUTDOWN ---"
         ["QUIT"]   -> putStrLn "--- CHURCH COMPUTER SHUTDOWN ---"
-        ["HELP"]   -> helpText >> loop ms
-        ["NS"]     -> showNamespace ms >> loop ms
-        ["REGS"]   -> showRegisters ms >> loop ms
-        ["TRACE"]  -> showTrace ms >> loop ms
-        []         -> loop ms
+        ["HELP"]   -> helpText >> loop ms vars
+        ["NS"]     -> showNamespace ms >> loop ms vars
+        ["REGS"]   -> showRegisters ms >> loop ms vars
+        ["TRACE"]  -> showTrace ms >> loop ms vars
+        ["VARS"]   -> showVars vars >> loop ms vars
+        ["CLEAR"]  -> do
+            putStrLn "  [OK] Variables cleared"
+            loop ms (Map.empty :: VarStore)
+        ("RUN":_) -> doRunFile ms vars (unwords (drop 1 tokens))
+        []         -> loop ms vars
 
-        ["CLIST", _] -> showCList ms (tokens !! 1) >> loop ms
+        ["CLIST", _] -> showCList ms (tokens !! 1) >> loop ms vars
 
-        ("LOAD":rest) -> doLoad ms rest tokens
-        ("TPERM":rest) -> doTperm ms rest
-        ("CALL":rest) -> doCallRaw ms rest
-        ["RETURN"] -> doReturn ms
+        ("LOAD":rest) -> doLoad ms vars rest tokens
+        ("TPERM":rest) -> doTperm ms vars rest
+        ("CALL":rest) -> doCallRaw ms vars rest
+        ["RETURN"] -> doReturn ms vars
 
-        _ | isTuringAttempt upperTokens -> turingFault >> loop ms
-          | isCallSyntax input -> doSymbolicCall ms input
+        _ | isLetSyntax input -> doLetBinding ms vars input
+          | isTuringAttempt upperTokens -> turingFault >> loop ms vars
+          | isCallSyntax input -> doSymbolicCall ms vars input
           | otherwise -> do
                 putStrLn "[ERROR] Unknown command. Type HELP for available commands."
-                loop ms
+                loop ms vars
 
 turingFault :: IO ()
 turingFault = do
@@ -127,30 +145,188 @@ isTuringAttempt (cmd:_) = cmd `elem`
     , "PUSH", "POP", "SWI", "SVC"
     ]
 
-doSymbolicCall :: MachineState -> String -> IO ()
-doSymbolicCall ms input = do
+doRunFile :: MachineState -> VarStore -> String -> IO ()
+doRunFile ms vars filename = do
+    let fn = strip filename
+    result <- (Right <$> readFile fn) `catch` (\e -> return (Left (show (e :: IOException))))
+    case result of
+        Left err -> do
+            putStrLn $ "[ERROR] Cannot read file: " ++ err
+            loop ms vars
+        Right contents -> do
+            putStrLn $ "  -- Running: " ++ fn ++ " --"
+            putStrLn ""
+            let cmds = filter isExecutable (lines contents)
+            runCommands ms vars cmds
+  where
+    isExecutable line =
+        let stripped = dropWhile (== ' ') line
+        in not (null stripped) && not (isPrefixOf' "--" stripped)
+
+runCommands :: MachineState -> VarStore -> [String] -> IO ()
+runCommands ms vars [] = loop ms vars
+runCommands ms vars (cmd:rest) = do
+    let tokens = words cmd
+    let upperTokens = map (map toUpper) tokens
+    case upperTokens of
+        ["EXIT"]   -> putStrLn "--- CHURCH COMPUTER SHUTDOWN ---"
+        ["QUIT"]   -> putStrLn "--- CHURCH COMPUTER SHUTDOWN ---"
+        ["VARS"]   -> showVars vars >> runCommands ms vars rest
+        ["REGS"]   -> showRegisters ms >> runCommands ms vars rest
+        ["NS"]     -> showNamespace ms >> runCommands ms vars rest
+        [] -> runCommands ms vars rest
+        _ | isLetSyntax cmd -> doLetBindingBatch ms vars cmd rest
+          | isCallSyntax cmd -> doCallBatch ms vars cmd rest
+          | isTuringAttempt upperTokens -> turingFault >> runCommands ms vars rest
+          | otherwise -> do
+                putStrLn $ "[ERROR] Unknown command: " ++ cmd
+                runCommands ms vars rest
+
+doLetBindingBatch :: MachineState -> VarStore -> String -> [String] -> IO ()
+doLetBindingBatch ms vars input rest = do
+    let stripped = dropWhile (== ' ') input
+    let afterLet = drop 4 stripped
+    case break (== '=') afterLet of
+        (_, []) -> do
+            putStrLn "[ERROR] Invalid let syntax."
+            runCommands ms vars rest
+        (varPart, _:callPart) -> do
+            let varName = strip varPart
+            let callStr = strip callPart
+            case parseCallSyntax callStr of
+                Nothing -> do
+                    putStrLn $ "[ERROR] Invalid Call in: " ++ input
+                    runCommands ms vars rest
+                Just (absName_, method, argTokens) ->
+                    case resolveArgs vars ms argTokens of
+                        Left badVar -> do
+                            putStrLn $ "[ERROR] Unknown variable: " ++ badVar ++ " in: " ++ input
+                            runCommands ms vars rest
+                        Right args -> do
+                            putStrLn $ "  -- Executing: let " ++ varName ++ " = Call(" ++ absName_ ++ "." ++ method ++ concatMap (\a -> ", " ++ show a) args ++ ") --"
+                            let ms0 = ms { msTrace = [] }
+                            result <- executeViaInstructions ms0 absName_ method args
+                            case result of
+                                Left fault -> do
+                                    putStrLn $ "  [FAULT] " ++ show fault
+                                    runCommands ms vars rest
+                                Right ms' -> do
+                                    let resultVal = Map.findWithDefault 0 0 (msDataRegs ms')
+                                    putStrLn $ "  " ++ varName ++ " = " ++ show resultVal
+                                    let vars' = Map.insert varName resultVal vars
+                                    runCommands ms' vars' rest
+
+doCallBatch :: MachineState -> VarStore -> String -> [String] -> IO ()
+doCallBatch ms vars input rest = do
+    case parseCallSyntax input of
+        Nothing -> do
+            putStrLn $ "[ERROR] Invalid Call: " ++ input
+            runCommands ms vars rest
+        Just (absName_, method, argTokens) ->
+            case resolveArgs vars ms argTokens of
+                Left badVar -> do
+                    putStrLn $ "[ERROR] Unknown variable: " ++ badVar ++ " in: " ++ input
+                    runCommands ms vars rest
+                Right args -> do
+                    putStrLn $ "  -- Executing: Call(" ++ absName_ ++ "." ++ method ++ concatMap (\a -> ", " ++ show a) args ++ ") --"
+                    let ms0 = ms { msTrace = [] }
+                    result <- executeViaInstructions ms0 absName_ method args
+                    case result of
+                        Left fault -> do
+                            putStrLn $ "  [FAULT] " ++ show fault
+                            runCommands ms vars rest
+                        Right ms' -> do
+                            let resultVal = Map.findWithDefault 0 0 (msDataRegs ms')
+                            putStrLn $ "  Result: " ++ show resultVal
+                            runCommands ms' vars rest
+
+isLetSyntax :: String -> Bool
+isLetSyntax s =
+    let upper = map toUpper (dropWhile (== ' ') s)
+    in isPrefixOf' "LET " upper
+
+doLetBinding :: MachineState -> VarStore -> String -> IO ()
+doLetBinding ms vars input = do
+    let stripped = dropWhile (== ' ') input
+    let afterLet = drop 4 stripped
+    case break (== '=') afterLet of
+        (_, []) -> do
+            putStrLn "[ERROR] Invalid let syntax. Use: let x = Call(SlideRule.ADD, 3, 5)"
+            loop ms vars
+        (varPart, _:callPart) -> do
+            let varName = strip varPart
+            let callStr = strip callPart
+            if not (isCallSyntax callStr)
+                then do
+                    putStrLn "[ERROR] Right side must be a Call(). Use: let x = Call(SlideRule.ADD, 3, 5)"
+                    loop ms vars
+                else doSymbolicCallWithVar ms vars callStr (Just varName)
+
+doSymbolicCall :: MachineState -> VarStore -> String -> IO ()
+doSymbolicCall ms vars input = doSymbolicCallWithVar ms vars input Nothing
+
+doSymbolicCallWithVar :: MachineState -> VarStore -> String -> Maybe String -> IO ()
+doSymbolicCallWithVar ms vars input maybeVar = do
     case parseCallSyntax input of
         Nothing -> do
             putStrLn "[ERROR] Invalid Call syntax. Use: Call(SlideRule.ADD, 3, 5)"
-            loop ms
-        Just (absName_, method, args) -> do
-            putStrLn ""
-            putStrLn $ "  -- Executing: Call(" ++ absName_ ++ "." ++ method ++ concatMap (\a -> ", " ++ show a) args ++ ") --"
-            putStrLn ""
-            let ms0 = ms { msTrace = [] }
-            result <- executeViaInstructions ms0 absName_ method args
-            case result of
-                Left fault -> do
-                    putStrLn $ "  [FAULT] " ++ show fault
+            loop ms vars
+        Just (absName_, method, argTokens) ->
+            case resolveArgs vars ms argTokens of
+                Left badVar -> do
+                    putStrLn $ "[ERROR] Unknown variable: " ++ badVar
+                    loop ms vars
+                Right args -> do
                     putStrLn ""
-                    loop ms
-                Right ms' -> do
-                    showTrace ms'
-                    let resultVal = Map.findWithDefault 0 0 (msDataRegs ms')
+                    putStrLn $ "  -- Executing: Call(" ++ absName_ ++ "." ++ method ++ concatMap (\a -> ", " ++ show a) args ++ ") --"
                     putStrLn ""
-                    putStrLn $ "  Result: " ++ show resultVal
-                    putStrLn ""
-                    loop ms'
+                    let ms0 = ms { msTrace = [] }
+                    result <- executeViaInstructions ms0 absName_ method args
+                    case result of
+                        Left fault -> do
+                            putStrLn $ "  [FAULT] " ++ show fault
+                            putStrLn ""
+                            loop ms vars
+                        Right ms' -> do
+                            showTrace ms'
+                            let resultVal = Map.findWithDefault 0 0 (msDataRegs ms')
+                            putStrLn ""
+                            case maybeVar of
+                                Just vn -> do
+                                    putStrLn $ "  " ++ vn ++ " = " ++ show resultVal
+                                    let vars' = Map.insert vn resultVal vars
+                                    putStrLn ""
+                                    loop ms' vars'
+                                Nothing -> do
+                                    putStrLn $ "  Result: " ++ show resultVal
+                                    putStrLn ""
+                                    loop ms' vars
+
+resolveArgs :: VarStore -> MachineState -> [String] -> Either String [Integer]
+resolveArgs vars ms tokens = mapM (resolveArg vars ms) tokens
+
+resolveArg :: VarStore -> MachineState -> String -> Either String Integer
+resolveArg vars ms token =
+    let stripped = strip token
+        upper = map toUpper stripped
+    in if upper == "ANS"
+       then Right (Map.findWithDefault 0 0 (msDataRegs ms))
+       else case Map.lookup stripped vars of
+           Just v  -> Right v
+           Nothing -> case readInteger stripped of
+               Just n  -> Right n
+               Nothing -> Left stripped
+
+showVars :: VarStore -> IO ()
+showVars vars = do
+    putStrLn ""
+    if Map.null vars
+        then putStrLn "  (no variables defined)"
+        else do
+            putStrLn "+=================== VARIABLES ===========================+"
+            mapM_ (\(k, v) -> putStrLn $ "  " ++ k ++ " = " ++ show v) (Map.toList vars)
+            putStrLn "+=========================================================+"
+    putStrLn ""
 
 executeViaInstructions :: MachineState -> String -> String -> [Integer] -> IO (Either Fault MachineState)
 executeViaInstructions ms absName_ method args = do
@@ -239,7 +415,7 @@ matchMethod gtName_ method =
     in upperGT == upperMethod
        || upperGT == ("SR_" ++ upperMethod)
 
-parseCallSyntax :: String -> Maybe (String, String, [Integer])
+parseCallSyntax :: String -> Maybe (String, String, [String])
 parseCallSyntax input = do
     let stripped = dropWhile (== ' ') input
     let upper = map toUpper stripped
@@ -256,8 +432,8 @@ parseCallSyntax input = do
                 (target:argStrs) -> do
                     let trimmed = strip target
                     case splitOn '.' trimmed of
-                        [absN, meth] -> Just (strip absN, strip meth, myMapMaybe readInteger argStrs)
-                        [absN]       -> Just (strip absN, "ACCESS", myMapMaybe readInteger argStrs)
+                        [absN, meth] -> Just (strip absN, strip meth, map strip argStrs)
+                        [absN]       -> Just (strip absN, "ACCESS", map strip argStrs)
                         _            -> Nothing
 
 splitOn :: Char -> String -> [String]
@@ -281,34 +457,34 @@ myMapMaybe f (x:xs) = case f x of
     Just y  -> y : myMapMaybe f xs
     Nothing -> myMapMaybe f xs
 
-doLoad :: MachineState -> [String] -> [String] -> IO ()
-doLoad ms upperRest origTokens = do
+doLoad :: MachineState -> VarStore -> [String] -> [String] -> IO ()
+doLoad ms vars upperRest origTokens = do
     let (crStr, name) = case upperRest of
-            ("CR":cr:rest) -> (cr, unwords (drop 3 origTokens))
-            (cr:rest)      -> (cr, unwords (drop 2 origTokens))
+            ("CR":cr:_) -> (cr, unwords (drop 3 origTokens))
+            (cr:_)      -> (cr, unwords (drop 2 origTokens))
             _              -> ("", "")
     case readInteger crStr of
-        Nothing -> putStrLn "[ERROR] Invalid register number" >> loop ms
+        Nothing -> putStrLn "[ERROR] Invalid register number" >> loop ms vars
         Just cr -> do
             let ms0 = ms { msTrace = [] }
             result <- churchLOAD ms0 (fromIntegral cr) (strip name)
             case result of
                 Left fault -> do
                     putStrLn $ "  [FAULT] " ++ show fault
-                    loop ms
+                    loop ms vars
                 Right ms' -> do
                     showTrace ms'
                     putStrLn $ "  [OK] CR" ++ show cr ++ " <- " ++ strip name
-                    loop ms'
+                    loop ms' vars
 
-doTperm :: MachineState -> [String] -> IO ()
-doTperm ms rest = do
+doTperm :: MachineState -> VarStore -> [String] -> IO ()
+doTperm ms vars rest = do
     let (crStr, permStrs) = case rest of
             ("CR":cr:ps) -> (cr, ps)
             (cr:ps)      -> (cr, ps)
             _            -> ("", [])
     case readInteger crStr of
-        Nothing -> putStrLn "[ERROR] Invalid register number" >> loop ms
+        Nothing -> putStrLn "[ERROR] Invalid register number" >> loop ms vars
         Just cr -> do
             let perms = concatMap parsePerm permStrs
             let ms0 = ms { msTrace = [] }
@@ -316,11 +492,11 @@ doTperm ms rest = do
             case result of
                 Left fault -> do
                     putStrLn $ "  [FAULT] " ++ show fault
-                    loop ms
+                    loop ms vars
                 Right ms' -> do
                     showTrace ms'
                     putStrLn "  [OK] Permission check passed"
-                    loop ms'
+                    loop ms' vars
 
 parsePerm :: String -> [Permission]
 parsePerm s = concatMap charToPerm (map toUpper s)
@@ -333,38 +509,38 @@ parsePerm s = concatMap charToPerm (map toUpper s)
         charToPerm 'E' = [E]
         charToPerm _   = []
 
-doCallRaw :: MachineState -> [String] -> IO ()
-doCallRaw ms rest = do
+doCallRaw :: MachineState -> VarStore -> [String] -> IO ()
+doCallRaw ms vars rest = do
     let crStr = case rest of
             ("CR":cr:_) -> cr
             (cr:_)      -> cr
             _           -> ""
     case readInteger crStr of
-        Nothing -> putStrLn "[ERROR] Invalid register number" >> loop ms
+        Nothing -> putStrLn "[ERROR] Invalid register number" >> loop ms vars
         Just cr -> do
             let ms0 = ms { msTrace = [] }
             result <- churchCALL ms0 (fromIntegral cr)
             case result of
                 Left fault -> do
                     putStrLn $ "  [FAULT] " ++ show fault
-                    loop ms
+                    loop ms vars
                 Right ms' -> do
                     showTrace ms'
                     putStrLn "  [OK] Entered abstraction scope"
-                    loop ms'
+                    loop ms' vars
 
-doReturn :: MachineState -> IO ()
-doReturn ms = do
+doReturn :: MachineState -> VarStore -> IO ()
+doReturn ms vars = do
     let ms0 = ms { msTrace = [] }
     result <- churchRETURN ms0
     case result of
         Left fault -> do
             putStrLn $ "  [FAULT] " ++ show fault
-            loop ms
+            loop ms vars
         Right ms' -> do
             showTrace ms'
             putStrLn "  [OK] Returned"
-            loop ms'
+            loop ms' vars
 
 showNamespace :: MachineState -> IO ()
 showNamespace ms = do
