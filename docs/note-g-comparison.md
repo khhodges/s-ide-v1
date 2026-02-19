@@ -126,6 +126,50 @@ Ada's program had a bug (a division with swapped operands). In a capability-secu
 
 ---
 
+## Beyond the Mechanical Age: Why Church Security Matters for Civilization
+
+Ada Lovelace designed her program for a machine made of brass gears — the pinnacle of Mechanical Age engineering. Today's binary computers are faster by a factor of billions, but they inherited a fatal architectural flaw from that era: **any instruction can touch any data**. The von Neumann architecture that powers every conventional computer treats code and data as interchangeable bit patterns in a single shared memory. This is the root cause of buffer overflows, code injection, privilege escalation, ransomware, and every other exploit that depends on corrupting what a program can reach.
+
+We have spent seven decades trying to patch this flaw with layers of software defense — firewalls, antivirus, access control lists, sandboxes, encryption at rest. None of them work reliably, because they are all bolted on top of hardware that was never designed to enforce boundaries. Every year brings larger breaches, more sophisticated attacks, and greater damage to the infrastructure that civilization depends on.
+
+### The Church Machine Difference
+
+The Pure Church Lambda Machine does not patch the problem. It eliminates it at the hardware level:
+
+1. **Oil and water** — Data registers (DRn) and context registers (CRn) are physically separate hardware paths. Data can never be confused with a Golden Token capability. There is no bit pattern a program can forge to manufacture access it was not granted. This is not a software check — it is a property of the circuit.
+
+2. **Every operation is capability-checked** — Our 16-line bernoulli.church program traverses 112 security gates. Not because we chose to be cautious, but because the instruction set has no unchecked path. There is no "unsafe" mode, no privilege escalation, no root access. The security is not a feature — it is the architecture.
+
+3. **No central point of corruption** — There is no operating system kernel, no hypervisor, no superuser account. Every resource is an atomic abstraction accessed only through Golden Tokens. Compromising one abstraction gives you nothing — you still need the right token for every other abstraction you want to reach.
+
+4. **Deterministic garbage collection** — The PP250 three-phase Mark-Scan-Sweep process is deterministic, not probabilistic. Memory is reclaimed on schedule, not when convenient. Dangling pointers and use-after-free — the foundation of modern exploit chains — cannot occur.
+
+### Performance Through Security
+
+The counterintuitive insight is that capability security does not cost performance — it enables it:
+
+- **No kernel transitions** — Conventional systems pay enormous overhead switching between user mode and kernel mode thousands of times per second. The Church Machine has no modes to switch between. Every abstraction runs at full speed in its own capability-bounded scope.
+
+- **No bounds checking overhead** — Conventional systems spend cycles checking array bounds, validating pointers, and verifying permissions in software. The Church Machine enforces these at the hardware level, in the same clock cycle as the operation itself.
+
+- **No security scanning** — Conventional systems run antivirus, intrusion detection, and integrity monitoring as background processes consuming CPU, memory, and I/O. The Church Machine needs none of this — violations are impossible, not merely detected.
+
+- **No patch cycles** — Conventional systems require constant software updates to close newly discovered vulnerabilities. The Church Machine's security properties are hardware invariants. They do not degrade over time, and they do not need patches. A Church Machine built today enforces the same security guarantees in a hundred years.
+
+### Future-Safe for the Information Age
+
+The Mechanical Age gave us machines that computed. The Binary Age gave us machines that computed fast. But speed without security is a liability — every networked computer is a potential weapon if it can be subverted.
+
+The Information Age demands machines that compute **correctly and securely by construction**, not by hope and patching. Civilization's critical infrastructure — power grids, financial systems, medical records, democratic processes, military command — runs on computers that any sufficiently motivated attacker can compromise, because the hardware itself has no concept of "you are not allowed to do that."
+
+Ada Lovelace saw that machines could weave algebraical patterns. What she could not foresee was that those patterns would one day control everything, and that the machine's inability to distinguish authorized from unauthorized access would become an existential threat.
+
+The Church Machine is the answer to that threat — not a better patch, but a different foundation. Capability-secured, domain-pure, hardware-enforced. Every operation checked. Every boundary real. Every token unforgeable. Built once, secure forever.
+
+The security of civilization must come first. The architecture must guarantee it.
+
+---
+
 *Sources:*
 *Ada Lovelace, "Notes by the Translator" (Note G), in L.F. Menabrea, "Sketch of The Analytical Engine," Taylor's Scientific Memoirs, Vol. III, August 1843.*
 *R. Glaschick, "Ada Lovelace's Calculation of Bernoulli's Numbers," rclab.de, 2016.*
