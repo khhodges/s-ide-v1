@@ -24,7 +24,7 @@ The CTMM simulator provides a web-based visualization using a Python HTTP server
 -   **Register Architecture**:
     -   **Context Registers (CR0-CR7)**: Hold Golden Tokens. CR15 for Namespace root, CR8 for Thread identity.
     -   **Data Registers (DR0-DR15)**: Hold 64-bit numeric values (Sim-64) or 32-bit values (Sim-32).
--   **Golden Token Permissions**: 6 bits (R, W, X, L, S, E) defining access rights, with domain purity enforced (Turing xor Church, never both).
+-   **Golden Token Permissions**: 6 bits (R, W, X, L, S, E) defining access rights, with domain purity enforced (Turing xor Church, never both). Data registers (DRn) and Context registers (CRn) are physically separate hardware paths — data can never be confused with Golden Tokens (oil and water). TPERM's primary value is defensive checking of dynamic tokens passed via API before committing to operations that require specific permissions.
 -   **Failsafe Security**: All validation failures are routed to a single FAULT handler.
 -   **Deterministic Garbage Collection (PP250)**: A three-phase Mark-Scan-Sweep process.
 -   **LAMBDA Instruction**: Enables lightweight, in-scope code application with machine-status fast path.
