@@ -15,13 +15,15 @@ from .save import ChurchSave
 from .load import ChurchLoad
 from .change import ChurchChange
 from .switch import ChurchSwitch
+from .fused_unit import ChurchELoadCall, ChurchXLoadLambda
 
 
 class ChurchCore(Elaboratable):
     """Pure Church Machine core — zero Turing-domain instructions.
 
     Clean 32-bit instruction format with ARM-style conditional execution.
-    Only 8 Church opcodes: LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA.
+    10 Church opcodes: LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA,
+    ELOADCALL (fused LOAD+TPERM(E)+CALL), XLOADLAMBDA (fused LOAD+TPERM(X)+LAMBDA).
     Any invalid opcode faults immediately.
     No ALU, no branches, no data memory load/store — pure capability security.
     """
@@ -78,6 +80,8 @@ class ChurchCore(Elaboratable):
         u_load = ChurchLoad()
         u_change = ChurchChange()
         u_switch = ChurchSwitch()
+        u_eloadcall = ChurchELoadCall()
+        u_xloadlambda = ChurchXLoadLambda()
         m.submodules.u_registers = u_regs
         m.submodules.u_decoder = u_decoder
         m.submodules.u_perm_check = u_perm
@@ -90,6 +94,8 @@ class ChurchCore(Elaboratable):
         m.submodules.u_load = u_load
         m.submodules.u_change = u_change
         m.submodules.u_switch = u_switch
+        m.submodules.u_eloadcall = u_eloadcall
+        m.submodules.u_xloadlambda = u_xloadlambda
 
         nia_reg = Signal(32)
 
@@ -138,7 +144,8 @@ class ChurchCore(Elaboratable):
         m.d.comb += any_unit_busy.eq(
             u_lambda.lambda_busy | u_tperm.tperm_busy | u_call.call_busy |
             u_return.busy | u_save.save_busy | u_load.load_busy |
-            u_change.change_busy | u_switch.switch_busy | u_gc.gc_busy
+            u_change.change_busy | u_switch.switch_busy | u_gc.gc_busy |
+            u_eloadcall.busy | u_xloadlambda.busy
         )
 
         lambda_start_sig = Signal()
@@ -159,7 +166,9 @@ class ChurchCore(Elaboratable):
                                 Mux(u_load.load_busy, u_load.cr_rd_addr,
                                     Mux(u_change.change_busy, u_change.cr_rd_addr,
                                         Mux(u_switch.switch_busy, u_switch.cr_rd_addr,
-                                            cr_src))))))))
+                                            Mux(u_eloadcall.busy, u_eloadcall.cr_rd_addr,
+                                                Mux(u_xloadlambda.busy, u_xloadlambda.cr_rd_addr,
+                                                    cr_src))))))))))
         )
 
         perm_gt_sig = Signal(GT_LAYOUT)
@@ -179,6 +188,10 @@ class ChurchCore(Elaboratable):
                 m.d.comb += required_perms.eq(PERM_MASK_L)
             with m.Case(ChurchOpcode.LAMBDA):
                 m.d.comb += required_perms.eq(PERM_MASK_X)
+            with m.Case(ChurchOpcode.ELOADCALL):
+                m.d.comb += required_perms.eq(0)
+            with m.Case(ChurchOpcode.XLOADLAMBDA):
+                m.d.comb += required_perms.eq(0)
             with m.Default():
                 m.d.comb += required_perms.eq(0)
 
@@ -235,7 +248,9 @@ class ChurchCore(Elaboratable):
                         Mux(u_return.busy, u_return.cr_wr_addr,
                             Mux(u_load.load_busy, u_load.cr_wr_addr,
                                 Mux(u_change.change_busy, u_change.cr_wr_addr,
-                                    Mux(u_switch.switch_busy, u_switch.cr_wr_addr, 0))))))
+                                    Mux(u_switch.switch_busy, u_switch.cr_wr_addr,
+                                        Mux(u_eloadcall.busy, u_eloadcall.cr_wr_addr,
+                                            Mux(u_xloadlambda.busy, u_xloadlambda.cr_wr_addr, 0))))))))
             ),
             u_regs.cr_wr_data.eq(
                 Mux(u_tperm.tperm_busy, u_tperm.cr_wr_data,
@@ -243,11 +258,14 @@ class ChurchCore(Elaboratable):
                         Mux(u_return.busy, u_return.cr_wr_data,
                             Mux(u_load.load_busy, u_load.cr_wr_data,
                                 Mux(u_change.change_busy, u_change.cr_wr_data,
-                                    Mux(u_switch.switch_busy, u_switch.cr_wr_data, 0))))))
+                                    Mux(u_switch.switch_busy, u_switch.cr_wr_data,
+                                        Mux(u_eloadcall.busy, u_eloadcall.cr_wr_data,
+                                            Mux(u_xloadlambda.busy, u_xloadlambda.cr_wr_data, 0))))))))
             ),
             u_regs.cr_wr_en.eq(
                 u_tperm.cr_wr_en | u_call.cr_wr_en | u_return.cr_wr_en |
-                u_load.cr_wr_en | u_change.cr_wr_en | u_switch.cr_wr_en
+                u_load.cr_wr_en | u_change.cr_wr_en | u_switch.cr_wr_en |
+                u_eloadcall.cr_wr_en | u_xloadlambda.cr_wr_en
             ),
         ]
 
@@ -255,10 +273,14 @@ class ChurchCore(Elaboratable):
             m.d.sync += nia_reg.eq(0)
         with m.Elif(u_lambda.nia_set):
             m.d.sync += nia_reg.eq(u_lambda.nia_value)
+        with m.Elif(u_xloadlambda.nia_set):
+            m.d.sync += nia_reg.eq(u_xloadlambda.nia_value)
         with m.Elif(u_return.nia_set):
             m.d.sync += nia_reg.eq(u_return.nia_value)
         with m.Elif(u_call.nia_set):
             m.d.sync += nia_reg.eq(u_call.nia_value)
+        with m.Elif(u_eloadcall.nia_set):
+            m.d.sync += nia_reg.eq(u_eloadcall.nia_value)
         with m.Elif(cond_exec_enable & ~any_unit_busy):
             m.d.sync += nia_reg.eq(nia_reg + 4)
 
@@ -456,6 +478,38 @@ class ChurchCore(Elaboratable):
             u_switch.mem_rd_valid.eq(1),
         ]
 
+        eloadcall_start_sig = Signal()
+        m.d.comb += eloadcall_start_sig.eq(
+            cond_exec_enable & is_church_op & (church_op == ChurchOpcode.ELOADCALL) & ~any_unit_busy
+        )
+        m.d.comb += [
+            u_eloadcall.start.eq(eloadcall_start_sig),
+            u_eloadcall.cr_src.eq(cr_src),
+            u_eloadcall.cr_dst.eq(cr_dst),
+            u_eloadcall.index.eq(cap_index),
+            u_eloadcall.mask.eq(u_decoder.call_mask),
+            u_eloadcall.cr_rd_data.eq(u_regs.cr_rd_data),
+            u_eloadcall.cr15_namespace.eq(u_regs.cr15_namespace),
+            u_eloadcall.mem_rd_data.eq(self.dmem_rd_data),
+            u_eloadcall.mem_rd_valid.eq(1),
+        ]
+
+        xloadlambda_start_sig = Signal()
+        m.d.comb += xloadlambda_start_sig.eq(
+            cond_exec_enable & is_church_op & (church_op == ChurchOpcode.XLOADLAMBDA) & ~any_unit_busy
+        )
+        m.d.comb += [
+            u_xloadlambda.start.eq(xloadlambda_start_sig),
+            u_xloadlambda.cr_src.eq(cr_src),
+            u_xloadlambda.cr_dst.eq(cr_dst),
+            u_xloadlambda.index.eq(cap_index),
+            u_xloadlambda.cr_rd_data.eq(u_regs.cr_rd_data),
+            u_xloadlambda.cr15_namespace.eq(u_regs.cr15_namespace),
+            u_xloadlambda.mem_rd_data.eq(self.dmem_rd_data),
+            u_xloadlambda.mem_rd_valid.eq(1),
+            u_xloadlambda.saved_nia.eq(nia_reg + 4),
+        ]
+
         CR5_STACK_DEPTH = 256
         cr5_stack = Memory(width=32, depth=CR5_STACK_DEPTH, init=[])
         m.submodules.cr5_stack = cr5_stack
@@ -482,6 +536,13 @@ class ChurchCore(Elaboratable):
                 cr5_stack_wr.en.eq(1),
             ]
             m.d.sync += cr5_stack_ptr.eq(cr5_stack_ptr + 1)
+        with m.Elif(u_eloadcall.complete & ~u_eloadcall.fault & ~cr5_stack_full):
+            m.d.comb += [
+                cr5_stack_wr.addr.eq(cr5_stack_ptr),
+                cr5_stack_wr.data.eq(u_eloadcall.saved_cr5_gt),
+                cr5_stack_wr.en.eq(1),
+            ]
+            m.d.sync += cr5_stack_ptr.eq(cr5_stack_ptr + 1)
         with m.Elif(u_return.complete & ~u_return.fault_valid & ~cr5_stack_empty):
             m.d.sync += cr5_stack_ptr.eq(cr5_stack_ptr - 1)
 
@@ -505,6 +566,10 @@ class ChurchCore(Elaboratable):
             m.d.comb += [self.fault.eq(u_change.fault_type), self.fault_valid.eq(1)]
         with m.Elif(u_switch.switch_fault):
             m.d.comb += [self.fault.eq(u_switch.fault_type), self.fault_valid.eq(1)]
+        with m.Elif(u_eloadcall.fault):
+            m.d.comb += [self.fault.eq(u_eloadcall.fault_type), self.fault_valid.eq(1)]
+        with m.Elif(u_xloadlambda.fault):
+            m.d.comb += [self.fault.eq(u_xloadlambda.fault_type), self.fault_valid.eq(1)]
         with m.Else():
             m.d.comb += [self.fault.eq(FaultType.NONE), self.fault_valid.eq(0)]
 
