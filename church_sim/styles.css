@@ -1563,6 +1563,40 @@ header h1 {
     border-radius: 3px;
 }
 
+.crd-tabs {
+    display: flex;
+    gap: 0.3rem;
+    margin-bottom: 0.5rem;
+    padding: 0.3rem;
+    background: #0d1b2a;
+    border-radius: 6px;
+}
+
+.crd-tab {
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+    background: #1b2d45;
+    color: #e0e0e0;
+    border: 2px solid #3a86ff;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+
+.crd-tab:hover {
+    background: #3a86ff;
+    border-color: #3a86ff;
+    color: white;
+}
+
+.crd-tab.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(233, 69, 96, 0.4);
+}
+
 @media (max-width: 800px) {
     .editor-layout { grid-template-columns: 1fr; }
     .repl-layout { grid-template-columns: 1fr; }

@@ -138,6 +138,18 @@ function openCRDetail(crIdx) {
     updateCRDetail();
 }
 
+let crDetailTab = 'content';
+
+function switchCRDetailTab(tab) {
+    crDetailTab = tab;
+    document.querySelectorAll('.crd-tab').forEach(t => t.classList.remove('active'));
+    const btn = document.getElementById('crdTab-' + tab);
+    if (btn) btn.classList.add('active');
+    document.querySelectorAll('.crd-panel').forEach(p => p.style.display = 'none');
+    const panel = document.getElementById('crdPanel-' + tab);
+    if (panel) panel.style.display = 'block';
+}
+
 function updateCRDetail() {
     if (selectedCR === null) return;
     const titleEl = document.getElementById('crDetailTitle');
@@ -157,62 +169,14 @@ function updateCRDetail() {
         return;
     }
 
-    titleEl.innerHTML = `CR${crIdx}${name ? ' — <span style="color:var(--church-blue)">' + name + '</span>' : ''} — Detail View <button class="btn btn-sm" onclick="switchDashTab(\'cr\')" style="margin-left:1rem;font-size:0.7rem;">← Back to CR Table</button>`;
-
-    let html = '<div class="cr-detail-grid">';
-
-    html += '<div class="cr-detail-section">';
-    html += '<div class="cr-detail-heading">128-bit Register Words</div>';
-    html += '<table class="cr-table cr-detail-words"><thead><tr>';
-    html += '<th>Word</th><th>Value</th><th>Decoded</th>';
-    html += '</tr></thead><tbody>';
-    html += `<tr><td>word0: GT</td><td class="cr-gt">0x${cr.word0_gt}</td><td>[${cr.perms}] Ver=${cr.gtVersion} Idx=${cr.gtIndex} Type=${cr.gtTypeName}</td></tr>`;
-    html += `<tr><td>word1: Location</td><td>0x${cr.word1_location.toString(16).toUpperCase().padStart(8,'0')}</td><td>Base address</td></tr>`;
-    html += `<tr><td>word2: Limit</td><td>B=${cr.limitB} F=${cr.limitF} Limit=0x${cr.limit17.toString(16).toUpperCase().padStart(5,'0')}</td><td>Bound=${cr.limitB} Frozen=${cr.limitF}</td></tr>`;
-    html += `<tr><td>word3: Seals</td><td>Ver=${cr.sealVersion} FNV=0x${cr.sealFNV.toString(16).toUpperCase().padStart(7,'0')}</td><td>Integrity seal</td></tr>`;
-    html += `<tr><td>M bit</td><td class="${cr.mBit ? 'cr-m-set' : ''}">${cr.mBit}</td><td>${cr.mBit ? 'Written under M elevation' : 'Normal write'}</td></tr>`;
-    html += '</tbody></table>';
-    html += '</div>';
-
-    const nsIdx = cr.gtIndex;
-    const ns = sim.namespaceTable;
-
-    if (nsIdx < ns.length) {
-        const entry = ns[nsIdx];
-        html += '<div class="cr-detail-section">';
-        html += `<div class="cr-detail-heading">Namespace Entry [${nsIdx}] — ${entry.label || 'unnamed'}</div>`;
-
-        const loc = entry.word0_location >>> 0;
-        const lim = sim.parseLimitWord(entry.word1_limit);
-        const sealVer = (entry.word2_seals >>> 25) & 0x7F;
-        const sealFNV = entry.word2_seals & 0x01FFFFFF;
-        const gtPermStr = cr.perms;
-        const storedGT = sim.memory[loc];
-        let storedPermStr = '------';
-        if (storedGT) {
-            const sp = sim.parseGT(storedGT).permissions;
-            storedPermStr = (sp.R?'R':'-')+(sp.W?'W':'-')+(sp.X?'X':'-')+(sp.L?'L':'-')+(sp.S?'S':'-')+(sp.E?'E':'-');
-        }
-
-        html += '<table class="cr-table"><tbody>';
-        html += `<tr><td>Location</td><td>0x${loc.toString(16).toUpperCase().padStart(8,'0')}</td></tr>`;
-        html += `<tr><td>GT Permissions</td><td>[${gtPermStr}]</td></tr>`;
-        html += `<tr><td>Stored GT Perms</td><td>[${storedPermStr}]</td></tr>`;
-        html += `<tr><td>B (Bind)</td><td>${lim.b}</td></tr>`;
-        html += `<tr><td>F (Frozen)</td><td>${lim.f}</td></tr>`;
-        html += `<tr><td>Limit</td><td>0x${lim.limit.toString(16).toUpperCase().padStart(5,'0')}</td></tr>`;
-        html += `<tr><td>Version</td><td>${sealVer}</td></tr>`;
-        html += `<tr><td>FNV Seal</td><td>0x${sealFNV.toString(16).toUpperCase().padStart(7,'0')}</td></tr>`;
-        html += `<tr><td>G bit</td><td>${entry.gBit}</td></tr>`;
-        html += `<tr><td>Chainable</td><td>${entry.chainable ? 'Yes' : 'No'}</td></tr>`;
-        html += '</tbody></table>';
-        html += '</div>';
-    }
+    titleEl.innerHTML = `CR${crIdx}${name ? ' — <span style="color:var(--church-blue)">' + name + '</span>' : ''} <button class="btn btn-sm" onclick="switchDashTab(\'cr\')" style="margin-left:1rem;font-size:0.7rem;">← Back</button>`;
 
     const parsedPerms = sim.parseGT(sim.cr[crIdx].word0).permissions;
     const hasX = parsedPerms.X;
     const hasL = parsedPerms.L;
     const crMbit = sim.cr[crIdx].m;
+    const nsIdx = cr.gtIndex;
+    const ns = sim.namespaceTable;
 
     const codeRegs = [7];
     const clistRegs = [6];
@@ -222,6 +186,16 @@ function updateCRDetail() {
     const showCList = hasL || (crMbit && clistRegs.includes(crIdx));
     const showThread = crMbit && threadRegs.includes(crIdx);
     const showNS = crMbit && nsRegs.includes(crIdx);
+
+    let html = '';
+    html += '<div class="crd-tabs">';
+    html += `<button class="crd-tab${crDetailTab==='content'?' active':''}" id="crdTab-content" onclick="switchCRDetailTab('content')">Content</button>`;
+    html += `<button class="crd-tab${crDetailTab==='register'?' active':''}" id="crdTab-register" onclick="switchCRDetailTab('register')">Register</button>`;
+    html += `<button class="crd-tab${crDetailTab==='binary'?' active':''}" id="crdTab-binary" onclick="switchCRDetailTab('binary')">Binary</button>`;
+    html += '</div>';
+
+    html += `<div class="crd-panel" id="crdPanel-content" style="display:${crDetailTab==='content'?'block':'none'}">`;
+    html += '<div class="cr-detail-grid">';
 
     if (showCode) {
         html += '<div class="cr-detail-section">';
@@ -278,7 +252,7 @@ function updateCRDetail() {
             html += '<div style="color:var(--text-secondary);padding:0.5rem;">No namespace entries within this capability\'s range.</div>';
         } else {
             html += '<table class="cr-table"><thead><tr>';
-            html += '<th>Offset</th><th>Idx</th><th>Label</th><th>Perms</th><th>Location</th><th>B</th><th>F</th><th>Limit</th><th>Ver</th><th>FNV Seal</th>';
+            html += '<th>Idx</th><th>Label</th><th>Perms</th><th>Type</th><th>Location</th><th>B</th><th>Limit</th><th>FNV</th>';
             html += '</tr></thead><tbody>';
             for (let j = 0; j < clistEntries.length; j++) {
                 const c = clistEntries[j];
@@ -289,18 +263,16 @@ function updateCRDetail() {
                     const sp = sim.parseGT(storedGT).permissions;
                     permStr = (sp.R?'R':'-')+(sp.W?'W':'-')+(sp.X?'X':'-')+(sp.L?'L':'-')+(sp.S?'S':'-')+(sp.E?'E':'-');
                 }
-                const sealVer = (e.word2_seals >>> 25) & 0x7F;
+                const typeNames = ['NULL','Abstract','Outform','Inform'];
                 const sealFNV = e.word2_seals & 0x01FFFFFF;
                 html += `<tr class="cr-active">`;
-                html += `<td class="cr-idx">+${j}</td>`;
-                html += `<td>${c.idx}</td>`;
+                html += `<td class="cr-idx">${c.idx}</td>`;
                 html += `<td class="cr-name">${e.label || ''}</td>`;
                 html += `<td class="cr-perms">[${permStr}]</td>`;
+                html += `<td>${typeNames[e.gtType] || '?'}</td>`;
                 html += `<td>0x${c.loc.toString(16).toUpperCase().padStart(8,'0')}</td>`;
                 html += `<td class="cr-flag">${c.lim.b}</td>`;
-                html += `<td class="cr-flag">${c.lim.f}</td>`;
                 html += `<td>0x${c.lim.limit.toString(16).toUpperCase().padStart(5,'0')}</td>`;
-                html += `<td>${sealVer}</td>`;
                 html += `<td>0x${sealFNV.toString(16).toUpperCase().padStart(7,'0')}</td>`;
                 html += '</tr>';
             }
@@ -332,8 +304,9 @@ function updateCRDetail() {
             html += '<div style="color:var(--text-secondary);padding:0.5rem;">Namespace table is empty.</div>';
         } else {
             html += '<table class="cr-table"><thead><tr>';
-            html += '<th>Idx</th><th>Label</th><th>Perms</th><th>Type</th><th>Location</th><th>B</th><th>G</th><th>Chainable</th>';
+            html += '<th>Idx</th><th>Label</th><th>Perms</th><th>Type</th><th>Location</th><th>B</th><th>G</th><th>Chain</th>';
             html += '</tr></thead><tbody>';
+            const typeNames = ['NULL','Abstract','Outform','Inform'];
             for (let i = 0; i < ns.length; i++) {
                 const e = ns[i];
                 const storedGT = sim.memory[e.word0_location];
@@ -343,7 +316,6 @@ function updateCRDetail() {
                     permStr = (sp.R?'R':'-')+(sp.W?'W':'-')+(sp.X?'X':'-')+(sp.L?'L':'-')+(sp.S?'S':'-')+(sp.E?'E':'-');
                 }
                 const loc = e.word0_location >>> 0;
-                const typeNames = ['NULL','Abstract','Outform','Reserved'];
                 html += '<tr class="cr-active">';
                 html += `<td class="cr-idx">${i}</td>`;
                 html += `<td class="cr-name">${e.label || ''}</td>`;
@@ -366,7 +338,102 @@ function updateCRDetail() {
         html += '<div style="color:var(--text-secondary);padding:0.5rem;">GT permissions control visibility. This capability does not grant viewable access (no R, X, or L). Run boot sequence to populate registers.</div>';
         html += '</div>';
     }
+
+    html += '</div></div>';
+
+    html += `<div class="crd-panel" id="crdPanel-register" style="display:${crDetailTab==='register'?'block':'none'}">`;
+    html += '<div class="cr-detail-grid">';
+
+    html += '<div class="cr-detail-section">';
+    html += '<div class="cr-detail-heading">128-bit Context Register Words</div>';
+    html += '<table class="cr-table cr-detail-words"><thead><tr>';
+    html += '<th>Word</th><th>Value</th><th>Decoded</th>';
+    html += '</tr></thead><tbody>';
+    html += `<tr><td>word0: GT</td><td class="cr-gt">0x${cr.word0_gt}</td><td>[${cr.perms}] Ver=${cr.gtVersion} Idx=${cr.gtIndex} Type=${cr.gtTypeName}</td></tr>`;
+    html += `<tr><td>word1: Location</td><td>0x${cr.word1_location.toString(16).toUpperCase().padStart(8,'0')}</td><td>Base address in memory</td></tr>`;
+    html += `<tr><td>word2: Limit</td><td>B=${cr.limitB} F=${cr.limitF} Limit=0x${cr.limit17.toString(16).toUpperCase().padStart(5,'0')}</td><td>Bound=${cr.limitB} Frozen=${cr.limitF} Size=${cr.limit17 + 1} words</td></tr>`;
+    html += `<tr><td>word3: Seals</td><td>Ver=${cr.sealVersion} FNV=0x${cr.sealFNV.toString(16).toUpperCase().padStart(7,'0')}</td><td>Integrity seal</td></tr>`;
+    html += `<tr><td>M bit</td><td class="${cr.mBit ? 'cr-m-set' : ''}">${cr.mBit}</td><td>${cr.mBit ? 'Written under M elevation (boot gift)' : 'Normal write'}</td></tr>`;
+    html += '</tbody></table>';
     html += '</div>';
+
+    if (nsIdx < ns.length) {
+        const entry = ns[nsIdx];
+        html += '<div class="cr-detail-section">';
+        html += `<div class="cr-detail-heading">Namespace Entry [${nsIdx}] — ${entry.label || 'unnamed'}</div>`;
+
+        const loc = entry.word0_location >>> 0;
+        const lim = sim.parseLimitWord(entry.word1_limit);
+        const sealVer = (entry.word2_seals >>> 25) & 0x7F;
+        const sealFNV = entry.word2_seals & 0x01FFFFFF;
+        const gtPermStr = cr.perms;
+        const storedGT = sim.memory[loc];
+        let storedPermStr = '------';
+        if (storedGT) {
+            const sp = sim.parseGT(storedGT).permissions;
+            storedPermStr = (sp.R?'R':'-')+(sp.W?'W':'-')+(sp.X?'X':'-')+(sp.L?'L':'-')+(sp.S?'S':'-')+(sp.E?'E':'-');
+        }
+        const typeNames = ['NULL','Abstract','Outform','Inform'];
+
+        html += '<table class="cr-table"><tbody>';
+        html += `<tr><td>Location</td><td>0x${loc.toString(16).toUpperCase().padStart(8,'0')}</td></tr>`;
+        html += `<tr><td>GT Permissions</td><td>[${gtPermStr}]</td></tr>`;
+        html += `<tr><td>Stored GT Perms</td><td>[${storedPermStr}]</td></tr>`;
+        html += `<tr><td>GT Type</td><td>${typeNames[entry.gtType] || '?'}</td></tr>`;
+        html += `<tr><td>B (Bind)</td><td>${lim.b}</td></tr>`;
+        html += `<tr><td>F (Frozen)</td><td>${lim.f}</td></tr>`;
+        html += `<tr><td>Limit</td><td>0x${lim.limit.toString(16).toUpperCase().padStart(5,'0')} (${lim.limit + 1} words)</td></tr>`;
+        html += `<tr><td>Version</td><td>${sealVer}</td></tr>`;
+        html += `<tr><td>FNV Seal</td><td>0x${sealFNV.toString(16).toUpperCase().padStart(7,'0')}</td></tr>`;
+        html += `<tr><td>G bit</td><td>${entry.gBit}</td></tr>`;
+        html += `<tr><td>Chainable</td><td>${entry.chainable ? 'Yes' : 'No'}</td></tr>`;
+        if (entry.codeLength !== undefined) {
+            html += `<tr><td>Code Length</td><td>${entry.codeLength} words (${entry.codeLength * 4} bytes)</td></tr>`;
+        }
+        html += '</tbody></table>';
+        html += '</div>';
+    }
+
+    html += '</div></div>';
+
+    html += `<div class="crd-panel" id="crdPanel-binary" style="display:${crDetailTab==='binary'?'block':'none'}">`;
+    html += '<div class="cr-detail-grid">';
+    html += '<div class="cr-detail-section">';
+    html += '<div class="cr-detail-heading">Memory Image — Raw Binary Data</div>';
+    const baseLoc = cr.word1_location >>> 0;
+    const limitVal = cr.limit17;
+    const dumpCount = Math.min(limitVal + 1, 256);
+    let nonZeroCount = 0;
+    for (let w = 0; w < dumpCount; w++) {
+        if (baseLoc + w < sim.memory.length && sim.memory[baseLoc + w] !== 0) nonZeroCount++;
+    }
+    html += `<div style="color:var(--text-secondary);font-size:0.72rem;margin-bottom:0.5rem;">Address range: 0x${baseLoc.toString(16).toUpperCase().padStart(4,'0')} – 0x${(baseLoc + dumpCount - 1).toString(16).toUpperCase().padStart(4,'0')} | ${dumpCount} words | ${nonZeroCount} non-zero</div>`;
+    html += '<div style="font-family:\'Courier New\',monospace;font-size:0.72rem;line-height:1.5;background:#0a0a1a;padding:0.75rem;border-radius:6px;overflow-x:auto;max-height:400px;overflow-y:auto;">';
+    for (let row = 0; row < dumpCount; row += 8) {
+        const addr = baseLoc + row;
+        let line = `<span style="color:var(--church-blue);">${addr.toString(16).toUpperCase().padStart(4,'0')}</span>  `;
+        let ascii = '';
+        for (let col = 0; col < 8; col++) {
+            const idx = row + col;
+            if (idx < dumpCount && baseLoc + idx < sim.memory.length) {
+                const w = sim.memory[baseLoc + idx];
+                const color = w === 0 ? 'var(--text-secondary)' : 'var(--church-gold)';
+                line += `<span style="color:${color};">${w.toString(16).toUpperCase().padStart(8,'0')}</span> `;
+                for (let b = 3; b >= 0; b--) {
+                    const byte = (w >>> (b * 8)) & 0xFF;
+                    ascii += (byte >= 32 && byte < 127) ? String.fromCharCode(byte) : '.';
+                }
+            } else {
+                line += '         ';
+                ascii += '    ';
+            }
+        }
+        line += ` <span style="color:var(--text-secondary);">|${ascii}|</span>`;
+        html += line + '<br>';
+    }
+    html += '</div>';
+    html += '</div>';
+    html += '</div></div>';
 
     contentEl.innerHTML = html;
 }
@@ -442,9 +509,9 @@ function updateNamespace() {
     let html = '<div class="ns-layout-header">NS_ENTRY_LAYOUT: 3 words per entry (96 bits)</div>';
     html += '<table class="ns-table"><thead><tr>';
     html += '<th>Idx</th><th class="ns-label-col">Label</th>';
-    html += '<th>word0: Location</th>';
-    html += '<th>word1: B</th><th>word1: F</th><th>word1: Limit[16:0]</th>';
-    html += '<th>word2: Ver[31:25]</th><th>word2: FNV Seal[24:0]</th>';
+    html += '<th>Perms</th><th>Type</th><th>Location</th>';
+    html += '<th>B</th><th>F</th><th>Limit</th>';
+    html += '<th>Ver</th><th>FNV Seal</th>';
     html += '<th>G</th><th>Actions</th>';
     html += '</tr></thead><tbody>';
 
@@ -454,9 +521,18 @@ function updateNamespace() {
         const lim = sim.parseLimitWord(e.word1_limit);
         const ver = (e.word2_seals >>> 25) & 0x7F;
         const seal = e.word2_seals & 0x01FFFFFF;
+        const storedGT = sim.memory[e.word0_location];
+        let permStr = '------';
+        if (storedGT) {
+            const sp = sim.parseGT(storedGT).permissions;
+            permStr = (sp.R?'R':'-')+(sp.W?'W':'-')+(sp.X?'X':'-')+(sp.L?'L':'-')+(sp.S?'S':'-')+(sp.E?'E':'-');
+        }
+        const typeNames = ['NULL','Abstract','Outform','Inform'];
         html += '<tr>';
         html += `<td>${i}</td>`;
         html += `<td class="ns-label">${e.label || '-'}</td>`;
+        html += `<td class="cr-perms">[${permStr}]</td>`;
+        html += `<td>${typeNames[e.gtType] || '?'}</td>`;
         html += `<td>0x${e.word0_location.toString(16).toUpperCase().padStart(8, '0')}</td>`;
         html += `<td class="ns-flag">${lim.b}</td>`;
         html += `<td class="ns-flag">${lim.f}</td>`;
@@ -464,7 +540,7 @@ function updateNamespace() {
         html += `<td>${ver}</td>`;
         html += `<td>0x${seal.toString(16).toUpperCase().padStart(7, '0')}</td>`;
         html += `<td class="ns-flag">${e.gBit}</td>`;
-        html += `<td class="ns-entry-actions"><button class="btn btn-primary btn-xs" onclick="exportEntryMemory(${i})">Export</button></td>`;
+        html += `<td class="ns-entry-actions"><button class="btn btn-primary btn-xs" onclick="exportEntryMemory(${i})">Export</button> <button class="btn btn-xs" onclick="importEntryMemory(${i})" style="background:#3a86ff;color:#fff;border:none;">Import</button></td>`;
         html += '</tr>';
     }
     html += '</tbody></table>';
@@ -951,16 +1027,21 @@ function exportEntryMemory(idx) {
     if (!data) return;
     const entry = sim.namespaceTable[idx];
     const hexWords = data.words.map(w => '0x' + (w >>> 0).toString(16).padStart(8, '0'));
+    let permObj = {};
+    if (data.gt) {
+        const sp = sim.parseGT(data.gt).permissions;
+        permObj = { R: sp.R?1:0, W: sp.W?1:0, X: sp.X?1:0, L: sp.L?1:0, S: sp.S?1:0, E: sp.E?1:0 };
+    }
+    const typeNames = ['NULL','Abstract','Outform','Inform'];
     const exportObj = {
         label: data.label,
         index: idx,
-        location: '0x' + data.location.toString(16),
-        gt: '0x' + (data.gt >>> 0).toString(16).padStart(8, '0'),
+        location: '0x' + data.location.toString(16).toUpperCase().padStart(8, '0'),
+        gt: '0x' + (data.gt >>> 0).toString(16).toUpperCase().padStart(8, '0'),
+        gtType: typeNames[entry ? entry.gtType : 0] || 'NULL',
         codeLength: data.codeLength,
+        permissions: permObj,
         code: hexWords,
-        permissions: entry ? {
-            R: (entry.word0_location !== undefined) ? ((sim.createGT(0, idx, {R:1,W:0,X:0,L:0,S:0,E:0}, 0) >> 2) & 1) : 0
-        } : {},
         entry: entry,
     };
     const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
@@ -997,8 +1078,24 @@ function exportAllNamespace() {
     URL.revokeObjectURL(url);
 }
 
-function importNamespaceFile() {
+let importTargetIdx = null;
+
+function importEntryMemory(idx) {
+    importTargetIdx = idx;
     document.getElementById('nsImportFile').click();
+}
+
+function importNamespaceFile() {
+    importTargetIdx = null;
+    document.getElementById('nsImportFile').click();
+}
+
+function parseCodeWords(codeArr) {
+    if (!Array.isArray(codeArr)) return [];
+    return codeArr.map(w => {
+        if (typeof w === 'string') return parseInt(w, 16) >>> 0;
+        return w >>> 0;
+    });
 }
 
 function handleNSImport(event) {
@@ -1008,22 +1105,38 @@ function handleNSImport(event) {
     reader.onload = function(e) {
         try {
             const data = JSON.parse(e.target.result);
-            if (data.namespace && Array.isArray(data.namespace)) {
+            if (importTargetIdx !== null) {
+                const words = parseCodeWords(data.code || data.words || []);
+                if (words.length > 0) {
+                    sim.setEntryMemory(importTargetIdx, words);
+                    if (data.label && sim.namespaceTable[importTargetIdx]) {
+                        sim.namespaceTable[importTargetIdx].label = data.label;
+                    }
+                    if (data.codeLength !== undefined && sim.namespaceTable[importTargetIdx]) {
+                        sim.namespaceTable[importTargetIdx].codeLength = data.codeLength;
+                    }
+                }
+                importTargetIdx = null;
+            } else if (data.namespace && Array.isArray(data.namespace)) {
                 for (const item of data.namespace) {
-                    if (item.entry && item.words) {
+                    const words = parseCodeWords(item.code || item.words || []);
+                    if (item.entry && words.length > 0) {
                         const idx = item.index !== undefined ? item.index : sim.namespaceTable.length;
                         while (sim.namespaceTable.length <= idx) sim.namespaceTable.push(null);
                         sim.namespaceTable[idx] = item.entry;
-                        sim.setEntryMemory(idx, item.words);
+                        sim.setEntryMemory(idx, words);
                     }
                 }
-            } else if (data.label && data.words) {
+            } else if (data.label) {
+                const words = parseCodeWords(data.code || data.words || []);
                 const idx = sim.namespaceTable.length;
                 if (data.entry) {
                     sim.namespaceTable[idx] = data.entry;
                     sim.namespaceTable[idx].word0_location = idx * 0x100;
                 }
-                sim.setEntryMemory(idx, data.words);
+                if (words.length > 0) {
+                    sim.setEntryMemory(idx, words);
+                }
             }
             saveNamespaceState();
             updateDashboard();
