@@ -182,50 +182,99 @@ function updateCRDetail() {
         html += '</div>';
     }
 
-    html += '<div class="cr-detail-section">';
-    html += '<div class="cr-detail-heading">C-List View — Accessible Entries</div>';
+    const parsedPerms = sim.parseGT(sim.cr[crIdx].word0).permissions;
+    const hasX = parsedPerms.X;
+    const hasL = parsedPerms.L;
+    const hasR = parsedPerms.R;
 
-    const baseLoc = cr.word1_location >>> 0;
-    const limitVal = cr.limit17;
-    const clistEntries = [];
-    for (let i = 0; i < ns.length; i++) {
-        const e = ns[i];
-        const eLoc = e.word0_location >>> 0;
-        const eLim = sim.parseLimitWord(e.word1_limit);
-        if (eLoc >= baseLoc && eLoc <= baseLoc + limitVal * 0x100) {
-            clistEntries.push({ idx: i, entry: e, loc: eLoc, lim: eLim });
+    if (hasX) {
+        html += '<div class="cr-detail-section">';
+        html += '<div class="cr-detail-heading">Code View — Executable Memory</div>';
+        const baseLoc = cr.word1_location >>> 0;
+        const limitVal = cr.limit17;
+        const wordCount = Math.min(limitVal + 1, 256);
+        let hasCode = false;
+        let codeHtml = '<table class="cr-table code-view-table"><thead><tr>';
+        codeHtml += '<th>Addr</th><th>Hex</th><th>Instruction</th>';
+        codeHtml += '</tr></thead><tbody>';
+        const asm = new ChurchAssembler();
+        for (let w = 0; w < wordCount; w++) {
+            const addr = baseLoc + w;
+            if (addr >= sim.memory.length) break;
+            const word = sim.memory[addr];
+            if (word === 0 && !hasCode) continue;
+            hasCode = true;
+            const isPC = (addr === sim.pc);
+            const rowClass = isPC ? 'code-pc-row' : '';
+            const decoded = word === 0 ? 'NOP / HALT' : asm.disassemble(word);
+            codeHtml += `<tr class="${rowClass}">`;
+            codeHtml += `<td class="cr-idx">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td>`;
+            codeHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+            codeHtml += `<td class="code-disasm">${decoded}</td>`;
+            codeHtml += '</tr>';
         }
+        codeHtml += '</tbody></table>';
+        if (!hasCode) {
+            html += '<div style="color:var(--text-secondary);padding:0.5rem;">No code loaded in this memory range (0x' +
+                baseLoc.toString(16).toUpperCase().padStart(4,'0') + ' – 0x' +
+                (baseLoc + wordCount - 1).toString(16).toUpperCase().padStart(4,'0') + ').</div>';
+        } else {
+            html += codeHtml;
+        }
+        html += '</div>';
     }
 
-    if (clistEntries.length === 0) {
-        html += '<div style="color:var(--text-secondary);padding:0.5rem;">No namespace entries within this capability\'s range.</div>';
-    } else {
-        html += '<table class="cr-table"><thead><tr>';
-        html += '<th>Offset</th><th>Idx</th><th>Label</th><th>Perms</th><th>Location</th><th>B</th><th>F</th><th>Limit</th><th>Ver</th><th>FNV Seal</th>';
-        html += '</tr></thead><tbody>';
-        for (let j = 0; j < clistEntries.length; j++) {
-            const c = clistEntries[j];
-            const e = c.entry;
-            const p = e.gtPerms || {};
-            const permStr = (p.R?'R':'-')+(p.W?'W':'-')+(p.X?'X':'-')+(p.L?'L':'-')+(p.S?'S':'-')+(p.E?'E':'-');
-            const sealVer = (e.word2_seals >>> 25) & 0x7F;
-            const sealFNV = e.word2_seals & 0x01FFFFFF;
-            html += `<tr class="cr-active">`;
-            html += `<td class="cr-idx">+${j}</td>`;
-            html += `<td>${c.idx}</td>`;
-            html += `<td class="cr-name">${e.label || ''}</td>`;
-            html += `<td class="cr-perms">[${permStr}]</td>`;
-            html += `<td>0x${c.loc.toString(16).toUpperCase().padStart(8,'0')}</td>`;
-            html += `<td class="cr-flag">${c.lim.b}</td>`;
-            html += `<td class="cr-flag">${c.lim.f}</td>`;
-            html += `<td>0x${c.lim.limit.toString(16).toUpperCase().padStart(5,'0')}</td>`;
-            html += `<td>${sealVer}</td>`;
-            html += `<td>0x${sealFNV.toString(16).toUpperCase().padStart(7,'0')}</td>`;
-            html += '</tr>';
+    if (hasL) {
+        html += '<div class="cr-detail-section">';
+        html += '<div class="cr-detail-heading">C-List View — Accessible Entries</div>';
+        const baseLoc = cr.word1_location >>> 0;
+        const limitVal = cr.limit17;
+        const clistEntries = [];
+        for (let i = 0; i < ns.length; i++) {
+            const e = ns[i];
+            const eLoc = e.word0_location >>> 0;
+            const eLim = sim.parseLimitWord(e.word1_limit);
+            if (eLoc >= baseLoc && eLoc <= baseLoc + limitVal * 0x100) {
+                clistEntries.push({ idx: i, entry: e, loc: eLoc, lim: eLim });
+            }
         }
-        html += '</tbody></table>';
+        if (clistEntries.length === 0) {
+            html += '<div style="color:var(--text-secondary);padding:0.5rem;">No namespace entries within this capability\'s range.</div>';
+        } else {
+            html += '<table class="cr-table"><thead><tr>';
+            html += '<th>Offset</th><th>Idx</th><th>Label</th><th>Perms</th><th>Location</th><th>B</th><th>F</th><th>Limit</th><th>Ver</th><th>FNV Seal</th>';
+            html += '</tr></thead><tbody>';
+            for (let j = 0; j < clistEntries.length; j++) {
+                const c = clistEntries[j];
+                const e = c.entry;
+                const p = e.gtPerms || {};
+                const permStr = (p.R?'R':'-')+(p.W?'W':'-')+(p.X?'X':'-')+(p.L?'L':'-')+(p.S?'S':'-')+(p.E?'E':'-');
+                const sealVer = (e.word2_seals >>> 25) & 0x7F;
+                const sealFNV = e.word2_seals & 0x01FFFFFF;
+                html += `<tr class="cr-active">`;
+                html += `<td class="cr-idx">+${j}</td>`;
+                html += `<td>${c.idx}</td>`;
+                html += `<td class="cr-name">${e.label || ''}</td>`;
+                html += `<td class="cr-perms">[${permStr}]</td>`;
+                html += `<td>0x${c.loc.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+                html += `<td class="cr-flag">${c.lim.b}</td>`;
+                html += `<td class="cr-flag">${c.lim.f}</td>`;
+                html += `<td>0x${c.lim.limit.toString(16).toUpperCase().padStart(5,'0')}</td>`;
+                html += `<td>${sealVer}</td>`;
+                html += `<td>0x${sealFNV.toString(16).toUpperCase().padStart(7,'0')}</td>`;
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+        }
+        html += '</div>';
     }
-    html += '</div>';
+
+    if (!hasX && !hasL && !hasR) {
+        html += '<div class="cr-detail-section">';
+        html += '<div class="cr-detail-heading">Capability Info</div>';
+        html += '<div style="color:var(--text-secondary);padding:0.5rem;">This capability has no R, X, or L permissions. Content not directly viewable.</div>';
+        html += '</div>';
+    }
     html += '</div>';
 
     contentEl.innerHTML = html;

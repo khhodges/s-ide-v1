@@ -191,6 +191,11 @@ header h1 {
     min-width: 100px;
 }
 
+.code-view-table td { font-family: 'Courier New', monospace; }
+.code-disasm { color: var(--church-green); }
+.code-pc-row { background: rgba(233, 69, 96, 0.2) !important; }
+.code-pc-row td { color: var(--text-primary) !important; font-weight: 600; }
+
 .reg-row {
     display: flex;
     align-items: center;
