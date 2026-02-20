@@ -174,26 +174,29 @@ header h1 {
 
 .dash-tabs {
     display: flex;
-    gap: 0.35rem;
+    gap: 0.4rem;
     margin-bottom: 0.5rem;
-    padding-bottom: 0.4rem;
+    padding: 0.4rem;
+    background: #0d1b2a;
+    border-radius: 6px;
 }
 
 .dash-tab {
-    padding: 0.4rem 1rem;
-    font-size: 0.78rem;
-    background: var(--bg-input);
-    color: var(--text-primary);
-    border: 1px solid var(--church-blue);
+    padding: 0.5rem 1.2rem;
+    font-size: 0.82rem;
+    background: #1b2d45;
+    color: #e0e0e0;
+    border: 2px solid #3a86ff;
     border-radius: 5px;
     cursor: pointer;
     transition: all 0.2s;
     font-weight: 600;
+    letter-spacing: 0.3px;
 }
 
 .dash-tab:hover {
-    background: var(--accent);
-    border-color: var(--accent);
+    background: #3a86ff;
+    border-color: #3a86ff;
     color: white;
 }
 
@@ -201,7 +204,7 @@ header h1 {
     background: var(--accent);
     color: white;
     border-color: var(--accent);
-    box-shadow: 0 0 8px rgba(233, 69, 96, 0.3);
+    box-shadow: 0 0 10px rgba(233, 69, 96, 0.4);
 }
 
 .dash-panel {
