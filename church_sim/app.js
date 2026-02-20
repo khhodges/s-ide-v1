@@ -185,15 +185,16 @@ function updateCRDetail() {
     const parsedPerms = sim.parseGT(sim.cr[crIdx].word0).permissions;
     const hasX = parsedPerms.X;
     const hasL = parsedPerms.L;
+    const mActive = sim.mElevation;
 
     const codeRegs = [7];
     const clistRegs = [6];
     const threadRegs = [8];
     const nsRegs = [15];
-    const showCode = hasX || codeRegs.includes(crIdx);
-    const showCList = hasL || clistRegs.includes(crIdx);
-    const showThread = threadRegs.includes(crIdx);
-    const showNS = nsRegs.includes(crIdx);
+    const showCode = hasX || (mActive && codeRegs.includes(crIdx));
+    const showCList = hasL || (mActive && clistRegs.includes(crIdx));
+    const showThread = mActive && threadRegs.includes(crIdx);
+    const showNS = mActive && nsRegs.includes(crIdx);
 
     if (showCode) {
         html += '<div class="cr-detail-section">';
@@ -327,7 +328,11 @@ function updateCRDetail() {
     if (!showCode && !showCList && !showThread && !showNS) {
         html += '<div class="cr-detail-section">';
         html += '<div class="cr-detail-heading">Capability Info</div>';
-        html += '<div style="color:var(--text-secondary);padding:0.5rem;">This register holds an active capability. No specialized view available for this register.</div>';
+        if (!mActive) {
+            html += '<div style="color:var(--text-secondary);padding:0.5rem;">M elevation is OFF — GT permissions control visibility. This capability does not grant viewable access (no R, X, or L).</div>';
+        } else {
+            html += '<div style="color:var(--text-secondary);padding:0.5rem;">This register holds an active capability. No specialized view available.</div>';
+        }
         html += '</div>';
     }
     html += '</div>';
