@@ -180,17 +180,18 @@ function updateCRDetail() {
         const lim = sim.parseLimitWord(entry.word1_limit);
         const sealVer = (entry.word2_seals >>> 25) & 0x7F;
         const sealFNV = entry.word2_seals & 0x01FFFFFF;
-        const p = entry.gtPerms || {};
-        const nsPermStr = (p.R?'R':'-')+(p.W?'W':'-')+(p.X?'X':'-')+(p.L?'L':'-')+(p.S?'S':'-')+(p.E?'E':'-');
         const gtPermStr = cr.perms;
-        const permMismatch = nsPermStr !== gtPermStr;
+        const storedGT = sim.memory[loc];
+        let storedPermStr = '------';
+        if (storedGT) {
+            const sp = sim.parseGT(storedGT).permissions;
+            storedPermStr = (sp.R?'R':'-')+(sp.W?'W':'-')+(sp.X?'X':'-')+(sp.L?'L':'-')+(sp.S?'S':'-')+(sp.E?'E':'-');
+        }
 
         html += '<table class="cr-table"><tbody>';
         html += `<tr><td>Location</td><td>0x${loc.toString(16).toUpperCase().padStart(8,'0')}</td></tr>`;
         html += `<tr><td>GT Permissions</td><td>[${gtPermStr}]</td></tr>`;
-        if (permMismatch) {
-            html += `<tr><td>NS Entry Perms</td><td style="color:var(--church-gold)">[${nsPermStr}] (differs from GT)</td></tr>`;
-        }
+        html += `<tr><td>Stored GT Perms</td><td>[${storedPermStr}]</td></tr>`;
         html += `<tr><td>B (Bind)</td><td>${lim.b}</td></tr>`;
         html += `<tr><td>F (Frozen)</td><td>${lim.f}</td></tr>`;
         html += `<tr><td>Limit</td><td>0x${lim.limit.toString(16).toUpperCase().padStart(5,'0')}</td></tr>`;
@@ -276,8 +277,12 @@ function updateCRDetail() {
             for (let j = 0; j < clistEntries.length; j++) {
                 const c = clistEntries[j];
                 const e = c.entry;
-                const p = e.gtPerms || {};
-                const permStr = (p.R?'R':'-')+(p.W?'W':'-')+(p.X?'X':'-')+(p.L?'L':'-')+(p.S?'S':'-')+(p.E?'E':'-');
+                const storedGT = sim.memory[e.word0_location];
+                let permStr = '------';
+                if (storedGT) {
+                    const sp = sim.parseGT(storedGT).permissions;
+                    permStr = (sp.R?'R':'-')+(sp.W?'W':'-')+(sp.X?'X':'-')+(sp.L?'L':'-')+(sp.S?'S':'-')+(sp.E?'E':'-');
+                }
                 const sealVer = (e.word2_seals >>> 25) & 0x7F;
                 const sealFNV = e.word2_seals & 0x01FFFFFF;
                 html += `<tr class="cr-active">`;
@@ -325,8 +330,12 @@ function updateCRDetail() {
             html += '</tr></thead><tbody>';
             for (let i = 0; i < ns.length; i++) {
                 const e = ns[i];
-                const p = e.gtPerms || {};
-                const permStr = (p.R?'R':'-')+(p.W?'W':'-')+(p.X?'X':'-')+(p.L?'L':'-')+(p.S?'S':'-')+(p.E?'E':'-');
+                const storedGT = sim.memory[e.word0_location];
+                let permStr = '------';
+                if (storedGT) {
+                    const sp = sim.parseGT(storedGT).permissions;
+                    permStr = (sp.R?'R':'-')+(sp.W?'W':'-')+(sp.X?'X':'-')+(sp.L?'L':'-')+(sp.S?'S':'-')+(sp.E?'E':'-');
+                }
                 const loc = e.word0_location >>> 0;
                 const typeNames = ['NULL','Abstract','Outform','Reserved'];
                 html += '<tr class="cr-active">';

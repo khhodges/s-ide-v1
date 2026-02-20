@@ -60,45 +60,46 @@ class ChurchSimulator {
     _initNamespaceTable() {
         this.namespaceTable = [];
         const abstractions = [
-            { label: 'Boot',       gtPerms: {R:0,W:0,X:1,L:0,S:0,E:0}, chainable: false },
-            { label: 'Threads',    gtPerms: {R:0,W:0,X:0,L:1,S:1,E:1}, chainable: false },
-            { label: 'Lambda',     gtPerms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'SlideRule',  gtPerms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
-            { label: 'Abacus',     gtPerms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
-            { label: 'Constants',  gtPerms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Stack',      gtPerms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
-            { label: 'SUCC',       gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'PRED',       gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'ADD',        gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'SUB',        gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'MUL',        gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'DIV',        gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'POW',        gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'SQRT',       gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'LOG',        gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'EXP',        gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'ISZERO',     gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'LEQ',        gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'TRUE',       gtPerms: {R:0,W:0,X:0,L:1,S:0,E:0}, chainable: false },
-            { label: 'FALSE',      gtPerms: {R:0,W:0,X:0,L:1,S:0,E:0}, chainable: false },
-            { label: 'PAIR',       gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'FST',        gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
-            { label: 'SND',        gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'Boot',       perms: {R:0,W:0,X:1,L:0,S:0,E:0}, chainable: false },
+            { label: 'Threads',    perms: {R:0,W:0,X:0,L:1,S:1,E:1}, chainable: false },
+            { label: 'Lambda',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
+            { label: 'SlideRule',  perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
+            { label: 'Abacus',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
+            { label: 'Constants',  perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
+            { label: 'Stack',      perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
+            { label: 'SUCC',       perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'PRED',       perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'ADD',        perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'SUB',        perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'MUL',        perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'DIV',        perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'POW',        perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'SQRT',       perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'LOG',        perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'EXP',        perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'ISZERO',     perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'LEQ',        perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'TRUE',       perms: {R:0,W:0,X:0,L:1,S:0,E:0}, chainable: false },
+            { label: 'FALSE',      perms: {R:0,W:0,X:0,L:1,S:0,E:0}, chainable: false },
+            { label: 'PAIR',       perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'FST',        perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'SND',        perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
         ];
         for (let i = 0; i < abstractions.length; i++) {
             const a = abstractions[i];
             const loc = i * 0x100;
             const lim17 = 0xFF;
+            const gtWord = this.createGT(0, i, a.perms, 0);
             this.namespaceTable[i] = {
                 word0_location: loc,
                 word1_limit: this.packLimitWord(lim17, 0, 0),
                 word2_seals: this.makeVersionSeals(0, loc, lim17),
                 gBit: 0,
                 label: a.label,
-                gtPerms: a.gtPerms,
                 gtType: 0,
                 chainable: a.chainable || false,
             };
+            this.memory[loc] = gtWord;
         }
     }
 
@@ -149,9 +150,8 @@ class ChurchSimulator {
                     return false;
                 }
                 const entry = this.namespaceTable[0];
-                const version = (entry.word2_seals >>> 25) & 0x7F;
-                const perms = entry.gtPerms || {R:0,W:0,X:0,L:0,S:0,E:0};
-                const gt7 = this.createGT(version, 0, perms, entry.gtType || 0);
+                const storedGT = this.memory[entry.word0_location];
+                const gt7 = storedGT || 0;
                 this._writeCR(7, gt7, entry);
                 this.output += '[M] CR7 ← CR6+0 (Boot, first c-list entry, normal GT rules)\n';
                 this.bootStep++;
@@ -414,9 +414,7 @@ class ChurchSimulator {
             this.fault('SEAL', `LOAD: entry ${targetIdx} seal failed`);
             return null;
         }
-        const version = (entry.word2_seals >>> 25) & 0x7F;
-        const perms = entry.gtPerms || {R:0,W:0,X:0,L:0,S:0,E:0};
-        const gt = this.createGT(version, targetIdx, perms, entry.gtType || 0);
+        const gt = this.memory[entry.word0_location] || 0;
         if (!this._writeCR(d.crDst, gt, entry)) return null;
         const desc = `LOAD CR${d.crDst}, [CR${d.crSrc} + ${targetIdx}] → ${entry.label || 'entry_'+targetIdx}`;
         this.output += desc + '\n';
@@ -447,11 +445,10 @@ class ChurchSimulator {
             const lim17 = 0xFF;
             const entry = {
                 word0_location: loc,
-                word1_limit: this.packLimitWord(lim17, 1, 0),
+                word1_limit: this.packLimitWord(lim17, 0, 0),
                 word2_seals: this.makeVersionSeals(0, loc, lim17),
                 gBit: 0,
                 label: `dyn_${targetIdx}`,
-                gtPerms: parsed.permissions,
                 gtType: parsed.type,
                 chainable: false,
             };
@@ -460,6 +457,8 @@ class ChurchSimulator {
             }
             this.namespaceTable[targetIdx] = entry;
         }
+        const saveLoc = this.namespaceTable[targetIdx].word0_location;
+        this.memory[saveLoc] = srcGT;
         const desc = `SAVE CR${d.crDst} → [CR${d.crSrc} + ${targetIdx}]`;
         this.output += desc + '\n';
         this.pc++;
@@ -523,9 +522,7 @@ class ChurchSimulator {
             this.fault('BOUNDS', `CHANGE: entry ${targetIdx} is null`);
             return null;
         }
-        const version = (entry.word2_seals >>> 25) & 0x7F;
-        const perms = entry.gtPerms || {R:0,W:0,X:0,L:0,S:0,E:0};
-        const gt = this.createGT(version, targetIdx, perms, entry.gtType || 0);
+        const gt = this.memory[entry.word0_location] || 0;
         if (!this._writeCR(d.crDst, gt, entry)) return null;
         const desc = `CHANGE CR${d.crDst}, [CR${d.crSrc}] idx=${targetIdx}`;
         this.output += desc + '\n';
@@ -650,9 +647,7 @@ class ChurchSimulator {
             return null;
         }
 
-        const version = (entry.word2_seals >>> 25) & 0x7F;
-        const perms = entry.gtPerms || {R:0,W:0,X:0,L:0,S:0,E:0};
-        const gt = this.createGT(version, targetIdx, perms, entry.gtType || 0);
+        const gt = this.memory[entry.word0_location] || 0;
         if (!this._writeCR(d.crDst, gt, entry)) return null;
 
         const tpermCheck = this.mLoad(gt, 'E');
@@ -701,9 +696,7 @@ class ChurchSimulator {
             return null;
         }
 
-        const version = (entry.word2_seals >>> 25) & 0x7F;
-        const perms = entry.gtPerms || {R:0,W:0,X:0,L:0,S:0,E:0};
-        const gt = this.createGT(version, slotIdx, perms, entry.gtType || 0);
+        const gt = this.memory[entry.word0_location] || 0;
         if (!this._writeCR(d.crDst, gt, entry)) return null;
 
         const parsed = this.parseGT(gt);
