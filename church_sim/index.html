@@ -30,11 +30,18 @@
             <button onclick="switchDashTab('cr')" class="dash-tab active" id="dashTab-cr">Context Registers</button>
             <button onclick="switchDashTab('dr')" class="dash-tab" id="dashTab-dr">Data Registers</button>
             <button onclick="switchDashTab('state')" class="dash-tab" id="dashTab-state">Machine State</button>
+            <button onclick="switchDashTab('crdetail')" class="dash-tab" id="dashTab-crdetail" style="display:none;">CR Detail</button>
         </div>
         <div id="dashPanel-cr" class="dash-panel active">
             <div class="panel">
                 <div class="panel-title">CR0–CR15 — 128-bit Context Registers (4 × 32-bit words)</div>
                 <div id="crRegs"></div>
+            </div>
+        </div>
+        <div id="dashPanel-crdetail" class="dash-panel">
+            <div class="panel">
+                <div class="panel-title" id="crDetailTitle">CR Detail</div>
+                <div id="crDetailContent"></div>
             </div>
         </div>
         <div id="dashPanel-dr" class="dash-panel">

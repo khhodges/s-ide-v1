@@ -60,7 +60,7 @@ class ChurchSimulator {
     _initNamespaceTable() {
         this.namespaceTable = [];
         const abstractions = [
-            { label: 'Boot',       gtPerms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'Boot',       gtPerms: {R:0,W:0,X:1,L:0,S:0,E:0}, chainable: false },
             { label: 'Threads',    gtPerms: {R:0,W:0,X:0,L:1,S:1,E:1}, chainable: false },
             { label: 'Lambda',     gtPerms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'SlideRule',  gtPerms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },

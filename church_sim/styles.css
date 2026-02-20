@@ -159,6 +159,38 @@ header h1 {
 .cr-m { text-align: center; color: var(--text-secondary); }
 .cr-m.cr-m-set { color: #e53e3e; font-weight: 700; }
 
+.cr-clickable { cursor: pointer; }
+.cr-clickable:hover { background: rgba(96,165,250,0.12) !important; }
+
+.cr-detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.5rem 0;
+}
+
+.cr-detail-section {
+    background: rgba(15,52,96,0.3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem;
+}
+
+.cr-detail-heading {
+    color: var(--church-gold);
+    font-weight: 600;
+    font-size: 0.82rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.35rem;
+}
+
+.cr-detail-words td:first-child {
+    color: var(--church-blue);
+    font-weight: 600;
+    min-width: 100px;
+}
+
 .reg-row {
     display: flex;
     align-items: center;
