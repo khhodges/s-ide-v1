@@ -135,20 +135,14 @@ class ChurchSimulator {
                 break;
             }
             case 3: {
-                const gt7 = this.createGT(0, 0, {R:0,W:0,X:0,L:0,S:0,E:0}, 0);
-                this._writeCR(7, gt7, bootEntry);
-                this.output += '[M] CR7 ← Boot CLOOMC (gift from heaven, no permissions)\n';
-                this.bootStep++;
-                break;
-            }
-            case 4: {
                 const gt6 = this.createGT(0, 1, {R:0,W:0,X:0,L:0,S:0,E:0}, 0);
                 this._writeCR(6, gt6, threadEntry);
                 this.output += '[M] CR6 ← Boot C-List (gift from heaven, no permissions)\n';
+                this.output += '[M] Note: CR7 (CLOOMC) = CR6+0 via normal GT rules\n';
                 this.bootStep++;
                 break;
             }
-            case 5:
+            case 4:
                 this.mElevation = false;
                 this.bootComplete = true;
                 this.output += '[M] Boot microcode: M elevation OFF — boot complete\n';
