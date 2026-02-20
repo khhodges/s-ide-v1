@@ -813,7 +813,8 @@ class ChurchSimulator {
 
     getFormattedCR(idx) {
         const cr = this.cr[idx];
-        if (!cr || cr.word0 === 0) {
+        const isEmpty = !cr || (cr.word0 === 0 && cr.word1 === 0 && cr.word2 === 0 && cr.word3 === 0 && cr.m === 0);
+        if (isEmpty) {
             return {
                 index: idx, isNull: true, mBit: 0,
                 word0_gt: '00000000', perms: '------', gtVersion: 0, gtIndex: 0, gtType: 'NULL', gtTypeName: 'NULL',
