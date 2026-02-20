@@ -36,9 +36,11 @@ class ChurchSimulator {
         this.namespaceTable = [];
         this.bootComplete = false;
         this.mElevation = false;
+        this.bootStep = 0;
 
         this._initNamespaceTable();
-        this._bootSequence();
+        this.output += '--- HARD RESET: all registers zeroed ---\n';
+        this.output += 'Boot microcode ready. Step or Run to begin boot sequence.\n';
         this.emit('reset', {});
         this.emit('stateChange', this.getState());
     }
@@ -100,36 +102,60 @@ class ChurchSimulator {
         }
     }
 
-    _bootSequence() {
-        for (let i = 0; i < 16; i++) {
-            this.cr[i] = { word0: 0, word1: 0, word2: 0, word3: 0 };
-            this.dr[i] = 0;
-        }
-        this.pc = 0;
-
-        this.mElevation = true;
+    _bootStep() {
+        if (this.bootComplete) return false;
 
         const bootEntry = this.namespaceTable[0];
         const threadEntry = this.namespaceTable[1];
 
-        const gt15 = this.createGT(0, 0, {R:0,W:0,X:0,L:1,S:0,E:1}, 0);
-        this._writeCR(15, gt15, bootEntry);
-        this.output += `[M] CR15 ← Boot namespace root [L,E]\n`;
-
-        const gt8 = this.createGT(0, 1, {R:0,W:0,X:0,L:1,S:1,E:0}, 0);
-        this._writeCR(8, gt8, threadEntry);
-        this.output += `[M] CR8 ← Thread identity [L,S]\n`;
-
-        const gt7 = this.createGT(0, 0, {R:0,W:0,X:0,L:0,S:0,E:1}, 0);
-        this._writeCR(7, gt7, bootEntry);
-        this.output += `[M] CR7 ← Boot CLOOMC [E]\n`;
-
-        const gt6 = this.createGT(0, 1, {R:0,W:0,X:0,L:1,S:1,E:0}, 0);
-        this._writeCR(6, gt6, threadEntry);
-        this.output += `[M] CR6 ← Thread C-List [L,S]\n`;
-
-        this.mElevation = false;
-        this.bootComplete = true;
+        switch (this.bootStep) {
+            case 0:
+                for (let i = 0; i < 16; i++) {
+                    if (this.cr[i].word0 !== 0 || this.cr[i].word1 !== 0) {
+                        this.fault('BOOT', 'Boot invariant: CRs must be zero at boot entry');
+                        return false;
+                    }
+                }
+                this.mElevation = true;
+                this.output += '[M] Boot microcode: M elevation ACTIVE\n';
+                this.bootStep++;
+                break;
+            case 1: {
+                const gt15 = this.createGT(0, 0, {R:0,W:0,X:0,L:1,S:0,E:1}, 0);
+                this._writeCR(15, gt15, bootEntry);
+                this.output += '[M] CR15 ← Boot namespace root [L,E]\n';
+                this.bootStep++;
+                break;
+            }
+            case 2: {
+                const gt8 = this.createGT(0, 1, {R:0,W:0,X:0,L:1,S:1,E:0}, 0);
+                this._writeCR(8, gt8, threadEntry);
+                this.output += '[M] CR8 ← Thread identity [L,S]\n';
+                this.bootStep++;
+                break;
+            }
+            case 3: {
+                const gt7 = this.createGT(0, 0, {R:0,W:0,X:0,L:0,S:0,E:1}, 0);
+                this._writeCR(7, gt7, bootEntry);
+                this.output += '[M] CR7 ← Boot CLOOMC [E]\n';
+                this.bootStep++;
+                break;
+            }
+            case 4: {
+                const gt6 = this.createGT(0, 1, {R:0,W:0,X:0,L:1,S:1,E:0}, 0);
+                this._writeCR(6, gt6, threadEntry);
+                this.output += '[M] CR6 ← Thread C-List [L,S]\n';
+                this.bootStep++;
+                break;
+            }
+            case 5:
+                this.mElevation = false;
+                this.bootComplete = true;
+                this.output += '[M] Boot microcode: M elevation OFF — boot complete\n';
+                break;
+        }
+        this.emit('stateChange', this.getState());
+        return true;
     }
 
     parseGT(gt32) {

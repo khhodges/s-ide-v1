@@ -25,6 +25,10 @@ class ChurchREPL {
         input = input.trim();
         if (!input) return null;
 
+        if (!this.sim.bootComplete) {
+            while (!this.sim.bootComplete) { this.sim._bootStep(); }
+        }
+
         const commentIdx = input.indexOf('--');
         if (commentIdx === 0) return null;
         if (commentIdx > 0) input = input.substring(0, commentIdx).trim();

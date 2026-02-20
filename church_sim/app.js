@@ -116,7 +116,11 @@ function updateFlagsDisplay() {
     const container = document.getElementById('flagsDisplay');
     if (!container) return;
     const f = sim.flags;
+    const mClass = sim.mElevation ? 'flag-m-active' : '';
+    const bootLabel = !sim.bootComplete ? `BOOT ${sim.bootStep}/6` : '';
+    const statusLabel = sim.halted ? 'HALTED' : (sim.bootComplete ? 'READY' : 'RESET');
     container.innerHTML = `
+        <span class="flag ${mClass}" title="M: transient microcode elevation (never stored in GT)">M${sim.mElevation ? '=1' : ''}</span>
         <span class="flag ${f.N ? 'flag-set' : ''}">N</span>
         <span class="flag ${f.Z ? 'flag-set' : ''}">Z</span>
         <span class="flag ${f.C ? 'flag-set' : ''}">C</span>
@@ -124,7 +128,8 @@ function updateFlagsDisplay() {
         <span class="flag-info">PC: ${sim.pc}</span>
         <span class="flag-info">Steps: ${sim.stepCount}</span>
         <span class="flag-info">Stack: ${sim.callStack.length}</span>
-        <span class="flag-info">${sim.halted ? 'HALTED' : 'READY'}</span>
+        ${bootLabel ? `<span class="flag-info flag-boot">${bootLabel}</span>` : ''}
+        <span class="flag-info">${statusLabel}</span>
     `;
 }
 
@@ -215,12 +220,22 @@ function assembleAndLoad() {
 }
 
 function stepSim() {
+    if (!sim.bootComplete) {
+        sim._bootStep();
+        const con = document.getElementById('editorConsole');
+        if (con) {
+            con.textContent += `\n[boot ${sim.bootStep}/6] ${sim.output.split('\n').filter(l => l).pop()}`;
+            con.scrollTop = con.scrollHeight;
+        }
+        updateDashboard();
+        return;
+    }
     const result = sim.step();
     if (result) {
-        const console = document.getElementById('editorConsole');
-        if (console) {
-            console.textContent += `\n[${sim.stepCount}] ${result.desc || 'executed'}`;
-            console.scrollTop = console.scrollHeight;
+        const con = document.getElementById('editorConsole');
+        if (con) {
+            con.textContent += `\n[${sim.stepCount}] ${result.desc || 'executed'}`;
+            con.scrollTop = con.scrollHeight;
         }
         if (result.pipeline && pipelineViz) {
             pipelineViz.showFullPipeline(result.pipeline);
@@ -230,11 +245,14 @@ function stepSim() {
 }
 
 function runSim() {
+    while (!sim.bootComplete) {
+        sim._bootStep();
+    }
     const steps = sim.run(10000);
-    const console = document.getElementById('editorConsole');
-    if (console) {
-        console.textContent += `\nRan ${steps} steps. ${sim.halted ? 'Halted.' : 'Stopped.'}`;
-        console.scrollTop = console.scrollHeight;
+    const con = document.getElementById('editorConsole');
+    if (con) {
+        con.textContent += `\nBoot complete. Ran ${steps} steps. ${sim.halted ? 'Halted.' : 'Stopped.'}`;
+        con.scrollTop = con.scrollHeight;
     }
     updateDashboard();
 }

@@ -26,6 +26,7 @@
     </div>
 
     <div id="dashboard" class="view active">
+        <div id="flagsDisplay" class="flags-bar"></div>
         <div class="dash-tabs">
             <button onclick="switchDashTab('cr')" class="dash-tab active" id="dashTab-cr">Context Registers</button>
             <button onclick="switchDashTab('dr')" class="dash-tab" id="dashTab-dr">Data Registers</button>
@@ -44,10 +45,6 @@
             </div>
         </div>
         <div id="dashPanel-state" class="dash-panel">
-            <div class="panel">
-                <div class="panel-title">Flags &amp; Status</div>
-                <div id="flagsDisplay"></div>
-            </div>
             <div class="panel">
                 <div class="panel-title">Machine Architecture</div>
                 <div id="machineInfo"></div>

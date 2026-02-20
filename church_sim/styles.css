@@ -194,10 +194,39 @@ header h1 {
     color: white;
 }
 
+.flag.flag-m-active {
+    background: #e53e3e;
+    border-color: #e53e3e;
+    color: white;
+    font-weight: 700;
+    animation: m-pulse 1s infinite;
+}
+
+@keyframes m-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
 .flag-info {
     margin-left: 0.35rem;
     font-size: 0.68rem;
     color: var(--text-secondary);
+}
+
+.flag-boot {
+    color: var(--church-gold);
+    font-weight: 600;
+}
+
+.flags-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
 }
 
 .dash-tabs {
