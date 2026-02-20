@@ -227,14 +227,24 @@ header h1 {
 .info-label { color: var(--text-secondary); }
 .info-value { color: var(--text-primary); font-family: 'Courier New', monospace; }
 
+#editor {
+    overflow: hidden;
+}
+
 .editor-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
-    height: calc(100vh - 80px);
+    height: 100%;
+    overflow: hidden;
 }
 
-.editor-panel { display: flex; flex-direction: column; }
+.editor-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
 
 #asmEditor {
     flex: 1;
@@ -248,6 +258,8 @@ header h1 {
     resize: none;
     tab-size: 4;
     line-height: 1.5;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 #asmEditor:focus { outline: 1px solid var(--accent); }
@@ -257,6 +269,7 @@ header h1 {
     gap: 0.5rem;
     margin-bottom: 0.5rem;
     flex-wrap: wrap;
+    flex-shrink: 0;
 }
 
 .btn {
@@ -296,6 +309,10 @@ header h1 {
 
 .btn-warning:hover { background: #92400e; }
 
+.editor-panel .panel-title {
+    flex-shrink: 0;
+}
+
 #editorConsole {
     flex: 1;
     background: #0a0a1a;
@@ -308,6 +325,7 @@ header h1 {
     overflow-y: auto;
     white-space: pre-wrap;
     line-height: 1.4;
+    min-height: 0;
 }
 
 .ns-table {
