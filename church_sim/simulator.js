@@ -91,7 +91,7 @@ class ChurchSimulator {
             const lim17 = 0xFF;
             this.namespaceTable[i] = {
                 word0_location: loc,
-                word1_limit: this.packLimitWord(lim17, 1, 0),
+                word1_limit: this.packLimitWord(lim17, 0, 0),
                 word2_seals: this.makeVersionSeals(0, loc, lim17),
                 gBit: 0,
                 label: a.label,
