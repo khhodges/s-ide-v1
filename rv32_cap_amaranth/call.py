@@ -46,6 +46,8 @@ class RV32CapCall(Elaboratable):
         CR6_CLIST = 6
         CR7_NUCLEUS = 7
         MAX_SRC_REG = 5
+        B_BIT_POS = 31
+        LIMIT_WIDTH = 32
 
         u_mload = RV32CapMLoad()
         m.submodules.u_mload = u_mload
@@ -62,6 +64,12 @@ class RV32CapCall(Elaboratable):
 
         local_cr_rd_en = Signal()
         local_cr_rd_addr = Signal(4)
+
+        b_idx = Signal(3)
+        b_cr_data = Signal(CAP_REG_LAYOUT)
+        b_clear_wr_en = Signal()
+        b_clear_wr_addr = Signal(4)
+        b_clear_wr_data = Signal(CAP_REG_LAYOUT)
 
         src_in_range = Signal()
         m.d.comb += src_in_range.eq(self.cr_src <= MAX_SRC_REG)
@@ -94,9 +102,9 @@ class RV32CapCall(Elaboratable):
         ]
 
         m.d.comb += [
-            self.cr_wr_addr.eq(u_mload.cr_wr_addr),
-            self.cr_wr_data.eq(u_mload.cr_wr_data),
-            self.cr_wr_en.eq(u_mload.cr_wr_en),
+            self.cr_wr_addr.eq(Mux(b_clear_wr_en, b_clear_wr_addr, u_mload.cr_wr_addr)),
+            self.cr_wr_data.eq(Mux(b_clear_wr_en, b_clear_wr_data, u_mload.cr_wr_data)),
+            self.cr_wr_en.eq(u_mload.cr_wr_en | b_clear_wr_en),
             self.mem_addr.eq(u_mload.mem_addr),
             self.mem_rd_en.eq(u_mload.mem_rd_en),
             self.thread_wr_en.eq(u_mload.thread_wr_en),
@@ -180,7 +188,41 @@ class RV32CapCall(Elaboratable):
                 with m.If(sub_fault_latched):
                     m.next = "FAULT"
                 with m.Elif(sub_done_latched):
+                    m.next = "CLEAR_B_INIT"
+
+            with m.State("CLEAR_B_INIT"):
+                m.d.sync += b_idx.eq(0)
+                m.next = "CLEAR_B_CHECK"
+
+            with m.State("CLEAR_B_CHECK"):
+                with m.If(b_idx > 5):
                     m.next = "COMPLETE"
+                with m.Elif(cr_preserve.bit_select(b_idx, 1)):
+                    m.d.comb += [local_cr_rd_en.eq(1), local_cr_rd_addr.eq(b_idx)]
+                    m.next = "CLEAR_B_READ"
+                with m.Else():
+                    m.d.sync += b_idx.eq(b_idx + 1)
+
+            with m.State("CLEAR_B_READ"):
+                m.d.comb += [local_cr_rd_en.eq(1), local_cr_rd_addr.eq(b_idx)]
+                m.d.sync += b_cr_data.eq(self.cr_rd_data)
+                m.next = "CLEAR_B_WRITE"
+
+            with m.State("CLEAR_B_WRITE"):
+                b_src = View(CAP_REG_LAYOUT, b_cr_data)
+                cleared_limit = Signal(LIMIT_WIDTH, name="cleared_limit")
+                m.d.comb += cleared_limit.eq(b_src.word2_limit & ~(1 << B_BIT_POS))
+                b_dst = View(CAP_REG_LAYOUT, b_clear_wr_data)
+                m.d.comb += [
+                    b_dst.word0_gt.eq(b_src.word0_gt),
+                    b_dst.word1_location.eq(b_src.word1_location),
+                    b_dst.word2_limit.eq(cleared_limit),
+                    b_dst.word3_seals.eq(b_src.word3_seals),
+                    b_clear_wr_en.eq(1),
+                    b_clear_wr_addr.eq(b_idx),
+                ]
+                m.d.sync += b_idx.eq(b_idx + 1)
+                m.next = "CLEAR_B_CHECK"
 
             with m.State("COMPLETE"):
                 m.next = "IDLE"

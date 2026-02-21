@@ -13,7 +13,7 @@ The Church-Turing Meta-Machine (CTMM) Simulator project develops a comprehensive
 - Ctrl+Z undoes last code change
 - Punt TPERM standardization until Sim-32 mature and ARM market direction clear
 - No separate dynamicObjects — all entries live in namespaceObjects (dynamic entries flagged .dynamic = true)
-- B (Bind) bit defaults to 0 on namespace entries — set only by explicit API choice, not by default
+- B (Bind) bit: CALL auto-clears B on all preserved CRs passed to callee — "no bind by default." Allow Bind is the explicit special case via TPERM before CALL. B defaults to 0 on namespace entries.
 
 ## System Architecture
 

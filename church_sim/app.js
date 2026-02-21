@@ -1360,15 +1360,15 @@ const INSTRUCTION_DATA = [
     {
         opcode: 2, mnemonic: 'CALL', domain: 'church',
         syntax: 'CALL CRd',
-        brief: 'Enter an abstraction — save context and transfer control',
+        brief: 'Enter an abstraction — save context, auto-clear B on all passed GTs',
         encoding: 'opcode[5]=00010 | cond[4] | CRd[4] | 0[4] | 0[15]',
         fields: [
             { name: 'CRd', desc: 'Target GT (must have E permission)' },
         ],
         permission: 'E (Enter/Execute) on CRd',
         flags: 'None',
-        details: 'Enters a namespace abstraction. The target GT must have E permission. The current PC, CRs, DRs, and flags are pushed onto the call stack. RETURN is the only way to exit.',
-        example: 'CALL CR3             ; Enter abstraction via CR3',
+        details: 'Enters a namespace abstraction. The target GT must have E permission. The current PC, CRs, DRs, and flags are pushed onto the call stack. CALL automatically clears the B (Bind) bit on all preserved context registers passed to the callee. This means the callee can USE any GT it receives but cannot SAVE it to a c-list — "use it, don\'t keep it" is the hardware default. To allow the callee to save a GT (delegation), the caller must explicitly set B=1 via TPERM before the CALL. RETURN is the only way to exit.',
+        example: 'CALL CR3             ; Enter abstraction — callee gets GTs with B=0\n                     ; Callee can use them but cannot SAVE them',
     },
     {
         opcode: 3, mnemonic: 'RETURN', domain: 'church',
@@ -1422,8 +1422,8 @@ const INSTRUCTION_DATA = [
         ],
         permission: 'None — operates on cached register only',
         flags: 'Z=1 if resulting permissions are non-zero, N=!Z',
-        details: 'Attenuates (reduces) the permission bits on the GT in CRd by ANDing with the given mask. Permissions can only be removed, never added — monotonic security. The attenuation is local to the cached context register and signals the M (modified) bit, just like any CR modification. The namespace slot is NOT updated until a legitimate SAVE commits the attenuated GT back to a c-list. This means you can safely attenuate a GT before a CALL to hand off reduced authority, without affecting the original namespace entry. Typical use: strip write permission before passing a GT, giving the callee read-only access.',
-        example: '; Example 1: Strip write — hand off read-only\nTPERM CR0, RX        ; Keep only R+X, strip W,L,S,E,B\nCALL CR0             ; Callee can read+execute but not write\n\n; Example 2: NO BIND — prevent subroutine from saving the GT\nLOAD CR1, CR6, 3     ; Load GT from c-list slot 3\nTPERM CR1, RWX       ; Keep R+W+X but clear B (Bind)\nCALL CR2             ; Subroutine gets CR1 but cannot SAVE it\n                     ; (SAVE requires B=1 on the source GT)',
+        details: 'Attenuates (reduces) the permission bits on the GT in CRd by ANDing with the given mask. Permissions can only be removed, never added — monotonic security. The attenuation is local to the cached context register and signals the M (modified) bit, just like any CR modification. The namespace slot is NOT updated until a legitimate SAVE commits the attenuated GT back to a c-list. Since CALL auto-clears B on all passed GTs, TPERM is also used for the special case of ALLOWING bind — explicitly setting B=1 before a CALL to delegate a capability the callee may keep.',
+        example: '; Example 1: Strip write — hand off read-only\nTPERM CR0, RX        ; Keep only R+X, strip W,L,S,E\nCALL CR2             ; Callee can read+execute but not write\n\n; Example 2: ALLOW BIND — delegate a GT the callee may keep\nLOAD CR1, CR6, 3     ; Load GT from c-list slot 3\nTPERM CR1, RWXB      ; Keep R+W+X and SET B (Bind)\nCALL CR2             ; Callee receives CR1 with B=1\n                     ; Callee CAN save this GT (delegation)',
     },
     {
         opcode: 7, mnemonic: 'LAMBDA', domain: 'church',
