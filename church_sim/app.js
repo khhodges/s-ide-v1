@@ -1400,16 +1400,16 @@ const INSTRUCTION_DATA = [
     {
         opcode: 5, mnemonic: 'SWITCH', domain: 'church',
         syntax: 'SWITCH CRs, imm',
-        brief: 'Swap two context registers atomically',
-        encoding: 'opcode[5]=00101 | cond[4] | 0[4] | CRs[4] | target[15]',
+        brief: 'Switch namespace — reload CR15 with a new namespace root',
+        encoding: 'opcode[5]=00101 | cond[4] | 0[4] | CRs[4] | idx[15]',
         fields: [
-            { name: 'CRs', desc: 'First register to swap' },
-            { name: 'imm', desc: 'Second register index (0-7)' },
+            { name: 'CRs', desc: 'GT pointing to the new namespace to switch to' },
+            { name: 'imm', desc: 'Namespace control flags' },
         ],
-        permission: 'CRs must be non-NULL',
+        permission: 'CRs must point to a valid namespace',
         flags: 'None',
-        details: 'Atomically swaps the contents of two context registers. Useful for capability management and register shuffling without requiring a temporary.',
-        example: 'SWITCH CR1, 3        ; Swap CR1 ↔ CR3',
+        details: 'Switches the active namespace by reloading CR15 (the namespace root register) with a new namespace. CR15 is the machine\'s view of the entire capability world — all LOADs, SAVEs, and CALLs resolve through it. SWITCH atomically replaces that root, giving the current thread an entirely different set of visible capabilities. This is the mechanism for domain isolation, sandboxing, and controlled namespace transitions.',
+        example: 'SWITCH CR3, 0        ; Switch namespace root (CR15) to namespace in CR3',
     },
     {
         opcode: 6, mnemonic: 'TPERM', domain: 'church',
