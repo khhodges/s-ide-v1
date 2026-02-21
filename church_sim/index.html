@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pure Church Machine Simulator</title>
-    <link rel="stylesheet" href="styles.css?v=20260220i">
+    <link rel="stylesheet" href="styles.css?v=20260221a">
 </head>
 <body>
     <div class="fixed-toolbar">
@@ -19,6 +19,7 @@
                     <button onclick="switchView('pipeline')" class="btn btn-view" id="viewBtn-pipeline">Pipeline</button>
                     <button onclick="switchView('tutorial')" class="btn btn-view" id="viewBtn-tutorial">Tutorial</button>
                     <button onclick="switchView('repl')" class="btn btn-view" id="viewBtn-repl">REPL</button>
+                    <button onclick="switchView('instructions')" class="btn btn-view" id="viewBtn-instructions">Instructions</button>
                 </div>
             </nav>
         </header>
@@ -152,6 +153,28 @@
         </div>
     </div>
 
+    <div id="instructions" class="view">
+        <div class="instr-layout">
+            <div class="instr-list-panel">
+                <div class="panel">
+                    <div class="panel-title">Instruction Set — 20 Instructions</div>
+                    <div class="instr-domain-header">Church Domain (10)</div>
+                    <div id="instrListChurch" class="instr-list"></div>
+                    <div class="instr-domain-header">Turing Domain (10 + shared RETURN)</div>
+                    <div id="instrListTuring" class="instr-list"></div>
+                </div>
+            </div>
+            <div class="instr-detail-panel">
+                <div class="panel">
+                    <div class="panel-title" id="instrDetailTitle">Select an instruction</div>
+                    <div id="instrDetailContent" class="instr-detail-content">
+                        <div class="instr-placeholder">Click any instruction on the left to see its format, encoding, permissions, flags, and usage examples.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="saveNSDialog" class="modal-overlay" style="display:none;">
         <div class="modal-dialog">
             <div class="modal-title">Save to Namespace</div>
@@ -191,6 +214,6 @@
     <script src="pipeline.js?v=20260220f"></script>
     <script src="repl.js?v=20260220f"></script>
     <script src="tutorial.js?v=20260220f"></script>
-    <script src="app.js?v=20260220m"></script>
+    <script src="app.js?v=20260221a"></script>
 </body>
 </html>

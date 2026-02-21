@@ -36,7 +36,7 @@ function init() {
     }
     updateLineNumbers();
     loadNamespaceState();
-    const views = ['dashboard','editor','namespace','pipeline','tutorial','repl'];
+    const views = ['dashboard','editor','namespace','pipeline','tutorial','repl','instructions'];
     const hash = window.location.hash.replace('#', '');
     const startView = views.includes(hash) ? hash : 'dashboard';
     switchView(startView);
@@ -59,6 +59,7 @@ function switchView(viewId) {
     if (viewId === 'namespace') updateNamespace();
     if (viewId === 'pipeline') pipelineViz.render();
     if (viewId === 'tutorial') churchTutorial.render('tutorialView');
+    if (viewId === 'instructions') renderInstructionsList();
 }
 
 function switchDashTab(tabId) {
@@ -1323,6 +1324,401 @@ function loadNamespaceState() {
             }
         }
     } catch (e) {}
+}
+
+const INSTRUCTION_DATA = [
+    {
+        opcode: 0, mnemonic: 'LOAD', domain: 'church',
+        syntax: 'LOAD CRd, CRs, imm',
+        brief: 'Load a Golden Token from the namespace into a context register',
+        encoding: 'opcode[5]=00000 | cond[4] | CRd[4] | CRs[4] | slot[15]',
+        fields: [
+            { name: 'CRd', desc: 'Destination context register (CR0-CR15)' },
+            { name: 'CRs', desc: 'Source C-List GT (must have L permission)' },
+            { name: 'imm', desc: 'Namespace slot index (0-32767)' },
+        ],
+        permission: 'L (Load) on CRs',
+        flags: 'None',
+        details: 'Reads a GT from the namespace at the given slot index. The source register must hold a GT with L permission. The loaded GT is written to CRd after version and seal validation via mLoad.',
+        example: 'LOAD CR0, CR6, 7    ; Load slot 7 into CR0 via C-List CR6',
+    },
+    {
+        opcode: 1, mnemonic: 'SAVE', domain: 'church',
+        syntax: 'SAVE CRd, CRs, imm',
+        brief: 'Save a Golden Token from a context register into the namespace',
+        encoding: 'opcode[5]=00001 | cond[4] | CRd[4] | CRs[4] | slot[15]',
+        fields: [
+            { name: 'CRd', desc: 'Source context register containing GT to save' },
+            { name: 'CRs', desc: 'Target C-List GT (must have S permission)' },
+            { name: 'imm', desc: 'Namespace slot index (0-32767)' },
+        ],
+        permission: 'S (Save) on CRs; B=1 required on source GT',
+        flags: 'None',
+        details: 'Writes the GT from CRd into the namespace at the given slot. The target C-List must have S permission, and the source GT must have its B (Bind) bit set. This prevents unauthorized capability propagation.',
+        example: 'SAVE CR1, CR6, 20   ; Save CR1 to slot 20 via C-List CR6',
+    },
+    {
+        opcode: 2, mnemonic: 'CALL', domain: 'church',
+        syntax: 'CALL CRd',
+        brief: 'Enter an abstraction — save context and transfer control',
+        encoding: 'opcode[5]=00010 | cond[4] | CRd[4] | 0[4] | 0[15]',
+        fields: [
+            { name: 'CRd', desc: 'Target GT (must have E permission)' },
+        ],
+        permission: 'E (Enter/Execute) on CRd',
+        flags: 'None',
+        details: 'Enters a namespace abstraction. The target GT must have E permission. The current PC, CRs, DRs, and flags are pushed onto the call stack. RETURN is the only way to exit.',
+        example: 'CALL CR3             ; Enter abstraction via CR3',
+    },
+    {
+        opcode: 3, mnemonic: 'RETURN', domain: 'church',
+        syntax: 'RETURN CRd',
+        brief: 'Exit an abstraction — restore caller context',
+        encoding: 'opcode[5]=00011 | cond[4] | CRd[4] | 0[4] | 0[15]',
+        fields: [
+            { name: 'CRd', desc: 'Return register (conventionally CR0)' },
+        ],
+        permission: 'None',
+        flags: 'None',
+        details: 'Pops the call stack and restores the caller\'s context (PC, CRs, DRs, flags). Shared between Church and Turing domains — it is the only exit from a safe Turing abstraction. If the call stack is empty, the machine halts.',
+        example: 'RETURN CR0           ; Exit abstraction, restore caller',
+    },
+    {
+        opcode: 4, mnemonic: 'CHANGE', domain: 'church',
+        syntax: 'CHANGE CRd, imm',
+        brief: 'Attenuate a capability — load a reduced-permission GT',
+        encoding: 'opcode[5]=00100 | cond[4] | CRd[4] | CRs[4] | idx[15]',
+        fields: [
+            { name: 'CRd', desc: 'Destination context register' },
+            { name: 'imm', desc: 'Namespace entry index to change to' },
+        ],
+        permission: 'Source GT must be non-NULL',
+        flags: 'None',
+        details: 'Loads a GT from the namespace with potentially reduced permissions. Used to attenuate capabilities — you can narrow permissions but never widen them. The monotonic security principle ensures capabilities only shrink.',
+        example: 'CHANGE CR2, 5        ; Attenuate CR2 to entry 5',
+    },
+    {
+        opcode: 5, mnemonic: 'SWITCH', domain: 'church',
+        syntax: 'SWITCH CRs, imm',
+        brief: 'Swap two context registers atomically',
+        encoding: 'opcode[5]=00101 | cond[4] | 0[4] | CRs[4] | target[15]',
+        fields: [
+            { name: 'CRs', desc: 'First register to swap' },
+            { name: 'imm', desc: 'Second register index (0-7)' },
+        ],
+        permission: 'CRs must be non-NULL',
+        flags: 'None',
+        details: 'Atomically swaps the contents of two context registers. Useful for capability management and register shuffling without requiring a temporary.',
+        example: 'SWITCH CR1, 3        ; Swap CR1 ↔ CR3',
+    },
+    {
+        opcode: 6, mnemonic: 'TPERM', domain: 'church',
+        syntax: 'TPERM CRd, preset',
+        brief: 'Test permissions on a Golden Token',
+        encoding: 'opcode[5]=00110 | cond[4] | CRd[4] | 0[4] | preset[15]',
+        fields: [
+            { name: 'CRd', desc: 'Context register holding the GT to test' },
+            { name: 'preset', desc: 'Permission preset (CLEAR, R, RW, X, RX, RWX, L, S, E, LS, LE, SE, LSE)' },
+        ],
+        permission: 'None (read-only test)',
+        flags: 'Z=1 if all tested permissions present, N=!Z',
+        details: 'Tests whether the GT in CRd has all the specified permission bits set. Sets Z=1 if the test passes (all required permissions present), Z=0 if any are missing. Use with conditional instructions to branch on permission checks.',
+        example: 'TPERM CR0, RWX       ; Test if CR0 has R+W+X\nBRANCHNE error       ; Branch if missing',
+    },
+    {
+        opcode: 7, mnemonic: 'LAMBDA', domain: 'church',
+        syntax: 'LAMBDA CRd',
+        brief: 'Apply a lambda reduction in-scope (no context save)',
+        encoding: 'opcode[5]=00111 | cond[4] | CRd[4] | 0[4] | 0[15]',
+        fields: [
+            { name: 'CRd', desc: 'Target GT (must have X permission)' },
+        ],
+        permission: 'X (Execute in-scope) on CRd',
+        flags: 'None',
+        details: 'Lightweight function application — applies a Church reduction without saving/restoring context (unlike CALL). The target GT must have X permission. Used for fast-path lambda calculus operations like SUCC, ADD, etc.',
+        example: 'LAMBDA CR0           ; Apply reduction via CR0',
+    },
+    {
+        opcode: 8, mnemonic: 'ELOADCALL', domain: 'church',
+        syntax: 'ELOADCALL CRd, CRs, imm',
+        brief: 'Fused LOAD + TPERM(E) + CALL in one instruction',
+        encoding: 'opcode[5]=01000 | cond[4] | CRd[4] | CRs[4] | slot[15]',
+        fields: [
+            { name: 'CRd', desc: 'Destination for loaded GT' },
+            { name: 'CRs', desc: 'C-List GT (must have L permission)' },
+            { name: 'imm', desc: 'Namespace slot index' },
+        ],
+        permission: 'L on CRs, then E on loaded GT',
+        flags: 'None',
+        details: 'Fused instruction that performs LOAD, verifies E permission, and enters the abstraction — all in one cycle. Reduces the 3-instruction sequence (LOAD + TPERM + CALL) to a single instruction for common abstraction entry patterns.',
+        example: 'ELOADCALL CR0, CR6, 12  ; Load slot 12, verify E, enter',
+    },
+    {
+        opcode: 9, mnemonic: 'XLOADLAMBDA', domain: 'church',
+        syntax: 'XLOADLAMBDA CRd, CRs, imm',
+        brief: 'Fused LOAD + TPERM(X) + LAMBDA in one instruction',
+        encoding: 'opcode[5]=01001 | cond[4] | CRd[4] | CRs[4] | slot[15]',
+        fields: [
+            { name: 'CRd', desc: 'Destination for loaded GT' },
+            { name: 'CRs', desc: 'C-List GT (must have L permission)' },
+            { name: 'imm', desc: 'Namespace slot index' },
+        ],
+        permission: 'L on CRs, then X on loaded GT',
+        flags: 'None',
+        details: 'Fused instruction that performs LOAD, verifies X permission, and applies a lambda reduction — all in one cycle. Used for fast-path Church reductions where the GT is loaded and applied in a single operation.',
+        example: 'XLOADLAMBDA CR0, CR6, 7  ; Load slot 7, verify X, reduce',
+    },
+    {
+        opcode: 10, mnemonic: 'DREAD', domain: 'turing',
+        syntax: 'DREAD DRd, CRs, imm',
+        brief: 'Read a data word from a GT-protected address into a data register',
+        encoding: 'opcode[5]=01010 | cond[4] | DRd[4] | CRs[4] | offset[15]',
+        fields: [
+            { name: 'DRd', desc: 'Destination data register (DR0-DR15)' },
+            { name: 'CRs', desc: 'GT pointing to data object (must have R permission)' },
+            { name: 'imm', desc: 'Word offset within the data object' },
+        ],
+        permission: 'R (Read) on CRs',
+        flags: 'None',
+        details: 'Reads a 32-bit word from the address range protected by the GT in CRs, at the given offset. mLoad validates the GT (version, seal, bounds) and checks R permission. Works on any address range — memory, devices, or registers.',
+        example: 'DREAD DR1, CR2, 0    ; Read word 0 from data object CR2',
+    },
+    {
+        opcode: 11, mnemonic: 'DWRITE', domain: 'turing',
+        syntax: 'DWRITE DRd, CRs, imm',
+        brief: 'Write a data register value to a GT-protected address',
+        encoding: 'opcode[5]=01011 | cond[4] | DRd[4] | CRs[4] | offset[15]',
+        fields: [
+            { name: 'DRd', desc: 'Source data register (value to write)' },
+            { name: 'CRs', desc: 'GT pointing to data object (must have W permission)' },
+            { name: 'imm', desc: 'Word offset within the data object' },
+        ],
+        permission: 'W (Write) on CRs',
+        flags: 'None',
+        details: 'Writes a 32-bit word from the specified DR to the address range protected by the GT in CRs. mLoad validates the GT and checks W permission. Bounds-checked against the entry limit. Works on memory, devices, or registers.',
+        example: 'DWRITE DR3, CR2, 4   ; Write DR3 to word 4 of data object CR2',
+    },
+    {
+        opcode: 12, mnemonic: 'BFEXT', domain: 'turing',
+        syntax: 'BFEXT DRd, CRs, pos, width',
+        brief: 'Extract a bitfield from a GT-protected word',
+        encoding: 'opcode[5]=01100 | cond[4] | DRd[4] | CRs[4] | pos[5]<<5 | width[5]',
+        fields: [
+            { name: 'DRd', desc: 'Destination data register for extracted bits' },
+            { name: 'CRs', desc: 'GT pointing to data (must have R permission)' },
+            { name: 'pos', desc: 'Bit position to start extraction (0-31)' },
+            { name: 'width', desc: 'Number of bits to extract (1-32)' },
+        ],
+        permission: 'R (Read) on CRs',
+        flags: 'None',
+        details: 'Extracts a bitfield from the first word of the data object pointed to by CRs. The extracted bits are right-aligned and zero-extended into DRd. Useful for parsing packed structures, GT fields, and device registers.',
+        example: 'BFEXT DR1, CR2, 8, 4  ; Extract 4 bits starting at bit 8',
+    },
+    {
+        opcode: 13, mnemonic: 'BFINS', domain: 'turing',
+        syntax: 'BFINS DRd, CRs, pos, width',
+        brief: 'Insert a bitfield into a GT-protected word',
+        encoding: 'opcode[5]=01101 | cond[4] | DRd[4] | CRs[4] | pos[5]<<5 | width[5]',
+        fields: [
+            { name: 'DRd', desc: 'Source data register (low bits inserted)' },
+            { name: 'CRs', desc: 'GT pointing to data (must have W permission)' },
+            { name: 'pos', desc: 'Bit position to start insertion (0-31)' },
+            { name: 'width', desc: 'Number of bits to insert (1-32)' },
+        ],
+        permission: 'W (Write) on CRs',
+        flags: 'None',
+        details: 'Inserts the low bits of DRd into the specified bitfield of the first word at the address protected by CRs. Other bits in the target word are preserved. Useful for modifying packed structures without full read-modify-write.',
+        example: 'BFINS DR1, CR2, 8, 4  ; Insert low 4 bits of DR1 at bit 8',
+    },
+    {
+        opcode: 14, mnemonic: 'MCMP', domain: 'turing',
+        syntax: 'MCMP DRa, DRb',
+        brief: 'Compare two data registers and set condition flags',
+        encoding: 'opcode[5]=01110 | cond[4] | DRa[4] | DRb[4] | 0[15]',
+        fields: [
+            { name: 'DRa', desc: 'First data register' },
+            { name: 'DRb', desc: 'Second data register' },
+        ],
+        permission: 'None',
+        flags: 'Z (zero/equal), N (negative), C (carry/unsigned ≥), V (signed overflow)',
+        details: 'Computes DRa - DRb internally (without storing the result) and sets the ARM-style condition flags. Use with BRANCH or conditional instructions to control flow based on comparison results. C flag uses unsigned comparison semantics (C=1 if DRa ≥ DRb unsigned).',
+        example: 'MCMP DR1, DR2        ; Compare DR1 with DR2\nBRANCHEQ equal       ; Branch if DR1 == DR2',
+    },
+    {
+        opcode: 15, mnemonic: 'IADD', domain: 'turing',
+        syntax: 'IADD DRd, DRa, DRb',
+        brief: 'Integer addition with flag setting',
+        encoding: 'opcode[5]=01111 | cond[4] | DRd[4] | DRa[4] | DRb[4] in imm[3:0]',
+        fields: [
+            { name: 'DRd', desc: 'Destination data register (result)' },
+            { name: 'DRa', desc: 'First source register (in src field)' },
+            { name: 'DRb', desc: 'Second source register (in imm bits 0-3)' },
+        ],
+        permission: 'None',
+        flags: 'Z (zero), N (negative), C (unsigned carry), V (signed overflow)',
+        details: 'Computes DRd = DRa + DRb as unsigned 32-bit integers and sets all four ARM-style flags. DR0 is hardwired to zero, so IADD DRd, DR0, DR0 initializes DRd to 0. C=1 if the result exceeds 32 bits. V=1 if signed overflow occurred.',
+        example: 'IADD DR3, DR1, DR2   ; DR3 = DR1 + DR2, set flags',
+    },
+    {
+        opcode: 16, mnemonic: 'ISUB', domain: 'turing',
+        syntax: 'ISUB DRd, DRa, DRb',
+        brief: 'Integer subtraction with flag setting',
+        encoding: 'opcode[5]=10000 | cond[4] | DRd[4] | DRa[4] | DRb[4] in imm[3:0]',
+        fields: [
+            { name: 'DRd', desc: 'Destination data register (result)' },
+            { name: 'DRa', desc: 'First source register (minuend)' },
+            { name: 'DRb', desc: 'Second source register (subtrahend, in imm bits 0-3)' },
+        ],
+        permission: 'None',
+        flags: 'Z (zero), N (negative), C (borrow: C=1 if DRa ≥ DRb), V (signed overflow)',
+        details: 'Computes DRd = DRa - DRb as unsigned 32-bit integers and sets all four ARM-style flags. C flag follows ARM convention: C=1 means no borrow (DRa ≥ DRb unsigned). ISUB DRd, DR0, DRx computes the two\'s complement negation.',
+        example: 'ISUB DR4, DR3, DR1   ; DR4 = DR3 - DR1, set flags',
+    },
+    {
+        opcode: 17, mnemonic: 'BRANCH', domain: 'turing',
+        syntax: 'BRANCH[cond] offset',
+        brief: 'Conditional branch with signed PC-relative offset',
+        encoding: 'opcode[5]=10001 | cond[4] | 0[4] | 0[4] | signed_offset[15]',
+        fields: [
+            { name: 'offset', desc: 'Signed 15-bit PC-relative offset (-16384 to +16383)' },
+        ],
+        permission: 'None',
+        flags: 'None (reads flags, does not set them)',
+        details: 'Branches to PC + offset if the condition (from the condition field) is true. The offset is sign-extended from 15 bits. Typically used with a condition suffix: BRANCHEQ, BRANCHNE, BRANCHGT, etc. Bounded within the abstraction.',
+        example: 'BRANCHEQ +3          ; If Z=1, skip 3 instructions\nBRANCHNE -5          ; If Z=0, loop back 5',
+    },
+    {
+        opcode: 18, mnemonic: 'SHL', domain: 'turing',
+        syntax: 'SHL DRd, DRs, shamt',
+        brief: 'Logical shift left with flag setting',
+        encoding: 'opcode[5]=10010 | cond[4] | DRd[4] | DRs[4] | shamt[5] in imm[4:0]',
+        fields: [
+            { name: 'DRd', desc: 'Destination data register (result)' },
+            { name: 'DRs', desc: 'Source data register (value to shift)' },
+            { name: 'shamt', desc: 'Shift amount (0-31)' },
+        ],
+        permission: 'None',
+        flags: 'Z (zero), N (sign bit of result), C (last bit shifted out)',
+        details: 'Shifts DRs left by shamt positions, filling vacated bits with zeros, and stores the result in DRd. C flag is set to the last bit shifted out (bit 32-shamt of the original value). Equivalent to multiplication by 2^shamt. V is always cleared.',
+        example: 'SHL DR2, DR1, 4      ; DR2 = DR1 << 4 (multiply by 16)',
+    },
+    {
+        opcode: 19, mnemonic: 'SHR', domain: 'turing',
+        syntax: 'SHR DRd, DRs, shamt [, ASR]',
+        brief: 'Logical or arithmetic shift right with flag setting',
+        encoding: 'opcode[5]=10011 | cond[4] | DRd[4] | DRs[4] | arith[1]<<5 | shamt[5]',
+        fields: [
+            { name: 'DRd', desc: 'Destination data register (result)' },
+            { name: 'DRs', desc: 'Source data register (value to shift)' },
+            { name: 'shamt', desc: 'Shift amount (0-31)' },
+            { name: 'ASR', desc: 'Optional: arithmetic shift (sign-extending). Omit for logical shift.' },
+        ],
+        permission: 'None',
+        flags: 'Z (zero), N (sign bit of result), C (last bit shifted out)',
+        details: 'Shifts DRs right by shamt positions. In logical mode (default), vacated high bits are filled with zeros. In arithmetic mode (ASR), vacated bits are filled with the sign bit, preserving the sign for signed division by powers of 2. C flag is the last bit shifted out (bit shamt-1). V is always cleared.',
+        example: 'SHR DR2, DR1, 3      ; DR2 = DR1 >> 3 (logical)\nSHR DR3, DR1, 1, ASR ; DR3 = DR1 >>> 1 (arithmetic, sign-extending)',
+    },
+];
+
+let selectedInstr = null;
+
+function renderInstructionsList() {
+    const churchList = document.getElementById('instrListChurch');
+    const turingList = document.getElementById('instrListTuring');
+    if (!churchList || !turingList) return;
+
+    churchList.innerHTML = '';
+    turingList.innerHTML = '';
+
+    INSTRUCTION_DATA.forEach(instr => {
+        const card = document.createElement('div');
+        card.className = 'instr-card' + (selectedInstr === instr.opcode ? ' active' : '');
+        card.innerHTML = `
+            <span class="instr-opcode">${instr.opcode}</span>
+            <span class="instr-mnemonic">${instr.mnemonic}</span>
+            <span class="instr-brief">${instr.brief}</span>
+        `;
+        card.onclick = () => showInstructionDetail(instr.opcode);
+
+        if (instr.domain === 'church') {
+            churchList.appendChild(card);
+        } else {
+            turingList.appendChild(card);
+        }
+    });
+
+    const returnCard = document.createElement('div');
+    returnCard.className = 'instr-card instr-shared' + (selectedInstr === 3 ? ' active' : '');
+    returnCard.innerHTML = `
+        <span class="instr-opcode">3</span>
+        <span class="instr-mnemonic">RETURN</span>
+        <span class="instr-brief">Shared — exit from Turing abstraction</span>
+    `;
+    returnCard.onclick = () => showInstructionDetail(3);
+    turingList.appendChild(returnCard);
+}
+
+function showInstructionDetail(opcode) {
+    selectedInstr = opcode;
+    const instr = INSTRUCTION_DATA.find(i => i.opcode === opcode);
+    if (!instr) return;
+
+    renderInstructionsList();
+
+    const title = document.getElementById('instrDetailTitle');
+    const content = document.getElementById('instrDetailContent');
+    if (!title || !content) return;
+
+    const domainLabel = instr.domain === 'church' ? 'Church Domain' : 'Turing Domain';
+    const domainClass = instr.domain === 'church' ? 'church' : 'turing';
+    title.textContent = `${instr.mnemonic} — Opcode ${instr.opcode}`;
+
+    content.innerHTML = `
+        <div class="instr-detail-section">
+            <div class="instr-detail-badge ${domainClass}">${domainLabel}</div>
+            <div class="instr-detail-desc">${instr.brief}</div>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Syntax</div>
+            <div class="instr-detail-code">${instr.syntax}</div>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Encoding (32-bit)</div>
+            <div class="instr-detail-code">${instr.encoding}</div>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Operands</div>
+            <table class="instr-fields-table">
+                <thead><tr><th>Field</th><th>Description</th></tr></thead>
+                <tbody>
+                    ${instr.fields.map(f => `<tr><td class="instr-field-name">${f.name}</td><td>${f.desc}</td></tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Permission Gate (mLoad)</div>
+            <div class="instr-detail-value">${instr.permission}</div>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Flags Affected</div>
+            <div class="instr-detail-value">${instr.flags}</div>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Description</div>
+            <div class="instr-detail-text">${instr.details}</div>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Example</div>
+            <pre class="instr-detail-example">${instr.example}</pre>
+        </div>
+    `;
 }
 
 document.addEventListener('DOMContentLoaded', init);
