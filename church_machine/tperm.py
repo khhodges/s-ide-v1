@@ -97,7 +97,7 @@ class ChurchTperm(Elaboratable):
                 result_gt = View(GT_LAYOUT, result_view.word0_gt)
                 m.d.comb += [
                     result_cap.eq(target_cap),
-                    result_gt.perms.eq(new_perms),
+                    result_gt.perms.eq(new_perms & target_gt.perms),
                     self.cr_wr_addr.eq(self.cr_target),
                     self.cr_wr_data.eq(result_cap),
                     self.cr_wr_en.eq(1),
