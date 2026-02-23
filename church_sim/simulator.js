@@ -130,7 +130,8 @@ class ChurchSimulator {
         this.nsLabels = {};
         this.nsCount = 0;
         const abstractions = [
-            { label: 'Boot',       perms: {R:0,W:0,X:1,L:0,S:0,E:0}, chainable: false },
+            { label: 'Boot.CList', perms: {R:0,W:0,X:0,L:1,S:1,E:0}, chainable: false },
+            { label: 'Boot.CLOOMC',perms: {R:0,W:0,X:1,L:0,S:0,E:0}, chainable: false },
             { label: 'Threads',    perms: {R:0,W:0,X:0,L:1,S:1,E:1}, chainable: false },
             { label: 'Lambda',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'SlideRule',  perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
@@ -197,8 +198,8 @@ class ChurchSimulator {
                 break;
             }
             case 2: {
-                const entry = this.readNSEntry(1);
-                const gt8 = this.createGT(0, 1, {R:0,W:0,X:0,L:0,S:0,E:0}, 0);
+                const entry = this.readNSEntry(2);
+                const gt8 = this.createGT(0, 2, {R:0,W:0,X:0,L:0,S:0,E:0}, 0);
                 this._writeCR(8, gt8, entry);
                 this.output += '[M] CR8 ← Boot thread (gift from heaven, no permissions)\n';
                 this.bootStep++;
@@ -213,17 +214,10 @@ class ChurchSimulator {
                 break;
             }
             case 4: {
-                const clistGT = this.cr[6].word0;
-                const check = this.mLoad(clistGT, 'L');
-                if (!check.ok) {
-                    this.fault('BOOT', `CR7 load via CR6+0 failed: ${check.message}`);
-                    return false;
-                }
-                const entry = this.readNSEntry(0);
-                const storedGT = this.memory[entry.word0_location];
-                const gt7 = storedGT || 0;
+                const entry = this.readNSEntry(1);
+                const gt7 = this.createGT(0, 1, {R:0,W:0,X:0,L:0,S:0,E:0}, 0);
                 this._writeCR(7, gt7, entry);
-                this.output += '[M] CR7 ← CR6+0 (Boot, first c-list entry, normal GT rules)\n';
+                this.output += '[M] CR7 ← Boot CLOOMC (gift from heaven, executable code block)\n';
                 this.bootStep++;
                 break;
             }

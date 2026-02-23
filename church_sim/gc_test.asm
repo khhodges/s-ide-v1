@@ -19,11 +19,11 @@
 
 ; --- Phase 1: Load subset into CRs (survivors) ---
 ; Each LOAD calls mLoad(L), toggling G to "live"
-LOAD CR0, CR6, 2       ; CR0 = Lambda    (E)
-LOAD CR1, CR6, 7       ; CR1 = SUCC      (XLE)
-LOAD CR2, CR6, 6       ; CR2 = Stack     (E)
-LOAD CR3, CR6, 9       ; CR3 = ADD       (XLE)
-LOAD CR4, CR6, 5       ; CR4 = Constants (E)
+LOAD CR0, CR6, 3       ; CR0 = Lambda    (E)
+LOAD CR1, CR6, 8       ; CR1 = SUCC      (XLE)
+LOAD CR2, CR6, 7       ; CR2 = Stack     (E)
+LOAD CR3, CR6, 10      ; CR3 = ADD       (XLE)
+LOAD CR4, CR6, 6       ; CR4 = Constants (E)
 
 ; --- Phase 2: Verify permissions ---
 TPERM CR0, E           ; Lambda has E? PASS
@@ -39,7 +39,7 @@ LAMBDA CR3             ; Church ADD reduction (X)
 
 ; --- Phase 4: CALL GC safe abstraction ---
 ; CALL checks E permission via mLoad
-LOAD CR5, CR6, 24      ; CR5 = GC abstraction (E)
+LOAD CR5, CR6, 25      ; CR5 = GC abstraction (E)
 TPERM CR5, E           ; Verify E permission
 CALL CR5               ; Trigger GC — atomic Turing abstraction
 

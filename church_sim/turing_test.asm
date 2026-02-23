@@ -11,8 +11,8 @@
 ; ============================================
 
 ; --- Boot: Load GTs ---
-LOAD CR0, CR6, 7       ; CR0 = SUCC (XLE)
-LOAD CR1, CR6, 9       ; CR1 = ADD (XLE)
+LOAD CR0, CR6, 8       ; CR0 = SUCC (XLE)
+LOAD CR1, CR6, 10      ; CR1 = ADD (XLE)
 
 ; --- Initialize DR1 = 0 ---
 IADD DR1, DR0, DR0     ; DR1 = 0 (Z=1)
@@ -40,7 +40,6 @@ BRANCHEQ +2            ; Branch taken
 IADD DR8, DR1, DR1     ; Skipped
 
 ; --- SHL: Shift left ---
-IADD DR9, DR0, DR0     ; DR9 = 0
 IADD DR9, DR3, DR0     ; DR9 = DR3 (copy)
 SHL DR10, DR9, 4       ; DR10 = DR9 << 4 (multiply by 16)
 
