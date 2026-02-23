@@ -23,7 +23,8 @@ NS_ENTRY_LAYOUT = StructLayout({
 
 NS_LIMIT_LAYOUT = StructLayout({
     "limit":    unsigned(17),
-    "reserved": unsigned(13),
+    "reserved": unsigned(12),
+    "g_bit":    unsigned(1),
     "f_flag":   unsigned(1),
     "b_flag":   unsigned(1),
 })
