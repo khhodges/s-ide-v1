@@ -42,6 +42,7 @@ class ChurchSimulator {
         this.nsCount = 0;
         this.gcPolarity = 0;
         this.nsHandlers = {};
+        this.nsClistMap = {};
 
         this.bootComplete = false;
         this.mElevation = false;
@@ -155,6 +156,7 @@ class ChurchSimulator {
             { label: 'SND',        perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
             { label: 'GC',         perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false, handler: 'gc' },
         ];
+        const clistChildren = [];
         for (let i = 0; i < abstractions.length; i++) {
             const a = abstractions[i];
             const loc = i * this.SLOT_SIZE;
@@ -166,7 +168,9 @@ class ChurchSimulator {
             if (a.handler) {
                 this.nsHandlers[i] = a.handler;
             }
+            clistChildren.push(i);
         }
+        this.nsClistMap[0] = clistChildren;
     }
 
     _bootStep() {
@@ -393,6 +397,25 @@ class ChurchSimulator {
                             log.push(`  CallStack ${crKey} → NS[${idx}] "${label}" — LIVE (G=${liveValue})`);
                         }
                     }
+                }
+            }
+        }
+        const tracedFromClist = new Set();
+        const traceQueue = [...liveSet];
+        while (traceQueue.length > 0) {
+            const parentIdx = traceQueue.shift();
+            if (tracedFromClist.has(parentIdx)) continue;
+            tracedFromClist.add(parentIdx);
+            const children = this.nsClistMap[parentIdx];
+            if (!children) continue;
+            for (const childIdx of children) {
+                if (liveSet.has(childIdx)) continue;
+                if (childIdx < this.nsCount && this.isNSEntryValid(childIdx)) {
+                    this.markLive(childIdx);
+                    liveSet.add(childIdx);
+                    traceQueue.push(childIdx);
+                    const label = this.nsLabels[childIdx] || '(unnamed)';
+                    log.push(`  C-List NS[${parentIdx}] → NS[${childIdx}] "${label}" — LIVE (G=${liveValue})`);
                 }
             }
         }
@@ -677,6 +700,14 @@ class ChurchSimulator {
             const lim17 = 0xFF;
             this.writeNSEntry(targetIdx, loc, lim17, 0, 0, 0, 0, parsed.type, 0);
             this.nsLabels[targetIdx] = `dyn_${targetIdx}`;
+        }
+        const clistParsed = this.parseGT(clistGT);
+        const clistIdx = clistParsed.index;
+        if (!this.nsClistMap[clistIdx]) {
+            this.nsClistMap[clistIdx] = [];
+        }
+        if (!this.nsClistMap[clistIdx].includes(targetIdx)) {
+            this.nsClistMap[clistIdx].push(targetIdx);
         }
         const entry = this.readNSEntry(targetIdx);
         const saveLoc = entry.word0_location;
