@@ -20,6 +20,11 @@ class ChurchAssembler {
             'CLEAR': 0, 'R': 1, 'RW': 2, 'X': 3,
             'RX': 4, 'RWX': 5, 'L': 6, 'S': 7,
             'E': 8, 'LS': 9, 'LE': 10, 'SE': 11, 'LSE': 12,
+            'RWXLSE': 13,
+            'B': 0x10, 'RB': 0x11, 'RWB': 0x12, 'XB': 0x13,
+            'RXB': 0x14, 'RWXB': 0x15, 'LB': 0x16, 'SB': 0x17,
+            'EB': 0x18, 'LSB': 0x19, 'LEB': 0x1A, 'SEB': 0x1B, 'LSEB': 0x1C,
+            'RWXLSEB': 0x1D,
         };
         this.labels = {};
         this.errors = [];
@@ -128,7 +133,7 @@ class ChurchAssembler {
                 if (this.tpermPresets[presetName] !== undefined) {
                     imm = this.tpermPresets[presetName];
                 } else {
-                    imm = this._parseImm(parts[2], lineNum) & 0xF;
+                    imm = this._parseImm(parts[2], lineNum) & 0x1F;
                 }
                 break;
             }
@@ -306,8 +311,10 @@ class ChurchAssembler {
             case 4: return `${mnemonic} CR${crDst}, idx=${imm}`;
             case 5: return `${mnemonic} CR${crSrc} ↔ CR${imm & 7}`;
             case 6: {
-                const presetNames = ['CLEAR','R','RW','X','RX','RWX','L','S','E','LS','LE','SE','LSE','RSV','RSV','RSV'];
-                return `${mnemonic} CR${crDst}, ${presetNames[imm & 0xF]}`;
+                const presetNames = ['CLEAR','R','RW','X','RX','RWX','L','S','E','LS','LE','SE','LSE','RWXLSE','RSV','RSV'];
+                const bFlag = (imm >>> 4) & 1;
+                const baseName = presetNames[imm & 0xF];
+                return `${mnemonic} CR${crDst}, ${baseName}${bFlag ? '+B' : ''}`;
             }
             case 7: return `${mnemonic} CR${crDst}`;
             case 8: return `${mnemonic} CR${crDst}, [CR${crSrc} + ${imm}]`;

@@ -327,6 +327,46 @@ class ChurchSimulator {
         return { ok: true, parsed, entry, index: parsed.index };
     }
 
+    mSave(gt32, targetIdx) {
+        const parsed = this.parseGT(gt32);
+        const srcEntry = this.readNSEntry(parsed.index);
+        if (!srcEntry) {
+            return { ok: false, fault: 'BOUNDS', message: `source entry ${parsed.index} is null` };
+        }
+        const srcWord1 = this.parseNSWord1(srcEntry.word1_limit);
+        const srcVersion = (srcEntry.word2_seals >>> 25) & 0x7F;
+        const srcVersionMatch = parsed.version === srcVersion;
+        const srcSealValid = this.validateMAC(srcEntry);
+        this.lastCapability = {
+            op: 'S',
+            label: this.nsLabels[parsed.index] || 'entry_'+parsed.index,
+            perms: parsed.permissions,
+            b: srcWord1.b,
+            f: srcWord1.f,
+            versionMatch: srcVersionMatch,
+            sealValid: srcSealValid,
+        };
+        if (!srcVersionMatch) {
+            return { ok: false, fault: 'VERSION', message: `source version mismatch: GT v${parsed.version}, entry v${srcVersion}` };
+        }
+        if (!srcSealValid) {
+            return { ok: false, fault: 'SEAL', message: `source seal validation failed for entry ${parsed.index}` };
+        }
+        if (srcWord1.b !== 1 && !this.mElevation) {
+            return { ok: false, fault: 'BIND', message: `GT has B=0 — not bindable to c-list` };
+        }
+        if (targetIdx !== null && targetIdx !== undefined) {
+            const tgtEntry = this.readNSEntry(targetIdx);
+            if (tgtEntry) {
+                const tgtWord1 = this.parseNSWord1(tgtEntry.word1_limit);
+                if (tgtWord1.f === 1 && !this.mElevation) {
+                    return { ok: false, fault: 'FROZEN', message: `target slot ${targetIdx} is frozen (F=1)` };
+                }
+            }
+        }
+        return { ok: true, parsed, srcEntry };
+    }
+
     markLive(idx) {
         const base = this.NS_TABLE_BASE + idx * this.NS_ENTRY_WORDS;
         const w1 = this.memory[base + 1];
@@ -681,15 +721,13 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `SAVE: CR${d.crDst} is NULL`);
             return null;
         }
-        const srcParsed = this.parseGT(srcGT);
-        const srcEntry = this.readNSEntry(srcParsed.index);
-        if (srcEntry) {
-            const srcWord1 = this.parseNSWord1(srcEntry.word1_limit);
-            if (srcWord1.b !== 1 && !this.mElevation) {
-                this.fault('BIND', `SAVE: CR${d.crDst} GT has B=0 — not bindable to c-list`);
-                return null;
-            }
+        const targetIdx = d.imm;
+        const saveCheck = this.mSave(srcGT, targetIdx);
+        if (!saveCheck.ok) {
+            this.fault(saveCheck.fault, `SAVE: CR${d.crDst}: ${saveCheck.message}`);
+            return null;
         }
+        const savedCap = this.lastCapability;
         const clistGT = this.cr[d.crSrc].word0;
         if (clistGT === 0) {
             this.fault('NULL_CAP', `SAVE: CR${d.crSrc} C-List is NULL`);
@@ -700,16 +738,14 @@ class ChurchSimulator {
             this.fault(clistCheck.fault, `SAVE: CR${d.crSrc}: ${clistCheck.message}`);
             return null;
         }
-        const targetIdx = d.imm;
+        this.lastCapability = savedCap;
         if (!this.isNSEntryValid(targetIdx)) {
-            const parsed = this.parseGT(srcGT);
             const loc = targetIdx * this.SLOT_SIZE;
             const lim17 = 0xFF;
-            this.writeNSEntry(targetIdx, loc, lim17, 0, 0, 0, 0, parsed.type, 0);
+            this.writeNSEntry(targetIdx, loc, lim17, 0, 0, 0, 0, saveCheck.parsed.type, 0);
             this.nsLabels[targetIdx] = `dyn_${targetIdx}`;
         }
-        const clistParsed = this.parseGT(clistGT);
-        const clistIdx = clistParsed.index;
+        const clistIdx = clistCheck.parsed.index;
         if (!this.nsClistMap[clistIdx]) {
             this.nsClistMap[clistIdx] = [];
         }
@@ -838,13 +874,14 @@ class ChurchSimulator {
 
     _execTperm(d) {
         const gt = this.cr[d.crDst].word0;
+        const bSet = (d.imm >>> 4) & 1;
         const presetCode = d.imm & 0xF;
 
         const presetMasks = [
             [],                ['R'],           ['R','W'],       ['X'],
             ['R','X'],         ['R','W','X'],   ['L'],           ['S'],
             ['E'],             ['L','S'],       ['L','E'],       ['S','E'],
-            ['L','S','E'],     null,            null,            null,
+            ['L','S','E'],     ['R','W','X','L','S','E'], null,  null,
         ];
 
         if (presetMasks[presetCode] === null) {
@@ -867,14 +904,23 @@ class ChurchSimulator {
         const required = presetMasks[presetCode];
         const hasAll = required.every(p => parsed.permissions[p] === 1);
 
+        if (bSet && hasAll) {
+            const entry = this.readNSEntry(parsed.index);
+            if (entry) {
+                const base = this.NS_TABLE_BASE + parsed.index * this.NS_ENTRY_WORDS;
+                this.memory[base + 1] = (entry.word1_limit | (1 << 31)) >>> 0;
+            }
+        }
+
         this.flags.Z = hasAll;
         this.flags.N = !hasAll;
         this.flags.C = false;
         this.flags.V = false;
 
-        const permStr = required.join('') || 'CLEAR';
+        const permStr = (required.join('') || 'CLEAR') + (bSet ? '+B' : '');
         const result = hasAll ? 'PASS' : 'FAIL';
-        const desc = `TPERM CR${d.crDst}, ${permStr} → ${result} (Z=${hasAll ? 1 : 0})`;
+        const bMsg = (bSet && hasAll) ? ' B→1' : '';
+        const desc = `TPERM CR${d.crDst}, ${permStr} → ${result} (Z=${hasAll ? 1 : 0})${bMsg}`;
         this.output += desc + '\n';
         this.pc++;
         return { pc: this.pc - 1, instr: d, desc, pipeline: this._tpermPipeline(d, parsed, hasAll) };

@@ -515,7 +515,7 @@ function updateInfoDisplay() {
         <div class="info-item"><span class="info-label">Conditions</span><span class="info-value">16 ARM-style (EQ, NE, CS, CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL, NV)</span></div>
         <div class="info-item"><span class="info-label">Address Space</span><span class="info-value">Unified: Memory (0x00-FD) | Devices (0xFE) | Registers (0xFF) \u2014 all GT-protected</span></div>
         <div class="info-item"><span class="info-label">Golden Tokens</span><span class="info-value">32-bit: Version(7) | Index(17) | Perms(6) | Type(2)</span></div>
-        <div class="info-item"><span class="info-label">Security Gate</span><span class="info-value">mLoad \u2014 single guard (R\u2192DREAD, W\u2192DWRITE, X\u2192LAMBDA, L\u2192LOAD, S\u2192SAVE, E\u2192CALL)</span></div>
+        <div class="info-item"><span class="info-label">Security Gates</span><span class="info-value">mLoad (R\u2192DREAD, W\u2192DWRITE, X\u2192LAMBDA, L\u2192LOAD, S\u2192SAVE, E\u2192CALL) + mSave (B, F, Version, Seal)</span></div>
         <div class="info-item"><span class="info-label">Safe Abstractions</span><span class="info-value">Turing hidden inside Church-callable entries \u2014 CALL in, RETURN out, atomic</span></div>
     `;
 }
@@ -725,6 +725,7 @@ TPERM CR0, E           ; SlideRule has E? PASS
 
 ; --- TEST 8: SAVE - write to namespace ---
 LOAD CR0, CR6, 3       ; Reload Lambda
+TPERM CR0, EB          ; Verify E + set B=1 (allow bind)
 SAVE CR0, CR6, 25      ; Save Lambda copy to slot 25
 
 ; --- TEST 9: CALL/RETURN ---
