@@ -104,7 +104,7 @@ function renderPagesDirectory() {
     ].join('');
     el('pagesReference').innerHTML = [
         card('/church/flowchart.html', 'Microcode Flowchart', 'Church', tc, 'All 20 instructions with memory bus annotations, TSB gates, GC cycle, fault catalog.'),
-        card('/test', 'Tunnel Test Harness', 'testing', tt, 'Side-by-side testing with automated messaging and real-time test logging.'),
+        card('/test/', 'Tunnel Test Harness', 'testing', tt, 'Side-by-side testing with automated messaging and real-time test logging.'),
     ].join('');
     el('pagesFigures').innerHTML = [
         card('/figures/', 'Fig 3: LAMBDA Fast Path', 'figure', td, 'LAMBDA machine-status fast path.'),
