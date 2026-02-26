@@ -110,6 +110,7 @@ function renderPagesDirectory() {
         navCard('/test/', 'Tunnel Test Harness', 'testing', tt, 'Side-by-side testing with automated messaging and real-time test logging.'),
     ].join('');
     el('pagesFigures').innerHTML = [
+        card('/figures/dual-gate-tsb', 'Fig 1: Dual-Gate TSB', 'figure', td, 'mLoad + mSave as the complete Trusted Security Base.'),
         card('/figures/', 'Fig 3: LAMBDA Fast Path', 'figure', td, 'LAMBDA machine-status fast path.'),
         card('/figures/stack-frames', 'Fig 4: Stack Frames', 'figure', td, 'Self-describing stack frames.'),
         card('/figures/lambda-nesting-sequence', 'Fig 5: LAMBDA Nesting', 'figure', td, 'Non-nestable LAMBDA with CALL-mediated nesting.'),

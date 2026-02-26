@@ -157,6 +157,12 @@ def figures_mint_nesting():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
+@app.route('/figures/dual-gate-tsb')
+def figures_dual_gate_tsb():
+    resp = make_response(send_from_directory(FIGURES_DIR, 'dual-gate-tsb.html'))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
 @app.route('/figures/hello-mum-tunnel')
 def figures_hello_mum_tunnel():
     resp = make_response(send_from_directory(FIGURES_DIR, 'hello-mum-tunnel.html'))
