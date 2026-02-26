@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTMM Unified Patent Submission</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #e0e0e0;
+    font-family: 'Times New Roman', Times, Georgia, serif;
+    font-size: 12pt;
+    line-height: 1.6;
+    color: #000;
+  }
+
+  .page {
+    background: #fff;
+    max-width: 8.5in;
+    margin: 0.5in auto;
+    padding: 1in 1.25in;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page { box-shadow: none; margin: 0; padding: 1in; max-width: none; }
+    .home-btn { display: none !important; }
+  }
+
+  h1 {
+    font-size: 16pt;
+    font-weight: bold;
+    text-align: center;
+    margin: 0 0 6pt 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+  }
+
+  h2 {
+    font-size: 13pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin: 24pt 0 8pt 0;
+    border-bottom: 1px solid #000;
+    padding-bottom: 3pt;
+  }
+
+  h3 {
+    font-size: 12pt;
+    font-weight: bold;
+    margin: 18pt 0 6pt 0;
+  }
+
+  h4 {
+    font-size: 11pt;
+    font-weight: bold;
+    font-style: italic;
+    margin: 14pt 0 4pt 0;
+  }
+
+  p {
+    margin: 0 0 8pt 0;
+    text-align: justify;
+    text-indent: 0;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid #000;
+    margin: 18pt 0;
+  }
+
+  strong { font-weight: bold; }
+  em { font-style: italic; }
+
+  ul, ol {
+    margin: 4pt 0 8pt 24pt;
+  }
+
+  li {
+    margin-bottom: 4pt;
+    text-align: justify;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8pt 0 12pt 0;
+    font-size: 10pt;
+  }
+
+  th, td {
+    border: 1px solid #000;
+    padding: 4pt 6pt;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: #f0f0f0;
+    font-weight: bold;
+  }
+
+  pre {
+    background: #f8f8f8;
+    border: 1px solid #ccc;
+    padding: 8pt 10pt;
+    margin: 6pt 0 10pt 0;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 9pt;
+    line-height: 1.4;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10pt;
+    background: #f0f0f0;
+    padding: 1pt 3pt;
+  }
+
+  pre code {
+    background: none;
+    padding: 0;
+    font-size: 9pt;
+  }
+
+  .home-btn {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    background: #333;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    font-size: 10pt;
+    text-decoration: none;
+    z-index: 100;
+  }
+
+  .home-btn:hover { background: #555; }
+
+  .title-block {
+    text-align: center;
+    margin-bottom: 24pt;
+  }
+
+  .title-block p {
+    text-align: center;
+    text-indent: 0;
+    margin-bottom: 4pt;
+  }
+</style>
+</head>
+<body>
+<a href="/" class="home-btn">Home</a>
+<div class="page" id="content">Loading...</div>
+
+<script>
+function escapeHtml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderMarkdown(md) {
+  const lines = md.split('\n');
+  let html = '';
+  let inTable = false;
+  let inTableHeader = false;
+  let inCode = false;
+  let codeBlock = '';
+  let inList = false;
+  let listType = '';
+
+  function closeList() {
+    if (inList) {
+      html += listType === 'ol' ? '</ol>\n' : '</ul>\n';
+      inList = false;
+    }
+  }
+
+  function closeTable() {
+    if (inTable) {
+      html += '</tbody></table>\n';
+      inTable = false;
+      inTableHeader = false;
+    }
+  }
+
+  function inlineFormat(text) {
+    text = escapeHtml(text);
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    text = text.replace(/`(.+?)`/g, '<code>$1</code>');
+    return text;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.startsWith('```')) {
+      if (inCode) {
+        html += '<pre><code>' + escapeHtml(codeBlock) + '</code></pre>\n';
+        codeBlock = '';
+        inCode = false;
+      } else {
+        closeList();
+        closeTable();
+        inCode = true;
+      }
+      continue;
+    }
+
+    if (inCode) {
+      codeBlock += line + '\n';
+      continue;
+    }
+
+    if (line.trim() === '---') {
+      closeList();
+      closeTable();
+      html += '<hr>\n';
+      continue;
+    }
+
+    if (line.startsWith('# ')) {
+      closeList(); closeTable();
+      html += '<h1>' + inlineFormat(line.slice(2)) + '</h1>\n';
+      continue;
+    }
+    if (line.startsWith('## ')) {
+      closeList(); closeTable();
+      html += '<h2>' + inlineFormat(line.slice(3)) + '</h2>\n';
+      continue;
+    }
+    if (line.startsWith('### ')) {
+      closeList(); closeTable();
+      html += '<h3>' + inlineFormat(line.slice(4)) + '</h3>\n';
+      continue;
+    }
+    if (line.startsWith('#### ')) {
+      closeList(); closeTable();
+      html += '<h4>' + inlineFormat(line.slice(5)) + '</h4>\n';
+      continue;
+    }
+
+    if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+      const cells = line.trim().split('|').filter((c, idx, arr) => idx > 0 && idx < arr.length - 1).map(c => c.trim());
+
+      if (cells.every(c => /^[-:]+$/.test(c))) {
+        continue;
+      }
+
+      if (!inTable) {
+        closeList();
+        inTable = true;
+        inTableHeader = true;
+        html += '<table><thead><tr>';
+        cells.forEach(c => { html += '<th>' + inlineFormat(c) + '</th>'; });
+        html += '</tr></thead><tbody>\n';
+        continue;
+      }
+
+      html += '<tr>';
+      cells.forEach(c => { html += '<td>' + inlineFormat(c) + '</td>'; });
+      html += '</tr>\n';
+      continue;
+    } else if (inTable && line.trim() === '') {
+      closeTable();
+    }
+
+    const olMatch = line.match(/^(\d+)\.\s+(.*)/);
+    const ulMatch = line.match(/^[-*]\s+(.*)/);
+    const indentedMatch = line.match(/^   \(.+?\)\s+(.*)/);
+
+    if (olMatch) {
+      closeTable();
+      if (!inList || listType !== 'ol') {
+        closeList();
+        inList = true;
+        listType = 'ol';
+        html += '<ol>\n';
+      }
+      html += '<li>' + inlineFormat(olMatch[2]) + '</li>\n';
+      continue;
+    }
+
+    if (ulMatch) {
+      closeTable();
+      if (!inList || listType !== 'ul') {
+        closeList();
+        inList = true;
+        listType = 'ul';
+        html += '<ul>\n';
+      }
+      html += '<li>' + inlineFormat(ulMatch[1]) + '</li>\n';
+      continue;
+    }
+
+    const paraMatch = line.match(/^\(([a-z])\)\s+(.*)/);
+    if (paraMatch) {
+      html += '<p>(' + paraMatch[1] + ') ' + inlineFormat(paraMatch[2]) + '</p>\n';
+      continue;
+    }
+
+    if (line.trim() === '') {
+      closeList();
+      continue;
+    }
+
+    closeTable();
+    closeList();
+    html += '<p>' + inlineFormat(line) + '</p>\n';
+  }
+
+  closeList();
+  closeTable();
+
+  if (inCode) {
+    html += '<pre><code>' + escapeHtml(codeBlock) + '</code></pre>\n';
+  }
+
+  return html;
+}
+
+fetch('/docs/patent-ctmm-unified.md')
+  .then(r => r.text())
+  .then(md => {
+    document.getElementById('content').innerHTML = renderMarkdown(md);
+  })
+  .catch(err => {
+    document.getElementById('content').innerHTML = '<p>Error loading document: ' + err.message + '</p>';
+  });
+</script>
+</body>
+</html>

@@ -169,6 +169,12 @@ def figures_static(path):
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
+@app.route('/docs/patent')
+def serve_patent():
+    resp = make_response(send_from_directory(DOCS_DIR, 'patent-ctmm-unified.html'))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
 @app.route('/docs/business/<path:filename>')
 def serve_business_doc(filename):
     business_dir = os.path.join(DOCS_DIR, 'business')
