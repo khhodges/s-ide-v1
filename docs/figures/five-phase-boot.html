@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 15: Five-Phase Boot Sequence</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #ffffff;
+    color: #1a1a1a;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+  }
+  h1 { font-size: 22px; color: #b8860b; margin-bottom: 6px; text-align: center; }
+  .subtitle { font-size: 13px; color: #555555; margin-bottom: 30px; text-align: center; max-width: 960px; }
+  .nav { position: fixed; top: 10px; left: 10px; z-index: 100; }
+  .nav a {
+    background: #f0f0f0; color: #333; text-decoration: none; padding: 6px 14px;
+    border-radius: 4px; font-size: 13px; border: 1px solid #ccc;
+  }
+  .nav a:hover { background: #e0e0e0; color: #000; }
+  .legend { margin-top: 24px; display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555555; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+  @media print { .nav { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="nav"><a href="/church/">&#8592; Church Machine</a></div>
+
+<h1>Figure 15 &mdash; Five-Phase Boot Sequence</h1>
+<p class="subtitle">Hardware initialization state machine. The machine starts in IDLE, resets all capability registers to NULL (failsafe), loads the namespace, initializes threads, loads the nucleus abstractions, and transitions to COMPLETE. Any failure at any phase routes to FAULT. No software runs until the hardware has established a safe, fully-validated initial state.</p>
+
+<svg viewBox="0 0 1100 1200" width="1100" height="1200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ah-k" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+    <marker id="ah-b" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2a6db5"/>
+    </marker>
+    <marker id="ah-g" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27864a"/>
+    </marker>
+    <marker id="ah-r" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#cc3333"/>
+    </marker>
+    <marker id="ah-o" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#c07020"/>
+    </marker>
+    <marker id="ah-p" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7b2d8e"/>
+    </marker>
+    <marker id="ah-t" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#1a7a7a"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title-lg { font-family:'Segoe UI',system-ui,sans-serif; font-size:17px; font-weight:700; text-anchor:middle; dominant-baseline:central; }
+    .title-sm { font-family:'Segoe UI',system-ui,sans-serif; font-size:14px; font-weight:700; text-anchor:middle; dominant-baseline:central; }
+    .title-xs { font-family:'Segoe UI',system-ui,sans-serif; font-size:12px; font-weight:600; text-anchor:middle; dominant-baseline:central; }
+    .label { font-family:'Segoe UI',system-ui,sans-serif; font-size:12px; fill:#1a1a1a; text-anchor:middle; dominant-baseline:central; }
+    .label-s { font-family:'Segoe UI',system-ui,sans-serif; font-size:10px; fill:#555555; text-anchor:middle; dominant-baseline:central; }
+    .label-l { font-family:'Segoe UI',system-ui,sans-serif; font-size:11px; fill:#555; text-anchor:start; dominant-baseline:central; }
+    .mono { font-family:'Consolas','Courier New',monospace; font-size:11px; fill:#1a1a1a; text-anchor:middle; dominant-baseline:central; }
+    .mono-b { font-family:'Consolas','Courier New',monospace; font-size:12px; font-weight:700; text-anchor:middle; dominant-baseline:central; }
+    .mono-s { font-family:'Consolas','Courier New',monospace; font-size:10px; fill:#555; text-anchor:middle; dominant-baseline:central; }
+    .mono-xs { font-family:'Consolas','Courier New',monospace; font-size:9px; fill:#777; text-anchor:middle; dominant-baseline:central; }
+    .hdr { font-family:'Segoe UI',system-ui,sans-serif; font-size:12px; font-weight:700; fill:#fff; text-anchor:middle; dominant-baseline:central; }
+  </style>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- STATE MACHINE DIAGRAM                                       -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <text x="550" y="25" class="title-lg" fill="#333">Hardware Boot State Machine</text>
+  <text x="550" y="45" class="label-s">Each phase must complete successfully before the next begins. Any failure routes to FAULT.</text>
+
+  <!-- ─── PHASE 0: IDLE ─── -->
+  <rect x="80" y="70" width="200" height="100" rx="50" fill="#f0f0f0" stroke="#555" stroke-width="2.5"/>
+  <text x="180" y="105" class="title-sm" fill="#555">IDLE</text>
+  <text x="180" y="125" class="mono-s" fill="#555">Power-on / Reset</text>
+  <text x="180" y="142" class="mono-xs" fill="#777">state = 0x00</text>
+
+  <!-- Arrow IDLE → FAULT_RST -->
+  <line x1="280" y1="120" x2="370" y2="120" stroke="#cc3333" stroke-width="2.5" marker-end="url(#ah-r)"/>
+  <text x="325" y="108" class="mono-b" fill="#cc3333">RST</text>
+
+  <!-- ─── PHASE 1: FAULT_RST ─── -->
+  <rect x="370" y="70" width="360" height="100" rx="14" fill="#fef5f5" stroke="#cc3333" stroke-width="2.5"/>
+  <rect x="372" y="72" width="356" height="30" rx="12" fill="#cc3333"/>
+  <text x="550" y="87" class="hdr" style="font-size:14px">Phase 1: FAULT_RST</text>
+  <text x="550" y="118" class="mono-b" fill="#cc3333">All CRs &#x2190; NULL GT</text>
+  <text x="550" y="136" class="label-s" fill="#cc3333">CR0-CR15 zeroed, flags cleared, PC=0</text>
+  <text x="550" y="152" class="mono-xs" fill="#cc3333">Failsafe: machine starts with zero authority</text>
+
+  <!-- Arrow FAULT_RST → LOAD_NS -->
+  <line x1="550" y1="170" x2="550" y2="220" stroke="#2a6db5" stroke-width="2.5" marker-end="url(#ah-b)"/>
+  <text x="570" y="198" class="mono-s" fill="#2a6db5">CRs zeroed</text>
+
+  <!-- ─── PHASE 2: LOAD_NS ─── -->
+  <rect x="300" y="220" width="500" height="130" rx="14" fill="#e8f4fd" stroke="#2a6db5" stroke-width="2.5"/>
+  <rect x="302" y="222" width="496" height="30" rx="12" fill="#2a6db5"/>
+  <text x="550" y="237" class="hdr" style="font-size:14px">Phase 2: LOAD_NS</text>
+
+  <text x="550" y="270" class="title-xs" fill="#2a6db5">Load Namespace from ROM/Flash</text>
+
+  <rect x="330" y="285" width="440" height="18" rx="3" fill="#dce9f5" stroke="#2a6db5" stroke-width="0.5"/>
+  <text x="550" y="294" class="mono-s" fill="#2a6db5">Read namespace image &#x2192; verify integrity hash</text>
+
+  <rect x="330" y="307" width="440" height="18" rx="3" fill="#dce9f5" stroke="#2a6db5" stroke-width="0.5"/>
+  <text x="550" y="316" class="mono-s" fill="#2a6db5">Populate namespace table: entries, seals, version counters</text>
+
+  <rect x="330" y="329" width="440" height="18" rx="3" fill="#dce9f5" stroke="#2a6db5" stroke-width="0.5"/>
+  <text x="550" y="338" class="mono-s" fill="#2a6db5">Set CR15 &#x2190; namespace root GT (global version = V1)</text>
+
+  <!-- Arrow LOAD_NS → INIT_THRD -->
+  <line x1="550" y1="350" x2="550" y2="400" stroke="#27864a" stroke-width="2.5" marker-end="url(#ah-g)"/>
+  <text x="570" y="378" class="mono-s" fill="#27864a">CR15 set</text>
+
+  <!-- ─── PHASE 3: INIT_THRD ─── -->
+  <rect x="300" y="400" width="500" height="130" rx="14" fill="#e8fde8" stroke="#27864a" stroke-width="2.5"/>
+  <rect x="302" y="402" width="496" height="30" rx="12" fill="#27864a"/>
+  <text x="550" y="417" class="hdr" style="font-size:14px">Phase 3: INIT_THRD</text>
+
+  <text x="550" y="450" class="title-xs" fill="#27864a">Initialize Thread Infrastructure</text>
+
+  <rect x="330" y="465" width="440" height="18" rx="3" fill="#d5f0d5" stroke="#27864a" stroke-width="0.5"/>
+  <text x="550" y="474" class="mono-s" fill="#27864a">Create boot thread control block</text>
+
+  <rect x="330" y="487" width="440" height="18" rx="3" fill="#d5f0d5" stroke="#27864a" stroke-width="0.5"/>
+  <text x="550" y="496" class="mono-s" fill="#27864a">Set CR8 &#x2190; thread identity GT (boot thread)</text>
+
+  <rect x="330" y="509" width="440" height="18" rx="3" fill="#d5f0d5" stroke="#27864a" stroke-width="0.5"/>
+  <text x="550" y="518" class="mono-s" fill="#27864a">Initialize stack pointer, allocate initial call frame</text>
+
+  <!-- Arrow INIT_THRD → LOAD_NUC -->
+  <line x1="550" y1="530" x2="550" y2="580" stroke="#7b2d8e" stroke-width="2.5" marker-end="url(#ah-p)"/>
+  <text x="570" y="558" class="mono-s" fill="#7b2d8e">CR8 set</text>
+
+  <!-- ─── PHASE 4: LOAD_NUC ─── -->
+  <rect x="300" y="580" width="500" height="130" rx="14" fill="#f3ecff" stroke="#7b2d8e" stroke-width="2.5"/>
+  <rect x="302" y="582" width="496" height="30" rx="12" fill="#7b2d8e"/>
+  <text x="550" y="597" class="hdr" style="font-size:14px">Phase 4: LOAD_NUC</text>
+
+  <text x="550" y="630" class="title-xs" fill="#7b2d8e">Load Nucleus Abstractions</text>
+
+  <rect x="330" y="645" width="440" height="18" rx="3" fill="#e8d6f5" stroke="#7b2d8e" stroke-width="0.5"/>
+  <text x="550" y="654" class="mono-s" fill="#7b2d8e">Load Boot abstraction into CR0 (entry point)</text>
+
+  <rect x="330" y="667" width="440" height="18" rx="3" fill="#e8d6f5" stroke="#7b2d8e" stroke-width="0.5"/>
+  <text x="550" y="676" class="mono-s" fill="#7b2d8e">Load core abstractions: Threads, CapabilityManager, GC</text>
+
+  <rect x="330" y="689" width="440" height="18" rx="3" fill="#e8d6f5" stroke="#7b2d8e" stroke-width="0.5"/>
+  <text x="550" y="698" class="mono-s" fill="#7b2d8e">Verify all GTs via mLoad (version, seal, permissions)</text>
+
+  <!-- Arrow LOAD_NUC → COMPLETE -->
+  <line x1="550" y1="710" x2="550" y2="760" stroke="#1a7a7a" stroke-width="2.5" marker-end="url(#ah-t)"/>
+  <text x="570" y="738" class="mono-s" fill="#1a7a7a">verified</text>
+
+  <!-- ─── PHASE 5: COMPLETE ─── -->
+  <rect x="370" y="760" width="360" height="80" rx="14" fill="#e0f7f7" stroke="#1a7a7a" stroke-width="2.5"/>
+  <rect x="372" y="762" width="356" height="30" rx="12" fill="#1a7a7a"/>
+  <text x="550" y="777" class="hdr" style="font-size:14px">Phase 5: COMPLETE</text>
+  <text x="550" y="808" class="mono-b" fill="#1a7a7a">CALL CR0 (Boot abstraction)</text>
+  <text x="550" y="826" class="label-s" fill="#1a7a7a">First instruction executes with full GT protection</text>
+
+  <!-- ─── FAULT (right side) ─── -->
+  <rect x="870" y="280" width="180" height="360" rx="14" fill="#fde8e8" stroke="#cc3333" stroke-width="2"/>
+  <rect x="872" y="282" width="176" height="30" rx="12" fill="#cc3333"/>
+  <text x="960" y="297" class="hdr" style="font-size:14px">FAULT</text>
+
+  <text x="960" y="330" class="title-xs" fill="#cc3333">Any Phase Fails</text>
+
+  <rect x="890" y="350" width="140" height="18" rx="3" fill="#fde8e8" stroke="#cc3333" stroke-width="0.5"/>
+  <text x="960" y="359" class="mono-xs" fill="#cc3333">Hash mismatch</text>
+
+  <rect x="890" y="374" width="140" height="18" rx="3" fill="#fde8e8" stroke="#cc3333" stroke-width="0.5"/>
+  <text x="960" y="383" class="mono-xs" fill="#cc3333">Seal verify fail</text>
+
+  <rect x="890" y="398" width="140" height="18" rx="3" fill="#fde8e8" stroke="#cc3333" stroke-width="0.5"/>
+  <text x="960" y="407" class="mono-xs" fill="#cc3333">Version mismatch</text>
+
+  <rect x="890" y="422" width="140" height="18" rx="3" fill="#fde8e8" stroke="#cc3333" stroke-width="0.5"/>
+  <text x="960" y="431" class="mono-xs" fill="#cc3333">Permission denied</text>
+
+  <rect x="890" y="446" width="140" height="18" rx="3" fill="#fde8e8" stroke="#cc3333" stroke-width="0.5"/>
+  <text x="960" y="455" class="mono-xs" fill="#cc3333">Namespace corrupt</text>
+
+  <rect x="890" y="470" width="140" height="18" rx="3" fill="#fde8e8" stroke="#cc3333" stroke-width="0.5"/>
+  <text x="960" y="479" class="mono-xs" fill="#cc3333">Thread alloc fail</text>
+
+  <line x1="960" y1="510" x2="960" y2="540" stroke="#cc3333" stroke-width="2" marker-end="url(#ah-r)"/>
+
+  <rect x="890" y="545" width="140" height="40" rx="8" fill="#cc3333"/>
+  <text x="960" y="558" class="hdr" style="font-size:11px">Machine halts</text>
+  <text x="960" y="574" class="hdr" style="font-size:9px">No recovery path</text>
+
+  <text x="960" y="610" class="label-s" fill="#cc3333">Single FAULT handler</text>
+  <text x="960" y="624" class="label-s" fill="#cc3333">for all boot failures</text>
+
+  <!-- Fault arrows from each phase -->
+  <line x1="800" y1="290" x2="868" y2="320" stroke="#cc3333" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ah-r)"/>
+  <line x1="800" y1="460" x2="868" y2="420" stroke="#cc3333" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ah-r)"/>
+  <line x1="800" y1="650" x2="868" y2="510" stroke="#cc3333" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ah-r)"/>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- REGISTER STATE EVOLUTION                                    -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <text x="550" y="880" class="title-lg" fill="#333">Register State at Each Phase</text>
+
+  <!-- Header -->
+  <rect x="80" y="900" width="940" height="28" rx="4" fill="#444"/>
+  <text x="150" y="914" class="hdr">Register</text>
+  <text x="310" y="914" class="hdr">FAULT_RST</text>
+  <text x="470" y="914" class="hdr">LOAD_NS</text>
+  <text x="630" y="914" class="hdr">INIT_THRD</text>
+  <text x="790" y="914" class="hdr">LOAD_NUC</text>
+  <text x="950" y="914" class="hdr">COMPLETE</text>
+
+  <!-- Column dividers -->
+  <line x1="230" y1="928" x2="230" y2="1068" stroke="#eee" stroke-width="0.5"/>
+  <line x1="390" y1="928" x2="390" y2="1068" stroke="#eee" stroke-width="0.5"/>
+  <line x1="550" y1="928" x2="550" y2="1068" stroke="#eee" stroke-width="0.5"/>
+  <line x1="710" y1="928" x2="710" y2="1068" stroke="#eee" stroke-width="0.5"/>
+  <line x1="870" y1="928" x2="870" y2="1068" stroke="#eee" stroke-width="0.5"/>
+
+  <!-- CR0-CR7 -->
+  <rect x="80" y="928" width="940" height="28" rx="0" fill="#f8f8f8"/>
+  <text x="150" y="942" class="mono-b" fill="#333">CR0-CR7</text>
+  <text x="310" y="942" class="mono-s" fill="#cc3333">NULL</text>
+  <text x="470" y="942" class="mono-s" fill="#cc3333">NULL</text>
+  <text x="630" y="942" class="mono-s" fill="#cc3333">NULL</text>
+  <text x="790" y="942" class="mono-s" fill="#7b2d8e">CR0=Boot</text>
+  <text x="950" y="942" class="mono-s" fill="#1a7a7a">CR0=Boot</text>
+
+  <!-- CR8 -->
+  <rect x="80" y="956" width="940" height="28" rx="0" fill="#fff"/>
+  <text x="150" y="970" class="mono-b" fill="#333">CR8</text>
+  <text x="310" y="970" class="mono-s" fill="#cc3333">NULL</text>
+  <text x="470" y="970" class="mono-s" fill="#cc3333">NULL</text>
+  <text x="630" y="970" class="mono-s" fill="#27864a">Thread ID</text>
+  <text x="790" y="970" class="mono-s" fill="#27864a">Thread ID</text>
+  <text x="950" y="970" class="mono-s" fill="#1a7a7a">Thread ID</text>
+
+  <!-- CR15 -->
+  <rect x="80" y="984" width="940" height="28" rx="0" fill="#f8f8f8"/>
+  <text x="150" y="998" class="mono-b" fill="#333">CR15</text>
+  <text x="310" y="998" class="mono-s" fill="#cc3333">NULL</text>
+  <text x="470" y="998" class="mono-s" fill="#2a6db5">NS Root</text>
+  <text x="630" y="998" class="mono-s" fill="#2a6db5">NS Root</text>
+  <text x="790" y="998" class="mono-s" fill="#2a6db5">NS Root</text>
+  <text x="950" y="998" class="mono-s" fill="#1a7a7a">NS Root</text>
+
+  <!-- Flags -->
+  <rect x="80" y="1012" width="940" height="28" rx="0" fill="#fff"/>
+  <text x="150" y="1026" class="mono-b" fill="#333">Flags</text>
+  <text x="310" y="1026" class="mono-s" fill="#cc3333">0x0000</text>
+  <text x="470" y="1026" class="mono-s" fill="#555">0x0000</text>
+  <text x="630" y="1026" class="mono-s" fill="#555">0x0000</text>
+  <text x="790" y="1026" class="mono-s" fill="#555">0x0000</text>
+  <text x="950" y="1026" class="mono-s" fill="#1a7a7a">0x0000</text>
+
+  <!-- PC -->
+  <rect x="80" y="1040" width="940" height="28" rx="0" fill="#f8f8f8"/>
+  <text x="150" y="1054" class="mono-b" fill="#333">PC</text>
+  <text x="310" y="1054" class="mono-s" fill="#cc3333">0x0000</text>
+  <text x="470" y="1054" class="mono-s" fill="#555">0x0000</text>
+  <text x="630" y="1054" class="mono-s" fill="#555">0x0000</text>
+  <text x="790" y="1054" class="mono-s" fill="#555">0x0000</text>
+  <text x="950" y="1054" class="mono-s" fill="#1a7a7a">Boot entry</text>
+
+  <!-- Table border -->
+  <rect x="80" y="900" width="940" height="168" rx="4" fill="none" stroke="#ccc" stroke-width="1"/>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- KEY INSIGHT                                                 -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <rect x="80" y="1090" width="940" height="90" rx="10" fill="#f5f5f0" stroke="#999" stroke-width="1"/>
+  <text x="550" y="1115" class="title-sm" fill="#b8860b">Why Hardware Boot Matters</text>
+  <text x="550" y="1138" class="label" fill="#333">Phase 1 (FAULT_RST) guarantees zero ambient authority: every register starts NULL.</text>
+  <text x="550" y="1156" class="label" fill="#333">No software executes until Phase 5. The machine is safe before it is useful.</text>
+  <text x="550" y="1170" class="label" fill="#555">Compare to conventional boot: BIOS/UEFI runs with full ring-0 privilege from the first instruction.</text>
+
+</svg>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#555;"></div> IDLE (power-on)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#cc3333;"></div> Phase 1: FAULT_RST (zero authority)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#2a6db5;"></div> Phase 2: LOAD_NS (namespace)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#27864a;"></div> Phase 3: INIT_THRD (threads)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#7b2d8e;"></div> Phase 4: LOAD_NUC (nucleus)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#1a7a7a;"></div> Phase 5: COMPLETE (first CALL)</div>
+</div>
+
+</body>
+</html>

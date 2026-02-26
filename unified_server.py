@@ -235,6 +235,12 @@ def figures_three_dispatch_styles():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
+@app.route('/figures/five-phase-boot')
+def figures_five_phase_boot():
+    resp = make_response(send_from_directory(FIGURES_DIR, 'five-phase-boot.html'))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
 @app.route('/figures/hello-mum-tunnel')
 def figures_hello_mum_tunnel():
     resp = make_response(send_from_directory(FIGURES_DIR, 'hello-mum-tunnel.html'))
