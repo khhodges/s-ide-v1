@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 10: Atomic Abstraction Architecture — 7 Zeroes</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #ffffff;
+    color: #1a1a1a;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+  }
+  h1 { font-size: 22px; color: #b8860b; margin-bottom: 6px; text-align: center; }
+  .subtitle { font-size: 13px; color: #555555; margin-bottom: 30px; text-align: center; max-width: 960px; }
+  .nav { position: fixed; top: 10px; left: 10px; z-index: 100; }
+  .nav a {
+    background: #f0f0f0; color: #333; text-decoration: none; padding: 6px 14px;
+    border-radius: 4px; font-size: 13px; border: 1px solid #ccc;
+  }
+  .nav a:hover { background: #e0e0e0; color: #000; }
+  .legend { margin-top: 24px; display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555555; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+  @media print { .nav { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="nav"><a href="/church/">&#8592; Church Machine</a></div>
+
+<h1>Figure 10 &mdash; Atomic Abstraction Architecture: The 7 Zeroes</h1>
+<p class="subtitle">Conventional architectures stack layers of complexity, each introducing attack surface. The CTMM eliminates all seven: no central OS, no VM/hypervisor, no privilege rings, no superuser, no ACLs, no MMU/TLB, no ambient authority. Every system service is an atomic abstraction accessed only through Golden Tokens validated by the dual-gate TSB.</p>
+
+<svg viewBox="0 0 1100 1380" width="1100" height="1380" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ah-r" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#cc3333"/>
+    </marker>
+    <marker id="ah-g" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27864a"/>
+    </marker>
+    <marker id="ah-k" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555"/>
+    </marker>
+  </defs>
+
+  <style>
+    .title-lg { font-family:'Segoe UI',system-ui,sans-serif; font-size:17px; font-weight:700; text-anchor:middle; dominant-baseline:central; }
+    .title-sm { font-family:'Segoe UI',system-ui,sans-serif; font-size:14px; font-weight:700; text-anchor:middle; dominant-baseline:central; }
+    .title-xs { font-family:'Segoe UI',system-ui,sans-serif; font-size:12px; font-weight:600; text-anchor:middle; dominant-baseline:central; }
+    .label { font-family:'Segoe UI',system-ui,sans-serif; font-size:12px; fill:#1a1a1a; text-anchor:middle; dominant-baseline:central; }
+    .label-s { font-family:'Segoe UI',system-ui,sans-serif; font-size:10px; fill:#555555; text-anchor:middle; dominant-baseline:central; }
+    .mono { font-family:'Consolas','Courier New',monospace; font-size:11px; fill:#1a1a1a; text-anchor:middle; dominant-baseline:central; }
+    .mono-b { font-family:'Consolas','Courier New',monospace; font-size:12px; font-weight:700; text-anchor:middle; dominant-baseline:central; }
+    .mono-s { font-family:'Consolas','Courier New',monospace; font-size:10px; fill:#555; text-anchor:middle; dominant-baseline:central; }
+    .hdr { font-family:'Segoe UI',system-ui,sans-serif; font-size:12px; font-weight:700; fill:#fff; text-anchor:middle; dominant-baseline:central; }
+    .absent { font-family:'Consolas','Courier New',monospace; font-size:11px; fill:#cc3333; text-anchor:middle; dominant-baseline:central; }
+    .present { font-family:'Consolas','Courier New',monospace; font-size:11px; fill:#27864a; text-anchor:middle; dominant-baseline:central; }
+  </style>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- CONVENTIONAL ARCHITECTURE (LEFT)                            -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <text x="265" y="20" class="title-lg" fill="#cc3333">Conventional Architecture</text>
+  <text x="265" y="40" class="label-s" fill="#cc3333">Layers of complexity = layers of attack surface</text>
+
+  <!-- Application layer -->
+  <rect x="80" y="60" width="370" height="50" rx="8" fill="#fde8e8" stroke="#cc3333" stroke-width="1.5"/>
+  <text x="265" y="80" class="title-xs" fill="#cc3333">Application</text>
+  <text x="265" y="98" class="label-s" fill="#555">runs in user space, least privilege</text>
+
+  <!-- Attack surface marker -->
+  <rect x="460" y="107" width="50" height="16" rx="3" fill="#cc3333"/>
+  <text x="485" y="115" class="hdr" style="font-size:8px">ATTACK</text>
+  <line x1="450" y1="110" x2="460" y2="115" stroke="#cc3333" stroke-width="1"/>
+
+  <!-- Syscall boundary -->
+  <rect x="80" y="110" width="370" height="26" rx="0" fill="#f5d0d0" stroke="#cc3333" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="265" y="123" class="mono-s" fill="#cc3333">syscall boundary (context switch)</text>
+
+  <!-- OS Kernel -->
+  <rect x="80" y="136" width="370" height="60" rx="8" fill="#fde8e8" stroke="#cc3333" stroke-width="1.5"/>
+  <text x="265" y="156" class="title-xs" fill="#cc3333">Operating System Kernel</text>
+  <text x="265" y="174" class="label-s" fill="#555">scheduler, VFS, network stack, drivers</text>
+  <text x="265" y="188" class="label-s" fill="#cc3333">millions of lines of trusted code</text>
+
+  <rect x="460" y="183" width="50" height="16" rx="3" fill="#cc3333"/>
+  <text x="485" y="191" class="hdr" style="font-size:8px">ATTACK</text>
+  <line x1="450" y1="186" x2="460" y2="191" stroke="#cc3333" stroke-width="1"/>
+
+  <!-- Privilege rings -->
+  <rect x="80" y="196" width="370" height="26" rx="0" fill="#f5d0d0" stroke="#cc3333" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="265" y="209" class="mono-s" fill="#cc3333">privilege ring boundary (ring 3 &#x2192; ring 0)</text>
+
+  <!-- Hypervisor -->
+  <rect x="80" y="222" width="370" height="50" rx="8" fill="#fde8e8" stroke="#cc3333" stroke-width="1.5"/>
+  <text x="265" y="242" class="title-xs" fill="#cc3333">Hypervisor / VMM</text>
+  <text x="265" y="260" class="label-s" fill="#555">virtual machines, hardware emulation</text>
+
+  <rect x="460" y="259" width="50" height="16" rx="3" fill="#cc3333"/>
+  <text x="485" y="267" class="hdr" style="font-size:8px">ATTACK</text>
+  <line x1="450" y1="262" x2="460" y2="267" stroke="#cc3333" stroke-width="1"/>
+
+  <!-- MMU/TLB -->
+  <rect x="80" y="272" width="370" height="26" rx="0" fill="#f5d0d0" stroke="#cc3333" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="265" y="285" class="mono-s" fill="#cc3333">MMU/TLB boundary (virtual &#x2192; physical)</text>
+
+  <!-- Hardware -->
+  <rect x="80" y="298" width="370" height="50" rx="8" fill="#f0f0f0" stroke="#999" stroke-width="1.5"/>
+  <text x="265" y="318" class="title-xs" fill="#555">Hardware (CPU + memory)</text>
+  <text x="265" y="336" class="label-s" fill="#555">speculative exec, cache, branch prediction</text>
+
+  <rect x="460" y="335" width="50" height="16" rx="3" fill="#cc3333"/>
+  <text x="485" y="343" class="hdr" style="font-size:8px">ATTACK</text>
+  <line x1="450" y1="338" x2="460" y2="343" stroke="#cc3333" stroke-width="1"/>
+
+  <!-- Attack surface count -->
+  <rect x="120" y="365" width="290" height="30" rx="6" fill="#fde8e8" stroke="#cc3333" stroke-width="2"/>
+  <text x="265" y="380" class="mono-b" fill="#cc3333">4 attack surfaces, billions of LOC trusted</text>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- CTMM ARCHITECTURE (RIGHT)                                   -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <text x="810" y="20" class="title-lg" fill="#27864a">CTMM / Church Machine</text>
+  <text x="810" y="40" class="label-s" fill="#27864a">Flat architecture = zero attack surface layers</text>
+
+  <!-- Atomic Abstractions (all equal, no hierarchy) -->
+  <rect x="600" y="60" width="420" height="240" rx="12" fill="#e8fde8" stroke="#27864a" stroke-width="2"/>
+  <text x="810" y="82" class="title-sm" fill="#27864a">Atomic Abstractions (all peers, no hierarchy)</text>
+
+  <!-- Individual abstractions -->
+  <rect x="620" y="100" width="120" height="34" rx="6" fill="#d5f0d5" stroke="#27864a" stroke-width="1"/>
+  <text x="680" y="117" class="mono" fill="#27864a">Threads</text>
+
+  <rect x="750" y="100" width="120" height="34" rx="6" fill="#d5f0d5" stroke="#27864a" stroke-width="1"/>
+  <text x="810" y="117" class="mono" fill="#27864a">GC (PP250)</text>
+
+  <rect x="880" y="100" width="120" height="34" rx="6" fill="#d5f0d5" stroke="#27864a" stroke-width="1"/>
+  <text x="940" y="117" class="mono" fill="#27864a">Stack</text>
+
+  <rect x="620" y="144" width="120" height="34" rx="6" fill="#d5f0d5" stroke="#27864a" stroke-width="1"/>
+  <text x="680" y="161" class="mono" fill="#27864a">SlideRule</text>
+
+  <rect x="750" y="144" width="120" height="34" rx="6" fill="#d5f0d5" stroke="#27864a" stroke-width="1"/>
+  <text x="810" y="161" class="mono" fill="#27864a">DateTime</text>
+
+  <rect x="880" y="144" width="120" height="34" rx="6" fill="#d5f0d5" stroke="#27864a" stroke-width="1"/>
+  <text x="940" y="161" class="mono" fill="#27864a">HP35</text>
+
+  <rect x="620" y="188" width="120" height="34" rx="6" fill="#d5f0d5" stroke="#27864a" stroke-width="1"/>
+  <text x="680" y="205" class="mono" fill="#27864a">CapMgr</text>
+
+  <rect x="750" y="188" width="120" height="34" rx="6" fill="#d5f0d5" stroke="#27864a" stroke-width="1"/>
+  <text x="810" y="205" class="mono" fill="#27864a">FamilyReg</text>
+
+  <rect x="880" y="188" width="120" height="34" rx="6" fill="#d5f0d5" stroke="#27864a" stroke-width="1"/>
+  <text x="940" y="205" class="mono" fill="#27864a">Constants</text>
+
+  <text x="810" y="248" class="label-s" fill="#27864a">Each entered via CALL with E permission GT, exited via RETURN</text>
+  <text x="810" y="264" class="label-s" fill="#27864a">Church interface (safe), Turing implementation (hidden, atomic)</text>
+  <text x="810" y="280" class="label-s" fill="#27864a">No abstraction trusts any other &mdash; all are peers</text>
+
+  <!-- Single gate -->
+  <rect x="630" y="310" width="360" height="36" rx="6" fill="#e8f4fd" stroke="#2a6db5" stroke-width="2"/>
+  <text x="810" y="328" class="mono-b" fill="#2a6db5">Dual-Gate TSB (mLoad + mSave)</text>
+
+  <!-- Arrow down -->
+  <line x1="810" y1="346" x2="810" y2="362" stroke="#555" stroke-width="1.5" marker-end="url(#ah-k)"/>
+
+  <!-- Hardware -->
+  <rect x="660" y="362" width="300" height="36" rx="6" fill="#f0f0f0" stroke="#999" stroke-width="1"/>
+  <text x="810" y="380" class="mono" fill="#555">Hardware (no speculation, no cache, no MMU)</text>
+
+  <rect x="660" y="410" width="300" height="30" rx="6" fill="#e8fde8" stroke="#27864a" stroke-width="2"/>
+  <text x="810" y="425" class="mono-b" fill="#27864a">0 attack surfaces, 1 gate trusted</text>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- VS arrow -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <text x="545" y="200" class="title-lg" fill="#b8860b">vs</text>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- THE 7 ZEROES                                                -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <text x="550" y="480" class="title-lg" fill="#b8860b">The 7 Zeroes</text>
+
+  <!-- Table header -->
+  <rect x="80" y="500" width="940" height="32" rx="6" fill="#444" stroke="#333" stroke-width="1"/>
+  <text x="120" y="516" class="hdr" text-anchor="start">#</text>
+  <text x="280" y="516" class="hdr" text-anchor="middle">Conventional Component</text>
+  <text x="550" y="516" class="hdr" text-anchor="middle">CTMM Replacement</text>
+  <text x="810" y="516" class="hdr" text-anchor="middle">Why It's Zero</text>
+
+  <!-- Row 1 -->
+  <rect x="80" y="532" width="940" height="50" rx="0" fill="#fef5f5" stroke="#eee" stroke-width="0.5"/>
+  <circle cx="110" cy="557" r="14" fill="#cc3333"/>
+  <text x="110" y="557" class="hdr" style="font-size:13px">0</text>
+  <text x="280" y="550" class="absent">Central OS</text>
+  <text x="280" y="567" class="label-s" fill="#555">monolithic kernel, scheduler, VFS</text>
+  <text x="550" y="550" class="present">Namespace entries</text>
+  <text x="550" y="567" class="label-s" fill="#555">each service is an atomic abstraction</text>
+  <text x="810" y="557" class="label-s" fill="#333">No kernel to exploit; no single point of compromise</text>
+
+  <!-- Row 2 -->
+  <rect x="80" y="582" width="940" height="50" rx="0" fill="#fff" stroke="#eee" stroke-width="0.5"/>
+  <circle cx="110" cy="607" r="14" fill="#cc3333"/>
+  <text x="110" y="607" class="hdr" style="font-size:13px">0</text>
+  <text x="280" y="600" class="absent">VM / Hypervisor</text>
+  <text x="280" y="617" class="label-s" fill="#555">hardware emulation, escape vulns</text>
+  <text x="550" y="600" class="present">Native abstractions</text>
+  <text x="550" y="617" class="label-s" fill="#555">no emulation layer needed</text>
+  <text x="810" y="607" class="label-s" fill="#333">No VM escape possible; isolation is hardware-native</text>
+
+  <!-- Row 3 -->
+  <rect x="80" y="632" width="940" height="50" rx="0" fill="#fef5f5" stroke="#eee" stroke-width="0.5"/>
+  <circle cx="110" cy="657" r="14" fill="#cc3333"/>
+  <text x="110" y="657" class="hdr" style="font-size:13px">0</text>
+  <text x="280" y="650" class="absent">Privilege Rings</text>
+  <text x="280" y="667" class="label-s" fill="#555">ring-0/1/2/3, mode bits</text>
+  <text x="550" y="650" class="present">Flat capability space</text>
+  <text x="550" y="667" class="label-s" fill="#555">all code runs at same level</text>
+  <text x="810" y="657" class="label-s" fill="#333">No mode bit to flip; authority comes from GT possession</text>
+
+  <!-- Row 4 -->
+  <rect x="80" y="682" width="940" height="50" rx="0" fill="#fff" stroke="#eee" stroke-width="0.5"/>
+  <circle cx="110" cy="707" r="14" fill="#cc3333"/>
+  <text x="110" y="707" class="hdr" style="font-size:13px">0</text>
+  <text x="280" y="700" class="absent">Superuser / Root</text>
+  <text x="280" y="717" class="label-s" fill="#555">uid 0, omnipotent account</text>
+  <text x="550" y="700" class="present">No global authority</text>
+  <text x="550" y="717" class="label-s" fill="#555">TPERM can only attenuate, never amplify</text>
+  <text x="810" y="707" class="label-s" fill="#333">No root to compromise; no single entity has all GTs</text>
+
+  <!-- Row 5 -->
+  <rect x="80" y="732" width="940" height="50" rx="0" fill="#fef5f5" stroke="#eee" stroke-width="0.5"/>
+  <circle cx="110" cy="757" r="14" fill="#cc3333"/>
+  <text x="110" y="757" class="hdr" style="font-size:13px">0</text>
+  <text x="280" y="750" class="absent">ACLs / Identity Auth</text>
+  <text x="280" y="767" class="label-s" fill="#555">confused deputy, TOCTOU</text>
+  <text x="550" y="750" class="present">Capability = authority</text>
+  <text x="550" y="767" class="label-s" fill="#555">GT possession is the access check</text>
+  <text x="810" y="757" class="label-s" fill="#333">No ambient authority; holding GT = exactly the granted rights</text>
+
+  <!-- Row 6 -->
+  <rect x="80" y="782" width="940" height="50" rx="0" fill="#fff" stroke="#eee" stroke-width="0.5"/>
+  <circle cx="110" cy="807" r="14" fill="#cc3333"/>
+  <text x="110" y="807" class="hdr" style="font-size:13px">0</text>
+  <text x="280" y="800" class="absent">MMU / TLB</text>
+  <text x="280" y="817" class="label-s" fill="#555">page tables, side-channel leaks</text>
+  <text x="550" y="800" class="present">GT bounds + version</text>
+  <text x="550" y="817" class="label-s" fill="#555">mLoad validates every access inline</text>
+  <text x="810" y="807" class="label-s" fill="#333">No page table to corrupt; bounds in the GT itself</text>
+
+  <!-- Row 7 -->
+  <rect x="80" y="832" width="940" height="50" rx="0" fill="#fef5f5" stroke="#eee" stroke-width="0.5"/>
+  <circle cx="110" cy="857" r="14" fill="#cc3333"/>
+  <text x="110" y="857" class="hdr" style="font-size:13px">0</text>
+  <text x="280" y="850" class="absent">Ambient Authority</text>
+  <text x="280" y="867" class="label-s" fill="#555">implicit inherited permissions</text>
+  <text x="550" y="850" class="present">Explicit delegation</text>
+  <text x="550" y="867" class="label-s" fill="#555">B-bit + TPERM + mSave check</text>
+  <text x="810" y="857" class="label-s" fill="#333">No implicit rights; every delegation is auditable + revocable</text>
+
+  <!-- Table border -->
+  <rect x="80" y="500" width="940" height="382" rx="6" fill="none" stroke="#ccc" stroke-width="1"/>
+
+  <!-- Column dividers -->
+  <line x1="150" y1="532" x2="150" y2="882" stroke="#eee" stroke-width="0.5"/>
+  <line x1="410" y1="532" x2="410" y2="882" stroke="#eee" stroke-width="0.5"/>
+  <line x1="690" y1="532" x2="690" y2="882" stroke="#eee" stroke-width="0.5"/>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- WHAT REPLACES THE STACK                                     -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <text x="550" y="920" class="title-lg" fill="#333">What Replaces the Conventional Stack</text>
+
+  <!-- Conventional side -->
+  <rect x="80" y="940" width="460" height="200" rx="10" fill="#fef5f5" stroke="#cc3333" stroke-width="1.5"/>
+  <text x="310" y="965" class="title-sm" fill="#cc3333">Conventional: Layered Trust</text>
+
+  <rect x="110" y="985" width="400" height="24" rx="4" fill="#fde8e8" stroke="#cc3333" stroke-width="0.5"/>
+  <text x="310" y="997" class="mono-s" fill="#cc3333">App trusts OS trusts Hypervisor trusts HW</text>
+  <rect x="110" y="1015" width="400" height="24" rx="4" fill="#fde8e8" stroke="#cc3333" stroke-width="0.5"/>
+  <text x="310" y="1027" class="mono-s" fill="#cc3333">Any layer compromise &#x2192; all layers above fall</text>
+  <rect x="110" y="1045" width="400" height="24" rx="4" fill="#fde8e8" stroke="#cc3333" stroke-width="0.5"/>
+  <text x="310" y="1057" class="mono-s" fill="#cc3333">Kernel = single point of failure (10M+ LOC)</text>
+  <rect x="110" y="1075" width="400" height="24" rx="4" fill="#fde8e8" stroke="#cc3333" stroke-width="0.5"/>
+  <text x="310" y="1087" class="mono-s" fill="#cc3333">Root exploit = game over</text>
+  <rect x="110" y="1105" width="400" height="24" rx="4" fill="#fde8e8" stroke="#cc3333" stroke-width="0.5"/>
+  <text x="310" y="1117" class="mono-s" fill="#cc3333">Security = mitigations stacked on mitigations</text>
+
+  <!-- CTMM side -->
+  <rect x="560" y="940" width="460" height="200" rx="10" fill="#e8fde8" stroke="#27864a" stroke-width="1.5"/>
+  <text x="790" y="965" class="title-sm" fill="#27864a">CTMM: Flat Peers + Single Gate</text>
+
+  <rect x="590" y="985" width="400" height="24" rx="4" fill="#d5f0d5" stroke="#27864a" stroke-width="0.5"/>
+  <text x="790" y="997" class="mono-s" fill="#27864a">Every abstraction is a peer (no hierarchy)</text>
+  <rect x="590" y="1015" width="400" height="24" rx="4" fill="#d5f0d5" stroke="#27864a" stroke-width="0.5"/>
+  <text x="790" y="1027" class="mono-s" fill="#27864a">Compromise one &#x2192; only that abstraction affected</text>
+  <rect x="590" y="1045" width="400" height="24" rx="4" fill="#d5f0d5" stroke="#27864a" stroke-width="0.5"/>
+  <text x="790" y="1057" class="mono-s" fill="#27864a">TSB = only trusted code (~1K gates in HW)</text>
+  <rect x="590" y="1075" width="400" height="24" rx="4" fill="#d5f0d5" stroke="#27864a" stroke-width="0.5"/>
+  <text x="790" y="1087" class="mono-s" fill="#27864a">No root concept &#x2192; no root exploit</text>
+  <rect x="590" y="1105" width="400" height="24" rx="4" fill="#d5f0d5" stroke="#27864a" stroke-width="0.5"/>
+  <text x="790" y="1117" class="mono-s" fill="#27864a">Security = absent hardware (nothing to exploit)</text>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- BOTTOM SUMMARY                                              -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <rect x="80" y="1170" width="940" height="80" rx="10" fill="#f5f5f0" stroke="#999" stroke-width="1"/>
+  <text x="550" y="1195" class="title-sm" fill="#b8860b">The Atomic Abstraction Principle</text>
+  <text x="550" y="1218" class="label" fill="#333">Every system service &mdash; threads, GC, math, I/O &mdash; is an atomic abstraction: Church interface (CALL/RETURN),</text>
+  <text x="550" y="1236" class="label" fill="#333">Turing implementation (hidden, atomic, no interleaving). No central coordinator. No privilege hierarchy. Just GTs + gates.</text>
+
+  <!-- 7 Zeroes summary bar -->
+  <rect x="140" y="1280" width="820" height="44" rx="10" fill="#27864a" stroke="#1a5a30" stroke-width="2"/>
+  <text x="550" y="1296" class="hdr" style="font-size:14px">7 ZEROES: No OS, No VM, No Rings, No Root, No ACLs, No MMU, No Ambient Authority</text>
+  <text x="550" y="1314" class="hdr" style="font-size:11px">Replaced by: Atomic Abstractions + Golden Tokens + Dual-Gate TSB</text>
+
+</svg>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#cc3333;"></div> Conventional (attack surfaces)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#27864a;"></div> CTMM (eliminated by construction)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#2a6db5;"></div> Dual-gate TSB (single trust point)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#b8860b;"></div> Architecture principle</div>
+</div>
+
+</body>
+</html>

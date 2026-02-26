@@ -205,6 +205,12 @@ def figures_vulnerability_elimination():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
+@app.route('/figures/atomic-abstraction-architecture')
+def figures_atomic_abstraction():
+    resp = make_response(send_from_directory(FIGURES_DIR, 'atomic-abstraction-architecture.html'))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
 @app.route('/figures/hello-mum-tunnel')
 def figures_hello_mum_tunnel():
     resp = make_response(send_from_directory(FIGURES_DIR, 'hello-mum-tunnel.html'))
