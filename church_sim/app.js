@@ -89,6 +89,9 @@ function renderPagesDirectory() {
         const eName = name.replace(/'/g, "\\'");
         return `<div onclick="openPageInFrame('${escaped}','${eName}')" style="cursor:pointer;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:0.7rem 0.9rem;color:#c9d1d9;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#30363d'"><div style="font-size:0.85rem;font-weight:600;color:#58a6ff;margin-bottom:0.2rem;">${name} <span style="font-size:0.6rem;padding:0.1rem 0.35rem;border-radius:3px;${tagClass}">${tag}</span></div><div style="font-size:0.7rem;color:#8b949e;line-height:1.3;">${desc}</div></div>`;
     }
+    function navCard(href, name, tag, tagClass, desc) {
+        return `<div onclick="window.location.href='${href}'" style="cursor:pointer;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:0.7rem 0.9rem;color:#c9d1d9;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#58a6ff'" onmouseout="this.style.borderColor='#30363d'"><div style="font-size:0.85rem;font-weight:600;color:#58a6ff;margin-bottom:0.2rem;">${name} <span style="font-size:0.6rem;padding:0.1rem 0.35rem;border-radius:3px;${tagClass}">${tag}</span></div><div style="font-size:0.7rem;color:#8b949e;line-height:1.3;">${desc}</div><div style="font-size:0.6rem;color:#484f58;margin-top:0.2rem;">Opens in full window</div></div>`;
+    }
     const tc = 'background:#1a2a1a;border:1px solid #3fb950;color:#3fb950;';
     const ts = 'background:#1a1a2a;border:1px solid #58a6ff;color:#58a6ff;';
     const tr = 'background:#2a1a2a;border:1px solid #bc8cff;color:#bc8cff;';
@@ -97,14 +100,14 @@ function renderPagesDirectory() {
 
     const el = id => document.getElementById(id);
     el('pagesSimulators').innerHTML = [
-        card('/', 'Home', 'landing', ts, 'Landing page with links to all simulators.'),
-        card('/church/', 'Church Machine', 'Pure Church', tc, '8 opcodes, zero Turing instructions, REPL, pipeline, Bernoulli tutorial.'),
-        card('/ctmm/', 'CTMM Simulator', 'Sim-64', ts, 'Custom ISA, 64-bit Golden Tokens, namespace browser, assembly editor.'),
-        card('/rv32/', 'RV32-Cap Simulator', 'RISC-V', tr, 'RISC-V RV32I with capability security extensions, 32-bit GTs.'),
+        navCard('/', 'Home', 'landing', ts, 'Landing page with links to all simulators.'),
+        navCard('/church/', 'Church Machine', 'Pure Church', tc, '8 opcodes, zero Turing instructions, REPL, pipeline, Bernoulli tutorial.'),
+        navCard('/ctmm/', 'CTMM Simulator', 'Sim-64', ts, 'Custom ISA, 64-bit Golden Tokens, namespace browser, assembly editor.'),
+        navCard('/rv32/', 'RV32-Cap Simulator', 'RISC-V', tr, 'RISC-V RV32I with capability security extensions, 32-bit GTs.'),
     ].join('');
     el('pagesReference').innerHTML = [
         card('/church/flowchart.html', 'Microcode Flowchart', 'Church', tc, 'All 20 instructions with memory bus annotations, TSB gates, GC cycle, fault catalog.'),
-        card('/test/', 'Tunnel Test Harness', 'testing', tt, 'Side-by-side testing with automated messaging and real-time test logging.'),
+        navCard('/test/', 'Tunnel Test Harness', 'testing', tt, 'Side-by-side testing with automated messaging and real-time test logging.'),
     ].join('');
     el('pagesFigures').innerHTML = [
         card('/figures/', 'Fig 3: LAMBDA Fast Path', 'figure', td, 'LAMBDA machine-status fast path.'),
