@@ -40,7 +40,7 @@
 <h1>Figure 1 &mdash; Dual-Gate Trusted Security Base Architecture</h1>
 <p class="subtitle">The complete TSB consists of exactly two hardware gates: mLoad (read path) and mSave (write path). Every capability operation in the entire machine must pass through one or both gates. Any validation failure at any stage routes to the single FAULT handler. ~329 lines of synthesizable Amaranth HDL.</p>
 
-<svg viewBox="0 0 1100 1050" width="1100" height="1050" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 1100 1100" width="1100" height="1100" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
       <polygon points="0 0, 10 3.5, 0 7" fill="#5dade2"/>
@@ -75,9 +75,9 @@
   </style>
 
   <!-- ═══════ OUTER TSB BOUNDARY ═══════ -->
-  <rect x="30" y="100" width="1040" height="850" rx="12" fill="none" stroke="#2a3a4a" stroke-width="2" stroke-dasharray="8,4"/>
+  <rect x="30" y="100" width="1040" height="900" rx="12" fill="none" stroke="#2a3a4a" stroke-width="2" stroke-dasharray="8,4"/>
   <text x="550" y="86" class="title-sm" fill="#5dade2">TRUSTED SECURITY BASE (TSB)</text>
-  <text x="550" y="968" class="label-s">~329 lines Amaranth HDL &mdash; 5 orders of magnitude smaller than Linux, 2 orders smaller than seL4</text>
+  <text x="550" y="1018" class="label-s">~329 lines Amaranth HDL &mdash; 5 orders of magnitude smaller than Linux, 2 orders smaller than seL4</text>
 
   <!-- ═══════ mLoad COLUMN (LEFT) ═══════ -->
   <!-- Header -->
@@ -188,70 +188,79 @@
   <text x="820" y="340" class="label" fill="#f0883e">Source GT Seal Validation</text>
   <line x1="820" y1="306" x2="820" y2="324" stroke="#f0883e" stroke-width="1.5" marker-end="url(#ah-o)"/>
 
-  <!-- Step 3: B-bit -->
-  <circle cx="650" cy="390" r="13" fill="#f5c842"/>
+  <!-- Step 3: Target Bounds -->
+  <circle cx="650" cy="390" r="13" fill="#5dade2"/>
   <text x="650" y="390" class="step-num">3</text>
-  <rect x="670" y="374" width="300" height="32" rx="6" fill="#1a1510" stroke="#f5c842" stroke-width="1.5"/>
-  <text x="820" y="390" class="label" fill="#f5c842">B-bit Check (B=1 required)</text>
+  <rect x="670" y="374" width="300" height="32" rx="6" fill="#1a1510" stroke="#5dade2" stroke-width="1.5"/>
+  <text x="820" y="390" class="label" fill="#5dade2">Target C-List Bounds Check</text>
   <line x1="820" y1="356" x2="820" y2="374" stroke="#f0883e" stroke-width="1.5" marker-end="url(#ah-o)"/>
 
-  <!-- Step 4: F-bit -->
+  <!-- Step 4: B-bit -->
   <circle cx="650" cy="440" r="13" fill="#f5c842"/>
   <text x="650" y="440" class="step-num">4</text>
   <rect x="670" y="424" width="300" height="32" rx="6" fill="#1a1510" stroke="#f5c842" stroke-width="1.5"/>
-  <text x="820" y="440" class="label" fill="#f5c842">F-bit Detection on Target Slot</text>
-  <line x1="820" y1="406" x2="820" y2="424" stroke="#f5c842" stroke-width="1.5" marker-end="url(#ah-y)"/>
+  <text x="820" y="440" class="label" fill="#f5c842">B-bit Check (B=1 required)</text>
+  <line x1="820" y1="406" x2="820" y2="424" stroke="#5dade2" stroke-width="1.5" marker-end="url(#ah)"/>
+
+  <!-- Step 5: F-bit -->
+  <circle cx="650" cy="490" r="13" fill="#f5c842"/>
+  <text x="650" y="490" class="step-num">5</text>
+  <rect x="670" y="474" width="300" height="32" rx="6" fill="#1a1510" stroke="#f5c842" stroke-width="1.5"/>
+  <text x="820" y="490" class="label" fill="#f5c842">F-bit Detection on Target Slot</text>
+  <line x1="820" y1="456" x2="820" y2="474" stroke="#f5c842" stroke-width="1.5" marker-end="url(#ah-y)"/>
 
   <!-- F-bit branch annotation -->
-  <rect x="740" y="462" width="160" height="22" rx="4" fill="#111822" stroke="#da70d6" stroke-width="1"/>
-  <text x="820" y="473" class="label-s" fill="#da70d6">F=1 &#x2192; HTTP/tunnel route</text>
-  <line x1="820" y1="456" x2="820" y2="462" stroke="#da70d6" stroke-width="1" stroke-dasharray="3,2"/>
+  <rect x="740" y="512" width="160" height="22" rx="4" fill="#111822" stroke="#da70d6" stroke-width="1"/>
+  <text x="820" y="523" class="label-s" fill="#da70d6">F=1 &#x2192; HTTP/tunnel route</text>
+  <line x1="820" y1="506" x2="820" y2="512" stroke="#da70d6" stroke-width="1" stroke-dasharray="3,2"/>
 
-  <!-- Step 5: Seal Recompute -->
-  <circle cx="650" cy="510" r="13" fill="#f0883e"/>
-  <text x="650" y="510" class="step-num">5</text>
-  <rect x="670" y="494" width="300" height="32" rx="6" fill="#1a1510" stroke="#f0883e" stroke-width="1.5"/>
-  <text x="820" y="510" class="label" fill="#f0883e">Seal Recompute (FNV hash)</text>
-  <line x1="820" y1="484" x2="820" y2="494" stroke="#f0883e" stroke-width="1.5" marker-end="url(#ah-o)"/>
-
-  <!-- Step 6: G-bit -->
-  <circle cx="650" cy="560" r="13" fill="#2ecc71"/>
+  <!-- Step 6: Seal Recompute -->
+  <circle cx="650" cy="560" r="13" fill="#f0883e"/>
   <text x="650" y="560" class="step-num">6</text>
-  <rect x="670" y="544" width="300" height="32" rx="6" fill="#1a1510" stroke="#2ecc71" stroke-width="1.5"/>
-  <text x="820" y="560" class="label" fill="#2ecc71">G-bit Reset (GC liveness)</text>
-  <line x1="820" y1="526" x2="820" y2="544" stroke="#f0883e" stroke-width="1.5" marker-end="url(#ah-o)"/>
+  <rect x="670" y="544" width="300" height="32" rx="6" fill="#1a1510" stroke="#f0883e" stroke-width="1.5"/>
+  <text x="820" y="560" class="label" fill="#f0883e">Seal Recompute (FNV hash)</text>
+  <line x1="820" y1="534" x2="820" y2="544" stroke="#f0883e" stroke-width="1.5" marker-end="url(#ah-o)"/>
 
-  <!-- Step 7: Commit -->
+  <!-- Step 7: G-bit -->
   <circle cx="650" cy="610" r="13" fill="#2ecc71"/>
   <text x="650" y="610" class="step-num">7</text>
   <rect x="670" y="594" width="300" height="32" rx="6" fill="#1a1510" stroke="#2ecc71" stroke-width="1.5"/>
-  <text x="820" y="610" class="label" fill="#2ecc71">Commit to C-List</text>
-  <line x1="820" y1="576" x2="820" y2="594" stroke="#2ecc71" stroke-width="1.5" marker-end="url(#ah-g)"/>
+  <text x="820" y="610" class="label" fill="#2ecc71">G-bit Reset (GC liveness)</text>
+  <line x1="820" y1="576" x2="820" y2="594" stroke="#f0883e" stroke-width="1.5" marker-end="url(#ah-o)"/>
+
+  <!-- Step 8: Commit -->
+  <circle cx="650" cy="660" r="13" fill="#2ecc71"/>
+  <text x="650" y="660" class="step-num">8</text>
+  <rect x="670" y="644" width="300" height="32" rx="6" fill="#1a1510" stroke="#2ecc71" stroke-width="1.5"/>
+  <text x="820" y="660" class="label" fill="#2ecc71">Commit to C-List</text>
+  <line x1="820" y1="626" x2="820" y2="644" stroke="#2ecc71" stroke-width="1.5" marker-end="url(#ah-g)"/>
 
   <!-- Success output -->
-  <rect x="710" y="650" width="220" height="30" rx="6" fill="#1a2a1a" stroke="#2ecc71" stroke-width="1.5"/>
-  <text x="820" y="665" class="gate-label" fill="#2ecc71">&#10003; Valid Write Complete</text>
-  <line x1="820" y1="626" x2="820" y2="650" stroke="#2ecc71" stroke-width="1.5" marker-end="url(#ah-g)"/>
+  <rect x="710" y="700" width="220" height="30" rx="6" fill="#1a2a1a" stroke="#2ecc71" stroke-width="1.5"/>
+  <text x="820" y="715" class="gate-label" fill="#2ecc71">&#10003; Valid Write Complete</text>
+  <line x1="820" y1="676" x2="820" y2="700" stroke="#2ecc71" stroke-width="1.5" marker-end="url(#ah-g)"/>
 
-  <!-- Fail arrows from steps 1-3 to FAULT -->
+  <!-- Fail arrows from steps 1-4 to FAULT -->
   <line x1="670" y1="290" x2="610" y2="290" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>
   <line x1="670" y1="340" x2="610" y2="340" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>
   <line x1="670" y1="390" x2="610" y2="390" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="670" y1="440" x2="610" y2="440" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>
   <text x="638" y="282" class="label-s" fill="#e74c3c">FAIL</text>
   <text x="638" y="332" class="label-s" fill="#e74c3c">FAIL</text>
   <text x="638" y="382" class="label-s" fill="#e74c3c">FAIL</text>
+  <text x="638" y="432" class="label-s" fill="#e74c3c">FAIL</text>
 
   <!-- ═══════ CENTRAL FAULT HANDLER ═══════ -->
-  <rect x="490" y="740" width="120" height="100" rx="10" fill="#2a0a0a" stroke="#e74c3c" stroke-width="2.5"/>
-  <text x="550" y="775" class="title-sm" fill="#e74c3c">FAULT</text>
-  <text x="550" y="798" class="label-s" fill="#e74c3c">Single handler</text>
-  <text x="550" y="814" class="label-s" fill="#e74c3c">No recovery</text>
-  <text x="550" y="830" class="label-s" fill="#e74c3c">No fallback</text>
+  <rect x="490" y="790" width="120" height="100" rx="10" fill="#2a0a0a" stroke="#e74c3c" stroke-width="2.5"/>
+  <text x="550" y="825" class="title-sm" fill="#e74c3c">FAULT</text>
+  <text x="550" y="848" class="label-s" fill="#e74c3c">Single handler</text>
+  <text x="550" y="864" class="label-s" fill="#e74c3c">No recovery</text>
+  <text x="550" y="880" class="label-s" fill="#e74c3c">No fallback</text>
 
   <!-- Fault arrows converging -->
   <!-- From mLoad fail lines -->
   <line x1="490" y1="340" x2="520" y2="340" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>
-  <line x1="520" y1="340" x2="520" y2="740" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#ah-r)"/>
+  <line x1="520" y1="340" x2="520" y2="790" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#ah-r)"/>
 
   <line x1="490" y1="390" x2="510" y2="390" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>
   <line x1="510" y1="390" x2="510" y2="500" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>
@@ -262,12 +271,14 @@
 
   <!-- From mSave fail lines -->
   <line x1="610" y1="290" x2="580" y2="290" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>
-  <line x1="580" y1="290" x2="580" y2="740" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#ah-r)"/>
+  <line x1="580" y1="290" x2="580" y2="790" stroke="#e74c3c" stroke-width="1.5" marker-end="url(#ah-r)"/>
 
   <line x1="610" y1="340" x2="590" y2="340" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>
   <line x1="590" y1="340" x2="590" y2="500" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>
 
   <line x1="610" y1="390" x2="600" y2="390" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <line x1="610" y1="440" x2="600" y2="440" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3"/>
 
   <!-- ═══════ INSTRUCTION SOURCES (TOP) ═══════ -->
   <!-- mLoad sources -->
@@ -291,16 +302,16 @@
   <line x1="820" y1="80" x2="820" y2="180" stroke="#f0883e" stroke-width="1" marker-end="url(#ah-o)"/>
 
   <!-- ═══════ M-ELEVATION BYPASS ═══════ -->
-  <rect x="60" y="730" width="170" height="50" rx="6" fill="#111822" stroke="#bc8cff" stroke-width="1.5"/>
-  <text x="145" y="748" class="gate-label" fill="#bc8cff">M-Elevation</text>
-  <text x="145" y="766" class="label-s" fill="#bc8cff">Bypasses permission check</text>
-  <line x1="145" y1="680" x2="145" y2="730" stroke="#bc8cff" stroke-width="1" stroke-dasharray="5,3"/>
+  <rect x="60" y="780" width="170" height="50" rx="6" fill="#111822" stroke="#bc8cff" stroke-width="1.5"/>
+  <text x="145" y="798" class="gate-label" fill="#bc8cff">M-Elevation</text>
+  <text x="145" y="816" class="label-s" fill="#bc8cff">Bypasses permission check</text>
+  <line x1="145" y1="710" x2="145" y2="780" stroke="#bc8cff" stroke-width="1" stroke-dasharray="5,3"/>
 
   <!-- ═══════ BOTTOM: SYMMETRY ANNOTATION ═══════ -->
-  <rect x="130" y="880" width="840" height="60" rx="8" fill="#111822" stroke="#30363d" stroke-width="1"/>
-  <text x="550" y="900" class="label" fill="#f5c842">Symmetric Design: mLoad guards every read, mSave guards every write</text>
-  <text x="550" y="920" class="label-s">Together they form the complete TSB. No capability operation bypasses both gates.</text>
-  <text x="550" y="934" class="label-s">G-bit integrated into both paths &#x2014; every namespace access contributes to GC liveness tracking.</text>
+  <rect x="130" y="930" width="840" height="60" rx="8" fill="#111822" stroke="#30363d" stroke-width="1"/>
+  <text x="550" y="950" class="label" fill="#f5c842">Symmetric Design: mLoad guards every read (7 stages), mSave guards every write (8 stages)</text>
+  <text x="550" y="970" class="label-s">Together they form the complete TSB. No capability operation bypasses both gates.</text>
+  <text x="550" y="984" class="label-s">G-bit integrated into both paths &#x2014; every namespace access contributes to GC liveness tracking.</text>
 
 </svg>
 

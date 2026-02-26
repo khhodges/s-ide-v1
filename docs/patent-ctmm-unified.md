@@ -305,24 +305,28 @@ mSave(source_GT, target_clist, target_index):
      Does it match the stored seal?
      Failure → FAULT (tampered source)
 
-  3. B-bit Check
+  3. Target C-List Bounds Check
+     Is the destination slot index within the C-List's allocated range?
+     Failure → FAULT (out-of-bounds write prevented)
+
+  4. B-bit Check
      Is B=1 on the source GT's namespace entry (word1, bit 31)?
      Failure → FAULT (capability is not bindable — cannot be saved)
 
-  4. F-bit Detection on Target Slot
+  5. F-bit Detection on Target Slot
      Is F=1 on the target namespace entry?
      If yes → route through HTTP/tunnel for remote object access
      If no → local write proceeds
 
-  5. Seal Recomputation
+  6. Seal Recomputation
      Compute new FNV seal from the written Location + Limit values.
      Construct new VersionSeals: existing version + new seal.
 
-  6. G-bit Reset
+  7. G-bit Reset
      Clear G=0 on the accessed namespace entries.
      Ensures GC liveness tracking on write path.
 
-  7. Commit Write
+  8. Commit Write
      Write the capability to the target C-List slot.
 ```
 
@@ -610,7 +614,7 @@ The architecture of Claim 1, comprising a Trusted Security Base consisting of ex
 
 (a) an mLoad read gate that validates every read-side capability operation through a sequential pipeline of permission check, bounds check, version match, MAC/seal validation, G-bit reset, capability register write, and thread table shadow update; wherein mLoad is the sole path for all capability register writes involving namespace dereferencing; and wherein mLoad enforces a permission gate table mapping R→DREAD, W→DWRITE, X→LAMBDA, L→LOAD, S→SAVE (c-list access), E→CALL;
 
-(b) an mSave write gate that validates every write of a Golden Token to a C-List through a sequential pipeline of source GT version match, source GT seal validation, B-bit check (B=1 required for bindability), F-bit detection on target slot (routing to HTTP/tunnel for foreign objects), seal recomputation, G-bit reset, and commit; wherein mSave is the sole path for all capability writes to C-Lists;
+(b) an mSave write gate that validates every write of a Golden Token to a C-List through a sequential pipeline of source GT version match, source GT seal validation, target C-List bounds check (verifying the destination slot index is within the C-List's allocated range), B-bit check (B=1 required for bindability), F-bit detection on target slot (routing to HTTP/tunnel for foreign objects), seal recomputation, G-bit reset, and commit; wherein mSave is the sole path for all capability writes to C-Lists;
 
 wherein the dual-gate TSB provides symmetric validation on both read and write paths, and the total TSB comprises fewer than 400 lines of synthesizable hardware description language; and wherein any failure at any step in either gate routes to a single hardware FAULT handler with no partial state, no silent failure, and no fallback path.
 
@@ -820,7 +824,7 @@ The architecture of Claim 3, wherein the LAMBDA instruction enables a code body 
 
 ## ABSTRACT
 
-A processor architecture, the Church-Turing Meta-Machine (CTMM), enforcing capability-based security through a dual-gate Trusted Security Base (TSB) comprising an mLoad read gate and an mSave write gate. Every Golden Token (GT) contains a 2-bit Type field (Inform, Outform, NULL, Abstract) and 6 permission bits organized into mutually exclusive Turing (R, W, X) and Church (L, S, E) domains. mLoad validates every read-side capability operation through permission, bounds, version, MAC, and G-bit checks; mSave validates every write of a capability to a C-List through version, seal, B-bit (bind), and F-bit (far/foreign) checks. The B (Bind) bit, defaulting to 0, provides hardware-enforced control over capability propagation — CALL auto-clears B on preserved capabilities, and explicit TPERM is required to allow bind. A LAMBDA instruction provides lightweight in-scope code application with machine-status fast path and zero stack access. Self-describing stack frames with a 1-bit tag distinguish CALL from LAMBDA frames. The architecture eliminates the OS, virtual memory, privilege rings, and superuser, replacing them with atomic abstractions and 7 security zeros. Deterministic PP250 garbage collection uses bidirectional G-bit integrated into both mLoad and mSave. In its Pure Church variant, the processor operates with only 6 Church-domain instructions, architecturally excluding all Turing-domain instructions to eliminate buffer overflows, ROP attacks, code injection, and privilege escalation by construction. Three software proofs (HP-35 calculator, SlideRule engine, interactive REPL) and synthesizable FPGA implementations (Amaranth HDL, SystemVerilog) demonstrate computational completeness and practical realizability. The total TSB is fewer than 400 lines of synthesizable HDL — five orders of magnitude smaller than Linux, two orders of magnitude smaller than seL4.
+A processor architecture, the Church-Turing Meta-Machine (CTMM), enforcing capability-based security through a dual-gate Trusted Security Base (TSB) comprising an mLoad read gate and an mSave write gate. Every Golden Token (GT) contains a 2-bit Type field (Inform, Outform, NULL, Abstract) and 6 permission bits organized into mutually exclusive Turing (R, W, X) and Church (L, S, E) domains. mLoad validates every read-side capability operation through permission, bounds, version, MAC, and G-bit checks; mSave validates every write of a capability to a C-List through version, seal, target bounds, B-bit (bind), and F-bit (far/foreign) checks. The B (Bind) bit, defaulting to 0, provides hardware-enforced control over capability propagation — CALL auto-clears B on preserved capabilities, and explicit TPERM is required to allow bind. A LAMBDA instruction provides lightweight in-scope code application with machine-status fast path and zero stack access. Self-describing stack frames with a 1-bit tag distinguish CALL from LAMBDA frames. The architecture eliminates the OS, virtual memory, privilege rings, and superuser, replacing them with atomic abstractions and 7 security zeros. Deterministic PP250 garbage collection uses bidirectional G-bit integrated into both mLoad and mSave. In its Pure Church variant, the processor operates with only 6 Church-domain instructions, architecturally excluding all Turing-domain instructions to eliminate buffer overflows, ROP attacks, code injection, and privilege escalation by construction. Three software proofs (HP-35 calculator, SlideRule engine, interactive REPL) and synthesizable FPGA implementations (Amaranth HDL, SystemVerilog) demonstrate computational completeness and practical realizability. The total TSB is fewer than 400 lines of synthesizable HDL — five orders of magnitude smaller than Linux, two orders of magnitude smaller than seL4.
 
 ---
 
@@ -828,7 +832,7 @@ A processor architecture, the Church-Turing Meta-Machine (CTMM), enforcing capab
 
 ### Figure 1: Dual-Gate Trusted Security Base Architecture
 
-Block diagram showing the two gates (mLoad and mSave) as the complete TSB. mLoad on the read path with its validation pipeline (permission → bounds → version → MAC → G-bit → CR write → thread shadow). mSave on the write path with its validation pipeline (version → seal → B-bit → F-bit → seal recompute → G-bit → commit). Single FAULT handler receiving failures from both gates.
+Block diagram showing the two gates (mLoad and mSave) as the complete TSB. mLoad on the read path with its validation pipeline (permission → bounds → version → MAC → G-bit → CR write → thread shadow). mSave on the write path with its validation pipeline (version → seal → target bounds → B-bit → F-bit → seal recompute → G-bit → commit). Single FAULT handler receiving failures from both gates.
 
 ### Figure 2: GT Format and Type Field
 
