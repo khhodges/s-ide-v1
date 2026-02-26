@@ -199,6 +199,12 @@ def figures_church_processor_block():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
+@app.route('/figures/vulnerability-elimination')
+def figures_vulnerability_elimination():
+    resp = make_response(send_from_directory(FIGURES_DIR, 'vulnerability-elimination.html'))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
 @app.route('/figures/hello-mum-tunnel')
 def figures_hello_mum_tunnel():
     resp = make_response(send_from_directory(FIGURES_DIR, 'hello-mum-tunnel.html'))
