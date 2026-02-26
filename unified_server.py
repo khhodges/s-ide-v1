@@ -229,6 +229,12 @@ def figures_network_transparency_fbit():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
+@app.route('/figures/three-dispatch-styles')
+def figures_three_dispatch_styles():
+    resp = make_response(send_from_directory(FIGURES_DIR, 'three-dispatch-styles.html'))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
 @app.route('/figures/hello-mum-tunnel')
 def figures_hello_mum_tunnel():
     resp = make_response(send_from_directory(FIGURES_DIR, 'hello-mum-tunnel.html'))
