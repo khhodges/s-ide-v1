@@ -200,4 +200,6 @@ def landing_page():
 if __name__ == '__main__':
     import logging
     logging.basicConfig(level=logging.INFO)
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    from waitress import serve
+    logging.getLogger().info("Starting server on port 5000")
+    serve(app, host='0.0.0.0', port=5000, threads=8)
