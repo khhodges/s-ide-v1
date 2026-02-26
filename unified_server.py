@@ -223,6 +223,12 @@ def figures_unified_address_space():
     resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     return resp
 
+@app.route('/figures/network-transparency-fbit')
+def figures_network_transparency_fbit():
+    resp = make_response(send_from_directory(FIGURES_DIR, 'network-transparency-fbit.html'))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
 @app.route('/figures/hello-mum-tunnel')
 def figures_hello_mum_tunnel():
     resp = make_response(send_from_directory(FIGURES_DIR, 'hello-mum-tunnel.html'))
