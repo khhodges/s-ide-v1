@@ -292,7 +292,7 @@ class ChurchSimulator {
         return storedSeal === this.computeSeal(entry.word0_location, lim.limit);
     }
 
-    mLoad(gt32, requiredPerm) {
+    mLoad(gt32, requiredPerm, srcCRIdx) {
         const parsed = this.parseGT(gt32);
         if (parsed.index >= this.nsCount) {
             return { ok: false, fault: 'BOUNDS', message: `namespace index ${parsed.index} out of bounds` };
@@ -301,16 +301,21 @@ class ChurchSimulator {
         if (!entry) {
             return { ok: false, fault: 'BOUNDS', message: `namespace entry ${parsed.index} is null` };
         }
-        const nsWord1 = this.parseNSWord1(entry.word1_limit);
         const nsVersion = (entry.word2_seals >>> 25) & 0x7F;
         const versionMatch = parsed.version === nsVersion;
         const sealValid = this.validateMAC(entry);
+
+        const srcCR = (srcCRIdx !== undefined) ? this.cr[srcCRIdx] : null;
+        const crWord2 = srcCR ? this.parseNSWord1(srcCR.word2) : null;
+        const bBit = crWord2 ? crWord2.b : ((entry.word1_limit >>> 31) & 1);
+        const fBit = crWord2 ? crWord2.f : ((entry.word1_limit >>> 30) & 1);
+
         this.lastCapability = {
             op: requiredPerm,
             label: this.nsLabels[parsed.index] || 'entry_'+parsed.index,
             perms: parsed.permissions,
-            b: nsWord1.b,
-            f: nsWord1.f,
+            b: bBit,
+            f: fBit,
             versionMatch,
             sealValid,
         };
@@ -327,32 +332,39 @@ class ChurchSimulator {
         return { ok: true, parsed, entry, index: parsed.index };
     }
 
-    mSave(gt32, targetIdx) {
+    mSave(gt32, targetIdx, srcCRIdx) {
         const parsed = this.parseGT(gt32);
+        const srcCR = (srcCRIdx !== undefined) ? this.cr[srcCRIdx] : null;
+        const crWord2 = srcCR ? this.parseNSWord1(srcCR.word2) : null;
+        const crVersion = srcCR ? ((srcCR.word3 >>> 25) & 0x7F) : null;
+
         const srcEntry = this.readNSEntry(parsed.index);
         if (!srcEntry) {
             return { ok: false, fault: 'BOUNDS', message: `source entry ${parsed.index} is null` };
         }
-        const srcWord1 = this.parseNSWord1(srcEntry.word1_limit);
-        const srcVersion = (srcEntry.word2_seals >>> 25) & 0x7F;
-        const srcVersionMatch = parsed.version === srcVersion;
+
+        const srcVersionMatch = parsed.version === ((srcEntry.word2_seals >>> 25) & 0x7F);
         const srcSealValid = this.validateMAC(srcEntry);
+
+        const bBit = crWord2 ? crWord2.b : this.parseNSWord1(srcEntry.word1_limit).b;
+        const fBit = crWord2 ? crWord2.f : this.parseNSWord1(srcEntry.word1_limit).f;
+
         this.lastCapability = {
             op: 'S',
             label: this.nsLabels[parsed.index] || 'entry_'+parsed.index,
             perms: parsed.permissions,
-            b: srcWord1.b,
-            f: srcWord1.f,
+            b: bBit,
+            f: fBit,
             versionMatch: srcVersionMatch,
             sealValid: srcSealValid,
         };
         if (!srcVersionMatch) {
-            return { ok: false, fault: 'VERSION', message: `source version mismatch: GT v${parsed.version}, entry v${srcVersion}` };
+            return { ok: false, fault: 'VERSION', message: `source version mismatch: GT v${parsed.version}, entry v${((srcEntry.word2_seals >>> 25) & 0x7F)}` };
         }
         if (!srcSealValid) {
             return { ok: false, fault: 'SEAL', message: `source seal validation failed for entry ${parsed.index}` };
         }
-        if (srcWord1.b !== 1 && !this.mElevation) {
+        if (bBit !== 1 && !this.mElevation) {
             return { ok: false, fault: 'BIND', message: `GT has B=0 — not bindable to c-list` };
         }
         if (targetIdx !== null && targetIdx !== undefined) {
@@ -687,7 +699,7 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `LOAD: CR${d.crSrc} is NULL`);
             return null;
         }
-        const check = this.mLoad(clistGT, 'L');
+        const check = this.mLoad(clistGT, 'L', d.crSrc);
         if (!check.ok) {
             this.fault(check.fault, `LOAD: CR${d.crSrc}: ${check.message}`);
             return null;
@@ -722,7 +734,7 @@ class ChurchSimulator {
             return null;
         }
         const targetIdx = d.imm;
-        const saveCheck = this.mSave(srcGT, targetIdx);
+        const saveCheck = this.mSave(srcGT, targetIdx, d.crDst);
         if (!saveCheck.ok) {
             this.fault(saveCheck.fault, `SAVE: CR${d.crDst}: ${saveCheck.message}`);
             return null;
@@ -733,7 +745,7 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `SAVE: CR${d.crSrc} C-List is NULL`);
             return null;
         }
-        const clistCheck = this.mLoad(clistGT, 'S');
+        const clistCheck = this.mLoad(clistGT, 'S', d.crSrc);
         if (!clistCheck.ok) {
             this.fault(clistCheck.fault, `SAVE: CR${d.crSrc}: ${clistCheck.message}`);
             return null;
@@ -767,7 +779,7 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `CALL: CR${d.crDst} is NULL`);
             return null;
         }
-        const check = this.mLoad(targetGT, 'E');
+        const check = this.mLoad(targetGT, 'E', d.crDst);
         if (!check.ok) {
             this.fault(check.fault, `CALL: CR${d.crDst}: ${check.message}`);
             return null;
@@ -786,7 +798,7 @@ class ChurchSimulator {
         });
 
         for (let i = 0; i < this.cr.length; i++) {
-            this.cr[i].word1_limit = (this.cr[i].word1_limit & ~(1 << 31)) >>> 0;
+            this.cr[i].word2 = (this.cr[i].word2 & ~(1 << 31)) >>> 0;
         }
 
         const label = this.nsLabels[check.index] || 'abstraction';
@@ -909,11 +921,9 @@ class ChurchSimulator {
         const hasAll = required.every(p => parsed.permissions[p] === 1);
 
         if (bSet && hasAll) {
-            const entry = this.readNSEntry(parsed.index);
-            if (entry) {
-                const base = this.NS_TABLE_BASE + parsed.index * this.NS_ENTRY_WORDS;
-                this.memory[base + 1] = (entry.word1_limit | (1 << 31)) >>> 0;
-            }
+            const base = this.NS_TABLE_BASE + parsed.index * this.NS_ENTRY_WORDS;
+            this.memory[base + 1] = (this.memory[base + 1] | (1 << 31)) >>> 0;
+            this.cr[d.crDst].word2 = (this.cr[d.crDst].word2 | (1 << 31)) >>> 0;
         }
 
         this.flags.Z = hasAll;
@@ -937,7 +947,7 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `LAMBDA: CR${crIdx} is NULL`);
             return null;
         }
-        const check = this.mLoad(targetGT, 'X');
+        const check = this.mLoad(targetGT, 'X', crIdx);
         if (!check.ok) {
             this.fault(check.fault, `LAMBDA: CR${crIdx}: ${check.message}`);
             return null;
@@ -956,7 +966,7 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `ELOADCALL: CR${d.crSrc} C-List is NULL`);
             return null;
         }
-        const loadCheck = this.mLoad(clistGT, 'L');
+        const loadCheck = this.mLoad(clistGT, 'L', d.crSrc);
         if (!loadCheck.ok) {
             this.fault(loadCheck.fault, `ELOADCALL LOAD: CR${d.crSrc}: ${loadCheck.message}`);
             return null;
@@ -980,7 +990,7 @@ class ChurchSimulator {
         const gt = this.memory[entry.word0_location] || 0;
         if (!this._writeCR(d.crDst, gt, entry)) return null;
 
-        const tpermCheck = this.mLoad(gt, 'E');
+        const tpermCheck = this.mLoad(gt, 'E', d.crDst);
         if (!tpermCheck.ok) {
             this.fault(tpermCheck.fault, `ELOADCALL TPERM: CR${d.crDst}: ${tpermCheck.message}`);
             return null;
@@ -994,7 +1004,7 @@ class ChurchSimulator {
         });
 
         for (let i = 0; i < this.cr.length; i++) {
-            this.cr[i].word1_limit = (this.cr[i].word1_limit & ~(1 << 31)) >>> 0;
+            this.cr[i].word2 = (this.cr[i].word2 & ~(1 << 31)) >>> 0;
         }
 
         const label = this.nsLabels[targetIdx] || 'abstraction';
@@ -1010,7 +1020,7 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `XLOADLAMBDA: CR${d.crSrc} C-List is NULL`);
             return null;
         }
-        const loadCheck = this.mLoad(clistGT, 'L');
+        const loadCheck = this.mLoad(clistGT, 'L', d.crSrc);
         if (!loadCheck.ok) {
             this.fault(loadCheck.fault, `XLOADLAMBDA LOAD: CR${d.crSrc}: ${loadCheck.message}`);
             return null;
@@ -1054,14 +1064,14 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `DREAD: CR${d.crSrc} is NULL`);
             return null;
         }
-        const check = this.mLoad(dataGT, 'R');
+        const check = this.mLoad(dataGT, 'R', d.crSrc);
         if (!check.ok) {
             this.fault(check.fault, `DREAD: CR${d.crSrc}: ${check.message}`);
             return null;
         }
-        const entry = check.entry;
-        const loc = entry.word0_location;
-        const lim = this.parseNSWord1(entry.word1_limit);
+        const srcCR = this.cr[d.crSrc];
+        const loc = srcCR.word1;
+        const lim = this.parseNSWord1(srcCR.word2);
         const offset = d.imm;
         if (offset > lim.limit) {
             this.fault('BOUNDS', `DREAD: offset ${offset} exceeds DATA limit ${lim.limit}`);
@@ -1085,14 +1095,14 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `DWRITE: CR${d.crSrc} is NULL`);
             return null;
         }
-        const check = this.mLoad(dataGT, 'W');
+        const check = this.mLoad(dataGT, 'W', d.crSrc);
         if (!check.ok) {
             this.fault(check.fault, `DWRITE: CR${d.crSrc}: ${check.message}`);
             return null;
         }
-        const entry = check.entry;
-        const loc = entry.word0_location;
-        const lim = this.parseNSWord1(entry.word1_limit);
+        const srcCR = this.cr[d.crSrc];
+        const loc = srcCR.word1;
+        const lim = this.parseNSWord1(srcCR.word2);
         const offset = d.imm;
         if (offset > lim.limit) {
             this.fault('BOUNDS', `DWRITE: offset ${offset} exceeds DATA limit ${lim.limit}`);
@@ -1143,13 +1153,12 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `BFEXT: CR${d.crSrc} is NULL`);
             return null;
         }
-        const check = this.mLoad(dataGT, 'R');
+        const check = this.mLoad(dataGT, 'R', d.crSrc);
         if (!check.ok) {
             this.fault(check.fault, `BFEXT: CR${d.crSrc}: ${check.message}`);
             return null;
         }
-        const entry = check.entry;
-        const loc = entry.word0_location;
+        const loc = this.cr[d.crSrc].word1;
         const pos = (d.imm >>> 5) & 0x1F;
         const width = d.imm & 0x1F;
         if (width === 0 || pos + width > 32) {
@@ -1176,13 +1185,12 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `BFINS: CR${d.crSrc} is NULL`);
             return null;
         }
-        const check = this.mLoad(dataGT, 'W');
+        const check = this.mLoad(dataGT, 'W', d.crSrc);
         if (!check.ok) {
             this.fault(check.fault, `BFINS: CR${d.crSrc}: ${check.message}`);
             return null;
         }
-        const entry = check.entry;
-        const loc = entry.word0_location;
+        const loc = this.cr[d.crSrc].word1;
         const pos = (d.imm >>> 5) & 0x1F;
         const width = d.imm & 0x1F;
         if (width === 0 || pos + width > 32) {
