@@ -547,7 +547,7 @@ function updateFlagsDisplay() {
     const container = document.getElementById('flagsDisplay');
     if (!container) return;
     const f = sim.flags;
-    const bootLabel = !sim.bootComplete ? `BOOT ${sim.bootStep}/6` : '';
+    const bootLabel = !sim.bootComplete ? `BOOT ${sim.bootStep}/5` : '';
     const statusLabel = sim.halted ? 'HALTED' : (sim.bootComplete ? 'READY' : 'RESET');
     const cap = sim.lastCapability;
     let capHtml = '';
@@ -696,7 +696,7 @@ function stepSim() {
         sim._bootStep();
         const con = document.getElementById('editorConsole');
         if (con) {
-            con.textContent += `\n[boot ${sim.bootStep}/6] ${sim.output.split('\n').filter(l => l).pop()}`;
+            con.textContent += `\n[boot ${sim.bootStep}/5] ${sim.output.split('\n').filter(l => l).pop()}`;
             con.scrollTop = con.scrollHeight;
         }
         updateDashboard();
@@ -769,12 +769,12 @@ function loadExample(name) {
 
 ; --- TEST 1: LOAD into CR0-CR5 ---
 ; Load 6 different abstractions via C-List
-LOAD CR0, CR6, 3       ; CR0 = Lambda  (E)
-LOAD CR1, CR6, 8       ; CR1 = SUCC    (LE)
-LOAD CR2, CR6, 10      ; CR2 = ADD     (LE)
-LOAD CR3, CR6, 11      ; CR3 = SUB     (LE)
-LOAD CR4, CR6, 12      ; CR4 = MUL     (LE)
-LOAD CR5, CR6, 6       ; CR5 = Constants (E)
+LOAD CR0, CR6, 5       ; CR0 = Lambda  (E)
+LOAD CR1, CR6, 11      ; CR1 = SUCC    (LE)
+LOAD CR2, CR6, 13      ; CR2 = ADD     (LE)
+LOAD CR3, CR6, 14      ; CR3 = SUB     (LE)
+LOAD CR4, CR6, 15      ; CR4 = MUL     (LE)
+LOAD CR5, CR6, 8       ; CR5 = Constants (E)
 
 ; --- TEST 2: TPERM - permission checks ---
 ; Each should set Z=1 (pass)
@@ -790,8 +790,8 @@ TPERM CR0, L           ; Lambda has L? FAIL (Z=0)
 
 ; --- TEST 4: Conditional execution ---
 ; Z=0 from failed TPERM above
-LOADEQ CR0, CR6, 13    ; SKIP (Z=0, not equal)
-LOADNE CR0, CR6, 3     ; EXEC (Z=0, is not-equal)
+LOADEQ CR0, CR6, 16    ; SKIP (Z=0, not equal)
+LOADNE CR0, CR6, 5     ; EXEC (Z=0, is not-equal)
 
 ; --- TEST 5: SWITCH - swap registers ---
 SWITCH CR0, 1          ; CR0 <-> CR1
@@ -806,25 +806,25 @@ LAMBDA CR3             ; Church SUB reduction
 LAMBDA CR4             ; Church MUL reduction
 
 ; --- TEST 7: CHANGE - re-aim register ---
-CHANGE CR0, 4          ; CR0 now -> SlideRule
+CHANGE CR0, 6          ; CR0 now -> SlideRule
 TPERM CR0, E           ; SlideRule has E? PASS
 
 ; --- TEST 8: SAVE - write to namespace ---
-LOAD CR0, CR6, 3       ; Reload Lambda
+LOAD CR0, CR6, 5       ; Reload Lambda
 TPERM CR0, EB          ; Verify E + set B=1 (allow bind)
-SAVE CR0, CR6, 25      ; Save Lambda copy to slot 25
+SAVE CR0, CR6, 28      ; Save Lambda copy to slot 28
 
 ; --- TEST 9: CALL/RETURN ---
-LOAD CR0, CR6, 3       ; CR0 = Lambda
+LOAD CR0, CR6, 5       ; CR0 = Lambda
 CALL CR0               ; Push frame, enter Lambda
 RETURN CR0             ; Pop frame, return to next
 
 ; --- TEST 10: ELOADCALL - fused Load+TPERM+Call ---
-ELOADCALL CR0, CR6, 3  ; Load Lambda + check E + call
+ELOADCALL CR0, CR6, 5  ; Load Lambda + check E + call
 RETURN CR0             ; Return from fused call
 
 ; --- TEST 11: XLOADLAMBDA - fused Load+TPERM+Lambda ---
-XLOADLAMBDA CR1, CR6, 8 ; Load SUCC + check + lambda
+XLOADLAMBDA CR1, CR6, 11 ; Load SUCC + check + lambda
 
 ; --- TEST 12: Conditional LAMBDA ---
 TPERM CR1, LE          ; Z=1 (SUCC has LE)
@@ -838,20 +838,20 @@ HALT
 `,
         'load_save': `; Load and Save example
 ; Load Lambda abstraction into CR0 from C-List[CR6]
-LOAD CR0, CR6, 3       ; CR0 = Lambda (ns index 3)
+LOAD CR0, CR6, 5       ; CR0 = Lambda (ns index 5)
 TPERM CR0, E           ; Check E permission
-LOAD CR1, CR6, 8       ; CR1 = SUCC
+LOAD CR1, CR6, 11      ; CR1 = SUCC
 TPERM CR1, LE          ; Check L+E
 CALL CR0               ; Enter Lambda
 RETURN CR0             ; Return
 `,
         'bernoulli': `; Bernoulli - simplified Church sequence
 ; Load core abstractions
-LOAD CR0, CR6, 3       ; Lambda
-LOAD CR1, CR6, 10      ; ADD
-LOAD CR2, CR6, 12      ; MUL
-LOAD CR3, CR6, 13      ; DIV
-LOAD CR4, CR6, 8       ; SUCC
+LOAD CR0, CR6, 5       ; Lambda
+LOAD CR1, CR6, 13      ; ADD
+LOAD CR2, CR6, 15      ; MUL
+LOAD CR3, CR6, 16      ; DIV
+LOAD CR4, CR6, 11      ; SUCC
 
 ; Verify permissions on all
 TPERM CR0, E           ; Lambda enter
@@ -870,15 +870,15 @@ LAMBDA CR4             ; Church SUCC
 RETURN CR0
 `,
         'conditional': `; Conditional execution demo
-LOAD CR0, CR6, 3       ; Load Lambda
+LOAD CR0, CR6, 5       ; Load Lambda
 TPERM CR0, E           ; Check — sets Z=1 (pass)
 
 ; This executes only if Z=1 (TPERM passed)
-LOADEQ CR1, CR6, 10    ; Load ADD only if equal (Z=1)
+LOADEQ CR1, CR6, 13    ; Load ADD only if equal (Z=1)
 LAMBDAEQ CR1           ; Lambda only if equal
 
 ; This would skip if Z=0 (TPERM failed)
-LOADNE CR2, CR6, 11    ; Load SUB only if not-equal (Z=0)
+LOADNE CR2, CR6, 14    ; Load SUB only if not-equal (Z=0)
 
 RETURN CR0
 `,
@@ -896,11 +896,11 @@ RETURN CR0
 ; ============================================
 
 ; --- Load subset into CRs (survivors) ---
-LOAD CR0, CR6, 3       ; CR0 = Lambda    (E)
-LOAD CR1, CR6, 8       ; CR1 = SUCC      (XLE)
-LOAD CR2, CR6, 7       ; CR2 = Stack     (E)
-LOAD CR3, CR6, 10      ; CR3 = ADD       (XLE)
-LOAD CR4, CR6, 6       ; CR4 = Constants (E)
+LOAD CR0, CR6, 5       ; CR0 = Lambda    (E)
+LOAD CR1, CR6, 11      ; CR1 = SUCC      (XLE)
+LOAD CR2, CR6, 9       ; CR2 = Stack     (E)
+LOAD CR3, CR6, 13      ; CR3 = ADD       (XLE)
+LOAD CR4, CR6, 8       ; CR4 = Constants (E)
 
 ; --- Verify permissions ---
 TPERM CR0, E           ; Lambda has E? PASS
@@ -914,7 +914,7 @@ LAMBDA CR1             ; SUCC reduction (X)
 LAMBDA CR3             ; ADD reduction (X)
 
 ; --- CALL GC: checks E via mLoad ---
-LOAD CR5, CR6, 25      ; CR5 = GC (E)
+LOAD CR5, CR6, 28      ; CR5 = GC (E)
 TPERM CR5, E           ; Verify E permission
 CALL CR5               ; Trigger GC abstraction
 
@@ -933,8 +933,8 @@ HALT
 ; ============================================
 
 ; --- Boot: Load GTs ---
-LOAD CR0, CR6, 8       ; CR0 = SUCC (XLE)
-LOAD CR1, CR6, 10      ; CR1 = ADD (XLE)
+LOAD CR0, CR6, 11      ; CR0 = SUCC (XLE)
+LOAD CR1, CR6, 13      ; CR1 = ADD (XLE)
 
 ; --- Initialize DR1 = 0 ---
 IADD DR1, DR0, DR0     ; DR1 = 0 (Z=1)
@@ -986,29 +986,29 @@ HALT
 ; ============================================
 ;
 ; Namespace reference:
-;   Slot 0  Boot.CList (L,S only)
-;   Slot 1  Boot.CLOOMC (X only)
-;   Slot 20 TRUE       (L only — no X, no E)
-;   Slot 21 FALSE      (L only — no X, no E)
-;   Slot 25 GC         (E only)
+;   Slot 2  Boot.CList (L,S only)
+;   Slot 4  Boot.CLOOMC (X only)
+;   Slot 23 TRUE       (L only — no X, no E)
+;   Slot 24 FALSE      (L only — no X, no E)
+;   Slot 28 GC         (E only)
 ; ============================================
 
 ; --- ATTACK 1: CALL without E permission ---
-; TRUE (slot 20) has only L — no E.
+; TRUE (slot 23) has only L — no E.
 ; CALL requires E via mLoad. Should FAULT.
-LOAD CR0, CR6, 20      ; CR0 = TRUE (L only)
+LOAD CR0, CR6, 23      ; CR0 = TRUE (L only)
 CALL CR0               ; FAULT: lacks E permission
 
 ; --- ATTACK 2: LAMBDA without X permission ---
-; Constants (slot 6) has only E — no X.
+; Constants (slot 8) has only E — no X.
 ; LAMBDA requires X via mLoad. Should FAULT.
-LOAD CR1, CR6, 6       ; CR1 = Constants (E only)
+LOAD CR1, CR6, 8       ; CR1 = Constants (E only)
 LAMBDA CR1             ; FAULT: lacks X permission
 
 ; --- ATTACK 3: CALL something with only X ---
-; Boot.CLOOMC (slot 1) has only X — no E.
+; Boot.CLOOMC (slot 4) has only X — no E.
 ; CALL requires E. Should FAULT.
-LOAD CR2, CR6, 1       ; CR2 = Boot.CLOOMC (X only)
+LOAD CR2, CR6, 4       ; CR2 = Boot.CLOOMC (X only)
 CALL CR2               ; FAULT: lacks E permission
 
 ; --- If we get here, something is broken ---
@@ -1032,8 +1032,8 @@ HALT
 ; --- ATTACK 1: SAVE with default B=0 ---
 ; After boot, B defaults to 0 on all entries.
 ; SAVE should FAULT because B=0.
-LOAD CR0, CR6, 8       ; CR0 = SUCC (XLE, B=0)
-SAVE CR0, CR6, 26      ; FAULT: B=0, cannot bind
+LOAD CR0, CR6, 11      ; CR0 = SUCC (XLE, B=0)
+SAVE CR0, CR6, 29      ; FAULT: B=0, cannot bind
 
 ; --- If we get here, B-bit default failed ---
 HALT
@@ -1050,9 +1050,9 @@ HALT
 ; ============================================
 
 ; --- Setup: Load GTs with known permissions ---
-LOAD CR0, CR6, 6       ; CR0 = Constants (E only)
-LOAD CR1, CR6, 20      ; CR1 = TRUE (L only)
-LOAD CR2, CR6, 8       ; CR2 = SUCC (XLE)
+LOAD CR0, CR6, 8       ; CR0 = Constants (E only)
+LOAD CR1, CR6, 23      ; CR1 = TRUE (L only)
+LOAD CR2, CR6, 11      ; CR2 = SUCC (XLE)
 
 ; --- ATTACK 1: Try to add X to Constants ---
 ; Constants has E only. Request RWXLSE.
@@ -1096,18 +1096,18 @@ HALT
 ; ============================================
 
 ; --- Setup: Load valid GTs ---
-LOAD CR0, CR6, 3       ; CR0 = Lambda (E)
-LOAD CR1, CR6, 8       ; CR1 = SUCC (XLE)
+LOAD CR0, CR6, 5       ; CR0 = Lambda (E)
+LOAD CR1, CR6, 11      ; CR1 = SUCC (XLE)
 
 ; --- ATTACK 1: Overwrite occupied CR ---
 ; CR0 already holds Lambda.
 ; Loading into occupied CR should FAULT.
-LOAD CR0, CR6, 10      ; FAULT: CR0 already occupied
+LOAD CR0, CR6, 13      ; FAULT: CR0 already occupied
 
 ; --- ATTACK 2: Reload same entry ---
 ; Even reloading the same GT should FAULT.
 ; The CR is occupied regardless of content.
-LOAD CR1, CR6, 8       ; FAULT: CR1 already occupied
+LOAD CR1, CR6, 11      ; FAULT: CR1 already occupied
 
 ; --- If we get here, CR protection failed ---
 HALT
@@ -1130,12 +1130,12 @@ HALT
 
 ; --- Phase A: Load 6 entries into CRs ---
 ; These should ALL survive GC.
-LOAD CR0, CR6, 3       ; Lambda    (E)
-LOAD CR1, CR6, 8       ; SUCC      (XLE)
-LOAD CR2, CR6, 7       ; Stack     (E)
-LOAD CR3, CR6, 10      ; ADD       (XLE)
-LOAD CR4, CR6, 6       ; Constants (E)
-LOAD CR5, CR6, 4       ; SlideRule (E)
+LOAD CR0, CR6, 5       ; Lambda    (E)
+LOAD CR1, CR6, 11      ; SUCC      (XLE)
+LOAD CR2, CR6, 9       ; Stack     (E)
+LOAD CR3, CR6, 13      ; ADD       (XLE)
+LOAD CR4, CR6, 8       ; Constants (E)
+LOAD CR5, CR6, 6       ; SlideRule (E)
 
 ; --- Phase B: Exercise some via LAMBDA ---
 ; mLoad marks these entries as accessed (live).
@@ -1151,7 +1151,7 @@ TPERM CR5, E           ; SlideRule still has E? PASS
 ; --- Phase D: Run GC ---
 ; Entries in CR0-CR5 + CR6 + CR15 survive.
 ; All other namespace entries are garbage.
-LOAD CR5, CR6, 25      ; CR5 = GC (overwrite SlideRule)
+LOAD CR5, CR6, 28      ; CR5 = GC (overwrite SlideRule)
 CALL CR5               ; Trigger GC abstraction
 
 ; --- Phase E: Verify survivors still work ---
@@ -1165,7 +1165,7 @@ TPERM CR4, E           ; Constants survived? PASS
 ; --- Phase F: Second GC cycle (polarity flip) ---
 ; Run GC again with flipped polarity.
 ; Survivors should still survive.
-LOAD CR5, CR6, 25      ; Reload GC
+LOAD CR5, CR6, 28      ; Reload GC
 CALL CR5               ; Second GC pass
 
 ; --- Phase G: Final verification ---
@@ -1335,7 +1335,7 @@ function loadEditorState() {
 ; All instructions support ARM-style condition suffixes
 ;
 ; Load an abstraction and verify its permissions
-LOAD CR0, CR6, 3       ; Load Lambda abstraction
+LOAD CR0, CR6, 5       ; Load Lambda abstraction
 TPERM CR0, E           ; Verify E (enter) permission
 LAMBDA CR0             ; Church reduction
 RETURN CR0             ; Return result

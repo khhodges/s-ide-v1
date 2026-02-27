@@ -307,42 +307,32 @@ class ChurchCore(Elaboratable):
                 thrd_gt = Signal(GT_LAYOUT)
                 thrd_gt_view = View(GT_LAYOUT, thrd_gt)
                 m.d.comb += [
-                    thrd_gt_view.index.eq(3),
+                    thrd_gt_view.index.eq(1),
                     thrd_gt_view.version.eq(0),
                     thrd_gt_view.gt_type.eq(GT_TYPE_INFORM),
                     thrd_gt_view.perms.eq(0),
                 ]
                 m.d.comb += [boot_wr_en[8].eq(1), boot_wr_gt[8].eq(thrd_gt)]
-            with m.Case(BootState.LOAD_NUC):
+
                 cr6_gt = Signal(GT_LAYOUT)
                 cr6_gt_view = View(GT_LAYOUT, cr6_gt)
                 m.d.comb += [
                     cr6_gt_view.index.eq(2),
                     cr6_gt_view.version.eq(0),
                     cr6_gt_view.gt_type.eq(GT_TYPE_INFORM),
-                    cr6_gt_view.perms.eq(PERM_MASK_L | PERM_MASK_E),
+                    cr6_gt_view.perms.eq(PERM_MASK_L | PERM_MASK_S),
                 ]
                 m.d.comb += [boot_wr_en[6].eq(1), boot_wr_gt[6].eq(cr6_gt)]
-
+            with m.Case(BootState.LOAD_NUC):
                 cr7_gt = Signal(GT_LAYOUT)
                 cr7_gt_view = View(GT_LAYOUT, cr7_gt)
                 m.d.comb += [
-                    cr7_gt_view.index.eq(1),
+                    cr7_gt_view.index.eq(4),
                     cr7_gt_view.version.eq(0),
                     cr7_gt_view.gt_type.eq(GT_TYPE_INFORM),
                     cr7_gt_view.perms.eq(PERM_MASK_X),
                 ]
                 m.d.comb += [boot_wr_en[7].eq(1), boot_wr_gt[7].eq(cr7_gt)]
-
-                cr5_gt = Signal(GT_LAYOUT)
-                cr5_gt_view = View(GT_LAYOUT, cr5_gt)
-                m.d.comb += [
-                    cr5_gt_view.index.eq(4),
-                    cr5_gt_view.version.eq(0),
-                    cr5_gt_view.gt_type.eq(GT_TYPE_INFORM),
-                    cr5_gt_view.perms.eq(PERM_MASK_L | PERM_MASK_S),
-                ]
-                m.d.comb += [boot_wr_en[5].eq(1), boot_wr_gt[5].eq(cr5_gt)]
 
         runtime_wr_en = [Signal(name=f"rt_cr{i}_wr_en") for i in range(16)]
         runtime_wr_gt = [Signal(GT_LAYOUT, name=f"rt_cr{i}_wr_gt") for i in range(16)]

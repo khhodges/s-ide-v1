@@ -131,32 +131,35 @@ class ChurchSimulator {
         this.nsLabels = {};
         this.nsCount = 0;
         const abstractions = [
-            { label: 'Boot.CList', perms: {R:0,W:0,X:0,L:1,S:1,E:0}, chainable: false },
-            { label: 'Boot.CLOOMC',perms: {R:0,W:0,X:1,L:0,S:0,E:0}, chainable: false },
-            { label: 'Threads',    perms: {R:0,W:0,X:0,L:1,S:1,E:1}, chainable: false },
-            { label: 'Lambda',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'SlideRule',  perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
-            { label: 'Abacus',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
-            { label: 'Constants',  perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Stack',      perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
-            { label: 'SUCC',       perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'PRED',       perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'ADD',        perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'SUB',        perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'MUL',        perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'DIV',        perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'POW',        perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'SQRT',       perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'LOG',        perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'EXP',        perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'ISZERO',     perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'LEQ',        perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'TRUE',       perms: {R:0,W:0,X:0,L:1,S:0,E:0}, chainable: false },
-            { label: 'FALSE',      perms: {R:0,W:0,X:0,L:1,S:0,E:0}, chainable: false },
-            { label: 'PAIR',       perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'FST',        perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'SND',        perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
-            { label: 'GC',         perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false, handler: 'gc' },
+            { label: 'Boot.NS',      perms: {R:0,W:0,X:0,L:0,S:0,E:0}, chainable: false },
+            { label: 'Boot.Thread',   perms: {R:0,W:0,X:0,L:0,S:0,E:0}, chainable: false },
+            { label: 'Boot.CList',    perms: {R:0,W:0,X:0,L:1,S:1,E:0}, chainable: false },
+            { label: 'Boot.Abstraction', perms: {R:0,W:0,X:0,L:1,S:0,E:1}, chainable: false },
+            { label: 'Boot.CLOOMC',   perms: {R:0,W:0,X:1,L:0,S:0,E:0}, chainable: false },
+            { label: 'Lambda',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
+            { label: 'SlideRule',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
+            { label: 'Abacus',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
+            { label: 'Constants',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
+            { label: 'Stack',         perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
+            { label: 'Threads',       perms: {R:0,W:0,X:0,L:1,S:1,E:1}, chainable: false },
+            { label: 'SUCC',          perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'PRED',          perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'ADD',           perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'SUB',           perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'MUL',           perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'DIV',           perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'POW',           perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'SQRT',          perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'LOG',           perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'EXP',           perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'ISZERO',        perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'LEQ',           perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'TRUE',          perms: {R:0,W:0,X:0,L:1,S:0,E:0}, chainable: false },
+            { label: 'FALSE',         perms: {R:0,W:0,X:0,L:1,S:0,E:0}, chainable: false },
+            { label: 'PAIR',          perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'FST',           perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'SND',           perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
+            { label: 'GC',            perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false, handler: 'gc' },
         ];
         const clistChildren = [];
         for (let i = 0; i < abstractions.length; i++) {
@@ -173,59 +176,93 @@ class ChurchSimulator {
             clistChildren.push(i);
         }
         this.nsClistMap[0] = clistChildren;
+
+        const bootAbstrCListLoc = 3 * this.SLOT_SIZE;
+        const cr7GT = this.createGT(0, 4, {R:0,W:0,X:1,L:0,S:0,E:0}, 0);
+        this.memory[bootAbstrCListLoc] = cr7GT;
+        this.nsClistMap[3] = [4];
     }
 
     _bootStep() {
         if (this.bootComplete) return false;
 
         switch (this.bootStep) {
-            case 0:
+            case 0: {
                 for (let i = 0; i < 16; i++) {
-                    if (this.cr[i].word0 !== 0 || this.cr[i].word1 !== 0 || this.cr[i].m !== 0) {
-                        this.fault('BOOT', 'Boot invariant: CRs must be zero at boot entry');
-                        return false;
-                    }
+                    this._clearCR(i);
                 }
+                this.dr.fill(0);
                 this.mElevation = true;
-                this.output += '[M] Boot microcode: M elevation ACTIVE\n';
+                this.output += '[BOOT] FAULT_RST — All CRs cleared to NULL, all DRs zeroed. M-Elevation ON.\n';
                 this.bootStep++;
                 break;
+            }
             case 1: {
-                const entry = this.readNSEntry(0);
                 const gt15 = this.createGT(0, 0, {R:0,W:0,X:0,L:0,S:0,E:0}, 0);
-                this._writeCR(15, gt15, entry);
-                this.output += '[M] CR15 ← Namespace root (gift from heaven, no permissions)\n';
+                const check = this.mLoad(gt15, null, undefined);
+                if (!check.ok) {
+                    this.fault('BOOT', `LOAD_NS mLoad failed: ${check.message}`);
+                    return false;
+                }
+                this._writeCR(15, gt15, check.entry);
+                this.output += '[BOOT] LOAD_NS — CR15 ← mLoad(Slot 0) Namespace root (zero perms, Inform)\n';
                 this.bootStep++;
                 break;
             }
             case 2: {
-                const entry = this.readNSEntry(2);
-                const gt8 = this.createGT(0, 2, {R:0,W:0,X:0,L:0,S:0,E:0}, 0);
-                this._writeCR(8, gt8, entry);
-                this.output += '[M] CR8 ← Boot thread (gift from heaven, no permissions)\n';
+                const gt8 = this.createGT(0, 1, {R:0,W:0,X:0,L:0,S:0,E:0}, 0);
+                const check8 = this.mLoad(gt8, null, undefined);
+                if (!check8.ok) {
+                    this.fault('BOOT', `INIT_THRD mLoad(Thread) failed: ${check8.message}`);
+                    return false;
+                }
+                this._writeCR(8, gt8, check8.entry);
+                this.output += '[BOOT] INIT_THRD — CR8 ← mLoad(Slot 1) Thread identity\n';
+
+                const gt6 = this.createGT(0, 2, {R:0,W:0,X:0,L:1,S:1,E:0}, 0);
+                const check6 = this.mLoad(gt6, null, undefined);
+                if (!check6.ok) {
+                    this.fault('BOOT', `INIT_THRD mLoad(CList) failed: ${check6.message}`);
+                    return false;
+                }
+                this._writeCR(6, gt6, check6.entry);
+                this.output += '[BOOT] INIT_THRD — CR6 ← mLoad(Slot 2) C-List\n';
                 this.bootStep++;
                 break;
             }
             case 3: {
-                const entry = this.readNSEntry(0);
-                const gt6 = this.createGT(0, 0, {R:0,W:0,X:0,L:0,S:0,E:0}, 0);
-                this._writeCR(6, gt6, entry);
-                this.output += '[M] CR6 ← Boot C-List (gift from heaven, no permissions — M gate handles access)\n';
+                const gt3 = this.createGT(0, 3, {R:0,W:0,X:0,L:1,S:0,E:1}, 0);
+                const check3 = this.mLoad(gt3, 'E', undefined);
+                if (!check3.ok) {
+                    this.fault('BOOT', `LOAD_NUC mLoad(Boot.Abstraction) failed: ${check3.message}`);
+                    return false;
+                }
+                const bootCListLoc = check3.entry.word0_location;
+                const cr7GT = this.memory[bootCListLoc];
+                if (cr7GT === 0) {
+                    this.fault('BOOT', 'Boot abstraction C-List offset 0 is empty — no CR7 GT');
+                    return false;
+                }
+                const cr7Parsed = this.parseGT(cr7GT);
+                const cr7Entry = this.readNSEntry(cr7Parsed.index);
+                if (!cr7Entry) {
+                    this.fault('BOOT', `Boot abstraction CR7 NS entry ${cr7Parsed.index} not found`);
+                    return false;
+                }
+                const cr7Check = this.mLoad(cr7GT, 'X', undefined);
+                if (!cr7Check.ok) {
+                    this.fault('BOOT', `LOAD_NUC mLoad(CR7) failed: ${cr7Check.message}`);
+                    return false;
+                }
+                this._writeCR(7, cr7GT, cr7Check.entry);
+                this.output += '[BOOT] LOAD_NUC — CALL into Boot.Abstraction(Slot 3); CR7 ← mLoad(offset 0 = Slot 4, Boot.CLOOMC)\n';
                 this.bootStep++;
                 break;
             }
-            case 4: {
-                const entry = this.readNSEntry(1);
-                const gt7 = this.createGT(0, 1, {R:0,W:0,X:0,L:0,S:0,E:0}, 0);
-                this._writeCR(7, gt7, entry);
-                this.output += '[M] CR7 ← Boot CLOOMC (gift from heaven, executable code block)\n';
-                this.bootStep++;
-                break;
-            }
-            case 5:
+            case 4:
                 this.mElevation = false;
                 this.bootComplete = true;
-                this.output += '[M] Boot microcode: M elevation OFF — boot complete\n';
+                this.output += '[BOOT] COMPLETE — M-Elevation OFF. CR5 is NULL (unavailable). Boot complete.\n';
                 break;
         }
         this.emit('stateChange', this.getState());

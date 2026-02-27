@@ -91,17 +91,52 @@
         <div style="margin-top:0.3rem;color:#8b949e;font-size:0.7rem;">31 ················ 27 │ 26 ····· 23 │ 22 ····· 19 │ 18 ····· 15 │ 14 ················ 0</div>
     </div>
 
+    <div class="section-title">Boot Memory Layout (Address 0x0000)</div>
+    <div class="flow-card boot" style="max-width:700px;margin:0 auto 1.5rem;">
+        <h3>Canonical Boot Namespace Slot Map</h3>
+        <table class="gate-table" style="width:100%;">
+            <tr><th>Slot</th><th>Address</th><th>Purpose</th><th>Boot Phase</th><th>CR Loaded</th></tr>
+            <tr><td>0</td><td>0x0000–0x0002</td><td>Boot Namespace (self-ref)</td><td>LOAD_NS</td><td>CR15 (zero perms, Inform)</td></tr>
+            <tr><td>1</td><td>0x0003–0x0005</td><td>Thread identity</td><td>INIT_THRD</td><td>CR8</td></tr>
+            <tr><td>2</td><td>0x0006–0x0008</td><td>C-List</td><td>INIT_THRD</td><td>CR6</td></tr>
+            <tr><td>3</td><td>0x0009–0x000B</td><td>Boot Abstraction C-List</td><td>LOAD_NUC (CALL)</td><td>CR7 at offset 0</td></tr>
+            <tr><td>4+</td><td>0x000C+</td><td>Additional NS entries</td><td>—</td><td>Remaining abstractions</td></tr>
+        </table>
+        <div class="sep"></div>
+        <h3>Hardwired GT for CR15</h3>
+        <div class="instr-encoding" style="margin-bottom:0.5rem;">
+            <span class="enc-field enc-op" style="flex:7">Version(7)=0</span>
+            <span class="enc-field enc-dst" style="flex:17">Index(17)=0</span>
+            <span class="enc-field enc-src" style="flex:6">Perms(6)=000000</span>
+            <span class="enc-field enc-imm" style="flex:2">Type(2)=00</span>
+        </div>
+        <div style="text-align:center;color:#8b949e;font-size:0.75rem;">= 0x00000000 — Inform type, zero permissions. The only hardwired trust.</div>
+        <div class="sep"></div>
+        <h3>Boot CR Status</h3>
+        <table class="gate-table" style="width:100%;">
+            <tr><th>CR</th><th>Status</th><th>Source</th></tr>
+            <tr><td>CR15</td><td><span class="step-ok">Loaded</span></td><td>mLoad(Slot 0) — Namespace root, zero perms, Inform</td></tr>
+            <tr><td>CR8</td><td><span class="step-ok">Loaded</span></td><td>mLoad(Slot 1) — Thread identity</td></tr>
+            <tr><td>CR6</td><td><span class="step-ok">Loaded</span></td><td>mLoad(Slot 2) — C-List</td></tr>
+            <tr><td>CR7</td><td><span class="step-ok">Discovered</span></td><td>CALL into Slot 3 → offset 0 of Boot abstraction's C-List</td></tr>
+            <tr><td>CR5</td><td><span class="step-fault">NULL</span></td><td>Not loaded — unavailable, missing from stack frame</td></tr>
+            <tr><td>Others</td><td><span class="step-fault">NULL</span></td><td>Cleared in FAULT_RST</td></tr>
+        </table>
+        <div class="sep"></div>
+        <div class="step"><span class="step-text"><span class="step-detail"><b>Security Invariant:</b> Every boot CR passes through mLoad. M-elevation bypasses the permission gate but NOT bounds, version, or seal validation. CR5 is NULL — the secure default.</span></span></div>
+    </div>
+
     <div class="section-title">Boot Microcode Sequence (Patent Section 15)</div>
     <div class="flow-card boot" style="max-width:550px;margin:0 auto 1.5rem;">
         <h3>Five-Phase Hardware Boot (M-Elevation Active)</h3>
         <div class="step"><span class="step-num">0</span><span class="step-text"><span class="bus bus-none">---</span> <b>IDLE</b> — waiting for boot_start signal</span></div>
         <div class="step"><span class="step-num">1</span><span class="step-text"><span class="bus bus-reg">REG</span> <b>FAULT_RST</b> — Clear all CRs to NULL, all DRs to zero. M-Elevation ON.</span></div>
-        <div class="step"><span class="step-num">2</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> <b>LOAD_NS</b> — Load namespace GT into CR15 (one hardwired bootstrap GT)</span></div>
-        <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> <b>INIT_THRD</b> — Initialize CR8 (Thread), CR5 (Services) via mLoad with M gate</span></div>
-        <div class="step"><span class="step-num">4</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> <b>LOAD_NUC</b> — Load CR7 (Nucleus), CR6 (C-List) via mLoad with M gate</span></div>
+        <div class="step"><span class="step-num">2</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> <b>LOAD_NS</b> — CR15 ← mLoad(Slot 0). Hardwired GT, zero perms, Inform type.</span></div>
+        <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> <b>INIT_THRD</b> — CR8 ← mLoad(Slot 1) Thread, CR6 ← mLoad(Slot 2) C-List. CR5 stays NULL.</span></div>
+        <div class="step"><span class="step-num">4</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> <b>LOAD_NUC</b> — CALL via mLoad(Slot 3, E) into Boot abstraction. CR7 discovered at offset 0.</span></div>
         <div class="step"><span class="step-num">5</span><span class="step-text"><span class="bus bus-none">---</span> <b>COMPLETE</b> — M-Elevation OFF → begin instruction fetch → <span class="step-ok">READY</span></span></div>
         <div class="sep"></div>
-        <div class="step"><span class="step-text"><span class="step-detail">Phase 1 sets all CRs to NULL for clean initialization. Phases 2-4 load valid GTs through mLoad (except CR15, the one hardwired bootstrap GT).</span></span></div>
+        <div class="step"><span class="step-text"><span class="step-detail">Phase 1 clears all CRs to NULL. Phases 2–4 load valid GTs through mLoad (M-elevation bypasses permission but not bounds/version/seal). CALL loads CR6 first. CR5 remains NULL — the secure default.</span></span></div>
     </div>
 
     <div class="section-title">Instruction Fetch &amp; Condition Check</div>

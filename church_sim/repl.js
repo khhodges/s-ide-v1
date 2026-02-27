@@ -301,14 +301,15 @@ class ChurchREPL {
 
     _nsIndex(name) {
         const map = {
-            'Boot.CList': 0, 'Boot.CLOOMC': 1,
-            'Threads': 2, 'Lambda': 3, 'SlideRule': 4,
-            'Abacus': 5, 'Constants': 6, 'Stack': 7,
-            'SUCC': 8, 'PRED': 9, 'ADD': 10, 'SUB': 11,
-            'MUL': 12, 'DIV': 13, 'POW': 14, 'SQRT': 15,
-            'LOG': 16, 'EXP': 17, 'ISZERO': 18, 'LEQ': 19,
-            'TRUE': 20, 'FALSE': 21, 'PAIR': 22, 'FST': 23, 'SND': 24,
-            'GC': 25,
+            'Boot.NS': 0, 'Boot.Thread': 1, 'Boot.CList': 2,
+            'Boot.Abstraction': 3, 'Boot.CLOOMC': 4,
+            'Lambda': 5, 'SlideRule': 6,
+            'Abacus': 7, 'Constants': 8, 'Stack': 9,
+            'Threads': 10, 'SUCC': 11, 'PRED': 12, 'ADD': 13, 'SUB': 14,
+            'MUL': 15, 'DIV': 16, 'POW': 17, 'SQRT': 18,
+            'LOG': 19, 'EXP': 20, 'ISZERO': 21, 'LEQ': 22,
+            'TRUE': 23, 'FALSE': 24, 'PAIR': 25, 'FST': 26, 'SND': 27,
+            'GC': 28,
         };
         return map[name] !== undefined ? map[name] : '?';
     }
