@@ -182,12 +182,14 @@ class ChurchSimulator {
         const clistChildren = [];
         for (let i = 0; i < abstractions.length; i++) {
             const a = abstractions[i];
-            const loc = i * this.SLOT_SIZE;
-            const lim17 = 0xFF;
+            const loc = (i === 0) ? this.NS_TABLE_BASE : i * this.SLOT_SIZE;
+            const lim17 = (i === 0) ? (abstractions.length * this.NS_ENTRY_WORDS) : 0xFF;
             const gtWord = this.createGT(0, i, a.perms, 0);
             this.writeNSEntry(i, loc, lim17, 0, 0, 0, a.chainable ? 1 : 0, 0, 0);
             this.nsLabels[i] = a.label;
-            this.memory[loc] = gtWord;
+            if (i > 0) {
+                this.memory[loc] = gtWord;
+            }
             if (a.handler) {
                 this.nsHandlers[i] = a.handler;
             }
@@ -577,6 +579,10 @@ class ChurchSimulator {
         let freedSlots = 0;
         let freedWords = 0;
         for (const c of candidates) {
+            if (c.index === 0) {
+                log.push(`  SKIP NS[0] "Boot.NS" — namespace root is protected`);
+                continue;
+            }
             const base = this.NS_TABLE_BASE + c.index * this.NS_ENTRY_WORDS;
             const w2 = this.memory[base + 2];
             const oldVersion = (w2 >>> 25) & 0x7F;
@@ -823,7 +829,7 @@ class ChurchSimulator {
         }
         this.lastCapability = savedCap;
         if (!this.isNSEntryValid(targetIdx)) {
-            const loc = targetIdx * this.SLOT_SIZE;
+            const loc = (targetIdx === 0) ? this.NS_TABLE_BASE : targetIdx * this.SLOT_SIZE;
             const lim17 = 0xFF;
             this.writeNSEntry(targetIdx, loc, lim17, 0, 0, 0, 0, saveCheck.parsed.type, 0);
             this.nsLabels[targetIdx] = `dyn_${targetIdx}`;
