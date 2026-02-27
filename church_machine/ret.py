@@ -14,6 +14,7 @@ class ChurchReturn(Elaboratable):
         self.complete = Signal()
         self.fault_valid = Signal()
         self.fault_type = Signal(4)
+        self.reboot_request = Signal()
 
         self.cr_rd_addr = Signal(4)
         self.cr_rd_data = Signal(CAP_REG_LAYOUT)
@@ -36,6 +37,10 @@ class ChurchReturn(Elaboratable):
         self.thread_wr_data = Signal(32)
 
         self.saved_cr5_gt = Signal(32)
+
+        self.lambda_active = Signal()
+        self.lambda_pc = Signal(32)
+        self.lambda_clear = Signal()
 
     def elaborate(self, platform):
         m = Module()
@@ -131,7 +136,18 @@ class ChurchReturn(Elaboratable):
                 m.d.sync += [fault_flag.eq(0), fault_latched.eq(FaultType.NONE)]
                 m.d.sync += [phase.eq(0), sub_done_latched.eq(0), sub_fault_latched.eq(0)]
                 with m.If(self.return_start):
-                    m.next = "READ_SRC"
+                    with m.If(self.lambda_active):
+                        m.next = "LAMBDA_FAST"
+                    with m.Else():
+                        m.next = "READ_SRC"
+
+            with m.State("LAMBDA_FAST"):
+                m.d.comb += [
+                    self.nia_set.eq(1),
+                    self.nia_value.eq(self.lambda_pc),
+                    self.lambda_clear.eq(1),
+                ]
+                m.next = "COMPLETE"
 
             with m.State("READ_SRC"):
                 m.d.comb += local_cr_rd_en.eq(1)
@@ -140,8 +156,7 @@ class ChurchReturn(Elaboratable):
 
             with m.State("CHECK_PERM"):
                 with m.If(is_null_cap):
-                    m.d.sync += [fault_flag.eq(1), fault_latched.eq(FaultType.NULL_CAP)]
-                    m.next = "FAULT"
+                    m.next = "REBOOT"
                 with m.Elif(~has_e_perm):
                     m.d.sync += [fault_flag.eq(1), fault_latched.eq(FaultType.PERM_E)]
                     m.next = "FAULT"
@@ -227,6 +242,9 @@ class ChurchReturn(Elaboratable):
             with m.State("COMPLETE"):
                 m.next = "IDLE"
 
+            with m.State("REBOOT"):
+                m.next = "IDLE"
+
             with m.State("FAULT"):
                 m.next = "IDLE"
 
@@ -235,6 +253,7 @@ class ChurchReturn(Elaboratable):
             self.complete.eq(fsm.ongoing("COMPLETE")),
             self.fault_valid.eq(fault_flag),
             self.fault_type.eq(fault_latched),
+            self.reboot_request.eq(fsm.ongoing("REBOOT")),
         ]
 
         return m

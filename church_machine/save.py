@@ -25,6 +25,11 @@ class ChurchSave(Elaboratable):
         self.mem_wr_en = Signal()
         self.mem_wr_done = Signal()
 
+        self.mem_rd_addr = Signal(32)
+        self.mem_rd_en = Signal()
+        self.mem_rd_data = Signal(32)
+        self.mem_rd_valid = Signal()
+
         self.cr15_namespace = Signal(CAP_REG_LAYOUT)
 
     def elaborate(self, platform):
@@ -55,11 +60,16 @@ class ChurchSave(Elaboratable):
             u_msave.sub_src_gt.eq(src_view.word0_gt),
             u_msave.sub_index.eq(self.index),
             u_msave.mem_wr_done.eq(self.mem_wr_done),
+            u_msave.cr15_namespace.eq(self.cr15_namespace),
+            u_msave.mem_rd_data.eq(self.mem_rd_data),
+            u_msave.mem_rd_valid.eq(self.mem_rd_valid),
         ]
         m.d.comb += [
             self.mem_wr_addr.eq(u_msave.mem_wr_addr),
             self.mem_wr_data.eq(u_msave.mem_wr_data),
             self.mem_wr_en.eq(u_msave.mem_wr_en),
+            self.mem_rd_addr.eq(u_msave.mem_rd_addr),
+            self.mem_rd_en.eq(u_msave.mem_rd_en),
         ]
         m.d.comb += sub_start.eq(sub_start_reg)
 

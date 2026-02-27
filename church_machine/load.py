@@ -28,6 +28,10 @@ class ChurchLoad(Elaboratable):
         self.mem_rd_en = Signal()
         self.mem_rd_data = Signal(32)
         self.mem_rd_valid = Signal()
+        self.mem_wr_en = Signal()
+        self.mem_wr_data = Signal(32)
+
+        self.gbit_reset_done = Signal()
 
         self.thread_wr_en = Signal()
         self.thread_wr_idx = Signal(4)
@@ -47,7 +51,7 @@ class ChurchLoad(Elaboratable):
             u_mload.sub_index.eq(self.index),
             u_mload.sub_direct.eq(0),
             u_mload.sub_direct_gt.eq(0),
-            u_mload.sub_m_elevated.eq(1),
+            u_mload.sub_m_elevated.eq(self.cr_src == CR_CLIST),
             u_mload.sub_start.eq(sub_start),
             u_mload.cr_rd_data.eq(self.cr_rd_data),
             u_mload.cr15_namespace.eq(self.cr15_namespace),
@@ -62,6 +66,9 @@ class ChurchLoad(Elaboratable):
             self.cr_wr_en.eq(u_mload.cr_wr_en),
             self.mem_addr.eq(u_mload.mem_addr),
             self.mem_rd_en.eq(u_mload.mem_rd_en),
+            self.mem_wr_en.eq(u_mload.mem_wr_en),
+            self.mem_wr_data.eq(u_mload.mem_wr_data),
+            self.gbit_reset_done.eq(u_mload.gbit_reset_done),
             self.thread_wr_en.eq(u_mload.thread_wr_en),
             self.thread_wr_idx.eq(u_mload.thread_wr_idx),
             self.thread_wr_data.eq(u_mload.thread_wr_data),

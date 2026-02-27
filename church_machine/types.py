@@ -54,6 +54,8 @@ NS_FLAG_B_MASK = 1 << NS_FLAG_B_BIT
 NS_FLAG_F_MASK = 1 << NS_FLAG_F_BIT
 NS_LIMIT_MASK  = (1 << GT_INDEX_BITS) - 1
 
+NS_TABLE_BASE  = 0xFD00
+
 FNV_OFFSET_32 = 0x811c9dc5
 FNV_PRIME_32  = 0x01000193
 FNV_SEAL_MASK = (1 << SEAL_BITS) - 1
@@ -108,9 +110,9 @@ class TpermPreset(IntEnum):
     LE    = 10
     SE    = 11
     LSE   = 12
-    RSV0  = 13
-    RSV1  = 14
-    RSV2  = 15
+    RWXLSE = 13
+    RSV0   = 14
+    RSV1   = 15
 
 
 TPERM_MASKS = {
@@ -127,9 +129,9 @@ TPERM_MASKS = {
     TpermPreset.LE:    PERM_MASK_L | PERM_MASK_E,
     TpermPreset.SE:    PERM_MASK_S | PERM_MASK_E,
     TpermPreset.LSE:   PERM_MASK_L | PERM_MASK_S | PERM_MASK_E,
+    TpermPreset.RWXLSE: PERM_MASK_R | PERM_MASK_W | PERM_MASK_X | PERM_MASK_L | PERM_MASK_S | PERM_MASK_E,
     TpermPreset.RSV0:  0x00,
     TpermPreset.RSV1:  0x00,
-    TpermPreset.RSV2:  0x00,
 }
 
 
@@ -149,6 +151,7 @@ class FaultType(IntEnum):
     TPERM_RSV     = 0xC
     DOMAIN_PURITY = 0xD
     BIND          = 0xE
+    F_BIT         = 0xF
 
 
 class BootState(IntEnum):

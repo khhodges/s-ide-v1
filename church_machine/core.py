@@ -100,6 +100,9 @@ class ChurchCore(Elaboratable):
 
         nia_reg = Signal(32)
 
+        lambda_active_reg = Signal()
+        lambda_pc_reg = Signal(32)
+
         boot_state_reg = Signal(3, init=BootState.IDLE)
         clear_all = Signal()
 
@@ -180,7 +183,7 @@ class ChurchCore(Elaboratable):
         required_perms = Signal(6)
         with m.Switch(church_op):
             with m.Case(ChurchOpcode.LOAD):
-                m.d.comb += required_perms.eq(PERM_MASK_L)
+                m.d.comb += required_perms.eq(Mux(cr_src == CR_CLIST, 0, PERM_MASK_L))
             with m.Case(ChurchOpcode.SAVE):
                 m.d.comb += required_perms.eq(PERM_MASK_S)
             with m.Case(ChurchOpcode.CALL):
@@ -213,7 +216,7 @@ class ChurchCore(Elaboratable):
             u_gc.gc_start.eq(self.gc_start),
             u_gc.gc_mark_en.eq(1),
             u_gc.gc_sweep_en.eq(1),
-            u_gc.ns_start_index.eq(0),
+            u_gc.ns_start_index.eq(1),
             u_gc.ns_end_index.eq(0x1000),
             u_gc.ns_rd_data.eq(self.ns_rd_data),
         ]
@@ -270,7 +273,9 @@ class ChurchCore(Elaboratable):
             ),
         ]
 
-        with m.If(clear_all):
+        with m.If(u_return.reboot_request):
+            m.d.sync += [boot_state_reg.eq(BootState.FAULT_RST), nia_reg.eq(0)]
+        with m.Elif(clear_all):
             m.d.sync += nia_reg.eq(0)
         with m.Elif(u_lambda.nia_set):
             m.d.sync += nia_reg.eq(u_lambda.nia_value)
@@ -395,7 +400,16 @@ class ChurchCore(Elaboratable):
             u_return.cr15_namespace.eq(u_regs.cr15_namespace),
             u_return.mem_rd_data.eq(self.dmem_rd_data),
             u_return.mem_rd_valid.eq(1),
+            u_return.lambda_active.eq(lambda_active_reg),
+            u_return.lambda_pc.eq(lambda_pc_reg),
         ]
+
+        with m.If(clear_all):
+            m.d.sync += [lambda_active_reg.eq(0), lambda_pc_reg.eq(0)]
+        with m.Elif(u_return.lambda_clear):
+            m.d.sync += lambda_active_reg.eq(0)
+        with m.Elif(u_lambda.lambda_complete & ~u_lambda.lambda_fault):
+            m.d.sync += [lambda_active_reg.eq(1), lambda_pc_reg.eq(u_lambda.saved_nia)]
 
         m.d.comb += [
             u_lambda.lambda_start.eq(lambda_start_sig),
@@ -426,6 +440,8 @@ class ChurchCore(Elaboratable):
             u_save.cr_rd_data.eq(u_regs.cr_rd_data),
             u_save.cr15_namespace.eq(u_regs.cr15_namespace),
             u_save.mem_wr_done.eq(1),
+            u_save.mem_rd_data.eq(self.dmem_rd_data),
+            u_save.mem_rd_valid.eq(1),
         ]
 
         load_start_sig = Signal()
@@ -578,6 +594,23 @@ class ChurchCore(Elaboratable):
             self.dmem_rd_en.eq(0),
             self.dmem_wr_data.eq(0),
             self.dmem_wr_en.eq(0),
+        ]
+
+        with m.If(u_load.mem_wr_en):
+            m.d.comb += [
+                self.dmem_addr.eq(u_load.mem_addr),
+                self.dmem_wr_data.eq(u_load.mem_wr_data),
+                self.dmem_wr_en.eq(1),
+            ]
+        with m.Elif(u_save.mem_rd_en):
+            m.d.comb += [
+                self.dmem_addr.eq(u_save.mem_rd_addr),
+                self.dmem_rd_en.eq(1),
+            ]
+
+        m.d.comb += [
+            u_gc.valid_key_access.eq(u_load.gbit_reset_done),
+            u_gc.access_index.eq(0),
         ]
 
         with m.If(u_gc.gc_busy):

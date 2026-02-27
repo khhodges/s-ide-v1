@@ -40,7 +40,7 @@ while len(BOOT_PROGRAM) < 256:
 
 DEMO_NAMESPACE = []
 for i in range(16):
-    location = i * 0x100
+    location = NS_TABLE_BASE if i == 0 else i * 0x100
     limit = 0x80000000 | 8
     seal_word = (0 << 25) | (0 & FNV_SEAL_MASK)
     DEMO_NAMESPACE.extend([location, limit, seal_word])

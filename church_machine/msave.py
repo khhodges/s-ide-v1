@@ -2,7 +2,7 @@ from amaranth import *
 from amaranth.lib.data import View
 
 from .types import *
-from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, NS_LIMIT_LAYOUT
+from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, NS_LIMIT_LAYOUT, SEALS_LAYOUT
 
 
 class ChurchMSave(Elaboratable):
@@ -21,6 +21,13 @@ class ChurchMSave(Elaboratable):
         self.mem_wr_en = Signal()
         self.mem_wr_done = Signal()
 
+        self.mem_rd_addr = Signal(32)
+        self.mem_rd_en = Signal()
+        self.mem_rd_data = Signal(32)
+        self.mem_rd_valid = Signal()
+
+        self.cr15_namespace = Signal(CAP_REG_LAYOUT)
+
     def elaborate(self, platform):
         m = Module()
 
@@ -34,6 +41,8 @@ class ChurchMSave(Elaboratable):
         dst_limit = View(NS_LIMIT_LAYOUT, dst_view.word2_limit)
         src_gt_view = View(GT_LAYOUT, src_gt_reg)
 
+        ns_view = View(CAP_REG_LAYOUT, self.cr15_namespace)
+
         dst_has_s_perm = dst_gt.perms[PERM_S]
         dst_has_bind = dst_limit.b_flag
         index_in_bounds = Signal()
@@ -41,6 +50,33 @@ class ChurchMSave(Elaboratable):
 
         write_addr = Signal(32)
         m.d.comb += write_addr.eq(dst_view.word1_location + (index_reg << 2))
+
+        ns_entry_addr = Signal(32)
+        m.d.comb += ns_entry_addr.eq(ns_view.word1_location + (src_gt_view.index * 12))
+
+        ns_location_reg = Signal(32)
+        ns_limit_reg = Signal(32)
+        ns_seals_reg = Signal(32)
+
+        ns_limit_view = View(NS_LIMIT_LAYOUT, ns_limit_reg)
+        ns_seals_view = View(SEALS_LAYOUT, ns_seals_reg)
+
+        version_match = Signal()
+        m.d.comb += version_match.eq(src_gt_view.version == ns_seals_view.version)
+
+        fnv_hash = Signal(32)
+        fnv_masked = Signal(25)
+        m.d.comb += [
+            fnv_hash.eq(
+                ((FNV_OFFSET_32 ^ ns_location_reg) * FNV_PRIME_32) ^
+                ns_limit_reg
+            ),
+            fnv_masked.eq(fnv_hash[:25]),
+        ]
+        seal_ok = Signal()
+        m.d.comb += seal_ok.eq(fnv_masked == ns_seals_view.seal)
+
+        target_f_bit = ns_limit_view.f_flag
 
         with m.FSM(name="msave") as fsm:
             with m.State("IDLE"):
@@ -70,6 +106,50 @@ class ChurchMSave(Elaboratable):
             with m.State("CHECK_BOUNDS"):
                 with m.If(~index_in_bounds):
                     m.d.sync += fault_type_reg.eq(FaultType.BOUNDS)
+                    m.next = "FAULT"
+                with m.Else():
+                    m.next = "FETCH_NS_LOC"
+
+            with m.State("FETCH_NS_LOC"):
+                m.d.comb += [
+                    self.mem_rd_addr.eq(ns_entry_addr),
+                    self.mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
+                    m.d.sync += ns_location_reg.eq(self.mem_rd_data)
+                    m.next = "FETCH_NS_LIMIT"
+
+            with m.State("FETCH_NS_LIMIT"):
+                m.d.comb += [
+                    self.mem_rd_addr.eq(ns_entry_addr + 4),
+                    self.mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
+                    m.d.sync += ns_limit_reg.eq(self.mem_rd_data)
+                    m.next = "FETCH_NS_SEALS"
+
+            with m.State("FETCH_NS_SEALS"):
+                m.d.comb += [
+                    self.mem_rd_addr.eq(ns_entry_addr + 8),
+                    self.mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
+                    m.d.sync += ns_seals_reg.eq(self.mem_rd_data)
+                    m.next = "CHECK_VERSION"
+
+            with m.State("CHECK_VERSION"):
+                with m.If(~version_match):
+                    m.d.sync += fault_type_reg.eq(FaultType.VERSION)
+                    m.next = "FAULT"
+                with m.Elif(~seal_ok):
+                    m.d.sync += fault_type_reg.eq(FaultType.SEAL)
+                    m.next = "FAULT"
+                with m.Else():
+                    m.next = "CHECK_F_BIT"
+
+            with m.State("CHECK_F_BIT"):
+                with m.If(target_f_bit):
+                    m.d.sync += fault_type_reg.eq(FaultType.F_BIT)
                     m.next = "FAULT"
                 with m.Else():
                     m.next = "WRITE_GT"
