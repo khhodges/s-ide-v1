@@ -226,6 +226,74 @@ function openCRDetail(crIdx) {
 }
 
 let crDetailTab = 'content';
+let clistExpandedIdx = null;
+
+function toggleCListEntry(nsIdx) {
+    clistExpandedIdx = (clistExpandedIdx === nsIdx) ? null : nsIdx;
+    updateCRDetail();
+}
+
+function renderCListEntryDetail(nsIdx, entry, storedGT) {
+    let h = '<div class="clist-detail">';
+    const label = entry.label || `NS[${nsIdx}]`;
+    h += `<div class="clist-detail-title">${label} — Namespace Entry ${nsIdx}</div>`;
+
+    h += '<table class="cr-table" style="margin-bottom:0.5rem;"><tbody>';
+    const loc = entry.word0_location >>> 0;
+    const lim = sim.parseNSWord1(entry.word1_limit);
+    const ver = (entry.word2_seals >>> 25) & 0x7F;
+    const seal = entry.word2_seals & 0x01FFFFFF;
+    h += `<tr><td style="color:var(--church-blue);width:120px;">Location</td><td>0x${loc.toString(16).toUpperCase().padStart(8,'0')}</td></tr>`;
+    h += `<tr><td style="color:var(--church-blue)">Limit</td><td>0x${lim.limit.toString(16).toUpperCase().padStart(5,'0')} (${lim.limit + 1} words)</td></tr>`;
+    h += `<tr><td style="color:var(--church-blue)">B (Bind)</td><td>${lim.b}</td></tr>`;
+    h += `<tr><td style="color:var(--church-blue)">F (Far)</td><td>${lim.f}</td></tr>`;
+    h += `<tr><td style="color:var(--church-blue)">G (GC)</td><td>${entry.gBit}</td></tr>`;
+    h += `<tr><td style="color:var(--church-blue)">Chainable</td><td>${lim.chainable ? 'Yes' : 'No'}</td></tr>`;
+    const typeNames = ['Inform','Outform','NULL','Abstract'];
+    h += `<tr><td style="color:var(--church-blue)">GT Type</td><td>${typeNames[entry.gtType] || '?'} (${entry.gtType})</td></tr>`;
+    h += `<tr><td style="color:var(--church-blue)">Version</td><td>${ver}</td></tr>`;
+    h += `<tr><td style="color:var(--church-blue)">FNV Seal</td><td>0x${seal.toString(16).toUpperCase().padStart(7,'0')}</td></tr>`;
+    h += '</tbody></table>';
+
+    if (storedGT) {
+        const p = sim.parseGT(storedGT);
+        const permStr = (p.permissions.R?'R':'-')+(p.permissions.W?'W':'-')+(p.permissions.X?'X':'-')+(p.permissions.L?'L':'-')+(p.permissions.S?'S':'-')+(p.permissions.E?'E':'-');
+        h += '<div class="clist-detail-title" style="margin-top:0.4rem;">Stored GT (word0)</div>';
+        h += '<table class="cr-table" style="margin-bottom:0.5rem;"><tbody>';
+        h += `<tr><td style="color:var(--church-blue);width:120px;">Raw</td><td>0x${storedGT.toString(16).toUpperCase().padStart(8,'0')}</td></tr>`;
+        h += `<tr><td style="color:var(--church-blue)">Version</td><td>${p.version}</td></tr>`;
+        h += `<tr><td style="color:var(--church-blue)">Index</td><td>${p.index}</td></tr>`;
+        h += `<tr><td style="color:var(--church-blue)">Perms</td><td>[${permStr}]</td></tr>`;
+        h += `<tr><td style="color:var(--church-blue)">Type</td><td>${p.typeName} (${p.type})</td></tr>`;
+        h += '</tbody></table>';
+    }
+
+    const wordCount = Math.min(lim.limit + 1, 64);
+    let hasData = false;
+    const asm = new ChurchAssembler();
+    let memHtml = '<table class="cr-table code-view-table"><thead><tr><th>Addr</th><th>Hex</th><th>Decode</th></tr></thead><tbody>';
+    for (let w = 0; w < wordCount; w++) {
+        const addr = loc + w;
+        if (addr >= sim.memory.length) break;
+        const word = sim.memory[addr];
+        if (word === 0 && !hasData) continue;
+        hasData = true;
+        const decoded = asm.disassemble(word);
+        memHtml += `<tr>`;
+        memHtml += `<td class="cr-idx">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td>`;
+        memHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+        memHtml += `<td class="code-disasm">${decoded}</td>`;
+        memHtml += '</tr>';
+    }
+    memHtml += '</tbody></table>';
+    if (hasData) {
+        h += '<div class="clist-detail-title" style="margin-top:0.4rem;">Memory Contents</div>';
+        h += memHtml;
+    }
+
+    h += '</div>';
+    return h;
+}
 
 function switchCRDetailTab(tab) {
     crDetailTab = tab;
@@ -348,7 +416,8 @@ function updateCRDetail() {
                 }
                 const typeNames = ['NULL','Abstract','Outform','Inform'];
                 const sealFNV = e.word2_seals & 0x01FFFFFF;
-                html += `<tr class="cr-active">`;
+                const isExpanded = (clistExpandedIdx === c.idx);
+                html += `<tr class="cr-active clist-clickable${isExpanded ? ' clist-selected' : ''}" onclick="toggleCListEntry(${c.idx})" title="Click to inspect NS[${c.idx}]">`;
                 html += `<td class="cr-idx">${c.idx}</td>`;
                 html += `<td class="cr-name">${e.label || ''}</td>`;
                 html += `<td class="cr-perms">[${permStr}]</td>`;
@@ -358,6 +427,9 @@ function updateCRDetail() {
                 html += `<td>0x${c.lim.limit.toString(16).toUpperCase().padStart(5,'0')}</td>`;
                 html += `<td>0x${sealFNV.toString(16).toUpperCase().padStart(7,'0')}</td>`;
                 html += '</tr>';
+                if (isExpanded) {
+                    html += `<tr class="clist-detail-row"><td colspan="8">${renderCListEntryDetail(c.idx, e, storedGT)}</td></tr>`;
+                }
             }
             html += '</tbody></table>';
         }

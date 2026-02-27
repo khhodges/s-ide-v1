@@ -162,6 +162,24 @@ header h1 {
 .cr-clickable { cursor: pointer; }
 .cr-clickable:hover { background: rgba(96,165,250,0.12) !important; }
 
+.clist-clickable { cursor: pointer; transition: background 0.15s; }
+.clist-clickable:hover { background: rgba(96,165,250,0.15) !important; }
+.clist-selected { background: rgba(96,165,250,0.22) !important; border-left: 2px solid var(--church-blue); }
+.clist-detail-row td { padding: 0 !important; background: rgba(10,30,60,0.5); }
+.clist-detail {
+    padding: 0.75rem;
+    border-left: 3px solid var(--church-blue);
+    margin: 0.25rem 0;
+}
+.clist-detail-title {
+    color: var(--church-gold);
+    font-weight: 600;
+    font-size: 0.78rem;
+    margin-bottom: 0.4rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--border);
+}
+
 .cr-detail-grid {
     display: flex;
     flex-direction: column;
