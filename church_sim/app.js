@@ -574,6 +574,7 @@ function updateFlagsDisplay() {
     }
     container.innerHTML = `
         <button class="btn btn-success btn-sm" onclick="stepSim()">Step</button>
+        <button class="btn btn-info btn-sm" onclick="slowBoot()" ${sim.bootComplete ? 'disabled style="opacity:0.5"' : ''}>Boot</button>
         <button class="btn btn-success btn-sm" onclick="runSim()">Run</button>
         <button class="btn btn-warning btn-sm" onclick="resetSim()">Reset</button>
         <span class="flags-sep"></span>
@@ -714,6 +715,34 @@ function stepSim() {
         }
     }
     updateDashboard();
+}
+
+let bootAnimating = false;
+function slowBoot() {
+    if (bootAnimating || sim.bootComplete) return;
+    bootAnimating = true;
+    const delay = 800;
+    function nextPhase() {
+        if (sim.bootComplete) {
+            bootAnimating = false;
+            const con = document.getElementById('editorConsole');
+            if (con) {
+                con.textContent += '\n--- Boot sequence complete ---';
+                con.scrollTop = con.scrollHeight;
+            }
+            updateDashboard();
+            return;
+        }
+        sim._bootStep();
+        const con = document.getElementById('editorConsole');
+        if (con) {
+            con.textContent += `\n[boot ${sim.bootStep}/5] ${sim.output.split('\n').filter(l => l).pop()}`;
+            con.scrollTop = con.scrollHeight;
+        }
+        updateDashboard();
+        setTimeout(nextPhase, delay);
+    }
+    nextPhase();
 }
 
 function runSim() {

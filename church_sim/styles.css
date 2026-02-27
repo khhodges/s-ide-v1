@@ -565,6 +565,14 @@ header h1 {
 
 .btn-warning:hover { background: #92400e; }
 
+.btn-info {
+    background: #164e63;
+    border-color: #22d3ee;
+    color: #22d3ee;
+}
+
+.btn-info:hover { background: #155e75; }
+
 .editor-panel .panel-title {
     flex-shrink: 0;
     padding-top: 0.4rem;
