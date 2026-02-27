@@ -152,7 +152,6 @@ class ChurchSimulator {
         const abstractions = [
             { label: 'Boot.NS',      perms: {R:0,W:0,X:0,L:0,S:0,E:0}, chainable: false },
             { label: 'Boot.Thread',   perms: {R:0,W:0,X:0,L:0,S:0,E:0}, chainable: false },
-            { label: 'Boot.CList',    perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'Boot.Abstraction', perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'Boot.CLOOMC',   perms: {R:0,W:0,X:1,L:0,S:0,E:0}, chainable: false },
             { label: 'Lambda',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
@@ -196,10 +195,9 @@ class ChurchSimulator {
         }
         this.nsClistMap[2] = clistChildren;
 
-        const bootAbstrCListLoc = 3 * this.SLOT_SIZE;
-        const cr7GT = this.createGT(0, 4, {R:0,W:0,X:1,L:0,S:0,E:0}, 0);
-        this.memory[bootAbstrCListLoc] = cr7GT;
-        this.nsClistMap[3] = [4];
+        const bootAbstrLoc = 2 * this.SLOT_SIZE;
+        const clooomcGT = this.createGT(0, 3, {R:0,W:0,X:1,L:0,S:0,E:0}, 0);
+        this.memory[bootAbstrLoc] = clooomcGT;
     }
 
     _bootStep() {
@@ -241,34 +239,54 @@ class ChurchSimulator {
                 break;
             }
             case 3: {
-                const gt6 = this.createGT(0, 2, {R:0,W:0,X:0,L:0,S:0,E:1}, 0);
+                const gt6 = this.createGT(0, 2, {R:0,W:0,X:0,L:1,S:1,E:1}, 0);
                 const check6 = this.mLoad(gt6, null, undefined);
                 if (!check6.ok) {
-                    this.fault('BOOT', `INIT_THRD mLoad(CList) failed: ${check6.message}`);
+                    this.fault('BOOT', `INIT_CLIST mLoad(Boot.Abstraction) failed: ${check6.message}`);
                     return false;
                 }
                 this._writeCR(6, gt6, check6.entry);
-                this.output += '[BOOT] INIT_THRD — CR6 ← mLoad(Slot 2) C-List\n';
+                this.output += '[BOOT] INIT_CLIST — CR6 ← mLoad(Slot 2) Boot Abstraction C-List (L+S+E)\n';
                 this.bootStep++;
                 break;
             }
             case 4: {
-                const gt3 = this.createGT(0, 3, {R:0,W:0,X:0,L:0,S:0,E:1}, 0);
-                const check3 = this.mLoad(gt3, 'E', undefined);
-                if (!check3.ok) {
-                    this.fault('BOOT', `LOAD_NUC mLoad(Boot.Abstraction) failed: ${check3.message}`);
+                const gt2 = this.createGT(0, 2, {R:0,W:0,X:0,L:1,S:1,E:1}, 0);
+                const check2 = this.mLoad(gt2, 'E', undefined);
+                if (!check2.ok) {
+                    this.fault('BOOT', `LOAD_NUC mLoad(Slot 2) failed: ${check2.message}`);
                     return false;
                 }
-                const bootCListLoc = check3.entry.word0_location;
+                const clistEntry = check2.entry;
+                const clistParsed = this.parseNSWord1(clistEntry.word1_limit);
+                if (clistParsed.f === 1) {
+                    this.fault('BOOT', 'LOAD_NUC: Slot 2 GT has F-bit set (Far) — FAULT');
+                    return false;
+                }
+                if (check2.parsed.type !== 0) {
+                    this.fault('BOOT', `LOAD_NUC: Slot 2 GT type is ${check2.parsed.typeName}, must be Inform`);
+                    return false;
+                }
+                this._writeCR(6, gt2, clistEntry);
+                const bootCListLoc = clistEntry.word0_location;
                 const cr7GT = this.memory[bootCListLoc];
                 if (cr7GT === 0) {
-                    this.fault('BOOT', 'Boot abstraction C-List offset 0 is empty — no CR7 GT');
+                    this.fault('BOOT', 'LOAD_NUC: Boot Abstraction C-List offset 0 is empty — no CR7 GT');
                     return false;
                 }
                 const cr7Parsed = this.parseGT(cr7GT);
+                if (cr7Parsed.type !== 0) {
+                    this.fault('BOOT', `LOAD_NUC: CR7 GT type is ${cr7Parsed.typeName}, must be Inform`);
+                    return false;
+                }
                 const cr7Entry = this.readNSEntry(cr7Parsed.index);
                 if (!cr7Entry) {
-                    this.fault('BOOT', `Boot abstraction CR7 NS entry ${cr7Parsed.index} not found`);
+                    this.fault('BOOT', `LOAD_NUC: CR7 NS entry ${cr7Parsed.index} not found`);
+                    return false;
+                }
+                const cr7Word1 = this.parseNSWord1(cr7Entry.word1_limit);
+                if (cr7Word1.f === 1) {
+                    this.fault('BOOT', 'LOAD_NUC: CR7 GT has F-bit set (Far) — FAULT');
                     return false;
                 }
                 const cr7Check = this.mLoad(cr7GT, 'X', undefined);
@@ -277,7 +295,8 @@ class ChurchSimulator {
                     return false;
                 }
                 this._writeCR(7, cr7GT, cr7Check.entry);
-                this.output += '[BOOT] LOAD_NUC — CALL into Boot.Abstraction(Slot 3); CR7 ← mLoad(offset 0 = Slot 4, Boot.CLOOMC)\n';
+                this.pc = 0;
+                this.output += '[BOOT] LOAD_NUC — CALL into Slot 2 (Boot Abstraction); CR6 ← mLoad(E), CR7 ← mLoad(offset 0 = Slot 3, Boot.CLOOMC, X), PC=0\n';
                 this.bootStep++;
                 break;
             }
@@ -604,11 +623,6 @@ class ChurchSimulator {
     }
 
     _writeCR(crIdx, gt32, entry) {
-        const existing = this.cr[crIdx].word0;
-        if (existing !== 0 && !this.mElevation) {
-            this.fault('CR_OCCUPIED', `CR${crIdx} holds active GT 0x${existing.toString(16).toUpperCase().padStart(8,'0')} — clear first`);
-            return false;
-        }
         this.cr[crIdx].word0 = gt32;
         this.cr[crIdx].word1 = entry.word0_location >>> 0;
         this.cr[crIdx].word2 = entry.word1_limit >>> 0;
@@ -831,19 +845,31 @@ class ChurchSimulator {
     }
 
     _execCall(d) {
-        const targetGT = this.cr[d.crDst].word0;
-        if (targetGT === 0) {
+        const sourceGT = this.cr[d.crDst].word0;
+        if (sourceGT === 0) {
             this.fault('NULL_CAP', `CALL: CR${d.crDst} is NULL`);
             return null;
         }
-        const check = this.mLoad(targetGT, 'E', d.crDst);
+        const srcParsed = this.parseGT(sourceGT);
+        if (srcParsed.type !== 0) {
+            this.fault('TYPE', `CALL: CR${d.crDst} GT type is ${srcParsed.typeName}, must be Inform`);
+            return null;
+        }
+        const check = this.mLoad(sourceGT, 'E', d.crDst);
         if (!check.ok) {
             this.fault(check.fault, `CALL: CR${d.crDst}: ${check.message}`);
+            return null;
+        }
+        const clistEntry = check.entry;
+        const clistWord1 = this.parseNSWord1(clistEntry.word1_limit);
+        if (clistWord1.f === 1) {
+            this.fault('FAR', `CALL: CR${d.crDst} C-List has F-bit set (Far)`);
             return null;
         }
 
         const handler = this.nsHandlers[check.index];
         if (handler) {
+            this._writeCR(6, sourceGT, clistEntry);
             return this._dispatchHandler(d, check, handler);
         }
 
@@ -854,12 +880,34 @@ class ChurchSimulator {
             savedFlags: {...this.flags},
         });
 
+        this._writeCR(6, sourceGT, clistEntry);
+
+        const clistLoc = clistEntry.word0_location;
+        const cr7GT = this.memory[clistLoc];
+        let cr7Desc = '';
+        if (cr7GT !== 0) {
+            const cr7Parsed = this.parseGT(cr7GT);
+            if (cr7Parsed.type === 0 && cr7Parsed.permissions.X) {
+                const cr7Entry = this.readNSEntry(cr7Parsed.index);
+                if (cr7Entry) {
+                    const cr7Word1 = this.parseNSWord1(cr7Entry.word1_limit);
+                    if (cr7Word1.f !== 1) {
+                        const cr7Check = this.mLoad(cr7GT, 'X', undefined);
+                        if (cr7Check.ok) {
+                            this._writeCR(7, cr7GT, cr7Check.entry);
+                            cr7Desc = `, CR7 ← X-GT(Slot ${cr7Parsed.index})`;
+                        }
+                    }
+                }
+            }
+        }
+
         for (let i = 0; i < this.cr.length; i++) {
             this.cr[i].word2 = (this.cr[i].word2 & ~(1 << 31)) >>> 0;
         }
 
         const label = this.nsLabels[check.index] || 'abstraction';
-        const desc = `CALL CR${d.crDst} → ${label}`;
+        const desc = `CALL CR${d.crDst} → ${label}: CR6 ← E-GT(Slot ${check.index})${cr7Desc}`;
         this.output += desc + '\n';
         this.pc++;
         return { pc: this.pc - 1, instr: d, desc, pipeline: this._callPipeline(d, label) };
@@ -1049,6 +1097,23 @@ class ChurchSimulator {
         if (!tpermCheck.ok) {
             this.fault(tpermCheck.fault, `ELOADCALL TPERM: CR${d.crDst}: ${tpermCheck.message}`);
             return null;
+        }
+
+        const clistEntry = tpermCheck.entry;
+        const clistLoc = clistEntry.word0_location;
+        const cr7GT = this.memory[clistLoc];
+        if (cr7GT !== 0) {
+            const cr7Parsed = this.parseGT(cr7GT);
+            if (cr7Parsed.type === 0) {
+                const cr7Entry = this.readNSEntry(cr7Parsed.index);
+                if (cr7Entry) {
+                    const cr7Check = this.mLoad(cr7GT, 'X', undefined);
+                    if (cr7Check.ok) {
+                        this._writeCR(6, gt, clistEntry);
+                        this._writeCR(7, cr7GT, cr7Check.entry);
+                    }
+                }
+            }
         }
 
         this.callStack.push({

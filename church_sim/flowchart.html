@@ -98,9 +98,9 @@
             <tr><th>Slot</th><th>Address</th><th>Purpose</th><th>Boot Phase</th><th>CR Loaded</th></tr>
             <tr><td>0</td><td>0x0000–0x0002</td><td>Boot Namespace (self-ref)</td><td>LOAD_NS</td><td>CR15 (zero perms, Inform)</td></tr>
             <tr><td>1</td><td>0x0003–0x0005</td><td>Thread identity</td><td>INIT_THRD</td><td>CR8</td></tr>
-            <tr><td>2</td><td>0x0006–0x0008</td><td>C-List</td><td>INIT_CLIST</td><td>CR6 (E only)</td></tr>
-            <tr><td>3</td><td>0x0009–0x000B</td><td>Boot Abstraction C-List</td><td>LOAD_NUC (CALL)</td><td>CR7 at offset 0</td></tr>
-            <tr><td>4+</td><td>0x000C+</td><td>Additional NS entries</td><td>—</td><td>Remaining abstractions</td></tr>
+            <tr><td>2</td><td>0x0006–0x0008</td><td>Boot Abstraction C-List</td><td>INIT_CLIST → CR6; then LOAD_NUC CALL → CR6 + CR7</td><td>CR6, CR7</td></tr>
+            <tr><td>3</td><td>0x0009–0x000B</td><td>Boot.CLOOMC</td><td>— (discovered at offset 0 of Slot 2)</td><td>—</td></tr>
+            <tr><td>4+</td><td>0x000C+</td><td>Remaining abstractions (Lambda, SlideRule, …)</td><td>—</td><td>—</td></tr>
         </table>
         <div class="sep"></div>
         <h3>Hardwired GT for CR15</h3>
@@ -117,8 +117,8 @@
             <tr><th>CR</th><th>Status</th><th>Source</th></tr>
             <tr><td>CR15</td><td><span class="step-ok">Loaded</span></td><td>mLoad(Slot 0) — Namespace root, zero perms, Inform</td></tr>
             <tr><td>CR8</td><td><span class="step-ok">Loaded</span></td><td>mLoad(Slot 1) — Thread identity</td></tr>
-            <tr><td>CR6</td><td><span class="step-ok">Loaded</span></td><td>mLoad(Slot 2) — C-List</td></tr>
-            <tr><td>CR7</td><td><span class="step-ok">Discovered</span></td><td>CALL into Slot 3 → offset 0 of Boot abstraction's C-List</td></tr>
+            <tr><td>CR6</td><td><span class="step-ok">Loaded</span></td><td>mLoad(Slot 2) — Boot Abstraction C-List (E perm, Inform type)</td></tr>
+            <tr><td>CR7</td><td><span class="step-ok">Discovered</span></td><td>CALL into Slot 2 → CR6+0 yields X-GT pointing to Slot 3 (Boot.CLOOMC)</td></tr>
             <tr><td>CR5</td><td><span class="step-fault">NULL</span></td><td>Not loaded — unavailable, missing from stack frame</td></tr>
             <tr><td>Others</td><td><span class="step-fault">NULL</span></td><td>Cleared in FAULT_RST</td></tr>
         </table>
@@ -134,10 +134,10 @@
         <div class="step"><span class="step-num">2</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> <b>LOAD_NS</b> — CR15 ← mLoad(Slot 0). Hardwired GT, zero perms, Inform type.</span></div>
         <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> <b>INIT_THRD</b> — CR8 ← mLoad(Slot 1) Thread identity.</span></div>
         <div class="step"><span class="step-num">4</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> <b>INIT_CLIST</b> — CR6 ← mLoad(Slot 2) C-List. CR5 stays NULL.</span></div>
-        <div class="step"><span class="step-num">5</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> <b>LOAD_NUC</b> — CALL via mLoad(Slot 3, E) into Boot abstraction. CR7 discovered at offset 0.</span></div>
+        <div class="step"><span class="step-num">5</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> <b>LOAD_NUC</b> — CALL into Slot 2: E-GT → mLoad → CR6; read CR6+0 → X-GT (Slot 3, Boot.CLOOMC) → mLoad → CR7; both Inform, not F; PC ← 0.</span></div>
         <div class="step"><span class="step-num">6</span><span class="step-text"><span class="bus bus-none">---</span> <b>COMPLETE</b> — M-Elevation OFF → begin instruction fetch → <span class="step-ok">READY</span></span></div>
         <div class="sep"></div>
-        <div class="step"><span class="step-text"><span class="step-detail">Phase 1 clears all CRs to NULL. Phases 2–5 load valid GTs through mLoad (M-elevation bypasses permission but not bounds/version/seal). Thread loads before C-List. CALL loads CR6 first. CR5 remains NULL — the secure default.</span></span></div>
+        <div class="step"><span class="step-text"><span class="step-detail">Phase 1 clears all CRs to NULL. Phases 2–5 load valid GTs through mLoad (M-elevation bypasses permission but not bounds/version/seal). Thread loads before C-List. LOAD_NUC follows CALL semantics: Phase 0 loads E-GT into CR6, Phase 1 reads CR6+0 X-GT into CR7, sets PC=0. Both GTs must be Inform type and not F (Far). CR5 remains NULL — the secure default.</span></span></div>
     </div>
 
     <div class="section-title">Instruction Fetch &amp; Condition Check</div>
@@ -228,15 +228,20 @@
 
         <div class="flow-card">
             <h3>2 — CALL CRd (Claims 7, 10)</h3>
-            <div class="step"><span class="step-num">1</span><span class="step-text"><span class="bus bus-reg">REG</span> CR[dst].word0 = target GT. Null? <span class="step-fault">→ NULL_CAP fault</span></span></div>
-            <div class="step"><span class="step-num">2</span><span class="step-text"><span class="step-gate">mLoad(targetGT, 'E', crDst)</span> — <span class="bus bus-rd">MEM RD</span> NS entry + <span class="bus bus-wr">MEM WR</span> G-bit</span></div>
-            <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-none">---</span> If handler registered (e.g., GC) → dispatch to safe Turing abstraction</span></div>
-            <div class="step"><span class="step-num">4</span><span class="step-text"><span class="bus bus-reg">REG</span> Push call frame (tag=0): save all CRs (16×4 words), all DRs (16), flags, returnPC</span></div>
-            <div class="step"><span class="step-num">5</span><span class="step-text"><span class="bus bus-reg">REG</span> If LAMBDA-active: save LAMBDA_PC + LAMBDA-active flag into call frame, clear LAMBDA-active <span class="step-detail">(Claim 7)</span></span></div>
-            <div class="step"><span class="step-num">6</span><span class="step-text"><span class="bus bus-reg">REG</span> Auto-clear B on all preserved CRs: CR[0..15].word2 bit 31 ← 0 <span class="step-detail">(Claim 10)</span></span></div>
-            <div class="step"><span class="step-num">7</span><span class="step-text"><span class="bus bus-none">---</span> <span class="step-ok">PC ← target entry point</span></span></div>
+            <div class="step"><span class="step-num">1</span><span class="step-text"><span class="bus bus-reg">REG</span> CR[src].word0 = source GT (E perm, pointing to C-List). Null? <span class="step-fault">→ NULL_CAP fault</span></span></div>
+            <div class="step"><span class="step-num">2</span><span class="step-text"><span class="bus bus-none">---</span> Validate: GT must be Inform type and not F (Far) <span class="step-fault">→ FAULT if either fails</span></span></div>
+            <div class="step"><span class="step-num">3</span><span class="step-text"><span class="step-gate">Phase 0: mLoad(sourceGT, 'E', crSrc)</span> — <span class="bus bus-rd">MEM RD</span> NS entry + <span class="bus bus-wr">MEM WR</span> G-bit → <span class="bus bus-reg">REG</span> CR6 ← validated C-List capability</span></div>
+            <div class="step"><span class="step-num">4</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read CR6+0 (memory at CR6's location + offset 0) → X-permission GT</span></div>
+            <div class="step"><span class="step-num">5</span><span class="step-text"><span class="bus bus-none">---</span> Validate: X-GT must be Inform type and not F (Far) <span class="step-fault">→ FAULT if either fails</span></span></div>
+            <div class="step"><span class="step-num">6</span><span class="step-text"><span class="step-gate">Phase 1: mLoad(xGT, 'X')</span> — <span class="bus bus-rd">MEM RD</span> NS entry + <span class="bus bus-wr">MEM WR</span> G-bit → <span class="bus bus-reg">REG</span> CR7 ← validated code capability</span></div>
+            <div class="step"><span class="step-num">7</span><span class="step-text"><span class="bus bus-none">---</span> If handler registered (e.g., GC) → dispatch to safe Turing abstraction</span></div>
+            <div class="step"><span class="step-num">8</span><span class="step-text"><span class="bus bus-reg">REG</span> Push call frame (tag=0): save all CRs (16×4 words), all DRs (16), flags, returnPC</span></div>
+            <div class="step"><span class="step-num">9</span><span class="step-text"><span class="bus bus-reg">REG</span> If LAMBDA-active: save LAMBDA_PC + LAMBDA-active flag into call frame, clear LAMBDA-active <span class="step-detail">(Claim 7)</span></span></div>
+            <div class="step"><span class="step-num">10</span><span class="step-text"><span class="bus bus-reg">REG</span> Auto-clear B on all preserved CRs: CR[0..15].word2 bit 31 ← 0 <span class="step-detail">(Claim 10)</span></span></div>
+            <div class="step"><span class="step-num">11</span><span class="step-text"><span class="bus bus-none">---</span> <span class="step-ok">PC ← 0</span> (instruction address set to zero — execution begins at first instruction)</span></div>
             <div class="sep"></div>
-            <div class="step"><span class="step-text"><span class="step-detail">Bus: 1 MEM RD (NS entry) + 1 MEM WR (G-bit) + 4 REG (GT + frame + LAMBDA state + B-clear). Call stack is machine-internal.</span></span></div>
+            <div class="step"><span class="step-text"><span class="step-detail">Two-phase mLoad: Phase 0 loads E-GT → CR6 (C-List), Phase 1 reads CR6+0 X-GT → CR7 (code entry). NIA = 0.</span></span></div>
+            <div class="step"><span class="step-text"><span class="step-detail">Bus: 2 MEM RD (2× NS entry) + 1 MEM RD (CR6+0) + 2 MEM WR (2× G-bit) + 5 REG (GT + CR6 + CR7 + frame + B-clear). Call stack is machine-internal.</span></span></div>
         </div>
 
         <div class="flow-card">

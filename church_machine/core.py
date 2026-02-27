@@ -329,7 +329,7 @@ class ChurchCore(Elaboratable):
                 slot3_gt = Signal(GT_LAYOUT)
                 slot3_gt_view = View(GT_LAYOUT, slot3_gt)
                 m.d.comb += [
-                    slot3_gt_view.index.eq(3),
+                    slot3_gt_view.index.eq(2),
                     slot3_gt_view.version.eq(0),
                     slot3_gt_view.gt_type.eq(GT_TYPE_INFORM),
                     slot3_gt_view.perms.eq(PERM_MASK_E),
@@ -338,7 +338,7 @@ class ChurchCore(Elaboratable):
                 cr7_gt = Signal(GT_LAYOUT)
                 cr7_gt_view = View(GT_LAYOUT, cr7_gt)
                 m.d.comb += [
-                    cr7_gt_view.index.eq(4),
+                    cr7_gt_view.index.eq(3),
                     cr7_gt_view.version.eq(0),
                     cr7_gt_view.gt_type.eq(GT_TYPE_INFORM),
                     cr7_gt_view.perms.eq(PERM_MASK_X),
