@@ -239,19 +239,19 @@ class ChurchSimulator {
                 break;
             }
             case 3: {
-                const gt6 = this.createGT(0, 2, {R:0,W:0,X:0,L:1,S:1,E:1}, 0);
+                const gt6 = this.createGT(0, 2, {R:0,W:0,X:0,L:0,S:0,E:1}, 0);
                 const check6 = this.mLoad(gt6, null, undefined);
                 if (!check6.ok) {
                     this.fault('BOOT', `INIT_CLIST mLoad(Boot.Abstraction) failed: ${check6.message}`);
                     return false;
                 }
                 this._writeCR(6, gt6, check6.entry);
-                this.output += '[BOOT] INIT_CLIST — CR6 ← mLoad(Slot 2) Boot Abstraction C-List (L+S+E)\n';
+                this.output += '[BOOT] INIT_CLIST — CR6 ← mLoad(Slot 2) Boot Abstraction C-List (E, L+S bypassed via CR6 M-elevation)\n';
                 this.bootStep++;
                 break;
             }
             case 4: {
-                const gt2 = this.createGT(0, 2, {R:0,W:0,X:0,L:1,S:1,E:1}, 0);
+                const gt2 = this.createGT(0, 2, {R:0,W:0,X:0,L:0,S:0,E:1}, 0);
                 const check2 = this.mLoad(gt2, 'E', undefined);
                 if (!check2.ok) {
                     this.fault('BOOT', `LOAD_NUC mLoad(Slot 2) failed: ${check2.message}`);
@@ -770,7 +770,7 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `LOAD: CR${d.crSrc} is NULL`);
             return null;
         }
-        const check = this.mLoad(clistGT, 'L', d.crSrc);
+        const check = this.mLoad(clistGT, d.crSrc === 6 ? null : 'L', d.crSrc);
         if (!check.ok) {
             this.fault(check.fault, `LOAD: CR${d.crSrc}: ${check.message}`);
             return null;
@@ -816,7 +816,7 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `SAVE: CR${d.crSrc} C-List is NULL`);
             return null;
         }
-        const clistCheck = this.mLoad(clistGT, 'S', d.crSrc);
+        const clistCheck = this.mLoad(clistGT, d.crSrc === 6 ? null : 'S', d.crSrc);
         if (!clistCheck.ok) {
             this.fault(clistCheck.fault, `SAVE: CR${d.crSrc}: ${clistCheck.message}`);
             return null;
@@ -1069,7 +1069,7 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `ELOADCALL: CR${d.crSrc} C-List is NULL`);
             return null;
         }
-        const loadCheck = this.mLoad(clistGT, 'L', d.crSrc);
+        const loadCheck = this.mLoad(clistGT, d.crSrc === 6 ? null : 'L', d.crSrc);
         if (!loadCheck.ok) {
             this.fault(loadCheck.fault, `ELOADCALL LOAD: CR${d.crSrc}: ${loadCheck.message}`);
             return null;
@@ -1140,7 +1140,7 @@ class ChurchSimulator {
             this.fault('NULL_CAP', `XLOADLAMBDA: CR${d.crSrc} C-List is NULL`);
             return null;
         }
-        const loadCheck = this.mLoad(clistGT, 'L', d.crSrc);
+        const loadCheck = this.mLoad(clistGT, d.crSrc === 6 ? null : 'L', d.crSrc);
         if (!loadCheck.ok) {
             this.fault(loadCheck.fault, `XLOADLAMBDA LOAD: CR${d.crSrc}: ${loadCheck.message}`);
             return null;

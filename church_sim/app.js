@@ -1117,7 +1117,7 @@ HALT
 ; ============================================
 ;
 ; Namespace reference:
-;   Slot 2  Boot.Abstraction (L,S,E)
+;   Slot 2  Boot.Abstraction (E only, L+S bypassed via CR6 M-elevation)
 ;   Slot 3  Boot.CLOOMC (X only)
 ;   Slot 22 TRUE       (L only — no X, no E)
 ;   Slot 23 FALSE      (L only — no X, no E)
