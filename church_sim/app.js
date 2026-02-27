@@ -576,6 +576,7 @@ function updateFlagsDisplay() {
         <button class="btn btn-success btn-sm" onclick="stepSim()">Step</button>
         <button class="btn btn-info btn-sm" onclick="slowBoot()" ${sim.bootComplete ? 'disabled style="opacity:0.5"' : ''}>Boot</button>
         <button class="btn btn-success btn-sm" onclick="runSim()">Run</button>
+        <button class="btn btn-walk btn-sm" onclick="walkToggle()">${walkRunning ? 'Stop' : 'Walk'}</button>
         <button class="btn btn-warning btn-sm" onclick="resetSim()">Reset</button>
         <span class="flags-sep"></span>
         <span class="flag ${f.N ? 'flag-set' : ''}">N</span>
@@ -715,6 +716,74 @@ function stepSim() {
         }
     }
     updateDashboard();
+}
+
+let walkRunning = false;
+let walkTimer = null;
+
+function walkToggle() {
+    if (walkRunning) {
+        walkRunning = false;
+        if (walkTimer) { clearTimeout(walkTimer); walkTimer = null; }
+        if (pipelineViz) pipelineViz.stopAnimation();
+        updateDashboard();
+        return;
+    }
+    if (!sim.bootComplete) {
+        slowBoot();
+        const waitForBoot = setInterval(() => {
+            if (sim.bootComplete && !bootAnimating) {
+                clearInterval(waitForBoot);
+                walkRunning = true;
+                switchView('pipeline');
+                updateDashboard();
+                walkNext();
+            }
+        }, 200);
+        return;
+    }
+    walkRunning = true;
+    switchView('pipeline');
+    updateDashboard();
+    walkNext();
+}
+
+function walkNext() {
+    if (!walkRunning || !sim.bootComplete) {
+        walkRunning = false;
+        updateDashboard();
+        return;
+    }
+    const result = sim.step();
+    if (!result) {
+        walkRunning = false;
+        updateDashboard();
+        return;
+    }
+    const con = document.getElementById('editorConsole');
+    if (con) {
+        con.textContent += `\n[${sim.stepCount}] ${result.desc || 'executed'}`;
+        con.scrollTop = con.scrollHeight;
+    }
+    if (result.pipeline && pipelineViz) {
+        pipelineViz.animate(result.pipeline, 500).then(() => {
+            updateDashboard();
+            if (walkRunning && sim.bootComplete) {
+                walkTimer = setTimeout(walkNext, 600);
+            } else {
+                walkRunning = false;
+                updateDashboard();
+            }
+        });
+    } else {
+        updateDashboard();
+        if (walkRunning && sim.bootComplete) {
+            walkTimer = setTimeout(walkNext, 1000);
+        } else {
+            walkRunning = false;
+            updateDashboard();
+        }
+    }
 }
 
 let bootAnimating = false;

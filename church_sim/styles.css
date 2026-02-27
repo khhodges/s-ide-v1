@@ -573,6 +573,14 @@ header h1 {
 
 .btn-info:hover { background: #155e75; }
 
+.btn-walk {
+    background: #4a1d96;
+    border-color: #a78bfa;
+    color: #a78bfa;
+}
+
+.btn-walk:hover { background: #5b21b6; }
+
 .editor-panel .panel-title {
     flex-shrink: 0;
     padding-top: 0.4rem;
