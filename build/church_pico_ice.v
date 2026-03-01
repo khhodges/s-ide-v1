@@ -3,7 +3,7 @@
 (* top =  1  *)
 (* src = "/home/runner/workspace/church_machine/pico_ice.py:135" *)
 (* generator = "Amaranth" *)
-module top(push_button, clk, rst, uart_tx, led_r, led_g, led_b, uart_rx);
+module top(push_button, clk, uart_tx, led_r, led_g, led_b, uart_rx);
   reg \$auto$verilog_backend.cc:2355:dump_module$1  = 0;
   wire \$1 ;
   wire \$10 ;
@@ -264,8 +264,7 @@ module top(push_button, clk, rst, uart_tx, led_r, led_g, led_b, uart_rx);
   (* src = "/home/runner/workspace/church_machine/pico_ice.py:22" *)
   wire [31:0] rd_data;
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
-  input rst;
-  wire rst;
+  wire rst = 1'b0;
   (* src = "/home/runner/workspace/church_machine/uart_tx.py:90" *)
   reg send;
   (* src = "/home/runner/workspace/church_machine/uart_tx.py:91" *)

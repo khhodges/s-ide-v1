@@ -80,6 +80,27 @@ def generate_pico_ice_verilog(output_dir="build"):
 
     verilog_text = convert(top, ports=ports)
 
+    lines = verilog_text.split('\n')
+    patched = []
+    in_top_module = False
+    rst_removed = False
+    skip_next_wire_rst = False
+    for line in lines:
+        if line.startswith('module top(') and not rst_removed:
+            line = line.replace(', rst,', ',')
+            in_top_module = True
+        if in_top_module and line.strip() == 'input rst;':
+            patched.append('  wire rst = 1\'b0;')
+            skip_next_wire_rst = True
+            rst_removed = True
+            in_top_module = False
+            continue
+        if skip_next_wire_rst and line.strip() == 'wire rst;':
+            skip_next_wire_rst = False
+            continue
+        patched.append(line)
+    verilog_text = '\n'.join(patched)
+
     output_path = os.path.join(output_dir, "church_pico_ice.v")
     with open(output_path, "w") as f:
         f.write(verilog_text)
