@@ -283,10 +283,18 @@ class ChurchPicoIce(Elaboratable):
             core.imem_data.eq(boot_rom.data),
         ]
 
-        halted = Signal(init=0)
-        step_pulse = Signal()
+        halted = Signal(init=1)
+        stepping = Signal()
 
-        m.d.comb += core.imem_valid.eq(~halted | step_pulse)
+        prev_nia = Signal(32)
+        m.d.sync += prev_nia.eq(core.nia)
+        nia_changed = Signal()
+        m.d.comb += nia_changed.eq(core.nia != prev_nia)
+
+        step_complete = Signal()
+        m.d.comb += step_complete.eq(stepping & nia_changed)
+
+        m.d.comb += core.imem_valid.eq(~halted | (stepping & ~step_complete))
 
         btn_sync = Signal(3)
         btn_prev = Signal()
@@ -419,17 +427,19 @@ class ChurchPicoIce(Elaboratable):
 
             with m.State("HALTED"):
                 with m.If(btn_press):
-                    m.d.sync += step_pulse.eq(1)
-                    m.next = "STEP_EXEC"
+                    m.d.sync += stepping.eq(1)
+                    m.next = "STEP_WAIT"
 
-            with m.State("STEP_EXEC"):
-                m.d.sync += [
-                    step_pulse.eq(0),
-                    step_nia.eq(core.nia),
-                    step_fault.eq(core.fault),
-                    step_had_fault.eq(core.fault_valid),
-                ]
-                m.next = "STEP_LABEL"
+            with m.State("STEP_WAIT"):
+                with m.If(step_complete):
+                    m.d.sync += [
+                        stepping.eq(0),
+                        step_nia.eq(core.nia),
+                        step_fault.eq(core.fault),
+                        step_had_fault.eq(core.fault_valid),
+                        step_idx.eq(0),
+                    ]
+                    m.next = "STEP_LABEL"
 
             with m.State("STEP_LABEL"):
                 m.d.comb += step_rd.addr.eq(step_idx)

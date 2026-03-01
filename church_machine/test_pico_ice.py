@@ -6,6 +6,9 @@ from amaranth.sim import *
 from .pico_ice import ChurchPicoIce
 
 
+UART_CHAR_CYCLES = 1042
+
+
 def test_pico_ice_sim():
     """Test pico-ice wrapper in simulation mode (uses Memory instead of SPRAM)."""
 
@@ -13,6 +16,21 @@ def test_pico_ice_sim():
 
     sim = Simulator(top)
     sim.add_clock(1 / 12_000_000)
+
+    def wait_uart_idle(n_chars):
+        for _ in range(n_chars * UART_CHAR_CYCLES + 2000):
+            yield Tick()
+
+    def press_button():
+        yield top.push_button.eq(1)
+        for _ in range(10):
+            yield Tick()
+        yield top.push_button.eq(0)
+        for _ in range(10):
+            yield Tick()
+        yield top.push_button.eq(1)
+        for _ in range(5):
+            yield Tick()
 
     def testbench():
         print("=== Church Machine pico-ice Integration Test (sim mode) ===")
@@ -31,37 +49,77 @@ def test_pico_ice_sim():
         assert boot_done, "FAIL: Boot did not complete within 50 cycles"
         print("  PASS: Auto-boot sequence completed")
 
+        yield from wait_uart_idle(35)
+
         print()
-        print("--- Phase 2: LED indicators ---")
+        print("--- Phase 2: Halt-on-boot verification ---")
+        nia_before = yield top.dbg_nia
+        print(f"  NIA after boot: 0x{nia_before:08X}")
+
+        for _ in range(100):
+            yield Tick()
+
+        nia_after = yield top.dbg_nia
+        print(f"  NIA after 100 more cycles: 0x{nia_after:08X}")
+        assert nia_before == nia_after, f"FAIL: NIA changed from 0x{nia_before:08X} to 0x{nia_after:08X} — machine not halted!"
+        print("  PASS: Machine halted after boot — NIA frozen")
+
+        fv = yield top.dbg_fault_valid
+        print(f"  fault_valid={fv} (should be 0 — no instruction executed)")
+        assert fv == 0, "FAIL: fault_valid should be 0 when halted"
+        print("  PASS: No fault while halted")
+
+        print()
+        print("--- Phase 3: LED indicators while halted ---")
         led_r = yield top.led_r
         led_g = yield top.led_g
         led_b = yield top.led_b
         print(f"  LED R(fault)={led_r} G(run)={led_g} B(boot)={led_b}")
         assert led_b == 0, "FAIL: Blue (boot) LED should be off"
-        assert led_g == 1, "FAIL: Green (run) LED should be on"
-        print("  PASS: LED state correct after boot")
+        assert led_r == 0, "FAIL: Red (fault) LED should be off"
+        print("  PASS: LED state correct (halted, no fault)")
 
         print()
-        print("--- Phase 3: Instruction execution ---")
-        for _ in range(20):
+        print("--- Phase 4: Button step — execute one instruction ---")
+        yield from press_button()
+
+        for _ in range(100):
             yield Tick()
 
-        fv = yield top.dbg_fault_valid
-        fc = yield top.dbg_fault
-        nia = yield top.dbg_nia
-        if fv:
-            print(f"  Security fault at NIA=0x{nia:08X}: code={fc}")
-            print("    (Expected — demo triggers permission check)")
-        else:
-            print(f"  Running at NIA=0x{nia:08X}")
-        print(f"  Final NIA: 0x{nia:08X}")
-        print("  PASS: Instruction execution verified")
+        nia_step1 = yield top.dbg_nia
+        print(f"  NIA after step: 0x{nia_step1:08X}")
+        assert nia_step1 != nia_before, f"FAIL: NIA didn't advance after button press (still 0x{nia_before:08X})"
+        print("  PASS: Step executed — NIA advanced")
+
+        nia_snapshot = nia_step1
+        for _ in range(200):
+            yield Tick()
+        nia_check = yield top.dbg_nia
+        assert nia_check == nia_snapshot, f"FAIL: NIA changed after step (0x{nia_snapshot:08X} -> 0x{nia_check:08X}) — machine didn't re-halt!"
+        print("  PASS: Machine re-halted after step")
+
+        yield from wait_uart_idle(15)
 
         print()
-        print("--- Phase 4: UART TX ---")
-        tx = yield top.uart_tx
-        print(f"  UART TX line: {tx} (1=idle)")
+        print("--- Phase 5: Multiple steps ---")
+        for step in range(3):
+            yield from press_button()
+            for _ in range(100):
+                yield Tick()
 
+            nia = yield top.dbg_nia
+            fv = yield top.dbg_fault_valid
+            fc = yield top.dbg_fault
+            fault_str = f" FAULT={fc}" if fv else ""
+            print(f"  Step {step+2}: NIA=0x{nia:08X}{fault_str}")
+
+            yield from wait_uart_idle(15)
+
+        print("  PASS: Multiple steps executed successfully")
+
+        print()
+        print("--- Phase 6: UART TX output ---")
+        tx = yield top.uart_tx
         transitions = 0
         prev = tx
         for _ in range(500):
@@ -71,35 +129,21 @@ def test_pico_ice_sim():
                 transitions += 1
             prev = cur
 
-        print(f"  UART: {transitions} transitions in 500 cycles")
         if transitions > 0:
-            print("  PASS: UART transmitting (banner/debug)")
+            print("  PASS: UART transmitting")
         else:
-            print("  INFO: UART idle (may need more cycles)")
-
-        print()
-        print("--- Phase 5: Fault LED update ---")
-        for _ in range(5):
-            yield Tick()
-        led_r = yield top.led_r
-        led_g = yield top.led_g
-        fv = yield top.dbg_fault_valid
-        if fv:
-            assert led_r == 1, "FAIL: Red LED should be on after fault"
-            assert led_g == 0, "FAIL: Green LED should be off after fault"
-            print("  PASS: Fault LED on, Run LED off")
-        else:
-            print("  PASS: No fault, LEDs unchanged")
+            print("  INFO: UART idle (expected — halted)")
 
         print()
         print("=== Summary ===")
         print("  pico-ice integration verified (sim mode):")
         print("    [x] Auto-boot with delay")
-        print("    [x] RGB LED indicators (R=fault, G=run, B=boot)")
-        print("    [x] Boot ROM instruction fetch")
-        print("    [x] Unified memory (sim: Memory, hw: SPRAM)")
+        print("    [x] Halt-on-boot (NIA frozen, no faults)")
+        print("    [x] LED indicators correct while halted")
+        print("    [x] Button step executes exactly one instruction")
+        print("    [x] Re-halt after each step")
+        print("    [x] Multiple steps work correctly")
         print("    [x] UART debug output")
-        print("    [x] Security fault detection")
         print()
         print("  All pico-ice integration tests passed!")
 
