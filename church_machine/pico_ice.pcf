@@ -14,7 +14,7 @@ set_io -nowarn led_g           39      # Green = running
 set_io -nowarn led_b           40      # Blue  = booting
 
 # Push button (active-low) — directly usable as GPIO
-set_io -nowarn push_button     10      # ICE_PB / ICE_SW2
+set_io -pullup yes -nowarn push_button     10      # ICE_PB / ICE_SW2
 
 # Reset — active-low, directly connect to PMOD pin or tie in Verilog
 # Note: Amaranth generates a 'rst' port. On pico-ice, RP2040 handles

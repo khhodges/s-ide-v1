@@ -120,7 +120,7 @@ class ChurchPicoIce(Elaboratable):
 
         self.uart_tx = Signal(init=1)
         self.uart_rx = Signal()
-        self.push_button = Signal()
+        self.push_button = Signal(init=1)
 
         self.led_r = Signal()
         self.led_g = Signal()
@@ -359,30 +359,25 @@ class ChurchPicoIce(Elaboratable):
 
         m.d.comb += core.gc_start.eq(0)
 
-        BANNER = [ord(c) for c in "CHURCH v1.0\r\n"]
-        banner_rom = Memory(width=8, depth=len(BANNER), init=BANNER)
-        m.submodules.banner_rom = banner_rom
-        banner_rd = banner_rom.read_port(transparent=True)
-
+        BANNER = Array([C(ord(c), 8) for c in "CHURCH v1.0\r\n"])
         banner_idx = Signal(range(len(BANNER) + 1))
+        banner_byte = Signal(8)
+        m.d.comb += banner_byte.eq(BANNER[banner_idx])
 
-        HALT_MSG = [ord(c) for c in "HALT\r\n"]
-        halt_rom = Memory(width=8, depth=len(HALT_MSG), init=HALT_MSG)
-        m.submodules.halt_rom = halt_rom
-        halt_rd = halt_rom.read_port(transparent=True)
+        HALT_MSG = Array([C(ord(c), 8) for c in "HALT\r\n"])
         halt_idx = Signal(range(len(HALT_MSG) + 1))
+        halt_byte = Signal(8)
+        m.d.comb += halt_byte.eq(HALT_MSG[halt_idx])
 
-        STEP_MSG = [ord(c) for c in "S:"]
-        step_rom = Memory(width=8, depth=len(STEP_MSG), init=STEP_MSG)
-        m.submodules.step_rom = step_rom
-        step_rd = step_rom.read_port(transparent=True)
+        STEP_MSG = Array([C(ord(c), 8) for c in "S:"])
         step_idx = Signal(range(len(STEP_MSG) + 1))
+        step_byte = Signal(8)
+        m.d.comb += step_byte.eq(STEP_MSG[step_idx])
 
-        FAULT_MSG = [ord(c) for c in "F:"]
-        fault_msg_rom = Memory(width=8, depth=len(FAULT_MSG), init=FAULT_MSG)
-        m.submodules.fault_msg_rom = fault_msg_rom
-        fault_msg_rd = fault_msg_rom.read_port(transparent=True)
+        FAULT_MSG = Array([C(ord(c), 8) for c in "F:"])
         fault_msg_idx = Signal(range(len(FAULT_MSG) + 1))
+        fault_byte = Signal(8)
+        m.d.comb += fault_byte.eq(FAULT_MSG[fault_msg_idx])
 
         prev_boot_complete = Signal()
         m.d.sync += prev_boot_complete.eq(core.boot_complete)
@@ -400,11 +395,10 @@ class ChurchPicoIce(Elaboratable):
                     m.next = "SEND_BANNER"
 
             with m.State("SEND_BANNER"):
-                m.d.comb += banner_rd.addr.eq(banner_idx)
                 with m.If(~debug.busy):
                     with m.If(banner_idx < len(BANNER)):
                         m.d.comb += [
-                            debug.byte_data.eq(banner_rd.data),
+                            debug.byte_data.eq(banner_byte),
                             debug.send_byte.eq(1),
                         ]
                         m.d.sync += banner_idx.eq(banner_idx + 1)
@@ -420,11 +414,10 @@ class ChurchPicoIce(Elaboratable):
                     m.next = "SEND_HALT"
 
             with m.State("SEND_HALT"):
-                m.d.comb += halt_rd.addr.eq(halt_idx)
                 with m.If(~debug.busy):
                     with m.If(halt_idx < len(HALT_MSG)):
                         m.d.comb += [
-                            debug.byte_data.eq(halt_rd.data),
+                            debug.byte_data.eq(halt_byte),
                             debug.send_byte.eq(1),
                         ]
                         m.d.sync += halt_idx.eq(halt_idx + 1)
@@ -449,11 +442,10 @@ class ChurchPicoIce(Elaboratable):
                     m.next = "STEP_LABEL"
 
             with m.State("STEP_LABEL"):
-                m.d.comb += step_rd.addr.eq(step_idx)
                 with m.If(~debug.busy):
                     with m.If(step_idx < len(STEP_MSG)):
                         m.d.comb += [
-                            debug.byte_data.eq(step_rd.data),
+                            debug.byte_data.eq(step_byte),
                             debug.send_byte.eq(1),
                         ]
                         m.d.sync += step_idx.eq(step_idx + 1)
@@ -475,11 +467,10 @@ class ChurchPicoIce(Elaboratable):
                         m.next = "SEND_HALT"
 
             with m.State("STEP_FAULT_LABEL"):
-                m.d.comb += fault_msg_rd.addr.eq(fault_msg_idx)
                 with m.If(~debug.busy):
                     with m.If(fault_msg_idx < len(FAULT_MSG)):
                         m.d.comb += [
-                            debug.byte_data.eq(fault_msg_rd.data),
+                            debug.byte_data.eq(fault_byte),
                             debug.send_byte.eq(1),
                         ]
                         m.d.sync += fault_msg_idx.eq(fault_msg_idx + 1)
