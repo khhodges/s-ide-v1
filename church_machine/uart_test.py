@@ -1,5 +1,5 @@
-"""Diagnostic: Full ChurchCore wired to SPRAM/BootROM but IDLE (no boot).
-Tests whether the core logic itself crashes the RP2040, even without booting.
+"""Diagnostic: Full ChurchCore with SPRAM init + boot, but NO instruction execution.
+Tests whether the boot process itself crashes the RP2040.
 """
 
 from amaranth import *
@@ -44,18 +44,80 @@ class UartTestTop(Elaboratable):
             core.imem_data.eq(boot_rom.data),
         ]
 
-        m.d.comb += spram.addr.eq(core.dmem_addr[2:16])
+        mem_addr = Signal(14)
+        any_ns_access = Signal()
+        any_clist_access = Signal()
+        m.d.comb += [
+            any_ns_access.eq(core.ns_rd_en | core.ns_wr_en),
+            any_clist_access.eq(core.clist_rd_en | core.clist_wr_en),
+        ]
+        with m.If(any_ns_access):
+            m.d.comb += mem_addr.eq(core.ns_addr[2:16])
+        with m.Elif(any_clist_access):
+            m.d.comb += mem_addr.eq(core.clist_addr[2:16])
+        with m.Else():
+            m.d.comb += mem_addr.eq(core.dmem_addr[2:16])
+
+        m.d.comb += spram.addr.eq(mem_addr)
         m.d.comb += core.dmem_rd_data.eq(spram.rd_data)
         m.d.comb += [
             core.ns_rd_data.eq(Cat(spram.rd_data, C(0, 64))),
             core.clist_rd_data.eq(spram.rd_data),
         ]
+
+        wr_data = Signal(32)
+        wr_en = Signal()
+        with m.If(core.ns_wr_en):
+            m.d.comb += [wr_data.eq(core.ns_wr_data[:32]), wr_en.eq(1)]
+        with m.Elif(core.clist_wr_en):
+            m.d.comb += [wr_data.eq(core.clist_wr_data), wr_en.eq(1)]
+        with m.Else():
+            m.d.comb += [wr_data.eq(core.dmem_wr_data), wr_en.eq(core.dmem_wr_en)]
         m.d.comb += [
-            spram.wr_data.eq(core.dmem_wr_data),
-            spram.wr_en.eq(core.dmem_wr_en),
+            spram.wr_data.eq(wr_data),
+            spram.wr_en.eq(wr_en),
         ]
 
-        m.d.comb += core.boot_start.eq(0)
+        ns_flat = []
+        for i in range(0, len(DEMO_NAMESPACE), 3):
+            if i + 2 < len(DEMO_NAMESPACE):
+                ns_flat.extend([DEMO_NAMESPACE[i], DEMO_NAMESPACE[i+1], DEMO_NAMESPACE[i+2]])
+        clist_flat = list(DEMO_CLIST[:64])
+        init_data = ns_flat + [0] * (192 - len(ns_flat)) + clist_flat + [0] * (64 - len(clist_flat))
+        init_total = len(init_data)
+
+        init_idx = Signal(range(init_total + 1))
+        init_done = Signal()
+        init_word = Signal(32)
+
+        with m.Switch(init_idx):
+            for i, word in enumerate(init_data):
+                if word != 0:
+                    with m.Case(i):
+                        m.d.comb += init_word.eq(word)
+            with m.Default():
+                m.d.comb += init_word.eq(0)
+
+        with m.If(~init_done):
+            m.d.comb += [
+                spram.addr.eq(init_idx),
+                spram.wr_data.eq(init_word),
+                spram.wr_en.eq(1),
+            ]
+            with m.If(init_idx < init_total):
+                m.d.sync += init_idx.eq(init_idx + 1)
+            with m.Else():
+                m.d.sync += init_done.eq(1)
+
+        boot_delay = Signal(4)
+        boot_triggered = Signal()
+        with m.If(~boot_triggered & init_done):
+            with m.If(boot_delay < 0xF):
+                m.d.sync += boot_delay.eq(boot_delay + 1)
+            with m.Else():
+                m.d.comb += core.boot_start.eq(1)
+                m.d.sync += boot_triggered.eq(1)
+
         m.d.comb += core.imem_valid.eq(0)
         m.d.comb += core.gc_start.eq(0)
 
@@ -87,13 +149,13 @@ class UartTestTop(Elaboratable):
 
         m.d.comb += [
             rgb.r.eq(core.fault_valid),
-            rgb.g.eq(heartbeat),
-            rgb.b.eq(0),
+            rgb.g.eq(heartbeat & init_done),
+            rgb.b.eq(~init_done),
         ]
         m.d.comb += [
             self.led_r.eq(core.fault_valid),
-            self.led_g.eq(heartbeat),
-            self.led_b.eq(0),
+            self.led_g.eq(heartbeat & init_done),
+            self.led_b.eq(~init_done),
         ]
 
         return m
