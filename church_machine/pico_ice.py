@@ -289,7 +289,7 @@ class ChurchPicoIce(Elaboratable):
             core.imem_data.eq(boot_rom.data),
         ]
 
-        halted = Signal(init=1)
+        halted = Signal()
         stepping = Signal()
 
         prev_nia = Signal(32)
@@ -300,7 +300,7 @@ class ChurchPicoIce(Elaboratable):
         step_complete = Signal()
         m.d.comb += step_complete.eq(stepping & nia_changed)
 
-        m.d.comb += core.imem_valid.eq(~halted | (stepping & ~step_complete))
+        m.d.comb += core.imem_valid.eq(stepping & ~step_complete)
 
         btn_sync = Signal(3)
         btn_prev = Signal()
