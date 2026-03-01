@@ -76,10 +76,12 @@ class ChurchTop(Elaboratable):
         dmem_rd = dmem.read_port(transparent=True)
         dmem_wr = dmem.write_port()
 
+        halted = Signal(init=0)
+
         m.d.comb += [
             boot_rom.addr.eq(core.imem_addr[2:11]),
             core.imem_data.eq(boot_rom.data),
-            core.imem_valid.eq(1),
+            core.imem_valid.eq(~halted),
         ]
 
         mem_addr = Signal(10)
@@ -147,7 +149,7 @@ class ChurchTop(Elaboratable):
 
         m.d.comb += [
             self.led_boot.eq(~core.boot_complete),
-            self.led_run.eq(core.boot_complete & ~core.fault_valid),
+            self.led_run.eq(core.boot_complete & ~core.fault_valid & ~halted),
             self.led_fault.eq(core.fault_valid),
         ]
 
@@ -185,7 +187,7 @@ class ChurchTop(Elaboratable):
         with m.FSM(name="debug_fsm"):
             with m.State("WAIT_BOOT"):
                 with m.If(boot_just_done):
-                    m.d.sync += banner_idx.eq(0)
+                    m.d.sync += [banner_idx.eq(0), halted.eq(1)]
                     m.next = "SEND_BANNER"
 
             with m.State("SEND_BANNER"):
@@ -211,6 +213,7 @@ class ChurchTop(Elaboratable):
 
             with m.State("RUNNING"):
                 with m.If(fault_just_fired):
+                    m.d.sync += halted.eq(1)
                     m.next = "DUMP_FAULT"
 
             with m.State("DUMP_FAULT"):
