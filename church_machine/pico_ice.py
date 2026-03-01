@@ -389,51 +389,22 @@ class ChurchPicoIce(Elaboratable):
         step_fault = Signal(4)
         step_had_fault = Signal()
 
-        alive_counter = Signal(32)
+        if self.sim_mode:
+            startup_target = 4
+        else:
+            startup_target = (self.clk_freq * 3) - 1
+        startup_ctr = Signal(26)
 
         with m.FSM(name="debug_fsm"):
-            with m.State("SEND_ALIVE"):
-                with m.If(~debug.busy):
-                    m.d.comb += [
-                        debug.data.eq(0xCA11AB1E),
-                        debug.send.eq(1),
-                    ]
-                    m.next = "ALIVE_WAIT"
-
-            with m.State("ALIVE_WAIT"):
-                with m.If(~debug.busy):
+            with m.State("STARTUP_DELAY"):
+                m.d.sync += startup_ctr.eq(startup_ctr + 1)
+                with m.If(startup_ctr == startup_target):
                     m.next = "WAIT_BOOT"
 
             with m.State("WAIT_BOOT"):
-                m.d.sync += alive_counter.eq(alive_counter + 1)
                 with m.If(core.boot_complete):
                     m.d.sync += [banner_idx.eq(0), halted.eq(1)]
                     m.next = "SEND_BANNER"
-                with m.Elif(alive_counter == (self.clk_freq - 1)):
-                    m.d.sync += alive_counter.eq(0)
-                    m.next = "SEND_TIMEOUT"
-
-            with m.State("SEND_TIMEOUT"):
-                with m.If(~debug.busy):
-                    if not self.sim_mode:
-                        m.d.comb += [
-                            debug.data.eq(Cat(init_done, boot_triggered, core.boot_complete,
-                                             core.boot_state, core.fault_valid, core.fault,
-                                             C(0, 18))),
-                            debug.send.eq(1),
-                        ]
-                    else:
-                        m.d.comb += [
-                            debug.data.eq(Cat(Const(0), boot_triggered, core.boot_complete,
-                                             core.boot_state, core.fault_valid, core.fault,
-                                             C(0, 18))),
-                            debug.send.eq(1),
-                        ]
-                    m.next = "TIMEOUT_WAIT"
-
-            with m.State("TIMEOUT_WAIT"):
-                with m.If(~debug.busy):
-                    m.next = "WAIT_BOOT"
 
             with m.State("SEND_BANNER"):
                 with m.If(~debug.busy):
