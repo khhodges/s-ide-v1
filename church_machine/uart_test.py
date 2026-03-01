@@ -1,11 +1,11 @@
-"""Diagnostic UART test for pico-ice — SPRAM isolation test.
-Uses DebugPrinter + SPRAM init (writes data to SPRAM, reads it back)
-but NO ChurchCore. Tests whether SPRAM usage crashes the RP2040.
+"""Diagnostic: Full ChurchCore wired to SPRAM/BootROM but IDLE (no boot).
+Tests whether the core logic itself crashes the RP2040, even without booting.
 """
 
 from amaranth import *
-from .uart_tx import UartTx, DebugPrinter
-from .boot_rom import DEMO_NAMESPACE, DEMO_CLIST
+from .uart_tx import DebugPrinter
+from .core import ChurchCore
+from .boot_rom import BootRom, BOOT_PROGRAM, DEMO_NAMESPACE, DEMO_CLIST
 from .pico_ice import ICE40SPRAM, ICE40RGBLED
 
 
@@ -30,116 +30,70 @@ class UartTestTop(Elaboratable):
         rgb = ICE40RGBLED()
         m.submodules.rgb = rgb
 
+        core = ChurchCore()
+        m.submodules.core = core
+
+        boot_rom = BootRom(BOOT_PROGRAM)
+        m.submodules.boot_rom = boot_rom
+
         spram = ICE40SPRAM()
         m.submodules.spram = spram
 
-        ns_flat = []
-        for i in range(0, len(DEMO_NAMESPACE), 3):
-            if i + 2 < len(DEMO_NAMESPACE):
-                ns_flat.extend([DEMO_NAMESPACE[i], DEMO_NAMESPACE[i+1], DEMO_NAMESPACE[i+2]])
+        m.d.comb += [
+            boot_rom.addr.eq(core.imem_addr[2:11]),
+            core.imem_data.eq(boot_rom.data),
+        ]
 
-        clist_flat = list(DEMO_CLIST[:64])
+        m.d.comb += spram.addr.eq(core.dmem_addr[2:16])
+        m.d.comb += core.dmem_rd_data.eq(spram.rd_data)
+        m.d.comb += [
+            core.ns_rd_data.eq(Cat(spram.rd_data, C(0, 64))),
+            core.clist_rd_data.eq(spram.rd_data),
+        ]
+        m.d.comb += [
+            spram.wr_data.eq(core.dmem_wr_data),
+            spram.wr_en.eq(core.dmem_wr_en),
+        ]
 
-        init_data = ns_flat + [0] * (192 - len(ns_flat)) + clist_flat + [0] * (64 - len(clist_flat))
-        init_total = len(init_data)
+        m.d.comb += core.boot_start.eq(0)
+        m.d.comb += core.imem_valid.eq(0)
+        m.d.comb += core.gc_start.eq(0)
 
-        init_idx = Signal(range(init_total + 1))
-        init_done = Signal()
-        init_word = Signal(32)
-
-        with m.Switch(init_idx):
-            for i, word in enumerate(init_data):
-                if word != 0:
-                    with m.Case(i):
-                        m.d.comb += init_word.eq(word)
-            with m.Default():
-                m.d.comb += init_word.eq(0)
-
-        with m.If(~init_done):
-            m.d.comb += [
-                spram.addr.eq(init_idx),
-                spram.wr_data.eq(init_word),
-                spram.wr_en.eq(1),
-            ]
-            with m.If(init_idx < init_total):
-                m.d.sync += init_idx.eq(init_idx + 1)
-            with m.Else():
-                m.d.sync += init_done.eq(1)
-
-        rd_addr = Signal(14)
-        rd_data_latched = Signal(32)
-        rd_phase = Signal()
-
-        counter = Signal(8, init=0)
+        counter = Signal(32, init=0)
         delay_ctr = Signal(24)
         heartbeat = Signal()
 
         with m.FSM(name="diag_fsm"):
-            with m.State("WAIT_INIT"):
-                with m.If(init_done):
-                    m.d.sync += rd_addr.eq(0)
-                    m.next = "READ_SETUP"
-
-            with m.State("READ_SETUP"):
-                m.d.comb += [
-                    spram.addr.eq(rd_addr),
-                    spram.wr_en.eq(0),
-                ]
-                m.next = "READ_LATCH"
-
-            with m.State("READ_LATCH"):
-                m.d.comb += [
-                    spram.addr.eq(rd_addr),
-                    spram.wr_en.eq(0),
-                ]
-                m.d.sync += rd_data_latched.eq(spram.rd_data)
-                m.next = "SEND_HEX"
+            with m.State("DELAY"):
+                m.d.sync += delay_ctr.eq(delay_ctr + 1)
+                with m.If(delay_ctr == (self.clk_freq // 4) - 1):
+                    m.d.sync += [delay_ctr.eq(0), heartbeat.eq(~heartbeat)]
+                    m.next = "SEND_HEX"
 
             with m.State("SEND_HEX"):
                 with m.If(~debug.busy):
                     m.d.comb += [
-                        debug.data.eq(rd_data_latched),
+                        debug.data.eq(Cat(core.boot_state, core.fault_valid,
+                                          core.fault, core.boot_complete,
+                                          counter[:24])),
                         debug.send.eq(1),
                     ]
-                    m.d.sync += rd_addr.eq(rd_addr + 1)
+                    m.d.sync += counter.eq(counter + 1)
                     m.next = "WAIT_DONE"
 
             with m.State("WAIT_DONE"):
                 with m.If(~debug.busy):
-                    with m.If(rd_addr < 10):
-                        m.next = "READ_SETUP"
-                    with m.Else():
-                        m.next = "COUNTER_LOOP"
-
-            with m.State("COUNTER_LOOP"):
-                m.d.sync += delay_ctr.eq(delay_ctr + 1)
-                with m.If(delay_ctr == (self.clk_freq // 4) - 1):
-                    m.d.sync += [delay_ctr.eq(0), heartbeat.eq(~heartbeat)]
-                    m.next = "SEND_COUNTER"
-
-            with m.State("SEND_COUNTER"):
-                with m.If(~debug.busy):
-                    m.d.comb += [
-                        debug.data.eq(counter),
-                        debug.send.eq(1),
-                    ]
-                    m.d.sync += counter.eq(counter + 1)
-                    m.next = "WAIT_COUNTER"
-
-            with m.State("WAIT_COUNTER"):
-                with m.If(~debug.busy):
-                    m.next = "COUNTER_LOOP"
+                    m.next = "DELAY"
 
         m.d.comb += [
-            rgb.r.eq(0),
+            rgb.r.eq(core.fault_valid),
             rgb.g.eq(heartbeat),
-            rgb.b.eq(~init_done),
+            rgb.b.eq(0),
         ]
-
         m.d.comb += [
-            self.led_r.eq(0),
+            self.led_r.eq(core.fault_valid),
             self.led_g.eq(heartbeat),
-            self.led_b.eq(~init_done),
+            self.led_b.eq(0),
         ]
 
         return m
