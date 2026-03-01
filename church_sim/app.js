@@ -652,10 +652,56 @@ function setPipelineMode(mode) {
     }
 }
 
+let nsExpandedSlot = -1;
+
+function toggleNSDetail(idx) {
+    nsExpandedSlot = (nsExpandedSlot === idx) ? -1 : idx;
+    updateNamespace();
+}
+
+function renderMemoryDump(location, limit) {
+    const wordCount = Math.min(limit, 64);
+    if (wordCount <= 0) return '<span style="color:#888;">Empty (limit=0)</span>';
+    let html = '<table class="ns-mem-table"><thead><tr>';
+    html += '<th>Offset</th><th>Address</th><th>Hex</th><th>Decoded</th>';
+    html += '</tr></thead><tbody>';
+    const permNames = ['R','W','X','L','S','E'];
+    const typeNames = {0:'Inform', 1:'Outform', 2:'NULL', 3:'Abstract'};
+    for (let i = 0; i < wordCount; i++) {
+        const addr = location + i;
+        const word = sim.memory[addr] || 0;
+        const hex = '0x' + (word >>> 0).toString(16).toUpperCase().padStart(8, '0');
+        let decoded = '';
+        if (word === 0) {
+            decoded = '<span style="color:#666;">0 (empty)</span>';
+        } else {
+            const gtType = word & 0x3;
+            const perms = (word >> 2) & 0x3F;
+            const index = (word >> 8) & 0x1FFFF;
+            const ver = (word >> 25) & 0x7F;
+            const pStr = permNames.filter((_, b) => perms & (1 << b)).join('') || '------';
+            const tName = typeNames[gtType] || '?';
+            const label = sim.nsLabels[index] || '';
+            decoded = `<span style="color:#4ec9b0;">${tName}</span> ` +
+                      `<span style="color:#d4a843;">${pStr}</span> ` +
+                      `→ idx <span style="color:#569cd6;">${index}</span>` +
+                      (label ? ` <span style="color:#9cdcfe;">(${label})</span>` : '') +
+                      ` v${ver}`;
+        }
+        const addrHex = '0x' + addr.toString(16).toUpperCase().padStart(4, '0');
+        html += `<tr><td style="color:#888;">+${i}</td><td>${addrHex}</td><td style="color:#ce9178;">${hex}</td><td>${decoded}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    if (limit > 64) {
+        html += `<div style="color:#888;font-size:0.75rem;padding:0.25rem 0.5rem;">Showing first 64 of ${limit} words</div>`;
+    }
+    return html;
+}
+
 function updateNamespace() {
     const container = document.getElementById('namespaceTable');
     if (!container) return;
-    let html = '<div class="ns-layout-header">NS_ENTRY_LAYOUT: 3 words per entry (96 bits)</div>';
+    let html = '<div class="ns-layout-header">NS_ENTRY_LAYOUT: 3 words per entry (96 bits) — click a row to inspect memory</div>';
     html += '<table class="ns-table"><thead><tr>';
     html += '<th>Idx</th><th class="ns-label-col">Label</th>';
     html += '<th>Type</th><th>Location</th>';
@@ -664,14 +710,15 @@ function updateNamespace() {
     html += '<th>G</th><th>Actions</th>';
     html += '</tr></thead><tbody>';
 
+    const typeNames = ['NULL','Abstract','Outform','Inform'];
     for (let i = 0; i < sim.nsCount; i++) {
         const e = sim.readNSEntry(i);
         if (!e) continue;
         const lim = sim.parseNSWord1(e.word1_limit);
         const ver = (e.word2_seals >>> 25) & 0x7F;
         const seal = e.word2_seals & 0x01FFFFFF;
-        const typeNames = ['NULL','Abstract','Outform','Inform'];
-        html += '<tr>';
+        const isExpanded = (nsExpandedSlot === i);
+        html += `<tr class="ns-row${isExpanded ? ' ns-row-active' : ''}" onclick="toggleNSDetail(${i})" style="cursor:pointer;">`;
         html += `<td>${i}</td>`;
         html += `<td class="ns-label">${e.label || '-'}</td>`;
         html += `<td>${typeNames[e.gtType] || '?'}</td>`;
@@ -682,8 +729,15 @@ function updateNamespace() {
         html += `<td>${ver}</td>`;
         html += `<td>0x${seal.toString(16).toUpperCase().padStart(7, '0')}</td>`;
         html += `<td class="ns-flag">${e.gBit}</td>`;
-        html += `<td class="ns-entry-actions"><button class="btn btn-primary btn-xs" onclick="exportEntryMemory(${i})">Export</button> <button class="btn btn-xs" onclick="importEntryMemory(${i})" style="background:#3a86ff;color:#fff;border:none;">Import</button></td>`;
+        html += `<td class="ns-entry-actions"><button class="btn btn-primary btn-xs" onclick="event.stopPropagation();exportEntryMemory(${i})">Export</button> <button class="btn btn-xs" onclick="event.stopPropagation();importEntryMemory(${i})" style="background:#3a86ff;color:#fff;border:none;">Import</button></td>`;
         html += '</tr>';
+        if (isExpanded) {
+            html += `<tr class="ns-detail-row"><td colspan="11">`;
+            html += `<div class="ns-detail-panel">`;
+            html += `<div class="ns-detail-title">Memory at 0x${e.word0_location.toString(16).toUpperCase().padStart(4, '0')} — ${e.label || 'Slot '+i} (${lim.limit} words)</div>`;
+            html += renderMemoryDump(e.word0_location, lim.limit);
+            html += `</div></td></tr>`;
+        }
     }
     html += '</tbody></table>';
     container.innerHTML = html;
