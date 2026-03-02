@@ -346,7 +346,7 @@ make -C church_machine all
 This runs three steps:
 1. **Verilog generation** — Amaranth compiles `UartTestTop` to Verilog (`build/uart_test.v`)
 2. **Synthesis** — Yosys synthesizes for iCE40 (`build/uart_test.json`)
-3. **Place & Route** — nextpnr-ice40 fits the design (`build/uart_test.asc` → `build/uart_test.bin`)
+3. **Place & Route** — nextpnr-ice40 fits the design (`build/uart_test.asc` → `build/uart_test.bin`). **Requires `--placer sa`** (simulated annealing) — the default analytical placer cannot legally place at 85% utilization.
 
 ### 2. Flash the bitstream
 
