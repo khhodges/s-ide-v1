@@ -14,23 +14,39 @@ const PicoSerial = (function() {
         return port !== null && port.readable !== null && port.writable !== null;
     }
 
+    async function ensureOpen() {
+        if (!port) {
+            throw new Error('No port selected. Call connect() first.');
+        }
+        if (port.readable && port.writable) {
+            return;
+        }
+        await port.open({ baudRate: BAUD, dataBits: 8, stopBits: 1, parity: 'none' });
+    }
+
     async function connect() {
         if (!isSupported()) {
             throw new Error('WebSerial not supported. Use Chrome or Edge.');
         }
 
         if (port) {
-            try { await port.close(); } catch(e) {}
+            try {
+                if (port.readable) {
+                    const r = port.readable.getReader();
+                    r.releaseLock();
+                }
+                if (port.writable) {
+                    const w = port.writable.getWriter();
+                    w.releaseLock();
+                }
+                await port.close();
+            } catch(e) {}
             port = null;
+            await new Promise(r => setTimeout(r, 200));
         }
 
         port = await navigator.serial.requestPort();
-
-        if (port.readable) {
-            return;
-        }
-
-        await port.open({ baudRate: BAUD, dataBits: 8, stopBits: 1, parity: 'none' });
+        await ensureOpen();
     }
 
     async function disconnect() {
@@ -71,7 +87,9 @@ const PicoSerial = (function() {
     async function uploadToFPGA(nsWords, clistWords, onStatus) {
         const status = onStatus || function() {};
 
-        await connect();
+        if (!isConnected()) {
+            throw new Error('Not connected. Call connect() first.');
+        }
 
         await drainInput();
 

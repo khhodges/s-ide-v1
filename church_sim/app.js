@@ -853,10 +853,27 @@ async function uploadToPicoIce() {
         const image = sim.exportHardwareImage();
         con.textContent = `Ready: ${image.namespace.length} NS words + ${image.clist.length} C-list words\n\n`;
 
-        con.textContent += 'Selecting serial port...\n';
-        await PicoSerial.connect();
-        con.textContent += 'Port connected.\n\n';
-        con.textContent += 'Sending data...\n';
+        if (!PicoSerial.isConnected()) {
+            con.textContent += 'Select the FPGA UART port when prompted...\n';
+            con.textContent += '(Choose the second pico-ice port, not the RP2040 REPL)\n\n';
+            try {
+                await PicoSerial.connect();
+            } catch(e) {
+                if (e.name === 'NotFoundError') {
+                    con.textContent += 'No port selected. Cancelled.\n';
+                    return;
+                }
+                con.textContent += 'Could not open port: ' + e.message + '\n\n';
+                con.textContent += 'TROUBLESHOOTING:\n';
+                con.textContent += '1. Go to chrome://settings/content/serialPorts\n';
+                con.textContent += '2. Remove all pico-ice entries\n';
+                con.textContent += '3. Close any serial monitor that might have the port open\n';
+                con.textContent += '4. Try again\n';
+                return;
+            }
+        }
+
+        con.textContent += 'Port connected. Sending data...\n';
 
         const result = await PicoSerial.uploadToFPGA(
             image.namespace,
@@ -869,20 +886,15 @@ async function uploadToPicoIce() {
         if (result.success) {
             con.textContent += '\nUpload successful! pico-ice booted with simulator data.\n';
         } else {
-            con.textContent += '\nData was sent but no boot banner received.\n';
-            con.textContent += 'The pico-ice may have already booted past the upload window.\n\n';
-            con.textContent += 'To retry with correct timing:\n';
+            con.textContent += '\nData sent but no boot banner received.\n';
+            con.textContent += 'The FPGA may have already booted past the ~1s upload window.\n\n';
+            con.textContent += 'To retry:\n';
             con.textContent += '  1. Press the RP2040 reset button on the pico-ice\n';
             con.textContent += '     (the button that does NOT turn off the green LED)\n';
             con.textContent += '  2. Immediately click "Upload to pico-ice" again\n';
-            con.textContent += '     (data must arrive within ~1 second of reset)\n';
         }
     } catch(e) {
-        if (e.name === 'NotFoundError') {
-            con.textContent += 'No serial port selected.\n';
-        } else {
-            con.textContent += 'Error: ' + e.message + '\n';
-        }
+        con.textContent += 'Error: ' + e.message + '\n';
     }
 }
 
