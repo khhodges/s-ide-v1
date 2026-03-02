@@ -804,27 +804,45 @@ function loadHardwareBinary() {
         if (con) con.textContent = 'Error: Hardware binary data not loaded (hw_binary.js missing)';
         return;
     }
-    sim.loadHardwareBinary(HW_BOOT_PROGRAM, HW_NAMESPACE, HW_CLIST, HW_NS_LABELS);
+    const abstractions = [];
+    if (typeof HW_SALVATION_CLIST !== 'undefined' && typeof HW_SALVATION_CODE !== 'undefined') {
+        abstractions.push({
+            label: 'Salvation',
+            nsIndex: 4,
+            clist: HW_SALVATION_CLIST,
+            codeNsIndex: 5,
+            code: HW_SALVATION_CODE,
+        });
+    }
+    sim.loadHardwareBinary(HW_BOOT_PROGRAM, HW_NAMESPACE, HW_CLIST, HW_NS_LABELS, abstractions);
 
     const editor = document.getElementById('asmEditor');
     if (editor) {
         editor.value = '; === pico-ice FPGA Hardware Binary ===\n' +
-            '; Exact boot ROM loaded from church_machine/boot_rom.py\n' +
+            '; Boot ROM + Salvation abstraction\n' +
             '; Namespace: 16 entries, C-List: 8 GTs\n' +
-            '; Memory layout matches iCE40UP5K SPRAM init\n' +
             ';\n' +
-            '; 0x0000  LOAD   CR1, [CR6 + 0]     ; GT from c-list slot 0\n' +
-            '; 0x0004  LOAD   CR2, [CR6 + 1]     ; GT from c-list slot 1\n' +
-            '; 0x0008  TPERM  CR2, X             ; Set X permission\n' +
-            '; 0x000C  LAMBDA CR2                ; Execute via LAMBDA\n' +
-            '; 0x0010  LOAD   CR0, [CR6 + 1]     ; GT from c-list slot 1\n' +
-            '; 0x0014  TPERM  CR0, E             ; Set E permission\n' +
-            '; 0x0018  CALL   CR0                ; Call via Golden Token\n' +
-            '; 0x001C  LOAD   CR7, [CR6 + 1]     ; GT from c-list slot 1\n' +
-            '; 0x0020  TPERM  CR7, X             ; Set X permission\n' +
-            '; 0x0024  LAMBDA CR7                ; Execute via LAMBDA\n' +
-            '; 0x0028  RETURN CR5                ; CR5=NULL -> PP250 reboot\n' +
-            '; 0x002C  SAVE   [CR6 + 2], CR1     ; Save GT to c-list\n';
+            '; --- Boot Program (NS 3, CLOOMC at 0x0300) ---\n' +
+            '; PC=0  CHANGE CR8, CR8, 1          ; establish thread context (sim-only)\n' +
+            '; PC=1  LOAD   CR1, [CR6 + 0]       ; CLOOMC GT from c-list slot 0\n' +
+            '; PC=2  LOAD   CR2, [CR6 + 1]       ; X-GT from c-list slot 1\n' +
+            '; PC=3  TPERM  CR2, X               ; set X permission\n' +
+            '; PC=4  LAMBDA CR2                  ; execute via LAMBDA\n' +
+            '; PC=5  LOAD   CR0, [CR6 + 6]       ; E-GT from c-list slot 6 -> Salvation\n' +
+            '; PC=6  TPERM  CR0, E               ; set E permission\n' +
+            '; PC=7  CALL   CR0                  ; >>> ENTER Salvation abstraction <<<\n' +
+            '; PC=8  LOAD   CR7, [CR6 + 1]       ; (after RETURN) reload code ref\n' +
+            '; PC=9  TPERM  CR7, X               ; set X permission\n' +
+            '; PC=10 LAMBDA CR7                  ; execute via LAMBDA\n' +
+            '; PC=11 RETURN CR5                  ; CR5=NULL -> PP250 reboot\n' +
+            '; PC=12 SAVE   [CR6 + 2], CR1       ; save GT to c-list\n' +
+            ';\n' +
+            '; --- Salvation Code (NS 5, CLOOMC at 0x0500) ---\n' +
+            '; PC=0  LOAD   CR1, [CR6 + 0]       ; load own CLOOMC from c-list\n' +
+            '; PC=1  LOAD   CR2, [CR6 + 1]       ; load reference from c-list\n' +
+            '; PC=2  TPERM  CR1, X               ; set X permission\n' +
+            '; PC=3  LAMBDA CR1                  ; apply CLOOMC (proves LAMBDA inside CALL)\n' +
+            '; PC=4  RETURN CR5                  ; <<< RETURN to boot caller <<<\n';
         updateLineNumbers();
     }
 

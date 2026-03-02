@@ -98,10 +98,12 @@ PC  Instruction              Description
 
  6  TPERM CR0, E            Set CR0 permissions to Enter-only (for CALL)
 
- 7  CALL CR0                Enter the abstraction via CALL
+ 7  CALL CR0                Enter the Salvation abstraction via CALL
                               Full 7-step security pipeline:
                               E-GT validated → mLoad → CR6 set → X-GT loaded → CR7 set → PC=0
                               The callee sees only what it was granted
+                              >>> Transfers to Salvation code (see below) <<<
+                              >>> RETURN from Salvation resumes here at PC=8 <<<
 
  8  LOAD CR7, [CR6 + 1]     Load GT from c-list slot 1 into CR7
 
@@ -115,6 +117,38 @@ PC  Instruction              Description
 12  SAVE CR1, [CR6 + 2]     Save CR1 (the GT loaded in instruction 1) back to
                               c-list slot 2, demonstrating capability transfer
 ```
+
+### Salvation Abstraction Code (NS 5, at 0x0500)
+
+The CALL at PC=7 enters the Salvation abstraction — the first user-level code object invoked after boot. It demonstrates the full CALL→execute→RETURN cycle through the GT gate.
+
+```
+PC  Instruction              Description
+──  ───────────────────────  ──────────────────────────────────────
+ 0  LOAD CR1, [CR6 + 0]     Load own CLOOMC GT from c-list slot 0
+                              (CR6 now points to Salvation's c-list at 0x0400)
+                              (Slot 0 = X-only Inform GT → NS idx 5)
+
+ 1  LOAD CR2, [CR6 + 1]     Load reference GT from c-list slot 1
+                              (Slot 1 = E-only Inform GT → NS idx 6)
+
+ 2  TPERM CR1, X            Set X permission on CR1
+
+ 3  LAMBDA CR1              Apply CLOOMC via LAMBDA
+                              Proves: LAMBDA works inside a CALL domain
+                              The sword inside the armor, inside the armor
+
+ 4  RETURN CR5              Return to boot program caller
+                              Restores caller's CRs, DRs, flags from call stack
+                              Boot resumes at PC=8 (post-CALL continuation)
+```
+
+**Salvation c-list** (at 0x0400, NS index 4):
+
+| Slot | GT Value     | Perms | Target | Purpose |
+|------|-------------|-------|--------|---------|
+| 0    | 0x00000510  | X     | NS 5   | CLOOMC (Salvation code) |
+| 1    | 0x00000680  | E     | NS 6   | Reference (for future use) |
 
 ### Four operations demonstrated
 

@@ -1617,7 +1617,7 @@ class ChurchSimulator {
         this.emit('stateChange', this.getState());
     }
 
-    loadHardwareBinary(hwProgram, hwNamespace, hwClist, hwLabels) {
+    loadHardwareBinary(hwProgram, hwNamespace, hwClist, hwLabels, abstractions) {
         this.reset();
 
         this.memory = new Uint32Array(65536);
@@ -1660,11 +1660,36 @@ class ChurchSimulator {
             }
         }
 
+        if (abstractions) {
+            for (const abs of abstractions) {
+                if (abs.clist && abs.nsIndex !== undefined) {
+                    const absBase = this.NS_TABLE_BASE + abs.nsIndex * this.NS_ENTRY_WORDS;
+                    const absLoc = this.memory[absBase];
+                    for (let i = 0; i < abs.clist.length; i++) {
+                        this.memory[absLoc + i] = abs.clist[i] >>> 0;
+                    }
+                }
+                if (abs.code && abs.codeNsIndex !== undefined) {
+                    const codeBase = this.NS_TABLE_BASE + abs.codeNsIndex * this.NS_ENTRY_WORDS;
+                    const codeLoc = this.memory[codeBase];
+                    for (let i = 0; i < abs.code.length; i++) {
+                        this.memory[codeLoc + i] = abs.code[i] >>> 0;
+                    }
+                }
+            }
+        }
+
         this.output = '';
         this.output += '=== HARDWARE BINARY LOADED ===\n';
         this.output += `Namespace: ${nsEntryCount} entries written to NS_TABLE_BASE (0x${this.NS_TABLE_BASE.toString(16).toUpperCase()})\n`;
         this.output += `C-List: ${hwClist.length} GTs written at 0x${clistBase.toString(16).padStart(4,'0').toUpperCase()}\n`;
         this.output += `Boot ROM: ${hwProgram.length} instructions at CLOOMC location 0x${clooomcLoc.toString(16).padStart(4,'0').toUpperCase()}\n`;
+        if (abstractions) {
+            for (const abs of abstractions) {
+                const label = abs.label || `NS ${abs.nsIndex}`;
+                this.output += `Abstraction: ${label} (NS ${abs.nsIndex}, code NS ${abs.codeNsIndex})\n`;
+            }
+        }
         this.output += '\n--- Namespace Entries ---\n';
         for (let i = 0; i < nsEntryCount; i++) {
             const base = this.NS_TABLE_BASE + i * this.NS_ENTRY_WORDS;
@@ -1688,6 +1713,21 @@ class ChurchSimulator {
             const w = hwProgram[i] >>> 0;
             if (w === 0) continue;
             this.output += `  PC=${i} (0x${(clooomcLoc+i).toString(16).padStart(4,'0')}): 0x${w.toString(16).padStart(8,'0')}\n`;
+        }
+        if (abstractions) {
+            for (const abs of abstractions) {
+                if (abs.code && abs.codeNsIndex !== undefined) {
+                    const codeBase = this.NS_TABLE_BASE + abs.codeNsIndex * this.NS_ENTRY_WORDS;
+                    const codeLoc = this.memory[codeBase];
+                    const label = abs.label || `NS ${abs.nsIndex}`;
+                    this.output += `\n--- ${label} Code (NS ${abs.codeNsIndex}, at 0x${codeLoc.toString(16).padStart(4,'0').toUpperCase()}) ---\n`;
+                    for (let i = 0; i < abs.code.length; i++) {
+                        const w = abs.code[i] >>> 0;
+                        if (w === 0) continue;
+                        this.output += `  PC=${i} (0x${(codeLoc+i).toString(16).padStart(4,'0')}): 0x${w.toString(16).padStart(8,'0')}\n`;
+                    }
+                }
+            }
         }
         this.output += '\nStep or Run to begin boot sequence with hardware data.\n';
 
