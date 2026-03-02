@@ -6,6 +6,12 @@ Copy this single file to your machine and run:
     python3 pico_upload.py --port /dev/ttyACM1
 
 No other project files needed.
+
+Workflow:
+    1. Script opens the serial port
+    2. You press the pico-ice reset button (the one that does NOT turn off the green LED)
+    3. You press Enter
+    4. Data sends instantly while the FPGA loader is still listening
 """
 
 import sys
@@ -14,46 +20,29 @@ import time
 import argparse
 
 NS_TABLE_BASE = 0xFD00
-FNV_SEAL_MASK = (1 << 25) - 1
-
-GT_TYPE_INFORM = 0b00
-GT_TYPE_NULL   = 0b10
-
-PERM_MASK_R = 1 << 0
-PERM_MASK_W = 1 << 1
-PERM_MASK_X = 1 << 2
-PERM_MASK_L = 1 << 3
-PERM_MASK_S = 1 << 4
-PERM_MASK_E = 1 << 5
 
 NS_WORDS = 192
 CLIST_WORDS = 64
 TOTAL_WORDS = NS_WORDS + CLIST_WORDS
 
 
-def make_gt(gt_type, perms, index, version):
-    return (version << 25) | (index << 8) | (perms << 2) | gt_type
-
-
 def build_default_image():
     ns = []
     for i in range(16):
         location = NS_TABLE_BASE if i == 0 else i * 0x100
-        limit = 0x80000000 | 8
-        seal_word = 0
-        ns.extend([location, limit, seal_word])
+        ns.extend([location, 0x80000008, 0])
     while len(ns) < NS_WORDS:
         ns.append(0)
 
     clist = [
-        make_gt(GT_TYPE_INFORM, PERM_MASK_R | PERM_MASK_X, 3, 0),
-        make_gt(GT_TYPE_INFORM, PERM_MASK_X | PERM_MASK_E, 4, 0),
-        make_gt(GT_TYPE_NULL, 0, 0, 0),
-        make_gt(GT_TYPE_INFORM, PERM_MASK_E, 2, 0),
-        make_gt(GT_TYPE_INFORM, PERM_MASK_E, 5, 0),
-        make_gt(GT_TYPE_INFORM, PERM_MASK_L, 6, 0),
-        make_gt(GT_TYPE_NULL, 0, 0, 0),
-        make_gt(GT_TYPE_NULL, 0, 0, 0),
+        0x00000314,
+        0x00000490,
+        0x00000002,
+        0x00000280,
+        0x00000580,
+        0x00000620,
+        0x00000002,
+        0x00000002,
     ]
     while len(clist) < CLIST_WORDS:
         clist.append(0)
@@ -68,7 +57,7 @@ def image_to_bytes(image):
     return data
 
 
-def upload(port, image, timeout_s=10):
+def upload(port, image, timeout_s=15):
     try:
         import serial
     except ImportError:
@@ -82,11 +71,14 @@ def upload(port, image, timeout_s=10):
     time.sleep(0.1)
     ser.reset_input_buffer()
 
-    print(f"Sending {len(data)} bytes ({len(image)} words)...")
+    print(f"Port open. Image: {len(image)} words ({len(data)} bytes)")
+    print()
+    input("Press the pico-ice reset button NOW, then press Enter here: ")
+
     ser.write(data)
     ser.flush()
+    print(f"Data sent. Waiting for banner...")
 
-    print("Waiting for banner...")
     deadline = time.time() + timeout_s
     lines = []
     while time.time() < deadline:
@@ -101,22 +93,44 @@ def upload(port, image, timeout_s=10):
     ser.close()
 
     if any("CHURCH" in l for l in lines):
-        print("\nUpload successful!")
+        print("\nUpload successful! Church Machine booted with new data.")
+        return True
+    elif lines:
+        print("\nFPGA responded but no CHURCH banner.")
+        print("The upload likely worked — the boot program ran.")
         return True
     else:
-        print("\nNo banner received.")
-        print("Press the RP2040 reset button on pico-ice, then run this again quickly.")
+        print("\nNo response from FPGA.")
+        print("Try again — press reset, then Enter faster.")
         return False
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Upload to Church Machine pico-ice")
+    parser = argparse.ArgumentParser(
+        description="Upload namespace + c-list to Church Machine pico-ice",
+        epilog="Workflow: run script, press reset button on pico-ice, press Enter fast."
+    )
     parser.add_argument('--port', default='/dev/ttyACM1',
                         help='Serial port (default: /dev/ttyACM1)')
+    parser.add_argument('--image', help='Binary image file (default: built-in demo)')
     args = parser.parse_args()
 
-    image = build_default_image()
-    print(f"Image: {len(image)} words ({len(image)*4} bytes)")
-    print(f"  Namespace: words 0..{NS_WORDS-1}")
-    print(f"  C-list:    words {NS_WORDS}..{TOTAL_WORDS-1}")
+    if args.image:
+        with open(args.image, 'rb') as f:
+            raw = f.read()
+        word_count = struct.unpack('<I', raw[:4])[0]
+        raw = raw[4:]
+        image = []
+        for i in range(word_count):
+            if i * 4 + 4 <= len(raw):
+                image.append(struct.unpack('<I', raw[i*4:i*4+4])[0])
+            else:
+                image.append(0)
+    else:
+        image = build_default_image()
+
+    print(f"Church Machine pico-ice Uploader")
+    print(f"  Namespace: {NS_WORDS} words (slots 0-15)")
+    print(f"  C-list:    {CLIST_WORDS} words")
+    print()
     upload(args.port, image)

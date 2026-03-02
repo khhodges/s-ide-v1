@@ -255,17 +255,34 @@ This loads the bitstream into the FPGA's CRAM (volatile — lost on power cycle)
 python -m church_machine.upload --port /dev/ttyACM1
 ```
 
-This sends the default namespace + c-list over serial. To upload custom data, modify `boot_rom.py` or create a custom binary and use `--image file.bin`.
+The upload tool opens the serial port first, then prompts you to press the pico-ice reset button. The workflow is:
+
+1. Run the command above
+2. The script opens the port and waits
+3. Press the **RP2040 reset button** on the pico-ice (the button that does NOT turn off the green LED)
+4. Press Enter immediately — data must arrive within ~1 second of reset
+
+The port must be opened before reset so the data can be sent instantly when the FPGA loader FSM is listening.
+
+A standalone version (`pico_upload.py`) with no project dependencies is also available for use on machines without the full project installed.
+
+To upload custom data, modify `boot_rom.py` or create a custom binary and use `--image file.bin`.
 
 If you skip this step, the FPGA auto-boots with built-in defaults after ~1 second.
 
 ### 4. Verify
 
 ```bash
-sleep 5 && timeout 15 cat /dev/ttyACM1
+timeout 15 cat /dev/ttyACM1
 ```
 
-Expected output:
+Expected output after successful upload:
+```
+S:0000000C
+HALT
+```
+
+Expected output after auto-boot with defaults:
 ```
 CHURCH v1.0
 00000008
@@ -287,7 +304,8 @@ The push button on the pico-ice single-steps one instruction per press. After ea
 |---|---|
 | `church_machine/uart_test.py` | Top-level FPGA design with UART loader (UartTestTop) |
 | `church_machine/boot_rom.py` | Boot program, demo namespace, demo c-list constants |
-| `church_machine/upload.py` | Host-side Python upload tool |
+| `church_machine/upload.py` | Host-side Python upload tool (requires project) |
+| `church_machine/pico_upload.py` | Standalone upload script (no project dependencies) |
 | `church_machine/uart_rx.py` | UART receiver module (8N1) |
 | `church_machine/uart_tx.py` | UART transmitter and DebugPrinter |
 | `church_machine/core.py` | Church Machine processor core |

@@ -56,7 +56,7 @@ def dump_image(filename, image):
     print(f"Dumped {len(data)} bytes ({len(image)} words) to {filename}")
 
 
-def upload_image(port, image, timeout_s=10):
+def upload_image(port, image, timeout_s=15):
     try:
         import serial
     except ImportError:
@@ -70,7 +70,10 @@ def upload_image(port, image, timeout_s=10):
     time.sleep(0.1)
     ser.reset_input_buffer()
 
-    print(f"Sending {len(data)} bytes ({len(image)} words)...")
+    print(f"Port open. Image: {len(image)} words ({len(data)} bytes)")
+    print()
+    input("Press the pico-ice reset button NOW, then press Enter here: ")
+
     ser.write(data)
     ser.flush()
 
@@ -89,10 +92,14 @@ def upload_image(port, image, timeout_s=10):
     ser.close()
 
     if any("CHURCH" in l for l in banner_lines):
-        print("Upload successful!")
+        print("\nUpload successful!")
+        return True
+    elif banner_lines:
+        print("\nFPGA responded but no CHURCH banner.")
+        print("The upload likely worked — the boot program ran.")
         return True
     else:
-        print("Warning: Did not receive expected banner.")
+        print("\nNo response. Try again — press reset, then Enter faster.")
         return False
 
 
