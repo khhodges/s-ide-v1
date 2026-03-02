@@ -64,18 +64,18 @@
         <div class="editor-layout">
             <div class="editor-panel">
                 <div class="editor-toolbar">
-                    <button class="btn btn-primary" onclick="assembleAndLoad()">Assemble</button>
-                    <button class="btn btn-primary" onclick="showSaveToNamespace()" id="btnSaveNS" disabled>Save to NS</button>
-                    <button class="btn btn-success" onclick="stepSim()">Step</button>
-                    <button class="btn btn-success" onclick="runSim()">Run</button>
-                    <button class="btn btn-warning" onclick="resetSim()">Reset</button>
-                    <button class="btn" onclick="runGC()" style="background:#9b59b6;color:#fff;border:none;">Run GC</button>
-                    <button class="btn" onclick="loadHardwareBinary()" style="background:#1a6b3a;color:#0f0;border:1px solid #0f0;" title="Load exact pico-ice FPGA binary data (namespace, c-list, boot ROM)">Load FPGA</button>
-                    <button class="btn" onclick="downloadHardwareImage()" style="background:#1a4a6b;color:#4fc3f7;border:1px solid #4fc3f7;" title="Download namespace + c-list as binary file for pico_upload.py">Download Image</button>
-                    <button class="btn" onclick="document.getElementById('imageFileInput').click()" style="background:#1a4a6b;color:#4fc3f7;border:1px solid #4fc3f7;" title="Load a .bin image file into the simulator">Upload Image</button>
+                    <button class="btn btn-primary" onclick="assembleAndLoad()" title="Assemble the code in the editor and load it into the simulator's instruction memory">Assemble</button>
+                    <button class="btn btn-primary" onclick="showSaveToNamespace()" id="btnSaveNS" disabled title="Save the assembled program as a new namespace entry so it can be called via Golden Tokens">Save to NS</button>
+                    <button class="btn btn-success" onclick="stepSim()" title="Execute one instruction and show the result (single-step through the boot sequence or program)">Step</button>
+                    <button class="btn btn-success" onclick="runSim()" title="Run the entire boot sequence and program until it halts or faults">Run</button>
+                    <button class="btn btn-warning" onclick="resetSim()" title="Reset the machine to its initial state (clears registers, PC, and call stack)">Reset</button>
+                    <button class="btn" onclick="runGC()" style="background:#9b59b6;color:#fff;border:none;" title="Run PP250 deterministic garbage collection (scan, identify, clear, flip)">Run GC</button>
+                    <button class="btn" onclick="loadHardwareBinary()" style="background:#1a6b3a;color:#0f0;border:1px solid #0f0;" title="Load the exact pico-ice FPGA boot ROM, namespace, and c-list into the simulator (matches the hardware bitstream)">Load FPGA</button>
+                    <button class="btn" onclick="downloadHardwareImage()" style="background:#1a4a6b;color:#4fc3f7;border:1px solid #4fc3f7;" title="Download the simulator's current namespace + c-list as a .bin file for uploading to the pico-ice via pico_upload.py">Download Image</button>
+                    <button class="btn" onclick="document.getElementById('imageFileInput').click()" style="background:#1a4a6b;color:#4fc3f7;border:1px solid #4fc3f7;" title="Load a .bin image file into the simulator to inspect its namespace entries and c-list GTs">Upload Image</button>
                     <input type="file" id="imageFileInput" accept=".bin" style="display:none" onchange="loadImageFile(this)">
-                    <a href="/church/pico_upload.py" download="pico_upload.py" class="btn" style="background:#1a4a6b;color:#4fc3f7;border:1px solid #4fc3f7;text-decoration:none;display:inline-block;line-height:1.5;" title="Download the standalone Python upload script">Get pico_upload.py</a>
-                    <button class="btn" onclick="uploadToPicoIce()" style="background:#1a4a6b;color:#4fc3f7;border:1px solid #4fc3f7;" title="Upload current namespace + c-list to pico-ice over serial (WebSerial)">Upload to pico-ice</button>
+                    <a href="/church/pico_upload.py" download="pico_upload.py" class="btn" style="background:#1a4a6b;color:#4fc3f7;border:1px solid #4fc3f7;text-decoration:none;display:inline-block;line-height:1.5;" title="Download the standalone Python script for uploading .bin images to the pico-ice from the command line">Get pico_upload.py</a>
+                    <button class="btn" onclick="uploadToPicoIce()" style="background:#1a4a6b;color:#4fc3f7;border:1px solid #4fc3f7;" title="Upload the simulator's current namespace + c-list directly to the pico-ice over WebSerial (Chrome/Edge only, requires top-level browsing context)">Upload to pico-ice</button>
                 </div>
                 <div class="example-tabs-row">
                     <button class="example-arrow example-arrow-left" onclick="scrollExamples(-1)">&lsaquo;</button>
