@@ -278,6 +278,11 @@ class ChurchSimulator {
                     return false;
                 }
                 const cr7Parsed = this.parseGT(cr7GT);
+                const bootSlot0Check = this._validateClistSlotPerms(cr7Parsed, 0);
+                if (!bootSlot0Check.ok) {
+                    this.fault('BOOT', `LOAD_NUC: ${bootSlot0Check.message}`);
+                    return false;
+                }
                 if (cr7Parsed.type !== 0) {
                     this.fault('BOOT', `LOAD_NUC: CR7 GT type is ${cr7Parsed.typeName}, must be Inform`);
                     return false;
@@ -371,6 +376,24 @@ class ChurchSimulator {
         const storedSeal = entry.word2_seals & 0x01FFFFFF;
         const lim = this.parseNSWord1(entry.word1_limit);
         return storedSeal === this.computeSeal(entry.word0_location, lim.limit);
+    }
+
+    _validateClistSlotPerms(parsed, slotIdx) {
+        const p = parsed.permissions;
+        const permStr = (p.R?'R':'')+(p.W?'W':'')+(p.X?'X':'')+(p.L?'L':'')+(p.S?'S':'')+(p.E?'E':'');
+        if (parsed.type === 2) return { ok: true };
+        if (slotIdx === 0) {
+            const hasX = p.X;
+            const onlyXorRX = hasX && !p.W && !p.L && !p.S && !p.E;
+            if (!onlyXorRX) {
+                return { ok: false, fault: 'DOMAIN_PURITY', message: `CLOOMC slot 0 has ${permStr||'no'} permissions — only X or RX allowed` };
+            }
+        } else {
+            if (p.X && p.E) {
+                return { ok: false, fault: 'DOMAIN_PURITY', message: `C-List slot ${slotIdx} has ${permStr} — mixed XE not allowed (use separate slots for X and E)` };
+            }
+        }
+        return { ok: true };
     }
 
     mLoad(gt32, requiredPerm, srcCRIdx) {
@@ -706,16 +729,48 @@ class ChurchSimulator {
         this.emit('output', this.output);
     }
 
-    step() {
-        if (this.halted) return null;
-        if (this.pc >= this.memory.length) {
-            this.fault('BOUNDS', `PC=${this.pc} out of memory`);
-            return null;
+    _fetchInstruction() {
+        if (!this.bootComplete) {
+            if (this.pc >= this.memory.length) {
+                return { ok: false, fault: 'BOUNDS', message: `PC=${this.pc} out of memory (pre-boot)` };
+            }
+            return { ok: true, word: this.memory[this.pc], addr: this.pc };
         }
 
-        const instrWord = this.memory[this.pc];
+        const cr7 = this.cr[7];
+        if (!cr7 || cr7.word0 === 0) {
+            return { ok: false, fault: 'NULL_CAP', message: 'CR7 (code register) is NULL — no code capability' };
+        }
+        const cr7Parsed = this.parseGT(cr7.word0);
+        if (!cr7Parsed.permissions.X) {
+            return { ok: false, fault: 'PERM_X', message: 'CR7 lacks X permission for instruction fetch' };
+        }
+        const entry = this.readNSEntry(cr7Parsed.index);
+        if (!entry) {
+            return { ok: false, fault: 'BOUNDS', message: `CR7 NS entry ${cr7Parsed.index} not found` };
+        }
+        const w1 = this.parseNSWord1(entry.word1_limit);
+        if (this.pc >= w1.limit) {
+            return { ok: false, fault: 'BOUNDS', message: `PC=${this.pc} exceeds CR7 code limit (${w1.limit})` };
+        }
+        const fetchAddr = entry.word0_location + this.pc;
+        if (fetchAddr >= this.memory.length) {
+            return { ok: false, fault: 'BOUNDS', message: `fetch address 0x${fetchAddr.toString(16)} out of memory` };
+        }
+        return { ok: true, word: this.memory[fetchAddr], addr: fetchAddr };
+    }
+
+    step() {
+        if (this.halted) return null;
+
+        const fetch = this._fetchInstruction();
+        if (!fetch.ok) {
+            this.fault(fetch.fault, fetch.message);
+            return null;
+        }
+        const instrWord = fetch.word;
         if (instrWord === 0) {
-            this.output += `[PP250] Zero instruction at PC=${this.pc} — no HALT, returning to boot sequence\n`;
+            this.output += `[PP250] Zero instruction at PC=${this.pc} (addr=0x${fetch.addr.toString(16)}) — no HALT, returning to boot sequence\n`;
             this._returnToBoot();
             return { pc: this.pc, instr: null, desc: 'PP250: zero instruction → reboot' };
         }
@@ -789,6 +844,15 @@ class ChurchSimulator {
             return null;
         }
         const slotParsed = this.parseGT(slotGT);
+
+        if (d.crSrc === 6) {
+            const permCheck = this._validateClistSlotPerms(slotParsed, d.imm);
+            if (!permCheck.ok) {
+                this.fault(permCheck.fault, `LOAD: ${permCheck.message}`);
+                return null;
+            }
+        }
+
         const targetIdx = slotParsed.index;
         if (targetIdx >= this.nsCount || !this.isNSEntryValid(targetIdx)) {
             this.fault('BOUNDS', `LOAD: namespace index ${targetIdx} out of bounds`);
@@ -834,6 +898,16 @@ class ChurchSimulator {
             return null;
         }
         this.lastCapability = savedCap;
+
+        if (d.crSrc === 6) {
+            const srcParsedCheck = this.parseGT(srcGT);
+            const slotPermCheck = this._validateClistSlotPerms(srcParsedCheck, d.imm);
+            if (!slotPermCheck.ok) {
+                this.fault(slotPermCheck.fault, `SAVE: ${slotPermCheck.message}`);
+                return null;
+            }
+        }
+
         const clistLoc = clistCheck.entry.word0_location;
         this.memory[clistLoc + d.imm] = srcGT;
         const srcParsed = saveCheck.parsed;
@@ -916,8 +990,9 @@ class ChurchSimulator {
         const label = this.nsLabels[check.index] || 'abstraction';
         const desc = `CALL CR${d.crDst} → ${label}: CR6 ← E-GT(Slot ${check.index})${cr7Desc}`;
         this.output += desc + '\n';
-        this.pc++;
-        return { pc: this.pc - 1, instr: d, desc, pipeline: this._callPipeline(d, label) };
+        const prevPC = this.pc;
+        this.pc = 0;
+        return { pc: prevPC, instr: d, desc, pipeline: this._callPipeline(d, label) };
     }
 
     _dispatchHandler(d, check, handler) {
@@ -952,6 +1027,13 @@ class ChurchSimulator {
             return { pc: this.pc, instr: d, desc: 'PP250: RETURN (empty stack) → reboot' };
         }
         const frame = this.callStack.pop();
+        if (frame.savedCRs) {
+            for (let i = 0; i < frame.savedCRs.length; i++) {
+                this.cr[i] = {...frame.savedCRs[i]};
+            }
+        }
+        if (frame.savedDRs) this.dr = [...frame.savedDRs];
+        if (frame.savedFlags) this.flags = {...frame.savedFlags};
         const desc = `RETURN CR${d.crDst} → PC=${frame.returnPC}`;
         this.output += desc + '\n';
         this.pc = frame.returnPC;
@@ -1513,16 +1595,25 @@ class ChurchSimulator {
     }
 
     loadProgram(words, startAddr) {
-        startAddr = startAddr || 0;
+        const clooomcSlot = 3;
+        const clooomcBase = this.NS_TABLE_BASE + clooomcSlot * this.NS_ENTRY_WORDS;
+        const codeLoc = this.memory[clooomcBase] || 0x0300;
+        const baseAddr = this.bootComplete ? codeLoc : (startAddr || 0);
         for (let i = 0; i < words.length; i++) {
-            if (startAddr + i < this.memory.length) {
-                this.memory[startAddr + i] = words[i] >>> 0;
+            if (baseAddr + i < this.memory.length) {
+                this.memory[baseAddr + i] = words[i] >>> 0;
             }
         }
-        this.pc = startAddr;
+        if (this.bootComplete) {
+            const oldW1 = this.memory[clooomcBase + 1];
+            const newLimit = Math.max(words.length, this.parseNSWord1(oldW1).limit);
+            this.memory[clooomcBase + 1] = (oldW1 & 0xFFFE0000) | (newLimit & 0x1FFFF);
+            this.memory[clooomcBase + 2] = this.makeVersionSeals(0, codeLoc, newLimit);
+        }
+        this.pc = 0;
         this.halted = false;
         this.running = false;
-        this.emit('programLoaded', { addr: startAddr, length: words.length });
+        this.emit('programLoaded', { addr: baseAddr, length: words.length });
         this.emit('stateChange', this.getState());
     }
 
@@ -1560,15 +1651,20 @@ class ChurchSimulator {
         for (let i = 0; i < nsEntryCount; i++) clistChildren.push(i);
         this.nsClistMap[2] = clistChildren;
 
+        const clooomcSlot = 3;
+        const clooomcBase = this.NS_TABLE_BASE + clooomcSlot * this.NS_ENTRY_WORDS;
+        const clooomcLoc = this.memory[clooomcBase] || 0x0300;
         for (let i = 0; i < hwProgram.length; i++) {
-            this.memory[i] = hwProgram[i] >>> 0;
+            if (hwProgram[i] !== 0) {
+                this.memory[clooomcLoc + i] = hwProgram[i] >>> 0;
+            }
         }
 
         this.output = '';
         this.output += '=== HARDWARE BINARY LOADED ===\n';
         this.output += `Namespace: ${nsEntryCount} entries written to NS_TABLE_BASE (0x${this.NS_TABLE_BASE.toString(16).toUpperCase()})\n`;
         this.output += `C-List: ${hwClist.length} GTs written at 0x${clistBase.toString(16).padStart(4,'0').toUpperCase()}\n`;
-        this.output += `Boot ROM: ${hwProgram.length} instructions at 0x0000\n`;
+        this.output += `Boot ROM: ${hwProgram.length} instructions at CLOOMC location 0x${clooomcLoc.toString(16).padStart(4,'0').toUpperCase()}\n`;
         this.output += '\n--- Namespace Entries ---\n';
         for (let i = 0; i < nsEntryCount; i++) {
             const base = this.NS_TABLE_BASE + i * this.NS_ENTRY_WORDS;
@@ -1587,10 +1683,11 @@ class ChurchSimulator {
                            (p.permissions.S ? 'S':'') + (p.permissions.E ? 'E':'');
             this.output += `  [${i}] 0x${gt.toString(16).padStart(8,'0')} ${p.typeName.padEnd(8)} ${(permStr||'------').padEnd(6)} → idx ${p.index}\n`;
         }
-        this.output += '\n--- Boot Program ---\n';
+        this.output += `\n--- CLOOMC Code (CR7, at 0x${clooomcLoc.toString(16).padStart(4,'0').toUpperCase()}) ---\n`;
         for (let i = 0; i < hwProgram.length; i++) {
             const w = hwProgram[i] >>> 0;
-            this.output += `  0x${(i*4).toString(16).padStart(4,'0')}: 0x${w.toString(16).padStart(8,'0')}\n`;
+            if (w === 0) continue;
+            this.output += `  PC=${i} (0x${(clooomcLoc+i).toString(16).padStart(4,'0')}): 0x${w.toString(16).padStart(8,'0')}\n`;
         }
         this.output += '\nStep or Run to begin boot sequence with hardware data.\n';
 
@@ -1640,8 +1737,13 @@ class ChurchSimulator {
 
         const hwBoot = bootProgram || (typeof HW_BOOT_PROGRAM !== 'undefined' ? HW_BOOT_PROGRAM : null);
         if (hwBoot) {
+            const clooomcSlot = 3;
+            const clooomcBase = this.NS_TABLE_BASE + clooomcSlot * this.NS_ENTRY_WORDS;
+            const codeLoc = this.memory[clooomcBase] || 0x0300;
             for (let i = 0; i < hwBoot.length; i++) {
-                this.memory[i] = hwBoot[i] >>> 0;
+                if (hwBoot[i] !== 0) {
+                    this.memory[codeLoc + i] = hwBoot[i] >>> 0;
+                }
             }
         }
 
@@ -1654,7 +1756,10 @@ class ChurchSimulator {
         this.output += `Namespace: ${nsEntryCount} entries at NS_TABLE_BASE (0x${this.NS_TABLE_BASE.toString(16).toUpperCase()})\n`;
         this.output += `C-List: ${clistCount} GTs at 0x${clistBase.toString(16).padStart(4,'0').toUpperCase()}\n`;
         if (hwBoot) {
-            this.output += `Boot ROM: ${hwBoot.length} instructions at 0x0000 (read-only in hardware)\n`;
+            const clooomcSlot2 = 3;
+            const clooomcBase2 = this.NS_TABLE_BASE + clooomcSlot2 * this.NS_ENTRY_WORDS;
+            const codeLoc2 = this.memory[clooomcBase2] || 0x0300;
+            this.output += `Boot Code: ${hwBoot.filter(w=>w!==0).length} instructions at CLOOMC 0x${codeLoc2.toString(16).padStart(4,'0').toUpperCase()}\n`;
         }
         this.output += '\n--- Namespace Entries ---\n';
         for (let i = 0; i < nsEntryCount; i++) {
@@ -1676,12 +1781,15 @@ class ChurchSimulator {
             this.output += `  [${i}] 0x${gt.toString(16).padStart(8,'0')} ${p.typeName.padEnd(8)} ${(permStr||'------').padEnd(6)} → idx ${p.index}\n`;
         }
         if (hwBoot) {
-            this.output += '\n--- Boot ROM (CR7 code, read-only) ---\n';
+            const clooomcSlot3 = 3;
+            const clooomcBase3 = this.NS_TABLE_BASE + clooomcSlot3 * this.NS_ENTRY_WORDS;
+            const codeLoc3 = this.memory[clooomcBase3] || 0x0300;
+            this.output += `\n--- CLOOMC Code (CR7, at 0x${codeLoc3.toString(16).padStart(4,'0').toUpperCase()}) ---\n`;
             for (let i = 0; i < hwBoot.length; i++) {
                 const w = hwBoot[i] >>> 0;
                 if (w === 0) continue;
                 const disasm = (typeof ChurchAssembler !== 'undefined') ? new ChurchAssembler().disassemble(w) : '';
-                this.output += `  0x${(i*4).toString(16).padStart(4,'0')}: 0x${w.toString(16).padStart(8,'0')}  ${disasm}\n`;
+                this.output += `  PC=${i} (0x${(codeLoc3+i).toString(16).padStart(4,'0')}): 0x${w.toString(16).padStart(8,'0')}  ${disasm}\n`;
             }
         }
         this.output += '\nStep or Run to begin boot sequence with loaded data.\n';

@@ -1,16 +1,17 @@
 const HW_BOOT_PROGRAM = [
-    0x070B0000, // 0x0000 LOAD CR1, [CR6 + 0]
-    0x07130001, // 0x0004 LOAD CR2, [CR6 + 1]
-    0x37100003, // 0x0008 TPERM CR2, X
-    0x3F100000, // 0x000C LAMBDA CR2
-    0x07030001, // 0x0010 LOAD CR0, [CR6 + 1]
-    0x37000008, // 0x0014 TPERM CR0, E
-    0x17000000, // 0x0018 CALL CR0
-    0x073B0001, // 0x001C LOAD CR7, [CR6 + 1]
-    0x37380003, // 0x0020 TPERM CR7, X
-    0x3F380000, // 0x0024 LAMBDA CR7
-    0x1F028000, // 0x0028 RETURN CR5
-    0x0F308002, // 0x002C SAVE [CR6 + 2], CR1
+    0x27440001, // PC=0  CHANGE CR8, CR8, 1  (establish thread context)
+    0x070B0000, // PC=1  LOAD CR1, [CR6 + 0]
+    0x07130001, // PC=2  LOAD CR2, [CR6 + 1]
+    0x37100003, // PC=3  TPERM CR2, X
+    0x3F100000, // PC=4  LAMBDA CR2
+    0x07030006, // PC=5  LOAD CR0, [CR6 + 6]
+    0x37000008, // PC=6  TPERM CR0, E
+    0x17000000, // PC=7  CALL CR0
+    0x073B0001, // PC=8  LOAD CR7, [CR6 + 1]
+    0x37380003, // PC=9  TPERM CR7, X
+    0x3F380000, // PC=10 LAMBDA CR7
+    0x1F028000, // PC=11 RETURN CR5
+    0x0F308002, // PC=12 SAVE [CR6 + 2], CR1
 ];
 
 const HW_NAMESPACE = [
@@ -34,12 +35,12 @@ const HW_NAMESPACE = [
 
 const HW_CLIST = [
     0x00000314, // CList[0] Inform RX  → NS idx 3 (Boot.CLOOMC)
-    0x00000490, // CList[1] Inform XE  → NS idx 4
-    0x00000002, // CList[2] NULL
+    0x00000410, // CList[1] Inform X   → NS idx 4 (LAMBDA target)
+    0x00000002, // CList[2] NULL       (SAVE target)
     0x00000280, // CList[3] Inform E   → NS idx 2 (Boot.Abstraction)
     0x00000580, // CList[4] Inform E   → NS idx 5
     0x00000620, // CList[5] Inform L   → NS idx 6
-    0x00000002, // CList[6] NULL
+    0x00000480, // CList[6] Inform E   → NS idx 4 (CALL target)
     0x00000002, // CList[7] NULL
 ];
 

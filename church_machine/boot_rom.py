@@ -13,6 +13,8 @@ def make_gt(gt_type=GT_TYPE_NULL, perms=0, index=0, version=0):
 
 
 BOOT_PROGRAM = [
+    encode_church(ChurchOpcode.CHANGE, CondCode.AL, cr_dst=8, cr_src=8, imm=1),
+
     encode_church(ChurchOpcode.LOAD, CondCode.AL, cr_dst=1, cr_src=6, imm=0),
 
     encode_church(ChurchOpcode.LOAD, CondCode.AL, cr_dst=2, cr_src=6, imm=1),
@@ -21,7 +23,7 @@ BOOT_PROGRAM = [
 
     encode_church(ChurchOpcode.LAMBDA, CondCode.AL, cr_dst=2),
 
-    encode_church(ChurchOpcode.LOAD, CondCode.AL, cr_dst=0, cr_src=6, imm=1),
+    encode_church(ChurchOpcode.LOAD, CondCode.AL, cr_dst=0, cr_src=6, imm=6),
     encode_church(ChurchOpcode.TPERM, CondCode.AL, cr_dst=0, imm=TpermPreset.E),
     encode_church(ChurchOpcode.CALL, CondCode.AL, cr_dst=0, cr_src=0),
 
@@ -48,12 +50,12 @@ for i in range(16):
 
 DEMO_CLIST = [
     make_gt(GT_TYPE_INFORM, PERM_MASK_R | PERM_MASK_X, 3, 0),
-    make_gt(GT_TYPE_INFORM, PERM_MASK_X | PERM_MASK_E, 4, 0),
+    make_gt(GT_TYPE_INFORM, PERM_MASK_X, 4, 0),
     make_gt(GT_TYPE_NULL, 0, 0, 0),
     make_gt(GT_TYPE_INFORM, PERM_MASK_E, 2, 0),
     make_gt(GT_TYPE_INFORM, PERM_MASK_E, 5, 0),
     make_gt(GT_TYPE_INFORM, PERM_MASK_L, 6, 0),
-    make_gt(GT_TYPE_NULL, 0, 0, 0),
+    make_gt(GT_TYPE_INFORM, PERM_MASK_E, 4, 0),
     make_gt(GT_TYPE_NULL, 0, 0, 0),
 ]
 
