@@ -1,7 +1,5 @@
 const PicoSerial = (function() {
     let port = null;
-    let reader = null;
-    let writer = null;
 
     const BAUD = 115200;
     const NS_WORDS = 192;
@@ -27,15 +25,10 @@ const PicoSerial = (function() {
     }
 
     async function disconnect() {
-        if (reader) {
-            try { await reader.cancel(); } catch(e) {}
-            reader = null;
-        }
         if (port) {
             try { await port.close(); } catch(e) {}
             port = null;
         }
-        writer = null;
     }
 
     function wordToLE(word) {
@@ -47,12 +40,59 @@ const PicoSerial = (function() {
         return buf;
     }
 
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function resetFPGA(onStatus) {
+        const status = onStatus || function() {};
+
+        if (!port) return;
+
+        status('Resetting pico-ice (close/reopen port)...');
+        try { await port.close(); } catch(e) {}
+        await sleep(200);
+        await port.open({ baudRate: BAUD, dataBits: 8, stopBits: 1, parity: 'none' });
+        await sleep(100);
+
+        try {
+            await port.setSignals({ dataTerminalReady: false, requestToSend: false });
+            await sleep(50);
+            await port.setSignals({ dataTerminalReady: true, requestToSend: true });
+            await sleep(50);
+            await port.setSignals({ dataTerminalReady: false, requestToSend: false });
+        } catch(e) {
+            // setSignals not supported on all platforms
+        }
+
+        await sleep(200);
+        status('Reset complete. Sending data...');
+    }
+
+    async function drainInput() {
+        if (!port || !port.readable) return;
+        const r = port.readable.getReader();
+        try {
+            while (true) {
+                const { value, done } = await Promise.race([
+                    r.read(),
+                    new Promise(resolve => setTimeout(() => resolve({ value: null, done: true }), 100))
+                ]);
+                if (done || !value) break;
+            }
+        } catch(e) {}
+        finally { try { r.releaseLock(); } catch(e) {} }
+    }
+
     async function uploadToFPGA(nsWords, clistWords, onStatus) {
         if (!isConnected()) {
             await connect();
         }
 
         const status = onStatus || function() {};
+
+        await resetFPGA(status);
+        await drainInput();
 
         const totalWords = NS_WORDS + CLIST_WORDS;
         const payload = new Uint8Array(4 + totalWords * 4);
@@ -82,7 +122,7 @@ const PicoSerial = (function() {
         status('Data sent. Waiting for banner...');
 
         const bannerLines = [];
-        const deadline = Date.now() + 8000;
+        const deadline = Date.now() + 10000;
         let accumulated = '';
 
         const r = port.readable.getReader();
@@ -90,7 +130,7 @@ const PicoSerial = (function() {
             while (Date.now() < deadline) {
                 const { value, done } = await Promise.race([
                     r.read(),
-                    new Promise(resolve => setTimeout(() => resolve({ value: null, done: true }), 2000))
+                    new Promise(resolve => setTimeout(() => resolve({ value: null, done: true }), 3000))
                 ]);
 
                 if (done || !value) break;
@@ -107,19 +147,17 @@ const PicoSerial = (function() {
                     }
                     if (line.includes('HALT')) {
                         r.releaseLock();
-                        reader = null;
                         const success = bannerLines.some(l => l.includes('CHURCH'));
                         return { success, lines: bannerLines };
                     }
                 }
             }
         } catch(e) {
-            // reader cancelled or timeout
+            status('Read error: ' + e.message);
         } finally {
             try { r.releaseLock(); } catch(e) {}
         }
 
-        reader = null;
         const success = bannerLines.some(l => l.includes('CHURCH'));
         return { success, lines: bannerLines };
     }
