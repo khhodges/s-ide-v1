@@ -1608,6 +1608,79 @@ class ChurchSimulator {
         this.emit('stateChange', this.getState());
     }
 
+    loadImageFromBinary(nsWords, clistWords) {
+        this.reset();
+
+        this.memory = new Uint32Array(65536);
+        this.nsLabels = {};
+        this.nsCount = 0;
+        this.nsClistMap = {};
+
+        const NS_WORDS = 192;
+        const CLIST_WORDS = 64;
+        const nsEntryCount = Math.floor(Math.min(nsWords.length, NS_WORDS) / 3);
+
+        for (let i = 0; i < nsEntryCount; i++) {
+            const loc = nsWords[i * 3 + 0] >>> 0;
+            const w1  = nsWords[i * 3 + 1] >>> 0;
+            const w2  = nsWords[i * 3 + 2] >>> 0;
+            const base = this.NS_TABLE_BASE + i * this.NS_ENTRY_WORDS;
+            this.memory[base + 0] = loc;
+            this.memory[base + 1] = w1;
+            this.memory[base + 2] = w2;
+            this.nsLabels[i] = `Slot ${i}`;
+            this.nsCount = i + 1;
+        }
+
+        const clistBase = 0x0200;
+        const clistCount = Math.min(clistWords.length, CLIST_WORDS);
+        for (let i = 0; i < clistCount; i++) {
+            this.memory[clistBase + i] = clistWords[i] >>> 0;
+        }
+
+        const clistChildren = [];
+        for (let i = 0; i < nsEntryCount; i++) clistChildren.push(i);
+        this.nsClistMap[2] = clistChildren;
+
+        this.output = '';
+        this.output += '=== BINARY IMAGE LOADED ===\n';
+        this.output += `Namespace: ${nsEntryCount} entries at NS_TABLE_BASE (0x${this.NS_TABLE_BASE.toString(16).toUpperCase()})\n`;
+        this.output += `C-List: ${clistCount} GTs at 0x${clistBase.toString(16).padStart(4,'0').toUpperCase()}\n`;
+        this.output += '\n--- Namespace Entries ---\n';
+        for (let i = 0; i < nsEntryCount; i++) {
+            const base = this.NS_TABLE_BASE + i * this.NS_ENTRY_WORDS;
+            const loc = this.memory[base];
+            const w1 = this.memory[base + 1];
+            const parsed = this.parseNSWord1(w1);
+            const label = this.nsLabels[i] || '';
+            this.output += `  [${i.toString().padStart(2)}] ${label.padEnd(20)} loc=0x${loc.toString(16).padStart(4,'0')} lim=${parsed.limit} B=${parsed.b} F=${parsed.f} G=${parsed.g}\n`;
+        }
+        this.output += '\n--- C-List GTs ---\n';
+        for (let i = 0; i < clistCount; i++) {
+            const gt = clistWords[i] >>> 0;
+            if (gt === 0) continue;
+            const p = this.parseGT(gt);
+            const permStr = (p.permissions.R ? 'R':'') + (p.permissions.W ? 'W':'') +
+                           (p.permissions.X ? 'X':'') + (p.permissions.L ? 'L':'') +
+                           (p.permissions.S ? 'S':'') + (p.permissions.E ? 'E':'');
+            this.output += `  [${i}] 0x${gt.toString(16).padStart(8,'0')} ${p.typeName.padEnd(8)} ${(permStr||'------').padEnd(6)} → idx ${p.index}\n`;
+        }
+        this.output += '\nStep or Run to begin boot sequence with loaded data.\n';
+
+        this.pc = 0;
+        this.halted = false;
+        this.running = false;
+        this.bootComplete = false;
+        this.mElevation = false;
+        this.bootStep = 0;
+        this.faultLog = [];
+        this.stepCount = 0;
+        this.callStack = [];
+
+        this.emit('programLoaded', { addr: 0, length: 0 });
+        this.emit('stateChange', this.getState());
+    }
+
     exportHardwareImage() {
         const NS_WORDS = 192;
         const CLIST_WORDS = 64;

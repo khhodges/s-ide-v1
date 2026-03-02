@@ -834,6 +834,57 @@ function loadHardwareBinary() {
     updateDashboard();
 }
 
+function loadImageFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const con = document.getElementById('editorConsole');
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const buffer = e.target.result;
+        const view = new DataView(buffer);
+
+        if (buffer.byteLength < 4) {
+            if (con) con.textContent = 'Error: File too small (need at least 4 bytes for header)';
+            return;
+        }
+
+        const wordCount = view.getUint32(0, true);
+        const expectedBytes = 4 + wordCount * 4;
+
+        if (buffer.byteLength < expectedBytes) {
+            if (con) con.textContent = `Error: File has ${buffer.byteLength} bytes but header says ${wordCount} words (need ${expectedBytes} bytes)`;
+            return;
+        }
+
+        const NS_WORDS = 192;
+        const CLIST_WORDS = 64;
+
+        const nsWords = new Uint32Array(NS_WORDS);
+        for (let i = 0; i < NS_WORDS && i < wordCount; i++) {
+            nsWords[i] = view.getUint32(4 + i * 4, true);
+        }
+
+        const clistWords = new Uint32Array(CLIST_WORDS);
+        for (let i = 0; i < CLIST_WORDS && (NS_WORDS + i) < wordCount; i++) {
+            clistWords[i] = view.getUint32(4 + (NS_WORDS + i) * 4, true);
+        }
+
+        sim.loadImageFromBinary(nsWords, clistWords);
+
+        if (con) con.textContent = sim.output;
+        updateDashboard();
+
+        if (con) {
+            con.textContent += `\nLoaded ${file.name} (${buffer.byteLength} bytes, ${wordCount} words)\n`;
+        }
+    };
+
+    reader.readAsArrayBuffer(file);
+    input.value = '';
+}
+
 function downloadHardwareImage() {
     const image = sim.exportHardwareImage();
     const NS_WORDS = 192;
