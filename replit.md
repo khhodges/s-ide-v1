@@ -47,7 +47,7 @@ The CTMM simulator provides web-based visualization using a Python HTTP server, 
     -   **SystemVerilog (`verilog/`)**: A parallel hardware implementation of the CTMM architecture.
 
 ### Web Interface (UI/UX)
-The web interface features a dark-themed, IDE-like design with ten views: Dashboard, Namespace Browser, Assembly Editor, Capabilities Explorer, Zoom, HP-35 Calculator, Instructions, Tutorial, and Code Browser. The Instructions View includes tabs for Church opcodes, Turing opcodes, Timing, and GT Types.
+The web interface features a dark-themed, IDE-like design with ten views: Dashboard, Namespace Browser, Assembly Editor, Capabilities Explorer, Zoom, HP-35 Calculator, Instructions, Tutorial, and Code Browser. The Instructions View includes tabs for Church opcodes, Turing opcodes, Timing, and GT Types. The Assembly Editor includes an "Upload to pico-ice" button that uses the Web Serial API (Chrome/Edge) to upload the simulator's current namespace + c-list to the physical pico-ice FPGA over serial, using the same protocol as `upload.py` (4-byte LE header + data words at 115200 baud). The `webserial.js` module handles serial communication; `simulator.js` provides `exportHardwareImage()` to extract data.
 
 ### Key Features
 -   **Built-in Abstractions**: Includes `Boot`, `Threads`, `SlideRule`, `Abacus`, `Circle`, `CapabilityManager`, `DateTime`, `Lambda`, `Constants`, `FamilyRegistry`, `Stack`, and `HP35`.

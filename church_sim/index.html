@@ -71,6 +71,7 @@
                     <button class="btn btn-warning" onclick="resetSim()">Reset</button>
                     <button class="btn" onclick="runGC()" style="background:#9b59b6;color:#fff;border:none;">Run GC</button>
                     <button class="btn" onclick="loadHardwareBinary()" style="background:#1a6b3a;color:#0f0;border:1px solid #0f0;" title="Load exact pico-ice FPGA binary data (namespace, c-list, boot ROM)">Load FPGA</button>
+                    <button class="btn" onclick="uploadToPicoIce()" style="background:#1a4a6b;color:#4fc3f7;border:1px solid #4fc3f7;" title="Upload current namespace + c-list to pico-ice over serial">Upload to pico-ice</button>
                 </div>
                 <div class="example-tabs-row">
                     <button class="example-arrow example-arrow-left" onclick="scrollExamples(-1)">&lsaquo;</button>
@@ -250,6 +251,7 @@
         </div>
     </div>
 
+    <script src="webserial.js?v=20260302a"></script>
     <script src="hw_binary.js?v=20260228a"></script>
     <script src="simulator.js?v=20260228a"></script>
     <script src="assembler.js?v=20260225b"></script>

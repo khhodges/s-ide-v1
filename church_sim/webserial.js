@@ -1,0 +1,137 @@
+const PicoSerial = (function() {
+    let port = null;
+    let reader = null;
+    let writer = null;
+
+    const BAUD = 115200;
+    const NS_WORDS = 192;
+    const CLIST_WORDS = 64;
+    const TOTAL_WORDS = NS_WORDS + CLIST_WORDS;
+
+    function isSupported() {
+        return 'serial' in navigator;
+    }
+
+    function isConnected() {
+        return port !== null && port.readable !== null;
+    }
+
+    async function connect() {
+        if (!isSupported()) {
+            throw new Error('WebSerial not supported. Use Chrome or Edge.');
+        }
+        if (isConnected()) return;
+
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: BAUD, dataBits: 8, stopBits: 1, parity: 'none' });
+    }
+
+    async function disconnect() {
+        if (reader) {
+            try { await reader.cancel(); } catch(e) {}
+            reader = null;
+        }
+        if (port) {
+            try { await port.close(); } catch(e) {}
+            port = null;
+        }
+        writer = null;
+    }
+
+    function wordToLE(word) {
+        const buf = new Uint8Array(4);
+        buf[0] = word & 0xFF;
+        buf[1] = (word >>> 8) & 0xFF;
+        buf[2] = (word >>> 16) & 0xFF;
+        buf[3] = (word >>> 24) & 0xFF;
+        return buf;
+    }
+
+    async function uploadToFPGA(nsWords, clistWords, onStatus) {
+        if (!isConnected()) {
+            await connect();
+        }
+
+        const status = onStatus || function() {};
+
+        const totalWords = NS_WORDS + CLIST_WORDS;
+        const payload = new Uint8Array(4 + totalWords * 4);
+
+        const header = wordToLE(totalWords);
+        payload.set(header, 0);
+
+        for (let i = 0; i < NS_WORDS; i++) {
+            const w = i < nsWords.length ? nsWords[i] : 0;
+            payload.set(wordToLE(w >>> 0), 4 + i * 4);
+        }
+
+        for (let i = 0; i < CLIST_WORDS; i++) {
+            const w = i < clistWords.length ? clistWords[i] : 0;
+            payload.set(wordToLE(w >>> 0), 4 + (NS_WORDS + i) * 4);
+        }
+
+        status(`Sending ${payload.length} bytes (${totalWords} words)...`);
+
+        const w = port.writable.getWriter();
+        try {
+            await w.write(payload);
+        } finally {
+            w.releaseLock();
+        }
+
+        status('Data sent. Waiting for banner...');
+
+        const bannerLines = [];
+        const deadline = Date.now() + 8000;
+        let accumulated = '';
+
+        const r = port.readable.getReader();
+        try {
+            while (Date.now() < deadline) {
+                const { value, done } = await Promise.race([
+                    r.read(),
+                    new Promise(resolve => setTimeout(() => resolve({ value: null, done: true }), 2000))
+                ]);
+
+                if (done || !value) break;
+
+                accumulated += new TextDecoder().decode(value);
+
+                const lines = accumulated.split(/\r?\n/);
+                accumulated = lines.pop();
+
+                for (const line of lines) {
+                    if (line.trim()) {
+                        bannerLines.push(line.trim());
+                        status(line.trim());
+                    }
+                    if (line.includes('HALT')) {
+                        r.releaseLock();
+                        reader = null;
+                        const success = bannerLines.some(l => l.includes('CHURCH'));
+                        return { success, lines: bannerLines };
+                    }
+                }
+            }
+        } catch(e) {
+            // reader cancelled or timeout
+        } finally {
+            try { r.releaseLock(); } catch(e) {}
+        }
+
+        reader = null;
+        const success = bannerLines.some(l => l.includes('CHURCH'));
+        return { success, lines: bannerLines };
+    }
+
+    return {
+        isSupported,
+        isConnected,
+        connect,
+        disconnect,
+        uploadToFPGA,
+        NS_WORDS,
+        CLIST_WORDS,
+        TOTAL_WORDS
+    };
+})();

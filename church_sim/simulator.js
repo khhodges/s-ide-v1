@@ -1608,6 +1608,28 @@ class ChurchSimulator {
         this.emit('stateChange', this.getState());
     }
 
+    exportHardwareImage() {
+        const NS_WORDS = 192;
+        const CLIST_WORDS = 64;
+
+        const nsWords = new Uint32Array(NS_WORDS);
+        const nsEntries = Math.min(this.nsCount || 16, 64);
+        for (let i = 0; i < nsEntries; i++) {
+            const base = this.NS_TABLE_BASE + i * this.NS_ENTRY_WORDS;
+            nsWords[i * 3 + 0] = this.memory[base + 0] >>> 0;
+            nsWords[i * 3 + 1] = this.memory[base + 1] >>> 0;
+            nsWords[i * 3 + 2] = this.memory[base + 2] >>> 0;
+        }
+
+        const clistWords = new Uint32Array(CLIST_WORDS);
+        const clistBase = 0x0200;
+        for (let i = 0; i < CLIST_WORDS; i++) {
+            clistWords[i] = this.memory[clistBase + i] >>> 0;
+        }
+
+        return { namespace: nsWords, clist: clistWords };
+    }
+
     run(maxSteps) {
         maxSteps = maxSteps || 10000;
         this.running = true;

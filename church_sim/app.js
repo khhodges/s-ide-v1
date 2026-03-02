@@ -835,6 +835,50 @@ function loadHardwareBinary() {
     updateDashboard();
 }
 
+async function uploadToPicoIce() {
+    const con = document.getElementById('editorConsole');
+    if (!con) return;
+
+    if (typeof PicoSerial === 'undefined') {
+        con.textContent = 'Error: WebSerial module not loaded (webserial.js missing)';
+        return;
+    }
+
+    if (!PicoSerial.isSupported()) {
+        con.textContent = 'WebSerial is not supported in this browser.\nUse Chrome or Edge to upload to pico-ice.';
+        return;
+    }
+
+    try {
+        con.textContent = 'Connecting to pico-ice...\n';
+
+        const image = sim.exportHardwareImage();
+        con.textContent += `Namespace: ${image.namespace.length} words\n`;
+        con.textContent += `C-list: ${image.clist.length} words\n`;
+
+        const result = await PicoSerial.uploadToFPGA(
+            image.namespace,
+            image.clist,
+            function(msg) {
+                con.textContent += msg + '\n';
+            }
+        );
+
+        if (result.success) {
+            con.textContent += '\nUpload successful! pico-ice booted with simulator data.\n';
+        } else {
+            con.textContent += '\nUpload sent, but did not receive expected banner.\n';
+            con.textContent += 'The pico-ice may need a reset, or check serial port selection.\n';
+        }
+    } catch(e) {
+        if (e.name === 'NotFoundError') {
+            con.textContent += 'No serial port selected.\n';
+        } else {
+            con.textContent += 'Error: ' + e.message + '\n';
+        }
+    }
+}
+
 let walkRunning = false;
 let walkTimer = null;
 
