@@ -49,24 +49,15 @@ const PicoSerial = (function() {
 
         if (!port) return;
 
-        status('Resetting pico-ice (close/reopen port)...');
-        try { await port.close(); } catch(e) {}
-        await sleep(200);
-        await port.open({ baudRate: BAUD, dataBits: 8, stopBits: 1, parity: 'none' });
-        await sleep(100);
-
+        status('Resetting pico-ice...');
         try {
-            await port.setSignals({ dataTerminalReady: false, requestToSend: false });
-            await sleep(50);
-            await port.setSignals({ dataTerminalReady: true, requestToSend: true });
-            await sleep(50);
-            await port.setSignals({ dataTerminalReady: false, requestToSend: false });
+            await port.setSignals({ dataTerminalReady: true });
+            await sleep(100);
+            await port.setSignals({ dataTerminalReady: false });
+            await sleep(500);
         } catch(e) {
-            // setSignals not supported on all platforms
+            status('DTR toggle not supported, sending data directly...');
         }
-
-        await sleep(200);
-        status('Reset complete. Sending data...');
     }
 
     async function drainInput() {
