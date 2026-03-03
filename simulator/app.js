@@ -561,8 +561,8 @@ function updateInfoDisplay() {
         <div class="info-item"><span class="info-label">Address Space</span><span class="info-value">Unified: Memory (0x00-FD) | Devices (0xFE) | Registers (0xFF) \u2014 all GT-protected</span></div>
         <div class="info-item"><span class="info-label">Golden Tokens</span><span class="info-value">32-bit: Version(7) | Index(17) | Perms(6) | Type(2)</span></div>
         <div class="info-item"><span class="info-label">Security Gates</span><span class="info-value">mLoad (R\u2192DREAD, W\u2192DWRITE, X\u2192LAMBDA, L\u2192LOAD, S\u2192SAVE, E\u2192CALL) + mSave (Version, Seal, Bounds, B-bit, F-bit)</span></div>
-        <div class="info-item"><span class="info-label">Safe Abstractions</span><span class="info-value">Turing hidden inside Church-callable entries \u2014 CALL in, RETURN out, atomic</span></div>
-        <div class="info-item"><span class="info-label">Abstraction Layers</span><span class="info-value">9 layers, ${abstractionRegistry ? abstractionRegistry.count() : 46} abstractions (Boot, System, Hardware, Math, Lambda, Social, IDE, Internet, GC)</span></div>
+        <div class="info-item"><span class="info-label">Security Blocks</span><span class="info-value">Each abstraction is a security block with MTBF \u2014 Turing hidden inside Church-callable entries, CALL in, RETURN out, atomic</span></div>
+        <div class="info-item"><span class="info-label">Abstraction Layers</span><span class="info-value">9 layers, ${abstractionRegistry ? abstractionRegistry.count() : 45} abstractions (Boot, System, Hardware, Math, Lambda Calculus, Social, IDE, Internet, GC)</span></div>
     `;
 }
 
@@ -752,6 +752,11 @@ function showAbstractionDetail(index) {
     if (abs.handler) {
         html += `<tr><td>Handler</td><td>${abs.handler}</td></tr>`;
     }
+    const faults = abs.faultCount || 0;
+    const mtbf = (abstractionRegistry && faults > 0) ? abstractionRegistry.getMTBF(abs.index) : Infinity;
+    const mtbfStr = mtbf === Infinity ? '\u221e (no faults)' : `${(mtbf / 1000).toFixed(1)}s`;
+    html += `<tr><td>Fault Count</td><td>${faults}</td></tr>`;
+    html += `<tr><td>MTBF</td><td>${mtbfStr}</td></tr>`;
     html += '</tbody></table>';
     html += '</div>';
 
@@ -830,7 +835,6 @@ function getMethodPurposes(abs) {
         'Abacus': { 'Add': 'Integer add', 'Sub': 'Integer subtract', 'Mul': 'Integer multiply', 'Div': 'Integer divide', 'Mod': 'Modulo', 'Abs': 'Absolute value' },
         'Constants': { 'Pi': 'Return \u03c0', 'E': 'Return e', 'Phi': 'Return \u03c6', 'Zero': 'Return 0', 'One': 'Return 1' },
         'Circle': { 'Area': 'Circle area (delegates trig to SlideRule)', 'Circumference': 'Circle circumference' },
-        'Lambda': { 'Apply': 'Apply function', 'Compose': 'Compose functions', 'Curry': 'Curry function' },
         'Family': { 'Register': 'Register parent-child bond', 'Hello': 'Hello(target_GT) \u2014 send greeting/request to any family member via their GT', 'Oversight': 'Query child activity' },
         'Schoolroom': { 'Join': 'Student joins class', 'Lesson': 'Teacher posts lesson', 'Submit': 'Student submits work', 'Grade': 'Teacher grades work' },
         'Friends': { 'Request': 'Send friend request', 'Accept': 'Accept friend request', 'Share': 'Share capability with friend', 'Revoke': 'Revoke shared capability' },
@@ -1066,25 +1070,25 @@ function loadExample(name) {
 ; ============================================
 
 ; --- TEST 1: LOAD into CR0-CR5 ---
-; Load 6 different abstractions via C-List
-LOAD CR0, CR6, 4       ; CR0 = Lambda  (E)
-LOAD CR1, CR6, 10      ; CR1 = SUCC    (LE)
-LOAD CR2, CR6, 12      ; CR2 = ADD     (LE)
-LOAD CR3, CR6, 13      ; CR3 = SUB     (LE)
-LOAD CR4, CR6, 14      ; CR4 = MUL     (LE)
+; Load 6 different abstractions via C-List (code objects are DATA domain)
+LOAD CR0, CR6, 4       ; CR0 = Salvation (E)
+LOAD CR1, CR6, 10      ; CR1 = SUCC    (XLE)
+LOAD CR2, CR6, 12      ; CR2 = ADD     (XLE)
+LOAD CR3, CR6, 13      ; CR3 = SUB     (XLE)
+LOAD CR4, CR6, 14      ; CR4 = MUL     (XLE)
 LOAD CR5, CR6, 7       ; CR5 = Constants (E)
 
 ; --- TEST 2: TPERM - permission checks ---
 ; Each should set Z=1 (pass)
-TPERM CR0, E           ; Lambda has E? PASS
-TPERM CR1, LE          ; SUCC has L+E? PASS
-TPERM CR2, LE          ; ADD has L+E? PASS
-TPERM CR3, LE          ; SUB has L+E? PASS
-TPERM CR4, LE          ; MUL has L+E? PASS
+TPERM CR0, E           ; Salvation has E? PASS
+TPERM CR1, XL          ; SUCC has X+L? PASS
+TPERM CR2, XL          ; ADD has X+L? PASS
+TPERM CR3, XL          ; SUB has X+L? PASS
+TPERM CR4, XL          ; MUL has X+L? PASS
 TPERM CR5, E           ; Constants has E? PASS
 
 ; --- TEST 3: TPERM failure ---
-TPERM CR0, L           ; Lambda has L? FAIL (Z=0)
+TPERM CR0, L           ; Salvation has L? FAIL (Z=0)
 
 ; --- TEST 4: Conditional execution ---
 ; Z=0 from failed TPERM above
@@ -1093,11 +1097,12 @@ LOADNE CR0, CR6, 4     ; EXEC (Z=0, is not-equal)
 
 ; --- TEST 5: SWITCH - swap registers ---
 SWITCH CR0, 1          ; CR0 <-> CR1
-; Now CR0=SUCC, CR1=Lambda
+; Now CR0=SUCC, CR1=Salvation
 SWITCH CR0, 1          ; Swap back
-; CR0=Lambda, CR1=SUCC again
+; CR0=Salvation, CR1=SUCC again
 
-; --- TEST 6: LAMBDA - in-scope reduction ---
+; --- TEST 6: LAMBDA instruction - in-scope reduction ---
+; LAMBDA is an instruction, not a security block
 LAMBDA CR1             ; Church SUCC reduction
 LAMBDA CR2             ; Church ADD reduction
 LAMBDA CR3             ; Church SUB reduction
@@ -1108,70 +1113,70 @@ CHANGE CR0, 16         ; CR0 now -> SlideRule
 TPERM CR0, E           ; SlideRule has E? PASS
 
 ; --- TEST 8: CALL/RETURN ---
-LOAD CR0, CR6, 4       ; CR0 = Lambda
-CALL CR0               ; Push frame, enter Lambda
+LOAD CR0, CR6, 4       ; CR0 = Salvation
+CALL CR0               ; Push frame, enter Salvation
 RETURN CR0             ; Pop frame, return to next
 
 ; --- TEST 9: ELOADCALL - fused Load+TPERM+Call ---
-ELOADCALL CR0, CR6, 4  ; Load Lambda + check E + call
+ELOADCALL CR0, CR6, 4  ; Load Salvation + check E + call
 RETURN CR0             ; Return from fused call
 
 ; --- TEST 10: XLOADLAMBDA - fused Load+TPERM+Lambda ---
-XLOADLAMBDA CR1, CR6, 10 ; Load SUCC + check + lambda
+XLOADLAMBDA CR1, CR6, 10 ; Load SUCC + check X + lambda
 
 ; --- TEST 11: Conditional LAMBDA ---
-TPERM CR1, LE          ; Z=1 (SUCC has LE)
-LAMBDAEQ CR2           ; Lambda ADD only if Z=1
-TPERM CR0, L           ; Z=0 (Lambda lacks L)
-LAMBDANE CR3           ; Lambda SUB only if Z=0 (NE)
+TPERM CR1, XL          ; Z=1 (SUCC has XL)
+LAMBDAEQ CR2           ; Apply ADD via LAMBDA only if Z=1
+TPERM CR0, L           ; Z=0 (Salvation lacks L)
+LAMBDANE CR3           ; Apply SUB via LAMBDA only if Z=0 (NE)
 LAMBDAEQ CR4           ; SKIP MUL (Z=0, not EQ)
 
 ; --- All tests complete ---
 HALT
 `,
         'load_save': `; Load and Save example
-; Load Lambda abstraction into CR0 from C-List[CR6]
-LOAD CR0, CR6, 4       ; CR0 = Lambda (ns index 4)
-TPERM CR0, E           ; Check E permission
-LOAD CR1, CR6, 10      ; CR1 = SUCC
-TPERM CR1, LE          ; Check L+E
-CALL CR0               ; Enter Lambda
+; Load SUCC from C-List[CR6] — SUCC is a DATA-domain code object
+LOAD CR0, CR6, 4       ; CR0 = SUCC (Church numeral)
+TPERM CR0, XL          ; Check X+L permissions
+LOAD CR1, CR6, 5       ; CR1 = ADD
+TPERM CR1, XL          ; Check X+L
+LAMBDA CR0             ; Apply SUCC via LAMBDA instruction
 RETURN CR0             ; Return
 `,
         'bernoulli': `; Bernoulli - simplified Church sequence
-; Load core abstractions
-LOAD CR0, CR6, 4       ; Lambda
-LOAD CR1, CR6, 12      ; ADD
-LOAD CR2, CR6, 14      ; MUL
-LOAD CR3, CR6, 15      ; DIV
-LOAD CR4, CR6, 10      ; SUCC
+; Load Church numeral abstractions (DATA-domain code objects)
+LOAD CR0, CR6, 4       ; SUCC
+LOAD CR1, CR6, 6       ; ADD
+LOAD CR2, CR6, 8       ; MUL
+LOAD CR3, CR6, 9       ; DIV (via SlideRule)
+LOAD CR4, CR6, 5       ; PRED
 
-; Verify permissions on all
-TPERM CR0, E           ; Lambda enter
-TPERM CR1, LE          ; ADD load+enter
-TPERM CR2, LE          ; MUL load+enter
-TPERM CR3, LE          ; DIV load+enter
-TPERM CR4, LE          ; SUCC load+enter
+; Verify permissions on all (X for LAMBDA application)
+TPERM CR0, XL          ; SUCC check
+TPERM CR1, XL          ; ADD check
+TPERM CR2, XL          ; MUL check
+TPERM CR3, XL          ; DIV check
+TPERM CR4, XL          ; PRED check
 
-; Execute reductions
+; Execute reductions via LAMBDA instruction (method within abstractions)
 LAMBDA CR1             ; Church ADD
 LAMBDA CR2             ; Church MUL
 LAMBDA CR3             ; Church DIV
-LAMBDA CR4             ; Church SUCC
+LAMBDA CR0             ; Church SUCC
 
 ; Return result
 RETURN CR0
 `,
         'conditional': `; Conditional execution demo
-LOAD CR0, CR6, 4       ; Load Lambda
-TPERM CR0, E           ; Check \u2014 sets Z=1 (pass)
+LOAD CR0, CR6, 4       ; Load SUCC (Church numeral)
+TPERM CR0, XL          ; Check \u2014 sets Z=1 (pass)
 
 ; This executes only if Z=1 (TPERM passed)
-LOADEQ CR1, CR6, 12    ; Load ADD only if equal (Z=1)
-LAMBDAEQ CR1           ; Lambda only if equal
+LOADEQ CR1, CR6, 6     ; Load ADD only if equal (Z=1)
+LAMBDAEQ CR1           ; Apply ADD via LAMBDA only if equal
 
 ; This would skip if Z=0 (TPERM failed)
-LOADNE CR2, CR6, 13    ; Load SUB only if not-equal (Z=0)
+LOADNE CR2, CR6, 7     ; Load SUB only if not-equal (Z=0)
 
 RETURN CR0
 `,
@@ -1189,15 +1194,15 @@ RETURN CR0
 ; ============================================
 
 ; --- Load subset into CRs (survivors) ---
-LOAD CR0, CR6, 4       ; CR0 = Lambda    (E)
+LOAD CR0, CR6, 4       ; CR0 = Salvation  (E)
 LOAD CR1, CR6, 10      ; CR1 = SUCC      (XLE)
 LOAD CR2, CR6, 8       ; CR2 = Stack     (E)
 LOAD CR3, CR6, 12      ; CR3 = ADD       (XLE)
 LOAD CR4, CR6, 7       ; CR4 = Constants (E)
 
 ; --- Verify permissions ---
-TPERM CR0, E           ; Lambda has E? PASS
-TPERM CR1, LE          ; SUCC has L+E? PASS
+TPERM CR0, E           ; Salvation has E? PASS
+TPERM CR1, XL          ; SUCC has X+L? PASS
 TPERM CR2, E           ; Stack has E? PASS
 TPERM CR3, LE          ; ADD has L+E? PASS
 TPERM CR4, E           ; Constants has E? PASS
@@ -1520,9 +1525,9 @@ function loadEditorState() {
 ; All instructions support ARM-style condition suffixes
 ;
 ; Load an abstraction and verify its permissions
-LOAD CR0, CR6, 4       ; Load Lambda abstraction
-TPERM CR0, E           ; Verify E (enter) permission
-LAMBDA CR0             ; Church reduction
+LOAD CR0, CR6, 4       ; Load SUCC (Church numeral, DATA-domain code object)
+TPERM CR0, XL          ; Verify X+L permissions
+LAMBDA CR0             ; Apply via LAMBDA instruction
 RETURN CR0             ; Return result
 `;
         }

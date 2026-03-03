@@ -302,14 +302,19 @@ class ChurchREPL {
     _nsIndex(name) {
         const map = {
             'Boot.NS': 0, 'Boot.Thread': 1, 'Boot.CList': 2,
-            'Boot.Abstraction': 3, 'Boot.CLOOMC': 4,
-            'Lambda': 5, 'SlideRule': 6,
-            'Abacus': 7, 'Constants': 8, 'Stack': 9,
-            'Threads': 10, 'SUCC': 11, 'PRED': 12, 'ADD': 13, 'SUB': 14,
-            'MUL': 15, 'DIV': 16, 'POW': 17, 'SQRT': 18,
-            'LOG': 19, 'EXP': 20, 'ISZERO': 21, 'LEQ': 22,
-            'TRUE': 23, 'FALSE': 24, 'PAIR': 25, 'FST': 26, 'SND': 27,
-            'GC': 28,
+            'Boot.CLOOMC': 3, 'Salvation': 4, 'Navana': 5,
+            'Mint': 6, 'Memory': 7, 'Scheduler': 8, 'Stack': 9,
+            'DijkstraFlag': 10, 'UART': 11, 'LED': 12, 'Button': 13,
+            'Timer': 14, 'Display': 15, 'SlideRule': 16, 'Abacus': 17,
+            'Constants': 18, 'Circle': 19,
+            'SUCC': 20, 'PRED': 21, 'ADD': 22, 'SUB': 23,
+            'MUL': 24, 'ISZERO': 25, 'TRUE': 26, 'FALSE': 27,
+            'Family': 28, 'Schoolroom': 29, 'Friends': 30,
+            'Tunnel': 31, 'Negotiate': 32,
+            'Editor': 33, 'Assembler': 34, 'Debugger': 35, 'Deployer': 36,
+            'Browser': 37, 'Messenger': 38, 'Photos': 39,
+            'Social': 40, 'Video': 41, 'Email': 42,
+            'PAIR': 43, 'GC': 44,
         };
         return map[name] !== undefined ? map[name] : '?';
     }

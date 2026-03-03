@@ -2,13 +2,14 @@
 
 ## Canonical Form
 
-Every abstraction in the Church Machine follows the same structure:
+Every abstraction in the Church Machine is a **security block** — a protected unit of functionality with measurable reliability.
 
-- **Namespace entry** — Has a c-list (CR6 target) and code (CR7 target at c-list[0])
-- **Entry** — Via CALL (E-GT) or application via LAMBDA (X-GT)
+- **Namespace entry** — Has a c-list (CR6 target) and code (CR7 target at c-list[0]). The code object is a DATA-domain entity — never Church domain.
+- **Entry** — Via CALL (E-GT). LAMBDA (X-GT) is a method/instruction within abstractions, not a separate security block.
+- **MTBF** — Mean Time Between Failures, measured by fault reports over time in the namespace. Every fault against a security block is counted. The MTBF ratio provides continuous reliability measurement.
 - **Method dispatch** — Symbolic dispatch (high-security), LAMBDA fast-path (performance), or compiled binary (fastest)
 
-There is no operating system. Every system service, hardware driver, and user-facing tool is an abstraction accessed through Golden Tokens. The same security model applies at every level — from boot firmware to social networking.
+There is no operating system. Every system service, hardware driver, and user-facing tool is a security block accessed through Golden Tokens. The same security model applies at every level — from boot firmware to social networking. A code object belongs to the DATA domain — it is data stored in memory, accessed via X permission. Code is never a Church-domain capability.
 
 ## Polymorphic Interface
 
@@ -200,34 +201,28 @@ Geometry via SlideRule — delegates trigonometric calculations to SlideRule. Co
 
 ## Layer 4 — Lambda Calculus
 
-Pure Church domain abstractions implementing lambda calculus primitives.
+Church numeral DATA-domain code objects. LAMBDA is not a security block — it exists as an instruction and method within abstractions. The Church Numerals are the security blocks that implement lambda calculus primitives. Their code objects are DATA-domain entities accessed via X permission.
 
-### 20 — Lambda
-
-**Methods**: Apply, Compose, Curry
-
-Core reduction engine. Apply performs beta reduction. Compose combines two functions. Curry transforms a multi-argument function.
-
-### 21–28 — Church Numerals
+### 20–27 — Church Numerals
 
 | Index | Name | Description |
 |-------|------|-------------|
-| 21 | SUCC | Successor function — adds 1 |
-| 22 | PRED | Predecessor function — subtracts 1 |
-| 23 | ADD | Addition of Church numerals |
-| 24 | SUB | Subtraction of Church numerals |
-| 25 | MUL | Multiplication of Church numerals |
-| 26 | ISZERO | Zero test — returns TRUE or FALSE |
-| 27 | TRUE | Boolean true (Church encoding: lambda x.lambda y.x) |
-| 28 | FALSE | Boolean false (Church encoding: lambda x.lambda y.y) |
+| 20 | SUCC | Successor function — adds 1 |
+| 21 | PRED | Predecessor function — subtracts 1 |
+| 22 | ADD | Addition of Church numerals |
+| 23 | SUB | Subtraction of Church numerals |
+| 24 | MUL | Multiplication of Church numerals |
+| 25 | ISZERO | Zero test — returns TRUE or FALSE |
+| 26 | TRUE | Boolean true (Church encoding: lambda x.lambda y.x) |
+| 27 | FALSE | Boolean false (Church encoding: lambda x.lambda y.y) |
 
-### 44 — PAIR
+### 43 — PAIR
 
 **Methods**: Apply
 
 Church pair constructor (lambda x.lambda y.lambda f.f x y). Used to build data structures in pure lambda calculus.
 
-**Rationale**: Church numerals prove that the machine is computationally complete using only lambda calculus — zero Turing-domain instructions. Every number, boolean, and data structure can be encoded as a pure function.
+**Rationale**: Church numerals prove that the machine is computationally complete using only lambda calculus — zero Turing-domain instructions. Every number, boolean, and data structure can be encoded as a pure function. LAMBDA is applied via the LAMBDA instruction — it is a method/operation, not a standalone security block.
 
 ---
 
@@ -235,7 +230,7 @@ Church pair constructor (lambda x.lambda y.lambda f.f x y). Used to build data s
 
 Networking and oversight capabilities for multi-user environments.
 
-### 29 — Family
+### 28 — Family
 
 **Methods**: Register, Hello, Oversight
 
@@ -247,25 +242,25 @@ Parent-child capability binding. Parent's namespace is the root; each child name
 
 **Namespace isolation**: Each sibling has their own namespace (CR15 points to a distinct NS root). Parent holds S permission on each child's namespace. Siblings cannot see each other's namespaces unless the parent explicitly grants cross-sibling GTs.
 
-### 30 — Schoolroom
+### 29 — Schoolroom
 
 **Methods**: Join, Lesson, Submit, Grade
 
 Teacher distributes lessons as DATA objects. Students submit work. Grade returns assessment. All operations are GT-gated — a student can only access lessons the teacher has granted.
 
-### 31 — Friends
+### 30 — Friends
 
 **Methods**: Request, Accept, Share, Revoke
 
 Peer-to-peer capability sharing, parent-gated. Request sends a friendship proposal (requires parent approval via Negotiate). Accept/Revoke manage the relationship. Share transfers a GT to a friend (subject to parent's S permission).
 
-### 32 — Tunnel
+### 31 — Tunnel
 
 **Methods**: Connect, Send, Receive, Close
 
 Outform GT encrypted tunnel for F-bit networking. Connect establishes a tunnel to a remote namespace. Send/Receive exchange data. Close terminates the connection.
 
-### 33 — Negotiate
+### 32 — Negotiate
 
 **Methods**: Propose, Approve, Reject, Status
 
@@ -285,25 +280,25 @@ Dual-approval protocol for special grants:
 
 Development tools as first-class abstractions.
 
-### 34 — Editor
+### 33 — Editor
 
 **Methods**: Open, Save, Load, Undo
 
 Code editor managing source text as a DATA object in the namespace.
 
-### 35 — Assembler
+### 34 — Assembler
 
 **Methods**: Assemble, Disassemble, Validate
 
 Translates assembly source to machine code. Validate checks syntax without generating output. Disassemble converts binary back to mnemonics.
 
-### 36 — Debugger
+### 35 — Debugger
 
 **Methods**: Step, Run, Breakpoint, Inspect
 
 Single-step debugger with register and memory inspection. Breakpoint sets a halt condition. Inspect reads any register or memory location (subject to GT permissions).
 
-### 37 — Deployer
+### 36 — Deployer
 
 **Methods**: Build, Upload, Verify, Boot
 
@@ -321,12 +316,12 @@ Each approved external resource is an Outform+Far GT pointing to that resource v
 
 | Index | Name | Methods | Description |
 |-------|------|---------|-------------|
-| 38 | Browser | Navigate, Back, Bookmark, Search | Web browsing — only parent-SAVEd site GTs are reachable |
-| 39 | Messenger | Send, Receive, Contacts, Block | Messaging — parent-approved contacts only |
-| 40 | Photos | View, Share, Upload, Album | Photo sharing — share targets limited to parent-SAVEd friend GTs |
-| 41 | Social | Post, Read, Follow, Feed | Social feed — only parent-SAVEd account GTs appear |
-| 42 | Video | Watch, Search, Playlist, Share | Video viewing — only parent-SAVEd channel GTs are watchable |
-| 43 | Email | Compose, Read, Reply, Contacts | Email — only parent-SAVEd email address GTs can be reached |
+| 37 | Browser | Navigate, Back, Bookmark, Search | Web browsing — only parent-SAVEd site GTs are reachable |
+| 38 | Messenger | Send, Receive, Contacts, Block | Messaging — parent-approved contacts only |
+| 39 | Photos | View, Share, Upload, Album | Photo sharing — share targets limited to parent-SAVEd friend GTs |
+| 40 | Social | Post, Read, Follow, Feed | Social feed — only parent-SAVEd account GTs appear |
+| 41 | Video | Watch, Search, Playlist, Share | Video viewing — only parent-SAVEd channel GTs are watchable |
+| 42 | Email | Compose, Read, Reply, Contacts | Email — only parent-SAVEd email address GTs can be reached |
 
 **Revocation model**: Every GT carries a 7-bit version. Parent revokes via Mint.Revoke — version increment instantly invalidates every outstanding copy. Revocation is instant, global, and unforgeable.
 
@@ -334,7 +329,7 @@ Each approved external resource is an Outform+Far GT pointing to that resource v
 
 ## Layer 8 — Garbage Collection
 
-### 45 — GC
+### 44 — GC
 
 **Methods**: Scan, Identify, Clear, Flip
 

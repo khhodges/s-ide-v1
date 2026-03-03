@@ -16,7 +16,10 @@ class AbstractionRegistry {
             perms: options.perms || { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 },
             chainable: options.chainable || false,
             handler: options.handler || null,
-            dispatch: {}
+            dispatch: {},
+            faultCount: 0,
+            firstActiveTime: null,
+            lastFaultTime: null
         };
 
         for (const m of methods) {
@@ -54,9 +57,32 @@ class AbstractionRegistry {
             result: {
                 index: a.index, name: a.name, layer: a.layer,
                 methods: a.methods, description: a.description,
-                perms: a.perms, chainable: a.chainable
+                perms: a.perms, chainable: a.chainable,
+                faultCount: a.faultCount,
+                mtbf: this.getMTBF(index)
             }
         };
+    }
+
+    reportFault(index) {
+        const a = this.abstractions[index];
+        if (!a) return;
+        a.faultCount++;
+        a.lastFaultTime = Date.now();
+        if (!a.firstActiveTime) a.firstActiveTime = Date.now();
+    }
+
+    activate(index) {
+        const a = this.abstractions[index];
+        if (!a) return;
+        if (!a.firstActiveTime) a.firstActiveTime = Date.now();
+    }
+
+    getMTBF(index) {
+        const a = this.abstractions[index];
+        if (!a || !a.firstActiveTime || a.faultCount === 0) return Infinity;
+        const uptimeMs = Date.now() - a.firstActiveTime;
+        return uptimeMs / a.faultCount;
     }
 
     bindMethod(index, methodName, fn) {
@@ -134,7 +160,7 @@ class AbstractionRegistry {
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(3, 'Boot.CLOOMC', 0, [],
-            'Boot code entry point (CR7)',
+            'Boot code entry point (CR7) — code is a DATA-domain object, accessed via X permission',
             { perms: { R: 0, W: 0, X: 1, L: 0, S: 0, E: 0 } });
 
         this.createAbstraction(4, 'Salvation', 1,
@@ -217,20 +243,15 @@ class AbstractionRegistry {
             'Geometry via SlideRule — delegates trig to SlideRule, computes area and circumference',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(20, 'Lambda', 4,
-            ['Apply', 'Compose', 'Curry'],
-            'Core reduction engine',
-            { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
-
         const churchNumerals = [
-            [21, 'SUCC', 'Successor function'],
-            [22, 'PRED', 'Predecessor function'],
-            [23, 'ADD', 'Addition'],
-            [24, 'SUB', 'Subtraction'],
-            [25, 'MUL', 'Multiplication'],
-            [26, 'ISZERO', 'Zero test'],
-            [27, 'TRUE', 'Boolean true'],
-            [28, 'FALSE', 'Boolean false'],
+            [20, 'SUCC', 'Successor function'],
+            [21, 'PRED', 'Predecessor function'],
+            [22, 'ADD', 'Addition'],
+            [23, 'SUB', 'Subtraction'],
+            [24, 'MUL', 'Multiplication'],
+            [25, 'ISZERO', 'Zero test'],
+            [26, 'TRUE', 'Boolean true'],
+            [27, 'FALSE', 'Boolean false'],
         ];
 
         for (const [idx, name, desc] of churchNumerals) {
@@ -241,87 +262,87 @@ class AbstractionRegistry {
                 { perms: { R: 0, W: 0, X: 1, L: 1, S: 0, E: 1 } });
         }
 
-        this.createAbstraction(29, 'Family', 5,
+        this.createAbstraction(28, 'Family', 5,
             ['Register', 'Hello', 'Oversight'],
             'Parent-child capability binding — Hello(target_GT) sends greeting/request to any family member via their GT',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(30, 'Schoolroom', 5,
+        this.createAbstraction(29, 'Schoolroom', 5,
             ['Join', 'Lesson', 'Submit', 'Grade'],
             'Teacher distributes lessons, students submit work',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(31, 'Friends', 5,
+        this.createAbstraction(30, 'Friends', 5,
             ['Request', 'Accept', 'Share', 'Revoke'],
             'Peer-to-peer capability sharing, parent-gated',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(32, 'Tunnel', 5,
+        this.createAbstraction(31, 'Tunnel', 5,
             ['Connect', 'Send', 'Receive', 'Close'],
             'Outform GT encrypted tunnel (F-bit networking)',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(33, 'Negotiate', 5,
+        this.createAbstraction(32, 'Negotiate', 5,
             ['Propose', 'Approve', 'Reject', 'Status'],
             'Parent-teacher joint approval for special grants',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(34, 'Editor', 6,
+        this.createAbstraction(33, 'Editor', 6,
             ['Open', 'Save', 'Load', 'Undo'],
             'Code editor — manages source text as a DATA object',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(35, 'Assembler', 6,
+        this.createAbstraction(34, 'Assembler', 6,
             ['Assemble', 'Disassemble', 'Validate'],
             'Translates assembly to machine code',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(36, 'Debugger', 6,
+        this.createAbstraction(35, 'Debugger', 6,
             ['Step', 'Run', 'Breakpoint', 'Inspect'],
             'Single-step debugger with register/memory inspection',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(37, 'Deployer', 6,
+        this.createAbstraction(36, 'Deployer', 6,
             ['Build', 'Upload', 'Verify', 'Boot'],
             'Compiles + uploads to Tang via UART',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(38, 'Browser', 7,
+        this.createAbstraction(37, 'Browser', 7,
             ['Navigate', 'Back', 'Bookmark', 'Search'],
             'Web browser — child LOADs site GTs from c-list',
             { perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
 
-        this.createAbstraction(39, 'Messenger', 7,
+        this.createAbstraction(38, 'Messenger', 7,
             ['Send', 'Receive', 'Contacts', 'Block'],
             'Messaging — parent-approved contacts',
             { perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
 
-        this.createAbstraction(40, 'Photos', 7,
+        this.createAbstraction(39, 'Photos', 7,
             ['View', 'Share', 'Upload', 'Album'],
             'Photo sharing — child LOADs recipient GTs',
             { perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
 
-        this.createAbstraction(41, 'Social', 7,
+        this.createAbstraction(40, 'Social', 7,
             ['Post', 'Read', 'Follow', 'Feed'],
             'Social feed — child LOADs account GTs',
             { perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
 
-        this.createAbstraction(42, 'Video', 7,
+        this.createAbstraction(41, 'Video', 7,
             ['Watch', 'Search', 'Playlist', 'Share'],
             'Video viewing — child LOADs channel GTs',
             { perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
 
-        this.createAbstraction(43, 'Email', 7,
+        this.createAbstraction(42, 'Email', 7,
             ['Compose', 'Read', 'Reply', 'Contacts'],
             'Email — child LOADs contact GTs',
             { perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
 
-        this.createAbstraction(44, 'PAIR', 4,
+        this.createAbstraction(43, 'PAIR', 4,
             ['Apply'],
             'Church pair constructor',
             { perms: { R: 0, W: 0, X: 1, L: 1, S: 0, E: 1 } });
 
-        this.createAbstraction(45, 'GC', 8,
+        this.createAbstraction(44, 'GC', 8,
             ['Scan', 'Identify', 'Clear', 'Flip'],
             'PP250 deterministic GC with bidirectional G-bit',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 }, handler: 'gc' });

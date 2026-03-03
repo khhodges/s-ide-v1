@@ -217,7 +217,7 @@ class SystemAbstractions {
             }
             if (freeIdx === -1) {
                 for (let i = 0; i < sim.nsCount; i++) {
-                    if (!sim.isNSEntryValid(i) && i >= 46) {
+                    if (!sim.isNSEntryValid(i) && i >= 45) {
                         freeIdx = i;
                         break;
                     }

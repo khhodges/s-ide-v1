@@ -188,7 +188,6 @@ class ChurchSimulator {
             { label: 'Abacus',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
             { label: 'Constants',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'Circle',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Lambda',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'SUCC',          perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
             { label: 'PRED',          perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
             { label: 'ADD',           perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
@@ -767,6 +766,13 @@ class ChurchSimulator {
         this.output += `FAULT [${type}] at PC=${this.pc}: ${message}\n`;
         this.halted = true;
         this.running = false;
+        if (this.abstractionRegistry) {
+            const idxMatch = message.match(/(?:entry|index|slot|CR)\s*(\d+)/i);
+            if (idxMatch) {
+                const idx = parseInt(idxMatch[1]);
+                if (idx < 45) this.abstractionRegistry.reportFault(idx);
+            }
+        }
         this.emit('fault', entry);
         this.emit('output', this.output);
     }
@@ -999,6 +1005,7 @@ class ChurchSimulator {
         if (this.abstractionRegistry) {
             const abstraction = this.abstractionRegistry.getAbstraction(check.index);
             if (abstraction && abstraction.methods.length > 0) {
+                this.abstractionRegistry.activate(check.index);
                 this._writeCR(6, sourceGT, clistEntry);
                 return this._dispatchAbstraction(d, check, abstraction);
             }

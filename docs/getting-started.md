@@ -10,7 +10,7 @@ The Church Machine teaches computer security through direct experience. Students
 2. **Permission Models**: Six permission bits (R, W, X, L, S, E) control what operations are possible on each resource.
 3. **Revocation**: How to instantly revoke access across all copies of a token.
 4. **Domain Separation**: Why keeping data processing separate from security operations prevents entire classes of attacks.
-5. **Lambda Calculus**: How pure functions can perform computation (Church numerals, Boolean logic).
+5. **Lambda Calculus**: How pure functions can perform computation (Church numerals, Boolean logic). LAMBDA is an instruction/method within abstractions, not a standalone security block.
 
 ### Lesson Progression
 
@@ -31,7 +31,7 @@ The IDE has eight views, accessible via the toolbar:
 | **Dashboard** | Register inspection (CR0–CR15, DR0–DR15), machine state, flags |
 | **Code** | Assembly editor with syntax highlighting, examples, assemble/deploy |
 | **Namespace** | Browse all namespace entries with their GTs, versions, and permissions |
-| **Abstractions** | Catalog of all 46 abstractions across 9 layers |
+| **Abstractions** | Catalog of all 45 security blocks across 9 layers |
 | **Pipeline** | Visual 7-step security pipeline (mLoad validation) |
 | **Tutorial** | Guided lessons with explanations |
 | **REPL** | Lambda calculus interactive interpreter |

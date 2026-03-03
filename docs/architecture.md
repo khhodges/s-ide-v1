@@ -17,15 +17,18 @@ The instruction set is split into two domains:
 - **Church domain** (10 instructions): Capability manipulation — LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA, ELOADCALL, XLOADLAMBDA
 - **Turing domain** (10 instructions + shared RETURN): Data processing — DREAD, DWRITE, BFEXT, BFINS, MCMP, IADD, ISUB, BRANCH, SHL, SHR
 
-A code object belongs to exactly one domain. Church code cannot perform arithmetic; Turing code cannot manipulate capabilities. This separation is enforced in hardware.
+A code object (CLOOMC) belongs to the DATA domain — it is data stored in memory, accessed via X permission. Code is never a Church-domain entity. The Church domain handles capabilities (GTs, c-lists); the Turing domain handles computation. A code object may contain Church instructions or Turing instructions, but the object itself is always data. This separation is enforced in hardware.
 
-### Atomic Abstractions
+### Abstractions as Security Blocks
 
-System services are not OS calls — they are namespace entries accessed via Golden Tokens. Each abstraction has:
+An abstraction is a security block — a protected unit of functionality with measurable reliability. Each abstraction has:
 
 - A c-list (CR6 target) containing its capabilities
-- Code (CR7 target at c-list[0]) implementing its methods
-- Entry via CALL (E-GT) or application via LAMBDA (X-GT)
+- Code (CR7 target at c-list[0]) — a DATA-domain object implementing its methods
+- Entry via CALL (E-GT); LAMBDA (X-GT) is a method within abstractions, not a separate security block
+- MTBF (Mean Time Between Failures) measured by fault reports over time in the namespace
+
+Abstractions are not OS calls — they are namespace entries accessed via Golden Tokens. Every fault against an abstraction is counted and tracked. The abstraction's MTBF is the ratio of uptime to fault count, providing a continuous reliability measure for each security block in the namespace.
 
 ### Polymorphic Abstraction Interface
 

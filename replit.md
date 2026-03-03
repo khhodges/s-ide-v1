@@ -19,7 +19,7 @@ church_sim/        — Original simulator (reference, ported to simulator/)
 
 - [README.md](../README.md) — Project overview and quick start
 - [docs/architecture.md](../docs/architecture.md) — System design, GT format, security pipeline, memory map
-- [docs/abstractions.md](../docs/abstractions.md) — Complete catalog of all 46 abstractions across 9 layers
+- [docs/abstractions.md](../docs/abstractions.md) — Complete catalog of all 45 abstractions across 9 layers
 - [docs/instruction-set.md](../docs/instruction-set.md) — All 20 instructions with encoding, syntax, and examples
 - [docs/tang-nano-20k.md](../docs/tang-nano-20k.md) — FPGA target, pin assignments, build toolchain
 - [docs/getting-started.md](../docs/getting-started.md) — Tutorial for educators, students, parents, and developers
@@ -28,31 +28,32 @@ church_sim/        — Original simulator (reference, ported to simulator/)
 
 ### Abstraction Model (Scale-Free)
 
-Every abstraction follows the canonical CR6/CR7 form:
+Every abstraction is a security block with MTBF measured by fault reports over time in a namespace:
 - CR6 → c-list (capability list)
-- CR7 → code at c-list[0] (CLOOMC)
-- Entered via CALL (E-GT) or LAMBDA (X-GT)
+- CR7 → code at c-list[0] (CLOOMC) — code is DATA domain, never Church domain
+- Entered via CALL (E-GT); LAMBDA is a method/instruction within abstractions, not a separate security block
 
-46 abstractions across 9 layers:
+45 abstractions across 9 layers:
 - Layer 0: Boot (NS, Thread, CList, CLOOMC)
 - Layer 1: System Services (Salvation, Navana, Mint, Memory, Scheduler, Stack, DijkstraFlag)
 - Layer 2: Hardware Attachments (UART, LED, Button, Timer, Display) — L/S/E only, NO R/W
 - Layer 3: Mathematics (SlideRule [incl. trig/angles], Abacus, Constants, Circle)
-- Layer 4: Lambda Calculus (Lambda, Church Numerals, PAIR)
-- Layer 5: Social (Family [Hello(GT)], Schoolroom, Friends, Tunnel, Negotiate)
-- Layer 6: IDE (Editor, Assembler, Debugger, Deployer)
-- Layer 7: Internet (Browser, Messenger, Photos, Social, Video, Email)
-- Layer 8: Garbage Collection (PP250 GC)
+- Layer 4: Lambda Calculus (Church Numerals 20-27, PAIR @43) — LAMBDA is NOT a security block
+- Layer 5: Social (Family [Hello(GT)] @28, Schoolroom @29, Friends @30, Tunnel @31, Negotiate @32)
+- Layer 6: IDE (Editor @33, Assembler @34, Debugger @35, Deployer @36)
+- Layer 7: Internet (Browser @37, Messenger @38, Photos @39, Social @40, Video @41, Email @42)
+- Layer 8: Garbage Collection (GC @44)
 
 Boot flow: Boot → CALL Salvation → Salvation transitions to Navana → Navana runs forever (no RETURN)
 Polymorphic interface: Every abstraction responds to create/destroy/call/inspect
+MTBF tracking: Every fault against a security block is counted; MTBF = uptime / fault count
 
 ### Security Model
 
 - Golden Tokens: 32-bit unforgeable capability tokens — Version(7) | Index(17) | Perms(6) | Type(2)
 - 6 permission bits: R (read), W (write), X (execute), L (load), S (save), E (enter)
 - mLoad 7-step pipeline: type check → version match → seal verify → bounds → perms → F-bit → deliver
-- Domain purity: Church (capabilities) and Turing (data) are separate and enforced in hardware
+- Domain purity: Church domain = capabilities (GTs, c-lists); DATA domain = code objects + data; code is NEVER Church domain
 - L/S Church domain controls capability grants — the c-list IS the parental approval
 - Version-based revocation: Mint.Revoke increments NS entry version, kills all GT copies instantly
 - Negotiate abstraction: dual-approval (parent+teacher) for special grants
