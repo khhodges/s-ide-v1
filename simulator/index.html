@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Church Machine IDE</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="fixed-toolbar">
+        <header>
+            <h1>Church Machine</h1>
+            <nav class="controls">
+                <div class="view-buttons">
+                    <button onclick="switchView('dashboard')" class="btn btn-view active" id="viewBtn-dashboard">Dashboard</button>
+                    <button onclick="switchView('editor')" class="btn btn-view" id="viewBtn-editor">Code</button>
+                    <button onclick="switchView('namespace')" class="btn btn-view" id="viewBtn-namespace">Namespace</button>
+                    <button onclick="switchView('abstractions')" class="btn btn-view" id="viewBtn-abstractions">Abstractions</button>
+                    <button onclick="switchView('pipeline')" class="btn btn-view" id="viewBtn-pipeline">Pipeline</button>
+                    <button onclick="switchView('tutorial')" class="btn btn-view" id="viewBtn-tutorial">Tutorial</button>
+                    <button onclick="switchView('repl')" class="btn btn-view" id="viewBtn-repl">REPL</button>
+                    <button onclick="switchView('reference')" class="btn btn-view" id="viewBtn-reference">Reference</button>
+                </div>
+                <div class="sim-controls">
+                    <button class="btn btn-success" onclick="stepSim()" title="Execute one instruction">Step</button>
+                    <button class="btn btn-success" onclick="runSim()" title="Run until halt or fault">Run</button>
+                    <button class="btn btn-warning" onclick="resetSim()" title="Reset machine">Reset</button>
+                </div>
+            </nav>
+        </header>
+    </div>
+
+    <div id="dashboard" class="view active">
+        <div id="flagsDisplay" class="flags-bar"></div>
+        <div class="dash-tabs">
+            <button onclick="switchDashTab('cr')" class="dash-tab active" id="dashTab-cr">Context Registers</button>
+            <button onclick="switchDashTab('dr')" class="dash-tab" id="dashTab-dr">Data Registers</button>
+            <button onclick="switchDashTab('state')" class="dash-tab" id="dashTab-state">Machine State</button>
+            <button onclick="switchDashTab('crdetail')" class="dash-tab" id="dashTab-crdetail" style="display:none;">CR Detail</button>
+        </div>
+        <div id="dashPanel-cr" class="dash-panel active">
+            <div class="panel">
+                <div class="panel-title">CR0-CR15 -- 128-bit Context Registers (4 x 32-bit words)</div>
+                <div id="crRegs"></div>
+            </div>
+        </div>
+        <div id="dashPanel-crdetail" class="dash-panel">
+            <div class="panel">
+                <div class="panel-title" id="crDetailTitle">CR Detail</div>
+                <div id="crDetailContent"></div>
+            </div>
+        </div>
+        <div id="dashPanel-dr" class="dash-panel">
+            <div class="panel">
+                <div class="panel-title">DR0-DR15 -- 32-bit Values (DR0 = zero)</div>
+                <div id="drRegs"></div>
+            </div>
+        </div>
+        <div id="dashPanel-state" class="dash-panel">
+            <div class="panel">
+                <div class="panel-title">Machine Architecture</div>
+                <div id="machineInfo"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="editor" class="view">
+        <div class="editor-layout">
+            <div class="editor-panel">
+                <div class="editor-toolbar">
+                    <button class="btn btn-primary" onclick="assembleAndLoad()" title="Assemble code and load into simulator">Assemble</button>
+                    <button class="btn btn-primary" onclick="showSaveToNamespace()" id="btnSaveNS" disabled title="Save assembled program to namespace">Save to NS</button>
+                    <button class="btn" onclick="runGC()" style="background:#9b59b6;color:#fff;border:none;" title="Run PP250 garbage collection">Run GC</button>
+                    <button class="btn btn-deploy" onclick="downloadHardwareImage()" title="Download binary for Tang Nano 20K">Download .bin</button>
+                    <button class="btn btn-deploy" onclick="uploadToTang()" title="Upload to Tang Nano 20K via WebSerial">Deploy to Tang</button>
+                </div>
+                <div class="example-tabs-row">
+                    <button class="example-arrow" onclick="scrollExamples(-1)">&lsaquo;</button>
+                    <div class="example-tabs-scroll" id="exampleTabsScroll">
+                        <button class="example-tab active" onclick="loadExample('selftest')" data-example="selftest">Self-Test</button>
+                        <button class="example-tab" onclick="loadExample('load_save')" data-example="load_save">Load/Save</button>
+                        <button class="example-tab" onclick="loadExample('bernoulli')" data-example="bernoulli">Bernoulli</button>
+                        <button class="example-tab" onclick="loadExample('conditional')" data-example="conditional">Conditional</button>
+                        <button class="example-tab" onclick="loadExample('gc_test')" data-example="gc_test">GC Test</button>
+                        <button class="example-tab" onclick="loadExample('turing_test')" data-example="turing_test">Turing ISA</button>
+                        <button class="example-tab" onclick="loadExample('salvation')" data-example="salvation" style="color:#4ade80;">Salvation</button>
+                        <button class="example-tab" onclick="loadExample('perm_attack')" data-example="perm_attack" style="color:#f87171;">Perm Attack</button>
+                        <button class="example-tab" onclick="loadExample('bind_attack')" data-example="bind_attack" style="color:#f87171;">Bind Attack</button>
+                    </div>
+                    <button class="example-arrow" onclick="scrollExamples(1)">&rsaquo;</button>
+                </div>
+                <div class="code-editor-wrap">
+                    <div class="line-numbers" id="lineNumbers"></div>
+                    <textarea id="asmEditor" spellcheck="false" wrap="off"></textarea>
+                </div>
+            </div>
+            <div class="editor-panel console-panel">
+                <div class="panel-title">Console Output</div>
+                <div id="editorConsole">Ready. Write Church assembly and click Assemble.</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="namespace" class="view">
+        <div class="panel">
+            <div class="panel-title">Namespace Table -- Golden Token Entries</div>
+            <div class="ns-toolbar">
+                <button class="btn btn-primary btn-sm" onclick="exportAllNamespace()">Export All</button>
+                <button class="btn btn-primary btn-sm" onclick="importNamespaceFile()">Import</button>
+                <input type="file" id="nsImportFile" style="display:none;" accept=".json,.bin" onchange="handleNSImport(event)">
+            </div>
+            <div id="namespaceTable"></div>
+        </div>
+    </div>
+
+    <div id="abstractions" class="view">
+        <div class="abs-layout">
+            <div class="abs-list-panel">
+                <div class="panel">
+                    <div class="panel-title">Abstraction Catalog -- 9 Layers, 44 Abstractions</div>
+                    <div id="absLayerList"></div>
+                </div>
+            </div>
+            <div class="abs-detail-panel">
+                <div class="panel">
+                    <div class="panel-title" id="absDetailTitle">Select an abstraction</div>
+                    <div id="absDetailContent">
+                        <div class="abs-placeholder">Click any abstraction on the left to see its methods, permissions, and how it fits into the CR6/CR7 canonical form.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="pipeline" class="view">
+        <div class="panel">
+            <div id="pipelineContainer"></div>
+        </div>
+    </div>
+
+    <div id="tutorial" class="view">
+        <div id="tutorialView"></div>
+    </div>
+
+    <div id="repl" class="view">
+        <div class="repl-layout">
+            <div class="repl-panel">
+                <div class="panel-title">Church Computer REPL -- Symbolic Mathematics</div>
+                <div id="replOutput">
+                    <div class="repl-info">Church Computer REPL -- Pure Lambda Calculus</div>
+                    <div class="repl-info">Type HELP for commands. Every operation goes through the 7-step security pipeline.</div>
+                    <div class="repl-info">===================================================</div>
+                </div>
+                <div class="repl-input-bar">
+                    <span class="repl-prompt">&#955;&gt;</span>
+                    <input type="text" id="replInput" placeholder="let n = succ(3)" onkeydown="replKeydown(event)">
+                    <button class="btn btn-primary" onclick="replExecute()">Enter</button>
+                </div>
+            </div>
+            <div class="repl-sidebar">
+                <div class="panel">
+                    <div class="panel-title">Quick Commands</div>
+                    <button class="btn" onclick="loadBernoulliInREPL()" style="width:100%;margin-bottom:0.5rem;">Run Bernoulli</button>
+                    <button class="btn" onclick="replExecute('HELP')" style="width:100%;margin-bottom:0.5rem;">Help</button>
+                    <button class="btn" onclick="replExecute('VARS')" style="width:100%;margin-bottom:0.5rem;">Show Variables</button>
+                    <button class="btn btn-warning" onclick="replExecute('CLEAR')" style="width:100%;">Clear All</button>
+                </div>
+                <div class="panel">
+                    <div class="panel-title">Architecture</div>
+                    <div class="arch-info">
+                        <strong>Church (10):</strong> LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA, ELOADCALL, XLOADLAMBDA<br><br>
+                        <strong>Turing (10):</strong> DREAD, DWRITE, BFEXT, BFINS, MCMP, IADD, ISUB, BRANCH, SHL, SHR + shared RETURN<br><br>
+                        <strong>Address Space:</strong> Memory (0x00-FD) | Devices (0xFE) | Registers (0xFF)<br><br>
+                        <strong>Golden Token:</strong><br>
+                        Version(7) | Index(17) | Perms(6) | Type(2)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reference" class="view">
+        <div class="ref-layout">
+            <div class="ref-list-panel">
+                <div class="panel">
+                    <div class="panel-title">Instruction Set -- 20 Instructions</div>
+                    <div class="instr-domain-header">Church Domain (10)</div>
+                    <div id="instrListChurch" class="instr-list"></div>
+                    <div class="instr-domain-header">Turing Domain (10 + shared RETURN)</div>
+                    <div id="instrListTuring" class="instr-list"></div>
+                </div>
+            </div>
+            <div class="ref-detail-panel">
+                <div class="panel">
+                    <div class="panel-title" id="instrDetailTitle">Select an instruction</div>
+                    <div id="instrDetailContent" class="instr-detail-content">
+                        <div class="instr-placeholder">Click any instruction on the left to see its format, encoding, permissions, flags, and usage examples.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="saveNSDialog" class="modal-overlay" style="display:none;">
+        <div class="modal-dialog">
+            <div class="modal-title">Save to Namespace</div>
+            <label class="modal-label">Namespace Slot:
+                <select id="saveNSSlot" class="modal-input" onchange="onSlotChange()"></select>
+            </label>
+            <label class="modal-label">Label:
+                <input type="text" id="saveNSLabel" class="modal-input" placeholder="MyCode">
+            </label>
+            <label class="modal-label">GT Type:
+                <select id="saveNSType" class="modal-input">
+                    <option value="0">Abstract</option>
+                    <option value="1">Outform</option>
+                    <option value="2">Inform</option>
+                </select>
+            </label>
+            <label class="modal-label">Permissions:
+                <div class="perm-checks">
+                    <label><input type="checkbox" id="permR"> R</label>
+                    <label><input type="checkbox" id="permW"> W</label>
+                    <label><input type="checkbox" id="permX" checked> X</label>
+                    <label><input type="checkbox" id="permL"> L</label>
+                    <label><input type="checkbox" id="permS"> S</label>
+                    <label><input type="checkbox" id="permE"> E</label>
+                </div>
+            </label>
+            <div class="modal-label" id="saveNSInfo" style="font-family:'Courier New',monospace;color:var(--church-gold);"></div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="confirmSaveToNamespace()">Save</button>
+                <button class="btn btn-warning" onclick="closeSaveDialog()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="abstractions.js"></script>
+    <script src="system_abstractions.js"></script>
+    <script src="device_abstractions.js"></script>
+    <script src="webserial.js"></script>
+    <script src="hw_binary.js"></script>
+    <script src="simulator.js"></script>
+    <script src="assembler.js"></script>
+    <script src="pipeline.js"></script>
+    <script src="repl.js"></script>
+    <script src="tutorial.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

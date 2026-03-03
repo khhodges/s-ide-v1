@@ -1,73 +1,97 @@
-# Church-Turing Meta-Machine (CTMM) Simulator
+# Church Machine Educational Platform
 
 ## Overview
-The Church-Turing Meta-Machine (CTMM) Simulator project develops a comprehensive simulator for a capability-based architecture, integrating Church's lambda calculus and Turing's computational model with failsafe security using "Golden Tokens." Its purpose is to provide an interactive web interface for exploring capability-based security, secure system design, and foundational computational principles. The project aims to advance secure computational models and offer robust tools for learning and practical application, contributing to more secure computational systems.
 
-## User Preferences
-- Tooltips positioned below for elements near top of viewport
-- Minimal UI with consolidated header controls
-- Auto-switching to Dashboard when Reset/Step/Run clicked
-- Code persistence in localStorage for session continuity
-- Assembly Editor defaults to Access.asm when empty
-- Example buttons append code instead of replacing
-- Ctrl+Z undoes last code change
-- Punt TPERM standardization until Sim-32 mature and ARM market direction clear
-- No separate dynamicObjects — all entries live in namespaceObjects (dynamic entries flagged .dynamic = true)
-- B (Bind) bit: CALL auto-clears B on all preserved CRs passed to callee — "no bind by default." Allow Bind is the explicit special case via TPERM before CALL. B defaults to 0 on namespace entries.
-- C-Lists only have E permission (entered via CALL). CLOOMC only has X or RX (executed via LAMBDA). This rule applies to boot entries too.
+The Church Machine is a capability-secured processor architecture with an educational IDE, targeting the Tang Nano 20K FPGA (Gowin GW2AR-18, 20,736 LUTs). The web-based simulator serves as the IDE — children write, compile, test, and deploy Church Machine programs through a single application. The architecture is capability-based with Golden Token security, extending from family/school use to any organizational scale.
 
-## System Architecture
+## Project Structure
 
-The CTMM simulator provides web-based visualization using a Python HTTP server, HTML, CSS, and JavaScript. It also includes synthesizable hardware implementations in SystemVerilog and Amaranth HDL.
+```
+hardware/          — Amaranth HDL for Tang Nano 20K (all features enabled)
+simulator/         — Web IDE (HTML/JS/CSS) — the educational product
+server/            — Flask backend (SQLite, port 5000)
+docs/              — Architecture and reference documentation
+church_machine/    — Original pico-ice hardware (reference, not active)
+church_sim/        — Original simulator (reference, ported to simulator/)
+```
 
-### Core Architectural Concepts
+## Documentation
 
--   **Capability-based Security**: Implemented via "Golden Tokens" (GTs) for access control, with 6 permission bits (R, W, X, L, S, E) and enforced domain purity (Turing XOR Church).
--   **Register Architecture**: Separated Context Registers (CR0-CR7 for Golden Tokens, CR15 for Namespace root, CR8 for Thread identity) and Data Registers (DR0-DR15 for numeric values).
--   **Failsafe Security**: All validation failures are routed to a single FAULT handler.
--   **Deterministic Garbage Collection (PP250)**: A four-phase Scan-Identify-Clear-Flip process with bidirectional G-bit. GC is a safe Turing abstraction — atomic Turing machine hidden behind a Church-callable namespace entry, entered via CALL, exited via RETURN. PP250 excludes HALT — the machine always returns to the boot sequence instead of halting (zero instruction or empty-stack RETURN triggers reboot, not halt). Namespace and memory persist across reboots (warm reboot).
--   **Safe Turing Abstractions**: Hidden Turing implementations inside Church-callable entries. Church is the armor (interface, security), Turing is the sword inside (implementation, hidden and atomic). Entered only via CALL/LAMBDA with valid GTs, exited only via RETURN.
--   **DATA Objects**: Namespace entries accessed via DREAD/DWRITE Turing instructions with R/W permission checks and bounds validation. DATA objects bridge Church and Turing domains.
--   **Minimal Turing ISA**: DREAD, DWRITE, BFEXT, BFINS, MCMP, IADD, ISUB, BRANCH, SHL, SHR + shared RETURN — 11 integer-only instructions.
--   **Unified Address Space**: Memory, attached devices, and machine register bank are segments of one flat address space, protected by the same GT gate via mLoad.
--   **Instruction Encoding**: 32-bit: opcode[5] | cond[4] | dst[4] | src[4] | imm[15]. 5-bit opcode supports 20 instructions (10 Church + 10 Turing).
--   **LAMBDA Instruction**: Enables lightweight, in-scope code application with machine-status fast path.
--   **mLoad — Read Gate**: Every read-side instruction goes through mLoad for GT validation (version, seal, bounds) and permission checking. Permission gate table: R→DREAD, W→DWRITE, X→LAMBDA, L→LOAD, S→SAVE(c-list access), E→CALL. M-elevation bypasses permission checks. CR6 (C-List register) has CR6-specific M-elevation: LOAD from CR6 skips L permission check because CALL already validated E on it. All other CRs must have correct permissions for every memory action.
--   **mSave — Write Gate**: Every write to a c-list goes through mSave for source GT validation: version match, seal valid, target C-List bounds check, B=1 (bindable), and F-bit detection on target slot (F=1 means FAR/foreign object requiring HTTP/tunnel access). Symmetric counterpart to mLoad in the TSB.
--   **B (Bind) Bit**: NS entry word1 bit 31. mSave requires B=1 on the source GT before committing to c-list. Defaults to 0 — set only by explicit TPERM with B modifier (e.g., `TPERM CR0, EB`).
--   **Canonical Boot Memory Layout**: Defines the initial state and flow of the system upon boot, including the setup of CRs and the sequence of operations from IDLE to COMPLETE.
--   **GT-Gated Instruction Fetch**: Instruction fetch goes through CR7's NS entry with bounds check against CR7's limit. PC is an offset within the current code object, not an absolute address. CALL sets PC=0 and CR7 to callee's CLOOMC; RETURN restores saved CR7 and PC.
--   **C-List Permission Enforcement**: C-list slot 0 (CLOOMC) must have X or RX only; slots 1+ must not mix X and E on the same slot (domain purity).
--   **GT Type Field** (2-bit): Specific cases of NULL Golden Tokens (Inform=0, Outform=1, NULL=2, Abstract=3). NOT used for object classification — R/W/X permission bits determine data vs. code access.
--   **Network Transparency**: Outform GTs support remote resources via HTTPS and RPC tunnels.
--   **Atomic Abstraction Architecture**: No central OS, VM, privileged mode, or superuser. All system services are atomic abstractions accessed via Golden Tokens, with `mLoad` as the single trusted gate.
--   **Three Dispatch Styles**: Abstractions can resolve method calls via Symbolic resolver (high-security), LAMBDA fast-path (performance), or Traditional compiled binary (fastest).
+- [README.md](../README.md) — Project overview and quick start
+- [docs/architecture.md](../docs/architecture.md) — System design, GT format, security pipeline, memory map
+- [docs/abstractions.md](../docs/abstractions.md) — Complete catalog of all 44 abstractions across 9 layers
+- [docs/instruction-set.md](../docs/instruction-set.md) — All 20 instructions with encoding, syntax, and examples
+- [docs/tang-nano-20k.md](../docs/tang-nano-20k.md) — FPGA target, pin assignments, build toolchain
+- [docs/getting-started.md](../docs/getting-started.md) — Tutorial for educators, students, parents, and developers
 
-### Web Interface (UI/UX)
-The web interface features a dark-themed, IDE-like design with ten views: Dashboard, Namespace Browser, Assembly Editor, Capabilities Explorer, Zoom, HP-35 Calculator, Instructions, Tutorial, and Code Browser. The Assembly Editor includes "Download Image" and "Upload to pico-ice" buttons for hardware interaction.
+## Architecture
 
-### Key Features
--   **Built-in Abstractions**: Includes `Boot`, `Threads`, `SlideRule`, `Abacus`, `Circle`, `CapabilityManager`, `DateTime`, `Lambda`, `Constants`, `FamilyRegistry`, `Stack`, and `HP35`.
--   **Instruction Set**: Custom 32-bit CTMM instruction set with Church-specific and Turing-specific operations, including ARM-style condition flags.
--   **State Persistence**: Automatic saving and restoring of state using browser local storage.
--   **Sim-32 GT Format**: 32-bit Golden Token: Version(7) + Index(17) + Permissions(6) + Type(2).
--   **Pure Church Computer REPL**: Interactive Haskell interpreter demonstrating the Pure Church Lambda Machine with symbolic math and Turing rejection.
--   **Church Machine Web Simulator**: Interactive web-based Pure Church Lambda Machine simulator mirroring the Amaranth hardware, proving computational completeness with zero Turing-domain instructions, and demonstrating pipeline modes (Full, Fused, Chained).
+### Abstraction Model (Scale-Free)
 
-### Hardware Implementations
--   **Amaranth HDL — Pure Church Machine (`church_machine/`)**: A standalone, Church-only 32-bit processor running on physical pico-ice FPGA (iCE40UP5K-SG48) at 12 MHz.
--   **Amaranth HDL — Sim-64 (`ctmm_amaranth/`)**: A 64-bit GT system with a custom ISA.
--   **Amaranth HDL — Sim-32 (`rv32_cap_amaranth/`)**: A 32-bit GT system based on RISC-V RV32I with custom Church extensions.
--   **SystemVerilog (`verilog/`)**: A parallel hardware implementation of the CTMM architecture.
+Every abstraction follows the canonical CR6/CR7 form:
+- CR6 → c-list (capability list)
+- CR7 → code at c-list[0] (CLOOMC)
+- Entered via CALL (E-GT) or LAMBDA (X-GT)
 
-### Unified Server Architecture
-All three simulators (CTMM, RV32, Church) are served from a single Flask application, providing dedicated routes, a test harness, and API endpoints for user authentication and state persistence.
+44 abstractions across 9 layers:
+- Layer 0: Boot (NS, Thread, CList, CLOOMC)
+- Layer 1: System Services (Salvation, Mint, Memory, Scheduler, Stack)
+- Layer 2: Hardware Attachments (UART, LED, Button, Timer, Display)
+- Layer 3: Mathematics (SlideRule, Abacus, Constants, Circle)
+- Layer 4: Lambda Calculus (Lambda, Church Numerals, PAIR)
+- Layer 5: Social (Family, Schoolroom, Friends, Tunnel, Negotiate)
+- Layer 6: IDE (Editor, Assembler, Debugger, Deployer)
+- Layer 7: Internet (Browser, Messenger, Photos, Social, Video, Email)
+- Layer 8: Garbage Collection (PP250 GC)
+
+### Security Model
+
+- Golden Tokens: 32-bit unforgeable capability tokens — Version(7) | Index(17) | Perms(6) | Type(2)
+- 6 permission bits: R (read), W (write), X (execute), L (load), S (save), E (enter)
+- mLoad 7-step pipeline: type check → version match → seal verify → bounds → perms → F-bit → deliver
+- Domain purity: Church (capabilities) and Turing (data) are separate and enforced in hardware
+- L/S Church domain controls capability grants — the c-list IS the parental approval
+- Version-based revocation: Mint.Revoke increments NS entry version, kills all GT copies instantly
+- Negotiate abstraction: dual-approval (parent+teacher) for special grants
+- Each sibling has their own isolated namespace
+
+### Hardware Target
+
+- Tang Nano 20K: Gowin GW2AR-18, QN88 package, 27MHz clock
+- All features enabled: CHANGE/SWITCH, SEAL_CHECK, FUSED_OPS, GC
+- UART: TX pin 17, RX pin 18 (BL616 USB bridge)
+- LEDs: pins 15-20 (6 LEDs, active-low)
+- Button: pin 88 (stepping)
+- Build: `cd hardware && make all` (requires oss-cad-suite)
+
+### Web IDE
+
+- Flask server on port 5000, serves simulator/ as static files
+- 8 views: Dashboard, Code, Namespace, Abstractions, Pipeline, Tutorial, REPL, Reference
+- State persistence via localStorage
+- WebSerial for Tang Nano 20K deployment
+
+### Instruction Set
+
+20 instructions (10 Church + 10 Turing):
+- Church: LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA, ELOADCALL, XLOADLAMBDA
+- Turing: DREAD, DWRITE, BFEXT, BFINS, MCMP, IADD, ISUB, BRANCH, SHL, SHR + shared RETURN
+- 32-bit encoding: opcode[5] | cond[4] | dst[4] | src[4] | imm[15]
+- ARM-style condition codes on all instructions (EQ, NE, CS, CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL, NV)
 
 ## External Dependencies
 
--   **Python/Flask**: Unified web server.
--   **Haskell GHC**: Supports the console simulator and Pure Church Computer REPL.
--   **`localStorage`**: Browser API for client-side state persistence.
--   **PostgreSQL**: Database for user accounts and simulator states.
--   **Replit Auth**: User authentication.
--   **Resend**: For sending welcome emails.
+- Python/Flask: Web server
+- SQLite: Local database (server/church_machine.db)
+- Amaranth HDL: Hardware synthesis
+- localStorage: Client-side state persistence
+- oss-cad-suite: FPGA toolchain (yosys, nextpnr-gowin, gowin_pack, openFPGALoader)
+
+## User Preferences
+
+- Church Gold dark theme
+- Mobile-responsive for parent mode on handsets
+- All feature flags True for Tang build
+- No separate dynamicObjects — all entries in namespaceObjects
+- B (Bind) bit defaults to 0, auto-cleared by CALL
+- C-Lists only have E permission, CLOOMC only X or RX

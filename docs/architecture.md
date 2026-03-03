@@ -1,0 +1,197 @@
+# Church Machine Architecture
+
+## Overview
+
+The Church Machine is a capability-secured processor that enforces security at the instruction level. There is no operating system, no privileged mode, no superuser. Every memory access — read or write — passes through a hardware validation gate (mLoad or mSave) that checks an unforgeable Golden Token before permitting the operation.
+
+## Design Principles
+
+### No Ambient Authority
+
+Traditional systems grant programs implicit access to resources. The Church Machine requires explicit capability tokens for every operation. A program can only access what it holds tokens for.
+
+### Domain Purity
+
+The instruction set is split into two domains:
+
+- **Church domain** (10 instructions): Capability manipulation — LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA, ELOADCALL, XLOADLAMBDA
+- **Turing domain** (10 instructions + shared RETURN): Data processing — DREAD, DWRITE, BFEXT, BFINS, MCMP, IADD, ISUB, BRANCH, SHL, SHR
+
+A code object belongs to exactly one domain. Church code cannot perform arithmetic; Turing code cannot manipulate capabilities. This separation is enforced in hardware.
+
+### Atomic Abstractions
+
+System services are not OS calls — they are namespace entries accessed via Golden Tokens. Each abstraction has:
+
+- A c-list (CR6 target) containing its capabilities
+- Code (CR7 target at c-list[0]) implementing its methods
+- Entry via CALL (E-GT) or application via LAMBDA (X-GT)
+
+## Golden Token Format
+
+```
+31        25 24          8 7      2 1  0
+| Version  |    Index    | Perms  |Type|
+|  7 bits  |   17 bits   | 6 bits |2 b |
+```
+
+### Version (7 bits)
+
+Monotonically increasing counter. Must match the version stored in the namespace entry. On mismatch, the GT is dead — access FAULTs. Revocation is instant: increment the namespace version, and every copy of every GT referencing that entry dies on next use.
+
+### Index (17 bits)
+
+Points to a namespace entry. Supports up to 131,072 entries.
+
+### Permissions (6 bits)
+
+| Bit | Name | Gate | Domain |
+|-----|------|------|--------|
+| 0 | R | DREAD | Turing |
+| 1 | W | DWRITE | Turing |
+| 2 | X | LAMBDA | Church |
+| 3 | L | LOAD | Church |
+| 4 | S | SAVE | Church |
+| 5 | E | CALL | Church |
+
+R, W, X are data permissions (Turing domain access). L, S, E are capability permissions (Church domain access).
+
+### Type (2 bits)
+
+| Value | Type | Meaning |
+|-------|------|---------|
+| 00 | Inform | Inbound capability reference |
+| 01 | Outform | Outbound/remote capability (F-bit networking) |
+| 10 | NULL | Empty slot — access FAULTs |
+| 11 | Abstract | Standard local capability |
+
+## Register Architecture
+
+### Context Registers (CR0–CR15)
+
+128-bit registers holding Golden Tokens. Each CR stores four 32-bit words:
+
+- **word0**: The GT itself (version + index + perms + type)
+- **word1**: Location/base address, plus B-bit (bit 31) and F-bit (bit 30)
+- **word2**: Limit/bounds
+- **word3**: Seal (FNV-1a hash for integrity)
+
+Special assignments:
+- **CR6**: Current capability list (c-list) — entered via CALL
+- **CR7**: Current code object (CLOOMC) — instruction fetch source
+- **CR8**: Thread identity
+- **CR9**: Interrupt handler
+- **CR10**: Default fault handler
+- **CR15**: Namespace root
+
+### Data Registers (DR0–DR15)
+
+32-bit integer registers. DR0 is hardwired to zero.
+
+### Flags
+
+ARM-style condition flags: N (negative), Z (zero), C (carry), V (overflow). Set by Turing arithmetic instructions (IADD, ISUB, MCMP). All instructions support conditional execution via 4-bit condition codes.
+
+## Memory Architecture
+
+### Unified Address Space
+
+```
+0x0000 – 0xFCFF    General memory (code + data objects)
+0xFD00 – 0xFDFF    Namespace table (NS entries)
+0xFE00 – 0xFEFF    Device I/O (UART, LED, Button, Timer, Display)
+0xFF00 – 0xFFFF    Machine registers (read-only inspection)
+```
+
+All segments are accessed through the same GT gate via mLoad.
+
+### Namespace Entries
+
+Each namespace entry is 3 words (96 bits):
+
+- **Word 0**: Flags (B-bit, F-bit) + version (7 bits) + location
+- **Word 1**: Limit (bounds for the object)
+- **Word 2**: Seal (FNV-1a integrity hash)
+
+## Security Pipeline (mLoad)
+
+Every read-side memory access passes through this 7-step pipeline:
+
+1. **GT Type Check** — NULL type → FAULT
+2. **Version Match** — GT version must equal NS entry version
+3. **Seal Verify** — FNV-1a hash must match NS entry seal
+4. **Bounds Check** — Access address must be within [location, location + limit)
+5. **Permission Check** — Required permission bit must be set in GT
+6. **F-bit Check** — F=1 means far/foreign object (requires tunnel)
+7. **Data Delivery** — Access permitted, data returned
+
+mSave (write gate) performs the symmetric check for c-list writes, additionally requiring B=1 (bindable) on the source GT.
+
+## B-bit (Bind)
+
+Namespace entry word1, bit 31. Controls whether a GT can be saved into another c-list:
+
+- B=0 (default): GT cannot be copied to other c-lists — mSave FAULTs
+- B=1: GT is bindable — mSave permits the write
+
+CALL automatically clears B on all preserved CRs passed to the callee ("no bind by default"). Explicit TPERM with B modifier enables binding.
+
+## Instruction Fetch
+
+Instruction fetch uses CR7 (CLOOMC):
+
+- PC is an offset within the current code object, not an absolute address
+- Bounds checked against CR7's limit
+- CALL sets PC=0 and CR7 to callee's CLOOMC
+- RETURN restores saved CR7 and PC
+
+## CALL / RETURN
+
+CALL performs:
+1. Validate E permission on target GT
+2. Load target's c-list into CR6
+3. Load target's code (c-list[0]) into CR7
+4. Save caller's CR6, CR7, PC to call stack
+5. Clear B-bit on preserved CRs
+6. Set PC = 0
+
+RETURN restores:
+1. Pop saved CR6, CR7, PC from call stack
+2. Resume at saved PC
+
+## LAMBDA
+
+Lightweight in-scope code application:
+1. Validate X permission on target GT
+2. Save current PC as lambda return point
+3. Execute target code in current scope (no c-list switch)
+4. Machine-status fast path: if target code is a single instruction, execute inline
+
+## Garbage Collection (PP250)
+
+Deterministic four-phase garbage collection:
+
+1. **Scan** — Walk namespace entries, mark reachable via G-bit
+2. **Identify** — Find unreachable entries (G-bit not set)
+3. **Clear** — Reclaim unreachable entries
+4. **Flip** — Toggle GC polarity for next cycle
+
+PP250 excludes HALT — the machine always returns to boot sequence. Namespace and memory persist across reboots (warm reboot).
+
+## Revocation
+
+Revocation is instant, global, and unforgeable:
+
+1. Increment the version on the namespace entry
+2. Every outstanding GT referencing that entry now has a version mismatch
+3. Next mLoad check FAULTs — no need to find or track copies
+4. Re-grant by creating a new GT with the new version
+
+## Network Transparency
+
+Outform GTs (type=01) with F-bit=1 represent remote resources:
+
+- Access triggers tunnel protocol (HTTPS/RPC)
+- Same GT format, same permission model
+- mLoad detects F-bit and routes to Tunnel abstraction
+- Transparent to application code

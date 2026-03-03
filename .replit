@@ -13,19 +13,19 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "CTMM Simulators"
+args = "Church Machine IDE"
 
 [[workflows.workflow]]
-name = "CTMM Simulators"
+name = "Church Machine IDE"
 author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = ".pythonlibs/bin/gunicorn -c gunicorn_config.py 'unified_server:app'"
+args = "cd /home/runner/workspace && python3 server/app.py"
 waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [[ports]]
 localPort = 5000
