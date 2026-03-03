@@ -126,9 +126,11 @@ All segments are accessed through the same GT gate via mLoad.
 
 Each namespace entry is 3 words (96 bits):
 
-- **Word 0**: Flags (B-bit, F-bit) + version (7 bits) + location
-- **Word 1**: Limit (bounds for the object)
-- **Word 2**: Seal (FNV-1a integrity hash)
+- **Word 0**: Location (32-bit base address of the object)
+- **Word 1**: B(31) | F(30) | G(29) | ... | Limit(16:0) — flags and bounds
+- **Word 2**: Version(31:25) | Seal(24:0) — 7-bit version + 25-bit FNV-1a integrity hash
+
+Seal = FNV-1a(word0, word1[16:0]). Recomputed and verified on every mLoad access (step 3). If word0 or word1 are tampered, the seal check fails.
 
 ## Boot Sequence
 

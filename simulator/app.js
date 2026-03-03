@@ -875,724 +875,1372 @@ function getMethodPurposes(abs) {
 function getMethodExamples(abs) {
     const examples = {
         'Salvation': {
-            'LOAD': `; Salvation.LOAD — prove NS lookup works
-LOAD   CR1, NS[4]       ; Load Salvation GT into CR1
-TPERM  CR1, #E          ; Verify E permission on GT
-; Success: CR1 holds a valid Salvation GT`,
-            'TPERM': `; Salvation.TPERM — prove permission check
-LOAD   CR1, NS[4]       ; Load Salvation GT
-TPERM  CR1, #E          ; Test E (Enter) permission
-BRANCH.NE  @fault       ; Branch if permission denied`,
-            'LAMBDA': `; Salvation.LAMBDA — prove Church reduction
-LOAD   CR1, NS[20]      ; Load SUCC GT
-LAMBDA CR1, DR0         ; Apply SUCC to DR0
-; DR0 now holds SUCC(DR0)`,
-            'TransitionToNavana': `; Salvation.TransitionToNavana — hand off to Navana
-LOAD   CR2, NS[5]       ; Load Navana GT into CR2
-CALL   CR2              ; Enter Navana (never returns)
-; Navana takes over system control`,
+            'LOAD': `; Salvation.LOAD — prove namespace lookup via mLoad pipeline
+; mLoad 7-step: type check -> version match -> seal verify
+;   -> bounds check -> perm check -> F-bit -> deliver
+LOAD   CR1, NS[4]       ; mLoad pipeline validates GT:
+                         ;   1. Type != NULL (type=00 Inform)
+                         ;   2. GT.version == NS[4].word2[31:25]
+                         ;   3. FNV seal(word0,word1) == word2[24:0]
+                         ;   4. Index 4 within NS bounds
+                         ;   5. L perm required for LOAD
+                         ;   6. F-bit=0 (local, not tunneled)
+                         ;   7. CR1 <- 128-bit capability register
+; CR1.word0 = GT packed: Ver(7)|Idx(17)|Perms(6)|Type(2)
+; CR1.word1 = NS[4].word0 (location)
+; CR1.word2 = NS[4].word1 (B|F|G|...|limit[16:0])
+; CR1.word3 = NS[4].word2 (version[31:25]|seal[24:0])`,
+            'TPERM': `; Salvation.TPERM — prove permission monotonicity
+; TPERM can only remove permissions, never add them
+; This is how the architecture enforces least privilege
+LOAD   CR1, NS[4]       ; CR1 holds Salvation GT [E]
+TPERM  CR1, #0b100000   ; Test E bit (bit 5 of perm field)
+BRANCH.NE  @perm_fault  ; Z flag clear = permission denied
+; Permission check passed
+; Note: TPERM never escalates — if source lacks a bit,
+; the result cannot have it. Monotonic restriction only.`,
+            'LAMBDA': `; Salvation.LAMBDA — prove Church numeral reduction
+; LAMBDA dispatches a method within an abstraction
+; It is NOT a security block — just an instruction
+LOAD   CR1, NS[20]      ; Load SUCC GT (X+L+E perms)
+                         ;   mLoad validates X perm for code
+DWRITE DR0, #3           ; Church numeral 3 in data register
+LAMBDA CR1, DR0          ; Apply SUCC: DR0 <- SUCC(3) = 4
+                         ;   CR1 must have X perm (code exec)
+                         ;   SUCC's CLOOMC is a DATA-domain object
+; Result: DR0 = 4`,
+            'TransitionToNavana': `; Salvation -> Navana transition (Salvation does NOT return)
+; Boot flow: Boot -> CALL Salvation -> Salvation -> Navana
+; Navana runs forever as the namespace controller
+LOAD   CR2, NS[5]       ; Load Navana E-GT via mLoad
+                         ;   7-step pipeline validates:
+                         ;   ver match, seal check, E perm
+CALL   CR2              ; Enter Navana:
+                         ;   1. Push return state to call stack
+                         ;   2. CR6 <- E-GT (c-list for Navana)
+                         ;   3. CR7 <- X-GT at c-list[0] (CLOOMC)
+                         ;   4. B-bits cleared on all CRs
+                         ;   5. PC <- Navana code entry point
+; Navana takes over — runs indefinitely, never RETURNs`,
         },
         'Navana': {
-            'Init': `; Navana.Init — bootstrap all abstractions
-LOAD   CR1, NS[5]       ; Load Navana GT
-DWRITE DR0, #0          ; Method selector = Init
-CALL   CR1              ; Navana initializes Layer 1-8`,
+            'Init': `; Navana.Init — bootstrap all abstractions (Layer 1-8)
+; Navana is the namespace controller, runs forever
+; Init walks the abstraction table and creates each one
+LOAD   CR1, NS[5]       ; Load Navana E-GT
+CALL   CR1              ; Enter Navana
+                         ;   CR6 <- Navana c-list
+                         ;   CR7 <- Navana CLOOMC (DATA-domain)
+; Inside Navana.Init:
+;   for each abstraction index 6..44:
+;     LOAD  CR3, NS[7]  ; Load Memory GT
+;     CALL  CR3          ; Memory.Allocate -> free slot + mem
+;     LOAD  CR4, NS[6]  ; Load Mint GT
+;     CALL  CR4          ; Mint.Create -> GT for new slot
+;   Navana.Init never returns — enters event loop`,
             'Manage': `; Navana.Manage — abstraction lifecycle
-LOAD   CR1, NS[5]       ; Load Navana GT
-DWRITE DR0, #1          ; Method = Manage
-DWRITE DR1, #33         ; Target = Editor abstraction
-CALL   CR1              ; Create/check Editor`,
-            'Monitor': `; Navana.Monitor — system health check
-LOAD   CR1, NS[5]       ; Load Navana GT
-DWRITE DR0, #2          ; Method = Monitor
-CALL   CR1              ; Returns fault counts, MTBF`,
-            'IDS': `; Navana.IDS — intrusion detection
-LOAD   CR1, NS[5]       ; Load Navana GT
-DWRITE DR0, #3          ; Method = IDS
-CALL   CR1              ; Scans for GT anomalies`,
+; Navana dispatches create/destroy/call/inspect uniformly
+; Every abstraction shares this polymorphic interface
+LOAD   CR1, NS[5]       ; Load Navana E-GT
+DWRITE DR0, #33         ; Target: Editor abstraction (NS[33])
+DWRITE DR1, #0          ; Operation: 0=create
+CALL   CR1              ; Navana.Manage dispatches:
+;   1. Memory.Allocate(size) -> slot, location
+;   2. Write NS entry: word0=loc, word1=limit|flags
+;   3. computeSeal(word0, word1) -> FNV-1a hash
+;   4. word2 = (version << 25) | seal
+;   5. Mint.Create(slot, perms, type) -> GT
+;   6. Return GT to caller via CR`,
+            'Monitor': `; Navana.Monitor — system health / MTBF tracking
+; Every abstraction is a security block with MTBF
+; MTBF = uptime / faultCount for that block
+LOAD   CR1, NS[5]       ; Load Navana E-GT
+CALL   CR1              ; Navana.Monitor checks:
+;   for each abstraction 0..44:
+;     read faultCount from registry
+;     compute MTBF = activeTime / faultCount
+;     if MTBF < threshold: flag degraded
+;   DR0 <- total fault count across all blocks
+;   DR1 <- index of lowest-MTBF abstraction`,
+            'IDS': `; Navana.IDS — Intrusion Detection System
+; Detects GT forgery attempts and version anomalies
+LOAD   CR1, NS[5]       ; Load Navana E-GT
+CALL   CR1              ; Navana.IDS scans:
+;   for each active NS entry:
+;     recompute seal = FNV(word0, word1)
+;     compare seal vs word2[24:0]
+;     if mismatch: FAULT — tampered entry
+;     check version consistency across all GTs
+;     if GT.version > NS.version: stale/forged
+;   Report anomalies to Navana.Monitor`,
         },
         'Mint': {
             'Create': `; Mint.Create — forge a new Golden Token
-LOAD   CR1, NS[6]       ; Load Mint GT
-DWRITE DR0, #45         ; Target NS slot 45
-DWRITE DR1, #0x09       ; Perms: L+E (bits 3,0)
-CALL   CR1              ; CR1 <- new GT for slot 45`,
-            'Revoke': `; Mint.Revoke — kill all copies of a GT
-LOAD   CR1, NS[6]       ; Load Mint GT
-DWRITE DR0, #45         ; Target NS slot to revoke
-CALL   CR1              ; Version incremented, old GTs dead`,
-            'Transfer': `; Mint.Transfer — move GT to another c-list
-LOAD   CR1, NS[6]       ; Load Mint GT
-DWRITE DR0, #45         ; Source slot
-DWRITE DR1, #60         ; Destination c-list slot
-CALL   CR1              ; GT moved to new c-list`,
+; Full process: find slot, reserve memory, pack 3-word NS
+; entry, compute FNV seal, pack 32-bit GT, enforce types
+;
+; Step 1: Caller must hold a source GT with >= target perms
+; (monotonic restriction — cannot grant what you don't hold)
+LOAD   CR1, NS[6]       ; Load Mint E-GT via mLoad pipeline
+TPERM  CR1, #E          ; Verify caller holds E perm on Mint
+
+; Step 2: Allocate a namespace slot via Memory
+LOAD   CR2, NS[7]       ; Load Memory E-GT
+DWRITE DR0, #64         ; Request 64 words of storage
+CALL   CR2              ; Memory.Allocate:
+                         ;   scans NS for free entry (word0=0, word1=0)
+                         ;   skips reserved slots 0..44
+                         ;   DR0 <- free slot index (e.g. 50)
+                         ;   DR1 <- base location (slot * SLOT_SIZE)
+
+; Step 3: Pack the 3-word namespace entry
+; word0 = location (base address of allocated memory)
+; word1 = B(31)|F(30)|G(29)|...|limit(16:0)
+;   B=0 (not yet bound), F=0 (local), G=0 (live)
+;   limit = (size-1) & 0x1FFFF = 63
+; word2 = version(31:25) | FNV_seal(24:0)
+;   seal = FNV-1a(word0, word1)
+;   FNV: h=0x5A5A5A5A; h=(h^loc)*0x01000193;
+;         h=(h^lim)*0x01000193; h=h^(h>>16); seal=h&0x1FFFFFF
+DWRITE DR2, DR1         ; DR2 = location (word0)
+DWRITE DR3, #63         ; DR3 = limit (word1 low 17 bits)
+DWRITE DR4, #0          ; DR4 = version 0 (new entry)
+
+; Step 4: Write NS entry to namespace table
+; NS_TABLE_BASE + slotIndex * 3 words
+; mem[base+0] = word0 (location)
+; mem[base+1] = packWord1(limit, B=0, F=0, G=0)
+; mem[base+2] = (version<<25) | computeSeal(loc, lim)
+
+; Step 5: Pack the 32-bit Golden Token
+; GT = Version(7)|Index(17)|Perms(6)|Type(2)
+;    = (0<<25)|(50<<8)|(permBits<<2)|(0)
+; permBits: R=bit0, W=bit1, X=bit2, L=bit3, S=bit4, E=bit5
+; Type: 00=Inform (local capability)
+; Domain purity enforced: Church(X,L,S,E) or Turing(R,W)
+;   — cannot mix Church and Turing perms in one GT
+DWRITE DR5, #0b001001   ; Perms: L+E (Church domain only)
+                         ;   bit3=L, bit0=E -> 0x09
+CALL   CR1              ; Mint.Create:
+                         ;   check source >= target perms
+                         ;   GT = (ver<<25)|(idx<<8)|(perms<<2)|type
+                         ;   CR1 <- new GT for NS[50]
+; Result: CR1 holds GT = 0x00003224
+;   ver=0, idx=50, perms=L+E, type=Inform`,
+            'Revoke': `; Mint.Revoke — instant revocation via version increment
+; Incrementing the version in the NS entry kills ALL
+; outstanding copies of the GT — they will fail mLoad
+; step 2 (version mismatch) on next use
+LOAD   CR1, NS[6]       ; Load Mint E-GT
+DWRITE DR0, #50         ; Target NS slot to revoke
+
+CALL   CR1              ; Mint.Revoke:
+;   base = NS_TABLE_BASE + 50 * 3
+;   word2 = mem[base+2]
+;   oldVer = (word2 >>> 25) & 0x7F     ; extract version
+;   newVer = (oldVer + 1) & 0x7F       ; increment (wraps at 128)
+;   seal = word2 & 0x01FFFFFF          ; preserve seal
+;   mem[base+2] = (newVer << 25) | seal ; write back
+;
+; All GTs with old version are now dead:
+;   any LOAD/CALL with stale GT hits mLoad step 2:
+;   GT.version(7 bits) != NS[50].word2.version(7 bits)
+;   -> FAULT: VERSION_MISMATCH
+; DR0 <- new version number`,
+            'Transfer': `; Mint.Transfer — move GT between c-lists
+; The c-list IS the parental approval — transferring a GT
+; to a child's c-list grants them access to that resource
+LOAD   CR1, NS[6]       ; Load Mint E-GT
+LOAD   CR2, NS[50]      ; Source: GT to transfer
+LOAD   CR3, NS[60]      ; Target: destination c-list GT
+
+; Transfer requires:
+;   1. Caller holds L perm on source c-list (can read GT)
+;   2. Caller holds S perm on target c-list (can write GT)
+;   3. B-bit (Bind) on source GT must be 0 (transferable)
+;      B-bit is auto-cleared by CALL instruction
+CALL   CR1              ; Mint.Transfer:
+;   read GT from source c-list[slot]
+;   validate B-bit = 0 (can be moved)
+;   SAVE GT to target c-list[slot] via S perm
+;   optionally zero source slot (move vs copy)
+; The child now has the GT in their c-list`,
         },
         'Memory': {
-            'Allocate': `; Memory.Allocate — claim a namespace slot
-LOAD   CR1, NS[7]       ; Load Memory GT
-DWRITE DR0, #256        ; Requested size (words)
-CALL   CR1              ; DR0 <- allocated slot index`,
-            'Free': `; Memory.Free — release a namespace slot
-LOAD   CR1, NS[7]       ; Load Memory GT
-DWRITE DR0, #50         ; Slot to free
-CALL   CR1              ; Slot 50 returned to pool`,
-            'Resize': `; Memory.Resize — grow/shrink allocation
-LOAD   CR1, NS[7]       ; Load Memory GT
-DWRITE DR0, #50         ; Slot to resize
-DWRITE DR1, #512        ; New size
-CALL   CR1              ; Slot 50 resized`,
+            'Allocate': `; Memory.Allocate — find free NS slot + reserve memory
+; Memory manages the namespace table as a pool of 3-word
+; entries. Each slot has: word0=loc, word1=lim|flags, word2=ver|seal
+LOAD   CR1, NS[7]       ; Load Memory E-GT via mLoad
+DWRITE DR0, #128        ; Request 128 words of storage
+
+CALL   CR1              ; Memory.Allocate:
+;   1. Scan NS table for free entry (word0=0 AND word1=0)
+;      start at nsCount, wrap to slot 45 (skip boot 0-44)
+;      if no free slot: FAULT OOM
+;   2. Compute location = freeIdx * SLOT_SIZE
+;   3. Pack limit = (size-1) & 0x1FFFF = 127
+;   4. Write 3-word NS entry:
+;      word0 = location
+;      word1 = packWord1(limit=127, B=0, F=0, G=0)
+;      word2 = (ver=0 << 25) | FNV_seal(loc, lim)
+;   5. Create GT with R+W perms (Turing DATA domain)
+;      GT = (0<<25)|(idx<<8)|(0b000110<<2)|(0)
+;   6. Label slot as DATA[idx]
+;
+; DR0 <- allocated slot index
+; DR1 <- base location address
+; CR2 <- R+W GT for the new DATA object
+; Type is Inform(00), domain is Turing(R+W) — DATA only`,
+            'Free': `; Memory.Free — deallocate NS slot + zero memory
+LOAD   CR1, NS[7]       ; Load Memory E-GT
+DWRITE DR0, #50         ; NS slot to free
+
+CALL   CR1              ; Memory.Free:
+;   base = NS_TABLE_BASE + 50 * 3
+;   1. Verify slot is allocated (word0|word1 != 0)
+;   2. Zero word0 (location = 0)
+;   3. Zero word1 (limit/flags = 0)
+;   4. word2 version preserved for stale GT detection
+;      (any GT still pointing here fails seal check)
+;   5. Clear label
+; Slot 50 now free for reuse by Memory.Allocate
+; Outstanding GTs for slot 50 are NOT revoked here
+; — use Mint.Revoke first to invalidate them`,
+            'Resize': `; Memory.Resize — change allocation size
+LOAD   CR1, NS[7]       ; Load Memory E-GT
+DWRITE DR0, #50         ; NS slot to resize
+DWRITE DR1, #256        ; New size (words)
+
+CALL   CR1              ; Memory.Resize:
+;   base = NS_TABLE_BASE + 50 * 3
+;   1. Read current word0 (location), word1 (limit)
+;   2. Compute new limit = (newSize-1) & 0x1FFFF
+;   3. Repack word1 with new limit, preserve B/F/G flags
+;   4. Recompute FNV seal for new (location, limit) pair
+;      seal = FNV-1a(word0, newLimit)
+;   5. Write word2 = (version << 25) | newSeal
+;   NOTE: seal must be recomputed whenever word0 or
+;   word1 changes — otherwise mLoad step 3 fails
+; Existing GTs remain valid (version unchanged)`,
         },
         'Scheduler': {
-            'Yield': `; Scheduler.Yield — give up time slice
-LOAD   CR1, NS[8]       ; Load Scheduler GT
-DWRITE DR0, #0          ; Method = Yield
-CALL   CR1              ; Thread yields, next runs`,
-            'Spawn': `; Scheduler.Spawn — create new thread
-LOAD   CR1, NS[8]       ; Load Scheduler GT
-DWRITE DR0, #1          ; Method = Spawn
-DWRITE DR1, #0x100      ; Entry point address
-CALL   CR1              ; DR0 <- new thread ID`,
-            'Wait': `; Scheduler.Wait — block until event
-LOAD   CR1, NS[8]       ; Load Scheduler GT
-DWRITE DR0, #2          ; Method = Wait
-DWRITE DR1, #10         ; Event: DijkstraFlag slot
-CALL   CR1              ; Thread blocked until signaled`,
-            'Stop': `; Scheduler.Stop — terminate thread
-LOAD   CR1, NS[8]       ; Load Scheduler GT
-DWRITE DR0, #3          ; Method = Stop
-DWRITE DR1, #2          ; Thread ID to stop
-CALL   CR1              ; Thread terminated`,
+            'Yield': `; Scheduler.Yield — voluntarily yield time slice
+LOAD   CR1, NS[8]       ; Load Scheduler E-GT
+CALL   CR1              ; Scheduler.Yield:
+;   1. Save current thread state (CRs, DRs, flags, PC)
+;   2. Select next ready thread from run queue
+;   3. Restore next thread's state
+;   4. Transfer control (PC <- next thread's saved PC)
+; Current thread goes to back of run queue`,
+            'Spawn': `; Scheduler.Spawn — create a new thread
+; Each thread gets its own CR set and namespace view
+LOAD   CR1, NS[8]       ; Load Scheduler E-GT
+LOAD   CR2, NS[50]      ; Code GT for new thread (X perm)
+                         ;   must be DATA-domain object
+DWRITE DR0, #0x0200     ; Entry point address within code
+
+CALL   CR1              ; Scheduler.Spawn:
+;   1. Memory.Allocate for thread control block
+;   2. Initialize CRs (copy parent's c-list subset)
+;   3. Set new thread PC = entry point
+;   4. Each child thread has isolated namespace view
+;   5. Add to run queue
+; DR0 <- new thread ID`,
+            'Wait': `; Scheduler.Wait — block thread on DijkstraFlag
+; Thread stops running until the flag is signaled
+LOAD   CR1, NS[8]       ; Load Scheduler E-GT
+LOAD   CR2, NS[10]      ; DijkstraFlag GT (event source)
+
+CALL   CR1              ; Scheduler.Wait:
+;   1. Remove current thread from run queue
+;   2. Add to DijkstraFlag's wait queue
+;   3. Save thread state
+;   4. Switch to next ready thread
+; Thread resumes when DijkstraFlag.Signal fires`,
+            'Stop': `; Scheduler.Stop — terminate a thread
+LOAD   CR1, NS[8]       ; Load Scheduler E-GT
+DWRITE DR0, #2          ; Thread ID to terminate
+
+CALL   CR1              ; Scheduler.Stop:
+;   1. Remove thread from run/wait queue
+;   2. Memory.Free thread control block
+;   3. Clear thread's CRs (release capabilities)
+;   4. If terminated thread held GTs, they become
+;      unreachable (GC will reclaim via G-bit scan)`,
         },
         'Stack': {
-            'Push': `; Stack.Push — push value onto stack
-LOAD   CR1, NS[9]       ; Load Stack GT
+            'Push': `; Stack.Push — push value onto managed stack
+; Stack uses a Memory-allocated DATA region for storage
+LOAD   CR1, NS[9]       ; Load Stack E-GT
 DWRITE DR0, #42         ; Value to push
-CALL   CR1              ; 42 pushed onto stack`,
+
+CALL   CR1              ; Stack.Push:
+;   1. Check stack not full (depth < limit from word1)
+;   2. DWRITE value to mem[location + depth]
+;      location = NS[stack_slot].word0
+;   3. Increment depth counter
+;   4. If full: FAULT STACK_OVERFLOW`,
             'Pop': `; Stack.Pop — pop value from stack
-LOAD   CR1, NS[9]       ; Load Stack GT
-DWRITE DR0, #1          ; Method = Pop
-CALL   CR1              ; DR0 <- popped value`,
+LOAD   CR1, NS[9]       ; Load Stack E-GT
+
+CALL   CR1              ; Stack.Pop:
+;   1. Check stack not empty (depth > 0)
+;   2. Decrement depth counter
+;   3. DREAD value from mem[location + depth]
+;   4. If empty: FAULT STACK_UNDERFLOW
+; DR0 <- popped value`,
             'Peek': `; Stack.Peek — read top without removing
-LOAD   CR1, NS[9]       ; Load Stack GT
-DWRITE DR0, #2          ; Method = Peek
-CALL   CR1              ; DR0 <- top value (kept)`,
-            'Depth': `; Stack.Depth — query stack depth
-LOAD   CR1, NS[9]       ; Load Stack GT
-DWRITE DR0, #3          ; Method = Depth
-CALL   CR1              ; DR0 <- current depth`,
+LOAD   CR1, NS[9]       ; Load Stack E-GT
+
+CALL   CR1              ; Stack.Peek:
+;   1. Check stack not empty
+;   2. DREAD mem[location + depth - 1]
+;   3. Do NOT decrement depth
+; DR0 <- top value (stack unchanged)`,
+            'Depth': `; Stack.Depth — query current stack depth
+LOAD   CR1, NS[9]       ; Load Stack E-GT
+
+CALL   CR1              ; Stack.Depth:
+;   DR0 <- current number of entries on stack`,
         },
         'DijkstraFlag': {
-            'Wait': `; DijkstraFlag.Wait — block until signaled
-LOAD   CR1, NS[10]      ; Load DijkstraFlag GT
-DWRITE DR0, #0          ; Method = Wait
-CALL   CR1              ; Thread blocks here
-; Resumes when another thread Signals`,
-            'Signal': `; DijkstraFlag.Signal — wake a waiting thread
-LOAD   CR1, NS[10]      ; Load DijkstraFlag GT
-DWRITE DR0, #1          ; Method = Signal
-CALL   CR1              ; One waiter wakes up`,
+            'Wait': `; DijkstraFlag.Wait — block thread until flag signaled
+; Implements Dijkstra's semaphore P() operation
+; Integrates with Scheduler for thread management
+LOAD   CR1, NS[10]      ; Load DijkstraFlag E-GT
+
+CALL   CR1              ; DijkstraFlag.Wait:
+;   1. Test flag state
+;   2. If signaled: clear flag, continue (no block)
+;   3. If not signaled:
+;      a. Add current thread to flag's wait queue
+;      b. Scheduler.Wait(this flag) — block thread
+;      c. Thread sleeps until Signal wakes it
+; Thread resumes here after being signaled`,
+            'Signal': `; DijkstraFlag.Signal — wake one waiting thread
+; Implements Dijkstra's semaphore V() operation
+LOAD   CR1, NS[10]      ; Load DijkstraFlag E-GT
+
+CALL   CR1              ; DijkstraFlag.Signal:
+;   1. If threads waiting on this flag:
+;      a. Remove one thread from wait queue
+;      b. Scheduler.Spawn/resume that thread
+;   2. If no threads waiting:
+;      a. Set flag state = signaled
+;      b. Next Wait() will consume it immediately`,
             'Reset': `; DijkstraFlag.Reset — clear flag state
-LOAD   CR1, NS[10]      ; Load DijkstraFlag GT
-DWRITE DR0, #2          ; Method = Reset
-CALL   CR1              ; Flag cleared`,
+LOAD   CR1, NS[10]      ; Load DijkstraFlag E-GT
+
+CALL   CR1              ; DijkstraFlag.Reset:
+;   1. Clear flag to unsignaled state
+;   2. Does NOT affect threads in wait queue
+;   3. Used to re-arm one-shot events`,
             'Test': `; DijkstraFlag.Test — non-blocking check
-LOAD   CR1, NS[10]      ; Load DijkstraFlag GT
-DWRITE DR0, #3          ; Method = Test
-CALL   CR1              ; DR0 <- 1 if signaled, 0 if not`,
+LOAD   CR1, NS[10]      ; Load DijkstraFlag E-GT
+
+CALL   CR1              ; DijkstraFlag.Test:
+;   1. Read flag state without blocking
+;   2. Does NOT consume the signal
+;   DR0 <- 1 if signaled, 0 if not`,
         },
         'UART': {
-            'Send': `; UART.Send — transmit byte (needs S perm)
+            'Send': `; UART.Send — transmit byte via Church domain S perm
+; Hardware devices use L/S/E only (Church domain)
+; NOT R/W (that's Turing domain for DATA objects)
+LOAD   CR1, NS[11]      ; Load UART GT [L,S,E] via mLoad
+                         ;   mLoad checks: type, version, seal,
+                         ;   bounds, perms, F-bit, deliver
+DWRITE DR0, #0x41       ; Byte to send ('A') in data register
+SAVE   CR1, DR0         ; S perm: save data TO device
+                         ;   SAVE checks S permission on GT
+                         ;   Church domain: capability-gated I/O
+; Byte queued for transmission on pin 69 (TX)`,
+            'Receive': `; UART.Receive — read byte via Church domain L perm
 LOAD   CR1, NS[11]      ; Load UART GT [L,S,E]
-DWRITE DR0, #0x41       ; Byte to send ('A')
-SAVE   CR1, DR0         ; S perm: save data to device`,
-            'Receive': `; UART.Receive — read byte (needs L perm)
-LOAD   CR1, NS[11]      ; Load UART GT [L,S,E]
-LOAD   DR0, CR1         ; L perm: load data from device
-; DR0 <- received byte`,
-            'SetBaud': `; UART.SetBaud — configure baud rate
-LOAD   CR1, NS[11]      ; Load UART GT
-DWRITE DR0, #115200     ; Baud rate
-CALL   CR1              ; Baud rate configured`,
+
+LOAD   DR0, CR1         ; L perm: load data FROM device
+                         ;   LOAD checks L permission on GT
+                         ;   Only capability holders can read UART
+; DR0 <- received byte from pin 70 (RX)
+; If no byte available: DR0 = 0, Z flag set`,
+            'SetBaud': `; UART.SetBaud — configure baud rate via CALL
+LOAD   CR1, NS[11]      ; Load UART E-GT
+DWRITE DR0, #115200     ; Target baud rate
+
+CALL   CR1              ; UART.SetBaud via E perm:
+;   1. Validate baud rate is supported
+;   2. Configure UART divider register
+;   3. BL616 USB bridge at 27MHz clock
+; Note: E perm required for configuration methods
+; L/S only for data transfer`,
         },
         'LED': {
-            'Set': `; LED.Set — turn LED on (needs S perm)
+            'Set': `; LED.Set — turn LED on via S (Save) permission
+; Tang Nano 20K: 6 LEDs on pins 15-20 (active-low)
 LOAD   CR1, NS[12]      ; Load LED GT [L,S,E]
 DWRITE DR0, #3          ; LED number (0-5)
-SAVE   CR1, DR0         ; S perm: save state to LED`,
-            'Clear': `; LED.Clear — turn LED off
-LOAD   CR1, NS[12]      ; Load LED GT
+DWRITE DR1, #1          ; State: 1=on
+SAVE   CR1, DR0         ; S perm: save state to device
+                         ;   Church domain capability gate
+                         ;   No ambient access — must hold GT`,
+            'Clear': `; LED.Clear — turn LED off via S perm
+LOAD   CR1, NS[12]      ; Load LED GT [L,S,E]
 DWRITE DR0, #3          ; LED number
-DWRITE DR1, #0          ; Off
+DWRITE DR1, #0          ; State: 0=off
 SAVE   CR1, DR0         ; S perm: save to device`,
             'Toggle': `; LED.Toggle — flip LED state
-LOAD   CR1, NS[12]      ; Load LED GT
+LOAD   CR1, NS[12]      ; Load LED GT [L,S,E]
 DWRITE DR0, #3          ; LED number
-CALL   CR1              ; Toggle via S perm`,
+
+CALL   CR1              ; LED.Toggle via E perm:
+;   1. L perm: read current state from device
+;   2. Invert state
+;   3. S perm: write new state to device`,
             'Pattern': `; LED.Pattern — set all 6 LEDs at once
-LOAD   CR1, NS[12]      ; Load LED GT
-DWRITE DR0, #0b101010   ; Pattern: alternating
-SAVE   CR1, DR0         ; S perm: all LEDs updated`,
+LOAD   CR1, NS[12]      ; Load LED GT [L,S,E]
+DWRITE DR0, #0b101010   ; Pattern: alternating on/off
+                         ; Bit 0=LED0, Bit 5=LED5
+SAVE   CR1, DR0         ; S perm: save pattern to device
+; All 6 LEDs updated atomically
+; Pins 15-20 driven active-low`,
         },
         'Button': {
-            'Read': `; Button.Read — read button state (L perm)
+            'Read': `; Button.Read — read button state via L perm
+; Button is L+E only (no S — you can't write to a button)
+; Tang Nano 20K button on pin 88
 LOAD   CR1, NS[13]      ; Load Button GT [L,E]
-LOAD   DR0, CR1         ; L perm: load from device
-; DR0 <- 1 if pressed, 0 if not`,
-            'WaitPress': `; Button.WaitPress — block until press
-LOAD   CR1, NS[13]      ; Load Button GT
-DWRITE DR0, #1          ; Method = WaitPress
-CALL   CR1              ; Blocks until button pressed`,
-            'OnEvent': `; Button.OnEvent — dequeue event
-LOAD   CR1, NS[13]      ; Load Button GT
-DWRITE DR0, #2          ; Method = OnEvent
-CALL   CR1              ; DR0 <- event or 0`,
+LOAD   DR0, CR1         ; L perm: load state from device
+; DR0 <- 1 if pressed, 0 if released`,
+            'WaitPress': `; Button.WaitPress — block until button press
+LOAD   CR1, NS[13]      ; Load Button GT [L,E]
+
+CALL   CR1              ; Button.WaitPress via E perm:
+;   1. Read current state via L perm
+;   2. If pressed: return immediately
+;   3. If released: Scheduler.Wait on button event
+;      thread blocks until hardware interrupt
+; DR0 <- 1 (pressed) when thread resumes`,
+            'OnEvent': `; Button.OnEvent — dequeue button event
+LOAD   CR1, NS[13]      ; Load Button GT [L,E]
+
+CALL   CR1              ; Button.OnEvent via E perm:
+;   1. Check event queue (press/release transitions)
+;   2. If event pending: dequeue and return
+;   3. If no event: DR0 = 0, Z flag set
+; DR0 <- event type (1=press, 2=release, 0=none)`,
         },
         'Timer': {
-            'Start': `; Timer.Start — begin counting (S perm)
+            'Start': `; Timer.Start — begin counting via S perm
 LOAD   CR1, NS[14]      ; Load Timer GT [L,S,E]
-DWRITE DR0, #0          ; Method = Start
-SAVE   CR1, DR0         ; S perm: start timer`,
-            'Stop': `; Timer.Stop — halt timer
-LOAD   CR1, NS[14]      ; Load Timer GT
-DWRITE DR0, #1          ; Method = Stop
-SAVE   CR1, DR0         ; S perm: stop timer`,
-            'Read': `; Timer.Read — get elapsed time (L perm)
-LOAD   CR1, NS[14]      ; Load Timer GT
-LOAD   DR0, CR1         ; L perm: load elapsed
-; DR0 <- elapsed ticks`,
-            'SetAlarm': `; Timer.SetAlarm — set threshold (S perm)
-LOAD   CR1, NS[14]      ; Load Timer GT
-DWRITE DR0, #1000       ; Alarm at 1000 ticks
-SAVE   CR1, DR0         ; S perm: save alarm`,
+DWRITE DR0, #0          ; Timer channel
+
+SAVE   CR1, DR0         ; S perm: save "start" to device
+; Timer begins counting from 27MHz clock`,
+            'Stop': `; Timer.Stop — halt timer via S perm
+LOAD   CR1, NS[14]      ; Load Timer GT [L,S,E]
+DWRITE DR0, #0          ; Timer channel
+
+CALL   CR1              ; Timer.Stop via E perm:
+;   S perm: write stop command to device
+;   Timer halts, counter preserved for reading`,
+            'Read': `; Timer.Read — get elapsed time via L perm
+LOAD   CR1, NS[14]      ; Load Timer GT [L,S,E]
+
+LOAD   DR0, CR1         ; L perm: load elapsed from device
+; DR0 <- elapsed ticks since Start
+; At 27MHz: ticks / 27000000 = seconds`,
+            'SetAlarm': `; Timer.SetAlarm — set alarm threshold via S perm
+LOAD   CR1, NS[14]      ; Load Timer GT [L,S,E]
+DWRITE DR0, #27000000   ; Alarm at 1 second (27M ticks)
+
+SAVE   CR1, DR0         ; S perm: save alarm to device
+; When counter reaches threshold:
+;   hardware signals DijkstraFlag for this timer
+;   waiting thread wakes via DijkstraFlag.Signal`,
         },
         'Display': {
-            'Write': `; Display.Write — write text (S perm)
+            'Write': `; Display.Write — write character via S perm
 LOAD   CR1, NS[15]      ; Load Display GT [L,S,E]
-DWRITE DR0, #0x48       ; 'H'
-SAVE   CR1, DR0         ; S perm: save to display`,
-            'Clear': `; Display.Clear — clear screen
-LOAD   CR1, NS[15]      ; Load Display GT
-DWRITE DR0, #1          ; Method = Clear
-CALL   CR1              ; Display cleared`,
-            'Scroll': `; Display.Scroll — scroll display
-LOAD   CR1, NS[15]      ; Load Display GT
-DWRITE DR0, #2          ; Method = Scroll
-DWRITE DR1, #1          ; Scroll 1 line
-CALL   CR1              ; Display scrolled`,
+DWRITE DR0, #0x48       ; Character 'H'
+
+SAVE   CR1, DR0         ; S perm: save char to device
+; Character appears at current cursor position`,
+            'Clear': `; Display.Clear — clear screen via E perm
+LOAD   CR1, NS[15]      ; Load Display GT [L,S,E]
+
+CALL   CR1              ; Display.Clear via E perm:
+;   S perm: write clear command to device
+;   All pixels/chars zeroed, cursor reset to (0,0)`,
+            'Scroll': `; Display.Scroll — scroll display via E perm
+LOAD   CR1, NS[15]      ; Load Display GT [L,S,E]
+DWRITE DR0, #1          ; Scroll 1 line up
+
+CALL   CR1              ; Display.Scroll via E perm:
+;   S perm: write scroll command to device
+;   Top line lost, bottom line cleared`,
         },
         'SlideRule': {
-            'Add': `; SlideRule.Add — float addition
-LOAD   CR1, NS[16]      ; Load SlideRule GT
-DWRITE DR0, #0x3F800000 ; 1.0 (IEEE 754)
+            'Add': `; SlideRule.Add — IEEE 754 float addition
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
+DWRITE DR0, #0x3F800000 ; 1.0 (IEEE 754 single)
 DWRITE DR1, #0x40000000 ; 2.0
-CALL   CR1              ; DR0 <- 3.0`,
-            'Sub': `; SlideRule.Sub — float subtract
-LOAD   CR1, NS[16]      ; Load SlideRule GT
+CALL   CR1              ; DR0 <- 0x40400000 (3.0)`,
+            'Sub': `; SlideRule.Sub — IEEE 754 float subtract
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
 DWRITE DR0, #0x40400000 ; 3.0
 DWRITE DR1, #0x3F800000 ; 1.0
-CALL   CR1              ; DR0 <- 2.0`,
-            'Mul': `; SlideRule.Mul — float multiply
-LOAD   CR1, NS[16]      ; Load SlideRule GT
+CALL   CR1              ; DR0 <- 0x40000000 (2.0)`,
+            'Mul': `; SlideRule.Mul — IEEE 754 float multiply
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
 DWRITE DR0, #0x40000000 ; 2.0
 DWRITE DR1, #0x40400000 ; 3.0
-CALL   CR1              ; DR0 <- 6.0`,
-            'Div': `; SlideRule.Div — float divide
-LOAD   CR1, NS[16]      ; Load SlideRule GT
+CALL   CR1              ; DR0 <- 0x40C00000 (6.0)`,
+            'Div': `; SlideRule.Div — IEEE 754 float divide
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
 DWRITE DR0, #0x41200000 ; 10.0
 DWRITE DR1, #0x40000000 ; 2.0
-CALL   CR1              ; DR0 <- 5.0`,
+CALL   CR1              ; DR0 <- 0x40A00000 (5.0)
+; Div by zero: FAULT MATH_ERROR`,
             'Sqrt': `; SlideRule.Sqrt — square root
-LOAD   CR1, NS[16]      ; Load SlideRule GT
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
 DWRITE DR0, #0x41100000 ; 9.0
-CALL   CR1              ; DR0 <- 3.0`,
+CALL   CR1              ; DR0 <- 0x40400000 (3.0)
+; Negative input: FAULT DOMAIN_ERROR`,
             'Log': `; SlideRule.Log — natural logarithm
-LOAD   CR1, NS[16]      ; Load SlideRule GT
-DWRITE DR0, #0x402DF854 ; e (2.71828...)
-CALL   CR1              ; DR0 <- 1.0`,
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
+DWRITE DR0, #0x402DF854 ; e (2.71828)
+CALL   CR1              ; DR0 <- 0x3F800000 (1.0)`,
             'Pow': `; SlideRule.Pow — power function
-LOAD   CR1, NS[16]      ; Load SlideRule GT
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
 DWRITE DR0, #0x40000000 ; Base: 2.0
-DWRITE DR1, #0x41200000 ; Exp: 10.0
-CALL   CR1              ; DR0 <- 1024.0`,
+DWRITE DR1, #0x41200000 ; Exponent: 10.0
+CALL   CR1              ; DR0 <- 0x44800000 (1024.0)`,
             'Sin': `; SlideRule.Sin — sine (radians)
-LOAD   CR1, NS[16]      ; Load SlideRule GT
-DWRITE DR0, #0x3FC90FDB ; pi/2 (1.5708)
-CALL   CR1              ; DR0 <- 1.0`,
+; FPGA uses CORDIC; simulator uses IEEE 754
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
+DWRITE DR0, #0x3FC90FDB ; pi/2 (1.5708 rad)
+CALL   CR1              ; DR0 <- 0x3F800000 (1.0)`,
             'Cos': `; SlideRule.Cos — cosine (radians)
-LOAD   CR1, NS[16]      ; Load SlideRule GT
-DWRITE DR0, #0x00000000 ; 0.0
-CALL   CR1              ; DR0 <- 1.0`,
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
+DWRITE DR0, #0x00000000 ; 0.0 rad
+CALL   CR1              ; DR0 <- 0x3F800000 (1.0)`,
             'Tan': `; SlideRule.Tan — tangent (radians)
-LOAD   CR1, NS[16]      ; Load SlideRule GT
-DWRITE DR0, #0x3F490FDB ; pi/4 (0.7854)
-CALL   CR1              ; DR0 <- 1.0`,
-            'Asin': `; SlideRule.Asin — inverse sine
-LOAD   CR1, NS[16]      ; Load SlideRule GT
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
+DWRITE DR0, #0x3F490FDB ; pi/4 (0.7854 rad)
+CALL   CR1              ; DR0 <- 0x3F800000 (1.0)
+; Near pi/2: FAULT DOMAIN_ERROR (asymptote)`,
+            'Asin': `; SlideRule.Asin — inverse sine -> radians
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
 DWRITE DR0, #0x3F800000 ; 1.0
-CALL   CR1              ; DR0 <- pi/2`,
-            'Acos': `; SlideRule.Acos — inverse cosine
-LOAD   CR1, NS[16]      ; Load SlideRule GT
+CALL   CR1              ; DR0 <- 0x3FC90FDB (pi/2)
+; |input| > 1.0: FAULT DOMAIN_ERROR`,
+            'Acos': `; SlideRule.Acos — inverse cosine -> radians
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
 DWRITE DR0, #0x3F800000 ; 1.0
-CALL   CR1              ; DR0 <- 0.0`,
-            'Atan': `; SlideRule.Atan — inverse tangent
-LOAD   CR1, NS[16]      ; Load SlideRule GT
+CALL   CR1              ; DR0 <- 0x00000000 (0.0)`,
+            'Atan': `; SlideRule.Atan — inverse tangent -> radians
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
 DWRITE DR0, #0x3F800000 ; 1.0
-CALL   CR1              ; DR0 <- pi/4`,
+CALL   CR1              ; DR0 <- 0x3F490FDB (pi/4)`,
             'ToDegrees': `; SlideRule.ToDegrees — radians to degrees
-LOAD   CR1, NS[16]      ; Load SlideRule GT
-DWRITE DR0, #0x40490FDB ; pi (3.14159)
-CALL   CR1              ; DR0 <- 180.0`,
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
+DWRITE DR0, #0x40490FDB ; pi (3.14159 rad)
+CALL   CR1              ; DR0 <- 0x43340000 (180.0 deg)
+; Multiply by 180/pi internally`,
             'ToRadians': `; SlideRule.ToRadians — degrees to radians
-LOAD   CR1, NS[16]      ; Load SlideRule GT
-DWRITE DR0, #0x43340000 ; 180.0
-CALL   CR1              ; DR0 <- pi`,
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT
+DWRITE DR0, #0x43340000 ; 180.0 degrees
+CALL   CR1              ; DR0 <- 0x40490FDB (pi rad)
+; Multiply by pi/180 internally`,
         },
         'Abacus': {
-            'Add': `; Abacus.Add — integer addition
-LOAD   CR1, NS[17]      ; Load Abacus GT
-DWRITE DR0, #7          ; Operand A
-DWRITE DR1, #5          ; Operand B
-CALL   CR1              ; DR0 <- 12`,
+            'Add': `; Abacus.Add — integer addition (Turing domain data)
+LOAD   CR1, NS[17]      ; Load Abacus E-GT
+DWRITE DR0, #7
+DWRITE DR1, #5
+CALL   CR1              ; DR0 <- 12
+; Overflow: sets V (overflow) flag`,
             'Sub': `; Abacus.Sub — integer subtract
-LOAD   CR1, NS[17]      ; Load Abacus GT
+LOAD   CR1, NS[17]      ; Load Abacus E-GT
 DWRITE DR0, #10
 DWRITE DR1, #3
-CALL   CR1              ; DR0 <- 7`,
+CALL   CR1              ; DR0 <- 7
+; Underflow: sets N (negative) flag`,
             'Mul': `; Abacus.Mul — integer multiply
-LOAD   CR1, NS[17]      ; Load Abacus GT
+LOAD   CR1, NS[17]      ; Load Abacus E-GT
 DWRITE DR0, #6
 DWRITE DR1, #7
 CALL   CR1              ; DR0 <- 42`,
             'Div': `; Abacus.Div — integer divide
-LOAD   CR1, NS[17]      ; Load Abacus GT
+LOAD   CR1, NS[17]      ; Load Abacus E-GT
 DWRITE DR0, #42
 DWRITE DR1, #6
-CALL   CR1              ; DR0 <- 7`,
-            'Mod': `; Abacus.Mod — modulo
-LOAD   CR1, NS[17]      ; Load Abacus GT
+CALL   CR1              ; DR0 <- 7 (quotient)
+; Div by zero: FAULT MATH_ERROR`,
+            'Mod': `; Abacus.Mod — modulo (remainder)
+LOAD   CR1, NS[17]      ; Load Abacus E-GT
 DWRITE DR0, #17
 DWRITE DR1, #5
 CALL   CR1              ; DR0 <- 2`,
             'Abs': `; Abacus.Abs — absolute value
-LOAD   CR1, NS[17]      ; Load Abacus GT
-DWRITE DR0, #-42        ; Negative input
+LOAD   CR1, NS[17]      ; Load Abacus E-GT
+DWRITE DR0, #-42        ; Negative input (two's complement)
 CALL   CR1              ; DR0 <- 42`,
         },
         'Constants': {
-            'Pi': `; Constants.Pi — load pi
-LOAD   CR1, NS[18]      ; Load Constants GT
-DWRITE DR0, #0          ; Selector = Pi
-CALL   CR1              ; DR0 <- 0x40490FDB (3.14159)`,
-            'E': `; Constants.E — load Euler's number
-LOAD   CR1, NS[18]      ; Load Constants GT
-DWRITE DR0, #1          ; Selector = E
-CALL   CR1              ; DR0 <- 0x402DF854 (2.71828)`,
-            'Phi': `; Constants.Phi — load golden ratio
-LOAD   CR1, NS[18]      ; Load Constants GT
-DWRITE DR0, #2          ; Selector = Phi
-CALL   CR1              ; DR0 <- 0x3FCFBE77 (1.61803)`,
-            'Zero': `; Constants.Zero — load zero
-LOAD   CR1, NS[18]      ; Load Constants GT
-DWRITE DR0, #3
-CALL   CR1              ; DR0 <- 0`,
-            'One': `; Constants.One — load one
-LOAD   CR1, NS[18]      ; Load Constants GT
-DWRITE DR0, #4
-CALL   CR1              ; DR0 <- 1`,
+            'Pi': `; Constants.Pi — return pi as IEEE 754
+LOAD   CR1, NS[18]      ; Load Constants E-GT
+CALL   CR1              ; DR0 <- 0x40490FDB (3.14159265)`,
+            'E': `; Constants.E — return Euler's number
+LOAD   CR1, NS[18]      ; Load Constants E-GT
+CALL   CR1              ; DR0 <- 0x402DF854 (2.71828183)`,
+            'Phi': `; Constants.Phi — return golden ratio
+LOAD   CR1, NS[18]      ; Load Constants E-GT
+CALL   CR1              ; DR0 <- 0x3FCFBE77 (1.61803399)`,
+            'Zero': `; Constants.Zero — return 0
+LOAD   CR1, NS[18]      ; Load Constants E-GT
+CALL   CR1              ; DR0 <- 0x00000000 (0.0)`,
+            'One': `; Constants.One — return 1
+LOAD   CR1, NS[18]      ; Load Constants E-GT
+CALL   CR1              ; DR0 <- 0x3F800000 (1.0)`,
         },
         'Circle': {
-            'Area': `; Circle.Area — pi * r^2 via SlideRule
-LOAD   CR1, NS[19]      ; Load Circle GT
+            'Area': `; Circle.Area — pi * r^2 (delegates to SlideRule)
+LOAD   CR1, NS[19]      ; Load Circle E-GT
 DWRITE DR0, #0x40A00000 ; Radius: 5.0
-CALL   CR1              ; DR0 <- 78.54 (area)
-; Internally: SlideRule.Mul(r, r), then Mul(pi, r^2)`,
+
+CALL   CR1              ; Circle.Area internally:
+;   1. LOAD CR2, NS[16] — get SlideRule GT
+;   2. CALL SlideRule.Mul(r, r)      -> r^2 = 25.0
+;   3. LOAD CR3, NS[18] — get Constants GT
+;   4. CALL Constants.Pi             -> pi
+;   5. CALL SlideRule.Mul(pi, r^2)   -> 78.5398
+; DR0 <- 0x429CE5A0 (78.54)
+; Circle has no trig itself — delegates to SlideRule`,
             'Circumference': `; Circle.Circumference — 2 * pi * r
-LOAD   CR1, NS[19]      ; Load Circle GT
+LOAD   CR1, NS[19]      ; Load Circle E-GT
 DWRITE DR0, #0x40A00000 ; Radius: 5.0
-DWRITE DR1, #1          ; Method = Circumference
-CALL   CR1              ; DR0 <- 31.416`,
+
+CALL   CR1              ; Circle.Circumference internally:
+;   1. CALL Constants.Pi             -> pi
+;   2. CALL SlideRule.Mul(2.0, pi)   -> 2*pi
+;   3. CALL SlideRule.Mul(2pi, r)    -> 31.4159
+; DR0 <- 0x41FB53D1 (31.416)`,
         },
         'SUCC': {
-            'Apply': `; SUCC.Apply — Church successor
+            'Apply': `; SUCC.Apply — Church successor via LAMBDA
+; Church numerals use LAMBDA instruction, not CALL
+; LAMBDA dispatches within an abstraction (not a security block)
 LOAD   CR1, NS[20]      ; Load SUCC GT [X,L,E]
+                         ;   X perm: code is a DATA-domain object
+                         ;   SUCC's CLOOMC holds the reduction code
 DWRITE DR0, #3          ; Church numeral 3
-LAMBDA CR1, DR0         ; Apply SUCC to 3
-; DR0 <- 4`,
+
+LAMBDA CR1, DR0         ; Apply SUCC:
+                         ;   CR1 must have X perm (execute code)
+                         ;   SUCC's code performs: f(f(f(x))) -> f(f(f(f(x))))
+                         ;   i.e. add one application of f
+; DR0 <- 4 (Church numeral for successor of 3)`,
         },
         'PRED': {
             'Apply': `; PRED.Apply — Church predecessor
-LOAD   CR1, NS[21]      ; Load PRED GT
+LOAD   CR1, NS[21]      ; Load PRED GT [X,L,E]
 DWRITE DR0, #5          ; Church numeral 5
-LAMBDA CR1, DR0         ; Apply PRED to 5
-; DR0 <- 4`,
+
+LAMBDA CR1, DR0         ; Apply PRED:
+                         ;   Removes one application of f
+                         ;   f(f(f(f(f(x))))) -> f(f(f(f(x))))
+; DR0 <- 4 (predecessor of 5)
+; PRED(0) = 0 (Church numerals have no negatives)`,
         },
         'ADD': {
             'Apply': `; ADD.Apply — Church addition
-LOAD   CR1, NS[22]      ; Load ADD GT
-DWRITE DR0, #3          ; First operand
-DWRITE DR1, #4          ; Second operand
-LAMBDA CR1, DR0         ; Apply ADD
+LOAD   CR1, NS[22]      ; Load ADD GT [X,L,E]
+DWRITE DR0, #3          ; First Church numeral
+DWRITE DR1, #4          ; Second Church numeral
+
+LAMBDA CR1, DR0         ; Apply ADD:
+                         ;   ADD m n = apply SUCC m times to n
+                         ;   3 + 4 = SUCC(SUCC(SUCC(4))) = 7
 ; DR0 <- 7`,
         },
         'SUB': {
             'Apply': `; SUB.Apply — Church subtraction
-LOAD   CR1, NS[23]      ; Load SUB GT
-DWRITE DR0, #7          ; First operand
-DWRITE DR1, #3          ; Second operand
-LAMBDA CR1, DR0         ; Apply SUB
-; DR0 <- 4`,
+LOAD   CR1, NS[23]      ; Load SUB GT [X,L,E]
+DWRITE DR0, #7
+DWRITE DR1, #3
+
+LAMBDA CR1, DR0         ; Apply SUB:
+                         ;   SUB m n = apply PRED n times to m
+                         ;   7 - 3 = PRED(PRED(PRED(7))) = 4
+; DR0 <- 4
+; SUB where n > m yields 0 (no negatives)`,
         },
         'MUL': {
             'Apply': `; MUL.Apply — Church multiplication
-LOAD   CR1, NS[24]      ; Load MUL GT
+LOAD   CR1, NS[24]      ; Load MUL GT [X,L,E]
 DWRITE DR0, #3
 DWRITE DR1, #4
-LAMBDA CR1, DR0         ; Apply MUL
+
+LAMBDA CR1, DR0         ; Apply MUL:
+                         ;   MUL m n = compose m and n
+                         ;   3 * 4 = apply (ADD 4) three times to 0
 ; DR0 <- 12`,
         },
         'ISZERO': {
             'Apply': `; ISZERO.Apply — Church zero test
-LOAD   CR1, NS[25]      ; Load ISZERO GT
-DWRITE DR0, #0          ; Test value
-LAMBDA CR1, DR0         ; Apply ISZERO
-; DR0 <- TRUE (Church boolean)`,
+LOAD   CR1, NS[25]      ; Load ISZERO GT [X,L,E]
+DWRITE DR0, #0          ; Church numeral to test
+
+LAMBDA CR1, DR0         ; Apply ISZERO:
+                         ;   if numeral is 0 (no f applications):
+                         ;     return TRUE (Church boolean)
+                         ;   else:
+                         ;     return FALSE
+; DR0 <- TRUE (NS[26] GT) because input was 0`,
         },
         'PAIR': {
             'Apply': `; PAIR.Apply — Church pair constructor
-LOAD   CR1, NS[43]      ; Load PAIR GT
+LOAD   CR1, NS[43]      ; Load PAIR GT [X,L,E]
 DWRITE DR0, #10         ; First element
 DWRITE DR1, #20         ; Second element
-LAMBDA CR1, DR0         ; Apply PAIR
-; DR0 <- PAIR(10, 20)`,
+
+LAMBDA CR1, DR0         ; Apply PAIR:
+                         ;   Construct pair: \\f. f 10 20
+                         ;   Extract first:  PAIR TRUE  -> 10
+                         ;   Extract second: PAIR FALSE -> 20
+; DR0 <- PAIR(10, 20) encoded as closure`,
         },
         'Family': {
-            'Register': `; Family.Register — bind parent-child
-LOAD   CR1, NS[28]      ; Load Family GT
-DWRITE DR0, #0          ; Method = Register
-LOAD   CR2, NS[50]      ; Parent GT
-LOAD   CR3, NS[51]      ; Child GT
-CALL   CR1              ; Bond registered in c-list`,
-            'Hello': `; Family.Hello — greet any family member
-LOAD   CR1, NS[28]      ; Load Family GT
-DWRITE DR0, #1          ; Method = Hello
-LOAD   CR2, NS[50]      ; target_GT (Mum, Dad, Sibling...)
-CALL   CR1              ; Hello(target_GT) sent
-; Mum is a GT, not a method name`,
-            'Oversight': `; Family.Oversight — parent queries child
-LOAD   CR1, NS[28]      ; Load Family GT
-DWRITE DR0, #2          ; Method = Oversight
+            'Register': `; Family.Register — bind parent-child relationship
+; The c-list IS the parental approval mechanism
+LOAD   CR1, NS[28]      ; Load Family E-GT
+LOAD   CR2, NS[50]      ; Parent GT (identifies parent)
+LOAD   CR3, NS[51]      ; Child GT (identifies child)
+
+CALL   CR1              ; Family.Register:
+;   1. Verify CR2 is a valid parent GT (mLoad pipeline)
+;   2. Verify CR3 is a valid child GT
+;   3. Add parent GT to child's c-list (via Mint.Transfer)
+;   4. Add child GT to parent's oversight c-list
+;   5. Parent's c-list controls what child can access
+; The c-list IS the parental control — not a filter,
+; not a blocklist. The child can ONLY reach GTs in
+; their c-list, and parent controls that c-list.`,
+            'Hello': `; Family.Hello(target_GT) — greet any family member
+; Mum is a GT, not a method name. Hello works with ANY GT.
+LOAD   CR1, NS[28]      ; Load Family E-GT
+LOAD   CR2, NS[50]      ; target_GT — could be:
+                         ;   Mum's GT, Dad's GT, sibling's GT,
+                         ;   teacher's GT, friend's GT...
+                         ;   the GT carries the identity
+
+CALL   CR1              ; Family.Hello(CR2):
+;   1. mLoad validates target_GT (type, ver, seal, perms)
+;   2. Verify target is in caller's c-list
+;      (parent must have approved this contact)
+;   3. Send greeting/request to target
+;   4. Target receives via their own Family abstraction
+; Hello(Mum_GT) sends to Mum
+; Hello(Sibling_GT) sends to sibling
+; Same method, different GT — that's capability security`,
+            'Oversight': `; Family.Oversight — parent queries child activity
+LOAD   CR1, NS[28]      ; Load Family E-GT
 LOAD   CR2, NS[51]      ; Child GT
-CALL   CR1              ; DR0 <- activity report`,
+
+CALL   CR1              ; Family.Oversight:
+;   1. Verify caller is parent (holds parent GT)
+;   2. Read child's abstraction usage log
+;   3. Report which GTs the child accessed
+;   4. Report fault counts on child's blocks
+; DR0 <- activity summary
+; Parent can then Mint.Revoke any GT to restrict access`,
         },
         'Schoolroom': {
             'Join': `; Schoolroom.Join — student enters class
-LOAD   CR1, NS[29]      ; Load Schoolroom GT
-DWRITE DR0, #0          ; Method = Join
-LOAD   CR2, NS[60]      ; Class GT
-CALL   CR1              ; Student joined`,
-            'Lesson': `; Schoolroom.Lesson — teacher posts lesson
-LOAD   CR1, NS[29]      ; Load Schoolroom GT
-DWRITE DR0, #1          ; Method = Lesson
-LOAD   CR2, NS[70]      ; Lesson content GT
-CALL   CR1              ; Lesson posted to class`,
+LOAD   CR1, NS[29]      ; Load Schoolroom E-GT
+LOAD   CR2, NS[60]      ; Classroom GT (from student's c-list)
+                         ;   Parent must have placed this GT there
+
+CALL   CR1              ; Schoolroom.Join:
+;   1. Verify classroom GT is valid (mLoad)
+;   2. Verify student GT is in classroom's roster
+;   3. Mint.Create a session GT for this student
+;   4. Add lesson materials GTs to student's c-list`,
+            'Lesson': `; Schoolroom.Lesson — teacher posts lesson material
+LOAD   CR1, NS[29]      ; Load Schoolroom E-GT
+LOAD   CR2, NS[60]      ; Classroom GT
+LOAD   CR3, NS[70]      ; Lesson content GT (DATA object)
+
+CALL   CR1              ; Schoolroom.Lesson:
+;   1. Verify teacher GT has authority over classroom
+;   2. Memory.Allocate for lesson storage
+;   3. Mint.Create GT for lesson (X perm for students)
+;   4. Mint.Transfer lesson GT to each student's c-list`,
             'Submit': `; Schoolroom.Submit — student submits work
-LOAD   CR1, NS[29]      ; Load Schoolroom GT
-DWRITE DR0, #2          ; Method = Submit
-LOAD   CR2, NS[71]      ; Work GT (DATA object)
-CALL   CR1              ; Work submitted`,
-            'Grade': `; Schoolroom.Grade — teacher grades work
-LOAD   CR1, NS[29]      ; Load Schoolroom GT
-DWRITE DR0, #3          ; Method = Grade
-LOAD   CR2, NS[71]      ; Work GT
-DWRITE DR1, #85         ; Grade: 85%
-CALL   CR1              ; Grade recorded`,
+LOAD   CR1, NS[29]      ; Load Schoolroom E-GT
+LOAD   CR2, NS[71]      ; Work GT (student's DATA object)
+
+CALL   CR1              ; Schoolroom.Submit:
+;   1. Verify student is enrolled (has session GT)
+;   2. Mint.Create a read-only GT for the work
+;   3. Mint.Transfer work GT to teacher's c-list
+;   4. Student keeps their R+W copy, teacher gets R only`,
+            'Grade': `; Schoolroom.Grade — teacher grades submitted work
+LOAD   CR1, NS[29]      ; Load Schoolroom E-GT
+LOAD   CR2, NS[71]      ; Work GT (teacher's read copy)
+DWRITE DR0, #85         ; Grade: 85%
+
+CALL   CR1              ; Schoolroom.Grade:
+;   1. Verify teacher authority
+;   2. Memory.Allocate for grade record
+;   3. Mint.Create grade GT, transfer to student's c-list
+;   4. Student can LOAD the grade GT to see their score`,
         },
         'Friends': {
-            'Request': `; Friends.Request — send friend request
-LOAD   CR1, NS[30]      ; Load Friends GT
-DWRITE DR0, #0          ; Method = Request
+            'Request': `; Friends.Request — send friend request (parent-gated)
+LOAD   CR1, NS[30]      ; Load Friends E-GT
 LOAD   CR2, NS[52]      ; Target peer GT
-CALL   CR1              ; Request sent (needs parent OK)`,
+
+CALL   CR1              ; Friends.Request:
+;   1. Verify target is in caller's namespace
+;   2. Create pending request (needs parent approval)
+;   3. Negotiate.Propose for parent+peer-parent approval
+;   4. Both parents must Negotiate.Approve before
+;      any capability sharing is possible`,
             'Accept': `; Friends.Accept — accept friend request
-LOAD   CR1, NS[30]      ; Load Friends GT
-DWRITE DR0, #1          ; Method = Accept
+LOAD   CR1, NS[30]      ; Load Friends E-GT
 LOAD   CR2, NS[52]      ; Requester GT
-CALL   CR1              ; Friendship accepted`,
-            'Share': `; Friends.Share — share a capability
-LOAD   CR1, NS[30]      ; Load Friends GT
-DWRITE DR0, #2          ; Method = Share
+
+CALL   CR1              ; Friends.Accept:
+;   1. Verify pending request exists
+;   2. Verify both parents have approved (Negotiate)
+;   3. Mint.Create shared-space GT for both friends
+;   4. Transfer shared GT to both c-lists`,
+            'Share': `; Friends.Share — share capability with friend
+LOAD   CR1, NS[30]      ; Load Friends E-GT
 LOAD   CR2, NS[52]      ; Friend GT
-LOAD   CR3, NS[80]      ; GT to share
-CALL   CR1              ; Capability shared`,
-            'Revoke': `; Friends.Revoke — revoke shared cap
-LOAD   CR1, NS[30]      ; Load Friends GT
-DWRITE DR0, #3          ; Method = Revoke
+LOAD   CR3, NS[80]      ; GT to share (capability)
+
+CALL   CR1              ; Friends.Share:
+;   1. Verify friendship exists (both accepted)
+;   2. TPERM: restrict shared GT permissions
+;      (friend gets <= what sharer holds)
+;   3. Mint.Transfer restricted GT to friend's c-list
+;   4. Original GT unchanged in sharer's c-list`,
+            'Revoke': `; Friends.Revoke — revoke shared capability
+LOAD   CR1, NS[30]      ; Load Friends E-GT
 LOAD   CR2, NS[80]      ; GT to revoke
-CALL   CR1              ; Shared capability revoked`,
+
+CALL   CR1              ; Friends.Revoke:
+;   1. Mint.Revoke: increment version on NS entry
+;   2. All copies of this GT (in friend's c-list) die
+;   3. Friend's next mLoad hits version mismatch -> FAULT`,
         },
         'Tunnel': {
-            'Connect': `; Tunnel.Connect — open encrypted tunnel
-LOAD   CR1, NS[31]      ; Load Tunnel GT
-DWRITE DR0, #0          ; Method = Connect
-LOAD   CR2, NS[55]      ; Remote endpoint GT (F-bit)
-CALL   CR1              ; Tunnel established`,
-            'Send': `; Tunnel.Send — send via tunnel
-LOAD   CR1, NS[31]      ; Load Tunnel GT
-DWRITE DR0, #1          ; Method = Send
-DWRITE DR1, #0x48656C6C ; "Hell" (payload)
-CALL   CR1              ; Data sent encrypted`,
-            'Receive': `; Tunnel.Receive — receive via tunnel
-LOAD   CR1, NS[31]      ; Load Tunnel GT
-DWRITE DR0, #2          ; Method = Receive
-CALL   CR1              ; DR0 <- received data`,
-            'Close': `; Tunnel.Close — close tunnel
-LOAD   CR1, NS[31]      ; Load Tunnel GT
-DWRITE DR0, #3          ; Method = Close
-CALL   CR1              ; Tunnel closed`,
+            'Connect': `; Tunnel.Connect — establish encrypted capability tunnel
+; F-bit (Far) on NS entries routes through tunnels
+LOAD   CR1, NS[31]      ; Load Tunnel E-GT
+LOAD   CR2, NS[55]      ; Remote endpoint GT
+                         ;   This GT has F-bit=1 in its NS entry
+                         ;   word1[30] = 1 (Far/Foreign)
+
+CALL   CR1              ; Tunnel.Connect:
+;   1. Verify remote GT has F-bit set
+;   2. Establish encrypted channel to remote namespace
+;   3. GT type becomes Outform (type=01) for remote
+;   4. All future LOAD/SAVE on this GT route through tunnel
+;   5. mLoad step 6 detects F-bit, redirects to tunnel`,
+            'Send': `; Tunnel.Send — send data via encrypted tunnel
+LOAD   CR1, NS[31]      ; Load Tunnel E-GT
+LOAD   CR2, NS[55]      ; Connected remote GT (F-bit=1)
+DWRITE DR0, #0x48656C6C ; Payload data ("Hell")
+
+CALL   CR1              ; Tunnel.Send:
+;   1. Encrypt payload with tunnel key
+;   2. Pack as capability-addressed message
+;   3. Transmit via UART/network to remote node
+;   4. Remote node validates GT on their end`,
+            'Receive': `; Tunnel.Receive — receive via encrypted tunnel
+LOAD   CR1, NS[31]      ; Load Tunnel E-GT
+
+CALL   CR1              ; Tunnel.Receive:
+;   1. Decrypt incoming message
+;   2. Verify source GT matches tunnel endpoint
+;   3. Deliver payload to caller
+; DR0 <- received data
+; If no data pending: Scheduler.Wait on tunnel event`,
+            'Close': `; Tunnel.Close — close encrypted tunnel
+LOAD   CR1, NS[31]      ; Load Tunnel E-GT
+LOAD   CR2, NS[55]      ; Remote endpoint GT
+
+CALL   CR1              ; Tunnel.Close:
+;   1. Send close notification to remote
+;   2. Clear F-bit on NS entry (word1[30] = 0)
+;   3. Destroy tunnel key material
+;   4. Future LOAD/SAVE on this GT fails (no tunnel)`,
         },
         'Negotiate': {
             'Propose': `; Negotiate.Propose — request special grant
-LOAD   CR1, NS[32]      ; Load Negotiate GT
-DWRITE DR0, #0          ; Method = Propose
+; Dual-approval: parent AND teacher must both approve
+LOAD   CR1, NS[32]      ; Load Negotiate E-GT
 LOAD   CR2, NS[80]      ; Requested capability GT
-CALL   CR1              ; Proposal submitted`,
-            'Approve': `; Negotiate.Approve — parent/teacher approves
-LOAD   CR1, NS[32]      ; Load Negotiate GT
-DWRITE DR0, #1          ; Method = Approve
-DWRITE DR1, #1          ; Proposal ID
-CALL   CR1              ; Approved (dual-approval)`,
+
+CALL   CR1              ; Negotiate.Propose:
+;   1. Create proposal record (Memory.Allocate)
+;   2. Mint.Create proposal GT for parent
+;   3. Mint.Create proposal GT for teacher
+;   4. Both must Negotiate.Approve before grant
+; DR0 <- proposal ID`,
+            'Approve': `; Negotiate.Approve — parent or teacher approves
+LOAD   CR1, NS[32]      ; Load Negotiate E-GT
+DWRITE DR0, #1          ; Proposal ID
+
+CALL   CR1              ; Negotiate.Approve:
+;   1. Verify caller is authorized approver
+;   2. Record approval (parent or teacher)
+;   3. If BOTH have approved:
+;      a. Mint.Create the requested GT
+;      b. Mint.Transfer to child's c-list
+;      c. Log grant for audit trail
+;   4. If only one approved: wait for other`,
             'Reject': `; Negotiate.Reject — reject proposal
-LOAD   CR1, NS[32]      ; Load Negotiate GT
-DWRITE DR0, #2          ; Method = Reject
-DWRITE DR1, #1          ; Proposal ID
-CALL   CR1              ; Proposal rejected`,
+LOAD   CR1, NS[32]      ; Load Negotiate E-GT
+DWRITE DR0, #1          ; Proposal ID
+
+CALL   CR1              ; Negotiate.Reject:
+;   1. Mark proposal as rejected
+;   2. Mint.Revoke proposal GTs
+;   3. Notify other approver of rejection`,
             'Status': `; Negotiate.Status — check proposal state
-LOAD   CR1, NS[32]      ; Load Negotiate GT
-DWRITE DR0, #3          ; Method = Status
-DWRITE DR1, #1          ; Proposal ID
-CALL   CR1              ; DR0 <- status code`,
+LOAD   CR1, NS[32]      ; Load Negotiate E-GT
+DWRITE DR0, #1          ; Proposal ID
+
+CALL   CR1              ; Negotiate.Status:
+; DR0 <- status: 0=pending, 1=parent_ok,
+;   2=teacher_ok, 3=both_approved, 4=rejected`,
         },
         'Editor': {
-            'Open': `; Editor.Open — open source file
-LOAD   CR1, NS[33]      ; Load Editor GT
-DWRITE DR0, #0          ; Method = Open
-LOAD   CR2, NS[80]      ; File GT (DATA object)
-CALL   CR1              ; File opened in editor`,
-            'Save': `; Editor.Save — save source file
-LOAD   CR1, NS[33]      ; Load Editor GT
-DWRITE DR0, #1          ; Method = Save
-CALL   CR1              ; File saved to namespace`,
-            'Load': `; Editor.Load — load from namespace
-LOAD   CR1, NS[33]      ; Load Editor GT
-DWRITE DR0, #2          ; Method = Load
-DWRITE DR1, #80         ; Source NS slot
-CALL   CR1              ; Source loaded into editor`,
+            'Open': `; Editor.Open — open source file from namespace
+LOAD   CR1, NS[33]      ; Load Editor E-GT
+LOAD   CR2, NS[80]      ; File GT (DATA-domain object, R+W)
+                         ;   mLoad validates R perm for reading
+
+CALL   CR1              ; Editor.Open:
+;   1. mLoad CR2 (validates type, ver, seal, R perm)
+;   2. DREAD file contents from location (word0)
+;      up to limit (word1[16:0]) bytes
+;   3. Load into editor buffer
+;   4. File is a DATA object — Turing domain (R+W)`,
+            'Save': `; Editor.Save — save source to namespace
+LOAD   CR1, NS[33]      ; Load Editor E-GT
+
+CALL   CR1              ; Editor.Save:
+;   1. Get editor buffer contents
+;   2. If no existing slot: Memory.Allocate new DATA slot
+;   3. DWRITE buffer to mem[location] (W perm required)
+;   4. Recompute seal: FNV(word0, word1) for integrity
+;   5. Update word2 = (version << 25) | newSeal`,
+            'Load': `; Editor.Load — load source from NS slot into editor
+LOAD   CR1, NS[33]      ; Load Editor E-GT
+DWRITE DR0, #80         ; NS slot containing source
+
+CALL   CR1              ; Editor.Load:
+;   1. LOAD GT for NS[80] (needs L perm in c-list)
+;   2. mLoad validates: type, ver, seal, bounds
+;   3. DREAD contents into editor buffer
+;   4. Source is DATA domain — code is never Church domain`,
             'Undo': `; Editor.Undo — undo last edit
-LOAD   CR1, NS[33]      ; Load Editor GT
-DWRITE DR0, #3          ; Method = Undo
-CALL   CR1              ; Last edit undone`,
+LOAD   CR1, NS[33]      ; Load Editor E-GT
+
+CALL   CR1              ; Editor.Undo:
+;   1. Pop previous state from undo stack
+;   2. Restore editor buffer
+;   3. Stack managed via Stack abstraction internally`,
         },
         'Assembler': {
             'Assemble': `; Assembler.Assemble — source to machine code
-LOAD   CR1, NS[34]      ; Load Assembler GT
-DWRITE DR0, #0          ; Method = Assemble
-LOAD   CR2, NS[80]      ; Source GT (DATA object)
-CALL   CR1              ; CR2 <- binary GT (DATA object)`,
-            'Disassemble': `; Assembler.Disassemble — binary to source
-LOAD   CR1, NS[34]      ; Load Assembler GT
-DWRITE DR0, #1          ; Method = Disassemble
-LOAD   CR2, NS[81]      ; Binary GT
-CALL   CR1              ; CR2 <- source text GT`,
+; Output is a DATA-domain object (code is DATA, not Church)
+LOAD   CR1, NS[34]      ; Load Assembler E-GT
+LOAD   CR2, NS[80]      ; Source GT (DATA object, R perm)
+
+CALL   CR1              ; Assembler.Assemble:
+;   1. DREAD source text from CR2's location
+;   2. Parse assembly mnemonics
+;   3. Encode each instruction as 32-bit word:
+;      opcode(5)|cond(4)|dst(4)|src(4)|imm(15)
+;   4. Memory.Allocate for output binary (new DATA slot)
+;   5. DWRITE binary to new slot
+;   6. Mint.Create GT for binary (R+X perms)
+;      Code is a DATA-domain object with X permission
+; CR2 <- binary GT (DATA domain, X perm for execution)`,
+            'Disassemble': `; Assembler.Disassemble — binary to assembly text
+LOAD   CR1, NS[34]      ; Load Assembler E-GT
+LOAD   CR2, NS[81]      ; Binary GT (DATA object, X perm)
+
+CALL   CR1              ; Assembler.Disassemble:
+;   1. DREAD binary words from CR2's location
+;   2. Decode each 32-bit instruction:
+;      opcode(5)|cond(4)|dst(4)|src(4)|imm(15)
+;   3. Generate assembly text
+;   4. Memory.Allocate for output text
+;   5. Mint.Create GT for text (R+W perms)
+; CR2 <- source text GT`,
             'Validate': `; Assembler.Validate — check code validity
-LOAD   CR1, NS[34]      ; Load Assembler GT
-DWRITE DR0, #2          ; Method = Validate
+LOAD   CR1, NS[34]      ; Load Assembler E-GT
 LOAD   CR2, NS[80]      ; Source GT
-CALL   CR1              ; DR0 <- 1 valid, 0 invalid`,
+
+CALL   CR1              ; Assembler.Validate:
+;   1. Parse source for syntax errors
+;   2. Check register references (CR0-15, DR0-15)
+;   3. Verify condition codes (EQ,NE,CS,CC,MI,PL,...)
+;   4. Check opcode encoding fits 5-bit field
+; DR0 <- 1 if valid, 0 if errors found
+; DR1 <- error count`,
         },
         'Debugger': {
-            'Step': `; Debugger.Step — single-step execution
-LOAD   CR1, NS[35]      ; Load Debugger GT
-DWRITE DR0, #0          ; Method = Step
-CALL   CR1              ; One instruction executed`,
-            'Run': `; Debugger.Run — run until halt/breakpoint
-LOAD   CR1, NS[35]      ; Load Debugger GT
-DWRITE DR0, #1          ; Method = Run
-CALL   CR1              ; Running until stop`,
+            'Step': `; Debugger.Step — single-step one instruction
+LOAD   CR1, NS[35]      ; Load Debugger E-GT
+
+CALL   CR1              ; Debugger.Step:
+;   1. Fetch instruction at current PC
+;   2. Decode: opcode(5)|cond(4)|dst(4)|src(4)|imm(15)
+;   3. Evaluate condition code against flags (N,Z,C,V)
+;   4. If condition met: execute instruction
+;   5. If LOAD/CALL: run full mLoad 7-step pipeline
+;   6. Update PC, flags, step counter
+;   7. Return state snapshot to IDE`,
+            'Run': `; Debugger.Run — run until halt or breakpoint
+LOAD   CR1, NS[35]      ; Load Debugger E-GT
+
+CALL   CR1              ; Debugger.Run:
+;   1. Loop: fetch-decode-execute
+;   2. Check breakpoint list each cycle
+;   3. If PC matches breakpoint: halt, report
+;   4. If FAULT: halt, report fault type and PC
+;   5. Max steps limit prevents infinite loops`,
             'Breakpoint': `; Debugger.Breakpoint — set/clear breakpoint
-LOAD   CR1, NS[35]      ; Load Debugger GT
-DWRITE DR0, #2          ; Method = Breakpoint
-DWRITE DR1, #0x0040     ; Address to break at
-CALL   CR1              ; Breakpoint set at 0x40`,
-            'Inspect': `; Debugger.Inspect — inspect register/memory
-LOAD   CR1, NS[35]      ; Load Debugger GT
-DWRITE DR0, #3          ; Method = Inspect
-DWRITE DR1, #0x0100     ; Memory address
-CALL   CR1              ; DR0 <- value at 0x100`,
+LOAD   CR1, NS[35]      ; Load Debugger E-GT
+DWRITE DR0, #0x0040     ; Address to break at
+
+CALL   CR1              ; Debugger.Breakpoint:
+;   1. If address already has breakpoint: clear it
+;   2. If no breakpoint: set one at DR0
+;   3. Breakpoints stored in debugger's DATA slot`,
+            'Inspect': `; Debugger.Inspect — inspect register or memory
+LOAD   CR1, NS[35]      ; Load Debugger E-GT
+DWRITE DR0, #0x0100     ; Memory address to inspect
+
+CALL   CR1              ; Debugger.Inspect:
+;   1. If address is in NS table range (>= 0xFD00):
+;      read NS entry (3 words), decode fields
+;   2. If address is in data memory:
+;      DREAD the word at that address
+;   3. Return decoded view (GT fields, NS entry fields)
+; DR0 <- value at inspected address`,
         },
         'Deployer': {
-            'Build': `; Deployer.Build — compile for Tang Nano
-LOAD   CR1, NS[36]      ; Load Deployer GT
-DWRITE DR0, #0          ; Method = Build
-LOAD   CR2, NS[81]      ; Binary GT
-CALL   CR1              ; FPGA bitstream built`,
-            'Upload': `; Deployer.Upload — send via UART to Tang
-LOAD   CR1, NS[36]      ; Load Deployer GT
-DWRITE DR0, #1          ; Method = Upload
-CALL   CR1              ; Bitstream uploaded via UART`,
+            'Build': `; Deployer.Build — compile binary for Tang Nano 20K
+LOAD   CR1, NS[36]      ; Load Deployer E-GT
+LOAD   CR2, NS[81]      ; Binary GT (DATA object)
+
+CALL   CR1              ; Deployer.Build:
+;   1. DREAD binary from CR2's location
+;   2. Add boot vector and NS table initialization
+;   3. Package for FPGA: Gowin GW2AR-18 bitstream
+;   4. Memory.Allocate for deployment image
+;   5. Mint.Create GT for image
+; CR2 <- deployment image GT`,
+            'Upload': `; Deployer.Upload — send to Tang via UART
+LOAD   CR1, NS[36]      ; Load Deployer E-GT
+
+CALL   CR1              ; Deployer.Upload:
+;   1. LOAD UART GT from c-list (NS[11])
+;   2. For each word in deployment image:
+;      SAVE word to UART (S perm on UART GT)
+;   3. UART TX on pin 69 -> BL616 USB bridge
+;   4. Wait for ACK after each block`,
             'Verify': `; Deployer.Verify — verify upload integrity
-LOAD   CR1, NS[36]      ; Load Deployer GT
-DWRITE DR0, #2          ; Method = Verify
-CALL   CR1              ; DR0 <- 1 if verified`,
+LOAD   CR1, NS[36]      ; Load Deployer E-GT
+
+CALL   CR1              ; Deployer.Verify:
+;   1. Request readback from Tang via UART
+;   2. LOAD bytes from UART (L perm)
+;   3. Compare against original image
+;   4. Compute checksum match
+; DR0 <- 1 if verified, 0 if mismatch`,
             'Boot': `; Deployer.Boot — boot the FPGA
-LOAD   CR1, NS[36]      ; Load Deployer GT
-DWRITE DR0, #3          ; Method = Boot
-CALL   CR1              ; Tang Nano booted`,
+LOAD   CR1, NS[36]      ; Load Deployer E-GT
+
+CALL   CR1              ; Deployer.Boot:
+;   1. Send boot command via UART
+;   2. Tang Nano begins executing from boot vector
+;   3. FPGA initializes NS table (slots 0-44)
+;   4. Boot -> Salvation -> Navana (same as simulator)
+;   5. 27MHz clock begins instruction execution`,
         },
         'Browser': {
             'Navigate': `; Browser.Navigate — go to GT-addressed site
-LOAD   CR1, NS[37]      ; Load Browser GT
-DWRITE DR0, #0          ; Method = Navigate
-LOAD   CR2, NS[90]      ; Site GT from c-list
-CALL   CR1              ; Page loaded (no URLs, only GTs)`,
-            'Back': `; Browser.Back — go back
-LOAD   CR1, NS[37]      ; Load Browser GT
-DWRITE DR0, #1          ; Method = Back
-CALL   CR1              ; Previous page`,
-            'Bookmark': `; Browser.Bookmark — save GT bookmark
-LOAD   CR1, NS[37]      ; Load Browser GT
-DWRITE DR0, #2          ; Method = Bookmark
+; No URLs, no DNS — only capability-addressed resources
+LOAD   CR1, NS[37]      ; Load Browser E-GT [L,E]
+LOAD   CR2, NS[90]      ; Site GT from child's c-list
+                         ;   Parent placed this GT in the c-list
+                         ;   Child can ONLY reach sites in c-list
+
+CALL   CR1              ; Browser.Navigate:
+;   1. mLoad validates site GT (type, ver, seal, L perm)
+;   2. If F-bit=1: route through Tunnel (encrypted)
+;   3. LOAD page content via L perm on site GT
+;   4. Render content in display
+; No ambient authority — no way to reach unlisted sites`,
+            'Back': `; Browser.Back — navigate back
+LOAD   CR1, NS[37]      ; Load Browser E-GT
+CALL   CR1              ; Pop previous site GT from history stack`,
+            'Bookmark': `; Browser.Bookmark — save GT bookmark to c-list
+LOAD   CR1, NS[37]      ; Load Browser E-GT
 LOAD   CR2, NS[90]      ; Site GT to bookmark
-CALL   CR1              ; Bookmark saved to c-list`,
+
+CALL   CR1              ; Browser.Bookmark:
+;   1. Verify GT is valid (mLoad)
+;   2. SAVE GT to bookmark c-list (S perm)
+;   3. Bookmark is just a GT in the c-list`,
             'Search': `; Browser.Search — search within GT scope
-LOAD   CR1, NS[37]      ; Load Browser GT
-DWRITE DR0, #3          ; Method = Search
-LOAD   CR2, NS[91]      ; Search scope GT
-CALL   CR1              ; Results in c-list`,
+LOAD   CR1, NS[37]      ; Load Browser E-GT [L,E]
+LOAD   CR2, NS[91]      ; Search scope GT (e.g. library site)
+
+CALL   CR1              ; Browser.Search:
+;   1. LOAD search index via L perm on scope GT
+;   2. Results are GTs in the scope's c-list
+;   3. Child can only see results parent approved`,
         },
         'Messenger': {
-            'Send': `; Messenger.Send — send message
-LOAD   CR1, NS[38]      ; Load Messenger GT
-DWRITE DR0, #0          ; Method = Send
-LOAD   CR2, NS[50]      ; Recipient GT (parent-approved)
-LOAD   CR3, NS[85]      ; Message GT (DATA object)
-CALL   CR1              ; Message sent`,
+            'Send': `; Messenger.Send — send message to approved contact
+LOAD   CR1, NS[38]      ; Load Messenger E-GT [L,E]
+LOAD   CR2, NS[50]      ; Recipient GT (must be in c-list)
+LOAD   CR3, NS[85]      ; Message content GT (DATA object)
+
+CALL   CR1              ; Messenger.Send:
+;   1. Verify recipient GT is in caller's c-list
+;      (parent must have approved this contact)
+;   2. If F-bit=1: route via Tunnel (encrypted)
+;   3. SAVE message to recipient's inbox c-list
+;   4. Signal recipient via DijkstraFlag`,
             'Receive': `; Messenger.Receive — read incoming message
-LOAD   CR1, NS[38]      ; Load Messenger GT
-DWRITE DR0, #1          ; Method = Receive
-CALL   CR1              ; CR2 <- message GT`,
-            'Contacts': `; Messenger.Contacts — list approved contacts
-LOAD   CR1, NS[38]      ; Load Messenger GT
-DWRITE DR0, #2          ; Method = Contacts
-CALL   CR1              ; DR0 <- contact count`,
+LOAD   CR1, NS[38]      ; Load Messenger E-GT [L,E]
+
+CALL   CR1              ; Messenger.Receive:
+;   1. LOAD from inbox c-list (L perm)
+;   2. Dequeue oldest message GT
+;   3. If no messages: Scheduler.Wait on inbox event
+; CR2 <- message content GT (DATA object)`,
+            'Contacts': `; Messenger.Contacts — list parent-approved contacts
+LOAD   CR1, NS[38]      ; Load Messenger E-GT [L,E]
+
+CALL   CR1              ; Messenger.Contacts:
+;   1. Walk the contact c-list
+;   2. Each contact is a GT placed by parent
+;   3. Return count and list of valid GTs
+; DR0 <- number of approved contacts`,
             'Block': `; Messenger.Block — block a contact
-LOAD   CR1, NS[38]      ; Load Messenger GT
-DWRITE DR0, #3          ; Method = Block
+LOAD   CR1, NS[38]      ; Load Messenger E-GT
 LOAD   CR2, NS[52]      ; Contact GT to block
-CALL   CR1              ; Contact blocked`,
+
+CALL   CR1              ; Messenger.Block:
+;   1. Mint.Revoke the contact GT (version bump)
+;   2. Contact can no longer send messages
+;   3. Parent notified via Family.Oversight`,
         },
         'Photos': {
             'View': `; Photos.View — view a photo
-LOAD   CR1, NS[39]      ; Load Photos GT
-DWRITE DR0, #0          ; Method = View
-LOAD   CR2, NS[85]      ; Photo GT
-CALL   CR1              ; Photo displayed`,
-            'Share': `; Photos.Share — share with GT
-LOAD   CR1, NS[39]      ; Load Photos GT
-DWRITE DR0, #1          ; Method = Share
+LOAD   CR1, NS[39]      ; Load Photos E-GT [L,E]
+LOAD   CR2, NS[85]      ; Photo GT (DATA object)
+
+CALL   CR1              ; Photos.View:
+;   1. mLoad validates photo GT (type, ver, seal, L perm)
+;   2. DREAD photo data from location (word0)
+;   3. Render on Display (via Display.Write with S perm)`,
+            'Share': `; Photos.Share — share photo with GT
+LOAD   CR1, NS[39]      ; Load Photos E-GT
 LOAD   CR2, NS[85]      ; Photo GT
 LOAD   CR3, NS[50]      ; Recipient GT
-CALL   CR1              ; Photo shared`,
+
+CALL   CR1              ; Photos.Share:
+;   1. TPERM: create read-only copy of photo GT (L only)
+;   2. Mint.Transfer restricted GT to recipient's c-list
+;   3. Recipient can View but not modify`,
             'Upload': `; Photos.Upload — upload new photo
-LOAD   CR1, NS[39]      ; Load Photos GT
-DWRITE DR0, #2          ; Method = Upload
-LOAD   CR2, NS[86]      ; Photo data GT (DATA object)
-CALL   CR1              ; Photo stored`,
-            'Album': `; Photos.Album — manage album
-LOAD   CR1, NS[39]      ; Load Photos GT
-DWRITE DR0, #3          ; Method = Album
-CALL   CR1              ; DR0 <- album entry count`,
+LOAD   CR1, NS[39]      ; Load Photos E-GT
+LOAD   CR2, NS[86]      ; Photo data GT (DATA object, R+W)
+
+CALL   CR1              ; Photos.Upload:
+;   1. Memory.Allocate for photo storage
+;   2. DWRITE photo data to new slot
+;   3. Mint.Create GT with L perm (view-only)
+;   4. Compute seal for integrity verification`,
+            'Album': `; Photos.Album — manage photo album
+LOAD   CR1, NS[39]      ; Load Photos E-GT
+
+CALL   CR1              ; Photos.Album:
+;   1. Walk album c-list (each entry is a photo GT)
+;   2. Return count and metadata
+; DR0 <- album entry count`,
         },
         'Social': {
-            'Post': `; Social.Post — post to feed
-LOAD   CR1, NS[40]      ; Load Social GT
-DWRITE DR0, #0          ; Method = Post
+            'Post': `; Social.Post — post content to feed
+LOAD   CR1, NS[40]      ; Load Social E-GT [L,E]
 LOAD   CR2, NS[85]      ; Content GT (DATA object)
-CALL   CR1              ; Post published`,
+
+CALL   CR1              ; Social.Post:
+;   1. Memory.Allocate for post storage
+;   2. DWRITE content to new slot
+;   3. Mint.Create GT for post (L perm for followers)
+;   4. Distribute post GT to followers' feed c-lists`,
             'Read': `; Social.Read — read feed
-LOAD   CR1, NS[40]      ; Load Social GT
-DWRITE DR0, #1          ; Method = Read
-CALL   CR1              ; CR2 <- feed entry GT`,
+LOAD   CR1, NS[40]      ; Load Social E-GT [L,E]
+
+CALL   CR1              ; Social.Read:
+;   1. Walk feed c-list (each entry is a post GT)
+;   2. LOAD post content via L perm on each GT
+; CR2 <- next feed entry GT`,
             'Follow': `; Social.Follow — follow an account
-LOAD   CR1, NS[40]      ; Load Social GT
-DWRITE DR0, #2          ; Method = Follow
-LOAD   CR2, NS[55]      ; Account GT
-CALL   CR1              ; Now following`,
+LOAD   CR1, NS[40]      ; Load Social E-GT
+LOAD   CR2, NS[55]      ; Account GT (must be in c-list)
+
+CALL   CR1              ; Social.Follow:
+;   1. Verify account GT is parent-approved
+;   2. Request follow via Negotiate (if needed)
+;   3. Account's posts will appear in feed c-list`,
             'Feed': `; Social.Feed — get feed items
-LOAD   CR1, NS[40]      ; Load Social GT
-DWRITE DR0, #3          ; Method = Feed
-CALL   CR1              ; DR0 <- feed item count`,
+LOAD   CR1, NS[40]      ; Load Social E-GT
+
+CALL   CR1              ; Social.Feed:
+;   1. Count entries in feed c-list
+; DR0 <- number of feed items available`,
         },
         'Video': {
             'Watch': `; Video.Watch — play a video
-LOAD   CR1, NS[41]      ; Load Video GT
-DWRITE DR0, #0          ; Method = Watch
-LOAD   CR2, NS[85]      ; Video GT
-CALL   CR1              ; Video playing`,
-            'Search': `; Video.Search — search videos
-LOAD   CR1, NS[41]      ; Load Video GT
-DWRITE DR0, #1          ; Method = Search
-LOAD   CR2, NS[91]      ; Search scope GT
-CALL   CR1              ; Results in c-list`,
+LOAD   CR1, NS[41]      ; Load Video E-GT [L,E]
+LOAD   CR2, NS[85]      ; Video GT (DATA object)
+
+CALL   CR1              ; Video.Watch:
+;   1. mLoad validates video GT (L perm required)
+;   2. DREAD video data from location
+;   3. If F-bit=1: stream via Tunnel (encrypted)
+;   4. Render on Display via S perm`,
+            'Search': `; Video.Search — search videos within GT scope
+LOAD   CR1, NS[41]      ; Load Video E-GT
+LOAD   CR2, NS[91]      ; Search scope GT (library/channel)
+
+CALL   CR1              ; Video.Search:
+;   1. LOAD search index via L perm on scope GT
+;   2. Results filtered to parent-approved GTs only
+;   3. Results placed in caller's c-list`,
             'Playlist': `; Video.Playlist — manage playlist
-LOAD   CR1, NS[41]      ; Load Video GT
-DWRITE DR0, #2          ; Method = Playlist
-CALL   CR1              ; DR0 <- playlist length`,
+LOAD   CR1, NS[41]      ; Load Video E-GT
+
+CALL   CR1              ; Video.Playlist:
+;   1. Walk playlist c-list
+;   2. Each entry is a video GT
+; DR0 <- playlist length`,
             'Share': `; Video.Share — share video GT
-LOAD   CR1, NS[41]      ; Load Video GT
-DWRITE DR0, #3          ; Method = Share
+LOAD   CR1, NS[41]      ; Load Video E-GT
 LOAD   CR2, NS[85]      ; Video GT
 LOAD   CR3, NS[50]      ; Recipient GT
-CALL   CR1              ; Video shared`,
+
+CALL   CR1              ; Video.Share:
+;   1. TPERM: restrict to L-only (view but not copy)
+;   2. Mint.Transfer to recipient's c-list`,
         },
         'Email': {
-            'Compose': `; Email.Compose — compose email
-LOAD   CR1, NS[42]      ; Load Email GT
-DWRITE DR0, #0          ; Method = Compose
-LOAD   CR2, NS[50]      ; Recipient GT
+            'Compose': `; Email.Compose — compose and send email
+LOAD   CR1, NS[42]      ; Load Email E-GT [L,E]
+LOAD   CR2, NS[50]      ; Recipient GT (must be in contacts c-list)
 LOAD   CR3, NS[85]      ; Body GT (DATA object)
-CALL   CR1              ; Email queued`,
-            'Read': `; Email.Read — read email
-LOAD   CR1, NS[42]      ; Load Email GT
-DWRITE DR0, #1          ; Method = Read
-CALL   CR1              ; CR2 <- email content GT`,
-            'Reply': `; Email.Reply — reply to email
-LOAD   CR1, NS[42]      ; Load Email GT
-DWRITE DR0, #2          ; Method = Reply
-LOAD   CR2, NS[86]      ; Original email GT
-LOAD   CR3, NS[85]      ; Reply body GT
-CALL   CR1              ; Reply sent`,
-            'Contacts': `; Email.Contacts — list contacts
-LOAD   CR1, NS[42]      ; Load Email GT
-DWRITE DR0, #3          ; Method = Contacts
-CALL   CR1              ; DR0 <- contact count`,
+
+CALL   CR1              ; Email.Compose:
+;   1. Verify recipient GT in contacts c-list
+;   2. Memory.Allocate for email storage
+;   3. DWRITE body to new slot
+;   4. Mint.Create email GT
+;   5. If F-bit=1: route via Tunnel (encrypted)
+;   6. SAVE to recipient's inbox c-list`,
+            'Read': `; Email.Read — read incoming email
+LOAD   CR1, NS[42]      ; Load Email E-GT [L,E]
+
+CALL   CR1              ; Email.Read:
+;   1. LOAD from inbox c-list (L perm)
+;   2. Dequeue oldest email GT
+;   3. DREAD email body from GT's location
+; CR2 <- email content GT`,
+            'Reply': `; Email.Reply — reply to an email
+LOAD   CR1, NS[42]      ; Load Email E-GT
+LOAD   CR2, NS[86]      ; Original email GT (for thread)
+LOAD   CR3, NS[85]      ; Reply body GT (DATA object)
+
+CALL   CR1              ; Email.Reply:
+;   1. Extract sender GT from original email
+;   2. Verify sender is still in contacts c-list
+;   3. Memory.Allocate for reply
+;   4. Link reply to original (thread chain via GTs)
+;   5. Send via same path as Compose`,
+            'Contacts': `; Email.Contacts — list email contacts
+LOAD   CR1, NS[42]      ; Load Email E-GT
+
+CALL   CR1              ; Email.Contacts:
+;   1. Walk email contacts c-list
+;   2. Each contact is a GT placed by parent
+; DR0 <- number of email contacts`,
         },
         'GC': {
-            'Scan': `; GC.Scan — mark live entries
-LOAD   CR1, NS[44]      ; Load GC GT
-DWRITE DR0, #0          ; Method = Scan
-CALL   CR1              ; Walk CRs, set G-bits on live`,
-            'Identify': `; GC.Identify — find garbage
-LOAD   CR1, NS[44]      ; Load GC GT
-DWRITE DR0, #1          ; Method = Identify
-CALL   CR1              ; DR0 <- garbage entry count`,
+            'Scan': `; GC.Scan — mark live entries via G-bit
+; PP250 deterministic GC with bidirectional G-bit
+; G-bit in word1[29] of each NS entry
+LOAD   CR1, NS[44]      ; Load GC E-GT
+
+CALL   CR1              ; GC.Scan:
+;   1. Walk all 16 CRs (CR0-CR15):
+;      for each valid CR with a GT:
+;        extract index from GT bits [24:8]
+;        read NS[index].word1
+;        set G-bit (word1[29] = current polarity)
+;   2. Walk all c-list entries reachable from CRs:
+;      for each GT in c-list:
+;        set G-bit on referenced NS entry
+;   3. Any entry NOT marked is garbage
+; mLoad step 7 also resets G-bit on every access`,
+            'Identify': `; GC.Identify — find garbage entries
+LOAD   CR1, NS[44]      ; Load GC E-GT
+
+CALL   CR1              ; GC.Identify:
+;   1. Scan NS table (slots 45..nsCount):
+;      read word1[29] (G-bit) for each entry
+;      if G-bit != current polarity: entry is garbage
+;   2. Build garbage list
+; DR0 <- number of garbage entries found
+; Skip boot slots 0-44 (always live)`,
             'Clear': `; GC.Clear — zero garbage memory
-LOAD   CR1, NS[44]      ; Load GC GT
-DWRITE DR0, #2          ; Method = Clear
-CALL   CR1              ; Dead entries zeroed`,
+LOAD   CR1, NS[44]      ; Load GC E-GT
+
+CALL   CR1              ; GC.Clear:
+;   1. For each garbage entry from Identify:
+;      zero word0 (location = 0)
+;      zero word1 (limit/flags = 0)
+;      preserve word2 (version stays for stale GT detection)
+;   2. Memory at old locations now free
+;   3. Slots available for Memory.Allocate reuse
+; DR0 <- number of entries cleared`,
             'Flip': `; GC.Flip — invert GC polarity
-LOAD   CR1, NS[44]      ; Load GC GT
-DWRITE DR0, #3          ; Method = Flip
-CALL   CR1              ; G-bit polarity flipped`,
+LOAD   CR1, NS[44]      ; Load GC E-GT
+
+CALL   CR1              ; GC.Flip:
+;   1. Toggle polarity flag (0 -> 1 or 1 -> 0)
+;   2. After flip, ALL entries appear as garbage
+;      until next Scan marks live ones
+;   3. This enables the bidirectional GC cycle:
+;      Scan(polarity=0) -> Identify -> Clear
+;      Flip
+;      Scan(polarity=1) -> Identify -> Clear
+;      Flip ... (repeat)`,
         },
     };
     return examples[abs.name] || {};
