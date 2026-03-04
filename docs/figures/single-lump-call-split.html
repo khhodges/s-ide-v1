@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 25: Single-Lump CALL Split</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #ffffff;
+    color: #1a1a1a;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+  }
+  h1 { font-size: 22px; color: #b8860b; margin-bottom: 6px; text-align: center; }
+  .subtitle { font-size: 13px; color: #555555; margin-bottom: 30px; text-align: center; max-width: 960px; }
+  .nav { position: fixed; top: 10px; left: 10px; z-index: 100; }
+  .nav a {
+    background: #f0f0f0; color: #333; text-decoration: none; padding: 6px 14px;
+    border-radius: 4px; font-size: 13px; border: 1px solid #ccc;
+  }
+  .nav a:hover { background: #e0e0e0; color: #000; }
+  .legend { margin-top: 24px; display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555555; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+  @media print {
+    .nav { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="nav"><a href="/church/">&#8592; Church Machine</a></div>
+
+<h1>Figure 25 &mdash; Single-Lump CALL Split</h1>
+<p class="subtitle">A single Inform E-GT points to one namespace entry describing a contiguous memory lump. The CALL instruction reads clistCount from word1 and splits the lump into two domain-pure regions: CR7 (code, X-only) and CR6 (c-list, L-only), with inaccessible freespace between them.</p>
+
+<svg viewBox="0 0 1100 960" width="1100" height="960" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#b8860b"/>
+    </marker>
+    <marker id="ah-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2c5f8a"/>
+    </marker>
+    <marker id="ah-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2e7d32"/>
+    </marker>
+    <marker id="ah-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#6b4c9a"/>
+    </marker>
+    <marker id="ah-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#c62828"/>
+    </marker>
+    <pattern id="hatch" patternUnits="userSpaceOnUse" width="8" height="8">
+      <path d="M0,8 l8,-8 M-2,2 l4,-4 M6,10 l4,-4" stroke="#bbb" stroke-width="0.7"/>
+    </pattern>
+  </defs>
+
+  <!-- ===== E-GT (Golden Token) ===== -->
+  <rect x="60" y="30" width="400" height="70" rx="8" fill="#fffbef" stroke="#b8860b" stroke-width="2"/>
+  <text x="260" y="55" text-anchor="middle" font-size="15" font-weight="bold" fill="#b8860b">Inform E-GT (Golden Token)</text>
+  <text x="260" y="78" text-anchor="middle" font-size="11" font-family="'Courier New', monospace" fill="#555">Version(7) | Index(17) | Perms=E(6) | Type=01(2)</text>
+  <text x="260" y="92" text-anchor="middle" font-size="10" fill="#888">32-bit unforgeable capability token</text>
+
+  <!-- Arrow from E-GT to NS Entry -->
+  <line x1="260" y1="100" x2="260" y2="145" stroke="#b8860b" stroke-width="2" marker-end="url(#ah)"/>
+  <text x="270" y="128" font-size="10" fill="#b8860b">Index resolves to</text>
+
+  <!-- ===== NS Entry (3 words) ===== -->
+  <rect x="60" y="150" width="400" height="160" rx="8" fill="#f5f5f5" stroke="#333" stroke-width="2"/>
+  <text x="260" y="175" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">Namespace Entry (3 words)</text>
+  <line x1="80" y1="185" x2="440" y2="185" stroke="#333" stroke-width="0.5" opacity="0.3"/>
+
+  <!-- word0 -->
+  <rect x="80" y="192" width="360" height="26" rx="3" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1"/>
+  <text x="90" y="210" font-size="11" font-weight="bold" fill="#2e7d32">word0: Location</text>
+  <text x="380" y="210" text-anchor="end" font-size="11" font-family="'Courier New', monospace" fill="#555">0x1200 (base address of lump)</text>
+
+  <!-- word1 — the key field -->
+  <rect x="80" y="224" width="360" height="40" rx="3" fill="#fff8e1" stroke="#b8860b" stroke-width="1.5"/>
+  <text x="90" y="242" font-size="11" font-weight="bold" fill="#b8860b">word1:</text>
+  <text x="135" y="242" font-size="10" font-family="'Courier New', monospace" fill="#555">B(31)|F(30)|G(29)|C(28)|</text>
+  <text x="135" y="257" font-size="10" font-family="'Courier New', monospace" fill="#b8860b">type=01(27:26)|clistCount=3(25:17)|limit=255(16:0)</text>
+
+  <!-- word2 -->
+  <rect x="80" y="270" width="360" height="26" rx="3" fill="#f3e5f5" stroke="#6b4c9a" stroke-width="1"/>
+  <text x="90" y="288" font-size="11" font-weight="bold" fill="#6b4c9a">word2: Seal</text>
+  <text x="380" y="288" text-anchor="end" font-size="11" font-family="'Courier New', monospace" fill="#555">FNV-1a(location, limit) — 25 bits</text>
+
+  <!-- ===== CALL instruction box ===== -->
+  <rect x="540" y="30" width="500" height="120" rx="10" fill="#ffebee" stroke="#c62828" stroke-width="2.5"/>
+  <text x="790" y="55" text-anchor="middle" font-size="16" font-weight="bold" fill="#c62828">CALL Instruction</text>
+  <line x1="560" y1="63" x2="1020" y2="63" stroke="#c62828" stroke-width="0.5" opacity="0.3"/>
+  <text x="570" y="82" font-size="11" fill="#333">1. mLoad: type &#x2192; version &#x2192; seal &#x2192; bounds &#x2192; E-perm &#x2192; F-bit &#x2192; deliver</text>
+  <text x="570" y="100" font-size="11" fill="#333">2. Parse word1: extract clistCount and limit</text>
+  <text x="570" y="118" font-size="11" fill="#c62828" font-weight="bold">3. clistStart = (limit + 1) - clistCount = 256 - 3 = 253</text>
+  <text x="570" y="136" font-size="11" fill="#333">4. Create CR7 (code) + CR6 (c-list), set PC = 0</text>
+
+  <!-- Arrow from CALL to the split diagram -->
+  <line x1="790" y1="150" x2="790" y2="195" stroke="#c62828" stroke-width="2" marker-end="url(#ah-red)"/>
+  <text x="800" y="178" font-size="10" fill="#c62828">Splits lump into two CRs</text>
+
+  <!-- ===== LUMP — the main diagram ===== -->
+  <!-- Outer lump container -->
+  <rect x="540" y="200" width="260" height="540" rx="0" fill="none" stroke="#333" stroke-width="2.5"/>
+  <text x="670" y="192" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">Lump (power-of-2 = 256 words)</text>
+
+  <!-- Code region (top) -->
+  <rect x="540" y="200" width="260" height="180" fill="#e3f2fd" stroke="#2c5f8a" stroke-width="2"/>
+  <text x="670" y="230" text-anchor="middle" font-size="14" font-weight="bold" fill="#2c5f8a">Code Region</text>
+  <text x="670" y="250" text-anchor="middle" font-size="11" fill="#555">Turing domain</text>
+  <line x1="560" y1="262" x2="780" y2="262" stroke="#2c5f8a" stroke-width="0.5" opacity="0.3"/>
+  <text x="560" y="282" font-size="10" font-family="'Courier New', monospace" fill="#333">offset 0: method_table[3]</text>
+  <text x="560" y="298" font-size="10" font-family="'Courier New', monospace" fill="#333">offset 3: Greet code words</text>
+  <text x="560" y="314" font-size="10" font-family="'Courier New', monospace" fill="#333">offset 8: Init code words</text>
+  <text x="560" y="330" font-size="10" font-family="'Courier New', monospace" fill="#333">offset 14: Stop code words</text>
+  <text x="560" y="350" font-size="10" font-family="'Courier New', monospace" fill="#888">... compiled CLOOMC++ output</text>
+  <text x="560" y="370" font-size="10" font-family="'Courier New', monospace" fill="#888">offset ~50: last instruction</text>
+
+  <!-- Offset labels on left side -->
+  <text x="530" y="210" text-anchor="end" font-size="9" fill="#2c5f8a">0</text>
+
+  <!-- Freespace region (middle) -->
+  <rect x="540" y="380" width="260" height="160" fill="url(#hatch)" stroke="#999" stroke-width="1" stroke-dasharray="4,3"/>
+  <rect x="540" y="380" width="260" height="160" fill="rgba(240,240,240,0.7)" stroke="#999" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="670" y="445" text-anchor="middle" font-size="14" font-weight="bold" fill="#999">FREESPACE</text>
+  <text x="670" y="465" text-anchor="middle" font-size="11" fill="#aaa">Inaccessible</text>
+  <text x="670" y="485" text-anchor="middle" font-size="10" fill="#aaa">Beyond CR7 limit,</text>
+  <text x="670" y="500" text-anchor="middle" font-size="10" fill="#aaa">before CR6 base</text>
+  <text x="670" y="520" text-anchor="middle" font-size="10" fill="#bbb">Growth room for code updates</text>
+
+  <!-- Offset label -->
+  <text x="530" y="390" text-anchor="end" font-size="9" fill="#999">~51</text>
+
+  <!-- C-list region (bottom) -->
+  <rect x="540" y="540" width="260" height="200" fill="#f5f0ff" stroke="#6b4c9a" stroke-width="2"/>
+  <text x="670" y="570" text-anchor="middle" font-size="14" font-weight="bold" fill="#6b4c9a">C-List Region</text>
+  <text x="670" y="590" text-anchor="middle" font-size="11" fill="#555">Church domain</text>
+  <line x1="560" y1="602" x2="780" y2="602" stroke="#6b4c9a" stroke-width="0.5" opacity="0.3"/>
+  <text x="560" y="622" font-size="10" font-family="'Courier New', monospace" fill="#333">slot 0: E-GT &#x2192; Memory (@7)</text>
+  <text x="560" y="642" font-size="10" font-family="'Courier New', monospace" fill="#333">slot 1: E-GT &#x2192; Mint (@6)</text>
+  <text x="560" y="662" font-size="10" font-family="'Courier New', monospace" fill="#333">slot 2: E-GT &#x2192; Scheduler (@8)</text>
+  <text x="670" y="700" text-anchor="middle" font-size="10" fill="#888">Golden Tokens only — no data</text>
+  <text x="670" y="720" text-anchor="middle" font-size="10" fill="#888">Populated by Navana from upload</text>
+
+  <!-- Offset labels -->
+  <text x="530" y="550" text-anchor="end" font-size="9" fill="#6b4c9a">253</text>
+  <text x="530" y="740" text-anchor="end" font-size="9" fill="#333">255</text>
+
+  <!-- clistStart boundary marker -->
+  <line x1="520" y1="540" x2="810" y2="540" stroke="#c62828" stroke-width="2" stroke-dasharray="6,3"/>
+  <text x="815" y="544" font-size="11" font-weight="bold" fill="#c62828">clistStart = 253</text>
+
+  <!-- ===== CR7 arrow and box ===== -->
+  <line x1="800" y1="290" x2="870" y2="290" stroke="#2c5f8a" stroke-width="2.5" marker-end="url(#ah-blue)"/>
+  <rect x="875" y="250" width="200" height="100" rx="8" fill="#e3f2fd" stroke="#2c5f8a" stroke-width="2.5"/>
+  <text x="975" y="278" text-anchor="middle" font-size="15" font-weight="bold" fill="#2c5f8a">CR7</text>
+  <text x="975" y="298" text-anchor="middle" font-size="12" fill="#333">Code Region</text>
+  <line x1="895" y1="308" x2="1055" y2="308" stroke="#2c5f8a" stroke-width="0.5" opacity="0.3"/>
+  <text x="975" y="325" text-anchor="middle" font-size="11" font-family="'Courier New', monospace" fill="#2c5f8a">loc=base, lim=252</text>
+  <text x="975" y="342" text-anchor="middle" font-size="12" font-weight="bold" fill="#c62828">Perms = X-only</text>
+
+  <!-- ===== CR6 arrow and box ===== -->
+  <line x1="800" y1="640" x2="870" y2="640" stroke="#6b4c9a" stroke-width="2.5" marker-end="url(#ah-purple)"/>
+  <rect x="875" y="600" width="200" height="100" rx="8" fill="#f5f0ff" stroke="#6b4c9a" stroke-width="2.5"/>
+  <text x="975" y="628" text-anchor="middle" font-size="15" font-weight="bold" fill="#6b4c9a">CR6</text>
+  <text x="975" y="648" text-anchor="middle" font-size="12" fill="#333">C-List Region</text>
+  <line x1="895" y1="658" x2="1055" y2="658" stroke="#6b4c9a" stroke-width="0.5" opacity="0.3"/>
+  <text x="975" y="675" text-anchor="middle" font-size="11" font-family="'Courier New', monospace" fill="#6b4c9a">loc=base+253, lim=2</text>
+  <text x="975" y="692" text-anchor="middle" font-size="12" font-weight="bold" fill="#c62828">Perms = L-only</text>
+
+  <!-- ===== Hardcoded annotation ===== -->
+  <rect x="870" y="420" width="210" height="70" rx="6" fill="#fff" stroke="#c62828" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="975" y="442" text-anchor="middle" font-size="11" font-weight="bold" fill="#c62828">R001 Security Invariant</text>
+  <text x="975" y="460" text-anchor="middle" font-size="10" fill="#555">Permissions are HARDCODED</text>
+  <text x="975" y="475" text-anchor="middle" font-size="10" fill="#555">by CALL, not derived from GT</text>
+
+  <!-- Dashed lines from annotation to CR boxes -->
+  <line x1="975" y1="420" x2="975" y2="350" stroke="#c62828" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="975" y1="490" x2="975" y2="600" stroke="#c62828" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- ===== Arrow from NS Entry to Lump ===== -->
+  <path d="M 460 230 C 500 230, 510 300, 540 300" fill="none" stroke="#2e7d32" stroke-width="2" marker-end="url(#ah-green)"/>
+  <text x="485" y="250" font-size="10" fill="#2e7d32">word0 points to</text>
+  <text x="485" y="262" font-size="10" fill="#2e7d32">lump base</text>
+
+  <!-- ===== Domain purity labels ===== -->
+  <rect x="60" y="380" width="200" height="80" rx="6" fill="#fff" stroke="#2c5f8a" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="160" y="402" text-anchor="middle" font-size="11" font-weight="bold" fill="#2c5f8a">Turing Domain (X)</text>
+  <text x="160" y="420" text-anchor="middle" font-size="10" fill="#555">DREAD, DWRITE, IADD,</text>
+  <text x="160" y="436" text-anchor="middle" font-size="10" fill="#555">ISUB, BRANCH, MCMP,</text>
+  <text x="160" y="452" text-anchor="middle" font-size="10" fill="#555">BFEXT, BFINS, SHL, SHR</text>
+
+  <rect x="60" y="520" width="200" height="60" rx="6" fill="#fff" stroke="#6b4c9a" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="160" y="542" text-anchor="middle" font-size="11" font-weight="bold" fill="#6b4c9a">Church Domain (L)</text>
+  <text x="160" y="560" text-anchor="middle" font-size="10" fill="#555">LOAD only — GT slots</text>
+  <text x="160" y="574" text-anchor="middle" font-size="10" fill="#555">No SAVE, no DREAD/DWRITE</text>
+
+  <!-- ===== What CALL prevents ===== -->
+  <rect x="60" y="660" width="400" height="110" rx="8" fill="#fff9f9" stroke="#c62828" stroke-width="1.5"/>
+  <text x="260" y="685" text-anchor="middle" font-size="13" font-weight="bold" fill="#c62828">Domain Purity Enforced by CALL</text>
+  <line x1="80" y1="693" x2="440" y2="693" stroke="#c62828" stroke-width="0.5" opacity="0.3"/>
+  <text x="80" y="712" font-size="11" fill="#333">&#x2717; Code cannot LOAD GTs from CR7 (X-only, no L)</text>
+  <text x="80" y="730" font-size="11" fill="#333">&#x2717; C-list cannot execute as code (L-only, no X)</text>
+  <text x="80" y="748" font-size="11" fill="#333">&#x2717; Neither can read/write data across boundary</text>
+  <text x="80" y="766" font-size="11" fill="#c62828">&#x2713; Security enforced by hardware, not compiler</text>
+
+  <!-- ===== word1 detail breakdown ===== -->
+  <rect x="60" y="830" width="980" height="90" rx="8" fill="#f9f9f9" stroke="#b8860b" stroke-width="1.5"/>
+  <text x="550" y="855" text-anchor="middle" font-size="13" font-weight="bold" fill="#b8860b">NS Entry word1 Bit Layout</text>
+
+  <!-- Bit fields as colored segments -->
+  <rect x="80" y="868" width="50" height="30" fill="#ffcdd2" stroke="#c62828" stroke-width="1"/>
+  <text x="105" y="888" text-anchor="middle" font-size="9" font-weight="bold" fill="#c62828">B</text>
+  <text x="105" y="906" text-anchor="middle" font-size="8" fill="#888">31</text>
+
+  <rect x="130" y="868" width="50" height="30" fill="#ffcdd2" stroke="#c62828" stroke-width="1"/>
+  <text x="155" y="888" text-anchor="middle" font-size="9" font-weight="bold" fill="#c62828">F</text>
+  <text x="155" y="906" text-anchor="middle" font-size="8" fill="#888">30</text>
+
+  <rect x="180" y="868" width="50" height="30" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1"/>
+  <text x="205" y="888" text-anchor="middle" font-size="9" font-weight="bold" fill="#2e7d32">G</text>
+  <text x="205" y="906" text-anchor="middle" font-size="8" fill="#888">29</text>
+
+  <rect x="230" y="868" width="50" height="30" fill="#f5f5f5" stroke="#999" stroke-width="1"/>
+  <text x="255" y="888" text-anchor="middle" font-size="9" font-weight="bold" fill="#666">C</text>
+  <text x="255" y="906" text-anchor="middle" font-size="8" fill="#888">28</text>
+
+  <rect x="280" y="868" width="90" height="30" fill="#fff8e1" stroke="#b8860b" stroke-width="1.5"/>
+  <text x="325" y="888" text-anchor="middle" font-size="9" font-weight="bold" fill="#b8860b">type=01</text>
+  <text x="325" y="906" text-anchor="middle" font-size="8" fill="#888">27:26</text>
+
+  <rect x="370" y="868" width="280" height="30" fill="#ffe0b2" stroke="#e65100" stroke-width="2"/>
+  <text x="510" y="888" text-anchor="middle" font-size="11" font-weight="bold" fill="#e65100">clistCount = 3</text>
+  <text x="510" y="906" text-anchor="middle" font-size="8" fill="#888">25:17 (9 bits, max 511)</text>
+
+  <rect x="650" y="868" width="370" height="30" fill="#e3f2fd" stroke="#2c5f8a" stroke-width="1.5"/>
+  <text x="835" y="888" text-anchor="middle" font-size="11" font-weight="bold" fill="#2c5f8a">limit = 255</text>
+  <text x="835" y="906" text-anchor="middle" font-size="8" fill="#888">16:0 (17 bits, max 131072)</text>
+</svg>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#b8860b;"></div>Golden Token / NS Entry</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#2c5f8a;"></div>Code Region (CR7, X-only)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#6b4c9a;"></div>C-List Region (CR6, L-only)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#c62828;"></div>CALL Instruction / Security</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#e65100;"></div>clistCount (split key)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#ccc;"></div>Freespace (inaccessible)</div>
+</div>
+
+</body>
+</html>
