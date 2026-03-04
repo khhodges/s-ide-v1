@@ -57,6 +57,10 @@ def simulator_index():
 def simulator_static(path):
     return send_from_directory(SIMULATOR_DIR, path)
 
+@app.route("/docs/figures/<path:path>")
+def docs_figures(path):
+    return send_from_directory(os.path.join(DOCS_DIR, "figures"), path)
+
 with app.app_context():
     import sys
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
