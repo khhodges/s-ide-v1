@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 26: Compiler-Security Separation</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #ffffff;
+    color: #1a1a1a;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+  }
+  h1 { font-size: 22px; color: #b8860b; margin-bottom: 6px; text-align: center; }
+  .subtitle { font-size: 13px; color: #555555; margin-bottom: 30px; text-align: center; max-width: 960px; }
+  .nav { position: fixed; top: 10px; left: 10px; z-index: 100; }
+  .nav a {
+    background: #f0f0f0; color: #333; text-decoration: none; padding: 6px 14px;
+    border-radius: 4px; font-size: 13px; border: 1px solid #ccc;
+  }
+  .nav a:hover { background: #e0e0e0; color: #000; }
+  .legend { margin-top: 24px; display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #555555; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; }
+  @media print { .nav { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="nav"><a href="/church/">&#8592; Church Machine</a></div>
+
+<h1>Figure 26 &mdash; Compiler-Security Separation</h1>
+<p class="subtitle">The compiler produces code words in the correctness domain, outside the Trusted Computing Base. The hardware validates Golden Tokens, enforces bounds, and hardcodes domain permissions in the security domain, inside the TCB. Compiler bugs affect correctness within the security perimeter but cannot breach it.</p>
+
+<svg viewBox="0 0 1100 880" width="1100" height="880" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#b8860b"/>
+    </marker>
+    <marker id="ah-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2c5f8a"/>
+    </marker>
+    <marker id="ah-red" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#c62828"/>
+    </marker>
+    <marker id="ah-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2e7d32"/>
+    </marker>
+    <marker id="ah-grey" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#888"/>
+    </marker>
+  </defs>
+
+  <!-- ============================================================ -->
+  <!-- TRUST BOUNDARY — the thick red dashed line across the middle -->
+  <!-- ============================================================ -->
+  <line x1="30" y1="420" x2="1070" y2="420" stroke="#c62828" stroke-width="3" stroke-dasharray="12,6"/>
+  <rect x="420" y="405" width="260" height="30" rx="4" fill="#ffffff" stroke="none"/>
+  <text x="550" y="425" text-anchor="middle" font-size="14" font-weight="bold" fill="#c62828">TRUST BOUNDARY</text>
+
+  <!-- Labels for above/below -->
+  <text x="50" y="415" font-size="11" fill="#c62828" font-weight="bold">OUTSIDE TCB</text>
+  <text x="50" y="438" font-size="11" fill="#c62828" font-weight="bold">INSIDE TCB</text>
+
+  <!-- ============================================================ -->
+  <!-- TOP HALF — Correctness Domain (Outside TCB)                  -->
+  <!-- ============================================================ -->
+
+  <!-- Outer correctness zone -->
+  <rect x="40" y="30" width="1020" height="370" rx="12" fill="#fffbef" stroke="#b8860b" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="550" y="58" text-anchor="middle" font-size="18" font-weight="bold" fill="#b8860b">Correctness Domain</text>
+  <text x="550" y="76" text-anchor="middle" font-size="12" fill="#888">Compiler responsibility &#x2014; bugs produce wrong answers, never security violations</text>
+
+  <!-- CLOOMC++ Compiler box -->
+  <rect x="80" y="95" width="420" height="130" rx="10" fill="#fff8e1" stroke="#b8860b" stroke-width="2"/>
+  <text x="290" y="122" text-anchor="middle" font-size="15" font-weight="bold" fill="#b8860b">CLOOMC++ Compiler</text>
+  <line x1="100" y1="132" x2="480" y2="132" stroke="#b8860b" stroke-width="0.5" opacity="0.3"/>
+  <text x="100" y="152" font-size="11" fill="#333">JavaScript front-end (imperative)</text>
+  <text x="100" y="170" font-size="11" fill="#333">Haskell front-end (functional)</text>
+  <text x="100" y="188" font-size="11" fill="#333">Resident Object Model (c-list &#x2192; offsets)</text>
+  <text x="100" y="206" font-size="11" fill="#333">Code Generator (32-bit instruction words)</text>
+
+  <!-- Output arrow from compiler -->
+  <line x1="500" y1="160" x2="580" y2="160" stroke="#b8860b" stroke-width="2" marker-end="url(#ah)"/>
+
+  <!-- Code words output -->
+  <rect x="585" y="95" width="440" height="130" rx="10" fill="#f5f5f5" stroke="#555" stroke-width="2"/>
+  <text x="805" y="122" text-anchor="middle" font-size="15" font-weight="bold" fill="#333">Compiled Output</text>
+  <line x1="605" y1="132" x2="1005" y2="132" stroke="#555" stroke-width="0.5" opacity="0.3"/>
+  <text x="615" y="155" font-size="11" font-family="'Courier New', monospace" fill="#555">IADD DR4, DR0, #1   &#x2192; 0x1E810001</text>
+  <text x="615" y="173" font-size="11" font-family="'Courier New', monospace" fill="#555">MCMP DR0, #0        &#x2192; 0x1C800000</text>
+  <text x="615" y="191" font-size="11" font-family="'Courier New', monospace" fill="#555">BRANCH.EQ +3        &#x2192; 0x22100003</text>
+  <text x="615" y="209" font-size="11" font-family="'Courier New', monospace" fill="#555">RETURN              &#x2192; 0x06000000</text>
+
+  <!-- Compiler bug examples -->
+  <rect x="80" y="245" width="420" height="135" rx="8" fill="#fff" stroke="#e65100" stroke-width="1.5"/>
+  <text x="290" y="270" text-anchor="middle" font-size="13" font-weight="bold" fill="#e65100">Compiler Bugs (Correctness Failures)</text>
+  <line x1="100" y1="280" x2="480" y2="280" stroke="#e65100" stroke-width="0.5" opacity="0.3"/>
+  <text x="100" y="300" font-size="11" fill="#333">&#x2022; Wrong register allocation &#x2192; wrong value computed</text>
+  <text x="100" y="318" font-size="11" fill="#333">&#x2022; Incorrect branch target &#x2192; wrong method path taken</text>
+  <text x="100" y="336" font-size="11" fill="#333">&#x2022; Miscomputed c-list offset &#x2192; wrong abstraction called</text>
+  <text x="100" y="354" font-size="11" fill="#333">&#x2022; Bad immediate encoding &#x2192; arithmetic produces wrong result</text>
+  <text x="100" y="372" font-size="11" fill="#e65100" font-weight="bold">All produce wrong answers &#x2014; none escape the lump</text>
+
+  <!-- "Cannot breach" arrows hitting the trust boundary -->
+  <line x1="290" y1="380" x2="290" y2="412" stroke="#e65100" stroke-width="2" marker-end="url(#ah-grey)"/>
+  <line x1="390" y1="380" x2="390" y2="412" stroke="#e65100" stroke-width="2" marker-end="url(#ah-grey)"/>
+  <line x1="190" y1="380" x2="190" y2="412" stroke="#e65100" stroke-width="2" marker-end="url(#ah-grey)"/>
+
+  <!-- X marks on the arrows hitting the boundary -->
+  <text x="185" y="408" font-size="18" font-weight="bold" fill="#c62828">&#x2717;</text>
+  <text x="285" y="408" font-size="18" font-weight="bold" fill="#c62828">&#x2717;</text>
+  <text x="385" y="408" font-size="18" font-weight="bold" fill="#c62828">&#x2717;</text>
+
+  <!-- "Blocked" annotation -->
+  <rect x="585" y="285" width="440" height="95" rx="8" fill="#ffebee" stroke="#c62828" stroke-width="1.5"/>
+  <text x="805" y="310" text-anchor="middle" font-size="13" font-weight="bold" fill="#c62828">Why Compiler Bugs Cannot Breach Security</text>
+  <line x1="605" y1="320" x2="1005" y2="320" stroke="#c62828" stroke-width="0.5" opacity="0.3"/>
+  <text x="615" y="340" font-size="11" fill="#333">No instruction sequence can forge a Golden Token</text>
+  <text x="615" y="358" font-size="11" fill="#333">No code can escape lump bounds (NS entry limit)</text>
+  <text x="615" y="376" font-size="11" fill="#333">No code can access GTs not in its own c-list</text>
+
+  <!-- ============================================================ -->
+  <!-- BOTTOM HALF — Security Domain (Inside TCB)                   -->
+  <!-- ============================================================ -->
+
+  <!-- Outer security zone -->
+  <rect x="40" y="445" width="1020" height="400" rx="12" fill="#ffebee" stroke="#c62828" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="550" y="475" text-anchor="middle" font-size="18" font-weight="bold" fill="#c62828">Security Domain (Trusted Computing Base)</text>
+  <text x="550" y="493" text-anchor="middle" font-size="12" fill="#888">Hardware responsibility &#x2014; enforces invariants regardless of compiled code</text>
+
+  <!-- mLoad Gate -->
+  <rect x="80" y="510" width="290" height="155" rx="10" fill="#e3f2fd" stroke="#2c5f8a" stroke-width="2.5"/>
+  <text x="225" y="537" text-anchor="middle" font-size="15" font-weight="bold" fill="#2c5f8a">mLoad Gate (Read Path)</text>
+  <line x1="100" y1="547" x2="350" y2="547" stroke="#2c5f8a" stroke-width="0.5" opacity="0.3"/>
+  <text x="100" y="567" font-size="11" fill="#333">1. GT Type check (NULL &#x2192; FAULT)</text>
+  <text x="100" y="585" font-size="11" fill="#333">2. Version match (stale &#x2192; FAULT)</text>
+  <text x="100" y="603" font-size="11" fill="#333">3. Seal verify (tampered &#x2192; FAULT)</text>
+  <text x="100" y="621" font-size="11" fill="#333">4. Bounds check (overflow &#x2192; FAULT)</text>
+  <text x="100" y="639" font-size="11" fill="#333">5. Permission check (denied &#x2192; FAULT)</text>
+  <text x="100" y="657" font-size="11" fill="#333">6. F-bit check (remote &#x2192; tunnel)</text>
+
+  <!-- mSave Gate -->
+  <rect x="400" y="510" width="290" height="155" rx="10" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2.5"/>
+  <text x="545" y="537" text-anchor="middle" font-size="15" font-weight="bold" fill="#2e7d32">mSave Gate (Write Path)</text>
+  <line x1="420" y1="547" x2="670" y2="547" stroke="#2e7d32" stroke-width="0.5" opacity="0.3"/>
+  <text x="420" y="567" font-size="11" fill="#333">1. GT Type check (NULL &#x2192; FAULT)</text>
+  <text x="420" y="585" font-size="11" fill="#333">2. Version match (stale &#x2192; FAULT)</text>
+  <text x="420" y="603" font-size="11" fill="#333">3. Seal verify (tampered &#x2192; FAULT)</text>
+  <text x="420" y="621" font-size="11" fill="#333">4. Bounds check (overflow &#x2192; FAULT)</text>
+  <text x="420" y="639" font-size="11" fill="#333">5. Write permission (W or S required)</text>
+  <text x="420" y="657" font-size="11" fill="#333">6. B-bit check (bind propagation)</text>
+
+  <!-- CALL Split Enforcer -->
+  <rect x="720" y="510" width="310" height="155" rx="10" fill="#f5f0ff" stroke="#6b4c9a" stroke-width="2.5"/>
+  <text x="875" y="537" text-anchor="middle" font-size="15" font-weight="bold" fill="#6b4c9a">CALL Domain Enforcer</text>
+  <line x1="740" y1="547" x2="1010" y2="547" stroke="#6b4c9a" stroke-width="0.5" opacity="0.3"/>
+  <text x="740" y="567" font-size="11" fill="#333">After mLoad validates E-GT:</text>
+  <text x="740" y="585" font-size="11" fill="#333">Parse clistCount from word1</text>
+  <text x="740" y="603" font-size="11" fill="#6b4c9a" font-weight="bold">CR7 &#x2192; X-only (HARDCODED)</text>
+  <text x="740" y="621" font-size="11" fill="#6b4c9a" font-weight="bold">CR6 &#x2192; L-only (HARDCODED)</text>
+  <text x="740" y="639" font-size="11" fill="#333">PC = 0 (execution starts at top)</text>
+  <text x="740" y="657" font-size="11" fill="#333">B-bit cleared on preserved CRs</text>
+
+  <!-- Hardware invariants summary -->
+  <rect x="80" y="685" width="460" height="140" rx="8" fill="#fff" stroke="#c62828" stroke-width="2"/>
+  <text x="310" y="710" text-anchor="middle" font-size="14" font-weight="bold" fill="#c62828">Hardware-Enforced Invariants</text>
+  <line x1="100" y1="720" x2="520" y2="720" stroke="#c62828" stroke-width="0.5" opacity="0.3"/>
+  <text x="100" y="740" font-size="11" fill="#333">&#x2713; Every memory access passes through mLoad or mSave</text>
+  <text x="100" y="758" font-size="11" fill="#333">&#x2713; Domain purity: Church (L,S,E) and Turing (R,W,X) never mix</text>
+  <text x="100" y="776" font-size="11" fill="#333">&#x2713; GTs cannot be forged &#x2014; no instruction creates a GT from data</text>
+  <text x="100" y="794" font-size="11" fill="#333">&#x2713; Lump bounds enforced &#x2014; code cannot read/write beyond limit</text>
+  <text x="100" y="812" font-size="11" fill="#333">&#x2713; Version revocation instant &#x2014; all copies invalidated at once</text>
+
+  <!-- TCB size comparison -->
+  <rect x="570" y="685" width="460" height="140" rx="8" fill="#f9f9f9" stroke="#555" stroke-width="1.5"/>
+  <text x="800" y="710" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">TCB Size Comparison</text>
+  <line x1="590" y1="720" x2="1010" y2="720" stroke="#555" stroke-width="0.5" opacity="0.3"/>
+
+  <rect x="600" y="732" width="400" height="16" rx="2" fill="#ffcdd2" stroke="none"/>
+  <rect x="600" y="732" width="400" height="16" rx="2" fill="#c62828" stroke="none" opacity="0.7"/>
+  <text x="610" y="744" font-size="10" font-weight="bold" fill="#fff">Linux kernel: ~30,000,000 lines</text>
+
+  <rect x="600" y="756" width="60" height="16" rx="2" fill="#fff3e0" stroke="#e65100" stroke-width="1"/>
+  <text x="610" y="768" font-size="10" font-weight="bold" fill="#e65100">seL4: ~10,000</text>
+
+  <rect x="600" y="780" width="8" height="16" rx="2" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1"/>
+  <text x="616" y="792" font-size="10" font-weight="bold" fill="#2e7d32">Church Machine TCB: ~329 lines HDL</text>
+
+  <text x="800" y="818" text-anchor="middle" font-size="10" fill="#888">5 orders of magnitude smaller than Linux</text>
+
+  <!-- Arrows showing code flows DOWN through boundary into hardware -->
+  <line x1="805" y1="225" x2="805" y2="505" stroke="#888" stroke-width="1.5" marker-end="url(#ah-grey)"/>
+  <text x="815" y="390" font-size="10" fill="#888" transform="rotate(90,815,390)">Code words flow down</text>
+
+  <!-- Arrow showing all validation failures route to FAULT -->
+  <rect x="80" y="840" width="950" height="25" rx="4" fill="#ffcdd2" stroke="#c62828" stroke-width="1"/>
+  <text x="550" y="857" text-anchor="middle" font-size="12" font-weight="bold" fill="#c62828">Every validation failure at any stage &#x2192; single FAULT handler &#x2014; no silent fallback, no default allow</text>
+</svg>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#b8860b;"></div>Compiler (outside TCB)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#e65100;"></div>Compiler bugs (correctness only)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#2c5f8a;"></div>mLoad Gate (read validation)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#2e7d32;"></div>mSave Gate (write validation)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#6b4c9a;"></div>CALL Domain Enforcer</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#c62828;"></div>Trust boundary / FAULT</div>
+</div>
+
+</body>
+</html>
