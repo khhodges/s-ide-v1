@@ -3908,11 +3908,80 @@ function loadCLOOMCExample(name) {
         'church_pair': `-- Church Pairs — Haskell front-end\n-- Pairs pack two 16-bit values\n\nabstraction ChurchPair {\n    capabilities {\n    }\n\n    -- Construct a pair from two values\n    method makePair(a, b) = (a, b)\n\n    -- Extract first element\n    method first(p) = fst p\n\n    -- Extract second element  \n    method second(p) = snd p\n\n    -- Swap pair elements\n    method swap(p) = (snd p, fst p)\n}`,
         'church_case': `-- Church Case Expressions — Haskell front-end\n-- Pattern matching compiles to MCMP + BRANCH chains\n\nabstraction ChurchCase {\n    capabilities {\n    }\n\n    -- Factorial via case\n    method factorial(n) = case n of 0 -> 1, _ -> n * (n - 1)\n\n    -- Classify a number\n    method classify(n) = case n of 0 -> 100, 1 -> 200, _ -> n + 300\n\n    -- Absolute value\n    method abs(n) = if n < 0 then 0 - n else n\n}`,
         'church_lambda': `-- Church Lambda Expressions — Haskell front-end\n-- Lambda calculus on Church Machine hardware\n\nabstraction ChurchLambda {\n    capabilities {\n    }\n\n    -- Identity function\n    method identity(x) = x\n\n    -- Constant function (returns first arg)\n    method constant(x, y) = x\n\n    -- Apply successor twice\n    method double_succ(n) = succ (succ n)\n\n    -- Let binding example\n    method letExample(x) = let a = x + 1 in a + a\n}`,
+        'sliderule': `abstraction SlideRule {\n    capabilities { Constants }\n\n    method Add(a, b) {\n        result = a + b\n        return(result)\n    }\n\n    method Sub(a, b) {\n        result = a - b\n        return(result)\n    }\n\n    method Mul(a, b) {\n        acc = 0\n        sign = 0\n        if (b < 0) {\n            b = 0 - b\n            sign = 1\n        }\n        while (b > 0) {\n            low = bfext(b, 0, 1)\n            if (low == 1) {\n                acc = acc + a\n            }\n            a = a << 1\n            b = b >> 1\n        }\n        if (sign == 1) {\n            acc = 0 - acc\n        }\n        return(acc)\n    }\n\n    method Div(a, b) {\n        if (b == 0) {\n            return(0)\n        }\n        sign = 0\n        if (a < 0) {\n            a = 0 - a\n            sign = sign + 1\n        }\n        if (b < 0) {\n            b = 0 - b\n            sign = sign + 1\n        }\n        quot = 0\n        while (a >= b) {\n            a = a - b\n            quot = quot + 1\n        }\n        if (sign == 1) {\n            quot = 0 - quot\n        }\n        return(quot)\n    }\n\n    method Sqrt(n) {\n        if (n == 0) {\n            return(0)\n        }\n        if (n == 1) {\n            return(1)\n        }\n        guess = n >> 1\n        i = 0\n        while (i < 20) {\n            q = 0\n            rem = n\n            while (rem >= guess) {\n                rem = rem - guess\n                q = q + 1\n            }\n            next = guess + q\n            next = next >> 1\n            guess = next\n            i = i + 1\n        }\n        return(guess)\n    }\n\n    method Pow(base, exp) {\n        result = 1\n        while (exp > 0) {\n            acc = 0\n            m = base\n            r = result\n            while (r > 0) {\n                low = bfext(r, 0, 1)\n                if (low == 1) {\n                    acc = acc + m\n                }\n                m = m << 1\n                r = r >> 1\n            }\n            result = acc\n            exp = exp - 1\n        }\n        return(result)\n    }\n\n    method ToDegrees(radians) {\n        return(radians)\n    }\n\n    method ToRadians(degrees) {\n        return(degrees)\n    }\n}`,
     };
 
     editor.value = examples[name] || examples['hello'];
     updateLineNumbers();
     saveEditorState();
+}
+
+function saveUploadJSON() {
+    const editor = document.getElementById('asmEditor');
+    if (!editor || !cloomcCompiler) return;
+    const source = editor.value;
+    const con = document.getElementById('editorConsole');
+
+    const result = cloomcCompiler.compile(source, []);
+
+    if (result.errors.length > 0) {
+        const errText = result.errors.map(e => `Line ${e.line || '?'}: ${e.message}`).join('\n');
+        if (con) con.textContent = `CLOOMC++ compilation errors:\n${errText}`;
+        return;
+    }
+
+    const unresolved = [];
+    const uploadCaps = (result.capabilities || []).map((capName) => {
+        let target = -1;
+        if (sim && sim.abstractionRegistry) {
+            const allAbs = sim.abstractionRegistry.abstractions || [];
+            for (let i = 0; i < allAbs.length; i++) {
+                if (allAbs[i] && allAbs[i].name && allAbs[i].name.toUpperCase() === capName.toUpperCase()) {
+                    target = i;
+                    break;
+                }
+            }
+        }
+        if (target < 0) unresolved.push(capName);
+        return { target: target, name: capName, grants: ['E'] };
+    });
+
+    const upload = {
+        abstraction: result.abstractionName || 'Unnamed',
+        type: 'abstraction',
+        grants: ['E'],
+        capabilities: uploadCaps,
+        methods: result.methods.map(m => ({
+            name: m.name,
+            code: m.code.map(w => '0x' + (w >>> 0).toString(16).padStart(8, '0'))
+        }))
+    };
+
+    const json = JSON.stringify(upload, null, 2);
+
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (result.abstractionName || 'upload') + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const lang = result.language === 'haskell' ? 'Haskell' : 'JavaScript';
+    let listing = `Upload JSON saved as "${a.download}"\n\n`;
+    listing += `CLOOMC++ [${lang}] compiled "${result.abstractionName}":\n`;
+    listing += `  Methods: ${upload.methods.length}\n`;
+    listing += `  Capabilities: ${upload.capabilities.length} (${upload.capabilities.map(c => c.name).join(', ') || 'none'})\n`;
+    listing += `  Grants: ${upload.grants.join(', ')}\n`;
+    if (unresolved.length > 0) {
+        listing += `  WARNING: Unresolved capabilities: ${unresolved.join(', ')} (target=-1, boot system to resolve)\n`;
+    }
+    listing += `\nUpload JSON preview:\n${json}`;
+
+    if (con) con.textContent = listing;
+    appendOutput(`Saved upload JSON for "${result.abstractionName}"`, 'info');
 }
 
 let docsLoaded = false;

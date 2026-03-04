@@ -72,6 +72,7 @@
                     <button class="btn btn-primary" onclick="assembleAndLoad()" title="Assemble code and load into simulator">Assemble</button>
                     <button class="btn" onclick="compileCLOOMC()" style="background:#C89B3C;color:#141414;border:none;font-weight:bold;" title="Compile CLOOMC++ source to Church Machine code">CLOOMC++</button>
                     <button class="btn" onclick="compileAndCreateAbstraction()" style="background:#4a7a2e;color:#fff;border:none;" title="Compile and create abstraction via Navana.Abstraction.Add">Create Abstraction</button>
+                    <button class="btn" onclick="saveUploadJSON()" style="background:#2a6fdb;color:#fff;border:none;" title="Compile and save upload.json file">Save Upload JSON</button>
                     <button class="btn btn-primary" onclick="showSaveToNamespace()" id="btnSaveNS" disabled title="Save assembled program to namespace">Save to NS</button>
                     <button class="btn" onclick="runGC()" style="background:#9b59b6;color:#fff;border:none;" title="Run PP250 garbage collection">Run GC</button>
                     <button class="btn btn-deploy" onclick="downloadHardwareImage()" title="Download binary for Tang Nano 20K">Download .bin</button>
@@ -96,6 +97,7 @@
                         <button class="example-tab" onclick="loadCLOOMCExample('church_pair')" data-example="cloomc_church_pair" style="color:#a78bfa;">HS: Pairs</button>
                         <button class="example-tab" onclick="loadCLOOMCExample('church_case')" data-example="cloomc_church_case" style="color:#a78bfa;">HS: Case</button>
                         <button class="example-tab" onclick="loadCLOOMCExample('church_lambda')" data-example="cloomc_church_lambda" style="color:#a78bfa;">HS: Lambda</button>
+                        <button class="example-tab" onclick="loadCLOOMCExample('sliderule')" data-example="cloomc_sliderule" style="color:#C89B3C;">JS: SlideRule</button>
                     </div>
                     <button class="example-arrow" onclick="scrollExamples(1)">&rsaquo;</button>
                 </div>
