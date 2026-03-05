@@ -1,6 +1,6 @@
 import os
 import logging
-from flask import Flask, jsonify, send_from_directory, redirect
+from flask import Flask, jsonify, send_from_directory, redirect, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -50,12 +50,16 @@ def health():
 @app.route("/simulator/")
 def simulator_index():
     if os.path.isfile(os.path.join(SIMULATOR_DIR, "index.html")):
-        return send_from_directory(SIMULATOR_DIR, "index.html")
+        resp = make_response(send_from_directory(SIMULATOR_DIR, "index.html"))
+        resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        return resp
     return jsonify({"status": "simulator not yet built"})
 
 @app.route("/simulator/<path:path>")
 def simulator_static(path):
-    return send_from_directory(SIMULATOR_DIR, path)
+    resp = make_response(send_from_directory(SIMULATOR_DIR, path))
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
 
 @app.route("/docs/figures/<path:path>")
 def docs_figures(path):
