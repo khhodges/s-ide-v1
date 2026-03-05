@@ -1029,7 +1029,7 @@ header h1 {
     font-size: 0.78rem;
     line-height: 1.6;
     color: var(--text-secondary);
-    max-height: 300px;
+    max-height: 500px;
     overflow-y: auto;
 }
 
@@ -1060,6 +1060,59 @@ header h1 {
 .challenge-explain .code-desc {
     color: var(--text-secondary);
     flex: 1;
+}
+
+.explain-turing {
+    border-left: 3px solid rgba(100, 180, 255, 0.6);
+    background: rgba(100, 180, 255, 0.06);
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+    margin-bottom: 0.5rem;
+}
+
+.explain-turing .explain-header {
+    font-weight: 700;
+    color: rgba(130, 200, 255, 0.95);
+    margin-bottom: 0.3rem;
+    font-size: 0.82rem;
+}
+
+.explain-church {
+    border-left: 3px solid rgba(218, 165, 32, 0.6);
+    background: rgba(218, 165, 32, 0.06);
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+    margin-bottom: 0.5rem;
+}
+
+.explain-church .explain-header {
+    font-weight: 700;
+    color: var(--church-gold);
+    margin-bottom: 0.3rem;
+    font-size: 0.82rem;
+}
+
+.explain-bridge {
+    border-left: 3px solid rgba(100, 200, 100, 0.5);
+    background: rgba(100, 200, 100, 0.06);
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+    margin-top: 0.3rem;
+}
+
+.explain-bridge p {
+    margin: 0 0 0.3rem 0;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.explain-bridge p:last-child {
+    margin-bottom: 0;
+}
+
+.explain-bridge strong {
+    color: var(--text-primary);
 }
 
 .tutorial-wrapper {

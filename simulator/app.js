@@ -3490,72 +3490,128 @@ function challengeOpSlot(opType) {
     return slots[opType] || 22;
 }
 
+function buildTuringLines(c) {
+    const lines = [];
+    if (c.opType === 'add') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load the number ' + c.a + ' into data register 1'});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load the number ' + c.b + ' into data register 2'});
+        lines.push({asm: 'IADD DR3, DR1, DR2', desc: 'Add DR1 + DR2, store result (' + c.answer + ') in DR3'});
+        lines.push({note: 'IADD is "integer add". Everything here is a number: the values ' + c.a + ' and ' + c.b + ', the addresses DR1 and DR2. The body works in numbers.'});
+    } else if (c.opType === 'sub') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load ' + c.a + ' into data register 1'});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load ' + c.b + ' into data register 2'});
+        lines.push({asm: 'ISUB DR3, DR1, DR2', desc: 'Subtract DR2 from DR1, store result (' + c.answer + ') in DR3'});
+        lines.push({note: 'ISUB is "integer subtract". DR1, DR2, DR3 are physical addresses. The values ' + c.a + ' and ' + c.b + ' are numbers. The body only speaks in numbers.'});
+    } else if (c.opType === 'mul') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load ' + c.a + ' into data register 1'});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load ' + c.b + ' into data register 2'});
+        lines.push({asm: 'DREAD DR3, #0', desc: 'Set DR3 to 0 (running total)'});
+        lines.push({asm: 'IADD DR3, DR3, DR1', desc: 'Add DR1 to DR3 (repeat ' + c.b + ' times)'});
+        lines.push({asm: 'ISUB DR2, DR2, #1', desc: 'Count down: subtract 1 from DR2'});
+        lines.push({asm: 'BRANCH NE, -2', desc: 'If DR2 is not zero, jump back and add again'});
+        lines.push({note: 'No multiply instruction! The body loops: add ' + c.a + ' to itself ' + c.b + ' times. ' + c.a + ' \u00d7 ' + c.b + ' = ' + c.answer + '. Loops can run forever \u2014 the body can fail.'});
+    } else if (c.opType === 'div') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load the dividend (' + c.a + ') into DR1'});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load the divisor (' + c.b + ') into DR2'});
+        lines.push({asm: 'DREAD DR3, #0', desc: 'Set DR3 to 0 (counts subtractions)'});
+        lines.push({asm: 'ISUB DR1, DR1, DR2', desc: 'Subtract DR2 from DR1'});
+        lines.push({asm: 'IADD DR3, DR3, #1', desc: 'Add 1 to the counter'});
+        lines.push({asm: 'BRANCH PL, -2', desc: 'If DR1 is still positive, keep subtracting'});
+        lines.push({note: 'Division is repeated subtraction. Subtract ' + c.b + ' from ' + c.a + ' and count: ' + c.answer + ' times. All numbers, all physical.'});
+    } else if (c.opType === 'factorial') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load ' + c.a + ' into DR1 (the counter)'});
+        lines.push({asm: 'DREAD DR3, #1', desc: 'Set DR3 to 1 (the running product)'});
+        lines.push({asm: '-- outer loop:', desc: 'For each counter value, multiply DR3 by DR1'});
+        lines.push({asm: 'DREAD DR4, DR3', desc: 'Copy the current product into DR4'});
+        lines.push({asm: 'DREAD DR3, #0', desc: 'Reset DR3 for the add loop'});
+        lines.push({asm: 'DREAD DR5, DR1', desc: 'Copy counter into DR5 (inner loop count)'});
+        lines.push({asm: 'IADD DR3, DR3, DR4', desc: 'Add DR4 to DR3 (repeated DR1 times = multiply)'});
+        lines.push({asm: 'ISUB DR5, DR5, #1', desc: 'Decrease inner loop counter'});
+        lines.push({asm: 'BRANCH NE, -2', desc: 'Inner loop: keep adding until DR5 = 0'});
+        lines.push({asm: 'ISUB DR1, DR1, #1', desc: 'Decrease the outer counter by 1'});
+        lines.push({asm: 'BRANCH NE, -8', desc: 'Outer loop: repeat for next factor'});
+        lines.push({note: c.a + '! = ' + c.answer + '. Two nested loops of addition \u2014 the body builds complexity from simple parts. DR1 through DR5 are all physical addresses holding numbers.'});
+    } else if (c.opType === 'exp') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load the base (' + c.a + ') into DR1'});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load the exponent (' + c.b + ') into DR2'});
+        lines.push({asm: 'DREAD DR3, #1', desc: 'Set DR3 to 1 (result starts at 1)'});
+        lines.push({asm: '-- outer loop:', desc: 'Multiply DR3 by DR1, using an add loop'});
+        lines.push({asm: 'DREAD DR4, DR3', desc: 'Copy current result into DR4'});
+        lines.push({asm: 'DREAD DR3, #0', desc: 'Reset DR3 for the add loop'});
+        lines.push({asm: 'DREAD DR5, DR1', desc: 'Copy base into DR5 (inner loop count)'});
+        lines.push({asm: 'IADD DR3, DR3, DR4', desc: 'Add DR4 to DR3 (repeated DR1 times = multiply)'});
+        lines.push({asm: 'ISUB DR5, DR5, #1', desc: 'Decrease inner counter'});
+        lines.push({asm: 'BRANCH NE, -2', desc: 'Inner loop: keep adding'});
+        lines.push({asm: 'ISUB DR2, DR2, #1', desc: 'Decrease exponent counter'});
+        lines.push({asm: 'BRANCH NE, -8', desc: 'Outer loop until exponent reaches 0'});
+        lines.push({note: c.a + '^' + c.b + ' = ' + c.answer + '. Repeated multiplication, each multiplication repeated addition. Two nested loops, all numbers.'});
+    } else if (c.opType === 'mod') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load ' + c.a + ' into DR1'});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load ' + c.b + ' into DR2'});
+        lines.push({asm: 'ISUB DR1, DR1, DR2', desc: 'Subtract DR2 from DR1'});
+        lines.push({asm: 'BRANCH PL, -1', desc: 'If still positive, keep subtracting'});
+        lines.push({asm: 'IADD DR1, DR1, DR2', desc: 'Add back once (remainder = ' + c.answer + ')'});
+        lines.push({note: 'Modulo: subtract ' + c.b + ' from ' + c.a + ' until it goes negative, then add back once. Remainder is ' + c.answer + '.'});
+    } else {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load ' + c.a});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load ' + c.b});
+        lines.push({asm: 'Operation', desc: 'Compute the result: ' + c.answer});
+        lines.push({note: 'The body uses its 20 instructions to solve this step by step. All numbers, all physical addresses.'});
+    }
+    return lines;
+}
+
 function showChallengeExplanation(el, c) {
     if (!el) return;
 
-    let lines = [];
     const opName = challengeOpName(c.opType);
     const slot = challengeOpSlot(c.opType);
     const sym = challengeOpSymbol(c.opType);
-
-    if (c.opType === 'factorial') {
-        lines.push({title: 'How the Church Machine solves ' + c.a + '!:'});
-    } else {
-        lines.push({title: 'How the Church Machine solves ' + c.a + ' ' + sym + ' ' + c.b + ':'});
-    }
-
-    lines.push({step: '1', asm: 'LOAD CR7, [CR6 + ' + slot + ']', desc: 'Load the ' + opName + ' abstraction\'s Golden Token from the capability list (slot ' + slot + ')'});
-    lines.push({step: '2', asm: 'TPERM CR7, E', desc: 'Check the token has Entry permission \u2014 are we allowed to call ' + opName + '?'});
-    lines.push({step: '3', asm: 'CALL CR7', desc: 'Enter the ' + opName + ' abstraction through its security gate'});
-
-    lines.push({step: '4', asm: 'LOAD CR0, [CR6 + 1]', desc: 'Inside ' + opName + ': load the code region\'s Golden Token'});
-    lines.push({step: '5', asm: 'TPERM CR0, X', desc: 'Verify the code has Execute permission \u2014 no one tampered with it'});
-
-    if (c.opType === 'add') {
-        lines.push({step: '6', asm: 'LAMBDA CR0', desc: opName + ' runs: ' + c.a + ' + ' + c.b + ' \u2192 ' + c.answer + '. Result stored in DR0'});
-        lines.push({note: 'LAMBDA executes the addition. Even simple "2 + 3" passes through the security pipeline \u2014 the Golden Token on the ADD abstraction was checked before any code ran.'});
-    } else if (c.opType === 'sub') {
-        lines.push({step: '6', asm: 'LAMBDA CR0', desc: opName + ' runs: ' + c.a + ' - ' + c.b + ' \u2192 ' + c.answer + '. Result stored in DR0'});
-        lines.push({note: 'LAMBDA executes the subtraction. The security check happened at step 2 \u2014 if the token was wrong, the machine would FAULT and never reach this step.'});
-    } else if (c.opType === 'mul') {
-        lines.push({step: '6', asm: 'LAMBDA CR0', desc: opName + ' runs: ' + c.a + ' \u00d7 ' + c.b + ' \u2192 ' + c.answer + '. Inside, it loops ' + c.b + ' additions'});
-        lines.push({note: 'The Church Machine has no multiply instruction. ' + opName + ' uses a loop of IADD: add ' + c.a + ' to itself ' + c.b + ' times. But the security check at step 2 happened before any of that looping began.'});
-    } else if (c.opType === 'div') {
-        lines.push({step: '6', asm: 'LAMBDA CR0', desc: opName + ' runs: ' + c.a + ' \u00f7 ' + c.b + ' \u2192 ' + c.answer + '. Inside, it loops subtractions'});
-        lines.push({note: 'Division is repeated subtraction \u2014 subtract ' + c.b + ' from ' + c.a + ' and count: ' + c.answer + ' times. The Golden Token was verified before the loop started.'});
-    } else if (c.opType === 'factorial') {
-        lines.push({step: '6', asm: 'LAMBDA CR0', desc: opName + ' runs: ' + c.a + '! \u2192 ' + c.answer + '. Nested loops of additions'});
-        lines.push({note: c.a + '! means ' + c.a + ' \u00d7 ' + (c.a-1) + ' \u00d7 ... \u00d7 1 = ' + c.answer + '. Each multiply is itself a loop of additions. Two nested loops, but the security gate only opened once.'});
-    } else if (c.opType === 'exp') {
-        lines.push({step: '6', asm: 'LAMBDA CR0', desc: opName + ' runs: ' + c.a + '^' + c.b + ' \u2192 ' + c.answer + '. Repeated multiplication via additions'});
-        lines.push({note: c.a + '^' + c.b + ' = ' + c.answer + '. Exponentiation is repeated multiplication, each multiplication is repeated addition. Two nested loops, one security check.'});
-    } else if (c.opType === 'mod') {
-        lines.push({step: '6', asm: 'LAMBDA CR0', desc: opName + ' runs: ' + c.a + ' % ' + c.b + ' \u2192 ' + c.answer + '. Remainder after division'});
-        lines.push({note: 'Modulo is the remainder after division. Subtract ' + c.b + ' repeatedly from ' + c.a + ' until what is left is less than ' + c.b + '. The remainder is ' + c.answer + '.'});
-    } else {
-        lines.push({step: '6', asm: 'LAMBDA CR0', desc: 'Compute: ' + c.answer + '. Result stored in DR0'});
-        lines.push({note: 'The operation runs inside the abstraction. The Golden Token was checked before any code executed.'});
-    }
-
-    lines.push({step: '7', asm: 'RETURN CR7', desc: 'Exit the ' + opName + ' abstraction. The answer (' + c.answer + ') is in DR0'});
-
     const exprStr = c.opType === 'factorial' ? c.a + '!' : c.a + ' ' + sym + ' ' + c.b;
-    lines.push({note: 'Every calculation \u2014 even ' + exprStr + ' \u2014 goes through 7 steps: load the token, check permission, enter the abstraction, verify code, run, and return. This is what makes the Church Machine secure: no shortcut is possible.'});
 
     let html = '';
-    for (const line of lines) {
-        if (line.title) {
-            html += `<div style="font-weight:600;color:var(--church-gold);margin-bottom:0.3rem;">${escapeHtml(line.title)}</div>`;
-        } else if (line.note) {
-            html += `<div style="margin-top:0.4rem;padding:0.4rem 0.5rem;background:rgba(218,165,32,0.06);border-left:3px solid var(--church-gold);font-style:italic;color:var(--text-primary);font-family:inherit;">${escapeHtml(line.note)}</div>`;
+
+    html += `<div class="explain-turing">`;
+    html += `<div class="explain-header">The body \u2014 Turing (numbers)</div>`;
+    const turingLines = buildTuringLines(c);
+    for (const line of turingLines) {
+        if (line.note) {
+            html += `<div style="margin-top:0.3rem;font-size:0.78rem;font-style:italic;color:rgba(130,200,255,0.8);">${escapeHtml(line.note)}</div>`;
         } else {
             html += `<div class="code-line">`;
-            if (line.step) html += `<span class="code-hex" style="min-width:20px;">${escapeHtml(line.step)}.</span>`;
-            html += `<span class="code-asm">${escapeHtml(line.asm)}</span>`;
+            html += `<span class="code-asm" style="color:rgba(130,200,255,0.9);">${escapeHtml(line.asm)}</span>`;
             html += `<span class="code-desc">${escapeHtml(line.desc)}</span>`;
             html += `</div>`;
         }
     }
+    html += `</div>`;
+
+    html += `<div class="explain-church">`;
+    html += `<div class="explain-header">The mind \u2014 Church (symbols)</div>`;
+    const churchLines = [
+        {asm: 'LOAD CR7, [CR6 + ' + opName + ']', desc: 'Load the symbol "' + opName + '" from the capability list (slot ' + slot + ')'},
+        {asm: 'TPERM CR7, E', desc: 'Check permission "E" (Entry) \u2014 a symbol, not a number'},
+        {asm: 'CALL CR7', desc: 'Enter the ' + opName + ' abstraction through its security gate'},
+        {asm: 'LOAD CR0, [CR6 + Code]', desc: 'Load the code region\'s token \u2014 a symbol, not an address'},
+        {asm: 'TPERM CR0, X', desc: 'Check permission "X" (Execute) \u2014 proof the code is untampered'},
+        {asm: 'LAMBDA CR0', desc: opName + ' runs: ' + exprStr + ' \u2192 ' + c.answer},
+        {asm: 'RETURN CR7', desc: 'Exit. The answer (' + c.answer + ') is in DR0'},
+    ];
+    for (let i = 0; i < churchLines.length; i++) {
+        html += `<div class="code-line">`;
+        html += `<span class="code-hex" style="min-width:20px;">${i + 1}.</span>`;
+        html += `<span class="code-asm">${escapeHtml(churchLines[i].asm)}</span>`;
+        html += `<span class="code-desc">${escapeHtml(churchLines[i].desc)}</span>`;
+        html += `</div>`;
+    }
+    html += `<div style="margin-top:0.3rem;font-size:0.78rem;font-style:italic;color:var(--church-gold);opacity:0.8;">No numbers anywhere. CR7, CR6, "E", "X" \u2014 all symbols. The mind works in names and permissions, not addresses and values.</div>`;
+    html += `</div>`;
+
+    html += `<div class="explain-bridge">`;
+    html += `<p><strong>Body and mind.</strong> The Turing instructions above use numbers: DR1 = ${c.a}, DR2 = ${c.b}, physical addresses, values that can overflow. That is the body \u2014 action, physics, the part that can fail.</p>`;
+    html += `<p>The Church instructions use symbols: CR7, "${opName}", permission "E". No numbers. That is the mind \u2014 mathematics, proof, the part that cannot be forged.</p>`;
+    html += `<p>Ada wrote the first program in 1843 using symbols \u2014 no compiler, no OS, no superuser. The Church Machine returns to what she had. Turing was Church\u2019s student. He built the body. His teacher gave it a mind.</p>`;
+    html += `</div>`;
 
     el.innerHTML = html;
 }
