@@ -3586,24 +3586,24 @@ function updateMathWelcome() {
         if (sessions === 0) prompt = greeting + 'Try typing: let x = 6 * 7';
         else if (sessions < 3) prompt = greeting + 'Great! Now try: let y = 100 / 4';
         else if (sessions < 6) prompt = greeting + 'Try this: let area = 12 * 8';
-        else prompt = greeting + 'Challenge: use multiply and divide to solve a word problem!';
+        else prompt = greeting + 'Challenge: try let total = 25 * 4 + 10';
     } else if (grade === '6' || grade === '7' || grade === '8') {
         if (sessions === 0) prompt = greeting + 'Try typing: let ratio = 355 / 113';
-        else if (sessions < 3) prompt = greeting + 'Now try: let hyp = sqrt(add(mul(3,3), mul(4,4)))';
-        else if (sessions < 6) prompt = greeting + 'Try: let percent = mul(div(45, 200), 100)';
+        else if (sessions < 3) prompt = greeting + 'Now try: let area = 3 * 3 + 4 * 4';
+        else if (sessions < 6) prompt = greeting + 'Try: let percent = 45 / 200 * 100';
         else prompt = greeting + 'Explore: try defining variables and using them in expressions.';
     } else if (grade === '9' || grade === '10') {
-        if (sessions === 0) prompt = greeting + 'Try typing: let slope = div(sub(8, 2), sub(5, 1))';
-        else if (sessions < 3) prompt = greeting + 'Try: let quad = add(mul(3, mul(x, x)), mul(2, x))';
+        if (sessions === 0) prompt = greeting + 'Try typing: let slope = (8 - 2) / (5 - 1)';
+        else if (sessions < 3) prompt = greeting + 'Try: let area = 3 * 3 + 4 * 4';
         else prompt = greeting + 'Try the Compile Session button to see your math become machine code.';
     } else if (grade === '11' || grade === '12' || grade === 'IB') {
-        if (sessions === 0) prompt = greeting + 'Try typing: let deriv = div(sub(succ(mul(x,x)), mul(x,x)), 1)';
-        else if (sessions < 3) prompt = greeting + 'Try: let series = add(1, add(div(1,2), add(div(1,6), div(1,24))))';
-        else prompt = greeting + 'Try Compile Session to see lambda calculus compile to machine instructions.';
+        if (sessions === 0) prompt = greeting + 'Try typing: let n = 5   then: let f = 1 * 2 * 3 * 4 * 5';
+        else if (sessions < 3) prompt = greeting + 'Try: let series = 1 + 1/2 + 1/6 + 1/24';
+        else prompt = greeting + 'Try Compile Session to see your math compile to machine instructions.';
     } else {
         if (sessions === 0) prompt = (greeting || 'Welcome! ') + 'Try typing: let x = 2 + 3';
         else if (sessions < 3) prompt = (greeting || '') + 'Nice! Now try: let y = 10 * 5';
-        else if (sessions < 6) prompt = (greeting || '') + 'Try: let answer = div(mul(7, 8), 4)';
+        else if (sessions < 6) prompt = (greeting || '') + 'Try: let answer = 7 * 8 / 4';
         else prompt = (greeting || '') + 'Keep exploring! Type HELP to see all available commands.';
     }
 
@@ -4147,46 +4147,58 @@ function showWelcomePopup() {
     if (!body) return;
 
     body.innerHTML =
-        `<p style="font-size:0.95rem;line-height:1.6;margin-bottom:1rem;">` +
-        `Welcome! This is the <strong>Church Machine IDE</strong> &mdash; a learning environment where you or your children ` +
-        `can explore mathematics and programming. The IDE has several tabs across the top:</p>` +
+        `<div style="font-weight:700;color:var(--church-gold);font-size:1.05rem;margin-bottom:0.5rem;">Why does security matter?</div>` +
 
-        `<ul style="font-size:0.88rem;line-height:1.7;margin:0 0 1rem 1.2rem;padding:0;">` +
-        `<li><strong>Math</strong> &mdash; an interactive calculator. Type a math problem and press Enter to see the answer.</li>` +
-        `<li><strong>Code</strong> &mdash; write programs in four languages that compile to real machine instructions.</li>` +
-        `<li><strong>Tutorial</strong> &mdash; guided walkthroughs (still growing &mdash; more lessons coming soon).</li>` +
-        `<li><strong>Dashboard</strong> &mdash; see the machine's registers and internal state.</li>` +
-        `</ul>` +
+        `<p style="font-size:0.9rem;line-height:1.65;margin-bottom:0.75rem;">` +
+        `Every computer your child uses &mdash; phones, tablets, laptops &mdash; runs software that can be tricked. ` +
+        `Programs pretend to be other programs. Apps ask for permissions they should not have. ` +
+        `A child clicks one wrong link and strangers can see their data. ` +
+        `This is not a new problem. It is <em>the</em> problem of computing, and it was solved in 1936.</p>` +
 
-        `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;">` +
-        `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.4rem;">How does security work?</div>` +
-        `<p style="font-size:0.85rem;line-height:1.5;margin:0;">` +
-        `Every action on the Church Machine is controlled by <strong>Golden Tokens</strong> &mdash; unforgeable digital permissions ` +
-        `that work like keys. When you register your family, the machine creates a secure link between parent and child. ` +
-        `Your child can only communicate, share, or connect with others if you approve it. ` +
-        `Think of it as a digital permission slip that cannot be forged or bypassed.</p>` +
+        `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">` +
+        `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.4rem;">How Alonzo Church solved it</div>` +
+        `<p style="font-size:0.85rem;line-height:1.55;margin:0 0 0.5rem 0;">` +
+        `In 1936, mathematician <strong>Alonzo Church</strong> invented the lambda calculus &mdash; a way of computing where ` +
+        `you can only use something if someone explicitly gives it to you. No sneaking, no stealing, no tricks. ` +
+        `If you do not hold the key, the door does not open.</p>` +
+        `<p style="font-size:0.85rem;line-height:1.55;margin:0;">` +
+        `The Church Machine is built on this idea. Every action requires a <strong>Golden Token</strong> &mdash; ` +
+        `an unforgeable digital key. Your child cannot send a message, share a file, or connect with anyone ` +
+        `unless they hold the right token. And <em>you</em> control which tokens they hold.</p>` +
+        `</div>` +
+
+        `<div style="background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.2);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">` +
+        `<div style="font-weight:700;color:var(--church-green);margin-bottom:0.4rem;">Hello Mum &mdash; the first safe message</div>` +
+        `<p style="font-size:0.85rem;line-height:1.55;margin:0 0 0.5rem 0;">` +
+        `When you register your family, the Church Machine creates a secure link between parent and child. ` +
+        `Your child can then write their first program: <strong>Hello(Mum)</strong> &mdash; ` +
+        `a message that travels through the Family security block, verified by Golden Tokens at every step.</p>` +
+        `<p style="font-size:0.85rem;line-height:1.55;margin:0;">` +
+        `No one else can send that message. No one else can intercept it. It works because Mum is not just a name &mdash; ` +
+        `she is a <strong>Golden Token</strong>, unforgeable and unique. That is what Church's mathematics gives us: ` +
+        `a computer where "Hello Mum" actually means something safe.</p>` +
         `</div>` +
 
         `<div style="font-weight:600;margin-bottom:0.5rem;">Getting started:</div>` +
 
         `<div class="welcome-step">` +
         `<span class="welcome-step-num">1</span>` +
-        `<div class="welcome-step-text"><strong>Register your family.</strong> Click "Set Up My Family" below to enter your name (or your children's names) and select a grade level.</div>` +
+        `<div class="welcome-step-text"><strong>Register your family.</strong> Click "Set Up My Family" below to enter your name (or your children's names) and select a grade level. This creates the Golden Token link between you.</div>` +
         `</div>` +
 
         `<div class="welcome-step">` +
         `<span class="welcome-step-num">2</span>` +
-        `<div class="welcome-step-text"><strong>Try the Math tab.</strong> Type a simple calculation like <code style="background:#1a1a2e;padding:0.15rem 0.4rem;border-radius:3px;color:var(--church-gold);">let x = 2 + 3</code> and press Enter. The answer appears instantly.</div>` +
+        `<div class="welcome-step-text"><strong>Try the Math tab.</strong> Type a simple calculation like <code style="background:#1a1a2e;padding:0.15rem 0.4rem;border-radius:3px;color:var(--church-gold);">let x = 2 + 3</code> and press Enter. The answer appears instantly. Try the Challenge panel on the right for grade-level problems.</div>` +
         `</div>` +
 
         `<div class="welcome-step">` +
         `<span class="welcome-step-num">3</span>` +
-        `<div class="welcome-step-text"><strong>Watch their progress.</strong> Open Settings (the gear icon) at any time to see how many problems they have solved, which areas they have explored, and what they have been working on. Everything stays on this device &mdash; no accounts or cloud needed.</div>` +
+        `<div class="welcome-step-text"><strong>Watch their progress.</strong> Open Settings (the gear icon) to see problems solved, languages tried, and recent activity. Everything stays on this device &mdash; no accounts, no cloud.</div>` +
         `</div>` +
 
         `<div class="welcome-step">` +
         `<span class="welcome-step-num">4</span>` +
-        `<div class="welcome-step-text"><strong>Explore at your own pace.</strong> The Code tab has four programming languages to try. The Tutorial tab has guided lessons (with more being added). There is no wrong way to explore.</div>` +
+        `<div class="welcome-step-text"><strong>Explore.</strong> The Code tab has four programming languages. The Tutorial tab has guided lessons (more coming soon). There is no wrong way to learn.</div>` +
         `</div>`;
 
     document.getElementById('welcomeModal').style.display = 'flex';
