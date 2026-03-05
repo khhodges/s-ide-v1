@@ -3655,6 +3655,13 @@ function dismissMathGuide() {
     if (modal) modal.style.display = 'none';
 }
 
+function resetGuidePopups() {
+    localStorage.removeItem('church_welcome_dismissed');
+    localStorage.removeItem('churchMachine_mathGuideDismissed');
+    closeSettings();
+    showWelcomePopup();
+}
+
 function updateMathWelcome() {
     const el = document.getElementById('replWelcomeMsg');
     if (!el) return;
