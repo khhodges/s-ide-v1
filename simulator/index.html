@@ -248,6 +248,22 @@
         </div>
     </div>
 
+    <div id="welcomeModal" class="modal-overlay" style="display:none;">
+        <div class="modal-dialog welcome-dialog">
+            <div class="intro-header">
+                <div class="modal-title">Welcome to the Church Machine</div>
+            </div>
+            <div class="intro-body-wrap">
+                <div class="intro-body" id="welcomeBody"></div>
+                <div class="intro-scroll-arrow hidden" id="welcomeScrollArrow"><span>&#x25BC;</span></div>
+            </div>
+            <div class="welcome-footer">
+                <button class="btn btn-primary" id="welcomeSetupBtn" onclick="welcomeSetup()">Set Up My Family</button>
+                <button class="btn btn-view" onclick="welcomeSkip()">Skip for Now</button>
+            </div>
+        </div>
+    </div>
+
     <div id="introModal" class="modal-overlay" style="display:none;">
         <div class="modal-dialog intro-dialog">
             <div class="intro-header">
@@ -302,6 +318,11 @@
                             <option value="IB">IB (International Baccalaureate)</option>
                         </select>
                     </label>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-section-title">Family Members</div>
+                    <div id="familyMembersList"></div>
+                    <button class="btn-add-member" onclick="addFamilyMemberRow()">+ Add Family Member</button>
                 </div>
                 <div class="settings-section">
                     <div class="settings-section-title">Progress Report</div>

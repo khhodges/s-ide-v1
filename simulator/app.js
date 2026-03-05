@@ -59,6 +59,7 @@ function init() {
     switchView(startView);
     updateDashboard();
     pipelineViz.render();
+    showWelcomePopup();
 }
 
 function switchView(viewId) {
@@ -3423,7 +3424,7 @@ function appendOutput(text, type) {
 }
 
 function escapeHtml(str) {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function saveEditorState() {
@@ -3655,6 +3656,7 @@ RETURN CR0          ; Return result</div>
 };
 
 function showIntro(lang) {
+    if (isWelcomeNeeded()) return;
     const dismissed = localStorage.getItem('church_intro_dismissed_' + lang);
     if (dismissed === 'true') return;
 
@@ -3714,9 +3716,13 @@ function closeIntro() {
 function getStudentSettings() {
     try {
         const raw = localStorage.getItem('church_student_settings');
-        if (raw) return JSON.parse(raw);
+        if (raw) {
+            const s = JSON.parse(raw);
+            if (!s.familyMembers) s.familyMembers = [];
+            return s;
+        }
     } catch (e) {}
-    return { name: '', school: '', grade: '' };
+    return { name: '', school: '', grade: '', familyMembers: [] };
 }
 
 function getStudentProgress() {
@@ -3752,6 +3758,7 @@ function openSettings() {
     document.getElementById('settingName').value = settings.name || '';
     document.getElementById('settingSchool').value = settings.school || '';
     document.getElementById('settingGrade').value = settings.grade || '';
+    renderFamilyMembers(settings.familyMembers || []);
     renderProgressReport();
     document.getElementById('settingsModal').style.display = 'flex';
 }
@@ -3764,7 +3771,8 @@ function saveSettings() {
     const settings = {
         name: document.getElementById('settingName').value.trim(),
         school: document.getElementById('settingSchool').value.trim(),
-        grade: document.getElementById('settingGrade').value
+        grade: document.getElementById('settingGrade').value,
+        familyMembers: collectFamilyMembers()
     };
     localStorage.setItem('church_student_settings', JSON.stringify(settings));
     closeSettings();
@@ -3772,6 +3780,145 @@ function saveSettings() {
 
 function onGradeChange() {
     renderProgressReport();
+}
+
+const familyRoles = ['Parent', 'Parent', 'Child', 'Child', 'Child', 'Child', 'Child', 'Child'];
+
+function renderFamilyMembers(members) {
+    const container = document.getElementById('familyMembersList');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!members || members.length === 0) {
+        addFamilyMemberRow('Parent', '');
+        addFamilyMemberRow('Child', '');
+        return;
+    }
+    members.forEach(m => addFamilyMemberRow(m.role || 'Child', m.name || ''));
+}
+
+function addFamilyMemberRow(role, name) {
+    const container = document.getElementById('familyMembersList');
+    if (!container) return;
+    const count = container.children.length;
+    if (count >= 8) return;
+    const defaultRole = count < 2 ? (count === 0 ? 'Parent' : 'Child') : 'Child';
+    const r = role || defaultRole;
+    const n = name || '';
+    const row = document.createElement('div');
+    row.className = 'family-member-row';
+    row.innerHTML =
+        `<select class="modal-input family-role-select" style="width:100px;flex:none;">` +
+        `<option value="Parent"${r === 'Parent' ? ' selected' : ''}>Parent</option>` +
+        `<option value="Child"${r === 'Child' ? ' selected' : ''}>Child</option>` +
+        `<option value="Guardian"${r === 'Guardian' ? ' selected' : ''}>Guardian</option>` +
+        `<option value="Teacher"${r === 'Teacher' ? ' selected' : ''}>Teacher</option>` +
+        `</select>` +
+        `<input type="text" class="modal-input family-name-input" placeholder="Name" value="${escapeHtml(n)}">` +
+        `<button class="btn-remove-member" onclick="this.parentElement.remove()" title="Remove">&times;</button>`;
+    container.appendChild(row);
+}
+
+function collectFamilyMembers() {
+    const container = document.getElementById('familyMembersList');
+    if (!container) return [];
+    const members = [];
+    container.querySelectorAll('.family-member-row').forEach(row => {
+        const role = row.querySelector('.family-role-select');
+        const name = row.querySelector('.family-name-input');
+        if (role && name && name.value.trim()) {
+            members.push({ role: role.value, name: name.value.trim() });
+        }
+    });
+    return members;
+}
+
+function isWelcomeNeeded() {
+    return !localStorage.getItem('church_welcome_dismissed');
+}
+
+function showWelcomePopup() {
+    if (!isWelcomeNeeded()) return;
+
+    const body = document.getElementById('welcomeBody');
+    if (!body) return;
+
+    body.innerHTML =
+        `<p style="font-size:0.95rem;line-height:1.6;margin-bottom:1rem;">` +
+        `The Church Machine is a safe, capability-secured computer your child programs through this web-based IDE. ` +
+        `Every action is controlled by <strong>Golden Tokens</strong> &mdash; unforgeable digital permissions that work like keys. ` +
+        `Nothing happens without the right token, and <em>you</em> control which tokens your child holds.</p>` +
+
+        `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;">` +
+        `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.4rem;">What is the Family Abstraction?</div>` +
+        `<p style="font-size:0.85rem;line-height:1.5;margin:0;">` +
+        `The <strong>Family</strong> (NS[28]) is a security block in the Church Machine that binds parents and children together. ` +
+        `When you register your family, the machine creates a <strong>capability link</strong> between parent and child &mdash; ` +
+        `your child can only communicate, share, or connect with others if the Family abstraction (and therefore you) approves it. ` +
+        `Think of it as a digital permission slip that cannot be forged or bypassed.</p>` +
+        `</div>` +
+
+        `<div style="font-weight:600;margin-bottom:0.5rem;">Getting started:</div>` +
+
+        `<div class="welcome-step">` +
+        `<span class="welcome-step-num">1</span>` +
+        `<div class="welcome-step-text"><strong>Register your family.</strong> Click "Set Up My Family" below to enter your name, your child's name, and their grade level. This creates the parent-child capability binding in the Family abstraction.</div>` +
+        `</div>` +
+
+        `<div class="welcome-step">` +
+        `<span class="welcome-step-num">2</span>` +
+        `<div class="welcome-step-text"><strong>Let your child explore the Code tab.</strong> They will write programs in one of four languages &mdash; Symbolic Math (Ada's 1843 notation), JavaScript, Haskell, or Assembly. Each program compiles to real machine instructions.</div>` +
+        `</div>` +
+
+        `<div class="welcome-step">` +
+        `<span class="welcome-step-num">3</span>` +
+        `<div class="welcome-step-text"><strong>Watch their progress.</strong> Open Settings (the gear icon) at any time to see how many programs they have compiled, which languages they have tried, and what they have been working on. Every action is tracked &mdash; safely and locally on this device.</div>` +
+        `</div>` +
+
+        `<div class="welcome-step">` +
+        `<span class="welcome-step-num">4</span>` +
+        `<div class="welcome-step-text"><strong>Approve connections.</strong> If your child wants to share with friends or join a schoolroom, it goes through the <strong>Negotiate</strong> abstraction &mdash; both parent and teacher must approve. No permission is ever granted silently.</div>` +
+        `</div>` +
+
+        `<div style="background:rgba(218,165,32,0.06);border-left:3px solid var(--church-gold);padding:0.5rem 0.75rem;margin-top:0.5rem;font-size:0.82rem;line-height:1.5;">` +
+        `<strong>For educators:</strong> The Tutorial tab has two guided walkthroughs &mdash; the Discovery Path (Bernoulli numbers) and a Comparative Study (JavaScript vs Haskell). The REPL tab is an interactive calculator. Everything runs in the browser &mdash; no accounts, no cloud, no data leaves this device.` +
+        `</div>`;
+
+    document.getElementById('welcomeModal').style.display = 'flex';
+
+    const welcomeBody = body;
+    const arrow = document.getElementById('welcomeScrollArrow');
+    if (welcomeBody && arrow) {
+        const checkScroll = () => {
+            const gap = welcomeBody.scrollHeight - welcomeBody.scrollTop - welcomeBody.clientHeight;
+            if (gap > 30) arrow.classList.remove('hidden');
+            else arrow.classList.add('hidden');
+        };
+        checkScroll();
+        welcomeBody._scrollHandler = checkScroll;
+        welcomeBody.addEventListener('scroll', checkScroll);
+    }
+}
+
+function closeWelcome() {
+    localStorage.setItem('church_welcome_dismissed', '1');
+    const modal = document.getElementById('welcomeModal');
+    if (modal) modal.style.display = 'none';
+    const welcomeBody = document.getElementById('welcomeBody');
+    if (welcomeBody && welcomeBody._scrollHandler) {
+        welcomeBody.removeEventListener('scroll', welcomeBody._scrollHandler);
+        delete welcomeBody._scrollHandler;
+    }
+    const arrow = document.getElementById('welcomeScrollArrow');
+    if (arrow) arrow.classList.add('hidden');
+}
+
+function welcomeSetup() {
+    closeWelcome();
+    openSettings();
+}
+
+function welcomeSkip() {
+    closeWelcome();
 }
 
 function renderProgressReport() {

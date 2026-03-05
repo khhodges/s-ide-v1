@@ -1583,6 +1583,102 @@ header h1 {
     flex: 1;
 }
 
+#welcomeModal {
+    z-index: 10001;
+}
+
+.welcome-dialog {
+    max-width: 700px;
+    min-width: 340px;
+    width: 92vw;
+}
+
+.welcome-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.75rem;
+}
+
+.welcome-step {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.welcome-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    background: var(--church-gold);
+    color: var(--bg-dark);
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.welcome-step-text {
+    flex: 1;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.family-member-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+.family-member-row .modal-input {
+    flex: 1;
+    margin-top: 0;
+}
+
+.family-member-row .family-role {
+    width: 80px;
+    font-size: 0.75rem;
+    color: var(--church-gold);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.family-member-row .btn-remove-member {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0 0.3rem;
+    line-height: 1;
+}
+
+.family-member-row .btn-remove-member:hover {
+    color: #e74c3c;
+}
+
+.btn-add-member {
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--text-secondary);
+    padding: 0.3rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-top: 0.3rem;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.btn-add-member:hover {
+    color: var(--church-gold);
+    border-color: var(--church-gold);
+}
+
 .settings-dialog {
     max-width: 580px;
     min-width: 340px;
