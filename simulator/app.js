@@ -3438,17 +3438,6 @@ function loadEditorState() {
         const saved = localStorage.getItem('church_editor_code');
         if (saved) {
             editor.value = saved;
-        } else {
-            editor.value = `; Pure Church Machine \u2014 Assembly Editor
-; 10 opcodes: LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA, ELOADCALL, XLOADLAMBDA
-; All instructions support ARM-style condition suffixes
-;
-; Load an abstraction and verify its permissions
-LOAD CR0, CR6, 4       ; Load SUCC (Church numeral, DATA-domain code object)
-TPERM CR0, XL          ; Verify X+L permissions
-LAMBDA CR0             ; Apply via LAMBDA instruction
-RETURN CR0             ; Return result
-`;
         }
     }
     const sel = document.getElementById('langSelector');
@@ -3456,6 +3445,9 @@ RETURN CR0             ; Return result
     if (sel && savedLang) {
         sel.value = savedLang;
         onLangChange(true);
+    } else if (sel) {
+        sel.value = 'symbolic';
+        onLangChange(false);
     }
 }
 

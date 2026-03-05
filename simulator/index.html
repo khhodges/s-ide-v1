@@ -70,10 +70,10 @@
             <div class="editor-panel">
                 <div class="editor-toolbar">
                     <select id="langSelector" class="lang-selector" onchange="onLangChange()" title="Source language">
+                        <option value="symbolic">Symbolic Math (Ada)</option>
                         <option value="assembly">Assembly</option>
                         <option value="javascript">JS (CLOOMC++)</option>
                         <option value="haskell">Haskell (CLOOMC++)</option>
-                        <option value="symbolic">Symbolic Math (Ada)</option>
                     </select>
                     <button class="btn btn-primary" onclick="smartCompile()" title="Compile with auto-detected or selected language">Compile</button>
                     <button class="btn" onclick="compileDraft()" style="background:#C89B3C;color:#141414;border:none;font-weight:bold;" title="Show compilation draft — methods, capabilities, lump layout">Draft</button>
