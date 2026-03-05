@@ -181,23 +181,31 @@
                 </div>
             </div>
             <div class="repl-sidebar">
+                <div class="panel challenge-panel">
+                    <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;">
+                        <span>Challenge</span>
+                        <button class="btn btn-primary" onclick="generateChallenge()" style="padding:0.2rem 0.6rem;font-size:0.75rem;">New Problem</button>
+                    </div>
+                    <div id="challengeArea">
+                        <div id="challengePrompt" class="challenge-prompt">Click "New Problem" to get a math challenge!</div>
+                        <div id="challengeInput" class="challenge-input-area" style="display:none;">
+                            <input type="text" id="challengeAnswer" class="modal-input" placeholder="Your answer..." onkeydown="if(event.key==='Enter')checkChallenge()">
+                            <div style="display:flex;gap:0.4rem;margin-top:0.4rem;">
+                                <button class="btn btn-primary" onclick="checkChallenge()" style="flex:1;font-size:0.8rem;">Check</button>
+                                <button class="btn" onclick="showChallengeHint()" style="flex:1;font-size:0.8rem;">Hint</button>
+                            </div>
+                        </div>
+                        <div id="challengeResult" class="challenge-result"></div>
+                        <div id="challengeExplain" class="challenge-explain"></div>
+                    </div>
+                </div>
                 <div class="panel">
-                    <div class="panel-title">Quick Commands</div>
+                    <div class="panel-title">Tools</div>
                     <button class="btn" onclick="loadBernoulliInREPL()" style="width:100%;margin-bottom:0.5rem;">Run Bernoulli</button>
                     <button class="btn" onclick="replCompileSession()" style="width:100%;margin-bottom:0.5rem;background:#C89B3C;color:#141414;font-weight:bold;">Compile Session</button>
                     <button class="btn" onclick="replExecute('HELP')" style="width:100%;margin-bottom:0.5rem;">Help</button>
                     <button class="btn" onclick="replExecute('VARS')" style="width:100%;margin-bottom:0.5rem;">Show Variables</button>
                     <button class="btn btn-warning" onclick="replExecute('CLEAR')" style="width:100%;">Clear All</button>
-                </div>
-                <div class="panel">
-                    <div class="panel-title">Architecture</div>
-                    <div class="arch-info">
-                        <strong>Church (10):</strong> LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA, ELOADCALL, XLOADLAMBDA<br><br>
-                        <strong>Turing (10):</strong> DREAD, DWRITE, BFEXT, BFINS, MCMP, IADD, ISUB, BRANCH, SHL, SHR + shared RETURN<br><br>
-                        <strong>Address Space:</strong> Memory (0x00-FD) | Devices (0xFE) | Registers (0xFF)<br><br>
-                        <strong>Golden Token:</strong><br>
-                        Version(7) | Index(17) | Perms(6) | Type(2)
-                    </div>
                 </div>
             </div>
         </div>

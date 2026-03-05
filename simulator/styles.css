@@ -979,6 +979,89 @@ header h1 {
     line-height: 1.5;
 }
 
+.challenge-panel {
+    border: 1px solid rgba(218,165,32,0.3);
+}
+
+.challenge-prompt {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.challenge-prompt .challenge-question {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--church-gold);
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: rgba(218,165,32,0.08);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.challenge-input-area {
+    margin-top: 0.5rem;
+}
+
+.challenge-result {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    min-height: 0;
+}
+
+.challenge-result.correct {
+    color: var(--church-green);
+}
+
+.challenge-result.incorrect {
+    color: #e74c3c;
+}
+
+.challenge-result.hint {
+    color: var(--church-blue);
+}
+
+.challenge-explain {
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.challenge-explain .code-line {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.2rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-family: 'Courier New', monospace;
+}
+
+.challenge-explain .code-line:last-child {
+    border-bottom: none;
+}
+
+.challenge-explain .code-hex {
+    color: var(--church-gold);
+    min-width: 85px;
+    flex-shrink: 0;
+}
+
+.challenge-explain .code-asm {
+    color: var(--church-green);
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.challenge-explain .code-desc {
+    color: var(--text-secondary);
+    flex: 1;
+}
+
 .tutorial-wrapper {
     padding: 1rem;
     height: 100%;

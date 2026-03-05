@@ -141,6 +141,7 @@ Multi-language compiler targeting Church Machine 20-instruction set:
   - SlideRule Comparative Study: 23-step walkthrough of architecture, compiler, JS vs Haskell comparison, disassembly, performance, security, and hands-on guide (sliderule_tutorial.js)
 - CLOOMC++ compiler integrated: write source → compile → create abstraction (JS, Haskell, Symbolic Math)
 - REPL: interactive calculator + "Compile Session" button compiles let-bindings to Church Machine code
+- Math Challenge: sidebar panel with grade-appropriate problems (K-2 add/sub, 3-5 mul/div, 6-8 squares/mixed, 9-10 algebra, 11-12/IB factorial/exponents), answer checking, hints, and line-by-line machine code explanations using DREAD/IADD/ISUB/BRANCH
 - Docs tab: browse docs/*.md and docs/figures/*.html from the IDE; markdown rendered in-app, figures embedded via iframe
 - Welcome popup: first-visit parent guide explaining Church Machine, Family abstraction (NS[28]), Golden Tokens, and setup steps; "Set Up My Family" opens settings, "Skip for Now" dismisses; suppresses language intros until dismissed
 - Settings: gear icon in intro popup opens settings modal with student name, school, K-12 + IB grade dropdown, family members (role + name, up to 8)

@@ -3311,6 +3311,260 @@ function scrollExamples(dir) {
     }
 }
 
+let currentChallenge = null;
+
+function generateChallenge() {
+    const settings = getStudentSettings();
+    const progress = getStudentProgress();
+    const grade = settings.grade || '';
+    const solved = progress.challengesSolved || 0;
+
+    const tier = getGradeTier(grade);
+    const problem = pickProblem(tier, solved);
+    currentChallenge = problem;
+
+    const promptEl = document.getElementById('challengePrompt');
+    const inputEl = document.getElementById('challengeInput');
+    const resultEl = document.getElementById('challengeResult');
+    const explainEl = document.getElementById('challengeExplain');
+    const answerEl = document.getElementById('challengeAnswer');
+
+    promptEl.innerHTML = problem.story +
+        `<div class="challenge-question">${escapeHtml(problem.question)}</div>`;
+    inputEl.style.display = 'block';
+    resultEl.innerHTML = '';
+    resultEl.className = 'challenge-result';
+    explainEl.innerHTML = '';
+    if (answerEl) { answerEl.value = ''; answerEl.focus(); }
+}
+
+function getGradeTier(grade) {
+    if (grade === 'K' || grade === '1' || grade === '2') return 'early';
+    if (grade === '3' || grade === '4' || grade === '5') return 'elementary';
+    if (grade === '6' || grade === '7' || grade === '8') return 'middle';
+    if (grade === '9' || grade === '10') return 'high';
+    if (grade === '11' || grade === '12' || grade === 'IB') return 'advanced';
+    return 'early';
+}
+
+function pickProblem(tier, solved) {
+    const pools = {
+        early: [
+            () => { const a = rr(1,9), b = rr(1,9); return mp(a+' + '+b, a+b, 'addition', a, b, 'add'); },
+            () => { const a = rr(5,15), b = rr(1,a); return mp(a+' - '+b, a-b, 'subtraction', a, b, 'sub'); },
+            () => { const a = rr(1,5), b = rr(1,5); return mp(a+' + '+b, a+b, 'addition', a, b, 'add'); },
+            () => { const a = rr(2,10), b = rr(1,a-1); return mp(a+' - '+b, a-b, 'subtraction', a, b, 'sub'); },
+            () => { const a = rr(1,9), b = rr(1,9); return mp(a+' + '+b+' = ?', a+b, 'addition', a, b, 'add'); },
+        ],
+        elementary: [
+            () => { const a = rr(2,12), b = rr(2,12); return mp(a+' \u00d7 '+b, a*b, 'multiplication', a, b, 'mul'); },
+            () => { const b = rr(2,12), c = rr(2,12); const a = b*c; return mp(a+' \u00f7 '+b, c, 'division', a, b, 'div'); },
+            () => { const a = rr(10,99), b = rr(10,99); return mp(a+' + '+b, a+b, 'addition', a, b, 'add'); },
+            () => { const a = rr(50,200), b = rr(10,a); return mp(a+' - '+b, a-b, 'subtraction', a, b, 'sub'); },
+            () => { const a = rr(5,20), b = rr(2,9); return mp(a+' \u00d7 '+b, a*b, 'multiplication', a, b, 'mul'); },
+        ],
+        middle: [
+            () => { const a = rr(10,50), b = rr(2,10), c = rr(1,20); return mp(a+' \u00d7 '+b+' + '+c, a*b+c, 'mixed ops', a*b, c, 'add', a, b); },
+            () => { const b = rr(2,15), c = rr(2,15); const a = b*c; return mp(a+' \u00f7 '+b, c, 'division', a, b, 'div'); },
+            () => { const a = rr(2,15); return mp('What is ' + a + '\u00b2 ?', a*a, 'squaring', a, a, 'mul'); },
+            () => { const a = rr(100,999), b = rr(10,99); return mp(a+' - '+b, a-b, 'subtraction', a, b, 'sub'); },
+            () => { const a = rr(2,12), b = rr(2,12), c = rr(1,10); return mp(a+' \u00d7 '+b+' + '+c, a*b+c, 'mixed ops', a*b, c, 'add', a, b); },
+        ],
+        high: [
+            () => { const a = rr(2,15), b = rr(2,15); const p = a*b; return mp('If y = '+a+'x and x = '+b+', what is y?', p, 'algebra', a, b, 'mul'); },
+            () => { const r = rr(1,10), h = rr(2,15); const v = r*r*h; return mp('Volume: r='+r+', h='+h+', r\u00b2\u00d7h = ?', v, 'volume', r*r, h, 'mul'); },
+            () => { const x1=rr(1,5),y1=rr(1,5),x2=rr(6,10),y2=rr(6,10); return mp('Rise/Run: ('+x1+','+y1+') to ('+x2+','+y2+'). Rise = ?', y2-y1, 'slope (rise)', y2, y1, 'sub'); },
+            () => { const a = rr(2,20), b = rr(2,20); return mp(a+'\u00b2 + '+b+'\u00b2 = ?', a*a+b*b, 'Pythagorean sum', a*a, b*b, 'add'); },
+        ],
+        advanced: [
+            () => { const n = rr(2,8); let f=1; for(let i=2;i<=n;i++) f*=i; return mp(n+'! (factorial)', f, 'factorial', n, 0, 'factorial'); },
+            () => { const a=rr(2,6),b=rr(2,6),c=rr(1,5); return mp(a+'\u00d7'+b+' + '+a+'\u00d7'+c+' = '+a+'('+b+'+'+c+')', a*(b+c), 'distributive', a, b+c, 'mul'); },
+            () => { const a=rr(2,10),n=rr(2,4); let p=1; for(let i=0;i<n;i++) p*=a; return mp(a+'^'+n, p, 'exponent', a, n, 'exp'); },
+            () => { const a=rr(10,99),b=rr(10,99); return mp('GCD-step: '+a+' mod '+b+' = ?', a%b, 'modular', a, b, 'mod'); },
+        ],
+    };
+
+    const pool = pools[tier] || pools.early;
+    const fn = pool[solved % pool.length];
+
+    const base = fn();
+    const stories = {
+        early: [
+            'You have some apples in a basket.',
+            'Count the stars in the sky!',
+            'Help the robot count blocks.',
+        ],
+        elementary: [
+            'A farmer is planting rows of seeds.',
+            'How many tiles cover the floor?',
+            'Split the candies equally among friends.',
+        ],
+        middle: [
+            'Calculate the area of the garden.',
+            'Divide the supplies for the expedition.',
+            'Find the missing measurement.',
+        ],
+        high: [
+            'Solve for the unknown variable.',
+            'Calculate the geometric measurement.',
+            'Apply the formula to find the answer.',
+        ],
+        advanced: [
+            'Evaluate the mathematical expression.',
+            'Apply the algebraic identity.',
+            'Compute the result step by step.',
+        ],
+    };
+    const storyPool = stories[tier] || stories.early;
+    base.story = storyPool[Math.floor(Math.random() * storyPool.length)];
+    return base;
+}
+
+function rr(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function mp(question, answer, opName, a, b, opType, origA, origB) {
+    return { question, answer, opName, a, b, opType, origA, origB, story: '' };
+}
+
+function checkChallenge() {
+    if (!currentChallenge) return;
+    const answerEl = document.getElementById('challengeAnswer');
+    const resultEl = document.getElementById('challengeResult');
+    const explainEl = document.getElementById('challengeExplain');
+    if (!answerEl || !resultEl) return;
+
+    const userAnswer = parseFloat(answerEl.value.trim());
+    if (isNaN(userAnswer)) {
+        resultEl.className = 'challenge-result incorrect';
+        resultEl.textContent = 'Please enter a number.';
+        return;
+    }
+
+    if (userAnswer === currentChallenge.answer) {
+        resultEl.className = 'challenge-result correct';
+        resultEl.textContent = 'Correct! The answer is ' + currentChallenge.answer + '.';
+
+        const progress = getStudentProgress();
+        progress.challengesSolved = (progress.challengesSolved || 0) + 1;
+        saveStudentProgress(progress);
+
+        showChallengeExplanation(explainEl, currentChallenge);
+    } else {
+        resultEl.className = 'challenge-result incorrect';
+        resultEl.textContent = 'Not quite. Try again!';
+    }
+}
+
+function showChallengeHint() {
+    if (!currentChallenge) return;
+    const resultEl = document.getElementById('challengeResult');
+    if (!resultEl) return;
+
+    const c = currentChallenge;
+    let hint = '';
+    if (c.opType === 'add') hint = 'Add ' + c.a + ' and ' + c.b + ' together.';
+    else if (c.opType === 'sub') hint = 'Subtract ' + c.b + ' from ' + c.a + '.';
+    else if (c.opType === 'mul') hint = 'Multiply ' + c.a + ' by ' + c.b + '.';
+    else if (c.opType === 'div') hint = 'Divide ' + c.a + ' by ' + c.b + '.';
+    else if (c.opType === 'factorial') hint = 'Multiply all numbers from 1 up to ' + c.a + '.';
+    else if (c.opType === 'exp') hint = 'Multiply ' + c.a + ' by itself ' + c.b + ' times.';
+    else if (c.opType === 'mod') hint = 'What is the remainder when ' + c.a + ' is divided by ' + c.b + '?';
+    else hint = 'Think about ' + c.opName + ' step by step.';
+
+    resultEl.className = 'challenge-result hint';
+    resultEl.textContent = 'Hint: ' + hint;
+}
+
+function showChallengeExplanation(el, c) {
+    if (!el) return;
+
+    let lines = [];
+    const aHex = '0x' + (c.a >>> 0).toString(16).padStart(8, '0');
+    const bHex = '0x' + (c.b >>> 0).toString(16).padStart(8, '0');
+    const rHex = '0x' + (c.answer >>> 0).toString(16).padStart(8, '0');
+
+    lines.push({title: 'How the Church Machine solves this:'});
+
+    if (c.opType === 'add') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load the first number (' + c.a + ') into data register 1'});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load the second number (' + c.b + ') into data register 2'});
+        lines.push({asm: 'IADD DR3, DR1, DR2', desc: 'Add DR1 + DR2, store the result (' + c.answer + ') in DR3'});
+        lines.push({hex: aHex, asm: '.word ' + c.a, desc: 'Data: the number ' + c.a + ' stored in memory'});
+        lines.push({hex: bHex, asm: '.word ' + c.b, desc: 'Data: the number ' + c.b + ' stored in memory'});
+        lines.push({note: 'IADD is the "integer add" instruction. It takes two registers and puts the sum in a third.'});
+    } else if (c.opType === 'sub') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load ' + c.a + ' into data register 1'});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load ' + c.b + ' into data register 2'});
+        lines.push({asm: 'ISUB DR3, DR1, DR2', desc: 'Subtract DR2 from DR1, store the result (' + c.answer + ') in DR3'});
+        lines.push({note: 'ISUB is "integer subtract". The machine subtracts the second register from the first.'});
+    } else if (c.opType === 'mul') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load ' + c.a + ' into data register 1'});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load ' + c.b + ' into data register 2'});
+        lines.push({asm: 'DREAD DR3, #0', desc: 'Set DR3 to 0 (this will hold our running total)'});
+        lines.push({asm: 'IADD DR3, DR3, DR1', desc: 'Add DR1 to DR3 (repeat ' + c.b + ' times in a loop)'});
+        lines.push({asm: 'ISUB DR2, DR2, #1', desc: 'Count down: subtract 1 from DR2'});
+        lines.push({asm: 'BRANCH NE, -2', desc: 'If DR2 is not zero, jump back and add again'});
+        lines.push({note: 'The Church Machine has no multiply instruction! It uses a loop: add ' + c.a + ' to itself ' + c.b + ' times. ' + c.a + ' \u00d7 ' + c.b + ' = ' + c.answer + '.'});
+    } else if (c.opType === 'div') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load the dividend (' + c.a + ') into DR1'});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load the divisor (' + c.b + ') into DR2'});
+        lines.push({asm: 'DREAD DR3, #0', desc: 'Set DR3 to 0 (this counts how many times we subtract)'});
+        lines.push({asm: 'ISUB DR1, DR1, DR2', desc: 'Subtract DR2 from DR1'});
+        lines.push({asm: 'IADD DR3, DR3, #1', desc: 'Add 1 to the counter'});
+        lines.push({asm: 'BRANCH PL, -2', desc: 'If DR1 is still positive, keep subtracting'});
+        lines.push({note: 'Division is repeated subtraction! Subtract ' + c.b + ' from ' + c.a + ' and count how many times: ' + c.answer + ' times.'});
+    } else if (c.opType === 'factorial') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load ' + c.a + ' into DR1 (the counter)'});
+        lines.push({asm: 'DREAD DR3, #1', desc: 'Set DR3 to 1 (the running product)'});
+        lines.push({asm: '-- outer loop:', desc: 'For each counter value, multiply DR3 by DR1'});
+        lines.push({asm: 'DREAD DR4, DR3', desc: 'Copy the current product into DR4'});
+        lines.push({asm: 'DREAD DR3, #0', desc: 'Reset DR3 to 0 for the add loop'});
+        lines.push({asm: 'DREAD DR5, DR1', desc: 'Copy counter into DR5 (inner loop count)'});
+        lines.push({asm: 'IADD DR3, DR3, DR4', desc: 'Add DR4 to DR3 (repeated DR1 times = multiply)'});
+        lines.push({asm: 'ISUB DR5, DR5, #1', desc: 'Decrease inner loop counter'});
+        lines.push({asm: 'BRANCH NE, -2', desc: 'Inner loop: keep adding until DR5 = 0'});
+        lines.push({asm: 'ISUB DR1, DR1, #1', desc: 'Decrease the outer counter by 1'});
+        lines.push({asm: 'BRANCH NE, -8', desc: 'Outer loop: repeat for next factor'});
+        lines.push({note: c.a + '! = ' + c.answer + '. The machine has no multiply instruction, so it uses nested add loops: each multiplication is repeated addition.'});
+    } else if (c.opType === 'exp') {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load the base (' + c.a + ') into DR1'});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load the exponent (' + c.b + ') into DR2'});
+        lines.push({asm: 'DREAD DR3, #1', desc: 'Set DR3 to 1 (the result starts at 1)'});
+        lines.push({asm: '-- outer loop:', desc: 'Multiply DR3 by DR1, using an add loop'});
+        lines.push({asm: 'DREAD DR4, DR3', desc: 'Copy current result into DR4'});
+        lines.push({asm: 'DREAD DR3, #0', desc: 'Reset DR3 for the add loop'});
+        lines.push({asm: 'DREAD DR5, DR1', desc: 'Copy base into DR5 (inner loop count)'});
+        lines.push({asm: 'IADD DR3, DR3, DR4', desc: 'Add DR4 to DR3 (repeated DR1 times = multiply)'});
+        lines.push({asm: 'ISUB DR5, DR5, #1', desc: 'Decrease inner counter'});
+        lines.push({asm: 'BRANCH NE, -2', desc: 'Inner loop: keep adding'});
+        lines.push({asm: 'ISUB DR2, DR2, #1', desc: 'Decrease exponent counter'});
+        lines.push({asm: 'BRANCH NE, -8', desc: 'Outer loop until exponent reaches 0'});
+        lines.push({note: c.a + '^' + c.b + ' = ' + c.answer + '. Exponentiation is repeated multiplication, and each multiplication is repeated addition. Two nested loops!'});
+    } else {
+        lines.push({asm: 'DREAD DR1, #' + c.a, desc: 'Load ' + c.a});
+        lines.push({asm: 'DREAD DR2, #' + c.b, desc: 'Load ' + c.b});
+        lines.push({asm: 'Operation', desc: 'Compute the result: ' + c.answer});
+        lines.push({note: 'The Church Machine uses its 20-instruction set to solve this step by step.'});
+    }
+
+    let html = '';
+    for (const line of lines) {
+        if (line.title) {
+            html += `<div style="font-weight:600;color:var(--church-gold);margin-bottom:0.3rem;">${escapeHtml(line.title)}</div>`;
+        } else if (line.note) {
+            html += `<div style="margin-top:0.4rem;padding:0.4rem 0.5rem;background:rgba(218,165,32,0.06);border-left:3px solid var(--church-gold);font-style:italic;color:var(--text-primary);font-family:inherit;">${escapeHtml(line.note)}</div>`;
+        } else {
+            html += `<div class="code-line">`;
+            if (line.hex) html += `<span class="code-hex">${escapeHtml(line.hex)}</span>`;
+            html += `<span class="code-asm">${escapeHtml(line.asm)}</span>`;
+            html += `<span class="code-desc">${escapeHtml(line.desc)}</span>`;
+            html += `</div>`;
+        }
+    }
+
+    el.innerHTML = html;
+}
+
 function updateMathWelcome() {
     const el = document.getElementById('replWelcomeMsg');
     if (!el) return;
