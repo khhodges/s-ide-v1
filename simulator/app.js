@@ -2529,9 +2529,12 @@ function runSim() {
 
 function resetSim() {
     sim.reset();
-    const con = document.getElementById('editorConsole');
-    if (con) con.textContent = 'Machine reset.';
     pipelineViz.reset();
+    while (!sim.bootComplete) {
+        sim._bootStep();
+    }
+    const con = document.getElementById('editorConsole');
+    if (con) con.textContent = 'Machine reset and booted.';
     updateDashboard();
 }
 
