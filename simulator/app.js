@@ -89,7 +89,7 @@ function switchView(viewId) {
             churchTutorial.render('tutorialView');
         }
     }
-    if (viewId === 'repl') updateMathWelcome();
+    if (viewId === 'repl') { updateMathWelcome(); showMathGuidePopup(); }
     if (viewId === 'reference') renderReference();
     if (viewId === 'docs') loadDocsView();
 }
@@ -3605,6 +3605,56 @@ function showChallengeExplanation(el, c) {
     el.innerHTML = html;
 }
 
+function showMathGuidePopup() {
+    if (localStorage.getItem('churchMachine_mathGuideDismissed')) return;
+    const welcomeModal = document.getElementById('welcomeModal');
+    if (welcomeModal && welcomeModal.style.display !== 'none') return;
+
+    const modal = document.getElementById('mathGuideModal');
+    const body = document.getElementById('mathGuideBody');
+    if (!modal || !body) return;
+
+    body.innerHTML =
+        `<p style="font-size:0.9rem;line-height:1.65;margin-bottom:0.75rem;">` +
+        `This page has two sides, separated by a moveable bar.</p>` +
+
+        `<div style="display:flex;gap:1rem;margin-bottom:0.75rem;">` +
+
+        `<div style="flex:1;background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.6rem 0.8rem;">` +
+        `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.3rem;">Left &mdash; The Mind</div>` +
+        `<p style="font-size:0.82rem;line-height:1.5;margin:0;">` +
+        `Church domain. Symbols and permissions. When you type a calculation, you see ` +
+        `<strong>CALL SET(3,1) ADD</strong> &mdash; one instruction, no numbers. ` +
+        `The security envelope opens, the body does its work inside, and the envelope closes.</p>` +
+        `</div>` +
+
+        `<div style="flex:1;background:rgba(100,180,255,0.08);border:1px solid rgba(100,180,255,0.25);border-radius:8px;padding:0.6rem 0.8rem;">` +
+        `<div style="font-weight:700;color:rgba(130,200,255,0.95);margin-bottom:0.3rem;">Right &mdash; The Body</div>` +
+        `<p style="font-size:0.82rem;line-height:1.5;margin:0;">` +
+        `Turing domain. Numbers and physical addresses. The challenge panel shows how the body computes: ` +
+        `<strong>IADD DR0, DR0, DR1</strong> &mdash; add two registers. ` +
+        `Values that can overflow. Loops that can run forever. The body can fail.</p>` +
+        `</div>` +
+
+        `</div>` +
+
+        `<div style="background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.2);border-radius:8px;padding:0.6rem 0.8rem;">` +
+        `<p style="font-size:0.82rem;line-height:1.5;margin:0 0 0.4rem 0;">` +
+        `Ada wrote the first program in 1843 using symbols &mdash; no compiler, no OS, no superuser. ` +
+        `The Church Machine returns to what she had.</p>` +
+        `<p style="font-size:0.82rem;line-height:1.5;margin:0;">` +
+        `Turing was Church\u2019s student. He built the body. His teacher gave it a mind.</p>` +
+        `</div>`;
+
+    modal.style.display = 'flex';
+}
+
+function dismissMathGuide() {
+    localStorage.setItem('churchMachine_mathGuideDismissed', '1');
+    const modal = document.getElementById('mathGuideModal');
+    if (modal) modal.style.display = 'none';
+}
+
 function updateMathWelcome() {
     const el = document.getElementById('replWelcomeMsg');
     if (!el) return;
@@ -4273,10 +4323,12 @@ function closeWelcome() {
 function welcomeSetup() {
     closeWelcome();
     openSettings();
+    showMathGuidePopup();
 }
 
 function welcomeSkip() {
     closeWelcome();
+    showMathGuidePopup();
 }
 
 function renderProgressReport() {

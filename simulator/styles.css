@@ -910,7 +910,7 @@ header h1 {
 .repl-panel {
     display: flex;
     flex-direction: column;
-    flex: 2;
+    flex: 1;
     min-width: 200px;
     overflow: hidden;
 }
