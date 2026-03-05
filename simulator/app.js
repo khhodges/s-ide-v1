@@ -3527,6 +3527,45 @@ function closeSaveDialog() {
     document.getElementById('saveNSDialog').style.display = 'none';
 }
 
+function getNextStepTip(lang) {
+    const progress = getStudentProgress();
+    const c = progress.compilations || 0;
+    const a = progress.abstractions || 0;
+    const d = progress.drafts || 0;
+    const langs = progress.langsUsed || [];
+
+    if (c === 0) {
+        if (lang === 'symbolic') return `<div class="intro-tip intro-next-step"><strong>Step 1:</strong> Click the gold <strong>Compile</strong> button below the code editor. This translates Ada's math into machine code -- you will see every instruction with a comment explaining what it does.</div>`;
+        if (lang === 'assembly') return `<div class="intro-tip intro-next-step"><strong>Step 1:</strong> Click the <strong>Self-Test</strong> example button, then click <strong>Compile</strong>. Watch each instruction appear with its hex encoding.</div>`;
+        if (lang === 'javascript') return `<div class="intro-tip intro-next-step"><strong>Step 1:</strong> Click <strong>JS: Hello</strong> to load a simple program, then click <strong>Compile</strong> to see it translated into machine instructions.</div>`;
+        if (lang === 'haskell') return `<div class="intro-tip intro-next-step"><strong>Step 1:</strong> Click <strong>HS: Math</strong> to load arithmetic functions, then click <strong>Compile</strong> to see how math becomes machine code.</div>`;
+        return `<div class="intro-tip intro-next-step"><strong>Step 1:</strong> Click the <strong>Compile</strong> button below the code editor to translate the program into machine instructions.</div>`;
+    }
+
+    if (d === 0) {
+        return `<div class="intro-tip intro-next-step"><strong>Next step:</strong> You have compiled code -- now click <strong>Draft</strong> to see how the program maps to memory. You will see the lump layout: code region, capability list, and free space.</div>`;
+    }
+
+    if (a === 0) {
+        return `<div class="intro-tip intro-next-step"><strong>Next step:</strong> Click <strong>Boot</strong> in the top-left first (the machine needs to start), then click <strong>Create Abstraction</strong> to load your program into the Church Machine's namespace as a real abstraction with its own security entry.</div>`;
+    }
+
+    if (langs.length <= 1) {
+        const suggest = lang === 'symbolic' ? 'JavaScript' : (lang === 'javascript' ? 'Haskell' : (lang === 'haskell' ? 'Symbolic Math (Ada)' : 'JavaScript'));
+        return `<div class="intro-tip intro-next-step"><strong>Challenge:</strong> You have compiled, drafted, and created an abstraction! Try switching to <strong>${suggest}</strong> in the language dropdown -- the same 20 machine instructions work for every language.</div>`;
+    }
+
+    if (c < 5) {
+        return `<div class="intro-tip intro-next-step"><strong>Keep going:</strong> You have used ${langs.length} languages so far. Try editing the code -- change a variable or add a new operation, then <strong>Compile</strong> again to see how the machine code changes.</div>`;
+    }
+
+    if (lang === 'symbolic') {
+        return `<div class="intro-tip intro-next-step"><strong>Explore:</strong> Try the <strong>REPL</strong> tab to experiment with expressions interactively, then click <strong>Compile Session</strong> to turn your experiments into a program. Or visit the <strong>Tutorial</strong> tab for a guided walkthrough.</div>`;
+    }
+
+    return `<div class="intro-tip intro-next-step"><strong>Explore:</strong> Open the <strong>Tutorial</strong> tab for a guided discovery path, try the <strong>REPL</strong> for interactive experiments, or view your progress in the <strong>Settings</strong> (gear icon below).</div>`;
+}
+
 const langIntros = {
     symbolic: {
         title: "Symbolic Math -- Ada Lovelace's Notation (1843)",
@@ -3546,8 +3585,6 @@ let V11 = V4 / V5   -- divide V4 by V5</div>
             You write one operation per line, just like Ada did on paper.</p>
             <p>The Church Machine can now run Ada's program -- 183 years after she wrote it.
             Her notation is a real programming language here.</p>
-            <div class="intro-tip">Try clicking <strong>Compile</strong> to turn Ada's program into
-            machine code, then <strong>Draft</strong> to see how it maps to hardware.</div>
         `
     },
     assembly: {
@@ -3568,8 +3605,6 @@ RETURN CR0          ; Return result</div>
             <p>Assembly gives you direct control over registers, memory, and Golden Token permissions.
             Every instruction can have a <span class="intro-highlight">condition code</span> (like EQ, NE, GT)
             so it only runs when the condition is true.</p>
-            <div class="intro-tip">Start with the <strong>Self-Test</strong> example to see how the machine boots,
-            or try <strong>Ada Note G</strong> to see Ada Lovelace's program in raw machine instructions.</div>
         `
     },
     javascript: {
@@ -3593,8 +3628,6 @@ RETURN CR0          ; Return result</div>
             <p>The compiler translates your code into the same 20 instructions
             that assembly uses. Variables become data registers (DR0-DR15),
             and multiply/divide become loops of addition and subtraction.</p>
-            <div class="intro-tip">Try the <strong>JS: Hello</strong> example, then click <strong>Compile</strong>
-            to see the machine code it produces. Click <strong>Draft</strong> to see the full layout.</div>
         `
     },
     haskell: {
@@ -3617,9 +3650,6 @@ RETURN CR0          ; Return result</div>
             running on real hardware.</p>
             <p>The name "Church Machine" comes from Alonzo Church, who invented lambda calculus.
             This front-end connects his mathematics to actual silicon.</p>
-            <div class="intro-tip">Try <strong>HS: Math</strong> for basic arithmetic,
-            <strong>HS: Pairs</strong> for data structures,
-            or <strong>HS: Case</strong> for pattern matching.</div>
         `
     }
 };
@@ -3632,11 +3662,23 @@ function showIntro(lang) {
     if (!intro) return;
 
     const adapted = getGradeAdaptedIntro(lang) || intro;
+    const nextStep = getNextStepTip(lang);
     document.getElementById('introTitle').innerHTML = adapted.title;
-    document.getElementById('introBody').innerHTML = adapted.body;
+    document.getElementById('introBody').innerHTML = adapted.body + nextStep;
     document.getElementById('introDismiss').checked = false;
     document.getElementById('introModal').style.display = 'flex';
     document.getElementById('introModal').setAttribute('data-lang', lang);
+    const goBtn = document.getElementById('introGoBtn');
+    if (goBtn) {
+        const progress = getStudentProgress();
+        const c = progress.compilations || 0;
+        const d = progress.drafts || 0;
+        const a = progress.abstractions || 0;
+        if (c === 0) goBtn.textContent = "Let's Try It!";
+        else if (d === 0) goBtn.textContent = 'See the Draft!';
+        else if (a === 0) goBtn.textContent = 'Create It!';
+        else goBtn.textContent = "Let's Go!";
+    }
 
     const body = document.getElementById('introBody');
     const arrow = document.getElementById('introScrollArrow');
@@ -3817,7 +3859,6 @@ let V2 = 2
 let V4 = V2 * V3    -- multiply!</div>
                 <p>Each <span class="intro-highlight">V</span> is like a box that holds a number.
                 V1 holds the number 1, V2 holds 2, and so on. You tell the machine what to do with the numbers!</p>
-                <div class="intro-tip">Press <strong>Compile</strong> to see Ada's program turn into machine language!</div>
             `;
         } else if (tier === 'elementary') {
             adapted.body = `
@@ -3832,8 +3873,6 @@ let V4 = V2 * V3    -- multiply V2 by V3
 let V11 = V4 / V5   -- divide V4 by V5</div>
                 <p>Each <span class="intro-highlight">V-variable</span> holds a number.
                 You write one math operation per line. The Church Machine can actually run Ada's program today!</p>
-                <div class="intro-tip">Click <strong>Compile</strong> to translate Ada's math into machine code,
-                then <strong>Draft</strong> to see the memory layout.</div>
             `;
         } else if (tier === 'middle') {
             adapted.body = `
@@ -3847,8 +3886,6 @@ let V4 = V2 * V3    -- Operation 1: 2n
 let V11 = V4 / V5   -- Operation 4: ratio</div>
                 <p>Multiply and divide compile to loops of addition and subtraction --
                 the same way early computers actually worked.</p>
-                <div class="intro-tip">Try <strong>Compile</strong> to see the machine code, then <strong>Draft</strong>
-                to understand how the code maps to a memory lump with method tables and capability lists.</div>
             `;
         } else if (tier === 'high') {
             adapted.body = `
@@ -3865,8 +3902,6 @@ let V11 = V4 / V5   -- ISUB loop: quotient++, remainder -= divisor</div>
                 <p>Multiplication compiles to shift-and-add loops; division to repeated subtraction.
                 The compiler allocates temporary registers dynamically to avoid clobbering.
                 ${tier === 'ib' ? 'This connects to the IB Computer Science core -- abstraction, algorithms, and machine architecture as a unified system.' : ''}</p>
-                <div class="intro-tip">Examine the <strong>Draft</strong> output to see lump layout, CR7/CR6 split,
-                and the capability-secured memory model. Compare JS and Haskell versions via the language selector.</div>
             `;
         }
     } else if (lang === 'assembly') {
@@ -3880,7 +3915,6 @@ let V11 = V4 / V5   -- ISUB loop: quotient++, remainder -= divisor</div>
 MCMP DR0, DR1        ; compare them</div>
                 <p>There are <span class="intro-highlight">20 instructions</span> the machine knows.
                 Some do math, and some check security permissions -- like asking a parent for permission!</p>
-                <div class="intro-tip">Try the <strong>Self-Test</strong> example to see the machine run!</div>
             `;
         } else if (tier === 'elementary' || tier === 'middle') {
             adapted.body = `
@@ -3897,8 +3931,6 @@ TPERM CR0, XL       ; permission check (execute + load)
 CALL CR0            ; domain crossing via E-GT</div>
                 <p>ARM-style condition codes on every instruction. The F-bit auto-set on Outform GTs prevents
                 the confused deputy problem.${tier === 'ib' ? ' This maps directly to IB CS topics: machine architecture, instruction sets, and security models.' : ''}</p>
-                <div class="intro-tip">Study the <strong>mLoad pipeline</strong> (7 steps) in the Pipeline tab
-                to understand how capability checks enforce memory safety at the hardware level.</div>
             `;
         }
     } else if (lang === 'javascript') {
@@ -3915,7 +3947,6 @@ CALL CR0            ; domain crossing via E-GT</div>
 }</div>
                 <p>An <span class="intro-highlight">abstraction</span> is like a little program with its own rules.
                 Methods are the things it can do -- like greeting someone!</p>
-                <div class="intro-tip">Try <strong>JS: Hello</strong>, then click <strong>Compile</strong> to see the machine code!</div>
             `;
         } else if (tier === 'advanced' || tier === 'ib') {
             adapted.body = `
@@ -3936,7 +3967,6 @@ CALL CR0            ; domain crossing via E-GT</div>
 method isZero(n) = if n == 0 then 1 else 0</div>
                 <p>It looks like math equations! The Church Machine turns these into the same instructions
                 as the other languages.</p>
-                <div class="intro-tip">Try <strong>HS: Math</strong> to see basic arithmetic in Haskell!</div>
             `;
         } else if (tier === 'advanced' || tier === 'ib') {
             adapted.body = `
@@ -3946,8 +3976,6 @@ method isZero(n) = if n == 0 then 1 else 0</div>
                 <div class="intro-example">method factorial(n) = case n of 0 -> 1, _ -> n * (n - 1)
 method swap(p) = (snd p, fst p)</div>
                 <p>Named after Alonzo Church, this front-end connects his lambda calculus to silicon.${tier === 'ib' ? ' This relates to IB CS abstract data structures, recursion, and computational thinking.' : ''}</p>
-                <div class="intro-tip">Compare the compiled output of <strong>HS: Math</strong> with <strong>JS: Counter</strong> --
-                both produce the same machine instructions from different paradigms.</div>
             `;
         } else {
             adapted.body = `<p>${greeting}${base.body}`;

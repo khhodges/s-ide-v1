@@ -1539,6 +1539,15 @@ header h1 {
     font-size: 0.85rem;
 }
 
+.intro-body .intro-next-step {
+    background: rgba(200, 155, 60, 0.18);
+    border-left: 4px solid var(--church-gold);
+    padding: 0.6rem 0.85rem;
+    margin-top: 1rem;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
 .intro-footer {
     display: flex;
     align-items: center;
