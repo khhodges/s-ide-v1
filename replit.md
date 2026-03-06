@@ -153,7 +153,8 @@ Multi-language compiler targeting Church Machine 20-instruction set:
 - Settings: gear icon in intro popup opens settings modal with student name, school, K-12 + IB grade dropdown, family members (role + name, up to 8)
 - Grade-adapted intros: intro popup content dynamically adapts to student grade level (early/elementary/middle/high/advanced/IB tiers)
 - Progress tracking: compilations, abstractions created, drafts, Interactive Math sessions, languages used, recent activity history
-- State persistence via localStorage (editor state, settings, progress, intro dismissals, welcome dismissal, family members)
+- Tool guide popups: one-time educational popups for each math tool tab (Interactive Math, HP-35, Abacus, Slide Rule). Each explains what the tool does, what buttons to press, and how to learn. Triggered on first visit to each tab after welcome+math guide dismissed. Reset via "Show Guides Again" in Settings. Stored in localStorage keys churchMachine_toolGuide_{interactive,hp35,abacus,sliderule}.
+- State persistence via localStorage (editor state, settings, progress, intro dismissals, welcome dismissal, family members, tool guides)
 - WebSerial for Tang Nano 20K deployment
 
 ### Instruction Set

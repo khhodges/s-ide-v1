@@ -3653,13 +3653,157 @@ function dismissMathGuide() {
     localStorage.setItem('churchMachine_mathGuideDismissed', '1');
     const modal = document.getElementById('mathGuideModal');
     if (modal) modal.style.display = 'none';
+    showToolGuide('interactive');
 }
 
 function resetGuidePopups() {
     localStorage.removeItem('church_welcome_dismissed');
     localStorage.removeItem('churchMachine_mathGuideDismissed');
+    localStorage.removeItem('churchMachine_toolGuide_interactive');
+    localStorage.removeItem('churchMachine_toolGuide_hp35');
+    localStorage.removeItem('churchMachine_toolGuide_abacus');
+    localStorage.removeItem('churchMachine_toolGuide_sliderule');
     closeSettings();
     showWelcomePopup();
+}
+
+const TOOL_GUIDES = {
+    interactive: {
+        title: 'Interactive Math',
+        body:
+            `<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">` +
+            `<span style="font-size:2rem;">&#955;</span>` +
+            `<div><strong style="font-size:1rem;">Your lambda calculus notebook</strong>` +
+            `<p style="font-size:0.82rem;color:var(--text-secondary);margin:0.2rem 0 0;">Type maths, see it run on the Church Machine.</p></div></div>` +
+
+            `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.65rem;">` +
+            `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.3rem;">What can I do?</div>` +
+            `<ul style="font-size:0.82rem;line-height:1.6;margin:0;padding-left:1.2rem;">` +
+            `<li>Type <code>let x = 2 + 3</code> and press Enter to compute</li>` +
+            `<li>Build up calculations step by step \u2014 each line remembers the last</li>` +
+            `<li>Click <strong>Compile Session</strong> to turn your work into real Church Machine code</li>` +
+            `<li>The right panel shows how the machine runs your calculation</li></ul></div>` +
+
+            `<div style="background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.2);border-radius:8px;padding:0.6rem 0.8rem;">` +
+            `<div style="font-weight:600;color:rgba(100,200,100,0.9);font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem;">How to learn</div>` +
+            `<p style="font-size:0.82rem;line-height:1.55;margin:0;">` +
+            `Start simple: <code>let a = 5</code>, then <code>let b = a * 2</code>. ` +
+            `Watch the right side \u2014 it shows what the processor does with your symbols. ` +
+            `This is how Ada Lovelace wrote her first program in 1843: symbols first, then the machine runs them.</p></div>`
+    },
+    hp35: {
+        title: 'HP-35 Scientific Calculator',
+        body:
+            `<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">` +
+            `<span style="font-size:2rem;">&#128425;</span>` +
+            `<div><strong style="font-size:1rem;">The calculator that changed the world</strong>` +
+            `<p style="font-size:0.82rem;color:var(--text-secondary);margin:0.2rem 0 0;">A 1972 HP-35, rebuilt in pure lambda calculus.</p></div></div>` +
+
+            `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.65rem;">` +
+            `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.3rem;">What can I do?</div>` +
+            `<ul style="font-size:0.82rem;line-height:1.6;margin:0;padding-left:1.2rem;">` +
+            `<li>Type a number, press <strong>ENTER</strong> to push it onto the stack</li>` +
+            `<li>Type another number, then press an operator (+, \u2212, \u00d7, \u00f7)</li>` +
+            `<li>Use scientific functions: <strong>sin</strong>, <strong>cos</strong>, <strong>tan</strong>, <strong>log</strong>, <strong>ln</strong>, <strong>\u221a</strong></li>` +
+            `<li>The <strong>stack</strong> panel shows X, Y, Z, T registers \u2014 just like the real HP-35</li></ul></div>` +
+
+            `<div style="background:rgba(100,180,255,0.08);border:1px solid rgba(100,180,255,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.65rem;">` +
+            `<div style="font-weight:600;color:rgba(130,200,255,0.95);font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem;">RPN \u2014 Reverse Polish Notation</div>` +
+            `<p style="font-size:0.82rem;line-height:1.55;margin:0;">` +
+            `Instead of typing <code>2 + 3 =</code>, you type <code>2 ENTER 3 +</code>. ` +
+            `Put the numbers in first, then say what to do with them. ` +
+            `No brackets needed, ever. Astronauts used this on Apollo missions!</p></div>` +
+
+            `<div style="background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.2);border-radius:8px;padding:0.6rem 0.8rem;">` +
+            `<div style="font-weight:600;color:rgba(100,200,100,0.9);font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem;">How to learn</div>` +
+            `<p style="font-size:0.82rem;line-height:1.55;margin:0;">` +
+            `Try this: press <strong>5</strong>, then <strong>ENTER</strong>, then <strong>3</strong>, then <strong>+</strong>. ` +
+            `The answer (8) appears in X. Watch the lambda trace on the right \u2014 ` +
+            `it shows Church numerals doing the same calculation with pure logic.</p></div>`
+    },
+    abacus: {
+        title: 'Soroban Abacus',
+        body:
+            `<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">` +
+            `<span style="font-size:2rem;">&#129518;</span>` +
+            `<div><strong style="font-size:1rem;">The oldest computer in the world</strong>` +
+            `<p style="font-size:0.82rem;color:var(--text-secondary);margin:0.2rem 0 0;">A Japanese soroban \u2014 people have used these for 2,500 years.</p></div></div>` +
+
+            `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.65rem;">` +
+            `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.3rem;">What can I do?</div>` +
+            `<ul style="font-size:0.82rem;line-height:1.6;margin:0;padding-left:1.2rem;">` +
+            `<li>Click beads to move them \u2014 beads touching the bar count</li>` +
+            `<li>Each <strong>top bead</strong> (heaven bead) is worth <strong>5</strong></li>` +
+            `<li>Each <strong>bottom bead</strong> (earth bead) is worth <strong>1</strong></li>` +
+            `<li>The digital readout shows your current number</li>` +
+            `<li>Columns go right to left: ones, tens, hundreds, thousands\u2026</li></ul></div>` +
+
+            `<div style="background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.2);border-radius:8px;padding:0.6rem 0.8rem;">` +
+            `<div style="font-weight:600;color:rgba(100,200,100,0.9);font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem;">How to learn</div>` +
+            `<p style="font-size:0.82rem;line-height:1.55;margin:0;">` +
+            `Start by making the number 7: move one heaven bead down (5) and two earth beads up (1+1). ` +
+            `Now try 42: on the tens column move 4 earth beads up, on the ones column move 2 earth beads up. ` +
+            `The trace shows CALL Abacus instructions \u2014 every click is a Church Machine operation.</p></div>`
+    },
+    sliderule: {
+        title: 'Logarithmic Slide Rule',
+        body:
+            `<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">` +
+            `<span style="font-size:2rem;">&#128207;</span>` +
+            `<div><strong style="font-size:1rem;">The tool that built the modern world</strong>` +
+            `<p style="font-size:0.82rem;color:var(--text-secondary);margin:0.2rem 0 0;">Engineers used slide rules for 350 years \u2014 from bridges to moon rockets.</p></div></div>` +
+
+            `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.65rem;">` +
+            `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.3rem;">What can I do?</div>` +
+            `<ul style="font-size:0.82rem;line-height:1.6;margin:0;padding-left:1.2rem;">` +
+            `<li><strong>Drag the green C scale</strong> left or right to set the first number</li>` +
+            `<li><strong>Drag the red cursor</strong> to read the answer on the D scale</li>` +
+            `<li>Use the <strong>preset buttons</strong> (2\u00d73, \u03c0\u00d72) to see worked examples</li>` +
+            `<li>Switch scale modes: C/D (multiply), A/B (squares), S/T (trig) and more</li></ul></div>` +
+
+            `<div style="background:rgba(100,180,255,0.08);border:1px solid rgba(100,180,255,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.65rem;">` +
+            `<div style="font-weight:600;color:rgba(130,200,255,0.95);font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem;">How does it work?</div>` +
+            `<p style="font-size:0.82rem;line-height:1.55;margin:0;">` +
+            `Multiplication is just <em>adding lengths</em>. The scales are spaced by logarithms, so ` +
+            `sliding log(a) + log(b) gives log(a\u00d7b). The labels <span style="color:#ff6644;">a</span> and ` +
+            `<span style="color:#44aaff;">b</span> above the scale show you what\u2019s happening.</p></div>` +
+
+            `<div style="background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.2);border-radius:8px;padding:0.6rem 0.8rem;">` +
+            `<div style="font-weight:600;color:rgba(100,200,100,0.9);font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem;">How to learn</div>` +
+            `<p style="font-size:0.82rem;line-height:1.55;margin:0;">` +
+            `Click <strong>2 \u00d7 3</strong> to see the slide rule compute 6. Watch the hand-drawn arrow appear below. ` +
+            `Then try dragging the C scale yourself and moving the cursor. ` +
+            `NASA engineers calculated the Apollo trajectory with slide rules like this one.</p></div>`
+    }
+};
+
+let currentToolGuide = null;
+
+function showToolGuide(tool) {
+    if (!TOOL_GUIDES[tool]) return;
+    if (localStorage.getItem('churchMachine_toolGuide_' + tool)) return;
+    if (!localStorage.getItem('church_welcome_dismissed')) return;
+    if (!localStorage.getItem('churchMachine_mathGuideDismissed')) return;
+
+    const modal = document.getElementById('toolGuideModal');
+    const title = document.getElementById('toolGuideTitle');
+    const body = document.getElementById('toolGuideBody');
+    if (!modal || !title || !body) return;
+
+    const guide = TOOL_GUIDES[tool];
+    title.textContent = guide.title;
+    body.innerHTML = guide.body;
+    currentToolGuide = tool;
+    modal.style.display = 'flex';
+}
+
+function dismissToolGuide() {
+    if (currentToolGuide) {
+        localStorage.setItem('churchMachine_toolGuide_' + currentToolGuide, '1');
+    }
+    const modal = document.getElementById('toolGuideModal');
+    if (modal) modal.style.display = 'none';
+    currentToolGuide = null;
 }
 
 function updateMathWelcome() {
@@ -3773,6 +3917,8 @@ function switchMathMode(mode) {
     if (mode === 'sliderule' && !slideruleState.rendered) renderSlideRuleCalculator();
 
     if (typeof historySetTool === 'function') historySetTool(mode);
+
+    showToolGuide(mode);
 }
 
 function switchSidebarTab(tab) {
