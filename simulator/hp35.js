@@ -322,16 +322,18 @@ function renderHP35Calculator() {
                     </div>
                 </div>
             </div>
-            <div class="hp35-stack-display">
-                <div class="hp35-stack-header">4-Register Stack</div>
-                <div class="hp35-stack-reg" data-reg="3"></div>
-                <div class="hp35-stack-reg" data-reg="2"></div>
-                <div class="hp35-stack-reg" data-reg="1"></div>
-                <div class="hp35-stack-reg" data-reg="0"></div>
-            </div>
-            <div class="hp35-trace-inline">
-                <div class="hp35-trace-header">Lambda Calculus Trace</div>
-                <div class="hp35-trace-area"></div>
+            <div class="hp35-side-panel">
+                <div class="hp35-stack-display">
+                    <div class="hp35-stack-header">4-Register Stack</div>
+                    <div class="hp35-stack-reg" data-reg="3"></div>
+                    <div class="hp35-stack-reg" data-reg="2"></div>
+                    <div class="hp35-stack-reg" data-reg="1"></div>
+                    <div class="hp35-stack-reg" data-reg="0"></div>
+                </div>
+                <div class="hp35-trace-inline">
+                    <div class="hp35-trace-header">Lambda Calculus Trace</div>
+                    <div class="hp35-trace-area"></div>
+                </div>
             </div>
         </div>
     `;

@@ -50,6 +50,14 @@ function slideruleReadAtCursor() {
     return { d: dVal, c: cVal };
 }
 
+function slideruleGetScaleFactor() {
+    const svgEl = document.querySelector('.sliderule-svg');
+    if (!svgEl) return 1;
+    const rect = svgEl.getBoundingClientRect();
+    const totalW = slideruleState.scaleStart * 2 + slideruleState.scaleWidth;
+    return totalW / rect.width;
+}
+
 function slideruleStartDragSlide(e) {
     e.preventDefault();
     slideruleState.draggingSlide = true;
@@ -78,13 +86,14 @@ function slideruleDragMove(e) {
     const clientX = e.clientX || (e.touches && e.touches[0].clientX);
     if (clientX === undefined) return;
 
+    const scale = slideruleGetScaleFactor();
+    const dx = (clientX - slideruleState.dragStartX) * scale;
+
     if (slideruleState.draggingSlide) {
-        const dx = clientX - slideruleState.dragStartX;
         slideruleState.slideOffset = slideruleState.dragStartOffset + dx;
         slideruleState.slideOffset = Math.max(-slideruleState.scaleWidth, Math.min(slideruleState.scaleWidth, slideruleState.slideOffset));
         slideruleUpdateDisplay();
     } else if (slideruleState.draggingCursor) {
-        const dx = clientX - slideruleState.dragStartX;
         slideruleState.cursorX = slideruleState.dragStartCursor + dx;
         slideruleState.cursorX = Math.max(slideruleState.scaleStart, Math.min(slideruleState.scaleStart + slideruleState.scaleWidth, slideruleState.cursorX));
         slideruleUpdateDisplay();
@@ -122,7 +131,7 @@ function sliderulePresetMultiply(a, b) {
     slideruleState.cursorX = Math.max(slideruleState.scaleStart, Math.min(slideruleState.scaleStart + slideruleState.scaleWidth, slideruleState.cursorX));
     const result = aClamp * bClamp;
     slideruleTraceLog(
-        `CALL SlideRule.Mul(${aClamp}, ${bClamp}) → ${Math.round(result * 1000) / 1000}`,
+        `CALL SlideRule.Mul(${aClamp}, ${bClamp}) \u2192 ${Math.round(result * 1000) / 1000}`,
         `Multiply: set C-scale 1 at D=${aClamp}, read D at C=${bClamp}`
     );
     slideruleUpdateDisplay();
@@ -134,8 +143,8 @@ function sliderulePresetSqrt(val) {
     slideruleState.slideOffset = 0;
     slideruleState.cursorX = slideruleValToX(sqr, 0);
     slideruleTraceLog(
-        `CALL SlideRule.Sqrt(${v}) → ${Math.round(sqr * 1000) / 1000}`,
-        `Square root: √${v} ≈ ${Math.round(sqr * 1000) / 1000}`
+        `CALL SlideRule.Sqrt(${v}) \u2192 ${Math.round(sqr * 1000) / 1000}`,
+        `Square root: \u221a${v} \u2248 ${Math.round(sqr * 1000) / 1000}`
     );
     slideruleUpdateDisplay();
 }
@@ -182,6 +191,56 @@ function slideruleGenerateScaleTicks(offset) {
     return ticks;
 }
 
+function slideruleGenerateArrows(cx) {
+    const so = slideruleState.slideOffset;
+    if (Math.abs(so) < 2) return '';
+
+    const arrowColor = '#ff3333';
+    const defs = `
+        <defs>
+            <marker id="arrowRight" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto">
+                <path d="M0,0 L10,3 L0,6 Z" fill="${arrowColor}"/>
+            </marker>
+            <marker id="arrowLeft" viewBox="0 0 10 6" refX="0" refY="3" markerWidth="8" markerHeight="6" orient="auto">
+                <path d="M10,0 L0,3 L10,6 Z" fill="${arrowColor}"/>
+            </marker>
+        </defs>`;
+
+    let arrows = defs;
+    const ss = slideruleState.scaleStart;
+
+    const cOneX = ss + so;
+    const arrowY1 = 120;
+    const arrowY2 = 132;
+    const arrowY3 = 144;
+
+    if (so > 0 && cOneX > ss) {
+        arrows += `<line x1="${ss}" y1="${arrowY1}" x2="${cOneX}" y2="${arrowY1}" stroke="${arrowColor}" stroke-width="2" marker-end="url(#arrowRight)" opacity="0.85"/>`;
+        const midA = (ss + cOneX) / 2;
+        arrows += `<text x="${midA}" y="${arrowY1 - 4}" text-anchor="middle" fill="${arrowColor}" font-size="8" font-family="monospace" opacity="0.9">log(a)</text>`;
+    }
+
+    if (cx > cOneX + 2) {
+        arrows += `<line x1="${cOneX}" y1="${arrowY2}" x2="${cx}" y2="${arrowY2}" stroke="${arrowColor}" stroke-width="2" marker-end="url(#arrowRight)" opacity="0.65"/>`;
+        const midB = (cOneX + cx) / 2;
+        arrows += `<text x="${midB}" y="${arrowY2 - 4}" text-anchor="middle" fill="${arrowColor}" font-size="8" font-family="monospace" opacity="0.7">log(b)</text>`;
+    } else if (cx < cOneX - 2) {
+        arrows += `<line x1="${cOneX}" y1="${arrowY2}" x2="${cx}" y2="${arrowY2}" stroke="${arrowColor}" stroke-width="2" marker-end="url(#arrowLeft)" opacity="0.65"/>`;
+        const midB = (cOneX + cx) / 2;
+        arrows += `<text x="${midB}" y="${arrowY2 - 4}" text-anchor="middle" fill="${arrowColor}" font-size="8" font-family="monospace" opacity="0.7">log(b)</text>`;
+    }
+
+    if (cx > ss + 2) {
+        arrows += `<line x1="${ss}" y1="${arrowY3}" x2="${cx}" y2="${arrowY3}" stroke="${arrowColor}" stroke-width="2.5" marker-end="url(#arrowRight)" opacity="0.95"/>`;
+        const midR = (ss + cx) / 2;
+        const vals = slideruleReadAtCursor();
+        const product = Math.round(vals.d * vals.c * 1000) / 1000;
+        arrows += `<text x="${midR}" y="${arrowY3 - 4}" text-anchor="middle" fill="${arrowColor}" font-size="9" font-weight="bold" font-family="monospace">log(${product}) = log(a) + log(b)</text>`;
+    }
+
+    return arrows;
+}
+
 function slideruleRenderDisplay() {
     const container = document.getElementById('slideruleContainer');
     if (!container) return;
@@ -189,7 +248,7 @@ function slideruleRenderDisplay() {
     const vals = slideruleReadAtCursor();
 
     const readout = container.querySelector('.sliderule-readout-value');
-    if (readout) readout.textContent = `D: ${vals.d}  ·  C: ${vals.c}  ·  D×C ≈ ${Math.round(vals.d * vals.c * 1000) / 1000}`;
+    if (readout) readout.textContent = `D: ${vals.d}  \u00b7  C: ${vals.c}  \u00b7  D\u00d7C \u2248 ${Math.round(vals.d * vals.c * 1000) / 1000}`;
 
     const svgEl = container.querySelector('.sliderule-svg');
     if (svgEl) {
@@ -197,6 +256,10 @@ function slideruleRenderDisplay() {
         const dTicks = slideruleGenerateScaleTicks(0);
         const cTicks = slideruleGenerateScaleTicks(slideruleState.slideOffset);
         const cx = slideruleState.cursorX;
+        const arrowsSVG = slideruleGenerateArrows(cx);
+        const svgHeight = Math.abs(slideruleState.slideOffset) > 2 ? 155 : 110;
+
+        svgEl.setAttribute('viewBox', `0 0 ${totalW} ${svgHeight}`);
 
         svgEl.innerHTML = `
             <rect x="0" y="0" width="${totalW}" height="110" rx="4" fill="#2a1a0a" stroke="#8B7355" stroke-width="2"/>
@@ -215,6 +278,8 @@ function slideruleRenderDisplay() {
             <line x1="${cx}" y1="0" x2="${cx}" y2="110" stroke="rgba(255,50,50,0.8)" stroke-width="1.5" stroke-dasharray="3,2"/>
             <rect x="${cx - 10}" y="0" width="20" height="110" fill="rgba(255,50,50,0.08)" class="sliderule-cursor-zone" style="cursor:crosshair;"/>
             <circle cx="${cx}" cy="3" r="4" fill="#ff3333" class="sliderule-cursor-handle" style="cursor:crosshair;"/>
+
+            ${arrowsSVG}
         `;
 
         const slideRect = svgEl.querySelector('.sliderule-slide-rect');
@@ -258,20 +323,20 @@ function renderSlideRuleCalculator() {
         <div class="sliderule-body">
             <div class="sliderule-title">
                 <span class="sliderule-title-label">SLIDE RULE</span>
-                <span class="sliderule-title-ns">NS[16] · SlideRule</span>
+                <span class="sliderule-title-ns">NS[16] \u00b7 SlideRule</span>
             </div>
             <div class="sliderule-readout">
-                <span class="sliderule-readout-value">D: 1  ·  C: 1  ·  D×C ≈ 1</span>
+                <span class="sliderule-readout-value">D: 1  \u00b7  C: 1  \u00b7  D\u00d7C \u2248 1</span>
             </div>
-            <svg class="sliderule-svg" width="${totalW}" height="110" viewBox="0 0 ${totalW} 110"></svg>
-            <div class="sliderule-instructions">Drag <span style="color:#33cc66;">green C-scale</span> to slide · Drag <span style="color:#ff3333;">red cursor</span> to read</div>
+            <svg class="sliderule-svg" width="${totalW}" height="110" viewBox="0 0 ${totalW} 110" preserveAspectRatio="xMidYMid meet"></svg>
+            <div class="sliderule-instructions">Drag <span style="color:#33cc66;">green C-scale</span> to slide \u00b7 Drag <span style="color:#ff3333;">red cursor</span> to read</div>
             <div class="sliderule-presets">
                 <span class="sliderule-preset-label">Try:</span>
-                <button class="sliderule-preset-btn" onclick="sliderulePresetMultiply(2, 3)">2 × 3</button>
-                <button class="sliderule-preset-btn" onclick="sliderulePresetMultiply(1.5, 4)">1.5 × 4</button>
-                <button class="sliderule-preset-btn" onclick="sliderulePresetMultiply(3.14, 2)">π × 2</button>
-                <button class="sliderule-preset-btn" onclick="sliderulePresetSqrt(2)">√2</button>
-                <button class="sliderule-preset-btn" onclick="sliderulePresetSqrt(9)">√9</button>
+                <button class="sliderule-preset-btn" onclick="sliderulePresetMultiply(2, 3)">2 \u00d7 3</button>
+                <button class="sliderule-preset-btn" onclick="sliderulePresetMultiply(1.5, 4)">1.5 \u00d7 4</button>
+                <button class="sliderule-preset-btn" onclick="sliderulePresetMultiply(3.14, 2)">\u03c0 \u00d7 2</button>
+                <button class="sliderule-preset-btn" onclick="sliderulePresetSqrt(2)">\u221a2</button>
+                <button class="sliderule-preset-btn" onclick="sliderulePresetSqrt(9)">\u221a9</button>
                 <button class="sliderule-preset-btn" onclick="slideruleReset()">Reset</button>
             </div>
         </div>
@@ -280,9 +345,10 @@ function renderSlideRuleCalculator() {
             <div class="sliderule-stack-header">How It Works</div>
             <div class="sliderule-info-text">
                 The slide rule multiplies by <em>adding logarithms</em> physically.
-                Sliding the C-scale by log(a) and reading at C=b gives D = a×b.
-                This is the same principle behind CALL SlideRule.Mul — the Church Machine's
-                floating-point abstraction at NS[16].
+                Sliding the C-scale by log(a) and reading at C=b gives D = a\u00d7b.
+                The <span style="color:#ff3333;">red arrows</span> show the two lengths being added:
+                log(a) + log(b) = log(a\u00d7b). This is the same principle behind
+                CALL SlideRule.Mul \u2014 the Church Machine's floating-point abstraction at NS[16].
             </div>
         </div>
 
