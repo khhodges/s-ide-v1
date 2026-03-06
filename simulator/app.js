@@ -2409,6 +2409,7 @@ function assembleAndLoad() {
     if (result.errors.length > 0) {
         const errText = result.errors.map(e => `Line ${e.line}: ${e.message}`).join('\n');
         if (con) con.textContent = `Assembly errors:\n${errText}`;
+        showNextSteps('error');
         return;
     }
 
@@ -2420,6 +2421,7 @@ function assembleAndLoad() {
         listing += `  ${i.toString().padStart(4)}: 0x${result.words[i].toString(16).padStart(8, '0')}  ${assembler.disassemble(result.words[i])}\n`;
     }
     if (con) con.textContent = listing;
+    showNextSteps('assembled');
 
     const saveBtn = document.getElementById('btnSaveNS');
     if (saveBtn) saveBtn.disabled = false;
@@ -5603,6 +5605,7 @@ function compileDraft() {
     if (result.errors.length > 0) {
         const errText = result.errors.map(e => `Line ${e.line || '?'}: ${e.message}`).join('\n');
         if (con) con.textContent = `CLOOMC++ Draft — compilation errors:\n${errText}`;
+        showNextSteps('error');
         return;
     }
 
@@ -5700,6 +5703,7 @@ function compileDraft() {
     }
 
     if (con) con.textContent = draft;
+    showNextSteps('draft');
     trackAction('draft', { name: result.abstractionName, lang: result.language });
     appendOutput(`Draft: "${result.abstractionName}" — ${result.methods.length} methods, ${clistCount} caps, ${allocSize} alloc`, 'info');
 }
@@ -5716,6 +5720,7 @@ function compileCLOOMC() {
     if (result.errors.length > 0) {
         const errText = result.errors.map(e => `Line ${e.line || '?'}: ${e.message}`).join('\n');
         if (con) con.textContent = `CLOOMC++ compilation errors:\n${errText}`;
+        showNextSteps('error');
         return;
     }
 
@@ -5755,6 +5760,7 @@ function compileCLOOMC() {
     }
 
     if (con) con.textContent = listing;
+    showNextSteps('compiled');
     trackAction('compile', { name: result.abstractionName, lang: result.language });
     appendOutput(`CLOOMC++ compiled "${result.abstractionName}" — ${result.methods.length} methods`, 'info');
 }
@@ -5771,11 +5777,13 @@ function compileAndCreateAbstraction() {
     if (result.errors.length > 0) {
         const errText = result.errors.map(e => `Line ${e.line || '?'}: ${e.message}`).join('\n');
         if (con) con.textContent = `CLOOMC++ compilation errors:\n${errText}`;
+        showNextSteps('error');
         return;
     }
 
     if (!sim.bootComplete) {
         if (con) con.textContent = 'Boot not complete — run boot sequence first.';
+        showNextSteps('error');
         return;
     }
 
@@ -5805,6 +5813,7 @@ function compileAndCreateAbstraction() {
 
     if (!addResult || !addResult.ok) {
         if (con) con.textContent = `Abstraction creation failed: ${addResult ? addResult.message : 'unknown error'}`;
+        showNextSteps('error');
         return;
     }
 
@@ -5829,6 +5838,7 @@ function compileAndCreateAbstraction() {
     }
 
     if (con) con.textContent = listing;
+    showNextSteps('created');
     trackAction('abstract', { name: upload.abstraction, lang: result.language });
     appendOutput(`Created "${upload.abstraction}" @ NS[${addResult.result.nsIndex}]`, 'info');
     updateDashboard();
@@ -6039,6 +6049,55 @@ function renderMarkdown(md) {
         }
     }
     return result.join('\n');
+}
+
+function showNextSteps(context) {
+    const box = document.getElementById('nextStepsBox');
+    if (!box) return;
+
+    const steps = {
+        'compiled': `
+            <div class="next-steps-label">Next Steps</div>
+            <ul>
+                <li><strong>Name this abstract idea</strong> — does the abstraction name describe what it does?</li>
+                <li><strong>What functions does it perform?</strong> — look at the methods. Each one is a capability you are giving to the world.</li>
+                <li><strong>Step through it</strong> — click <strong>Step</strong> to watch each instruction execute one at a time.</li>
+                <li><strong>Create Abstraction</strong> — when you are ready, click the green button to give your idea a Body in the Church Machine.</li>
+            </ul>`,
+        'assembled': `
+            <div class="next-steps-label">Next Steps</div>
+            <ul>
+                <li><strong>Step through it</strong> — click <strong>Step</strong> to execute one instruction at a time and watch the registers change.</li>
+                <li><strong>Run it</strong> — click <strong>Run</strong> to execute all instructions until halt or fault.</li>
+                <li><strong>Save to NS</strong> — save the assembled program to a namespace slot.</li>
+                <li><strong>Try a different example</strong> — click the tabs above to explore more programs.</li>
+            </ul>`,
+        'created': `
+            <div class="next-steps-label">Next Steps</div>
+            <ul>
+                <li><strong>Check the Namespace</strong> — click the <strong>Namespace</strong> tab to see your new abstraction's entry.</li>
+                <li><strong>Inspect it</strong> — click <strong>Abstractions</strong> to see the lump layout, c-list, and Golden Token.</li>
+                <li><strong>Call it</strong> — write another abstraction that holds a capability to yours, then CALL it.</li>
+                <li><strong>Build something bigger</strong> — every abstraction you create can be used by the next one.</li>
+            </ul>`,
+        'error': `
+            <div class="next-steps-label">Next Steps</div>
+            <ul>
+                <li><strong>Read the error</strong> — the line number tells you where to look.</li>
+                <li><strong>Check your syntax</strong> — does every <code>{</code> have a matching <code>}</code>?</li>
+                <li><strong>Try an example</strong> — click an example tab above to see working code you can modify.</li>
+            </ul>`,
+        'draft': `
+            <div class="next-steps-label">Next Steps</div>
+            <ul>
+                <li><strong>Review the methods</strong> — are these the functions your abstraction needs?</li>
+                <li><strong>Check capabilities</strong> — does your abstraction need access to other abstractions?</li>
+                <li><strong>Look at the lump layout</strong> — code region (CR7) + capability list (CR6). Is the size right?</li>
+                <li><strong>Compile</strong> — click <strong>Compile</strong> to see the actual machine instructions.</li>
+            </ul>`
+    };
+
+    box.innerHTML = steps[context] || '';
 }
 
 function initConsoleAutoSwitch() {

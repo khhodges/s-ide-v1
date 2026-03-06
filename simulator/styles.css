@@ -712,6 +712,44 @@ header h1 {
     max-height: calc(100vh - 160px);
 }
 
+.next-steps-box {
+    background: rgba(218,165,32,0.08);
+    border: 1px solid rgba(218,165,32,0.25);
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.next-steps-box:empty {
+    display: none;
+}
+
+.next-steps-label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--church-gold);
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+}
+
+.next-steps-box ul {
+    margin: 0.3rem 0 0 0;
+    padding-left: 1.2rem;
+}
+
+.next-steps-box li {
+    margin-bottom: 0.25rem;
+}
+
+.next-steps-box strong {
+    color: var(--text-primary);
+}
+
 #codeConsoleContent,
 #codeHistoryPanel {
     flex: 1;
