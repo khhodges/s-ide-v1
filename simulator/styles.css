@@ -534,6 +534,30 @@ header h1 {
     flex-shrink: 0;
 }
 
+.toolbar-phase {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid rgba(200, 155, 60, 0.35);
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    position: relative;
+}
+
+.phase-label {
+    font-size: 0.6rem;
+    font-variant: small-caps;
+    letter-spacing: 0.08em;
+    color: #C89B3C;
+    opacity: 0.8;
+    position: absolute;
+    top: -0.5rem;
+    left: 0.5rem;
+    background: #141414;
+    padding: 0 0.3rem;
+    pointer-events: none;
+}
+
 .lang-selector {
     background: #1a1a2e;
     color: var(--church-gold);

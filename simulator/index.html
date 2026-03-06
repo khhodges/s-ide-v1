@@ -70,20 +70,29 @@
         <div class="editor-layout">
             <div class="editor-panel">
                 <div class="editor-toolbar">
-                    <select id="langSelector" class="lang-selector" onchange="onLangChange()" title="Source language">
-                        <option value="symbolic">Symbolic Math (Ada)</option>
-                        <option value="assembly">Assembly</option>
-                        <option value="javascript">JS (CLOOMC++)</option>
-                        <option value="haskell">Haskell (CLOOMC++)</option>
-                    </select>
-                    <button class="btn btn-primary" onclick="smartCompile()" title="Compile with auto-detected or selected language">Compile</button>
-                    <button class="btn" onclick="compileDraft()" style="background:#C89B3C;color:#141414;border:none;font-weight:bold;" title="Show compilation draft — methods, capabilities, lump layout">Draft</button>
-                    <button class="btn" onclick="compileAndCreateAbstraction()" style="background:#4a7a2e;color:#fff;border:none;" title="Compile and create abstraction via Navana.Abstraction.Add">Create Abstraction</button>
-                    <button class="btn" onclick="saveUploadJSON()" style="background:#2a6fdb;color:#fff;border:none;" title="Compile and save upload.json file">Save Upload JSON</button>
-                    <button class="btn btn-primary" onclick="showSaveToNamespace()" id="btnSaveNS" disabled title="Save assembled program to namespace">Save to NS</button>
-                    <button class="btn" onclick="runGC()" style="background:#9b59b6;color:#fff;border:none;" title="Run PP250 garbage collection">Run GC</button>
-                    <button class="btn btn-deploy" onclick="downloadHardwareImage()" title="Download binary for Tang Nano 20K">Download .bin</button>
-                    <button class="btn btn-deploy" onclick="uploadToTang()" title="Upload to Tang Nano 20K via WebSerial">Deploy to Tang</button>
+                    <div class="toolbar-phase">
+                        <span class="phase-label">Design</span>
+                        <select id="langSelector" class="lang-selector" onchange="onLangChange()" title="Source language">
+                            <option value="symbolic">Symbolic Math (Ada)</option>
+                            <option value="assembly">Assembly</option>
+                            <option value="javascript">JS (CLOOMC++)</option>
+                            <option value="haskell">Haskell (CLOOMC++)</option>
+                        </select>
+                        <button class="btn" onclick="compileDraft()" style="background:#C89B3C;color:#141414;border:none;font-weight:bold;" title="Show compilation draft — methods, capabilities, lump layout">Draft</button>
+                    </div>
+                    <div class="toolbar-phase">
+                        <span class="phase-label">Build</span>
+                        <button class="btn btn-primary" onclick="smartCompile()" title="Compile with auto-detected or selected language">Compile</button>
+                        <button class="btn" onclick="compileAndCreateAbstraction()" style="background:#4a7a2e;color:#fff;border:none;" title="Compile and create abstraction via Navana.Abstraction.Add">Create Abstraction</button>
+                    </div>
+                    <div class="toolbar-phase">
+                        <span class="phase-label">Install</span>
+                        <button class="btn" onclick="saveUploadJSON()" style="background:#2a6fdb;color:#fff;border:none;" title="Compile and save upload.json file">Save Upload JSON</button>
+                        <button class="btn btn-primary" onclick="showSaveToNamespace()" id="btnSaveNS" disabled title="Save assembled program to namespace">Save to NS</button>
+                        <button class="btn" onclick="runGC()" style="background:#9b59b6;color:#fff;border:none;" title="Run PP250 garbage collection">Run GC</button>
+                        <button class="btn btn-deploy" onclick="downloadHardwareImage()" title="Download binary for Tang Nano 20K">Download .bin</button>
+                        <button class="btn btn-deploy" onclick="uploadToTang()" title="Upload to Tang Nano 20K via WebSerial">Deploy to Tang</button>
+                    </div>
                 </div>
                 <div class="example-tabs-row">
                     <button class="example-arrow" onclick="scrollExamples(-1)">&lsaquo;</button>
