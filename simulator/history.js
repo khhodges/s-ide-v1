@@ -437,3 +437,22 @@ function historyNewStory() {
 function historyNewCodeStory() {
     historyRefreshCode();
 }
+
+function historyShowCreateAbstraction() {
+    const story = MATH_HISTORY.code.find(s => s.title === "Create Abstraction: Where Mind Meets Body");
+    if (!story) return;
+    const area = document.getElementById('codeHistoryContent');
+    if (!area) return;
+    area.innerHTML = `
+        <div class="history-story">
+            <div class="history-era">${story.era}</div>
+            <div class="history-title">${story.title}</div>
+            <div class="history-body">${story.body}</div>
+            <div class="history-question">
+                <div class="history-question-label">Think about it</div>
+                ${story.question}
+            </div>
+        </div>
+    `;
+    switchCodeTab('history');
+}

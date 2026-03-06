@@ -5760,6 +5760,7 @@ function compileCLOOMC() {
 }
 
 function compileAndCreateAbstraction() {
+    if (typeof historyShowCreateAbstraction === 'function') historyShowCreateAbstraction();
     const editor = document.getElementById('asmEditor');
     if (!editor || !cloomcCompiler) return;
     const source = editor.value;
