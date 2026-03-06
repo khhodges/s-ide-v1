@@ -4089,6 +4089,104 @@ header h1 {
     color: #ff4444;
 }
 
+.hp35-stack-guide {
+    width: 100%;
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 6px;
+}
+
+.hp35-stack-guide-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--church-gold);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hp35-stack-guide-body p {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 6px;
+}
+
+.hp35-stack-guide-body strong {
+    color: var(--text-primary);
+}
+
+.hp35-stack-diagram {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin: 8px 0;
+}
+
+.hp35-stack-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    background: #1a1f2e;
+    border-radius: 4px;
+    border-left: 3px solid var(--church-gold);
+}
+
+.hp35-sreg {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--church-gold);
+    min-width: 18px;
+}
+
+.hp35-sdesc {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.hp35-stack-tips {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+}
+
+.hp35-tip-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--church-gold);
+    margin-bottom: 4px;
+}
+
+.hp35-stack-tips p {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 4px;
+}
+
+.hp35-example {
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    color: var(--text-primary);
+    background: #1a1f2e;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin: 4px 0 8px;
+}
+
+.hp35-ekey {
+    background: var(--church-gold);
+    color: #1a1400;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
 .hp35-trace-inline {
     width: 100%;
     background: var(--bg-panel);

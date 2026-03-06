@@ -324,11 +324,40 @@ function renderHP35Calculator() {
             </div>
             <div class="hp35-side-panel">
                 <div class="hp35-stack-display">
-                    <div class="hp35-stack-header">4-Register Stack</div>
+                    <div class="hp35-stack-header">4-Register Stack (T, Z, Y, X)</div>
                     <div class="hp35-stack-reg" data-reg="3"></div>
                     <div class="hp35-stack-reg" data-reg="2"></div>
                     <div class="hp35-stack-reg" data-reg="1"></div>
                     <div class="hp35-stack-reg" data-reg="0"></div>
+                </div>
+                <div class="hp35-stack-guide">
+                    <div class="hp35-stack-guide-title">How the Stack Works</div>
+                    <div class="hp35-stack-guide-body">
+                        <p>The HP-35 uses a <strong>4-level stack</strong> instead of an <strong>=</strong> key. You enter numbers first, then press the operation.</p>
+                        <div class="hp35-stack-diagram">
+                            <div class="hp35-stack-row"><span class="hp35-sreg">T</span> <span class="hp35-sdesc">Top \u2014 oldest value, falls off when full</span></div>
+                            <div class="hp35-stack-row"><span class="hp35-sreg">Z</span> <span class="hp35-sdesc">Third level \u2014 holds earlier numbers</span></div>
+                            <div class="hp35-stack-row"><span class="hp35-sreg">Y</span> <span class="hp35-sdesc">Second operand for +, \u2212, \u00d7, \u00f7</span></div>
+                            <div class="hp35-stack-row"><span class="hp35-sreg">X</span> <span class="hp35-sdesc">Display \u2014 what you see and type into</span></div>
+                        </div>
+                        <div class="hp35-stack-tips">
+                            <div class="hp35-tip-title">Key Actions</div>
+                            <p><strong>ENTER \u2191</strong> \u2014 Pushes X up into Y (and Y\u2192Z, Z\u2192T). Use between numbers.</p>
+                            <p><strong>+  \u2212  \u00d7  \u00f7</strong> \u2014 Takes X and Y, puts the result in X, stack drops down.</p>
+                            <p><strong>x\u21c4y</strong> \u2014 Swaps X and Y. Fix wrong order without retyping.</p>
+                            <p><strong>R\u2193</strong> \u2014 Rolls the whole stack down: T\u2192X, X\u2192Y, Y\u2192Z, Z\u2192T.</p>
+                        </div>
+                        <div class="hp35-stack-tips">
+                            <div class="hp35-tip-title">Try It: (3 + 4) \u00d7 5</div>
+                            <p class="hp35-example">3 <span class="hp35-ekey">ENTER</span> 4 <span class="hp35-ekey">+</span> 5 <span class="hp35-ekey">\u00d7</span> \u2192 35</p>
+                            <div class="hp35-tip-title">Try It: (9 \u2212 2) \u00f7 (1 + 6)</div>
+                            <p class="hp35-example">9 <span class="hp35-ekey">ENTER</span> 2 <span class="hp35-ekey">\u2212</span> 1 <span class="hp35-ekey">ENTER</span> 6 <span class="hp35-ekey">+</span> <span class="hp35-ekey">\u00f7</span> \u2192 1</p>
+                        </div>
+                        <div class="hp35-stack-tips">
+                            <div class="hp35-tip-title">Why RPN?</div>
+                            <p>No parentheses needed. No = key. Complex expressions flow naturally left to right. The stack remembers intermediate results for you \u2014 like how you'd work it out on paper, one step at a time.</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="hp35-trace-inline">
                     <div class="hp35-trace-header">Lambda Calculus Trace</div>
