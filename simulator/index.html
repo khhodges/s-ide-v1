@@ -83,6 +83,7 @@
                     <div class="toolbar-phase">
                         <span class="phase-label">Build</span>
                         <button class="btn btn-primary" onclick="smartCompile()" title="Compile with auto-detected or selected language">Compile</button>
+                        <button class="btn" onclick="showCreateNamespace()" style="background:#2196F3;color:#fff;border:none;" title="Create a namespace entry — reserve a slot for your abstraction">Create Namespace</button>
                         <button class="btn" onclick="compileAndCreateAbstraction()" style="background:#4a7a2e;color:#fff;border:none;" title="Compile and create abstraction via Navana.Abstraction.Add">Create Abstraction</button>
                     </div>
                     <div class="toolbar-phase">
@@ -415,6 +416,38 @@
             <div class="modal-buttons">
                 <button class="btn btn-primary" onclick="saveSettings()">Save</button>
                 <button class="btn btn-warning" onclick="closeSettings()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="createNSDialog" class="modal-overlay" style="display:none;">
+        <div class="modal-dialog">
+            <div class="modal-title">Create Namespace Entry</div>
+            <p style="color:#aaa;font-size:0.85rem;margin:0 0 0.75rem;">Reserve a slot in the namespace for your abstraction. This is where Mind meets the machine — every abstraction needs a home.</p>
+            <label class="modal-label">Name:
+                <input type="text" id="createNSName" class="modal-input" placeholder="MyAbstraction">
+            </label>
+            <label class="modal-label">GT Type:
+                <select id="createNSGTType" class="modal-input">
+                    <option value="1">Inform (standard abstraction)</option>
+                    <option value="2">Outform (remote/F-bit)</option>
+                    <option value="3">Abstract (GT is value)</option>
+                </select>
+            </label>
+            <label class="modal-label">Allocation Size (words):
+                <select id="createNSAllocSize" class="modal-input">
+                    <option value="256">256 (minimum)</option>
+                    <option value="512">512</option>
+                    <option value="1024">1024</option>
+                    <option value="2048">2048</option>
+                </select>
+            </label>
+            <label class="modal-label">C-List Slots:
+                <input type="number" id="createNSClistCount" class="modal-input" value="0" min="0" max="511" title="Number of capability slots (0-511)">
+            </label>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="confirmCreateNamespace()">Create</button>
+                <button class="btn btn-warning" onclick="document.getElementById('createNSDialog').style.display='none'">Cancel</button>
             </div>
         </div>
     </div>

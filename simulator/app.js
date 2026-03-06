@@ -4121,6 +4121,94 @@ function loadEditorState() {
     }
 }
 
+function showCreateNamespace() {
+    if (!sim.bootComplete) {
+        const con = document.getElementById('editorConsole');
+        if (con) con.textContent = 'Boot not complete — run boot sequence first.';
+        showNextSteps('error');
+        return;
+    }
+    document.getElementById('createNSName').value = '';
+    document.getElementById('createNSGTType').value = '1';
+    document.getElementById('createNSAllocSize').value = '256';
+    document.getElementById('createNSClistCount').value = '0';
+    document.getElementById('createNSDialog').style.display = '';
+    document.getElementById('createNSName').focus();
+}
+
+function confirmCreateNamespace() {
+    const name = document.getElementById('createNSName').value.trim();
+    if (!name) {
+        alert('Please enter a name for the namespace entry.');
+        return;
+    }
+    const gtType = parseInt(document.getElementById('createNSGTType').value) || 1;
+    const allocSize = parseInt(document.getElementById('createNSAllocSize').value) || 256;
+    const clistCount = Math.min(511, Math.max(0, parseInt(document.getElementById('createNSClistCount').value) || 0));
+
+    if (clistCount >= allocSize) {
+        alert(`C-List slots (${clistCount}) must be less than allocation size (${allocSize}).`);
+        return;
+    }
+
+    const memResult = abstractionRegistry.dispatchMethod(7, 'Allocate', sim, { size: allocSize });
+    if (!memResult || !memResult.ok) {
+        const con = document.getElementById('editorConsole');
+        if (con) con.textContent = `Create Namespace failed: Memory.Allocate error — ${memResult ? memResult.message : 'unknown'}`;
+        showNextSteps('error');
+        document.getElementById('createNSDialog').style.display = 'none';
+        return;
+    }
+
+    const location = memResult.result.location;
+    const limit = allocSize - 1;
+
+    const addResult = abstractionRegistry.dispatchMethod(5, 'Add', sim, {
+        location: location,
+        limit: limit,
+        clistCount: clistCount,
+        gtType: gtType,
+        label: name
+    });
+
+    document.getElementById('createNSDialog').style.display = 'none';
+
+    if (!addResult || !addResult.ok) {
+        const con = document.getElementById('editorConsole');
+        if (con) con.textContent = `Create Namespace failed: Navana.Add error — ${addResult ? addResult.message : 'unknown'}`;
+        showNextSteps('error');
+        return;
+    }
+
+    const r = addResult.result;
+    const typeNames = ['NULL', 'Inform', 'Outform', 'Abstract'];
+    const clistStart = allocSize - clistCount;
+    const freespace = allocSize - clistCount;
+
+    let listing = `Namespace entry "${name}" created via Navana.Add:\n\n`;
+    listing += `  NS Index:     ${r.nsIndex}\n`;
+    listing += `  Version:      ${r.version}\n`;
+    listing += `  GT Type:      ${typeNames[gtType] || 'Unknown'}\n`;
+    listing += `  Location:     0x${location.toString(16)}\n`;
+    listing += `  Limit:        ${limit}\n`;
+    listing += `  Alloc Size:   ${allocSize} words\n`;
+    listing += `  C-List Slots: ${clistCount}\n`;
+    listing += `  Freespace:    ${freespace} words\n`;
+    if (clistCount > 0) {
+        listing += `\n  Lump Layout:\n`;
+        listing += `    Code region:  0x${location.toString(16)} — offset 0 to ${clistStart - 1}\n`;
+        listing += `    C-List:       offset ${clistStart} to ${allocSize - 1} (${clistCount} slots)\n`;
+    }
+    listing += `\nThis namespace entry is ready. Write your abstraction code,\nthen use "Create Abstraction" to populate NS[${r.nsIndex}].\n`;
+
+    const con = document.getElementById('editorConsole');
+    if (con) con.textContent = listing;
+    showNextSteps('compiled');
+    trackAction('namespace', { name: name, index: r.nsIndex });
+    appendOutput(`Created NS[${r.nsIndex}] "${name}" — ${allocSize} words, ${clistCount} c-list slots`, 'info');
+    updateDashboard();
+}
+
 function showSaveToNamespace() {
     if (!lastAssembledWords || lastAssembledWords.length === 0) {
         alert('Assemble code first before saving to namespace.');
