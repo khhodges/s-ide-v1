@@ -4320,6 +4320,27 @@ function getNextStepTip(lang) {
 }
 
 const langIntros = {
+    english: {
+        title: "English -- Programming in Your Own Words",
+        body: `
+            <p>What if you could <span class="intro-highlight">tell a computer what to do in plain English?</span></p>
+            <p>The Church Machine's English front-end makes this real. You write sentences,
+            and the compiler translates them into the same 32-bit machine instructions
+            as JavaScript, Haskell, or Ada's notation.</p>
+            <div class="intro-example">Create an abstraction called Hello
+
+Add a method called Greet that takes who
+Set result to who plus 1
+Return the result</div>
+            <p>The compiler understands verbs like <span class="intro-highlight">create</span>,
+            <span class="intro-highlight">set</span>, <span class="intro-highlight">return</span>,
+            <span class="intro-highlight">call</span>, and <span class="intro-highlight">if/when</span>.
+            Arithmetic uses words: <em>plus</em>, <em>minus</em>, <em>times</em>, <em>divided by</em>.</p>
+            <p>In 1952, <span class="intro-highlight">Grace Hopper</span> was told computers could only
+            understand numbers. She invented the compiler to prove them wrong.
+            This English front-end carries her dream to its conclusion.</p>
+        `
+    },
     symbolic: {
         title: "Symbolic Math -- Ada Lovelace's Notation (1843)",
         body: `
@@ -5637,6 +5658,7 @@ function onLangChange(restoring) {
     if (btnSaveNS) btnSaveNS.disabled = (lang !== 'assembly' || !lastAssembledWords);
 
     const langExampleGroups = {
+        english: ['cloomc_english_hello', 'cloomc_english_counter'],
         assembly: ['ada_note_g', 'selftest', 'load_save', 'bernoulli', 'conditional', 'gc_test', 'turing_test', 'salvation', 'perm_attack', 'bind_attack'],
         javascript: ['cloomc_hello', 'cloomc_memory', 'cloomc_counter', 'cloomc_sliderule'],
         haskell: ['cloomc_church_math', 'cloomc_church_pair', 'cloomc_church_case', 'cloomc_church_lambda', 'cloomc_sliderule_hs'],
@@ -5655,6 +5677,7 @@ function onLangChange(restoring) {
 
     if (!restoring) {
         const defaults = {
+            english: 'english_hello',
             assembly: 'selftest',
             javascript: 'hello',
             haskell: 'church_math',
@@ -5668,6 +5691,7 @@ function onLangChange(restoring) {
                 loadCLOOMCExample(defaultExample);
             }
         }
+        if (typeof historyShowLanguageStory === 'function') historyShowLanguageStory(lang);
         showIntro(lang);
     }
 }

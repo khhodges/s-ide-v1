@@ -320,6 +320,118 @@ const CODE_EXAMPLE_STORIES = {
     }
 };
 
+const LANGUAGE_STORIES = {
+    english: {
+        title: "English — Programming in Your Own Words",
+        body: "<strong>The idea:</strong> What if you could tell a computer what to do in plain English? The Church Machine's English front-end makes this real. You write sentences, and the compiler translates them into the same 32-bit machine instructions as JavaScript, Haskell, or Ada's notation.<br><br>" +
+            "<strong>How it works:</strong> The compiler reads your sentences and matches patterns. It understands verbs like <em>create</em>, <em>set</em>, <em>return</em>, <em>call</em>, and <em>if/when</em>. Nouns become variable names. Phrases like <em>plus</em>, <em>minus</em>, <em>times</em>, and <em>divided by</em> become arithmetic.<br><br>" +
+            "<strong>Syntax patterns:</strong><br>" +
+            "<code>Create an abstraction called Hello</code> — declares the abstraction<br>" +
+            "<code>Add a method called Greet that takes who</code> — defines a method with parameters<br>" +
+            "<code>It needs Memory and Mint</code> — declares capability requirements<br>" +
+            "<code>Set result to x plus 1</code> — assignment with arithmetic<br>" +
+            "<code>Let total be a plus b</code> — alternative assignment syntax<br>" +
+            "<code>If count is greater than 0</code> — conditional (also: <em>is equal to</em>, <em>is less than</em>, <em>is not</em>)<br>" +
+            "<code>Otherwise</code> — else branch<br>" +
+            "<code>End if</code> — closes the conditional<br>" +
+            "<code>Call Memory.Allocate with size</code> — invokes another abstraction's method<br>" +
+            "<code>Set r to the result of calling Memory.Allocate with size</code> — captures return value<br>" +
+            "<code>Return the result</code> — sends the value back<br><br>" +
+            "<strong>Why English matters:</strong> Grace Hopper fought for the idea that programming should be accessible. She was told computers could only understand numbers. She proved everyone wrong by inventing the compiler in 1952. The English front-end carries her vision to its logical conclusion: if the machine can understand JavaScript, Haskell, and Ada's notation, why not the language you already speak?<br><br>" +
+            "<strong>Auto-detection:</strong> The compiler detects English from your sentence patterns. You can also select it from the language dropdown. Both EN examples (Hello and Counter) demonstrate the core patterns.",
+        question: "The English front-end compiles to the same machine code as JavaScript. If they produce identical output, is English 'really' a programming language? What makes something a programming language?",
+        era: "Grace Hopper's Dream, 1952 → Now"
+    },
+    javascript: {
+        title: "JavaScript — The Language of the Web",
+        body: "<strong>The idea:</strong> The Church Machine's JavaScript front-end uses a C-like syntax familiar to millions of programmers. Curly braces define blocks. Equals assigns values. Parentheses group arguments. If you've ever written any code, this will feel like home.<br><br>" +
+            "<strong>How it works:</strong> The compiler parses an <code>abstraction Name { }</code> block containing <code>capabilities { }</code> and <code>method Name(args) { }</code> sections. Each method body contains statements that compile one-to-one with the Church Machine's 20-instruction set.<br><br>" +
+            "<strong>Syntax patterns:</strong><br>" +
+            "<code>abstraction Counter {</code> — declares the abstraction<br>" +
+            "<code>capabilities { Memory }</code> — lists required capabilities for the c-list<br>" +
+            "<code>method Add(a, b) {</code> — defines a method with parameters<br>" +
+            "<code>result = a + b</code> — assignment (operators: <code>+</code>, <code>-</code>, <code>&lt;&lt;</code>, <code>&gt;&gt;</code>)<br>" +
+            "<code>x = read(CR7, 0)</code> — reads from capability-bounded memory<br>" +
+            "<code>write(CR7, 0, value)</code> — writes to capability-bounded memory<br>" +
+            "<code>result = call(Memory.Allocate(size))</code> — calls another abstraction via c-list<br>" +
+            "<code>if (a == b) { ... }</code> — conditional (operators: <code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>)<br>" +
+            "<code>while (i &lt; 10) { ... }</code> — loop<br>" +
+            "<code>return(result)</code> — returns value in DR0<br>" +
+            "<code>bfext(word, pos, width)</code> — extracts a bit field<br>" +
+            "<code>bfins(word, val, pos, width)</code> — inserts a bit field<br><br>" +
+            "<strong>Calling convention:</strong> DR0–DR3 hold arguments and return values. DR4–DR11 are local variables (callee-saved). DR12–DR15 are temporaries (caller-saved). CR7 points to the code region, CR6 to the c-list.<br><br>" +
+            "<strong>History:</strong> Brendan Eich created JavaScript in 10 days in 1995. It was designed as a simple scripting language for web browsers, but it became the most widely used programming language in history. The Church Machine's JS front-end proves that even a language designed for web pages can target security-hardened capability hardware.",
+        question: "JavaScript was created in 10 days. The Church Machine was designed over years. Does the time spent designing a language affect how safe or powerful it is?",
+        era: "Netscape, 1995"
+    },
+    haskell: {
+        title: "Haskell — Pure Functions, No Side Effects",
+        body: "<strong>The idea:</strong> Haskell is a purely functional language. Every function takes inputs and produces outputs — nothing else. No global variables, no hidden state changes, no surprises. This makes programs easier to reason about, test, and verify.<br><br>" +
+            "<strong>How it works:</strong> The Haskell front-end compiles lambda expressions, case statements, let-bindings, and pairs into Church Machine instructions. Each method is a single expression: <code>method Add(a, b) = a + b</code>.<br><br>" +
+            "<strong>Syntax patterns:</strong><br>" +
+            "<code>method successor(n) = n + 1</code> — method as a single expression<br>" +
+            "<code>method abs(n) = if n &lt; 0 then 0 - n else n</code> — inline conditional<br>" +
+            "<code>method factorial(n) = case n of 0 -&gt; 1, _ -&gt; n * (n - 1)</code> — pattern matching<br>" +
+            "<code>method letExample(x) = let a = x + 1 in a + a</code> — let-binding<br>" +
+            "<code>method first(p) = fst p</code> — pair first element (BFEXT)<br>" +
+            "<code>method second(p) = snd p</code> — pair second element (BFEXT)<br>" +
+            "<code>method makePair(a, b) = (a, b)</code> — pair construction (BFINS)<br>" +
+            "<code>\\x -&gt; x + 1</code> — lambda expression (compiles to LAMBDA instruction)<br><br>" +
+            "<strong>Why Haskell on Church Machine?</strong> The Church Machine is named after Alonzo Church, who invented the lambda calculus. Haskell is the language closest to Church's original formalism. The Haskell front-end proves that the Church Machine truly runs on lambda calculus, not just a dressed-up von Neumann architecture.<br><br>" +
+            "<strong>History:</strong> Haskell was designed in 1990 by a committee of academics, named after Haskell Curry — who, like Turing, studied under Alonzo Church. Curry discovered that any function with multiple arguments can be rewritten as a chain of single-argument functions (currying). The 'Church → Curry → Haskell' lineage is a direct family tree of ideas.",
+        question: "Haskell has no mutable variables — once you set a value, it can never change. If nothing can change, how does a Haskell program do anything useful? How is state managed?",
+        era: "Church → Curry → Haskell, 1936–1990"
+    },
+    symbolic: {
+        title: "Symbolic Math — Ada Lovelace's Notation (1843)",
+        body: "<strong>The idea:</strong> In 1843, Ada Lovelace wrote the first computer program using a notation of variables (V1, V2, ...) and operations (one per line). She was describing an algorithm for Charles Babbage's Analytical Engine — a mechanical computer that was never built. The Church Machine's Symbolic Math front-end uses her exact notation, 180 years later.<br><br>" +
+            "<strong>How it works:</strong> The compiler recognises Ada-style variable patterns (V1–V15), arrow assignments (→), and operation keywords. Each variable maps directly to a data register: V1 → DR1, V2 → DR2, and so on, up to V15 → DR15.<br><br>" +
+            "<strong>Syntax patterns:</strong><br>" +
+            "<code>let V1 = 1</code> — initialise a store column<br>" +
+            "<code>let V4 = V2 * V3</code> — multiply (compiled to shift-and-add loop)<br>" +
+            "<code>let V11 = V4 / V5</code> — divide (compiled to repeated subtraction)<br>" +
+            "<code>let V5 = V5 + V1</code> — addition<br>" +
+            "<code>let V4 = V4 - V1</code> — subtraction<br>" +
+            "<code>V2 × V3 → V4</code> — arrow notation (Ada's original style)<br><br>" +
+            "<strong>No multiply or divide instructions:</strong> The Church Machine has no hardware multiply or divide. The symbolic math compiler generates software routines using IADD, ISUB, SHL, and SHR — the same approach Ada would have used, since Babbage's Engine also lacked these instructions.<br><br>" +
+            "<strong>Note G:</strong> Ada's most famous program computes B₇, the 7th Bernoulli number (−1/30). It uses variables V1–V15, 25 operations, and a loop. Click 'Ada: Note G' in the examples to run it. The result should be −1/30 — if it isn't, you've found the same bug Ada had.<br><br>" +
+            "<strong>Why Ada matters:</strong> Ada saw something nobody else did: Babbage's Engine could manipulate <em>symbols</em>, not just numbers. She wrote: 'The Engine might compose elaborate and scientific pieces of music of any degree of complexity or extent.' She imagined general-purpose computing 100 years before it existed. The Church Machine honours her by running her notation natively.",
+        question: "Ada wrote her program for a machine that didn't exist yet. She was programming an imaginary computer. Is that different from what we do when we write code for a simulator?",
+        era: "Victorian England, 1843"
+    },
+    assembly: {
+        title: "Assembly — Speaking Directly to the Machine",
+        body: "<strong>The idea:</strong> Assembly language is as close to the hardware as you can get. Each line corresponds to exactly one machine instruction. There is no compiler, no abstraction, no hiding — you see every register move, every memory access, every branch.<br><br>" +
+            "<strong>The Church Machine has 20 instructions</strong> split between two domains:<br><br>" +
+            "<strong>Church Domain (Mind — capabilities):</strong><br>" +
+            "<code>LOAD CRd, [CRs, idx]</code> — load a Golden Token from memory<br>" +
+            "<code>SAVE [CRd, idx], CRs</code> — save a Golden Token to memory<br>" +
+            "<code>CALL CRd</code> — enter an abstraction (checks E permission, clears B-bit)<br>" +
+            "<code>RETURN</code> — return from the current abstraction<br>" +
+            "<code>SEAL CRd, CRs</code> — seal a token (lock its permissions)<br>" +
+            "<code>UNSEAL CRd, CRs</code> — unseal a token (requires S permission)<br>" +
+            "<code>REVOKE idx</code> — revoke a token (increments version)<br>" +
+            "<code>LAMBDA CRd, offset</code> — capture a closure<br>" +
+            "<code>CMPSWP CRd, CRs, CRt</code> — atomic compare-and-swap for tokens<br>" +
+            "<code>MINT CRd, perms</code> — create a new token with specified permissions<br><br>" +
+            "<strong>Turing Domain (Body — data):</strong><br>" +
+            "<code>DREAD DRd, [CRs, offset]</code> — read data from bounded memory<br>" +
+            "<code>DWRITE [CRd, offset], DRs</code> — write data to bounded memory<br>" +
+            "<code>IADD DRd, DRs, imm</code> — integer add<br>" +
+            "<code>ISUB DRd, DRs, imm</code> — integer subtract<br>" +
+            "<code>SHL DRd, DRs, imm</code> — shift left<br>" +
+            "<code>SHR DRd, DRs, imm</code> — shift right<br>" +
+            "<code>BFEXT DRd, DRs, pos, width</code> — bit field extract<br>" +
+            "<code>BFINS DRd, DRs, pos, width</code> — bit field insert<br>" +
+            "<code>MCMP DRa, DRb</code> — compare and set flags<br>" +
+            "<code>BRANCH cond, target</code> — conditional branch (AL, EQ, NE, LT, GE, GT, LE)<br><br>" +
+            "<strong>Conditional execution:</strong> Every instruction supports ARM-style condition codes. The 4-bit condition field means any instruction can be skipped based on the last compare: <code>IADD.EQ</code> only adds if the previous MCMP found equality.<br><br>" +
+            "<strong>Why assembly?</strong> When something goes wrong — a security fault, a capability violation, a bad branch — assembly is where you find the truth. The compiler output shows you hexadecimal code words. Step mode lets you execute one instruction at a time. Assembly is the language the machine actually speaks.",
+        question: "Assembly has no variables, no functions, no abstractions — just registers and memory. Yet it can do everything the other four languages can. What exactly do higher-level languages add, if the machine doesn't need them?",
+        era: "The Hardware Level"
+    }
+};
+
 const CODE_STEP_GUIDE = {
     title: "How to Step Through Your Code",
     body: "<strong>1. Write or load code</strong> \u2014 Type in the editor or click an example tab above (Hello, Memory, Ada: Note G, etc.).<br><br>" +
@@ -436,6 +548,25 @@ function historyNewStory() {
 
 function historyNewCodeStory() {
     historyRefreshCode();
+}
+
+function historyShowLanguageStory(lang) {
+    const story = LANGUAGE_STORIES[lang];
+    if (!story) return;
+    const area = document.getElementById('codeHistoryContent');
+    if (!area) return;
+    area.innerHTML = `
+        <div class="history-story">
+            <div class="history-era">${story.era}</div>
+            <div class="history-title">${story.title}</div>
+            <div class="history-body">${story.body}</div>
+            <div class="history-question">
+                <div class="history-question-label">Think about it</div>
+                ${story.question}
+            </div>
+        </div>
+    `;
+    switchCodeTab('history');
 }
 
 function historyShowCreateAbstraction() {
