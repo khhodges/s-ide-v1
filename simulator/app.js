@@ -3646,7 +3646,8 @@ function showMathGuidePopup() {
         `<p style="font-size:0.82rem;line-height:1.5;margin:0 0 0.4rem 0;">` +
         `Turing was Church\u2019s student. He built the body. His teacher gave it a mind.</p>` +
         `<p style="font-size:0.82rem;line-height:1.5;margin:0 0 0.4rem 0;">` +
-        `The von Neumann design that every computer uses today is like many exposed clockworks sharing the same open space \u2014 ` +
+        `The von Neumann design that every computer uses today is like body parts without an integrated mental framework \u2014 ` +
+        `many exposed mechanics sharing the same mindless open space, ` +
         `every gear can touch every other gear, and every new part makes collisions more likely.</p>` +
         `<p style="font-size:0.82rem;line-height:1.5;margin:0 0 0.4rem 0;">` +
         `The more it grows, the more unreliable it becomes.</p>` +
