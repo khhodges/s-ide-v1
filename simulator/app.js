@@ -39,6 +39,7 @@ function init() {
     loadEditorState();
     initReplDivider();
     initEditorDivider();
+    initConsoleAutoSwitch();
     const asmEd = document.getElementById('asmEditor');
     if (asmEd) {
         asmEd.addEventListener('input', updateLineNumbers);
@@ -2397,7 +2398,6 @@ CALL   CR1              ; GC.Flip:
 }
 
 function assembleAndLoad() {
-    switchCodeTab('console');
     const editor = document.getElementById('asmEditor');
     if (!editor) return;
     const source = editor.value;
@@ -5583,7 +5583,6 @@ function onLangChange(restoring) {
 }
 
 function smartCompile() {
-    switchCodeTab('console');
     const sel = document.getElementById('langSelector');
     const lang = sel ? sel.value : 'assembly';
     if (lang === 'assembly') {
@@ -6039,6 +6038,17 @@ function renderMarkdown(md) {
         }
     }
     return result.join('\n');
+}
+
+function initConsoleAutoSwitch() {
+    const con = document.getElementById('editorConsole');
+    if (!con) return;
+    const observer = new MutationObserver(function() {
+        if (currentView === 'editor') {
+            switchCodeTab('console');
+        }
+    });
+    observer.observe(con, { childList: true, characterData: true, subtree: true });
 }
 
 function initEditorDivider() {
