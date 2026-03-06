@@ -168,11 +168,61 @@ const MATH_HISTORY = {
             question: "The red arrows below the scales show log(a) + log(b) = log(a\u00d7b). Why does turning multiplication into addition matter so much?",
             era: "Renaissance"
         }
+    ],
+    code: [
+        {
+            title: "Ada Lovelace's Note G: The First Program (1843)",
+            body: "Ada Lovelace wrote the first computer program as a set of instructions for Charles Babbage's Analytical Engine. Her algorithm computed B\u2087, the 7th Bernoulli number (\u22121/30). She used variables V1\u2013V15, one operation per line, with loops and conditional branching \u2014 all the elements of a real program.<br><br>Her notation looks remarkably like assembly language: each step names a destination, an operation, and operands. The Church Machine's Symbolic Math compiler accepts her exact format: <code>let V4 = V2 * V3</code>. Click 'Ada: Note G' in the examples above to see it run.",
+            question: "Ada's program had a bug. She wrote it by hand, with no debugger. How would you test a program if you had no computer to run it on?",
+            era: "Victorian England, 1843"
+        },
+        {
+            title: "Grace Hopper Invents the Compiler (1952)",
+            body: "Grace Hopper was told that computers could only do arithmetic, not process language. She disagreed and built the first compiler (A-0) \u2014 a program that translated human-readable code into machine instructions. Nobody believed it would work. 'I had a running compiler and nobody would touch it,' she said. 'They told me a computer couldn\u2019t write a program.'<br><br>The CLOOMC++ compiler in the Church Machine follows the same idea: you write JavaScript, Haskell, or Ada's notation, and the compiler turns it into 32-bit Church Machine code words. Every 'Assemble' click is Hopper's invention at work.",
+            question: "Before compilers, programmers wrote raw machine code by hand. Why was the idea of a computer writing code so hard for people to accept?",
+            era: "Post-War America, 1952"
+        },
+        {
+            title: "Capability Security: Dennis and Van Horn (1966)",
+            body: "In 1966, Jack Dennis and Earl Van Horn published a paper at MIT describing a radical idea: instead of a central authority deciding who can access what (like a superuser), give each program unforgeable tokens called capabilities. If you hold the token, you can use the resource. If not, you can't even name it.<br><br>Every Golden Token in the Church Machine \u2014 the 32-bit values with Version, Index, Perms, and Type fields \u2014 is exactly what Dennis and Van Horn described. LOAD checks your token. CALL checks your token. No superuser, no bypass, no tricks.",
+            question: "Most computers today use access control lists (who is allowed) instead of capabilities (what token do you hold). Which feels safer to you? Why?",
+            era: "MIT, 1966"
+        },
+        {
+            title: "Alonzo Church and the Lambda Calculus (1936)",
+            body: "Before there were computers, Alonzo Church invented a complete model of computation using nothing but functions. He called it the lambda calculus. Every computation \u2014 adding numbers, sorting lists, running programs \u2014 can be expressed as functions applied to functions.<br><br>The Church Machine is named after him because it runs on his model, not the von Neumann model that every other computer uses. When you write Haskell code in this editor, you're writing in the language closest to what Church invented 90 years ago.",
+            question: "Church proved that some problems can never be solved by any algorithm (the Entscheidungsproblem). Why would it matter to know that something is impossible?",
+            era: "Princeton, 1936"
+        },
+        {
+            title: "The Morris Worm: Why Security Matters (1988)",
+            body: "On November 2, 1988, Robert Tappan Morris released a worm that crashed roughly 10% of the entire Internet (about 6,000 machines). It exploited a buffer overflow in the Unix 'finger' daemon \u2014 a bug where a program accepted more data than its buffer could hold, overwriting adjacent memory.<br><br>In the Church Machine, this attack is impossible. Every memory region is bounded by its Golden Token. The mLoad pipeline checks bounds at step 4. Writing past your allocation triggers a FAULT, not a takeover. The von Neumann design lets any gear touch any other gear. The Church Machine puts each gear in a sealed envelope.",
+            question: "The Morris Worm was an accident \u2014 Morris didn't intend to crash the Internet. Should accidents be punished the same as intentional attacks?",
+            era: "Early Internet, 1988"
+        },
+        {
+            title: "Donald Knuth and The Art of Programming (1962\u2013present)",
+            body: "Donald Knuth started writing 'The Art of Computer Programming' in 1962. He's still writing it. The work is so detailed that Knuth offers $2.56 (one hexadecimal dollar) to anyone who finds an error. Thousands of checks have been cashed.<br><br>Knuth also created TeX because he was unhappy with how his books were typeset. Rather than complain, he built the entire typesetting system himself. The Church Machine follows the same philosophy: if the existing design (von Neumann) has a flaw (no security), don't patch it \u2014 build the right thing.",
+            question: "Knuth says 'premature optimization is the root of all evil.' What does that mean for how you should write code?",
+            era: "Stanford, 1962\u2013present"
+        },
+        {
+            title: "Haskell: A Language for Mathematicians (1990)",
+            body: "In 1987, a group of academics were frustrated: there were too many lazy functional languages, each slightly different. They formed a committee and in 1990 released Haskell, named after Haskell Curry (who also studied under Church). Haskell is purely functional \u2014 no side effects, no mutable state.<br><br>The Church Machine's Haskell front-end compiles lambda expressions, case statements, and pairs directly to the 20-instruction set. When you click 'HS: Math' or 'HS: Lambda' above, you're writing in a language designed by Church's intellectual grandchildren.",
+            question: "Haskell has no mutable variables \u2014 once you set a value, it can never change. How would you write a counter without being able to change a variable?",
+            era: "Academic Computing, 1990"
+        },
+        {
+            title: "The Therac-25: When Software Kills (1985\u20131987)",
+            body: "The Therac-25 was a radiation therapy machine. Software bugs caused it to deliver 100 times the intended dose, killing three patients and injuring three more. The root cause: race conditions and the removal of hardware safety interlocks in favour of software-only checks.<br><br>In capability security, the principle of least authority (POLA) means each component holds only the permissions it needs. If the Therac-25 had used capabilities, the high-energy beam control would have been isolated behind a separate token with its own safety checks \u2014 no single bug could have bypassed all protections.",
+            question: "The Therac-25 accidents happened because testers never tested unusual input sequences. How would you test software that controls something dangerous?",
+            era: "Medical Computing, 1985"
+        }
     ]
 };
 
 let historyCurrentTool = 'interactive';
-let historyShownIndices = { interactive: [], hp35: [], abacus: [], sliderule: [] };
+let historyShownIndices = { interactive: [], hp35: [], abacus: [], sliderule: [], code: [] };
 
 function historyGetRandom(tool) {
     const stories = MATH_HISTORY[tool];
@@ -197,13 +247,10 @@ function historySetTool(tool) {
     historyRefresh();
 }
 
-function historyRefresh() {
-    const area = document.getElementById('historyContent');
-    if (!area) return;
-
-    const story = historyGetRandom(historyCurrentTool);
+function historyRenderStory(area, tool) {
+    const story = historyGetRandom(tool);
     if (!story) {
-        area.innerHTML = '<div class="history-empty">Select a math tool to see its history.</div>';
+        area.innerHTML = '<div class="history-empty">No stories available.</div>';
         return;
     }
 
@@ -220,6 +267,20 @@ function historyRefresh() {
     `;
 }
 
+function historyRefresh() {
+    const area = document.getElementById('historyContent');
+    if (area) historyRenderStory(area, historyCurrentTool);
+}
+
+function historyRefreshCode() {
+    const area = document.getElementById('codeHistoryContent');
+    if (area) historyRenderStory(area, 'code');
+}
+
 function historyNewStory() {
     historyRefresh();
+}
+
+function historyNewCodeStory() {
+    historyRefreshCode();
 }

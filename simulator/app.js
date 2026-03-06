@@ -3929,6 +3929,27 @@ function switchMathMode(mode) {
     showToolGuide(mode);
 }
 
+function switchCodeTab(tab) {
+    const consoleContent = document.getElementById('codeConsoleContent');
+    const historyPanel = document.getElementById('codeHistoryPanel');
+    const tabConsole = document.getElementById('codeTabConsole');
+    const tabHistory = document.getElementById('codeTabHistory');
+
+    if (tab === 'history') {
+        if (consoleContent) consoleContent.style.display = 'none';
+        if (historyPanel) historyPanel.style.display = 'block';
+        if (tabConsole) tabConsole.classList.remove('active');
+        if (tabHistory) tabHistory.classList.add('active');
+        const area = document.getElementById('codeHistoryContent');
+        if (area && !area.innerHTML.trim() && typeof historyRefreshCode === 'function') historyRefreshCode();
+    } else {
+        if (consoleContent) consoleContent.style.display = 'block';
+        if (historyPanel) historyPanel.style.display = 'none';
+        if (tabConsole) tabConsole.classList.add('active');
+        if (tabHistory) tabHistory.classList.remove('active');
+    }
+}
+
 function switchSidebarTab(tab) {
     const challengeContent = document.getElementById('sidebarChallengeContent');
     const historyContent = document.getElementById('sidebarHistoryContent');
