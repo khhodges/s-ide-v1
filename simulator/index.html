@@ -173,6 +173,8 @@
                 <div class="math-mode-tabs">
                     <button class="math-mode-tab active" id="mathTabInteractive" onclick="switchMathMode('interactive')">Interactive Math</button>
                     <button class="math-mode-tab" id="mathTabHP35" onclick="switchMathMode('hp35')">HP-35</button>
+                    <button class="math-mode-tab" id="mathTabAbacus" onclick="switchMathMode('abacus')">Abacus</button>
+                    <button class="math-mode-tab" id="mathTabSlideRule" onclick="switchMathMode('sliderule')">Slide Rule</button>
                 </div>
                 <div id="interactiveMathContent">
                     <div id="replOutput">
@@ -185,6 +187,8 @@
                     </div>
                 </div>
                 <div id="hp35Container" style="display:none;"></div>
+                <div id="abacusContainer" style="display:none;"></div>
+                <div id="slideruleContainer" style="display:none;"></div>
             </div>
             <div class="repl-divider" id="replDivider"></div>
             <div class="repl-sidebar">
@@ -410,6 +414,8 @@
     <script src="pipeline.js"></script>
     <script src="repl.js"></script>
     <script src="hp35.js"></script>
+    <script src="abacus.js"></script>
+    <script src="sliderule.js"></script>
     <script src="tutorial.js"></script>
     <script src="sliderule_tutorial.js"></script>
     <script src="app.js"></script>

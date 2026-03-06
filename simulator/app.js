@@ -3744,25 +3744,33 @@ function replExecute(cmdOverride) {
 }
 
 function switchMathMode(mode) {
-    const interactiveContent = document.getElementById('interactiveMathContent');
-    const hp35Container = document.getElementById('hp35Container');
-    const tabInteractive = document.getElementById('mathTabInteractive');
-    const tabHP35 = document.getElementById('mathTabHP35');
+    const containers = {
+        interactive: document.getElementById('interactiveMathContent'),
+        hp35: document.getElementById('hp35Container'),
+        abacus: document.getElementById('abacusContainer'),
+        sliderule: document.getElementById('slideruleContainer')
+    };
+    const tabs = {
+        interactive: document.getElementById('mathTabInteractive'),
+        hp35: document.getElementById('mathTabHP35'),
+        abacus: document.getElementById('mathTabAbacus'),
+        sliderule: document.getElementById('mathTabSlideRule')
+    };
 
-    if (mode === 'hp35') {
-        if (interactiveContent) interactiveContent.style.display = 'none';
-        if (hp35Container) {
-            hp35Container.style.display = 'block';
-            if (!hp35State.rendered) renderHP35Calculator();
+    for (const key in containers) {
+        if (containers[key]) {
+            containers[key].style.display = key === mode ? (key === 'interactive' ? 'flex' : 'block') : 'none';
         }
-        if (tabInteractive) tabInteractive.classList.remove('active');
-        if (tabHP35) tabHP35.classList.add('active');
-    } else {
-        if (interactiveContent) interactiveContent.style.display = 'flex';
-        if (hp35Container) hp35Container.style.display = 'none';
-        if (tabInteractive) tabInteractive.classList.add('active');
-        if (tabHP35) tabHP35.classList.remove('active');
     }
+    for (const key in tabs) {
+        if (tabs[key]) {
+            tabs[key].classList.toggle('active', key === mode);
+        }
+    }
+
+    if (mode === 'hp35' && !hp35State.rendered) renderHP35Calculator();
+    if (mode === 'abacus' && !abacusState.rendered) renderAbacusCalculator();
+    if (mode === 'sliderule' && !slideruleState.rendered) renderSlideRuleCalculator();
 }
 
 function replKeydown(event) {
