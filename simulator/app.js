@@ -54,6 +54,7 @@ function init() {
     }
     updateLineNumbers();
     loadNamespaceState();
+    checkBootId();
     const views = ['repl','editor','tutorial','dashboard','namespace','abstractions','pipeline','reference','docs'];
     const hash = window.location.hash.replace('#', '');
     const startView = views.includes(hash) ? hash : 'repl';
@@ -61,6 +62,25 @@ function init() {
     updateDashboard();
     pipelineViz.render();
     showWelcomePopup();
+}
+
+function checkBootId() {
+    fetch('/api/boot-id')
+        .then(r => r.json())
+        .then(data => {
+            const stored = localStorage.getItem('churchMachine_bootId');
+            if (stored && stored !== data.bootId) {
+                localStorage.removeItem('church_welcome_dismissed');
+                localStorage.removeItem('churchMachine_mathGuideDismissed');
+                localStorage.removeItem('churchMachine_toolGuide_interactive');
+                localStorage.removeItem('churchMachine_toolGuide_hp35');
+                localStorage.removeItem('churchMachine_toolGuide_abacus');
+                localStorage.removeItem('churchMachine_toolGuide_sliderule');
+                showWelcomePopup();
+            }
+            localStorage.setItem('churchMachine_bootId', data.bootId);
+        })
+        .catch(() => {});
 }
 
 function switchView(viewId) {

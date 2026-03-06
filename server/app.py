@@ -1,5 +1,6 @@
 import os
 import logging
+import uuid
 from flask import Flask, jsonify, send_from_directory, redirect, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
@@ -26,6 +27,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SIMULATOR_DIR = os.path.join(BASE_DIR, "simulator")
 DOCS_DIR = os.path.join(BASE_DIR, "docs")
 
+BOOT_ID = str(uuid.uuid4())
+
 @app.after_request
 def add_cache_control(response):
     if response.content_type and (
@@ -46,6 +49,10 @@ def index():
 @app.route("/api/health")
 def health():
     return jsonify({"status": "ok"})
+
+@app.route("/api/boot-id")
+def boot_id():
+    return jsonify({"bootId": BOOT_ID})
 
 @app.route("/simulator/")
 def simulator_index():
