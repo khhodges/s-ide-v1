@@ -335,7 +335,7 @@ class ChurchREPL {
         return {
             type: 'info',
             text: [
-                'Church Computer REPL \u2014 Pure Lambda Calculus',
+                'Church Computer Interactive Math \u2014 Pure Lambda Calculus',
                 '',
                 'Arithmetic:  3 + 5, 10 * 2, 8 / 4, 2 ^ 3',
                 'Functions:   succ(n), pred(n), sqrt(x), log(x), exp(x)',
@@ -373,9 +373,9 @@ class ChurchREPL {
             return { type: 'info', text: 'No variables defined. Use "let V1 = 42" to define variables first.' };
         }
 
-        let source = `-- REPL Session compiled to Symbolic Math\n`;
+        let source = `-- Interactive Math Session compiled to Symbolic Math\n`;
         source += `-- ${bindings.length} variable(s)\n\n`;
-        source += `abstraction REPLSession {\n`;
+        source += `abstraction MathSession {\n`;
         source += `    capabilities {\n    }\n\n`;
         source += `    method compute() {\n`;
 
@@ -406,7 +406,7 @@ class ChurchREPL {
             return { type: 'result', text: `Compile errors:\n${errText}\n\nSource:\n${source}` };
         }
 
-        let output = `═══ REPL Session → Church Machine Code ═══\n\n`;
+        let output = `═══ Interactive Math Session → Church Machine Code ═══\n\n`;
         output += `Language: Symbolic Math (Ada)\n`;
         output += `Abstraction: "${result.abstractionName}"\n`;
         output += `Methods: ${result.methods.length}\n\n`;

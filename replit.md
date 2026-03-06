@@ -135,12 +135,12 @@ Multi-language compiler targeting Church Machine 20-instruction set:
 ### Web IDE
 
 - Flask server on port 5000, serves simulator/ as static files
-- 9 views: Math (default, was REPL), Code, Tutorial, Dashboard, Namespace, Abstractions, Pipeline, Reference, Docs
+- 9 views: Math (Interactive Math, default), Code, Tutorial, Dashboard, Namespace, Abstractions, Pipeline, Reference, Docs
 - Tutorial tab: two tutorials selectable via buttons:
-  - Discovery Path (Bernoulli): interactive step-through with REPL execution (tutorial.js)
+  - Discovery Path (Bernoulli): interactive step-through with Interactive Math execution (tutorial.js)
   - SlideRule Comparative Study: 23-step walkthrough of architecture, compiler, JS vs Haskell comparison, disassembly, performance, security, and hands-on guide (sliderule_tutorial.js)
 - CLOOMC++ compiler integrated: write source → compile → create abstraction (JS, Haskell, Symbolic Math)
-- REPL: interactive calculator + "Compile Session" button compiles let-bindings to Church Machine code
+- Interactive Math: interactive calculator + "Compile Session" button compiles let-bindings to Church Machine code
 - Math Challenge: sidebar panel with grade-appropriate problems (K-2 add/sub, 3-5 mul/div, 6-8 squares/mixed, 9-10 algebra, 11-12/IB factorial/exponents), answer checking, hints, and dual-domain explanations: Turing domain (body — IADD/ISUB/BRANCH, numbers and physical addresses, DR0/DR1 args) shown in blue, Church domain (mind — A/B/C labeled math: A=first, B=second, operator, C=A op B=answer) shown in gold. TPERM only used for capabilities from untrusted sources. Hardware checks permissions automatically on LOAD and CALL.
 - Math guide popup: one-time "Body and Mind" popup when Math tab first opens (after welcome popup dismissed), explaining left=mind (Church/symbols), right=body (Turing/numbers), Ada's 1843 program, Turing as Church's student. Dismissed via "Got it", stored in localStorage key churchMachine_mathGuideDismissed.
 - 50-50 split: Math tab panels default to equal width, separated by draggable divider bar (gold on hover)
@@ -148,7 +148,7 @@ Multi-language compiler targeting Church Machine 20-instruction set:
 - Welcome popup: first-visit parent guide explaining Church Machine, Family abstraction (NS[28]), Golden Tokens, and setup steps; "Set Up My Family" opens settings, "Skip for Now" dismisses; suppresses language intros until dismissed
 - Settings: gear icon in intro popup opens settings modal with student name, school, K-12 + IB grade dropdown, family members (role + name, up to 8)
 - Grade-adapted intros: intro popup content dynamically adapts to student grade level (early/elementary/middle/high/advanced/IB tiers)
-- Progress tracking: compilations, abstractions created, drafts, REPL sessions, languages used, recent activity history
+- Progress tracking: compilations, abstractions created, drafts, Interactive Math sessions, languages used, recent activity history
 - State persistence via localStorage (editor state, settings, progress, intro dismissals, welcome dismissal, family members)
 - WebSerial for Tang Nano 20K deployment
 
@@ -177,4 +177,4 @@ Multi-language compiler targeting Church Machine 20-instruction set:
 - B (Bind) bit defaults to 0, auto-cleared by CALL
 - C-Lists only have E permission, CLOOMC only X or RX
 - Phase 1 + 1b + 1c: JS, Haskell, and Symbolic Math (Ada) front-ends implemented; auto-detected by compiler
-- REPL "Compile Session" button: compiles interactive let-bindings to Church Machine code via symbolic math front-end
+- Interactive Math "Compile Session" button: compiles interactive let-bindings to Church Machine code via symbolic math front-end

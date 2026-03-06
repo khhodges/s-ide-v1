@@ -3958,10 +3958,10 @@ function getNextStepTip(lang) {
     }
 
     if (lang === 'symbolic') {
-        return `<div class="intro-tip intro-next-step"><strong>Explore:</strong> Try the <strong>REPL</strong> tab to experiment with expressions interactively, then click <strong>Compile Session</strong> to turn your experiments into a program. Or visit the <strong>Tutorial</strong> tab for a guided walkthrough.</div>`;
+        return `<div class="intro-tip intro-next-step"><strong>Explore:</strong> Try the <strong>Interactive Math</strong> tab to experiment with expressions interactively, then click <strong>Compile Session</strong> to turn your experiments into a program. Or visit the <strong>Tutorial</strong> tab for a guided walkthrough.</div>`;
     }
 
-    return `<div class="intro-tip intro-next-step"><strong>Explore:</strong> Open the <strong>Tutorial</strong> tab for a guided discovery path, try the <strong>REPL</strong> for interactive experiments, or view your progress in the <strong>Settings</strong> (gear icon below).</div>`;
+    return `<div class="intro-tip intro-next-step"><strong>Explore:</strong> Open the <strong>Tutorial</strong> tab for a guided discovery path, try the <strong>Interactive Math</strong> for interactive experiments, or view your progress in the <strong>Settings</strong> (gear icon below).</div>`;
 }
 
 const langIntros = {
@@ -4365,7 +4365,7 @@ function renderProgressReport() {
     html += `<div class="progress-stat"><span class="progress-stat-label">Programs Compiled</span><span class="progress-stat-value">${progress.compilations}</span></div>`;
     html += `<div class="progress-stat"><span class="progress-stat-label">Abstractions Created</span><span class="progress-stat-value">${progress.abstractions}</span></div>`;
     html += `<div class="progress-stat"><span class="progress-stat-label">Drafts Viewed</span><span class="progress-stat-value">${progress.drafts}</span></div>`;
-    html += `<div class="progress-stat"><span class="progress-stat-label">REPL Sessions</span><span class="progress-stat-value">${progress.replSessions}</span></div>`;
+    html += `<div class="progress-stat"><span class="progress-stat-label">Interactive Math Sessions</span><span class="progress-stat-value">${progress.replSessions}</span></div>`;
 
     if (progress.langsUsed.length > 0) {
         const langNames = { symbolic: 'Symbolic Math', javascript: 'JavaScript', haskell: 'Haskell', assembly: 'Assembly' };
