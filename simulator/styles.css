@@ -3895,23 +3895,39 @@ header h1 {
     }
 }
 
-.hp35-calc-wrapper {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: flex-start;
+.hp35-tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 12px;
     padding: 8px 0;
+    align-items: start;
+}
+
+.hp35-tile {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    min-width: 0;
+}
+
+.hp35-tile-calc {
+    background: transparent;
+    border: none;
+    padding: 0;
+    display: flex;
     justify-content: center;
 }
 
-.hp35-side-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    flex: 1;
-    min-width: 200px;
-    max-width: 400px;
+.hp35-tile-header {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--church-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
 }
 
 .hp35-body {
@@ -4054,19 +4070,9 @@ header h1 {
 }
 
 .hp35-stack-display {
-    width: 100%;
     display: flex;
     flex-direction: column;
     gap: 3px;
-}
-
-.hp35-stack-header {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--church-gold);
-    font-weight: 600;
-    margin-bottom: 4px;
 }
 
 .hp35-stack-reg {
@@ -4089,23 +4095,6 @@ header h1 {
     color: #ff4444;
 }
 
-.hp35-stack-guide {
-    width: 100%;
-    background: #0d1117;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 10px;
-    margin-top: 6px;
-}
-
-.hp35-stack-guide-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--church-gold);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
 
 .hp35-stack-guide-body p {
     font-size: 0.78rem;
@@ -4187,25 +4176,9 @@ header h1 {
     font-weight: 700;
 }
 
-.hp35-trace-inline {
-    width: 100%;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-    max-height: 200px;
-    display: flex;
-    flex-direction: column;
-}
-
-.hp35-trace-header {
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: var(--church-gold);
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--border);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.hp35-tile-trace {
+    max-height: 350px;
+    overflow-y: auto;
 }
 
 .hp35-trace-area {
