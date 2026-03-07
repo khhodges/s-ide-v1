@@ -339,6 +339,10 @@ function renderHP35Calculator() {
                     <div class="hp35-stack-row"><span class="hp35-sreg">X</span> <span class="hp35-sdesc">Display \u2014 what you see and type into</span></div>
                 </div>
             </div>
+            <div class="hp35-tile hp35-tile-trace">
+                <div class="hp35-tile-header">Lambda Calculus Trace</div>
+                <div class="hp35-trace-area"></div>
+            </div>
             <div class="hp35-tile hp35-tile-guide">
                 <div class="hp35-tile-header">How to Use RPN</div>
                 <div class="hp35-stack-guide-body">
@@ -361,10 +365,6 @@ function renderHP35Calculator() {
                         <p>No parentheses needed. No = key. Complex expressions flow naturally left to right. The stack remembers intermediate results for you \u2014 like how you'd work it out on paper, one step at a time.</p>
                     </div>
                 </div>
-            </div>
-            <div class="hp35-tile hp35-tile-trace">
-                <div class="hp35-tile-header">Lambda Calculus Trace</div>
-                <div class="hp35-trace-area"></div>
             </div>
         </div>
     `;
