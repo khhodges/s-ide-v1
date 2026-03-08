@@ -4130,26 +4130,51 @@ function populateHowItWorks(mode) {
 
         abacus: `
             <div class="panel" style="margin-bottom:0.75rem;">
-                <div class="panel-title" style="color:var(--church-gold);">How the Abacus Works</div>
+                <div class="panel-title" style="color:var(--church-gold);">The Church Abstraction as a Digital Abacus</div>
                 <div style="font-size:0.82rem;line-height:1.55;color:var(--text-secondary);">
-                    The soroban (Japanese abacus) uses <strong>positional notation</strong> &mdash; each column is a power of 10.
-                    The top bead is worth <strong>5</strong>, the four bottom beads are worth <strong>1</strong> each.
-                    Move beads toward the bar to add their value; move them away to subtract.
+                    <p style="margin:0 0 0.5rem 0;">A Church Machine <strong>abstraction</strong> is like a digital abacus &mdash; a self-contained block with rods (methods) and beads (data) that only the owner can move.</p>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.25rem;margin-bottom:0.6rem;">
+                    <div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:0.25rem 0.5rem;background:rgba(0,0,0,0.2);border-radius:4px;">
+                        <span style="color:var(--church-gold);">Abacus Frame</span><span style="color:var(--text-secondary);">\u2194</span><span style="color:rgba(130,200,255,0.95);">Abstraction (NS Entry)</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:0.25rem 0.5rem;background:rgba(0,0,0,0.2);border-radius:4px;">
+                        <span style="color:var(--church-gold);">Rods</span><span style="color:var(--text-secondary);">\u2194</span><span style="color:rgba(130,200,255,0.95);">Methods (code at offset 0)</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:0.25rem 0.5rem;background:rgba(0,0,0,0.2);border-radius:4px;">
+                        <span style="color:var(--church-gold);">Beads</span><span style="color:var(--text-secondary);">\u2194</span><span style="color:rgba(130,200,255,0.95);">Data (within the lump)</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:0.25rem 0.5rem;background:rgba(0,0,0,0.2);border-radius:4px;">
+                        <span style="color:var(--church-gold);">Heaven Beads (5)</span><span style="color:var(--text-secondary);">\u2194</span><span style="color:rgba(130,200,255,0.95);">Capabilities (c-list, Church domain)</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:0.25rem 0.5rem;background:rgba(0,0,0,0.2);border-radius:4px;">
+                        <span style="color:var(--church-gold);">Earth Beads (1 each)</span><span style="color:var(--text-secondary);">\u2194</span><span style="color:rgba(130,200,255,0.95);">Data words (Turing domain)</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:0.25rem 0.5rem;background:rgba(0,0,0,0.2);border-radius:4px;">
+                        <span style="color:var(--church-gold);">Beam Bar</span><span style="color:var(--text-secondary);">\u2194</span><span style="color:rgba(130,200,255,0.95);">Domain purity boundary</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.78rem;padding:0.25rem 0.5rem;background:rgba(0,0,0,0.2);border-radius:4px;">
+                        <span style="color:var(--church-gold);">Place Value (10\u207f)</span><span style="color:var(--text-secondary);">\u2194</span><span style="color:rgba(130,200,255,0.95);">Abstraction layer (1\u20139)</span>
+                    </div>
                 </div>
             </div>
             <div class="panel" style="margin-bottom:0.75rem;">
-                <div class="panel-title" style="color:rgba(130,200,255,0.95);">Place Value</div>
+                <div class="panel-title" style="color:rgba(100,200,100,0.9);">Why It Matters</div>
                 <div style="font-size:0.82rem;line-height:1.55;color:var(--text-secondary);">
-                    <p style="margin:0 0 0.4rem 0;">Each column represents a digit: ones, tens, hundreds, thousands. The rightmost column is ones.</p>
-                    <p style="margin:0 0 0.4rem 0;">To show <strong>7</strong>: move the top bead down (5) and two bottom beads up (1+1). Total: 5+2 = 7.</p>
-                    <p style="margin:0;">When a column exceeds 9, you <strong>carry</strong> &mdash; reset the column to 0 and add 1 to the next column left. This is exactly how binary carry works in the Church Machine&rsquo;s ALU.</p>
+                    On a soroban, each rod is independent &mdash; you can only change beads on the rod you&rsquo;re touching. In the Church Machine, each abstraction works the same way: you can only call its methods through a <strong>Golden Token</strong> with the right permissions. No token, no access.
+                </div>
+            </div>
+            <div class="panel" style="margin-bottom:0.75rem;">
+                <div class="panel-title" style="color:rgba(130,200,255,0.95);">Structure of a Lump</div>
+                <div style="font-size:0.82rem;line-height:1.55;color:var(--text-secondary);">
+                    <p style="margin:0 0 0.3rem 0;font-family:monospace;background:rgba(0,0,0,0.2);padding:0.4rem 0.6rem;border-radius:4px;font-size:0.78rem;"><span style="color:var(--church-gold);">[Code at offset 0]</span> <span style="color:var(--text-secondary);">[Free space]</span> <span style="color:rgba(130,200,255,0.95);">[C-list at end]</span></p>
+                    <p style="margin:0;">Methods live at the start. The capability list (c-list) lives at the end. Free space grows between them &mdash; just like beads slide along rods.</p>
                 </div>
             </div>
             <div class="panel">
-                <div class="panel-title" style="color:rgba(100,200,100,0.9);">Church Machine Connection</div>
+                <div class="panel-title" style="color:rgba(180,140,255,0.95);">Functional Methods</div>
                 <div style="font-size:0.82rem;line-height:1.55;color:var(--text-secondary);">
-                    <p style="margin:0 0 0.4rem 0;">The abacus is a <strong>register machine</strong>. Each column is a register holding one digit. Operations propagate carries left &mdash; the same ripple-carry logic used in hardware adders.</p>
-                    <p style="margin:0;">Every bead move is traced as a Church Machine operation, showing how physical computation maps to <code>IADD</code> and <code>ISUB</code> instructions.</p>
+                    Each method is a pure function: give it inputs, get outputs. No side effects, no hidden state changes. Just as sliding a bead is a single, visible action &mdash; every method call is explicit and auditable through the trace below.
                 </div>
             </div>`,
 

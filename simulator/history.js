@@ -516,6 +516,36 @@ function historyRenderStory(area, tool) {
         return;
     }
 
+    let extra = '';
+    if (tool === 'abacus') {
+        extra = `
+        <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:0.75rem;">
+            <div class="panel" style="margin-bottom:0.75rem;">
+                <div class="panel-title" style="color:var(--church-gold);">How the Abacus Works</div>
+                <div style="font-size:0.82rem;line-height:1.55;color:var(--text-secondary);">
+                    The soroban (Japanese abacus) uses <strong>positional notation</strong> &mdash; each column is a power of 10.
+                    The top bead is worth <strong>5</strong>, the four bottom beads are worth <strong>1</strong> each.
+                    Move beads toward the bar to add their value; move them away to subtract.
+                </div>
+            </div>
+            <div class="panel" style="margin-bottom:0.75rem;">
+                <div class="panel-title" style="color:rgba(130,200,255,0.95);">Place Value</div>
+                <div style="font-size:0.82rem;line-height:1.55;color:var(--text-secondary);">
+                    <p style="margin:0 0 0.4rem 0;">Each column represents a digit: ones, tens, hundreds, thousands. The rightmost column is ones.</p>
+                    <p style="margin:0 0 0.4rem 0;">To show <strong>7</strong>: move the top bead down (5) and two bottom beads up (1+1). Total: 5+2 = 7.</p>
+                    <p style="margin:0;">When a column exceeds 9, you <strong>carry</strong> &mdash; reset the column to 0 and add 1 to the next column left. This is exactly how binary carry works in the Church Machine&rsquo;s ALU.</p>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-title" style="color:rgba(100,200,100,0.9);">Church Machine Connection</div>
+                <div style="font-size:0.82rem;line-height:1.55;color:var(--text-secondary);">
+                    <p style="margin:0 0 0.4rem 0;">The abacus is a <strong>register machine</strong>. Each column is a register holding one digit. Operations propagate carries left &mdash; the same ripple-carry logic used in hardware adders.</p>
+                    <p style="margin:0;">Every bead move is traced as a Church Machine operation, showing how physical computation maps to <code>IADD</code> and <code>ISUB</code> instructions.</p>
+                </div>
+            </div>
+        </div>`;
+    }
+
     area.innerHTML = `
         <div class="history-story">
             <div class="history-era">${story.era}</div>
@@ -527,6 +557,7 @@ function historyRenderStory(area, tool) {
                 ${story.question}
             </div>
         </div>
+        ${extra}
     `;
 }
 
