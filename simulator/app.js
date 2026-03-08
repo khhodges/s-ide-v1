@@ -3983,6 +3983,45 @@ function convertCaretToSuperscript(text) {
     });
 }
 
+function _appendToTraceTab(command, result) {
+    const traceLog = document.querySelector('.repl-trace-log');
+    if (!traceLog) return;
+    const hint = document.querySelector('.repl-trace-hint');
+    if (hint) hint.style.display = 'none';
+
+    const entry = document.createElement('div');
+    entry.className = 'repl-trace-entry';
+
+    const header = document.createElement('div');
+    header.className = 'repl-trace-entry-header';
+    header.textContent = '\u03BB> ' + command;
+    entry.appendChild(header);
+
+    const resultLine = document.createElement('div');
+    resultLine.className = 'repl-trace-entry-result';
+    resultLine.textContent = result.text;
+    entry.appendChild(resultLine);
+
+    if (result.churchSteps) {
+        for (const step of result.churchSteps) {
+            const stepEl = document.createElement('div');
+            stepEl.className = 'repl-trace-entry-step';
+            stepEl.textContent = step;
+            entry.appendChild(stepEl);
+        }
+    }
+
+    if (result.cycles) {
+        const cyclesEl = document.createElement('div');
+        cyclesEl.className = 'repl-trace-entry-cycles';
+        cyclesEl.textContent = '\u23F1 ' + result.cycles + ' cycles';
+        entry.appendChild(cyclesEl);
+    }
+
+    traceLog.appendChild(entry);
+    traceLog.scrollTop = traceLog.scrollHeight;
+}
+
 function replExecute(cmdOverride) {
     const input = document.getElementById('replInput');
     const output = document.getElementById('replOutput');
@@ -4005,6 +4044,7 @@ function replExecute(cmdOverride) {
                 traceHtml += '</div>';
                 output.innerHTML += traceHtml;
             }
+            _appendToTraceTab(command, result);
             if (result.pipeline && pipelineViz) {
                 pipelineViz.showFullPipeline(result.pipeline);
             }
@@ -4439,9 +4479,10 @@ function populateTrace(mode) {
 
         interactive: `
             <div class="panel">
-                <div class="panel-title" style="color:var(--church-gold);">Trace</div>
-                <div style="font-size:0.82rem;line-height:1.55;color:var(--text-secondary);">
-                    Use <strong>Compile Session</strong> to see your expressions transformed into Church Machine instructions.
+                <div class="panel-title" style="color:var(--church-gold);">Church Machine Trace</div>
+                <div class="repl-trace-log"></div>
+                <div class="repl-trace-hint" style="font-size:0.82rem;line-height:1.55;color:var(--text-secondary);padding:0.5rem 0;">
+                    Enter expressions in Pure Math to see Church Machine operations here.
                 </div>
             </div>`
     };

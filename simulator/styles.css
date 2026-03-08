@@ -1431,6 +1431,52 @@ a.next-step-link:hover {
     line-height: 1.4;
 }
 
+.repl-trace-log {
+    max-height: 60vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.repl-trace-entry {
+    border-left: 2px solid var(--church-gold);
+    padding: 0.4rem 0.6rem;
+    background: rgba(251, 191, 36, 0.04);
+    border-radius: 0 4px 4px 0;
+}
+
+.repl-trace-entry-header {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--church-gold);
+    font-family: monospace;
+    margin-bottom: 0.2rem;
+}
+
+.repl-trace-entry-result {
+    font-size: 0.78rem;
+    color: var(--text-primary);
+    font-family: monospace;
+    margin-bottom: 0.25rem;
+}
+
+.repl-trace-entry-step {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-family: monospace;
+    line-height: 1.5;
+    padding-left: 0.5rem;
+}
+
+.repl-trace-entry-cycles {
+    font-size: 0.7rem;
+    color: var(--church-gold);
+    opacity: 0.7;
+    margin-top: 0.2rem;
+    text-align: right;
+}
+
 .repl-sidebar {
     display: flex;
     flex-direction: column;
