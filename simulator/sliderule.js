@@ -329,6 +329,39 @@ function slideruleGenerateArrows(cx) {
     return arrows;
 }
 
+function slideruleTogglePanel(panel) {
+    const panels = ['howitworks', 'history', 'fp'];
+    const ids = { howitworks: 'sliderulePanelHowitworks', history: 'sliderulePanelHistory', fp: 'sliderulePanelFp' };
+    const arrows = { howitworks: 'slideruleArrowHowitworks', history: 'slideruleArrowHistory', fp: 'slideruleArrowFp' };
+    const el = document.getElementById(ids[panel]);
+    if (!el) return;
+    const isOpen = el.style.display !== 'none';
+    el.style.display = isOpen ? 'none' : '';
+    const arrow = document.getElementById(arrows[panel]);
+    if (arrow) arrow.textContent = isOpen ? '\u25BC' : '\u25B2';
+    if (!isOpen && panel === 'history') sliderulePopulateHistory();
+}
+
+function sliderulePopulateHistory() {
+    const area = document.getElementById('sliderulePanelHistory');
+    if (!area) return;
+    if (typeof historyStories === 'undefined') return;
+    const stories = historyStories.sliderule || historyStories.interactive || [];
+    if (!stories.length) {
+        area.innerHTML = '<p style="color:var(--text-secondary);font-size:0.82rem;padding:0.5rem;">No history stories available yet.</p>';
+        return;
+    }
+    const idx = Math.floor(Math.random() * stories.length);
+    const story = stories[idx];
+    let html = `<div style="padding:0.5rem 0;">`;
+    html += `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.4rem;">${story.title || 'History'}</div>`;
+    if (story.year) html += `<div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:0.3rem;">${story.year}</div>`;
+    html += `<p style="font-size:0.82rem;line-height:1.55;margin:0 0 0.4rem 0;">${story.text || ''}</p>`;
+    if (story.wiki) html += `<a href="${story.wiki}" target="_blank" rel="noopener" class="history-wiki" style="color:var(--church-gold);font-size:0.8rem;">Read more on Wikipedia \u2197</a>`;
+    html += `</div>`;
+    area.innerHTML = html;
+}
+
 function slideruleGenerateTopLabels(scaleDef, offset) {
     let labels = '';
     const range = scaleDef.range;
@@ -480,9 +513,12 @@ function renderSlideRuleCalculator() {
         </div>
 
         <div class="sliderule-tile-column">
-            <div class="sliderule-tile">
-                <div class="sliderule-tile-header">How It Works</div>
-                <div class="sliderule-info-text">
+            <div class="sliderule-tile sliderule-tile-howitworks" style="cursor:pointer;" onclick="slideruleTogglePanel('howitworks')">
+                <div class="sliderule-tile-header" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>How It Works</span>
+                    <span class="sliderule-panel-arrow" id="slideruleArrowHowitworks" style="font-size:0.7rem;opacity:0.6;">\u25B2</span>
+                </div>
+                <div class="sliderule-info-text" id="sliderulePanelHowitworks">
                     The slide rule computes by <em>adding or comparing logarithmic lengths</em>.
                     On the C/D scales, sliding by log(a) and reading at C=b gives D = a\u00d7b.
                     <span style="color:#ff6644;">a</span> and <span style="color:#44aaff;">b</span> are labelled above the scale. The <span style="color:#ff3333;">red arrow</span> below shows a \u00d7 b.
@@ -491,8 +527,19 @@ function renderSlideRuleCalculator() {
                     CALL SlideRule at NS[16].
                 </div>
             </div>
-            <div class="sliderule-tile">
-                <div class="sliderule-tile-header">Floating Point \u2014 The Slide Rule Inside Your Computer</div>
+            <div class="sliderule-tile" style="cursor:pointer;" onclick="slideruleTogglePanel('history')">
+                <div class="sliderule-tile-header" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>History</span>
+                    <span class="sliderule-panel-arrow" id="slideruleArrowHistory" style="font-size:0.7rem;opacity:0.6;">\u25BC</span>
+                </div>
+                <div class="sliderule-history-area" id="sliderulePanelHistory" style="display:none;"></div>
+            </div>
+            <div class="sliderule-tile" style="cursor:pointer;" onclick="slideruleTogglePanel('fp')">
+                <div class="sliderule-tile-header" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>Floating Point \u2014 The Slide Rule Inside Your Computer</span>
+                    <span class="sliderule-panel-arrow" id="slideruleArrowFp" style="font-size:0.7rem;opacity:0.6;">\u25BC</span>
+                </div>
+                <div id="sliderulePanelFp" style="display:none;">
                 <div class="sliderule-fp-body">
                     <p>Every floating-point number in a computer works exactly like a slide rule reading. A slide rule gives you a <strong>mantissa</strong> (where the cursor sits on the scale) and you keep track of the <strong>exponent</strong> (the power of 10) in your head. IEEE 754 does the same thing in binary.</p>
                     <div class="sliderule-fp-diagram">
@@ -521,6 +568,7 @@ function renderSlideRuleCalculator() {
                         <div class="sliderule-fp-title">In the Church Machine</div>
                         <p>The Church Machine\u2019s Turing domain handles 32-bit data words. When those words represent floating-point values, the same slide rule principles apply \u2014 mantissa, exponent, logarithmic spacing. The slide rule on screen and the ALU in hardware are doing the same mathematics.</p>
                     </div>
+                </div>
                 </div>
             </div>
         </div>
