@@ -261,7 +261,7 @@ function slideruleGenerateScaleTicksForDef(scaleDef, offset) {
         ticks += `<line x1="${x}" y1="0" x2="${x}" y2="20" stroke="#eee" stroke-width="2"/>`;
         let label = v.toString();
         if (v >= 1000) label = '1k';
-        ticks += `<text x="${x}" y="30" text-anchor="middle" fill="#fff" font-size="10" font-weight="bold" font-family="monospace">${label}</text>`;
+        ticks += `<text x="${x}" y="32" text-anchor="middle" fill="#fff" font-size="20" font-weight="bold" font-family="monospace">${label}</text>`;
     }
 
     for (const set of minorSets) {
@@ -348,7 +348,7 @@ function slideruleGenerateTopLabels(scaleDef, offset) {
         if (x < slideruleState.scaleStart - 5 || x > slideruleState.scaleStart + slideruleState.scaleWidth + 5) continue;
         let label = v.toString();
         if (v >= 1000) label = '1k';
-        labels += `<text x="${x}" y="-4" text-anchor="middle" fill="${scaleDef.color}" font-size="12" font-weight="bold" font-family="monospace" opacity="0.85">${label}</text>`;
+        labels += `<text x="${x}" y="-6" text-anchor="middle" fill="${scaleDef.color}" font-size="20" font-weight="bold" font-family="monospace" opacity="0.85">${label}</text>`;
         labels += `<line x1="${x}" y1="-2" x2="${x}" y2="0" stroke="${scaleDef.color}" stroke-width="1" opacity="0.5"/>`;
     }
     return labels;
@@ -372,8 +372,8 @@ function slideruleRenderDisplay() {
         const cx = slideruleState.cursorX;
         const arrowsSVG = slideruleGenerateArrows(cx);
         const hasArrows = Math.abs(slideruleState.slideOffset) > 2 && slideruleState.scaleMode === 'CD';
-        const svgHeight = hasArrows ? 150 : 130;
-        const svgTop = hasArrows ? -26 : -18;
+        const svgHeight = hasArrows ? 150 : 140;
+        const svgTop = hasArrows ? -30 : -28;
 
         svgEl.setAttribute('viewBox', `0 ${svgTop} ${totalW} ${svgHeight - svgTop}`);
 
@@ -384,15 +384,15 @@ function slideruleRenderDisplay() {
 
             <rect x="0" y="0" width="${totalW}" height="110" rx="4" fill="#2a1a0a" stroke="#8B7355" stroke-width="2"/>
             <rect x="${slideruleState.scaleStart - 4}" y="2" width="${slideruleState.scaleWidth + 8}" height="32" fill="#1a1a1a" rx="2"/>
-            <text x="14" y="20" fill="${mode.fixed.color}" font-size="11" font-weight="bold" font-family="monospace">${mode.fixed.name}</text>
+            <text x="14" y="22" fill="${mode.fixed.color}" font-size="14" font-weight="bold" font-family="monospace">${mode.fixed.name}</text>
             <g transform="translate(0, 4)">${fixedTicks}</g>
 
             <rect x="${slideruleState.scaleStart - 4 + slideruleState.slideOffset}" y="38" width="${slideruleState.scaleWidth + 8}" height="32" fill="#1a3318" rx="2" class="sliderule-slide-rect" style="cursor:grab;"/>
-            <text x="${slideruleState.scaleStart - 16 + slideruleState.slideOffset}" y="58" fill="${mode.slide.color}" font-size="11" font-weight="bold" font-family="monospace">${mode.slide.name}</text>
+            <text x="${slideruleState.scaleStart - 18 + slideruleState.slideOffset}" y="58" fill="${mode.slide.color}" font-size="14" font-weight="bold" font-family="monospace">${mode.slide.name}</text>
             <g transform="translate(0, 42)">${slideTicks}</g>
 
             <rect x="${slideruleState.scaleStart - 4}" y="74" width="${slideruleState.scaleWidth + 8}" height="32" fill="#1a1a1a" rx="2"/>
-            <text x="14" y="94" fill="${mode.fixed.color}" font-size="11" font-weight="bold" font-family="monospace">${mode.fixed.name}</text>
+            <text x="14" y="94" fill="${mode.fixed.color}" font-size="14" font-weight="bold" font-family="monospace">${mode.fixed.name}</text>
             <g transform="translate(0, 78)">${fixedTicks}</g>
 
             <line x1="${cx}" y1="${svgTop}" x2="${cx}" y2="110" stroke="rgba(255,50,50,0.8)" stroke-width="1.5" stroke-dasharray="3,2"/>
