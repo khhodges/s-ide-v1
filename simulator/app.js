@@ -4841,7 +4841,7 @@ function addFamilyMemberRow(role, name) {
         permsHTML += `</div>`;
     }
 
-    const roleOptions = ['Mum', 'Dad', 'Me', 'Brother', 'Sister', 'Grandpa', 'Grandma', 'Uncle', 'Auntie', 'Cousin', 'Friend', 'Teacher', 'Pet'];
+    const roleOptions = ['Mum', 'Dad', 'Me', 'Brother', 'Sister', 'Grandpa', 'Grandma', 'Uncle', 'Auntie', 'Cousin', 'Friend', 'Teacher'];
     let roleSelectHTML = `<select class="modal-input family-role-select">`;
     roleOptions.forEach(opt => {
         roleSelectHTML += `<option value="${opt}"${r === opt ? ' selected' : ''}>${opt}</option>`;
@@ -4851,7 +4851,7 @@ function addFamilyMemberRow(role, name) {
     row.innerHTML =
         `<div class="family-member-top">` +
         roleSelectHTML +
-        `<input type="text" class="modal-input family-name-input" placeholder="Name" value="${escapeHtml(n)}">` +
+        `<input type="text" class="modal-input family-name-input" placeholder="Pet Name" value="${escapeHtml(n)}">` +
         gtBadge +
         `<button class="btn-remove-member" onclick="this.closest('.family-member-row').remove()" title="Remove">&times;</button>` +
         `</div>` +
