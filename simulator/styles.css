@@ -1292,6 +1292,23 @@ a.next-step-link:hover {
     font-style: italic;
 }
 
+.history-wiki {
+    margin: 0.4rem 0;
+    font-size: 0.72rem;
+}
+
+.history-wiki a {
+    color: var(--church-gold);
+    text-decoration: none;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+}
+
+.history-wiki a:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
 .history-question-label {
     font-size: 0.62rem;
     text-transform: uppercase;
