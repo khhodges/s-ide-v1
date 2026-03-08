@@ -4735,6 +4735,8 @@ function hasAnyPopupDismissedPerm() {
 function toggleShowAllPopups(checked) {
     if (checked) {
         resetAllPopupsFlags();
+    } else {
+        dismissAllPopupsPerm();
     }
 }
 
@@ -4753,8 +4755,26 @@ function resetAllPopupsFlags() {
     localStorage.removeItem('churchMachine_toolGuide_sliderule_perm');
 }
 
+function dismissAllPopupsPerm() {
+    localStorage.setItem('church_welcome_dismissed', '1');
+    localStorage.setItem('church_welcome_dismissed_perm', '1');
+    localStorage.setItem('churchMachine_mathGuideDismissed', '1');
+    localStorage.setItem('churchMachine_mathGuideDismissed_perm', '1');
+    localStorage.setItem('churchMachine_toolGuide_interactive', '1');
+    localStorage.setItem('churchMachine_toolGuide_interactive_perm', '1');
+    localStorage.setItem('churchMachine_toolGuide_hp35', '1');
+    localStorage.setItem('churchMachine_toolGuide_hp35_perm', '1');
+    localStorage.setItem('churchMachine_toolGuide_abacus', '1');
+    localStorage.setItem('churchMachine_toolGuide_abacus_perm', '1');
+    localStorage.setItem('churchMachine_toolGuide_sliderule', '1');
+    localStorage.setItem('churchMachine_toolGuide_sliderule_perm', '1');
+}
+
 function closeSettings() {
     document.getElementById('settingsModal').style.display = 'none';
+    if (!hasAnyPopupDismissedPerm() && isWelcomeNeeded()) {
+        showWelcomePopup();
+    }
 }
 
 function saveSettings() {
