@@ -4029,10 +4029,13 @@ function switchMathMode(mode) {
     if (mode === 'abacus' && !abacusState.rendered) renderAbacusCalculator();
     if (mode === 'sliderule' && !slideruleState.rendered) renderSlideRuleCalculator();
 
-    if (typeof slideruleRemoveSidebar === 'function') slideruleRemoveSidebar();
-    if (mode === 'sliderule' && typeof slideruleInjectSidebar === 'function') {
-        slideruleInjectSidebar();
-        switchSidebarTab('history');
+    const hiwTab = document.getElementById('sidebarTabHowItWorks');
+    if (hiwTab) hiwTab.style.display = mode === 'sliderule' ? '' : 'none';
+    if (mode === 'sliderule') {
+        switchSidebarTab('howitworks');
+    } else {
+        const hiwContent = document.getElementById('sidebarHowItWorksContent');
+        if (hiwContent && hiwContent.style.display !== 'none') switchSidebarTab('history');
     }
 
     if (typeof historySetTool === 'function') historySetTool(mode);
@@ -4073,23 +4076,31 @@ function switchCodeTab(tab) {
 function switchSidebarTab(tab) {
     const challengeContent = document.getElementById('sidebarChallengeContent');
     const historyContent = document.getElementById('sidebarHistoryContent');
+    const hiwContent = document.getElementById('sidebarHowItWorksContent');
     const tabChallenge = document.getElementById('sidebarTabChallenge');
     const tabHistory = document.getElementById('sidebarTabHistory');
+    const tabHIW = document.getElementById('sidebarTabHowItWorks');
+
+    if (challengeContent) challengeContent.style.display = 'none';
+    if (historyContent) historyContent.style.display = 'none';
+    if (hiwContent) hiwContent.style.display = 'none';
+    if (tabChallenge) tabChallenge.classList.remove('active');
+    if (tabHistory) tabHistory.classList.remove('active');
+    if (tabHIW) tabHIW.classList.remove('active');
 
     if (tab === 'history') {
-        if (challengeContent) challengeContent.style.display = 'none';
         if (historyContent) historyContent.style.display = 'block';
-        if (tabChallenge) tabChallenge.classList.remove('active');
         if (tabHistory) tabHistory.classList.add('active');
         if (typeof historyRefresh === 'function') {
             const area = document.getElementById('historyContent');
             if (area && !area.innerHTML.trim()) historyRefresh();
         }
+    } else if (tab === 'howitworks') {
+        if (hiwContent) hiwContent.style.display = 'block';
+        if (tabHIW) tabHIW.classList.add('active');
     } else {
         if (challengeContent) challengeContent.style.display = 'block';
-        if (historyContent) historyContent.style.display = 'none';
         if (tabChallenge) tabChallenge.classList.add('active');
-        if (tabHistory) tabHistory.classList.remove('active');
     }
 }
 

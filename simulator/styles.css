@@ -4910,7 +4910,7 @@ a.next-step-link:hover {
 
 .sliderule-tile-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    grid-template-columns: 1fr;
     gap: 12px;
     padding: 8px 0;
     align-items: start;
