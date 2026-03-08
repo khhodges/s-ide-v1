@@ -4623,7 +4623,7 @@ function getStudentSettings() {
             return s;
         }
     } catch (e) {}
-    return { name: '', school: '', grade: '', familyMembers: [] };
+    return { name: '', grade: '', familyMembers: [] };
 }
 
 function getStudentProgress() {
@@ -4658,7 +4658,6 @@ function openSettings() {
     if (!requirePermission('settings', 'Change Settings')) return;
     const settings = getStudentSettings();
     document.getElementById('settingName').value = settings.name || '';
-    document.getElementById('settingSchool').value = settings.school || '';
     document.getElementById('settingGrade').value = settings.grade || '';
     renderFamilyMembers(settings.familyMembers || []);
     renderProgressReport();
@@ -4672,7 +4671,6 @@ function closeSettings() {
 function saveSettings() {
     const settings = {
         name: document.getElementById('settingName').value.trim(),
-        school: document.getElementById('settingSchool').value.trim(),
         grade: document.getElementById('settingGrade').value,
         familyMembers: collectFamilyMembers()
     };
@@ -4681,18 +4679,21 @@ function saveSettings() {
     let fa = getFamilyAbstraction();
     const members = settings.familyMembers;
     if (members.length > 0) {
-        const firstParent = members.find(m => m.role === 'Parent');
-        if (!fa && firstParent) {
-            fa = initFamilyAbstraction(firstParent.name);
+        const adultRoles = ['Mum', 'Dad', 'Grandpa', 'Grandma', 'Uncle', 'Auntie', 'Teacher'];
+        const firstAdult = members.find(m => adultRoles.includes(m.role));
+        if (!fa && firstAdult) {
+            fa = initFamilyAbstraction(firstAdult.name);
+            fa.clist[0].role = firstAdult.role;
+            saveFamilyAbstraction(fa);
             setActiveGT(fa.owner);
         }
         if (fa) {
             members.forEach(m => {
                 const existing = fa.clist.find(e => e.name === m.name && e.role === m.role);
                 if (!existing && m.name) {
-                    if (m.role === 'Parent' && fa.clist.filter(e => e.role === 'Parent').length === 0) {
+                    if (adultRoles.includes(m.role) && fa.clist.filter(e => adultRoles.includes(e.role)).length === 0) {
                         fa.owner = mintGoldenToken();
-                        fa.clist.unshift({ gtId: fa.owner, role: 'Parent', name: m.name, permissions: (() => { const p = {}; FAMILY_PERMISSIONS.forEach(x => { p[x.key] = true; }); return p; })(), immutable: true, mintedAt: Date.now() });
+                        fa.clist.unshift({ gtId: fa.owner, role: m.role, name: m.name, permissions: (() => { const p = {}; FAMILY_PERMISSIONS.forEach(x => { p[x.key] = true; }); return p; })(), immutable: true, mintedAt: Date.now() });
                         saveFamilyAbstraction(fa);
                     } else {
                         mintChildGT(fa, m.name, m.role);
@@ -4708,18 +4709,18 @@ function onGradeChange() {
     renderProgressReport();
 }
 
-const familyRoles = ['Parent', 'Parent', 'Child', 'Child', 'Child', 'Child', 'Child', 'Child'];
+const familyRoles = ['Mum', 'Me', 'Friend', 'Friend', 'Friend', 'Friend', 'Friend', 'Friend'];
 
 function renderFamilyMembers(members) {
     const container = document.getElementById('familyMembersList');
     if (!container) return;
     container.innerHTML = '';
     if (!members || members.length === 0) {
-        addFamilyMemberRow('Parent', '');
-        addFamilyMemberRow('Child', '');
+        addFamilyMemberRow('Mum', '');
+        addFamilyMemberRow('Me', '');
         return;
     }
-    members.forEach(m => addFamilyMemberRow(m.role || 'Child', m.name || ''));
+    members.forEach(m => addFamilyMemberRow(m.role || 'Me', m.name || ''));
 }
 
 function addFamilyMemberRow(role, name) {
@@ -4727,7 +4728,7 @@ function addFamilyMemberRow(role, name) {
     if (!container) return;
     const count = container.children.length;
     if (count >= 8) return;
-    const defaultRole = count < 2 ? (count === 0 ? 'Parent' : 'Child') : 'Child';
+    const defaultRole = count < 2 ? (count === 0 ? 'Mum' : 'Me') : 'Friend';
     const r = role || defaultRole;
     const n = name || '';
     const fa = getFamilyAbstraction();
@@ -4753,14 +4754,16 @@ function addFamilyMemberRow(role, name) {
         permsHTML += `</div>`;
     }
 
+    const roleOptions = ['Mum', 'Dad', 'Me', 'Brother', 'Sister', 'Grandpa', 'Grandma', 'Uncle', 'Auntie', 'Cousin', 'Friend', 'Teacher', 'Pet'];
+    let roleSelectHTML = `<select class="modal-input family-role-select" style="width:100px;flex:none;">`;
+    roleOptions.forEach(opt => {
+        roleSelectHTML += `<option value="${opt}"${r === opt ? ' selected' : ''}>${opt}</option>`;
+    });
+    roleSelectHTML += `</select>`;
+
     row.innerHTML =
         `<div class="family-member-top">` +
-        `<select class="modal-input family-role-select" style="width:100px;flex:none;">` +
-        `<option value="Parent"${r === 'Parent' ? ' selected' : ''}>Parent</option>` +
-        `<option value="Child"${r === 'Child' ? ' selected' : ''}>Child</option>` +
-        `<option value="Guardian"${r === 'Guardian' ? ' selected' : ''}>Guardian</option>` +
-        `<option value="Teacher"${r === 'Teacher' ? ' selected' : ''}>Teacher</option>` +
-        `</select>` +
+        roleSelectHTML +
         `<input type="text" class="modal-input family-name-input" placeholder="Name" value="${escapeHtml(n)}">` +
         gtBadge +
         `<button class="btn-remove-member" onclick="this.closest('.family-member-row').remove()" title="Remove">&times;</button>` +
