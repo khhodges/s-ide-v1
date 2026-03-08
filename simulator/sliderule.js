@@ -210,14 +210,14 @@ function sliderulePresetMultiply(a, b) {
 }
 
 function sliderulePresetSqrt(val) {
-    if (slideruleState.scaleMode !== 'CD') slideruleSwitchScale('CD');
+    if (slideruleState.scaleMode !== 'AB') slideruleSwitchScale('AB');
     const v = Math.max(1, Math.min(100, val));
     const sqr = Math.sqrt(v);
     slideruleState.slideOffset = 0;
-    slideruleState.cursorX = slideruleValToXForScale(sqr, SLIDERULE_SCALES.CD.fixed, 0);
+    slideruleState.cursorX = slideruleValToXForScale(v, SLIDERULE_SCALES.AB.fixed, 0);
     slideruleTraceLog(
         `CALL SlideRule.Sqrt(${v}) \u2192 ${Math.round(sqr * 1000) / 1000}`,
-        `Square root: \u221a${v} \u2248 ${Math.round(sqr * 1000) / 1000}`
+        `Square root: read A=${v}, look down to D \u2192 \u221a${v} \u2248 ${Math.round(sqr * 1000) / 1000}`
     );
     slideruleUpdateDisplay();
 }
