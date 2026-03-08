@@ -3696,6 +3696,33 @@ function showMathGuidePopup() {
 
         `</div>` +
 
+        `<div style="background:rgba(180,140,255,0.06);border:1px solid rgba(180,140,255,0.2);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.75rem;">` +
+        `<div style="font-weight:700;color:rgba(180,140,255,0.95);margin-bottom:0.3rem;">Where Mind meets Body &mdash; Pythagoras to Church</div>` +
+        `<p style="font-size:0.82rem;line-height:1.5;margin:0 0 0.4rem 0;">` +
+        `Pythagoras discovered that a stretched string half the length produces a note one octave higher. ` +
+        `The <span style="color:rgba(100,200,100,0.95);font-weight:600;">symbol</span> (the ratio 2:1) and the ` +
+        `<span style="color:rgba(130,200,255,0.95);font-weight:600;">mechanism</span> (the vibrating string) are different things &mdash; ` +
+        `but one governs the other. This is the oldest known link between mathematics and physics.</p>` +
+        `<p style="font-size:0.82rem;line-height:1.5;margin:0 0 0.4rem 0;">` +
+        `The slide rule shows it perfectly. The <span style="color:rgba(100,200,100,0.95);font-weight:600;">green C scale</span> is the symbol &mdash; ` +
+        `an abstract logarithmic ruler where <em>position</em> represents a number. ` +
+        `The <span style="color:rgba(130,200,255,0.95);font-weight:600;">physical slide</span> is the mechanism &mdash; ` +
+        `moving it adds lengths, and because the scale is logarithmic, adding lengths <em>multiplies numbers</em>. ` +
+        `The symbol (log) controls what the body (slide) does.</p>` +
+        `<p style="font-size:0.82rem;line-height:1.5;margin:0 0 0.4rem 0;">` +
+        `The Church Machine works the same way. ` +
+        `<span style="color:rgba(100,200,100,0.95);font-weight:600;">Symbols</span>: Golden Tokens, permissions, ` +
+        `<code>CALL R0, #greet</code>. ` +
+        `<span style="color:rgba(130,200,255,0.95);font-weight:600;">Mechanics</span>: registers, memory addresses, ` +
+        `<code>ADD R2, R0, R1</code>. ` +
+        `The symbol controls what the registers do &mdash; just as the ratio 2:1 controls what the string does, ` +
+        `and just as log(a) + log(b) controls what the slide rule computes.</p>` +
+        `<p style="font-size:0.82rem;line-height:1.5;margin:0;">` +
+        `Pythagoras heard it in strings. Napier carved it into slide rules. Church wrote it in functions. ` +
+        `The Church Machine runs it in hardware. ` +
+        `<a href="https://en.wikipedia.org/wiki/Musica_universalis" target="_blank" rel="noopener" style="color:rgba(180,140,255,0.95);">More</a></p>` +
+        `</div>` +
+
         `<div style="background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.2);border-radius:8px;padding:0.6rem 0.8rem;">` +
         `<p style="font-size:0.82rem;line-height:1.5;margin:0 0 0.4rem 0;">` +
         `Ada wrote the first program in 1843 using symbols &mdash; no compiler, no OS, no superuser. ` +
