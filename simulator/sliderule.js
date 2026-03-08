@@ -498,5 +498,5 @@ function renderSlideRuleCalculator() {
     </div>`;
 
     slideruleState.rendered = true;
-    slideruleUpdateDisplay();
+    sliderulePresetMultiply(2, 3);
 }
