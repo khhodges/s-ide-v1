@@ -5034,7 +5034,8 @@ const SUBJECTS = [
         lessons: [
             { title: 'Your First Program', code: 'create abstraction called Hello\nadd method greet that prints "Hello World"', desc: 'Learn to write commands the Church Machine understands' },
             { title: 'Variables & Storage', code: 'create abstraction called Counter\nadd data count starting at 0\nadd method increment that adds 1 to count', desc: 'Store and change values using data words' },
-            { title: 'Conditions', code: 'create abstraction called Guard\nadd method check that if count is greater than 10 then print "Too many"', desc: 'Make decisions with if-then logic' }
+            { title: 'Conditions', code: 'create abstraction called Guard\nadd method check that if count is greater than 10 then print "Too many"', desc: 'Make decisions with if-then logic' },
+            { title: 'First-Class Variables', code: 'create abstraction called Mapper\nadd method apply that takes a function and a value and returns the function applied to the value', desc: 'Pass functions as values — the key difference from basic machine code' }
         ]
     },
     {
@@ -5045,6 +5046,7 @@ const SUBJECTS = [
         desc: 'Modern programming with functions and objects',
         lessons: [
             { title: 'Functions', code: 'function add(a, b) {\n  return a + b;\n}', desc: 'Define reusable blocks of code' },
+            { title: 'First-Class Variables', code: 'let double = (x) => x * 2;\nlet apply = (f, x) => f(x);\nlet result = apply(double, 5);\n// result = 10', desc: 'Store functions in variables and pass them as arguments — not just values' },
             { title: 'Arrays & Loops', code: 'let nums = [1, 2, 3, 4, 5];\nfor (let n of nums) {\n  console.log(n * n);\n}', desc: 'Work with lists and repeat actions' },
             { title: 'Objects as Abstractions', code: 'let counter = {\n  count: 0,\n  increment() { this.count++; },\n  read() { return this.count; }\n};', desc: 'Group data and methods together' }
         ]
@@ -5057,6 +5059,7 @@ const SUBJECTS = [
         desc: 'Pure functional programming with lambda calculus',
         lessons: [
             { title: 'Lambda Expressions', code: 'double = \\x -> x * 2\nadd = \\x y -> x + y', desc: 'Define functions with lambda notation' },
+            { title: 'First-Class Variables', code: 'apply f x = f x\ndouble = \\x -> x * 2\nresult = apply double 5\n-- result = 10\n-- "double" is passed as an argument, not called directly', desc: 'Functions are values — pass them, store them, return them' },
             { title: 'Pattern Matching', code: 'factorial 0 = 1\nfactorial n = n * factorial (n - 1)', desc: 'Handle different cases elegantly' },
             { title: 'Higher-Order Functions', code: 'map (\\x -> x * x) [1, 2, 3, 4, 5]', desc: 'Pass functions as arguments' }
         ]
@@ -5069,6 +5072,7 @@ const SUBJECTS = [
         desc: 'Ada Lovelace\'s mathematical notation',
         lessons: [
             { title: 'Let Bindings', code: 'let x = 2 + 3\nlet y = x * 4\nlet result = y - 1', desc: 'Define values step by step, like algebra' },
+            { title: 'First-Class Variables', code: 'let double = \\x -> x * 2\nlet apply = \\f x -> f(x)\nlet result = apply(double, 5)', desc: 'A variable holds a function — Ada did this in 1843' },
             { title: 'Expressions', code: 'let area = 3.14159 * r * r\nlet circumference = 2 * 3.14159 * r', desc: 'Write mathematical formulas' },
             { title: 'Bernoulli Numbers', code: 'let b0 = 1\nlet b1 = -1/2\nlet b2 = 1/6', desc: 'Ada\'s original computation from Note G' }
         ]
@@ -5081,7 +5085,8 @@ const SUBJECTS = [
         desc: 'Direct Church Machine instructions',
         lessons: [
             { title: 'Load & Store', code: 'LOAD R0, #42\nSTORE R0, [R1]\nLOAD R2, [R1]', desc: 'Move data between registers and memory' },
-            { title: 'Arithmetic', code: 'LOAD R0, #7\nLOAD R1, #5\nADD R2, R0, R1\nMUL R3, R2, R0', desc: 'Compute with the Turing instruction set' },
+            { title: 'Arithmetic', code: 'LOAD R0, #7\nLOAD R1, #5\nADD R2, R0, R1\nMUL R3, R2, R0', desc: 'Compute with the Turing instruction set — values only' },
+            { title: 'First-Class Variables', code: 'MINT R0\nSEAL R0, R1\nCALL R0, #method\n; CALL passes an abstraction (a function)\n; not a value — this is the Church domain', desc: 'CALL passes functions via Golden Tokens — Turing cannot do this' },
             { title: 'Capabilities', code: 'MINT R0\nSEAL R0, R1\nCALL R0, #method', desc: 'Work with Golden Tokens and the Church instruction set' }
         ]
     },

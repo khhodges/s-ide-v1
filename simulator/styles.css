@@ -1136,6 +1136,19 @@ a.next-step-link:hover {
     border-radius: 0 4px 4px 0;
 }
 
+.math-tool-history p {
+    margin: 0 0 0.4rem;
+}
+
+.math-tool-history p:last-child {
+    margin-bottom: 0;
+}
+
+.math-tool-history em {
+    color: var(--church-gold);
+    font-style: italic;
+}
+
 .math-tool-history code {
     background: rgba(0,0,0,0.3);
     padding: 0.1rem 0.35rem;
