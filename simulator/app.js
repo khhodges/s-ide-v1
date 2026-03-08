@@ -3681,7 +3681,8 @@ function showMathGuidePopup() {
         `<p style="font-size:0.82rem;line-height:1.5;margin:0;">` +
         `Church domain. Symbols and permissions. The calculation becomes: ` +
         `<strong>A = 3, B = 1, C = CALL.ADD (A + B)</strong> &mdash; pure mathematics, no registers. ` +
-        `CALL names the abstraction, the envelope opens, the body runs inside, and the envelope closes.</p>` +
+        `CALL names the abstraction, the envelope opens, the body runs inside, and the envelope closes. ` +
+        `<a href="https://en.wikipedia.org/wiki/Lambda_calculus" target="_blank" rel="noopener" style="color:var(--church-gold);">More</a></p>` +
         `</div>` +
 
         `<div style="flex:1;background:rgba(100,180,255,0.08);border:1px solid rgba(100,180,255,0.25);border-radius:8px;padding:0.6rem 0.8rem;">` +
@@ -3689,7 +3690,8 @@ function showMathGuidePopup() {
         `<p style="font-size:0.82rem;line-height:1.5;margin:0;">` +
         `Turing domain. Numbers and physical addresses. The challenge panel shows how the body computes: ` +
         `<strong>IADD DR0, DR0, DR1</strong> &mdash; add two registers. ` +
-        `Values that can overflow. Loops that can run forever. The body can fail.</p>` +
+        `Values that can overflow. Loops that can run forever. The body can fail. ` +
+        `<a href="https://en.wikipedia.org/wiki/Turing_machine" target="_blank" rel="noopener" style="color:rgba(130,200,255,0.95);">More</a></p>` +
         `</div>` +
 
         `</div>` +
@@ -3697,7 +3699,8 @@ function showMathGuidePopup() {
         `<div style="background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.2);border-radius:8px;padding:0.6rem 0.8rem;">` +
         `<p style="font-size:0.82rem;line-height:1.5;margin:0 0 0.4rem 0;">` +
         `Ada wrote the first program in 1843 using symbols &mdash; no compiler, no OS, no superuser. ` +
-        `The Church Machine returns to what she had.</p>` +
+        `The Church Machine returns to what she had. ` +
+        `<a href="https://en.wikipedia.org/wiki/Ada_Lovelace" target="_blank" rel="noopener" style="color:rgba(100,200,100,0.9);">More</a></p>` +
         `<p style="font-size:0.82rem;line-height:1.5;margin:0 0 0.4rem 0;">` +
         `Turing was Church\u2019s student. He built the body. His teacher gave it a mind.</p>` +
         `<p style="font-size:0.82rem;line-height:1.5;margin:0 0 0.4rem 0;">` +
@@ -3764,7 +3767,8 @@ const TOOL_GUIDES = {
             `<p style="font-size:0.82rem;line-height:1.55;margin:0;">` +
             `Start simple: <code>let a = 5</code>, then <code>let b = a * 2</code>. ` +
             `Watch the right side \u2014 it shows what the processor does with your symbols. ` +
-            `This is how Ada Lovelace wrote her first program in 1843: symbols first, then the machine runs them.</p></div>`
+            `This is how Ada Lovelace wrote her first program in 1843: symbols first, then the machine runs them. ` +
+            `<a href="https://en.wikipedia.org/wiki/Ada_Lovelace" target="_blank" rel="noopener" style="color:rgba(100,200,100,0.9);">More</a></p></div>`
     },
     hp35: {
         title: 'HP-35 Scientific Calculator',
@@ -3772,7 +3776,7 @@ const TOOL_GUIDES = {
             `<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">` +
             `<span style="font-size:2rem;">&#128425;</span>` +
             `<div><strong style="font-size:1rem;">The calculator that changed the world</strong>` +
-            `<p style="font-size:0.82rem;color:var(--text-secondary);margin:0.2rem 0 0;">A 1972 HP-35, rebuilt in pure lambda calculus.</p></div></div>` +
+            `<p style="font-size:0.82rem;color:var(--text-secondary);margin:0.2rem 0 0;">A 1972 HP-35, rebuilt in pure lambda calculus. <a href="https://en.wikipedia.org/wiki/HP-35" target="_blank" rel="noopener" style="color:var(--church-gold);">More</a></p></div></div>` +
 
             `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.65rem;">` +
             `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.3rem;">What can I do?</div>` +
@@ -3787,7 +3791,8 @@ const TOOL_GUIDES = {
             `<p style="font-size:0.82rem;line-height:1.55;margin:0;">` +
             `Instead of typing <code>2 + 3 =</code>, you type <code>2 ENTER 3 +</code>. ` +
             `Put the numbers in first, then say what to do with them. ` +
-            `No brackets needed, ever. Astronauts used this on Apollo missions!</p></div>` +
+            `No brackets needed, ever. Astronauts used this on Apollo missions! ` +
+            `<a href="https://en.wikipedia.org/wiki/Reverse_Polish_notation" target="_blank" rel="noopener" style="color:rgba(130,200,255,0.95);">More</a></p></div>` +
 
             `<div style="background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.2);border-radius:8px;padding:0.6rem 0.8rem;">` +
             `<div style="font-weight:600;color:rgba(100,200,100,0.9);font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem;">How to learn</div>` +
@@ -3802,7 +3807,7 @@ const TOOL_GUIDES = {
             `<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">` +
             `<span style="font-size:2rem;">&#129518;</span>` +
             `<div><strong style="font-size:1rem;">The oldest computer in the world</strong>` +
-            `<p style="font-size:0.82rem;color:var(--text-secondary);margin:0.2rem 0 0;">A Japanese soroban \u2014 people have used these for 2,500 years.</p></div></div>` +
+            `<p style="font-size:0.82rem;color:var(--text-secondary);margin:0.2rem 0 0;">A Japanese soroban \u2014 people have used these for 2,500 years. <a href="https://en.wikipedia.org/wiki/Soroban" target="_blank" rel="noopener" style="color:var(--church-gold);">More</a></p></div></div>` +
 
             `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.65rem;">` +
             `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.3rem;">What can I do?</div>` +
@@ -3826,7 +3831,7 @@ const TOOL_GUIDES = {
             `<div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.75rem;">` +
             `<span style="font-size:2rem;">&#128207;</span>` +
             `<div><strong style="font-size:1rem;">The tool that built the modern world</strong>` +
-            `<p style="font-size:0.82rem;color:var(--text-secondary);margin:0.2rem 0 0;">Engineers used slide rules for 350 years \u2014 from bridges to moon rockets.</p></div></div>` +
+            `<p style="font-size:0.82rem;color:var(--text-secondary);margin:0.2rem 0 0;">Engineers used slide rules for 350 years \u2014 from bridges to moon rockets. <a href="https://en.wikipedia.org/wiki/Slide_rule" target="_blank" rel="noopener" style="color:var(--church-gold);">More</a></p></div></div>` +
 
             `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.6rem 0.8rem;margin-bottom:0.65rem;">` +
             `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.3rem;">What can I do?</div>` +
@@ -3841,7 +3846,8 @@ const TOOL_GUIDES = {
             `<p style="font-size:0.82rem;line-height:1.55;margin:0;">` +
             `Multiplication is just <em>adding lengths</em>. The scales are spaced by logarithms, so ` +
             `sliding log(a) + log(b) gives log(a\u00d7b). The labels <span style="color:#ff6644;">a</span> and ` +
-            `<span style="color:#44aaff;">b</span> above the scale show you what\u2019s happening.</p></div>` +
+            `<span style="color:#44aaff;">b</span> above the scale show you what\u2019s happening. ` +
+            `<a href="https://en.wikipedia.org/wiki/Logarithm" target="_blank" rel="noopener" style="color:rgba(130,200,255,0.95);">More</a></p></div>` +
 
             `<div style="background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.2);border-radius:8px;padding:0.6rem 0.8rem;">` +
             `<div style="font-weight:600;color:rgba(100,200,100,0.9);font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.3rem;">How to learn</div>` +
@@ -4944,7 +4950,8 @@ function showWelcomePopup() {
         `<p style="font-size:0.88rem;line-height:1.55;margin-bottom:0.75rem;">` +
         `The Church Machine implements the <strong>Lambda Calculus</strong>: a universal model of computation that provides ` +
         `a rigorous mathematical foundation for designing secure and provably correct software and hardware, ` +
-        `offering an alternative to the problematic von Neumann model.</p>` +
+        `offering an alternative to the problematic von Neumann model. ` +
+        `<a href="https://en.wikipedia.org/wiki/Lambda_calculus" target="_blank" rel="noopener" style="color:var(--church-gold);">More</a></p>` +
 
         `<div style="font-weight:700;color:var(--church-gold);font-size:1.05rem;margin-bottom:0.5rem;">Why does security matter?</div>` +
 
@@ -4959,11 +4966,13 @@ function showWelcomePopup() {
         `<p style="font-size:0.85rem;line-height:1.55;margin:0 0 0.5rem 0;">` +
         `In 1936, mathematician <strong>Alonzo Church</strong> invented the lambda calculus &mdash; a way of computing where ` +
         `you can only use something if someone explicitly gives it to you. No sneaking, no stealing, no tricks. ` +
-        `If you do not hold the key, the door does not open.</p>` +
+        `If you do not hold the key, the door does not open. ` +
+        `<a href="https://en.wikipedia.org/wiki/Alonzo_Church" target="_blank" rel="noopener" style="color:var(--church-gold);">More</a></p>` +
         `<p style="font-size:0.85rem;line-height:1.55;margin:0;">` +
         `The Church Machine is built on this idea. Every action requires a <strong>Golden Token</strong> &mdash; ` +
         `an unforgeable digital key. Your child cannot send a message, share a file, or connect with anyone ` +
-        `unless they hold the right token. And <em>you</em> control which tokens they hold.</p>` +
+        `unless they hold the right token. And <em>you</em> control which tokens they hold. ` +
+        `<a href="https://en.wikipedia.org/wiki/Capability-based_security" target="_blank" rel="noopener" style="color:var(--church-gold);">More</a></p>` +
         `</div>` +
 
         `<div style="background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.2);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">` +
