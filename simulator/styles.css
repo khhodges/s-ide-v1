@@ -2627,6 +2627,12 @@ a.next-step-link:hover {
     border-bottom: 1px solid var(--border);
 }
 
+.settings-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
 .settings-label {
     display: block;
     font-size: 0.8rem;
