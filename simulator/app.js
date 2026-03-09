@@ -5527,6 +5527,45 @@ function renderFamilyIntroQR() {
     el.innerHTML = svg;
 }
 
+function openShareLink() {
+    const url = window.location.href.split('#')[0];
+    const input = document.getElementById('shareLinkURL');
+    if (input) input.value = url;
+    const status = document.getElementById('shareLinkStatus');
+    if (status) status.textContent = '';
+    document.getElementById('shareLinkModal').style.display = 'flex';
+    setTimeout(() => { if (input) { input.focus(); input.select(); } }, 100);
+}
+
+function copyShareLink() {
+    const input = document.getElementById('shareLinkURL');
+    const status = document.getElementById('shareLinkStatus');
+    if (!input) return;
+    const url = input.value;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+            if (status) { status.textContent = 'Copied to clipboard'; status.className = 'share-link-status success'; }
+        }).catch(() => {
+            input.select();
+            document.execCommand('copy');
+            if (status) { status.textContent = 'Copied to clipboard'; status.className = 'share-link-status success'; }
+        });
+    } else {
+        input.select();
+        document.execCommand('copy');
+        if (status) { status.textContent = 'Copied to clipboard'; status.className = 'share-link-status success'; }
+    }
+}
+
+function nativeShare() {
+    const url = document.getElementById('shareLinkURL')?.value || window.location.href;
+    if (navigator.share) {
+        navigator.share({ title: 'Church Machine', url: url }).catch(() => { copyShareLink(); });
+    } else {
+        copyShareLink();
+    }
+}
+
 function openSettings() {
     if (!requirePermission('settings', 'Change Settings')) return;
     const settings = getStudentSettings();

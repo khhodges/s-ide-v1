@@ -5591,3 +5591,63 @@ a.next-step-link:hover {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+.btn-share-icon {
+    font-size: 0.9rem;
+    padding: 0.25rem 0.45rem;
+    line-height: 1;
+}
+
+.share-link-dialog {
+    max-width: 480px;
+}
+
+.share-link-desc {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    margin: 0 0 0.75rem;
+}
+
+.share-link-url-box {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 0.5rem;
+}
+
+.share-link-input {
+    flex: 1;
+    background: var(--bg-dark);
+    color: var(--church-gold);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.45rem 0.6rem;
+    font-family: monospace;
+    font-size: 0.78rem;
+    outline: none;
+    min-width: 0;
+}
+
+.share-link-input:focus {
+    border-color: var(--church-gold);
+}
+
+.share-link-copy {
+    white-space: nowrap;
+    padding: 0.45rem 1rem;
+}
+
+.share-link-status {
+    font-size: 0.75rem;
+    min-height: 1.2em;
+    margin-bottom: 0.5rem;
+}
+
+.share-link-status.success {
+    color: #33cc66;
+}
+
+.share-link-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
