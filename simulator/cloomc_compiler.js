@@ -1796,7 +1796,7 @@ class CLOOMCCompiler {
             if (t.match(/^(read|write|load|save)\s+(from|to|the value)\s+/)) englishScore++;
             if (t.match(/^(call|run|execute|invoke)\s+/)) englishScore++;
             if (t.match(/^(that takes|which takes|with parameters?|with inputs?)\s+/)) englishScore++;
-            if (t.match(/^\w+\s*\([^)]*\)\s*:\s*$/)) hasBlockMethod = true;
+            if (t.match(/^\w+\s*\([^)]*\)\s*:?\s*$/)) hasBlockMethod = true;
             if (t.match(/^(add|multiply|subtract|divide)\s+\w+\s+(to|by|from)\s+/)) hasEnglishBody = true;
             if (t.match(/\band\s+return\s+(the\s+)?/)) hasEnglishBody = true;
         }
@@ -1949,7 +1949,7 @@ class CLOOMCCompiler {
                 continue;
             }
 
-            const methodMatch = t.match(/^(\w+)\s*\(([^)]*)\)\s*:\s*$/);
+            const methodMatch = t.match(/^(\w+)\s*\(([^)]*)\)\s*:?\s*$/);
             if (methodMatch) {
                 if (currentMethod) result.methods.push(currentMethod);
                 const name = methodMatch[1];
