@@ -158,10 +158,21 @@ function slideruleGetScaleFactor() {
     return totalW / rect.width;
 }
 
+function slideruleShowLockMessage() {
+    const container = document.getElementById('slideruleContainer');
+    if (!container) return;
+    const lockEl = container.querySelector('.sliderule-lock-msg');
+    if (!lockEl) return;
+    lockEl.classList.remove('visible');
+    void lockEl.offsetWidth;
+    lockEl.classList.add('visible');
+    lockEl.onanimationend = () => { lockEl.classList.remove('visible'); };
+}
+
 function slideruleStartDragSlide(e) {
     e.preventDefault();
     const mode = SLIDERULE_SCALES[slideruleState.scaleMode];
-    if (mode.lockSlide) return;
+    if (mode.lockSlide) { slideruleShowLockMessage(); return; }
     slideruleState.draggingSlide = true;
     slideruleState.dragStartX = e.clientX || e.touches[0].clientX;
     slideruleState.dragStartOffset = slideruleState.slideOffset;
@@ -430,7 +441,13 @@ function slideruleGenerateArrows(cx) {
     }
 
     if (cursorLabel) {
-        const markerY = -22;
+        let markerY;
+        const sm = slideruleState.scaleMode;
+        if (sm === 'AB') { markerY = 90; }
+        else if (sm === 'CI') { markerY = 54; }
+        else if (sm === 'K') { markerY = 90; }
+        else if (sm === 'ST') { markerY = 54; }
+        else { markerY = 90; }
         arrows += `<text x="${cx}" y="${markerY}" text-anchor="middle" fill="#ff3333" font-size="18" font-weight="bold" font-family="monospace">\u00d7</text>`;
         if (cursorLabel.includes('\n')) {
             const parts = cursorLabel.split('\n');
@@ -535,8 +552,8 @@ function slideruleRenderDisplay() {
         const bottomFill = mode.bottomActive ? '#1a1a1a' : '#141414';
         const midX = mode.lockSlide ? slideruleState.scaleStart - 4 : slideruleState.scaleStart - 4 + slideruleState.slideOffset;
         const midLabelX = mode.lockSlide ? 14 : slideruleState.scaleStart - 18 + slideruleState.slideOffset;
-        const midCursor = mode.lockSlide ? '' : 'cursor:grab;';
-        const midClass = mode.lockSlide ? '' : 'class="sliderule-slide-rect"';
+        const midCursor = mode.lockSlide ? 'cursor:not-allowed;' : 'cursor:grab;';
+        const midClass = mode.lockSlide ? 'class="sliderule-slide-rect"' : 'class="sliderule-slide-rect"';
 
         svgEl.innerHTML = `
             <g opacity="${topOpacity}">${topLabels}</g>
@@ -548,7 +565,7 @@ function slideruleRenderDisplay() {
             <g transform="translate(0, 4)" opacity="${topOpacity}">${topTicks}</g>
 
             <rect x="${midX}" y="38" width="${slideruleState.scaleWidth + 8}" height="32" fill="${slideFill}" rx="2" ${midClass} style="${midCursor}"/>
-            <text x="${midLabelX}" y="58" fill="${mode.slide.color}" font-size="14" font-weight="bold" font-family="monospace" opacity="${slideOpacity}">${mode.slide.name}</text>
+            <text x="${midLabelX}" y="58" fill="${mode.slide.color}" font-size="14" font-weight="bold" font-family="monospace" opacity="${slideOpacity}">${mode.slide.name}</text>${mode.lockSlide ? `<text x="${midLabelX + 16}" y="58" fill="#999" font-size="11" font-family="sans-serif" opacity="0.7">🔒</text>` : ''}
             <g transform="translate(0, 42)" opacity="${slideOpacity}">${slideTicks}</g>
 
             <rect x="${slideruleState.scaleStart - 4}" y="74" width="${slideruleState.scaleWidth + 8}" height="32" fill="${bottomFill}" rx="2"/>
@@ -566,6 +583,16 @@ function slideruleRenderDisplay() {
         if (slideRect) {
             slideRect.addEventListener('mousedown', slideruleStartDragSlide);
             slideRect.addEventListener('touchstart', slideruleStartDragSlide, { passive: false });
+        }
+
+        const lockMsg = container.querySelector('.sliderule-lock-msg');
+        if (lockMsg) {
+            if (!mode.lockSlide) {
+                lockMsg.classList.remove('visible');
+                lockMsg.style.display = 'none';
+            } else {
+                lockMsg.style.display = '';
+            }
         }
 
         const cursorZone = svgEl.querySelector('.sliderule-cursor-zone');
@@ -628,7 +655,10 @@ function renderSlideRuleCalculator() {
                     <div class="sliderule-readout">
                         <span class="sliderule-readout-value"></span>
                     </div>
-                    <svg class="sliderule-svg" width="100%" height="110" viewBox="0 0 ${totalW} 110" preserveAspectRatio="xMidYMid meet"></svg>
+                    <div style="position:relative;">
+                        <svg class="sliderule-svg" width="100%" height="110" viewBox="0 0 ${totalW} 110" preserveAspectRatio="xMidYMid meet"></svg>
+                        <div class="sliderule-lock-msg">🔒 D is fixed to the body — all scales are stationary in S/T mode</div>
+                    </div>
                     <div class="sliderule-instructions" id="slideruleInstructions"></div>
                     <div class="sliderule-presets">
                         <span class="sliderule-preset-label">Try:</span>
