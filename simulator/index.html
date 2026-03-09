@@ -12,21 +12,21 @@
             <h1>Church Machine</h1>
             <nav class="controls">
                 <div class="view-buttons">
-                    <button onclick="switchView('repl')" class="btn btn-view active" id="viewBtn-repl">Math</button>
-                    <button onclick="switchView('editor')" class="btn btn-view" id="viewBtn-editor">Code</button>
-                    <button onclick="switchView('tutorial')" class="btn btn-view" id="viewBtn-tutorial">Tutorial</button>
-                    <button onclick="switchView('dashboard')" class="btn btn-view" id="viewBtn-dashboard">Dashboard</button>
-                    <button onclick="switchView('namespace')" class="btn btn-view" id="viewBtn-namespace">Namespace</button>
-                    <button onclick="switchView('abstractions')" class="btn btn-view" id="viewBtn-abstractions">Abstractions</button>
-                    <button onclick="switchView('pipeline')" class="btn btn-view" id="viewBtn-pipeline">Pipeline</button>
-                    <button onclick="switchView('reference')" class="btn btn-view" id="viewBtn-reference">Reference</button>
-                    <button onclick="switchView('docs')" class="btn btn-view" id="viewBtn-docs">Docs</button>
+                    <button onclick="switchView('repl')" class="btn btn-view active" id="viewBtn-repl" data-tooltip="Math — HP-35 calculator, abacus, slide rule, and pure math REPL">Math</button>
+                    <button onclick="switchView('editor')" class="btn btn-view" id="viewBtn-editor" data-tooltip="Code — Write, compile, and deploy Church Machine programs">Code</button>
+                    <button onclick="switchView('tutorial')" class="btn btn-view" id="viewBtn-tutorial" data-tooltip="Tutorial — Guided learning paths for Church Machine concepts">Tutorial</button>
+                    <button onclick="switchView('dashboard')" class="btn btn-view" id="viewBtn-dashboard" data-tooltip="Dashboard — View registers, machine state, and run GC">Dashboard</button>
+                    <button onclick="switchView('namespace')" class="btn btn-view" id="viewBtn-namespace" data-tooltip="Namespace — Browse and manage Golden Token entries">Namespace</button>
+                    <button onclick="switchView('abstractions')" class="btn btn-view" id="viewBtn-abstractions" data-tooltip="Abstractions — Explore the 9-layer abstraction catalog">Abstractions</button>
+                    <button onclick="switchView('pipeline')" class="btn btn-view" id="viewBtn-pipeline" data-tooltip="Pipeline — Visualise the instruction execution pipeline">Pipeline</button>
+                    <button onclick="switchView('reference')" class="btn btn-view" id="viewBtn-reference" data-tooltip="Reference — All 20 instructions with encoding and examples">Reference</button>
+                    <button onclick="switchView('docs')" class="btn btn-view" id="viewBtn-docs" data-tooltip="Docs — Technical documents and architecture figures">Docs</button>
                 </div>
                 <div class="sim-controls">
-                    <button class="btn btn-success" onclick="stepSim()" title="Execute one instruction">Step</button>
-                    <button class="btn btn-success" onclick="runSim()" title="Run until halt or fault">Run</button>
-                    <button class="btn btn-warning" onclick="resetSim()" title="Reset and boot machine">Boot</button>
-                    <button class="btn btn-view btn-settings-icon" onclick="openSettings()" title="Settings">&#9881;</button>
+                    <button class="btn btn-success" onclick="stepSim()" data-tooltip="Step — Execute one instruction and show the result">Step</button>
+                    <button class="btn btn-success" onclick="runSim()" data-tooltip="Run — Execute all instructions until halt or fault">Run</button>
+                    <button class="btn btn-warning" onclick="resetSim()" data-tooltip="Boot — Reset the machine and run the boot sequence">Boot</button>
+                    <button class="btn btn-view btn-settings-icon" onclick="openSettings()" data-tooltip="Settings — Configure student profile, subjects, and family">&#9881;</button>
                 </div>
             </nav>
         </header>
@@ -35,13 +35,13 @@
     <div id="dashboard" class="view active">
         <div id="flagsDisplay" class="flags-bar"></div>
         <div class="dash-tabs">
-            <button onclick="switchDashTab('cr')" class="dash-tab active" id="dashTab-cr" data-tooltip="View all 16 context registers (128-bit, 4 words each)">Context Registers</button>
-            <button onclick="switchDashTab('dr')" class="dash-tab" id="dashTab-dr" data-tooltip="View all 16 data registers (32-bit values, DR0 = zero)">Data Registers</button>
-            <button onclick="switchDashTab('state')" class="dash-tab" id="dashTab-state" data-tooltip="View machine architecture and current state">Machine State</button>
-            <button class="btn" onclick="runGC()" style="background:#9b59b6;color:#fff;border:none;" title="Run PP250 garbage collection" data-tooltip="Run PP250 garbage collection (scan, identify, clear, flip)">Run GC</button>
-            <button onclick="switchDashTab('crdetail')" class="dash-tab" id="dashTab-crdetail" style="display:none;" data-tooltip="Detailed view of a single context register">CR Detail</button>
-            <button onclick="exportSimulatorToGitHub()" class="dash-tab" id="dashTab-export" title="Push simulator files to GitHub" data-tooltip="Push simulator files to GitHub">Push to GitHub</button>
-            <button class="btn" onclick="showLibrary()" style="background:#C89B3C;color:#141414;border:none;font-weight:bold;" title="Browse and share abstractions via Mum Tunnel Library" data-tooltip="Browse and share abstractions via Mum Tunnel Library">Get from GitHub</button>
+            <button onclick="switchDashTab('cr')" class="dash-tab active" id="dashTab-cr" data-tooltip="Context Registers — View all 16 context registers (128-bit, 4 words each)">Context Registers</button>
+            <button onclick="switchDashTab('dr')" class="dash-tab" id="dashTab-dr" data-tooltip="Data Registers — View all 16 data registers (32-bit values, DR0 = zero)">Data Registers</button>
+            <button onclick="switchDashTab('state')" class="dash-tab" id="dashTab-state" data-tooltip="Machine State — View machine architecture and current state">Machine State</button>
+            <button class="btn" onclick="runGC()" style="background:#9b59b6;color:#fff;border:none;" data-tooltip="Run GC — Run PP250 garbage collection (scan, identify, clear, flip)">Run GC</button>
+            <button onclick="switchDashTab('crdetail')" class="dash-tab" id="dashTab-crdetail" style="display:none;" data-tooltip="CR Detail — Detailed view of a single context register">CR Detail</button>
+            <button onclick="exportSimulatorToGitHub()" class="dash-tab" id="dashTab-export" data-tooltip="Push to GitHub — Push simulator files to GitHub">Push to GitHub</button>
+            <button class="btn" onclick="showLibrary()" style="background:#C89B3C;color:#141414;border:none;font-weight:bold;" data-tooltip="Get from GitHub — Browse and share abstractions via Mum Tunnel Library">Get from GitHub</button>
         </div>
         <div id="dashPanel-cr" class="dash-panel active">
             <div class="panel">
@@ -82,49 +82,49 @@
                             <option value="javascript">JS (CLOOMC++)</option>
                             <option value="haskell">Haskell (CLOOMC++)</option>
                         </select>
-                        <button class="btn" onclick="compileDraft()" style="background:#C89B3C;color:#141414;border:none;font-weight:bold;" title="Show compilation draft — methods, capabilities, lump layout">Draft</button>
+                        <button class="btn" onclick="compileDraft()" style="background:#C89B3C;color:#141414;border:none;font-weight:bold;" data-tooltip="Draft — Show compilation draft: methods, capabilities, and lump layout">Draft</button>
                     </div>
                     <div class="toolbar-phase">
                         <span class="phase-label">Build</span>
-                        <button class="btn btn-primary" onclick="smartCompile()" title="Compile with auto-detected or selected language">Compile</button>
-                        <button class="btn" onclick="showCreateNamespace()" style="background:#2196F3;color:#fff;border:none;" title="Create a namespace entry — reserve a slot for your abstraction">Create Namespace</button>
-                        <button class="btn" onclick="compileAndCreateAbstraction()" style="background:#4a7a2e;color:#fff;border:none;" title="Compile and create abstraction via Navana.Abstraction.Add">Create Abstraction</button>
+                        <button class="btn btn-primary" onclick="smartCompile()" data-tooltip="Compile — Compile with auto-detected or selected source language">Compile</button>
+                        <button class="btn" onclick="showCreateNamespace()" style="background:#2196F3;color:#fff;border:none;" data-tooltip="Create Namespace — Reserve a namespace slot for your abstraction">Create Namespace</button>
+                        <button class="btn" onclick="compileAndCreateAbstraction()" style="background:#4a7a2e;color:#fff;border:none;" data-tooltip="Create Abstraction — Compile and create via Navana.Abstraction.Add">Create Abstraction</button>
                     </div>
                     <div class="toolbar-phase">
                         <span class="phase-label">Install</span>
-                        <button class="btn" onclick="saveUploadJSON()" style="background:#2a6fdb;color:#fff;border:none;" title="Compile and save upload.json file">Save Upload JSON</button>
-                        <button class="btn btn-primary" onclick="showSaveToNamespace()" id="btnSaveNS" disabled title="Save assembled program to namespace">Save to NS</button>
-                        <button class="btn btn-deploy" onclick="downloadHardwareImage()" title="Download binary for Tang Nano 20K">Download .bin</button>
-                        <button class="btn btn-deploy" onclick="uploadToTang()" title="Upload to Tang Nano 20K via WebSerial">Deploy to Tang</button>
+                        <button class="btn" onclick="saveUploadJSON()" style="background:#2a6fdb;color:#fff;border:none;" data-tooltip="Save Upload JSON — Compile and save the upload.json deployment file">Save Upload JSON</button>
+                        <button class="btn btn-primary" onclick="showSaveToNamespace()" id="btnSaveNS" disabled data-tooltip="Save to NS — Save the assembled program as a namespace entry">Save to NS</button>
+                        <button class="btn btn-deploy" onclick="downloadHardwareImage()" data-tooltip="Download .bin — Download binary image for Tang Nano 20K hardware">Download .bin</button>
+                        <button class="btn btn-deploy" onclick="uploadToTang()" data-tooltip="Deploy to Tang — Upload to Tang Nano 20K via WebSerial (Chrome/Edge)">Deploy to Tang</button>
                     </div>
                 </div>
                 <div class="example-tabs-row">
-                    <button class="example-arrow" onclick="scrollExamples(-1)">&lsaquo;</button>
+                    <button class="example-arrow tooltip-below" onclick="scrollExamples(-1)" data-tooltip="Scroll Left — See more examples">&lsaquo;</button>
                     <div class="example-tabs-scroll" id="exampleTabsScroll">
-                        <button class="example-tab" onclick="loadExample('ada_note_g')" data-example="ada_note_g" style="color:#f0c674;">Ada Note G</button>
-                        <button class="example-tab active" onclick="loadExample('selftest')" data-example="selftest">Self-Test</button>
-                        <button class="example-tab" onclick="loadExample('load_save')" data-example="load_save">Load/Save</button>
-                        <button class="example-tab" onclick="loadExample('bernoulli')" data-example="bernoulli">Bernoulli</button>
-                        <button class="example-tab" onclick="loadExample('conditional')" data-example="conditional">Conditional</button>
-                        <button class="example-tab" onclick="loadExample('gc_test')" data-example="gc_test">GC Test</button>
-                        <button class="example-tab" onclick="loadExample('turing_test')" data-example="turing_test">Turing ISA</button>
-                        <button class="example-tab" onclick="loadExample('salvation')" data-example="salvation" style="color:#4ade80;">Salvation</button>
-                        <button class="example-tab" onclick="loadExample('perm_attack')" data-example="perm_attack" style="color:#f87171;">Perm Attack</button>
-                        <button class="example-tab" onclick="loadExample('bind_attack')" data-example="bind_attack" style="color:#f87171;">Bind Attack</button>
-                        <button class="example-tab" onclick="loadCLOOMCExample('hello')" data-example="cloomc_hello" style="color:#C89B3C;">JS: Hello</button>
-                        <button class="example-tab" onclick="loadCLOOMCExample('memory')" data-example="cloomc_memory" style="color:#C89B3C;">JS: Memory</button>
-                        <button class="example-tab" onclick="loadCLOOMCExample('counter')" data-example="cloomc_counter" style="color:#C89B3C;">JS: Counter</button>
-                        <button class="example-tab" onclick="loadCLOOMCExample('church_math')" data-example="cloomc_church_math" style="color:#a78bfa;">HS: Math</button>
-                        <button class="example-tab" onclick="loadCLOOMCExample('church_pair')" data-example="cloomc_church_pair" style="color:#a78bfa;">HS: Pairs</button>
-                        <button class="example-tab" onclick="loadCLOOMCExample('church_case')" data-example="cloomc_church_case" style="color:#a78bfa;">HS: Case</button>
-                        <button class="example-tab" onclick="loadCLOOMCExample('church_lambda')" data-example="cloomc_church_lambda" style="color:#a78bfa;">HS: Lambda</button>
-                        <button class="example-tab" onclick="loadCLOOMCExample('sliderule')" data-example="cloomc_sliderule" style="color:#C89B3C;">JS: SlideRule</button>
-                        <button class="example-tab" onclick="loadCLOOMCExample('sliderule_hs')" data-example="cloomc_sliderule_hs" style="color:#a78bfa;">HS: SlideRule</button>
-                        <button class="example-tab" onclick="loadCLOOMCExample('ada_note_g')" data-example="cloomc_ada_note_g" style="color:#e8a87c;">Ada: Note G</button>
-                        <button class="example-tab" onclick="loadCLOOMCExample('english_hello')" data-example="cloomc_english_hello" style="color:#4fc3f7;">EN: Hello</button>
-                        <button class="example-tab" onclick="loadCLOOMCExample('english_counter')" data-example="cloomc_english_counter" style="color:#4fc3f7;">EN: Counter</button>
+                        <button class="example-tab tooltip-below" onclick="loadExample('ada_note_g')" data-example="ada_note_g" style="color:#f0c674;" data-tooltip="Ada Note G — Ada Lovelace's Bernoulli algorithm in assembly">Ada Note G</button>
+                        <button class="example-tab active tooltip-below" onclick="loadExample('selftest')" data-example="selftest" data-tooltip="Self-Test — Basic instruction self-test to verify the machine works">Self-Test</button>
+                        <button class="example-tab tooltip-below" onclick="loadExample('load_save')" data-example="load_save" data-tooltip="Load/Save — Demonstrate mLoad and mSave memory operations">Load/Save</button>
+                        <button class="example-tab tooltip-below" onclick="loadExample('bernoulli')" data-example="bernoulli" data-tooltip="Bernoulli — Sum of squares computation using Church numerals">Bernoulli</button>
+                        <button class="example-tab tooltip-below" onclick="loadExample('conditional')" data-example="conditional" data-tooltip="Conditional — Branch-free conditional execution via LAMBDA">Conditional</button>
+                        <button class="example-tab tooltip-below" onclick="loadExample('gc_test')" data-example="gc_test" data-tooltip="GC Test — Exercise the PP250 garbage collection cycle">GC Test</button>
+                        <button class="example-tab tooltip-below" onclick="loadExample('turing_test')" data-example="turing_test" data-tooltip="Turing ISA — Test the Turing domain instructions (DREAD, DWRITE)">Turing ISA</button>
+                        <button class="example-tab tooltip-below" onclick="loadExample('salvation')" data-example="salvation" style="color:#4ade80;" data-tooltip="Salvation — Demonstrate safe abstraction and capability protection">Salvation</button>
+                        <button class="example-tab tooltip-below" onclick="loadExample('perm_attack')" data-example="perm_attack" style="color:#f87171;" data-tooltip="Perm Attack — Attempt a permission escalation attack (should fail safely)">Perm Attack</button>
+                        <button class="example-tab tooltip-below" onclick="loadExample('bind_attack')" data-example="bind_attack" style="color:#f87171;" data-tooltip="Bind Attack — Attempt a binding attack on Golden Tokens (should fail safely)">Bind Attack</button>
+                        <button class="example-tab tooltip-below" onclick="loadCLOOMCExample('hello')" data-example="cloomc_hello" style="color:#C89B3C;" data-tooltip="JS: Hello — Hello world in JavaScript CLOOMC++">JS: Hello</button>
+                        <button class="example-tab tooltip-below" onclick="loadCLOOMCExample('memory')" data-example="cloomc_memory" style="color:#C89B3C;" data-tooltip="JS: Memory — Memory operations in JavaScript CLOOMC++">JS: Memory</button>
+                        <button class="example-tab tooltip-below" onclick="loadCLOOMCExample('counter')" data-example="cloomc_counter" style="color:#C89B3C;" data-tooltip="JS: Counter — Counter abstraction in JavaScript CLOOMC++">JS: Counter</button>
+                        <button class="example-tab tooltip-below" onclick="loadCLOOMCExample('church_math')" data-example="cloomc_church_math" style="color:#a78bfa;" data-tooltip="HS: Math — Church numeral arithmetic in Haskell CLOOMC++">HS: Math</button>
+                        <button class="example-tab tooltip-below" onclick="loadCLOOMCExample('church_pair')" data-example="cloomc_church_pair" style="color:#a78bfa;" data-tooltip="HS: Pairs — Church-encoded pairs in Haskell CLOOMC++">HS: Pairs</button>
+                        <button class="example-tab tooltip-below" onclick="loadCLOOMCExample('church_case')" data-example="cloomc_church_case" style="color:#a78bfa;" data-tooltip="HS: Case — Pattern matching in Haskell CLOOMC++">HS: Case</button>
+                        <button class="example-tab tooltip-below" onclick="loadCLOOMCExample('church_lambda')" data-example="cloomc_church_lambda" style="color:#a78bfa;" data-tooltip="HS: Lambda — Lambda abstractions in Haskell CLOOMC++">HS: Lambda</button>
+                        <button class="example-tab tooltip-below" onclick="loadCLOOMCExample('sliderule')" data-example="cloomc_sliderule" style="color:#C89B3C;" data-tooltip="JS: SlideRule — Slide rule simulation in JavaScript CLOOMC++">JS: SlideRule</button>
+                        <button class="example-tab tooltip-below" onclick="loadCLOOMCExample('sliderule_hs')" data-example="cloomc_sliderule_hs" style="color:#a78bfa;" data-tooltip="HS: SlideRule — Slide rule simulation in Haskell CLOOMC++">HS: SlideRule</button>
+                        <button class="example-tab tooltip-below" onclick="loadCLOOMCExample('ada_note_g')" data-example="cloomc_ada_note_g" style="color:#e8a87c;" data-tooltip="Ada: Note G — Ada Lovelace's algorithm in high-level CLOOMC++">Ada: Note G</button>
+                        <button class="example-tab tooltip-below" onclick="loadCLOOMCExample('english_hello')" data-example="cloomc_english_hello" style="color:#4fc3f7;" data-tooltip="EN: Hello — Hello world in plain English CLOOMC++">EN: Hello</button>
+                        <button class="example-tab tooltip-below" onclick="loadCLOOMCExample('english_counter')" data-example="cloomc_english_counter" style="color:#4fc3f7;" data-tooltip="EN: Counter — Counter abstraction in plain English CLOOMC++">EN: Counter</button>
                     </div>
-                    <button class="example-arrow" onclick="scrollExamples(1)">&rsaquo;</button>
+                    <button class="example-arrow tooltip-below" onclick="scrollExamples(1)" data-tooltip="Scroll Right — See more examples">&rsaquo;</button>
                 </div>
                 <div class="code-editor-wrap">
                     <div class="line-numbers" id="lineNumbers"></div>
@@ -134,9 +134,9 @@
             <div class="editor-divider" id="editorDivider"></div>
             <div class="editor-panel console-panel">
                 <div class="sidebar-tabs">
-                    <button class="sidebar-tab" id="codeTabConsole" onclick="switchCodeTab('console')">Console Output</button>
-                    <button class="sidebar-tab" id="codeTabSyntax" onclick="switchCodeTab('syntax')">Syntax</button>
-                    <button class="sidebar-tab active" id="codeTabHistory" onclick="switchCodeTab('history')">History</button>
+                    <button class="sidebar-tab" id="codeTabConsole" onclick="switchCodeTab('console')" data-tooltip="Console Output — View assembler output and execution results">Console Output</button>
+                    <button class="sidebar-tab" id="codeTabSyntax" onclick="switchCodeTab('syntax')" data-tooltip="Syntax — Quick reference for instruction syntax">Syntax</button>
+                    <button class="sidebar-tab active" id="codeTabHistory" onclick="switchCodeTab('history')" data-tooltip="History — Stories and context about Church Machine concepts">History</button>
                 </div>
                 <div id="codeConsoleContent" style="display:none;">
                     <div id="editorConsole">Ready. Write Church assembly and click Assemble.</div>
@@ -147,8 +147,8 @@
                 </div>
                 <div id="codeHistoryPanel">
                     <div style="display:flex;justify-content:flex-end;gap:0.4rem;padding:0.3rem 0;">
-                        <button class="btn" onclick="historyShowStepGuide()" style="padding:0.2rem 0.6rem;font-size:0.75rem;">How to Step</button>
-                        <button class="btn btn-primary" onclick="historyNewCodeStory()" style="padding:0.2rem 0.6rem;font-size:0.75rem;">Another Story</button>
+                        <button class="btn" onclick="historyShowStepGuide()" style="padding:0.2rem 0.6rem;font-size:0.75rem;" data-tooltip="How to Step — Learn how to single-step through programs">How to Step</button>
+                        <button class="btn btn-primary" onclick="historyNewCodeStory()" style="padding:0.2rem 0.6rem;font-size:0.75rem;" data-tooltip="Another Story — Generate a new story about this code">Another Story</button>
                     </div>
                     <div id="codeHistoryContent"></div>
                 </div>
@@ -160,8 +160,8 @@
         <div class="panel">
             <div class="panel-title">Namespace Table -- Golden Token Entries</div>
             <div class="ns-toolbar">
-                <button class="btn btn-primary btn-sm" onclick="exportAllNamespace()">Export All</button>
-                <button class="btn btn-primary btn-sm" onclick="importNamespaceFile()">Import</button>
+                <button class="btn btn-primary btn-sm" onclick="exportAllNamespace()" data-tooltip="Export All — Download all namespace entries as a JSON file">Export All</button>
+                <button class="btn btn-primary btn-sm" onclick="importNamespaceFile()" data-tooltip="Import — Load namespace entries from a JSON or binary file">Import</button>
                 <input type="file" id="nsImportFile" style="display:none;" accept=".json,.bin" onchange="handleNSImport(event)">
             </div>
             <div id="namespaceTable"></div>
@@ -174,7 +174,7 @@
                 <div class="panel">
                     <div class="panel-title abs-catalog-header">
                         <span>Abstraction Catalog -- 9 Layers, 44 Abstractions</span>
-                        <button class="btn abs-library-btn" onclick="showLibrary()" title="Browse and share abstractions via Mum Tunnel Library">Browse Library</button>
+                        <button class="btn abs-library-btn" onclick="showLibrary()" data-tooltip="Browse Library — Browse and share abstractions via Mum Tunnel Library">Browse Library</button>
                     </div>
                     <div id="absLayerList"></div>
                 </div>
@@ -198,8 +198,8 @@
 
     <div id="tutorial" class="view">
         <div class="tutorial-selector" style="margin: 0.5rem 1rem 0;">
-            <button class="btn-tut-select active" id="tutSelect-bernoulli" onclick="selectTutorial('bernoulli')">Discovery Path (Bernoulli)</button>
-            <button class="btn-tut-select" id="tutSelect-sliderule" onclick="selectTutorial('sliderule')">SlideRule Comparative Study</button>
+            <button class="btn-tut-select active" id="tutSelect-bernoulli" onclick="selectTutorial('bernoulli')" data-tooltip="Discovery Path — Follow Bernoulli's journey to learn Church Machine concepts">Discovery Path (Bernoulli)</button>
+            <button class="btn-tut-select" id="tutSelect-sliderule" onclick="selectTutorial('sliderule')" data-tooltip="SlideRule — Compare historical computing tools with the Church Machine">SlideRule Comparative Study</button>
         </div>
         <div id="tutorialView"></div>
     </div>
@@ -208,10 +208,10 @@
         <div class="repl-layout">
             <div class="repl-panel">
                 <div class="math-mode-tabs">
-                    <button class="math-mode-tab active" id="mathTabHP35" onclick="switchMathMode('hp35')">HP-35</button>
-                    <button class="math-mode-tab" id="mathTabAbacus" onclick="switchMathMode('abacus')">Abacus</button>
-                    <button class="math-mode-tab" id="mathTabSlideRule" onclick="switchMathMode('sliderule')">Slide Rule</button>
-                    <button class="math-mode-tab" id="mathTabInteractive" onclick="switchMathMode('interactive')">Pure Math</button>
+                    <button class="math-mode-tab active" id="mathTabHP35" onclick="switchMathMode('hp35')" data-tooltip="HP-35 — RPN scientific calculator with lambda calculus trace">HP-35</button>
+                    <button class="math-mode-tab" id="mathTabAbacus" onclick="switchMathMode('abacus')" data-tooltip="Abacus — Traditional bead calculator for place-value arithmetic">Abacus</button>
+                    <button class="math-mode-tab" id="mathTabSlideRule" onclick="switchMathMode('sliderule')" data-tooltip="Slide Rule — Analogue computing with logarithmic scales">Slide Rule</button>
+                    <button class="math-mode-tab" id="mathTabInteractive" onclick="switchMathMode('interactive')" data-tooltip="Pure Math — Interactive REPL for lambda calculus expressions">Pure Math</button>
                 </div>
                 <div id="interactiveMathContent">
                     <div class="math-tool-history">
@@ -226,10 +226,10 @@
                         <span class="repl-prompt">&#955;&gt;</span>
                         <input type="text" id="replInput" placeholder="let x = 2 + 3" onkeydown="replKeydown(event)">
                         <div class="symbol-picker-wrap">
-                            <button class="btn symbol-picker-btn" onclick="toggleSymbolPicker()" title="Insert mathematical symbol">&#8721;</button>
+                            <button class="btn symbol-picker-btn" onclick="toggleSymbolPicker()" data-tooltip="Symbols — Insert mathematical symbols into your expression">&#8721;</button>
                             <div class="symbol-picker-dropdown" id="symbolPickerDropdown"></div>
                         </div>
-                        <button class="btn btn-primary" onclick="replExecute()">Enter</button>
+                        <button class="btn btn-primary" onclick="replExecute()" data-tooltip="Enter — Evaluate the expression in the REPL">Enter</button>
                     </div>
                 </div>
                 <div id="hp35Container" style="display:none;"></div>
@@ -239,25 +239,25 @@
             <div class="repl-divider" id="replDivider"></div>
             <div class="repl-sidebar">
                 <div class="sidebar-tabs">
-                    <button class="sidebar-tab" id="sidebarTabChallenge" onclick="switchSidebarTab('challenge')">Challenge</button>
-                    <button class="sidebar-tab active" id="sidebarTabHistory" onclick="switchSidebarTab('history')">History</button>
-                    <button class="sidebar-tab" id="sidebarTabHowItWorks" onclick="switchSidebarTab('howitworks')" style="display:none;">How It Works</button>
-                    <button class="sidebar-tab" id="sidebarTabHowToUse" onclick="switchSidebarTab('howtouse')" style="display:none;">How to Use</button>
-                    <button class="sidebar-tab" id="sidebarTabTrace" onclick="switchSidebarTab('trace')" style="display:none;">Trace</button>
+                    <button class="sidebar-tab" id="sidebarTabChallenge" onclick="switchSidebarTab('challenge')" data-tooltip="Challenge — Test your skills with math problems">Challenge</button>
+                    <button class="sidebar-tab active" id="sidebarTabHistory" onclick="switchSidebarTab('history')" data-tooltip="History — Stories about the people and ideas behind computing">History</button>
+                    <button class="sidebar-tab" id="sidebarTabHowItWorks" onclick="switchSidebarTab('howitworks')" style="display:none;" data-tooltip="How It Works — Understand the lambda calculus behind this tool">How It Works</button>
+                    <button class="sidebar-tab" id="sidebarTabHowToUse" onclick="switchSidebarTab('howtouse')" style="display:none;" data-tooltip="How to Use — Guide for using this math tool">How to Use</button>
+                    <button class="sidebar-tab" id="sidebarTabTrace" onclick="switchSidebarTab('trace')" style="display:none;" data-tooltip="Trace — Step-by-step lambda calculus execution trace">Trace</button>
                 </div>
                 <div id="sidebarChallengeContent" style="display:none;">
                     <div class="panel challenge-panel">
                         <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;">
                             <span>Challenge</span>
-                            <button class="btn btn-primary" onclick="generateChallenge()" style="padding:0.2rem 0.6rem;font-size:0.75rem;">New Problem</button>
+                            <button class="btn btn-primary" onclick="generateChallenge()" style="padding:0.2rem 0.6rem;font-size:0.75rem;" data-tooltip="New Problem — Generate a new math challenge to solve">New Problem</button>
                         </div>
                         <div id="challengeArea">
                             <div id="challengePrompt" class="challenge-prompt">Click "New Problem" to get a math challenge!</div>
                             <div id="challengeInput" class="challenge-input-area" style="display:none;">
                                 <input type="text" id="challengeAnswer" class="modal-input" placeholder="Your answer..." onkeydown="if(event.key==='Enter')checkChallenge()">
                                 <div style="display:flex;gap:0.4rem;margin-top:0.4rem;">
-                                    <button class="btn btn-primary" onclick="checkChallenge()" style="flex:1;font-size:0.8rem;">Check</button>
-                                    <button class="btn" onclick="showChallengeHint()" style="flex:1;font-size:0.8rem;">Hint</button>
+                                    <button class="btn btn-primary" onclick="checkChallenge()" style="flex:1;font-size:0.8rem;" data-tooltip="Check — Submit your answer and see if it is correct">Check</button>
+                                    <button class="btn" onclick="showChallengeHint()" style="flex:1;font-size:0.8rem;" data-tooltip="Hint — Get a helpful hint for the current challenge">Hint</button>
                                 </div>
                             </div>
                             <div id="challengeResult" class="challenge-result"></div>
@@ -266,18 +266,18 @@
                     </div>
                     <div class="panel">
                         <div class="panel-title">Tools</div>
-                        <button class="btn" onclick="loadBernoulliInREPL()" style="width:100%;margin-bottom:0.5rem;">Run Bernoulli</button>
-                        <button class="btn" onclick="replCompileSession()" style="width:100%;margin-bottom:0.5rem;background:#C89B3C;color:#141414;font-weight:bold;">Compile Session</button>
-                        <button class="btn" onclick="replExecute('HELP')" style="width:100%;margin-bottom:0.5rem;">Help</button>
-                        <button class="btn" onclick="replExecute('VARS')" style="width:100%;margin-bottom:0.5rem;">Show Variables</button>
-                        <button class="btn btn-warning" onclick="replExecute('CLEAR')" style="width:100%;">Clear All</button>
+                        <button class="btn" onclick="loadBernoulliInREPL()" style="width:100%;margin-bottom:0.5rem;" data-tooltip="Run Bernoulli — Execute the Bernoulli sum-of-squares program">Run Bernoulli</button>
+                        <button class="btn" onclick="replCompileSession()" style="width:100%;margin-bottom:0.5rem;background:#C89B3C;color:#141414;font-weight:bold;" data-tooltip="Compile Session — Compile all REPL definitions to Church assembly">Compile Session</button>
+                        <button class="btn" onclick="replExecute('HELP')" style="width:100%;margin-bottom:0.5rem;" data-tooltip="Help — Show available REPL commands and syntax">Help</button>
+                        <button class="btn" onclick="replExecute('VARS')" style="width:100%;margin-bottom:0.5rem;" data-tooltip="Show Variables — List all variables defined in this session">Show Variables</button>
+                        <button class="btn btn-warning" onclick="replExecute('CLEAR')" style="width:100%;" data-tooltip="Clear All — Clear the REPL output and reset all variables">Clear All</button>
                     </div>
                 </div>
                 <div id="sidebarHistoryContent">
                     <div class="panel history-panel">
                         <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center;">
                             <span>History</span>
-                            <button class="btn btn-primary" onclick="historyNewStory()" style="padding:0.2rem 0.6rem;font-size:0.75rem;">Another Story</button>
+                            <button class="btn btn-primary" onclick="historyNewStory()" style="padding:0.2rem 0.6rem;font-size:0.75rem;" data-tooltip="Another Story — Generate a new computing history story">Another Story</button>
                         </div>
                         <div id="historyContent"></div>
                     </div>
@@ -344,8 +344,8 @@
             <div class="welcome-footer">
                 <label class="popup-dismiss-check"><input type="checkbox" id="welcomeDontShow"> Don't show again</label>
                 <div>
-                    <button class="btn btn-primary" id="welcomeSetupBtn" onclick="welcomeSetup()">Set Up My Family</button>
-                    <button class="btn btn-view" onclick="welcomeSkip()">Skip for Now</button>
+                    <button class="btn btn-primary" id="welcomeSetupBtn" onclick="welcomeSetup()" data-tooltip="Set Up My Family — Configure family members and permissions">Set Up My Family</button>
+                    <button class="btn btn-view" onclick="welcomeSkip()" data-tooltip="Skip for Now — Close this dialog and explore on your own">Skip for Now</button>
                 </div>
             </div>
         </div>
@@ -359,7 +359,7 @@
             <div class="intro-body" id="mathGuideBody"></div>
             <div class="popup-footer-bar">
                 <label class="popup-dismiss-check"><input type="checkbox" id="mathGuideDontShow"> Don't show again</label>
-                <button class="btn btn-primary" onclick="dismissMathGuide()">Got it</button>
+                <button class="btn btn-primary" onclick="dismissMathGuide()" data-tooltip="Got it — Close this guide and start using the math tools">Got it</button>
             </div>
         </div>
     </div>
@@ -372,7 +372,7 @@
             <div class="intro-body" id="toolGuideBody"></div>
             <div class="popup-footer-bar">
                 <label class="popup-dismiss-check"><input type="checkbox" id="toolGuideDontShow"> Don't show again</label>
-                <button class="btn btn-primary" onclick="dismissToolGuide()">Got it!</button>
+                <button class="btn btn-primary" onclick="dismissToolGuide()" data-tooltip="Got it! — Close this guide and start using the tool">Got it!</button>
             </div>
         </div>
     </div>
@@ -381,18 +381,18 @@
         <div class="modal-dialog intro-dialog">
             <div class="intro-header">
                 <div class="modal-title" id="introTitle"></div>
-                <button class="intro-close" onclick="closeIntro()">&times;</button>
+                <button class="intro-close" onclick="closeIntro()" data-tooltip="Close — Dismiss this introduction">&times;</button>
             </div>
             <div class="intro-body-wrap">
                 <div class="intro-body" id="introBody"></div>
                 <div class="intro-scroll-arrow hidden" id="introScrollArrow"><span>&#x25BC;</span></div>
             </div>
             <div class="intro-footer">
-                <button class="settings-gear-btn" onclick="openSettings()" title="Settings">&#x2699;</button>
+                <button class="settings-gear-btn" onclick="openSettings()" data-tooltip="Settings — Open settings to configure your profile">&#x2699;</button>
                 <label class="intro-dismiss-label">
                     <input type="checkbox" id="introDismiss"> Don't show this again
                 </label>
-                <button class="btn btn-primary" id="introGoBtn" onclick="closeIntro()">Let's Go!</button>
+                <button class="btn btn-primary" id="introGoBtn" onclick="closeIntro()" data-tooltip="Let's Go! — Close this introduction and start exploring">Let's Go!</button>
             </div>
         </div>
     </div>
@@ -402,8 +402,8 @@
             <div class="settings-page-header">
                 <div class="modal-title">Settings</div>
                 <div class="settings-page-actions">
-                    <button class="btn btn-primary" onclick="saveSettings()">Save</button>
-                    <button class="btn btn-warning" onclick="closeSettings()">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveSettings()" data-tooltip="Save — Save your settings and close">Save</button>
+                    <button class="btn btn-warning" onclick="closeSettings()" data-tooltip="Cancel — Discard changes and close settings">Cancel</button>
                 </div>
             </div>
             <div class="settings-page-grid">
@@ -431,7 +431,7 @@
                             </div>
                         </div>
                         <div id="familyMembersList"></div>
-                        <button class="btn-add-member" onclick="addFamilyMemberRow()">+ Add Family &amp; Friends</button>
+                        <button class="btn-add-member" onclick="addFamilyMemberRow()" data-tooltip="Add Family &amp; Friends — Add a new family member or friend with their own Golden Token">+ Add Family &amp; Friends</button>
                     </div>
                 </div>
             </div>
@@ -466,8 +466,8 @@
                 <input type="number" id="createNSClistCount" class="modal-input" value="0" min="0" max="511" title="Number of capability slots (0-511)">
             </label>
             <div class="modal-buttons">
-                <button class="btn btn-primary" onclick="confirmCreateNamespace()">Create</button>
-                <button class="btn btn-warning" onclick="document.getElementById('createNSDialog').style.display='none'">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmCreateNamespace()" data-tooltip="Create — Create the namespace entry with these settings">Create</button>
+                <button class="btn btn-warning" onclick="document.getElementById('createNSDialog').style.display='none'" data-tooltip="Cancel — Close without creating a namespace entry">Cancel</button>
             </div>
         </div>
     </div>
@@ -500,8 +500,8 @@
             </label>
             <div class="modal-label" id="saveNSInfo" style="font-family:'Courier New',monospace;color:var(--church-gold);"></div>
             <div class="modal-buttons">
-                <button class="btn btn-primary" onclick="confirmSaveToNamespace()">Save</button>
-                <button class="btn btn-warning" onclick="closeSaveDialog()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmSaveToNamespace()" data-tooltip="Save — Save the assembled program to the selected namespace slot">Save</button>
+                <button class="btn btn-warning" onclick="closeSaveDialog()" data-tooltip="Cancel — Close without saving to namespace">Cancel</button>
             </div>
         </div>
     </div>
@@ -522,14 +522,14 @@
                     <option value="symbolic">Symbolic Math</option>
                     <option value="assembly">Assembly</option>
                 </select>
-                <button class="btn" onclick="publishToLibrary()" style="background:#4a7a2e;color:#fff;border:none;">Publish Current</button>
+                <button class="btn" onclick="publishToLibrary()" style="background:#4a7a2e;color:#fff;border:none;" data-tooltip="Publish Current — Share your current abstraction with the library">Publish Current</button>
             </div>
             <div id="libraryGrid" class="library-grid">
                 <div class="library-loading">Loading shared abstractions...</div>
             </div>
             <div class="library-footer">
                 <a id="libraryGitHubLink" href="#" target="_blank" class="library-github-link">View on GitHub</a>
-                <button class="btn btn-warning" onclick="document.getElementById('libraryModal').style.display='none'">Close</button>
+                <button class="btn btn-warning" onclick="document.getElementById('libraryModal').style.display='none'" data-tooltip="Close — Close the library browser">Close</button>
             </div>
         </div>
     </div>
@@ -545,8 +545,8 @@
             </label>
             <div id="publishPreview" class="publish-preview"></div>
             <div class="modal-buttons">
-                <button class="btn btn-primary" onclick="confirmPublish()">Publish to GitHub</button>
-                <button class="btn btn-warning" onclick="document.getElementById('publishModal').style.display='none'">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmPublish()" data-tooltip="Publish to GitHub — Upload your abstraction to the shared library on GitHub">Publish to GitHub</button>
+                <button class="btn btn-warning" onclick="document.getElementById('publishModal').style.display='none'" data-tooltip="Cancel — Close without publishing">Cancel</button>
             </div>
         </div>
     </div>

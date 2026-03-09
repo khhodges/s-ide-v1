@@ -31,6 +31,7 @@ The web IDE features nine views (Math, Code, Tutorial, Dashboard, Namespace, Abs
 - **Subjects:** Settings page displays 7 subject cards (English, JavaScript, Haskell, Symbolic Math, Assembly, Math Tools, Security). Each card opens a lesson list; clicking a lesson navigates to the editor with starter code or the relevant view/tab.
 - **Responsive Design:** Panels often use a 50-50 split with draggable dividers, adapting to narrow screens. Tab bars (.math-mode-tabs, .sidebar-tabs) auto-collapse overflowing tabs into a hamburger (☰) dropdown when panels are resized via dividers.
 - **Popups:** Educational popups for welcome, math guide, and individual tool guides enhance the learning experience.
+- **Tooltips:** Global CSS tooltip system using `data-tooltip` attribute on all buttons (100 total in `simulator/index.html`). Dark-themed tooltips (#1b2d45 background, #3a86ff border) with consistent "LABEL — Description" format. Uses `::after` pseudo-element; `.tooltip-below` modifier for elements near top edge. No `title` attributes on tooltip'd buttons (prevents double tooltips). HP-35 calculator buttons also use `data-tooltip` (set in `hp35.js`).
 - **State Persistence:** Utilizes localStorage for editor state, settings, progress, and dismissals.
 
 **Technical Implementations:**
