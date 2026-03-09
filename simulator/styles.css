@@ -4177,6 +4177,13 @@ a.next-step-link:hover {
     margin: 0.75rem 0;
 }
 
+.sr-four-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin: 0.75rem 0;
+}
+
 .sr-col-title {
     font-weight: 600;
     color: var(--church-gold);
@@ -4622,7 +4629,8 @@ a.next-step-link:hover {
 }
 
 @media (max-width: 768px) {
-    .sr-two-col {
+    .sr-two-col,
+    .sr-four-col {
         grid-template-columns: 1fr;
     }
     .sr-progress-bar {

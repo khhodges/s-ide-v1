@@ -411,11 +411,17 @@ class SlideRuleTutorial {
 </div>`
             },
             {
-                title: "Disassembly: Add (JS vs Haskell)",
+                title: "Disassembly: Add (All Four Languages)",
                 type: "disassembly",
-                content: `<div class="sr-two-col">
+                content: `<div class="sr-four-col">
 <div class="sr-col">
-<div class="sr-col-title">JavaScript Add(a, b) &mdash; 5 instructions</div>
+<div class="sr-col-title">English &mdash; 3 instructions</div>
+<pre class="sr-asm">0: LOAD.AL CR0, [CL+0]     ; load SlideRule cap
+1: IADD.AL DR0, DR0, DR1   ; a + b
+2: RETURN.AL                ; return</pre>
+</div>
+<div class="sr-col">
+<div class="sr-col-title">JavaScript &mdash; 5 instructions</div>
 <pre class="sr-asm">0: IADD.AL DR12, DR0, #0   ; DR12 = a
 1: IADD.AL DR12, DR12, #0  ; DR12 += b
 2: IADD.AL DR4, DR12, #0   ; result = DR12
@@ -423,14 +429,22 @@ class SlideRuleTutorial {
 4: RETURN.AL                ; return</pre>
 </div>
 <div class="sr-col">
-<div class="sr-col-title">Haskell Add(a, b) = a + b &mdash; 4 instructions</div>
+<div class="sr-col-title">Haskell &mdash; 4 instructions</div>
 <pre class="sr-asm">0: IADD.AL DR12, DR0, #0   ; DR12 = a
 1: IADD.AL DR12, DR0, #0   ; DR12 = a + b
 2: IADD.AL DR0, DR12, #0   ; DR0 = result
 3: RETURN.AL                ; return</pre>
 </div>
+<div class="sr-col">
+<div class="sr-col-title">Machine code &mdash; 2 instructions</div>
+<pre class="sr-asm">0: 0x7F600000              ; IADD DR0, DR0, DR1
+1: 0x1F800000              ; RETURN</pre>
 </div>
-<p>Haskell saves one instruction &mdash; it does not allocate an explicit local variable (<code>result</code>). The functional compiler knows <code>a + b</code> yields the return value directly.</p>`
+</div>
+<div class="sr-key-concept">
+<div class="sr-concept-title">Four paths, one result</div>
+<p><strong>Machine code</strong> is the most compact (2 instructions) &mdash; hand-written with zero overhead. <strong>English</strong> loads a capability reference first (3 instructions) but gains floating-point access. <strong>Haskell</strong> avoids the explicit local variable (4 instructions). <strong>JavaScript</strong> is the most verbose (5 instructions) due to explicit temporaries. All four produce identical integer results for Add.</p>
+</div>`
             },
             {
                 title: "Disassembly: Mul (the dramatic difference)",
