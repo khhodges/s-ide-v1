@@ -227,17 +227,17 @@ class SecurityTutorial {
 <div class="sr-references">
 <div class="sr-ref-title">References</div>
 <ol>
-<li>Dennis &amp; Van Horn (1966). "Programming Semantics for Multiprogrammed Computations." <em>CACM</em> 9(3).</li>
-<li>Levy (1984). <em>Capability-Based Computer Systems</em>. Digital Press.</li>
-<li>Church (1936). "An Unsolvable Problem of Elementary Number Theory." <em>Amer. J. Math.</em> 58(2).</li>
-<li>Turing (1936). "On Computable Numbers." <em>Proc. London Math. Soc.</em> 2(42).</li>
-<li>Kocher et al. (2019). "Spectre Attacks." <em>IEEE S&amp;P</em>.</li>
-<li>Watson et al. (2015). "CHERI." <em>IEEE S&amp;P</em>.</li>
-<li>Woodruff et al. (2014). "The CHERI Capability Model." <em>ISCA '14</em>.</li>
-<li>Halton (1972). "Hardware of the System 250 for Communication Control." <em>ISS</em>, MIT.</li>
-<li>Hamer-Hodges (2024). <em>Civilizing Cyberspace</em>. Studio of Books. ISBN 978-1964148663.</li>
-<li>Hamer-Hodges (2023). <em>The Fate of AI Society</em>. Studio of Books. ISBN 978-1964148540.</li>
-<li>Hamer-Hodges (2025). <em>Winning World War III</em>. Studio of Books. ISBN 978-1964864983.</li>
+<li>Dennis &amp; Van Horn (1966). <a href="https://doi.org/10.1145/365230.365252" target="_blank" rel="noopener">"Programming Semantics for Multiprogrammed Computations."</a> <em>CACM</em> 9(3).</li>
+<li>Levy (1984). <a href="https://homes.cs.washington.edu/~levy/capabook/" target="_blank" rel="noopener"><em>Capability-Based Computer Systems</em></a>. Digital Press.</li>
+<li>Church (1936). <a href="https://doi.org/10.2307/2371045" target="_blank" rel="noopener">"An Unsolvable Problem of Elementary Number Theory."</a> <em>Amer. J. Math.</em> 58(2).</li>
+<li>Turing (1936). <a href="https://doi.org/10.1112/plms/s2-42.1.230" target="_blank" rel="noopener">"On Computable Numbers."</a> <em>Proc. London Math. Soc.</em> 2(42).</li>
+<li>Kocher et al. (2019). <a href="https://doi.org/10.1109/SP.2019.00002" target="_blank" rel="noopener">"Spectre Attacks."</a> <em>IEEE S&amp;P</em>.</li>
+<li>Watson et al. (2015). <a href="https://doi.org/10.1109/SP.2015.27" target="_blank" rel="noopener">"CHERI."</a> <em>IEEE S&amp;P</em>.</li>
+<li>Woodruff et al. (2014). <a href="https://doi.org/10.1145/2678373.2665740" target="_blank" rel="noopener">"The CHERI Capability Model."</a> <em>ISCA '14</em>.</li>
+<li>Halton (1972). <a href="https://web.archive.org/web/2024/https://hamer-hodges.com/pp250.html" target="_blank" rel="noopener">"Hardware of the System 250 for Communication Control."</a> <em>ISS</em>, MIT.</li>
+<li>Hamer-Hodges (2024). <a href="https://www.amazon.com/dp/1964148669" target="_blank" rel="noopener"><em>Civilizing Cyberspace</em></a>. Studio of Books. ISBN 978-1964148663.</li>
+<li>Hamer-Hodges (2023). <a href="https://www.amazon.com/dp/1964148545" target="_blank" rel="noopener"><em>The Fate of AI Society</em></a>. Studio of Books. ISBN 978-1964148540.</li>
+<li>Hamer-Hodges (2025). <a href="https://www.amazon.com/dp/1964864984" target="_blank" rel="noopener"><em>Winning World War III</em></a>. Studio of Books. ISBN 978-1964864983.</li>
 </ol>
 </div>`
             }

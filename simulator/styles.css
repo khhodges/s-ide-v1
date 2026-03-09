@@ -4634,6 +4634,16 @@ pre:hover .code-copy-btn {
     line-height: 1.6;
 }
 
+.sr-references a {
+    color: #5dade2;
+    text-decoration: none;
+}
+
+.sr-references a:hover {
+    color: var(--church-gold);
+    text-decoration: underline;
+}
+
 .sr-tutorial-steps {
     display: flex;
     flex-direction: column;
