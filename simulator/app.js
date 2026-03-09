@@ -274,26 +274,32 @@ function renderCListEntryDetail(nsIdx, entry) {
     h += '</tbody></table>';
 
     const wordCount = Math.min(lim.limit + 1, 64);
-    let hasData = false;
-    const asm = new ChurchAssembler();
-    let memHtml = '<table class="cr-table code-view-table"><thead><tr><th>Addr</th><th>Hex</th><th>Decode</th></tr></thead><tbody>';
-    for (let w = 0; w < wordCount; w++) {
-        const addr = loc + w;
-        if (addr >= sim.memory.length) break;
-        const word = sim.memory[addr];
-        if (word === 0 && !hasData) continue;
-        hasData = true;
-        const decoded = asm.disassemble(word);
-        memHtml += `<tr>`;
-        memHtml += `<td class="cr-idx">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td>`;
-        memHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
-        memHtml += `<td class="code-disasm">${decoded}</td>`;
-        memHtml += '</tr>';
-    }
-    memHtml += '</tbody></table>';
-    if (hasData) {
-        h += '<div class="clist-detail-title" style="margin-top:0.4rem;">Memory Contents</div>';
-        h += memHtml;
+    const isBootNS = (nsIdx === 0 && loc === sim.NS_TABLE_BASE);
+    if (isBootNS) {
+        h += '<div class="clist-detail-title" style="margin-top:0.4rem;">Namespace Table Entries</div>';
+        h += renderMemoryDump(loc, lim.limit + 1, nsIdx);
+    } else {
+        let hasData = false;
+        const asm = new ChurchAssembler();
+        let memHtml = '<table class="cr-table code-view-table"><thead><tr><th>Addr</th><th>Hex</th><th>Decode</th></tr></thead><tbody>';
+        for (let w = 0; w < wordCount; w++) {
+            const addr = loc + w;
+            if (addr >= sim.memory.length) break;
+            const word = sim.memory[addr];
+            if (word === 0 && !hasData) continue;
+            hasData = true;
+            const decoded = asm.disassemble(word);
+            memHtml += `<tr>`;
+            memHtml += `<td class="cr-idx">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td>`;
+            memHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+            memHtml += `<td class="code-disasm">${decoded}</td>`;
+            memHtml += '</tr>';
+        }
+        memHtml += '</tbody></table>';
+        if (hasData) {
+            h += '<div class="clist-detail-title" style="margin-top:0.4rem;">Memory Contents</div>';
+            h += memHtml;
+        }
     }
 
     h += '</div>';
@@ -678,37 +684,69 @@ function toggleNSDetail(idx) {
     updateNamespace();
 }
 
-function renderMemoryDump(location, limit) {
+function renderMemoryDump(location, limit, nsIndex) {
     const wordCount = Math.min(limit, 64);
     if (wordCount <= 0) return '<span style="color:#888;">Empty (limit=0)</span>';
+
+    const isBootNS = (nsIndex === 0 && location === sim.NS_TABLE_BASE);
+
     let html = '<table class="ns-mem-table"><thead><tr>';
-    html += '<th>Offset</th><th>Address</th><th>Hex</th><th>Decoded</th>';
+    if (isBootNS) {
+        html += '<th>Entry</th><th>Address</th><th>W0: Location</th><th>W1: Flags+Limit</th><th>W2: Ver+Seal</th><th>Decoded</th>';
+    } else {
+        html += '<th>Offset</th><th>Address</th><th>Hex</th><th>Decoded</th>';
+    }
     html += '</tr></thead><tbody>';
+
     const permNames = ['R','W','X','L','S','E'];
-    const typeNames = {0:'NULL', 1:'Inform', 2:'Outform', 3:'Abstract'};
-    for (let i = 0; i < wordCount; i++) {
-        const addr = location + i;
-        const word = sim.memory[addr] || 0;
-        const hex = '0x' + (word >>> 0).toString(16).toUpperCase().padStart(8, '0');
-        let decoded = '';
-        if (word === 0) {
-            decoded = '<span style="color:#666;">0 (empty)</span>';
-        } else {
-            const gtType = word & 0x3;
-            const perms = (word >> 2) & 0x3F;
-            const index = (word >> 8) & 0x1FFFF;
-            const ver = (word >> 25) & 0x7F;
-            const pStr = permNames.filter((_, b) => perms & (1 << b)).join('') || '------';
-            const tName = typeNames[gtType] || '?';
-            const label = sim.nsLabels[index] || '';
-            decoded = `<span style="color:rgba(78,201,176,0.7);">${tName}</span> ` +
-                      `<span style="color:rgba(200,155,60,0.55);">${pStr}</span> ` +
-                      `\u2192 idx <span style="color:rgba(86,156,214,0.7);">${index}</span>` +
-                      (label ? ` <span style="color:rgba(156,220,254,0.6);">(${label})</span>` : '') +
-                      ` v${ver}`;
+    const typeNamesGT = {0:'NULL', 1:'Inform', 2:'Outform', 3:'Abstract'};
+
+    if (isBootNS) {
+        const entryCount = Math.floor(wordCount / 3);
+        for (let e = 0; e < entryCount; e++) {
+            const base = location + e * 3;
+            const w0 = sim.memory[base] || 0;
+            const w1 = sim.memory[base + 1] || 0;
+            const w2 = sim.memory[base + 2] || 0;
+            if (w0 === 0 && w1 === 0 && w2 === 0) continue;
+            const parsed = sim.parseNSWord1(w1);
+            const ver = (w2 >>> 25) & 0x7F;
+            const seal = w2 & 0x01FFFFFF;
+            const label = sim.nsLabels[e] || '';
+            const typeName = typeNamesGT[parsed.gtType] || '?';
+            const addrHex = '0x' + base.toString(16).toUpperCase().padStart(4, '0');
+            const w0Hex = '0x' + (w0 >>> 0).toString(16).toUpperCase().padStart(8, '0');
+            const w1Hex = '0x' + (w1 >>> 0).toString(16).toUpperCase().padStart(8, '0');
+            const w2Hex = '0x' + (w2 >>> 0).toString(16).toUpperCase().padStart(8, '0');
+            let decoded = `<span style="color:rgba(78,201,176,0.7);">${typeName}</span>`;
+            decoded += ` B=${parsed.b} F=${parsed.f} G=${parsed.g}`;
+            decoded += ` Lim=0x${parsed.limit.toString(16).toUpperCase().padStart(5,'0')}`;
+            decoded += ` v${ver}`;
+            if (label) decoded += ` <span style="color:rgba(156,220,254,0.6);">(${label})</span>`;
+            html += `<tr>`;
+            html += `<td style="color:rgba(200,155,60,0.7);">NS[${e}]</td>`;
+            html += `<td>${addrHex}</td>`;
+            html += `<td style="color:rgba(206,145,120,0.6);">${w0Hex}</td>`;
+            html += `<td style="color:rgba(206,145,120,0.6);">${w1Hex}</td>`;
+            html += `<td style="color:rgba(206,145,120,0.6);">${w2Hex}</td>`;
+            html += `<td>${decoded}</td>`;
+            html += '</tr>';
         }
-        const addrHex = '0x' + addr.toString(16).toUpperCase().padStart(4, '0');
-        html += `<tr><td style="color:#666;">+${i}</td><td>${addrHex}</td><td style="color:rgba(206,145,120,0.6);">${hex}</td><td>${decoded}</td></tr>`;
+    } else {
+        var asm = new ChurchAssembler();
+        for (let i = 0; i < wordCount; i++) {
+            const addr = location + i;
+            const word = sim.memory[addr] || 0;
+            const hex = '0x' + (word >>> 0).toString(16).toUpperCase().padStart(8, '0');
+            let decoded = '';
+            if (word === 0) {
+                decoded = '<span style="color:#666;">0 (empty)</span>';
+            } else {
+                decoded = asm.disassemble(word);
+            }
+            const addrHex = '0x' + addr.toString(16).toUpperCase().padStart(4, '0');
+            html += `<tr><td style="color:#666;">+${i}</td><td>${addrHex}</td><td style="color:rgba(206,145,120,0.6);">${hex}</td><td>${decoded}</td></tr>`;
+        }
     }
     html += '</tbody></table>';
     if (limit > 64) {
@@ -753,8 +791,8 @@ function updateNamespace() {
         if (isExpanded) {
             html += `<tr class="ns-detail-row"><td colspan="11">`;
             html += `<div class="ns-detail-panel">`;
-            html += `<div class="ns-detail-title">Memory at 0x${e.word0_location.toString(16).toUpperCase().padStart(4, '0')} \u2014 ${e.label || 'Slot '+i} (${lim.limit} words)</div>`;
-            html += renderMemoryDump(e.word0_location, lim.limit);
+            html += `<div class="ns-detail-title">Memory at 0x${e.word0_location.toString(16).toUpperCase().padStart(4, '0')} \u2014 ${e.label || 'Slot '+i} (${lim.limit + 1} words)</div>`;
+            html += renderMemoryDump(e.word0_location, lim.limit + 1, i);
             html += `</div></td></tr>`;
         }
     }
