@@ -457,7 +457,8 @@ header h1 {
     opacity: 1;
 }
 
-[data-tooltip].tooltip-below::after {
+[data-tooltip].tooltip-below::after,
+.fixed-toolbar [data-tooltip]::after {
     bottom: auto;
     top: calc(100% + 8px);
 }
