@@ -64,10 +64,11 @@ const SLIDERULE_SCALES = {
     ST: {
         label: 'S / T',
         desc: 'Sine & Tangent',
+        lockSlide: true,
         top: SCALE_DEFS.S,       topActive: true,
-        slide: SCALE_DEFS.T,     slideActive: true,
-        bottom: SCALE_DEFS.D,    bottomActive: true,
-        readout: (t, s, b) => `S: ${t}\u00b0  \u00b7  sin \u2248 ${Math.round(Math.sin(t * Math.PI / 180) * 10000) / 10000}  \u00b7  D: ${b}  \u00b7  T: ${s}\u00b0  \u00b7  tan \u2248 ${Math.round(Math.tan(s * Math.PI / 180) * 10000) / 10000}`
+        slide: SCALE_DEFS.D,     slideActive: true,
+        bottom: SCALE_DEFS.T,    bottomActive: true,
+        readout: (t, s, b) => `S: ${t}\u00b0  \u00b7  sin \u2248 ${Math.round(Math.sin(t * Math.PI / 180) * 10000) / 10000}  \u00b7  D: ${s}  \u00b7  T: ${b}\u00b0  \u00b7  tan \u2248 ${Math.round(Math.tan(b * Math.PI / 180) * 10000) / 10000}`
     }
 };
 
@@ -98,9 +99,9 @@ const SLIDERULE_EXPLANATIONS = {
     },
     ST: {
         title: 'S / T \u2014 Sine & Tangent',
-        body: 'The S scale maps angles (5.7\u00b0\u201390\u00b0) to positions where D reads sin(\u03b8)\u00d710. The T scale maps angles (5.7\u00b0\u201345\u00b0) to positions where D reads tan(\u03b8)\u00d710. To find sin(30\u00b0): drag the cursor to 30 on S, then read D = 5.0 \u2014 divide by 10 to get 0.5. The \u00d7 marker above the cursor shows the actual decimal value.',
-        scales: 'Body top: S (sine, 5.7\u00b0\u201390\u00b0) \u2014 active\nSlide: T (tangent, 5.7\u00b0\u201345\u00b0) \u2014 active\nBody bottom: D (single decade 1\u201310) \u2014 read sin/tan values here',
-        layout: 'On your rule: S, ST, T, and D are all on the body bottom. Here we show S on top, T on the slide, and D on the bottom so you can read the numeric result directly.'
+        body: 'S, D, and T are all fixed on the body \u2014 nothing slides. The S scale maps angles (5.7\u00b0\u201390\u00b0) so that D at the same position reads sin(\u03b8)\u00d710. The T scale maps angles (5.7\u00b0\u201345\u00b0) so that D reads tan(\u03b8)\u00d710. To find sin(30\u00b0): drag the cursor to 30 on S, read D = 5.0, divide by 10 \u2192 0.5. The \u00d7 marker above shows the decimal value directly.',
+        scales: 'Body: S (sine, 5.7\u00b0\u201390\u00b0) \u2014 fixed, active\nBody: D (single decade 1\u201310) \u2014 fixed, read values here\nBody: T (tangent, 5.7\u00b0\u201345\u00b0) \u2014 fixed, active',
+        layout: 'On your rule: S, ST, T, and D are all on the fixed body bottom. All three rows here are fixed \u2014 no slide movement. The cursor reads across all scales simultaneously.'
     }
 };
 
@@ -140,8 +141,9 @@ function slideruleClampVal(v, range) {
 function slideruleReadAtCursor() {
     const mode = SLIDERULE_SCALES[slideruleState.scaleMode];
     const cx = slideruleState.cursorX;
+    const slideOffset = mode.lockSlide ? 0 : -slideruleState.slideOffset;
     const topVal = slideruleClampVal(slideruleXToValForScale(cx, mode.top, 0), mode.top.range);
-    const slideVal = slideruleClampVal(slideruleXToValForScale(cx, mode.slide, -slideruleState.slideOffset), mode.slide.range);
+    const slideVal = slideruleClampVal(slideruleXToValForScale(cx, mode.slide, slideOffset), mode.slide.range);
     const bottomVal = slideruleClampVal(slideruleXToValForScale(cx, mode.bottom, 0), mode.bottom.range);
     slideruleState.lastReadD = bottomVal;
     slideruleState.lastReadC = slideVal;
@@ -158,6 +160,8 @@ function slideruleGetScaleFactor() {
 
 function slideruleStartDragSlide(e) {
     e.preventDefault();
+    const mode = SLIDERULE_SCALES[slideruleState.scaleMode];
+    if (mode.lockSlide) return;
     slideruleState.draggingSlide = true;
     slideruleState.dragStartX = e.clientX || e.touches[0].clientX;
     slideruleState.dragStartOffset = slideruleState.slideOffset;
@@ -417,11 +421,11 @@ function slideruleGenerateArrows(cx) {
         cursorLabel = `\u00b3\u221a${kVal} = ${dVal}`;
     } else if (slideruleState.scaleMode === 'ST') {
         const sVal = Math.round(vals.top * 100) / 100;
-        const tVal = Math.round(vals.slide * 100) / 100;
-        const dVal = Math.round(vals.bottom * 1000) / 1000;
+        const dVal = Math.round(vals.slide * 1000) / 1000;
+        const tVal = Math.round(vals.bottom * 100) / 100;
         const sinV = Math.round(Math.sin(sVal * Math.PI / 180) * 10000) / 10000;
         const tanV = Math.round(Math.tan(tVal * Math.PI / 180) * 10000) / 10000;
-        resultLabel = `S: ${sVal}\u00b0 \u2192 sin = ${sinV}  \u00b7  T: ${tVal}\u00b0 \u2192 tan = ${tanV}  \u00b7  D = ${dVal}`;
+        resultLabel = `S: ${sVal}\u00b0 \u2192 sin = ${sinV}  \u00b7  D = ${dVal}  \u00b7  T: ${tVal}\u00b0 \u2192 tan = ${tanV}`;
         cursorLabel = `sin = ${sinV}\ntan = ${tanV}`;
     }
 
@@ -501,7 +505,7 @@ function slideruleRenderDisplay() {
         } else if (sm === 'K') {
             instr = 'Drag <span style="color:#ff3333;">cursor</span> to a value on <span style="color:#cc9933;">K</span> (1\u20131000) \u2014 read its cube root on <span style="color:#cc9933;">D</span> below';
         } else if (sm === 'ST') {
-            instr = 'Drag <span style="color:#ff3333;">cursor</span> to an angle on <span style="color:#cc9933;">S</span> (top) or <span style="color:#66bbff;">T</span> (slide) \u2014 read sin/tan value on <span style="color:#cc9933;">D</span> (bottom, \u00f710)';
+            instr = 'All scales fixed \u2014 drag <span style="color:#ff3333;">cursor</span> across <span style="color:#cc9933;">S</span> (top), <span style="color:#cc9933;">D</span> (middle), <span style="color:#66bbff;">T</span> (bottom) \u2014 read sin/tan from the <span style="color:#ff3333;">\u00d7</span> above';
         }
         instrEl.innerHTML = instr;
     }
@@ -510,7 +514,8 @@ function slideruleRenderDisplay() {
     if (svgEl) {
         const totalW = slideruleState.scaleStart * 2 + slideruleState.scaleWidth;
         const topTicks = slideruleGenerateScaleTicksForDef(mode.top, 0);
-        const slideTicks = slideruleGenerateScaleTicksForDef(mode.slide, slideruleState.slideOffset);
+        const midOffset = mode.lockSlide ? 0 : slideruleState.slideOffset;
+        const slideTicks = slideruleGenerateScaleTicksForDef(mode.slide, midOffset);
         const bottomTicks = slideruleGenerateScaleTicksForDef(mode.bottom, 0);
         const cx = slideruleState.cursorX;
         const arrowsSVG = slideruleGenerateArrows(cx);
@@ -526,8 +531,12 @@ function slideruleRenderDisplay() {
         const slideOpacity = mode.slideActive ? '1' : '0.4';
         const bottomOpacity = mode.bottomActive ? '1' : '0.4';
         const topFill = mode.topActive ? '#1a1a1a' : '#141414';
-        const slideFill = mode.slideActive ? '#1a3318' : '#141e14';
+        const slideFill = mode.lockSlide ? (mode.slideActive ? '#1a1a1a' : '#141414') : (mode.slideActive ? '#1a3318' : '#141e14');
         const bottomFill = mode.bottomActive ? '#1a1a1a' : '#141414';
+        const midX = mode.lockSlide ? slideruleState.scaleStart - 4 : slideruleState.scaleStart - 4 + slideruleState.slideOffset;
+        const midLabelX = mode.lockSlide ? 14 : slideruleState.scaleStart - 18 + slideruleState.slideOffset;
+        const midCursor = mode.lockSlide ? '' : 'cursor:grab;';
+        const midClass = mode.lockSlide ? '' : 'class="sliderule-slide-rect"';
 
         svgEl.innerHTML = `
             <g opacity="${topOpacity}">${topLabels}</g>
@@ -538,8 +547,8 @@ function slideruleRenderDisplay() {
             <text x="14" y="22" fill="${mode.top.color}" font-size="14" font-weight="bold" font-family="monospace" opacity="${topOpacity}">${mode.top.name}</text>
             <g transform="translate(0, 4)" opacity="${topOpacity}">${topTicks}</g>
 
-            <rect x="${slideruleState.scaleStart - 4 + slideruleState.slideOffset}" y="38" width="${slideruleState.scaleWidth + 8}" height="32" fill="${slideFill}" rx="2" class="sliderule-slide-rect" style="cursor:grab;"/>
-            <text x="${slideruleState.scaleStart - 18 + slideruleState.slideOffset}" y="58" fill="${mode.slide.color}" font-size="14" font-weight="bold" font-family="monospace" opacity="${slideOpacity}">${mode.slide.name}</text>
+            <rect x="${midX}" y="38" width="${slideruleState.scaleWidth + 8}" height="32" fill="${slideFill}" rx="2" ${midClass} style="${midCursor}"/>
+            <text x="${midLabelX}" y="58" fill="${mode.slide.color}" font-size="14" font-weight="bold" font-family="monospace" opacity="${slideOpacity}">${mode.slide.name}</text>
             <g transform="translate(0, 42)" opacity="${slideOpacity}">${slideTicks}</g>
 
             <rect x="${slideruleState.scaleStart - 4}" y="74" width="${slideruleState.scaleWidth + 8}" height="32" fill="${bottomFill}" rx="2"/>
