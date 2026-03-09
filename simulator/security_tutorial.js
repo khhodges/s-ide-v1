@@ -211,7 +211,7 @@ class SecurityTutorial {
 </div>
 <div class="sr-tut-step">
 <span class="sr-tut-num">10</span>
-<div><strong>Test.</strong> Switch to the <strong>REPL</strong> tab and call your methods. The results are identical whichever language you chose &mdash; the hardware enforces the same security model on all four.</div>
+<div><strong>Test.</strong> Switch to the <strong>Pure Math</strong> tab and call your methods. The results are identical whichever language you chose &mdash; the hardware enforces the same security model on all four.</div>
 </div>
 </div>`
             },
