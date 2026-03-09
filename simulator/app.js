@@ -279,26 +279,80 @@ function renderCListEntryDetail(nsIdx, entry) {
         h += '<div class="clist-detail-title" style="margin-top:0.4rem;">Namespace Table Entries</div>';
         h += renderMemoryDump(loc, lim.limit + 1, nsIdx);
     } else {
-        let hasData = false;
-        const asm = new ChurchAssembler();
-        let memHtml = '<table class="cr-table code-view-table"><thead><tr><th>Addr</th><th>Hex</th><th>Decode</th></tr></thead><tbody>';
-        for (let w = 0; w < wordCount; w++) {
-            const addr = loc + w;
-            if (addr >= sim.memory.length) break;
-            const word = sim.memory[addr];
-            if (word === 0 && !hasData) continue;
-            hasData = true;
-            const decoded = asm.disassemble(word);
-            memHtml += `<tr>`;
-            memHtml += `<td class="cr-idx">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td>`;
-            memHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
-            memHtml += `<td class="code-disasm">${decoded}</td>`;
-            memHtml += '</tr>';
-        }
-        memHtml += '</tbody></table>';
-        if (hasData) {
-            h += '<div class="clist-detail-title" style="margin-top:0.4rem;">Memory Contents</div>';
-            h += memHtml;
+        const rawClistCount = lim.clistCount || 0;
+        const allocSize = lim.limit + 1;
+        const safeClistCount = Math.max(0, Math.min(rawClistCount, allocSize));
+        const isBootCList = (nsIdx === 2 && loc === 2 * sim.SLOT_SIZE);
+
+        if (isBootCList) {
+            h += '<div class="clist-detail-title" style="margin-top:0.4rem;">C-List (GT Entries)</div>';
+            let gtHtml = '<table class="cr-table code-view-table"><thead><tr><th>#</th><th>Addr</th><th>Hex</th><th>GT Decoded</th></tr></thead><tbody>';
+            let hasGT = false;
+            for (let w = 0; w < wordCount; w++) {
+                const addr = loc + w;
+                if (addr >= sim.memory.length) break;
+                const word = sim.memory[addr] || 0;
+                if (word === 0) continue;
+                hasGT = true;
+                gtHtml += _renderGTRow(w, addr, word);
+            }
+            gtHtml += '</tbody></table>';
+            if (hasGT) h += gtHtml;
+        } else if (safeClistCount > 0) {
+            const codeEnd = allocSize - safeClistCount;
+            let hasCode = false;
+            const asm = new ChurchAssembler();
+            let codeHtml = '<table class="cr-table code-view-table"><thead><tr><th>Addr</th><th>Hex</th><th>Decode</th></tr></thead><tbody>';
+            for (let w = 0; w < Math.min(codeEnd, wordCount); w++) {
+                const addr = loc + w;
+                if (addr >= sim.memory.length) break;
+                const word = sim.memory[addr] || 0;
+                if (word === 0 && !hasCode) continue;
+                hasCode = true;
+                const decoded = asm.disassemble(word);
+                codeHtml += `<tr>`;
+                codeHtml += `<td class="cr-idx">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td>`;
+                codeHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+                codeHtml += `<td class="code-disasm">${decoded}</td>`;
+                codeHtml += '</tr>';
+            }
+            codeHtml += '</tbody></table>';
+            if (hasCode) {
+                h += '<div class="clist-detail-title" style="margin-top:0.4rem;">CLOOMC Code</div>';
+                h += codeHtml;
+            }
+            h += `<div class="clist-detail-title" style="margin-top:0.4rem;">C-List (${safeClistCount} GT entries)</div>`;
+            let gtHtml = '<table class="cr-table code-view-table"><thead><tr><th>#</th><th>Addr</th><th>Hex</th><th>GT Decoded</th></tr></thead><tbody>';
+            for (let w = 0; w < safeClistCount; w++) {
+                const addr = loc + codeEnd + w;
+                if (addr >= sim.memory.length) break;
+                const word = sim.memory[addr] || 0;
+                gtHtml += _renderGTRow(w, addr, word);
+            }
+            gtHtml += '</tbody></table>';
+            h += gtHtml;
+        } else {
+            let hasData = false;
+            const asm = new ChurchAssembler();
+            let memHtml = '<table class="cr-table code-view-table"><thead><tr><th>Addr</th><th>Hex</th><th>Decode</th></tr></thead><tbody>';
+            for (let w = 0; w < wordCount; w++) {
+                const addr = loc + w;
+                if (addr >= sim.memory.length) break;
+                const word = sim.memory[addr];
+                if (word === 0 && !hasData) continue;
+                hasData = true;
+                const decoded = asm.disassemble(word);
+                memHtml += `<tr>`;
+                memHtml += `<td class="cr-idx">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td>`;
+                memHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+                memHtml += `<td class="code-disasm">${decoded}</td>`;
+                memHtml += '</tr>';
+            }
+            memHtml += '</tbody></table>';
+            if (hasData) {
+                h += '<div class="clist-detail-title" style="margin-top:0.4rem;">Memory Contents</div>';
+                h += memHtml;
+            }
         }
     }
 
@@ -684,6 +738,22 @@ function toggleNSDetail(idx) {
     updateNamespace();
 }
 
+function _renderGTRow(idx, addr, word) {
+    const hex = '0x' + (word >>> 0).toString(16).toUpperCase().padStart(8, '0');
+    if (word === 0) {
+        return `<tr><td style="color:rgba(200,155,60,0.7);">${idx}</td><td>0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td><td style="color:rgba(206,145,120,0.6);">${hex}</td><td><span style="color:#666;">0 (empty)</span></td></tr>`;
+    }
+    const p = sim.parseGT(word);
+    const permStr = (p.permissions.R ? 'R' : '-') + (p.permissions.W ? 'W' : '-') + (p.permissions.X ? 'X' : '-') + (p.permissions.L ? 'L' : '-') + (p.permissions.S ? 'S' : '-') + (p.permissions.E ? 'E' : '-');
+    const label = sim.nsLabels[p.index] || '';
+    let decoded = `<span style="color:rgba(78,201,176,0.7);">${p.typeName}</span>`;
+    decoded += ` <span style="color:rgba(200,155,60,0.55);">[${permStr}]</span>`;
+    decoded += ` \u2192 idx <span style="color:rgba(86,156,214,0.7);">${p.index}</span>`;
+    if (label) decoded += ` <span style="color:rgba(156,220,254,0.6);">(${label})</span>`;
+    decoded += ` v${p.version}`;
+    return `<tr><td style="color:rgba(200,155,60,0.7);">${idx}</td><td>0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td><td style="color:rgba(206,145,120,0.6);">${hex}</td><td>${decoded}</td></tr>`;
+}
+
 function renderMemoryDump(location, limit, nsIndex) {
     const wordCount = Math.min(limit, 64);
     if (wordCount <= 0) return '<span style="color:#888;">Empty (limit=0)</span>';
@@ -733,19 +803,56 @@ function renderMemoryDump(location, limit, nsIndex) {
             html += '</tr>';
         }
     } else {
-        var asm = new ChurchAssembler();
-        for (let i = 0; i < wordCount; i++) {
-            const addr = location + i;
-            const word = sim.memory[addr] || 0;
-            const hex = '0x' + (word >>> 0).toString(16).toUpperCase().padStart(8, '0');
-            let decoded = '';
-            if (word === 0) {
-                decoded = '<span style="color:#666;">0 (empty)</span>';
-            } else {
-                decoded = asm.disassemble(word);
+        const nsEntry = sim.readNSEntry(nsIndex);
+        const parsedW1 = nsEntry ? sim.parseNSWord1(nsEntry.word1_limit) : null;
+        const rawClistCount = parsedW1 ? parsedW1.clistCount : 0;
+        const allocSize = limit;
+        const safeClistCount = Math.max(0, Math.min(rawClistCount, allocSize));
+        const isBootCList = (nsIndex === 2 && location === 2 * sim.SLOT_SIZE);
+
+        if (isBootCList) {
+            html = '<table class="ns-mem-table"><thead><tr>';
+            html += '<th>#</th><th>Address</th><th>Hex</th><th>GT Decoded</th>';
+            html += '</tr></thead><tbody>';
+            for (let i = 0; i < wordCount; i++) {
+                const addr = location + i;
+                const word = sim.memory[addr] || 0;
+                if (word === 0) continue;
+                html += _renderGTRow(i, addr, word);
             }
-            const addrHex = '0x' + addr.toString(16).toUpperCase().padStart(4, '0');
-            html += `<tr><td style="color:#666;">+${i}</td><td>${addrHex}</td><td style="color:rgba(206,145,120,0.6);">${hex}</td><td>${decoded}</td></tr>`;
+        } else if (safeClistCount > 0) {
+            const codeEnd = allocSize - safeClistCount;
+            const codeShow = Math.min(codeEnd, wordCount);
+            html = '<div style="color:rgba(156,220,254,0.7);font-size:0.75rem;padding:0.15rem 0.5rem;margin-top:0.2rem;">CLOOMC Code</div>';
+            html += '<table class="ns-mem-table"><thead><tr><th>Offset</th><th>Address</th><th>Hex</th><th>Decoded</th></tr></thead><tbody>';
+            var asm = new ChurchAssembler();
+            for (let i = 0; i < codeShow; i++) {
+                const addr = location + i;
+                const word = sim.memory[addr] || 0;
+                const hex = '0x' + (word >>> 0).toString(16).toUpperCase().padStart(8, '0');
+                let decoded = word === 0 ? '<span style="color:#666;">0 (empty)</span>' : asm.disassemble(word);
+                const addrHex = '0x' + addr.toString(16).toUpperCase().padStart(4, '0');
+                html += `<tr><td style="color:#666;">+${i}</td><td>${addrHex}</td><td style="color:rgba(206,145,120,0.6);">${hex}</td><td>${decoded}</td></tr>`;
+            }
+            html += '</tbody></table>';
+            html += '<div style="color:rgba(200,155,60,0.7);font-size:0.75rem;padding:0.15rem 0.5rem;margin-top:0.3rem;">C-List (' + safeClistCount + ' GT entries)</div>';
+            html += '<table class="ns-mem-table"><thead><tr><th>#</th><th>Address</th><th>Hex</th><th>GT Decoded</th></tr></thead><tbody>';
+            const clistShow = Math.min(safeClistCount, wordCount);
+            for (let i = 0; i < clistShow; i++) {
+                const addr = location + codeEnd + i;
+                const word = sim.memory[addr] || 0;
+                html += _renderGTRow(i, addr, word);
+            }
+        } else {
+            var asm = new ChurchAssembler();
+            for (let i = 0; i < wordCount; i++) {
+                const addr = location + i;
+                const word = sim.memory[addr] || 0;
+                const hex = '0x' + (word >>> 0).toString(16).toUpperCase().padStart(8, '0');
+                let decoded = word === 0 ? '<span style="color:#666;">0 (empty)</span>' : asm.disassemble(word);
+                const addrHex = '0x' + addr.toString(16).toUpperCase().padStart(4, '0');
+                html += `<tr><td style="color:#666;">+${i}</td><td>${addrHex}</td><td style="color:rgba(206,145,120,0.6);">${hex}</td><td>${decoded}</td></tr>`;
+            }
         }
     }
     html += '</tbody></table>';
