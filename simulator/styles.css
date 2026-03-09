@@ -5252,6 +5252,38 @@ a.next-step-link:hover {
     margin-top: 8px;
 }
 
+.sliderule-explanation {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(26, 45, 26, 0.5);
+    border: 1px solid #3a5a3a;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+.sliderule-expl-title {
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: #cc9933;
+    margin-bottom: 6px;
+}
+.sliderule-expl-body {
+    margin-bottom: 8px;
+    color: #c8c8c8;
+}
+.sliderule-expl-scales {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.sliderule-expl-scale {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    color: #88aacc;
+    padding: 2px 0;
+}
+
 .sliderule-scale-selector {
     display: flex;
     gap: 4px;

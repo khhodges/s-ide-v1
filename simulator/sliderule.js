@@ -55,6 +55,34 @@ const SLIDERULE_SCALES = {
     }
 };
 
+const SLIDERULE_EXPLANATIONS = {
+    CD: {
+        title: 'C / D \u2014 Multiplication & Division',
+        body: 'The C and D scales are the workhorse of any slide rule. Both are single-decade logarithmic scales running 1\u201310. Because distances represent logarithms, sliding C relative to D adds log values \u2014 which multiplies the numbers. To compute a \u00d7 b: slide C so its 1 aligns with a on D, then read D under b on C. Division reverses this: align b on C over a on D, read D under 1 on C.',
+        scales: 'D (fixed body) \u2014 single decade 1\u201310, left\u2192right\nC (sliding rod) \u2014 single decade 1\u201310, left\u2192right'
+    },
+    AB: {
+        title: 'A / B \u2014 Squares & Square Roots',
+        body: 'The A scale compresses two decades (1\u2013100) into the rule length. The B scale below it spans one decade (1\u201310). Because A covers x\u00b2 in the same space B covers x, the cursor links each value on A to its square root on B. To find \u221aN: place the cursor on N on the A scale and read the answer on the B scale. To square a number: find it on B and read A.',
+        scales: 'A (fixed body) \u2014 double decade 1\u2013100, left\u2192right\nB (sliding rod) \u2014 single decade 1\u201310, left\u2192right'
+    },
+    CI: {
+        title: 'C / CI \u2014 Reciprocals & Division',
+        body: 'The CI (C-Inverted) scale runs right-to-left \u2014 it is a mirror image of C. Where C reads x, CI reads 1/x at the same position. This lets you divide without moving the slide: align the cursor and read the reciprocal directly. On a physical slide rule the inverted scale runs from 10 on the left to 1 on the right.',
+        scales: 'C (fixed body) \u2014 single decade 1\u201310, left\u2192right\nCI (sliding rod) \u2014 single decade 10\u21921, right\u2192left (inverted)'
+    },
+    K: {
+        title: 'D / K \u2014 Cubes & Cube Roots',
+        body: 'The K scale compresses three decades (1\u20131000) into the rule length. Paired with D (single decade 1\u201310), it links each value on K to its cube root on D. To find \u00b3\u221aN: place the cursor on N on the K scale and read D. To cube a number: find it on D and read K.',
+        scales: 'K (fixed body) \u2014 triple decade 1\u20131000, left\u2192right\nD (sliding rod) \u2014 single decade 1\u201310, left\u2192right'
+    },
+    ST: {
+        title: 'S / T \u2014 Sine & Tangent',
+        body: 'The S scale maps angles (5.7\u00b0\u201390\u00b0) to their sine values on a logarithmic scale. The T scale maps angles (5.7\u00b0\u201345\u00b0) to their tangent values. Both are paired with the D scale underneath, so the cursor links an angle to its trig function value. These scales were essential for navigation and surveying before electronic calculators.',
+        scales: 'S (fixed body) \u2014 sine scale 5.7\u00b0\u201390\u00b0\nT (sliding rod) \u2014 tangent scale 5.7\u00b0\u201345\u00b0'
+    }
+};
+
 function slideruleTraceLog(lambdaExpr, desc) {
     slideruleState.trace.unshift({ lambda: lambdaExpr, desc: desc, time: Date.now() });
     if (slideruleState.trace.length > slideruleState.maxTrace) slideruleState.trace.pop();
@@ -181,6 +209,7 @@ function slideruleSwitchScale(mode) {
         `Switched to ${SLIDERULE_SCALES[mode].label}: ${SLIDERULE_SCALES[mode].desc}`
     );
     slideruleUpdateScaleButtons();
+    slideruleUpdateExplanation();
     slideruleUpdateDisplay();
 }
 
@@ -231,6 +260,17 @@ function slideruleReset() {
 
 function slideruleUpdateDisplay() {
     slideruleRenderDisplay();
+}
+
+function slideruleUpdateExplanation() {
+    const el = document.getElementById('slideruleExplanation');
+    if (!el) return;
+    const info = SLIDERULE_EXPLANATIONS[slideruleState.scaleMode];
+    if (!info) { el.innerHTML = ''; return; }
+    const scaleLines = info.scales.split('\n').map(l => '<span class="sliderule-expl-scale">' + l + '</span>').join('');
+    el.innerHTML = '<div class="sliderule-expl-title">' + info.title + '</div>' +
+        '<div class="sliderule-expl-body">' + info.body + '</div>' +
+        '<div class="sliderule-expl-scales">' + scaleLines + '</div>';
 }
 
 function slideruleGenerateScaleTicksForDef(scaleDef, offset) {
@@ -472,11 +512,13 @@ function renderSlideRuleCalculator() {
                         <button class="sliderule-preset-btn" onclick="sliderulePresetSqrt(9)">\u221a9</button>
                         <button class="sliderule-preset-btn" onclick="slideruleReset()">Reset</button>
                     </div>
+                    <div class="sliderule-explanation" id="slideruleExplanation"></div>
                 </div>
             </div>
         </div>
     </div>`;
 
     slideruleState.rendered = true;
+    slideruleUpdateExplanation();
     sliderulePresetMultiply(2, 3);
 }
