@@ -127,10 +127,10 @@ class SlideRuleTutorial {
                 content: `<p>CLOOMC++ is a multi-language compiler with a single back-end. All front-ends produce the same output: arrays of 32-bit Church Machine instruction words.</p>
 <div class="sr-compiler-diagram">
 <div class="sr-comp-inputs">
-<div class="sr-comp-input">English</div>
-<div class="sr-comp-input">JavaScript</div>
-<div class="sr-comp-input">Haskell</div>
-<div class="sr-comp-input">Machine code</div>
+<div class="sr-comp-input" data-tooltip="English: Add(a, b) &mdash; add two numbers&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">English</div>
+<div class="sr-comp-input" data-tooltip="JavaScript: result = a + b; return(result)&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">JavaScript</div>
+<div class="sr-comp-input" data-tooltip="Haskell: method Add(a, b) = a + b&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">Haskell</div>
+<div class="sr-comp-input" data-tooltip="Machine code: 0x7F600000, 0x1F800000&#10;&#10;Direct 32-bit words:&#10;0x7F600000 = IADD DR0, DR0, DR1&#10;0x1F800000 = RETURN&#10;No compilation needed &mdash; injected verbatim">Machine code</div>
 </div>
 <div class="sr-comp-arrow">&darr;</div>
 <div class="sr-comp-core">CLOOMC++ Compiler<br><small>Resident Object Model</small></div>

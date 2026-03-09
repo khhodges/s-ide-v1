@@ -4381,6 +4381,21 @@ a.next-step-link:hover {
     border-radius: 4px;
     font-size: 0.78rem;
     color: var(--church-gold);
+    position: relative;
+    cursor: help;
+}
+
+.sr-comp-input[data-tooltip]::after {
+    bottom: auto;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: pre-line;
+    text-align: left;
+    max-width: 340px;
+    font-family: monospace;
+    font-size: 0.72rem;
+    line-height: 1.5;
 }
 
 .sr-comp-arrow {
