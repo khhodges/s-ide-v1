@@ -29,8 +29,8 @@ const SLIDERULE_SCALES = {
         label: 'A / B',
         desc: 'Squares & Square Roots',
         fixed: { name: 'A', color: '#cc9933', map: v => Math.log10(v) / 2, unmap: x => Math.pow(10, x * 2), range: [1, 100] },
-        slide: { name: 'B', color: '#33cc66', map: v => Math.log10(v) / 2, unmap: x => Math.pow(10, x * 2), range: [1, 100] },
-        readout: (d, c) => `A: ${d}  \u00b7  B: ${c}  \u00b7  \u221aA \u2248 ${Math.round(Math.sqrt(d) * 1000) / 1000}`
+        slide: { name: 'B', color: '#33cc66', map: v => Math.log10(v), unmap: x => Math.pow(10, x), range: [1, 10] },
+        readout: (d, c) => `A: ${d}  \u00b7  B: ${c}  \u00b7  \u221aA = B \u2248 ${Math.round(c * 1000) / 1000}`
     },
     CI: {
         label: 'C / CI',
@@ -217,7 +217,7 @@ function sliderulePresetSqrt(val) {
     slideruleState.cursorX = slideruleValToXForScale(v, SLIDERULE_SCALES.AB.fixed, 0);
     slideruleTraceLog(
         `CALL SlideRule.Sqrt(${v}) \u2192 ${Math.round(sqr * 1000) / 1000}`,
-        `Square root: read A=${v}, look down to D \u2192 \u221a${v} \u2248 ${Math.round(sqr * 1000) / 1000}`
+        `Square root: find ${v} on A scale, read B scale \u2192 \u221a${v} = ${Math.round(sqr * 1000) / 1000}`
     );
     slideruleUpdateDisplay();
 }
