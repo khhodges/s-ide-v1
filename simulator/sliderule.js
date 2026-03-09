@@ -65,9 +65,9 @@ const SLIDERULE_SCALES = {
         label: 'S / T',
         desc: 'Sine & Tangent',
         top: SCALE_DEFS.S,       topActive: true,
-        slide: SCALE_DEFS.C,     slideActive: false,
-        bottom: SCALE_DEFS.T,    bottomActive: true,
-        readout: (t, s, b) => `S: ${t}\u00b0  \u00b7  sin \u2248 ${Math.round(Math.sin(t * Math.PI / 180) * 10000) / 10000}  \u00b7  T: ${b}\u00b0  \u00b7  tan \u2248 ${Math.round(Math.tan(b * Math.PI / 180) * 10000) / 10000}`
+        slide: SCALE_DEFS.T,     slideActive: true,
+        bottom: SCALE_DEFS.D,    bottomActive: true,
+        readout: (t, s, b) => `S: ${t}\u00b0  \u00b7  sin \u2248 ${Math.round(Math.sin(t * Math.PI / 180) * 10000) / 10000}  \u00b7  D: ${b}  \u00b7  T: ${s}\u00b0  \u00b7  tan \u2248 ${Math.round(Math.tan(s * Math.PI / 180) * 10000) / 10000}`
     }
 };
 
@@ -98,9 +98,9 @@ const SLIDERULE_EXPLANATIONS = {
     },
     ST: {
         title: 'S / T \u2014 Sine & Tangent',
-        body: 'The S scale maps angles (5.7\u00b0\u201390\u00b0) to positions where D reads sin(\u03b8). The T scale maps angles (5.7\u00b0\u201345\u00b0) to positions where D reads tan(\u03b8). To find sin(30\u00b0): locate 30 on S and read D \u2248 0.5. These scales were essential for navigation and surveying.',
-        scales: 'Body top: S (sine, 5.7\u00b0\u201390\u00b0) \u2014 active\nSlide: C (single decade 1\u201310) \u2014 context\nBody bottom: T (tangent, 5.7\u00b0\u201345\u00b0) \u2014 active',
-        layout: 'On your rule: S, ST, and T are all on the body bottom alongside D. Here we show S on top and T on bottom so you can read both at the cursor.'
+        body: 'The S scale maps angles (5.7\u00b0\u201390\u00b0) to positions where D reads sin(\u03b8)\u00d710. The T scale maps angles (5.7\u00b0\u201345\u00b0) to positions where D reads tan(\u03b8)\u00d710. To find sin(30\u00b0): drag the cursor to 30 on S, then read D = 5.0 \u2014 divide by 10 to get 0.5. The \u00d7 marker above the cursor shows the actual decimal value.',
+        scales: 'Body top: S (sine, 5.7\u00b0\u201390\u00b0) \u2014 active\nSlide: T (tangent, 5.7\u00b0\u201345\u00b0) \u2014 active\nBody bottom: D (single decade 1\u201310) \u2014 read sin/tan values here',
+        layout: 'On your rule: S, ST, T, and D are all on the body bottom. Here we show S on top, T on the slide, and D on the bottom so you can read the numeric result directly.'
     }
 };
 
@@ -417,10 +417,11 @@ function slideruleGenerateArrows(cx) {
         cursorLabel = `\u00b3\u221a${kVal} = ${dVal}`;
     } else if (slideruleState.scaleMode === 'ST') {
         const sVal = Math.round(vals.top * 100) / 100;
-        const tVal = Math.round(vals.bottom * 100) / 100;
+        const tVal = Math.round(vals.slide * 100) / 100;
+        const dVal = Math.round(vals.bottom * 1000) / 1000;
         const sinV = Math.round(Math.sin(sVal * Math.PI / 180) * 10000) / 10000;
         const tanV = Math.round(Math.tan(tVal * Math.PI / 180) * 10000) / 10000;
-        resultLabel = `sin ${sVal}\u00b0 = ${sinV}  \u00b7  tan ${tVal}\u00b0 = ${tanV}`;
+        resultLabel = `S: ${sVal}\u00b0 \u2192 sin = ${sinV}  \u00b7  T: ${tVal}\u00b0 \u2192 tan = ${tanV}  \u00b7  D = ${dVal}`;
         cursorLabel = `sin = ${sinV}\ntan = ${tanV}`;
     }
 
@@ -500,7 +501,7 @@ function slideruleRenderDisplay() {
         } else if (sm === 'K') {
             instr = 'Drag <span style="color:#ff3333;">cursor</span> to a value on <span style="color:#cc9933;">K</span> (1\u20131000) \u2014 read its cube root on <span style="color:#cc9933;">D</span> below';
         } else if (sm === 'ST') {
-            instr = 'Drag <span style="color:#ff3333;">cursor</span> to an angle on <span style="color:#cc9933;">S</span> or <span style="color:#66bbff;">T</span> \u2014 the <span style="color:#ff3333;">\u00d7</span> above shows sin and tan values';
+            instr = 'Drag <span style="color:#ff3333;">cursor</span> to an angle on <span style="color:#cc9933;">S</span> (top) or <span style="color:#66bbff;">T</span> (slide) \u2014 read sin/tan value on <span style="color:#cc9933;">D</span> (bottom, \u00f710)';
         }
         instrEl.innerHTML = instr;
     }
