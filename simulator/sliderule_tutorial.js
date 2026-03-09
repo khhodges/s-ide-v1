@@ -162,7 +162,7 @@ class SlideRuleTutorial {
 </div>`
             },
             {
-                title: "Register Allocation & JSON Upload Format",
+                title: "Variable Passing & JSON Upload Format",
                 type: "compiler",
                 content: `<p>The Church Machine provides 16 data registers:</p>
 <table class="sr-table sr-table-wide"><tr><th>Registers</th><th>Purpose</th><th>Saved by</th></tr>
@@ -603,7 +603,7 @@ class SlideRuleTutorial {
         let html = '<div class="sr-wrapper">';
 
         html += '<div class="sr-header">';
-        html += '<h2>The Church Machine: SlideRule Comparative Study</h2>';
+        html += '<h2>The Church Machine Study</h2>';
         html += '<p class="sr-tagline">Multi-Language Compilation &bull; Capability Security &bull; Universal Target</p>';
         html += '<div class="sr-controls">';
         html += `<button class="btn btn-tutorial" onclick="slideRuleTutorial.stepBack()" ${this.currentStep <= 0 ? 'disabled' : ''}>&laquo; Back</button>`;
