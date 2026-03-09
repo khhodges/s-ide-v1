@@ -124,10 +124,14 @@ class SlideRuleTutorial {
             {
                 title: "The CLOOMC++ Compiler",
                 type: "compiler",
-                content: `<p>CLOOMC++ is a multi-language compiler with a single back-end. Both front-ends produce the same output: arrays of 32-bit Church Machine instruction words.</p>
+                content: `<p>CLOOMC++ is a multi-language compiler with a single back-end. All front-ends produce the same output: arrays of 32-bit Church Machine instruction words.</p>
 <div class="sr-compiler-diagram">
-<div class="sr-comp-input">JavaScript source</div>
-<div class="sr-comp-input">Haskell source</div>
+<div class="sr-comp-inputs">
+<div class="sr-comp-input">English</div>
+<div class="sr-comp-input">JavaScript</div>
+<div class="sr-comp-input">Haskell</div>
+<div class="sr-comp-input">Machine code</div>
+</div>
 <div class="sr-comp-arrow">&darr;</div>
 <div class="sr-comp-core">CLOOMC++ Compiler<br><small>Resident Object Model</small></div>
 <div class="sr-comp-arrow">&darr;</div>

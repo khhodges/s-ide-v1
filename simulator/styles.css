@@ -4367,6 +4367,13 @@ a.next-step-link:hover {
     border-radius: 8px;
 }
 
+.sr-comp-inputs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
 .sr-comp-input {
     padding: 0.4rem 1rem;
     background: rgba(200, 155, 60, 0.15);
