@@ -4409,6 +4409,20 @@ a.next-step-link:hover {
     color: var(--bg-dark);
     border-radius: 6px;
     font-weight: 600;
+    position: relative;
+    cursor: help;
+}
+
+.sr-comp-core[data-tooltip]::after {
+    bottom: auto;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: normal;
+    text-align: left;
+    max-width: 380px;
+    line-height: 1.5;
+    font-weight: normal;
     font-size: 0.85rem;
     text-align: center;
 }
