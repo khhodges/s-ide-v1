@@ -7644,7 +7644,7 @@ function onLangChange(restoring) {
         javascript: ['cloomc_hello', 'cloomc_memory', 'cloomc_counter', 'cloomc_sliderule'],
         haskell: ['cloomc_church_math', 'cloomc_church_pair', 'cloomc_church_case', 'cloomc_church_lambda', 'cloomc_sliderule_hs'],
         symbolic: ['cloomc_ada_note_g'],
-        lambda: ['cloomc_lambda_church', 'cloomc_lambda_booleans', 'cloomc_lambda_pairs', 'cloomc_lambda_ycomb']
+        lambda: ['cloomc_lambda_church', 'cloomc_lambda_booleans', 'cloomc_lambda_pairs', 'cloomc_lambda_ycomb', 'cloomc_lambda_sliderule']
     };
 
     const scroll = document.getElementById('exampleTabsScroll');
@@ -8129,6 +8129,107 @@ abstraction YCombinator {
     -- Sum 1..n: n*(n+1)/2
     method sumTo(n) = n * (n + 1)
 }`,
+        'lambda_sliderule': `-- LAMBDA CALCULUS
+-- Slide Rule \u2014 logarithmic computation as pure functions
+-- A slide rule computes via log identities:
+--   log(a \u00d7 b) = log(a) + log(b)
+--   log(a / b) = log(a) - log(b)
+--   log(\u221aa)   = log(a) / 2
+--   log(\u00b3\u221aa)  = log(a) / 3
+
+abstraction SlideRule {
+    capabilities { Constants }
+
+    -- C/D Scale: Multiplication
+    -- Slide C so its 1 aligns with a on D, read D under b on C
+    -- \u03BBa.\u03BBb.a \u00d7 b  (log addition on the scales)
+    method Multiply(a, b) = a * b
+
+    -- C/D Scale: Division
+    -- Align b on C over a on D, read D under 1 on C
+    -- \u03BBa.\u03BBb.a / b  (log subtraction)
+    method Divide(a, b) =
+        if b == 0 then 0
+        else a * b
+
+    -- A/D Scale: Square
+    -- Find x on D, read A  (double-decade maps x\u00b2)
+    -- \u03BBx.x \u00d7 x
+    method Square(x) = x * x
+
+    -- A/D Scale: Square Root (integer approximation)
+    -- Find n on A (body top), read D (body bottom)
+    -- \u03BBn.\u230a\u221an\u230b via conditional lookup
+    method Sqrt(n) =
+        if n < 1 then 0
+        else if n < 4 then 1
+        else if n < 9 then 2
+        else if n < 16 then 3
+        else if n < 25 then 4
+        else if n < 36 then 5
+        else if n < 49 then 6
+        else if n < 64 then 7
+        else if n < 81 then 8
+        else if n < 100 then 9
+        else 10
+
+    -- K/D Scale: Cube
+    -- Find x on D, read K  (triple-decade maps x\u00b3)
+    -- \u03BBx.x \u00d7 x \u00d7 x
+    method Cube(x) = x * x * x
+
+    -- K/D Scale: Cube Root (integer approximation)
+    -- Find n on K (body top), read D (body bottom)
+    -- \u03BBn.\u230a\u00b3\u221an\u230b via conditional lookup
+    method CubeRoot(n) =
+        if n < 1 then 0
+        else if n < 8 then 1
+        else if n < 27 then 2
+        else if n < 64 then 3
+        else if n < 125 then 4
+        else if n < 216 then 5
+        else if n < 343 then 6
+        else if n < 512 then 7
+        else if n < 729 then 8
+        else if n < 1000 then 9
+        else 10
+
+    -- CI/D Scale: Reciprocal (integer approximation)
+    -- CI runs right-to-left; cursor reads 1/x directly
+    -- \u03BBx.1/x \u2014 approximated for integer domain
+    method Reciprocal(x) =
+        if x == 0 then 0
+        else if x == 1 then 1
+        else 0
+
+    -- S Scale: Sine (integer approximation, degrees)
+    -- Find angle on S, read sin(\u03b8)\u00d710 on D, divide by 10
+    -- \u03BBdeg.sin(deg) approximated as lookup
+    method SineApprox(deg) =
+        if deg < 6 then 1
+        else if deg < 15 then 2
+        else if deg < 25 then 4
+        else if deg < 35 then 5
+        else if deg < 45 then 7
+        else if deg < 60 then 8
+        else if deg < 75 then 9
+        else 10
+
+    -- Absolute value: \u03BBn.if n < 0 then 0 - n else n
+    method Abs(n) = if n < 0 then 0 - n else n
+
+    -- Clamp: \u03BBx.\u03BBlo.\u03BBhi.if x < lo then lo else if x > hi then hi else x
+    method Clamp(x, lo, hi) =
+        if x < lo then lo
+        else if x > hi then hi
+        else x
+
+    -- Max: \u03BBa.\u03BBb.if a > b then a else b
+    method Max(a, b) = if a > b then a else b
+
+    -- Min: \u03BBa.\u03BBb.if a < b then a else b
+    method Min(a, b) = if a < b then a else b
+}`,
     };
 
     editor.value = examples[name] || examples['hello'];
@@ -8140,7 +8241,7 @@ abstraction YCombinator {
         const isHaskell = ['church_math','church_pair','church_case','church_lambda','sliderule_hs'].includes(name);
         const isSymbolic = ['ada_note_g'].includes(name);
         const isEnglish = ['english_hello','english_counter'].includes(name);
-        const isLambda = ['lambda_church','lambda_booleans','lambda_pairs','lambda_ycomb'].includes(name);
+        const isLambda = ['lambda_church','lambda_booleans','lambda_pairs','lambda_ycomb','lambda_sliderule'].includes(name);
         sel.value = isLambda ? 'lambda' : isEnglish ? 'english' : isSymbolic ? 'symbolic' : isHaskell ? 'haskell' : 'javascript';
     }
 
