@@ -4049,10 +4049,45 @@ a.next-step-link:hover {
 
     .docs-content-panel {
         overflow-y: visible;
+        max-width: 100vw;
     }
 
     .docs-content-panel .panel {
         height: auto;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .docs-content-body {
+        max-width: 100%;
+        overflow-x: hidden;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    .docs-content-body pre {
+        max-width: calc(100vw - 3rem);
+        overflow-x: auto;
+        font-size: 0.7rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+
+    .docs-content-body code {
+        word-break: break-all;
+    }
+
+    .docs-content-body table {
+        display: block;
+        max-width: calc(100vw - 3rem);
+        overflow-x: auto;
+        font-size: 0.7rem;
+    }
+
+    .docs-content-body td,
+    .docs-content-body th {
+        padding: 0.25rem 0.35rem;
+        font-size: 0.68rem;
     }
 
     .docs-back-btn {
