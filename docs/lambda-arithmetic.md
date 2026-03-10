@@ -290,9 +290,43 @@ isEqual(9, 18, 1, 2) = if (9×2) == (1×18) then 1 else 0
 
 ### Why Separate Num/Den Methods?
 
-The Church Machine passes and returns single integer values — there are no tuple return types at the hardware level. So each fraction operation is split into two method calls: one for the numerator, one for the denominator. The caller tracks both values.
+The current CLOOMC++ compiler convention maps one method to one return value in a single data register. So each fraction operation is split into two method calls: one for the numerator, one for the denominator. The caller tracks both values. [*]
 
-This is how real hardware fraction libraries work: you store the numerator and denominator in separate registers and call the appropriate method for each component.
+This is how many real hardware fraction libraries work: you store the numerator and denominator in separate registers and call the appropriate method for each component. But this is a **compiler convention**, not a hardware limitation — see the footnote below.
+
+---
+
+**[*] Footnote — Tuples on the Church Machine: compiler convention vs. hardware capability**
+
+The statement that "each fraction operation is split into two method calls" deserves careful qualification. This is a limitation of the current CLOOMC++ compiler's calling convention, **not** a limitation of the Church Machine hardware.
+
+The hardware is fully capable of returning multiple values from a single method call. Here is why, and how it could work:
+
+**1. The registers are there.** The Church Machine has 8 data registers (DR0–DR7) and 16 capability registers (CR0–CR15). The CALL and RETURN instructions do not restrict how many of these registers carry meaningful data. A method that computes both a numerator and a denominator could write the numerator to DR1 and the denominator to DR2 before executing RETURN. The caller would then read both registers — no second method call needed.
+
+**2. Memory lumps can store tuples.** A capability register can point to an abstraction's memory lump — a contiguous block of words. A method could write a tuple's components as adjacent words in the lump (numerator at offset 0, denominator at offset 1), and the caller could LOAD each word by offset. This is analogous to returning a struct pointer in C — the data lives in memory, the caller knows the layout.
+
+**3. Register-pair conventions are standard in real hardware.** This is not an unusual idea. ARM's 32-bit architecture returns 64-bit results across R0:R1. The x86 DIV instruction writes the quotient to EAX and the remainder to EDX simultaneously. The MIPS `mult` instruction writes its 64-bit result to HI:LO. In each case, a single instruction produces a multi-register result, and the calling convention defines which registers carry which components. The Church Machine could adopt the same approach — for example, "fraction methods return numerator in DR1 and denominator in DR2."
+
+**4. What the CLOOMC++ compiler would need.** To support multi-value returns, three things would change in the compiler, none in the hardware:
+
+- **Syntax**: A way to express tuple returns, e.g., `method addFrac(n1, d1, n2, d2) = ((n1 * d2) + (n2 * d1), d1 * d2)` returning both components at once.
+- **Calling convention**: A defined mapping — "the first return value goes to DR1, the second to DR2" — so the caller knows where to find each component after RETURN.
+- **Code generation**: The compiler emits instructions that write to both destination registers before the RETURN instruction, rather than writing to one and discarding the other.
+
+**5. The rational abstraction would simplify dramatically.** With tuple returns, `RationalArith` could be rewritten as:
+
+```
+method addFrac(n1, d1, n2, d2) = ((n1 * d2) + (n2 * d1), d1 * d2)
+method mulFrac(n1, d1, n2, d2) = (n1 * n2, d1 * d2)
+method divFrac(n1, d1, n2, d2) = (n1 * d2, d1 * n2)
+```
+
+Each operation would be a single method call returning both the numerator and denominator, halving the number of calls the caller needs to make.
+
+**6. This is a natural future extension.** The split Num/Den pattern used in this document is correct and works today. It is not a workaround for broken hardware — it is a pragmatic choice within the current compiler's single-return convention. When the CLOOMC++ compiler gains tuple-return support, the rational arithmetic abstraction can be simplified without any hardware changes. The instructions, the registers, and the capability model are already sufficient.
+
+---
 
 ### Limitations
 
