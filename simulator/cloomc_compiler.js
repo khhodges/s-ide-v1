@@ -243,6 +243,7 @@ class CLOOMCCompiler {
                 tokens.push({ type: 'op', value: '-', pos: i }); i++; continue;
             }
             if (input[i] === '*') { tokens.push({ type: 'op', value: '*', pos: i }); i++; continue; }
+            if (input[i] === '/') { tokens.push({ type: 'op', value: '/', pos: i }); i++; continue; }
             if (input.substring(i, i + 2) === '==') { tokens.push({ type: 'op', value: '==', pos: i }); i += 2; continue; }
             if (input.substring(i, i + 2) === '<=') { tokens.push({ type: 'op', value: '<=', pos: i }); i += 2; continue; }
             if (input.substring(i, i + 2) === '>=') { tokens.push({ type: 'op', value: '>=', pos: i }); i += 2; continue; }
@@ -1600,6 +1601,23 @@ class CLOOMCCompiler {
                         code[exitAddr] = (code[exitAddr] & ~0x7FFF) | (exitTarget & 0x7FFF);
                         code[exitAddr] = code[exitAddr] >>> 0;
                         break;
+                    case '/': {
+                        manifest.push({ src: lineNum, addr: code.length, desc: 'divide (repeated subtraction)' });
+                        const remDR = this._allocTemp(locals);
+                        code.push(this.encode(this.opcodes.IADD, 14, dr, 0, 0));
+                        code.push(this.encode(this.opcodes.IADD, 14, remDR, leftReg, 0));
+                        const divLoop = code.length;
+                        code.push(this.encode(this.opcodes.MCMP, 14, remDR, rightReg, 0));
+                        const divExit = code.length;
+                        code.push(this.encode(this.opcodes.BRANCH, this.conditions.LT, 0, 0, 0));
+                        code.push(this.encode(this.opcodes.ISUB, 14, remDR, remDR, rightReg));
+                        code.push(this.encode(this.opcodes.IADD, 14, dr, dr, 1));
+                        code.push(this.encode(this.opcodes.BRANCH, 14, 0, 0, divLoop & 0x7FFF));
+                        const divExitTarget = code.length;
+                        code[divExit] = (code[divExit] & ~0x7FFF) | (divExitTarget & 0x7FFF);
+                        code[divExit] = code[divExit] >>> 0;
+                        break;
+                    }
                     case '==':
                         manifest.push({ src: lineNum, addr: code.length, desc: 'equals' });
                         code.push(this.encode(this.opcodes.MCMP, 14, leftReg, rightReg, 0));
