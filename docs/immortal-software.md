@@ -315,7 +315,7 @@ Sceptics will point out that capability architectures have been proposed before 
 
 ### Hardware Patching vs Full Immersion — The Fundamental Difference
 
-Every previous capability architecture took a conventional processor and **patched capabilities onto it**. The underlying machine remained a von Neumann architecture with raw memory addresses, mutable global state, and unrestricted control flow. Capabilities were an addition — a security layer bolted on top of hardware that was never designed for it.
+Most capability architectures took a conventional processor and **patched capabilities onto it**. The underlying machine remained a von Neumann architecture with raw memory addresses, mutable global state, and unrestricted control flow. Capabilities were an addition — a security layer bolted on top of hardware that was never designed for it.
 
 | Architecture | Approach | What remained underneath |
 |---|---|---|
@@ -331,9 +331,25 @@ These are all **hardware patches**: the conventional architecture persists, and 
 
 **3. The software stack problem.** A patched architecture still runs conventional software — C compilers, Unix kernels, shared libraries, package managers. The capability mechanism can protect the boundaries between components, but it cannot prevent the components themselves from containing the bugs that capabilities are meant to guard against. You still have buffer overflows inside a C library — you've just added a fence around the library. The bugs persist; only their blast radius is reduced.
 
-### The Church Machine: Full Immersion
+### The PP250 — The Pioneer That Got It Right
 
-The Church Machine does not patch capabilities onto a conventional architecture. **There is no conventional architecture underneath.** The design starts from the lambda calculus and builds upward:
+There is one critical exception to the patching pattern. The **Plessey PP250** (late 1960s) — predating the CAP Computer by several years — was the first capability architecture to take the full immersion approach. It was not a conventional processor with capabilities bolted on. It was a capability machine from the ground up, designed for telecom switching where downtime was measured in lost revenue per second and a stale token from a terminated call must never grant access to a new call's billing data.
+
+The PP250 made design choices that the patching architectures did not:
+
+- **Capabilities were the only access mechanism.** There was no raw memory address mode, no backdoor to conventional addressing. If you didn't hold a capability, you couldn't access the resource. Period.
+- **The instruction set was built around capabilities.** Operations assumed capability-mediated access, not flat memory. The hardware did not need a compatibility mode because there was nothing to be compatible with.
+- **The architecture served a domain where correctness was non-negotiable.** Telecom switching — thousands of concurrent calls, each a dynamic thread with its own capabilities, real-time deterministic garbage collection to reclaim resources from terminated calls. The PP250 ran in production, in telephone exchanges, handling real traffic.
+
+The PP250 proved that full immersion capability hardware could work, could perform, and could run mission-critical workloads. It was not an academic exercise — it was a production system in one of the most demanding real-time environments in computing.
+
+**Why didn't it spread?** The PP250 was designed for a specific domain (telecom switching) by a specific company (Plessey) at a time when the broader computing industry was consolidating around the von Neumann model and general-purpose processors. The market chose backward compatibility and general-purpose flexibility over architectural correctness. The PP250's lessons were not lost — they were ignored, because the cost of ignoring them had not yet become high enough.
+
+The Church Machine is the PP250's architectural descendant. It takes the same full immersion approach — capabilities as the only mechanism, no conventional hardware underneath, no escape hatch — and extends it with the lambda calculus as the computational model, the Navana Master Controller for abstraction management, and per-abstraction MTBF measurement. What the PP250 proved for telecom in the 1960s, the Church Machine generalises for all safety-critical computing.
+
+### The Church Machine: Full Immersion — Completing What the PP250 Started
+
+The Church Machine does not patch capabilities onto a conventional architecture. **There is no conventional architecture underneath.** Like the PP250 before it, the design starts from first principles and builds upward — but where the PP250 started from telecom requirements, the Church Machine starts from the lambda calculus:
 
 - **No raw memory addresses.** Memory is organised into lumps (code lumps, data lumps), each accessed exclusively through Golden Tokens. There is no `0x7fff3a20` to dereference. The concept of a pointer does not exist.
 
@@ -345,23 +361,26 @@ The Church Machine does not patch capabilities onto a conventional architecture.
 
 This is the difference between a building with a sprinkler system and a building made of materials that cannot burn. The sprinkler system (hardware patching) mitigates fire damage. The non-combustible building (full immersion) eliminates fire as a category of failure.
 
-| Property | Hardware patching (CAP, iAPX 432, CHERI) | Full immersion (Church Machine) |
+| Property | Hardware patching (CAP, iAPX 432, CHERI) | Full immersion (PP250, Church Machine) |
 |---|---|---|
 | Conventional memory model | Still present — capabilities overlay it | Does not exist — lumps and tokens replace it |
 | Raw pointers | Available alongside capability pointers | Concept does not exist in the ISA |
-| Legacy code compatibility | Supported — conventional code runs alongside | Not supported — all code is lambda calculus abstractions |
+| Legacy code compatibility | Supported — conventional code runs alongside | Not supported — all code operates within the capability model |
 | Bypass path to raw hardware | Exists (legacy mode, uncovered code) | Does not exist — there is no raw hardware to reach |
-| Complexity trajectory | Increases (two models coexist) | Decreases (one model, 20 instructions) |
-| Software stack | Conventional (C, Unix, libraries) | Eliminated — abstractions replace the stack |
+| Complexity trajectory | Increases (two models coexist) | Decreases (one model, minimal instruction set) |
+| Software stack | Conventional (C, Unix, libraries) | Eliminated — capabilities are the only interface |
 | Security boundary | Permeable — covers what it covers | Total — the capability model is the only execution model |
+| Production proven | CAP: academic. iAPX 432: commercial failure. CHERI: research prototype | PP250: production telecom. Church Machine: in development |
 
 ### Why This Matters for the Timeline
 
-The failure of previous capability architectures is often cited as evidence that capability hardware cannot succeed commercially. But previous architectures were not attempting what the Church Machine attempts. They were asking: *"How do we add capabilities to a conventional computer?"* The Church Machine asks: *"What does a computer look like if capabilities are the only mechanism?"*
+The failure of CAP, iAPX 432, and CHERI is often cited as evidence that capability hardware cannot succeed commercially. But those architectures were all patching approaches — they were asking: *"How do we add capabilities to a conventional computer?"* The PP250 and the Church Machine ask a different question: *"What does a computer look like if capabilities are the only mechanism?"*
+
+The PP250 answered that question for telecom in the 1960s and ran in production for years. It was not a failure — it was a success in a narrow domain that the broader industry chose to ignore. The Church Machine generalises the PP250's answer to all computing, with the lambda calculus providing the mathematical foundation that makes the architecture domain-independent.
 
 This is a harder engineering problem — there is no legacy compatibility, no gradual migration path, no "run your existing C code with added protection." But it is a *simpler* machine. Twenty instructions instead of thousands. No microcode. No compatibility modes. No dual memory models. The hardware is verifiable precisely because it is minimal.
 
-The tradeoff is stark: previous capability architectures offered backward compatibility at the cost of incomplete security. The Church Machine offers complete security at the cost of backward compatibility. For green-field safety-critical systems — where backward compatibility is worthless but provable security is existential — this is not a tradeoff at all. It is the only rational choice.
+The tradeoff is stark: patching architectures offered backward compatibility at the cost of incomplete security. Full immersion — pioneered by the PP250 and completed by the Church Machine — offers complete security at the cost of backward compatibility. For green-field safety-critical systems — where backward compatibility is worthless but provable security is existential — this is not a tradeoff at all. It is the only rational choice.
 
 **The cost of failure has changed.** In 1981, a buffer overflow was an inconvenience. In 2026, a buffer overflow in a medical device can kill patients, in an autonomous weapons system can cause civilian casualties, in a banking platform can erase billions. The regulatory and liability pressure on software correctness is orders of magnitude higher than it was when previous capability architectures were proposed.
 
