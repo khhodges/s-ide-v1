@@ -356,6 +356,36 @@ If you've used object-oriented languages, you might expect to create an "instanc
 
 Data lives in **registers and memory**. Abstractions provide **operations** on that data. This is closer to how a real CPU works than to an object-oriented language.
 
+### Code Reuse by Construction — Why Stateless Abstractions Matter
+
+This separation of code from data is not a limitation — it is the source of the Church Machine's code reuse model, and it comes directly from the lambda calculus.
+
+In Alonzo Church's lambda calculus, a function is a pure transformation: it takes an argument, produces a result, and has no side effects. The function `λx.x + 1` can be applied to 3, to 7, to a million different values — each application is independent, and the function itself is unchanged. There is no "state" inside the function that one caller can corrupt for another.
+
+The Church Machine implements this literally. An abstraction's code is loaded once into a memory lump and shared by every caller through capability-secured `CALL` instructions:
+
+```
+Thread #12 calls FixedPointMath.mulFixed(150, 240)   → uses DR1, DR2, returns in DR3
+Thread #47 calls FixedPointMath.mulFixed(350, 175)   → uses DR1, DR2, returns in DR3
+Thread #93 calls FixedPointMath.mulFixed(999, 100)   → uses DR1, DR2, returns in DR3
+```
+
+All three threads execute the **same code** at the **same memory address**. But each thread has its own register file, so DR1 and DR2 hold different values in each thread. The results are independent. No locks, no synchronisation, no defensive copying. The code is reused automatically because it has no state to conflict.
+
+This is fundamentally different from object-oriented code reuse:
+
+| | Object-oriented | Church Machine |
+|---|---|---|
+| **Reuse mechanism** | Inheritance — child class copies and extends parent code | Capability — caller holds a token granting access to shared code |
+| **State** | Each instance has its own fields, mixed with the methods | State lives entirely in the caller's registers and memory |
+| **Interference** | Shared mutable state requires locks, synchronisation, defensive copying | Impossible — the abstraction has no mutable state to share |
+| **Scaling** | Each instance consumes memory for its fields | One code lump serves unlimited callers; only registers scale with thread count |
+| **Safety** | Depends on correct discipline by the programmer | Enforced by hardware — the architecture makes interference structurally impossible |
+
+The lambda calculus guarantees this property mathematically: a pure function applied to different arguments cannot produce interference. The Church Machine enforces it physically: abstractions contain only code, threads contain only state, and the capability system controls who can call what.
+
+This means **code reuse is not a feature that was designed in — it is a consequence of the mathematical model**. Any abstraction, once written and deployed, can be safely shared by any number of concurrent callers without modification, without synchronisation, and without risk. The `FixedPointMath` abstraction serves a telephone exchange, a banking system, and a medical instrument simultaneously — the same code, the same methods, different threads, provably independent results.
+
 ### How Values Are Tracked
 
 The caller keeps track of what values mean. For fixed-point:
