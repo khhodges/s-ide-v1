@@ -313,6 +313,56 @@ Architectural transitions in computing follow a consistent pattern. New paradigm
 
 Sceptics will point out that capability architectures have been proposed before (CAP computer 1970, iAPX 432 1981, CHERI 2014) without achieving mainstream adoption. What's different this time?
 
+### Hardware Patching vs Full Immersion — The Fundamental Difference
+
+Every previous capability architecture took a conventional processor and **patched capabilities onto it**. The underlying machine remained a von Neumann architecture with raw memory addresses, mutable global state, and unrestricted control flow. Capabilities were an addition — a security layer bolted on top of hardware that was never designed for it.
+
+| Architecture | Approach | What remained underneath |
+|---|---|---|
+| **CAP Computer** (Cambridge, 1970) | Added capability registers to a conventional processor | Conventional memory model, conventional instruction set, conventional linking |
+| **iAPX 432** (Intel, 1981) | Object-based capability architecture, but implemented as a complex CISC design on top of conventional silicon | x86-era memory model, enormous microcode complexity, catastrophic performance overhead |
+| **CHERI** (Cambridge/SRI, 2014–present) | Extended MIPS/RISC-V/ARM with capability pointers — "fat pointers" that carry bounds and permissions | The entire conventional software stack: C, Unix, shared libraries, mutable global state, raw pointers still exist alongside capabilities |
+
+These are all **hardware patches**: the conventional architecture persists, and the capability mechanism is layered on top. This creates three unavoidable problems:
+
+**1. The bypass problem.** If the conventional mechanism still exists alongside the capability mechanism, there is always a path — through a bug, a misconfiguration, or a deliberate exploit — to bypass the capabilities and use the raw hardware directly. CHERI, for example, allows legacy C code to run alongside capability-aware code. The capabilities protect what they cover, but they cannot prevent the uncovered code from corrupting the system. The security boundary is permeable.
+
+**2. The complexity problem.** Bolting capabilities onto an existing architecture means the hardware must support *both* the conventional model *and* the capability model simultaneously. The iAPX 432's microcode was so complex that it ran 5–10× slower than a conventional processor of the same era. CHERI adds capability metadata to every pointer, doubling pointer size and requiring changes throughout the memory hierarchy. The patching approach increases complexity rather than reducing it.
+
+**3. The software stack problem.** A patched architecture still runs conventional software — C compilers, Unix kernels, shared libraries, package managers. The capability mechanism can protect the boundaries between components, but it cannot prevent the components themselves from containing the bugs that capabilities are meant to guard against. You still have buffer overflows inside a C library — you've just added a fence around the library. The bugs persist; only their blast radius is reduced.
+
+### The Church Machine: Full Immersion
+
+The Church Machine does not patch capabilities onto a conventional architecture. **There is no conventional architecture underneath.** The design starts from the lambda calculus and builds upward:
+
+- **No raw memory addresses.** Memory is organised into lumps (code lumps, data lumps), each accessed exclusively through Golden Tokens. There is no `0x7fff3a20` to dereference. The concept of a pointer does not exist.
+
+- **No mutable global state.** Each thread has its own register file. There are no global variables, no shared memory segments, no environment variables. State is local to the computation that owns it.
+
+- **No conventional instruction set.** The Church Machine has 20 instructions, derived from the operations needed to evaluate lambda calculus expressions and manage capabilities. There is no `MOV`, no `JMP`, no `LOAD` from an arbitrary address. Every instruction operates within the capability model because the capability model is all there is.
+
+- **No conventional software stack.** There is no C compiler, no Unix kernel, no shared libraries, no linker, no package manager. Code is written as lambda calculus abstractions, loaded into code lumps by the Navana Master Controller, and executed within the capability framework. There is no "legacy mode", no "compatibility layer", no escape hatch.
+
+This is the difference between a building with a sprinkler system and a building made of materials that cannot burn. The sprinkler system (hardware patching) mitigates fire damage. The non-combustible building (full immersion) eliminates fire as a category of failure.
+
+| Property | Hardware patching (CAP, iAPX 432, CHERI) | Full immersion (Church Machine) |
+|---|---|---|
+| Conventional memory model | Still present — capabilities overlay it | Does not exist — lumps and tokens replace it |
+| Raw pointers | Available alongside capability pointers | Concept does not exist in the ISA |
+| Legacy code compatibility | Supported — conventional code runs alongside | Not supported — all code is lambda calculus abstractions |
+| Bypass path to raw hardware | Exists (legacy mode, uncovered code) | Does not exist — there is no raw hardware to reach |
+| Complexity trajectory | Increases (two models coexist) | Decreases (one model, 20 instructions) |
+| Software stack | Conventional (C, Unix, libraries) | Eliminated — abstractions replace the stack |
+| Security boundary | Permeable — covers what it covers | Total — the capability model is the only execution model |
+
+### Why This Matters for the Timeline
+
+The failure of previous capability architectures is often cited as evidence that capability hardware cannot succeed commercially. But previous architectures were not attempting what the Church Machine attempts. They were asking: *"How do we add capabilities to a conventional computer?"* The Church Machine asks: *"What does a computer look like if capabilities are the only mechanism?"*
+
+This is a harder engineering problem — there is no legacy compatibility, no gradual migration path, no "run your existing C code with added protection." But it is a *simpler* machine. Twenty instructions instead of thousands. No microcode. No compatibility modes. No dual memory models. The hardware is verifiable precisely because it is minimal.
+
+The tradeoff is stark: previous capability architectures offered backward compatibility at the cost of incomplete security. The Church Machine offers complete security at the cost of backward compatibility. For green-field safety-critical systems — where backward compatibility is worthless but provable security is existential — this is not a tradeoff at all. It is the only rational choice.
+
 **The cost of failure has changed.** In 1981, a buffer overflow was an inconvenience. In 2026, a buffer overflow in a medical device can kill patients, in an autonomous weapons system can cause civilian casualties, in a banking platform can erase billions. The regulatory and liability pressure on software correctness is orders of magnitude higher than it was when previous capability architectures were proposed.
 
 **The tooling gap has closed.** The iAPX 432 failed partly because writing capability-aware code in 1981 was impractical with contemporary tooling. Today, the lambda calculus is well understood, functional programming has entered the mainstream (Haskell, Rust's ownership model, even JavaScript's arrow functions), and formal verification tools are maturing. The Church Machine's 20-instruction ISA is simpler than any mainstream processor — tooling is easier to build, not harder.
