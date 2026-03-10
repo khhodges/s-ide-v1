@@ -370,6 +370,178 @@ The key insight: **the "instance" is really the caller's context** — its regis
 
 ---
 
+## Threads as Dynamic Instances — The PP250 Telephone Call
+
+### The Missing Piece
+
+The earlier sections explained that abstractions are stateless code blocks and that the caller's registers hold the data. But what happens when you need *many independent callers*, each with their own state, running at the same time?
+
+Consider a PP250 telephone exchange handling calls to Australia. Each call needs its own state — caller ID, destination number, duration counter, billing rate, connection status. You can't share one set of registers between 50 simultaneous calls. Each call needs its own context.
+
+The answer is **threads**. On the Church Machine, a thread *is* a dynamic instance.
+
+### One Thread Per Call
+
+When a call to Australia is initiated, the system spawns a new thread. That thread gets:
+
+- **Its own register file** — DR0–DR7 hold call-specific data (caller ID in DR1, destination in DR2, duration counter in DR3, billing rate in DR4)
+- **Its own program counter** — the thread executes the telephony abstraction's code independently
+- **Its own capability context** — the thread holds Golden Tokens for exactly the abstractions it needs
+
+```
+Thread #47 — Call to Australia
+  DR1 = 61299887766       (destination: +61 2 9988 7766)
+  DR2 = 442071234567      (caller: +44 20 7123 4567)
+  DR3 = 0                 (duration counter, incrementing)
+  DR4 = 250               (billing rate: 2.50 per minute, fixed-point)
+  
+  Capabilities:
+    CR1 → Telephony        (connect, disconnect, signal)
+    CR2 → Billing          (startCharge, endCharge, getRate)
+    CR3 → Routing          (findRoute, allocateCircuit)
+```
+
+Fifty simultaneous calls to Australia means fifty threads, each with their own registers, their own capabilities, and their own execution state. They run concurrently, sharing the telephony abstraction's *code* but never sharing *data*. When a call ends, its thread terminates.
+
+### Static Abstractions, Dynamic Threads
+
+This completes the picture:
+
+| Concept | What it provides | Lifetime |
+|---|---|---|
+| **Abstraction** | Code — methods, logic, instruction sequences | Permanent (loaded once, shared by all callers) |
+| **Thread** | State — registers, PC, capability context | Dynamic (created per call, destroyed on completion) |
+| **Capability** | Permission — Golden Token granting access | Scoped to the thread that holds it |
+
+The abstraction is the *class*. The thread is the *instance*. The capability is the *permission to use it*. This is not a metaphor — it is the actual hardware mechanism.
+
+---
+
+## Why This Demands Deterministic Garbage Collection
+
+### The Problem: What Happens When a Call Ends?
+
+When thread #47's call to Australia disconnects, the thread terminates. But it leaves behind:
+
+- **Namespace entries** — the telephony, billing, and routing abstractions were referenced by this thread's capabilities
+- **Golden Tokens** — the thread held tokens in CR1, CR2, CR3 that pointed to those entries
+- **Memory** — the thread's register state and any memory lump it was using
+
+If these resources are not reclaimed, they accumulate. A busy exchange handling thousands of calls per hour would exhaust the namespace in minutes. Every ended call that isn't cleaned up is a resource leak — and eventually, the system cannot spawn new threads for new calls.
+
+This is not a theoretical problem. It is the *central* problem of any system that creates and destroys dynamic instances.
+
+### Non-Deterministic GC Is Not Acceptable
+
+Languages like Java and Go use non-deterministic garbage collection — the GC runs "when it feels like it", with unpredictable pause times and no guarantee of when resources will be freed. For a telephone exchange, this is catastrophic:
+
+- **A GC pause during a call drops audio** — the thread stops executing, the call goes silent
+- **Unpredictable reclamation means unpredictable capacity** — you cannot know how many calls the system can handle at any given moment
+- **GC storms under load** — when the system is busiest (peak call volume), GC pressure is highest, causing the worst pauses at the worst time
+- **Stale tokens linger** — if GC hasn't collected a terminated thread's resources, its Golden Tokens might still appear valid, creating a window for use-after-free
+
+### The PP250 Solution: Deterministic Four-Phase GC
+
+The Church Machine's garbage collection is deterministic — it runs in bounded time with predictable behaviour. The four phases are:
+
+**Phase 1 — Mark:** Flag all non-empty namespace entries as potentially reclaimable (set G=1).
+
+**Phase 2 — Scan:** Walk the full reachability tree from all live roots — active threads' capability registers, call stack frames, thread table entries. Every reachable entry has G reset to 0.
+
+**Phase 3 — Clear:** Any entry still marked G=1 after scanning is unreachable. No active thread references it. Reclaim it.
+
+**Phase 4 — Flip:** Toggle GC polarity for the next cycle.
+
+The critical insight is **how liveness is signalled**: the mLoad validation pipeline — the single trusted path for all namespace access — resets the G-bit on every accessed entry as a side effect of normal execution. Active calls constantly touch their namespace entries through LOAD, SAVE, CALL, and RETURN instructions. This means:
+
+- **Active calls automatically signal liveness** — no explicit "I'm still alive" messages needed
+- **Ended calls stop touching entries** — their G-bits stay set after Mark, making them candidates for reclamation
+- **The GC never interrupts a live call** — it only reclaims entries that no active thread references
+
+### Version Bumping: Killing Stale Tokens Instantly
+
+When an entry is swept (reclaimed), its 7-bit version number is incremented. Any outstanding Golden Token that references this entry still contains the old version number.
+
+```
+Thread #47 terminates. Its CR1 held a token for namespace entry #200 (version 5).
+GC sweeps entry #200: version bumped to 6.
+Entry #200 is reallocated for a new call (thread #93).
+
+If any code still holds the old token (entry #200, version 5):
+  → mLoad checks: token version (5) ≠ entry version (6)
+  → FAULT — access denied
+  → Use-after-free is impossible
+```
+
+The old token is now permanently invalid. It does not need to be found and erased — it invalidates itself the moment the version changes. This is O(1) revocation — no matter how many copies of a token exist, they all become invalid simultaneously when the entry's version is bumped.
+
+### Determinism Means Guarantees
+
+| Property | What it guarantees |
+|---|---|
+| **Bounded pause time** | GC runs in predictable, bounded time — no unexpected pauses |
+| **Predictable capacity** | You can calculate the maximum number of concurrent calls |
+| **No GC storms** | Reclamation rate is proportional to completion rate, not allocation rate |
+| **Provable liveness** | If a thread is active, its entries are reachable — GC will not collect them |
+| **Provable reclamation** | If a thread has terminated, its entries will be collected in the next cycle |
+
+---
+
+## Flawless, Fail-Safe Security
+
+Deterministic garbage collection is not a performance optimisation. It is a **security requirement**. Without it, the capability system has gaps. With it, the system is provably secure against an entire class of attacks.
+
+### 1. No Dangling Capabilities
+
+When thread #47 terminates, its Golden Tokens must become unusable. Version bumping ensures this at the hardware level — any attempt to use a stale token triggers a fault. There is no time window where a terminated thread's capabilities could be exploited.
+
+In systems without deterministic GC, there is a race: the token exists, the resource is freed but not yet collected, and a new allocation reuses the slot. The old token now points to the new resource — a classic use-after-free vulnerability. The Church Machine's version bumping eliminates this entirely.
+
+### 2. No Resource Exhaustion Attacks
+
+An attacker who can spawn threads (or cause calls to be initiated) might try to exhaust the namespace by creating many threads and abandoning them. With non-deterministic GC, this attack succeeds — the GC may not reclaim resources fast enough.
+
+With deterministic GC, reclamation is guaranteed within one cycle. The namespace has a provable upper bound on occupancy: the number of currently active threads, plus one cycle's worth of recently terminated threads. The attacker cannot exceed this bound.
+
+### 3. No Information Leakage Between Calls
+
+When a namespace entry is swept and reallocated for a new call, the entry is cleared. Thread #93 (the new call) cannot read any data from thread #47 (the old call). The registers are fresh, the memory lump is zeroed, and the capabilities are newly minted.
+
+This is critical for a telephone exchange: call metadata, billing records, and routing information from one call must never leak to another. Deterministic sweep with entry clearing guarantees a clean slate on every allocation.
+
+### 4. Least Authority Per Thread
+
+Each thread holds only the capabilities it needs for its specific task. Thread #47 has tokens for telephony, billing, and routing — but not for the exchange's configuration, other threads' billing records, or the system's boot sequence. When thread #47 terminates, those capabilities cease to exist.
+
+There is no ambient authority that persists between calls. No global variables, no shared mutable state, no "root" capability that grants access to everything. Each thread operates in its own security sandbox, defined entirely by its C-List of Golden Tokens.
+
+### 5. The mLoad Invariant — No Window of Vulnerability
+
+Every capability access — every LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH — validates the Golden Token against the namespace in real time through the mLoad pipeline. This validation checks:
+
+- Is the token's version current? (Temporal safety)
+- Does the token have the required permissions? (Authority check)
+- Is the target entry still allocated? (Liveness check)
+- Has the entry been sealed or revoked? (Integrity check)
+
+If any check fails, the instruction faults. There is no cached validation, no "trust the token because it was valid last time". Every access is verified against the current state of the namespace.
+
+This means there is **no window of vulnerability** between a token being issued and being used. Even if GC reclaims an entry between two successive instructions, the second instruction's mLoad will detect the version mismatch and fault.
+
+### The Lambda Calculus Foundation
+
+This is not coincidental. The Church Machine's security model is a direct implementation of Alonzo Church's lambda calculus at the hardware level:
+
+- **Functions have no side effects** — abstractions are pure code, threads carry state
+- **Values exist only while they are referenced** — Golden Tokens are valid only while the namespace entry is live
+- **Unreferenced values can be safely collected** — deterministic GC reclaims entries that no thread can reach
+- **Substitution is the only way to bind values** — capabilities are granted through the C-List, never forged or guessed
+- **Reduction eliminates intermediate terms** — thread termination and GC sweep are the hardware equivalent of beta-reduction's cleanup
+
+The PP250 telephone exchange is Church's lambda calculus made physical: every call is a lambda expression in flight, every thread is a reduction in progress, and garbage collection is the mechanism that ensures completed reductions release their resources. The security guarantees are not bolted on — they emerge naturally from the mathematical foundation.
+
+---
+
 ## Further Reading
 
 - The **LC: Slide Rule** example demonstrates fixed-point thinking — its `SineApprox` method returns `sin(θ) × 10` to preserve one decimal place on integer hardware.
