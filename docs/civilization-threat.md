@@ -387,6 +387,40 @@ Your creative work, stored as data lumps, cannot be silently copied, modified, o
 **Trust through provable security.**
 When the architecture guarantees that your banking transaction cannot be intercepted, your vote cannot be modified, your medical records cannot be breached, and your communications cannot be read — not by policy promise, but by hardware enforcement — then trust in digital systems is restored. The elderly can bank online. Small businesses can trade globally. Citizens can vote electronically. Everyone can participate in the digital economy and the digital democracy, because the architecture makes participation safe.
 
+### Golden Tokens as Democratic Governance
+
+Democracy does not concentrate power. It **distributes power incrementally**, limits it formally, and regulates it through ceremony, procedure, and accountability. Every democratic institution is designed to prevent any single actor from exercising unchecked authority:
+
+| Democratic principle | How it works in governance | How Golden Tokens implement it |
+|---|---|---|
+| **Separation of powers** | Legislative, executive, and judicial branches hold distinct, limited authority — no branch can act unilaterally | Each abstraction holds only the capabilities it needs for its specific function; a memory allocator cannot execute code, a scheduler cannot access billing data |
+| **Delegation with limits** | A mayor has authority over city operations but cannot command the military; a chief of police has arrest powers but cannot pass laws | Capabilities can be attenuated (reduced in scope) but never amplified; an abstraction granted read access cannot escalate to write access |
+| **Ceremonial regulation** | Even routine powers are exercised through formal procedures — a council vote follows Robert's Rules of Order, a judge follows rules of evidence, a police officer follows rules of engagement | Every capability access goes through mLoad, which validates the Golden Token atomically; there is no informal shortcut, no backdoor, no "just this once" |
+| **Autonomous authority with accountability** | An autonomous lethal weapon system has rules of engagement that define when it may fire — the authority is delegated but bounded, and the decision is logged | A thread with a capability for a critical operation can exercise it autonomously within the capability's permissions, but every access is validated and traceable through the token's version history |
+| **No absolute ruler** | No president, prime minister, or monarch has unlimited power; constitutional limits, term limits, and oversight mechanisms constrain every role | No superuser, no root, no God-mode; the concept of unlimited authority does not exist in the architecture |
+| **Incremental trust** | A new employee starts with limited access and earns broader responsibility over time; a newly elected official inherits a defined set of powers | New abstractions are loaded with minimal capabilities; broader access is granted through explicit capability delegation, never by default |
+| **Recall and revocation** | Elected officials can be impeached, recalled, or voted out; appointed officials can be dismissed; authority is never permanent without accountability | Golden Tokens can be revoked by bumping the version number; revocation is immediate, hardware-enforced, and cannot be circumvented by the revoked party |
+
+The conventional architecture is the opposite of democratic governance. The superuser has absolute power. The kernel sees everything. Virtual memory grants the OS access to every process's data. There is no separation of powers — the operating system is legislative, executive, and judicial authority combined in a single, unaccountable process. It is, architecturally, a digital monarchy.
+
+### Debate Without Polarisation
+
+Democracy depends on structured debate — the ability of individuals to disagree, present evidence, challenge assumptions, and reach decisions through deliberation rather than coercion. Robert's Rules of Order, parliamentary procedure, and judicial rules of evidence all exist to ensure that debate is productive rather than destructive.
+
+Social media has replaced structured debate with algorithmic amplification. The platform's engagement algorithm rewards outrage, punishes nuance, and optimises for emotional reaction rather than reasoned discourse. The result is polarisation — not because citizens disagree (disagreement is healthy), but because the architecture of the platform *profits from making disagreement toxic*.
+
+On a Church Machine network:
+
+- **No engagement algorithms unless explicitly granted.** A communication platform is an abstraction. If the platform's recommendation algorithm is not granted a capability to reorder or filter content, it cannot do so. Users interact with information in the order it was produced, not in the order that maximises their emotional engagement.
+
+- **Algorithmic accountability through MTBF.** If a recommendation algorithm is deployed, it is an abstraction with measured reliability. If users who interact with algorithmically curated content subsequently exhibit higher fault rates (more errors, more conflicts, more complaints) than users who interact with unfiltered content, the algorithm's MTBF degrades measurably. The harm is visible, attributable, and actionable.
+
+- **No centralised content moderation.** Content moderation on conventional platforms is exercised by the platform — an unelected, unaccountable central authority deciding what billions of people can see and say. On the Church Machine, content is data lumps. Access is controlled by capabilities. If you hold a capability to read someone's publication, you can read it. No intermediary can silently remove, downrank, or modify content you have a capability to access.
+
+- **Structured interaction by design.** Just as Robert's Rules of Order impose procedure on debate to prevent it from degenerating into shouting, capability-based communication channels can enforce protocol. A deliberation channel can require that each participant's contribution is visible to all participants (no shadow-banning), that contributions cannot be retroactively modified (immutable data lumps), and that the order of contributions is chronological (no algorithmic reordering). The architecture enforces the procedural fairness that social media deliberately subverts.
+
+The Church Machine does not prevent disagreement — disagreement is essential to democracy. It prevents the **architectural manipulation of disagreement** for profit. It provides the digital equivalent of a town hall with fair procedural rules, rather than an arena with a promoter who profits from fights.
+
 ### The Deeper Point
 
 Democracy is not a political system. It is the political expression of a deeper principle: that individual human beings, thinking freely, choosing independently, and cooperating voluntarily, produce better outcomes than any centralised authority can dictate. Every democratic institution — free press, independent judiciary, secret ballot, property rights, freedom of assembly — exists to protect the individual's ability to think, create, and choose without coercion.
