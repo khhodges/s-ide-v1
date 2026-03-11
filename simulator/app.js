@@ -7095,68 +7095,77 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 6, mnemonic: 'TPERM', domain: 'church',
-        syntax: 'TPERM CRs, #preset [, offset]',
-        brief: 'GT health check \u2014 test permissions, validity, and bounds; set flags. Also: permission restriction (monotonic).',
-        encoding: 'opcode[5]=00110 | cond[4] | dst[4] | src[4] | imm15[15]',
+        syntax: 'TPERM CRs, preset [, offset]  |  TPERM CRd, preset',
+        brief: 'Two forms, one opcode: health-check (sets Z flag) or permission restriction (monotonic).',
+        encoding: 'opcode[5]=00110 | cond[4] | reg[4] | preset[4] | offset[15]',
         fields: [
-            { name: 'dst', desc: 'CRd (restriction mode) or unused (health-check mode)' },
-            { name: 'src', desc: 'Preset code (4 bits \u2014 selects permission mask to test or apply)' },
-            { name: 'imm15', desc: 'Offset for bounds check (health-check mode), or 0 (restriction mode)' },
+            { name: 'reg',    desc: 'CRs for health-check; CRd for restriction' },
+            { name: 'preset', desc: '4-bit permission code (see table below)' },
+            { name: 'offset', desc: 'Health-check: base+offset tested against limit. Restriction: 0 (no offset operand in assembly)' },
         ],
-        permission: 'None \u2014 reads cached register, does not trap',
-        flags: 'Z=1 if all checks pass (permissions present, valid, in bounds); Z=0 if any check fails',
-        details: 'TPERM has two modes that share the same opcode. The mode is determined by how the fields are used:\n\n'
-            + 'MODE 1 \u2014 HEALTH CHECK (flag-setting):\n'
-            + '  Syntax:   TPERM CRs, #preset, offset\n'
-            + '  Encoding: opcode=00110 | cond | CRs | preset | offset\n'
-            + '  dst field = CRs (register to check)\n'
-            + '  src field = preset (permission mask to test: R=1, RW=2, X=3, E=8, etc.)\n'
-            + '  imm15    = offset (base + offset checked against limit)\n'
-            + '  Checks all at once: (1) does CRs have the requested permissions? (2) is the GT valid (version + MAC)? (3) is base + offset within the region?\n'
-            + '  Result: Z=1 if all pass, Z=0 if any fail. Never traps.\n'
-            + '  The Z flag persists, enabling conditional execution (EQ/NE suffixes) for zero-cost try-catch.\n\n'
-            + 'MODE 2 \u2014 PERMISSION RESTRICTION (monotonic attenuation):\n'
-            + '  Syntax:   TPERM CRd, #preset\n'
-            + '  Encoding: opcode=00110 | cond | CRd | preset | 0\n'
-            + '  dst field = CRd (register to attenuate)\n'
-            + '  src field = preset (permission mask to AND with current permissions)\n'
-            + '  imm15    = 0 (no offset \u2014 distinguishes from health check)\n'
-            + '  ANDs the preset mask with CRd\'s current permissions. Permissions can only be removed, never added (monotonic). Sets Z=1 if resulting permissions are non-zero. The attenuation is local to the cached CR; the namespace slot is not updated until a SAVE commits it.\n\n'
-            + 'PRESET TABLE:\n'
-            + '  Turing domain: 0=CLEAR  1=R  2=RW  3=X  4=RX  5=RWX\n'
-            + '  Church domain: 6=L  7=S  8=E  9=LS\n'
-            + '  10,11,12 = reserved (E+L, E+S, E+L+S — illegal, E must be standalone)\n'
-            + '  13 = reserved (cross-domain — illegal, raises FAULT)\n'
-            + '  B-modifier variants (add 0x10): RB, RWB, XB, EB, LSB \u2014 sets B alongside a valid preset.\n\n'
-            + 'Two invariants enforced at encoding:\n'
-            + '  1. Domain purity: Turing (R,W,X) and Church (L,S,E) cannot be combined.\n'
-            + '  2. E isolation: E must be standalone. Combining E with L or S would allow a holder to both\n'
-            + '     traverse the nodal c-list and enter the abstraction — an attack path. Valid Church presets: L, S, E, LS.',
-        example: '; === MODE 1: Health check (flag-setting, no trap) ===\n'
-            + '; Check R+W perms, valid, offset 0 in bounds\n'
-            + 'TPERM CR5, RW, 0       ; dst=CR5, src=preset 2 (RW), imm15=0\n'
-            + '                        ; Z=1: perms OK, valid, in bounds\n'
-            + '                        ; Z=0: any check failed\n'
-            + '\n'
-            + '; --- happy path (EQ = fires only when Z=1) ---\n'
-            + 'readEQ val, CR5, 0      ; skipped if Z=0\n'
-            + 'writeEQ CR5, 0, val+1   ; skipped if Z=0\n'
-            + 'returnEQ(val)           ; returns to caller — skipped if Z=0\n'
-            + '\n'
-            + '; --- catch path (NE = fires only when Z=0) ---\n'
-            + 'MOVNE  DR0, #0          ; set error code\n'
-            + 'returnNE                ; return error to caller\n'
-            + '; No branches — hardware skips/executes by suffix\n\n'
-            + '; === MODE 2: Permission restriction (monotonic) ===\n'
-            + '; Strip write \u2014 hand off read-only\n'
-            + 'TPERM CR0, RX           ; dst=CR0, src=preset 4 (RX), imm15=0\n'
-            + '                        ; ANDs CR0 perms with RX mask\n'
-            + '                        ; Result: W,L,S,E removed\n'
-            + 'CALL CR2                ; callee gets read+execute only\n\n'
-            + '; === MODE 2 + B-modifier: Allow bind ===\n'
-            + 'LOAD CR1, CR6, 3        ; load GT from c-list\n'
-            + 'TPERM CR1, RWXB         ; keep R+W+X and SET B (Bind)\n'
-            + 'CALL CR2                ; callee can save this GT',
+        permission: 'None \u2014 never traps',
+        flags: 'Health-check: Z=1 all pass, Z=0 any fail. Restriction: Z=1 result non-zero.',
+        details:
+            '┌─ FORM 1: HEALTH CHECK ──────────────────────────────────────────┐\n'
+          + '│  Assembly:  TPERM CRs, preset, offset                           │\n'
+          + '│                                                                  │\n'
+          + '│  31    27│26   23│22   19│18   15│14                0│          │\n'
+          + '│  ┌──────┬──────┬──────┬──────┬───────────────────┐  │          │\n'
+          + '│  │00110 │ cond │  CRs │preset│      offset       │  │          │\n'
+          + '│  └──────┴──────┴──────┴──────┴───────────────────┘  │          │\n'
+          + '│   op=6    4-bit   4-bit   4-bit       15-bit          │          │\n'
+          + '│                                                                  │\n'
+          + '│  Checks in one cycle:                                            │\n'
+          + '│    1. Does CRs hold the preset permissions?                      │\n'
+          + '│    2. Is the GT valid (version + MAC)?                           │\n'
+          + '│    3. Is base + offset within the GT\'s limit?                   │\n'
+          + '│  Result: Z=1 all pass  Z=0 any fail  Never traps.               │\n'
+          + '└──────────────────────────────────────────────────────────────────┘\n\n'
+          + '┌─ FORM 2: PERMISSION RESTRICTION ────────────────────────────────┐\n'
+          + '│  Assembly:  TPERM CRd, preset                                   │\n'
+          + '│                                                                  │\n'
+          + '│  31    27│26   23│22   19│18   15│14                0│          │\n'
+          + '│  ┌──────┬──────┬──────┬──────┬───────────────────┐  │          │\n'
+          + '│  │00110 │ cond │  CRd │preset│        0          │  │          │\n'
+          + '│  └──────┴──────┴──────┴──────┴───────────────────┘  │          │\n'
+          + '│   op=6    4-bit   4-bit   4-bit       0 (15-bit)      │          │\n'
+          + '│                                                                  │\n'
+          + '│  ANDs preset mask with CRd\'s current permissions.               │\n'
+          + '│  Permissions can only be removed, never added (monotonic).      │\n'
+          + '│  Local to the cached CR — not written to namespace until SAVE.  │\n'
+          + '│  Z=1 if result is non-zero.                                     │\n'
+          + '└──────────────────────────────────────────────────────────────────┘\n\n'
+          + '┌─ PRESET TABLE ───────────────────────────────────────────────────┐\n'
+          + '│  Turing domain (R,W,X):                                          │\n'
+          + '│    0=CLEAR  1=R  2=RW  3=X  4=RX  5=RWX                         │\n'
+          + '│  Church domain (L,S,E):                                          │\n'
+          + '│    6=L  7=S  8=E  9=LS                                           │\n'
+          + '│    10,11,12 = FAULT  (E+L, E+S, E+LS — E must be standalone)    │\n'
+          + '│    13      = FAULT  (cross-domain mix)                           │\n'
+          + '│  B-modifier (+0x10): RB  RWB  XB  EB  LSB                       │\n'
+          + '│                                                                  │\n'
+          + '│  Rule 1 — Domain purity: Turing and Church bits never combined.  │\n'
+          + '│  Rule 2 — E isolation:   E must be standalone. E+L or E+S lets  │\n'
+          + '│           a caller traverse the c-list AND enter the abstraction │\n'
+          + '│           — an attack path into the nodal c-list.                │\n'
+          + '└──────────────────────────────────────────────────────────────────┘',
+        example:
+            '; FORM 1 — health check with try-catch\n'
+          + 'TPERM CR5, RW, 4       ; check R+W, valid, offset 4 in bounds\n'
+          + 'readEQ  val, CR5, 4    ; happy path — fires only if Z=1\n'
+          + 'IADDEQ  val, val, 1    ;\n'
+          + 'writeEQ CR5, 4, val    ;\n'
+          + 'returnEQ(val)          ; done — skipped if Z=0\n'
+          + 'MOVNE   DR0, 0         ; catch — fires only if Z=0\n'
+          + 'returnNE(DR0)          ; return error\n'
+          + '\n'
+          + '; FORM 2 — strip write before handing off\n'
+          + 'TPERM CR0, RX          ; remove W, L, S, E — keep R and X only\n'
+          + 'CALL  CR2              ; callee gets read+execute, nothing else\n'
+          + '\n'
+          + '; FORM 2 + B-modifier — allow callee to keep the GT\n'
+          + 'TPERM CR1, EB          ; keep E, set B (Bind allows SAVE by callee)\n'
+          + 'CALL  CR2              ; callee may save CR1 to its own c-list',
     },
     {
         opcode: 7, mnemonic: 'LAMBDA', domain: 'church',
