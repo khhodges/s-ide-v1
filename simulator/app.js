@@ -7104,29 +7104,43 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 3, mnemonic: 'RETURN', domain: 'church',
-        syntax: 'RETURN',
-        brief: 'Exit an abstraction \u2014 restore caller context from call frame',
-        encoding: 'opcode[5]=00011 | cond[4] | 0[4] | 0[4] | 0[15]',
-        fields: [],
+        syntax: 'RETURN [mask]',
+        brief: 'Exit an abstraction \u2014 restore caller context; optionally scrub working CRs',
+        encoding: 'opcode[5]=00011 | cond[4] | 0[11] | mask[12]',
+        fields: [
+            { name: 'mask', desc: '12-bit literal (bits [11:0]). Bit N = 1 clears CR_N to NULL after frame restoration. Bit 6 reserved (must be 0 — CR6 is always restored from the frame E-GT). mask=0 is the no-op default (bare RETURN).' },
+        ],
         permission: 'None',
         flags: 'None',
         details:
-            '  31    27│26   23│22                              0\n'
-          + '  ┌──────┬──────┬────────────────────────────────┐\n'
-          + '  │00011 │ cond │              0                 │\n'
-          + '  └──────┴──────┴────────────────────────────────┘\n'
-          + '   5-bit   4-bit                zero\n\n'
-          + 'No programmer-visible operand fields.\n'
-          + 'All bits beyond cond are reserved and must be zero.\n\n'
-          + 'Pops the 2-word call frame pushed by CALL:\n'
-          + '  Word 0: caller\'s E-GT — revalidated via mLoad (version+MAC+G-bit reset);\n'
-          + '          NS split re-runs to re-derive caller\'s CR6 (c-list) and CR14 (code).\n'
-          + '  Word 1: NIA | machine indicators — restores PC and machine status.\n\n'
-          + 'DRs and all other CRs (CR0–CR5, CR7–CR13, CR15) are not changed by RETURN;\n'
-          + 'they retain whatever values the callee left in them.\n'
+            '  31    27│26   23│22          12│11          0\n'
+          + '  ┌──────┬──────┬─────────────┬─────────────┐\n'
+          + '  │00011 │ cond │      0      │    mask     │\n'
+          + '  └──────┴──────┴─────────────┴─────────────┘\n'
+          + '   5-bit   4-bit    11-bit        12-bit\n\n'
+          + 'mask[11:0]: bit N = 1 → clear CR_N to NULL after frame restoration.\n'
+          + '  Bit 6 is reserved (must be 0): CR6 is always restored from the frame\n'
+          + '  E-GT by the hardware — its write enable is not wired to the mask bus.\n'
+          + '  mask = 0 → no clearing; bare RETURN is fully backward-compatible.\n\n'
+          + 'Execution order:\n'
+          + '  1. Pop 2-word frame from call stack\n'
+          + '  2. mLoad caller\'s E-GT (Word 0): version+MAC+G-bit reset → FAULT on failure\n'
+          + '     NS split re-runs to re-derive CR6 (c-list) and CR14 (code) for caller.\n'
+          + '  3. Restore PC from NIA and machine indicators from Word 1.\n'
+          + '  4. Apply mask: all marked CRs written to NULL in one parallel clock edge.\n'
+          + '     The 12-bit mask fans directly into the CR register-file write enables —\n'
+          + '     zero overhead, same cost whether 1 or 11 registers are cleared.\n\n'
+          + 'Why mask is programmer-declared (not auto-inferred):\n'
+          + '  GTs are first-class. The callee may legitimately return a GT in CR0.\n'
+          + '  Only the programmer knows which CRs carry return values vs. internal\n'
+          + '  working state. The CLOOMC compiler emits the mask as a compile-time\n'
+          + '  literal from a "clear:" annotation; the hardware enforces it.\n\n'
+          + 'DRs and non-masked CRs retain whatever values the callee left.\n'
           + 'Shared between Church and Turing domains — the only exit from a safe\n'
           + 'Turing abstraction. If the call stack is empty, the machine halts.',
-        example: 'RETURN               ; Exit abstraction — restore caller from 2-word frame',
+        example: 'RETURN                   ; mask=0 — no scrub, backward-compatible\n'
+               + 'RETURN 0b111111011111    ; clear CR0–CR5, CR7–CR11 — scrub all working regs\n'
+               + 'RETURN 0b000000011110    ; clear CR1–CR4 only — CR0 carries a return GT',
     },
     {
         opcode: 4, mnemonic: 'CHANGE', domain: 'church',

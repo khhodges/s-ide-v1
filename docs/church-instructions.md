@@ -120,8 +120,9 @@ All Church instructions that access the namespace route through the **mLoad mast
 4. Re-run NS split on caller's NS entry → re-derive CR6 (caller c-list) and CR14 (caller code)
 5. Restore PC from NIA (Word 1)
 6. Restore machine indicators from Word 1
+7. Apply mask[11:0]: all CRs with mask bit set written to NULL in one parallel clock edge
 
-**Mnemonic**: `RETURN`  (no operands)
+**Mnemonic**: `RETURN [mask]` — mask is a 12-bit literal in instruction bits [11:0]; mask=0 is the no-op default (`RETURN` with no argument)
 
 | Aspect | Detail |
 |--------|--------|
@@ -130,7 +131,8 @@ All Church instructions that access the namespace route through the **mLoad mast
 | **CR6 / CR14 Restore** | Re-derived from caller's NS entry via NS split — not stored directly in frame |
 | **PC Restore** | NIA from Word 1 |
 | **Machine Indicators** | Restored from Word 1 (LAMBDA-active, flags, stackSpace, etc.) |
-| **Unchanged** | DR0–DR15, CR0–CR5, CR7–CR13, CR15 |
+| **Mask** | Bits [11:0]: bit N=1 → CR_N to NULL. Bit 6 reserved (CR6 always restored from E-GT). One parallel clock edge — zero overhead. |
+| **Unchanged** | DR0–DR15 and non-masked CRs retain callee values |
 | **Stack Underflow** | FAULT: no saved context |
 | **Stack Indicators** | stackFrames and stackSpace updated |
 

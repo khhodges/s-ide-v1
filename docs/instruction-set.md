@@ -87,15 +87,22 @@ No DRs and no other CRs are pushed. Callee inherits DR0–DR15, CR0–CR5, CR7�
 ### RETURN (opcode 3)
 
 ```
-RETURN
+RETURN [mask]
 ```
-*(no operands)*
 
-Returns from the current abstraction. Pops the 2-word frame pushed by CALL:
-- **Word 0** (caller's E-GT) — revalidated via mLoad (version + MAC + G-bit reset); NS split re-runs to re-derive CR6 and CR14 for the caller
-- **Word 1** (NIA | machine indicators) — restores PC and machine status
+**Encoding**: `opcode[5]=00011 | cond[4] | 0[11] | mask[12]`
 
-DRs and all other CRs (CR0–CR5, CR7–CR13, CR15) are unchanged — they retain whatever values the callee left. Shared between Church and Turing domains.
+`mask` is a 12-bit literal in bits [11:0]. Bit N = 1 clears CR_N to NULL after the frame is restored. Bit 6 is reserved (must be 0 — CR6 is always restored from the frame E-GT). Bare `RETURN` (mask=0) is the no-op default and is fully backward-compatible.
+
+**Execution order**:
+1. Pop 2-word frame
+2. mLoad caller's E-GT (Word 0) — version + MAC + G-bit reset; NS split re-derives CR6 and CR14
+3. Restore PC from NIA and machine indicators from Word 1
+4. Apply mask — all marked CRs written to NULL in **one parallel clock edge** (mask bits fan into CR register-file write enables; zero overhead regardless of how many bits are set)
+
+**Why the mask is programmer-declared**: GTs are first-class values — a callee may legitimately return a GT in CR0. Only the programmer knows which CRs carry return values vs. internal working state. The mask is emitted as a compile-time literal by the CLOOMC compiler from a `clear:` annotation; the hardware enforces it.
+
+DRs and non-masked CRs retain whatever values the callee left. Shared between Church and Turing domains.
 
 If the call stack is empty, RETURN triggers a reboot (warm restart) — not a halt.
 
