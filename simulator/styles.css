@@ -3881,14 +3881,42 @@ a.next-step-link:hover {
     padding: 0.25rem 0;
 }
 
+.docs-chapter-group {
+    margin-bottom: 0.5rem;
+}
+
+.docs-chapter-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--church-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.5rem 0.6rem 0.2rem;
+    border-top: 1px solid rgba(200, 155, 60, 0.15);
+    margin-top: 0.25rem;
+}
+
+.docs-chapter-group:first-child .docs-chapter-title {
+    border-top: none;
+    margin-top: 0;
+}
+
+.docs-chapter-num {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-right: 0.4rem;
+    min-width: 1.8rem;
+    display: inline-block;
+}
+
 .docs-file-item {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
-    padding: 0.4rem 0.6rem;
+    padding: 0.3rem 0.6rem 0.3rem 1rem;
     cursor: pointer;
     border-radius: 4px;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: var(--text-dim);
     transition: background 0.15s;
 }

@@ -8769,11 +8769,24 @@ function renderDocsFileList() {
     const figsList = document.getElementById('docsFigureList');
     if (!docsList || !figsList || !docsData) return;
 
-    docsList.innerHTML = docsData.docs.map(d => {
-        const sizeKB = (d.size / 1024).toFixed(1);
-        const label = d.name.replace('.md', '');
-        return `<div class="docs-file-item" onclick="loadDoc('${d.name}')" data-doc="${d.name}"><span>${label}</span><span class="file-size">${sizeKB} KB</span></div>`;
-    }).join('');
+    if (docsData.chapters && docsData.chapters.length > 0) {
+        let chapterNum = 0;
+        docsList.innerHTML = docsData.chapters.map(ch => {
+            chapterNum++;
+            const items = ch.docs.map((d, i) => {
+                const sizeKB = (d.size / 1024).toFixed(1);
+                const label = d.name.replace('.md', '');
+                return `<div class="docs-file-item" onclick="loadDoc('${d.name}')" data-doc="${d.name}"><span class="docs-chapter-num">${chapterNum}.${i + 1}</span><span>${label}</span><span class="file-size">${sizeKB} KB</span></div>`;
+            }).join('');
+            return `<div class="docs-chapter-group"><div class="docs-chapter-title">${ch.title}</div>${items}</div>`;
+        }).join('');
+    } else {
+        docsList.innerHTML = docsData.docs.map(d => {
+            const sizeKB = (d.size / 1024).toFixed(1);
+            const label = d.name.replace('.md', '');
+            return `<div class="docs-file-item" onclick="loadDoc('${d.name}')" data-doc="${d.name}"><span>${label}</span><span class="file-size">${sizeKB} KB</span></div>`;
+        }).join('');
+    }
 
     figsList.innerHTML = docsData.figures.map(f => {
         const label = f.name.replace('.html', '');

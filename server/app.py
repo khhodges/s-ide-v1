@@ -75,14 +75,100 @@ def simulator_static(path):
 def docs_figures(path):
     return send_from_directory(os.path.join(DOCS_DIR, "figures"), path)
 
+BOOK_CHAPTERS = [
+    ("Part I: Introduction", [
+        "overview.md",
+        "getting-started.md",
+        "handbook.md",
+    ]),
+    ("Part II: Architecture", [
+        "architecture.md",
+        "instruction-set.md",
+        "church-instructions.md",
+        "instruction_matrix.md",
+        "lambda-instruction.md",
+        "golden-tokens.md",
+        "gt-literals.md",
+        "call-stack.md",
+        "dispatch-styles.md",
+    ]),
+    ("Part III: Security", [
+        "namespace-security.md",
+        "trusted-security-base.md",
+        "boot-permission-rules.md",
+        "risks.md",
+    ]),
+    ("Part IV: Runtime", [
+        "abstractions.md",
+        "garbage-collection.md",
+        "family-registry.md",
+    ]),
+    ("Part V: Networking", [
+        "network-transparency.md",
+        "tunnel-messaging-example.md",
+    ]),
+    ("Part VI: Lambda Calculus", [
+        "lambda-arithmetic.md",
+        "note-g-comparison.md",
+        "paper-sliderule-comparison.md",
+    ]),
+    ("Part VII: Immortal Software", [
+        "longevity.md",
+        "immortal-software.md",
+    ]),
+    ("Part VIII: The Civilisation Case", [
+        "civilization-threat.md",
+    ]),
+    ("Part IX: Hardware Implementation", [
+        "chipflow-cover-letter.md",
+        "chipflow-technical-summary.md",
+        "church-machine-pico-ice.md",
+        "tang-nano-20k.md",
+        "production_silicon_todo.md",
+    ]),
+    ("Part X: Patents & Proposals", [
+        "patent-church-machine-claims.md",
+        "patent-church-machine-email.md",
+        "patent-cloomc-universal-target.md",
+        "patent-ctmm-lambda.md",
+        "patent-ctmm-unified.md",
+        "proposal-lambda-registers.md",
+    ]),
+]
+
 @app.route("/api/docs/list")
 def docs_list():
-    docs = []
-    for f in sorted(os.listdir(DOCS_DIR)):
+    all_files = set()
+    for f in os.listdir(DOCS_DIR):
         if f.endswith('.md'):
-            filepath = os.path.join(DOCS_DIR, f)
+            all_files.add(f)
+
+    chapters = []
+    catalogued = set()
+    for part_title, filenames in BOOK_CHAPTERS:
+        entries = []
+        for fname in filenames:
+            if fname in all_files:
+                filepath = os.path.join(DOCS_DIR, fname)
+                size = os.path.getsize(filepath)
+                entries.append({"name": fname, "type": "doc", "size": size})
+                catalogued.add(fname)
+        if entries:
+            chapters.append({"title": part_title, "docs": entries})
+
+    uncatalogued = sorted(all_files - catalogued)
+    if uncatalogued:
+        entries = []
+        for fname in uncatalogued:
+            filepath = os.path.join(DOCS_DIR, fname)
             size = os.path.getsize(filepath)
-            docs.append({"name": f, "type": "doc", "size": size})
+            entries.append({"name": fname, "type": "doc", "size": size})
+        chapters.append({"title": "Appendix", "docs": entries})
+
+    flat_docs = []
+    for ch in chapters:
+        flat_docs.extend(ch["docs"])
+
     figures = []
     figures_dir = os.path.join(DOCS_DIR, "figures")
     if os.path.isdir(figures_dir):
@@ -91,7 +177,7 @@ def docs_list():
                 filepath = os.path.join(figures_dir, f)
                 size = os.path.getsize(filepath)
                 figures.append({"name": f, "type": "figure", "size": size})
-    return jsonify({"docs": docs, "figures": figures})
+    return jsonify({"docs": flat_docs, "chapters": chapters, "figures": figures})
 
 @app.route("/api/docs/read/<path:filename>")
 def docs_read(filename):
