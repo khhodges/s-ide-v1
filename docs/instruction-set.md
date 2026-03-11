@@ -103,52 +103,107 @@ Atomically swaps the contents of CRd and CRs. Used for thread context switching 
 
 ### TPERM (opcode 6)
 
-TPERM is the single-instruction GT health check. It evaluates permissions, validity, and bounds in one cycle and **sets condition flags** — it does not trap. The flags persist across subsequent instructions, enabling ARM-style conditional execution for zero-cost try-catch patterns.
+TPERM is the single-instruction GT health check. It shares one opcode across two modes — **health check** (flag-setting, no trap) and **permission restriction** (monotonic attenuation). The mode is determined by how the standard 32-bit encoding fields are used.
+
+#### Encoding
+
+Both modes use the standard 32-bit format:
 
 ```
-TPERM CRs, #preset [, offset]
+31    27 26  23 22  19 18  15 14           0
+|00110 | cond |  dst |  src |    imm15    |
+  op=6   4-bit  4-bit  4-bit   15 bits
 ```
 
-**What TPERM checks (all at once)**:
-1. **Permissions** — does the GT have the requested permission bits? (R, W, RW, E, LSE, etc.)
+#### Mode 1 — Health Check (flag-setting)
+
+```
+TPERM CRs, #preset, offset
+```
+
+| Field | Usage |
+|-------|-------|
+| dst (4 bits) | CRs — the context register to check |
+| src (4 bits) | Preset code — selects the permission mask to test (see table below) |
+| imm15 (15 bits) | Offset — hardware checks `base + offset ≤ limit` |
+
+**What the hardware checks (all at once, one cycle)**:
+1. **Permissions** — does CRs have the requested permission bits?
 2. **Valid** — does the GT pass version and MAC validation?
-3. **Base + Limit** — if an offset is provided, is Base + offset within the GT's region?
+3. **Base + Limit** — is `base + offset` within the GT's region?
 
 **Flags set**:
 - **Z = 1**: all checks passed (permissions present, valid, in bounds)
 - **Z = 0**: one or more checks failed
 
-**No trap**: TPERM never faults. If checks fail, the Z flag says so and software decides what to do via conditional execution. The CRs themselves enforce safety — an actual read/write to an invalid or out-of-bounds region will FAULT at that point. TPERM is the "ask first" instruction.
+**No trap**: TPERM never faults. If checks fail, the Z flag says so and software decides what to do via conditional execution. The actual read/write instructions that follow enforce safety — an access to an invalid or out-of-bounds region will FAULT at that point. TPERM is the "ask first" instruction.
 
-#### Conditional Execution: Zero-Cost Try-Catch
+##### Conditional Execution: Zero-Cost Try-Catch
 
 Because every Church Machine instruction carries a 4-bit ARM condition code, TPERM + conditional suffixes give you try-catch with no branches and no overhead on the happy path:
 
 ```
-TPERM CR5, RW, offset      ; check R+W perms, valid, base+offset in bounds
+TPERM CR5, RW, offset      ; dst=CR5, src=preset 2 (RW), imm15=offset
                             ; Z=1 if all pass, Z=0 if any fail
 
-readEQ DR1, CR5, offset     ; happy path — only fires if Z=1
-IADDEQ DR2, DR1, 1          ; happy path — continues if Z=1
-writeEQ CR5, offset, DR2    ; happy path — writes if Z=1
+; --- happy path (EQ suffix = fires only when Z=1) ---
+readEQ DR1, CR5, offset     ; skipped if Z=0
+IADDEQ DR2, DR1, 1          ; skipped if Z=0
+writeEQ CR5, offset, DR2    ; skipped if Z=0
+returnEQ                     ; return to caller — skipped if Z=0
 
-; catch path (TBD — recovery is case-by-case)
-; instructions with NE suffix fire when Z=0
+; --- catch path (NE suffix = fires only when Z=0) ---
+; Execution reaches here ONLY if TPERM set Z=0.
+; Every EQ instruction above was silently skipped by hardware.
+MOVNE  DR0, #0               ; set error code (0 = failed)
+returnNE                      ; return error to caller
 ```
 
-The happy path does not branch, does not check errors, does not even know failure is possible. Every instruction carries EQ and the hardware silently skips it if TPERM failed.
+The happy path does not branch, does not check errors, does not even know failure is possible. Every instruction carries EQ and the hardware silently skips it if TPERM failed. The catch path runs on the same principle in reverse: NE instructions fire only when Z=0. Both paths execute in sequence with no branching — the condition code on every instruction determines whether the hardware executes or skips it.
 
-#### Permission Restriction (monotonic)
+**Execution trace when TPERM passes (Z=1)**:
+```
+TPERM    → Z=1
+readEQ   → executes (Z=1 matches EQ)
+IADDEQ   → executes
+writeEQ  → executes
+returnEQ → executes — caller gets result, never reaches catch
+MOVNE    → skipped (Z=1 does not match NE)
+returnNE → skipped
+```
 
-TPERM can also restrict permissions on a GT:
+**Execution trace when TPERM fails (Z=0)**:
+```
+TPERM    → Z=0
+readEQ   → skipped (Z=0 does not match EQ)
+IADDEQ   → skipped
+writeEQ  → skipped
+returnEQ → skipped
+MOVNE    → executes (Z=0 matches NE) — sets error code
+returnNE → executes — caller gets error
+```
+
+No branches. No jumps. The hardware skips or executes each instruction based on the condition suffix alone.
+
+#### Mode 2 — Permission Restriction (monotonic attenuation)
 
 ```
 TPERM CRd, #preset
 ```
 
-Permissions can only be removed, never added (monotonic restriction). Domain purity is enforced: Turing (R, W, X) and Church (L, S, E) permissions cannot be mixed.
+| Field | Usage |
+|-------|-------|
+| dst (4 bits) | CRd — the context register to attenuate |
+| src (4 bits) | Preset code — permission mask to AND with current permissions |
+| imm15 (15 bits) | 0 (no offset — distinguishes from health check) |
 
-**Presets**:
+ANDs the preset mask with CRd's current permissions. Permissions can only be removed, never added (monotonic restriction). Sets Z=1 if resulting permissions are non-zero. The attenuation is local to the cached CR; the namespace slot is not updated until a SAVE commits it. Domain purity is enforced: Turing (R, W, X) and Church (L, S, E) permissions cannot be mixed.
+
+#### Preset Table
+
+Presets are split into two mutually exclusive groups matching domain purity:
+
+**Turing domain** (R, W, X — data access and execution):
 
 | Value | Name | Bits Set |
 |-------|------|----------|
@@ -158,6 +213,11 @@ Permissions can only be removed, never added (monotonic restriction). Domain pur
 | 3 | X | X |
 | 4 | RX | R, X |
 | 5 | RWX | R, W, X |
+
+**Church domain** (L, S, E — capability list operations):
+
+| Value | Name | Bits Set |
+|-------|------|----------|
 | 6 | L | L |
 | 7 | S | S |
 | 8 | E | E |
@@ -165,11 +225,14 @@ Permissions can only be removed, never added (monotonic restriction). Domain pur
 | 10 | LE | L, E |
 | 11 | SE | S, E |
 | 12 | LSE | L, S, E |
-| 13 | RWXLSE | All |
 
-B-modifier variants (add 0x10): RB, RWB, XB, EB, etc. — sets B-bit alongside permissions.
+No preset combines Turing and Church bits. Domain purity is a hardware invariant enforced at the instruction encoding level — a cross-domain preset value is illegal and raises a FAULT.
 
-**Design rationale**: TPERM is the single gateway for inspecting and restricting GT metadata — permissions, validity, type, stack indicators, and bounds. Keeping all metadata operations in one instruction minimises opcode usage and silicon cost while providing a uniform interface. The flag-setting (no-trap) design enables the conditional execution try-catch pattern that gives the happy path zero overhead.
+B-modifier variants (add 0x10): RB, RWB, XB, EB, LSB, etc. — sets B-bit alongside the domain-pure permission set.
+
+#### Design Rationale
+
+TPERM is the single gateway for inspecting and restricting GT metadata — permissions, validity, type, stack indicators, and bounds. Keeping all metadata operations in one opcode minimises opcode usage and silicon cost while providing a uniform interface. The two modes coexist in the same encoding: `imm15 > 0` triggers a bounds check (health-check mode); `imm15 = 0` with no offset performs attenuation (restriction mode). The flag-setting (no-trap) design enables the conditional execution try-catch pattern that gives the happy path zero overhead.
 
 ### LAMBDA (opcode 7)
 

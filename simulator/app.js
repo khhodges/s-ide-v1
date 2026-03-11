@@ -7096,17 +7096,63 @@ const INSTRUCTION_DATA = [
     {
         opcode: 6, mnemonic: 'TPERM', domain: 'church',
         syntax: 'TPERM CRs, #preset [, offset]',
-        brief: 'GT health check \u2014 test permissions, validity, and bounds; set flags',
-        encoding: 'opcode[5]=00110 | cond[4] | CRs[4] | preset[4] | offset[15]',
+        brief: 'GT health check \u2014 test permissions, validity, and bounds; set flags. Also: permission restriction (monotonic).',
+        encoding: 'opcode[5]=00110 | cond[4] | dst[4] | src[4] | imm15[15]',
         fields: [
-            { name: 'CRs', desc: 'Context register holding the GT to check' },
-            { name: 'preset', desc: 'Permission preset to test (R, W, RW, X, E, LSE, etc.)' },
-            { name: 'offset', desc: 'Optional offset \u2014 checks base + offset \u2264 limit (bounds test)' },
+            { name: 'dst', desc: 'CRd (restriction mode) or unused (health-check mode)' },
+            { name: 'src', desc: 'Preset code (4 bits \u2014 selects permission mask to test or apply)' },
+            { name: 'imm15', desc: 'Offset for bounds check (health-check mode), or 0 (restriction mode)' },
         ],
         permission: 'None \u2014 reads cached register, does not trap',
         flags: 'Z=1 if all checks pass (permissions present, valid, in bounds); Z=0 if any check fails',
-        details: 'Single-instruction GT health check. Evaluates permissions, validity (version + MAC), and bounds in one cycle. Sets condition flags but never traps \u2014 this is the one Church instruction that does not FAULT on failure. The Z flag persists across subsequent instructions, enabling ARM-style conditional execution (EQ/NE suffixes) for zero-cost try-catch patterns. The happy path carries EQ suffixes; the catch path uses NE or falls through. TPERM can also restrict permissions on a GT (monotonic attenuation \u2014 permissions can only be removed, never added). Domain purity is enforced: Turing (R, W, X) and Church (L, S, E) permissions cannot be mixed.',
-        example: '; Example 1: Try-catch pattern (zero-cost happy path)\nTPERM CR5, RW, 0     ; Check R+W, valid, offset 0 in bounds\nreadEQ val, CR5, 0   ; Only fires if Z=1 (TPERM passed)\nwriteEQ CR5, 0, val+1; Only fires if Z=1\nreturnEQ(val)        ; Only fires if Z=1\n; catch: Z=0 \u2014 permission, validity, or bounds failure\nreturn(0)\n\n; Example 2: Permission restriction (monotonic)\nTPERM CR0, RX        ; Keep only R+X, strip W,L,S,E\nCALL CR2             ; Callee can read+execute but not write\n\n; Example 3: Allow bind for delegation\nLOAD CR1, CR6, 3     ; Load GT from c-list slot 3\nTPERM CR1, RWXB      ; Keep R+W+X and SET B (Bind)\nCALL CR2             ; Callee receives CR1 with B=1 (can save it)',
+        details: 'TPERM has two modes that share the same opcode. The mode is determined by how the fields are used:\n\n'
+            + 'MODE 1 \u2014 HEALTH CHECK (flag-setting):\n'
+            + '  Syntax:   TPERM CRs, #preset, offset\n'
+            + '  Encoding: opcode=00110 | cond | CRs | preset | offset\n'
+            + '  dst field = CRs (register to check)\n'
+            + '  src field = preset (permission mask to test: R=1, RW=2, X=3, E=8, etc.)\n'
+            + '  imm15    = offset (base + offset checked against limit)\n'
+            + '  Checks all at once: (1) does CRs have the requested permissions? (2) is the GT valid (version + MAC)? (3) is base + offset within the region?\n'
+            + '  Result: Z=1 if all pass, Z=0 if any fail. Never traps.\n'
+            + '  The Z flag persists, enabling conditional execution (EQ/NE suffixes) for zero-cost try-catch.\n\n'
+            + 'MODE 2 \u2014 PERMISSION RESTRICTION (monotonic attenuation):\n'
+            + '  Syntax:   TPERM CRd, #preset\n'
+            + '  Encoding: opcode=00110 | cond | CRd | preset | 0\n'
+            + '  dst field = CRd (register to attenuate)\n'
+            + '  src field = preset (permission mask to AND with current permissions)\n'
+            + '  imm15    = 0 (no offset \u2014 distinguishes from health check)\n'
+            + '  ANDs the preset mask with CRd\'s current permissions. Permissions can only be removed, never added (monotonic). Sets Z=1 if resulting permissions are non-zero. The attenuation is local to the cached CR; the namespace slot is not updated until a SAVE commits it.\n\n'
+            + 'PRESET TABLE:\n'
+            + '  Turing domain: 0=CLEAR  1=R  2=RW  3=X  4=RX  5=RWX\n'
+            + '  Church domain: 6=L  7=S  8=E  9=LS  10=LE  11=SE  12=LSE\n'
+            + '  13 = reserved (cross-domain — illegal, raises FAULT)\n'
+            + '  B-modifier variants (add 0x10): RB, RWB, XB, EB, LSB, etc. \u2014 sets B alongside domain-pure permissions.\n\n'
+            + 'Domain purity is a hardware invariant. Turing (R,W,X) and Church (L,S,E) bits cannot appear in the same preset. No preset spans both domains.',
+        example: '; === MODE 1: Health check (flag-setting, no trap) ===\n'
+            + '; Check R+W perms, valid, offset 0 in bounds\n'
+            + 'TPERM CR5, RW, 0       ; dst=CR5, src=preset 2 (RW), imm15=0\n'
+            + '                        ; Z=1: perms OK, valid, in bounds\n'
+            + '                        ; Z=0: any check failed\n'
+            + '\n'
+            + '; --- happy path (EQ = fires only when Z=1) ---\n'
+            + 'readEQ val, CR5, 0      ; skipped if Z=0\n'
+            + 'writeEQ CR5, 0, val+1   ; skipped if Z=0\n'
+            + 'returnEQ(val)           ; returns to caller — skipped if Z=0\n'
+            + '\n'
+            + '; --- catch path (NE = fires only when Z=0) ---\n'
+            + 'MOVNE  DR0, #0          ; set error code\n'
+            + 'returnNE                ; return error to caller\n'
+            + '; No branches — hardware skips/executes by suffix\n\n'
+            + '; === MODE 2: Permission restriction (monotonic) ===\n'
+            + '; Strip write \u2014 hand off read-only\n'
+            + 'TPERM CR0, RX           ; dst=CR0, src=preset 4 (RX), imm15=0\n'
+            + '                        ; ANDs CR0 perms with RX mask\n'
+            + '                        ; Result: W,L,S,E removed\n'
+            + 'CALL CR2                ; callee gets read+execute only\n\n'
+            + '; === MODE 2 + B-modifier: Allow bind ===\n'
+            + 'LOAD CR1, CR6, 3        ; load GT from c-list\n'
+            + 'TPERM CR1, RWXB         ; keep R+W+X and SET B (Bind)\n'
+            + 'CALL CR2                ; callee can save this GT',
     },
     {
         opcode: 7, mnemonic: 'LAMBDA', domain: 'church',
@@ -8050,21 +8096,20 @@ abstraction Memory {
         // in one instruction. Z=1 if all pass.
         TPERM CR5, RW, 0
 
-        // Happy path — all EQ instructions skip if Z=0
+        // happy path (EQ = fires only when Z=1)
         readEQ location, CR5, 0
         neededEQ = size + 255
         neededEQ = neededEQ >> 8
         neededEQ = neededEQ << 8
-
-        // Check bounds: does location+needed fit?
         TPERMEQ CR5, RW, location + needed
-
-        // Commit — advance the heap pointer
         writeEQ CR5, 0, location + needed
         returnEQ(location, needed)
 
-        // Catch path (Z=0): permission or bounds failure
-        return(0, 0)
+        // catch path (NE = fires only when Z=0)
+        // TPERM set Z=0 → every EQ was skipped
+        MOVNE DR0, 0
+        MOVNE DR1, 0
+        returnNE(DR0, DR1)
     }
 
     // Free: placeholder — bump allocators don't free.
@@ -8289,11 +8334,14 @@ abstraction Heap {
     // Called once when the instance is created.
     method Init() {
         TPERM CR5, RW, 0
+        // happy path (EQ = fires only when Z=1)
         writeEQ CR5, 0, 0
         returnEQ(0)
 
-        // catch: CR5 lacks RW or is invalid
-        return(0)
+        // catch path (NE = fires only when Z=0)
+        // Every EQ above was skipped by hardware
+        MOVNE DR0, 0
+        returnNE(DR0)
     }
 
     // Alloc: reserve 'count' words from the heap.
@@ -8302,37 +8350,45 @@ abstraction Heap {
     method Alloc(count) {
         // Check RW + valid + offset 0 in bounds
         TPERM CR5, RW, 0
-        readEQ offset, CR5, 0
 
-        // Check new end is still in bounds (EQ: skips if first TPERM failed)
+        // happy path (EQ = fires only when Z=1)
+        readEQ offset, CR5, 0
         TPERMEQ CR5, RW, offset + count
         writeEQ CR5, 0, offset + count
         returnEQ(offset)
 
-        // catch: permission, validity, or bounds failure
-        return(0)
+        // catch path (NE = fires only when Z=0)
+        // TPERM set Z=0 → every EQ was skipped
+        MOVNE DR0, 0
+        returnNE(DR0)
     }
 
     // Read: return the value at heap[index].
     method Read(index) {
         // One TPERM checks R + valid + index in bounds
         TPERM CR5, R, index
+
+        // happy path (EQ = fires only when Z=1)
         readEQ value, CR5, index
         returnEQ(value)
 
-        // catch: no R permission or index out of bounds
-        return(0)
+        // catch path (NE = fires only when Z=0)
+        MOVNE DR0, 0
+        returnNE(DR0)
     }
 
     // Write: store a value at heap[index].
     method Write(index, value) {
         // One TPERM checks W + valid + index in bounds
         TPERM CR5, W, index
+
+        // happy path (EQ = fires only when Z=1)
         writeEQ CR5, index, value
         returnEQ(1)
 
-        // catch: no W permission or index out of bounds
-        return(0)
+        // catch path (NE = fires only when Z=0)
+        MOVNE DR0, 0
+        returnNE(DR0)
     }
 }`,
         'counter': `abstraction Counter {\n    capabilities {\n    }\n    method Increment(value) {\n        result = value + 1\n        return(result)\n    }\n    method Add(a, b) {\n        result = a + b\n        return(result)\n    }\n}`,

@@ -96,7 +96,7 @@ This document maps each instruction across all implementation layers for verific
 | 10   | LE    | L,E         | Combo    | [ ]         | [x] Amaranth     |
 | 11   | SE    | S,E         | Combo    | [ ]         | [x] Amaranth     |
 | 12   | LSE   | L,S,E       | Combo    | [ ]         | [x] Amaranth     |
-| 13   | RWXLSE| R,W,X,L,S,E| All      | [ ]         | [x] Amaranth     |
+| 13   | —     | —          | Reserved — cross-domain preset; illegal, raises FAULT | [ ] | [x] Amaranth |
 | 14   | RSVD  | FAULT       | Reserved | [ ]         | [x] Amaranth     |
 | 15   | RSVD  | FAULT       | Reserved | [ ]         | [x] Amaranth     |
 
