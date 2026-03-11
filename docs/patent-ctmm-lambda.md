@@ -298,7 +298,7 @@ However, nesting is possible through CALL mediation:
 ```
 LAMBDA CR2, x10        ; LAMBDA-active set, LAMBDA_PC saved
   ; ... LAMBDA body ...
-  CALL CR5              ; saves LAMBDA state to stack, clears LAMBDA-active
+  CALL CR5, 0xF         ; pushes 2-word frame (E-GT + NIA|indicators), clears LAMBDA-active
     ; ... called procedure ...
     LAMBDA CR3, x11     ; permitted: LAMBDA-active was cleared by CALL
       ; ... nested LAMBDA body ...
@@ -509,7 +509,7 @@ process:
 .clamped:
 
   ; Now log the result via CALL (cross-domain service)
-  CALL CR5                 ; saves LAMBDA state to CALL frame, clears LAMBDA-active
+  CALL CR5, 0xF            ; pushes 2-word frame (E-GT + NIA|indicators), clears LAMBDA-active
     ; ... logging service executes in its own domain ...
     ; ... logging service RETURNs ...
   ; CALL RETURN restores LAMBDA state: LAMBDA-active re-set, LAMBDA_PC restored

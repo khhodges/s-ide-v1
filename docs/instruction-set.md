@@ -89,6 +89,7 @@ No DRs and no other CRs are pushed. Callee inherits DR0–DR15, CR0–CR5, CR7�
 ```
 RETURN
 ```
+*(no operands)*
 
 Returns from the current abstraction. Pops the 2-word frame pushed by CALL:
 - **Word 0** (caller's E-GT) — revalidated via mLoad (version + MAC + G-bit reset); NS split re-runs to re-derive CR6 and CR14 for the caller
@@ -379,7 +380,7 @@ loop:
 
 ```asm
 LOAD CR0, CR6, #4    ; Load Salvation from c-list slot 4
-CALL CR0             -- Enter the abstraction
+CALL CR0, 0xF        -- Direct mode: CR0 is the E-GT
 ```
 
 Both `;` and `--` introduce comments.

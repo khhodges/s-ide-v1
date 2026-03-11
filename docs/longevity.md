@@ -129,7 +129,7 @@ The permissions are not copied from the source GT. They are not read from the NS
 - DR4–DR11: local variables (callee-saved by the compiler)
 - DR12–DR15: temporaries (compiler scratch, caller-saved)
 
-**C-list mapping** (R005 fix): capability names in the source map to c-list offsets. When the compiler sees `call(Memory, Allocate, size)`, it looks up "Memory" in the capability list to find its c-list slot number, then emits `LOAD CR0, CR6, <slot>` followed by `CALL CR0`.
+**C-list mapping** (R005 fix): capability names in the source map to c-list offsets. When the compiler sees `call(Memory, Allocate, size)`, it looks up "Memory" in the capability list to find its c-list slot number, then emits `LOAD CR0, CR6, <slot>` followed by `CALL CR0, 0xF` (direct mode).
 
 **Output format:** An array of methods, each containing an array of 32-bit code words, plus a manifest (upload.json) with abstraction name, capabilities, and grants.
 

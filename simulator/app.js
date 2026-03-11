@@ -3481,12 +3481,12 @@ TPERM CR0, E           ; SlideRule has E? PASS
 
 ; --- TEST 8: CALL/RETURN ---
 LOAD CR0, CR6, 4       ; CR0 = Salvation
-CALL CR0               ; Push frame, enter Salvation
-RETURN CR0             ; Pop frame, return to next
+CALL CR0, 0xF          ; Direct mode: CR0 is the E-GT — enter Salvation
+RETURN                ; Return to caller (pops 2-word frame)
 
 ; --- TEST 9: ELOADCALL - fused Load+TPERM+Call ---
 ELOADCALL CR0, CR6, 4  ; Load Salvation + check E + call
-RETURN CR0             ; Return from fused call
+RETURN                ; Return from fused call
 
 ; --- TEST 10: XLOADLAMBDA - fused Load+TPERM+Lambda ---
 XLOADLAMBDA CR1, CR6, 10 ; Load SUCC + check X + lambda
@@ -3508,7 +3508,7 @@ TPERM CR0, XL          ; Check X+L permissions
 LOAD CR1, CR6, 5       ; CR1 = ADD
 TPERM CR1, XL          ; Check X+L
 LAMBDA CR0             ; Apply SUCC via LAMBDA instruction
-RETURN CR0             ; Return
+RETURN                ; Return to caller
 `,
         'bernoulli': `; Bernoulli - simplified Church sequence
 ; Load Church numeral abstractions (DATA-domain code objects)
@@ -3532,7 +3532,7 @@ LAMBDA CR3             ; Church DIV
 LAMBDA CR0             ; Church SUCC
 
 ; Return result
-RETURN CR0
+RETURN
 `,
         'conditional': `; Conditional execution demo
 LOAD CR0, CR6, 4       ; Load SUCC (Church numeral)
@@ -3545,7 +3545,7 @@ LAMBDAEQ CR1           ; Apply ADD via LAMBDA only if equal
 ; This would skip if Z=0 (TPERM failed)
 LOADNE CR2, CR6, 7     ; Load SUB only if not-equal (Z=0)
 
-RETURN CR0
+RETURN
 `,
         'gc_test': `; ============================================
 ; Church Machine GC Test (PP250)
@@ -3581,7 +3581,7 @@ LAMBDA CR3             ; ADD reduction (X)
 ; --- CALL GC: checks E via mLoad ---
 LOAD CR5, CR6, 27      ; CR5 = GC (E)
 TPERM CR5, E           ; Verify E permission
-CALL CR5               ; Trigger GC abstraction
+CALL CR5, 0xF          ; Direct mode: CR5 is the E-GT — trigger GC
 
 HALT
 `,
@@ -3663,7 +3663,7 @@ LOAD CR0, CR6, 4       ; CR0 = Salvation (E)
 TPERM CR0, E           ; Verify E permission
 
 ; --- CALL Salvation ---
-CALL CR0               ; Enter Salvation abstraction
+CALL CR0, 0xF          ; Direct mode: CR0 is the E-GT — enter Salvation
 ; Salvation transitions to Navana (no RETURN)
 ; Navana runs indefinitely managing all abstractions
 
@@ -3691,7 +3691,7 @@ HALT
 ; TRUE (slot 26) has only L \u2014 no E.
 ; CALL requires E via mLoad. Should FAULT.
 LOAD CR0, CR6, 26      ; CR0 = TRUE (L only)
-CALL CR0               ; FAULT: lacks E permission
+CALL CR0, 0xF          ; FAULT: direct mode but CR0 lacks E permission
 
 ; --- ATTACK 2: LAMBDA without X permission ---
 ; Constants (slot 18) has only E \u2014 no X.
@@ -3704,7 +3704,7 @@ LAMBDA CR1             ; FAULT: lacks X permission
 ; CALL requires E. Should FAULT.
 LOAD CR2, CR6, 4       ; CR2 = Salvation (E-GT from C-List)
 TPERM CR2, X           ; Strip E, keep X only
-CALL CR2               ; FAULT: lacks E permission
+CALL CR2, 0xF          ; FAULT: direct mode but CR2 lacks E permission
 
 ; --- If we get here, something is broken ---
 HALT
@@ -5636,7 +5636,7 @@ let V11 = V4 / V5   -- divide V4 by V5</div>
             <div class="intro-example">LOAD CR0, CR6, 4    ; Load from capability list
 TPERM CR0, XL       ; Check permissions
 LAMBDA CR0          ; Execute
-RETURN CR0          ; Return result</div>
+RETURN                ; Return result</div>
             <p>Assembly gives you direct control over registers, memory, and Golden Token permissions.
             Every instruction can have a <span class="intro-highlight">condition code</span> (like EQ, NE, GT)
             so it only runs when the condition is true.</p>
@@ -6629,7 +6629,7 @@ MCMP DR0, DR1        ; compare them</div>
                 handles computation.</p>
                 <div class="intro-example">LOAD CR0, CR6, 4    ; capability load from c-list
 TPERM CR0, XL       ; permission check (execute + load)
-CALL CR0            ; domain crossing via E-GT</div>
+CALL CR0, 0xF       ; direct mode — CR0 is the E-GT</div>
                 <p>ARM-style condition codes on every instruction. The F-bit auto-set on Outform GTs prevents
                 the confused deputy problem.${tier === 'ib' ? ' This maps directly to IB CS topics: machine architecture, instruction sets, and security models.' : ''}</p>
             `;
@@ -7104,22 +7104,20 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 3, mnemonic: 'RETURN', domain: 'church',
-        syntax: 'RETURN CRd',
-        brief: 'Exit an abstraction \u2014 restore caller context',
-        encoding: 'opcode[5]=00011 | cond[4] | CRd[4] | 0[4] | 0[15]',
-        fields: [
-            { name: 'CRd', desc: 'Return register (conventionally CR0)' },
-        ],
+        syntax: 'RETURN',
+        brief: 'Exit an abstraction \u2014 restore caller context from call frame',
+        encoding: 'opcode[5]=00011 | cond[4] | 0[4] | 0[4] | 0[15]',
+        fields: [],
         permission: 'None',
         flags: 'None',
         details:
-            '  31    27│26   23│22   19│18   15│14                0\n'
-          + '  ┌──────┬──────┬──────┬──────┬───────────────────┐\n'
-          + '  │00011 │ cond │  CRd │  ─   │        0          │\n'
-          + '  └──────┴──────┴──────┴──────┴───────────────────┘\n'
-          + '   5-bit   4-bit   4-bit  zero        zero\n\n'
-          + 'CRd = return value register (conventionally CR0).\n'
-          + 'src and imm15 are zero.\n\n'
+            '  31    27│26   23│22                              0\n'
+          + '  ┌──────┬──────┬────────────────────────────────┐\n'
+          + '  │00011 │ cond │              0                 │\n'
+          + '  └──────┴──────┴────────────────────────────────┘\n'
+          + '   5-bit   4-bit                zero\n\n'
+          + 'No programmer-visible operand fields.\n'
+          + 'All bits beyond cond are reserved and must be zero.\n\n'
           + 'Pops the 2-word call frame pushed by CALL:\n'
           + '  Word 0: caller\'s E-GT — revalidated via mLoad (version+MAC+G-bit reset);\n'
           + '          NS split re-runs to re-derive caller\'s CR6 (c-list) and CR14 (code).\n'
@@ -7128,7 +7126,7 @@ const INSTRUCTION_DATA = [
           + 'they retain whatever values the callee left in them.\n'
           + 'Shared between Church and Turing domains — the only exit from a safe\n'
           + 'Turing abstraction. If the call stack is empty, the machine halts.',
-        example: 'RETURN CR0           ; Exit abstraction, restore caller',
+        example: 'RETURN               ; Exit abstraction — restore caller from 2-word frame',
     },
     {
         opcode: 4, mnemonic: 'CHANGE', domain: 'church',
@@ -8353,10 +8351,10 @@ function loadCLOOMCExample(name) {
 // state themselves. Instance state lives in CR5,
 // the private instance data register.
 //
-// CR5 is saved on CALL and restored on RETURN by
-// hardware. Each thread carries its own CR5, so
-// multiple threads can share the same Memory code
-// while each maintains its own heap pointer.
+// CR5 is NOT saved/restored by CALL or RETURN —
+// the callee inherits whatever CR5 the caller had.
+// Each abstraction loads its own instance data
+// into CR5 at entry from its c-list.
 //
 // CR5 points to a region where this instance keeps
 // its bookkeeping (here: the current heap offset).
@@ -8412,12 +8410,12 @@ abstraction Memory {
 // into Mint's c-list. Without that GT, Mint cannot
 // reach Memory at all — hardware enforces this.
 //
-// Mint's own CR5 holds its private instance data,
-// separate from Memory's CR5. When Mint calls
-// Memory.Allocate, the CALL hardware saves Mint's
-// CR5 and loads Memory's. On RETURN, Mint's CR5
-// is restored. Neither abstraction can see the
-// other's private data.
+// Mint's own CR5 holds its private instance data.
+// When Mint calls Memory.Allocate, CR5 is NOT saved
+// by hardware — Memory.Allocate loads its own
+// instance data from its c-list at entry. After
+// RETURN, Mint reloads its CR5 if needed. Neither
+// abstraction touches the other's private data.
 
 abstraction Mint {
     capabilities {

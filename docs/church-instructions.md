@@ -121,7 +121,7 @@ All Church instructions that access the namespace route through the **mLoad mast
 5. Restore PC from NIA (Word 1)
 6. Restore machine indicators from Word 1
 
-**Mnemonic**: `RETURN`
+**Mnemonic**: `RETURN`  (no operands)
 
 | Aspect | Detail |
 |--------|--------|

@@ -98,7 +98,7 @@ PC  Instruction              Description
 
  6  TPERM CR0, E            Set CR0 permissions to Enter-only (for CALL)
 
- 7  CALL CR0                Enter the Salvation abstraction via CALL
+ 7  CALL CR0, 0xF           Enter the Salvation abstraction (direct mode: CR0 is E-GT)
                               Full 7-step security pipeline:
                               E-GT validated → mLoad → CR6 set → X-GT loaded → CR7 set → PC=0
                               The callee sees only what it was granted
@@ -111,8 +111,9 @@ PC  Instruction              Description
 
 10  LAMBDA CR7              Apply as lambda (second fast-path demonstration)
 
-11  RETURN CR5              Return from current scope via CR5
-                              Restores caller's CRs, DRs, and flags from call stack
+11  RETURN                  Return from current scope
+                              Pops 2-word frame: re-derives CR6/CR14 from caller E-GT,
+                              restores PC (NIA) and machine indicators
 
 12  SAVE CR1, [CR6 + 2]     Save CR1 (the GT loaded in instruction 1) back to
                               c-list slot 2, demonstrating capability transfer
@@ -138,8 +139,9 @@ PC  Instruction              Description
                               Proves: LAMBDA works inside a CALL domain
                               The sword inside the armor, inside the armor
 
- 4  RETURN CR5              Return to boot program caller
-                              Restores caller's CRs, DRs, flags from call stack
+ 4  RETURN                  Return to boot program caller
+                              Pops 2-word frame: re-derives CR6/CR14 from caller E-GT,
+                              restores PC (NIA) and machine indicators
                               Boot resumes at PC=8 (post-CALL continuation)
 ```
 
