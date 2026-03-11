@@ -7040,7 +7040,7 @@ const INSTRUCTION_DATA = [
         encoding: 'opcode[5]=00001 | cond[4] | CRd[4] | CRs[4] | offset[15]',
         fields: [
             { name: 'CRd',    desc: 'C-List — the capability list to save into (S permission required, word-addressed)' },
-            { name: 'CRs',    desc: 'Source GT to save into the C-List (must have B=1 — Bind bit set)' },
+            { name: 'CRs',    desc: 'Source GT (must have B=1 — Bind bit set)' },
             { name: 'offset', desc: 'Word address within the C-List at CRd (0–32767)' },
         ],
         permission: 'S on CRd (C-List); B=1 on CRs (source GT) — mSave validates all',
