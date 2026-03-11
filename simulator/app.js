@@ -8032,12 +8032,32 @@ abstraction Memory {
 
     // Allocate: reserve 'size' bytes of memory.
     // Rounds up to 256-byte alignment (>> 8, << 8).
-    // Returns (location, actual_size).
+    // Returns (location, actual_size) on success,
+    // or (0, 0) if CR5 lacks permissions or space.
     method Allocate(size) {
+        // Step 1: verify CR5 has R and W permissions.
+        // TPERM traps if the permission is absent —
+        // we check both before touching memory.
+        TPERM CR5, R
+        TPERM CR5, W
+
+        // Step 2: read current heap offset and compute
+        // the aligned block size (256-byte granularity).
         location = read(CR5, 0)
         needed = size + 255
         needed = needed >> 8
         needed = needed << 8
+
+        // Step 3: check free space — the GT's limit
+        // field tells us how many words CR5 covers.
+        // If location + needed exceeds the limit,
+        // we are out of space. Return (0, 0).
+        limit = GLIMIT(CR5)
+        if (location + needed > limit) {
+            return(0, 0)
+        }
+
+        // Step 4: commit — advance the heap pointer.
         write(CR5, 0, location + needed)
         return(location, needed)
     }
