@@ -189,7 +189,7 @@ TPERM CRs, #preset [, offset]
 ```
 
 **What TPERM checks (all at once)**:
-1. **Permissions** — does the GT have the requested permission bits? (R, W, RW, E, LSE, etc.)
+1. **Permissions** — does the GT have the requested permission bits? (R, W, RW, E, LS, etc.)
 2. **Valid** — does the GT pass version and MAC validation?
 3. **Base + Limit** — if an offset is provided, is Base + offset within the GT's region?
 

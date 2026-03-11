@@ -50,12 +50,17 @@ The GT stores exactly 6 permission bits. These are the mutually exclusive access
 
 ### Domain Purity
 
-A GT may carry Turing permissions (R, W, X) **or** Church permissions (L, S, E), but **never both**. E (Enter) belongs to the Church domain. This is enforced in hardware at TPERM time -- any attempt to create a mixed-domain GT raises a DOMAIN_PURITY fault.
+A GT may carry Turing permissions (R, W, X) **or** Church permissions (L, S, E), but **never both**. This is enforced in hardware at TPERM time — any attempt to create a mixed-domain GT raises a DOMAIN_PURITY fault.
+
+### E Isolation
+
+Within the Church domain, E (Enter — invoke an abstraction) must be **standalone**. E may not be combined with L (Load from c-list) or S (Save to c-list). A token that combines E with L or S would allow its holder to both traverse the nodal c-list and enter the abstraction it contains — an attack path that bypasses the separation between the capability list and the code it holds. E is the entry key to a function; L and S are the keys to the capability list that owns it. They must never be the same key.
 
 ```
-Valid:   R, W, X, RW, RX, WX, RWX        (Turing pure)
-Valid:   L, S, E, LS, LE, SE, LSE         (Church pure)
-Invalid: RL, WL, XE, RE, WS, RWXE, RWXL  (any mix of {R,W,X} with {L,S,E})
+Valid:   R, W, X, RW, RX, RWX             (Turing pure)
+Valid:   L, S, E, LS                       (Church pure — E standalone)
+Invalid: RL, WL, XE, RE, WS, RWXE, RWXL  (cross-domain — any mix of {R,W,X} with {L,S,E})
+Invalid: LE, SE, LSE                       (E isolation violation — E combined with L or S)
 ```
 
 ### M Permission -- Transient Microcode Elevation

@@ -7124,10 +7124,14 @@ const INSTRUCTION_DATA = [
             + '  ANDs the preset mask with CRd\'s current permissions. Permissions can only be removed, never added (monotonic). Sets Z=1 if resulting permissions are non-zero. The attenuation is local to the cached CR; the namespace slot is not updated until a SAVE commits it.\n\n'
             + 'PRESET TABLE:\n'
             + '  Turing domain: 0=CLEAR  1=R  2=RW  3=X  4=RX  5=RWX\n'
-            + '  Church domain: 6=L  7=S  8=E  9=LS  10=LE  11=SE  12=LSE\n'
+            + '  Church domain: 6=L  7=S  8=E  9=LS\n'
+            + '  10,11,12 = reserved (E+L, E+S, E+L+S — illegal, E must be standalone)\n'
             + '  13 = reserved (cross-domain — illegal, raises FAULT)\n'
-            + '  B-modifier variants (add 0x10): RB, RWB, XB, EB, LSB, etc. \u2014 sets B alongside domain-pure permissions.\n\n'
-            + 'Domain purity is a hardware invariant. Turing (R,W,X) and Church (L,S,E) bits cannot appear in the same preset. No preset spans both domains.',
+            + '  B-modifier variants (add 0x10): RB, RWB, XB, EB, LSB \u2014 sets B alongside a valid preset.\n\n'
+            + 'Two invariants enforced at encoding:\n'
+            + '  1. Domain purity: Turing (R,W,X) and Church (L,S,E) cannot be combined.\n'
+            + '  2. E isolation: E must be standalone. Combining E with L or S would allow a holder to both\n'
+            + '     traverse the nodal c-list and enter the abstraction — an attack path. Valid Church presets: L, S, E, LS.',
         example: '; === MODE 1: Health check (flag-setting, no trap) ===\n'
             + '; Check R+W perms, valid, offset 0 in bounds\n'
             + 'TPERM CR5, RW, 0       ; dst=CR5, src=preset 2 (RW), imm15=0\n'

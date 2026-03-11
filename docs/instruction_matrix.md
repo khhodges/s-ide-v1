@@ -93,9 +93,9 @@ This document maps each instruction across all implementation layers for verific
 | 7    | S     | S           | Lambda   | [ ]         | [x] Amaranth     |
 | 8    | E     | E           | Lambda   | [ ]         | [x] Amaranth     |
 | 9    | LS    | L,S         | Combo    | [ ]         | [x] Amaranth     |
-| 10   | LE    | L,E         | Combo    | [ ]         | [x] Amaranth     |
-| 11   | SE    | S,E         | Combo    | [ ]         | [x] Amaranth     |
-| 12   | LSE   | L,S,E       | Combo    | [ ]         | [x] Amaranth     |
+| 10   | —     | —           | Reserved — E+L illegal (E must be standalone) | [ ] | [x] Amaranth |
+| 11   | —     | —           | Reserved — E+S illegal (E must be standalone) | [ ] | [x] Amaranth |
+| 12   | —     | —           | Reserved — E+L+S illegal (E must be standalone) | [ ] | [x] Amaranth |
 | 13   | —     | —          | Reserved — cross-domain preset; illegal, raises FAULT | [ ] | [x] Amaranth |
 | 14   | RSVD  | FAULT       | Reserved | [ ]         | [x] Amaranth     |
 | 15   | RSVD  | FAULT       | Reserved | [ ]         | [x] Amaranth     |
