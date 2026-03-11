@@ -7011,53 +7011,54 @@ async function uploadToTang() {
 const INSTRUCTION_DATA = [
     {
         opcode: 0, mnemonic: 'LOAD', domain: 'church',
-        syntax: 'LOAD CRd, CRs, slot',
-        brief: 'Load a Golden Token from the namespace into a context register',
-        encoding: 'opcode[5]=00000 | cond[4] | CRd[4] | CRs[4] | slot[15]',
+        syntax: 'LOAD CRd, CRs, offset',
+        brief: 'Load a Golden Token from a C-List into a context register',
+        encoding: 'opcode[5]=00000 | cond[4] | CRd[4] | CRs[4] | offset[15]',
         fields: [
-            { name: 'CRd',  desc: 'Destination context register (CR0-CR15)' },
-            { name: 'CRs',  desc: 'Source C-List GT (must have L permission)' },
-            { name: 'slot', desc: 'Slot offset into the C-List pointed to by CRs (0–32767)' },
+            { name: 'CRd',    desc: 'Destination context register (CR0-CR15)' },
+            { name: 'CRs',    desc: 'C-List — the capability list to read from (word-addressed)' },
+            { name: 'offset', desc: 'Word address offset within the C-List (0–32767)' },
         ],
-        permission: 'L (Load) on CRs',
+        permission: 'L (Load) — checked by mLoad on the GT at CRs + offset',
         flags: 'None',
         details:
             '  31    27│26   23│22   19│18   15│14                0\n'
           + '  ┌──────┬──────┬──────┬──────┬───────────────────┐\n'
-          + '  │00000 │ cond │  CRd │  CRs │       slot        │\n'
+          + '  │00000 │ cond │  CRd │  CRs │      offset       │\n'
           + '  └──────┴──────┴──────┴──────┴───────────────────┘\n'
           + '   5-bit   4-bit   4-bit   4-bit       15-bit\n\n'
-          + 'CRs must hold a C-List GT with L (Load) permission.\n'
-          + 'mLoad validates: version, seal, slot within bounds.\n'
-          + 'The GT at slot index is copied into CRd.',
-        example: 'LOAD CR0, CR6, 7    ; Load slot 7 into CR0 via C-List CR6',
+          + 'CRs is the C-List (capability list), word-addressed.\n'
+          + 'offset is the word address within the C-List.\n'
+          + 'mLoad fetches the GT at CRs + offset, validates version\n'
+          + 'and seal, then copies it into CRd.',
+        example: 'LOAD CR0, CR6, 7    ; Load word 7 of C-List CR6 into CR0',
     },
     {
         opcode: 1, mnemonic: 'SAVE', domain: 'church',
-        syntax: 'SAVE CRd, CRs, imm',
+        syntax: 'SAVE CRd, CRs, offset',
         brief: 'Save a Golden Token into a C-List (capability list)',
-        encoding: 'opcode[5]=00001 | cond[4] | CRd[4] | CRs[4] | slot[15]',
+        encoding: 'opcode[5]=00001 | cond[4] | CRd[4] | CRs[4] | offset[15]',
         fields: [
-            { name: 'CRd', desc: 'Source context register containing GT to save' },
-            { name: 'CRs', desc: 'C-List GT \u2014 the capability list to save into (must have S permission)' },
-            { name: 'imm', desc: 'Slot index within the C-List (0-32767)' },
+            { name: 'CRd',    desc: 'Source context register containing the GT to save' },
+            { name: 'CRs',    desc: 'C-List — the capability list to write into (word-addressed)' },
+            { name: 'offset', desc: 'Word address offset within the C-List (0–32767)' },
         ],
-        permission: 'S (Save) on CRs; B=1 required on source GT',
+        permission: 'S (Save) — checked by mLoad on CRs; B=1 required on source GT',
         flags: 'None',
         details:
             '  31    27│26   23│22   19│18   15│14                0\n'
           + '  ┌──────┬──────┬──────┬──────┬───────────────────┐\n'
-          + '  │00001 │ cond │  CRd │  CRs │       slot        │\n'
+          + '  │00001 │ cond │  CRd │  CRs │      offset       │\n'
           + '  └──────┴──────┴──────┴──────┴───────────────────┘\n'
           + '   5-bit   4-bit   4-bit   4-bit       15-bit\n\n'
-          + 'CRd = GT to save (B=1 required on this GT).\n'
-          + 'CRs = target C-List GT (must have S permission).\n'
-          + 'slot = destination slot within the C-List.\n\n'
-          + 'A C-List is a namespace entry that holds other GTs — the fundamental\n'
-          + 'mechanism for storing and sharing capabilities. B=1 on the source GT\n'
-          + 'is the hardware\'s "use it, don\'t keep it" default: a callee cannot\n'
-          + 'save GTs it was only passed for use, preventing unauthorized propagation.',
-        example: 'SAVE CR1, CR6, 20   ; Save CR1 into slot 20 of C-List CR6',
+          + 'CRd    = GT to save (B=1 required on this GT).\n'
+          + 'CRs    = the C-List (capability list), word-addressed.\n'
+          + 'offset = word address within the C-List.\n\n'
+          + 'Writes the GT from CRd into the C-List at CRs + offset.\n'
+          + 'B=1 on the source GT is the hardware\'s delegation gate: a callee\n'
+          + 'cannot save GTs it was only passed for use, preventing unauthorized\n'
+          + 'capability propagation.',
+        example: 'SAVE CR1, CR6, 20   ; Save CR1 into word 20 of C-List CR6',
     },
     {
         opcode: 2, mnemonic: 'CALL', domain: 'church',
@@ -7263,59 +7264,59 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 8, mnemonic: 'ELOADCALL', domain: 'church',
-        syntax: 'ELOADCALL CRd, CRs, imm',
+        syntax: 'ELOADCALL CRd, CRs, offset',
         brief: 'Fused LOAD + TPERM(E) + CALL in one instruction',
-        encoding: 'opcode[5]=01000 | cond[4] | CRd[4] | CRs[4] | slot[15]',
+        encoding: 'opcode[5]=01000 | cond[4] | CRd[4] | CRs[4] | offset[15]',
         fields: [
-            { name: 'CRd', desc: 'Destination for loaded GT' },
-            { name: 'CRs', desc: 'C-List GT (must have L permission)' },
-            { name: 'imm', desc: 'Namespace slot index' },
+            { name: 'CRd',    desc: 'Destination for loaded GT' },
+            { name: 'CRs',    desc: 'C-List — the capability list (word-addressed)' },
+            { name: 'offset', desc: 'Word address offset within the C-List (0–32767)' },
         ],
-        permission: 'L on CRs, then E on loaded GT',
+        permission: 'mLoad checks L on fetched GT, then E on loaded GT',
         flags: 'None',
         details:
             '  31    27│26   23│22   19│18   15│14                0\n'
           + '  ┌──────┬──────┬──────┬──────┬───────────────────┐\n'
-          + '  │01000 │ cond │  CRd │  CRs │       slot        │\n'
+          + '  │01000 │ cond │  CRd │  CRs │      offset       │\n'
           + '  └──────┴──────┴──────┴──────┴───────────────────┘\n'
           + '   5-bit   4-bit   4-bit   4-bit       15-bit\n\n'
-          + 'CRd  = destination for the loaded GT.\n'
-          + 'CRs  = C-List GT (must have L permission).\n'
-          + 'slot = namespace slot to load from.\n\n'
+          + 'CRd    = destination for the loaded GT.\n'
+          + 'CRs    = the C-List (capability list), word-addressed.\n'
+          + 'offset = word address within the C-List.\n\n'
           + 'Fused micro-op sequence in one cycle:\n'
-          + '  1. LOAD  — read GT at slot via CRs (L permission checked)\n'
+          + '  1. LOAD  — fetch GT at CRs + offset via mLoad\n'
           + '  2. TPERM — verify E permission on the loaded GT\n'
           + '  3. CALL  — enter the abstraction\n'
           + 'Reduces the common 3-instruction entry sequence to a single word.',
-        example: 'ELOADCALL CR0, CR6, 12  ; Load slot 12, verify E, enter',
+        example: 'ELOADCALL CR0, CR6, 12  ; Load word 12 of C-List CR6, verify E, enter',
     },
     {
         opcode: 9, mnemonic: 'XLOADLAMBDA', domain: 'church',
-        syntax: 'XLOADLAMBDA CRd, CRs, imm',
+        syntax: 'XLOADLAMBDA CRd, CRs, offset',
         brief: 'Fused LOAD + TPERM(X) + LAMBDA in one instruction',
-        encoding: 'opcode[5]=01001 | cond[4] | CRd[4] | CRs[4] | slot[15]',
+        encoding: 'opcode[5]=01001 | cond[4] | CRd[4] | CRs[4] | offset[15]',
         fields: [
-            { name: 'CRd', desc: 'Destination for loaded GT' },
-            { name: 'CRs', desc: 'C-List GT (must have L permission)' },
-            { name: 'imm', desc: 'Namespace slot index' },
+            { name: 'CRd',    desc: 'Destination for loaded GT' },
+            { name: 'CRs',    desc: 'C-List — the capability list (word-addressed)' },
+            { name: 'offset', desc: 'Word address offset within the C-List (0–32767)' },
         ],
-        permission: 'L on CRs, then X on loaded GT',
+        permission: 'mLoad checks L on fetched GT, then X on loaded GT',
         flags: 'None',
         details:
             '  31    27│26   23│22   19│18   15│14                0\n'
           + '  ┌──────┬──────┬──────┬──────┬───────────────────┐\n'
-          + '  │01001 │ cond │  CRd │  CRs │       slot        │\n'
+          + '  │01001 │ cond │  CRd │  CRs │      offset       │\n'
           + '  └──────┴──────┴──────┴──────┴───────────────────┘\n'
           + '   5-bit   4-bit   4-bit   4-bit       15-bit\n\n'
-          + 'CRd  = destination for the loaded GT.\n'
-          + 'CRs  = C-List GT (must have L permission).\n'
-          + 'slot = namespace slot to load from.\n\n'
+          + 'CRd    = destination for the loaded GT.\n'
+          + 'CRs    = the C-List (capability list), word-addressed.\n'
+          + 'offset = word address within the C-List.\n\n'
           + 'Fused micro-op sequence in one cycle:\n'
-          + '  1. LOAD   — read GT at slot via CRs (L permission checked)\n'
+          + '  1. LOAD   — fetch GT at CRs + offset via mLoad\n'
           + '  2. TPERM  — verify X permission on the loaded GT\n'
           + '  3. LAMBDA — apply the reduction in-scope (no context save)\n'
           + 'Used for fast-path Church reductions where load + apply is one operation.',
-        example: 'XLOADLAMBDA CR0, CR6, 7  ; Load slot 7, verify X, reduce',
+        example: 'XLOADLAMBDA CR0, CR6, 7  ; Load word 7 of C-List CR6, verify X, reduce',
     },
     {
         opcode: 10, mnemonic: 'DREAD', domain: 'turing',
