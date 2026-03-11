@@ -99,7 +99,7 @@ LAMBDA = macro's speed + function's code reuse.
 
 ## Constructive Example: Clamp Function
 
-The following examples use Sim-32 RISC-V register naming (x0-x31, MV, BGE, BLE, LI, J) which maps to the Church Machine's data register conventions. In Sim-64, these would be DR0-DR15 with Church Machine mnemonics (IADD, MCMP, BRANCH, etc.).
+The following examples use RISC-V register naming (x0-x31, MV, BGE, BLE, LI, J) which maps to the Church Machine's data register conventions (DR0-DR15 with IADD, MCMP, BRANCH, etc.).
 
 A graphics program needs to clamp RGB values to 0-255 range:
 
@@ -175,7 +175,7 @@ process_body:
 
 ## The Church-Turing Marriage
 
-| Church's Theory | CTMM Hardware |
+| Church's Theory | Church Machine Hardware |
 |----------------|---------------|
 | λx.body (function definition) | GT with X permission in CRn |
 | Argument (bound variable) | Value in data register x |

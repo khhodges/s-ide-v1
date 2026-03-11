@@ -4,8 +4,8 @@
 
 G (Garbage) is a liveness flag used in the garbage collection process. It is **not** a GT permission bit -- it is part of the GC infrastructure. The two simulators implement G differently:
 
-- **Sim-64**: G is a 1-bit field in the 64-bit GT layout (bit 57). It is reset (cleared to 0) on every namespace access through mLoad, and set to 1 during the Mark phase.
-- **Sim-32**: G is tracked in the namespace entry, not in the GT itself. Liveness is determined by version matching -- when a namespace entry is swept, its 7-bit version is bumped, instantly invalidating all stale GTs.
+- **Church Machine**: G is a 1-bit field in the 64-bit GT layout (bit 57). It is reset (cleared to 0) on every namespace access through mLoad, and set to 1 during the Mark phase.
+- **Church Machine**: G is tracked in the namespace entry, not in the GT itself. Liveness is determined by version matching -- when a namespace entry is swept, its 7-bit version is bumped, instantly invalidating all stale GTs.
 
 In both implementations, the liveness signal is integrated into the mLoad validation path:
 
@@ -63,12 +63,12 @@ The Scan phase walks the full reachability tree from all live roots, clearing G=
 **Live roots include:**
 - All capability registers (CR0-CR15)
 - All call stack frames
-- Thread table entries (Sim-32)
+- Thread table entries
 
 **Tree walk rules:**
 - Reachability in the tree determines liveness, not parent permissions
 - No permission filtering during scan — an entry is reachable if it can be reached through any path, regardless of whether the path has L, M, or any other permission
-- Nested C-Lists (Sim-64) or referenced entries (Sim-32) are followed recursively
+- Nested C-Lists and referenced entries are followed recursively
 - A visited set prevents infinite loops in cyclic structures
 
 ### Phase 3: Sweep
@@ -77,12 +77,11 @@ The Sweep phase reclaims entries that are still marked with G=1 after scanning.
 
 - Any namespace entry still marked after Scan is unreachable — no live capability register, call stack frame, or thread table entry references it.
 - The entry is cleared (reclaimed).
-- **Sim-32**: The entry's version is bumped (incremented within the 7-bit field), invalidating any stale Golden Tokens.
-- **Sim-64**: The entry is removed from the namespace tree.
+- The entry's version is bumped (incremented within the 7-bit field), invalidating any stale Golden Tokens.
 
 ---
 
-## Version Bumping and Token Invalidation (Sim-32)
+## Version Bumping and Token Invalidation (Church Machine)
 
 Version bumping is the mechanism that prevents use-after-free vulnerabilities. When a namespace entry is reclaimed during Sweep:
 
@@ -95,29 +94,18 @@ This provides strong temporal safety: even if an old token is retained in a regi
 
 ---
 
-## Sim-64: GC Integration
+## GC Integration
 
-In Sim-64, garbage collection is integrated directly into the mLoad path:
-
-- When any Church instruction accesses a namespace entry through mLoad, the G bit on that entry is cleared.
-- The GC operates on the namespace hierarchy, traversing the tree of namespaces rooted at CR15.
-- The Scan phase walks the full DNA tree without permission filtering — any reachable node has its G bit cleared.
-- The Mark-Scan-Sweep cycle can be triggered to identify unreferenced entries by checking which entries still have their G bit set.
-
----
-
-## Sim-32: GC Integration
-
-In Sim-32, garbage collection uses the same G-bit mechanism through mLoad:
+Garbage collection uses the G-bit mechanism through mLoad:
 
 - **mLoad resets G**: When mLoad validates a namespace access, it resets G=0 on the accessed entry. This happens during every LOAD, SAVE, CALL, RETURN, CHANGE, and SWITCH.
 - **mLoadByIndex resets G**: Direct namespace index access also resets G=0.
 - The three phases (Mark, Scan, Sweep) can be triggered independently through the Dashboard UI.
 - The namespace table is a flat array of up to 131,072 entries.
 
-### Dashboard UI (Sim-32)
+### Dashboard UI (Church Machine)
 
-The Sim-32 Dashboard provides four GC control buttons:
+The Church Machine Dashboard provides four GC control buttons:
 
 | Button | Action |
 |--------|--------|
@@ -149,17 +137,17 @@ The mLoad module (`ctmm_amaranth/mload.py`) mirrors the SystemVerilog implementa
 
 ---
 
-## Comparison
+## Summary
 
-| Aspect | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|--------|---------------|-------------------|
-| **G-bit Reset Trigger** | Every mLoad call (all Church instructions) | Every mLoad/mLoadByIndex call (all Church instructions) |
-| **Namespace Structure** | Hierarchical (tree of namespaces) | Flat table (up to 131,072 entries) |
-| **Scan Algorithm** | DNA tree walk from CR15 root, no permission filtering | DNA tree walk from registers + call stack + thread table, no permission filtering |
-| **Version Bumping** | Not used (tree removal) | 7-bit version incremented on Sweep |
-| **Token Invalidation** | Entry removal from tree | Version mismatch detection |
-| **User Control** | Dashboard buttons (Mark, Scan, Sweep, GC Cycle) | Dashboard buttons (Mark, Scan, Sweep, GC Cycle) |
-| **Hardware Support** | g_bit_reset/g_bit_addr signals in mLoad, SAVE, RETURN | g_bit_reset/g_bit_addr signals in mLoad, SAVE, RETURN |
+| Aspect | Detail |
+|--------|--------|
+| **G-bit Reset Trigger** | Every mLoad/mLoadByIndex call (all Church instructions) |
+| **Namespace Structure** | Flat table (up to 131,072 entries) |
+| **Scan Algorithm** | DNA tree walk from registers + call stack + thread table, no permission filtering |
+| **Version Bumping** | 7-bit version incremented on Sweep |
+| **Token Invalidation** | Version mismatch detection |
+| **User Control** | Dashboard buttons (Mark, Scan, Sweep, GC Cycle) |
+| **Hardware Support** | g_bit_reset/g_bit_addr signals in mLoad, SAVE, RETURN |
 
 ## Key Design Principle
 

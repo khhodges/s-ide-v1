@@ -4,20 +4,16 @@
 
 The Church instructions implement capability-based access control as hardware-enforced operations. They are the mechanism by which software interacts with Golden Tokens (GTs), capability registers (CRs), and the Namespace. Named after Alonzo Church, these instructions embody the lambda calculus principle of controlled access through abstraction.
 
-Both the Sim-64 (CTMM) and Sim-32 (RV32-Cap) simulators implement the same six core Church instructions. The architectural purpose, security model, and operational semantics are identical. Only the encoding format, token width, and implementation details differ.
-
 All Church instructions that access the namespace route through the **mLoad master validation path**, which enforces permission checks, bounds validation, MAC verification, and G-bit reset on every access.
 
 ---
 
-## Shared Architectural Principles
-
-These rules apply identically to both simulators:
+## Architectural Principles
 
 1. **CR0-CR7 Only**: Church instructions can only address CR0-CR7 via 3-bit register encoding. System registers CR8-CR15 are physically unreachable through instruction encoding.
 2. **SWITCH Is the Gate**: The only way to write to system registers CR8-CR15 is through the privileged SWITCH instruction.
 3. **Permission Domains Are Mutually Exclusive**: Turing (R, W, X) and Church (L, S, E) permissions cannot be mixed within a single operation context.
-4. **Failsafe FAULT**: Every validation failure (permission, bounds, version, MAC) routes to a FAULT handler.
+4. **Failsafe FAULT**: Every validation failure (permission, bounds, version, MAC) routes to a FAULT handler — except TPERM, which sets Z=0 on failure to enable conditional execution without trapping.
 5. **C-List Mediation**: LOAD and SAVE operate through capability-mediated access, never through raw memory addressing.
 6. **mLoad Validation**: All namespace access routes through the mLoad trusted path, which always resets the G-bit on accessed entries.
 7. **G-bit Reset on Access**: Every namespace access resets G=0 on the accessed entry, regardless of the instruction or permission type. Reachability determines liveness.
@@ -42,18 +38,15 @@ These rules apply identically to both simulators:
 5. Reset G=0 on the accessed namespace entry
 6. Copy the capability into the destination CR
 
-| Detail | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|--------|---------------|-------------------|
-| **Mnemonic** | `LOAD CRd, CRs, idx` | `CAP.LOAD CRd, CRs, index` |
-| **Source C-List** | Any CR (CRs) as C-List source, explicit index operand | Any CR (CRs) as source, 17-bit immediate index |
-| **Permission Check** | L or M on source CR | L on source CR |
-| **GT Validation** | Implicit (capability object integrity) | Version match + MAC seal validation on source GT |
-| **MAC Validation** | Yes — hardware hash checked on loaded GT | Yes — 25-bit FNV seal in VersionSeals checked on target namespace entry |
-| **G-bit Reset** | Yes — G bit cleared on namespace access via mLoad | Yes — G bit cleared on namespace access via mLoad |
-| **Bounds Check** | Against source C-List entry count | Against namespaceTable length |
-| **GT Width** | 64-bit (Offset + Permissions + Spare) | 32-bit (Version + Index + Permissions + Type) |
-| **Result** | Loaded capability object stored in destination CR | 128-bit CR filled: word0=new GT, word1=location, word2=limit, word3=versionSeals from namespace entry |
-| **Encoding** | 5-bit opcode, condition[4], I-bit, CRd[3], CRs[3], idx | opcode=0x2B, J-type: CRd[11:9], CRs[14:12], index[29:15] |
+**Mnemonic**: `LOAD CRd, CRs, index`
+
+| Aspect | Detail |
+|--------|--------|
+| **Permission Check** | L on source CR (M-elevation by microcode for CR6) |
+| **GT Validation** | Version match + MAC seal validation |
+| **G-bit Reset** | Yes — G bit cleared on namespace access via mLoad |
+| **Bounds Check** | Index must be within C-List bounds |
+| **Result** | Validated GT loaded into destination CR |
 
 ---
 
@@ -72,17 +65,15 @@ These rules apply identically to both simulators:
 4. Copy the capability from the source CR into the target entry
 5. Reset G=0 on the accessed C-List namespace entry
 
-| Detail | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|--------|---------------|-------------------|
-| **Mnemonic** | `SAVE CRd, CRs, idx` | `CAP.SAVE CRsrc, CRdst, index` |
-| **Destination** | Any CR (CRd) as C-List destination, explicit index | Any CR (CRdst) as destination, 17-bit immediate index |
-| **Permission Check (C-List)** | S or M on destination CR | S on destination CR |
-| **Permission Check (source)** | B or M on source CR (Bind permission required) | None |
-| **Bounds Check** | Against destination C-List size | Index must be < 131,072; namespace table auto-extends |
-| **Seal Recompute** | N/A | Yes — MAC seal recomputed from Location+Limit, preserving existing version |
-| **G-bit Reset** | Yes — on accessed C-List namespace entry | Yes — on accessed C-List namespace entry |
-| **Storage** | Writes capability object into C-List entry | Writes CR word1 (location), word2 (limit), word3 (recomputed versionSeals) into namespace table |
-| **Encoding** | 5-bit opcode, condition[4], I-bit, CRd[3], CRs[3], idx | opcode=0x7B, J-type: CRsrc[11:9], CRdst[14:12], index[29:15] |
+**Mnemonic**: `SAVE CRsrc, CRdst, index`
+
+| Aspect | Detail |
+|--------|--------|
+| **Permission Check** | S on destination CR |
+| **Bounds Check** | Index must be within C-List bounds |
+| **Seal Recompute** | MAC seal recomputed from Location+Limit |
+| **G-bit Reset** | Yes — on accessed C-List namespace entry |
+| **Result** | Capability stored into target C-List entry |
 
 ---
 
@@ -99,20 +90,16 @@ These rules apply identically to both simulators:
 4. Push return context onto the call stack
 5. Transfer control to the target abstraction
 
-| Detail | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|--------|---------------|-------------------|
-| **Mnemonic** | `CALL CRs [, mask]` | `CAP.CALL CRs` |
-| **Required Permission** | L (Load) on source CR — used to access C-List for loading new context | E (Enter) on source CR — direct entry permission |
-| **GT Validation** | Implicit (capability object integrity) | Version match + MAC seal validation on both source GT and target namespace entry |
-| **G-bit Reset** | Yes — on callee namespace entry via mLoad | Yes — on callee namespace entry via mLoad |
-| **Saved Context** | Return NIA, CR6, CR7, bound GT list | PC, CR5, CR6, CR7 pushed to call stack (max 256 frames) |
-| **Stack Overflow** | Software-managed depth tracking | FAULT if call stack full (256 frames). Updates stackSpace/stackFrames indicators. |
-| **Register Clearing** | 11-bit mask field specifies which DRs (1-5) and CRs (0-5) to clear/preserve on entry; DR0 always preserved, DR6-15 always cleared | CR5 cleared after push (software clears others) |
-| **New Context** | CR6 loaded with target's nodal C-List, CR7 loaded with Access Code (X permission) | CR6 set to callee C-List (M-bit set), CR7 set to callee code, PC set to namespace entry location |
-| **Stack** | Software-managed call stack with depth tracking | Hardware call stack with 256-frame limit, stackSpace/stackFrames indicators |
-| **Encoding** | 5-bit opcode, condition[4], CRs[3], mask bits | opcode=0x5B, J-type: CRs[14:12] |
+**Mnemonic**: `CALL CRs`
 
-**Note on permission difference**: Sim-64 uses L because CALL's first action is loading the target's C-List entries (a Load operation). Sim-32 uses E because it treats CALL as entering an abstraction directly. Both achieve the same security goal — only authorized callers can invoke protected services.
+| Aspect | Detail |
+|--------|--------|
+| **Required Permission** | E (Enter) on source CR |
+| **GT Validation** | Version match + MAC seal validation |
+| **G-bit Reset** | Yes — on callee namespace entry via mLoad |
+| **Saved Context** | PC, CR5, CR6, CR7 pushed to call stack (max 256 frames) |
+| **Stack Overflow** | FAULT if call stack full. Updates stackSpace/stackFrames indicators |
+| **New Context** | CR6 set to callee C-List (M-bit set), CR7 set to callee code, PC set to entry point |
 
 ---
 
@@ -120,7 +107,7 @@ These rules apply identically to both simulators:
 
 **Purpose**: Restore context saved by a previous CALL and resume execution at the caller.
 
-**Required Permission**: None (return is always permitted if a saved context exists), E checked on return capability (Sim-64)
+**Required Permission**: None (return is always permitted if a saved context exists)
 
 **Validation Path**: Routes saved CR5/CR6/CR7 GTs through mLoad for namespace revalidation — version check, MAC check, G-bit reset. Catches recycled entries (use-after-free prevention).
 
@@ -133,18 +120,16 @@ These rules apply identically to both simulators:
 6. Reset G=0 on all restored namespace entries
 7. Resume execution at the saved return address
 
-| Detail | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|--------|---------------|-------------------|
-| **Mnemonic** | `RETURN` | `CAP.RETURN` |
-| **Permission Check** | None (null perm passed to mLoad — skips permission check) | None |
-| **Restored Registers** | CR5 (tolerant), CR6, CR7, NIA via mLoad revalidation | CR5 (tolerant), CR6 (M-bit set), CR7, PC (set to saved PC + 4) via mLoad |
-| **mLoad Revalidation** | Yes — saved GTs routed through mLoad for version/MAC/namespace validation | Yes — saved GTs routed through mLoad for version/MAC validation |
-| **CR5 Fault Tolerance** | CR5 fault clears CR5, continues to CR6/CR7 | CR5 fault clears CR5, continues to CR6/CR7 |
-| **G-bit Reset** | Yes — on all restored namespace entries via mLoad | Yes — on all restored namespace entries via mLoad |
-| **Bound GT Surrender** | Yes — CRs marked as bound during CALL are cleared to NULL | No |
-| **Stack Underflow** | FAULT: "Stack underflow - no procedure to return from" | FAULT: "No saved context to restore" |
-| **Stack Indicators** | N/A | Updates stackFrames (true if frames remain) and stackSpace (true, always room after pop) |
-| **Encoding** | 5-bit opcode, condition[4], no operands | opcode=0x0B, funct3=000, no operands |
+**Mnemonic**: `RETURN`
+
+| Aspect | Detail |
+|--------|--------|
+| **Permission Check** | None |
+| **Restored Registers** | CR5 (tolerant), CR6 (M-bit set), CR7, PC via mLoad revalidation |
+| **CR5 Fault Tolerance** | CR5 fault clears CR5, continues to CR6/CR7 |
+| **G-bit Reset** | Yes — on all restored namespace entries via mLoad |
+| **Stack Underflow** | FAULT: "No saved context to restore" |
+| **Stack Indicators** | Updates stackFrames and stackSpace |
 
 ---
 
@@ -152,25 +137,23 @@ These rules apply identically to both simulators:
 
 **Purpose**: Create or set a new thread identity by writing to CR8 (Thread register). This is the mechanism for context switching between threads.
 
-**Validation Path**: Routes through mLoad when using C-List lookup (I=1 in Sim-64) — full validation with G-bit reset.
+**Validation Path**: Routes through mLoad — full validation with G-bit reset.
 
 **Operation**:
-1. Obtain source capability (from register or C-List lookup via mLoad)
+1. Obtain source capability
 2. Write to CR8 (Thread identity)
 3. Reset G=0 on accessed namespace entries
 4. Advance the PC
 
-| Detail | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|--------|---------------|-------------------|
-| **Mnemonic** | `CHANGE CRs` (I=0) or `CHANGE CRn, idx` (I=1) | `CAP.CHANGE CRs` |
-| **Permission Check** | I=1: L on C-List CR for lookup; I=0: none on source (capability object checked) | E (Enter) on source CR |
-| **I-bit Variant** | Yes — I=0 uses register, I=1 uses C-List lookup | No (register only) |
-| **Target** | Always CR8 (Thread) | Full atomic thread swap via thread table |
-| **G-bit Reset** | Yes — via mLoad on C-List access | Yes — on accessed namespace entries |
-| **Save Side** | Saves DR+PC+indicators only (CRs always current in thread table shadow via mLoad) | Saves x0-x31 and PC to thread table (CRs always current via mLoad thread shadow) |
-| **Restore Side** | New thread GT created via mLoad; CRs restored from thread shadow via mLoad | CRs restored from thread table via mLoad revalidation; data registers restored directly |
-| **Exclusive Monitor** | Cleared for current thread (ARM CLREX semantics) | Not implemented |
-| **Encoding** | 5-bit opcode, condition[4], I-bit, CRs[3] | opcode=0x0B, funct3=001, cr_src=rs2[2:0] |
+**Mnemonic**: `CHANGE CRs`
+
+| Aspect | Detail |
+|--------|--------|
+| **Permission Check** | E (Enter) on source CR |
+| **Target** | CR8 (Thread) — full atomic thread swap |
+| **G-bit Reset** | Yes — on accessed namespace entries |
+| **Save Side** | Saves data registers and PC to thread table (CRs always current via mLoad shadow) |
+| **Restore Side** | CRs restored from thread table via mLoad revalidation; data registers restored directly |
 
 ---
 
@@ -178,58 +161,79 @@ These rules apply identically to both simulators:
 
 **Purpose**: Write a capability into one of the system registers CR8-CR15. This is the only instruction that can modify system registers, making it the privilege gate.
 
-**Validation Path**: Routes through mLoad when using C-List lookup (I=1 in Sim-64) — full validation with G-bit reset.
+**Validation Path**: Routes through mLoad — full validation with G-bit reset.
 
 **Operation**:
-1. Check required permission on the source capability → FAULT if not
+1. Check M permission on the source capability → FAULT if not
 2. Determine the target system register from the 3-bit target field (CR8 + target)
 3. Copy the capability into the target system register
 4. Reset G=0 on accessed namespace entries
 
-| Detail | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|--------|---------------|-------------------|
-| **Mnemonic** | `SWITCH CRs, target` (I=0) or `SWITCH CRn, idx, target` (I=1) | `CAP.SWITCH CRs, target` |
-| **Permission Check** | I=1: L on C-List CR; I=0: L or E on source CR | M (Machine) on source CR |
-| **I-bit Variant** | Yes — I=0 uses register, I=1 uses C-List lookup | No (register only) |
-| **G-bit Reset** | Yes — via mLoad on namespace access | Yes — via mLoad on namespace access |
-| **Target Field** | 3-bit: 0=CR8(Thread), 1=CR9(Interrupt), 2=CR10(DFault), 3-6=CR11-14(future), 7=CR15(Namespace) | 3-bit: 0=CR8, 1=CR9, ..., 7=CR15 (same mapping) |
-| **Target Encoding** | Instruction operand (parsed from args) | Instruction bits [24:22] |
-| **Bounds Check** | Implicit (target 0-7 maps to CR8-CR15) | destIdx must be ≤ 15, FAULT otherwise |
-| **Exclusive Monitor** | Cleared if target is CR8 | Not implemented |
-| **Encoding** | 5-bit opcode, condition[4], I-bit, CRs[3], target[3] | opcode=0x0B, funct3=010, cr_src=rs2[2:0], tgt=[24:22] |
+**Mnemonic**: `SWITCH CRs, target`
 
-**Note on permission difference**: Sim-64 requires L or E because SWITCH may load from a C-List (needing L) or enter a new context (needing E). Sim-32 requires M (Machine) because SWITCH is treated as a privileged machine-level operation.
+| Aspect | Detail |
+|--------|--------|
+| **Permission Check** | M (Machine) on source CR |
+| **Target Field** | 3-bit: 0=CR8(Thread), 1=CR9(Interrupt), 2=CR10(DFault), 3-6=CR11-14(future), 7=CR15(Namespace) |
+| **G-bit Reset** | Yes — via mLoad on namespace access |
+| **Bounds Check** | Target must map to CR8-CR15 |
 
 ---
 
-## TPERM — Test Permission / Inspect GT Metadata
+## TPERM — Test Permission / GT Health Check
 
-TPERM is the unified instruction for all Golden Token metadata inspection. One opcode handles permission restriction, permission testing, and field extraction — the hardware already has the CR decoded, so selecting different fields costs no additional silicon.
+TPERM is the single-instruction GT health check. It evaluates permissions, validity, and bounds in one cycle and **sets condition flags** — it does not trap. The flags persist across subsequent instructions, enabling ARM-style conditional execution for zero-cost try-catch patterns.
 
-### Sim-32 (RV32-Cap)
-
-**Mnemonic**: `CAP.TPERM rd, CRs`
-
-**Encoding**: opcode=0x0B, funct3=011, CRs in rs2[22:20], result in rd[11:7]
-
-**Mode 1 — Permission Test (read-only)**:
-Tests whether CRs has a specified permission. If absent, the processor traps (FAULT). No namespace access occurs — this is a register-local check. Used to verify R, W, X, L, S, or E before accessing memory or capabilities:
 ```
-TPERM CR5, R    ; trap if CR5 lacks Read permission
-TPERM CR5, W    ; trap if CR5 lacks Write permission
+TPERM CRs, #preset [, offset]
 ```
 
-**Mode 2 — Field Extraction (LIMIT)**:
-Extracts the limit field from the GT in CRs and writes it to data register rd. The limit encodes how many words the GT's region covers:
-```
-TPERM DR1, CR5, LIMIT    ; DR1 = number of words CR5 covers
-```
-This enables software bounds checking before access, complementing the hardware bounds checking that occurs on every read/write.
+**What TPERM checks (all at once)**:
+1. **Permissions** — does the GT have the requested permission bits? (R, W, RW, E, LSE, etc.)
+2. **Valid** — does the GT pass version and MAC validation?
+3. **Base + Limit** — if an offset is provided, is Base + offset within the GT's region?
 
-**Mode 3 — Full Metadata Query**:
-Reads all metadata fields from CRs into rd:
+**Flags set**:
+- **Z = 1**: all checks passed (permissions present, valid, in bounds)
+- **Z = 0**: one or more checks failed
 
-**Result Layout (rd)**:
+**No trap**: TPERM never faults. If checks fail, the Z flag says so and software decides what to do via conditional execution. The CRs themselves enforce safety — an actual read/write to an invalid or out-of-bounds region will FAULT at that point. TPERM is the "ask first" instruction.
+
+No namespace access occurs — TPERM is a register-local read-only operation. No G-bit reset.
+
+### Conditional Execution: Zero-Cost Try-Catch
+
+Because every Church Machine instruction carries a 4-bit ARM condition code, TPERM + conditional suffixes give you try-catch with no branches and no overhead on the happy path:
+
+```
+TPERM CR5, RW, offset      ; check R+W perms, valid, base+offset in bounds
+                            ; Z=1 if all pass, Z=0 if any fail
+
+readEQ DR1, CR5, offset     ; happy path — only fires if Z=1
+IADDEQ DR2, DR1, 1          ; happy path — continues if Z=1
+writeEQ CR5, offset, DR2    ; happy path — writes if Z=1
+
+; catch path (TBD — recovery is case-by-case)
+; instructions with NE suffix fire when Z=0
+```
+
+The happy path does not branch, does not check errors, does not even know failure is possible. Every instruction carries EQ and the hardware silently skips it if TPERM failed.
+
+### Permission Restriction (monotonic)
+
+TPERM can also restrict permissions on a GT:
+
+```
+TPERM CRd, #preset
+```
+
+Permissions can only be removed, never added (monotonic restriction). Domain purity is enforced: Turing (R, W, X) and Church (L, S, E) permissions cannot be mixed.
+
+### Full Metadata Query
+
+TPERM can read all metadata fields from a CR into a data register:
+
+**Result Layout (DRd)**:
 | Bits | Field | Description |
 |------|-------|-------------|
 | [5:0] | Permissions | R, W, X, L, S, E from CRs Golden Token |
@@ -240,15 +244,11 @@ Reads all metadata fields from CRs into rd:
 | [15:14] | Type | GT type: 00=Inform, 01=Outform, 10=NULL, 11=Abstract |
 | [31:16] | (Reserved) | Zero |
 
-### Sim-64 (CTMM)
-
-In Sim-64, TPERM checks permission bits and bounds on a GT, setting condition flags (P, B, Z). It also supports LIMIT extraction into a data register. No namespace access occurs (read-only, no G-bit reset).
-
 ---
 
-## Additional Church Instructions (Sim-64 Only)
+## Additional Church Instructions
 
-The CTMM simulator includes five additional Church instructions not present in the RV32-Cap simulator. These provide atomic operations, bulk transfers, and permission management:
+These instructions provide atomic operations, bulk transfers, and extended permission management:
 
 | Instruction | Purpose | Permission | G-bit Reset |
 |-------------|---------|------------|-------------|
@@ -256,72 +256,25 @@ The CTMM simulator includes five additional Church instructions not present in t
 | **SAVEX** | Save Exclusive — conditional save that only succeeds if the exclusive monitor is still valid | S or M | Yes — on accessed entry |
 | **LDM** | Load Multiple — load multiple CRs from consecutive C-List entries in one instruction | L or M | Yes — on each accessed entry |
 | **STM** | Store Multiple — store multiple CRs to consecutive C-List entries in one instruction | S or M | Yes — on each accessed entry |
-| **TPERM** | Test Permission / Inspect Metadata — check permission bits, extract limit field, query validity and type. Sets condition flags (P, B, Z) | None | No (read-only, no namespace access) |
-
-These instructions exist in Sim-64 because its custom ISA has room for dedicated opcodes. Sim-32 uses the standard RISC-V opcode space with 4 dedicated custom opcodes (0x2B=LOAD, 0x5B=CALL, 0x7B=SAVE) plus custom-0 (0x0B) with funct3 selecting: 000=RETURN, 001=CHANGE, 010=SWITCH, 011=TPERM (100-111 reserved).
 
 ---
 
-## Encoding Comparison
+## Encoding
 
-### Sim-64 (CTMM) — Custom ARM-style Encoding
+### Instruction Encoding Format
 ```
 [31:27] Opcode (5 bits) — each Church instruction has its own opcode
 [26:23] Condition (4 bits) — ARM-style conditional execution (N,Z,C,V)
 [22]    I-bit — 0=register source, 1=C-List lookup
 [21:0]  Operands (22 bits) — CRs, indices, target fields
 ```
-Every instruction can be conditionally executed based on the condition flags. This is unique to Sim-64.
-
-### Sim-32 (RV32-Cap) — RISC-V Custom Opcode Encoding
-
-**Dedicated opcodes (J-type format)**:
-```
-LOAD:  opcode=0x2B  — CAP.LOAD CRd, CRs, index
-       [31:17] index (15 bits), [14:12] CRs (3 bits), [11:9] CRd (3 bits), [6:0] 0101011
-
-CALL:  opcode=0x5B  — CAP.CALL CRs
-       [14:12] CRs (3 bits), [6:0] 1011011
-
-SAVE:  opcode=0x7B  — CAP.SAVE CRsrc, CRdst, index
-       [31:17] index (15 bits), [14:12] CRdst (3 bits), [11:9] CRsrc (3 bits), [6:0] 1111011
-```
-
-**Custom-0 opcode (R-type format)**:
-```
-opcode=0x0B (custom-0), funct3 selects instruction:
-  000 = RETURN    — CAP.RETURN (no operands)
-  001 = CHANGE    — CAP.CHANGE CRs (CRs in rs2[22:20])
-  010 = SWITCH    — CAP.SWITCH CRs, target (CRs in rs2[22:20], target in [24:22])
-  011 = TPERM     — CAP.TPERM rd, CRs (CRs in rs2[22:20], result in rd[11:7])
-  100-111 = (reserved for future Church instructions)
-```
-No conditional execution — RISC-V uses explicit branch instructions instead.
-
----
-
-## Implementation Differences Summary
-
-| Aspect | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|--------|---------------|-------------------|
-| **CALL permission** | L (Load — accesses C-List) | E (Enter — enters abstraction) |
-| **SWITCH permission** | L or E | M (Machine) |
-| **CHANGE behavior** | Creates new thread GT with R/W permissions | Full atomic thread swap: saves x0-x31, CR0-CR8, PC to thread table; loads target context |
-| **CHANGE permission** | None (I=0) / L (I=1 for C-List lookup) | E (Enter) on source CR |
-| **I-bit variants** | Yes — CHANGE and SWITCH support register (I=0) and C-List lookup (I=1) | No — register mode only |
-| **Bind validation** | SAVE requires B or M on source | Not enforced |
-| **MAC validation** | LOAD validates hardware hash | LOAD and CALL validate 25-bit FNV seal in VersionSeals; SAVE recomputes seal |
-| **G-bit reset** | All Church instructions reset G via mLoad on every namespace access | All Church instructions reset G via mLoad on every namespace access |
-| **Exclusive monitors** | CHANGE clears thread's exclusive monitor | Not implemented |
-| **Bound GT surrender** | RETURN clears CRs bound during CALL | Not implemented |
-| **Register clearing** | CALL uses mask to selectively clear DRs/CRs | Not implemented |
-| **Conditional execution** | All instructions support ARM-style conditions | None (RISC-V branches) |
+Every instruction can be conditionally executed based on the condition flags. This is what enables the TPERM try-catch pattern — one TPERM sets the flags, subsequent instructions carry EQ/NE suffixes.
 
 ---
 
 ## Security Model Summary
 
-Both simulators enforce the same core security invariants:
+The Church Machine enforces these core security invariants:
 
 | Principle | Enforcement |
 |-----------|-------------|

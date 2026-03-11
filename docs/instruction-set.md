@@ -103,15 +103,50 @@ Atomically swaps the contents of CRd and CRs. Used for thread context switching 
 
 ### TPERM (opcode 6)
 
-TPERM is the unified instruction for inspecting and restricting Golden Token metadata. It has three modes selected by the operand:
+TPERM is the single-instruction GT health check. It evaluates permissions, validity, and bounds in one cycle and **sets condition flags** — it does not trap. The flags persist across subsequent instructions, enabling ARM-style conditional execution for zero-cost try-catch patterns.
 
-#### Mode 1: Permission Restriction (monotonic)
+```
+TPERM CRs, #preset [, offset]
+```
+
+**What TPERM checks (all at once)**:
+1. **Permissions** — does the GT have the requested permission bits? (R, W, RW, E, LSE, etc.)
+2. **Valid** — does the GT pass version and MAC validation?
+3. **Base + Limit** — if an offset is provided, is Base + offset within the GT's region?
+
+**Flags set**:
+- **Z = 1**: all checks passed (permissions present, valid, in bounds)
+- **Z = 0**: one or more checks failed
+
+**No trap**: TPERM never faults. If checks fail, the Z flag says so and software decides what to do via conditional execution. The CRs themselves enforce safety — an actual read/write to an invalid or out-of-bounds region will FAULT at that point. TPERM is the "ask first" instruction.
+
+#### Conditional Execution: Zero-Cost Try-Catch
+
+Because every Church Machine instruction carries a 4-bit ARM condition code, TPERM + conditional suffixes give you try-catch with no branches and no overhead on the happy path:
+
+```
+TPERM CR5, RW, offset      ; check R+W perms, valid, base+offset in bounds
+                            ; Z=1 if all pass, Z=0 if any fail
+
+readEQ DR1, CR5, offset     ; happy path — only fires if Z=1
+IADDEQ DR2, DR1, 1          ; happy path — continues if Z=1
+writeEQ CR5, offset, DR2    ; happy path — writes if Z=1
+
+; catch path (TBD — recovery is case-by-case)
+; instructions with NE suffix fire when Z=0
+```
+
+The happy path does not branch, does not check errors, does not even know failure is possible. Every instruction carries EQ and the hardware silently skips it if TPERM failed.
+
+#### Permission Restriction (monotonic)
+
+TPERM can also restrict permissions on a GT:
 
 ```
 TPERM CRd, #preset
 ```
 
-Restricts the permissions on the GT in CRd to the given preset. Permissions can only be removed, never added (monotonic restriction). Domain purity is enforced: Turing (R, W, X) and Church (L, S, E) permissions cannot be mixed.
+Permissions can only be removed, never added (monotonic restriction). Domain purity is enforced: Turing (R, W, X) and Church (L, S, E) permissions cannot be mixed.
 
 **Presets**:
 
@@ -134,32 +169,7 @@ Restricts the permissions on the GT in CRd to the given preset. Permissions can 
 
 B-modifier variants (add 0x10): RB, RWB, XB, EB, etc. — sets B-bit alongside permissions.
 
-#### Mode 2: Permission Test (read-only)
-
-```
-TPERM CRs, #perm
-```
-
-Tests whether the GT in CRs has the specified permission. If the permission is absent, the processor traps (FAULT). No namespace access occurs — this is a register-local read-only check. Used to verify R, W, X, L, S, or E before accessing memory or capabilities.
-
-#### Mode 3: Field Extraction
-
-```
-TPERM DRd, CRs, LIMIT
-```
-
-Extracts the limit field from the GT in CRs and writes it to data register DRd. The limit field encodes how many words the GT's region covers. The hardware already has the CR decoded when TPERM runs — reading the limit is just selecting a different field from the same register. No new opcode is needed.
-
-This enables software bounds checking before access:
-```
-limit = TPERM(CR5, LIMIT)    // extract limit from CR5's GT
-if (offset > limit) {
-    return(0)                 // out of bounds — refuse access
-}
-value = read(CR5, offset)     // safe to proceed
-```
-
-**Design rationale**: TPERM is the single gateway for inspecting any GT metadata — permissions, validity, type, stack indicators, and bounds. Keeping all metadata inspection in one instruction minimises opcode usage and silicon cost while providing a uniform interface for software safety checks.
+**Design rationale**: TPERM is the single gateway for inspecting and restricting GT metadata — permissions, validity, type, stack indicators, and bounds. Keeping all metadata operations in one instruction minimises opcode usage and silicon cost while providing a uniform interface. The flag-setting (no-trap) design enables the conditional execution try-catch pattern that gives the happy path zero overhead.
 
 ### LAMBDA (opcode 7)
 

@@ -2,7 +2,7 @@
 
 ## What Are Golden Tokens?
 
-Golden Tokens (GTs) are the fundamental unit of access control in the CTMM architecture. Every access to a resource -- whether loading data, calling a service, or switching privilege levels -- requires a valid Golden Token that grants the necessary permissions. Golden Tokens are unforgeable: they cannot be fabricated by software, only created and managed through hardware-enforced mechanisms.
+Golden Tokens (GTs) are the fundamental unit of access control in the Church Machine architecture. Every access to a resource -- whether loading data, calling a service, or switching privilege levels -- requires a valid Golden Token that grants the necessary permissions. Golden Tokens are unforgeable: they cannot be fabricated by software, only created and managed through hardware-enforced mechanisms.
 
 A Golden Token encodes three things:
 1. **What** resource it refers to (via an index or offset into the namespace)
@@ -13,25 +13,9 @@ Without a valid Golden Token, no operation proceeds. Any attempt to use an inval
 
 ---
 
-## GT Format: Sim-64 (CTMM)
+## GT Format
 
-Sim-64 uses a 64-bit Golden Token with the following structure:
-
-| Field | Description |
-|-------|-------------|
-| **Offset** (32 bits) | Index into the namespace identifying the target resource |
-| **Spare** (23 bits) | Version counter (bumped by GC sweep) |
-| **Type** (2 bits) | Inform (00), Outform (01), NULL (10), Abstract (11) |
-| **G** (1 bit) | Garbage collection mark bit |
-| **Permissions** (6 bits) | R, W, X, L, S, E |
-
-The 64-bit GT is stored directly in capability registers CR0-CR15. The Sim-64 design is documented separately and will be finalised independently of Sim-32 -- each simulator swims in its own private space.
-
----
-
-## GT Format: Sim-32 (RV32-Cap)
-
-Sim-32 uses a 32-bit Golden Token with a precisely defined bit layout:
+The Church Machine uses a 32-bit Golden Token with a precisely defined bit layout:
 
 ```
 [31:25] Version     (7 bits)  -- Version tag for GC invalidation (128 generations)
@@ -40,7 +24,7 @@ Sim-32 uses a 32-bit Golden Token with a precisely defined bit layout:
 [1:0]   Type        (2 bits)  -- Token type classification
 ```
 
-Each capability register in Sim-32 is 128 bits wide (4 x 32-bit words):
+Each capability register in Church Machine is 128 bits wide (4 x 32-bit words):
 
 | Word | Content |
 |------|---------|
@@ -51,7 +35,7 @@ Each capability register in Sim-32 is 128 bits wide (4 x 32-bit words):
 
 ---
 
-## GT Permission Bits (Sim-32)
+## GT Permission Bits (Church Machine)
 
 The GT stores exactly 6 permission bits. These are the mutually exclusive access rights -- three for data operations (Turing domain) and three for capability operations (Church domain):
 
@@ -95,7 +79,7 @@ B and F are checked by the namespace management logic when capabilities are copi
 
 ## GT Type Field
 
-Both Sim-32 and Sim-64 include a 2-bit type field classifying the nature of the referenced resource:
+The Church Machine includes a 2-bit type field classifying the nature of the referenced resource:
 
 | Value | Type | Description |
 |-------|------|-------------|
@@ -104,24 +88,22 @@ Both Sim-32 and Sim-64 include a 2-bit type field classifying the nature of the 
 | 10 | NULL | Empty / invalid / revoked -- always faults on use |
 | 11 | Abstract | Unforgeable constant value (e.g., pi) |
 
-In Sim-32, the type field occupies bits [1:0] of the GT. In Sim-64, it occupies the gt_type field in the 64-bit layout.
+The type field occupies bits [1:0] of the GT.
 
 NULL is architecturally distinct from all valid reference types. A register holding all zeros could be confused with an Inform GT pointing to namespace index 0 with version 0 and no permissions -- but Type = 10 (NULL) is unambiguous. The hardware knows immediately the register does not reference any namespace entry.
 
 ---
 
-## GT Version Field (Sim-32)
+## GT Version Field (Church Machine)
 
-Sim-32 includes a 7-bit version field in bits [31:25] of the Golden Token. This version tag is critical for garbage collection safety:
+Church Machine includes a 7-bit version field in bits [31:25] of the Golden Token. This version tag is critical for garbage collection safety:
 
 - Each namespace entry has a corresponding version number stored in the VersionSeals word (also bits [31:25]).
 - When a GT is used (LOAD or CALL), the version in the GT must match the version in the namespace entry. A mismatch triggers a FAULT.
 - During garbage collection sweep, reclaimed entries have their version bumped. This automatically invalidates all outstanding GTs that reference the old version, preventing use-after-free vulnerabilities.
 - 7 bits gives 128 version generations before wraparound.
 
-Sim-64 uses a different GC mechanism (G-bit clearing on access through mLoad's RESET_G state).
-
-### VersionSeals Word (Sim-32)
+### VersionSeals Word
 
 The word3 (VersionSeals) in each capability register and namespace entry combines the version with an integrity seal:
 
@@ -130,13 +112,13 @@ The word3 (VersionSeals) in each capability register and namespace entry combine
 [24:0]  Seal     (25 bits) -- FNV hash of Location and Limit for integrity
 ```
 
-The 25-bit FNV seal serves the same purpose as the Sim-64 MAC: it provides integrity verification for the namespace entry.
+The 25-bit FNV seal provides integrity verification for the namespace entry.
 
 ---
 
 ## Capability Registers
 
-Both simulators provide 16 capability registers (CR0-CR15), divided into two groups:
+The Church Machine provides 16 capability registers (CR0-CR15), divided into two groups:
 
 ### Instruction-Addressable Registers (CR0-CR7)
 

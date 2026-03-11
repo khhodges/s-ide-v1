@@ -325,7 +325,7 @@ This is secure because:
 ### What We Give Up
 
 1. **Four data registers** (x28-x31) when LAMBDA_MODE=1 — but these are caller-saved temporaries (t3-t6), the least valuable in the RISC-V calling convention
-2. **CR15 changes meaning** — moves from Namespace root to Lambda register. Requires updating all four implementations (simulator, Verilog, Amaranth, Sim-64)
+2. **CR15 changes meaning** — moves from Namespace root to Lambda register. Requires updating all four implementations (simulator, Verilog, Amaranth, Church Machine)
 3. **Complexity in CHANGE**: Thread context must save/restore LAMBDA_MODE and the 4 lambda register contents
 4. **Toolchain awareness**: Compilers targeting LAMBDA_MODE=1 must know x28-x31 are aliased
 
@@ -395,7 +395,7 @@ The architecture of Proposed Claim 13, wherein the implicit value extraction on 
 
 3. **Interaction with CALL/RETURN**: If a CALL occurs while LAMBDA_MODE=1, should x28-x31 in the saved context be the CR12-CR15 GT-Literals or the underlying DR values? The thread table shadow already tracks CR0-CR7; should it extend to CR12-CR15?
 
-4. **Sim-64 equivalent**: The 64-bit CTMM uses DR0-DR15 (not x0-x31). Should it have an analogous lambda register window, or is this RV32-Cap specific?
+4. **Lambda register window**: The Church Machine uses DR0-DR15. Should the lambda register window apply to all implementations?
 
 5. **GC interaction**: CR12-CR15 hold direct GT-Literals (no namespace entry). They don't participate in GC. But if one holds an indirect GT-Literal (from CAP.LOAD), should the GC scan walk through them? The current scan walks CR0-CR7 via the thread table shadow.
 

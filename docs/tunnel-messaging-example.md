@@ -29,7 +29,7 @@ What this assumes:
 
 What this proves: **you can output text.**
 
-### Hello Mum (CTMM, 2026)
+### Hello Mum (Church Machine, 2026)
 
 ```
 CALL(CONNECT(me, mymother))
@@ -97,16 +97,16 @@ All seven zeroes share one root cause: **mLoad is the single trusted gate and no
 
 The proof-of-concept uses both simulators to demonstrate architecture independence:
 
-| Property | "me" (CTMM Sim-64) | "mymother" (RV32-Cap Sim-32) |
-|----------|--------------------|-----------------------------|
-| ISA | Custom CTMM | RISC-V RV32I + capability extensions |
+| Property | "me" | "mymother" |
+|----------|------|------------|
+| Implementation | 64-bit Church Machine | 32-bit Church Machine |
 | Data registers | DR0-DR15 (64-bit) | x0-x31 (32-bit) |
 | Capability registers | CR0-CR15 (64-bit GTs) | CR0-CR15 (32-bit GTs) |
 | GT format | 64-bit Golden Token | 32-bit Golden Token |
 | Word size | 64-bit | 32-bit |
 | mLoad path | Identical semantics | Identical semantics |
 
-The architectures are different. The ISAs are different. The register widths are different. The GT formats are different. But the **capability semantics are identical** — and that is what matters.
+The implementations are different. The register widths are different. The GT formats are different. But the **capability semantics are identical** — and that is what matters.
 
 ---
 
@@ -181,7 +181,7 @@ SAVE CR0, CR6, 7
 
 Each Thread.Mint internally validates domain purity (RWX or LSE, never both), checks the thread's memory budget, and delegates to Namespace.Mint which allocates the 3-word descriptor (Location, Limit, Seals), computes the MAC, and returns the GT in CR0.
 
-### "me" Namespace (CTMM Sim-64)
+### "me" Namespace (Church Machine)
 
 | Index | Name | Type | Permissions | Flags | Created By | Description |
 |-------|------|------|-------------|-------|------------|-------------|
@@ -213,7 +213,7 @@ Entry[7] (ABI_Mum):
   Seals:    MAC = FNV(Location ⊕ Limit ⊕ Version ⊕ Index), gBit = 0
 ```
 
-### "mymother" Namespace (RV32-Cap Sim-32)
+### "mymother" Namespace (Church Machine)
 
 | Index | Name | Type | Permissions | Flags | Created By | Description |
 |-------|------|------|-------------|-------|------------|-------------|
@@ -289,13 +289,13 @@ The ABI descriptor costs nothing compared to the network. It is fetched once, ca
 
 ---
 
-## 6. The Assembly: "me" Side (CTMM Sim-64)
+## 6. The Assembly: "me" Side (Church Machine)
 
 ### The Complete Program
 
 ```asm
 ; ============================================================
-; HELLO MUM — "me" side (CTMM Sim-64)
+; HELLO MUM — "me" side (Church Machine)
 ; One Church instruction: CALL(CONNECT(me, mymother))
 ; Three Golden Tokens: me (CR8), tunnel key (CR0), mymother (CR1)
 ; ============================================================
@@ -350,13 +350,13 @@ The caller wrote **one intent**: send "Hello Mum!" to mymother. The machine deco
 
 ---
 
-## 7. The Assembly: "mymother" Side (RV32-Cap Sim-32)
+## 7. The Assembly: "mymother" Side (Church Machine)
 
 ### The Messaging Service
 
 ```asm
 ; ============================================================
-; HELLO MUM — "mymother" side (RV32-Cap Sim-32)
+; HELLO MUM — "mymother" side (Church Machine)
 ; This is the service that receives and stores the message.
 ; It runs on a RISC-V machine with 32-bit registers.
 ; ============================================================
@@ -631,7 +631,7 @@ The claims in this section are **conditional on the capability grant**: a proces
 
 In a conventional system, malware exploits the gap between what the OS *should* allow and what it *actually* allows. Buffer overflows, ROP chains, and privilege escalation all exploit the fact that the OS trusts code running in kernel mode.
 
-In CTMM:
+In Church Machine:
 - Every code execution requires a GT with X permission (LAMBDA) or E permission (CALL)
 - The GT must be Inform type (local) or Outform type (remote) — NULL and Abstract FAULT immediately
 - The GT's MAC must match the namespace entry — forged GTs FAULT
@@ -654,7 +654,7 @@ To inject malware, an attacker would need to:
 
 In a conventional system, ransomware exploits the superuser: escalate to root, then encrypt everything because root has write access to all files.
 
-In CTMM:
+In Church Machine:
 - There is no superuser. No root. No admin.
 - Write access requires a GT with W permission on the specific namespace entry
 - The ransomware process holds GTs for exactly the resources it was granted — nothing more
@@ -665,7 +665,7 @@ In CTMM:
 
 If the messaging service were compromised (hypothetically), it could only damage what it has GTs for: its own Inbox and its own code. It cannot spread. It cannot escalate. It cannot encrypt data it doesn't hold write capabilities for.
 
-**Ransomware requires write access to everything. CTMM gives write access to nothing unless a specific GT grants it.**
+**Ransomware requires write access to everything. Church Machine gives write access to nothing unless a specific GT grants it.**
 
 ### 12.3 Why AI Containment Escape Is Structurally Eliminated
 
@@ -673,7 +673,7 @@ If the messaging service were compromised (hypothetically), it could only damage
 
 In a conventional system, an AI running as a process can exploit OS vulnerabilities (kernel bugs, container escapes, privilege escalation) to access the network, file system, other processes, or hardware directly.
 
-In CTMM:
+In Church Machine:
 - The AI process is a thread with a C-List containing exactly the GTs it was granted
 - Want to access the network? Need an Outform GT with E permission. No GT? No access. FAULT.
 - Want to read other processes' data? Need R permission on their namespace entries. No GT? Invisible.

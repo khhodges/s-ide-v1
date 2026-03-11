@@ -6,18 +6,16 @@ The CALL instruction invokes a protected abstraction (service or function) refer
 
 ### CALL Flow
 
-| Step | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|------|---------------|-------------------|
-| **1. Permission Check** | L (Load) on source CR | E (Enter) on source CR |
-| **2. GT Validation** | Capability object integrity | Version match + MAC seal validation |
-| **3. Context Save** | Return NIA, CR6, CR7, LAMBDA state, bound GT list pushed to stack | PC, CR5, CR6, CR7, LAMBDA-active pushed to call stack |
-| **3a. LAMBDA Clear** | Clears LAMBDA-active flag (callee gets clean LAMBDA state) | Clears LAMBDA-active flag |
-| **4. Stack Check** | Software-managed depth tracking | FAULT if stack full (256 frames) |
-| **5. Register Setup** | CR6 = target C-List, CR7 = Access Code (X permission) | CR6 = callee C-List (M-bit set), CR7 = callee code |
-| **6. Register Clearing** | 11-bit mask selects which DRs/CRs to clear; DR0 preserved, DR6-15 always cleared | CR5 cleared after push; software clears others |
-| **7. PC Update** | PC set to target code entry | PC set to namespace entry Location |
-
-**Permission difference**: Sim-64 requires L because CALL's first action loads the target's C-List entries (a Load operation). Sim-32 requires E because CALL enters an abstraction directly. Both achieve the same security goal.
+| Step | Detail |
+|------|--------|
+| **1. Permission Check** | E (Enter) on source CR |
+| **2. GT Validation** | Version match + MAC seal validation |
+| **3. Context Save** | PC, CR5, CR6, CR7, LAMBDA-active pushed to call stack |
+| **3a. LAMBDA Clear** | Clears LAMBDA-active flag (callee gets clean LAMBDA state) |
+| **4. Stack Check** | FAULT if stack full (256 frames) |
+| **5. Register Setup** | CR6 = callee C-List (M-bit set), CR7 = callee code |
+| **6. Register Clearing** | CR5 cleared after push; software clears others |
+| **7. PC Update** | PC set to namespace entry Location |
 
 ---
 
@@ -36,20 +34,19 @@ When RETURN executes and the LAMBDA-active flag is set in machine status:
 
 When RETURN executes and LAMBDA-active is NOT set, pop the top stack frame:
 
-| Aspect | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|--------|---------------|-------------------|
-| **Permission Check** | None | None |
-| **Restored Registers** | CR6, CR7, NIA | CR5, CR6 (M-bit set), CR7, PC (+4) |
-| **LAMBDA State Restore** | Restores LAMBDA-active and LAMBDA_PC from frame | Restores LAMBDA-active from frame |
-| **Bound GT Surrender** | CRs bound during CALL are cleared to NULL | Not implemented |
-| **Stack Underflow** | FAULT: "Stack underflow" | FAULT: "No saved context to restore" |
-| **Stack Indicators** | N/A | Updates stackFrames and stackSpace flags |
+| Aspect | Detail |
+|--------|--------|
+| **Permission Check** | None |
+| **Restored Registers** | CR5, CR6 (M-bit set), CR7, PC (+4) |
+| **LAMBDA State Restore** | Restores LAMBDA-active from frame |
+| **Stack Underflow** | FAULT: "No saved context to restore" |
+| **Stack Indicators** | Updates stackFrames and stackSpace flags |
 
 RETURN requires no permission -- it is always permitted if a saved context exists on the call stack. If the stack is empty, a FAULT is triggered.
 
 When RETURN restores a CALL frame that was pushed while LAMBDA was active, the LAMBDA-active flag and LAMBDA_PC are restored from the frame. This means the next RETURN will use the LAMBDA fast path, correctly completing the interrupted LAMBDA return. This is how CALL-mediated LAMBDA nesting works: CALL saves the LAMBDA state, the callee runs freely, and RETURN restores the LAMBDA return path.
 
-In Sim-32, the M-bit is set on the restored CR6. This marks the C-List as having Machine permission, indicating that the caller's context has been properly restored through the hardware return mechanism.
+In Church Machine, the M-bit is set on the restored CR6. This marks the C-List as having Machine permission, indicating that the caller's context has been properly restored through the hardware return mechanism.
 
 ---
 
@@ -66,9 +63,9 @@ This gives the programmer a dedicated register for inter-abstraction data transf
 
 ---
 
-## Stack Indicators (Sim-32)
+## Stack Indicators (Church Machine)
 
-Sim-32 provides two 1-bit stack indicator flags that are automatically maintained by the CALL and RETURN microcode:
+Church Machine provides two 1-bit stack indicator flags that are automatically maintained by the CALL and RETURN microcode:
 
 | Flag | Meaning |
 |------|---------|
@@ -79,7 +76,7 @@ These flags are visible on the Dashboard and can be tested programmatically usin
 
 ---
 
-## TPERM Instruction (Sim-32)
+## TPERM Instruction (Church Machine)
 
 The TPERM (Test Permission) instruction tests the permissions, validity, type, and stack indicators of a Golden Token and writes the result to a data register.
 
@@ -103,10 +100,7 @@ TPERM allows software to inspect capability metadata and stack state without tri
 
 ## Stack Overflow Protection
 
-Both simulators prevent stack overflow:
-
-- **Sim-64**: Software-managed depth tracking. The stack depth is tracked by the runtime, and overflow behavior is defined by the software implementation.
-- **Sim-32**: Hardware-enforced 256-frame limit. If the call stack is full when a CALL is executed, an immediate FAULT is triggered. The stackSpace indicator (testable via TPERM) allows software to check for available space before calling.
+The Church Machine prevents stack overflow with a hardware-enforced 256-frame limit. If the call stack is full when a CALL is executed, an immediate FAULT is triggered. The stackSpace indicator (testable via TPERM) allows software to check for available space before calling.
 
 ---
 
@@ -114,18 +108,16 @@ Both simulators prevent stack overflow:
 
 The CHANGE instruction performs thread context switching by modifying the thread identity.
 
-| Aspect | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|--------|---------------|-------------------|
-| **Mnemonic** | `CHANGE CRs` (I=0) or `CHANGE CRn, idx` (I=1) | `CAP.CHANGE CRs` |
-| **Required Permission** | None (I=0) / L (I=1 for C-List lookup) | E (Enter) on source CR |
-| **Operation** | Creates new thread GT with R/W permissions, writes to CR8 | Full atomic thread swap via thread table |
-| **Context Saved** | N/A (new thread created) | x0-x31, CR0-CR8, PC, LAMBDA state saved to thread table |
-| **Context Loaded** | N/A | Target thread's x0-x31, CR0-CR8, PC, LAMBDA state loaded from thread table |
-| **CR9-CR15** | N/A | Unchanged (shared across threads) |
-| **I-bit Variant** | Yes (register or C-List lookup) | No (register only) |
-| **Exclusive Monitor** | Cleared for current thread | Not implemented |
+| Aspect | Detail |
+|--------|--------|
+| **Mnemonic** | `CHANGE CRs` |
+| **Required Permission** | E (Enter) on source CR |
+| **Operation** | Full atomic thread swap via thread table |
+| **Context Saved** | Data registers, CR0-CR8, PC, LAMBDA state saved to thread table |
+| **Context Loaded** | Target thread's registers, CRs, PC, LAMBDA state loaded from thread table |
+| **CR9-CR15** | Unchanged (shared across threads) |
 
-In Sim-32, CHANGE performs a full atomic swap: the current thread's complete register state (all 32 data registers, capability registers CR0-CR8, and the PC) is saved to the thread table, and the target thread's state is loaded. System registers CR9-CR15 are shared across all threads and remain unchanged. The thread table stores complete thread contexts indexed by the GT's namespace index, and entries are created on first use.
+CHANGE performs a full atomic swap: the current thread's complete register state (data registers, capability registers CR0-CR8, and the PC) is saved to the thread table, and the target thread's state is loaded. System registers CR9-CR15 are shared across all threads and remain unchanged. The thread table stores complete thread contexts indexed by the GT's namespace index, and entries are created on first use.
 
 ---
 
@@ -133,13 +125,10 @@ In Sim-32, CHANGE performs a full atomic swap: the current thread's complete reg
 
 The SWITCH instruction is the sole mechanism for writing to system registers CR8-CR15. It copies a capability from an instruction-addressable register into a system register.
 
-| Aspect | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|--------|---------------|-------------------|
-| **Mnemonic** | `SWITCH CRs, target` | `CAP.SWITCH CRs, target` |
-| **Required Permission** | L or E on source CR | M (Machine) on source CR |
-| **Target Field** | 3-bit: 0=CR8, 1=CR9, ..., 7=CR15 | 3-bit: 0=CR8, 1=CR9, ..., 7=CR15 |
-| **I-bit Variant** | Yes (register or C-List lookup) | No (register only) |
+| Aspect | Detail |
+|--------|--------|
+| **Mnemonic** | `SWITCH CRs, target` |
+| **Required Permission** | M (Machine) on source CR |
+| **Target Field** | 3-bit: 0=CR8, 1=CR9, ..., 7=CR15 |
 
 SWITCH is architecturally significant because it is the only way to escalate privilege. All other instructions are confined to CR0-CR7. To modify the namespace root (CR15), the thread identity (CR8), or any other system register, code must possess a valid capability with the appropriate permission and use SWITCH to install it.
-
-**Permission difference**: Sim-64 requires L or E because SWITCH may load from a C-List (L) or enter a new context (E). Sim-32 requires M (Machine) because SWITCH is a privileged machine-level operation.

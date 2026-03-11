@@ -189,4 +189,4 @@ The security of civilization must come first. The architecture must guarantee it
 *Sources:*
 *Ada Lovelace, "Notes by the Translator" (Note G), in L.F. Menabrea, "Sketch of The Analytical Engine," Taylor's Scientific Memoirs, Vol. III, August 1843.*
 *R. Glaschick, "Ada Lovelace's Calculation of Bernoulli's Numbers," rclab.de, 2016.*
-*Church Computer, bernoulli.church, CTMM Simulator Project, February 2026.*
+*Church Computer, bernoulli.church, Church Machine Simulator Project, February 2026.*

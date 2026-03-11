@@ -14,8 +14,8 @@ Traditional systems grant programs implicit access to resources. The Church Mach
 
 The instruction set is split into two domains:
 
-- **Church domain** (10 instructions): Capability manipulation — LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA, ELOADCALL, XLOADLAMBDA. (Sim-32 uses 7 core Church instructions; Sim-64 uses 11 including LOADX, SAVEX, LDM, STM. The 10/10 split is the architectural model; specific implementations may fuse or extend instructions.)
-- **Turing domain** (10 instructions + shared RETURN): Data processing — DREAD, DWRITE, BFEXT, BFINS, MCMP, IADD, ISUB, BRANCH, SHL, SHR. (Sim-64 uses ARM-style mnemonics: MOV, ADD, SUB, MUL, DIV, AND, ORR, EOR, LSL, LSR, ASR, CMP, TST, LDI, B, BL.)
+- **Church domain** (10 instructions): Capability manipulation — LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA, ELOADCALL, XLOADLAMBDA. (The 10/10 split is the architectural model; specific implementations may fuse or extend instructions.)
+- **Turing domain** (10 instructions + shared RETURN): Data processing — DREAD, DWRITE, BFEXT, BFINS, MCMP, IADD, ISUB, BRANCH, SHL, SHR. (Church Machine uses ARM-style mnemonics: MOV, ADD, SUB, MUL, DIV, AND, ORR, EOR, LSL, LSR, ASR, CMP, TST, LDI, B, BL.)
 
 A code object (CLOOMC) belongs to the DATA domain — it is data stored in memory, accessed via X permission. Code is never a Church-domain entity. The Church domain handles capabilities (GTs, c-lists); the Turing domain handles computation. A code object may contain Church instructions or Turing instructions, but the object itself is always data. This separation is enforced in hardware.
 

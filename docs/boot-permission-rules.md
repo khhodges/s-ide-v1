@@ -1,4 +1,4 @@
-# CTMM Boot Permission Rules
+# Church Machine Boot Permission Rules
 
 ## Foundational Principle
 

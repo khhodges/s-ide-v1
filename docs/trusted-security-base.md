@@ -2,15 +2,15 @@
 
 ## What Is the Trusted Security Base?
 
-The Trusted Security Base (TSB) is the minimal set of logic that **every** capability operation must pass through. In a conventional system, the "trusted computing base" includes an operating system kernel, a hypervisor, privileged CPU modes, and memory management units -- millions of lines of code that attackers can exploit. The CTMM architecture eliminates all of that. The entire TSB is a single module: **mLoad**.
+The Trusted Security Base (TSB) is the minimal set of logic that **every** capability operation must pass through. In a conventional system, the "trusted computing base" includes an operating system kernel, a hypervisor, privileged CPU modes, and memory management units -- millions of lines of code that attackers can exploit. The Church Machine architecture eliminates all of that. The entire TSB is a single module: **mLoad**.
 
 **mLoad is the sole trusted path for writing to capability registers.**
 
-This document describes the TSB for both implementations, focused on the Sim-32 (RV32-Cap) design. The Sim-64 (Amaranth HDL) implementation follows the same architectural principles with a wider GT format.
+This document describes the Church Machine's TSB design.
 
 ---
 
-## Part 1: Sim-32 (RV32-Cap) Trusted Security Base
+## Part 1: Church Machine Trusted Security Base
 
 ### Golden Token Layout (32-bit)
 
@@ -52,13 +52,13 @@ The GT stores exactly 6 permission bits. These are access rights, not metadata:
 | M (Machine/Microcode) | Transient signal during mLoad | Prevents privilege escalation -- no user code can set or observe it |
 | B (Bind) | Namespace entry metadata | Policy about whether a capability can be copied -- property of the slot, not the token |
 | F (Far/Foreign) | Namespace entry metadata | Whether the resource is remote -- property of where it lives, not what you can do with it |
-| G (Garbage) | Namespace entry bit 29 | Sim-32 uses both a G-bit (cleared on access to prove reachability) and a 7-bit version field for GC sweep revocation |
+| G (Garbage) | Namespace entry bit 29 | Church Machine uses both a G-bit (cleared on access to prove reachability) and a 7-bit version field for GC sweep revocation |
 
-### mLoad Validation Pipeline (Sim-32)
+### mLoad Validation Pipeline (Church Machine)
 
 Five Church instructions write Golden Tokens into capability registers: LOAD, CALL, RETURN, CHANGE, and SWITCH. Every one of them routes through mLoad. SAVE writes to the namespace (not CRs). LAMBDA reads an existing GT and jumps (no CR write).
 
-The mLoad validation sequence in Sim-32 (`simulator.js`):
+The mLoad validation sequence in Church Machine (`simulator.js`):
 
 ```
 mLoad(source_capability, required_permission, index, destCR):
@@ -99,9 +99,9 @@ mLoad(source_capability, required_permission, index, destCR):
 
 Any failure at any step triggers an immediate FAULT. There is no partial write, no speculative execution past a fault, no recovery path.
 
-### Version-Based Garbage Collection (Sim-32)
+### Version-Based Garbage Collection (Church Machine)
 
-Sim-32 uses a 7-bit version field (128 generations) for deterministic GC:
+Church Machine uses a 7-bit version field (128 generations) for deterministic GC:
 
 1. **Mark**: Set G=1 on all non-empty namespace entries
 2. **Scan**: Walk reachability tree from all live roots (CRs, call stack, thread table), clearing G=0 on reachable entries
@@ -109,7 +109,7 @@ Sim-32 uses a 7-bit version field (128 generations) for deterministic GC:
 
 When a stale GT is later used, mLoad detects the version mismatch and faults. This prevents use-after-free without any runtime overhead on the fast path.
 
-### Security Invariants (Sim-32)
+### Security Invariants (Church Machine)
 
 1. **No CR Write Without mLoad**: Every capability register write passes through mLoad's validation pipeline. There is no alternative path.
 2. **No Privilege Escalation**: M is a transient signal during microcode execution. No user instruction can set, test, or observe it.
@@ -122,9 +122,9 @@ When a stale GT is later used, mLoad detects the version mismatch and faults. Th
 
 ---
 
-## Part 2: Sim-64 (Amaranth HDL) Trusted Security Base
+## Part 2: Church Machine Hardware (Amaranth HDL) Trusted Security Base
 
-The Sim-64 hardware implementation follows the same architectural principles with a 64-bit GT and synthesizable HDL. The Sim-64 design will be finalised independently -- each simulator swims in its own private space.
+The Church Machine hardware implementation follows the same architectural principles with a 64-bit GT and synthesizable HDL.
 
 ### Golden Token Layout (64-bit)
 
@@ -136,10 +136,10 @@ The Sim-64 hardware implementation follows the same architectural principles wit
  └──────┴──┴─────┴───────────┴────────────────────────┘
 ```
 
-Same 6 permission bits (R, W, X, L, S, E). Same domain purity rule. Key differences from Sim-32:
+Same 6 permission bits (R, W, X, L, S, E). Same domain purity rule. The hardware implementation uses wider data paths:
 
-| Aspect | Sim-32 | Sim-64 |
-|--------|--------|--------|
+| Aspect | Simulator | Hardware (HDL) |
+|--------|-----------|----------------|
 | GT width | 32-bit | 64-bit |
 | Namespace index | 17-bit Index (131K entries) | 32-bit Offset |
 | GC mechanism | G-bit cleared on access + 7-bit version bump on sweep | G-bit cleared on access, spare field as version |
@@ -149,7 +149,7 @@ Same 6 permission bits (R, W, X, L, S, E). Same domain purity rule. Key differen
 
 ### mLoad FSM (Amaranth HDL -- 218 lines, 14 states)
 
-The Sim-64 mLoad is a 14-state finite state machine implementing the same validation pipeline as Sim-32, but in synthesizable hardware:
+The hardware mLoad is a 14-state finite state machine implementing the same validation pipeline in synthesizable hardware:
 
 ```
 IDLE → FETCH_SRC → CHECK_L → CHECK_BOUNDS → FETCH_W0
@@ -183,7 +183,7 @@ The `perm_check.py` module provides combinational validation logic alongside mLo
 
 ### Total TSB Size
 
-The entire Sim-64 trusted security base is approximately **329 lines** of synthesizable Amaranth HDL (at time of writing):
+The entire Church Machine trusted security base is approximately **329 lines** of synthesizable Amaranth HDL (at time of writing):
 - mLoad: 218 lines
 - perm_check: 111 lines
 
@@ -211,8 +211,8 @@ Two orders of magnitude smaller than seL4. Five orders of magnitude smaller than
 
 ### Where They Differ
 
-| Aspect | Sim-32 | Sim-64 |
-|--------|--------|--------|
+| Aspect | Simulator | Hardware (HDL) |
+|--------|-----------|----------------|
 | TSB implementation | Software (JavaScript mLoad function) | Hardware (Amaranth HDL FSM) |
 | GC stale detection | G-bit in NS entry + version field in GT (7-bit, 128 generations) | G-bit in GT + spare field as version |
 | Integrity validation | 25-bit FNV seal | Hardware MAC |

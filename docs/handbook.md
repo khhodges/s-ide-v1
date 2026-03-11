@@ -1,4 +1,4 @@
-# CTMM: The Industrial Strength Living Machine
+# Church Machine: The Industrial Strength Living Machine
 
 Unified System Specification and Reference Manual
 
@@ -10,7 +10,7 @@ Unified System Specification and Reference Manual
 
 ## 1. Foundational Philosophy
 
-The CTMM transitions Computer Science from the "Binary Vibe" to an Industrial Strength Biological Model.
+The Church Machine transitions Computer Science from the "Binary Vibe" to an Industrial Strength Biological Model.
 
 **No Compilers**: There is no translation gap. The Command Interpreter binds "Named Ideas" directly to Golden Tokens.
 
@@ -22,14 +22,14 @@ The CTMM transitions Computer Science from the "Binary Vibe" to an Industrial St
 
 ## 2. The Mechanics of Reality (The Golden Token)
 
-The fundamental particle of this universe is the Golden Token (GT) — a 32-bit unforgeable key in Sim-32, or 64-bit in Sim-64. When loaded into a Capability Register (CR), the full context expands to 128 bits (4 × 32-bit words) or 256 bits (4 × 64-bit words):
+The fundamental particle of this universe is the Golden Token (GT) — a 32-bit unforgeable key. When loaded into a Capability Register (CR), the full context expands to 128 bits (4 × 32-bit words):
 
 | Word | Function | Description |
 |------|----------|-------------|
 | 1 | Golden Token | Version, namespace index, permissions (R, W, X, L, S, E), and type (NULL, Inform, Outform, Abstract). |
 | 2 | Location | Address of the resource — local memory (Inform) or remote endpoint (Outform). |
 | 3 | Limit | Object size bound, plus B (Bind) and F (Far) flags. |
-| 4 | Seal | Integrity check — FNV hash (Sim-32) or hardware MAC (Sim-64). Ensures the namespace entry is untampered. |
+| 4 | Seal | Integrity check — FNV hash. Ensures the namespace entry is untampered. |
 
 ---
 

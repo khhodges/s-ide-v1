@@ -6,7 +6,7 @@
 
 ## Overview
 
-The FamilyRegistry is an **atomic abstraction** — a service accessed exclusively through Golden Tokens via mLoad, like every other service in the CTMM architecture. It has no privileged access, no special hardware mode, and no bypass of mLoad. It is the credible mechanism by which two Meta Machines establish a secure bidirectional relationship (a "family bond"), complete with matching tunnel keys, remote addresses, and Outform+Far namespace entries.
+The FamilyRegistry is an **atomic abstraction** — a service accessed exclusively through Golden Tokens via mLoad, like every other service in the Church Machine architecture. It has no privileged access, no special hardware mode, and no bypass of mLoad. It is the credible mechanism by which two Meta Machines establish a secure bidirectional relationship (a "family bond"), complete with matching tunnel keys, remote addresses, and Outform+Far namespace entries.
 
 The question "how does Kenneth find Priscilla's address?" is answered: **the FamilyRegistry placed it in the namespace entry at bind time**. After that, the GT is the address.
 
@@ -16,9 +16,9 @@ The question "how does Kenneth find Priscilla's address?" is answered: **the Fam
 
 In conventional networking, every connection requires address resolution: DNS lookups, routing tables, ARP, DHCP. The address is discovered at connect time and may change.
 
-In the CTMM architecture, the address is **bound into the namespace entry at registration time**. There is no runtime lookup. The FamilyRegistry creates the entry once, and after that the GT indexes directly to a namespace entry whose `location` field holds the remote endpoint. The MAC seals it. GC manages its lifecycle.
+In the Church Machine architecture, the address is **bound into the namespace entry at registration time**. There is no runtime lookup. The FamilyRegistry creates the entry once, and after that the GT indexes directly to a namespace entry whose `location` field holds the remote endpoint. The MAC seals it. GC manages its lifecycle.
 
-| Conventional | CTMM |
+| Conventional | Church Machine |
 |-------------|------|
 | DNS lookup at connect time | Address in namespace entry at bind time |
 | Address can change (DNS TTL) | Address sealed by MAC — immutable until revoked |
@@ -82,7 +82,7 @@ STEP 1: VALIDATE CALLER
 
 STEP 2: READ INTRODUCTION
   FamilyRegistry reads the introduction entry via mLoad:
-    - Remote machine identity: "Priscilla — RV32-Cap Sim-32"
+    - Remote machine identity: "Priscilla — Church Machine"
     - Remote endpoint address: 0xC7440001 (or HTTPS URL hash)
     - Remote public attestation: MAC-signed identity proof
     - ABI descriptor: 32-bit RISC-V register mapping
@@ -162,7 +162,7 @@ Introduction Data Structure:
 
 For the Hello Mum demo, the FamilyRegistry was called during system initialization (simulated by the boot sequence). Here is exactly what it produced:
 
-### On Priscilla's Machine (RV32-Cap Sim-32)
+### On Priscilla's Machine (Church Machine)
 
 ```
 Namespace Entry [15] — TunnelKey_Child (Inform, R):
@@ -193,7 +193,7 @@ Namespace Entry [20] — Reply_Tunnel (Outform, E):
   Remote ID: ctmm-sim64-kenneth
 ```
 
-### On Kenneth's Machine (CTMM Sim-64)
+### On Kenneth's Machine (Church Machine)
 
 ```
 Namespace Entry [4] — TunnelKey_Mum (Inform, R):

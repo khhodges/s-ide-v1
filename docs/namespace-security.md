@@ -4,19 +4,15 @@
 
 The namespace is the master directory of all resources in the system. Every Golden Token references an entry in the namespace table. Each entry describes a resource with three fields:
 
-| Field | Sim-64 (CTMM) | Sim-32 (RV32-Cap) |
-|-------|---------------|-------------------|
-| **Word 1** | Location | Location (32-bit) |
-| **Word 2** | Limit | Limit (32-bit) |
-| **Word 3** | Seals (MAC hash) | VersionSeals (32-bit) |
+| Field | Content |
+|-------|---------|
+| **Word 1** | Location (32-bit) |
+| **Word 2** | Limit (32-bit) |
+| **Word 3** | VersionSeals (32-bit) |
 
-### Sim-64 Namespace Entries
+### Namespace Entry Format
 
-Sim-64 uses 3-word entries where the Seals word contains a hardware-enforced MAC (Message Authentication Code) hash. This hash is computed from the Location and Limit fields and serves as an integrity check -- any tampering with the entry's data will cause the MAC to fail validation.
-
-### Sim-32 Namespace Entries
-
-Sim-32 uses 3 x 32-bit word entries. The VersionSeals word combines two pieces of information:
+Each namespace entry uses 3 x 32-bit words. The VersionSeals word combines two pieces of information:
 
 ```
  VersionSeals [31:0]:
@@ -24,9 +20,9 @@ Sim-32 uses 3 x 32-bit word entries. The VersionSeals word combines two pieces o
   [24:0]  Seal     (25 bits) -- FNV hash of Location + Limit
 ```
 
-The 25-bit FNV seal serves the same purpose as the Sim-64 MAC hash: it provides integrity verification for the namespace entry. The 7-bit version field enables garbage collection by allowing stale tokens to be detected and invalidated.
+The 25-bit FNV seal provides integrity verification for the namespace entry. The 7-bit version field enables garbage collection by allowing stale tokens to be detected and invalidated.
 
-The namespace table in Sim-32 supports up to 131,072 entries (limited by the 17-bit index field in the Golden Token). Each entry occupies 3 words, so the slot address is calculated as `Index x 3`.
+The namespace table in Church Machine supports up to 131,072 entries (limited by the 17-bit index field in the Golden Token). Each entry occupies 3 words, so the slot address is calculated as `Index x 3`.
 
 **Note on B and F flags**: The B (Bind) and F (Far/Foreign) flags are namespace entry metadata stored in the namespace table entry, not permission bits in the Golden Token. B indicates whether the entry is bound to a specific C-List, and F marks foreign/remote proxy entries. These are properties of the namespace entry itself, not of the GT that references it.
 
@@ -34,7 +30,7 @@ The namespace table in Sim-32 supports up to 131,072 entries (limited by the 17-
 
 ## The mLoad Master Validation Path
 
-All namespace access in the CTMM architecture routes through a single trusted validation path called **mLoad**. This is the fundamental security principle: one master validation pipeline that every Church instruction must use to access the namespace.
+All namespace access in the Church Machine architecture routes through a single trusted validation path called **mLoad**. This is the fundamental security principle: one master validation pipeline that every Church instruction must use to access the namespace.
 
 ### Why One Path
 
@@ -57,8 +53,7 @@ mLoad(source_capability, required_permission, index, destCR):
 
   2. Bounds Check
      Is the index within the source C-List range?
-     - Sim-64: Index < source.Limit
-     - Sim-32: Index < namespaceTable.length
+     Index must be < namespaceTable.length
      Failure → FAULT
 
   3. Fetch Golden Token
@@ -73,8 +68,7 @@ mLoad(source_capability, required_permission, index, destCR):
      Read Location, Limit, and Seals from the namespace.
 
   6. MAC/Seal Validation
-     - Sim-64: Hardware MAC hash verification
-     - Sim-32: Version match + 25-bit FNV seal recomputation
+     Version match + 25-bit FNV seal recomputation
      Failure → FAULT
 
   7. G-bit Reset
@@ -130,13 +124,13 @@ MAC seal validation is the mechanism that ensures Golden Tokens and namespace en
 
 Validation occurs on every mLoad call — which means every Church instruction that accesses namespace:
 
-| Operation | Sim-64 | Sim-32 |
-|-----------|--------|--------|
-| **LOAD** | MAC hash checked on loaded GT | Version match + FNV seal checked on source GT and target namespace entry |
-| **CALL** | Implicit capability integrity check | Version match + FNV seal checked on both source GT and target namespace entry |
-| **SAVE** | N/A (write path uses mSave) | FNV seal recomputed from Location + Limit, preserving existing version |
+| Operation | Validation |
+|-----------|------------|
+| **LOAD** | Version match + FNV seal checked on source GT and target namespace entry |
+| **CALL** | Version match + FNV seal checked on both source GT and target namespace entry |
+| **SAVE** | FNV seal recomputed from Location + Limit, preserving existing version |
 
-### How Validation Works (Sim-32)
+### How Validation Works
 
 When mLoad accesses a namespace entry:
 
@@ -153,7 +147,7 @@ When a SAVE instruction writes to a namespace entry:
 
 ## Failsafe Principle
 
-The CTMM architecture follows a strict failsafe design: **any validation failure triggers a FAULT, handled by a single fault handler**. There are no partial failures, no silent degradation, and no undefined behaviors. The system is either operating correctly or it is faulted.
+The Church Machine architecture follows a strict failsafe design: **any validation failure triggers a FAULT, handled by a single fault handler**. There are no partial failures, no silent degradation, and no undefined behaviors. The system is either operating correctly or it is faulted.
 
 This applies uniformly to:
 - Permission violations (missing required permission bit)
@@ -169,7 +163,7 @@ The fault handler is the single point of error management, ensuring consistent a
 
 ## Security Invariants
 
-Both simulators enforce the following invariants at all times:
+The Church Machine enforces the following invariants at all times:
 
 ### No Direct System Register Access
 
@@ -177,9 +171,7 @@ Only CR0-CR7 are addressable through the 3-bit register encoding in Church instr
 
 ### Privilege Through SWITCH Only
 
-The SWITCH instruction is the sole mechanism for writing to system registers CR8-CR15. It requires appropriate permissions:
-- Sim-64: L or E permission on the source capability
-- Sim-32: M (Machine) permission on the source capability
+The SWITCH instruction is the sole mechanism for writing to system registers CR8-CR15. It requires M (Machine) permission on the source capability.
 
 ### Capability-Mediated Access Through mLoad
 
@@ -199,6 +191,6 @@ M (Machine) is a transient microcode elevation on the CR, never stored in the GT
 ### G-bit Reset as Security Invariant
 
 The G-bit reset on every namespace access is not optional — it is a security invariant enforced by the mLoad path. This ensures that the garbage collector can accurately determine which entries are reachable, preventing:
-- **Use-after-free**: Reclaimed entries have their version bumped (Sim-32) or are removed from the tree (Sim-64).
+- **Use-after-free**: Reclaimed entries have their version bumped, instantly invalidating stale Golden Tokens.
 - **Resource leaks**: Unreachable entries are identified and reclaimed.
 - **GC evasion**: No instruction can access namespace without triggering G-bit reset.

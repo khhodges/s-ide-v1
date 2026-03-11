@@ -1,6 +1,6 @@
 # Production Silicon TODO
 
-This document tracks requirements for synthesizing the CTMM Verilog to production-ready silicon. The current implementation captures architectural concepts for simulation; these items would be needed for a real chip.
+This document tracks requirements for synthesizing the Church Machine Verilog to production-ready silicon. The current implementation captures architectural concepts for simulation; these items would be needed for a real chip.
 
 ## SWITCH/CHANGE Instruction Pipeline
 

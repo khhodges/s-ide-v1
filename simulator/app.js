@@ -8025,6 +8025,14 @@ function loadCLOOMCExample(name) {
 // its bookkeeping (here: the current heap offset).
 // The read/write operations go through CR5's Golden
 // Token, so access is hardware-enforced.
+//
+// TPERM is a flag-setting instruction — it checks
+// permissions, validity, and bounds in one cycle,
+// then sets the Z flag. It never traps. Subsequent
+// instructions carry EQ/NE suffixes for zero-cost
+// try-catch: the happy path runs as if errors don't
+// exist, and the hardware silently skips instructions
+// when TPERM failed.
 
 abstraction Memory {
     capabilities {
@@ -8035,31 +8043,25 @@ abstraction Memory {
     // Returns (location, actual_size) on success,
     // or (0, 0) if CR5 lacks permissions or space.
     method Allocate(size) {
-        // Step 1: verify CR5 has R and W permissions.
-        // TPERM traps if the permission is absent —
-        // we check both before touching memory.
-        TPERM CR5, R
-        TPERM CR5, W
+        // TPERM checks R+W perms, valid, and offset 0
+        // in one instruction. Z=1 if all pass.
+        TPERM CR5, RW, 0
 
-        // Step 2: read current heap offset and compute
-        // the aligned block size (256-byte granularity).
-        location = read(CR5, 0)
-        needed = size + 255
-        needed = needed >> 8
-        needed = needed << 8
+        // Happy path — all EQ instructions skip if Z=0
+        readEQ location, CR5, 0
+        neededEQ = size + 255
+        neededEQ = neededEQ >> 8
+        neededEQ = neededEQ << 8
 
-        // Step 3: check free space — TPERM extracts
-        // the limit field from CR5's Golden Token.
-        // If location + needed exceeds the limit,
-        // we are out of space. Return (0, 0).
-        limit = TPERM(CR5, LIMIT)
-        if (location + needed > limit) {
-            return(0, 0)
-        }
+        // Check bounds: does location+needed fit?
+        TPERMEQ CR5, RW, location + needed
 
-        // Step 4: commit — advance the heap pointer.
-        write(CR5, 0, location + needed)
-        return(location, needed)
+        // Commit — advance the heap pointer
+        writeEQ CR5, 0, location + needed
+        returnEQ(location, needed)
+
+        // Catch path (Z=0): permission or bounds failure
+        return(0, 0)
     }
 
     // Free: placeholder — bump allocators don't free.
@@ -8254,23 +8256,23 @@ abstraction PackedString {
 // The Heap abstraction IS the heap — a flat array
 // of 32-bit integer cells, accessed through CR5.
 //
-// Every operation uses TPERM — one instruction that
-// inspects any field of a Golden Token:
-//   TPERM CR5, R      — check R permission (trap if absent)
-//   TPERM CR5, W      — check W permission (trap if absent)
-//   TPERM CR5, LIMIT  — extract the limit field into a DR
+// TPERM is the single GT health check. It evaluates
+// permissions, validity, and bounds in ONE cycle and
+// sets the Z flag — it never traps. Subsequent
+// instructions carry condition suffixes:
+//   readEQ  — fires only if Z=1 (TPERM passed)
+//   writeEQ — fires only if Z=1 (TPERM passed)
 //
-// The hardware already has the CR decoded when TPERM
-// runs — reading the limit is just selecting a
-// different field from the same register. One
-// instruction, no new opcodes, minimal silicon.
+// This is zero-cost try-catch: the happy path reads
+// as if errors don't exist. The hardware silently
+// skips every EQ instruction if TPERM failed.
 //
 // Key differences from JavaScript:
 //   - No garbage collection needed. The GT's lifetime
 //     IS the heap's lifetime. Revoke the GT, the
 //     memory is gone. No dangling pointers.
-//   - No buffer overflows. TPERM LIMIT gives exact
-//     bounds checked before every access.
+//   - No buffer overflows. TPERM checks bounds as
+//     part of its single-cycle evaluation.
 //   - No shared mutable state. Each thread's CR5
 //     points to its own private region.
 //   - Access is unforgeable. You can't manufacture
@@ -8282,11 +8284,12 @@ abstraction Heap {
 
     // Init: set the heap offset to zero.
     // Called once when the instance is created.
-    // CR5 must have R+W permissions.
     method Init() {
-        TPERM CR5, R
-        TPERM CR5, W
-        write(CR5, 0, 0)
+        TPERM CR5, RW, 0
+        writeEQ CR5, 0, 0
+        returnEQ(0)
+
+        // catch: CR5 lacks RW or is invalid
         return(0)
     }
 
@@ -8294,37 +8297,39 @@ abstraction Heap {
     // Returns the starting offset, or 0 if full.
     // Each word is 32 bits (one integer).
     method Alloc(count) {
-        TPERM CR5, R
-        TPERM CR5, W
-        offset = read(CR5, 0)
-        limit = TPERM(CR5, LIMIT)
-        if (offset + count > limit) {
-            return(0)
-        }
-        write(CR5, 0, offset + count)
-        return(offset)
+        // Check RW + valid + offset 0 in bounds
+        TPERM CR5, RW, 0
+        readEQ offset, CR5, 0
+
+        // Check new end is still in bounds (EQ: skips if first TPERM failed)
+        TPERMEQ CR5, RW, offset + count
+        writeEQ CR5, 0, offset + count
+        returnEQ(offset)
+
+        // catch: permission, validity, or bounds failure
+        return(0)
     }
 
     // Read: return the value at heap[index].
     method Read(index) {
-        TPERM CR5, R
-        limit = TPERM(CR5, LIMIT)
-        if (index >= limit) {
-            return(0)
-        }
-        value = read(CR5, index)
-        return(value)
+        // One TPERM checks R + valid + index in bounds
+        TPERM CR5, R, index
+        readEQ value, CR5, index
+        returnEQ(value)
+
+        // catch: no R permission or index out of bounds
+        return(0)
     }
 
     // Write: store a value at heap[index].
     method Write(index, value) {
-        TPERM CR5, W
-        limit = TPERM(CR5, LIMIT)
-        if (index >= limit) {
-            return(0)
-        }
-        write(CR5, index, value)
-        return(1)
+        // One TPERM checks W + valid + index in bounds
+        TPERM CR5, W, index
+        writeEQ CR5, index, value
+        returnEQ(1)
+
+        // catch: no W permission or index out of bounds
+        return(0)
     }
 }`,
         'counter': `abstraction Counter {\n    capabilities {\n    }\n    method Increment(value) {\n        result = value + 1\n        return(result)\n    }\n    method Add(a, b) {\n        result = a + b\n        return(result)\n    }\n}`,

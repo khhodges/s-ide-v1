@@ -1,9 +1,9 @@
-# CTMM Instruction Cross-Reference Matrix
+# Church Machine Instruction Cross-Reference Matrix
 
 This document maps each instruction across all implementation layers for verification.
 
 ## Legend
-- **Opcode**: 5-bit binary opcode from Verilog
+- **Opcode**: 5-bit binary opcode
 - **Cycles**: Minimum execution cycles (N = number of registers for LDM/STM)
 - **Latency**: Total latency including memory access (+mem = memory-dependent)
 - **JS Line**: Line number in `web/simulator.js`
@@ -37,7 +37,7 @@ This document maps each instruction across all implementation layers for verific
 - [ ] RETURN: Verify stack pop, context restore, mask handling
 - [ ] CHANGE: Verify thread switch, monitor clearing
 - [ ] SWITCH: Verify C-List context switch
-- [ ] TPERM: Verify preset codes 0-13, FAULT on 14-15. Verify LIMIT extraction mode writes correct bounds to DR
+- [ ] TPERM: Verify flag-setting model (Z=1 pass, Z=0 fail), preset codes 0-13, reserved codes 14-15 ignored (no FAULT). Verify conditional execution (EQ/NE suffixes) with TPERM flags
 - [ ] LOADX: Verify monitor set, same validation as LOAD
 - [ ] SAVEX: Verify monitor check, conditional store, result in DR
 - [ ] LDM: Verify per-register mLoad validation, register list

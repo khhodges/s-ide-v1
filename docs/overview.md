@@ -1,28 +1,14 @@
-# CTMM Project Overview
+# Church Machine Project Overview
 
 ## What Is This Project?
 
-This project implements simulators for Kenneth James Hamer-Hodges' **Church-Turing Meta-Machine (CTMM)** capability-based security architecture. The CTMM is a hardware architecture that enforces failsafe security through **Golden Tokens** -- unforgeable capability keys that mediate all access to system resources. Named after Alonzo Church and Alan Turing, the architecture integrates lambda calculus principles (controlled access through abstraction) with Turing's computational model (data processing and execution).
-
-The project contains two independent simulators that share the same foundational security philosophy but differ in instruction set architecture, token width, and implementation details. Each simulator swims in its own private space -- changes to one never affect the other.
+This project implements a simulator for Kenneth James Hamer-Hodges' **Church Machine** capability-based security architecture. The Church Machine is a hardware architecture that enforces failsafe security through **Golden Tokens** — unforgeable capability keys that mediate all access to system resources. Named after Alonzo Church and Alan Turing, the architecture integrates lambda calculus principles (controlled access through abstraction) with Turing's computational model (data processing and execution).
 
 ---
 
-## The Two Simulators
+## Architectural Principles
 
-### Sim-32 (RV32-Cap) -- Primary Implementation
-
-Located in the `riscv_cap/` directory, Sim-32 extends the standard RISC-V RV32I instruction set with capability-based security. It uses 32-bit Golden Tokens with 6 permission bits (R, W, X, L, S, E), a 7-bit version field for GC invalidation, and a 17-bit namespace index supporting 131,072 entries. The web interface provides six views: Dashboard, Namespace Browser, Assembly Editor, Capabilities Explorer, Instructions, and Docs.
-
-### Sim-64 (CTMM)
-
-Located in the `web/` directory, Sim-64 is the original CTMM simulator. It uses a custom ARM-style instruction set with 64-bit Golden Tokens. The web interface provides seven views: Dashboard, Namespace Browser, Assembly Editor, Capabilities Explorer, Instructions, Tutorial, and Code Browser. Hardware implementations exist in SystemVerilog (`verilog/`) and Amaranth HDL (`ctmm_amaranth/`).
-
----
-
-## Shared Architectural Principles
-
-Both simulators enforce the same core security model:
+The Church Machine enforces these core security invariants:
 
 - **Failsafe Security**: Every validation failure routes to a single FAULT handler. There are no silent failures or undefined behaviors.
 - **Golden Tokens**: All access rights are embodied in unforgeable capability keys. No raw memory addressing is permitted.
@@ -38,26 +24,24 @@ Both simulators enforce the same core security model:
 
 ---
 
-## Quick Comparison
+## Key Features
 
-| Feature | Sim-32 (RV32-Cap) | Sim-64 (CTMM) |
-|---------|-------------------|---------------|
-| **Directory** | `riscv_cap/` | `web/` |
-| **Golden Token Width** | 32-bit | 64-bit |
-| **GT Format** | Version(7) + Index(17) + Perms(6) + Type(2) | Offset(32) + Spare(23) + Type(2) + G(1) + Perms(6) |
-| **GT Permission Bits** | 6 (R, W, X, L, S, E) | 6 (R, W, X, L, S, E) |
-| **Permission Domains** | Turing (RWX) xor Church (LSE) | Turing (RWX) xor Church (LSE) |
-| **Namespace Metadata** | B (Bind), F (Far) in namespace entry | TBD |
-| **Base ISA** | RISC-V RV32I | Custom ARM-style encoding |
-| **Data Registers** | x0-x31 (32-bit each) | DR0-DR15 (64-bit each) |
-| **Capability Registers** | CR0-CR15 (128-bit, 4x32-bit words) | CR0-CR15 (64-bit GTs) |
-| **Church Instructions** | 7 (CAP.LOAD, CAP.SAVE, CAP.CALL, CAP.RETURN, CAP.CHANGE, CAP.SWITCH, CAP.TPERM) | 11 (LOAD, SAVE, LOADX, SAVEX, LDM, STM, CALL, RETURN, CHANGE, SWITCH, TPERM) |
-| **Max Namespace Entries** | 131,072 (17-bit index) | Offset-dependent |
-| **GT Version Field** | 7-bit (128 generations) | None (G-bit mechanism) |
-| **GT Type Field** | 2-bit: Inform, Outform, NULL, Abstract | 2-bit: Inform, Outform, NULL, Abstract |
-| **MAC Validation** | 25-bit FNV seal in VersionSeals | Hardware-enforced hash |
-| **Garbage Collection** | Version bump on sweep; G-bit reset on access | G-bit cleared on LOAD access |
-| **Hardware Implementations** | Software simulation only | SystemVerilog + Amaranth HDL |
+| Feature | Detail |
+|---------|--------|
+| **Golden Token Width** | 32-bit |
+| **GT Format** | Version(7) + Index(17) + Perms(6) + Type(2) |
+| **GT Permission Bits** | 6 (R, W, X, L, S, E) |
+| **Permission Domains** | Turing (RWX) xor Church (LSE) — domain purity enforced in hardware |
+| **Namespace Metadata** | B (Bind), F (Far) in namespace entry |
+| **Data Registers** | DR0-DR15 |
+| **Capability Registers** | CR0-CR15 (CR0-CR7 instruction-addressable, CR8-CR15 system) |
+| **Church Instructions** | LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LOADX, SAVEX, LDM, STM |
+| **Turing Instructions** | DREAD, DWRITE, BFEXT, BFINS, MCMP, IADD, ISUB, BRANCH, SHL, SHR |
+| **Max Namespace Entries** | 131,072 (17-bit index) |
+| **GT Version Field** | 7-bit (128 generations) |
+| **GT Type Field** | 2-bit: Inform, Outform, NULL, Abstract |
+| **MAC Validation** | 25-bit FNV seal in VersionSeals |
+| **Garbage Collection** | Version bump on sweep; G-bit reset on access |
 
 ---
 
@@ -65,31 +49,17 @@ Both simulators enforce the same core security model:
 
 ```
 /
-+-- riscv_cap/              Sim-32 (RV32-Cap) web simulator
++-- simulator/              Church Machine IDE (web application)
 |   +-- index.html          Single-page application
-|   +-- simulator.js        Core simulation engine (RV32I + Church)
-|   +-- assembler.js        Two-pass assembler
-|   +-- app.js              UI controller
-|   +-- styles.css           Dark-themed styling
-|   +-- main.py             Flask web server (port 5000)
+|   +-- app.js              UI controller and examples
+|   +-- styles.css          Dark-themed styling
 |
-+-- web/                    Sim-64 (CTMM) web simulator
-|   +-- index.html          Single-page application
-|   +-- simulator.js        Core simulation engine
-|   +-- app.js              UI controller
-|   +-- styles.css           Dark-themed styling
-|   +-- app.py / server.py  Python HTTP server
-|   +-- images/             UI assets
++-- server/                 Flask web server
+|   +-- app.py              API routes and doc serving
 |
-+-- hardware/               Amaranth HDL hardware implementation (Sim-32, Tang Nano 20K)
-+-- ctmm_amaranth/          Amaranth HDL hardware implementation (Sim-64)
-+-- verilog/                SystemVerilog hardware implementation (Sim-64)
-+-- CTMM/                   Haskell console simulator (Sim-64)
-+-- docs/                   Project documentation
++-- docs/                   Project documentation (The Church Machine book)
++-- hardware/               Amaranth HDL hardware implementation (Tang Nano 20K)
++-- ctmm_amaranth/          Amaranth HDL hardware implementation
++-- verilog/                SystemVerilog hardware implementation
++-- CTMM/                   Haskell console simulator
 ```
-
----
-
-## Independence
-
-The two simulators are fully independent codebases. Each swims in its own private space -- changes to one never affect the other. Only one web simulator can be active on port 5000 at a time.
