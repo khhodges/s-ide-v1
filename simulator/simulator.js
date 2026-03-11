@@ -59,6 +59,7 @@ class ChurchSimulator {
         this.mElevation = false;
         this.bootStep = 0;
         this.lastCapability = null;
+        this.auditLog = [];
 
         this._initNamespaceTable();
         this.output += '--- HARD RESET: all registers zeroed ---\n';
@@ -470,9 +471,24 @@ class ChurchSimulator {
         const bBit = crWord2 ? crWord2.b : ((entry.word1_limit >>> 31) & 1);
         const fBit = crWord2 ? crWord2.f : ((entry.word1_limit >>> 30) & 1);
 
+        const permPass = requiredPerm === null || this.mElevation || !!parsed.permissions[requiredPerm];
+        const auditEntry = {
+            gate: 'mLoad',
+            label: this.nsLabels[parsed.index] || 'entry_'+parsed.index,
+            nsIndex: parsed.index,
+            requiredPerm,
+            checks: {
+                version: { pass: versionMatch },
+                seal:    { pass: sealValid },
+                perm:    { pass: permPass, perm: requiredPerm },
+            },
+            b: bBit, f: fBit,
+            result: (versionMatch && sealValid && permPass) ? 'pass' : 'fail',
+        };
+        this.auditLog.push(auditEntry);
         this.lastCapability = {
             op: requiredPerm,
-            label: this.nsLabels[parsed.index] || 'entry_'+parsed.index,
+            label: auditEntry.label,
             perms: parsed.permissions,
             b: bBit,
             f: fBit,
@@ -509,9 +525,33 @@ class ChurchSimulator {
         const bBit = crWord2 ? crWord2.b : this.parseNSWord1(srcEntry.word1_limit).b;
         const fBit = crWord2 ? crWord2.f : this.parseNSWord1(srcEntry.word1_limit).f;
 
+        const bindPass = bBit === 1 || this.mElevation;
+        let farPass = true;
+        if (targetIdx !== null && targetIdx !== undefined) {
+            const tgtEntry = this.readNSEntry(targetIdx);
+            if (tgtEntry) {
+                const tgtWord1 = this.parseNSWord1(tgtEntry.word1_limit);
+                if (tgtWord1.f === 1 && !this.mElevation) farPass = false;
+            }
+        }
+        const saveAudit = {
+            gate: 'mSave',
+            label: this.nsLabels[parsed.index] || 'entry_'+parsed.index,
+            nsIndex: parsed.index,
+            requiredPerm: 'S',
+            checks: {
+                version: { pass: srcVersionMatch },
+                seal:    { pass: srcSealValid },
+                bind:    { pass: bindPass },
+                far:     { pass: farPass },
+            },
+            b: bBit, f: fBit,
+            result: (srcVersionMatch && srcSealValid && bindPass && farPass) ? 'pass' : 'fail',
+        };
+        this.auditLog.push(saveAudit);
         this.lastCapability = {
             op: 'S',
-            label: this.nsLabels[parsed.index] || 'entry_'+parsed.index,
+            label: saveAudit.label,
             perms: parsed.permissions,
             b: bBit,
             f: fBit,
@@ -524,17 +564,11 @@ class ChurchSimulator {
         if (!srcSealValid) {
             return { ok: false, fault: 'SEAL', message: `source seal validation failed for entry ${parsed.index}` };
         }
-        if (bBit !== 1 && !this.mElevation) {
+        if (!bindPass) {
             return { ok: false, fault: 'BIND', message: `GT has B=0 — not bindable to c-list` };
         }
-        if (targetIdx !== null && targetIdx !== undefined) {
-            const tgtEntry = this.readNSEntry(targetIdx);
-            if (tgtEntry) {
-                const tgtWord1 = this.parseNSWord1(tgtEntry.word1_limit);
-                if (tgtWord1.f === 1 && !this.mElevation) {
-                    return { ok: false, fault: 'FAR', message: `target slot ${targetIdx} is FAR (F=1) — requires HTTP/tunnel access` };
-                }
-            }
+        if (!farPass) {
+            return { ok: false, fault: 'FAR', message: `target slot ${targetIdx} is FAR (F=1) — requires HTTP/tunnel access` };
         }
         return { ok: true, parsed, srcEntry };
     }
@@ -825,6 +859,7 @@ class ChurchSimulator {
 
     step() {
         if (this.halted) return null;
+        this.auditLog = [];
 
         const fetch = this._fetchInstruction();
         if (!fetch.ok) {
@@ -1666,40 +1701,41 @@ class ChurchSimulator {
     }
 
     _eloadcallPipeline(d, label) {
+        const auditSteps = this._auditPipeline();
         return [
-            { stage: 'LOAD', desc: `Namespace lookup via CR${d.crSrc}, index ${d.imm}`, perm: 'L', status: 'pass' },
-            { stage: 'TPERM', desc: `Verify E permission on ${label}`, perm: 'E', status: 'pass' },
+            ...auditSteps,
             { stage: 'CALL', desc: `Enter ${label}, save context`, status: 'pass' },
         ];
     }
 
     _xloadlambdaPipeline(d, label) {
+        const auditSteps = this._auditPipeline();
         return [
-            { stage: 'LOAD', desc: `C-List slot lookup [CR${d.crSrc} + ${d.imm}]`, perm: 'L', status: 'pass' },
-            { stage: 'TPERM', desc: `Verify X permission on ${label}`, perm: 'X', status: 'pass' },
+            ...auditSteps,
             { stage: 'LAMBDA', desc: `Church reduction via ${label}`, status: 'pass' },
         ];
     }
 
     _loadPipeline(d, label) {
+        const auditSteps = this._auditPipeline();
         return [
-            { stage: 'LOAD', desc: `Namespace lookup via CR${d.crSrc}`, perm: 'L', status: 'pass' },
-            { stage: 'TPERM', desc: `Verify L permission on CR${d.crSrc}`, perm: 'L', status: 'pass' },
-            { stage: 'VALIDATE', desc: `FNV seal check on entry ${d.imm}`, status: 'pass' },
+            ...auditSteps,
             { stage: 'WRITE', desc: `Write ${label} to CR${d.crDst}`, status: 'pass' },
         ];
     }
 
     _callPipeline(d, label) {
+        const auditSteps = this._auditPipeline();
         return [
-            { stage: 'LOAD', desc: `Read target GT from CR${d.crDst}`, perm: 'L', status: 'pass' },
-            { stage: 'TPERM', desc: `Verify E permission on target`, perm: 'E', status: 'pass' },
+            ...auditSteps,
             { stage: 'CALL', desc: `Enter ${label}, save context`, status: 'pass' },
         ];
     }
 
     _returnPipeline(d, frame) {
+        const auditSteps = this._auditPipeline();
         return [
+            ...auditSteps,
             { stage: 'RETURN', desc: `Restore context, PC -> ${frame.returnPC}`, status: 'pass' },
         ];
     }
@@ -1715,11 +1751,34 @@ class ChurchSimulator {
     }
 
     _lambdaPipeline(d, label) {
+        const auditSteps = this._auditPipeline();
         return [
-            { stage: 'LOAD', desc: `Read CR${d.crDst} GT`, perm: 'L', status: 'pass' },
-            { stage: 'TPERM', desc: `Verify X permission`, perm: 'X', status: 'pass' },
+            ...auditSteps,
             { stage: 'LAMBDA', desc: `Church reduction via ${label}`, status: 'pass' },
         ];
+    }
+
+    _auditPipeline() {
+        return this.auditLog.map(a => {
+            const checks = a.checks;
+            const checkList = Object.entries(checks).map(([k, v]) => ({
+                name: k.toUpperCase(),
+                pass: v.pass,
+                perm: v.perm || null,
+            }));
+            return {
+                stage: a.gate,
+                type: a.gate,
+                desc: `${a.gate}(NS[${a.nsIndex}]="${a.label}"${a.requiredPerm ? ', '+a.requiredPerm : ''})`,
+                label: a.label,
+                nsIndex: a.nsIndex,
+                requiredPerm: a.requiredPerm,
+                checks: checkList,
+                status: a.result,
+                b: a.b,
+                f: a.f,
+            };
+        });
     }
 
     loadProgram(words, startAddr) {

@@ -36,11 +36,19 @@ class PipelineVisualizer {
                     { id: 'eloadcall', label: 'ELOADCALL', desc: 'Enter programmable abstraction', fused: true, subSteps: ['LOAD (L)', 'TPERM (E)', 'CALL'] },
                 ];
                 break;
+            case 'audit':
+                this.stages = [];
+                break;
         }
     }
 
     render() {
         if (!this.container) return;
+
+        if (this.mode === 'audit') {
+            this._renderAudit();
+            return;
+        }
 
         const modeLabels = { full: '7-Step Security Pipeline', fused: '3-Step Fused Pipeline', chained: 'Programmable Abstraction Chain' };
         const modeDescs = {
@@ -52,8 +60,9 @@ class PipelineVisualizer {
         let html = '<div class="pipeline-wrapper">';
 
         html += '<div class="pipeline-mode-selector">';
-        for (const m of ['full', 'fused', 'chained']) {
-            html += `<button class="btn btn-mode ${this.mode === m ? 'active' : ''}" onclick="setPipelineMode('${m}')">${modeLabels[m].split(' ').slice(0,2).join(' ')}</button>`;
+        for (const m of ['full', 'fused', 'chained', 'audit']) {
+            const btnLabel = { full: '7-Step', fused: '3-Step Fused', chained: 'Chained', audit: 'TSB Audit' }[m];
+            html += `<button class="btn btn-mode ${this.mode === m ? 'active' : ''}" onclick="setPipelineMode('${m}')">${btnLabel}</button>`;
         }
         html += '</div>';
 
@@ -136,6 +145,97 @@ class PipelineVisualizer {
         this.container.innerHTML = html;
     }
 
+    _renderAudit() {
+        const steps = this.stageData || [];
+        const tsbGates = ['mLoad', 'mSave'];
+
+        let html = '<div class="pipeline-wrapper pipeline-audit">';
+
+        html += '<div class="pipeline-mode-selector">';
+        for (const m of ['full', 'fused', 'chained', 'audit']) {
+            const btnLabel = { full: '7-Step', fused: '3-Step Fused', chained: 'Chained', audit: 'TSB Audit' }[m];
+            html += `<button class="btn btn-mode ${this.mode === m ? 'active' : ''}" onclick="setPipelineMode('${m}')">${btnLabel}</button>`;
+        }
+        html += '</div>';
+
+        html += '<div class="pipeline-title">TSB Audit — mLoad / mSave Gates</div>';
+        html += '<div class="pipeline-subtitle">Every capability gate shown as an explicit instruction-level audit step</div>';
+
+        if (steps.length === 0) {
+            html += '<div class="pipeline-info"><div class="pipeline-current">Ready</div>';
+            html += '<div class="pipeline-detail">Step through code — every mLoad and mSave gate will appear here as a live audit record</div></div>';
+            html += '</div>';
+            this.container.innerHTML = html;
+            return;
+        }
+
+        html += '<div class="audit-steps">';
+        let gateCount = 0;
+        for (let i = 0; i < steps.length; i++) {
+            const step = steps[i];
+            const isTSB = tsbGates.includes(step.type);
+            const isActive = i === this.currentStage - 1;
+            const isDone  = this.currentStage >= steps.length;
+
+            if (isTSB) {
+                gateCount++;
+                const overallPass = step.status === 'pass';
+                html += `<div class="audit-gate ${overallPass ? 'gate-pass' : 'gate-fail'} ${isActive ? 'gate-active' : ''} ${isDone ? 'gate-done' : ''}">`;
+                html += `<div class="gate-header">`;
+                html += `<span class="gate-type-badge gate-${step.type.toLowerCase()}">${step.type}</span>`;
+                html += `<span class="gate-label">NS[${step.nsIndex}] &ldquo;${step.label}&rdquo;</span>`;
+                if (step.requiredPerm) {
+                    html += `<span class="gate-perm-req">requires&nbsp;<b>${step.requiredPerm}</b></span>`;
+                }
+                html += `<span class="gate-result ${overallPass ? 'result-pass' : 'result-fail'}">${overallPass ? '\u2713 PASS' : '\u2717 FAULT'}</span>`;
+                html += `</div>`;
+
+                if (step.checks && step.checks.length > 0) {
+                    html += '<div class="gate-checks">';
+                    for (const chk of step.checks) {
+                        const chkClass = chk.pass ? 'check-pass' : 'check-fail';
+                        const icon = chk.pass ? '\u2713' : '\u2717';
+                        const label = chk.name === 'PERM' && chk.perm ? `${chk.name}&nbsp;(${chk.perm})` : chk.name;
+                        html += `<span class="gate-check ${chkClass}">${icon}&nbsp;${label}</span>`;
+                    }
+                    if (step.b !== undefined) {
+                        html += `<span class="gate-flag">B=${step.b}</span>`;
+                    }
+                    if (step.f !== undefined) {
+                        html += `<span class="gate-flag">F=${step.f}</span>`;
+                    }
+                    html += '</div>';
+                }
+                html += '</div>';
+            } else {
+                html += `<div class="audit-instr-step ${isDone ? 'instr-done' : ''}">`;
+                html += `<span class="instr-stage-badge">${step.stage || step.type || 'OP'}</span>`;
+                html += `<span class="instr-desc">${step.desc || ''}</span>`;
+                if (step.status === 'pass') html += `<span class="instr-status-ok">\u2713</span>`;
+                if (step.status === 'fail') html += `<span class="instr-status-fail">\u2717</span>`;
+                html += '</div>';
+            }
+        }
+        html += '</div>';
+
+        const tsbCount = steps.filter(s => tsbGates.includes(s.type)).length;
+        html += '<div class="pipeline-info">';
+        if (tsbCount > 0) {
+            const allPass = steps.filter(s => tsbGates.includes(s.type)).every(s => s.status === 'pass');
+            html += `<div class="pipeline-current ${allPass ? 'pipeline-complete' : 'pipeline-fault'}">`;
+            html += allPass ? `\u2713 ${tsbCount} TSB gate${tsbCount > 1 ? 's' : ''} passed` : `\u2717 TSB gate fault`;
+            html += '</div>';
+            html += `<div class="pipeline-detail">${steps.length - tsbCount} instruction step${steps.length - tsbCount !== 1 ? 's' : ''}, ${tsbCount} capability gate${tsbCount > 1 ? 's' : ''} — all checks live from hardware model</div>`;
+        } else {
+            html += '<div class="pipeline-current">No TSB gates this step</div>';
+            html += '<div class="pipeline-detail">This instruction did not invoke mLoad or mSave</div>';
+        }
+        html += '</div>';
+
+        html += '</div>';
+        this.container.innerHTML = html;
+    }
+
     _cycleComparison() {
         if (this.mode === 'full') return '7 cycles per operation';
         if (this.mode === 'fused') return '3 cycles (was 7 \u2014 57% reduction)';
@@ -166,7 +266,9 @@ class PipelineVisualizer {
 
     showFullPipeline(stageDataArray) {
         this.stageData = stageDataArray || [];
-        const displayLen = this.mode === 'chained' ? (1 + this.chainSteps.length + 1) : this.stages.length;
+        const displayLen = this.mode === 'audit'   ? this.stageData.length :
+                           this.mode === 'chained' ? (1 + this.chainSteps.length + 1) :
+                           this.stages.length;
         this.currentStage = displayLen;
         this.render();
     }
@@ -184,7 +286,9 @@ class PipelineVisualizer {
         this.stageData = stageDataArray || [];
         this.animating = true;
 
-        const displayLen = this.mode === 'chained' ? (1 + this.chainSteps.length + 1) : this.stages.length;
+        const displayLen = this.mode === 'audit'   ? this.stageData.length :
+                           this.mode === 'chained' ? (1 + this.chainSteps.length + 1) :
+                           this.stages.length;
 
         for (let i = 0; i < displayLen; i++) {
             if (!this.animating) break;
