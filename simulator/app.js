@@ -7062,32 +7062,32 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 2, mnemonic: 'CALL', domain: 'church',
-        syntax: 'CALL CRd',
-        brief: 'Enter an abstraction \u2014 save context, auto-clear B on all passed GTs',
-        encoding: 'opcode[5]=00010 | cond[4] | CRd[4] | 0[4] | 0[15]',
+        syntax: 'CALL CRd, offset',
+        brief: 'Enter an abstraction — fetch E-GT (direct or via C-List), set up CR6/CR7, push context',
+        encoding: 'opcode[5]=00010 | cond[4] | CRd[4] | offset[4] | 0[15]',
         fields: [
-            { name: 'CRd', desc: 'Target GT (must have E permission)' },
+            { name: 'CRd',    desc: 'C-List (L permission — mLoad fetches E-GT at CRd[offset]) or direct E-GT (E permission — offset ignored)' },
+            { name: 'offset', desc: '4-bit index into the C-List at CRd (0–14); ignored when CRd is a direct E-GT' },
         ],
-        permission: 'E (Enter/Execute) on CRd',
+        permission: 'L on CRd (C-List mode, mLoad fetches E-GT at offset) or E on CRd (direct mode)',
         flags: 'None',
         details:
             '  31    27│26   23│22   19│18   15│14                0\n'
           + '  ┌──────┬──────┬──────┬──────┬───────────────────┐\n'
-          + '  │00010 │ cond │  CRd │  ─   │        0          │\n'
+          + '  │00010 │ cond │  CRd │offset│         0         │\n'
           + '  └──────┴──────┴──────┴──────┴───────────────────┘\n'
-          + '   5-bit   4-bit   4-bit  zero        zero\n\n'
-          + 'CRd = target E-GT (Inform abstraction entry point).\n'
-          + 'src field and imm15 are both zero.\n\n'
-          + 'mLoad validates version, seal, and E permission on CRd.\n'
-          + 'CALL reads word1 of the lump to extract clistCount:\n'
-          + '  clistStart = (limit + 1) - clistCount\n'
-          + '  CR7 (code)   → base .. clistStart-1   (X-only)\n'
-          + '  CR6 (c-list) → clistStart .. limit     (L-only)\n\n'
+          + '   5-bit   4-bit   4-bit  4-bit       15-bit\n\n'
+          + 'C-List mode (L on CRd): mLoad fetches the E-GT at CRd[offset] (offset 0–14).\n'
+          + '  This is a special case of mLoad.\n'
+          + 'Direct mode  (E on CRd): CRd is the E-GT; offset is ignored.\n\n'
+          + 'After obtaining the E-GT the lump is split:\n'
+          + '  CR6 (c-list): base = limit − GTcount\n'
+          + '  CR7 (code):   base = slot base address, limit = code size\n\n'
           + 'Caller PC, all CRs, DRs, and flags are pushed to the call stack.\n'
           + 'B bit is cleared on every passed GT (hardware "use it, don\'t keep it").\n'
           + 'To allow delegation, set B=1 via TPERM before CALL.\n'
           + 'PC is set to 0. RETURN is the only exit.',
-        example: 'CALL CR3             ; Enter abstraction \u2014 split lump into CR7 (code, X) + CR6 (c-list, L)\n                     ; Callee gets GTs with B=0 \u2014 cannot SAVE them',
+        example: 'CALL CR6, 3          ; Fetch E-GT at offset 3 in C-List CR6 → enter abstraction\n                     ; CR6 ← c-list region (base = limit−GTcount), CR7 ← code region',
     },
     {
         opcode: 3, mnemonic: 'RETURN', domain: 'church',
