@@ -195,7 +195,7 @@ TPERM CRd, #preset
 |-------|-------|
 | dst (4 bits) | CRd — the context register to attenuate |
 | src (4 bits) | Preset code — permission mask to AND with current permissions |
-| imm15 (15 bits) | 0 (no offset — distinguishes from health check) |
+| imm15 (15 bits) | 0x7FFF — all-ones sentinel; distinguishes restriction from health-check and allows health-check at offset 0 |
 
 ANDs the preset mask with CRd's current permissions. Permissions can only be removed, never added (monotonic restriction). Sets Z=1 if resulting permissions are non-zero. The attenuation is local to the cached CR; the namespace slot is not updated until a SAVE commits it. Domain purity is enforced: Turing (R, W, X) and Church (L, S, E) permissions cannot be mixed.
 
@@ -236,7 +236,7 @@ B-modifier variants (add 0x10): RB, RWB, XB, EB, LSB — sets B-bit alongside a 
 
 #### Design Rationale
 
-TPERM is the single gateway for inspecting and restricting GT metadata — permissions, validity, type, stack indicators, and bounds. Keeping all metadata operations in one opcode minimises opcode usage and silicon cost while providing a uniform interface. The two modes coexist in the same encoding: `imm15 > 0` triggers a bounds check (health-check mode); `imm15 = 0` with no offset performs attenuation (restriction mode). The flag-setting (no-trap) design enables the conditional execution try-catch pattern that gives the happy path zero overhead.
+TPERM is the single gateway for inspecting and restricting GT metadata — permissions, validity, type, stack indicators, and bounds. Keeping all metadata operations in one opcode minimises opcode usage and silicon cost while providing a uniform interface. The two modes coexist in the same encoding: `imm15 = 0x7FFF` (all fifteen bits set) is the restriction sentinel — it performs monotonic attenuation with no bounds check. Any other imm15 value (0–32766) is a health-check offset, including 0 (test the base address). The all-ones sentinel was chosen over 0 precisely to allow offset=0 as a valid health-check target. The flag-setting (no-trap) design enables the conditional execution try-catch pattern that gives the happy path zero overhead.
 
 ### LAMBDA (opcode 7)
 

@@ -227,6 +227,8 @@ TPERM can also restrict permissions on a GT:
 TPERM CRd, #preset
 ```
 
+The assembler encodes restriction mode by setting `imm15 = 0x7FFF` (all fifteen bits set). This sentinel distinguishes restriction from a health-check at offset 0 (`imm15 = 0`), which is a valid bounds test of the base address itself. The full range 0–32766 is available for health-check offsets.
+
 Permissions can only be removed, never added (monotonic restriction). Domain purity is enforced: Turing (R, W, X) and Church (L, S, E) permissions cannot be mixed.
 
 ### Full Metadata Query

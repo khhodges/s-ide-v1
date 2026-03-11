@@ -7101,7 +7101,7 @@ const INSTRUCTION_DATA = [
         fields: [
             { name: 'reg',    desc: 'CRs for health-check; CRd for restriction' },
             { name: 'preset', desc: '4-bit permission code (see table below)' },
-            { name: 'offset', desc: 'Health-check: base+offset tested against limit. Restriction: 0 (no offset operand in assembly)' },
+            { name: 'offset', desc: 'Health-check: base+offset tested against limit (0\u201332766 valid). Restriction: 0x7FFF (all ones \u2014 sentinel that distinguishes restriction from health-check; never a valid bounds offset)' },
         ],
         permission: 'None \u2014 never traps',
         flags: 'Health-check: Z=1 all pass, Z=0 any fail. Restriction: Z=1 result non-zero.',
@@ -7126,12 +7126,14 @@ const INSTRUCTION_DATA = [
           + '│                                                                  │\n'
           + '│  31    27│26   23│22   19│18   15│14                0│          │\n'
           + '│  ┌──────┬──────┬──────┬──────┬───────────────────┐  │          │\n'
-          + '│  │00110 │ cond │  CRd │preset│        0          │  │          │\n'
+          + '│  │00110 │ cond │  CRd │preset│      0x7FFF       │  │          │\n'
           + '│  └──────┴──────┴──────┴──────┴───────────────────┘  │          │\n'
-          + '│   op=6    4-bit   4-bit   4-bit       0 (15-bit)      │          │\n'
+          + '│   op=6    4-bit   4-bit   4-bit   0x7FFF (15-bit)     │          │\n'
           + '│                                                                  │\n'
-          + '│  ANDs preset mask with CRd\'s current permissions.               │\n'
-          + '│  Permissions can only be removed, never added (monotonic).      │\n'
+          + '│  Sentinel: imm15=0x7FFF (all ones) marks restriction mode.      │\n'
+          + '│  This frees the full 0\u201332766 range for health-check offsets,     │\n'
+          + '│  including offset=0 (test the base address itself).             │\n'
+          + '│  ANDs preset mask with CRd\'s current permissions (monotonic).   │\n'
           + '│  Local to the cached CR — not written to namespace until SAVE.  │\n'
           + '│  Z=1 if result is non-zero.                                     │\n'
           + '└──────────────────────────────────────────────────────────────────┘\n\n'
