@@ -256,7 +256,7 @@ class ChurchAssembler {
 
     _parseCR(token, lineNum) {
         if (!token) {
-            this.errors.push({ line: lineNum, message: 'A capability register (like CR0, CR6, CR7) is needed here, but nothing was given.' });
+            this.errors.push({ line: lineNum, message: 'A capability register (like CR0, CR6, CR14) is needed here, but nothing was given.' });
             return 0;
         }
         token = token.toUpperCase().replace(/,/g, '');

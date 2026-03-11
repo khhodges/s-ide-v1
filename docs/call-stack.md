@@ -10,10 +10,10 @@ The CALL instruction invokes a protected abstraction (service or function) refer
 |------|--------|
 | **1. Permission Check** | E (Enter) on source CR |
 | **2. GT Validation** | Version match + MAC seal validation |
-| **3. Context Save** | PC, CR5, CR6, CR7, LAMBDA-active pushed to call stack |
+| **3. Context Save** | PC, CR5, CR6, CR14, LAMBDA-active pushed to call stack |
 | **3a. LAMBDA Clear** | Clears LAMBDA-active flag (callee gets clean LAMBDA state) |
 | **4. Stack Check** | FAULT if stack full (256 frames) |
-| **5. Register Setup** | CR6 = callee C-List (M-bit set), CR7 = callee code |
+| **5. Register Setup** | CR6 = callee C-List (M-bit set), CR14 = callee code (privileged) |
 | **6. Register Clearing** | CR5 cleared after push; software clears others |
 | **7. PC Update** | PC set to namespace entry Location |
 
@@ -37,7 +37,7 @@ When RETURN executes and LAMBDA-active is NOT set, pop the top stack frame:
 | Aspect | Detail |
 |--------|--------|
 | **Permission Check** | None |
-| **Restored Registers** | CR5, CR6 (M-bit set), CR7, PC (+4) |
+| **Restored Registers** | CR5, CR6 (M-bit set), CR14, PC (+4) |
 | **LAMBDA State Restore** | Restores LAMBDA-active from frame |
 | **Stack Underflow** | FAULT: "No saved context to restore" |
 | **Stack Indicators** | Updates stackFrames and stackSpace flags |
@@ -113,22 +113,22 @@ The CHANGE instruction performs thread context switching by modifying the thread
 | **Mnemonic** | `CHANGE CRs` |
 | **Required Permission** | E (Enter) on source CR |
 | **Operation** | Full atomic thread swap via thread table |
-| **Context Saved** | Data registers, CR0-CR8, PC, LAMBDA state saved to thread table |
+| **Context Saved** | DR0-DR15, CR0-CR11, CR14, CR15, PC, LAMBDA state saved to thread table |
 | **Context Loaded** | Target thread's registers, CRs, PC, LAMBDA state loaded from thread table |
-| **CR9-CR15** | Unchanged (shared across threads) |
+| **CR12-CR13** | Unchanged (system-wide: fault handler and interrupt handler) |
 
-CHANGE performs a full atomic swap: the current thread's complete register state (data registers, capability registers CR0-CR8, and the PC) is saved to the thread table, and the target thread's state is loaded. System registers CR9-CR15 are shared across all threads and remain unchanged. The thread table stores complete thread contexts indexed by the GT's namespace index, and entries are created on first use.
+CHANGE performs a full atomic swap. Per-thread context saved/restored: data registers DR0-DR15, programmer-accessible capability registers CR0-CR11, per-thread privileged registers CR14 (code) and CR15 (namespace), and the PC. System-wide registers CR12 (data fault handler) and CR13 (interrupt handler) are shared across all threads and remain unchanged during CHANGE. The thread table stores complete thread contexts indexed by the GT's namespace index, and entries are created on first use.
 
 ---
 
 ## SWITCH: The Privilege Gate
 
-The SWITCH instruction is the sole mechanism for writing to system registers CR8-CR15. It copies a capability from an instruction-addressable register into a system register.
+The SWITCH instruction is the sole mechanism for writing to privileged registers CR12-CR15. It copies a capability from an instruction-addressable register into a privileged register.
 
 | Aspect | Detail |
 |--------|--------|
 | **Mnemonic** | `SWITCH CRs, target` |
 | **Required Permission** | M (Machine) on source CR |
-| **Target Field** | 3-bit: 0=CR8, 1=CR9, ..., 7=CR15 |
+| **Target Field** | 2-bit: 0=CR12(fault), 1=CR13(interrupt), 2=CR14(code), 3=CR15(namespace) |
 
-SWITCH is architecturally significant because it is the only way to escalate privilege. All other instructions are confined to CR0-CR7. To modify the namespace root (CR15), the thread identity (CR8), or any other system register, code must possess a valid capability with the appropriate permission and use SWITCH to install it.
+SWITCH is architecturally significant because it is the only way to escalate privilege. All other instructions are confined to CR0-CR11. To modify the namespace root (CR15), the fault handler (CR12), the interrupt handler (CR13), or the code register (CR14), code must possess a valid capability with the appropriate permission and use SWITCH to install it.

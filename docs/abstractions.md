@@ -4,7 +4,7 @@
 
 Every abstraction in the Church Machine is a **security block** — a protected unit of functionality with measurable reliability.
 
-- **Namespace entry** — One shared GT, one lump. mLoad derives CR7 (code, X-only: base = slot base address, limit = code size) and CR6 (c-list, L-only: base = slot limit − GTcount) from the same slot metadata. The code object is a DATA-domain entity — never Church domain.
+- **Namespace entry** — One shared GT, one lump. mLoad derives CR14 (code, X-only: base = slot base address, limit = code size) and CR6 (c-list, L-only: base = slot limit − GTcount) from the same slot metadata. The code object is a DATA-domain entity — never Church domain.
 - **Entry** — Via CALL (Inform E-GT). LAMBDA (X-GT) is a method/instruction within abstractions, not a separate security block.
 - **MTBF** — Mean Time Between Failures, measured by fault reports over time in the namespace. Every fault against a security block is counted. The MTBF ratio provides continuous reliability measurement.
 - **Method dispatch** — Symbolic dispatch (high-security), LAMBDA fast-path (performance), or compiled binary (fastest)
@@ -15,7 +15,7 @@ There is no operating system. Every system service, hardware driver, and user-fa
 ### Lump Structure
 
 ```
-offset 0:       Method table + Code     → CR7 (code, Turing X-only)
+offset 0:       Method table + Code     → CR14 (code, Turing X-only, privileged)
 codeEnd:        FREESPACE               (unreachable, padding to power-of-2)
 clistStart:     C-list (GT slots)       → CR6 (c-list, Church L-only)
 allocatedSize:  (power-of-2)
@@ -23,7 +23,7 @@ allocatedSize:  (power-of-2)
 
 mLoad reads the single shared GT's slot metadata to derive both registers:
 
-- **CR7 (code)**: base = slot base address, limit = code size (X-only)
+- **CR14 (code)**: base = slot base address, limit = code size (X-only, privileged)
 - **CR6 (c-list)**: base = slot limit − GTcount (L-only)
 
 ## Scale-Free Architecture
@@ -41,9 +41,9 @@ Hardware-initialized entries, always present after reset.
 | 0 | Boot.NS | — | Namespace root. Location = NS_TABLE_BASE (0xFD00). The root of the capability tree. |
 | 1 | Boot.Thread | — | Initial thread identity, loaded into CR8. Identifies the boot thread. |
 | 2 | Boot.CList | E | Boot abstraction c-list, loaded into CR6. Contains the boot code and initial capabilities. |
-| 3 | Boot.CLOOMC | X | Boot code entry point, loaded into CR7. First instruction executes from here. |
+| 3 | Boot.CLOOMC | X | Boot code entry point, loaded into CR14 (privileged). First instruction executes from here. |
 
-**Rationale**: Boot entries establish the minimum viable secure state. The processor cannot execute any instruction until CR6 (c-list), CR7 (code), and CR15 (namespace) are initialized. Boot sequence writes these entries to the namespace table, then triggers execution.
+**Rationale**: Boot entries establish the minimum viable secure state. The processor cannot execute any instruction until CR6 (c-list), CR14 (code, privileged), and CR15 (namespace) are initialized. Boot sequence writes these entries to the namespace table, then triggers execution.
 
 ---
 

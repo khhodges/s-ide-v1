@@ -110,13 +110,13 @@ class SlideRuleTutorial {
   word1: B|F|G|chain|type|clistCount|limit
   word2: version | FNV seal</pre>
 <div class="sr-lump-diagram">
-<div class="sr-lump-region sr-lump-code">Code (Turing domain, X) &larr; CR7</div>
+<div class="sr-lump-region sr-lump-code">Code (Turing domain, X) &larr; CR14</div>
 <div class="sr-lump-region sr-lump-free">FREESPACE (inaccessible)</div>
 <div class="sr-lump-region sr-lump-clist">C-list (Church domain, L) &larr; CR6</div>
 </div>
 <p>When CALL enters an abstraction, it reads <code>clistCount</code> from word1 and splits the lump:</p>
 <ul>
-<li><strong>CR7 (code):</strong> base address, limit = clistStart - 1, permissions = <strong>X only</strong></li>
+<li><strong>CR14 (code):</strong> base address, limit = clistStart - 1, permissions = <strong>X only</strong> [privileged]</li>
 <li><strong>CR6 (c-list):</strong> base + clistStart, limit = clistCount - 1, permissions = <strong>L only</strong></li>
 </ul>
 <p>These permissions are <strong>architecturally hardcoded</strong> by CALL. Code cannot read its own capabilities (no GT leakage) and capabilities cannot be executed as code (no injection).</p>`

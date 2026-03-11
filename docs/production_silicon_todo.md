@@ -4,19 +4,20 @@ This document tracks requirements for synthesizing the Church Machine Verilog to
 
 ## SWITCH/CHANGE Instruction Pipeline
 
-### 1. CR9-CR14 Register Storage Paths
+### 1. CR12-CR15 Register Storage Paths
 **Status**: IMPLEMENTED (2026-01-28)
 
 **Completed**:
-- Added cr9_wr_en through cr14_wr_en ports in `ctmm_registers.sv`
-- Added GT write logic for CR9-CR14 in register file
-- Updated SWITCH routing in `ctmm_core.sv` with full case statement for all 8 targets
+- Added cr12_wr_en through cr15_wr_en ports in `ctmm_registers.sv`
+- Added GT write logic for CR12-CR15 in register file
+- Updated SWITCH routing in `ctmm_core.sv` with full case statement for all 4 targets (2-bit target field)
 - All targets now functional (no more silent ignore)
 
 **Architecture notes**:
-- CR9: Interrupt handler capability
-- CR10: Data fault handler capability  
-- CR11-CR14: Reserved for future expansion
+- CR12: Data fault handler capability (system-wide, unchanged by CHANGE)
+- CR13: Interrupt handler capability (system-wide, unchanged by CHANGE)
+- CR14: Code register — current CLOOMC (per-thread, saved/restored by CHANGE)
+- CR15: Namespace root (per-thread, saved/restored by CHANGE)
 - Note: Current implementation writes GT (Word 0) only; full capability writes via mLoad path
 
 ### 2. Memory Latency Handling for I=1 Mode

@@ -24,7 +24,7 @@ A code object (CLOOMC) belongs to the DATA domain — it is data stored in memor
 An abstraction is a security block — a protected unit of functionality with measurable reliability. Each abstraction has:
 
 - A c-list (CR6 target) containing its capabilities
-- Code (CR7 target at c-list[0]) — a DATA-domain object implementing its methods
+- Code (CR14 target — CLOOMC) — a DATA-domain object implementing its methods
 - Entry via CALL (E-GT); LAMBDA (X-GT) is a method within abstractions, not a separate security block
 - MTBF (Mean Time Between Failures) measured by fault reports over time in the namespace
 
@@ -82,7 +82,7 @@ R and W are pure Turing permissions (data access). L, S, and E are pure Church p
 | 10 | Outform | GT points to remote memory (F-bit auto-set, tunneled access) |
 | 11 | Abstract | GT IS the value — constants (pi), immutable credentials, escale variables |
 
-All abstractions use **Inform (01)** GTs. The Inform GT points to a namespace entry, which points to a memory lump. CALL uses the clistCount field in the NS entry's word1 to split the lump into code (CR7) and c-list (CR6) regions.
+All abstractions use **Inform (01)** GTs. The Inform GT points to a namespace entry, which points to a memory lump. CALL uses the clistCount field in the NS entry's word1 to split the lump into code (CR14, privileged) and c-list (CR6) regions.
 
 ## Register Architecture
 
@@ -96,12 +96,12 @@ All abstractions use **Inform (01)** GTs. The Inform GT points to a namespace en
 - **word3**: Seal (FNV-1a hash for integrity)
 
 Special assignments:
-- **CR6**: Current capability list (c-list) — entered via CALL
-- **CR7**: Current code object (CLOOMC) — instruction fetch source
-- **CR8**: Thread identity
-- **CR9**: Interrupt handler
-- **CR10**: Default fault handler
-- **CR15**: Namespace root
+- **CR6**: Current capability list (c-list) — entered via CALL (programmer-accessible)
+- **CR8**: Thread identity (programmer-accessible)
+- **CR12**: Data fault handler (privileged — system-wide)
+- **CR13**: Interrupt handler (privileged — system-wide)
+- **CR14**: Current code object (CLOOMC) — instruction fetch source (privileged — per-thread)
+- **CR15**: Namespace root (privileged — per-thread)
 
 ### Data Registers (DR0–DR15)
 
@@ -146,7 +146,7 @@ Bits 16:0:  limit — object size limit (0-131071)
 
 When `clistCount > 0`, the NS entry describes an abstraction lump. CALL splits the lump:
 - `clistStart = (limit + 1) - clistCount`
-- **CR7** (code): location = base, limit = clistStart - 1, permissions = X-only (hardcoded)
+- **CR14** (code): location = base, limit = clistStart - 1, permissions = X-only (hardcoded, privileged)
 - **CR6** (c-list): location = base + clistStart, limit = clistCount - 1, permissions = L-only (hardcoded)
 - PC = 0
 
@@ -162,7 +162,7 @@ The boot sequence follows a deterministic flow:
 2. **LOAD_NS**: CR15 initialized with GT to Namespace Root (Slot 0).
 3. **INIT_THRD**: CR8 initialized with Thread Identity (Slot 1).
 4. **INIT_CLIST**: CR6 loaded with Boot C-List (Slot 2).
-5. **LOAD_NUC**: CR7 loaded with Boot Code (CLOOMC from Slot 3). PC = 0.
+5. **LOAD_NUC**: CR14 loaded with Boot Code (CLOOMC from Slot 3, privileged). PC = 0.
 6. **COMPLETE**: M-Elevation OFF. Machine begins executing boot code.
 
 After boot, the code CALLs Salvation (NS[4]) to verify the security pipeline. Salvation proves LOAD, TPERM, and LAMBDA work correctly, then transitions to Navana (NS[5]). Navana does not RETURN — it becomes the permanent namespace controller, managing all abstractions, intrusion detection (IDS), and system lifecycle indefinitely.
@@ -192,12 +192,12 @@ CALL automatically clears B on all preserved CRs passed to the callee ("no bind 
 
 ## Instruction Fetch
 
-Instruction fetch uses CR7 (CLOOMC):
+Instruction fetch uses CR14 (CLOOMC, privileged):
 
 - PC is an offset within the current code object, not an absolute address
-- Bounds checked against CR7's limit
-- CALL sets PC=0 and CR7 to callee's CLOOMC
-- RETURN restores saved CR7 and PC
+- Bounds checked against CR14's limit
+- CALL sets PC=0 and CR14 to callee's CLOOMC
+- RETURN restores saved CR14 and PC
 
 ## CALL / RETURN
 
@@ -207,16 +207,16 @@ CALL performs (single NS entry with clistCount):
 3. Parse word1 → extract clistCount and limit
 4. If clistCount > 0 (abstraction lump):
    - clistStart = (limit + 1) - clistCount
-   - CR7 (code): location = base, limit = clistStart - 1, perms = **X-only** (hardcoded)
+   - CR14 (code): location = base, limit = clistStart - 1, perms = **X-only** (hardcoded, privileged)
    - CR6 (c-list): location = base + clistStart, limit = clistCount - 1, perms = **L-only** (hardcoded)
-5. Save caller's CR6, CR7, PC to call stack
+5. Save caller's CR6, CR14, PC to call stack
 6. Clear B-bit on preserved CRs
 7. Set PC = 0
 
-CR7 and CR6 permissions are architectural invariants — X-only for code, L-only for c-list. The E-GT grants Enter permission to reach the abstraction; CALL enforces the internal domain split. This resolves R001. The lump layout places code (method table + instructions) at offset 0, freespace in the middle, and c-list GTs at allocSize-clistCount. All lumps are allocated as power-of-2 blocks (minimum 32 words).
+CR14 and CR6 permissions are architectural invariants — X-only for code, L-only for c-list. The E-GT grants Enter permission to reach the abstraction; CALL enforces the internal domain split. This resolves R001. The lump layout places code (method table + instructions) at offset 0, freespace in the middle, and c-list GTs at allocSize-clistCount. All lumps are allocated as power-of-2 blocks (minimum 32 words).
 
 RETURN restores:
-1. Pop saved CR6, CR7, PC from call stack
+1. Pop saved CR6, CR14, PC from call stack
 2. Resume at saved PC
 
 ## LAMBDA

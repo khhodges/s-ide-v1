@@ -73,7 +73,7 @@ Saves the GT in CRs to the c-list pointed to by CRd at the given slot. Requires 
 CALL CRd
 ```
 
-Enters the abstraction referenced by CRd. Requires E (enter) permission. Pushes current CR6, CR7, and PC onto the call stack. Loads target's c-list into CR6 and code (c-list[0]) into CR7. Sets PC=0. Clears B-bit on all preserved CRs.
+Enters the abstraction referenced by CRd. Requires E (enter) permission. Pushes current CR6, CR14, and PC onto the call stack. Loads target's c-list into CR6 and code into CR14 (privileged). Sets PC=0. Clears B-bit on all preserved CRs.
 
 ### RETURN (opcode 3)
 
@@ -81,7 +81,7 @@ Enters the abstraction referenced by CRd. Requires E (enter) permission. Pushes 
 RETURN
 ```
 
-Returns from the current abstraction. Pops saved CR6, CR7, and PC from the call stack. Shared between Church and Turing domains.
+Returns from the current abstraction. Pops saved CR6, CR14, and PC from the call stack. Shared between Church and Turing domains.
 
 If the call stack is empty, RETURN triggers a reboot (warm restart) — not a halt.
 

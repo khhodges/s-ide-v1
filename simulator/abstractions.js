@@ -176,7 +176,7 @@ class AbstractionRegistry {
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 0 } });
 
         this.createAbstraction(2, 'Boot.Abstr', 0, [],
-            'Boot abstraction — combined code (CR7) + c-list (CR6) in one slot',
+            'Boot abstraction — combined code (CR14) + c-list (CR6) in one slot',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(3, '(empty)', 0, [],

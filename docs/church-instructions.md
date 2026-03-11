@@ -10,8 +10,8 @@ All Church instructions that access the namespace route through the **mLoad mast
 
 ## Architectural Principles
 
-1. **CR0-CR7 Only**: Church instructions can only address CR0-CR7 via 3-bit register encoding. System registers CR8-CR15 are physically unreachable through instruction encoding.
-2. **SWITCH Is the Gate**: The only way to write to system registers CR8-CR15 is through the privileged SWITCH instruction.
+1. **CR0-CR11 Only**: Church instructions can only address CR0-CR11 via the 4-bit register field. Privileged registers CR12-CR15 are physically unreachable through instruction encoding (exception: DREAD/DWRITE may use CR14 as source).
+2. **SWITCH Is the Gate**: The only way to write to privileged registers CR12-CR15 is through the privileged SWITCH instruction.
 3. **Permission Domains Are Mutually Exclusive**: Turing (R, W, X) and Church (L, S, E) permissions cannot be mixed within a single operation context.
 4. **Failsafe FAULT**: Every validation failure (permission, bounds, version, MAC) routes to a FAULT handler — except TPERM, which sets Z=0 on failure to enable conditional execution without trapping.
 5. **C-List Mediation**: LOAD and SAVE operate through capability-mediated access, never through raw memory addressing.
@@ -97,9 +97,9 @@ All Church instructions that access the namespace route through the **mLoad mast
 | **Required Permission** | E (Enter) on source CR |
 | **GT Validation** | Version match + MAC seal validation |
 | **G-bit Reset** | Yes — on callee namespace entry via mLoad |
-| **Saved Context** | PC, CR5, CR6, CR7 pushed to call stack (max 256 frames) |
+| **Saved Context** | PC, CR5, CR6, CR14 pushed to call stack (max 256 frames) |
 | **Stack Overflow** | FAULT if call stack full. Updates stackSpace/stackFrames indicators |
-| **New Context** | CR6 set to callee C-List (M-bit set), CR7 set to callee code, PC set to entry point |
+| **New Context** | CR6 set to callee C-List (M-bit set), CR14 set to callee code (privileged), PC set to entry point |
 
 ---
 
@@ -109,14 +109,14 @@ All Church instructions that access the namespace route through the **mLoad mast
 
 **Required Permission**: None (return is always permitted if a saved context exists)
 
-**Validation Path**: Routes saved CR5/CR6/CR7 GTs through mLoad for namespace revalidation — version check, MAC check, G-bit reset. Catches recycled entries (use-after-free prevention).
+**Validation Path**: Routes saved CR5/CR6/CR14 GTs through mLoad for namespace revalidation — version check, MAC check, G-bit reset. Catches recycled entries (use-after-free prevention).
 
 **Operation**:
 1. Check that a saved context exists on the call stack → FAULT if empty
 2. Pop the saved context
 3. Restore CR5 via mLoad (tolerant — clears CR5 on fault, continues)
 4. Restore CR6 via mLoad (fatal — FAULTs on validation failure)
-5. Restore CR7 via mLoad (fatal — FAULTs on validation failure)
+5. Restore CR14 via mLoad (fatal — FAULTs on validation failure)
 6. Reset G=0 on all restored namespace entries
 7. Resume execution at the saved return address
 
@@ -125,8 +125,8 @@ All Church instructions that access the namespace route through the **mLoad mast
 | Aspect | Detail |
 |--------|--------|
 | **Permission Check** | None |
-| **Restored Registers** | CR5 (tolerant), CR6 (M-bit set), CR7, PC via mLoad revalidation |
-| **CR5 Fault Tolerance** | CR5 fault clears CR5, continues to CR6/CR7 |
+| **Restored Registers** | CR5 (tolerant), CR6 (M-bit set), CR14, PC via mLoad revalidation |
+| **CR5 Fault Tolerance** | CR5 fault clears CR5, continues to CR6/CR14 |
 | **G-bit Reset** | Yes — on all restored namespace entries via mLoad |
 | **Stack Underflow** | FAULT: "No saved context to restore" |
 | **Stack Indicators** | Updates stackFrames and stackSpace |
@@ -159,14 +159,14 @@ All Church instructions that access the namespace route through the **mLoad mast
 
 ### 6. SWITCH — Copy Capability to System Register
 
-**Purpose**: Write a capability into one of the system registers CR8-CR15. This is the only instruction that can modify system registers, making it the privilege gate.
+**Purpose**: Write a capability into one of the privileged registers CR12-CR15. This is the only instruction that can modify privileged registers, making it the privilege gate.
 
 **Validation Path**: Routes through mLoad — full validation with G-bit reset.
 
 **Operation**:
 1. Check M permission on the source capability → FAULT if not
-2. Determine the target system register from the 3-bit target field (CR8 + target)
-3. Copy the capability into the target system register
+2. Determine the target privileged register from the 2-bit target field
+3. Copy the capability into the target privileged register
 4. Reset G=0 on accessed namespace entries
 
 **Mnemonic**: `SWITCH CRs, target`
@@ -174,9 +174,9 @@ All Church instructions that access the namespace route through the **mLoad mast
 | Aspect | Detail |
 |--------|--------|
 | **Permission Check** | M (Machine) on source CR |
-| **Target Field** | 3-bit: 0=CR8(Thread), 1=CR9(Interrupt), 2=CR10(DFault), 3-6=CR11-14(future), 7=CR15(Namespace) |
+| **Target Field** | 2-bit: 0=CR12(fault), 1=CR13(interrupt), 2=CR14(code), 3=CR15(namespace) |
 | **G-bit Reset** | Yes — via mLoad on namespace access |
-| **Bounds Check** | Target must map to CR8-CR15 |
+| **Bounds Check** | Target must map to CR12-CR15 |
 
 ---
 
@@ -280,8 +280,8 @@ The Church Machine enforces these core security invariants:
 
 | Principle | Enforcement |
 |-----------|-------------|
-| No direct system register access | CR0-CR7 only in instruction encoding (3-bit field) |
-| Privilege through SWITCH only | Only SWITCH writes to CR8-CR15 |
+| No direct privileged register access | CR0-CR11 only in instruction encoding (4-bit field) |
+| Privilege through SWITCH only | Only SWITCH writes to CR12-CR15 |
 | Permission before access | Every Church instruction checks permissions before operating |
 | Single validation path | All namespace access routes through mLoad |
 | G-bit reset on every access | mLoad always resets G=0, ensuring GC accuracy |

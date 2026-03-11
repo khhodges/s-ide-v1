@@ -41,7 +41,7 @@ Each risk has a severity rating, a description of the fix, a reference to the ta
 **Solution:** Created `simulator/namespace_diagram.svg` showing:
 - The Namespace Table with 3-word NS entries (word0: location, word1: B|F|G|chain|type|clistCount|limit, word2: seals)
 - A lump with three regions: Method Table + Code (offset 0), FREESPACE (padding), C-List (GT slots at allocSize - clistCount)
-- CALL split arrows showing CR7 (code, RWX) and CR6 (c-list, L-only)
+- CALL split arrows showing CR14 (code, X-only) and CR6 (c-list, L-only)
 - The E-GT format: Version(7) | Index(17) | Perms=E(6) | Type=01(2)
 - GT type legend: NULL(00), Inform(01), Outform(10), Abstract(11)
 - CLOOMC++ compiler flow: source → Resident Object Model → code words → upload.json
@@ -52,7 +52,7 @@ Each risk has a severity rating, a description of the fix, a reference to the ta
 
 ### T001: NS Entry word1 — clistCount in bits[25:17]
 
-**Problem:** The namespace entry needed a field to tell CALL how many capability slots sit at the end of a lump. Without clistCount, CALL cannot split a lump into code (CR7) and c-list (CR6).
+**Problem:** The namespace entry needed a field to tell CALL how many capability slots sit at the end of a lump. Without clistCount, CALL cannot split a lump into code (CR14) and c-list (CR6).
 
 **Solution:** Already implemented in `simulator/simulator.js`. The `packNSWord1` function encodes:
 
@@ -68,16 +68,16 @@ word1: B(31) | F(30) | G(29) | chain(28) | type(27:26) | clistCount(25:17) | lim
 
 ### T002: CALL R001 Fix — Domain Purity Enforced in Hardware
 
-**Problem:** R001 was the most critical security risk. When CALL split a lump into CR7 (code) and CR6 (c-list), it was inheriting permissions from the source GT. This meant a program could potentially get Church-domain permissions on its code region or Turing-domain permissions on its c-list — violating domain purity.
+**Problem:** R001 was the most critical security risk. When CALL split a lump into CR14 (code) and CR6 (c-list), it was inheriting permissions from the source GT. This meant a program could potentially get Church-domain permissions on its code region or Turing-domain permissions on its c-list — violating domain purity.
 
 **Solution:** Hardcoded the permissions in `_execCall` (simulator/simulator.js). When clistCount > 0, CALL now creates two fresh GTs with fixed permissions:
 
 ```javascript
-const cr7GT = this.createGT(version, index, {R:1,W:1,X:1,L:0,S:0,E:0}, 1);  // Turing domain
-const cr6GT = this.createGT(version, index, {R:0,W:0,X:0,L:1,S:0,E:0}, 1);  // Church domain
+const cr14GT = this.createGT(version, index, {R:0,W:0,X:1,L:0,S:0,E:0}, 1);  // Turing domain, X-only
+const cr6GT  = this.createGT(version, index, {R:0,W:0,X:0,L:1,S:0,E:0}, 1);  // Church domain, L-only
 ```
 
-- **CR7** (code region): R, W, X — pure Turing domain. R and W are needed because Boot.CLOOMC uses DREAD to load constants from data tables appended after HALT in the code region. X permits execution.
+- **CR14** (code region): X-only — pure Turing domain. Execute permission permits instruction fetch. DREAD CR14 exception permits reading read-only constants appended after HALT in the code lump without requiring R permission on the code region.
 - **CR6** (c-list region): L only — pure Church domain. The c-list holds Golden Tokens. You can LOAD a GT from it, but you cannot DREAD, DWRITE, or execute it. You cannot even SAVE to it without explicit S permission granted separately.
 
 The permissions are not copied from the source GT. They are not read from the NS entry. They are constants in the CALL instruction's implementation. No policy decision, no configuration, no override. The hardware (and simulator) simply produces these values every time.
@@ -271,7 +271,7 @@ Mint still forges the GT (that is Mint's unique role — only Mint can create ne
   - Capabilities list with c-list slot assignments
   - Lump layout diagram: Method Table (words) | Code (words) | FREESPACE (words) | C-List (slots)
   - clistCount, code size, lump size (power-of-2), freespace
-  - CALL split preview: CR7 base/limit and CR6 base/limit
+  - CALL split preview: CR14 base/limit and CR6 base/limit
   - Full instruction listing with disassembly
 - **Example loading:** `loadExample()` and `loadCLOOMCExample()` auto-set the language selector
 
@@ -440,7 +440,7 @@ You can examine any namespace entry and reconstruct the structure of the abstrac
 
 Ada separated her arithmetic operations from her variable-state tracking. The operations column said what to compute; the variable columns tracked where the data was. She could reason about the computation and the storage independently.
 
-The Church Machine enforces this in hardware. Church domain (capabilities: LOAD, SAVE, CALL, RETURN) and Turing domain (data: DREAD, DWRITE, IADD, ISUB, BRANCH) are physically separate. CR7 (code) gets RWX permissions — pure Turing. CR6 (c-list) gets L permission — pure Church. You cannot execute a capability. You cannot forge a token from data.
+The Church Machine enforces this in hardware. Church domain (capabilities: LOAD, SAVE, CALL, RETURN) and Turing domain (data: DREAD, DWRITE, IADD, ISUB, BRANCH) are physically separate. CR14 (code) gets RWX permissions — pure Turing. CR6 (c-list) gets L permission — pure Church. You cannot execute a capability. You cannot forge a token from data.
 
 **Why this matters for longevity:** When security and computation are entangled, you cannot reason about either one in isolation. Domain separation means a future reader can analyse the security properties of a program (which capabilities does it hold? what can it access?) without understanding the computation, and vice versa. Two independent, simpler analyses instead of one impossibly complex one.
 
@@ -500,7 +500,7 @@ The variable mapping is explicit:
 | V13 | DR13 | Accumulator |
 | V24 | DR15 | Result: B7 |
 
-Constants are loaded from a data table at the end of the program via `DREAD DR, CR7, offset` — the same pattern Ada used with the Analytical Engine's store columns. DR0 is hardwired to zero, just as column 0 of the Engine was implicitly available.
+Constants are loaded from a data table at the end of the program via `DREAD DR, CR14, offset` — the same pattern Ada used with the Analytical Engine's store columns. DR0 is hardwired to zero, just as column 0 of the Engine was implicitly available.
 
 If a student in the year 2200 finds this code, they can read it. They can trace through the 25 operations. They can find the bug we fixed. They can verify the Bernoulli number computation against the mathematical formula. They do not need the Church Machine hardware, the simulator, the IDE, or this document. They need the code and a pencil.
 

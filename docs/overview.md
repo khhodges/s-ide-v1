@@ -12,14 +12,14 @@ The Church Machine enforces these core security invariants:
 
 - **Failsafe Security**: Every validation failure routes to a single FAULT handler. There are no silent failures or undefined behaviors.
 - **Golden Tokens**: All access rights are embodied in unforgeable capability keys. No raw memory addressing is permitted.
-- **Capability Registers (CR0-CR15)**: 16 capability registers hold Golden Tokens. CR0-CR7 are instruction-addressable via 3-bit encoding. CR8-CR15 are system registers, protected from direct instruction access.
+- **Capability Registers (CR0-CR15)**: 16 capability registers hold Golden Tokens. CR0-CR11 are programmer-accessible via the 4-bit register field. CR12-CR15 are privileged registers — hardware faults on any instruction that encodes them in a register field (exception: DREAD/DWRITE may use CR14 as source).
 - **Two Permission Domains (Domain Purity)**: A GT may carry Turing permissions (R, W, X) or Church permissions (L, S, E), but never both. This is enforced in hardware -- any attempt to mix domains raises a DOMAIN_PURITY fault.
   - **Turing (R, W, X)**: Read, Write, and Execute data/code
   - **Church (L, S, E)**: Load, Save, and Enter capabilities/abstractions
 - **M Permission -- Transient Only**: M (Machine/Microcode) is never stored in a GT. It exists only as a transient hardware signal during microcode execution, invisible to user instructions.
 - **B and F -- Namespace Metadata**: B (Bind) and F (Far/Foreign) are properties of namespace entries, not GT permission bits. B controls whether a capability can be copied; F marks remote resources.
 - **C-List Mediation**: LOAD and SAVE operations go through capability-mediated C-Lists, never through raw memory addresses.
-- **SWITCH as Privilege Gate**: The only way to write to system registers CR8-CR15 is through the SWITCH instruction.
+- **SWITCH as Privilege Gate**: The only way to write to privileged registers CR12-CR15 is through the SWITCH instruction.
 - **mLoad as Sole Trusted Path**: All capability register writes route through the mLoad validation pipeline.
 
 ---
@@ -34,7 +34,7 @@ The Church Machine enforces these core security invariants:
 | **Permission Domains** | Turing (RWX) xor Church (LSE) — domain purity enforced in hardware |
 | **Namespace Metadata** | B (Bind), F (Far) in namespace entry |
 | **Data Registers** | DR0-DR15 |
-| **Capability Registers** | CR0-CR15 (CR0-CR7 instruction-addressable, CR8-CR15 system) |
+| **Capability Registers** | CR0-CR15 (CR0-CR11 programmer-accessible, CR12-CR15 privileged) |
 | **Church Instructions** | LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LOADX, SAVEX, LDM, STM |
 | **Turing Instructions** | DREAD, DWRITE, BFEXT, BFINS, MCMP, IADD, ISUB, BRANCH, SHL, SHR |
 | **Max Namespace Entries** | 131,072 (17-bit index) |

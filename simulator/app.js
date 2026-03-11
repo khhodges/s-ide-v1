@@ -1005,7 +1005,7 @@ function showAbstractionDetail(index) {
     }
 
     html += '<div class="abs-detail-section">';
-    html += '<div class="abs-detail-label">CR6/CR7 Canonical Form</div>';
+    html += '<div class="abs-detail-label">CR6/CR14 Canonical Form</div>';
     html += '<div class="abs-canonical">';
     html += '<div class="abs-canonical-diagram">';
     html += `<div class="abs-cr-box cr6-box">`;
@@ -1015,7 +1015,7 @@ function showAbstractionDetail(index) {
     html += `</div>`;
     html += `<div class="abs-cr-arrow">\u2192 CALL \u2192</div>`;
     html += `<div class="abs-cr-box cr7-box">`;
-    html += `<div class="abs-cr-label">CR7 (CLOOMC)</div>`;
+    html += `<div class="abs-cr-label">CR14 (CLOOMC)</div>`;
     html += `<div class="abs-cr-content">Code at NS[${abs.index}].location</div>`;
     html += `<div class="abs-cr-perms">[X] Execute permission</div>`;
     html += `</div>`;
@@ -1159,7 +1159,7 @@ LOAD   CR2, NS[5]       ; Load Navana E-GT via mLoad
 CALL   CR2              ; Enter Navana:
                          ;   1. Push return state to call stack
                          ;   2. CR6 <- E-GT (c-list for Navana)
-                         ;   3. CR7 <- X-GT at c-list[0] (CLOOMC)
+                         ;   3. CR14 <- X-GT (CLOOMC, privileged)
                          ;   4. B-bits cleared on all CRs
                          ;   5. PC <- Navana code entry point
 ; Navana takes over — runs indefinitely, never RETURNs`,
@@ -1171,7 +1171,7 @@ CALL   CR2              ; Enter Navana:
 LOAD   CR1, NS[5]       ; Load Navana E-GT
 CALL   CR1              ; Enter Navana
                          ;   CR6 <- Navana c-list
-                         ;   CR7 <- Navana CLOOMC (DATA-domain)
+                         ;   CR14 <- Navana CLOOMC (DATA-domain, privileged)
 ; Inside Navana.Init:
 ;   for each abstraction index 6..44:
 ;     LOAD  CR3, NS[7]  ; Load Memory GT
@@ -1285,7 +1285,7 @@ DWRITE DR2, #0b000100   ; perms = X only (Turing)
                          ;   bit2=X — execute but no read
 CALL   CR1              ; Mint.Create:
 ;   Code object you can run but not inspect
-;   CR7 loads via X perm at c-list[0]
+;   CR14 loads via X perm (privileged code register)
 
 ; ── EXAMPLE D: Inform + Church L,S,E (c-list) ────────────
 LOAD   CR1, NS[6]       ; Load Mint E-GT
@@ -3076,13 +3076,13 @@ function loadExample(name) {
 ;
 ; DR0 = 0 always (hardwired zero register).
 ; Constants loaded via DREAD from a data
-; table at the end of this program (CR7).
+; table at the end of this program (CR14 code lump exception).
 ; ============================================
 
 ; --- Initialize Ada's Store columns ---
-DREAD DR1, CR7, 100        ; V1 = 1
-DREAD DR2, CR7, 101        ; V2 = 2
-DREAD DR3, CR7, 102        ; V3 = n = 4
+DREAD DR1, CR14, 100       ; V1 = 1
+DREAD DR2, CR14, 101       ; V2 = 2
+DREAD DR3, CR14, 102       ; V3 = n = 4
 
 ; ============================================
 ; OPERATION 1: × (V2 × V3 → V4, V5, V6)
@@ -3174,7 +3174,7 @@ op9_done:
 ; B1 = 1 (integer stand-in for 1/6)
 ; 1 × 4 = 4 — multiplication loop
 ; ============================================
-DREAD DR15, CR7, 103       ; DR15 = B1 = 1
+DREAD DR15, CR14, 103       ; DR15 = B1 = 1
 IADD DR12, DR0, DR0        ; V12 = 0
 IADD DR14, DR11, DR0       ; counter = V11
 op10_loop:
@@ -3284,7 +3284,7 @@ op20_done:
 ; "B3 × coefficient"
 ; B3 = 1 (integer stand-in for -1/30)
 ; ============================================
-DREAD DR15, CR7, 104       ; DR15 = B3 = 1
+DREAD DR15, CR14, 104       ; DR15 = B3 = 1
 IADD DR12, DR0, DR0        ; V12 = 0
 IADD DR14, DR11, DR0       ; counter = V11
 op21_loop:
@@ -3375,7 +3375,7 @@ BRANCH op20b_loop
 op20b_done:
 
 ; OPERATION 21b: V12 = V23 × V11 = B5 × 0 = 0
-DREAD DR15, CR7, 105       ; DR15 = B5 = 1
+DREAD DR15, CR14, 105       ; DR15 = B5 = 1
 IADD DR12, DR0, DR0
 IADD DR14, DR11, DR0
 op21b_loop:
@@ -3421,7 +3421,7 @@ HALT
 
 ; --- Data table (Ada's Store constants) ---
 ; Placed at offset 100 via .org directive.
-; DREAD DR, CR7, offset reads these values.
+; DREAD DR, CR14, offset reads these values (CR14 code lump exception).
 .org 100
 .word 1                    ; offset 100: V1 = 1
 .word 2                    ; offset 101: V2 = 2
@@ -7063,7 +7063,7 @@ const INSTRUCTION_DATA = [
     {
         opcode: 2, mnemonic: 'CALL', domain: 'church',
         syntax: 'CALL CRd, offset',
-        brief: 'Enter an abstraction — fetch E-GT (direct or via C-List), set up CR6/CR7, push context',
+        brief: 'Enter an abstraction — fetch E-GT (direct or via C-List), set up CR6/CR14, push context',
         encoding: 'opcode[5]=00010 | cond[4] | CRd[4] | offset[4] | 0[15]',
         fields: [
             { name: 'CRd',    desc: 'C-List (L permission — mLoad fetches E-GT at CRd[offset]) or direct E-GT (E permission — offset ignored)' },
@@ -7084,13 +7084,13 @@ const INSTRUCTION_DATA = [
           + '    ↑ base                          ↑ limit\n\n'
           + 'Code starts at the slot base address; the C-List is packed at the top\n'
           + '(limit). mLoad reads the same slot metadata to derive both registers:\n'
-          + '  CR7 (code):   base = slot base address, limit = code size\n'
-          + '  CR6 (c-list): base = slot limit − GTcount\n\n'
-          + 'Caller PC, all CRs, DRs, and flags are pushed to the call stack.\n'
+          + '  CR14 (code):   base = slot base address, limit = code size  [privileged]\n'
+          + '  CR6  (c-list): base = slot limit − GTcount\n\n'
+          + 'Caller PC, CR0–CR11, CR14, CR15, DRs, and flags are pushed to the call stack.\n'
           + 'B bit is cleared on every passed GT (hardware "use it, don\'t keep it").\n'
           + 'To allow delegation, set B=1 via TPERM before CALL.\n'
           + 'PC is set to 0. RETURN is the only exit.',
-        example: 'CALL CR6, 3          ; Fetch E-GT at offset 3 in C-List CR6 → enter abstraction\n                     ; CR6 ← c-list region (base = limit−GTcount), CR7 ← code region',
+        example: 'CALL CR6, 3          ; Fetch E-GT at offset 3 in C-List CR6 → enter abstraction\n                     ; CR6 ← c-list region (base = limit−GTcount), CR14 ← code region',
     },
     {
         opcode: 3, mnemonic: 'RETURN', domain: 'church',
@@ -7118,7 +7118,7 @@ const INSTRUCTION_DATA = [
     {
         opcode: 4, mnemonic: 'CHANGE', domain: 'church',
         syntax: 'CHANGE CRd, imm',
-        brief: 'Suspend/activate thread \u2014 save and load all machine registers',
+        brief: 'Suspend/activate thread \u2014 save and load thread register state',
         encoding: 'opcode[5]=00100 | cond[4] | CRd[4] | 0[4] | idx[15]',
         fields: [
             { name: 'CRd', desc: 'Thread GT \u2014 identifies the thread to change to' },
@@ -7134,9 +7134,15 @@ const INSTRUCTION_DATA = [
           + '   5-bit   4-bit   4-bit  zero       15-bit\n\n'
           + 'CRd   = thread GT identifying the target thread.\n'
           + 'flags = thread control flags (imm15).\n\n'
-          + 'Atomic context-switch: saves ALL registers of the current thread\n'
-          + '(all CRs, DRs, PC, flags) then loads the complete register set of the\n'
-          + 'target thread. One instruction — no intermediate state is visible.\n'
+          + 'Atomic context-switch. Per-thread registers saved and restored:\n'
+          + '  CR0–CR11  (programmer-accessible capability registers)\n'
+          + '  CR14      (code register — privileged, per-thread)\n'
+          + '  CR15      (namespace root — privileged, per-thread)\n'
+          + '  DR0–DR15, PC, flags\n\n'
+          + 'System-wide registers unchanged during CHANGE:\n'
+          + '  CR12 (data fault handler) — shared across all threads\n'
+          + '  CR13 (interrupt handler)  — shared across all threads\n\n'
+          + 'One instruction — no intermediate state is visible.\n'
           + 'The suspended thread resumes exactly where it left off.',
         example: 'CHANGE CR8, 0        ; Suspend current thread, activate thread in CR8',
     },
@@ -7328,10 +7334,10 @@ const INSTRUCTION_DATA = [
         encoding: 'opcode[5]=01010 | cond[4] | DRd[4] | CRs[4] | offset[15]',
         fields: [
             { name: 'DRd', desc: 'Destination data register (DR0-DR15)' },
-            { name: 'CRs', desc: 'GT pointing to data object (must have R permission)' },
+            { name: 'CRs', desc: 'GT pointing to data object (R permission; or CR14 with X permission — code lump exception)' },
             { name: 'imm', desc: 'Word offset within the data object' },
         ],
-        permission: 'R (Read) on CRs',
+        permission: 'R on CRs; exception: CR14 accepted with X permission (code lump read-only data)',
         flags: 'None',
         details:
             '  31    27│26   23│22   19│18   15│14                0\n'
@@ -7340,11 +7346,16 @@ const INSTRUCTION_DATA = [
           + '  └──────┴──────┴──────┴──────┴───────────────────┘\n'
           + '   5-bit   4-bit   4-bit   4-bit       15-bit\n\n'
           + 'DRd    = destination data register for the 32-bit result.\n'
-          + 'CRs    = GT covering the data object (must have R permission).\n'
+          + 'CRs    = GT covering the data object (R permission required).\n'
           + 'offset = word offset within the protected region.\n\n'
           + 'mLoad validates: version, seal, R permission, base+offset within limit.\n'
-          + 'Unified address space: works on memory, devices, or device registers.',
-        example: 'DREAD DR1, CR2, 0    ; Read word 0 from data object CR2',
+          + 'Unified address space: works on memory, devices, or device registers.\n\n'
+          + 'CR14 exception: DREAD may use CR14 (the privileged code register) as\n'
+          + 'CRs with X permission only — R is not required. This preserves the\n'
+          + 'DREAD DR, CR14, offset pattern for read-only constants packed after\n'
+          + 'HALT in the code lump. Decode fault rule: (CRs>=12) AND NOT (CRs==14).',
+        example: 'DREAD DR1, CR2, 0    ; Read word 0 from data object CR2\n'
+               + 'DREAD DR1, CR14, 100 ; Read constant at offset 100 in code lump',
     },
     {
         opcode: 11, mnemonic: 'DWRITE', domain: 'turing',
@@ -7353,10 +7364,10 @@ const INSTRUCTION_DATA = [
         encoding: 'opcode[5]=01011 | cond[4] | DRd[4] | CRs[4] | offset[15]',
         fields: [
             { name: 'DRd', desc: 'Source data register (value to write)' },
-            { name: 'CRs', desc: 'GT pointing to data object (must have W permission)' },
+            { name: 'CRs', desc: 'GT pointing to data object (W permission; CR12–CR15 invalid in this field except CR14)' },
             { name: 'imm', desc: 'Word offset within the data object' },
         ],
-        permission: 'W (Write) on CRs',
+        permission: 'W on CRs; CR12–CR15 invalid except CR14 (same exception as DREAD)',
         flags: 'None',
         details:
             '  31    27│26   23│22   19│18   15│14                0\n'
@@ -7744,8 +7755,8 @@ const SYNTAX_REF = {
                 { syntax: "Return <em>value</em>", desc: "Return a specific value" },
             ]},
             { heading: "Memory", items: [
-                { syntax: "Read from <em>CR7</em> at offset <em>0</em>", desc: "Read memory" },
-                { syntax: "Write <em>value</em> to <em>CR7</em> at offset <em>0</em>", desc: "Write memory" },
+                { syntax: "Read from <em>CR14</em> at offset <em>0</em>", desc: "Read code lump constant" },
+                { syntax: "Read from <em>CR0</em> at offset <em>0</em>", desc: "Read data object" },
             ]},
         ]
     },
@@ -7774,8 +7785,8 @@ const SYNTAX_REF = {
                 { syntax: "return(<em>result</em>)", desc: "Return value in DR0" },
             ]},
             { heading: "Memory & Bit Fields", items: [
-                { syntax: "<em>x</em> = read(<em>CR7</em>, <em>offset</em>)", desc: "Read from capability" },
-                { syntax: "write(<em>CR7</em>, <em>offset</em>, <em>value</em>)", desc: "Write to capability" },
+                { syntax: "<em>x</em> = read(<em>CR0</em>, <em>offset</em>)", desc: "Read from capability" },
+                { syntax: "write(<em>CR0</em>, <em>offset</em>, <em>value</em>)", desc: "Write to capability" },
                 { syntax: "bfext(<em>word</em>, <em>pos</em>, <em>width</em>)", desc: "Extract bit field" },
                 { syntax: "bfins(<em>word</em>, <em>val</em>, <em>pos</em>, <em>width</em>)", desc: "Insert bit field" },
             ]},
@@ -7872,10 +7883,11 @@ const SYNTAX_REF = {
                 { syntax: "IADD.EQ DR0, DR1, 1", desc: "Conditional add (only if equal)" },
             ]},
             { heading: "Registers", items: [
-                { syntax: "CR0\u2013CR7", desc: "Capability registers (Golden Tokens)" },
+                { syntax: "CR0\u2013CR11", desc: "Capability registers \u2014 programmer-accessible (Golden Tokens)" },
                 { syntax: "DR0\u2013DR15", desc: "Data registers (32-bit integers)" },
-                { syntax: "CR6", desc: "C-list (L-only)" },
-                { syntax: "CR7", desc: "Code region (X-only)" },
+                { syntax: "CR12\u2013CR15", desc: "Privileged \u2014 hardware FAULT if used in register fields (except CR14 in DREAD/DWRITE)" },
+                { syntax: "CR6",  desc: "C-list (L-only, set by CALL)" },
+                { syntax: "CR14", desc: "Code region (X-only, privileged, set by CALL)" },
             ]},
         ]
     },
@@ -8124,10 +8136,10 @@ function compileDraft() {
 
     draft += `\n  CALL split preview:\n`;
     if (clistCount > 0) {
-        draft += `    CR7 (code):   base=0, limit=${clistStart - 1}, perms=X-only\n`;
-        draft += `    CR6 (c-list): base+${clistStart}, limit=${clistCount - 1}, perms=L-only\n`;
+        draft += `    CR14 (code):   base=0, limit=${clistStart - 1}, perms=X-only  [privileged]\n`;
+        draft += `    CR6  (c-list): base+${clistStart}, limit=${clistCount - 1}, perms=L-only\n`;
     } else {
-        draft += `    CR7 (code):   base=0, limit=${allocSize - 1}, perms=X-only\n`;
+        draft += `    CR14 (code):   base=0, limit=${allocSize - 1}, perms=X-only  [privileged]\n`;
         draft += `    CR6:          (no c-list)\n`;
     }
 
@@ -8300,7 +8312,7 @@ function compileAndCreateAbstraction() {
     listing += `    Alloc size:  ${r.allocSize} words (power-of-2)\n`;
     if (r.clistCount > 0) {
         listing += `\n  CALL split:\n`;
-        listing += `    CR7 (code):   base=0x${r.location.toString(16)}, limit=${clistStart - 1}, perms=X-only\n`;
+        listing += `    CR14 (code):   base=0x${r.location.toString(16)}, limit=${clistStart - 1}, perms=X-only  [privileged]\n`;
         listing += `    CR6 (c-list): base=0x${(r.location + clistStart).toString(16)}, limit=${r.clistCount - 1}, perms=L-only\n`;
     }
 

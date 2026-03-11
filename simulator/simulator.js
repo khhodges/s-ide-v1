@@ -360,7 +360,7 @@ class ChurchSimulator {
                 };
 
                 this.pc = 0;
-                this.output += `[BOOT] LOAD_NUC — CALL into Boot.Abstr (Slot 2); CR7(code,RWX,lim=${clistStart-1}), CR6(clist,L,base=0x${(base+clistStart).toString(16).toUpperCase()},lim=${clistCount-1}), PC=0\n`;
+                this.output += `[BOOT] LOAD_NUC — CALL into Boot.Abstr (Slot 2); CR14(code,X,lim=${clistStart-1}), CR6(clist,L,base=0x${(base+clistStart).toString(16).toUpperCase()},lim=${clistCount-1}), PC=0\n`;
                 this.bootStep++;
                 break;
             }
@@ -802,19 +802,19 @@ class ChurchSimulator {
 
         const cr7 = this.cr[7];
         if (!cr7 || cr7.word0 === 0) {
-            return { ok: false, fault: 'NULL_CAP', message: 'CR7 (code register) is NULL — no code capability' };
+            return { ok: false, fault: 'NULL_CAP', message: 'CR14 (code register) is NULL — no code capability' };
         }
         const cr7Parsed = this.parseGT(cr7.word0);
         if (!cr7Parsed.permissions.X) {
-            return { ok: false, fault: 'PERM_X', message: 'CR7 lacks X permission for instruction fetch' };
+            return { ok: false, fault: 'PERM_X', message: 'CR14 lacks X permission for instruction fetch' };
         }
         const entry = this.readNSEntry(cr7Parsed.index);
         if (!entry) {
-            return { ok: false, fault: 'BOUNDS', message: `CR7 NS entry ${cr7Parsed.index} not found` };
+            return { ok: false, fault: 'BOUNDS', message: `CR14 NS entry ${cr7Parsed.index} not found` };
         }
         const w1 = this.parseNSWord1(entry.word1_limit);
         if (this.pc >= w1.limit) {
-            return { ok: false, fault: 'BOUNDS', message: `PC=${this.pc} exceeds CR7 code limit (${w1.limit})` };
+            return { ok: false, fault: 'BOUNDS', message: `PC=${this.pc} exceeds CR14 code limit (${w1.limit})` };
         }
         const fetchAddr = entry.word0_location + this.pc;
         if (fetchAddr >= this.memory.length) {
@@ -1067,7 +1067,7 @@ class ChurchSimulator {
                 m: this.mElevation ? 1 : 0
             };
 
-            cr7Desc = `, CR7(code,RWX,lim=${clistStart-1}), CR6(clist,L,lim=${clistCount-1})`;
+            cr7Desc = `, CR14(code,X,lim=${clistStart-1}), CR6(clist,L,lim=${clistCount-1})`;
         } else {
             this._writeCR(6, sourceGT, nsEntry);
 
@@ -1083,7 +1083,7 @@ class ChurchSimulator {
                             const cr7Check = this.mLoad(cr7GT, 'X', undefined);
                             if (cr7Check.ok) {
                                 this._writeCR(7, cr7GT, cr7Check.entry);
-                                cr7Desc = `, CR7 <- X-GT(Slot ${cr7Parsed.index})`;
+                                cr7Desc = `, CR14 <- X-GT(Slot ${cr7Parsed.index})`;
                             }
                         }
                     }

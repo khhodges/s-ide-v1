@@ -12,7 +12,7 @@ class SecurityTutorial {
                 content: `<p>Regardless of language or compilation strategy, the CLOOMC++ compiler <strong>cannot</strong>:</p>
 <div class="sr-security-list">
 <div class="sr-sec-item"><span class="sr-sec-num">1</span><strong>Forge a Golden Token.</strong> Tokens are created only by Mint.Create (via Navana). The compiler produces Turing-domain code words &mdash; no access to Church-domain token creation.</div>
-<div class="sr-sec-item"><span class="sr-sec-num">2</span><strong>Escape the lump.</strong> CALL hardcodes CR7 boundaries. Out-of-bounds branches trigger a hardware fault.</div>
+<div class="sr-sec-item"><span class="sr-sec-num">2</span><strong>Escape the lump.</strong> CALL hardcodes CR14 boundaries. Out-of-bounds branches trigger a hardware fault.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">3</span><strong>Read its own capabilities.</strong> CR6 has L-only permission. DREAD on the c-list faults. LOAD reads GTs into capability registers, not data registers.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">4</span><strong>Access undeclared abstractions.</strong> The c-list contains exactly the declared capabilities. If you don't declare Memory, no instruction sequence can reach it.</div>
 </div>

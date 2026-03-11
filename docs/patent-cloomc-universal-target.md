@@ -80,7 +80,7 @@ The Church Machine instruction set comprises 20 instructions in two domains:
 |--------|------------|----------|----------|
 | Church | LOAD | 00000 | Load GT from c-list (CR6) into capability register; requires L permission |
 | Church | SAVE | 00001 | Save GT from capability register to c-list; requires S permission |
-| Church | CALL | 00010 | Enter abstraction scope via E-GT; splits lump into CR7+CR6 |
+| Church | CALL | 00010 | Enter abstraction scope via E-GT; splits lump into CR14+CR6 |
 | Church | RETURN | 00011 | Exit abstraction scope; restore caller context |
 | Church | CHANGE | 00100 | Modify GT permissions (reduce only) |
 | Church | SWITCH | 00101 | Context switch between threads |
@@ -205,12 +205,12 @@ When the CALL instruction processes an Inform E-GT with clistCount > 0:
 1. **mLoad validation**: GT type check → version match → seal verify → bounds check → E-permission check → F-bit check → deliver NS entry
 2. **Parse word1**: Extract clistCount and limit from the NS entry
 3. **Compute split point**: `clistStart = (limit + 1) - clistCount`
-4. **Create CR7 (Code Region)**: location = base, limit = clistStart - 1, permissions = **X-only** (hardcoded)
+4. **Create CR14 (Code Region)**: location = base, limit = clistStart - 1, permissions = **X-only** (hardcoded)
 5. **Create CR6 (C-List Region)**: location = base + clistStart, limit = clistCount - 1, permissions = **L-only** (hardcoded)
 6. **Set PC = 0**: Execution begins at the first instruction of the code region
 
-**Critical security invariant (R001)**: CR7 permissions are hardcoded to X-only (execute). CR6 permissions are hardcoded to L-only (load capability). These permissions are **not** derived from the E-GT or the NS entry — they are architectural constants enforced by the CALL instruction. This prevents:
-- Code reading its own capabilities as data (CR7 cannot Load)
+**Critical security invariant (R001)**: CR14 permissions are hardcoded to X-only (execute). CR6 permissions are hardcoded to L-only (load capability). These permissions are **not** derived from the E-GT or the NS entry — they are architectural constants enforced by the CALL instruction. This prevents:
+- Code reading its own capabilities as data (CR14 cannot Load)
 - C-list entries being executed as code (CR6 cannot eXecute)
 - Any cross-domain contamination between code and capability regions
 
@@ -218,7 +218,7 @@ When the CALL instruction processes an Inform E-GT with clistCount > 0:
 
 ```
 ┌──────────────────────────────────────┐ offset 0
-│ Method table + compiled code         │ → CR7 (Turing domain, X-only)
+│ Method table + compiled code         │ → CR14 (Turing domain, X-only)
 │ (produced by CLOOMC++ compiler)      │
 ├──────────────────────────────────────┤ codeEnd
 │ FREESPACE (power-of-2 padding)       │ inaccessible (beyond code limit)
@@ -228,7 +228,7 @@ When the CALL instruction processes an Inform E-GT with clistCount > 0:
 └──────────────────────────────────────┘ allocSize (power-of-2)
 ```
 
-The freespace region is architecturally inaccessible — it lies beyond CR7's limit and before CR6's base. This provides growth room for code updates without reallocating the lump.
+The freespace region is architecturally inaccessible — it lies beyond CR14's limit and before CR6's base. This provides growth room for code updates without reallocating the lump.
 
 ### The Upload-Driven Abstraction Lifecycle
 
@@ -344,7 +344,7 @@ Nine risks (R001-R009) have been identified, documented, and resolved:
 
 | Risk | Severity | Description | Status |
 |------|----------|-------------|--------|
-| R001 | CRITICAL | CALL must hardcode CR7=X, CR6=L | RESOLVED |
+| R001 | CRITICAL | CALL must hardcode CR14=X, CR6=L | RESOLVED |
 | R002 | MEDIUM | 25-bit FNV seal strength | ACCEPTED (adequate for target hardware) |
 | R003 | LOW | Boot raw write single point of failure | RESOLVED |
 | R004 | HIGH/LOW | Compiler incorrect code generation | RESOLVED (security unaffected by compiler bugs) |
@@ -361,7 +361,7 @@ Automated end-to-end testing confirms:
 - Haskell source compiles and produces `[Haskell]` tagged output with correct hex instruction words
 - Both produce valid upload.json objects processed by Navana.Abstraction.Add
 - Boot sequence completes with all 11 abstractions installed
-- CR7 and CR6 are correctly set from single NS entry with clistCount split
+- CR14 and CR6 are correctly set from single NS entry with clistCount split
 
 ---
 
@@ -407,7 +407,7 @@ A method of managing abstractions in the processor of Claim 24, comprising:
 
 (c) upon execution of a CALL instruction targeting the abstraction:
 - computing a split point as `clistStart = (limit + 1) - clistCount`;
-- creating a first context register (CR7) pointing to the code region with permissions hardcoded to execute-only (X);
+- creating a first context register (CR14) pointing to the code region with permissions hardcoded to execute-only (X);
 - creating a second context register (CR6) pointing to the c-list region with permissions hardcoded to load-only (L);
 - setting the program counter to zero;
 
@@ -461,7 +461,7 @@ The compilation system of Claim 25, wherein:
 - Golden Token validation (version match, seal verification, permission check) on every memory access;
 - domain purity (Church-domain and Turing-domain permissions cannot coexist on a single GT);
 - bounds checking (code cannot access memory beyond the lump limits set by the namespace entry);
-- CALL split hardcoding (CR7=X-only, CR6=L-only regardless of compiled code);
+- CALL split hardcoding (CR14=X-only, CR6=L-only regardless of compiled code);
 - c-list authority (code can only LOAD GTs present in its c-list; no GT can be forged by any instruction sequence);
 
 (d) wherein this separation holds for all source languages processed by the compiler, such that adding a new language front-end to the compiler cannot weaken the security model — the hardware provides a language-independent security floor.
@@ -526,7 +526,7 @@ Diagram showing JavaScript and Haskell source code flowing through language-spec
 
 ### Figure 25: Single-Lump CALL Split
 
-Diagram showing a single namespace entry pointing to a contiguous lump, with the CALL instruction splitting the lump at the clistStart boundary into CR7 (X-only code) and CR6 (L-only c-list), with freespace between.
+Diagram showing a single namespace entry pointing to a contiguous lump, with the CALL instruction splitting the lump at the clistStart boundary into CR14 (X-only code) and CR6 (L-only c-list), with freespace between.
 
 ### Figure 26: Compiler-Security Separation
 

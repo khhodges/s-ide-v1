@@ -810,7 +810,7 @@ class CLOOMCCompiler {
     _parseCR(name) {
         const match = name.match(/^CR(\d+)$/);
         if (match) return parseInt(match[1]);
-        if (name === 'CODE' || name === 'CR7') return 7;
+        if (name === 'CODE' || name === 'CR14') return 14;
         if (name === 'CLIST' || name === 'CR6') return 6;
         return 0;
     }
@@ -1969,7 +1969,7 @@ class CLOOMCCompiler {
             const offset = 100 + constants.length;
             constants.push(value);
             code.push(this.encode(this.opcodes.DREAD, 14, dr, 7, offset));
-            manifest.push({ line: 0, instr: `DREAD DR${dr}, CR7, ${offset}`, comment: `load constant ${value}` });
+            manifest.push({ line: 0, instr: `DREAD DR${dr}, CR14, ${offset}`, comment: `load constant ${value}` });
         };
 
         const emitExpr = (expr, dstDR, lineNum) => {
