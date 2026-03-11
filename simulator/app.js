@@ -8048,11 +8048,11 @@ abstraction Memory {
         needed = needed >> 8
         needed = needed << 8
 
-        // Step 3: check free space — the GT's limit
-        // field tells us how many words CR5 covers.
+        // Step 3: check free space — TPERM extracts
+        // the limit field from CR5's Golden Token.
         // If location + needed exceeds the limit,
         // we are out of space. Return (0, 0).
-        limit = GLIMIT(CR5)
+        limit = TPERM(CR5, LIMIT)
         if (location + needed > limit) {
             return(0, 0)
         }
@@ -8254,16 +8254,23 @@ abstraction PackedString {
 // The Heap abstraction IS the heap — a flat array
 // of 32-bit integer cells, accessed through CR5.
 //
-// Every operation checks permissions (TPERM) and
-// bounds (GLIMIT) before touching memory. This is
-// what JavaScript's ArrayBuffer would look like if
-// access control were enforced by hardware.
+// Every operation uses TPERM — one instruction that
+// inspects any field of a Golden Token:
+//   TPERM CR5, R      — check R permission (trap if absent)
+//   TPERM CR5, W      — check W permission (trap if absent)
+//   TPERM CR5, LIMIT  — extract the limit field into a DR
+//
+// The hardware already has the CR decoded when TPERM
+// runs — reading the limit is just selecting a
+// different field from the same register. One
+// instruction, no new opcodes, minimal silicon.
 //
 // Key differences from JavaScript:
 //   - No garbage collection needed. The GT's lifetime
 //     IS the heap's lifetime. Revoke the GT, the
 //     memory is gone. No dangling pointers.
-//   - No buffer overflows. GLIMIT gives exact bounds.
+//   - No buffer overflows. TPERM LIMIT gives exact
+//     bounds checked before every access.
 //   - No shared mutable state. Each thread's CR5
 //     points to its own private region.
 //   - Access is unforgeable. You can't manufacture
@@ -8290,7 +8297,7 @@ abstraction Heap {
         TPERM CR5, R
         TPERM CR5, W
         offset = read(CR5, 0)
-        limit = GLIMIT(CR5)
+        limit = TPERM(CR5, LIMIT)
         if (offset + count > limit) {
             return(0)
         }
@@ -8301,7 +8308,7 @@ abstraction Heap {
     // Read: return the value at heap[index].
     method Read(index) {
         TPERM CR5, R
-        limit = GLIMIT(CR5)
+        limit = TPERM(CR5, LIMIT)
         if (index >= limit) {
             return(0)
         }
@@ -8312,7 +8319,7 @@ abstraction Heap {
     // Write: store a value at heap[index].
     method Write(index, value) {
         TPERM CR5, W
-        limit = GLIMIT(CR5)
+        limit = TPERM(CR5, LIMIT)
         if (index >= limit) {
             return(0)
         }
