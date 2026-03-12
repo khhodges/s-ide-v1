@@ -2949,7 +2949,12 @@ function faultModalDismiss() {
 
 function faultModalReboot() {
     faultModalDismiss();
-    faultClear();
+    sim.reset();
+    pipelineViz.reset();
+    bootAnimating = false;
+    const con = document.getElementById('editorConsole');
+    if (con) con.textContent = '';
+    slowBoot();
 }
 
 function faultModalInvestigate() {
@@ -2961,12 +2966,10 @@ function faultModalInvestigate() {
 function resetSim() {
     sim.reset();
     pipelineViz.reset();
-    while (!sim.bootComplete) {
-        sim._bootStep();
-    }
+    bootAnimating = false;
     const con = document.getElementById('editorConsole');
-    if (con) con.textContent = 'Machine reset and booted.\n';
-    updateDashboard();
+    if (con) con.textContent = '';
+    slowBoot();
 }
 
 function runGC() {
