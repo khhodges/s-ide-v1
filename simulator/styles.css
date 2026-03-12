@@ -493,7 +493,8 @@ header h1 {
 [data-tooltip].tooltip-below::after,
 .fixed-toolbar [data-tooltip]::after,
 .example-tabs-row [data-tooltip]::after,
-.editor-toolbar [data-tooltip]::after {
+.editor-toolbar [data-tooltip]::after,
+.builder-toolbar [data-tooltip]::after {
     bottom: auto;
     top: calc(100% + 8px);
 }
@@ -6816,4 +6817,66 @@ pre:hover .code-copy-btn {
 
 .builder-abs-deps-details[open] > summary {
     margin-bottom: 3px;
+}
+
+.builder-help-btn {
+    background: var(--bg-input) !important;
+    color: var(--church-gold) !important;
+    border: 1px solid var(--church-gold) !important;
+    font-weight: 700 !important;
+    font-size: 0.8rem !important;
+    min-width: 26px;
+    padding: 2px 6px !important;
+    border-radius: 50% !important;
+    line-height: 1;
+}
+
+.builder-help-btn:hover {
+    background: rgba(251, 191, 36, 0.15) !important;
+}
+
+.builder-hint-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    background: rgba(58, 134, 255, 0.08);
+    border: 1px solid rgba(58, 134, 255, 0.25);
+    border-radius: 5px;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+    margin: 0.35rem 0;
+}
+
+.builder-hint-banner span {
+    flex: 1;
+}
+
+.builder-hint-banner code {
+    background: #1a1a2e;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    color: var(--church-gold);
+    font-size: 0.74rem;
+}
+
+.builder-hint-schema {
+    background: rgba(251, 191, 36, 0.06);
+    border-color: rgba(251, 191, 36, 0.2);
+}
+
+.builder-hint-dismiss {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.builder-hint-dismiss:hover {
+    color: var(--text-primary);
 }

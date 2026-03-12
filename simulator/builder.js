@@ -14,6 +14,7 @@ class NamespaceBuilder {
         this._boundDocMouseUp = this._onDocMouseUp.bind(this);
         this._boundDocMouseMove = this._onDocMouseMove.bind(this);
         this._docListenersAttached = false;
+        this._hintDismissed = { canvas: false, computer: false, namespace: false };
         this._loadState();
     }
 
@@ -427,6 +428,12 @@ class NamespaceBuilder {
         var comp = this.selectedComputer;
         if (!comp) return '<div class="builder-panel-empty">Select a computer on the canvas to see its namespaces</div>';
         var html = '';
+        if (!this._hintDismissed.computer) {
+            html += '<div class="builder-hint-banner" id="builderHintComputer">';
+            html += '<span>Add up to 8 namespaces. Click a namespace to add abstractions.</span>';
+            html += '<button class="builder-hint-dismiss" onclick="builder._hintDismissed.computer=true;this.parentElement.remove()">\u00d7</button>';
+            html += '</div>';
+        }
         if (this.error) {
             html += '<div class="builder-error">' + this._esc(this.error) + '</div>';
         }
@@ -482,6 +489,14 @@ class NamespaceBuilder {
         html += '<input class="builder-label-input" value="' + this._esc(ns.label) + '" onchange="builder.renameNamespace(' + comp.id + ', ' + ns.id + ', this.value)" />';
         html += '<button class="btn btn-sm builder-back-btn" onclick="builder.selectedNamespace = null; builder.render()">\u2190 Back</button>';
         html += '</div>';
+
+        if (!this._hintDismissed.namespace) {
+            html += '<div class="builder-hint-banner builder-hint-schema" id="builderHintNamespace">';
+            html += '<span>Drop a <strong>upload.json</strong> file below. Required fields: ';
+            html += '<code>abstraction</code> (string), <code>methods</code> (array), <code>capabilities</code> (array), <code>grants</code> (array).</span>';
+            html += '<button class="builder-hint-dismiss" onclick="builder._hintDismissed.namespace=true;this.parentElement.remove()">\u00d7</button>';
+            html += '</div>';
+        }
 
         html += '<div class="builder-drop-zone" id="builderDropZone">';
         html += '<div class="builder-drop-icon">\u2b07</div>';
@@ -676,21 +691,32 @@ class NamespaceBuilder {
         var container = document.getElementById('builderView');
         if (!container) return;
 
+        if (document.activeElement && container.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+
         var html = '<div class="builder-layout">';
 
         html += '<div class="builder-canvas-area">';
         html += '<div class="builder-toolbar">';
         html += '<span class="builder-title">Universal Cyberspace</span>';
         html += '<div class="builder-toolbar-actions">';
-        html += '<div class="builder-palette-card" draggable="true" id="paletteComputer" title="Drag onto canvas to add a computer">\u2395 Computer</div>';
-        html += '<div class="builder-palette-card" draggable="true" id="paletteNamespace" title="Drag onto computer panel to add a namespace">\u2630 Namespace</div>';
-        html += '<button class="btn btn-sm builder-export-btn" onclick="builder.exportTopology()">Save Topology</button>';
-        html += '<button class="btn btn-sm builder-clear-btn" onclick="if(confirm(\'Clear all?\')) builder.clearAll()">Clear All</button>';
+        html += '<div class="builder-palette-card" draggable="true" id="paletteComputer" data-tooltip="Computer — Drag onto canvas to add a computer node">\u2395 Computer</div>';
+        html += '<div class="builder-palette-card" draggable="true" id="paletteNamespace" data-tooltip="Namespace — Drag onto computer panel to add a namespace">\u2630 Namespace</div>';
+        html += '<button class="btn btn-sm builder-export-btn" onclick="builder.exportTopology()" data-tooltip="Save Topology — Export the full topology as a JSON file">Save Topology</button>';
+        html += '<button class="btn btn-sm builder-clear-btn" onclick="if(confirm(\'Clear all?\')) builder.clearAll()" data-tooltip="Clear All — Remove all computers, namespaces, and abstractions">Clear All</button>';
+        html += '<button class="btn btn-sm builder-help-btn" onclick="showBuilderHelpPopup(true)" data-tooltip="Help — Show the Builder quick-start guide">?</button>';
         html += '</div>';
         html += '</div>';
         html += '<div class="builder-canvas" id="builderCanvas">';
         html += this._renderSvgCanvas();
         html += '</div>';
+        if (!this._hintDismissed.canvas && !this.selectedComputer) {
+            html += '<div class="builder-hint-banner" id="builderHintCanvas">';
+            html += '<span>Click or drag to add a Computer node, then select it to configure namespaces.</span>';
+            html += '<button class="builder-hint-dismiss" onclick="builder._hintDismissed.canvas=true;this.parentElement.remove()">\u00d7</button>';
+            html += '</div>';
+        }
         html += '</div>';
 
         html += '<div class="builder-side-panel">';
@@ -1030,5 +1056,54 @@ class NamespaceBuilder {
 var builder;
 function initBuilder() {
     if (!builder) builder = new NamespaceBuilder();
+    builder._hintDismissed = { canvas: false, computer: false, namespace: false };
     builder.render();
+    showBuilderHelpPopup();
+}
+
+function showBuilderHelpPopup(force) {
+    var modal = document.getElementById('builderHelpModal');
+    if (!modal) return;
+    if (!force && localStorage.getItem('church_builder_help_dismissed')) return;
+    var welcomeModal = document.getElementById('welcomeModal');
+    if (!force && welcomeModal && welcomeModal.style.display !== 'none') return;
+    var body = document.getElementById('builderHelpBody');
+    if (!body) return;
+    body.innerHTML =
+        '<div style="margin-bottom:0.75rem;">' +
+        '<p style="font-size:0.88rem;line-height:1.55;margin-bottom:0.6rem;">' +
+        'The <strong>Namespace Builder</strong> lets you design a deployment topology ' +
+        'by arranging <em>Computers</em>, <em>Namespaces</em>, and <em>Abstractions</em> ' +
+        'on a visual canvas.</p>' +
+        '</div>' +
+
+        '<div style="font-weight:700;color:var(--church-gold);font-size:0.95rem;margin-bottom:0.5rem;">Three levels</div>' +
+
+        '<div class="welcome-step">' +
+        '<span class="welcome-step-num">1</span>' +
+        '<div class="welcome-step-text"><strong>Canvas</strong> \u2014 Click the canvas or drag the <em>\u2395 Computer</em> palette card to place computer nodes. Drag nodes to reposition them.</div>' +
+        '</div>' +
+
+        '<div class="welcome-step">' +
+        '<span class="welcome-step-num">2</span>' +
+        '<div class="welcome-step-text"><strong>Computer</strong> \u2014 Select a computer to see its side panel. Add up to 8 namespaces per computer. Click a namespace to drill in.</div>' +
+        '</div>' +
+
+        '<div class="welcome-step">' +
+        '<span class="welcome-step-num">3</span>' +
+        '<div class="welcome-step-text"><strong>Namespace</strong> \u2014 Drop <code style="background:#1a1a2e;padding:0.15rem 0.4rem;border-radius:3px;color:var(--church-gold);">upload.json</code> files to add abstractions. Each file must have: <code>abstraction</code>, <code>methods</code>, <code>capabilities</code>, and <code>grants</code>.</div>' +
+        '</div>' +
+
+        '<div style="background:rgba(218,165,32,0.06);border:1px solid rgba(218,165,32,0.2);border-radius:8px;padding:0.6rem 1rem;margin-top:0.75rem;font-size:0.82rem;line-height:1.5;">' +
+        '<strong style="color:var(--church-gold);">Tip:</strong> Use <em>Save Topology</em> to export your design as JSON. ' +
+        'Cross-computer dependencies are shown as dashed lines on the canvas.' +
+        '</div>';
+
+    modal.style.display = 'flex';
+}
+
+function closeBuilderHelp() {
+    localStorage.setItem('church_builder_help_dismissed', '1');
+    var modal = document.getElementById('builderHelpModal');
+    if (modal) modal.style.display = 'none';
 }
