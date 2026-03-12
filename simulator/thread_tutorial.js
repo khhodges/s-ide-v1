@@ -161,7 +161,11 @@ ${this._memMap(null)}
 <tr><td>\u2464 Data Registers</td><td>allocSize\u221216</td><td>16 words (fixed)</td><td>Architecture constant (DR0\u2013DR15)</td></tr>
 </table>
 <div class="sr-key-concept"><div class="sr-concept-title">CR8 and CR12 \u2014 Thread Handle and Thread Stack</div>
-<p>Boot step B:02 (INIT_THRD) loads <strong>two</strong> registers from NS Slot 1. <strong>CR8</strong> receives the thread identity GT (zero perms, Inform-type) \u2014 its <code>index</code> field is Slot 1, supplying <code>word0_location</code> (lump base) and <code>word0_limit + 1</code> (allocSize). <strong>CR12</strong> receives the Thread Stack GT (RW perms, base = lump base + 12, limit = allocSize \u2212 12) \u2014 this is the live stack pointer used by CALL and RETURN. CR12 is per-thread and is saved / restored on every CHANGE.</p></div>`
+<p>Boot step B:02 (INIT_THRD) loads <strong>two</strong> registers from NS Slot 1:</p>
+<ul>
+<li><strong>CR8 \u2014 Thread Identity GT</strong> (Inform-type, zero perms). Its <code>index</code> field points to NS Slot 1, giving the kernel <code>word0_location</code> (lump base address) and <code>word0_limit + 1</code> (allocSize). CR8 is the thread\u2019s own handle \u2014 used as the target of CHANGE when another thread activates this one.</li>
+<li><strong>CR12 \u2014 Thread Stack GT</strong> (RW perms, base = lump\u202f+\u202f12, limit = NS slot\u202fclistStart\u202f\u2212\u202f1). This GT authorises CALL and RETURN to read and write the FIFO stack region. It is <em>not</em> a stack pointer \u2014 it defines the <strong>boundary</strong> of the stack memory. The actual position within that region is tracked by the hidden <strong>STO register</strong> (stack-top offset, 0\u20134095 words from word\u202f12). CR12 is per-thread and is saved / restored on every CHANGE alongside STO.</li>
+</ul></div>`
             },
             {
                 title: 'Thread Lifecycle \u2014 mLoad, CHANGE, and Suspension',
