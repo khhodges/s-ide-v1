@@ -20,7 +20,10 @@ class PipelineVisualizer {
     }
 
     _renderNIA() {
-        const niaData = this.niaRows || (this.niaProvider ? this.niaProvider() : null);
+        let niaData = this.niaRows;
+        if (!niaData && this.niaProvider) {
+            try { niaData = this.niaProvider(); } catch(e) { niaData = null; }
+        }
         if (!niaData || !niaData.curr) return '';
         const rows = [
             { key: 'last', label: 'last',               data: niaData.last },

@@ -2820,24 +2820,31 @@ function slowBoot() {
     bootAnimating = true;
     const delay = 800;
     function nextPhase() {
-        if (sim.bootComplete) {
-            bootAnimating = false;
+        try {
+            if (sim.bootComplete) {
+                bootAnimating = false;
+                const con = document.getElementById('editorConsole');
+                if (con) {
+                    con.textContent += '\n--- Boot sequence complete ---';
+                    con.scrollTop = con.scrollHeight;
+                }
+                updateDashboard();
+                return;
+            }
+            sim._bootStep();
             const con = document.getElementById('editorConsole');
             if (con) {
-                con.textContent += '\n--- Boot sequence complete ---';
+                const lastLine = (sim.output || '').split('\n').filter(l => l).pop() || '';
+                con.textContent += `\n[boot ${sim.bootStep}/6] ${lastLine}`;
                 con.scrollTop = con.scrollHeight;
             }
             updateDashboard();
-            return;
+            setTimeout(nextPhase, delay);
+        } catch(e) {
+            bootAnimating = false;
+            console.error('slowBoot nextPhase error:', e);
+            updateDashboard();
         }
-        sim._bootStep();
-        const con = document.getElementById('editorConsole');
-        if (con) {
-            con.textContent += `\n[boot ${sim.bootStep}/6] ${sim.output.split('\n').filter(l => l).pop()}`;
-            con.scrollTop = con.scrollHeight;
-        }
-        updateDashboard();
-        setTimeout(nextPhase, delay);
     }
     nextPhase();
 }
