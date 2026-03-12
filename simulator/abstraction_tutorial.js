@@ -80,15 +80,17 @@ ${this._p2Sizes()}
                 title: '\u2460 Code Region \u2014 CR14 (CLOOMC)',
                 type: 'code',
                 content: `${this._memMap('code')}
-<p>The Code region spans from <strong>word\u202f0</strong> to <strong>clistStart\u202f\u2212\u202f1</strong>. Each word is a 32-bit Church Machine instruction. The CPU fetches and executes them sequentially, starting from PC\u202f=\u202f0 on every CALL entry.</p>
+<p>The Code region starts at <strong>word\u202f0</strong> of the lump. Each word is a 32-bit Church Machine instruction. The CPU fetches and executes them sequentially, starting from PC\u202f=\u202f0 on every CALL entry.</p>
 <table class="sr-table"><tr><th>Register</th><th>Field</th><th>Meaning</th></tr>
-<tr><td rowspan="3">CR14</td><td>base</td><td>Lump base address (= word\u202f0 of the code region)</td></tr>
-<tr><td>limit</td><td>clistStart\u202f\u2212\u202f1 \u2014 last valid instruction offset</td></tr>
-<tr><td>perm</td><td>X (execute) \u2014 used by the CPU for instruction fetch</td></tr>
+<tr><td rowspan="3">CR14</td><td>base</td><td>Lump base address (= word\u202f0 of the lump) \u2014 from NS slot <code>word0_location</code></td></tr>
+<tr><td>limit</td><td>NS slot <code>word1 limit[16:0]</code> = allocSize\u202f\u2212\u202f1 \u2014 <strong>set by the IDE</strong> at upload time</td></tr>
+<tr><td>perm</td><td>X (execute) \u2014 used by the CPU for instruction fetch only</td></tr>
 </table>
-<p>CR14 is called the <strong>CLOOMC</strong> register (CLass\u202fOf\u202fObjects Memory Code). It authorises every instruction fetch \u2014 the CPU checks X permission on CR14 before fetching each word. If the PC exceeds the limit a <code>BOUNDS</code> fault fires.</p>
+<p>CR14 is the <strong>CLOOMC</strong> register (CLass\u202fOf\u202fObjects Memory Code). The CPU checks X\u2011perm on CR14 before every instruction fetch. If the PC advances beyond the limit stored in the NS slot a <code>BOUNDS</code> fault fires. The limit value is determined entirely by the IDE \u2014 it is encoded in NS slot metadata at upload and never recomputed by the hardware at runtime.</p>
+<div class="sr-key-concept"><div class="sr-concept-title">Read-Only Constants Belong to the Heap, Not the Code Region</div>
+<p>The Code region holds <em>instruction words only</em>. If an abstraction needs read-only constant data (lookup tables, string literals, fixed coefficients) the IDE places those values at the <strong>first locations of the heap</strong>. The abstraction accesses them under program control via a heap GT (R-perm), not via CR14. This keeps the code region pure executable and makes the boundary between instructions and data explicit at the NS slot level.</p></div>
 <div class="sr-key-concept"><div class="sr-concept-title">CR14 is Per-Thread, Not Per-Abstraction</div>
-<p>CR14 lives in the <em>thread\u2019s</em> privileged register zone (CR12\u2013CR15) and is re-derived on every CALL from the callee\u2019s E-GT. It is saved and restored across context switches (CHANGE) as part of per-thread state. The abstraction\u2019s lump itself never changes \u2014 only the thread\u2019s CR14 points into it.</p></div>`
+<p>CR14 lives in the <em>thread\u2019s</em> privileged register zone (CR12\u2013CR15) and is re-derived on every CALL from the callee\u2019s NS slot metadata. It is saved and restored across context switches (CHANGE) as part of per-thread state. The abstraction\u2019s lump is never modified during execution \u2014 any number of threads can share the same abstraction safely.</p></div>`
             },
             {
                 title: '\u2461 C-List \u2014 CR6 (Capability List)',
@@ -121,7 +123,7 @@ ${this._p2Sizes()}
 <p>On CALL the hardware performs these steps from the E-GT:</p>
 <ol>
 <li><strong>Validate</strong> \u2014 check E\u202f=\u202f1, check seal (FNV hash matches NS entry)</li>
-<li><strong>Derive CR14</strong> \u2014 base\u202f=\u202fcallee lump base, limit\u202f=\u202fclistStart\u202f\u2212\u202f1, X perm</li>
+<li><strong>Derive CR14</strong> \u2014 base\u202f=\u202fcallee lump base (NS slot <code>word0_location</code>), limit\u202f=\u202fNS slot <code>word1 limit[16:0]</code> (= allocSize\u202f\u2212\u202f1, set by IDE), X perm</li>
 <li><strong>Derive CR6</strong> \u2014 base\u202f=\u202fcallee lump base\u202f+\u202fclistStart, limit\u202f=\u202fclistCount\u202f\u2212\u202f1, L perm</li>
 <li><strong>Set PC\u202f=\u202f0</strong> \u2014 always enters at the first instruction word</li>
 </ol>
@@ -187,7 +189,7 @@ ${this._p2Sizes()}
 <div class="sr-security-list">
 <div class="sr-sec-item"><span class="sr-sec-num">1</span><strong>Upload.</strong> The IDE writes the abstraction\u2019s lump into namespace memory and creates an NS entry: <code>word0_location</code> = lump base, <code>word1</code> = packed limit and clistCount, <code>word2</code> = FNV seal. The C-List GT words are placed at lump[clistStart\u202f\u2192\u202fallocSize\u22121].</div>
 <div class="sr-sec-item"><span class="sr-sec-num">2</span><strong>Boot B:03 \u2014 INIT_ABSTR.</strong> The hardware loads the Boot.Abstr NS slot (Slot\u202f2) into a temporary E-perm GT for CR6 to confirm the boot abstraction\u2019s identity.</div>
-<div class="sr-sec-item"><span class="sr-sec-num">3</span><strong>Boot B:04 \u2014 LOAD_NUC.</strong> From the NS Slot\u202f2 metadata the hardware derives and writes <strong>CR14</strong> (code GT: base = lump base, limit = clistStart\u22121, X perm) and <strong>CR6</strong> (c-list GT: base = lump base\u202f+\u202fclistStart, limit = clistCount\u22121, L perm). PC is set to 0. Boot code begins executing.</div>
+<div class="sr-sec-item"><span class="sr-sec-num">3</span><strong>Boot B:04 \u2014 LOAD_NUC.</strong> From the NS Slot\u202f2 metadata the hardware derives and writes <strong>CR14</strong> (code GT: base = NS <code>word0_location</code>, limit = NS <code>word1 limit[16:0]</code> = allocSize\u22121, X perm) and <strong>CR6</strong> (c-list GT: base = lump base\u202f+\u202fclistStart, limit = clistCount\u22121, L perm). PC is set to 0. Boot code begins executing.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">4</span><strong>CALL \u2014 Entering any abstraction.</strong> The calling thread presents an E-GT. The hardware validates it, pushes a 2-word frame [E-GT\u202f|\u202fframe\u202fword] onto the thread\u2019s FIFO stack (STO\u202f+=\u202f2), re-derives CR6 and CR14 from the callee\u2019s NS slot, and sets PC\u202f=\u202f0. CR0 (return) and CR1 (first argument) are set by the caller beforehand.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">5</span><strong>Execution.</strong> Instructions run sequentially from PC\u202f=\u202f0. The abstraction accesses capabilities via LOAD/SAVE/ELOAD through CR6. All memory access outside the lump requires a valid GT in a CR. DR0\u2013DR15 and the thread stack are part of the <em>calling thread\u2019s</em> lump, not the abstraction.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">6</span><strong>RETURN.</strong> The RETURN instruction pops the frame (SZ=1: 2 words), re-derives the caller\u2019s CR6 and CR14 from the saved E-GT, restores PC, FLAGS, STO, and applies the MASK to clear any CRs the callee declares as output-only. Control returns to the instruction after the original CALL.</div>
