@@ -31,7 +31,7 @@ class PipelineVisualizer {
         for (const row of rows) {
             const d = row.data;
             const rowClass = `nia-row-${row.key}`;
-            const addrStr  = d ? ('0x' + d.addr.toString(16).toUpperCase().padStart(4, '0')) : '\u2014';
+            const addrStr  = d ? (d.addrStr || ('0x' + d.addr.toString(16).toUpperCase().padStart(4, '0'))) : '\u2014';
             const disasm   = d ? (d.disasm || '\u2014') : '\u2014';
             const loc      = d ? (d.label ? (d.label + (d.offset > 0 ? `+${d.offset}` : '')) : (d.prog || '')) : '\u2014';
             html += `<tr class="${rowClass}">`;
@@ -306,6 +306,7 @@ class PipelineVisualizer {
         this.stageData = [];
         this.chainSteps = [];
         this.animating = false;
+        this.niaRows = null;
         this.render();
     }
 

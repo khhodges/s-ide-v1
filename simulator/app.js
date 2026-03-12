@@ -17,7 +17,10 @@ function init() {
     sim = new ChurchSimulator();
     assembler = new ChurchAssembler();
     pipelineViz = new PipelineVisualizer('pipelineContainer');
-    pipelineViz.setNIAProvider(() => _buildNIARows(sim.pc > 0 ? sim.pc - 1 : null, sim.pc));
+    pipelineViz.setNIAProvider(() => {
+        if (!sim.bootComplete) return _bootNIARows(sim.bootStep);
+        return _buildNIARows(sim.pc > 0 ? sim.pc - 1 : null, sim.pc);
+    });
     pipelineViz.render();
     repl = new ChurchREPL(sim, pipelineViz);
     churchTutorial = new BernoulliTutorial(repl, pipelineViz);
@@ -2682,6 +2685,26 @@ function _buildNIARows(prevAddr, currAddr) {
         last: _niaMeta(prevAddr),
         curr: _niaMeta(currAddr),
         next: _niaMeta(currAddr !== null && currAddr !== undefined ? currAddr + 1 : null)
+    };
+}
+
+const _BOOT_STEPS = [
+    { addrStr: 'B:00', disasm: 'FAULT_RST',  label: 'Clear all CRs / DRs',    offset: null, prog: 'boot' },
+    { addrStr: 'B:01', disasm: 'LOAD_NS',    label: 'CR15 \u2190 NS[0] root',  offset: null, prog: 'boot' },
+    { addrStr: 'B:02', disasm: 'INIT_THRD',  label: 'CR8 \u2190 NS[1] Thread', offset: null, prog: 'boot' },
+    { addrStr: 'B:03', disasm: 'INIT_ABSTR', label: 'CR6 \u2190 NS[2] Abstr',  offset: null, prog: 'boot' },
+    { addrStr: 'B:04', disasm: 'LOAD_NUC',   label: 'CR7/CR14 \u2190 code',    offset: null, prog: 'boot' },
+    { addrStr: 'B:05', disasm: 'COMPLETE',   label: 'Boot done',               offset: null, prog: 'boot' },
+];
+
+function _bootNIARows(bootStep) {
+    const prevIdx = bootStep - 1;
+    const currIdx = bootStep;
+    const nextIdx = bootStep + 1;
+    return {
+        last: prevIdx >= 0 ? _BOOT_STEPS[prevIdx] : null,
+        curr: _BOOT_STEPS[currIdx] || null,
+        next: nextIdx < _BOOT_STEPS.length ? _BOOT_STEPS[nextIdx] : null,
     };
 }
 
