@@ -7,29 +7,37 @@ class PipelineVisualizer {
         this.animating = false;
         this.stageData = [];
         this.chainSteps = [];
-        this.niaPrev = null;
-        this.niaCurr = null;
+        this.niaRows = null;
         this._setMode('full');
     }
 
-    setNIA(prev, curr) {
-        this.niaPrev = (prev !== undefined && prev !== null) ? prev : null;
-        this.niaCurr = (curr !== undefined && curr !== null) ? curr : null;
+    setNIA(rows) {
+        this.niaRows = (rows && rows.curr) ? rows : null;
     }
 
     _renderNIA() {
-        if (this.niaCurr === null) return '';
-        const fmt = n => '0x' + n.toString(16).toUpperCase().padStart(4, '0');
-        const prev  = this.niaPrev !== null ? fmt(this.niaPrev) : '—';
-        const curr  = fmt(this.niaCurr);
-        const next  = fmt(this.niaCurr + 1);
-        return `<div class="nia-strip">` +
-               `<span class="nia-cell nia-prev"><span class="nia-arrow">\u2190</span> NIA\u22121&nbsp;<code>${prev}</code></span>` +
-               `<span class="nia-sep">|</span>` +
-               `<span class="nia-cell nia-curr">\u25B6 NIA&nbsp;<code>${curr}</code></span>` +
-               `<span class="nia-sep">|</span>` +
-               `<span class="nia-cell nia-next">NIA\u002B1&nbsp;<code>${next}</code> <span class="nia-arrow">\u2192</span></span>` +
-               `</div>`;
+        if (!this.niaRows) return '';
+        const rows = [
+            { key: 'last', label: 'last',    data: this.niaRows.last, dim: true  },
+            { key: 'curr', label: '\u25b6\u202fthis', data: this.niaRows.curr, dim: false },
+            { key: 'next', label: 'next',    data: this.niaRows.next, dim: true  }
+        ];
+        let html = '<table class="nia-table">';
+        for (const row of rows) {
+            const d = row.data;
+            const rowClass = `nia-row-${row.key}`;
+            const addrStr  = d ? ('0x' + d.addr.toString(16).toUpperCase().padStart(4, '0')) : '\u2014';
+            const disasm   = d ? (d.disasm || '\u2014') : '\u2014';
+            const loc      = d ? (d.label ? (d.label + (d.offset > 0 ? `+${d.offset}` : '')) : (d.prog || '')) : '\u2014';
+            html += `<tr class="${rowClass}">`;
+            html += `<td class="nia-lbl">${row.label}</td>`;
+            html += `<td class="nia-addr"><code>${addrStr}</code></td>`;
+            html += `<td class="nia-disasm"><code>${disasm}</code></td>`;
+            html += `<td class="nia-loc">${loc ? `<span class="nia-loc-text">${loc}</span>` : ''}</td>`;
+            html += `</tr>`;
+        }
+        html += '</table>';
+        return html;
     }
 
     _setMode(mode) {

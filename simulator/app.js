@@ -2616,6 +2616,14 @@ function assembleAndLoad() {
     sim.loadProgram(result.words, 0);
     lastAssembledWords = result.words.slice();
 
+    const abstrBase2 = sim.NS_TABLE_BASE + 2 * sim.NS_ENTRY_WORDS;
+    const progBase = sim.bootComplete ? (sim.memory[abstrBase2] || (2 * sim.SLOT_SIZE)) : 0;
+    sim.programBaseAddr = progBase;
+    sim.programLabels = result.labels || {};
+    const entryLabel = Object.keys(result.labels || {}).find(k => (result.labels[k] === 0)) || null;
+    sim.programName = entryLabel || (Object.keys(result.labels || {})[0]) || 'prog';
+    if (pipelineViz) pipelineViz.setNIA(null);
+
     let listing = `Assembled ${result.words.length} instructions:\n`;
     for (let i = 0; i < result.words.length; i++) {
         listing += `  ${i.toString().padStart(4)}: 0x${result.words[i].toString(16).padStart(8, '0')}  ${assembler.disassemble(result.words[i])}\n`;
@@ -2627,6 +2635,35 @@ function assembleAndLoad() {
     if (saveBtn) saveBtn.disabled = false;
 
     updateDashboard();
+}
+
+function _niaMeta(addr) {
+    if (addr === null || addr === undefined || addr < 0) return null;
+    const word = (sim.memory && addr < sim.memory.length) ? sim.memory[addr] : 0;
+    const dis = (typeof assembler !== 'undefined' && assembler) ? assembler.disassemble(word) : '';
+    const base   = sim.programBaseAddr || 0;
+    const labels = sim.programLabels  || {};
+    const rel    = addr - base;
+    let bestName = null, bestDist = Infinity;
+    for (const [name, labelRel] of Object.entries(labels)) {
+        const dist = rel - labelRel;
+        if (dist >= 0 && dist < bestDist) { bestDist = dist; bestName = name; }
+    }
+    return {
+        addr,
+        disasm: dis || (word === 0 ? 'HALT' : `0x${word.toString(16).padStart(8,'0')}`),
+        label:  bestName,
+        offset: bestName ? bestDist : null,
+        prog:   sim.programName || ''
+    };
+}
+
+function _buildNIARows(prevAddr, currAddr) {
+    return {
+        last: _niaMeta(prevAddr),
+        curr: _niaMeta(currAddr),
+        next: _niaMeta(currAddr !== null && currAddr !== undefined ? currAddr + 1 : null)
+    };
 }
 
 function stepSim() {
@@ -2655,7 +2692,7 @@ function stepSim() {
             con.scrollTop = con.scrollHeight;
         }
         if (pipelineViz) {
-            pipelineViz.setNIA(result.pc, sim.pc);
+            pipelineViz.setNIA(_buildNIARows(result.pc, sim.pc));
             if (pipelineViz.mode === 'audit' && result.auditPipeline) {
                 pipelineViz.showFullPipeline(result.auditPipeline);
             } else if (result.pipeline) {
@@ -2714,7 +2751,7 @@ function walkNext() {
         con.scrollTop = con.scrollHeight;
     }
     if (result.pipeline && pipelineViz) {
-        pipelineViz.setNIA(result.pc, sim.pc);
+        pipelineViz.setNIA(_buildNIARows(result.pc, sim.pc));
         pipelineViz.animate(result.pipeline, 500).then(() => {
             updateDashboard();
             if (walkRunning && sim.bootComplete) {
