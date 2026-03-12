@@ -73,7 +73,7 @@ ${this._memMap(null)}
 <tr><td>11</td><td>CR11</td><td>Programmer-defined</td><td>Programmer</td></tr>
 </table>
 <div class="sr-key-concept"><div class="sr-concept-title">mLoad Keeps the GT Zone in Sync</div>
-<p>Every time mLoad executes it <strong>writes the loaded GT back into the corresponding GT-zone word</strong> (word N for CR_N). This guarantees the lump\u2019s GT zone always mirrors the live CR registers. When CHANGE suspends the thread, the hardware simply reads the GT zone directly \u2014 no separate save step needed for CR0\u2013CR11.</p></div>`
+<p>Every time mLoad executes it <strong>writes the loaded GT back into the corresponding GT-zone word</strong> (word N for CR_N). This guarantees the lump\u2019s GT zone always mirrors the live CR registers. When CHANGE suspends DR0\u2013DR15 are saved into the thread image with NIA &amp; Flags before mLoad a new CR8 the Thread, the hardware simply reads the GT zone directly \u2014 no separate save step needed for CR0\u2013CR11.</p></div>`
             },
             {
                 title: '\u2461 FIFO Stack \u2014 Grows Downward',
