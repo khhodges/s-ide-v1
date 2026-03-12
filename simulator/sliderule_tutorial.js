@@ -19,8 +19,8 @@ class SlideRuleTutorial {
                 type: "overview",
                 content: `<div class="sr-objectives">
 <div class="sr-obj-item"><span class="sr-obj-num">1</span>The 20-instruction Church Machine architecture</div>
-<div class="sr-obj-item"><span class="sr-obj-num">2</span>How the CLOOMC++ compiler targets it from JavaScript and Haskell</div>
-<div class="sr-obj-item"><span class="sr-obj-num">3</span>A side-by-side comparison of the SlideRule abstraction in both languages</div>
+<div class="sr-obj-item"><span class="sr-obj-num">2</span>How the CLOOMC++ compiler targets it from six front-ends: English, Symbolic Math, JavaScript, Haskell, Lambda Calculus, and Assembly</div>
+<div class="sr-obj-item"><span class="sr-obj-num">3</span>A side-by-side comparison of the SlideRule abstraction in four of the six front-ends (English, JavaScript, Haskell, and Machine code)</div>
 <div class="sr-obj-item"><span class="sr-obj-num">4</span>Performance analysis on the Tang Nano 20K FPGA (27 MHz)</div>
 <div class="sr-obj-item"><span class="sr-obj-num">5</span>Why the CLOOMC++ compiler can produce incorrect programs but never insecure ones</div>
 <div class="sr-obj-item"><span class="sr-obj-num">6</span>How to write and compile your own abstraction</div>
@@ -139,6 +139,8 @@ class SlideRuleTutorial {
 <div class="sr-comp-input" data-tooltip="English: Add(a, b) &mdash; add two numbers&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">English</div>
 <div class="sr-comp-input" data-tooltip="JavaScript: result = a + b; return(result)&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">JavaScript</div>
 <div class="sr-comp-input" data-tooltip="Haskell: method Add(a, b) = a + b&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">Haskell</div>
+<div class="sr-comp-input" data-tooltip="Symbolic Math (Ada): let result = a + b in result&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">Symbolic Math</div>
+<div class="sr-comp-input" data-tooltip="Lambda Calculus: &lambda;a b &rarr; a + b&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">Lambda Calculus</div>
 <div class="sr-comp-input" data-tooltip="Machine code: 0x7F600000, 0x1F800000&#10;&#10;Direct 32-bit words:&#10;0x7F600000 = IADD DR0, DR0, DR1&#10;0x1F800000 = RETURN&#10;No compilation needed &mdash; injected verbatim">Machine code</div>
 </div>
 <div class="sr-comp-arrow">&darr;</div>
@@ -373,7 +375,7 @@ class SlideRuleTutorial {
                 type: "comparison",
                 content: `<div class="sr-comp-layout">
 <div class="sr-compiler-diagram" style="flex:3;min-width:0">
-<p><strong>All four languages &mdash; same Add method:</strong></p>
+<p><strong>Four SlideRule implementations (six languages total) &mdash; same Add method:</strong></p>
 <table class="sr-table sr-table-wide"><tr><th>Language</th><th>Instructions</th><th>Floating Point</th><th>Approach</th></tr>
 <tr><td>English</td><td>3</td><td>&check;</td><td>Delegates to slide rule abstraction</td></tr>
 <tr><td>JavaScript</td><td>5</td><td>&cross;</td><td>Explicit integer IADD</td></tr>
@@ -397,6 +399,7 @@ class SlideRuleTutorial {
 <div class="sr-total-item"><strong>JavaScript:</strong> 8 methods, 153 instructions, 612 bytes</div>
 <div class="sr-total-item"><strong>Haskell:</strong> 11 methods, 151 instructions, 604 bytes</div>
 <div class="sr-total-item"><strong>Machine code:</strong> 3 methods, 19 instructions, 76 bytes (hand-optimised)</div>
+<div class="sr-total-item" style="margin-top:0.5rem;opacity:0.7;font-size:0.85rem"><em>Symbolic Math (Ada) and Lambda Calculus are also supported CLOOMC++ front-ends &mdash; SlideRule implementations are not included in this comparison.</em></div>
 </div>
 </div>
 <div class="sr-comp-side sr-comp-side-right">
