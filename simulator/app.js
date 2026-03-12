@@ -183,7 +183,46 @@ function updateDashboard() {
     updateDRDisplay();
     updateFlagsDisplay();
     updateInfoDisplay();
+    updateGateLog();
     if (selectedCR !== null) updateCRDetail();
+}
+
+function updateGateLog() {
+    const container = document.getElementById('gateLogContent');
+    if (!container) return;
+    const log = sim.auditLog || [];
+    if (log.length === 0) {
+        container.innerHTML = `<div class="gate-log-empty">
+            <p>No gates recorded yet.</p>
+            <ol class="audit-guide-steps">
+                <li>Click <b>Boot</b> (top-right)</li>
+                <li>Switch to the <b>Gate Log</b> tab (you are here)</li>
+                <li>Click <b>Step</b> (top-right) — each click shows the mLoad / mSave gates for that instruction</li>
+            </ol>
+        </div>`;
+        return;
+    }
+    let html = '';
+    for (const a of log) {
+        const pass = a.result === 'pass';
+        const isMSave = a.gate === 'mSave';
+        html += `<div class="audit-gate ${pass ? 'gate-pass' : 'gate-fail'}">`;
+        html += `<div class="gate-header">`;
+        html += `<span class="gate-type-badge ${isMSave ? 'gate-msave' : 'gate-mload'}">${a.gate}</span>`;
+        html += `<span class="gate-label">NS[${a.nsIndex}] &ldquo;${a.label}&rdquo;</span>`;
+        if (a.requiredPerm) html += `<span class="gate-perm-req">requires&nbsp;<b>${a.requiredPerm}</b></span>`;
+        html += `<span class="gate-result ${pass ? 'result-pass' : 'result-fail'}">${pass ? '\u2713 PASS' : '\u2717 FAULT'}</span>`;
+        html += `</div>`;
+        html += `<div class="gate-checks">`;
+        for (const [k, v] of Object.entries(a.checks)) {
+            const label = k === 'perm' && v.perm ? `PERM&nbsp;(${v.perm})` : k.toUpperCase();
+            html += `<span class="gate-check ${v.pass ? 'check-pass' : 'check-fail'}">${v.pass ? '\u2713' : '\u2717'}&nbsp;${label}</span>`;
+        }
+        html += `<span class="gate-flag">B=${a.b}</span><span class="gate-flag">F=${a.f}</span>`;
+        html += `</div>`;
+        html += `</div>`;
+    }
+    container.innerHTML = html;
 }
 
 function updateCRDisplay() {
@@ -2592,11 +2631,18 @@ function assembleAndLoad() {
 
 function stepSim() {
     if (!sim.bootComplete) {
+        sim.auditLog = [];
         sim._bootStep();
         const con = document.getElementById('editorConsole');
         if (con) {
             con.textContent += `\n[boot ${sim.bootStep}/6] ${sim.output.split('\n').filter(l => l).pop()}`;
             con.scrollTop = con.scrollHeight;
+        }
+        if (pipelineViz && pipelineViz.mode === 'audit') {
+            pipelineViz.showFullPipeline(sim.auditLog.map(a => {
+                const checks = Object.entries(a.checks).map(([k, v]) => ({ name: k.toUpperCase(), pass: v.pass, perm: v.perm || null }));
+                return { stage: a.gate, type: a.gate, desc: `${a.gate}(NS[${a.nsIndex}]="${a.label}"${a.requiredPerm ? ', '+a.requiredPerm : ''})`, label: a.label, nsIndex: a.nsIndex, requiredPerm: a.requiredPerm, checks, status: a.result, b: a.b, f: a.f };
+            }));
         }
         updateDashboard();
         return;
@@ -2608,8 +2654,12 @@ function stepSim() {
             con.textContent += `\n[${sim.stepCount}] ${result.desc || 'executed'}`;
             con.scrollTop = con.scrollHeight;
         }
-        if (result.pipeline && pipelineViz) {
-            pipelineViz.showFullPipeline(result.pipeline);
+        if (pipelineViz) {
+            if (pipelineViz.mode === 'audit' && result.auditPipeline) {
+                pipelineViz.showFullPipeline(result.auditPipeline);
+            } else if (result.pipeline) {
+                pipelineViz.showFullPipeline(result.pipeline);
+            }
         }
     }
     updateDashboard();

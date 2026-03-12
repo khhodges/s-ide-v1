@@ -918,6 +918,7 @@ class ChurchSimulator {
 
         if (result) {
             this.dr[0] = 0;
+            result.auditPipeline = this._auditPipeline();
             this.emit('step', result);
             this.emit('stateChange', this.getState());
         }
@@ -1701,41 +1702,40 @@ class ChurchSimulator {
     }
 
     _eloadcallPipeline(d, label) {
-        const auditSteps = this._auditPipeline();
         return [
-            ...auditSteps,
+            { stage: 'LOAD', desc: `Namespace lookup via CR${d.crSrc}, index ${d.imm}`, perm: 'L', status: 'pass' },
+            { stage: 'TPERM', desc: `Verify E permission on ${label}`, perm: 'E', status: 'pass' },
             { stage: 'CALL', desc: `Enter ${label}, save context`, status: 'pass' },
         ];
     }
 
     _xloadlambdaPipeline(d, label) {
-        const auditSteps = this._auditPipeline();
         return [
-            ...auditSteps,
+            { stage: 'LOAD', desc: `C-List slot lookup [CR${d.crSrc} + ${d.imm}]`, perm: 'L', status: 'pass' },
+            { stage: 'TPERM', desc: `Verify X permission on ${label}`, perm: 'X', status: 'pass' },
             { stage: 'LAMBDA', desc: `Church reduction via ${label}`, status: 'pass' },
         ];
     }
 
     _loadPipeline(d, label) {
-        const auditSteps = this._auditPipeline();
         return [
-            ...auditSteps,
+            { stage: 'LOAD', desc: `Namespace lookup via CR${d.crSrc}`, perm: 'L', status: 'pass' },
+            { stage: 'TPERM', desc: `Verify L permission on CR${d.crSrc}`, perm: 'L', status: 'pass' },
+            { stage: 'VALIDATE', desc: `FNV seal check on entry ${d.imm}`, status: 'pass' },
             { stage: 'WRITE', desc: `Write ${label} to CR${d.crDst}`, status: 'pass' },
         ];
     }
 
     _callPipeline(d, label) {
-        const auditSteps = this._auditPipeline();
         return [
-            ...auditSteps,
+            { stage: 'LOAD', desc: `Read target GT from CR${d.crDst}`, perm: 'L', status: 'pass' },
+            { stage: 'TPERM', desc: `Verify E permission on target`, perm: 'E', status: 'pass' },
             { stage: 'CALL', desc: `Enter ${label}, save context`, status: 'pass' },
         ];
     }
 
     _returnPipeline(d, frame) {
-        const auditSteps = this._auditPipeline();
         return [
-            ...auditSteps,
             { stage: 'RETURN', desc: `Restore context, PC -> ${frame.returnPC}`, status: 'pass' },
         ];
     }
@@ -1751,9 +1751,9 @@ class ChurchSimulator {
     }
 
     _lambdaPipeline(d, label) {
-        const auditSteps = this._auditPipeline();
         return [
-            ...auditSteps,
+            { stage: 'LOAD', desc: `Read CR${d.crDst} GT`, perm: 'L', status: 'pass' },
+            { stage: 'TPERM', desc: `Verify X permission`, perm: 'X', status: 'pass' },
             { stage: 'LAMBDA', desc: `Church reduction via ${label}`, status: 'pass' },
         ];
     }

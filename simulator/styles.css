@@ -6175,3 +6175,14 @@ pre:hover .code-copy-btn {
 .audit-guide ol.audit-guide-steps li b {
     color: #f0d080;
 }
+
+/* Gate Log empty state */
+.gate-log-empty {
+    padding: 16px;
+    color: #9a9080;
+    font-size: 0.84rem;
+    text-align: center;
+}
+.gate-log-empty p {
+    margin: 0 0 8px 0;
+}
