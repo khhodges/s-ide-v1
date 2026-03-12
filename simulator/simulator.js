@@ -38,6 +38,7 @@ class ChurchSimulator {
 
         this.pc = 0;
         this.flags = { N: false, Z: false, C: false, V: false };
+        this.sto = 0;
         this.running = false;
         this.halted = false;
         this.stepCount = 0;
@@ -74,6 +75,7 @@ class ChurchSimulator {
         }
         this.dr.fill(0);
         this.flags = { N: false, Z: false, C: false, V: false };
+        this.sto = 0;
         this.callStack = [];
         this.lambdaActive = false;
         this.lambdaReturnPC = 0;
@@ -813,6 +815,27 @@ class ChurchSimulator {
         };
     }
 
+    _packFrameWord(returnPC, sz, savedSTO) {
+        const { N, Z, C, V } = this.flags;
+        const flagBits = ((N ? 1 : 0) << 3) | ((Z ? 1 : 0) << 2) | ((C ? 1 : 0) << 1) | (V ? 1 : 0);
+        return (
+            ((flagBits & 0xF) << 28) |
+            ((returnPC & 0x7FFF) << 13) |
+            ((sz & 1) << 12) |
+            (savedSTO & 0xFFF)
+        ) >>> 0;
+    }
+
+    _unpackFrameWord(word) {
+        const flagBits = (word >>> 28) & 0xF;
+        return {
+            flags:    { N: !!(flagBits & 8), Z: !!(flagBits & 4), C: !!(flagBits & 2), V: !!(flagBits & 1) },
+            returnPC: (word >>> 13) & 0x7FFF,
+            sz:       (word >>> 12) & 1,
+            savedSTO: word & 0xFFF,
+        };
+    }
+
     encodeInstruction(opcode, cond, crDst, crSrc, imm) {
         return (
             ((opcode & 0x1F) << 27) |
@@ -1080,12 +1103,18 @@ class ChurchSimulator {
             }
         }
 
+        const savedSTO = this.sto;
+        const frameWord = this._packFrameWord(this.pc + 1, 1, savedSTO);
         this.callStack.push({
-            returnPC: this.pc + 1,
-            savedCRs: this.cr.map(c => ({...c})),
-            savedDRs: [...this.dr],
+            returnPC:   this.pc + 1,
+            savedCRs:   this.cr.map(c => ({...c})),
+            savedDRs:   [...this.dr],
             savedFlags: {...this.flags},
+            savedSTO,
+            sz: 1,
+            frameWord,
         });
+        this.sto = (savedSTO + 2) & 0xFFF;
 
         const clistCount = word1.clistCount;
         const limit = word1.limit;
@@ -1204,6 +1233,7 @@ class ChurchSimulator {
             this._returnToBoot();
             return { pc: this.pc, instr: d, desc: 'PP250: RETURN (empty stack) -> reboot' };
         }
+        const mask = d.imm & 0xFFF;
         const frame = this.callStack.pop();
         if (frame.savedCRs) {
             for (let i = 0; i < frame.savedCRs.length; i++) {
@@ -1212,10 +1242,20 @@ class ChurchSimulator {
         }
         if (frame.savedDRs) this.dr = [...frame.savedDRs];
         if (frame.savedFlags) this.flags = {...frame.savedFlags};
-        const desc = `RETURN CR${d.crDst} -> PC=${frame.returnPC}`;
+        if (typeof frame.savedSTO === 'number') this.sto = frame.savedSTO;
+        const clearedCRs = [];
+        for (let i = 0; i < 12; i++) {
+            if (mask & (1 << i)) {
+                this._clearCR(i);
+                clearedCRs.push(`CR${i}`);
+            }
+        }
+        const frameTag = frame.sz === 0 ? 'LAMBDA' : 'CALL';
+        const maskDesc = mask ? ` MASK=0b${mask.toString(2).padStart(12, '0')} cleared[${clearedCRs.join(',')}]` : '';
+        const desc = `RETURN (${frameTag}/SZ=${frame.sz}) PC→${frame.returnPC}${maskDesc}`;
         this.output += desc + '\n';
         this.pc = frame.returnPC;
-        return { pc: frame.returnPC, instr: d, desc, pipeline: this._returnPipeline(d, frame) };
+        return { pc: frame.returnPC, instr: d, desc, pipeline: this._returnPipeline(d, frame, mask) };
     }
 
     _execChange(d) {
@@ -1323,8 +1363,21 @@ class ChurchSimulator {
             return null;
         }
 
+        const savedSTO = this.sto;
+        const frameWord = this._packFrameWord(this.pc + 1, 0, savedSTO);
+        this.callStack.push({
+            returnPC:   this.pc + 1,
+            savedCRs:   this.cr.map(c => ({...c})),
+            savedFlags: {...this.flags},
+            savedSTO,
+            sz: 0,
+            frameWord,
+            isLambda: true,
+        });
+        this.sto = (savedSTO + 1) & 0xFFF;
+
         const label = this.nsLabels[check.index] || 'reduction';
-        const desc = `LAMBDA CR${crIdx} -> ${label}`;
+        const desc = `LAMBDA CR${crIdx} -> ${label} [SZ=0, STO:${savedSTO}->${this.sto}]`;
         this.output += desc + '\n';
         this.pc++;
         return { pc: this.pc - 1, instr: d, desc, pipeline: this._lambdaPipeline(d, label) };
@@ -1389,12 +1442,18 @@ class ChurchSimulator {
             }
         }
 
+        const savedSTO_ec = this.sto;
+        const frameWord_ec = this._packFrameWord(this.pc + 1, 1, savedSTO_ec);
         this.callStack.push({
-            returnPC: this.pc + 1,
-            savedCRs: this.cr.map(c => ({...c})),
-            savedDRs: [...this.dr],
+            returnPC:   this.pc + 1,
+            savedCRs:   this.cr.map(c => ({...c})),
+            savedDRs:   [...this.dr],
             savedFlags: {...this.flags},
+            savedSTO:   savedSTO_ec,
+            sz: 1,
+            frameWord:  frameWord_ec,
         });
+        this.sto = (savedSTO_ec + 2) & 0xFFF;
 
         for (let i = 0; i < this.cr.length; i++) {
             this.cr[i].word2 = (this.cr[i].word2 & ~(1 << 31)) >>> 0;
@@ -1742,16 +1801,22 @@ class ChurchSimulator {
 
     _callPipeline(d, label) {
         return [
-            { stage: 'LOAD', desc: `Read target GT from CR${d.crDst}`, perm: 'L', status: 'pass' },
+            { stage: 'LOAD',  desc: `Read target GT from CR${d.crDst}`, perm: 'L', status: 'pass' },
             { stage: 'TPERM', desc: `Verify E permission on target`, perm: 'E', status: 'pass' },
-            { stage: 'CALL', desc: `Enter ${label}, save context`, status: 'pass' },
+            { stage: 'PUSH',  desc: `Push E-GT (word 0) + frame word (SZ=1): FLAGS|PC|SZ|STO`, status: 'pass' },
+            { stage: 'CALL',  desc: `Enter ${label}, CR6/CR14 derived, PC←0`, status: 'pass' },
         ];
     }
 
-    _returnPipeline(d, frame) {
-        return [
-            { stage: 'RETURN', desc: `Restore context, PC -> ${frame.returnPC}`, status: 'pass' },
-        ];
+    _returnPipeline(d, frame, mask) {
+        const stages = [];
+        const frameTag = frame.sz === 0 ? 'LAMBDA' : 'CALL';
+        stages.push({ stage: 'POP', desc: `Pop ${frame.sz === 0 ? '1-word LAMBDA' : '2-word CALL'} frame; restore FLAGS, STO←${frame.savedSTO}`, status: 'pass' });
+        if (frame.sz === 1) {
+            stages.push({ stage: 'E-GT', desc: 'Revalidate caller E-GT → re-derive CR6/CR14', perm: 'E', status: 'pass' });
+        }
+        stages.push({ stage: 'RETURN', desc: `PC→${frame.returnPC}${mask ? `, MASK clears ${mask.toString(2).padStart(12,'0')}` : ''}`, status: 'pass' });
+        return stages;
     }
 
     _tpermPipeline(d, parsed, hasAll) {
@@ -1766,8 +1831,9 @@ class ChurchSimulator {
 
     _lambdaPipeline(d, label) {
         return [
-            { stage: 'LOAD', desc: `Read CR${d.crDst} GT`, perm: 'L', status: 'pass' },
-            { stage: 'TPERM', desc: `Verify X permission`, perm: 'X', status: 'pass' },
+            { stage: 'LOAD',   desc: `Read CR${d.crDst} GT`, perm: 'L', status: 'pass' },
+            { stage: 'TPERM',  desc: `Verify X permission`, perm: 'X', status: 'pass' },
+            { stage: 'PUSH',   desc: `Push 1-word frame (SZ=0): FLAGS|PC|SZ|STO`, status: 'pass' },
             { stage: 'LAMBDA', desc: `Church reduction via ${label}`, status: 'pass' },
         ];
     }
@@ -1941,6 +2007,7 @@ class ChurchSimulator {
         this.faultLog = [];
         this.stepCount = 0;
         this.callStack = [];
+        this.sto = 0;
 
         this.emit('programLoaded', { addr: 0, length: hwProgram.length });
         this.emit('stateChange', this.getState());
@@ -2041,6 +2108,7 @@ class ChurchSimulator {
         this.faultLog = [];
         this.stepCount = 0;
         this.callStack = [];
+        this.sto = 0;
 
         this.emit('programLoaded', { addr: 0, length: hwBoot ? hwBoot.length : 0 });
         this.emit('stateChange', this.getState());
@@ -2094,7 +2162,9 @@ class ChurchSimulator {
             dr: [...this.dr],
             pc: this.pc,
             flags: {...this.flags},
+            sto: this.sto,
             callStack: this.callStack.length,
+            callFrames: this.callStack.map(f => ({ sz: f.sz, returnPC: f.returnPC, savedSTO: f.savedSTO, frameWord: f.frameWord })),
             stepCount: this.stepCount,
             halted: this.halted,
             output: this.output,
