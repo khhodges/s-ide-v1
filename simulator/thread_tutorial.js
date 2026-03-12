@@ -152,15 +152,15 @@ ${this._memMap(null)}
 <tr><td>\u2463 Heap</td><td>heap base</td><td>fixed \u2191</td><td>IDE slot metadata (clistCount)</td></tr>
 <tr><td>\u2464 Data Registers</td><td>allocSize\u221216</td><td>16 words (fixed)</td><td>Architecture constant (DR0\u2013DR15)</td></tr>
 </table>
-<div class="sr-key-concept"><div class="sr-concept-title">CR8 \u2014 The Thread Handle</div>
-<p>The boot microcode stores the thread\u2019s Golden Token in <strong>CR8</strong> (INIT_THRD step, boot step B:02). The GT\u2019s <code>index</code> field is NS Slot 1. The NS entry at Slot 1 supplies <code>word0_location</code> (lump base address) and <code>word0_limit + 1</code> (allocSize). All five regions are derived from these two values plus the architecture constants above.</p></div>`
+<div class="sr-key-concept"><div class="sr-concept-title">CR8 and CR12 \u2014 Thread Handle and Thread Stack</div>
+<p>Boot step B:02 (INIT_THRD) loads <strong>two</strong> registers from NS Slot 1. <strong>CR8</strong> receives the thread identity GT (zero perms, Inform-type) \u2014 its <code>index</code> field is Slot 1, supplying <code>word0_location</code> (lump base) and <code>word0_limit + 1</code> (allocSize). <strong>CR12</strong> receives the Thread Stack GT (RW perms, base = lump base + 12, limit = allocSize \u2212 12) \u2014 this is the live stack pointer used by CALL and RETURN. CR12 is per-thread and is saved / restored on every CHANGE.</p></div>`
             },
             {
                 title: 'Thread Lifecycle \u2014 mLoad, CHANGE, and Suspension',
                 type: 'lifecycle',
                 content: `<p>A thread moves through phases from boot to suspension and back:</p>
 <div class="sr-security-list">
-<div class="sr-sec-item"><span class="sr-sec-num">1</span><strong>Boot \u2014 INIT_THRD (B:02).</strong> <code>sim._bootStep()</code> loads NS Slot 1 into CR8. The lump is now the active thread context. The GT zone (words 0\u201311) holds the initial capability set.</div>
+<div class="sr-sec-item"><span class="sr-sec-num">1</span><strong>Boot \u2014 INIT_THRD (B:02).</strong> <code>sim._bootStep()</code> loads NS Slot 1 into <strong>CR8</strong> (thread identity, zero perms) and derives the Thread Stack GT into <strong>CR12</strong> (RW, base = lump+12). The lump is now the active thread context; CR0\u201311 hold the initial capability set.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">2</span><strong>mLoad \u2014 GT zone maintenance.</strong> Every time mLoad loads a GT into CR_N, it <strong>writes the same GT word back to lump word N</strong>. The GT zone is always a live mirror of CR0\u2013CR11. No separate \u201csave\u201d step is needed at context-switch time.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">3</span><strong>CALL.</strong> Entering any abstraction pushes a 2-word frame onto the FIFO stack at word 12+. The CALL instruction checks CR14 bounds, writes <code>[caller E-GT, MASK\u2019d CRs]</code>, and advances the stack pointer by 2.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">4</span><strong>RETURN.</strong> Reads the MASK field (12-bit), restores the selected CRs from the frame, re-derives CR6 and CR14 by re-running the NS split on the caller\u2019s E-GT, then jumps to the return address.</div>

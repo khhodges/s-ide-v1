@@ -441,7 +441,8 @@ function updateCRDetail() {
     const crIdx = selectedCR;
     const cr = sim.getFormattedCR(crIdx);
     const localNames = {
-        6: 'C-List', 7: 'CLOOMC', 8: 'Thread', 9: 'IRQ', 10: 'Fault', 15: 'Namespace'
+        0: 'Return', 1: 'Arg 1', 6: 'C-List',
+        12: 'Stack', 13: 'IRQ', 14: 'CLOOMC', 15: 'Namespace'
     };
     const name = localNames[crIdx] || '';
 
@@ -7439,12 +7440,12 @@ const INSTRUCTION_DATA = [
           + 'flags = thread control flags (imm15).\n\n'
           + 'Atomic context-switch. Per-thread registers saved and restored:\n'
           + '  CR0–CR11  (programmer-accessible capability registers)\n'
+          + '  CR12      (thread stack — privileged, per-thread)\n'
           + '  CR14      (code register — privileged, per-thread)\n'
           + '  CR15      (namespace root — privileged, per-thread)\n'
           + '  DR0–DR15, PC, flags\n\n'
-          + 'System-wide registers unchanged during CHANGE:\n'
-          + '  CR12 (data fault handler) — shared across all threads\n'
-          + '  CR13 (interrupt handler)  — shared across all threads\n\n'
+          + 'System-wide register unchanged during CHANGE:\n'
+          + '  CR13 (interrupt handler) — shared across all threads\n\n'
           + 'One instruction — no intermediate state is visible.\n'
           + 'The suspended thread resumes exactly where it left off.',
         example: 'CHANGE CR8, 0        ; Suspend current thread, activate thread in CR8',
