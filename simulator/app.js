@@ -6616,6 +6616,9 @@ function welcomeSetup() {
 function welcomeSkip() {
     closeWelcome();
     showMathGuidePopup();
+    if (currentView === 'builder' && typeof showBuilderHelpPopup === 'function') {
+        showBuilderHelpPopup();
+    }
 }
 
 const SUBJECTS = [

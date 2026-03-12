@@ -1065,6 +1065,7 @@ function showBuilderHelpPopup(force) {
     var modal = document.getElementById('builderHelpModal');
     if (!modal) return;
     if (!force && localStorage.getItem('church_builder_help_dismissed')) return;
+    if (!force && typeof isWelcomeNeeded === 'function' && isWelcomeNeeded()) return;
     var welcomeModal = document.getElementById('welcomeModal');
     if (!force && welcomeModal && welcomeModal.style.display !== 'none') return;
     var body = document.getElementById('builderHelpBody');
