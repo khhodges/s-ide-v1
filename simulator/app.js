@@ -37,7 +37,7 @@ function init() {
     window.slideRuleTutorial = slideRuleTutorial;
 
     sim.on('stateChange', () => updateDashboard());
-    sim.on('fault', (f) => appendOutput(`FAULT [${f.type}]: ${f.message}`, 'error'));
+    sim.on('fault', (f) => { appendOutput(`FAULT [${f.type}]: ${f.message}`, 'error'); showFaultModal(f); });
     sim.on('halt', () => appendOutput('Machine halted.', 'info'));
 
     loadEditorState();
@@ -2844,6 +2844,95 @@ function faultClear() {
     const con = document.getElementById('editorConsole');
     if (con) con.textContent = 'FAULT: Machine cleared.';
     updateDashboard();
+}
+
+const _FAULT_COLORS = {
+    BOUNDS:       '#e05555', NULL_CAP:    '#e05555', PERM_X:       '#e07030',
+    PERMISSION:   '#e07030', VERSION:     '#c0a030', SEAL:         '#c0a030',
+    BIND:         '#c0a030', FAR:         '#c08030', DOMAIN_PURITY:'#e05555',
+    BOOT:         '#e05555', MATH_ERROR:  '#c0a030', DOMAIN_ERROR: '#c0a030',
+    STACK_OVERFLOW:'#e05555', STACK_UNDERFLOW:'#e05555', TYPE: '#e05555',
+};
+
+function showFaultModal(f) {
+    const existing = document.getElementById('faultModalOverlay');
+    if (existing) existing.remove();
+
+    const pc     = f.pc;
+    const pcHex  = '0x' + pc.toString(16).toUpperCase().padStart(4, '0');
+    const word   = (sim.memory && pc < sim.memory.length) ? sim.memory[pc] : 0;
+    const disasm = assembler ? assembler.disassemble(word) : '???';
+    const ns     = _nsOwnerOf(pc);
+    const nsStr  = ns ? `${ns.label} +${ns.offset}` : '\u2014';
+    const color  = _FAULT_COLORS[f.type] || '#e05555';
+
+    const allFaults  = sim.faultLog || [];
+    const historyHtml = allFaults.length > 1
+        ? allFaults.slice(-5).map((fl, i, arr) => {
+            const isCurrent = (i === arr.length - 1);
+            return `<span class="fault-hist-item${isCurrent ? ' fault-hist-current' : ''}">[step ${fl.step}] ${fl.type}</span>`;
+          }).join('')
+        : '';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'faultModalOverlay';
+    overlay.className = 'modal-overlay';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'modal-dialog fault-dialog';
+    dialog.innerHTML = `
+        <div class="fault-modal-header">
+            <span class="fault-type-badge" style="background:${color}22;border-color:${color};color:${color}">${f.type}</span>
+            <span class="fault-modal-title">Machine Fault</span>
+        </div>
+        <div class="fault-modal-message">${f.message}</div>
+        <div class="fault-detail-grid">
+            <div class="fault-detail-row">
+                <span class="fault-detail-label">PC</span>
+                <span class="fault-detail-value"><code>${pcHex}</code></span>
+            </div>
+            <div class="fault-detail-row">
+                <span class="fault-detail-label">Instruction</span>
+                <span class="fault-detail-value"><code>${disasm}</code></span>
+            </div>
+            <div class="fault-detail-row">
+                <span class="fault-detail-label">Location</span>
+                <span class="fault-detail-value">${nsStr}</span>
+            </div>
+            <div class="fault-detail-row">
+                <span class="fault-detail-label">Step</span>
+                <span class="fault-detail-value">${f.step}</span>
+            </div>
+            ${historyHtml ? `<div class="fault-detail-row fault-history-row">
+                <span class="fault-detail-label">History</span>
+                <span class="fault-detail-value">${historyHtml}</span>
+            </div>` : ''}
+        </div>
+        <div class="modal-buttons">
+            <button class="btn btn-danger" onclick="faultModalReboot()">&#x21BA; Reboot</button>
+            <button class="btn btn-warning" onclick="faultModalInvestigate()">&#x1F50D; Investigate</button>
+            <button class="btn" onclick="faultModalDismiss()">Dismiss</button>
+        </div>`;
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) faultModalDismiss(); });
+}
+
+function faultModalDismiss() {
+    const el = document.getElementById('faultModalOverlay');
+    if (el) el.remove();
+}
+
+function faultModalReboot() {
+    faultModalDismiss();
+    faultClear();
+}
+
+function faultModalInvestigate() {
+    faultModalDismiss();
+    switchView('dashboard');
+    switchDashTab('gatelog');
 }
 
 function resetSim() {
