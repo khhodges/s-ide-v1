@@ -242,7 +242,7 @@ function updateCRDisplay() {
     if (!container) return;
     const localNames = {
         0: 'Return', 1: 'Arg 1', 6: 'C-List',
-        12: 'Stack', 13: 'IRQ', 14: 'CLOOMC', 15: 'Namespace'
+        12: 'Thread', 13: 'IRQ', 14: 'CLOOMC', 15: 'Namespace'
     };
     const crMeta = {
         0:  { group: 'gt',     role: 'arch',   badge: 'Arch'   },
@@ -272,7 +272,7 @@ function updateCRDisplay() {
     html += '</tr></thead><tbody>';
     for (let i = 0; i < 16; i++) {
         if (i === 12) {
-            html += `<tr class="cr-separator"><td colspan="${COLS + 1}">&#9472;&#9472; Not in GT zone &#9472;&#9472; CR12 Thread Stack (Priv) \u00b7 CR13 IRQ (System) \u00b7 CR14\u201315 Privileged &#9472;&#9472;</td></tr>`;
+            html += `<tr class="cr-separator"><td colspan="${COLS + 1}">&#9472;&#9472; Not in GT zone &#9472;&#9472; CR12 Thread Identity (Priv) \u00b7 CR13 IRQ (System) \u00b7 CR14\u201315 Privileged &#9472;&#9472;</td></tr>`;
         }
         const cr = sim.getFormattedCR(i);
         const name = localNames[i] || '';
@@ -311,7 +311,7 @@ function openCRDetail(crIdx) {
         const cr = sim.getFormattedCR(crIdx);
         const localNames = {
             0: 'Return', 1: 'Arg 1', 6: 'C-List',
-            12: 'Stack', 13: 'IRQ', 14: 'CLOOMC', 15: 'Namespace'
+            12: 'Thread', 13: 'IRQ', 14: 'CLOOMC', 15: 'Namespace'
         };
         const name = localNames[crIdx] || '';
         detailTab.textContent = `CR${crIdx}${name ? ' \u2014 ' + name : ''}`;
@@ -442,7 +442,7 @@ function updateCRDetail() {
     const cr = sim.getFormattedCR(crIdx);
     const localNames = {
         0: 'Return', 1: 'Arg 1', 6: 'C-List',
-        12: 'Stack', 13: 'IRQ', 14: 'CLOOMC', 15: 'Namespace'
+        12: 'Thread', 13: 'IRQ', 14: 'CLOOMC', 15: 'Namespace'
     };
     const name = localNames[crIdx] || '';
 
@@ -2726,7 +2726,7 @@ function _buildNIARows(prevAddr, currAddr) {
 const _BOOT_STEPS = [
     { addrStr: 'B:00', disasm: 'FAULT_RST',  label: 'Clear all CRs / DRs',    offset: null, prog: 'boot' },
     { addrStr: 'B:01', disasm: 'LOAD_NS',    label: 'CR15 \u2190 NS[0] root',  offset: null, prog: 'boot' },
-    { addrStr: 'B:02', disasm: 'INIT_THRD',  label: 'CR8/CR12 \u2190 NS[1] Thread/Stack', offset: null, prog: 'boot' },
+    { addrStr: 'B:02', disasm: 'INIT_THRD',  label: 'CR12 \u2190 NS[1] Thread Identity', offset: null, prog: 'boot' },
     { addrStr: 'B:03', disasm: 'INIT_ABSTR', label: 'CR6 \u2190 NS[2] Abstr',              offset: null, prog: 'boot' },
     { addrStr: 'B:04', disasm: 'LOAD_NUC',   label: 'CR14 \u2190 code (CLOOMC)',           offset: null, prog: 'boot' },
     { addrStr: 'B:05', disasm: 'COMPLETE',   label: 'Boot done',               offset: null, prog: 'boot' },
@@ -7368,7 +7368,7 @@ const INSTRUCTION_DATA = [
           + '(limit). mLoad reads the same slot metadata to derive both registers:\n'
           + '  CR14 (code):   base = slot base address, limit = code size  [privileged]\n'
           + '  CR6  (c-list): base = slot limit − GTcount  [implicit CRd, always CR6]\n\n'
-          + 'CALL pushes exactly 2 words onto the FIFO stack (via CR12):\n'
+          + 'CALL pushes exactly 2 words onto the FIFO stack (region of thread lump addressed by CR12 + STO):\n'
           + '  Word 0: caller\'s E-GT — RETURN revalidates it to re-derive CR6 and CR14.\n'
           + '  Word 1: frame word — 32-bit packed word:\n'
           + '    31  28 │ 27      13 │ 12  │ 11       0\n'
@@ -7461,7 +7461,7 @@ const INSTRUCTION_DATA = [
           + '  3. Activate incoming thread: restore per-thread state from its thread lump.\n\n'
           + 'Per-thread registers saved and restored:\n'
           + '  CR0\u2013CR11  (programmer-accessible capability registers)\n'
-          + '  CR12      (thread stack \u2014 privileged, per-thread)\n'
+          + '  CR12      (Thread Identity \u2014 privileged, per-thread)\n'
           + '  CR14      (code register \u2014 privileged, per-thread)\n'
           + '  CR15      (namespace root \u2014 privileged, per-thread)\n'
           + '  STO       (stack-top-offset hidden register \u2014 per-thread)\n'
@@ -7592,7 +7592,7 @@ const INSTRUCTION_DATA = [
           + 'CRd = target GT (must have X permission).\n'
           + 'src and imm15 are zero.\n\n'
           + 'Lightweight in-scope application — applies a Church reduction and pushes\n'
-          + 'a minimal 1-word frame (SZ=0) onto the FIFO stack via CR12:\n'
+          + 'a minimal 1-word frame (SZ=0) onto the FIFO stack (region of thread lump addressed by CR12 + STO):\n'
           + '  31  28 │ 27      13 │ 12  │ 11       0\n'
           + '  ┌──────┬───────────┬─────┬────────────┐\n'
           + '  │FLAGS │  PC[14:0] │  0  │  STO[11:0] │\n'
