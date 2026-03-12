@@ -1571,7 +1571,7 @@ CALL   CR1              ; Stack.Push:
 ;   2. DWRITE value to mem[location + depth]
 ;      location = NS[stack_slot].word0
 ;   3. Increment depth counter
-;   4. If full: FAULT STACK_OVERFLOW`,
+;   4. If full: WARN STACK_OVERFLOW — thread suspended for programmed recovery`,
             'Pop': `; Stack.Pop — pop value from stack
 LOAD   CR1, NS[9]       ; Load Stack E-GT
 

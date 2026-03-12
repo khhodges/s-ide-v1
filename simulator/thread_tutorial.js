@@ -83,7 +83,7 @@ ${this._memMap(null)}
 <ul>
 <li><strong>Stack top</strong>: word 12 (immediately after the GT zone)</li>
 <li><strong>Stack limit</strong>: set by the NS slot field <code>clistStart \u2212 1</code> inside <code>word0_location</code></li>
-<li><strong>Overflow</strong>: a hardware fault fires if the stack pointer reaches the limit</li>
+<li><strong>Overflow</strong>: a <code>STACK_OVERFLOW</code> warning suspends the thread at the limit for programmed recovery</li>
 <li><strong>2-word CALL frame (SZ=1)</strong>: <code>[E-GT \u00b7 frame\u202fword]</code> \u2014 STO advances by 2</li>
 <li><strong>1-word LAMBDA frame (SZ=0)</strong>: <code>[frame\u202fword only]</code> \u2014 STO advances by 1</li>
 </ul>
@@ -111,8 +111,8 @@ ${this._memMap(null)}
 <li>\u2191 The <strong>heap grows up</strong> as objects are allocated</li>
 </ul>
 <p>Freespace is not a named region at the hardware level \u2014 it is simply the words between the current stack pointer and the current heap pointer. The IDE sets the initial allocation so that even a fully-populated stack and a full heap leave a small safety margin.</p>
-<div class="sr-key-concept"><div class="sr-concept-title">Stack Overflow = Hardware Fault</div>
-<p>The NS slot\u2019s limit field is the hardware guard. If the stack pointer exceeds it (i.e., the stack hits the freespace floor), a <code>FAULT [STACK_OVERFLOW]</code> fires before any write occurs. No smash possible \u2014 the hardware stops the access before it corrupts the heap.</p></div>`
+<div class="sr-key-concept"><div class="sr-concept-title">Stack Overflow = Thread Suspension (Recoverable)</div>
+<p>The NS slot\u2019s limit field is the hardware guard. If the stack pointer reaches the limit, a <code>STACK_OVERFLOW</code> warning is raised <em>before any write occurs</em> and the thread is <strong>suspended</strong> for programmed recovery. The recovery handler can abort the thread, inspect state in the IDE debugger, or take corrective action \u2014 no smash is possible because the hardware blocks the write and suspends cleanly.</p></div>`
             },
             {
                 title: '\u2463 Heap \u2014 Fixed-Size Object Store',
@@ -177,7 +177,7 @@ ${this._memMap(null)}
 <div class="sr-sec-item"><span class="sr-sec-num">7</span><strong>Heap allocation &amp; GC.</strong> Objects are written into the heap via DWRITE using CR9. When freespace is exhausted a <code>FAULT [HEAP_FULL]</code> fires. The <strong>Run GC</strong> button triggers the Garbage Collector, which compacts the live heap set and restores freespace without moving the stack or the GT zone.</div>
 </div>
 <div class="sr-key-concept"><div class="sr-concept-title">No Stack Smash, No Heap Spray</div>
-<p>Because every region has hardware-enforced bounds derived from immutable NS slot metadata, <strong>buffer overflows, stack smashes, and heap sprays are impossible</strong>. An attacker cannot push the stack pointer past its limit, cannot write past the heap ceiling, and cannot forge the GTs in the capability region \u2014 all without any OS, runtime check, or compiler mitigation.</p></div>`
+<p>Because every region has hardware-enforced bounds derived from immutable NS slot metadata, <strong>buffer overflows, stack smashes, and heap sprays are impossible</strong>. If the stack pointer reaches its limit, the hardware raises <code>STACK_OVERFLOW</code>, suspends the thread, and blocks the write \u2014 the heap is never touched. An attacker cannot forge the GTs in the capability region. All without any OS, runtime check, or compiler mitigation.</p></div>`
             }
         ];
     }
