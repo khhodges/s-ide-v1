@@ -7431,35 +7431,45 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 4, mnemonic: 'CHANGE', domain: 'church',
-        syntax: 'CHANGE CRd, imm',
-        brief: 'Suspend/activate thread \u2014 save and load thread register state',
+        syntax: 'CHANGE CRd, idx',
+        brief: 'Suspend current thread \u2014 activate the Thread Abstraction at c-list offset idx in CRd',
         encoding: 'opcode[5]=00100 | cond[4] | CRd[4] | 0[4] | idx[15]',
         fields: [
-            { name: 'CRd', desc: 'Thread GT \u2014 identifies the thread to change to' },
-            { name: 'imm', desc: 'Thread control flags' },
+            { name: 'CRd', desc: 'C-list register (typically CR6) \u2014 provides the capability list to index into' },
+            { name: 'idx', desc: 'C-list offset (0\u201332767) \u2014 selects the slot in CRd\u2019s c-list that holds the Thread Abstraction GT' },
         ],
-        permission: 'Thread GT must be valid',
+        permission: 'Thread Abstraction GT at CRd[idx] must be valid (E permission)',
         flags: 'None',
         details:
             '  31    27│26   23│22   19│18   15│14                0\n'
           + '  ┌──────┬──────┬──────┬──────┬───────────────────┐\n'
-          + '  │00100 │ cond │  CRd │  ─   │      flags        │\n'
+          + '  │00100 │ cond │  CRd │  ─   │       idx         │\n'
           + '  └──────┴──────┴──────┴──────┴───────────────────┘\n'
           + '   5-bit   4-bit   4-bit  zero       15-bit\n\n'
-          + 'CRd   = thread GT identifying the target thread.\n'
-          + 'flags = thread control flags (imm15).\n\n'
-          + 'Atomic context-switch. Per-thread registers saved and restored:\n'
-          + '  CR0–CR11  (programmer-accessible capability registers)\n'
-          + '  CR12      (thread stack — privileged, per-thread)\n'
-          + '  CR14      (code register — privileged, per-thread)\n'
-          + '  CR15      (namespace root — privileged, per-thread)\n'
-          + '  STO       (stack-top-offset hidden register — per-thread)\n'
-          + '  DR0–DR15, PC, flags\n\n'
+          + 'CRd = c-list register (typically CR6, the current c-list).\n'
+          + 'idx = offset within that c-list pointing to the Thread Abstraction GT.\n\n'
+          + 'Thread Abstraction — definition:\n'
+          + '  The physical memory region owned by this namespace for a single thread.\n'
+          + '  Layout (addresses increase downward from word 0):\n'
+          + '    Top:    CLOOMC initialisation code — provided by the IDE at slot creation\n'
+          + '    Bottom: Namespace table — pre-formatted by the IDE at slot creation\n'
+          + '  The IDE fills both regions when it mints the Thread Abstraction slot;\n'
+          + '  the running program sees only the live GT zone, stack, heap, and DRs.\n\n'
+          + 'Execution (atomic \u2014 no intermediate state is visible):\n'
+          + '  1. Index CRd at offset idx; verify the GT has E permission \u2014 FAULT on fail.\n'
+          + '  2. Suspend outgoing thread: save per-thread state into its thread lump.\n'
+          + '  3. Activate incoming thread: restore per-thread state from its thread lump.\n\n'
+          + 'Per-thread registers saved and restored:\n'
+          + '  CR0\u2013CR11  (programmer-accessible capability registers)\n'
+          + '  CR12      (thread stack \u2014 privileged, per-thread)\n'
+          + '  CR14      (code register \u2014 privileged, per-thread)\n'
+          + '  CR15      (namespace root \u2014 privileged, per-thread)\n'
+          + '  STO       (stack-top-offset hidden register \u2014 per-thread)\n'
+          + '  DR0\u2013DR15, PC, flags\n\n'
           + 'System-wide register unchanged during CHANGE:\n'
-          + '  CR13 (interrupt handler) — shared across all threads\n\n'
-          + 'One instruction — no intermediate state is visible.\n'
+          + '  CR13 (interrupt handler) \u2014 shared across all threads\n\n'
           + 'The suspended thread resumes exactly where it left off.',
-        example: 'CHANGE CR8, 0        ; Suspend current thread, activate thread in CR8',
+        example: 'CHANGE CR6, 3        ; Activate Thread Abstraction at c-list offset 3 in CR6',
     },
     {
         opcode: 5, mnemonic: 'SWITCH', domain: 'church',
