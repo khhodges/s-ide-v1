@@ -79,19 +79,27 @@ ${this._memMap(null)}
                 title: '\u2461 FIFO Stack \u2014 Grows Downward',
                 type: 'stack',
                 content: `${this._memMap('stack')}
-<p>Immediately after the GT zone, the <strong>FIFO call stack</strong> begins at word 12 and expands <em>downward</em> (toward higher addresses). Each CALL frame pushes two words: the caller\u2019s E-GT (used by RETURN to revalidate and re-derive CR6/CR14) and the MASK-selected CR snapshot. RETURN pops them.</p>
+<p>Immediately after the GT zone, the <strong>FIFO call stack</strong> begins at word 12 and expands <em>downward</em> (toward higher addresses). CALL pushes a 2-word frame; LAMBDA pushes a 1-word frame. RETURN pops the correct number based on the SZ bit in the frame word.</p>
 <ul>
 <li><strong>Stack top</strong>: word 12 (immediately after the GT zone)</li>
 <li><strong>Stack limit</strong>: set by the NS slot field <code>clistStart \u2212 1</code> inside <code>word0_location</code></li>
 <li><strong>Overflow</strong>: a hardware fault fires if the stack pointer reaches the limit</li>
-<li><strong>2-word call frame</strong>: <code>[caller E-GT \u00b7 MASK\u2019d CR snapshot]</code></li>
+<li><strong>2-word CALL frame (SZ=1)</strong>: <code>[E-GT \u00b7 frame\u202fword]</code> \u2014 STO advances by 2</li>
+<li><strong>1-word LAMBDA frame (SZ=0)</strong>: <code>[frame\u202fword only]</code> \u2014 STO advances by 1</li>
 </ul>
 <table class="sr-table"><tr><th>Frame word</th><th>Contents</th></tr>
-<tr><td>word 0</td><td>Caller\u2019s E-GT (revalidated by RETURN to re-derive CR6 + CR14)</td></tr>
-<tr><td>word 1</td><td>MASK-selected CR snapshot (up to 12 capability registers, bit N = clear CR_N)</td></tr>
+<tr><td>word 0 (CALL only)</td><td>Caller\u2019s E-GT \u2014 RETURN revalidates it to re-derive CR6 and CR14</td></tr>
+<tr><td>word 1 (CALL) / word 0 (LAMBDA)</td><td>32-bit frame word: <code>FLAGS[31:28] | PC[27:13] | SZ[12] | STO[11:0]</code></td></tr>
 </table>
+<table class="sr-table"><tr><th>Frame word field</th><th>Meaning</th></tr>
+<tr><td>FLAGS [31:28]</td><td>N Z C V condition codes saved at call site</td></tr>
+<tr><td>PC [27:13]</td><td>15-bit return address (offset in caller\u2019s code, 0\u201332767)</td></tr>
+<tr><td>SZ [12]</td><td>1 = 2-word CALL frame \u00b7 0 = 1-word LAMBDA frame</td></tr>
+<tr><td>STO [11:0]</td><td>Saved stack-top-offset hidden register (restored by RETURN)</td></tr>
+</table>
+<p><strong>MASK is in the RETURN instruction, not the frame.</strong> The low 12 bits of the RETURN literal specify which CRs to clear after context restoration. This frees the 12 bits in the frame word for STO instead.</p>
 <div class="sr-key-concept"><div class="sr-concept-title">FIFO, Not LIFO</div>
-<p>The stack discipline is <strong>First-In First-Out</strong> from the runtime\u2019s perspective: CALL is the entry, RETURN is the exit, and nested calls push sequentially downward. The abstraction model guarantees no frame can be forged or overwritten because all stack words are inside the thread\u2019s lump boundary.</p></div>`
+<p>The stack discipline is <strong>First-In First-Out</strong> from the runtime\u2019s perspective: CALL is the entry, RETURN is the exit, and nested calls push sequentially downward. The abstraction model guarantees no frame can be forged or overwritten because all stack words are inside the thread\u2019s lump boundary. The hidden <strong>STO register</strong> (0\u20134095) tracks the current stack top offset from word 12 and is saved/restored across every call and context switch.</p></div>`
             },
             {
                 title: '\u2462 Freespace \u2014 The Dynamic Buffer',
@@ -162,8 +170,8 @@ ${this._memMap(null)}
 <div class="sr-security-list">
 <div class="sr-sec-item"><span class="sr-sec-num">1</span><strong>Boot \u2014 INIT_THRD (B:02).</strong> <code>sim._bootStep()</code> loads NS Slot 1 into <strong>CR8</strong> (thread identity, zero perms) and derives the Thread Stack GT into <strong>CR12</strong> (RW, base = lump+12). The lump is now the active thread context; CR0\u201311 hold the initial capability set.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">2</span><strong>mLoad \u2014 GT zone maintenance.</strong> Every time mLoad loads a GT into CR_N, it <strong>writes the same GT word back to lump word N</strong>. The GT zone is always a live mirror of CR0\u2013CR11. No separate \u201csave\u201d step is needed at context-switch time.</div>
-<div class="sr-sec-item"><span class="sr-sec-num">3</span><strong>CALL.</strong> Entering any abstraction pushes a 2-word frame onto the FIFO stack at word 12+. The CALL instruction checks CR14 bounds, writes <code>[caller E-GT, MASK\u2019d CRs]</code>, and advances the stack pointer by 2.</div>
-<div class="sr-sec-item"><span class="sr-sec-num">4</span><strong>RETURN.</strong> Reads the MASK field (12-bit), restores the selected CRs from the frame, re-derives CR6 and CR14 by re-running the NS split on the caller\u2019s E-GT, then jumps to the return address.</div>
+<div class="sr-sec-item"><span class="sr-sec-num">3</span><strong>CALL.</strong> Entering any abstraction pushes a <strong>2-word frame (SZ=1)</strong> onto the FIFO stack: word 0 = caller\u2019s E-GT, word 1 = frame word <code>FLAGS[31:28]|PC[27:13]|SZ=1|STO[11:0]</code>. Hidden register STO advances by 2. LAMBDA pushes a <strong>1-word frame (SZ=0)</strong>: frame word only (no E-GT), STO advances by 1.</div>
+<div class="sr-sec-item"><span class="sr-sec-num">4</span><strong>RETURN.</strong> Reads SZ from the frame word to determine how many words to pop (2 for CALL, 1 for LAMBDA). Restores FLAGS, PC, and STO from the frame word. SZ=1 only: re-derives CR6 and CR14 by revalidating the caller\u2019s E-GT. Applies the 12-bit MASK literal embedded in the RETURN instruction itself to clear the specified CRs.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">5</span><strong>CHANGE \u2014 Suspend &amp; Resume.</strong> CHANGE atomically swaps CR8 for a new thread GT. The outgoing thread\u2019s context is saved in two parts: (a) <strong>the GT zone (CR0\u2013CR11) is already persisted</strong> \u2014 mLoad wrote every GT back to the lump in real time, so no additional save is needed; (b) CHANGE <strong>explicitly saves</strong> the remaining live state: <strong>DR0\u2013DR15</strong> (data registers), <strong>CR14</strong> (the CLOOMC code-segment register), <strong>NAI</strong> (Next Address Index \u2014 the program counter), and <strong>FLAGS</strong> (condition codes). The NS slot is updated only if lump metadata has changed.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">6</span><strong>Resume.</strong> CHANGE restores the incoming thread\u2019s saved context from its thread-table entry. CR12 (Thread Stack) is restored via mLoad for the incoming thread; CR13 (IRQ, system-wide interrupt handler) is <em>not</em> changed.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">7</span><strong>Heap allocation &amp; GC.</strong> Objects are written into the heap via DWRITE using CR9. When freespace is exhausted a <code>FAULT [HEAP_FULL]</code> fires. The <strong>Run GC</strong> button triggers the Garbage Collector, which compacts the live heap set and restores freespace without moving the stack or the GT zone.</div>
