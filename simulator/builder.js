@@ -286,7 +286,7 @@ class NamespaceBuilder {
         var html = '<div class="builder-data-attrs">';
         html += '<div class="builder-data-attrs-header">';
         html += '<span class="builder-data-attrs-label">\u{1F4CB} Data Attributes</span>';
-        html += '<button class="btn btn-sm builder-add-attr-btn" onclick="builder.addDataAttr(' + s + ')" data-tooltip="Add Attribute — Add a key-value data attribute to this object">+ Attr</button>';
+        html += '<button class="btn btn-sm builder-add-attr-btn" onclick="builder.addDataAttr(' + s + ')" title="Add key-value data attribute">+ Attr</button>';
         html += '</div>';
         if (attrs && attrs.length > 0) {
             html += '<div class="builder-attr-list">';
@@ -296,7 +296,7 @@ class NamespaceBuilder {
                 html += '<input class="builder-attr-key" placeholder="key" value="' + this._esc(attr.key) + '" onchange="builder.updateDataAttrKey(' + s + ',' + i + ',this.value)" />';
                 html += '<span class="builder-attr-eq">=</span>';
                 html += '<input class="builder-attr-val" placeholder="value" value="' + this._esc(attr.value) + '" onchange="builder.updateDataAttrVal(' + s + ',' + i + ',this.value)" />';
-                html += '<button class="builder-remove-btn" onclick="builder.removeDataAttr(' + s + ',' + i + ')" data-tooltip="Remove this attribute">\u00d7</button>';
+                html += '<button class="builder-remove-btn" onclick="builder.removeDataAttr(' + s + ',' + i + ')">\u00d7</button>';
                 html += '</div>';
             }
             html += '</div>';
@@ -651,7 +651,7 @@ class NamespaceBuilder {
         html += '<div class="builder-location-row">';
         html += '<span class="builder-location-icon">\uD83D\uDCCD</span>';
         html += '<input class="builder-location-input" id="builderLocInput_' + comp.id + '" placeholder="e.g. Stuart, FL or London, UK" value="' + this._esc(locName) + '" onkeydown="if(event.key===\'Enter\'){builder.locateComputer(' + comp.id + ',this.value)}" />';
-        html += '<button class="btn btn-sm builder-locate-btn" onclick="builder.locateComputer(' + comp.id + ',document.getElementById(\'builderLocInput_' + comp.id + '\').value)" data-tooltip="Locate — Pin this computer at the typed location on the map">Locate</button>';
+        html += '<button class="btn btn-sm builder-locate-btn" onclick="builder.locateComputer(' + comp.id + ',document.getElementById(\'builderLocInput_' + comp.id + '\').value)" title="Pin this computer at the typed location on the map">Locate</button>';
         html += '</div>';
 
         html += this._renderDataAttributes('computer', comp.id, 0, 0, comp.dataAttributes || []);
@@ -908,11 +908,11 @@ class NamespaceBuilder {
         html += '<div class="builder-toolbar">';
         html += '<span class="builder-title">Universal Cyberspace</span>';
         html += '<div class="builder-toolbar-actions">';
-        html += '<div class="builder-map-btns" data-tooltip="Map Style — Choose canvas background: Space, Earth, Moon, or Mars">';
-        html += '<button class="btn btn-sm builder-map-btn' + (ms==='space'?' active':'') + '" onclick="builder.setMapStyle(\'space\')" data-tooltip="Space — Deep space background">🔭</button>';
-        html += '<button class="btn btn-sm builder-map-btn' + (ms==='earth'?' active':'') + '" onclick="builder.setMapStyle(\'earth\')" data-tooltip="Earth — World map background for geographic placement">🌍</button>';
-        html += '<button class="btn btn-sm builder-map-btn' + (ms==='moon'?' active':'') + '" onclick="builder.setMapStyle(\'moon\')" data-tooltip="Moon — Lunar surface background">🌑</button>';
-        html += '<button class="btn btn-sm builder-map-btn' + (ms==='mars'?' active':'') + '" onclick="builder.setMapStyle(\'mars\')" data-tooltip="Mars — Martian surface background">🔴</button>';
+        html += '<div class="builder-map-btns">';
+        html += '<button class="btn btn-sm builder-map-btn' + (ms==='space'?' active':'') + '" onclick="builder.setMapStyle(\'space\')" title="Space">🔭</button>';
+        html += '<button class="btn btn-sm builder-map-btn' + (ms==='earth'?' active':'') + '" onclick="builder.setMapStyle(\'earth\')" title="Earth">🌍</button>';
+        html += '<button class="btn btn-sm builder-map-btn' + (ms==='moon'?' active':'') + '" onclick="builder.setMapStyle(\'moon\')" title="Moon">🌑</button>';
+        html += '<button class="btn btn-sm builder-map-btn' + (ms==='mars'?' active':'') + '" onclick="builder.setMapStyle(\'mars\')" title="Mars">🔴</button>';
         html += '</div>';
         html += '<div class="builder-palette-card" draggable="true" id="paletteComputer" data-tooltip="Computer — Drag onto canvas to add a computer node">\u2395 Computer</div>';
         html += '<div class="builder-palette-card" draggable="true" id="paletteNamespace" data-tooltip="Namespace — Drag onto computer panel to add a namespace">\u2630 Namespace</div>';
