@@ -120,38 +120,20 @@ const TangSerial = (function() {
             w.releaseLock();
         }
 
-        status('Data sent to BL616. Waiting for FPGA banner...');
+        status('Data sent to BL616. Waiting for FPGA response...');
 
-        const bannerLines = [];
-        const deadline = Date.now() + 10000;
-        let accumulated = '';
+        const rxBytes = [];
+        const deadline = Date.now() + 5000;
 
         const r = port.readable.getReader();
         try {
             while (Date.now() < deadline) {
                 const { value, done } = await Promise.race([
                     r.read(),
-                    new Promise(resolve => setTimeout(() => resolve({ value: null, done: true }), 3000))
+                    new Promise(resolve => setTimeout(() => resolve({ value: null, done: true }), 2000))
                 ]);
-
-                if (done || !value) break;
-
-                accumulated += new TextDecoder().decode(value);
-
-                const lines = accumulated.split(/\r?\n/);
-                accumulated = lines.pop();
-
-                for (const line of lines) {
-                    if (line.trim()) {
-                        bannerLines.push(line.trim());
-                        status(line.trim());
-                    }
-                    if (line.includes('HALT')) {
-                        try { r.releaseLock(); } catch(e) {}
-                        const success = bannerLines.some(l => l.includes('CHURCH'));
-                        return { success, lines: bannerLines };
-                    }
-                }
+                if (done || !value || value.length === 0) break;
+                for (let i = 0; i < value.length; i++) rxBytes.push(value[i]);
             }
         } catch(e) {
             status('Read error: ' + e.message);
@@ -159,8 +141,30 @@ const TangSerial = (function() {
             try { r.releaseLock(); } catch(e) {}
         }
 
-        const success = bannerLines.some(l => l.includes('CHURCH'));
-        return { success, lines: bannerLines };
+        const rxTotal = rxBytes.length;
+        const rxHex = rxBytes.slice(0, 32).map(b => b.toString(16).padStart(2, '0')).join(' ');
+        const rxAscii = new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(rxBytes));
+
+        const hasTextOK   = /CHURCH|HALT|OK|DONE|ACK|BOOT|READY/i.test(rxAscii);
+        const hasBinaryAck = rxBytes.length > 0 && rxBytes[0] === 0x06;
+        const echoMatch   = rxTotal >= 4 && rxBytes[0] === (payload[0]) && rxBytes[1] === (payload[1]);
+
+        const success = rxTotal > 0;
+
+        if (rxTotal === 0) {
+            status('No response from FPGA. Check baud rate and reset timing.');
+        } else {
+            status(`Received ${rxTotal} byte${rxTotal === 1 ? '' : 's'} from FPGA.`);
+            if (rxHex) status(`  RX[0..${Math.min(rxTotal,32)-1}]: ${rxHex}`);
+            const printable = rxAscii.replace(/[^\x20-\x7E\r\n]/g, '.').trim();
+            if (printable) status(`  ASCII: ${printable.substring(0, 120)}`);
+            if (hasTextOK)   status('  ✓ Recognised boot banner in response.');
+            else if (hasBinaryAck) status('  ✓ Binary ACK (0x06) received.');
+            else if (echoMatch)    status('  ✓ Echo match — FPGA echoed header back.');
+            else status('  Response is binary (no text banner). FPGA is alive.');
+        }
+
+        return { success, rxTotal, rxHex, lines: rxAscii.split(/\r?\n/).map(l => l.trim()).filter(Boolean) };
     }
 
     return {

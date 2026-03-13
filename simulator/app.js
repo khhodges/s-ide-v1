@@ -7314,13 +7314,14 @@ async function uploadToTang() {
         );
 
         if (result.success) {
-            con.textContent += '\nUpload successful! Tang Nano 20K booted with simulator data.\n';
+            con.textContent += '\nUpload complete. FPGA received data and responded.\n';
+            con.textContent += `(${result.rxTotal} bytes back — see RX lines above for detail)\n`;
         } else {
-            con.textContent += '\nData sent but no boot banner received.\n';
-            con.textContent += 'The FPGA may have already booted past the upload window.\n\n';
-            con.textContent += 'To retry:\n';
-            con.textContent += '  1. Press the reset button on the Tang Nano 20K\n';
-            con.textContent += '  2. Immediately click "Deploy to Tang" again\n';
+            con.textContent += '\nNo response from FPGA after sending data.\n\n';
+            con.textContent += 'TIPS:\n';
+            con.textContent += '  1. Press the RESET button on the Tang Nano 20K\n';
+            con.textContent += '  2. Click "Deploy to Tang" within 1-2 seconds of releasing reset\n';
+            con.textContent += '  3. Make sure no other app has the serial port open\n';
         }
     } catch(e) {
         con.textContent += 'Error: ' + e.message + '\n';
