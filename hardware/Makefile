@@ -1,67 +1,44 @@
-# Church Machine — Tang Nano 20K build (Yosys + NextPNR-Gowin + Gowin Pack)
+# Church Machine — Tang Nano 20K build (NextPNR-Gowin + Gowin Pack)
 #
 # Prerequisites:
-#   Install oss-cad-suite (includes yosys, nextpnr-gowin, gowin_pack)
-#   Or: sudo apt install yosys && build nextpnr-gowin from source
+#   Install oss-cad-suite: https://github.com/YosysHQ/oss-cad-suite-build/releases
+#   source oss-cad-suite/environment
 #
 # Usage:
-#   make verilog   — generate Verilog from Amaranth
-#   make synth     — synthesize with Yosys
-#   make pnr       — place and route with NextPNR-Gowin
-#   make pack      — create bitstream with gowin_pack
-#   make prog      — upload to Tang Nano 20K via openFPGALoader
-#   make all       — full build chain
-#   make clean     — remove build artifacts
+#   make pnr pack  — place-and-route + generate .fs bitstream
+#   make prog      — flash to Tang Nano 20K via openFPGALoader (plug in USB-C first)
+#   make clean     — remove generated files
 
 DEVICE   := GW2AR-LV18QN88C8/I7
 FAMILY   := GW2A-18C
-CST      := tang_nano_20k.cst
-
-BUILD    := ../build
 FREQ_MHZ := 27
 
 PROJ     := church_tang_nano_20k
-VERILOG  := $(BUILD)/$(PROJ).v
-JSON     := $(BUILD)/$(PROJ).json
-PACK     := $(BUILD)/$(PROJ).fs
-TIMING   := $(BUILD)/$(PROJ)_timing.txt
+VERILOG  := $(PROJ).v
+JSON     := $(PROJ).json
+PNR_JSON := $(PROJ)_pnr.json
+PACK     := $(PROJ).fs
+CST      := tang_nano_20k.cst
 
-.PHONY: all verilog synth pnr pack prog clean report
+.PHONY: pnr pack prog clean
 
-all: pack
-
-verilog:
-	cd .. && python -m hardware.gen_verilog
-
-synth: $(JSON)
-$(JSON): $(VERILOG) $(CST)
-	@mkdir -p $(BUILD)
-	yosys -p "read_verilog $(VERILOG); synth_gowin -top top -json $(JSON)" > $(BUILD)/synth.log 2>&1
-	@echo "=== Resource usage ==="
-	@grep -A 20 "Printing statistics" $(BUILD)/synth.log || true
-
-pnr: $(PACK)
-$(PACK): $(JSON)
+pnr: $(PNR_JSON)
+$(PNR_JSON): $(JSON) $(CST)
 	nextpnr-gowin \
 		--json $(JSON) \
-		--write $(BUILD)/$(PROJ)_pnr.json \
+		--write $(PNR_JSON) \
 		--device $(DEVICE) \
 		--family $(FAMILY) \
 		--cst $(CST) \
-		--freq $(FREQ_MHZ) \
-		2>&1 | tee $(BUILD)/pnr.log
-	gowin_pack -d $(FAMILY) -o $(PACK) $(BUILD)/$(PROJ)_pnr.json
+		--freq $(FREQ_MHZ)
 
 pack: $(PACK)
+$(PACK): $(PNR_JSON)
+	gowin_pack -d $(FAMILY) -o $(PACK) $(PNR_JSON)
 
 prog: $(PACK)
-	@echo "=== Upload to Tang Nano 20K ==="
+	@echo "=== Uploading to Tang Nano 20K ==="
 	openFPGALoader -b tangnano20k $(PACK)
 
 clean:
-	rm -f $(JSON) $(PACK) $(TIMING)
-	rm -f $(BUILD)/synth.log $(BUILD)/pnr.log $(BUILD)/$(PROJ)_pnr.json
-
-report: $(JSON)
-	@echo "=== Gowin GW2AR-18 Synthesis Report ==="
-	@grep -E "LUT|DFF|BSRAM|ALU|DSP|Number" $(BUILD)/synth.log || true
+	rm -f $(PNR_JSON) $(PACK)
