@@ -26,7 +26,7 @@ $(PNR_JSON): $(JSON) $(CST)
 		--device $(DEVICE) \
 		--json $(JSON) \
 		--write $(PNR_JSON) \
-		--gowin-cst $(CST) \
+		-o cst=$(CST) \
 		--freq $(FREQ_MHZ)
 
 pack: $(PACK)
