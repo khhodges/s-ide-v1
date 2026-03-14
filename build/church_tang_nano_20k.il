@@ -46,7 +46,7 @@ module \top
   wire width 32 \dmem_addr
 
   attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:15"
-  wire width 11 \addr$25
+  wire width 11 \addr$24
 
   attribute \src "/home/runner/workspace/hardware/core.py:42"
   wire width 32 \dmem_rd_data
@@ -79,10 +79,10 @@ module \top
   wire width 1 \dmem_wr_en
 
   attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:16"
-  wire width 32 \wr_data$36
+  wire width 32 \wr_data$35
 
   attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:18"
-  wire width 1 \wr_en$37
+  wire width 1 \wr_en$36
 
   attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:188"
   attribute \init 9'000000000
@@ -157,6 +157,9 @@ module \top
   attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:245"
   attribute \init 1'0
   wire width 1 \heartbeat_blink
+
+  attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:50"
+  wire width 1 \led3
 
   attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:265"
   attribute \init 1'0
@@ -271,13 +274,10 @@ module \top
   wire width 1 output 7  \led2
 
   attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:50"
-  wire width 1 output 8  \led3
+  wire width 1 output 8  \led4
 
   attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:50"
-  wire width 1 output 9  \led4
-
-  attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:50"
-  wire width 1 output 10  \led5
+  wire width 1 output 9  \led5
 
   wire width 1 $1
 
@@ -524,9 +524,9 @@ module \top
     connect \clk \clk [0]
     connect \rst \rst [0]
     connect \rd_data \dmem_rd_data [31:0]
-    connect \mem_r_addr \addr$25 [10:0]
-    connect \mem_w_data \wr_data$36 [31:0]
-    connect \wr_en \wr_en$37 [0]
+    connect \mem_r_addr \addr$24 [10:0]
+    connect \mem_w_data \wr_data$35 [31:0]
+    connect \wr_en \wr_en$36 [0]
   end
 
   attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:145"
@@ -1482,10 +1482,10 @@ module \top
 
   attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:15"
   process $172
-    assign \addr$25 [10:0] \mem_addr [10:0]
+    assign \addr$24 [10:0] \mem_addr [10:0]
     switch $1 [0]
       case 1'1
-        assign \addr$25 [10:0] { 2'00 \init_idx [8:0] }
+        assign \addr$24 [10:0] { 2'00 \init_idx [8:0] }
     end
   end
 
@@ -1517,19 +1517,19 @@ module \top
 
   attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:16"
   process $175
-    assign \wr_data$36 [31:0] \wr_data [31:0]
+    assign \wr_data$35 [31:0] \wr_data [31:0]
     switch $1 [0]
       case 1'1
-        assign \wr_data$36 [31:0] \init_word [31:0]
+        assign \wr_data$35 [31:0] \init_word [31:0]
     end
   end
 
   attribute \src "/home/runner/workspace/hardware/tang_nano_20k.py:18"
   process $176
-    assign \wr_en$37 [0] \wr_en [0]
+    assign \wr_en$36 [0] \wr_en [0]
     switch $1 [0]
       case 1'1
-        assign \wr_en$37 [0] 1'1
+        assign \wr_en$36 [0] 1'1
     end
   end
 
