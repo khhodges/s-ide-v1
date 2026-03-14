@@ -10,6 +10,7 @@
 #   make clean     — remove generated files
 
 DEVICE   := GW2A-18C
+FAMILY   := GW2A-18C
 FREQ_MHZ := 27
 
 PROJ     := church_tang_nano_20k
@@ -26,12 +27,13 @@ $(PNR_JSON): $(JSON) $(CST)
 		--device $(DEVICE) \
 		--json $(JSON) \
 		--write $(PNR_JSON) \
+		-o family=$(FAMILY) \
 		-o cst=$(CST) \
 		--freq $(FREQ_MHZ)
 
 pack: $(PACK)
 $(PACK): $(PNR_JSON)
-	gowin_pack -d $(DEVICE) -o $(PACK) $(PNR_JSON)
+	gowin_pack -d $(FAMILY) -o $(PACK) $(PNR_JSON)
 
 prog: $(PACK)
 	@echo "=== Uploading to Tang Nano 20K ==="
