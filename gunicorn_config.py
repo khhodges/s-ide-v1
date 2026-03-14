@@ -1,6 +1,7 @@
 import signal
 
 bind = "0.0.0.0:5000"
+worker_class = "gthread"
 workers = 1
 threads = 8
 timeout = 120
