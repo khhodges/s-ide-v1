@@ -2447,7 +2447,7 @@ module top(imem_valid, dmem_rd_data, boot_start, gc_start, clk, rst, imem_addr, 
     .mload_src(mload_cr_src),
     .mload_start(mload_start),
     .\port$0$2 (imem_data[18:0]),
-    .\port$676$0 (\$143 ),
+    .\port$712$0 (\$143 ),
     .rst(rst),
     .saved_cr5_gt(\saved_cr5_gt$321 )
   );
@@ -4106,7 +4106,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/call.py:45" *)
 (* generator = "Amaranth" *)
-module \top.u_call (clk, rst, call_start, cr_rd_data, mload_src, \port$676$0 , mload_index, call_busy, call_complete, mload_fault, mload_done, cr_rd_addr, cr_wr_data, cr_wr_en, cr_wr_addr, call_fault, fault_type, saved_cr5_gt, mload_start, mload_fault_type, \port$0$2 
+module \top.u_call (clk, rst, call_start, cr_rd_data, mload_src, \port$712$0 , mload_index, call_busy, call_complete, mload_fault, mload_done, cr_rd_addr, cr_wr_data, cr_wr_en, cr_wr_addr, call_fault, fault_type, saved_cr5_gt, mload_start, mload_fault_type, \port$0$2 
 );
   reg \$auto$verilog_backend.cc:2355:dump_module$14  = 0;
   wire [2:0] \$1 ;
@@ -4322,8 +4322,8 @@ module \top.u_call (clk, rst, call_start, cr_rd_data, mload_src, \port$676$0 , m
   reg phase = 1'h0;
   input [18:0] \port$0$2 ;
   wire [18:0] \port$0$2 ;
-  output [2:0] \port$676$0 ;
-  wire [2:0] \port$676$0 ;
+  output [2:0] \port$712$0 ;
+  wire [2:0] \port$712$0 ;
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
   input rst;
   wire rst;
@@ -4955,7 +4955,7 @@ module \top.u_call (clk, rst, call_start, cr_rd_data, mload_src, \port$676$0 , m
   assign nia_set = call_complete;
   assign nia_value = 32'd0;
   assign mask = { 1'h0, \port$0$2 [14:0] };
-  assign \port$676$0  = \$1 ;
+  assign \port$712$0  = \$1 ;
   assign \cr_wr_data.word0_gt  = cr_wr_data[31:0];
   assign \cr_wr_data.word0_gt.gt_type  = cr_wr_data[1:0];
   assign \cr_wr_data.word0_gt.perms  = cr_wr_data[7:2];
@@ -10287,8 +10287,20 @@ module \top.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data, cr_
   reg [31:0] \$29 ;
   wire [127:0] \$3 ;
   reg [31:0] \$30 ;
-  reg [3:0] \$31 ;
+  reg [31:0] \$31 ;
+  reg [31:0] \$32 ;
+  reg [31:0] \$33 ;
+  reg [31:0] \$34 ;
+  reg [31:0] \$35 ;
+  reg [31:0] \$36 ;
+  reg [31:0] \$37 ;
+  reg [31:0] \$38 ;
+  reg [31:0] \$39 ;
   wire [127:0] \$4 ;
+  reg [31:0] \$40 ;
+  reg [31:0] \$41 ;
+  reg [31:0] \$42 ;
+  reg [3:0] \$43 ;
   wire \$5 ;
   wire [31:0] \$6 ;
   wire \$7 ;
@@ -10956,9 +10968,33 @@ module \top.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data, cr_
   (* src = "/home/runner/workspace/hardware/registers.py:62" *)
   reg [31:0] dr1 = 32'd0;
   (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr10 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr11 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr12 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr13 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr14 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr15 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
   reg [31:0] dr2 = 32'd0;
   (* src = "/home/runner/workspace/hardware/registers.py:62" *)
   reg [31:0] dr3 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr4 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr5 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr6 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr7 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr8 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr9 = 32'd0;
   (* src = "/home/runner/workspace/hardware/registers.py:44" *)
   wire [3:0] dr_rd_addr1;
   (* src = "/home/runner/workspace/hardware/registers.py:46" *)
@@ -11011,6 +11047,42 @@ module \top.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data, cr_
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
   input rst;
   wire rst;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr5 <= \$32 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr6 <= \$33 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr7 <= \$34 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr8 <= \$35 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr9 <= \$36 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr10 <= \$37 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr11 <= \$38 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr12 <= \$39 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr13 <= \$40 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr14 <= \$41 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr15 <= \$42 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:63" *)
+  always @(posedge clk)
+    flags <= \$43 ;
   (* src = "/home/runner/workspace/hardware/registers.py:61" *)
   always @(posedge clk)
     cr0 <= \$11 ;
@@ -11071,9 +11143,131 @@ module \top.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data, cr_
   (* src = "/home/runner/workspace/hardware/registers.py:62" *)
   always @(posedge clk)
     dr3 <= \$30 ;
-  (* src = "/home/runner/workspace/hardware/registers.py:63" *)
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
   always @(posedge clk)
-    flags <= \$31 ;
+    dr4 <= \$31 ;
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
+    \$32  = dr5;
+    if (clear_all) begin
+      \$32  = 32'd0;
+    end
+    if (rst) begin
+      \$32  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
+    \$33  = dr6;
+    if (clear_all) begin
+      \$33  = 32'd0;
+    end
+    if (rst) begin
+      \$33  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
+    \$34  = dr7;
+    if (clear_all) begin
+      \$34  = 32'd0;
+    end
+    if (rst) begin
+      \$34  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
+    \$35  = dr8;
+    if (clear_all) begin
+      \$35  = 32'd0;
+    end
+    if (rst) begin
+      \$35  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
+    \$36  = dr9;
+    if (clear_all) begin
+      \$36  = 32'd0;
+    end
+    if (rst) begin
+      \$36  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
+    \$37  = dr10;
+    if (clear_all) begin
+      \$37  = 32'd0;
+    end
+    if (rst) begin
+      \$37  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
+    \$38  = dr11;
+    if (clear_all) begin
+      \$38  = 32'd0;
+    end
+    if (rst) begin
+      \$38  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
+    \$39  = dr12;
+    if (clear_all) begin
+      \$39  = 32'd0;
+    end
+    if (rst) begin
+      \$39  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
+    \$40  = dr13;
+    if (clear_all) begin
+      \$40  = 32'd0;
+    end
+    if (rst) begin
+      \$40  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
+    \$41  = dr14;
+    if (clear_all) begin
+      \$41  = 32'd0;
+    end
+    if (rst) begin
+      \$41  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
+    \$42  = dr15;
+    if (clear_all) begin
+      \$42  = 32'd0;
+    end
+    if (rst) begin
+      \$42  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
+    \$43  = flags;
+    (* full_case = 32'd1 *)
+    if (clear_all) begin
+      \$43  = 4'h0;
+    end else begin
+    end
+    if (rst) begin
+      \$43  = 4'h0;
+    end
+  end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
     (* full_case = 32'd1 *)
@@ -11736,14 +11930,12 @@ module \top.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data, cr_
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$24 ) begin end
-    \$31  = flags;
-    (* full_case = 32'd1 *)
+    \$31  = dr4;
     if (clear_all) begin
-      \$31  = 4'h0;
-    end else begin
+      \$31  = 32'd0;
     end
     if (rst) begin
-      \$31  = 4'h0;
+      \$31  = 32'd0;
     end
   end
   assign cr_word_rd_sel = 2'h0;

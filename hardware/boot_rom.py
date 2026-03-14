@@ -1,6 +1,6 @@
 from amaranth import *
 
-from .types import *
+from .hw_types import *
 
 
 def encode_church(opcode, cond=CondCode.AL, cr_dst=0, cr_src=0, imm=0):

@@ -7415,6 +7415,56 @@ function downloadHardwareImage() {
     }
 }
 
+async function downloadFPGAPackage() {
+    if (!requirePermission('deploy', 'Deploy to Tang')) return;
+    switchView('editor');
+    switchCodeTab('console');
+    const con = document.getElementById('editorConsole');
+    const btn = document.getElementById('btnFPGAPkg');
+    if (con) con.textContent = 'Generating FPGA build package...\nThis runs Amaranth + Yosys synthesis (may take 30-60 seconds).\n';
+    if (btn) { btn.disabled = true; btn.textContent = 'Building...'; }
+
+    try {
+        const resp = await fetch('/api/download/fpga-package');
+        if (!resp.ok) {
+            let errMsg = `Server returned ${resp.status}`;
+            try {
+                const errData = await resp.json();
+                errMsg = errData.error || errMsg;
+                if (errData.stderr) errMsg += '\n\n' + errData.stderr;
+            } catch (_) {}
+            if (con) con.textContent += '\nFailed: ' + errMsg + '\n';
+            return;
+        }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'church-nano-package.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        if (con) {
+            con.textContent += `\nDownloaded church-nano-package.zip (${(blob.size / 1024).toFixed(0)} KB)\n`;
+            con.textContent += '\nContents:\n';
+            con.textContent += '  church_tang_nano_20k.v    — Synthesisable Verilog\n';
+            con.textContent += '  church_tang_nano_20k.json — Yosys netlist\n';
+            con.textContent += '  tang_nano_20k.cst         — Pin constraints\n';
+            con.textContent += '  Makefile                  — Build targets\n';
+            con.textContent += '  BUILD.md                  — Instructions\n\n';
+            con.textContent += 'Next steps:\n';
+            con.textContent += '  1. Unzip the package\n';
+            con.textContent += '  2. Install OSS CAD Suite (oss-cad-suite-build on GitHub)\n';
+            con.textContent += '  3. Run: make pnr pack prog\n';
+        }
+    } catch (e) {
+        if (con) con.textContent += '\nError: ' + e.message + '\n';
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Download FPGA Package'; }
+    }
+}
+
 async function uploadToTang() {
     if (!requirePermission('deploy', 'Deploy to Tang')) return;
     switchView('editor');

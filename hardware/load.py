@@ -1,6 +1,6 @@
 from amaranth import *
 
-from .types import *
+from .hw_types import *
 
 
 class ChurchLoad(Elaboratable):

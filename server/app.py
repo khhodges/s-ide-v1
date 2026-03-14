@@ -1,9 +1,13 @@
 import os
+import io
 import json
 import logging
 import uuid
 import base64
 import mimetypes
+import zipfile
+import subprocess
+import tempfile
 import gzip as _gzip
 import requests as http_requests
 from flask import Flask, jsonify, send_from_directory, redirect, make_response, request
@@ -475,6 +479,136 @@ See [LICENSE](../LICENSE) for details.
             except Exception as e:
                 errors.append(f"{gh_path}: {str(e)}")
     return jsonify({"ok": len(errors) == 0, "pushed": results, "errors": errors, "total": len(results)})
+
+BUILD_MD_TEMPLATE = """# Church Machine — Tang Nano 20K Build Package
+
+## What's Inside
+
+- `church_tang_nano_20k.v` — Synthesisable Verilog (generated from Amaranth HDL)
+- `church_tang_nano_20k.json` — Yosys synthesis netlist (Gowin target)
+- `tang_nano_20k.cst` — Pin constraints for GW2AR-LV18QN88C8/I7
+- `Makefile` — Build automation (pnr, pack, prog targets)
+
+## Prerequisites
+
+Install OSS CAD Suite (provides nextpnr-gowin, gowin_pack, openFPGALoader):
+
+```bash
+# Linux / macOS — download latest release:
+# https://github.com/YosysHQ/oss-cad-suite-build/releases/latest
+tar xzf oss-cad-suite-*.tgz
+source oss-cad-suite/environment
+```
+
+## Build and Flash
+
+The Verilog and synthesis JSON are pre-built. You only need place-and-route
+and bitstream packing:
+
+```bash
+make pnr       # place and route with nextpnr-gowin
+make pack      # generate .fs bitstream with gowin_pack
+make prog      # flash to Tang Nano 20K via openFPGALoader (USB-C)
+```
+
+## After Flashing
+
+1. Open the Church Machine IDE in **Chrome or Edge** (WebSerial required)
+2. Plug in the Tang Nano 20K via USB-C
+3. Go to the **Code** tab → **Console Output** sub-tab
+4. Click **Deploy to Tang** to upload your program
+
+## LED Pinout (active-low accent)
+
+| LED | Pin | Signal            |
+|-----|-----|-------------------|
+| 0   | 15  | Boot in progress  |
+| 1   | 16  | Running / blink   |
+| 2   | 17  | Fault             |
+| 3   | 18  | Boot complete inv |
+| 4   | 19  | Halted            |
+| 5   | 20  | Stepping          |
+
+## Device
+
+- **FPGA**: Gowin GW2AR-LV18QN88C8/I7
+- **Board**: Sipeed Tang Nano 20K
+- **Clock**: 27 MHz crystal
+- **UART**: 115200 baud via BL616 USB bridge
+"""
+
+@app.route("/api/download/fpga-package")
+def download_fpga_package():
+    hw_dir = os.path.join(BASE_DIR, "hardware")
+    build_dir = os.path.join(BASE_DIR, "build")
+
+    try:
+        os.makedirs(build_dir, exist_ok=True)
+
+        logging.info("FPGA package: generating Verilog from Amaranth...")
+        gen_result = subprocess.run(
+            ["python3", "-m", "hardware.gen_verilog", "build"],
+            cwd=BASE_DIR,
+            capture_output=True, text=True, timeout=120
+        )
+        if gen_result.returncode != 0:
+            return jsonify({
+                "error": "Amaranth Verilog generation failed",
+                "stderr": gen_result.stderr[-2000:] if gen_result.stderr else "",
+                "stdout": gen_result.stdout[-1000:] if gen_result.stdout else ""
+            }), 500
+
+        verilog_path = os.path.join(build_dir, "church_tang_nano_20k.v")
+        if not os.path.isfile(verilog_path):
+            return jsonify({"error": "Verilog file not generated"}), 500
+
+        logging.info("FPGA package: running Yosys synthesis...")
+        json_path = os.path.join(build_dir, "church_tang_nano_20k.json")
+        synth_result = subprocess.run(
+            ["yosys", "-p",
+             f"read_verilog {verilog_path}; synth_gowin -top top -json {json_path}"],
+            cwd=BASE_DIR,
+            capture_output=True, text=True, timeout=120
+        )
+        if synth_result.returncode != 0:
+            return jsonify({
+                "error": "Yosys synthesis failed",
+                "stderr": synth_result.stderr[-2000:] if synth_result.stderr else "",
+                "stdout": synth_result.stdout[-2000:] if synth_result.stdout else ""
+            }), 500
+
+        if not os.path.isfile(json_path):
+            return jsonify({"error": "Yosys JSON netlist not generated"}), 500
+
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+            zf.write(verilog_path, "church_tang_nano_20k.v")
+            zf.write(json_path, "church_tang_nano_20k.json")
+
+            cst_path = os.path.join(hw_dir, "tang_nano_20k.cst")
+            if os.path.isfile(cst_path):
+                zf.write(cst_path, "tang_nano_20k.cst")
+
+            makefile_path = os.path.join(hw_dir, "Makefile")
+            if os.path.isfile(makefile_path):
+                zf.write(makefile_path, "Makefile")
+
+            zf.writestr("BUILD.md", BUILD_MD_TEMPLATE)
+
+        zip_data = buf.getvalue()
+        resp = make_response(zip_data)
+        resp.headers['Content-Type'] = 'application/zip'
+        resp.headers['Content-Disposition'] = 'attachment; filename="church-nano-package.zip"'
+        resp.headers['Content-Length'] = len(zip_data)
+
+        logging.info("FPGA package: download ready (%d bytes)", len(zip_data))
+        return resp
+
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "Build timed out (120s limit)"}), 500
+    except Exception as e:
+        logging.exception("FPGA package generation failed")
+        return jsonify({"error": str(e)}), 500
 
 with app.app_context():
     import sys

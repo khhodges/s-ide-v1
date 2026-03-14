@@ -5957,8 +5957,8 @@ module \top.core (rst, imem_valid, boot_complete, perm_gt_sig, mem_rd_data, boot
     .mload_index(mload_index),
     .mload_src(mload_cr_src),
     .mload_start(mload_start),
-    .\port$2577$0 (instruction[18:0]),
-    .\port$921$0 (\$143 ),
+    .\port$2637$0 (instruction[18:0]),
+    .\port$957$0 (\$143 ),
     .rst(rst),
     .saved_cr5_gt(\saved_cr5_gt$309 )
   );
@@ -5980,7 +5980,7 @@ module \top.core (rst, imem_valid, boot_complete, perm_gt_sig, mem_rd_data, boot
     .flags(flags),
     .mem_rd_data(mem_rd_data),
     .nia(imem_addr),
-    .\port$2577$0 (instruction[18:0]),
+    .\port$2637$0 (instruction[18:0]),
     .rst(rst)
   );
   (* src = "/home/runner/workspace/hardware/core.py:91" *)
@@ -6007,7 +6007,7 @@ module \top.core (rst, imem_valid, boot_complete, perm_gt_sig, mem_rd_data, boot
     .fault(fault),
     .fault_type(\fault_type$332 ),
     .mem_rd_data(mem_rd_data),
-    .\port$2577$0 (instruction[22:0]),
+    .\port$2637$0 (instruction[22:0]),
     .rst(rst),
     .saved_cr5_gt(\saved_cr5_gt$310 ),
     .start(eloadcall_start_sig)
@@ -6022,7 +6022,7 @@ module \top.core (rst, imem_valid, boot_complete, perm_gt_sig, mem_rd_data, boot
     .ns_rd_en(\ns_rd_en$398 ),
     .ns_wr_data(\ns_wr_data$400 ),
     .ns_wr_en(\ns_wr_en$402 ),
-    .\port$1974$0 (mem_rd_data),
+    .\port$2010$0 (mem_rd_data),
     .rst(rst)
   );
   (* src = "/home/runner/workspace/hardware/core.py:94" *)
@@ -6052,7 +6052,7 @@ module \top.core (rst, imem_valid, boot_complete, perm_gt_sig, mem_rd_data, boot
     .mload_fault(mload_fault),
     .mload_m_elevated(\mload_m_elevated$365 ),
     .mload_start(\mload_start$359 ),
-    .\port$2577$0 (instruction[22:0]),
+    .\port$2637$0 (instruction[22:0]),
     .rst(rst)
   );
   (* src = "/home/runner/workspace/hardware/core.py:92" *)
@@ -6153,7 +6153,7 @@ module \top.core (rst, imem_valid, boot_complete, perm_gt_sig, mem_rd_data, boot
     .mem_wr_addr(mem_wr_addr),
     .mem_wr_data(\mem_wr_data$390 ),
     .mem_wr_en(\mem_wr_en$385 ),
-    .\port$2577$0 (instruction[22:0]),
+    .\port$2637$0 (instruction[22:0]),
     .rst(rst),
     .save_busy(save_busy),
     .save_fault(save_fault),
@@ -6198,7 +6198,7 @@ module \top.core (rst, imem_valid, boot_complete, perm_gt_sig, mem_rd_data, boot
     .cr_wr_en(\cr_wr_en$95 ),
     .fault_type(\fault_type$331 ),
     .mem_rd_data(mem_rd_data),
-    .\port$2577$0 (instruction[17:0]),
+    .\port$2637$0 (instruction[17:0]),
     .rst(rst),
     .switch_busy(switch_busy),
     .switch_fault(switch_fault),
@@ -6235,7 +6235,7 @@ module \top.core (rst, imem_valid, boot_complete, perm_gt_sig, mem_rd_data, boot
     .mem_rd_data(mem_rd_data),
     .nia_set(\nia_set$408 ),
     .nia_value(\nia_value$413 ),
-    .\port$2577$0 (instruction[22:0]),
+    .\port$2637$0 (instruction[22:0]),
     .rst(rst),
     .start(xloadlambda_start_sig)
   );
@@ -7618,7 +7618,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/call.py:45" *)
 (* generator = "Amaranth" *)
-module \top.core.u_call (rst, call_start, cr_rd_data, mload_src, \port$921$0 , mload_index, call_busy, call_complete, mload_fault, mload_done, cr_rd_addr, cr_wr_data, cr_wr_en, cr_wr_addr, call_fault, fault_type, saved_cr5_gt, mload_start, mload_fault_type, \port$2577$0 , clk
+module \top.core.u_call (rst, call_start, cr_rd_data, mload_src, \port$957$0 , mload_index, call_busy, call_complete, mload_fault, mload_done, cr_rd_addr, cr_wr_data, cr_wr_en, cr_wr_addr, call_fault, fault_type, saved_cr5_gt, mload_start, mload_fault_type, \port$2637$0 , clk
 );
   reg \$auto$verilog_backend.cc:2355:dump_module$16  = 0;
   wire [2:0] \$1 ;
@@ -7832,10 +7832,10 @@ module \top.core.u_call (rst, call_start, cr_rd_data, mload_src, \port$921$0 , m
   wire [31:0] nia_value;
   (* src = "/home/runner/workspace/hardware/call.py:53" *)
   reg phase = 1'h0;
-  input [18:0] \port$2577$0 ;
-  wire [18:0] \port$2577$0 ;
-  output [2:0] \port$921$0 ;
-  wire [2:0] \port$921$0 ;
+  input [18:0] \port$2637$0 ;
+  wire [18:0] \port$2637$0 ;
+  output [2:0] \port$957$0 ;
+  wire [2:0] \port$957$0 ;
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
   input rst;
   wire rst;
@@ -7872,10 +7872,10 @@ module \top.core.u_call (rst, call_start, cr_rd_data, mload_src, \port$921$0 , m
   (* src = "/home/runner/workspace/hardware/call.py:65" *)
   always @(posedge clk)
     b_cr_data <= \$38 ;
-  assign src_in_range = \port$2577$0 [18:15] <= (* src = "/home/runner/workspace/hardware/call.py:71" *) 3'h5;
-  assign mload_src = phase ? (* src = "/home/runner/workspace/hardware/call.py:81" *) 4'h6 : \port$2577$0 [18:15];
+  assign src_in_range = \port$2637$0 [18:15] <= (* src = "/home/runner/workspace/hardware/call.py:71" *) 3'h5;
+  assign mload_src = phase ? (* src = "/home/runner/workspace/hardware/call.py:81" *) 4'h6 : \port$2637$0 [18:15];
   assign \$1  = phase ? (* src = "/home/runner/workspace/hardware/call.py:82" *) 3'h7 : 3'h6;
-  assign mload_index = phase ? (* src = "/home/runner/workspace/hardware/call.py:83" *) 17'h00000 : { 2'h0, \port$2577$0 [14:0] };
+  assign mload_index = phase ? (* src = "/home/runner/workspace/hardware/call.py:83" *) 17'h00000 : { 2'h0, \port$2637$0 [14:0] };
   assign \$2  = ~ (* src = "/home/runner/workspace/hardware/call.py:110" *) mask_latched[4:0];
   assign \$3  = ~ (* src = "/home/runner/workspace/hardware/call.py:111" *) mask_latched[10:5];
   assign \$4  = ~ (* src = "/home/runner/workspace/hardware/call.py:136" *) src_reg_latched[5];
@@ -7944,9 +7944,9 @@ module \top.core.u_call (rst, call_start, cr_rd_data, mload_src, \port$921$0 , m
       4'h0:
           /* empty */;
       4'h1:
-          cr_rd_addr = \port$2577$0 [18:15];
+          cr_rd_addr = \port$2637$0 [18:15];
       4'h3:
-          cr_rd_addr = \port$2577$0 [18:15];
+          cr_rd_addr = \port$2637$0 [18:15];
       4'h4:
           (* full_case = 32'd1 *)
           if (\$4 ) begin
@@ -8250,7 +8250,7 @@ module \top.core.u_call (rst, call_start, cr_rd_data, mload_src, \port$921$0 , m
     casez (call_state)
       4'h0:
           if (call_start) begin
-            \$32  = { 1'h0, \port$2577$0 [14:0] };
+            \$32  = { 1'h0, \port$2637$0 [14:0] };
           end
     endcase
     if (rst) begin
@@ -8446,9 +8446,9 @@ module \top.core.u_call (rst, call_start, cr_rd_data, mload_src, \port$921$0 , m
       \$38  = 128'h00000000000000000000000000000000;
     end
   end
-  assign cr_src = \port$2577$0 [18:15];
+  assign cr_src = \port$2637$0 [18:15];
   assign mload_dst = { 1'h0, \$1  };
-  assign index = { 2'h0, \port$2577$0 [14:0] };
+  assign index = { 2'h0, \port$2637$0 [14:0] };
   assign sub_start_reg = mload_start;
   assign mload_cr_src = mload_src;
   assign mload_cr_dst = { 1'h0, \$1  };
@@ -8466,8 +8466,8 @@ module \top.core.u_call (rst, call_start, cr_rd_data, mload_src, \port$921$0 , m
   assign fault_type_latched = fault_type;
   assign nia_set = call_complete;
   assign nia_value = 32'd0;
-  assign mask = { 1'h0, \port$2577$0 [14:0] };
-  assign \port$921$0  = \$1 ;
+  assign mask = { 1'h0, \port$2637$0 [14:0] };
+  assign \port$957$0  = \$1 ;
   assign \cr_wr_data.word0_gt  = cr_wr_data[31:0];
   assign \cr_wr_data.word0_gt.gt_type  = cr_wr_data[1:0];
   assign \cr_wr_data.word0_gt.perms  = cr_wr_data[7:2];
@@ -8514,7 +8514,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/change.py:48" *)
 (* generator = "Amaranth" *)
-module \top.core.u_change (rst, change_start, cr_rd_data, dr_rd_data, change_busy, mem_rd_data, nia, cr8_thread, cr15_namespace, flags, cr_rd_addr, change_fault, fault_type, cr_wr_addr, cr_wr_data, cr_wr_en, \port$2577$0 , clk);
+module \top.core.u_change (rst, change_start, cr_rd_data, dr_rd_data, change_busy, mem_rd_data, nia, cr8_thread, cr15_namespace, flags, cr_rd_addr, change_fault, fault_type, cr_wr_addr, cr_wr_data, cr_wr_en, \port$2637$0 , clk);
   reg \$auto$verilog_backend.cc:2355:dump_module$17  = 0;
   wire [16:0] \$1 ;
   wire \$10 ;
@@ -8827,8 +8827,8 @@ module \top.core.u_change (rst, change_start, cr_rd_data, dr_rd_data, change_bus
   wire [31:0] packed_pc_word;
   (* src = "/home/runner/workspace/hardware/change.py:90" *)
   wire [31:0] pc_offset;
-  input [18:0] \port$2577$0 ;
-  wire [18:0] \port$2577$0 ;
+  input [18:0] \port$2637$0 ;
+  wire [18:0] \port$2637$0 ;
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
   input rst;
   wire rst;
@@ -9027,11 +9027,11 @@ module \top.core.u_change (rst, change_start, cr_rd_data, dr_rd_data, change_bus
       4'h1:
           cr_rd_addr = 4'h7;
       4'h2:
-          cr_rd_addr = \port$2577$0 [18:15];
+          cr_rd_addr = \port$2637$0 [18:15];
       4'h3:
-          cr_rd_addr = \port$2577$0 [18:15];
+          cr_rd_addr = \port$2637$0 [18:15];
       4'h4:
-          cr_rd_addr = \port$2577$0 [18:15];
+          cr_rd_addr = \port$2637$0 [18:15];
     endcase
   end
   always @* begin
@@ -9131,7 +9131,7 @@ module \top.core.u_change (rst, change_start, cr_rd_data, dr_rd_data, change_bus
       4'h7:
           /* empty */;
       4'h8:
-          sub_cr_src = \port$2577$0 [18:15];
+          sub_cr_src = \port$2637$0 [18:15];
       4'h9:
           sub_cr_src = 4'h8;
     endcase
@@ -9342,7 +9342,7 @@ module \top.core.u_change (rst, change_start, cr_rd_data, dr_rd_data, change_bus
     casez (change_state)
       4'h0:
           if (change_start) begin
-            \$32  = { 2'h0, \port$2577$0 [14:0] };
+            \$32  = { 2'h0, \port$2637$0 [14:0] };
           end
     endcase
     if (rst) begin
@@ -9355,7 +9355,7 @@ module \top.core.u_change (rst, change_start, cr_rd_data, dr_rd_data, change_bus
     casez (change_state)
       4'h0:
           if (change_start) begin
-            \$33  = { 1'h0, \port$2577$0 [14:0] };
+            \$33  = { 1'h0, \port$2637$0 [14:0] };
           end
     endcase
     if (rst) begin
@@ -9543,11 +9543,11 @@ module \top.core.u_change (rst, change_start, cr_rd_data, dr_rd_data, change_bus
   assign \thread_wr_en$45  = thread_wr_en;
   assign \thread_wr_idx$47  = thread_wr_idx;
   assign \thread_wr_data$49  = thread_wr_data;
-  assign cr_src = \port$2577$0 [18:15];
+  assign cr_src = \port$2637$0 [18:15];
   assign fault_latched = change_fault;
   assign fault_type_latched = fault_type;
-  assign index = { 2'h0, \port$2577$0 [14:0] };
-  assign change_mask = { 1'h0, \port$2577$0 [14:0] };
+  assign index = { 2'h0, \port$2637$0 [14:0] };
+  assign change_mask = { 1'h0, \port$2637$0 [14:0] };
   assign mem_wr_done = 1'h1;
   assign \flags.N  = flags[0];
   assign \flags.Z  = flags[1];
@@ -10840,7 +10840,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/fused_unit.py:45" *)
 (* generator = "Amaranth" *)
-module \top.core.u_eloadcall (rst, start, cr_rd_data, cr_rd_addr, busy, complete, mem_rd_data, cr15_namespace, fault, fault_type, saved_cr5_gt, cr_wr_addr, cr_wr_data, cr_wr_en, \port$2577$0 , clk);
+module \top.core.u_eloadcall (rst, start, cr_rd_data, cr_rd_addr, busy, complete, mem_rd_data, cr15_namespace, fault, fault_type, saved_cr5_gt, cr_wr_addr, cr_wr_data, cr_wr_en, \port$2637$0 , clk);
   reg \$auto$verilog_backend.cc:2355:dump_module$20  = 0;
   wire [4:0] \$1 ;
   wire \$10 ;
@@ -11085,8 +11085,8 @@ module \top.core.u_eloadcall (rst, start, cr_rd_data, cr_rd_addr, busy, complete
   wire [31:0] nia_value;
   (* src = "/home/runner/workspace/hardware/fused_unit.py:54" *)
   reg [1:0] phase = 2'h0;
-  input [22:0] \port$2577$0 ;
-  wire [22:0] \port$2577$0 ;
+  input [22:0] \port$2637$0 ;
+  wire [22:0] \port$2637$0 ;
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
   input rst;
   wire rst;
@@ -11140,7 +11140,7 @@ module \top.core.u_eloadcall (rst, start, cr_rd_data, cr_rd_addr, busy, complete
   wire [3:0] thread_wr_idx;
   (* src = "/home/runner/workspace/hardware/mload.py:44" *)
   wire [3:0] \thread_wr_idx$37 ;
-  assign src_in_range = \port$2577$0 [18:15] <= (* src = "/home/runner/workspace/hardware/fused_unit.py:72" *) 3'h5;
+  assign src_in_range = \port$2637$0 [18:15] <= (* src = "/home/runner/workspace/hardware/fused_unit.py:72" *) 3'h5;
   assign sub_m_elevated = mload_src == (* src = "/home/runner/workspace/hardware/fused_unit.py:103" *) 3'h6;
   assign cr_rd_addr = local_cr_rd_en ? (* src = "/home/runner/workspace/hardware/fused_unit.py:123" *) local_cr_rd_addr : \cr_rd_addr$42 ;
   assign \$1  = ~ (* src = "/home/runner/workspace/hardware/fused_unit.py:133" *) mask_latched[4:0];
@@ -11222,9 +11222,9 @@ module \top.core.u_eloadcall (rst, start, cr_rd_data, cr_rd_addr, busy, complete
     (* full_case = 32'd1 *)
     casez (phase)
       2'h0:
-          mload_src = \port$2577$0 [18:15];
+          mload_src = \port$2637$0 [18:15];
       2'h1:
-          mload_src = \port$2577$0 [22:19];
+          mload_src = \port$2637$0 [22:19];
       default:
           mload_src = 4'h6;
     endcase
@@ -11234,7 +11234,7 @@ module \top.core.u_eloadcall (rst, start, cr_rd_data, cr_rd_addr, busy, complete
     (* full_case = 32'd1 *)
     casez (phase)
       2'h0:
-          mload_dst = \port$2577$0 [22:19];
+          mload_dst = \port$2637$0 [22:19];
       2'h1:
           mload_dst = 4'h6;
       default:
@@ -11246,7 +11246,7 @@ module \top.core.u_eloadcall (rst, start, cr_rd_data, cr_rd_addr, busy, complete
     (* full_case = 32'd1 *)
     casez (phase)
       2'h0:
-          mload_index = { 2'h0, \port$2577$0 [14:0] };
+          mload_index = { 2'h0, \port$2637$0 [14:0] };
       2'h1:
           mload_index = 17'h00000;
       default:
@@ -11286,7 +11286,7 @@ module \top.core.u_eloadcall (rst, start, cr_rd_data, cr_rd_addr, busy, complete
       4'h3:
           /* empty */;
       4'h4:
-          local_cr_rd_addr = \port$2577$0 [22:19];
+          local_cr_rd_addr = \port$2637$0 [22:19];
       4'h5:
           (* full_case = 32'd1 *)
           if (\$3 ) begin
@@ -11468,7 +11468,7 @@ module \top.core.u_eloadcall (rst, start, cr_rd_data, cr_rd_addr, busy, complete
     casez (eloadcall_state)
       4'h0:
           if (start) begin
-            \$21  = { 1'h0, \port$2577$0 [14:0] };
+            \$21  = { 1'h0, \port$2637$0 [14:0] };
           end
     endcase
     if (rst) begin
@@ -11599,9 +11599,9 @@ module \top.core.u_eloadcall (rst, start, cr_rd_data, cr_rd_addr, busy, complete
       \$25  = 32'd0;
     end
   end
-  assign cr_src = \port$2577$0 [18:15];
-  assign cr_dst = \port$2577$0 [22:19];
-  assign index = { 2'h0, \port$2577$0 [14:0] };
+  assign cr_src = \port$2637$0 [18:15];
+  assign cr_dst = \port$2637$0 [22:19];
+  assign index = { 2'h0, \port$2637$0 [14:0] };
   assign \sub_start$9  = sub_start;
   assign sub_cr_src = mload_src;
   assign sub_cr_dst = mload_dst;
@@ -11628,7 +11628,7 @@ module \top.core.u_eloadcall (rst, start, cr_rd_data, cr_rd_addr, busy, complete
   assign fault_type_latched = fault_type;
   assign nia_set = complete;
   assign nia_value = 32'd0;
-  assign mask = { 1'h0, \port$2577$0 [14:0] };
+  assign mask = { 1'h0, \port$2637$0 [14:0] };
   assign \cr_rd_data.word0_gt  = cr_rd_data[31:0];
   assign \cr_rd_data.word0_gt.gt_type  = cr_rd_data[1:0];
   assign \cr_rd_data.word0_gt.perms  = cr_rd_data[7:2];
@@ -12735,7 +12735,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/gc_unit.py:33" *)
 (* generator = "Amaranth" *)
-module \top.core.u_gc_unit (rst, gc_busy, \port$1974$0 , ns_addr, ns_rd_en, ns_wr_data, ns_wr_en, garbage_count, g_bit_reset, clk);
+module \top.core.u_gc_unit (rst, gc_busy, \port$2010$0 , ns_addr, ns_rd_en, ns_wr_data, ns_wr_en, garbage_count, g_bit_reset, clk);
   reg \$auto$verilog_backend.cc:2355:dump_module$22  = 0;
   wire [7:0] \$1 ;
   wire \$10 ;
@@ -12816,8 +12816,8 @@ module \top.core.u_gc_unit (rst, gc_busy, \port$1974$0 , ns_addr, ns_rd_en, ns_w
   (* src = "/home/runner/workspace/hardware/gc_unit.py:20" *)
   output ns_wr_en;
   reg ns_wr_en;
-  input [31:0] \port$1974$0 ;
-  wire [31:0] \port$1974$0 ;
+  input [31:0] \port$2010$0 ;
+  wire [31:0] \port$2010$0 ;
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
   input rst;
   wire rst;
@@ -13101,11 +13101,11 @@ module \top.core.u_gc_unit (rst, gc_busy, \port$1974$0 , ns_addr, ns_rd_en, ns_w
       3'h0:
           /* empty */;
       3'h1:
-          \$25  = { 64'h0000000000000000, \port$1974$0  };
+          \$25  = { 64'h0000000000000000, \port$2010$0  };
       3'h3:
           /* empty */;
       3'h2:
-          \$25  = { 64'h0000000000000000, \port$1974$0  };
+          \$25  = { 64'h0000000000000000, \port$2010$0  };
     endcase
     if (rst) begin
       \$25  = 96'h000000000000000000000000;
@@ -13119,7 +13119,7 @@ module \top.core.u_gc_unit (rst, gc_busy, \port$1974$0 , ns_addr, ns_rd_en, ns_w
   assign gc_mark_en = 1'h1;
   assign gc_sweep_en = 1'h1;
   assign ns_start_index = 17'h00001;
-  assign ns_rd_data = { 64'h0000000000000000, \port$1974$0  };
+  assign ns_rd_data = { 64'h0000000000000000, \port$2010$0  };
   assign ns_end_index = 17'h01000;
   assign \$10  = 1'h0;
   assign \$11  = 1'h0;
@@ -13383,7 +13383,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/load.py:31" *)
 (* generator = "Amaranth" *)
-module \top.core.u_load (rst, load_start, mload_m_elevated, load_busy, load_fault, mload_busy, mload_fault, mload_done, mload_start, fault_type, \port$2577$0 , clk);
+module \top.core.u_load (rst, load_start, mload_m_elevated, load_busy, load_fault, mload_busy, mload_fault, mload_done, mload_start, fault_type, \port$2637$0 , clk);
   reg \$auto$verilog_backend.cc:2355:dump_module$24  = 0;
   wire \$1 ;
   wire \$2 ;
@@ -13443,8 +13443,8 @@ module \top.core.u_load (rst, load_start, mload_m_elevated, load_busy, load_faul
   (* src = "/home/runner/workspace/hardware/load.py:17" *)
   output mload_start;
   reg mload_start;
-  input [22:0] \port$2577$0 ;
-  wire [22:0] \port$2577$0 ;
+  input [22:0] \port$2637$0 ;
+  wire [22:0] \port$2637$0 ;
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
   input rst;
   wire rst;
@@ -13457,7 +13457,7 @@ module \top.core.u_load (rst, load_start, mload_m_elevated, load_busy, load_faul
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
   always @(posedge clk)
     load_wrapper_state <= \$6 ;
-  assign mload_m_elevated = \port$2577$0 [18:15] == (* src = "/home/runner/workspace/hardware/load.py:39" *) 3'h6;
+  assign mload_m_elevated = \port$2637$0 [18:15] == (* src = "/home/runner/workspace/hardware/load.py:39" *) 3'h6;
   assign load_busy = ~ (* src = "/home/runner/workspace/hardware/load.py:58" *) \$1 ;
   assign load_complete = \$4  & (* src = "/home/runner/workspace/hardware/load.py:59" *) mload_done;
   always @* begin
@@ -13496,12 +13496,12 @@ module \top.core.u_load (rst, load_start, mload_m_elevated, load_busy, load_faul
       \$6  = 2'h0;
     end
   end
-  assign mload_cr_src = \port$2577$0 [18:15];
-  assign cr_src = \port$2577$0 [18:15];
-  assign mload_cr_dst = \port$2577$0 [22:19];
-  assign cr_dst = \port$2577$0 [22:19];
-  assign mload_index = { 2'h0, \port$2577$0 [14:0] };
-  assign index = { 2'h0, \port$2577$0 [14:0] };
+  assign mload_cr_src = \port$2637$0 [18:15];
+  assign cr_src = \port$2637$0 [18:15];
+  assign mload_cr_dst = \port$2637$0 [22:19];
+  assign cr_dst = \port$2637$0 [22:19];
+  assign mload_index = { 2'h0, \port$2637$0 [14:0] };
+  assign index = { 2'h0, \port$2637$0 [14:0] };
   assign mload_direct = 1'h0;
   assign mload_direct_gt = 32'd0;
   assign mload_fault_type = fault_type;
@@ -13801,8 +13801,20 @@ module \top.core.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data
   reg [31:0] \$29 ;
   wire [127:0] \$3 ;
   reg [31:0] \$30 ;
-  reg [3:0] \$31 ;
+  reg [31:0] \$31 ;
+  reg [31:0] \$32 ;
+  reg [31:0] \$33 ;
+  reg [31:0] \$34 ;
+  reg [31:0] \$35 ;
+  reg [31:0] \$36 ;
+  reg [31:0] \$37 ;
+  reg [31:0] \$38 ;
+  reg [31:0] \$39 ;
   wire [127:0] \$4 ;
+  reg [31:0] \$40 ;
+  reg [31:0] \$41 ;
+  reg [31:0] \$42 ;
+  reg [3:0] \$43 ;
   wire \$5 ;
   wire [31:0] \$6 ;
   wire \$7 ;
@@ -14470,9 +14482,33 @@ module \top.core.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data
   (* src = "/home/runner/workspace/hardware/registers.py:62" *)
   reg [31:0] dr1 = 32'd0;
   (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr10 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr11 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr12 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr13 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr14 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr15 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
   reg [31:0] dr2 = 32'd0;
   (* src = "/home/runner/workspace/hardware/registers.py:62" *)
   reg [31:0] dr3 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr4 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr5 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr6 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr7 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr8 = 32'd0;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  reg [31:0] dr9 = 32'd0;
   (* src = "/home/runner/workspace/hardware/registers.py:44" *)
   wire [3:0] dr_rd_addr1;
   (* src = "/home/runner/workspace/hardware/registers.py:46" *)
@@ -14525,6 +14561,42 @@ module \top.core.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
   input rst;
   wire rst;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr5 <= \$32 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr6 <= \$33 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr7 <= \$34 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr8 <= \$35 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr9 <= \$36 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr10 <= \$37 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr11 <= \$38 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr12 <= \$39 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr13 <= \$40 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr14 <= \$41 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
+  always @(posedge clk)
+    dr15 <= \$42 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:63" *)
+  always @(posedge clk)
+    flags <= \$43 ;
   (* src = "/home/runner/workspace/hardware/registers.py:61" *)
   always @(posedge clk)
     cr0 <= \$11 ;
@@ -14585,9 +14657,131 @@ module \top.core.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data
   (* src = "/home/runner/workspace/hardware/registers.py:62" *)
   always @(posedge clk)
     dr3 <= \$30 ;
-  (* src = "/home/runner/workspace/hardware/registers.py:63" *)
+  (* src = "/home/runner/workspace/hardware/registers.py:62" *)
   always @(posedge clk)
-    flags <= \$31 ;
+    dr4 <= \$31 ;
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
+    \$32  = dr5;
+    if (clear_all) begin
+      \$32  = 32'd0;
+    end
+    if (rst) begin
+      \$32  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
+    \$33  = dr6;
+    if (clear_all) begin
+      \$33  = 32'd0;
+    end
+    if (rst) begin
+      \$33  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
+    \$34  = dr7;
+    if (clear_all) begin
+      \$34  = 32'd0;
+    end
+    if (rst) begin
+      \$34  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
+    \$35  = dr8;
+    if (clear_all) begin
+      \$35  = 32'd0;
+    end
+    if (rst) begin
+      \$35  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
+    \$36  = dr9;
+    if (clear_all) begin
+      \$36  = 32'd0;
+    end
+    if (rst) begin
+      \$36  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
+    \$37  = dr10;
+    if (clear_all) begin
+      \$37  = 32'd0;
+    end
+    if (rst) begin
+      \$37  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
+    \$38  = dr11;
+    if (clear_all) begin
+      \$38  = 32'd0;
+    end
+    if (rst) begin
+      \$38  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
+    \$39  = dr12;
+    if (clear_all) begin
+      \$39  = 32'd0;
+    end
+    if (rst) begin
+      \$39  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
+    \$40  = dr13;
+    if (clear_all) begin
+      \$40  = 32'd0;
+    end
+    if (rst) begin
+      \$40  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
+    \$41  = dr14;
+    if (clear_all) begin
+      \$41  = 32'd0;
+    end
+    if (rst) begin
+      \$41  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
+    \$42  = dr15;
+    if (clear_all) begin
+      \$42  = 32'd0;
+    end
+    if (rst) begin
+      \$42  = 32'd0;
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
+    \$43  = flags;
+    (* full_case = 32'd1 *)
+    if (clear_all) begin
+      \$43  = 4'h0;
+    end else begin
+    end
+    if (rst) begin
+      \$43  = 4'h0;
+    end
+  end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
     (* full_case = 32'd1 *)
@@ -15250,14 +15444,12 @@ module \top.core.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$26 ) begin end
-    \$31  = flags;
-    (* full_case = 32'd1 *)
+    \$31  = dr4;
     if (clear_all) begin
-      \$31  = 4'h0;
-    end else begin
+      \$31  = 32'd0;
     end
     if (rst) begin
-      \$31  = 4'h0;
+      \$31  = 32'd0;
     end
   end
   assign cr_word_rd_sel = 2'h0;
@@ -16326,7 +16518,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/save.py:36" *)
 (* generator = "Amaranth" *)
-module \top.core.u_save (rst, save_start, cr_rd_data, save_busy, mem_rd_data, cr15_namespace, cr_rd_addr, save_fault, fault_type, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, \port$2577$0 , clk);
+module \top.core.u_save (rst, save_start, cr_rd_data, save_busy, mem_rd_data, cr15_namespace, cr_rd_addr, save_fault, fault_type, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, \port$2637$0 , clk);
   reg \$auto$verilog_backend.cc:2355:dump_module$28  = 0;
   wire \$1 ;
   reg \$10 ;
@@ -16478,8 +16670,8 @@ module \top.core.u_save (rst, save_start, cr_rd_data, save_busy, mem_rd_data, cr
   wire mem_wr_en;
   (* src = "/home/runner/workspace/hardware/msave.py:23" *)
   wire \mem_wr_en$23 ;
-  input [22:0] \port$2577$0 ;
-  wire [22:0] \port$2577$0 ;
+  input [22:0] \port$2637$0 ;
+  wire [22:0] \port$2637$0 ;
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
   input rst;
   wire rst;
@@ -16554,7 +16746,7 @@ module \top.core.u_save (rst, save_start, cr_rd_data, save_busy, mem_rd_data, cr
   (* init = 1'h0 *)
   (* src = "/home/runner/workspace/hardware/save.py:48" *)
   wire sub_start_reg;
-  assign dst_in_range = \port$2577$0 [22:19] <= (* src = "/home/runner/workspace/hardware/save.py:53" *) 3'h6;
+  assign dst_in_range = \port$2637$0 [22:19] <= (* src = "/home/runner/workspace/hardware/save.py:53" *) 3'h6;
   assign save_busy = ~ (* src = "/home/runner/workspace/hardware/save.py:115" *) \$1 ;
   assign save_complete = \$5  & (* src = "/home/runner/workspace/hardware/save.py:116" *) sub_done_latched;
   assign \$1  = ! (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) save_wrapper_state;
@@ -16597,7 +16789,7 @@ module \top.core.u_save (rst, save_start, cr_rd_data, save_busy, mem_rd_data, cr
     .mem_wr_addr(mem_wr_addr),
     .mem_wr_data(mem_wr_data),
     .mem_wr_en(mem_wr_en),
-    .\port$2577$0 (\port$2577$0 [14:0]),
+    .\port$2637$0 (\port$2637$0 [14:0]),
     .rst(rst),
     .sub_done(sub_done),
     .sub_dst_cap(sub_dst_cap),
@@ -16613,11 +16805,11 @@ module \top.core.u_save (rst, save_start, cr_rd_data, save_busy, mem_rd_data, cr
       3'h0:
           /* empty */;
       3'h1:
-          cr_rd_addr = \port$2577$0 [22:19];
+          cr_rd_addr = \port$2637$0 [22:19];
       3'h2:
-          cr_rd_addr = \port$2577$0 [18:15];
+          cr_rd_addr = \port$2637$0 [18:15];
       3'h3:
-          cr_rd_addr = \port$2577$0 [18:15];
+          cr_rd_addr = \port$2637$0 [18:15];
     endcase
   end
   always @* begin
@@ -16789,12 +16981,12 @@ module \top.core.u_save (rst, save_start, cr_rd_data, save_busy, mem_rd_data, cr
       \$14  = 1'h0;
     end
   end
-  assign cr_dst = \port$2577$0 [22:19];
+  assign cr_dst = \port$2637$0 [22:19];
   assign \sub_start$3  = sub_start;
   assign dst_reg_latched = sub_dst_cap;
   assign sub_src_gt = src_reg_latched[31:0];
-  assign sub_index = { 2'h0, \port$2577$0 [14:0] };
-  assign index = { 2'h0, \port$2577$0 [14:0] };
+  assign sub_index = { 2'h0, \port$2637$0 [14:0] };
+  assign index = { 2'h0, \port$2637$0 [14:0] };
   assign mem_wr_done = 1'h1;
   assign \mem_wr_done$11  = 1'h1;
   assign \cr15_namespace$13  = cr15_namespace;
@@ -16807,7 +16999,7 @@ module \top.core.u_save (rst, save_start, cr_rd_data, save_busy, mem_rd_data, cr
   assign \mem_rd_addr$25  = mem_rd_addr;
   assign \mem_rd_en$27  = mem_rd_en;
   assign sub_start_reg = sub_start;
-  assign cr_src = \port$2577$0 [18:15];
+  assign cr_src = \port$2637$0 [18:15];
   assign fault_latched = save_fault;
   assign fault_type_latched = fault_type;
   assign \sub_dst_cap.word0_gt  = sub_dst_cap[31:0];
@@ -16862,7 +17054,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/msave.py:34" *)
 (* generator = "Amaranth" *)
-module \top.core.u_save.u_msave (rst, sub_fault, sub_done, mem_rd_data, cr15_namespace, sub_dst_cap, sub_src_gt, sub_start, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, sub_fault_type, \port$2577$0 , clk);
+module \top.core.u_save.u_msave (rst, sub_fault, sub_done, mem_rd_data, cr15_namespace, sub_dst_cap, sub_src_gt, sub_start, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, sub_fault_type, \port$2637$0 , clk);
   reg \$auto$verilog_backend.cc:2355:dump_module$29  = 0;
   wire [19:0] \$1 ;
   wire [39:0] \$10 ;
@@ -16993,8 +17185,8 @@ module \top.core.u_save.u_msave (rst, sub_fault, sub_done, mem_rd_data, cr15_nam
   reg [31:0] ns_location_reg = 32'd0;
   (* src = "/home/runner/workspace/hardware/msave.py:65" *)
   reg [31:0] ns_seals_reg = 32'd0;
-  input [14:0] \port$2577$0 ;
-  wire [14:0] \port$2577$0 ;
+  input [14:0] \port$2637$0 ;
+  wire [14:0] \port$2637$0 ;
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
   input rst;
   wire rst;
@@ -17295,7 +17487,7 @@ module \top.core.u_save.u_msave (rst, sub_fault, sub_done, mem_rd_data, cr15_nam
     casez (msave_state)
       4'h0:
           if (sub_start) begin
-            \$36  = { 2'h0, \port$2577$0  };
+            \$36  = { 2'h0, \port$2637$0  };
           end
     endcase
     if (rst) begin
@@ -17429,7 +17621,7 @@ module \top.core.u_save.u_msave (rst, sub_fault, sub_done, mem_rd_data, cr15_nam
   assign fnv_mul = \$16 [31:0];
   assign fnv_masked = fnv_hash[24:0];
   assign fault_type_reg = sub_fault_type;
-  assign sub_index = { 2'h0, \port$2577$0  };
+  assign sub_index = { 2'h0, \port$2637$0  };
   assign mem_rd_valid = 1'h1;
   assign mem_wr_done = 1'h1;
   assign \dst_cap_reg.word0_gt  = dst_cap_reg[31:0];
@@ -18517,7 +18709,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/switch.py:37" *)
 (* generator = "Amaranth" *)
-module \top.core.u_switch (rst, switch_start, cr_rd_data, cr_rd_addr, switch_busy, mem_rd_data, cr15_namespace, switch_fault, fault_type, cr_wr_addr, cr_wr_data, cr_wr_en, \port$2577$0 , clk);
+module \top.core.u_switch (rst, switch_start, cr_rd_data, cr_rd_addr, switch_busy, mem_rd_data, cr15_namespace, switch_fault, fault_type, cr_wr_addr, cr_wr_data, cr_wr_en, \port$2637$0 , clk);
   reg \$auto$verilog_backend.cc:2355:dump_module$31  = 0;
   wire [4:0] \$1 ;
   wire \$10 ;
@@ -18699,8 +18891,8 @@ module \top.core.u_switch (rst, switch_start, cr_rd_data, cr_rd_addr, switch_bus
   wire mem_rd_valid;
   (* src = "/home/runner/workspace/hardware/switch.py:30" *)
   wire \mem_rd_valid$20 ;
-  input [17:0] \port$2577$0 ;
-  wire [17:0] \port$2577$0 ;
+  input [17:0] \port$2637$0 ;
+  wire [17:0] \port$2637$0 ;
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
   input rst;
   wire rst;
@@ -18775,8 +18967,8 @@ module \top.core.u_switch (rst, switch_start, cr_rd_data, cr_rd_addr, switch_bus
   wire [3:0] thread_wr_idx;
   (* src = "/home/runner/workspace/hardware/mload.py:44" *)
   wire [3:0] \thread_wr_idx$34 ;
-  assign \$1  = 4'h8 + (* src = "/home/runner/workspace/hardware/switch.py:45" *) \port$2577$0 [2:0];
-  assign src_in_range = \port$2577$0 [17:15] <= (* src = "/home/runner/workspace/hardware/switch.py:56" *) 3'h7;
+  assign \$1  = 4'h8 + (* src = "/home/runner/workspace/hardware/switch.py:45" *) \port$2637$0 [2:0];
+  assign src_in_range = \port$2637$0 [17:15] <= (* src = "/home/runner/workspace/hardware/switch.py:56" *) 3'h7;
   assign cr_rd_addr = local_cr_rd_en ? (* src = "/home/runner/workspace/hardware/switch.py:87" *) local_cr_rd_addr : \cr_rd_addr$39 ;
   assign switch_busy = ~ (* src = "/home/runner/workspace/hardware/switch.py:131" *) \$2 ;
   assign switch_complete = \$8  & (* src = "/home/runner/workspace/hardware/switch.py:132" *) sub_done;
@@ -18814,7 +19006,7 @@ module \top.core.u_switch (rst, switch_start, cr_rd_data, cr_rd_addr, switch_bus
     .mem_addr(mem_addr),
     .mem_rd_data(mem_rd_data),
     .mem_rd_en(mem_rd_en),
-    .\port$2577$0 (\port$2577$0 ),
+    .\port$2637$0 (\port$2637$0 ),
     .rst(rst),
     .sub_busy(sub_busy),
     .sub_cr_dst(\$1 [3:0]),
@@ -18845,9 +19037,9 @@ module \top.core.u_switch (rst, switch_start, cr_rd_data, cr_rd_addr, switch_bus
       3'h0:
           /* empty */;
       3'h1:
-          local_cr_rd_addr = { 1'h0, \port$2577$0 [17:15] };
+          local_cr_rd_addr = { 1'h0, \port$2637$0 [17:15] };
       3'h2:
-          local_cr_rd_addr = { 1'h0, \port$2577$0 [17:15] };
+          local_cr_rd_addr = { 1'h0, \port$2637$0 [17:15] };
     endcase
   end
   always @* begin
@@ -18981,13 +19173,13 @@ module \top.core.u_switch (rst, switch_start, cr_rd_data, cr_rd_addr, switch_bus
     end
   end
   assign dest_cr = \$1 [3:0];
-  assign target = \port$2577$0 [2:0];
-  assign cr_src = \port$2577$0 [17:15];
+  assign target = \port$2637$0 [2:0];
+  assign cr_src = \port$2637$0 [17:15];
   assign \sub_start$5  = sub_start;
-  assign sub_cr_src = { 1'h0, \port$2577$0 [17:15] };
+  assign sub_cr_src = { 1'h0, \port$2637$0 [17:15] };
   assign sub_cr_dst = \$1 [3:0];
-  assign sub_index = { 2'h0, \port$2577$0 [14:0] };
-  assign index = { 2'h0, \port$2577$0 [14:0] };
+  assign sub_index = { 2'h0, \port$2637$0 [14:0] };
+  assign index = { 2'h0, \port$2637$0 [14:0] };
   assign sub_direct = 1'h0;
   assign sub_direct_gt = 32'd0;
   assign sub_m_elevated = 1'h1;
@@ -19066,7 +19258,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/mload.py:51" *)
 (* generator = "Amaranth" *)
-module \top.core.u_switch.u_mload (rst, cr_rd_data, sub_cr_dst, sub_busy, sub_fault, sub_done, mem_rd_data, cr15_namespace, sub_start, cr_rd_addr, mem_addr, mem_rd_en, thread_wr_en, thread_wr_idx, thread_wr_data, cr_wr_addr, cr_wr_data, cr_wr_en, sub_fault_type, \port$2577$0 , clk
+module \top.core.u_switch.u_mload (rst, cr_rd_data, sub_cr_dst, sub_busy, sub_fault, sub_done, mem_rd_data, cr15_namespace, sub_start, cr_rd_addr, mem_addr, mem_rd_en, thread_wr_en, thread_wr_idx, thread_wr_data, cr_wr_addr, cr_wr_data, cr_wr_en, sub_fault_type, \port$2637$0 , clk
 );
   reg \$auto$verilog_backend.cc:2355:dump_module$32  = 0;
   wire [19:0] \$1 ;
@@ -19242,8 +19434,8 @@ module \top.core.u_switch.u_mload (rst, cr_rd_data, sub_cr_dst, sub_busy, sub_fa
   wire ns_index_in_bounds;
   (* src = "/home/runner/workspace/hardware/mload.py:85" *)
   reg [31:0] ns_w1_saved = 32'd0;
-  input [17:0] \port$2577$0 ;
-  wire [17:0] \port$2577$0 ;
+  input [17:0] \port$2637$0 ;
+  wire [17:0] \port$2637$0 ;
   (* src = "/home/runner/workspace/hardware/mload.py:59" *)
   reg [127:0] result_cap = 128'h00000000000000000000000000000000;
   (* src = "/home/runner/workspace/hardware/mload.py:59" *)
@@ -19791,7 +19983,7 @@ module \top.core.u_switch.u_mload (rst, cr_rd_data, sub_cr_dst, sub_busy, sub_fa
     casez (mload_state)
       4'h0:
           if (sub_start) begin
-            \$40  = { 1'h0, \port$2577$0 [17:15] };
+            \$40  = { 1'h0, \port$2637$0 [17:15] };
           end
     endcase
     if (rst) begin
@@ -19817,7 +20009,7 @@ module \top.core.u_switch.u_mload (rst, cr_rd_data, sub_cr_dst, sub_busy, sub_fa
     casez (mload_state)
       4'h0:
           if (sub_start) begin
-            \$42  = { 2'h0, \port$2577$0 [14:0] };
+            \$42  = { 2'h0, \port$2637$0 [14:0] };
           end
     endcase
     if (rst) begin
@@ -20053,8 +20245,8 @@ module \top.core.u_switch.u_mload (rst, cr_rd_data, sub_cr_dst, sub_busy, sub_fa
   assign fnv_mul = \$16 [31:0];
   assign fnv_masked = fnv_hash[24:0];
   assign fault_type_reg = sub_fault_type;
-  assign sub_cr_src = { 1'h0, \port$2577$0 [17:15] };
-  assign sub_index = { 2'h0, \port$2577$0 [14:0] };
+  assign sub_cr_src = { 1'h0, \port$2637$0 [17:15] };
+  assign sub_index = { 2'h0, \port$2637$0 [14:0] };
   assign sub_direct = 1'h0;
   assign sub_direct_gt = 32'd0;
   assign sub_m_elevated = 1'h1;
@@ -20551,7 +20743,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/fused_unit.py:289" *)
 (* generator = "Amaranth" *)
-module \top.core.u_xloadlambda (rst, start, cr_rd_data, cr_rd_addr, busy, mem_rd_data, cr15_namespace, nia_set, nia_value, fault, fault_type, cr_wr_addr, cr_wr_data, cr_wr_en, \port$2577$0 , clk);
+module \top.core.u_xloadlambda (rst, start, cr_rd_data, cr_rd_addr, busy, mem_rd_data, cr15_namespace, nia_set, nia_value, fault, fault_type, cr_wr_addr, cr_wr_data, cr_wr_en, \port$2637$0 , clk);
   reg \$auto$verilog_backend.cc:2355:dump_module$34  = 0;
   wire \$1 ;
   reg \$10 ;
@@ -20766,8 +20958,8 @@ module \top.core.u_xloadlambda (rst, start, cr_rd_data, cr_rd_addr, busy, mem_rd
   (* src = "/home/runner/workspace/hardware/fused_unit.py:285" *)
   output [31:0] nia_value;
   reg [31:0] nia_value;
-  input [22:0] \port$2577$0 ;
-  wire [22:0] \port$2577$0 ;
+  input [22:0] \port$2637$0 ;
+  wire [22:0] \port$2637$0 ;
   (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_ir.py:283" *)
   input rst;
   wire rst;
@@ -20816,7 +21008,7 @@ module \top.core.u_xloadlambda (rst, start, cr_rd_data, cr_rd_addr, busy, mem_rd
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
   reg [2:0] xloadlambda_state = 3'h0;
   assign is_null = loaded_cap[1:0] == (* src = "/home/runner/workspace/hardware/fused_unit.py:308" *) 2'h2;
-  assign sub_m_elevated = \port$2577$0 [18:15] == (* src = "/home/runner/workspace/hardware/fused_unit.py:316" *) 3'h6;
+  assign sub_m_elevated = \port$2637$0 [18:15] == (* src = "/home/runner/workspace/hardware/fused_unit.py:316" *) 3'h6;
   assign cr_rd_addr = local_cr_rd_en ? (* src = "/home/runner/workspace/hardware/fused_unit.py:336" *) local_cr_rd_addr : \cr_rd_addr$39 ;
   assign busy = ~ (* src = "/home/runner/workspace/hardware/fused_unit.py:400" *) \$1 ;
   assign \$1  = ! (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) xloadlambda_state;
@@ -20860,7 +21052,7 @@ module \top.core.u_xloadlambda (rst, start, cr_rd_data, cr_rd_addr, busy, mem_rd
     .mem_addr(mem_addr),
     .mem_rd_data(mem_rd_data),
     .mem_rd_en(mem_rd_en),
-    .\port$2577$0 (\port$2577$0 ),
+    .\port$2637$0 (\port$2637$0 ),
     .rst(rst),
     .sub_done(sub_done),
     .sub_fault(sub_fault),
@@ -20892,7 +21084,7 @@ module \top.core.u_xloadlambda (rst, start, cr_rd_data, cr_rd_addr, busy, mem_rd
       3'h1:
           /* empty */;
       3'h3:
-          local_cr_rd_addr = \port$2577$0 [22:19];
+          local_cr_rd_addr = \port$2637$0 [22:19];
     endcase
   end
   always @* begin
@@ -21070,12 +21262,12 @@ module \top.core.u_xloadlambda (rst, start, cr_rd_data, cr_rd_addr, busy, mem_rd
     end
   end
   assign sub_start_reg = sub_start;
-  assign sub_cr_src = \port$2577$0 [18:15];
-  assign cr_src = \port$2577$0 [18:15];
-  assign sub_cr_dst = \port$2577$0 [22:19];
-  assign cr_dst = \port$2577$0 [22:19];
-  assign sub_index = { 2'h0, \port$2577$0 [14:0] };
-  assign index = { 2'h0, \port$2577$0 [14:0] };
+  assign sub_cr_src = \port$2637$0 [18:15];
+  assign cr_src = \port$2637$0 [18:15];
+  assign sub_cr_dst = \port$2637$0 [22:19];
+  assign cr_dst = \port$2637$0 [22:19];
+  assign sub_index = { 2'h0, \port$2637$0 [14:0] };
+  assign index = { 2'h0, \port$2637$0 [14:0] };
   assign sub_direct = 1'h0;
   assign sub_direct_gt = 32'd0;
   assign \cr_rd_data$14  = cr_rd_data;
@@ -21153,7 +21345,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/mload.py:51" *)
 (* generator = "Amaranth" *)
-module \top.core.u_xloadlambda.u_mload (rst, cr_rd_data, sub_m_elevated, sub_fault, sub_done, mem_rd_data, cr15_namespace, sub_start, cr_rd_addr, mem_addr, mem_rd_en, thread_wr_en, thread_wr_idx, thread_wr_data, cr_wr_addr, cr_wr_data, cr_wr_en, sub_fault_type, \port$2577$0 , clk);
+module \top.core.u_xloadlambda.u_mload (rst, cr_rd_data, sub_m_elevated, sub_fault, sub_done, mem_rd_data, cr15_namespace, sub_start, cr_rd_addr, mem_addr, mem_rd_en, thread_wr_en, thread_wr_idx, thread_wr_data, cr_wr_addr, cr_wr_data, cr_wr_en, sub_fault_type, \port$2637$0 , clk);
   reg \$auto$verilog_backend.cc:2355:dump_module$35  = 0;
   wire [19:0] \$1 ;
   wire [39:0] \$10 ;
@@ -21328,8 +21520,8 @@ module \top.core.u_xloadlambda.u_mload (rst, cr_rd_data, sub_m_elevated, sub_fau
   wire ns_index_in_bounds;
   (* src = "/home/runner/workspace/hardware/mload.py:85" *)
   reg [31:0] ns_w1_saved = 32'd0;
-  input [22:0] \port$2577$0 ;
-  wire [22:0] \port$2577$0 ;
+  input [22:0] \port$2637$0 ;
+  wire [22:0] \port$2637$0 ;
   (* src = "/home/runner/workspace/hardware/mload.py:59" *)
   reg [127:0] result_cap = 128'h00000000000000000000000000000000;
   (* src = "/home/runner/workspace/hardware/mload.py:59" *)
@@ -21878,7 +22070,7 @@ module \top.core.u_xloadlambda.u_mload (rst, cr_rd_data, sub_m_elevated, sub_fau
     casez (mload_state)
       4'h0:
           if (sub_start) begin
-            \$40  = \port$2577$0 [18:15];
+            \$40  = \port$2637$0 [18:15];
           end
     endcase
     if (rst) begin
@@ -21891,7 +22083,7 @@ module \top.core.u_xloadlambda.u_mload (rst, cr_rd_data, sub_m_elevated, sub_fau
     casez (mload_state)
       4'h0:
           if (sub_start) begin
-            \$41  = \port$2577$0 [22:19];
+            \$41  = \port$2637$0 [22:19];
           end
     endcase
     if (rst) begin
@@ -21904,7 +22096,7 @@ module \top.core.u_xloadlambda.u_mload (rst, cr_rd_data, sub_m_elevated, sub_fau
     casez (mload_state)
       4'h0:
           if (sub_start) begin
-            \$42  = { 2'h0, \port$2577$0 [14:0] };
+            \$42  = { 2'h0, \port$2637$0 [14:0] };
           end
     endcase
     if (rst) begin
@@ -22140,9 +22332,9 @@ module \top.core.u_xloadlambda.u_mload (rst, cr_rd_data, sub_m_elevated, sub_fau
   assign fnv_mul = \$16 [31:0];
   assign fnv_masked = fnv_hash[24:0];
   assign fault_type_reg = sub_fault_type;
-  assign sub_cr_src = \port$2577$0 [18:15];
-  assign sub_cr_dst = \port$2577$0 [22:19];
-  assign sub_index = { 2'h0, \port$2577$0 [14:0] };
+  assign sub_cr_src = \port$2637$0 [18:15];
+  assign sub_cr_dst = \port$2637$0 [22:19];
+  assign sub_index = { 2'h0, \port$2637$0 [14:0] };
   assign sub_direct = 1'h0;
   assign sub_direct_gt = 32'd0;
   assign mem_rd_valid = 1'h1;

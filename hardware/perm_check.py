@@ -1,7 +1,7 @@
 from amaranth import *
 from amaranth.lib.data import View
 
-from .types import *
+from .hw_types import *
 from .layouts import GT_LAYOUT
 
 

@@ -92,3 +92,13 @@ The Dashboard view has a "Push to GitHub" button that triggers `POST /api/github
 - **Amaranth HDL:** Employed for hardware synthesis of the FPGA design.
 - **localStorage:** Used for client-side state persistence within the web IDE.
 - **oss-cad-suite:** Provides the FPGA toolchain, including `yosys`, `nextpnr-gowin`, `gowin_pack`, and `openFPGALoader`.
+
+## FPGA Build Package
+
+The IDE includes a "Download FPGA Package" button in the Code tab Install toolbar that generates a downloadable ZIP containing:
+- Pre-generated Verilog (`church_tang_nano_20k.v`) from Amaranth HDL
+- Pre-synthesised Yosys JSON netlist (`church_tang_nano_20k.json`) for Gowin GW2AR-18
+- Pin constraints (`tang_nano_20k.cst`) and `Makefile`
+- `BUILD.md` with two-command instructions: `make pnr pack` then `make prog`
+
+The endpoint `GET /api/download/fpga-package` runs Amaranth elaboration and Yosys synthesis on demand (takes ~30-60s). The user unzips locally and only needs OSS CAD Suite for the final place-and-route + bitstream packing step. The `hardware/hw_types.py` module (renamed from `types.py` to avoid shadowing Python's stdlib `types` module) defines all Church Machine opcodes, permission bits, GT types, and fault codes.
