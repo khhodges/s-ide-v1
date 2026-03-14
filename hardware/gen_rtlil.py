@@ -11,7 +11,7 @@ def generate_rtlil(output_dir="build"):
 
     ports = [
         top.uart_tx, top.uart_rx, top.push_button,
-    ] + top.led
+    ] + [led for i, led in enumerate(top.led) if i != 3]
 
     rtlil_text = convert(top, ports=ports)
 

@@ -9,7 +9,7 @@
 #   make prog      — flash to Tang Nano 20K via openFPGALoader (plug in USB-C first)
 #   make clean     — remove generated files
 
-DEVICE   := GW2A-LV18QN88
+DEVICE   := GW2AR-LV18QN88C8/I7
 FAMILY   := GW2A-18C
 FREQ_MHZ := 27
 
