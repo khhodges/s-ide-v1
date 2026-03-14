@@ -7327,6 +7327,8 @@ function downloadHardwareImage() {
 
 async function uploadToTang() {
     if (!requirePermission('deploy', 'Deploy to Tang')) return;
+    switchView('editor');
+    switchCodeTab('console');
     const con = document.getElementById('editorConsole');
     if (!con) return;
 
