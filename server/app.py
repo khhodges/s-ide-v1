@@ -504,7 +504,7 @@ source oss-cad-suite/environment
 The Verilog and synthesis JSON are pre-built. You only need two commands:
 
 ```bash
-make pnr pack    # place-and-route (nextpnr-gowin) + generate .fs bitstream (gowin_pack)
+make pnr pack    # place-and-route (nextpnr-himbaechel) + generate .fs bitstream (gowin_pack)
 make prog        # flash to Tang Nano 20K via openFPGALoader (USB-C)
 ```
 
