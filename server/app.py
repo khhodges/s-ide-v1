@@ -35,6 +35,7 @@ DOCS_DIR = os.path.join(BASE_DIR, "docs")
 BOOT_ID = str(uuid.uuid4())
 
 _COMPRESSIBLE = ('javascript', 'css', 'html', 'json', 'text/')
+_gz_cache = {}
 
 def _serve_file(filepath, filename):
     """Read a file from disk and return a gzip-compressed response with ETag support."""
@@ -47,12 +48,24 @@ def _serve_file(filepath, filename):
         resp.headers['ETag'] = etag
         return resp
     ct = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
-    with open(filepath, 'rb') as f:
-        data = f.read()
     ae = request.headers.get('Accept-Encoding', '')
-    if 'gzip' in ae and len(data) >= 1024 and any(x in ct for x in _COMPRESSIBLE):
-        compressed = _gzip.compress(data, compresslevel=6)
-        if len(compressed) < len(data):
+    if 'gzip' in ae and any(x in ct for x in _COMPRESSIBLE):
+        cache_key = etag
+        if cache_key not in _gz_cache:
+            with open(filepath, 'rb') as f:
+                data = f.read()
+            if len(data) >= 1024:
+                compressed = _gzip.compress(data, compresslevel=6)
+                _gz_cache[cache_key] = compressed if len(compressed) < len(data) else None
+                raw = data
+            else:
+                _gz_cache[cache_key] = None
+                raw = data
+        else:
+            compressed = _gz_cache[cache_key]
+            raw = None
+        compressed = _gz_cache[cache_key]
+        if compressed is not None:
             resp = make_response(compressed)
             resp.headers['Content-Type'] = ct
             resp.headers['Content-Encoding'] = 'gzip'
@@ -60,6 +73,16 @@ def _serve_file(filepath, filename):
             resp.headers['Vary'] = 'Accept-Encoding'
             resp.headers['ETag'] = etag
             return resp
+        if raw is None:
+            with open(filepath, 'rb') as f:
+                raw = f.read()
+        resp = make_response(raw)
+        resp.headers['Content-Type'] = ct
+        resp.headers['Content-Length'] = len(raw)
+        resp.headers['ETag'] = etag
+        return resp
+    with open(filepath, 'rb') as f:
+        data = f.read()
     resp = make_response(data)
     resp.headers['Content-Type'] = ct
     resp.headers['Content-Length'] = len(data)
@@ -456,4 +479,4 @@ with app.app_context():
 
 if __name__ == "__main__":
     logging.info("Starting Church Machine server on port 5000")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False, threaded=True)
