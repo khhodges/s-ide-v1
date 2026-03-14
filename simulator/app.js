@@ -312,9 +312,10 @@ function updateGateLog() {
     for (const a of log) {
         const pass = a.result === 'pass';
         const isMSave = a.gate === 'mSave';
+        const isNavana = a.gate.startsWith('Navana.');
         html += `<div class="audit-gate ${pass ? 'gate-pass' : 'gate-fail'}">`;
         html += `<div class="gate-header">`;
-        html += `<span class="gate-type-badge ${isMSave ? 'gate-msave' : 'gate-mload'}">${a.gate}</span>`;
+        html += `<span class="gate-type-badge ${isNavana ? 'gate-navana' : (isMSave ? 'gate-msave' : 'gate-mload')}">${a.gate}</span>`;
         html += `<span class="gate-label">NS[${a.nsIndex}] &ldquo;${a.label}&rdquo;</span>`;
         if (a.requiredPerm) html += `<span class="gate-perm-req">requires&nbsp;<b>${a.requiredPerm}</b></span>`;
         html += `<span class="gate-result ${pass ? 'result-pass' : 'result-fail'}">${pass ? '\u2713 PASS' : '\u2717 FAULT'}</span>`;
@@ -1388,6 +1389,95 @@ CALL   CR1              ; Navana.IDS scans:
 ;     check version consistency across all GTs
 ;     if GT.version > NS.version: stale/forged
 ;   Report anomalies to Navana.Monitor`,
+            'ValidatePassKey': `; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+; LED via Navana PassKey — complete 3-step flow
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+; PassKey = ABSTRACTION GT (type=0b11=Abstract)
+;   GT index encodes: device[15:8] | permMask[7:4] | id[3:0]
+; Navana = gatekeeper. Validates PassKey,
+;   replaces CR1 with E-perm LED driver.
+; LED driver = callable. Methods via DR0/DR1.
+; Caller never sees hardware address or NS index.
+;
+; Step 1: Load PassKey from thread's c-list
+; Step 2: CALL Navana with PassKey in CR1
+; Step 3: CALL LED driver (now in CR1) with DRs set
+
+; ── STEP 1: Load PassKey ──────────────────────
+LOAD   CR1, [CR6 + 0]   ; Load PassKey GT from thread c-list
+                          ;   Abstract type (0b11)
+                          ;   Index encodes: device=LED(0x01),
+                          ;     permMask=ALL(0x0F), id
+                          ;   Placed by Navana.Init at boot
+
+; ── STEP 2: CALL Navana — present PassKey ─────
+LOAD   CR2, NS[5]        ; Load Navana E-GT
+                          ;   CR1 still holds PassKey
+CALL   CR2                ; CALL Navana detects Abstract GT in CR1:
+;   Navana.ValidatePassKey dispatched automatically:
+;   1. Parse CR1 GT: type must be Abstract (0b11)
+;   2. Decode index: device selector, perm mask
+;   3. Lookup in Navana's PassKey registry
+;   4. Check not revoked, not tampered
+;   5. Replace CR1 <- E-perm LED driver GT (Inform)
+;   6. Store permMask for driver calls
+;   DR0 <- permMask granted
+; If invalid: PERM fault — no hardware state changes
+
+; ── STEP 3: CALL LED driver — set LED 3 ON ────
+; CR1 now holds E-perm LED driver (not PassKey)
+DWRITE DR0, #3            ; LED number (0-5)
+DWRITE DR1, #1            ; Colour/state: 1=on
+CALL   CR1                ; LED.Set via E-perm driver:
+;   1. DR0[31:24] = method (0=Set,1=Clear,2=Pattern,3=Get)
+;   2. DR0[7:0]   = LED number
+;   3. DR1[7:0]   = colour/state
+;   4. Hardware write at 0xFE10 (invisible to caller)
+;   5. DR0 <- updated LED state
+; Gate Log shows full chain of custody:
+;   PassKey presented -> Navana validated ->
+;   LED.Set(3,1) called -> device write committed`,
+            'CallLEDDriver': `; LED via Navana PassKey — two calling modes
+;
+; Assumes PassKey already validated (Step 1-2 done)
+; CR1 holds E-perm LED driver GT from Navana
+
+; ---- Mode 1: LED.Set(LED#, colour) ----
+; When DR1 > 0, routes to LED.Set automatically
+DWRITE DR0, #3            ; DR0 = LED number (0-5)
+DWRITE DR1, #1            ; DR1 = colour (non-zero -> Set mode)
+CALL   CR1                ; LED.Set via E-perm driver
+
+; ---- Mode 2: LED.Pattern(6-bit pattern) ----
+; When DR1 = 0 and DR0 is a 6-bit value, routes to LED.Pattern
+DWRITE DR0, #0b00101010  ; DR0 = 6-bit pattern (alternating)
+DWRITE DR1, #0            ; DR1 = 0 -> Pattern mode
+CALL   CR1                ; LED.Pattern via E-perm driver:
+;   1. Reads DR0[5:0] as 6-bit pattern
+;   2. Writes pattern atomically to all 6 LEDs
+;   3. Pins 15-20 driven active-low
+;   4. DR0 <- new LED state
+; Gate Log shows full chain of custody:
+;   Grant validated -> LED.Pattern called ->
+;   device write committed`,
+            'MintPassKey': `; Navana.MintPassKey — create a new PassKey
+; PRIVILEGED: requires M-elevation (boot/kernel only)
+; Unprivileged callers get PERM fault.
+LOAD   CR1, NS[5]        ; Load Navana E-GT
+DWRITE DR0, #4            ; DR0=4 selects MintPassKey method
+DWRITE DR1, #0x010F       ; DR1[15:8]=device(LED=0x01), DR1[7:0]=permMask(ALL=0x0F)
+CALL   CR1                ; Navana.MintPassKey:
+;   1. Check M-elevation (unprivileged -> PERM fault)
+;   2. Allocate PassKey ID (monotonic counter)
+;   3. Pack Abstract GT (type=0b11):
+;      index = device[15:8] | permMask[7:4] | id[3:0]
+;      E perm for CALL capability
+;   4. Store in Navana's private PassKey registry
+;   5. CR1 <- PassKey GT (ready to grant to thread)
+; PassKey is unforgeable:
+;   - Only Navana can mint (M-elevation required)
+;   - GT index encoding cross-checked against registry
+;   - Thread receives but cannot modify or copy`,
         },
         'Mint': {
             'Create': `; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

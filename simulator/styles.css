@@ -6163,6 +6163,12 @@ pre:hover .code-copy-btn {
     border: 1px solid rgba(220, 160, 60, 0.35);
 }
 
+.gate-navana {
+    background: rgba(100, 40, 140, 0.4);
+    color: #c8a0f0;
+    border: 1px solid rgba(160, 100, 220, 0.35);
+}
+
 .gate-label {
     color: #e8e0d0;
     font-weight: 500;

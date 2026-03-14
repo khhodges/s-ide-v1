@@ -1185,6 +1185,85 @@ class ChurchSimulator {
 
     _dispatchAbstraction(d, check, abstraction) {
         const label = abstraction.name;
+
+        if (check.index === 5) {
+            const cr1GT = this.cr[1].word0;
+            if (cr1GT !== 0) {
+                const cr1Parsed = this.parseGT(cr1GT);
+                if (cr1Parsed.type === 3) {
+                    const desc = `CALL CR${d.crDst} -> Navana.ValidatePassKey [PassKey in CR1]`;
+                    this.output += desc + '\n';
+
+                    const result = this.abstractionRegistry.dispatchMethod(5, 'ValidatePassKey', this, {
+                        passKeyGT: cr1GT
+                    });
+
+                    if (result && result.ok) {
+                        const driverGT = result.result.driverGT;
+                        if (driverGT) {
+                            const driverParsed = this.parseGT(driverGT);
+                            const driverEntry = this.readNSEntry(driverParsed.index);
+                            if (driverEntry) {
+                                this._writeCR(1, driverGT, driverEntry);
+                                this.output += `  ${result.message}\n`;
+                                this.output += `  CR1 <- E-perm LED driver (NS[${driverParsed.index}])\n`;
+                            } else {
+                                this.output += `  ValidatePassKey succeeded but driver NS[${driverParsed.index}] entry missing\n`;
+                                this.fault('PERM', `CALL Navana: driver NS entry not found at index ${driverParsed.index}`);
+                                return null;
+                            }
+                        } else {
+                            this.output += `  ValidatePassKey succeeded but no driver GT returned\n`;
+                            this.fault('PERM', 'CALL Navana: no driver GT in validation result');
+                            return null;
+                        }
+                        this.dr[0] = result.result.permMask || 0;
+                    } else {
+                        this.output += `  ${result ? result.message : 'Navana.ValidatePassKey failed'}\n`;
+                        this.fault('PERM', `CALL Navana: PassKey validation failed — ${result ? result.message : 'unknown error'}`);
+                        return null;
+                    }
+
+                    this.pc++;
+                    return { pc: this.pc - 1, instr: d, desc, pipeline: [
+                        { stage: 'CALL', desc: 'Enter Navana (PassKey gate)', perm: 'E', status: 'pass' },
+                        { stage: 'VALIDATE', desc: `PassKey validated for ${result.result.device}`, status: 'pass' },
+                        { stage: 'GRANT', desc: 'CR1 <- E-perm LED driver', status: 'pass' },
+                        { stage: 'RETURN', desc: 'Exit Navana', status: 'pass' },
+                    ]};
+                }
+            }
+
+            const methodName = this._selectNavanaMethod(d) || abstraction.methods[0] || 'Apply';
+            const desc = `CALL CR${d.crDst} -> ${label}.${methodName} [abstraction dispatch]`;
+            this.output += desc + '\n';
+
+            if (this.abstractionRegistry) {
+                const result = this.abstractionRegistry.dispatchMethod(check.index, methodName, this, {
+                    dr0: this.dr[0], dr1: this.dr[1]
+                });
+                if (result && result.message) {
+                    this.output += `  ${result.message}\n`;
+                }
+                if (result && !result.ok && result.fault) {
+                    this.fault(result.fault, `${label}.${methodName}: ${result.message}`);
+                    this.pc++;
+                    return { pc: this.pc - 1, instr: d, desc, pipeline: [
+                        { stage: 'CALL', desc: `Enter ${label} abstraction`, perm: 'E', status: 'pass' },
+                        { stage: 'DISPATCH', desc: `${label}.${methodName}`, status: 'fail' },
+                        { stage: 'FAULT', desc: `${result.fault}: ${result.message}`, status: 'fail' },
+                    ]};
+                }
+            }
+
+            this.pc++;
+            return { pc: this.pc - 1, instr: d, desc, pipeline: [
+                { stage: 'CALL', desc: `Enter ${label} abstraction`, perm: 'E', status: 'pass' },
+                { stage: 'DISPATCH', desc: `${label}.${methodName}`, status: 'pass' },
+                { stage: 'RETURN', desc: `Exit ${label}`, status: 'pass' },
+            ]};
+        }
+
         const methodName = abstraction.methods[0] || 'Apply';
         const desc = `CALL CR${d.crDst} -> ${label}.${methodName} [abstraction dispatch]`;
         this.output += desc + '\n';
@@ -1204,6 +1283,17 @@ class ChurchSimulator {
         ]};
     }
 
+    _selectNavanaMethod(d) {
+        const dr0 = this.dr[0];
+        if (dr0 === 0) return 'Init';
+        if (dr0 === 1) return 'Manage';
+        if (dr0 === 2) return 'Monitor';
+        if (dr0 === 3) return 'IDS';
+        if (dr0 === 4) return 'MintPassKey';
+        if (dr0 === 5) return 'GetPassKeyAuditLog';
+        return null;
+    }
+
     _dispatchHandler(d, check, handler) {
         const label = this.nsLabels[check.index] || 'handler';
         switch (handler) {
@@ -1221,6 +1311,55 @@ class ChurchSimulator {
                     { stage: 'GC-SCAN', desc: `Scan CRs, confirm ${gcResult.liveCount} live entries`, status: 'pass' },
                     { stage: 'GC-SWEEP', desc: `Sweep ${gcResult.freedSlots} garbage entries`, status: 'pass' },
                     { stage: 'RETURN', desc: `Exit ${label}, flip polarity`, status: 'pass' },
+                ]};
+            }
+            case 'led_driver': {
+                const desc = `CALL CR${d.crDst} -> ${label} [LED driver E-perm abstraction]`;
+                this.output += desc + '\n';
+
+                const dr0 = this.dr[0];
+                const dr1 = this.dr[1];
+                const callerGT = this.cr[d.crDst].word0;
+
+                if (this.abstractionRegistry) {
+                    const result = this.abstractionRegistry.dispatchMethod(5, 'CallLEDDriver', this, {
+                        callerGT: callerGT,
+                        dr0: dr0,
+                        dr1: dr1
+                    });
+
+                    if (result && result.ok) {
+                        this.output += `  ${result.message}\n`;
+                        if (result.result && result.result.state !== undefined) {
+                            this.dr[0] = result.result.state;
+                        }
+                        if (result.result && result.result.led !== undefined) {
+                            this.dr[0] = result.result.state || 0;
+                        }
+                    } else {
+                        this.output += `  ${result ? result.message : 'LED driver call failed'}\n`;
+                        this.fault('PERM', `LED driver: ${result ? result.message : 'unknown error'}`);
+                        return null;
+                    }
+                }
+
+                this.pc++;
+                const methodNames = ['Set', 'Clear', 'Pattern', 'Get'];
+                const methodSelector = (dr0 >>> 24) & 0xFF;
+                let dispatchMethod;
+                if (methodSelector > 0 && methodSelector <= 3) {
+                    dispatchMethod = methodSelector;
+                } else if (dr1 > 0) {
+                    dispatchMethod = 0;
+                } else {
+                    dispatchMethod = 2;
+                }
+                const methodName = methodNames[dispatchMethod] || 'Set';
+                return { pc: this.pc - 1, instr: d, desc, pipeline: [
+                    { stage: 'CALL', desc: `Enter LED driver`, perm: 'E', status: 'pass' },
+                    { stage: 'DISPATCH', desc: `LED.${methodName}(DR0=0x${dr0.toString(16)}, DR1=0x${dr1.toString(16)})`, status: 'pass' },
+                    { stage: 'DEVICE', desc: `Hardware write at 0xFE10`, status: 'pass' },
+                    { stage: 'RETURN', desc: `Exit LED driver`, status: 'pass' },
                 ]};
             }
             default:

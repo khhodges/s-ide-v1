@@ -46,12 +46,130 @@ class SystemAbstractions {
     }
 
     _bindNavana() {
+        const DEVICE_NS_SLOTS = { UART: 11, LED: 12, Button: 13, Timer: 14, Display: 15 };
+        const PASSKEY_DEVICE_SELECTORS = { LED: 0x01, UART: 0x02, Button: 0x03, Timer: 0x04, Display: 0x05 };
+        const PASSKEY_PERM_SET   = 0x01;
+        const PASSKEY_PERM_CLEAR = 0x02;
+        const PASSKEY_PERM_PATTERN = 0x04;
+        const PASSKEY_PERM_GET   = 0x08;
+        const PASSKEY_PERM_ALL   = 0x0F;
+
+        let passKeyCounter = 0;
+
         const navanaState = {
             initialized: false,
             managedAbstractions: [],
             idsLog: [],
-            monitorLog: []
+            monitorLog: [],
+            deviceRegistry: {},
+            passKeys: {},
+            ledDriverAbstraction: null,
+            passKeyAuditLog: [],
+            driverPermGrants: {},
+            driverGrantCounter: 0
         };
+
+        function encodePassKeyIndex(deviceSelector, permMask, pkId) {
+            return ((deviceSelector & 0xFF) << 8) | ((permMask & 0x0F) << 4) | (pkId & 0x0F);
+        }
+
+        function decodePassKeyIndex(index) {
+            return {
+                deviceSelector: (index >>> 8) & 0xFF,
+                permMask: (index >>> 4) & 0x0F,
+                pkId: index & 0x0F
+            };
+        }
+
+        function mintPassKey(sim, deviceName, permMask) {
+            const deviceSelector = PASSKEY_DEVICE_SELECTORS[deviceName];
+            if (!deviceSelector) return null;
+
+            const pkId = ++passKeyCounter;
+            const encodedIndex = encodePassKeyIndex(deviceSelector, permMask, pkId & 0x0F);
+
+            const pkGT = sim.createGT(0, encodedIndex, { E: 1 }, 3);
+
+            const passKeyRecord = {
+                id: pkId,
+                gt: pkGT,
+                device: deviceName,
+                deviceSelector: deviceSelector,
+                permMask: permMask,
+                encodedIndex: encodedIndex,
+                issuedBy: 'Navana',
+                issuedAt: Date.now(),
+                revoked: false
+            };
+            navanaState.passKeys[pkGT] = passKeyRecord;
+            return passKeyRecord;
+        }
+
+        function validatePassKey(sim, gt32) {
+            const parsed = sim.parseGT(gt32);
+            if (parsed.type !== 3) return { ok: false, reason: 'TYPE', message: `PassKey GT type is ${parsed.typeName}, must be Abstract` };
+
+            const decoded = decodePassKeyIndex(parsed.index);
+            if (!decoded.deviceSelector || !Object.values(PASSKEY_DEVICE_SELECTORS).includes(decoded.deviceSelector)) {
+                return { ok: false, reason: 'ENCODING', message: `PassKey GT index encodes invalid device selector 0x${decoded.deviceSelector.toString(16)}` };
+            }
+
+            const record = navanaState.passKeys[gt32];
+            if (!record) return { ok: false, reason: 'NOT_ISSUED', message: 'PassKey not issued by Navana' };
+            if (record.revoked) return { ok: false, reason: 'REVOKED', message: 'PassKey has been revoked' };
+
+            if (decoded.deviceSelector !== record.deviceSelector) {
+                return { ok: false, reason: 'TAMPERED', message: 'PassKey GT index device selector does not match registry' };
+            }
+            if (decoded.permMask !== (record.permMask & 0x0F)) {
+                return { ok: false, reason: 'TAMPERED', message: 'PassKey GT index permission mask does not match registry' };
+            }
+
+            return { ok: true, record: record };
+        }
+
+        function createLEDDriverAbstraction(sim) {
+            const deviceState = sim.deviceAbstractions ? sim.deviceAbstractions._deviceState.led : null;
+            const driver = {
+                nsIndex: DEVICE_NS_SLOTS.LED,
+                device: 'LED',
+                methods: ['Set', 'Clear', 'Pattern', 'Get'],
+                call: function(sim, dr0, dr1, permMask) {
+                    const method = dr0 >>> 24;
+                    const ledNum = dr0 & 0xFF;
+                    const colour = dr1 & 0xFF;
+                    const pattern = dr0 & 0x3F;
+
+                    let result;
+                    if (method === 0 || method === undefined) {
+                        if (!(permMask & PASSKEY_PERM_SET)) {
+                            return { ok: false, fault: 'PERM', message: 'LED.Set not permitted by PassKey' };
+                        }
+                        result = sim.abstractionRegistry.dispatchMethod(DEVICE_NS_SLOTS.LED, 'Set', sim, { led: ledNum, colour: colour });
+                    } else if (method === 1) {
+                        if (!(permMask & PASSKEY_PERM_CLEAR)) {
+                            return { ok: false, fault: 'PERM', message: 'LED.Clear not permitted by PassKey' };
+                        }
+                        result = sim.abstractionRegistry.dispatchMethod(DEVICE_NS_SLOTS.LED, 'Clear', sim, { led: ledNum });
+                    } else if (method === 2) {
+                        if (!(permMask & PASSKEY_PERM_PATTERN)) {
+                            return { ok: false, fault: 'PERM', message: 'LED.Pattern not permitted by PassKey' };
+                        }
+                        result = sim.abstractionRegistry.dispatchMethod(DEVICE_NS_SLOTS.LED, 'Pattern', sim, { pattern: pattern });
+                    } else if (method === 3) {
+                        if (!(permMask & PASSKEY_PERM_GET)) {
+                            return { ok: false, fault: 'PERM', message: 'LED.Get not permitted by PassKey' };
+                        }
+                        const state = deviceState ? deviceState.state : 0;
+                        result = { ok: true, result: { state: state }, message: `LED.Get: state=0b${state.toString(2).padStart(6, '0')}` };
+                    } else {
+                        return { ok: false, fault: 'METHOD', message: `LED driver: unknown method selector ${method}` };
+                    }
+                    return result;
+                }
+            };
+            return driver;
+        }
 
         this.registry.bindMethod(5, 'Init', function(sim, args) {
             navanaState.initialized = true;
@@ -60,13 +178,334 @@ class SystemAbstractions {
                 const all = registry.getAllAbstractions();
                 navanaState.managedAbstractions = all.map(a => ({ index: a.index, name: a.name, layer: a.layer }));
             }
+
+            navanaState.deviceRegistry = {};
+            for (const [name, nsIdx] of Object.entries(DEVICE_NS_SLOTS)) {
+                const entry = sim.readNSEntry(nsIdx);
+                if (entry) {
+                    const version = (entry.word2_seals >>> 25) & 0x7F;
+                    const gt = sim.createGT(version, nsIdx, { L: 1, S: 1, E: 1 }, 1);
+                    navanaState.deviceRegistry[name] = {
+                        nsIndex: nsIdx,
+                        gt: gt,
+                        entry: entry,
+                        label: sim.nsLabels[nsIdx] || name
+                    };
+                }
+            }
+
+            navanaState.ledDriverAbstraction = createLEDDriverAbstraction(sim);
+
+            sim.nsHandlers[DEVICE_NS_SLOTS.LED] = 'led_driver';
+
+            const ledPK = mintPassKey(sim, 'LED', PASSKEY_PERM_ALL);
+
+            if (ledPK) {
+                const threadEntry = sim.readNSEntry(1);
+                if (threadEntry) {
+                    const threadParsed = sim.parseNSWord1(threadEntry.word1_limit);
+                    const threadBase = threadEntry.word0_location;
+                    const allocSize = threadParsed.limit + 1;
+                    const newClistCount = threadParsed.clistCount + 1;
+                    const clistSlot = threadBase + allocSize - newClistCount;
+                    sim.memory[clistSlot] = ledPK.gt;
+                    const newW1 = sim.packNSWord1(threadParsed.limit, threadParsed.b, threadParsed.f, threadParsed.g, threadParsed.chainable, threadParsed.gtType, newClistCount);
+                    const nsBase = sim.NS_TABLE_BASE + 1 * sim.NS_ENTRY_WORDS;
+                    sim.memory[nsBase + 1] = newW1;
+                }
+
+                if (!sim.nsClistMap[1]) sim.nsClistMap[1] = [];
+                sim.nsClistMap[1].push({ gt: ledPK.gt, device: 'LED', passKeyId: ledPK.id });
+            }
+
+            const deviceCount = Object.keys(navanaState.deviceRegistry).length;
+            const msg = `Navana.Init: initialized ${navanaState.managedAbstractions.length} abstractions, discovered ${deviceCount} devices (${Object.keys(navanaState.deviceRegistry).join(', ')}), minted ${Object.keys(navanaState.passKeys).length} PassKey(s). Running indefinitely.`;
+
+            sim.auditLog.push({
+                gate: 'Navana.Init',
+                label: 'Navana',
+                nsIndex: 5,
+                requiredPerm: null,
+                checks: {
+                    devices: { pass: deviceCount > 0 },
+                    passkeys: { pass: !!ledPK }
+                },
+                b: 0, f: 0,
+                result: 'pass'
+            });
+
             return {
                 ok: true,
                 result: {
                     initialized: true,
-                    abstractionCount: navanaState.managedAbstractions.length
+                    abstractionCount: navanaState.managedAbstractions.length,
+                    deviceCount: deviceCount,
+                    devices: Object.keys(navanaState.deviceRegistry),
+                    passKeys: ledPK ? [{ id: ledPK.id, device: ledPK.device, gt: ledPK.gt }] : []
                 },
-                message: `Navana.Init: initialized ${navanaState.managedAbstractions.length} abstractions. Running indefinitely.`
+                message: msg
+            };
+        });
+
+        this.registry.bindMethod(5, 'ValidatePassKey', function(sim, args) {
+            if (!navanaState.initialized) {
+                return { ok: false, fault: 'NOT_INIT', message: 'Navana.ValidatePassKey: Navana not initialized' };
+            }
+
+            const passKeyGT = args.passKeyGT;
+            if (passKeyGT === undefined || passKeyGT === null || passKeyGT === 0) {
+                sim.auditLog.push({
+                    gate: 'Navana.ValidatePassKey',
+                    label: 'Navana',
+                    nsIndex: 5,
+                    requiredPerm: 'E',
+                    checks: { passkey: { pass: false }, issued: { pass: false } },
+                    b: 0, f: 0,
+                    result: 'fail'
+                });
+                return { ok: false, fault: 'PERM', message: 'Navana.ValidatePassKey: no PassKey presented (CR1 is NULL)' };
+            }
+
+            const validation = validatePassKey(sim, passKeyGT);
+            if (!validation.ok) {
+                sim.auditLog.push({
+                    gate: 'Navana.ValidatePassKey',
+                    label: 'Navana',
+                    nsIndex: 5,
+                    requiredPerm: 'E',
+                    checks: {
+                        passkey: { pass: false },
+                        issued: { pass: false },
+                        reason: { pass: false, perm: validation.reason }
+                    },
+                    b: 0, f: 0,
+                    result: 'fail'
+                });
+                return { ok: false, fault: 'PERM', message: `Navana.ValidatePassKey: ${validation.message}` };
+            }
+
+            const record = validation.record;
+            let driverAbstraction = null;
+            let driverGT = 0;
+
+            if (record.device === 'LED' && navanaState.ledDriverAbstraction) {
+                const driverNSIdx = navanaState.ledDriverAbstraction.nsIndex;
+                const entry = sim.readNSEntry(driverNSIdx);
+                if (entry) {
+                    navanaState.driverGrantCounter++;
+                    const grantNonce = navanaState.driverGrantCounter;
+                    const grantVersion = grantNonce & 0x7F;
+                    driverGT = sim.createGT(grantVersion, driverNSIdx, { E: 1 }, 1);
+                    driverAbstraction = navanaState.ledDriverAbstraction;
+                    navanaState.driverPermGrants[driverGT] = {
+                        permMask: record.permMask,
+                        passKeyId: record.id,
+                        device: record.device,
+                        grantNonce: grantNonce,
+                        grantedAt: Date.now()
+                    };
+                }
+            }
+
+            navanaState.passKeyAuditLog.push({
+                timestamp: Date.now(),
+                passKeyId: record.id,
+                device: record.device,
+                permMask: record.permMask,
+                action: 'VALIDATE',
+                result: 'APPROVED'
+            });
+
+            sim.auditLog.push({
+                gate: 'Navana.ValidatePassKey',
+                label: 'Navana',
+                nsIndex: 5,
+                requiredPerm: 'E',
+                checks: {
+                    passkey: { pass: true },
+                    issued: { pass: true },
+                    device: { pass: true, perm: record.device },
+                    permmask: { pass: true, perm: `0x${record.permMask.toString(16)}` }
+                },
+                passKeyId: record.id,
+                b: 0, f: 0,
+                result: 'pass'
+            });
+
+            return {
+                ok: true,
+                result: {
+                    approved: true,
+                    passKeyId: record.id,
+                    device: record.device,
+                    permMask: record.permMask,
+                    driverGT: driverGT,
+                    driverMethods: driverAbstraction ? driverAbstraction.methods : []
+                },
+                message: `Navana.ValidatePassKey: PassKey #${record.id} approved for ${record.device} (permMask=0x${record.permMask.toString(16)}). E-perm driver returned in CR1.`
+            };
+        });
+
+        this.registry.bindMethod(5, 'CallLEDDriver', function(sim, args) {
+            if (!navanaState.initialized) {
+                return { ok: false, fault: 'NOT_INIT', message: 'Navana.CallLEDDriver: Navana not initialized' };
+            }
+
+            const dr0 = args.dr0 !== undefined ? args.dr0 : 0;
+            const dr1 = args.dr1 !== undefined ? args.dr1 : 0;
+            const callerGT = args.callerGT || 0;
+
+            let permMask = 0;
+            let passKeyId = 0;
+
+            const grant = navanaState.driverPermGrants[callerGT];
+            if (grant) {
+                permMask = grant.permMask;
+                passKeyId = grant.passKeyId;
+            }
+
+            if (permMask === 0) {
+                sim.auditLog.push({
+                    gate: 'Navana.CallLEDDriver',
+                    label: 'LED',
+                    nsIndex: DEVICE_NS_SLOTS.LED,
+                    requiredPerm: 'E',
+                    checks: {
+                        grant: { pass: false, perm: 'no valid driver grant' }
+                    },
+                    b: 0, f: 0,
+                    result: 'fail'
+                });
+                return { ok: false, fault: 'PERM', message: 'Navana.CallLEDDriver: no valid driver grant — obtain LED driver via Navana.ValidatePassKey first' };
+            }
+
+            if (!navanaState.ledDriverAbstraction) {
+                return { ok: false, fault: 'NO_DRIVER', message: 'Navana.CallLEDDriver: LED driver not initialized' };
+            }
+
+            const methodSelector = (dr0 >>> 24) & 0xFF;
+            let method, ledNum, colour, pattern;
+            if (methodSelector > 0 && methodSelector <= 3) {
+                method = methodSelector;
+                ledNum = dr0 & 0xFF;
+                colour = dr1 & 0xFF;
+                pattern = dr0 & 0x3F;
+            } else if (dr1 > 0) {
+                method = 0;
+                ledNum = dr0 & 0xFF;
+                colour = dr1 & 0xFF;
+                pattern = 0;
+            } else {
+                method = 2;
+                ledNum = 0;
+                colour = 0;
+                pattern = dr0 & 0x3F;
+            }
+
+            const driverResult = navanaState.ledDriverAbstraction.call(sim, (method << 24) | (ledNum & 0xFF), colour, permMask);
+
+            const methodNames = ['Set', 'Clear', 'Pattern', 'Get'];
+            const methodName = methodNames[method] || 'Set';
+
+            navanaState.passKeyAuditLog.push({
+                timestamp: Date.now(),
+                passKeyId: passKeyId,
+                device: 'LED',
+                method: methodName,
+                dr0: dr0,
+                dr1: dr1,
+                permMask: permMask,
+                action: 'CALL',
+                result: driverResult.ok ? 'OK' : driverResult.fault
+            });
+
+            sim.auditLog.push({
+                gate: 'Navana.CallLEDDriver',
+                label: `LED.${methodName}`,
+                nsIndex: DEVICE_NS_SLOTS.LED,
+                requiredPerm: 'E',
+                checks: {
+                    grant: { pass: true, perm: `PassKey#${passKeyId}` },
+                    device: { pass: true, perm: 'LED' },
+                    method: { pass: driverResult.ok, perm: methodName },
+                    permmask: { pass: driverResult.ok, perm: `0x${permMask.toString(16)}` }
+                },
+                passKeyId: passKeyId,
+                dr0: dr0,
+                dr1: dr1,
+                b: 0, f: 0,
+                result: driverResult.ok ? 'pass' : 'fail'
+            });
+
+            return driverResult;
+        });
+
+        this.registry.bindMethod(5, 'MintPassKey', function(sim, args) {
+            if (!navanaState.initialized) {
+                return { ok: false, fault: 'NOT_INIT', message: 'Navana.MintPassKey: Navana not initialized' };
+            }
+
+            if (!sim.mElevation && !args._internal) {
+                sim.auditLog.push({
+                    gate: 'Navana.MintPassKey',
+                    label: 'Navana',
+                    nsIndex: 5,
+                    requiredPerm: 'M',
+                    checks: { privilege: { pass: false, perm: 'M-elevation required' } },
+                    b: 0, f: 0,
+                    result: 'fail'
+                });
+                return { ok: false, fault: 'PERM', message: 'Navana.MintPassKey: requires M-elevation or Navana-internal authority — unprivileged callers cannot mint PassKeys' };
+            }
+
+            let device = args.device || 'LED';
+            let permMask = args.permMask !== undefined ? args.permMask : PASSKEY_PERM_ALL;
+
+            if (args.dr1 !== undefined && !args._internal) {
+                const dr1 = args.dr1;
+                const devSel = (dr1 >>> 8) & 0xFF;
+                const selToName = {};
+                for (const [name, sel] of Object.entries(PASSKEY_DEVICE_SELECTORS)) {
+                    selToName[sel] = name;
+                }
+                device = selToName[devSel] || device;
+                permMask = dr1 & 0xFF;
+            }
+
+            if (!PASSKEY_DEVICE_SELECTORS[device]) {
+                return { ok: false, fault: 'DEVICE', message: `Navana.MintPassKey: unknown device "${device}"` };
+            }
+
+            const pk = mintPassKey(sim, device, permMask);
+            if (!pk) {
+                return { ok: false, fault: 'MINT', message: 'Navana.MintPassKey: failed to mint PassKey' };
+            }
+
+            sim.auditLog.push({
+                gate: 'Navana.MintPassKey',
+                label: 'Navana',
+                nsIndex: 5,
+                requiredPerm: null,
+                checks: {
+                    device: { pass: true, perm: device },
+                    permmask: { pass: true, perm: `0x${permMask.toString(16)}` }
+                },
+                b: 0, f: 0,
+                result: 'pass'
+            });
+
+            return {
+                ok: true,
+                result: { id: pk.id, device: pk.device, permMask: pk.permMask, gt: pk.gt },
+                message: `Navana.MintPassKey: PassKey #${pk.id} minted for ${device} (permMask=0x${permMask.toString(16)}, GT=0x${pk.gt.toString(16).padStart(8, '0')})`
+            };
+        });
+
+        this.registry.bindMethod(5, 'GetPassKeyAuditLog', function(sim, args) {
+            return {
+                ok: true,
+                result: { entries: navanaState.passKeyAuditLog.slice(-50) },
+                message: `Navana.GetPassKeyAuditLog: ${navanaState.passKeyAuditLog.length} entries`
             };
         });
 
