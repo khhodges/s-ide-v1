@@ -1,7 +1,8 @@
 # Church Machine ISA Encoding Reference
 
-All values verified against `simulator/assembler.js`. This document is the
-complete specification needed to implement an encoder with no guesswork.
+All values verified against `simulator/assembler.js` and `simulator/simulator.js`.
+This document is the complete specification needed to implement an encoder with
+no guesswork.
 
 ---
 
@@ -128,17 +129,35 @@ Example: `IADDLT DR0, DR1, DR2` encodes opcode=0x0F, cond=11.
 
 #### Instruction-specific notes
 
-**BRANCH** — `imm15` is a signed 15-bit value; bit 14 is the sign bit.  
-Sign-extend for display: `soff = (imm & 0x4000) ? (imm | 0xFFFF8000) : imm`.  
-Labels assemble to their absolute instruction index stored directly in imm15.
+**BRANCH** — `imm15` is a **signed PC-relative offset** (confirmed by simulator).
+Execution: `target_PC = current_PC + sign_extend(imm15)`. Bit 14 of imm15 is the
+sign bit. Sign-extend: `soff = (imm & 0x4000) ? (imm | 0xFFFF8000) : imm`.
+
+The built-in assembler (`assembler.js`) has a quirk when a label name is used as
+the operand: it stores the label's *absolute instruction index* rather than a
+relative offset. This only gives the correct result when the branch instruction
+happens to sit at PC 0. **For an external encoder or compiler, always compute and
+encode a proper PC-relative offset** — do not store absolute addresses.
+Numeric literals (e.g. `BRANCH -5`) always encode correctly as relative offsets.
 
 **MCMP** — No destination field. fld_a and fld_b both hold DR operand numbers.
 The comparison result is written only to the condition flags register. imm15 is
 always zero.
 
-**IADD / ISUB** — The third operand is always a DR register, never a literal
-constant. It is packed into the lower 4 bits of imm15 (`imm & 0xF`). Bits
-[14:4] of imm15 are unused (zero).
+**IADD / ISUB — no immediate mode.** The third operand is always a DR register
+number packed into `imm15[3:0]` (0–15). There is no literal constant mode —
+there is no bit anywhere in the word that switches between "register" and
+"immediate". The value `5` in that field means *DR5*, not the constant 5.
+
+Loading small constants via IADD therefore depends on a register-as-constant
+convention, not on any hardware immediate mode:
+- **DR0 is hardwired to 0** — the simulator zeroes it after every instruction.
+  `IADD DRn, DR0, DRk` computes `DRn = 0 + DRk = DRk` (a register copy).
+- To load a small non-zero constant N (1–15): pre-load DRN = N somewhere in the
+  prologue, then reference DRN as the source. Or use SHL/ISUB combinations.
+- **Range limit**: only values 0–15 can be expressed this way (matching valid DR
+  indices). Constants outside this range require DREAD from a data capability or
+  a different code-generation strategy.
 
 **BFEXT / BFINS** — imm packing: `imm = (pos << 5) | width`, occupying bits
 [9:0] of imm15. Bits [14:10] are unused (zero).
@@ -152,14 +171,19 @@ Logical right shift: `imm15[5] = 0`. Shift amount is `imm15[4:0]`.
 
 Both register files use the same 4-bit encoding 0–15 in fld_a / fld_b:
 
-| Register | Assembly syntax | Field value |
-|----------|----------------|-------------|
-| CR0–CR15 | `CR0` … `CR15` | 0–15 in fld_a or fld_b |
-| DR0–DR15 | `DR0` … `DR15` | 0–15 in fld_a, fld_b, or imm15[3:0] |
+| Register | Assembly syntax | Field value | Notes |
+|----------|----------------|-------------|-------|
+| CR0–CR15 | `CR0` … `CR15` | 0–15 in fld_a or fld_b | |
+| DR0      | `DR0`          | 0 in fld_a, fld_b, or imm15[3:0] | **Hardwired zero** — the simulator writes 0 to DR0 after *every* instruction. It cannot hold a value across instructions. |
+| DR1–DR15 | `DR1` … `DR15` | 1–15 in fld_a, fld_b, or imm15[3:0] | General-purpose |
 
 CRs and DRs are **separate register files**. The opcode determines which file is
 accessed. The same 4-bit encoding is reused in both fields independently; there
 is no shared namespace at the hardware level.
+
+The DR0 = 0 invariant is enforced unconditionally by the simulator
+(`this.dr[0] = 0` after every step), making it usable as a zero source for
+address arithmetic and register copies.
 
 ---
 
@@ -207,10 +231,24 @@ def encode(opcode, cond=14, fld_a=0, fld_b=0, imm15=0):
         ( imm15  & 0x7FFF)
     )
 
+def branch_offset(from_pc, to_pc):
+    """Compute the signed PC-relative imm15 for a BRANCH instruction."""
+    offset = to_pc - from_pc
+    return offset & 0x7FFF   # truncate to 15 bits (sign preserved in bit 14)
+
 # Examples
-IADD_DR0_DR1_DR2 = encode(opcode=15, fld_a=0, fld_b=1, imm15=2)
-BRANCH_minus4    = encode(opcode=17, imm15=(-4) & 0x7FFF)
+IADD_DR1_DR0_DR2 = encode(opcode=15, fld_a=1, fld_b=0, imm15=2)
+# DR1 = DR0 + DR2  (DR0 is always 0, so this copies DR2 into DR1)
+
+# BRANCH: always PC-relative. Encode as offset from the branch instruction's PC.
+# branch at PC=10, target at PC=3:  offset = 3 - 10 = -7
+BRANCH_back_7    = encode(opcode=17, imm15=branch_offset(from_pc=10, to_pc=3))
+# branch at PC=5, target at PC=12: offset = 12 - 5 = +7
+BRANCH_forward_7 = encode(opcode=17, imm15=branch_offset(from_pc=5, to_pc=12))
+# Conditional branch: BRANCHLT (branch if less-than)
+BRANCHLT_back_2  = encode(opcode=17, cond=11, imm15=branch_offset(10, 8))
+
 TPERM_CR0_RWX   = encode(opcode=6,  fld_a=0, imm15=0x05)
-MCMP_DR0_DR1    = encode(opcode=14, fld_a=0, fld_b=1)
+MCMP_DR1_DR2    = encode(opcode=14, fld_a=1, fld_b=2)
 HALT_or_NOP     = 0x00000000
 ```
