@@ -130,7 +130,7 @@ function renderUserTabs() {
         closeSpan.textContent = '\u00D7';
         btn.appendChild(labelSpan);
         btn.appendChild(closeSpan);
-        labelSpan.addEventListener('click', () => selectUserTab(tab.id));
+        btn.addEventListener('click', (e) => { if (!e.target.classList.contains('user-tab-close')) selectUserTab(tab.id); });
         closeSpan.addEventListener('click', (e) => {
             e.stopPropagation();
             if (confirm('Delete program "' + tab.name + '"?')) deleteUserTab(tab.id);
