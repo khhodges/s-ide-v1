@@ -227,6 +227,10 @@ class ChurchSimulator {
     }
 
     _initNamespaceTable() {
+        // GT type semantics: 0=NULL, 1=Real (concrete lump in memory), 2=Abstract (user-uploaded/PassKey), 3=reserved
+        // All boot-time slots (Boot.NS, Boot.Thread, Boot.Abstr, Salvation, Navana, Mint, etc.) are Real (type=1)
+        // because they reference concrete physical memory lumps in the namespace table.
+        // Abstract (type=2) GTs are only created by Navana.Abstraction.Add (user uploads) and Navana.MintPassKey.
         this.nsLabels = {};
         this.nsCount = 0;
         const abstractions = this._getAbstractionCatalog();
@@ -272,6 +276,8 @@ class ChurchSimulator {
     }
 
     _bootStep() {
+        // All boot CRs use type=1 (Real) GTs — they reference concrete NS slots with physical lumps.
+        // type=2 (Abstract) GTs are only created at runtime by Navana.Abstraction.Add and Navana.MintPassKey.
         if (this.bootComplete) return false;
 
         switch (this.bootStep) {

@@ -88,6 +88,7 @@ class SystemAbstractions {
             const pkId = ++passKeyCounter;
             const encodedIndex = encodePassKeyIndex(deviceSelector, permMask, pkId & 0x0F);
 
+            // PassKey GTs are type=2 (Abstract) — value-in-token, not a concrete NS lump reference.
             const pkGT = sim.createGT(0, encodedIndex, { E: 1 }, 2);
 
             const passKeyRecord = {
@@ -708,6 +709,8 @@ class SystemAbstractions {
                 }
             }
 
+            // User-uploaded abstractions are type=2 (Abstract) — they are not concrete boot lumps (type=1/Real)
+            // but higher-order callable objects identified by their E-GT without direct memory ownership.
             const addResult = sim.abstractionRegistry.dispatchMethod(5, 'Add', sim, {
                 location: location,
                 limit: limit,
