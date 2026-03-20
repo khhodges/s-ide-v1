@@ -88,7 +88,7 @@ class SystemAbstractions {
             const pkId = ++passKeyCounter;
             const encodedIndex = encodePassKeyIndex(deviceSelector, permMask, pkId & 0x0F);
 
-            const pkGT = sim.createGT(0, encodedIndex, { E: 1 }, 3);
+            const pkGT = sim.createGT(0, encodedIndex, { E: 1 }, 2);
 
             const passKeyRecord = {
                 id: pkId,
@@ -107,7 +107,7 @@ class SystemAbstractions {
 
         function validatePassKey(sim, gt32) {
             const parsed = sim.parseGT(gt32);
-            if (parsed.type !== 3) return { ok: false, reason: 'TYPE', message: `PassKey GT type is ${parsed.typeName}, must be Abstract` };
+            if (parsed.type !== 2) return { ok: false, reason: 'TYPE', message: `PassKey GT type is ${parsed.typeName}, must be Abstract` };
 
             const decoded = decodePassKeyIndex(parsed.index);
             if (!decoded.deviceSelector || !Object.values(PASSKEY_DEVICE_SELECTORS).includes(decoded.deviceSelector)) {

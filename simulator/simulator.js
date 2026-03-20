@@ -339,7 +339,7 @@ class ChurchSimulator {
                     return false;
                 }
                 if (check2.parsed.type !== 1) {
-                    this.fault('BOOT', `LOAD_NUC: Boot.Abstr type is ${check2.parsed.typeName}, must be Inform`);
+                    this.fault('BOOT', `LOAD_NUC: Boot.Abstr type is ${check2.parsed.typeName}, must be Real`);
                     return false;
                 }
                 const base = abstrEntry.word0_location;
@@ -391,68 +391,79 @@ class ChurchSimulator {
 
     parseGT(gt32) {
         gt32 = gt32 >>> 0;
-        const version = (gt32 >>> 25) & 0x7F;
-        const index = (gt32 >>> 8) & 0x1FFFF;
-        const permBits = (gt32 >>> 2) & 0x3F;
-        const type = gt32 & 0x3;
+        const permBits = (gt32 >>> 25) & 0x7F;
+        const type    = (gt32 >>> 23) & 0x3;
+        const gt_seq  = (gt32 >>> 16) & 0x7F;
+        const index   =  gt32         & 0xFFFF;
         return {
-            version, index,
+            gt_seq, index,
             permissions: {
-                R: (permBits >>> 0) & 1,
-                W: (permBits >>> 1) & 1,
-                X: (permBits >>> 2) & 1,
-                L: (permBits >>> 3) & 1,
-                S: (permBits >>> 4) & 1,
-                E: (permBits >>> 5) & 1,
+                B: (permBits >>> 6) & 1,
+                R: (permBits >>> 5) & 1,
+                W: (permBits >>> 4) & 1,
+                X: (permBits >>> 3) & 1,
+                L: (permBits >>> 2) & 1,
+                S: (permBits >>> 1) & 1,
+                E: (permBits >>> 0) & 1,
             },
             type,
-            typeName: ['NULL','Inform','Outform','Abstract'][type & 3],
+            typeName: ['NULL','Real','Abstract','???'][type & 3],
         };
     }
 
-    createGT(version, index, perms, type) {
-        const v = ((version & 0x7F) << 25) >>> 0;
-        const i = ((index & 0x1FFFF) << 8) >>> 0;
-        const p = (this.getPermBits(perms) << 2) >>> 0;
-        const t = type & 0x3;
-        return (v | i | p | t) >>> 0;
+    createGT(gt_seq, slotId, perms, type) {
+        const p = (this.getPermBits(perms) << 25) >>> 0;
+        const t = ((type   & 0x3)  << 23) >>> 0;
+        const s = ((gt_seq & 0x7F) << 16) >>> 0;
+        const i = (slotId  & 0xFFFF)      >>> 0;
+        return (p | t | s | i) >>> 0;
     }
 
     getPermBits(permsObj) {
         let bits = 0;
-        if (permsObj.R) bits |= 1;
-        if (permsObj.W) bits |= 2;
-        if (permsObj.X) bits |= 4;
-        if (permsObj.L) bits |= 8;
-        if (permsObj.S) bits |= 16;
-        if (permsObj.E) bits |= 32;
-        return bits & 0x3F;
+        if (permsObj.E) bits |= 1;
+        if (permsObj.S) bits |= 2;
+        if (permsObj.L) bits |= 4;
+        if (permsObj.X) bits |= 8;
+        if (permsObj.W) bits |= 16;
+        if (permsObj.R) bits |= 32;
+        if (permsObj.B) bits |= 64;
+        return bits & 0x7F;
     }
 
     computeSeal(location, limit17) {
-        let h = 0x5A5A5A5A;
-        h = ((h ^ location) * 0x01000193) >>> 0;
-        h = ((h ^ limit17) * 0x01000193) >>> 0;
-        h = (h ^ (h >>> 16)) >>> 0;
-        return h & 0x01FFFFFF;
+        let crc = 0xFFFF;
+        const update = (byte) => {
+            for (let i = 0; i < 8; i++) {
+                const bit = ((byte >>> (7 - i)) & 1) ^ ((crc >>> 15) & 1);
+                crc = ((crc << 1) & 0xFFFF) ^ (bit ? 0x1021 : 0);
+            }
+        };
+        update((location >>> 24) & 0xFF);
+        update((location >>> 16) & 0xFF);
+        update((location >>>  8) & 0xFF);
+        update( location         & 0xFF);
+        update((limit17  >>> 16) & 0xFF);
+        update((limit17  >>>  8) & 0xFF);
+        update( limit17          & 0xFF);
+        return crc & 0xFFFF;
     }
 
-    makeVersionSeals(version, location, limit17) {
+    makeVersionSeals(gt_seq, location, limit17) {
         const seal = this.computeSeal(location, limit17);
-        return (((version & 0x7F) << 25) | (seal & 0x01FFFFFF)) >>> 0;
+        return (((gt_seq & 0x7F) << 25) | (seal & 0xFFFF)) >>> 0;
     }
 
     validateMAC(entry) {
         if (!entry) return false;
-        const storedSeal = entry.word2_seals & 0x01FFFFFF;
+        const storedSeal = entry.word2_seals & 0xFFFF;
         const lim = this.parseNSWord1(entry.word1_limit);
         return storedSeal === this.computeSeal(entry.word0_location, lim.limit);
     }
 
     _validateClistSlotPerms(parsed, slotIdx) {
         const p = parsed.permissions;
-        const permStr = (p.R?'R':'')+(p.W?'W':'')+(p.X?'X':'')+(p.L?'L':'')+(p.S?'S':'')+(p.E?'E':'');
-        if (parsed.type === 2) return { ok: true };
+        const permStr = (p.B?'B':'')+(p.R?'R':'')+(p.W?'W':'')+(p.X?'X':'')+(p.L?'L':'')+(p.S?'S':'')+(p.E?'E':'');
         if (slotIdx === 0) {
             const hasX = p.X;
             const onlyXorRX = hasX && !p.W && !p.L && !p.S && !p.E;
@@ -476,14 +487,12 @@ class ChurchSimulator {
         if (!entry) {
             return { ok: false, fault: 'BOUNDS', message: `namespace entry ${parsed.index} is null` };
         }
-        const nsVersion = (entry.word2_seals >>> 25) & 0x7F;
-        const versionMatch = parsed.version === nsVersion;
+        const nsGtSeq = (entry.word2_seals >>> 25) & 0x7F;
+        const versionMatch = parsed.gt_seq === nsGtSeq;
         const sealValid = this.validateMAC(entry);
 
-        const srcCR = (srcCRIdx !== undefined) ? this.cr[srcCRIdx] : null;
-        const crWord2 = srcCR ? this.parseNSWord1(srcCR.word2) : null;
-        const bBit = crWord2 ? crWord2.b : ((entry.word1_limit >>> 31) & 1);
-        const fBit = crWord2 ? crWord2.f : ((entry.word1_limit >>> 30) & 1);
+        const bBit = parsed.permissions.B || 0;
+        const fBit = (entry.word1_limit >>> 30) & 1;
 
         const permPass = requiredPerm === null || this.mElevation || !!parsed.permissions[requiredPerm];
         const auditEntry = {
@@ -510,10 +519,10 @@ class ChurchSimulator {
             sealValid,
         };
         if (!versionMatch) {
-            return { ok: false, fault: 'VERSION', message: `version mismatch: GT v${parsed.version}, entry v${nsVersion}` };
+            return { ok: false, fault: 'VERSION', message: `gt_seq mismatch: GT seq ${parsed.gt_seq}, entry seq ${nsGtSeq}` };
         }
         if (!sealValid) {
-            return { ok: false, fault: 'SEAL', message: `FNV seal validation failed for entry ${parsed.index}` };
+            return { ok: false, fault: 'SEAL', message: `CRC seal validation failed for entry ${parsed.index}` };
         }
         if (requiredPerm !== null && !this.mElevation && !parsed.permissions[requiredPerm]) {
             return { ok: false, fault: 'PERMISSION', message: `lacks ${requiredPerm} permission` };
@@ -524,20 +533,16 @@ class ChurchSimulator {
 
     mSave(gt32, targetIdx, srcCRIdx) {
         const parsed = this.parseGT(gt32);
-        const srcCR = (srcCRIdx !== undefined) ? this.cr[srcCRIdx] : null;
-        const crWord2 = srcCR ? this.parseNSWord1(srcCR.word2) : null;
-        const crVersion = srcCR ? ((srcCR.word3 >>> 25) & 0x7F) : null;
-
         const srcEntry = this.readNSEntry(parsed.index);
         if (!srcEntry) {
             return { ok: false, fault: 'BOUNDS', message: `source entry ${parsed.index} is null` };
         }
 
-        const srcVersionMatch = parsed.version === ((srcEntry.word2_seals >>> 25) & 0x7F);
+        const srcVersionMatch = parsed.gt_seq === ((srcEntry.word2_seals >>> 25) & 0x7F);
         const srcSealValid = this.validateMAC(srcEntry);
 
-        const bBit = crWord2 ? crWord2.b : this.parseNSWord1(srcEntry.word1_limit).b;
-        const fBit = crWord2 ? crWord2.f : this.parseNSWord1(srcEntry.word1_limit).f;
+        const bBit = parsed.permissions.B || 0;
+        const fBit = (srcEntry.word1_limit >>> 30) & 1;
 
         const bindPass = bBit === 1 || this.mElevation;
         let farPass = true;
@@ -573,10 +578,10 @@ class ChurchSimulator {
             sealValid: srcSealValid,
         };
         if (!srcVersionMatch) {
-            return { ok: false, fault: 'VERSION', message: `source version mismatch: GT v${parsed.version}, entry v${((srcEntry.word2_seals >>> 25) & 0x7F)}` };
+            return { ok: false, fault: 'VERSION', message: `source gt_seq mismatch: GT seq ${parsed.gt_seq}, entry seq ${(srcEntry.word2_seals >>> 25) & 0x7F}` };
         }
         if (!srcSealValid) {
-            return { ok: false, fault: 'SEAL', message: `source seal validation failed for entry ${parsed.index}` };
+            return { ok: false, fault: 'SEAL', message: `source CRC seal validation failed for entry ${parsed.index}` };
         }
         if (!bindPass) {
             return { ok: false, fault: 'BIND', message: `GT has B=0 — not bindable to c-list` };
@@ -1172,10 +1177,6 @@ class ChurchSimulator {
             }
         }
 
-        for (let i = 0; i < this.cr.length; i++) {
-            this.cr[i].word2 = (this.cr[i].word2 & ~(1 << 31)) >>> 0;
-        }
-
         const desc = `CALL CR${d.crDst} -> ${label}: clistCount=${clistCount}${cr7Desc}`;
         this.output += desc + '\n';
         const prevPC = this.pc;
@@ -1472,9 +1473,7 @@ class ChurchSimulator {
         const hasAll = required.every(p => parsed.permissions[p] === 1);
 
         if (bSet && hasAll) {
-            const base = this.NS_TABLE_BASE + parsed.index * this.NS_ENTRY_WORDS;
-            this.memory[base + 1] = (this.memory[base + 1] | (1 << 31)) >>> 0;
-            this.cr[d.crDst].word2 = (this.cr[d.crDst].word2 | (1 << 31)) >>> 0;
+            this.cr[d.crDst].word0 = (this.cr[d.crDst].word0 & ~(1 << 31)) >>> 0;
         }
 
         this.flags.Z = hasAll;
@@ -1484,7 +1483,7 @@ class ChurchSimulator {
 
         const permStr = (required.join('') || 'CLEAR') + (bSet ? '+B' : '');
         const result = hasAll ? 'PASS' : 'FAIL';
-        const bMsg = (bSet && hasAll) ? ' B->1' : '';
+        const bMsg = (bSet && hasAll) ? ' B->0' : '';
         const desc = `TPERM CR${d.crDst}, ${permStr} -> ${result} (Z=${hasAll ? 1 : 0})${bMsg}`;
         this.output += desc + '\n';
         this.pc++;
@@ -1595,10 +1594,6 @@ class ChurchSimulator {
             frameWord:  frameWord_ec,
         });
         this.sto = (savedSTO_ec + 2) & 0xFFF;
-
-        for (let i = 0; i < this.cr.length; i++) {
-            this.cr[i].word2 = (this.cr[i].word2 & ~(1 << 31)) >>> 0;
-        }
 
         const label = this.nsLabels[targetIdx] || 'abstraction';
         const desc = `ELOADCALL CR${d.crDst}, [CR${d.crSrc} + ${d.imm}] -> ${label} (LOAD+TPERM+CALL)`;
@@ -2105,15 +2100,16 @@ class ChurchSimulator {
             const w1 = this.memory[base + 1];
             const parsed = this.parseNSWord1(w1);
             const label = this.nsLabels[i] || '';
-            this.output += `  [${i.toString().padStart(2)}] ${label.padEnd(20)} loc=0x${loc.toString(16).padStart(4,'0')} lim=${parsed.limit} B=${parsed.b} F=${parsed.f} G=${parsed.g}\n`;
+            this.output += `  [${i.toString().padStart(2)}] ${label.padEnd(20)} loc=0x${loc.toString(16).padStart(4,'0')} lim=${parsed.limit} F=${parsed.f} G=${parsed.g}\n`;
         }
         this.output += '\n--- C-List GTs ---\n';
         for (let i = 0; i < hwClist.length; i++) {
             const gt = hwClist[i] >>> 0;
             const p = this.parseGT(gt);
-            const permStr = (p.permissions.R ? 'R':'') + (p.permissions.W ? 'W':'') +
-                           (p.permissions.X ? 'X':'') + (p.permissions.L ? 'L':'') +
-                           (p.permissions.S ? 'S':'') + (p.permissions.E ? 'E':'');
+            const permStr = (p.permissions.B ? 'B':'') + (p.permissions.R ? 'R':'') +
+                           (p.permissions.W ? 'W':'') + (p.permissions.X ? 'X':'') +
+                           (p.permissions.L ? 'L':'') + (p.permissions.S ? 'S':'') +
+                           (p.permissions.E ? 'E':'');
             this.output += `  [${i}] 0x${gt.toString(16).padStart(8,'0')} ${p.typeName.padEnd(8)} ${(permStr||'------').padEnd(6)} -> idx ${p.index}\n`;
         }
         this.output += `\n--- CLOOMC Code (Boot.Abstr code region, at 0x${abstrLoc.toString(16).padStart(4,'0').toUpperCase()}) ---\n`;
@@ -2218,17 +2214,18 @@ class ChurchSimulator {
             const w1 = this.memory[base + 1];
             const parsed = this.parseNSWord1(w1);
             const label = this.nsLabels[i] || '';
-            this.output += `  [${i.toString().padStart(2)}] ${label.padEnd(20)} loc=0x${loc.toString(16).padStart(4,'0')} lim=${parsed.limit} B=${parsed.b} F=${parsed.f} G=${parsed.g}\n`;
+            this.output += `  [${i.toString().padStart(2)}] ${label.padEnd(20)} loc=0x${loc.toString(16).padStart(4,'0')} lim=${parsed.limit} F=${parsed.f} G=${parsed.g}\n`;
         }
         this.output += '\n--- C-List GTs ---\n';
         for (let i = 0; i < clistCount; i++) {
             const gt = clistWords[i] >>> 0;
             if (gt === 0) continue;
             const p = this.parseGT(gt);
-            const permStr = (p.permissions.R ? 'R':'') + (p.permissions.W ? 'W':'') +
-                           (p.permissions.X ? 'X':'') + (p.permissions.L ? 'L':'') +
-                           (p.permissions.S ? 'S':'') + (p.permissions.E ? 'E':'');
-            this.output += `  [${i}] 0x${gt.toString(16).padStart(8,'0')} ${p.typeName.padEnd(8)} ${(permStr||'------').padEnd(6)} -> idx ${p.index}\n`;
+            const permStr = (p.permissions.B ? 'B':'') + (p.permissions.R ? 'R':'') +
+                           (p.permissions.W ? 'W':'') + (p.permissions.X ? 'X':'') +
+                           (p.permissions.L ? 'L':'') + (p.permissions.S ? 'S':'') +
+                           (p.permissions.E ? 'E':'');
+            this.output += `  [${i}] 0x${gt.toString(16).padStart(8,'0')} ${p.typeName.padEnd(8)} ${(permStr||'-------').padEnd(7)} -> idx ${p.index}\n`;
         }
         if (hwBoot) {
             this.output += `\n--- CLOOMC Code (Boot.Abstr code region, at 0x${abstrLoc.toString(16).padStart(4,'0').toUpperCase()}) ---\n`;
@@ -2321,17 +2318,18 @@ class ChurchSimulator {
         if (isEmpty) {
             return {
                 index: idx, isNull: true, mBit: 0,
-                word0_gt: '00000000', perms: '------', gtVersion: 0, gtIndex: 0, gtType: 'NULL', gtTypeName: 'NULL',
+                word0_gt: '00000000', perms: '-------', gtSeq: 0, gtIndex: 0, gtType: 'NULL', gtTypeName: 'NULL',
                 word1_location: 0,
                 word2_limit_raw: 0, limitB: 0, limitF: 0, limit17: 0,
-                word3_seals_raw: 0, sealVersion: 0, sealFNV: 0,
+                word3_seals_raw: 0, sealGtSeq: 0, sealCRC: 0,
             };
         }
         const parsed = this.parseGT(cr.word0);
         const lim = this.parseNSWord1(cr.word2);
-        const sealVer = (cr.word3 >>> 25) & 0x7F;
-        const sealFNV = cr.word3 & 0x01FFFFFF;
-        const permStr = (parsed.permissions.R ? 'R' : '-') +
+        const sealGtSeq = (cr.word3 >>> 25) & 0x7F;
+        const sealCRC = cr.word3 & 0xFFFF;
+        const permStr = (parsed.permissions.B ? 'B' : '-') +
+                        (parsed.permissions.R ? 'R' : '-') +
                         (parsed.permissions.W ? 'W' : '-') +
                         (parsed.permissions.X ? 'X' : '-') +
                         (parsed.permissions.L ? 'L' : '-') +
@@ -2341,18 +2339,18 @@ class ChurchSimulator {
             index: idx, isNull: false, mBit: cr.m || 0,
             word0_gt: cr.word0.toString(16).toUpperCase().padStart(8, '0'),
             perms: permStr,
-            gtVersion: parsed.version,
+            gtSeq: parsed.gt_seq,
             gtIndex: parsed.index,
             gtType: parsed.type,
             gtTypeName: parsed.typeName,
             word1_location: cr.word1,
             word2_limit_raw: cr.word2,
-            limitB: lim.b,
+            limitB: parsed.permissions.B,
             limitF: lim.f,
             limit17: lim.limit,
             word3_seals_raw: cr.word3,
-            sealVersion: sealVer,
-            sealFNV: sealFNV,
+            sealGtSeq: sealGtSeq,
+            sealCRC: sealCRC,
         };
     }
 

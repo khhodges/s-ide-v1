@@ -524,10 +524,10 @@ function updateCRDisplay() {
     const COLS = 14;
     let html = '<table class="cr-table"><thead><tr>';
     html += '<th>CR</th><th>M</th><th>Name</th><th>Role</th>';
-    html += '<th>word0: GT</th><th>Perms</th><th>Ver</th><th>Idx</th><th>Type</th>';
+    html += '<th>word0: GT</th><th>Perms</th><th>Seq</th><th>Idx</th><th>Type</th>';
     html += '<th>word1: Location</th>';
-    html += '<th>word2: B</th><th>F</th><th>Limit[16:0]</th>';
-    html += '<th>word3: Ver</th><th>FNV Seal</th>';
+    html += '<th>W0:B</th><th>F</th><th>Limit[16:0]</th>';
+    html += '<th>word3: Seq</th><th>CRC Seal</th>';
     html += '</tr></thead><tbody>';
     for (let i = 0; i < 16; i++) {
         if (i === 12) {
@@ -546,15 +546,15 @@ function updateCRDisplay() {
         html += `<td><span class="cr-role-badge cr-role-${meta.role}">${meta.badge}</span></td>`;
         html += `<td class="cr-gt">0x${cr.word0_gt}</td>`;
         html += `<td class="cr-perms">[${cr.perms}]</td>`;
-        html += `<td>${cr.gtVersion}</td>`;
+        html += `<td>${cr.gtSeq}</td>`;
         html += `<td>${cr.gtIndex}</td>`;
         html += `<td class="cr-type">${cr.gtTypeName}</td>`;
         html += `<td>0x${cr.word1_location.toString(16).toUpperCase().padStart(8, '0')}</td>`;
         html += `<td class="cr-flag">${cr.limitB}</td>`;
         html += `<td class="cr-flag">${cr.limitF}</td>`;
         html += `<td>0x${cr.limit17.toString(16).toUpperCase().padStart(5, '0')}</td>`;
-        html += `<td>${cr.sealVersion}</td>`;
-        html += `<td>0x${cr.sealFNV.toString(16).toUpperCase().padStart(7, '0')}</td>`;
+        html += `<td>${cr.sealGtSeq}</td>`;
+        html += `<td>0x${cr.sealCRC.toString(16).toUpperCase().padStart(4, '0')}</td>`;
         html += '</tr>';
     }
     html += '</tbody></table>';
@@ -597,11 +597,10 @@ function renderCListEntryDetail(nsIdx, entry) {
     const loc = entry.word0_location >>> 0;
     const lim = sim.parseNSWord1(entry.word1_limit);
     const ver = (entry.word2_seals >>> 25) & 0x7F;
-    const seal = entry.word2_seals & 0x01FFFFFF;
+    const seal = entry.word2_seals & 0xFFFF;
     h += `<tr><td style="color:var(--church-blue);width:120px;">W0: Location</td><td>0x${loc.toString(16).toUpperCase().padStart(8,'0')}</td></tr>`;
-    const typeNames = ['NULL','Inform','Outform','Abstract'];
+    const typeNames = ['NULL','Real','Abstract','???'];
     h += `<tr><td style="color:var(--church-blue)">W1: Type</td><td>${typeNames[entry.gtType] || '?'} (${entry.gtType})</td></tr>`;
-    h += `<tr><td style="color:var(--church-blue)">W1: B (Bind)</td><td>${lim.b}</td></tr>`;
     h += `<tr><td style="color:var(--church-blue)">W1: F (Far)</td><td>${lim.f}</td></tr>`;
     h += `<tr><td style="color:var(--church-blue)">W1: G (GC)</td><td>${entry.gBit}</td></tr>`;
     h += `<tr><td style="color:var(--church-blue)">W1: Chainable</td><td>${lim.chainable ? 'Yes' : 'No'}</td></tr>`;
@@ -790,22 +789,22 @@ function updateCRDetail() {
             html += '<div style="color:var(--text-secondary);padding:0.5rem;">No namespace entries within this capability\'s range.</div>';
         } else {
             html += '<table class="cr-table"><thead><tr>';
-            html += '<th>Idx</th><th>Label</th><th>W0: Location</th><th>W1: Type</th><th>W1: B</th><th>W1: Limit</th><th>W2: FNV</th>';
+            html += '<th>Idx</th><th>Label</th><th>W0: Location</th><th>W1: Type</th><th>W1: F</th><th>W1: Limit</th><th>W2: CRC</th>';
             html += '</tr></thead><tbody>';
             for (let j = 0; j < clistEntries.length; j++) {
                 const c = clistEntries[j];
                 const e = c.entry;
-                const typeNames = ['NULL','Inform','Outform','Abstract'];
-                const sealFNV = e.word2_seals & 0x01FFFFFF;
+                const typeNames = ['NULL','Real','Abstract','???'];
+                const sealCRC = e.word2_seals & 0xFFFF;
                 const isExpanded = (clistExpandedIdx === c.idx);
                 html += `<tr class="cr-active clist-clickable${isExpanded ? ' clist-selected' : ''}" onclick="toggleCListEntry(${c.idx})" title="Click to inspect NS[${c.idx}]">`;
                 html += `<td class="cr-idx">${c.idx}</td>`;
                 html += `<td class="cr-name">${e.label || ''}</td>`;
                 html += `<td>0x${c.loc.toString(16).toUpperCase().padStart(8,'0')}</td>`;
                 html += `<td>${typeNames[e.gtType] || '?'}</td>`;
-                html += `<td class="cr-flag">${c.lim.b}</td>`;
+                html += `<td class="cr-flag">${c.lim.f}</td>`;
                 html += `<td>0x${c.lim.limit.toString(16).toUpperCase().padStart(5,'0')}</td>`;
-                html += `<td>0x${sealFNV.toString(16).toUpperCase().padStart(7,'0')}</td>`;
+                html += `<td>0x${sealCRC.toString(16).toUpperCase().padStart(4,'0')}</td>`;
                 html += '</tr>';
                 if (isExpanded) {
                     html += `<tr class="clist-detail-row"><td colspan="7">${renderCListEntryDetail(c.idx, e)}</td></tr>`;
@@ -839,9 +838,9 @@ function updateCRDetail() {
             html += '<div style="color:var(--text-secondary);padding:0.5rem;">Namespace table is empty.</div>';
         } else {
             html += '<table class="cr-table"><thead><tr>';
-            html += '<th>Idx</th><th>Label</th><th>W0: Location</th><th>W1: Type</th><th>W1: B</th><th>W1: G</th><th>W1: Chain</th>';
+            html += '<th>Idx</th><th>Label</th><th>W0: Location</th><th>W1: Type</th><th>W1: F</th><th>W1: G</th><th>W1: Chain</th>';
             html += '</tr></thead><tbody>';
-            const typeNames = ['NULL','Inform','Outform','Abstract'];
+            const typeNames = ['NULL','Real','Abstract','???'];
             for (let i = 0; i < sim.nsCount; i++) {
                 const e = sim.readNSEntry(i);
                 if (!e) continue;
@@ -851,7 +850,7 @@ function updateCRDetail() {
                 html += `<td class="cr-name">${e.label || ''}</td>`;
                 html += `<td>0x${loc.toString(16).toUpperCase().padStart(8,'0')}</td>`;
                 html += `<td>${typeNames[e.gtType] || '?'}</td>`;
-                html += `<td class="cr-flag">${sim.parseNSWord1(e.word1_limit).b}</td>`;
+                html += `<td class="cr-flag">${sim.parseNSWord1(e.word1_limit).f}</td>`;
                 html += `<td class="cr-flag">${e.gBit}</td>`;
                 html += `<td>${e.chainable ? 'Yes' : 'No'}</td>`;
                 html += '</tr>';
@@ -878,10 +877,10 @@ function updateCRDetail() {
     html += '<table class="cr-table cr-detail-words"><thead><tr>';
     html += '<th>Word</th><th>Value</th><th>Decoded</th>';
     html += '</tr></thead><tbody>';
-    html += `<tr><td>word0: GT</td><td class="cr-gt">0x${cr.word0_gt}</td><td>[${cr.perms}] Ver=${cr.gtVersion} Idx=${cr.gtIndex} Type=${cr.gtTypeName}</td></tr>`;
+    html += `<tr><td>word0: GT</td><td class="cr-gt">0x${cr.word0_gt}</td><td>[${cr.perms}] Seq=${cr.gtSeq} Idx=${cr.gtIndex} Type=${cr.gtTypeName}</td></tr>`;
     html += `<tr><td>word1: Location</td><td>0x${cr.word1_location.toString(16).toUpperCase().padStart(8,'0')}</td><td>Base address in memory</td></tr>`;
-    html += `<tr><td>word2: Limit</td><td>B=${cr.limitB} F=${cr.limitF} Limit=0x${cr.limit17.toString(16).toUpperCase().padStart(5,'0')}</td><td>Bound=${cr.limitB} Far=${cr.limitF} Size=${cr.limit17 + 1} words</td></tr>`;
-    html += `<tr><td>word3: Seals</td><td>Ver=${cr.sealVersion} FNV=0x${cr.sealFNV.toString(16).toUpperCase().padStart(7,'0')}</td><td>Integrity seal</td></tr>`;
+    html += `<tr><td>word2: Limit</td><td>F=${cr.limitF} Limit=0x${cr.limit17.toString(16).toUpperCase().padStart(5,'0')}</td><td>Far=${cr.limitF} Size=${cr.limit17 + 1} words</td></tr>`;
+    html += `<tr><td>word3: Seals</td><td>Seq=${cr.sealGtSeq} CRC=0x${cr.sealCRC.toString(16).toUpperCase().padStart(4,'0')}</td><td>Integrity seal (CRC-16/CCITT)</td></tr>`;
     html += `<tr><td>M bit</td><td class="${cr.mBit ? 'cr-m-set' : ''}">${cr.mBit}</td><td>${cr.mBit ? 'Written under M elevation (boot gift)' : 'Normal write'}</td></tr>`;
     html += '</tbody></table>';
     html += '</div>';
@@ -894,21 +893,20 @@ function updateCRDetail() {
 
         const loc = entry.word0_location >>> 0;
         const lim = sim.parseNSWord1(entry.word1_limit);
-        const sealVer = (entry.word2_seals >>> 25) & 0x7F;
-        const sealFNV = entry.word2_seals & 0x01FFFFFF;
+        const sealGtSeq = (entry.word2_seals >>> 25) & 0x7F;
+        const sealCRC = entry.word2_seals & 0xFFFF;
         const gtPermStr = cr.perms;
-        const typeNames = ['NULL','Inform','Outform','Abstract'];
+        const typeNames = ['NULL','Real','Abstract','???'];
 
         html += '<table class="cr-table"><tbody>';
         html += `<tr><td>W0: Location</td><td>0x${loc.toString(16).toUpperCase().padStart(8,'0')}</td></tr>`;
         html += `<tr><td>W1: Type</td><td>${typeNames[entry.gtType] || '?'}</td></tr>`;
-        html += `<tr><td>W1: B (Bind)</td><td>${lim.b}</td></tr>`;
         html += `<tr><td>W1: F (Far)</td><td>${lim.f}</td></tr>`;
         html += `<tr><td>W1: G (GC)</td><td>${entry.gBit}</td></tr>`;
         html += `<tr><td>W1: Chainable</td><td>${entry.chainable ? 'Yes' : 'No'}</td></tr>`;
         html += `<tr><td>W1: Limit</td><td>0x${lim.limit.toString(16).toUpperCase().padStart(5,'0')} (${lim.limit + 1} words)</td></tr>`;
-        html += `<tr><td>W2: Version</td><td>${sealVer}</td></tr>`;
-        html += `<tr><td>W2: FNV Seal</td><td>0x${sealFNV.toString(16).toUpperCase().padStart(7,'0')}</td></tr>`;
+        html += `<tr><td>W2: GT Seq</td><td>${sealGtSeq}</td></tr>`;
+        html += `<tr><td>W2: CRC Seal</td><td>0x${sealCRC.toString(16).toUpperCase().padStart(4,'0')}</td></tr>`;
         html += `<tr><td>CR Permissions</td><td>[${gtPermStr}]</td></tr>`;
         if (entry.codeLength !== undefined) {
             html += `<tr><td>Code Length</td><td>${entry.codeLength} words (${entry.codeLength * 4} bytes)</td></tr>`;
@@ -1067,13 +1065,13 @@ function _renderGTRow(idx, addr, word) {
         return `<tr><td style="color:rgba(200,155,60,0.7);">${idx}</td><td>0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td><td style="color:rgba(206,145,120,0.6);">${hex}</td><td><span style="color:#666;">0 (empty)</span></td></tr>`;
     }
     const p = sim.parseGT(word);
-    const permStr = (p.permissions.R ? 'R' : '-') + (p.permissions.W ? 'W' : '-') + (p.permissions.X ? 'X' : '-') + (p.permissions.L ? 'L' : '-') + (p.permissions.S ? 'S' : '-') + (p.permissions.E ? 'E' : '-');
+    const permStr = (p.permissions.B ? 'B' : '-') + (p.permissions.R ? 'R' : '-') + (p.permissions.W ? 'W' : '-') + (p.permissions.X ? 'X' : '-') + (p.permissions.L ? 'L' : '-') + (p.permissions.S ? 'S' : '-') + (p.permissions.E ? 'E' : '-');
     const label = sim.nsLabels[p.index] || '';
     let decoded = `<span style="color:rgba(78,201,176,0.7);">${p.typeName}</span>`;
     decoded += ` <span style="color:rgba(200,155,60,0.55);">[${permStr}]</span>`;
     decoded += ` \u2192 idx <span style="color:rgba(86,156,214,0.7);">${p.index}</span>`;
     if (label) decoded += ` <span style="color:rgba(156,220,254,0.6);">(${label})</span>`;
-    decoded += ` v${p.version}`;
+    decoded += ` seq${p.gt_seq}`;
     return `<tr><td style="color:rgba(200,155,60,0.7);">${idx}</td><td>0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td><td style="color:rgba(206,145,120,0.6);">${hex}</td><td>${decoded}</td></tr>`;
 }
 
@@ -1091,8 +1089,8 @@ function renderMemoryDump(location, limit, nsIndex) {
     }
     html += '</tr></thead><tbody>';
 
-    const permNames = ['R','W','X','L','S','E'];
-    const typeNamesGT = {0:'NULL', 1:'Inform', 2:'Outform', 3:'Abstract'};
+    const permNames = ['B','R','W','X','L','S','E'];
+    const typeNamesGT = {0:'NULL', 1:'Real', 2:'Abstract', 3:'???'};
 
     if (isBootNS) {
         const entryCount = Math.floor(wordCount / 3);
@@ -1104,7 +1102,7 @@ function renderMemoryDump(location, limit, nsIndex) {
             if (w0 === 0 && w1 === 0 && w2 === 0) continue;
             const parsed = sim.parseNSWord1(w1);
             const ver = (w2 >>> 25) & 0x7F;
-            const seal = w2 & 0x01FFFFFF;
+            const seal = w2 & 0xFFFF;
             const label = sim.nsLabels[e] || '';
             const typeName = typeNamesGT[parsed.gtType] || '?';
             const addrHex = '0x' + base.toString(16).toUpperCase().padStart(4, '0');
@@ -1112,7 +1110,7 @@ function renderMemoryDump(location, limit, nsIndex) {
             const w1Hex = '0x' + (w1 >>> 0).toString(16).toUpperCase().padStart(8, '0');
             const w2Hex = '0x' + (w2 >>> 0).toString(16).toUpperCase().padStart(8, '0');
             let decoded = `<span style="color:rgba(78,201,176,0.7);">${typeName}</span>`;
-            decoded += ` B=${parsed.b} F=${parsed.f} G=${parsed.g}`;
+            decoded += ` F=${parsed.f} G=${parsed.g}`;
             decoded += ` Lim=0x${parsed.limit.toString(16).toUpperCase().padStart(5,'0')}`;
             decoded += ` v${ver}`;
             if (label) decoded += ` <span style="color:rgba(156,220,254,0.6);">(${label})</span>`;
@@ -1177,34 +1175,33 @@ function updateNamespace() {
     html += '<table class="ns-table"><thead><tr>';
     html += '<th>Idx</th><th class="ns-label-col">Label</th>';
     html += '<th>W0: Location</th>';
-    html += '<th>W1: Type</th><th>W1: B</th><th>W1: F</th><th>W1: G</th><th>W1: Limit</th>';
-    html += '<th>W2: Ver</th><th>W2: FNV Seal</th>';
+    html += '<th>W1: Type</th><th>W1: F</th><th>W1: G</th><th>W1: Limit</th>';
+    html += '<th>W2: Seq</th><th>W2: CRC Seal</th>';
     html += '<th>Actions</th>';
     html += '</tr></thead><tbody>';
 
-    const typeNames = ['NULL','Inform','Outform','Abstract'];
+    const typeNames = ['NULL','Real','Abstract','???'];
     for (let i = 0; i < sim.nsCount; i++) {
         const e = sim.readNSEntry(i);
         if (!e) continue;
         const lim = sim.parseNSWord1(e.word1_limit);
         const ver = (e.word2_seals >>> 25) & 0x7F;
-        const seal = e.word2_seals & 0x01FFFFFF;
+        const seal = e.word2_seals & 0xFFFF;
         const isExpanded = (nsExpandedSlot === i);
         html += `<tr class="ns-row${isExpanded ? ' ns-row-active' : ''}" onclick="toggleNSDetail(${i})" style="cursor:pointer;">`;
         html += `<td>${i}</td>`;
         html += `<td class="ns-label">${e.label || '-'}</td>`;
         html += `<td>0x${e.word0_location.toString(16).toUpperCase().padStart(8, '0')}</td>`;
         html += `<td>${typeNames[e.gtType] || '?'}</td>`;
-        html += `<td class="ns-flag">${lim.b}</td>`;
         html += `<td class="ns-flag">${lim.f}</td>`;
         html += `<td class="ns-flag">${e.gBit}</td>`;
         html += `<td>0x${lim.limit.toString(16).toUpperCase().padStart(5, '0')}</td>`;
         html += `<td>${ver}</td>`;
-        html += `<td>0x${seal.toString(16).toUpperCase().padStart(7, '0')}</td>`;
+        html += `<td>0x${seal.toString(16).toUpperCase().padStart(4, '0')}</td>`;
         html += `<td class="ns-entry-actions"><button class="btn btn-primary btn-xs" onclick="event.stopPropagation();exportEntryMemory(${i})">Export</button> <button class="btn btn-xs" onclick="event.stopPropagation();importEntryMemory(${i})" style="background:#3a86ff;color:#fff;border:none;">Import</button></td>`;
         html += '</tr>';
         if (isExpanded) {
-            html += `<tr class="ns-detail-row"><td colspan="11">`;
+            html += `<tr class="ns-detail-row"><td colspan="10">`;
             html += `<div class="ns-detail-panel">`;
             html += `<div class="ns-detail-title">Memory at 0x${e.word0_location.toString(16).toUpperCase().padStart(4, '0')} \u2014 ${e.label || 'Slot '+i} (${lim.limit + 1} words)</div>`;
             html += renderMemoryDump(e.word0_location, lim.limit + 1, i);
@@ -1280,7 +1277,7 @@ function showAbstractionDetail(index) {
     titleEl.textContent = `${abs.name} \u2014 Abstraction ${abs.index}`;
 
     const p = abs.perms || {};
-    const permStr = (p.R?'R':'')+(p.W?'W':'')+(p.X?'X':'')+(p.L?'L':'')+(p.S?'S':'')+(p.E?'E':'') || 'none';
+    const permStr = (p.B?'B':'')+(p.R?'R':'')+(p.W?'W':'')+(p.X?'X':'')+(p.L?'L':'')+(p.S?'S':'')+(p.E?'E':'') || 'none';
 
     let html = '';
 
@@ -6104,13 +6101,13 @@ function confirmCreateNamespace() {
     }
 
     const r = addResult.result;
-    const typeNames = ['NULL', 'Inform', 'Outform', 'Abstract'];
+    const typeNames = ['NULL', 'Real', 'Abstract', '???'];
     const clistStart = allocSize - clistCount;
     const freespace = allocSize - clistCount;
 
     let listing = `Namespace entry "${name}" created via Navana.Add:\n\n`;
     listing += `  NS Index:     ${r.nsIndex}\n`;
-    listing += `  Version:      ${r.version}\n`;
+    listing += `  GT Seq:       ${r.version}\n`;
     listing += `  W1 Type:      ${typeNames[gtType] || 'Unknown'}\n`;
     listing += `  W0 Location:  0x${location.toString(16)}\n`;
     listing += `  W1 Limit:     ${limit}\n`;
@@ -7396,9 +7393,9 @@ function exportEntryMemory(idx) {
     let permObj = {};
     if (data.gt) {
         const sp = sim.parseGT(data.gt).permissions;
-        permObj = { R: sp.R?1:0, W: sp.W?1:0, X: sp.X?1:0, L: sp.L?1:0, S: sp.S?1:0, E: sp.E?1:0 };
+        permObj = { B: sp.B?1:0, R: sp.R?1:0, W: sp.W?1:0, X: sp.X?1:0, L: sp.L?1:0, S: sp.S?1:0, E: sp.E?1:0 };
     }
-    const typeNames = ['NULL','Inform','Outform','Abstract'];
+    const typeNames = ['NULL','Real','Abstract','???'];
     const exportObj = {
         label: data.label,
         index: idx,
@@ -9248,7 +9245,7 @@ function compileAndCreateAbstraction() {
     const clistStart = r.allocSize - r.clistCount;
     let listing = `Abstraction "${upload.abstraction}" created via Navana.Abstraction.Add:\n\n`;
     listing += `  NS Index:    ${r.nsIndex}\n`;
-    listing += `  Version:     ${r.version}\n`;
+    listing += `  GT Seq:      ${r.version}\n`;
     listing += `  E-GT:        0x${r.eGT.toString(16).padStart(8, '0')}\n`;
     listing += `  Location:    0x${r.location.toString(16)}\n`;
     listing += `  Methods:     ${r.methods.join(', ')}\n`;
