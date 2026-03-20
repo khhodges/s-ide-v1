@@ -606,7 +606,7 @@ function renderCListEntryDetail(nsIdx, entry) {
     h += `<tr><td style="color:var(--church-blue)">W1: Chainable</td><td>${lim.chainable ? 'Yes' : 'No'}</td></tr>`;
     h += `<tr><td style="color:var(--church-blue)">W1: Limit</td><td>0x${lim.limit.toString(16).toUpperCase().padStart(5,'0')} (${lim.limit + 1} words)</td></tr>`;
     h += `<tr><td style="color:var(--church-blue)">W2: Version</td><td>${ver}</td></tr>`;
-    h += `<tr><td style="color:var(--church-blue)">W2: FNV Seal</td><td>0x${seal.toString(16).toUpperCase().padStart(7,'0')}</td></tr>`;
+    h += `<tr><td style="color:var(--church-blue)">W2: CRC Seal</td><td>0x${seal.toString(16).toUpperCase().padStart(4,'0')}</td></tr>`;
     h += '</tbody></table>';
 
     const wordCount = lim.limit + 1;
@@ -1454,9 +1454,9 @@ function getMethodExamples(abs) {
 ; mLoad 7-step: type check -> version match -> seal verify
 ;   -> bounds check -> perm check -> F-bit -> deliver
 LOAD   CR1, NS[4]       ; mLoad pipeline validates GT:
-                         ;   1. Type != NULL (00=NULL, 01=Inform)
-                         ;   2. GT.version == NS[4].word2[31:25]
-                         ;   3. FNV seal(word0,word1) == word2[24:0]
+                         ;   1. Type != NULL (00=NULL, 01=Real, 10=Abstract)
+                         ;   2. GT.gt_seq == NS[4].word2[31:25]
+                         ;   3. CRC-16 seal(word0,word1) == word2[15:0]
                          ;   4. Index 4 within NS bounds
                          ;   5. L perm required for LOAD
                          ;   6. F-bit=0 (local, not tunneled)
@@ -1544,8 +1544,8 @@ CALL   CR1              ; Navana.Monitor checks:
 LOAD   CR1, NS[5]       ; Load Navana E-GT
 CALL   CR1              ; Navana.IDS scans:
 ;   for each active NS entry:
-;     recompute seal = FNV(word0, word1)
-;     compare seal vs word2[24:0]
+;     recompute seal = CRC-16(word0, word1)
+;     compare seal vs word2[15:0]
 ;     if mismatch: FAULT — tampered entry
 ;     check version consistency across all GTs
 ;     if GT.version > NS.version: stale/forged
@@ -1683,10 +1683,10 @@ CALL   CR1              ; Mint.Create internally:
 ;   4. Pack NS entry at NS_TABLE_BASE + 50*3:
 ;      word0 = location (0x3200)
 ;      word1 = B(0)|F(0)|G(0)|type(01)|...|limit(127)
-;      word2 = (newVer<<25) | FNV_seal(loc, limit)
+;      word2 = (newVer<<25) | CRC16_seal(loc, limit)
 ;   5. Pack GT:
-;      GT = (1<<25)|(50<<8)|(0b000011<<2)|(0b01)
-;         = ver=1, idx=50, R+W, Inform
+;      GT = (seq<<16)|(50)|(0b000001<<25)|(0b01<<23)
+;         = seq=1, idx=50, R+W, Real
 ; Result: CR1 <- ready-to-use GT for NS[50]
 
 ; ── EXAMPLE B: Inform + Turing R,W,X (full data+code) ────
@@ -1791,7 +1791,7 @@ CALL   CR1              ; Mint.Revoke:
 ;   word2 = mem[base+2]
 ;   oldVer = (word2 >>> 25) & 0x7F     ; extract version
 ;   newVer = (oldVer + 1) & 0x7F       ; increment (wraps at 128)
-;   seal = word2 & 0x01FFFFFF          ; preserve seal
+;   seal = word2 & 0xFFFF               ; preserve CRC-16 seal
 ;   mem[base+2] = (newVer << 25) | seal ; write back
 ;
 ; All GTs with old version are now dead:
@@ -1858,7 +1858,7 @@ CALL   CR1              ; Memory.Resize:
 ;   2. Update the allocation record with new size
 ; NOTE: if an NS entry references this location,
 ; Mint must also update the NS entry's limit field
-; and recompute the FNV seal separately`,
+; and recompute the CRC-16 seal separately`,
         },
         'Scheduler': {
             'Yield': `; Scheduler.Yield — voluntarily yield time slice
@@ -2576,8 +2576,8 @@ CALL   CR1              ; Editor.Save:
 ;   1. Get editor buffer contents
 ;   2. If no existing slot: Memory.Allocate new DATA slot
 ;   3. DWRITE buffer to mem[location] (W perm required)
-;   4. Recompute seal: FNV(word0, word1) for integrity
-;   5. Update word2 = (version << 25) | newSeal`,
+;   4. Recompute seal: CRC-16(word0, word1) for integrity
+;   5. Update word2 = (gt_seq << 25) | newCRC`,
             'Load': `; Editor.Load — load source from NS slot into editor
 LOAD   CR1, NS[33]      ; Load Editor E-GT
 DWRITE DR0, #80         ; NS slot containing source

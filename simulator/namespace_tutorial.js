@@ -93,7 +93,7 @@ ${this._memMap(null)}
 <tr><td>word0_location</td><td>${hex(0)}</td><td>Physical memory base \u2014 the namespace starts at word\u202f0</td></tr>
 <tr><td>word1 limit</td><td>${this.TOTAL_WORDS - 1} (= ${hex(this.TOTAL_WORDS - 1)})</td><td>Total physical memory size \u2212\u202f1 \u2014 defines the full namespace extent</td></tr>
 <tr><td>word1 clistCount</td><td><em>N</em> (count of active NS entries)</td><td>NS Table size \u2014 how many 3-word entries exist</td></tr>
-<tr><td>word2 seal</td><td>FNV-32(0, ${this.TOTAL_WORDS - 1})</td><td>Hardware-verified at every mLoad of CR15</td></tr>
+<tr><td>word2 seal</td><td>CRC-16(0, ${this.TOTAL_WORDS - 1})</td><td>Hardware-verified at every mLoad of CR15</td></tr>
 </table>
 <p>At boot (B:01) the hardware loads Slot\u202f0 into <strong>CR15</strong> (the Namespace register). From that point on, <code>CR15.limit\u202f=\u202f${this.TOTAL_WORDS - 1}</code> tells every mLoad how large the physical namespace is, and <code>CR15.clistCount\u202f=\u202fN</code> tells the hardware how many NS entries are valid.</p>
 <div class="sr-key-concept"><div class="sr-concept-title">clistCount IS the NS Table Size</div>
@@ -107,7 +107,7 @@ ${this._memMap(null)}
 <table class="sr-table"><tr><th>Offset within entry</th><th>Name</th><th>Contents</th></tr>
 <tr><td>+0</td><td>word0</td><td>Lump base address (<code>word0_location</code>)</td></tr>
 <tr><td>+1</td><td>word1</td><td>Packed metadata: limit, clistCount, flags (see next slide)</td></tr>
-<tr><td>+2</td><td>word2</td><td>Version + FNV-32 seal</td></tr>
+<tr><td>+2</td><td>word2</td><td>GT Seq (gt_seq) + CRC-16 seal</td></tr>
 </table>
 <p>The hardware reads these three words on every <strong>mLoad</strong>, every <strong>CALL</strong>, and every <strong>RETURN</strong>. The seal is re-verified on each use to detect stale or forged capabilities.</p>
 <div class="sr-key-concept"><div class="sr-concept-title">NS Table Capacity</div>
@@ -132,17 +132,17 @@ ${this._memMap(null)}
 <p>For Slot\u202f0, <code>limit\u202f=\u202f${this.TOTAL_WORDS - 1}</code> and <code>clistCount\u202f=\u202fN</code> (live entry count). For any other slot, <code>limit\u202f=\u202f${SLOT - 1}</code> and <code>clistCount</code> is the C-List size for that abstraction or thread.</p></div>`
             },
             {
-                title: 'NS Entry word2 \u2014 Version and FNV Seal',
+                title: 'NS Entry word2 \u2014 GT Seq and CRC-16 Seal',
                 type: 'word2',
-                content: `<p>NS entry word2 provides two security mechanisms: a version counter for revocation and a cryptographic seal for forgery detection.</p>
+                content: `<p>NS entry word2 provides two security mechanisms: a sequence counter for revocation and a CRC-16 seal for forgery detection.</p>
 <table class="sr-table"><tr><th>Bits</th><th>Field</th><th>Meaning</th></tr>
-<tr><td>[24:0]</td><td>seal</td><td>Low 25 bits of FNV-32 computed over <code>(word0_location, limit)</code></td></tr>
-<tr><td>[31:25]</td><td>version</td><td>7-bit counter. Starts at 0; incremented on every revocation of this slot.</td></tr>
+<tr><td>[15:0]</td><td>seal</td><td>CRC-16/CCITT (poly 0x1021, init 0xFFFF) computed over <code>(word0_location, limit)</code></td></tr>
+<tr><td>[31:25]</td><td>gt_seq</td><td>7-bit counter. Starts at 0; incremented on every revocation of this slot.</td></tr>
 </table>
-<p>Every GT word that points to a slot carries the slot\u2019s version at the time the GT was issued. On every mLoad, CALL, or RETURN the hardware checks:</p>
+<p>Every GT word that points to a slot carries the slot\u2019s gt_seq at the time the GT was issued. On every mLoad, CALL, or RETURN the hardware checks:</p>
 <ol>
-<li><strong>Seal</strong>: recompute FNV-32 from the live NS entry; compare to the GT\u2019s stored seal. Mismatch \u2192 <code>SEAL_MISMATCH</code> fault.</li>
-<li><strong>Version</strong>: compare GT\u2019s version field to the NS entry\u2019s version. Mismatch \u2192 <code>VERSION</code> fault (capability revoked).</li>
+<li><strong>Seal</strong>: recompute CRC-16 from the live NS entry; compare to the stored CRC. Mismatch \u2192 <code>SEAL_MISMATCH</code> fault.</li>
+<li><strong>GT Seq</strong>: compare GT\u2019s gt_seq field to the NS entry\u2019s gt_seq. Mismatch \u2192 <code>VERSION</code> fault (capability revoked).</li>
 </ol>
 <div class="sr-key-concept"><div class="sr-concept-title">Revocation Is O(1)</div>
 <p>To revoke all capabilities to a slot, the IDE simply increments the version field in word2. Every existing GT for that slot now has a stale version and will fault immediately on use. No scan of memory is required. This is why the Church Machine can revoke a capability instantly regardless of how many GTs reference it.</p></div>`
@@ -152,14 +152,14 @@ ${this._memMap(null)}
                 type: 'cr15',
                 content: `<p>At boot B:01 (LOAD_NS) the hardware loads NS Slot\u202f0 into <strong>CR15</strong> (the Namespace register). CR15 gives the running thread a read-only view of the physical memory layout.</p>
 <table class="sr-table"><tr><th>CR15 word</th><th>Source</th><th>Value</th></tr>
-<tr><td>word0 (GT)</td><td>createGT(0, slot=0, zero perms)</td><td>Inform-type GT, index=0, all perm bits clear</td></tr>
+<tr><td>word0 (GT)</td><td>createGT(0, slot=0, zero perms)</td><td>Real-type GT, index=0, all perm bits clear</td></tr>
 <tr><td>word1</td><td>NS Slot\u202f0 word0_location</td><td>${hex(0)} \u2014 physical namespace base</td></tr>
 <tr><td>word2</td><td>NS Slot\u202f0 word1_limit</td><td>limit=${this.TOTAL_WORDS - 1} + clistCount=<em>N</em></td></tr>
-<tr><td>word3</td><td>NS Slot\u202f0 word2_seals</td><td>version + FNV seal</td></tr>
+<tr><td>word3</td><td>NS Slot\u202f0 word2_seals</td><td>gt_seq + CRC-16 seal</td></tr>
 </table>
 <p>CR15 is in the <strong>privileged zone</strong> (CR12\u2013CR15) \u2014 it cannot be used as a source or destination for DREAD/DWRITE. It is loaded once at boot and is per-thread: saved and restored by CHANGE as part of per-thread context.</p>
-<div class="sr-key-concept"><div class="sr-concept-title">Zero Perms \u2014 Inform-Only</div>
-<p>The GT in CR15 has no permission bits set (no R, W, X, L, S, E). It is purely informational: it proves to the hardware \u2014 via the FNV seal \u2014 that the namespace description it carries is authentic and unmodified. Any code that attempts to use CR15 as a data or code capability will receive a <code>PERM</code> fault.</p></div>`
+<div class="sr-key-concept"><div class="sr-concept-title">Zero Perms \u2014 Real-type Identity Token</div>
+<p>The GT in CR15 has no permission bits set (no R, W, X, L, S, E). It is purely structural: it proves to the hardware \u2014 via the CRC-16 seal \u2014 that the namespace description it carries is authentic and unmodified. Any code that attempts to use CR15 as a data or code capability will receive a <code>PERM</code> fault.</p></div>`
             },
             {
                 title: 'Namespace Lifecycle \u2014 Upload to GC',

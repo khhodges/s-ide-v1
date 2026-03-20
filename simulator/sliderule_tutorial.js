@@ -108,7 +108,7 @@ class SlideRuleTutorial {
 <pre class="sr-encoding">NS Entry:
   word0: location (base address of lump)
   word1: B|F|G|chain|type|clistCount|limit
-  word2: version | FNV seal</pre>
+  word2: gt_seq | CRC-16 seal</pre>
 <div class="sr-lump-diagram">
 <div class="sr-lump-region sr-lump-code">Code (Turing domain, X) &larr; CR14</div>
 <div class="sr-lump-region sr-lump-free">FREESPACE (inaccessible)</div>

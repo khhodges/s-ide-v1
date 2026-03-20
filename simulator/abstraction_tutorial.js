@@ -102,7 +102,7 @@ ${this._p2Sizes()}
 <li><strong>General pattern.</strong> Any Programmed Abstraction can use this pattern for privileged APIs \u2014 set the Pass Key GT as a required argument and reject callers who present the wrong or zero-permission GT. It is a purely software contract enforced by the capability-check logic inside the method, with the hardware seal guaranteeing the GT cannot be forged or replayed from a revoked session.</li>
 </ul></div>
 <div class="sr-key-concept"><div class="sr-concept-title">All Three Paths Arrive at the Same Hardware Gate</div>
-<p>Regardless of how the E-GT was obtained, the hardware performs the same validation on <code>CALL</code>: check E\u202f=\u202f1, recompute the FNV-32 seal against the NS entry, derive CR14 and CR6, push the 2-word frame, set PC\u202f=\u202f0. The three paths are only distinguished at the <em>source of the E-GT</em> \u2014 name (compiler), number (C-List index), or address (pre-loaded register). Once the GT is in a CR the call mechanism is identical.</p></div>
+<p>Regardless of how the E-GT was obtained, the hardware performs the same validation on <code>CALL</code>: check E\u202f=\u202f1, recompute the CRC-16 seal against the NS entry, derive CR14 and CR6, push the 2-word frame, set PC\u202f=\u202f0. The three paths are only distinguished at the <em>source of the E-GT</em> \u2014 name (compiler), number (C-List index), or address (pre-loaded register). Once the GT is in a CR the call mechanism is identical.</p></div>
 <div class="sr-key-concept"><div class="sr-concept-title">ELOAD = LOAD + CALL in One Instruction</div>
 <p><code>ELOAD CRd, idx</code> reads the GT at C-List[idx] into CRd and immediately calls it in a single atomic operation \u2014 equivalent to <code>LOAD CRd, idx; CALL CRd</code> but without the GT remaining in the register after the call returns. Use <code>LOAD</code> + <code>CALL</code> separately only when you need to inspect or retain the GT.</p></div>`
             },
@@ -148,18 +148,18 @@ ${this._p2Sizes()}
 <table class="sr-table"><tr><th>GT word field</th><th>Value</th></tr>
 <tr><td>NS slot index</td><td>Callee\u2019s namespace slot number</td></tr>
 <tr><td>Permissions</td><td>E\u202f=\u202f1, all others 0</td></tr>
-<tr><td>Seal</td><td>FNV hash of (location, limit) \u2014 hardware-checked on every use</td></tr>
+<tr><td>Seal</td><td>CRC-16 of (location, limit) \u2014 hardware-checked on every use</td></tr>
 </table>
 <p>On CALL the hardware performs these steps from the E-GT:</p>
 <ol>
-<li><strong>Validate</strong> \u2014 check E\u202f=\u202f1, check seal (FNV hash matches NS entry)</li>
+<li><strong>Validate</strong> \u2014 check E\u202f=\u202f1, check seal (CRC-16 matches NS entry)</li>
 <li><strong>Derive CR14</strong> \u2014 base\u202f=\u202fNS slot <code>word0_location</code>, limit\u202f=\u202fNS slot <code>word1 limit[16:0]</code> (= allocSize\u202f\u2212\u202f1, set by IDE), perm\u202f=\u202fXR or X (IDE-controlled)</li>
 <li><strong>Derive CR6</strong> \u2014 base\u202f=\u202fcallee lump base\u202f+\u202fclistStart, limit\u202f=\u202fclistCount\u202f\u2212\u202f1, L perm</li>
 <li><strong>Set PC\u202f=\u202f0</strong> \u2014 always enters at the first instruction word</li>
 </ol>
 <p>The E-GT is also <strong>saved in the CALL frame</strong> (the 2-word CALL frame\u2019s word\u202f0 is the caller\u2019s E-GT). RETURN uses it to re-derive the caller\u2019s CR6 and CR14 after popping the frame.</p>
 <div class="sr-key-concept"><div class="sr-concept-title">The Seal Prevents Forgery</div>
-<p>The FNV-32 seal in the GT is computed over <code>(word0_location, limit)</code> when the NS entry is written. The hardware recomputes the seal on every CALL and RETURN. A forged or stale GT that points to wrong memory will have a mismatched seal and cause a <code>SEAL_MISMATCH</code> fault \u2014 no memory access occurs.</p></div>`
+<p>The CRC-16/CCITT seal in the GT is computed over <code>(word0_location, limit)</code> when the NS entry is written. The hardware recomputes the seal on every CALL and RETURN. A forged or stale GT that points to wrong memory will have a mismatched seal and cause a <code>SEAL_MISMATCH</code> fault \u2014 no memory access occurs.</p></div>`
             },
             {
                 title: 'CALL \u2014 Entering an Abstraction',
@@ -207,7 +207,7 @@ ${this._p2Sizes()}
 <tr><td>word0_location</td><td>Lump base address in namespace memory</td></tr>
 <tr><td>word1 limit[16:0]</td><td>allocSize \u2212 1 (total lump word count minus one)</td></tr>
 <tr><td>word1 clistCount[25:17]</td><td>Number of C-List GT slots (= C-List size in words)</td></tr>
-<tr><td>word2 seal</td><td>FNV-32 hash of (location, limit) \u2014 checked on every CALL and RETURN</td></tr>
+<tr><td>word2 seal</td><td>CRC-16/CCITT of (location, limit) \u2014 checked on every CALL and RETURN</td></tr>
 </table>
 <div class="sr-key-concept"><div class="sr-concept-title">clistStart = allocSize \u2212 clistCount</div>
 <p>The C-List is always packed at the <em>top</em> (highest addresses) of the lump. The Code region occupies word\u202f0 upward. Any unused words between codeEnd and clistStart are <strong>freespace</strong> \u2014 an inert gap that arises from the power-of-2 lump constraint. The hardware derives clistStart from allocSize and clistCount on every CALL entry \u2014 there is no separate pointer stored anywhere.</p></div>`
@@ -217,7 +217,7 @@ ${this._p2Sizes()}
                 type: 'lifecycle',
                 content: `<p>An abstraction moves through these phases from namespace setup to active execution:</p>
 <div class="sr-security-list">
-<div class="sr-sec-item"><span class="sr-sec-num">1</span><strong>Upload.</strong> The IDE writes the abstraction\u2019s lump into namespace memory and creates an NS entry: <code>word0_location</code> = lump base, <code>word1</code> = packed limit and clistCount, <code>word2</code> = FNV seal. The C-List GT words are placed at lump[clistStart\u202f\u2192\u202fallocSize\u22121].</div>
+<div class="sr-sec-item"><span class="sr-sec-num">1</span><strong>Upload.</strong> The IDE writes the abstraction\u2019s lump into namespace memory and creates an NS entry: <code>word0_location</code> = lump base, <code>word1</code> = packed limit and clistCount, <code>word2</code> = CRC-16 seal. The C-List GT words are placed at lump[clistStart\u202f\u2192\u202fallocSize\u22121].</div>
 <div class="sr-sec-item"><span class="sr-sec-num">2</span><strong>Boot B:03 \u2014 INIT_ABSTR.</strong> The hardware loads the Boot.Abstr NS slot (Slot\u202f2) into a temporary E-perm GT for CR6 to confirm the boot abstraction\u2019s identity.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">3</span><strong>Boot B:04 \u2014 LOAD_NUC.</strong> From the NS Slot\u202f2 metadata the hardware derives and writes <strong>CR14</strong> (code GT: base = NS <code>word0_location</code>, limit = NS <code>word1 limit[16:0]</code> = allocSize\u22121, perm = XR or X per IDE setting) and <strong>CR6</strong> (c-list GT: base = lump base\u202f+\u202fclistStart, limit = clistCount\u22121, L perm). PC is set to 0. Boot code begins executing.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">4</span><strong>CALL \u2014 Entering any abstraction.</strong> The calling thread presents an E-GT. The hardware validates it, pushes a 2-word frame [E-GT\u202f|\u202fframe\u202fword] onto the thread\u2019s FIFO stack (STO\u202f+=\u202f2), re-derives CR6 and CR14 from the callee\u2019s NS slot, and sets PC\u202f=\u202f0. CR0 (return) and CR1 (first argument) are set by the caller beforehand.</div>

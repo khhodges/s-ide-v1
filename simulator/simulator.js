@@ -1936,7 +1936,7 @@ class ChurchSimulator {
         return [
             { stage: 'LOAD', desc: `Namespace lookup via CR${d.crSrc}`, perm: 'L', status: 'pass' },
             { stage: 'TPERM', desc: `Verify L permission on CR${d.crSrc}`, perm: 'L', status: 'pass' },
-            { stage: 'VALIDATE', desc: `FNV seal check on entry ${d.imm}`, status: 'pass' },
+            { stage: 'VALIDATE', desc: `CRC-16 seal check on entry ${d.imm}`, status: 'pass' },
             { stage: 'WRITE', desc: `Write ${label} to CR${d.crDst}`, status: 'pass' },
         ];
     }

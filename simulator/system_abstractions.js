@@ -843,8 +843,8 @@ class SystemAbstractions {
             const w2 = sim.memory[base + 2];
             const oldVersion = (w2 >>> 25) & 0x7F;
             const newVersion = (oldVersion + 1) & 0x7F;
-            const seal = w2 & 0x01FFFFFF;
-            sim.memory[base + 2] = (((newVersion & 0x7F) << 25) | (seal & 0x01FFFFFF)) >>> 0;
+            const seal = w2 & 0xFFFF;
+            sim.memory[base + 2] = (((newVersion & 0x7F) << 25) | (seal & 0xFFFF)) >>> 0;
 
             return {
                 ok: true,
