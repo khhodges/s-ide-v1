@@ -2,7 +2,7 @@ from amaranth import *
 from amaranth.lib.data import View
 
 from .hw_types import *
-from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, NS_ENTRY_LAYOUT, WORD2_LAYOUT, WORD3_LAYOUT
+from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, NS_ENTRY_LAYOUT, WORD2_LAYOUT, WORD3_LAYOUT, LUMP_HEADER_LAYOUT
 
 
 class ChurchMLoad(Elaboratable):
@@ -178,8 +178,9 @@ class ChurchMLoad(Elaboratable):
                     m.next = "FETCH_W2"
 
             with m.State("FETCH_W2"):
+                # word1_w2 is at NS entry offset +4 (limit_offset | gt_seq)
                 m.d.comb += [
-                    self.mem_addr.eq(ns_entry_addr + 8),
+                    self.mem_addr.eq(ns_entry_addr + 4),
                     self.mem_rd_en.eq(1),
                 ]
                 with m.If(self.mem_rd_valid):
@@ -191,8 +192,9 @@ class ChurchMLoad(Elaboratable):
 
             if self.enable_seal_check:
                 with m.State("FETCH_W3"):
+                    # word2_w3 is at NS entry offset +8 (crc | g_bit)
                     m.d.comb += [
-                        self.mem_addr.eq(ns_entry_addr + 12),
+                        self.mem_addr.eq(ns_entry_addr + 8),
                         self.mem_rd_en.eq(1),
                     ]
                     with m.If(self.mem_rd_valid):
@@ -222,7 +224,7 @@ class ChurchMLoad(Elaboratable):
                         gbit_cleared_view.spare.eq(ns_w3_view.spare),
                     ]
                     m.d.comb += [
-                        self.mem_addr.eq(ns_entry_addr + 12),
+                        self.mem_addr.eq(ns_entry_addr + 8),
                         self.mem_wr_en.eq(1),
                         self.mem_wr_data.eq(gbit_cleared_w3),
                         self.ns_entry_addr_out.eq(ns_entry_addr),

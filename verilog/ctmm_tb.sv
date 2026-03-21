@@ -178,10 +178,10 @@ module ctmm_tb;
         end
         for (int i = 0; i < 16; i++) begin
             ns_mem[i] = '{
-                word3_w3:       '{spare: 15'h0, g_bit: 1'b0, crc: 16'h0},
-                word2_w2:       '{spare: 4'h0, gt_seq: 7'h0, limit_offset: 21'h1000},
-                word1_location: 32'h0,
-                word0_gt25:     32'h0
+                word3_lump:     32'h0,
+                word2_w3:       '{spare: 15'h0, g_bit: 1'b0, crc: 16'h0},
+                word1_w2:       '{spare: 4'h0, gt_seq: 7'h0, limit_offset: 21'h1000},
+                word0_location: 32'h0
             };
         end
         for (int i = 0; i < 1024; i++) begin

@@ -2,7 +2,7 @@ from amaranth import *
 from amaranth.lib.data import View
 
 from .hw_types import *
-from .layouts import GT_LAYOUT, CAP_REG_LAYOUT
+from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, WORD2_LAYOUT, LUMP_HEADER_LAYOUT
 
 
 class ChurchCall(Elaboratable):
@@ -40,6 +40,18 @@ class ChurchCall(Elaboratable):
         self.nia_value = Signal(32)
         self.dr_clear_mask = Signal(16)
         self.cr_clear_mask = Signal(16)
+
+        # Direct memory read for NS lump header fetch (post Phase 2)
+        self.mem_rd_addr = Signal(32)
+        self.mem_rd_en = Signal()
+        self.mem_rd_data = Signal(32)
+        self.mem_rd_valid = Signal()
+
+        # CR15 namespace for computing NS entry address of callee
+        self.cr15_namespace = Signal(CAP_REG_LAYOUT)
+
+        # CR14 code cap for NIA base (populated after Phase 2 mload)
+        self.cr14_code = Signal(CAP_REG_LAYOUT)
 
     def elaborate(self, platform):
         m = Module()
@@ -111,6 +123,24 @@ class ChurchCall(Elaboratable):
             cr_clear_computed.eq(Cat(~cr_preserve, Const(0, 10))),
         ]
 
+        # NS lump header fetch state
+        cr14_view = View(CAP_REG_LAYOUT, self.cr14_code)
+        cr14_gt = View(GT_LAYOUT, cr14_view.word0_gt)
+        cr15_view = View(CAP_REG_LAYOUT, self.cr15_namespace)
+
+        callee_ns_entry_addr = Signal(32)
+        m.d.comb += callee_ns_entry_addr.eq(
+            cr15_view.word1_location + (cr14_gt.slot_id << 4)
+        )
+
+        lump_reg = Signal(32)
+        lump_view = View(LUMP_HEADER_LAYOUT, lump_reg)
+
+        nia_computed = Signal(32)
+        m.d.comb += nia_computed.eq(
+            cr14_view.word1_location + ((1 + lump_view.mw) << 2)
+        )
+
         with m.FSM(name="call") as fsm:
             with m.State("IDLE"):
                 m.d.sync += [phase.eq(0), fault_latched.eq(0), fault_type_latched.eq(FaultType.NONE)]
@@ -174,6 +204,16 @@ class ChurchCall(Elaboratable):
                 with m.If(sub_fault_latched):
                     m.next = "FAULT"
                 with m.Elif(sub_done_latched):
+                    m.next = "FETCH_LUMP"
+
+            with m.State("FETCH_LUMP"):
+                # Fetch NS word3_lump (+12) for callee to extract mw for NIA
+                m.d.comb += [
+                    self.mem_rd_addr.eq(callee_ns_entry_addr + 12),
+                    self.mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
+                    m.d.sync += lump_reg.eq(self.mem_rd_data)
                     m.next = "CLEAR_B_INIT"
 
             with m.State("CLEAR_B_INIT"):
@@ -224,7 +264,7 @@ class ChurchCall(Elaboratable):
             self.call_fault.eq(fault_latched),
             self.fault_type.eq(fault_type_latched),
             self.nia_set.eq(fsm.ongoing("COMPLETE")),
-            self.nia_value.eq(0),
+            self.nia_value.eq(nia_computed),
             self.dr_clear_mask.eq(Mux(fsm.ongoing("COMPLETE"), dr_clear_computed, 0)),
             self.cr_clear_mask.eq(Mux(fsm.ongoing("COMPLETE"), cr_clear_computed, 0)),
         ]

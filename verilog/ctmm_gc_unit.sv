@@ -149,7 +149,7 @@ module ctmm_gc_unit
             mark_counter <= 32'h0;
         end else if (state == GC_IDLE && gc_start) begin
             mark_counter <= 32'h0;
-        end else if (state == GC_MARK_WRITE && !ns_rd_data.word3_w3.g_bit) begin
+        end else if (state == GC_MARK_WRITE && !ns_rd_data.word2_w3.g_bit) begin
             mark_counter <= mark_counter + 32'h1;
         end
     end
@@ -165,7 +165,7 @@ module ctmm_gc_unit
             garbage_counter <= 32'h0;
         end else if (state == GC_IDLE && gc_start) begin
             garbage_counter <= 32'h0;
-        end else if (state == GC_SWEEP_CHECK && ns_rd_data.word3_w3.g_bit) begin
+        end else if (state == GC_SWEEP_CHECK && ns_rd_data.word2_w3.g_bit) begin
             garbage_counter <= garbage_counter + 32'h1;
         end
     end
@@ -181,7 +181,7 @@ module ctmm_gc_unit
     
     always_comb begin
         ns_wr_data = ns_rd_data;
-        ns_wr_data.word3_w3.g_bit = 1'b1;
+        ns_wr_data.word2_w3.g_bit = 1'b1;
     end
     
     assign ns_wr_en = (state == GC_MARK_WRITE);

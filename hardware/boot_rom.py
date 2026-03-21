@@ -3,14 +3,17 @@ from amaranth import *
 from .hw_types import *
 
 
-def crc16_ccitt(word0_gt25, word1, word2, poly=0x1021, init=0xFFFF):
-    """CRC-16/CCITT over GT[24:0] (25 bits, MSB first) + word1 (32 bits) + word2 (32 bits).
-    Total: 89 bits, poly=0x1021, init=0xFFFF."""
+def crc16_ccitt(gt_bits, location, word1_w2, poly=0x1021, init=0xFFFF):
+    """CRC-16/CCITT over GT[24:0] (25 bits, MSB first) + location (32 bits) + word1_w2 (32 bits).
+    Total: 89 bits, poly=0x1021, init=0xFFFF.
+    gt_bits   : lower 25 bits of the 32-bit GT word (perms[6:0] | gt_type[1:0] | gt_seq[6:0] | slot_id[15:0])
+    location  : NS word0_location (code base address)
+    word1_w2  : NS word1_w2 (limit_offset | gt_seq)"""
     crc = init
     for bit in range(24, -1, -1):
-        top = ((crc >> 15) ^ ((word0_gt25 >> bit) & 1)) & 1
+        top = ((crc >> 15) ^ ((gt_bits >> bit) & 1)) & 1
         crc = ((crc << 1) & 0xFFFF) ^ (poly if top else 0)
-    for word in (word1, word2):
+    for word in (location, word1_w2):
         for bit in range(31, -1, -1):
             top = ((crc >> 15) ^ ((word >> bit) & 1)) & 1
             crc = ((crc << 1) & 0xFFFF) ^ (poly if top else 0)
@@ -57,28 +60,42 @@ while len(BOOT_PROGRAM) < 256:
     BOOT_PROGRAM.append(0x00000000)
 
 
-def _make_ns_entry(gt_type, perms, slot_id, gt_seq, location, size):
-    """Build a 4-word NS entry: [location, word1_rsv, word2_w2, word3_w3].
+def _make_ns_entry(gt_type, perms, slot_id, gt_seq, location, alloc_size, mw=0, cc=0, n_minus_6=0):
+    """Build a 4-word NS entry (stride = slot_id << 4, i.e. 16 bytes per entry).
 
-    word2_w2: limit_offset[20:0] | gt_seq[6:0] | spare[3:0]
-    word3_w3: crc[15:0] | g_bit[0] | spare[14:0]
+    Layout:
+      word0_location (+0): code base address (location)
+      word1_w2       (+4): limit_offset[20:0] | gt_seq[6:0] | spare[3:0]
+                           limit_offset = alloc_size - 1  (last valid index)
+      word2_w3       (+8): crc[15:0] | g_bit | spare[14:0]
+                           crc = CRC-16/CCITT over GT[24:0] + location + word1_w2
+      word3_lump     (+12): cached LUMP_HEADER_LAYOUT (mw, cc, n_minus_6, …)
+
+    The GT bits used in the CRC are the lower 25 bits of the GT word (no b_flag or top perms).
     """
     gt_word0 = make_gt(gt_type, perms, slot_id, gt_seq)
-    word0_gt25 = gt_word0 & 0x1FFFFFF
-    word1 = location
-    limit_offset = size & 0x1FFFFF
-    word2 = (gt_seq & 0x7F) << 21 | limit_offset
-    crc = crc16_ccitt(word0_gt25, word1, word2)
-    word3 = crc & 0xFFFF
-    return [word0_gt25, word1, word2, word3]
+    gt25 = gt_word0 & 0x1FFFFFF
+
+    limit_offset = max(0, alloc_size - 1) & 0x1FFFFF
+    word1_w2 = ((gt_seq & 0x7F) << 21) | limit_offset
+
+    crc = crc16_ccitt(gt25, location, word1_w2)
+    word2_w3 = crc & 0xFFFF
+
+    # Cached lump header: mw[5:0] | cc[7:0] | n_minus_6[3:0] in LUMP_HEADER_LAYOUT order
+    # LUMP_HEADER_LAYOUT (LSB→MSB): r[1]|c[1]|h[1]|mw[6]|typ[2]|cc[8]|n_minus_6[4]|ver[4]|magic[5]
+    word3_lump = ((mw & 0x3F) << 3) | ((cc & 0xFF) << 11) | ((n_minus_6 & 0xF) << 19)
+
+    return [location, word1_w2, word2_w3, word3_lump]
 
 
 DEMO_NAMESPACE = []
 for _i in range(16):
     _location = NS_TABLE_BASE if _i == 0 else _i * 0x100
-    _size = 8
+    _alloc_size = 8
     _gt_seq = 0
-    _entry = _make_ns_entry(GT_TYPE_REAL, PERM_MASK_R | PERM_MASK_W, _i, _gt_seq, _location, _size)
+    _entry = _make_ns_entry(GT_TYPE_REAL, PERM_MASK_R | PERM_MASK_W, _i, _gt_seq,
+                            _location, _alloc_size)
     DEMO_NAMESPACE.extend(_entry)
 
 

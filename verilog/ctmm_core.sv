@@ -492,7 +492,7 @@ module ctmm_core
                             6'h0;
     assign perm_check_valid = exec_enable && is_church_op;
     assign access_index = {24'h0, clist_index};
-    assign limit = ns_rd_data.word2_w2.limit_offset[15:0];
+    assign limit = ns_rd_data.word1_w2.limit_offset[15:0];
     assign check_bounds = 1'b1;
     
     // CR write for LOAD operation

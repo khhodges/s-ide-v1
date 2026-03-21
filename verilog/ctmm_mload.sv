@@ -9,14 +9,13 @@
 //   2. Check bounds: index < CRn.word2_w2.limit_offset[15:0]
 //   3. Fetch GT (32 bits) from CRn[index] in C-List memory
 //   4. Check GT.slot_id < CR15.word2_w2.limit_offset[15:0]  (namespace bounds)
-//   5. Fetch word0_gt25     from NS[slot_id << 4]      (+0)
-//   6. Fetch word1_location from NS[slot_id << 4]      (+4)
-//   7. Fetch word2_w2       from NS[slot_id << 4]      (+8)
-//   8. Fetch word3_w3       from NS[slot_id << 4]      (+12)
-//   9. Validate: GT.gt_seq == word2_w2.gt_seq          (version check)
-//  10. Validate: CRC-16/CCITT(GT[24:0]+word1+word2_w2) == word3_w3.crc
-//  11. Reset G-bit in namespace entry if set
-//  12. Write result capability to CRd
+//   5. Fetch word0_location from NS[slot_id << 4]      (+0)  = code base address
+//   6. Fetch word1_w2       from NS[slot_id << 4]      (+4)  = limit_offset | gt_seq
+//   7. Fetch word2_w3       from NS[slot_id << 4]      (+8)  = crc[15:0] | g_bit
+//   8. Validate: GT.gt_seq == word1_w2.gt_seq          (version check)
+//   9. Validate: CRC-16/CCITT(GT[24:0]+location+word1_w2) == word2_w3.crc
+//  10. Reset G-bit in NS word2_w3 (+8) if set
+//  11. Write result capability to CRd
 // ============================================================================
 
 module ctmm_mload
@@ -200,11 +199,15 @@ module ctmm_mload
                            ({16'h0, result_cap.word0_gt.slot_id} << 4);
 
     // ========================================================================
-    // CRC-16/CCITT over GT[24:0] + word1_location + word2_w2 (89 bits, MSB first)
+    // CRC-16/CCITT over GT[24:0] + NS_location + NS_word1_w2 (89 bits, MSB first)
     // ========================================================================
-    // Stages 0..24  : GT bits [24..0]  (25 bits)
-    // Stages 25..56 : word1_location bits [31..0] (32 bits)
-    // Stages 57..88 : word2_w2 bits [31..0] (32 bits)
+    // result_cap.word1_location = fetched from NS +0 (word0_location = code base address)
+    // result_cap.word2_w2       = fetched from NS +4 (word1_w2 = limit_offset | gt_seq)
+    // result_cap.word3_w3       = fetched from NS +8 (word2_w3 = crc | g_bit)
+    // ----
+    // Stages 0..24  : GT bits [24..0]           (result_cap.word0_gt[24:0])
+    // Stages 25..56 : NS location bits [31..0]  (result_cap.word1_location)
+    // Stages 57..88 : NS word1_w2 bits [31..0]  (result_cap.word2_w2)
 
     logic [15:0] crc_stage [0:89];
     genvar gi;
@@ -326,9 +329,9 @@ module ctmm_mload
         mem_rd_en = 1'b0;
         case (state)
             SUB_FETCH_W0:     begin mem_addr = clist_gt_addr;      mem_rd_en = 1'b1; end
-            SUB_FETCH_LOC:    begin mem_addr = ns_entry_addr + 4;  mem_rd_en = 1'b1; end
-            SUB_FETCH_LIMIT:  begin mem_addr = ns_entry_addr + 8;  mem_rd_en = 1'b1; end
-            SUB_FETCH_SEALS:  begin mem_addr = ns_entry_addr + 12; mem_rd_en = 1'b1; end
+            SUB_FETCH_LOC:    begin mem_addr = ns_entry_addr;      mem_rd_en = 1'b1; end  // +0: location
+            SUB_FETCH_LIMIT:  begin mem_addr = ns_entry_addr + 4;  mem_rd_en = 1'b1; end  // +4: word1_w2
+            SUB_FETCH_SEALS:  begin mem_addr = ns_entry_addr + 8;  mem_rd_en = 1'b1; end  // +8: word2_w3
             default: ;
         endcase
     end

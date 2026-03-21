@@ -129,8 +129,9 @@ class ChurchMSave(Elaboratable):
                     m.next = "FETCH_NS_W2"
 
             with m.State("FETCH_NS_W2"):
+                # word1_w2 is at NS entry offset +4 (limit_offset | gt_seq)
                 m.d.comb += [
-                    self.mem_rd_addr.eq(ns_entry_addr + 8),
+                    self.mem_rd_addr.eq(ns_entry_addr + 4),
                     self.mem_rd_en.eq(1),
                 ]
                 with m.If(self.mem_rd_valid):
@@ -142,8 +143,9 @@ class ChurchMSave(Elaboratable):
 
             if self.enable_seal_check:
                 with m.State("FETCH_NS_W3"):
+                    # word2_w3 is at NS entry offset +8 (crc | g_bit)
                     m.d.comb += [
-                        self.mem_rd_addr.eq(ns_entry_addr + 12),
+                        self.mem_rd_addr.eq(ns_entry_addr + 8),
                         self.mem_rd_en.eq(1),
                     ]
                     with m.If(self.mem_rd_valid):

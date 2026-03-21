@@ -10,9 +10,11 @@
 //
 // CALL Steps (Two-Phase Load + Isolation):
 //   Pre: Save CR5 GT for later restoration by RETURN
-//   Phase 1: mLoad CRs[Index] → CR6  (nodal C-List)
-//   Phase 2: mLoad CR6[0]    → CR14  (CLOOMC code)
-//   Phase 3: Clear B-flag on preserved CRs, apply isolation, set NIA=0
+//   Phase 1: mLoad CRs[Index] → CR6   (nodal C-List)
+//   Phase 2: mLoad CR6[0]    → CR14   (CLOOMC code capability)
+//   Phase 3: Fetch NS[CR14.slot_id].word3_lump (+12) to read mw field
+//   Phase 4: NIA = CR14.word1_location + (1 + mw) * 4
+//   Phase 5: Clear B-flag on preserved CRs, apply isolation
 //
 // Permission check: source CR must have E (Enter) permission.
 //
@@ -96,6 +98,8 @@ module ctmm_call
         CALL_PHASE1,
         CALL_PHASE1_DONE,
         CALL_PHASE2,
+        CALL_PHASE2_DONE,
+        CALL_FETCH_LUMP,
         CALL_CLEAR_B_INIT,
         CALL_CLEAR_B_CHECK,
         CALL_CLEAR_B_READ,
@@ -110,10 +114,57 @@ module ctmm_call
     logic phase;
 
     always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n)          phase <= 1'b0;
-        else if (state == CALL_IDLE)       phase <= 1'b0;
-        else if (state == CALL_PHASE1_DONE) phase <= 1'b1;
+        if (!rst_n)                          phase <= 1'b0;
+        else if (state == CALL_IDLE)         phase <= 1'b0;
+        else if (state == CALL_PHASE1_DONE)  phase <= 1'b1;
     end
+
+    // ========================================================================
+    // CR14 Latch (captured after Phase 2 completes)
+    // ========================================================================
+    // cr14_latched holds the loaded code capability after Phase 2 mLoad.
+    // Its word1_location = code base pointer; word0_gt.slot_id = NS slot.
+
+    capability_reg_t cr14_latched;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            cr14_latched <= CR_NULL;
+        else if (state == CALL_PHASE2_DONE)
+            cr14_latched <= sub_cr_wr_data;   // mLoad wrote CR14 — grab its value
+    end
+
+    // ========================================================================
+    // FETCH_LUMP: read NS[slot_id].word3_lump (+12) for mw field
+    // ========================================================================
+    // NS entry base = CR15.word1_location + (slot_id << 4); lump is at +12.
+
+    logic [31:0] lump_fetch_addr;
+    logic [31:0] lump_reg;          // word3_lump raw value
+
+    assign lump_fetch_addr = cr15_namespace.word1_location
+                           + ({16'h0, cr14_latched.word0_gt.slot_id} << 4)
+                           + 32'd12;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            lump_reg <= 32'd0;
+        else if (state == CALL_FETCH_LUMP && mem_rd_valid)
+            lump_reg <= mem_rd_data;
+    end
+
+    // LUMP_HEADER_LAYOUT (from layouts.py):
+    //   bits [5:0]  = mw (max-word, number of argument registers – 1)
+    //   bits [11:6] = cc (calling-convention flags)
+    //   bits [17:12]= n_minus_6 (total frame words minus 6)
+    //   bits [31:18]= spare
+    logic [5:0] mw_field;
+    assign mw_field = lump_reg[5:0];    // LUMP_HEADER_LAYOUT.mw
+
+    // NIA = code_base + (1 + mw) * 4  (skip over the prologue header word)
+    logic [31:0] nia_computed;
+    assign nia_computed = cr14_latched.word1_location
+                        + ({26'd0, mw_field} + 32'd1) * 32'd4;
 
     // ========================================================================
     // Operand Latching
@@ -214,7 +265,7 @@ module ctmm_call
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n)
             sub_start_reg <= 1'b0;
-        else if ((state == CALL_READ_CR5 && next_state == CALL_PHASE1) ||
+        else if ((state == CALL_READ_CR5    && next_state == CALL_PHASE1) ||
                  (state == CALL_PHASE1_DONE && next_state == CALL_PHASE2))
             sub_start_reg <= 1'b1;
         else
@@ -225,7 +276,8 @@ module ctmm_call
         if (!rst_n) begin
             sub_done_latched  <= 1'b0;
             sub_fault_latched <= 1'b0;
-        end else if (state == CALL_IDLE || sub_start_reg) begin
+        end else if (state == CALL_IDLE || sub_start_reg ||
+                     state == CALL_PHASE2_DONE) begin
             sub_done_latched  <= 1'b0;
             sub_fault_latched <= 1'b0;
         end else begin
@@ -260,10 +312,10 @@ module ctmm_call
         .cr_wr_data     (sub_cr_wr_data),
         .cr_wr_en       (sub_cr_wr_en),
         .cr15_namespace (cr15_namespace),
-        .mem_addr       (mem_addr),
-        .mem_rd_en      (mem_rd_en),
+        .mem_addr       (sub_mem_addr),
+        .mem_rd_en      (sub_mem_rd_en),
         .mem_rd_data    (mem_rd_data),
-        .mem_rd_valid   (mem_rd_valid),
+        .mem_rd_valid   (lump_fetch_active ? 1'b0 : mem_rd_valid),
         .thread_wr_en   (thread_wr_en),
         .thread_wr_idx  (thread_wr_idx),
         .thread_wr_data (thread_wr_data)
@@ -301,6 +353,20 @@ module ctmm_call
         else if (state == CALL_CLEAR_B_READ)
             b_cr_latched <= cr_rd_data;
     end
+
+    // ========================================================================
+    // Memory Muxing (local FETCH_LUMP vs mLoad sub-module)
+    // ========================================================================
+
+    logic [31:0] sub_mem_addr;
+    logic        sub_mem_rd_en;
+    logic        lump_fetch_active;
+
+    assign lump_fetch_active = (state == CALL_FETCH_LUMP) ||
+                               (state == CALL_PHASE2_DONE);
+
+    assign mem_addr   = lump_fetch_active ? lump_fetch_addr : sub_mem_addr;
+    assign mem_rd_en  = lump_fetch_active ? (state == CALL_FETCH_LUMP) : sub_mem_rd_en;
 
     // ========================================================================
     // Register Read/Write Muxing
@@ -375,7 +441,13 @@ module ctmm_call
 
             CALL_PHASE2:
                 if (sub_fault_latched)     next_state = CALL_FAULT;
-                else if (sub_done_latched) next_state = CALL_CLEAR_B_INIT;
+                else if (sub_done_latched) next_state = CALL_PHASE2_DONE;
+
+            CALL_PHASE2_DONE:
+                next_state = CALL_FETCH_LUMP;
+
+            CALL_FETCH_LUMP:
+                if (mem_rd_valid) next_state = CALL_CLEAR_B_INIT;
 
             CALL_CLEAR_B_INIT:
                 next_state = CALL_CLEAR_B_CHECK;
@@ -415,7 +487,7 @@ module ctmm_call
     assign fault_type    = fault_type_latched;
 
     assign nia_set      = (state == CALL_COMPLETE);
-    assign nia_value    = 32'd0;
+    assign nia_value    = nia_computed;
     assign dr_clear_mask = (state == CALL_COMPLETE) ? dr_clear_computed : 16'd0;
     assign cr_clear_mask = (state == CALL_COMPLETE) ? cr_clear_computed : 16'd0;
 

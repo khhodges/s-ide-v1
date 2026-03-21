@@ -136,17 +136,24 @@ package ctmm_pkg;
     // ========================================================================
     // Namespace Entry - 4 x 32-bit words (128 bits) in memory
     // ========================================================================
-    // Word 0: word0_gt25   - GT bits [24:0] (padded to 32 bits)
-    // Word 1: Location     - physical address/pointer (32 bits)
-    // Word 2: word2_w2     - gt_seq + limit_offset (WORD2_T)
-    // Word 3: word3_w3     - g_bit + CRC-16 seal (WORD3_T)
+    // Word 0 (+0):  word0_location - code base address (32-bit pointer)
+    // Word 1 (+4):  word1_w2       - gt_seq[6:0] | limit_offset[20:0]  (WORD2_T)
+    // Word 2 (+8):  word2_w3       - spare[14:0] | g_bit | crc[15:0]   (WORD3_T)
+    // Word 3 (+12): word3_lump     - cached LUMP_HEADER (mw, cc, n_minus_6, …)
+    //
+    // Stride = slot_id << 4  (16 bytes per entry)
+    //
+    // CRC-16/CCITT input (89 bits, MSB first):
+    //   GT[24:0]  (lower 25 bits of GT word 0, no b_flag/upper perms)
+    //   location  (word0_location, 32 bits)
+    //   word1_w2  (32 bits)
     // ========================================================================
 
     typedef struct packed {
-        word3_t      word3_w3;     // CRC-16 seal + GC g_bit
-        word2_t      word2_w2;     // gt_seq + limit_offset
-        logic [31:0] word1_location; // Physical location
-        logic [31:0] word0_gt25;   // GT bits [24:0], upper 7 bits unused
+        logic [31:0] word3_lump;     // Cached lump header (mw, cc, n_minus_6, …)
+        word3_t      word2_w3;       // g_bit + CRC-16 seal
+        word2_t      word1_w2;       // gt_seq + limit_offset
+        logic [31:0] word0_location; // Code base address
     } namespace_entry_t;
 
     // Namespace entry stride = 16 bytes (4 x 32-bit words)
