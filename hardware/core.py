@@ -45,8 +45,8 @@ class ChurchCore(Elaboratable):
 
         self.ns_addr = Signal(32)
         self.ns_rd_en = Signal()
-        self.ns_rd_data = Signal(32 * 3)
-        self.ns_wr_data = Signal(32 * 3)
+        self.ns_rd_data = Signal(32 * 4)
+        self.ns_wr_data = Signal(32 * 4)
         self.ns_wr_en = Signal()
 
         self.clist_addr = Signal(32)
@@ -398,6 +398,10 @@ class ChurchCore(Elaboratable):
             u_call.index.eq(cap_index),
             u_call.mask.eq(u_decoder.call_mask),
             u_call.cr_rd_data.eq(u_regs.cr_rd_data),
+            u_call.cr15_namespace.eq(u_regs.cr15_namespace),
+            u_call.cr14_code.eq(u_regs.cr14_code),
+            u_call.mem_rd_data.eq(self.dmem_rd_data),
+            u_call.mem_rd_valid.eq(1),
         ]
 
         m.d.comb += ret_start_sig.eq(
@@ -658,6 +662,12 @@ class ChurchCore(Elaboratable):
                 self.dmem_rd_en.eq(u_shared_mload.mem_rd_en),
                 self.dmem_wr_data.eq(u_shared_mload.mem_wr_data),
                 self.dmem_wr_en.eq(u_shared_mload.mem_wr_en),
+            ]
+        with m.Elif(u_call.mem_rd_en):
+            # CALL FETCH_LUMP: read NS word3_lump (+12) for NIA computation
+            m.d.comb += [
+                self.dmem_addr.eq(u_call.mem_rd_addr),
+                self.dmem_rd_en.eq(1),
             ]
         with m.Elif(u_save.mem_wr_en):
             m.d.comb += [

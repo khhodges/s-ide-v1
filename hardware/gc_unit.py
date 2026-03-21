@@ -36,15 +36,20 @@ class ChurchGCUnit(Elaboratable):
         mark_counter = Signal(32)
         garbage_counter = Signal(32)
 
+        # NS_ENTRY_LAYOUT (4 words at stride slot_id<<4):
+        #   word_select(0, 32) = word0_location (+0)  — code base address
+        #   word_select(1, 32) = word1_w2       (+4)  — limit_offset | gt_seq  (WORD2_LAYOUT)
+        #   word_select(2, 32) = word2_w3       (+8)  — crc | g_bit            (WORD3_LAYOUT)
+        #   word_select(3, 32) = word3_lump     (+12) — cached LUMP_HEADER
         latched_entry = Signal(32 * 4)
-        latched_w2 = latched_entry.word_select(2, 32)
-        latched_w3 = latched_entry.word_select(3, 32)
+        latched_w1 = latched_entry.word_select(1, 32)   # word1_w2: limit | gt_seq
+        latched_w2 = latched_entry.word_select(2, 32)   # word2_w3: crc | g_bit
 
-        w2_view = View(WORD2_LAYOUT, latched_w2)
-        w3_view = View(WORD3_LAYOUT, latched_w3)
+        w1_view = View(WORD2_LAYOUT, latched_w1)   # gt_seq lives here
+        w2_view = View(WORD3_LAYOUT, latched_w2)   # g_bit / crc live here
 
         next_version = Signal(7)
-        m.d.comb += next_version.eq(w2_view.gt_seq + 1)
+        m.d.comb += next_version.eq(w1_view.gt_seq + 1)
 
         with m.FSM(name="gc") as fsm:
             with m.State("IDLE"):
@@ -73,10 +78,10 @@ class ChurchGCUnit(Elaboratable):
 
             with m.State("MARK_WRITE"):
                 wr_entry = Signal(32 * 4)
-                wr_w3 = wr_entry.word_select(3, 32)
-                wr_w3_view = View(WORD3_LAYOUT, wr_w3)
+                wr_w2 = wr_entry.word_select(2, 32)   # word2_w3 (+8): crc | g_bit
+                wr_w2_view = View(WORD3_LAYOUT, wr_w2)
                 m.d.comb += wr_entry.eq(latched_entry)
-                m.d.comb += wr_w3_view.g_bit.eq(1)
+                m.d.comb += wr_w2_view.g_bit.eq(1)
 
                 m.d.comb += [
                     self.ns_addr.eq(current_index),
@@ -84,7 +89,7 @@ class ChurchGCUnit(Elaboratable):
                     self.ns_wr_en.eq(1),
                 ]
 
-                with m.If(~w3_view.g_bit):
+                with m.If(~w2_view.g_bit):
                     m.d.sync += mark_counter.eq(mark_counter + 1)
 
                 m.d.sync += current_index.eq(current_index + 1)
@@ -107,7 +112,7 @@ class ChurchGCUnit(Elaboratable):
                 m.next = "SWEEP_CHECK"
 
             with m.State("SWEEP_CHECK"):
-                with m.If(w3_view.g_bit):
+                with m.If(w2_view.g_bit):
                     m.d.sync += garbage_counter.eq(garbage_counter + 1)
                     m.next = "SWEEP_WRITE"
                 with m.Else():
@@ -119,11 +124,11 @@ class ChurchGCUnit(Elaboratable):
 
             with m.State("SWEEP_WRITE"):
                 swept_entry = Signal(32 * 4)
-                swept_w2 = swept_entry.word_select(2, 32)
-                swept_w2_view = View(WORD2_LAYOUT, swept_w2)
+                swept_w1 = swept_entry.word_select(1, 32)   # word1_w2 (+4): gt_seq | limit_offset
+                swept_w1_view = View(WORD2_LAYOUT, swept_w1)
                 m.d.comb += [
                     swept_entry.eq(0),
-                    swept_w2_view.gt_seq.eq(next_version),
+                    swept_w1_view.gt_seq.eq(next_version),
                 ]
                 m.d.comb += [
                     self.ns_addr.eq(current_index),

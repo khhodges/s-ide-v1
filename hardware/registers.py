@@ -36,6 +36,7 @@ class ChurchRegisters(Elaboratable):
         self.cr6_clist = Signal(CAP_REG_LAYOUT)
         self.cr7_cloomc = Signal(CAP_REG_LAYOUT)
         self.cr8_thread = Signal(CAP_REG_LAYOUT)
+        self.cr14_code = Signal(CAP_REG_LAYOUT)
         self.cr15_namespace = Signal(CAP_REG_LAYOUT)
 
         self.cr_gt_wr_data = [Signal(GT_LAYOUT, name=f"cr{i}_gt_wr_data") for i in range(16)]
@@ -78,6 +79,7 @@ class ChurchRegisters(Elaboratable):
             self.cr6_clist.eq(cap_regs[CR_CLIST]),
             self.cr7_cloomc.eq(cap_regs[CR_CLOOMC]),
             self.cr8_thread.eq(cap_regs[CR_THREAD]),
+            self.cr14_code.eq(cap_regs[14]),
             self.cr15_namespace.eq(cap_regs[CR_NAMESPACE]),
         ]
 
