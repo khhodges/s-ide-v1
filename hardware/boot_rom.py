@@ -3,6 +3,16 @@ from amaranth import *
 from .hw_types import *
 
 
+def crc16_ccitt(word_a, word_b, poly=0x1021, init=0xFFFF):
+    """CRC-16/CCITT over two 32-bit words (MSB first), poly=0x1021, init=0xFFFF."""
+    crc = init
+    for word in (word_a, word_b):
+        for bit in range(31, -1, -1):
+            top = ((crc >> 15) ^ ((word >> bit) & 1)) & 1
+            crc = ((crc << 1) & 0xFFFF) ^ (poly if top else 0)
+    return crc & 0xFFFF
+
+
 def encode_church(opcode, cond=CondCode.AL, cr_dst=0, cr_src=0, imm=0):
     return ((opcode & 0x1F) << 27) | ((cond & 0xF) << 23) | \
            ((cr_dst & 0xF) << 19) | ((cr_src & 0xF) << 15) | (imm & 0x7FFF)
@@ -44,11 +54,13 @@ while len(BOOT_PROGRAM) < 256:
 
 
 DEMO_NAMESPACE = []
-for i in range(16):
-    location = NS_TABLE_BASE if i == 0 else i * 0x100
-    limit = 0x80000000 | 8
-    seal_word = (0 << 25) | (0 & CRC_SEAL_MASK)
-    DEMO_NAMESPACE.extend([location, limit, seal_word])
+for _i in range(16):
+    _location = NS_TABLE_BASE if _i == 0 else _i * 0x100
+    _limit = 0x80000000 | 8
+    _seal = crc16_ccitt(_location, _limit)
+    _gt_seq = 0
+    _seal_word = (_gt_seq << 25) | (_seal & CRC_SEAL_MASK)
+    DEMO_NAMESPACE.extend([_location, _limit, _seal_word])
 
 
 DEMO_CLIST = [

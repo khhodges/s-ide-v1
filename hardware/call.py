@@ -196,11 +196,13 @@ class ChurchCall(Elaboratable):
 
             with m.State("CLEAR_B_WRITE"):
                 b_src = View(CAP_REG_LAYOUT, b_cr_data)
-                cleared_gt = Signal(32, name="cleared_gt")
-                m.d.comb += cleared_gt.eq(b_src.word0_gt & ~(1 << B_BIT_POS))
                 b_dst = View(CAP_REG_LAYOUT, b_clear_wr_data)
                 m.d.comb += [
-                    b_dst.word0_gt.eq(cleared_gt),
+                    b_dst.word0_gt.slot_id.eq(b_src.word0_gt.slot_id),
+                    b_dst.word0_gt.gt_seq.eq(b_src.word0_gt.gt_seq),
+                    b_dst.word0_gt.gt_type.eq(b_src.word0_gt.gt_type),
+                    b_dst.word0_gt.perms.eq(b_src.word0_gt.perms),
+                    b_dst.word0_gt.b_flag.eq(0),
                     b_dst.word1_location.eq(b_src.word1_location),
                     b_dst.word2_limit.eq(b_src.word2_limit),
                     b_dst.word3_seals.eq(b_src.word3_seals),
