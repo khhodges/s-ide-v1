@@ -71,7 +71,7 @@ class ChurchMLoad(Elaboratable):
         m.d.comb += src_is_null.eq(src_gt.gt_type == GT_TYPE_NULL)
 
         bounds_ok = Signal()
-        m.d.comb += bounds_ok.eq(index_reg < src_view.word2_limit[:17])
+        m.d.comb += bounds_ok.eq(index_reg < src_view.word2_limit[:16])
 
         clist_gt_addr = Signal(32)
         m.d.comb += clist_gt_addr.eq(src_view.word1_location + (index_reg << 2))
@@ -80,7 +80,7 @@ class ChurchMLoad(Elaboratable):
         m.d.comb += ns_entry_addr.eq(ns_view.word1_location + (result_gt.slot_id << 3) + (result_gt.slot_id << 2))
 
         ns_index_in_bounds = Signal()
-        m.d.comb += ns_index_in_bounds.eq(result_gt.slot_id < ns_view.word2_limit[:17])
+        m.d.comb += ns_index_in_bounds.eq(result_gt.slot_id < ns_view.word2_limit[:16])
 
         ns_w1_saved = Signal(32)
         ns_w1_view = View(NS_LIMIT_LAYOUT, ns_w1_saved)
