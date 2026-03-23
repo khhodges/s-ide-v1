@@ -10803,7 +10803,9 @@ function initTabOverflow(container) {
         }
     }
 
-    var observer = new ResizeObserver(updateOverflow);
+    var observer = new ResizeObserver(function() {
+        requestAnimationFrame(updateOverflow);
+    });
     observer.observe(container);
 
     var updating = false;
