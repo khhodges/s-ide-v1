@@ -86,19 +86,22 @@ class SlideRuleTutorial {
             {
                 title: "Golden Tokens",
                 type: "architecture",
-                content: `<p>A Golden Token (GT) is a 32-bit unforgeable capability:</p>
-<pre class="sr-encoding">31        25 24          8 7      2 1  0
-| version  |    index    | perms  |type|
-|  7 bits  |   17 bits   | 6 bits |2 b |</pre>
+                content: `<p>A Golden Token (GT) is a 32-bit unforgeable capability — one word stored in a c-list slot:</p>
+<pre class="sr-encoding"> 31      25 24  23 22      16 15           0
+&#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x252C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x252C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x252C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;
+&#x2502;B R W X  &#x2502; typ  &#x2502;  gt_seq   &#x2502;  object_id   &#x2502;
+&#x2502; L S E   &#x2502; [2]  &#x2502;   [7]    &#x2502;    [16]     &#x2502;
+&#x2502;  [7]    &#x2502;      &#x2502;          &#x2502;             &#x2502;
+&#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2534;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2534;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2534;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;</pre>
 <table class="sr-table sr-table-wide"><tr><th>Field</th><th>Bits</th><th>Purpose</th></tr>
-<tr><td>Version</td><td>7</td><td>Anti-replay counter. Revoking increments version &mdash; all copies instantly invalid.</td></tr>
-<tr><td>Index</td><td>17</td><td>Points to a namespace entry (128K possible entries).</td></tr>
-<tr><td>Permissions</td><td>6</td><td>R, W, X, L, S, E.</td></tr>
-<tr><td>Type</td><td>2</td><td>00=NULL, 01=Inform (memory via NS), 10=Outform (remote), 11=Abstract (GT <em>is</em> value).</td></tr>
+<tr><td>Perms (B&thinsp;R&thinsp;W&thinsp;X&thinsp;L&thinsp;S&thinsp;E)</td><td>7</td><td>Capability permissions. Turing domain: R(ead), W(rite), X(ecute). Church domain: L(oad), S(ave), E(nter). B = Bounds (access-size limit). MSB=B, LSB=E.</td></tr>
+<tr><td>typ</td><td>2</td><td>00=NULL (invalid), 01=Real (GT points to an NS entry &rarr; memory lump), 10=Abstract (GT <em>is</em> the value), 11=Reserved.</td></tr>
+<tr><td>gt_seq</td><td>7</td><td>Revocation counter. Incrementing gt_seq in the NS entry instantly invalidates every derived copy — the next mLoad that presents a stale gt_seq faults.</td></tr>
+<tr><td>object_id</td><td>16</td><td>Index into the namespace (65&thinsp;536 possible entries).</td></tr>
 </table>
 <div class="sr-key-concept">
 <div class="sr-concept-title">Instant Revocation</div>
-<p>Incrementing a token's version in the namespace entry invalidates every copy of every derived token immediately. No garbage collection of permissions, no race condition, no eventually-consistent revocation. The next mLoad that presents the old version faults.</p>
+<p>Incrementing a token's <strong>gt_seq</strong> in the namespace entry invalidates every copy of every derived token immediately. No garbage collection of permissions, no race condition, no eventually-consistent revocation. The next mLoad that presents a stale gt_seq faults.</p>
 </div>`
             },
             {
