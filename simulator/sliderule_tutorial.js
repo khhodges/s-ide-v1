@@ -169,7 +169,7 @@ class SlideRuleTutorial {
 <p>For example, the PP250 statement <code>CALL.Connect(me, to: my_mother)</code> passes two capability tokens &mdash; each an unforgeable, permission-carrying reference &mdash; as ordinary variables.</p>
 <p>No raw pointers, no shared memory, no ambient authority. The compiler ensures every variable is a sealed capability.</p>
 </div>
-<div class="sr-comp-core" style="flex:0 0 auto">CLOOMC++ Compiler<br><small>Resident Object Model</small></div>
+<div class="sr-comp-core" style="flex:0 0 auto;padding:0.3rem 1rem">CLOOMC++ Compiler<br><small>Resident Object Model</small></div>
 <div class="sr-comp-side-panel open" style="flex:1;min-width:0">
 <div class="sr-comp-side-title">Bare Metal Security</div>
 <p>CLOOMC++ runs on <strong>bare metal hardware</strong> with no operating system required.</p>
@@ -178,7 +178,9 @@ class SlideRuleTutorial {
 </div>
 </div>
 <div class="sr-comp-arrow">&darr;</div>
-<div class="sr-comp-output">32-bit code words &rarr; lump.zip</div>
+<div class="sr-comp-output"><strong>Lump Library (GitHub)</strong><br><small>32-bit code words &rarr; lump.zip</small></div>
+<div class="sr-comp-arrow">&darr;</div>
+<div class="sr-comp-output" style="background:rgba(30,100,200,0.12);border-color:rgba(30,100,200,0.35);color:#79c0ff"><strong>Lazy Loader</strong><br><small>on-demand fetch &amp; install</small></div>
 </div>
 <div class="sr-key-concept">
 <div class="sr-concept-title">Resident Object Model</div>
