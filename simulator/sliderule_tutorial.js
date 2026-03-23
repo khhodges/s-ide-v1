@@ -163,12 +163,12 @@ class SlideRuleTutorial {
 </div>
 <div class="sr-compiler-diagram">
 <div class="sr-comp-inputs">
-<div class="sr-comp-input" data-tooltip="English: Add(a, b) &mdash; add two numbers&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">English</div>
-<div class="sr-comp-input" data-tooltip="JavaScript: result = a + b; return(result)&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">JavaScript</div>
-<div class="sr-comp-input" data-tooltip="Haskell: method Add(a, b) = a + b&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">Haskell</div>
-<div class="sr-comp-input" data-tooltip="Symbolic Math (Ada): let result = a + b in result&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">Symbolic Math (Ada)</div>
-<div class="sr-comp-input" data-tooltip="Lambda Calculus: &lambda;a b &rarr; a + b&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">Lambda Calculus</div>
-<div class="sr-comp-input" data-tooltip="Machine code: 0x7F600000, 0x1F800000&#10;&#10;Direct 32-bit words:&#10;0x7F600000 = IADD DR0, DR0, DR1&#10;0x1F800000 = RETURN&#10;No compilation needed &mdash; injected verbatim">Machine code</div>
+<div class="sr-comp-input" data-tooltip="English: Add(a, b) &mdash; add two numbers&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">English<br><small style="opacity:0.65;font-size:0.75em">Experimental</small></div>
+<div class="sr-comp-input" data-tooltip="JavaScript: result = a + b; return(result)&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">Java/Script<br><small style="opacity:0.65;font-size:0.75em">Version 1</small></div>
+<div class="sr-comp-input" data-tooltip="Haskell: method Add(a, b) = a + b&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">Haskell<br><small style="opacity:0.65;font-size:0.75em">Version 1</small></div>
+<div class="sr-comp-input" data-tooltip="Symbolic Math (Ada): let result = a + b in result&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">Symbolic Math<br><small style="opacity:0.65;font-size:0.75em">Ada&rsquo;s Version</small></div>
+<div class="sr-comp-input" data-tooltip="Lambda Calculus: &lambda;a b &rarr; a + b&#10;&#10;Compiles to:&#10;IADD DR0, DR0, DR1  &rarr; 0x7F600000&#10;RETURN              &rarr; 0x1F800000">Lambda Calculus<br><small style="opacity:0.65;font-size:0.75em">Version 1</small></div>
+<div class="sr-comp-input" data-tooltip="Machine code: 0x7F600000, 0x1F800000&#10;&#10;Direct 32-bit words:&#10;0x7F600000 = IADD DR0, DR0, DR1&#10;0x1F800000 = RETURN&#10;No compilation needed &mdash; injected verbatim">Machine Code<br><small style="opacity:0.65;font-size:0.75em">Full</small></div>
 </div>
 <div class="sr-comp-arrow">&darr;</div>
 <div class="sr-comp-core" onclick="document.getElementById('srCompPanelLeft').classList.toggle('open')"><span style="font-size:0.65rem;opacity:0.7">&#9654; click</span><br>CLOOMC++ Compiler<br><small>Resident Object Model</small></div>
