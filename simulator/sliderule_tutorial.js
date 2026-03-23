@@ -178,7 +178,7 @@ class SlideRuleTutorial {
 </div>
 </div>
 <div class="sr-comp-arrow">&darr;</div>
-<div class="sr-comp-output">32-bit code words &rarr; upload.json</div>
+<div class="sr-comp-output">32-bit code words &rarr; lump.zip</div>
 </div>
 <div class="sr-key-concept">
 <div class="sr-concept-title">Resident Object Model</div>
