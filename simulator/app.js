@@ -10,6 +10,7 @@ let securityTutorial = null;
 let threadTutorial = null;
 let abstrTutorial = null;
 let nsTutorial = null;
+let secureBootTutorial = null;
 let activeTutorial = 'sliderule';
 let cloomcCompiler = null;
 let currentView = 'dashboard';
@@ -318,6 +319,8 @@ function switchView(viewId) {
             abstrTutorial.render('tutorialView');
         } else if (activeTutorial === 'namespace' && nsTutorial) {
             nsTutorial.render('tutorialView');
+        } else if (activeTutorial === 'secureboot' && secureBootTutorial) {
+            secureBootTutorial.render('tutorialView');
         } else if (churchTutorial) {
             churchTutorial.render('tutorialView');
         }
@@ -350,6 +353,8 @@ function selectTutorial(which) {
         abstrTutorial.render('tutorialView');
     } else if (which === 'namespace' && nsTutorial) {
         nsTutorial.render('tutorialView');
+    } else if (which === 'secureboot' && secureBootTutorial) {
+        secureBootTutorial.render('tutorialView');
     } else if (churchTutorial) {
         churchTutorial.render('tutorialView');
     }
@@ -384,6 +389,10 @@ function _ensureTutorialObjects() {
         abstrTutorial = new AbstractionTutorial();
     if (!nsTutorial && typeof NamespaceTutorial !== 'undefined')
         nsTutorial = new NamespaceTutorial();
+    if (!secureBootTutorial && typeof SecureBootTutorial !== 'undefined') {
+        secureBootTutorial = new SecureBootTutorial();
+        window.secureBootTutorial = secureBootTutorial;
+    }
 }
 
 function hideLoadingOverlay() {
@@ -6875,6 +6884,14 @@ function showWelcomePopup() {
     if (!body) return;
 
     body.innerHTML =
+        `<div style="font-weight:700;color:var(--church-gold);font-size:1.05rem;margin-bottom:0.5rem;">Why does security matter?</div>` +
+
+        `<p style="font-size:0.9rem;line-height:1.65;margin-bottom:0.75rem;">` +
+        `Every computer your child uses &mdash; phones, tablets, laptops &mdash; runs software that can be tricked. ` +
+        `Programs pretend to be other programs. Apps ask for permissions they should not have. ` +
+        `A child clicks one wrong link and strangers can see their data. ` +
+        `This is not a new problem. It is <em>the</em> problem of computing, and it was solved in 1936.</p>` +
+
         `<div style="background:rgba(218,165,32,0.06);border:1px solid rgba(218,165,32,0.2);border-radius:8px;padding:0.6rem 1rem;margin-bottom:0.75rem;font-size:0.88rem;line-height:1.55;">` +
         `<strong style="color:var(--church-gold);">Did you know?</strong> Cybercrime is now the world's third biggest economy &mdash; ` +
         `behind only the USA and China. If it were a country, it would be richer than Japan, Germany, and the UK combined. ` +
@@ -6885,14 +6902,6 @@ function showWelcomePopup() {
         `a rigorous mathematical foundation for designing secure and provably correct software and hardware, ` +
         `offering an alternative to the problematic von Neumann model. ` +
         `<a href="https://en.wikipedia.org/wiki/Lambda_calculus" target="_blank" rel="noopener" style="color:var(--church-gold);">More</a></p>` +
-
-        `<div style="font-weight:700;color:var(--church-gold);font-size:1.05rem;margin-bottom:0.5rem;">Why does security matter?</div>` +
-
-        `<p style="font-size:0.9rem;line-height:1.65;margin-bottom:0.75rem;">` +
-        `Every computer your child uses &mdash; phones, tablets, laptops &mdash; runs software that can be tricked. ` +
-        `Programs pretend to be other programs. Apps ask for permissions they should not have. ` +
-        `A child clicks one wrong link and strangers can see their data. ` +
-        `This is not a new problem. It is <em>the</em> problem of computing, and it was solved in 1936.</p>` +
 
         `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">` +
         `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.4rem;">How Alonzo Church solved it</div>` +
