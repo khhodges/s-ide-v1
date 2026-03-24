@@ -1305,17 +1305,41 @@ function showAbstractionDetail(index) {
     html += `<div class="abs-detail-desc">${abs.description}</div>`;
     html += '</div>';
 
-    html += '<div class="abs-detail-section abs-polymorphic-section">';
-    html += '<div class="abs-detail-label">Polymorphic Interface</div>';
-    html += '<div class="abs-polymorphic-bar">';
-    html += '<span class="abs-poly-method">create</span>';
-    html += '<span class="abs-poly-method">destroy</span>';
-    html += '<span class="abs-poly-method">call</span>';
-    html += '<span class="abs-poly-method">inspect</span>';
-    html += '</div>';
-    html += '<div class="abs-poly-note">Every abstraction responds to these four operations. ';
-    html += 'This uniformity is intentional \u2014 the same pattern applies whether the abstraction is a boot service, a hardware driver, a math library, or a social networking tool.</div>';
-    html += '</div>';
+    {
+        const methodPurposes = getMethodPurposes(abs);
+        const methodExamples = getMethodExamples(abs);
+        const methods = (abs.methods && abs.methods.length > 0) ? abs.methods : [];
+        const uid = abs.index;
+        html += '<div class="abs-detail-section abs-methods-section">';
+        html += '<div class="abs-detail-label">Methods</div>';
+        if (methods.length === 0) {
+            html += '<div class="abs-method-empty">No methods registered \u2014 CALL enters the abstraction directly.</div>';
+        } else {
+            html += `<div class="abs-method-tabs" id="abs-tabs-${uid}">`;
+            for (let mi = 0; mi < methods.length; mi++) {
+                const m = methods[mi];
+                const active = mi === 0 ? ' abs-method-tab-active' : '';
+                html += `<span class="abs-method-tab${active}" onclick="absSelectMethod(this,'abs-panel-${uid}-${mi}')">${m}</span>`;
+            }
+            html += '</div>';
+            html += `<div class="abs-method-panels" id="abs-panels-${uid}">`;
+            for (let mi = 0; mi < methods.length; mi++) {
+                const m = methods[mi];
+                const purpose = methodPurposes[m] || 'Dispatched via CALL';
+                const example = methodExamples[m] || null;
+                const display = mi === 0 ? '' : ' style="display:none"';
+                html += `<div class="abs-method-panel-item" id="abs-panel-${uid}-${mi}"${display}>`;
+                html += `<div class="abs-method-panel-name">${abs.name}.${m}</div>`;
+                html += `<div class="abs-method-panel-desc">${purpose}</div>`;
+                if (example) {
+                    html += `<pre class="abs-method-panel-code">${example}</pre>`;
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+    }
 
     html += '<div class="abs-detail-section">';
     html += '<div class="abs-detail-label">Properties</div>';
@@ -1335,29 +1359,6 @@ function showAbstractionDetail(index) {
     html += `<tr><td>MTBF</td><td>${mtbfStr}</td></tr>`;
     html += '</tbody></table>';
     html += '</div>';
-
-    if (abs.methods && abs.methods.length > 0) {
-        html += '<div class="abs-detail-section">';
-        html += '<div class="abs-detail-label">Methods</div>';
-        const methodPurposes = getMethodPurposes(abs);
-        const methodExamples = getMethodExamples(abs);
-        html += '<div class="abs-method-cards">';
-        for (const m of abs.methods) {
-            const purpose = methodPurposes[m] || 'Dispatched via CALL';
-            const example = methodExamples[m] || null;
-            html += '<div class="abs-method-card">';
-            html += `<div class="abs-method-card-header">`;
-            html += `<span class="abs-method-card-name">${abs.name}.${m}</span>`;
-            html += `</div>`;
-            html += `<div class="abs-method-card-desc">${purpose}</div>`;
-            if (example) {
-                html += `<pre class="abs-method-card-code">${example}</pre>`;
-            }
-            html += '</div>';
-        }
-        html += '</div>';
-        html += '</div>';
-    }
 
     html += '<div class="abs-detail-section">';
     html += '<div class="abs-detail-label">CR6/CR14 Canonical Form</div>';
@@ -1419,6 +1420,18 @@ function showAbstractionDetail(index) {
     }
 
     contentEl.innerHTML = html;
+}
+
+function absSelectMethod(tabEl, panelId) {
+    const tabsContainer = tabEl.parentElement;
+    tabsContainer.querySelectorAll('.abs-method-tab').forEach(t => t.classList.remove('abs-method-tab-active'));
+    tabEl.classList.add('abs-method-tab-active');
+    const panelsContainer = tabsContainer.nextElementSibling;
+    if (panelsContainer) {
+        panelsContainer.querySelectorAll('.abs-method-panel-item').forEach(p => p.style.display = 'none');
+    }
+    const panel = document.getElementById(panelId);
+    if (panel) panel.style.display = '';
 }
 
 function getMethodPurposes(abs) {

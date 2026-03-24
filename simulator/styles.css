@@ -3883,6 +3883,96 @@ a.next-step-link:hover {
     line-height: 1.4;
 }
 
+.abs-methods-section {
+    background: rgba(15, 52, 96, 0.12);
+    border: 1px solid rgba(100, 160, 255, 0.15);
+    border-radius: 6px;
+    padding: 0.75rem;
+}
+
+.abs-method-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+}
+
+.abs-method-tab {
+    display: inline-block;
+    background: rgba(30, 60, 120, 0.3);
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.65rem;
+    border-radius: 4px;
+    border: 1px solid rgba(100, 160, 255, 0.2);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    user-select: none;
+}
+
+.abs-method-tab:hover {
+    background: rgba(30, 80, 180, 0.4);
+    color: var(--text-primary);
+    border-color: rgba(100, 160, 255, 0.4);
+}
+
+.abs-method-tab-active {
+    background: rgba(15, 52, 150, 0.55);
+    color: var(--church-gold);
+    border-color: var(--church-gold);
+}
+
+.abs-method-panels {
+    border-top: 1px solid rgba(100, 160, 255, 0.15);
+    padding-top: 0.55rem;
+}
+
+.abs-method-panel-item {
+    animation: absPanelFade 0.12s ease;
+}
+
+@keyframes absPanelFade {
+    from { opacity: 0; transform: translateY(3px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.abs-method-panel-name {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--church-gold);
+    margin-bottom: 0.3rem;
+}
+
+.abs-method-panel-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    margin-bottom: 0.45rem;
+}
+
+.abs-method-panel-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.68rem;
+    color: #b8d4f8;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(100, 160, 255, 0.15);
+    border-radius: 4px;
+    padding: 0.5rem 0.7rem;
+    margin: 0;
+    white-space: pre;
+    overflow-x: auto;
+    line-height: 1.5;
+}
+
+.abs-method-empty {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
 .abs-method-cards {
     display: flex;
     flex-direction: column;
