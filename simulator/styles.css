@@ -1235,6 +1235,47 @@ a.next-step-link:hover {
 .boot-ns-label { color: #93c5fd; font-style: italic; font-size: 0.75rem; }
 .boot-ns-addr  { color: #f97316; font-family: monospace; font-size: 0.73rem; }
 
+.thread-layout-view {
+    padding: 0.4rem 0.6rem 0.8rem;
+    font-size: 0.78rem;
+}
+.thread-layout-header {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #e0e0e0;
+    margin-bottom: 0.8rem;
+}
+.thread-zone-hdr {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #e0e0e0;
+    margin: 0.75rem 0 0.3rem;
+    border-left: 3px solid #888;
+    padding-left: 0.5rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+.thread-zone-note {
+    color: #6b7280;
+    font-weight: 400;
+    font-size: 0.69rem;
+}
+.thread-zone-table {
+    width: 100%;
+    margin-bottom: 0.3rem;
+}
+.thread-free-empty {
+    color: #4b5563;
+    font-style: italic;
+    font-size: 0.74rem;
+    padding: 0.3rem 0.5rem;
+    background: rgba(0,0,0,0.2);
+    border-radius: 4px;
+    margin-bottom: 0.2rem;
+}
+
 .pipeline-wrapper {
     padding: 1rem;
 }

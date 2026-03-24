@@ -1203,8 +1203,133 @@ function renderBootNSImage() {
     return html;
 }
 
+// Thread slot layout constants (words within a 256-word slot)
+const THREAD_LAYOUT = {
+    CAPS_START:   0,   CAPS_END:   11,  CAPS_WORDS:   12,
+    STACK_START: 12,   STACK_END:  43,  STACK_WORDS:  32,
+    FREE_START:  44,   FREE_END:  175,  FREE_WORDS:  132,
+    HEAP_START: 176,   HEAP_END:  239,  HEAP_WORDS:   64,
+    DR_START:   240,   DR_END:    255,  DR_WORDS:     16,
+    TOTAL:      256,
+};
+const THREAD_NS_SLOTS = new Set([1, 45]);
+
+function renderThreadMemoryLayout(nsIndex) {
+    const entry = sim.readNSEntry(nsIndex);
+    const slotBase = entry ? entry.word0_location : (nsIndex * sim.SLOT_SIZE);
+    const label = sim.nsLabels[nsIndex] || ('Slot ' + nsIndex);
+    const TL = THREAD_LAYOUT;
+
+    const secHdr = (num, title, note, color) =>
+        `<div class="thread-zone-hdr" style="border-left-color:${color};">${num} ${title}<span class="thread-zone-note">${note}</span></div>`;
+
+    const addrOf = (off) => '0x' + (slotBase + off).toString(16).toUpperCase().padStart(4, '0');
+    const hexOf  = (w)   => '0x' + (w >>> 0).toString(16).toUpperCase().padStart(8, '0');
+
+    let html = '<div class="thread-layout-view">';
+
+    // Header
+    html += `<div class="thread-layout-header">${label} — Thread Memory Layout<span style="color:#6b7280;font-weight:400;font-size:0.75rem;margin-left:0.6rem;">NS Slot ${nsIndex} · base ${addrOf(0)} · 256 words (1 024 bytes)</span></div>`;
+
+    // ── Zone ①: Capabilities ──────────────────────────────────────────────
+    html += secHdr('①', 'Capabilities', '12 words · CR0–CR11 · saved/restored on context switch', '#f4b942');
+    html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>CR</th><th>Offset</th><th>Addr</th><th>Hex</th><th>Decoded (GT)</th></tr></thead><tbody>';
+    for (let i = 0; i < TL.CAPS_WORDS; i++) {
+        const off  = TL.CAPS_START + i;
+        const word = sim.memory[slotBase + off] || 0;
+        const hex  = hexOf(word);
+        let decoded;
+        if (word === 0) {
+            decoded = '<span style="color:#4b5563;">NULL</span>';
+        } else {
+            const gt = sim.parseGT(word);
+            const perms = Object.entries(gt.permissions).filter(([,v])=>v).map(([k])=>k).join('') || 'none';
+            const lbl = sim.nsLabels[gt.index] || '';
+            decoded = `<span style="color:#60a5fa;">${gt.typeName}</span> Slot=${gt.index}${lbl ? ' <i style="color:#93c5fd;">('+lbl+')</i>' : ''} p=[${perms}] seq${gt.gt_seq}`;
+        }
+        html += `<tr><td style="color:#f4b942;">CR${i}</td><td style="color:#555;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.9);font-family:monospace;">${hex}</td><td>${decoded}</td></tr>`;
+    }
+    html += '</tbody></table>';
+
+    // ── Zone ②: LIFO Stack ────────────────────────────────────────────────
+    const stackWords = sim.memory.slice(slotBase + TL.STACK_START, slotBase + TL.STACK_END + 1);
+    const stackUsed  = stackWords.filter(Boolean).length;
+    html += secHdr('②', 'LIFO Stack ↓', `32 words · grows down from word 12 · ${stackUsed} word${stackUsed!==1?'s':''} non-zero`, '#38bdf8');
+    html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>Off</th><th>Addr</th><th>Hex</th><th>Decoded</th></tr></thead><tbody>';
+    for (let i = 0; i < TL.STACK_WORDS; i++) {
+        const off  = TL.STACK_START + i;
+        const word = sim.memory[slotBase + off] || 0;
+        const hex  = hexOf(word);
+        let decoded;
+        if (word === 0) {
+            decoded = '<span style="color:#374151;">empty</span>';
+        } else {
+            const gt = sim.parseGT(word);
+            if (gt.type !== 0) {
+                const perms = Object.entries(gt.permissions).filter(([,v])=>v).map(([k])=>k).join('') || 'none';
+                const lbl = sim.nsLabels[gt.index] || '';
+                decoded = `GT → <span style="color:#38bdf8;">${gt.typeName}</span> Slot=${gt.index}${lbl?' <i style="color:#93c5fd;">('+lbl+')</i>':''} [${perms}]`;
+            } else {
+                decoded = `<span style="color:#9ca3af;">frame word = 0x${word.toString(16).toUpperCase().padStart(8,'0')}</span>`;
+            }
+        }
+        const rowStyle = word ? '' : ' style="opacity:0.25;"';
+        html += `<tr${rowStyle}><td style="color:#38bdf8;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.85);font-family:monospace;">${hex}</td><td>${decoded}</td></tr>`;
+    }
+    html += '</tbody></table>';
+
+    // ── Zone ③: Freespace ─────────────────────────────────────────────────
+    let freeNonZero = 0;
+    for (let i = TL.FREE_START; i <= TL.FREE_END; i++) {
+        if (sim.memory[slotBase + i]) freeNonZero++;
+    }
+    html += secHdr('③', 'Freespace', `132 words · offset +44 … +175 · ${freeNonZero} non-zero · shrinks as stack grows ↓ and heap grows ↑`, '#6b7280');
+    if (freeNonZero === 0) {
+        html += '<div class="thread-free-empty">All 132 words are zero — region is unallocated.</div>';
+    } else {
+        html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>Off</th><th>Addr</th><th>Hex</th><th>Note</th></tr></thead><tbody>';
+        for (let i = TL.FREE_START; i <= TL.FREE_END; i++) {
+            const word = sim.memory[slotBase + i] || 0;
+            if (!word) continue;
+            html += `<tr><td style="color:#6b7280;">+${i}</td><td style="font-family:monospace;">${addrOf(i)}</td><td style="color:rgba(206,145,120,0.8);font-family:monospace;">${hexOf(word)}</td><td style="color:#4b5563;">non-zero</td></tr>`;
+        }
+        html += '</tbody></table>';
+    }
+
+    // ── Zone ④: Heap ──────────────────────────────────────────────────────
+    let heapNonZero = 0;
+    for (let i = TL.HEAP_START; i <= TL.HEAP_END; i++) {
+        if (sim.memory[slotBase + i]) heapNonZero++;
+    }
+    html += secHdr('④', 'Heap ↑', `64 words · offset +176 … +239 · base ${addrOf(TL.HEAP_START)} · ${heapNonZero} word${heapNonZero!==1?'s':''} allocated`, '#22c55e');
+    html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>Off</th><th>Addr</th><th>Hex</th><th>Decoded</th></tr></thead><tbody>';
+    for (let i = 0; i < TL.HEAP_WORDS; i++) {
+        const off  = TL.HEAP_START + i;
+        const word = sim.memory[slotBase + off] || 0;
+        const rowStyle = word ? '' : ' style="opacity:0.22;"';
+        const decoded  = word ? `<span style="color:#9ca3af;">0x${word.toString(16).toUpperCase().padStart(8,'0')}</span>` : '<span style="color:#374151;">free</span>';
+        html += `<tr${rowStyle}><td style="color:#22c55e;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.8);font-family:monospace;">${hexOf(word)}</td><td>${decoded}</td></tr>`;
+    }
+    html += '</tbody></table>';
+
+    // ── Zone ⑤: Data Registers ────────────────────────────────────────────
+    html += secHdr('⑤', 'Data Registers', '16 words · DR0–DR15 · offset +240 … +255 · always at the base of the slot', '#a855f7');
+    html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>DR</th><th>Offset</th><th>Addr</th><th>Value (hex)</th><th>Value (dec)</th></tr></thead><tbody>';
+    for (let i = 0; i < TL.DR_WORDS; i++) {
+        const off  = TL.DR_START + i;
+        const word = sim.memory[slotBase + off] || 0;
+        const rowStyle = word ? '' : ' style="opacity:0.28;"';
+        html += `<tr${rowStyle}><td style="color:#a855f7;">DR${i}</td><td style="color:#555;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:#c084fc;font-family:monospace;">${hexOf(word)}</td><td style="color:#9ca3af;">${word >>> 0}</td></tr>`;
+    }
+    html += '</tbody></table>';
+
+    html += '</div>';
+    return html;
+}
+
 function renderMemoryDump(location, limit, nsIndex) {
     if (nsIndex === 0) return renderBootNSImage();
+    if (THREAD_NS_SLOTS.has(nsIndex)) return renderThreadMemoryLayout(nsIndex);
 
     const wordCount = limit;
     if (wordCount <= 0) return '<span style="color:#888;">Empty (limit=0)</span>';
