@@ -188,6 +188,7 @@ function init() {
     deviceAbstractions = new DeviceAbstractions(abstractionRegistry);
     sim.initAbstractions(abstractionRegistry, systemAbstractions, deviceAbstractions);
     sim.reset();
+    _absMethodsLoad();
 
     if (typeof CLOOMCCompiler !== 'undefined') {
         cloomcCompiler = new CLOOMCCompiler();
@@ -1234,6 +1235,29 @@ function updateNamespace() {
 let selectedAbsIndex = null;
 let absCollapsedLayers = {};
 let userMethodData = {};
+let userMethodLists = {};
+
+function _absMethodsSave() {
+    try {
+        localStorage.setItem('cm_userMethodData', JSON.stringify(userMethodData));
+        localStorage.setItem('cm_userMethodLists', JSON.stringify(userMethodLists));
+    } catch(e) {}
+}
+
+function _absMethodsLoad() {
+    try {
+        const d = localStorage.getItem('cm_userMethodData');
+        if (d) userMethodData = JSON.parse(d);
+        const l = localStorage.getItem('cm_userMethodLists');
+        if (l) {
+            userMethodLists = JSON.parse(l);
+            for (const idxStr of Object.keys(userMethodLists)) {
+                const abs = abstractionRegistry && abstractionRegistry.getAbstraction(parseInt(idxStr, 10));
+                if (abs) abs.methods = userMethodLists[idxStr].slice();
+            }
+        }
+    } catch(e) {}
+}
 
 function renderAbstractions() {
     if (!abstractionRegistry) return;
@@ -1529,6 +1553,7 @@ function absUpdateMethod(absIdx, mName) {
         purpose: descEl.value.trim(),
         example: codeEl ? codeEl.value.trim() : ''
     };
+    _absMethodsSave();
     showAbstractionDetail(absIdx);
 }
 
@@ -1548,6 +1573,8 @@ function absSaveMethod(absIdx) {
         purpose: descEl ? descEl.value.trim() : '',
         example: codeEl ? codeEl.value.trim() : ''
     };
+    userMethodLists[absIdx] = abs.methods.slice();
+    _absMethodsSave();
     showAbstractionDetail(absIdx);
 }
 
@@ -1560,6 +1587,8 @@ function absDeleteMethod(absIdx) {
     if (!abs || !abs.methods) return;
     abs.methods = abs.methods.filter(m => m !== name);
     delete userMethodData[`${absIdx}:${name}`];
+    userMethodLists[absIdx] = abs.methods.slice();
+    _absMethodsSave();
     showAbstractionDetail(absIdx);
 }
 
