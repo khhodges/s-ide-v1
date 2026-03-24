@@ -84,7 +84,7 @@ LOAD_NS:                          ; hardware boot step B:01 \u2014 no user instr
 ;
 ; After B:02:
 ;   CR13 holds the Thread GT with RWX perms and gt_seq = 0
-;   The thread stack (FIFO) begins at lump base + 12 words
+;   The thread stack (LIFO) begins at lump base + 12 words
 ;   DR0\u2013DR15 are still zero from the reset
 
 ; First CLOOMC user instruction \u2014 emitted by boot ROM:
@@ -97,7 +97,7 @@ INIT_THRD:  CHANGE  AL, CR8, CR8, #1   ; B:02 \u2014 switch to thread context</p
 <table class="sr-table">
 <tr><th>Offset (words)</th><th>Zone</th><th>Description</th></tr>
 <tr><td>0\u202f\u2013\u202f11</td><td>GT Zone</td><td>Per-thread C-List GTs (CR0\u2013CR11 initial values)</td></tr>
-<tr><td>12\u202f\u2013\u202fallocEnd</td><td>FIFO Stack</td><td>CALL/RETURN frames grow upward from word 12</td></tr>
+<tr><td>12\u202f\u2013\u202fallocEnd</td><td>LIFO Stack</td><td>CALL/RETURN frames grow downward from word 12</td></tr>
 <tr><td>mid\u202f\u2013\u202fallocEnd</td><td>Heap</td><td>Dynamic allocation (grows downward)</td></tr>
 <tr><td>last 16</td><td>DR shadow</td><td>Data register spill area (compiler-managed)</td></tr>
 </table>
@@ -187,7 +187,7 @@ LOAD_NUC:
     ;        CR6.base   = lump_base + clistStart   (c-list packed at top of lump)
     ;        CR6.limit  = clistCount - 1
     ;        CR6.perm   = L only
-    ;   5. Push 2-word frame [caller E-GT | frame_word] onto thread FIFO stack
+    ;   5. Push 2-word frame [caller E-GT | frame_word] onto thread LIFO stack
     ;   6. Advance STO by 2
     ;   7. Set PC = 0 \u2014 user abstraction begins executing
     CALL    AL, CR0, CR0       ; enter first user abstraction \u2014 B:04 complete
@@ -273,7 +273,7 @@ LOAD_NUC:
     CALL    AL, CR0, CR0       ; \u21d2 hardware validates seal of NS Slot 4
                                ;    derives CR14 (code GT, base=0x0400, limit=0xFF, perm=XR)
                                ;    derives CR6  (c-list GT, base=clistStart, limit=clistCount-1, perm=L)
-                               ;    pushes 2-word CALL frame onto thread FIFO stack (STO += 2)
+                               ;    pushes 2-word CALL frame onto thread LIFO stack (STO += 2)
                                ;    sets PC = 0 \u2014 first user abstraction begins
 
 ; ---- Boot epilogue (after user RETURN) ------------------

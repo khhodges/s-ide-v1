@@ -7,7 +7,7 @@ class ThreadTutorial {
     _memMap(highlighted) {
         const sections = [
             { id: 'cap',   label: '\u2460 Capabilities',     sub: 'GT for CR0\u2013CR11  (12 words, fixed)',      bg: '#3a2c00', border: '#c8a020', text: '#f0d060' },
-            { id: 'stack', label: '\u2461 FIFO Stack \u2193', sub: 'Expands down \u00b7 limit set by NS slot',     bg: '#002a40', border: '#2080c0', text: '#60b8f0' },
+            { id: 'stack', label: '\u2461 LIFO Stack \u2193', sub: 'Expands down \u00b7 limit set by NS slot',     bg: '#002a40', border: '#2080c0', text: '#60b8f0' },
             { id: 'free',  label: '\u2462 Freespace',         sub: 'Dynamic gap \u00b7 shrinks as stack/heap grow',bg: '#181818', border: '#404040', text: '#888'    },
             { id: 'heap',  label: '\u2463 Heap \u2191',       sub: 'Fixed size \u00b7 defined by IDE slot metadata',bg: '#002a10', border: '#20a040', text: '#60d080' },
             { id: 'dr',    label: '\u2464 Data Registers',    sub: 'DR0\u2013DR15  (16 \u00d7 32-bit, fixed at base)', bg: '#1e0840', border: '#8040c0', text: '#b080f0' },
@@ -76,10 +76,10 @@ ${this._memMap(null)}
 <p>Every time mLoad executes it <strong>writes the loaded GT back into the corresponding GT-zone word</strong> (word N for CR_N). This guarantees the lump\u2019s GT zone always mirrors the live CR registers. When CHANGE suspends a thread, DR0\u2013DR15 are saved into the thread image along with PC, FLAGS, STO, CR12, CR14, and CR15. Because mLoad already kept the GT zone in sync during execution, no separate save step is needed for CR0\u2013CR11.</p></div>`
             },
             {
-                title: '\u2461 FIFO Stack \u2014 Grows Downward',
+                title: '\u2461 LIFO Stack \u2014 Grows Downward',
                 type: 'stack',
                 content: `${this._memMap('stack')}
-<p>Immediately after the GT zone, the <strong>FIFO call stack</strong> begins at word 12 and expands <em>downward</em> (toward higher addresses). CALL pushes a 2-word frame; LAMBDA pushes a 1-word frame. RETURN pops the correct number based on the SZ bit in the frame word.</p>
+<p>Immediately after the GT zone, the <strong>LIFO call stack</strong> begins at word 12 and expands <em>downward</em> (toward higher addresses). CALL pushes a 2-word frame; LAMBDA pushes a 1-word frame. RETURN pops the correct number based on the SZ bit in the frame word.</p>
 <ul>
 <li><strong>Stack top</strong>: word 12 (immediately after the GT zone)</li>
 <li><strong>Stack limit</strong>: set by the NS slot field <code>clistStart \u2212 1</code> inside <code>word0_location</code></li>
@@ -155,7 +155,7 @@ ${this._memMap(null)}
 <p>The full thread lump, from word 0 to <code>allocSize \u2212 1</code>:</p>
 <table class="sr-table"><tr><th>Region</th><th>Start</th><th>Size</th><th>Defined by</th></tr>
 <tr><td>\u2460 GT Zone (Capabilities)</td><td>word 0</td><td>12 words (fixed)</td><td>Architecture constant  (1 word \u00d7 CR0\u2013CR11)</td></tr>
-<tr><td>\u2461 FIFO Stack</td><td>word 12</td><td>variable \u2193</td><td>NS slot clistStart field</td></tr>
+<tr><td>\u2461 LIFO Stack</td><td>word 12</td><td>variable \u2193</td><td>NS slot clistStart field</td></tr>
 <tr><td>\u2462 Freespace</td><td>stack bottom</td><td>dynamic</td><td>Remaining after stack + heap</td></tr>
 <tr><td>\u2463 Heap</td><td>heap base</td><td>fixed \u2191</td><td>IDE slot metadata (clistCount)</td></tr>
 <tr><td>\u2464 Data Registers</td><td>allocSize\u221216</td><td>16 words (fixed)</td><td>Architecture constant (DR0\u2013DR15)</td></tr>
@@ -174,7 +174,7 @@ ${this._memMap(null)}
 <div class="sr-security-list">
 <div class="sr-sec-item"><span class="sr-sec-num">1</span><strong>Boot \u2014 INIT_THRD (B:02).</strong> <code>sim._bootStep()</code> loads NS Slot 1 into <strong>CR12</strong> (Thread Identity GT, zero perms, Inform-type) via mLoad. CR12 encodes the lump base and total size; the stack region and heap bounds are derived from this metadata by the hardware. The lump is now the active thread context; CR0\u201311 hold the initial capability set. CR8 is not touched at boot and is available for programmer use.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">2</span><strong>mLoad \u2014 GT zone maintenance.</strong> Every time mLoad loads a GT into CR_N, it <strong>writes the same GT word back to lump word N</strong>. The GT zone is always a live mirror of CR0\u2013CR11. No separate \u201csave\u201d step is needed at context-switch time.</div>
-<div class="sr-sec-item"><span class="sr-sec-num">3</span><strong>CALL.</strong> Entering any abstraction pushes a <strong>2-word frame (SZ=1)</strong> onto the FIFO stack: word 0 = caller\u2019s E-GT, word 1 = frame word <code>FLAGS[31:28]|PC[27:13]|SZ=1|STO[11:0]</code>. Hidden register STO advances by 2. LAMBDA pushes a <strong>1-word frame (SZ=0)</strong>: frame word only (no E-GT), STO advances by 1.</div>
+<div class="sr-sec-item"><span class="sr-sec-num">3</span><strong>CALL.</strong> Entering any abstraction pushes a <strong>2-word frame (SZ=1)</strong> onto the LIFO stack: word 0 = caller\u2019s E-GT, word 1 = frame word <code>FLAGS[31:28]|PC[27:13]|SZ=1|STO[11:0]</code>. Hidden register STO advances by 2. LAMBDA pushes a <strong>1-word frame (SZ=0)</strong>: frame word only (no E-GT), STO advances by 1.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">4</span><strong>RETURN.</strong> Reads SZ from the frame word to determine how many words to pop (2 for CALL, 1 for LAMBDA). Restores FLAGS, PC, and STO from the frame word. SZ=1 only: re-derives CR6 and CR14 by revalidating the caller\u2019s E-GT. Applies the 12-bit MASK literal embedded in the RETURN instruction itself to clear the specified CRs.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">5</span><strong>CHANGE \u2014 Suspend &amp; Resume.</strong> CHANGE indexes the invoking thread\u2019s c-list at the given offset (CRd[idx]) to obtain an E-perm Thread Abstraction GT for the target thread. CR8 is <em>not</em> a CHANGE operand and is not touched by CHANGE. The outgoing thread\u2019s context is saved in two parts: (a) <strong>the GT zone (CR0\u2013CR11) is already persisted</strong> \u2014 mLoad wrote every GT back to the lump in real time, so no additional save is needed; (b) CHANGE <strong>explicitly saves</strong> the remaining per-thread live state: <strong>DR0\u2013DR15</strong>, <strong>PC</strong>, <strong>FLAGS</strong>, <strong>STO</strong>, <strong>CR12</strong> (Thread Identity), <strong>CR14</strong> (CLOOMC), and <strong>CR15</strong> (Namespace). The NS slot is updated only if lump metadata has changed.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">6</span><strong>Resume.</strong> CHANGE restores the incoming thread\u2019s saved per-thread context: DR0\u2013DR15, PC, FLAGS, STO, CR12, CR14, and CR15 are all reloaded from the saved state. The GT zone (CR0\u2013CR11) of the incoming thread is already in its lump and is never explicitly restored \u2014 the GT zone is live at all times. CR13 (IRQ, system-wide interrupt handler) is <em>not</em> changed.</div>
@@ -193,7 +193,7 @@ ${this._memMap(null)}
         let html = '<div class="sr-wrapper">';
         html += '<div class="sr-header">';
         html += '<h2>Thread Abstraction</h2>';
-        html += '<p class="sr-tagline">GT Zone \u00b7 FIFO Stack \u00b7 Heap \u00b7 Data Registers \u00b7 mLoad Sync \u00b7 CHANGE Suspension</p>';
+        html += '<p class="sr-tagline">GT Zone \u00b7 LIFO Stack \u00b7 Heap \u00b7 Data Registers \u00b7 mLoad Sync \u00b7 CHANGE Suspension</p>';
         html += '<div class="sr-controls">';
         html += `<button class="btn btn-tutorial" onclick="threadTutorial.stepBack()" ${this.currentStep <= 0 ? 'disabled' : ''}>&laquo; Back</button>`;
         html += `<span class="tutorial-progress">${Math.max(0, this.currentStep + 1)} / ${this.steps.length}</span>`;
@@ -213,7 +213,7 @@ ${this._memMap(null)}
             html += '<div class="sr-step-container sr-type-intro">';
             html += '<div class="sr-step-title">Thread Abstraction Memory Layout</div>';
             html += '<div class="sr-step-content">';
-            html += '<p>This tutorial walks through the five memory regions of a Church Machine Thread Abstraction: the GT zone (CR0\u2013CR11), the FIFO call stack, the dynamic freespace buffer, the fixed-size heap, and the hardware register file at the base. It also covers mLoad\u2019s GT-zone maintenance and how CHANGE suspends and resumes threads.</p>';
+            html += '<p>This tutorial walks through the five memory regions of a Church Machine Thread Abstraction: the GT zone (CR0\u2013CR11), the LIFO call stack, the dynamic freespace buffer, the fixed-size heap, and the hardware register file at the base. It also covers mLoad\u2019s GT-zone maintenance and how CHANGE suspends and resumes threads.</p>';
             html += '<p>Click <strong>Next</strong> to begin.</p>';
             html += '</div></div>';
         }

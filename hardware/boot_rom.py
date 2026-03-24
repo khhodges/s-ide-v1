@@ -103,7 +103,7 @@ BOOT_PROGRAM += [
     # On success:
     #   CR14 derived from NS Slot 4: base=word0_location, limit=word1[16:0], perm=XR
     #   CR6  derived from NS Slot 4: base=clistStart, limit=clistCount-1, perm=L
-    #   2-word CALL frame pushed onto thread FIFO stack (STO += 2)
+    #   2-word CALL frame pushed onto thread LIFO stack (STO += 2)
     #   PC = 0 — user abstraction begins executing
     encode_church(ChurchOpcode.CALL, CondCode.AL, cr_dst=0, cr_src=0),
 

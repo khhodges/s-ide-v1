@@ -73,7 +73,7 @@ ${this._p2Sizes()}
 <li><strong>Static capabilities</strong> live in the C-List \u2014 the abstraction\u2019s fixed authority boundary, frozen at upload unless an explicit S-permissioned GT was issued to a writer.</li>
 <li><strong>Dynamic data</strong> (stack frames, temporaries, heap objects, DR0\u2013DR15) lives exclusively in the <em>Thread</em> lump \u2014 never inside the abstraction.</li>
 <li><strong>Abstractions are stateless and shareable</strong> \u2014 any number of threads can hold an E-GT for the same abstraction and enter it concurrently without interference, because the lump is never written during execution.</li>
-<li><strong>Threads carry all mutable state</strong>: the FIFO stack, heap, data registers, and the privileged CR12\u2013CR15 window. The abstraction lump is unchanged between calls.</li>
+<li><strong>Threads carry all mutable state</strong>: the LIFO stack, heap, data registers, and the privileged CR12\u2013CR15 window. The abstraction lump is unchanged between calls.</li>
 </ul></div>`
             },
             {
@@ -164,7 +164,7 @@ ${this._p2Sizes()}
             {
                 title: 'CALL \u2014 Entering an Abstraction',
                 type: 'call',
-                content: `<p>CALL enters an abstraction by consuming an E-GT from CRs, pushing a 2-word frame onto the <em>thread\u2019s</em> FIFO stack, and transferring control to PC\u202f=\u202f0 of the callee.</p>
+                content: `<p>CALL enters an abstraction by consuming an E-GT from CRs, pushing a 2-word frame onto the <em>thread\u2019s</em> LIFO stack, and transferring control to PC\u202f=\u202f0 of the callee.</p>
 <table class="sr-table"><tr><th>Event</th><th>Detail</th></tr>
 <tr><td>E-GT validated</td><td>E perm checked; seal recomputed and verified against NS entry</td></tr>
 <tr><td>Frame word pushed</td><td><code>FLAGS[31:28] | PC[27:13] | SZ=1[12] | STO[11:0]</code> (saved return address and stack state)</td></tr>
@@ -175,12 +175,12 @@ ${this._p2Sizes()}
 <tr><td>PC = 0</td><td>Execution begins at callee\u2019s first instruction word</td></tr>
 </table>
 <div class="sr-key-concept"><div class="sr-concept-title">The Stack Belongs to the Thread, Not the Abstraction</div>
-<p>CALL frame words are written into the <em>calling thread\u2019s</em> lump (the FIFO stack region, word\u202f12 onward from the thread lump base). The abstraction\u2019s own lump is not modified. This is why abstractions can be shared across threads: their code and c-list are immutable during execution.</p></div>`
+<p>CALL frame words are written into the <em>calling thread\u2019s</em> lump (the LIFO stack region, word\u202f12 onward from the thread lump base). The abstraction\u2019s own lump is not modified. This is why abstractions can be shared across threads: their code and c-list are immutable during execution.</p></div>`
             },
             {
                 title: 'RETURN \u2014 Leaving an Abstraction',
                 type: 'return',
-                content: `<p>RETURN pops the call frame from the thread\u2019s FIFO stack and restores the caller\u2019s execution context. It also applies a capability mask declared in the RETURN instruction itself.</p>
+                content: `<p>RETURN pops the call frame from the thread\u2019s LIFO stack and restores the caller\u2019s execution context. It also applies a capability mask declared in the RETURN instruction itself.</p>
 <table class="sr-table"><tr><th>Step</th><th>Detail</th></tr>
 <tr><td>Read SZ from frame word[12]</td><td>1 \u2192 2-word CALL frame \u00b7 0 \u2192 1-word LAMBDA frame</td></tr>
 <tr><td>Restore FLAGS, PC, STO</td><td>From frame word bits [31:28], [27:13], [11:0]</td></tr>
@@ -220,7 +220,7 @@ ${this._p2Sizes()}
 <div class="sr-sec-item"><span class="sr-sec-num">1</span><strong>Upload.</strong> The IDE writes the abstraction\u2019s lump into namespace memory and creates an NS entry: <code>word0_location</code> = lump base, <code>word1</code> = packed limit and clistCount, <code>word2</code> = CRC-16 seal. The C-List GT words are placed at lump[clistStart\u202f\u2192\u202fallocSize\u22121].</div>
 <div class="sr-sec-item"><span class="sr-sec-num">2</span><strong>Boot B:03 \u2014 INIT_ABSTR.</strong> The hardware loads the Boot.Abstr NS slot (Slot\u202f2) into a temporary E-perm GT for CR6 to confirm the boot abstraction\u2019s identity.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">3</span><strong>Boot B:04 \u2014 LOAD_NUC.</strong> From the NS Slot\u202f2 metadata the hardware derives and writes <strong>CR14</strong> (code GT: base = NS <code>word0_location</code>, limit = NS <code>word1 limit[16:0]</code> = allocSize\u22121, perm = XR or X per IDE setting) and <strong>CR6</strong> (c-list GT: base = lump base\u202f+\u202fclistStart, limit = clistCount\u22121, L perm). PC is set to 0. Boot code begins executing.</div>
-<div class="sr-sec-item"><span class="sr-sec-num">4</span><strong>CALL \u2014 Entering any abstraction.</strong> The calling thread presents an E-GT. The hardware validates it, pushes a 2-word frame [E-GT\u202f|\u202fframe\u202fword] onto the thread\u2019s FIFO stack (STO\u202f+=\u202f2), re-derives CR6 and CR14 from the callee\u2019s NS slot, and sets PC\u202f=\u202f0. CR0 (return) and CR1 (first argument) are set by the caller beforehand.</div>
+<div class="sr-sec-item"><span class="sr-sec-num">4</span><strong>CALL \u2014 Entering any abstraction.</strong> The calling thread presents an E-GT. The hardware validates it, pushes a 2-word frame [E-GT\u202f|\u202fframe\u202fword] onto the thread\u2019s LIFO stack (STO\u202f+=\u202f2), re-derives CR6 and CR14 from the callee\u2019s NS slot, and sets PC\u202f=\u202f0. CR0 (return) and CR1 (first argument) are set by the caller beforehand.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">5</span><strong>Execution.</strong> Instructions run sequentially from PC\u202f=\u202f0. The abstraction accesses capabilities via LOAD/SAVE/ELOAD through CR6. All memory access outside the lump requires a valid GT in a CR. DR0\u2013DR15 and the thread stack are part of the <em>calling thread\u2019s</em> lump, not the abstraction.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">6</span><strong>RETURN.</strong> The RETURN instruction pops the frame (SZ=1: 2 words), re-derives the caller\u2019s CR6 and CR14 from the saved E-GT, restores PC, FLAGS, STO, and applies the MASK to clear any CRs the callee declares as output-only. Control returns to the instruction after the original CALL.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">7</span><strong>CHANGE (abstraction as CLOOMC).</strong> A scheduler thread can switch which abstraction is the \u201crunning code\u201d by saving CR14 and CR6 as part of per-thread context and restoring them for a different thread. The abstraction\u2019s own lump is never modified during a context switch.</div>
