@@ -1460,6 +1460,11 @@ function getMethodPurposes(abs) {
         'Video': { 'Watch': 'Video.Watch(video_GT) — LOAD + stream via L perm', 'Search': 'Video.Search(scope_GT) — search within approved scope', 'Playlist': 'Video.Playlist() — walk playlist c-list', 'Share': 'Video.Share(video_GT, recipient_GT) — TPERM to L-only, transfer' },
         'Email': { 'Compose': 'Email.Compose(recipient_GT, body_GT) — allocate + send to inbox', 'Read': 'Email.Read() — dequeue from inbox c-list', 'Reply': 'Email.Reply(original_GT, body_GT) — reply in thread chain', 'Contacts': 'Email.Contacts() — list parent-approved email contacts' },
         'GC': { 'Scan': 'GC.Scan() — walk CRs + c-lists, set G-bit on live NS entries', 'Identify': 'GC.Identify() — find entries where G-bit != polarity', 'Clear': 'GC.Clear() — zero word0+word1 on garbage entries', 'Flip': 'GC.Flip() — toggle polarity for bidirectional cycle' },
+        'Thread': {
+            'switchTo': 'Thread.switchTo(thread_GT) — issues CHANGE targeting thread_GT; saves the calling thread\u2019s full context (DR0\u2013DR15, PC, FLAGS, STO, CR12, CR14, CR15) into its lump, then restores the target thread\u2019s saved context and resumes it at its saved PC. Requires E perm on thread_GT.',
+            'Kill':     'Thread.Kill(thread_GT) — terminates the target thread: suspends it via CHANGE, releases its lump via Memory.Free, revokes its Thread GT via Mint.Revoke (incrementing gt_seq so all live copies of the GT become instantly invalid). Requires E perm on thread_GT.',
+            'Compile':  'Thread.Compile(f_GT) \u2014 creates a new Thread Abstraction whose initial start abstraction is f. Calls Memory.Allocate for a fresh lump (GT zone + LIFO stack + heap + DR file), calls Mint.Create(Inform, lumpSize, 0) to mint a zero-perm Thread Identity GT (CR12 of the new thread), stores f_GT into the new thread\u2019s c-list as CR0 (the return/first-call slot), and returns the new Thread GT to the caller. The new thread is ready to run as soon as switchTo is called on its GT.',
+        },
     };
     if (knownPurposes[abs.name]) {
         return knownPurposes[abs.name];
@@ -2976,6 +2981,39 @@ CALL   CR1              ; GC.Flip:
 ;      Flip
 ;      Scan(polarity=1) -> Identify -> Clear
 ;      Flip ... (repeat)`,
+        },
+        'Thread': {
+            'switchTo': `; Thread.switchTo(thread_GT) — context switch to target thread
+; CR0 holds Thread GT with E perm (obtained from Scheduler c-list)
+TPERM  CR0, E           ; verify E perm on thread GT
+CHANGE AL, CR0, CR0, #0 ; CHANGE: save calling thread context into
+                         ;   its lump (DR0-15, PC, FLAGS, STO, CR12,
+                         ;   CR14, CR15), then restore target thread
+                         ;   context from its lump and resume at
+                         ;   saved PC. CR0 indexes the thread c-list.
+; After CHANGE: execution continues in the target thread`,
+            'Kill': `; Thread.Kill(thread_GT) — terminate target thread
+; CR1 holds target Thread GT (E perm)
+TPERM  CR1, E           ; verify E perm — must hold thread GT
+CALL   CR_mem, #Free    ; Memory.Free(thread_GT.lumpBase) —
+                         ;   release thread lump back to allocator
+CALL   CR_mint, #Revoke ; Mint.Revoke(thread_GT) —
+                         ;   increment gt_seq in NS entry;
+                         ;   all live copies of the GT instantly
+                         ;   become version-mismatched (dead)
+; Thread is now fully terminated: lump freed, GT revoked`,
+            'Compile': `; Thread.Compile(f_GT) — create a new thread, f is the start abstraction
+; CR1 holds f_GT (E perm) — the initial abstraction to run
+TPERM  CR1, E           ; verify E perm on start abstraction
+CALL   CR_mem, #Alloc   ; Memory.Allocate(lumpSize) ->
+                         ;   lump: [GT zone 12w][LIFO stack][heap][DR 16w]
+CALL   CR_mint, #Create ; Mint.Create(Inform, lumpSize, perms=0) ->
+                         ;   CR12 of new thread (zero-perm Inform GT)
+                         ;   word0_location = lump base
+                         ;   word0_limit    = lumpSize - 1
+DWRITE DR0, lump[0]     ; store f_GT into new thread's GT zone word 0
+                         ;   (CR0 of the new thread = first-call slot)
+; Returns: new Thread GT — call Thread.switchTo to begin execution`,
         },
     };
     return examples[abs.name] || {};

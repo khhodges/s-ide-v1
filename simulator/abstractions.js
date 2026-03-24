@@ -366,6 +366,11 @@ class AbstractionRegistry {
             ['Scan', 'Identify', 'Clear', 'Flip'],
             'PP250 deterministic GC with bidirectional G-bit',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 }, handler: 'gc' });
+
+        this.createAbstraction(45, 'Thread', 1,
+            ['switchTo', 'Kill', 'Compile'],
+            'Thread Abstraction \u2014 switch execution to a named thread, terminate a thread, or compile a new thread with a given start abstraction',
+            { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
     }
 }
 
