@@ -1269,7 +1269,17 @@ const IMPL_STATUS_COLORS = {
 };
 
 function _implStatusGet(key) {
-    return absImplStatus[key] || 'pseudo';
+    if (absImplStatus[key]) return absImplStatus[key];
+    // For a per-method key "absIdx:methodName", fall back to the abstraction-level key "abs:absIdx"
+    const colon = key.indexOf(':');
+    if (colon > 0) {
+        const prefix = key.slice(0, colon);
+        if (/^\d+$/.test(prefix)) {
+            const absKey = `abs:${prefix}`;
+            if (absImplStatus[absKey]) return absImplStatus[absKey];
+        }
+    }
+    return 'pseudo';
 }
 
 function _implStatusSet(key, value) {
@@ -1304,7 +1314,12 @@ function _implStatusSeed() {
 
 function _implStatusBest(abs) {
     const methods = abs.methods && abs.methods.length > 0 ? abs.methods : [];
-    let best = IMPL_STATUS_LEVELS.indexOf(_implStatusGet(`abs:${abs.index}`));
+    if (methods.length === 0) {
+        // No methods: the abstraction-level key is the only signal
+        return _implStatusGet(`abs:${abs.index}`);
+    }
+    // With methods: compute best across all method slots (each slot falls back to abs-level if unset)
+    let best = -1;
     for (const m of methods) {
         const lvl = IMPL_STATUS_LEVELS.indexOf(_implStatusGet(`${abs.index}:${m}`));
         if (lvl > best) best = lvl;
