@@ -7599,3 +7599,65 @@ pre:hover .code-copy-btn {
 .impl-status-installed { color: var(--impl-installed); border-color: var(--impl-installed); }
 .impl-status-tested    { color: var(--impl-tested);    border-color: var(--impl-tested); }
 .impl-status-released  { color: var(--impl-released);  border-color: var(--impl-released); }
+
+/* Badge inside method tab chip */
+.abs-method-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 6px;
+    padding: 1px 5px 1px 4px;
+    border-radius: 8px;
+    border: 1px solid currentColor;
+    font-size: 0.52rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    vertical-align: middle;
+    white-space: nowrap;
+    line-height: 1.4;
+    transition: opacity 0.15s;
+}
+.abs-method-status-badge:hover { opacity: 0.8; }
+.abs-method-status-badge-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+.abs-method-status-badge-pseudo    { color: var(--impl-pseudo); }
+.abs-method-status-badge-js        { color: var(--impl-js); }
+.abs-method-status-badge-cloomc    { color: var(--impl-cloomc); }
+.abs-method-status-badge-installed { color: var(--impl-installed); }
+.abs-method-status-badge-tested    { color: var(--impl-tested); }
+.abs-method-status-badge-released  { color: var(--impl-released); }
+
+/* Floating status dropdown (appended to body) */
+.abs-status-dropdown {
+    position: fixed;
+    z-index: 9999;
+    background: #1b2d45;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.55);
+    min-width: 160px;
+    padding: 4px 0;
+    font-size: 0.72rem;
+}
+.abs-status-dropdown-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: background 0.1s;
+    white-space: nowrap;
+    color: var(--text-secondary);
+}
+.abs-status-dropdown-option:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.abs-status-dropdown-option.current { background: rgba(255,255,255,0.04); }
+.abs-status-dropdown-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}

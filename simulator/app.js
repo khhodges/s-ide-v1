@@ -1251,6 +1251,14 @@ const IMPL_STATUS_LABELS = {
     tested:    'Tested',
     released:  'Released'
 };
+const IMPL_STATUS_SHORT = {
+    pseudo:    'Pseudo',
+    js:        'JS',
+    cloomc:    'CLOOMC',
+    installed: 'Installed',
+    tested:    'Tested',
+    released:  'Released'
+};
 const IMPL_STATUS_COLORS = {
     pseudo:    '#9ca3af',
     js:        '#60a5fa',
@@ -1307,6 +1315,51 @@ function _implStatusBest(abs) {
 function absSetMethodStatus(absIdx, mName, value) {
     _implStatusSet(`${absIdx}:${mName}`, value);
     showAbstractionDetail(absIdx);
+}
+
+let _statusDropdownCleanup = null;
+
+function absToggleStatusDropdown(absIdx, mi, mName, evt) {
+    evt.stopPropagation();
+    _absCloseStatusDropdown();
+    const mStatus = _implStatusGet(`${absIdx}:${mName}`);
+    const dd = document.createElement('div');
+    dd.className = 'abs-status-dropdown';
+    const rect = evt.currentTarget ? evt.currentTarget.getBoundingClientRect() : null;
+    const x = rect ? rect.left : evt.clientX;
+    const y = rect ? rect.bottom + 4 : evt.clientY + 4;
+    dd.style.left = `${Math.min(x, window.innerWidth - 175)}px`;
+    dd.style.top = `${Math.min(y, window.innerHeight - 200)}px`;
+    for (const s of IMPL_STATUS_LEVELS) {
+        const opt = document.createElement('div');
+        opt.className = 'abs-status-dropdown-option' + (s === mStatus ? ' current' : '');
+        const dot = document.createElement('span');
+        dot.className = 'abs-status-dropdown-dot';
+        dot.style.background = IMPL_STATUS_COLORS[s];
+        if (s !== 'pseudo') dot.style.boxShadow = `0 0 4px ${IMPL_STATUS_COLORS[s]}`;
+        const label = document.createElement('span');
+        label.textContent = IMPL_STATUS_LABELS[s];
+        opt.appendChild(dot);
+        opt.appendChild(label);
+        opt.addEventListener('click', (e) => {
+            e.stopPropagation();
+            _absCloseStatusDropdown();
+            absSetMethodStatus(absIdx, mName, s);
+        });
+        dd.appendChild(opt);
+    }
+    document.body.appendChild(dd);
+    _statusDropdownCleanup = (e) => { if (!dd.contains(e.target)) _absCloseStatusDropdown(); };
+    setTimeout(() => document.addEventListener('click', _statusDropdownCleanup), 0);
+}
+
+function _absCloseStatusDropdown() {
+    const existing = document.querySelector('.abs-status-dropdown');
+    if (existing) existing.remove();
+    if (_statusDropdownCleanup) {
+        document.removeEventListener('click', _statusDropdownCleanup);
+        _statusDropdownCleanup = null;
+    }
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -1441,7 +1494,14 @@ function showAbstractionDetail(index) {
             for (let mi = 0; mi < methods.length; mi++) {
                 const m = methods[mi];
                 const active = mi === 0 ? ' abs-method-tab-active' : '';
-                html += `<span class="abs-method-tab${active}" onclick="absSelectMethod(this,'abs-panel-${uid}-${mi}')">${m}</span>`;
+                const mStatus = _implStatusGet(`${uid}:${m}`);
+                const badgeLabel = IMPL_STATUS_SHORT[mStatus] || mStatus;
+                html += `<span class="abs-method-tab${active}" onclick="absSelectMethod(this,'abs-panel-${uid}-${mi}')">`;
+                html += `${m}`;
+                html += `<span class="abs-method-status-badge abs-method-status-badge-${mStatus}" onclick="event.stopPropagation();absToggleStatusDropdown(${uid},${mi},${JSON.stringify(m)},event)" title="Status: ${IMPL_STATUS_LABELS[mStatus]} — click to change">`;
+                html += `<span class="abs-method-status-badge-dot"></span>${badgeLabel}`;
+                html += `</span>`;
+                html += `</span>`;
             }
             html += `<span class="abs-method-tab-spacer"></span>`;
             html += `<button class="btn abs-method-ctrl-btn" title="Add method" onclick="absShowAddForm(${uid})">+</button>`;
@@ -1453,15 +1513,10 @@ function showAbstractionDetail(index) {
                 const purpose = methodPurposes[m] || 'Dispatched via CALL';
                 const example = methodExamples[m] || null;
                 const display = mi === 0 ? '' : ' style="display:none"';
-                const mStatus = _implStatusGet(`${uid}:${m}`);
-                const statusOpts = IMPL_STATUS_LEVELS.map(s =>
-                    `<option value="${s}"${s === mStatus ? ' selected' : ''}>${IMPL_STATUS_LABELS[s]}</option>`
-                ).join('');
                 html += `<div class="abs-method-panel-item" id="abs-panel-${uid}-${mi}"${display}>`;
                 html += `<div class="abs-method-panel-header">`;
                 html += `<div class="abs-method-panel-name">${abs.name}.${m}</div>`;
                 html += `<button class="btn abs-method-ctrl-btn abs-method-edit-btn" title="Edit method" onclick="absShowEditForm(${uid},${JSON.stringify(m)})">&#9998;</button>`;
-                html += `<select class="impl-status-select impl-status-${mStatus}" title="Implementation status — click to change" onchange="this.className='impl-status-select impl-status-'+this.value;absSetMethodStatus(${uid},${JSON.stringify(m)},this.value)">${statusOpts}</select>`;
                 html += `</div>`;
                 html += `<div class="abs-method-panel-desc">${purpose}</div>`;
                 if (example) {
