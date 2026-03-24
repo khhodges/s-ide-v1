@@ -119,6 +119,35 @@ class SecurityTutorial {
 <li>Any computable function can be expressed in these 20 instructions</li>
 <li>No language can bypass the capability model &mdash; not even raw machine code</li>
 </ul>
+<p><strong>Case-by-Case: <code>Add(a, b)</code> &mdash; parameters: a&rarr;DR0, b&rarr;DR1</strong></p>
+<table class="sr-table sr-table-wide">
+<tr><th>Language</th><th>Source</th><th>Compiled Assembly</th><th>Hex words</th></tr>
+<tr>
+  <td><strong>English</strong></td>
+  <td><code>Add(a, b):<br>&nbsp;&nbsp;Add a to b and return the result.</code></td>
+  <td><code>IADD DR0, DR0, DR1<br>RETURN</code></td>
+  <td><code>0x7F000001<br>0x1F000000</code></td>
+</tr>
+<tr>
+  <td><strong>JavaScript</strong></td>
+  <td><code>method Add(a, b) {<br>&nbsp;&nbsp;result = a + b<br>&nbsp;&nbsp;return(result)<br>}</code></td>
+  <td><code>IADD DR0, DR0, DR1<br>RETURN</code></td>
+  <td><code>0x7F000001<br>0x1F000000</code></td>
+</tr>
+<tr>
+  <td><strong>Haskell</strong></td>
+  <td><code>method Add(a, b) = a + b</code></td>
+  <td><code>IADD DR0, DR0, DR1<br>RETURN</code></td>
+  <td><code>0x7F000001<br>0x1F000000</code></td>
+</tr>
+<tr>
+  <td><strong>Machine code</strong></td>
+  <td><code>0x7F000001<br>0x1F000000</code></td>
+  <td><code>IADD DR0, DR0, DR1<br>RETURN</code></td>
+  <td><code>0x7F000001<br>0x1F000000</code></td>
+</tr>
+</table>
+<p style="font-size:0.85em;color:var(--sr-muted,#888)"><strong>Hex verified:</strong> IADD=opcode 15, cond AL=14, dst=DR0, srcA=DR0, srcB=DR1&rarr;imm=1 &rarr; <code>(15&lt;&lt;27)|(14&lt;&lt;23)|(0&lt;&lt;19)|(0&lt;&lt;15)|1 = 0x7F000001</code>. RETURN=opcode 3 &rarr; <code>(3&lt;&lt;27)|(14&lt;&lt;23) = 0x1F000000</code>.</p>
 <div class="sr-key-concept">
 <div class="sr-concept-title">Separation of Concerns</div>
 <p>The programmer writes in any comfortable notation &mdash; natural English, imperative JavaScript, functional Haskell, or direct hex. The compiler reduces it to the universal substrate. The hardware enforces security at every instruction, regardless of source language.</p>
