@@ -1329,6 +1329,7 @@ function _implStatusBest(abs) {
 
 function absSetMethodStatus(absIdx, mName, value) {
     _implStatusSet(`${absIdx}:${mName}`, value);
+    renderAbstractions();
     showAbstractionDetail(absIdx);
 }
 
