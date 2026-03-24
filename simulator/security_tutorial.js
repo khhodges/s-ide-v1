@@ -32,8 +32,8 @@ class SecurityTutorial {
 <div class="sr-sec-item"><span class="sr-sec-num">4</span>Sets <code>clistCount = 1</code> in the NS entry's word1</div>
 </div>
 <div class="sr-key-concept">
-<div class="sr-concept-title">Parental Approval Made Concrete</div>
-<p>The c-list is parental approval made concrete. A child cannot grant their abstraction access to resources the parent has not provided. Revoking a GT (incrementing version) instantly cuts access &mdash; all copies become invalid.</p>
+<div class="sr-concept-title">Negotiated Approval Made Concrete</div>
+<p>The c-list is digital approval made concrete. A spy cannot grant their abstraction access to resources the owner does to approve by providing a copy of the key, the Golden Token. Revoking a GT increments the version and instantly cuts access — all prior copies become invalid.</p>
 </div>`
             },
             {
