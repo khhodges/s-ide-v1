@@ -174,6 +174,7 @@ BOOK_CHAPTERS = [
     ("Part IV: Runtime", [
         "abstractions.md",
         "garbage-collection.md",
+        "locator.md",
         "family-registry.md",
     ]),
     ("Part V: Networking", [
