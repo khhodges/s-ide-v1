@@ -797,10 +797,6 @@ The difference from `Mint.Lump`:
 
 ---
 
-*Document applies to: Church Machine IDE simulator · Boot.NS slots 1 (Boot.Thread), 2 (Boot.Abstr), 45 (Thread) · Tang Nano 20 K + Efinix Ti60 F225 targets.*
-
----
-
 ---
 
 # Appendix B — Namespace LUMP
@@ -1226,4 +1222,38 @@ already owns.
 
 ---
 
-*Document applies to: Church Machine IDE simulator · Boot.NS slots 1 (Boot.Thread), 2 (Boot.Abstr), 45 (Thread) · Tang Nano 20 K + Efinix Ti60 F225 targets.*
+---
+
+# All Three Lump Types — Side-by-Side Reference
+
+| Property | Function Abstraction | Thread | Namespace LUMP |
+|----------|---------------------|--------|----------------|
+| **Purpose** | Callable code unit (one abstraction) | Live execution context (one thread) | Address-space root + NS Table + lazy-load host |
+| **Word 0** | Header `0x1F` | Header `0x1F` | Header `0x1F` |
+| **`typ` field** | `00` — callable | `10` — clist-only | `00` (with init code) or `10` (directory only) |
+| **`cw` field** | Code word count (≥ 0) | Always `0` | Init microcode length (may be `0`) |
+| **`cc` field** | Compiler-chosen dep count | Always `12` (CR0–CR11) | `3`+ (Mint · Scheduler · Locator) |
+| **Example header** | `0xF881_AC00` (Decimal, n=7 cw=107 cc=0) | `0xF900_020C` (n=8 cw=0 cc=12) | `0xFF00_0003` (Boot.NS, n=14 cw=0 cc=3) |
+| **Entry point** | PC = 1 on every CALL | Never — not callable | PC = 1 if `typ=00` |
+| **Words 1..cw** | CLOOMC code (dispatcher + methods) | Absent — `cw = 0` | Boot / init microcode |
+| **Freespace zone** | Compile-time fixed · all-zero · immutable | Dynamic 131 words — Stack ↓ and Heap ↑ collide | Between init code and NS Table · all-zero |
+| **C-list zone** | Last `cc` words · dep E-GTs · compiler-set | Last 12 words · CR0–CR11 boot credentials | Last `cc` words · Mint, Scheduler, Locator E-GTs |
+| **Unique body** | Code only | 5 zones: Header · Caps · Stack · Free · Heap · DR | **NS Table** (N × 3-word entries: Live / Outform / NULL) |
+| **Physical scope** | One lump region | One 256-word thread slot | **Entire application address space** |
+| **NS Table** | None — uses parent NS | None — uses parent NS | **IS the NS Table** |
+| **Outform support** | No — all deps must be Live at call time | No | **Yes** — Absent event → Locator fetch |
+| **Lazy load** | Not applicable | Not applicable | **Hosts** the Locator; fetches from Home Base IDE |
+| **Issued by** | `Mint.Lump(base, n)` | `Mint.Thread(base, n)` | `Mint.Lump(base, n)` or FPGA-embedded (Boot.NS) |
+| **Transient CR14** | Code view (X) words 1..cw | Not derived | Code view (X) if `typ=00` |
+| **Transient CR6** | C-list view (L) last `cc` words | Not derived | C-list view (L) last `cc` words |
+| **Issued GTs** | One E-GT (caller holds) | E-GT (Scheduler) + RW-GT (Thread) | One E-GT (spans whole address range) |
+| **GC interaction** | G bit in NS slot Word 3 | G bits in all live CRs in Zone ① | G bits in all Live NS Table entries (Word 3) |
+| **lumpSize** | 2^n compiler-chosen (64–16 384 words) | Fixed 2^8 = 256 words | 2^n IDE-chosen; Boot.NS = 2^14 = 16 384 words |
+| **Freespace verified by Mint** | Yes — words cw+1..lumpSize-cc-1 all-zero | Zone ③ only (words 45..175); Zone ① skipped | Yes — between init code end and NS Table start |
+| **Distribution format** | `*.lump.zip` | Created in-place; not zipped | `*.namespace.zip` with `manifest.json` |
+| **Simulator NS slot** | Most slots (Salvation=4, Mint=6, …) | Slots 1 and 45 | Slot 0 (Boot.NS) |
+| **CALL target?** | Yes | No | Yes (typ=00) or No (typ=10) |
+
+---
+
+*Document applies to: Church Machine IDE simulator · Boot.NS slots 0 (Boot.NS), 1 (Boot.Thread), 2 (Boot.Abstr), 45 (Thread) · Tang Nano 20 K + Efinix Ti60 F225 targets.*
