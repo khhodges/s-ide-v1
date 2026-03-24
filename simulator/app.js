@@ -1211,7 +1211,7 @@ function updateNamespace() {
         const isExpanded = (nsExpandedSlot === i);
         html += `<tr class="ns-row${isExpanded ? ' ns-row-active' : ''}" onclick="toggleNSDetail(${i})" style="cursor:pointer;">`;
         html += `<td>${i}</td>`;
-        html += `<td class="ns-label">${e.label || '-'}</td>`;
+        html += `<td class="ns-label" onmouseenter="showNSEntryTooltip(event,${i})" onmouseleave="hideNSEntryTooltip()">${e.label || '-'}</td>`;
         html += `<td>0x${e.word0_location.toString(16).toUpperCase().padStart(8, '0')}</td>`;
         html += `<td>${typeNames[e.gtType] || '?'}</td>`;
         html += `<td class="ns-flag">${lim.f}</td>`;
@@ -1231,6 +1231,89 @@ function updateNamespace() {
     }
     html += '</tbody></table>';
     container.innerHTML = html;
+}
+
+function _getNSEntryTooltipEl() {
+    let el = document.getElementById('nsEntryTooltip');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'nsEntryTooltip';
+        el.className = 'ns-entry-tooltip';
+        document.body.appendChild(el);
+    }
+    return el;
+}
+
+function showNSEntryTooltip(evt, idx) {
+    const tt = _getNSEntryTooltipEl();
+    const e = sim.readNSEntry(idx);
+    if (!e) { tt.classList.remove('visible'); return; }
+
+    const lim = sim.parseNSWord1(e.word1_limit);
+    const typeNames = ['NULL','Real','Abstract','Outform'];
+    const badgeClass = ['ns-tt-badge-null','ns-tt-badge-real','ns-tt-badge-abstract','ns-tt-badge-outform'];
+    const typeName = typeNames[lim.gtType] || '?';
+    const ver = (e.word2_seals >>> 25) & 0x7F;
+    const seal = e.word2_seals & 0xFFFF;
+    const sizeWords = lim.limit + 1;
+    const sizeBytes = sizeWords * 4;
+
+    let absMatch = null;
+    if (abstractionRegistry && typeof abstractionRegistry.getAbstraction === 'function') {
+        absMatch = abstractionRegistry.getAbstraction(idx);
+    }
+
+    let html = `<div class="ns-tt-header">Slot ${idx}<span class="ns-tt-badge ${badgeClass[lim.gtType]}">${typeName}</span></div>`;
+    if (e.label) html += `<div class="ns-tt-label">"${e.label}"</div>`;
+    if (absMatch) {
+        const absName = absMatch.name || '';
+        const absLayer = absMatch.layer != null ? ` · Layer ${absMatch.layer}` : '';
+        const absMethods = Array.isArray(absMatch.methods) ? absMatch.methods : [];
+        html += `<div class="ns-tt-abs-name">${absName}<span style="color:#9ca3af;font-weight:400;font-size:0.7rem;">${absLayer}</span></div>`;
+        if (absMatch.description) {
+            const d = absMatch.description;
+            html += `<div style="color:#9ca3af;font-size:0.72rem;margin-bottom:0.25rem;">${d.slice(0,100)}${d.length > 100 ? '…' : ''}</div>`;
+        }
+        if (absMethods.length) {
+            html += `<div style="color:#6b7280;font-size:0.7rem;margin-bottom:0.2rem;">${absMethods.length} method${absMethods.length !== 1 ? 's' : ''}: <span style="color:#c084fc;">${absMethods.slice(0,5).join(', ')}${absMethods.length > 5 ? ', …' : ''}</span></div>`;
+        }
+        html += '<hr class="ns-tt-divider">';
+    }
+    html += `<div class="ns-tt-row"><b>Address</b> 0x${e.word0_location.toString(16).toUpperCase().padStart(8,'0')}</div>`;
+    html += `<div class="ns-tt-row"><b>Size</b> ${sizeWords} word${sizeWords !== 1 ? 's' : ''} &nbsp;(${sizeBytes} bytes)</div>`;
+    html += `<div class="ns-tt-row"><b>Version</b> ${ver} &nbsp;&nbsp;<b style="margin-left:0.6rem">CRC</b> 0x${seal.toString(16).toUpperCase().padStart(4,'0')}</div>`;
+    if (e.clistCount) html += `<div class="ns-tt-row"><b>C-list</b> ${e.clistCount} entr${e.clistCount !== 1 ? 'ies' : 'y'}</div>`;
+    const flags = [];
+    if (lim.f) flags.push('<span class="ns-tt-flag">F Far/Tunnel</span>');
+    if (lim.b) flags.push('<span class="ns-tt-flag">B</span>');
+    if (e.gBit) flags.push('<span class="ns-tt-flag">G GC-live</span>');
+    if (e.chainable) flags.push('<span class="ns-tt-flag">Chainable</span>');
+    if (flags.length) html += `<div class="ns-tt-row" style="flex-wrap:wrap;gap:4px;"><b>Flags</b> ${flags.join(' ')}</div>`;
+
+    tt.innerHTML = html;
+    tt.classList.add('visible');
+    _positionNSTooltip(tt, evt);
+}
+
+function _positionNSTooltip(tt, evt) {
+    const margin = 12;
+    tt.style.left = '0px'; tt.style.top = '0px';
+    const tw = tt.offsetWidth || 260;
+    const th = tt.offsetHeight || 140;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let x = evt.clientX + margin;
+    let y = evt.clientY - th / 2;
+    if (x + tw > vw - 8) x = evt.clientX - tw - margin;
+    if (y < 8) y = 8;
+    if (y + th > vh - 8) y = vh - th - 8;
+    tt.style.left = x + 'px';
+    tt.style.top  = y + 'px';
+}
+
+function hideNSEntryTooltip() {
+    const tt = document.getElementById('nsEntryTooltip');
+    if (tt) tt.classList.remove('visible');
 }
 
 let selectedAbsIndex = null;
