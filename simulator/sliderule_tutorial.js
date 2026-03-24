@@ -101,7 +101,7 @@ class SlideRuleTutorial {
 <tr><td>object_id</td><td>16</td><td>Index into the namespace (65&thinsp;536 possible entries).</td></tr>
 </table>
 <div class="sr-key-concept">
-<div class="sr-concept-title">Instant Revocation</div>
+<div class="sr-concept-title">Negotiated Approval Made Concrete</div>
 <p>The c-list is digital approval made concrete. A spy cannot grant their abstraction access to resources the owner does to approve by providing a copy of the key, the Golden Token. Revoking a GT increments the version and instantly cuts access — all prior copies become invalid.</p>
 </div>`
             },
