@@ -1304,7 +1304,7 @@ let absImplStatus = {};
 const IMPL_STATUS_LEVELS = ['pseudo', 'js', 'cloomc', 'installed', 'tested', 'released'];
 const IMPL_STATUS_LABELS = {
     pseudo:    'Pseudo Code',
-    js:        'Built-in JS',
+    js:        'Built-in',
     cloomc:    'Compiled CLOOMC',
     installed: 'Installed',
     tested:    'Tested',
@@ -1312,19 +1312,19 @@ const IMPL_STATUS_LABELS = {
 };
 const IMPL_STATUS_SHORT = {
     pseudo:    'Pseudo',
-    js:        'JS',
+    js:        'Built-in',
     cloomc:    'CLOOMC',
     installed: 'Installed',
     tested:    'Tested',
     released:  'Released'
 };
 const IMPL_STATUS_COLORS = {
-    pseudo:    '#9ca3af',
-    js:        '#60a5fa',
+    pseudo:    '#6b7280',
+    js:        '#ef4444',
     cloomc:    '#c084fc',
-    installed: '#2dd4bf',
-    tested:    '#4ade80',
-    released:  '#fbbf24'
+    installed: '#22c55e',
+    tested:    '#38bdf8',
+    released:  '#f1f5f9'
 };
 
 function _implStatusGet(key) {

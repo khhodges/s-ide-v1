@@ -7511,12 +7511,12 @@ pre:hover .code-copy-btn {
 
 /* ── Implementation Status ─────────────────────────────────────── */
 :root {
-    --impl-pseudo:    #9ca3af;
-    --impl-js:        #60a5fa;
+    --impl-pseudo:    #6b7280;
+    --impl-js:        #ef4444;
     --impl-cloomc:    #c084fc;
-    --impl-installed: #2dd4bf;
-    --impl-tested:    #4ade80;
-    --impl-released:  #fbbf24;
+    --impl-installed: #22c55e;
+    --impl-tested:    #38bdf8;
+    --impl-released:  #f1f5f9;
 }
 
 .impl-dot {
@@ -7676,7 +7676,7 @@ pre:hover .code-copy-btn {
 .abs-boot-code-desc code {
     font-family: 'JetBrains Mono', 'Courier New', monospace;
     font-style: normal;
-    color: var(--impl-js);
+    color: var(--church-gold);
     font-size: 0.68rem;
 }
 .abs-boot-code-pre {
