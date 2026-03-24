@@ -102,7 +102,7 @@ class SlideRuleTutorial {
 </table>
 <div class="sr-key-concept">
 <div class="sr-concept-title">Instant Revocation</div>
-<p>Incrementing a token's <strong>gt_seq</strong> in the namespace entry invalidates every copy of every derived token immediately. No garbage collection of permissions, no race condition, no eventually-consistent revocation. The next mLoad that presents a stale gt_seq faults.</p>
+<p>The c-list is approval made concrete. Neither children, or experts cannot grant their abstraction access to resources they have not declared in advance then approved by the owner. Revoking this approval is easy just incrementing the GT version instantly cuts access — all copies become invalid.</p>
 </div>`
             },
             {
