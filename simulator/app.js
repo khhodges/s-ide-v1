@@ -6665,6 +6665,8 @@ function openSettings() {
     renderFamilyMembers(settings.familyMembers || []);
     renderProgressReport();
     renderFamilyIntroQR();
+    const releaseEl = document.getElementById('settingsReleasePublishedAt');
+    if (releaseEl) releaseEl.textContent = '2026-03-24 00:00 UTC';
     const anyPerm = hasAnyPopupDismissedPerm();
     const showAllCheck = document.getElementById('showAllPopupsCheck');
     if (showAllCheck) showAllCheck.checked = !anyPerm;

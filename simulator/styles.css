@@ -3186,6 +3186,16 @@ a.next-step-link:hover {
     margin-bottom: 1.25rem;
 }
 
+.settings-release-note {
+    color: var(--text-primary);
+    margin-bottom: 0.35rem;
+}
+
+.settings-release-meta {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
 .settings-section-title {
     font-size: 0.85rem;
     font-weight: 600;
