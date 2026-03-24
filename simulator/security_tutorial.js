@@ -166,33 +166,35 @@ class SecurityTutorial {
 <span class="sr-tut-num">2</span>
 <div><strong>English</strong> &mdash; describe what each method does in plain language:</div>
 <pre class="sr-code sr-code-en">abstraction MyMath {
-    capabilities { Constants }
+    capabilities { Constants }  -- imports Constants E-GT into c-list CR0
 
-    Double(n):
+    Double(n):                  -- one parameter: n maps to DR0
         Add n to n and return the result.
+        -- compiler maps "Add X to Y" -> IADD; "return" -> RETURN
 
-    Square(n):
+    Square(n):                  -- one parameter: n maps to DR0
         Multiply n by n using repeated addition
         and return the product.
+        -- "Multiply ... using repeated addition" -> IADD loop + RETURN
 }</pre>
 </div>
 <div class="sr-tut-step">
 <span class="sr-tut-num">3</span>
 <div><strong>JavaScript</strong> &mdash; imperative style with explicit loops:</div>
 <pre class="sr-code sr-code-js">abstraction MyMath {
-    capabilities { Constants }
-    method Double(n) {
-        result = n + n
-        return(result)
+    capabilities { Constants }  // Constants E-GT written to c-list CR0
+    method Double(n) {          // n arrives in DR0
+        result = n + n          // allocates DR4; emits IADD DR4, DR0, DR0
+        return(result)          // moves DR4 -> DR0; emits RETURN
     }
-    method Square(n) {
-        acc = 0
-        i = n
-        while (i > 0) {
-            acc = acc + n
-            i = i - 1
+    method Square(n) {          // n arrives in DR0
+        acc = 0                 // allocates DR4; emits IADD DR4, 0, 0
+        i = n                   // allocates DR5; emits IADD DR5, DR0, 0
+        while (i > 0) {         // emits MCMP DR5, 0 + BRANCH.LE exit
+            acc = acc + n       // emits IADD DR4, DR4, DR0
+            i = i - 1           // emits ISUB DR5, DR5, 1
         }
-        return(acc)
+        return(acc)             // moves DR4 -> DR0; emits RETURN
     }
 }</pre>
 </div>
@@ -200,31 +202,33 @@ class SecurityTutorial {
 <span class="sr-tut-num">4</span>
 <div><strong>Haskell</strong> &mdash; functional style with single expressions:</div>
 <pre class="sr-code sr-code-hs">abstraction MyMath {
-    capabilities { Constants }
-    method Double(n) = n + n
-    method Square(n) = n * n
+    capabilities { Constants }   -- Constants E-GT into c-list CR0
+    method Double(n) = n + n     -- n in DR0; emits IADD DR0, DR0, DR0 + RETURN
+    method Square(n) = n * n     -- * expands to repeated IADD loop; result in DR0
 }</pre>
 </div>
 <div class="sr-tut-step">
 <span class="sr-tut-num">5</span>
 <div><strong>Ada's Symbolic Math</strong> &mdash; Ada-inspired syntax with strong typing and formal <code>begin/end</code> blocks:</div>
 <pre class="sr-code sr-code-sym">abstraction MyMath {
-    capabilities { Constants }
+    capabilities { Constants }           -- Constants E-GT into c-list CR0
 
-    function Double(n : Integer) return Integer is
+    function Double(n : Integer)         -- n : Integer -> n mapped to DR0
+                     return Integer is   -- explicit return type declaration
     begin
-        return n + n;
+        return n + n;                    -- emits IADD DR0, DR0, DR0 + RETURN
     end Double;
 
-    function Square(n : Integer) return Integer is
-        acc : Integer := 0;
-        i   : Integer := n;
+    function Square(n : Integer)
+                     return Integer is
+        acc : Integer := 0;              -- local DR4 allocated; IADD DR4, 0, 0
+        i   : Integer := n;              -- local DR5 allocated; IADD DR5, DR0, 0
     begin
-        while i &gt; 0 loop
-            acc := acc + n;
-            i   := i - 1;
-        end loop;
-        return acc;
+        while i &gt; 0 loop               -- emits MCMP DR5, 0 + BRANCH.LE exit
+            acc := acc + n;              -- emits IADD DR4, DR4, DR0
+            i   := i - 1;               -- emits ISUB DR5, DR5, 1
+        end loop;                        -- emits unconditional BRANCH back to MCMP
+        return acc;                      -- moves DR4 -> DR0; emits RETURN
     end Square;
 }</pre>
 </div>
@@ -232,15 +236,16 @@ class SecurityTutorial {
 <span class="sr-tut-num">6</span>
 <div><strong>Lambda Calculus</strong> &mdash; pure anonymous functions; recursion via self-application (Z-combinator pattern):</div>
 <pre class="sr-code sr-code-lc">abstraction MyMath {
-    capabilities { Constants }
+    capabilities { Constants }         -- Constants E-GT into c-list CR0
 
-    Double &equiv; &lambda;n &rarr; n + n
+    Double &equiv; &lambda;n &rarr; n + n           -- anonymous fn of n (DR0); emits IADD + RETURN
 
-    Square &equiv; &lambda;n &rarr;
-        let go = &lambda;self acc i &rarr;
-            if i = 0 then acc
+    Square &equiv; &lambda;n &rarr;                 -- outer lambda captures n in DR0
+        let go = &lambda;self acc i &rarr;           -- recursive helper; self=own E-GT, acc=running total, i=counter
+            if i = 0 then acc          -- base case: emits MCMP + BRANCH; returns acc in DR0
             else self self (acc + n) (i - 1)
-        in go go 0 n
+            -- recursive step: CALL self (Z-combinator); acc+n emits IADD; i-1 emits ISUB
+        in go go 0 n                   -- kickstart: passes go's E-GT as self, acc=0, i=n
 }</pre>
 </div>
 <div class="sr-tut-step">
