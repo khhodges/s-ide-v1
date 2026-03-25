@@ -194,6 +194,10 @@ at instruction-decode time.
 All 128 bits zero. Faults on any CALL, LOAD, or DREAD. Occupies every
 unoccupied c-list slot. Never issued by Mint.
 
+When `mLoad` validation encounters a NULL slot in the NS table, the GT
+used in the instruction is set to NULL — causing any subsequent CALL,
+LOAD, or DREAD on that register to fault.
+
 ### Real GT (typ = 01)
 
 Issued by Mint. References a physical memory region. The R/W/X or L/S/E
@@ -209,9 +213,14 @@ slot consumed.
 
 ### Outform GT (typ = 11)
 
-Lump registered in the namespace but not resident. An IDE-managed 96-bit
-token is held in NS Words 1–3. LOAD fires an Absent event; the Locator
-fetches, inflates, and Mints the lump, promoting the slot to Live.
+A GT issued by the IDE as a dependency placeholder. The GT itself (Word 0
+only) is the IDE's key to identify the lump — no NS slot is required until
+the lump is resolved. When the lump is first LOAD-ed, an Absent event fires;
+the Locator fetches the zip, inflates it, determines the lump size and all
+metadata from the header word, and then allocates an NS slot and calls
+`Mint.Lump` to promote the slot to Live (typ = 01). The IDE may issue many
+Outform GTs for the same lump; they all resolve to the same Live slot when
+inflated.
 
 ---
 
