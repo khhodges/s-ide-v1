@@ -6,19 +6,19 @@ class ThreadTutorial {
 
     _memMap(highlighted) {
         const sections = [
-            { id: 'cap',   label: '\u2460 Capabilities',     sub: 'GT for CR0\u2013CR11  (12 words, fixed)',      bg: '#3a2c00', border: '#c8a020', text: '#f0d060' },
-            { id: 'stack', label: '\u2461 LIFO Stack \u2193', sub: 'Expands down \u00b7 limit set by NS slot',     bg: '#002a40', border: '#2080c0', text: '#60b8f0' },
-            { id: 'free',  label: '\u2462 Freespace',         sub: 'Dynamic gap \u00b7 shrinks as stack/heap grow',bg: '#181818', border: '#404040', text: '#888'    },
+            { id: 'dr',    label: '\u2464 Data Registers',    sub: 'DR0\u2013DR15  (16 \u00d7 32-bit, fixed)',        bg: '#1e0840', border: '#8040c0', text: '#b080f0' },
             { id: 'heap',  label: '\u2463 Heap \u2191',       sub: 'Fixed size \u00b7 defined by IDE slot metadata',bg: '#002a10', border: '#20a040', text: '#60d080' },
-            { id: 'dr',    label: '\u2464 Data Registers',    sub: 'DR0\u2013DR15  (16 \u00d7 32-bit, fixed at base)', bg: '#1e0840', border: '#8040c0', text: '#b080f0' },
+            { id: 'free',  label: '\u2462 Freespace',         sub: 'Dynamic gap \u00b7 shrinks as stack/heap grow',bg: '#181818', border: '#404040', text: '#888'    },
+            { id: 'stack', label: '\u2461 LIFO Stack \u2193', sub: 'Expands down \u00b7 limit set by NS slot',     bg: '#002a40', border: '#2080c0', text: '#60b8f0' },
+            { id: 'cap',   label: '\u2460 Capabilities',     sub: 'GT for CR0\u2013CR11  (12 words, at tail)',      bg: '#3a2c00', border: '#c8a020', text: '#f0d060' },
         ];
-        const heights = { cap: 72, stack: 96, free: 56, heap: 72, dr: 64 };
+        const heights = { dr: 64, heap: 72, free: 56, stack: 96, cap: 72 };
         const addrLabels = {
-            cap:   'word 0 \u2192',
-            stack: 'word 12 \u2192',
-            free:  'stack bottom \u2192',
-            heap:  'heap base \u2192',
-            dr:    'DR base \u2192',
+            dr:    'word 1 \u2192',
+            heap:  'word 17 \u2192',
+            free:  'word 81 \u2192',
+            stack: 'word 212 \u2192',
+            cap:   'word 244 \u2192',
         };
         let html = '<div style="display:flex;gap:8px;margin:12px 0 4px 0;align-items:stretch;">';
         html += '<div style="display:flex;flex-direction:column;justify-content:flex-start;width:88px;flex-shrink:0;font-size:0.68rem;color:#666;font-family:monospace;">';
@@ -48,10 +48,10 @@ class ThreadTutorial {
                 title: 'What Is a Thread Abstraction?',
                 type: 'intro',
                 content: `<p>A <strong>Thread Abstraction</strong> is the Church Machine\u2019s representation of a running computation. Like all abstractions it lives inside a <em>lump</em> (a contiguous block of namespace words), but its internal structure is different from a Programmed Abstraction: it carries both a protected capability set <em>and</em> a live execution context.</p>
-<p>At boot (B:02) the machine loads a Thread Identity GT into <strong>CR12</strong> from NS Slot 1 (zero perms, Inform-type). CR12 tells the running thread where its own lump lives; its metadata defines the lump base, total size, and heap limit. The stack region occupies lump words 12 \u2192 heap base; its current position is tracked by the hidden <strong>STO register</strong>.</p>
+<p>At boot (B:02) the machine loads a Thread Identity GT into <strong>CR12</strong> from NS Slot 1 (zero perms, Inform-type). CR12 tells the running thread where its own lump lives; its metadata defines the lump base, total size, and heap limit. The stack region occupies lump words 212 \u2192 word 80 (below freespace); its current position is tracked by the hidden <strong>STO register</strong> (initial value = 212).</p>
 ${this._memMap(null)}
 <div class="sr-key-concept"><div class="sr-concept-title">Five Regions, One Lump</div>
-<p>Reading top-to-bottom (word 0 \u2192 base): <strong>\u2460 Capabilities \u2192 \u2461 Stack \u2192 \u2462 Freespace \u2192 \u2463 Heap \u2192 \u2464 Data Registers</strong>. Every region lives inside the same protected lump; the hardware enforces bounds on every access.</p></div>`
+<p>Reading top-to-bottom (word 0 \u2192 base): <strong>Header \u2192 \u2464 Data Registers \u2192 \u2463 Heap \u2192 \u2462 Freespace \u2192 \u2461 Stack \u2192 \u2460 Capabilities</strong>. Every region lives inside the same protected lump; the hardware enforces bounds on every access. The Capabilities zone at the tail (words 244\u2013255) is the c-list, eliminating any overlap.</p></div>`
             },
             {
                 title: '\u2460 Capabilities \u2014 GT Zone for CR0\u2013CR11',
@@ -79,10 +79,10 @@ ${this._memMap(null)}
                 title: '\u2461 LIFO Stack \u2014 Grows Downward',
                 type: 'stack',
                 content: `${this._memMap('stack')}
-<p>Immediately after the GT zone, the <strong>LIFO call stack</strong> begins at word 12 and expands <em>downward</em> (toward higher addresses). CALL pushes a 2-word frame; LAMBDA pushes a 1-word frame. RETURN pops the correct number based on the SZ bit in the frame word.</p>
+<p>The <strong>LIFO call stack</strong> begins at word 212 and expands <em>downward</em> (toward lower addresses, into freespace). STO = 212 is the initial "empty stack" marker. CALL pushes a 2-word frame; LAMBDA pushes a 1-word frame. RETURN pops the correct number based on the SZ bit in the frame word.</p>
 <ul>
-<li><strong>Stack top</strong>: word 12 (immediately after the GT zone)</li>
-<li><strong>Stack limit</strong>: set by the NS slot field <code>clistStart \u2212 1</code> inside <code>word0_location</code></li>
+<li><strong>Stack top</strong> (STO initial): word 212 (just below freespace)</li>
+<li><strong>Stack limit</strong>: word 81 (must not collide with freespace bottom)</li>
 <li><strong>Overflow</strong>: a <code>STACK_OVERFLOW</code> warning suspends the thread at the limit for programmed recovery</li>
 <li><strong>2-word CALL frame (SZ=1)</strong>: <code>[E-GT \u00b7 frame\u202fword]</code> \u2014 STO advances by 2</li>
 <li><strong>1-word LAMBDA frame (SZ=0)</strong>: <code>[frame\u202fword only]</code> \u2014 STO advances by 1</li>
@@ -99,7 +99,7 @@ ${this._memMap(null)}
 </table>
 <p><strong>MASK is in the RETURN instruction, not the frame.</strong> The low 12 bits of the RETURN literal specify which CRs to clear after context restoration. This frees the 12 bits in the frame word for STO instead.</p>
 <div class="sr-key-concept"><div class="sr-concept-title">LIFO, Not FIFO</div>
-<p>The stack discipline is <strong>Last-In First-Out</strong>: CALL pushes a frame downward and RETURN pops the most recent frame first \u2014 the last call entered is the first to exit. Nested calls push sequentially deeper; unwinding always reverses that order. The abstraction model guarantees no frame can be forged or overwritten because all stack words are inside the thread\u2019s lump boundary. The hidden <strong>STO register</strong> (0\u20134095) tracks the current stack top offset from word 12 and is saved/restored across every call and context switch.</p></div>`
+<p>The stack discipline is <strong>Last-In First-Out</strong>: CALL pushes a frame downward (STO decreases) and RETURN pops the most recent frame first \u2014 the last call entered is the first to exit. Nested calls push sequentially deeper; unwinding always reverses that order. The abstraction model guarantees no frame can be forged or overwritten because all stack words are inside the thread\u2019s lump boundary. The hidden <strong>STO register</strong> (0\u20134095) tracks the current stack top offset and is saved/restored across every call and context switch. Initial STO = 212 (empty); each CALL decreases STO by 2 (or 1 for LAMBDA).</p></div>`
             },
             {
                 title: '\u2462 Freespace \u2014 The Dynamic Buffer',
@@ -118,10 +118,11 @@ ${this._memMap(null)}
                 title: '\u2463 Heap \u2014 Fixed-Size Object Store',
                 type: 'heap',
                 content: `${this._memMap('heap')}
-<p>Above the Data Registers, the <strong>heap</strong> holds dynamically-allocated objects. Its size is fixed at thread-creation time by the IDE slot metadata stored in the NS entry\u2019s word1 field (<code>clistCount</code> encodes heap word count for threads).</p>
+<p>After the Data Registers, the <strong>heap</strong> holds dynamically-allocated objects. Its size is fixed at thread-creation time by the IDE slot metadata stored in the NS entry\u2019s heapSize field.</p>
 <ul>
-<li><strong>Heap base</strong>: <code>lump base + allocSize \u2212 heapWords \u2212 16</code> (16 = DR region)</li>
-<li><strong>Allocation</strong>: thread abstractions advance the heap pointer upward in turn (bump allocation); objects grow from heap base toward freespace</li>
+<li><strong>Heap base</strong>: word 17 (immediately after Data Registers)</li>
+<li><strong>Heap limit</strong>: word 80 (must not collide with freespace)</li>
+<li><strong>Allocation</strong>: thread objects advance the heap pointer upward (bump allocation); objects grow from heap base toward freespace</li>
 <li><strong>Fixed ceiling</strong>: the heap cannot expand beyond its allocated words; each thread owns its heap region exclusively</li>
 <li><strong>GC</strong>: triggered automatically by RETURN \u2014 only the Thread GT (thread lump) is the GC root; objects unreachable from that root are reclaimed and the live set is compacted in place</li>
 </ul>
@@ -155,11 +156,12 @@ ${this._memMap(null)}
                 content: `${this._memMap(null)}
 <p>The full thread lump, from word 0 to <code>allocSize \u2212 1</code>:</p>
 <table class="sr-table"><tr><th>Region</th><th>Start</th><th>Size</th><th>Defined by</th></tr>
-<tr><td>\u2460 GT Zone (Capabilities)</td><td>word 0</td><td>12 words (fixed)</td><td>Architecture constant  (1 word \u00d7 CR0\u2013CR11)</td></tr>
-<tr><td>\u2461 LIFO Stack</td><td>word 12</td><td>variable \u2193</td><td>NS slot clistStart field</td></tr>
-<tr><td>\u2462 Freespace</td><td>stack bottom</td><td>dynamic</td><td>Remaining after stack + heap</td></tr>
-<tr><td>\u2463 Heap</td><td>heap base</td><td>fixed \u2191</td><td>IDE slot metadata (clistCount)</td></tr>
-<tr><td>\u2464 Data Registers</td><td>allocSize\u221216</td><td>16 words (fixed)</td><td>Architecture constant (DR0\u2013DR15)</td></tr>
+<tr><td>Header</td><td>word 0</td><td>1 word (fixed)</td><td>0xF900_020C (magic, typ, cc)</td></tr>
+<tr><td>\u2464 Data Registers</td><td>word 1</td><td>16 words (fixed)</td><td>Architecture constant (DR0\u2013DR15)</td></tr>
+<tr><td>\u2463 Heap</td><td>word 17</td><td>fixed \u2191</td><td>IDE slot metadata (heapSize)</td></tr>
+<tr><td>\u2462 Freespace</td><td>word 81</td><td>dynamic</td><td>Remaining between heap + stack</td></tr>
+<tr><td>\u2461 LIFO Stack</td><td>word 212</td><td>variable \u2193</td><td>STO initial = 212; grows downward</td></tr>
+<tr><td>\u2460 GT Zone (Capabilities)</td><td>word 244</td><td>12 words (fixed)</td><td>c-list tail = CR0\u2013CR11 zone</td></tr>
 </table>
 <div class="sr-key-concept"><div class="sr-concept-title">CR12 \u2014 Thread Identity</div>
 <p>Boot step B:02 (INIT_THRD) loads <strong>one</strong> register from NS Slot 1:</p>
