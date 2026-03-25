@@ -673,7 +673,7 @@ lump memory by SAVE/LOAD.
 +246  CR2    — General-purpose
 +247  CR3    — General-purpose
 +248  CR4    — General-purpose
-+249  CR5    — General-purpose
++249  CR5    — Heap GT (Zone ④ · by convention · installed by CHANGE)  [hardware-assisted]
 +250  CR6    — C-list view (E+M+B?-only) — set by CALL, cleared by RETURN  [hardware-defined]
 +251  CR7    — General-purpose
 +252  CR8    — General-purpose
@@ -751,6 +751,14 @@ are all programmer-chosen. The hardware enforces only the outer boundary
 concern. This makes heap behaviour fully programmable on a per-thread basis:
 two threads in the same application may use completely different allocation
 strategies without any conflict or coordination at the hardware level.
+
+By convention **CR5 is the Heap GT** — a data GT whose range covers exactly
+Zone ④ (words 17..80) of the thread's own lump. The CHANGE instruction
+installs this GT transparently into CR5 as part of context restoration,
+scoped to the IDE-defined bounds of Zone ④. This gives the thread immediate
+DREAD/DWRITE access to its heap on every context-load without an explicit
+LOAD instruction, while keeping the heap strictly private: the GT covers only
+this thread's Zone ④ and cannot be widened by the programmer.
 
 ---
 
@@ -831,6 +839,7 @@ state. The exact register set saved/restored is:
 | Register | Role |
 |----------|------|
 | **CR12** | Thread Identity (Priv zone) — lump base + word count |
+| **CR5** | Heap GT — re-installed to Zone ④ bounds (words 17..80) of the incoming thread |
 | **STO** | Stack Top Offset hidden register — current stack depth |
 | **DR0–DR15** | All 16 data registers |
 | **PC** | Program counter |
@@ -838,10 +847,11 @@ state. The exact register set saved/restored is:
 | **CR14** | Transient code-view (X) — derived fresh on the next CALL |
 | **CR15** | Namespace root — per-thread address space anchor |
 
-CR0–CR11 (Zone ①, the live capability registers) are **not** saved on
-CHANGE — they are saved and restored only by explicit SAVE/LOAD
-instructions within the thread. CR13 is the interrupt-vector hardware
-register and is handled separately by the IRQ path.
+CR0–CR4 and CR6–CR11 (Zone ①, the live capability registers) are **not**
+saved on CHANGE — they are saved and restored only by explicit SAVE/LOAD
+instructions within the thread. CR5 is the exception: CHANGE re-installs it
+from the incoming thread's Zone ④ bounds automatically. CR13 is the
+interrupt-vector hardware register and is handled separately by the IRQ path.
 
 CR7–CR11 (Prog zone) are saved as part of Zone ① via SAVE/LOAD, not
 via CHANGE. The boot sequence does not touch them; they start at whatever

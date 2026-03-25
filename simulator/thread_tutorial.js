@@ -64,7 +64,7 @@ ${this._memMap(null)}
 <tr><td>+246</td><td>CR2</td><td>General-purpose</td><td>Programmer</td></tr>
 <tr><td>+247</td><td>CR3</td><td>General-purpose</td><td>Programmer</td></tr>
 <tr><td>+248</td><td>CR4</td><td>General-purpose</td><td>Programmer</td></tr>
-<tr><td>+249</td><td>CR5</td><td>General-purpose</td><td>Programmer</td></tr>
+<tr><td>+249</td><td>CR5</td><td>Heap GT \u00b7 Zone \u2463 bounds (words 17\u201380) \u00b7 installed by CHANGE</td><td><strong>Convention</strong></td></tr>
 <tr><td>+250</td><td>CR6</td><td>C-list view (E+M+B?-only) \u00b7 re-derived on CALL/RETURN/CHANGE</td><td><strong>Architecture</strong></td></tr>
 <tr><td>+251</td><td>CR7</td><td>General-purpose</td><td>Programmer</td></tr>
 <tr><td>+252</td><td>CR8</td><td>General-purpose</td><td>Programmer</td></tr>
