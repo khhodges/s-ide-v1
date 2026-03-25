@@ -818,9 +818,29 @@ time and never changes; Thread freespace is live.
 ## Zone ④ — Heap
 
 64 words at offsets +17..+80. Fixed size set by the IDE slot metadata
-at design time. Objects are allocated from base+17 upward. The GC
-abstraction manages the heap — the G bit in Word 3 of each live GT
-enables mark-and-sweep collection of unreachable heap objects.
+at design time. Objects are allocated from base+17 upward using bump
+allocation; DR5 tracks the current frontier (offset from word 17 to the
+next free word).
+
+**Garbage collection.** The G bit in Word 3 of each live GT is the mark
+bit. The GC abstraction performs mark-and-sweep over Zone ④:
+
+1. **Mark** — starting from the Thread GT in CR12 (the sole GC root), the
+   collector traces every reachable GT in the heap and sets its G bit.
+2. **Sweep** — any heap object whose G bit is clear after the mark phase is
+   unreachable and is reclaimed.
+3. **Compact** — the live set is moved toward the heap base (word 17),
+   closing gaps left by swept objects. All GT references inside the live
+   set are updated to reflect new locations.
+4. **DR5 reset** — after compaction the collector resets DR5 to the offset
+   of the word immediately following the compacted live set. This is
+   critical: DR5 would otherwise point into the middle of compacted data,
+   corrupting subsequent allocations.
+
+GC does not touch the LIFO stack, the GT zone (Zone ①), or the Data
+Registers other than DR5. The heap ceiling (word 80) is never moved.
+Collection is triggered automatically on RETURN; the IDE also provides a
+manual trigger for interactive inspection.
 
 ---
 

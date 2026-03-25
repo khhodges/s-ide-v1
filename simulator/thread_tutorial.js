@@ -134,7 +134,9 @@ ${this._memMap(null)}
 <tr><td>limit (bits 16\u20130)</td><td>Total lump word count \u2212 1</td></tr>
 </table>
 <div class="sr-key-concept"><div class="sr-concept-title">Why Fixed at Design Time?</div>
-<p>The IDE declares heap size as part of the thread\u2019s capability contract. A thread cannot silently consume unbounded memory \u2014 it must declare its maximum heap at upload time, and Navana enforces that limit at allocation. This makes memory usage auditable before the program runs.</p></div>`
+<p>The IDE declares heap size as part of the thread\u2019s capability contract. A thread cannot silently consume unbounded memory \u2014 it must declare its maximum heap at upload time, and Navana enforces that limit at allocation. This makes memory usage auditable before the program runs.</p></div>
+<div class="sr-key-concept"><div class="sr-concept-title">Garbage Collection and DR5</div>
+<p>GC uses the <strong>G bit</strong> (Word 3 of each GT) as the mark bit. The collector traces all GTs reachable from the Thread GT in CR12 (the sole root), marks them, sweeps unreachable objects, then <strong>compacts</strong> the live set toward heap base (word 17). After compaction, <strong>DR5 is reset</strong> to the offset of the word immediately after the compacted live set \u2014 without this reset, DR5 would point into the middle of valid data and corrupt the next allocation. GC leaves the LIFO stack, GT zone, and all other DRs untouched. Collection fires automatically on RETURN; the <strong>Run\u202fGC</strong> button in the simulator provides a manual trigger.</p></div>`
             },
             {
                 title: '\u2464 Data Registers \u2014 The Register File',
