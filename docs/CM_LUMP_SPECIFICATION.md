@@ -869,13 +869,13 @@ install time and rejects the binary if any freespace word is non-zero.
 | Freespace scan | Words cw+1..lumpSize-cc-1 | Zone ③ only (words 45..175) |
 | Zone ① scan | Not applicable | Skipped — pre-populated |
 | Entry point | PC = 1 on every CALL | Never — not callable |
-| Transient CR14 | Code view (X) derived on CALL | Not applicable |
-| Transient CR6 | C-list view (L) derived on CALL | Not applicable |
+| Transient CR14 | Code view (X) derived on CALL | Loaded into CR12 |
+| Transient CR6 | C-list view (L) derived on CALL | Reconstructed on SWITCH |
 | Issued GTs | One E-GT (caller holds) | E-GT (Scheduler) + RW-GT (Thread) |
 | GC interaction | G bit in lump's NS slot | G bits in all live CRs in Zone ① |
 | CHANGE saves | Not applicable | CR12 · STO · DR0–DR15 · PC · FLAGS · CR14 · CR15 |
 | Zip format | `*.lump.zip` | `*.thread.zip` |
-| lumpSize | 2^n, compiler-chosen | Fixed 2^8 = 256 words |
+| lumpSize | 2^n, compiler-chosen | IDE defined 2^n (< 1024 words) |
 | Header word | 0xF8xx_xxxx (typ=00) | 0xF900_020C (typ=10, cw=0, cc=12) |
 
 ---
@@ -907,17 +907,17 @@ list only the abstractions their application references.
 
 ## Namespace LUMP Header Word (Word 0)
 
-A Namespace LUMP is a callable lump (`typ=00`) if it contains
-initialisation microcode (PC=1 on first CALL), or a clist-only lump
-(`typ=10`) if the NS Table is the sole content. Boot.NS uses `typ=00`
-because it runs the boot microcode sequence.
+A Namespace LUMP is always a clist-only lump (`typ=10`). It contains no
+executable code — the body is Binary Data (NS Table entries). `cw` is
+always `0` and there is no c-list of capability slots; the tail of the
+lump holds the NS Table entries, not GT Word 0 slots.
 
 ### Boot.NS Header
 
 ```
 31      27 26    23 22                10 9   8 7              0
 +──────────+────────+──────────────────+──────+────────────────+
-│ 0x1F [5] │ n-6[4] │     cw [13]      │00[2] │    cc [8]      │
+│ 0x1F [5] │ n-6[4] │     cw=0 [13]    │10[2] │    cc [8]      │
 +──────────+────────+──────────────────+──────+────────────────+
 ```
 
@@ -925,15 +925,15 @@ because it runs the boot microcode sequence.
 |-------|--------------|---------|
 | magic | 0x1F | Traps if executed out-of-sequence |
 | n-6   | 8 (2^14 = 16 384 words) | Covers full 64 KB physical address space |
-| cw    | boot sequence word count | Words 1..cw are boot microcode |
-| typ   | 00 | Callable — PC=1 on CALL, runs boot dispatcher |
-| cc    | 3 | C-list: Mint E-GT, Scheduler E-GT, Locator E-GT |
+| cw    | 0 | No code section — NS Table is binary data only |
+| typ   | 10 | clist-only — not callable, no init microcode |
+| cc    | 3 | Locator count embedded in header; no GT Word 0 c-list slots |
 
-### Application NS Header (pure-directory variant)
+### Application NS Header
 
 ```
-Boot.NS  (n=14, cw=BOOT_CODE_LEN, cc=3, typ=00):  0xF_nnnnn_00_03
-App.NS   (n=10, cw=INIT_CODE_LEN, cc=4, typ=00):  0xFA0_xxxxx_00_04
+Boot.NS  (n=14, cw=0, cc=3, typ=10):  0xFF00_0003
+App.NS   (n=10, cw=0, cc=4, typ=10):  0xFA00_0004
 ```
 
 ---
@@ -947,12 +947,10 @@ issue GTs that reference addresses beyond the NS LUMP's limit.
 
 ```
 ┌─────────────────────────────────────────────────────────┐  ← base
-│  Word 0     NS LUMP header                              │
-│  Words 1..cw  Boot / init microcode                     │
-│  Words cw+1..NS_TABLE_START-1  Freespace (all-zero)     │
-│  Words NS_TABLE_START..NS_TABLE_END  NS Table           │  ← N × 3 words
-│  Words NS_TABLE_END+1..lumpSize-cc-1  Trailing zeros    │
-│  Words lumpSize-cc..lumpSize-1  C-list                  │
+│  Word 0     NS LUMP header (typ=10, cw=0)               │
+│  Words 1..NS_TABLE_START-1  Freespace (all-zero)        │
+│  Words NS_TABLE_START..NS_TABLE_END  NS Table           │  ← N × 3 words (Binary Data)
+│  Words NS_TABLE_END+1..lumpSize-1  Trailing zeros       │
 └─────────────────────────────────────────────────────────┘  ← base + lumpSize - 1
 ```
 
@@ -960,10 +958,8 @@ issue GTs that reference addresses beyond the NS LUMP's limit.
 
 | Region | Start | End | Size | Contents |
 |--------|-------|-----|------|----------|
-| Boot microcode | 0x0001 | 0x000B | 11 words | BOOT_SEQ pseudo-assembly (B:00–B:08) |
-| NS LUMP freespace | 0x000C | 0xFCFF | variable | All zero — Mint-verified |
-| NS Table | 0xFD00 | 0xFD83 | 44 × 3 = 132 words | 44 NS slots × 3 words each |
-| C-list (Mint, Sched, Locator) | 0xFD84 | 0xFD86 | 3 words | E-GT Word 0 × 3 |
+| NS LUMP freespace | 0x0001 | 0xFCFF | variable | All zero — Mint verified by CRC scan per slot |
+| NS Table | 0xFD00 | 0xFD83 | 44 × 3 = 132 words | 44 NS slots × 3 words each (Binary Data) |
 
 The NS Table lives at a **hardware-known fixed offset** within Boot.NS.
 On Tang Nano 20 K, `NS_TABLE_BASE = 0xFD00` is wired in the decoder;
@@ -1273,10 +1269,11 @@ Boot.NS (Slot 0) is a special case of the Namespace LUMP:
 |----------|---------|---------------------|
 | Base | 0x0000 | Declared in manifest |
 | limit_offset | Entire RAM − 1 | 2^n − 1 (sub-range) |
-| typ | 00 (callable — runs boot microcode) | 00 or 10 |
+| typ | 10 (clist-only — no init microcode) | 10 always |
+| cw | 0 | 0 always |
 | N (NS Table entries) | All 46 boot slots | App-specific count |
 | NS Table location | `NS_TABLE_BASE = 0xFD00` (hardware fixed) | Declared in manifest or header field |
-| C-list | Mint, Scheduler, Locator (cc=3) | App-chosen (cc=1..255) |
+| Locators (cc) | 3 (Mint, Scheduler, Locator — header field only, no GT slots) | App-chosen count (header field only) |
 | Issued by | Hardware at power-on (pre-written) | Mint.Lump() at install time |
 | Distribution | Embedded in FPGA bitstream | namespace.zip |
 
@@ -1292,16 +1289,16 @@ already owns.
 
 | Property | Function Abstraction | Namespace LUMP |
 |----------|---------------------|----------------|
-| Word 0 | Header (magic 0x1F, typ=00) | Header (magic 0x1F, typ=00 or 10) |
-| cw | Code words (methods + dispatcher) | Init microcode (may be 0) |
-| cc | Compiler-fixed (deps) | Mint E-GT + Scheduler + Locator(s) |
-| Body | Code + freespace + c-list | Code + freespace + **NS Table** + c-list |
+| Word 0 | Header (magic 0x1F, typ=00) | Header (magic 0x1F, typ=10) |
+| cw | Code words (methods + dispatcher) | Always 0 — no code section |
+| cc | Compiler-fixed (deps) | None — NS Table only (binary data, not GT slots) |
+| Body | Code + freespace + c-list | Freespace + **NS Table** (Binary Data) |
 | Physical scope | One lump region | **Entire application address space** |
 | NS Table | None — uses parent NS | **IS the NS Table** |
 | Outform entries | Never — all deps resident | Supported — lazy-loads on demand |
-| Lazy load | Via Locator in c-list | **Hosts** the Locator via its c-list |
+| Lazy load | Via Locator in c-list | **Hosts** the Locator — cc field identifies Locator count |
 | Distribution | `*.lump.zip` | `*.namespace.zip` with manifest |
-| CALL target | Yes — method dispatcher at PC=1 | Yes (typ=00) or No (typ=10) |
+| CALL target | Yes — method dispatcher at PC=1 | No |
 
 ---
 
@@ -1313,30 +1310,30 @@ already owns.
 |----------|---------------------|--------|----------------|
 | **Purpose** | Callable code unit (one abstraction) | Live execution context (one thread) | Address-space root + NS Table + lazy-load host |
 | **Word 0** | Header `0x1F` | Header `0x1F` | Header `0x1F` |
-| **`typ` field** | `00` — callable | `10` — clist-only | `00` (with init code) or `10` (directory only) |
-| **`cw` field** | Code word count (≥ 0) | Always `0` | Init microcode length (may be `0`) |
-| **`cc` field** | Compiler-chosen dep count | Always `12` (CR0–CR11) | `3`+ (Mint · Scheduler · Locator) |
+| **`typ` field** | `00` — callable | `10` — clist-only | `10` only |
+| **`cw` field** | Code word count (≥ 0) | Always `0` | Always `0` |
+| **`cc` field** | Compiler-chosen dep count | Always `12` (CR0–CR11) | None — NS Table only |
 | **Example header** | `0xF881_AC00` (Decimal, n=7 cw=107 cc=0) | `0xF900_020C` (n=8 cw=0 cc=12) | `0xFF00_0003` (Boot.NS, n=14 cw=0 cc=3) |
-| **Entry point** | PC = 1 on every CALL | Never — not callable | PC = 1 if `typ=00` |
-| **Words 1..cw** | CLOOMC code (dispatcher + methods) | Absent — `cw = 0` | Boot / init microcode |
-| **Freespace zone** | Compile-time fixed · all-zero · immutable | Dynamic 131 words — Stack ↓ and Heap ↑ collide | Between init code and NS Table · all-zero |
-| **C-list zone** | Last `cc` words · dep E-GTs · compiler-set | Last 12 words · CR0–CR11 boot credentials | Last `cc` words · Mint, Scheduler, Locator E-GTs |
+| **Entry point** | PC = 1 on every CALL | Never — not callable | Never — not callable |
+| **Words 1..cw** | CLOOMC code (dispatcher + methods) | Absent — `cw = 0` | Absent — `cw = 0` |
+| **Freespace zone** | Compile-time fixed · all-zero · immutable | Dynamic 131 words — Stack ↓ and Heap ↑ collide | Words 1..NS_TABLE_START-1 · all-zero |
+| **C-list zone** | Last `cc` words · dep E-GTs · compiler-set | Last 12 words · CR0–CR11 boot credentials | BINARY DATA (NS Table entries, not GT Word 0 slots) |
 | **Unique body** | Code only | 5 zones: Header · Caps · Stack · Free · Heap · DR | **NS Table** (N × 3-word entries: Live / Outform / NULL) |
 | **Physical scope** | One lump region | One 256-word thread slot | **Entire application address space** |
 | **NS Table** | None — uses parent NS | None — uses parent NS | **IS the NS Table** |
 | **Outform support** | No — all deps must be Live at call time | No | **Yes** — Absent event → Locator fetch |
 | **Lazy load** | Not applicable | Not applicable | **Hosts** the Locator; fetches from Home Base IDE |
 | **Issued by** | `Mint.Lump(base, n)` | `Mint.Thread(base, n)` | `Mint.Lump(base, n)` or FPGA-embedded (Boot.NS) |
-| **Transient CR14** | Code view (X) words 1..cw | Not derived | Code view (X) if `typ=00` |
-| **Transient CR6** | C-list view (L) last `cc` words | Not derived | C-list view (L) last `cc` words |
+| **Transient CR14** | Code view (X) words 1..cw | Loaded into CR12 | Not applicable |
+| **Transient CR6** | C-list view (L) last `cc` words | Reconstructed on SWITCH | Not applicable |
 | **Issued GTs** | One E-GT (caller holds) | E-GT (Scheduler) + RW-GT (Thread) | One E-GT (spans whole address range) |
 | **GC interaction** | G bit in NS slot Word 3 | G bits in all live CRs in Zone ① | G bits in all Live NS Table entries (Word 3) |
 | **CHANGE saves** | Not applicable | CR12 · STO · DR0–DR15 · PC · FLAGS · CR14 · CR15 | Not applicable (not a thread) |
-| **lumpSize** | 2^n compiler-chosen (64–16 384 words) | Fixed 2^8 = 256 words | 2^n IDE-chosen; Boot.NS = 2^14 = 16 384 words |
-| **Freespace verified by Mint** | Yes — words cw+1..lumpSize-cc-1 all-zero | Zone ③ only (words 45..175); Zone ① skipped | Yes — between init code end and NS Table start |
+| **lumpSize** | 2^n compiler-chosen (64–16 384 words) | IDE defined 2^n (< 1024 words) | 2^n IDE-chosen; Boot.NS = 2^14 = 16 384 words |
+| **Freespace verified by Mint** | Yes — words cw+1..lumpSize-cc-1 all-zero | Zone ③ only (words 45..175); Zone ① skipped | Scan CRC per slot |
 | **Distribution format** | `*.lump.zip` | `*.thread.zip` | `*.namespace.zip` with `manifest.json` |
 | **Simulator NS slot** | Most slots (Salvation=4, Mint=6, …) | Slots 1 and 45 | Slot 0 (Boot.NS) |
-| **CALL target?** | Yes | No | Yes (typ=00) or No (typ=10) |
+| **CALL target?** | Yes | No | No |
 
 ---
 
