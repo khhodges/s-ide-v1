@@ -1205,16 +1205,21 @@ function renderBootNSImage() {
 
 // Thread slot layout constants (words within a 256-word slot)
 // Word 0 is the lump header (0xF900_020C: magic=0x1F, n-6=2, cw=0, typ=10, cc=12).
-// All five zones are offset by +1 to make room for the header word.
-// Freespace is 131 words (not 132) — the header consumes 1 word.
+// Physical layout (word 0 at top, word 255 at bottom):
+//   +0          Lump Header  (1 word)
+//   +1  … +16   Zone ⑤ Data Registers — DR0..DR15  (16 words)
+//   +17 … +80   Zone ④ Heap ↑ — fixed size, grows upward  (64 words)
+//   +81 … +211  Zone ③ Freespace — dynamic gap  (131 words)
+//   +212 … +243 Zone ② LIFO Stack ↓ — STO initial = 212  (32 words)
+//   +244 … +255 Zone ① Capabilities — CR0..CR11 GT Word 0; c-list tail  (12 words)
 const THREAD_LAYOUT = {
     HEADER_WORD:  0,
     THREAD_HEADER: 0xF900_020C,
-    CAPS_START:   1,   CAPS_END:   12,  CAPS_WORDS:   12,
-    STACK_START: 13,   STACK_END:  44,  STACK_WORDS:  32,
-    FREE_START:  45,   FREE_END:  175,  FREE_WORDS:  131,
-    HEAP_START: 176,   HEAP_END:  239,  HEAP_WORDS:   64,
-    DR_START:   240,   DR_END:    255,  DR_WORDS:     16,
+    DR_START:     1,   DR_END:     16,  DR_WORDS:     16,
+    HEAP_START:  17,   HEAP_END:   80,  HEAP_WORDS:   64,
+    FREE_START:  81,   FREE_END:  211,  FREE_WORDS:  131,
+    STACK_START: 212,  STACK_END: 243,  STACK_WORDS:  32,
+    CAPS_START:  244,  CAPS_END:  255,  CAPS_WORDS:   12,
     TOTAL:      256,
 };
 const THREAD_NS_SLOTS = new Set([1, 45]);
@@ -1245,30 +1250,55 @@ function renderThreadMemoryLayout(nsIndex) {
     html += ` &nbsp;<span style="color:#64748b;">0xF900_020C — never executed · traps if PC reaches word 0</span>`;
     html += `</div>`;
 
-    // ── Zone ①: Capabilities ──────────────────────────────────────────────
-    html += secHdr('①', 'Capabilities', `12 words · CR0–CR11 · offset +1 … +12 · saved/restored on context switch`, '#f4b942');
-    html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>CR</th><th>Offset</th><th>Addr</th><th>Hex</th><th>Decoded (GT)</th></tr></thead><tbody>';
-    for (let i = 0; i < TL.CAPS_WORDS; i++) {
-        const off  = TL.CAPS_START + i;
+    // ── Zone ⑤: Data Registers (+1 … +16) ───────────────────────────────────
+    html += secHdr('⑤', 'Data Registers', '16 words · DR0–DR15 · offset +1 … +16 · head of the slot (after header)', '#a855f7');
+    html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>DR</th><th>Offset</th><th>Addr</th><th>Value (hex)</th><th>Value (dec)</th></tr></thead><tbody>';
+    for (let i = 0; i < TL.DR_WORDS; i++) {
+        const off  = TL.DR_START + i;
         const word = sim.memory[slotBase + off] || 0;
-        const hex  = hexOf(word);
-        let decoded;
-        if (word === 0) {
-            decoded = '<span style="color:#4b5563;">NULL</span>';
-        } else {
-            const gt = sim.parseGT(word);
-            const perms = Object.entries(gt.permissions).filter(([,v])=>v).map(([k])=>k).join('') || 'none';
-            const lbl = sim.nsLabels[gt.index] || '';
-            decoded = `<span style="color:#60a5fa;">${gt.typeName}</span> Slot=${gt.index}${lbl ? ' <i style="color:#93c5fd;">('+lbl+')</i>' : ''} p=[${perms}] seq${gt.gt_seq}`;
-        }
-        html += `<tr><td style="color:#f4b942;">CR${i}</td><td style="color:#555;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.9);font-family:monospace;">${hex}</td><td>${decoded}</td></tr>`;
+        const rowStyle = word ? '' : ' style="opacity:0.28;"';
+        html += `<tr${rowStyle}><td style="color:#a855f7;">DR${i}</td><td style="color:#555;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:#c084fc;font-family:monospace;">${hexOf(word)}</td><td style="color:#9ca3af;">${word >>> 0}</td></tr>`;
     }
     html += '</tbody></table>';
 
-    // ── Zone ②: LIFO Stack ────────────────────────────────────────────────
+    // ── Zone ④: Heap (+17 … +80) ─────────────────────────────────────────
+    let heapNonZero = 0;
+    for (let i = TL.HEAP_START; i <= TL.HEAP_END; i++) {
+        if (sim.memory[slotBase + i]) heapNonZero++;
+    }
+    html += secHdr('④', 'Heap ↑', `64 words · offset +17 … +80 · base ${addrOf(TL.HEAP_START)} · ${heapNonZero} word${heapNonZero!==1?'s':''} allocated`, '#22c55e');
+    html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>Off</th><th>Addr</th><th>Hex</th><th>Decoded</th></tr></thead><tbody>';
+    for (let i = 0; i < TL.HEAP_WORDS; i++) {
+        const off  = TL.HEAP_START + i;
+        const word = sim.memory[slotBase + off] || 0;
+        const rowStyle = word ? '' : ' style="opacity:0.22;"';
+        const decoded  = word ? `<span style="color:#9ca3af;">0x${word.toString(16).toUpperCase().padStart(8,'0')}</span>` : '<span style="color:#374151;">free</span>';
+        html += `<tr${rowStyle}><td style="color:#22c55e;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.8);font-family:monospace;">${hexOf(word)}</td><td>${decoded}</td></tr>`;
+    }
+    html += '</tbody></table>';
+
+    // ── Zone ③: Freespace (+81 … +211) ───────────────────────────────────
+    let freeNonZero = 0;
+    for (let i = TL.FREE_START; i <= TL.FREE_END; i++) {
+        if (sim.memory[slotBase + i]) freeNonZero++;
+    }
+    html += secHdr('③', 'Freespace', `131 words · offset +81 … +211 · ${freeNonZero} non-zero · shrinks as stack grows ↓ and heap grows ↑`, '#6b7280');
+    if (freeNonZero === 0) {
+        html += '<div class="thread-free-empty">All 131 words are zero — region is unallocated.</div>';
+    } else {
+        html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>Off</th><th>Addr</th><th>Hex</th><th>Note</th></tr></thead><tbody>';
+        for (let i = TL.FREE_START; i <= TL.FREE_END; i++) {
+            const word = sim.memory[slotBase + i] || 0;
+            if (!word) continue;
+            html += `<tr><td style="color:#6b7280;">+${i}</td><td style="font-family:monospace;">${addrOf(i)}</td><td style="color:rgba(206,145,120,0.8);font-family:monospace;">${hexOf(word)}</td><td style="color:#4b5563;">non-zero</td></tr>`;
+        }
+        html += '</tbody></table>';
+    }
+
+    // ── Zone ②: LIFO Stack (+212 … +243) ─────────────────────────────────
     const stackWords = sim.memory.slice(slotBase + TL.STACK_START, slotBase + TL.STACK_END + 1);
     const stackUsed  = stackWords.filter(Boolean).length;
-    html += secHdr('②', 'LIFO Stack ↓', `32 words · STO starts at 12 · frames occupy words 13–44 · offset +13 … +44 · ${stackUsed} word${stackUsed!==1?'s':''} non-zero`, '#38bdf8');
+    html += secHdr('②', 'LIFO Stack ↓', `32 words · STO starts at 212 · first CALL: words 211–210 · offset +212 … +243 · ${stackUsed} word${stackUsed!==1?'s':''} non-zero`, '#38bdf8');
     html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>Off</th><th>Addr</th><th>Hex</th><th>Decoded</th></tr></thead><tbody>';
     for (let i = 0; i < TL.STACK_WORDS; i++) {
         const off  = TL.STACK_START + i;
@@ -1292,48 +1322,23 @@ function renderThreadMemoryLayout(nsIndex) {
     }
     html += '</tbody></table>';
 
-    // ── Zone ③: Freespace ─────────────────────────────────────────────────
-    let freeNonZero = 0;
-    for (let i = TL.FREE_START; i <= TL.FREE_END; i++) {
-        if (sim.memory[slotBase + i]) freeNonZero++;
-    }
-    html += secHdr('③', 'Freespace', `131 words · offset +45 … +175 · ${freeNonZero} non-zero · shrinks as stack grows ↓ and heap grows ↑`, '#6b7280');
-    if (freeNonZero === 0) {
-        html += '<div class="thread-free-empty">All 131 words are zero — region is unallocated.</div>';
-    } else {
-        html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>Off</th><th>Addr</th><th>Hex</th><th>Note</th></tr></thead><tbody>';
-        for (let i = TL.FREE_START; i <= TL.FREE_END; i++) {
-            const word = sim.memory[slotBase + i] || 0;
-            if (!word) continue;
-            html += `<tr><td style="color:#6b7280;">+${i}</td><td style="font-family:monospace;">${addrOf(i)}</td><td style="color:rgba(206,145,120,0.8);font-family:monospace;">${hexOf(word)}</td><td style="color:#4b5563;">non-zero</td></tr>`;
+    // ── Zone ①: Capabilities (+244 … +255) ───────────────────────────────
+    html += secHdr('①', 'Capabilities', `12 words · CR0–CR11 · offset +244 … +255 · c-list tail · saved/restored on context switch`, '#f4b942');
+    html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>CR</th><th>Offset</th><th>Addr</th><th>Hex</th><th>Decoded (GT)</th></tr></thead><tbody>';
+    for (let i = 0; i < TL.CAPS_WORDS; i++) {
+        const off  = TL.CAPS_START + i;
+        const word = sim.memory[slotBase + off] || 0;
+        const hex  = hexOf(word);
+        let decoded;
+        if (word === 0) {
+            decoded = '<span style="color:#4b5563;">NULL</span>';
+        } else {
+            const gt = sim.parseGT(word);
+            const perms = Object.entries(gt.permissions).filter(([,v])=>v).map(([k])=>k).join('') || 'none';
+            const lbl = sim.nsLabels[gt.index] || '';
+            decoded = `<span style="color:#60a5fa;">${gt.typeName}</span> Slot=${gt.index}${lbl ? ' <i style="color:#93c5fd;">('+lbl+')</i>' : ''} p=[${perms}] seq${gt.gt_seq}`;
         }
-        html += '</tbody></table>';
-    }
-
-    // ── Zone ④: Heap ──────────────────────────────────────────────────────
-    let heapNonZero = 0;
-    for (let i = TL.HEAP_START; i <= TL.HEAP_END; i++) {
-        if (sim.memory[slotBase + i]) heapNonZero++;
-    }
-    html += secHdr('④', 'Heap ↑', `64 words · offset +176 … +239 · base ${addrOf(TL.HEAP_START)} · ${heapNonZero} word${heapNonZero!==1?'s':''} allocated`, '#22c55e');
-    html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>Off</th><th>Addr</th><th>Hex</th><th>Decoded</th></tr></thead><tbody>';
-    for (let i = 0; i < TL.HEAP_WORDS; i++) {
-        const off  = TL.HEAP_START + i;
-        const word = sim.memory[slotBase + off] || 0;
-        const rowStyle = word ? '' : ' style="opacity:0.22;"';
-        const decoded  = word ? `<span style="color:#9ca3af;">0x${word.toString(16).toUpperCase().padStart(8,'0')}</span>` : '<span style="color:#374151;">free</span>';
-        html += `<tr${rowStyle}><td style="color:#22c55e;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.8);font-family:monospace;">${hexOf(word)}</td><td>${decoded}</td></tr>`;
-    }
-    html += '</tbody></table>';
-
-    // ── Zone ⑤: Data Registers ────────────────────────────────────────────
-    html += secHdr('⑤', 'Data Registers', '16 words · DR0–DR15 · offset +240 … +255 · always at the base of the slot', '#a855f7');
-    html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>DR</th><th>Offset</th><th>Addr</th><th>Value (hex)</th><th>Value (dec)</th></tr></thead><tbody>';
-    for (let i = 0; i < TL.DR_WORDS; i++) {
-        const off  = TL.DR_START + i;
-        const word = sim.memory[slotBase + off] || 0;
-        const rowStyle = word ? '' : ' style="opacity:0.28;"';
-        html += `<tr${rowStyle}><td style="color:#a855f7;">DR${i}</td><td style="color:#555;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:#c084fc;font-family:monospace;">${hexOf(word)}</td><td style="color:#9ca3af;">${word >>> 0}</td></tr>`;
+        html += `<tr><td style="color:#f4b942;">CR${i}</td><td style="color:#555;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.9);font-family:monospace;">${hex}</td><td>${decoded}</td></tr>`;
     }
     html += '</tbody></table>';
 
