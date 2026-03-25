@@ -535,7 +535,7 @@ Note: clistStart = lumpSize - cc = 256 - 46 = 210
 
 The Thread is a specialised lump. Like every other lump it is a
 capability-secured, power-of-2 memory region with a header word at Word 0
-and a c-list at its tail. It occupies one Object NS slot and is assigned a
+and a c-list at its tail and freespace for stack and heap growth in between. It occupies one Object NS slot and is assigned a
 single E-GT by Mint at creation time.
 
 What makes the Thread distinct is how the rest of the lump is used.
