@@ -178,8 +178,8 @@ more than one group is rejected by Mint as malformed.
 | NULL GT           | 00  | 0 (all clear)       | All bits zero — faults on any use |
 | ABSTRACT GT       | 10  | 0 (no rights)       | Self-defining constant or PassKey — no RAM |
 | OUTFORM GT        | 11  | (any)               | Lump registered but not yet resident — fires Absent event on LOAD |
-| *(CR14 transient)*| 01  | B X                 | Derived from NS slot on CALL; never issued or stored |
-| *(CR6 transient)* | 01  | B L                 | Derived from NS slot on CALL; never issued or stored |
+| *(CR14 transient)*| 01  | X                   | Derived from NS slot on CALL; never issued or stored |
+| *(CR6 transient)* | 01  | L                   | Derived from NS slot on CALL; never issued or stored |
 
 ---
 
@@ -297,8 +297,8 @@ issued or stored.
 | Token    | Region                         | Permissions | Mounted as   | Issued? |
 |----------|--------------------------------|-------------|--------------|---------|
 | **E-GT** | Entire lump (word 0..size-1)   | B E         | held by caller | Yes — only issued GT |
-| CR14 (X) | Words 1..lumpSize-cc-1         | B X         | CR14 on CALL | No — transient only |
-| CR6  (L) | Words lumpSize-cc..lumpSize-1  | B L         | CR6 on CALL  | No — transient only |
+| CR14 (X) | Words 1..lumpSize-cc-1         | X           | CR14 on CALL | No — transient only |
+| CR6  (L) | Words lumpSize-cc..lumpSize-1  | L           | CR6 on CALL  | No — transient only |
 
 If `cc = 0`: CR6 is NULL GT after CALL; the derived X view still covers the
 full code section.
