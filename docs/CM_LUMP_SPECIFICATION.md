@@ -389,6 +389,19 @@ SlideRule.lump.zip
 +-- SlideRule.bin    ← raw lump binary: header + code + freespace + c-list
 ```
 
+### Single Thread Upload
+
+```
+MyApp.thread.zip
++-- MyApp.thread.bin    ← 256-word Thread lump binary (1 024 bytes)
+                           Word 0:       0xF900_020C (header)
+                           Words 1..12:  Zone ① — initial CR0..CR11 GT Word 0 values
+                           Words 13..44: Zone ② — LIFO Stack (all zero at creation)
+                           Words 45..175: Zone ③ — Freespace (all zero — Mint verifies)
+                           Words 176..239: Zone ④ — Heap (all zero at creation)
+                           Words 240..255: Zone ⑤ — DR0..DR15 (all zero at creation)
+```
+
 ### Namespace Bundle
 
 ```
