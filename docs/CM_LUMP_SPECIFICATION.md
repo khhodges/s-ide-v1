@@ -535,8 +535,7 @@ Note: clistStart = lumpSize - cc = 256 - 46 = 210
 
 The Thread is a specialised lump. Like every other lump it is a
 capability-secured, power-of-2 memory region with a header word at Word 0
-and a c-list at its tail and freespace for stack and heap growth in between. It occupies one Object NS slot and is assigned a
-single E-GT by Mint at creation time.
+and a c-list at its tail and freespace for stack and heap growth in between. The Thread GT occupies one Object NS slot and is assigned a single zero permissions GT by Mint at creation time. Access rights are under M (TSB microcode) control like the NS and CR6.
 
 What makes the Thread distinct is how the rest of the lump is used.
 A function abstraction lump holds executable CLOOMC code followed by
