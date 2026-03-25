@@ -457,7 +457,7 @@ reference that is defined by the object reference.
 | Entry point integrity | PC always starts at 1 — the header word cannot be executed |
 | CRC check | Every LOAD validates CRC-16/CCITT over Word 0[24:0] + Word 1 + Word 2 |
 | SAVE gating | B=0 in Word 0 bit 31 causes SAVE to fault — PassKeys and session GTs cannot be copied |
-| GC correctness | Mark-and-sweep via G bit — cycles collected, no per-operation overhead |
+| GC correctness | Mark-and-sweep via G bit — cycles collected, no per-operation overhead (deterministic and real-time, no applition stalls) |
 
 ### Policy (Mint + Namespace enforced)
 
