@@ -579,11 +579,11 @@ Word addresses increase downward from the base.
 │  ① Capabilities                             │  [12 words]
 │     CR0 … CR11 — Golden Token words         │  (one 32-bit GT Word 0 per slot)
 │     Fixed zone — mLoad keeps this zone      │  = the c-list tail (cc=12)
-├─────────────────────────────────────────────┤  ← base  (+13)  ← stack top
+├─────────────────────────────────────────────┤  ← base  (+12/+13)  ← STO initial = 12 (empty)
 │  ② LIFO Stack  ↓                            │  [32 words]
-│     CALL: 2-word frame  [E-GT · frame word] │
-│     LAMBDA: 1-word frame  [frame word]      │
-│     Grows downward; SP tracks depth         │
+│     CALL: 2-word frame  [E-GT · frame word] │  STO += 2  (first CALL: words 13–14)
+│     LAMBDA: 1-word frame  [frame word]      │  STO += 1  (first LAMBDA: word 13)
+│     Grows downward; STO hidden register     │
 ├─────────────────────────────────────────────┤  ← base  (+45)
 │  ③ Freespace                                │  [131 words]
 │     Unallocated — dynamic                   │
@@ -663,14 +663,18 @@ lump memory by SAVE/LOAD.
 +5   CR4    — NS write authority
 +6   CR5    — (general — working capability)
 +7   CR6    — transient C-list view (set by CALL, not stored permanently)
-+8   CR7    — (general — working capability)
-+9   CR8    — (general — working capability)
-+10  CR9    — (general — working capability)
-+11  CR10   — (general — working capability)
-+12  CR11   — (general — working capability)
++8   CR7    — Prog zone · programmer-defined (no arch role · not set at boot)
++9   CR8    — Prog zone · programmer-defined (no arch role · not set at boot)
++10  CR9    — Prog zone · programmer-defined (no arch role · not set at boot)
++11  CR10   — Prog zone · programmer-defined (no arch role · not set at boot)
++12  CR11   — Prog zone · programmer-defined (no arch role · not set at boot)
 ```
 
-### CR12–CR15 — Privileged Zone
+CR7–CR11 form the **Prog zone** — five slots with no architecture-assigned
+role. The IDE and application programmer use them freely. They are not
+touched by the boot sequence and are not saved on CHANGE.
+
+### CR12–CR15 — Privileged Zone (Priv zone)
 
 CR12–CR15 are not stored in Zone ① of the Thread lump. They are held
 exclusively in the hardware CR file and are loaded via `mLoad(NS Slot 1)`
@@ -678,32 +682,45 @@ at boot step B:02. They carry zero permissions in their stored GT Word 0
 and are of Inform-type — the hardware returns a constant on DREAD. They
 are never written to lump memory and are never accessible via DREAD.
 
+**CR12 — Thread Identity.** CR12 specifically encodes the Thread lump's
+base address and total word count. It acts as the hardware anchor for the
+stack: the effective stack region is lump words 12 → heap base, with the
+hidden **STO** (Stack Top Offset) register tracking the current top.
+`Mint.Thread` sets STO = 12 at Thread creation — this is the empty-stack
+position; the first pushed word lands at word 13 (Zone ② base). CR12 is
+saved and restored on every CHANGE alongside STO, DR0–DR15, PC, FLAGS,
+CR14, and CR15 (see §CHANGE Context Save below).
+
 ---
 
 ## Zone ② — LIFO Stack
 
 32 words at offsets +13..+44. The stack grows downward (toward higher
-offsets). SP points to the next free slot.
+offsets). **STO** (Stack Top Offset, a hidden per-thread register) tracks
+the current top. `Mint.Thread` initialises STO = 12 at Thread creation
+(the empty-stack sentinel at the Zone ①/② boundary); the first word
+pushed lands at word 13.
 
 ### Frame Formats
 
 ```
-CALL frame (SZ=1 — 2 words):
-  SP+0:  E-GT Word 0 of the callee  (Golden Token, Church-side)
-  SP+1:  Frame word: SZ[1] | return_PC[15] | prev_SP[16]
+CALL frame (SZ=1 — 2 words):      STO += 2 after push
+  STO-1:  E-GT Word 0 of the callee  (Golden Token, Church-side)
+  STO+0:  Frame word: SZ[1] | return_PC[15] | prev_STO[16]
 
-LAMBDA frame (SZ=0 — 1 word):
-  SP+0:  Frame word: SZ[1]=0 | lambda_arg[15] | prev_SP[16]
+LAMBDA frame (SZ=0 — 1 word):     STO += 1 after push
+  STO+0:  Frame word: SZ[1]=0 | lambda_arg[15] | prev_STO[16]
 ```
 
-The RETURN instruction pops the frame, restores SP, and jumps to
-return_PC in the caller's code section. No kernel involvement.
+The RETURN instruction pops the frame, restores STO to the saved
+`prev_STO` value, and jumps to `return_PC` in the caller's code section.
+No kernel involvement.
 
 ### Stack Depth
 
 With 32 words and 2-word CALL frames, the maximum call depth is **16
 nested calls** before the stack overflows into Freespace. The hardware
-detects overflow when SP would reach offset +45 (Zone ③).
+detects overflow when STO would reach offset +45 (Zone ③).
 
 ---
 
@@ -740,6 +757,33 @@ data registers. Always at the physical tail of the Thread lump.
 DR contents are raw 32-bit integers — subject to DREAD/DWRITE via a
 Turing-rights view, never to LOAD/SAVE. A data value cannot be
 reinterpreted as a GT.
+
+---
+
+## CHANGE Context Save
+
+On every **CHANGE** (context switch), the hardware saves the outgoing
+thread's full per-thread state and restores the incoming thread's saved
+state. The exact register set saved/restored is:
+
+| Register | Role |
+|----------|------|
+| **CR12** | Thread Identity (Priv zone) — lump base + word count |
+| **STO** | Stack Top Offset hidden register — current stack depth |
+| **DR0–DR15** | All 16 data registers |
+| **PC** | Program counter |
+| **FLAGS** | Condition flags |
+| **CR14** | Transient code-view (X) — derived fresh on the next CALL |
+| **CR15** | Namespace root — per-thread address space anchor |
+
+CR0–CR11 (Zone ①, the live capability registers) are **not** saved on
+CHANGE — they are saved and restored only by explicit SAVE/LOAD
+instructions within the thread. CR13 is the interrupt-vector hardware
+register and is handled separately by the IRQ path.
+
+CR7–CR11 (Prog zone) are saved as part of Zone ① via SAVE/LOAD, not
+via CHANGE. The boot sequence does not touch them; they start at whatever
+value Zone ① carries in the `*.thread.zip` binary.
 
 ---
 
@@ -829,6 +873,7 @@ install time and rejects the binary if any freespace word is non-zero.
 | Transient CR6 | C-list view (L) derived on CALL | Not applicable |
 | Issued GTs | One E-GT (caller holds) | E-GT (Scheduler) + RW-GT (Thread) |
 | GC interaction | G bit in lump's NS slot | G bits in all live CRs in Zone ① |
+| CHANGE saves | Not applicable | CR12 · STO · DR0–DR15 · PC · FLAGS · CR14 · CR15 |
 | Zip format | `*.lump.zip` | `*.thread.zip` |
 | lumpSize | 2^n, compiler-chosen | Fixed 2^8 = 256 words |
 | Header word | 0xF8xx_xxxx (typ=00) | 0xF900_020C (typ=10, cw=0, cc=12) |
@@ -1286,6 +1331,7 @@ already owns.
 | **Transient CR6** | C-list view (L) last `cc` words | Not derived | C-list view (L) last `cc` words |
 | **Issued GTs** | One E-GT (caller holds) | E-GT (Scheduler) + RW-GT (Thread) | One E-GT (spans whole address range) |
 | **GC interaction** | G bit in NS slot Word 3 | G bits in all live CRs in Zone ① | G bits in all Live NS Table entries (Word 3) |
+| **CHANGE saves** | Not applicable | CR12 · STO · DR0–DR15 · PC · FLAGS · CR14 · CR15 | Not applicable (not a thread) |
 | **lumpSize** | 2^n compiler-chosen (64–16 384 words) | Fixed 2^8 = 256 words | 2^n IDE-chosen; Boot.NS = 2^14 = 16 384 words |
 | **Freespace verified by Mint** | Yes — words cw+1..lumpSize-cc-1 all-zero | Zone ③ only (words 45..175); Zone ① skipped | Yes — between init code end and NS Table start |
 | **Distribution format** | `*.lump.zip` | `*.thread.zip` | `*.namespace.zip` with `manifest.json` |

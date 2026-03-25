@@ -1268,7 +1268,7 @@ function renderThreadMemoryLayout(nsIndex) {
     // ── Zone ②: LIFO Stack ────────────────────────────────────────────────
     const stackWords = sim.memory.slice(slotBase + TL.STACK_START, slotBase + TL.STACK_END + 1);
     const stackUsed  = stackWords.filter(Boolean).length;
-    html += secHdr('②', 'LIFO Stack ↓', `32 words · grows down from word 13 · offset +13 … +44 · ${stackUsed} word${stackUsed!==1?'s':''} non-zero`, '#38bdf8');
+    html += secHdr('②', 'LIFO Stack ↓', `32 words · STO starts at 12 · frames occupy words 13–44 · offset +13 … +44 · ${stackUsed} word${stackUsed!==1?'s':''} non-zero`, '#38bdf8');
     html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>Off</th><th>Addr</th><th>Hex</th><th>Decoded</th></tr></thead><tbody>';
     for (let i = 0; i < TL.STACK_WORDS; i++) {
         const off  = TL.STACK_START + i;
