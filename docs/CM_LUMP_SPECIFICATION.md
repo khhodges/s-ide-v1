@@ -760,6 +760,12 @@ DREAD/DWRITE access to its heap on every context-load without an explicit
 LOAD instruction, while keeping the heap strictly private: the GT covers only
 this thread's Zone ④ and cannot be widened by the programmer.
 
+**DR5 is the heap allocation pointer** — a raw 32-bit offset from Zone ④
+base (word 17) giving the next free word. CR5 and DR5 form the complete
+heap register pair: CR5 is the access right, DR5 is the position. Together
+they are everything the software allocator needs to allocate, read, and write
+heap objects without any further indirection.
+
 ---
 
 ## Zone ② — LIFO Stack
@@ -827,6 +833,13 @@ header).
 DR contents are raw 32-bit integers — subject to DREAD/DWRITE via a
 Turing-rights view, never to LOAD/SAVE. A data value cannot be
 reinterpreted as a GT.
+
+By convention **DR5 is the heap allocation pointer** — a raw 32-bit integer
+offset (relative to Zone ④ base, word 17) giving the next free word in the
+heap. DR5 pairs with CR5 (the Heap GT) to form the complete heap register
+pair: CR5 supplies the access right, DR5 supplies the position. DR5 is
+the only DR with an architecture-level convention; DR0–DR4 and DR6–DR15
+remain fully general-purpose.
 
 ---
 
