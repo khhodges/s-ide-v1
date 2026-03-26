@@ -43,7 +43,7 @@ Because all eight properties collapse to a single code path, the attack surface 
 | **CALL** | Phase 2 (post E-perm check) | Populate both CR6 (c-list) and CR14 (code) from the E_GT, to the callee NS slots for CR6 and CR14 using the Lump header and Base location or for lazy-Load from the Memory Manager. The mLoad is the single point of Trusted Security Code (microcode implemented in open source hardware for public review on GitHub) |
 | **RETURN** | Restoring caller context | Reload caller's CR6 and CR14 from the return frame E-GT using the same rules for CALL |
 | **CHANGE** | Load target thread + restore CRs | Switch thread context; restore per-thread capability set and Reload caller's CR6 and CR14 from the return frame E-GT using the same rules for CALL |
-| **SWITCH** | Context switch to new thread | Load the incoming thread's capability set into CRs |
+| **SWITCH** | Context switch to new Namespace Table in CR15 | in conjunction with the Namespace Abstraction |
 | **TPERM** | Permission transfer phase | Load the delegated GT into the recipient's CR |
 | **LAMBDA** | Closure capture | Load the closed-over GT into the lambda's internal CR slot |
 | **ELOADCALL** | Extended load-and-call | Load GT and immediately populate CRs for the callee entry point |
