@@ -55,6 +55,135 @@ SWITCH, TPERM, LAMBDA, ELOADCALL, and XLOADLAMBDA share a single
 
 ---
 
+## CHANGE Private mLoad — Security Proof
+
+### Why CHANGE Cannot Share the Arbiter
+
+Every other mLoad caller fires the sub-operation exactly once per
+instruction. CHANGE fires it in a multi-step sequence:
+
+1. **LOAD_THREAD** — one mLoad to validate the target thread GT and load
+   it into CR8 (the incoming thread identity)
+2. **RESTORE_CALL / RESTORE_NEXT loop** — up to fifteen sequential mLoad
+   calls, one per CR0–CR14 that appears in the restore mask
+
+If CHANGE shared `u_shared_mload` it would hold the arbiter locked for up
+to **sixteen consecutive mLoad pipelines**. Every other instruction that
+needs mLoad (LOAD, CALL, RETURN, SWITCH, …) would be stalled for the entire
+duration of the context switch. CHANGE therefore owns a private instance so
+its restoration loop runs independently without blocking the rest of the CPU.
+
+### Identity of the Private Instance
+
+The private instance is not a fork, simplified copy, or alternate
+implementation. It is the same class:
+
+```python
+# hardware/change.py, line 52
+u_mload = ChurchMLoad()
+m.submodules.u_mload = u_mload
+```
+
+`ChurchMLoad()` with no arguments inherits the global `ENABLE_SEAL_CHECK`
+flag (from `hw_types.py`), exactly as the shared instance does. The FSM
+state machine, all signal widths, all combinational checks, and all memory
+access patterns are **bit-for-bit identical by construction** — there is no
+divergent code path.
+
+### Static Wiring Choices
+
+CHANGE hard-wires two inputs to the private mLoad (lines 104–106 of
+`change.py`):
+
+| Input | Value wired by CHANGE | Shared-arbiter value |
+|---|---|---|
+| `sub_direct` | `0` (always) | varies per caller |
+| `sub_direct_gt` | `0` (always) | varies per caller |
+| `sub_m_elevated` | `1` (always) | varies per caller |
+
+`sub_direct = 0` means CHANGE never bypasses the c-list read. Every GT
+loaded by CHANGE's private mLoad is read from memory through the full
+FETCH\_GT stage — no GT is injected from a register without a memory
+round-trip.
+
+`sub_m_elevated = 1` means the CHECK\_L stage inside mLoad will pass
+regardless of whether the source CR holds an L-perm GT. The justification
+for this is structural and is covered in the next section.
+
+### M-Elevation Justification
+
+M-elevation only bypasses the CHECK\_L stage. All other stages run
+unchanged. The L-perm check is not dropped — it is **externalised** to the
+CHANGE FSM itself and performed before the first mLoad ever fires:
+
+```
+CHANGE FSM — before any mLoad call
+  LATCH_CRN state (change.py line 163):
+    if ~crn_has_l_perm:          # explicit L-perm check on cr_src
+        fault → PERM_L
+        → FAULT
+    else:
+        → SAVE_DR                # only reaches mLoad if L-perm confirmed
+```
+
+CHANGE verifies L-permission on `cr_src` (the c-list GT supplied by the
+instruction) before entering SAVE\_DR. No path reaches LOAD_THREAD or the
+RESTORE loop unless the source CR has already passed the L-perm gate.
+
+In the RESTORE loop (RESTORE_CALL), the source is CR8 — the thread GT just
+installed by LOAD_THREAD. That GT was validated by the immediately preceding
+mLoad pipeline (full FSM, seal check, version check, bounds check). It
+cannot be tampered with between the two calls because CR8 is a hardware
+register written only by mLoad's CR write port.
+
+M-elevation is therefore sound: the L-perm check is not absent, it is done
+at the earliest structurally correct point (CHANGE FSM for cr_src; previous
+mLoad pipeline for CR8), and it cannot be bypassed by user code because
+`sub_m_elevated` is an internal hardware signal not reachable from the ISA.
+
+### Stage-by-Stage Comparison Table
+
+The table below compares every FSM stage of the shared mLoad against
+CHANGE's private instance for both call sites within CHANGE.
+
+| FSM Stage | Shared mLoad | CHANGE LOAD_THREAD | CHANGE RESTORE loop |
+|---|---|---|---|
+| **FETCH_SRC** | Reads `cr_src` from register file | Reads `cr_src` from register file | Reads CR8 from register file |
+| **CHECK_L** | ✓ Fails on no-L or null | Bypassed (M-elevated) — L-perm confirmed by CHANGE FSM upstream | Bypassed (M-elevated) — CR8 installed by validated mLoad |
+| **CHECK_BOUNDS** | ✓ `index < clist_limit` | ✓ Runs unconditionally | ✓ Runs unconditionally |
+| **FETCH_GT** | ✓ Memory read: c-list at `src.loc + index×4` | ✓ Memory read: c-list at `src.loc + index×4` | ✓ Memory read: c-list at CR8.loc + cr_index×4 |
+| **CHECK_NS** | ✓ `slot_id < NS_size` | ✓ Runs unconditionally | ✓ Runs unconditionally |
+| **FETCH_LOC** | ✓ Memory read: NS base + `slot_id×16` | ✓ Memory read: NS base + `slot_id×16` | ✓ Memory read: NS base + `slot_id×16` |
+| **FETCH_W2** | ✓ Memory read: NS +4 | ✓ Memory read: NS +4 | ✓ Memory read: NS +4 |
+| **FETCH_W3** | ✓ Memory read: NS +8 (if seal enabled) | ✓ Memory read: NS +8 (if seal enabled) | ✓ Memory read: NS +8 (if seal enabled) |
+| **CHECK_VERSION** | ✓ gt_seq match + CRC-16/CCITT | ✓ Runs unconditionally | ✓ Runs unconditionally |
+| **RESET_GBIT** | ✓ Writes g_bit=0 to NS +8 | ✓ Runs unconditionally | ✓ Runs unconditionally |
+| **UPDATE_THREAD** | ✓ Shadows CR0–CR7 to thread lump | ✓ Runs unconditionally | ✓ Runs unconditionally |
+| **COMPLETE / FAULT** | ✓ Writes CR or asserts fault | ✓ Identical | ✓ Identical |
+
+Every security-critical stage — bounds, version, seal, g-bit, thread shadow
+— executes on every loop iteration without exception.
+
+### Formal Security Invariant
+
+> **Invariant TCB-CHANGE-1 (Private mLoad Equivalence):**
+> The `ChurchMLoad` instance inside `ChurchChange` is the same class as the
+> shared arbiter. Its FSM is structurally identical. The sole deviation is
+> the permanent assertion of `sub_m_elevated`, which skips only the
+> CHECK\_L stage. This is architecturally sound because: (a) the CHANGE FSM
+> performs an equivalent L-perm check on the source CR before any mLoad
+> fires; (b) subsequent loop iterations use a source CR (CR8) that was just
+> validated by the immediately preceding mLoad pipeline; and (c)
+> `sub_m_elevated` is a hardware-internal signal unreachable from user code.
+> All remaining security properties — bounds enforcement, revocation
+> prevention (gt_seq), forgery detection (CRC-16/CCITT seal), GC liveness
+> (g-bit reset), and thread-lump shadow sync — are enforced on every single
+> iteration of the CHANGE restoration loop without modification or bypass.
+> CHANGE's private mLoad is therefore part of the minimal Trusted Security
+> Code Base, not an exception to it.
+
+---
+
 ## Inputs
 
 | Signal | Width | Description |
