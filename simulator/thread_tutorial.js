@@ -10,7 +10,7 @@ class ThreadTutorial {
             { id: 'heap',  label: '\u2463 Heap \u2193',       sub: 'Size = heapWords \u00b7 NS clistCount field \u00b7 SW-defined by IDE', bg: '#002a10', border: '#20a040', text: '#60d080' },
             { id: 'free',  label: '\u2462 Freespace',         sub: 'Dynamic gap \u00b7 shrinks as stack/heap grow', bg: '#181818', border: '#404040', text: '#888'    },
             { id: 'stack', label: '\u2461 LIFO Stack \u2191', sub: 'Size = sw words \u00b7 sw field in Header[0] \u00b7 SW-defined by IDE', bg: '#002a40', border: '#2080c0', text: '#60b8f0' },
-            { id: 'cap',   label: '\u2460 Capabilities',     sub: 'GT for CR0\u2013CR11  (cc words, at tail) \u00b7 cc in Header[0]', bg: '#3a2c00', border: '#c8a020', text: '#f0d060' },
+            { id: 'cap',   label: '\u2460 Capabilities',     sub: 'GT for CR0\u2013CR11  (12 words, architecture-fixed)',            bg: '#3a2c00', border: '#c8a020', text: '#f0d060' },
         ];
         const heights = { dr: 64, heap: 72, free: 56, stack: 96, cap: 72 };
         const addrLabels = {
@@ -18,7 +18,7 @@ class ThreadTutorial {
             heap:  'word 17 \u2192',
             free:  '17+heapWords \u2192',
             stack: 'sp_max \u2192',
-            cap:   'lumpSize\u2212cc \u2192',
+            cap:   'lumpSize\u221212 \u2192',
         };
         let html = '<div style="display:flex;gap:8px;margin:12px 0 4px 0;align-items:stretch;">';
         html += '<div style="display:flex;flex-direction:column;justify-content:flex-start;width:88px;flex-shrink:0;font-size:0.68rem;color:#666;font-family:monospace;">';
@@ -59,20 +59,20 @@ ${this._memMap(null)}
                 title: '\u2460 Capabilities \u2014 GT Zone for CR0\u2013CR11',
                 type: 'capabilities',
                 content: `${this._memMap('cap')}
-<p>The tail <code>cc</code> words of the thread lump (words <code>lumpSize\u2212cc</code> \u2026 <code>lumpSize\u22121</code>) are the <strong>GT zone</strong>: one 32-bit Golden Token word for each of CR0\u2013CR11. Only <em>two</em> of these are hardware-defined; the remaining ten are general-purpose \u2014 exactly as DR0\u2013DR15 are general-purpose data registers.</p>
-<table class="sr-table"><tr><th>Offset (lumpSize\u2212cc+N)</th><th>CR</th><th>Role</th><th>Controlled by</th></tr>
-<tr><td>lumpSize\u2212cc+0</td><td>CR0</td><td>General-purpose</td><td>Programmer</td></tr>
-<tr><td>lumpSize\u2212cc+1</td><td>CR1</td><td>CALL/RETURN ABI \u00b7 argument GT in; return GT out</td><td><strong>Architecture</strong></td></tr>
-<tr><td>lumpSize\u2212cc+2</td><td>CR2</td><td>General-purpose</td><td>Programmer</td></tr>
-<tr><td>lumpSize\u2212cc+3</td><td>CR3</td><td>General-purpose</td><td>Programmer</td></tr>
-<tr><td>lumpSize\u2212cc+4</td><td>CR4</td><td>General-purpose</td><td>Programmer</td></tr>
-<tr><td>lumpSize\u2212cc+5</td><td>CR5</td><td>Heap GT \u00b7 Zone \u2463 bounds (17 \u2026 17+heapWords\u22121) \u00b7 installed by CHANGE</td><td><strong>Convention</strong></td></tr>
-<tr><td>lumpSize\u2212cc+6</td><td>CR6</td><td>C-list view (E+M+B?-only) \u00b7 re-derived on CALL/RETURN/CHANGE</td><td><strong>Architecture</strong></td></tr>
-<tr><td>lumpSize\u2212cc+7</td><td>CR7</td><td>General-purpose</td><td>Programmer</td></tr>
-<tr><td>lumpSize\u2212cc+8</td><td>CR8</td><td>General-purpose</td><td>Programmer</td></tr>
-<tr><td>lumpSize\u2212cc+9</td><td>CR9</td><td>General-purpose</td><td>Programmer</td></tr>
-<tr><td>lumpSize\u2212cc+10</td><td>CR10</td><td>General-purpose</td><td>Programmer</td></tr>
-<tr><td>lumpSize\u2212cc+11</td><td>CR11</td><td>General-purpose</td><td>Programmer</td></tr>
+<p>The tail <strong>12 words</strong> of the thread lump (words <code>lumpSize\u221212</code> \u2026 <code>lumpSize\u22121</code>) are the <strong>GT zone</strong>: one 32-bit Golden Token word for each of CR0\u2013CR11. The count 12 is architecture-fixed (CR0\u2013CR11 always exists); only the start address varies with <code>lumpSize</code>. Only <em>two</em> of these are hardware-defined; the remaining ten are general-purpose \u2014 exactly as DR0\u2013DR15 are general-purpose data registers.</p>
+<table class="sr-table"><tr><th>Offset (lumpSize\u221212+N)</th><th>CR</th><th>Role</th><th>Controlled by</th></tr>
+<tr><td>lumpSize\u221212+0</td><td>CR0</td><td>General-purpose</td><td>Programmer</td></tr>
+<tr><td>lumpSize\u221212+1</td><td>CR1</td><td>CALL/RETURN ABI \u00b7 argument GT in; return GT out</td><td><strong>Architecture</strong></td></tr>
+<tr><td>lumpSize\u221212+2</td><td>CR2</td><td>General-purpose</td><td>Programmer</td></tr>
+<tr><td>lumpSize\u221212+3</td><td>CR3</td><td>General-purpose</td><td>Programmer</td></tr>
+<tr><td>lumpSize\u221212+4</td><td>CR4</td><td>General-purpose</td><td>Programmer</td></tr>
+<tr><td>lumpSize\u221212+5</td><td>CR5</td><td>Heap GT \u00b7 Zone \u2463 bounds (17 \u2026 17+heapWords\u22121) \u00b7 installed by CHANGE</td><td><strong>Convention</strong></td></tr>
+<tr><td>lumpSize\u221212+6</td><td>CR6</td><td>C-list view (E+M+B?-only) \u00b7 re-derived on CALL/RETURN/CHANGE</td><td><strong>Architecture</strong></td></tr>
+<tr><td>lumpSize\u221212+7</td><td>CR7</td><td>General-purpose</td><td>Programmer</td></tr>
+<tr><td>lumpSize\u221212+8</td><td>CR8</td><td>General-purpose</td><td>Programmer</td></tr>
+<tr><td>lumpSize\u221212+9</td><td>CR9</td><td>General-purpose</td><td>Programmer</td></tr>
+<tr><td>lumpSize\u221212+10</td><td>CR10</td><td>General-purpose</td><td>Programmer</td></tr>
+<tr><td>lumpSize\u221212+11</td><td>CR11</td><td>General-purpose</td><td>Programmer</td></tr>
 </table>
 <div class="sr-key-concept"><div class="sr-concept-title">System GTs Live in C-list Slots</div>
 <p>Capabilities for system services \u2014 Scheduler, Mint, NS write authority, etc. \u2014 are held in <strong>c-list slots</strong>, not in fixed CRs. A thread LOADs the GT it needs into any free general-purpose CR immediately before use. This is identical to how data registers work: the register is a transient holder; the durable home is the c-list.</p>
@@ -179,7 +179,7 @@ ${this._memMap(null)}
 <tr><td>\u2463 Heap</td><td>word 17</td><td><code>heapWords</code> \u2193</td><td>NS entry <code>clistCount</code> field \u00b7 SW-defined by IDE</td></tr>
 <tr><td>\u2462 Freespace</td><td>17+heapWords</td><td>dynamic</td><td>Residual gap between heap top and stack floor</td></tr>
 <tr><td>\u2461 LIFO Stack</td><td><code>sp_min</code> \u2026 <code>sp_max</code></td><td><code>sw</code> words \u2193</td><td>IDE thread header <code>sw</code> field \u00b7 cursor STO = sp_max (empty)</td></tr>
-<tr><td>\u2460 GT Zone (Capabilities)</td><td>lumpSize \u2212 cc</td><td><code>cc</code> words (fixed)</td><td>c-list tail = CR0\u2013CR11 zone</td></tr>
+<tr><td>\u2460 GT Zone (Capabilities)</td><td>lumpSize \u2212 12</td><td>12 words (architecture-fixed)</td><td>c-list tail = CR0\u2013CR11 zone</td></tr>
 </table>
 <div class="sr-key-concept"><div class="sr-concept-title">CR12 \u2014 Thread Identity</div>
 <p>Boot step B:02 (INIT_THRD) loads <strong>one</strong> register from NS Slot 1:</p>
