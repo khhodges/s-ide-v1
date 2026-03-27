@@ -14,7 +14,7 @@ class ChurchCall(Elaboratable):
         self.call_busy = Signal()
         self.call_complete = Signal()
         self.call_fault = Signal()
-        self.fault_type = Signal(5)      # 5 bits: FaultType 0x0–0x10
+        self.fault_type = Signal(5)      # 5 bits: FaultType 0x0–0x12
 
         # Snapshot of caller's CR5 GT — consumed by core to save onto cr5_stack
         # at call_complete so ChurchReturn can restore it.  Wired combinatorially
@@ -81,7 +81,7 @@ class ChurchCall(Elaboratable):
         src_reg_latched = Signal(CAP_REG_LAYOUT)
         mask_latched = Signal(16)
         fault_latched = Signal()
-        fault_type_latched = Signal(5)      # 5 bits to cover FaultType.STACK_OVERFLOW=0x10
+        fault_type_latched = Signal(5)      # 5 bits: covers FaultType 0x0–0x12 (STACK_CORRUPT)
         sub_start_reg = Signal()
         sub_done_latched = Signal()
         sub_fault_latched = Signal()

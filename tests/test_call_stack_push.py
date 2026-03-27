@@ -267,8 +267,138 @@ def test_corrupt():
     _run_scenario(initial_sto=SP_MAX + 1, expect_fault=FaultType.STACK_CORRUPT)
 
 
+def test_sw_parametrized():
+    """
+    Verify that sp_max and sp_min scale correctly for different sw values.
+    For each sw the FSM must:
+      - accept  STO = sp_max            (normal/empty)
+      - accept  STO = sp_min            (boundary low)
+      - fault STACK_OVERFLOW at STO = sp_min - 1
+      - fault STACK_CORRUPT  at STO = sp_max + 1
+    Uses n_minus_6=2 (256-word thread), cc=12 throughout.
+    """
+    N6 = 2
+    CC = 12
+    LSIZ = 1 << (N6 + 6)
+
+    for sw in (8, 16, 32, 64):
+        sp_max_t = LSIZ - CC - 1
+        sp_min_t = LSIZ - CC - sw + 2
+
+        # Build a test-specific thread header
+        thr_hdr_val = _build_lump_hdr(n_minus_6=N6, cc=CC, cw=sw, magic=0x1F)
+
+        errors = []
+
+        # We test all four boundary conditions in one FSM run-loop per sw value.
+        for (sto_val, exp_fault) in [
+            (sp_max_t,     None),
+            (sp_min_t,     None),
+            (sp_min_t - 1, FaultType.STACK_OVERFLOW),
+            (sp_max_t + 1, FaultType.STACK_CORRUPT),
+        ]:
+            dut2 = ChurchCall()
+            local_errors = []
+
+            callee_cap = _build_cap(slot_id=1, perms=PERM_MASK_E, location=0x2000)
+            ns_cap     = _build_cap(slot_id=0, perms=0, location=0x8000)
+            code_cap   = _build_cap(slot_id=2, perms=PERM_MASK_E, location=0x9004)
+            cr5_cap    = _build_cap(slot_id=5, perms=0, location=SP_STORE_ADDR)
+            callee_lump_hdr = _build_lump_hdr(n_minus_6=0, cc=4, cw=8, magic=0x5)
+
+            def proc():
+                yield dut2.caller_pc.eq(CALLER_PC)
+                yield dut2.thread_base.eq(THREAD_BASE)
+                yield dut2.cr5_heap.eq(cr5_cap)
+                yield dut2.cr15_namespace.eq(ns_cap)
+                yield dut2.cr14_code.eq(code_cap)
+                yield dut2.mask.eq(0)
+                yield dut2.index.eq(0)
+                yield dut2.cr_src.eq(0)
+                yield dut2.mload_done.eq(0)
+                yield dut2.mload_fault.eq(0)
+                yield dut2.mload_fault_type.eq(0)
+                yield dut2.mem_rd_valid.eq(0)
+                yield dut2.mem_rd_data.eq(0)
+                yield dut2.cr_rd_data.eq(callee_cap)
+
+                yield dut2.call_start.eq(1)
+                yield Tick()
+                yield dut2.call_start.eq(0)
+
+                phase1_done = False
+                mload_ack = False
+                callee_served = False
+                thr_served = False
+
+                for _ in range(150):
+                    comp   = yield dut2.call_complete
+                    fault  = yield dut2.call_fault
+                    ftype  = yield dut2.fault_type
+                    rd_en  = yield dut2.mem_rd_en
+                    rd_addr= yield dut2.mem_rd_addr
+                    ml_start = yield dut2.mload_start
+
+                    if mload_ack:
+                        yield dut2.mload_done.eq(0)
+                        mload_ack = False
+                        if not phase1_done:
+                            yield dut2.cr_rd_data.eq(CALLEE_EGT)
+                            phase1_done = True
+                        else:
+                            yield dut2.cr_rd_data.eq(code_cap)
+
+                    if ml_start:
+                        yield dut2.mload_done.eq(1)
+                        mload_ack = True
+
+                    if rd_en:
+                        if rd_addr == THREAD_BASE and not thr_served:
+                            yield dut2.mem_rd_data.eq(thr_hdr_val)
+                            yield dut2.mem_rd_valid.eq(1)
+                            thr_served = True
+                        elif not callee_served and rd_addr != SP_STORE_ADDR and rd_addr != THREAD_BASE:
+                            yield dut2.mem_rd_data.eq(callee_lump_hdr)
+                            yield dut2.mem_rd_valid.eq(1)
+                            callee_served = True
+                        elif rd_addr == SP_STORE_ADDR:
+                            yield dut2.mem_rd_data.eq(sto_val)
+                            yield dut2.mem_rd_valid.eq(1)
+                        else:
+                            yield dut2.mem_rd_valid.eq(0)
+                    else:
+                        yield dut2.mem_rd_valid.eq(0)
+
+                    if comp or fault:
+                        if exp_fault is not None:
+                            if not fault or ftype != exp_fault:
+                                local_errors.append(
+                                    f"sw={sw} STO={sto_val}: expected {exp_fault.name}"
+                                    f", got fault={fault} ftype=0x{ftype:x}"
+                                )
+                        elif fault:
+                            local_errors.append(
+                                f"sw={sw} STO={sto_val}: unexpected fault 0x{ftype:x}"
+                            )
+                        break
+                    yield Tick()
+                else:
+                    local_errors.append(f"sw={sw} STO={sto_val}: FSM did not complete")
+
+            sim2 = Simulator(dut2)
+            sim2.add_clock(1e-6)
+            sim2.add_process(proc)
+            sim2.run()
+
+            errors.extend(local_errors)
+
+        if errors:
+            raise AssertionError("\n".join(errors))
+
+
 if __name__ == "__main__":
-    test_normal_push();   print("test_normal_push:   PASS")
-    test_boundary_push(); print("test_boundary_push: PASS")
-    test_overflow();      print("test_overflow:      PASS")
-    test_corrupt();       print("test_corrupt:       PASS")
+    test_normal_push();      print("test_normal_push:      PASS")
+    test_boundary_push();    print("test_boundary_push:    PASS")
+    test_overflow();         print("test_overflow:         PASS")
+    test_corrupt();          print("test_corrupt:          PASS")
+    test_sw_parametrized();  print("test_sw_parametrized:  PASS")
