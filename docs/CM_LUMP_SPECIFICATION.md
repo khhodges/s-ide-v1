@@ -100,6 +100,35 @@ Boot.Abstr (n=8,  cw=0,   cc=46, typ=00): 0xF900_002E
 
 ---
 
+## Addressing Convention
+
+Two address spaces are used throughout the Church Machine lump model.
+All hardware registers and memory interfaces operate in **byte addresses**.
+The PC and NIA counters operate in **word offsets** (one unit = one 32-bit word = 4 bytes).
+
+| Quantity | Unit | Notes |
+|---|---|---|
+| `base` / `location` field in a CAP_REG | byte address | 32-bit physical address; always word-aligned (bits [1:0] = 0) |
+| `limit_offset` in WORD2_LAYOUT | inclusive word count − 1 | The last valid word index relative to `base`; multiply by 4 and add to base to get the last valid byte address |
+| PC | word offset from `CR14.base` | Word 0 is the lump header; word 1 is the first code word, so PC starts at 1 |
+| NIA | word offset from `CR14.base` | Same space as PC; converted to a byte address by: `byte_addr = CR14.base + NIA × 4` |
+| `cw` (header field) | word count | Number of code words; code occupies words 1..cw inclusive |
+| `cc` (header field) | slot count | Number of c-list slots; each slot is one word; c-list occupies the last `cc` words of the lump |
+
+**×4 bridge rule**: whenever a word offset must be expressed as a memory address (for `mem_rd_addr` / `mem_wr_addr` bus signals), multiply by 4.  Conversely, a byte address arriving from the memory bus is converted to a word offset by right-shifting 2 bits.
+
+**Word-alignment guarantee**: the lump allocator always places a lump at an address whose low two bits are zero.  Implementors may rely on this without a runtime check.
+
+**Derived sizes**:
+- `lumpSize` (words) = `1 << (n_minus_6 + 6)` — always a power of two, 64..16384
+- `freespace` (words) = `lumpSize − 1 − cw − cc` — words between the last code word and the c-list; must be zero-filled
+- `CR14.base` = `NS_base + 4` (skips lump header word)
+- `CR14.limit_offset` = `lumpSize − cc − 2`
+- `CR6.base` = `NS_base + (lumpSize − cc) × 4`
+- `CR6.limit_offset` = `cc − 1`
+
+---
+
 ## Mint Validation Sequence
 
 `Mint.Lump(base, n)` receives a lump already inflated into physical memory.
@@ -343,8 +372,9 @@ If CALL CR_s   (CR_s holds the E-GT for the target lump), if RETURN (E-GT found 
   2. Read object_id and gt_seq from E-GT Word 0
   3. Fetch NS[object_id] — 3 words: base, gt_seq_ns, limit_offset
      Read Mem[base] → lump header word:
-       n_minus_6 = Mem[base][22:19]
-       cc        = Mem[base][18:11]
+       n_minus_6 = Mem[base][26:23]   (bits 26..23)
+       cw        = Mem[base][22:10]   (bits 22..10)
+       cc        = Mem[base][7:0]     (bits  7..0)
      If lump not present (evicted / Outform): invoke Locator, retry
   4. Revocation check: if E-GT gt_seq != NS gt_seq_ns -> FAULT
   5. Derive lumpSize = 1 << (n_minus_6 + 6)

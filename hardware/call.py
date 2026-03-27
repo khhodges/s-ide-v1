@@ -128,7 +128,7 @@ class ChurchCall(Elaboratable):
         lump_reg = Signal(32)
         lump_view = View(LUMP_HEADER_LAYOUT, lump_reg)
 
-        mw_reg        = Signal(6)
+        cw_reg        = Signal(13)
         cc_reg        = Signal(8)
         n_minus_6_reg = Signal(4)
 
@@ -249,7 +249,7 @@ class ChurchCall(Elaboratable):
                 with m.If(self.mem_rd_valid):
                     m.d.sync += lump_reg.eq(self.mem_rd_data)
                     m.d.sync += [
-                        mw_reg.eq(View(LUMP_HEADER_LAYOUT, self.mem_rd_data).mw),
+                        cw_reg.eq(View(LUMP_HEADER_LAYOUT, self.mem_rd_data).cw),
                         cc_reg.eq(View(LUMP_HEADER_LAYOUT, self.mem_rd_data).cc),
                         n_minus_6_reg.eq(View(LUMP_HEADER_LAYOUT, self.mem_rd_data).n_minus_6),
                     ]

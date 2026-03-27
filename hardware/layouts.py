@@ -29,22 +29,18 @@ WORD3_LAYOUT = StructLayout({
 })
 
 LUMP_HEADER_LAYOUT = StructLayout({
-    "r":         unsigned(1),
-    "c":         unsigned(1),
-    "h":         unsigned(1),
-    "mw":        unsigned(6),
-    "typ":       unsigned(2),
-    "cc":        unsigned(8),
-    "n_minus_6": unsigned(4),
-    "ver":       unsigned(4),
-    "magic":     unsigned(5),
+    "cc":        unsigned(8),    # bits  [7:0]  — c-list slot count (0..255)
+    "typ":       unsigned(2),    # bits  [9:8]  — object type: 00=lump, 01=data, 10=clist-only, 11=Outform
+    "cw":        unsigned(13),   # bits [22:10] — code word count (0..8191)
+    "n_minus_6": unsigned(4),    # bits [26:23] — lumpSize = 2^(val+6), valid range 0..8
+    "magic":     unsigned(5),    # bits [31:27] — always 0x1F; traps if executed
 })
 
 # 4-word Namespace Entry layout (stride = slot_id << 4, i.e. 16 bytes):
 #   word0_location (+0):  code base address (32-bit pointer)
 #   word1_w2       (+4):  WORD2_LAYOUT  — limit_offset[20:0] | gt_seq[6:0] | spare[3:0]
 #   word2_w3       (+8):  WORD3_LAYOUT  — crc[15:0] | g_bit | spare[14:0]
-#   word3_lump     (+12): LUMP_HEADER_LAYOUT — cached lump header (mw, cc, n_minus_6, …)
+#   word3_lump     (+12): LUMP_HEADER_LAYOUT — cached lump header (cw, cc, n_minus_6, …)
 NS_ENTRY_LAYOUT = StructLayout({
     "word0_location": unsigned(32),
     "word1_w2":       unsigned(32),
