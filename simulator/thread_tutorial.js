@@ -10,7 +10,7 @@ class ThreadTutorial {
             { bits: '[26:23]', name: 'n\u22126', val: 'IDE',   note: 'lumpSize = 2^(val+6)',               w: 4,  bg: '#3a2000', border: '#c86000', text: '#f09040' },
             { bits: '[22:10]', name: 'sw',     val: 'IDE',   note: 'Stack words (cw reused, typ=10)',    w: 13, bg: '#002a40', border: '#2080c0', text: '#60b8f0' },
             { bits: '[9:8]',   name: 'typ',    val: '10',    note: 'clist-only = Thread abstraction',    w: 2,  bg: '#2a2a2a', border: '#555',    text: '#888'    },
-            { bits: '[7:0]',   name: 'cc',     val: 'IDE',   note: 'heapWords \u2014 IDE-set max heap words (caps always 12, architecture-fixed)', w: 8,  bg: '#002a10', border: '#20a040', text: '#60d080' },
+            { bits: '[7:0]',   name: 'cc',     val: 'IDE',   note: 'Heap size \u2014 IDE sets max heap words (e.g. cc=64 \u2192 Zone \u2463 holds up to 64 words)', w: 8,  bg: '#002a10', border: '#20a040', text: '#60d080' },
         ];
         const total = 32;
         let bar = '<div style="display:flex;width:100%;border-radius:3px;overflow:hidden;margin-bottom:2px;">';
@@ -96,7 +96,7 @@ ${this._memMap(null)}
 <tr><td><code style="color:#f09040">n\u22126</code></td><td>[26:23]</td><td>4&nbsp;b</td><td>IDE</td><td><code>lumpSize = 2^(val+6)</code>; e.g. val=2 \u2192 2^8 = 256 words</td></tr>
 <tr><td><code style="color:#60b8f0">sw</code></td><td>[22:10]</td><td>13&nbsp;b</td><td>IDE</td><td><strong>Stack words</strong> \u2014 <code>cw</code> field reinterpreted for typ=10; max CALL frames&nbsp;= sw\u00f72</td></tr>
 <tr><td><code style="color:#888">typ</code></td><td>[9:8]</td><td>2&nbsp;b</td><td><code>10</code></td><td>clist-only \u2014 identifies this lump as a Thread (no executable code)</td></tr>
-<tr><td><code style="color:#60d080">cc</code></td><td>[7:0]</td><td>8&nbsp;b</td><td>IDE</td><td><strong>heapWords</strong> \u2014 IDE-set max heap words; caps zone always 12 words (architecture-fixed)</td></tr>
+<tr><td><code style="color:#60d080">cc</code></td><td>[7:0]</td><td>8&nbsp;b</td><td>IDE</td><td><strong>Heap size</strong> \u2014 IDE sets the heap zone size limit; cc = max N heap words (e.g. cc=64 \u2192 Zone \u2463 holds up to 64 words); caps zone always 12 words (architecture-fixed)</td></tr>
 </table>
 <div class="sr-key-concept"><div class="sr-concept-title">Encoding Formula</div>
 <p><code>(0x1F &lt;&lt; 27) | (n_minus_6 &lt;&lt; 23) | (sw &lt;&lt; 10) | (0b10 &lt;&lt; 8) | heapWords</code></p>

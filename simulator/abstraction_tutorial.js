@@ -4,6 +4,34 @@ class AbstractionTutorial {
         this.currentStep = -1;
     }
 
+    _headerRef() {
+        const fields = [
+            { bits: '[31:27]', name: 'magic',  val: '0x1F', note: 'Trap-on-execute guard',                                w: 5,  bg: '#2a2a2a', border: '#555',    text: '#888'    },
+            { bits: '[26:23]', name: 'n\u22126', val: 'IDE',   note: 'lumpSize = 2^(val+6)',                                w: 4,  bg: '#3a2000', border: '#c86000', text: '#f09040' },
+            { bits: '[22:10]', name: 'cw',     val: 'IDE',   note: 'Code word count (instruction words, compiler-set)',   w: 13, bg: '#002a40', border: '#2080c0', text: '#60b8f0' },
+            { bits: '[9:8]',   name: 'typ',    val: '00',    note: 'callable \u00b7 Enter only \u2014 Programmed Abstraction', w: 2,  bg: '#2a2a2a', border: '#555',    text: '#888'    },
+            { bits: '[7:0]',   name: 'cc',     val: 'IDE',   note: 'C-list size \u2014 compiler-set GT count (0\u2013255)',    w: 8,  bg: '#1a1000', border: '#c08020', text: '#f0c050' },
+        ];
+        let bar = '<div style="display:flex;width:100%;border-radius:3px;overflow:hidden;margin-bottom:2px;">';
+        for (const f of fields) {
+            bar += `<div style="flex:${f.w};background:${f.bg};border:1px solid ${f.border};padding:2px 3px;text-align:center;overflow:hidden;min-width:0;" title="${f.bits} ${f.name}=${f.val} \u2014 ${f.note}">`;
+            bar += `<span style="color:${f.text};font-size:0.62rem;font-weight:700;font-family:monospace;white-space:nowrap;">${f.name}</span><br>`;
+            bar += `<span style="color:${f.text};font-size:0.58rem;font-family:monospace;opacity:0.8;">${f.val}</span>`;
+            bar += '</div>';
+        }
+        bar += '</div>';
+        let meta = '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;">';
+        for (const f of fields) {
+            meta += `<span style="font-size:0.65rem;font-family:monospace;color:#777;">`
+                  + `<span style="color:${f.text}">${f.bits}&nbsp;${f.name}=${f.val}</span>`
+                  + `&nbsp;\u00b7&nbsp;${f.note}</span>`;
+        }
+        meta += '</div>';
+        return `<div style="background:#111;border:1px solid #333;border-radius:4px;padding:6px 8px 4px 8px;margin-bottom:8px;">`
+             + `<div style="font-size:0.62rem;color:#555;font-family:monospace;margin-bottom:4px;">Header[0] \u2014 Programmed Abstraction (typ=00) \u00b7 32 bits</div>`
+             + bar + meta + `</div>`;
+    }
+
     _memMap(highlighted) {
         const sections = [
             { id: 'code',  label: '\u2460 Code',             sub: 'Instruction words  (word\u202f0 \u2192 codeEnd)', bg: '#001a30', border: '#2080c0', text: '#70bfff', dashed: false },
@@ -35,7 +63,7 @@ class AbstractionTutorial {
             html += '</div>';
         }
         html += '</div></div>';
-        return html;
+        return this._headerRef() + html;
     }
 
     _p2Sizes() {
@@ -75,6 +103,26 @@ ${this._p2Sizes()}
 <li><strong>Abstractions are stateless and shareable</strong> \u2014 any number of threads can hold an E-GT for the same abstraction and enter it concurrently without interference, because the lump is never written during execution.</li>
 <li><strong>Threads carry all mutable state</strong>: the LIFO stack, heap, data registers, and the privileged CR12\u2013CR15 window. The abstraction lump is unchanged between calls.</li>
 </ul></div>`
+            },
+            {
+                title: 'Header[0] \u2014 Programmed Abstraction Bit Fields',
+                type: 'header',
+                content: `${this._headerRef()}
+<p>Word 0 of every lump is a <strong>32-bit header word</strong>. For Programmed Abstractions (<code>typ=00</code>) the five fields encode the lump geometry and the compiler\u2019s layout choices. Hover any field box above to read its bit range and note.</p>
+<table class="sr-table">
+<tr><th>Field</th><th>Bits</th><th>Width</th><th>Value</th><th>Meaning</th></tr>
+<tr><td><code style="color:#888">magic</code></td><td>[31:27]</td><td>5&nbsp;b</td><td><code>0x1F</code></td><td>Trap-on-execute guard \u2014 executing word&nbsp;0 always faults</td></tr>
+<tr><td><code style="color:#f09040">n\u22126</code></td><td>[26:23]</td><td>4&nbsp;b</td><td>IDE</td><td><code>lumpSize = 2^(val+6)</code>; e.g. val=2 \u2192 2^8 = 256 words</td></tr>
+<tr><td><code style="color:#60b8f0">cw</code></td><td>[22:10]</td><td>13&nbsp;b</td><td>IDE</td><td><strong>Code word count</strong> \u2014 compiler-set; instruction words occupy words&nbsp;0 \u2026 cw\u22121</td></tr>
+<tr><td><code style="color:#888">typ</code></td><td>[9:8]</td><td>2&nbsp;b</td><td><code>00</code></td><td>callable \u00b7 Enter only \u2014 identifies this lump as a Programmed Abstraction</td></tr>
+<tr><td><code style="color:#f0c050">cc</code></td><td>[7:0]</td><td>8&nbsp;b</td><td>IDE</td><td><strong>C-list size</strong> \u2014 compiler-set GT count; the last <code>cc</code> words of the lump form the C-List</td></tr>
+</table>
+<div class="sr-key-concept"><div class="sr-concept-title">Encoding Formula</div>
+<p><code>(0x1F &lt;&lt; 27) | (n_minus_6 &lt;&lt; 23) | (cw &lt;&lt; 10) | (0b00 &lt;&lt; 8) | cc</code></p>
+<p>Example \u2014 128-word lump, cw=107 code words, cc=0 c-list words:</p>
+<p><code style="color:#60b8f0;font-size:1rem;">0xF881_AC00</code>&nbsp;&nbsp;(magic=0x1F, n\u22126=1, cw=107, typ=00, cc=0)</p></div>
+<div class="sr-key-concept"><div class="sr-concept-title">Lump Geometry from the Header</div>
+<p>Given the header word, the hardware can derive all three zone boundaries without any additional metadata: <strong>code zone</strong> = words 0 \u2026 cw\u22121, <strong>freespace</strong> = words cw \u2026 (lumpSize\u2212cc\u22121), <strong>C-List</strong> = words lumpSize\u2212cc \u2026 lumpSize\u22121. The freespace is always inaccessible at runtime; it exists solely as a power-of-2 rounding artifact.</p></div>`,
             },
             {
                 title: 'Calling Methods \u2014 Three Access Paths',

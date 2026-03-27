@@ -10,6 +10,34 @@ class NamespaceTutorial {
 
     _hex(n) { return '0x' + n.toString(16).toUpperCase().padStart(4, '0'); }
 
+    _headerRef() {
+        const fields = [
+            { bits: '[31:27]', name: 'magic',  val: '0x1F', note: 'Trap-on-execute guard',                                  w: 5,  bg: '#2a2a2a', border: '#555',    text: '#888'    },
+            { bits: '[26:23]', name: 'n\u22126', val: 'HW',    note: 'lumpSize = entire physical address space (HW-set)',     w: 4,  bg: '#3a2000', border: '#c86000', text: '#f09040' },
+            { bits: '[22:10]', name: 'cw',     val: '0',     note: 'No executable code \u2014 NS is a data lump',              w: 13, bg: '#2a2a2a', border: '#555',    text: '#888'    },
+            { bits: '[9:8]',   name: 'typ',    val: '10',    note: 'clist-only \u2014 Namespace data lump (same as Thread)',   w: 2,  bg: '#2a2a2a', border: '#555',    text: '#888'    },
+            { bits: '[7:0]',   name: 'cc',     val: '0',     note: 'No GT c-list \u2014 NS Table is raw binary data, not GTs', w: 8,  bg: '#1a1000', border: '#b07820', text: '#f0c050' },
+        ];
+        let bar = '<div style="display:flex;width:100%;border-radius:3px;overflow:hidden;margin-bottom:2px;">';
+        for (const f of fields) {
+            bar += `<div style="flex:${f.w};background:${f.bg};border:1px solid ${f.border};padding:2px 3px;text-align:center;overflow:hidden;min-width:0;" title="${f.bits} ${f.name}=${f.val} \u2014 ${f.note}">`;
+            bar += `<span style="color:${f.text};font-size:0.62rem;font-weight:700;font-family:monospace;white-space:nowrap;">${f.name}</span><br>`;
+            bar += `<span style="color:${f.text};font-size:0.58rem;font-family:monospace;opacity:0.8;">${f.val}</span>`;
+            bar += '</div>';
+        }
+        bar += '</div>';
+        let meta = '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;">';
+        for (const f of fields) {
+            meta += `<span style="font-size:0.65rem;font-family:monospace;color:#777;">`
+                  + `<span style="color:${f.text}">${f.bits}&nbsp;${f.name}=${f.val}</span>`
+                  + `&nbsp;\u00b7&nbsp;${f.note}</span>`;
+        }
+        meta += '</div>';
+        return `<div style="background:#111;border:1px solid #333;border-radius:4px;padding:6px 8px 4px 8px;margin-bottom:8px;">`
+             + `<div style="font-size:0.62rem;color:#555;font-family:monospace;margin-bottom:4px;">Header[0] \u2014 Namespace Lump \u00b7 Slot\u202f0 (typ=10) \u00b7 32 bits</div>`
+             + bar + meta + `</div>`;
+    }
+
     _memMap(highlighted) {
         const nsTableEnd = this.TOTAL_WORDS - 1;
         const nsTableStart = this.NS_TABLE_BASE;
@@ -51,7 +79,7 @@ class NamespaceTutorial {
             if (s.id !== 'nstable') html += '<div style="height:2px;background:#111;"></div>';
         }
         html += '</div></div>';
-        return html;
+        return this._headerRef() + html;
     }
 
     _buildSteps() {
@@ -68,6 +96,26 @@ class NamespaceTutorial {
 ${this._memMap(null)}
 <div class="sr-key-concept"><div class="sr-concept-title">Two Regions, One Address Space</div>
 <p>The ${hex(this.TOTAL_WORDS)}-word physical address space is divided into two regions: <strong>Lump Space</strong> (${hex(0)}\u202f\u2013\u202f${hex(this.NS_TABLE_BASE - 1)}) where abstraction and thread lumps are allocated, and the <strong>NS Table</strong> (${NS}\u202f\u2013\u202f${END}) where the hardware stores the 3-word metadata entry for every slot. <strong>NS Slot\u202f0</strong> (the root entry) describes the entire physical address space and encodes the NS Table size in its metadata.</p></div>`
+            },
+            {
+                title: 'Header[0] \u2014 Namespace Lump Bit Fields',
+                type: 'header',
+                content: `${this._headerRef()}
+<p>Word 0 of every lump is a <strong>32-bit header word</strong>. The Namespace root (Slot\u202f0) is itself a lump \u2014 a special data lump that spans the entire physical address space. Its header (<code>typ=10</code>) marks it as a clist-only lump with no executable code and no GT c-list. Hover any field box above to read its bit range and note.</p>
+<table class="sr-table">
+<tr><th>Field</th><th>Bits</th><th>Width</th><th>NS Slot\u202f0 value</th><th>Meaning</th></tr>
+<tr><td><code style="color:#888">magic</code></td><td>[31:27]</td><td>5&nbsp;b</td><td><code>0x1F</code></td><td>Trap-on-execute guard \u2014 executing word&nbsp;0 always faults</td></tr>
+<tr><td><code style="color:#f09040">n\u22126</code></td><td>[26:23]</td><td>4&nbsp;b</td><td>HW</td><td><code>lumpSize = 2^(val+6)</code> covers the full physical address space; set by hardware at boot</td></tr>
+<tr><td><code style="color:#888">cw</code></td><td>[22:10]</td><td>13&nbsp;b</td><td><code>0</code></td><td>No executable code \u2014 the namespace is a data lump, not a callable</td></tr>
+<tr><td><code style="color:#888">typ</code></td><td>[9:8]</td><td>2&nbsp;b</td><td><code>10</code></td><td>clist-only \u2014 same type code as Thread; distinguishes data lumps from callables</td></tr>
+<tr><td><code style="color:#f0c050">cc</code></td><td>[7:0]</td><td>8&nbsp;b</td><td><code>0</code></td><td>No GT c-list \u2014 the NS Table is raw binary data (3-word entries), not Golden Tokens</td></tr>
+</table>
+<div class="sr-key-concept"><div class="sr-concept-title">Encoding Formula</div>
+<p><code>(0x1F &lt;&lt; 27) | (n_minus_6 &lt;&lt; 23) | (0 &lt;&lt; 10) | (0b10 &lt;&lt; 8) | 0</code></p>
+<p>Example \u2014 65536-word namespace (2^16, n\u22126=10):</p>
+<p><code style="color:#f0c050;font-size:1rem;">0xFD00_0200</code>&nbsp;&nbsp;(magic=0x1F, n\u22126=10, cw=0, typ=10, cc=0)</p></div>
+<div class="sr-key-concept"><div class="sr-concept-title">Why typ=10 for Both NS and Thread?</div>
+<p>Both the Namespace root and Thread lumps carry <code>typ=10</code> (clist-only). They are distinguished at runtime by <em>context</em> \u2014 the NS lump is always Slot\u202f0 (loaded into CR12 as a zero-perm, Inform-type GT at boot), while Thread lumps are loaded dynamically. The key difference in the header is <strong>n\u22126</strong>: the NS lump\u2019s n\u22126 encodes the full physical address space size (set by hardware), while a Thread\u2019s n\u22126 encodes its modest working-memory lump size (set by the IDE).</p></div>`,
             },
             {
                 title: '\u2460 Lump Space \u2014 Slot Allocations',
