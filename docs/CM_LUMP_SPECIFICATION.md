@@ -611,8 +611,8 @@ field `0x1F` as every other lump. The `typ` field is set to `10`
 ```
 (0x1F << 27) | (2 << 23) | (sw << 10) | (0b10 << 8) | 12
 
-Boot.Thread   (n-6=2, sw=32, cc=12, typ=10):  0xF908_020C
-Thread        (n-6=2, sw=32, cc=12, typ=10):  0xF908_020C
+Boot.Thread   (n-6=2, sw=32, cc=12, typ=10):  0xF900_820C
+Thread        (n-6=2, sw=32, cc=12, typ=10):  0xF900_820C
 ```
 
 Thread lumps of the same geometry share the same header word. Version is
@@ -780,14 +780,16 @@ are never written to lump memory and are never accessible via DREAD.
 
 **CR12 — Thread Identity.** CR12 specifically encodes the Thread lump's
 base address and total word count. It acts as the hardware anchor for the
-stack: the effective stack region is lump words 212 → 81, with the
+stack: the effective stack zone spans `stack_min` (= `lumpSize−cc−sw`,
+example: 212) up to `sp_max` (= `lumpSize−cc−1`, example: 243), with the
 hidden **STO** (Stack Top Offset) register tracking the current top.
-`Mint.Thread` sets STO = 212 at Thread creation — this is the empty-stack
-position; the first pushed word lands at word 211 (Zone ② base, STO -= 1).
+`Mint.Thread` sets STO = `sp_max` (example: 243) at Thread creation — this
+is the empty-stack sentinel; the first pushed word lands at `sp_max−1`
+(Zone ② base, STO -= 1).
 CR12 is saved and restored on every CHANGE alongside STO, DR0–DR15, PC,
 FLAGS, CR14, and CR15 (see §CHANGE Context Save below).
 
-The Zone ④ **Heap** (words 17..80) is entirely absent from the hardware
+The Zone ④ **Heap** (words 17..17+heapWords−1, example: 17..80) is entirely absent from the hardware
 save/restore path. It is private to its thread — no other thread holds a GT
 that spans those words — and is managed entirely by software running within
 the thread. The allocator, GC policy, object layout, and compaction strategy
@@ -858,13 +860,14 @@ relaxes the overflow threshold automatically.
 
 ## Zone ③ — Freespace
 
-131 words at offsets +81..+211. This is the collision zone between the
-upward-growing Heap and the downward-growing Stack. At Thread creation
-`Mint.Thread` verifies all 131 words are zero.
+`17+heapWords` to `sp_max` words (dynamic, IDE-defined; example: +81..+243,
+163 words). This is the collision zone between the upward-growing Heap and
+the downward-growing Stack. At Thread creation `Mint.Thread` verifies all
+words in this zone are zero.
 
-At runtime, Heap objects above heap base and Stack frames below the initial
-high-water mark both consume words from this zone. The sum of live Heap
-allocation and live Stack depth must not exceed 131 words.
+At runtime, Heap objects above heap base and Stack frames below `sp_max`
+both consume words from this zone. The sum of live Heap allocation and live
+Stack depth must not exceed `sp_max − 17 − heapWords` words (example: 163).
 
 This is the only zone in any Church Machine lump that is dynamically
 variable at runtime. Function abstraction freespace is fixed at compile
@@ -874,7 +877,8 @@ time and never changes; Thread freespace is live.
 
 ## Zone ④ — Heap
 
-64 words at offsets +17..+80. Fixed size set by the IDE slot metadata
+`heapWords` words at offsets +17..+17+heapWords−1 (IDE-defined; example:
+64 words, +17..+80). Fixed size set by the IDE slot metadata
 at design time. Objects are allocated from base+17 upward using bump
 allocation; DR5 tracks the current frontier (offset from word 17 to the
 next free word).
