@@ -56,14 +56,14 @@ class NamespaceTutorial {
         const sections = [
             {
                 id: 'bootstrap',
-                label: '\u2460 Bootstrap',
-                sub: `0x0000 \u2191 \u00b7 IDE-set \u00b7 ${this.BOOTSTRAP_SLOTS} slots (NS root \u00b7 boot thread \u00b7 boot abstr.) \u00b7 \u2026 ${h(B-1)}`,
+                label: '\u2460 Bootstrap \u2191',
+                sub: `0x0000 \u00b7 IDE-set \u00b7 ${this.BOOTSTRAP_SLOTS} slots (NS root \u00b7 boot thread \u00b7 boot abstr.) \u00b7 \u2026 ${h(B-1)}`,
                 bg: '#1a0030', border: '#8040c0', text: '#b080f0'
             },
             {
                 id: 'resident',
-                label: '\u2461 Resident Lumps',
-                sub: `${h(B)} \u2191 \u00b7 IDE-set \u00b7 ${this.RESIDENT_SLOTS} always-loaded slots \u00b7 \u2026 ${h(B+R-1)}`,
+                label: '\u2461 Resident Lumps \u2191',
+                sub: `${h(B)} \u00b7 IDE-set \u00b7 ${this.RESIDENT_SLOTS} always-loaded slots \u00b7 \u2026 ${h(B+R-1)}`,
                 bg: '#001830', border: '#2070b0', text: '#70b8ff'
             },
             {
@@ -74,8 +74,8 @@ class NamespaceTutorial {
             },
             {
                 id: 'nstable',
-                label: '\u2463 NS Table',
-                sub: `2^cc\u2212cw = ${h(NS)} \u2193 \u00b7 cw words \u00b7 ${this.NS_ENTRY_WORDS} per entry \u00b7 grows \u2193 \u00b7 \u2026 0xFFFF`,
+                label: '\u2463 NS Table \u2193',
+                sub: `2^cc\u2212cw = ${h(NS)} \u00b7 cw words \u00b7 ${this.NS_ENTRY_WORDS} per entry \u00b7 \u2026 0xFFFF`,
                 bg: '#1a1000', border: '#b07820', text: '#f0c050'
             },
         ];
