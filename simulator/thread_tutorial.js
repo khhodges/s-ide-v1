@@ -174,12 +174,12 @@ ${this._memMap(null)}
                 content: `${this._memMap(null)}
 <p>The full thread lump, from word 0 to <code>allocSize \u2212 1</code>:</p>
 <table class="sr-table"><tr><th>Region</th><th>Start</th><th>Size</th><th>Defined by</th></tr>
-<tr><td>Header</td><td>word 0</td><td>1 word (fixed)</td><td>0xF900_020C (magic, typ, cc)</td></tr>
+<tr><td>Header</td><td>word 0</td><td>1 word (fixed)</td><td>0xF900_020C (magic, typ=10, cc, sw)</td></tr>
 <tr><td>\u2464 Data Registers</td><td>word 1</td><td>16 words (fixed)</td><td>Architecture constant (DR0\u2013DR15)</td></tr>
-<tr><td>\u2463 Heap</td><td>word 17</td><td>fixed \u2191</td><td>IDE slot metadata (heapSize)</td></tr>
-<tr><td>\u2462 Freespace</td><td>word 81</td><td>dynamic</td><td>Remaining between heap + stack</td></tr>
-<tr><td>\u2461 LIFO Stack</td><td>word 212</td><td>variable \u2193</td><td>STO initial = 212; grows downward</td></tr>
-<tr><td>\u2460 GT Zone (Capabilities)</td><td>word 244</td><td>12 words (fixed)</td><td>c-list tail = CR0\u2013CR11 zone</td></tr>
+<tr><td>\u2463 Heap</td><td>word 17</td><td><code>cc</code> words \u2191</td><td>IDE thread header <code>cc</code> field (heap words)</td></tr>
+<tr><td>\u2462 Freespace</td><td>word 17+cc</td><td>dynamic</td><td>Residual gap between heap top and stack floor</td></tr>
+<tr><td>\u2461 LIFO Stack</td><td><code>sp_min</code> \u2026 <code>sp_max</code></td><td><code>sw</code> words \u2193</td><td>IDE thread header <code>sw</code> field \u00b7 cursor STO = sp_max (empty)</td></tr>
+<tr><td>\u2460 GT Zone (Capabilities)</td><td>lumpSize \u2212 cc</td><td><code>cc</code> words (fixed)</td><td>c-list tail = CR0\u2013CR11 zone</td></tr>
 </table>
 <div class="sr-key-concept"><div class="sr-concept-title">CR12 \u2014 Thread Identity</div>
 <p>Boot step B:02 (INIT_THRD) loads <strong>one</strong> register from NS Slot 1:</p>
