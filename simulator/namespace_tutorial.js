@@ -13,10 +13,10 @@ class NamespaceTutorial {
     _headerRef() {
         const fields = [
             { bits: '[31:27]', name: 'magic',  val: '0x1F', note: 'Trap-on-execute guard',                                  w: 5,  bg: '#2a2a2a', border: '#555',    text: '#888'    },
-            { bits: '[26:23]', name: 'n\u22126', val: 'HW',    note: 'lumpSize = entire physical address space (HW-set)',     w: 4,  bg: '#3a2000', border: '#c86000', text: '#f09040' },
-            { bits: '[22:10]', name: 'cw',     val: '0',     note: 'No executable code \u2014 NS is a data lump',              w: 13, bg: '#2a2a2a', border: '#555',    text: '#888'    },
+            { bits: '[26:23]', name: 'n\u22126', val: 'HW',    note: 'lumpSize = 2^(val+6) = full physical address space (n\u22126=10 for 65536 words)', w: 4,  bg: '#3a2000', border: '#c86000', text: '#f09040' },
+            { bits: '[22:10]', name: 'cw',     val: 'HW',    note: 'NS Table word count; NS Table base = 2^cc \u2212 cw (e.g. cw=768 \u2192 256 entries \u00d7 3 words)', w: 13, bg: '#002a40', border: '#2080c0', text: '#60b8f0' },
             { bits: '[9:8]',   name: 'typ',    val: '10',    note: 'clist-only \u2014 Namespace data lump (same as Thread)',   w: 2,  bg: '#2a2a2a', border: '#555',    text: '#888'    },
-            { bits: '[7:0]',   name: 'cc',     val: '0',     note: 'No GT c-list \u2014 NS Table is raw binary data, not GTs', w: 8,  bg: '#1a1000', border: '#b07820', text: '#f0c050' },
+            { bits: '[7:0]',   name: 'cc',     val: 'HW',    note: 'Physical address space = 2^cc words (e.g. cc=16 \u2192 65\u202f536 total words); NS Table starts at 2^cc and grows \u2193', w: 8,  bg: '#1a1000', border: '#b07820', text: '#f0c050' },
         ];
         let bar = '<div style="display:flex;width:100%;border-radius:3px;overflow:hidden;margin-bottom:2px;">';
         for (const f of fields) {
@@ -47,13 +47,13 @@ class NamespaceTutorial {
             {
                 id: 'lumps',
                 label: 'Lump Space',
-                sub: `${this._hex(0)} \u2013 ${this._hex(lumpEnd)}  \u00b7  one ${this.SLOT_SIZE}-word slot per abstraction`,
+                sub: `0x0000 \u2191 grows up  \u00b7  one ${this.SLOT_SIZE}-word slot per abstraction  \u00b7  \u2026 ${this._hex(lumpEnd)}`,
                 bg: '#001830', border: '#2070b0', text: '#70b8ff'
             },
             {
                 id: 'nstable',
                 label: 'NS Table',
-                sub: `${this._hex(nsTableStart)} \u2013 ${this._hex(nsTableEnd)}  \u00b7  3\u202fwords per entry \u00b7 up to 256 entries`,
+                sub: `2^cc \u2212 cw \u2192 ${this._hex(nsTableEnd)}  \u00b7  cw words \u00b7 3 per entry \u00b7 grows \u2193`,
                 bg: '#1a1000', border: '#b07820', text: '#f0c050'
             },
         ];
@@ -101,21 +101,28 @@ ${this._memMap(null)}
                 title: 'Header[0] \u2014 Namespace Lump Bit Fields',
                 type: 'header',
                 content: `${this._headerRef()}
-<p>Word 0 of every lump is a <strong>32-bit header word</strong>. The Namespace root (Slot\u202f0) is itself a lump \u2014 a special data lump that spans the entire physical address space. Its header (<code>typ=10</code>) marks it as a clist-only lump with no executable code and no GT c-list. Hover any field box above to read its bit range and note.</p>
+<p>Word 0 of every lump is a <strong>32-bit header word</strong>. For the Namespace root (Slot\u202f0) the five fields are <em>repurposed</em> just as they are for Thread lumps. The two key fields are <code style="color:#f0c050">cc</code> (physical address space size as a power of two) and <code style="color:#60b8f0">cw</code> (NS Table word count). Hover any field box above to read its bit range and note.</p>
 <table class="sr-table">
 <tr><th>Field</th><th>Bits</th><th>Width</th><th>NS Slot\u202f0 value</th><th>Meaning</th></tr>
 <tr><td><code style="color:#888">magic</code></td><td>[31:27]</td><td>5&nbsp;b</td><td><code>0x1F</code></td><td>Trap-on-execute guard \u2014 executing word&nbsp;0 always faults</td></tr>
-<tr><td><code style="color:#f09040">n\u22126</code></td><td>[26:23]</td><td>4&nbsp;b</td><td>HW</td><td><code>lumpSize = 2^(val+6)</code> covers the full physical address space; set by hardware at boot</td></tr>
-<tr><td><code style="color:#888">cw</code></td><td>[22:10]</td><td>13&nbsp;b</td><td><code>0</code></td><td>No executable code \u2014 the namespace is a data lump, not a callable</td></tr>
-<tr><td><code style="color:#888">typ</code></td><td>[9:8]</td><td>2&nbsp;b</td><td><code>10</code></td><td>clist-only \u2014 same type code as Thread; distinguishes data lumps from callables</td></tr>
-<tr><td><code style="color:#f0c050">cc</code></td><td>[7:0]</td><td>8&nbsp;b</td><td><code>0</code></td><td>No GT c-list \u2014 the NS Table is raw binary data (3-word entries), not Golden Tokens</td></tr>
+<tr><td><code style="color:#f09040">n\u22126</code></td><td>[26:23]</td><td>4&nbsp;b</td><td>HW</td><td><code>lumpSize = 2^(n\u22126+6)</code> = full physical address space; for 65536-word NS: n\u22126=10</td></tr>
+<tr><td><code style="color:#60b8f0">cw</code></td><td>[22:10]</td><td>13&nbsp;b</td><td>HW</td><td><strong>NS Table word count</strong> (repurposed from code word count); NS Table base = 2^cc \u2212 cw \u2193; e.g. cw=768 = 256 entries \u00d7 3 words/entry</td></tr>
+<tr><td><code style="color:#888">typ</code></td><td>[9:8]</td><td>2&nbsp;b</td><td><code>10</code></td><td>clist-only \u2014 same type code as Thread; marks NS as a data lump, not a callable</td></tr>
+<tr><td><code style="color:#f0c050">cc</code></td><td>[7:0]</td><td>8&nbsp;b</td><td>HW</td><td><strong>Physical address space = 2^cc words</strong> (repurposed from c-list count); e.g. cc=16 \u2192 2^16 = 65\u202f536 total words; NS Table starts at 2^cc and grows \u2193</td></tr>
 </table>
+<div class="sr-key-concept"><div class="sr-concept-title">Address Space Layout</div>
+<p><strong>Lump Space</strong> starts at <code>0x0000</code> and grows <strong>upward \u2191</strong> \u2014 slots are allocated from the bottom. <strong>NS Table</strong> starts at <code>2^cc</code> (the top of the address space) and grows <strong>downward \u2193</strong> as entries are added. The boundary between them is: <code>NS Table base = 2^cc \u2212 cw</code>.</p>
+<p>Example: cc=16, cw=768 \u2192 NS Table base = 65\u202f536 \u2212 768 = <code>0xFD00</code>; Lump Space = <code>0x0000</code>\u2026<code>0xFCFF</code>.</p></div>
 <div class="sr-key-concept"><div class="sr-concept-title">Encoding Formula</div>
-<p><code>(0x1F &lt;&lt; 27) | (n_minus_6 &lt;&lt; 23) | (0 &lt;&lt; 10) | (0b10 &lt;&lt; 8) | 0</code></p>
-<p>Example \u2014 65536-word namespace (2^16, n\u22126=10):</p>
-<p><code style="color:#f0c050;font-size:1rem;">0xFD00_0200</code>&nbsp;&nbsp;(magic=0x1F, n\u22126=10, cw=0, typ=10, cc=0)</p></div>
-<div class="sr-key-concept"><div class="sr-concept-title">Why typ=10 for Both NS and Thread?</div>
-<p>Both the Namespace root and Thread lumps carry <code>typ=10</code> (clist-only). They are distinguished at runtime by <em>context</em> \u2014 the NS lump is always Slot\u202f0 (loaded into CR12 as a zero-perm, Inform-type GT at boot), while Thread lumps are loaded dynamically. The key difference in the header is <strong>n\u22126</strong>: the NS lump\u2019s n\u22126 encodes the full physical address space size (set by hardware), while a Thread\u2019s n\u22126 encodes its modest working-memory lump size (set by the IDE).</p></div>`,
+<p><code>(0x1F &lt;&lt; 27) | (n_minus_6 &lt;&lt; 23) | (cw &lt;&lt; 10) | (0b10 &lt;&lt; 8) | cc</code></p>
+<p>Example \u2014 65536-word namespace (cc=16, cw=768 NS Table words, n\u22126=10):</p>
+<p><code style="color:#f0c050;font-size:1rem;">0xFD0C_0210</code>&nbsp;&nbsp;(magic=0x1F, n\u22126=10, cw=768, typ=10, cc=16)</p></div>
+<div class="sr-key-concept"><div class="sr-concept-title">Three Lump Types \u2014 Same Header, Different Field Semantics</div>
+<p>All three lump types share the same 32-bit header format. The hardware uses <code>typ</code> to decide which interpretation applies:</p>
+<table class="sr-table" style="margin-top:6px;"><tr><th>Field</th><th>Programmed (typ=00)</th><th>Thread (typ=10)</th><th>Namespace (typ=10)</th></tr>
+<tr><td><code>cw</code></td><td>Code word count</td><td>Stack words (sw)</td><td>NS Table word count</td></tr>
+<tr><td><code>cc</code></td><td>C-list GT count</td><td>Heap size (max N words)</td><td>Physical space = 2^cc words</td></tr>
+</table></div>`,
             },
             {
                 title: '\u2460 Lump Space \u2014 Slot Allocations',
