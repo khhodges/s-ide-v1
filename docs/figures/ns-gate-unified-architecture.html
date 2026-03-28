@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChurchNSGate — Unified NS Integrity Architecture</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0e17;
+    color: #c8d6e5;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+  }
+  h1 { font-size: 21px; color: #f5c842; margin-bottom: 5px; text-align: center; }
+  .subtitle {
+    font-size: 12px; color: #8899aa; margin-bottom: 20px;
+    text-align: center; max-width: 900px; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<h1>ChurchNSGate &mdash; Unified NS Integrity Architecture</h1>
+<p class="subtitle">
+  The 3-read + gt_seq-match + CRC-16/CCITT check that previously existed
+  separately in both mLoad and cLoad is now a single shared sub-module.
+  Each caller provides only its own pre- and post-gate logic; the integrity
+  gate runs once, in one place.
+</p>
+
+<svg viewBox="0 0 1100 1040" width="1100" height="1040" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+    <marker id="ah-b" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#4a9fd5"/>
+    </marker>
+    <marker id="ah-g" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#3cb371"/>
+    </marker>
+    <marker id="ah-o" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#e8882c"/>
+    </marker>
+    <marker id="ah-y" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#f5c842"/>
+    </marker>
+    <marker id="ah-r" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0,8 3,0 6" fill="#e74c3c"/>
+    </marker>
+  </defs>
+
+  <style>
+    .sname { font-family:'Consolas','Courier New',monospace; font-size:12px; font-weight:700;
+             text-anchor:middle; dominant-baseline:central; }
+    .sdesc { font-family:'Segoe UI',system-ui,sans-serif; font-size:10px; fill:#8899aa;
+             text-anchor:middle; dominant-baseline:central; }
+    .col-hdr { font-family:'Segoe UI',system-ui,sans-serif; font-size:14px; font-weight:700;
+               text-anchor:middle; dominant-baseline:central; }
+    .col-sub { font-family:'Segoe UI',system-ui,sans-serif; font-size:10px; fill:#8899aa;
+               text-anchor:middle; dominant-baseline:central; }
+    .sec-lbl { font-family:'Segoe UI',system-ui,sans-serif; font-size:11px;
+               text-anchor:middle; dominant-baseline:central; }
+    .albl { font-family:'Segoe UI',system-ui,sans-serif; font-size:10px;
+            text-anchor:middle; dominant-baseline:central; fill:#f5c842; }
+    .fnote { font-family:'Segoe UI',system-ui,sans-serif; font-size:11px; fill:#4a6a8a;
+             text-anchor:middle; dominant-baseline:central; }
+  </style>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       COLUMN HEADERS
+  ══════════════════════════════════════════════════════════════ -->
+
+  <!-- mLoad header -->
+  <rect x="20" y="8" width="310" height="46" rx="7" fill="#162a44" stroke="#4a9fd5" stroke-width="1.5"/>
+  <text class="col-hdr" x="175" y="24" fill="#5dade2">mLoad</text>
+  <text class="col-sub" x="175" y="42">hardware/mload.py</text>
+
+  <!-- Gate header -->
+  <rect x="390" y="8" width="320" height="46" rx="7" fill="#2e1e06" stroke="#e8882c" stroke-width="2"/>
+  <text class="col-hdr" x="550" y="24" fill="#f0993c">ChurchNSGate  ·  shared</text>
+  <text class="col-sub" x="550" y="42">hardware/ns_gate.py</text>
+
+  <!-- cLoad header -->
+  <rect x="770" y="8" width="310" height="46" rx="7" fill="#0e2818" stroke="#3cb371" stroke-width="1.5"/>
+  <text class="col-hdr" x="925" y="24" fill="#4cd885">cLoad</text>
+  <text class="col-sub" x="925" y="42">hardware/cload.py</text>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION LABEL: Pre-gate
+  ══════════════════════════════════════════════════════════════ -->
+
+  <text class="sec-lbl" x="175" y="66" fill="#3a6a9a">&#x2500;&#x2500; Pre-gate (caller-specific) &#x2500;&#x2500;</text>
+  <text class="sec-lbl" x="925" y="66" fill="#2a7a4a">&#x2500;&#x2500; Pre-gate (caller-specific) &#x2500;&#x2500;</text>
+  <text class="sec-lbl" x="550" y="66" fill="#5a4020">&#x2500;&#x2500; idle, awaiting start pulse &#x2500;&#x2500;</text>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       mLoad PRE-GATE STATES  (7 rows, step=44)
+  ══════════════════════════════════════════════════════════════ -->
+
+  <!-- IDLE -->
+  <rect x="20" y="74" width="310" height="38" rx="4" fill="#0f1520" stroke="#3a4a5a"/>
+  <text class="sname" x="175" y="90" fill="#c8d6e5">IDLE</text>
+  <text class="sdesc" x="175" y="103">wait for sub_start</text>
+
+  <!-- FETCH_SRC -->
+  <rect x="20" y="118" width="310" height="38" rx="4" fill="#0e1e32" stroke="#4a9fd5"/>
+  <text class="sname" x="175" y="133" fill="#e8e8e8">FETCH_SRC</text>
+  <text class="sdesc" x="175" y="147">read source CR or accept direct_gt</text>
+
+  <!-- CHECK_L -->
+  <rect x="20" y="162" width="310" height="38" rx="4" fill="#0e1e32" stroke="#4a9fd5"/>
+  <text class="sname" x="175" y="177" fill="#e8e8e8">CHECK_L</text>
+  <text class="sdesc" x="175" y="191">L-perm on src cap  |  m_elevated bypass</text>
+
+  <!-- CHECK_BOUNDS -->
+  <rect x="20" y="206" width="310" height="38" rx="4" fill="#0e1e32" stroke="#4a9fd5"/>
+  <text class="sname" x="175" y="221" fill="#e8e8e8">CHECK_BOUNDS</text>
+  <text class="sdesc" x="175" y="235">index &lt; src limit_offset</text>
+
+  <!-- FETCH_GT -->
+  <rect x="20" y="250" width="310" height="38" rx="4" fill="#0e1e32" stroke="#4a9fd5"/>
+  <text class="sname" x="175" y="265" fill="#e8e8e8">FETCH_GT</text>
+  <text class="sdesc" x="175" y="279">read GT word 0 from c-list memory</text>
+
+  <!-- CHECK_NS -->
+  <rect x="20" y="294" width="310" height="38" rx="4" fill="#0e1e32" stroke="#4a9fd5"/>
+  <text class="sname" x="175" y="309" fill="#e8e8e8">CHECK_NS</text>
+  <text class="sdesc" x="175" y="323">result_gt.slot_id &lt; ns_limit  (CR15.word2)</text>
+
+  <!-- START_GATE -->
+  <rect x="20" y="338" width="310" height="38" rx="4" fill="#252200" stroke="#f5c842" stroke-width="2"/>
+  <text class="sname" x="175" y="353" fill="#f5c842">START_GATE</text>
+  <text class="sdesc" x="175" y="367">pulse ns_gate_start · gt_word0 = result_gt · &#x2192; WAIT_GATE</text>
+
+  <!-- mLoad down-arrows -->
+  <line x1="175" y1="112" x2="175" y2="116" stroke="#4a9fd5" stroke-width="1.5" marker-end="url(#ah-b)"/>
+  <line x1="175" y1="156" x2="175" y2="160" stroke="#4a9fd5" stroke-width="1.5" marker-end="url(#ah-b)"/>
+  <line x1="175" y1="200" x2="175" y2="204" stroke="#4a9fd5" stroke-width="1.5" marker-end="url(#ah-b)"/>
+  <line x1="175" y1="244" x2="175" y2="248" stroke="#4a9fd5" stroke-width="1.5" marker-end="url(#ah-b)"/>
+  <line x1="175" y1="288" x2="175" y2="292" stroke="#4a9fd5" stroke-width="1.5" marker-end="url(#ah-b)"/>
+  <line x1="175" y1="332" x2="175" y2="336" stroke="#4a9fd5" stroke-width="1.5" marker-end="url(#ah-b)"/>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       cLoad PRE-GATE STATES  (3 rows, aligned top + bottom with mLoad)
+  ══════════════════════════════════════════════════════════════ -->
+
+  <!-- IDLE -->
+  <rect x="770" y="74" width="310" height="38" rx="4" fill="#0f1520" stroke="#3a4a5a"/>
+  <text class="sname" x="925" y="90" fill="#c8d6e5">IDLE</text>
+  <text class="sdesc" x="925" y="103">wait for cload_start</text>
+
+  <!-- CHECK_TYPE (covers REAL-type + E-perm, combined for brevity) -->
+  <rect x="770" y="206" width="310" height="38" rx="4" fill="#0e2818" stroke="#3cb371"/>
+  <text class="sname" x="925" y="221" fill="#e8e8e8">CHECK_TYPE</text>
+  <text class="sdesc" x="925" y="235">gt_type == REAL  ·  perms[E] == 1</text>
+
+  <!-- START_GATE -->
+  <rect x="770" y="338" width="310" height="38" rx="4" fill="#252200" stroke="#f5c842" stroke-width="2"/>
+  <text class="sname" x="925" y="353" fill="#f5c842">START_GATE</text>
+  <text class="sdesc" x="925" y="367">pulse ns_gate_start · gt_word0 = e_gt_latched · &#x2192; WAIT_GATE</text>
+
+  <!-- cLoad down-arrows -->
+  <line x1="925" y1="112" x2="925" y2="204" stroke="#3cb371" stroke-width="1.5" marker-end="url(#ah-g)"/>
+  <line x1="925" y1="244" x2="925" y2="336" stroke="#3cb371" stroke-width="1.5" marker-end="url(#ah-g)"/>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       GATE "IDLE / WAITING" placeholder (pre-gate band)
+  ══════════════════════════════════════════════════════════════ -->
+
+  <rect x="390" y="74" width="320" height="302" rx="6" fill="#120e04" stroke="#3a2808" stroke-width="1" stroke-dasharray="5,3"/>
+  <text x="550" y="190" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="700" fill="#4a3010" font-family="Consolas,monospace">IDLE</text>
+  <text x="550" y="212" text-anchor="middle" dominant-baseline="central" font-size="10" fill="#3a2808" font-family="Segoe UI,sans-serif">waiting for ns_gate_start</text>
+  <text x="550" y="228" text-anchor="middle" dominant-baseline="central" font-size="10" fill="#3a2808" font-family="Segoe UI,sans-serif">gt_word0 and cr15_namespace</text>
+  <text x="550" y="244" text-anchor="middle" dominant-baseline="central" font-size="10" fill="#3a2808" font-family="Segoe UI,sans-serif">must be stable on the start cycle</text>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       DELEGATION ARROWS  (START_GATE on each side → gate IDLE)
+  ══════════════════════════════════════════════════════════════ -->
+
+  <!-- mLoad → Gate  (right arrow from mLoad START_GATE into gate) -->
+  <path d="M330 357 C362 357 378 390 390 400"
+        stroke="#f5c842" stroke-width="2" fill="none" marker-end="url(#ah-y)"/>
+  <text class="albl" x="350" y="385">delegate</text>
+
+  <!-- cLoad → Gate  (left arrow from cLoad START_GATE into gate) -->
+  <path d="M770 357 C738 357 722 390 710 400"
+        stroke="#f5c842" stroke-width="2" fill="none" marker-end="url(#ah-y)"/>
+  <text class="albl" x="750" y="385">delegate</text>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION LABEL: Gate running
+  ══════════════════════════════════════════════════════════════ -->
+
+  <text class="sec-lbl" x="550" y="392" fill="#8a5010">&#x2500;&#x2500; Gate running &#x2500;&#x2500;</text>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       GATE ACTIVE STATES
+  ══════════════════════════════════════════════════════════════ -->
+
+  <!-- FETCH_LOC -->
+  <rect x="390" y="402" width="320" height="38" rx="4" fill="#1e1408" stroke="#e8882c"/>
+  <text class="sname" x="550" y="417" fill="#f0993c">FETCH_LOC</text>
+  <text class="sdesc" x="550" y="431">mem[CR15.base + slot_id &#xD7; 12] &#x2192; latch raw_base</text>
+
+  <!-- FETCH_W2 -->
+  <rect x="390" y="446" width="320" height="38" rx="4" fill="#1e1408" stroke="#e8882c"/>
+  <text class="sname" x="550" y="461" fill="#f0993c">FETCH_W2</text>
+  <text class="sdesc" x="550" y="475">mem[NS_entry+4] &#x2192; latch raw_w2  (gt_seq | limit)</text>
+
+  <!-- FETCH_W3  (seal-check only, dashed) -->
+  <rect x="390" y="490" width="320" height="38" rx="4" fill="#1e1408" stroke="#e8882c" stroke-dasharray="4,2.5"/>
+  <text class="sname" x="550" y="505" fill="#b06818">[FETCH_W3]</text>
+  <text class="sdesc" x="550" y="519">mem[NS_entry+8] &#x2192; latch raw_w3  (CRC | g_bit)  &#x2605; sealed</text>
+
+  <!-- CHECK_VERSION  (two-line, taller) -->
+  <rect x="390" y="534" width="320" height="50" rx="4" fill="#1e1408" stroke="#f5c842" stroke-width="1.5"/>
+  <text class="sname" x="550" y="549" fill="#f5c842">CHECK_VERSION</text>
+  <text class="sdesc" x="550" y="563">e_gt.gt_seq == raw_w2.gt_seq  &#x2192;  VERSION fault on mismatch</text>
+  <text class="sdesc" x="550" y="576">CRC-16/CCITT(gt[24:0]+raw_base+raw_w2) == raw_w3.crc  &#x2192;  SEAL fault</text>
+
+  <!-- Gate down-arrows -->
+  <line x1="550" y1="440" x2="550" y2="444" stroke="#e8882c" stroke-width="1.5" marker-end="url(#ah-o)"/>
+  <line x1="550" y1="484" x2="550" y2="488" stroke="#e8882c" stroke-width="1.5" marker-end="url(#ah-o)"/>
+  <line x1="550" y1="528" x2="550" y2="532" stroke="#e8882c" stroke-width="1.5" marker-end="url(#ah-o)"/>
+
+  <!-- CHECK_VERSION → DONE (happy path) -->
+  <line x1="550" y1="584" x2="550" y2="590" stroke="#2ecc71" stroke-width="1.5" marker-end="url(#ah-g)"/>
+
+  <!-- CHECK_VERSION → FAULT (fault path, right side exit) -->
+  <path d="M710 562 C740 562 748 615 710 628"
+        stroke="#e74c3c" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#ah-r)"/>
+  <text x="752" y="593" text-anchor="middle" dominant-baseline="central" font-size="9" fill="#e74c3c" font-family="Segoe UI,sans-serif">VERSION</text>
+  <text x="752" y="604" text-anchor="middle" dominant-baseline="central" font-size="9" fill="#e74c3c" font-family="Segoe UI,sans-serif">SEAL</text>
+
+  <!-- DONE -->
+  <rect x="390" y="592" width="320" height="38" rx="4" fill="#0a2018" stroke="#2ecc71" stroke-width="2"/>
+  <text class="sname" x="550" y="607" fill="#2ecc71">DONE</text>
+  <text class="sdesc" x="550" y="621">ns_gate_done=1  ·  raw_base / raw_w2 / raw_w3 valid</text>
+
+  <!-- FAULT -->
+  <rect x="390" y="636" width="320" height="38" rx="4" fill="#280808" stroke="#e74c3c" stroke-width="2"/>
+  <text class="sname" x="550" y="651" fill="#e74c3c">FAULT</text>
+  <text class="sdesc" x="550" y="665">ns_gate_fault=1  ·  fault_type: VERSION or SEAL  &#x2192; IDLE</text>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       GATE OUTPUT ARROWS  (DONE → both WAIT_GATE; FAULT → both)
+  ══════════════════════════════════════════════════════════════ -->
+
+  <!-- DONE → mLoad WAIT_GATE -->
+  <path d="M390 611 C340 611 315 665 315 710"
+        stroke="#f5c842" stroke-width="2" fill="none" marker-end="url(#ah-y)"/>
+  <text class="albl" x="288" y="660">done</text>
+
+  <!-- DONE → cLoad WAIT_GATE -->
+  <path d="M710 611 C760 611 785 665 785 710"
+        stroke="#f5c842" stroke-width="2" fill="none" marker-end="url(#ah-y)"/>
+  <text class="albl" x="812" y="660">done</text>
+
+  <!-- FAULT → mLoad FAULT (dashed red) -->
+  <path d="M390 655 C330 655 305 700 305 740"
+        stroke="#e74c3c" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#ah-r)"/>
+
+  <!-- FAULT → cLoad FAULT (dashed red) -->
+  <path d="M710 655 C770 655 795 700 795 740"
+        stroke="#e74c3c" stroke-width="1.5" fill="none" stroke-dasharray="4,2" marker-end="url(#ah-r)"/>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       SECTION LABEL: Post-gate
+  ══════════════════════════════════════════════════════════════ -->
+
+  <text class="sec-lbl" x="175" y="698" fill="#3a6a9a">&#x2500;&#x2500; Post-gate (mLoad-specific) &#x2500;&#x2500;</text>
+  <text class="sec-lbl" x="925" y="698" fill="#2a7a4a">&#x2500;&#x2500; Post-gate (cLoad-specific) &#x2500;&#x2500;</text>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       mLoad POST-GATE STATES
+  ══════════════════════════════════════════════════════════════ -->
+
+  <!-- WAIT_GATE -->
+  <rect x="20" y="706" width="310" height="38" rx="4" fill="#252200" stroke="#f5c842" stroke-width="2"/>
+  <text class="sname" x="175" y="721" fill="#f5c842">WAIT_GATE</text>
+  <text class="sdesc" x="175" y="735">latch raw_base/w2/w3 on done; latch fault_type on fault</text>
+
+  <!-- RESET_GBIT  (seal only, dashed) -->
+  <rect x="20" y="750" width="310" height="38" rx="4" fill="#0e1e32" stroke="#e8882c" stroke-dasharray="4,2.5"/>
+  <text class="sname" x="175" y="765" fill="#b07020">[RESET_GBIT]</text>
+  <text class="sdesc" x="175" y="779">write g_bit=0 to NS_entry[+8]  &#x2605; seal check only</text>
+
+  <!-- UPDATE_THREAD -->
+  <rect x="20" y="794" width="310" height="38" rx="4" fill="#0e1e32" stroke="#4a9fd5"/>
+  <text class="sname" x="175" y="809" fill="#e8e8e8">UPDATE_THREAD</text>
+  <text class="sdesc" x="175" y="823">write GT word to c-list mirror (if dst CR &#x2264; 7)</text>
+
+  <!-- COMPLETE -->
+  <rect x="20" y="838" width="310" height="38" rx="4" fill="#0a2018" stroke="#2ecc71" stroke-width="2"/>
+  <text class="sname" x="175" y="853" fill="#2ecc71">COMPLETE</text>
+  <text class="sdesc" x="175" y="867">write full cap_reg to dest CR  ·  assert sub_done  &#x2192; IDLE</text>
+
+  <!-- mLoad FAULT -->
+  <rect x="20" y="882" width="310" height="38" rx="4" fill="#280808" stroke="#e74c3c"/>
+  <text class="sname" x="175" y="897" fill="#e74c3c">FAULT</text>
+  <text class="sdesc" x="175" y="911">assert sub_fault  ·  latch fault_type  &#x2192; IDLE</text>
+
+  <!-- mLoad post-gate down-arrows -->
+  <line x1="175" y1="744" x2="175" y2="748" stroke="#4a9fd5" stroke-width="1.5" marker-end="url(#ah-b)"/>
+  <line x1="175" y1="788" x2="175" y2="792" stroke="#4a9fd5" stroke-width="1.5" marker-end="url(#ah-b)"/>
+  <line x1="175" y1="832" x2="175" y2="836" stroke="#2ecc71" stroke-width="1.5" marker-end="url(#ah-g)"/>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       cLoad POST-GATE STATES
+  ══════════════════════════════════════════════════════════════ -->
+
+  <!-- WAIT_GATE -->
+  <rect x="770" y="706" width="310" height="38" rx="4" fill="#252200" stroke="#f5c842" stroke-width="2"/>
+  <text class="sname" x="925" y="721" fill="#f5c842">WAIT_GATE</text>
+  <text class="sdesc" x="925" y="735">latch raw_base/w2/w3 on done; latch fault_type on fault</text>
+
+  <!-- FETCH_HDR -->
+  <rect x="770" y="750" width="310" height="38" rx="4" fill="#0e2818" stroke="#3cb371"/>
+  <text class="sname" x="925" y="765" fill="#e8e8e8">FETCH_HDR</text>
+  <text class="sdesc" x="925" y="779">mem[raw_base] &#x2192; cc / n_minus_6 / lump_size</text>
+
+  <!-- WRITE_CR14 -->
+  <rect x="770" y="794" width="310" height="38" rx="4" fill="#0e2818" stroke="#3cb371"/>
+  <text class="sname" x="925" y="809" fill="#e8e8e8">WRITE_CR14</text>
+  <text class="sdesc" x="925" y="823">X-only cap  ·  base=raw_base+4  ·  limit=lumpSize&#x2212;cc&#x2212;2</text>
+
+  <!-- WRITE_CR6 -->
+  <rect x="770" y="838" width="310" height="38" rx="4" fill="#0e2818" stroke="#3cb371"/>
+  <text class="sname" x="925" y="853" fill="#e8e8e8">WRITE_CR6</text>
+  <text class="sdesc" x="925" y="867">c-list cap  ·  base=raw_base+(lumpSize&#x2212;cc)&#xD7;4  ·  limit=cc&#x2212;1</text>
+
+  <!-- cLoad DONE -->
+  <rect x="770" y="882" width="310" height="38" rx="4" fill="#0a2018" stroke="#2ecc71" stroke-width="2"/>
+  <text class="sname" x="925" y="897" fill="#2ecc71">DONE</text>
+  <text class="sdesc" x="925" y="911">assert cload_done  ·  CR14 + CR6 written  &#x2192; IDLE</text>
+
+  <!-- cLoad FAULT -->
+  <rect x="770" y="926" width="310" height="38" rx="4" fill="#280808" stroke="#e74c3c"/>
+  <text class="sname" x="925" y="941" fill="#e74c3c">FAULT</text>
+  <text class="sdesc" x="925" y="955">assert cload_fault  ·  latch fault_type  &#x2192; IDLE</text>
+
+  <!-- cLoad post-gate down-arrows -->
+  <line x1="925" y1="744" x2="925" y2="748" stroke="#3cb371" stroke-width="1.5" marker-end="url(#ah-g)"/>
+  <line x1="925" y1="788" x2="925" y2="792" stroke="#3cb371" stroke-width="1.5" marker-end="url(#ah-g)"/>
+  <line x1="925" y1="832" x2="925" y2="836" stroke="#3cb371" stroke-width="1.5" marker-end="url(#ah-g)"/>
+  <line x1="925" y1="876" x2="925" y2="880" stroke="#2ecc71" stroke-width="1.5" marker-end="url(#ah-g)"/>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       FOOTNOTES
+  ══════════════════════════════════════════════════════════════ -->
+
+  <line x1="60" y1="978" x2="1040" y2="978" stroke="#1e2a3a" stroke-width="1"/>
+
+  <text class="fnote" x="550" y="992">
+    &#x2605; States compiled in only when enable_seal_check = True (production default).
+    Dashed borders mark conditional states.
+  </text>
+  <text class="fnote" x="550" y="1008">
+    Memory bus is muxed: ns_gate_busy=1 &#x2192; gate drives mem_addr/mem_rd_en;
+    caller drives mem otherwise (FETCH_HDR in cLoad; FETCH_GT, RESET_GBIT in mLoad).
+  </text>
+  <text class="fnote" x="550" y="1024">
+    CRC input (89 bits): gt_word0[24:0] + raw_base[31:0] + raw_w2[31:0]
+    &#x2014; identical to the separate computations that previously lived in each caller.
+  </text>
+
+</svg>
+</body>
+</html>
