@@ -165,7 +165,7 @@ class ChurchCLoad(Elaboratable):
                     m.next = "CHECK_TYPE"
 
             with m.State("CHECK_TYPE"):
-                with m.If(e_gt_view.gt_type != GT_TYPE_REAL):
+                with m.If(e_gt_view.gt_type != GT_TYPE_INFORM):
                     m.d.sync += fault_type_reg.eq(FaultType.PERM_E)
                     m.next = "FAULT"
                 with m.Elif(~e_gt_view.perms[PERM_E]):

@@ -30,7 +30,7 @@ The Church Machine uses a 32-bit Golden Token with a precisely defined bit layou
 |-------|-----------|-------|-------------|
 | [15:0]  | `object_id` | 16 | Namespace slot index (0–65,535) |
 | [22:16] | `gt_seq`    | 7  | Revocation sequence counter; must match NS Entry Word 1 `gt_seq` |
-| [24:23] | `typ`       | 2  | GT class (NULL / Real / Abstract / Outform) |
+| [24:23] | `typ`       | 2  | GT class (NULL / Inform / Outform / Abstract) |
 | [30:25] | permissions | 6  | R, W, X, L, S, E (see below) |
 | [31]    | `B`         | 1  | Bind flag — 1 = GT may be propagated via mSave |
 
@@ -95,9 +95,9 @@ The Church Machine includes a 2-bit type field classifying the nature of the ref
 | Value | Type | Description |
 |-------|------|-------------|
 | 00 | NULL | Empty / invalid — always faults on use |
-| 01 | Real | GT points to a lump or data object in local memory via an NS entry |
-| 10 | Abstract | GT IS the value — constants, immutable credentials, PassKey tokens |
-| 11 | Outform | GT references an IDE-managed dependency (lazy-loaded via Locator) |
+| 01 | Inform | GT points to a lump or data object in local memory via an NS entry |
+| 10 | Outform | GT references an IDE-managed dependency (lazy-loaded via Locator) |
+| 11 | Abstract | GT IS the value — constants, immutable credentials, PassKey tokens |
 
 NULL is architecturally distinct from all valid reference types. Any GT with `typ=00` immediately faults at ChurchNSGate before any NS lookup is performed.
 

@@ -191,7 +191,7 @@ the GT class at [24:23], and identity fields below that:
 | 27    | L     | Church | LOAD        | Load a capability out of this region |
 | 26    | S     | Church | SAVE        | Save a capability into this region |
 | 25    | E     | Church | CALL        | This GT is a valid CALL target |
-| 24:23 | typ   | —      | —           | GT class: 00=NULL, 01=Real, 10=Abstract, 11=Outform — CRC covered |
+| 24:23 | typ   | —      | —           | GT class: 00=NULL, 01=Inform, 10=Outform, 11=Abstract — CRC covered |
 
 **R, W, X and L, S, E are mutually exclusive groups.** Any GT with bits from
 more than one group is rejected by Mint as malformed.
@@ -205,8 +205,8 @@ more than one group is rejected by Mint as malformed.
 | R-GT (read-only)  | 01  | B R                 | Turing: read-only data |
 | LS-GT (MintCL)    | 01  | B L S               | Church: full capability read/write |
 | NULL GT           | 00  | 0 (all clear)       | All bits zero — faults on any use |
-| ABSTRACT GT       | 10  | 0 (no rights)       | Self-defining constant or PassKey — no RAM |
-| OUTFORM GT        | 11  | (any)               | Lump registered but not yet resident — fires Absent event on LOAD |
+| OUTFORM GT        | 10  | (any)               | Lump registered but not yet resident — fires Absent event on LOAD |
+| ABSTRACT GT       | 11  | 0 (no rights)       | Self-defining constant or PassKey — no RAM |
 | *(CR14 transient)*| 01  | X                   | Derived from NS slot on CALL; never issued or stored |
 | *(CR6 transient)* | 01  | L                   | Derived from NS slot on CALL; never issued or stored |
 
@@ -240,7 +240,7 @@ fixed value) and PassKey credentials (opaque identity tokens). Abstract GTs
 are distributed by writing the full CR directly into c-list slots — no NS
 slot consumed.
 
-### Outform GT (typ = 11)
+### Outform GT (typ = 10)
 
 A GT issued by the IDE as a dependency placeholder. The GT itself (Word 0
 only) is the IDE's key to identify the lump — no NS slot is required until
@@ -286,7 +286,7 @@ thread).
 | Field         | Bits  | Meaning |
 |---------------|-------|---------|
 | B R W X L S E | 31:25 | Permissions — TPERM-changeable, **excluded from CRC** |
-| typ           | 24:23 | GT class: 00=NULL, 01=Real, 10=Abstract, 11=Outform — CRC covered |
+| typ           | 24:23 | GT class: 00=NULL, 01=Inform, 10=Outform, 11=Abstract — CRC covered |
 | gt_seq        | 22:16 | Revocation sequence number — CRC covered |
 | object_id     | 15:0  | Object index, unique per lump issuance — CRC covered |
 
@@ -399,9 +399,9 @@ an Outform Event only if the download remains absent.
 
 | Slot Word 0 value       | typ | Meaning |
 |-------------------------|-----|---------|
-| B\|perms\|typ=01\|gt_seq\|object_id | 01=Real | Regular lump or data GT |
-| typ=10\|object_id       | 10=Abstract | Physical constant or PassKey — self-defining |
-| typ=11\|object_id       | 11=Outform | IDE-managed dep — Absent event fires on first LOAD |
+| B\|perms\|typ=01\|gt_seq\|object_id | 01=Inform | Regular lump or data GT |
+| typ=10\|object_id       | 10=Outform | IDE-managed dep — Absent event fires on first LOAD |
+| typ=11\|object_id       | 11=Abstract | Physical constant or PassKey — self-defining |
 | 0x00000000              | 00=NULL | Unused slot |
 
 `cc` is the slot count. The c-list occupies the last `cc` words of the lump.

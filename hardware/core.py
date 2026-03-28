@@ -320,7 +320,7 @@ class ChurchCore(Elaboratable):
                 m.d.comb += [
                     ns_gt_view.slot_id.eq(0),
                     ns_gt_view.gt_seq.eq(0),
-                    ns_gt_view.gt_type.eq(GT_TYPE_REAL),
+                    ns_gt_view.gt_type.eq(GT_TYPE_INFORM),
                     ns_gt_view.perms.eq(0),
                 ]
                 m.d.comb += [boot_wr_en[15].eq(1), boot_wr_gt[15].eq(ns_gt)]
@@ -330,7 +330,7 @@ class ChurchCore(Elaboratable):
                 m.d.comb += [
                     thrd_gt_view.slot_id.eq(1),
                     thrd_gt_view.gt_seq.eq(0),
-                    thrd_gt_view.gt_type.eq(GT_TYPE_REAL),
+                    thrd_gt_view.gt_type.eq(GT_TYPE_INFORM),
                     thrd_gt_view.perms.eq(0),
                 ]
                 m.d.comb += [boot_wr_en[8].eq(1), boot_wr_gt[8].eq(thrd_gt)]
@@ -340,7 +340,7 @@ class ChurchCore(Elaboratable):
                 m.d.comb += [
                     cr6_gt_view.slot_id.eq(2),
                     cr6_gt_view.gt_seq.eq(0),
-                    cr6_gt_view.gt_type.eq(GT_TYPE_REAL),
+                    cr6_gt_view.gt_type.eq(GT_TYPE_INFORM),
                     cr6_gt_view.perms.eq(PERM_MASK_E),
                 ]
                 m.d.comb += [boot_wr_en[6].eq(1), boot_wr_gt[6].eq(cr6_gt)]
@@ -350,7 +350,7 @@ class ChurchCore(Elaboratable):
                 m.d.comb += [
                     slot3_gt_view.slot_id.eq(2),
                     slot3_gt_view.gt_seq.eq(0),
-                    slot3_gt_view.gt_type.eq(GT_TYPE_REAL),
+                    slot3_gt_view.gt_type.eq(GT_TYPE_INFORM),
                     slot3_gt_view.perms.eq(PERM_MASK_E),
                 ]
 
@@ -359,7 +359,7 @@ class ChurchCore(Elaboratable):
                 m.d.comb += [
                     cr7_gt_view.slot_id.eq(3),
                     cr7_gt_view.gt_seq.eq(0),
-                    cr7_gt_view.gt_type.eq(GT_TYPE_REAL),
+                    cr7_gt_view.gt_type.eq(GT_TYPE_INFORM),
                     cr7_gt_view.perms.eq(PERM_MASK_X),
                 ]
                 m.d.comb += [boot_wr_en[7].eq(1), boot_wr_gt[7].eq(cr7_gt)]

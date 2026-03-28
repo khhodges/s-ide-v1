@@ -36,7 +36,7 @@ def make_gt(gt_type=GT_TYPE_NULL, perms=0, slot_id=0, gt_seq=0):
     GT Word 0 field layout (current — matches CLOOMC listing in secure_boot_tutorial.js):
       [15:0]  slot_id   — 16-bit namespace slot index
       [22:16] gt_seq    — 7-bit revocation counter (must match NS entry word2[31:25])
-      [24:23] gt_type   — 00=Null  01=Real (GT_TYPE_REAL)  10=Abstract (GT_TYPE_ABSTRACT)
+      [24:23] gt_type   — 00=NULL  01=Inform (GT_TYPE_INFORM)  10=Outform (GT_TYPE_OUTFORM)  11=Abstract (GT_TYPE_ABSTRACT)
       [30:25] perms     — R W X L S E (one bit each, LSB=R)
       [31]    b_flag    — bindable override (set by IDE; excluded from CRC seal input)
 
@@ -72,11 +72,11 @@ if ENABLE_CHANGE_SWITCH:
 
 BOOT_PROGRAM += [
     # B:03 INIT_ABSTR — load code/constants GT into CR1 from c-list[0]
-    # CLOOMC: LOAD AL, CR1, CR6[0]  → make_gt(GT_TYPE_REAL, R|X, slot_id=3, gt_seq=0)
+    # CLOOMC: LOAD AL, CR1, CR6[0]  → make_gt(GT_TYPE_INFORM, R|X, slot_id=3, gt_seq=0)
     encode_church(ChurchOpcode.LOAD, CondCode.AL, cr_dst=1, cr_src=6, imm=0),
 
     # B:03 — load boot code GT into CR2 from c-list[1]
-    # CLOOMC: LOAD AL, CR2, CR6[1]  → make_gt(GT_TYPE_REAL, X, slot_id=4, gt_seq=0)
+    # CLOOMC: LOAD AL, CR2, CR6[1]  → make_gt(GT_TYPE_INFORM, X, slot_id=4, gt_seq=0)
     encode_church(ChurchOpcode.LOAD, CondCode.AL, cr_dst=2, cr_src=6, imm=1),
 
     # B:03 — restrict CR2 to X permission only (TPERM does not check seal)
@@ -90,7 +90,7 @@ BOOT_PROGRAM += [
     encode_church(ChurchOpcode.LAMBDA, CondCode.AL, cr_dst=2),
 
     # B:04 LOAD_NUC — load first user abstraction E-GT into CR0 from c-list[6]
-    # CLOOMC: LOAD AL, CR0, CR6[6]  → make_gt(GT_TYPE_REAL, E, slot_id=4, gt_seq=0)
+    # CLOOMC: LOAD AL, CR0, CR6[6]  → make_gt(GT_TYPE_INFORM, E, slot_id=4, gt_seq=0)
     encode_church(ChurchOpcode.LOAD, CondCode.AL, cr_dst=0, cr_src=6, imm=6),
 
     # B:04 — restrict CR0 to E permission only before CALL
@@ -176,7 +176,7 @@ for _i in range(16):
     _location = NS_TABLE_BASE if _i == 0 else _i * 0x100
     _alloc_size = 8
     _gt_seq = 0
-    _entry = _make_ns_entry(GT_TYPE_REAL, PERM_MASK_R | PERM_MASK_W, _i, _gt_seq,
+    _entry = _make_ns_entry(GT_TYPE_INFORM, PERM_MASK_R | PERM_MASK_W, _i, _gt_seq,
                             _location, _alloc_size)
     DEMO_NAMESPACE.extend(_entry)
 
@@ -195,13 +195,13 @@ for _i in range(16):
 #   idx 7: make_gt(Null, 0,   0,         0)         — reserved
 # ---------------------------------------------------------------------------
 DEMO_CLIST = [
-    make_gt(GT_TYPE_REAL, PERM_MASK_R | PERM_MASK_X, 3, 0),  # idx 0: code/constants R|X, Slot 3
-    make_gt(GT_TYPE_REAL, PERM_MASK_X, 4, 0),                 # idx 1: Boot code X-only, Slot 4
+    make_gt(GT_TYPE_INFORM, PERM_MASK_R | PERM_MASK_X, 3, 0),  # idx 0: code/constants R|X, Slot 3
+    make_gt(GT_TYPE_INFORM, PERM_MASK_X, 4, 0),                 # idx 1: Boot code X-only, Slot 4
     make_gt(GT_TYPE_NULL, 0, 0, 0),                           # idx 2: empty → Thread GT after SAVE
-    make_gt(GT_TYPE_REAL, PERM_MASK_E, 2, 0),                 # idx 3: Boot.Abstr E-GT, Slot 2
-    make_gt(GT_TYPE_REAL, PERM_MASK_E, 5, 0),                 # idx 4: secondary abstraction E, Slot 5
-    make_gt(GT_TYPE_REAL, PERM_MASK_L, 6, 0),                 # idx 5: C-List L-GT, Slot 6
-    make_gt(GT_TYPE_REAL, PERM_MASK_E, 4, 0),                 # idx 6: first user E-GT, Slot 4 (B:04)
+    make_gt(GT_TYPE_INFORM, PERM_MASK_E, 2, 0),                 # idx 3: Boot.Abstr E-GT, Slot 2
+    make_gt(GT_TYPE_INFORM, PERM_MASK_E, 5, 0),                 # idx 4: secondary abstraction E, Slot 5
+    make_gt(GT_TYPE_INFORM, PERM_MASK_L, 6, 0),                 # idx 5: C-List L-GT, Slot 6
+    make_gt(GT_TYPE_INFORM, PERM_MASK_E, 4, 0),                 # idx 6: first user E-GT, Slot 4 (B:04)
     make_gt(GT_TYPE_NULL, 0, 0, 0),                           # idx 7: reserved
 ]
 

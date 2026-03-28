@@ -5,7 +5,7 @@
 ## Overview
 
 When a thread executes **LOAD** against a c-list slot whose GT type is
-`Outform` (`typ=11`), the lump binary is not resident in physical memory.
+`Outform` (`typ=10`), the lump binary is not resident in physical memory.
 The hardware fires the **Absent event** and invokes the **Locator** as a
 secure subroutine `CALL` in the same thread. There is no scheduler transfer,
 no thread park, and no context switch. The calling thread's register state
@@ -26,7 +26,7 @@ without pre-loading them all.
 
 | Term | Definition |
 |------|------------|
-| **Outform GT** | A c-list slot Word 0 with `typ=11`. Signals that the lump is registered but not yet resident. The `object_id` field identifies which NS slot holds the recovery token. |
+| **Outform GT** | A c-list slot Word 0 with `typ=10`. Signals that the lump is registered but not yet resident. The `object_id` field identifies which NS slot holds the recovery token. |
 | **Outform NS slot** | The three NS words for the object hold a **96-bit opaque IDE token** (Words 1–3). Hardware passes this token to the Locator when the Absent event fires. |
 | **Live NS slot** | The three NS words hold the real lump descriptor: `base` (Word 1), `gt_seq + limit_offset` (Word 2), `CRC-16` (Word 3). `LOAD` succeeds against a Live slot. |
 | **Locator** | A ROM-resident or namespace-installed lump invoked as a secure `CALL`. It owns the fetch-inflate-validate sequence and holds `NetworkIO`, `Mint`, and `NamespaceWrite` capabilities in its c-list. |
@@ -41,7 +41,7 @@ without pre-loading them all.
 The Locator is invoked when **all** of the following are true:
 
 1. A thread executes **`LOAD`** against a c-list slot.
-2. The GT in that slot has **`typ = 11`** (Outform).
+2. The GT in that slot has **`typ = 10`** (Outform).
 3. The GT's `gt_seq` matches the stored sequence in the Outform NS slot — the GT is valid, just not yet resident.
 
 The hardware reads the three Outform NS words for `object_id`, extracts the
@@ -63,7 +63,7 @@ A namespace slot transitions between two states during the lazy-load lifecycle:
 
 | NS Word | Contents |
 |---------|----------|
-| Word 0  | E-GT (Outform typ=11, permissions, `gt_seq`, `object_id`) |
+| Word 0  | E-GT (Outform typ=10, permissions, `gt_seq`, `object_id`) |
 | Word 1  | IDE token bits [95:64] |
 | Word 2  | IDE token bits [63:32] |
 | Word 3  | IDE token bits [31:0] |
@@ -75,7 +75,7 @@ verbatim and interpreted to resolve the network source.
 
 | NS Word | Contents |
 |---------|----------|
-| Word 0  | E-GT (Real typ=01, permissions, `gt_seq`, `object_id`) |
+| Word 0  | E-GT (Inform typ=01, permissions, `gt_seq`, `object_id`) |
 | Word 1  | `base [32]` — physical base address of the lump |
 | Word 2  | `gt_seq [7]` \| `limit_offset [21]` |
 | Word 3  | `spare [15]` \| `G [1]` \| `CRC-16 [16]` |
@@ -94,7 +94,7 @@ the entire lump binary (see Step 8 below). `LOAD` succeeds against a Live slot.
 ### Step 1 — Absent event fires
 **Actor:** Hardware
 
-**Trigger:** Thread executes `LOAD`; GT `typ=11` (Outform).
+**Trigger:** Thread executes `LOAD`; GT `typ=10` (Outform).
 
 The hardware reads the three Outform NS words for `object_id`, extracting the
 96-bit IDE token, then invokes the Locator as a secure subroutine `CALL` in the
@@ -241,7 +241,7 @@ latency cost).
 ## Resolution Summary
 
 ```
-Thread LOAD ──► GT typ=11 (Outform) ──► Absent event fires
+Thread LOAD ──► GT typ=10 (Outform) ──► Absent event fires
                                                 │
                                     Locator invoked as subroutine CALL
                                                 │
@@ -264,9 +264,9 @@ Thread LOAD ──► GT typ=11 (Outform) ──► Absent event fires
 
 ## Outform GT and Eviction
 
-The Outform GT (`typ=11` Word 0) in the caller's c-list slot is **not modified**
+The Outform GT (`typ=10` Word 0) in the caller's c-list slot is **not modified**
 by the Absent event or the Locator. The c-list slot permanently holds
-`typ=11 | object_id` — the NS slot is the source of truth for whether the
+`typ=10 | object_id` — the NS slot is the source of truth for whether the
 lump is currently resident.
 
 The 96-bit IDE token saved in Step 2 allows the Locator to restore the
@@ -335,7 +335,7 @@ Compile time:
                                ┌────────┴──────────────────────┐
                                │  NS slot created (Outform)     │
                                │  Words 1–3: 96-bit IDE token   │
-                               │  GT Word 0: typ=11 (Outform)   │
+                               │  GT Word 0: typ=10 (Outform)   │
                                └────────┬──────────────────────┘
                                         │
                                lump.zip archived to Lump Library
@@ -367,7 +367,7 @@ After eviction:
   Live NS slot is written.
 - **Capability isolation preserved:** The Locator runs inside the same
   thread's trust domain. Mint writes the Live NS slot — only Mint has
-  `NamespaceWrite` authority. The caller's c-list slot (`typ=11`) is never
+  `NamespaceWrite` authority. The caller's c-list slot (`typ=10`) is never
   modified by the protocol; the NS slot is the sole source of residence truth.
 - **Eviction restores the lazy path cleanly:** Any holder retrying after
   eviction re-triggers the Locator transparently. No stale state is left

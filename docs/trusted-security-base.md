@@ -27,7 +27,7 @@ This document describes the Church Machine's TSB design.
 |---------|-------------|-------------|
 | [15:0]  | `object_id`  | Namespace slot index (0–65,535) |
 | [22:16] | `gt_seq`     | Revocation counter — must match NS Entry Word 1 `gt_seq` |
-| [24:23] | `typ`        | GT class: 00=NULL, 01=Real, 10=Abstract, 11=Outform |
+| [24:23] | `typ`        | GT class: 00=NULL, 01=Inform, 10=Outform, 11=Abstract |
 | [30:25] | permissions  | R(25) W(26) X(27) L(28) S(29) E(30) |
 | [31]    | `B`          | Bind flag — stored in GT bit [31] |
 

@@ -36,7 +36,7 @@ TUNNEL_REQ_LEN = 6   # gt_raw[31:0] LE + slot_id[15:0] LE
 
 
 class ChurchOutform(Elaboratable):
-    """Lazy-load handler for Absent Outform NS entries (typ=11).
+    """Lazy-load handler for Absent Outform NS entries (typ=10).
 
     FSM: IDLE -> TUNNEL_CONNECT -> RECV_HDR -> CHECK_SIG -> CHECK_FLAGS ->
          READ_UCSIZE -> DERIVE_N -> ALLOC -> SKIP_FNAME -> SKIP_EXTRA ->

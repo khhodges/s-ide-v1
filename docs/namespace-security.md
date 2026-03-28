@@ -52,7 +52,7 @@ The namespace table supports up to **65,536 entries**, bounded by the 16-bit `ob
 | [16]    | `g_bit` | GC mark bit — cleared on every ChurchNSGate access (G=0 = reachable) |
 | [31:17] | spare   | Reserved |
 
-**Note on B and F flags**: The B (Bind) flag lives in **bit [31] of GT Word 0** itself (`b_flag` in GT_LAYOUT) — it is a property of the token, not the NS entry. The F (Far/Foreign) concept is represented by the `typ` field in the GT (`typ=11` for Outform). Neither B nor F has a dedicated field in the 3-word NS entry.
+**Note on B and F flags**: The B (Bind) flag lives in **bit [31] of GT Word 0** itself (`b_flag` in GT_LAYOUT) — it is a property of the token, not the NS entry. The F (Far/Foreign) concept is represented by the `typ` field in the GT (`typ=10` for Outform). Neither B nor F has a dedicated field in the 3-word NS entry.
 
 ---
 

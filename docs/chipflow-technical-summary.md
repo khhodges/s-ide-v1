@@ -47,10 +47,10 @@ Permission Bits:
   [5] E — Enter      (Church domain)
 
 GT Type Field (2 bits, within spare):
-  00 — Inform  (local reference)
-  01 — Outform (remote reference)
-  10 — NULL    (empty/invalid/revoked)
-  11 — Abstract (unforgeable constant, e.g., pi)
+  00 — NULL     (empty/invalid)
+  01 — Inform   (local reference — NS lookup, lump in local memory)
+  10 — Outform  (calls the IDE — absent lump, Locator fires on first LOAD)
+  11 — Abstract (calls the abstraction abstraction — self-defining value, e.g., PassKey)
 ```
 
 **Capability Register (CR) Layout — 4 words, 256 bits:**

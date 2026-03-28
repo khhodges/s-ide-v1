@@ -59,7 +59,7 @@ R, W, and X permissions are NOT permitted on hardware devices.
 |---------|------------|-------|-------------|
 | [15:0]  | `object_id` | 16   | Namespace slot index (0–65,535) |
 | [22:16] | `gt_seq`    | 7    | Revocation sequence counter |
-| [24:23] | `typ`       | 2    | GT class (NULL / Real / Abstract / Outform) |
+| [24:23] | `typ`       | 2    | GT class (NULL / Inform / Outform / Abstract) |
 | [30:25] | permissions | 6    | R, W, X, L, S, E |
 | [31]    | `B`         | 1    | Bind flag |
 
@@ -90,10 +90,10 @@ R and W are pure Turing permissions (data access). L, S, and E are pure Church p
 |-------|------|---------|
 | 00 | NULL | Zero value — no capability. A zeroed GT (typ=00) always faults on use. |
 | 01 | Inform | GT points to memory via an NS entry — abstractions, data objects, lumps |
-| 10 | Abstract | GT IS the value — constants (pi), immutable credentials, escale variables |
-| 11 | Outform | GT references an IDE-managed dependency; lazy-loaded via Locator on first LOAD |
+| 10 | Outform | GT references an IDE-managed dependency; lazy-loaded via Locator on first LOAD |
+| 11 | Abstract | GT IS the value — constants (pi), immutable credentials, PassKey tokens |
 
-All abstractions use **Real (01)** GTs. The Real GT's `object_id` indexes a namespace slot that holds the lump base address and limit. CALL loads the lump header from `raw_base` via cLoad and reads `cc` (c-list count) and `n_minus_6` (size exponent) to split the lump into code (CR14, privileged) and c-list (CR6) regions.
+All abstractions use **Inform (01)** GTs. The Inform GT's `object_id` indexes a namespace slot that holds the lump base address and limit. CALL loads the lump header from `raw_base` via cLoad and reads `cc` (c-list count) and `n_minus_6` (size exponent) to split the lump into code (CR14, privileged) and c-list (CR6) regions.
 
 ## Namespace Table Slot Format
 
@@ -176,7 +176,7 @@ Revocation: increment `NS Word 1 [27:21]` by 1. All existing GTs for this entry 
 
 ### Lump split (abstraction lumps)
 
-When CALL resolves a Real GT, cLoad reads the **lump header** at `raw_base`. The header encodes:
+When CALL resolves an Inform GT, cLoad reads the **lump header** at `raw_base`. The header encodes:
 - `cc` — 8-bit c-list count (number of GTs at the top of the lump)
 - `n_minus_6` — 4-bit size exponent: lump size in words = `2^(n_minus_6 + 6)`
 
@@ -314,7 +314,7 @@ Instruction fetch uses CR14 (CLOOMC, privileged):
 ## CALL / RETURN
 
 CALL performs:
-1. Validate E permission on target Real GT (`typ=01`)
+1. Validate E permission on target Inform GT (`typ=01`)
 2. ChurchNSGate validates gt_seq + CRC-16 on the NS entry
 3. cLoad reads the **lump header** at `raw_base` → extracts `cc` (c-list count, 8-bit) and `n_minus_6` (size exponent, 4-bit)
 4. Compute lump split:
