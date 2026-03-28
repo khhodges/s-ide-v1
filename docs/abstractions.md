@@ -26,6 +26,179 @@ mLoad reads the single shared GT's slot metadata to derive both registers:
 - **CR14 (code)**: base = slot base address, limit = code size (X-only, privileged)
 - **CR6 (c-list)**: base = slot limit − GTcount (L-only)
 
+## The Three Lump Types
+
+Every lump delivered as a ZIP download has a header word at Word 0. The header encodes everything Mint needs to validate the binary — no separate metadata file. Each of the three lump types occupies a fixed role in the system hierarchy:
+
+1. **Namespace** — the root. Defines the physical memory map and the full NS Table.
+2. **Thread** — the execution context. Holds live registers, stack, heap, and c-list.
+3. **Function** — the callable abstraction. Holds executable code and a c-list of capabilities.
+
+### ZIP → Header Word: How Lump Size Is Derived
+
+Every lump zip is a standard ZIP archive with one contained binary. The Locator reads the ZIP **local file header** (32 bytes) at the start of the archive. The critical field is at **byte offset 24**:
+
+```
+ZIP Local File Header (partial):
+  Offset  0–3:   Signature 0x04034B50
+  Offset  6–7:   General-purpose bit flags  (bit 3 must be 0 — no streaming)
+  Offset 16–19:  CRC-32 of the uncompressed data
+  Offset 20–23:  Compressed size
+  Offset 24–27:  Uncompressed size  ◄── this field drives lump allocation
+```
+
+**Derivation sequence (identical for all three types):**
+
+```
+1. Assert bit 3 of flags = 0 (streaming mode rejected — CRC-32 must be in header)
+2. uncompressed_size ← Mem[zipBase + 24]           (4-byte little-endian)
+3. n              = log₂(uncompressed_size / 4)    (uncompressed_size is in bytes;
+                                                    divide by 4 → word count = 2^n)
+4. n_minus_6      = n - 6                          (fits in 4 bits; valid 0..8)
+5. lumpSize       = 2^n           words
+6. byteSize       = lumpSize × 4  bytes            (= uncompressed_size, verified)
+```
+
+`n_minus_6` is what the IDE writes into header word bits `[26:23]`. Mint independently re-derives it from the same formula and faults if the header word disagrees with the binary length.
+
+---
+
+### 1 — Namespace Lump (typ = 10, clist-only)
+
+The Namespace lump is the first thing installed. It is not callable — it defines the physical address space of the entire application and pre-populates the NS Table with Live, Outform, and NULL entries for every abstraction the application can ever reach.
+
+```
+31      27 26    23 22                10 9   8 7              0
++──────────+────────+──────────────────+──────+────────────────+
+│ 0x1F [5] │ n-6[4] │     cw=0 [13]    │10[2] │    cc [8]      │
++──────────+────────+──────────────────+──────+────────────────+
+```
+
+| Field | Set by  | Value / Meaning |
+|-------|---------|-----------------|
+| magic | HW spec | Always `0x1F` — traps if accidentally executed |
+| n-6   | IDE     | From ZIP `uncompressed_size`: `n-6 = log₂(size/4) − 6`. Determines how much physical address space the application owns. |
+| cw    | IDE     | Always `0` — no executable code; body is Binary Data (NS Table entries) |
+| typ   | IDE     | Always `10` (clist-only) |
+| cc    | IDE     | **Locator count** — number of Locator GT slots embedded in the NS header (not GT Word 0 c-list slots) |
+
+**ZIP size → header:**
+```
+namespace.zip uncompressed_size = 65 536 bytes  →  n = 14  →  n-6 = 8
+```
+
+**Example header words:**
+```
+Boot.NS  (n-6=8, cw=0, cc=3, typ=10):  0xFF00_0003   ← 16 384-word space
+App.NS   (n-6=4, cw=0, cc=4, typ=10):  0xFA00_0004   ← 1 024-word space
+```
+
+The body of a Namespace lump is **not** a code section or a GT c-list — it is the NS Table itself: `N × 3 words` of Binary Data (base / limit+gt_seq / CRC+G entries). Mint validates each slot's CRC-16 at install time.
+
+---
+
+### 2 — Thread Lump (typ = 10, clist-only)
+
+The Thread lump holds the live execution state of a suspended thread — capability registers (CR0–CR11), a LIFO call stack, a heap, and data registers (DR0–DR15). It is never executed. PC never enters the Thread lump. CHANGE saves and restores it atomically.
+
+The `cw` (code word count) field is **reinterpreted** as `sw` (stack words) because a Thread carries no code. The `cc` field is repurposed as `heapWords`.
+
+```
+31      27 26    23 22                10 9   8 7              0
++──────────+────────+──────────────────+──────+────────────────+
+│ 0x1F [5] │ n-6[4] │      sw [13]     │10[2] │  heapWords[8]  │
++──────────+────────+──────────────────+──────+────────────────+
+```
+
+| Field    | Set by  | Value / Meaning |
+|----------|---------|-----------------|
+| magic    | HW spec | Always `0x1F` |
+| n-6      | IDE     | From ZIP `uncompressed_size`: same derivation as Namespace. Determines total thread lump size. |
+| sw       | IDE     | **Stack words** — the `cw` field reinterpreted for `typ=10`. IDE sets the LIFO stack depth at thread creation. |
+| typ      | IDE     | Always `10` (clist-only) — Mint does not look for a code section |
+| heapWords| IDE     | **Heap words** — the `cc` field repurposed. IDE sets max heap depth. The caps zone (CR0–CR11, 12 words) is architecture-fixed; `heapWords` controls Zone ④. |
+
+**ZIP size → header:**
+```
+MyApp.thread.zip uncompressed_size = 1 024 bytes  →  n = 8  →  n-6 = 2
+```
+
+**Memory zones** (all offsets from lump base, IDE-parameterised via `sw` and `heapWords`):
+
+```
+Word 0:          Header (typ=10, sw, heapWords)       [never executed]
+Words 1..16:     ⑤ Data Registers DR0–DR15            [16 words, fixed]
+Words 17..16+heapWords:   ④ Heap ↑                   [IDE: heapWords]
+Words 17+heapWords..sp_max: ③ Freespace              [zero at creation]
+Words sp_max+1..lumpSize-13: ② LIFO Stack ↓          [IDE: sw words]
+Words lumpSize-12..lumpSize-1: ① Capabilities CR0–CR11 [12 words, fixed]
+```
+
+**Example header words:**
+```
+Boot.Thread (n-6=2, sw=32, heapWords=64, typ=10):  0xF900_8240
+Thread      (n-6=2, sw=32, heapWords=64, typ=10):  0xF900_8240
+```
+
+The IDE populates Zone ① (the capabilities tail) at compile time with the thread's birth GTs — CR0–CR11 initial values. All other zones are all-zero in the distributed binary.
+
+---
+
+### 3 — Function Abstraction Lump (typ = 00)
+
+The Function lump is the callable abstraction — a CLOOMC code section followed by freespace and a c-list. This is the standard lump type. CALL validates the E-GT, reads the header word, derives `cw` and `cc`, and splits the lump into CR14 (code, X-only) and CR6 (c-list, L-only).
+
+```
+31      27 26    23 22                10 9   8 7              0
++──────────+────────+──────────────────+──────+────────────────+
+│ 0x1F [5] │ n-6[4] │      cw [13]     │00[2] │    cc [8]      │
++──────────+────────+──────────────────+──────+────────────────+
+```
+
+| Field | Set by  | Value / Meaning |
+|-------|---------|-----------------|
+| magic | HW spec | Always `0x1F` |
+| n-6   | IDE     | From ZIP `uncompressed_size`: same derivation. Determines lump allocation size. |
+| cw    | IDE     | **Code word count** — number of code words (method table + instructions). PC=1 is entry; code occupies Words 1..cw. |
+| typ   | IDE     | Always `00` (standard lump) |
+| cc    | IDE     | **C-list slot count** — number of GT Word 0 slots at the lump tail. Each slot is one 32-bit word. IDE pre-fills these at compile time. |
+
+**ZIP size → header:**
+```
+SlideRule.lump.zip uncompressed_size = 4 096 bytes  →  n = 10  →  n-6 = 4
+```
+
+**Memory layout:**
+```
+Word 0:                  Header (typ=00, cw, cc)      [never executed — traps]
+Words 1..cw:             Code (method table + instructions) → CR14 at CALL
+Words cw+1..lumpSize-cc-1: Freespace (all-zero, Mint-verified)
+Words lumpSize-cc..lumpSize-1: C-list (cc GT slots)  → CR6 at CALL
+```
+
+**Example header words:**
+```
+Decimal   (n-6=1, cw=107, cc=0,  typ=00):  0xF881_AC00
+SlideRule (n-6=4, cw=525, cc=1,  typ=00):  0xFA08_3401
+Boot.Abstr(n-6=2, cw=0,  cc=46, typ=00):  0xF900_002E
+```
+
+The IDE pre-populates every c-list slot with either an Inform GT (resident dependency) or an Outform GT (lazy-loaded dependency). Outform GT slots fire the Absent event on first LOAD, invoking the Locator to fetch the zip, derive `n` from `uncompressed_size`, allocate memory, inflate, and mint a Live NS entry.
+
+---
+
+### Header Word Comparison
+
+| Type      | typ | cw field meaning | cc field meaning | ZIP → n derivation |
+|-----------|-----|-----------------|------------------|--------------------|
+| Namespace | 10  | always 0 (no code) | Locator count  | `n = log₂(size/4)`; `n-6` in [26:23] |
+| Thread    | 10  | `sw` — stack words (IDE) | `heapWords` (IDE) | same |
+| Function  | 00  | `cw` — code word count (IDE) | c-list slots (IDE) | same |
+
+All three use `magic=0x1F`, power-of-2 lump sizes (minimum 64 words), and the same CRC-16/CCITT integrity check in the NS entry. The ZIP `uncompressed_size` field is the single authoritative source for lump size — Mint cross-checks the header word's `n-6` against the physical binary length.
+
+---
+
 ## Scale-Free Architecture
 
 The abstraction model is scale-free. The same primitives — namespace isolation, L/S capability grants, version revocation, Negotiate dual-approval, Outform+Far tunnels — apply from a single family to a national government. The architecture enforces rules; the namespace configuration reflects the local tradition.
