@@ -411,6 +411,117 @@ sentinel for each resource, validated by hardware before the GT is installed.
 
 ---
 
+## MTBF Qualification and Downloadability Regulation
+
+Every Secure Abstraction carries an **MTBF qualification** — a hardware-tracked
+reliability metric (Mean Time Between Failures) that determines whether the abstraction
+may be distributed beyond the local CTMM and, if so, to whom. The parent IDE assists
+in setting the thresholds for each tier and may update them remotely via the Home Base
+tunnel.
+
+### Why MTBF gates downloadability
+
+A distributed abstraction becomes part of the capability structure of every CTMM that
+receives it. A poorly qualified abstraction — one with a high failure rate — degrades
+the reliability of every system it enters. MTBF qualification makes reliability a
+first-class architectural property: an abstraction that has not demonstrated sufficient
+reliability cannot propagate, regardless of who asks for it.
+
+This is enforced in hardware through the **S (Save) permission** on the abstraction's
+GT. The MTBF tier determines whether the hardware permits `mSave` on that GT:
+
+| Tier | MTBF condition | S permission | Scope |
+|:-----|:---------------|:-------------|:------|
+| **Isolated** | Below minimum threshold, or unvalidated | Blocked — hardware denies mSave | Local CTMM only; cannot be copied or distributed |
+| **User-regulated** | Meets user-tier threshold | Permitted — user-level abstractions may receive a copy | Individual user distribution via the Home Base tunnel |
+| **Namespace-regulated** | Meets namespace-tier threshold | Permitted — all abstractions in the namespace may receive it | Full namespace distribution; CR15 (Namespace) validates each download |
+
+### MTBF tracking
+
+The hardware tracks two counters per abstraction in the namespace entry:
+
+| Counter | Meaning |
+|:--------|:--------|
+| `invocation_count` | Number of times the abstraction has been entered via CALL |
+| `failure_count` | Number of those invocations that resulted in a FAULT or unhandled exception |
+
+```
+MTBF score = invocation_count / (failure_count + 1)
+             ↑ higher is more reliable; failure_count + 1 avoids division by zero
+```
+
+These counters are updated atomically by hardware at the end of every CALL / RETURN
+cycle. They cannot be written by user code — they are read-only from software's
+perspective, writable only by the hardware invocation path.
+
+### Downloadability tiers in detail
+
+#### Isolated
+The abstraction exists only on the local CTMM. The S bit on its GT is hardware-locked
+to 0 — `mSave` of this GT faults unconditionally. An abstraction enters the Isolated
+tier when:
+- It has fewer than the minimum invocation count for any tier (freshly installed,
+  unvalidated), or
+- Its MTBF score is below the Isolated floor set by the IDE threshold config.
+
+Isolated abstractions can still be called locally (E permission is independent of S).
+They simply cannot leave the machine they are running on.
+
+#### User-regulated
+The abstraction's MTBF score meets the user-tier threshold. The S bit is enabled for
+GTs held by user-level abstractions. Distribution is mediated by the Home Base tunnel:
+the sending CTMM packages the abstraction via `mSave` and the receiving CTMM installs
+it via `mLoad` after the tunnel delivers it. The receiving CTMM recalculates a fresh
+MTBF score from zero — history from the sending machine does not transfer.
+
+#### Namespace-regulated
+The abstraction's MTBF score meets the namespace-tier threshold. Distribution is
+permitted to all abstractions within the namespace. Each distribution is authorised
+by the Namespace register (CR15): the namespace authority holds the GT with S permission
+and the IDE validates the threshold before permitting the transfer.
+
+### IDE threshold management
+
+The parent IDE sets and updates the MTBF thresholds for all three tiers. Thresholds
+are delivered to the CTMM as a signed configuration payload via the Home Base tunnel
+(`R` permission on the Home Base GT — the CTMM receives the threshold data):
+
+```
+Threshold config payload (delivered via Home Base R):
+  isolated_floor      — minimum MTBF score; below this, S is always locked
+  user_tier_threshold — MTBF score required for User-regulated status
+  ns_tier_threshold   — MTBF score required for Namespace-regulated status
+  min_invocations     — minimum invocation_count before any tier is assigned
+```
+
+The IDE may raise thresholds (tighten quality requirements) or lower them (e.g., for
+a namespace in early development). Threshold changes take effect on the next invocation
+cycle — they do not retroactively revoke existing distributed copies, but do prevent
+further distribution of abstractions that no longer qualify.
+
+MTBF telemetry flows back to the IDE via the Home Base tunnel (`W` permission):
+the CTMM periodically sends `invocation_count` and `failure_count` for each
+abstraction so the IDE can track fleet-wide reliability and adjust thresholds
+accordingly.
+
+### Security properties
+
+- **Counters are hardware-owned.** User code cannot inflate `invocation_count` or
+  deflate `failure_count` to falsely qualify an abstraction. The hardware path is the
+  only writer.
+- **Fresh score on receipt.** A received abstraction starts with zero counters. It
+  must earn its tier on the receiving machine — it cannot inherit a fraudulent score
+  from the sender.
+- **Threshold authenticity.** Threshold payloads are delivered only via the Home Base
+  tunnel, which is an Abstract GT provisioned at boot. A payload arriving through any
+  other path is rejected — there is no way for user code to inject a forged threshold
+  config.
+- **Tier demotion is immediate.** If the IDE lowers a threshold and an abstraction's
+  MTBF score falls below the new threshold, the S bit is locked on the next
+  invocation — no distribution can occur after that point.
+
+---
+
 ## Secure Network Browser Abstraction
 
 A **Secure Network Browser** is a Secure Abstraction that manages outbound network
