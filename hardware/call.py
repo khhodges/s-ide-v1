@@ -201,7 +201,8 @@ class ChurchCall(Elaboratable):
         nia_computed = Signal(32)
         m.d.comb += nia_computed.eq(1)
 
-        # CR14 with M=1 (PERM_X asserted) for SET_M_WRITE
+        # CR14 with M=1 (PERM_X asserted, PERM_R optional) for SET_M_WRITE
+        # CR14 permissions: RX only (no W — code is read-execute, not writable)
         cr14_with_m = Signal(CAP_REG_LAYOUT)
         cr14_wm_view = View(CAP_REG_LAYOUT, cr14_with_m)
         cr14_wm_gt   = View(GT_LAYOUT, cr14_wm_view.word0_gt)
@@ -209,7 +210,7 @@ class ChurchCall(Elaboratable):
             cr14_wm_gt.slot_id.eq(cr14_lat_gt.slot_id),
             cr14_wm_gt.gt_seq.eq(cr14_lat_gt.gt_seq),
             cr14_wm_gt.gt_type.eq(cr14_lat_gt.gt_type),
-            cr14_wm_gt.perms.eq(cr14_lat_gt.perms | PERM_MASK_X),
+            cr14_wm_gt.perms.eq((cr14_lat_gt.perms & PERM_MASK_R) | PERM_MASK_X),
             cr14_wm_gt.b_flag.eq(cr14_lat_gt.b_flag),
             cr14_wm_view.word1_location.eq(cr14_lat_view.word1_location + 4),
             cr14_wm_view.word2_w2.eq(cr14_lat_view.word2_w2),

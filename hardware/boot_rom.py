@@ -101,7 +101,7 @@ BOOT_PROGRAM += [
     # CLOOMC: CALL AL, CR0, CR0
     # SECURITY CHECKPOINT 2: hardware re-validates CRC-16 seal of NS Slot 4 here.
     # On success:
-    #   CR14 derived from NS Slot 4: base=word0_location, limit=word1[16:0], perm=XR
+    #   CR14 derived from NS Slot 4: base=word0_location, limit=word1[16:0], perm=RX only (no W)
     #   CR6  derived from NS Slot 4: base=clistStart, limit=clistCount-1, perm=L
     #   2-word CALL frame pushed onto thread LIFO stack (STO += 2)
     #   PC = 0 — user abstraction begins executing
