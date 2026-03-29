@@ -787,7 +787,8 @@ hidden **STO** (Stack Top Offset) register tracking the current top.
 is the empty-stack sentinel; the first word pushed onto the stack occupies
 `sp_max−1` (cursor STO field decreases by 1 for LAMBDA, by 2 for CALL).
 CR12 is saved and restored on every CHANGE alongside STO, DR0–DR15, PC,
-FLAGS, CR14, and CR15 (see §CHANGE Context Save below).
+and FLAGS (see §CHANGE Context Save below). CR13, CR14, and CR15 are not
+touched by CHANGE — they are system-wide registers shared across all threads.
 
 The Zone ④ **Heap** (words 17..17+heapWords−1, example: 17..80) is entirely absent from the hardware
 save/restore path. It is private to its thread — no other thread holds a GT
@@ -917,25 +918,32 @@ remain fully general-purpose.
 ## CHANGE Context Save
 
 On every **CHANGE** (context switch), the hardware saves the outgoing
-thread's full per-thread state and restores the incoming thread's saved
-state. The exact register set saved/restored is:
+thread's per-thread state and restores the incoming thread's saved state.
+
+**Saved and restored by CHANGE:**
 
 | Register | Role |
 |----------|------|
 | **CR12** | Thread Identity (Priv zone) — lump base + word count |
-| **CR5** | Heap GT — re-installed to Zone ④ bounds (words 17..80) of the incoming thread |
+| **CR5** | Heap GT — re-installed from incoming Zone ④ bounds automatically |
 | **STO** | Stack Top Offset hidden register — current stack depth |
 | **DR0–DR15** | All 16 data registers |
 | **PC** | Program counter |
 | **FLAGS** | Condition flags |
-| **CR14** | Transient code-view (X) — derived fresh on the next CALL |
-| **CR15** | Namespace root — per-thread address space anchor |
+| **LAMBDA state** | LAMBDA_PC and LAMBDA-active flag |
+
+**Never touched by CHANGE (system-wide):**
+
+| Register | Role |
+|----------|------|
+| **CR13** | IRQ handler — one handler for the whole machine; CHANGE must not re-point it |
+| **CR14** | Transient code-view (X) — re-derived by cLoad on the next CALL, not stored |
+| **CR15** | Namespace root — all threads in the same application share one namespace |
 
 CR0–CR4 and CR6–CR11 (Zone ①, the live capability registers) are **not**
 saved on CHANGE — they are saved and restored only by explicit SAVE/LOAD
 instructions within the thread. CR5 is the exception: CHANGE re-installs it
-from the incoming thread's Zone ④ bounds automatically. CR13 is the
-interrupt-vector hardware register and is handled separately by the IRQ path.
+from the incoming thread's Zone ④ bounds automatically.
 
 CR7–CR11 (Prog zone) are saved as part of Zone ① via SAVE/LOAD, not
 via CHANGE. The boot sequence does not touch them; they start at whatever

@@ -127,11 +127,13 @@ The CHANGE instruction performs thread context switching by modifying the thread
 | **Mnemonic** | `CHANGE CRs` |
 | **Required Permission** | E (Enter) on source CR |
 | **Operation** | Full atomic thread swap via thread table |
-| **Context Saved** | DR0-DR15, CR0-CR11, CR14, CR15, PC, LAMBDA state saved to thread table |
-| **Context Loaded** | Target thread's registers, CRs, PC, LAMBDA state loaded from thread table |
-| **CR12-CR13** | Unchanged (system-wide: fault handler and interrupt handler) |
+| **Context Saved** | DR0-DR15, CR0-CR11, CR12, STO, PC, FLAGS, LAMBDA state |
+| **Context Loaded** | Incoming thread's DR0-DR15, CR12, STO, PC, FLAGS, LAMBDA state; CR5 re-installed from incoming Zone ④ bounds |
+| **CR13 — Unchanged** | IRQ handler — system-wide, shared by all threads |
+| **CR14 — Unchanged** | Transient code-view — re-derived by cLoad on the next CALL |
+| **CR15 — Unchanged** | Namespace root — system-wide, shared by all threads |
 
-CHANGE performs a full atomic swap. Per-thread context saved/restored: data registers DR0-DR15, programmer-accessible capability registers CR0-CR11, per-thread privileged registers CR14 (code) and CR15 (namespace), and the PC. System-wide registers CR12 (data fault handler) and CR13 (interrupt handler) are shared across all threads and remain unchanged during CHANGE. The thread table stores complete thread contexts indexed by the GT's namespace index, and entries are created on first use.
+CHANGE performs a full atomic swap of per-thread state: data registers DR0–DR15, CR12 (Thread Identity), the hidden STO (Stack Top Offset), PC, condition FLAGS, and LAMBDA state. CR5 (Heap GT) is re-installed automatically from the incoming thread's Zone ④ bounds. Three registers are system-wide and are never touched by CHANGE: CR13 (IRQ handler), CR14 (code register — transient, rebuilt by cLoad on the next CALL), and CR15 (Namespace root — all threads in the same application share one namespace). To write any of CR13–CR15, code must use SWITCH — the explicit privilege gate.
 
 ---
 
