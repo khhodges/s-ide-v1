@@ -1460,8 +1460,14 @@ class ChurchSimulator {
         ];
 
         if (presetMasks[presetCode] === null) {
-            this.fault('TPERM_RSV', `TPERM: reserved preset code ${presetCode}`);
-            return null;
+            this.flags.Z = false;
+            this.flags.N = true;
+            this.flags.C = false;
+            this.flags.V = false;
+            const desc = `TPERM CR${d.crDst}, RSV${presetCode} [reserved, ignored] — Z=0`;
+            this.output += desc + '\n';
+            this.pc++;
+            return { pc: this.pc - 1, instr: d, desc };
         }
 
         if (gt === 0) {

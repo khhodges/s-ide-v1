@@ -37,7 +37,7 @@ This document maps each instruction across all implementation layers for verific
 - [ ] RETURN: Verify stack pop, context restore, mask handling
 - [ ] CHANGE: Verify thread switch, monitor clearing
 - [ ] SWITCH: Verify C-List context switch
-- [ ] TPERM: Verify flag-setting model (Z=1 pass, Z=0 fail), preset codes 0-13, reserved codes 14-15 ignored (no FAULT). Verify conditional execution (EQ/NE suffixes) with TPERM flags
+- [x] TPERM: Flag model Z=1=pass/Z=0=fail confirmed. Presets 0-13 verified (CLEAR through RWXLSE). Codes 14-15 now ignored/Z=0 (no FAULT). Conditional execution (EQ/NE etc.) works via standard condition-check gate before dispatch. B-flag (bit 4 of imm) clears GT B-bit on pass. All named presets including RWXLSE/RWXLSEB added to assembler.
 - [ ] LOADX: Verify monitor set, same validation as LOAD
 - [ ] SAVEX: Verify monitor check, conditional store, result in DR
 - [ ] LDM: Verify per-register mLoad validation, register list

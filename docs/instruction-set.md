@@ -222,44 +222,27 @@ ANDs the preset mask with CRd's current permissions. Permissions can only be rem
 
 #### Preset Table
 
-Presets are split into two mutually exclusive groups matching domain purity:
-
-**Turing domain** (R, W, X — data access and execution):
-
-| Value | Name | Bits Set |
-|-------|------|----------|
-| 0 | CLEAR | None |
+| Code | Name | Bits Checked |
+|------|------|--------------|
+| 0 | CLEAR | None (always Z=1 if GT is non-NULL) |
 | 1 | R | R |
 | 2 | RW | R, W |
 | 3 | X | X |
 | 4 | RX | R, X |
 | 5 | RWX | R, W, X |
-| 10 | W | W |
-
-**Church domain** (L, S, E — capability list operations):
-
-| Value | Name | Bits Set |
-|-------|------|----------|
 | 6 | L | L |
 | 7 | S | S |
 | 8 | E | E |
 | 9 | LS | L, S |
+| 10 | LE | L, E |
+| 11 | SE | S, E |
+| 12 | LSE | L, S, E |
+| 13 | RWXLSE | R, W, X, L, S, E (all-permissions check) |
+| 14–15 | (reserved) | Ignored — Z=0, no fault |
 
-**Reserved codes** (raise FAULT at runtime):
+**B-modifier** (bit 4 of preset code): Adding B (0x10) clears the B-bit in the GT on a passing check — e.g. `TPERM CR5, EB` (code 0x18) checks E permission and, if it passes, clears the Bind bit. Named B-variants: RB, RWB, XB, RXB, RWXB, LB, SB, EB, LSB, LEB, SEB, LSEB, RWXLSEB.
 
-| Value | Name |
-|-------|------|
-| 11 | — |
-| 12 | — |
-| 13 | — |
-
-**E isolation rule**: E (Execute — enter an abstraction) must never be combined with L (Load from c-list) or S (Save to c-list). Combining E with L or S in a single token would allow a holder to both traverse the nodal c-list and enter an abstraction with one capability, creating an attack path into the c-list structure. E is the entry key to a function; L and S are the keys to the capability list that owns it. Keeping them separate ensures that holding the ability to call something does not grant the ability to read or modify the c-list it came from.
-
-Valid Church presets: L, S, E, LS. No preset may combine E with L or S.
-
-**Cross-domain rule**: No preset combines Turing and Church bits. Domain purity is a hardware invariant enforced at the instruction encoding level — a cross-domain preset value is illegal and raises a FAULT.
-
-B-modifier variants (add 0x10): RB, RWB, XB, EB, LSB, WB — sets B-bit alongside a valid domain-pure permission set. LSB is the maximum Church c-list preset with bind.
+**NULL GT rule**: If the GT in CRd is NULL (word0=0), TPERM always sets Z=0 with no fault.
 
 #### Design Rationale
 
