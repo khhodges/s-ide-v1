@@ -138,7 +138,9 @@ class ChurchAssembler {
                 break;
             }
             case 3: {
-                crDst = this._parseCR(parts[1], lineNum);
+                if (parts.length > 1) {
+                    imm = this._parseImm(parts[1], lineNum) & 0xFFF;
+                }
                 break;
             }
             case 4: {
@@ -337,7 +339,10 @@ class ChurchAssembler {
             case 0: return `${mnemonic} CR${crDst}, [CR${crSrc} + ${imm}]`;
             case 1: return `${mnemonic} CR${crDst} -> [CR${crSrc} + ${imm}]`;
             case 2: return `${mnemonic} CR${crDst}`;
-            case 3: return `${mnemonic} CR${crDst}`;
+            case 3: {
+                const retMask = imm & 0xFFF;
+                return retMask ? `${mnemonic} 0b${retMask.toString(2).padStart(12, '0')}` : mnemonic;
+            }
             case 4: return `${mnemonic} CR${crDst}, idx=${imm}`;
             case 5: return `${mnemonic} CR${crSrc} <-> CR${imm & 7}`;
             case 6: {

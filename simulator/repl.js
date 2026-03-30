@@ -292,7 +292,7 @@ class ChurchREPL {
                     churchSteps.push(
                         `ELOADCALL   CR7, CR6, ${this._nsIndex('POW')}  ; LOAD+TPERM(E)+CALL \u2192 POW`,
                         `XLOADLAMBDA CR0, CR6, 1                     ; LOAD+TPERM(X)+LAMBDA \u2192 ${displayResult}`,
-                        `RETURN      CR7                             ; Result in DR0`,
+                        `RETURN                                       ; Result in DR0`,
                     );
                     if (this.pipeline) {
                         pipeline = this.pipeline.buildSecurityTrace('ELOADCALL', { target: 'POW', result: displayResult });
@@ -325,7 +325,7 @@ class ChurchREPL {
                     churchSteps.push(
                         `ELOADCALL   CR7, CR6, ${this._nsIndex(abstraction)}  ; LOAD+TPERM(E)+CALL \u2192 ${abstraction}`,
                         `XLOADLAMBDA CR0, CR6, 1                     ; LOAD+TPERM(X)+LAMBDA \u2192 ${displayResult}`,
-                        `RETURN      CR7                             ; Result in DR0`,
+                        `RETURN                                       ; Result in DR0`,
                     );
                     if (this.pipeline) {
                         pipeline = this.pipeline.buildSecurityTrace('ELOADCALL', { target: abstraction, result: displayResult });
@@ -382,7 +382,7 @@ class ChurchREPL {
                 churchSteps.push(
                     `ELOADCALL   CR7, CR6, ${this._nsIndex(abstraction)}  ; LOAD+TPERM(E)+CALL \u2192 ${abstraction}`,
                     `XLOADLAMBDA CR0, CR6, 1                     ; LOAD+TPERM(X)+LAMBDA \u2192 ${displayResult}`,
-                    `RETURN      CR7                             ; Result in DR0`,
+                    `RETURN                                       ; Result in DR0`,
                 );
                 if (this.pipeline) {
                     pipeline = this.pipeline.buildSecurityTrace('ELOADCALL', { target: abstraction, result: displayResult });

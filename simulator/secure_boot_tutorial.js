@@ -202,7 +202,7 @@ LOAD_NUC:
     LAMBDA  AL, CR7            ; re-enter boot finalisation code
 
     ; Final RETURN with capability mask 0b100000 (mask CR5)
-    RETURN  AL, CR5            ; clear CR5 on exit; boot sequence complete
+    RETURN  0b000000100000     ; clear CR5 on exit; boot sequence complete
 
     ; Preserve the thread GT in C-List slot 2 for runtime use
     SAVE    AL, CR6, CR1, #2   ; write CR1 (Thread GT) into c-list[2]</pre>
@@ -283,7 +283,7 @@ LOAD_NUC:
     TPERM   AL, CR7, #X        ; restrict to X
     LAMBDA  AL, CR7            ; re-enter boot finalisation (seal re-checked here)
 
-    RETURN  AL, CR5            ; clear CR5 (capability mask 0b100000); boot complete
+    RETURN  0b000000100000     ; clear CR5 (bit 5 of mask); boot complete
 
     SAVE    AL, CR6, CR1, #2   ; persist Thread GT at c-list[2] for runtime use
 
@@ -381,7 +381,7 @@ USER_ENTRY:
 
     ; Continue with application logic ...
     ; RETURN to boot epilogue when done
-    RETURN  AL, CR0            ; clear CR0 on exit</pre>
+    RETURN  0b000000000001     ; clear CR0 on exit</pre>
 <div class="sr-key-concept"><div class="sr-concept-title">Capability-Safe Handoff Guarantee</div>
 <p>By the time the user abstraction\u2019s first instruction executes:</p>
 <ul style="margin:4px 0 0 0;padding-left:1.2em;line-height:1.9;">
@@ -411,7 +411,7 @@ USER_ENTRY:
 <tr><td>[8]</td><td><code>LOAD AL, CR7, CR6[1]</code></td><td>Epilogue \u2014 reload boot code GT</td></tr>
 <tr><td>[9]</td><td><code>TPERM AL, CR7, #X</code></td><td>Epilogue \u2014 restrict to X</td></tr>
 <tr><td>[10]</td><td><code>LAMBDA AL, CR7</code></td><td>Epilogue \u2014 re-enter boot finalisation</td></tr>
-<tr><td>[11]</td><td><code>RETURN AL, CR5</code></td><td>Epilogue \u2014 boot complete; mask CR5</td></tr>
+<tr><td>[11]</td><td><code>RETURN 0b000000100000</code></td><td>Epilogue \u2014 boot complete; mask CR5</td></tr>
 <tr><td>[12]</td><td><code>SAVE AL, CR6, CR1, #2</code></td><td>Epilogue \u2014 persist Thread GT to c-list[2]</td></tr>
 </table>
 <div class="sr-key-concept"><div class="sr-concept-title">DEMO_CLIST and DEMO_NAMESPACE</div>
