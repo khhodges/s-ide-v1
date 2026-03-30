@@ -406,12 +406,12 @@ class ChurchSimulator {
             gt_seq, index,
             permissions: {
                 B: (permBits >>> 6) & 1,
-                R: (permBits >>> 5) & 1,
-                W: (permBits >>> 4) & 1,
-                X: (permBits >>> 3) & 1,
-                L: (permBits >>> 2) & 1,
-                S: (permBits >>> 1) & 1,
-                E: (permBits >>> 0) & 1,
+                E: (permBits >>> 5) & 1,
+                S: (permBits >>> 4) & 1,
+                L: (permBits >>> 3) & 1,
+                X: (permBits >>> 2) & 1,
+                W: (permBits >>> 1) & 1,
+                R: (permBits >>> 0) & 1,
             },
             type,
             typeName: ['NULL','Inform','Outform','Abstract'][type & 3],
@@ -428,12 +428,12 @@ class ChurchSimulator {
 
     getPermBits(permsObj) {
         let bits = 0;
-        if (permsObj.E) bits |= 1;
-        if (permsObj.S) bits |= 2;
-        if (permsObj.L) bits |= 4;
-        if (permsObj.X) bits |= 8;
-        if (permsObj.W) bits |= 16;
-        if (permsObj.R) bits |= 32;
+        if (permsObj.R) bits |= 1;
+        if (permsObj.W) bits |= 2;
+        if (permsObj.X) bits |= 4;
+        if (permsObj.L) bits |= 8;
+        if (permsObj.S) bits |= 16;
+        if (permsObj.E) bits |= 32;
         if (permsObj.B) bits |= 64;
         return bits & 0x7F;
     }
@@ -1456,7 +1456,7 @@ class ChurchSimulator {
             [],                ['R'],           ['R','W'],       ['X'],
             ['R','X'],         ['R','W','X'],   ['L'],           ['S'],
             ['E'],             ['L','S'],       ['L','E'],       ['S','E'],
-            ['L','S','E'],     null,            null,            null,
+            ['L','S','E'],     ['R','W','X','L','S','E'],  null,  null,
         ];
 
         if (presetMasks[presetCode] === null) {
