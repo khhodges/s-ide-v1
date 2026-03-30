@@ -1156,7 +1156,7 @@ a.next-step-link:hover {
     margin-left: 0.25rem;
     vertical-align: middle;
 }
-.ns-tt-badge-real    { background: #1e40af; color: #93c5fd; }
+.ns-tt-badge-inform  { background: #1e40af; color: #93c5fd; }
 .ns-tt-badge-abstract{ background: #5b21b6; color: #c4b5fd; }
 .ns-tt-badge-outform { background: #065f46; color: #6ee7b7; }
 .ns-tt-badge-null    { background: #374151; color: #9ca3af; }
