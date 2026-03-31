@@ -172,7 +172,10 @@ def _make_ns_entry(gt_type, perms, slot_id, gt_seq, location, alloc_size, cw=0, 
 #   Slot 7:  LED_DEV    — 0x40000000, RW, limit=0 (1 word)
 #   Slot 8:  UART_DEV   — 0x40000004, RW, limit=2 (3 words: TX, STATUS, RX)
 #   Slot 9:  BTN_DEV    — 0x40000010, R,  limit=0 (1 word)
-#   Slot 10: TIMER_DEV  — 0x40000014, R,  limit=0 (1 word)
+#   Slot 10: TIMER_DEV  — 0x40000014, RW, limit=4 (5 words):
+#             offset 0 = TICKS_LO (R), offset 1 = TICKS_HI (R),
+#             offset 2 = TOD_EPOCH (R/W), offset 3 = ALARM_CMP (R/W),
+#             offset 4 = ALARM_CTL (R/W: [0]=armed, [1]=fired)
 #   Slots 11–15: reserved for future device GTs
 # ---------------------------------------------------------------------------
 MMIO_LED_SLOT   = 7
@@ -189,7 +192,7 @@ _MMIO_ENTRIES = {
     MMIO_LED_SLOT:   (MMIO_LED_ADDR,   1,  GT_TYPE_ABSTRACT, PERM_MASK_R | PERM_MASK_W),
     MMIO_UART_SLOT:  (MMIO_UART_ADDR,  3,  GT_TYPE_ABSTRACT, PERM_MASK_R | PERM_MASK_W),
     MMIO_BTN_SLOT:   (MMIO_BTN_ADDR,   1,  GT_TYPE_ABSTRACT, PERM_MASK_R),
-    MMIO_TIMER_SLOT: (MMIO_TIMER_ADDR, 1,  GT_TYPE_ABSTRACT, PERM_MASK_R),
+    MMIO_TIMER_SLOT: (MMIO_TIMER_ADDR, 5,  GT_TYPE_ABSTRACT, PERM_MASK_R | PERM_MASK_W),
 }
 
 # ---------------------------------------------------------------------------

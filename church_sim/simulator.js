@@ -49,10 +49,15 @@ class ChurchSimulator {
         this.bootStep = 0;
         this.lastCapability = null;
 
-        this.simLED   = 0;
-        this.simTimer = 0;
-        this.simBTN   = 0;
-        this.mmioDevices = new Map();
+        this.simLED        = 0;
+        this.simTimerLo    = 0;
+        this.simTimerHi    = 0;
+        this.simTodEpoch   = 0;
+        this.simAlarmCmp   = 0;
+        this.simAlarmArmed = false;
+        this.simAlarmFired = false;
+        this.simBTN        = 0;
+        this.mmioDevices   = new Map();
 
         this._initNamespaceTable();
         this.output += '--- HARD RESET: all registers zeroed ---\n';
@@ -212,7 +217,7 @@ class ChurchSimulator {
             { type: 'led',   label: 'LED_DEV',   perms: {R:1,W:1,X:0,L:0,S:0,E:0}, lim17: 0 },
             { type: 'uart',  label: 'UART_DEV',  perms: {R:1,W:1,X:0,L:0,S:0,E:0}, lim17: 2 },
             { type: 'btn',   label: 'BTN_DEV',   perms: {R:1,W:0,X:0,L:0,S:0,E:0}, lim17: 0 },
-            { type: 'timer', label: 'TIMER_DEV', perms: {R:1,W:0,X:0,L:0,S:0,E:0}, lim17: 0 },
+            { type: 'timer', label: 'TIMER_DEV', perms: {R:1,W:1,X:0,L:0,S:0,E:0}, lim17: 4 },
         ];
         for (let i = 0; i < mmioSlotDefs.length; i++) {
             const slotIdx = mmioBase + i;
@@ -1300,15 +1305,32 @@ class ChurchSimulator {
 
     _readMMIO(devType, offset) {
         switch (devType) {
-            case 'led':   return this.simLED >>> 0;
+            case 'led': return this.simLED >>> 0;
             case 'uart':
                 if (offset === 0) return 0;
                 if (offset === 1) return 1;
                 if (offset === 2) return 0;
                 return 0;
-            case 'btn':   return this.simBTN >>> 0;
-            case 'timer': return (this.simTimer++) >>> 0;
-            default:      return 0;
+            case 'btn': return this.simBTN >>> 0;
+            case 'timer': {
+                this.simTimerLo = ((this.simTimerLo >>> 0) + 1) >>> 0;
+                if (this.simTimerLo === 0) this.simTimerHi = ((this.simTimerHi >>> 0) + 1) >>> 0;
+                if (this.simAlarmArmed && !this.simAlarmFired) {
+                    if (this.simTimerLo === (this.simAlarmCmp >>> 0)) {
+                        this.simAlarmFired = true;
+                        this.emit('alarmFired', { tickLo: this.simTimerLo });
+                    }
+                }
+                switch (offset) {
+                    case 0: return this.simTimerLo;
+                    case 1: return this.simTimerHi;
+                    case 2: return this.simTodEpoch >>> 0;
+                    case 3: return this.simAlarmCmp >>> 0;
+                    case 4: return ((this.simAlarmArmed ? 1 : 0) | (this.simAlarmFired ? 2 : 0)) >>> 0;
+                    default: return 0;
+                }
+            }
+            default: return 0;
         }
     }
 
@@ -1323,6 +1345,21 @@ class ChurchSimulator {
                     const ch = String.fromCharCode(value & 0xFF);
                     this.output += ch;
                     this.emit('uartTx', { byte: value & 0xFF, char: ch });
+                }
+                break;
+            case 'timer':
+                switch (offset) {
+                    case 2:
+                        this.simTodEpoch = value >>> 0;
+                        break;
+                    case 3:
+                        this.simAlarmCmp = value >>> 0;
+                        break;
+                    case 4:
+                        if (value & 1) this.simAlarmArmed = true;
+                        if (value & 2) this.simAlarmFired = false;
+                        break;
+                    default: break;
                 }
                 break;
             default:

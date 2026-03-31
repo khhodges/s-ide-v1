@@ -106,17 +106,34 @@ class ChurchTi60F225(Elaboratable):
         #   0x40000008  [2]  UART_STATUS— 32-bit read-only  {30'b0, rx_valid, tx_ready}
         #   0x4000000C  [3]  UART_RX    — 8-bit read-only
         #   0x40000010  [4]  BTN        — 1-bit read-only   (push button)
-        #   0x40000014  [5]  TIMER      — 32-bit read-only  (cycle counter)
+        #   0x40000014  [5]  TIMER.TICKS_LO  — 32-bit free-running tick, low word
+        #   0x40000018  [6]  TIMER.TICKS_HI  — 32-bit free-running tick, high word
+        #   0x4000001C  [7]  TIMER.TOD_EPOCH — Unix seconds (R/W, set by boot/IDE)
+        #   0x40000020  [8]  TIMER.ALARM_CMP — alarm compare vs TICKS_LO (R/W)
+        #   0x40000024  [9]  TIMER.ALARM_CTL — [0]=armed [1]=fired; write 1→[1] to clear (R/W)
         is_mmio = Signal()
         m.d.comb += is_mmio.eq(core.dmem_addr[30] & ~core.dmem_addr[31])
-        mmio_reg_sel = Signal(3)
-        m.d.comb += mmio_reg_sel.eq(core.dmem_addr[2:5])
+        mmio_reg_sel = Signal(4)
+        m.d.comb += mmio_reg_sel.eq(core.dmem_addr[2:6])
 
-        mmio_led_reg    = Signal(4)
-        mmio_uart_tx_wr = Signal()
+        mmio_led_reg      = Signal(4)
+        mmio_uart_tx_wr   = Signal()
         mmio_uart_tx_data = Signal(8)
-        timer_ctr       = Signal(32)
-        m.d.sync += timer_ctr.eq(timer_ctr + 1)
+
+        timer_lo    = Signal(32)
+        timer_hi    = Signal(32)
+        tod_epoch   = Signal(32)
+        alarm_cmp   = Signal(32)
+        alarm_armed = Signal()
+        alarm_fired = Signal()
+
+        with m.If(timer_lo == 0xFFFFFFFF):
+            m.d.sync += timer_hi.eq(timer_hi + 1)
+        m.d.sync += timer_lo.eq(timer_lo + 1)
+
+        with m.If(alarm_armed & ~alarm_fired):
+            with m.If(timer_lo == alarm_cmp):
+                m.d.sync += alarm_fired.eq(1)
 
         is_mmio_write = Signal()
         m.d.comb += is_mmio_write.eq(is_mmio & core.dmem_wr_en)
@@ -130,6 +147,15 @@ class ChurchTi60F225(Elaboratable):
                         mmio_uart_tx_wr.eq(1),
                         mmio_uart_tx_data.eq(core.dmem_wr_data[:8]),
                     ]
+                with m.Case(7):
+                    m.d.sync += tod_epoch.eq(core.dmem_wr_data)
+                with m.Case(8):
+                    m.d.sync += alarm_cmp.eq(core.dmem_wr_data)
+                with m.Case(9):
+                    with m.If(core.dmem_wr_data[0]):
+                        m.d.sync += alarm_armed.eq(1)
+                    with m.If(core.dmem_wr_data[1]):
+                        m.d.sync += alarm_fired.eq(0)
 
         is_mmio_read = Signal()
         m.d.comb += is_mmio_read.eq(is_mmio & core.dmem_rd_en)
@@ -147,7 +173,15 @@ class ChurchTi60F225(Elaboratable):
             with m.Case(4):
                 m.d.comb += mmio_rd_data.eq(Cat(self.push_button, C(0, 31)))
             with m.Case(5):
-                m.d.comb += mmio_rd_data.eq(timer_ctr)
+                m.d.comb += mmio_rd_data.eq(timer_lo)
+            with m.Case(6):
+                m.d.comb += mmio_rd_data.eq(timer_hi)
+            with m.Case(7):
+                m.d.comb += mmio_rd_data.eq(tod_epoch)
+            with m.Case(8):
+                m.d.comb += mmio_rd_data.eq(alarm_cmp)
+            with m.Case(9):
+                m.d.comb += mmio_rd_data.eq(Cat(alarm_armed, alarm_fired, C(0, 30)))
             with m.Default():
                 m.d.comb += mmio_rd_data.eq(0)
         # ── end MMIO decode ──────────────────────────────────────────────────
