@@ -30,7 +30,7 @@ def encode_church(opcode, cond=CondCode.AL, cr_dst=0, cr_src=0, imm=0):
            ((cr_dst & 0xF) << 19) | ((cr_src & 0xF) << 15) | (imm & 0x7FFF)
 
 
-def make_gt(gt_type=GT_TYPE_NULL, perms=0, slot_id=0, gt_seq=0):
+def make_gt(gt_type=GT_TYPE_NULL, perms=0, slot_id=0, gt_seq=0, b_flag=0):
     """Encode a 32-bit Golden Token word.
 
     GT Word 0 field layout (current — matches CLOOMC listing in secure_boot_tutorial.js):
@@ -38,11 +38,15 @@ def make_gt(gt_type=GT_TYPE_NULL, perms=0, slot_id=0, gt_seq=0):
       [22:16] gt_seq    — 7-bit revocation counter (must match NS entry word2[31:25])
       [24:23] gt_type   — 00=NULL  01=Inform (GT_TYPE_INFORM)  10=Outform (GT_TYPE_OUTFORM)  11=Abstract (GT_TYPE_ABSTRACT)
       [30:25] perms     — R W X L S E (one bit each, LSB=R)
-      [31]    b_flag    — bindable override (set by IDE; excluded from CRC seal input)
+      [31]    b_flag    — bindable override (1=IDE-bound peripheral; excluded from CRC seal input)
+
+    b_flag=1 for IO device GTs (LED, UART, BTN, TIMER): marks the GT as bound to a physical
+    resource by the system configurator. Excluded from GT[24:0] CRC input so runtime/debugger
+    can set/clear it without recomputing the NS entry seal.
 
     CLOOMC listing cross-ref: simulator/secure_boot_tutorial.js §"Secure Boot — Overview"
     """
-    return (perms << 25) | (gt_type << 23) | (gt_seq << 16) | slot_id
+    return (b_flag << 31) | (perms << 25) | (gt_type << 23) | (gt_seq << 16) | slot_id
 
 
 # ---------------------------------------------------------------------------
@@ -223,24 +227,36 @@ for _i in range(16):
 # DEMO_CLIST — initial C-List for the boot abstraction (Slot 2)
 #
 # CLOOMC listing cross-ref: simulator/secure_boot_tutorial.js §"Full Secure Boot CLOOMC Listing"
-#   idx 0: make_gt(Inform, R|X, slot_id=3, gt_seq=0) — code/constants read+exec GT
-#   idx 1: make_gt(Inform, X,   slot_id=4, gt_seq=0) — Boot code exec-only GT
-#   idx 2: make_gt(NULL,   0,   0,         0)         — empty; filled by SAVE epilogue (Thread GT)
-#   idx 3: make_gt(Inform, E,   slot_id=2, gt_seq=0) — Boot.Abstr E-GT (return channel)
-#   idx 4: make_gt(Inform, E,   slot_id=5, gt_seq=0) — secondary abstraction E-GT
-#   idx 5: make_gt(Inform, L,   slot_id=6, gt_seq=0) — C-List L-GT (for BIND)
-#   idx 6: make_gt(Inform, E,   slot_id=4, gt_seq=0) — first user abstraction E-GT  ← B:04 LOAD_NUC
-#   idx 7: make_gt(NULL,   0,   0,         0)         — reserved
+#   idx 0: make_gt(Inform, R|X, slot_id=3, gt_seq=0)         — code/constants read+exec GT
+#   idx 1: make_gt(Inform, X,   slot_id=4, gt_seq=0)         — Boot code exec-only GT
+#   idx 2: make_gt(NULL,   0,   0,         0)                 — empty; filled by SAVE epilogue (Thread GT)
+#   idx 3: make_gt(Inform, E,   slot_id=2, gt_seq=0)         — Boot.Abstr E-GT (return channel)
+#   idx 4: make_gt(Inform, E,   slot_id=5, gt_seq=0)         — secondary abstraction E-GT
+#   idx 5: make_gt(Inform, L,   slot_id=6, gt_seq=0)         — C-List L-GT (for BIND)
+#   idx 6: make_gt(Inform, E,   slot_id=4, gt_seq=0)         — first user abstraction E-GT ← B:04
+#   idx 7: make_gt(NULL,   0,   0,         0)                 — reserved
+#   idx 8: make_gt(Inform, R|W, slot_id=7, b_flag=1)         — LED_DEV  (MMIO, bindable)
+#   idx 9: make_gt(Inform, R|W, slot_id=8, b_flag=1)         — UART_DEV (MMIO, bindable)
+#   idx10: make_gt(Inform, R,   slot_id=9, b_flag=1)         — BTN_DEV  (MMIO, bindable)
+#   idx11: make_gt(Inform, R|W, slot_id=10,b_flag=1)         — TIMER_DEV(MMIO, bindable)
+#
+# b_flag=1 marks each IO device GT as IDE-bound to a physical peripheral.  The flag is
+# excluded from the CRC seal input so the runtime can clear it on un-bind without
+# recomputing the NS entry.
 # ---------------------------------------------------------------------------
 DEMO_CLIST = [
-    make_gt(GT_TYPE_INFORM, PERM_MASK_R | PERM_MASK_X, 3, 0),  # idx 0: code/constants R|X, Slot 3
-    make_gt(GT_TYPE_INFORM, PERM_MASK_X, 4, 0),                 # idx 1: Boot code X-only, Slot 4
-    make_gt(GT_TYPE_NULL, 0, 0, 0),                           # idx 2: empty → Thread GT after SAVE
-    make_gt(GT_TYPE_INFORM, PERM_MASK_E, 2, 0),                 # idx 3: Boot.Abstr E-GT, Slot 2
-    make_gt(GT_TYPE_INFORM, PERM_MASK_E, 5, 0),                 # idx 4: secondary abstraction E, Slot 5
-    make_gt(GT_TYPE_INFORM, PERM_MASK_L, 6, 0),                 # idx 5: C-List L-GT, Slot 6
-    make_gt(GT_TYPE_INFORM, PERM_MASK_E, 4, 0),                 # idx 6: first user E-GT, Slot 4 (B:04)
-    make_gt(GT_TYPE_NULL, 0, 0, 0),                           # idx 7: reserved
+    make_gt(GT_TYPE_INFORM, PERM_MASK_R | PERM_MASK_X, 3, 0),        # idx 0: code/constants R|X, Slot 3
+    make_gt(GT_TYPE_INFORM, PERM_MASK_X, 4, 0),                       # idx 1: Boot code X-only, Slot 4
+    make_gt(GT_TYPE_NULL, 0, 0, 0),                                    # idx 2: empty → Thread GT after SAVE
+    make_gt(GT_TYPE_INFORM, PERM_MASK_E, 2, 0),                       # idx 3: Boot.Abstr E-GT, Slot 2
+    make_gt(GT_TYPE_INFORM, PERM_MASK_E, 5, 0),                       # idx 4: secondary abstraction E, Slot 5
+    make_gt(GT_TYPE_INFORM, PERM_MASK_L, 6, 0),                       # idx 5: C-List L-GT, Slot 6
+    make_gt(GT_TYPE_INFORM, PERM_MASK_E, 4, 0),                       # idx 6: first user E-GT, Slot 4 (B:04)
+    make_gt(GT_TYPE_NULL, 0, 0, 0),                                    # idx 7: reserved
+    make_gt(GT_TYPE_INFORM, PERM_MASK_R | PERM_MASK_W, MMIO_LED_SLOT,   0, b_flag=1),  # idx 8:  LED_DEV
+    make_gt(GT_TYPE_INFORM, PERM_MASK_R | PERM_MASK_W, MMIO_UART_SLOT,  0, b_flag=1),  # idx 9:  UART_DEV
+    make_gt(GT_TYPE_INFORM, PERM_MASK_R,                MMIO_BTN_SLOT,   0, b_flag=1),  # idx 10: BTN_DEV
+    make_gt(GT_TYPE_INFORM, PERM_MASK_R | PERM_MASK_W, MMIO_TIMER_SLOT, 0, b_flag=1),  # idx 11: TIMER_DEV
 ]
 
 while len(DEMO_CLIST) < 64:

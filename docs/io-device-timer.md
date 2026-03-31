@@ -12,7 +12,7 @@
 | GT type | `GT_TYPE_INFORM` (`0b01`) |
 | Turing permissions | `R W` |
 | Church permissions | none |
-| `b_flag` | 0 (not propagable from boot namespace) |
+| `b_flag` | 1 (IDE-bound peripheral; excluded from CRC seal) |
 
 The TIMER abstraction exposes a 64-bit free-running hardware tick counter, a
 software-settable Unix epoch register, and a single-shot alarm mechanism — all within
@@ -27,13 +27,13 @@ and alarm registers are read-write.
  31   30 25  24 23  22 16  15       0
 ┌───┬──────┬─────┬───────┬──────────┐
 │ b │ perms│type │gt_seq │ slot_id  │
-│ 0 │ RW   │ 01₂ │  0    │   0x000A │
+│ 1 │ RW   │ 01₂ │  0    │   0x000A │
 └───┴──────┴─────┴───────┴──────────┘
 ```
 
 | Field | Bits | Value | Meaning |
 |:------|:-----|:------|:--------|
-| `b_flag` | 31 | 0 | Not propagable via mSave |
+| `b_flag` | 31 | 1 | IDE-bound peripheral; excluded from CRC seal input |
 | `perms` | 30:25 | `110000₂` | R=1, W=1, X=0, L=0, S=0, E=0 |
 | `gt_type` | 24:23 | `01₂` | Inform |
 | `gt_seq` | 22:16 | 0 | Boot-provisioned, sequence 0 |
@@ -52,7 +52,7 @@ and alarm registers are read-write.
 | Slot index | 10 |
 | MMIO base (`word1_location`) | `0x40000014` |
 | `limit17` | 4 (→ `limit_offset = 4`) |
-| `b_flag` | 0 |
+| `b_flag` | 1 |
 | `f_flag` | 0 |
 | `g_bit` | 0 |
 | `chainable` | 0 |

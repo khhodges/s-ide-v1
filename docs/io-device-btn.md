@@ -12,7 +12,7 @@
 | GT type | `GT_TYPE_INFORM` (`0b01`) |
 | Turing permissions | `R` |
 | Church permissions | none |
-| `b_flag` | 0 (not propagable from boot namespace) |
+| `b_flag` | 1 (IDE-bound peripheral; excluded from CRC seal) |
 
 The BTN abstraction is a **read-only 32-bit register** that reflects the debounced
 state of the board's user push button. It is write-protected at the hardware level:
@@ -27,13 +27,13 @@ can falsify button state.
  31   30 25  24 23  22 16  15       0
 ┌───┬──────┬─────┬───────┬──────────┐
 │ b │ perms│type │gt_seq │ slot_id  │
-│ 0 │ R    │ 01₂ │  0    │   0x0009 │
+│ 1 │ R    │ 01₂ │  0    │   0x0009 │
 └───┴──────┴─────┴───────┴──────────┘
 ```
 
 | Field | Bits | Value | Meaning |
 |:------|:-----|:------|:--------|
-| `b_flag` | 31 | 0 | Not propagable via mSave |
+| `b_flag` | 31 | 1 | IDE-bound peripheral; excluded from CRC seal input |
 | `perms` | 30:25 | `100000₂` | R=1, W=0, X=0, L=0, S=0, E=0 |
 | `gt_type` | 24:23 | `01₂` | Inform |
 | `gt_seq` | 22:16 | 0 | Boot-provisioned, sequence 0 |
@@ -52,7 +52,7 @@ can falsify button state.
 | Slot index | 9 |
 | MMIO base (`word1_location`) | `0x40000010` |
 | `limit17` | 0 (→ `limit_offset = 0`) |
-| `b_flag` | 0 |
+| `b_flag` | 1 |
 | `f_flag` | 0 |
 | `g_bit` | 0 |
 | `chainable` | 0 |
