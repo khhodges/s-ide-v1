@@ -9,7 +9,7 @@
 | MMIO base address | `0x40000010` |
 | Allocation size | 1 word (32 bits) |
 | `limit_offset` | 0 (single-word device; valid offsets: `{0}`) |
-| GT type | `GT_TYPE_ABSTRACT` (`0b11`) |
+| GT type | `GT_TYPE_INFORM` (`0b01`) |
 | Turing permissions | `R` |
 | Church permissions | none |
 | `b_flag` | 0 (not propagable from boot namespace) |
@@ -27,7 +27,7 @@ can falsify button state.
  31   30 25  24 23  22 16  15       0
 ┌───┬──────┬─────┬───────┬──────────┐
 │ b │ perms│type │gt_seq │ slot_id  │
-│ 0 │ R    │ 11₂ │  0    │   0x0009 │
+│ 0 │ R    │ 01₂ │  0    │   0x0009 │
 └───┴──────┴─────┴───────┴──────────┘
 ```
 
@@ -35,7 +35,7 @@ can falsify button state.
 |:------|:-----|:------|:--------|
 | `b_flag` | 31 | 0 | Not propagable via mSave |
 | `perms` | 30:25 | `100000₂` | R=1, W=0, X=0, L=0, S=0, E=0 |
-| `gt_type` | 24:23 | `11₂` | Abstract |
+| `gt_type` | 24:23 | `01₂` | Inform |
 | `gt_seq` | 22:16 | 0 | Boot-provisioned, sequence 0 |
 | `slot_id` | 15:0 | `0x0009` | Boot NS index 9 |
 
@@ -55,7 +55,7 @@ can falsify button state.
 | `f_flag` | 0 |
 | `g_bit` | 0 |
 | `chainable` | 0 |
-| `gt_type` | `GT_TYPE_ABSTRACT` (`0b11`) |
+| `gt_type` | `GT_TYPE_INFORM` (`0b01`) |
 | `version` | 0 |
 
 ---

@@ -9,13 +9,13 @@
 | MMIO base address | `0x40000000` |
 | Allocation size | 1 word (32 bits) |
 | `limit_offset` | 0 (single-word device; valid offsets: `{0}`) |
-| GT type | `GT_TYPE_ABSTRACT` (`0b11`) |
+| GT type | `GT_TYPE_INFORM` (`0b01`) |
 | Turing permissions | `R W` |
 | Church permissions | none |
 | `b_flag` | 0 (not propagable from boot namespace) |
 
 The LED abstraction is a **read/write 32-bit register** whose low bits are wired directly
-to the board's status LEDs. It is provisioned as an Abstract GT in the boot namespace
+to the board's status LEDs. It is provisioned as an Inform GT in the boot namespace
 before any user code runs, so any thread that holds a copy of NS slot 7 (or an
 attenuated derivative) has unforgeable, bounded access to LED state.
 
@@ -27,7 +27,7 @@ attenuated derivative) has unforgeable, bounded access to LED state.
  31   30 25  24 23  22 16  15       0
 ┌───┬──────┬─────┬───────┬──────────┐
 │ b │ perms│type │gt_seq │ slot_id  │
-│ 0 │ RW   │ 11₂ │  0    │   0x0007 │
+│ 0 │ RW   │ 01₂ │  0    │   0x0007 │
 └───┴──────┴─────┴───────┴──────────┘
 ```
 
@@ -35,7 +35,7 @@ attenuated derivative) has unforgeable, bounded access to LED state.
 |:------|:-----|:------|:--------|
 | `b_flag` | 31 | 0 | Not propagable via mSave |
 | `perms` | 30:25 | `110000₂` | R=1, W=1, X=0, L=0, S=0, E=0 |
-| `gt_type` | 24:23 | `11₂` | Abstract |
+| `gt_type` | 24:23 | `01₂` | Inform |
 | `gt_seq` | 22:16 | 0 | Boot-provisioned, sequence 0 |
 | `slot_id` | 15:0 | `0x0007` | Boot NS index 7 |
 
@@ -55,7 +55,7 @@ attenuated derivative) has unforgeable, bounded access to LED state.
 | `f_flag` | 0 |
 | `g_bit` | 0 |
 | `chainable` | 0 |
-| `gt_type` | `GT_TYPE_ABSTRACT` (hardware constant `0b11`) |
+| `gt_type` | `GT_TYPE_INFORM` (hardware constant `0b01`) |
 | `version` | 0 |
 
 The NS entry exists only to carry the GT description into the boot namespace table.

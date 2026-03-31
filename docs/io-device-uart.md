@@ -9,13 +9,13 @@
 | MMIO base address | `0x40000004` |
 | Allocation size | 3 words (96 bits) |
 | `limit_offset` | 2 (valid offsets: `{0, 1, 2}`) |
-| GT type | `GT_TYPE_ABSTRACT` (`0b11`) |
+| GT type | `GT_TYPE_INFORM` (`0b01`) |
 | Turing permissions | `R W` |
 | Church permissions | none |
 | `b_flag` | 0 (not propagable from boot namespace) |
 
 The UART abstraction exposes the board's single FTDI-bridged UART as a three-word
-Abstract GT in the boot namespace. Offset 0 is the transmit register, offset 1 is the
+Inform GT in the boot namespace. Offset 0 is the transmit register, offset 1 is the
 status register (read-only; reflects TX readiness), and offset 2 is the receive register.
 All three offsets are within the single limit_offset=2 grant — no separate GT is needed
 for TX vs RX.
@@ -28,7 +28,7 @@ for TX vs RX.
  31   30 25  24 23  22 16  15       0
 ┌───┬──────┬─────┬───────┬──────────┐
 │ b │ perms│type │gt_seq │ slot_id  │
-│ 0 │ RW   │ 11₂ │  0    │   0x0008 │
+│ 0 │ RW   │ 01₂ │  0    │   0x0008 │
 └───┴──────┴─────┴───────┴──────────┘
 ```
 
@@ -36,7 +36,7 @@ for TX vs RX.
 |:------|:-----|:------|:--------|
 | `b_flag` | 31 | 0 | Not propagable via mSave |
 | `perms` | 30:25 | `110000₂` | R=1, W=1, X=0, L=0, S=0, E=0 |
-| `gt_type` | 24:23 | `11₂` | Abstract |
+| `gt_type` | 24:23 | `01₂` | Inform |
 | `gt_seq` | 22:16 | 0 | Boot-provisioned, sequence 0 |
 | `slot_id` | 15:0 | `0x0008` | Boot NS index 8 |
 
@@ -56,7 +56,7 @@ for TX vs RX.
 | `f_flag` | 0 |
 | `g_bit` | 0 |
 | `chainable` | 0 |
-| `gt_type` | `GT_TYPE_ABSTRACT` (`0b11`) |
+| `gt_type` | `GT_TYPE_INFORM` (`0b01`) |
 | `version` | 0 |
 
 ---

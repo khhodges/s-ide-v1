@@ -9,14 +9,14 @@
 | MMIO base address | `0x40000014` |
 | Allocation size | 5 words (160 bits) |
 | `limit_offset` | 4 (valid offsets: `{0, 1, 2, 3, 4}`) |
-| GT type | `GT_TYPE_ABSTRACT` (`0b11`) |
+| GT type | `GT_TYPE_INFORM` (`0b01`) |
 | Turing permissions | `R W` |
 | Church permissions | none |
 | `b_flag` | 0 (not propagable from boot namespace) |
 
 The TIMER abstraction exposes a 64-bit free-running hardware tick counter, a
 software-settable Unix epoch register, and a single-shot alarm mechanism — all within
-one five-word Abstract GT in the boot namespace. The counter is read-only; the epoch
+one five-word Inform GT in the boot namespace. The counter is read-only; the epoch
 and alarm registers are read-write.
 
 ---
@@ -27,7 +27,7 @@ and alarm registers are read-write.
  31   30 25  24 23  22 16  15       0
 ┌───┬──────┬─────┬───────┬──────────┐
 │ b │ perms│type │gt_seq │ slot_id  │
-│ 0 │ RW   │ 11₂ │  0    │   0x000A │
+│ 0 │ RW   │ 01₂ │  0    │   0x000A │
 └───┴──────┴─────┴───────┴──────────┘
 ```
 
@@ -35,7 +35,7 @@ and alarm registers are read-write.
 |:------|:-----|:------|:--------|
 | `b_flag` | 31 | 0 | Not propagable via mSave |
 | `perms` | 30:25 | `110000₂` | R=1, W=1, X=0, L=0, S=0, E=0 |
-| `gt_type` | 24:23 | `11₂` | Abstract |
+| `gt_type` | 24:23 | `01₂` | Inform |
 | `gt_seq` | 22:16 | 0 | Boot-provisioned, sequence 0 |
 | `slot_id` | 15:0 | `0x000A` | Boot NS index 10 |
 
@@ -55,7 +55,7 @@ and alarm registers are read-write.
 | `f_flag` | 0 |
 | `g_bit` | 0 |
 | `chainable` | 0 |
-| `gt_type` | `GT_TYPE_ABSTRACT` (`0b11`) |
+| `gt_type` | `GT_TYPE_INFORM` (`0b01`) |
 | `version` | 0 |
 
 ---

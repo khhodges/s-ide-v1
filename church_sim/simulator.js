@@ -213,17 +213,17 @@ class ChurchSimulator {
         this.memory[bootAbstrLoc] = clooomcGT;
 
         const mmioBase = abstractions.length;
+        const GT_TYPE_INFORM = 1;
         const mmioSlotDefs = [
-            { type: 'led',   label: 'LED_DEV',   perms: {R:1,W:1,X:0,L:0,S:0,E:0}, lim17: 0 },
-            { type: 'uart',  label: 'UART_DEV',  perms: {R:1,W:1,X:0,L:0,S:0,E:0}, lim17: 2 },
-            { type: 'btn',   label: 'BTN_DEV',   perms: {R:1,W:0,X:0,L:0,S:0,E:0}, lim17: 0 },
-            { type: 'timer', label: 'TIMER_DEV', perms: {R:1,W:1,X:0,L:0,S:0,E:0}, lim17: 4 },
+            { type: 'led',   label: 'LED_DEV',   perms: {R:1,W:1,X:0,L:0,S:0,E:0}, lim17: 0, addr: 0x40000000 },
+            { type: 'uart',  label: 'UART_DEV',  perms: {R:1,W:1,X:0,L:0,S:0,E:0}, lim17: 2, addr: 0x40000004 },
+            { type: 'btn',   label: 'BTN_DEV',   perms: {R:1,W:0,X:0,L:0,S:0,E:0}, lim17: 0, addr: 0x40000010 },
+            { type: 'timer', label: 'TIMER_DEV', perms: {R:1,W:1,X:0,L:0,S:0,E:0}, lim17: 4, addr: 0x40000014 },
         ];
         for (let i = 0; i < mmioSlotDefs.length; i++) {
             const slotIdx = mmioBase + i;
             const dev = mmioSlotDefs[i];
-            const loc = 0xF000 + slotIdx;
-            this.writeNSEntry(slotIdx, loc, dev.lim17, 0, 0, 0, 0, 0, 0);
+            this.writeNSEntry(slotIdx, dev.addr, dev.lim17, 0, 0, 0, 0, GT_TYPE_INFORM, 0);
             this.nsLabels[slotIdx] = dev.label;
             this.mmioDevices.set(slotIdx, { type: dev.type, label: dev.label });
         }
