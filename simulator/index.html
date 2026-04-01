@@ -322,6 +322,23 @@
     </div>
 
     <div id="builder" class="view">
+        <div id="hardwareBuildPanel" class="hardware-build-panel">
+            <div class="hardware-build-header">
+                <span class="hardware-build-title">&#x2B21; Hardware Build</span>
+                <span class="hardware-build-subtitle">Generate synthesisable RTL for your target FPGA</span>
+            </div>
+            <div class="hardware-build-controls">
+                <label class="hardware-build-label" for="hardwareBoardSel">Target Board</label>
+                <select id="hardwareBoardSel" class="lang-selector" onchange="setSelectedBoard(this.value); updateHardwarePanelLabel()" title="Target FPGA board">
+                    <option value="tang-nano-20k">Sipeed Tang Nano 20K (Gowin GW2AR-18)</option>
+                    <option value="ti60-f225">Efinix Ti60 F225</option>
+                </select>
+                <button class="btn btn-deploy" id="btnHWBuild" onclick="downloadFPGAPackage()" data-tooltip="Build &amp; Download — Run Amaranth elaboration + Yosys synthesis, then download the ZIP package">Build &amp; Download</button>
+            </div>
+            <div class="hardware-build-info" id="hardwareBuildInfo">
+                <span id="hwBuildInfoText"></span>
+            </div>
+        </div>
         <div id="builderView"></div>
     </div>
 

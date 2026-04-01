@@ -293,6 +293,7 @@ function switchView(viewId) {
     if (viewId === 'abstractions') renderAbstractions();
     if (viewId === 'pipeline') pipelineViz.render();
     if (viewId === 'builder' && typeof initBuilder === 'function') initBuilder();
+    if (viewId === 'builder') initHardwareBuildPanel();
     if (viewId === 'editor') {
         if (activeUserTabId && userTabDirty) saveActiveUserTab();
         activeUserTabId = null;
@@ -7474,6 +7475,23 @@ function getBoardLabel(board) {
     return 'Sipeed Tang Nano 20K';
 }
 
+function initHardwareBuildPanel() {
+    const sel = document.getElementById('hardwareBoardSel');
+    if (sel) sel.value = getSelectedBoard();
+    updateHardwarePanelLabel();
+}
+
+function updateHardwarePanelLabel() {
+    const board = getSelectedBoard();
+    const info = document.getElementById('hwBuildInfoText');
+    if (!info) return;
+    if (board === 'ti60-f225') {
+        info.textContent = 'Output: church_ti60_f225.v + church_ti60_f225.edif + ti60_f225.isf  \u2014  open in Efinity IDE (Titanium project)';
+    } else {
+        info.textContent = 'Output: church_tang_nano_20k.v + Makefile + tang_nano_20k.cst  \u2014  run make pnr pack, then make prog';
+    }
+}
+
 function openSettings() {
     if (!requirePermission('settings', 'Change Settings')) return;
     const settings = getStudentSettings();
@@ -8503,13 +8521,17 @@ function downloadHardwareImage() {
 
 async function downloadFPGAPackage() {
     if (!requirePermission('deploy', 'Deploy to Tang')) return;
+    const board = getSelectedBoard();
+    const boardLabel = getBoardLabel(board);
+    const isTi60 = (board === 'ti60-f225');
+
+    const hwBtn = document.getElementById('btnHWBuild');
+    if (hwBtn) { hwBtn.disabled = true; hwBtn.innerHTML = '<span class="spinner"></span> Building...'; }
+
     switchView('editor');
     switchCodeTab('console');
     const con = document.getElementById('editorConsole');
     const btn = document.getElementById('btnFPGAPkg');
-    const board = getSelectedBoard();
-    const boardLabel = getBoardLabel(board);
-    const isTi60 = (board === 'ti60-f225');
 
     if (con) con.textContent = `Generating FPGA build package for ${boardLabel}...\nThis runs Amaranth elaboration + Yosys synthesis (typically 20-60 seconds).\n`;
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Building...'; }
@@ -8569,6 +8591,8 @@ async function downloadFPGAPackage() {
         if (con) con.textContent += '\nError: ' + e.message + '\n';
     } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = 'Download FPGA Package'; }
+        const hwBtnFinal = document.getElementById('btnHWBuild');
+        if (hwBtnFinal) { hwBtnFinal.disabled = false; hwBtnFinal.innerHTML = 'Build &amp; Download'; }
     }
 }
 

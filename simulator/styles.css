@@ -7060,6 +7060,57 @@ pre:hover .code-copy-btn {
     gap: 0.4rem;
 }
 
+.hardware-build-panel {
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+}
+
+.hardware-build-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 160px;
+}
+
+.hardware-build-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--church-gold);
+    letter-spacing: 0.3px;
+}
+
+.hardware-build-subtitle {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.hardware-build-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.hardware-build-label {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.hardware-build-info {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-family: var(--mono);
+    opacity: 0.85;
+    flex: 1;
+    min-width: 200px;
+}
+
 .builder-export-btn {
     background: #2a6fdb !important;
     color: #fff !important;
