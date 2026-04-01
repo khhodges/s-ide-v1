@@ -95,6 +95,29 @@ The Dashboard view has a "Push to GitHub" button that triggers `POST /api/github
 - **localStorage:** Used for client-side state persistence within the web IDE.
 - **oss-cad-suite:** Provides the FPGA toolchain, including `yosys`, `nextpnr-gowin`, `gowin_pack`, and `openFPGALoader`.
 
+## Ti60 F225 Hardware Build — Status & Workflow
+
+**Full bitstream successfully generated** (April 2026). The Church Machine runs on the Efinix Titanium Ti60 F225.
+
+### Build steps (run from `~/church-efinity/church_ti60_f225/` on Chromebook)
+1. Regenerate flat Verilog (flatten avoids escaped hierarchical names):
+   ```
+   yosys -p "read_rtlil ~/church-machine/build/church_ti60_f225.il; hierarchy -top top; proc; flatten; clean; write_verilog -noattr ~/church-efinity/build/church_ti60_f225.v"
+   ```
+2. Synthesis: `efx_run church_ti60_f225 --prj --flow map`
+3. Place-and-route: `efx_run church_ti60_f225 --prj --flow pnr`
+4. Interface Designer (generates LPF): `efx_run church_ti60_f225 --prj --flow interface`
+5. Bitstream: `efx_run church_ti60_f225 --prj --flow pgm`
+6. Flash: `efx_run church_ti60_f225 --prj --flow program`
+
+### Key lessons learned
+- Project XML must start with `<?xml version="1.0"?>`, use `<efx:sdc_file>` (not `<efx:isf_source>`), and have exactly ONE `<efx:design_file>` entry.
+- Yosys **must** use `flatten` before `write_verilog` — Efinity's `efx_map` cannot parse backslash-escaped hierarchical module names like `\top.boot_rom`.
+- `setup_ti60_peri.py` now purges any stale GPIOs/PLLs from template peri.xml before configuring our 8 signals. Must start from helloworld template and run the script.
+- Efinity tool order: `map` → `pnr` → `interface` → `pgm`. The `interface` step generates the LPF required by `pgm`.
+- SDC file: `create_clock -period 20.0 [get_ports {clk}]` (50 MHz → 20 ns).
+- Efinity project at `~/church-efinity/church_ti60_f225/`; Verilog at `~/church-efinity/build/church_ti60_f225.v`; IL at `~/church-machine/build/church_ti60_f225.il`.
+
 ## FPGA Build Package
 
 The IDE includes a "Download FPGA Package" button in the Code tab Install toolbar that generates a downloadable ZIP containing:

@@ -31,6 +31,28 @@ PERI_XML = "church_ti60_f225.peri.xml"
 design = DesignAPI(is_verbose=True)
 design.load(PERI_XML)
 
+# ── Strip any stale GPIOs / PLLs left over from a template peri.xml ─────────
+import xml.etree.ElementTree as _ET
+_NS = "http://www.efinixinc.com/peri_design_db"
+_KEEP = {"clk", "led0", "led1", "led2", "led3",
+         "push_button", "uart_tx", "uart_rx"}
+_tree = _ET.parse(PERI_XML)
+_root = _tree.getroot()
+for _sec in _root.findall(f"{{{_NS}}}gpio_info"):
+    for _g in _sec.findall(f"{{{_NS}}}comp_gpio"):
+        if _g.get("name") not in _KEEP:
+            print(f"  cleanup: removing GPIO {_g.get('name')!r}")
+            _sec.remove(_g)
+for _sec in _root.findall(f"{{{_NS}}}pll_info"):
+    for _p in _sec.findall(f"{{{_NS}}}pll"):
+        print(f"  cleanup: removing PLL {_p.get('name')!r}")
+        _sec.remove(_p)
+_ET.register_namespace("efxpt", _NS)
+_ET.register_namespace("xsi",   "http://www.w3.org/2001/XMLSchema-instance")
+_tree.write(PERI_XML, xml_declaration=True, encoding="UTF-8")
+design.load(PERI_XML)   # reload after cleanup
+# ─────────────────────────────────────────────────────────────────────────────
+
 for bank in ["1A", "1B", "2A", "2B", "3A", "3B", "4A", "4B"]:
     design.set_device_property(bank, "DYNAMIC_VOLTAGE", "0", "IOBANK")
     design.set_mode_sel_name(bank, f"{bank}_MODE_SEL", bank)
