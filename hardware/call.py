@@ -205,10 +205,6 @@ class ChurchCall(Elaboratable):
         n_minus_6_reg = Signal(4)
         lumpSize_reg  = Signal(15)   # 1 << (n_minus_6 + 6); range 64..16384 words
 
-        # NIA: word offset 1 — first instruction is always lump word 1 (word 0 is header)
-        nia_computed = Signal(32)
-        m.d.comb += nia_computed.eq(1)
-
         # CR14 with M=1 (PERM_X asserted, PERM_R optional) for SET_M_WRITE
         # CR14 permissions: RX only (no W — code is read-execute, not writable)
         cr14_with_m = Signal(CAP_REG_LAYOUT)
@@ -224,6 +220,11 @@ class ChurchCall(Elaboratable):
             cr14_wm_view.word2_w2.eq(cr14_lat_view.word2_w2),
             cr14_wm_view.word3_w3.eq(cr14_lat_view.word3_w3),
         ]
+
+        # NIA: callee's first instruction = lump_base + 4 (word 1, after the lump header).
+        # cr14_wm_view.word1_location already equals cr14_lat_view.word1_location + 4.
+        nia_computed = Signal(32)
+        m.d.comb += nia_computed.eq(cr14_wm_view.word1_location)
 
         # mLoad stores raw NS[+0] = lump_base into CR14.word1_location (no +4 offset).
         # SET_M_WRITE applies +4 so the final CR14.base points at the first instruction word.

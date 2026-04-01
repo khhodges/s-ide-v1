@@ -627,6 +627,8 @@ class ChurchCore(Elaboratable):
             m.d.sync += [lambda_active_reg.eq(0), lambda_pc_reg.eq(0)]
         with m.Elif(u_return.lambda_clear):
             m.d.sync += lambda_active_reg.eq(0)
+        with m.Elif(u_call.call_complete & ~u_call.call_fault):
+            m.d.sync += lambda_active_reg.eq(0)
         with m.Elif(u_lambda.lambda_complete & ~u_lambda.lambda_fault):
             m.d.sync += [lambda_active_reg.eq(1), lambda_pc_reg.eq(u_lambda.saved_nia)]
 
