@@ -286,16 +286,22 @@ class ChurchTi60F225(Elaboratable):
 
         led_boot = ~core.boot_complete
         led_run = core.boot_complete & ~core.fault_valid & ~halted
-        led_halted_blink = core.boot_complete & halted & ~core.fault_valid & heartbeat_blink
+        # Visible in both pre-boot and post-boot: blinks whenever halted & healthy
+        led_halted_blink = halted & ~core.fault_valid & heartbeat_blink
         led_fault = core.fault_valid
 
         # Pre-boot:  show hardware status (boot, run, fault, heartbeat).
-        # Post-boot: software controls LEDs via DWRITE to LED[0..3] MMIO registers.
+        # Post-boot: software controls LEDs via DWRITE to LED[0..3] MMIO registers,
+        #            EXCEPT led[1] which also ORs in the halted-heartbeat so the green
+        #            channel of RGB1 blinks at 1 Hz whenever the CPU is halted & healthy
+        #            (provides always-visible proof-of-life on the board).
         # Each LED word is bits[2:0]={B,G,R}; only bit 0 (R) drives the physical pin.
         # Ti60 has 4 physical LEDs (led0–led3); LED[4] register exists but has no pin.
         m.d.comb += [
             self.led[0].eq(Mux(core.boot_complete, mmio_led_reg[0][0], led_boot)),
-            self.led[1].eq(Mux(core.boot_complete, mmio_led_reg[1][0], led_run | led_halted_blink)),
+            self.led[1].eq(Mux(core.boot_complete,
+                               mmio_led_reg[1][0] | led_halted_blink,
+                               led_run | led_halted_blink)),
             self.led[2].eq(Mux(core.boot_complete, mmio_led_reg[2][0], led_fault)),
             self.led[3].eq(Mux(core.boot_complete, mmio_led_reg[3][0], core.boot_complete)),
         ]
