@@ -346,7 +346,7 @@ class ChurchTi60F225(Elaboratable):
                                mmio_led_reg[1][0] | demo_led[1] | led_halted_blink,
                                led_run | led_halted_blink)),
             self.led[2].eq(Mux(core.boot_complete,
-                               mmio_led_reg[2][0] | demo_led[2],
+                               mmio_led_reg[2][0] | demo_led[2] | core.fault_valid,
                                led_fault)),
             self.led[3].eq(Mux(core.boot_complete,
                                mmio_led_reg[3][0] | demo_led[3],
@@ -404,7 +404,7 @@ class ChurchTi60F225(Elaboratable):
 
             with m.State("WAIT_BOOT"):
                 with m.If(core.boot_complete):
-                    m.d.sync += [banner_idx.eq(0), halted.eq(1)]
+                    m.d.sync += [banner_idx.eq(0), halted.eq(0)]
                     m.next = "SEND_BANNER"
 
             with m.State("SEND_BANNER"):
@@ -416,7 +416,8 @@ class ChurchTi60F225(Elaboratable):
                         ]
                         m.d.sync += banner_idx.eq(banner_idx + 1)
                     with m.Else():
-                        m.next = "DUMP_NIA"
+                        # Boot complete — launch CPU into free-run immediately.
+                        m.next = "ENTER_FREE_RUN"
 
             with m.State("DUMP_NIA"):
                 with m.If(~debug.busy):
@@ -436,14 +437,17 @@ class ChurchTi60F225(Elaboratable):
                         m.d.sync += halt_idx.eq(halt_idx + 1)
                     with m.Else():
                         m.d.sync += halt_idx.eq(0)
+                        # After single-step: return to paused single-step mode.
+                        # After initial boot banner: keep going (handled by re-enter flow).
                         m.next = "HALTED"
 
             with m.State("HALTED"):
+                # Paused / single-step mode.
+                # Button hold (~1 s): resume free-run.
+                # Short press: step one instruction.
                 with m.If(btn_hold_done):
-                    # Long press (~1 s): enter free-run (CPU takes over the LEDs)
                     m.next = "ENTER_FREE_RUN"
                 with m.Elif(btn_press):
-                    # Short press: single-step
                     m.d.sync += stepping.eq(1)
                     m.next = "STEP_WAIT"
 
@@ -459,8 +463,21 @@ class ChurchTi60F225(Elaboratable):
 
             with m.State("FREE_RUN"):
                 # CPU runs freely, controlling the LEDs via DWRITE.
-                # Keep halted=0 every cycle (avoids any accidental re-halt).
                 m.d.sync += halted.eq(0)
+                with m.If(core.fault_valid):
+                    # Any fault: freeze CPU and light fault LED.
+                    m.next = "FAULT_HALT"
+                with m.Elif(btn_press):
+                    # Button press: pause into single-step mode.
+                    m.d.sync += halted.eq(1)
+                    m.next = "HALTED"
+
+            with m.State("FAULT_HALT"):
+                # CPU faulted — hold halted, fault LED driven by core.fault_valid.
+                # Button press: resume single-step for diagnosis.
+                m.d.sync += halted.eq(1)
+                with m.If(btn_press):
+                    m.next = "HALTED"
 
             with m.State("STEP_WAIT"):
                 with m.If(step_complete):

@@ -4,42 +4,42 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
   reg \$auto$verilog_backend.cc:2355:dump_module$1  = 0;
   wire _000_;
   wire _001_;
-  reg _002_;
-  reg [2:0] _003_;
-  reg [2:0] _004_;
+  wire _002_;
+  reg [31:0] _003_;
+  reg _004_;
   reg [2:0] _005_;
   reg [2:0] _006_;
   reg [2:0] _007_;
-  reg [31:0] _008_;
-  reg [31:0] _009_;
-  reg _010_;
-  reg [2:0] _011_;
+  reg [2:0] _008_;
+  reg [2:0] _009_;
+  reg [31:0] _010_;
+  reg [31:0] _011_;
   wire _012_;
-  reg [25:0] _013_;
-  reg _014_;
-  reg _015_;
-  reg [7:0] _016_;
-  reg [25:0] _017_;
-  reg _018_;
-  reg [24:0] _019_;
-  reg [2:0] _020_;
-  reg [3:0] _021_;
-  reg _022_;
+  reg _013_;
+  reg [2:0] _014_;
+  reg [25:0] _015_;
+  reg _016_;
+  reg _017_;
+  reg [7:0] _018_;
+  reg [25:0] _019_;
+  reg _020_;
+  reg [24:0] _021_;
+  reg [2:0] _022_;
   wire _023_;
-  reg [27:0] _024_;
-  reg [3:0] _025_;
-  reg [4:0] _026_;
-  reg _027_;
-  reg [2:0] _028_;
+  reg [3:0] _024_;
+  reg _025_;
+  reg [27:0] _026_;
+  reg [3:0] _027_;
+  reg [4:0] _028_;
   reg _029_;
-  reg [31:0] _030_;
-  reg [3:0] _031_;
-  reg _032_;
-  reg [1:0] _033_;
+  reg [2:0] _030_;
+  reg _031_;
+  reg [31:0] _032_;
+  reg [3:0] _033_;
   wire _034_;
-  reg [1:0] _035_;
-  wire _036_;
-  wire _037_;
+  reg _035_;
+  reg [1:0] _036_;
+  reg [1:0] _037_;
   wire _038_;
   wire _039_;
   wire _040_;
@@ -91,47 +91,49 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
   wire _086_;
   wire _087_;
   wire _088_;
-  wire [32:0] _089_;
-  wire [32:0] _090_;
+  wire _089_;
+  wire _090_;
   wire _091_;
   wire _092_;
-  wire _093_;
-  wire _094_;
+  wire [32:0] _093_;
+  wire [32:0] _094_;
   wire _095_;
-  wire [26:0] _096_;
+  wire _096_;
   wire _097_;
   wire _098_;
   wire _099_;
-  wire [26:0] _100_;
-  wire _101_;
+  wire _100_;
+  wire [26:0] _101_;
   wire _102_;
   wire _103_;
-  wire _104_;
-  wire [3:0] _105_;
-  wire [25:0] _106_;
+  wire [26:0] _104_;
+  wire _105_;
+  wire _106_;
   wire _107_;
   wire _108_;
-  wire [4:0] _109_;
+  wire [3:0] _109_;
   wire _110_;
-  wire [28:0] _111_;
+  wire [25:0] _111_;
   wire _112_;
-  wire _113_;
+  wire [4:0] _113_;
   wire _114_;
-  wire [5:0] _115_;
+  wire [28:0] _115_;
   wire _116_;
   wire _117_;
   wire _118_;
-  wire _119_;
-  wire [3:0] _120_;
+  wire [5:0] _119_;
+  wire _120_;
   wire _121_;
   wire _122_;
-  wire [2:0] _123_;
-  wire _124_;
+  wire _123_;
+  wire [3:0] _124_;
   wire _125_;
   wire _126_;
   wire [2:0] _127_;
   wire _128_;
-  reg [31:0] _129_;
+  wire _129_;
+  wire _130_;
+  wire [2:0] _131_;
   wire [8:0] addr;
   reg alarm_armed = 1'h0;
   reg [31:0] alarm_cmp = 32'd0;
@@ -2317,197 +2319,199 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
     if (wr_en)
       dmem[mem_addr] <= wr_data;
   end
-  reg [10:0] _284_;
+  reg [10:0] _288_;
   always @(posedge 1'h0) begin
-    _284_ <= mem_addr;
+    _288_ <= mem_addr;
   end
-  assign mem_rd_data = dmem[_284_];
+  assign mem_rd_data = dmem[_288_];
   assign any_ns_access = ns_rd_en | ns_wr_en;
   assign any_clist_access = 1'h0 | 1'h0;
   assign _000_ = ~ dmem_addr[31];
   assign is_mmio = dmem_addr[30] & _000_;
   assign is_mmio_write = is_mmio & dmem_wr_en;
   assign is_mmio_read = is_mmio & dmem_rd_en;
-  assign _042_ = ~ busy;
+  assign _044_ = ~ busy;
   assign dmem_rd_data = is_mmio_read ? mmio_rd_data : mem_rd_data;
-  assign _053_ = ~ is_mmio;
+  assign _055_ = ~ is_mmio;
   assign nia_changed = imem_addr != prev_nia;
   assign step_complete = stepping & nia_changed;
-  assign _064_ = ~ halted;
-  assign _075_ = ~ step_complete;
-  assign _086_ = stepping & _075_;
-  assign imem_valid = _064_ | _086_;
-  assign _097_ = ~ btn_sync[2];
-  assign btn_press = btn_prev & _097_;
-  assign _108_ = ~ busy;
-  assign _119_ = mmio_uart_pending & _108_;
+  assign _066_ = ~ halted;
+  assign _077_ = ~ step_complete;
+  assign _088_ = stepping & _077_;
+  assign imem_valid = _066_ | _088_;
+  assign _099_ = ~ btn_sync[2];
+  assign btn_press = btn_prev & _099_;
+  assign _110_ = ~ busy;
+  assign _121_ = mmio_uart_pending & _110_;
   assign _001_ = dbg_boot_complete & halted;
   assign _012_ = demo_phase == 1'h0;
   assign demo_led0 = _001_ & _012_;
   assign _023_ = dbg_boot_complete & halted;
   assign _034_ = demo_phase == 1'h1;
   assign demo_led1 = _023_ & _034_;
-  assign _036_ = dbg_boot_complete & halted;
-  assign _037_ = demo_phase == 2'h2;
-  assign demo_led2 = _036_ & _037_;
   assign _038_ = dbg_boot_complete & halted;
-  assign _039_ = demo_phase == 2'h3;
-  assign demo_led3 = _038_ & _039_;
-  assign _040_ = mmio_led0[0] | demo_led0;
-  assign _041_ = ~ dbg_boot_complete;
-  assign led0 = dbg_boot_complete ? _040_ : _041_;
-  assign _043_ = mmio_led1[0] | demo_led1;
-  assign _044_ = ~ dbg_fault_valid;
-  assign _045_ = halted & _044_;
-  assign _046_ = _045_ & heartbeat_blink;
-  assign _047_ = _043_ | _046_;
-  assign _048_ = ~ dbg_fault_valid;
-  assign _049_ = dbg_boot_complete & _048_;
-  assign _050_ = ~ halted;
-  assign _051_ = _049_ & _050_;
-  assign _052_ = ~ dbg_fault_valid;
-  assign _054_ = halted & _052_;
-  assign _055_ = _054_ & heartbeat_blink;
-  assign _056_ = _051_ | _055_;
-  assign led1 = dbg_boot_complete ? _047_ : _056_;
-  assign _057_ = mmio_led2[0] | demo_led2;
-  assign led2 = dbg_boot_complete ? _057_ : dbg_fault_valid;
-  assign _058_ = mmio_led3[0] | demo_led3;
-  assign led3 = dbg_boot_complete ? _058_ : dbg_boot_complete;
-  assign _059_ = ~ boot_triggered;
-  assign _060_ = boot_delay == 4'hf;
-  assign _061_ = ~ busy;
-  assign _062_ = banner_idx < 5'h12;
-  assign _063_ = ~ busy;
-  assign _065_ = ~ busy;
-  assign _066_ = halt_idx < 3'h6;
+  assign _039_ = demo_phase == 2'h2;
+  assign demo_led2 = _038_ & _039_;
+  assign _040_ = dbg_boot_complete & halted;
+  assign _041_ = demo_phase == 2'h3;
+  assign demo_led3 = _040_ & _041_;
+  assign _042_ = mmio_led0[0] | demo_led0;
+  assign _043_ = ~ dbg_boot_complete;
+  assign led0 = dbg_boot_complete ? _042_ : _043_;
+  assign _045_ = mmio_led1[0] | demo_led1;
+  assign _046_ = ~ dbg_fault_valid;
+  assign _047_ = halted & _046_;
+  assign _048_ = _047_ & heartbeat_blink;
+  assign _049_ = _045_ | _048_;
+  assign _050_ = ~ dbg_fault_valid;
+  assign _051_ = dbg_boot_complete & _050_;
+  assign _052_ = ~ halted;
+  assign _053_ = _051_ & _052_;
+  assign _054_ = ~ dbg_fault_valid;
+  assign _056_ = halted & _054_;
+  assign _057_ = _056_ & heartbeat_blink;
+  assign _058_ = _053_ | _057_;
+  assign led1 = dbg_boot_complete ? _049_ : _058_;
+  assign _059_ = mmio_led2[0] | demo_led2;
+  assign _060_ = _059_ | dbg_fault_valid;
+  assign led2 = dbg_boot_complete ? _060_ : dbg_fault_valid;
+  assign _061_ = mmio_led3[0] | demo_led3;
+  assign led3 = dbg_boot_complete ? _061_ : dbg_boot_complete;
+  assign _062_ = ~ boot_triggered;
+  assign _063_ = boot_delay == 4'hf;
+  assign _064_ = ~ busy;
+  assign _065_ = banner_idx < 5'h12;
   assign _067_ = ~ busy;
-  assign _068_ = step_idx < 2'h2;
-  assign _069_ = ~ busy;
+  assign _068_ = ~ busy;
+  assign _069_ = halt_idx < 3'h6;
   assign _070_ = ~ busy;
-  assign _071_ = fault_msg_idx < 2'h2;
+  assign _071_ = step_idx < 2'h2;
   assign _072_ = ~ busy;
-  assign _073_ = debug_fsm_state == 1'h0;
-  assign _074_ = debug_fsm_state == 1'h1;
-  assign _076_ = debug_fsm_state == 2'h2;
-  assign _077_ = debug_fsm_state == 2'h3;
-  assign _078_ = debug_fsm_state == 3'h4;
-  assign _079_ = debug_fsm_state == 3'h5;
-  assign _080_ = debug_fsm_state == 3'h6;
-  assign _081_ = debug_fsm_state == 3'h7;
-  assign _082_ = debug_fsm_state == 4'h8;
-  assign _083_ = debug_fsm_state == 4'h9;
-  assign _084_ = debug_fsm_state == 4'ha;
-  assign _085_ = debug_fsm_state == 4'hb;
-  assign _087_ = debug_fsm_state == 4'hc;
-  assign _088_ = timer_lo == 32'd4294967295;
-  assign _089_ = timer_hi + 1'h1;
-  assign _090_ = timer_lo + 1'h1;
-  assign _091_ = ~ alarm_fired;
-  assign _092_ = alarm_armed & _091_;
-  assign _093_ = timer_lo == alarm_cmp;
-  assign _094_ = ~ btn_sync[2];
-  assign _095_ = btn_hold_ctr < 26'h2faf080;
-  assign _096_ = btn_hold_ctr + 1'h1;
-  assign _098_ = ~ busy;
-  assign _099_ = mmio_uart_pending & _098_;
-  assign _100_ = heartbeat_ctr + 1'h1;
-  assign _101_ = heartbeat_ctr == 26'h2faf07f;
-  assign _102_ = ~ heartbeat_blink;
-  assign _103_ = demo_ctr == 25'h17d783f;
-  assign _104_ = demo_phase == 3'h4;
-  assign _105_ = demo_phase + 1'h1;
-  assign _106_ = demo_ctr + 1'h1;
-  assign _107_ = ~ boot_triggered;
-  assign _109_ = boot_delay + 1'h1;
-  assign _110_ = boot_delay == 4'hf;
-  assign _111_ = startup_ctr + 1'h1;
-  assign _112_ = startup_ctr == 28'h8f0d17f;
-  assign _113_ = ~ busy;
-  assign _114_ = banner_idx < 5'h12;
-  assign _115_ = banner_idx + 1'h1;
-  assign _116_ = ~ busy;
+  assign _073_ = ~ busy;
+  assign _074_ = fault_msg_idx < 2'h2;
+  assign _075_ = ~ busy;
+  assign _076_ = debug_fsm_state == 1'h0;
+  assign _078_ = debug_fsm_state == 1'h1;
+  assign _079_ = debug_fsm_state == 2'h2;
+  assign _080_ = debug_fsm_state == 2'h3;
+  assign _081_ = debug_fsm_state == 3'h4;
+  assign _082_ = debug_fsm_state == 3'h5;
+  assign _083_ = debug_fsm_state == 3'h6;
+  assign _084_ = debug_fsm_state == 3'h7;
+  assign _085_ = debug_fsm_state == 4'h8;
+  assign _086_ = debug_fsm_state == 4'h9;
+  assign _087_ = debug_fsm_state == 4'ha;
+  assign _089_ = debug_fsm_state == 4'hb;
+  assign _090_ = debug_fsm_state == 4'hc;
+  assign _091_ = debug_fsm_state == 4'hd;
+  assign _092_ = timer_lo == 32'd4294967295;
+  assign _093_ = timer_hi + 1'h1;
+  assign _094_ = timer_lo + 1'h1;
+  assign _095_ = ~ alarm_fired;
+  assign _096_ = alarm_armed & _095_;
+  assign _097_ = timer_lo == alarm_cmp;
+  assign _098_ = ~ btn_sync[2];
+  assign _100_ = btn_hold_ctr < 26'h2faf080;
+  assign _101_ = btn_hold_ctr + 1'h1;
+  assign _102_ = ~ busy;
+  assign _103_ = mmio_uart_pending & _102_;
+  assign _104_ = heartbeat_ctr + 1'h1;
+  assign _105_ = heartbeat_ctr == 26'h2faf07f;
+  assign _106_ = ~ heartbeat_blink;
+  assign _107_ = demo_ctr == 25'h17d783f;
+  assign _108_ = demo_phase == 3'h4;
+  assign _109_ = demo_phase + 1'h1;
+  assign _111_ = demo_ctr + 1'h1;
+  assign _112_ = ~ boot_triggered;
+  assign _113_ = boot_delay + 1'h1;
+  assign _114_ = boot_delay == 4'hf;
+  assign _115_ = startup_ctr + 1'h1;
+  assign _116_ = startup_ctr == 28'h8f0d17f;
   assign _117_ = ~ busy;
-  assign _118_ = halt_idx < 3'h6;
-  assign _120_ = halt_idx + 1'h1;
-  assign _121_ = ~ busy;
-  assign _122_ = step_idx < 2'h2;
-  assign _123_ = step_idx + 1'h1;
-  assign _124_ = ~ busy;
+  assign _118_ = banner_idx < 5'h12;
+  assign _119_ = banner_idx + 1'h1;
+  assign _120_ = ~ busy;
+  assign _122_ = ~ busy;
+  assign _123_ = halt_idx < 3'h6;
+  assign _124_ = halt_idx + 1'h1;
   assign _125_ = ~ busy;
-  assign _126_ = fault_msg_idx < 2'h2;
-  assign _127_ = fault_msg_idx + 1'h1;
+  assign _126_ = step_idx < 2'h2;
+  assign _127_ = step_idx + 1'h1;
   assign _128_ = ~ busy;
+  assign _129_ = ~ busy;
+  assign _130_ = fault_msg_idx < 2'h2;
+  assign _131_ = fault_msg_idx + 1'h1;
+  assign _002_ = ~ busy;
   always @(posedge 1'h0)
-    timer_hi <= _129_;
+    timer_hi <= _003_;
   always @(posedge 1'h0)
-    timer_lo <= _090_[31:0];
+    timer_lo <= _094_[31:0];
   always @(posedge 1'h0)
-    alarm_fired <= _002_;
+    alarm_fired <= _004_;
   always @(posedge 1'h0)
-    mmio_led0 <= _003_;
+    mmio_led0 <= _005_;
   always @(posedge 1'h0)
-    mmio_led1 <= _004_;
+    mmio_led1 <= _006_;
   always @(posedge 1'h0)
-    mmio_led2 <= _005_;
+    mmio_led2 <= _007_;
   always @(posedge 1'h0)
-    mmio_led3 <= _006_;
+    mmio_led3 <= _008_;
   always @(posedge 1'h0)
-    mmio_led4 <= _007_;
+    mmio_led4 <= _009_;
   always @(posedge 1'h0)
-    tod_epoch <= _008_;
+    tod_epoch <= _010_;
   always @(posedge 1'h0)
-    alarm_cmp <= _009_;
+    alarm_cmp <= _011_;
   always @(posedge 1'h0)
-    alarm_armed <= _010_;
+    alarm_armed <= _013_;
   always @(posedge 1'h0)
     prev_nia <= imem_addr;
   always @(posedge 1'h0)
-    btn_sync <= _011_;
+    btn_sync <= _014_;
   always @(posedge 1'h0)
     btn_prev <= btn_sync[2];
   always @(posedge 1'h0)
-    btn_hold_ctr <= _013_;
+    btn_hold_ctr <= _015_;
   always @(posedge 1'h0)
-    btn_hold_done <= _014_;
+    btn_hold_done <= _016_;
   always @(posedge 1'h0)
-    mmio_uart_pending <= _015_;
+    mmio_uart_pending <= _017_;
   always @(posedge 1'h0)
-    mmio_uart_byte_reg <= _016_;
+    mmio_uart_byte_reg <= _018_;
   always @(posedge 1'h0)
-    heartbeat_ctr <= _017_;
+    heartbeat_ctr <= _019_;
   always @(posedge 1'h0)
-    heartbeat_blink <= _018_;
+    heartbeat_blink <= _020_;
   always @(posedge 1'h0)
-    demo_ctr <= _019_;
+    demo_ctr <= _021_;
   always @(posedge 1'h0)
-    demo_phase <= _020_;
+    demo_phase <= _022_;
   always @(posedge 1'h0)
-    boot_delay <= _021_;
+    boot_delay <= _024_;
   always @(posedge 1'h0)
-    boot_triggered <= _022_;
+    boot_triggered <= _025_;
   always @(posedge 1'h0)
-    startup_ctr <= _024_;
+    startup_ctr <= _026_;
   always @(posedge 1'h0)
-    debug_fsm_state <= _025_;
+    debug_fsm_state <= _027_;
   always @(posedge 1'h0)
-    banner_idx <= _026_;
+    banner_idx <= _028_;
   always @(posedge 1'h0)
-    halted <= _027_;
+    halted <= _029_;
   always @(posedge 1'h0)
-    halt_idx <= _028_;
+    halt_idx <= _030_;
   always @(posedge 1'h0)
-    stepping <= _029_;
+    stepping <= _031_;
   always @(posedge 1'h0)
-    step_nia <= _030_;
+    step_nia <= _032_;
   always @(posedge 1'h0)
-    step_fault <= _031_;
+    step_fault <= _033_;
   always @(posedge 1'h0)
-    step_had_fault <= _032_;
+    step_had_fault <= _035_;
   always @(posedge 1'h0)
-    step_idx <= _033_;
+    step_idx <= _036_;
   always @(posedge 1'h0)
-    fault_msg_idx <= _035_;
+    fault_msg_idx <= _037_;
   \church_ti60_f225.boot_rom  boot_rom (
     .addr(imem_addr[10:2]),
     .data(imem_data)
@@ -2532,7 +2536,7 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
     .ns_wr_data(ns_wr_data),
     .ns_wr_en(ns_wr_en),
     .perm_gt_sig(clist_wr_data),
-    .\port$3920$0 (mem_rd_data)
+    .\port$3910$0 (mem_rd_data)
   );
   \church_ti60_f225.debug  debug (
     .busy(busy),
@@ -2702,7 +2706,7 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
       4'h5:
           mmio_rd_data = 32'd0;
       4'h6:
-          mmio_rd_data = { 31'h00000000, _042_ };
+          mmio_rd_data = { 31'h00000000, _044_ };
       4'h7:
           mmio_rd_data = 32'd0;
       4'ha:
@@ -2728,7 +2732,7 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
       wr_data = ns_wr_data[31:0];
     end else if (1'h0) begin
       wr_data = clist_wr_data;
-    end else if (_053_) begin
+    end else if (_055_) begin
       wr_data = dmem_wr_data;
     end
   end
@@ -2739,7 +2743,7 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
       wr_en = 1'h1;
     end else if (1'h0) begin
       wr_en = 1'h1;
-    end else if (_053_) begin
+    end else if (_055_) begin
       wr_en = dmem_wr_en;
     end
   end
@@ -2753,25 +2757,27 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
           /* empty */;
       4'h2:
           /* empty */;
-      4'h3:
-          /* empty */;
       4'h4:
           /* empty */;
       4'h5:
           /* empty */;
       4'h6:
+          /* empty */;
+      4'h3:
           free_run_start = 1'h1;
       4'h8:
           /* empty */;
-      4'h7:
-          /* empty */;
       4'h9:
+          /* empty */;
+      4'h7:
           /* empty */;
       4'ha:
           /* empty */;
       4'hb:
           /* empty */;
       4'hc:
+          /* empty */;
+      4'hd:
           /* empty */;
     endcase
   end
@@ -2785,25 +2791,27 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
           /* empty */;
       4'h2:
           /* empty */;
-      4'h3:
-          /* empty */;
       4'h4:
           /* empty */;
       4'h5:
           /* empty */;
       4'h6:
+          /* empty */;
+      4'h3:
           free_run_nia = 32'd1024;
       4'h8:
           /* empty */;
-      4'h7:
-          /* empty */;
       4'h9:
+          /* empty */;
+      4'h7:
           /* empty */;
       4'ha:
           /* empty */;
       4'hb:
           /* empty */;
       4'hc:
+          /* empty */;
+      4'hd:
           /* empty */;
     endcase
   end
@@ -2812,7 +2820,7 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
     send_byte = 1'h0;
     if (fsm_send_byte) begin
       send_byte = 1'h1;
-    end else if (_119_) begin
+    end else if (_121_) begin
       send_byte = 1'h1;
     end
   end
@@ -2821,15 +2829,15 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
     byte_data = 8'h00;
     if (fsm_send_byte) begin
       byte_data = fsm_byte_data;
-    end else if (_119_) begin
+    end else if (_121_) begin
       byte_data = mmio_uart_byte_reg;
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
     boot_start = 1'h0;
-    if (_059_) begin
-      if (_060_) begin
+    if (_062_) begin
+      if (_063_) begin
         boot_start = 1'h1;
       end
     end else begin
@@ -2845,46 +2853,48 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
       4'h1:
           /* empty */;
       4'h2:
-          if (_061_) begin
-            if (_062_) begin
+          if (_064_) begin
+            if (_065_) begin
               fsm_byte_data = banner_byte;
             end else begin
             end
           end
-      4'h3:
-          /* empty */;
       4'h4:
-          if (_065_) begin
-            if (_066_) begin
+          /* empty */;
+      4'h5:
+          if (_068_) begin
+            if (_069_) begin
               fsm_byte_data = halt_byte;
             end else begin
             end
           end
-      4'h5:
-          /* empty */;
       4'h6:
+          /* empty */;
+      4'h3:
           /* empty */;
       4'h8:
           /* empty */;
+      4'h9:
+          /* empty */;
       4'h7:
           /* empty */;
-      4'h9:
-          if (_067_) begin
-            if (_068_) begin
+      4'ha:
+          if (_070_) begin
+            if (_071_) begin
               fsm_byte_data = step_byte;
             end else begin
             end
           end
-      4'ha:
-          /* empty */;
       4'hb:
-          if (_070_) begin
-            if (_071_) begin
+          /* empty */;
+      4'hc:
+          if (_073_) begin
+            if (_074_) begin
               fsm_byte_data = fault_byte;
             end else begin
             end
           end
-      4'hc:
+      4'hd:
           /* empty */;
     endcase
   end
@@ -2897,46 +2907,48 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
       4'h1:
           /* empty */;
       4'h2:
-          if (_061_) begin
-            if (_062_) begin
+          if (_064_) begin
+            if (_065_) begin
               fsm_send_byte = 1'h1;
             end else begin
             end
           end
-      4'h3:
-          /* empty */;
       4'h4:
-          if (_065_) begin
-            if (_066_) begin
+          /* empty */;
+      4'h5:
+          if (_068_) begin
+            if (_069_) begin
               fsm_send_byte = 1'h1;
             end else begin
             end
           end
-      4'h5:
-          /* empty */;
       4'h6:
+          /* empty */;
+      4'h3:
           /* empty */;
       4'h8:
           /* empty */;
+      4'h9:
+          /* empty */;
       4'h7:
           /* empty */;
-      4'h9:
-          if (_067_) begin
-            if (_068_) begin
-              fsm_send_byte = 1'h1;
-            end else begin
-            end
-          end
       4'ha:
-          /* empty */;
-      4'hb:
           if (_070_) begin
             if (_071_) begin
               fsm_send_byte = 1'h1;
             end else begin
             end
           end
+      4'hb:
+          /* empty */;
       4'hc:
+          if (_073_) begin
+            if (_074_) begin
+              fsm_send_byte = 1'h1;
+            end else begin
+            end
+          end
+      4'hd:
           /* empty */;
     endcase
   end
@@ -2950,30 +2962,32 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
           /* empty */;
       4'h2:
           /* empty */;
-      4'h3:
-          if (_063_) begin
+      4'h4:
+          if (_067_) begin
             \data$101  = imem_addr;
           end
-      4'h4:
-          /* empty */;
       4'h5:
           /* empty */;
       4'h6:
           /* empty */;
-      4'h8:
+      4'h3:
           /* empty */;
-      4'h7:
+      4'h8:
           /* empty */;
       4'h9:
           /* empty */;
+      4'h7:
+          /* empty */;
       4'ha:
-          if (_069_) begin
+          /* empty */;
+      4'hb:
+          if (_072_) begin
             \data$101  = step_nia;
           end
-      4'hb:
-          /* empty */;
       4'hc:
-          if (_072_) begin
+          /* empty */;
+      4'hd:
+          if (_075_) begin
             \data$101  = fault_word;
           end
     endcase
@@ -2988,30 +3002,32 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
           /* empty */;
       4'h2:
           /* empty */;
-      4'h3:
-          if (_063_) begin
+      4'h4:
+          if (_067_) begin
             send = 1'h1;
           end
-      4'h4:
-          /* empty */;
       4'h5:
           /* empty */;
       4'h6:
           /* empty */;
-      4'h8:
+      4'h3:
           /* empty */;
-      4'h7:
+      4'h8:
           /* empty */;
       4'h9:
           /* empty */;
+      4'h7:
+          /* empty */;
       4'ha:
-          if (_069_) begin
+          /* empty */;
+      4'hb:
+          if (_072_) begin
             send = 1'h1;
           end
-      4'hb:
-          /* empty */;
       4'hc:
-          if (_072_) begin
+          /* empty */;
+      4'hd:
+          if (_075_) begin
             send = 1'h1;
           end
     endcase
@@ -3026,43 +3042,45 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
           /* empty */;
       4'h2:
           /* empty */;
-      4'h3:
-          /* empty */;
       4'h4:
           /* empty */;
       4'h5:
           /* empty */;
       4'h6:
           /* empty */;
+      4'h3:
+          /* empty */;
       4'h8:
           /* empty */;
-      4'h7:
-          /* empty */;
       4'h9:
+          /* empty */;
+      4'h7:
           /* empty */;
       4'ha:
           /* empty */;
       4'hb:
           /* empty */;
       4'hc:
-          if (_072_) begin
+          /* empty */;
+      4'hd:
+          if (_075_) begin
             fault_word = { 28'h0000000, step_fault };
           end
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _129_ = timer_hi;
-    if (_088_) begin
-      _129_ = _089_[31:0];
+    _003_ = timer_hi;
+    if (_092_) begin
+      _003_ = _093_[31:0];
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _002_ = alarm_fired;
-    if (_092_) begin
-      if (_093_) begin
-        _002_ = 1'h1;
+    _004_ = alarm_fired;
+    if (_096_) begin
+      if (_097_) begin
+        _004_ = 1'h1;
       end
     end
     if (is_mmio_write) begin
@@ -3085,74 +3103,22 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
             /* empty */;
         4'hf:
             if (dmem_wr_data[1]) begin
-              _002_ = 1'h0;
+              _004_ = 1'h0;
             end
       endcase
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _003_ = mmio_led0;
+    _005_ = mmio_led0;
     if (is_mmio_write) begin
       casez (dmem_addr[5:2])
         4'h0:
-            _003_ = dmem_wr_data[2:0];
-        4'h1:
-            /* empty */;
-        4'h2:
-            /* empty */;
-        4'h3:
-            /* empty */;
-        4'h4:
-            /* empty */;
-        4'h5:
-            /* empty */;
-        4'hd:
-            /* empty */;
-        4'he:
-            /* empty */;
-        4'hf:
-            /* empty */;
-      endcase
-    end
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _004_ = mmio_led1;
-    if (is_mmio_write) begin
-      casez (dmem_addr[5:2])
-        4'h0:
-            /* empty */;
-        4'h1:
-            _004_ = dmem_wr_data[2:0];
-        4'h2:
-            /* empty */;
-        4'h3:
-            /* empty */;
-        4'h4:
-            /* empty */;
-        4'h5:
-            /* empty */;
-        4'hd:
-            /* empty */;
-        4'he:
-            /* empty */;
-        4'hf:
-            /* empty */;
-      endcase
-    end
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _005_ = mmio_led2;
-    if (is_mmio_write) begin
-      casez (dmem_addr[5:2])
-        4'h0:
-            /* empty */;
-        4'h1:
-            /* empty */;
-        4'h2:
             _005_ = dmem_wr_data[2:0];
+        4'h1:
+            /* empty */;
+        4'h2:
+            /* empty */;
         4'h3:
             /* empty */;
         4'h4:
@@ -3170,17 +3136,17 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _006_ = mmio_led3;
+    _006_ = mmio_led1;
     if (is_mmio_write) begin
       casez (dmem_addr[5:2])
         4'h0:
             /* empty */;
         4'h1:
-            /* empty */;
-        4'h2:
-            /* empty */;
-        4'h3:
             _006_ = dmem_wr_data[2:0];
+        4'h2:
+            /* empty */;
+        4'h3:
+            /* empty */;
         4'h4:
             /* empty */;
         4'h5:
@@ -3196,7 +3162,7 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _007_ = mmio_led4;
+    _007_ = mmio_led2;
     if (is_mmio_write) begin
       casez (dmem_addr[5:2])
         4'h0:
@@ -3204,11 +3170,11 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
         4'h1:
             /* empty */;
         4'h2:
-            /* empty */;
-        4'h3:
-            /* empty */;
-        4'h4:
             _007_ = dmem_wr_data[2:0];
+        4'h3:
+            /* empty */;
+        4'h4:
+            /* empty */;
         4'h5:
             /* empty */;
         4'hd:
@@ -3222,7 +3188,59 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _008_ = tod_epoch;
+    _008_ = mmio_led3;
+    if (is_mmio_write) begin
+      casez (dmem_addr[5:2])
+        4'h0:
+            /* empty */;
+        4'h1:
+            /* empty */;
+        4'h2:
+            /* empty */;
+        4'h3:
+            _008_ = dmem_wr_data[2:0];
+        4'h4:
+            /* empty */;
+        4'h5:
+            /* empty */;
+        4'hd:
+            /* empty */;
+        4'he:
+            /* empty */;
+        4'hf:
+            /* empty */;
+      endcase
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
+    _009_ = mmio_led4;
+    if (is_mmio_write) begin
+      casez (dmem_addr[5:2])
+        4'h0:
+            /* empty */;
+        4'h1:
+            /* empty */;
+        4'h2:
+            /* empty */;
+        4'h3:
+            /* empty */;
+        4'h4:
+            _009_ = dmem_wr_data[2:0];
+        4'h5:
+            /* empty */;
+        4'hd:
+            /* empty */;
+        4'he:
+            /* empty */;
+        4'hf:
+            /* empty */;
+      endcase
+    end
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
+    _010_ = tod_epoch;
     if (is_mmio_write) begin
       casez (dmem_addr[5:2])
         4'h0:
@@ -3238,7 +3256,7 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
         4'h5:
             /* empty */;
         4'hd:
-            _008_ = dmem_wr_data;
+            _010_ = dmem_wr_data;
         4'he:
             /* empty */;
         4'hf:
@@ -3248,7 +3266,7 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _009_ = alarm_cmp;
+    _011_ = alarm_cmp;
     if (is_mmio_write) begin
       casez (dmem_addr[5:2])
         4'h0:
@@ -3266,7 +3284,7 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
         4'hd:
             /* empty */;
         4'he:
-            _009_ = dmem_wr_data;
+            _011_ = dmem_wr_data;
         4'hf:
             /* empty */;
       endcase
@@ -3274,7 +3292,7 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _010_ = alarm_armed;
+    _013_ = alarm_armed;
     if (is_mmio_write) begin
       casez (dmem_addr[5:2])
         4'h0:
@@ -3295,94 +3313,94 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
             /* empty */;
         4'hf:
             if (dmem_wr_data[0]) begin
-              _010_ = 1'h1;
+              _013_ = 1'h1;
             end
       endcase
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _011_ = btn_sync;
-    _011_[0] = push_button;
-    _011_[1] = btn_sync[0];
-    _011_[2] = btn_sync[1];
+    _014_ = btn_sync;
+    _014_[0] = push_button;
+    _014_[1] = btn_sync[0];
+    _014_[2] = btn_sync[1];
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _013_ = btn_hold_ctr;
-    if (_094_) begin
-      if (_095_) begin
-        _013_ = _096_[25:0];
+    _015_ = btn_hold_ctr;
+    if (_098_) begin
+      if (_100_) begin
+        _015_ = _101_[25:0];
       end else begin
       end
     end else begin
-      _013_ = 26'h0000000;
+      _015_ = 26'h0000000;
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _014_ = btn_hold_done;
-    if (_094_) begin
-      if (_095_) begin
+    _016_ = btn_hold_done;
+    if (_098_) begin
+      if (_100_) begin
       end else begin
-        _014_ = 1'h1;
+        _016_ = 1'h1;
       end
     end else begin
-      _014_ = 1'h0;
+      _016_ = 1'h0;
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _015_ = mmio_uart_pending;
+    _017_ = mmio_uart_pending;
     if (mmio_uart_tx_wr) begin
-      _015_ = 1'h1;
+      _017_ = 1'h1;
     end
     if (fsm_send_byte) begin
-    end else if (_099_) begin
-      _015_ = 1'h0;
+    end else if (_103_) begin
+      _017_ = 1'h0;
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _016_ = mmio_uart_byte_reg;
+    _018_ = mmio_uart_byte_reg;
     if (mmio_uart_tx_wr) begin
-      _016_ = mmio_uart_tx_data;
+      _018_ = mmio_uart_tx_data;
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _017_ = _100_[25:0];
-    if (_101_) begin
-      _017_ = 26'h0000000;
+    _019_ = _104_[25:0];
+    if (_105_) begin
+      _019_ = 26'h0000000;
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _018_ = heartbeat_blink;
-    if (_101_) begin
-      _018_ = _102_;
+    _020_ = heartbeat_blink;
+    if (_105_) begin
+      _020_ = _106_;
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _019_ = demo_ctr;
+    _021_ = demo_ctr;
     if (dbg_boot_complete) begin
-      if (_103_) begin
-        _019_ = 25'h0000000;
+      if (_107_) begin
+        _021_ = 25'h0000000;
       end else begin
-        _019_ = _106_[24:0];
+        _021_ = _111_[24:0];
       end
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _020_ = demo_phase;
+    _022_ = demo_phase;
     if (dbg_boot_complete) begin
-      if (_103_) begin
-        if (_104_) begin
-          _020_ = 3'h0;
+      if (_107_) begin
+        if (_108_) begin
+          _022_ = 3'h0;
         end else begin
-          _020_ = _105_[2:0];
+          _022_ = _109_[2:0];
         end
       end else begin
       end
@@ -3390,33 +3408,31 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _021_ = boot_delay;
-    if (_107_) begin
-      _021_ = _109_[3:0];
+    _024_ = boot_delay;
+    if (_112_) begin
+      _024_ = _113_[3:0];
     end else begin
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _022_ = boot_triggered;
-    if (_107_) begin
-      if (_110_) begin
-        _022_ = 1'h1;
+    _025_ = boot_triggered;
+    if (_112_) begin
+      if (_114_) begin
+        _025_ = 1'h1;
       end
     end else begin
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _024_ = startup_ctr;
+    _026_ = startup_ctr;
     casez (debug_fsm_state)
       4'h0:
-          _024_ = _111_[27:0];
+          _026_ = _115_[27:0];
       4'h1:
           /* empty */;
       4'h2:
-          /* empty */;
-      4'h3:
           /* empty */;
       4'h4:
           /* empty */;
@@ -3424,11 +3440,13 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
           /* empty */;
       4'h6:
           /* empty */;
+      4'h3:
+          /* empty */;
       4'h8:
           /* empty */;
-      4'h7:
-          /* empty */;
       4'h9:
+          /* empty */;
+      4'h7:
           /* empty */;
       4'ha:
           /* empty */;
@@ -3436,226 +3454,162 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
           /* empty */;
       4'hc:
           /* empty */;
+      4'hd:
+          /* empty */;
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _025_ = debug_fsm_state;
+    _027_ = debug_fsm_state;
     casez (debug_fsm_state)
       4'h0:
-          if (_112_) begin
-            _025_ = 4'h1;
+          if (_116_) begin
+            _027_ = 4'h1;
           end
       4'h1:
           if (dbg_boot_complete) begin
-            _025_ = 4'h2;
+            _027_ = 4'h2;
           end
       4'h2:
-          if (_113_) begin
-            if (_114_) begin
-            end else begin
-              _025_ = 4'h3;
-            end
-          end
-      4'h3:
-          if (_116_) begin
-            _025_ = 4'h4;
-          end
-      4'h4:
           if (_117_) begin
             if (_118_) begin
             end else begin
-              _025_ = 4'h5;
+              _027_ = 4'h3;
             end
+          end
+      4'h4:
+          if (_120_) begin
+            _027_ = 4'h5;
           end
       4'h5:
-          if (btn_hold_done) begin
-            _025_ = 4'h6;
-          end else if (btn_press) begin
-            _025_ = 4'h7;
+          if (_122_) begin
+            if (_123_) begin
+            end else begin
+              _027_ = 4'h6;
+            end
           end
       4'h6:
-          _025_ = 4'h8;
+          if (btn_hold_done) begin
+            _027_ = 4'h3;
+          end else if (btn_press) begin
+            _027_ = 4'h7;
+          end
+      4'h3:
+          _027_ = 4'h8;
       4'h8:
-          /* empty */;
-      4'h7:
-          if (step_complete) begin
-            _025_ = 4'h9;
+          if (dbg_fault_valid) begin
+            _027_ = 4'h9;
+          end else if (btn_press) begin
+            _027_ = 4'h6;
           end
       4'h9:
-          if (_121_) begin
-            if (_122_) begin
-            end else begin
-              _025_ = 4'ha;
-            end
+          if (btn_press) begin
+            _027_ = 4'h6;
+          end
+      4'h7:
+          if (step_complete) begin
+            _027_ = 4'ha;
           end
       4'ha:
-          if (_124_) begin
-            if (step_had_fault) begin
-              _025_ = 4'hb;
-            end else begin
-              _025_ = 4'h4;
-            end
-          end
-      4'hb:
           if (_125_) begin
             if (_126_) begin
             end else begin
-              _025_ = 4'hc;
+              _027_ = 4'hb;
             end
           end
-      4'hc:
+      4'hb:
           if (_128_) begin
-            _025_ = 4'h4;
-          end
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _026_ = banner_idx;
-    casez (debug_fsm_state)
-      4'h0:
-          /* empty */;
-      4'h1:
-          if (dbg_boot_complete) begin
-            _026_ = 5'h00;
-          end
-      4'h2:
-          if (_113_) begin
-            if (_114_) begin
-              _026_ = _115_[4:0];
+            if (step_had_fault) begin
+              _027_ = 4'hc;
             end else begin
+              _027_ = 4'h5;
             end
           end
-      4'h3:
-          /* empty */;
-      4'h4:
-          /* empty */;
-      4'h5:
-          /* empty */;
-      4'h6:
-          /* empty */;
-      4'h8:
-          /* empty */;
-      4'h7:
-          /* empty */;
-      4'h9:
-          /* empty */;
-      4'ha:
-          /* empty */;
-      4'hb:
-          /* empty */;
       4'hc:
-          /* empty */;
+          if (_129_) begin
+            if (_130_) begin
+            end else begin
+              _027_ = 4'hd;
+            end
+          end
+      4'hd:
+          if (_002_) begin
+            _027_ = 4'h5;
+          end
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _027_ = halted;
+    _028_ = banner_idx;
     casez (debug_fsm_state)
       4'h0:
           /* empty */;
       4'h1:
           if (dbg_boot_complete) begin
-            _027_ = 1'h1;
+            _028_ = 5'h00;
           end
       4'h2:
-          /* empty */;
-      4'h3:
-          /* empty */;
-      4'h4:
-          /* empty */;
-      4'h5:
-          /* empty */;
-      4'h6:
-          _027_ = 1'h0;
-      4'h8:
-          _027_ = 1'h0;
-      4'h7:
-          /* empty */;
-      4'h9:
-          /* empty */;
-      4'ha:
-          /* empty */;
-      4'hb:
-          /* empty */;
-      4'hc:
-          /* empty */;
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _028_ = halt_idx;
-    casez (debug_fsm_state)
-      4'h0:
-          /* empty */;
-      4'h1:
-          /* empty */;
-      4'h2:
-          /* empty */;
-      4'h3:
-          /* empty */;
-      4'h4:
           if (_117_) begin
             if (_118_) begin
-              _028_ = _120_[2:0];
+              _028_ = _119_[4:0];
             end else begin
-              _028_ = 3'h0;
             end
           end
+      4'h4:
+          /* empty */;
       4'h5:
           /* empty */;
       4'h6:
           /* empty */;
-      4'h8:
+      4'h3:
           /* empty */;
-      4'h7:
+      4'h8:
           /* empty */;
       4'h9:
           /* empty */;
+      4'h7:
+          /* empty */;
       4'ha:
-          if (_124_) begin
-            if (step_had_fault) begin
-            end else begin
-              _028_ = 3'h0;
-            end
-          end
+          /* empty */;
       4'hb:
           /* empty */;
       4'hc:
-          if (_128_) begin
-            _028_ = 3'h0;
-          end
+          /* empty */;
+      4'hd:
+          /* empty */;
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _029_ = stepping;
+    _029_ = halted;
     casez (debug_fsm_state)
       4'h0:
           /* empty */;
       4'h1:
-          /* empty */;
+          if (dbg_boot_complete) begin
+            _029_ = 1'h0;
+          end
       4'h2:
-          /* empty */;
-      4'h3:
           /* empty */;
       4'h4:
           /* empty */;
       4'h5:
-          if (btn_hold_done) begin
+          /* empty */;
+      4'h6:
+          /* empty */;
+      4'h3:
+          _029_ = 1'h0;
+      4'h8:
+        begin
+          _029_ = 1'h0;
+          if (dbg_fault_valid) begin
           end else if (btn_press) begin
             _029_ = 1'h1;
           end
-      4'h6:
-          /* empty */;
-      4'h8:
-          /* empty */;
-      4'h7:
-          if (step_complete) begin
-            _029_ = 1'h0;
-          end
+        end
       4'h9:
+          _029_ = 1'h1;
+      4'h7:
           /* empty */;
       4'ha:
           /* empty */;
@@ -3663,11 +3617,13 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
           /* empty */;
       4'hc:
           /* empty */;
+      4'hd:
+          /* empty */;
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _030_ = step_nia;
+    _030_ = halt_idx;
     casez (debug_fsm_state)
       4'h0:
           /* empty */;
@@ -3675,178 +3631,274 @@ module church_ti60_f225(push_button, uart_tx, led0, led1, led2, led3, uart_rx);
           /* empty */;
       4'h2:
           /* empty */;
-      4'h3:
-          /* empty */;
       4'h4:
           /* empty */;
       4'h5:
-          /* empty */;
-      4'h6:
-          /* empty */;
-      4'h8:
-          /* empty */;
-      4'h7:
-          if (step_complete) begin
-            _030_ = imem_addr;
-          end
-      4'h9:
-          /* empty */;
-      4'ha:
-          /* empty */;
-      4'hb:
-          /* empty */;
-      4'hc:
-          /* empty */;
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _031_ = step_fault;
-    casez (debug_fsm_state)
-      4'h0:
-          /* empty */;
-      4'h1:
-          /* empty */;
-      4'h2:
-          /* empty */;
-      4'h3:
-          /* empty */;
-      4'h4:
-          /* empty */;
-      4'h5:
-          /* empty */;
-      4'h6:
-          /* empty */;
-      4'h8:
-          /* empty */;
-      4'h7:
-          if (step_complete) begin
-            _031_ = fault[3:0];
-          end
-      4'h9:
-          /* empty */;
-      4'ha:
-          /* empty */;
-      4'hb:
-          /* empty */;
-      4'hc:
-          /* empty */;
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _032_ = step_had_fault;
-    casez (debug_fsm_state)
-      4'h0:
-          /* empty */;
-      4'h1:
-          /* empty */;
-      4'h2:
-          /* empty */;
-      4'h3:
-          /* empty */;
-      4'h4:
-          /* empty */;
-      4'h5:
-          /* empty */;
-      4'h6:
-          /* empty */;
-      4'h8:
-          /* empty */;
-      4'h7:
-          if (step_complete) begin
-            _032_ = dbg_fault_valid;
-          end
-      4'h9:
-          /* empty */;
-      4'ha:
-          /* empty */;
-      4'hb:
-          /* empty */;
-      4'hc:
-          /* empty */;
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _033_ = step_idx;
-    casez (debug_fsm_state)
-      4'h0:
-          /* empty */;
-      4'h1:
-          /* empty */;
-      4'h2:
-          /* empty */;
-      4'h3:
-          /* empty */;
-      4'h4:
-          /* empty */;
-      4'h5:
-          /* empty */;
-      4'h6:
-          /* empty */;
-      4'h8:
-          /* empty */;
-      4'h7:
-          if (step_complete) begin
-            _033_ = 2'h0;
-          end
-      4'h9:
-          if (_121_) begin
-            if (_122_) begin
-              _033_ = _123_[1:0];
+          if (_122_) begin
+            if (_123_) begin
+              _030_ = _124_[2:0];
             end else begin
-              _033_ = 2'h0;
+              _030_ = 3'h0;
             end
           end
-      4'ha:
-          /* empty */;
-      4'hb:
-          /* empty */;
-      4'hc:
-          /* empty */;
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
-    _035_ = fault_msg_idx;
-    casez (debug_fsm_state)
-      4'h0:
-          /* empty */;
-      4'h1:
-          /* empty */;
-      4'h2:
+      4'h6:
           /* empty */;
       4'h3:
           /* empty */;
-      4'h4:
-          /* empty */;
-      4'h5:
-          /* empty */;
-      4'h6:
-          /* empty */;
       4'h8:
-          /* empty */;
-      4'h7:
           /* empty */;
       4'h9:
           /* empty */;
+      4'h7:
+          /* empty */;
       4'ha:
-          if (_124_) begin
+          /* empty */;
+      4'hb:
+          if (_128_) begin
             if (step_had_fault) begin
-              _035_ = 2'h0;
             end else begin
+              _030_ = 3'h0;
             end
           end
+      4'hc:
+          /* empty */;
+      4'hd:
+          if (_002_) begin
+            _030_ = 3'h0;
+          end
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
+    _031_ = stepping;
+    casez (debug_fsm_state)
+      4'h0:
+          /* empty */;
+      4'h1:
+          /* empty */;
+      4'h2:
+          /* empty */;
+      4'h4:
+          /* empty */;
+      4'h5:
+          /* empty */;
+      4'h6:
+          if (btn_hold_done) begin
+          end else if (btn_press) begin
+            _031_ = 1'h1;
+          end
+      4'h3:
+          /* empty */;
+      4'h8:
+          /* empty */;
+      4'h9:
+          /* empty */;
+      4'h7:
+          if (step_complete) begin
+            _031_ = 1'h0;
+          end
+      4'ha:
+          /* empty */;
       4'hb:
+          /* empty */;
+      4'hc:
+          /* empty */;
+      4'hd:
+          /* empty */;
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
+    _032_ = step_nia;
+    casez (debug_fsm_state)
+      4'h0:
+          /* empty */;
+      4'h1:
+          /* empty */;
+      4'h2:
+          /* empty */;
+      4'h4:
+          /* empty */;
+      4'h5:
+          /* empty */;
+      4'h6:
+          /* empty */;
+      4'h3:
+          /* empty */;
+      4'h8:
+          /* empty */;
+      4'h9:
+          /* empty */;
+      4'h7:
+          if (step_complete) begin
+            _032_ = imem_addr;
+          end
+      4'ha:
+          /* empty */;
+      4'hb:
+          /* empty */;
+      4'hc:
+          /* empty */;
+      4'hd:
+          /* empty */;
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
+    _033_ = step_fault;
+    casez (debug_fsm_state)
+      4'h0:
+          /* empty */;
+      4'h1:
+          /* empty */;
+      4'h2:
+          /* empty */;
+      4'h4:
+          /* empty */;
+      4'h5:
+          /* empty */;
+      4'h6:
+          /* empty */;
+      4'h3:
+          /* empty */;
+      4'h8:
+          /* empty */;
+      4'h9:
+          /* empty */;
+      4'h7:
+          if (step_complete) begin
+            _033_ = fault[3:0];
+          end
+      4'ha:
+          /* empty */;
+      4'hb:
+          /* empty */;
+      4'hc:
+          /* empty */;
+      4'hd:
+          /* empty */;
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
+    _035_ = step_had_fault;
+    casez (debug_fsm_state)
+      4'h0:
+          /* empty */;
+      4'h1:
+          /* empty */;
+      4'h2:
+          /* empty */;
+      4'h4:
+          /* empty */;
+      4'h5:
+          /* empty */;
+      4'h6:
+          /* empty */;
+      4'h3:
+          /* empty */;
+      4'h8:
+          /* empty */;
+      4'h9:
+          /* empty */;
+      4'h7:
+          if (step_complete) begin
+            _035_ = dbg_fault_valid;
+          end
+      4'ha:
+          /* empty */;
+      4'hb:
+          /* empty */;
+      4'hc:
+          /* empty */;
+      4'hd:
+          /* empty */;
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
+    _036_ = step_idx;
+    casez (debug_fsm_state)
+      4'h0:
+          /* empty */;
+      4'h1:
+          /* empty */;
+      4'h2:
+          /* empty */;
+      4'h4:
+          /* empty */;
+      4'h5:
+          /* empty */;
+      4'h6:
+          /* empty */;
+      4'h3:
+          /* empty */;
+      4'h8:
+          /* empty */;
+      4'h9:
+          /* empty */;
+      4'h7:
+          if (step_complete) begin
+            _036_ = 2'h0;
+          end
+      4'ha:
           if (_125_) begin
             if (_126_) begin
-              _035_ = _127_[1:0];
+              _036_ = _127_[1:0];
             end else begin
-              _035_ = 2'h0;
+              _036_ = 2'h0;
+            end
+          end
+      4'hb:
+          /* empty */;
+      4'hc:
+          /* empty */;
+      4'hd:
+          /* empty */;
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$1 ) begin end
+    _037_ = fault_msg_idx;
+    casez (debug_fsm_state)
+      4'h0:
+          /* empty */;
+      4'h1:
+          /* empty */;
+      4'h2:
+          /* empty */;
+      4'h4:
+          /* empty */;
+      4'h5:
+          /* empty */;
+      4'h6:
+          /* empty */;
+      4'h3:
+          /* empty */;
+      4'h8:
+          /* empty */;
+      4'h9:
+          /* empty */;
+      4'h7:
+          /* empty */;
+      4'ha:
+          /* empty */;
+      4'hb:
+          if (_128_) begin
+            if (step_had_fault) begin
+              _037_ = 2'h0;
+            end else begin
             end
           end
       4'hc:
+          if (_129_) begin
+            if (_130_) begin
+              _037_ = _131_[1:0];
+            end else begin
+              _037_ = 2'h0;
+            end
+          end
+      4'hd:
           /* empty */;
     endcase
   end
@@ -3944,55 +3996,19 @@ module \church_ti60_f225.boot_rom (data, addr);
       9'h109:
           rom_comb = 32'd2399240192;
       9'h10a:
-          rom_comb = 32'd2399764481;
+          rom_comb = 32'd2937586044;
       9'h10b:
-          rom_comb = 32'd2937586044;
+          rom_comb = 32'd2937077759;
       9'h10c:
-          rom_comb = 32'd2937077759;
+          rom_comb = 32'd3071344641;
       9'h10d:
-          rom_comb = 32'd3071344641;
+          rom_comb = 32'd3095429119;
       9'h10e:
-          rom_comb = 32'd3095429119;
+          rom_comb = 32'd3071901697;
       9'h10f:
-          rom_comb = 32'd3071901697;
+          rom_comb = 32'd3095429116;
       9'h110:
-          rom_comb = 32'd3095429116;
-      9'h111:
-          rom_comb = 32'd2399240193;
-      9'h112:
-          rom_comb = 32'd2399764482;
-      9'h113:
-          rom_comb = 32'd2937586044;
-      9'h114:
-          rom_comb = 32'd2937077759;
-      9'h115:
-          rom_comb = 32'd3071344641;
-      9'h116:
-          rom_comb = 32'd3095429119;
-      9'h117:
-          rom_comb = 32'd3071901697;
-      9'h118:
-          rom_comb = 32'd3095429116;
-      9'h119:
-          rom_comb = 32'd2399240194;
-      9'h11a:
-          rom_comb = 32'd2399764483;
-      9'h11b:
-          rom_comb = 32'd2937586044;
-      9'h11c:
-          rom_comb = 32'd2937077759;
-      9'h11d:
-          rom_comb = 32'd3071344641;
-      9'h11e:
-          rom_comb = 32'd3095429119;
-      9'h11f:
-          rom_comb = 32'd3071901697;
-      9'h120:
-          rom_comb = 32'd3095429116;
-      9'h121:
-          rom_comb = 32'd2399240195;
-      9'h122:
-          rom_comb = 32'd3204480992;
+          rom_comb = 32'd3204481010;
       default:
           rom_comb = 32'd0;
     endcase
@@ -4000,7 +4016,7 @@ module \church_ti60_f225.boot_rom (data, addr);
   assign clk = 1'h0;
 endmodule
 
-module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$3920$0 , free_run_start, free_run_nia, boot_start, \fault$381 , \fault_valid$383 , dmem_addr, dmem_rd_en, dmem_wr_data, dmem_wr_en, ns_addr, ns_rd_en, ns_wr_data, ns_wr_en, imem_addr, instruction, mem_rd_data);
+module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$3910$0 , free_run_start, free_run_nia, boot_start, \fault$381 , \fault_valid$383 , dmem_addr, dmem_rd_en, dmem_wr_data, dmem_wr_en, ns_addr, ns_rd_en, ns_wr_data, ns_wr_en, imem_addr, instruction, mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$3  = 0;
   wire _000_;
   wire _001_;
@@ -5152,8 +5168,8 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
   wire [1:0] \perm_gt_sig.gt_type ;
   wire [5:0] \perm_gt_sig.perms ;
   wire [15:0] \perm_gt_sig.slot_id ;
-  input [31:0] \port$3920$0 ;
-  wire [31:0] \port$3920$0 ;
+  input [31:0] \port$3910$0 ;
+  wire [31:0] \port$3910$0 ;
   wire [3:0] preset;
   wire reboot_request;
   reg [5:0] required_perms;
@@ -5886,7 +5902,7 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
     .mload_index(mload_index),
     .mload_src(mload_cr_src),
     .mload_start(mload_start),
-    .\port$4678$0 (instruction[18:0]),
+    .\port$4668$0 (instruction[18:0]),
     .thread_base(cr12_thread[63:32]),
     .thread_hdr(thread_hdr)
   );
@@ -5906,7 +5922,7 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
     .flags(flags),
     .mem_rd_data(mem_rd_data),
     .nia(imem_addr),
-    .\port$4678$0 (instruction[18:0]),
+    .\port$4668$0 (instruction[18:0]),
     .thread_hdr_out(thread_hdr)
   );
   \church_ti60_f225.core.u_decoder  u_decoder (
@@ -5935,7 +5951,7 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
     .dr_wr_en(dr_wr_en),
     .fault(\fault$379 ),
     .fault_type(\fault_type$395 ),
-    .\port$4678$0 (instruction[22:0]),
+    .\port$4668$0 (instruction[22:0]),
     .start(dread_start_sig)
   );
   \church_ti60_f225.core.u_dwrite  u_dwrite (
@@ -5949,7 +5965,7 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
     .dr_rd_data(dr_rd_data),
     .fault(\fault$380 ),
     .fault_type(\fault_type$396 ),
-    .\port$4678$0 (instruction[22:0]),
+    .\port$4668$0 (instruction[22:0]),
     .start(dwrite_start_sig)
   );
   \church_ti60_f225.core.u_eloadcall  u_eloadcall (
@@ -5964,7 +5980,7 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
     .fault(fault),
     .fault_type(\fault_type$393 ),
     .mem_rd_data(mem_rd_data),
-    .\port$4678$0 (instruction[22:0]),
+    .\port$4668$0 (instruction[22:0]),
     .saved_cr5_gt(\saved_cr5_gt$369 ),
     .start(eloadcall_start_sig)
   );
@@ -5976,7 +5992,7 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
     .ns_rd_en(\ns_rd_en$471 ),
     .ns_wr_data(\ns_wr_data$473 ),
     .ns_wr_en(\ns_wr_en$475 ),
-    .\port$3920$0 (\port$3920$0 )
+    .\port$3910$0 (\port$3910$0 )
   );
   \church_ti60_f225.core.u_lambda  u_lambda (
     .cr_rd_addr(\cr_rd_addr$45 ),
@@ -6000,7 +6016,7 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
     .mload_fault(mload_fault),
     .mload_m_elevated(\mload_m_elevated$428 ),
     .mload_start(\mload_start$422 ),
-    .\port$4678$0 (instruction[22:0])
+    .\port$4668$0 (instruction[22:0])
   );
   \church_ti60_f225.core.u_perm_check  u_perm_check (
     .check_domain_purity(check_domain_purity),
@@ -6103,7 +6119,7 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
     .mem_wr_addr(\mem_wr_addr$459 ),
     .mem_wr_data(\mem_wr_data$460 ),
     .mem_wr_en(\mem_wr_en$450 ),
-    .\port$4678$0 (instruction[22:0]),
+    .\port$4668$0 (instruction[22:0]),
     .save_busy(save_busy),
     .save_fault(save_fault),
     .save_start(save_start_sig)
@@ -6142,7 +6158,7 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
     .cr_wr_en(\cr_wr_en$115 ),
     .fault_type(\fault_type$392 ),
     .mem_rd_data(mem_rd_data),
-    .\port$4678$0 (instruction[17:0]),
+    .\port$4668$0 (instruction[17:0]),
     .switch_busy(switch_busy),
     .switch_fault(switch_fault),
     .switch_start(switch_start_sig)
@@ -6173,7 +6189,7 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
     .mem_rd_data(mem_rd_data),
     .nia_set(\nia_set$481 ),
     .nia_value(\nia_value$487 ),
-    .\port$4678$0 (instruction[22:0]),
+    .\port$4668$0 (instruction[22:0]),
     .start(xloadlambda_start_sig)
   );
   always @* begin
@@ -6960,8 +6976,8 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
   assign gc_sweep_en = 1'h1;
   assign ns_start_index = 16'h0001;
   assign ns_end_index = 16'h1000;
-  assign ns_rd_data = { 64'h0000000000000000, \port$3920$0  };
-  assign \ns_rd_data$61  = { 64'h0000000000000000, \port$3920$0  };
+  assign ns_rd_data = { 64'h0000000000000000, \port$3910$0  };
+  assign \ns_rd_data$61  = { 64'h0000000000000000, \port$3910$0  };
   assign \gc_busy$62  = gc_busy;
   assign garbage_count = gc_garbage_count;
   assign cr_rd_data_gt = cr_rd_data[31:0];
@@ -7804,7 +7820,7 @@ module \church_ti60_f225.core (imem_valid, boot_complete, perm_gt_sig, \port$392
 endmodule
 
 module \church_ti60_f225.core.u_call (call_start, cr_rd_data, mload_src, mload_dst, mload_index, call_busy, call_complete, mload_fault, mload_done, caller_pc, cr5_heap, thread_base, cr14_code, cr15_namespace, cr_null_mask, cr_b_clear_mask, cr_rd_addr, cr_wr_addr, cr_wr_data, cr_wr_en, mem_rd_addr
-, mem_rd_en, mem_wr_addr, mem_wr_data, mem_wr_en, call_fault, fault_type, mload_start, mload_fault_type, thread_hdr, \port$4678$0 , mem_rd_data);
+, mem_rd_en, mem_wr_addr, mem_wr_data, mem_wr_en, call_fault, fault_type, mload_start, mload_fault_type, thread_hdr, \port$4668$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$4  = 0;
   wire [4:0] _000_;
   wire [32:0] _001_;
@@ -8075,8 +8091,8 @@ module \church_ti60_f225.core.u_call (call_start, cr_rd_data, mload_src, mload_d
   wire [31:0] nia_value;
   wire [31:0] ns_base_from_cr14;
   reg phase = 1'h0;
-  input [18:0] \port$4678$0 ;
-  wire [18:0] \port$4678$0 ;
+  input [18:0] \port$4668$0 ;
+  wire [18:0] \port$4668$0 ;
   wire [31:0] saved_cr5_gt;
   wire \saved_cr5_gt.b_flag ;
   wire [6:0] \saved_cr5_gt.gt_seq ;
@@ -8182,10 +8198,10 @@ module \church_ti60_f225.core.u_call (call_start, cr_rd_data, mload_src, mload_d
   assign _055_ = $signed(_044_) - $signed({ 1'h0, thread_hdr[22:10] });
   assign _066_ = $signed(_055_) + $signed(3'h2);
   assign _070_ = caller_pc + 1'h1;
-  assign src_in_range = \port$4678$0 [18:15] <= 4'hb;
-  assign mload_src = phase ? 4'h6 : \port$4678$0 [18:15];
+  assign src_in_range = \port$4668$0 [18:15] <= 4'hb;
+  assign mload_src = phase ? 4'h6 : \port$4668$0 [18:15];
   assign mload_dst = phase ? 4'he : 4'h6;
-  assign mload_index = phase ? 16'h0000 : { 1'h0, \port$4678$0 [14:0] };
+  assign mload_index = phase ? 16'h0000 : { 1'h0, \port$4668$0 [14:0] };
   assign _071_ = cr14_code[15:0] * 4'hc;
   assign _001_ = cr15_namespace[63:32] + _071_;
   assign _002_ = cr14_latched[30:25] & 6'h01;
@@ -8344,9 +8360,9 @@ module \church_ti60_f225.core.u_call (call_start, cr_rd_data, mload_src, mload_d
       5'h00:
           /* empty */;
       5'h01:
-          cr_rd_addr = \port$4678$0 [18:15];
+          cr_rd_addr = \port$4668$0 [18:15];
       5'h03:
-          cr_rd_addr = \port$4678$0 [18:15];
+          cr_rd_addr = \port$4668$0 [18:15];
       5'h04:
           /* empty */;
       5'h05:
@@ -9065,7 +9081,7 @@ module \church_ti60_f225.core.u_call (call_start, cr_rd_data, mload_src, mload_d
     casez (call_state)
       5'h00:
           if (call_start) begin
-            _056_ = { 1'h0, \port$4678$0 [14:0] };
+            _056_ = { 1'h0, \port$4668$0 [14:0] };
           end
       5'h01:
           /* empty */;
@@ -9739,8 +9755,8 @@ module \church_ti60_f225.core.u_call (call_start, cr_rd_data, mload_src, mload_d
   assign sp_max = _033_[14:0];
   assign sp_min = _066_[14:0];
   assign frame_word = { 1'h1, _070_[14:0], sp_latched[15:0] };
-  assign cr_src = \port$4678$0 [18:15];
-  assign index = { 1'h0, \port$4678$0 [14:0] };
+  assign cr_src = \port$4668$0 [18:15];
+  assign index = { 1'h0, \port$4668$0 [14:0] };
   assign sub_start_reg = mload_start;
   assign mload_cr_src = mload_src;
   assign mload_cr_dst = mload_dst;
@@ -9764,7 +9780,7 @@ module \church_ti60_f225.core.u_call (call_start, cr_rd_data, mload_src, mload_d
   assign nia_set = call_complete;
   assign nia_value = 32'd1;
   assign clk = 1'h0;
-  assign mask = { 1'h0, \port$4678$0 [14:0] };
+  assign mask = { 1'h0, \port$4668$0 [14:0] };
   assign mem_rd_valid = 1'h1;
   assign \cr_wr_data.word0_gt  = cr_wr_data[31:0];
   assign \cr_wr_data.word0_gt.slot_id  = cr_wr_data[15:0];
@@ -9881,7 +9897,7 @@ module \church_ti60_f225.core.u_call (call_start, cr_rd_data, mload_src, mload_d
   assign \cr_rd_data.word3_w3  = cr_rd_data[127:96];
 endmodule
 
-module \church_ti60_f225.core.u_change (change_start, cr_rd_data, dr_rd_data, change_busy, nia, cr12_thread, cr15_namespace, flags, cr_rd_addr, change_fault, fault_type, thread_hdr_out, cr_wr_addr, cr_wr_data, cr_wr_en, \port$4678$0 , mem_rd_data);
+module \church_ti60_f225.core.u_change (change_start, cr_rd_data, dr_rd_data, change_busy, nia, cr12_thread, cr15_namespace, flags, cr_rd_addr, change_fault, fault_type, thread_hdr_out, cr_wr_addr, cr_wr_data, cr_wr_en, \port$4668$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$5  = 0;
   wire [16:0] _00_;
   wire _01_;
@@ -10075,8 +10091,8 @@ module \church_ti60_f225.core.u_change (change_start, cr_rd_data, dr_rd_data, ch
   wire [31:0] nia;
   wire [31:0] packed_pc_word;
   wire [31:0] pc_offset;
-  input [18:0] \port$4678$0 ;
-  wire [18:0] \port$4678$0 ;
+  input [18:0] \port$4668$0 ;
+  wire [18:0] \port$4668$0 ;
   reg [4:0] save_index = 5'h00;
   wire skip_current_cr;
   reg [3:0] sub_cr_dst;
@@ -10423,12 +10439,12 @@ module \church_ti60_f225.core.u_change (change_start, cr_rd_data, dr_rd_data, ch
       4'h2:
         begin
           cr_rd_addr = 4'h7;
-          cr_rd_addr = \port$4678$0 [18:15];
+          cr_rd_addr = \port$4668$0 [18:15];
         end
       4'h3:
-          cr_rd_addr = \port$4678$0 [18:15];
+          cr_rd_addr = \port$4668$0 [18:15];
       4'h4:
-          cr_rd_addr = \port$4678$0 [18:15];
+          cr_rd_addr = \port$4668$0 [18:15];
       4'h6:
           /* empty */;
       4'h7:
@@ -10594,7 +10610,7 @@ module \church_ti60_f225.core.u_change (change_start, cr_rd_data, dr_rd_data, ch
       4'h7:
           /* empty */;
       4'h8:
-          sub_cr_src = \port$4678$0 [18:15];
+          sub_cr_src = \port$4668$0 [18:15];
       4'h9:
           sub_cr_src = 4'h8;
       4'hb:
@@ -10879,7 +10895,7 @@ module \church_ti60_f225.core.u_change (change_start, cr_rd_data, dr_rd_data, ch
     casez (change_state)
       4'h0:
           if (change_start) begin
-            _26_ = { 1'h0, \port$4678$0 [14:0] };
+            _26_ = { 1'h0, \port$4668$0 [14:0] };
           end
       4'h1:
           /* empty */;
@@ -10913,7 +10929,7 @@ module \church_ti60_f225.core.u_change (change_start, cr_rd_data, dr_rd_data, ch
     casez (change_state)
       4'h0:
           if (change_start) begin
-            _27_ = { 1'h0, \port$4678$0 [14:0] };
+            _27_ = { 1'h0, \port$4668$0 [14:0] };
           end
       4'h1:
           /* empty */;
@@ -11042,12 +11058,12 @@ module \church_ti60_f225.core.u_change (change_start, cr_rd_data, dr_rd_data, ch
   assign \thread_wr_idx$49  = thread_wr_idx;
   assign \thread_wr_data$51  = thread_wr_data;
   assign thread_hdr_reg = thread_hdr_out;
-  assign cr_src = \port$4678$0 [18:15];
+  assign cr_src = \port$4668$0 [18:15];
   assign fault_latched = change_fault;
   assign fault_type_latched = fault_type;
   assign clk = 1'h0;
-  assign index = { 1'h0, \port$4678$0 [14:0] };
-  assign change_mask = { 1'h0, \port$4678$0 [14:0] };
+  assign index = { 1'h0, \port$4668$0 [14:0] };
+  assign change_mask = { 1'h0, \port$4668$0 [14:0] };
   assign mem_wr_done = 1'h1;
   assign \flags.N  = flags[0];
   assign \flags.Z  = flags[1];
@@ -13470,7 +13486,7 @@ module \church_ti60_f225.core.u_decoder (exec_enable, is_church_op, is_dread_op,
   assign \flags.V  = flags[3];
 endmodule
 
-module \church_ti60_f225.core.u_dread (start, cr_rd_data, cr_rd_addr, busy, fault, fault_type, dmem_addr, dmem_rd_en, dr_wr_addr, dr_wr_data, dr_wr_en, \port$4678$0 , dmem_rd_data);
+module \church_ti60_f225.core.u_dread (start, cr_rd_data, cr_rd_addr, busy, fault, fault_type, dmem_addr, dmem_rd_en, dr_wr_addr, dr_wr_data, dr_wr_en, \port$4668$0 , dmem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$9  = 0;
   wire _00_;
   reg [3:0] _01_;
@@ -13531,13 +13547,13 @@ module \church_ti60_f225.core.u_dread (start, cr_rd_data, cr_rd_addr, busy, faul
   reg [14:0] imm_reg = 15'h0000;
   wire in_bounds;
   wire [15:0] limit;
-  input [22:0] \port$4678$0 ;
-  wire [22:0] \port$4678$0 ;
+  input [22:0] \port$4668$0 ;
+  wire [22:0] \port$4668$0 ;
   input start;
   wire start;
   assign gt_null = cr_rd_data[31:0] == 1'h0;
   assign in_bounds = imm_reg <= cr_rd_data[79:64];
-  assign cr_rd_addr = busy ? cr_src_reg : \port$4678$0 [18:15];
+  assign cr_rd_addr = busy ? cr_src_reg : \port$4668$0 [18:15];
   assign _00_ = ~ cr_rd_data[25];
   assign _06_ = ~ in_bounds;
   assign _07_ = dr_dst_reg != 1'h0;
@@ -13685,7 +13701,7 @@ module \church_ti60_f225.core.u_dread (start, cr_rd_data, cr_rd_addr, busy, faul
     casez (dread_fsm_state)
       2'h0:
           if (start) begin
-            _01_ = \port$4678$0 [18:15];
+            _01_ = \port$4668$0 [18:15];
           end
       2'h1:
           /* empty */;
@@ -13699,7 +13715,7 @@ module \church_ti60_f225.core.u_dread (start, cr_rd_data, cr_rd_addr, busy, faul
     casez (dread_fsm_state)
       2'h0:
           if (start) begin
-            _02_ = \port$4678$0 [22:19];
+            _02_ = \port$4668$0 [22:19];
           end
       2'h1:
           /* empty */;
@@ -13713,7 +13729,7 @@ module \church_ti60_f225.core.u_dread (start, cr_rd_data, cr_rd_addr, busy, faul
     casez (dread_fsm_state)
       2'h0:
           if (start) begin
-            _03_ = \port$4678$0 [14:0];
+            _03_ = \port$4668$0 [14:0];
           end
       2'h1:
           /* empty */;
@@ -13762,10 +13778,10 @@ module \church_ti60_f225.core.u_dread (start, cr_rd_data, cr_rd_addr, busy, faul
   end
   assign has_r = cr_rd_data[25];
   assign limit = cr_rd_data[79:64];
-  assign cr_src = \port$4678$0 [18:15];
+  assign cr_src = \port$4668$0 [18:15];
   assign clk = 1'h0;
-  assign dr_dst = \port$4678$0 [22:19];
-  assign imm = \port$4678$0 [14:0];
+  assign dr_dst = \port$4668$0 [22:19];
+  assign imm = \port$4668$0 [14:0];
   assign \cr_rd_data.word0_gt  = cr_rd_data[31:0];
   assign \cr_rd_data.word0_gt.slot_id  = cr_rd_data[15:0];
   assign \cr_rd_data.word0_gt.gt_seq  = cr_rd_data[22:16];
@@ -13777,7 +13793,7 @@ module \church_ti60_f225.core.u_dread (start, cr_rd_data, cr_rd_addr, busy, faul
   assign \cr_rd_data.word3_w3  = cr_rd_data[127:96];
 endmodule
 
-module \church_ti60_f225.core.u_dwrite (cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, busy, fault, fault_type, dmem_addr, dmem_wr_data, dmem_wr_en, \port$4678$0 , start);
+module \church_ti60_f225.core.u_dwrite (cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, busy, fault, fault_type, dmem_addr, dmem_wr_data, dmem_wr_en, \port$4668$0 , start);
   reg \$auto$verilog_backend.cc:2355:dump_module$10  = 0;
   wire _00_;
   reg [3:0] _01_;
@@ -13837,14 +13853,14 @@ module \church_ti60_f225.core.u_dwrite (cr_rd_data, dr_rd_data, cr_rd_addr, dr_r
   reg [14:0] imm_reg = 15'h0000;
   wire in_bounds;
   wire [15:0] limit;
-  input [22:0] \port$4678$0 ;
-  wire [22:0] \port$4678$0 ;
+  input [22:0] \port$4668$0 ;
+  wire [22:0] \port$4668$0 ;
   input start;
   wire start;
   assign gt_null = cr_rd_data[31:0] == 1'h0;
   assign in_bounds = imm_reg <= cr_rd_data[79:64];
-  assign cr_rd_addr = busy ? cr_src_reg : \port$4678$0 [18:15];
-  assign dr_rd_addr = busy ? dr_src_reg : \port$4678$0 [22:19];
+  assign cr_rd_addr = busy ? cr_src_reg : \port$4668$0 [18:15];
+  assign dr_rd_addr = busy ? dr_src_reg : \port$4668$0 [22:19];
   assign _00_ = ~ cr_rd_data[26];
   assign _06_ = ~ in_bounds;
   assign _07_ = dwrite_fsm_state == 1'h0;
@@ -13969,7 +13985,7 @@ module \church_ti60_f225.core.u_dwrite (cr_rd_data, dr_rd_data, cr_rd_addr, dr_r
     casez (dwrite_fsm_state)
       2'h0:
           if (start) begin
-            _13_ = \port$4678$0 [18:15];
+            _13_ = \port$4668$0 [18:15];
           end
       2'h1:
           /* empty */;
@@ -13983,7 +13999,7 @@ module \church_ti60_f225.core.u_dwrite (cr_rd_data, dr_rd_data, cr_rd_addr, dr_r
     casez (dwrite_fsm_state)
       2'h0:
           if (start) begin
-            _01_ = \port$4678$0 [22:19];
+            _01_ = \port$4668$0 [22:19];
           end
       2'h1:
           /* empty */;
@@ -13997,7 +14013,7 @@ module \church_ti60_f225.core.u_dwrite (cr_rd_data, dr_rd_data, cr_rd_addr, dr_r
     casez (dwrite_fsm_state)
       2'h0:
           if (start) begin
-            _02_ = \port$4678$0 [14:0];
+            _02_ = \port$4668$0 [14:0];
           end
       2'h1:
           /* empty */;
@@ -14063,10 +14079,10 @@ module \church_ti60_f225.core.u_dwrite (cr_rd_data, dr_rd_data, cr_rd_addr, dr_r
   end
   assign has_w = cr_rd_data[26];
   assign limit = cr_rd_data[79:64];
-  assign cr_src = \port$4678$0 [18:15];
-  assign dr_src = \port$4678$0 [22:19];
+  assign cr_src = \port$4668$0 [18:15];
+  assign dr_src = \port$4668$0 [22:19];
   assign clk = 1'h0;
-  assign imm = \port$4678$0 [14:0];
+  assign imm = \port$4668$0 [14:0];
   assign \cr_rd_data.word0_gt  = cr_rd_data[31:0];
   assign \cr_rd_data.word0_gt.slot_id  = cr_rd_data[15:0];
   assign \cr_rd_data.word0_gt.gt_seq  = cr_rd_data[22:16];
@@ -14078,7 +14094,7 @@ module \church_ti60_f225.core.u_dwrite (cr_rd_data, dr_rd_data, cr_rd_addr, dr_r
   assign \cr_rd_data.word3_w3  = cr_rd_data[127:96];
 endmodule
 
-module \church_ti60_f225.core.u_eloadcall (start, cr_rd_data, cr_rd_addr, busy, complete, cr15_namespace, fault, fault_type, saved_cr5_gt, cr_wr_addr, cr_wr_data, cr_wr_en, \port$4678$0 , mem_rd_data);
+module \church_ti60_f225.core.u_eloadcall (start, cr_rd_data, cr_rd_addr, busy, complete, cr15_namespace, fault, fault_type, saved_cr5_gt, cr_wr_addr, cr_wr_data, cr_wr_en, \port$4668$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$11  = 0;
   wire [4:0] _00_;
   wire _01_;
@@ -14225,8 +14241,8 @@ module \church_ti60_f225.core.u_eloadcall (start, cr_rd_data, cr_rd_addr, busy, 
   wire nia_set;
   wire [31:0] nia_value;
   reg [1:0] phase = 2'h0;
-  input [22:0] \port$4678$0 ;
-  wire [22:0] \port$4678$0 ;
+  input [22:0] \port$4668$0 ;
+  wire [22:0] \port$4668$0 ;
   output [31:0] saved_cr5_gt;
   reg [31:0] saved_cr5_gt = 32'd0;
   wire src_in_range;
@@ -14252,7 +14268,7 @@ module \church_ti60_f225.core.u_eloadcall (start, cr_rd_data, cr_rd_addr, busy, 
   wire \thread_wr_en$35 ;
   wire [3:0] thread_wr_idx;
   wire [3:0] \thread_wr_idx$37 ;
-  assign src_in_range = \port$4678$0 [18:15] <= 3'h5;
+  assign src_in_range = \port$4668$0 [18:15] <= 3'h5;
   assign sub_m_elevated = mload_src == 3'h6;
   assign cr_rd_addr = local_cr_rd_en ? local_cr_rd_addr : \cr_rd_addr$42 ;
   assign _00_ = ~ mask_latched[4:0];
@@ -14321,9 +14337,9 @@ module \church_ti60_f225.core.u_eloadcall (start, cr_rd_data, cr_rd_addr, busy, 
     mload_src = 4'h0;
     casez (phase)
       2'h0:
-          mload_src = \port$4678$0 [18:15];
+          mload_src = \port$4668$0 [18:15];
       2'h1:
-          mload_src = \port$4678$0 [22:19];
+          mload_src = \port$4668$0 [22:19];
       default:
           mload_src = 4'h6;
     endcase
@@ -14333,7 +14349,7 @@ module \church_ti60_f225.core.u_eloadcall (start, cr_rd_data, cr_rd_addr, busy, 
     mload_dst = 4'h0;
     casez (phase)
       2'h0:
-          mload_dst = \port$4678$0 [22:19];
+          mload_dst = \port$4668$0 [22:19];
       2'h1:
           mload_dst = 4'h6;
       default:
@@ -14345,7 +14361,7 @@ module \church_ti60_f225.core.u_eloadcall (start, cr_rd_data, cr_rd_addr, busy, 
     mload_index = 16'h0000;
     casez (phase)
       2'h0:
-          mload_index = { 1'h0, \port$4678$0 [14:0] };
+          mload_index = { 1'h0, \port$4668$0 [14:0] };
       2'h1:
           mload_index = 16'h0000;
       default:
@@ -14394,7 +14410,7 @@ module \church_ti60_f225.core.u_eloadcall (start, cr_rd_data, cr_rd_addr, busy, 
       4'h3:
           /* empty */;
       4'h4:
-          local_cr_rd_addr = \port$4678$0 [22:19];
+          local_cr_rd_addr = \port$4668$0 [22:19];
       4'h5:
           if (_18_) begin
           end else begin
@@ -14596,7 +14612,7 @@ module \church_ti60_f225.core.u_eloadcall (start, cr_rd_data, cr_rd_addr, busy, 
     casez (eloadcall_state)
       4'h0:
           if (start) begin
-            _13_ = { 1'h0, \port$4678$0 [14:0] };
+            _13_ = { 1'h0, \port$4668$0 [14:0] };
           end
       4'h1:
           /* empty */;
@@ -14757,9 +14773,9 @@ module \church_ti60_f225.core.u_eloadcall (start, cr_rd_data, cr_rd_addr, busy, 
           /* empty */;
     endcase
   end
-  assign cr_src = \port$4678$0 [18:15];
-  assign cr_dst = \port$4678$0 [22:19];
-  assign index = { 1'h0, \port$4678$0 [14:0] };
+  assign cr_src = \port$4668$0 [18:15];
+  assign cr_dst = \port$4668$0 [22:19];
+  assign index = { 1'h0, \port$4668$0 [14:0] };
   assign \sub_start$9  = sub_start;
   assign sub_cr_src = mload_src;
   assign sub_cr_dst = mload_dst;
@@ -14787,7 +14803,7 @@ module \church_ti60_f225.core.u_eloadcall (start, cr_rd_data, cr_rd_addr, busy, 
   assign nia_set = complete;
   assign nia_value = 32'd0;
   assign clk = 1'h0;
-  assign mask = { 1'h0, \port$4678$0 [14:0] };
+  assign mask = { 1'h0, \port$4668$0 [14:0] };
   assign \cr_rd_data.word0_gt  = cr_rd_data[31:0];
   assign \cr_rd_data.word0_gt.slot_id  = cr_rd_data[15:0];
   assign \cr_rd_data.word0_gt.gt_seq  = cr_rd_data[22:16];
@@ -17011,7 +17027,7 @@ module \church_ti60_f225.core.u_eloadcall.u_mload.u_ns_gate (mem_rd_valid, ns_en
   assign \cr15_namespace.word3_w3  = cr15_namespace[127:96];
 endmodule
 
-module \church_ti60_f225.core.u_gc_unit (\port$3920$0 , ns_addr, ns_rd_en, ns_wr_data, ns_wr_en, garbage_count, g_bit_reset, gc_busy);
+module \church_ti60_f225.core.u_gc_unit (\port$3910$0 , ns_addr, ns_rd_en, ns_wr_data, ns_wr_en, garbage_count, g_bit_reset, gc_busy);
   reg \$auto$verilog_backend.cc:2355:dump_module$14  = 0;
   wire [7:0] _00_;
   wire _01_;
@@ -17067,8 +17083,8 @@ module \church_ti60_f225.core.u_gc_unit (\port$3920$0 , ns_addr, ns_rd_en, ns_wr
   reg [95:0] ns_wr_data;
   output ns_wr_en;
   reg ns_wr_en;
-  input [31:0] \port$3920$0 ;
-  wire [31:0] \port$3920$0 ;
+  input [31:0] \port$3910$0 ;
+  wire [31:0] \port$3910$0 ;
   reg [95:0] swept_entry;
   wire valid_key_access;
   reg [95:0] wr_entry;
@@ -17370,11 +17386,11 @@ module \church_ti60_f225.core.u_gc_unit (\port$3920$0 , ns_addr, ns_rd_en, ns_wr
       3'h0:
           /* empty */;
       3'h1:
-          _17_ = { 64'h0000000000000000, \port$3920$0  };
+          _17_ = { 64'h0000000000000000, \port$3910$0  };
       3'h3:
           /* empty */;
       3'h2:
-          _17_ = { 64'h0000000000000000, \port$3920$0  };
+          _17_ = { 64'h0000000000000000, \port$3910$0  };
       3'h5:
           /* empty */;
       3'h6:
@@ -17392,7 +17408,7 @@ module \church_ti60_f225.core.u_gc_unit (\port$3920$0 , ns_addr, ns_rd_en, ns_wr
   assign gc_mark_en = 1'h1;
   assign gc_sweep_en = 1'h1;
   assign ns_start_index = 16'h0001;
-  assign ns_rd_data = { 64'h0000000000000000, \port$3920$0  };
+  assign ns_rd_data = { 64'h0000000000000000, \port$3910$0  };
   assign ns_end_index = 16'h1000;
 endmodule
 
@@ -17638,7 +17654,7 @@ module \church_ti60_f225.core.u_lambda (cr_rd_data, lambda_busy, lambda_complete
   assign \cr_rd_data.word3_w3  = cr_rd_data[127:96];
 endmodule
 
-module \church_ti60_f225.core.u_load (mload_m_elevated, load_busy, load_fault, mload_busy, mload_fault, mload_done, mload_start, fault_type, \port$4678$0 , load_start);
+module \church_ti60_f225.core.u_load (mload_m_elevated, load_busy, load_fault, mload_busy, mload_fault, mload_done, mload_start, fault_type, \port$4668$0 , load_start);
   reg \$auto$verilog_backend.cc:2355:dump_module$16  = 0;
   wire _00_;
   wire _01_;
@@ -17676,8 +17692,8 @@ module \church_ti60_f225.core.u_load (mload_m_elevated, load_busy, load_fault, m
   wire mload_m_elevated;
   output mload_start;
   reg mload_start;
-  input [22:0] \port$4678$0 ;
-  wire [22:0] \port$4678$0 ;
+  input [22:0] \port$4668$0 ;
+  wire [22:0] \port$4668$0 ;
   assign load_fault = _03_ & mload_fault;
   assign _00_ = load_wrapper_state == 1'h0;
   assign _01_ = load_wrapper_state == 1'h1;
@@ -17686,7 +17702,7 @@ module \church_ti60_f225.core.u_load (mload_m_elevated, load_busy, load_fault, m
   assign _04_ = mload_done | mload_fault;
   always @(posedge 1'h0)
     load_wrapper_state <= _05_;
-  assign mload_m_elevated = \port$4678$0 [18:15] == 3'h6;
+  assign mload_m_elevated = \port$4668$0 [18:15] == 3'h6;
   assign load_busy = ~ _00_;
   assign load_complete = _03_ & mload_done;
   always @* begin
@@ -17723,12 +17739,12 @@ module \church_ti60_f225.core.u_load (mload_m_elevated, load_busy, load_fault, m
           end
     endcase
   end
-  assign mload_cr_src = \port$4678$0 [18:15];
-  assign cr_src = \port$4678$0 [18:15];
-  assign mload_cr_dst = \port$4678$0 [22:19];
-  assign cr_dst = \port$4678$0 [22:19];
-  assign mload_index = { 1'h0, \port$4678$0 [14:0] };
-  assign index = { 1'h0, \port$4678$0 [14:0] };
+  assign mload_cr_src = \port$4668$0 [18:15];
+  assign cr_src = \port$4668$0 [18:15];
+  assign mload_cr_dst = \port$4668$0 [22:19];
+  assign cr_dst = \port$4668$0 [22:19];
+  assign mload_index = { 1'h0, \port$4668$0 [14:0] };
+  assign index = { 1'h0, \port$4668$0 [14:0] };
   assign mload_direct = 1'h0;
   assign mload_direct_gt = 32'd0;
   assign mload_fault_type = fault_type;
@@ -23826,7 +23842,7 @@ module \church_ti60_f225.core.u_return (saved_cr5_gt, cr_rd_data, cr_rd_addr, bu
   assign \cr_rd_data.word3_w3  = cr_rd_data[127:96];
 endmodule
 
-module \church_ti60_f225.core.u_save (save_start, cr_rd_data, save_busy, cr15_namespace, cr_rd_addr, save_fault, fault_type, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, \port$4678$0 , mem_rd_data);
+module \church_ti60_f225.core.u_save (save_start, cr_rd_data, save_busy, cr15_namespace, cr_rd_addr, save_fault, fault_type, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, \port$4668$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$20  = 0;
   wire _00_;
   reg _01_;
@@ -23917,8 +23933,8 @@ module \church_ti60_f225.core.u_save (save_start, cr_rd_data, save_busy, cr15_na
   output mem_wr_en;
   wire mem_wr_en;
   wire \mem_wr_en$23 ;
-  input [22:0] \port$4678$0 ;
-  wire [22:0] \port$4678$0 ;
+  input [22:0] \port$4668$0 ;
+  wire [22:0] \port$4668$0 ;
   output save_busy;
   wire save_busy;
   wire save_complete;
@@ -23957,7 +23973,7 @@ module \church_ti60_f225.core.u_save (save_start, cr_rd_data, save_busy, cr15_na
   reg sub_start = 1'h0;
   wire \sub_start$3 ;
   wire sub_start_reg;
-  assign dst_in_range = \port$4678$0 [22:19] <= 3'h6;
+  assign dst_in_range = \port$4668$0 [22:19] <= 3'h6;
   assign save_busy = ~ _00_;
   assign save_complete = _09_ & sub_done_latched;
   assign _00_ = save_wrapper_state == 1'h0;
@@ -23990,7 +24006,7 @@ module \church_ti60_f225.core.u_save (save_start, cr_rd_data, save_busy, cr15_na
     .mem_wr_addr(mem_wr_addr),
     .mem_wr_data(mem_wr_data),
     .mem_wr_en(mem_wr_en),
-    .\port$4678$0 (\port$4678$0 [14:0]),
+    .\port$4668$0 (\port$4668$0 [14:0]),
     .sub_done(sub_done),
     .sub_dst_cap(sub_dst_cap),
     .sub_fault(sub_fault),
@@ -24005,11 +24021,11 @@ module \church_ti60_f225.core.u_save (save_start, cr_rd_data, save_busy, cr15_na
       3'h0:
           /* empty */;
       3'h1:
-          cr_rd_addr = \port$4678$0 [22:19];
+          cr_rd_addr = \port$4668$0 [22:19];
       3'h2:
-          cr_rd_addr = \port$4678$0 [18:15];
+          cr_rd_addr = \port$4668$0 [18:15];
       3'h3:
-          cr_rd_addr = \port$4678$0 [18:15];
+          cr_rd_addr = \port$4668$0 [18:15];
       3'h4:
           /* empty */;
     endcase
@@ -24166,12 +24182,12 @@ module \church_ti60_f225.core.u_save (save_start, cr_rd_data, save_busy, cr15_na
           _05_ = 1'h0;
     endcase
   end
-  assign cr_dst = \port$4678$0 [22:19];
+  assign cr_dst = \port$4668$0 [22:19];
   assign \sub_start$3  = sub_start;
   assign dst_reg_latched = sub_dst_cap;
   assign sub_src_gt = src_reg_latched[31:0];
-  assign sub_index = { 1'h0, \port$4678$0 [14:0] };
-  assign index = { 1'h0, \port$4678$0 [14:0] };
+  assign sub_index = { 1'h0, \port$4668$0 [14:0] };
+  assign index = { 1'h0, \port$4668$0 [14:0] };
   assign mem_wr_done = 1'h1;
   assign \mem_wr_done$11  = 1'h1;
   assign \cr15_namespace$13  = cr15_namespace;
@@ -24184,7 +24200,7 @@ module \church_ti60_f225.core.u_save (save_start, cr_rd_data, save_busy, cr15_na
   assign \mem_rd_addr$25  = mem_rd_addr;
   assign \mem_rd_en$27  = mem_rd_en;
   assign sub_start_reg = sub_start;
-  assign cr_src = \port$4678$0 [18:15];
+  assign cr_src = \port$4668$0 [18:15];
   assign fault_latched = save_fault;
   assign fault_type_latched = fault_type;
   assign clk = 1'h0;
@@ -24244,7 +24260,7 @@ module \church_ti60_f225.core.u_save (save_start, cr_rd_data, save_busy, cr15_na
   assign \cr_rd_data.word3_w3  = cr_rd_data[127:96];
 endmodule
 
-module \church_ti60_f225.core.u_save.u_msave (sub_fault, sub_done, cr15_namespace, sub_dst_cap, sub_src_gt, sub_start, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, sub_fault_type, \port$4678$0 , mem_rd_data);
+module \church_ti60_f225.core.u_save.u_msave (sub_fault, sub_done, cr15_namespace, sub_dst_cap, sub_src_gt, sub_start, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, sub_fault_type, \port$4668$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$21  = 0;
   wire [18:0] _000_;
   wire [12:0] _001_;
@@ -24677,8 +24693,8 @@ module \church_ti60_f225.core.u_save.u_msave (sub_fault, sub_done, cr15_namespac
   reg [31:0] ns_location_reg = 32'd0;
   reg [31:0] ns_w2_reg = 32'd0;
   reg [31:0] ns_w3_reg = 32'd0;
-  input [14:0] \port$4678$0 ;
-  wire [14:0] \port$4678$0 ;
+  input [14:0] \port$4668$0 ;
+  wire [14:0] \port$4668$0 ;
   wire seal_ok;
   reg [31:0] src_gt_reg = 32'd0;
   wire sub_busy;
@@ -25220,7 +25236,7 @@ module \church_ti60_f225.core.u_save.u_msave (sub_fault, sub_done, cr15_namespac
     casez (msave_state)
       4'h0:
           if (sub_start) begin
-            _015_ = { 1'h0, \port$4678$0  };
+            _015_ = { 1'h0, \port$4668$0  };
           end
       4'h1:
           /* empty */;
@@ -25529,7 +25545,7 @@ module \church_ti60_f225.core.u_save.u_msave (sub_fault, sub_done, cr15_namespac
   assign crc16_result = crc16_89;
   assign fault_type_reg = sub_fault_type;
   assign clk = 1'h0;
-  assign sub_index = { 1'h0, \port$4678$0  };
+  assign sub_index = { 1'h0, \port$4668$0  };
   assign mem_rd_valid = 1'h1;
   assign mem_wr_done = 1'h1;
   assign \dst_cap_reg.word0_gt  = dst_cap_reg[31:0];
@@ -27721,7 +27737,7 @@ module \church_ti60_f225.core.u_shared_mload.u_ns_gate (mem_rd_valid, ns_entry_a
   assign \cr15_namespace.word3_w3  = cr15_namespace[127:96];
 endmodule
 
-module \church_ti60_f225.core.u_switch (switch_start, cr_rd_data, cr_rd_addr, switch_busy, cr15_namespace, switch_fault, fault_type, cr_wr_addr, cr_wr_data, cr_wr_en, \port$4678$0 , mem_rd_data);
+module \church_ti60_f225.core.u_switch (switch_start, cr_rd_data, cr_rd_addr, switch_busy, cr15_namespace, switch_fault, fault_type, cr_wr_addr, cr_wr_data, cr_wr_en, \port$4668$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$24  = 0;
   wire [4:0] _00_;
   wire _01_;
@@ -27837,8 +27853,8 @@ module \church_ti60_f225.core.u_switch (switch_start, cr_rd_data, cr_rd_addr, sw
   wire \mem_rd_en$35 ;
   wire mem_rd_valid;
   wire \mem_rd_valid$25 ;
-  input [17:0] \port$4678$0 ;
-  wire [17:0] \port$4678$0 ;
+  input [17:0] \port$4668$0 ;
+  wire [17:0] \port$4668$0 ;
   wire sentinel_ok;
   wire src_in_range;
   wire src_is_abstract;
@@ -27880,14 +27896,14 @@ module \church_ti60_f225.core.u_switch (switch_start, cr_rd_data, cr_rd_addr, sw
   wire \thread_wr_en$37 ;
   wire [3:0] thread_wr_idx;
   wire [3:0] \thread_wr_idx$39 ;
-  assign _00_ = 4'h8 + \port$4678$0 [2:0];
-  assign src_in_range = \port$4678$0 [17:15] <= 3'h7;
+  assign _00_ = 4'h8 + \port$4668$0 [2:0];
+  assign src_in_range = \port$4668$0 [17:15] <= 3'h7;
   assign src_is_abstract = src_reg_latched[24:23] == 2'h3;
-  assign _11_ = \port$4678$0 [2:0] == 3'h5;
+  assign _11_ = \port$4668$0 [2:0] == 3'h5;
   assign expected_sentinel = _11_ ? 32'd4294967294 : 32'd4294967295;
   assign sentinel_ok = src_reg_latched[63:32] == expected_sentinel;
-  assign _15_ = \port$4678$0 [2:0] == 3'h5;
-  assign _16_ = \port$4678$0 [2:0] == 3'h7;
+  assign _15_ = \port$4668$0 [2:0] == 3'h5;
+  assign _16_ = \port$4668$0 [2:0] == 3'h7;
   assign target_valid = _15_ | _16_;
   assign cr_rd_addr = local_cr_rd_en ? local_cr_rd_addr : \cr_rd_addr$44 ;
   assign switch_busy = ~ _17_;
@@ -27924,7 +27940,7 @@ module \church_ti60_f225.core.u_switch (switch_start, cr_rd_data, cr_rd_addr, sw
     .mem_addr(mem_addr),
     .mem_rd_data(mem_rd_data),
     .mem_rd_en(mem_rd_en),
-    .\port$4678$0 (\port$4678$0 ),
+    .\port$4668$0 (\port$4668$0 ),
     .sub_busy(sub_busy),
     .sub_cr_dst(_00_[3:0]),
     .sub_done(sub_done),
@@ -27968,9 +27984,9 @@ module \church_ti60_f225.core.u_switch (switch_start, cr_rd_data, cr_rd_addr, sw
       4'h1:
           /* empty */;
       4'h2:
-          local_cr_rd_addr = { 1'h0, \port$4678$0 [17:15] };
+          local_cr_rd_addr = { 1'h0, \port$4668$0 [17:15] };
       4'h3:
-          local_cr_rd_addr = { 1'h0, \port$4678$0 [17:15] };
+          local_cr_rd_addr = { 1'h0, \port$4668$0 [17:15] };
       4'h4:
           /* empty */;
       4'h5:
@@ -28154,13 +28170,13 @@ module \church_ti60_f225.core.u_switch (switch_start, cr_rd_data, cr_rd_addr, sw
     endcase
   end
   assign dest_cr = _00_[3:0];
-  assign target = \port$4678$0 [2:0];
-  assign cr_src = \port$4678$0 [17:15];
+  assign target = \port$4668$0 [2:0];
+  assign cr_src = \port$4668$0 [17:15];
   assign \sub_start$10  = sub_start;
-  assign sub_cr_src = { 1'h0, \port$4678$0 [17:15] };
+  assign sub_cr_src = { 1'h0, \port$4668$0 [17:15] };
   assign sub_cr_dst = _00_[3:0];
-  assign sub_index = { 1'h0, \port$4678$0 [14:0] };
-  assign index = { 1'h0, \port$4678$0 [14:0] };
+  assign sub_index = { 1'h0, \port$4668$0 [14:0] };
+  assign index = { 1'h0, \port$4668$0 [14:0] };
   assign sub_direct = 1'h0;
   assign sub_direct_gt = 32'd0;
   assign sub_m_elevated = 1'h1;
@@ -28245,7 +28261,7 @@ module \church_ti60_f225.core.u_switch (switch_start, cr_rd_data, cr_rd_addr, sw
   assign \cr_wr_data$29.word3_w3  = cr_wr_data[127:96];
 endmodule
 
-module \church_ti60_f225.core.u_switch.u_mload (cr_rd_data, sub_cr_dst, mem_addr, mem_rd_en, sub_busy, sub_fault, sub_done, cr15_namespace, sub_start, cr_rd_addr, thread_wr_en, thread_wr_idx, thread_wr_data, cr_wr_addr, cr_wr_data, cr_wr_en, sub_fault_type, \port$4678$0 , mem_rd_data);
+module \church_ti60_f225.core.u_switch.u_mload (cr_rd_data, sub_cr_dst, mem_addr, mem_rd_en, sub_busy, sub_fault, sub_done, cr15_namespace, sub_start, cr_rd_addr, thread_wr_en, thread_wr_idx, thread_wr_data, cr_wr_addr, cr_wr_data, cr_wr_en, sub_fault_type, \port$4668$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$25  = 0;
   wire [18:0] _00_;
   wire _01_;
@@ -28364,8 +28380,8 @@ module \church_ti60_f225.core.u_switch.u_mload (cr_rd_data, sub_cr_dst, mem_addr
   reg ns_gate_start;
   wire ns_index_in_bounds;
   reg [31:0] ns_w3_saved = 32'd0;
-  input [17:0] \port$4678$0 ;
-  wire [17:0] \port$4678$0 ;
+  input [17:0] \port$4668$0 ;
+  wire [17:0] \port$4668$0 ;
   wire [31:0] raw_base;
   wire [31:0] raw_w2;
   wire [31:0] raw_w3;
@@ -28947,7 +28963,7 @@ module \church_ti60_f225.core.u_switch.u_mload (cr_rd_data, sub_cr_dst, mem_addr
     casez (mload_state)
       4'h0:
           if (sub_start) begin
-            _12_ = { 1'h0, \port$4678$0 [17:15] };
+            _12_ = { 1'h0, \port$4668$0 [17:15] };
           end
       4'h1:
           /* empty */;
@@ -29011,7 +29027,7 @@ module \church_ti60_f225.core.u_switch.u_mload (cr_rd_data, sub_cr_dst, mem_addr
     casez (mload_state)
       4'h0:
           if (sub_start) begin
-            _14_ = { 1'h0, \port$4678$0 [14:0] };
+            _14_ = { 1'h0, \port$4668$0 [14:0] };
           end
       4'h1:
           /* empty */;
@@ -29320,8 +29336,8 @@ module \church_ti60_f225.core.u_switch.u_mload (cr_rd_data, sub_cr_dst, mem_addr
   assign \ns_entry_addr_out$25  = ns_entry_addr_out;
   assign fault_type_reg = sub_fault_type;
   assign clk = 1'h0;
-  assign sub_cr_src = { 1'h0, \port$4678$0 [17:15] };
-  assign sub_index = { 1'h0, \port$4678$0 [14:0] };
+  assign sub_cr_src = { 1'h0, \port$4668$0 [17:15] };
+  assign sub_index = { 1'h0, \port$4668$0 [14:0] };
   assign sub_direct = 1'h0;
   assign sub_direct_gt = 32'd0;
   assign sub_m_elevated = 1'h1;
@@ -30811,7 +30827,7 @@ module \church_ti60_f225.core.u_tperm (cr_rd_data, tperm_busy, cr_rd_addr, cr_wr
   assign \cr_rd_data.word3_w3  = cr_rd_data[127:96];
 endmodule
 
-module \church_ti60_f225.core.u_xloadlambda (start, cr_rd_data, cr_rd_addr, busy, cr15_namespace, nia_set, nia_value, fault, fault_type, cr_wr_addr, cr_wr_data, cr_wr_en, \port$4678$0 , mem_rd_data);
+module \church_ti60_f225.core.u_xloadlambda (start, cr_rd_data, cr_rd_addr, busy, cr15_namespace, nia_set, nia_value, fault, fault_type, cr_wr_addr, cr_wr_data, cr_wr_en, \port$4668$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$28  = 0;
   wire _00_;
   reg _01_;
@@ -30938,8 +30954,8 @@ module \church_ti60_f225.core.u_xloadlambda (start, cr_rd_data, cr_rd_addr, busy
   reg nia_set;
   output [31:0] nia_value;
   reg [31:0] nia_value;
-  input [22:0] \port$4678$0 ;
-  wire [22:0] \port$4678$0 ;
+  input [22:0] \port$4668$0 ;
+  wire [22:0] \port$4668$0 ;
   input start;
   wire start;
   wire [3:0] sub_cr_dst;
@@ -30963,7 +30979,7 @@ module \church_ti60_f225.core.u_xloadlambda (start, cr_rd_data, cr_rd_addr, busy
   wire [3:0] \thread_wr_idx$34 ;
   reg [2:0] xloadlambda_state = 3'h0;
   assign is_null = loaded_cap[24:23] == 1'h0;
-  assign sub_m_elevated = \port$4678$0 [18:15] == 3'h6;
+  assign sub_m_elevated = \port$4668$0 [18:15] == 3'h6;
   assign cr_rd_addr = local_cr_rd_en ? local_cr_rd_addr : \cr_rd_addr$39 ;
   assign busy = ~ _00_;
   assign _00_ = xloadlambda_state == 1'h0;
@@ -30998,7 +31014,7 @@ module \church_ti60_f225.core.u_xloadlambda (start, cr_rd_data, cr_rd_addr, busy
     .mem_addr(mem_addr),
     .mem_rd_data(mem_rd_data),
     .mem_rd_en(mem_rd_en),
-    .\port$4678$0 (\port$4678$0 ),
+    .\port$4668$0 (\port$4668$0 ),
     .sub_done(sub_done),
     .sub_fault(sub_fault),
     .sub_fault_type(sub_fault_type),
@@ -31037,7 +31053,7 @@ module \church_ti60_f225.core.u_xloadlambda (start, cr_rd_data, cr_rd_addr, busy
       3'h1:
           /* empty */;
       3'h3:
-          local_cr_rd_addr = \port$4678$0 [22:19];
+          local_cr_rd_addr = \port$4668$0 [22:19];
       3'h4:
           /* empty */;
       3'h5:
@@ -31261,12 +31277,12 @@ module \church_ti60_f225.core.u_xloadlambda (start, cr_rd_data, cr_rd_addr, busy
     endcase
   end
   assign sub_start_reg = sub_start;
-  assign sub_cr_src = \port$4678$0 [18:15];
-  assign cr_src = \port$4678$0 [18:15];
-  assign sub_cr_dst = \port$4678$0 [22:19];
-  assign cr_dst = \port$4678$0 [22:19];
-  assign sub_index = { 1'h0, \port$4678$0 [14:0] };
-  assign index = { 1'h0, \port$4678$0 [14:0] };
+  assign sub_cr_src = \port$4668$0 [18:15];
+  assign cr_src = \port$4668$0 [18:15];
+  assign sub_cr_dst = \port$4668$0 [22:19];
+  assign cr_dst = \port$4668$0 [22:19];
+  assign sub_index = { 1'h0, \port$4668$0 [14:0] };
+  assign index = { 1'h0, \port$4668$0 [14:0] };
   assign sub_direct = 1'h0;
   assign sub_direct_gt = 32'd0;
   assign \cr_rd_data$14  = cr_rd_data;
@@ -31350,7 +31366,7 @@ module \church_ti60_f225.core.u_xloadlambda (start, cr_rd_data, cr_rd_addr, busy
   assign \cr_wr_data$24.word3_w3  = cr_wr_data[127:96];
 endmodule
 
-module \church_ti60_f225.core.u_xloadlambda.u_mload (cr_rd_data, sub_m_elevated, mem_addr, mem_rd_en, sub_fault, sub_done, cr15_namespace, sub_start, cr_rd_addr, thread_wr_en, thread_wr_idx, thread_wr_data, cr_wr_addr, cr_wr_data, cr_wr_en, sub_fault_type, \port$4678$0 , mem_rd_data);
+module \church_ti60_f225.core.u_xloadlambda.u_mload (cr_rd_data, sub_m_elevated, mem_addr, mem_rd_en, sub_fault, sub_done, cr15_namespace, sub_start, cr_rd_addr, thread_wr_en, thread_wr_idx, thread_wr_data, cr_wr_addr, cr_wr_data, cr_wr_en, sub_fault_type, \port$4668$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$29  = 0;
   wire [18:0] _00_;
   wire _01_;
@@ -31469,8 +31485,8 @@ module \church_ti60_f225.core.u_xloadlambda.u_mload (cr_rd_data, sub_m_elevated,
   reg ns_gate_start;
   wire ns_index_in_bounds;
   reg [31:0] ns_w3_saved = 32'd0;
-  input [22:0] \port$4678$0 ;
-  wire [22:0] \port$4678$0 ;
+  input [22:0] \port$4668$0 ;
+  wire [22:0] \port$4668$0 ;
   wire [31:0] raw_base;
   wire [31:0] raw_w2;
   wire [31:0] raw_w3;
@@ -32051,7 +32067,7 @@ module \church_ti60_f225.core.u_xloadlambda.u_mload (cr_rd_data, sub_m_elevated,
     casez (mload_state)
       4'h0:
           if (sub_start) begin
-            _12_ = \port$4678$0 [18:15];
+            _12_ = \port$4668$0 [18:15];
           end
       4'h1:
           /* empty */;
@@ -32083,7 +32099,7 @@ module \church_ti60_f225.core.u_xloadlambda.u_mload (cr_rd_data, sub_m_elevated,
     casez (mload_state)
       4'h0:
           if (sub_start) begin
-            _13_ = \port$4678$0 [22:19];
+            _13_ = \port$4668$0 [22:19];
           end
       4'h1:
           /* empty */;
@@ -32115,7 +32131,7 @@ module \church_ti60_f225.core.u_xloadlambda.u_mload (cr_rd_data, sub_m_elevated,
     casez (mload_state)
       4'h0:
           if (sub_start) begin
-            _14_ = { 1'h0, \port$4678$0 [14:0] };
+            _14_ = { 1'h0, \port$4668$0 [14:0] };
           end
       4'h1:
           /* empty */;
@@ -32424,9 +32440,9 @@ module \church_ti60_f225.core.u_xloadlambda.u_mload (cr_rd_data, sub_m_elevated,
   assign \ns_entry_addr_out$25  = ns_entry_addr_out;
   assign fault_type_reg = sub_fault_type;
   assign clk = 1'h0;
-  assign sub_cr_src = \port$4678$0 [18:15];
-  assign sub_cr_dst = \port$4678$0 [22:19];
-  assign sub_index = { 1'h0, \port$4678$0 [14:0] };
+  assign sub_cr_src = \port$4668$0 [18:15];
+  assign sub_cr_dst = \port$4668$0 [22:19];
+  assign sub_index = { 1'h0, \port$4668$0 [14:0] };
   assign sub_direct = 1'h0;
   assign sub_direct_gt = 32'd0;
   assign \src_cap.word0_gt  = src_cap[31:0];

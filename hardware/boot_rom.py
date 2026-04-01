@@ -149,10 +149,12 @@ while len(BOOT_PROGRAM) < 256:
 
 
 # ---------------------------------------------------------------------------
-# NUC_PROGRAM — first abstraction: LED blink demo via DWRITE/IADD/ISUB/BRANCH
+# NUC_PROGRAM — first abstraction: LED0 blink demo via DWRITE/IADD/ISUB/BRANCH
 #
 # Placed at boot_rom indices 256–511 (byte address 0x400–0x7FC).
-# The CPU jumps here when the debug FSM releases it into free-run mode.
+# The debug FSM transitions here automatically after boot completes.
+# This program blinks LED0 at ~1 Hz — visibly distinct from the hardware
+# walking-LED boot demo (which drives all four LEDs in sequence).
 #
 # Register use:
 #   DR0 = hardwired 0 (zero register)
@@ -163,134 +165,76 @@ while len(BOOT_PROGRAM) < 256:
 #
 # Timing (50 MHz):  each ISUB+BRANCH pair = 4 cycles.
 #   inner = 16383 iterations × 4 cycles = 65532 cycles
-#   outer = 380   iterations → inner total = 380 × 65532 = 24,902,160 cycles ≈ 0.498 s
-#   4 LEDs × 0.498 s ≈ 2.0 s per full revolution.
+#   outer = 380   iterations → 380 × 65532 = 24,902,160 cycles ≈ 0.498 s per phase
+#   LED0 on ~0.498 s, off ~0.498 s → ~1 Hz blink (vs 4-LED hardware demo rotation)
 #
-# NUC word-offset table (base = NUC index 0 = rom index 256):
-#   0  LOAD  CR3, CR6[8]           — load LED_DEV capability
-#   1  IADD  DR1, DR0, #1          — DR1 = 1 (on)
-#   ── Phase 0: LED0 ──────────────────────────────────────────────────────────
-#   2  DWRITE CR3[0], DR1          — LED0 = 1
-#   3  IADD  DR3, DR0, #380        — outer count
-#   4  IADD  DR2, DR0, #16383      — inner count  ← outer loop top
-#   5  ISUB  DR2, DR2, #1          ← inner loop top
-#   6  BRANCH NE, #-1              — → index 5 (inner)
+# NUC word-offset table (base = NUC index 0 = rom index 256 = byte 0x400):
+#   0  LOAD  CR3, CR6[8]      — load LED_DEV capability into CR3
+#   1  IADD  DR1, DR0, #1     — DR1 = 1 (on value)
+#   ── LED0 ON phase ──────────────────────────────────────────────────────────
+#   2  DWRITE CR3[0], DR1     — LED0 = 1
+#   3  IADD  DR3, DR0, #380   — outer count
+#   4  IADD  DR2, DR0, #16383 — inner count  ← outer-loop-top
+#   5  ISUB  DR2, DR2, #1     ← inner-loop-top
+#   6  BRANCH NE, #-1         — → index 5
 #   7  ISUB  DR3, DR3, #1
-#   8  BRANCH NE, #-4              — → index 4 (outer: reset inner count)
-#   9  DWRITE CR3[0], DR0          — LED0 = 0
-#   ── Phase 1: LED1 ──────────────────────────────────────────────────────────
-#  10  DWRITE CR3[1], DR1
-#  11  IADD  DR3, DR0, #380
-#  12  IADD  DR2, DR0, #16383
-#  13  ISUB  DR2, DR2, #1
-#  14  BRANCH NE, #-1
-#  15  ISUB  DR3, DR3, #1
-#  16  BRANCH NE, #-4
-#  17  DWRITE CR3[1], DR0
-#   ── Phase 2: LED2 ──────────────────────────────────────────────────────────
-#  18  DWRITE CR3[2], DR1
-#  19  IADD  DR3, DR0, #380
-#  20  IADD  DR2, DR0, #16383
-#  21  ISUB  DR2, DR2, #1
-#  22  BRANCH NE, #-1
-#  23  ISUB  DR3, DR3, #1
-#  24  BRANCH NE, #-4
-#  25  DWRITE CR3[2], DR0
-#   ── Phase 3: LED3 ──────────────────────────────────────────────────────────
-#  26  DWRITE CR3[3], DR1
-#  27  IADD  DR3, DR0, #380
-#  28  IADD  DR2, DR0, #16383
-#  29  ISUB  DR2, DR2, #1
-#  30  BRANCH NE, #-1
-#  31  ISUB  DR3, DR3, #1
-#  32  BRANCH NE, #-4
-#  33  DWRITE CR3[3], DR0
-#  34  BRANCH AL, #-32             — loop back to index 2 (LED0 on)
+#   8  BRANCH NE, #-4         — → index 4
+#   ── LED0 OFF phase ─────────────────────────────────────────────────────────
+#   9  DWRITE CR3[0], DR0     — LED0 = 0
+#  10  IADD  DR3, DR0, #380   — outer count
+#  11  IADD  DR2, DR0, #16383 — inner count  ← outer-loop-top
+#  12  ISUB  DR2, DR2, #1     ← inner-loop-top
+#  13  BRANCH NE, #-1         — → index 12
+#  14  ISUB  DR3, DR3, #1
+#  15  BRANCH NE, #-4         — → index 11
+#  16  BRANCH AL, #-14        — → index 2 (loop: LED0 on again)
 # ---------------------------------------------------------------------------
 
-# BRANCH imm = signed word offset from current instruction's byte address.
+# BRANCH imm = signed word offset from current instruction's address.
 # branch_target = nia_reg + sign_extend(imm) * 4
-# Inner back-edge: target = index 5, branch at index 6  → offset = 5-6 = -1 → 0x7FFF
-# Outer back-edge: target = index 4, branch at index 8  → offset = 4-8 = -4 → 0x7FFC
-# Same offsets repeat identically for phases 1-3.
-# Final loop: target = index 2, branch at index 34 → offset = 2-34 = -32 → 0x7FE0
+# Inner back-edge (on phase):  target=5,  branch at 6  → -1  → 0x7FFF
+# Outer back-edge (on phase):  target=4,  branch at 8  → -4  → 0x7FFC
+# Inner back-edge (off phase): target=12, branch at 13 → -1  → 0x7FFF
+# Outer back-edge (off phase): target=11, branch at 15 → -4  → 0x7FFC
+# Top-of-loop:                 target=2,  branch at 16 → -14 → 0x7FF2
 
 NUC_PROGRAM = [
-    # 0: load LED_DEV capability into CR3 from DEMO_CLIST index 8 via CR6 (c-list cap)
+    # 0: load LED_DEV capability into CR3 from c-list slot 8 (via CR6)
     encode_church(ChurchOpcode.LOAD, CondCode.AL, cr_dst=3, cr_src=6, imm=8),
-    # 1: DR1 = 0 + 1 = 1  (DR0 is hardwired to 0)
+    # 1: DR1 = 1 (DWRITE "on" value)
     encode_turing(TuringOpcode.IADD, CondCode.AL, dr_dst=1, dr_src=0, imm=1),
-    # ── Phase 0: LED0 ─────────────────────────────────────────────────────────
-    # 2: LED0 = 1 (on)
+    # ── LED0 ON phase ──────────────────────────────────────────────────────────
+    # 2: LED0 = 1
     encode_turing(TuringOpcode.DWRITE, CondCode.AL, dr_dst=1, dr_src=3, imm=0),
-    # 3: DR3 = outer count = 380
+    # 3: DR3 = 380 (outer delay count)
     encode_turing(TuringOpcode.IADD, CondCode.AL, dr_dst=3, dr_src=0, imm=380),
-    # 4: DR2 = inner count = 16383  ← outer-loop-top (resets inner counter)
+    # 4: DR2 = 16383 (inner delay count)  ← outer-loop-top
     encode_turing(TuringOpcode.IADD, CondCode.AL, dr_dst=2, dr_src=0, imm=16383),
     # 5: DR2 -= 1  ← inner-loop-top
     encode_turing(TuringOpcode.ISUB, CondCode.AL, dr_dst=2, dr_src=2, imm=1),
-    # 6: if DR2 != 0, branch to index 5 (inner loop)
+    # 6: branch to index 5 if DR2 != 0
     encode_turing(TuringOpcode.BRANCH, CondCode.NE, imm=(-1) & 0x7FFF),
     # 7: DR3 -= 1
     encode_turing(TuringOpcode.ISUB, CondCode.AL, dr_dst=3, dr_src=3, imm=1),
-    # 8: if DR3 != 0, branch to index 4 (outer loop: reset inner)
+    # 8: branch to index 4 if DR3 != 0
     encode_turing(TuringOpcode.BRANCH, CondCode.NE, imm=(-4) & 0x7FFF),
-    # 9: LED0 = 0 (off)
+    # ── LED0 OFF phase ─────────────────────────────────────────────────────────
+    # 9: LED0 = 0
     encode_turing(TuringOpcode.DWRITE, CondCode.AL, dr_dst=0, dr_src=3, imm=0),
-    # ── Phase 1: LED1 ─────────────────────────────────────────────────────────
-    # 10: LED1 = 1
-    encode_turing(TuringOpcode.DWRITE, CondCode.AL, dr_dst=1, dr_src=3, imm=1),
-    # 11: DR3 = 380
+    # 10: DR3 = 380
     encode_turing(TuringOpcode.IADD, CondCode.AL, dr_dst=3, dr_src=0, imm=380),
-    # 12: DR2 = 16383  ← outer-loop-top
+    # 11: DR2 = 16383  ← outer-loop-top
     encode_turing(TuringOpcode.IADD, CondCode.AL, dr_dst=2, dr_src=0, imm=16383),
-    # 13: DR2 -= 1  ← inner-loop-top
+    # 12: DR2 -= 1  ← inner-loop-top
     encode_turing(TuringOpcode.ISUB, CondCode.AL, dr_dst=2, dr_src=2, imm=1),
-    # 14: branch to index 13
+    # 13: branch to index 12 if DR2 != 0
     encode_turing(TuringOpcode.BRANCH, CondCode.NE, imm=(-1) & 0x7FFF),
-    # 15: DR3 -= 1
+    # 14: DR3 -= 1
     encode_turing(TuringOpcode.ISUB, CondCode.AL, dr_dst=3, dr_src=3, imm=1),
-    # 16: branch to index 12
+    # 15: branch to index 11 if DR3 != 0
     encode_turing(TuringOpcode.BRANCH, CondCode.NE, imm=(-4) & 0x7FFF),
-    # 17: LED1 = 0
-    encode_turing(TuringOpcode.DWRITE, CondCode.AL, dr_dst=0, dr_src=3, imm=1),
-    # ── Phase 2: LED2 ─────────────────────────────────────────────────────────
-    # 18: LED2 = 1
-    encode_turing(TuringOpcode.DWRITE, CondCode.AL, dr_dst=1, dr_src=3, imm=2),
-    # 19: DR3 = 380
-    encode_turing(TuringOpcode.IADD, CondCode.AL, dr_dst=3, dr_src=0, imm=380),
-    # 20: DR2 = 16383  ← outer-loop-top
-    encode_turing(TuringOpcode.IADD, CondCode.AL, dr_dst=2, dr_src=0, imm=16383),
-    # 21: DR2 -= 1  ← inner-loop-top
-    encode_turing(TuringOpcode.ISUB, CondCode.AL, dr_dst=2, dr_src=2, imm=1),
-    # 22: branch to index 21
-    encode_turing(TuringOpcode.BRANCH, CondCode.NE, imm=(-1) & 0x7FFF),
-    # 23: DR3 -= 1
-    encode_turing(TuringOpcode.ISUB, CondCode.AL, dr_dst=3, dr_src=3, imm=1),
-    # 24: branch to index 20
-    encode_turing(TuringOpcode.BRANCH, CondCode.NE, imm=(-4) & 0x7FFF),
-    # 25: LED2 = 0
-    encode_turing(TuringOpcode.DWRITE, CondCode.AL, dr_dst=0, dr_src=3, imm=2),
-    # ── Phase 3: LED3 ─────────────────────────────────────────────────────────
-    # 26: LED3 = 1
-    encode_turing(TuringOpcode.DWRITE, CondCode.AL, dr_dst=1, dr_src=3, imm=3),
-    # 27: DR3 = 380
-    encode_turing(TuringOpcode.IADD, CondCode.AL, dr_dst=3, dr_src=0, imm=380),
-    # 28: DR2 = 16383  ← outer-loop-top
-    encode_turing(TuringOpcode.IADD, CondCode.AL, dr_dst=2, dr_src=0, imm=16383),
-    # 29: DR2 -= 1  ← inner-loop-top
-    encode_turing(TuringOpcode.ISUB, CondCode.AL, dr_dst=2, dr_src=2, imm=1),
-    # 30: branch to index 29
-    encode_turing(TuringOpcode.BRANCH, CondCode.NE, imm=(-1) & 0x7FFF),
-    # 31: DR3 -= 1
-    encode_turing(TuringOpcode.ISUB, CondCode.AL, dr_dst=3, dr_src=3, imm=1),
-    # 32: branch to index 28
-    encode_turing(TuringOpcode.BRANCH, CondCode.NE, imm=(-4) & 0x7FFF),
-    # 33: LED3 = 0
-    encode_turing(TuringOpcode.DWRITE, CondCode.AL, dr_dst=0, dr_src=3, imm=3),
-    # ── Repeat ────────────────────────────────────────────────────────────────
-    # 34: unconditional branch back to index 2 (LED0 on); offset = 2 - 34 = -32 words
-    encode_turing(TuringOpcode.BRANCH, CondCode.AL, imm=(-32) & 0x7FFF),
+    # 16: unconditional branch back to index 2 (LED0 on); offset = 2-16 = -14 words
+    encode_turing(TuringOpcode.BRANCH, CondCode.AL, imm=(-14) & 0x7FFF),
 ]
 
 # Assemble full ROM: BOOT_PROGRAM (256 words) + NUC_PROGRAM (padded to 256 words)
