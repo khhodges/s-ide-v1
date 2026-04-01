@@ -243,15 +243,31 @@ module \top
   attribute \src "/home/runner/workspace/hardware/core.py:64"
   wire width 1 \boot_complete
 
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:302"
+  wire width 1 \demo_led0
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:301"
+  attribute \init 3'000
+  wire width 3 \demo_phase
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:302"
+  wire width 1 \demo_led1
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:302"
+  wire width 1 \demo_led2
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:302"
+  wire width 1 \demo_led3
+
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:282"
   attribute \init 1'0
   wire width 1 \heartbeat_blink
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:310"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:338"
   attribute \init 1'0
   wire width 1 \boot_triggered
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:309"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:337"
   attribute \init 4'0000
   wire width 4 \boot_delay
 
@@ -261,31 +277,31 @@ module \top
   attribute \src "/home/runner/workspace/hardware/core.py:66"
   wire width 1 \gc_start
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:324"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:352"
   wire width 8 \banner_byte
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:323"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:351"
   attribute \init 5'00000
   wire width 5 \banner_idx
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:329"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:357"
   wire width 8 \halt_byte
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:328"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:356"
   attribute \init 3'000
   wire width 3 \halt_idx
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:334"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:362"
   wire width 8 \step_byte
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:333"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:361"
   attribute \init 2'00
   wire width 2 \step_idx
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:339"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:367"
   wire width 8 \fault_byte
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:338"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:366"
   attribute \init 2'00
   wire width 2 \fault_msg_idx
 
@@ -294,19 +310,19 @@ module \top
   wire width 4 \debug_fsm_state
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:89"
-  wire width 32 \data$95
+  wire width 32 \data$100
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:90"
   wire width 1 \send
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:342"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:370"
   attribute \init 32'00000000000000000000000000000000
   wire width 32 \step_nia
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:449"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:477"
   wire width 32 \fault_word
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:343"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:371"
   attribute \init 4'0000
   wire width 4 \step_fault
 
@@ -314,11 +330,15 @@ module \top
   attribute \init 26'00000000000000000000000000
   wire width 26 \heartbeat_ctr
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:350"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:300"
+  attribute \init 25'0000000000000000000000000
+  wire width 25 \demo_ctr
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:378"
   attribute \init 28'0000000000000000000000000000
   wire width 28 \startup_ctr
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:344"
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:372"
   attribute \init 1'0
   wire width 1 \step_had_fault
 
@@ -440,9 +460,9 @@ module \top
 
   wire width 1 $47
 
-  wire width 33 $48
+  wire width 1 $48
 
-  wire width 33 $49
+  wire width 1 $49
 
   wire width 1 $50
 
@@ -454,69 +474,69 @@ module \top
 
   wire width 1 $54
 
-  wire width 27 $55
+  wire width 1 $55
 
-  wire width 1 $56
+  wire width 33 $56
 
-  wire width 1 $57
+  wire width 33 $57
 
   wire width 1 $58
 
-  wire width 5 $59
+  wire width 1 $59
 
   wire width 1 $60
 
-  wire width 29 $61
+  wire width 1 $61
 
   wire width 1 $62
 
-  wire width 1 $63
+  wire width 27 $63
 
   wire width 1 $64
 
-  wire width 6 $65
+  wire width 1 $65
 
   wire width 1 $66
 
   wire width 1 $67
 
-  wire width 1 $68
+  wire width 4 $68
 
-  wire width 4 $69
+  wire width 26 $69
 
   wire width 1 $70
 
-  wire width 1 $71
+  wire width 5 $71
 
-  wire width 3 $72
+  wire width 1 $72
 
-  wire width 1 $73
+  wire width 29 $73
 
   wire width 1 $74
 
   wire width 1 $75
 
-  wire width 3 $76
+  wire width 1 $76
 
-  wire width 1 $77
+  wire width 6 $77
 
-  wire width 32 $78
+  wire width 1 $78
 
   wire width 1 $79
 
-  wire width 3 $80
+  wire width 1 $80
 
-  wire width 3 $81
+  wire width 4 $81
 
-  wire width 3 $82
+  wire width 1 $82
 
-  wire width 3 $83
+  wire width 1 $83
 
   wire width 3 $84
 
-  wire width 32 $85
+  wire width 1 $85
 
-  wire width 32 $86
+  wire width 1 $86
 
   wire width 1 $87
 
@@ -524,37 +544,65 @@ module \top
 
   wire width 1 $89
 
-  wire width 8 $90
+  wire width 32 $90
 
-  wire width 26 $91
+  wire width 1 $91
 
-  wire width 1 $92
+  wire width 3 $92
 
-  wire width 4 $93
+  wire width 3 $93
 
-  wire width 1 $94
+  wire width 3 $94
 
-  wire width 28 $95
+  wire width 3 $95
 
-  wire width 4 $96
+  wire width 3 $96
 
-  wire width 5 $97
+  wire width 32 $97
 
-  wire width 1 $98
+  wire width 32 $98
 
-  wire width 3 $99
+  wire width 1 $99
 
-  wire width 1 $100
+  wire width 3 $100
 
-  wire width 32 $101
+  wire width 1 $101
 
-  wire width 4 $102
+  wire width 8 $102
 
-  wire width 1 $103
+  wire width 26 $103
 
-  wire width 2 $104
+  wire width 1 $104
 
-  wire width 2 $105
+  wire width 25 $105
+
+  wire width 3 $106
+
+  wire width 4 $107
+
+  wire width 1 $108
+
+  wire width 28 $109
+
+  wire width 4 $110
+
+  wire width 5 $111
+
+  wire width 1 $112
+
+  wire width 3 $113
+
+  wire width 1 $114
+
+  wire width 32 $115
+
+  wire width 4 $116
+
+  wire width 1 $117
+
+  wire width 2 $118
+
+  wire width 2 $119
 
   attribute \src "/home/runner/workspace/hardware/core.py:58"
   wire width 16 \clist_rd_data.slot_id
@@ -593,7 +641,7 @@ module \top
     connect \imem_valid \imem_valid [0]
     connect \boot_complete \dbg_boot_complete [0]
     connect \perm_gt_sig \clist_wr_data [31:0]
-    connect \port$3804$0 \mem_rd_data [31:0]
+    connect \port$3826$0 \mem_rd_data [31:0]
     connect \boot_start \boot_start [0]
     connect \fault$364 \fault [4:0]
     connect \fault_valid$366 \dbg_fault_valid [0]
@@ -621,14 +669,14 @@ module \top
     connect \clk \clk [0]
     connect \send_byte \send_byte [0]
     connect \byte_data \byte_data [7:0]
-    connect \data$15 \data$95 [31:0]
+    connect \data$15 \data$100 [31:0]
     connect \send \send [0]
     connect \busy \busy [0]
     connect \tx \uart_tx [0]
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:92"
-  cell $or $106
+  cell $or $120
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -640,7 +688,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:93"
-  cell $or $107
+  cell $or $121
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -652,7 +700,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:129"
-  cell $not $108
+  cell $not $122
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -661,7 +709,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:129"
-  cell $and $109
+  cell $and $123
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -673,7 +721,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:154"
-  cell $and $110
+  cell $and $124
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -685,7 +733,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:177"
-  cell $and $111
+  cell $and $125
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -697,7 +745,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:187"
-  cell $not $112
+  cell $not $126
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -706,7 +754,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:206"
-  cell $mux $113
+  cell $mux $127
     parameter \WIDTH 32
     connect \S \is_mmio_read [0]
     connect \A \mem_rd_data [31:0]
@@ -715,7 +763,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:218"
-  cell $not $114
+  cell $not $128
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -724,7 +772,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:233"
-  cell $ne $115
+  cell $ne $129
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 32
@@ -736,7 +784,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:236"
-  cell $and $116
+  cell $and $130
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -748,7 +796,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:238"
-  cell $not $117
+  cell $not $131
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -757,7 +805,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:238"
-  cell $not $118
+  cell $not $132
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -766,7 +814,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:238"
-  cell $and $119
+  cell $and $133
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -778,7 +826,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:238"
-  cell $or $120
+  cell $or $134
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -790,7 +838,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:249"
-  cell $not $121
+  cell $not $135
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -799,7 +847,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:249"
-  cell $and $122
+  cell $and $136
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -811,7 +859,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:268"
-  cell $not $123
+  cell $not $137
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -820,7 +868,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:268"
-  cell $and $124
+  cell $and $138
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -831,194 +879,338 @@ module \top
     connect \Y $9
   end
 
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:306"
+  cell $eq $139
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 3
+    parameter \B_WIDTH 0
+    parameter \Y_WIDTH 1
+    connect \A \demo_phase [2:0]
+    connect \B {  }
+    connect \Y $10
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:306"
+  cell $and $140
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \dbg_boot_complete [0]
+    connect \B $10 [0]
+    connect \Y \demo_led0
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:306"
+  cell $eq $141
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 3
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \demo_phase [2:0]
+    connect \B 1'1
+    connect \Y $11
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:306"
+  cell $and $142
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \dbg_boot_complete [0]
+    connect \B $11 [0]
+    connect \Y \demo_led1
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:306"
+  cell $eq $143
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 3
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 1
+    connect \A \demo_phase [2:0]
+    connect \B 2'10
+    connect \Y $12
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:306"
+  cell $and $144
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \dbg_boot_complete [0]
+    connect \B $12 [0]
+    connect \Y \demo_led2
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:306"
+  cell $eq $145
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 3
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 1
+    connect \A \demo_phase [2:0]
+    connect \B 2'11
+    connect \Y $13
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:306"
+  cell $and $146
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \dbg_boot_complete [0]
+    connect \B $13 [0]
+    connect \Y \demo_led3
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:324"
+  cell $or $147
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \mmio_led0 [0]
+    connect \B \demo_led0 [0]
+    connect \Y $14
+  end
+
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:287"
-  cell $not $125
+  cell $not $148
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \dbg_boot_complete [0]
-    connect \Y $10
+    connect \Y $15
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:301"
-  cell $mux $126
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:323"
+  cell $mux $149
     parameter \WIDTH 1
     connect \S \dbg_boot_complete [0]
-    connect \A $10 [0]
-    connect \B \mmio_led0 [0]
+    connect \A $15 [0]
+    connect \B $14 [0]
     connect \Y \led0
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:290"
-  cell $not $127
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \dbg_fault_valid [0]
-    connect \Y $11
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:290"
-  cell $and $128
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \halted [0]
-    connect \B $11 [0]
-    connect \Y $12
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:290"
-  cell $and $129
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A $12 [0]
-    connect \B \heartbeat_blink [0]
-    connect \Y $13
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:303"
-  cell $or $130
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:327"
+  cell $or $150
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \mmio_led1 [0]
-    connect \B $13 [0]
-    connect \Y $14
+    connect \B \demo_led1 [0]
+    connect \Y $16
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:288"
-  cell $not $131
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:290"
+  cell $not $151
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \dbg_fault_valid [0]
-    connect \Y $15
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:288"
-  cell $and $132
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \dbg_boot_complete [0]
-    connect \B $15 [0]
-    connect \Y $16
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:288"
-  cell $not $133
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \halted [0]
     connect \Y $17
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:288"
-  cell $and $134
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:290"
+  cell $and $152
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
-    connect \A $16 [0]
+    connect \A \halted [0]
     connect \B $17 [0]
     connect \Y $18
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:290"
-  cell $not $135
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \dbg_fault_valid [0]
-    connect \Y $19
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:290"
-  cell $and $136
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \halted [0]
-    connect \B $19 [0]
-    connect \Y $20
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:290"
-  cell $and $137
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A $20 [0]
-    connect \B \heartbeat_blink [0]
-    connect \Y $21
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:304"
-  cell $or $138
+  cell $and $153
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A $18 [0]
+    connect \B \heartbeat_blink [0]
+    connect \Y $19
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:327"
+  cell $or $154
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A $16 [0]
+    connect \B $19 [0]
+    connect \Y $20
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:288"
+  cell $not $155
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \dbg_fault_valid [0]
+    connect \Y $21
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:288"
+  cell $and $156
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \dbg_boot_complete [0]
     connect \B $21 [0]
     connect \Y $22
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:302"
-  cell $mux $139
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:288"
+  cell $not $157
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \halted [0]
+    connect \Y $23
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:288"
+  cell $and $158
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A $22 [0]
+    connect \B $23 [0]
+    connect \Y $24
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:290"
+  cell $not $159
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \dbg_fault_valid [0]
+    connect \Y $25
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:290"
+  cell $and $160
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \halted [0]
+    connect \B $25 [0]
+    connect \Y $26
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:290"
+  cell $and $161
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A $26 [0]
+    connect \B \heartbeat_blink [0]
+    connect \Y $27
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:328"
+  cell $or $162
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A $24 [0]
+    connect \B $27 [0]
+    connect \Y $28
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:326"
+  cell $mux $163
     parameter \WIDTH 1
     connect \S \dbg_boot_complete [0]
-    connect \A $22 [0]
-    connect \B $14 [0]
+    connect \A $28 [0]
+    connect \B $20 [0]
     connect \Y \led1
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:305"
-  cell $mux $140
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:330"
+  cell $or $164
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \mmio_led2 [0]
+    connect \B \demo_led2 [0]
+    connect \Y $29
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:329"
+  cell $mux $165
     parameter \WIDTH 1
     connect \S \dbg_boot_complete [0]
     connect \A \dbg_fault_valid [0]
-    connect \B \mmio_led2 [0]
+    connect \B $29 [0]
     connect \Y \led2
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:306"
-  cell $mux $141
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:333"
+  cell $or $166
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \mmio_led3 [0]
+    connect \B \demo_led3 [0]
+    connect \Y $30
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:332"
+  cell $mux $167
     parameter \WIDTH 1
     connect \S \dbg_boot_complete [0]
     connect \A \dbg_boot_complete [0]
-    connect \B \mmio_led3 [0]
+    connect \B $30 [0]
     connect \Y \led3
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:312"
-  cell $not $142
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:340"
+  cell $not $168
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \boot_triggered [0]
-    connect \Y $23
+    connect \Y $31
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:314"
-  cell $eq $143
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:342"
+  cell $eq $169
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 4
@@ -1026,11 +1218,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \boot_delay [3:0]
     connect \B 4'1111
-    connect \Y $24
+    connect \Y $32
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:325"
-  process $144
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:353"
+  process $170
     assign \banner_byte [7:0] 8'00000000
     switch \banner_idx [4:0]
       case 5'00000
@@ -1072,8 +1264,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:330"
-  process $145
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:358"
+  process $171
     assign \halt_byte [7:0] 8'00000000
     switch \halt_idx [2:0]
       case 3'000
@@ -1091,8 +1283,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:335"
-  process $146
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:363"
+  process $172
     assign \step_byte [7:0] 8'00000000
     switch \step_idx [1:0]
       case 2'00
@@ -1102,8 +1294,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:340"
-  process $147
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:368"
+  process $173
     assign \fault_byte [7:0] 8'00000000
     switch \fault_msg_idx [1:0]
       case 2'00
@@ -1113,89 +1305,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:364"
-  cell $not $148
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $25
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:365"
-  cell $lt $149
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 5
-    parameter \B_WIDTH 5
-    parameter \Y_WIDTH 1
-    connect \A \banner_idx [4:0]
-    connect \B 5'10010
-    connect \Y $26
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:375"
-  cell $not $150
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $27
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:383"
-  cell $not $151
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $28
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:384"
-  cell $lt $152
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 3
-    parameter \B_WIDTH 3
-    parameter \Y_WIDTH 1
-    connect \A \halt_idx [2:0]
-    connect \B 3'110
-    connect \Y $29
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:411"
-  cell $not $153
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $30
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:412"
-  cell $lt $154
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 2
-    parameter \B_WIDTH 2
-    parameter \Y_WIDTH 1
-    connect \A \step_idx [1:0]
-    connect \B 2'10
-    connect \Y $31
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:423"
-  cell $not $155
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $32
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:436"
-  cell $not $156
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:392"
+  cell $not $174
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -1203,350 +1314,8 @@ module \top
     connect \Y $33
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:437"
-  cell $lt $157
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 2
-    parameter \B_WIDTH 2
-    parameter \Y_WIDTH 1
-    connect \A \fault_msg_idx [1:0]
-    connect \B 2'10
-    connect \Y $34
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:448"
-  cell $not $158
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $35
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $159
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 0
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [3:0]
-    connect \B {  }
-    connect \Y $36
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $160
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [3:0]
-    connect \B 1'1
-    connect \Y $37
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $161
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 2
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [3:0]
-    connect \B 2'10
-    connect \Y $38
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $162
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 2
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [3:0]
-    connect \B 2'11
-    connect \Y $39
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $163
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 3
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [3:0]
-    connect \B 3'100
-    connect \Y $40
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $164
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 3
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [3:0]
-    connect \B 3'101
-    connect \Y $41
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $165
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 3
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [3:0]
-    connect \B 3'110
-    connect \Y $42
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $166
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 3
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [3:0]
-    connect \B 3'111
-    connect \Y $43
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $167
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 4
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [3:0]
-    connect \B 4'1000
-    connect \Y $44
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $168
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 4
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [3:0]
-    connect \B 4'1001
-    connect \Y $45
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $169
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 4
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [3:0]
-    connect \B 4'1010
-    connect \Y $46
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:145"
-  cell $eq $170
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 32
-    parameter \B_WIDTH 32
-    parameter \Y_WIDTH 1
-    connect \A \timer_lo [31:0]
-    connect \B 32'11111111111111111111111111111111
-    connect \Y $47
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:146"
-  cell $add $171
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 32
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 33
-    connect \A \timer_hi [31:0]
-    connect \B 1'1
-    connect \Y $48
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:147"
-  cell $add $172
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 32
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 33
-    connect \A \timer_lo [31:0]
-    connect \B 1'1
-    connect \Y $49
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:149"
-  cell $not $173
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \alarm_fired [0]
-    connect \Y $50
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:149"
-  cell $and $174
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \alarm_armed [0]
-    connect \B $50 [0]
-    connect \Y $51
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:150"
-  cell $eq $175
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 32
-    parameter \B_WIDTH 32
-    parameter \Y_WIDTH 1
-    connect \A \timer_lo [31:0]
-    connect \B \alarm_cmp [31:0]
-    connect \Y $52
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:268"
-  cell $not $176
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $53
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:268"
-  cell $and $177
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \mmio_uart_pending [0]
-    connect \B $53 [0]
-    connect \Y $54
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:283"
-  cell $add $178
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 26
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 27
-    connect \A \heartbeat_ctr [25:0]
-    connect \B 1'1
-    connect \Y $55
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:284"
-  cell $eq $179
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 26
-    parameter \B_WIDTH 26
-    parameter \Y_WIDTH 1
-    connect \A \heartbeat_ctr [25:0]
-    connect \B 26'10111110101111000001111111
-    connect \Y $56
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:285"
-  cell $not $180
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \heartbeat_blink [0]
-    connect \Y $57
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:312"
-  cell $not $181
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \boot_triggered [0]
-    connect \Y $58
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:313"
-  cell $add $182
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 5
-    connect \A \boot_delay [3:0]
-    connect \B 1'1
-    connect \Y $59
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:314"
-  cell $eq $183
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 4
-    parameter \B_WIDTH 4
-    parameter \Y_WIDTH 1
-    connect \A \boot_delay [3:0]
-    connect \B 4'1111
-    connect \Y $60
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:354"
-  cell $add $184
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 28
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 29
-    connect \A \startup_ctr [27:0]
-    connect \B 1'1
-    connect \Y $61
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:355"
-  cell $eq $185
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 28
-    parameter \B_WIDTH 28
-    parameter \Y_WIDTH 1
-    connect \A \startup_ctr [27:0]
-    connect \B 28'1000111100001101000101111111
-    connect \Y $62
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:364"
-  cell $not $186
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $63
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:365"
-  cell $lt $187
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:393"
+  cell $lt $175
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 5
@@ -1554,41 +1323,29 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \banner_idx [4:0]
     connect \B 5'10010
-    connect \Y $64
+    connect \Y $34
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:370"
-  cell $add $188
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 5
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 6
-    connect \A \banner_idx [4:0]
-    connect \B 1'1
-    connect \Y $65
-  end
-
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:375"
-  cell $not $189
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:403"
+  cell $not $176
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $66
+    connect \Y $35
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:383"
-  cell $not $190
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:411"
+  cell $not $177
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $67
+    connect \Y $36
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:384"
-  cell $lt $191
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:412"
+  cell $lt $178
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -1596,11 +1353,494 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \halt_idx [2:0]
     connect \B 3'110
+    connect \Y $37
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:439"
+  cell $not $179
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $38
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:440"
+  cell $lt $180
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 1
+    connect \A \step_idx [1:0]
+    connect \B 2'10
+    connect \Y $39
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:451"
+  cell $not $181
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $40
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:464"
+  cell $not $182
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $41
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:465"
+  cell $lt $183
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 1
+    connect \A \fault_msg_idx [1:0]
+    connect \B 2'10
+    connect \Y $42
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:476"
+  cell $not $184
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $43
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $185
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 0
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [3:0]
+    connect \B {  }
+    connect \Y $44
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $186
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [3:0]
+    connect \B 1'1
+    connect \Y $45
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $187
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [3:0]
+    connect \B 2'10
+    connect \Y $46
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $188
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [3:0]
+    connect \B 2'11
+    connect \Y $47
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $189
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 3
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [3:0]
+    connect \B 3'100
+    connect \Y $48
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $190
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 3
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [3:0]
+    connect \B 3'101
+    connect \Y $49
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $191
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 3
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [3:0]
+    connect \B 3'110
+    connect \Y $50
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $192
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 3
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [3:0]
+    connect \B 3'111
+    connect \Y $51
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $193
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 4
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [3:0]
+    connect \B 4'1000
+    connect \Y $52
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $194
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 4
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [3:0]
+    connect \B 4'1001
+    connect \Y $53
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $195
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 4
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [3:0]
+    connect \B 4'1010
+    connect \Y $54
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:145"
+  cell $eq $196
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 32
+    parameter \B_WIDTH 32
+    parameter \Y_WIDTH 1
+    connect \A \timer_lo [31:0]
+    connect \B 32'11111111111111111111111111111111
+    connect \Y $55
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:146"
+  cell $add $197
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 32
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 33
+    connect \A \timer_hi [31:0]
+    connect \B 1'1
+    connect \Y $56
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:147"
+  cell $add $198
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 32
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 33
+    connect \A \timer_lo [31:0]
+    connect \B 1'1
+    connect \Y $57
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:149"
+  cell $not $199
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \alarm_fired [0]
+    connect \Y $58
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:149"
+  cell $and $200
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \alarm_armed [0]
+    connect \B $58 [0]
+    connect \Y $59
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:150"
+  cell $eq $201
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 32
+    parameter \B_WIDTH 32
+    parameter \Y_WIDTH 1
+    connect \A \timer_lo [31:0]
+    connect \B \alarm_cmp [31:0]
+    connect \Y $60
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:268"
+  cell $not $202
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $61
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:268"
+  cell $and $203
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \mmio_uart_pending [0]
+    connect \B $61 [0]
+    connect \Y $62
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:283"
+  cell $add $204
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 26
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 27
+    connect \A \heartbeat_ctr [25:0]
+    connect \B 1'1
+    connect \Y $63
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:284"
+  cell $eq $205
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 26
+    parameter \B_WIDTH 26
+    parameter \Y_WIDTH 1
+    connect \A \heartbeat_ctr [25:0]
+    connect \B 26'10111110101111000001111111
+    connect \Y $64
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:285"
+  cell $not $206
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \heartbeat_blink [0]
+    connect \Y $65
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:309"
+  cell $eq $207
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 25
+    parameter \B_WIDTH 25
+    parameter \Y_WIDTH 1
+    connect \A \demo_ctr [24:0]
+    connect \B 25'1011111010111100000111111
+    connect \Y $66
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:311"
+  cell $eq $208
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 3
+    parameter \B_WIDTH 3
+    parameter \Y_WIDTH 1
+    connect \A \demo_phase [2:0]
+    connect \B 3'100
+    connect \Y $67
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:314"
+  cell $add $209
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 3
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 4
+    connect \A \demo_phase [2:0]
+    connect \B 1'1
     connect \Y $68
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:389"
-  cell $add $192
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:316"
+  cell $add $210
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 25
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 26
+    connect \A \demo_ctr [24:0]
+    connect \B 1'1
+    connect \Y $69
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:340"
+  cell $not $211
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \boot_triggered [0]
+    connect \Y $70
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:341"
+  cell $add $212
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 5
+    connect \A \boot_delay [3:0]
+    connect \B 1'1
+    connect \Y $71
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:342"
+  cell $eq $213
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 4
+    parameter \Y_WIDTH 1
+    connect \A \boot_delay [3:0]
+    connect \B 4'1111
+    connect \Y $72
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:382"
+  cell $add $214
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 28
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 29
+    connect \A \startup_ctr [27:0]
+    connect \B 1'1
+    connect \Y $73
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:383"
+  cell $eq $215
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 28
+    parameter \B_WIDTH 28
+    parameter \Y_WIDTH 1
+    connect \A \startup_ctr [27:0]
+    connect \B 28'1000111100001101000101111111
+    connect \Y $74
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:392"
+  cell $not $216
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $75
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:393"
+  cell $lt $217
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 5
+    parameter \B_WIDTH 5
+    parameter \Y_WIDTH 1
+    connect \A \banner_idx [4:0]
+    connect \B 5'10010
+    connect \Y $76
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:398"
+  cell $add $218
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 5
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 6
+    connect \A \banner_idx [4:0]
+    connect \B 1'1
+    connect \Y $77
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:403"
+  cell $not $219
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $78
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:411"
+  cell $not $220
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $79
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:412"
+  cell $lt $221
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 3
+    parameter \B_WIDTH 3
+    parameter \Y_WIDTH 1
+    connect \A \halt_idx [2:0]
+    connect \B 3'110
+    connect \Y $80
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:417"
+  cell $add $222
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -1608,20 +1848,20 @@ module \top
     parameter \Y_WIDTH 4
     connect \A \halt_idx [2:0]
     connect \B 1'1
-    connect \Y $69
+    connect \Y $81
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:411"
-  cell $not $193
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:439"
+  cell $not $223
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $70
+    connect \Y $82
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:412"
-  cell $lt $194
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:440"
+  cell $lt $224
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 2
@@ -1629,11 +1869,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \step_idx [1:0]
     connect \B 2'10
-    connect \Y $71
+    connect \Y $83
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:417"
-  cell $add $195
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:445"
+  cell $add $225
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 2
@@ -1641,29 +1881,29 @@ module \top
     parameter \Y_WIDTH 3
     connect \A \step_idx [1:0]
     connect \B 1'1
-    connect \Y $72
+    connect \Y $84
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:423"
-  cell $not $196
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:451"
+  cell $not $226
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $73
+    connect \Y $85
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:436"
-  cell $not $197
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:464"
+  cell $not $227
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $74
+    connect \Y $86
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:437"
-  cell $lt $198
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:465"
+  cell $lt $228
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 2
@@ -1671,11 +1911,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \fault_msg_idx [1:0]
     connect \B 2'10
-    connect \Y $75
+    connect \Y $87
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:442"
-  cell $add $199
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:470"
+  cell $add $229
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 2
@@ -1683,20 +1923,20 @@ module \top
     parameter \Y_WIDTH 3
     connect \A \fault_msg_idx [1:0]
     connect \B 1'1
-    connect \Y $76
+    connect \Y $88
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:448"
-  cell $not $200
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:476"
+  cell $not $230
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $77
+    connect \Y $89
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:82"
-  cell $meminit_v2 $201
+  cell $meminit_v2 $231
     parameter \MEMID "\\dmem"
     parameter \ABITS 0
     parameter \WIDTH 32
@@ -1708,7 +1948,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:85"
-  cell $memwr_v2 $202
+  cell $memwr_v2 $232
     parameter \MEMID "\\dmem"
     parameter \ABITS 11
     parameter \WIDTH 32
@@ -1723,7 +1963,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:84"
-  cell $memrd_v2 $203
+  cell $memrd_v2 $233
     parameter \MEMID "\\dmem"
     parameter \ABITS 11
     parameter \WIDTH 32
@@ -1744,7 +1984,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:87"
-  process $204
+  process $234
     assign \mem_addr [10:0] 11'00000000000
     switch { \any_clist_access [0] \any_ns_access [0] }
       case 2'-1
@@ -1757,7 +1997,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:135"
-  process $205
+  process $235
     assign \mmio_uart_tx_wr [0] 1'0
     switch \is_mmio_write [0]
       case 1'1
@@ -1777,7 +2017,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:136"
-  process $206
+  process $236
     assign \mmio_uart_tx_data [7:0] 8'00000000
     switch \is_mmio_write [0]
       case 1'1
@@ -1797,7 +2037,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:179"
-  process $207
+  process $237
     assign \mmio_rd_data [31:0] 32'00000000000000000000000000000000
     switch \dmem_addr [5:2]
       case 4'0000
@@ -1834,7 +2074,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:212"
-  process $208
+  process $238
     assign \wr_data [31:0] 32'00000000000000000000000000000000
     switch { $3 [0] 1'0 \ns_wr_en [0] }
       case 3'--1
@@ -1847,7 +2087,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:213"
-  process $209
+  process $239
     assign \wr_en [0] 1'0
     switch { $3 [0] 1'0 \ns_wr_en [0] }
       case 3'--1
@@ -1860,7 +2100,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:91"
-  process $210
+  process $240
     assign \send_byte [0] 1'0
     switch { $9 [0] \fsm_send_byte [0] }
       case 2'-1
@@ -1871,7 +2111,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:92"
-  process $211
+  process $241
     assign \byte_data [7:0] 8'00000000
     switch { $9 [0] \fsm_send_byte [0] }
       case 2'-1
@@ -1882,11 +2122,11 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:62"
-  process $212
+  process $242
     assign \boot_start [0] 1'0
-    switch $23 [0]
+    switch $31 [0]
       case 1'1
-        switch $24 [0]
+        switch $32 [0]
           case 1'1
             assign \boot_start [0] 1'1
         end
@@ -1896,15 +2136,15 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:260"
-  process $213
+  process $243
     assign \fsm_byte_data [7:0] 8'00000000
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
       case 4'0010
-        switch $25 [0]
+        switch $33 [0]
           case 1'1
-            switch $26 [0]
+            switch $34 [0]
               case 1'1
                 assign \fsm_byte_data [7:0] \banner_byte [7:0]
               case
@@ -1912,9 +2152,9 @@ module \top
         end
       case 4'0011
       case 4'0100
-        switch $28 [0]
+        switch $36 [0]
           case 1'1
-            switch $29 [0]
+            switch $37 [0]
               case 1'1
                 assign \fsm_byte_data [7:0] \halt_byte [7:0]
               case
@@ -1923,9 +2163,9 @@ module \top
       case 4'0101
       case 4'0110
       case 4'0111
-        switch $30 [0]
+        switch $38 [0]
           case 1'1
-            switch $31 [0]
+            switch $39 [0]
               case 1'1
                 assign \fsm_byte_data [7:0] \step_byte [7:0]
               case
@@ -1933,9 +2173,9 @@ module \top
         end
       case 4'1000
       case 4'1001
-        switch $33 [0]
+        switch $41 [0]
           case 1'1
-            switch $34 [0]
+            switch $42 [0]
               case 1'1
                 assign \fsm_byte_data [7:0] \fault_byte [7:0]
               case
@@ -1946,15 +2186,15 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:259"
-  process $214
+  process $244
     assign \fsm_send_byte [0] 1'0
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
       case 4'0010
-        switch $25 [0]
+        switch $33 [0]
           case 1'1
-            switch $26 [0]
+            switch $34 [0]
               case 1'1
                 assign \fsm_send_byte [0] 1'1
               case
@@ -1962,9 +2202,9 @@ module \top
         end
       case 4'0011
       case 4'0100
-        switch $28 [0]
+        switch $36 [0]
           case 1'1
-            switch $29 [0]
+            switch $37 [0]
               case 1'1
                 assign \fsm_send_byte [0] 1'1
               case
@@ -1973,9 +2213,9 @@ module \top
       case 4'0101
       case 4'0110
       case 4'0111
-        switch $30 [0]
+        switch $38 [0]
           case 1'1
-            switch $31 [0]
+            switch $39 [0]
               case 1'1
                 assign \fsm_send_byte [0] 1'1
               case
@@ -1983,9 +2223,9 @@ module \top
         end
       case 4'1000
       case 4'1001
-        switch $33 [0]
+        switch $41 [0]
           case 1'1
-            switch $34 [0]
+            switch $42 [0]
               case 1'1
                 assign \fsm_send_byte [0] 1'1
               case
@@ -1996,44 +2236,44 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:89"
-  process $215
-    assign \data$95 [31:0] 32'00000000000000000000000000000000
+  process $245
+    assign \data$100 [31:0] 32'00000000000000000000000000000000
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
       case 4'0010
       case 4'0011
-        switch $27 [0]
+        switch $35 [0]
           case 1'1
-            assign \data$95 [31:0] \imem_addr [31:0]
+            assign \data$100 [31:0] \imem_addr [31:0]
         end
       case 4'0100
       case 4'0101
       case 4'0110
       case 4'0111
       case 4'1000
-        switch $32 [0]
+        switch $40 [0]
           case 1'1
-            assign \data$95 [31:0] \step_nia [31:0]
+            assign \data$100 [31:0] \step_nia [31:0]
         end
       case 4'1001
       case 4'1010
-        switch $35 [0]
+        switch $43 [0]
           case 1'1
-            assign \data$95 [31:0] \fault_word [31:0]
+            assign \data$100 [31:0] \fault_word [31:0]
         end
     end
   end
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:90"
-  process $216
+  process $246
     assign \send [0] 1'0
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
       case 4'0010
       case 4'0011
-        switch $27 [0]
+        switch $35 [0]
           case 1'1
             assign \send [0] 1'1
         end
@@ -2042,21 +2282,21 @@ module \top
       case 4'0110
       case 4'0111
       case 4'1000
-        switch $32 [0]
+        switch $40 [0]
           case 1'1
             assign \send [0] 1'1
         end
       case 4'1001
       case 4'1010
-        switch $35 [0]
+        switch $43 [0]
           case 1'1
             assign \send [0] 1'1
         end
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:449"
-  process $217
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:477"
+  process $247
     assign \fault_word [31:0] 32'00000000000000000000000000000000
     switch \debug_fsm_state [3:0]
       case 4'0000
@@ -2070,7 +2310,7 @@ module \top
       case 4'1000
       case 4'1001
       case 4'1010
-        switch $35 [0]
+        switch $43 [0]
           case 1'1
             assign \fault_word [31:0] { 28'0000000000000000000000000000 \step_fault [3:0] }
         end
@@ -2078,40 +2318,40 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:139"
-  process $218
-    assign $78 [31:0] \timer_hi [31:0]
-    switch $47 [0]
+  process $248
+    assign $90 [31:0] \timer_hi [31:0]
+    switch $55 [0]
       case 1'1
-        assign $78 [31:0] $48 [31:0]
+        assign $90 [31:0] $56 [31:0]
     end
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:139"
-  cell $dff $219
+  cell $dff $249
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $78 [31:0]
+    connect \D $90 [31:0]
     connect \CLK \clk [0]
     connect \Q \timer_hi
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:138"
-  cell $dff $220
+  cell $dff $250
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $49 [31:0]
+    connect \D $57 [31:0]
     connect \CLK \clk [0]
     connect \Q \timer_lo
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:143"
-  process $221
-    assign $79 [0] \alarm_fired [0]
-    switch $51 [0]
+  process $251
+    assign $91 [0] \alarm_fired [0]
+    switch $59 [0]
       case 1'1
-        switch $52 [0]
+        switch $60 [0]
           case 1'1
-            assign $79 [0] 1'1
+            assign $91 [0] 1'1
         end
     end
     switch \is_mmio_write [0]
@@ -2128,29 +2368,29 @@ module \top
           case 4'1111
             switch \dmem_wr_data [1]
               case 1'1
-                assign $79 [0] 1'0
+                assign $91 [0] 1'0
             end
         end
     end
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:143"
-  cell $dff $222
+  cell $dff $252
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $79 [0]
+    connect \D $91 [0]
     connect \CLK \clk [0]
     connect \Q \alarm_fired
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:134"
-  process $223
-    assign $80 [2:0] \mmio_led0 [2:0]
+  process $253
+    assign $92 [2:0] \mmio_led0 [2:0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
           case 4'0000
-            assign $80 [2:0] \dmem_wr_data [2:0]
+            assign $92 [2:0] \dmem_wr_data [2:0]
           case 4'0001
           case 4'0010
           case 4'0011
@@ -2164,23 +2404,23 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:134"
-  cell $dff $224
+  cell $dff $254
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
-    connect \D $80 [2:0]
+    connect \D $92 [2:0]
     connect \CLK \clk [0]
     connect \Q \mmio_led0
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:134"
-  process $225
-    assign $81 [2:0] \mmio_led1 [2:0]
+  process $255
+    assign $93 [2:0] \mmio_led1 [2:0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
           case 4'0000
           case 4'0001
-            assign $81 [2:0] \dmem_wr_data [2:0]
+            assign $93 [2:0] \dmem_wr_data [2:0]
           case 4'0010
           case 4'0011
           case 4'0100
@@ -2193,24 +2433,24 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:134"
-  cell $dff $226
+  cell $dff $256
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
-    connect \D $81 [2:0]
+    connect \D $93 [2:0]
     connect \CLK \clk [0]
     connect \Q \mmio_led1
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:134"
-  process $227
-    assign $82 [2:0] \mmio_led2 [2:0]
+  process $257
+    assign $94 [2:0] \mmio_led2 [2:0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
           case 4'0000
           case 4'0001
           case 4'0010
-            assign $82 [2:0] \dmem_wr_data [2:0]
+            assign $94 [2:0] \dmem_wr_data [2:0]
           case 4'0011
           case 4'0100
           case 4'0101
@@ -2222,17 +2462,17 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:134"
-  cell $dff $228
+  cell $dff $258
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
-    connect \D $82 [2:0]
+    connect \D $94 [2:0]
     connect \CLK \clk [0]
     connect \Q \mmio_led2
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:134"
-  process $229
-    assign $83 [2:0] \mmio_led3 [2:0]
+  process $259
+    assign $95 [2:0] \mmio_led3 [2:0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
@@ -2240,7 +2480,7 @@ module \top
           case 4'0001
           case 4'0010
           case 4'0011
-            assign $83 [2:0] \dmem_wr_data [2:0]
+            assign $95 [2:0] \dmem_wr_data [2:0]
           case 4'0100
           case 4'0101
           case 4'1101
@@ -2251,17 +2491,17 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:134"
-  cell $dff $230
+  cell $dff $260
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
-    connect \D $83 [2:0]
+    connect \D $95 [2:0]
     connect \CLK \clk [0]
     connect \Q \mmio_led3
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:134"
-  process $231
-    assign $84 [2:0] \mmio_led4 [2:0]
+  process $261
+    assign $96 [2:0] \mmio_led4 [2:0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
@@ -2270,7 +2510,7 @@ module \top
           case 4'0010
           case 4'0011
           case 4'0100
-            assign $84 [2:0] \dmem_wr_data [2:0]
+            assign $96 [2:0] \dmem_wr_data [2:0]
           case 4'0101
           case 4'1101
           case 4'1110
@@ -2280,17 +2520,17 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:134"
-  cell $dff $232
+  cell $dff $262
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
-    connect \D $84 [2:0]
+    connect \D $96 [2:0]
     connect \CLK \clk [0]
     connect \Q \mmio_led4
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:140"
-  process $233
-    assign $85 [31:0] \tod_epoch [31:0]
+  process $263
+    assign $97 [31:0] \tod_epoch [31:0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
@@ -2301,7 +2541,7 @@ module \top
           case 4'0100
           case 4'0101
           case 4'1101
-            assign $85 [31:0] \dmem_wr_data [31:0]
+            assign $97 [31:0] \dmem_wr_data [31:0]
           case 4'1110
           case 4'1111
         end
@@ -2309,17 +2549,17 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:140"
-  cell $dff $234
+  cell $dff $264
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $85 [31:0]
+    connect \D $97 [31:0]
     connect \CLK \clk [0]
     connect \Q \tod_epoch
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:141"
-  process $235
-    assign $86 [31:0] \alarm_cmp [31:0]
+  process $265
+    assign $98 [31:0] \alarm_cmp [31:0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
@@ -2331,24 +2571,24 @@ module \top
           case 4'0101
           case 4'1101
           case 4'1110
-            assign $86 [31:0] \dmem_wr_data [31:0]
+            assign $98 [31:0] \dmem_wr_data [31:0]
           case 4'1111
         end
     end
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:141"
-  cell $dff $236
+  cell $dff $266
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $86 [31:0]
+    connect \D $98 [31:0]
     connect \CLK \clk [0]
     connect \Q \alarm_cmp
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:142"
-  process $237
-    assign $87 [0] \alarm_armed [0]
+  process $267
+    assign $99 [0] \alarm_armed [0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
@@ -2363,23 +2603,23 @@ module \top
           case 4'1111
             switch \dmem_wr_data [0]
               case 1'1
-                assign $87 [0] 1'1
+                assign $99 [0] 1'1
             end
         end
     end
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:142"
-  cell $dff $238
+  cell $dff $268
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $87 [0]
+    connect \D $99 [0]
     connect \CLK \clk [0]
     connect \Q \alarm_armed
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:230"
-  cell $dff $239
+  cell $dff $269
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
     connect \D \imem_addr [31:0]
@@ -2388,24 +2628,24 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:240"
-  process $240
-    assign $88 [2:0] \btn_sync [2:0]
-    assign $88 [0] \push_button [0]
-    assign $88 [1] \btn_sync [0]
-    assign $88 [2] \btn_sync [1]
+  process $270
+    assign $100 [2:0] \btn_sync [2:0]
+    assign $100 [0] \push_button [0]
+    assign $100 [1] \btn_sync [0]
+    assign $100 [2] \btn_sync [1]
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:240"
-  cell $dff $241
+  cell $dff $271
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
-    connect \D $88 [2:0]
+    connect \D $100 [2:0]
     connect \CLK \clk [0]
     connect \Q \btn_sync
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:241"
-  cell $dff $242
+  cell $dff $272
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
     connect \D \btn_sync [2]
@@ -2414,129 +2654,179 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:257"
-  process $243
-    assign $89 [0] \mmio_uart_pending [0]
+  process $273
+    assign $101 [0] \mmio_uart_pending [0]
     switch \mmio_uart_tx_wr [0]
       case 1'1
-        assign $89 [0] 1'1
+        assign $101 [0] 1'1
     end
-    switch { $54 [0] \fsm_send_byte [0] }
+    switch { $62 [0] \fsm_send_byte [0] }
       case 2'-1
       case 2'1-
-        assign $89 [0] 1'0
+        assign $101 [0] 1'0
     end
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:257"
-  cell $dff $244
+  cell $dff $274
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $89 [0]
+    connect \D $101 [0]
     connect \CLK \clk [0]
     connect \Q \mmio_uart_pending
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:258"
-  process $245
-    assign $90 [7:0] \mmio_uart_byte_reg [7:0]
+  process $275
+    assign $102 [7:0] \mmio_uart_byte_reg [7:0]
     switch \mmio_uart_tx_wr [0]
       case 1'1
-        assign $90 [7:0] \mmio_uart_tx_data [7:0]
+        assign $102 [7:0] \mmio_uart_tx_data [7:0]
     end
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:258"
-  cell $dff $246
+  cell $dff $276
     parameter \WIDTH 8
     parameter \CLK_POLARITY 1
-    connect \D $90 [7:0]
+    connect \D $102 [7:0]
     connect \CLK \clk [0]
     connect \Q \mmio_uart_byte_reg
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:281"
-  process $247
-    assign $91 [25:0] $55 [25:0]
-    switch $56 [0]
+  process $277
+    assign $103 [25:0] $63 [25:0]
+    switch $64 [0]
       case 1'1
-        assign $91 [25:0] 26'00000000000000000000000000
+        assign $103 [25:0] 26'00000000000000000000000000
     end
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:281"
-  cell $dff $248
+  cell $dff $278
     parameter \WIDTH 26
     parameter \CLK_POLARITY 1
-    connect \D $91 [25:0]
+    connect \D $103 [25:0]
     connect \CLK \clk [0]
     connect \Q \heartbeat_ctr
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:282"
-  process $249
-    assign $92 [0] \heartbeat_blink [0]
-    switch $56 [0]
+  process $279
+    assign $104 [0] \heartbeat_blink [0]
+    switch $64 [0]
       case 1'1
-        assign $92 [0] $57 [0]
+        assign $104 [0] $65 [0]
     end
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:282"
-  cell $dff $250
+  cell $dff $280
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $92 [0]
+    connect \D $104 [0]
     connect \CLK \clk [0]
     connect \Q \heartbeat_blink
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:309"
-  process $251
-    assign $93 [3:0] \boot_delay [3:0]
-    switch $58 [0]
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:300"
+  process $281
+    assign $105 [24:0] \demo_ctr [24:0]
+    switch \dbg_boot_complete [0]
       case 1'1
-        assign $93 [3:0] $59 [3:0]
+        switch $66 [0]
+          case 1'1
+            assign $105 [24:0] 25'0000000000000000000000000
+          case
+            assign $105 [24:0] $69 [24:0]
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:300"
+  cell $dff $282
+    parameter \WIDTH 25
+    parameter \CLK_POLARITY 1
+    connect \D $105 [24:0]
+    connect \CLK \clk [0]
+    connect \Q \demo_ctr
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:301"
+  process $283
+    assign $106 [2:0] \demo_phase [2:0]
+    switch \dbg_boot_complete [0]
+      case 1'1
+        switch $66 [0]
+          case 1'1
+            switch $67 [0]
+              case 1'1
+                assign $106 [2:0] 3'000
+              case
+                assign $106 [2:0] $68 [2:0]
+            end
+          case
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:301"
+  cell $dff $284
+    parameter \WIDTH 3
+    parameter \CLK_POLARITY 1
+    connect \D $106 [2:0]
+    connect \CLK \clk [0]
+    connect \Q \demo_phase
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:337"
+  process $285
+    assign $107 [3:0] \boot_delay [3:0]
+    switch $70 [0]
+      case 1'1
+        assign $107 [3:0] $71 [3:0]
       case
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:309"
-  cell $dff $252
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:337"
+  cell $dff $286
     parameter \WIDTH 4
     parameter \CLK_POLARITY 1
-    connect \D $93 [3:0]
+    connect \D $107 [3:0]
     connect \CLK \clk [0]
     connect \Q \boot_delay
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:310"
-  process $253
-    assign $94 [0] \boot_triggered [0]
-    switch $58 [0]
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:338"
+  process $287
+    assign $108 [0] \boot_triggered [0]
+    switch $70 [0]
       case 1'1
-        switch $60 [0]
+        switch $72 [0]
           case 1'1
-            assign $94 [0] 1'1
+            assign $108 [0] 1'1
         end
       case
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:310"
-  cell $dff $254
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:338"
+  cell $dff $288
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $94 [0]
+    connect \D $108 [0]
     connect \CLK \clk [0]
     connect \Q \boot_triggered
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:350"
-  process $255
-    assign $95 [27:0] \startup_ctr [27:0]
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:378"
+  process $289
+    assign $109 [27:0] \startup_ctr [27:0]
     switch \debug_fsm_state [3:0]
       case 4'0000
-        assign $95 [27:0] $61 [27:0]
+        assign $109 [27:0] $73 [27:0]
       case 4'0001
       case 4'0010
       case 4'0011
@@ -2550,123 +2840,123 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:350"
-  cell $dff $256
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:378"
+  cell $dff $290
     parameter \WIDTH 28
     parameter \CLK_POLARITY 1
-    connect \D $95 [27:0]
+    connect \D $109 [27:0]
     connect \CLK \clk [0]
     connect \Q \startup_ctr
   end
 
   attribute \src "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144"
-  process $257
-    assign $96 [3:0] \debug_fsm_state [3:0]
+  process $291
+    assign $110 [3:0] \debug_fsm_state [3:0]
     switch \debug_fsm_state [3:0]
       case 4'0000
-        switch $62 [0]
+        switch $74 [0]
           case 1'1
-            assign $96 [3:0] 4'0001
+            assign $110 [3:0] 4'0001
         end
       case 4'0001
         switch \dbg_boot_complete [0]
           case 1'1
-            assign $96 [3:0] 4'0010
+            assign $110 [3:0] 4'0010
         end
       case 4'0010
-        switch $63 [0]
+        switch $75 [0]
           case 1'1
-            switch $64 [0]
+            switch $76 [0]
               case 1'1
               case
-                assign $96 [3:0] 4'0011
+                assign $110 [3:0] 4'0011
             end
         end
       case 4'0011
-        switch $66 [0]
+        switch $78 [0]
           case 1'1
-            assign $96 [3:0] 4'0100
+            assign $110 [3:0] 4'0100
         end
       case 4'0100
-        switch $67 [0]
+        switch $79 [0]
           case 1'1
-            switch $68 [0]
+            switch $80 [0]
               case 1'1
               case
-                assign $96 [3:0] 4'0101
+                assign $110 [3:0] 4'0101
             end
         end
       case 4'0101
         switch \btn_press [0]
           case 1'1
-            assign $96 [3:0] 4'0110
+            assign $110 [3:0] 4'0110
         end
       case 4'0110
         switch \step_complete [0]
           case 1'1
-            assign $96 [3:0] 4'0111
+            assign $110 [3:0] 4'0111
         end
       case 4'0111
-        switch $70 [0]
+        switch $82 [0]
           case 1'1
-            switch $71 [0]
+            switch $83 [0]
               case 1'1
               case
-                assign $96 [3:0] 4'1000
+                assign $110 [3:0] 4'1000
             end
         end
       case 4'1000
-        switch $73 [0]
+        switch $85 [0]
           case 1'1
             switch \step_had_fault [0]
               case 1'1
-                assign $96 [3:0] 4'1001
+                assign $110 [3:0] 4'1001
               case
-                assign $96 [3:0] 4'0100
+                assign $110 [3:0] 4'0100
             end
         end
       case 4'1001
-        switch $74 [0]
+        switch $86 [0]
           case 1'1
-            switch $75 [0]
+            switch $87 [0]
               case 1'1
               case
-                assign $96 [3:0] 4'1010
+                assign $110 [3:0] 4'1010
             end
         end
       case 4'1010
-        switch $77 [0]
+        switch $89 [0]
           case 1'1
-            assign $96 [3:0] 4'0100
+            assign $110 [3:0] 4'0100
         end
     end
   end
 
   attribute \src "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144"
-  cell $dff $258
+  cell $dff $292
     parameter \WIDTH 4
     parameter \CLK_POLARITY 1
-    connect \D $96 [3:0]
+    connect \D $110 [3:0]
     connect \CLK \clk [0]
     connect \Q \debug_fsm_state
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:323"
-  process $259
-    assign $97 [4:0] \banner_idx [4:0]
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:351"
+  process $293
+    assign $111 [4:0] \banner_idx [4:0]
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
         switch \dbg_boot_complete [0]
           case 1'1
-            assign $97 [4:0] 5'00000
+            assign $111 [4:0] 5'00000
         end
       case 4'0010
-        switch $63 [0]
+        switch $75 [0]
           case 1'1
-            switch $64 [0]
+            switch $76 [0]
               case 1'1
-                assign $97 [4:0] $65 [4:0]
+                assign $111 [4:0] $77 [4:0]
               case
             end
         end
@@ -2681,24 +2971,24 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:323"
-  cell $dff $260
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:351"
+  cell $dff $294
     parameter \WIDTH 5
     parameter \CLK_POLARITY 1
-    connect \D $97 [4:0]
+    connect \D $111 [4:0]
     connect \CLK \clk [0]
     connect \Q \banner_idx
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:227"
-  process $261
-    assign $98 [0] \halted [0]
+  process $295
+    assign $112 [0] \halted [0]
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
         switch \dbg_boot_complete [0]
           case 1'1
-            assign $98 [0] 1'1
+            assign $112 [0] 1'1
         end
       case 4'0010
       case 4'0011
@@ -2713,65 +3003,65 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:227"
-  cell $dff $262
+  cell $dff $296
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $98 [0]
+    connect \D $112 [0]
     connect \CLK \clk [0]
     connect \Q \halted
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:328"
-  process $263
-    assign $99 [2:0] \halt_idx [2:0]
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:356"
+  process $297
+    assign $113 [2:0] \halt_idx [2:0]
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
       case 4'0010
       case 4'0011
       case 4'0100
-        switch $67 [0]
+        switch $79 [0]
           case 1'1
-            switch $68 [0]
+            switch $80 [0]
               case 1'1
-                assign $99 [2:0] $69 [2:0]
+                assign $113 [2:0] $81 [2:0]
               case
-                assign $99 [2:0] 3'000
+                assign $113 [2:0] 3'000
             end
         end
       case 4'0101
       case 4'0110
       case 4'0111
       case 4'1000
-        switch $73 [0]
+        switch $85 [0]
           case 1'1
             switch \step_had_fault [0]
               case 1'1
               case
-                assign $99 [2:0] 3'000
+                assign $113 [2:0] 3'000
             end
         end
       case 4'1001
       case 4'1010
-        switch $77 [0]
+        switch $89 [0]
           case 1'1
-            assign $99 [2:0] 3'000
+            assign $113 [2:0] 3'000
         end
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:328"
-  cell $dff $264
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:356"
+  cell $dff $298
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
-    connect \D $99 [2:0]
+    connect \D $113 [2:0]
     connect \CLK \clk [0]
     connect \Q \halt_idx
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:228"
-  process $265
-    assign $100 [0] \stepping [0]
+  process $299
+    assign $114 [0] \stepping [0]
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
@@ -2781,12 +3071,12 @@ module \top
       case 4'0101
         switch \btn_press [0]
           case 1'1
-            assign $100 [0] 1'1
+            assign $114 [0] 1'1
         end
       case 4'0110
         switch \step_complete [0]
           case 1'1
-            assign $100 [0] 1'0
+            assign $114 [0] 1'0
         end
       case 4'0111
       case 4'1000
@@ -2796,17 +3086,17 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/ti60_f225.py:228"
-  cell $dff $266
+  cell $dff $300
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $100 [0]
+    connect \D $114 [0]
     connect \CLK \clk [0]
     connect \Q \stepping
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:342"
-  process $267
-    assign $101 [31:0] \step_nia [31:0]
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:370"
+  process $301
+    assign $115 [31:0] \step_nia [31:0]
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
@@ -2817,7 +3107,7 @@ module \top
       case 4'0110
         switch \step_complete [0]
           case 1'1
-            assign $101 [31:0] \imem_addr [31:0]
+            assign $115 [31:0] \imem_addr [31:0]
         end
       case 4'0111
       case 4'1000
@@ -2826,18 +3116,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:342"
-  cell $dff $268
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:370"
+  cell $dff $302
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $101 [31:0]
+    connect \D $115 [31:0]
     connect \CLK \clk [0]
     connect \Q \step_nia
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:343"
-  process $269
-    assign $102 [3:0] \step_fault [3:0]
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:371"
+  process $303
+    assign $116 [3:0] \step_fault [3:0]
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
@@ -2848,7 +3138,7 @@ module \top
       case 4'0110
         switch \step_complete [0]
           case 1'1
-            assign $102 [3:0] \fault [3:0]
+            assign $116 [3:0] \fault [3:0]
         end
       case 4'0111
       case 4'1000
@@ -2857,18 +3147,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:343"
-  cell $dff $270
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:371"
+  cell $dff $304
     parameter \WIDTH 4
     parameter \CLK_POLARITY 1
-    connect \D $102 [3:0]
+    connect \D $116 [3:0]
     connect \CLK \clk [0]
     connect \Q \step_fault
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:344"
-  process $271
-    assign $103 [0] \step_had_fault [0]
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:372"
+  process $305
+    assign $117 [0] \step_had_fault [0]
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
@@ -2879,7 +3169,7 @@ module \top
       case 4'0110
         switch \step_complete [0]
           case 1'1
-            assign $103 [0] \dbg_fault_valid [0]
+            assign $117 [0] \dbg_fault_valid [0]
         end
       case 4'0111
       case 4'1000
@@ -2888,18 +3178,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:344"
-  cell $dff $272
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:372"
+  cell $dff $306
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $103 [0]
+    connect \D $117 [0]
     connect \CLK \clk [0]
     connect \Q \step_had_fault
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:333"
-  process $273
-    assign $104 [1:0] \step_idx [1:0]
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:361"
+  process $307
+    assign $118 [1:0] \step_idx [1:0]
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
@@ -2910,16 +3200,16 @@ module \top
       case 4'0110
         switch \step_complete [0]
           case 1'1
-            assign $104 [1:0] 2'00
+            assign $118 [1:0] 2'00
         end
       case 4'0111
-        switch $70 [0]
+        switch $82 [0]
           case 1'1
-            switch $71 [0]
+            switch $83 [0]
               case 1'1
-                assign $104 [1:0] $72 [1:0]
+                assign $118 [1:0] $84 [1:0]
               case
-                assign $104 [1:0] 2'00
+                assign $118 [1:0] 2'00
             end
         end
       case 4'1000
@@ -2928,18 +3218,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:333"
-  cell $dff $274
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:361"
+  cell $dff $308
     parameter \WIDTH 2
     parameter \CLK_POLARITY 1
-    connect \D $104 [1:0]
+    connect \D $118 [1:0]
     connect \CLK \clk [0]
     connect \Q \step_idx
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:338"
-  process $275
-    assign $105 [1:0] \fault_msg_idx [1:0]
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:366"
+  process $309
+    assign $119 [1:0] \fault_msg_idx [1:0]
     switch \debug_fsm_state [3:0]
       case 4'0000
       case 4'0001
@@ -2950,33 +3240,33 @@ module \top
       case 4'0110
       case 4'0111
       case 4'1000
-        switch $73 [0]
+        switch $85 [0]
           case 1'1
             switch \step_had_fault [0]
               case 1'1
-                assign $105 [1:0] 2'00
+                assign $119 [1:0] 2'00
               case
             end
         end
       case 4'1001
-        switch $74 [0]
+        switch $86 [0]
           case 1'1
-            switch $75 [0]
+            switch $87 [0]
               case 1'1
-                assign $105 [1:0] $76 [1:0]
+                assign $119 [1:0] $88 [1:0]
               case
-                assign $105 [1:0] 2'00
+                assign $119 [1:0] 2'00
             end
         end
       case 4'1010
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:338"
-  cell $dff $276
+  attribute \src "/home/runner/workspace/hardware/ti60_f225.py:366"
+  cell $dff $310
     parameter \WIDTH 2
     parameter \CLK_POLARITY 1
-    connect \D $105 [1:0]
+    connect \D $119 [1:0]
     connect \CLK \clk [0]
     connect \Q \fault_msg_idx
   end
@@ -4414,7 +4704,7 @@ module \top.core
   attribute \src "/home/runner/workspace/hardware/core.py:401"
   wire width 32 output 4  \perm_gt_sig
 
-  wire width 32 input 5  \port$3804$0
+  wire width 32 input 5  \port$3826$0
 
   attribute \src "/home/runner/workspace/hardware/core.py:62"
   wire width 1 input 6  \boot_start
@@ -6756,7 +7046,7 @@ module \top.core
   cell \top.core.u_gc_unit \u_gc_unit
     connect \clk \clk [0]
     connect \gc_busy \gc_busy [0]
-    connect \port$3804$0 \port$3804$0 [31:0]
+    connect \port$3826$0 \port$3826$0 [31:0]
     connect \ns_addr \ns_addr$452 [31:0]
     connect \ns_rd_en \ns_rd_en$454 [0]
     connect \ns_wr_data \ns_wr_data$456 [95:0]
@@ -6814,7 +7104,7 @@ module \top.core
     connect \mload_start \mload_start [0]
     connect \mload_fault_type \fault_type$373 [3:0]
     connect \thread_hdr \thread_hdr [31:0]
-    connect \port$4548$0 \instruction [18:0]
+    connect \port$4574$0 \instruction [18:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:101"
@@ -6878,7 +7168,7 @@ module \top.core
     connect \mem_wr_en \mem_wr_en$433 [0]
     connect \mem_wr_addr \mem_wr_addr$442 [31:0]
     connect \mem_wr_data \mem_wr_data$443 [31:0]
-    connect \port$4548$0 \instruction [22:0]
+    connect \port$4574$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:104"
@@ -6893,7 +7183,7 @@ module \top.core
     connect \mload_done \mload_done [0]
     connect \mload_start \mload_start$405 [0]
     connect \fault_type \fault_type$373 [3:0]
-    connect \port$4548$0 \instruction [22:0]
+    connect \port$4574$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:106"
@@ -6943,7 +7233,7 @@ module \top.core
     connect \cr_wr_addr \cr_wr_addr$84 [3:0]
     connect \cr_wr_data \cr_wr_data$93 [127:0]
     connect \cr_wr_en \cr_wr_en$101 [0]
-    connect \port$4548$0 \instruction [18:0]
+    connect \port$4574$0 \instruction [18:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:108"
@@ -6960,7 +7250,7 @@ module \top.core
     connect \cr_wr_addr \cr_wr_addr$83 [3:0]
     connect \cr_wr_data \cr_wr_data$92 [127:0]
     connect \cr_wr_en \cr_wr_en$102 [0]
-    connect \port$4548$0 \instruction [17:0]
+    connect \port$4574$0 \instruction [17:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:112"
@@ -6979,7 +7269,7 @@ module \top.core
     connect \cr_wr_addr \cr_wr_addr$82 [3:0]
     connect \cr_wr_data \cr_wr_data$91 [127:0]
     connect \cr_wr_en \cr_wr_en$99 [0]
-    connect \port$4548$0 \instruction [22:0]
+    connect \port$4574$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:113"
@@ -6998,7 +7288,7 @@ module \top.core
     connect \cr_wr_addr \cr_wr_addr$81 [3:0]
     connect \cr_wr_data \cr_wr_data$90 [127:0]
     connect \cr_wr_en \cr_wr_en$100 [0]
-    connect \port$4548$0 \instruction [22:0]
+    connect \port$4574$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:114"
@@ -7016,7 +7306,7 @@ module \top.core
     connect \dr_wr_addr \dr_wr_addr$72 [3:0]
     connect \dr_wr_data \dr_wr_data$74 [31:0]
     connect \dr_wr_en \dr_wr_en [0]
-    connect \port$4548$0 \instruction [22:0]
+    connect \port$4574$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:115"
@@ -7033,7 +7323,7 @@ module \top.core
     connect \dmem_addr \dmem_addr$446 [31:0]
     connect \dmem_wr_data \dmem_wr_data$447 [31:0]
     connect \dmem_wr_en \dmem_wr_en$436 [0]
-    connect \port$4548$0 \instruction [22:0]
+    connect \port$4574$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:127"
@@ -10223,8 +10513,8 @@ connect \gc_mark_en 1'1
 connect \gc_sweep_en 1'1
 connect \ns_start_index 16'0000000000000001
 connect \ns_end_index 16'0001000000000000
-connect \ns_rd_data { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$3804$0 [31:0] }
-connect \ns_rd_data$58 { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$3804$0 [31:0] }
+connect \ns_rd_data { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$3826$0 [31:0] }
+connect \ns_rd_data$58 { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$3826$0 [31:0] }
 connect \gc_busy$59 \gc_busy [0]
 connect \garbage_count \gc_garbage_count [31:0]
 connect \cr_rd_data_gt \cr_rd_data [31:0]
@@ -17488,7 +17778,7 @@ module \top.core.u_gc_unit
   attribute \src "/home/runner/workspace/hardware/gc_unit.py:13"
   wire width 1 output 1  \gc_busy
 
-  wire width 32 input 2  \port$3804$0
+  wire width 32 input 2  \port$3826$0
 
   attribute \src "/home/runner/workspace/hardware/gc_unit.py:16"
   wire width 32 output 3  \ns_addr
@@ -18090,10 +18380,10 @@ module \top.core.u_gc_unit
     switch \gc_state [2:0]
       case 3'000
       case 3'001
-        assign $25 [95:0] { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$3804$0 [31:0] }
+        assign $25 [95:0] { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$3826$0 [31:0] }
       case 3'011
       case 3'010
-        assign $25 [95:0] { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$3804$0 [31:0] }
+        assign $25 [95:0] { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$3826$0 [31:0] }
       case 3'101
       case 3'110
       case 3'100
@@ -18117,7 +18407,7 @@ connect \gc_start 1'0
 connect \gc_mark_en 1'1
 connect \gc_sweep_en 1'1
 connect \ns_start_index 16'0000000000000001
-connect \ns_rd_data { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$3804$0 [31:0] }
+connect \ns_rd_data { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$3826$0 [31:0] }
 connect \ns_end_index 16'0001000000000000
 
 end
@@ -18814,7 +19104,7 @@ module \top.core.u_call
   attribute \src "/home/runner/workspace/hardware/call.py:77"
   wire width 32 input 31  \thread_hdr
 
-  wire width 19 input 32  \port$4548$0
+  wire width 19 input 32  \port$4574$0
 
   wire width 5 $1
 
@@ -19402,7 +19692,7 @@ module \top.core.u_call
     parameter \A_WIDTH 4
     parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
-    connect \A \port$4548$0 [18:15]
+    connect \A \port$4574$0 [18:15]
     connect \B 4'1011
     connect \Y \src_in_range
   end
@@ -19411,7 +19701,7 @@ module \top.core.u_call
   cell $mux $82
     parameter \WIDTH 4
     connect \S \phase [0]
-    connect \A \port$4548$0 [18:15]
+    connect \A \port$4574$0 [18:15]
     connect \B 4'0110
     connect \Y \mload_src
   end
@@ -19429,7 +19719,7 @@ module \top.core.u_call
   cell $mux $84
     parameter \WIDTH 16
     connect \S \phase [0]
-    connect \A { 1'0 \port$4548$0 [14:0] }
+    connect \A { 1'0 \port$4574$0 [14:0] }
     connect \B 16'0000000000000000
     connect \Y \mload_index
   end
@@ -20105,9 +20395,9 @@ module \top.core.u_call
     switch \call_state [4:0]
       case 5'00000
       case 5'00001
-        assign \cr_rd_addr [3:0] \port$4548$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$4574$0 [18:15]
       case 5'00011
-        assign \cr_rd_addr [3:0] \port$4548$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$4574$0 [18:15]
       case 5'00100
       case 5'00101
       case 5'00110
@@ -20663,7 +20953,7 @@ module \top.core.u_call
       case 5'00000
         switch \call_start [0]
           case 1'1
-            assign $60 [15:0] { 1'0 \port$4548$0 [14:0] }
+            assign $60 [15:0] { 1'0 \port$4574$0 [14:0] }
         end
       case 5'00001
       case 5'00011
@@ -21247,8 +21537,8 @@ connect \thr_lump_sz $2 [14:0]
 connect \sp_max $4 [14:0]
 connect \sp_min $7 [14:0]
 connect \frame_word { 1'1 $8 [14:0] \sp_latched [15:0] }
-connect \cr_src \port$4548$0 [18:15]
-connect \index { 1'0 \port$4548$0 [14:0] }
+connect \cr_src \port$4574$0 [18:15]
+connect \index { 1'0 \port$4574$0 [14:0] }
 connect \sub_start_reg \mload_start [0]
 connect \mload_cr_src \mload_src [3:0]
 connect \mload_cr_dst \mload_dst [3:0]
@@ -21271,7 +21561,7 @@ connect \fault_latched \call_fault [0]
 connect \fault_type_latched \fault_type [4:0]
 connect \nia_set \call_complete [0]
 connect \nia_value 32'00000000000000000000000000000001
-connect \mask { 1'0 \port$4548$0 [14:0] }
+connect \mask { 1'0 \port$4574$0 [14:0] }
 connect \mem_rd_valid 1'1
 connect \cr_wr_data.word0_gt \cr_wr_data [31:0]
 connect \cr_wr_data.word0_gt.slot_id \cr_wr_data [15:0]
@@ -23371,7 +23661,7 @@ module \top.core.u_save
   attribute \src "/home/runner/workspace/hardware/msave.py:22"
   wire width 32 output 13  \mem_wr_data
 
-  wire width 23 input 14  \port$4548$0
+  wire width 23 input 14  \port$4574$0
 
   wire width 1 $1
 
@@ -23579,7 +23869,7 @@ module \top.core.u_save
     connect \mem_wr_addr \mem_wr_addr [31:0]
     connect \mem_wr_data \mem_wr_data [31:0]
     connect \sub_fault_type \sub_fault_type [3:0]
-    connect \port$4548$0 \port$4548$0 [14:0]
+    connect \port$4574$0 \port$4574$0 [14:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/save.py:53"
@@ -23589,7 +23879,7 @@ module \top.core.u_save
     parameter \A_WIDTH 4
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$4548$0 [22:19]
+    connect \A \port$4574$0 [22:19]
     connect \B 3'110
     connect \Y \dst_in_range
   end
@@ -23690,11 +23980,11 @@ module \top.core.u_save
     switch \save_wrapper_state [2:0]
       case 3'000
       case 3'001
-        assign \cr_rd_addr [3:0] \port$4548$0 [22:19]
+        assign \cr_rd_addr [3:0] \port$4574$0 [22:19]
       case 3'010
-        assign \cr_rd_addr [3:0] \port$4548$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$4574$0 [18:15]
       case 3'011
-        assign \cr_rd_addr [3:0] \port$4548$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$4574$0 [18:15]
       case 3'100
     end
   end
@@ -23919,12 +24209,12 @@ module \top.core.u_save
     connect \Q \sub_start
   end
 
-connect \cr_dst \port$4548$0 [22:19]
+connect \cr_dst \port$4574$0 [22:19]
 connect \sub_start$3 \sub_start [0]
 connect \dst_reg_latched \sub_dst_cap [127:0]
 connect \sub_src_gt \src_reg_latched [31:0]
-connect \sub_index { 1'0 \port$4548$0 [14:0] }
-connect \index { 1'0 \port$4548$0 [14:0] }
+connect \sub_index { 1'0 \port$4574$0 [14:0] }
+connect \index { 1'0 \port$4574$0 [14:0] }
 connect \mem_wr_done 1'1
 connect \mem_wr_done$11 1'1
 connect \cr15_namespace$13 \cr15_namespace [127:0]
@@ -23937,7 +24227,7 @@ connect \mem_wr_en$23 \mem_wr_en [0]
 connect \mem_rd_addr$25 \mem_rd_addr [31:0]
 connect \mem_rd_en$27 \mem_rd_en [0]
 connect \sub_start_reg \sub_start [0]
-connect \cr_src \port$4548$0 [18:15]
+connect \cr_src \port$4574$0 [18:15]
 connect \fault_latched \save_fault [0]
 connect \fault_type_latched \fault_type [3:0]
 connect \sub_dst_cap.word0_gt \sub_dst_cap [31:0]
@@ -24910,7 +25200,7 @@ module \top.core.u_save.u_msave
   attribute \init 4'0000
   wire width 4 output 13  \sub_fault_type
 
-  wire width 15 input 14  \port$4548$0
+  wire width 15 input 14  \port$4574$0
 
   wire width 19 $1
 
@@ -28626,7 +28916,7 @@ module \top.core.u_save.u_msave
       case 4'0000
         switch \sub_start [0]
           case 1'1
-            assign $112 [15:0] { 1'0 \port$4548$0 [14:0] }
+            assign $112 [15:0] { 1'0 \port$4574$0 [14:0] }
         end
       case 4'0001
       case 4'0011
@@ -28965,7 +29255,7 @@ connect \crc16_sh_87 { \crc16_87 [14:0] 1'0 }
 connect \crc16_sh_88 { \crc16_88 [14:0] 1'0 }
 connect \crc16_result \crc16_89 [15:0]
 connect \fault_type_reg \sub_fault_type [3:0]
-connect \sub_index { 1'0 \port$4548$0 [14:0] }
+connect \sub_index { 1'0 \port$4574$0 [14:0] }
 connect \mem_rd_valid 1'1
 connect \mem_wr_done 1'1
 connect \dst_cap_reg.word0_gt \dst_cap_reg [31:0]
@@ -29066,7 +29356,7 @@ module \top.core.u_load
   attribute \src "/home/runner/workspace/hardware/load.py:28"
   wire width 4 input 9  \fault_type
 
-  wire width 23 input 10  \port$4548$0
+  wire width 23 input 10  \port$4574$0
 
   wire width 1 $1
 
@@ -29087,7 +29377,7 @@ module \top.core.u_load
     parameter \A_WIDTH 4
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$4548$0 [18:15]
+    connect \A \port$4574$0 [18:15]
     connect \B 3'110
     connect \Y \mload_m_elevated
   end
@@ -29231,12 +29521,12 @@ module \top.core.u_load
     connect \Q \load_wrapper_state
   end
 
-connect \mload_cr_src \port$4548$0 [18:15]
-connect \cr_src \port$4548$0 [18:15]
-connect \mload_cr_dst \port$4548$0 [22:19]
-connect \cr_dst \port$4548$0 [22:19]
-connect \mload_index { 1'0 \port$4548$0 [14:0] }
-connect \index { 1'0 \port$4548$0 [14:0] }
+connect \mload_cr_src \port$4574$0 [18:15]
+connect \cr_src \port$4574$0 [18:15]
+connect \mload_cr_dst \port$4574$0 [22:19]
+connect \cr_dst \port$4574$0 [22:19]
+connect \mload_index { 1'0 \port$4574$0 [14:0] }
+connect \index { 1'0 \port$4574$0 [14:0] }
 connect \mload_direct 1'0
 connect \mload_direct_gt 32'00000000000000000000000000000000
 connect \mload_fault_type \fault_type [3:0]
@@ -35644,7 +35934,7 @@ module \top.core.u_change
   attribute \src "/home/runner/workspace/hardware/mload.py:53"
   wire width 1 output 16  \cr_wr_en
 
-  wire width 19 input 17  \port$4548$0
+  wire width 19 input 17  \port$4574$0
 
   wire width 17 $1
 
@@ -36378,11 +36668,11 @@ module \top.core.u_change
         assign \cr_rd_addr [3:0] 4'0111
       case 4'0010
         assign \cr_rd_addr [3:0] 4'0111
-        assign \cr_rd_addr [3:0] \port$4548$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$4574$0 [18:15]
       case 4'0011
-        assign \cr_rd_addr [3:0] \port$4548$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$4574$0 [18:15]
       case 4'0100
-        assign \cr_rd_addr [3:0] \port$4548$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$4574$0 [18:15]
       case 4'0110
       case 4'0111
       case 4'1000
@@ -36493,7 +36783,7 @@ module \top.core.u_change
       case 4'0110
       case 4'0111
       case 4'1000
-        assign \sub_cr_src [3:0] \port$4548$0 [18:15]
+        assign \sub_cr_src [3:0] \port$4574$0 [18:15]
       case 4'1001
         assign \sub_cr_src [3:0] 4'1000
       case 4'1011
@@ -36757,7 +37047,7 @@ module \top.core.u_change
       case 4'0000
         switch \change_start [0]
           case 1'1
-            assign $33 [15:0] { 1'0 \port$4548$0 [14:0] }
+            assign $33 [15:0] { 1'0 \port$4574$0 [14:0] }
         end
       case 4'0001
       case 4'0010
@@ -36790,7 +37080,7 @@ module \top.core.u_change
       case 4'0000
         switch \change_start [0]
           case 1'1
-            assign $34 [15:0] { 1'0 \port$4548$0 [14:0] }
+            assign $34 [15:0] { 1'0 \port$4574$0 [14:0] }
         end
       case 4'0001
       case 4'0010
@@ -37168,11 +37458,11 @@ connect \thread_wr_en$47 \thread_wr_en [0]
 connect \thread_wr_idx$49 \thread_wr_idx [3:0]
 connect \thread_wr_data$51 \thread_wr_data [31:0]
 connect \thread_hdr_reg \thread_hdr_out [31:0]
-connect \cr_src \port$4548$0 [18:15]
+connect \cr_src \port$4574$0 [18:15]
 connect \fault_latched \change_fault [0]
 connect \fault_type_latched \fault_type [4:0]
-connect \index { 1'0 \port$4548$0 [14:0] }
-connect \change_mask { 1'0 \port$4548$0 [14:0] }
+connect \index { 1'0 \port$4574$0 [14:0] }
+connect \change_mask { 1'0 \port$4574$0 [14:0] }
 connect \mem_wr_done 1'1
 connect \flags.N \flags [0]
 connect \flags.Z \flags [1]
@@ -43585,7 +43875,7 @@ module \top.core.u_switch
   attribute \src "/home/runner/workspace/hardware/mload.py:53"
   wire width 1 output 11  \cr_wr_en
 
-  wire width 18 input 12  \port$4548$0
+  wire width 18 input 12  \port$4574$0
 
   wire width 5 $1
 
@@ -43841,7 +44131,7 @@ module \top.core.u_switch
     connect \cr_wr_data \cr_wr_data [127:0]
     connect \cr_wr_en \cr_wr_en [0]
     connect \sub_fault_type \sub_fault_type [3:0]
-    connect \port$4548$0 \port$4548$0 [17:0]
+    connect \port$4574$0 \port$4574$0 [17:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/switch.py:45"
@@ -43852,7 +44142,7 @@ module \top.core.u_switch
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 5
     connect \A 4'1000
-    connect \B \port$4548$0 [2:0]
+    connect \B \port$4574$0 [2:0]
     connect \Y $1
   end
 
@@ -43863,7 +44153,7 @@ module \top.core.u_switch
     parameter \A_WIDTH 3
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$4548$0 [17:15]
+    connect \A \port$4574$0 [17:15]
     connect \B 3'111
     connect \Y \src_in_range
   end
@@ -43887,7 +44177,7 @@ module \top.core.u_switch
     parameter \A_WIDTH 3
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$4548$0 [2:0]
+    connect \A \port$4574$0 [2:0]
     connect \B 3'101
     connect \Y $2
   end
@@ -43920,7 +44210,7 @@ module \top.core.u_switch
     parameter \A_WIDTH 3
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$4548$0 [2:0]
+    connect \A \port$4574$0 [2:0]
     connect \B 3'101
     connect \Y $3
   end
@@ -43932,7 +44222,7 @@ module \top.core.u_switch
     parameter \A_WIDTH 3
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$4548$0 [2:0]
+    connect \A \port$4574$0 [2:0]
     connect \B 3'111
     connect \Y $4
   end
@@ -44160,9 +44450,9 @@ module \top.core.u_switch
       case 4'0000
       case 4'0001
       case 4'0010
-        assign \local_cr_rd_addr [3:0] { 1'0 \port$4548$0 [17:15] }
+        assign \local_cr_rd_addr [3:0] { 1'0 \port$4574$0 [17:15] }
       case 4'0011
-        assign \local_cr_rd_addr [3:0] { 1'0 \port$4548$0 [17:15] }
+        assign \local_cr_rd_addr [3:0] { 1'0 \port$4574$0 [17:15] }
       case 4'0100
       case 4'0101
       case 4'0110
@@ -44379,13 +44669,13 @@ module \top.core.u_switch
   end
 
 connect \dest_cr $1 [3:0]
-connect \target \port$4548$0 [2:0]
-connect \cr_src \port$4548$0 [17:15]
+connect \target \port$4574$0 [2:0]
+connect \cr_src \port$4574$0 [17:15]
 connect \sub_start$10 \sub_start [0]
-connect \sub_cr_src { 1'0 \port$4548$0 [17:15] }
+connect \sub_cr_src { 1'0 \port$4574$0 [17:15] }
 connect \sub_cr_dst $1 [3:0]
-connect \sub_index { 1'0 \port$4548$0 [14:0] }
-connect \index { 1'0 \port$4548$0 [14:0] }
+connect \sub_index { 1'0 \port$4574$0 [14:0] }
+connect \index { 1'0 \port$4574$0 [14:0] }
 connect \sub_direct 1'0
 connect \sub_direct_gt 32'00000000000000000000000000000000
 connect \sub_m_elevated 1'1
@@ -44674,7 +44964,7 @@ module \top.core.u_switch.u_mload
   attribute \init 4'0000
   wire width 4 output 18  \sub_fault_type
 
-  wire width 18 input 19  \port$4548$0
+  wire width 18 input 19  \port$4574$0
 
   wire width 19 $1
 
@@ -45554,7 +45844,7 @@ module \top.core.u_switch.u_mload
       case 4'0000
         switch \sub_start [0]
           case 1'1
-            assign $20 [3:0] { 1'0 \port$4548$0 [17:15] }
+            assign $20 [3:0] { 1'0 \port$4574$0 [17:15] }
         end
       case 4'0001
       case 4'0011
@@ -45618,7 +45908,7 @@ module \top.core.u_switch.u_mload
       case 4'0000
         switch \sub_start [0]
           case 1'1
-            assign $22 [15:0] { 1'0 \port$4548$0 [14:0] }
+            assign $22 [15:0] { 1'0 \port$4574$0 [14:0] }
         end
       case 4'0001
       case 4'0011
@@ -45956,8 +46246,8 @@ connect \mem_rd_data$21 \mem_rd_data [31:0]
 connect \mem_rd_valid$23 1'1
 connect \ns_entry_addr_out$25 \ns_entry_addr_out [31:0]
 connect \fault_type_reg \sub_fault_type [3:0]
-connect \sub_cr_src { 1'0 \port$4548$0 [17:15] }
-connect \sub_index { 1'0 \port$4548$0 [14:0] }
+connect \sub_cr_src { 1'0 \port$4574$0 [17:15] }
+connect \sub_index { 1'0 \port$4574$0 [14:0] }
 connect \sub_direct 1'0
 connect \sub_direct_gt 32'00000000000000000000000000000000
 connect \sub_m_elevated 1'1
@@ -50844,7 +51134,7 @@ module \top.core.u_eloadcall
   attribute \src "/home/runner/workspace/hardware/mload.py:53"
   wire width 1 output 13  \cr_wr_en
 
-  wire width 23 input 14  \port$4548$0
+  wire width 23 input 14  \port$4574$0
 
   wire width 5 $1
 
@@ -51117,7 +51407,7 @@ module \top.core.u_eloadcall
     parameter \A_WIDTH 4
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$4548$0 [18:15]
+    connect \A \port$4574$0 [18:15]
     connect \B 3'101
     connect \Y \src_in_range
   end
@@ -51352,9 +51642,9 @@ module \top.core.u_eloadcall
     assign \mload_src [3:0] 4'0000
     switch \phase [1:0]
       case 2'00
-        assign \mload_src [3:0] \port$4548$0 [18:15]
+        assign \mload_src [3:0] \port$4574$0 [18:15]
       case 2'01
-        assign \mload_src [3:0] \port$4548$0 [22:19]
+        assign \mload_src [3:0] \port$4574$0 [22:19]
       case
         assign \mload_src [3:0] 4'0110
     end
@@ -51365,7 +51655,7 @@ module \top.core.u_eloadcall
     assign \mload_dst [3:0] 4'0000
     switch \phase [1:0]
       case 2'00
-        assign \mload_dst [3:0] \port$4548$0 [22:19]
+        assign \mload_dst [3:0] \port$4574$0 [22:19]
       case 2'01
         assign \mload_dst [3:0] 4'0110
       case
@@ -51378,7 +51668,7 @@ module \top.core.u_eloadcall
     assign \mload_index [15:0] 16'0000000000000000
     switch \phase [1:0]
       case 2'00
-        assign \mload_index [15:0] { 1'0 \port$4548$0 [14:0] }
+        assign \mload_index [15:0] { 1'0 \port$4574$0 [14:0] }
       case 2'01
         assign \mload_index [15:0] 16'0000000000000000
       case
@@ -51419,7 +51709,7 @@ module \top.core.u_eloadcall
       case 4'0001
       case 4'0011
       case 4'0100
-        assign \local_cr_rd_addr [3:0] \port$4548$0 [22:19]
+        assign \local_cr_rd_addr [3:0] \port$4574$0 [22:19]
       case 4'0101
         switch $3 [0]
           case 1'1
@@ -51657,7 +51947,7 @@ module \top.core.u_eloadcall
       case 4'0000
         switch \start [0]
           case 1'1
-            assign $21 [15:0] { 1'0 \port$4548$0 [14:0] }
+            assign $21 [15:0] { 1'0 \port$4574$0 [14:0] }
         end
       case 4'0001
       case 4'0011
@@ -51840,9 +52130,9 @@ module \top.core.u_eloadcall
     connect \Q \saved_cr5_gt
   end
 
-connect \cr_src \port$4548$0 [18:15]
-connect \cr_dst \port$4548$0 [22:19]
-connect \index { 1'0 \port$4548$0 [14:0] }
+connect \cr_src \port$4574$0 [18:15]
+connect \cr_dst \port$4574$0 [22:19]
+connect \index { 1'0 \port$4574$0 [14:0] }
 connect \sub_start$9 \sub_start [0]
 connect \sub_cr_src \mload_src [3:0]
 connect \sub_cr_dst \mload_dst [3:0]
@@ -51869,7 +52159,7 @@ connect \fault_latched \fault [0]
 connect \fault_type_latched \fault_type [3:0]
 connect \nia_set \complete [0]
 connect \nia_value 32'00000000000000000000000000000000
-connect \mask { 1'0 \port$4548$0 [14:0] }
+connect \mask { 1'0 \port$4574$0 [14:0] }
 connect \cr_rd_data.word0_gt \cr_rd_data [31:0]
 connect \cr_rd_data.word0_gt.slot_id \cr_rd_data [15:0]
 connect \cr_rd_data.word0_gt.gt_seq \cr_rd_data [22:16]
@@ -58265,7 +58555,7 @@ module \top.core.u_xloadlambda
   attribute \src "/home/runner/workspace/hardware/mload.py:53"
   wire width 1 output 13  \cr_wr_en
 
-  wire width 23 input 14  \port$4548$0
+  wire width 23 input 14  \port$4574$0
 
   wire width 1 $1
 
@@ -58504,7 +58794,7 @@ module \top.core.u_xloadlambda
     connect \cr_wr_data \cr_wr_data [127:0]
     connect \cr_wr_en \cr_wr_en [0]
     connect \sub_fault_type \sub_fault_type [3:0]
-    connect \port$4548$0 \port$4548$0 [22:0]
+    connect \port$4574$0 \port$4574$0 [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/fused_unit.py:308"
@@ -58526,7 +58816,7 @@ module \top.core.u_xloadlambda
     parameter \A_WIDTH 4
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$4548$0 [18:15]
+    connect \A \port$4574$0 [18:15]
     connect \B 3'110
     connect \Y \sub_m_elevated
   end
@@ -58664,7 +58954,7 @@ module \top.core.u_xloadlambda
       case 3'000
       case 3'001
       case 3'011
-        assign \local_cr_rd_addr [3:0] \port$4548$0 [22:19]
+        assign \local_cr_rd_addr [3:0] \port$4574$0 [22:19]
       case 3'100
       case 3'101
       case 3'110
@@ -58926,12 +59216,12 @@ module \top.core.u_xloadlambda
   end
 
 connect \sub_start_reg \sub_start [0]
-connect \sub_cr_src \port$4548$0 [18:15]
-connect \cr_src \port$4548$0 [18:15]
-connect \sub_cr_dst \port$4548$0 [22:19]
-connect \cr_dst \port$4548$0 [22:19]
-connect \sub_index { 1'0 \port$4548$0 [14:0] }
-connect \index { 1'0 \port$4548$0 [14:0] }
+connect \sub_cr_src \port$4574$0 [18:15]
+connect \cr_src \port$4574$0 [18:15]
+connect \sub_cr_dst \port$4574$0 [22:19]
+connect \cr_dst \port$4574$0 [22:19]
+connect \sub_index { 1'0 \port$4574$0 [14:0] }
+connect \index { 1'0 \port$4574$0 [14:0] }
 connect \sub_direct 1'0
 connect \sub_direct_gt 32'00000000000000000000000000000000
 connect \cr_rd_data$14 \cr_rd_data [127:0]
@@ -59219,7 +59509,7 @@ module \top.core.u_xloadlambda.u_mload
   attribute \init 4'0000
   wire width 4 output 17  \sub_fault_type
 
-  wire width 23 input 18  \port$4548$0
+  wire width 23 input 18  \port$4574$0
 
   wire width 19 $1
 
@@ -60099,7 +60389,7 @@ module \top.core.u_xloadlambda.u_mload
       case 4'0000
         switch \sub_start [0]
           case 1'1
-            assign $20 [3:0] \port$4548$0 [18:15]
+            assign $20 [3:0] \port$4574$0 [18:15]
         end
       case 4'0001
       case 4'0011
@@ -60131,7 +60421,7 @@ module \top.core.u_xloadlambda.u_mload
       case 4'0000
         switch \sub_start [0]
           case 1'1
-            assign $21 [3:0] \port$4548$0 [22:19]
+            assign $21 [3:0] \port$4574$0 [22:19]
         end
       case 4'0001
       case 4'0011
@@ -60163,7 +60453,7 @@ module \top.core.u_xloadlambda.u_mload
       case 4'0000
         switch \sub_start [0]
           case 1'1
-            assign $22 [15:0] { 1'0 \port$4548$0 [14:0] }
+            assign $22 [15:0] { 1'0 \port$4574$0 [14:0] }
         end
       case 4'0001
       case 4'0011
@@ -60501,9 +60791,9 @@ connect \mem_rd_data$21 \mem_rd_data [31:0]
 connect \mem_rd_valid$23 1'1
 connect \ns_entry_addr_out$25 \ns_entry_addr_out [31:0]
 connect \fault_type_reg \sub_fault_type [3:0]
-connect \sub_cr_src \port$4548$0 [18:15]
-connect \sub_cr_dst \port$4548$0 [22:19]
-connect \sub_index { 1'0 \port$4548$0 [14:0] }
+connect \sub_cr_src \port$4574$0 [18:15]
+connect \sub_cr_dst \port$4574$0 [22:19]
+connect \sub_index { 1'0 \port$4574$0 [14:0] }
 connect \sub_direct 1'0
 connect \sub_direct_gt 32'00000000000000000000000000000000
 connect \src_cap.word0_gt \src_cap [31:0]
@@ -65251,7 +65541,7 @@ module \top.core.u_dread
   attribute \src "/home/runner/workspace/hardware/dread.py:45"
   wire width 1 output 12  \dr_wr_en
 
-  wire width 23 input 13  \port$4548$0
+  wire width 23 input 13  \port$4574$0
 
   wire width 1 $1
 
@@ -65336,7 +65626,7 @@ module \top.core.u_dread
   cell $mux $17
     parameter \WIDTH 4
     connect \S \busy [0]
-    connect \A \port$4548$0 [18:15]
+    connect \A \port$4574$0 [18:15]
     connect \B \cr_src_reg [3:0]
     connect \Y \cr_rd_addr
   end
@@ -65560,7 +65850,7 @@ module \top.core.u_dread
       case 2'00
         switch \start [0]
           case 1'1
-            assign $10 [3:0] \port$4548$0 [18:15]
+            assign $10 [3:0] \port$4574$0 [18:15]
         end
       case 2'01
       case 2'10
@@ -65583,7 +65873,7 @@ module \top.core.u_dread
       case 2'00
         switch \start [0]
           case 1'1
-            assign $11 [3:0] \port$4548$0 [22:19]
+            assign $11 [3:0] \port$4574$0 [22:19]
         end
       case 2'01
       case 2'10
@@ -65606,7 +65896,7 @@ module \top.core.u_dread
       case 2'00
         switch \start [0]
           case 1'1
-            assign $12 [14:0] \port$4548$0 [14:0]
+            assign $12 [14:0] \port$4574$0 [14:0]
         end
       case 2'01
       case 2'10
@@ -65684,9 +65974,9 @@ module \top.core.u_dread
 
 connect \has_r \cr_rd_data [25]
 connect \limit \cr_rd_data [79:64]
-connect \cr_src \port$4548$0 [18:15]
-connect \dr_dst \port$4548$0 [22:19]
-connect \imm \port$4548$0 [14:0]
+connect \cr_src \port$4574$0 [18:15]
+connect \dr_dst \port$4574$0 [22:19]
+connect \imm \port$4574$0 [14:0]
 connect \cr_rd_data.word0_gt \cr_rd_data [31:0]
 connect \cr_rd_data.word0_gt.slot_id \cr_rd_data [15:0]
 connect \cr_rd_data.word0_gt.gt_seq \cr_rd_data [22:16]
@@ -65787,7 +66077,7 @@ module \top.core.u_dwrite
   attribute \src "/home/runner/workspace/hardware/dwrite.py:47"
   wire width 1 output 11  \dmem_wr_en
 
-  wire width 23 input 12  \port$4548$0
+  wire width 23 input 12  \port$4574$0
 
   wire width 1 $1
 
@@ -65872,7 +66162,7 @@ module \top.core.u_dwrite
   cell $mux $17
     parameter \WIDTH 4
     connect \S \busy [0]
-    connect \A \port$4548$0 [18:15]
+    connect \A \port$4574$0 [18:15]
     connect \B \cr_src_reg [3:0]
     connect \Y \cr_rd_addr
   end
@@ -65881,7 +66171,7 @@ module \top.core.u_dwrite
   cell $mux $18
     parameter \WIDTH 4
     connect \S \busy [0]
-    connect \A \port$4548$0 [22:19]
+    connect \A \port$4574$0 [22:19]
     connect \B \dr_src_reg [3:0]
     connect \Y \dr_rd_addr
   end
@@ -66071,7 +66361,7 @@ module \top.core.u_dwrite
       case 2'00
         switch \start [0]
           case 1'1
-            assign $9 [3:0] \port$4548$0 [18:15]
+            assign $9 [3:0] \port$4574$0 [18:15]
         end
       case 2'01
       case 2'10
@@ -66094,7 +66384,7 @@ module \top.core.u_dwrite
       case 2'00
         switch \start [0]
           case 1'1
-            assign $10 [3:0] \port$4548$0 [22:19]
+            assign $10 [3:0] \port$4574$0 [22:19]
         end
       case 2'01
       case 2'10
@@ -66117,7 +66407,7 @@ module \top.core.u_dwrite
       case 2'00
         switch \start [0]
           case 1'1
-            assign $11 [14:0] \port$4548$0 [14:0]
+            assign $11 [14:0] \port$4574$0 [14:0]
         end
       case 2'01
       case 2'10
@@ -66221,9 +66511,9 @@ module \top.core.u_dwrite
 
 connect \has_w \cr_rd_data [26]
 connect \limit \cr_rd_data [79:64]
-connect \cr_src \port$4548$0 [18:15]
-connect \dr_src \port$4548$0 [22:19]
-connect \imm \port$4548$0 [14:0]
+connect \cr_src \port$4574$0 [18:15]
+connect \dr_src \port$4574$0 [22:19]
+connect \imm \port$4574$0 [14:0]
 connect \cr_rd_data.word0_gt \cr_rd_data [31:0]
 connect \cr_rd_data.word0_gt.slot_id \cr_rd_data [15:0]
 connect \cr_rd_data.word0_gt.gt_seq \cr_rd_data [22:16]

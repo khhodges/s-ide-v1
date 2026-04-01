@@ -290,20 +290,48 @@ class ChurchTi60F225(Elaboratable):
         led_halted_blink = halted & ~core.fault_valid & heartbeat_blink
         led_fault = core.fault_valid
 
+        # ── Post-boot LED demo ────────────────────────────────────────────────
+        # Cycles each physical LED on for ~0.5 s in sequence (led0→led1→led2→led3→all-off→repeat).
+        # Exercises the full mmio_led_reg[i][0] → led[i] → physical-pin path for every channel,
+        # the same path a CPU DWRITE would use.  The CPU can still override by writing MMIO regs
+        # (OR'd in below), and the 1 Hz heartbeat on led[1] coexists with the demo.
+        # ─────────────────────────────────────────────────────────────────────
+        demo_half_sec = self.clk_freq // 2          # 25 000 000 cycles @ 50 MHz
+        demo_ctr   = Signal(range(demo_half_sec))   # counts to 0.5 s
+        demo_phase = Signal(3)                       # 0-4 (4 = all-off gap)
+        demo_led   = [Signal(name=f"demo_led{i}") for i in range(4)]
+
+        # demo_led[i] is high only during the matching phase, after boot_complete
+        for i in range(4):
+            m.d.comb += demo_led[i].eq(core.boot_complete & (demo_phase == i))
+
+        with m.If(core.boot_complete):
+            with m.If(demo_ctr == demo_half_sec - 1):
+                m.d.sync += demo_ctr.eq(0)
+                with m.If(demo_phase == 4):
+                    m.d.sync += demo_phase.eq(0)
+                with m.Else():
+                    m.d.sync += demo_phase.eq(demo_phase + 1)
+            with m.Else():
+                m.d.sync += demo_ctr.eq(demo_ctr + 1)
+
         # Pre-boot:  show hardware status (boot, run, fault, heartbeat).
-        # Post-boot: software controls LEDs via DWRITE to LED[0..3] MMIO registers,
-        #            EXCEPT led[1] which also ORs in the halted-heartbeat so the green
-        #            channel of RGB1 blinks at 1 Hz whenever the CPU is halted & healthy
-        #            (provides always-visible proof-of-life on the board).
+        # Post-boot: MMIO registers (CPU DWRITE) OR demo_led OR heartbeat drive each LED.
         # Each LED word is bits[2:0]={B,G,R}; only bit 0 (R) drives the physical pin.
         # Ti60 has 4 physical LEDs (led0–led3); LED[4] register exists but has no pin.
         m.d.comb += [
-            self.led[0].eq(Mux(core.boot_complete, mmio_led_reg[0][0], led_boot)),
+            self.led[0].eq(Mux(core.boot_complete,
+                               mmio_led_reg[0][0] | demo_led[0],
+                               led_boot)),
             self.led[1].eq(Mux(core.boot_complete,
-                               mmio_led_reg[1][0] | led_halted_blink,
+                               mmio_led_reg[1][0] | demo_led[1] | led_halted_blink,
                                led_run | led_halted_blink)),
-            self.led[2].eq(Mux(core.boot_complete, mmio_led_reg[2][0], led_fault)),
-            self.led[3].eq(Mux(core.boot_complete, mmio_led_reg[3][0], core.boot_complete)),
+            self.led[2].eq(Mux(core.boot_complete,
+                               mmio_led_reg[2][0] | demo_led[2],
+                               led_fault)),
+            self.led[3].eq(Mux(core.boot_complete,
+                               mmio_led_reg[3][0] | demo_led[3],
+                               core.boot_complete)),
         ]
 
         boot_delay = Signal(4, init=0)
