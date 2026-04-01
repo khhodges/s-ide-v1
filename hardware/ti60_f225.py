@@ -226,6 +226,7 @@ class ChurchTi60F225(Elaboratable):
 
         halted = Signal(init=1)
         stepping = Signal()
+        fault_latched = Signal()  # sticky: set on any fault_valid, cleared only by reset
 
         prev_nia = Signal(32)
         m.d.sync += prev_nia.eq(core.nia)
@@ -302,11 +303,14 @@ class ChurchTi60F225(Elaboratable):
         with m.If(heartbeat_ctr == self.clk_freq - 1):
             m.d.sync += [heartbeat_ctr.eq(0), heartbeat_blink.eq(~heartbeat_blink)]
 
+        # Latch fault persistently so LED[2] stays lit even after a one-cycle fault pulse.
+        m.d.sync += fault_latched.eq(fault_latched | core.fault_valid)
+
         led_boot = ~core.boot_complete
-        led_run = core.boot_complete & ~core.fault_valid & ~halted
+        led_run = core.boot_complete & ~fault_latched & ~halted
         # Visible in both pre-boot and post-boot: blinks whenever halted & healthy
-        led_halted_blink = halted & ~core.fault_valid & heartbeat_blink
-        led_fault = core.fault_valid
+        led_halted_blink = halted & ~fault_latched & heartbeat_blink
+        led_fault = fault_latched
 
         # ── Post-boot LED demo ────────────────────────────────────────────────
         # Cycles each physical LED on for ~0.5 s in sequence (led0→led1→led2→led3→all-off→repeat).
@@ -346,7 +350,7 @@ class ChurchTi60F225(Elaboratable):
                                mmio_led_reg[1][0] | demo_led[1] | led_halted_blink,
                                led_run | led_halted_blink)),
             self.led[2].eq(Mux(core.boot_complete,
-                               mmio_led_reg[2][0] | demo_led[2] | core.fault_valid,
+                               mmio_led_reg[2][0] | demo_led[2] | fault_latched,
                                led_fault)),
             self.led[3].eq(Mux(core.boot_complete,
                                mmio_led_reg[3][0] | demo_led[3],
@@ -404,7 +408,10 @@ class ChurchTi60F225(Elaboratable):
 
             with m.State("WAIT_BOOT"):
                 with m.If(core.boot_complete):
-                    m.d.sync += [banner_idx.eq(0), halted.eq(0)]
+                    # halted=1 during SEND_BANNER so demo_led (walking pattern) is
+                    # briefly visible — proving the capability boot completed before
+                    # the CPU takes over with its own LED blink.
+                    m.d.sync += [banner_idx.eq(0), halted.eq(1)]
                     m.next = "SEND_BANNER"
 
             with m.State("SEND_BANNER"):
@@ -452,8 +459,12 @@ class ChurchTi60F225(Elaboratable):
                     m.next = "STEP_WAIT"
 
             with m.State("ENTER_FREE_RUN"):
-                # Fire free_run_start for exactly one cycle to jump nia to NUC entry.
-                # NUC start = boot_rom word 256 = byte address 0x400.
+                # BOOT_PROGRAM has already completed (boot_complete asserted), proving
+                # the full capability boot chain (CHANGE → LOAD → TPERM → LAMBDA → CALL
+                # → RETURN → SAVE).  CR6 (c-list) and CR15 (NS) are live.
+                # We pulse free_run_start for one cycle to resume the CPU at the NUC
+                # entry point: ROM word 256 = byte 0x400.  This is the Turing-domain
+                # abstraction that the boot handed control to via slot-4 LAMBDA.
                 m.d.comb += [
                     core.free_run_start.eq(1),
                     core.free_run_nia.eq(0x400),
