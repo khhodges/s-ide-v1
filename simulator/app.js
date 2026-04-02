@@ -7497,18 +7497,24 @@ function _setBuildStatus(state, label, board) {
     if (brd && board) brd.textContent = board;
 }
 
+function _buildLogScroll() {
+    const area = document.getElementById('buildLogArea');
+    if (!area) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => { area.scrollTop = area.scrollHeight; }));
+}
+
 function _buildLogAppend(text) {
     const area = document.getElementById('buildLogArea');
     if (!area) return;
     area.textContent += text;
-    requestAnimationFrame(() => { area.scrollTop = area.scrollHeight; });
+    _buildLogScroll();
 }
 
 function _buildLogSet(text) {
     const area = document.getElementById('buildLogArea');
     if (!area) return;
     area.textContent = text;
-    requestAnimationFrame(() => { area.scrollTop = area.scrollHeight; });
+    _buildLogScroll();
 }
 
 function _renderBuildFiles(files, isTi60) {
