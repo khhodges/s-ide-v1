@@ -913,17 +913,30 @@ function updateCRDetail() {
         html += '</tbody></table>';
 
         if (isDevice && nsIdx === 12) {
-            const bits = sim.ledBits || 0;
-            html += '<div class="cr-detail-heading" style="margin-top:0.75rem;">LED State</div>';
-            html += '<div style="display:flex;gap:6px;padding:0.4rem 0;">';
-            for (let b = 5; b >= 0; b--) {
-                const on = (bits >>> b) & 1;
-                html += `<div style="width:28px;height:28px;border-radius:50%;background:${on ? '#22ff44' : '#1a2a1a'};border:2px solid ${on ? '#44ff66' : '#334433'};display:flex;align-items:center;justify-content:center;font-size:0.6rem;color:${on ? '#000' : '#446644'};">${b}</div>`;
+            // LED_DEV: 5 registers (offset 0-4 = LED0-LED4); bit[0] = R (red) drives pin
+            // Only bit[0] physically lights the LED on Ti60 F225 — bits[2:1] are G,B (wired but no pin)
+            html += '<div class="cr-detail-heading" style="margin-top:0.75rem;">LED Registers</div>';
+            html += '<table class="cr-table code-view-table" style="margin-bottom:0.3rem;">';
+            html += '<thead><tr><th>Offset</th><th>Name</th><th>Hex</th><th>Pin</th></tr></thead><tbody>';
+            for (let ledIdx = 0; ledIdx <= 4; ledIdx++) {
+                const addr = dataBase + ledIdx;
+                const val = (addr < sim.memory.length) ? (sim.memory[addr] >>> 0) : 0;
+                const rBit = val & 1;  // bit[0] = R = drives LED pin
+                const pinLabel = ledIdx <= 3 ? (rBit ? 'ON' : 'off') : (rBit ? 'ON (no pin)' : '—');
+                const pinColor = (rBit && ledIdx <= 3) ? '#22ff44' : (rBit ? '#ffaa22' : 'var(--text-secondary)');
+                html += `<tr>`;
+                html += `<td class="cr-idx">+${ledIdx}</td>`;
+                html += `<td>LED${ledIdx}</td>`;
+                html += `<td class="cr-gt">0x${val.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+                html += `<td style="color:${pinColor};font-weight:${rBit?'bold':'normal'}">${pinLabel}</td>`;
+                html += `</tr>`;
             }
-            html += '</div>';
+            html += '</tbody></table>';
+            html += '<div style="color:var(--text-secondary);font-size:0.72rem;padding-bottom:0.3rem;">bit[0]=R drives pin · bit[1]=G · bit[2]=B (Ti60: only R connected)</div>';
         }
 
-        if (wordCount > 0) {
+        if (wordCount > 0 && nsIdx !== 12) {
+            // LED device (nsIdx=12) already shows its registers in the LED Registers table above
             html += '<div class="cr-detail-heading" style="margin-top:0.75rem;">Memory Contents</div>';
             html += '<table class="cr-table code-view-table"><thead><tr><th>Addr</th><th>Hex</th><th>Dec</th></tr></thead><tbody>';
             for (let w = 0; w < wordCount; w++) {

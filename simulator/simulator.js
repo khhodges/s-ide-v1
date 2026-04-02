@@ -238,6 +238,13 @@ class ChurchSimulator {
         const clistChildren = [];
         const clistGTs = [];
 
+        // Hardware-accurate device register sizes (matches boot_rom.py _MMIO_ENTRIES)
+        // LED:   5 words (LED0–LED4, one per LED; bit[0]=R drives pin)      → limit17 = 4
+        // UART:  3 words (TX@0, STATUS@1, RX@2)                             → limit17 = 2
+        // Button:1 word  (button state bitmask)                              → limit17 = 0
+        // Timer: 5 words (TICKS_LO, TICKS_HI, TOD_EPOCH, ALARM_CMP, CTL)   → limit17 = 4
+        const DEVICE_REG_LIMITS = { 11: 2, 12: 4, 13: 0, 14: 4 };
+
         for (let i = 0; i < abstractions.length; i++) {
             const a = abstractions[i];
             if (i === 3) {
@@ -248,7 +255,8 @@ class ChurchSimulator {
                 continue;
             }
             const loc = (i === 0) ? 0 : i * this.SLOT_SIZE;
-            const lim17 = (i === 0) ? (this.memory.length - 1) : (this.SLOT_SIZE - 1);
+            const lim17 = (i === 0) ? (this.memory.length - 1)
+                        : (DEVICE_REG_LIMITS[i] !== undefined ? DEVICE_REG_LIMITS[i] : (this.SLOT_SIZE - 1));
             const nsTableCount = (i === 0) ? abstractions.length : 0;
             this.writeNSEntry(i, loc, lim17, 0, 0, 0, a.chainable ? 1 : 0, 1, 0, nsTableCount);
             this.nsLabels[i] = a.label;
@@ -263,15 +271,16 @@ class ChurchSimulator {
 
         // DEMO_CLIST hardware alignment: override C-List slots 8–11 with device GTs so
         // hardware code "LOAD CR3, CR6, 8" picks up the LED device, exactly as on Ti60 F225.
-        //   [8] = LED_DEV   (W)   → NS slot 12 (LED)
-        //   [9] = UART_DEV  (R|W) → NS slot 11 (UART)
-        //  [10] = BTN_DEV   (R)   → NS slot 13 (Button)
-        //  [11] = TIMER_DEV (R|W) → NS slot 14 (Timer)
+        //   [8]  LED_DEV   R|W → NS slot 12 (5 registers: LED0–LED4, bit[0]=R drives pin)
+        //   [9]  UART_DEV  R|W → NS slot 11 (3 registers: TX@0, STATUS@1, RX@2)
+        //   [10] BTN_DEV   R   → NS slot 13 (1 register: button state bitmask)
+        //   [11] TIMER_DEV R|W → NS slot 14 (5 registers: TICKS_LO, HI, TOD, ALARM_CMP, CTL)
+        // Permissions match hardware DEMO_CLIST (boot_rom.py lines 357-360)
         const HW_DEVICE_SLOTS = [
-            { nsIdx: 12, perms: {R:0,W:1,X:0,L:0,S:0,E:0} }, // [8]  LED
-            { nsIdx: 11, perms: {R:1,W:1,X:0,L:0,S:0,E:0} }, // [9]  UART
-            { nsIdx: 13, perms: {R:1,W:0,X:0,L:0,S:0,E:0} }, // [10] Button
-            { nsIdx: 14, perms: {R:1,W:1,X:0,L:0,S:0,E:0} }, // [11] Timer
+            { nsIdx: 12, perms: {R:1,W:1,X:0,L:0,S:0,E:0} }, // [8]  LED_DEV   R|W (5 regs)
+            { nsIdx: 11, perms: {R:1,W:1,X:0,L:0,S:0,E:0} }, // [9]  UART_DEV  R|W (3 regs)
+            { nsIdx: 13, perms: {R:1,W:0,X:0,L:0,S:0,E:0} }, // [10] BTN_DEV   R   (1 reg)
+            { nsIdx: 14, perms: {R:1,W:1,X:0,L:0,S:0,E:0} }, // [11] TIMER_DEV R|W (5 regs)
         ];
         for (let i = 0; i < HW_DEVICE_SLOTS.length; i++) {
             const d = HW_DEVICE_SLOTS[i];
@@ -1082,10 +1091,6 @@ class ChurchSimulator {
             this.nsClistMap[clistIdx].push(srcParsed.index);
         }
         const label = this.nsLabels[srcParsed.index] || 'entry_'+srcParsed.index;
-        if (srcParsed.index === 12) {
-            this.ledBits = this.dr[0] & 0x3F;
-            this.ledMode = 'program';
-        }
         const desc = `SAVE CR${d.crDst} -> [CR${d.crSrc} + ${d.imm}] (${label})`;
         this.output += desc + '\n';
         this.pc++;
@@ -1737,16 +1742,23 @@ class ChurchSimulator {
         // Route device writes to simulated hardware peripherals
         const devNsIdx = check.index;
         if (devNsIdx === 12) {
-            // LED_DEV — update Dashboard hardware LED strip (bits 0–3 → LED0–LED3)
-            this.ledBits = value & 0x3F;
+            // LED_DEV: offsets 0–4 each control one LED; bit[0] = R (red) drives the pin
+            // Matches hardware: DWRITE DR1, CR3, 0 sets LED0 R-bit (bit[0] of word at offset 0)
+            if (offset <= 4) {
+                if (value & 1) {
+                    this.ledBits |= (1 << offset);
+                } else {
+                    this.ledBits &= ~(1 << offset);
+                }
+            }
             this.ledMode = 'program';
         }
 
         const label = this.nsLabels[check.index] || 'data';
-        const devTag = devNsIdx === 12 ? ` [→ LED hardware: 0b${(value & 0x3F).toString(2).padStart(4,'0')}]`
-                     : devNsIdx === 11 ? ' [→ UART hardware]'
-                     : devNsIdx === 13 ? ' [→ BTN hardware]'
-                     : devNsIdx === 14 ? ' [→ TIMER hardware]'
+        const devTag = devNsIdx === 12 ? ` [→ LED${offset} = ${value & 1 ? 'ON' : 'OFF'} (bit[0] drives pin)]`
+                     : devNsIdx === 11 ? ` [→ UART ${offset===0?'TX':offset===1?'STATUS':'RX'}]`
+                     : devNsIdx === 13 ? ' [→ BTN read-only]'
+                     : devNsIdx === 14 ? ` [→ TIMER ${['TICKS_LO','TICKS_HI','TOD_EPOCH','ALARM_CMP','ALARM_CTL'][offset]||'reg'}]`
                      : '';
         const desc = `DWRITE DR${drIdx}, [CR${d.crSrc} + ${offset}] <- 0x${value.toString(16).toUpperCase().padStart(8,'0')} (${label})${devTag}`;
         this.output += desc + '\n';
