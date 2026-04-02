@@ -8736,9 +8736,34 @@ async function uploadToTang() {
 
     const board = getSelectedBoard();
     const boardLabel = getBoardLabel(board);
+    const isTi60Board = board === 'ti60-f225';
 
     if (typeof TangSerial === 'undefined') {
         con.textContent = 'Error: WebSerial module not loaded (webserial.js missing)';
+        return;
+    }
+
+    // Ti60 note: the firmware has no UART RX upload handler.
+    // The namespace is baked into the bitstream at synthesis time.
+    // UART TX (H14) sends the startup banner; the board is programmed via Efinity JTAG.
+    if (isTi60Board) {
+        con.textContent =
+            'Ti60 F225 — UART namespace upload is not yet supported in firmware.\n\n' +
+            'The namespace is baked into the bitstream at build time.\n' +
+            'Use Efinity IDE to program the board via JTAG after building the package.\n\n' +
+            'HOW TO CONFIRM YOUR BOARD IS RUNNING:\n' +
+            '  LEDs after JTAG flash + power-on:\n' +
+            '    Boot in progress  →  LED0 on (steady)\n' +
+            '    Boot complete     →  LED0→1→2→3→off walking pattern (0.5 s each)\n' +
+            '    CPU in free-run   →  LED1 has 1 Hz heartbeat blink\n' +
+            '    Fault             →  LED2 stays on\n\n' +
+            '  UART TX (pin H14, 115200 8N1) sends  CHURCH Ti60 v1.0  on startup.\n' +
+            '  (Requires an external USB-UART adapter — the Ti60 FT4232H is JTAG-only.)\n\n' +
+            'WORKFLOW:\n' +
+            '  1. Build FPGA Package  →  downloads the Efinity project zip\n' +
+            '  2. Open zip in Efinity IDE  →  synthesise + place-and-route\n' +
+            '  3. Programme via Efinity Programmer (JTAG)\n' +
+            '  4. Watch LEDs — walking pattern confirms successful boot\n';
         return;
     }
 
