@@ -872,6 +872,36 @@ header h1 {
     color: var(--church-gold);
 }
 
+.welcome-slide-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.35rem;
+}
+
+.btn-slide-nav {
+    background: transparent;
+    border: 1px solid rgba(218,165,32,0.35);
+    color: var(--church-gold);
+    border-radius: 4px;
+    font-size: 0.95rem;
+    line-height: 1;
+    padding: 0.15rem 0.45rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.btn-slide-nav:hover {
+    background: rgba(218,165,32,0.12);
+    border-color: var(--church-gold);
+}
+
+.slide-indicator {
+    font-size: 0.78rem;
+    color: #888;
+    min-width: 2.8rem;
+    text-align: center;
+}
+
 .btn-help-icon {
     font-size: 0.9rem;
     font-weight: 700;

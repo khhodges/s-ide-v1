@@ -480,6 +480,11 @@
         <div class="modal-dialog welcome-dialog">
             <div class="intro-header">
                 <div class="modal-title">Welcome to the Church Machine</div>
+                <div class="welcome-slide-nav">
+                    <button class="btn-slide-nav" id="welcomePrevBtn" onclick="stepWelcomeSlide(-1)" title="Previous">&#8592;</button>
+                    <span id="welcomeSlideIndicator" class="slide-indicator">1 / 4</span>
+                    <button class="btn-slide-nav" id="welcomeNextBtn" onclick="stepWelcomeSlide(1)" title="Next">&#8594;</button>
+                </div>
             </div>
             <div class="intro-body-wrap">
                 <div class="intro-body" id="welcomeBody"></div>

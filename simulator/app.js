@@ -7774,95 +7774,121 @@ function isWelcomeNeeded() {
     return !localStorage.getItem('church_welcome_dismissed');
 }
 
-function showWelcomePopup(force) {
-    if (POPUPS_DISABLED) return;
-    if (!force && !isWelcomeNeeded()) return;
-
-    const body = document.getElementById('welcomeBody');
-    if (!body) return;
-
-    body.innerHTML =
-        `<div style="font-weight:700;color:var(--church-gold);font-size:1.05rem;margin-bottom:0.5rem;">Why does security matter?</div>` +
-
+const WELCOME_SLIDES = [
+    {
+        html: `<div style="font-weight:700;color:var(--church-gold);font-size:1.05rem;margin-bottom:0.75rem;">Why does security matter?</div>` +
         `<p style="font-size:0.9rem;line-height:1.65;margin-bottom:0.75rem;">` +
         `Every computer your child uses &mdash; phones, tablets, laptops &mdash; runs software that can be tricked. ` +
         `Programs pretend to be other programs. Apps ask for permissions they should not have. ` +
         `A child clicks one wrong link and strangers can see their data. ` +
         `This is not a new problem. It is <em>the</em> problem of computing, and it was solved in 1936.</p>` +
-
-        `<div style="background:rgba(218,165,32,0.06);border:1px solid rgba(218,165,32,0.2);border-radius:8px;padding:0.6rem 1rem;margin-bottom:0.75rem;font-size:0.88rem;line-height:1.55;">` +
+        `<div style="background:rgba(218,165,32,0.06);border:1px solid rgba(218,165,32,0.2);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;font-size:0.88rem;line-height:1.6;">` +
         `<strong style="color:var(--church-gold);">Did you know?</strong> Cybercrime is now the world's third biggest economy &mdash; ` +
         `behind only the USA and China. If it were a country, it would be richer than Japan, Germany, and the UK combined. ` +
         `<a href="https://sipantic.blogspot.com/2025/11/the-cybercrime-tsunami.html" target="_blank" rel="noopener" style="color:var(--church-gold);">Read more</a></div>` +
-
-        `<p style="font-size:0.88rem;line-height:1.55;margin-bottom:0.75rem;">` +
+        `<p style="font-size:0.88rem;line-height:1.6;margin:0;">` +
         `The Church Machine implements the <strong>Lambda Calculus</strong>: a universal model of computation that provides ` +
         `a rigorous mathematical foundation for designing secure and provably correct software and hardware, ` +
         `offering an alternative to the problematic von Neumann model. ` +
-        `<a href="https://en.wikipedia.org/wiki/Lambda_calculus" target="_blank" rel="noopener" style="color:var(--church-gold);">More</a></p>` +
-
-        `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">` +
-        `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.4rem;">How Alonzo Church solved it</div>` +
-        `<p style="font-size:0.85rem;line-height:1.55;margin:0 0 0.5rem 0;">` +
+        `<a href="https://en.wikipedia.org/wiki/Lambda_calculus" target="_blank" rel="noopener" style="color:var(--church-gold);">More</a></p>`
+    },
+    {
+        html: `<div style="font-weight:700;color:var(--church-gold);font-size:1.05rem;margin-bottom:0.75rem;">How Alonzo Church solved it</div>` +
+        `<p style="font-size:0.9rem;line-height:1.65;margin-bottom:0.75rem;">` +
         `In 1936, mathematician <strong>Alonzo Church</strong> invented the lambda calculus &mdash; a way of computing where ` +
         `you can only use something if someone explicitly gives it to you. No sneaking, no stealing, no tricks. ` +
         `If you do not hold the key, the door does not open. ` +
         `<a href="https://en.wikipedia.org/wiki/Alonzo_Church" target="_blank" rel="noopener" style="color:var(--church-gold);">More</a></p>` +
-        `<p style="font-size:0.85rem;line-height:1.55;margin:0;">` +
+        `<div style="background:rgba(218,165,32,0.08);border:1px solid rgba(218,165,32,0.25);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">` +
+        `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.5rem;">Golden Tokens</div>` +
+        `<p style="font-size:0.88rem;line-height:1.6;margin:0;">` +
         `The Church Machine is built on this idea. Every action requires a <strong>Golden Token</strong> &mdash; ` +
         `an unforgeable digital key. Your child cannot send a message, share a file, or connect with anyone ` +
         `unless they hold the right token. And <em>you</em> control which tokens they hold. ` +
         `<a href="https://en.wikipedia.org/wiki/Capability-based_security" target="_blank" rel="noopener" style="color:var(--church-gold);">More</a></p>` +
         `</div>` +
-
+        `<p style="font-size:0.85rem;color:#aaa;line-height:1.5;margin:0;">` +
+        `This is not access control bolted on top &mdash; it is the mathematics itself. There is no way around it.</p>`
+    },
+    {
+        html: `<div style="font-weight:700;color:var(--church-green);font-size:1.05rem;margin-bottom:0.75rem;">Hello Mum &mdash; the first safe message</div>` +
         `<div style="background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.2);border-radius:8px;padding:0.75rem 1rem;margin-bottom:0.75rem;">` +
-        `<div style="font-weight:700;color:var(--church-green);margin-bottom:0.4rem;">Hello Mum &mdash; the first safe message</div>` +
-        `<p style="font-size:0.85rem;line-height:1.55;margin:0 0 0.5rem 0;">` +
+        `<p style="font-size:0.9rem;line-height:1.65;margin:0 0 0.75rem 0;">` +
         `When you register your family, the Church Machine creates a secure link between parent and child. ` +
         `Your child can then write their first program: <strong>Hello(Mum)</strong> &mdash; ` +
         `a message that travels through the Family security block, verified by Golden Tokens at every step.</p>` +
-        `<p style="font-size:0.85rem;line-height:1.55;margin:0;">` +
+        `<p style="font-size:0.9rem;line-height:1.65;margin:0;">` +
         `No one else can send that message. No one else can intercept it. It works because Mum is not just a name &mdash; ` +
-        `she is a <strong>Golden Token</strong>, alive, in charge, unforgeable and unique. That is what Church's mathematics gives us: ` +
-        `a computer where "Hello Mum" (unlike Hello World from 1972) actually means something safe.</p>` +
+        `she is a <strong>Golden Token</strong>, alive, in charge, unforgeable and unique.</p>` +
         `</div>` +
-
-        `<div style="font-weight:600;margin-bottom:0.5rem;">Getting started:</div>` +
-
+        `<p style="font-size:0.88rem;color:#aaa;line-height:1.55;margin:0;">` +
+        `That is what Church's mathematics gives us: a computer where &ldquo;Hello Mum&rdquo; &mdash; unlike ` +
+        `Hello World from 1972 &mdash; actually means something safe.</p>`
+    },
+    {
+        html: `<div style="font-weight:700;color:var(--church-gold);font-size:1.05rem;margin-bottom:0.75rem;">Getting started</div>` +
         `<div class="welcome-step">` +
         `<span class="welcome-step-num">1</span>` +
         `<div class="welcome-step-text"><strong>Register your family.</strong> Click "Set Up My Family" below to enter your name (or your children's names) and select a grade level. This creates the Golden Token link between you.</div>` +
         `</div>` +
-
         `<div class="welcome-step">` +
         `<span class="welcome-step-num">2</span>` +
         `<div class="welcome-step-text"><strong>Try the Math tab.</strong> Type a simple calculation like <code style="background:#1a1a2e;padding:0.15rem 0.4rem;border-radius:3px;color:var(--church-gold);">let x = 2 + 3</code> and press Enter. The answer appears instantly. Try the Challenge panel on the right for grade-level problems.</div>` +
         `</div>` +
-
         `<div class="welcome-step">` +
         `<span class="welcome-step-num">3</span>` +
         `<div class="welcome-step-text"><strong>Watch their progress.</strong> Open Settings (the gear icon) to see problems solved, languages tried, and recent activity. Everything stays on this device &mdash; no accounts, no cloud.</div>` +
         `</div>` +
-
         `<div class="welcome-step">` +
         `<span class="welcome-step-num">4</span>` +
-        `<div class="welcome-step-text"><strong>Explore.</strong> The Code tab has four programming languages. The Tutorial tab has guided lessons (more coming soon). There is no wrong way to learn.</div>` +
-        `</div>`;
+        `<div class="welcome-step-text"><strong>Explore.</strong> The Code tab has four programming languages. The Tutorial tab has guided lessons. The Docs tab has the full reference. There is no wrong way to learn.</div>` +
+        `</div>`
+    }
+];
 
-    document.getElementById('welcomeModal').style.display = 'flex';
+let _welcomeSlideIdx = 0;
 
-    const welcomeBody = body;
+function _getNextWelcomeSlide() {
+    const stored = parseInt(localStorage.getItem('church_welcome_slide') || '0', 10);
+    const next = isNaN(stored) ? 0 : (stored + 1) % WELCOME_SLIDES.length;
+    localStorage.setItem('church_welcome_slide', String(next));
+    return next;
+}
+
+function _renderWelcomeSlide(idx) {
+    const body = document.getElementById('welcomeBody');
+    const indicator = document.getElementById('welcomeSlideIndicator');
+    if (!body) return;
+    _welcomeSlideIdx = ((idx % WELCOME_SLIDES.length) + WELCOME_SLIDES.length) % WELCOME_SLIDES.length;
+    body.scrollTop = 0;
+    body.innerHTML = WELCOME_SLIDES[_welcomeSlideIdx].html;
+    if (indicator) indicator.textContent = `${_welcomeSlideIdx + 1} / ${WELCOME_SLIDES.length}`;
     const arrow = document.getElementById('welcomeScrollArrow');
-    if (welcomeBody && arrow) {
+    if (arrow) {
         const checkScroll = () => {
-            const gap = welcomeBody.scrollHeight - welcomeBody.scrollTop - welcomeBody.clientHeight;
+            const gap = body.scrollHeight - body.scrollTop - body.clientHeight;
             if (gap > 30) arrow.classList.remove('hidden');
             else arrow.classList.add('hidden');
         };
+        if (body._scrollHandler) body.removeEventListener('scroll', body._scrollHandler);
+        body._scrollHandler = checkScroll;
+        body.addEventListener('scroll', checkScroll);
         checkScroll();
-        welcomeBody._scrollHandler = checkScroll;
-        welcomeBody.addEventListener('scroll', checkScroll);
     }
+}
+
+function stepWelcomeSlide(dir) {
+    _renderWelcomeSlide(_welcomeSlideIdx + dir);
+    localStorage.setItem('church_welcome_slide', String(_welcomeSlideIdx));
+}
+
+function showWelcomePopup(force) {
+    if (POPUPS_DISABLED) return;
+    if (!force && !isWelcomeNeeded()) return;
+
+    const idx = force ? _welcomeSlideIdx : _getNextWelcomeSlide();
+    _renderWelcomeSlide(idx);
+    document.getElementById('welcomeModal').style.display = 'flex';
 }
 
 function closeWelcome() {
