@@ -142,7 +142,7 @@ The centralised OS did not detect and prevent any error. It generated an unbound
 
 ## 2024: The Church Machine — Completing What the PP250 Started
 
-The Church Machine begins where the PP250 left off, but with a deeper foundation.
+The Church Machine begins where the PP250 left off, but with a deeper foundation using [CLOOMC](https://sipantic.blogspot.com/2025/03/xx.html) (Capability-Limited/Object-Oriented/Machine-Code).
 
 The PP250 was a capability machine designed for telecom. It proved that full-immersion capability hardware works. But it was built for a specific domain, by a specific company, at a time when the broader industry was not ready to listen.
 
