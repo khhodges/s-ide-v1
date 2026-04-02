@@ -431,10 +431,19 @@
     </div>
 
     <div id="reference" class="view">
+        <div class="ref-tab-row">
+            <button class="ref-tab active" id="refTab-abstractions" onclick="switchRefTab('abstractions')">Abstractions &amp; Methods</button>
+            <button class="ref-tab" id="refTab-hardware" onclick="switchRefTab('hardware')">Hardware Architecture</button>
+        </div>
         <div class="ref-layout">
             <div class="ref-list-panel">
-                <div class="panel">
-                    <div class="panel-title">Instruction Set -- 20 Instructions</div>
+                <div class="panel" id="refPanel-abstractions">
+                    <div class="panel-title">Abstractions &amp; Methods</div>
+                    <div class="instr-domain-header">Concepts</div>
+                    <div id="instrListAbstractions" class="instr-list"></div>
+                </div>
+                <div class="panel" id="refPanel-hardware" style="display:none;">
+                    <div class="panel-title">Hardware Instruction Set &mdash; 20 Instructions</div>
                     <div class="instr-domain-header">Church Domain (10)</div>
                     <div id="instrListChurch" class="instr-list"></div>
                     <div class="instr-domain-header">Turing Domain (10 + shared RETURN)</div>
@@ -443,9 +452,9 @@
             </div>
             <div class="ref-detail-panel">
                 <div class="panel">
-                    <div class="panel-title" id="instrDetailTitle">Select an instruction</div>
+                    <div class="panel-title" id="instrDetailTitle">Select a concept or instruction</div>
                     <div id="instrDetailContent" class="instr-detail-content">
-                        <div class="instr-placeholder">Click any instruction on the left to see its format, encoding, permissions, flags, and usage examples.</div>
+                        <div class="instr-placeholder">Click any item on the left to see details.</div>
                     </div>
                 </div>
             </div>

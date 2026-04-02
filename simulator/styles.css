@@ -3682,11 +3682,38 @@ a.next-step-link:hover {
     box-shadow: 0 0 10px rgba(233, 69, 96, 0.4);
 }
 
+.ref-tab-row {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.4rem 0.75rem 0;
+    border-bottom: 1px solid rgba(218,165,32,0.2);
+    background: var(--bg-secondary);
+}
+
+.ref-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: var(--text-secondary);
+    padding: 0.35rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 4px 4px 0 0;
+    transition: color 0.15s, background 0.15s;
+}
+.ref-tab:hover { color: var(--text-primary); background: rgba(218,165,32,0.05); }
+.ref-tab.active {
+    color: var(--church-gold);
+    background: var(--bg-primary);
+    border-color: rgba(218,165,32,0.3);
+}
+
 .ref-layout {
     display: grid;
     grid-template-columns: 340px 1fr;
     gap: 1rem;
-    height: calc(100vh - 70px);
+    height: calc(100vh - 110px);
     overflow: hidden;
 }
 

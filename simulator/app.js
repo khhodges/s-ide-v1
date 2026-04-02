@@ -9560,11 +9560,290 @@ function _attachRefTip(card, brief) {
     card.addEventListener('mouseleave', _refTipHide);
 }
 
+const ABSTRACTION_DATA = [
+    {
+        id: 'abstraction',
+        name: 'Abstraction',
+        brief: 'A named, capability-gated execution unit occupying a namespace slot.',
+        detail: `An abstraction is the Church Machine's unit of software. Each abstraction occupies one namespace slot (slot 0 = boot, slot 1 = CLOOMC kernel, slots 2+ = user).
+
+Structure of an abstraction in memory (Thread Lump, typ=0x0A):
+  ┌───────────────────────────────────┐
+  │ Header[0]   typ | cc | reserved   │  ← base address (word 0)
+  │ Data Registers  DR0–DR15 (saved)  │
+  │ Heap ↓      cc words, bump alloc  │
+  │ Freespace   (grows/shrinks)       │
+  │ Stack ↑     LIFO, CALL/LAMBDA     │
+  │ C-List tail CR0–CR11 (12 words)   │
+  └───────────────────────────────────┘
+
+Entry: via CALL instruction through C-List slot holding an E-perm Golden Token pointing to the code lump.`,
+        example: `; Declare abstraction (CLOOMC JS syntax)
+abstraction Greeter {
+  capabilities { Family }
+  method Hello(name) {
+    call(Family.Send(name))
+    return(0)
+  }
+}`
+    },
+    {
+        id: 'method',
+        name: 'Method',
+        brief: 'A lambda-captured function stored in the C-List, invoked via CALL.',
+        detail: `A method is a LAMBDA closure stored as a Golden Token in the C-List.
+
+Lifecycle:
+  1. Compiler emits LAMBDA CRd, offset → creates closure GT with X-perm
+  2. Closure is stored in a C-List slot (SAVE instruction)
+  3. Caller invokes via CALL CRs, 0xF (direct E-perm) or ELOADCALL (load+call)
+  4. On entry: CR6 = callee c-list, CR14 = code region (X-only)
+  5. CHANGE swaps DR0–DR15 and CR6/CR14/CR15 between caller and callee
+  6. RETURN restores caller context
+
+Register conventions:
+  DR0–DR3   Arguments (DR0 = return value)
+  DR4–DR11  Callee-saved locals
+  DR12–DR15 Caller-saved temporaries`,
+        example: `; CLOOMC JS method call
+result = call(Memory.Allocate(size))
+
+; Compiles to:
+ELOADCALL CRd, [CR6, slot]   ; load + call in one instruction
+; or:
+LOAD CRd, [CR6, slot]        ; load closure GT
+CALL CRd, 0xF                ; call direct (E perm)`
+    },
+    {
+        id: 'golden-token',
+        name: 'Golden Token (GT)',
+        brief: 'A 128-bit unforgeable capability granting specific permissions to a resource.',
+        detail: `A Golden Token (GT) is a 128-bit value stored in a Context Register (CR).
+
+Layout (4 × 32-bit words):
+  word0 [31:24] perms  — R W X L S E B F (8 bits)
+  word0 [23:16] cc     — heap size in words (IDE-defined)
+  word0 [15:0]  version — revocation counter
+  word1 [31:0]  node   — memory address of the lump
+  word2 [31:0]  seal   — sealing key (0 = unsealed)
+  word3 [31:0]  sig    — CRC or integrity seal
+
+Permission bits:
+  R = DREAD   — read data words
+  W = DWRITE  — write data words
+  X = LAMBDA  — capture as closure
+  L = CALL    — invoke via C-List (loads CR6/CR14)
+  S = SAVE    — store GT into lump
+  E = CALL    — direct invocation (E-perm CALL)
+  B = boot    — present in boot C-List
+  F = freeze  — token cannot be further restricted
+
+Monotonic restriction: TPERM can only remove permissions, never add.
+Revocation: CHANGE with version bump invalidates all outstanding copies.`,
+        example: `; Check if GT has read permission (TPERM health-check form)
+TPERM CR0, #R        ; sets Z flag if CR0 has R perm
+BRANCH.NE fault      ; branch if no R perm
+
+; Restrict to read-only (TPERM restriction form)
+TPERM CR0, #R        ; keep only R bit — monotonic, irreversible`
+    },
+    {
+        id: 'clist',
+        name: 'C-List (Capability List)',
+        brief: 'The 12-word tail of a thread holding Golden Tokens CR0–CR11.',
+        detail: `Each thread has a C-List tail: 12 programmer-accessible Golden Token slots.
+
+Slots:
+  CR0   Result / first argument
+  CR1   Second argument
+  CR2   Third argument
+  CR3   Fourth argument
+  CR4   General purpose
+  CR5   General purpose
+  CR6   Current C-List base (set by CALL, read-only in CLOOMC)
+  CR7   General purpose
+  CR8   General purpose
+  CR9   General purpose
+  CR10  General purpose
+  CR11  General purpose
+
+Privileged zone (CR12–CR15) — hardware FAULT if used in most instructions:
+  CR12  Thread identity (priv, zero-perm, Inform-type)
+  CR13  Kernel reserved
+  CR14  Code region (X-only, set by CALL)
+  CR15  Stack / boot anchor
+
+The C-List is loaded at boot via mLoad(NS Slot 1, B-perm check).
+CALL updates CR6 and CR14. CHANGE swaps the full context.`,
+        example: `; Load a GT from C-List slot 3 into CR0
+LOAD CR0, [CR6, 3]
+
+; Save a GT from CR1 into slot 5 of target object
+SAVE [CR0, 5], CR1
+
+; Call abstraction via slot 2 in current C-List
+CALL CR6, 2          ; L perm required on slot 2`
+    },
+    {
+        id: 'thread',
+        name: 'Thread',
+        brief: 'The execution context: registers, stack, heap, and C-List tail in one lump.',
+        detail: `A thread is a single execution context managed by the CHANGE instruction.
+
+Memory layout (word 0 = base address, addresses increase downward):
+  [0]    Header word  typ=0x0A | cc (heap size) | reserved
+  [1–16] DR0–DR15     Saved data registers (32-bit each)
+  [17…]  Heap ↓       cc words; bump allocation; DR5 = frontier
+  [?]    Freespace    17+cc words to sp_max (IDE-defined)
+  [sp…]  Stack ↑      CALL frame: [E-GT · frame-word] (STO -= 2)
+                       LAMBDA frame: [frame-word] (STO -= 1)
+  [tail] C-List       CR0–CR11 (12 words, fixed tail)
+
+STO register = current stack top (word index).
+CHANGE saves current DRs into [1–16], loads new thread's DRs, swaps CR6/CR14/CR15.`,
+        example: `; CLOOMC compiler places locals in DR registers
+; On CALL, hardware saves DR0–DR15 in thread header
+; CHANGE instruction:
+CHANGE CR0, 1        ; switch to thread at CR0, use slot 1 for context`
+    },
+    {
+        id: 'namespace',
+        name: 'Namespace',
+        brief: 'The 192-slot address space. Each slot holds a Golden Token to an abstraction.',
+        detail: `The Namespace (NS) is the global directory of abstractions.
+
+Capacity: 192 slots (slots 0–191), each holding a 128-bit Golden Token.
+
+Reserved slots:
+  Slot 0   Boot microcode (6-step hardwired state machine, not a real code word)
+  Slot 1   CLOOMC kernel / thread manager
+
+User abstractions:
+  Slot 2+  IDE-assigned at compile time
+
+Boot sequence (B:00–B:05):
+  B:00  FAULT_RST — clear registers
+  B:01  LOAD_NS   — load namespace GT into CR15
+  B:02  mLoad CR12 from NS Slot 1 (Thread identity)
+  B:03  mLoad CR6  from NS Slot 1 (C-List)
+  B:04  mLoad CR14 from NS Slot 1 (Code region)
+  B:05  CALL into kernel entry point
+
+Access: LOAD/SAVE instructions using a namespace-scoped GT with L/S perm.`,
+        example: `; Assembly: load namespace entry for slot 3
+LOAD CR0, [CR15, 3]  ; CR15 = namespace base GT
+CALL CR0, 0xF        ; call directly (E perm)`
+    },
+    {
+        id: 'change',
+        name: 'CHANGE — Context Switch',
+        brief: 'Hardware thread switch: saves DR0–DR15, loads new thread context.',
+        detail: `CHANGE is the mechanism for both function calls and thread (abstraction) context switches.
+
+What CHANGE does:
+  1. Save DR0–DR15 into current thread header (words [1–16])
+  2. Load DR0–DR15 from new thread header
+  3. Swap CR6  (C-List pointer)
+  4. Swap CR14 (Code region pointer)
+  5. Swap CR15 (Stack/boot anchor)
+  6. Adjust STO for new thread
+
+When the compiler emits a CALL, it uses CHANGE internally.
+CHANGE enables capability-isolated context switching:
+  — The new thread runs in its own C-List (CR6)
+  — Code region is swapped (CR14)
+  — DR registers are fully saved and restored
+
+Syntax:  CHANGE CRd, imm     (imm = context-switch mode)`,
+        example: `; Hardware CHANGE during CALL:
+; 1. DR0–DR15 saved to current thread [1..16]
+; 2. New thread's DRs loaded
+; 3. CR6 = new C-List, CR14 = new code lump
+; RETURN undoes this`
+    },
+    {
+        id: 'switch',
+        name: 'SWITCH — Privilege Switch',
+        brief: 'Switch between privilege levels (ARCH → PROG → PRIV). Monotonic downward.',
+        detail: `SWITCH changes the privilege level of the current execution context.
+
+Privilege levels (monotonic — can only decrease):
+  ARCH  (0)  Full hardware access; set at boot
+  PROG  (1)  Normal abstraction code; no CR12–CR15 access
+  PRIV  (2)  Restricted; only safe operations
+
+SWITCH is monotonic: you can downgrade privilege but never upgrade within a thread.
+Upgrading requires a CALL into a higher-privilege abstraction via the C-List.
+
+Use cases:
+  — Boot firmware runs at ARCH; downgrades to PROG before entering user code
+  — Safety-critical sections can SWITCH to PRIV for isolation
+
+Syntax:  SWITCH CRs, imm     (imm = new privilege level)`,
+        example: `; Boot sequence downgrade after kernel init
+SWITCH CR15, #PROG   ; drop from ARCH to PROG before user CALL`
+    },
+];
+
+let _refActiveTab = 'abstractions';
+let _selectedAbstraction = null;
+
+function switchRefTab(tab) {
+    _refActiveTab = tab;
+    document.querySelectorAll('.ref-tab').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('refTab-' + tab);
+    if (btn) btn.classList.add('active');
+    document.getElementById('refPanel-abstractions').style.display = (tab === 'abstractions') ? '' : 'none';
+    document.getElementById('refPanel-hardware').style.display = (tab === 'hardware') ? '' : 'none';
+    const title = document.getElementById('instrDetailTitle');
+    const body = document.getElementById('instrDetailContent');
+    if (title) title.textContent = 'Select a concept or instruction';
+    if (body) body.innerHTML = '<div class="instr-placeholder">Click any item on the left to see details.</div>';
+}
+
+function showAbstractionDetail(id) {
+    _selectedAbstraction = id;
+    const item = ABSTRACTION_DATA.find(a => a.id === id);
+    if (!item) return;
+    renderReference();
+    const title = document.getElementById('instrDetailTitle');
+    const body = document.getElementById('instrDetailContent');
+    if (title) title.textContent = item.name;
+    if (!body) return;
+    body.innerHTML = `
+        <div class="instr-detail-section">
+            <div class="instr-detail-badge church">Abstraction Model</div>
+            <div class="instr-detail-desc">${item.brief}</div>
+        </div>
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Detail</div>
+            <pre class="instr-detail-text">${item.detail}</pre>
+        </div>
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Example</div>
+            <pre class="instr-detail-example">${item.example}</pre>
+        </div>
+    `;
+}
+
 function renderReference() {
     const churchList = document.getElementById('instrListChurch');
     const turingList = document.getElementById('instrListTuring');
-    if (!churchList || !turingList) return;
+    const absList = document.getElementById('instrListAbstractions');
 
+    if (absList) {
+        absList.innerHTML = '';
+        ABSTRACTION_DATA.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'instr-card' + (_selectedAbstraction === item.id ? ' active' : '');
+            card.innerHTML = `<span class="instr-mnemonic">${item.name}</span><span class="instr-brief">${item.brief}</span>`;
+            card.onclick = () => { _refTipHide(); showAbstractionDetail(item.id); };
+            _attachRefTip(card, item.brief);
+            absList.appendChild(card);
+        });
+    }
+
+    if (!churchList || !turingList) return;
     churchList.innerHTML = '';
     turingList.innerHTML = '';
 
@@ -9576,14 +9855,15 @@ function renderReference() {
             <span class="instr-mnemonic">${instr.mnemonic}</span>
             <span class="instr-brief">${instr.brief}</span>
         `;
-        card.onclick = () => { _refTipHide(); showInstructionDetail(instr.opcode); };
+        card.onclick = () => {
+            _refTipHide();
+            _selectedAbstraction = null;
+            if (_refActiveTab !== 'hardware') switchRefTab('hardware');
+            showInstructionDetail(instr.opcode);
+        };
         _attachRefTip(card, instr.brief);
-
-        if (instr.domain === 'church') {
-            churchList.appendChild(card);
-        } else {
-            turingList.appendChild(card);
-        }
+        if (instr.domain === 'church') churchList.appendChild(card);
+        else turingList.appendChild(card);
     });
 
     const returnCard = document.createElement('div');
@@ -9593,7 +9873,7 @@ function renderReference() {
         <span class="instr-mnemonic">RETURN</span>
         <span class="instr-brief">Shared \u2014 exit from Turing abstraction</span>
     `;
-    returnCard.onclick = () => { _refTipHide(); showInstructionDetail(3); };
+    returnCard.onclick = () => { _refTipHide(); _selectedAbstraction = null; showInstructionDetail(3); };
     _attachRefTip(returnCard, 'Shared \u2014 exit from Turing abstraction');
     turingList.appendChild(returnCard);
 }
@@ -9793,40 +10073,45 @@ const SYNTAX_REF = {
     assembly: {
         title: "Assembly Syntax Reference",
         sections: [
-            { heading: "Church Domain (Mind)", items: [
-                { syntax: "LOAD CRd, [CRs, <em>idx</em>]", desc: "Load Golden Token" },
-                { syntax: "SAVE [CRd, <em>idx</em>], CRs", desc: "Save Golden Token" },
-                { syntax: "CALL CRs, <em>off</em>", desc: "Enter abstraction via C-List (L perm, off 0–14) or direct (E perm, off=0xF)" },
-                { syntax: "RETURN", desc: "Return from abstraction" },
-                { syntax: "LAMBDA CRd, <em>offset</em>", desc: "Capture closure" },
-                { syntax: "SEAL CRd, CRs", desc: "Seal token" },
-                { syntax: "UNSEAL CRd, CRs", desc: "Unseal (S perm)" },
-                { syntax: "REVOKE <em>idx</em>", desc: "Revoke (bump version)" },
-                { syntax: "CMPSWP CRd, CRs, CRt", desc: "Atomic compare-swap" },
-                { syntax: "MINT CRd, <em>perms</em>", desc: "Create token" },
+            { heading: "Church Domain — Capability Instructions (opcodes 0–9)", items: [
+                { syntax: "LOAD CRd, [CRs, <em>idx</em>]", desc: "Load Golden Token from lump (R perm)" },
+                { syntax: "SAVE [CRd, <em>idx</em>], CRs", desc: "Save Golden Token into lump (S perm)" },
+                { syntax: "CALL CRs, <em>off</em>", desc: "Enter via C-List slot (L perm, off 0–14) or direct (E perm, off=0xF)" },
+                { syntax: "RETURN", desc: "Return from abstraction; restore caller context" },
+                { syntax: "CHANGE CRd, <em>imm</em>", desc: "Context switch — save/load DR0–DR15, swap CR6/CR14/CR15" },
+                { syntax: "SWITCH CRs, <em>imm</em>", desc: "Downgrade privilege level (ARCH→PROG→PRIV, monotonic)" },
+                { syntax: "TPERM CRd, <em>preset</em>", desc: "Health-check (sets Z) or restrict permissions (monotonic mask)" },
+                { syntax: "LAMBDA CRd, <em>offset</em>", desc: "Capture closure into CRd (offset=0x7FFF = immediate form)" },
+                { syntax: "ELOADCALL CRd, [CRs, <em>off</em>]", desc: "Load GT from lump then CALL in one instruction (E+L perm)" },
+                { syntax: "XLOADLAMBDA CRd, [CRs, <em>off</em>]", desc: "Load GT from lump then LAMBDA capture (X perm)" },
             ]},
-            { heading: "Turing Domain (Body)", items: [
-                { syntax: "DREAD DRd, [CRs, <em>off</em>]", desc: "Read data" },
-                { syntax: "DWRITE [CRd, <em>off</em>], DRs", desc: "Write data" },
-                { syntax: "IADD DRd, DRs, <em>imm</em>", desc: "Integer add" },
-                { syntax: "ISUB DRd, DRs, <em>imm</em>", desc: "Integer subtract" },
-                { syntax: "SHL DRd, DRs, <em>imm</em>", desc: "Shift left" },
-                { syntax: "SHR DRd, DRs, <em>imm</em>", desc: "Shift right" },
-                { syntax: "BFEXT DRd, DRs, <em>pos</em>, <em>w</em>", desc: "Bit field extract" },
-                { syntax: "BFINS DRd, DRs, <em>pos</em>, <em>w</em>", desc: "Bit field insert" },
-                { syntax: "MCMP DRa, DRb", desc: "Compare, set flags" },
-                { syntax: "BRANCH <em>cond</em>, <em>target</em>", desc: "Branch (AL/EQ/NE/LT/GE/GT/LE)" },
+            { heading: "Turing Domain — Data Instructions (opcodes 10–19)", items: [
+                { syntax: "DREAD DRd, [CRs, <em>off</em>]", desc: "Read 32-bit word from lump (R perm)" },
+                { syntax: "DWRITE [CRd, <em>off</em>], DRs", desc: "Write 32-bit word into lump (W perm)" },
+                { syntax: "BFEXT DRd, DRs, <em>pos</em>, <em>w</em>", desc: "Extract bit field [pos, pos+w) from DRs" },
+                { syntax: "BFINS DRd, DRs, <em>pos</em>, <em>w</em>", desc: "Insert bit field into DRd at [pos, pos+w)" },
+                { syntax: "MCMP DRa, DRb", desc: "Compare DRa vs DRb, set N/Z/C/V flags" },
+                { syntax: "BRANCH <em>cond</em>, <em>target</em>", desc: "Conditional branch (AL/EQ/NE/LT/GE/GT/LE)" },
+                { syntax: "IADD DRd, DRs, <em>imm</em>", desc: "DRd = DRs + sign_extend(imm)" },
+                { syntax: "ISUB DRd, DRs, <em>imm</em>", desc: "DRd = DRs − sign_extend(imm)" },
+                { syntax: "SHL DRd, DRs, <em>n</em>", desc: "Logical shift left by n" },
+                { syntax: "SHR DRd, DRs, <em>n</em>", desc: "Logical shift right by n" },
             ]},
             { heading: "Condition Codes", items: [
-                { syntax: ".EQ / .NE / .LT / .GE / .GT / .LE", desc: "Suffix any instruction" },
-                { syntax: "IADD.EQ DR0, DR1, 1", desc: "Conditional add (only if equal)" },
+                { syntax: ".AL .EQ .NE .LT .GE .GT .LE", desc: "Suffix any instruction (AL = always)" },
+                { syntax: "IADD.EQ DR0, DR1, 1", desc: "Add 1 only if Z flag set" },
+                { syntax: "LOAD.NE CR0, [CR1, 0]", desc: "Load only if not equal" },
             ]},
             { heading: "Registers", items: [
-                { syntax: "CR0\u2013CR11", desc: "Capability registers \u2014 programmer-accessible (Golden Tokens)" },
-                { syntax: "DR0\u2013DR15", desc: "Data registers (32-bit integers)" },
-                { syntax: "CR12\u2013CR15", desc: "Privileged \u2014 hardware FAULT if used in register fields (except CR14 in DREAD/DWRITE)" },
-                { syntax: "CR6",  desc: "C-list (L-only, set by CALL)" },
-                { syntax: "CR14", desc: "Code region (X-only, privileged, set by CALL)" },
+                { syntax: "CR0\u2013CR11", desc: "Programmer-accessible Golden Token slots (C-List)" },
+                { syntax: "DR0\u2013DR15", desc: "32-bit data registers; DR0 = arg/return; DR0 always 0 on read" },
+                { syntax: "CR12\u2013CR15", desc: "Privileged — FAULT if used in most fields; set by CALL/CHANGE" },
+                { syntax: "CR6",  desc: "C-List base (loaded by CALL from target c-list)" },
+                { syntax: "CR14", desc: "Code region GT (X-only; loaded by CALL from target code lump)" },
+            ]},
+            { heading: "Encoding (32-bit)", items: [
+                { syntax: "opcode[5] | cond[4] | dst[4] | src[4] | imm[15]", desc: "All instructions share this fixed-width format" },
+                { syntax: "0x00000000", desc: "NOP (opcode=0, LOAD with zero everything)" },
             ]},
         ]
     },
