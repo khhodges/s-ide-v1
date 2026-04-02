@@ -2,7 +2,7 @@
 
 ## What Is This Project?
 
-This project implements a simulator for Kenneth James Hamer-Hodges' **Church Machine** capability-based security architecture. The Church Machine is a hardware architecture that enforces failsafe security through **Golden Tokens** — unforgeable capability keys that mediate all access to system resources. Named after Alonzo Church and Alan Turing, the architecture integrates lambda calculus principles (controlled access through abstraction) with Turing's computational model (data processing and execution).
+This project is a **CLOOMC IDE** for Kenneth J Hamer-Hodges' **Church Machine** capability-based security architecture. It includes software design tools to build secure software abstractions each with their own calibrated MTBF, for Industrial Strength Computer Science, free from global cybercrime and Quantum Computer Crypto collapse.
 
 ---
 
