@@ -8647,7 +8647,7 @@ async function buildFPGAOnly() {
         }
         const doneTs = new Date().toLocaleTimeString();
         _buildLogAppend(`\n[${doneTs}] Build complete. Files saved on server:\n`);
-        (data.files || []).forEach(f => { _buildLogAppend(`  ✓ ${f}\n`); });
+        (data.file_paths || data.files || []).forEach(f => { _buildLogAppend(`  ✓ ${f}\n`); });
         _buildLogAppend('\nClick "Download FPGA Package" to download the ZIP.\n');
         _setBuildStatus('ok', `Build succeeded — ${boardLabel}`, boardLabel);
         _renderBuildFiles(data.files || [], isTi60);

@@ -738,8 +738,9 @@ def build_fpga():
             f.write(board)
 
         files = [os.path.basename(p) for p in paths.values() if os.path.isfile(p)]
+        file_paths = [p for p in paths.values() if os.path.isfile(p)]
         logging.info("FPGA build: synthesis complete, files=%s", files)
-        return jsonify({"ok": True, "board": board, "files": files})
+        return jsonify({"ok": True, "board": board, "files": files, "file_paths": file_paths})
 
     except subprocess.TimeoutExpired:
         return jsonify({"error": "Build timed out (120s limit)", "stderr": ""}), 500
