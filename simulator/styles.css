@@ -7221,6 +7221,184 @@ pre:hover .code-copy-btn {
     min-width: 200px;
 }
 
+.builder-view-tab-row {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.35rem 0.75rem 0;
+    border-bottom: 1px solid rgba(218,165,32,0.2);
+    background: var(--bg-secondary);
+}
+
+.builder-view-tab {
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: var(--text-secondary);
+    padding: 0.3rem 1rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 4px 4px 0 0;
+    transition: color 0.15s, background 0.15s;
+}
+.builder-view-tab:hover { color: var(--text-primary); background: rgba(218,165,32,0.05); }
+.builder-view-tab.active {
+    color: var(--church-gold);
+    background: var(--bg-primary);
+    border-color: rgba(218,165,32,0.3);
+}
+
+.build-details-panel {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 160px);
+    overflow: hidden;
+    padding: 0.75rem;
+    gap: 0.75rem;
+}
+
+.build-details-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.75rem;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.82rem;
+}
+
+.build-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+    flex-shrink: 0;
+    transition: background 0.3s;
+}
+.build-status-dot.idle    { background: var(--text-secondary); }
+.build-status-dot.running { background: #f0a020; animation: pulse-dot 0.8s ease-in-out infinite; }
+.build-status-dot.ok      { background: var(--church-green); }
+.build-status-dot.error   { background: var(--accent); }
+
+@keyframes pulse-dot {
+    0%,100% { opacity: 1; } 50% { opacity: 0.3; }
+}
+
+.build-status-label {
+    flex: 1;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.build-status-board {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--church-gold);
+    opacity: 0.85;
+}
+
+.build-details-body {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 0.75rem;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.build-details-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.build-details-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding-bottom: 0.2rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.build-log-area {
+    flex: 1;
+    background: #0d0d0d;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 0.6rem 0.8rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: #c8c8c8;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+    min-height: 0;
+}
+
+.build-file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.build-file-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    padding: 0.3rem 0.5rem;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-primary);
+}
+
+.build-file-icon {
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.build-file-empty {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 0.4rem 0;
+}
+
+.build-next-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.build-step-row {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.76rem;
+    color: var(--text-primary);
+    line-height: 1.4;
+    padding: 0.25rem 0;
+}
+
+.build-step-num {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--church-gold);
+    background: rgba(218,165,32,0.12);
+    border-radius: 3px;
+    padding: 1px 5px;
+    flex-shrink: 0;
+    align-self: flex-start;
+    margin-top: 1px;
+}
+
 .builder-export-btn {
     background: #2a6fdb !important;
     color: #fff !important;

@@ -340,7 +340,34 @@
                 <span id="hwBuildInfoText"></span>
             </div>
         </div>
+        <div class="builder-view-tab-row">
+            <button class="builder-view-tab active" id="builderViewTab-cyberspace" onclick="switchBuilderViewTab('cyberspace')">&#x2B21; Universal Cyberspace</button>
+            <button class="builder-view-tab" id="builderViewTab-buildlog" onclick="switchBuilderViewTab('buildlog')">&#x1F9F1; Build Details</button>
+        </div>
         <div id="builderView"></div>
+        <div id="buildDetailsPanel" style="display:none;" class="build-details-panel">
+            <div class="build-details-status-bar">
+                <span class="build-status-dot" id="buildStatusDot"></span>
+                <span class="build-status-label" id="buildStatusLabel">No build yet — click Build to synthesise RTL</span>
+                <span class="build-status-board" id="buildStatusBoard"></span>
+            </div>
+            <div class="build-details-body">
+                <div class="build-details-col">
+                    <div class="build-details-section-title">Build Log</div>
+                    <pre class="build-log-area" id="buildLogArea">Ready.</pre>
+                </div>
+                <div class="build-details-col build-details-col-right">
+                    <div class="build-details-section-title">Package Contents</div>
+                    <div class="build-file-list" id="buildFileList">
+                        <div class="build-file-empty">No build yet.</div>
+                    </div>
+                    <div class="build-details-section-title" style="margin-top:1rem;">Next Steps</div>
+                    <div class="build-next-steps" id="buildNextSteps">
+                        <div class="build-file-empty">Build first to see instructions.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="repl" class="view">

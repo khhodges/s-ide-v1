@@ -7478,6 +7478,72 @@ function getBoardLabel(board) {
     return 'Sipeed Tang Nano 20K';
 }
 
+function switchBuilderViewTab(tab) {
+    document.querySelectorAll('.builder-view-tab').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('builderViewTab-' + tab);
+    if (btn) btn.classList.add('active');
+    const cyberspace = document.getElementById('builderView');
+    const details = document.getElementById('buildDetailsPanel');
+    if (cyberspace) cyberspace.style.display = (tab === 'cyberspace') ? '' : 'none';
+    if (details) details.style.display = (tab === 'buildlog') ? '' : 'none';
+}
+
+function _setBuildStatus(state, label, board) {
+    const dot = document.getElementById('buildStatusDot');
+    const lbl = document.getElementById('buildStatusLabel');
+    const brd = document.getElementById('buildStatusBoard');
+    if (dot) { dot.className = 'build-status-dot ' + state; }
+    if (lbl) lbl.textContent = label;
+    if (brd && board) brd.textContent = board;
+}
+
+function _buildLogAppend(text) {
+    const area = document.getElementById('buildLogArea');
+    if (!area) return;
+    area.textContent += text;
+    area.scrollTop = area.scrollHeight;
+}
+
+function _buildLogSet(text) {
+    const area = document.getElementById('buildLogArea');
+    if (area) { area.textContent = text; area.scrollTop = 0; }
+}
+
+function _renderBuildFiles(files, isTi60) {
+    const list = document.getElementById('buildFileList');
+    if (!list) return;
+    if (!files || !files.length) {
+        list.innerHTML = '<div class="build-file-empty">No files reported.</div>';
+        return;
+    }
+    const iconMap = { v: '📄', edif: '🔌', il: '⚙️', json: '📋', cst: '📍', makefile: '🛠️', md: '📖' };
+    list.innerHTML = files.map(f => {
+        const ext = f.split('.').pop().toLowerCase();
+        const icon = iconMap[ext] || '📄';
+        return `<div class="build-file-row"><span class="build-file-icon">${icon}</span><span>${f}</span></div>`;
+    }).join('');
+}
+
+function _renderBuildNextSteps(isTi60) {
+    const el = document.getElementById('buildNextSteps');
+    if (!el) return;
+    const steps = isTi60 ? [
+        'Open Efinity IDE, create Titanium project (Ti60F225)',
+        'Add church_ti60_f225.v as source file',
+        'Interface Editor → Import ti60_f225.isf',
+        'Run Synthesis → P&R → Generate Bitstream',
+        'Program via Efinity Programmer (JTAG / USB)',
+    ] : [
+        'Install OSS CAD Suite (oss-cad-suite-build on GitHub)',
+        'Unzip the package, then run: make pnr pack',
+        'Connect Tang Nano 20K via USB',
+        'Run: make prog  — or use the Deploy to FPGA button',
+    ];
+    el.innerHTML = steps.map((s, i) =>
+        `<div class="build-step-row"><span class="build-step-num">${i + 1}</span><span>${s}</span></div>`
+    ).join('');
+}
+
 function initHardwareBuildPanel() {
     const sel = document.getElementById('hardwareBoardSel');
     if (sel) sel.value = getSelectedBoard();
@@ -8559,40 +8625,35 @@ async function buildFPGAOnly() {
     if (hwBtn) { hwBtn.disabled = true; hwBtn.innerHTML = '<span class="spinner"></span> Building...'; }
     if (dlBtn) dlBtn.disabled = true;
 
-    switchView('editor');
-    switchCodeTab('console');
-    const con = document.getElementById('editorConsole');
-    if (con) con.textContent = `Building FPGA RTL for ${boardLabel}...\nThis runs Amaranth elaboration + Yosys synthesis (typically 20–60 seconds).\n`;
+    switchView('builder');
+    switchBuilderViewTab('buildlog');
+
+    const ts = new Date().toLocaleTimeString();
+    _buildLogSet(`[${ts}] Building FPGA RTL for ${boardLabel}...\nRunning Amaranth elaboration + Yosys synthesis (typically 20–60 s).\n`);
+    _setBuildStatus('running', `Building ${boardLabel}…`, boardLabel);
+    document.getElementById('buildFileList').innerHTML = '<div class="build-file-empty">Building…</div>';
+    document.getElementById('buildNextSteps').innerHTML = '<div class="build-file-empty">Waiting for build…</div>';
 
     try {
         const resp = await fetch(`/api/build/fpga?board=${encodeURIComponent(board)}`);
         const data = await resp.json();
         if (!resp.ok || data.error) {
             const msg = data.error || `Server returned ${resp.status}`;
-            if (con) con.textContent += '\nFailed: ' + msg + (data.stderr ? '\n\n' + data.stderr : '') + '\n';
+            _buildLogAppend('\nFailed: ' + msg + (data.stderr ? '\n\n--- stderr ---\n' + data.stderr : '') + '\n');
+            _setBuildStatus('error', 'Build failed — see log', boardLabel);
             return;
         }
-        if (con) {
-            con.textContent += `\nBuild complete. Files saved on server:\n`;
-            (data.files || []).forEach(f => { con.textContent += `  ${f}\n`; });
-            con.textContent += '\nClick "Download FPGA Package" to download the ZIP.\n';
-            if (isTi60) {
-                con.textContent += '\nNext steps after download:\n';
-                con.textContent += '  1. Open Efinity IDE, create Titanium project (Ti60F225)\n';
-                con.textContent += '  2. Add church_ti60_f225.v as source\n';
-                con.textContent += '  3. Interface Editor -> Import ti60_f225.isf\n';
-                con.textContent += '  4. Run Synthesis -> P&R -> Generate Bitstream\n';
-                con.textContent += '  5. Program via Efinity Programmer (JTAG/USB)\n';
-            } else {
-                con.textContent += '\nNext steps after download:\n';
-                con.textContent += '  1. Install OSS CAD Suite (oss-cad-suite-build on GitHub)\n';
-                con.textContent += '  2. Run: make pnr pack\n';
-                con.textContent += '  3. Run: make prog  (or use Deploy to FPGA button)\n';
-            }
-        }
+        const doneTs = new Date().toLocaleTimeString();
+        _buildLogAppend(`\n[${doneTs}] Build complete. Files saved on server:\n`);
+        (data.files || []).forEach(f => { _buildLogAppend(`  ✓ ${f}\n`); });
+        _buildLogAppend('\nClick "Download FPGA Package" to download the ZIP.\n');
+        _setBuildStatus('ok', `Build succeeded — ${boardLabel}`, boardLabel);
+        _renderBuildFiles(data.files || [], isTi60);
+        _renderBuildNextSteps(isTi60);
         if (dlBtn) dlBtn.disabled = false;
     } catch (e) {
-        if (con) con.textContent += '\nError: ' + e.message + '\n';
+        _buildLogAppend('\nError: ' + e.message + '\n');
+        _setBuildStatus('error', 'Build error — see log', boardLabel);
     } finally {
         if (hwBtn) { hwBtn.disabled = false; hwBtn.textContent = 'Build'; }
     }
@@ -8608,10 +8669,10 @@ async function downloadFPGAPackage() {
     const btn = document.getElementById('btnFPGAPkg');
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Downloading...'; }
 
-    switchView('editor');
-    switchCodeTab('console');
-    const con = document.getElementById('editorConsole');
-    if (con) con.textContent = `Downloading FPGA package for ${boardLabel}...\n`;
+    switchView('builder');
+    switchBuilderViewTab('buildlog');
+    const ts = new Date().toLocaleTimeString();
+    _buildLogAppend(`\n[${ts}] Downloading FPGA package for ${boardLabel}...\n`);
 
     try {
         const resp = await fetch(`/api/download/fpga-zip?board=${encodeURIComponent(board)}`);
@@ -8621,9 +8682,9 @@ async function downloadFPGAPackage() {
                 const errData = await resp.json();
                 errMsg = errData.error || errMsg;
             } catch (_) {}
-            if (con) con.textContent += '\nFailed: ' + errMsg + '\n';
+            _buildLogAppend('\nFailed: ' + errMsg + '\n');
             if (errMsg.includes('No build found')) {
-                if (con) con.textContent += 'Run "Build" first to synthesise the RTL.\n';
+                _buildLogAppend('Run "Build" first to synthesise the RTL.\n');
             }
             return;
         }
@@ -8636,24 +8697,23 @@ async function downloadFPGAPackage() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        if (con) {
-            con.textContent += `Downloaded ${zipName} (${(blob.size / 1024).toFixed(0)} KB)\n`;
-            con.textContent += '\nContents:\n';
-            if (isTi60) {
-                con.textContent += '  church_ti60_f225.v    — Synthesisable Verilog\n';
-                con.textContent += '  church_ti60_f225.edif — Yosys EDIF netlist (synth_efinix)\n';
-                con.textContent += '  ti60_f225.isf         — Pin constraints (Efinity IDE)\n';
-                con.textContent += '  BUILD.md              — Instructions\n';
-            } else {
-                con.textContent += '  church_tang_nano_20k.v    — Synthesisable Verilog\n';
-                con.textContent += '  church_tang_nano_20k.json — Yosys netlist\n';
-                con.textContent += '  tang_nano_20k.cst         — Pin constraints\n';
-                con.textContent += '  Makefile                  — Build targets\n';
-                con.textContent += '  BUILD.md                  — Instructions\n';
-            }
+        const doneTs = new Date().toLocaleTimeString();
+        _buildLogAppend(`[${doneTs}] Downloaded ${zipName} (${(blob.size / 1024).toFixed(0)} KB)\n`);
+        _buildLogAppend('\nPackage contents:\n');
+        if (isTi60) {
+            _buildLogAppend('  church_ti60_f225.v    — Synthesisable Verilog\n');
+            _buildLogAppend('  church_ti60_f225.edif — Yosys EDIF netlist (synth_efinix)\n');
+            _buildLogAppend('  ti60_f225.isf         — Pin constraints (Efinity IDE)\n');
+            _buildLogAppend('  BUILD.md              — Instructions\n');
+        } else {
+            _buildLogAppend('  church_tang_nano_20k.v    — Synthesisable Verilog\n');
+            _buildLogAppend('  church_tang_nano_20k.json — Yosys netlist\n');
+            _buildLogAppend('  tang_nano_20k.cst         — Pin constraints\n');
+            _buildLogAppend('  Makefile                  — Build targets\n');
+            _buildLogAppend('  BUILD.md                  — Instructions\n');
         }
     } catch (e) {
-        if (con) con.textContent += '\nError: ' + e.message + '\n';
+        _buildLogAppend('\nError: ' + e.message + '\n');
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'Download FPGA Package'; }
     }
