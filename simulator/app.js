@@ -1027,9 +1027,6 @@ function updateFlagsDisplay() {
         <span class="cap-label">${cap.label}</span>`;
     }
     container.innerHTML = `
-        <button class="btn btn-success btn-sm" onclick="stepSim()">Step</button>
-        <button class="btn btn-info btn-sm" onclick="slowBoot()" ${sim.bootComplete ? 'disabled style="opacity:0.5"' : ''}>Boot</button>
-        <button class="btn btn-success btn-sm" onclick="runSim()">Run</button>
         <button class="btn btn-walk btn-sm" onclick="walkToggle()">${walkRunning ? 'Stop' : 'Walk'}</button>
         <button class="btn btn-warning btn-sm" onclick="faultClear()">Fault</button>
         <span class="flags-sep"></span>
