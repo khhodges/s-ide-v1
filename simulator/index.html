@@ -166,9 +166,6 @@
                         <button class="btn" onclick="saveUploadJSON()" style="background:#2a6fdb;color:#fff;border:none;" data-tooltip="Save Upload JSON — Compile and save the upload.json deployment file">Save Upload JSON</button>
                         <button class="btn" onclick="saveActiveUserTab()" id="btnSaveUserTab" disabled style="background:#1976d2;color:#fff;border:none;" data-tooltip="Save Program — Save the current user program (Ctrl+S)">Save Program</button>
                         <button class="btn btn-primary" onclick="showSaveToNamespace()" id="btnSaveNS" disabled data-tooltip="Save to NS — Save the assembled program as a namespace entry">Save to NS</button>
-                        <button class="btn btn-deploy" onclick="downloadHardwareImage()" data-tooltip="Download .bin — Download binary image for Tang Nano 20K hardware">Download .bin</button>
-                        <button class="btn btn-deploy" onclick="downloadFPGAPackage()" id="btnFPGAPkg" data-tooltip="Download FPGA Package — Verilog + synthesis + build files for Tang Nano 20K">Download FPGA Package</button>
-                        <button class="btn btn-deploy" onclick="uploadToTang()" data-tooltip="Deploy to FPGA — Upload to the selected FPGA board via WebSerial (Chrome/Edge)">Deploy to FPGA</button>
                     </div>
                 </div>
                 <div class="example-tabs-row">
@@ -335,6 +332,9 @@
                     <option value="ti60-f225">Efinix Ti60 F225</option>
                 </select>
                 <button class="btn btn-deploy" id="btnHWBuild" onclick="downloadFPGAPackage()" data-tooltip="Build &amp; Download — Run Amaranth elaboration + Yosys synthesis, then download the ZIP package">Build &amp; Download</button>
+                <button class="btn btn-deploy" id="btnFPGAPkg" onclick="downloadFPGAPackage()" data-tooltip="Download FPGA Package — Verilog + synthesis + build files for the selected board">Download FPGA Package</button>
+                <button class="btn btn-deploy" onclick="downloadHardwareImage()" data-tooltip="Download .bin — Download binary image for Tang Nano 20K hardware">Download .bin</button>
+                <button class="btn btn-deploy" onclick="uploadToTang()" data-tooltip="Deploy to FPGA — Upload to the selected FPGA board via WebSerial (Chrome/Edge)">Deploy to FPGA</button>
             </div>
             <div class="hardware-build-info" id="hardwareBuildInfo">
                 <span id="hwBuildInfoText"></span>
