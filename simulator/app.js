@@ -9835,7 +9835,7 @@ function renderReference() {
         absList.innerHTML = '';
         ABSTRACTION_DATA.forEach(item => {
             const card = document.createElement('div');
-            card.className = 'instr-card' + (_selectedAbstraction === item.id ? ' active' : '');
+            card.className = 'instr-card abs-card' + (_selectedAbstraction === item.id ? ' active' : '');
             card.innerHTML = `<span class="instr-mnemonic">${item.name}</span><span class="instr-brief">${item.brief}</span>`;
             card.onclick = () => { _refTipHide(); showAbstractionDetail(item.id); };
             _attachRefTip(card, item.brief);

@@ -3781,6 +3781,25 @@ a.next-step-link:hover {
     opacity: 0.75;
 }
 
+.instr-card.abs-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+}
+
+.instr-card.abs-card .instr-mnemonic {
+    white-space: normal;
+    line-height: 1.3;
+}
+
+.instr-card.abs-card .instr-brief {
+    white-space: normal;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    line-height: 1.3;
+}
+
 .instr-opcode {
     font-family: 'Courier New', monospace;
     font-size: 0.7rem;
