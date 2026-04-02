@@ -5170,6 +5170,65 @@ CALL CR2, 0xF          ; FAULT: direct mode but CR2 lacks E permission
 ; --- If we get here, something is broken ---
 HALT
 `,
+        'led_blink': `; ============================================
+; LED Blink — Ti60 F225 Nucleus Program
+; The exact code running on the real FPGA
+; ============================================
+;
+; This is the first abstraction ever executed
+; by the Church Machine on real silicon.
+;
+; The nucleus uses the Turing ISA's DWRITE to
+; toggle LED0 through a capability (CR3) loaded
+; from the c-list. No raw memory address is ever
+; touched — every I/O goes through a gate.
+;
+; Instruction summary:
+;   LOAD  CR3, CR6, 8   — capability lookup
+;   DWRITE DR, CRs, off — device write via gate
+;   IADD / ISUB / BRANCH — integer arithmetic
+;
+; On the FPGA (50 MHz): delay = 380 × 16383
+; ≈ 0.5 s per half-period → 1 Hz blink.
+; In the simulator: delay = 3 × 3 so you can
+; step through the whole loop interactively.
+;
+; Note: DWRITE may show a fault in the simulator
+; if the LED device is not mapped at slot 8 —
+; that is expected. On the FPGA it is wired.
+; ============================================
+
+; --- Load LED device capability into CR3 ---
+LOAD CR3, CR6, 8          ; c-list slot 8 = LED_DEV
+
+; --- DR1 = 1 (the "on" value) ---
+IADD DR1, DR0, #1
+
+; ── LED ON phase ─────────────────────────────
+led_on:
+DWRITE DR1, CR3, 0        ; LED0 = 1  (write 1 through gate)
+IADD DR3, DR0, #3         ; outer delay count  (FPGA: 380)
+outer_on:
+IADD DR2, DR0, #3         ; inner delay count  (FPGA: 16383)
+inner_on:
+ISUB DR2, DR2, #1
+BRANCHNE inner_on
+ISUB DR3, DR3, #1
+BRANCHNE outer_on
+
+; ── LED OFF phase ────────────────────────────
+DWRITE DR0, CR3, 0        ; LED0 = 0  (write 0 through gate)
+IADD DR3, DR0, #3
+outer_off:
+IADD DR2, DR0, #3
+inner_off:
+ISUB DR2, DR2, #1
+BRANCHNE inner_off
+ISUB DR3, DR3, #1
+BRANCHNE outer_off
+
+BRANCH led_on             ; loop forever
+`,
         'bind_attack': `; ============================================
 ; ADVERSARIAL TEST: B-Bit Enforcement
 ; Tests TWO security boundaries:
@@ -10276,7 +10335,7 @@ function onLangChange(restoring) {
 
     const langExampleGroups = {
         english: ['cloomc_english_hello', 'cloomc_english_counter'],
-        assembly: ['ada_note_g', 'selftest', 'load_save', 'bernoulli', 'conditional', 'gc_test', 'turing_test', 'salvation', 'perm_attack', 'bind_attack'],
+        assembly: ['ada_note_g', 'selftest', 'load_save', 'bernoulli', 'conditional', 'gc_test', 'turing_test', 'led_blink', 'salvation', 'perm_attack', 'bind_attack'],
         javascript: ['cloomc_hello', 'cloomc_string', 'cloomc_memory', 'cloomc_heap', 'cloomc_counter', 'cloomc_sliderule'],
         haskell: ['cloomc_church_math', 'cloomc_church_pair', 'cloomc_church_case', 'cloomc_church_lambda', 'cloomc_sliderule_hs'],
         symbolic: ['cloomc_ada_note_g'],
