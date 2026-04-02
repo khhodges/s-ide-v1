@@ -97,6 +97,26 @@
 
     <div id="dashboard" class="view active">
         <div id="flagsDisplay" class="flags-bar"></div>
+        <div id="hwLedBar" class="hw-led-bar">
+            <span class="hw-led-label">Ti60 F225</span>
+            <div class="hw-led-item">
+                <div class="hw-led hw-led-green" id="hw-led0"></div>
+                <span class="hw-led-name">LED0<br><span class="hw-led-role">Boot</span></span>
+            </div>
+            <div class="hw-led-item">
+                <div class="hw-led hw-led-red" id="hw-led1"></div>
+                <span class="hw-led-name">LED1<br><span class="hw-led-role">Run</span></span>
+            </div>
+            <div class="hw-led-item">
+                <div class="hw-led hw-led-green" id="hw-led2"></div>
+                <span class="hw-led-name">LED2<br><span class="hw-led-role">Fault</span></span>
+            </div>
+            <div class="hw-led-item">
+                <div class="hw-led hw-led-green" id="hw-led3"></div>
+                <span class="hw-led-name">LED3<br><span class="hw-led-role">Done</span></span>
+            </div>
+            <span class="hw-led-hint">← DWRITE CR3[0]</span>
+        </div>
         <div class="dash-tabs">
             <button onclick="switchDashTab('cr')" class="dash-tab active" id="dashTab-cr" data-tooltip="Context Registers — View all 16 context registers (128-bit, 4 words each)">Context Registers</button>
             <button onclick="switchDashTab('dr')" class="dash-tab" id="dashTab-dr" data-tooltip="Data Registers — View all 16 data registers (32-bit values, DR0 = zero)">Data Registers</button>

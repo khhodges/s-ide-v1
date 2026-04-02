@@ -455,6 +455,13 @@ function updateLedStrip() {
     if (bitsEl) {
         bitsEl.textContent = '0b' + bits.toString(2).padStart(6, '0') + ' = ' + bits;
     }
+
+    for (let i = 0; i < 4; i++) {
+        const hwEl = document.getElementById('hw-led' + i);
+        if (!hwEl) continue;
+        const lit = !!((bits >> i) & 1);
+        hwEl.classList.toggle('on', lit);
+    }
 }
 
 function copyLedAssembly() {
@@ -5180,23 +5187,24 @@ HALT
 ; Ti60 F225 FPGA. It produces the 1 Hz LED
 ; blink you can see on the board right now.
 ;
-; WHY IT DIFFERS FROM THE SIMULATOR:
-; The hardware NUC_PROGRAM operates at bare
-; metal — it uses the DEMO_CLIST (not NS) and
-; writes directly to an MMIO address via DWRITE.
+; HOW TO WATCH THIS IN THE SIMULATOR:
+; 1. Switch to the Dashboard view (top nav bar).
+; 2. Watch the Ti60 F225 LED strip — LED0 (green)
+;    and LED1 (red) respond to each DWRITE.
+; 3. Use Step to advance one instruction at a time
+;    and see the hardware LEDs toggle in sync.
 ;
-;   Hardware path (this code):
-;     LOAD CR3, CR6, 8    ; DEMO_CLIST[8] = LED_DEV
-;     DWRITE DR1, CR3, 0  ; raw MMIO write @ 0x40000000
+; NOTE: DWRITE requires C-List slot 8 = LED_DEV.
+; Once Task #64 is merged, this code runs in the
+; simulator identically to the FPGA.
 ;
-;   Simulator path (NS-based LED abstraction):
-;     LOAD CR1, NS[12]    ; Namespace slot 12 = LED
-;     SAVE CR1, DR0       ; S-perm device write
+; Hardware path (this code):
+;   LOAD CR3, CR6, 8    ; DEMO_CLIST[8] = LED_DEV
+;   DWRITE DR1, CR3, 0  ; MMIO write @ 0x40000000
 ;
-; The simulator will FAULT at DWRITE because
-; DEMO_CLIST[8] (bare MMIO) doesn't exist there.
-; See the LED snippets in the autocomplete panel
-; for the simulator-runnable version.
+; Simulator-only alternative (works today):
+;   LOAD CR1, NS[12]    ; Namespace slot 12 = LED
+;   SAVE CR1, DR0       ; S-perm device write
 ;
 ; On the FPGA (50 MHz): 380 × 16383 iters ≈ 0.5 s
 ; per phase → 1 Hz blink total.
