@@ -261,6 +261,23 @@ class ChurchSimulator {
         }
         this.nsClistMap[2] = clistChildren;
 
+        // DEMO_CLIST hardware alignment: override C-List slots 8–11 with device GTs so
+        // hardware code "LOAD CR3, CR6, 8" picks up the LED device, exactly as on Ti60 F225.
+        //   [8] = LED_DEV   (W)   → NS slot 12 (LED)
+        //   [9] = UART_DEV  (R|W) → NS slot 11 (UART)
+        //  [10] = BTN_DEV   (R)   → NS slot 13 (Button)
+        //  [11] = TIMER_DEV (R|W) → NS slot 14 (Timer)
+        const HW_DEVICE_SLOTS = [
+            { nsIdx: 12, perms: {R:0,W:1,X:0,L:0,S:0,E:0} }, // [8]  LED
+            { nsIdx: 11, perms: {R:1,W:1,X:0,L:0,S:0,E:0} }, // [9]  UART
+            { nsIdx: 13, perms: {R:1,W:0,X:0,L:0,S:0,E:0} }, // [10] Button
+            { nsIdx: 14, perms: {R:1,W:1,X:0,L:0,S:0,E:0} }, // [11] Timer
+        ];
+        for (let i = 0; i < HW_DEVICE_SLOTS.length; i++) {
+            const d = HW_DEVICE_SLOTS[i];
+            clistGTs[8 + i] = this.createGT(0, d.nsIdx, d.perms, 1);
+        }
+
         const bootAbstrLoc = 2 * this.SLOT_SIZE;
         const bootAllocSize = this.SLOT_SIZE;
         const bootClistCount = clistGTs.length;
@@ -983,7 +1000,7 @@ class ChurchSimulator {
             this.fault(check.fault, `LOAD: CR${d.crSrc}: ${check.message}`);
             return null;
         }
-        const clistLoc = check.entry.word0_location;
+        const clistLoc = this.cr[d.crSrc].word1;
         const slotGT = this.memory[clistLoc + d.imm] || 0;
         if (slotGT === 0) {
             this.fault('NULL_CAP', `LOAD: c-list offset ${d.imm} is empty (NULL GT)`);
@@ -1054,7 +1071,7 @@ class ChurchSimulator {
             }
         }
 
-        const clistLoc = clistCheck.entry.word0_location;
+        const clistLoc = this.cr[d.crSrc].word1;
         this.memory[clistLoc + d.imm] = srcGT;
         const srcParsed = saveCheck.parsed;
         const clistIdx = clistCheck.parsed.index;
@@ -1716,8 +1733,22 @@ class ChurchSimulator {
         }
         const value = this.dr[drIdx] >>> 0;
         this.memory[loc + offset] = value;
+
+        // Route device writes to simulated hardware peripherals
+        const devNsIdx = check.index;
+        if (devNsIdx === 12) {
+            // LED_DEV — update Dashboard hardware LED strip (bits 0–3 → LED0–LED3)
+            this.ledBits = value & 0x3F;
+            this.ledMode = 'program';
+        }
+
         const label = this.nsLabels[check.index] || 'data';
-        const desc = `DWRITE DR${drIdx}, [CR${d.crSrc} + ${offset}] <- 0x${value.toString(16).toUpperCase().padStart(8,'0')} (${label})`;
+        const devTag = devNsIdx === 12 ? ` [→ LED hardware: 0b${(value & 0x3F).toString(2).padStart(4,'0')}]`
+                     : devNsIdx === 11 ? ' [→ UART hardware]'
+                     : devNsIdx === 13 ? ' [→ BTN hardware]'
+                     : devNsIdx === 14 ? ' [→ TIMER hardware]'
+                     : '';
+        const desc = `DWRITE DR${drIdx}, [CR${d.crSrc} + ${offset}] <- 0x${value.toString(16).toUpperCase().padStart(8,'0')} (${label})${devTag}`;
         this.output += desc + '\n';
         this.pc++;
         return { pc: this.pc - 1, instr: d, desc, pipeline: [
@@ -1832,33 +1863,47 @@ class ChurchSimulator {
 
     _execIadd(d) {
         const drA = d.crSrc;
-        const drB = d.imm & 0xF;
         const a = this.dr[drA] >>> 0;
-        const b = this.dr[drB] >>> 0;
+        let b, bDesc;
+        if (d.imm & 0x4000) {
+            b = (d.imm & 0x3FFF) >>> 0;
+            bDesc = `#${b}`;
+        } else {
+            const drB = d.imm & 0xF;
+            b = this.dr[drB] >>> 0;
+            bDesc = `DR${drB}`;
+        }
         const result = a + b;
         this._setAddFlags(a, b, result);
         this.dr[d.crDst] = result >>> 0;
-        const desc = `IADD DR${d.crDst}, DR${drA}, DR${drB} -> ${a} + ${b} = ${result >>> 0} [Z=${this.flags.Z?1:0} N=${this.flags.N?1:0} C=${this.flags.C?1:0} V=${this.flags.V?1:0}]`;
+        const desc = `IADD DR${d.crDst}, DR${drA}, ${bDesc} -> ${a} + ${b} = ${result >>> 0} [Z=${this.flags.Z?1:0} N=${this.flags.N?1:0} C=${this.flags.C?1:0} V=${this.flags.V?1:0}]`;
         this.output += desc + '\n';
         this.pc++;
         return { pc: this.pc - 1, instr: d, desc, pipeline: [
-            { stage: 'IADD', desc: `DR${d.crDst} = DR${drA} + DR${drB}`, status: 'pass' },
+            { stage: 'IADD', desc: `DR${d.crDst} = DR${drA} + ${bDesc}`, status: 'pass' },
         ]};
     }
 
     _execIsub(d) {
         const drA = d.crSrc;
-        const drB = d.imm & 0xF;
         const a = this.dr[drA] >>> 0;
-        const b = this.dr[drB] >>> 0;
+        let b, bDesc;
+        if (d.imm & 0x4000) {
+            b = (d.imm & 0x3FFF) >>> 0;
+            bDesc = `#${b}`;
+        } else {
+            const drB = d.imm & 0xF;
+            b = this.dr[drB] >>> 0;
+            bDesc = `DR${drB}`;
+        }
         const result = a - b;
         this._setSubFlags(a, b, result);
         this.dr[d.crDst] = result >>> 0;
-        const desc = `ISUB DR${d.crDst}, DR${drA}, DR${drB} -> ${a} - ${b} = ${result >>> 0} [Z=${this.flags.Z?1:0} N=${this.flags.N?1:0} C=${this.flags.C?1:0} V=${this.flags.V?1:0}]`;
+        const desc = `ISUB DR${d.crDst}, DR${drA}, ${bDesc} -> ${a} - ${b} = ${result >>> 0} [Z=${this.flags.Z?1:0} N=${this.flags.N?1:0} C=${this.flags.C?1:0} V=${this.flags.V?1:0}]`;
         this.output += desc + '\n';
         this.pc++;
         return { pc: this.pc - 1, instr: d, desc, pipeline: [
-            { stage: 'ISUB', desc: `DR${d.crDst} = DR${drA} - DR${drB}`, status: 'pass' },
+            { stage: 'ISUB', desc: `DR${d.crDst} = DR${drA} - ${bDesc}`, status: 'pass' },
         ]};
     }
 

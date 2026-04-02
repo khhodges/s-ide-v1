@@ -213,13 +213,29 @@ class ChurchAssembler {
             case 15: {
                 crDst = this._parseDR(parts[1], lineNum);
                 crSrc = this._parseDR(parts[2], lineNum);
-                imm = this._parseDR(parts[3], lineNum);
+                {
+                    const p3 = (parts[3] || '').replace(/,/g, '').trim();
+                    if (p3.startsWith('#')) {
+                        const immVal = parseInt(p3.substring(1), 10);
+                        imm = 0x4000 | ((isNaN(immVal) ? 0 : immVal) & 0x3FFF);
+                    } else {
+                        imm = this._parseDR(parts[3], lineNum);
+                    }
+                }
                 break;
             }
             case 16: {
                 crDst = this._parseDR(parts[1], lineNum);
                 crSrc = this._parseDR(parts[2], lineNum);
-                imm = this._parseDR(parts[3], lineNum);
+                {
+                    const p3 = (parts[3] || '').replace(/,/g, '').trim();
+                    if (p3.startsWith('#')) {
+                        const immVal = parseInt(p3.substring(1), 10);
+                        imm = 0x4000 | ((isNaN(immVal) ? 0 : immVal) & 0x3FFF);
+                    } else {
+                        imm = this._parseDR(parts[3], lineNum);
+                    }
+                }
                 break;
             }
             case 17: {
@@ -365,8 +381,8 @@ class ChurchAssembler {
                 return `${mnemonic} DR${crDst}, [CR${crSrc}], pos=${pos}, w=${width}`;
             }
             case 14: return `${mnemonic} DR${crDst}, DR${crSrc}`;
-            case 15: return `${mnemonic} DR${crDst}, DR${crSrc}, DR${imm & 0xF}`;
-            case 16: return `${mnemonic} DR${crDst}, DR${crSrc}, DR${imm & 0xF}`;
+            case 15: return (imm & 0x4000) ? `${mnemonic} DR${crDst}, DR${crSrc}, #${imm & 0x3FFF}` : `${mnemonic} DR${crDst}, DR${crSrc}, DR${imm & 0xF}`;
+            case 16: return (imm & 0x4000) ? `${mnemonic} DR${crDst}, DR${crSrc}, #${imm & 0x3FFF}` : `${mnemonic} DR${crDst}, DR${crSrc}, DR${imm & 0xF}`;
             case 17: {
                 const soff = (imm & 0x4000) ? (imm | 0xFFFF8000) : imm;
                 return `${mnemonic} ${soff >= 0 ? '+' : ''}${soff}`;

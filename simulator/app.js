@@ -5186,30 +5186,25 @@ HALT
 ; blink you can see on the board right now.
 ;
 ; HOW TO WATCH THIS IN THE SIMULATOR:
-; 1. Switch to the Dashboard view (top nav bar).
-; 2. Watch the Ti60 F225 LED strip — LED0 (green)
-;    and LED1 (red) respond to each DWRITE.
-; 3. Use Step to advance one instruction at a time
-;    and see the hardware LEDs toggle in sync.
+; 1. Boot the machine (click Boot, or Step x6).
+; 2. Assemble this code, then click Step.
+; 3. Switch to Dashboard — watch the Ti60 F225
+;    LED strip: LED0 (green) toggles with each
+;    DWRITE, exactly as on the physical board.
 ;
-; NOTE: DWRITE requires C-List slot 8 = LED_DEV.
-; Once Task #64 is merged, this code runs in the
-; simulator identically to the FPGA.
+; Path: LOAD CR3, CR6, 8  → loads LED_DEV GT
+;       DWRITE DR1, CR3, 0 → LED0 on
+;       DWRITE DR0, CR3, 0 → LED0 off
 ;
-; Hardware path (this code):
-;   LOAD CR3, CR6, 8    ; DEMO_CLIST[8] = LED_DEV
-;   DWRITE DR1, CR3, 0  ; MMIO write @ 0x40000000
-;
-; Simulator-only alternative (works today):
-;   LOAD CR1, NS[12]    ; Namespace slot 12 = LED
-;   SAVE CR1, DR0       ; S-perm device write
+; C-List[8] = LED_DEV (W) in the simulator boot,
+; so this code runs identically to the FPGA.
 ;
 ; On the FPGA (50 MHz): 380 × 16383 iters ≈ 0.5 s
 ; per phase → 1 Hz blink total.
 ; ============================================
 
-; --- Load LED MMIO capability from DEMO_CLIST ---
-LOAD CR3, CR6, 8          ; DEMO_CLIST[8] = LED_DEV (hardware only)
+; --- Load LED device capability from C-List slot 8 ---
+LOAD CR3, CR6, 8          ; C-List[8] = LED_DEV (W-perm, NS slot 12)
 
 ; --- DR1 = 1 (the "on" value) ---
 IADD DR1, DR0, #1
