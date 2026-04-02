@@ -642,6 +642,9 @@ def _fpga_paths(board):
             "verilog": os.path.join(build_dir, "church_ti60_f225.v"),
             "edif":    os.path.join(build_dir, "church_ti60_f225.edif"),
             "isf":     os.path.join(hw_dir,    "ti60_f225.isf"),
+            "project": os.path.join(hw_dir,    "ti60_f225_project.xml"),
+            "peri":    os.path.join(hw_dir,    "ti60_f225.peri.xml"),
+            "sdc":     os.path.join(hw_dir,    "ti60_f225.sdc"),
         }
         zip_name = "church-ti60-package.zip"
         build_md = BUILD_MD_TI60
@@ -674,10 +677,19 @@ def _make_fpga_zip(is_ti60, paths, zip_name, build_md):
     hw_dir = os.path.join(BASE_DIR, "hardware")
     buf = io.BytesIO()
     if is_ti60:
+        with open(paths["project"], 'r') as f:
+            project_xml = f.read()
+        # Fix path so all files sit in the same flat directory
+        project_xml = project_xml.replace(
+            '../build/church_ti60_f225.v', 'church_ti60_f225.v'
+        )
         with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
             zf.write(paths["verilog"], "church_ti60_f225.v")
             zf.write(paths["edif"],    "church_ti60_f225.edif")
             zf.write(paths["isf"],     "ti60_f225.isf")
+            zf.writestr("church_ti60_f225.xml",      project_xml)
+            zf.write(paths["peri"],    "church_ti60_f225.peri.xml")
+            zf.write(paths["sdc"],     "church_ti60_f225.sdc")
             zf.writestr("BUILD.md", build_md)
     else:
         json_path = paths["json"]
