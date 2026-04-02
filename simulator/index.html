@@ -331,10 +331,10 @@
                     <option value="tang-nano-20k">Sipeed Tang Nano 20K (Gowin GW2AR-18)</option>
                     <option value="ti60-f225">Efinix Ti60 F225</option>
                 </select>
-                <button class="btn btn-deploy" id="btnHWBuild" onclick="downloadFPGAPackage()" data-tooltip="Build &amp; Download — Run Amaranth elaboration + Yosys synthesis, then download the ZIP package">Build &amp; Download</button>
-                <button class="btn btn-deploy" id="btnFPGAPkg" onclick="downloadFPGAPackage()" data-tooltip="Download FPGA Package — Verilog + synthesis + build files for the selected board">Download FPGA Package</button>
-                <button class="btn btn-deploy" onclick="downloadHardwareImage()" data-tooltip="Download .bin — Download binary image for Tang Nano 20K hardware">Download .bin</button>
-                <button class="btn btn-deploy" onclick="uploadToTang()" data-tooltip="Deploy to FPGA — Upload to the selected FPGA board via WebSerial (Chrome/Edge)">Deploy to FPGA</button>
+                <button class="btn btn-deploy" id="btnHWBuild" onclick="buildFPGAOnly()" data-tooltip="Build — Run Amaranth elaboration + Yosys synthesis and save RTL artifacts to server">Build</button>
+                <button class="btn btn-deploy" id="btnFPGAPkg" onclick="downloadFPGAPackage()" data-tooltip="Download FPGA Package — Download the last-built Verilog + netlist + constraints ZIP">Download FPGA Package</button>
+                <button class="btn btn-deploy" onclick="downloadHardwareImage()" data-tooltip="Download .bin — Download binary memory image from the current simulator state">Download .bin</button>
+                <button class="btn btn-deploy" onclick="uploadToTang()" data-tooltip="Deploy to FPGA — Upload .bin to the selected FPGA board via WebSerial (Chrome/Edge)">Deploy to FPGA</button>
             </div>
             <div class="hardware-build-info" id="hardwareBuildInfo">
                 <span id="hwBuildInfoText"></span>

@@ -631,40 +631,83 @@ Then import the EDIF into Efinity for P&R.
 """
 
 
-@app.route("/api/download/fpga-package")
-def download_fpga_package():
-    hw_dir = os.path.join(BASE_DIR, "hardware")
+def _fpga_paths(board):
+    """Return (is_ti60, paths_dict, zip_name, build_md) for the given board slug."""
     build_dir = os.path.join(BASE_DIR, "build")
-
-    board = request.args.get("board", "tang-nano-20k").strip().lower()
+    hw_dir = os.path.join(BASE_DIR, "hardware")
     is_ti60 = (board == "ti60-f225")
+    if is_ti60:
+        paths = {
+            "rtlil":   os.path.join(build_dir, "church_ti60_f225.il"),
+            "verilog": os.path.join(build_dir, "church_ti60_f225.v"),
+            "edif":    os.path.join(build_dir, "church_ti60_f225.edif"),
+            "isf":     os.path.join(hw_dir,    "ti60_f225.isf"),
+        }
+        zip_name = "church-ti60-package.zip"
+        build_md = BUILD_MD_TI60
+        gen_args = ["python3", "-m", "hardware.gen_rtlil", "build", "--ti60"]
+        synth_cmd_tpl = (
+            "read_rtlil {rtlil}; "
+            "synth_efinix -top top -edif {edif}; "
+            "write_verilog {verilog}"
+        )
+    else:
+        paths = {
+            "rtlil":   os.path.join(build_dir, "church_tang_nano_20k.il"),
+            "verilog": os.path.join(build_dir, "church_tang_nano_20k.v"),
+            "json":    os.path.join(build_dir, "church_tang_nano_20k.json"),
+            "cst":     os.path.join(hw_dir,    "tang_nano_20k.cst"),
+            "makefile":os.path.join(hw_dir,    "Makefile"),
+        }
+        zip_name = "church-nano-package.zip"
+        build_md = BUILD_MD_TANG
+        gen_args = ["python3", "-m", "hardware.gen_rtlil", "build"]
+        synth_cmd_tpl = (
+            "read_rtlil {rtlil}; "
+            "synth_gowin -top top -json {json} -vout {verilog}"
+        )
+    return is_ti60, paths, zip_name, build_md, gen_args, synth_cmd_tpl
+
+
+def _make_fpga_zip(is_ti60, paths, zip_name, build_md):
+    """Zip up already-built FPGA artifacts and return (BytesIO, zip_name)."""
+    hw_dir = os.path.join(BASE_DIR, "hardware")
+    buf = io.BytesIO()
+    if is_ti60:
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+            zf.write(paths["verilog"], "church_ti60_f225.v")
+            zf.write(paths["edif"],    "church_ti60_f225.edif")
+            zf.write(paths["isf"],     "ti60_f225.isf")
+            zf.writestr("BUILD.md", build_md)
+    else:
+        json_path = paths["json"]
+        with open(json_path, 'r') as f:
+            json_text = f.read()
+        json_text = json_text.replace('"speed": "ES"', '"speed": "C8"')
+        with open(json_path, 'w') as f:
+            f.write(json_text)
+        logging.info("FPGA zip: patched JSON speed grade (ES -> C8)")
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+            zf.write(paths["verilog"],  "church_tang_nano_20k.v")
+            zf.write(json_path,         "church_tang_nano_20k.json")
+            zf.write(paths["cst"],      "tang_nano_20k.cst")
+            zf.write(paths["makefile"], "Makefile")
+            zf.writestr("BUILD.md", build_md)
+    return buf, zip_name
+
+
+@app.route("/api/build/fpga")
+def build_fpga():
+    """Run Amaranth elaboration + Yosys synthesis. Save artifacts to build/. Return JSON status."""
+    build_dir = os.path.join(BASE_DIR, "build")
+    board = request.args.get("board", "tang-nano-20k").strip().lower()
+    is_ti60, paths, zip_name, build_md, gen_args, synth_cmd_tpl = _fpga_paths(board)
 
     try:
         os.makedirs(build_dir, exist_ok=True)
 
-        if is_ti60:
-            rtlil_path = os.path.join(build_dir, "church_ti60_f225.il")
-            verilog_path = os.path.join(build_dir, "church_ti60_f225.v")
-            edif_path = os.path.join(build_dir, "church_ti60_f225.edif")
-            gen_args = ["python3", "-m", "hardware.gen_rtlil", "build", "--ti60"]
-            zip_name = "church-ti60-package.zip"
-            build_md = BUILD_MD_TI60
-            logging.info("FPGA package: target = Ti60 F225")
-        else:
-            rtlil_path = os.path.join(build_dir, "church_tang_nano_20k.il")
-            verilog_path = os.path.join(build_dir, "church_tang_nano_20k.v")
-            json_path = os.path.join(build_dir, "church_tang_nano_20k.json")
-            gen_args = ["python3", "-m", "hardware.gen_rtlil", "build"]
-            zip_name = "church-nano-package.zip"
-            build_md = BUILD_MD_TANG
-            logging.info("FPGA package: target = Tang Nano 20K")
-
-        logging.info("FPGA package: generating RTLIL from Amaranth...")
-        gen_result = subprocess.run(
-            gen_args,
-            cwd=BASE_DIR,
-            capture_output=True, text=True, timeout=120
-        )
+        logging.info("FPGA build: generating RTLIL from Amaranth (board=%s)...", board)
+        gen_result = subprocess.run(gen_args, cwd=BASE_DIR, capture_output=True, text=True, timeout=120)
         if gen_result.returncode != 0:
             return jsonify({
                 "error": "Amaranth RTLIL generation failed",
@@ -672,28 +715,14 @@ def download_fpga_package():
                 "stdout": gen_result.stdout[-1000:] if gen_result.stdout else ""
             }), 500
 
-        if not os.path.isfile(rtlil_path):
+        if not os.path.isfile(paths["rtlil"]):
             return jsonify({"error": "RTLIL file not generated", "stderr": ""}), 500
 
-        if is_ti60:
-            logging.info("FPGA package: running Yosys synthesis (RTLIL -> EDIF + Verilog, Efinix target)...")
-            synth_cmd = (
-                f"read_rtlil {rtlil_path}; "
-                f"synth_efinix -top top -edif {edif_path}; "
-                f"write_verilog {verilog_path}"
-            )
-        else:
-            logging.info("FPGA package: running Yosys synthesis (RTLIL -> JSON + Verilog, Gowin target)...")
-            synth_cmd = (
-                f"read_rtlil {rtlil_path}; "
-                f"synth_gowin -top top -json {json_path} -vout {verilog_path}"
-            )
+        fmt_args = {k: v for k, v in paths.items()}
+        synth_cmd = synth_cmd_tpl.format(**fmt_args)
 
-        synth_result = subprocess.run(
-            ["yosys", "-p", synth_cmd],
-            cwd=BASE_DIR,
-            capture_output=True, text=True, timeout=120
-        )
+        logging.info("FPGA build: running Yosys synthesis...")
+        synth_result = subprocess.run(["yosys", "-p", synth_cmd], cwd=BASE_DIR, capture_output=True, text=True, timeout=120)
         if synth_result.returncode != 0:
             return jsonify({
                 "error": "Yosys synthesis failed",
@@ -701,65 +730,62 @@ def download_fpga_package():
                 "stdout": synth_result.stdout[-2000:] if synth_result.stdout else ""
             }), 500
 
-        if not os.path.isfile(verilog_path):
+        if not os.path.isfile(paths["verilog"]):
             return jsonify({"error": "Yosys Verilog output not generated", "stderr": ""}), 500
 
-        buf = io.BytesIO()
+        marker_path = os.path.join(build_dir, "_last_board.txt")
+        with open(marker_path, 'w') as f:
+            f.write(board)
 
-        if is_ti60:
-            if not os.path.isfile(edif_path):
-                return jsonify({"error": "Yosys EDIF netlist not generated", "stderr": ""}), 500
+        files = [os.path.basename(p) for p in paths.values() if os.path.isfile(p)]
+        logging.info("FPGA build: synthesis complete, files=%s", files)
+        return jsonify({"ok": True, "board": board, "files": files})
 
-            isf_path = os.path.join(hw_dir, "ti60_f225.isf")
-            if not os.path.isfile(isf_path):
-                return jsonify({"error": "Pin constraints file (ti60_f225.isf) not found", "stderr": ""}), 500
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "Build timed out (120s limit)", "stderr": ""}), 500
+    except Exception as e:
+        logging.exception("FPGA build failed")
+        return jsonify({"error": str(e), "stderr": ""}), 500
 
-            with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-                zf.write(verilog_path, "church_ti60_f225.v")
-                zf.write(edif_path, "church_ti60_f225.edif")
-                zf.write(isf_path, "ti60_f225.isf")
-                zf.writestr("BUILD.md", build_md)
 
-        else:
-            if not os.path.isfile(json_path):
-                return jsonify({"error": "Yosys JSON netlist not generated", "stderr": ""}), 500
+@app.route("/api/download/fpga-zip")
+def download_fpga_zip():
+    """Download the ZIP of the last successfully built FPGA artifacts (no rebuild)."""
+    build_dir = os.path.join(BASE_DIR, "build")
+    board = request.args.get("board", "tang-nano-20k").strip().lower()
+    is_ti60, paths, zip_name, build_md, _, _ = _fpga_paths(board)
 
-            with open(json_path, 'r') as f:
-                json_text = f.read()
-            json_text = json_text.replace('"speed": "ES"', '"speed": "C8"')
-            with open(json_path, 'w') as f:
-                f.write(json_text)
-            logging.info("FPGA package: patched JSON speed grade (ES -> C8)")
+    if not os.path.isfile(paths["verilog"]):
+        return jsonify({"error": "No build found for this board. Run Build first."}), 404
 
-            cst_path = os.path.join(hw_dir, "tang_nano_20k.cst")
-            if not os.path.isfile(cst_path):
-                return jsonify({"error": "Pin constraints file (tang_nano_20k.cst) not found", "stderr": ""}), 500
-
-            makefile_path = os.path.join(hw_dir, "Makefile")
-            if not os.path.isfile(makefile_path):
-                return jsonify({"error": "Makefile not found in hardware/", "stderr": ""}), 500
-
-            with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
-                zf.write(verilog_path, "church_tang_nano_20k.v")
-                zf.write(json_path, "church_tang_nano_20k.json")
-                zf.write(cst_path, "tang_nano_20k.cst")
-                zf.write(makefile_path, "Makefile")
-                zf.writestr("BUILD.md", build_md)
-
+    try:
+        buf, zip_name = _make_fpga_zip(is_ti60, paths, zip_name, build_md)
         zip_data = buf.getvalue()
         resp = make_response(zip_data)
         resp.headers['Content-Type'] = 'application/zip'
         resp.headers['Content-Disposition'] = f'attachment; filename="{zip_name}"'
         resp.headers['Content-Length'] = len(zip_data)
-
-        logging.info("FPGA package: download ready (%d bytes)", len(zip_data))
+        logging.info("FPGA zip download: %s (%d bytes)", zip_name, len(zip_data))
         return resp
-
-    except subprocess.TimeoutExpired:
-        return jsonify({"error": "Build timed out (120s limit)", "stderr": ""}), 500
     except Exception as e:
-        logging.exception("FPGA package generation failed")
-        return jsonify({"error": str(e), "stderr": ""}), 500
+        logging.exception("FPGA zip download failed")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/download/fpga-package")
+def download_fpga_package():
+    """Legacy: build + download in one shot (kept for backwards compatibility)."""
+    build_dir = os.path.join(BASE_DIR, "build")
+    board = request.args.get("board", "tang-nano-20k").strip().lower()
+    build_resp = build_fpga()
+    if isinstance(build_resp, tuple):
+        resp_obj, status = build_resp
+        if status != 200:
+            return build_resp
+    else:
+        if build_resp.status_code != 200:
+            return build_resp
+    return download_fpga_zip()
 
 with app.app_context():
     import sys

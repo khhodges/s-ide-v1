@@ -8551,80 +8551,114 @@ function downloadHardwareImage() {
     }
 }
 
-async function downloadFPGAPackage() {
+async function buildFPGAOnly() {
     if (!requirePermission('deploy', 'Deploy to Tang')) return;
     const board = getSelectedBoard();
     const boardLabel = getBoardLabel(board);
     const isTi60 = (board === 'ti60-f225');
 
     const hwBtn = document.getElementById('btnHWBuild');
+    const dlBtn = document.getElementById('btnFPGAPkg');
     if (hwBtn) { hwBtn.disabled = true; hwBtn.innerHTML = '<span class="spinner"></span> Building...'; }
+    if (dlBtn) dlBtn.disabled = true;
 
     switchView('editor');
     switchCodeTab('console');
     const con = document.getElementById('editorConsole');
-    const btn = document.getElementById('btnFPGAPkg');
-
-    if (con) con.textContent = `Generating FPGA build package for ${boardLabel}...\nThis runs Amaranth elaboration + Yosys synthesis (typically 20-60 seconds).\n`;
-    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Building...'; }
+    if (con) con.textContent = `Building FPGA RTL for ${boardLabel}...\nThis runs Amaranth elaboration + Yosys synthesis (typically 20–60 seconds).\n`;
 
     try {
-        const resp = await fetch(`/api/download/fpga-package?board=${encodeURIComponent(board)}`);
+        const resp = await fetch(`/api/build/fpga?board=${encodeURIComponent(board)}`);
+        const data = await resp.json();
+        if (!resp.ok || data.error) {
+            const msg = data.error || `Server returned ${resp.status}`;
+            if (con) con.textContent += '\nFailed: ' + msg + (data.stderr ? '\n\n' + data.stderr : '') + '\n';
+            return;
+        }
+        if (con) {
+            con.textContent += `\nBuild complete. Files saved on server:\n`;
+            (data.files || []).forEach(f => { con.textContent += `  ${f}\n`; });
+            con.textContent += '\nClick "Download FPGA Package" to download the ZIP.\n';
+            if (isTi60) {
+                con.textContent += '\nNext steps after download:\n';
+                con.textContent += '  1. Open Efinity IDE, create Titanium project (Ti60F225)\n';
+                con.textContent += '  2. Add church_ti60_f225.v as source\n';
+                con.textContent += '  3. Interface Editor -> Import ti60_f225.isf\n';
+                con.textContent += '  4. Run Synthesis -> P&R -> Generate Bitstream\n';
+                con.textContent += '  5. Program via Efinity Programmer (JTAG/USB)\n';
+            } else {
+                con.textContent += '\nNext steps after download:\n';
+                con.textContent += '  1. Install OSS CAD Suite (oss-cad-suite-build on GitHub)\n';
+                con.textContent += '  2. Run: make pnr pack\n';
+                con.textContent += '  3. Run: make prog  (or use Deploy to FPGA button)\n';
+            }
+        }
+        if (dlBtn) dlBtn.disabled = false;
+    } catch (e) {
+        if (con) con.textContent += '\nError: ' + e.message + '\n';
+    } finally {
+        if (hwBtn) { hwBtn.disabled = false; hwBtn.textContent = 'Build'; }
+    }
+}
+
+async function downloadFPGAPackage() {
+    if (!requirePermission('deploy', 'Deploy to Tang')) return;
+    const board = getSelectedBoard();
+    const boardLabel = getBoardLabel(board);
+    const isTi60 = (board === 'ti60-f225');
+    const zipName = isTi60 ? 'church-ti60-package.zip' : 'church-nano-package.zip';
+
+    const btn = document.getElementById('btnFPGAPkg');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Downloading...'; }
+
+    switchView('editor');
+    switchCodeTab('console');
+    const con = document.getElementById('editorConsole');
+    if (con) con.textContent = `Downloading FPGA package for ${boardLabel}...\n`;
+
+    try {
+        const resp = await fetch(`/api/download/fpga-zip?board=${encodeURIComponent(board)}`);
         if (!resp.ok) {
             let errMsg = `Server returned ${resp.status}`;
             try {
                 const errData = await resp.json();
                 errMsg = errData.error || errMsg;
-                if (errData.stderr) errMsg += '\n\n' + errData.stderr;
             } catch (_) {}
             if (con) con.textContent += '\nFailed: ' + errMsg + '\n';
+            if (errMsg.includes('No build found')) {
+                if (con) con.textContent += 'Run "Build" first to synthesise the RTL.\n';
+            }
             return;
         }
         const blob = await resp.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        const zipName = isTi60 ? 'church-ti60-package.zip' : 'church-nano-package.zip';
         a.download = zipName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         if (con) {
-            con.textContent += `\nDownloaded ${zipName} (${(blob.size / 1024).toFixed(0)} KB)\n`;
+            con.textContent += `Downloaded ${zipName} (${(blob.size / 1024).toFixed(0)} KB)\n`;
             con.textContent += '\nContents:\n';
             if (isTi60) {
                 con.textContent += '  church_ti60_f225.v    — Synthesisable Verilog\n';
                 con.textContent += '  church_ti60_f225.edif — Yosys EDIF netlist (synth_efinix)\n';
                 con.textContent += '  ti60_f225.isf         — Pin constraints (Efinity IDE)\n';
-                con.textContent += '  BUILD.md              — Instructions\n\n';
-                con.textContent += 'Next steps:\n';
-                con.textContent += '  1. Unzip the package\n';
-                con.textContent += '  2. Open Efinity IDE, create Titanium project (Ti60F225)\n';
-                con.textContent += '  3. Add church_ti60_f225.v as source\n';
-                con.textContent += '  4. Interface Editor -> Import ti60_f225.isf\n';
-                con.textContent += '  5. Run Synthesis -> P&R -> Generate Bitstream\n';
-                con.textContent += '  6. Program via Efinity Programmer (JTAG/USB)\n';
+                con.textContent += '  BUILD.md              — Instructions\n';
             } else {
                 con.textContent += '  church_tang_nano_20k.v    — Synthesisable Verilog\n';
                 con.textContent += '  church_tang_nano_20k.json — Yosys netlist\n';
                 con.textContent += '  tang_nano_20k.cst         — Pin constraints\n';
                 con.textContent += '  Makefile                  — Build targets\n';
-                con.textContent += '  BUILD.md                  — Instructions\n\n';
-                con.textContent += 'Next steps:\n';
-                con.textContent += '  1. Unzip the package\n';
-                con.textContent += '  2. Install OSS CAD Suite (oss-cad-suite-build on GitHub)\n';
-                con.textContent += '  3. Run: make pnr pack\n';
-                con.textContent += '  4. Run: make prog\n';
-                con.textContent += '  5. Upload via Deploy button in this IDE\n';
+                con.textContent += '  BUILD.md                  — Instructions\n';
             }
         }
     } catch (e) {
         if (con) con.textContent += '\nError: ' + e.message + '\n';
     } finally {
-        if (btn) { btn.disabled = false; btn.innerHTML = 'Download FPGA Package'; }
-        const hwBtnFinal = document.getElementById('btnHWBuild');
-        if (hwBtnFinal) { hwBtnFinal.disabled = false; hwBtnFinal.innerHTML = 'Build &amp; Download'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Download FPGA Package'; }
     }
 }
 
