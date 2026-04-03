@@ -128,8 +128,9 @@ function generateTabId() {
     return 'ut_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 }
 
-function createUserTab(name, lang) {
-    const tab = { id: generateTabId(), name: name, lang: lang || 'assembly', code: '' };
+function createUserTab(name, lang, initialCode) {
+    const code = (initialCode !== undefined) ? initialCode : '';
+    const tab = { id: generateTabId(), name: name, lang: lang || 'assembly', code };
     userTabs.push(tab);
     saveUserTabsToStorage();
     renderUserTabs();
@@ -171,7 +172,6 @@ function selectUserTab(id) {
     renderUserTabs();
     updateSaveUserTabBtn();
     updateLineNumbers();
-    if (editor) editor.focus();
     const outputEl = document.getElementById('assemblyOutput');
     if (outputEl) outputEl.innerHTML = '';
 }
@@ -252,13 +252,16 @@ function confirmNewTab() {
     const name = nameInput ? nameInput.value.trim() : '';
     if (!name) { alert('Please enter a program name.'); return; }
     const lang = langSel ? langSel.value : 'assembly';
+    // Snapshot the current editor content so the new tab starts with it
+    const editor = document.getElementById('asmEditor');
+    const initialCode = editor ? editor.value : '';
     hideNewTabDialog();
     const sel = document.getElementById('langSelector');
     if (sel && sel.value !== lang) {
         sel.value = lang;
         onLangChange(true);
     }
-    createUserTab(name, lang);
+    createUserTab(name, lang, initialCode);
 }
 
 function init() {
@@ -13141,6 +13144,8 @@ function adjustViewTop() {
 }
 
 window.addEventListener('resize', adjustViewTop);
+window.addEventListener('beforeunload', () => { if (activeUserTabId && userTabDirty) saveActiveUserTab(); });
+window.addEventListener('pagehide', () => { if (activeUserTabId && userTabDirty) saveActiveUserTab(); });
 
 (function initPullToRefresh() {
     let startY = 0;

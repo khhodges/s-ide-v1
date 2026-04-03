@@ -737,7 +737,6 @@ header h1 {
 }
 
 #asmEditor:focus { outline: none; }
-.code-editor-wrap:focus-within { outline: 1px solid var(--accent); }
 
 .editor-toolbar {
     display: flex;
