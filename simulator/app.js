@@ -11126,13 +11126,13 @@ function smartCompile() {
 function compileDraftAssembly(source, con) {
     switchCodeTab('console');
     if (!source || !source.trim()) {
-        if (con) con.textContent = 'Draft — no code to draft. Enter assembly code first.';
+        if (con) { con.textContent = 'Draft — no code to draft. Enter assembly code first.'; con.scrollTop = 0; }
         return;
     }
     const result = assembler.assemble(source);
     if (result.errors.length > 0) {
         const errText = result.errors.map(e => `Line ${e.line}: ${e.message}`).join('\n');
-        if (con) con.textContent = `Assembly Draft — errors:\n${errText}`;
+        if (con) { con.textContent = `Assembly Draft — errors:\n${errText}`; con.scrollTop = 0; }
         showNextSteps('error');
         return;
     }
@@ -11165,7 +11165,7 @@ function compileDraftAssembly(source, con) {
 
     draft += `\n═══════════════════════════════════════════════════\n`;
 
-    if (con) con.textContent = draft;
+    if (con) { con.textContent = draft; con.scrollTop = 0; }
     showNextSteps('draft');
 }
 
@@ -11190,7 +11190,7 @@ function compileDraft() {
 
     if (result.errors.length > 0) {
         const errText = result.errors.map(e => `Line ${e.line || '?'}: ${e.message}`).join('\n');
-        if (con) con.textContent = `CLOOMC++ Draft — compilation errors:\n${errText}`;
+        if (con) { con.textContent = `CLOOMC++ Draft — compilation errors:\n${errText}`; con.scrollTop = 0; }
         showNextSteps('error');
         return;
     }
@@ -11288,7 +11288,7 @@ function compileDraft() {
         draft += '\n';
     }
 
-    if (con) con.textContent = draft;
+    if (con) { con.textContent = draft; con.scrollTop = 0; }
     showNextSteps('draft');
     trackAction('draft', { name: result.abstractionName, lang: result.language });
     appendOutput(`Draft: "${result.abstractionName}" — ${result.methods.length} methods, ${clistCount} caps, ${allocSize} alloc`, 'info');
@@ -11306,7 +11306,7 @@ function compileCLOOMC() {
 
     if (result.errors.length > 0) {
         const errText = result.errors.map(e => `Line ${e.line || '?'}: ${e.message}`).join('\n');
-        if (con) con.textContent = `CLOOMC++ compilation errors:\n${errText}`;
+        if (con) { con.textContent = `CLOOMC++ compilation errors:\n${errText}`; con.scrollTop = 0; }
         showNextSteps('error');
         return;
     }
@@ -11346,7 +11346,7 @@ function compileCLOOMC() {
         listing += '\n';
     }
 
-    if (con) con.textContent = listing;
+    if (con) { con.textContent = listing; con.scrollTop = 0; }
     showNextSteps('compiled');
     trackAction('compile', { name: result.abstractionName, lang: result.language });
     appendOutput(`CLOOMC++ compiled "${result.abstractionName}" — ${result.methods.length} methods`, 'info');
