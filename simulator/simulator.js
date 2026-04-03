@@ -884,6 +884,7 @@ class ChurchSimulator {
         log.push('');
 
         // ── Phase 3: SWEEP ───────────────────────────────────────────────────
+        const _GT_TYPE_NAMES = ['Null', 'Inform', 'Outform', 'Abstract'];
         const p3Lines = [];
         const candidates = [];
         for (let i = 0; i < priorCount; i++) {
@@ -892,9 +893,16 @@ class ChurchSimulator {
             const entry = this.readNSEntry(i);
             const label = this.nsLabels[i] || '(unnamed)';
             const loc = entry ? (entry.word0_location >>> 0) : 0;
+            const w1parsed = entry ? this.parseNSWord1(entry.word1_limit) : null;
+            const typeName  = w1parsed ? (_GT_TYPE_NAMES[w1parsed.gtType] || '?') : '?';
+            const limit     = w1parsed ? w1parsed.limit : 0;
+            const clistCnt  = w1parsed ? w1parsed.clistCount : 0;
+            const w2base    = this.NS_TABLE_BASE + i * this.NS_ENTRY_WORDS + 2;
+            const version   = (this.memory[w2base] >>> 25) & 0x7F;
             candidates.push({ index: i, label, loc });
-            p3Lines.push(`NS[${i}] "${label}" @ 0x${loc.toString(16).toUpperCase().padStart(8,'0')}`);
-            log.push(`  GARBAGE NS[${i}] "${label}" @ 0x${loc.toString(16).toUpperCase().padStart(8,'0')} — G=${garbageValue}`);
+            p3Lines.push(`NS[${i}]  "${label}"`);
+            p3Lines.push(`  ${typeName}  ·  @0x${loc.toString(16).toUpperCase().padStart(4,'0')}  ·  ${limit} words  ·  ${clistCnt} caps  ·  v${version}`);
+            log.push(`  GARBAGE NS[${i}] "${label}" type=${typeName} @0x${loc.toString(16).toUpperCase().padStart(8,'0')} limit=${limit} clist=${clistCnt} ver=${version} — G=${garbageValue}`);
         }
         if (candidates.length === 0) p3Lines.push('No garbage entries found — namespace is clean');
         p3Lines.push(`${candidates.length} garbage ${candidates.length === 1 ? 'entry' : 'entries'} identified for reclamation`);
