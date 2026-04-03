@@ -1489,6 +1489,11 @@ class ChurchSimulator {
             }
         }
 
+        // Stack overflow: need 2 words for frame (at sto and sto-1)
+        if (this.sto < 2) {
+            this.fault('STACK_OVERFLOW', `CALL CR${d.crDst}: call stack overflow — STO=${this.sto}, stack exhausted after ${this.callStack.length} frame(s). Thread lump full.`);
+            return null;
+        }
         const savedSTO = this.sto;
         const oldCR6GT = this.cr[6].word0 >>> 0;  // capture before callee overwrites CR6
         const frameWord = this._packFrameWord(this.pc + 1, 1, savedSTO);
@@ -1998,6 +2003,11 @@ class ChurchSimulator {
             }
         }
 
+        // Stack overflow: need 2 words for frame (at sto and sto-1)
+        if (this.sto < 2) {
+            this.fault('STACK_OVERFLOW', `ELOADCALL CR${d.crDst}: call stack overflow — STO=${this.sto}, stack exhausted after ${this.callStack.length} frame(s). Thread lump full.`);
+            return null;
+        }
         const savedSTO_ec = this.sto;
         const frameWord_ec = this._packFrameWord(this.pc + 1, 1, savedSTO_ec);
         this.callStack.push({

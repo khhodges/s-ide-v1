@@ -12118,6 +12118,39 @@ abstraction RationalArith {
         else if a > b then a - b
         else b - a
 }`,
+        'stack_overflow': `// ── Stack Overflow Experiment ──
+// The Church Machine thread lump has 256 words.
+// The call stack grows downward from word 243.
+// Each CALL consumes 2 words (frame + CR6 save).
+// After ~120 nested calls, STO reaches 0 and the
+// machine raises a clean STACK_OVERFLOW fault.
+//
+// This abstraction lists itself as its own
+// capability (c-list[0] = self E-GT). The run()
+// method calls run() again via that c-list entry.
+// No RETURN is ever reached — the chain grows
+// until the hardware runs out of stack space.
+//
+// HOW TO RUN:
+//   1. Click Compile  (or Ctrl+Enter)
+//   2. Click  Create Abstraction
+//   3. Switch to the REPL or Pipeline view
+//   4. Step through — watch STO count down
+//      in the pipeline panel on every CALL
+//   5. When STO < 2 you'll see:
+//        FAULT [STACK_OVERFLOW]: ELOADCALL ...
+
+abstraction StackOverflow {
+    capabilities {
+        StackOverflow
+    }
+
+    // Entry point — call this to start the experiment
+    method run() {
+        call(StackOverflow.run())
+        RETURN
+    }
+}`,
     };
 
     editor.value = examples[name] || examples['hello'];
