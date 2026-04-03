@@ -827,6 +827,21 @@ class ChurchSimulator {
         if (holes.length > 0) {
             p1Lines.push(`  Holes: ${holes.map(h => 'NS[' + h + ']').join(', ')}`);
         }
+
+        // CR15 current slot size
+        const cr15gt = this.cr[15] ? this.cr[15].word0 : 0;
+        if (cr15gt !== 0) {
+            const cr15parsed = this.parseGT(cr15gt);
+            const cr15idx = cr15parsed.index;
+            const cr15base = this.NS_TABLE_BASE + cr15idx * this.NS_ENTRY_WORDS;
+            const cr15w1 = this.memory[cr15base + 1];
+            const cr15limit = cr15w1 & 0x1FFFF;
+            const cr15label = this.nsLabels[cr15idx] || '(unnamed)';
+            p1Lines.push(`CR15 → NS[${cr15idx}]  "${cr15label}"  —  slot size: ${cr15limit} words`);
+        } else {
+            p1Lines.push(`CR15 → (null — no current abstraction)`);
+        }
+
         p1Lines.push('');
         p1Lines.push(`Polarity: G=${garbageValue} = garbage,  G=${liveValue} = live`);
         p1Lines.push(`Marked all ${markCount} valid entries as garbage suspects`);
