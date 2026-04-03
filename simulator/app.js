@@ -367,6 +367,39 @@ function switchView(viewId) {
     }
     if (viewId === 'reference') renderReference();
     if (viewId === 'docs') loadDocsView();
+    if (viewId === 'tools') renderToolsView();
+}
+
+let _lastGCResult = null;
+
+function renderToolsView() {
+    const nsEntryEl   = document.getElementById('tgcNSEntries');
+    const freedSlotsEl = document.getElementById('tgcFreedSlots');
+    const freedWordsEl = document.getElementById('tgcFreedWords');
+    const liveEl       = document.getElementById('tgcLiveCount');
+    const lastRunEl    = document.getElementById('toolsGCLastRun');
+
+    if (nsEntryEl) nsEntryEl.textContent = sim && typeof sim.nsCount === 'number' ? sim.nsCount : '—';
+
+    if (_lastGCResult) {
+        if (freedSlotsEl) freedSlotsEl.textContent = _lastGCResult.freedSlots;
+        if (freedWordsEl) freedWordsEl.textContent = _lastGCResult.freedWords;
+        if (liveEl)       liveEl.textContent       = _lastGCResult.liveCount;
+        if (lastRunEl)    lastRunEl.textContent     = 'Last run: freed ' + _lastGCResult.freedSlots + ' slot' + (_lastGCResult.freedSlots !== 1 ? 's' : '');
+    } else {
+        if (freedSlotsEl) freedSlotsEl.textContent = '—';
+        if (freedWordsEl) freedWordsEl.textContent = '—';
+        if (liveEl)       liveEl.textContent       = '—';
+        if (lastRunEl)    lastRunEl.textContent     = 'Not run yet this session';
+    }
+}
+
+function runGCFromTools() {
+    runGC();
+    if (sim && sim.bootComplete) {
+        const result = _lastGCResult;
+        if (result) renderToolsView();
+    }
 }
 
 function selectTutorial(which) {
@@ -4687,6 +4720,8 @@ function runGC() {
     const result = sim.runGC();
     sim.mElevation = false;
     sim.output += '[I/O] GC abstraction complete \u2014 RETURN\n';
+    _lastGCResult = result;
+    if (currentView === 'tools') renderToolsView();
 
     const lines = result.report.split('\n');
     const phases = [];

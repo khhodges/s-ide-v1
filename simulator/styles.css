@@ -8476,3 +8476,185 @@ pre:hover .code-copy-btn {
 .abs-boot-code-pre {
     border-left: 3px solid var(--impl-installed) !important;
 }
+
+/* ── Tools View ─────────────────────────────────────────────────────────── */
+.tools-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    max-width: 1100px;
+    margin: 0 auto;
+    height: 100%;
+    box-sizing: border-box;
+    align-content: start;
+}
+@media (max-width: 760px) {
+    .tools-layout { grid-template-columns: 1fr; }
+}
+.tools-panel {
+    background: var(--panel-bg, #10101e);
+    border: 1px solid var(--border, #1e2040);
+    border-radius: 10px;
+    padding: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.tools-panel-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    border-bottom: 1px solid var(--border, #1e2040);
+    padding-bottom: 0.9rem;
+}
+.tools-panel-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.tools-panel-title {
+    font-family: Georgia, serif;
+    font-size: 1.05rem;
+    color: var(--church-gold, #daa520);
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+.tools-panel-sub {
+    font-size: 0.72rem;
+    color: var(--text-secondary, #888);
+}
+/* Stat grid */
+.tools-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+.tools-stat-card {
+    background: var(--sim-bg, #08080f);
+    border: 1px solid var(--border, #1e2040);
+    border-radius: 7px;
+    padding: 0.6rem 0.4rem;
+    text-align: center;
+}
+.tools-stat-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--church-gold, #daa520);
+    line-height: 1.2;
+}
+.tools-stat-label {
+    font-size: 0.62rem;
+    color: var(--text-secondary, #888);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
+}
+/* Phase list */
+.tools-phases { display: flex; flex-direction: column; gap: 0.4rem; }
+.tools-phase {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 5px;
+    background: var(--sim-bg, #08080f);
+}
+.tools-phase-num {
+    width: 1.4em; height: 1.4em;
+    border-radius: 50%;
+    background: var(--church-gold, #daa520);
+    color: #000;
+    font-weight: 700;
+    font-size: 0.72rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.tools-phase-name {
+    color: #e2e8f0;
+    font-weight: 600;
+    min-width: 5.5em;
+}
+.tools-phase-desc { color: var(--text-secondary, #888); }
+/* Action row */
+.tools-action-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.2rem;
+}
+.tools-last-run {
+    font-size: 0.72rem;
+    color: var(--text-secondary, #888);
+    font-style: italic;
+}
+/* Buttons */
+.tools-btn {
+    border: none;
+    border-radius: 7px;
+    padding: 0.55rem 1.1rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+}
+.tools-btn:active { transform: scale(0.97); }
+.tools-btn-primary {
+    background: var(--church-gold, #daa520);
+    color: #000;
+}
+.tools-btn-primary:hover { opacity: 0.88; }
+.tools-btn-secondary {
+    background: #1e2040;
+    color: #e2e8f0;
+    border: 1px solid #38bdf8;
+}
+.tools-btn-secondary:hover { background: #28305a; }
+/* GitHub cards */
+.tools-gh-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+}
+.tools-gh-card {
+    background: var(--sim-bg, #08080f);
+    border: 1px solid var(--border, #1e2040);
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.tools-gh-card-icon {
+    font-size: 1.5rem;
+    color: #38bdf8;
+}
+.tools-gh-card-title {
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #e2e8f0;
+}
+.tools-gh-card-desc {
+    font-size: 0.72rem;
+    color: var(--text-secondary, #888);
+    line-height: 1.5;
+    flex: 1;
+}
+.tools-gh-note {
+    font-size: 0.7rem;
+    color: var(--text-secondary, #888);
+    border-top: 1px solid var(--border, #1e2040);
+    padding-top: 0.7rem;
+    line-height: 1.5;
+}
+.tools-link-btn {
+    background: none;
+    border: none;
+    color: #38bdf8;
+    cursor: pointer;
+    font-size: inherit;
+    padding: 0;
+    text-decoration: underline;
+}
