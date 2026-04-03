@@ -662,35 +662,45 @@ function renderCListEntryDetail(nsIdx, entry) {
                + ` \u00b7 cw=${cw} \u00b7 typ=${typNames[hdr.typ]||hdr.typ} \u00b7 cc=${cc}`
                + `</span></div>`;
             // ── CLOOMC Code (words 1..cw at loc+1..loc+cw) ──────────────────
-            // Scan for the last non-zero instruction to separate actual code from freespace.
+            // Scan for the last non-zero instruction to separate code from trailing freespace.
             let actualCodeEnd = 0;
             for (let w = 0; w < cw; w++) {
                 const codeAddr = loc + 1 + w;
                 if (codeAddr < sim.memory.length && sim.memory[codeAddr]) actualCodeEnd = w + 1;
             }
-            h += '<div class="clist-detail-title" style="margin-top:0.3rem;">CLOOMC Code';
-            if (actualCodeEnd === 0) h += ' <span style="color:#555;font-size:0.72rem;">(empty \u2014 program not loaded)</span>';
-            h += '</div>';
-            if (actualCodeEnd > 0) {
+            {
                 const asm = new ChurchAssembler();
-                let codeHtml = '<table class="cr-table code-view-table"><thead><tr><th>Addr</th><th>Hex</th><th>Decode</th></tr></thead><tbody>';
-                for (let w = 0; w < actualCodeEnd; w++) {
-                    const addr = loc + 1 + w;
-                    if (addr >= sim.memory.length) break;
-                    const word = sim.memory[addr] || 0;
-                    const decoded = asm.disassemble(word);
-                    codeHtml += `<tr>`;
-                    codeHtml += `<td class="cr-idx">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td>`;
-                    codeHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
-                    codeHtml += `<td class="code-disasm">${decoded}</td>`;
-                    codeHtml += '</tr>';
+                const isEmpty = actualCodeEnd === 0;
+                h += '<div class="clist-detail-title" style="margin-top:0.3rem;">CLOOMC Code';
+                if (cw === 0) {
+                    h += ' <span style="color:#555;font-size:0.72rem;">(cw=0 \u2014 no code region)</span></div>';
+                } else {
+                    if (isEmpty) h += ' <span style="color:#555;font-size:0.72rem;">(empty \u2014 not loaded)</span>';
+                    h += '</div>';
+                    // Always show all cw slots so the user sees the code region layout.
+                    // Empty slots (word=0) are shown dimmed; loaded instructions are bright.
+                    let codeHtml = '<table class="cr-table code-view-table"><thead><tr><th>Off</th><th>Addr</th><th>Hex</th><th>Decode</th></tr></thead><tbody>';
+                    for (let w = 0; w < cw; w++) {
+                        const addr = loc + 1 + w;
+                        if (addr >= sim.memory.length) break;
+                        const word = sim.memory[addr] >>> 0;
+                        const decoded = word === 0 ? 'HALT' : asm.disassemble(word);
+                        const isPC   = sim.bootComplete && (addr === (sim.memory[sim.NS_TABLE_BASE + 2 * sim.NS_ENTRY_WORDS] || (2 * sim.SLOT_SIZE)) + 1 + sim.pc);
+                        const dimmed = word === 0 ? ' style="opacity:0.35;"' : '';
+                        const pcMark = isPC ? ' class="code-pc-row"' : '';
+                        codeHtml += `<tr${pcMark}${dimmed}>`;
+                        codeHtml += `<td class="cr-idx">+${w + 1}</td>`;
+                        codeHtml += `<td class="cr-idx">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td>`;
+                        codeHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+                        codeHtml += `<td class="code-disasm">${decoded}</td>`;
+                        codeHtml += '</tr>';
+                    }
+                    codeHtml += '</tbody></table>';
+                    h += codeHtml;
                 }
-                codeHtml += '</tbody></table>';
-                h += codeHtml;
             }
             // ── Freespace (words actualCodeEnd+1 .. clistStart-1 relative to word 1) ──
-            // Total freespace = (cw - actualCodeEnd) [trailing zeros in code region]
-            //                 + (clistStart - 1 - cw) [gap between code end and c-list]
+            // Freespace = gap between last instruction and c-list (from the code region's perspective).
             const totalFreeWords = clistStart - 1 - actualCodeEnd;  // words between last code and c-list
             if (totalFreeWords > 0) {
                 const freeBase = loc + 1 + actualCodeEnd;
@@ -4117,6 +4127,9 @@ function stepSim() {
             } else {
                 pipelineViz.render();
             }
+        }
+        if (sim.bootComplete) {
+            _autoLoadDefaultProgram();
         }
         updateDashboard();
         return;
