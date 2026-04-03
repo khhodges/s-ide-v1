@@ -649,27 +649,46 @@ function renderCListEntryDetail(nsIdx, entry) {
         const safeClistCount = Math.max(0, Math.min(rawClistCount, allocSize));
         if (safeClistCount > 0) {
             const codeEnd = allocSize - safeClistCount;
-            let hasCode = false;
-            const asm = new ChurchAssembler();
-            let codeHtml = '<table class="cr-table code-view-table"><thead><tr><th>Addr</th><th>Hex</th><th>Decode</th></tr></thead><tbody>';
+            // Find the last non-zero word in the code region so trailing zeros
+            // are shown as a separate Freespace section, not inside the code table.
+            let actualCodeEnd = 0;
             for (let w = 0; w < Math.min(codeEnd, wordCount); w++) {
-                const addr = loc + w;
-                if (addr >= sim.memory.length) break;
-                const word = sim.memory[addr] || 0;
-                if (word === 0 && !hasCode) continue;
-                hasCode = true;
-                const decoded = asm.disassemble(word);
-                codeHtml += `<tr>`;
-                codeHtml += `<td class="cr-idx">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td>`;
-                codeHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
-                codeHtml += `<td class="code-disasm">${decoded}</td>`;
-                codeHtml += '</tr>';
+                if ((loc + w) < sim.memory.length && sim.memory[loc + w]) actualCodeEnd = w + 1;
             }
-            codeHtml += '</tbody></table>';
-            if (hasCode) {
-                h += '<div class="clist-detail-title" style="margin-top:0.4rem;">CLOOMC Code</div>';
+            // ── CLOOMC Code ──────────────────────────────────────────────────
+            h += '<div class="clist-detail-title" style="margin-top:0.4rem;">CLOOMC Code';
+            if (actualCodeEnd === 0) h += ' <span style="color:#555;font-size:0.72rem;">(empty \u2014 program not loaded)</span>';
+            h += '</div>';
+            if (actualCodeEnd > 0) {
+                const asm = new ChurchAssembler();
+                let codeHtml = '<table class="cr-table code-view-table"><thead><tr><th>Addr</th><th>Hex</th><th>Decode</th></tr></thead><tbody>';
+                for (let w = 0; w < actualCodeEnd; w++) {
+                    const addr = loc + w;
+                    if (addr >= sim.memory.length) break;
+                    const word = sim.memory[addr] || 0;
+                    const decoded = asm.disassemble(word);
+                    codeHtml += `<tr>`;
+                    codeHtml += `<td class="cr-idx">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td>`;
+                    codeHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+                    codeHtml += `<td class="code-disasm">${decoded}</td>`;
+                    codeHtml += '</tr>';
+                }
+                codeHtml += '</tbody></table>';
                 h += codeHtml;
             }
+            // ── Freespace (empty words between code end and c-list start) ────
+            const freeWords = codeEnd - actualCodeEnd;
+            if (freeWords > 0) {
+                const freeBase = loc + actualCodeEnd;
+                const freeEnd  = loc + codeEnd - 1;
+                h += `<div class="clist-detail-title" style="margin-top:0.3rem;color:#52525b;">Freespace`
+                   + ` <span style="font-size:0.72rem;color:#3f3f46;">`
+                   + `offsets +${actualCodeEnd}\u2013+${codeEnd - 1}`
+                   + ` \u00b7 ${freeWords} unused words`
+                   + ` \u00b7 0x${freeBase.toString(16).toUpperCase().padStart(4,'0')}\u20130x${freeEnd.toString(16).toUpperCase().padStart(4,'0')}`
+                   + `</span></div>`;
+            }
+            // ── C-List ───────────────────────────────────────────────────────
             h += `<div class="clist-detail-title" style="margin-top:0.4rem;">C-List (${safeClistCount} GT entries)</div>`;
             let gtHtml = '<table class="cr-table code-view-table"><thead><tr><th>#</th><th>Addr</th><th>Hex</th><th>GT Decoded</th></tr></thead><tbody>';
             for (let w = 0; w < safeClistCount; w++) {
