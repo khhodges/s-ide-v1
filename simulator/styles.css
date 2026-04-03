@@ -114,6 +114,21 @@ header h1 {
     opacity: 1;
 }
 
+/* ── Sim icon buttons ────────────────────────────────── */
+.sim-icon-btn {
+    font-size: 1.1rem;
+    padding: 0.25rem 0.55rem;
+    min-width: 2.2rem;
+    line-height: 1;
+}
+
+.sim-icon-btn.walk-active {
+    background: var(--church-blue) !important;
+    border-color: var(--church-blue) !important;
+    color: #fff !important;
+    box-shadow: 0 0 8px rgba(58,134,255,0.5);
+}
+
 /* ── Hamburger menu ──────────────────────────────────── */
 .ham-wrap {
     position: relative;

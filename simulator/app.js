@@ -1223,8 +1223,6 @@ function updateFlagsDisplay() {
         <span class="cap-label">${cap.label}</span>`;
     }
     container.innerHTML = `
-        <button class="btn btn-walk btn-sm" onclick="walkToggle()">${walkRunning ? 'Stop' : 'Walk'}</button>
-        <button class="btn btn-warning btn-sm" onclick="faultClear()">Fault</button>
         <span class="flags-sep"></span>
         <span class="flag ${f.N ? 'flag-set' : ''}">N</span>
         <span class="flag ${f.Z ? 'flag-set' : ''}">Z</span>
@@ -4265,11 +4263,24 @@ function stepSim() {
 let walkRunning = false;
 let walkTimer = null;
 
+function updateWalkBtn() {
+    const btn = document.getElementById('toolWalkBtn');
+    if (!btn) return;
+    if (walkRunning) {
+        btn.classList.add('walk-active');
+        btn.setAttribute('data-tooltip', 'Walk (running) — Click to stop');
+    } else {
+        btn.classList.remove('walk-active');
+        btn.setAttribute('data-tooltip', 'Walk — Animate step-by-step execution');
+    }
+}
+
 function walkToggle() {
     if (walkRunning) {
         walkRunning = false;
         if (walkTimer) { clearTimeout(walkTimer); walkTimer = null; }
         if (pipelineViz) pipelineViz.stopAnimation();
+        updateWalkBtn();
         updateDashboard();
         return;
     }
@@ -4280,6 +4291,7 @@ function walkToggle() {
                 clearInterval(waitForBoot);
                 walkRunning = true;
                 switchView('pipeline');
+                updateWalkBtn();
                 updateDashboard();
                 walkNext();
             }
@@ -4288,6 +4300,7 @@ function walkToggle() {
     }
     walkRunning = true;
     switchView('pipeline');
+    updateWalkBtn();
     updateDashboard();
     walkNext();
 }
@@ -4295,12 +4308,14 @@ function walkToggle() {
 function walkNext() {
     if (!walkRunning || !sim.bootComplete) {
         walkRunning = false;
+        updateWalkBtn();
         updateDashboard();
         return;
     }
     const result = sim.step();
     if (!result) {
         walkRunning = false;
+        updateWalkBtn();
         updateDashboard();
         return;
     }
@@ -4317,11 +4332,13 @@ function walkNext() {
                 walkTimer = setTimeout(walkNext, 600);
             } else {
                 walkRunning = false;
+                updateWalkBtn();
                 updateDashboard();
             }
         }).catch(err => {
             console.error('walkNext animate error:', err);
             walkRunning = false;
+            updateWalkBtn();
             updateDashboard();
         });
     } else {
@@ -4330,6 +4347,7 @@ function walkNext() {
             walkTimer = setTimeout(walkNext, 1000);
         } else {
             walkRunning = false;
+            updateWalkBtn();
             updateDashboard();
         }
     }
