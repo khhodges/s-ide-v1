@@ -447,6 +447,23 @@ header h1 {
     font-weight: 600;
 }
 
+.flags-led-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.flags-led-row .flags-bar {
+    flex: 1 1 auto;
+    margin-bottom: 0;
+}
+
+.hw-led-bar-left {
+    flex-shrink: 0;
+    margin-bottom: 0;
+}
+
 .flags-bar {
     display: flex;
     align-items: center;
