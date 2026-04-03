@@ -1780,6 +1780,9 @@ class CLOOMCCompiler {
 
     _detectSymbolic(source) {
         if (this._detectEnglish(source)) return false;
+        // Guard: plain JS array/object constants and class files are not symbolic Ada
+        if (/^\s*const\s+\w+\s*=\s*[\[{]/m.test(source)) return false;
+        if (/^\s*(?:export\s+)?(?:default\s+)?class\s+\w+/m.test(source)) return false;
         const lines = source.split('\n');
         let adaVars = 0;
         let arrowAssign = 0;
@@ -1794,7 +1797,7 @@ class CLOOMCCompiler {
             if (t === '}') continue;
             if (t.match(/\bV\d+\b/) && (t.includes('=') || t.includes('→') || t.includes('->'))) adaVars++;
             if (t.includes('→') || (t.match(/\S\s*->\s*V\d+/) && !t.includes('\\'))) arrowAssign++;
-            if (!t.match(/^method\s/) && t.match(/\b(multiply|divide|add|subtract|operation|repeat)\b/i)) opKeywords++;
+            if (t.match(/^(multiply|divide|add|subtract|operation|repeat)\b/i)) opKeywords++;
             if (t.match(/^step\s+\d+/i)) opKeywords++;
         }
         return (adaVars >= 2) || (arrowAssign >= 1) || (opKeywords >= 2);
