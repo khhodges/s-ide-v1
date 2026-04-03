@@ -268,6 +268,7 @@
                     <button class="sidebar-tab" id="codeTabConsole" onclick="switchCodeTab('console')" data-tooltip="Console Output — View assembler output and execution results">Console Output</button>
                     <button class="sidebar-tab" id="codeTabSyntax" onclick="switchCodeTab('syntax')" data-tooltip="Syntax — Quick reference for instruction syntax">Syntax</button>
                     <button class="sidebar-tab active" id="codeTabHistory" onclick="switchCodeTab('history')" data-tooltip="History — Stories and context about Church Machine concepts">History</button>
+                    <button class="sidebar-tab" id="codeTabJs" onclick="switchCodeTab('js')" data-tooltip="JS Source — Browse the simulator JS files that implement the boot code">JS</button>
                 </div>
                 <div id="codeConsoleContent" style="display:none;">
                     <div id="ledStrip" class="led-strip">
@@ -297,6 +298,10 @@
                         <button class="btn btn-primary" onclick="historyNewCodeStory()" style="padding:0.2rem 0.6rem;font-size:0.75rem;" data-tooltip="Another Story — Generate a new story about this code">Another Story</button>
                     </div>
                     <div id="codeHistoryContent"></div>
+                </div>
+                <div id="codeJsPanel" style="display:none;">
+                    <div id="codeJsFileBar" style="display:flex;flex-wrap:wrap;gap:0.3rem;padding:0.35rem 0.4rem;border-bottom:1px solid var(--border);"></div>
+                    <pre id="codeJsSource" style="flex:1;overflow:auto;margin:0;padding:0.5rem 0.7rem;font-size:0.72rem;line-height:1.5;background:var(--bg-secondary);color:var(--text-primary);white-space:pre;tab-size:4;"></pre>
                 </div>
             </div>
         </div>

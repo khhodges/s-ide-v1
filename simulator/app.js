@@ -6611,16 +6611,20 @@ function switchCodeTab(tab) {
     const consoleContent = document.getElementById('codeConsoleContent');
     const historyPanel = document.getElementById('codeHistoryPanel');
     const syntaxPanel = document.getElementById('codeSyntaxPanel');
+    const jsPanel = document.getElementById('codeJsPanel');
     const tabConsole = document.getElementById('codeTabConsole');
     const tabHistory = document.getElementById('codeTabHistory');
     const tabSyntax = document.getElementById('codeTabSyntax');
+    const tabJs = document.getElementById('codeTabJs');
 
     if (consoleContent) consoleContent.style.display = 'none';
     if (historyPanel) historyPanel.style.display = 'none';
     if (syntaxPanel) syntaxPanel.style.display = 'none';
+    if (jsPanel) jsPanel.style.display = 'none';
     if (tabConsole) tabConsole.classList.remove('active');
     if (tabHistory) tabHistory.classList.remove('active');
     if (tabSyntax) tabSyntax.classList.remove('active');
+    if (tabJs) tabJs.classList.remove('active');
 
     if (tab === 'history') {
         if (historyPanel) historyPanel.style.display = 'block';
@@ -6631,10 +6635,58 @@ function switchCodeTab(tab) {
         if (syntaxPanel) syntaxPanel.style.display = 'block';
         if (tabSyntax) tabSyntax.classList.add('active');
         if (typeof renderSyntaxRef === 'function') renderSyntaxRef();
+    } else if (tab === 'js') {
+        if (jsPanel) jsPanel.style.display = 'block';
+        if (tabJs) tabJs.classList.add('active');
+        renderJsTab();
     } else {
         if (consoleContent) consoleContent.style.display = 'block';
         if (tabConsole) tabConsole.classList.add('active');
     }
+}
+
+const _JS_TAB_FILES = [
+    { name: 'simulator.js',          label: 'simulator',          desc: 'Core CPU, boot sequence, GC, NS table, memory layout' },
+    { name: 'assembler.js',          label: 'assembler',          desc: 'Church Machine assembler — encodes instructions to 32-bit words' },
+    { name: 'boot_uploads.js',       label: 'boot_uploads',       desc: 'Boot ROM upload handling — sends binary to FPGA over WebSerial' },
+    { name: 'system_abstractions.js',label: 'system_abstractions',desc: 'System abstraction definitions loaded into the NS table at boot' },
+    { name: 'device_abstractions.js',label: 'device_abstractions',desc: 'Device register abstractions (MMIO, UART, GPIO, …)' },
+    { name: 'app.js',                label: 'app',                desc: 'IDE front-end — views, panels, GC UI, CR table rendering' },
+];
+let _jsTabActiveFile = null;
+
+function renderJsTab() {
+    const bar = document.getElementById('codeJsFileBar');
+    const src = document.getElementById('codeJsSource');
+    if (!bar) return;
+    if (!bar.innerHTML.trim()) {
+        bar.innerHTML = _JS_TAB_FILES.map(f =>
+            `<button class="btn btn-sm js-file-btn" id="jsFileBtn_${f.name.replace('.','_')}"
+                onclick="loadJsFile('${f.name}')"
+                data-tooltip="${f.desc}"
+                style="font-size:0.7rem;padding:0.15rem 0.5rem;">${f.label}</button>`
+        ).join('');
+    }
+    if (!_jsTabActiveFile && src) {
+        src.textContent = 'Select a file above to view its source.';
+    }
+}
+
+function loadJsFile(filename) {
+    const src = document.getElementById('codeJsSource');
+    if (!src) return;
+    if (_jsTabActiveFile === filename) return;
+    _jsTabActiveFile = filename;
+
+    document.querySelectorAll('.js-file-btn').forEach(b => b.classList.remove('active'));
+    const active = document.getElementById('jsFileBtn_' + filename.replace('.', '_'));
+    if (active) active.classList.add('active');
+
+    src.textContent = 'Loading…';
+    fetch('/simulator/' + filename)
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+        .then(text => { src.textContent = text; })
+        .catch(err => { src.textContent = 'Could not load ' + filename + ': ' + err.message; });
 }
 
 function switchSidebarTab(tab) {
