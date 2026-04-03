@@ -322,7 +322,11 @@ function init() {
     checkBootId();
     const views = ['repl','editor','tutorial','dashboard','namespace','abstractions','pipeline','reference','docs','builder'];
     const hash = window.location.hash.replace('#', '');
-    const startView = views.includes(hash) ? hash : 'pipeline';
+    let startView = views.includes(hash) ? hash : null;
+    if (!startView) {
+        try { const saved = localStorage.getItem('church_lastView'); if (saved && views.includes(saved)) startView = saved; } catch(e) {}
+    }
+    if (!startView) startView = 'docs';
     switchView(startView);
     switchMathMode('hp35');
 
@@ -392,6 +396,7 @@ function switchView(viewId) {
     if (viewId !== currentView) previousView = currentView;
     currentView = viewId;
     window.location.hash = viewId;
+    try { localStorage.setItem('church_lastView', viewId); } catch(e) {}
     const backBtn = document.getElementById('backBtn');
     if (backBtn) backBtn.style.display = previousView ? 'inline-flex' : 'none';
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
