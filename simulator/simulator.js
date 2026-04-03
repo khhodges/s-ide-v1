@@ -4,7 +4,7 @@ class ChurchSimulator {
         this.NS_TABLE_BASE = 0xFD00;
         this.NS_ENTRY_WORDS = 3;
         this.MAX_NS_ENTRIES = 256;
-        this.SLOT_SIZE = 0x100;
+        this.SLOT_SIZE = 0x40;   // 64 words — FPGA minimum slot allocation (boot_rom.py line 339)
 
         this.abstractionRegistry = null;
         this.systemAbstractions = null;
@@ -287,19 +287,28 @@ class ChurchSimulator {
             clistGTs[8 + i] = this.createGT(0, d.nsIdx, d.perms, 1);
         }
 
-        const bootAbstrLoc = 2 * this.SLOT_SIZE;
-        const bootAllocSize = this.SLOT_SIZE;
+        // Slot 2 (Boot.Abstr) lump layout — tight bound matching hardware:
+        //   Words 0–16: code region (NUC_CODE_WORDS = 17 instructions for LED blink demo)
+        //   Words 17–28: c-list (bootClistCount = 12 GT words, indices 0–11)
+        //   Physical backing: SLOT_SIZE = 64 words (FPGA minimum block-RAM allocation)
+        //   NS entry limit17 = 28 (= code + clist - 1, tight capability bound)
+        //   → CR14.lim = 16 (exec-only, exactly the 17 code words at offsets 0–16)
+        //   → CR6.lim  = 11 (list,  exactly the 12 clist words at offsets 17–28)
+        const NUC_CODE_WORDS = 17;
+        const bootAbstrLoc   = 2 * this.SLOT_SIZE;
         const bootClistCount = clistGTs.length;
-        const clistStart = bootAllocSize - bootClistCount;
+        const clistStart     = NUC_CODE_WORDS;                       // c-list immediately after code
+        const bootLumpWords  = NUC_CODE_WORDS + bootClistCount;      // 29 (tight, no padding)
+
         for (let i = 0; i < bootClistCount; i++) {
             this.memory[bootAbstrLoc + clistStart + i] = clistGTs[i];
         }
-        this.memory[bootAbstrLoc + clistStart] = 0;
+        this.memory[bootAbstrLoc + clistStart] = 0;  // GT[0] = null (filled by SAVE epilogue)
 
         const bootNSBase = this.NS_TABLE_BASE + 2 * this.NS_ENTRY_WORDS;
-        const bootW1 = this.packNSWord1(bootAllocSize - 1, 0, 0, 0, 0, 1, bootClistCount);
+        const bootW1 = this.packNSWord1(bootLumpWords - 1, 0, 0, 0, 0, 1, bootClistCount);
         this.memory[bootNSBase + 1] = bootW1;
-        this.memory[bootNSBase + 2] = this.makeVersionSeals(0, bootAbstrLoc, bootAllocSize - 1);
+        this.memory[bootNSBase + 2] = this.makeVersionSeals(0, bootAbstrLoc, bootLumpWords - 1);
     }
 
     _bootStep() {
