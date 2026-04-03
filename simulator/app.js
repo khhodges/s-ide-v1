@@ -370,7 +370,22 @@ function switchView(viewId) {
     if (viewId === 'tools') renderToolsView();
 }
 
-let _lastGCResult = null;
+let _lastGCResult   = null;
+let _gcPhaseStep    = 0;       // 0=idle/done  1..4=waiting for next click
+let _pendingGCPhases = null;   // phases[] from the current in-progress GC run
+
+const _GC_PHASE_NAMES = ['Mark', 'Scan', 'Sweep', 'Clear'];
+
+function _tgcUpdateBtn() {
+    const btn = document.getElementById('tgcRunBtn');
+    if (!btn) return;
+    if (_gcPhaseStep === 0) {
+        btn.innerHTML = '&#9851; Run GC';
+    } else {
+        const name = _GC_PHASE_NAMES[_gcPhaseStep] || '';
+        btn.innerHTML = (_gcPhaseStep + 1) + ': ' + name + ' &#8594;';
+    }
+}
 
 function renderToolsView() {
     const nsEntryEl    = document.getElementById('tgcNSEntries');
@@ -394,17 +409,20 @@ function renderToolsView() {
         if (liveEl)       liveEl.textContent       = '—';
         if (lastRunEl)    lastRunEl.textContent     = 'Not run yet this session';
     }
+    _tgcUpdateBtn();
 }
 
 function _tgcSetCardState(num, state, badge, lines) {
-    const card   = document.getElementById('tgcCard' + num);
-    const badgeEl = document.getElementById('tgcBadge' + num);
+    const card     = document.getElementById('tgcCard' + num);
+    const badgeEl  = document.getElementById('tgcBadge' + num);
     const reportEl = document.getElementById('tgcReport' + num);
     if (!card) return;
     card.dataset.state = state;
     if (badgeEl) badgeEl.textContent = badge;
     if (reportEl && lines) {
-        reportEl.innerHTML = lines.map(l => '<div class="tgc-line">' + l.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>').join('');
+        reportEl.innerHTML = lines
+            .map(l => '<div class="tgc-line">' + l.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>')
+            .join('');
     }
 }
 
@@ -414,46 +432,55 @@ function _tgcReset() {
         const r = document.getElementById('tgcReport' + i);
         if (r) r.innerHTML = '';
     }
+    _gcPhaseStep   = 0;
+    _pendingGCPhases = null;
 }
 
 function runGCFromTools() {
-    if (!sim || !sim.bootComplete) {
+    const btn = document.getElementById('tgcRunBtn');
+
+    // ── Step 0: start a fresh GC run ─────────────────────────────────────
+    if (_gcPhaseStep === 0) {
+        if (!sim || !sim.bootComplete) {
+            _tgcReset();
+            for (let i = 1; i <= 4; i++) _tgcSetCardState(i, 'error', 'Not booted', null);
+            const el = document.getElementById('toolsGCLastRun');
+            if (el) el.textContent = 'Boot the machine first (top-right Boot button)';
+            return;
+        }
         _tgcReset();
-        for (let i = 1; i <= 4; i++) _tgcSetCardState(i, 'error', 'Not booted', null);
-        const lastRunEl = document.getElementById('toolsGCLastRun');
-        if (lastRunEl) lastRunEl.textContent = 'Boot the machine first (top-right Boot button)';
-        return;
+        sim.mElevation = true;
+        const result = sim.runGC();
+        sim.mElevation = false;
+        _lastGCResult    = result;
+        _pendingGCPhases = result.phases || [];
+        // fall through to reveal phase 1 immediately
     }
 
-    _tgcReset();
-    const btn = document.getElementById('tgcRunBtn');
+    // ── Steps 1-4: reveal the next phase ─────────────────────────────────
+    const phases = _pendingGCPhases;
+    if (!phases || _gcPhaseStep >= phases.length) return;
+
+    const idx = _gcPhaseStep;    // 0-based index into phases[]
+    const num = idx + 1;         // 1-based card number
+
     if (btn) btn.disabled = true;
-
-    sim.output += '[I/O] GC button pressed (Tools view) — invoking GC safe abstraction\n';
-    sim.mElevation = true;
-    const result = sim.runGC();
-    sim.mElevation = false;
-    sim.output += '[I/O] GC abstraction complete — RETURN\n';
-    _lastGCResult = result;
-
-    const phases = result.phases || [];
-    const PHASE_MS = 550;
-
-    phases.forEach((phase, i) => {
-        const num = i + 1;
-        setTimeout(() => {
-            _tgcSetCardState(num, 'running', '…', null);
-        }, PHASE_MS * i);
-
-        setTimeout(() => {
-            _tgcSetCardState(num, 'done', '✓', phase.lines);
-        }, PHASE_MS * i + PHASE_MS * 0.75);
-    });
+    _tgcSetCardState(num, 'running', '…', null);
 
     setTimeout(() => {
-        renderToolsView();
+        _tgcSetCardState(num, 'done', '\u2713', phases[idx].lines);
+        _gcPhaseStep++;
+
+        if (_gcPhaseStep >= phases.length) {
+            // All phases revealed — show final stats, reset for next run
+            renderToolsView();
+            _gcPhaseStep    = 0;
+            _pendingGCPhases = null;
+        }
+
+        _tgcUpdateBtn();
         if (btn) btn.disabled = false;
-    }, PHASE_MS * phases.length + 200);
+    }, 420);
 }
 
 function selectTutorial(which) {
