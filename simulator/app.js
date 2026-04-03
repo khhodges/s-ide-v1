@@ -1504,18 +1504,20 @@ function renderThreadMemoryLayout(nsIndex) {
         if (word === 0) {
             decoded = '<span style="color:#374151;">empty</span>';
         } else {
-            const gt = sim.parseGT(word);
-            if (gt.type !== 0) {
-                const perms = Object.entries(gt.permissions).filter(([,v])=>v).map(([k])=>k).join('') || 'none';
-                const lbl = sim.nsLabels[gt.index] || '';
-                decoded = `GT → <span style="color:#38bdf8;">${gt.typeName}</span> Slot=${gt.index}${lbl?' <i style="color:#93c5fd;">('+lbl+')</i>':''} [${perms}]`;
+            // Sentinel check MUST run before parseGT:
+            // sentinel frameWord = 0x0FFFF0F3 has GT type-field bits = 3 (Abstract),
+            // so GT parsing would misclassify it.  Detect by NIA=0x7FFF (poison) first.
+            const niaBits = (word >>> 13) & 0x7FFF;
+            const szBit   = (word >>> 12) & 1;
+            const prevSTO =  word & 0xFFF;
+            if (niaBits === 0x7FFF) {
+                decoded = `<span style="color:#f97316;font-weight:600;">sentinel frameWord</span> <span style="color:#9ca3af;">(NIA=0x7FFF·poison, sz=${szBit}, prev_STO=${prevSTO})</span>`;
             } else {
-                // Check for sentinel frameWord: NIA field (bits 27:13) = 0x7FFF
-                const niaBits = (word >>> 13) & 0x7FFF;
-                const szBit   = (word >>> 12) & 1;
-                const prevSTO =  word & 0xFFF;
-                if (niaBits === 0x7FFF) {
-                    decoded = `<span style="color:#f97316;font-weight:600;">sentinel frameWord</span> <span style="color:#9ca3af;">(NIA=0x7FFF·poison, sz=${szBit}, prev_STO=${prevSTO})</span>`;
+                const gt = sim.parseGT(word);
+                if (gt.type !== 0) {
+                    const perms = Object.entries(gt.permissions).filter(([,v])=>v).map(([k])=>k).join('') || 'none';
+                    const lbl = sim.nsLabels[gt.index] || '';
+                    decoded = `GT → <span style="color:#38bdf8;">${gt.typeName}</span> Slot=${gt.index}${lbl?' <i style="color:#93c5fd;">('+lbl+')</i>':''} [${perms}]`;
                 } else {
                     const returnPC = niaBits;
                     decoded = `<span style="color:#9ca3af;">frame word: returnPC=${returnPC}, sz=${szBit}, prev_STO=${prevSTO}</span>`;

@@ -1768,7 +1768,7 @@ class ChurchSimulator {
             sz: 1,
             frameWord:  frameWord_ec,
         });
-        this.sto = (savedSTO_ec + 2) & 0xFFF;
+        this.sto = (savedSTO_ec - 2) & 0xFFF;
 
         const label = this.nsLabels[targetIdx] || 'abstraction';
         const desc = `ELOADCALL CR${d.crDst}, [CR${d.crSrc} + ${d.imm}] -> ${label} (LOAD+TPERM+CALL)`;
