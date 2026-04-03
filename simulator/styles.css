@@ -450,12 +450,15 @@ header h1 {
 .flags-led-row {
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
     gap: 0.5rem;
     margin-bottom: 0.5rem;
+    overflow: hidden;
 }
 
 .flags-led-row .flags-bar {
     flex: 1 1 auto;
+    min-width: 0;
     margin-bottom: 0;
 }
 
