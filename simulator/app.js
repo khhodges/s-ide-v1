@@ -453,7 +453,6 @@ function runGCFromTools() {
     setTimeout(() => {
         renderToolsView();
         if (btn) btn.disabled = false;
-        if (currentView === 'tools') updateUI();
     }, PHASE_MS * phases.length + 200);
 }
 
