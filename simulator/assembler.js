@@ -110,6 +110,8 @@ class ChurchAssembler {
             if (commentIdx >= 0) line = line.substring(0, commentIdx).trim();
             const dashComment = line.indexOf('--');
             if (dashComment >= 0) line = line.substring(0, dashComment).trim();
+            const slashComment = line.indexOf('//');
+            if (slashComment >= 0) line = line.substring(0, slashComment).trim();
             if (!line) continue;
 
             if (line.endsWith(':')) {
