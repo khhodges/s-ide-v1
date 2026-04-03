@@ -11179,7 +11179,7 @@ function compileDraft() {
     const isHighLevel = cloomcCompiler._detectEnglish(source) ||
                         cloomcCompiler._detectHaskell(source) ||
                         cloomcCompiler._detectSymbolic(source) ||
-                        source.trim().match(/^(?:\/\/|abstraction\s)/im);
+                        /^\s*abstraction\s+\w+/m.test(source);
     if (!isHighLevel) {
         return compileDraftAssembly(source, con);
     }
