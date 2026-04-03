@@ -826,11 +826,11 @@ function updateCRDetail() {
 
     const codeRegs = [7];
     const clistRegs = [6];
-    const threadRegs = [8];
+    const threadRegs = [8, 12];
     const nsRegs = [15];
     const showCode = hasX || (crMbit && codeRegs.includes(crIdx));
     const showCList = hasL || (crMbit && clistRegs.includes(crIdx));
-    const showThread = crMbit && threadRegs.includes(crIdx);
+    const showThread = THREAD_NS_SLOTS.has(nsIdx) || (crMbit && threadRegs.includes(crIdx));
     const showNS = crMbit && nsRegs.includes(crIdx);
     const showData = (hasR || hasW) && !showCode && !showCList;
 
@@ -954,17 +954,7 @@ function updateCRDetail() {
 
     if (showThread) {
         html += '<div class="cr-detail-section">';
-        html += '<div class="cr-detail-heading">Thread Identity</div>';
-        html += '<table class="cr-table"><tbody>';
-        html += `<tr><td style="color:var(--church-blue)">Thread Index</td><td>${cr.gtIndex}</td></tr>`;
-        html += `<tr><td style="color:var(--church-blue)">M bit</td><td class="${cr.mBit ? 'cr-m-set' : ''}">${cr.mBit}</td></tr>`;
-        html += `<tr><td style="color:var(--church-blue)">Boot Gift</td><td>${cr.mBit ? 'Written under M elevation' : 'Normal'}</td></tr>`;
-        const threadNS = sim.readNSEntry(cr.gtIndex);
-        if (threadNS) {
-            html += `<tr><td style="color:var(--church-blue)">NS Label</td><td>${threadNS.label || '(unnamed)'}</td></tr>`;
-            html += `<tr><td style="color:var(--church-blue)">Chainable</td><td>${threadNS.chainable ? 'Yes' : 'No'}</td></tr>`;
-        }
-        html += '</tbody></table>';
+        html += renderThreadMemoryLayout(nsIdx);
         html += '</div>';
     }
 
