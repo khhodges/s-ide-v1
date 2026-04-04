@@ -1140,7 +1140,10 @@ function injectCRCode(logEl) {
     }
 
     log(`Simulator patched — ${newCW} word${newCW !== 1 ? 's' : ''} written.`);
-    updateDisplay();
+    updateCRDisplay();
+    updateDRDisplay();
+    updateFlagsDisplay();
+    updateInfoDisplay();
     return { newWords, baseLoc, codeStart, newCW, oldCW, nsIdx };
 }
 
@@ -5006,6 +5009,18 @@ const _FAULT_COLORS = {
     STACK_OVERFLOW:'#e05555', STACK_UNDERFLOW:'#e05555', TYPE: '#e05555',
 };
 
+// Numeric fault codes matching hw_types.py FaultType enum (5-bit UART field).
+// null = simulator-only fault with no hardware code.
+const _FAULT_CODES = {
+    PERM_R:0x01, PERM_W:0x02, PERM_X:0x03, PERM_L:0x04, PERM_S:0x05, PERM_E:0x06,
+    NULL_CAP:0x07, BOUNDS:0x08, VERSION:0x09, SEAL:0x0A, INVALID_OP:0x0B,
+    TPERM_RSV:0x0C, DOMAIN_PURITY:0x0D, BIND:0x0E, F_BIT:0x0F,
+    STACK_OVERFLOW:0x10, ABSENT_OUTFORM:0x11, STACK_CORRUPT:0x12,
+    // Software-only (no hardware code):
+    PERM:null, FAR:null, BOOT:null, MATH_ERROR:null,
+    DOMAIN_ERROR:null, HANDLER:null, PERMISSION:null, TYPE:null,
+};
+
 function showFaultModal(f) {
     const existing = document.getElementById('faultModalOverlay');
     if (existing) existing.remove();
@@ -5018,6 +5033,12 @@ function showFaultModal(f) {
     const nsStr  = ns ? `${ns.label} +${ns.offset}` : '\u2014';
     const color  = _FAULT_COLORS[f.type] || '#e05555';
 
+    // Numeric hardware fault code
+    const codeVal = _FAULT_CODES.hasOwnProperty(f.type) ? _FAULT_CODES[f.type] : undefined;
+    const codeStr = codeVal != null
+        ? `0x${codeVal.toString(16).toUpperCase().padStart(2,'0')} (${codeVal})`
+        : 'SW only';
+
     const allFaults  = sim.faultLog || [];
     const historyHtml = allFaults.length > 1
         ? allFaults.slice(-5).map((fl, i, arr) => {
@@ -5025,6 +5046,53 @@ function showFaultModal(f) {
             return `<span class="fault-hist-item${isCurrent ? ' fault-hist-current' : ''}">[step ${fl.step}] ${fl.type}</span>`;
           }).join('')
         : '';
+
+    // ── Capability register snapshot ──────────────────────────────────────
+    const crSnap = f.crSnapshot || [];
+    let crTableRows = '';
+    crSnap.forEach((c, i) => {
+        if (!c || c.word0 === 0) return;
+        try {
+            const p = sim.parseGT(c.word0);
+            const typeChar = ['\u2014','I','O','A'][p.type] || '?';
+            const perms = ['R','W','X','L','S','E'].filter(k => p.permissions[k]).join('') || '\u2014';
+            const base  = c.word1 ? '0x'+((c.word1>>>0).toString(16).toUpperCase()) : '\u2014';
+            crTableRows += `<tr>
+                <td class="freg-name">CR${i}</td>
+                <td class="freg-type">${typeChar}</td>
+                <td class="freg-slot">S${p.index}</td>
+                <td class="freg-perms">${perms}</td>
+                <td class="freg-base">${base}</td>
+            </tr>`;
+        } catch(e) {}
+    });
+    const crSection = crTableRows ? `
+        <div class="fault-regs-section">
+            <div class="fault-regs-label">Capability Registers</div>
+            <div class="fault-regs-scroll">
+                <table class="fault-regs-table">
+                    <thead><tr><th>Reg</th><th>Type</th><th>Slot</th><th>Perms</th><th>Base</th></tr></thead>
+                    <tbody>${crTableRows}</tbody>
+                </table>
+            </div>
+        </div>` : '';
+
+    // ── Data register + flags snapshot ────────────────────────────────────
+    const drSnap = f.drSnapshot || [];
+    const drParts = drSnap
+        .map((v, i) => ({ v: v >>> 0, i }))
+        .filter(({v}) => v !== 0)
+        .map(({v, i}) => `<span class="freg-dr">DR${i}=0x${v.toString(16).toUpperCase().padStart(8,'0')}</span>`);
+
+    const fl = f.flagsSnapshot || {};
+    const flagsStr = ['Z','N','C','V'].map(k => `<span class="freg-flag ${fl[k]?'flag-set':''}">${k}=${fl[k]?1:0}</span>`).join('');
+
+    const drSection = (drParts.length > 0 || flagsStr) ? `
+        <div class="fault-regs-section">
+            ${drParts.length > 0 ? `<div class="fault-regs-label">Data Registers (non-zero)</div>
+            <div class="fault-dr-row">${drParts.join(' ')}</div>` : ''}
+            <div class="fault-flags-row">Flags: ${flagsStr}</div>
+        </div>` : '';
 
     const overlay = document.createElement('div');
     overlay.id = 'faultModalOverlay';
@@ -5039,6 +5107,10 @@ function showFaultModal(f) {
         </div>
         <div class="fault-modal-message">${f.message}</div>
         <div class="fault-detail-grid">
+            <div class="fault-detail-row">
+                <span class="fault-detail-label">Code</span>
+                <span class="fault-detail-value"><code class="fault-code-val">${codeStr}</code></span>
+            </div>
             <div class="fault-detail-row">
                 <span class="fault-detail-label">PC</span>
                 <span class="fault-detail-value"><code>${pcHex}</code></span>
@@ -5060,6 +5132,8 @@ function showFaultModal(f) {
                 <span class="fault-detail-value">${historyHtml}</span>
             </div>` : ''}
         </div>
+        ${crSection}
+        ${drSection}
         <div class="modal-buttons">
             <button class="btn btn-danger" onclick="faultModalReboot()">&#x21BA; Reboot</button>
             <button class="btn btn-warning" onclick="faultModalInvestigate()">&#x1F50D; Investigate</button>

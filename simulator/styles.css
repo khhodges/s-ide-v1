@@ -7322,7 +7322,9 @@ pre:hover .code-copy-btn {
 /* ── Fault Popup Modal ───────────────────────────────────────── */
 .fault-dialog {
     min-width: 380px;
-    max-width: 560px;
+    max-width: 620px;
+    max-height: 90vh;
+    overflow-y: auto;
     border: 1px solid rgba(220, 60, 60, 0.45);
     box-shadow: 0 0 32px rgba(200, 40, 40, 0.18), 0 4px 24px rgba(0,0,0,0.6);
 }
@@ -7436,6 +7438,120 @@ pre:hover .code-copy-btn {
     background: rgba(220,60,60,0.25);
     color: #e08080;
     font-weight: 600;
+}
+
+.fault-code-val {
+    font-family: var(--font-mono, monospace);
+    color: #f0b050;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+/* ── Register snapshot sections inside fault modal ──────────── */
+.fault-regs-section {
+    margin-bottom: 0.85rem;
+    border: 1px solid rgba(100,140,200,0.18);
+    border-radius: 5px;
+    overflow: hidden;
+    font-size: 0.8rem;
+}
+
+.fault-regs-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    background: rgba(0,0,0,0.22);
+    padding: 4px 10px;
+    border-bottom: 1px solid rgba(100,140,200,0.12);
+}
+
+.fault-regs-scroll {
+    overflow-x: auto;
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+.fault-regs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.78rem;
+}
+
+.fault-regs-table thead th {
+    background: rgba(0,0,0,0.18);
+    color: var(--text-secondary);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    text-align: left;
+    border-bottom: 1px solid rgba(100,140,200,0.12);
+    white-space: nowrap;
+}
+
+.fault-regs-table tbody tr:nth-child(even) {
+    background: rgba(0,0,0,0.10);
+}
+
+.fault-regs-table tbody tr:hover {
+    background: rgba(80,120,200,0.10);
+}
+
+.fault-regs-table td {
+    padding: 3px 8px;
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(100,140,200,0.06);
+}
+
+.freg-name  { color: #90b8f0; font-weight: 600; }
+.freg-type  { color: #a0c888; }
+.freg-slot  { color: #c0a860; }
+.freg-perms { color: #d08858; font-weight: 600; letter-spacing: 0.02em; }
+.freg-base  { color: #a0a8c0; }
+
+.fault-dr-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(100,140,200,0.08);
+}
+
+.freg-dr {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.76rem;
+    background: rgba(100,160,220,0.10);
+    border: 1px solid rgba(100,160,220,0.18);
+    border-radius: 3px;
+    padding: 1px 7px;
+    color: #90b8d0;
+    white-space: nowrap;
+}
+
+.fault-flags-row {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+    padding: 5px 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.freg-flag {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.freg-flag.flag-set {
+    color: #f0c060;
+    opacity: 1;
+    font-weight: 700;
 }
 
 .btn-danger {

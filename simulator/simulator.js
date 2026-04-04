@@ -1232,7 +1232,14 @@ class ChurchSimulator {
     }
 
     fault(type, message) {
-        const entry = { type, message, pc: this.pc, step: this.stepCount };
+        const entry = {
+            type, message, pc: this.pc, step: this.stepCount,
+            // Snapshot machine state so the fault modal can show registers without
+            // navigating away.  Deep-copy so post-fault resets don't overwrite these.
+            crSnapshot: this.cr ? this.cr.map(c => c ? {...c} : null) : [],
+            drSnapshot: this.dr ? [...this.dr] : [],
+            flagsSnapshot: this.flags ? {...this.flags} : {},
+        };
         this.faultLog.push(entry);
         this.output += `FAULT [${type}] at PC=${this.pc}: ${message}\n`;
         this.halted = true;
