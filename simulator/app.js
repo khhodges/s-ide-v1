@@ -4409,9 +4409,72 @@ function assembleAndLoad() {
     const source = editor.value;
     saveEditorState();
 
+    const con = document.getElementById('editorConsole');
+
+    const isHighLevel = cloomcCompiler && (
+        cloomcCompiler._detectEnglish(source) ||
+        cloomcCompiler._detectHaskell(source) ||
+        cloomcCompiler._detectSymbolic(source) ||
+        /^\s*abstraction\s+\w+/m.test(source)
+    );
+
+    if (isHighLevel) {
+        const result = cloomcCompiler.compile(source, []);
+        if (result.errors.length > 0) {
+            const errText = result.errors.map(e => `Line ${e.line || '?'}: ${e.message}`).join('\n');
+            if (con) con.textContent = `CLOOMC++ errors:\n${errText}`;
+            showNextSteps('error');
+            return;
+        }
+        const methods = result.methods || [];
+        const methodTableSize = methods.length;
+        const words = [];
+        const labels = {};
+        let codeOffset = methodTableSize;
+        const methodTableEntries = [];
+        for (const m of methods) {
+            methodTableEntries.push(codeOffset);
+            labels[m.name] = codeOffset;
+            codeOffset += (m.code || []).length;
+        }
+        for (const entry of methodTableEntries) words.push(entry);
+        for (const m of methods) {
+            for (const w of (m.code || [])) words.push(w);
+        }
+        sim.loadProgram(words, 0);
+        lastAssembledWords = words.slice();
+        const abstrBase2 = sim.NS_TABLE_BASE + 2 * sim.NS_ENTRY_WORDS;
+        const progBase = sim.bootComplete ? (sim.memory[abstrBase2] || (2 * sim.SLOT_SIZE)) : 0;
+        sim.programBaseAddr = progBase;
+        sim.programLabels = labels;
+        sim.programName = result.abstractionName || (methods.length > 0 ? methods[0].name : 'prog');
+        if (pipelineViz) pipelineViz.setNIA(null);
+        let listing = `Assembled ${words.length} words (CLOOMC++ "${result.abstractionName || ''}", ${methods.length} method(s)):\n\n`;
+        let wordIdx = 0;
+        for (let mi = 0; mi < methods.length; mi++) {
+            listing += `  [method table] ${mi}: offset ${methodTableEntries[mi]}\n`;
+        }
+        listing += '\n';
+        wordIdx = methodTableSize;
+        for (const m of methods) {
+            listing += `  method ${m.name}: ${(m.code || []).length} instruction(s)\n`;
+            for (let i = 0; i < (m.code || []).length; i++) {
+                const w = m.code[i];
+                listing += `    ${wordIdx.toString().padStart(4)}: 0x${w.toString(16).padStart(8, '0')}  ${assembler.disassemble(w)}\n`;
+                wordIdx++;
+            }
+            listing += '\n';
+        }
+        if (con) con.textContent = listing;
+        showNextSteps('assembled');
+        const saveBtn = document.getElementById('btnSaveNS');
+        if (saveBtn) saveBtn.disabled = false;
+        updateDashboard();
+        return;
+    }
+
     const result = assembler.assemble(source);
 
-    const con = document.getElementById('editorConsole');
     if (result.errors.length > 0) {
         const errText = result.errors.map(e => `Line ${e.line}: ${e.message}`).join('\n');
         if (con) con.textContent = `Assembly errors:\n${errText}`;
