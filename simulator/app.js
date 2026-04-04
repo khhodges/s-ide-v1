@@ -11403,7 +11403,6 @@ function onLangChange(restoring) {
 
 function smartCompile() {
     if (!requirePermission('compile', 'Compile Programs')) return;
-    switchView('editor');
     const sel = document.getElementById('langSelector');
     let lang = sel ? sel.value : 'assembly';
 

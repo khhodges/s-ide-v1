@@ -51,6 +51,12 @@ class CLOOMCCompiler {
 
     compileJS(source, capabilities) {
         const errors = [];
+        // Auto-wrap bare method code that has no abstraction declaration
+        if (!/^\s*abstraction\s+\w+/m.test(source) && /^\s*method\s+\w+/m.test(source)) {
+            const nameMatch = source.match(/^\s*method\s+(\w+)/m);
+            const autoName = nameMatch ? nameMatch[1].charAt(0).toUpperCase() + nameMatch[1].slice(1) + 'Abstraction' : 'MyAbstraction';
+            source = `abstraction ${autoName} {\n${source}\n}`;
+        }
         const parsed = this._parseAbstraction(source, errors);
         if (errors.length > 0) {
             return { methods: [], errors, manifest: [], abstractionName: parsed.name || '', capabilities: parsed.capabilities || [], language: 'javascript' };
