@@ -408,7 +408,7 @@ class ChurchSimulator {
         //   Words 18–51:  Freespace    (34 words, always zero, internal to the lump)
         //   Words 52–63:  C-list       (12 GT words, at physical end; matching hardware DEMO_CLIST)
         //   Physical backing: SLOT_SIZE = 64 words = lumpSize (n_minus_6=0 → 2^6 = 64)
-        //   → CR14: base=lump_start, limit=lumpSize-cc-2=50 (code region, words 1..51 via +1 fetch)
+        //   → CR14: base=lump_start, limit=cw-1=16  (code region; cload reads cw from lump header)
         //   → CR6:  base=lump_start+52, limit=cc-1=11  (c-list at physical end)
         const NUC_CODE_WORDS    = 17;
         const DEMO_CLIST_SIZE   = 12;  // hardware DEMO_CLIST has exactly 12 entries (idx 0–11)
