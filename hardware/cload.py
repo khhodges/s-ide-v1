@@ -87,6 +87,7 @@ class ChurchCLoad(Elaboratable):
         raw_w3   = Signal(32)
 
         cc_reg        = Signal(8)
+        cw_reg        = Signal(13)   # _hdr.cw: authoritative code-word count from lump header
         n_minus_6_reg = Signal(4)
         lump_size_reg = Signal(15)
 
@@ -118,7 +119,7 @@ class ChurchCLoad(Elaboratable):
             cr14_gt_view.perms.eq(PERM_MASK_X),
             cr14_gt_view.b_flag.eq(0),
             cr14_view.word1_location.eq(raw_base + 4),
-            cr14_w2_view.limit_offset.eq(lump_size_reg - cc_reg - 1),    # cw-1 (inclusive last valid PC; cw = lump_size - cc)
+            cr14_w2_view.limit_offset.eq(cw_reg - 1),    # cw-1 (inclusive last valid PC; cw from lump header, not allocation size)
             cr14_w2_view.gt_seq.eq(e_gt_view.gt_seq),
             cr14_w2_view.spare.eq(0),
             cr14_view.word3_w3.eq(raw_w3),
@@ -158,6 +159,7 @@ class ChurchCLoad(Elaboratable):
                         raw_w2.eq(0),
                         raw_w3.eq(0),
                         cc_reg.eq(0),
+                        cw_reg.eq(0),
                         n_minus_6_reg.eq(0),
                         lump_size_reg.eq(0),
                         fault_type_reg.eq(FaultType.NONE),
@@ -202,6 +204,7 @@ class ChurchCLoad(Elaboratable):
                     _hdr = View(LUMP_HEADER_LAYOUT, self.mem_rd_data)
                     m.d.sync += [
                         cc_reg.eq(_hdr.cc),
+                        cw_reg.eq(_hdr.cw),          # authoritative code-word count
                         n_minus_6_reg.eq(_hdr.n_minus_6),
                         lump_size_reg.eq(Const(1, 15) << (_hdr.n_minus_6 + 6)),
                     ]

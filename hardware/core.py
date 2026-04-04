@@ -199,7 +199,11 @@ class ChurchCore(Elaboratable):
         exec_enable = u_decoder.exec_enable
 
         cond_exec_enable = Signal()
-        m.d.comb += cond_exec_enable.eq(self.boot_complete & exec_enable)
+        fetch_bounds_fault = Signal()   # combinatorial; gates cond_exec_enable and drives fault
+        # fetch_bounds_fault is assigned below (after any_unit_busy is defined).
+        # Including ~fetch_bounds_fault here ensures that NO instruction can start in the
+        # same cycle that a BOUNDS fault is asserted — decode side effects are suppressed.
+        m.d.comb += cond_exec_enable.eq(self.boot_complete & exec_enable & ~fetch_bounds_fault)
 
         # 1-cycle busy registers for single-cycle Turing ops (prevent double-execution
         # due to the 1-cycle ROM fetch pipeline latency)
@@ -1092,11 +1096,16 @@ class ChurchCore(Elaboratable):
         with m.Elif(u_return.complete & ~u_return.fault_valid & ~cr5_stack_empty):
             m.d.sync += cr5_stack_ptr.eq(cr5_stack_ptr - 1)
 
-        with m.If(
+        # fetch_bounds_fault: active when nia_reg escapes the active code fence.
+        # Also drives cond_exec_enable low (via the declaration above) so that no
+        # instruction can start in the same cycle — decode side effects are suppressed
+        # before the fault is taken.  Fence is inactive when code_lo == code_hi == 0.
+        m.d.comb += fetch_bounds_fault.eq(
             self.boot_complete & ~any_unit_busy &
             (code_lo_reg != code_hi_reg) &
             ((nia_reg < code_lo_reg) | (nia_reg >= code_hi_reg))
-        ):
+        )
+        with m.If(fetch_bounds_fault):
             m.d.comb += [self.fault.eq(FaultType.BOUNDS), self.fault_valid.eq(1)]
         with m.Elif(u_decoder.fault_valid):
             m.d.comb += [self.fault.eq(u_decoder.fault), self.fault_valid.eq(1)]
