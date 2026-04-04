@@ -11404,7 +11404,18 @@ function onLangChange(restoring) {
 function smartCompile() {
     if (!requirePermission('compile', 'Compile Programs')) return;
     const sel = document.getElementById('langSelector');
-    const lang = sel ? sel.value : 'assembly';
+    let lang = sel ? sel.value : 'assembly';
+
+    // Auto-detect CLOOMC++ when code has abstraction/method keywords
+    if (lang === 'assembly') {
+        const src = (document.getElementById('asmEditor') || {}).value || '';
+        if (/^\s*abstraction\s+\w+/m.test(src) || /^\s*method\s+\w+/m.test(src)) {
+            lang = 'javascript';
+            if (sel) sel.value = 'javascript';
+            onLangChange(true);
+        }
+    }
+
     if (lang === 'assembly') {
         assembleAndLoad();
     } else {
