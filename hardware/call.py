@@ -82,6 +82,13 @@ class ChurchCall(Elaboratable):
         self.cr_b_clear_mask = Signal(12)
         self.cr_null_mask    = Signal(12)
 
+        # Code fence bounds — driven combinatorially; valid when call_complete=1.
+        # code_lo_out: byte address of first instruction (lump_base + 4)
+        # code_hi_out: exclusive byte address past last instruction (lump_base + 4 + cw*4)
+        # Core latches these into code_lo_reg / code_hi_reg on call_complete.
+        self.code_lo_out = Signal(32)
+        self.code_hi_out = Signal(32)
+
     def elaborate(self, platform):
         m = Module()
 
@@ -245,7 +252,7 @@ class ChurchCall(Elaboratable):
             cr14_wl_gt.perms.eq(cr14_wm_gt.perms),        # includes PERM_X (M=1)
             cr14_wl_gt.b_flag.eq(cr14_wm_gt.b_flag),
             cr14_wl_view.word1_location.eq(cr14_wm_view.word1_location),  # NS_base+4
-            cr14_wl_w2.limit_offset.eq(lumpSize_reg - cc_reg - 2),        # lumpSize−cc−2
+            cr14_wl_w2.limit_offset.eq(cw_reg),                           # cw (first invalid PC offset)
             cr14_wl_w2.gt_seq.eq(cr14_lat_w2.gt_seq),
             cr14_wl_w2.spare.eq(0),
             cr14_wl_view.word3_w3.eq(cr14_wm_view.word3_w3),
@@ -278,6 +285,15 @@ class ChurchCall(Elaboratable):
             cr6_adj_view.word3_w3.eq(cr6_lat_view.word3_w3),
         ]
 
+
+        # Code fence bounds — always-valid combinatorial outputs for core to latch
+        # on call_complete.  ns_base_from_cr14 = lump_base (byte address before +4).
+        # cw_reg is latched from the lump header in FETCH_LUMP and stable for the
+        # remainder of the CALL pipeline.
+        m.d.comb += [
+            self.code_lo_out.eq(ns_base_from_cr14 + 4),
+            self.code_hi_out.eq(ns_base_from_cr14 + 4 + (cw_reg << 2)),
+        ]
 
         # Explicit combinatorial defaults so these signals are always driven to 0
         # except during the single CLEAR_B state that pulses them.

@@ -131,6 +131,14 @@ class ChurchCore(Elaboratable):
 
         nia_reg = Signal(32)
 
+        # Code fence registers — protect against runaway branches escaping the current
+        # CALL context.  Set from the CALL unit on call_complete; cleared to (0, 0) on
+        # reboot or whenever the execution context leaves the guarded code region via
+        # LAMBDA / ELOADCALL / XLOADLAMBDA (where code bounds are unknown).
+        # Fence is inactive when code_lo_reg == code_hi_reg == 0.
+        code_lo_reg = Signal(32, init=0)
+        code_hi_reg = Signal(32, init=0)
+
         lambda_active_reg = Signal()
         lambda_pc_reg = Signal(32)
 
@@ -477,6 +485,20 @@ class ChurchCore(Elaboratable):
         with m.Elif(self.boot_complete & u_decoder.instr_valid & ~any_unit_busy):
             # Advance PC for all instructions (including not-taken branches)
             m.d.sync += nia_reg.eq(nia_reg + 4)
+
+        # Code fence management — separate priority chain from nia update.
+        # Reboot clears fence (highest priority).
+        # Lambda / eloadcall / xloadlambda entering unknown code suspends fence.
+        # CALL completing establishes (or re-establishes) the fence.
+        with m.If(u_return.reboot_request | clear_all):
+            m.d.sync += [code_lo_reg.eq(0), code_hi_reg.eq(0)]
+        with m.Elif(u_lambda.nia_set | u_eloadcall.nia_set | u_xloadlambda.nia_set):
+            m.d.sync += [code_lo_reg.eq(0), code_hi_reg.eq(0)]
+        with m.Elif(u_call.call_complete):
+            m.d.sync += [
+                code_lo_reg.eq(u_call.code_lo_out),
+                code_hi_reg.eq(u_call.code_hi_out),
+            ]
 
         m.d.comb += [
             self.imem_addr.eq(nia_reg),
@@ -1047,6 +1069,12 @@ class ChurchCore(Elaboratable):
             m.d.comb += [self.fault.eq(u_cload.cload_fault_type), self.fault_valid.eq(1)]
         with m.Elif(u_outform.outform_fault):
             m.d.comb += [self.fault.eq(u_outform.outform_fault_type), self.fault_valid.eq(1)]
+        with m.Elif(
+            self.boot_complete & ~any_unit_busy &
+            (code_lo_reg != code_hi_reg) &
+            ((nia_reg < code_lo_reg) | (nia_reg >= code_hi_reg))
+        ):
+            m.d.comb += [self.fault.eq(FaultType.BOUNDS), self.fault_valid.eq(1)]
         with m.Else():
             m.d.comb += [self.fault.eq(FaultType.NONE), self.fault_valid.eq(0)]
 

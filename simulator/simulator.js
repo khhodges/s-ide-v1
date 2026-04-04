@@ -609,11 +609,11 @@ class ChurchSimulator {
                 // Hardware does this simultaneously from the header word; both tokens
                 // are Inform-type, zero gt_seq, referencing Slot 2 (same physical lump).
                 const cr14GT = this.createGT(0, 2, {R:1,W:0,X:1,L:0,S:0,E:0}, 1);         // R+X Inform GT for Slot 2 → CR14 is the code-execution token
-                const cr14Word1 = this.packNSWord1(lumpSz - cc - 2, 0, 0, 0, 0, 1, 0);     // NS word1 encodes limit = lumpSz − cc − 2 (excludes header word 0 and c-list)
+                const cr14Word1 = this.packNSWord1(cw, 0, 0, 0, 0, 1, 0);                  // NS word1 encodes limit = cw (first invalid PC offset; valid PCs are 0..cw-1)
                 this.cr[14] = {
                     word0: cr14GT,                  // Golden Token identifying the code lump
                     word1: base,                    // physical base address of lump (first instruction at base+0)
-                    word2: cr14Word1,               // limit word (max reachable instruction offset)
+                    word2: cr14Word1,               // limit word (cw = first invalid PC; used by _fetchInstruction)
                     word3: abstrEntry.word2_seals,  // seal field copied from NS entry (version + seal bits)
                     m: this.mElevation ? 1 : 0     // M-elevation is still ON at this point (cleared below)
                 };
@@ -632,7 +632,7 @@ class ChurchSimulator {
 
                 // ── Step 5: Set PC and emit log ───────────────────────────────────────
                 this.pc = 0;                        // first instruction of Boot Abstraction is at lump word 0 (offset from lump base)
-                this.output += `[BOOT] LOAD_NUC — hdr=0x${hdrWord.toString(16).toUpperCase().padStart(8,'0')} (cw=${cw},cc=${cc},lumpSize=${lumpSz}); CR14+CR6 ← simultaneous from lump header; CR14(X,lim=${lumpSz-cc-2}) CR6(L,base=0x${(base+clistStart).toString(16).toUpperCase()},lim=${cc-1}), PC=0\n`;
+                this.output += `[BOOT] LOAD_NUC — hdr=0x${hdrWord.toString(16).toUpperCase().padStart(8,'0')} (cw=${cw},cc=${cc},lumpSize=${lumpSz}); CR14+CR6 ← simultaneous from lump header; CR14(X,cw=${cw},lim=0..${cw-1}) CR6(L,base=0x${(base+clistStart).toString(16).toUpperCase()},lim=${cc-1}), PC=0\n`;
                 this.output += `[BOOT] SENTINEL CALL — frame@+${sp_max}=0x${sentinelFrameWord.toString(16).toUpperCase().padStart(8,'0')} (NIA=0x7FFF,sz=1,prev_STO=${sp_max}), E-GT@+${sp_max-1}=0x${oldCR6GT.toString(16).toUpperCase().padStart(8,'0')}, STO=${this.sto}\n`;
 
                 // ── Step 6 (B:05): COMPLETE ───────────────────────────────────────────
@@ -1275,9 +1275,9 @@ class ChurchSimulator {
         if (!entry) {
             return { ok: false, fault: 'BOUNDS', message: `CR14 NS entry ${cr14Parsed.index} not found` };
         }
-        const w1 = this.parseNSWord1(entry.word1_limit);
-        if (this.pc >= w1.limit) {
-            return { ok: false, fault: 'BOUNDS', message: `PC=${this.pc} exceeds CR14 code limit (${w1.limit})` };
+        const cr14w2 = this.parseNSWord1((this.cr[14].word2 || 0) >>> 0);
+        if (this.pc >= cr14w2.limit) {
+            return { ok: false, fault: 'BOUNDS', message: `PC=${this.pc} exceeds CR14 code limit (cw=${cr14w2.limit})` };
         }
         // +1: skip lump header at word 0; code region starts at word0_location + 1
         const fetchAddr = entry.word0_location + 1 + this.pc;
@@ -1548,7 +1548,7 @@ class ChurchSimulator {
 
             // CR14 (code, X) and CR6 (c-list, L) set simultaneously from single lump header read
             const cr14GT = this.createGT(srcParsed.gt_seq, check.index, {R:1,W:0,X:1,L:0,S:0,E:0}, 1);
-            const cr14Word1 = this.packNSWord1(lumpSz - cc - 2, 0, 0, 0, 0, 1, 0);
+            const cr14Word1 = this.packNSWord1(cw, 0, 0, 0, 0, 1, 0);
             this.cr[14] = {
                 word0: cr14GT,
                 word1: base,
@@ -1568,7 +1568,7 @@ class ChurchSimulator {
             };
             // CR6 lives in the CALL stack frame (written above); NOT in the caps zone
 
-            cr7Desc = `, hdr=0x${hdrWord.toString(16).toUpperCase().padStart(8,'0')} → CR14+CR6 simultaneous: CR14(X,cw=${cw},lim=${lumpSz-cc-2}) CR6(L,cc=${cc},base=0x${(base+clistStart).toString(16).toUpperCase()})`;
+            cr7Desc = `, hdr=0x${hdrWord.toString(16).toUpperCase().padStart(8,'0')} → CR14+CR6 simultaneous: CR14(X,cw=${cw},lim=0..${cw-1}) CR6(L,cc=${cc},base=0x${(base+clistStart).toString(16).toUpperCase()})`;
         } else {
             this._writeCR(6, sourceGT, nsEntry);
 

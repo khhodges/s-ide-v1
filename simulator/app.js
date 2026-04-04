@@ -1134,7 +1134,7 @@ function injectCRCode(logEl) {
         const oldW1 = sim.memory[nsBase + 1] >>> 0;
         const oldW2 = sim.memory[nsBase + 2] >>> 0;
         const w1f = sim.parseNSWord1(oldW1);
-        const newLimit17 = Math.max(0, newCW - 1);
+        const newLimit17 = newCW;
         const newW1 = sim.packNSWord1(newLimit17, w1f.b, w1f.f, w1f.g, w1f.chainable, w1f.gtType, w1f.clistCount);
         sim.memory[nsBase + 1] = newW1;
 
@@ -1142,9 +1142,12 @@ function injectCRCode(logEl) {
         const newW2 = sim.makeVersionSeals(existingGtSeq, baseLoc, newLimit17);
         sim.memory[nsBase + 2] = newW2;
 
-        if (sim.cr[crIdx]) sim.cr[crIdx].word3 = newW2;
+        if (sim.cr[crIdx]) {
+            sim.cr[crIdx].word3 = newW2;
+            sim.cr[crIdx].word2 = newW1 >>> 0;
+        }
 
-        log(`Resized: lump cw updated, NS[${nsIdx}] limit17=${newLimit17}, CRC recomputed (gt_seq=${existingGtSeq} preserved).`);
+        log(`Resized: lump cw updated, NS[${nsIdx}] limit17=${newLimit17} (cw=${newCW}), CRC recomputed (gt_seq=${existingGtSeq} preserved).`);
     }
 
     log(`Simulator patched — ${newCW} word${newCW !== 1 ? 's' : ''} written.`);
