@@ -132,7 +132,11 @@ class ChurchAssembler {
 
             if (line.endsWith(':')) {
                 // Label definition — store word offset (= current instruction count)
-                this.labels[line.slice(0, -1).trim()] = instructions.length;
+                const labelName = line.slice(0, -1).trim();
+                if (this.labels[labelName] !== undefined) {
+                    this.errors.push({ line: lineNum + 1, message: `Label "${labelName}" is defined more than once. Each label must be unique within a code lump.` });
+                }
+                this.labels[labelName] = instructions.length;
                 continue;
             }
 
