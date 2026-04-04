@@ -1509,7 +1509,11 @@ class ChurchSimulator {
             return null;
         }
         const savedSTO = this.sto;
-        const oldCR6GT = this.cr[6].word0 >>> 0;  // capture before callee overwrites CR6
+        // Hardware (call.py PHASE1_DONE → STACK_WRITE_EGT) saves the CALLEE'S E-GT
+        // (callee_egt_latched = CR6.word0 after Phase 1 mLoad = sourceGT with E perm),
+        // NOT the caller's old CR6 (which is L-type post-boot, not E-type).
+        // This E-GT at STO-1 is what RETURN's cload uses to restore the callee's context.
+        const calleeEGT = sourceGT >>> 0;
         const frameWord = this._packFrameWord(this.pc + 1, 1, savedSTO);
         this.callStack.push({
             returnPC:   this.pc + 1,
@@ -1522,11 +1526,11 @@ class ChurchSimulator {
         });
         // Write 2-word CALL frame to thread lump stack zone (hardware-accurate):
         //   STO+0 = frameWord   (returnPC, flags, sz, prev_STO)
-        //   STO−1 = old CR6 GT  (caller's E-type c-list token, restored by RETURN)
+        //   STO−1 = callee E-GT (sourceGT — the E-type token used to invoke this abstraction)
         const callThreadBase = this.cr[12] && this.cr[12].word1;
         if (callThreadBase) {
             this.memory[callThreadBase + savedSTO]     = frameWord;
-            this.memory[callThreadBase + savedSTO - 1] = oldCR6GT;
+            this.memory[callThreadBase + savedSTO - 1] = calleeEGT;
         }
         this.sto = (savedSTO - 2) & 0xFFF;
 
