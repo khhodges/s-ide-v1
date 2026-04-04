@@ -1053,15 +1053,23 @@ function editCRCodeInEditor() {
         codeLimit = lumpHdr.cw;
     }
 
+    // Collect raw words (clamped to memory), then trim trailing zeros.
+    const rawWords = [];
+    for (let w = 0; w < codeLimit; w++) {
+        const addr = codeStart + w;
+        if (addr >= sim.memory.length) break;
+        rawWords.push(sim.memory[addr] >>> 0);
+    }
+    let trimLen = rawWords.length;
+    while (trimLen > 0 && rawWords[trimLen - 1] === 0) trimLen--;
+    const trimmedWords = rawWords.slice(0, trimLen);
+
     const lines = [];
     lines.push(`; Disassembly of CR${crIdx}  NS[${nsIdx}]  @ 0x${baseLoc.toString(16).toUpperCase().padStart(4,'0')}  (${codeLimit} word${codeLimit !== 1 ? 's' : ''})`);
-    if (codeLimit === 0) {
+    if (trimmedWords.length === 0) {
         lines.push('; (empty lump)');
     } else {
-        for (let w = 0; w < codeLimit; w++) {
-            const addr = codeStart + w;
-            if (addr >= sim.memory.length) break;
-            const word = sim.memory[addr] >>> 0;
+        for (const word of trimmedWords) {
             lines.push(word === 0 ? 'NOP' : asm.disassemble(word));
         }
     }
@@ -1222,12 +1230,18 @@ function updateCRDetail() {
     const showNS = crMbit && nsRegs.includes(crIdx);
     const showData = (hasR || hasW) && !showCode && !showCList;
 
+    // Check if the base location holds a valid lump header (needed for Edit button).
+    const _editBaseLoc = cr.word1_location >>> 0;
+    const _editWord0 = (_editBaseLoc < sim.memory.length) ? (sim.memory[_editBaseLoc] >>> 0) : 0;
+    const _editLumpHdr = sim.parseLumpHeader(_editWord0);
+    const showEditButton = showCode && _editLumpHdr.valid;
+
     let html = '';
     html += '<div class="crd-tabs">';
     html += `<button class="crd-tab${crDetailTab==='content'?' active':''}" id="crdTab-content" onclick="switchCRDetailTab('content')">Content</button>`;
     html += `<button class="crd-tab${crDetailTab==='register'?' active':''}" id="crdTab-register" onclick="switchCRDetailTab('register')">Register</button>`;
     html += `<button class="crd-tab${crDetailTab==='binary'?' active':''}" id="crdTab-binary" onclick="switchCRDetailTab('binary')">Binary</button>`;
-    if (showCode) {
+    if (showEditButton) {
         html += `<button class="crd-tab crd-tab-action" onclick="editCRCodeInEditor()" title="Load this code lump into the assembly editor">Edit</button>`;
     }
     html += '</div>';
@@ -1304,9 +1318,11 @@ function updateCRDetail() {
             html += codeHtml;
         }
 
-        // Inject panel — patch the code lump back after editing
+        // Inject panel — only shown when a valid lump header is present
         html += `<div class="cr-inject-bar">`;
-        html += `<button class="btn btn-sm" onclick="editCRCodeInEditor()" title="Load this code lump into the assembly editor">&#x270E; Edit in Editor</button>`;
+        if (lumpHdr.valid) {
+            html += `<button class="btn btn-sm" onclick="editCRCodeInEditor()" title="Load this code lump into the assembly editor">&#x270E; Edit in Editor</button>`;
+        }
         html += `<button class="btn btn-sm btn-primary" onclick="(function(){`;
         html += `var el=document.getElementById('crInjectLog');`;
         html += `el.style.display='block';el.textContent='';`;
