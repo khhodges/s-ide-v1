@@ -195,3 +195,6 @@ class BootState(IntEnum):
     INIT_CLIST = 4
     LOAD_NUC   = 5
     COMPLETE   = 6
+
+
+NUC_PROGRAM_CW = 17

@@ -136,8 +136,14 @@ class ChurchCore(Elaboratable):
         # reboot or whenever the execution context leaves the guarded code region via
         # LAMBDA / ELOADCALL / XLOADLAMBDA (where code bounds are unknown).
         # Fence is inactive when code_lo_reg == code_hi_reg == 0.
-        code_lo_reg = Signal(32, init=0)
-        code_hi_reg = Signal(32, init=0)
+        #
+        # fence_pending_reg is set on cross-domain RETURN and cleared when cload writes
+        # CR14 with the restored caller code cap.  While set, it contributes to
+        # any_unit_busy, preventing instruction fetch/decode during the transitional
+        # window, thereby eliminating the unfenced gap between RETURN and cload.
+        code_lo_reg     = Signal(32, init=0)
+        code_hi_reg     = Signal(32, init=0)
+        fence_pending_reg = Signal(init=0)
 
         lambda_active_reg = Signal()
         lambda_pc_reg = Signal(32)
@@ -219,6 +225,7 @@ class ChurchCore(Elaboratable):
             iadd_busy_reg | isub_busy_reg | branch_busy_reg |
             shl_busy_reg | shr_busy_reg | bfext_busy_reg | bfins_busy_reg | mcmp_busy_reg |
             u_cload.cload_busy | cload_pending |
+            fence_pending_reg |
             u_outform.outform_busy
         )
         m.d.comb += any_unit_busy.eq(busy_expr)
@@ -487,31 +494,56 @@ class ChurchCore(Elaboratable):
             m.d.sync += nia_reg.eq(nia_reg + 4)
 
         # Code fence management — separate priority chain from nia update.
-        # Reboot/RETURN/clear_all clears fence (highest priority).
-        #   - RETURN: after returning to caller, callee's bounds must not apply; caller
-        #             bounds are unknown (not saved in frame), so fence goes inactive.
-        #   - Lambda / eloadcall / xloadlambda entering unknown code: fence suspended.
-        # CALL completing establishes (or re-establishes) the fence.
-        with m.If(u_return.reboot_request | u_return.complete | clear_all):
-            m.d.sync += [code_lo_reg.eq(0), code_hi_reg.eq(0)]
-        with m.Elif(u_lambda.nia_set | u_eloadcall.nia_set | u_xloadlambda.nia_set):
-            m.d.sync += [code_lo_reg.eq(0), code_hi_reg.eq(0)]
-        with m.Elif(u_call.call_complete):
+        #
+        # Priority (highest first):
+        #   1. Reboot / global reset: clear fence + cancel any pending transition.
+        #   2. Cross-domain RETURN: set fence_pending to stall fetch until cload restores
+        #      CR14.  The callee's fence is KEPT (not cleared) so that the BOUNDS check
+        #      cannot fire during the stall (any_unit_busy already blocks decode, but
+        #      keeping the old fence avoids an inactive-fence window entirely).
+        #   3. Lambda-fast RETURN (~cross_domain_ret): no cload follows, fence goes
+        #      inactive immediately (caller's context had no fence at lambda entry).
+        #   4. cload writes CR14: fence_pending cleared, new fence established from the
+        #      restored caller code cap.  This is the exclusive path to re-activate the
+        #      fence after a cross-domain RETURN.
+        #   5. LAMBDA / ELOADCALL / XLOADLAMBDA: entering unknown code, fence suspended.
+        #   6. CALL completing: establish callee fence from CALL unit outputs.
+        with m.If(u_return.reboot_request | clear_all):
+            # Reboot or global reset — wipe everything immediately.
             m.d.sync += [
-                code_lo_reg.eq(u_call.code_lo_out),
-                code_hi_reg.eq(u_call.code_hi_out),
+                code_lo_reg.eq(0),
+                code_hi_reg.eq(0),
+                fence_pending_reg.eq(0),
             ]
+        with m.Elif(u_return.complete & cross_domain_ret):
+            # Cross-domain RETURN: stall instruction execution until cload restores CR14.
+            # Old fence (callee's bounds) is intentionally kept; fetch is blocked by
+            # fence_pending_reg contribution to any_unit_busy, so no false BOUNDS fault.
+            m.d.sync += fence_pending_reg.eq(1)
+        with m.Elif(u_return.complete & ~cross_domain_ret):
+            # Lambda-fast RETURN: no cload follows — fence goes inactive.
+            m.d.sync += [code_lo_reg.eq(0), code_hi_reg.eq(0)]
         with m.Elif(u_cload.cr_wr_en & (u_cload.cr_wr_addr == CR_CODE)):
-            # cload (triggered by cross-domain RETURN) writes CR14 with the caller's
-            # restored code cap.  Re-establish the fence from the new CR14 value.
+            # cload (triggered by cross-domain RETURN) restores the caller's code cap
+            # into CR14.  Re-establish the fence and release the stall.
             cr14_cload_view = View(CAP_REG_LAYOUT, u_cload.cr_wr_data)
             cr14_cload_w2   = View(WORD2_LAYOUT,   cr14_cload_view.word2_w2)
             m.d.sync += [
+                fence_pending_reg.eq(0),
                 code_lo_reg.eq(cr14_cload_view.word1_location),
                 code_hi_reg.eq(
                     cr14_cload_view.word1_location +
-                    ((cr14_cload_w2.limit_offset + 1) << 2)   # limit_offset is inclusive (cw-1)
+                    ((cr14_cload_w2.limit_offset + 1) << 2)   # limit_offset inclusive (cw-1)
                 ),
+            ]
+        with m.Elif(u_lambda.nia_set | u_eloadcall.nia_set | u_xloadlambda.nia_set):
+            # Entering unknown code via LAMBDA/ELOADCALL/XLOADLAMBDA — suspend fence.
+            m.d.sync += [code_lo_reg.eq(0), code_hi_reg.eq(0)]
+        with m.Elif(u_call.call_complete):
+            # CALL completed — establish callee fence from CALL unit byte-address outputs.
+            m.d.sync += [
+                code_lo_reg.eq(u_call.code_lo_out),
+                code_hi_reg.eq(u_call.code_hi_out),
             ]
 
         m.d.comb += [
@@ -584,6 +616,15 @@ class ChurchCore(Elaboratable):
                     cr7_gt_view.perms.eq(PERM_MASK_X),
                 ]
                 m.d.comb += [boot_wr_en[7].eq(1), boot_wr_gt[7].eq(cr7_gt)]
+
+                # Boot fence: NUC_PROGRAM occupies IMEM byte addresses [0, NUC_PROGRAM_CW*4).
+                # nia_reg starts at 0 after reset; establishing the fence here (in the
+                # same cycle that transitions to COMPLETE) means BOUNDS enforcement is
+                # active from the very first post-boot instruction fetch.
+                m.d.sync += [
+                    code_lo_reg.eq(0),
+                    code_hi_reg.eq(NUC_PROGRAM_CW * 4),
+                ]
 
         runtime_wr_en = [Signal(name=f"rt_cr{i}_wr_en") for i in range(16)]
         runtime_wr_gt = [Signal(GT_LAYOUT, name=f"rt_cr{i}_wr_gt") for i in range(16)]
