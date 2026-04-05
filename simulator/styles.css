@@ -4198,6 +4198,33 @@ a.next-step-link:hover {
     color: white;
 }
 
+/* Thread view: make crDetailContent the scroll container so the
+   title, tabs, and thread header are all frozen above the zone tables */
+.crd-content-thread {
+    overflow-y: auto;
+    max-height: calc(100vh - 105px);
+}
+/* Tabs row pins to top of the scroll area */
+.crd-content-thread .crd-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    /* retain its own bg so it covers content scrolling under it */
+}
+/* Thread layout header pins below the tabs (~46px) */
+.crd-content-thread .thread-layout-sticky {
+    top: 46px;
+    z-index: 10;
+}
+/* Strip the section box styling for the thread section —
+   the thread layout manages its own visual hierarchy */
+.cr-detail-section-thread {
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+}
+
 /* Zone navigation buttons (Thread view) */
 .crd-zone-nav {
     display: inline-flex;

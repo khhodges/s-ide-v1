@@ -1369,6 +1369,7 @@ function updateCRDetail() {
     if (cr.isNull) {
         titleEl.textContent = `CR${crIdx}${name ? ' \u2014 ' + name : ''} (NULL)`;
         contentEl.innerHTML = '<div style="color:var(--text-secondary);padding:1rem;">Register is empty (all words zero).</div>';
+        contentEl.classList.remove('crd-content-thread');
         return;
     }
 
@@ -1545,7 +1546,7 @@ function updateCRDetail() {
     }
 
     if (showThread) {
-        html += '<div class="cr-detail-section">';
+        html += '<div class="cr-detail-section cr-detail-section-thread">';
         html += renderThreadMemoryLayout(nsIdx);
         html += '</div>';
     }
@@ -1742,6 +1743,13 @@ function updateCRDetail() {
     html += '</div></div>';
 
     contentEl.innerHTML = html;
+    // For thread views, make the content div the scroll container so the
+    // title, tabs, and thread header stay frozen while the zone tables scroll.
+    if (showThread) {
+        contentEl.classList.add('crd-content-thread');
+    } else {
+        contentEl.classList.remove('crd-content-thread');
+    }
 }
 
 function updateDRDisplay() {
