@@ -1121,43 +1121,66 @@ function switchCRDetailTab(tab) {
 
 function scrollToThreadZone(zone) {
     switchCRDetailTab('content');
-    const id = 'thread-zone-' + zone;
-    // Zone 2 (LIFO Stack) header is at the BOTTOM of the zone (adjacent to the sentinel frame).
-    // Scroll it into view at the BOTTOM of the visible area so the frames above it are visible.
-    const anchorAtEnd = (zone === 2);
     // Allow the panel to become visible before scrolling
     requestAnimationFrame(() => {
-        const target = document.getElementById(id);
-        if (!target) return;
-        // Find nearest scrollable ancestor
-        let scroller = target.parentElement;
-        while (scroller && scroller !== document.body) {
-            const overflow = getComputedStyle(scroller).overflowY;
-            if (overflow === 'auto' || overflow === 'scroll') break;
-            scroller = scroller.parentElement;
-        }
-        if (scroller && scroller !== document.body) {
-            const targetTop = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
-            // Account for sticky elements that sit on top of the scroll viewport:
-            //   1. .crd-tabs   — sticky at top:0   (tab row with zone buttons)
-            //   2. .thread-layout-sticky — sticky at top:tabsHeight (lump header block)
+        // Helper: measure sticky offset (tabs row + thread-layout header)
+        function getStickyOffset(scroller) {
             const tabsEl   = scroller.querySelector('.crd-tabs');
             const stickyEl = scroller.querySelector('.thread-layout-sticky');
             const tabsH    = tabsEl   ? tabsEl.offsetHeight   : 46;
             const stickyH  = stickyEl ? stickyEl.offsetHeight : 0;
-            const stickyOffset = tabsH + stickyH + 6;
-            let scrollTop;
-            if (anchorAtEnd) {
-                // Position the target near the BOTTOM of the visible area so the
-                // stack frames (rows just above the header banner) are in view.
-                const visibleH = scroller.clientHeight - stickyOffset;
-                scrollTop = Math.max(0, targetTop - visibleH + target.offsetHeight + 12);
-            } else {
-                scrollTop = Math.max(0, targetTop - stickyOffset);
+            return tabsH + stickyH + 6;
+        }
+        // Helper: find nearest scrollable ancestor
+        function findScroller(el) {
+            let s = el.parentElement;
+            while (s && s !== document.body) {
+                const ov = getComputedStyle(s).overflowY;
+                if (ov === 'auto' || ov === 'scroll') return s;
+                s = s.parentElement;
             }
-            scroller.scrollTo({ top: scrollTop, behavior: 'smooth' });
+            return null;
+        }
+        // Helper: scroll an element to the top of the viewport (below sticky headers)
+        function scrollToTop(scroller, target, extraPad) {
+            const stickyOffset = getStickyOffset(scroller);
+            const targetTop = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+            scroller.scrollTo({ top: Math.max(0, targetTop - stickyOffset - (extraPad || 0)), behavior: 'smooth' });
+        }
+
+        if (zone === 2) {
+            // Zone 2 (LIFO Stack): scroll so the Top of Stack frame (+1 frame below)
+            // is visible at the top of the viewport. The top frame sits at sto+1 (E-GT)
+            // and sto+2 (frame word); we anchor on sto+1 so both rows are shown first,
+            // with the next frame's rows visible below.
+            const sto = (sim && sim.sto != null) ? sim.sto : null;
+            let anchorRow = null;
+            if (sto != null) {
+                // sto+1 is the E-GT word of the topmost frame; sto+2 is the frame word.
+                // Show 1 row above the E-GT for visual breathing room (+2 px of padding).
+                const egOffset = sto + 1;
+                anchorRow = document.getElementById('thread-stack-row-' + egOffset);
+            }
+            // Fallback: if STO is unknown or the row isn't rendered, use the zone banner
+            if (!anchorRow) anchorRow = document.getElementById('thread-zone-2');
+            if (!anchorRow) return;
+            const scroller = findScroller(anchorRow);
+            if (scroller) {
+                scrollToTop(scroller, anchorRow, 4);
+            } else {
+                anchorRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            return;
+        }
+
+        const id = 'thread-zone-' + zone;
+        const target = document.getElementById(id);
+        if (!target) return;
+        const scroller = findScroller(target);
+        if (scroller) {
+            scrollToTop(scroller, target);
         } else {
-            target.scrollIntoView({ behavior: 'smooth', block: anchorAtEnd ? 'end' : 'start' });
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     });
 }
@@ -2342,7 +2365,7 @@ function renderThreadMemoryLayout(nsIndex) {
             }
         }
         const rowStyle = word ? '' : ' style="opacity:0.25;"';
-        html += `<tr${rowStyle}><td style="color:#38bdf8;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.85);font-family:monospace;">${hex}</td><td>${decoded}</td></tr>`;
+        html += `<tr id="thread-stack-row-${off}"${rowStyle}><td style="color:#38bdf8;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.85);font-family:monospace;">${hex}</td><td>${decoded}</td></tr>`;
     }
     html += '</tbody></table>';
     html += secHdr('②', 'LIFO Stack ↑', `32 words · STO=${stoLive} · grows ↑ · sentinel: E-GT@+242, fw@+243 (NIA=0x7FFF) · ${stackUsed} word${stackUsed!==1?'s':''} non-zero`, '#38bdf8', 'thread-zone-2');
