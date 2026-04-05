@@ -771,8 +771,18 @@ function updateGateLog() {
         html += `</div>`;
         html += `<div class="gate-checks">`;
         for (const [k, v] of Object.entries(a.checks)) {
-            const label = k === 'perm' && v.perm ? `PERM&nbsp;(${v.perm})` : k.toUpperCase();
-            html += `<span class="gate-check ${v.pass ? 'check-pass' : 'check-fail'}">${v.pass ? '\u2713' : '\u2717'}&nbsp;${label}</span>`;
+            let label;
+            if (k === 'perm' && v.perm) {
+                label = `PERM&nbsp;(${v.perm})`;
+            } else if (k === 'range') {
+                label = v.pass
+                    ? `SCOPE&nbsp;(${v.offset}&nbsp;&le;&nbsp;${v.limit})`
+                    : `SCOPE&nbsp;(${v.offset}&nbsp;&gt;&nbsp;${v.limit}&nbsp;&#x26A0;)`;
+            } else {
+                label = k.toUpperCase();
+            }
+            const extraClass = k === 'range' ? ' check-range' : '';
+            html += `<span class="gate-check ${v.pass ? 'check-pass' : 'check-fail'}${extraClass}">${v.pass ? '\u2713' : '\u2717'}&nbsp;${label}</span>`;
         }
         html += `<span class="gate-flag">B=${a.b}</span><span class="gate-flag">F=${a.f}</span>`;
         html += `</div>`;

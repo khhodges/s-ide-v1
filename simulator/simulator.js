@@ -2119,7 +2119,13 @@ class ChurchSimulator {
         const loc = srcCR.word1;
         const lim = this.parseNSWord1(srcCR.word2);
         const offset = d.imm;
-        if (offset > lim.limit) {
+        const rangePass = offset <= lim.limit;
+        if (this.auditLog.length > 0) {
+            const lastEntry = this.auditLog[this.auditLog.length - 1];
+            lastEntry.checks.range = { pass: rangePass, offset, limit: lim.limit };
+            if (!rangePass) lastEntry.result = 'fail';
+        }
+        if (!rangePass) {
             this.fault('BOUNDS', `DREAD: offset ${offset} exceeds DATA limit ${lim.limit}`);
             return null;
         }
@@ -2150,7 +2156,13 @@ class ChurchSimulator {
         const loc = srcCR.word1;
         const lim = this.parseNSWord1(srcCR.word2);
         const offset = d.imm;
-        if (offset > lim.limit) {
+        const rangePass = offset <= lim.limit;
+        if (this.auditLog.length > 0) {
+            const lastEntry = this.auditLog[this.auditLog.length - 1];
+            lastEntry.checks.range = { pass: rangePass, offset, limit: lim.limit };
+            if (!rangePass) lastEntry.result = 'fail';
+        }
+        if (!rangePass) {
             this.fault('BOUNDS', `DWRITE: offset ${offset} exceeds DATA limit ${lim.limit}`);
             return null;
         }

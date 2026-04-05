@@ -7341,6 +7341,19 @@ pre:hover .code-copy-btn {
     border: 1px solid rgba(160, 50, 60, 0.4);
 }
 
+.check-range.check-pass {
+    background: rgba(20, 55, 70, 0.55);
+    color: #5dd6f5;
+    border: 1px solid rgba(40, 120, 160, 0.4);
+}
+
+.check-range.check-fail {
+    background: rgba(80, 45, 10, 0.6);
+    color: #ffaa33;
+    border: 1px solid rgba(180, 100, 20, 0.5);
+    font-weight: 700;
+}
+
 .gate-flag {
     font-family: 'Courier New', monospace;
     font-size: 0.72rem;
