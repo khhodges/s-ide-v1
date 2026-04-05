@@ -1401,7 +1401,18 @@ class ChurchSimulator {
             this.fault(check.fault, `LOAD: CR${d.crSrc}: ${check.message}`);
             return null;
         }
-        const clistLoc = this.cr[d.crSrc].word1;
+        // For CR6: word1 is the c-list base set by CALL/boot correctly.
+        // For other CRs: word1 = entry.word0_location (lump start, set by _writeCR).
+        // Recompute c-list base from lump header so non-CR6 loads read from c-list end, not lump start.
+        let clistLoc;
+        if (d.crSrc === 6) {
+            clistLoc = this.cr[d.crSrc].word1;
+        } else {
+            const lumpBase = check.entry.word0_location;
+            const hdrWord = this.memory[lumpBase] >>> 0;
+            const hdr = this.parseLumpHeader(hdrWord);
+            clistLoc = (hdr.valid && hdr.cc > 0) ? (lumpBase + hdr.lumpSize - hdr.cc) >>> 0 : lumpBase;
+        }
         const slotGT = this.memory[clistLoc + d.imm] || 0;
         if (slotGT === 0) {
             this.fault('NULL_CAP', `LOAD: c-list offset ${d.imm} is empty (NULL GT)`);
@@ -1472,7 +1483,17 @@ class ChurchSimulator {
             }
         }
 
-        const clistLoc = this.cr[d.crSrc].word1;
+        // For CR6: word1 is the c-list base set correctly by CALL/boot.
+        // For other CRs: word1 = lump_start (from _writeCR); recompute c-list base from lump header.
+        let clistLoc;
+        if (d.crSrc === 6) {
+            clistLoc = this.cr[d.crSrc].word1;
+        } else {
+            const lumpBase = clistCheck.entry.word0_location;
+            const hdrWord = this.memory[lumpBase] >>> 0;
+            const hdr = this.parseLumpHeader(hdrWord);
+            clistLoc = (hdr.valid && hdr.cc > 0) ? (lumpBase + hdr.lumpSize - hdr.cc) >>> 0 : lumpBase;
+        }
         this.memory[clistLoc + d.imm] = srcGT;
         const srcParsed = saveCheck.parsed;
         const clistIdx = clistCheck.parsed.index;
@@ -1518,16 +1539,25 @@ class ChurchSimulator {
 
         const handler = this.nsHandlers[check.index];
         if (handler) {
+            // Handler dispatches are atomic (no real call frame): save and restore CR6 so
+            // the caller's c-list base (CR6.word1) is never corrupted by _writeCR's lump-start write.
+            const savedCR6 = {...this.cr[6]};
             this._writeCR(6, sourceGT, nsEntry);
-            return this._dispatchHandler(d, check, handler);
+            const handlerResult = this._dispatchHandler(d, check, handler);
+            this.cr[6] = savedCR6;
+            return handlerResult;
         }
 
         if (this.abstractionRegistry) {
             const abstraction = this.abstractionRegistry.getAbstraction(check.index);
             if (abstraction && abstraction.methods.length > 0) {
                 this.abstractionRegistry.activate(check.index);
+                // Abstraction dispatches are also atomic: save/restore CR6 to preserve caller's c-list base.
+                const savedCR6 = {...this.cr[6]};
                 this._writeCR(6, sourceGT, nsEntry);
-                return this._dispatchAbstraction(d, check, abstraction);
+                const abstrResult = this._dispatchAbstraction(d, check, abstraction);
+                this.cr[6] = savedCR6;
+                return abstrResult;
             }
         }
 
@@ -2012,7 +2042,16 @@ class ChurchSimulator {
             return null;
         }
 
-        const srcLoc = loadCheck.entry.word0_location;
+        // Compute c-list base: CR6 has it pre-set by CALL/boot; other CRs need lump-header lookup.
+        let srcLoc;
+        if (d.crSrc === 6) {
+            srcLoc = this.cr[d.crSrc].word1;
+        } else {
+            const lumpBase = loadCheck.entry.word0_location;
+            const hdrWord = this.memory[lumpBase] >>> 0;
+            const hdr = this.parseLumpHeader(hdrWord);
+            srcLoc = (hdr.valid && hdr.cc > 0) ? (lumpBase + hdr.lumpSize - hdr.cc) >>> 0 : lumpBase;
+        }
         const slotGT = this.memory[srcLoc + d.imm] || 0;
         if (slotGT === 0) {
             this.fault('NULL_CAP', `ELOADCALL: c-list offset ${d.imm} is empty`);
@@ -2100,7 +2139,16 @@ class ChurchSimulator {
             return null;
         }
 
-        const srcLoc = loadCheck.entry.word0_location;
+        // Compute c-list base: CR6 has it pre-set by CALL/boot; other CRs need lump-header lookup.
+        let srcLoc;
+        if (d.crSrc === 6) {
+            srcLoc = this.cr[d.crSrc].word1;
+        } else {
+            const lumpBase = loadCheck.entry.word0_location;
+            const hdrWord = this.memory[lumpBase] >>> 0;
+            const hdr = this.parseLumpHeader(hdrWord);
+            srcLoc = (hdr.valid && hdr.cc > 0) ? (lumpBase + hdr.lumpSize - hdr.cc) >>> 0 : lumpBase;
+        }
         const slotGT = this.memory[srcLoc + d.imm] || 0;
         if (slotGT === 0) {
             this.fault('NULL_CAP', `XLOADLAMBDA: c-list offset ${d.imm} is empty`);
