@@ -1326,16 +1326,6 @@ function showPatchModal(ok, opName, logText) {
     `;
 
     document.body.appendChild(toast);
-
-    if (ok) {
-        setTimeout(() => {
-            const el = document.getElementById('patchToastOverlay');
-            if (el) {
-                el.classList.add('patch-toast-fade');
-                setTimeout(() => el.remove(), 400);
-            }
-        }, 3000);
-    }
 }
 
 function toggleCrdInfoPop(id) {
