@@ -124,6 +124,7 @@ class ChurchSimulator {
         this.dr = new Array(16).fill(0);
 
         this.pc = 0;
+        this.physicalPC = 0;
         this.flags = { N: false, Z: false, C: false, V: false };
         this.sto = 243;  // sp_max = lumpSize(256) − caps(12) − 1; hardware starts here, CALL decrements
         this.running = false;
@@ -169,6 +170,7 @@ class ChurchSimulator {
         this.lambdaActive = false;
         this.lambdaReturnPC = 0;
         this.pc = 0;
+        this.physicalPC = 0;
         this.halted = false;
         this.running = false;
         this.bootComplete = false;
@@ -1234,7 +1236,7 @@ class ChurchSimulator {
 
     fault(type, message) {
         const entry = {
-            type, message, pc: this.pc, step: this.stepCount,
+            type, message, pc: this.pc, physicalPC: this.physicalPC, step: this.stepCount,
             // Snapshot machine state so the fault modal can show registers without
             // navigating away.  Deep-copy so post-fault resets don't overwrite these.
             crSnapshot: this.cr ? this.cr.map(c => c ? {...c} : null) : [],
@@ -1261,6 +1263,7 @@ class ChurchSimulator {
             if (this.pc >= this.memory.length) {
                 return { ok: false, fault: 'BOUNDS', message: `PC=${this.pc} out of memory (pre-boot)` };
             }
+            this.physicalPC = this.pc;
             return { ok: true, word: this.memory[this.pc], addr: this.pc };
         }
 
@@ -1285,6 +1288,7 @@ class ChurchSimulator {
         if (fetchAddr >= this.memory.length) {
             return { ok: false, fault: 'BOUNDS', message: `fetch address 0x${fetchAddr.toString(16)} out of memory` };
         }
+        this.physicalPC = fetchAddr;
         return { ok: true, word: this.memory[fetchAddr], addr: fetchAddr };
     }
 
@@ -2005,27 +2009,23 @@ class ChurchSimulator {
             return null;
         }
 
-        if (!this._writeCR(d.crDst, slotGT, entry)) return null;
-
-        const tpermCheck = this.mLoad(slotGT, 'E', d.crDst);
+        // Validate the slot GT and gather TPERM / CR7 data before touching any CRs.
+        const tpermCheck = this.mLoad(slotGT, 'E', undefined);
         if (!tpermCheck.ok) {
             this.fault(tpermCheck.fault, `ELOADCALL TPERM: CR${d.crDst}: ${tpermCheck.message}`);
             return null;
         }
-
         const clistEntry = tpermCheck.entry;
         const clistLoc = clistEntry.word0_location;
         const cr7GT = this.memory[clistLoc];
+        let cr7Check = null;
         if (cr7GT !== 0) {
             const cr7Parsed = this.parseGT(cr7GT);
-            if (cr7Parsed.type === 1) {  // Code ref must be Inform type, not Outform
+            if (cr7Parsed.type === 1) {
                 const cr7Entry = this.readNSEntry(cr7Parsed.index);
                 if (cr7Entry) {
-                    const cr7Check = this.mLoad(cr7GT, 'X', undefined);
-                    if (cr7Check.ok) {
-                        this._writeCR(6, slotGT, clistEntry);
-                        this._writeCR(7, cr7GT, cr7Check.entry);
-                    }
+                    const chk = this.mLoad(cr7GT, 'X', undefined);
+                    if (chk.ok) cr7Check = chk;
                 }
             }
         }
@@ -2037,6 +2037,7 @@ class ChurchSimulator {
         }
         const savedSTO_ec = this.sto;
         const frameWord_ec = this._packFrameWord(this.pc + 1, 1, savedSTO_ec);
+        // Save CRs BEFORE any _writeCR calls so RETURN correctly restores the caller's context.
         this.callStack.push({
             returnPC:   this.pc + 1,
             savedCRs:   this.cr.map(c => ({...c})),
@@ -2047,6 +2048,13 @@ class ChurchSimulator {
             frameWord:  frameWord_ec,
         });
         this.sto = (savedSTO_ec - 2) & 0xFFF;
+
+        // Now write the loaded GT and set up CR6/CR7 for the callee context.
+        if (!this._writeCR(d.crDst, slotGT, entry)) return null;
+        if (cr7Check) {
+            this._writeCR(6, slotGT, clistEntry);
+            this._writeCR(7, cr7GT, cr7Check.entry);
+        }
 
         const label = this.nsLabels[targetIdx] || 'abstraction';
         const desc = `ELOADCALL CR${d.crDst}, [CR${d.crSrc} + ${d.imm}] -> ${label} (LOAD+TPERM+CALL)`;
@@ -2794,8 +2802,10 @@ class ChurchSimulator {
         this.running = true;
         let steps = 0;
         while (this.running && !this.halted && this.bootComplete && steps < maxSteps) {
-            // Check breakpoint before executing (skip on first step so we advance past a BP we're sitting on)
-            if (steps > 0 && breakpoints && breakpoints.has(this.pc >>> 0)) {
+            // Check breakpoint before executing (skip on first step so we advance past a BP we're sitting on).
+            // physicalPC holds the actual memory address of the next instruction to fetch;
+            // simBreakpoints stores physical addresses so we must compare against physicalPC, not this.pc.
+            if (steps > 0 && breakpoints && breakpoints.has(this.physicalPC >>> 0)) {
                 break;
             }
             const result = this.step();
@@ -2811,6 +2821,7 @@ class ChurchSimulator {
             cr: this.cr.map(c => ({...c})),
             dr: [...this.dr],
             pc: this.pc,
+            physicalPC: this.physicalPC,
             flags: {...this.flags},
             sto: this.sto,
             callStack: this.callStack.length,

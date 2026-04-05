@@ -7484,6 +7484,44 @@ pre:hover .code-copy-btn {
     font-weight: 700;
 }
 
+.check-skipped {
+    background: rgba(40, 40, 50, 0.4);
+    color: #888;
+    border: 1px dashed rgba(120, 120, 140, 0.35);
+    font-style: italic;
+}
+
+.fault-scope-section {
+    margin-bottom: 0.85rem;
+    border: 1px solid rgba(255, 170, 50, 0.4);
+    border-left: 4px solid #ffaa33;
+    border-radius: 5px;
+    padding: 8px 12px;
+    background: rgba(80, 45, 10, 0.3);
+}
+
+.fault-scope-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #ffaa33;
+    margin-bottom: 4px;
+}
+
+.fault-scope-detail {
+    font-size: 0.82rem;
+    color: #e0c080;
+}
+
+.fault-scope-detail code {
+    background: rgba(255, 170, 50, 0.15);
+    border-radius: 3px;
+    padding: 1px 4px;
+    color: #ffcc66;
+    font-family: var(--font-mono, monospace);
+}
+
 .gate-flag {
     font-family: 'Courier New', monospace;
     font-size: 0.72rem;

@@ -784,6 +784,12 @@ function updateGateLog() {
             const extraClass = k === 'range' ? ' check-range' : '';
             html += `<span class="gate-check ${v.pass ? 'check-pass' : 'check-fail'}${extraClass}">${v.pass ? '\u2713' : '\u2717'}&nbsp;${label}</span>`;
         }
+        // When the gate failed on perm and is a DREAD/DWRITE mLoad, the range check was never
+        // reached.  Show a greyed-out badge so the user knows the scope was not verified.
+        const isDReadWrite = a.gate === 'mLoad' && a.requiredPerm && (a.requiredPerm === 'R' || a.requiredPerm === 'W');
+        if (!pass && isDReadWrite && !a.checks.range) {
+            html += `<span class="gate-check check-skipped" title="Perm check failed before scope could be verified">&mdash;&nbsp;SCOPE&nbsp;(not&nbsp;checked)</span>`;
+        }
         html += `<span class="gate-flag">B=${a.b}</span><span class="gate-flag">F=${a.f}</span>`;
         html += `</div>`;
         html += `</div>`;
@@ -5054,13 +5060,14 @@ function walkNext() {
         updateDashboard();
         return;
     }
-    // Check breakpoint: new PC after the step
-    if (simBreakpoints.size > 0 && !sim.halted && simBreakpoints.has(sim.pc)) {
+    // Check breakpoint: compare against physicalPC (the memory address of the next fetch),
+    // not sim.pc (which is a relative offset within the lump).
+    if (simBreakpoints.size > 0 && !sim.halted && simBreakpoints.has(sim.physicalPC >>> 0)) {
         walkRunning = false;
         updateWalkBtn();
         const con2 = document.getElementById('editorConsole');
         if (con2) {
-            con2.textContent += `\n[BP] Breakpoint at PC=0x${sim.pc.toString(16).toUpperCase().padStart(4,'0')}`;
+            con2.textContent += `\n[BP] Breakpoint at 0x${(sim.physicalPC >>> 0).toString(16).toUpperCase().padStart(4,'0')}`;
             con2.scrollTop = con2.scrollHeight;
         }
         updateDashboard();
@@ -5180,8 +5187,8 @@ function runSim() {
             status = 'PP250: Returned to boot sequence.';
         } else if (sim.halted) {
             status = 'Faulted.';
-        } else if (simBreakpoints.size > 0 && simBreakpoints.has(sim.pc)) {
-            status = `Breakpoint at PC=0x${sim.pc.toString(16).toUpperCase().padStart(4,'0')}.`;
+        } else if (simBreakpoints.size > 0 && simBreakpoints.has(sim.physicalPC >>> 0)) {
+            status = `Breakpoint at 0x${(sim.physicalPC >>> 0).toString(16).toUpperCase().padStart(4,'0')}.`;
         }
         con.textContent += `\nBoot complete. Ran ${steps} steps. ${status}`;
         con.scrollTop = con.scrollHeight;
@@ -5237,7 +5244,9 @@ function showFaultModal(f) {
     const existing = document.getElementById('faultModalOverlay');
     if (existing) existing.remove();
 
-    const pc     = f.pc;
+    // Use physicalPC (actual memory address of the faulting instruction) when available;
+    // fall back to f.pc (relative PC) for pre-boot faults or older entries.
+    const pc     = (f.physicalPC !== undefined && f.physicalPC !== null) ? f.physicalPC : f.pc;
     const pcHex  = '0x' + pc.toString(16).toUpperCase().padStart(4, '0');
     const word   = (sim.memory && pc < sim.memory.length) ? sim.memory[pc] : 0;
     const disasm = assembler ? assembler.disassemble(word) : '???';
@@ -5306,6 +5315,26 @@ function showFaultModal(f) {
             <div class="fault-flags-row">Flags: ${flagsStr}</div>
         </div>` : '';
 
+    // ── Scope callout for BOUNDS / range faults ────────────────────────────
+    // When a DREAD/DWRITE range check fails, sim.auditLog has a checks.range entry.
+    // Surface it here so the user can see exactly which offset exceeded which limit.
+    let scopeSection = '';
+    if (f.type === 'BOUNDS') {
+        const auditEntries = sim.auditLog || [];
+        const lastEntry = auditEntries.length > 0 ? auditEntries[auditEntries.length - 1] : null;
+        if (lastEntry && lastEntry.checks && lastEntry.checks.range && !lastEntry.checks.range.pass) {
+            const rc = lastEntry.checks.range;
+            scopeSection = `
+        <div class="fault-scope-section">
+            <div class="fault-scope-label">&#x26A0; Scope violation</div>
+            <div class="fault-scope-detail">
+                Accessed offset <code>${rc.offset}</code> but NS limit is <code>${rc.limit}</code>
+                &nbsp;&mdash;&nbsp;valid range is <code>0</code>&ndash;<code>${rc.limit}</code>.
+            </div>
+        </div>`;
+        }
+    }
+
     const overlay = document.createElement('div');
     overlay.id = 'faultModalOverlay';
     overlay.className = 'modal-overlay';
@@ -5344,6 +5373,7 @@ function showFaultModal(f) {
                 <span class="fault-detail-value">${historyHtml}</span>
             </div>` : ''}
         </div>
+        ${scopeSection}
         ${crSection}
         ${drSection}
         <div class="modal-buttons">
