@@ -1255,11 +1255,11 @@ async function injectCRCodeToFPGA(logEl) {
     const log = msg => { if (logEl) { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; } };
 
     const patch = injectCRCode(logEl);
-    if (!patch) return;
+    if (!patch) return false;
 
     if (!TangSerial.isConnected()) {
         log('FPGA not connected — simulator updated only. Connect to FPGA and retry.');
-        return;
+        return false;
     }
 
     const { newWords, baseLoc, newCW, nsIdx } = patch;
@@ -1273,7 +1273,7 @@ async function injectCRCodeToFPGA(logEl) {
             await TangSerial.uploadToFPGA(nsSlice, clSlice, msg => log('  ' + msg));
         } catch(e) {
             log('NS upload failed: ' + e.message);
-            return;
+            return false;
         }
     }
 
@@ -1281,8 +1281,10 @@ async function injectCRCodeToFPGA(logEl) {
     try {
         await TangSerial.patchLump(baseLoc, newWords, msg => log('  ' + msg));
         log('FPGA patched successfully.');
+        return true;
     } catch(e) {
         log('FPGA patch failed: ' + e.message);
+        return false;
     }
 }
 
@@ -1298,9 +1300,8 @@ function patchSimulator() {
 async function patchFPGA() {
     const logEl = document.getElementById('crInjectLog');
     if (logEl) { logEl.style.display = 'block'; logEl.textContent = ''; }
-    await injectCRCodeToFPGA(logEl);
+    const ok = await injectCRCodeToFPGA(logEl);
     const logText = logEl ? logEl.textContent.trim() : '';
-    const ok = !!logText && !logText.includes('Error:') && !logText.includes('failed');
     showPatchModal(ok, 'Patch FPGA', logText);
 }
 
