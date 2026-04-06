@@ -1393,10 +1393,12 @@ header h1 {
     margin-top: 0.4rem;
     font-family: 'Courier New', monospace;
     font-size: 0.8rem;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: auto;
     white-space: pre;
     line-height: 1.4;
-    max-height: calc(100vh - 160px);
+    flex: 1;
+    min-height: 0;
 }
 
 .next-steps-box {
