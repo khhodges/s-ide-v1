@@ -1198,7 +1198,13 @@ function cancelHideZonePopup() {
     if (_zdpHideTimer) { clearTimeout(_zdpHideTimer); _zdpHideTimer = null; }
 }
 
-function hideZonePopup() {
+function hideZonePopup(immediate) {
+    if (immediate) {
+        cancelHideZonePopup();
+        const pop = document.getElementById('zone-data-popup');
+        if (pop) pop.style.display = 'none';
+        return;
+    }
     _zdpHideTimer = setTimeout(() => {
         const pop = document.getElementById('zone-data-popup');
         if (pop) pop.style.display = 'none';
@@ -1375,7 +1381,8 @@ function showZonePopup(evt, zone, nsIdx) {
         html += `</table>`;
     }
 
-    pop.innerHTML = html;
+    const dismissBtn = `<button class="zdp-dismiss" onclick="hideZonePopup(true)" title="Close">&times;</button>`;
+    pop.innerHTML = dismissBtn + html;
     pop.style.display = 'block';
 
     // Position below the button; only flip above if there is more room above than below.

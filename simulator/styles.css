@@ -4353,6 +4353,23 @@ a.next-step-link:hover {
     box-shadow: 0 6px 28px rgba(0,0,0,0.75);
     pointer-events: auto;
 }
+#zone-data-popup .zdp-dismiss {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background: none;
+    border: none;
+    color: #6b8faf;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+#zone-data-popup .zdp-dismiss:hover {
+    color: #e2e8f0;
+    background: rgba(255,255,255,0.08);
+}
 #zone-data-popup .zdp-title {
     font-size: 0.72rem;
     font-weight: 700;
