@@ -3,20 +3,67 @@ const TangSerial = (function() {
     let activeReader = null;
     let _boardLabel = 'Tang Nano 20K';
 
+    // ── Local Bridge (ChromeOS / WebSerial-blocked environments) ────────────
+    let _bridgeMode = false;
+    let _bridgeUrl  = '';
+    let _bridgeOpen = false;
+
+    async function _bFetch(path, opts) {
+        const r = await fetch(_bridgeUrl + path, opts);
+        if (!r.ok) throw new Error(`Bridge HTTP ${r.status}`);
+        return r.json();
+    }
+
+    async function connectBridge(url) {
+        _bridgeUrl  = (url || 'http://penguin.linux.test:8766').replace(/\/$/, '');
+        const r = await _bFetch('/connect', { method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({}) });
+        if (!r.ok) throw new Error(r.error || 'Bridge connect failed');
+        _bridgeMode = true;
+        _bridgeOpen = true;
+    }
+
+    async function disconnectBridge() {
+        try { await _bFetch('/disconnect', { method: 'POST',
+            headers: {'Content-Type': 'application/json'}, body: '{}' }); }
+        catch(e) {}
+        _bridgeMode = false;
+        _bridgeOpen = false;
+    }
+
+    // Send tx bytes, wait for exactly rxCount bytes back (or timeout)
+    async function _bTransact(txArr, rxCount, timeoutMs) {
+        return _bFetch('/transact', { method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ tx: txArr, rx_count: rxCount, timeout_ms: timeoutMs }) });
+    }
+
+    async function _bDrain() {
+        try { await _bFetch('/drain'); } catch(e) {}
+    }
+
+    // ── end bridge helpers ───────────────────────────────────────────────────
+
     const BAUD = 115200;
     const NS_WORDS = 192;
     const CLIST_WORDS = 64;
     const TOTAL_WORDS = NS_WORDS + CLIST_WORDS;
 
     function isSupported() {
-        return 'serial' in navigator;
+        return _bridgeMode || 'serial' in navigator;
     }
 
     function isConnected() {
+        if (_bridgeMode) return _bridgeOpen;
         return port !== null && port.readable !== null && port.writable !== null;
     }
 
     async function ensureOpen() {
+        if (_bridgeMode) {
+            if (!_bridgeOpen) throw new Error('Bridge not connected. Call connectBridge() first.');
+            return;
+        }
         if (!port) {
             throw new Error('No port selected. Call connect() first.');
         }
@@ -66,6 +113,7 @@ const TangSerial = (function() {
     }
 
     async function disconnect() {
+        if (_bridgeMode) { await disconnectBridge(); return; }
         if (port) {
             try { await port.close(); } catch(e) {}
             port = null;
@@ -86,6 +134,7 @@ const TangSerial = (function() {
     }
 
     async function drainInput() {
+        if (_bridgeMode) { await _bDrain(); return; }
         if (!port || !port.readable) return;
         const r = port.readable.getReader();
         activeReader = r;
@@ -311,6 +360,24 @@ const TangSerial = (function() {
         status(`PATCH_LUMP: addr=0x${baseAddr.toString(16).toUpperCase().padStart(4,'0')} N=${N} CRC=0x${crc.toString(16).toUpperCase().padStart(4,'0')} — sending ${frame.length} bytes...`);
 
         await drainInput();
+
+        // ── bridge path ──────────────────────────────────────────────────────
+        if (_bridgeMode) {
+            const res = await _bTransact(Array.from(frame), 4, 3000);
+            if (!res.ok) { status('Bridge error: ' + res.error); return { success: false }; }
+            const rxBytes = res.rx || [];
+            if (rxBytes.length >= 4) {
+                const echoAddr  = (rxBytes[0] << 8) | rxBytes[1];
+                const echoCount = (rxBytes[2] << 8) | rxBytes[3];
+                const ok = echoAddr === (baseAddr & 0xFFFF) && echoCount === N;
+                status(ok ? `Echo OK: addr=0x${echoAddr.toString(16).toUpperCase().padStart(4,'0')} count=${echoCount}`
+                          : `Echo mismatch`);
+                return { success: ok };
+            }
+            status(`No echo received (${rxBytes.length} bytes).`);
+            return { success: false };
+        }
+
         const w = port.writable.getWriter();
         try { await w.write(frame); } finally { w.releaseLock(); }
 
@@ -373,11 +440,26 @@ const TangSerial = (function() {
         frame[4] = (count    >>> 8) & 0xFF;
         frame[5] =  count           & 0xFF;
 
-        const writer = port.writable.getWriter();
-        try { await writer.write(frame); } finally { writer.releaseLock(); }
-
         status(`READ_BRAM: addr=0x${baseAddr.toString(16).toUpperCase().padStart(4,'0')} ` +
                `count=${count} — awaiting ${count * 4} bytes…`);
+
+        // ── bridge path ──────────────────────────────────────────────────────
+        if (_bridgeMode) {
+            const res = await _bTransact(Array.from(frame), count * 4, 5000);
+            if (!res.ok) { status('Bridge error: ' + res.error); return { success: false, words: [], rxLen: 0 }; }
+            const rb = res.rx || [];
+            const words = [];
+            for (let i = 0; i + 3 < rb.length; i += 4) {
+                words.push(((rb[i]) | (rb[i+1] << 8) | (rb[i+2] << 16) | (rb[i+3] << 24)) >>> 0);
+            }
+            const ok = rb.length >= count * 4;
+            status(ok ? `READ_BRAM: ${words.length} words received ✓`
+                      : `READ_BRAM: timeout — got ${rb.length}/${count*4} bytes`);
+            return { success: ok, words, rxBytes: new Uint8Array(rb), rxLen: rb.length };
+        }
+
+        const writer = port.writable.getWriter();
+        try { await writer.write(frame); } finally { writer.releaseLock(); }
 
         const expected = count * 4;
         const rxBytes  = new Uint8Array(expected);
@@ -422,6 +504,8 @@ const TangSerial = (function() {
         isConnected,
         connect,
         disconnect,
+        connectBridge,
+        disconnectBridge,
         uploadToFPGA,
         patchLump,
         readBRAM,

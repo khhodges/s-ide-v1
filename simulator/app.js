@@ -5681,6 +5681,44 @@ async function fpgaConnectToggle() {
     updateFPGAStatusBtn();
 }
 
+async function fpgaBridgeConnect() {
+    if (typeof TangSerial === 'undefined') {
+        _fpgaLog('FPGA: TangSerial driver not loaded.');
+        return;
+    }
+    if (TangSerial.isConnected()) {
+        try {
+            await TangSerial.disconnect();
+            _fpgaLog('FPGA Bridge: Disconnected.');
+        } catch(e) {
+            _fpgaLog('FPGA Bridge disconnect error: ' + e.message);
+        }
+        updateFPGAStatusBtn();
+        return;
+    }
+    const defaultUrl = 'http://penguin.linux.test:8766';
+    const url = window.prompt(
+        'Local Bridge URL\n\n' +
+        'Run this in your Linux terminal first:\n' +
+        '  python3 server/local_bridge.py\n\n' +
+        'Then enter the bridge URL below (ChromeOS default is pre-filled):',
+        defaultUrl
+    );
+    if (!url) { _fpgaLog('FPGA Bridge: Cancelled.'); return; }
+
+    const btn = document.getElementById('fpgaConnBtn');
+    if (btn) { btn.className = 'btn fpga-conn-btn fpga-connecting'; btn.textContent = '⬡ FPGA …'; }
+    _fpgaLog('FPGA Bridge: Connecting to ' + url + ' …');
+    try {
+        await TangSerial.connectBridge(url);
+        _fpgaLog('FPGA Bridge: Connected ✓  (using local bridge, not WebSerial)');
+    } catch(e) {
+        _fpgaLog('FPGA Bridge connect failed: ' + (e.message || String(e)) +
+            '\n\nMake sure the bridge script is running:\n  python3 server/local_bridge.py');
+    }
+    updateFPGAStatusBtn();
+}
+
 // Poll FPGA status every 2 s so the indicator stays current
 setInterval(updateFPGAStatusBtn, 2000);
 
