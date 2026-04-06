@@ -621,7 +621,7 @@ appear pre-selected. Click **Program** to flash.
 ## Re-synthesise from Verilog (optional)
 
 ```bash
-yosys -p "read_verilog church_ti60_f225.v; synth_efinix -top top -edif church_ti60_f225.edif"
+yosys -p "read_verilog church_ti60_f225.v; synth_efinix -top top -titanium -edif church_ti60_f225.edif"
 ```
 
 ## LED Pinout (active-high, Ti60 F225 Dev Board)
@@ -662,7 +662,7 @@ def _fpga_paths(board):
         gen_args = ["python3", "-m", "hardware.gen_rtlil", "build", "--ti60"]
         synth_cmd_tpl = (
             "read_rtlil {rtlil}; "
-            "synth_efinix -top top -edif {edif}; "
+            "synth_efinix -top top -titanium -edif {edif}; "
             "write_verilog {verilog}"
         )
     else:
