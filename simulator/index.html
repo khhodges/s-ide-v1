@@ -105,7 +105,7 @@
                     <div class="break-wrap" id="breakWrap">
                         <button class="btn btn-break sim-icon-btn" id="toolBreakBtn" onclick="toggleBreakPopover()" data-tooltip="Breakpoint — Set/clear PC breakpoints for Run and Walk">&#x25CF;</button>
                         <div class="break-popover" id="breakPopover" style="display:none;">
-                            <div class="break-popover-title">Breakpoints</div>
+                            <div class="break-popover-title">Breakpoints <button class="break-close-btn" onclick="toggleBreakPopover()" title="Close">&times;</button></div>
                             <div id="breakList" class="break-list"></div>
                             <div class="break-add-row">
                                 <input id="breakAddrInput" class="break-addr-input" type="text" placeholder="0x0100" maxlength="8" onkeydown="if(event.key==='Enter')addBreakpointFromInput()" />

@@ -1303,7 +1303,21 @@ header h1 {
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: rgba(239,68,68,0.55);
-    margin-bottom: 0.45rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.break-close-btn {
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0 0.2rem;
+    line-height: 1;
+}
+.break-close-btn:hover {
+    color: #fff;
 }
 .break-list {
     min-height: 1.8rem;

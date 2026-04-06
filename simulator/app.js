@@ -5296,7 +5296,7 @@ function renderBreakList() {
     el.innerHTML = [...simBreakpoints].sort((a,b) => a-b).map(addr =>
         `<div class="break-item">
             <code class="break-addr-label">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</code>
-            <button class="btn break-remove-btn" onclick="removeBreakpoint(${addr})" title="Remove">&#x2715;</button>
+            <button class="btn break-remove-btn" onclick="removeBreakpoint(${addr})" title="Remove this breakpoint">&#x1F5D1;</button>
         </div>`
     ).join('');
 }
