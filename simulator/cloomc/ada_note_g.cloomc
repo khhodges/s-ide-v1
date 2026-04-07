@@ -35,9 +35,7 @@ abstraction NoteG {
 
         -- Operation 1: multiply V2 * V3 -> V4, V5, V6
         -- "Multiply 2 by n" = 2 * 4 = 8
-        let V4 = V2 * V3
-        let V5 = V4
-        let V6 = V4
+        let V4, V5, V6 = V2 * V3
 
         -- Operation 2: subtract V4 - V1 -> V4
         -- "2n minus 1" = 7
@@ -86,62 +84,51 @@ abstraction NoteG {
         -- "Decrement loop counter"
         let V10 = V10 - V1
 
-        -- Operation 13: subtract V6 - V1 -> V6
-        -- "Decrement working variable"
-        let V6 = V6 - V1
+        -- Operations 13–23: Loop body (repeats for each subsequent Bk term)
+        -- Ada's "backing" mechanism — the Engine returns the barrel
+        -- to operation 13 while V10 > 0.
+        repeat V10 as V10
 
-        -- Operation 14: add V1 + V7 -> V7
-        -- "Increment denominator"
-        let V7 = V1 + V7
+            -- Operation 13: subtract V6 - V1 -> V6
+            -- "Decrement working variable"
+            let V6 = V6 - V1
 
-        -- Operation 15: divide V6 / V7 -> V8
-        -- "Fraction part" = 7 / 3 = 2
-        let V8 = V6 / V7
+            -- Operation 14: add V1 + V7 -> V7
+            -- "Increment denominator"
+            let V7 = V1 + V7
 
-        -- Operation 16: multiply V8 * V11 -> V11
-        -- "Update coefficient" = 2 * 4 = 8
-        let V11 = V8 * V11
+            -- Operation 15: divide V6 / V7 -> V8
+            -- "Fraction part"
+            let V8 = V6 / V7
 
-        -- Operation 17: subtract V6 - V1 -> V6
-        let V6 = V6 - V1
+            -- Operation 16: multiply V8 * V11 -> V11
+            -- "Update coefficient"
+            let V11 = V8 * V11
 
-        -- Operation 18: add V1 + V7 -> V7
-        let V7 = V1 + V7
+            -- Operation 17: subtract V6 - V1 -> V6
+            let V6 = V6 - V1
 
-        -- Operation 19: divide V6 / V7 -> V9
-        -- "Fraction part" = 6 / 4 = 1
-        let V9 = V6 / V7
+            -- Operation 18: add V1 + V7 -> V7
+            let V7 = V1 + V7
 
-        -- Operation 20: multiply V9 * V11 -> V11
-        -- "Coefficient -> A3" = 1 * 8 = 8
-        let V11 = V9 * V11
+            -- Operation 19: divide V6 / V7 -> V9
+            -- "Fraction part"
+            let V9 = V6 / V7
 
-        -- Operation 21: multiply B3 * V11 -> V12
-        -- "B3 * coefficient" = 1 * 8 = 8
-        let V15 = 1
-        let V12 = V15 * V11
+            -- Operation 20: multiply V9 * V11 -> V11
+            -- "Coefficient -> Ak"
+            let V11 = V9 * V11
 
-        -- Operation 22: add V12 + V13 -> V13
-        -- "Accumulate: sum += B3 * A3"
-        let V13 = V12 + V13
+            -- Operation 21: multiply Bk * V11 -> V12
+            -- "Bk * coefficient"
+            let V15 = 1
+            let V12 = V15 * V11
 
-        -- Operation 23: subtract V10 - V1 -> V10
-        -- "Decrement loop counter"
-        let V10 = V10 - V1
+            -- Operation 22: add V12 + V13 -> V13
+            -- "Accumulate: sum += Bk * Ak"
+            let V13 = V12 + V13
 
-        -- Operations 13b-23b: Second iteration (B5 term)
-        let V6 = V6 - V1
-        let V7 = V1 + V7
-        let V8 = V6 / V7
-        let V11 = V8 * V11
-        let V6 = V6 - V1
-        let V7 = V1 + V7
-        let V9 = V6 / V7
-        let V11 = V9 * V11
-        let V15 = 1
-        let V12 = V15 * V11
-        let V13 = V12 + V13
-        let V10 = V10 - V1
+        end
 
         -- Operation 24: subtract 0 - V13 -> V15
         -- "Final result: B7 = -accumulated sum"

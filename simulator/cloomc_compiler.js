@@ -499,13 +499,13 @@ class CLOOMCCompiler {
         const rom = {};
         const capNames = declaredCaps || [];
         for (let i = 0; i < capNames.length; i++) {
-            rom[capNames[i].toUpperCase()] = i;
+            rom[capNames[i].toUpperCase()] = i + 1;
         }
         if (uploadCaps && uploadCaps.length > 0) {
             for (let i = 0; i < uploadCaps.length; i++) {
                 const name = uploadCaps[i].name || uploadCaps[i].target;
                 if (typeof name === 'string') {
-                    rom[name.toUpperCase()] = i;
+                    rom[name.toUpperCase()] = i + 1;
                 }
             }
         }
@@ -1981,6 +1981,7 @@ class CLOOMCCompiler {
         const vars = {};
         let nextLocal = this.DR_LOCALS_START;
         const constants = [];
+        const loopStack = [];
 
         for (const param of method.params) {
             const paramIdx = method.params.indexOf(param);
@@ -2027,10 +2028,8 @@ class CLOOMCCompiler {
         };
 
         const emitLoadConst = (dr, value) => {
-            const offset = 100 + constants.length;
-            constants.push(value);
-            code.push(this.encode(this.opcodes.DREAD, 14, dr, 7, offset));
-            manifest.push({ line: 0, instr: `DREAD DR${dr}, CR14, ${offset}`, comment: `load constant ${value}` });
+            code.push(this.encode(this.opcodes.IADD, 14, dr, 0, value | 0x4000));
+            manifest.push({ line: 0, instr: `IADD DR${dr}, DR0, #${value}`, comment: `load constant ${value}` });
         };
 
         const emitExpr = (expr, dstDR, lineNum) => {
@@ -2195,12 +2194,17 @@ class CLOOMCCompiler {
                 continue;
             }
 
-            const letMatch = text.match(/^let\s+(\w+)\s*=\s*(.+)$/);
+            const letMatch = text.match(/^let\s+(\w+(?:\s*,\s*\w+)*)\s*=\s*(.+)$/);
             if (letMatch) {
-                const varName = letMatch[1].trim();
+                const targets = letMatch[1].split(',').map(t => t.trim());
                 const expr = letMatch[2].trim();
-                const dstDR = allocVar(varName);
-                emitExpr(expr, dstDR, lineNum);
+                const firstDR = allocVar(targets[0]);
+                emitExpr(expr, firstDR, lineNum);
+                for (let ti = 1; ti < targets.length; ti++) {
+                    const extraDR = allocVar(targets[ti]);
+                    code.push(this.encode(this.opcodes.IADD, 14, extraDR, firstDR, 0));
+                    manifest.push({ line: lineNum, instr: `IADD DR${extraDR}, DR${firstDR}, DR0`, comment: `copy to ${targets[ti]}` });
+                }
                 continue;
             }
 
@@ -2222,18 +2226,53 @@ class CLOOMCCompiler {
                 continue;
             }
 
+            const repeatMatch = text.match(/^repeat\s+(.+?)\s+as\s+(\w+)$/i);
+            if (repeatMatch) {
+                const countExpr = repeatMatch[1].trim();
+                const counterName = repeatMatch[2].trim();
+                const counterDR = allocVar(counterName);
+                emitExpr(countExpr, counterDR, lineNum);
+                manifest.push({ line: lineNum, instr: `-- repeat`, comment: `repeat ${countExpr} as ${counterName}` });
+                loopStack.push({ loopStart: code.length, counterDR, counterName, lineNum });
+                continue;
+            }
+
+            if (text.match(/^end$/i)) {
+                if (loopStack.length === 0) {
+                    errors.push({ line: lineNum, message: `'end' without matching 'repeat'` });
+                    continue;
+                }
+                const loop = loopStack.pop();
+                code.push(this.encode(this.opcodes.ISUB, 14, loop.counterDR, loop.counterDR, 0x4001));
+                manifest.push({ line: lineNum, instr: `ISUB DR${loop.counterDR}, DR${loop.counterDR}, #1`, comment: `decrement ${loop.counterName}` });
+                code.push(this.encode(this.opcodes.MCMP, 14, loop.counterDR, 0, 0));
+                manifest.push({ line: lineNum, instr: `MCMP DR${loop.counterDR}, DR0`, comment: `compare ${loop.counterName} with 0` });
+                const branchIdx = code.length;
+                const soff = loop.loopStart - branchIdx;
+                code.push(this.encode(this.opcodes.BRANCH, this.conditions.GT, 0, 0, soff & 0x7FFF));
+                manifest.push({ line: lineNum, instr: `BRANCH GT, ${soff}`, comment: `loop back if ${loop.counterName} > 0` });
+                continue;
+            }
+
             if (text.match(/^halt$/i) || text.match(/^stop$/i)) {
-                code.push(this.encode(this.opcodes.BRANCH, 14, 0, 0, code.length));
-                manifest.push({ line: lineNum, instr: 'HALT', comment: 'halt (branch to self)' });
+                code.push(0);
+                manifest.push({ line: lineNum, instr: 'HALT', comment: 'halt (zero word)' });
                 continue;
             }
 
             errors.push({ line: lineNum, message: `Cannot parse symbolic statement: ${text}` });
         }
 
+        if (loopStack.length > 0) {
+            for (const unclosed of loopStack) {
+                errors.push({ line: unclosed.lineNum, message: `'repeat' without matching 'end'` });
+            }
+        }
+
         if (code.length === 0 || (code[code.length - 1] & (0x1F << 27)) !== (this.opcodes.RETURN << 27)) {
-            const lastBranch = code.length > 0 ? (code[code.length - 1] >>> 27) : -1;
-            if (lastBranch !== this.opcodes.BRANCH) {
+            const lastWord = code.length > 0 ? code[code.length - 1] : -1;
+            const lastOp = lastWord >>> 27;
+            if (lastOp !== this.opcodes.BRANCH && lastWord !== 0) {
                 code.push(this.encode(this.opcodes.RETURN, 14, 0, 0, 0));
                 manifest.push({ line: 0, instr: 'RETURN', comment: 'implicit return' });
             }

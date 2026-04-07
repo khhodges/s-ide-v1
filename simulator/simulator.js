@@ -1644,7 +1644,6 @@ class ChurchSimulator {
             const abstraction = this.abstractionRegistry.getAbstraction(check.index);
             if (abstraction && abstraction.methods.length > 0) {
                 this.abstractionRegistry.activate(check.index);
-                // Abstraction dispatches are also atomic: save/restore CR6 to preserve caller's c-list base.
                 const savedCR6 = {...this.cr[6]};
                 this._writeCR(6, sourceGT, nsEntry);
                 const abstrResult = this._dispatchAbstraction(d, check, abstraction);
@@ -1820,16 +1819,39 @@ class ChurchSimulator {
                 }
             }
 
-            const methodName = this._selectNavanaMethod(d) || abstraction.methods[0] || 'Apply';
+            let methodName, argDR0, argDR1, encodedDstReg = null;
+            if (d.imm & 0x4000) {
+                const packed = d.imm & 0x3FFF;
+                const methodIdx = (packed >> 8) & 0xF;
+                const leftReg = (packed >> 4) & 0xF;
+                const rightReg = packed & 0xF;
+                encodedDstReg = d.crSrc;
+                argDR0 = this.dr[leftReg];
+                argDR1 = this.dr[rightReg];
+                methodName = (methodIdx >= 0 && methodIdx < abstraction.methods.length)
+                    ? abstraction.methods[methodIdx]
+                    : (abstraction.methods[0] || 'Apply');
+            } else {
+                methodName = this._selectNavanaMethod(d) || abstraction.methods[0] || 'Apply';
+                argDR0 = this.dr[0];
+                argDR1 = this.dr[1];
+            }
             const desc = `CALL CR${d.crDst} -> ${label}.${methodName} [abstraction dispatch]`;
             this.output += desc + '\n';
 
             if (this.abstractionRegistry) {
                 const result = this.abstractionRegistry.dispatchMethod(check.index, methodName, this, {
-                    dr0: this.dr[0], dr1: this.dr[1]
+                    dr0: argDR0, dr1: argDR1
                 });
                 if (result && result.message) {
                     this.output += `  ${result.message}\n`;
+                }
+                if (result && result.ok && result.result !== undefined && typeof result.result === 'number') {
+                    if (encodedDstReg !== null) {
+                        this.dr[encodedDstReg] = result.result;
+                    } else {
+                        this.dr[0] = result.result;
+                    }
                 }
                 if (result && !result.ok && result.fault) {
                     this.fault(result.fault, `${label}.${methodName}: ${result.message}`);
