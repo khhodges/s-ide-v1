@@ -26,3 +26,4 @@ echo "If SRAM fails, try: openFPGALoader -b tangnano20k -f blink.fs"
 echo ""
 echo "Build complete! blink.fs is ready."
 ls -la blink.fs
+
