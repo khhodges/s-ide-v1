@@ -1581,13 +1581,18 @@ async function injectCRCodeToFPGA(logEl) {
     }
 
     log(`Sending code lump (${newCW} words at 0x${baseLoc.toString(16).toUpperCase().padStart(4,'0')}) to FPGA...`);
+    let patchResult;
     try {
-        await TangSerial.patchLump(baseLoc, newWords, msg => log('  ' + msg));
-        log('FPGA patched successfully.');
+        patchResult = await TangSerial.patchLump(baseLoc, newWords, msg => log('  ' + msg));
     } catch(e) {
         log('FPGA patch failed: ' + e.message);
         return false;
     }
+    if (!patchResult || !patchResult.success) {
+        log('FPGA patch failed — no valid echo from hardware.');
+        return false;
+    }
+    log('FPGA patch confirmed by echo.');
 
     log('Sending RUN command...');
     try {
