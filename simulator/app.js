@@ -1470,8 +1470,33 @@ function injectCRCode(logEl) {
     const baseLoc = cr.word1_location >>> 0;
     const nsIdx = cr.gtIndex;
 
-    const src = (document.getElementById('asmEditor') || {}).value || '';
-    if (!src.trim()) { log('Error: Editor is empty — open the code in the editor first (Edit button).'); return null; }
+    let src = (document.getElementById('asmEditor') || {}).value || '';
+    if (!src.trim()) {
+        const autoBaseLoc = cr.word1_location >>> 0;
+        const autoWord0 = (autoBaseLoc < sim.memory.length) ? (sim.memory[autoBaseLoc] >>> 0) : 0;
+        const autoHdr = sim.parseLumpHeader(autoWord0);
+        if (autoHdr.valid && autoHdr.cw > 0) {
+            const autoStart = autoBaseLoc + 1;
+            const autoAsm = new ChurchAssembler();
+            const autoWords = [];
+            for (let w = 0; w < autoHdr.cw; w++) {
+                const addr = autoStart + w;
+                if (addr >= sim.memory.length) break;
+                autoWords.push(sim.memory[addr] >>> 0);
+            }
+            let trimLen = autoWords.length;
+            while (trimLen > 0 && autoWords[trimLen - 1] === 0) trimLen--;
+            const lines = [];
+            for (let i = 0; i < trimLen; i++) {
+                lines.push(autoWords[i] === 0 ? 'NOP' : autoAsm.disassemble(autoWords[i]));
+            }
+            src = lines.join('\n');
+            const asmEd = document.getElementById('asmEditor');
+            if (asmEd) asmEd.value = src;
+            log(`Auto-loaded ${trimLen} instructions from CR${crIdx} lump.`);
+        }
+    }
+    if (!src.trim()) { log('Error: Editor is empty and no code found in this CR lump. Click Edit to write code first.'); return null; }
 
     const asmObj = new ChurchAssembler();
     const result = asmObj.assemble(src);
