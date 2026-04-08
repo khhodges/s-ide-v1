@@ -2193,6 +2193,30 @@ class ChurchSimulator {
         }
 
         const savedSTO = this.sto;
+        const lambdaThreadBase = this.cr[12] && this.cr[12].word1;
+        if (lambdaThreadBase) {
+            const threadHdrWord = this.memory[lambdaThreadBase] >>> 0;
+            const threadHdr = this.parseLumpHeader(threadHdrWord);
+            const threadLumpSize = threadHdr.valid ? threadHdr.lumpSize : 256;
+            const threadCC = threadHdr.valid ? threadHdr.cc : 0;
+            const heapEnd = 1 + 16 + threadCC;
+            const sw = (threadHdr.valid && threadHdr.typ === 2) ? threadHdr.cw : 0;
+            const sp_max = threadLumpSize - 12 - 1;
+            const sp_min = sp_max - sw + 1;
+            const newSTO = (savedSTO - 1) & 0xFFF;
+            if (newSTO < sp_min) {
+                this.flags.V = true;
+                this.output += `[STACK WARNING] LAMBDA CR${crIdx}: STO=${newSTO} below sw limit sp_min=${sp_min} (sw=${sw}) — V flag set\n`;
+            }
+            if (savedSTO < heapEnd) {
+                this.fault('BOUNDS', `LAMBDA CR${crIdx}: stack overflow — STO=${savedSTO} would write into heap/DR zone (heapEnd=${heapEnd})`);
+                return null;
+            }
+            if (savedSTO >= threadLumpSize) {
+                this.fault('BOUNDS', `LAMBDA CR${crIdx}: stack frame address ${savedSTO} out of thread lump (size=${threadLumpSize})`);
+                return null;
+            }
+        }
         const frameWord = this._packFrameWord(this.pc + 1, 0, savedSTO);
         this.callStack.push({
             returnPC:   this.pc + 1,
@@ -2203,7 +2227,10 @@ class ChurchSimulator {
             frameWord,
             isLambda: true,
         });
-        this.sto = (savedSTO + 1) & 0xFFF;
+        if (lambdaThreadBase) {
+            this.memory[lambdaThreadBase + savedSTO] = frameWord;
+        }
+        this.sto = (savedSTO - 1) & 0xFFF;
 
         const label = this.nsLabels[check.index] || 'reduction';
         const desc = `LAMBDA CR${crIdx} -> ${label} [SZ=0, STO:${savedSTO}->${this.sto}]`;
