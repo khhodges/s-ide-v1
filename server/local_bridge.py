@@ -161,13 +161,42 @@ class Handler(BaseHTTPRequestHandler):
             self._json_resp({'ok': False, 'error': 'not found'}, 404)
 
 
+def _generate_self_signed_cert():
+    """Generate a self-signed certificate for HTTPS bridge (mixed-content workaround)."""
+    import tempfile, subprocess, os
+    cert_dir = tempfile.mkdtemp(prefix='church_bridge_')
+    key_path  = os.path.join(cert_dir, 'key.pem')
+    cert_path = os.path.join(cert_dir, 'cert.pem')
+    subprocess.run([
+        'openssl', 'req', '-x509', '-newkey', 'rsa:2048',
+        '-keyout', key_path, '-out', cert_path,
+        '-days', '365', '-nodes',
+        '-subj', '/CN=penguin.linux.test',
+    ], capture_output=True, check=True)
+    return cert_path, key_path
+
+
 if __name__ == '__main__':
-    print(f'Church Machine FPGA Bridge')
+    import ssl as _ssl
+
+    cert_path, key_path = _generate_self_signed_cert()
+
+    print(f'Church Machine FPGA Bridge (HTTPS)')
     print(f'  Serial : {SERIAL_PORT} @ {BAUD} baud')
-    print(f'  HTTP   : http://0.0.0.0:{HTTP_PORT}')
-    print(f'  ChromeOS bridge URL: http://penguin.linux.test:{HTTP_PORT}')
+    print(f'  HTTPS  : https://0.0.0.0:{HTTP_PORT}')
+    print(f'  ChromeOS bridge URL: https://penguin.linux.test:{HTTP_PORT}')
     print()
-    print('In the IDE click  "Bridge"  and use the URL above.')
+    print('IMPORTANT — first time setup:')
+    print(f'  1. Open https://penguin.linux.test:{HTTP_PORT}/status in Chrome')
+    print(f'  2. Click "Advanced" → "Proceed to penguin.linux.test (unsafe)"')
+    print(f'  3. You should see {{"ok": true, ...}}')
+    print(f'  4. Now go to the IDE and click "Bridge"')
+    print()
     print('Press Ctrl+C to stop.')
     print()
-    HTTPServer(('0.0.0.0', HTTP_PORT), Handler).serve_forever()
+
+    server = HTTPServer(('0.0.0.0', HTTP_PORT), Handler)
+    ctx = _ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(cert_path, key_path)
+    server.socket = ctx.wrap_socket(server.socket, server_side=True)
+    server.serve_forever()

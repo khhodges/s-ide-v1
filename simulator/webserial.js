@@ -15,7 +15,7 @@ const TangSerial = (function() {
     }
 
     async function connectBridge(url) {
-        _bridgeUrl  = (url || 'http://penguin.linux.test:8766').replace(/\/$/, '');
+        _bridgeUrl  = (url || 'https://penguin.linux.test:8766').replace(/\/$/, '');
         const r = await _bFetch('/connect', { method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({}) });

@@ -5874,7 +5874,7 @@ async function fpgaBridgeConnect() {
         updateFPGAStatusBtn();
         return;
     }
-    const defaultUrl = 'http://penguin.linux.test:8766';
+    const defaultUrl = 'https://penguin.linux.test:8766';
     const url = window.prompt(
         'Local Bridge URL\n\n' +
         'Run this in your Linux terminal first:\n' +
