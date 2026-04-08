@@ -3,7 +3,7 @@
 (* top =  1  *)
 (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:59" *)
 (* generator = "Amaranth" *)
-module top(push_button, uart_tx, led0, led1, led2, led3, led4, led5, uart_rx);
+module top(clk, push_button, uart_tx, led0, led1, led2, led3, led4, led5, uart_rx);
   reg \$auto$verilog_backend.cc:2355:dump_module$15  = 0;
   wire \$1 ;
   wire \$10 ;
@@ -196,7 +196,7 @@ module top(push_button, uart_tx, led0, led1, led2, led3, led4, led5, uart_rx);
   (* src = "/home/runner/workspace/hardware/core.py:68" *)
   wire clist_wr_en;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/boot_rom.py:465" *)
   wire [31:0] data;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:89" *)
@@ -475,111 +475,113 @@ module top(push_button, uart_tx, led0, led1, led2, led3, led4, led5, uart_rx);
   assign \$90  = fault_msg_idx + (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:532" *) 1'h1;
   assign \$91  = ~ (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:538" *) busy;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:108" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     timer_hi <= \$92 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:107" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     timer_lo <= \$59 [31:0];
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:112" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     alarm_fired <= \$93 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:103" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mmio_led0 <= \$94 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:103" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mmio_led1 <= \$95 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:103" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mmio_led2 <= \$96 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:103" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mmio_led3 <= \$97 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:103" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mmio_led4 <= \$98 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:109" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     tod_epoch <= \$99 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:110" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     alarm_cmp <= \$100 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:111" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     alarm_armed <= \$101 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:292" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     init_idx <= \$102 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:293" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     init_done <= \$103 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:318" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     prev_nia <= imem_addr;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:328" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     btn_sync <= \$104 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:329" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     btn_prev <= btn_sync[2];
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:342" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mmio_uart_pending <= \$105 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:343" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mmio_uart_byte_reg <= \$106 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:366" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     heartbeat_ctr <= \$107 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:367" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     heartbeat_blink <= \$108 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:398" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     boot_delay <= \$109 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:399" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     boot_triggered <= \$110 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:440" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     startup_ctr <= \$111 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     debug_fsm_state <= \$112 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:413" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     banner_idx <= \$113 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:315" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     halted <= \$114 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:418" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     halt_idx <= \$115 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:316" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     stepping <= \$116 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:432" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     step_nia <= \$117 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:433" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     step_fault <= \$118 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:434" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     step_had_fault <= \$119 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:423" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     step_idx <= \$120 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:428" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     fault_msg_idx <= \$121 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:67" *)
   \top.boot_rom  boot_rom (
+    .clk(clk),
     .addr(imem_addr[10:2]),
     .data(imem_data)
   );
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:243" *)
   \top.bsram  bsram (
+    .clk(clk),
     .mem_r_addr(\addr$45 ),
     .mem_w_data(\wr_data$54 ),
     .rd_data(rd_data),
@@ -587,6 +589,7 @@ module top(push_button, uart_tx, led0, led1, led2, led3, led4, led5, uart_rx);
   );
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:64" *)
   \top.core  core (
+    .clk(clk),
     .boot_complete(dbg_boot_complete),
     .boot_start(boot_start),
     .dmem_addr(dmem_addr),
@@ -603,6 +606,7 @@ module top(push_button, uart_tx, led0, led1, led2, led3, led4, led5, uart_rx);
   );
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:70" *)
   \top.debug  debug (
+    .clk(clk),
     .busy(busy),
     .byte_data(byte_data),
     .\data$15 (\data$98 ),
@@ -1738,7 +1742,7 @@ module top(push_button, uart_tx, led0, led1, led2, led3, led4, led5, uart_rx);
   assign boot_complete = dbg_boot_complete;
   assign boot_gate = init_done;
   assign gc_start = 1'h0;
-  assign clk = 1'h0;
+  
   assign \clist_rd_data.slot_id  = rd_data[15:0];
   assign \clist_rd_data.gt_seq  = rd_data[22:16];
   assign \clist_rd_data.gt_type  = rd_data[24:23];
@@ -1759,20 +1763,20 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/boot_rom.py:468" *)
 (* generator = "Amaranth" *)
-module \top.boot_rom (data, addr);
+module \top.boot_rom (clk, data, addr);
   reg \$auto$verilog_backend.cc:2355:dump_module$16  = 0;
   (* src = "/home/runner/workspace/hardware/boot_rom.py:464" *)
   input [8:0] addr;
   wire [8:0] addr;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/boot_rom.py:465" *)
   output [31:0] data;
   reg [31:0] data = 32'd0;
   (* src = "/home/runner/workspace/hardware/boot_rom.py:470" *)
   reg [31:0] rom_comb;
   (* src = "/home/runner/workspace/hardware/boot_rom.py:465" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     data <= rom_comb;
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$16 ) begin end
@@ -1808,16 +1812,16 @@ module \top.boot_rom (data, addr);
           rom_comb = 32'd0;
     endcase
   end
-  assign clk = 1'h0;
+  
 endmodule
 
 (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:22" *)
 (* generator = "Amaranth" *)
-module \top.bsram (mem_r_addr, mem_w_data, wr_en, rd_data);
+module \top.bsram (clk, mem_r_addr, mem_w_data, wr_en, rd_data);
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:15" *)
   wire [10:0] addr;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:19" *)
   wire cs;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:27" *)
@@ -3892,12 +3896,12 @@ module \top.bsram (mem_r_addr, mem_w_data, wr_en, rd_data);
     mem[2046] = 32'd0;
     mem[2047] = 32'd0;
   end
-  always @(posedge 1'h0) begin
+  always @(posedge clk) begin
     if (mem_w_en)
       mem[mem_r_addr] <= mem_w_data;
   end
   reg [10:0] _0_;
-  always @(posedge 1'h0) begin
+  always @(posedge clk) begin
     _0_ <= mem_r_addr;
   end
   assign rd_data = mem[_0_];
@@ -3906,13 +3910,13 @@ module \top.bsram (mem_r_addr, mem_w_data, wr_en, rd_data);
   assign mem_w_addr = mem_r_addr;
   assign wr_data = mem_w_data;
   assign cs = 1'h1;
-  assign clk = 1'h0;
+  
   assign mem_w_en = wr_en;
 endmodule
 
 (* src = "/home/runner/workspace/hardware/core.py:95" *)
 (* generator = "Amaranth" *)
-module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361 , \fault_valid$362 , dmem_addr, dmem_rd_en, dmem_wr_data, dmem_wr_en, imem_addr, instruction, mem_rd_data);
+module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361 , \fault_valid$362 , dmem_addr, dmem_rd_en, dmem_wr_data, dmem_wr_en, imem_addr, instruction, mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$17  = 0;
   wire \$1 ;
   wire \$10 ;
@@ -4471,7 +4475,7 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   (* src = "/home/runner/workspace/hardware/core.py:68" *)
   wire clist_wr_en;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/cload.py:56" *)
   wire cload_busy;
   (* src = "/home/runner/workspace/hardware/ret.py:57" *)
@@ -6454,12 +6458,12 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
     cr5_stack[254] = 32'd0;
     cr5_stack[255] = 32'd0;
   end
-  always @(posedge 1'h0) begin
+  always @(posedge clk) begin
     if (cr5_stack_w_en)
       cr5_stack[cr5_stack_w_addr] <= cr5_stack_w_data;
   end
   reg [7:0] _0_;
-  always @(posedge 1'h0) begin
+  always @(posedge clk) begin
     _0_ <= \$115 [7:0];
   end
   assign cr5_stack_r_data = cr5_stack[_0_];
@@ -6676,61 +6680,62 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   assign \$180  = cr5_stack_ptr + (* src = "/home/runner/workspace/hardware/core.py:1137" *) 1'h1;
   assign \$181  = cr5_stack_ptr - (* src = "/home/runner/workspace/hardware/core.py:1147" *) 1'h1;
   (* src = "/home/runner/workspace/hardware/core.py:163" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     boot_state <= \$182 ;
   (* src = "/home/runner/workspace/hardware/core.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     imem_addr <= \$183 ;
   (* src = "/home/runner/workspace/hardware/core.py:156" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     code_lo_reg <= \$184 ;
   (* src = "/home/runner/workspace/hardware/core.py:157" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     code_hi_reg <= \$185 ;
   (* src = "/home/runner/workspace/hardware/core.py:158" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     fence_pending_reg <= \$186 ;
   (* src = "/home/runner/workspace/hardware/core.py:232" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cross_domain_ret <= \$187 ;
   (* src = "/home/runner/workspace/hardware/core.py:233" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cload_pending <= \$188 ;
   (* src = "/home/runner/workspace/hardware/core.py:160" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     lambda_active <= \$189 ;
   (* src = "/home/runner/workspace/hardware/core.py:161" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     lambda_pc <= \$190 ;
   (* src = "/home/runner/workspace/hardware/core.py:222" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     iadd_busy_reg <= \$157 ;
   (* src = "/home/runner/workspace/hardware/core.py:223" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     isub_busy_reg <= \$159 ;
   (* src = "/home/runner/workspace/hardware/core.py:225" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     shl_busy_reg <= \$161 ;
   (* src = "/home/runner/workspace/hardware/core.py:226" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     shr_busy_reg <= \$163 ;
   (* src = "/home/runner/workspace/hardware/core.py:227" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     bfext_busy_reg <= \$165 ;
   (* src = "/home/runner/workspace/hardware/core.py:228" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     bfins_busy_reg <= \$167 ;
   (* src = "/home/runner/workspace/hardware/core.py:229" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mcmp_busy_reg <= \$169 ;
   (* src = "/home/runner/workspace/hardware/core.py:224" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     branch_busy_reg <= \$171 ;
   (* src = "/home/runner/workspace/hardware/core.py:1115" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr5_stack_ptr <= \$191 ;
   (* src = "/home/runner/workspace/hardware/core.py:109" *)
   \top.core.u_call  u_call (
+    .clk(clk),
     .call_busy(call_busy),
     .call_complete(call_complete),
     .call_fault(call_fault),
@@ -6768,6 +6773,7 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   );
   (* src = "/home/runner/workspace/hardware/core.py:141" *)
   \top.core.u_cload  u_cload (
+    .clk(clk),
     .cload_busy(cload_busy),
     .cload_fault(cload_fault),
     .cload_fault_type(cload_fault_type),
@@ -6803,6 +6809,7 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   );
   (* src = "/home/runner/workspace/hardware/core.py:139" *)
   \top.core.u_dread  u_dread (
+    .clk(clk),
     .busy(\busy$19 ),
     .cr_rd_addr(\cr_rd_addr$38 ),
     .cr_rd_data(cr_rd_data),
@@ -6819,6 +6826,7 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   );
   (* src = "/home/runner/workspace/hardware/core.py:140" *)
   \top.core.u_dwrite  u_dwrite (
+    .clk(clk),
     .busy(\busy$20 ),
     .cr_rd_addr(\cr_rd_addr$37 ),
     .cr_rd_data(cr_rd_data),
@@ -6834,6 +6842,7 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   );
   (* src = "/home/runner/workspace/hardware/core.py:113" *)
   \top.core.u_load  u_load (
+    .clk(clk),
     .fault_type(\fault_type$369 ),
     .load_busy(load_busy),
     .load_fault(load_fault),
@@ -6847,6 +6856,7 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   );
   (* src = "/home/runner/workspace/hardware/core.py:142" *)
   \top.core.u_outform  u_outform (
+    .clk(clk),
     .mem_wr_addr(\mem_wr_addr$447 ),
     .mem_wr_data(\mem_wr_data$448 ),
     .mem_wr_en(\mem_wr_en$432 ),
@@ -6868,6 +6878,7 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   );
   (* src = "/home/runner/workspace/hardware/core.py:106" *)
   \top.core.u_registers  u_registers (
+    .clk(clk),
     .clear_all(clear_all),
     .cr0_gt_wr_data(32'd0),
     .cr0_gt_wr_en(1'h0),
@@ -6925,6 +6936,7 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   );
   (* src = "/home/runner/workspace/hardware/core.py:110" *)
   \top.core.u_return  u_return (
+    .clk(clk),
     .busy(busy),
     .cload_e_gt(e_gt),
     .complete(complete),
@@ -6955,6 +6967,7 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   );
   (* src = "/home/runner/workspace/hardware/core.py:112" *)
   \top.core.u_save  u_save (
+    .clk(clk),
     .cr15_namespace(cr15_namespace),
     .cr_rd_addr(\cr_rd_addr$39 ),
     .cr_rd_data(cr_rd_data),
@@ -6972,6 +6985,7 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   );
   (* src = "/home/runner/workspace/hardware/core.py:115" *)
   \top.core.u_shared_mload  u_shared_mload (
+    .clk(clk),
     .cr15_namespace(cr15_namespace),
     .cr_rd_addr(\cr_rd_addr$43 ),
     .cr_rd_data(cr_rd_data),
@@ -6997,6 +7011,7 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   );
   (* src = "/home/runner/workspace/hardware/core.py:111" *)
   \top.core.u_tperm  u_tperm (
+    .clk(clk),
     .cr_rd_addr(\cr_rd_addr$42 ),
     .cr_rd_data(cr_rd_data),
     .cr_target(instruction[22:19]),
@@ -7867,7 +7882,7 @@ module \top.core (imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361
   assign ns_rd_en = 1'h0;
   assign ns_wr_data = 96'h000000000000000000000000;
   assign ns_wr_en = 1'h0;
-  assign clk = 1'h0;
+  
   assign free_run_start = 1'h0;
   assign \nia_set$461  = call_complete;
   assign free_run_nia = 32'd0;
@@ -8516,7 +8531,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/call.py:93" *)
 (* generator = "Amaranth" *)
-module \top.core.u_call (call_start, cr_rd_data, mload_src, mload_dst, mload_index, code_lo_out, code_hi_out, call_busy, call_complete, mload_fault, mload_done, caller_pc, cr5_heap, thread_base, cr14_code, cr15_namespace, nia_computed, cr_null_mask, cr_b_clear_mask, cr_rd_addr, cr_wr_addr
+module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mload_index, code_lo_out, code_hi_out, call_busy, call_complete, mload_fault, mload_done, caller_pc, cr5_heap, thread_base, cr14_code, cr15_namespace, nia_computed, cr_null_mask, cr_b_clear_mask, cr_rd_addr, cr_wr_addr
 , cr_wr_data, cr_wr_en, mem_rd_addr, mem_rd_en, mem_wr_addr, mem_wr_data, mem_wr_en, call_fault, fault_type, mload_start, mload_fault_type, \port$3256$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$18  = 0;
   wire [4:0] \$1 ;
@@ -8618,7 +8633,7 @@ module \top.core.u_call (call_start, cr_rd_data, mload_src, mload_dst, mload_ind
   (* src = "/home/runner/workspace/hardware/call.py:211" *)
   reg [7:0] cc_reg = 8'h00;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/call.py:90" *)
   output [31:0] code_hi_out;
   wire [31:0] code_hi_out;
@@ -9061,58 +9076,58 @@ module \top.core.u_call (call_start, cr_rd_data, mload_src, mload_dst, mload_ind
   assign \$56  = sp_latched > (* src = "/home/runner/workspace/hardware/call.py:467" *) 15'h0033;
   assign \$57  = sp_latched < (* src = "/home/runner/workspace/hardware/call.py:473" *) 15'h0036;
   (* src = "/home/runner/workspace/hardware/call.py:99" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     phase <= \$58 ;
   (* src = "/home/runner/workspace/hardware/call.py:102" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     call_fault <= \$59 ;
   (* src = "/home/runner/workspace/hardware/call.py:103" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     fault_type <= \$60 ;
   (* src = "/home/runner/workspace/hardware/call.py:105" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sub_done_latched <= \$61 ;
   (* src = "/home/runner/workspace/hardware/call.py:106" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sub_fault_latched <= \$62 ;
   (* src = "/home/runner/workspace/hardware/call.py:101" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mask_latched <= \$63 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     call_state <= \$64 ;
   (* src = "/home/runner/workspace/hardware/call.py:100" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     src_reg_latched <= \$65 ;
   (* src = "/home/runner/workspace/hardware/call.py:104" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mload_start <= \$66 ;
   (* src = "/home/runner/workspace/hardware/call.py:137" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     callee_egt_latched <= \$67 ;
   (* src = "/home/runner/workspace/hardware/call.py:152" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr14_latched <= \$68 ;
   (* src = "/home/runner/workspace/hardware/call.py:207" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     lump_reg <= \$69 ;
   (* src = "/home/runner/workspace/hardware/call.py:210" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cw_reg <= \$70 ;
   (* src = "/home/runner/workspace/hardware/call.py:211" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cc_reg <= \$71 ;
   (* src = "/home/runner/workspace/hardware/call.py:212" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     n_minus_6_reg <= \$72 ;
   (* src = "/home/runner/workspace/hardware/call.py:213" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     lumpSize_reg <= \$73 ;
   (* src = "/home/runner/workspace/hardware/call.py:262" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr6_latched <= \$74 ;
   (* src = "/home/runner/workspace/hardware/call.py:117" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sp_latched <= \$75 ;
   assign \$8  = caller_pc + (* src = "/home/runner/workspace/hardware/call.py:146" *) 1'h1;
   assign src_in_range = \port$3256$0 [18:15] <= (* src = "/home/runner/workspace/hardware/call.py:157" *) 4'hb;
@@ -10096,7 +10111,7 @@ module \top.core.u_call (call_start, cr_rd_data, mload_src, mload_dst, mload_ind
   assign fault_type_latched = fault_type;
   assign nia_set = call_complete;
   assign nia_value = cr14_with_m[63:32];
-  assign clk = 1'h0;
+  
   assign mask = { 1'h0, \port$3256$0 [14:0] };
   assign mem_rd_valid = 1'h1;
   assign code_lo_out = \$19 [31:0];
@@ -10262,7 +10277,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/cload.py:75" *)
 (* generator = "Amaranth" *)
-module \top.core.u_cload (mem_addr, mem_rd_en, cload_busy, cload_fault, cload_start, cr15_namespace, e_gt, cr_wr_addr, cr_wr_data, cr_wr_en, cload_fault_type, mem_rd_data);
+module \top.core.u_cload (clk, mem_addr, mem_rd_en, cload_busy, cload_fault, cload_start, cr15_namespace, e_gt, cr_wr_addr, cr_wr_data, cr_wr_en, cload_fault_type, mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$19  = 0;
   wire [32:0] \$1 ;
   wire \$10 ;
@@ -10298,7 +10313,7 @@ module \top.core.u_cload (mem_addr, mem_rd_en, cload_busy, cload_fault, cload_st
   (* src = "/home/runner/workspace/hardware/cload.py:89" *)
   reg [7:0] cc_reg = 8'h00;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/cload.py:56" *)
   output cload_busy;
   wire cload_busy;
@@ -10534,37 +10549,38 @@ module \top.core.u_cload (mem_addr, mem_rd_en, cload_busy, cload_fault, cload_st
   assign \$20  = mem_rd_data[26:23] + (* src = "/home/runner/workspace/hardware/cload.py:222" *) 3'h6;
   assign \$21  = 1'h1 << (* src = "/home/runner/workspace/hardware/cload.py:222" *) \$20 ;
   (* src = "/home/runner/workspace/hardware/cload.py:81" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     e_gt_latched <= \$22 ;
   (* src = "/home/runner/workspace/hardware/cload.py:85" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     raw_base <= \$23 ;
   (* src = "/home/runner/workspace/hardware/cload.py:86" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     raw_w2 <= \$24 ;
   (* src = "/home/runner/workspace/hardware/cload.py:87" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     raw_w3 <= \$25 ;
   (* src = "/home/runner/workspace/hardware/cload.py:89" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cc_reg <= \$26 ;
   (* src = "/home/runner/workspace/hardware/cload.py:90" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cw_reg <= \$27 ;
   (* src = "/home/runner/workspace/hardware/cload.py:91" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     n_minus_6_reg <= \$28 ;
   (* src = "/home/runner/workspace/hardware/cload.py:92" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     lump_size_reg <= \$29 ;
   (* src = "/home/runner/workspace/hardware/cload.py:83" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cload_fault_type <= \$30 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cload_state <= \$31 ;
   (* src = "/home/runner/workspace/hardware/cload.py:77" *)
   \top.core.u_cload.u_ns_gate  u_ns_gate (
+    .clk(clk),
     .cr15_namespace(cr15_namespace),
     .gt_word0(gt_word0),
     .mem_addr(\mem_addr$5 ),
@@ -10916,7 +10932,7 @@ module \top.core.u_cload (mem_addr, mem_rd_en, cload_busy, cload_fault, cload_st
   assign local_cr_wr_data = cr_wr_data;
   assign local_cr_wr_en = cr_wr_en;
   assign fault_type_reg = cload_fault_type;
-  assign clk = 1'h0;
+  
   assign \cr15_namespace.word0_gt  = cr15_namespace[31:0];
   assign \cr15_namespace.word0_gt.slot_id  = cr15_namespace[15:0];
   assign \cr15_namespace.word0_gt.gt_seq  = cr15_namespace[22:16];
@@ -10993,7 +11009,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/ns_gate.py:71" *)
 (* generator = "Amaranth" *)
-module \top.core.u_cload.u_ns_gate (mem_rd_valid, ns_gate_busy, ns_gate_fault, ns_gate_done, cr15_namespace, ns_gate_start, gt_word0, mem_addr, mem_rd_en, raw_base_reg, raw_w2_reg, raw_w3_reg, ns_gate_fault_type, mem_rd_data);
+module \top.core.u_cload.u_ns_gate (clk, mem_rd_valid, ns_gate_busy, ns_gate_fault, ns_gate_done, cr15_namespace, ns_gate_start, gt_word0, mem_addr, mem_rd_en, raw_base_reg, raw_w2_reg, raw_w3_reg, ns_gate_fault_type, mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$20  = 0;
   wire [19:0] \$1 ;
   wire [12:0] \$10 ;
@@ -11104,7 +11120,7 @@ module \top.core.u_cload.u_ns_gate (mem_rd_valid, ns_gate_busy, ns_gate_fault, n
   wire \$auto$rtlil.cc:2739:Not$4 ;
   wire [14:0] \$auto$rtlil.cc:2739:Not$6 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:58" *)
   input [127:0] cr15_namespace;
   wire [127:0] cr15_namespace;
@@ -12009,22 +12025,22 @@ module \top.core.u_cload.u_ns_gate (mem_rd_valid, ns_gate_busy, ns_gate_fault, n
   assign \$99  = ~ (* src = "/home/runner/workspace/hardware/ns_gate.py:162" *) gt_seq_match;
   assign \$100  = ~ (* src = "/home/runner/workspace/hardware/ns_gate.py:165" *) seal_ok;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:73" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     gt_latched <= \$101 ;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:77" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     raw_base_reg <= \$102 ;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:78" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     raw_w2_reg <= \$103 ;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:79" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     raw_w3_reg <= \$104 ;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:75" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     ns_gate_fault_type <= \$105 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     ns_gate_state <= \$106 ;
   assign \$auto$rtlil.cc:2739:Not$4  = ~ gt_latched[24];
   assign \$auto$rtlil.cc:2739:Not$6  = ~ { 3'h0, \$3 [12:1] };
@@ -12268,7 +12284,7 @@ module \top.core.u_cload.u_ns_gate (mem_rd_valid, ns_gate_busy, ns_gate_fault, n
   assign raw_w2 = raw_w2_reg;
   assign raw_w3 = raw_w3_reg;
   assign ns_entry_addr_out = \$2 [31:0];
-  assign clk = 1'h0;
+  
   assign \cr15_namespace.word0_gt  = cr15_namespace[31:0];
   assign \cr15_namespace.word0_gt.slot_id  = cr15_namespace[15:0];
   assign \cr15_namespace.word0_gt.gt_seq  = cr15_namespace[22:16];
@@ -12576,7 +12592,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/dread.py:52" *)
 (* generator = "Amaranth" *)
-module \top.core.u_dread (start, cr_rd_data, cr_rd_addr, busy, fault, fault_type, dmem_addr, dmem_rd_en, dr_wr_addr, dr_wr_data, dr_wr_en, \port$3256$0 , dmem_rd_data);
+module \top.core.u_dread (clk, start, cr_rd_data, cr_rd_addr, busy, fault, fault_type, dmem_addr, dmem_rd_en, dr_wr_addr, dr_wr_data, dr_wr_en, \port$3256$0 , dmem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$22  = 0;
   wire \$1 ;
   reg [3:0] \$10 ;
@@ -12598,7 +12614,7 @@ module \top.core.u_dread (start, cr_rd_data, cr_rd_addr, busy, fault, fault_type
   output busy;
   reg busy;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/dread.py:40" *)
   output [3:0] cr_rd_addr;
   wire [3:0] cr_rd_addr;
@@ -12689,19 +12705,19 @@ module \top.core.u_dread (start, cr_rd_data, cr_rd_addr, busy, fault, fault_type
   assign \$8  = ~ (* src = "/home/runner/workspace/hardware/dread.py:95" *) in_bounds;
   assign \$9  = cr_rd_data[63:32] + (* src = "/home/runner/workspace/hardware/dread.py:99" *) { imm_reg, 2'h0 };
   (* src = "/home/runner/workspace/hardware/dread.py:54" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr_src_reg <= \$10 ;
   (* src = "/home/runner/workspace/hardware/dread.py:55" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr_dst_reg <= \$11 ;
   (* src = "/home/runner/workspace/hardware/dread.py:56" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     imm_reg <= \$12 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dread_fsm_state <= \$13 ;
   (* src = "/home/runner/workspace/hardware/dread.py:57" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     addr_reg <= \$14 ;
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$22 ) begin end
@@ -12891,7 +12907,7 @@ module \top.core.u_dread (start, cr_rd_data, cr_rd_addr, busy, fault, fault_type
   assign has_r = cr_rd_data[25];
   assign limit = cr_rd_data[79:64];
   assign cr_src = \port$3256$0 [18:15];
-  assign clk = 1'h0;
+  
   assign dr_dst = \port$3256$0 [22:19];
   assign imm = \port$3256$0 [14:0];
   assign \cr_rd_data.word0_gt  = cr_rd_data[31:0];
@@ -12907,7 +12923,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/dwrite.py:50" *)
 (* generator = "Amaranth" *)
-module \top.core.u_dwrite (cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, busy, fault, fault_type, dmem_addr, dmem_wr_data, dmem_wr_en, \port$3256$0 , start);
+module \top.core.u_dwrite (clk, cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, busy, fault, fault_type, dmem_addr, dmem_wr_data, dmem_wr_en, \port$3256$0 , start);
   reg \$auto$verilog_backend.cc:2355:dump_module$23  = 0;
   wire \$1 ;
   reg [3:0] \$10 ;
@@ -12929,7 +12945,7 @@ module \top.core.u_dwrite (cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, busy,
   output busy;
   reg busy;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/dwrite.py:39" *)
   output [3:0] cr_rd_addr;
   wire [3:0] cr_rd_addr;
@@ -13019,22 +13035,22 @@ module \top.core.u_dwrite (cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, busy,
   assign \$7  = ~ (* src = "/home/runner/workspace/hardware/dwrite.py:97" *) in_bounds;
   assign \$8  = cr_rd_data[63:32] + (* src = "/home/runner/workspace/hardware/dwrite.py:102" *) { imm_reg, 2'h0 };
   (* src = "/home/runner/workspace/hardware/dwrite.py:52" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr_src_reg <= \$9 ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:53" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr_src_reg <= \$10 ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:54" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     imm_reg <= \$11 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dwrite_fsm_state <= \$12 ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:55" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     addr_reg <= \$13 ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:56" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr_data_reg <= \$14 ;
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$23 ) begin end
@@ -13217,7 +13233,7 @@ module \top.core.u_dwrite (cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, busy,
   assign limit = cr_rd_data[79:64];
   assign cr_src = \port$3256$0 [18:15];
   assign dr_src = \port$3256$0 [22:19];
-  assign clk = 1'h0;
+  
   assign imm = \port$3256$0 [14:0];
   assign \cr_rd_data.word0_gt  = cr_rd_data[31:0];
   assign \cr_rd_data.word0_gt.slot_id  = cr_rd_data[15:0];
@@ -13232,7 +13248,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/load.py:31" *)
 (* generator = "Amaranth" *)
-module \top.core.u_load (mload_m_elevated, load_busy, load_fault, mload_busy, mload_fault, mload_done, mload_start, fault_type, \port$3256$0 , load_start);
+module \top.core.u_load (clk, mload_m_elevated, load_busy, load_fault, mload_busy, mload_fault, mload_done, mload_start, fault_type, \port$3256$0 , load_start);
   reg \$auto$verilog_backend.cc:2355:dump_module$24  = 0;
   wire \$1 ;
   wire \$2 ;
@@ -13241,7 +13257,7 @@ module \top.core.u_load (mload_m_elevated, load_busy, load_fault, mload_busy, ml
   wire \$5 ;
   reg [1:0] \$6 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/load.py:10" *)
   wire [3:0] cr_dst;
   (* src = "/home/runner/workspace/hardware/load.py:9" *)
@@ -13300,7 +13316,7 @@ module \top.core.u_load (mload_m_elevated, load_busy, load_fault, mload_busy, ml
   assign \$4  = load_wrapper_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 2'h3;
   assign \$5  = mload_done | (* src = "/home/runner/workspace/hardware/load.py:54" *) mload_fault;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     load_wrapper_state <= \$6 ;
   assign mload_m_elevated = \port$3256$0 [18:15] == (* src = "/home/runner/workspace/hardware/load.py:39" *) 3'h6;
   assign load_busy = ~ (* src = "/home/runner/workspace/hardware/load.py:58" *) \$1 ;
@@ -13347,12 +13363,12 @@ module \top.core.u_load (mload_m_elevated, load_busy, load_fault, mload_busy, ml
   assign mload_direct = 1'h0;
   assign mload_direct_gt = 32'd0;
   assign mload_fault_type = fault_type;
-  assign clk = 1'h0;
+  
 endmodule
 
 (* src = "/home/runner/workspace/hardware/outform_iot.py:74" *)
 (* generator = "Amaranth" *)
-module \top.core.u_outform (outform_busy, tx_valid, mem_wr_addr, mem_wr_data, mem_wr_en, outform_fault, result_gt, outform_fault_type, tx_byte);
+module \top.core.u_outform (clk, outform_busy, tx_valid, mem_wr_addr, mem_wr_data, mem_wr_en, outform_fault, result_gt, outform_fault_type, tx_byte);
   reg \$auto$verilog_backend.cc:2355:dump_module$25  = 0;
   wire [31:0] \$1 ;
   wire [31:0] \$10 ;
@@ -13475,7 +13491,7 @@ module \top.core.u_outform (outform_busy, tx_valid, mem_wr_addr, mem_wr_data, me
   (* src = "/home/runner/workspace/hardware/outform_iot.py:89" *)
   reg [1:0] byte_buf_cnt = 2'h0;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:80" *)
   reg [31:0] crc32_stored = 32'd0;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:91" *)
@@ -13604,49 +13620,49 @@ module \top.core.u_outform (outform_busy, tx_valid, mem_wr_addr, mem_wr_data, me
   assign \$54  = byte_buf_cnt + (* src = "/home/runner/workspace/hardware/outform_iot.py:244" *) 1'h1;
   assign \$55  = crc_final != (* src = "/home/runner/workspace/hardware/outform_iot.py:250" *) crc32_stored;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:76" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     tx_byte_cnt <= \$56 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:77" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     hdr_byte_cnt <= \$57 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:79" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     payload_len_reg <= \$58 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:80" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     crc32_stored <= \$59 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:82" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     word_count_reg <= \$60 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:83" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mint_n <= \$61 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:84" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     total_words <= \$62 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:91" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     crc_acc <= \$63 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:87" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     wr_word_cnt <= \$64 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:88" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     byte_buf <= \$65 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:89" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     byte_buf_cnt <= \$66 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:93" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     result_gt <= \$67 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     outform_iot_state <= \$68 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:33" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     outform_fault_type <= \$69 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:86" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mint_base <= \$70 ;
   assign \$2  = _iot_cxb0 ? (* src = "/home/runner/workspace/hardware/outform_iot.py:69" *) 32'd3988292384 : 32'd0;
   assign _iot_cs0 = \$1  ^ (* src = "/home/runner/workspace/hardware/outform_iot.py:69" *) \$2 ;
@@ -14120,7 +14136,7 @@ module \top.core.u_outform (outform_busy, tx_valid, mem_wr_addr, mem_wr_data, me
   assign n_reg = mint_n;
   assign result_gt_reg = result_gt;
   assign rx_valid = 1'h0;
-  assign clk = 1'h0;
+  
   assign outform_start = 1'h0;
   assign alloc_fault = 1'h0;
   assign alloc_done = 1'h0;
@@ -14430,7 +14446,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/registers.py:68" *)
 (* generator = "Amaranth" *)
-module \top.core.u_registers (cr_rd_addr, cr_wr_addr, cr_wr_data, cr_wr_en, cr0_gt_wr_en, cr0_gt_wr_data, cr1_gt_wr_en, cr1_gt_wr_data, cr2_gt_wr_en, cr2_gt_wr_data, cr3_gt_wr_en, cr3_gt_wr_data, cr4_gt_wr_en, cr4_gt_wr_data, cr5_gt_wr_en, cr5_gt_wr_data, cr6_gt_wr_en, cr6_gt_wr_data, cr7_gt_wr_en, cr7_gt_wr_data, cr8_gt_wr_en
+module \top.core.u_registers (clk, cr_rd_addr, cr_wr_addr, cr_wr_data, cr_wr_en, cr0_gt_wr_en, cr0_gt_wr_data, cr1_gt_wr_en, cr1_gt_wr_data, cr2_gt_wr_en, cr2_gt_wr_data, cr3_gt_wr_en, cr3_gt_wr_data, cr4_gt_wr_en, cr4_gt_wr_data, cr5_gt_wr_en, cr5_gt_wr_data, cr6_gt_wr_en, cr6_gt_wr_data, cr7_gt_wr_en, cr7_gt_wr_data, cr8_gt_wr_en
 , cr8_gt_wr_data, cr9_gt_wr_en, cr9_gt_wr_data, cr10_gt_wr_en, cr10_gt_wr_data, cr11_gt_wr_en, cr11_gt_wr_data, cr12_gt_wr_en, cr12_gt_wr_data, cr13_gt_wr_en, cr13_gt_wr_data, cr14_gt_wr_en, cr14_gt_wr_data, cr15_gt_wr_en, cr15_gt_wr_data, dr_rd_addr2, dr_rd_addr1, cr_rd_data, dr_rd_data1, dr_rd_data2, flags_in
 , flags_wr_en, dr_wr_addr, dr_wr_data, dr_wr_en, cr5, cr12, cr14, cr15, flags, cr_null_mask, cr_b_clear_mask, clear_all);
   reg \$auto$verilog_backend.cc:2355:dump_module$27  = 0;
@@ -14481,7 +14497,7 @@ module \top.core.u_registers (cr_rd_addr, cr_wr_addr, cr_wr_data, cr_wr_en, cr0_
   input clear_all;
   wire clear_all;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
   reg [127:0] cr0 = 128'h00000000000000000000000000000000;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
@@ -15349,40 +15365,40 @@ module \top.core.u_registers (cr_rd_addr, cr_wr_addr, cr_wr_data, cr_wr_en, cr0_
   input flags_wr_en;
   wire flags_wr_en;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr5 <= \$32 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr6 <= \$33 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr7 <= \$34 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr8 <= \$35 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr9 <= \$36 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr10 <= \$37 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr11 <= \$38 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr12 <= \$39 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr13 <= \$40 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr14 <= \$41 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr15 <= \$42 ;
   (* src = "/home/runner/workspace/hardware/registers.py:72" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     flags <= \$43 ;
   assign \$5  = ! (* src = "/home/runner/workspace/hardware/registers.py:137" *) dr_rd_addr1;
   assign dr_rd_data1 = \$5  ? (* src = "/home/runner/workspace/hardware/registers.py:137" *) 32'd0 : \$6 ;
@@ -15391,67 +15407,67 @@ module \top.core.u_registers (cr_rd_addr, cr_wr_addr, cr_wr_data, cr_wr_en, cr0_
   assign \$9  = | (* src = "/home/runner/workspace/hardware/registers.py:130" *) dr_wr_addr;
   assign \$10  = dr_wr_en & (* src = "/home/runner/workspace/hardware/registers.py:130" *) \$9 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr0 <= \$11 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr1 <= \$12 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr2 <= \$13 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr3 <= \$14 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr4 <= \$15 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr5 <= \$16 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr6 <= \$17 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr7 <= \$18 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr8 <= \$19 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr9 <= \$20 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr10 <= \$21 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr11 <= \$22 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr12 <= \$23 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr13 <= \$24 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr14 <= \$25 ;
   (* src = "/home/runner/workspace/hardware/registers.py:70" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr15 <= \$26 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr0 <= \$27 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr1 <= \$28 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr2 <= \$29 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr3 <= \$30 ;
   (* src = "/home/runner/workspace/hardware/registers.py:71" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dr4 <= \$31 ;
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$27 ) begin end
@@ -16658,7 +16674,7 @@ module \top.core.u_registers (cr_rd_addr, cr_wr_addr, cr_wr_data, cr_wr_en, cr0_
   assign cr14_code = cr14;
   assign cr15_namespace = cr15;
   assign flags_reg = flags;
-  assign clk = 1'h0;
+  
   assign cr_word_wr_en = 1'h0;
   assign cr_word_sel = 2'h0;
   assign cr_word_wr_addr = 4'h0;
@@ -16980,7 +16996,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/ret.py:60" *)
 (* generator = "Amaranth" *)
-module \top.core.u_return (return_start, mload_direct_gt, cr_rd_data, cr_rd_addr, busy, complete, reboot_request, mload_fault, mload_done, lambda_active, lambda_pc, cr5_heap, cr12_thread, mload_start, nia_set, nia_value, mem_rd_addr, mem_rd_en, mem_wr_addr, mem_wr_data, mem_wr_en
+module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd_addr, busy, complete, reboot_request, mload_fault, mload_done, lambda_active, lambda_pc, cr5_heap, cr12_thread, mload_start, nia_set, nia_value, mem_rd_addr, mem_rd_en, mem_wr_addr, mem_wr_data, mem_wr_en
 , fault_valid, fault_type, cload_e_gt, mload_fault_type, cr_src, mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$28  = 0;
   wire [32:0] \$1 ;
@@ -17024,7 +17040,7 @@ module \top.core.u_return (return_start, mload_direct_gt, cr_rd_data, cr_rd_addr
   (* src = "/home/runner/workspace/hardware/ret.py:79" *)
   wire [31:0] callee_egt_latched;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/ret.py:79" *)
   output [31:0] cload_e_gt;
   reg [31:0] cload_e_gt = 32'd0;
@@ -17286,46 +17302,46 @@ module \top.core.u_return (return_start, mload_direct_gt, cr_rd_data, cr_rd_addr
   assign \$19  = ~ (* src = "/home/runner/workspace/hardware/ret.py:169" *) return_cap[30];
   assign \$20  = ~ (* src = "/home/runner/workspace/hardware/ret.py:191" *) mem_rd_data[31];
   (* src = "/home/runner/workspace/hardware/ret.py:132" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     fault_valid <= \$21 ;
   (* src = "/home/runner/workspace/hardware/ret.py:133" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     fault_type <= \$22 ;
   (* src = "/home/runner/workspace/hardware/ret.py:130" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sub_done_latched <= \$23 ;
   (* src = "/home/runner/workspace/hardware/ret.py:131" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sub_fault_latched <= \$24 ;
   (* src = "/home/runner/workspace/hardware/ret.py:79" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cload_e_gt <= \$25 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     ret_state <= \$26 ;
   (* src = "/home/runner/workspace/hardware/ret.py:64" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     return_cap <= \$27 ;
   (* src = "/home/runner/workspace/hardware/ret.py:75" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     heap_base_latched <= \$28 ;
   (* src = "/home/runner/workspace/hardware/ret.py:76" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     thread_base_latched <= \$29 ;
   (* src = "/home/runner/workspace/hardware/ret.py:78" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sto_latched <= \$30 ;
   (* src = "/home/runner/workspace/hardware/ret.py:83" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     frame_word <= \$31 ;
   (* src = "/home/runner/workspace/hardware/ret.py:80" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     return_pc_latched <= \$32 ;
   (* src = "/home/runner/workspace/hardware/ret.py:81" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     prev_sto_latched <= \$33 ;
   (* src = "/home/runner/workspace/hardware/ret.py:129" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sub_start_reg <= \$34 ;
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
@@ -17872,7 +17888,7 @@ module \top.core.u_return (return_start, mload_direct_gt, cr_rd_data, cr_rd_addr
   assign callee_egt_latched = cload_e_gt;
   assign fault_flag = fault_valid;
   assign fault_latched = fault_type;
-  assign clk = 1'h0;
+  
   assign mem_rd_valid = 1'h1;
   assign \return_cap.word0_gt  = return_cap[31:0];
   assign \return_cap.word0_gt.slot_id  = return_cap[15:0];
@@ -17926,7 +17942,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/save.py:36" *)
 (* generator = "Amaranth" *)
-module \top.core.u_save (save_start, cr_rd_data, save_busy, cr15_namespace, cr_rd_addr, save_fault, fault_type, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, \port$3256$0 , mem_rd_data);
+module \top.core.u_save (clk, save_start, cr_rd_data, save_busy, cr15_namespace, cr_rd_addr, save_fault, fault_type, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, \port$3256$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$29  = 0;
   wire \$1 ;
   reg \$10 ;
@@ -17943,7 +17959,7 @@ module \top.core.u_save (save_start, cr_rd_data, save_busy, cr15_namespace, cr_r
   reg [3:0] \$8 ;
   reg \$9 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/save.py:33" *)
   input [127:0] cr15_namespace;
   wire [127:0] cr15_namespace;
@@ -18172,31 +18188,32 @@ module \top.core.u_save (save_start, cr_rd_data, save_busy, cr15_namespace, cr_r
   assign \$5  = save_wrapper_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 3'h4;
   assign \$6  = ~ (* src = "/home/runner/workspace/hardware/save.py:85" *) dst_in_range;
   (* src = "/home/runner/workspace/hardware/save.py:45" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     save_fault <= \$7 ;
   (* src = "/home/runner/workspace/hardware/save.py:46" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     fault_type <= \$8 ;
   (* src = "/home/runner/workspace/hardware/save.py:49" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sub_done_latched <= \$9 ;
   (* src = "/home/runner/workspace/hardware/save.py:50" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sub_fault_latched <= \$10 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     save_wrapper_state <= \$11 ;
   (* src = "/home/runner/workspace/hardware/save.py:43" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sub_dst_cap <= \$12 ;
   (* src = "/home/runner/workspace/hardware/save.py:44" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     src_reg_latched <= \$13 ;
   (* src = "/home/runner/workspace/hardware/save.py:48" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sub_start <= \$14 ;
   (* src = "/home/runner/workspace/hardware/save.py:41" *)
   \top.core.u_save.u_msave  u_msave (
+    .clk(clk),
     .cr15_namespace(cr15_namespace),
     .mem_rd_addr(mem_rd_addr),
     .mem_rd_data(mem_rd_data),
@@ -18392,7 +18409,7 @@ module \top.core.u_save (save_start, cr_rd_data, save_busy, cr15_namespace, cr_r
   assign cr_src = \port$3256$0 [18:15];
   assign fault_latched = save_fault;
   assign fault_type_latched = fault_type;
-  assign clk = 1'h0;
+  
   assign \sub_dst_cap.word0_gt  = sub_dst_cap[31:0];
   assign \sub_dst_cap.word0_gt.slot_id  = sub_dst_cap[15:0];
   assign \sub_dst_cap.word0_gt.gt_seq  = sub_dst_cap[22:16];
@@ -18451,7 +18468,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/msave.py:34" *)
 (* generator = "Amaranth" *)
-module \top.core.u_save.u_msave (sub_fault, sub_done, cr15_namespace, sub_dst_cap, sub_src_gt, sub_start, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, sub_fault_type, \port$3256$0 , mem_rd_data);
+module \top.core.u_save.u_msave (clk, sub_fault, sub_done, cr15_namespace, sub_dst_cap, sub_src_gt, sub_start, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, sub_fault_type, \port$3256$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$30  = 0;
   wire [18:0] \$1 ;
   wire [12:0] \$10 ;
@@ -18573,7 +18590,7 @@ module \top.core.u_save.u_msave (sub_fault, sub_done, cr15_namespace, sub_dst_ca
   wire \$auto$rtlil.cc:2739:Not$12 ;
   wire [14:0] \$auto$rtlil.cc:2739:Not$14 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/msave.py:31" *)
   input [127:0] cr15_namespace;
   wire [127:0] cr15_namespace;
@@ -19533,28 +19550,28 @@ module \top.core.u_save.u_msave (sub_fault, sub_done, cr15_namespace, sub_dst_ca
   assign \$108  = ~ (* src = "/home/runner/workspace/hardware/msave.py:156" *) gt_seq_match;
   assign \$109  = ~ (* src = "/home/runner/workspace/hardware/msave.py:159" *) seal_ok;
   (* src = "/home/runner/workspace/hardware/msave.py:36" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     dst_cap_reg <= \$110 ;
   (* src = "/home/runner/workspace/hardware/msave.py:37" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     src_gt_reg <= \$111 ;
   (* src = "/home/runner/workspace/hardware/msave.py:38" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     index_reg <= \$112 ;
   (* src = "/home/runner/workspace/hardware/msave.py:39" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sub_fault_type <= \$113 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     msave_state <= \$114 ;
   (* src = "/home/runner/workspace/hardware/msave.py:60" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     ns_location_reg <= \$115 ;
   (* src = "/home/runner/workspace/hardware/msave.py:61" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     ns_w2_reg <= \$116 ;
   (* src = "/home/runner/workspace/hardware/msave.py:65" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     ns_w3_reg <= \$117 ;
   assign \$auto$rtlil.cc:2739:Not$12  = ~ src_gt_reg[24];
   assign \$auto$rtlil.cc:2739:Not$14  = ~ { 3'h0, \$5 [12:1] };
@@ -19934,7 +19951,7 @@ module \top.core.u_save.u_msave (sub_fault, sub_done, cr15_namespace, sub_dst_ca
   assign crc16_sh_88 = { crc16_88[14:0], 1'h0 };
   assign crc16_result = crc16_89;
   assign fault_type_reg = sub_fault_type;
-  assign clk = 1'h0;
+  
   assign sub_index = { 1'h0, \port$3256$0  };
   assign mem_rd_valid = 1'h1;
   assign mem_wr_done = 1'h1;
@@ -19973,7 +19990,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/mload.py:75" *)
 (* generator = "Amaranth" *)
-module \top.core.u_shared_mload (cr_rd_data, mem_addr, mem_rd_en, sub_busy, sub_fault, sub_done, sub_start, sub_cr_src, sub_cr_dst, sub_index, sub_direct, sub_direct_gt, sub_m_elevated, cr15_namespace, cr_rd_addr, mem_wr_en, mem_wr_data, cr_wr_addr, cr_wr_data, cr_wr_en, sub_fault_type
+module \top.core.u_shared_mload (clk, cr_rd_data, mem_addr, mem_rd_en, sub_busy, sub_fault, sub_done, sub_start, sub_cr_src, sub_cr_dst, sub_index, sub_direct, sub_direct_gt, sub_m_elevated, cr15_namespace, cr_rd_addr, mem_wr_en, mem_wr_data, cr_wr_addr, cr_wr_data, cr_wr_en, sub_fault_type
 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$31  = 0;
   wire [18:0] \$1 ;
@@ -20010,7 +20027,7 @@ module \top.core.u_shared_mload (cr_rd_data, mem_addr, mem_rd_en, sub_busy, sub_
   (* src = "/home/runner/workspace/hardware/mload.py:105" *)
   wire [31:0] clist_gt_addr;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:58" *)
   input [127:0] cr15_namespace;
   wire [127:0] cr15_namespace;
@@ -20289,37 +20306,38 @@ module \top.core.u_shared_mload (cr_rd_data, mem_addr, mem_rd_en, sub_busy, sub_
   assign \$18  = ~ (* src = "/home/runner/workspace/hardware/mload.py:172" *) bounds_ok;
   assign \$19  = ~ (* src = "/home/runner/workspace/hardware/mload.py:188" *) ns_index_in_bounds;
   (* src = "/home/runner/workspace/hardware/mload.py:81" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr_src_reg <= \$20 ;
   (* src = "/home/runner/workspace/hardware/mload.py:82" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     cr_dst_reg <= \$21 ;
   (* src = "/home/runner/workspace/hardware/mload.py:83" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     index_reg <= \$22 ;
   (* src = "/home/runner/workspace/hardware/mload.py:84" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     direct_mode <= \$23 ;
   (* src = "/home/runner/workspace/hardware/mload.py:85" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     direct_gt_reg <= \$24 ;
   (* src = "/home/runner/workspace/hardware/mload.py:87" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     result_cap <= \$25 ;
   (* src = "/home/runner/workspace/hardware/mload.py:88" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     sub_fault_type <= \$26 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     mload_state <= \$27 ;
   (* src = "/home/runner/workspace/hardware/mload.py:86" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     src_cap <= \$28 ;
   (* src = "/home/runner/workspace/hardware/mload.py:114" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     ns_w3_saved <= \$29 ;
   (* src = "/home/runner/workspace/hardware/mload.py:77" *)
   \top.core.u_shared_mload.u_ns_gate  u_ns_gate (
+    .clk(clk),
     .cr15_namespace(cr15_namespace),
     .gt_word0(gt_word0),
     .mem_addr(\mem_addr$12 ),
@@ -20918,7 +20936,7 @@ module \top.core.u_shared_mload (cr_rd_data, mem_addr, mem_rd_en, sub_busy, sub_
   assign \mem_rd_valid$23  = 1'h1;
   assign \ns_entry_addr_out$25  = ns_entry_addr_out;
   assign fault_type_reg = sub_fault_type;
-  assign clk = 1'h0;
+  
   assign \src_cap.word0_gt  = src_cap[31:0];
   assign \src_cap.word0_gt.slot_id  = src_cap[15:0];
   assign \src_cap.word0_gt.gt_seq  = src_cap[22:16];
@@ -20979,7 +20997,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/ns_gate.py:71" *)
 (* generator = "Amaranth" *)
-module \top.core.u_shared_mload.u_ns_gate (mem_rd_valid, ns_entry_addr, ns_gate_busy, ns_gate_fault, ns_gate_done, cr15_namespace, ns_gate_start, gt_word0, mem_addr, mem_rd_en, raw_base_reg, raw_w2_reg, raw_w3_reg, ns_gate_fault_type, mem_rd_data);
+module \top.core.u_shared_mload.u_ns_gate (clk, mem_rd_valid, ns_entry_addr, ns_gate_busy, ns_gate_fault, ns_gate_done, cr15_namespace, ns_gate_start, gt_word0, mem_addr, mem_rd_en, raw_base_reg, raw_w2_reg, raw_w3_reg, ns_gate_fault_type, mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$32  = 0;
   wire [19:0] \$1 ;
   wire [12:0] \$10 ;
@@ -21090,7 +21108,7 @@ module \top.core.u_shared_mload.u_ns_gate (mem_rd_valid, ns_entry_addr, ns_gate_
   wire [14:0] \$auto$rtlil.cc:2739:Not$10 ;
   wire \$auto$rtlil.cc:2739:Not$8 ;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:58" *)
   input [127:0] cr15_namespace;
   wire [127:0] cr15_namespace;
@@ -21996,22 +22014,22 @@ module \top.core.u_shared_mload.u_ns_gate (mem_rd_valid, ns_entry_addr, ns_gate_
   assign \$99  = ~ (* src = "/home/runner/workspace/hardware/ns_gate.py:162" *) gt_seq_match;
   assign \$100  = ~ (* src = "/home/runner/workspace/hardware/ns_gate.py:165" *) seal_ok;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:73" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     gt_latched <= \$101 ;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:77" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     raw_base_reg <= \$102 ;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:78" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     raw_w2_reg <= \$103 ;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:79" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     raw_w3_reg <= \$104 ;
   (* src = "/home/runner/workspace/hardware/ns_gate.py:75" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     ns_gate_fault_type <= \$105 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     ns_gate_state <= \$106 ;
   assign \$auto$rtlil.cc:2739:Not$8  = ~ gt_latched[24];
   assign \$auto$rtlil.cc:2739:Not$10  = ~ { 3'h0, \$3 [12:1] };
@@ -22254,7 +22272,7 @@ module \top.core.u_shared_mload.u_ns_gate (mem_rd_valid, ns_entry_addr, ns_gate_
   assign raw_w2 = raw_w2_reg;
   assign raw_w3 = raw_w3_reg;
   assign ns_entry_addr_out = \$2 [31:0];
-  assign clk = 1'h0;
+  
   assign ns_entry_addr = \$2 [31:0];
   assign \cr15_namespace.word0_gt  = cr15_namespace[31:0];
   assign \cr15_namespace.word0_gt.slot_id  = cr15_namespace[15:0];
@@ -22272,7 +22290,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/tperm.py:27" *)
 (* generator = "Amaranth" *)
-module \top.core.u_tperm (cr_rd_data, tperm_busy, cr_rd_addr, cr_wr_addr, cr_wr_data, cr_wr_en, tperm_fault, fault_type, preset, cr_target, tperm_start);
+module \top.core.u_tperm (clk, cr_rd_data, tperm_busy, cr_rd_addr, cr_wr_addr, cr_wr_data, cr_wr_en, tperm_fault, fault_type, preset, cr_target, tperm_start);
   reg \$auto$verilog_backend.cc:2355:dump_module$33  = 0;
   wire [5:0] \$1 ;
   reg [3:0] \$10 ;
@@ -22290,7 +22308,7 @@ module \top.core.u_tperm (cr_rd_data, tperm_busy, cr_rd_addr, cr_wr_addr, cr_wr_
   (* src = "/home/runner/workspace/hardware/tperm.py:63" *)
   wire can_only_reduce;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/tperm.py:19" *)
   output [3:0] cr_rd_addr;
   reg [3:0] cr_rd_addr;
@@ -22428,19 +22446,19 @@ module \top.core.u_tperm (cr_rd_data, tperm_busy, cr_rd_addr, cr_wr_addr, cr_wr_
   assign tperm_complete = tperm_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 3'h5;
   assign \$8  = ~ (* src = "/home/runner/workspace/hardware/tperm.py:82" *) can_only_reduce;
   (* src = "/home/runner/workspace/hardware/tperm.py:33" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     tperm_fault <= \$9 ;
   (* src = "/home/runner/workspace/hardware/tperm.py:34" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     fault_type <= \$10 ;
   (* src = "/home/runner/workspace/hardware/tperm.py:32" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     preset_reg <= \$11 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     tperm_state <= \$12 ;
   (* src = "/home/runner/workspace/hardware/tperm.py:29" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     target_cap <= \$13 ;
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$33 ) begin end
@@ -22649,7 +22667,7 @@ module \top.core.u_tperm (cr_rd_data, tperm_busy, cr_rd_addr, cr_wr_addr, cr_wr_
   end
   assign fault_flag = tperm_fault;
   assign fault_latched = fault_type;
-  assign clk = 1'h0;
+  
   assign \target_cap.word0_gt  = target_cap[31:0];
   assign \target_cap.word0_gt.slot_id  = target_cap[15:0];
   assign \target_cap.word0_gt.gt_seq  = target_cap[22:16];
@@ -22690,7 +22708,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/uart_tx.py:97" *)
 (* generator = "Amaranth" *)
-module \top.debug (byte_data, \data$15 , send, busy, tx, send_byte);
+module \top.debug (clk, byte_data, \data$15 , send, busy, tx, send_byte);
   reg \$auto$verilog_backend.cc:2355:dump_module$34  = 0;
   wire [6:0] \$1 ;
   wire \$10 ;
@@ -22725,7 +22743,7 @@ module \top.debug (byte_data, \data$15 , send, busy, tx, send_byte);
   (* src = "/home/runner/workspace/hardware/uart_tx.py:107" *)
   reg [7:0] byte_reg = 8'h00;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:19" *)
   reg [7:0] data;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:89" *)
@@ -22773,19 +22791,20 @@ module \top.debug (byte_data, \data$15 , send, busy, tx, send_byte);
   assign \$17  = ~ (* src = "/home/runner/workspace/hardware/uart_tx.py:147" *) \busy$8 ;
   assign \$18  = ~ (* src = "/home/runner/workspace/hardware/uart_tx.py:161" *) \busy$8 ;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:105" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     data_reg <= \$19 ;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:106" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     nibble_idx <= \$20 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     debug_printer_state <= \$21 ;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:107" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     byte_reg <= \$22 ;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:100" *)
   \top.debug.uart  uart (
+    .clk(clk),
     .busy(\busy$8 ),
     .data(data),
     .done(done),
@@ -22982,7 +23001,7 @@ module \top.debug (byte_data, \data$15 , send, busy, tx, send_byte);
   end
   assign \tx$1  = tx;
   assign nibble_val = \$3 [3:0];
-  assign clk = 1'h0;
+  
   assign \$1  = { 1'h0, nibble_idx, 2'h0 };
   assign \$3 [31:4] = 28'h0000000;
   assign \$3 [3:0] = \$2 [3:0];
@@ -22990,7 +23009,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/uart_tx.py:26" *)
 (* generator = "Amaranth" *)
-module \top.debug.uart (start, tx, busy, done, data);
+module \top.debug.uart (clk, start, tx, busy, done, data);
   reg \$auto$verilog_backend.cc:2355:dump_module$35  = 0;
   wire \$1 ;
   reg [7:0] \$10 ;
@@ -23010,7 +23029,7 @@ module \top.debug.uart (start, tx, busy, done, data);
   output busy;
   reg busy;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
-  wire clk;
+  input clk;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:30" *)
   reg [7:0] counter = 8'h00;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:19" *)
@@ -23037,16 +23056,16 @@ module \top.debug.uart (start, tx, busy, done, data);
   assign \$7  = bit_pos == (* src = "/home/runner/workspace/hardware/uart_tx.py:61" *) 4'h9;
   assign \$8  = counter + (* src = "/home/runner/workspace/hardware/uart_tx.py:64" *) 1'h1;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:32" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     shift_reg <= \$9 ;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:30" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     counter <= \$10 ;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:31" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     bit_pos <= \$11 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
-  always @(posedge 1'h0)
+  always @(posedge clk)
     uart_tx_state <= \$12 ;
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$35 ) begin end
@@ -23147,6 +23166,6 @@ module \top.debug.uart (start, tx, busy, done, data);
           \$12  = 2'h0;
     endcase
   end
-  assign clk = 1'h0;
+  
   assign \$5  = { 1'h0, shift_reg[9:1] };
 endmodule

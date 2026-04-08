@@ -1,8 +1,103 @@
 import os
+import re
 import sys
 from amaranth.back.verilog import convert
 from .core import ChurchCore
 from .tang_nano_20k import ChurchTangNano20K
+
+
+def _patch_clocks(verilog_text):
+    """Fix Amaranth's disconnected clocks: thread `clk` through the hierarchy.
+
+    Amaranth's convert() ties clk=1'h0 in every module. This patch:
+    1. Adds `clk` to every module's port list as an input
+    2. Changes `wire clk;` to `input clk;` in every module
+    3. Adds `.clk(clk)` to every submodule instantiation
+    4. Removes `assign clk = 1'h0;` lines
+    5. Replaces `always @(posedge 1'h0)` with `always @(posedge clk)`
+    """
+    text = verilog_text
+    text = text.replace("assign clk = 1'h0;", "")
+    text = text.replace("always @(posedge 1'h0)", "always @(posedge clk)")
+
+    lines = text.split('\n')
+
+    modules_with_clk = set()
+    module_names = set()
+    current_module = None
+    for line in lines:
+        m = re.match(r'^module\s+(\\?[\w.]+)\s*\(', line)
+        if m:
+            current_module = m.group(1)
+            module_names.add(current_module)
+        if current_module and line.strip() == 'wire clk;':
+            modules_with_clk.add(current_module)
+        if line.strip() == 'endmodule':
+            current_module = None
+
+    result = []
+    current_module = None
+    for line in lines:
+        stripped = line.strip()
+
+        m = re.match(r'^module\s+(\\?[\w.]+)\s*\((.+)', line)
+        if m:
+            current_module = m.group(1)
+            mod_name = m.group(1)
+            rest = m.group(2)
+            if mod_name in modules_with_clk and 'clk' not in rest:
+                sep = ' ' if mod_name.startswith('\\') else ''
+                line = f'module {mod_name}{sep}(clk, {rest}'
+
+        if stripped == 'wire clk;' and current_module in modules_with_clk:
+            result.append('  input clk;')
+            continue
+
+        if stripped == 'endmodule':
+            current_module = None
+
+        result.append(line)
+
+    text = '\n'.join(result)
+
+    def add_clk_to_instantiation(match):
+        full = match.group(0)
+        if '.clk(clk)' in full:
+            return full
+        insert_pos = full.find('(') + 1
+        return full[:insert_pos] + '\n    .clk(clk),' + full[insert_pos:]
+
+    for mod_name in modules_with_clk:
+        escaped = re.escape(mod_name)
+        pattern = escaped + r'\s+\w+\s*\([^;]*?\);'
+        text = re.sub(pattern, add_clk_to_instantiation, text, flags=re.DOTALL)
+
+    return text
+
+
+def _patch_rst(verilog_text):
+    """Remove rst from top module port list, tie it to 1'b0 internally."""
+    lines = verilog_text.split('\n')
+    patched = []
+    in_top_module = False
+    rst_removed = False
+    skip_next_wire_rst = False
+    for line in lines:
+        if line.startswith('module top(') and not rst_removed:
+            line = line.replace(', rst,', ',')
+            line = line.replace(', rst)', ')')
+            in_top_module = True
+        if in_top_module and line.strip() == 'input rst;':
+            patched.append('  wire rst = 1\'b0;')
+            skip_next_wire_rst = True
+            rst_removed = True
+            in_top_module = False
+            continue
+        if skip_next_wire_rst and line.strip() == 'wire rst;':
+            skip_next_wire_rst = False
+            continue
+        patched.append(line)
+    return '\n'.join(patched)
 
 
 def generate_core_verilog(output_dir="build"):
@@ -47,27 +142,8 @@ def generate_tang_nano_20k_verilog(output_dir="build"):
     ] + top.led
 
     verilog_text = convert(top, ports=ports)
-
-    lines = verilog_text.split('\n')
-    patched = []
-    in_top_module = False
-    rst_removed = False
-    skip_next_wire_rst = False
-    for line in lines:
-        if line.startswith('module top(') and not rst_removed:
-            line = line.replace(', rst,', ',')
-            in_top_module = True
-        if in_top_module and line.strip() == 'input rst;':
-            patched.append('  wire rst = 1\'b0;')
-            skip_next_wire_rst = True
-            rst_removed = True
-            in_top_module = False
-            continue
-        if skip_next_wire_rst and line.strip() == 'wire rst;':
-            skip_next_wire_rst = False
-            continue
-        patched.append(line)
-    verilog_text = '\n'.join(patched)
+    verilog_text = _patch_clocks(verilog_text)
+    verilog_text = _patch_rst(verilog_text)
 
     output_path = os.path.join(output_dir, "church_tang_nano_20k.v")
     with open(output_path, "w") as f:
@@ -125,27 +201,8 @@ def generate_tang_nano_20k_iot_verilog(output_dir="build"):
     ] + top.led
 
     verilog_text = convert(top, ports=ports)
-
-    lines = verilog_text.split('\n')
-    patched = []
-    in_top_module = False
-    rst_removed = False
-    skip_next_wire_rst = False
-    for line in lines:
-        if line.startswith('module top(') and not rst_removed:
-            line = line.replace(', rst,', ',')
-            in_top_module = True
-        if in_top_module and line.strip() == 'input rst;':
-            patched.append('  wire rst = 1\'b0;')
-            skip_next_wire_rst = True
-            rst_removed = True
-            in_top_module = False
-            continue
-        if skip_next_wire_rst and line.strip() == 'wire rst;':
-            skip_next_wire_rst = False
-            continue
-        patched.append(line)
-    verilog_text = '\n'.join(patched)
+    verilog_text = _patch_clocks(verilog_text)
+    verilog_text = _patch_rst(verilog_text)
 
     output_path = os.path.join(output_dir, "church_tang_nano_20k_iot.v")
     with open(output_path, "w") as f:

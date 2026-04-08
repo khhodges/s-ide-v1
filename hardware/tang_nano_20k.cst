@@ -1,7 +1,5 @@
 // Tang Nano 20K pin constraints for Church Machine
 // Gowin GW2AR-LV18QN88C8/I7 — 27MHz crystal, BL616 USB-UART, 6 LEDs, 1 button
-// Note: led3 (pin 14) omitted — pin 14 is the internal PSRAM CE on GW2AR and
-//       is excluded from the nextpnr-himbaechel GPIO pinmap for this device.
 
 // System clock — 27MHz crystal oscillator
 IO_LOC "clk" 4;
@@ -14,13 +12,14 @@ IO_LOC "uart_rx" 18;
 IO_PORT "uart_rx" IO_TYPE=LVCMOS33 PULL_MODE=UP;
 
 // Onboard LEDs (active-low) — signal names match Amaranth led0..led5
-// led3 (pin 14) not constrained — not exported as a port (see gen_rtlil.py)
 IO_LOC "led0" 10;
 IO_PORT "led0" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
 IO_LOC "led1" 11;
 IO_PORT "led1" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
 IO_LOC "led2" 13;
 IO_PORT "led2" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
+IO_LOC "led3" 15;
+IO_PORT "led3" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
 IO_LOC "led4" 9;
 IO_PORT "led4" IO_TYPE=LVCMOS33 PULL_MODE=NONE DRIVE=8;
 IO_LOC "led5" 8;
