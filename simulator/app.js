@@ -1540,6 +1540,9 @@ function injectCRCode(logEl) {
     sim.pc = 0;
     sim.halted = false;
     sim.running = false;
+    sim.sto = 243;
+    sim.callStack = [];
+    sim.flags = { N: false, Z: false, C: false, V: false };
 
     updateCRDisplay();
     updateDRDisplay();
