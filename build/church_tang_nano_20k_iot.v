@@ -678,8 +678,8 @@ module top(clk, push_button, uart_tx, led0, led1, led2, led3, uart_rx);
     .dmem_rd_en(dmem_rd_en),
     .dmem_wr_data(dmem_wr_data),
     .dmem_wr_en(dmem_wr_en),
-    .\fault$361 (fault),
-    .\fault_valid$362 (dbg_fault_valid),
+    .\fault$362 (fault),
+    .\fault_valid$363 (dbg_fault_valid),
     .imem_addr(imem_addr),
     .imem_valid(imem_valid),
     .instruction(imem_data),
@@ -4583,7 +4583,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/core.py:95" *)
 (* generator = "Amaranth" *)
-module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$361 , \fault_valid$362 , dmem_addr, dmem_rd_en, dmem_wr_data, dmem_wr_en, imem_addr, instruction, mem_rd_data);
+module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \fault$362 , \fault_valid$363 , dmem_addr, dmem_rd_en, dmem_wr_data, dmem_wr_en, imem_addr, instruction, mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$17  = 0;
   wire \$1 ;
   wire \$10 ;
@@ -4784,13 +4784,13 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   wire alloc_fault;
   (* src = "/home/runner/workspace/hardware/core.py:231" *)
   wire any_unit_busy;
-  (* src = "/home/runner/workspace/hardware/core.py:855" *)
+  (* src = "/home/runner/workspace/hardware/core.py:856" *)
   wire [31:0] arith_imm_sx;
-  (* src = "/home/runner/workspace/hardware/core.py:936" *)
+  (* src = "/home/runner/workspace/hardware/core.py:937" *)
   wire [31:0] bf_mask;
-  (* src = "/home/runner/workspace/hardware/core.py:934" *)
-  wire [4:0] bf_offset;
   (* src = "/home/runner/workspace/hardware/core.py:935" *)
+  wire [4:0] bf_offset;
+  (* src = "/home/runner/workspace/hardware/core.py:936" *)
   wire [4:0] bf_width;
   (* src = "/home/runner/workspace/hardware/core.py:227" *)
   reg bfext_busy_reg = 1'h0;
@@ -4820,7 +4820,7 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   wire \bfins_flags_sig.V ;
   (* src = "/home/runner/workspace/hardware/core.py:390" *)
   wire \bfins_flags_sig.Z ;
-  (* src = "/home/runner/workspace/hardware/core.py:964" *)
+  (* src = "/home/runner/workspace/hardware/core.py:965" *)
   wire [31:0] bfins_mask_shifted;
   (* src = "/home/runner/workspace/hardware/core.py:383" *)
   wire [31:0] bfins_result;
@@ -5156,11 +5156,11 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   (* init = 1'h0 *)
   (* src = "/home/runner/workspace/hardware/cload.py:55" *)
   wire cload_start;
-  (* src = "/home/runner/workspace/hardware/call.py:90" *)
+  (* src = "/home/runner/workspace/hardware/call.py:93" *)
   wire [31:0] code_hi_out;
   (* src = "/home/runner/workspace/hardware/core.py:157" *)
   reg [31:0] code_hi_reg = 32'd0;
-  (* src = "/home/runner/workspace/hardware/call.py:89" *)
+  (* src = "/home/runner/workspace/hardware/call.py:92" *)
   wire [31:0] code_lo_out;
   (* src = "/home/runner/workspace/hardware/core.py:156" *)
   reg [31:0] code_lo_reg = 32'd0;
@@ -5224,45 +5224,65 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   wire [15:0] \cr12_gt_wr_data.slot_id ;
   (* src = "/home/runner/workspace/hardware/registers.py:44" *)
   wire cr12_gt_wr_en;
-  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
   wire [127:0] cr12_thread;
-  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
-  wire [127:0] \cr12_thread$248 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
-  wire [31:0] \cr12_thread$248.word0_gt ;
-  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
-  wire \cr12_thread$248.word0_gt.b_flag ;
-  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
-  wire [6:0] \cr12_thread$248.word0_gt.gt_seq ;
-  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
-  wire [1:0] \cr12_thread$248.word0_gt.gt_type ;
-  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
-  wire [5:0] \cr12_thread$248.word0_gt.perms ;
-  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
-  wire [15:0] \cr12_thread$248.word0_gt.slot_id ;
-  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
-  wire [31:0] \cr12_thread$248.word1_location ;
-  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
-  wire [31:0] \cr12_thread$248.word2_w2 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
-  wire [31:0] \cr12_thread$248.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  wire [127:0] \cr12_thread$233 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  wire [31:0] \cr12_thread$233.word0_gt ;
+  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  wire \cr12_thread$233.word0_gt.b_flag ;
+  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  wire [6:0] \cr12_thread$233.word0_gt.gt_seq ;
+  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  wire [1:0] \cr12_thread$233.word0_gt.gt_type ;
+  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  wire [5:0] \cr12_thread$233.word0_gt.perms ;
+  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  wire [15:0] \cr12_thread$233.word0_gt.slot_id ;
+  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  wire [31:0] \cr12_thread$233.word1_location ;
+  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  wire [31:0] \cr12_thread$233.word2_w2 ;
+  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  wire [31:0] \cr12_thread$233.word3_w3 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
+  wire [127:0] \cr12_thread$249 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
+  wire [31:0] \cr12_thread$249.word0_gt ;
+  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
+  wire \cr12_thread$249.word0_gt.b_flag ;
+  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
+  wire [6:0] \cr12_thread$249.word0_gt.gt_seq ;
+  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
+  wire [1:0] \cr12_thread$249.word0_gt.gt_type ;
+  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
+  wire [5:0] \cr12_thread$249.word0_gt.perms ;
+  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
+  wire [15:0] \cr12_thread$249.word0_gt.slot_id ;
+  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
+  wire [31:0] \cr12_thread$249.word1_location ;
+  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
+  wire [31:0] \cr12_thread$249.word2_w2 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:46" *)
+  wire [31:0] \cr12_thread$249.word3_w3 ;
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
   wire [31:0] \cr12_thread.word0_gt ;
-  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
   wire \cr12_thread.word0_gt.b_flag ;
-  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
   wire [6:0] \cr12_thread.word0_gt.gt_seq ;
-  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
   wire [1:0] \cr12_thread.word0_gt.gt_type ;
-  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
   wire [5:0] \cr12_thread.word0_gt.perms ;
-  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
   wire [15:0] \cr12_thread.word0_gt.slot_id ;
-  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
   wire [31:0] \cr12_thread.word1_location ;
-  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
   wire [31:0] \cr12_thread.word2_w2 ;
-  (* src = "/home/runner/workspace/hardware/registers.py:38" *)
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
   wire [31:0] \cr12_thread.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/registers.py:43" *)
   wire [31:0] cr13_gt_wr_data;
@@ -5369,65 +5389,65 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   (* src = "/home/runner/workspace/hardware/registers.py:41" *)
   wire [31:0] \cr15_namespace$223.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/cload.py:63" *)
-  wire [127:0] \cr15_namespace$254 ;
+  wire [127:0] \cr15_namespace$255 ;
   (* src = "/home/runner/workspace/hardware/cload.py:63" *)
-  wire [31:0] \cr15_namespace$254.word0_gt ;
+  wire [31:0] \cr15_namespace$255.word0_gt ;
   (* src = "/home/runner/workspace/hardware/cload.py:63" *)
-  wire \cr15_namespace$254.word0_gt.b_flag ;
+  wire \cr15_namespace$255.word0_gt.b_flag ;
   (* src = "/home/runner/workspace/hardware/cload.py:63" *)
-  wire [6:0] \cr15_namespace$254.word0_gt.gt_seq ;
+  wire [6:0] \cr15_namespace$255.word0_gt.gt_seq ;
   (* src = "/home/runner/workspace/hardware/cload.py:63" *)
-  wire [1:0] \cr15_namespace$254.word0_gt.gt_type ;
+  wire [1:0] \cr15_namespace$255.word0_gt.gt_type ;
   (* src = "/home/runner/workspace/hardware/cload.py:63" *)
-  wire [5:0] \cr15_namespace$254.word0_gt.perms ;
+  wire [5:0] \cr15_namespace$255.word0_gt.perms ;
   (* src = "/home/runner/workspace/hardware/cload.py:63" *)
-  wire [15:0] \cr15_namespace$254.word0_gt.slot_id ;
+  wire [15:0] \cr15_namespace$255.word0_gt.slot_id ;
   (* src = "/home/runner/workspace/hardware/cload.py:63" *)
-  wire [31:0] \cr15_namespace$254.word1_location ;
+  wire [31:0] \cr15_namespace$255.word1_location ;
   (* src = "/home/runner/workspace/hardware/cload.py:63" *)
-  wire [31:0] \cr15_namespace$254.word2_w2 ;
+  wire [31:0] \cr15_namespace$255.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/cload.py:63" *)
-  wire [31:0] \cr15_namespace$254.word3_w3 ;
+  wire [31:0] \cr15_namespace$255.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/save.py:33" *)
-  wire [127:0] \cr15_namespace$269 ;
+  wire [127:0] \cr15_namespace$270 ;
   (* src = "/home/runner/workspace/hardware/save.py:33" *)
-  wire [31:0] \cr15_namespace$269.word0_gt ;
+  wire [31:0] \cr15_namespace$270.word0_gt ;
   (* src = "/home/runner/workspace/hardware/save.py:33" *)
-  wire \cr15_namespace$269.word0_gt.b_flag ;
+  wire \cr15_namespace$270.word0_gt.b_flag ;
   (* src = "/home/runner/workspace/hardware/save.py:33" *)
-  wire [6:0] \cr15_namespace$269.word0_gt.gt_seq ;
+  wire [6:0] \cr15_namespace$270.word0_gt.gt_seq ;
   (* src = "/home/runner/workspace/hardware/save.py:33" *)
-  wire [1:0] \cr15_namespace$269.word0_gt.gt_type ;
+  wire [1:0] \cr15_namespace$270.word0_gt.gt_type ;
   (* src = "/home/runner/workspace/hardware/save.py:33" *)
-  wire [5:0] \cr15_namespace$269.word0_gt.perms ;
+  wire [5:0] \cr15_namespace$270.word0_gt.perms ;
   (* src = "/home/runner/workspace/hardware/save.py:33" *)
-  wire [15:0] \cr15_namespace$269.word0_gt.slot_id ;
+  wire [15:0] \cr15_namespace$270.word0_gt.slot_id ;
   (* src = "/home/runner/workspace/hardware/save.py:33" *)
-  wire [31:0] \cr15_namespace$269.word1_location ;
+  wire [31:0] \cr15_namespace$270.word1_location ;
   (* src = "/home/runner/workspace/hardware/save.py:33" *)
-  wire [31:0] \cr15_namespace$269.word2_w2 ;
+  wire [31:0] \cr15_namespace$270.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/save.py:33" *)
-  wire [31:0] \cr15_namespace$269.word3_w3 ;
+  wire [31:0] \cr15_namespace$270.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/mload.py:55" *)
-  wire [127:0] \cr15_namespace$375 ;
+  wire [127:0] \cr15_namespace$376 ;
   (* src = "/home/runner/workspace/hardware/mload.py:55" *)
-  wire [31:0] \cr15_namespace$375.word0_gt ;
+  wire [31:0] \cr15_namespace$376.word0_gt ;
   (* src = "/home/runner/workspace/hardware/mload.py:55" *)
-  wire \cr15_namespace$375.word0_gt.b_flag ;
+  wire \cr15_namespace$376.word0_gt.b_flag ;
   (* src = "/home/runner/workspace/hardware/mload.py:55" *)
-  wire [6:0] \cr15_namespace$375.word0_gt.gt_seq ;
+  wire [6:0] \cr15_namespace$376.word0_gt.gt_seq ;
   (* src = "/home/runner/workspace/hardware/mload.py:55" *)
-  wire [1:0] \cr15_namespace$375.word0_gt.gt_type ;
+  wire [1:0] \cr15_namespace$376.word0_gt.gt_type ;
   (* src = "/home/runner/workspace/hardware/mload.py:55" *)
-  wire [5:0] \cr15_namespace$375.word0_gt.perms ;
+  wire [5:0] \cr15_namespace$376.word0_gt.perms ;
   (* src = "/home/runner/workspace/hardware/mload.py:55" *)
-  wire [15:0] \cr15_namespace$375.word0_gt.slot_id ;
+  wire [15:0] \cr15_namespace$376.word0_gt.slot_id ;
   (* src = "/home/runner/workspace/hardware/mload.py:55" *)
-  wire [31:0] \cr15_namespace$375.word1_location ;
+  wire [31:0] \cr15_namespace$376.word1_location ;
   (* src = "/home/runner/workspace/hardware/mload.py:55" *)
-  wire [31:0] \cr15_namespace$375.word2_w2 ;
+  wire [31:0] \cr15_namespace$376.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/mload.py:55" *)
-  wire [31:0] \cr15_namespace$375.word3_w3 ;
+  wire [31:0] \cr15_namespace$376.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/call.py:57" *)
   wire [31:0] \cr15_namespace.word0_gt ;
   (* src = "/home/runner/workspace/hardware/call.py:57" *)
@@ -5539,25 +5559,25 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   (* src = "/home/runner/workspace/hardware/registers.py:36" *)
   wire [31:0] \cr5_heap$230.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/ret.py:45" *)
-  wire [127:0] \cr5_heap$247 ;
+  wire [127:0] \cr5_heap$248 ;
   (* src = "/home/runner/workspace/hardware/ret.py:45" *)
-  wire [31:0] \cr5_heap$247.word0_gt ;
+  wire [31:0] \cr5_heap$248.word0_gt ;
   (* src = "/home/runner/workspace/hardware/ret.py:45" *)
-  wire \cr5_heap$247.word0_gt.b_flag ;
+  wire \cr5_heap$248.word0_gt.b_flag ;
   (* src = "/home/runner/workspace/hardware/ret.py:45" *)
-  wire [6:0] \cr5_heap$247.word0_gt.gt_seq ;
+  wire [6:0] \cr5_heap$248.word0_gt.gt_seq ;
   (* src = "/home/runner/workspace/hardware/ret.py:45" *)
-  wire [1:0] \cr5_heap$247.word0_gt.gt_type ;
+  wire [1:0] \cr5_heap$248.word0_gt.gt_type ;
   (* src = "/home/runner/workspace/hardware/ret.py:45" *)
-  wire [5:0] \cr5_heap$247.word0_gt.perms ;
+  wire [5:0] \cr5_heap$248.word0_gt.perms ;
   (* src = "/home/runner/workspace/hardware/ret.py:45" *)
-  wire [15:0] \cr5_heap$247.word0_gt.slot_id ;
+  wire [15:0] \cr5_heap$248.word0_gt.slot_id ;
   (* src = "/home/runner/workspace/hardware/ret.py:45" *)
-  wire [31:0] \cr5_heap$247.word1_location ;
+  wire [31:0] \cr5_heap$248.word1_location ;
   (* src = "/home/runner/workspace/hardware/ret.py:45" *)
-  wire [31:0] \cr5_heap$247.word2_w2 ;
+  wire [31:0] \cr5_heap$248.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/ret.py:45" *)
-  wire [31:0] \cr5_heap$247.word3_w3 ;
+  wire [31:0] \cr5_heap$248.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/call.py:64" *)
   wire [31:0] \cr5_heap.word0_gt ;
   (* src = "/home/runner/workspace/hardware/call.py:64" *)
@@ -5576,21 +5596,21 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   wire [31:0] \cr5_heap.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/call.py:64" *)
   wire [31:0] \cr5_heap.word3_w3 ;
-  (* src = "/home/runner/workspace/hardware/core.py:1116" *)
-  wire cr5_stack_empty;
   (* src = "/home/runner/workspace/hardware/core.py:1117" *)
+  wire cr5_stack_empty;
+  (* src = "/home/runner/workspace/hardware/core.py:1118" *)
   wire cr5_stack_full;
-  (* src = "/home/runner/workspace/hardware/core.py:1115" *)
+  (* src = "/home/runner/workspace/hardware/core.py:1116" *)
   reg [7:0] cr5_stack_ptr = 8'h00;
-  (* src = "/home/runner/workspace/hardware/core.py:1119" *)
+  (* src = "/home/runner/workspace/hardware/core.py:1120" *)
   wire [7:0] cr5_stack_r_addr;
-  (* src = "/home/runner/workspace/hardware/core.py:1119" *)
+  (* src = "/home/runner/workspace/hardware/core.py:1120" *)
   wire [31:0] cr5_stack_r_data;
-  (* src = "/home/runner/workspace/hardware/core.py:1118" *)
+  (* src = "/home/runner/workspace/hardware/core.py:1119" *)
   reg [7:0] cr5_stack_w_addr;
-  (* src = "/home/runner/workspace/hardware/core.py:1118" *)
+  (* src = "/home/runner/workspace/hardware/core.py:1119" *)
   reg [31:0] cr5_stack_w_data;
-  (* src = "/home/runner/workspace/hardware/core.py:1118" *)
+  (* src = "/home/runner/workspace/hardware/core.py:1119" *)
   reg cr5_stack_w_en;
   (* src = "/home/runner/workspace/hardware/registers.py:43" *)
   wire [31:0] cr6_gt_wr_data;
@@ -5662,18 +5682,18 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   wire cr9_gt_wr_en;
   (* src = "/home/runner/workspace/hardware/registers.py:64" *)
   wire [11:0] cr_b_clear_mask;
-  (* src = "/home/runner/workspace/hardware/call.py:82" *)
-  wire [11:0] \cr_b_clear_mask$236 ;
+  (* src = "/home/runner/workspace/hardware/call.py:85" *)
+  wire [11:0] \cr_b_clear_mask$237 ;
   (* src = "/home/runner/workspace/hardware/decoder.py:49" *)
   wire [3:0] cr_dst;
   (* src = "/home/runner/workspace/hardware/save.py:13" *)
-  wire [3:0] \cr_dst$266 ;
+  wire [3:0] \cr_dst$267 ;
   (* src = "/home/runner/workspace/hardware/load.py:10" *)
-  wire [3:0] \cr_dst$315 ;
+  wire [3:0] \cr_dst$316 ;
   (* src = "/home/runner/workspace/hardware/registers.py:65" *)
   wire [11:0] cr_null_mask;
-  (* src = "/home/runner/workspace/hardware/call.py:83" *)
-  wire [11:0] \cr_null_mask$238 ;
+  (* src = "/home/runner/workspace/hardware/call.py:86" *)
+  wire [11:0] \cr_null_mask$239 ;
   (* src = "/home/runner/workspace/hardware/registers.py:20" *)
   wire [3:0] cr_rd_addr;
   (* src = "/home/runner/workspace/hardware/dwrite.py:39" *)
@@ -5713,125 +5733,125 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   (* src = "/home/runner/workspace/hardware/call.py:25" *)
   wire [31:0] \cr_rd_data$221.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/ret.py:19" *)
-  wire [127:0] \cr_rd_data$242 ;
+  wire [127:0] \cr_rd_data$243 ;
   (* src = "/home/runner/workspace/hardware/ret.py:19" *)
-  wire [31:0] \cr_rd_data$242.word0_gt ;
+  wire [31:0] \cr_rd_data$243.word0_gt ;
   (* src = "/home/runner/workspace/hardware/ret.py:19" *)
-  wire \cr_rd_data$242.word0_gt.b_flag ;
+  wire \cr_rd_data$243.word0_gt.b_flag ;
   (* src = "/home/runner/workspace/hardware/ret.py:19" *)
-  wire [6:0] \cr_rd_data$242.word0_gt.gt_seq ;
+  wire [6:0] \cr_rd_data$243.word0_gt.gt_seq ;
   (* src = "/home/runner/workspace/hardware/ret.py:19" *)
-  wire [1:0] \cr_rd_data$242.word0_gt.gt_type ;
+  wire [1:0] \cr_rd_data$243.word0_gt.gt_type ;
   (* src = "/home/runner/workspace/hardware/ret.py:19" *)
-  wire [5:0] \cr_rd_data$242.word0_gt.perms ;
+  wire [5:0] \cr_rd_data$243.word0_gt.perms ;
   (* src = "/home/runner/workspace/hardware/ret.py:19" *)
-  wire [15:0] \cr_rd_data$242.word0_gt.slot_id ;
+  wire [15:0] \cr_rd_data$243.word0_gt.slot_id ;
   (* src = "/home/runner/workspace/hardware/ret.py:19" *)
-  wire [31:0] \cr_rd_data$242.word1_location ;
+  wire [31:0] \cr_rd_data$243.word1_location ;
   (* src = "/home/runner/workspace/hardware/ret.py:19" *)
-  wire [31:0] \cr_rd_data$242.word2_w2 ;
+  wire [31:0] \cr_rd_data$243.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/ret.py:19" *)
-  wire [31:0] \cr_rd_data$242.word3_w3 ;
+  wire [31:0] \cr_rd_data$243.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/tperm.py:20" *)
-  wire [127:0] \cr_rd_data$262 ;
+  wire [127:0] \cr_rd_data$263 ;
   (* src = "/home/runner/workspace/hardware/tperm.py:20" *)
-  wire [31:0] \cr_rd_data$262.word0_gt ;
+  wire [31:0] \cr_rd_data$263.word0_gt ;
   (* src = "/home/runner/workspace/hardware/tperm.py:20" *)
-  wire \cr_rd_data$262.word0_gt.b_flag ;
+  wire \cr_rd_data$263.word0_gt.b_flag ;
   (* src = "/home/runner/workspace/hardware/tperm.py:20" *)
-  wire [6:0] \cr_rd_data$262.word0_gt.gt_seq ;
+  wire [6:0] \cr_rd_data$263.word0_gt.gt_seq ;
   (* src = "/home/runner/workspace/hardware/tperm.py:20" *)
-  wire [1:0] \cr_rd_data$262.word0_gt.gt_type ;
+  wire [1:0] \cr_rd_data$263.word0_gt.gt_type ;
   (* src = "/home/runner/workspace/hardware/tperm.py:20" *)
-  wire [5:0] \cr_rd_data$262.word0_gt.perms ;
+  wire [5:0] \cr_rd_data$263.word0_gt.perms ;
   (* src = "/home/runner/workspace/hardware/tperm.py:20" *)
-  wire [15:0] \cr_rd_data$262.word0_gt.slot_id ;
+  wire [15:0] \cr_rd_data$263.word0_gt.slot_id ;
   (* src = "/home/runner/workspace/hardware/tperm.py:20" *)
-  wire [31:0] \cr_rd_data$262.word1_location ;
+  wire [31:0] \cr_rd_data$263.word1_location ;
   (* src = "/home/runner/workspace/hardware/tperm.py:20" *)
-  wire [31:0] \cr_rd_data$262.word2_w2 ;
+  wire [31:0] \cr_rd_data$263.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/tperm.py:20" *)
-  wire [31:0] \cr_rd_data$262.word3_w3 ;
+  wire [31:0] \cr_rd_data$263.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/save.py:21" *)
-  wire [127:0] \cr_rd_data$268 ;
+  wire [127:0] \cr_rd_data$269 ;
   (* src = "/home/runner/workspace/hardware/save.py:21" *)
-  wire [31:0] \cr_rd_data$268.word0_gt ;
+  wire [31:0] \cr_rd_data$269.word0_gt ;
   (* src = "/home/runner/workspace/hardware/save.py:21" *)
-  wire \cr_rd_data$268.word0_gt.b_flag ;
+  wire \cr_rd_data$269.word0_gt.b_flag ;
   (* src = "/home/runner/workspace/hardware/save.py:21" *)
-  wire [6:0] \cr_rd_data$268.word0_gt.gt_seq ;
+  wire [6:0] \cr_rd_data$269.word0_gt.gt_seq ;
   (* src = "/home/runner/workspace/hardware/save.py:21" *)
-  wire [1:0] \cr_rd_data$268.word0_gt.gt_type ;
+  wire [1:0] \cr_rd_data$269.word0_gt.gt_type ;
   (* src = "/home/runner/workspace/hardware/save.py:21" *)
-  wire [5:0] \cr_rd_data$268.word0_gt.perms ;
+  wire [5:0] \cr_rd_data$269.word0_gt.perms ;
   (* src = "/home/runner/workspace/hardware/save.py:21" *)
-  wire [15:0] \cr_rd_data$268.word0_gt.slot_id ;
+  wire [15:0] \cr_rd_data$269.word0_gt.slot_id ;
   (* src = "/home/runner/workspace/hardware/save.py:21" *)
-  wire [31:0] \cr_rd_data$268.word1_location ;
+  wire [31:0] \cr_rd_data$269.word1_location ;
   (* src = "/home/runner/workspace/hardware/save.py:21" *)
-  wire [31:0] \cr_rd_data$268.word2_w2 ;
+  wire [31:0] \cr_rd_data$269.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/save.py:21" *)
-  wire [31:0] \cr_rd_data$268.word3_w3 ;
+  wire [31:0] \cr_rd_data$269.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/dread.py:41" *)
-  wire [127:0] \cr_rd_data$280 ;
+  wire [127:0] \cr_rd_data$281 ;
   (* src = "/home/runner/workspace/hardware/dread.py:41" *)
-  wire [31:0] \cr_rd_data$280.word0_gt ;
+  wire [31:0] \cr_rd_data$281.word0_gt ;
   (* src = "/home/runner/workspace/hardware/dread.py:41" *)
-  wire \cr_rd_data$280.word0_gt.b_flag ;
+  wire \cr_rd_data$281.word0_gt.b_flag ;
   (* src = "/home/runner/workspace/hardware/dread.py:41" *)
-  wire [6:0] \cr_rd_data$280.word0_gt.gt_seq ;
+  wire [6:0] \cr_rd_data$281.word0_gt.gt_seq ;
   (* src = "/home/runner/workspace/hardware/dread.py:41" *)
-  wire [1:0] \cr_rd_data$280.word0_gt.gt_type ;
+  wire [1:0] \cr_rd_data$281.word0_gt.gt_type ;
   (* src = "/home/runner/workspace/hardware/dread.py:41" *)
-  wire [5:0] \cr_rd_data$280.word0_gt.perms ;
+  wire [5:0] \cr_rd_data$281.word0_gt.perms ;
   (* src = "/home/runner/workspace/hardware/dread.py:41" *)
-  wire [15:0] \cr_rd_data$280.word0_gt.slot_id ;
+  wire [15:0] \cr_rd_data$281.word0_gt.slot_id ;
   (* src = "/home/runner/workspace/hardware/dread.py:41" *)
-  wire [31:0] \cr_rd_data$280.word1_location ;
+  wire [31:0] \cr_rd_data$281.word1_location ;
   (* src = "/home/runner/workspace/hardware/dread.py:41" *)
-  wire [31:0] \cr_rd_data$280.word2_w2 ;
+  wire [31:0] \cr_rd_data$281.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/dread.py:41" *)
-  wire [31:0] \cr_rd_data$280.word3_w3 ;
+  wire [31:0] \cr_rd_data$281.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:40" *)
-  wire [127:0] \cr_rd_data$288 ;
+  wire [127:0] \cr_rd_data$289 ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:40" *)
-  wire [31:0] \cr_rd_data$288.word0_gt ;
+  wire [31:0] \cr_rd_data$289.word0_gt ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:40" *)
-  wire \cr_rd_data$288.word0_gt.b_flag ;
+  wire \cr_rd_data$289.word0_gt.b_flag ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:40" *)
-  wire [6:0] \cr_rd_data$288.word0_gt.gt_seq ;
+  wire [6:0] \cr_rd_data$289.word0_gt.gt_seq ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:40" *)
-  wire [1:0] \cr_rd_data$288.word0_gt.gt_type ;
+  wire [1:0] \cr_rd_data$289.word0_gt.gt_type ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:40" *)
-  wire [5:0] \cr_rd_data$288.word0_gt.perms ;
+  wire [5:0] \cr_rd_data$289.word0_gt.perms ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:40" *)
-  wire [15:0] \cr_rd_data$288.word0_gt.slot_id ;
+  wire [15:0] \cr_rd_data$289.word0_gt.slot_id ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:40" *)
-  wire [31:0] \cr_rd_data$288.word1_location ;
+  wire [31:0] \cr_rd_data$289.word1_location ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:40" *)
-  wire [31:0] \cr_rd_data$288.word2_w2 ;
+  wire [31:0] \cr_rd_data$289.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:40" *)
-  wire [31:0] \cr_rd_data$288.word3_w3 ;
+  wire [31:0] \cr_rd_data$289.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/mload.py:49" *)
-  wire [127:0] \cr_rd_data$374 ;
+  wire [127:0] \cr_rd_data$375 ;
   (* src = "/home/runner/workspace/hardware/mload.py:49" *)
-  wire [31:0] \cr_rd_data$374.word0_gt ;
+  wire [31:0] \cr_rd_data$375.word0_gt ;
   (* src = "/home/runner/workspace/hardware/mload.py:49" *)
-  wire \cr_rd_data$374.word0_gt.b_flag ;
+  wire \cr_rd_data$375.word0_gt.b_flag ;
   (* src = "/home/runner/workspace/hardware/mload.py:49" *)
-  wire [6:0] \cr_rd_data$374.word0_gt.gt_seq ;
+  wire [6:0] \cr_rd_data$375.word0_gt.gt_seq ;
   (* src = "/home/runner/workspace/hardware/mload.py:49" *)
-  wire [1:0] \cr_rd_data$374.word0_gt.gt_type ;
+  wire [1:0] \cr_rd_data$375.word0_gt.gt_type ;
   (* src = "/home/runner/workspace/hardware/mload.py:49" *)
-  wire [5:0] \cr_rd_data$374.word0_gt.perms ;
+  wire [5:0] \cr_rd_data$375.word0_gt.perms ;
   (* src = "/home/runner/workspace/hardware/mload.py:49" *)
-  wire [15:0] \cr_rd_data$374.word0_gt.slot_id ;
+  wire [15:0] \cr_rd_data$375.word0_gt.slot_id ;
   (* src = "/home/runner/workspace/hardware/mload.py:49" *)
-  wire [31:0] \cr_rd_data$374.word1_location ;
+  wire [31:0] \cr_rd_data$375.word1_location ;
   (* src = "/home/runner/workspace/hardware/mload.py:49" *)
-  wire [31:0] \cr_rd_data$374.word2_w2 ;
+  wire [31:0] \cr_rd_data$375.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/mload.py:49" *)
-  wire [31:0] \cr_rd_data$374.word3_w3 ;
+  wire [31:0] \cr_rd_data$375.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/registers.py:21" *)
   wire [31:0] \cr_rd_data.word0_gt ;
   (* src = "/home/runner/workspace/hardware/registers.py:21" *)
@@ -5867,15 +5887,15 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   (* src = "/home/runner/workspace/hardware/call.py:11" *)
   wire [3:0] \cr_src$216 ;
   (* src = "/home/runner/workspace/hardware/ret.py:11" *)
-  wire [2:0] \cr_src$241 ;
+  wire [2:0] \cr_src$242 ;
   (* src = "/home/runner/workspace/hardware/save.py:12" *)
-  wire [3:0] \cr_src$265 ;
+  wire [3:0] \cr_src$266 ;
   (* src = "/home/runner/workspace/hardware/dread.py:33" *)
-  wire [3:0] \cr_src$276 ;
+  wire [3:0] \cr_src$277 ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:32" *)
-  wire [3:0] \cr_src$285 ;
+  wire [3:0] \cr_src$286 ;
   (* src = "/home/runner/workspace/hardware/load.py:9" *)
-  wire [3:0] \cr_src$314 ;
+  wire [3:0] \cr_src$315 ;
   (* src = "/home/runner/workspace/hardware/tperm.py:11" *)
   wire [3:0] cr_target;
   (* src = "/home/runner/workspace/hardware/registers.py:23" *)
@@ -6028,28 +6048,28 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   output [31:0] dmem_addr;
   reg [31:0] dmem_addr;
   (* src = "/home/runner/workspace/hardware/dread.py:47" *)
-  wire [31:0] \dmem_addr$443 ;
-  (* src = "/home/runner/workspace/hardware/dwrite.py:45" *)
   wire [31:0] \dmem_addr$444 ;
+  (* src = "/home/runner/workspace/hardware/dwrite.py:45" *)
+  wire [31:0] \dmem_addr$445 ;
   (* src = "/home/runner/workspace/hardware/core.py:54" *)
   wire [31:0] dmem_rd_data;
   (* src = "/home/runner/workspace/hardware/dread.py:49" *)
-  wire [31:0] \dmem_rd_data$281 ;
+  wire [31:0] \dmem_rd_data$282 ;
   (* src = "/home/runner/workspace/hardware/core.py:53" *)
   output dmem_rd_en;
   reg dmem_rd_en;
   (* src = "/home/runner/workspace/hardware/dread.py:48" *)
-  wire \dmem_rd_en$429 ;
+  wire \dmem_rd_en$430 ;
   (* src = "/home/runner/workspace/hardware/core.py:55" *)
   output [31:0] dmem_wr_data;
   reg [31:0] dmem_wr_data;
   (* src = "/home/runner/workspace/hardware/dwrite.py:46" *)
-  wire [31:0] \dmem_wr_data$445 ;
+  wire [31:0] \dmem_wr_data$446 ;
   (* src = "/home/runner/workspace/hardware/core.py:56" *)
   output dmem_wr_en;
   reg dmem_wr_en;
   (* src = "/home/runner/workspace/hardware/dwrite.py:47" *)
-  wire \dmem_wr_en$430 ;
+  wire \dmem_wr_en$431 ;
   (* src = "/home/runner/workspace/hardware/dread.py:34" *)
   wire [3:0] dr_dst;
   (* src = "/home/runner/workspace/hardware/dwrite.py:42" *)
@@ -6078,9 +6098,9 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   wire dr_wr_en;
   (* src = "/home/runner/workspace/hardware/registers.py:52" *)
   reg \dr_wr_en$75 ;
-  (* src = "/home/runner/workspace/hardware/core.py:804" *)
+  (* src = "/home/runner/workspace/hardware/core.py:805" *)
   wire dread_start_sig;
-  (* src = "/home/runner/workspace/hardware/core.py:817" *)
+  (* src = "/home/runner/workspace/hardware/core.py:818" *)
   wire dwrite_start_sig;
   (* src = "/home/runner/workspace/hardware/cload.py:61" *)
   wire [31:0] e_gt;
@@ -6089,37 +6109,37 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   (* src = "/home/runner/workspace/hardware/dread.py:37" *)
   wire fault;
   (* src = "/home/runner/workspace/hardware/dwrite.py:36" *)
-  wire \fault$358 ;
+  wire \fault$359 ;
   (* src = "/home/runner/workspace/hardware/core.py:78" *)
-  output [4:0] \fault$361 ;
-  reg [4:0] \fault$361 ;
+  output [4:0] \fault$362 ;
+  reg [4:0] \fault$362 ;
   (* src = "/home/runner/workspace/hardware/decoder.py:58" *)
-  wire [3:0] \fault$363 ;
+  wire [3:0] \fault$364 ;
   (* src = "/home/runner/workspace/hardware/perm_check.py:31" *)
   wire [3:0] fault_type;
   (* src = "/home/runner/workspace/hardware/tperm.py:17" *)
-  wire [3:0] \fault_type$365 ;
+  wire [3:0] \fault_type$366 ;
   (* src = "/home/runner/workspace/hardware/call.py:17" *)
-  wire [4:0] \fault_type$366 ;
+  wire [4:0] \fault_type$367 ;
   (* src = "/home/runner/workspace/hardware/ret.py:15" *)
-  wire [3:0] \fault_type$367 ;
-  (* src = "/home/runner/workspace/hardware/save.py:18" *)
   wire [3:0] \fault_type$368 ;
-  (* src = "/home/runner/workspace/hardware/load.py:15" *)
+  (* src = "/home/runner/workspace/hardware/save.py:18" *)
   wire [3:0] \fault_type$369 ;
+  (* src = "/home/runner/workspace/hardware/load.py:15" *)
+  wire [3:0] \fault_type$370 ;
   (* src = "/home/runner/workspace/hardware/dread.py:38" *)
-  wire [4:0] \fault_type$370 ;
-  (* src = "/home/runner/workspace/hardware/dwrite.py:37" *)
   wire [4:0] \fault_type$371 ;
+  (* src = "/home/runner/workspace/hardware/dwrite.py:37" *)
+  wire [4:0] \fault_type$372 ;
   (* src = "/home/runner/workspace/hardware/ret.py:14" *)
   wire fault_valid;
   (* src = "/home/runner/workspace/hardware/decoder.py:59" *)
-  wire \fault_valid$352 ;
-  (* src = "/home/runner/workspace/hardware/perm_check.py:32" *)
   wire \fault_valid$353 ;
+  (* src = "/home/runner/workspace/hardware/perm_check.py:32" *)
+  wire \fault_valid$354 ;
   (* src = "/home/runner/workspace/hardware/core.py:79" *)
-  output \fault_valid$362 ;
-  reg \fault_valid$362 ;
+  output \fault_valid$363 ;
+  reg \fault_valid$363 ;
   (* src = "/home/runner/workspace/hardware/core.py:158" *)
   reg fence_pending_reg = 1'h0;
   (* src = "/home/runner/workspace/hardware/core.py:214" *)
@@ -6217,15 +6237,15 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   (* src = "/home/runner/workspace/hardware/dread.py:35" *)
   wire [14:0] imm;
   (* src = "/home/runner/workspace/hardware/dwrite.py:34" *)
-  wire [14:0] \imm$287 ;
+  wire [14:0] \imm$288 ;
   (* src = "/home/runner/workspace/hardware/decoder.py:51" *)
   wire [14:0] immediate;
   (* src = "/home/runner/workspace/hardware/call.py:12" *)
   wire [15:0] index;
   (* src = "/home/runner/workspace/hardware/save.py:14" *)
-  wire [15:0] \index$267 ;
+  wire [15:0] \index$268 ;
   (* src = "/home/runner/workspace/hardware/load.py:11" *)
-  wire [15:0] \index$316 ;
+  wire [15:0] \index$317 ;
   (* src = "/home/runner/workspace/hardware/decoder.py:32" *)
   wire instr_valid;
   (* src = "/home/runner/workspace/hardware/core.py:49" *)
@@ -6285,7 +6305,7 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   wire load_fault;
   (* src = "/home/runner/workspace/hardware/load.py:8" *)
   wire load_start;
-  (* src = "/home/runner/workspace/hardware/core.py:1016" *)
+  (* src = "/home/runner/workspace/hardware/core.py:1017" *)
   wire load_start_sig;
   (* src = "/home/runner/workspace/hardware/call.py:13" *)
   wire [15:0] mask;
@@ -6308,74 +6328,74 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   (* src = "/home/runner/workspace/hardware/mload.py:57" *)
   wire [31:0] mem_addr;
   (* src = "/home/runner/workspace/hardware/cload.py:69" *)
-  wire [31:0] \mem_addr$446 ;
+  wire [31:0] \mem_addr$447 ;
   (* src = "/home/runner/workspace/hardware/call.py:46" *)
   wire [31:0] mem_rd_addr;
   (* src = "/home/runner/workspace/hardware/save.py:28" *)
-  wire [31:0] \mem_rd_addr$442 ;
+  wire [31:0] \mem_rd_addr$443 ;
   (* src = "/home/runner/workspace/hardware/ret.py:48" *)
-  wire [31:0] \mem_rd_addr$449 ;
+  wire [31:0] \mem_rd_addr$450 ;
   (* src = "/home/runner/workspace/hardware/mload.py:59" *)
   input [31:0] mem_rd_data;
   wire [31:0] mem_rd_data;
   (* src = "/home/runner/workspace/hardware/ret.py:50" *)
-  wire [31:0] \mem_rd_data$249 ;
+  wire [31:0] \mem_rd_data$250 ;
   (* src = "/home/runner/workspace/hardware/cload.py:71" *)
-  wire [31:0] \mem_rd_data$255 ;
+  wire [31:0] \mem_rd_data$256 ;
   (* src = "/home/runner/workspace/hardware/save.py:30" *)
-  wire [31:0] \mem_rd_data$271 ;
+  wire [31:0] \mem_rd_data$272 ;
   (* src = "/home/runner/workspace/hardware/mload.py:59" *)
-  wire [31:0] \mem_rd_data$376 ;
+  wire [31:0] \mem_rd_data$377 ;
   (* src = "/home/runner/workspace/hardware/mload.py:58" *)
   wire mem_rd_en;
   (* src = "/home/runner/workspace/hardware/call.py:47" *)
-  wire \mem_rd_en$425 ;
+  wire \mem_rd_en$426 ;
   (* src = "/home/runner/workspace/hardware/save.py:29" *)
-  wire \mem_rd_en$428 ;
+  wire \mem_rd_en$429 ;
   (* src = "/home/runner/workspace/hardware/cload.py:70" *)
-  wire \mem_rd_en$431 ;
+  wire \mem_rd_en$432 ;
   (* src = "/home/runner/workspace/hardware/ret.py:49" *)
-  wire \mem_rd_en$433 ;
+  wire \mem_rd_en$434 ;
   (* src = "/home/runner/workspace/hardware/call.py:49" *)
   wire mem_rd_valid;
   (* src = "/home/runner/workspace/hardware/ret.py:51" *)
-  wire \mem_rd_valid$250 ;
+  wire \mem_rd_valid$251 ;
   (* src = "/home/runner/workspace/hardware/cload.py:72" *)
-  wire \mem_rd_valid$256 ;
+  wire \mem_rd_valid$257 ;
   (* src = "/home/runner/workspace/hardware/save.py:31" *)
-  wire \mem_rd_valid$272 ;
+  wire \mem_rd_valid$273 ;
   (* src = "/home/runner/workspace/hardware/mload.py:60" *)
-  wire \mem_rd_valid$377 ;
+  wire \mem_rd_valid$378 ;
   (* src = "/home/runner/workspace/hardware/call.py:52" *)
   wire [31:0] mem_wr_addr;
   (* src = "/home/runner/workspace/hardware/save.py:23" *)
-  wire [31:0] \mem_wr_addr$440 ;
+  wire [31:0] \mem_wr_addr$441 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:49" *)
-  wire [31:0] \mem_wr_addr$447 ;
+  wire [31:0] \mem_wr_addr$448 ;
   (* src = "/home/runner/workspace/hardware/ret.py:53" *)
-  wire [31:0] \mem_wr_addr$450 ;
+  wire [31:0] \mem_wr_addr$451 ;
   (* src = "/home/runner/workspace/hardware/mload.py:62" *)
   wire [31:0] mem_wr_data;
   (* src = "/home/runner/workspace/hardware/call.py:53" *)
-  wire [31:0] \mem_wr_data$439 ;
+  wire [31:0] \mem_wr_data$440 ;
   (* src = "/home/runner/workspace/hardware/save.py:24" *)
-  wire [31:0] \mem_wr_data$441 ;
+  wire [31:0] \mem_wr_data$442 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:50" *)
-  wire [31:0] \mem_wr_data$448 ;
+  wire [31:0] \mem_wr_data$449 ;
   (* src = "/home/runner/workspace/hardware/ret.py:54" *)
-  wire [31:0] \mem_wr_data$451 ;
+  wire [31:0] \mem_wr_data$452 ;
   (* src = "/home/runner/workspace/hardware/save.py:26" *)
   wire mem_wr_done;
   (* src = "/home/runner/workspace/hardware/mload.py:61" *)
   wire mem_wr_en;
   (* src = "/home/runner/workspace/hardware/call.py:54" *)
-  wire \mem_wr_en$426 ;
-  (* src = "/home/runner/workspace/hardware/save.py:25" *)
   wire \mem_wr_en$427 ;
+  (* src = "/home/runner/workspace/hardware/save.py:25" *)
+  wire \mem_wr_en$428 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:51" *)
-  wire \mem_wr_en$432 ;
+  wire \mem_wr_en$433 ;
   (* src = "/home/runner/workspace/hardware/ret.py:55" *)
-  wire \mem_wr_en$434 ;
+  wire \mem_wr_en$435 ;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:56" *)
   wire mint_done;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:57" *)
@@ -6387,63 +6407,63 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   (* src = "/home/runner/workspace/hardware/call.py:32" *)
   wire [3:0] mload_cr_dst;
   (* src = "/home/runner/workspace/hardware/ret.py:29" *)
-  wire [3:0] \mload_cr_dst$394 ;
+  wire [3:0] \mload_cr_dst$395 ;
   (* src = "/home/runner/workspace/hardware/load.py:19" *)
-  wire [3:0] \mload_cr_dst$401 ;
+  wire [3:0] \mload_cr_dst$402 ;
   (* src = "/home/runner/workspace/hardware/call.py:31" *)
   wire [3:0] mload_cr_src;
   (* src = "/home/runner/workspace/hardware/ret.py:28" *)
-  wire [3:0] \mload_cr_src$393 ;
+  wire [3:0] \mload_cr_src$394 ;
   (* src = "/home/runner/workspace/hardware/load.py:18" *)
-  wire [3:0] \mload_cr_src$400 ;
+  wire [3:0] \mload_cr_src$401 ;
   (* src = "/home/runner/workspace/hardware/call.py:34" *)
   wire mload_direct;
   (* src = "/home/runner/workspace/hardware/ret.py:31" *)
-  wire \mload_direct$396 ;
+  wire \mload_direct$397 ;
   (* src = "/home/runner/workspace/hardware/load.py:21" *)
-  wire \mload_direct$403 ;
+  wire \mload_direct$404 ;
   (* src = "/home/runner/workspace/hardware/call.py:35" *)
   wire [31:0] mload_direct_gt;
   (* src = "/home/runner/workspace/hardware/ret.py:32" *)
-  wire [31:0] \mload_direct_gt$397 ;
+  wire [31:0] \mload_direct_gt$398 ;
   (* src = "/home/runner/workspace/hardware/load.py:22" *)
-  wire [31:0] \mload_direct_gt$404 ;
+  wire [31:0] \mload_direct_gt$405 ;
   (* src = "/home/runner/workspace/hardware/call.py:38" *)
   wire mload_done;
   (* src = "/home/runner/workspace/hardware/ret.py:35" *)
-  wire \mload_done$412 ;
+  wire \mload_done$413 ;
   (* src = "/home/runner/workspace/hardware/load.py:26" *)
-  wire \mload_done$416 ;
+  wire \mload_done$417 ;
   (* src = "/home/runner/workspace/hardware/call.py:39" *)
   wire mload_fault;
   (* src = "/home/runner/workspace/hardware/ret.py:36" *)
-  wire \mload_fault$413 ;
+  wire \mload_fault$414 ;
   (* src = "/home/runner/workspace/hardware/load.py:27" *)
-  wire \mload_fault$417 ;
+  wire \mload_fault$418 ;
   (* src = "/home/runner/workspace/hardware/call.py:40" *)
   wire [3:0] mload_fault_type;
   (* src = "/home/runner/workspace/hardware/ret.py:37" *)
-  wire [3:0] \mload_fault_type$414 ;
+  wire [3:0] \mload_fault_type$415 ;
   (* src = "/home/runner/workspace/hardware/load.py:28" *)
-  wire [3:0] \mload_fault_type$418 ;
+  wire [3:0] \mload_fault_type$419 ;
   (* src = "/home/runner/workspace/hardware/call.py:33" *)
   wire [15:0] mload_index;
   (* src = "/home/runner/workspace/hardware/ret.py:30" *)
-  wire [15:0] \mload_index$395 ;
+  wire [15:0] \mload_index$396 ;
   (* src = "/home/runner/workspace/hardware/load.py:20" *)
-  wire [15:0] \mload_index$402 ;
+  wire [15:0] \mload_index$403 ;
   (* src = "/home/runner/workspace/hardware/call.py:36" *)
   wire mload_m_elevated;
   (* src = "/home/runner/workspace/hardware/ret.py:33" *)
-  wire \mload_m_elevated$398 ;
+  wire \mload_m_elevated$399 ;
   (* src = "/home/runner/workspace/hardware/load.py:23" *)
-  wire \mload_m_elevated$405 ;
+  wire \mload_m_elevated$406 ;
   (* src = "/home/runner/workspace/hardware/call.py:30" *)
   wire mload_start;
   (* src = "/home/runner/workspace/hardware/ret.py:27" *)
-  wire \mload_start$392 ;
+  wire \mload_start$393 ;
   (* src = "/home/runner/workspace/hardware/load.py:17" *)
-  wire \mload_start$399 ;
+  wire \mload_start$400 ;
   (* init = 32'd0 *)
   (* src = "/home/runner/workspace/hardware/core.py:85" *)
   wire [31:0] nia;
@@ -6453,11 +6473,11 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   (* src = "/home/runner/workspace/hardware/ret.py:24" *)
   wire nia_set;
   (* src = "/home/runner/workspace/hardware/call.py:42" *)
-  wire \nia_set$461 ;
+  wire \nia_set$462 ;
   (* src = "/home/runner/workspace/hardware/ret.py:25" *)
   wire [31:0] nia_value;
   (* src = "/home/runner/workspace/hardware/call.py:43" *)
-  wire [31:0] \nia_value$464 ;
+  wire [31:0] \nia_value$465 ;
   (* src = "/home/runner/workspace/hardware/core.py:58" *)
   wire [31:0] ns_addr;
   (* src = "/home/runner/workspace/hardware/core.py:59" *)
@@ -6745,23 +6765,23 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   wire save_fault;
   (* src = "/home/runner/workspace/hardware/save.py:11" *)
   wire save_start;
-  (* src = "/home/runner/workspace/hardware/core.py:788" *)
+  (* src = "/home/runner/workspace/hardware/core.py:789" *)
   wire save_start_sig;
   (* src = "/home/runner/workspace/hardware/ret.py:39" *)
   wire [31:0] saved_cr5_gt;
   (* src = "/home/runner/workspace/hardware/call.py:22" *)
-  wire [31:0] \saved_cr5_gt$349 ;
+  wire [31:0] \saved_cr5_gt$350 ;
   (* src = "/home/runner/workspace/hardware/call.py:22" *)
-  wire \saved_cr5_gt$349.b_flag ;
+  wire \saved_cr5_gt$350.b_flag ;
   (* src = "/home/runner/workspace/hardware/call.py:22" *)
-  wire [6:0] \saved_cr5_gt$349.gt_seq ;
+  wire [6:0] \saved_cr5_gt$350.gt_seq ;
   (* src = "/home/runner/workspace/hardware/call.py:22" *)
-  wire [1:0] \saved_cr5_gt$349.gt_type ;
+  wire [1:0] \saved_cr5_gt$350.gt_type ;
   (* src = "/home/runner/workspace/hardware/call.py:22" *)
-  wire [5:0] \saved_cr5_gt$349.perms ;
+  wire [5:0] \saved_cr5_gt$350.perms ;
   (* src = "/home/runner/workspace/hardware/call.py:22" *)
-  wire [15:0] \saved_cr5_gt$349.slot_id ;
-  (* src = "/home/runner/workspace/hardware/core.py:903" *)
+  wire [15:0] \saved_cr5_gt$350.slot_id ;
+  (* src = "/home/runner/workspace/hardware/core.py:904" *)
   wire [4:0] shift_amt;
   (* src = "/home/runner/workspace/hardware/core.py:225" *)
   reg shl_busy_reg = 1'h0;
@@ -6812,7 +6832,7 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   (* src = "/home/runner/workspace/hardware/dread.py:29" *)
   wire start;
   (* src = "/home/runner/workspace/hardware/dwrite.py:28" *)
-  wire \start$284 ;
+  wire \start$285 ;
   (* src = "/home/runner/workspace/hardware/mload.py:43" *)
   wire sub_busy;
   (* src = "/home/runner/workspace/hardware/mload.py:38" *)
@@ -6849,7 +6869,7 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   wire [15:0] \thrd_gt.slot_id ;
   (* src = "/home/runner/workspace/hardware/call.py:71" *)
   wire [31:0] thread_base;
-  (* src = "/home/runner/workspace/hardware/call.py:77" *)
+  (* src = "/home/runner/workspace/hardware/call.py:80" *)
   wire [31:0] thread_hdr;
   (* src = "/home/runner/workspace/hardware/tperm.py:14" *)
   wire tperm_busy;
@@ -6865,7 +6885,7 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   wire [7:0] tx_data;
   (* src = "/home/runner/workspace/hardware/outform_iot.py:38" *)
   wire tx_valid;
-  (* src = "/home/runner/workspace/hardware/core.py:1113" *)
+  (* src = "/home/runner/workspace/hardware/core.py:1114" *)
   reg [31:0] cr5_stack [255:0];
   initial begin
     cr5_stack[0] = 32'd0;
@@ -7197,108 +7217,108 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   assign \$50  = \$48  & (* src = "/home/runner/workspace/hardware/core.py:704" *) \$49 ;
   assign \$51  = ~ (* src = "/home/runner/workspace/hardware/core.py:704" *) any_unit_busy;
   assign call_start_sig = \$50  & (* src = "/home/runner/workspace/hardware/core.py:704" *) \$51 ;
-  assign \$52  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:728" *) is_church_op;
-  assign \$53  = instruction[31:27] == (* src = "/home/runner/workspace/hardware/core.py:728" *) 2'h3;
-  assign \$54  = \$52  & (* src = "/home/runner/workspace/hardware/core.py:728" *) \$53 ;
-  assign \$55  = ~ (* src = "/home/runner/workspace/hardware/core.py:728" *) any_unit_busy;
-  assign ret_start_sig = \$54  & (* src = "/home/runner/workspace/hardware/core.py:728" *) \$55 ;
-  assign \$56  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:779" *) is_church_op;
-  assign \$57  = instruction[31:27] == (* src = "/home/runner/workspace/hardware/core.py:779" *) 3'h6;
-  assign \$58  = \$56  & (* src = "/home/runner/workspace/hardware/core.py:779" *) \$57 ;
-  assign \$59  = ~ (* src = "/home/runner/workspace/hardware/core.py:779" *) any_unit_busy;
-  assign tperm_start_sig = \$58  & (* src = "/home/runner/workspace/hardware/core.py:779" *) \$59 ;
-  assign \$60  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:790" *) is_church_op;
-  assign \$61  = instruction[31:27] == (* src = "/home/runner/workspace/hardware/core.py:790" *) 1'h1;
-  assign \$62  = \$60  & (* src = "/home/runner/workspace/hardware/core.py:790" *) \$61 ;
-  assign \$63  = ~ (* src = "/home/runner/workspace/hardware/core.py:790" *) any_unit_busy;
-  assign save_start_sig = \$62  & (* src = "/home/runner/workspace/hardware/core.py:790" *) \$63 ;
-  assign \$64  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:806" *) is_dread_op;
-  assign \$65  = ~ (* src = "/home/runner/workspace/hardware/core.py:806" *) any_unit_busy;
-  assign dread_start_sig = \$64  & (* src = "/home/runner/workspace/hardware/core.py:806" *) \$65 ;
-  assign \$66  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:819" *) is_dwrite_op;
-  assign \$67  = ~ (* src = "/home/runner/workspace/hardware/core.py:819" *) any_unit_busy;
-  assign dwrite_start_sig = \$66  & (* src = "/home/runner/workspace/hardware/core.py:819" *) \$67 ;
-  assign \$68  = bfins_start_sig ? (* src = "/home/runner/workspace/hardware/core.py:832" *) instruction[22:19] : 4'h0;
-  assign dr_rd_addr2 = \busy$20  ? (* src = "/home/runner/workspace/hardware/core.py:831" *) dr_rd_addr : \$68 ;
-  assign \$69  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:844" *) is_iadd_op;
-  assign \$70  = ~ (* src = "/home/runner/workspace/hardware/core.py:844" *) any_unit_busy;
-  assign iadd_start_sig = \$69  & (* src = "/home/runner/workspace/hardware/core.py:844" *) \$70 ;
-  assign \$71  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:845" *) is_isub_op;
-  assign \$72  = ~ (* src = "/home/runner/workspace/hardware/core.py:845" *) any_unit_busy;
-  assign isub_start_sig = \$71  & (* src = "/home/runner/workspace/hardware/core.py:845" *) \$72 ;
-  assign \$73  = iadd_start_sig | (* src = "/home/runner/workspace/hardware/core.py:862" *) isub_start_sig;
-  assign \$74  = \$73  | (* src = "/home/runner/workspace/hardware/core.py:862" *) shl_start_sig;
-  assign \$75  = \$74  | (* src = "/home/runner/workspace/hardware/core.py:862" *) shr_start_sig;
-  assign \$76  = \$75  | (* src = "/home/runner/workspace/hardware/core.py:862" *) bfext_start_sig;
-  assign \$77  = \$76  | (* src = "/home/runner/workspace/hardware/core.py:862" *) bfins_start_sig;
-  assign \$78  = \$77  | (* src = "/home/runner/workspace/hardware/core.py:862" *) mcmp_start_sig;
-  assign dr_rd_addr1 = \$78  ? (* src = "/home/runner/workspace/hardware/core.py:862" *) instruction[18:15] : 4'h0;
-  assign iadd_result = dr_rd_data1 + (* src = "/home/runner/workspace/hardware/core.py:870" *) { instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14:0] };
-  assign isub_result = dr_rd_data1 - (* src = "/home/runner/workspace/hardware/core.py:871" *) { instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14:0] };
-  assign \$79  = ! (* src = "/home/runner/workspace/hardware/core.py:878" *) iadd_result[31:0];
-  assign \$80  = ! (* src = "/home/runner/workspace/hardware/core.py:882" *) isub_result[31:0];
-  assign \$81  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:895" *) is_shl_op;
-  assign \$82  = ~ (* src = "/home/runner/workspace/hardware/core.py:895" *) any_unit_busy;
-  assign shl_start_sig = \$81  & (* src = "/home/runner/workspace/hardware/core.py:895" *) \$82 ;
-  assign \$83  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:896" *) is_shr_op;
-  assign \$84  = ~ (* src = "/home/runner/workspace/hardware/core.py:896" *) any_unit_busy;
-  assign shr_start_sig = \$83  & (* src = "/home/runner/workspace/hardware/core.py:896" *) \$84 ;
-  assign \$85  = dr_rd_data1 << (* src = "/home/runner/workspace/hardware/core.py:907" *) instruction[4:0];
-  assign shr_result = dr_rd_data1 >> (* src = "/home/runner/workspace/hardware/core.py:908" *) instruction[4:0];
-  assign \$86  = ! (* src = "/home/runner/workspace/hardware/core.py:915" *) \$85 [31:0];
-  assign \$87  = ! (* src = "/home/runner/workspace/hardware/core.py:919" *) shr_result;
-  assign \$88  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:931" *) is_bfext_op;
-  assign \$89  = ~ (* src = "/home/runner/workspace/hardware/core.py:931" *) any_unit_busy;
-  assign bfext_start_sig = \$88  & (* src = "/home/runner/workspace/hardware/core.py:931" *) \$89 ;
-  assign \$90  = 1'h1 << (* src = "/home/runner/workspace/hardware/core.py:940" *) instruction[9:5];
-  assign \$91  = \$90  - (* src = "/home/runner/workspace/hardware/core.py:940" *) 1'h1;
-  assign \$92  = dr_rd_data1 >> (* src = "/home/runner/workspace/hardware/core.py:941" *) instruction[4:0];
-  assign bfext_result = \$92  & (* src = "/home/runner/workspace/hardware/core.py:941" *) \$91 [31:0];
-  assign \$93  = ! (* src = "/home/runner/workspace/hardware/core.py:947" *) bfext_result;
-  assign \$94  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:961" *) is_bfins_op;
-  assign \$95  = ~ (* src = "/home/runner/workspace/hardware/core.py:961" *) any_unit_busy;
-  assign bfins_start_sig = \$94  & (* src = "/home/runner/workspace/hardware/core.py:961" *) \$95 ;
-  assign \$96  = \$91 [31:0] << (* src = "/home/runner/workspace/hardware/core.py:966" *) instruction[4:0];
-  assign \$97  = ~ (* src = "/home/runner/workspace/hardware/core.py:968" *) \$96 [31:0];
-  assign \$98  = dr_rd_data & (* src = "/home/runner/workspace/hardware/core.py:968" *) \$97 ;
-  assign \$99  = dr_rd_data1 & (* src = "/home/runner/workspace/hardware/core.py:969" *) \$91 [31:0];
-  assign \$100  = \$99  << (* src = "/home/runner/workspace/hardware/core.py:969" *) instruction[4:0];
-  assign \$101  = { 31'h00000000, \$98  } | (* src = "/home/runner/workspace/hardware/core.py:968" *) \$100 ;
-  assign \$102  = ! (* src = "/home/runner/workspace/hardware/core.py:976" *) \$101 [31:0];
-  assign \$103  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:987" *) is_mcmp_op;
-  assign \$104  = ~ (* src = "/home/runner/workspace/hardware/core.py:987" *) any_unit_busy;
-  assign mcmp_start_sig = \$103  & (* src = "/home/runner/workspace/hardware/core.py:987" *) \$104 ;
-  assign mcmp_result = dr_rd_data1 - (* src = "/home/runner/workspace/hardware/core.py:990" *) { instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14:0] };
-  assign \$105  = ! (* src = "/home/runner/workspace/hardware/core.py:995" *) mcmp_result[31:0];
-  assign \$106  = boot_complete & (* src = "/home/runner/workspace/hardware/core.py:1008" *) exec_enable;
-  assign \$107  = \$106  & (* src = "/home/runner/workspace/hardware/core.py:1008" *) is_branch_op;
-  assign \$108  = ~ (* src = "/home/runner/workspace/hardware/core.py:1008" *) any_unit_busy;
-  assign branch_taken = \$107  & (* src = "/home/runner/workspace/hardware/core.py:1008" *) \$108 ;
-  assign \$109  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:1018" *) is_church_op;
-  assign \$110  = ! (* src = "/home/runner/workspace/hardware/core.py:1018" *) instruction[31:27];
-  assign \$111  = \$109  & (* src = "/home/runner/workspace/hardware/core.py:1018" *) \$110 ;
-  assign \$112  = ~ (* src = "/home/runner/workspace/hardware/core.py:1018" *) any_unit_busy;
-  assign load_start_sig = \$111  & (* src = "/home/runner/workspace/hardware/core.py:1018" *) \$112 ;
-  assign cr5_stack_empty = ! (* src = "/home/runner/workspace/hardware/core.py:1122" *) cr5_stack_ptr;
-  assign \$113  = cr5_stack_ptr > (* src = "/home/runner/workspace/hardware/core.py:1124" *) 1'h0;
-  assign \$114  = cr5_stack_ptr - (* src = "/home/runner/workspace/hardware/core.py:1124" *) 1'h1;
-  assign \$115  = \$113  ? (* src = "/home/runner/workspace/hardware/core.py:1124" *) \$114  : 9'h000;
-  assign saved_cr5_gt = cr5_stack_empty ? (* src = "/home/runner/workspace/hardware/core.py:1125" *) 32'd0 : cr5_stack_r_data;
-  assign \$116  = ~ (* src = "/home/runner/workspace/hardware/core.py:1131" *) call_fault;
-  assign \$117  = call_complete & (* src = "/home/runner/workspace/hardware/core.py:1131" *) \$116 ;
-  assign \$120  = ~ (* src = "/home/runner/workspace/hardware/core.py:1146" *) fault_valid;
-  assign \$121  = complete & (* src = "/home/runner/workspace/hardware/core.py:1146" *) \$120 ;
-  assign \$122  = ~ (* src = "/home/runner/workspace/hardware/core.py:1146" *) cr5_stack_empty;
-  assign \$123  = \$121  & (* src = "/home/runner/workspace/hardware/core.py:1146" *) \$122 ;
-  assign \$124  = ~ (* src = "/home/runner/workspace/hardware/core.py:1154" *) any_unit_busy;
-  assign \$125  = boot_complete & (* src = "/home/runner/workspace/hardware/core.py:1154" *) \$124 ;
-  assign \$126  = code_lo_reg != (* src = "/home/runner/workspace/hardware/core.py:1155" *) code_hi_reg;
-  assign \$127  = \$125  & (* src = "/home/runner/workspace/hardware/core.py:1154" *) \$126 ;
-  assign \$128  = imem_addr < (* src = "/home/runner/workspace/hardware/core.py:1156" *) code_lo_reg;
-  assign \$129  = imem_addr >= (* src = "/home/runner/workspace/hardware/core.py:1156" *) code_hi_reg;
-  assign \$130  = \$128  | (* src = "/home/runner/workspace/hardware/core.py:1156" *) \$129 ;
-  assign fetch_bounds_fault = \$127  & (* src = "/home/runner/workspace/hardware/core.py:1154" *) \$130 ;
-  assign \$131  = mem_rd_en | (* src = "/home/runner/workspace/hardware/core.py:1257" *) mem_wr_en;
+  assign \$52  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:729" *) is_church_op;
+  assign \$53  = instruction[31:27] == (* src = "/home/runner/workspace/hardware/core.py:729" *) 2'h3;
+  assign \$54  = \$52  & (* src = "/home/runner/workspace/hardware/core.py:729" *) \$53 ;
+  assign \$55  = ~ (* src = "/home/runner/workspace/hardware/core.py:729" *) any_unit_busy;
+  assign ret_start_sig = \$54  & (* src = "/home/runner/workspace/hardware/core.py:729" *) \$55 ;
+  assign \$56  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:780" *) is_church_op;
+  assign \$57  = instruction[31:27] == (* src = "/home/runner/workspace/hardware/core.py:780" *) 3'h6;
+  assign \$58  = \$56  & (* src = "/home/runner/workspace/hardware/core.py:780" *) \$57 ;
+  assign \$59  = ~ (* src = "/home/runner/workspace/hardware/core.py:780" *) any_unit_busy;
+  assign tperm_start_sig = \$58  & (* src = "/home/runner/workspace/hardware/core.py:780" *) \$59 ;
+  assign \$60  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:791" *) is_church_op;
+  assign \$61  = instruction[31:27] == (* src = "/home/runner/workspace/hardware/core.py:791" *) 1'h1;
+  assign \$62  = \$60  & (* src = "/home/runner/workspace/hardware/core.py:791" *) \$61 ;
+  assign \$63  = ~ (* src = "/home/runner/workspace/hardware/core.py:791" *) any_unit_busy;
+  assign save_start_sig = \$62  & (* src = "/home/runner/workspace/hardware/core.py:791" *) \$63 ;
+  assign \$64  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:807" *) is_dread_op;
+  assign \$65  = ~ (* src = "/home/runner/workspace/hardware/core.py:807" *) any_unit_busy;
+  assign dread_start_sig = \$64  & (* src = "/home/runner/workspace/hardware/core.py:807" *) \$65 ;
+  assign \$66  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:820" *) is_dwrite_op;
+  assign \$67  = ~ (* src = "/home/runner/workspace/hardware/core.py:820" *) any_unit_busy;
+  assign dwrite_start_sig = \$66  & (* src = "/home/runner/workspace/hardware/core.py:820" *) \$67 ;
+  assign \$68  = bfins_start_sig ? (* src = "/home/runner/workspace/hardware/core.py:833" *) instruction[22:19] : 4'h0;
+  assign dr_rd_addr2 = \busy$20  ? (* src = "/home/runner/workspace/hardware/core.py:832" *) dr_rd_addr : \$68 ;
+  assign \$69  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:845" *) is_iadd_op;
+  assign \$70  = ~ (* src = "/home/runner/workspace/hardware/core.py:845" *) any_unit_busy;
+  assign iadd_start_sig = \$69  & (* src = "/home/runner/workspace/hardware/core.py:845" *) \$70 ;
+  assign \$71  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:846" *) is_isub_op;
+  assign \$72  = ~ (* src = "/home/runner/workspace/hardware/core.py:846" *) any_unit_busy;
+  assign isub_start_sig = \$71  & (* src = "/home/runner/workspace/hardware/core.py:846" *) \$72 ;
+  assign \$73  = iadd_start_sig | (* src = "/home/runner/workspace/hardware/core.py:863" *) isub_start_sig;
+  assign \$74  = \$73  | (* src = "/home/runner/workspace/hardware/core.py:863" *) shl_start_sig;
+  assign \$75  = \$74  | (* src = "/home/runner/workspace/hardware/core.py:863" *) shr_start_sig;
+  assign \$76  = \$75  | (* src = "/home/runner/workspace/hardware/core.py:863" *) bfext_start_sig;
+  assign \$77  = \$76  | (* src = "/home/runner/workspace/hardware/core.py:863" *) bfins_start_sig;
+  assign \$78  = \$77  | (* src = "/home/runner/workspace/hardware/core.py:863" *) mcmp_start_sig;
+  assign dr_rd_addr1 = \$78  ? (* src = "/home/runner/workspace/hardware/core.py:863" *) instruction[18:15] : 4'h0;
+  assign iadd_result = dr_rd_data1 + (* src = "/home/runner/workspace/hardware/core.py:871" *) { instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14:0] };
+  assign isub_result = dr_rd_data1 - (* src = "/home/runner/workspace/hardware/core.py:872" *) { instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14:0] };
+  assign \$79  = ! (* src = "/home/runner/workspace/hardware/core.py:879" *) iadd_result[31:0];
+  assign \$80  = ! (* src = "/home/runner/workspace/hardware/core.py:883" *) isub_result[31:0];
+  assign \$81  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:896" *) is_shl_op;
+  assign \$82  = ~ (* src = "/home/runner/workspace/hardware/core.py:896" *) any_unit_busy;
+  assign shl_start_sig = \$81  & (* src = "/home/runner/workspace/hardware/core.py:896" *) \$82 ;
+  assign \$83  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:897" *) is_shr_op;
+  assign \$84  = ~ (* src = "/home/runner/workspace/hardware/core.py:897" *) any_unit_busy;
+  assign shr_start_sig = \$83  & (* src = "/home/runner/workspace/hardware/core.py:897" *) \$84 ;
+  assign \$85  = dr_rd_data1 << (* src = "/home/runner/workspace/hardware/core.py:908" *) instruction[4:0];
+  assign shr_result = dr_rd_data1 >> (* src = "/home/runner/workspace/hardware/core.py:909" *) instruction[4:0];
+  assign \$86  = ! (* src = "/home/runner/workspace/hardware/core.py:916" *) \$85 [31:0];
+  assign \$87  = ! (* src = "/home/runner/workspace/hardware/core.py:920" *) shr_result;
+  assign \$88  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:932" *) is_bfext_op;
+  assign \$89  = ~ (* src = "/home/runner/workspace/hardware/core.py:932" *) any_unit_busy;
+  assign bfext_start_sig = \$88  & (* src = "/home/runner/workspace/hardware/core.py:932" *) \$89 ;
+  assign \$90  = 1'h1 << (* src = "/home/runner/workspace/hardware/core.py:941" *) instruction[9:5];
+  assign \$91  = \$90  - (* src = "/home/runner/workspace/hardware/core.py:941" *) 1'h1;
+  assign \$92  = dr_rd_data1 >> (* src = "/home/runner/workspace/hardware/core.py:942" *) instruction[4:0];
+  assign bfext_result = \$92  & (* src = "/home/runner/workspace/hardware/core.py:942" *) \$91 [31:0];
+  assign \$93  = ! (* src = "/home/runner/workspace/hardware/core.py:948" *) bfext_result;
+  assign \$94  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:962" *) is_bfins_op;
+  assign \$95  = ~ (* src = "/home/runner/workspace/hardware/core.py:962" *) any_unit_busy;
+  assign bfins_start_sig = \$94  & (* src = "/home/runner/workspace/hardware/core.py:962" *) \$95 ;
+  assign \$96  = \$91 [31:0] << (* src = "/home/runner/workspace/hardware/core.py:967" *) instruction[4:0];
+  assign \$97  = ~ (* src = "/home/runner/workspace/hardware/core.py:969" *) \$96 [31:0];
+  assign \$98  = dr_rd_data & (* src = "/home/runner/workspace/hardware/core.py:969" *) \$97 ;
+  assign \$99  = dr_rd_data1 & (* src = "/home/runner/workspace/hardware/core.py:970" *) \$91 [31:0];
+  assign \$100  = \$99  << (* src = "/home/runner/workspace/hardware/core.py:970" *) instruction[4:0];
+  assign \$101  = { 31'h00000000, \$98  } | (* src = "/home/runner/workspace/hardware/core.py:969" *) \$100 ;
+  assign \$102  = ! (* src = "/home/runner/workspace/hardware/core.py:977" *) \$101 [31:0];
+  assign \$103  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:988" *) is_mcmp_op;
+  assign \$104  = ~ (* src = "/home/runner/workspace/hardware/core.py:988" *) any_unit_busy;
+  assign mcmp_start_sig = \$103  & (* src = "/home/runner/workspace/hardware/core.py:988" *) \$104 ;
+  assign mcmp_result = dr_rd_data1 - (* src = "/home/runner/workspace/hardware/core.py:991" *) { instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14:0] };
+  assign \$105  = ! (* src = "/home/runner/workspace/hardware/core.py:996" *) mcmp_result[31:0];
+  assign \$106  = boot_complete & (* src = "/home/runner/workspace/hardware/core.py:1009" *) exec_enable;
+  assign \$107  = \$106  & (* src = "/home/runner/workspace/hardware/core.py:1009" *) is_branch_op;
+  assign \$108  = ~ (* src = "/home/runner/workspace/hardware/core.py:1009" *) any_unit_busy;
+  assign branch_taken = \$107  & (* src = "/home/runner/workspace/hardware/core.py:1009" *) \$108 ;
+  assign \$109  = cond_exec_enable & (* src = "/home/runner/workspace/hardware/core.py:1019" *) is_church_op;
+  assign \$110  = ! (* src = "/home/runner/workspace/hardware/core.py:1019" *) instruction[31:27];
+  assign \$111  = \$109  & (* src = "/home/runner/workspace/hardware/core.py:1019" *) \$110 ;
+  assign \$112  = ~ (* src = "/home/runner/workspace/hardware/core.py:1019" *) any_unit_busy;
+  assign load_start_sig = \$111  & (* src = "/home/runner/workspace/hardware/core.py:1019" *) \$112 ;
+  assign cr5_stack_empty = ! (* src = "/home/runner/workspace/hardware/core.py:1123" *) cr5_stack_ptr;
+  assign \$113  = cr5_stack_ptr > (* src = "/home/runner/workspace/hardware/core.py:1125" *) 1'h0;
+  assign \$114  = cr5_stack_ptr - (* src = "/home/runner/workspace/hardware/core.py:1125" *) 1'h1;
+  assign \$115  = \$113  ? (* src = "/home/runner/workspace/hardware/core.py:1125" *) \$114  : 9'h000;
+  assign saved_cr5_gt = cr5_stack_empty ? (* src = "/home/runner/workspace/hardware/core.py:1126" *) 32'd0 : cr5_stack_r_data;
+  assign \$116  = ~ (* src = "/home/runner/workspace/hardware/core.py:1132" *) call_fault;
+  assign \$117  = call_complete & (* src = "/home/runner/workspace/hardware/core.py:1132" *) \$116 ;
+  assign \$120  = ~ (* src = "/home/runner/workspace/hardware/core.py:1147" *) fault_valid;
+  assign \$121  = complete & (* src = "/home/runner/workspace/hardware/core.py:1147" *) \$120 ;
+  assign \$122  = ~ (* src = "/home/runner/workspace/hardware/core.py:1147" *) cr5_stack_empty;
+  assign \$123  = \$121  & (* src = "/home/runner/workspace/hardware/core.py:1147" *) \$122 ;
+  assign \$124  = ~ (* src = "/home/runner/workspace/hardware/core.py:1155" *) any_unit_busy;
+  assign \$125  = boot_complete & (* src = "/home/runner/workspace/hardware/core.py:1155" *) \$124 ;
+  assign \$126  = code_lo_reg != (* src = "/home/runner/workspace/hardware/core.py:1156" *) code_hi_reg;
+  assign \$127  = \$125  & (* src = "/home/runner/workspace/hardware/core.py:1155" *) \$126 ;
+  assign \$128  = imem_addr < (* src = "/home/runner/workspace/hardware/core.py:1157" *) code_lo_reg;
+  assign \$129  = imem_addr >= (* src = "/home/runner/workspace/hardware/core.py:1157" *) code_hi_reg;
+  assign \$130  = \$128  | (* src = "/home/runner/workspace/hardware/core.py:1157" *) \$129 ;
+  assign fetch_bounds_fault = \$127  & (* src = "/home/runner/workspace/hardware/core.py:1155" *) \$130 ;
+  assign \$131  = mem_rd_en | (* src = "/home/runner/workspace/hardware/core.py:1258" *) mem_wr_en;
   assign \$132  = ~ (* src = "/home/runner/workspace/hardware/core.py:533" *) fetch_bounds_fault;
   assign \$133  = branch_taken & (* src = "/home/runner/workspace/hardware/core.py:533" *) \$132 ;
   assign \$134  = boot_complete & (* src = "/home/runner/workspace/hardware/core.py:538" *) instr_valid;
@@ -7316,36 +7336,36 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   assign \$146  = \cr_wr_en$96  & (* src = "/home/runner/workspace/hardware/core.py:573" *) \$145 ;
   assign \$147  = \cr_wr_data$104 [84:64] + (* src = "/home/runner/workspace/hardware/core.py:583" *) 1'h1;
   assign \$149  = \cr_wr_data$104 [63:32] + (* src = "/home/runner/workspace/hardware/core.py:582" *) \$148 ;
-  assign \$150  = ~ (* src = "/home/runner/workspace/hardware/core.py:743" *) lambda_active;
-  assign \$151  = ~ (* src = "/home/runner/workspace/hardware/core.py:745" *) fault_valid;
-  assign \$152  = complete & (* src = "/home/runner/workspace/hardware/core.py:745" *) \$151 ;
-  assign \$153  = ~ (* src = "/home/runner/workspace/hardware/core.py:745" *) reboot_request;
-  assign \$154  = \$152  & (* src = "/home/runner/workspace/hardware/core.py:745" *) \$153 ;
-  assign \$155  = \$154  & (* src = "/home/runner/workspace/hardware/core.py:745" *) cross_domain_ret;
-  assign \$156  = ~ (* src = "/home/runner/workspace/hardware/core.py:850" *) iadd_busy_reg;
-  assign \$157  = iadd_start_sig & (* src = "/home/runner/workspace/hardware/core.py:850" *) \$156 ;
-  assign \$158  = ~ (* src = "/home/runner/workspace/hardware/core.py:851" *) isub_busy_reg;
-  assign \$159  = isub_start_sig & (* src = "/home/runner/workspace/hardware/core.py:851" *) \$158 ;
-  assign \$160  = ~ (* src = "/home/runner/workspace/hardware/core.py:899" *) shl_busy_reg;
-  assign \$161  = shl_start_sig & (* src = "/home/runner/workspace/hardware/core.py:899" *) \$160 ;
-  assign \$162  = ~ (* src = "/home/runner/workspace/hardware/core.py:900" *) shr_busy_reg;
-  assign \$163  = shr_start_sig & (* src = "/home/runner/workspace/hardware/core.py:900" *) \$162 ;
-  assign \$164  = ~ (* src = "/home/runner/workspace/hardware/core.py:932" *) bfext_busy_reg;
-  assign \$165  = bfext_start_sig & (* src = "/home/runner/workspace/hardware/core.py:932" *) \$164 ;
-  assign \$166  = ~ (* src = "/home/runner/workspace/hardware/core.py:962" *) bfins_busy_reg;
-  assign \$167  = bfins_start_sig & (* src = "/home/runner/workspace/hardware/core.py:962" *) \$166 ;
-  assign \$168  = ~ (* src = "/home/runner/workspace/hardware/core.py:988" *) mcmp_busy_reg;
-  assign \$169  = mcmp_start_sig & (* src = "/home/runner/workspace/hardware/core.py:988" *) \$168 ;
-  assign \$170  = ~ (* src = "/home/runner/workspace/hardware/core.py:1010" *) branch_busy_reg;
-  assign \$171  = branch_taken & (* src = "/home/runner/workspace/hardware/core.py:1010" *) \$170 ;
-  assign \$172  = ~ (* src = "/home/runner/workspace/hardware/core.py:1131" *) call_fault;
-  assign \$173  = call_complete & (* src = "/home/runner/workspace/hardware/core.py:1131" *) \$172 ;
-  assign \$176  = ~ (* src = "/home/runner/workspace/hardware/core.py:1146" *) fault_valid;
-  assign \$177  = complete & (* src = "/home/runner/workspace/hardware/core.py:1146" *) \$176 ;
-  assign \$178  = ~ (* src = "/home/runner/workspace/hardware/core.py:1146" *) cr5_stack_empty;
-  assign \$179  = \$177  & (* src = "/home/runner/workspace/hardware/core.py:1146" *) \$178 ;
-  assign \$180  = cr5_stack_ptr + (* src = "/home/runner/workspace/hardware/core.py:1137" *) 1'h1;
-  assign \$181  = cr5_stack_ptr - (* src = "/home/runner/workspace/hardware/core.py:1147" *) 1'h1;
+  assign \$150  = ~ (* src = "/home/runner/workspace/hardware/core.py:744" *) lambda_active;
+  assign \$151  = ~ (* src = "/home/runner/workspace/hardware/core.py:746" *) fault_valid;
+  assign \$152  = complete & (* src = "/home/runner/workspace/hardware/core.py:746" *) \$151 ;
+  assign \$153  = ~ (* src = "/home/runner/workspace/hardware/core.py:746" *) reboot_request;
+  assign \$154  = \$152  & (* src = "/home/runner/workspace/hardware/core.py:746" *) \$153 ;
+  assign \$155  = \$154  & (* src = "/home/runner/workspace/hardware/core.py:746" *) cross_domain_ret;
+  assign \$156  = ~ (* src = "/home/runner/workspace/hardware/core.py:851" *) iadd_busy_reg;
+  assign \$157  = iadd_start_sig & (* src = "/home/runner/workspace/hardware/core.py:851" *) \$156 ;
+  assign \$158  = ~ (* src = "/home/runner/workspace/hardware/core.py:852" *) isub_busy_reg;
+  assign \$159  = isub_start_sig & (* src = "/home/runner/workspace/hardware/core.py:852" *) \$158 ;
+  assign \$160  = ~ (* src = "/home/runner/workspace/hardware/core.py:900" *) shl_busy_reg;
+  assign \$161  = shl_start_sig & (* src = "/home/runner/workspace/hardware/core.py:900" *) \$160 ;
+  assign \$162  = ~ (* src = "/home/runner/workspace/hardware/core.py:901" *) shr_busy_reg;
+  assign \$163  = shr_start_sig & (* src = "/home/runner/workspace/hardware/core.py:901" *) \$162 ;
+  assign \$164  = ~ (* src = "/home/runner/workspace/hardware/core.py:933" *) bfext_busy_reg;
+  assign \$165  = bfext_start_sig & (* src = "/home/runner/workspace/hardware/core.py:933" *) \$164 ;
+  assign \$166  = ~ (* src = "/home/runner/workspace/hardware/core.py:963" *) bfins_busy_reg;
+  assign \$167  = bfins_start_sig & (* src = "/home/runner/workspace/hardware/core.py:963" *) \$166 ;
+  assign \$168  = ~ (* src = "/home/runner/workspace/hardware/core.py:989" *) mcmp_busy_reg;
+  assign \$169  = mcmp_start_sig & (* src = "/home/runner/workspace/hardware/core.py:989" *) \$168 ;
+  assign \$170  = ~ (* src = "/home/runner/workspace/hardware/core.py:1011" *) branch_busy_reg;
+  assign \$171  = branch_taken & (* src = "/home/runner/workspace/hardware/core.py:1011" *) \$170 ;
+  assign \$172  = ~ (* src = "/home/runner/workspace/hardware/core.py:1132" *) call_fault;
+  assign \$173  = call_complete & (* src = "/home/runner/workspace/hardware/core.py:1132" *) \$172 ;
+  assign \$176  = ~ (* src = "/home/runner/workspace/hardware/core.py:1147" *) fault_valid;
+  assign \$177  = complete & (* src = "/home/runner/workspace/hardware/core.py:1147" *) \$176 ;
+  assign \$178  = ~ (* src = "/home/runner/workspace/hardware/core.py:1147" *) cr5_stack_empty;
+  assign \$179  = \$177  & (* src = "/home/runner/workspace/hardware/core.py:1147" *) \$178 ;
+  assign \$180  = cr5_stack_ptr + (* src = "/home/runner/workspace/hardware/core.py:1138" *) 1'h1;
+  assign \$181  = cr5_stack_ptr - (* src = "/home/runner/workspace/hardware/core.py:1148" *) 1'h1;
   (* src = "/home/runner/workspace/hardware/core.py:163" *)
   always @(posedge clk)
     boot_state <= \$182 ;
@@ -7397,7 +7417,7 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   (* src = "/home/runner/workspace/hardware/core.py:224" *)
   always @(posedge clk)
     branch_busy_reg <= \$171 ;
-  (* src = "/home/runner/workspace/hardware/core.py:1115" *)
+  (* src = "/home/runner/workspace/hardware/core.py:1116" *)
   always @(posedge clk)
     cr5_stack_ptr <= \$191 ;
   (* src = "/home/runner/workspace/hardware/core.py:109" *)
@@ -7410,6 +7430,7 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     .caller_pc(imem_addr[16:2]),
     .code_hi_out(code_hi_out),
     .code_lo_out(code_lo_out),
+    .cr12_thread(cr12_thread),
     .cr14_code(cr14_code),
     .cr15_namespace(cr15_namespace),
     .cr5_heap(cr5_heap),
@@ -7420,23 +7441,22 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     .cr_wr_addr(\cr_wr_addr$99 ),
     .cr_wr_data(\cr_wr_data$106 ),
     .cr_wr_en(\cr_wr_en$94 ),
-    .fault_type(\fault_type$366 ),
+    .fault_type(\fault_type$367 ),
     .mem_rd_addr(mem_rd_addr),
     .mem_rd_data(mem_rd_data),
-    .mem_rd_en(\mem_rd_en$425 ),
+    .mem_rd_en(\mem_rd_en$426 ),
     .mem_wr_addr(mem_wr_addr),
-    .mem_wr_data(\mem_wr_data$439 ),
-    .mem_wr_en(\mem_wr_en$426 ),
+    .mem_wr_data(\mem_wr_data$440 ),
+    .mem_wr_en(\mem_wr_en$427 ),
     .mload_done(mload_done),
     .mload_dst(mload_cr_dst),
     .mload_fault(mload_fault),
-    .mload_fault_type(\fault_type$369 ),
+    .mload_fault_type(\fault_type$370 ),
     .mload_index(mload_index),
     .mload_src(mload_cr_src),
     .mload_start(mload_start),
-    .nia_computed(\nia_value$464 ),
-    .\port$3383$0 (instruction[18:0]),
-    .thread_base(cr12_thread[63:32])
+    .nia_computed(\nia_value$465 ),
+    .\port$3403$0 (instruction[18:0])
   );
   (* src = "/home/runner/workspace/hardware/core.py:141" *)
   \top.core.u_cload  u_cload (
@@ -7450,15 +7470,15 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     .cr_wr_data(\cr_wr_data$104 ),
     .cr_wr_en(\cr_wr_en$96 ),
     .e_gt(e_gt),
-    .mem_addr(\mem_addr$446 ),
+    .mem_addr(\mem_addr$447 ),
     .mem_rd_data(mem_rd_data),
-    .mem_rd_en(\mem_rd_en$431 )
+    .mem_rd_en(\mem_rd_en$432 )
   );
   (* src = "/home/runner/workspace/hardware/core.py:107" *)
   \top.core.u_decoder  u_decoder (
     .exec_enable(exec_enable),
-    .fault(\fault$363 ),
-    .fault_valid(\fault_valid$352 ),
+    .fault(\fault$364 ),
+    .fault_valid(\fault_valid$353 ),
     .flags(flags),
     .instr_valid(instr_valid),
     .instruction(instruction),
@@ -7480,15 +7500,15 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     .busy(\busy$19 ),
     .cr_rd_addr(\cr_rd_addr$38 ),
     .cr_rd_data(cr_rd_data),
-    .dmem_addr(\dmem_addr$443 ),
+    .dmem_addr(\dmem_addr$444 ),
     .dmem_rd_data(mem_rd_data),
-    .dmem_rd_en(\dmem_rd_en$429 ),
+    .dmem_rd_en(\dmem_rd_en$430 ),
     .dr_wr_addr(\dr_wr_addr$72 ),
     .dr_wr_data(\dr_wr_data$74 ),
     .dr_wr_en(dr_wr_en),
     .fault(fault),
-    .fault_type(\fault_type$370 ),
-    .\port$3383$0 (instruction[22:0]),
+    .fault_type(\fault_type$371 ),
+    .\port$3403$0 (instruction[22:0]),
     .start(dread_start_sig)
   );
   (* src = "/home/runner/workspace/hardware/core.py:140" *)
@@ -7497,36 +7517,36 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     .busy(\busy$20 ),
     .cr_rd_addr(\cr_rd_addr$37 ),
     .cr_rd_data(cr_rd_data),
-    .dmem_addr(\dmem_addr$444 ),
-    .dmem_wr_data(\dmem_wr_data$445 ),
-    .dmem_wr_en(\dmem_wr_en$430 ),
+    .dmem_addr(\dmem_addr$445 ),
+    .dmem_wr_data(\dmem_wr_data$446 ),
+    .dmem_wr_en(\dmem_wr_en$431 ),
     .dr_rd_addr(dr_rd_addr),
     .dr_rd_data(dr_rd_data),
-    .fault(\fault$358 ),
-    .fault_type(\fault_type$371 ),
-    .\port$3383$0 (instruction[22:0]),
+    .fault(\fault$359 ),
+    .fault_type(\fault_type$372 ),
+    .\port$3403$0 (instruction[22:0]),
     .start(dwrite_start_sig)
   );
   (* src = "/home/runner/workspace/hardware/core.py:113" *)
   \top.core.u_load  u_load (
     .clk(clk),
-    .fault_type(\fault_type$369 ),
+    .fault_type(\fault_type$370 ),
     .load_busy(load_busy),
     .load_fault(load_fault),
     .load_start(load_start_sig),
     .mload_busy(sub_busy),
     .mload_done(mload_done),
     .mload_fault(mload_fault),
-    .mload_m_elevated(\mload_m_elevated$405 ),
-    .mload_start(\mload_start$399 ),
-    .\port$3383$0 (instruction[22:0])
+    .mload_m_elevated(\mload_m_elevated$406 ),
+    .mload_start(\mload_start$400 ),
+    .\port$3403$0 (instruction[22:0])
   );
   (* src = "/home/runner/workspace/hardware/core.py:142" *)
   \top.core.u_outform  u_outform (
     .clk(clk),
-    .mem_wr_addr(\mem_wr_addr$447 ),
-    .mem_wr_data(\mem_wr_data$448 ),
-    .mem_wr_en(\mem_wr_en$432 ),
+    .mem_wr_addr(\mem_wr_addr$448 ),
+    .mem_wr_data(\mem_wr_data$449 ),
+    .mem_wr_en(\mem_wr_en$433 ),
     .outform_busy(outform_busy),
     .outform_fault(outform_fault),
     .outform_fault_type(outform_fault_type),
@@ -7539,7 +7559,7 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     .check_domain_purity(check_domain_purity),
     .check_valid(check_valid),
     .fault_type(fault_type),
-    .fault_valid(\fault_valid$353 ),
+    .fault_valid(\fault_valid$354 ),
     .gt_in(cr_rd_data[31:0]),
     .required_perms(required_perms)
   );
@@ -7612,21 +7632,21 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     .cr_rd_addr(\cr_rd_addr$40 ),
     .cr_rd_data(cr_rd_data),
     .cr_src(instruction[17:15]),
-    .fault_type(\fault_type$367 ),
+    .fault_type(\fault_type$368 ),
     .fault_valid(fault_valid),
     .lambda_active(lambda_active),
     .lambda_pc(lambda_pc),
-    .mem_rd_addr(\mem_rd_addr$449 ),
+    .mem_rd_addr(\mem_rd_addr$450 ),
     .mem_rd_data(mem_rd_data),
-    .mem_rd_en(\mem_rd_en$433 ),
-    .mem_wr_addr(\mem_wr_addr$450 ),
-    .mem_wr_data(\mem_wr_data$451 ),
-    .mem_wr_en(\mem_wr_en$434 ),
+    .mem_rd_en(\mem_rd_en$434 ),
+    .mem_wr_addr(\mem_wr_addr$451 ),
+    .mem_wr_data(\mem_wr_data$452 ),
+    .mem_wr_en(\mem_wr_en$435 ),
     .mload_direct_gt(saved_cr5_gt),
     .mload_done(mload_done),
     .mload_fault(mload_fault),
-    .mload_fault_type(\fault_type$369 ),
-    .mload_start(\mload_start$392 ),
+    .mload_fault_type(\fault_type$370 ),
+    .mload_start(\mload_start$393 ),
     .nia_set(nia_set),
     .nia_value(nia_value),
     .reboot_request(reboot_request),
@@ -7638,14 +7658,14 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     .cr15_namespace(cr15_namespace),
     .cr_rd_addr(\cr_rd_addr$39 ),
     .cr_rd_data(cr_rd_data),
-    .fault_type(\fault_type$368 ),
-    .mem_rd_addr(\mem_rd_addr$442 ),
+    .fault_type(\fault_type$369 ),
+    .mem_rd_addr(\mem_rd_addr$443 ),
     .mem_rd_data(mem_rd_data),
-    .mem_rd_en(\mem_rd_en$428 ),
-    .mem_wr_addr(\mem_wr_addr$440 ),
-    .mem_wr_data(\mem_wr_data$441 ),
-    .mem_wr_en(\mem_wr_en$427 ),
-    .\port$3383$0 (instruction[22:0]),
+    .mem_rd_en(\mem_rd_en$429 ),
+    .mem_wr_addr(\mem_wr_addr$441 ),
+    .mem_wr_data(\mem_wr_data$442 ),
+    .mem_wr_en(\mem_wr_en$428 ),
+    .\port$3403$0 (instruction[22:0]),
     .save_busy(save_busy),
     .save_fault(save_fault),
     .save_start(save_start_sig)
@@ -7671,7 +7691,7 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     .sub_direct_gt(sub_direct_gt),
     .sub_done(mload_done),
     .sub_fault(mload_fault),
-    .sub_fault_type(\fault_type$369 ),
+    .sub_fault_type(\fault_type$370 ),
     .sub_index(sub_index),
     .sub_m_elevated(sub_m_elevated),
     .sub_start(sub_start)
@@ -7685,7 +7705,7 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     .cr_wr_addr(\cr_wr_addr$100 ),
     .cr_wr_data(\cr_wr_data$107 ),
     .cr_wr_en(\cr_wr_en$93 ),
-    .fault_type(\fault_type$365 ),
+    .fault_type(\fault_type$366 ),
     .preset(instruction[3:0]),
     .tperm_busy(tperm_busy),
     .tperm_fault(tperm_fault),
@@ -7976,62 +7996,62 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     if (\$auto$verilog_backend.cc:2355:dump_module$17 ) begin end
     (* full_case = 32'd1 *)
     if (fetch_bounds_fault) begin
-      \fault$361  = 5'h08;
-    end else if (\fault_valid$352 ) begin
-      \fault$361  = { 1'h0, \fault$363  };
+      \fault$362  = 5'h08;
     end else if (\fault_valid$353 ) begin
-      \fault$361  = { 1'h0, fault_type };
+      \fault$362  = { 1'h0, \fault$364  };
+    end else if (\fault_valid$354 ) begin
+      \fault$362  = { 1'h0, fault_type };
     end else if (tperm_fault) begin
-      \fault$361  = { 1'h0, \fault_type$365  };
+      \fault$362  = { 1'h0, \fault_type$366  };
     end else if (call_fault) begin
-      \fault$361  = \fault_type$366 ;
+      \fault$362  = \fault_type$367 ;
     end else if (fault_valid) begin
-      \fault$361  = { 1'h0, \fault_type$367  };
+      \fault$362  = { 1'h0, \fault_type$368  };
     end else if (save_fault) begin
-      \fault$361  = { 1'h0, \fault_type$368  };
+      \fault$362  = { 1'h0, \fault_type$369  };
     end else if (load_fault) begin
-      \fault$361  = { 1'h0, \fault_type$369  };
+      \fault$362  = { 1'h0, \fault_type$370  };
     end else if (fault) begin
-      \fault$361  = \fault_type$370 ;
-    end else if (\fault$358 ) begin
-      \fault$361  = \fault_type$371 ;
+      \fault$362  = \fault_type$371 ;
+    end else if (\fault$359 ) begin
+      \fault$362  = \fault_type$372 ;
     end else if (cload_fault) begin
-      \fault$361  = cload_fault_type;
+      \fault$362  = cload_fault_type;
     end else if (outform_fault) begin
-      \fault$361  = outform_fault_type;
+      \fault$362  = outform_fault_type;
     end else begin
-      \fault$361  = 5'h00;
+      \fault$362  = 5'h00;
     end
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$17 ) begin end
     (* full_case = 32'd1 *)
     if (fetch_bounds_fault) begin
-      \fault_valid$362  = 1'h1;
-    end else if (\fault_valid$352 ) begin
-      \fault_valid$362  = 1'h1;
+      \fault_valid$363  = 1'h1;
     end else if (\fault_valid$353 ) begin
-      \fault_valid$362  = 1'h1;
+      \fault_valid$363  = 1'h1;
+    end else if (\fault_valid$354 ) begin
+      \fault_valid$363  = 1'h1;
     end else if (tperm_fault) begin
-      \fault_valid$362  = 1'h1;
+      \fault_valid$363  = 1'h1;
     end else if (call_fault) begin
-      \fault_valid$362  = 1'h1;
+      \fault_valid$363  = 1'h1;
     end else if (fault_valid) begin
-      \fault_valid$362  = 1'h1;
+      \fault_valid$363  = 1'h1;
     end else if (save_fault) begin
-      \fault_valid$362  = 1'h1;
+      \fault_valid$363  = 1'h1;
     end else if (load_fault) begin
-      \fault_valid$362  = 1'h1;
+      \fault_valid$363  = 1'h1;
     end else if (fault) begin
-      \fault_valid$362  = 1'h1;
-    end else if (\fault$358 ) begin
-      \fault_valid$362  = 1'h1;
+      \fault_valid$363  = 1'h1;
+    end else if (\fault$359 ) begin
+      \fault_valid$363  = 1'h1;
     end else if (cload_fault) begin
-      \fault_valid$362  = 1'h1;
+      \fault_valid$363  = 1'h1;
     end else if (outform_fault) begin
-      \fault_valid$362  = 1'h1;
+      \fault_valid$363  = 1'h1;
     end else begin
-      \fault_valid$362  = 1'h0;
+      \fault_valid$363  = 1'h0;
     end
   end
   always @* begin
@@ -8040,9 +8060,9 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     if (call_busy) begin
       sub_start = mload_start;
     end else if (busy) begin
-      sub_start = \mload_start$392 ;
+      sub_start = \mload_start$393 ;
     end else if (load_busy) begin
-      sub_start = \mload_start$399 ;
+      sub_start = \mload_start$400 ;
     end
   end
   always @* begin
@@ -8108,7 +8128,7 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     end else if (busy) begin
       sub_m_elevated = 1'h1;
     end else if (load_busy) begin
-      sub_m_elevated = \mload_m_elevated$405 ;
+      sub_m_elevated = \mload_m_elevated$406 ;
     end
   end
   always @* begin
@@ -8116,26 +8136,26 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     dmem_addr = 32'd0;
     if (\$131 ) begin
       dmem_addr = mem_addr;
-    end else if (\mem_rd_en$425 ) begin
+    end else if (\mem_rd_en$426 ) begin
       dmem_addr = mem_rd_addr;
-    end else if (\mem_wr_en$426 ) begin
-      dmem_addr = mem_wr_addr;
     end else if (\mem_wr_en$427 ) begin
-      dmem_addr = \mem_wr_addr$440 ;
-    end else if (\mem_rd_en$428 ) begin
-      dmem_addr = \mem_rd_addr$442 ;
-    end else if (\dmem_rd_en$429 ) begin
-      dmem_addr = \dmem_addr$443 ;
-    end else if (\dmem_wr_en$430 ) begin
+      dmem_addr = mem_wr_addr;
+    end else if (\mem_wr_en$428 ) begin
+      dmem_addr = \mem_wr_addr$441 ;
+    end else if (\mem_rd_en$429 ) begin
+      dmem_addr = \mem_rd_addr$443 ;
+    end else if (\dmem_rd_en$430 ) begin
       dmem_addr = \dmem_addr$444 ;
-    end else if (\mem_rd_en$431 ) begin
-      dmem_addr = \mem_addr$446 ;
-    end else if (\mem_wr_en$432 ) begin
-      dmem_addr = \mem_wr_addr$447 ;
-    end else if (\mem_rd_en$433 ) begin
-      dmem_addr = \mem_rd_addr$449 ;
-    end else if (\mem_wr_en$434 ) begin
-      dmem_addr = \mem_wr_addr$450 ;
+    end else if (\dmem_wr_en$431 ) begin
+      dmem_addr = \dmem_addr$445 ;
+    end else if (\mem_rd_en$432 ) begin
+      dmem_addr = \mem_addr$447 ;
+    end else if (\mem_wr_en$433 ) begin
+      dmem_addr = \mem_wr_addr$448 ;
+    end else if (\mem_rd_en$434 ) begin
+      dmem_addr = \mem_rd_addr$450 ;
+    end else if (\mem_wr_en$435 ) begin
+      dmem_addr = \mem_wr_addr$451 ;
     end
   end
   always @* begin
@@ -8143,19 +8163,19 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     dmem_rd_en = 1'h0;
     if (\$131 ) begin
       dmem_rd_en = mem_rd_en;
-    end else if (\mem_rd_en$425 ) begin
+    end else if (\mem_rd_en$426 ) begin
       dmem_rd_en = 1'h1;
-    end else if (\mem_wr_en$426 ) begin
     end else if (\mem_wr_en$427 ) begin
-    end else if (\mem_rd_en$428 ) begin
+    end else if (\mem_wr_en$428 ) begin
+    end else if (\mem_rd_en$429 ) begin
       dmem_rd_en = 1'h1;
-    end else if (\dmem_rd_en$429 ) begin
+    end else if (\dmem_rd_en$430 ) begin
       dmem_rd_en = 1'h1;
-    end else if (\dmem_wr_en$430 ) begin
-    end else if (\mem_rd_en$431 ) begin
+    end else if (\dmem_wr_en$431 ) begin
+    end else if (\mem_rd_en$432 ) begin
       dmem_rd_en = 1'h1;
-    end else if (\mem_wr_en$432 ) begin
-    end else if (\mem_rd_en$433 ) begin
+    end else if (\mem_wr_en$433 ) begin
+    end else if (\mem_rd_en$434 ) begin
       dmem_rd_en = 1'h1;
     end
   end
@@ -8164,21 +8184,21 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     dmem_wr_data = 32'd0;
     if (\$131 ) begin
       dmem_wr_data = mem_wr_data;
-    end else if (\mem_rd_en$425 ) begin
-    end else if (\mem_wr_en$426 ) begin
-      dmem_wr_data = \mem_wr_data$439 ;
+    end else if (\mem_rd_en$426 ) begin
     end else if (\mem_wr_en$427 ) begin
-      dmem_wr_data = \mem_wr_data$441 ;
-    end else if (\mem_rd_en$428 ) begin
-    end else if (\dmem_rd_en$429 ) begin
-    end else if (\dmem_wr_en$430 ) begin
-      dmem_wr_data = \dmem_wr_data$445 ;
-    end else if (\mem_rd_en$431 ) begin
-    end else if (\mem_wr_en$432 ) begin
-      dmem_wr_data = \mem_wr_data$448 ;
-    end else if (\mem_rd_en$433 ) begin
-    end else if (\mem_wr_en$434 ) begin
-      dmem_wr_data = \mem_wr_data$451 ;
+      dmem_wr_data = \mem_wr_data$440 ;
+    end else if (\mem_wr_en$428 ) begin
+      dmem_wr_data = \mem_wr_data$442 ;
+    end else if (\mem_rd_en$429 ) begin
+    end else if (\dmem_rd_en$430 ) begin
+    end else if (\dmem_wr_en$431 ) begin
+      dmem_wr_data = \dmem_wr_data$446 ;
+    end else if (\mem_rd_en$432 ) begin
+    end else if (\mem_wr_en$433 ) begin
+      dmem_wr_data = \mem_wr_data$449 ;
+    end else if (\mem_rd_en$434 ) begin
+    end else if (\mem_wr_en$435 ) begin
+      dmem_wr_data = \mem_wr_data$452 ;
     end
   end
   always @* begin
@@ -8186,20 +8206,20 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
     dmem_wr_en = 1'h0;
     if (\$131 ) begin
       dmem_wr_en = mem_wr_en;
-    end else if (\mem_rd_en$425 ) begin
-    end else if (\mem_wr_en$426 ) begin
-      dmem_wr_en = 1'h1;
+    end else if (\mem_rd_en$426 ) begin
     end else if (\mem_wr_en$427 ) begin
       dmem_wr_en = 1'h1;
-    end else if (\mem_rd_en$428 ) begin
-    end else if (\dmem_rd_en$429 ) begin
-    end else if (\dmem_wr_en$430 ) begin
+    end else if (\mem_wr_en$428 ) begin
       dmem_wr_en = 1'h1;
-    end else if (\mem_rd_en$431 ) begin
-    end else if (\mem_wr_en$432 ) begin
+    end else if (\mem_rd_en$429 ) begin
+    end else if (\dmem_rd_en$430 ) begin
+    end else if (\dmem_wr_en$431 ) begin
       dmem_wr_en = 1'h1;
-    end else if (\mem_rd_en$433 ) begin
-    end else if (\mem_wr_en$434 ) begin
+    end else if (\mem_rd_en$432 ) begin
+    end else if (\mem_wr_en$433 ) begin
+      dmem_wr_en = 1'h1;
+    end else if (\mem_rd_en$434 ) begin
+    end else if (\mem_wr_en$435 ) begin
       dmem_wr_en = 1'h1;
     end
   end
@@ -8239,7 +8259,7 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
       7'b???1???:
           \$183  = nia_value;
       7'b??1????:
-          \$183  = \nia_value$464 ;
+          \$183  = \nia_value$465 ;
       7'b?1?????:
           \$183  = \$139 [31:0];
       7'b1??????:
@@ -8442,50 +8462,51 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   assign mem_rd_valid = 1'h1;
   assign \cr5_heap$230  = cr5_heap;
   assign caller_pc = imem_addr[16:2];
+  assign \cr12_thread$233  = cr12_thread;
   assign thread_base = cr12_thread[63:32];
   assign thread_hdr = 32'd0;
-  assign \cr_b_clear_mask$236  = cr_b_clear_mask;
-  assign \cr_null_mask$238  = cr_null_mask;
+  assign \cr_b_clear_mask$237  = cr_b_clear_mask;
+  assign \cr_null_mask$239  = cr_null_mask;
   assign return_start = ret_start_sig;
-  assign \cr_src$241  = instruction[17:15];
-  assign \cr_rd_data$242  = cr_rd_data;
+  assign \cr_src$242  = instruction[17:15];
+  assign \cr_rd_data$243  = cr_rd_data;
   assign lambda_active_reg = lambda_active;
   assign lambda_pc_reg = lambda_pc;
-  assign \cr5_heap$247  = cr5_heap;
-  assign \cr12_thread$248  = cr12_thread;
-  assign \mem_rd_data$249  = mem_rd_data;
-  assign \mem_rd_valid$250  = 1'h1;
+  assign \cr5_heap$248  = cr5_heap;
+  assign \cr12_thread$249  = cr12_thread;
+  assign \mem_rd_data$250  = mem_rd_data;
+  assign \mem_rd_valid$251  = 1'h1;
   assign cload_start = cload_pending;
   assign cload_e_gt = e_gt;
-  assign \cr15_namespace$254  = cr15_namespace;
-  assign \mem_rd_data$255  = mem_rd_data;
-  assign \mem_rd_valid$256  = 1'h1;
+  assign \cr15_namespace$255  = cr15_namespace;
+  assign \mem_rd_data$256  = mem_rd_data;
+  assign \mem_rd_valid$257  = 1'h1;
   assign tperm_start = tperm_start_sig;
   assign cr_target = instruction[22:19];
   assign preset = instruction[3:0];
   assign tperm_preset = instruction[3:0];
-  assign \cr_rd_data$262  = cr_rd_data;
+  assign \cr_rd_data$263  = cr_rd_data;
   assign save_start = save_start_sig;
-  assign \cr_src$265  = instruction[18:15];
-  assign \cr_dst$266  = instruction[22:19];
-  assign \index$267  = { 1'h0, instruction[14:0] };
-  assign \cr_rd_data$268  = cr_rd_data;
-  assign \cr15_namespace$269  = cr15_namespace;
+  assign \cr_src$266  = instruction[18:15];
+  assign \cr_dst$267  = instruction[22:19];
+  assign \index$268  = { 1'h0, instruction[14:0] };
+  assign \cr_rd_data$269  = cr_rd_data;
+  assign \cr15_namespace$270  = cr15_namespace;
   assign mem_wr_done = 1'h1;
-  assign \mem_rd_data$271  = mem_rd_data;
-  assign \mem_rd_valid$272  = 1'h1;
+  assign \mem_rd_data$272  = mem_rd_data;
+  assign \mem_rd_valid$273  = 1'h1;
   assign start = dread_start_sig;
-  assign \cr_src$276  = instruction[18:15];
+  assign \cr_src$277  = instruction[18:15];
   assign dr_dst = instruction[22:19];
   assign imm = instruction[14:0];
   assign immediate = instruction[14:0];
-  assign \cr_rd_data$280  = cr_rd_data;
-  assign \dmem_rd_data$281  = mem_rd_data;
-  assign \start$284  = dwrite_start_sig;
-  assign \cr_src$285  = instruction[18:15];
+  assign \cr_rd_data$281  = cr_rd_data;
+  assign \dmem_rd_data$282  = mem_rd_data;
+  assign \start$285  = dwrite_start_sig;
+  assign \cr_src$286  = instruction[18:15];
   assign dr_src = instruction[22:19];
-  assign \imm$287  = instruction[14:0];
-  assign \cr_rd_data$288  = cr_rd_data;
+  assign \imm$288  = instruction[14:0];
+  assign \cr_rd_data$289  = cr_rd_data;
   assign dr_rd_data2 = dr_rd_data;
   assign arith_imm_sx = { instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14:0] };
   assign shift_amt = instruction[4:0];
@@ -8495,9 +8516,9 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   assign bfins_mask_shifted = \$96 [31:0];
   assign branch_sx32 = { instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14], instruction[14:0] };
   assign load_start = load_start_sig;
-  assign \cr_src$314  = instruction[18:15];
-  assign \cr_dst$315  = instruction[22:19];
-  assign \index$316  = { 1'h0, instruction[14:0] };
+  assign \cr_src$315  = instruction[18:15];
+  assign \cr_dst$316  = instruction[22:19];
+  assign \index$317  = { 1'h0, instruction[14:0] };
   assign outform_start = 1'h0;
   assign gt_raw = 32'd0;
   assign slot_id = 16'h0000;
@@ -8515,43 +8536,43 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   assign mint_fault = 1'h0;
   assign mint_result_gt = 32'd0;
   assign cr5_stack_r_addr = \$115 [7:0];
-  assign \saved_cr5_gt$349  = cr5_heap[31:0];
-  assign \cr_rd_data$374  = cr_rd_data;
-  assign \cr15_namespace$375  = cr15_namespace;
-  assign \mem_rd_data$376  = mem_rd_data;
-  assign \mem_rd_valid$377  = 1'h1;
+  assign \saved_cr5_gt$350  = cr5_heap[31:0];
+  assign \cr_rd_data$375  = cr_rd_data;
+  assign \cr15_namespace$376  = cr15_namespace;
+  assign \mem_rd_data$377  = mem_rd_data;
+  assign \mem_rd_valid$378  = 1'h1;
   assign mload_direct = 1'h0;
   assign mload_direct_gt = 32'd0;
   assign mload_m_elevated = 1'h1;
-  assign \mload_cr_src$393  = 4'h0;
-  assign \mload_cr_dst$394  = 4'h5;
-  assign \mload_index$395  = 16'h0000;
-  assign \mload_direct$396  = 1'h1;
-  assign \mload_direct_gt$397  = saved_cr5_gt;
-  assign \mload_m_elevated$398  = 1'h1;
-  assign \mload_cr_src$400  = instruction[18:15];
-  assign \mload_cr_dst$401  = instruction[22:19];
-  assign \mload_index$402  = { 1'h0, instruction[14:0] };
-  assign \mload_direct$403  = 1'h0;
-  assign \mload_direct_gt$404  = 32'd0;
+  assign \mload_cr_src$394  = 4'h0;
+  assign \mload_cr_dst$395  = 4'h5;
+  assign \mload_index$396  = 16'h0000;
+  assign \mload_direct$397  = 1'h1;
+  assign \mload_direct_gt$398  = saved_cr5_gt;
+  assign \mload_m_elevated$399  = 1'h1;
+  assign \mload_cr_src$401  = instruction[18:15];
+  assign \mload_cr_dst$402  = instruction[22:19];
+  assign \mload_index$403  = { 1'h0, instruction[14:0] };
+  assign \mload_direct$404  = 1'h0;
+  assign \mload_direct_gt$405  = 32'd0;
   assign sub_done = mload_done;
   assign sub_fault = mload_fault;
-  assign mload_fault_type = \fault_type$369 ;
-  assign sub_fault_type = \fault_type$369 ;
-  assign \mload_done$412  = mload_done;
-  assign \mload_fault$413  = mload_fault;
-  assign \mload_fault_type$414  = \fault_type$369 ;
+  assign mload_fault_type = \fault_type$370 ;
+  assign sub_fault_type = \fault_type$370 ;
+  assign \mload_done$413  = mload_done;
+  assign \mload_fault$414  = mload_fault;
+  assign \mload_fault_type$415  = \fault_type$370 ;
   assign mload_busy = sub_busy;
-  assign \mload_done$416  = mload_done;
-  assign \mload_fault$417  = mload_fault;
-  assign \mload_fault_type$418  = \fault_type$369 ;
+  assign \mload_done$417  = mload_done;
+  assign \mload_fault$418  = mload_fault;
+  assign \mload_fault_type$419  = \fault_type$370 ;
   assign ns_addr = 32'd0;
   assign ns_rd_en = 1'h0;
   assign ns_wr_data = 96'h000000000000000000000000;
   assign ns_wr_en = 1'h0;
   
   assign free_run_start = 1'h0;
-  assign \nia_set$461  = call_complete;
+  assign \nia_set$462  = call_complete;
   assign free_run_nia = 32'd0;
   assign perm_gt_sig = cr_rd_data[31:0];
   assign \flags.N  = flags[0];
@@ -9017,110 +9038,119 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   assign \cr12_thread.word1_location  = cr12_thread[63:32];
   assign \cr12_thread.word2_w2  = cr12_thread[95:64];
   assign \cr12_thread.word3_w3  = cr12_thread[127:96];
-  assign \cr_rd_data$242.word0_gt  = cr_rd_data[31:0];
-  assign \cr_rd_data$242.word0_gt.slot_id  = cr_rd_data[15:0];
-  assign \cr_rd_data$242.word0_gt.gt_seq  = cr_rd_data[22:16];
-  assign \cr_rd_data$242.word0_gt.gt_type  = cr_rd_data[24:23];
-  assign \cr_rd_data$242.word0_gt.perms  = cr_rd_data[30:25];
-  assign \cr_rd_data$242.word0_gt.b_flag  = cr_rd_data[31];
-  assign \cr_rd_data$242.word1_location  = cr_rd_data[63:32];
-  assign \cr_rd_data$242.word2_w2  = cr_rd_data[95:64];
-  assign \cr_rd_data$242.word3_w3  = cr_rd_data[127:96];
-  assign \cr5_heap$247.word0_gt  = cr5_heap[31:0];
-  assign \cr5_heap$247.word0_gt.slot_id  = cr5_heap[15:0];
-  assign \cr5_heap$247.word0_gt.gt_seq  = cr5_heap[22:16];
-  assign \cr5_heap$247.word0_gt.gt_type  = cr5_heap[24:23];
-  assign \cr5_heap$247.word0_gt.perms  = cr5_heap[30:25];
-  assign \cr5_heap$247.word0_gt.b_flag  = cr5_heap[31];
-  assign \cr5_heap$247.word1_location  = cr5_heap[63:32];
-  assign \cr5_heap$247.word2_w2  = cr5_heap[95:64];
-  assign \cr5_heap$247.word3_w3  = cr5_heap[127:96];
-  assign \cr12_thread$248.word0_gt  = cr12_thread[31:0];
-  assign \cr12_thread$248.word0_gt.slot_id  = cr12_thread[15:0];
-  assign \cr12_thread$248.word0_gt.gt_seq  = cr12_thread[22:16];
-  assign \cr12_thread$248.word0_gt.gt_type  = cr12_thread[24:23];
-  assign \cr12_thread$248.word0_gt.perms  = cr12_thread[30:25];
-  assign \cr12_thread$248.word0_gt.b_flag  = cr12_thread[31];
-  assign \cr12_thread$248.word1_location  = cr12_thread[63:32];
-  assign \cr12_thread$248.word2_w2  = cr12_thread[95:64];
-  assign \cr12_thread$248.word3_w3  = cr12_thread[127:96];
-  assign \cr15_namespace$254.word0_gt  = cr15_namespace[31:0];
-  assign \cr15_namespace$254.word0_gt.slot_id  = cr15_namespace[15:0];
-  assign \cr15_namespace$254.word0_gt.gt_seq  = cr15_namespace[22:16];
-  assign \cr15_namespace$254.word0_gt.gt_type  = cr15_namespace[24:23];
-  assign \cr15_namespace$254.word0_gt.perms  = cr15_namespace[30:25];
-  assign \cr15_namespace$254.word0_gt.b_flag  = cr15_namespace[31];
-  assign \cr15_namespace$254.word1_location  = cr15_namespace[63:32];
-  assign \cr15_namespace$254.word2_w2  = cr15_namespace[95:64];
-  assign \cr15_namespace$254.word3_w3  = cr15_namespace[127:96];
-  assign \cr_rd_data$262.word0_gt  = cr_rd_data[31:0];
-  assign \cr_rd_data$262.word0_gt.slot_id  = cr_rd_data[15:0];
-  assign \cr_rd_data$262.word0_gt.gt_seq  = cr_rd_data[22:16];
-  assign \cr_rd_data$262.word0_gt.gt_type  = cr_rd_data[24:23];
-  assign \cr_rd_data$262.word0_gt.perms  = cr_rd_data[30:25];
-  assign \cr_rd_data$262.word0_gt.b_flag  = cr_rd_data[31];
-  assign \cr_rd_data$262.word1_location  = cr_rd_data[63:32];
-  assign \cr_rd_data$262.word2_w2  = cr_rd_data[95:64];
-  assign \cr_rd_data$262.word3_w3  = cr_rd_data[127:96];
-  assign \cr_rd_data$268.word0_gt  = cr_rd_data[31:0];
-  assign \cr_rd_data$268.word0_gt.slot_id  = cr_rd_data[15:0];
-  assign \cr_rd_data$268.word0_gt.gt_seq  = cr_rd_data[22:16];
-  assign \cr_rd_data$268.word0_gt.gt_type  = cr_rd_data[24:23];
-  assign \cr_rd_data$268.word0_gt.perms  = cr_rd_data[30:25];
-  assign \cr_rd_data$268.word0_gt.b_flag  = cr_rd_data[31];
-  assign \cr_rd_data$268.word1_location  = cr_rd_data[63:32];
-  assign \cr_rd_data$268.word2_w2  = cr_rd_data[95:64];
-  assign \cr_rd_data$268.word3_w3  = cr_rd_data[127:96];
-  assign \cr15_namespace$269.word0_gt  = cr15_namespace[31:0];
-  assign \cr15_namespace$269.word0_gt.slot_id  = cr15_namespace[15:0];
-  assign \cr15_namespace$269.word0_gt.gt_seq  = cr15_namespace[22:16];
-  assign \cr15_namespace$269.word0_gt.gt_type  = cr15_namespace[24:23];
-  assign \cr15_namespace$269.word0_gt.perms  = cr15_namespace[30:25];
-  assign \cr15_namespace$269.word0_gt.b_flag  = cr15_namespace[31];
-  assign \cr15_namespace$269.word1_location  = cr15_namespace[63:32];
-  assign \cr15_namespace$269.word2_w2  = cr15_namespace[95:64];
-  assign \cr15_namespace$269.word3_w3  = cr15_namespace[127:96];
-  assign \cr_rd_data$280.word0_gt  = cr_rd_data[31:0];
-  assign \cr_rd_data$280.word0_gt.slot_id  = cr_rd_data[15:0];
-  assign \cr_rd_data$280.word0_gt.gt_seq  = cr_rd_data[22:16];
-  assign \cr_rd_data$280.word0_gt.gt_type  = cr_rd_data[24:23];
-  assign \cr_rd_data$280.word0_gt.perms  = cr_rd_data[30:25];
-  assign \cr_rd_data$280.word0_gt.b_flag  = cr_rd_data[31];
-  assign \cr_rd_data$280.word1_location  = cr_rd_data[63:32];
-  assign \cr_rd_data$280.word2_w2  = cr_rd_data[95:64];
-  assign \cr_rd_data$280.word3_w3  = cr_rd_data[127:96];
-  assign \cr_rd_data$288.word0_gt  = cr_rd_data[31:0];
-  assign \cr_rd_data$288.word0_gt.slot_id  = cr_rd_data[15:0];
-  assign \cr_rd_data$288.word0_gt.gt_seq  = cr_rd_data[22:16];
-  assign \cr_rd_data$288.word0_gt.gt_type  = cr_rd_data[24:23];
-  assign \cr_rd_data$288.word0_gt.perms  = cr_rd_data[30:25];
-  assign \cr_rd_data$288.word0_gt.b_flag  = cr_rd_data[31];
-  assign \cr_rd_data$288.word1_location  = cr_rd_data[63:32];
-  assign \cr_rd_data$288.word2_w2  = cr_rd_data[95:64];
-  assign \cr_rd_data$288.word3_w3  = cr_rd_data[127:96];
-  assign \saved_cr5_gt$349.slot_id  = cr5_heap[15:0];
-  assign \saved_cr5_gt$349.gt_seq  = cr5_heap[22:16];
-  assign \saved_cr5_gt$349.gt_type  = cr5_heap[24:23];
-  assign \saved_cr5_gt$349.perms  = cr5_heap[30:25];
-  assign \saved_cr5_gt$349.b_flag  = cr5_heap[31];
-  assign \cr_rd_data$374.word0_gt  = cr_rd_data[31:0];
-  assign \cr_rd_data$374.word0_gt.slot_id  = cr_rd_data[15:0];
-  assign \cr_rd_data$374.word0_gt.gt_seq  = cr_rd_data[22:16];
-  assign \cr_rd_data$374.word0_gt.gt_type  = cr_rd_data[24:23];
-  assign \cr_rd_data$374.word0_gt.perms  = cr_rd_data[30:25];
-  assign \cr_rd_data$374.word0_gt.b_flag  = cr_rd_data[31];
-  assign \cr_rd_data$374.word1_location  = cr_rd_data[63:32];
-  assign \cr_rd_data$374.word2_w2  = cr_rd_data[95:64];
-  assign \cr_rd_data$374.word3_w3  = cr_rd_data[127:96];
-  assign \cr15_namespace$375.word0_gt  = cr15_namespace[31:0];
-  assign \cr15_namespace$375.word0_gt.slot_id  = cr15_namespace[15:0];
-  assign \cr15_namespace$375.word0_gt.gt_seq  = cr15_namespace[22:16];
-  assign \cr15_namespace$375.word0_gt.gt_type  = cr15_namespace[24:23];
-  assign \cr15_namespace$375.word0_gt.perms  = cr15_namespace[30:25];
-  assign \cr15_namespace$375.word0_gt.b_flag  = cr15_namespace[31];
-  assign \cr15_namespace$375.word1_location  = cr15_namespace[63:32];
-  assign \cr15_namespace$375.word2_w2  = cr15_namespace[95:64];
-  assign \cr15_namespace$375.word3_w3  = cr15_namespace[127:96];
+  assign \cr12_thread$233.word0_gt  = cr12_thread[31:0];
+  assign \cr12_thread$233.word0_gt.slot_id  = cr12_thread[15:0];
+  assign \cr12_thread$233.word0_gt.gt_seq  = cr12_thread[22:16];
+  assign \cr12_thread$233.word0_gt.gt_type  = cr12_thread[24:23];
+  assign \cr12_thread$233.word0_gt.perms  = cr12_thread[30:25];
+  assign \cr12_thread$233.word0_gt.b_flag  = cr12_thread[31];
+  assign \cr12_thread$233.word1_location  = cr12_thread[63:32];
+  assign \cr12_thread$233.word2_w2  = cr12_thread[95:64];
+  assign \cr12_thread$233.word3_w3  = cr12_thread[127:96];
+  assign \cr_rd_data$243.word0_gt  = cr_rd_data[31:0];
+  assign \cr_rd_data$243.word0_gt.slot_id  = cr_rd_data[15:0];
+  assign \cr_rd_data$243.word0_gt.gt_seq  = cr_rd_data[22:16];
+  assign \cr_rd_data$243.word0_gt.gt_type  = cr_rd_data[24:23];
+  assign \cr_rd_data$243.word0_gt.perms  = cr_rd_data[30:25];
+  assign \cr_rd_data$243.word0_gt.b_flag  = cr_rd_data[31];
+  assign \cr_rd_data$243.word1_location  = cr_rd_data[63:32];
+  assign \cr_rd_data$243.word2_w2  = cr_rd_data[95:64];
+  assign \cr_rd_data$243.word3_w3  = cr_rd_data[127:96];
+  assign \cr5_heap$248.word0_gt  = cr5_heap[31:0];
+  assign \cr5_heap$248.word0_gt.slot_id  = cr5_heap[15:0];
+  assign \cr5_heap$248.word0_gt.gt_seq  = cr5_heap[22:16];
+  assign \cr5_heap$248.word0_gt.gt_type  = cr5_heap[24:23];
+  assign \cr5_heap$248.word0_gt.perms  = cr5_heap[30:25];
+  assign \cr5_heap$248.word0_gt.b_flag  = cr5_heap[31];
+  assign \cr5_heap$248.word1_location  = cr5_heap[63:32];
+  assign \cr5_heap$248.word2_w2  = cr5_heap[95:64];
+  assign \cr5_heap$248.word3_w3  = cr5_heap[127:96];
+  assign \cr12_thread$249.word0_gt  = cr12_thread[31:0];
+  assign \cr12_thread$249.word0_gt.slot_id  = cr12_thread[15:0];
+  assign \cr12_thread$249.word0_gt.gt_seq  = cr12_thread[22:16];
+  assign \cr12_thread$249.word0_gt.gt_type  = cr12_thread[24:23];
+  assign \cr12_thread$249.word0_gt.perms  = cr12_thread[30:25];
+  assign \cr12_thread$249.word0_gt.b_flag  = cr12_thread[31];
+  assign \cr12_thread$249.word1_location  = cr12_thread[63:32];
+  assign \cr12_thread$249.word2_w2  = cr12_thread[95:64];
+  assign \cr12_thread$249.word3_w3  = cr12_thread[127:96];
+  assign \cr15_namespace$255.word0_gt  = cr15_namespace[31:0];
+  assign \cr15_namespace$255.word0_gt.slot_id  = cr15_namespace[15:0];
+  assign \cr15_namespace$255.word0_gt.gt_seq  = cr15_namespace[22:16];
+  assign \cr15_namespace$255.word0_gt.gt_type  = cr15_namespace[24:23];
+  assign \cr15_namespace$255.word0_gt.perms  = cr15_namespace[30:25];
+  assign \cr15_namespace$255.word0_gt.b_flag  = cr15_namespace[31];
+  assign \cr15_namespace$255.word1_location  = cr15_namespace[63:32];
+  assign \cr15_namespace$255.word2_w2  = cr15_namespace[95:64];
+  assign \cr15_namespace$255.word3_w3  = cr15_namespace[127:96];
+  assign \cr_rd_data$263.word0_gt  = cr_rd_data[31:0];
+  assign \cr_rd_data$263.word0_gt.slot_id  = cr_rd_data[15:0];
+  assign \cr_rd_data$263.word0_gt.gt_seq  = cr_rd_data[22:16];
+  assign \cr_rd_data$263.word0_gt.gt_type  = cr_rd_data[24:23];
+  assign \cr_rd_data$263.word0_gt.perms  = cr_rd_data[30:25];
+  assign \cr_rd_data$263.word0_gt.b_flag  = cr_rd_data[31];
+  assign \cr_rd_data$263.word1_location  = cr_rd_data[63:32];
+  assign \cr_rd_data$263.word2_w2  = cr_rd_data[95:64];
+  assign \cr_rd_data$263.word3_w3  = cr_rd_data[127:96];
+  assign \cr_rd_data$269.word0_gt  = cr_rd_data[31:0];
+  assign \cr_rd_data$269.word0_gt.slot_id  = cr_rd_data[15:0];
+  assign \cr_rd_data$269.word0_gt.gt_seq  = cr_rd_data[22:16];
+  assign \cr_rd_data$269.word0_gt.gt_type  = cr_rd_data[24:23];
+  assign \cr_rd_data$269.word0_gt.perms  = cr_rd_data[30:25];
+  assign \cr_rd_data$269.word0_gt.b_flag  = cr_rd_data[31];
+  assign \cr_rd_data$269.word1_location  = cr_rd_data[63:32];
+  assign \cr_rd_data$269.word2_w2  = cr_rd_data[95:64];
+  assign \cr_rd_data$269.word3_w3  = cr_rd_data[127:96];
+  assign \cr15_namespace$270.word0_gt  = cr15_namespace[31:0];
+  assign \cr15_namespace$270.word0_gt.slot_id  = cr15_namespace[15:0];
+  assign \cr15_namespace$270.word0_gt.gt_seq  = cr15_namespace[22:16];
+  assign \cr15_namespace$270.word0_gt.gt_type  = cr15_namespace[24:23];
+  assign \cr15_namespace$270.word0_gt.perms  = cr15_namespace[30:25];
+  assign \cr15_namespace$270.word0_gt.b_flag  = cr15_namespace[31];
+  assign \cr15_namespace$270.word1_location  = cr15_namespace[63:32];
+  assign \cr15_namespace$270.word2_w2  = cr15_namespace[95:64];
+  assign \cr15_namespace$270.word3_w3  = cr15_namespace[127:96];
+  assign \cr_rd_data$281.word0_gt  = cr_rd_data[31:0];
+  assign \cr_rd_data$281.word0_gt.slot_id  = cr_rd_data[15:0];
+  assign \cr_rd_data$281.word0_gt.gt_seq  = cr_rd_data[22:16];
+  assign \cr_rd_data$281.word0_gt.gt_type  = cr_rd_data[24:23];
+  assign \cr_rd_data$281.word0_gt.perms  = cr_rd_data[30:25];
+  assign \cr_rd_data$281.word0_gt.b_flag  = cr_rd_data[31];
+  assign \cr_rd_data$281.word1_location  = cr_rd_data[63:32];
+  assign \cr_rd_data$281.word2_w2  = cr_rd_data[95:64];
+  assign \cr_rd_data$281.word3_w3  = cr_rd_data[127:96];
+  assign \cr_rd_data$289.word0_gt  = cr_rd_data[31:0];
+  assign \cr_rd_data$289.word0_gt.slot_id  = cr_rd_data[15:0];
+  assign \cr_rd_data$289.word0_gt.gt_seq  = cr_rd_data[22:16];
+  assign \cr_rd_data$289.word0_gt.gt_type  = cr_rd_data[24:23];
+  assign \cr_rd_data$289.word0_gt.perms  = cr_rd_data[30:25];
+  assign \cr_rd_data$289.word0_gt.b_flag  = cr_rd_data[31];
+  assign \cr_rd_data$289.word1_location  = cr_rd_data[63:32];
+  assign \cr_rd_data$289.word2_w2  = cr_rd_data[95:64];
+  assign \cr_rd_data$289.word3_w3  = cr_rd_data[127:96];
+  assign \saved_cr5_gt$350.slot_id  = cr5_heap[15:0];
+  assign \saved_cr5_gt$350.gt_seq  = cr5_heap[22:16];
+  assign \saved_cr5_gt$350.gt_type  = cr5_heap[24:23];
+  assign \saved_cr5_gt$350.perms  = cr5_heap[30:25];
+  assign \saved_cr5_gt$350.b_flag  = cr5_heap[31];
+  assign \cr_rd_data$375.word0_gt  = cr_rd_data[31:0];
+  assign \cr_rd_data$375.word0_gt.slot_id  = cr_rd_data[15:0];
+  assign \cr_rd_data$375.word0_gt.gt_seq  = cr_rd_data[22:16];
+  assign \cr_rd_data$375.word0_gt.gt_type  = cr_rd_data[24:23];
+  assign \cr_rd_data$375.word0_gt.perms  = cr_rd_data[30:25];
+  assign \cr_rd_data$375.word0_gt.b_flag  = cr_rd_data[31];
+  assign \cr_rd_data$375.word1_location  = cr_rd_data[63:32];
+  assign \cr_rd_data$375.word2_w2  = cr_rd_data[95:64];
+  assign \cr_rd_data$375.word3_w3  = cr_rd_data[127:96];
+  assign \cr15_namespace$376.word0_gt  = cr15_namespace[31:0];
+  assign \cr15_namespace$376.word0_gt.slot_id  = cr15_namespace[15:0];
+  assign \cr15_namespace$376.word0_gt.gt_seq  = cr15_namespace[22:16];
+  assign \cr15_namespace$376.word0_gt.gt_type  = cr15_namespace[24:23];
+  assign \cr15_namespace$376.word0_gt.perms  = cr15_namespace[30:25];
+  assign \cr15_namespace$376.word0_gt.b_flag  = cr15_namespace[31];
+  assign \cr15_namespace$376.word1_location  = cr15_namespace[63:32];
+  assign \cr15_namespace$376.word2_w2  = cr15_namespace[95:64];
+  assign \cr15_namespace$376.word3_w3  = cr15_namespace[127:96];
   assign mcmp_flags_sig[3] = 1'h0;
   assign mcmp_flags_sig[2] = mcmp_result[32];
   assign mcmp_flags_sig[1] = \$105 ;
@@ -9196,10 +9226,10 @@ module \top.core (clk, imem_valid, boot_complete, perm_gt_sig, boot_start, \faul
   assign \$175  = \$173 ;
 endmodule
 
-(* src = "/home/runner/workspace/hardware/call.py:93" *)
+(* src = "/home/runner/workspace/hardware/call.py:96" *)
 (* generator = "Amaranth" *)
-module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mload_index, code_lo_out, code_hi_out, call_busy, call_complete, mload_fault, mload_done, caller_pc, cr5_heap, thread_base, cr14_code, cr15_namespace, nia_computed, cr_null_mask, cr_b_clear_mask, cr_rd_addr, cr_wr_addr
-, cr_wr_data, cr_wr_en, mem_rd_addr, mem_rd_en, mem_wr_addr, mem_wr_data, mem_wr_en, call_fault, fault_type, mload_start, mload_fault_type, \port$3383$0 , mem_rd_data);
+module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mload_index, code_lo_out, code_hi_out, call_busy, call_complete, mload_fault, mload_done, caller_pc, cr5_heap, cr12_thread, cr14_code, cr15_namespace, nia_computed, cr_null_mask, cr_b_clear_mask, cr_rd_addr, cr_wr_addr
+, cr_wr_data, cr_wr_en, mem_rd_addr, mem_rd_en, mem_wr_addr, mem_wr_data, mem_wr_en, call_fault, fault_type, mload_start, mload_fault_type, \port$3403$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$18  = 0;
   wire [4:0] \$1 ;
   wire [32:0] \$10 ;
@@ -9249,31 +9279,33 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   wire \$50 ;
   wire \$51 ;
   wire \$52 ;
-  wire [4:0] \$53 ;
-  wire [45:0] \$54 ;
-  wire \$55 ;
+  wire \$53 ;
+  wire [4:0] \$54 ;
+  wire [45:0] \$55 ;
   wire \$56 ;
   wire \$57 ;
-  reg \$58 ;
-  reg \$59 ;
+  wire \$58 ;
+  wire \$59 ;
   wire [16:0] \$6 ;
-  reg [4:0] \$60 ;
+  reg \$60 ;
   reg \$61 ;
-  reg \$62 ;
-  reg [15:0] \$63 ;
-  reg [4:0] \$64 ;
-  reg [127:0] \$65 ;
-  reg \$66 ;
-  reg [31:0] \$67 ;
-  reg [127:0] \$68 ;
+  reg [4:0] \$62 ;
+  reg \$63 ;
+  reg \$64 ;
+  reg [15:0] \$65 ;
+  reg [4:0] \$66 ;
+  reg [127:0] \$67 ;
+  reg \$68 ;
   reg [31:0] \$69 ;
   wire [17:0] \$7 ;
-  reg [12:0] \$70 ;
-  reg [7:0] \$71 ;
-  reg [3:0] \$72 ;
-  reg [14:0] \$73 ;
-  reg [127:0] \$74 ;
-  reg [31:0] \$75 ;
+  reg [127:0] \$70 ;
+  reg [31:0] \$71 ;
+  reg [12:0] \$72 ;
+  reg [7:0] \$73 ;
+  reg [3:0] \$74 ;
+  reg [14:0] \$75 ;
+  reg [127:0] \$76 ;
+  reg [31:0] \$77 ;
   wire [15:0] \$8 ;
   wire [19:0] \$9 ;
   (* src = "/home/runner/workspace/hardware/call.py:14" *)
@@ -9282,7 +9314,7 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   (* src = "/home/runner/workspace/hardware/call.py:42" *)
   output call_complete;
   wire call_complete;
-  (* src = "/home/runner/workspace/hardware/call.py:102" *)
+  (* src = "/home/runner/workspace/hardware/call.py:105" *)
   output call_fault;
   reg call_fault = 1'h0;
   (* src = "/home/runner/workspace/hardware/call.py:10" *)
@@ -9290,23 +9322,46 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   wire call_start;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
   reg [4:0] call_state = 5'h00;
-  (* src = "/home/runner/workspace/hardware/call.py:137" *)
+  (* src = "/home/runner/workspace/hardware/call.py:140" *)
   reg [31:0] callee_egt_latched = 32'd0;
-  (* src = "/home/runner/workspace/hardware/call.py:202" *)
+  (* src = "/home/runner/workspace/hardware/call.py:217" *)
   wire [31:0] callee_ns_entry_addr;
   (* src = "/home/runner/workspace/hardware/call.py:68" *)
   input [14:0] caller_pc;
   wire [14:0] caller_pc;
-  (* src = "/home/runner/workspace/hardware/call.py:211" *)
+  (* src = "/home/runner/workspace/hardware/call.py:226" *)
   reg [7:0] cc_reg = 8'h00;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
   input clk;
-  (* src = "/home/runner/workspace/hardware/call.py:90" *)
+  (* src = "/home/runner/workspace/hardware/call.py:93" *)
   output [31:0] code_hi_out;
   wire [31:0] code_hi_out;
-  (* src = "/home/runner/workspace/hardware/call.py:89" *)
+  (* src = "/home/runner/workspace/hardware/call.py:92" *)
   output [31:0] code_lo_out;
   wire [31:0] code_lo_out;
+  (* src = "/home/runner/workspace/hardware/call.py:163" *)
+  wire cr12_null;
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
+  input [127:0] cr12_thread;
+  wire [127:0] cr12_thread;
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
+  wire [31:0] \cr12_thread.word0_gt ;
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
+  wire \cr12_thread.word0_gt.b_flag ;
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
+  wire [6:0] \cr12_thread.word0_gt.gt_seq ;
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
+  wire [1:0] \cr12_thread.word0_gt.gt_type ;
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
+  wire [5:0] \cr12_thread.word0_gt.perms ;
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
+  wire [15:0] \cr12_thread.word0_gt.slot_id ;
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
+  wire [31:0] \cr12_thread.word1_location ;
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
+  wire [31:0] \cr12_thread.word2_w2 ;
+  (* src = "/home/runner/workspace/hardware/call.py:74" *)
+  wire [31:0] \cr12_thread.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/call.py:60" *)
   input [127:0] cr14_code;
   wire [127:0] cr14_code;
@@ -9328,65 +9383,65 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   wire [31:0] \cr14_code.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/call.py:60" *)
   wire [31:0] \cr14_code.word3_w3 ;
-  (* src = "/home/runner/workspace/hardware/call.py:152" *)
+  (* src = "/home/runner/workspace/hardware/call.py:167" *)
   reg [127:0] cr14_latched = 128'h00000000000000000000000000000000;
-  (* src = "/home/runner/workspace/hardware/call.py:152" *)
+  (* src = "/home/runner/workspace/hardware/call.py:167" *)
   wire [31:0] \cr14_latched.word0_gt ;
-  (* src = "/home/runner/workspace/hardware/call.py:152" *)
+  (* src = "/home/runner/workspace/hardware/call.py:167" *)
   wire \cr14_latched.word0_gt.b_flag ;
-  (* src = "/home/runner/workspace/hardware/call.py:152" *)
+  (* src = "/home/runner/workspace/hardware/call.py:167" *)
   wire [6:0] \cr14_latched.word0_gt.gt_seq ;
-  (* src = "/home/runner/workspace/hardware/call.py:152" *)
+  (* src = "/home/runner/workspace/hardware/call.py:167" *)
   wire [1:0] \cr14_latched.word0_gt.gt_type ;
-  (* src = "/home/runner/workspace/hardware/call.py:152" *)
+  (* src = "/home/runner/workspace/hardware/call.py:167" *)
   wire [5:0] \cr14_latched.word0_gt.perms ;
-  (* src = "/home/runner/workspace/hardware/call.py:152" *)
+  (* src = "/home/runner/workspace/hardware/call.py:167" *)
   wire [15:0] \cr14_latched.word0_gt.slot_id ;
-  (* src = "/home/runner/workspace/hardware/call.py:152" *)
+  (* src = "/home/runner/workspace/hardware/call.py:167" *)
   wire [31:0] \cr14_latched.word1_location ;
-  (* src = "/home/runner/workspace/hardware/call.py:152" *)
+  (* src = "/home/runner/workspace/hardware/call.py:167" *)
   wire [31:0] \cr14_latched.word2_w2 ;
-  (* src = "/home/runner/workspace/hardware/call.py:152" *)
+  (* src = "/home/runner/workspace/hardware/call.py:167" *)
   wire [31:0] \cr14_latched.word3_w3 ;
-  (* src = "/home/runner/workspace/hardware/call.py:243" *)
+  (* src = "/home/runner/workspace/hardware/call.py:258" *)
   wire [127:0] cr14_with_limit;
-  (* src = "/home/runner/workspace/hardware/call.py:243" *)
+  (* src = "/home/runner/workspace/hardware/call.py:258" *)
   wire [31:0] \cr14_with_limit.word0_gt ;
-  (* src = "/home/runner/workspace/hardware/call.py:243" *)
+  (* src = "/home/runner/workspace/hardware/call.py:258" *)
   wire \cr14_with_limit.word0_gt.b_flag ;
-  (* src = "/home/runner/workspace/hardware/call.py:243" *)
+  (* src = "/home/runner/workspace/hardware/call.py:258" *)
   wire [6:0] \cr14_with_limit.word0_gt.gt_seq ;
-  (* src = "/home/runner/workspace/hardware/call.py:243" *)
+  (* src = "/home/runner/workspace/hardware/call.py:258" *)
   wire [1:0] \cr14_with_limit.word0_gt.gt_type ;
-  (* src = "/home/runner/workspace/hardware/call.py:243" *)
+  (* src = "/home/runner/workspace/hardware/call.py:258" *)
   wire [5:0] \cr14_with_limit.word0_gt.perms ;
-  (* src = "/home/runner/workspace/hardware/call.py:243" *)
+  (* src = "/home/runner/workspace/hardware/call.py:258" *)
   wire [15:0] \cr14_with_limit.word0_gt.slot_id ;
-  (* src = "/home/runner/workspace/hardware/call.py:243" *)
+  (* src = "/home/runner/workspace/hardware/call.py:258" *)
   wire [31:0] \cr14_with_limit.word1_location ;
-  (* src = "/home/runner/workspace/hardware/call.py:243" *)
+  (* src = "/home/runner/workspace/hardware/call.py:258" *)
   wire [31:0] \cr14_with_limit.word2_w2 ;
-  (* src = "/home/runner/workspace/hardware/call.py:243" *)
+  (* src = "/home/runner/workspace/hardware/call.py:258" *)
   wire [31:0] \cr14_with_limit.word3_w3 ;
-  (* src = "/home/runner/workspace/hardware/call.py:217" *)
+  (* src = "/home/runner/workspace/hardware/call.py:232" *)
   wire [127:0] cr14_with_m;
-  (* src = "/home/runner/workspace/hardware/call.py:217" *)
+  (* src = "/home/runner/workspace/hardware/call.py:232" *)
   wire [31:0] \cr14_with_m.word0_gt ;
-  (* src = "/home/runner/workspace/hardware/call.py:217" *)
+  (* src = "/home/runner/workspace/hardware/call.py:232" *)
   wire \cr14_with_m.word0_gt.b_flag ;
-  (* src = "/home/runner/workspace/hardware/call.py:217" *)
+  (* src = "/home/runner/workspace/hardware/call.py:232" *)
   wire [6:0] \cr14_with_m.word0_gt.gt_seq ;
-  (* src = "/home/runner/workspace/hardware/call.py:217" *)
+  (* src = "/home/runner/workspace/hardware/call.py:232" *)
   wire [1:0] \cr14_with_m.word0_gt.gt_type ;
-  (* src = "/home/runner/workspace/hardware/call.py:217" *)
+  (* src = "/home/runner/workspace/hardware/call.py:232" *)
   wire [5:0] \cr14_with_m.word0_gt.perms ;
-  (* src = "/home/runner/workspace/hardware/call.py:217" *)
+  (* src = "/home/runner/workspace/hardware/call.py:232" *)
   wire [15:0] \cr14_with_m.word0_gt.slot_id ;
-  (* src = "/home/runner/workspace/hardware/call.py:217" *)
+  (* src = "/home/runner/workspace/hardware/call.py:232" *)
   wire [31:0] \cr14_with_m.word1_location ;
-  (* src = "/home/runner/workspace/hardware/call.py:217" *)
+  (* src = "/home/runner/workspace/hardware/call.py:232" *)
   wire [31:0] \cr14_with_m.word2_w2 ;
-  (* src = "/home/runner/workspace/hardware/call.py:217" *)
+  (* src = "/home/runner/workspace/hardware/call.py:232" *)
   wire [31:0] \cr14_with_m.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/call.py:57" *)
   input [127:0] cr15_namespace;
@@ -9409,6 +9464,8 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   wire [31:0] \cr15_namespace.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/call.py:57" *)
   wire [31:0] \cr15_namespace.word3_w3 ;
+  (* src = "/home/runner/workspace/hardware/call.py:155" *)
+  wire cr5_has_r;
   (* src = "/home/runner/workspace/hardware/call.py:64" *)
   input [127:0] cr5_heap;
   wire [127:0] cr5_heap;
@@ -9430,53 +9487,55 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   wire [31:0] \cr5_heap.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/call.py:64" *)
   wire [31:0] \cr5_heap.word3_w3 ;
-  (* src = "/home/runner/workspace/hardware/call.py:272" *)
+  (* src = "/home/runner/workspace/hardware/call.py:154" *)
+  wire cr5_null;
+  (* src = "/home/runner/workspace/hardware/call.py:287" *)
   wire [127:0] cr6_adjusted;
-  (* src = "/home/runner/workspace/hardware/call.py:272" *)
+  (* src = "/home/runner/workspace/hardware/call.py:287" *)
   wire [31:0] \cr6_adjusted.word0_gt ;
-  (* src = "/home/runner/workspace/hardware/call.py:272" *)
+  (* src = "/home/runner/workspace/hardware/call.py:287" *)
   wire \cr6_adjusted.word0_gt.b_flag ;
-  (* src = "/home/runner/workspace/hardware/call.py:272" *)
+  (* src = "/home/runner/workspace/hardware/call.py:287" *)
   wire [6:0] \cr6_adjusted.word0_gt.gt_seq ;
-  (* src = "/home/runner/workspace/hardware/call.py:272" *)
+  (* src = "/home/runner/workspace/hardware/call.py:287" *)
   wire [1:0] \cr6_adjusted.word0_gt.gt_type ;
-  (* src = "/home/runner/workspace/hardware/call.py:272" *)
+  (* src = "/home/runner/workspace/hardware/call.py:287" *)
   wire [5:0] \cr6_adjusted.word0_gt.perms ;
-  (* src = "/home/runner/workspace/hardware/call.py:272" *)
+  (* src = "/home/runner/workspace/hardware/call.py:287" *)
   wire [15:0] \cr6_adjusted.word0_gt.slot_id ;
-  (* src = "/home/runner/workspace/hardware/call.py:272" *)
+  (* src = "/home/runner/workspace/hardware/call.py:287" *)
   wire [31:0] \cr6_adjusted.word1_location ;
-  (* src = "/home/runner/workspace/hardware/call.py:272" *)
+  (* src = "/home/runner/workspace/hardware/call.py:287" *)
   wire [31:0] \cr6_adjusted.word2_w2 ;
-  (* src = "/home/runner/workspace/hardware/call.py:272" *)
+  (* src = "/home/runner/workspace/hardware/call.py:287" *)
   wire [31:0] \cr6_adjusted.word3_w3 ;
-  (* src = "/home/runner/workspace/hardware/call.py:262" *)
+  (* src = "/home/runner/workspace/hardware/call.py:277" *)
   reg [127:0] cr6_latched = 128'h00000000000000000000000000000000;
-  (* src = "/home/runner/workspace/hardware/call.py:262" *)
+  (* src = "/home/runner/workspace/hardware/call.py:277" *)
   wire [31:0] \cr6_latched.word0_gt ;
-  (* src = "/home/runner/workspace/hardware/call.py:262" *)
+  (* src = "/home/runner/workspace/hardware/call.py:277" *)
   wire \cr6_latched.word0_gt.b_flag ;
-  (* src = "/home/runner/workspace/hardware/call.py:262" *)
+  (* src = "/home/runner/workspace/hardware/call.py:277" *)
   wire [6:0] \cr6_latched.word0_gt.gt_seq ;
-  (* src = "/home/runner/workspace/hardware/call.py:262" *)
+  (* src = "/home/runner/workspace/hardware/call.py:277" *)
   wire [1:0] \cr6_latched.word0_gt.gt_type ;
-  (* src = "/home/runner/workspace/hardware/call.py:262" *)
+  (* src = "/home/runner/workspace/hardware/call.py:277" *)
   wire [5:0] \cr6_latched.word0_gt.perms ;
-  (* src = "/home/runner/workspace/hardware/call.py:262" *)
+  (* src = "/home/runner/workspace/hardware/call.py:277" *)
   wire [15:0] \cr6_latched.word0_gt.slot_id ;
-  (* src = "/home/runner/workspace/hardware/call.py:262" *)
+  (* src = "/home/runner/workspace/hardware/call.py:277" *)
   wire [31:0] \cr6_latched.word1_location ;
-  (* src = "/home/runner/workspace/hardware/call.py:262" *)
+  (* src = "/home/runner/workspace/hardware/call.py:277" *)
   wire [31:0] \cr6_latched.word2_w2 ;
-  (* src = "/home/runner/workspace/hardware/call.py:262" *)
+  (* src = "/home/runner/workspace/hardware/call.py:277" *)
   wire [31:0] \cr6_latched.word3_w3 ;
-  (* src = "/home/runner/workspace/hardware/call.py:82" *)
+  (* src = "/home/runner/workspace/hardware/call.py:85" *)
   output [11:0] cr_b_clear_mask;
   reg [11:0] cr_b_clear_mask;
-  (* src = "/home/runner/workspace/hardware/call.py:83" *)
+  (* src = "/home/runner/workspace/hardware/call.py:86" *)
   output [11:0] cr_null_mask;
   reg [11:0] cr_null_mask;
-  (* src = "/home/runner/workspace/hardware/call.py:108" *)
+  (* src = "/home/runner/workspace/hardware/call.py:111" *)
   output [3:0] cr_rd_addr;
   reg [3:0] cr_rd_addr;
   (* src = "/home/runner/workspace/hardware/call.py:25" *)
@@ -9502,10 +9561,10 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   wire [31:0] \cr_rd_data.word3_w3 ;
   (* src = "/home/runner/workspace/hardware/call.py:11" *)
   wire [3:0] cr_src;
-  (* src = "/home/runner/workspace/hardware/call.py:110" *)
+  (* src = "/home/runner/workspace/hardware/call.py:113" *)
   output [3:0] cr_wr_addr;
   reg [3:0] cr_wr_addr;
-  (* src = "/home/runner/workspace/hardware/call.py:111" *)
+  (* src = "/home/runner/workspace/hardware/call.py:114" *)
   output [127:0] cr_wr_data;
   reg [127:0] cr_wr_data;
   (* src = "/home/runner/workspace/hardware/call.py:27" *)
@@ -9526,63 +9585,63 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   wire [31:0] \cr_wr_data.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/call.py:27" *)
   wire [31:0] \cr_wr_data.word3_w3 ;
-  (* src = "/home/runner/workspace/hardware/call.py:109" *)
+  (* src = "/home/runner/workspace/hardware/call.py:112" *)
   output cr_wr_en;
   reg cr_wr_en;
-  (* src = "/home/runner/workspace/hardware/call.py:210" *)
+  (* src = "/home/runner/workspace/hardware/call.py:225" *)
   reg [12:0] cw_reg = 13'h0000;
   (* init = 1'h0 *)
-  (* src = "/home/runner/workspace/hardware/call.py:102" *)
+  (* src = "/home/runner/workspace/hardware/call.py:105" *)
   wire fault_latched;
-  (* src = "/home/runner/workspace/hardware/call.py:103" *)
+  (* src = "/home/runner/workspace/hardware/call.py:106" *)
   output [4:0] fault_type;
   reg [4:0] fault_type = 5'h00;
   (* init = 5'h00 *)
-  (* src = "/home/runner/workspace/hardware/call.py:103" *)
+  (* src = "/home/runner/workspace/hardware/call.py:106" *)
   wire [4:0] fault_type_latched;
-  (* src = "/home/runner/workspace/hardware/call.py:144" *)
+  (* src = "/home/runner/workspace/hardware/call.py:147" *)
   wire [31:0] frame_word;
   (* src = "/home/runner/workspace/hardware/call.py:12" *)
   wire [15:0] index;
-  (* src = "/home/runner/workspace/hardware/call.py:108" *)
+  (* src = "/home/runner/workspace/hardware/call.py:111" *)
   wire [3:0] local_cr_rd_addr;
-  (* src = "/home/runner/workspace/hardware/call.py:110" *)
-  wire [3:0] local_cr_wr_addr;
-  (* src = "/home/runner/workspace/hardware/call.py:111" *)
-  wire [127:0] local_cr_wr_data;
-  (* src = "/home/runner/workspace/hardware/call.py:111" *)
-  wire [31:0] \local_cr_wr_data.word0_gt ;
-  (* src = "/home/runner/workspace/hardware/call.py:111" *)
-  wire \local_cr_wr_data.word0_gt.b_flag ;
-  (* src = "/home/runner/workspace/hardware/call.py:111" *)
-  wire [6:0] \local_cr_wr_data.word0_gt.gt_seq ;
-  (* src = "/home/runner/workspace/hardware/call.py:111" *)
-  wire [1:0] \local_cr_wr_data.word0_gt.gt_type ;
-  (* src = "/home/runner/workspace/hardware/call.py:111" *)
-  wire [5:0] \local_cr_wr_data.word0_gt.perms ;
-  (* src = "/home/runner/workspace/hardware/call.py:111" *)
-  wire [15:0] \local_cr_wr_data.word0_gt.slot_id ;
-  (* src = "/home/runner/workspace/hardware/call.py:111" *)
-  wire [31:0] \local_cr_wr_data.word1_location ;
-  (* src = "/home/runner/workspace/hardware/call.py:111" *)
-  wire [31:0] \local_cr_wr_data.word2_w2 ;
-  (* src = "/home/runner/workspace/hardware/call.py:111" *)
-  wire [31:0] \local_cr_wr_data.word3_w3 ;
-  (* src = "/home/runner/workspace/hardware/call.py:109" *)
-  wire local_cr_wr_en;
   (* src = "/home/runner/workspace/hardware/call.py:113" *)
-  wire [31:0] local_mem_wr_addr;
+  wire [3:0] local_cr_wr_addr;
   (* src = "/home/runner/workspace/hardware/call.py:114" *)
+  wire [127:0] local_cr_wr_data;
+  (* src = "/home/runner/workspace/hardware/call.py:114" *)
+  wire [31:0] \local_cr_wr_data.word0_gt ;
+  (* src = "/home/runner/workspace/hardware/call.py:114" *)
+  wire \local_cr_wr_data.word0_gt.b_flag ;
+  (* src = "/home/runner/workspace/hardware/call.py:114" *)
+  wire [6:0] \local_cr_wr_data.word0_gt.gt_seq ;
+  (* src = "/home/runner/workspace/hardware/call.py:114" *)
+  wire [1:0] \local_cr_wr_data.word0_gt.gt_type ;
+  (* src = "/home/runner/workspace/hardware/call.py:114" *)
+  wire [5:0] \local_cr_wr_data.word0_gt.perms ;
+  (* src = "/home/runner/workspace/hardware/call.py:114" *)
+  wire [15:0] \local_cr_wr_data.word0_gt.slot_id ;
+  (* src = "/home/runner/workspace/hardware/call.py:114" *)
+  wire [31:0] \local_cr_wr_data.word1_location ;
+  (* src = "/home/runner/workspace/hardware/call.py:114" *)
+  wire [31:0] \local_cr_wr_data.word2_w2 ;
+  (* src = "/home/runner/workspace/hardware/call.py:114" *)
+  wire [31:0] \local_cr_wr_data.word3_w3 ;
+  (* src = "/home/runner/workspace/hardware/call.py:112" *)
+  wire local_cr_wr_en;
+  (* src = "/home/runner/workspace/hardware/call.py:116" *)
+  wire [31:0] local_mem_wr_addr;
+  (* src = "/home/runner/workspace/hardware/call.py:117" *)
   wire [31:0] local_mem_wr_data;
-  (* src = "/home/runner/workspace/hardware/call.py:115" *)
+  (* src = "/home/runner/workspace/hardware/call.py:118" *)
   wire local_mem_wr_en;
-  (* src = "/home/runner/workspace/hardware/call.py:213" *)
+  (* src = "/home/runner/workspace/hardware/call.py:228" *)
   reg [14:0] lumpSize_reg = 15'h0000;
-  (* src = "/home/runner/workspace/hardware/call.py:207" *)
+  (* src = "/home/runner/workspace/hardware/call.py:222" *)
   reg [31:0] lump_reg = 32'd0;
   (* src = "/home/runner/workspace/hardware/call.py:13" *)
   wire [15:0] mask;
-  (* src = "/home/runner/workspace/hardware/call.py:101" *)
+  (* src = "/home/runner/workspace/hardware/call.py:104" *)
   reg [15:0] mask_latched = 16'h0000;
   (* src = "/home/runner/workspace/hardware/call.py:46" *)
   output [31:0] mem_rd_addr;
@@ -9595,13 +9654,13 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   reg mem_rd_en;
   (* src = "/home/runner/workspace/hardware/call.py:49" *)
   wire mem_rd_valid;
-  (* src = "/home/runner/workspace/hardware/call.py:113" *)
+  (* src = "/home/runner/workspace/hardware/call.py:116" *)
   output [31:0] mem_wr_addr;
   reg [31:0] mem_wr_addr;
-  (* src = "/home/runner/workspace/hardware/call.py:114" *)
+  (* src = "/home/runner/workspace/hardware/call.py:117" *)
   output [31:0] mem_wr_data;
   reg [31:0] mem_wr_data;
-  (* src = "/home/runner/workspace/hardware/call.py:115" *)
+  (* src = "/home/runner/workspace/hardware/call.py:118" *)
   output mem_wr_en;
   reg mem_wr_en;
   (* src = "/home/runner/workspace/hardware/call.py:32" *)
@@ -9628,16 +9687,16 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   output [15:0] mload_index;
   wire [15:0] mload_index;
   (* src = "/home/runner/workspace/hardware/call.py:33" *)
-  wire [15:0] \mload_index$18 ;
+  wire [15:0] \mload_index$23 ;
   (* src = "/home/runner/workspace/hardware/call.py:36" *)
   wire mload_m_elevated;
   (* src = "/home/runner/workspace/hardware/call.py:31" *)
   output [3:0] mload_src;
   wire [3:0] mload_src;
-  (* src = "/home/runner/workspace/hardware/call.py:104" *)
+  (* src = "/home/runner/workspace/hardware/call.py:107" *)
   output mload_start;
   reg mload_start = 1'h0;
-  (* src = "/home/runner/workspace/hardware/call.py:212" *)
+  (* src = "/home/runner/workspace/hardware/call.py:227" *)
   reg [3:0] n_minus_6_reg = 4'h0;
   (* src = "/home/runner/workspace/hardware/call.py:43" *)
   output [31:0] nia_computed;
@@ -9646,12 +9705,12 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   wire nia_set;
   (* src = "/home/runner/workspace/hardware/call.py:43" *)
   wire [31:0] nia_value;
-  (* src = "/home/runner/workspace/hardware/call.py:239" *)
+  (* src = "/home/runner/workspace/hardware/call.py:254" *)
   wire [31:0] ns_base_from_cr14;
-  (* src = "/home/runner/workspace/hardware/call.py:99" *)
+  (* src = "/home/runner/workspace/hardware/call.py:102" *)
   reg phase = 1'h0;
-  input [18:0] \port$3383$0 ;
-  wire [18:0] \port$3383$0 ;
+  input [18:0] \port$3403$0 ;
+  wire [18:0] \port$3403$0 ;
   (* src = "/home/runner/workspace/hardware/call.py:22" *)
   wire [31:0] saved_cr5_gt;
   (* src = "/home/runner/workspace/hardware/call.py:22" *)
@@ -9664,56 +9723,59 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   wire [5:0] \saved_cr5_gt.perms ;
   (* src = "/home/runner/workspace/hardware/call.py:22" *)
   wire [15:0] \saved_cr5_gt.slot_id ;
-  (* src = "/home/runner/workspace/hardware/call.py:117" *)
+  (* src = "/home/runner/workspace/hardware/call.py:120" *)
   reg [31:0] sp_latched = 32'd0;
-  (* src = "/home/runner/workspace/hardware/call.py:128" *)
+  (* src = "/home/runner/workspace/hardware/call.py:131" *)
   wire [14:0] sp_max;
-  (* src = "/home/runner/workspace/hardware/call.py:129" *)
+  (* src = "/home/runner/workspace/hardware/call.py:132" *)
   wire [14:0] sp_min;
-  (* src = "/home/runner/workspace/hardware/call.py:156" *)
+  (* src = "/home/runner/workspace/hardware/call.py:171" *)
   wire src_in_range;
-  (* src = "/home/runner/workspace/hardware/call.py:100" *)
+  (* src = "/home/runner/workspace/hardware/call.py:103" *)
   reg [127:0] src_reg_latched = 128'h00000000000000000000000000000000;
-  (* src = "/home/runner/workspace/hardware/call.py:100" *)
+  (* src = "/home/runner/workspace/hardware/call.py:103" *)
   wire [31:0] \src_reg_latched.word0_gt ;
-  (* src = "/home/runner/workspace/hardware/call.py:100" *)
+  (* src = "/home/runner/workspace/hardware/call.py:103" *)
   wire \src_reg_latched.word0_gt.b_flag ;
-  (* src = "/home/runner/workspace/hardware/call.py:100" *)
+  (* src = "/home/runner/workspace/hardware/call.py:103" *)
   wire [6:0] \src_reg_latched.word0_gt.gt_seq ;
-  (* src = "/home/runner/workspace/hardware/call.py:100" *)
+  (* src = "/home/runner/workspace/hardware/call.py:103" *)
   wire [1:0] \src_reg_latched.word0_gt.gt_type ;
-  (* src = "/home/runner/workspace/hardware/call.py:100" *)
+  (* src = "/home/runner/workspace/hardware/call.py:103" *)
   wire [5:0] \src_reg_latched.word0_gt.perms ;
-  (* src = "/home/runner/workspace/hardware/call.py:100" *)
+  (* src = "/home/runner/workspace/hardware/call.py:103" *)
   wire [15:0] \src_reg_latched.word0_gt.slot_id ;
-  (* src = "/home/runner/workspace/hardware/call.py:100" *)
+  (* src = "/home/runner/workspace/hardware/call.py:103" *)
   wire [31:0] \src_reg_latched.word1_location ;
-  (* src = "/home/runner/workspace/hardware/call.py:100" *)
+  (* src = "/home/runner/workspace/hardware/call.py:103" *)
   wire [31:0] \src_reg_latched.word2_w2 ;
-  (* src = "/home/runner/workspace/hardware/call.py:100" *)
+  (* src = "/home/runner/workspace/hardware/call.py:103" *)
   wire [31:0] \src_reg_latched.word3_w3 ;
-  (* src = "/home/runner/workspace/hardware/call.py:105" *)
+  (* src = "/home/runner/workspace/hardware/call.py:108" *)
   reg sub_done_latched = 1'h0;
-  (* src = "/home/runner/workspace/hardware/call.py:106" *)
+  (* src = "/home/runner/workspace/hardware/call.py:109" *)
   reg sub_fault_latched = 1'h0;
   (* init = 1'h0 *)
-  (* src = "/home/runner/workspace/hardware/call.py:104" *)
+  (* src = "/home/runner/workspace/hardware/call.py:107" *)
   wire sub_start_reg;
-  (* src = "/home/runner/workspace/hardware/call.py:123" *)
+  (* src = "/home/runner/workspace/hardware/call.py:126" *)
   wire [14:0] thr_lump_sz;
   (* src = "/home/runner/workspace/hardware/call.py:71" *)
-  input [31:0] thread_base;
   wire [31:0] thread_base;
-  (* src = "/home/runner/workspace/hardware/call.py:77" *)
+  (* src = "/home/runner/workspace/hardware/call.py:80" *)
   wire [31:0] thread_hdr;
-  assign \$22  = \$20  + (* src = "/home/runner/workspace/hardware/call.py:299" *) \$21 ;
-  assign \$23  = ! (* src = "/home/runner/workspace/hardware/call.py:418" *) cc_reg;
-  assign \$24  = ~ (* src = "/home/runner/workspace/hardware/call.py:446" *) mask_latched[11:0];
-  assign \$25  = sp_latched - (* src = "/home/runner/workspace/hardware/call.py:487" *) 1'h1;
-  assign \$27  = $signed({ 1'h0, thread_base }) + (* src = "/home/runner/workspace/hardware/call.py:487" *) $signed(\$26 );
-  assign \$29  = thread_base + (* src = "/home/runner/workspace/hardware/call.py:498" *) \$28 ;
-  assign \$30  = sp_latched - (* src = "/home/runner/workspace/hardware/call.py:508" *) 2'h2;
-  assign call_busy = ~ (* src = "/home/runner/workspace/hardware/call.py:520" *) \$31 ;
+  assign \$17  = $signed({ 1'h0, cr14_latched[63:32] }) + (* src = "/home/runner/workspace/hardware/call.py:299" *) $signed(\$16 );
+  assign \$18  = cc_reg - (* src = "/home/runner/workspace/hardware/call.py:301" *) 1'h1;
+  assign \$19  = cr14_latched[63:32] + (* src = "/home/runner/workspace/hardware/call.py:313" *) 3'h4;
+  assign \$20  = cr14_latched[63:32] + (* src = "/home/runner/workspace/hardware/call.py:314" *) 3'h4;
+  assign \$22  = \$20  + (* src = "/home/runner/workspace/hardware/call.py:314" *) \$21 ;
+  assign \$23  = ! (* src = "/home/runner/workspace/hardware/call.py:433" *) cc_reg;
+  assign \$24  = ~ (* src = "/home/runner/workspace/hardware/call.py:461" *) mask_latched[11:0];
+  assign \$25  = sp_latched - (* src = "/home/runner/workspace/hardware/call.py:515" *) 1'h1;
+  assign \$27  = $signed({ 1'h0, cr12_thread[63:32] }) + (* src = "/home/runner/workspace/hardware/call.py:515" *) $signed(\$26 );
+  assign \$29  = cr12_thread[63:32] + (* src = "/home/runner/workspace/hardware/call.py:526" *) \$28 ;
+  assign \$30  = sp_latched - (* src = "/home/runner/workspace/hardware/call.py:536" *) 2'h2;
+  assign call_busy = ~ (* src = "/home/runner/workspace/hardware/call.py:548" *) \$31 ;
   assign \$31  = ! (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) call_state;
   assign \$32  = call_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 1'h1;
   assign \$33  = call_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 2'h2;
@@ -9734,82 +9796,82 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   assign \$48  = call_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 5'h11;
   assign \$49  = call_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 5'h12;
   assign \$50  = call_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 5'h13;
-  assign call_complete = call_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 5'h14;
-  assign \$51  = ~ (* src = "/home/runner/workspace/hardware/call.py:319" *) src_in_range;
-  assign \$52  = ~ (* src = "/home/runner/workspace/hardware/call.py:331" *) src_reg_latched[30];
-  assign \$53  = mem_rd_data[26:23] + (* src = "/home/runner/workspace/hardware/call.py:402" *) 3'h6;
-  assign \$54  = 1'h1 << (* src = "/home/runner/workspace/hardware/call.py:402" *) \$53 ;
-  assign \$55  = ! (* src = "/home/runner/workspace/hardware/call.py:418" *) cc_reg;
-  assign \$56  = sp_latched > (* src = "/home/runner/workspace/hardware/call.py:467" *) 15'h0033;
-  assign \$57  = sp_latched < (* src = "/home/runner/workspace/hardware/call.py:473" *) 15'h0036;
-  (* src = "/home/runner/workspace/hardware/call.py:99" *)
-  always @(posedge clk)
-    phase <= \$58 ;
+  assign \$51  = call_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 5'h14;
+  assign call_complete = call_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 5'h15;
+  assign \$52  = ~ (* src = "/home/runner/workspace/hardware/call.py:334" *) src_in_range;
+  assign \$53  = ~ (* src = "/home/runner/workspace/hardware/call.py:346" *) src_reg_latched[30];
+  assign \$54  = mem_rd_data[26:23] + (* src = "/home/runner/workspace/hardware/call.py:417" *) 3'h6;
+  assign \$55  = 1'h1 << (* src = "/home/runner/workspace/hardware/call.py:417" *) \$54 ;
+  assign \$56  = ! (* src = "/home/runner/workspace/hardware/call.py:433" *) cc_reg;
+  assign \$57  = ~ (* src = "/home/runner/workspace/hardware/call.py:469" *) cr5_heap[25];
+  assign \$58  = sp_latched > (* src = "/home/runner/workspace/hardware/call.py:495" *) 15'h0033;
+  assign \$59  = sp_latched < (* src = "/home/runner/workspace/hardware/call.py:501" *) 15'h0036;
   (* src = "/home/runner/workspace/hardware/call.py:102" *)
   always @(posedge clk)
-    call_fault <= \$59 ;
-  (* src = "/home/runner/workspace/hardware/call.py:103" *)
-  always @(posedge clk)
-    fault_type <= \$60 ;
+    phase <= \$60 ;
   (* src = "/home/runner/workspace/hardware/call.py:105" *)
   always @(posedge clk)
-    sub_done_latched <= \$61 ;
+    call_fault <= \$61 ;
   (* src = "/home/runner/workspace/hardware/call.py:106" *)
   always @(posedge clk)
-    sub_fault_latched <= \$62 ;
-  (* src = "/home/runner/workspace/hardware/call.py:101" *)
+    fault_type <= \$62 ;
+  (* src = "/home/runner/workspace/hardware/call.py:108" *)
   always @(posedge clk)
-    mask_latched <= \$63 ;
-  (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
+    sub_done_latched <= \$63 ;
+  (* src = "/home/runner/workspace/hardware/call.py:109" *)
   always @(posedge clk)
-    call_state <= \$64 ;
-  (* src = "/home/runner/workspace/hardware/call.py:100" *)
-  always @(posedge clk)
-    src_reg_latched <= \$65 ;
+    sub_fault_latched <= \$64 ;
   (* src = "/home/runner/workspace/hardware/call.py:104" *)
   always @(posedge clk)
-    mload_start <= \$66 ;
-  (* src = "/home/runner/workspace/hardware/call.py:137" *)
+    mask_latched <= \$65 ;
+  (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
   always @(posedge clk)
-    callee_egt_latched <= \$67 ;
-  (* src = "/home/runner/workspace/hardware/call.py:152" *)
+    call_state <= \$66 ;
+  (* src = "/home/runner/workspace/hardware/call.py:103" *)
   always @(posedge clk)
-    cr14_latched <= \$68 ;
-  (* src = "/home/runner/workspace/hardware/call.py:207" *)
+    src_reg_latched <= \$67 ;
+  (* src = "/home/runner/workspace/hardware/call.py:107" *)
   always @(posedge clk)
-    lump_reg <= \$69 ;
-  (* src = "/home/runner/workspace/hardware/call.py:210" *)
+    mload_start <= \$68 ;
+  (* src = "/home/runner/workspace/hardware/call.py:140" *)
   always @(posedge clk)
-    cw_reg <= \$70 ;
-  (* src = "/home/runner/workspace/hardware/call.py:211" *)
+    callee_egt_latched <= \$69 ;
+  (* src = "/home/runner/workspace/hardware/call.py:167" *)
   always @(posedge clk)
-    cc_reg <= \$71 ;
-  (* src = "/home/runner/workspace/hardware/call.py:212" *)
+    cr14_latched <= \$70 ;
+  (* src = "/home/runner/workspace/hardware/call.py:222" *)
   always @(posedge clk)
-    n_minus_6_reg <= \$72 ;
-  (* src = "/home/runner/workspace/hardware/call.py:213" *)
+    lump_reg <= \$71 ;
+  (* src = "/home/runner/workspace/hardware/call.py:225" *)
   always @(posedge clk)
-    lumpSize_reg <= \$73 ;
-  (* src = "/home/runner/workspace/hardware/call.py:262" *)
+    cw_reg <= \$72 ;
+  (* src = "/home/runner/workspace/hardware/call.py:226" *)
   always @(posedge clk)
-    cr6_latched <= \$74 ;
-  (* src = "/home/runner/workspace/hardware/call.py:117" *)
+    cc_reg <= \$73 ;
+  (* src = "/home/runner/workspace/hardware/call.py:227" *)
   always @(posedge clk)
-    sp_latched <= \$75 ;
-  assign \$8  = caller_pc + (* src = "/home/runner/workspace/hardware/call.py:146" *) 1'h1;
-  assign src_in_range = \port$3383$0 [18:15] <= (* src = "/home/runner/workspace/hardware/call.py:157" *) 4'hb;
-  assign mload_src = phase ? (* src = "/home/runner/workspace/hardware/call.py:167" *) 4'h6 : \port$3383$0 [18:15];
-  assign mload_dst = phase ? (* src = "/home/runner/workspace/hardware/call.py:168" *) 4'he : 4'h6;
-  assign mload_index = phase ? (* src = "/home/runner/workspace/hardware/call.py:169" *) 16'h0000 : { 1'h0, \port$3383$0 [14:0] };
-  assign \$9  = cr14_code[15:0] * (* src = "/home/runner/workspace/hardware/call.py:204" *) 4'hc;
-  assign \$10  = cr15_namespace[63:32] + (* src = "/home/runner/workspace/hardware/call.py:204" *) \$9 ;
-  assign \$13  = cr14_latched[63:32] + (* src = "/home/runner/workspace/hardware/call.py:226" *) 3'h4;
-  assign \$14  = cw_reg - (* src = "/home/runner/workspace/hardware/call.py:255" *) 1'h1;
-  assign \$15  = lumpSize_reg - (* src = "/home/runner/workspace/hardware/call.py:284" *) cc_reg;
-  assign \$17  = $signed({ 1'h0, cr14_latched[63:32] }) + (* src = "/home/runner/workspace/hardware/call.py:284" *) $signed(\$16 );
-  assign \$18  = cc_reg - (* src = "/home/runner/workspace/hardware/call.py:286" *) 1'h1;
-  assign \$19  = cr14_latched[63:32] + (* src = "/home/runner/workspace/hardware/call.py:298" *) 3'h4;
-  assign \$20  = cr14_latched[63:32] + (* src = "/home/runner/workspace/hardware/call.py:299" *) 3'h4;
+    n_minus_6_reg <= \$74 ;
+  (* src = "/home/runner/workspace/hardware/call.py:228" *)
+  always @(posedge clk)
+    lumpSize_reg <= \$75 ;
+  (* src = "/home/runner/workspace/hardware/call.py:277" *)
+  always @(posedge clk)
+    cr6_latched <= \$76 ;
+  (* src = "/home/runner/workspace/hardware/call.py:120" *)
+  always @(posedge clk)
+    sp_latched <= \$77 ;
+  assign \$8  = caller_pc + (* src = "/home/runner/workspace/hardware/call.py:149" *) 1'h1;
+  assign cr5_null = ! (* src = "/home/runner/workspace/hardware/call.py:157" *) cr5_heap[24:23];
+  assign cr12_null = ! (* src = "/home/runner/workspace/hardware/call.py:164" *) cr12_thread[24:23];
+  assign src_in_range = \port$3403$0 [18:15] <= (* src = "/home/runner/workspace/hardware/call.py:172" *) 4'hb;
+  assign mload_src = phase ? (* src = "/home/runner/workspace/hardware/call.py:182" *) 4'h6 : \port$3403$0 [18:15];
+  assign mload_dst = phase ? (* src = "/home/runner/workspace/hardware/call.py:183" *) 4'he : 4'h6;
+  assign mload_index = phase ? (* src = "/home/runner/workspace/hardware/call.py:184" *) 16'h0000 : { 1'h0, \port$3403$0 [14:0] };
+  assign \$9  = cr14_code[15:0] * (* src = "/home/runner/workspace/hardware/call.py:219" *) 4'hc;
+  assign \$10  = cr15_namespace[63:32] + (* src = "/home/runner/workspace/hardware/call.py:219" *) \$9 ;
+  assign \$13  = cr14_latched[63:32] + (* src = "/home/runner/workspace/hardware/call.py:241" *) 3'h4;
+  assign \$14  = cw_reg - (* src = "/home/runner/workspace/hardware/call.py:270" *) 1'h1;
+  assign \$15  = lumpSize_reg - (* src = "/home/runner/workspace/hardware/call.py:299" *) cc_reg;
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
     cr_null_mask = 12'h000;
@@ -9885,9 +9947,9 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h00:
           /* empty */;
       5'h01:
-          cr_rd_addr = \port$3383$0 [18:15];
+          cr_rd_addr = \port$3403$0 [18:15];
       5'h03:
-          cr_rd_addr = \port$3383$0 [18:15];
+          cr_rd_addr = \port$3403$0 [18:15];
       5'h04:
           /* empty */;
       5'h05:
@@ -10047,6 +10109,8 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h0d:
           /* empty */;
       5'h0f:
+          /* empty */;
+      5'h10:
           mem_rd_addr = cr5_heap[63:32];
     endcase
   end
@@ -10083,6 +10147,8 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h0d:
           /* empty */;
       5'h0f:
+          /* empty */;
+      5'h10:
           mem_rd_en = 1'h1;
     endcase
   end
@@ -10123,10 +10189,12 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h10:
           /* empty */;
       5'h11:
-          mem_wr_addr = \$27 [31:0];
+          /* empty */;
       5'h12:
-          mem_wr_addr = \$29 [31:0];
+          mem_wr_addr = \$27 [31:0];
       5'h13:
+          mem_wr_addr = \$29 [31:0];
+      5'h14:
           mem_wr_addr = cr5_heap[63:32];
     endcase
   end
@@ -10167,10 +10235,12 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h10:
           /* empty */;
       5'h11:
-          mem_wr_data = callee_egt_latched;
+          /* empty */;
       5'h12:
-          mem_wr_data = { 1'h1, \$8 [14:0], sp_latched[15:0] };
+          mem_wr_data = callee_egt_latched;
       5'h13:
+          mem_wr_data = { 1'h1, \$8 [14:0], sp_latched[15:0] };
+      5'h14:
           mem_wr_data = \$30 [31:0];
     endcase
   end
@@ -10211,284 +10281,313 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h10:
           /* empty */;
       5'h11:
-          mem_wr_en = 1'h1;
+          /* empty */;
       5'h12:
           mem_wr_en = 1'h1;
       5'h13:
           mem_wr_en = 1'h1;
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$58  = phase;
-    casez (call_state)
-      5'h00:
-          \$58  = 1'h0;
-      5'h01:
-          /* empty */;
-      5'h03:
-          /* empty */;
-      5'h04:
-          /* empty */;
-      5'h05:
-          /* empty */;
-      5'h06:
-          \$58  = 1'h1;
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$59  = call_fault;
-    casez (call_state)
-      5'h00:
-          \$59  = 1'h0;
-      5'h01:
-          if (\$51 ) begin
-            \$59  = 1'h1;
-          end
-      5'h03:
-          /* empty */;
-      5'h04:
-          if (\$52 ) begin
-            \$59  = 1'h1;
-          end
-      5'h05:
-          if (mload_fault) begin
-            \$59  = 1'h1;
-          end
-      5'h06:
-          /* empty */;
-      5'h07:
-          if (mload_fault) begin
-            \$59  = 1'h1;
-          end
-      5'h08:
-          /* empty */;
-      5'h09:
-          /* empty */;
-      5'h0a:
-          /* empty */;
-      5'h0b:
-          /* empty */;
-      5'h0c:
-          /* empty */;
-      5'h0e:
-          /* empty */;
-      5'h0d:
-          /* empty */;
-      5'h0f:
-          /* empty */;
-      5'h10:
-          if (\$56 ) begin
-            \$59  = 1'h1;
-          end else if (\$57 ) begin
-            \$59  = 1'h1;
-          end
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$60  = fault_type;
-    casez (call_state)
-      5'h00:
-          \$60  = 5'h00;
-      5'h01:
-          if (\$51 ) begin
-            \$60  = 5'h06;
-          end
-      5'h03:
-          /* empty */;
-      5'h04:
-          if (\$52 ) begin
-            \$60  = 5'h06;
-          end
-      5'h05:
-          if (mload_fault) begin
-            \$60  = { 1'h0, mload_fault_type };
-          end
-      5'h06:
-          /* empty */;
-      5'h07:
-          if (mload_fault) begin
-            \$60  = { 1'h0, mload_fault_type };
-          end
-      5'h08:
-          /* empty */;
-      5'h09:
-          /* empty */;
-      5'h0a:
-          /* empty */;
-      5'h0b:
-          /* empty */;
-      5'h0c:
-          /* empty */;
-      5'h0e:
-          /* empty */;
-      5'h0d:
-          /* empty */;
-      5'h0f:
-          /* empty */;
-      5'h10:
-          if (\$56 ) begin
-            \$60  = 5'h12;
-          end else if (\$57 ) begin
-            \$60  = 5'h10;
-          end
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$61  = sub_done_latched;
-    casez (call_state)
-      5'h00:
-          \$61  = 1'h0;
-      5'h01:
-          /* empty */;
-      5'h03:
-          /* empty */;
-      5'h04:
-          /* empty */;
-      5'h05:
-          if (mload_done) begin
-            \$61  = 1'h1;
-          end
-      5'h06:
-          \$61  = 1'h0;
-      5'h07:
-          if (mload_done) begin
-            \$61  = 1'h1;
-          end
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$62  = sub_fault_latched;
-    casez (call_state)
-      5'h00:
-          \$62  = 1'h0;
-      5'h01:
-          /* empty */;
-      5'h03:
-          /* empty */;
-      5'h04:
-          /* empty */;
-      5'h05:
-          if (mload_fault) begin
-            \$62  = 1'h1;
-          end
-      5'h06:
-          \$62  = 1'h0;
-      5'h07:
-          if (mload_fault) begin
-            \$62  = 1'h1;
-          end
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$63  = mask_latched;
-    casez (call_state)
-      5'h00:
-          if (call_start) begin
-            \$63  = { 1'h0, \port$3383$0 [14:0] };
-          end
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$64  = call_state;
-    casez (call_state)
-      5'h00:
-          if (call_start) begin
-            \$64  = 5'h01;
-          end
-      5'h01:
-          (* full_case = 32'd1 *)
-          if (\$51 ) begin
-            \$64  = 5'h02;
-          end else begin
-            \$64  = 5'h03;
-          end
-      5'h03:
-          \$64  = 5'h04;
-      5'h04:
-          (* full_case = 32'd1 *)
-          if (\$52 ) begin
-            \$64  = 5'h02;
-          end else begin
-            \$64  = 5'h05;
-          end
-      5'h05:
-          if (sub_fault_latched) begin
-            \$64  = 5'h02;
-          end else if (sub_done_latched) begin
-            \$64  = 5'h06;
-          end
-      5'h06:
-          \$64  = 5'h07;
-      5'h07:
-          if (sub_fault_latched) begin
-            \$64  = 5'h02;
-          end else if (sub_done_latched) begin
-            \$64  = 5'h08;
-          end
-      5'h08:
-          \$64  = 5'h09;
-      5'h09:
-          \$64  = 5'h0a;
-      5'h0a:
-          \$64  = 5'h0b;
-      5'h0b:
-          \$64  = 5'h0c;
-      5'h0c:
-          (* full_case = 32'd1 *)
-          if (\$55 ) begin
-            \$64  = 5'h0d;
-          end else begin
-            \$64  = 5'h0e;
-          end
-      5'h0e:
-          \$64  = 5'h0d;
-      5'h0d:
-          \$64  = 5'h0f;
-      5'h0f:
-          \$64  = 5'h10;
-      5'h10:
-          (* full_case = 32'd1 *)
-          if (\$56 ) begin
-            \$64  = 5'h02;
-          end else if (\$57 ) begin
-            \$64  = 5'h02;
-          end else begin
-            \$64  = 5'h11;
-          end
-      5'h11:
-          \$64  = 5'h12;
-      5'h12:
-          \$64  = 5'h13;
-      5'h13:
-          \$64  = 5'h14;
       5'h14:
-          \$64  = 5'h00;
-      5'h02:
-          \$64  = 5'h00;
+          mem_wr_en = 1'h1;
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$65  = src_reg_latched;
+    \$60  = phase;
+    casez (call_state)
+      5'h00:
+          \$60  = 1'h0;
+      5'h01:
+          /* empty */;
+      5'h03:
+          /* empty */;
+      5'h04:
+          /* empty */;
+      5'h05:
+          /* empty */;
+      5'h06:
+          \$60  = 1'h1;
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
+    \$61  = call_fault;
+    casez (call_state)
+      5'h00:
+          \$61  = 1'h0;
+      5'h01:
+          if (\$52 ) begin
+            \$61  = 1'h1;
+          end
+      5'h03:
+          /* empty */;
+      5'h04:
+          if (\$53 ) begin
+            \$61  = 1'h1;
+          end
+      5'h05:
+          if (mload_fault) begin
+            \$61  = 1'h1;
+          end
+      5'h06:
+          /* empty */;
+      5'h07:
+          if (mload_fault) begin
+            \$61  = 1'h1;
+          end
+      5'h08:
+          /* empty */;
+      5'h09:
+          /* empty */;
+      5'h0a:
+          /* empty */;
+      5'h0b:
+          /* empty */;
+      5'h0c:
+          /* empty */;
+      5'h0e:
+          /* empty */;
+      5'h0d:
+          /* empty */;
+      5'h0f:
+          if (cr5_null) begin
+            \$61  = 1'h1;
+          end else if (\$57 ) begin
+            \$61  = 1'h1;
+          end else if (cr12_null) begin
+            \$61  = 1'h1;
+          end
+      5'h10:
+          /* empty */;
+      5'h11:
+          if (\$58 ) begin
+            \$61  = 1'h1;
+          end else if (\$59 ) begin
+            \$61  = 1'h1;
+          end
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
+    \$62  = fault_type;
+    casez (call_state)
+      5'h00:
+          \$62  = 5'h00;
+      5'h01:
+          if (\$52 ) begin
+            \$62  = 5'h06;
+          end
+      5'h03:
+          /* empty */;
+      5'h04:
+          if (\$53 ) begin
+            \$62  = 5'h06;
+          end
+      5'h05:
+          if (mload_fault) begin
+            \$62  = { 1'h0, mload_fault_type };
+          end
+      5'h06:
+          /* empty */;
+      5'h07:
+          if (mload_fault) begin
+            \$62  = { 1'h0, mload_fault_type };
+          end
+      5'h08:
+          /* empty */;
+      5'h09:
+          /* empty */;
+      5'h0a:
+          /* empty */;
+      5'h0b:
+          /* empty */;
+      5'h0c:
+          /* empty */;
+      5'h0e:
+          /* empty */;
+      5'h0d:
+          /* empty */;
+      5'h0f:
+          if (cr5_null) begin
+            \$62  = 5'h07;
+          end else if (\$57 ) begin
+            \$62  = 5'h01;
+          end else if (cr12_null) begin
+            \$62  = 5'h07;
+          end
+      5'h10:
+          /* empty */;
+      5'h11:
+          if (\$58 ) begin
+            \$62  = 5'h12;
+          end else if (\$59 ) begin
+            \$62  = 5'h10;
+          end
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
+    \$63  = sub_done_latched;
+    casez (call_state)
+      5'h00:
+          \$63  = 1'h0;
+      5'h01:
+          /* empty */;
+      5'h03:
+          /* empty */;
+      5'h04:
+          /* empty */;
+      5'h05:
+          if (mload_done) begin
+            \$63  = 1'h1;
+          end
+      5'h06:
+          \$63  = 1'h0;
+      5'h07:
+          if (mload_done) begin
+            \$63  = 1'h1;
+          end
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
+    \$64  = sub_fault_latched;
+    casez (call_state)
+      5'h00:
+          \$64  = 1'h0;
+      5'h01:
+          /* empty */;
+      5'h03:
+          /* empty */;
+      5'h04:
+          /* empty */;
+      5'h05:
+          if (mload_fault) begin
+            \$64  = 1'h1;
+          end
+      5'h06:
+          \$64  = 1'h0;
+      5'h07:
+          if (mload_fault) begin
+            \$64  = 1'h1;
+          end
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
+    \$65  = mask_latched;
+    casez (call_state)
+      5'h00:
+          if (call_start) begin
+            \$65  = { 1'h0, \port$3403$0 [14:0] };
+          end
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
+    \$66  = call_state;
+    casez (call_state)
+      5'h00:
+          if (call_start) begin
+            \$66  = 5'h01;
+          end
+      5'h01:
+          (* full_case = 32'd1 *)
+          if (\$52 ) begin
+            \$66  = 5'h02;
+          end else begin
+            \$66  = 5'h03;
+          end
+      5'h03:
+          \$66  = 5'h04;
+      5'h04:
+          (* full_case = 32'd1 *)
+          if (\$53 ) begin
+            \$66  = 5'h02;
+          end else begin
+            \$66  = 5'h05;
+          end
+      5'h05:
+          if (sub_fault_latched) begin
+            \$66  = 5'h02;
+          end else if (sub_done_latched) begin
+            \$66  = 5'h06;
+          end
+      5'h06:
+          \$66  = 5'h07;
+      5'h07:
+          if (sub_fault_latched) begin
+            \$66  = 5'h02;
+          end else if (sub_done_latched) begin
+            \$66  = 5'h08;
+          end
+      5'h08:
+          \$66  = 5'h09;
+      5'h09:
+          \$66  = 5'h0a;
+      5'h0a:
+          \$66  = 5'h0b;
+      5'h0b:
+          \$66  = 5'h0c;
+      5'h0c:
+          (* full_case = 32'd1 *)
+          if (\$56 ) begin
+            \$66  = 5'h0d;
+          end else begin
+            \$66  = 5'h0e;
+          end
+      5'h0e:
+          \$66  = 5'h0d;
+      5'h0d:
+          \$66  = 5'h0f;
+      5'h0f:
+          (* full_case = 32'd1 *)
+          if (cr5_null) begin
+            \$66  = 5'h02;
+          end else if (\$57 ) begin
+            \$66  = 5'h02;
+          end else if (cr12_null) begin
+            \$66  = 5'h02;
+          end else begin
+            \$66  = 5'h10;
+          end
+      5'h10:
+          \$66  = 5'h11;
+      5'h11:
+          (* full_case = 32'd1 *)
+          if (\$58 ) begin
+            \$66  = 5'h02;
+          end else if (\$59 ) begin
+            \$66  = 5'h02;
+          end else begin
+            \$66  = 5'h12;
+          end
+      5'h12:
+          \$66  = 5'h13;
+      5'h13:
+          \$66  = 5'h14;
+      5'h14:
+          \$66  = 5'h15;
+      5'h15:
+          \$66  = 5'h00;
+      5'h02:
+          \$66  = 5'h00;
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
+    \$67  = src_reg_latched;
     casez (call_state)
       5'h00:
           /* empty */;
       5'h01:
           /* empty */;
       5'h03:
-          \$65  = cr_rd_data;
+          \$67  = cr_rd_data;
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$66  = mload_start;
+    \$68  = mload_start;
     casez (call_state)
       5'h00:
           /* empty */;
@@ -10498,21 +10597,21 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
           /* empty */;
       5'h04:
           (* full_case = 32'd1 *)
-          if (\$52 ) begin
+          if (\$53 ) begin
           end else begin
-            \$66  = 1'h1;
+            \$68  = 1'h1;
           end
       5'h05:
-          \$66  = 1'h0;
+          \$68  = 1'h0;
       5'h06:
-          \$66  = 1'h1;
+          \$68  = 1'h1;
       5'h07:
-          \$66  = 1'h0;
+          \$68  = 1'h0;
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$67  = callee_egt_latched;
+    \$69  = callee_egt_latched;
     casez (call_state)
       5'h00:
           /* empty */;
@@ -10525,34 +10624,12 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h05:
           /* empty */;
       5'h06:
-          \$67  = cr_rd_data[31:0];
+          \$69  = cr_rd_data[31:0];
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$68  = cr14_latched;
-    casez (call_state)
-      5'h00:
-          /* empty */;
-      5'h01:
-          /* empty */;
-      5'h03:
-          /* empty */;
-      5'h04:
-          /* empty */;
-      5'h05:
-          /* empty */;
-      5'h06:
-          /* empty */;
-      5'h07:
-          /* empty */;
-      5'h08:
-          \$68  = cr_rd_data;
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$69  = lump_reg;
+    \$70  = cr14_latched;
     casez (call_state)
       5'h00:
           /* empty */;
@@ -10569,16 +10646,12 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h07:
           /* empty */;
       5'h08:
-          /* empty */;
-      5'h09:
-          /* empty */;
-      5'h0a:
-          \$69  = mem_rd_data;
+          \$70  = cr_rd_data;
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$70  = cw_reg;
+    \$71  = lump_reg;
     casez (call_state)
       5'h00:
           /* empty */;
@@ -10599,12 +10672,12 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h09:
           /* empty */;
       5'h0a:
-          \$70  = mem_rd_data[22:10];
+          \$71  = mem_rd_data;
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$71  = cc_reg;
+    \$72  = cw_reg;
     casez (call_state)
       5'h00:
           /* empty */;
@@ -10625,12 +10698,12 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h09:
           /* empty */;
       5'h0a:
-          \$71  = mem_rd_data[7:0];
+          \$72  = mem_rd_data[22:10];
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$72  = n_minus_6_reg;
+    \$73  = cc_reg;
     casez (call_state)
       5'h00:
           /* empty */;
@@ -10651,12 +10724,12 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h09:
           /* empty */;
       5'h0a:
-          \$72  = mem_rd_data[26:23];
+          \$73  = mem_rd_data[7:0];
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$73  = lumpSize_reg;
+    \$74  = n_minus_6_reg;
     casez (call_state)
       5'h00:
           /* empty */;
@@ -10677,12 +10750,38 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h09:
           /* empty */;
       5'h0a:
-          \$73  = \$54 [14:0];
+          \$74  = mem_rd_data[26:23];
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$74  = cr6_latched;
+    \$75  = lumpSize_reg;
+    casez (call_state)
+      5'h00:
+          /* empty */;
+      5'h01:
+          /* empty */;
+      5'h03:
+          /* empty */;
+      5'h04:
+          /* empty */;
+      5'h05:
+          /* empty */;
+      5'h06:
+          /* empty */;
+      5'h07:
+          /* empty */;
+      5'h08:
+          /* empty */;
+      5'h09:
+          /* empty */;
+      5'h0a:
+          \$75  = \$55 [14:0];
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
+    \$76  = cr6_latched;
     casez (call_state)
       5'h00:
           /* empty */;
@@ -10708,15 +10807,15 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
           /* empty */;
       5'h0c:
           (* full_case = 32'd1 *)
-          if (\$55 ) begin
+          if (\$56 ) begin
           end else begin
-            \$74  = cr_rd_data;
+            \$76  = cr_rd_data;
           end
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$18 ) begin end
-    \$75  = sp_latched;
+    \$77  = sp_latched;
     casez (call_state)
       5'h00:
           /* empty */;
@@ -10747,7 +10846,9 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
       5'h0d:
           /* empty */;
       5'h0f:
-          \$75  = mem_rd_data;
+          /* empty */;
+      5'h10:
+          \$77  = mem_rd_data;
     endcase
   end
   assign thr_lump_sz = \$2 [14:0];
@@ -10755,12 +10856,13 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   assign sp_max = \$4 [14:0];
   assign sp_min = \$7 [14:0];
   assign frame_word = { 1'h1, \$8 [14:0], sp_latched[15:0] };
-  assign cr_src = \port$3383$0 [18:15];
-  assign index = { 1'h0, \port$3383$0 [14:0] };
+  assign cr5_has_r = cr5_heap[25];
+  assign cr_src = \port$3403$0 [18:15];
+  assign index = { 1'h0, \port$3403$0 [14:0] };
   assign sub_start_reg = mload_start;
   assign mload_cr_src = mload_src;
   assign mload_cr_dst = mload_dst;
-  assign \mload_index$18  = mload_index;
+  assign \mload_index$23  = mload_index;
   assign mload_direct = 1'h0;
   assign mload_m_elevated = 1'h1;
   assign mload_direct_gt = 32'd0;
@@ -10774,16 +10876,35 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   assign saved_cr5_gt = cr5_heap[31:0];
   assign callee_ns_entry_addr = \$10 [31:0];
   assign ns_base_from_cr14 = cr14_latched[63:32];
+  assign thread_base = cr12_thread[63:32];
   assign fault_latched = call_fault;
   assign fault_type_latched = fault_type;
   assign nia_set = call_complete;
   assign nia_value = cr14_with_m[63:32];
   
-  assign mask = { 1'h0, \port$3383$0 [14:0] };
+  assign mask = { 1'h0, \port$3403$0 [14:0] };
   assign mem_rd_valid = 1'h1;
   assign code_lo_out = \$19 [31:0];
   assign code_hi_out = \$22 [31:0];
   assign nia_computed = cr14_with_m[63:32];
+  assign \cr5_heap.word0_gt  = cr5_heap[31:0];
+  assign \cr5_heap.word0_gt.slot_id  = cr5_heap[15:0];
+  assign \cr5_heap.word0_gt.gt_seq  = cr5_heap[22:16];
+  assign \cr5_heap.word0_gt.gt_type  = cr5_heap[24:23];
+  assign \cr5_heap.word0_gt.perms  = cr5_heap[30:25];
+  assign \cr5_heap.word0_gt.b_flag  = cr5_heap[31];
+  assign \cr5_heap.word1_location  = cr5_heap[63:32];
+  assign \cr5_heap.word2_w2  = cr5_heap[95:64];
+  assign \cr5_heap.word3_w3  = cr5_heap[127:96];
+  assign \cr12_thread.word0_gt  = cr12_thread[31:0];
+  assign \cr12_thread.word0_gt.slot_id  = cr12_thread[15:0];
+  assign \cr12_thread.word0_gt.gt_seq  = cr12_thread[22:16];
+  assign \cr12_thread.word0_gt.gt_type  = cr12_thread[24:23];
+  assign \cr12_thread.word0_gt.perms  = cr12_thread[30:25];
+  assign \cr12_thread.word0_gt.b_flag  = cr12_thread[31];
+  assign \cr12_thread.word1_location  = cr12_thread[63:32];
+  assign \cr12_thread.word2_w2  = cr12_thread[95:64];
+  assign \cr12_thread.word3_w3  = cr12_thread[127:96];
   assign \cr_wr_data.word0_gt  = cr_wr_data[31:0];
   assign \cr_wr_data.word0_gt.slot_id  = cr_wr_data[15:0];
   assign \cr_wr_data.word0_gt.gt_seq  = cr_wr_data[22:16];
@@ -10807,15 +10928,6 @@ module \top.core.u_call (clk, call_start, cr_rd_data, mload_src, mload_dst, mloa
   assign \saved_cr5_gt.gt_type  = cr5_heap[24:23];
   assign \saved_cr5_gt.perms  = cr5_heap[30:25];
   assign \saved_cr5_gt.b_flag  = cr5_heap[31];
-  assign \cr5_heap.word0_gt  = cr5_heap[31:0];
-  assign \cr5_heap.word0_gt.slot_id  = cr5_heap[15:0];
-  assign \cr5_heap.word0_gt.gt_seq  = cr5_heap[22:16];
-  assign \cr5_heap.word0_gt.gt_type  = cr5_heap[24:23];
-  assign \cr5_heap.word0_gt.perms  = cr5_heap[30:25];
-  assign \cr5_heap.word0_gt.b_flag  = cr5_heap[31];
-  assign \cr5_heap.word1_location  = cr5_heap[63:32];
-  assign \cr5_heap.word2_w2  = cr5_heap[95:64];
-  assign \cr5_heap.word3_w3  = cr5_heap[127:96];
   assign \cr15_namespace.word0_gt  = cr15_namespace[31:0];
   assign \cr15_namespace.word0_gt.slot_id  = cr15_namespace[15:0];
   assign \cr15_namespace.word0_gt.gt_seq  = cr15_namespace[22:16];
@@ -13259,7 +13371,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/dread.py:52" *)
 (* generator = "Amaranth" *)
-module \top.core.u_dread (clk, start, cr_rd_data, cr_rd_addr, busy, fault, fault_type, dmem_addr, dmem_rd_en, dr_wr_addr, dr_wr_data, dr_wr_en, \port$3383$0 , dmem_rd_data);
+module \top.core.u_dread (clk, start, cr_rd_data, cr_rd_addr, busy, fault, fault_type, dmem_addr, dmem_rd_en, dr_wr_addr, dr_wr_data, dr_wr_en, \port$3403$0 , dmem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$22  = 0;
   wire \$1 ;
   reg [3:0] \$10 ;
@@ -13354,14 +13466,14 @@ module \top.core.u_dread (clk, start, cr_rd_data, cr_rd_addr, busy, fault, fault
   wire in_bounds;
   (* src = "/home/runner/workspace/hardware/dread.py:65" *)
   wire [15:0] limit;
-  input [22:0] \port$3383$0 ;
-  wire [22:0] \port$3383$0 ;
+  input [22:0] \port$3403$0 ;
+  wire [22:0] \port$3403$0 ;
   (* src = "/home/runner/workspace/hardware/dread.py:29" *)
   input start;
   wire start;
   assign gt_null = ! (* src = "/home/runner/workspace/hardware/dread.py:69" *) cr_rd_data[31:0];
   assign in_bounds = imm_reg <= (* src = "/home/runner/workspace/hardware/dread.py:72" *) cr_rd_data[79:64];
-  assign cr_rd_addr = busy ? (* src = "/home/runner/workspace/hardware/dread.py:75" *) cr_src_reg : \port$3383$0 [18:15];
+  assign cr_rd_addr = busy ? (* src = "/home/runner/workspace/hardware/dread.py:75" *) cr_src_reg : \port$3403$0 [18:15];
   assign \$1  = ~ (* src = "/home/runner/workspace/hardware/dread.py:92" *) cr_rd_data[25];
   assign \$2  = ~ (* src = "/home/runner/workspace/hardware/dread.py:95" *) in_bounds;
   assign \$3  = | (* src = "/home/runner/workspace/hardware/dread.py:109" *) dr_dst_reg;
@@ -13508,7 +13620,7 @@ module \top.core.u_dread (clk, start, cr_rd_data, cr_rd_addr, busy, fault, fault
     casez (dread_fsm_state)
       2'h0:
           if (start) begin
-            \$10  = \port$3383$0 [18:15];
+            \$10  = \port$3403$0 [18:15];
           end
     endcase
   end
@@ -13518,7 +13630,7 @@ module \top.core.u_dread (clk, start, cr_rd_data, cr_rd_addr, busy, fault, fault
     casez (dread_fsm_state)
       2'h0:
           if (start) begin
-            \$11  = \port$3383$0 [22:19];
+            \$11  = \port$3403$0 [22:19];
           end
     endcase
   end
@@ -13528,7 +13640,7 @@ module \top.core.u_dread (clk, start, cr_rd_data, cr_rd_addr, busy, fault, fault
     casez (dread_fsm_state)
       2'h0:
           if (start) begin
-            \$12  = \port$3383$0 [14:0];
+            \$12  = \port$3403$0 [14:0];
           end
     endcase
   end
@@ -13573,10 +13685,10 @@ module \top.core.u_dread (clk, start, cr_rd_data, cr_rd_addr, busy, fault, fault
   end
   assign has_r = cr_rd_data[25];
   assign limit = cr_rd_data[79:64];
-  assign cr_src = \port$3383$0 [18:15];
+  assign cr_src = \port$3403$0 [18:15];
   
-  assign dr_dst = \port$3383$0 [22:19];
-  assign imm = \port$3383$0 [14:0];
+  assign dr_dst = \port$3403$0 [22:19];
+  assign imm = \port$3403$0 [14:0];
   assign \cr_rd_data.word0_gt  = cr_rd_data[31:0];
   assign \cr_rd_data.word0_gt.slot_id  = cr_rd_data[15:0];
   assign \cr_rd_data.word0_gt.gt_seq  = cr_rd_data[22:16];
@@ -13590,7 +13702,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/dwrite.py:50" *)
 (* generator = "Amaranth" *)
-module \top.core.u_dwrite (clk, cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, busy, fault, fault_type, dmem_addr, dmem_wr_data, dmem_wr_en, \port$3383$0 , start);
+module \top.core.u_dwrite (clk, cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, busy, fault, fault_type, dmem_addr, dmem_wr_data, dmem_wr_en, \port$3403$0 , start);
   reg \$auto$verilog_backend.cc:2355:dump_module$23  = 0;
   wire \$1 ;
   reg [3:0] \$10 ;
@@ -13684,15 +13796,15 @@ module \top.core.u_dwrite (clk, cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, 
   wire in_bounds;
   (* src = "/home/runner/workspace/hardware/dwrite.py:64" *)
   wire [15:0] limit;
-  input [22:0] \port$3383$0 ;
-  wire [22:0] \port$3383$0 ;
+  input [22:0] \port$3403$0 ;
+  wire [22:0] \port$3403$0 ;
   (* src = "/home/runner/workspace/hardware/dwrite.py:28" *)
   input start;
   wire start;
   assign gt_null = ! (* src = "/home/runner/workspace/hardware/dwrite.py:68" *) cr_rd_data[31:0];
   assign in_bounds = imm_reg <= (* src = "/home/runner/workspace/hardware/dwrite.py:71" *) cr_rd_data[79:64];
-  assign cr_rd_addr = busy ? (* src = "/home/runner/workspace/hardware/dwrite.py:75" *) cr_src_reg : \port$3383$0 [18:15];
-  assign dr_rd_addr = busy ? (* src = "/home/runner/workspace/hardware/dwrite.py:76" *) dr_src_reg : \port$3383$0 [22:19];
+  assign cr_rd_addr = busy ? (* src = "/home/runner/workspace/hardware/dwrite.py:75" *) cr_src_reg : \port$3403$0 [18:15];
+  assign dr_rd_addr = busy ? (* src = "/home/runner/workspace/hardware/dwrite.py:76" *) dr_src_reg : \port$3403$0 [22:19];
   assign \$1  = ~ (* src = "/home/runner/workspace/hardware/dwrite.py:94" *) cr_rd_data[26];
   assign \$2  = ~ (* src = "/home/runner/workspace/hardware/dwrite.py:97" *) in_bounds;
   assign \$3  = ! (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) dwrite_fsm_state;
@@ -13817,7 +13929,7 @@ module \top.core.u_dwrite (clk, cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, 
     casez (dwrite_fsm_state)
       2'h0:
           if (start) begin
-            \$9  = \port$3383$0 [18:15];
+            \$9  = \port$3403$0 [18:15];
           end
     endcase
   end
@@ -13827,7 +13939,7 @@ module \top.core.u_dwrite (clk, cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, 
     casez (dwrite_fsm_state)
       2'h0:
           if (start) begin
-            \$10  = \port$3383$0 [22:19];
+            \$10  = \port$3403$0 [22:19];
           end
     endcase
   end
@@ -13837,7 +13949,7 @@ module \top.core.u_dwrite (clk, cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, 
     casez (dwrite_fsm_state)
       2'h0:
           if (start) begin
-            \$11  = \port$3383$0 [14:0];
+            \$11  = \port$3403$0 [14:0];
           end
     endcase
   end
@@ -13898,10 +14010,10 @@ module \top.core.u_dwrite (clk, cr_rd_data, dr_rd_data, cr_rd_addr, dr_rd_addr, 
   end
   assign has_w = cr_rd_data[26];
   assign limit = cr_rd_data[79:64];
-  assign cr_src = \port$3383$0 [18:15];
-  assign dr_src = \port$3383$0 [22:19];
+  assign cr_src = \port$3403$0 [18:15];
+  assign dr_src = \port$3403$0 [22:19];
   
-  assign imm = \port$3383$0 [14:0];
+  assign imm = \port$3403$0 [14:0];
   assign \cr_rd_data.word0_gt  = cr_rd_data[31:0];
   assign \cr_rd_data.word0_gt.slot_id  = cr_rd_data[15:0];
   assign \cr_rd_data.word0_gt.gt_seq  = cr_rd_data[22:16];
@@ -13915,7 +14027,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/load.py:31" *)
 (* generator = "Amaranth" *)
-module \top.core.u_load (clk, mload_m_elevated, load_busy, load_fault, mload_busy, mload_fault, mload_done, mload_start, fault_type, \port$3383$0 , load_start);
+module \top.core.u_load (clk, mload_m_elevated, load_busy, load_fault, mload_busy, mload_fault, mload_done, mload_start, fault_type, \port$3403$0 , load_start);
   reg \$auto$verilog_backend.cc:2355:dump_module$24  = 0;
   wire \$1 ;
   wire \$2 ;
@@ -13974,8 +14086,8 @@ module \top.core.u_load (clk, mload_m_elevated, load_busy, load_fault, mload_bus
   (* src = "/home/runner/workspace/hardware/load.py:17" *)
   output mload_start;
   reg mload_start;
-  input [22:0] \port$3383$0 ;
-  wire [22:0] \port$3383$0 ;
+  input [22:0] \port$3403$0 ;
+  wire [22:0] \port$3403$0 ;
   assign load_fault = \$4  & (* src = "/home/runner/workspace/hardware/load.py:60" *) mload_fault;
   assign \$1  = ! (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) load_wrapper_state;
   assign \$2  = load_wrapper_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 1'h1;
@@ -13985,7 +14097,7 @@ module \top.core.u_load (clk, mload_m_elevated, load_busy, load_fault, mload_bus
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
   always @(posedge clk)
     load_wrapper_state <= \$6 ;
-  assign mload_m_elevated = \port$3383$0 [18:15] == (* src = "/home/runner/workspace/hardware/load.py:39" *) 3'h6;
+  assign mload_m_elevated = \port$3403$0 [18:15] == (* src = "/home/runner/workspace/hardware/load.py:39" *) 3'h6;
   assign load_busy = ~ (* src = "/home/runner/workspace/hardware/load.py:58" *) \$1 ;
   assign load_complete = \$4  & (* src = "/home/runner/workspace/hardware/load.py:59" *) mload_done;
   always @* begin
@@ -14021,12 +14133,12 @@ module \top.core.u_load (clk, mload_m_elevated, load_busy, load_fault, mload_bus
           end
     endcase
   end
-  assign mload_cr_src = \port$3383$0 [18:15];
-  assign cr_src = \port$3383$0 [18:15];
-  assign mload_cr_dst = \port$3383$0 [22:19];
-  assign cr_dst = \port$3383$0 [22:19];
-  assign mload_index = { 1'h0, \port$3383$0 [14:0] };
-  assign index = { 1'h0, \port$3383$0 [14:0] };
+  assign mload_cr_src = \port$3403$0 [18:15];
+  assign cr_src = \port$3403$0 [18:15];
+  assign mload_cr_dst = \port$3403$0 [22:19];
+  assign cr_dst = \port$3403$0 [22:19];
+  assign mload_index = { 1'h0, \port$3403$0 [14:0] };
+  assign index = { 1'h0, \port$3403$0 [14:0] };
   assign mload_direct = 1'h0;
   assign mload_direct_gt = 32'd0;
   assign mload_fault_type = fault_type;
@@ -17679,21 +17791,24 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
   wire \$19 ;
   wire [35:0] \$2 ;
   wire \$20 ;
-  reg \$21 ;
-  reg [3:0] \$22 ;
-  reg \$23 ;
+  wire \$21 ;
+  wire \$22 ;
+  wire \$23 ;
   reg \$24 ;
-  reg [31:0] \$25 ;
-  reg [3:0] \$26 ;
-  reg [127:0] \$27 ;
+  reg [3:0] \$25 ;
+  reg \$26 ;
+  reg \$27 ;
   reg [31:0] \$28 ;
-  reg [31:0] \$29 ;
+  reg [3:0] \$29 ;
   wire [36:0] \$3 ;
-  reg [31:0] \$30 ;
+  reg [127:0] \$30 ;
   reg [31:0] \$31 ;
-  reg [14:0] \$32 ;
-  reg [15:0] \$33 ;
-  reg \$34 ;
+  reg [31:0] \$32 ;
+  reg [31:0] \$33 ;
+  reg [31:0] \$34 ;
+  reg [14:0] \$35 ;
+  reg [15:0] \$36 ;
+  reg \$37 ;
   wire [32:0] \$4 ;
   wire [35:0] \$5 ;
   wire [36:0] \$6 ;
@@ -17704,16 +17819,18 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
   output busy;
   wire busy;
   (* init = 32'd0 *)
-  (* src = "/home/runner/workspace/hardware/ret.py:79" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:92" *)
   wire [31:0] callee_egt_latched;
   (* src = "/home/runner/workspace/hardware/tang_nano_20k.py:61" *)
   input clk;
-  (* src = "/home/runner/workspace/hardware/ret.py:79" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:92" *)
   output [31:0] cload_e_gt;
   reg [31:0] cload_e_gt = 32'd0;
   (* src = "/home/runner/workspace/hardware/ret.py:13" *)
   output complete;
   wire complete;
+  (* src = "/home/runner/workspace/hardware/ret.py:85" *)
+  wire cr12_null;
   (* src = "/home/runner/workspace/hardware/ret.py:46" *)
   input [127:0] cr12_thread;
   wire [127:0] cr12_thread;
@@ -17735,6 +17852,10 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
   wire [31:0] \cr12_thread.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/ret.py:46" *)
   wire [31:0] \cr12_thread.word3_w3 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:75" *)
+  wire cr5_has_r;
+  (* src = "/home/runner/workspace/hardware/ret.py:76" *)
+  wire cr5_has_w;
   (* src = "/home/runner/workspace/hardware/ret.py:45" *)
   input [127:0] cr5_heap;
   wire [127:0] cr5_heap;
@@ -17756,6 +17877,8 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
   wire [31:0] \cr5_heap.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/ret.py:45" *)
   wire [31:0] \cr5_heap.word3_w3 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:74" *)
+  wire cr5_null;
   (* src = "/home/runner/workspace/hardware/ret.py:18" *)
   output [3:0] cr_rd_addr;
   wire [3:0] cr_rd_addr;
@@ -17808,26 +17931,26 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
   (* src = "/home/runner/workspace/hardware/ret.py:22" *)
   wire cr_wr_en;
   (* init = 1'h0 *)
-  (* src = "/home/runner/workspace/hardware/ret.py:132" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:145" *)
   wire fault_flag;
   (* init = 4'h0 *)
-  (* src = "/home/runner/workspace/hardware/ret.py:133" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:146" *)
   wire [3:0] fault_latched;
-  (* src = "/home/runner/workspace/hardware/ret.py:133" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:146" *)
   output [3:0] fault_type;
   reg [3:0] fault_type = 4'h0;
-  (* src = "/home/runner/workspace/hardware/ret.py:132" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:145" *)
   output fault_valid;
   reg fault_valid = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ret.py:86" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:99" *)
   wire [15:0] frame_prev_sto;
-  (* src = "/home/runner/workspace/hardware/ret.py:85" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:98" *)
   wire [14:0] frame_ret_pc;
-  (* src = "/home/runner/workspace/hardware/ret.py:84" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:97" *)
   wire frame_sz;
-  (* src = "/home/runner/workspace/hardware/ret.py:83" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:96" *)
   reg [31:0] frame_word = 32'd0;
-  (* src = "/home/runner/workspace/hardware/ret.py:75" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:88" *)
   reg [31:0] heap_base_latched = 32'd0;
   (* src = "/home/runner/workspace/hardware/ret.py:69" *)
   wire is_null_cap;
@@ -17839,36 +17962,36 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
   (* src = "/home/runner/workspace/hardware/ret.py:42" *)
   input [31:0] lambda_pc;
   wire [31:0] lambda_pc;
-  (* src = "/home/runner/workspace/hardware/ret.py:93" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:106" *)
   reg local_cr_rd_en;
-  (* src = "/home/runner/workspace/hardware/ret.py:98" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:111" *)
   wire [31:0] local_mem_rd_addr;
-  (* src = "/home/runner/workspace/hardware/ret.py:99" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:112" *)
   wire local_mem_rd_en;
-  (* src = "/home/runner/workspace/hardware/ret.py:100" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:113" *)
   wire [31:0] local_mem_wr_addr;
-  (* src = "/home/runner/workspace/hardware/ret.py:101" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:114" *)
   wire [31:0] local_mem_wr_data;
-  (* src = "/home/runner/workspace/hardware/ret.py:102" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:115" *)
   wire local_mem_wr_en;
-  (* src = "/home/runner/workspace/hardware/ret.py:98" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:111" *)
   output [31:0] mem_rd_addr;
   reg [31:0] mem_rd_addr;
   (* src = "/home/runner/workspace/hardware/ret.py:50" *)
   input [31:0] mem_rd_data;
   wire [31:0] mem_rd_data;
-  (* src = "/home/runner/workspace/hardware/ret.py:99" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:112" *)
   output mem_rd_en;
   reg mem_rd_en;
   (* src = "/home/runner/workspace/hardware/ret.py:51" *)
   wire mem_rd_valid;
-  (* src = "/home/runner/workspace/hardware/ret.py:100" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:113" *)
   output [31:0] mem_wr_addr;
   reg [31:0] mem_wr_addr;
-  (* src = "/home/runner/workspace/hardware/ret.py:101" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:114" *)
   output [31:0] mem_wr_data;
   reg [31:0] mem_wr_data;
-  (* src = "/home/runner/workspace/hardware/ret.py:102" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:115" *)
   output mem_wr_en;
   reg mem_wr_en;
   (* src = "/home/runner/workspace/hardware/ret.py:29" *)
@@ -17902,7 +18025,7 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
   (* src = "/home/runner/workspace/hardware/ret.py:25" *)
   output [31:0] nia_value;
   reg [31:0] nia_value;
-  (* src = "/home/runner/workspace/hardware/ret.py:81" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:94" *)
   reg [15:0] prev_sto_latched = 16'h0000;
   (* src = "/home/runner/workspace/hardware/ret.py:16" *)
   output reboot_request;
@@ -17929,30 +18052,41 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
   wire [31:0] \return_cap.word2_w2 ;
   (* src = "/home/runner/workspace/hardware/ret.py:64" *)
   wire [31:0] \return_cap.word3_w3 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:80" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:93" *)
   reg [14:0] return_pc_latched = 15'h0000;
   (* src = "/home/runner/workspace/hardware/ret.py:10" *)
   input return_start;
   wire return_start;
   (* src = "/home/runner/workspace/hardware/ret.py:39" *)
   wire [31:0] saved_cr5_gt;
-  (* src = "/home/runner/workspace/hardware/ret.py:78" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:91" *)
   reg [31:0] sto_latched = 32'd0;
-  (* src = "/home/runner/workspace/hardware/ret.py:130" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:143" *)
   reg sub_done_latched = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ret.py:131" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:144" *)
   reg sub_fault_latched = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ret.py:129" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:142" *)
   reg sub_start_reg = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ret.py:76" *)
+  (* src = "/home/runner/workspace/hardware/ret.py:89" *)
   reg [31:0] thread_base_latched = 32'd0;
+  (* src = "/home/runner/workspace/hardware/ret.py:93" *)
+  always @(posedge clk)
+    return_pc_latched <= \$35 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:94" *)
+  always @(posedge clk)
+    prev_sto_latched <= \$36 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:142" *)
+  always @(posedge clk)
+    sub_start_reg <= \$37 ;
   assign is_null_cap = ! (* src = "/home/runner/workspace/hardware/ret.py:70" *) return_cap[24:23];
-  assign cr_rd_addr = local_cr_rd_en ? (* src = "/home/runner/workspace/hardware/ret.py:95" *) { 1'h0, cr_src } : 4'h0;
-  assign \$1  = sto_latched + (* src = "/home/runner/workspace/hardware/ret.py:186" *) 2'h2;
-  assign \$3  = thread_base_latched + (* src = "/home/runner/workspace/hardware/ret.py:186" *) \$2 ;
-  assign \$4  = sto_latched + (* src = "/home/runner/workspace/hardware/ret.py:203" *) 1'h1;
-  assign \$6  = thread_base_latched + (* src = "/home/runner/workspace/hardware/ret.py:203" *) \$5 ;
-  assign busy = ~ (* src = "/home/runner/workspace/hardware/ret.py:250" *) \$8 ;
+  assign cr5_null = ! (* src = "/home/runner/workspace/hardware/ret.py:78" *) cr5_heap[24:23];
+  assign cr12_null = ! (* src = "/home/runner/workspace/hardware/ret.py:86" *) cr12_thread[24:23];
+  assign cr_rd_addr = local_cr_rd_en ? (* src = "/home/runner/workspace/hardware/ret.py:108" *) { 1'h0, cr_src } : 4'h0;
+  assign \$1  = sto_latched + (* src = "/home/runner/workspace/hardware/ret.py:215" *) 2'h2;
+  assign \$3  = thread_base_latched + (* src = "/home/runner/workspace/hardware/ret.py:215" *) \$2 ;
+  assign \$4  = sto_latched + (* src = "/home/runner/workspace/hardware/ret.py:232" *) 1'h1;
+  assign \$6  = thread_base_latched + (* src = "/home/runner/workspace/hardware/ret.py:232" *) \$5 ;
+  assign busy = ~ (* src = "/home/runner/workspace/hardware/ret.py:279" *) \$8 ;
   assign \$8  = ! (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) ret_state;
   assign \$9  = ret_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 1'h1;
   assign \$10  = ret_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 2'h2;
@@ -17966,50 +18100,116 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
   assign \$16  = ret_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 4'ha;
   assign \$17  = ret_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 4'hb;
   assign \$18  = ret_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 4'hc;
-  assign \$19  = ~ (* src = "/home/runner/workspace/hardware/ret.py:169" *) return_cap[30];
-  assign \$20  = ~ (* src = "/home/runner/workspace/hardware/ret.py:191" *) mem_rd_data[31];
-  (* src = "/home/runner/workspace/hardware/ret.py:132" *)
+  assign \$19  = ret_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 4'hd;
+  assign \$20  = ~ (* src = "/home/runner/workspace/hardware/ret.py:182" *) return_cap[30];
+  assign \$21  = ~ (* src = "/home/runner/workspace/hardware/ret.py:192" *) cr5_heap[25];
+  assign \$22  = ~ (* src = "/home/runner/workspace/hardware/ret.py:195" *) cr5_heap[26];
+  assign \$23  = ~ (* src = "/home/runner/workspace/hardware/ret.py:220" *) mem_rd_data[31];
+  (* src = "/home/runner/workspace/hardware/ret.py:145" *)
   always @(posedge clk)
-    fault_valid <= \$21 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:133" *)
+    fault_valid <= \$24 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:146" *)
   always @(posedge clk)
-    fault_type <= \$22 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:130" *)
+    fault_type <= \$25 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:143" *)
   always @(posedge clk)
-    sub_done_latched <= \$23 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:131" *)
+    sub_done_latched <= \$26 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:144" *)
   always @(posedge clk)
-    sub_fault_latched <= \$24 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:79" *)
+    sub_fault_latched <= \$27 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:92" *)
   always @(posedge clk)
-    cload_e_gt <= \$25 ;
+    cload_e_gt <= \$28 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
   always @(posedge clk)
-    ret_state <= \$26 ;
+    ret_state <= \$29 ;
   (* src = "/home/runner/workspace/hardware/ret.py:64" *)
   always @(posedge clk)
-    return_cap <= \$27 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:75" *)
+    return_cap <= \$30 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:88" *)
   always @(posedge clk)
-    heap_base_latched <= \$28 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:76" *)
+    heap_base_latched <= \$31 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:89" *)
   always @(posedge clk)
-    thread_base_latched <= \$29 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:78" *)
+    thread_base_latched <= \$32 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:91" *)
   always @(posedge clk)
-    sto_latched <= \$30 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:83" *)
+    sto_latched <= \$33 ;
+  (* src = "/home/runner/workspace/hardware/ret.py:96" *)
   always @(posedge clk)
-    frame_word <= \$31 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:80" *)
-  always @(posedge clk)
-    return_pc_latched <= \$32 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:81" *)
-  always @(posedge clk)
-    prev_sto_latched <= \$33 ;
-  (* src = "/home/runner/workspace/hardware/ret.py:129" *)
-  always @(posedge clk)
-    sub_start_reg <= \$34 ;
+    frame_word <= \$34 ;
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
+    \$35  = return_pc_latched;
+    casez (ret_state)
+      4'h0:
+          /* empty */;
+      4'h1:
+          /* empty */;
+      4'h2:
+          /* empty */;
+      4'h4:
+          /* empty */;
+      4'h7:
+          /* empty */;
+      4'h8:
+          /* empty */;
+      4'h9:
+          (* full_case = 32'd1 *)
+          if (\$23 ) begin
+          end else begin
+            \$35  = mem_rd_data[30:16];
+          end
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
+    \$36  = prev_sto_latched;
+    casez (ret_state)
+      4'h0:
+          /* empty */;
+      4'h1:
+          /* empty */;
+      4'h2:
+          /* empty */;
+      4'h4:
+          /* empty */;
+      4'h7:
+          /* empty */;
+      4'h8:
+          /* empty */;
+      4'h9:
+          (* full_case = 32'd1 *)
+          if (\$23 ) begin
+          end else begin
+            \$36  = mem_rd_data[15:0];
+          end
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
+    \$37  = sub_start_reg;
+    casez (ret_state)
+      4'h0:
+          /* empty */;
+      4'h1:
+          /* empty */;
+      4'h2:
+          /* empty */;
+      4'h4:
+          /* empty */;
+      4'h7:
+          /* empty */;
+      4'h8:
+          /* empty */;
+      4'h9:
+          /* empty */;
+      4'ha:
+          \$37  = 1'h1;
+      4'hb:
+          \$37  = 1'h0;
+    endcase
+  end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
     mload_start = 1'h0;
@@ -18029,6 +18229,8 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
       4'h9:
           /* empty */;
       4'ha:
+          /* empty */;
+      4'hb:
           mload_start = sub_start_reg;
     endcase
   end
@@ -18055,6 +18257,8 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
       4'hb:
           /* empty */;
       4'hc:
+          /* empty */;
+      4'hd:
           nia_set = 1'h1;
     endcase
   end
@@ -18081,6 +18285,8 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
       4'hb:
           /* empty */;
       4'hc:
+          /* empty */;
+      4'hd:
           nia_value = { 14'h0000, \$7  };
     endcase
   end
@@ -18119,10 +18325,12 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
       4'h4:
           /* empty */;
       4'h7:
-          mem_rd_addr = heap_base_latched;
+          /* empty */;
       4'h8:
-          mem_rd_addr = \$3 [31:0];
+          mem_rd_addr = heap_base_latched;
       4'h9:
+          mem_rd_addr = \$3 [31:0];
+      4'ha:
           mem_rd_addr = \$6 [31:0];
     endcase
   end
@@ -18139,10 +18347,12 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
       4'h4:
           /* empty */;
       4'h7:
-          mem_rd_en = 1'h1;
+          /* empty */;
       4'h8:
           mem_rd_en = 1'h1;
       4'h9:
+          mem_rd_en = 1'h1;
+      4'ha:
           mem_rd_en = 1'h1;
     endcase
   end
@@ -18167,6 +18377,8 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
       4'ha:
           /* empty */;
       4'hb:
+          /* empty */;
+      4'hc:
           mem_wr_addr = heap_base_latched;
     endcase
   end
@@ -18191,6 +18403,8 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
       4'ha:
           /* empty */;
       4'hb:
+          /* empty */;
+      4'hc:
           mem_wr_data = { 16'h0000, prev_sto_latched };
     endcase
   end
@@ -18215,94 +18429,14 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
       4'ha:
           /* empty */;
       4'hb:
+          /* empty */;
+      4'hc:
           mem_wr_en = 1'h1;
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$21  = fault_valid;
-    casez (ret_state)
-      4'h0:
-          \$21  = 1'h0;
-      4'h1:
-          /* empty */;
-      4'h2:
-          /* empty */;
-      4'h4:
-          if (is_null_cap) begin
-          end else if (\$19 ) begin
-            \$21  = 1'h1;
-          end
-      4'h7:
-          /* empty */;
-      4'h8:
-          if (\$20 ) begin
-            \$21  = 1'h1;
-          end
-      4'h9:
-          /* empty */;
-      4'ha:
-          if (mload_fault) begin
-            \$21  = 1'h1;
-          end
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$22  = fault_type;
-    casez (ret_state)
-      4'h0:
-          \$22  = 4'h0;
-      4'h1:
-          /* empty */;
-      4'h2:
-          /* empty */;
-      4'h4:
-          if (is_null_cap) begin
-          end else if (\$19 ) begin
-            \$22  = 4'h6;
-          end
-      4'h7:
-          /* empty */;
-      4'h8:
-          if (\$20 ) begin
-            \$22  = 4'h2;
-          end
-      4'h9:
-          /* empty */;
-      4'ha:
-          if (mload_fault) begin
-            \$22  = mload_fault_type;
-          end
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$23  = sub_done_latched;
-    casez (ret_state)
-      4'h0:
-          \$23  = 1'h0;
-      4'h1:
-          /* empty */;
-      4'h2:
-          /* empty */;
-      4'h4:
-          /* empty */;
-      4'h7:
-          /* empty */;
-      4'h8:
-          /* empty */;
-      4'h9:
-          \$23  = 1'h0;
-      4'ha:
-          if (mload_done) begin
-            \$23  = 1'h1;
-          end
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$24  = sub_fault_latched;
+    \$24  = fault_valid;
     casez (ret_state)
       4'h0:
           \$24  = 1'h0;
@@ -18311,14 +18445,29 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
       4'h2:
           /* empty */;
       4'h4:
-          /* empty */;
+          if (is_null_cap) begin
+          end else if (\$20 ) begin
+            \$24  = 1'h1;
+          end
       4'h7:
-          /* empty */;
+          if (cr5_null) begin
+            \$24  = 1'h1;
+          end else if (\$21 ) begin
+            \$24  = 1'h1;
+          end else if (\$22 ) begin
+            \$24  = 1'h1;
+          end else if (cr12_null) begin
+            \$24  = 1'h1;
+          end
       4'h8:
           /* empty */;
       4'h9:
-          \$24  = 1'h0;
+          if (\$23 ) begin
+            \$24  = 1'h1;
+          end
       4'ha:
+          /* empty */;
+      4'hb:
           if (mload_fault) begin
             \$24  = 1'h1;
           end
@@ -18326,10 +18475,49 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$25  = cload_e_gt;
+    \$25  = fault_type;
     casez (ret_state)
       4'h0:
-          \$25  = 32'd0;
+          \$25  = 4'h0;
+      4'h1:
+          /* empty */;
+      4'h2:
+          /* empty */;
+      4'h4:
+          if (is_null_cap) begin
+          end else if (\$20 ) begin
+            \$25  = 4'h6;
+          end
+      4'h7:
+          if (cr5_null) begin
+            \$25  = 4'h7;
+          end else if (\$21 ) begin
+            \$25  = 4'h1;
+          end else if (\$22 ) begin
+            \$25  = 4'h2;
+          end else if (cr12_null) begin
+            \$25  = 4'h7;
+          end
+      4'h8:
+          /* empty */;
+      4'h9:
+          if (\$23 ) begin
+            \$25  = 4'h2;
+          end
+      4'ha:
+          /* empty */;
+      4'hb:
+          if (mload_fault) begin
+            \$25  = mload_fault_type;
+          end
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
+    \$26  = sub_done_latched;
+    casez (ret_state)
+      4'h0:
+          \$26  = 1'h0;
       4'h1:
           /* empty */;
       4'h2:
@@ -18341,119 +18529,170 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
       4'h8:
           /* empty */;
       4'h9:
-          \$25  = mem_rd_data;
+          /* empty */;
+      4'ha:
+          \$26  = 1'h0;
+      4'hb:
+          if (mload_done) begin
+            \$26  = 1'h1;
+          end
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$26  = ret_state;
+    \$27  = sub_fault_latched;
+    casez (ret_state)
+      4'h0:
+          \$27  = 1'h0;
+      4'h1:
+          /* empty */;
+      4'h2:
+          /* empty */;
+      4'h4:
+          /* empty */;
+      4'h7:
+          /* empty */;
+      4'h8:
+          /* empty */;
+      4'h9:
+          /* empty */;
+      4'ha:
+          \$27  = 1'h0;
+      4'hb:
+          if (mload_fault) begin
+            \$27  = 1'h1;
+          end
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
+    \$28  = cload_e_gt;
+    casez (ret_state)
+      4'h0:
+          \$28  = 32'd0;
+      4'h1:
+          /* empty */;
+      4'h2:
+          /* empty */;
+      4'h4:
+          /* empty */;
+      4'h7:
+          /* empty */;
+      4'h8:
+          /* empty */;
+      4'h9:
+          /* empty */;
+      4'ha:
+          \$28  = mem_rd_data;
+    endcase
+  end
+  always @* begin
+    if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
+    \$29  = ret_state;
     casez (ret_state)
       4'h0:
           if (return_start) begin
             (* full_case = 32'd1 *)
             if (lambda_active) begin
-              \$26  = 4'h1;
+              \$29  = 4'h1;
             end else begin
-              \$26  = 4'h2;
+              \$29  = 4'h2;
             end
           end
       4'h1:
-          \$26  = 4'h3;
+          \$29  = 4'h3;
       4'h2:
-          \$26  = 4'h4;
+          \$29  = 4'h4;
       4'h4:
           (* full_case = 32'd1 *)
           if (is_null_cap) begin
-            \$26  = 4'h5;
-          end else if (\$19 ) begin
-            \$26  = 4'h6;
+            \$29  = 4'h5;
+          end else if (\$20 ) begin
+            \$29  = 4'h6;
           end else begin
-            \$26  = 4'h7;
+            \$29  = 4'h7;
           end
       4'h7:
-          \$26  = 4'h8;
-      4'h8:
           (* full_case = 32'd1 *)
-          if (\$20 ) begin
-            \$26  = 4'h6;
+          if (cr5_null) begin
+            \$29  = 4'h6;
+          end else if (\$21 ) begin
+            \$29  = 4'h6;
+          end else if (\$22 ) begin
+            \$29  = 4'h6;
+          end else if (cr12_null) begin
+            \$29  = 4'h6;
           end else begin
-            \$26  = 4'h9;
+            \$29  = 4'h8;
           end
+      4'h8:
+          \$29  = 4'h9;
       4'h9:
-          \$26  = 4'ha;
-      4'ha:
-          if (sub_fault_latched) begin
-            \$26  = 4'h6;
-          end else if (sub_done_latched) begin
-            \$26  = 4'hb;
+          (* full_case = 32'd1 *)
+          if (\$23 ) begin
+            \$29  = 4'h6;
+          end else begin
+            \$29  = 4'ha;
           end
+      4'ha:
+          \$29  = 4'hb;
       4'hb:
-          \$26  = 4'hc;
+          if (sub_fault_latched) begin
+            \$29  = 4'h6;
+          end else if (sub_done_latched) begin
+            \$29  = 4'hc;
+          end
       4'hc:
-          \$26  = 4'h3;
+          \$29  = 4'hd;
+      4'hd:
+          \$29  = 4'h3;
       4'h3:
-          \$26  = 4'h0;
+          \$29  = 4'h0;
       4'h5:
-          \$26  = 4'h0;
+          \$29  = 4'h0;
       4'h6:
-          \$26  = 4'h0;
+          \$29  = 4'h0;
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$27  = return_cap;
+    \$30  = return_cap;
     casez (ret_state)
       4'h0:
           /* empty */;
       4'h1:
           /* empty */;
       4'h2:
-          \$27  = cr_rd_data;
+          \$30  = cr_rd_data;
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$28  = heap_base_latched;
+    \$31  = heap_base_latched;
     casez (ret_state)
       4'h0:
           /* empty */;
       4'h1:
           /* empty */;
       4'h2:
-          \$28  = cr5_heap[63:32];
+          \$31  = cr5_heap[63:32];
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$29  = thread_base_latched;
+    \$32  = thread_base_latched;
     casez (ret_state)
       4'h0:
           /* empty */;
       4'h1:
           /* empty */;
       4'h2:
-          \$29  = cr12_thread[63:32];
+          \$32  = cr12_thread[63:32];
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$30  = sto_latched;
-    casez (ret_state)
-      4'h0:
-          /* empty */;
-      4'h1:
-          /* empty */;
-      4'h2:
-          /* empty */;
-      4'h4:
-          /* empty */;
-      4'h7:
-          \$30  = mem_rd_data;
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$31  = frame_word;
+    \$33  = sto_latched;
     casez (ret_state)
       4'h0:
           /* empty */;
@@ -18466,56 +18705,12 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
       4'h7:
           /* empty */;
       4'h8:
-          \$31  = mem_rd_data;
+          \$33  = mem_rd_data;
     endcase
   end
   always @* begin
     if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$32  = return_pc_latched;
-    casez (ret_state)
-      4'h0:
-          /* empty */;
-      4'h1:
-          /* empty */;
-      4'h2:
-          /* empty */;
-      4'h4:
-          /* empty */;
-      4'h7:
-          /* empty */;
-      4'h8:
-          (* full_case = 32'd1 *)
-          if (\$20 ) begin
-          end else begin
-            \$32  = mem_rd_data[30:16];
-          end
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$33  = prev_sto_latched;
-    casez (ret_state)
-      4'h0:
-          /* empty */;
-      4'h1:
-          /* empty */;
-      4'h2:
-          /* empty */;
-      4'h4:
-          /* empty */;
-      4'h7:
-          /* empty */;
-      4'h8:
-          (* full_case = 32'd1 *)
-          if (\$20 ) begin
-          end else begin
-            \$33  = mem_rd_data[15:0];
-          end
-    endcase
-  end
-  always @* begin
-    if (\$auto$verilog_backend.cc:2355:dump_module$28 ) begin end
-    \$34  = sub_start_reg;
+    \$34  = frame_word;
     casez (ret_state)
       4'h0:
           /* empty */;
@@ -18530,11 +18725,11 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
       4'h8:
           /* empty */;
       4'h9:
-          \$34  = 1'h1;
-      4'ha:
-          \$34  = 1'h0;
+          \$34  = mem_rd_data;
     endcase
   end
+  assign cr5_has_r = cr5_heap[25];
+  assign cr5_has_w = cr5_heap[26];
   assign frame_sz = frame_word[31];
   assign frame_ret_pc = frame_word[30:16];
   assign frame_prev_sto = frame_word[15:0];
@@ -18566,24 +18761,6 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
   assign \return_cap.word1_location  = return_cap[63:32];
   assign \return_cap.word2_w2  = return_cap[95:64];
   assign \return_cap.word3_w3  = return_cap[127:96];
-  assign \cr_wr_data.word0_gt  = 32'd0;
-  assign \cr_wr_data.word0_gt.slot_id  = 16'h0000;
-  assign \cr_wr_data.word0_gt.gt_seq  = 7'h00;
-  assign \cr_wr_data.word0_gt.gt_type  = 2'h0;
-  assign \cr_wr_data.word0_gt.perms  = 6'h00;
-  assign \cr_wr_data.word0_gt.b_flag  = 1'h0;
-  assign \cr_wr_data.word1_location  = 32'd0;
-  assign \cr_wr_data.word2_w2  = 32'd0;
-  assign \cr_wr_data.word3_w3  = 32'd0;
-  assign \cr_rd_data.word0_gt  = cr_rd_data[31:0];
-  assign \cr_rd_data.word0_gt.slot_id  = cr_rd_data[15:0];
-  assign \cr_rd_data.word0_gt.gt_seq  = cr_rd_data[22:16];
-  assign \cr_rd_data.word0_gt.gt_type  = cr_rd_data[24:23];
-  assign \cr_rd_data.word0_gt.perms  = cr_rd_data[30:25];
-  assign \cr_rd_data.word0_gt.b_flag  = cr_rd_data[31];
-  assign \cr_rd_data.word1_location  = cr_rd_data[63:32];
-  assign \cr_rd_data.word2_w2  = cr_rd_data[95:64];
-  assign \cr_rd_data.word3_w3  = cr_rd_data[127:96];
   assign \cr5_heap.word0_gt  = cr5_heap[31:0];
   assign \cr5_heap.word0_gt.slot_id  = cr5_heap[15:0];
   assign \cr5_heap.word0_gt.gt_seq  = cr5_heap[22:16];
@@ -18602,6 +18779,24 @@ module \top.core.u_return (clk, return_start, mload_direct_gt, cr_rd_data, cr_rd
   assign \cr12_thread.word1_location  = cr12_thread[63:32];
   assign \cr12_thread.word2_w2  = cr12_thread[95:64];
   assign \cr12_thread.word3_w3  = cr12_thread[127:96];
+  assign \cr_wr_data.word0_gt  = 32'd0;
+  assign \cr_wr_data.word0_gt.slot_id  = 16'h0000;
+  assign \cr_wr_data.word0_gt.gt_seq  = 7'h00;
+  assign \cr_wr_data.word0_gt.gt_type  = 2'h0;
+  assign \cr_wr_data.word0_gt.perms  = 6'h00;
+  assign \cr_wr_data.word0_gt.b_flag  = 1'h0;
+  assign \cr_wr_data.word1_location  = 32'd0;
+  assign \cr_wr_data.word2_w2  = 32'd0;
+  assign \cr_wr_data.word3_w3  = 32'd0;
+  assign \cr_rd_data.word0_gt  = cr_rd_data[31:0];
+  assign \cr_rd_data.word0_gt.slot_id  = cr_rd_data[15:0];
+  assign \cr_rd_data.word0_gt.gt_seq  = cr_rd_data[22:16];
+  assign \cr_rd_data.word0_gt.gt_type  = cr_rd_data[24:23];
+  assign \cr_rd_data.word0_gt.perms  = cr_rd_data[30:25];
+  assign \cr_rd_data.word0_gt.b_flag  = cr_rd_data[31];
+  assign \cr_rd_data.word1_location  = cr_rd_data[63:32];
+  assign \cr_rd_data.word2_w2  = cr_rd_data[95:64];
+  assign \cr_rd_data.word3_w3  = cr_rd_data[127:96];
   assign \$2  = { 1'h0, \$1 , 2'h0 };
   assign \$5  = { 1'h0, \$4 , 2'h0 };
   assign \$7  = { 1'h0, return_pc_latched, 2'h0 };
@@ -18609,7 +18804,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/save.py:36" *)
 (* generator = "Amaranth" *)
-module \top.core.u_save (clk, save_start, cr_rd_data, save_busy, cr15_namespace, cr_rd_addr, save_fault, fault_type, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, \port$3383$0 , mem_rd_data);
+module \top.core.u_save (clk, save_start, cr_rd_data, save_busy, cr15_namespace, cr_rd_addr, save_fault, fault_type, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, \port$3403$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$29  = 0;
   wire \$1 ;
   reg \$10 ;
@@ -18768,8 +18963,8 @@ module \top.core.u_save (clk, save_start, cr_rd_data, save_busy, cr15_namespace,
   wire mem_wr_en;
   (* src = "/home/runner/workspace/hardware/msave.py:23" *)
   wire \mem_wr_en$23 ;
-  input [22:0] \port$3383$0 ;
-  wire [22:0] \port$3383$0 ;
+  input [22:0] \port$3403$0 ;
+  wire [22:0] \port$3403$0 ;
   (* src = "/home/runner/workspace/hardware/save.py:15" *)
   output save_busy;
   wire save_busy;
@@ -18845,7 +19040,7 @@ module \top.core.u_save (clk, save_start, cr_rd_data, save_busy, cr15_namespace,
   (* init = 1'h0 *)
   (* src = "/home/runner/workspace/hardware/save.py:48" *)
   wire sub_start_reg;
-  assign dst_in_range = \port$3383$0 [22:19] <= (* src = "/home/runner/workspace/hardware/save.py:53" *) 3'h6;
+  assign dst_in_range = \port$3403$0 [22:19] <= (* src = "/home/runner/workspace/hardware/save.py:53" *) 3'h6;
   assign save_busy = ~ (* src = "/home/runner/workspace/hardware/save.py:115" *) \$1 ;
   assign save_complete = \$5  & (* src = "/home/runner/workspace/hardware/save.py:116" *) sub_done_latched;
   assign \$1  = ! (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) save_wrapper_state;
@@ -18888,7 +19083,7 @@ module \top.core.u_save (clk, save_start, cr_rd_data, save_busy, cr15_namespace,
     .mem_wr_addr(mem_wr_addr),
     .mem_wr_data(mem_wr_data),
     .mem_wr_en(mem_wr_en),
-    .\port$3383$0 (\port$3383$0 [14:0]),
+    .\port$3403$0 (\port$3403$0 [14:0]),
     .sub_done(sub_done),
     .sub_dst_cap(sub_dst_cap),
     .sub_fault(sub_fault),
@@ -18903,11 +19098,11 @@ module \top.core.u_save (clk, save_start, cr_rd_data, save_busy, cr15_namespace,
       3'h0:
           /* empty */;
       3'h1:
-          cr_rd_addr = \port$3383$0 [22:19];
+          cr_rd_addr = \port$3403$0 [22:19];
       3'h2:
-          cr_rd_addr = \port$3383$0 [18:15];
+          cr_rd_addr = \port$3403$0 [18:15];
       3'h3:
-          cr_rd_addr = \port$3383$0 [18:15];
+          cr_rd_addr = \port$3403$0 [18:15];
     endcase
   end
   always @* begin
@@ -19055,12 +19250,12 @@ module \top.core.u_save (clk, save_start, cr_rd_data, save_busy, cr15_namespace,
           \$14  = 1'h0;
     endcase
   end
-  assign cr_dst = \port$3383$0 [22:19];
+  assign cr_dst = \port$3403$0 [22:19];
   assign \sub_start$3  = sub_start;
   assign dst_reg_latched = sub_dst_cap;
   assign sub_src_gt = src_reg_latched[31:0];
-  assign sub_index = { 1'h0, \port$3383$0 [14:0] };
-  assign index = { 1'h0, \port$3383$0 [14:0] };
+  assign sub_index = { 1'h0, \port$3403$0 [14:0] };
+  assign index = { 1'h0, \port$3403$0 [14:0] };
   assign mem_wr_done = 1'h1;
   assign \mem_wr_done$11  = 1'h1;
   assign \cr15_namespace$13  = cr15_namespace;
@@ -19073,7 +19268,7 @@ module \top.core.u_save (clk, save_start, cr_rd_data, save_busy, cr15_namespace,
   assign \mem_rd_addr$25  = mem_rd_addr;
   assign \mem_rd_en$27  = mem_rd_en;
   assign sub_start_reg = sub_start;
-  assign cr_src = \port$3383$0 [18:15];
+  assign cr_src = \port$3403$0 [18:15];
   assign fault_latched = save_fault;
   assign fault_type_latched = fault_type;
   
@@ -19135,7 +19330,7 @@ endmodule
 
 (* src = "/home/runner/workspace/hardware/msave.py:34" *)
 (* generator = "Amaranth" *)
-module \top.core.u_save.u_msave (clk, sub_fault, sub_done, cr15_namespace, sub_dst_cap, sub_src_gt, sub_start, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, sub_fault_type, \port$3383$0 , mem_rd_data);
+module \top.core.u_save.u_msave (clk, sub_fault, sub_done, cr15_namespace, sub_dst_cap, sub_src_gt, sub_start, mem_rd_addr, mem_rd_en, mem_wr_en, mem_wr_addr, mem_wr_data, sub_fault_type, \port$3403$0 , mem_rd_data);
   reg \$auto$verilog_backend.cc:2355:dump_module$30  = 0;
   wire [18:0] \$1 ;
   wire [12:0] \$10 ;
@@ -19878,8 +20073,8 @@ module \top.core.u_save.u_msave (clk, sub_fault, sub_done, cr15_namespace, sub_d
   reg [31:0] ns_w2_reg = 32'd0;
   (* src = "/home/runner/workspace/hardware/msave.py:65" *)
   reg [31:0] ns_w3_reg = 32'd0;
-  input [14:0] \port$3383$0 ;
-  wire [14:0] \port$3383$0 ;
+  input [14:0] \port$3403$0 ;
+  wire [14:0] \port$3403$0 ;
   (* src = "/home/runner/workspace/hardware/msave.py:87" *)
   wire seal_ok;
   (* src = "/home/runner/workspace/hardware/msave.py:37" *)
@@ -20380,7 +20575,7 @@ module \top.core.u_save.u_msave (clk, sub_fault, sub_done, cr15_namespace, sub_d
     casez (msave_state)
       4'h0:
           if (sub_start) begin
-            \$112  = { 1'h0, \port$3383$0  };
+            \$112  = { 1'h0, \port$3403$0  };
           end
     endcase
   end
@@ -20619,7 +20814,7 @@ module \top.core.u_save.u_msave (clk, sub_fault, sub_done, cr15_namespace, sub_d
   assign crc16_result = crc16_89;
   assign fault_type_reg = sub_fault_type;
   
-  assign sub_index = { 1'h0, \port$3383$0  };
+  assign sub_index = { 1'h0, \port$3403$0  };
   assign mem_rd_valid = 1'h1;
   assign mem_wr_done = 1'h1;
   assign \dst_cap_reg.word0_gt  = dst_cap_reg[31:0];
