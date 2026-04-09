@@ -305,13 +305,12 @@ function init() {
     });
     sim.on('fault', (f) => {
         appendOutput(`FAULT [${f.type}]: ${f.message}`, 'error');
+        _lastFault = f;
         faultAlertOn();
         try {
             showFaultModal(f);
         } catch(err) {
             console.error('[fault] showFaultModal threw:', err);
-            // Retry outside the synchronous sim.run() call stack so the modal
-            // is not inside the try-catch that wraps sim.run().
             setTimeout(() => {
                 try { showFaultModal(f); } catch(e2) {
                     console.error('[fault] showFaultModal retry failed:', e2);
@@ -6121,6 +6120,8 @@ async function fpgaReadBRAM() {
     }
 }
 
+let _lastFault = null;
+
 function faultAlertOn() {
     const btn = document.getElementById('toolFaultBtn');
     if (!btn) return;
@@ -6135,7 +6136,16 @@ function faultAlertOff() {
     btn.classList.add('fault-idle');
 }
 
+function faultRecall() {
+    if (_lastFault) {
+        showFaultModal(_lastFault);
+    } else {
+        faultClear();
+    }
+}
+
 function faultClear() {
+    _lastFault = null;
     faultAlertOff();
     _defaultProgramLoaded = false;
     sim.reset();
@@ -6343,6 +6353,7 @@ function showFaultModal(f) {
             <button class="btn btn-danger" onclick="faultModalReboot()">&#x21BA; Reboot</button>
             <button class="btn btn-warning" onclick="faultModalInvestigate()">&#x1F50D; Investigate</button>
             <button class="btn" onclick="faultModalDismiss()">Dismiss</button>
+            <button class="btn btn-muted" onclick="faultModalClearAndDismiss()" title="Clear fault state — stops the flashing alert">&#x2715; Clear</button>
         </div>`;
 
     overlay.appendChild(dialog);
@@ -6357,6 +6368,8 @@ function faultModalDismiss() {
 
 function faultModalReboot() {
     faultModalDismiss();
+    _lastFault = null;
+    faultAlertOff();
     if (pipelineViz) pipelineViz.setNIA(null);
     _defaultProgramLoaded = false;
     sim.reset();
@@ -6371,6 +6384,12 @@ function faultModalInvestigate() {
     faultModalDismiss();
     switchView('dashboard');
     switchDashTab('gatelog');
+}
+
+function faultModalClearAndDismiss() {
+    faultModalDismiss();
+    _lastFault = null;
+    faultAlertOff();
 }
 
 function resetSim() {

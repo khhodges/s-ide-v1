@@ -100,7 +100,7 @@
                             data-tooltip="CR0–15 — Context Registers · click to cycle: CR0-15 → CR14 CLOOMC → CR12 Thread">CRs</button>
                 </div>
                 <div class="sim-exec-btns">
-                    <button class="btn btn-warning sim-icon-btn fault-idle" id="toolFaultBtn" onclick="faultClear()" data-tooltip="Fault — Clear the fault state and resume">&#x26A1;</button>
+                    <button class="btn btn-warning sim-icon-btn fault-idle" id="toolFaultBtn" onclick="faultRecall()" data-tooltip="Fault — Click to recall the fault report">&#x26A1;</button>
                     <button class="btn btn-success sim-icon-btn" onclick="stepSim()" data-tooltip="Step — Execute one instruction">&#x1F463;</button>
                     <button class="btn btn-walk sim-icon-btn" id="toolWalkBtn" onclick="walkToggle()" data-tooltip="Walk — Animate step-by-step execution">&#x1F6B6;</button>
                     <div class="break-wrap" id="breakWrap">

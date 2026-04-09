@@ -8359,6 +8359,12 @@ tr.itrace-fault td { color: #ff9999; }
     border-color: #991b1b;
 }
 .btn-danger:hover { background: #991b1b; }
+.btn-muted {
+    background: #374151;
+    color: #9ca3af;
+    border-color: #4b5563;
+}
+.btn-muted:hover { background: #4b5563; color: #d1d5db; }
 
 #builderView {
     flex: 1;
