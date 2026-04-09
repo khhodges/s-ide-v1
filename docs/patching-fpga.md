@@ -51,6 +51,87 @@ on two FPGA boards you can buy for the price of a textbook.
 
 ---
 
+## The Church-Turing Thesis
+
+In 1936, two mathematicians independently solved the same fundamental
+problem — what does it mean for something to be computable? — and
+arrived at two radically different answers.
+
+**Alonzo Church** at Princeton published the lambda calculus: a pure
+mathematical system where computation is the application of functions to
+arguments. There are no variables you can change, no memory you can
+overwrite, no side effects. A function takes an input and produces an
+output. That is all it can do. The lambda calculus is computation as
+mathematics — deterministic, repeatable, and provably correct.
+
+**Alan Turing**, Church's doctoral student, published the Turing machine:
+an abstract device with a tape of symbols, a read/write head, and a set
+of rules. The machine reads a symbol, writes a symbol, moves left or
+right, and changes state. The Turing machine is computation as mechanism
+— sequential, stateful, and imperative. It models what a human
+calculator does with pencil and paper: read, write, move, decide.
+
+Church and Turing proved that their two models are equivalent in
+computational power — anything one can compute, the other can compute.
+This equivalence is a mathematical theorem. The broader Church-Turing
+thesis — that these models capture everything that is effectively
+computable — remains an unproven but universally accepted conjecture.
+
+But equivalence in power does not mean equivalence in consequence.
+Turing's model became the blueprint for every computer built since 1945:
+a mutable memory, a program counter, instructions that read and write
+anywhere. Church's model was set aside as a theoretical curiosity. We
+built civilisation's digital infrastructure on the Turing side alone.
+
+The Church Machine reunites both sides. Its instruction set is split
+evenly: ten **Turing instructions** (data manipulation, arithmetic,
+branching) and ten **Church instructions** (capability operations,
+secure entry, lambda creation). The Turing half does the work. The
+Church half ensures the work is authorised. Neither half is complete
+without the other.
+
+This is why capability faults are not errors — they are the Church side
+doing its job. When the machine refuses an unauthorised access, that is
+the lambda calculus enforcing mathematical correctness on a physical
+machine.
+
+---
+
+## CLOOMC — the Universal Capability Compiler
+
+You do not need to write Church Machine assembly by hand. **CLOOMC++**
+(Church Lambda Object-Oriented Machine Compiler) is a multi-language
+compiler that targets the 20-instruction Church Machine instruction set.
+
+Write in the language you think in. CLOOMC compiles it to secure,
+capability-checked machine code:
+
+- **English** — natural language descriptions compiled to instructions
+- **JavaScript** — familiar syntax for web developers
+- **Haskell** — pure functional style, natural fit for the Church side
+- **Symbolic Math (Ada)** — mathematical expressions with `let` bindings
+  and `repeat` loops, honouring Ada Lovelace's Note G (1843)
+- **Lambda Calculus** — Church numerals, Boolean logic, pure functions
+
+CLOOMC auto-detects the language. You never need to specify it. Write
+a program, click compile, and it produces an `upload.json` containing
+the compiled machine words, capability requirements, and self-documentation.
+
+The key insight: regardless of which language you write in, every
+compiled abstraction obeys the same six Laws. A JavaScript program and
+a Haskell program running on the same Church Machine cannot interfere
+with each other — not because of process isolation or virtual memory,
+but because the hardware will not permit it.
+
+CLOOMC also generates the capability list automatically. When your code
+uses multiply or divide, it detects this and injects a capability
+reference to the SlideRule abstraction (a hardware-accelerated
+multiply/divide unit). When your code calls another abstraction, it
+generates the minimum capability grant required. You get
+principle-of-least-privilege by default, not by discipline.
+
+---
+
 ## Why This Matters
 
 Modern software is fragile. A single vulnerability in one library can
