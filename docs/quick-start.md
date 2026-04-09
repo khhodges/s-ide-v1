@@ -87,7 +87,7 @@ keeping every security guarantee intact.
 | **FPGA** | Gowin GW2AR-18C, 20K LUTs (~22% used) |
 | **Clock** | 27 MHz (direct crystal) |
 | **Memory** | 64 KB BSRAM |
-| **Price** | ~$3–$20 (Sipeed) |
+| **Price** | ~$3–$20 |
 | **Best for** | Classrooms, IoT nodes, learning, first Church Machine |
 | **UART** | On-board FT2232 — just plug in USB-C, no adapter needed |
 
@@ -136,7 +136,7 @@ from unboxing to running your own code on real silicon.
 
 ### What you need
 
-- A **[Tang Nano 20K](https://www.google.com/search?q=Tang+Nano+20K)** board (~$3–$20 from Sipeed)
+- A **[Tang Nano 20K](https://www.google.com/search?q=Tang+Nano+20K)** board (~$3–$20)
 - A **USB-C cable** (data, not charge-only)
 - A computer running **Linux** or **ChromeOS** (with Linux container)
 
