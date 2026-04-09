@@ -136,20 +136,21 @@ const TangSerial = (function() {
     async function drainInput() {
         if (_bridgeMode) { await _bDrain(); return; }
         if (!port || !port.readable) return;
-        const r = port.readable.getReader();
+        var r = port.readable.getReader();
         activeReader = r;
         try {
             while (true) {
-                const { value, done } = await Promise.race([
+                var result = await Promise.race([
                     r.read(),
-                    new Promise(resolve => setTimeout(() => resolve({ value: null, done: true }), 100))
+                    sleep(100).then(function() { return { value: null, done: true }; }),
                 ]);
-                if (done || !value) break;
+                if (result.done || !result.value) break;
             }
         } catch(e) {}
         finally {
             activeReader = null;
-            try { r.releaseLock(); } catch(e) {}
+            try { await r.cancel(); } catch(e2) {}
+            try { r.releaseLock(); } catch(e3) {}
         }
     }
 
@@ -207,7 +208,8 @@ const TangSerial = (function() {
             status('Read error: ' + e.message);
         } finally {
             activeReader = null;
-            try { r.releaseLock(); } catch(e) {}
+            try { await r.cancel(); } catch(e2) {}
+            try { r.releaseLock(); } catch(e3) {}
         }
 
         const rxTotal = rxBytes.length;
@@ -297,7 +299,8 @@ const TangSerial = (function() {
             status('Read error: ' + e.message);
         } finally {
             activeReader = null;
-            try { r.releaseLock(); } catch(e) {}
+            try { await r.cancel(); } catch(e2) {}
+            try { r.releaseLock(); } catch(e3) {}
         }
 
         return { bytesSent: probe.length, bytesReceived: rxBytes.length, rawBytes: rxBytes };
@@ -316,109 +319,136 @@ const TangSerial = (function() {
 
     // PATCH_LUMP — write N words at an arbitrary BRAM address.
     // Protocol: [0xBE][0xEF][addrHi][addrLo][countHi][countLo][w0_LE ... wN-1_LE][crcHi][crcLo]
-    // The FPGA echoes back [addrHi][addrLo][countHi][countLo] on success.
-    // Requires hardware/boot_rom.py UART FSM extension to decode opcode 0xBEEF.
+    // The FPGA echoes back [addrHi][addrLo][countHi][countLo] on success,
+    // or 0x15 (NAK) on CRC mismatch.
+    // Requires hardware ti60_f225.py debug FSM (opcode 0xBEEF).
     async function patchLump(baseAddr, words, onStatus) {
-        const status = onStatus || function() {};
+        var status = onStatus || function() {};
 
         if (!isConnected()) {
             throw new Error('Not connected. Call connect() first.');
         }
 
-        const N = words.length;
+        var N = words.length;
         if (N === 0) { status('Nothing to send (0 words).'); return { success: true }; }
 
-        // Build payload: 2 magic + 2 addr + 2 count + N*4 data + 2 CRC
-        const payloadBody = new Uint8Array(2 + 2 + 2 + N * 4);
+        var payloadBody = new Uint8Array(2 + 2 + 2 + N * 4);
         payloadBody[0] = 0xBE;
         payloadBody[1] = 0xEF;
         payloadBody[2] = (baseAddr >>> 8) & 0xFF;
         payloadBody[3] = baseAddr & 0xFF;
         payloadBody[4] = (N >>> 8) & 0xFF;
         payloadBody[5] = N & 0xFF;
-        for (let i = 0; i < N; i++) {
-            const w = words[i] >>> 0;
+        for (var i = 0; i < N; i++) {
+            var w = words[i] >>> 0;
             payloadBody[6 + i * 4 + 0] = w & 0xFF;
             payloadBody[6 + i * 4 + 1] = (w >>> 8) & 0xFF;
             payloadBody[6 + i * 4 + 2] = (w >>> 16) & 0xFF;
             payloadBody[6 + i * 4 + 3] = (w >>> 24) & 0xFF;
         }
 
-        // CRC-16/CCITT-FALSE over the body (excluding the two CRC bytes themselves)
-        let crc = 0xFFFF;
-        for (const byte of payloadBody) {
-            for (let i = 0; i < 8; i++) {
-                const bit = ((byte >>> (7 - i)) & 1) ^ ((crc >>> 15) & 1);
+        var crc = 0xFFFF;
+        for (var ci = 0; ci < payloadBody.length; ci++) {
+            var byte = payloadBody[ci];
+            for (var bi = 0; bi < 8; bi++) {
+                var bit = ((byte >>> (7 - bi)) & 1) ^ ((crc >>> 15) & 1);
                 crc = ((crc << 1) & 0xFFFF) ^ (bit ? 0x1021 : 0);
             }
         }
-        const frame = new Uint8Array(payloadBody.length + 2);
+        var frame = new Uint8Array(payloadBody.length + 2);
         frame.set(payloadBody, 0);
         frame[payloadBody.length]     = (crc >>> 8) & 0xFF;
         frame[payloadBody.length + 1] = crc & 0xFF;
 
-        status(`PATCH_LUMP: addr=0x${baseAddr.toString(16).toUpperCase().padStart(4,'0')} N=${N} CRC=0x${crc.toString(16).toUpperCase().padStart(4,'0')} — sending ${frame.length} bytes...`);
+        status('PATCH_LUMP: addr=0x' + baseAddr.toString(16).toUpperCase().padStart(4,'0') +
+               ' N=' + N + ' CRC=0x' + crc.toString(16).toUpperCase().padStart(4,'0') +
+               ' \u2014 sending ' + frame.length + ' bytes\u2026');
 
         await drainInput();
+        await sleep(50);
+        await drainInput();
 
-        // ── bridge path ──────────────────────────────────────────────────────
         if (_bridgeMode) {
-            const res = await _bTransact(Array.from(frame), 4, 3000);
+            var res = await _bTransact(Array.from(frame), 4, 5000);
             if (!res.ok) { status('Bridge error: ' + res.error); return { success: false }; }
-            const rxBytes = res.rx || [];
-            if (rxBytes.length >= 4) {
-                const echoAddr  = (rxBytes[0] << 8) | rxBytes[1];
-                const echoCount = (rxBytes[2] << 8) | rxBytes[3];
-                const ok = echoAddr === (baseAddr & 0xFFFF) && echoCount === N;
-                status(ok ? `Echo OK: addr=0x${echoAddr.toString(16).toUpperCase().padStart(4,'0')} count=${echoCount}`
-                          : `Echo mismatch`);
-                return { success: ok };
+            var rb = res.rx || [];
+            if (rb.length >= 4) {
+                var bAddr  = (rb[0] << 8) | rb[1];
+                var bCount = (rb[2] << 8) | rb[3];
+                var bOk = bAddr === (baseAddr & 0xFFFF) && bCount === N;
+                status(bOk ? 'Echo OK: addr=0x' + bAddr.toString(16).toUpperCase().padStart(4,'0') + ' count=' + bCount
+                           : 'Echo mismatch');
+                return { success: bOk };
             }
-            status(`No echo received (${rxBytes.length} bytes).`);
+            if (rb.length === 1 && rb[0] === 0x15) {
+                status('NAK received \u2014 CRC mismatch on FPGA side.');
+                return { success: false };
+            }
+            status('No echo received (' + rb.length + ' bytes).');
             return { success: false };
         }
 
-        const w = port.writable.getWriter();
-        try { await w.write(frame); } finally { w.releaseLock(); }
+        async function sendAndAwaitEcho(f) {
+            var wr = port.writable.getWriter();
+            try { await wr.write(f); } finally { wr.releaseLock(); }
 
-        status('Bytes sent. Waiting for echo...');
+            status('Bytes sent. Waiting for echo\u2026');
 
-        const rxBytes = [];
-        const deadline = Date.now() + 3000;
-        const r = port.readable.getReader();
-        activeReader = r;
-        try {
-            while (Date.now() < deadline) {
-                const { value, done } = await Promise.race([
-                    r.read(),
-                    new Promise(resolve => setTimeout(() => resolve({ done: true }), 1000))
-                ]);
-                if (done || !value || value.length === 0) break;
-                for (let i = 0; i < value.length; i++) rxBytes.push(value[i]);
-                if (rxBytes.length >= 4) break;
+            var rxBuf = [];
+            var deadline = Date.now() + 5000;
+            var r = port.readable.getReader();
+            activeReader = r;
+            try {
+                while (rxBuf.length < 4) {
+                    var remaining = Math.max(deadline - Date.now(), 0);
+                    if (remaining <= 0) break;
+                    var result = await Promise.race([
+                        r.read(),
+                        sleep(remaining).then(function() { return { value: null, done: true }; }),
+                    ]);
+                    if (result.done || !result.value) break;
+                    for (var j = 0; j < result.value.length; j++) rxBuf.push(result.value[j]);
+                }
+            } catch(e) {
+                status('Read error: ' + e.message);
+            } finally {
+                activeReader = null;
+                try { await r.cancel(); } catch(e2) {}
+                try { r.releaseLock(); } catch(e3) {}
             }
-        } catch(e) {
-            status('Read error: ' + e.message);
-        } finally {
-            activeReader = null;
-            try { r.releaseLock(); } catch(e) {}
+            return rxBuf;
+        }
+
+        var rxBytes = await sendAndAwaitEcho(frame);
+
+        if (rxBytes.length === 0) {
+            status('No echo \u2014 retrying with drain\u2026');
+            await drainInput();
+            await sleep(200);
+            await drainInput();
+            rxBytes = await sendAndAwaitEcho(frame);
         }
 
         if (rxBytes.length >= 4) {
-            const echoAddr  = (rxBytes[0] << 8) | rxBytes[1];
-            const echoCount = (rxBytes[2] << 8) | rxBytes[3];
-            const addrOk  = echoAddr  === (baseAddr & 0xFFFF);
-            const countOk = echoCount === N;
+            var echoAddr  = (rxBytes[0] << 8) | rxBytes[1];
+            var echoCount = (rxBytes[2] << 8) | rxBytes[3];
+            var addrOk  = echoAddr  === (baseAddr & 0xFFFF);
+            var countOk = echoCount === N;
             if (addrOk && countOk) {
-                status(`Echo OK: addr=0x${echoAddr.toString(16).toUpperCase().padStart(4,'0')} count=${echoCount}`);
+                status('Echo OK: addr=0x' + echoAddr.toString(16).toUpperCase().padStart(4,'0') + ' count=' + echoCount);
                 return { success: true };
             } else {
-                status(`Echo mismatch: expected addr=0x${(baseAddr&0xFFFF).toString(16).toUpperCase().padStart(4,'0')} count=${N}, got addr=0x${echoAddr.toString(16).toUpperCase().padStart(4,'0')} count=${echoCount}`);
+                status('Echo mismatch: expected addr=0x' + (baseAddr&0xFFFF).toString(16).toUpperCase().padStart(4,'0') +
+                       ' count=' + N + ', got addr=0x' + echoAddr.toString(16).toUpperCase().padStart(4,'0') +
+                       ' count=' + echoCount);
                 return { success: false };
             }
+        } else if (rxBytes.length === 1 && rxBytes[0] === 0x15) {
+            status('NAK (0x15) received \u2014 CRC mismatch on FPGA side. Frame may be corrupted.');
+            return { success: false };
         } else {
-            status(`No echo received (${rxBytes.length} bytes). Firmware may not support PATCH_LUMP yet — update hardware/boot_rom.py.`);
-            return { success: false, rxBytes };
+            status('No echo received (' + rxBytes.length + ' bytes). Check: FPGA connected? Bitstream includes debug FSM?');
+            return { success: false, rxBytes: rxBytes };
         }
     }
 
@@ -484,7 +514,8 @@ const TangSerial = (function() {
                     }
                 }
             } finally {
-                r.releaseLock();
+                try { await r.cancel(); } catch(e2) {}
+                try { r.releaseLock(); } catch(e3) {}
             }
             return { rxBuf: rxBuf, rxLen: rxOff };
         }
