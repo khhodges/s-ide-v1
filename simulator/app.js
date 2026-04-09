@@ -6177,45 +6177,88 @@ setInterval(updateFPGAStatusBtn, 2000);
 // Sends 0xBEAD to the Ti60 F225 debug FSM and dumps the returned words to the
 // editor console as a hex table.  Useful to verify PATCH_LUMP actually wrote the
 // correct words after a patch.
-async function fpgaReadBRAM() {
+function fpgaReadBRAM() {
     if (typeof TangSerial === 'undefined' || !TangSerial.isConnected()) {
         _fpgaLog('Read BRAM: FPGA not connected — click ⬡ FPGA to connect first.');
         return;
     }
-    // Default: read the full NS+c-list region (0x0000..0xFF = 256 words)
-    const addrStr  = prompt('BRAM start word address (hex, default 0x0000):', '0x0000');
-    if (addrStr === null) return;
-    const countStr = prompt('Word count to read (default 256):', '256');
-    if (countStr === null) return;
 
-    const baseAddr = parseInt(addrStr, 16) || 0;
-    const count    = Math.min(Math.max(parseInt(countStr, 10) || 256, 1), 2048);
+    const existing = document.getElementById('bramModalOverlay');
+    if (existing) existing.remove();
 
-    switchView('editor');
-    _fpgaLog(`Read BRAM: addr=0x${baseAddr.toString(16).toUpperCase().padStart(4,'0')} count=${count}…`);
+    const overlay = document.createElement('div');
+    overlay.id = 'bramModalOverlay';
+    overlay.className = 'modal-overlay';
 
-    try {
-        const result = await TangSerial.readBRAM(baseAddr, count, (msg) => _fpgaLog(msg));
-        if (result.words.length === 0) {
-            _fpgaLog('Read BRAM: no data received — is the Ti60 F225 bitstream built with READ_BRAM support?');
-            return;
+    const dialog = document.createElement('div');
+    dialog.className = 'modal-dialog';
+    dialog.innerHTML = `
+        <div class="modal-title">Read BRAM</div>
+        <label class="modal-label">Start word address (hex)
+            <input id="bramAddrInput" class="modal-input" type="text" value="0x0000">
+        </label>
+        <label class="modal-label">Word count
+            <input id="bramCountInput" class="modal-input" type="text" value="256">
+        </label>
+        <div class="modal-buttons">
+            <button id="bramModalCancel" class="btn">Cancel</button>
+            <button id="bramModalOk" class="btn btn-primary">OK</button>
+        </div>`;
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    const addrInput  = document.getElementById('bramAddrInput');
+    const countInput = document.getElementById('bramCountInput');
+    addrInput.focus();
+    addrInput.select();
+
+    function closeModal() { overlay.remove(); document.removeEventListener('keydown', onEscape); }
+
+    document.getElementById('bramModalCancel').addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+    function onEscape(e) { if (e.key === 'Escape') closeModal(); }
+    document.addEventListener('keydown', onEscape);
+
+    let submitted = false;
+    async function submit() {
+        if (submitted) return;
+        submitted = true;
+        const addrStr  = addrInput.value;
+        const countStr = countInput.value;
+        closeModal();
+
+        const baseAddr = parseInt(addrStr, 16) || 0;
+        const count    = Math.min(Math.max(parseInt(countStr, 10) || 256, 1), 2048);
+
+        switchView('editor');
+        _fpgaLog(`Read BRAM: addr=0x${baseAddr.toString(16).toUpperCase().padStart(4,'0')} count=${count}…`);
+
+        try {
+            const result = await TangSerial.readBRAM(baseAddr, count, (msg) => _fpgaLog(msg));
+            if (result.words.length === 0) {
+                _fpgaLog('Read BRAM: no data received — is the Ti60 F225 bitstream built with READ_BRAM support?');
+                return;
+            }
+            const PER_LINE = 8;
+            let out = `\nBRAM dump  addr=0x${baseAddr.toString(16).toUpperCase().padStart(4,'0')}  (${result.words.length} words):\n`;
+            for (let i = 0; i < result.words.length; i += PER_LINE) {
+                const lineAddr = baseAddr + i;
+                const hex = result.words.slice(i, i + PER_LINE)
+                    .map(w => w.toString(16).toUpperCase().padStart(8, '0'))
+                    .join('  ');
+                out += `  +${String(lineAddr).padStart(4)}  ${hex}\n`;
+            }
+            const con = document.getElementById('editorConsole');
+            if (con) { con.textContent += out; con.scrollTop = con.scrollHeight; }
+        } catch(e) {
+            _fpgaLog('Read BRAM error: ' + e.message);
         }
-        // Display as hex table: 8 words per line
-        const PER_LINE = 8;
-        let out = `\nBRAM dump  addr=0x${baseAddr.toString(16).toUpperCase().padStart(4,'0')}  (${result.words.length} words):\n`;
-        for (let i = 0; i < result.words.length; i += PER_LINE) {
-            const lineAddr = baseAddr + i;
-            const hex = result.words.slice(i, i + PER_LINE)
-                .map(w => w.toString(16).toUpperCase().padStart(8, '0'))
-                .join('  ');
-            out += `  +${String(lineAddr).padStart(4)}  ${hex}\n`;
-        }
-        // Also note any word that matches a known NS entry location
-        const con = document.getElementById('editorConsole');
-        if (con) { con.textContent += out; con.scrollTop = con.scrollHeight; }
-    } catch(e) {
-        _fpgaLog('Read BRAM error: ' + e.message);
     }
+
+    document.getElementById('bramModalOk').addEventListener('click', submit);
+    addrInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); countInput.focus(); countInput.select(); } });
+    countInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
 }
 
 let _lastFault = null;
