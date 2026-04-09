@@ -7,10 +7,34 @@ attacker. We have spent seventy years patching this mistake. The Church
 Machine is a different answer: **security built into every memory access,
 enforced by the hardware itself.**
 
-The Second Law of the Church-Turing Machine Model says: every READ and
-every WRITE must be validated by a referenced capability — an unforgeable
-token that grants specific permissions on a specific region of memory.
-No token, no access. No exceptions. No root user. No privilege escalation.
+The design is governed by the five Laws of the Church-Turing Machine
+Model:
+
+1. **Oil and Water** — capabilities and data never mix. Code lives in
+   one domain, security tokens live in another. You cannot cast a
+   pointer into a capability or forge a token from raw bits. The
+   hardware enforces this separation on every cycle.
+
+2. **Double Checking** — every READ and every WRITE must be validated
+   by a referenced capability context register. CR14 checks instruction
+   fetch. CR12 checks thread lump access. CR5 checks code entry. No
+   single point of trust — the machine cross-checks at every boundary.
+
+3. **Distribution not Centralisation** — there is no kernel, no central
+   authority, no single process that controls all resources. Each
+   abstraction holds exactly the capabilities it needs. Authority is
+   distributed to the edge, not hoarded at the centre.
+
+4. **Democratic not Dictatorial** — no root user, no superuser, no
+   privilege escalation. Every abstraction operates under the same
+   rules. The boot firmware itself runs with limited capabilities. No
+   entity can override the security model — not even the manufacturer.
+
+5. **Calibrated and Transparent** — every capability carries explicit,
+   visible permission bits (R, W, X, L, S, E) and bounds. You can
+   inspect exactly what any abstraction is allowed to do. There are no
+   hidden permissions, no implicit grants, no ambient authority. What
+   you see is what it gets.
 
 This is not theoretical. The Church Machine runs on real silicon today,
 on two FPGA boards you can buy for the price of a textbook.
