@@ -2907,7 +2907,7 @@ class ChurchSimulator {
                     const oldW1        = this.memory[nsBase + 1] >>> 0;
                     const oldW2        = this.memory[nsBase + 2] >>> 0;
                     const w1f          = this.parseNSWord1(oldW1);
-                    const newLimit17   = newCW - 1;
+                    const newLimit17   = newCW;
                     this.memory[nsBase + 1] = this.packNSWord1(newLimit17, w1f.b, w1f.f, w1f.g, w1f.chainable, w1f.gtType, w1f.clistCount);
                     const existingGtSeq    = (oldW2 >>> 25) & 0x7F;
                     this.memory[nsBase + 2] = this.makeVersionSeals(existingGtSeq, baseAddr, newLimit17);
