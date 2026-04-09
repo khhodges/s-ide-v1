@@ -383,9 +383,10 @@ lean tunnel-hunting protocol (8-byte header, raw STORE, CRC-32). Any
 opcode removed from the profile triggers FAULT_OPCODE — the machine
 never silently ignores a missing feature.
 
-**Who should choose this:** Students, educators, IoT builders, and
-anyone who wants the fastest path from unboxing to running secure code
-on real silicon. If you are new to the Church Machine, start here.
+**Who should choose this:** Parents, children, schools, teachers,
+students, educators, IoT builders, and anyone who wants the fastest
+path from unboxing to running secure code on real silicon. If you are
+new to the Church Machine, start here.
 
 ### Side-by-Side Comparison
 
