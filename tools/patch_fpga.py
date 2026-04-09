@@ -3,31 +3,32 @@
 Church Machine FPGA Patcher — command-line tool
 ================================================
 Reads a .patch file exported from the Church Machine IDE and sends the
-pre-compiled binary blocks to the FPGA over UART.
+pre-compiled binary frames to the FPGA over UART.
 
 Usage:
     python3 patch_fpga.py <serial-port> <patch-file>
 
 Example:
-    python3 patch_fpga.py /dev/ttyUSB1 CR14_patch.bin
+    python3 patch_fpga.py /dev/ttyUSB1 CR14_patch.patch
 
-The script knows nothing about Church Machine internals.  It reads
-binary patch blocks and sends each one using the PATCH_LUMP UART protocol:
-
-    [0xBE][0xEF][addrHi][addrLo][countHi][countLo][word0_LE...wordN_LE][crcHi][crcLo]
-
-After all blocks are sent, it transmits the RUN command (0xBE 0xAA).
-
-.patch file format (all multi-byte values little-endian unless noted):
+.patch file format (CHPF v1):
     Bytes 0-3:  Magic "CHPF" (0x43 0x48 0x50 0x46)
     Byte  4:    Version (0x01)
-    Byte  5:    Number of patch blocks (1-255)
-    Byte  6:    Flags (bit 0 = send RUN after all blocks)
+    Byte  5:    Number of PATCH_LUMP blocks (1-255)
+    Byte  6:    Flags (bit 0 = file includes RUN sentinel after all blocks)
     Byte  7:    Reserved (0x00)
-    Then for each block:
-        Bytes 0-1:  Address (big-endian, BRAM word address)
-        Bytes 2-3:  Word count N (big-endian)
-        Bytes 4..4+N*4-1:  N words (little-endian, 4 bytes each)
+    Then for each block, a complete UART frame:
+        Bytes 0-1:   Tag [0xBE][0xEF]
+        Bytes 2-3:   Address (big-endian, BRAM word address)
+        Bytes 4-5:   Word count N (big-endian)
+        Bytes 6..6+N*4-1:  N words (little-endian, 4 bytes each)
+        Last 2 bytes: CRC-16/CCITT over the frame body (tag+addr+count+words)
+    If flags bit 0 is set, the last 2 bytes of the file are:
+        [0xBE][0xAA]  (RUN sentinel — tells FPGA to start executing)
+
+The script sends each stored frame verbatim over UART, waits for the
+4-byte echo (addr+count), verifies it, and then sends the RUN sentinel
+if present.
 
 Requires: pyserial (pip3 install pyserial)
 """
@@ -56,45 +57,49 @@ def parse_patch_file(path):
 
     num_blocks = data[5]
     flags = data[6]
-    send_run = bool(flags & 1)
+    has_run = bool(flags & 1)
 
-    blocks = []
+    frames = []
     offset = 8
     for i in range(num_blocks):
-        if offset + 4 > len(data):
-            print(f"ERROR: Patch file truncated at block {i}")
+        if offset + 6 > len(data):
+            print(f"ERROR: Patch file truncated at block {i} header")
             sys.exit(1)
-        addr = (data[offset] << 8) | data[offset + 1]
-        count = (data[offset + 2] << 8) | data[offset + 3]
-        offset += 4
-        words_bytes = data[offset:offset + count * 4]
-        if len(words_bytes) < count * 4:
-            print(f"ERROR: Patch file truncated in block {i} data")
+        if data[offset] != 0xBE or data[offset + 1] != 0xEF:
+            print(f"ERROR: Block {i} missing PATCH_LUMP tag (expected 0xBEEF, got 0x{data[offset]:02X}{data[offset+1]:02X})")
             sys.exit(1)
-        offset += count * 4
-        blocks.append((addr, count, words_bytes))
+        addr = (data[offset + 2] << 8) | data[offset + 3]
+        count = (data[offset + 4] << 8) | data[offset + 5]
+        body_len = 6 + count * 4
+        frame_len = body_len + 2
+        if offset + frame_len > len(data):
+            print(f"ERROR: Patch file truncated in block {i} (need {frame_len} bytes, have {len(data) - offset})")
+            sys.exit(1)
+        frame = data[offset:offset + frame_len]
+        stored_crc = (frame[-2] << 8) | frame[-1]
+        computed_crc = crc16_ccitt(frame[:-2])
+        if stored_crc != computed_crc:
+            print(f"ERROR: Block {i} CRC mismatch — stored=0x{stored_crc:04X}, computed=0x{computed_crc:04X}")
+            sys.exit(1)
+        frames.append((addr, count, frame, stored_crc))
+        offset += frame_len
 
-    return blocks, send_run
+    run_sentinel = None
+    if has_run:
+        if offset + 2 > len(data):
+            print(f"ERROR: Patch file missing RUN sentinel")
+            sys.exit(1)
+        run_sentinel = data[offset:offset + 2]
+        if run_sentinel != b'\xBE\xAA':
+            print(f"ERROR: Invalid RUN sentinel (expected 0xBEAA, got 0x{run_sentinel[0]:02X}{run_sentinel[1]:02X})")
+            sys.exit(1)
 
-def build_uart_frame(addr, count, words_bytes):
-    body = bytearray()
-    body.append(0xBE)
-    body.append(0xEF)
-    body.append((addr >> 8) & 0xFF)
-    body.append(addr & 0xFF)
-    body.append((count >> 8) & 0xFF)
-    body.append(count & 0xFF)
-    body.extend(words_bytes)
-    crc = crc16_ccitt(body)
-    frame = bytearray(body)
-    frame.append((crc >> 8) & 0xFF)
-    frame.append(crc & 0xFF)
-    return frame, crc
+    return frames, run_sentinel
 
 def main():
     if len(sys.argv) < 3:
         print("Usage: python3 patch_fpga.py <serial-port> <patch-file>")
-        print("Example: python3 patch_fpga.py /dev/ttyUSB1 CR14_patch.bin")
+        print("Example: python3 patch_fpga.py /dev/ttyUSB1 CR14_patch.patch")
         sys.exit(1)
 
     serial_port = sys.argv[1]
@@ -106,16 +111,16 @@ def main():
         print("ERROR: pyserial not installed.  Run:  pip3 install pyserial")
         sys.exit(1)
 
-    blocks, send_run = parse_patch_file(patch_path)
+    frames, run_sentinel = parse_patch_file(patch_path)
 
     print(f"Church Machine FPGA Patcher")
     print(f"  File   : {patch_path}")
-    print(f"  Blocks : {len(blocks)}")
-    print(f"  RUN    : {'yes' if send_run else 'no'}")
+    print(f"  Blocks : {len(frames)}")
+    print(f"  RUN    : {'yes' if run_sentinel else 'no'}")
     print()
 
-    for i, (addr, count, _) in enumerate(blocks):
-        print(f"  Block {i}: addr=0x{addr:04X}  words={count}")
+    for i, (addr, count, frame, crc) in enumerate(frames):
+        print(f"  Block {i}: addr=0x{addr:04X}  words={count}  CRC=0x{crc:04X}  frame={len(frame)} bytes")
     print()
 
     try:
@@ -131,8 +136,7 @@ def main():
     time.sleep(0.05)
 
     all_ok = True
-    for i, (addr, count, words_bytes) in enumerate(blocks):
-        frame, crc = build_uart_frame(addr, count, words_bytes)
+    for i, (addr, count, frame, crc) in enumerate(frames):
         print(f"  Block {i}: TX {len(frame)} bytes  addr=0x{addr:04X}  words={count}  CRC=0x{crc:04X}")
 
         ser.reset_input_buffer()
@@ -162,10 +166,10 @@ def main():
             print(f"           RX no echo ({len(rx)} bytes received)")
             all_ok = False
 
-    if send_run:
+    if run_sentinel:
         print()
-        print("  Sending RUN command (0xBE 0xAA)...")
-        ser.write(bytes([0xBE, 0xAA]))
+        print("  Sending RUN sentinel (0xBE 0xAA)...")
+        ser.write(run_sentinel)
         ser.flush()
         print("  RUN sent — core executing from PC=0.")
 

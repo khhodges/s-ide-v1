@@ -168,7 +168,7 @@ Click **Export Patch** in the CR detail card.  This does three things:
 1. Assembles your code and patches the simulator memory
 2. Shows a **patch preview** in the console — addresses, word counts, CRC,
    and whether an NS table update is included
-3. Downloads a `.bin` file (e.g. `CR14_patch.bin`)
+3. Downloads a `.patch` file (e.g. `CR14_patch.patch`)
 
 The preview looks like:
 ```
@@ -179,21 +179,21 @@ Block 0: Code lump  addr=0x0141  words=7
   RUN: yes (0xBE 0xAA after all blocks)
   File size: 40 bytes
 
-Downloaded: CR14_patch.bin
+Downloaded: CR14_patch.patch
 ```
 
 ### Step 10 — Flash to the FPGA
 
-Copy `CR14_patch.bin` and `tools/patch_fpga.py` to your local machine, then:
+Copy `CR14_patch.patch` and `tools/patch_fpga.py` to your local machine, then:
 
 ```bash
-python3 patch_fpga.py /dev/ttyUSB1 CR14_patch.bin
+python3 patch_fpga.py /dev/ttyUSB1 CR14_patch.patch
 ```
 
 Output:
 ```
 Church Machine FPGA Patcher
-  File   : CR14_patch.bin
+  File   : CR14_patch.patch
   Blocks : 1
   RUN    : yes
 
@@ -374,6 +374,6 @@ sudo usermod -aG dialout $USER
 | Step | Where | Action |
 |------|-------|--------|
 | 8 | IDE | Select CR, click Edit, write code |
-| 9 | IDE | Click Export Patch — downloads `.bin` file |
-| 10 | Local | `python3 patch_fpga.py /dev/ttyUSB1 CR14_patch.bin` |
+| 9 | IDE | Click Export Patch — downloads `.patch` file |
+| 10 | Local | `python3 patch_fpga.py /dev/ttyUSB1 CR14_patch.patch` |
 | 11 | Local | Check LEDs + cross-check CRC values |

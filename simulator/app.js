@@ -1646,6 +1646,27 @@ async function patchFPGA() {
     showPatchModal(ok, 'Patch FPGA', logText);
 }
 
+/*
+ * exportPatchFile() — Export a .patch file for command-line FPGA flashing.
+ *
+ * .patch file format (CHPF v1):
+ *   Bytes 0-3:  Magic "CHPF" (0x43 0x48 0x50 0x46)
+ *   Byte  4:    Version (0x01)
+ *   Byte  5:    Number of PATCH_LUMP blocks (1-255)
+ *   Byte  6:    Flags (bit 0 = file includes RUN sentinel after blocks)
+ *   Byte  7:    Reserved (0x00)
+ *   Then for each block, a complete UART frame:
+ *     Bytes 0-1:   Tag [0xBE][0xEF]
+ *     Bytes 2-3:   Address (big-endian, BRAM word address)
+ *     Bytes 4-5:   Word count N (big-endian)
+ *     Bytes 6..6+N*4-1:  N words (little-endian, 4 bytes each)
+ *     Last 2 bytes: CRC-16/CCITT over the frame body (tag+addr+count+words)
+ *   If flags bit 0 is set, a 2-byte RUN sentinel follows all blocks:
+ *     [0xBE][0xAA]
+ *
+ * The CLI tool (tools/patch_fpga.py) sends each stored frame verbatim
+ * over UART — no recomputation needed.
+ */
 function exportPatchFile() {
     const logEl = document.getElementById('crInjectLog');
     if (logEl) { logEl.style.display = 'block'; logEl.textContent = ''; }
@@ -1673,27 +1694,45 @@ function exportPatchFile() {
     blocks.push({ addr: codeStart, words: newWords });
     log(`Block ${blocks.length - 1}: Code lump  addr=0x${codeStart.toString(16).toUpperCase().padStart(4,'0')}  words=${newCW}`);
 
-    const numBlocks = blocks.length;
-    let totalDataBytes = 0;
-    const blockBuffers = [];
-    for (const blk of blocks) {
-        const buf = new Uint8Array(4 + blk.words.length * 4);
-        buf[0] = (blk.addr >> 8) & 0xFF;
-        buf[1] = blk.addr & 0xFF;
-        buf[2] = (blk.words.length >> 8) & 0xFF;
-        buf[3] = blk.words.length & 0xFF;
-        for (let i = 0; i < blk.words.length; i++) {
-            const w = blk.words[i] >>> 0;
-            buf[4 + i * 4 + 0] = w & 0xFF;
-            buf[4 + i * 4 + 1] = (w >> 8) & 0xFF;
-            buf[4 + i * 4 + 2] = (w >> 16) & 0xFF;
-            buf[4 + i * 4 + 3] = (w >> 24) & 0xFF;
+    function crc16ccitt(data) {
+        let crc = 0xFFFF;
+        for (const byte of data) {
+            for (let b = 0; b < 8; b++) {
+                const bit = ((byte >>> (7 - b)) & 1) ^ ((crc >>> 15) & 1);
+                crc = ((crc << 1) & 0xFFFF) ^ (bit ? 0x1021 : 0);
+            }
         }
-        blockBuffers.push(buf);
-        totalDataBytes += buf.length;
+        return crc;
     }
 
-    const fileSize = 8 + totalDataBytes;
+    const numBlocks = blocks.length;
+    const frameBuffers = [];
+    for (const blk of blocks) {
+        const bodyLen = 6 + blk.words.length * 4;
+        const frame = new Uint8Array(bodyLen + 2);
+        frame[0] = 0xBE;
+        frame[1] = 0xEF;
+        frame[2] = (blk.addr >> 8) & 0xFF;
+        frame[3] = blk.addr & 0xFF;
+        frame[4] = (blk.words.length >> 8) & 0xFF;
+        frame[5] = blk.words.length & 0xFF;
+        for (let i = 0; i < blk.words.length; i++) {
+            const w = blk.words[i] >>> 0;
+            frame[6 + i * 4 + 0] = w & 0xFF;
+            frame[6 + i * 4 + 1] = (w >> 8) & 0xFF;
+            frame[6 + i * 4 + 2] = (w >> 16) & 0xFF;
+            frame[6 + i * 4 + 3] = (w >> 24) & 0xFF;
+        }
+        const crc = crc16ccitt(frame.subarray(0, bodyLen));
+        frame[bodyLen] = (crc >> 8) & 0xFF;
+        frame[bodyLen + 1] = crc & 0xFF;
+        frameBuffers.push({ frame, crc });
+    }
+
+    const runSentinel = new Uint8Array([0xBE, 0xAA]);
+    let totalFrameBytes = 0;
+    for (const fb of frameBuffers) totalFrameBytes += fb.frame.length;
+    const fileSize = 8 + totalFrameBytes + runSentinel.length;
     const fileData = new Uint8Array(fileSize);
     fileData[0] = 0x43;
     fileData[1] = 0x48;
@@ -1705,44 +1744,25 @@ function exportPatchFile() {
     fileData[7] = 0x00;
 
     let offset = 8;
-    for (const buf of blockBuffers) {
-        fileData.set(buf, offset);
-        offset += buf.length;
+    for (const fb of frameBuffers) {
+        fileData.set(fb.frame, offset);
+        offset += fb.frame.length;
     }
+    fileData.set(runSentinel, offset);
 
     log('');
     log('--- Patch Preview (cross-check with patch_fpga.py output) ---');
     for (let i = 0; i < blocks.length; i++) {
         const blk = blocks[i];
-        const body = new Uint8Array(6 + blk.words.length * 4);
-        body[0] = 0xBE; body[1] = 0xEF;
-        body[2] = (blk.addr >> 8) & 0xFF;
-        body[3] = blk.addr & 0xFF;
-        body[4] = (blk.words.length >> 8) & 0xFF;
-        body[5] = blk.words.length & 0xFF;
-        for (let j = 0; j < blk.words.length; j++) {
-            const w = blk.words[j] >>> 0;
-            body[6 + j * 4 + 0] = w & 0xFF;
-            body[6 + j * 4 + 1] = (w >> 8) & 0xFF;
-            body[6 + j * 4 + 2] = (w >> 16) & 0xFF;
-            body[6 + j * 4 + 3] = (w >> 24) & 0xFF;
-        }
-        let crc = 0xFFFF;
-        for (const byte of body) {
-            for (let b = 0; b < 8; b++) {
-                const bit = ((byte >>> (7 - b)) & 1) ^ ((crc >>> 15) & 1);
-                crc = ((crc << 1) & 0xFFFF) ^ (bit ? 0x1021 : 0);
-            }
-        }
-        const frameLen = body.length + 2;
-        log(`  Block ${i}: addr=0x${blk.addr.toString(16).toUpperCase().padStart(4,'0')}  words=${blk.words.length}  CRC=0x${crc.toString(16).toUpperCase().padStart(4,'0')}  frame=${frameLen} bytes`);
+        const fb = frameBuffers[i];
+        log(`  Block ${i}: addr=0x${blk.addr.toString(16).toUpperCase().padStart(4,'0')}  words=${blk.words.length}  CRC=0x${fb.crc.toString(16).toUpperCase().padStart(4,'0')}  frame=${fb.frame.length} bytes`);
     }
-    log(`  RUN: yes (0xBE 0xAA after all blocks)`);
+    log(`  RUN sentinel: [0xBE 0xAA] included in file`);
     log(`  File size: ${fileSize} bytes`);
     log('');
 
     const crIdx = selectedCR !== null ? selectedCR : 0;
-    const fileName = `CR${crIdx}_patch.bin`;
+    const fileName = `CR${crIdx}_patch.patch`;
 
     const blob = new Blob([fileData], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
@@ -1876,9 +1896,9 @@ function updateCRDetail() {
         html += `<div class="crd-info-pop" id="patchFPGAInfoPop" style="display:none;"><b>Patch FPGA</b><br><br>Runs <b>Patch Simulator</b> first, then uploads the updated code lump to the connected Efinix Ti60 F225 FPGA over WebSerial (UART).<br><br>If the instruction count changed, the full NS table is re-uploaded before the code lump. Requires an active WebSerial connection to the hardware.</div>`;
         html += `</span>`;
         html += `<span class="crd-action-group">`;
-        html += `<button class="crd-tab crd-tab-action crd-tab-fpga" onclick="exportPatchFile()" title="Export compiled patch as .bin file for command-line flashing">&#x2B73; Export Patch</button>`;
+        html += `<button class="crd-tab crd-tab-action crd-tab-fpga" onclick="exportPatchFile()" title="Export compiled patch as .patch file for command-line flashing">&#x2B73; Export Patch</button>`;
         html += `<button class="crd-action-info-btn crd-action-info-btn-fpga" onclick="toggleCrdInfoPop('exportPatchInfoPop')" title="What does Export Patch do?">&#x2139;</button>`;
-        html += `<div class="crd-info-pop" id="exportPatchInfoPop" style="display:none;"><b>Export Patch</b><br><br>Assembles the code and downloads a <code>.bin</code> patch file containing the pre-compiled binary blocks. Flash it to the FPGA with:<br><code>python3 patch_fpga.py /dev/ttyUSB1 file.bin</code><br><br>No bridge or browser connection needed &mdash; just one terminal command.</div>`;
+        html += `<div class="crd-info-pop" id="exportPatchInfoPop" style="display:none;"><b>Export Patch</b><br><br>Assembles the code and downloads a <code>.patch</code> file containing complete UART frames with tags, CRC, and RUN sentinel. Flash it to the FPGA with:<br><code>python3 patch_fpga.py /dev/ttyUSB1 file.patch</code><br><br>No bridge or browser connection needed &mdash; just one terminal command.</div>`;
         html += `</span>`;
     }
     html += '</div>';
