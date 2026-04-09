@@ -603,7 +603,7 @@ other abstractions. The hardware guarantees this on every cycle.
 
 And because patching writes into namespace memory over UART, you can
 change your software at any time — write a new abstraction, recompile,
-export, flash. The machine stays the same. The security stays the
+export, patch. The machine stays the same. The security stays the
 same. Only the software changes, and every version of the software is
 automatically fail-safe because the fail-safe computer enforces it.
 
@@ -620,7 +620,7 @@ The lock never opens for anything without a key.
 ## Writing and Patching Code
 
 This is your everyday workflow: write code in the IDE, compile it in the
-simulator, export a patch file, and flash it with one terminal command.
+simulator, export a patch file, and patch it with one terminal command.
 
 ```
 IDE ── write ──► Patch (compile) ──► Export Patch ──► patch_fpga.py ──► FPGA
@@ -698,14 +698,14 @@ preview and the script output.
 - **led1** stops blinking (core now running your code)
 - **led2** OFF = no fault, ON = capability fault triggered
 
-To change your code, repeat Steps 6–10: edit, compile, export, flash.
+To change your code, repeat Steps 6–10: edit, compile, export, patch.
 Each cycle takes under a minute.
 
 ---
 
 ## Getting Started: Efinix Ti60 F225
 
-The Ti60 follows the same write-compile-export-flash workflow, with a
+The Ti60 follows the same write-compile-export-patch workflow, with a
 few differences in setup.
 
 ### Hardware differences
@@ -751,7 +751,7 @@ Verilog — it does not produce a flashable bitstream.
 | Heartbeat | Clock alive | Blinking | Blinking |
 
 After flashing, the patching workflow is identical: write code in the
-IDE, compile with Patch, export with Export Patch, flash with
+IDE, compile with Patch, export with Export Patch, patch with
 `patch_fpga.py` pointing at your UART adapter's serial port.
 
 ---
