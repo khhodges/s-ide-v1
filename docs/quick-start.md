@@ -146,12 +146,11 @@ You need **openFPGALoader** to flash the bitstream and **Python 3 +
 pyserial** to send code patches over UART.
 
 ```bash
-# OSS CAD Suite — includes openFPGALoader and all FPGA tools
-# Download from: https://github.com/YosysHQ/oss-cad-suite-build/releases
-# Extract, then activate:
+# OSS CAD Suite (includes openFPGALoader)
+# https://github.com/YosysHQ/oss-cad-suite-build
 source ~/oss-cad-suite/environment
 
-# pyserial — for the CLI patch tool
+# pyserial (for the CLI patch tool)
 pip3 install pyserial
 ```
 
