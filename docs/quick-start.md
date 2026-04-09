@@ -583,61 +583,107 @@ If you need to modify the hardware design itself — add a peripheral,
 change the memory map, adjust the boot ROM — you will need to build
 the bitstream from Amaranth HDL source.
 
-### Tang Nano 20K (open-source toolchain)
+The build has two phases. The first phase runs in the IDE. The second
+phase runs on your local machine because it requires more RAM than a
+cloud container provides and physical USB access to flash the board.
 
-Everything from Step 1 above, plus ~20 GB of RAM for place and route.
+### Phase 1 — Build in the IDE (both boards)
+
+The IDE Builder tab handles Verilog generation and Yosys synthesis
+for you. No terminal commands needed.
+
+1. Open the **Builder** tab in the IDE
+2. Select your board (Tang Nano 20K or Ti60 F225)
+3. Click **Build** — this runs Amaranth elaboration and Yosys
+   synthesis (typically 20–60 seconds)
+4. When the build completes, click **Download FPGA Package** — this
+   downloads a ZIP containing everything you need for phase 2
+
+**What the ZIP contains (Tang Nano 20K):**
+
+| File | Purpose |
+|------|---------|
+| `church_tang_nano_20k_iot.json` | Yosys netlist (synthesis output) |
+| `tang_nano_20k.cst` | Pin constraints |
+| `Makefile` | Build targets for PnR + flash |
+| `BUILD.md` | Instructions for phase 2 |
+
+**What the ZIP contains (Ti60 F225):**
+
+| File | Purpose |
+|------|---------|
+| `church_ti60_f225.v` | Synthesisable Verilog |
+| `church_ti60_f225.edif` | Yosys EDIF netlist |
+| `ti60_f225.isf` | Pin constraints (Efinity IDE) |
+| `BUILD.md` | Instructions for phase 2 |
+
+If you prefer terminal commands (advanced users), you can run the
+same steps manually:
 
 ```bash
-# 1. Generate Verilog (in Replit)
+# Tang Nano 20K
 python3 -m hardware.gen_verilog --iot build
-
-# 2. Synthesize (in Replit)
 yosys -p "read_verilog build/church_tang_nano_20k_iot.v; \
           synth_gowin -top top \
           -json build/church_tang_nano_20k_iot.json"
+```
 
-# 3. Download .json and .cst to your local machine
+### Phase 2 — Place, route, and flash (local machine)
 
-# 4. Place and route (local, needs ~20 GB RAM, 3–5 minutes)
+Phase 2 requires your local machine for two reasons: place and route
+needs ~20 GB of RAM, and flashing requires a USB cable to the board.
+
+#### Tang Nano 20K (open-source toolchain)
+
+Extract the ZIP downloaded from the IDE, then:
+
+```bash
+# 1. Place and route (~20 GB RAM, 3–5 minutes)
 nextpnr-himbaechel \
     --device GW2AR-LV18QN88C8/I7 \
-    --json build/church_tang_nano_20k_iot.json \
-    --write build/church_tang_nano_20k_iot_pnr.json \
+    --json church_tang_nano_20k_iot.json \
+    --write church_tang_nano_20k_iot_pnr.json \
     -o family=GW2A-18C \
-    -o cst=hardware/tang_nano_20k.cst \
+    -o cst=tang_nano_20k.cst \
     --freq 27
 
-# 5. Pack the bitstream
+# 2. Pack the bitstream
 gowin_pack -d GW2A-18C \
     -o church_tang_nano_20k_iot.fs \
-    build/church_tang_nano_20k_iot_pnr.json
+    church_tang_nano_20k_iot_pnr.json
 
-# 6. Flash
+# 3. Flash
 openFPGALoader -b tangnano20k church_tang_nano_20k_iot.fs
 ```
 
-Or use the Makefile (PnR and pack only — Verilog gen and synthesis must
-be done first):
+Or use the included Makefile:
 
 ```bash
-cp build/church_tang_nano_20k_iot.json hardware/
-cd hardware
 make tang-iot      # place-and-route + pack
 make prog-iot      # flash
 ```
 
-### Efinix Ti60 F225 (proprietary toolchain)
+#### Efinix Ti60 F225 (proprietary toolchain)
 
-The Ti60 build requires the Efinity IDE from Efinix. The open-source
-Amaranth-to-Verilog step runs in Replit, but synthesis, PnR, and
-bitstream generation use Efinity.
+The Ti60 requires the Efinity IDE from Efinix for place-and-route
+and bitstream generation. Extract the ZIP, then:
 
-```bash
-# Generate Verilog + resource report (in Replit)
-./build_ti60.sh build
+1. Open the Efinity IDE and import the project
+2. Add `church_ti60_f225.v` as the top-level source
+3. Run the Efinity synthesis, placement, and routing flow
+4. Generate the bitstream (`.hex` or `.bit` file)
+5. Flash using the Efinity Programmer GUI
 
-# Then open the project in Efinity IDE and run the full flow
-```
+### Summary: what runs where
+
+| Step | Where | How |
+|------|-------|-----|
+| Verilog generation | IDE | Builder tab → Build |
+| Yosys synthesis | IDE | Builder tab → Build |
+| Download package | IDE | Builder tab → Download FPGA Package |
+| Place and route | Local | `nextpnr` (Tang) or Efinity (Ti60) |
+| Pack bitstream | Local | `gowin_pack` (Tang) or Efinity (Ti60) |
+| Flash | Local | `openFPGALoader` (Tang) or Efinity (Ti60) |
 
 ---
 
