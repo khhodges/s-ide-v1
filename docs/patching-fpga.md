@@ -330,6 +330,48 @@ as a first principle, not an afterthought.
 
 ---
 
+## Step Zero: Start with the IDE — No Hardware Required
+
+You do not need an FPGA to begin. The Church Machine IDE runs entirely
+in your browser and includes a full simulator that enforces every one
+of the six Laws. Everything you learn in the simulator transfers
+directly to real hardware — the instruction set, the capability model,
+the security faults, the namespace, the SlideRule — it is all
+identical.
+
+**What the IDE gives you right now:**
+
+- **Write code in five languages** — English, JavaScript, Haskell,
+  Symbolic Math, or Lambda Calculus. CLOOMC auto-detects the language
+  and compiles to the 20-instruction Church Machine instruction set.
+- **See every capability register** — click the CRs button to inspect
+  all 16 capability registers in real time. Watch CR14 validate
+  instruction fetch, CR12 check thread lump access, CR5 guard the
+  heap.
+- **Trigger real capability faults** — try to read memory you have no
+  capability for. The simulator will fault exactly the way the
+  hardware does. This is how you learn the security model — by
+  running into the walls.
+- **Step through instructions** — single-step your abstraction and
+  watch each Turing instruction (ADD, SUB, LOAD, STORE, BRANCH) and
+  each Church instruction (CALL, RETURN, SENTRY, LAMBDA) execute in
+  sequence.
+- **Run Ada's Bernoulli program** — load the NoteG example from the
+  tutorial menu, compile it, and watch 183-year-old mathematics
+  execute on a capability-secured machine.
+- **Export to hardware when you are ready** — the Export Patch button
+  produces a `.patch` file you can flash to either FPGA with a single
+  command.
+
+**The path is simple:** learn in the IDE, experiment until your
+abstractions run clean with MTBF = ∞, then plug in a board and flash.
+The code you wrote in the simulator runs unchanged on silicon.
+
+Start the IDE now — everything below this point is about hardware, and
+you can come back to it when you are ready for a board.
+
+---
+
 ## Choosing Your Board
 
 The Church Machine runs on two FPGA boards. Both execute the same
