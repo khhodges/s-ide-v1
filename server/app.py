@@ -370,6 +370,93 @@ def library_repo_url():
         return jsonify({"url": f"https://github.com/{GITHUB_LIBRARY_REPO}"})
     return jsonify({"url": ""})
 
+def github_api_public(path, repo):
+    url = f"https://api.github.com/repos/{repo}{path}"
+    headers = {"Accept": "application/vnd.github.v3+json"}
+    if GITHUB_TOKEN:
+        headers["Authorization"] = f"token {GITHUB_TOKEN}"
+    try:
+        r = http_requests.get(url, headers=headers, timeout=15)
+        if r.status_code >= 400:
+            if GITHUB_TOKEN:
+                headers_noauth = {"Accept": "application/vnd.github.v3+json"}
+                r = http_requests.get(url, headers=headers_noauth, timeout=15)
+                if r.status_code >= 400:
+                    return None, f"GitHub API {r.status_code}: {r.text[:200]}"
+            else:
+                return None, f"GitHub API {r.status_code}: {r.text[:200]}"
+        return r.json(), None
+    except Exception as e:
+        return None, str(e)
+
+@app.route("/api/github/community")
+def github_community():
+    repos_info = []
+    for repo_name, label in [(GITHUB_LIBRARY_REPO, "CLOOMC Project"), (GITHUB_FOUNDATION_REPO, "CLOOMC Foundation")]:
+        if not repo_name:
+            continue
+        data, err = github_api_public("", repo_name)
+        if err or not data:
+            repos_info.append({"name": repo_name, "label": label, "error": err or "No data"})
+            continue
+        repos_info.append({
+            "name": repo_name,
+            "label": label,
+            "url": data.get("html_url", f"https://github.com/{repo_name}"),
+            "description": data.get("description", ""),
+            "stars": data.get("stargazers_count", 0),
+            "forks": data.get("forks_count", 0),
+            "openIssues": data.get("open_issues_count", 0),
+            "watchers": data.get("subscribers_count", 0),
+            "license": (data.get("license") or {}).get("spdx_id", ""),
+            "defaultBranch": data.get("default_branch", "main"),
+            "language": data.get("language", ""),
+            "updatedAt": data.get("updated_at", ""),
+            "createdAt": data.get("created_at", ""),
+        })
+    return jsonify({"repos": repos_info})
+
+@app.route("/api/github/activity")
+def github_activity():
+    repo = request.args.get("repo", GITHUB_LIBRARY_REPO)
+    if not repo:
+        return jsonify({"commits": [], "error": "No repo configured"})
+    data, err = github_api_public("/commits?per_page=10", repo)
+    if err or not isinstance(data, list):
+        return jsonify({"commits": [], "error": err or "No data"})
+    commits = []
+    for c in data[:10]:
+        commit_info = c.get("commit", {})
+        author_info = commit_info.get("author", {})
+        gh_author = c.get("author") or {}
+        commits.append({
+            "sha": c.get("sha", "")[:7],
+            "message": commit_info.get("message", "").split("\n")[0][:120],
+            "author": author_info.get("name", "Unknown"),
+            "avatar": gh_author.get("avatar_url", ""),
+            "date": author_info.get("date", ""),
+            "url": c.get("html_url", ""),
+        })
+    return jsonify({"commits": commits})
+
+@app.route("/api/github/contributors")
+def github_contributors():
+    repo = request.args.get("repo", GITHUB_LIBRARY_REPO)
+    if not repo:
+        return jsonify({"contributors": [], "error": "No repo configured"})
+    data, err = github_api_public("/contributors?per_page=20", repo)
+    if err or not isinstance(data, list):
+        return jsonify({"contributors": [], "error": err or "No data"})
+    contributors = []
+    for c in data[:20]:
+        contributors.append({
+            "login": c.get("login", ""),
+            "avatar": c.get("avatar_url", ""),
+            "contributions": c.get("contributions", 0),
+            "url": c.get("html_url", ""),
+        })
+    return jsonify({"contributors": contributors})
+
 @app.route("/api/library/browse")
 def library_browse():
     lang_filter = request.args.get("language", "")

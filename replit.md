@@ -44,6 +44,7 @@ The web IDE offers ten views (Math, Code, Tutorial, Dashboard, Namespace, Abstra
 - **WebSerial:** Used for deploying compiled programs to the Tang Nano 20K FPGA.
 - **Export Patch + CLI Patcher:** `exportPatchFile()` in app.js exports a `.patch` file (CHPF format v1) containing complete UART frames (0xBEEF tag + addr + count + LE words + CRC-16/CCITT) and RUN sentinel (0xBEAA). `tools/patch_fpga.py` is a standalone CLI script that reads these files and sends frames verbatim to the FPGA over UART — no bridge, no browser needed.
 - **Mum Tunnel Library:** A GitHub-backed shared abstraction library with API endpoints for browsing, retrieving, and publishing abstractions.
+- **GitHub Community Hub:** The GitHub view shows live repository stats (stars, forks, issues, watchers), recent commit activity with author avatars, contributor grid, quick links to Issues/PRs/Discussions/Wiki, and action cards for Push/Browse/Publish. Uses `github_api_public()` for unauthenticated fallback on public repos. Endpoints: `/api/github/community`, `/api/github/activity`, `/api/github/contributors`.
 - **Self-Documenting Abstractions:** Each compiled abstraction includes a `doc` block with metadata, auto-generated from compiler output.
 
 ## External Dependencies

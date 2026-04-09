@@ -454,6 +454,7 @@ function switchView(viewId) {
     if (activeHamItem) activeHamItem.classList.add('ham-active');
 
     if (viewId === 'dashboard') updateDashboard();
+    if (viewId === 'github') loadGitHubCommunity();
     if (viewId === 'namespace') updateNamespace();
     if (viewId === 'abstractions') renderAbstractions();
     if (viewId === 'pipeline') pipelineViz.render();
@@ -6643,6 +6644,148 @@ function showGCConsole(phases, result, isError) {
 
     if (!isError) updateStatus();
     (isError ? closeBtn : stepBtn).focus();
+}
+
+var _ghCommunityLoaded = false;
+
+function _ghTimeAgo(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr);
+    var now = new Date();
+    var sec = Math.floor((now - d) / 1000);
+    if (sec < 60) return 'just now';
+    var min = Math.floor(sec / 60);
+    if (min < 60) return min + 'm ago';
+    var hr = Math.floor(min / 60);
+    if (hr < 24) return hr + 'h ago';
+    var day = Math.floor(hr / 24);
+    if (day < 30) return day + 'd ago';
+    var mon = Math.floor(day / 30);
+    return mon + 'mo ago';
+}
+
+async function loadGitHubCommunity() {
+    if (_ghCommunityLoaded && !arguments[0]) return;
+    var refreshBtn = document.querySelector('.gh-refresh-btn');
+    if (refreshBtn) refreshBtn.classList.add('spinning');
+
+    try {
+        var [communityResp, activityResp, contribResp] = await Promise.all([
+            fetch('/api/github/community').then(function(r) { return r.json(); }),
+            fetch('/api/github/activity').then(function(r) { return r.json(); }),
+            fetch('/api/github/contributors').then(function(r) { return r.json(); })
+        ]);
+        _renderGhRepos(communityResp.repos || []);
+        _renderGhActivity(activityResp.commits || []);
+        _renderGhContributors(contribResp.contributors || []);
+        _renderGhQuickLinks(communityResp.repos || []);
+        _ghCommunityLoaded = true;
+    } catch (e) {
+        var row = document.getElementById('ghReposRow');
+        if (row) row.innerHTML = '<div class="gh-loading-placeholder">Could not load community data: ' + e.message + '</div>';
+    } finally {
+        if (refreshBtn) refreshBtn.classList.remove('spinning');
+    }
+}
+
+function _renderGhRepos(repos) {
+    var row = document.getElementById('ghReposRow');
+    if (!row) return;
+    if (repos.length === 0) {
+        row.innerHTML = '<div class="gh-loading-placeholder">No repositories configured.</div>';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < repos.length; i++) {
+        var r = repos[i];
+        if (r.error) {
+            html += '<div class="gh-repo-card"><div class="gh-repo-name">' + escapeHTML(r.label) + '</div><div class="gh-repo-desc">' + escapeHTML(r.error) + '</div></div>';
+            continue;
+        }
+        html += '<div class="gh-repo-card">';
+        html += '<div class="gh-repo-name"><a href="' + escapeHTML(r.url) + '" target="_blank" rel="noopener">' + escapeHTML(r.label) + '</a></div>';
+        html += '<div class="gh-repo-desc">' + escapeHTML(r.description || r.name) + '</div>';
+        html += '<div class="gh-repo-stats">';
+        html += '<span class="gh-stat"><span class="gh-stat-icon">&#x2605;</span> <span class="gh-stat-val">' + r.stars + '</span> stars</span>';
+        html += '<span class="gh-stat"><span class="gh-stat-icon">&#x2442;</span> <span class="gh-stat-val">' + r.forks + '</span> forks</span>';
+        html += '<span class="gh-stat"><span class="gh-stat-icon">&#x25CB;</span> <span class="gh-stat-val">' + r.openIssues + '</span> issues</span>';
+        html += '<span class="gh-stat"><span class="gh-stat-icon">&#x1F441;</span> <span class="gh-stat-val">' + r.watchers + '</span> watchers</span>';
+        if (r.license) html += '<span class="gh-stat">' + escapeHTML(r.license) + '</span>';
+        html += '</div>';
+        html += '</div>';
+    }
+    row.innerHTML = html;
+}
+
+function _renderGhActivity(commits) {
+    var list = document.getElementById('ghActivityList');
+    if (!list) return;
+    if (commits.length === 0) {
+        list.innerHTML = '<div class="gh-loading-placeholder">No recent commits found.</div>';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < commits.length; i++) {
+        var c = commits[i];
+        html += '<div class="gh-commit-item">';
+        if (c.avatar) {
+            html += '<img class="gh-commit-avatar" src="' + escapeHTML(c.avatar) + '&s=48" alt="" loading="lazy">';
+        } else {
+            html += '<div class="gh-commit-avatar"></div>';
+        }
+        html += '<div class="gh-commit-info">';
+        html += '<div class="gh-commit-msg"><a href="' + escapeHTML(c.url) + '" target="_blank" rel="noopener">' + escapeHTML(c.message) + '</a></div>';
+        html += '<div class="gh-commit-meta"><span class="gh-commit-sha">' + escapeHTML(c.sha) + '</span> by ' + escapeHTML(c.author) + ' &middot; ' + _ghTimeAgo(c.date) + '</div>';
+        html += '</div>';
+        html += '</div>';
+    }
+    list.innerHTML = html;
+}
+
+function _renderGhContributors(contributors) {
+    var grid = document.getElementById('ghContributorsGrid');
+    if (!grid) return;
+    if (contributors.length === 0) {
+        grid.innerHTML = '<div class="gh-loading-placeholder">No contributors found.</div>';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < contributors.length; i++) {
+        var c = contributors[i];
+        html += '<a class="gh-contributor" href="' + escapeHTML(c.url) + '" target="_blank" rel="noopener">';
+        if (c.avatar) {
+            html += '<img class="gh-contributor-avatar" src="' + escapeHTML(c.avatar) + '&s=44" alt="" loading="lazy">';
+        } else {
+            html += '<div class="gh-contributor-avatar"></div>';
+        }
+        html += '<span class="gh-contributor-name">' + escapeHTML(c.login) + '</span>';
+        html += '<span class="gh-contributor-count">' + c.contributions + '</span>';
+        html += '</a>';
+    }
+    grid.innerHTML = html;
+}
+
+function _renderGhQuickLinks(repos) {
+    var el = document.getElementById('ghQuickLinks');
+    if (!el) return;
+    var links = [];
+    for (var i = 0; i < repos.length; i++) {
+        var r = repos[i];
+        if (!r.url) continue;
+        links.push({label: r.label + ' Code', url: r.url, icon: '&#x2630;'});
+        links.push({label: 'Issues', url: r.url + '/issues', icon: '&#x25CB;'});
+        links.push({label: 'Pull Requests', url: r.url + '/pulls', icon: '&#x21C4;'});
+        links.push({label: 'Discussions', url: r.url + '/discussions', icon: '&#x1F4AC;'});
+        links.push({label: 'Wiki', url: r.url + '/wiki', icon: '&#x1F4D6;'});
+        break;
+    }
+    links.push({label: 'Contributing Guide', url: '/docs/contributing.md', icon: '&#x1F91D;'});
+    var html = '';
+    for (var j = 0; j < links.length; j++) {
+        var lk = links[j];
+        html += '<a class="gh-quick-link" href="' + escapeHTML(lk.url) + '" target="_blank" rel="noopener">' + lk.icon + ' ' + escapeHTML(lk.label) + '</a>';
+    }
+    el.innerHTML = html;
 }
 
 var _ghConsoleOutput = null;

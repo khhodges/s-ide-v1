@@ -721,26 +721,55 @@
 
     <div id="github" class="view">
         <div class="github-layout">
-            <div class="gc-title" style="margin-bottom:0.25rem;">⇅ GitHub Sync</div>
-            <div class="gc-sub" style="margin-bottom:1.5rem;">Mum Tunnel Library — push simulator source or browse shared abstractions</div>
-
-            <div class="gh-full-cards">
-                <div class="gh-full-card">
-                    <div class="gh-full-icon">↑</div>
-                    <div class="gh-full-title">Push to GitHub</div>
-                    <div class="gh-full-desc">Export the current simulator source (JS, HTML, CSS) to your connected GitHub repository. Every file is updated in a single commit.</div>
-                    <button class="tools-btn tools-btn-secondary gh-full-btn" onclick="exportSimulatorToGitHub()">Push Now</button>
+            <div class="gh-header">
+                <div class="gh-header-left">
+                    <div class="gc-title">Open Source Community</div>
+                    <div class="gc-sub">CLOOMC is free, open source, and community-driven. Law 6: Open Source.</div>
                 </div>
-                <div class="gh-full-card">
-                    <div class="gh-full-icon">↓</div>
-                    <div class="gh-full-title">Browse Library</div>
-                    <div class="gh-full-desc">Fetch shared abstractions from the Mum Tunnel Library. Search by language or author, then install directly into your namespace.</div>
-                    <button class="tools-btn tools-btn-secondary gh-full-btn" onclick="showLibrary()">Open Library</button>
+                <button class="gh-refresh-btn" onclick="loadGitHubCommunity()" title="Refresh community data">&#x21BB;</button>
+            </div>
+
+            <div class="gh-repos-row" id="ghReposRow">
+                <div class="gh-repo-card gh-loading-placeholder">Loading repositories...</div>
+            </div>
+
+            <div class="gh-section-grid">
+                <div class="gh-section-panel">
+                    <div class="gh-section-title">Recent Activity</div>
+                    <div class="gh-activity-list" id="ghActivityList">
+                        <div class="gh-loading-placeholder">Loading commits...</div>
+                    </div>
+                </div>
+
+                <div class="gh-section-panel">
+                    <div class="gh-section-title">Contributors</div>
+                    <div class="gh-contributors-grid" id="ghContributorsGrid">
+                        <div class="gh-loading-placeholder">Loading contributors...</div>
+                    </div>
+                    <div class="gh-section-title" style="margin-top:1.2rem;">Quick Links</div>
+                    <div class="gh-quick-links" id="ghQuickLinks"></div>
                 </div>
             </div>
 
-            <div class="tools-gh-note" style="margin-top:2rem;">
-                GitHub integration requires a personal access token. Configure it in <button class="tools-link-btn" onclick="openSettings()">Settings</button>.
+            <div class="gh-actions-row">
+                <div class="gh-full-card gh-action-card">
+                    <div class="gh-full-icon">&#x2191;</div>
+                    <div class="gh-full-title">Push to GitHub</div>
+                    <div class="gh-full-desc">Export the current simulator source to the connected repository. Every file is updated in a single commit.</div>
+                    <button class="tools-btn tools-btn-secondary gh-full-btn" onclick="exportSimulatorToGitHub()">Push Now</button>
+                </div>
+                <div class="gh-full-card gh-action-card">
+                    <div class="gh-full-icon">&#x2193;</div>
+                    <div class="gh-full-title">Browse Library</div>
+                    <div class="gh-full-desc">Fetch shared abstractions from the Mum Tunnel Library. Search by language or author, then install into your namespace.</div>
+                    <button class="tools-btn tools-btn-secondary gh-full-btn" onclick="showLibrary()">Open Library</button>
+                </div>
+                <div class="gh-full-card gh-action-card">
+                    <div class="gh-full-icon">&#x2191;</div>
+                    <div class="gh-full-title">Publish Abstraction</div>
+                    <div class="gh-full-desc">Share your compiled abstraction with the community. It will appear in the Mum Tunnel Library for others to import.</div>
+                    <button class="tools-btn tools-btn-secondary gh-full-btn" onclick="publishToLibrary()">Publish</button>
+                </div>
             </div>
         </div>
     </div>
