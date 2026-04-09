@@ -564,6 +564,58 @@ waiting for you to send it code.
 
 ---
 
+## Flashing vs Patching — Two Different Things
+
+The IDE workflow has two distinct operations, and it is important to
+understand the difference because they do fundamentally different
+things.
+
+### Flashing creates the fail-safe computer
+
+When you flash a bitstream (`.fs` file) with openFPGALoader, you are
+writing the Church Machine itself into the FPGA. This is the hardware
+— the processor, the capability registers, the namespace controller,
+the UART, the boot ROM, the security model. After flashing, you have
+a real Church Machine running on silicon. It enforces every one of the
+six Laws. It will refuse any unauthorised memory access. It will fault
+on any capability violation. It is a **fail-safe computer** — a
+machine that fails safely by design, not by policy.
+
+You flash once (or whenever a new hardware version is released). The
+bitstream does not contain your programs. It contains the machine that
+runs your programs.
+
+### Patching adds changeable fail-safe software
+
+When you patch (export a `.patch` file and send it over UART), you are
+writing abstractions — programs — into the namespace memory of an
+already-running Church Machine. The machine does not change. The
+software does.
+
+This is what makes the Church Machine different from every other
+computer: **the software you write is also fail-safe.** Not because
+you wrote it carefully, but because the hardware will not permit it to
+misbehave. Your abstraction runs inside a capability-secured lump. It
+can only touch memory it has a capability for. It cannot forge
+capabilities. It cannot escape its lump. It cannot interfere with
+other abstractions. The hardware guarantees this on every cycle.
+
+And because patching writes into namespace memory over UART, you can
+change your software at any time — write a new abstraction, recompile,
+export, flash. The machine stays the same. The security stays the
+same. Only the software changes, and every version of the software is
+automatically fail-safe because the fail-safe computer enforces it.
+
+```
+FLASH (once)     →  fail-safe COMPUTER  (the machine itself)
+PATCH (anytime)  →  fail-safe SOFTWARE  (your abstractions)
+```
+
+The bitstream is the lock. The patch is what you put inside the lock.
+The lock never opens for anything without a key.
+
+---
+
 ## Writing and Patching Code
 
 This is your everyday workflow: write code in the IDE, compile it in the
