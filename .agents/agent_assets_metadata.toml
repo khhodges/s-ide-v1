@@ -42,3 +42,9 @@ id = "LGBXHAPfrFZb1bTRbRGON"
 uri = "file://docs/fulcrum-of-computer-science.pdf"
 type = "pdf"
 title = "The Fulcrum of Computer Science (updated tables)"
+
+[[outputs]]
+id = "BcSHNOV01T03YtzZbrzj-"
+uri = "file://docs/introducing-cloomc.pdf"
+type = "pdf"
+title = "Why Your Computer Cannot Be Trusted — An Introduction to the CLOOMC IDE"
