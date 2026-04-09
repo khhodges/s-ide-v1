@@ -24,12 +24,14 @@ The Church Machine transitions Computer Science from the "Binary Vibe" to an Ind
 
 The fundamental particle of this universe is the Golden Token (GT) — a 32-bit unforgeable key. When loaded into a Capability Register (CR), the full context expands to 128 bits (4 × 32-bit words):
 
-| Word | Function | Description |
-|------|----------|-------------|
-| 1 | Golden Token | Version, namespace index, permissions (R, W, X, L, S, E), and type (NULL, Inform, Outform, Abstract). |
-| 2 | Location | Address of the resource — local memory (Inform) or remote endpoint (Outform). |
-| 3 | Limit | Object size bound, plus B (Bind) and F (Far) flags. |
-| 4 | Seal | Integrity check — CRC-16/CCITT (poly 0x1021, init 0xFFFF) over 89 bits. Ensures the namespace entry is untampered. |
+| Register | Function | Description |
+|----------|----------|-------------|
+| R0 | Golden Token | Version, namespace index, permissions (R, W, X, L, S, E), and type (NULL, Inform, Outform, Abstract). |
+| R1 | Location | Address of the resource — local memory (Inform) or remote endpoint (Outform). |
+| R2 | Limit | Object size bound, plus B (Bind) and F (Far) flags. |
+| R3 | Seal | Integrity check — CRC-16/CCITT (poly 0x1021, init 0xFFFF) over 89 bits. Ensures the namespace entry is untampered. |
+
+> **Naming convention:** R0–R3 refer to the four 32-bit words of a Capability Register. W0–W2 refer to the three 32-bit words of a Namespace (NS) entry. This avoids ambiguity — if you see R3 it is always the CR seal word; if you see W2 it is always the NS seal word.
 
 ---
 

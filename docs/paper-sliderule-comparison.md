@@ -115,10 +115,10 @@ A Golden Token (GT) is a 32-bit unforgeable capability:
 An abstraction is the fundamental security block. Each abstraction occupies a single contiguous memory region called a *lump*, described by one namespace (NS) entry:
 
 ```
-NS Entry:
-  word0: location (base address of lump)
-  word1: B|F|G|chain|type|clistCount|limit
-  word2: CRC-16 seal | g_bit | spare
+NS Entry (W0–W2):
+  W0: location (base address of lump)
+  W1: B|F|G|chain|type|clistCount|limit
+  W2: CRC-16 seal | gt_seq | spare
 
 Lump Layout:
   +---------------------------+ offset 0

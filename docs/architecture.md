@@ -214,12 +214,14 @@ Offset +2   Word 2 — crc       [31:17]  spare
 
 ### Context Registers (CR0–CR15)
 
-128-bit registers holding Golden Tokens. Each CR stores four 32-bit words:
+128-bit registers holding Golden Tokens. Each CR stores four 32-bit words (R0–R3):
 
-- **word0**: The GT itself (`B | perms | typ | gt_seq | object_id`)
-- **word1**: Lump base address (NS Entry Word 0)
-- **word2**: NS Entry Word 1 (`spare | gt_seq | limit_offset`)
-- **word3**: NS Entry Word 2 (`spare | g_bit | CRC-16`)
+- **R0**: The GT itself (`B | perms | typ | gt_seq | object_id`)
+- **R1**: Lump base address (NS Entry W0)
+- **R2**: NS Entry W1 (`spare | gt_seq | limit_offset`)
+- **R3**: NS Entry W2 (`spare | g_bit | CRC-16`)
+
+> **Convention:** R0–R3 = the 4 words of a Capability Register. W0–W2 = the 3 words of an NS entry.
 
 Special assignments (from `hardware/hw_types.py`):
 - **CR5**:  Heap pointer (CR_HEAP) — bump-allocation frontier

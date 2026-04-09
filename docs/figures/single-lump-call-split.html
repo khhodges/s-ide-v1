@@ -78,18 +78,18 @@
 
   <!-- word0 -->
   <rect x="80" y="192" width="360" height="26" rx="3" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1"/>
-  <text x="90" y="210" font-size="11" font-weight="bold" fill="#2e7d32">word0: Location</text>
+  <text x="90" y="210" font-size="11" font-weight="bold" fill="#2e7d32">W0: Location</text>
   <text x="380" y="210" text-anchor="end" font-size="11" font-family="'Courier New', monospace" fill="#555">0x1200 (base address of lump)</text>
 
-  <!-- word1 — the key field -->
+  <!-- W1 — the key field -->
   <rect x="80" y="224" width="360" height="40" rx="3" fill="#fff8e1" stroke="#b8860b" stroke-width="1.5"/>
-  <text x="90" y="242" font-size="11" font-weight="bold" fill="#b8860b">word1:</text>
+  <text x="90" y="242" font-size="11" font-weight="bold" fill="#b8860b">W1:</text>
   <text x="135" y="242" font-size="10" font-family="'Courier New', monospace" fill="#555">B(31)|F(30)|G(29)|C(28)|</text>
   <text x="135" y="257" font-size="10" font-family="'Courier New', monospace" fill="#b8860b">type=01(27:26)|clistCount=3(25:17)|limit=255(16:0)</text>
 
-  <!-- word2 -->
+  <!-- W2 -->
   <rect x="80" y="270" width="360" height="26" rx="3" fill="#f3e5f5" stroke="#6b4c9a" stroke-width="1"/>
-  <text x="90" y="288" font-size="11" font-weight="bold" fill="#6b4c9a">word2: Seal</text>
+  <text x="90" y="288" font-size="11" font-weight="bold" fill="#6b4c9a">W2: Seal</text>
   <text x="380" y="288" text-anchor="end" font-size="11" font-family="'Courier New', monospace" fill="#555">FNV-1a(location, limit) — 25 bits</text>
 
   <!-- ===== CALL instruction box ===== -->
@@ -97,7 +97,7 @@
   <text x="790" y="55" text-anchor="middle" font-size="16" font-weight="bold" fill="#c62828">CALL Instruction</text>
   <line x1="560" y1="63" x2="1020" y2="63" stroke="#c62828" stroke-width="0.5" opacity="0.3"/>
   <text x="570" y="82" font-size="11" fill="#333">1. mLoad: type &#x2192; version &#x2192; seal &#x2192; bounds &#x2192; E-perm &#x2192; F-bit &#x2192; deliver</text>
-  <text x="570" y="100" font-size="11" fill="#333">2. Parse word1: extract clistCount and limit</text>
+  <text x="570" y="100" font-size="11" fill="#333">2. Parse W1: extract clistCount and limit</text>
   <text x="570" y="118" font-size="11" fill="#c62828" font-weight="bold">3. clistStart = (limit + 1) - clistCount = 256 - 3 = 253</text>
   <text x="570" y="136" font-size="11" fill="#333">4. Create CR14 (code) + CR6 (c-list), set PC = 0</text>
 

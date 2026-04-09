@@ -850,10 +850,10 @@ function updateCRDisplay() {
     const COLS = 14;
     let html = '<table class="cr-table"><thead><tr>';
     html += '<th>CR</th><th>M</th><th>Name</th><th>Role</th>';
-    html += '<th>word0: GT</th><th>Perms</th><th>Seq</th><th>Idx</th><th>Type</th>';
-    html += '<th>word1: Location</th>';
-    html += '<th>W0:B</th><th>F</th><th>Limit[16:0]</th>';
-    html += '<th>word3: Seq</th><th>CRC Seal</th>';
+    html += '<th>R0: GT</th><th>Perms</th><th>Seq</th><th>Idx</th><th>Type</th>';
+    html += '<th>R1: Location</th>';
+    html += '<th>R0:B</th><th>F</th><th>Limit[16:0]</th>';
+    html += '<th>R3: Seq</th><th>CRC Seal</th>';
     html += '</tr></thead><tbody>';
     for (let i = 0; i < 16; i++) {
         if (i === 12) {
@@ -2145,10 +2145,10 @@ function updateCRDetail() {
     html += '<table class="cr-table cr-detail-words"><thead><tr>';
     html += '<th>Word</th><th>Value</th><th>Decoded</th>';
     html += '</tr></thead><tbody>';
-    html += `<tr><td>word0: GT</td><td class="cr-gt">0x${cr.word0_gt}</td><td>[${cr.perms}] Seq=${cr.gtSeq} Idx=${cr.gtIndex} Type=${cr.gtTypeName}</td></tr>`;
-    html += `<tr><td>word1: Location</td><td>0x${cr.word1_location.toString(16).toUpperCase().padStart(8,'0')}</td><td>Base address in memory</td></tr>`;
-    html += `<tr><td>word2: Limit</td><td>F=${cr.limitF} Limit=0x${cr.limit17.toString(16).toUpperCase().padStart(5,'0')}</td><td>Far=${cr.limitF} Size=${cr.limit17 + 1} words</td></tr>`;
-    html += `<tr><td>word3: Seals</td><td>Seq=${cr.sealGtSeq} CRC=0x${cr.sealCRC.toString(16).toUpperCase().padStart(4,'0')}</td><td>Integrity seal (CRC-16/CCITT)</td></tr>`;
+    html += `<tr><td>R0: GT</td><td class="cr-gt">0x${cr.word0_gt}</td><td>[${cr.perms}] Seq=${cr.gtSeq} Idx=${cr.gtIndex} Type=${cr.gtTypeName}</td></tr>`;
+    html += `<tr><td>R1: Location</td><td>0x${cr.word1_location.toString(16).toUpperCase().padStart(8,'0')}</td><td>Base address in memory</td></tr>`;
+    html += `<tr><td>R2: Limit</td><td>F=${cr.limitF} Limit=0x${cr.limit17.toString(16).toUpperCase().padStart(5,'0')}</td><td>Far=${cr.limitF} Size=${cr.limit17 + 1} words</td></tr>`;
+    html += `<tr><td>R3: Seals</td><td>Seq=${cr.sealGtSeq} CRC=0x${cr.sealCRC.toString(16).toUpperCase().padStart(4,'0')}</td><td>Integrity seal (CRC-16/CCITT)</td></tr>`;
     html += `<tr><td>M bit</td><td class="${cr.mBit ? 'cr-m-set' : ''}">${cr.mBit}</td><td>${cr.mBit ? 'Written under M elevation (boot gift)' : 'Normal write'}</td></tr>`;
     html += '</tbody></table>';
     html += '</div>';
@@ -2167,14 +2167,14 @@ function updateCRDetail() {
         const typeNames = ['NULL','Inform','Outform','Abstract'];
 
         html += '<table class="cr-table"><tbody>';
-        html += `<tr><td>NS W0: Location</td><td>0x${loc.toString(16).toUpperCase().padStart(8,'0')}</td></tr>`;
-        html += `<tr><td>NS W1: Type</td><td>${typeNames[entry.gtType] || '?'}</td></tr>`;
-        html += `<tr><td>NS W1: F (Far)</td><td>${lim.f}</td></tr>`;
-        html += `<tr><td>NS W1: G (GC)</td><td>${entry.gBit}</td></tr>`;
-        html += `<tr><td>NS W1: Chainable</td><td>${entry.chainable ? 'Yes' : 'No'}</td></tr>`;
-        html += `<tr><td>NS W1: Limit</td><td>0x${lim.limit.toString(16).toUpperCase().padStart(5,'0')} (${lim.limit + 1} words)</td></tr>`;
-        html += `<tr><td>NS W2: GT Seq</td><td>${sealGtSeq}</td></tr>`;
-        html += `<tr><td>NS W2: CRC Seal</td><td>0x${sealCRC.toString(16).toUpperCase().padStart(4,'0')}</td></tr>`;
+        html += `<tr><td>W0: Location</td><td>0x${loc.toString(16).toUpperCase().padStart(8,'0')}</td></tr>`;
+        html += `<tr><td>W1: Type</td><td>${typeNames[entry.gtType] || '?'}</td></tr>`;
+        html += `<tr><td>W1: F (Far)</td><td>${lim.f}</td></tr>`;
+        html += `<tr><td>W1: G (GC)</td><td>${entry.gBit}</td></tr>`;
+        html += `<tr><td>W1: Chainable</td><td>${entry.chainable ? 'Yes' : 'No'}</td></tr>`;
+        html += `<tr><td>W1: Limit</td><td>0x${lim.limit.toString(16).toUpperCase().padStart(5,'0')} (${lim.limit + 1} words)</td></tr>`;
+        html += `<tr><td>W2: GT Seq</td><td>${sealGtSeq}</td></tr>`;
+        html += `<tr><td>W2: CRC Seal</td><td>0x${sealCRC.toString(16).toUpperCase().padStart(4,'0')}</td></tr>`;
         html += `<tr><td>CR Permissions</td><td>[${gtPermStr}]</td></tr>`;
         if (entry.codeLength !== undefined) {
             html += `<tr><td>Code Length</td><td>${entry.codeLength} words (${entry.codeLength * 4} bytes)</td></tr>`;
@@ -12369,13 +12369,13 @@ CALL CRd, 0xF                ; call direct (E perm)`
         brief: 'A 128-bit unforgeable capability granting specific permissions to a resource.',
         detail: `A Golden Token (GT) is a 128-bit value stored in a Context Register (CR).
 
-Layout (4 × 32-bit words):
-  word0 [31:24] perms  — R W X L S E B F (8 bits)
-  word0 [23:16] cc     — heap size in words (IDE-defined)
-  word0 [15:0]  version — revocation counter
-  word1 [31:0]  node   — memory address of the lump
-  word2 [31:0]  seal   — sealing key (0 = unsealed)
-  word3 [31:0]  sig    — CRC or integrity seal
+Layout (4 × 32-bit words — R0 to R3):
+  R0 [31:24] perms  — R W X L S E B F (8 bits)
+  R0 [23:16] cc     — heap size in words (IDE-defined)
+  R0 [15:0]  version — revocation counter
+  R1 [31:0]  node   — memory address of the lump
+  R2 [31:0]  seal   — sealing key (0 = unsealed)
+  R3 [31:0]  sig    — CRC or integrity seal
 
 Permission bits:
   R = DREAD   — read data words

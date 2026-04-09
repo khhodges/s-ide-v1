@@ -39,7 +39,7 @@ Each risk has a severity rating, a description of the fix, a reference to the ta
 **Problem:** The single-NS-entry model — one lump, one Inform GT, CALL splits by clistCount — is the central architectural idea, but it existed only in text descriptions. A visual was needed for the tutorial and documentation.
 
 **Solution:** Created `simulator/namespace_diagram.svg` showing:
-- The Namespace Table with 3-word NS entries (word0: location, word1: B|F|G|chain|type|clistCount|limit, word2: seals)
+- The Namespace Table with 3-word NS entries (W0: location, W1: B|F|G|chain|type|clistCount|limit, W2: seals)
 - A lump with three regions: Method Table + Code (offset 0), FREESPACE (padding), C-List (GT slots at allocSize - clistCount)
 - CALL split arrows showing CR14 (code, X-only) and CR6 (c-list, L-only)
 - The E-GT format: Version(7) | Index(17) | Perms=E(6) | Type=01(2)
@@ -57,7 +57,7 @@ Each risk has a severity rating, a description of the fix, a reference to the ta
 **Solution:** Already implemented in `simulator/simulator.js`. The `packNSWord1` function encodes:
 
 ```
-word1: B(31) | F(30) | G(29) | chain(28) | type(27:26) | clistCount(25:17) | limit(16:0)
+W1: B(31) | F(30) | G(29) | chain(28) | type(27:26) | clistCount(25:17) | limit(16:0)
 ```
 
 `parseNSWord1` extracts all fields. `writeNSEntry` accepts clistCount as a parameter. The 9-bit clistCount field (bits 25:17) supports up to 511 capability slots per abstraction.
