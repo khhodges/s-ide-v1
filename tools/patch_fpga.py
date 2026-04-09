@@ -172,6 +172,8 @@ def main():
 
     if run_sentinel:
         print()
+        time.sleep(0.05)
+        ser.reset_input_buffer()
         print("  Sending RUN sentinel (0xBE 0xAA)...")
         ser.write(run_sentinel)
         ser.flush()

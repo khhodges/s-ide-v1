@@ -510,7 +510,16 @@ class ChurchTangNano20K(Elaboratable):
                     m.next = "SEND_HALT"
 
             with m.State("SEND_HALT"):
-                with m.If(~debug.busy):
+                with m.If(uart_rx.valid & (uart_rx.data == 0xBE)):
+                    m.d.sync += [
+                        patch_rx_phase.eq(0),
+                        halt_idx.eq(0),
+                    ]
+                    m.d.comb += [
+                        crc_mod.reset.eq(1),
+                    ]
+                    m.next = "CMD_MAGIC2"
+                with m.Elif(~debug.busy):
                     with m.If(halt_idx < len(HALT_MSG)):
                         m.d.comb += [
                             fsm_byte_data.eq(halt_byte),

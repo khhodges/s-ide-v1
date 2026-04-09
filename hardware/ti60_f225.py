@@ -509,7 +509,14 @@ class ChurchTi60F225(Elaboratable):
                     m.next = "SEND_HALT"
 
             with m.State("SEND_HALT"):
-                with m.If(~debug.busy):
+                with m.If(rx_valid & (rx_data == 0xBE)):
+                    m.d.sync += [
+                        pl_active.eq(1),
+                        halt_idx.eq(0),
+                    ]
+                    m.d.comb += crc_mod.reset.eq(1)
+                    m.next = "PL_WAIT_EF"
+                with m.Elif(~debug.busy):
                     with m.If(halt_idx < len(HALT_MSG)):
                         m.d.comb += [
                             fsm_byte_data.eq(halt_byte),
@@ -518,8 +525,6 @@ class ChurchTi60F225(Elaboratable):
                         m.d.sync += halt_idx.eq(halt_idx + 1)
                     with m.Else():
                         m.d.sync += halt_idx.eq(0)
-                        # After single-step: return to paused single-step mode.
-                        # After initial boot banner: keep going (handled by re-enter flow).
                         m.next = "HALTED"
 
             with m.State("HALTED"):
