@@ -601,15 +601,38 @@ can only touch memory it has a capability for. It cannot forge
 capabilities. It cannot escape its lump. It cannot interfere with
 other abstractions. The hardware guarantees this on every cycle.
 
-And because patching writes into namespace memory over UART, you can
-change your software at any time — write a new abstraction, recompile,
-export, patch. The machine stays the same. The security stays the
-same. Only the software changes, and every version of the software is
-automatically fail-safe because the fail-safe computer enforces it.
+### Patching is a one-click operation
+
+On a conventional computer, deploying software is anxious work. You
+test, review, stage, canary, roll back if something breaks. You need
+all of this ceremony because the machine itself offers no guarantees —
+any program can corrupt any memory, call any system call, and crash
+any other process.
+
+On the Church Machine, **the six Laws extend from the IDE into the
+runtime.** The IDE enforces them at compile time: CLOOMC validates
+capability requirements, checks bounds, generates minimum-privilege
+grants, and produces correct UART frames with CRC checksums. The
+hardware enforces them at execution time: every instruction fetch is
+checked by CR14, every thread access by CR12, every heap access by
+CR5. There is no gap between what the IDE promises and what the
+machine delivers.
+
+This means patching is a **one-click operation.** Click Patch in the
+IDE. The abstraction is compiled, validated, framed, checksummed, and
+sent to the FPGA. When it arrives, the hardware loads it into the
+namespace and begins execution under full capability enforcement. If
+the code attempts anything it was not granted permission to do, the
+machine faults — safely, immediately, visibly. There is no "deploy
+and pray." There is no rollback procedure. There is no canary. The
+machine will not permit the code to misbehave, so you do not need
+to worry about whether it will.
+
+Write. Click. Run. The Laws hold from editor to silicon.
 
 ```
 FLASH (once)     →  fail-safe COMPUTER  (the machine itself)
-PATCH (anytime)  →  fail-safe SOFTWARE  (your abstractions)
+PATCH (one click) → fail-safe SOFTWARE  (your abstractions)
 ```
 
 The bitstream is the lock. The patch is what you put inside the lock.
@@ -619,11 +642,12 @@ The lock never opens for anything without a key.
 
 ## Writing and Patching Code
 
-This is your everyday workflow: write code in the IDE, compile it in the
-simulator, export a patch file, and patch it with one terminal command.
+This is your everyday workflow. Because the IDE constraints and the
+six Laws extend continuously into the runtime, the whole cycle is a
+single confident action — not a multi-stage deployment pipeline.
 
 ```
-IDE ── write ──► Patch (compile) ──► Export Patch ──► patch_fpga.py ──► FPGA
+IDE ── write ──► Patch (one click) ──► FPGA runs under full capability enforcement
 ```
 
 ### Step 6 — Write your code
