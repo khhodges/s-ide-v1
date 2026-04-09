@@ -6076,6 +6076,58 @@ function updateFPGAStatusBtn() {
     }
 }
 
+let _fpgaToastTimer = null;
+function _dismissFpgaToast() {
+    if (_fpgaToastTimer) { clearTimeout(_fpgaToastTimer); _fpgaToastTimer = null; }
+    var el = document.getElementById('fpgaToastEl');
+    if (el) el.remove();
+}
+function _showFpgaToast(title, body, level, duration) {
+    level = level || 'info';
+    if (duration === undefined || duration === null) duration = 5000;
+    _dismissFpgaToast();
+
+    var icons = { info: '\u2139', ok: '\u2713', warn: '\u26A0', err: '\u2717' };
+    var el = document.createElement('div');
+    el.id = 'fpgaToastEl';
+    el.className = 'fpga-toast fpga-toast-' + level;
+
+    var header = document.createElement('div');
+    header.className = 'fpga-toast-header';
+
+    var iconSpan = document.createElement('span');
+    iconSpan.className = 'fpga-toast-icon';
+    iconSpan.textContent = icons[level] || icons.info;
+
+    var titleSpan = document.createElement('span');
+    titleSpan.className = 'fpga-toast-title';
+    titleSpan.textContent = title;
+
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'fpga-toast-close';
+    closeBtn.textContent = '\u2715';
+    closeBtn.addEventListener('click', _dismissFpgaToast);
+
+    header.appendChild(iconSpan);
+    header.appendChild(titleSpan);
+    header.appendChild(closeBtn);
+
+    var bodyDiv = document.createElement('div');
+    bodyDiv.className = 'fpga-toast-body';
+    bodyDiv.textContent = body;
+
+    el.appendChild(header);
+    el.appendChild(bodyDiv);
+    document.body.appendChild(el);
+
+    if (duration > 0) {
+        _fpgaToastTimer = setTimeout(function() {
+            el.classList.add('fpga-toast-fade');
+            setTimeout(function() { if (el.parentNode) el.remove(); }, 400);
+        }, duration);
+    }
+}
+
 function _fpgaLog(msg) {
     const con = document.getElementById('editorConsole');
     if (con) {
@@ -6087,43 +6139,55 @@ function _fpgaLog(msg) {
 async function fpgaConnectToggle() {
     const btn = document.getElementById('fpgaConnBtn');
     if (typeof TangSerial === 'undefined') {
+        _showFpgaToast('FPGA', 'WebSerial driver not loaded.', 'err');
         _fpgaLog('FPGA: WebSerial driver not loaded.');
         return;
     }
     if (TangSerial.isConnected()) {
         try {
             await TangSerial.disconnect();
+            _showFpgaToast('FPGA Disconnected', 'Serial port closed.', 'info', 3000);
             _fpgaLog('FPGA: Disconnected.');
         } catch(e) {
+            _showFpgaToast('FPGA', 'Disconnect error: ' + e.message, 'err');
             _fpgaLog('FPGA disconnect error: ' + e.message);
         }
         updateFPGAStatusBtn();
         return;
     }
     if (!TangSerial.isSupported()) {
+        _showFpgaToast('WebSerial Not Available',
+            'WebSerial is not supported in this browser or context.\n\nUse Chrome or Edge and open the app URL directly (not the Replit preview iframe).',
+            'warn', 8000);
         _fpgaLog('FPGA: WebSerial not supported in this browser.\nUse Chrome or Edge, and open the app directly (not through the Replit preview iframe).');
         updateFPGAStatusBtn();
         return;
     }
-    // Attempt connect — show connecting state on button
     if (btn) {
         btn.className = 'btn fpga-conn-btn fpga-connecting';
-        btn.textContent = '⬡ FPGA …';
+        btn.textContent = '\u2B21 FPGA \u2026';
     }
-    _fpgaLog('FPGA: Connecting — select your FPGA serial port in the browser dialog…');
+    _showFpgaToast('FPGA Connecting\u2026', 'Select your FPGA serial port in the browser dialog.', 'info', 0);
+    _fpgaLog('FPGA: Connecting \u2014 select your FPGA serial port in the browser dialog\u2026');
     try {
         await TangSerial.connect();
-        _fpgaLog('FPGA: Connected ✓');
+        _showFpgaToast('FPGA Connected', 'Serial port open \u2014 ready to send/receive.', 'ok', 4000);
+        _fpgaLog('FPGA: Connected \u2713');
     } catch(e) {
         const msg = e.message || String(e);
         if (msg.includes('permissions policy') || msg.includes('disallowed')) {
+            _showFpgaToast('WebSerial Blocked',
+                'The browser permissions policy blocks WebSerial in this context.\n\nOpen the published app URL directly in Chrome to connect.',
+                'warn', 10000);
             _fpgaLog('FPGA: WebSerial blocked by the browser permissions policy.\n' +
                      'This happens in the Replit preview iframe.\n' +
                      'To connect your FPGA: open the published/deployed app URL directly in Chrome,\n' +
                      'or use the dedicated "Deploy to Tang" button in the Build tab.');
         } else if (msg.includes('No port selected') || msg.includes('user cancelled') || msg.includes('AbortError')) {
-            _fpgaLog('FPGA: Port selection cancelled — no port chosen.');
+            _showFpgaToast('FPGA', 'Port selection cancelled \u2014 no port chosen.', 'warn', 3000);
+            _fpgaLog('FPGA: Port selection cancelled \u2014 no port chosen.');
         } else {
+            _showFpgaToast('FPGA Connect Failed', msg, 'err', 6000);
             _fpgaLog('FPGA connect failed: ' + msg);
         }
     }
@@ -6132,40 +6196,91 @@ async function fpgaConnectToggle() {
 
 async function fpgaBridgeConnect() {
     if (typeof TangSerial === 'undefined') {
+        _showFpgaToast('Bridge', 'TangSerial driver not loaded.', 'err');
         _fpgaLog('FPGA: TangSerial driver not loaded.');
         return;
     }
     if (TangSerial.isConnected()) {
         try {
             await TangSerial.disconnect();
+            _showFpgaToast('Bridge Disconnected', 'Bridge session closed.', 'info', 3000);
             _fpgaLog('FPGA Bridge: Disconnected.');
         } catch(e) {
+            _showFpgaToast('Bridge', 'Disconnect error: ' + e.message, 'err');
             _fpgaLog('FPGA Bridge disconnect error: ' + e.message);
         }
         updateFPGAStatusBtn();
         return;
     }
-    const defaultUrl = 'https://penguin.linux.test:8766';
-    const url = window.prompt(
-        'Local Bridge URL\n\n' +
-        'Run this in your Linux terminal first:\n' +
-        '  python3 server/local_bridge.py\n\n' +
-        'Then enter the bridge URL below (ChromeOS default is pre-filled):',
-        defaultUrl
-    );
-    if (!url) { _fpgaLog('FPGA Bridge: Cancelled.'); return; }
+    _showBridgeModal();
+}
 
-    const btn = document.getElementById('fpgaConnBtn');
-    if (btn) { btn.className = 'btn fpga-conn-btn fpga-connecting'; btn.textContent = '⬡ FPGA …'; }
-    _fpgaLog('FPGA Bridge: Connecting to ' + url + ' …');
-    try {
-        await TangSerial.connectBridge(url);
-        _fpgaLog('FPGA Bridge: Connected ✓  (using local bridge, not WebSerial)');
-    } catch(e) {
-        _fpgaLog('FPGA Bridge connect failed: ' + (e.message || String(e)) +
-            '\n\nMake sure the bridge script is running:\n  python3 server/local_bridge.py');
+function _showBridgeModal() {
+    var existing = document.getElementById('bridgeModalOverlay');
+    if (existing) existing.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'bridgeModalOverlay';
+    overlay.className = 'modal-overlay';
+
+    var dialog = document.createElement('div');
+    dialog.className = 'modal-dialog';
+    dialog.innerHTML =
+        '<div class="modal-title">FPGA Bridge Connect</div>' +
+        '<p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 0.75rem">Run this in your Linux terminal first:</p>' +
+        '<pre style="background:var(--bg-input);padding:0.5rem;border-radius:4px;font-size:0.78rem;color:#22c55e;margin:0 0 1rem;white-space:pre-wrap">python3 server/local_bridge.py</pre>' +
+        '<label class="modal-label">Bridge URL' +
+            '<input id="bridgeUrlInput" class="modal-input" type="text" value="https://penguin.linux.test:8766">' +
+        '</label>' +
+        '<div class="modal-buttons">' +
+            '<button id="bridgeModalCancel" class="btn">Cancel</button>' +
+            '<button id="bridgeModalOk" class="btn btn-primary">Connect</button>' +
+        '</div>';
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    var urlInput = document.getElementById('bridgeUrlInput');
+    urlInput.focus();
+    urlInput.select();
+
+    function closeModal() { overlay.remove(); document.removeEventListener('keydown', onEsc); }
+    function onEsc(e) { if (e.key === 'Escape') closeModal(); }
+    document.addEventListener('keydown', onEsc);
+    document.getElementById('bridgeModalCancel').addEventListener('click', closeModal);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+
+    var submitted = false;
+    async function submit() {
+        if (submitted) return;
+        submitted = true;
+        var url = urlInput.value.trim();
+        closeModal();
+        if (!url) {
+            _showFpgaToast('Bridge', 'No URL entered \u2014 cancelled.', 'warn', 3000);
+            _fpgaLog('FPGA Bridge: Cancelled.');
+            return;
+        }
+        var btn = document.getElementById('fpgaConnBtn');
+        if (btn) { btn.className = 'btn fpga-conn-btn fpga-connecting'; btn.textContent = '\u2B21 FPGA \u2026'; }
+        _showFpgaToast('Bridge Connecting\u2026', 'Reaching ' + url, 'info', 0);
+        _fpgaLog('FPGA Bridge: Connecting to ' + url + ' \u2026');
+        try {
+            await TangSerial.connectBridge(url);
+            _showFpgaToast('Bridge Connected', 'Using local bridge at ' + url, 'ok', 4000);
+            _fpgaLog('FPGA Bridge: Connected \u2713  (using local bridge, not WebSerial)');
+        } catch(e) {
+            _showFpgaToast('Bridge Connect Failed',
+                (e.message || String(e)) + '\n\nMake sure the bridge script is running:\npython3 server/local_bridge.py',
+                'err', 8000);
+            _fpgaLog('FPGA Bridge connect failed: ' + (e.message || String(e)) +
+                '\n\nMake sure the bridge script is running:\n  python3 server/local_bridge.py');
+        }
+        updateFPGAStatusBtn();
     }
-    updateFPGAStatusBtn();
+
+    document.getElementById('bridgeModalOk').addEventListener('click', submit);
+    urlInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
 }
 
 // Poll FPGA status every 2 s so the indicator stays current
@@ -6177,7 +6292,8 @@ setInterval(updateFPGAStatusBtn, 2000);
 // correct words after a patch.
 function fpgaReadBRAM() {
     if (typeof TangSerial === 'undefined' || !TangSerial.isConnected()) {
-        _fpgaLog('Read BRAM: FPGA not connected — click ⬡ FPGA to connect first.');
+        _showFpgaToast('Read BRAM', 'FPGA not connected \u2014 click \u2B21 FPGA to connect first.', 'warn', 5000);
+        _fpgaLog('Read BRAM: FPGA not connected \u2014 click \u2B21 FPGA to connect first.');
         return;
     }
 
@@ -6231,10 +6347,12 @@ function fpgaReadBRAM() {
 
         _fpgaLog(`Read BRAM: addr=0x${baseAddr.toString(16).toUpperCase().padStart(4,'0')} count=${count}…`);
 
+        _showFpgaToast('Reading BRAM\u2026', `addr=0x${baseAddr.toString(16).toUpperCase().padStart(4,'0')}  count=${count}`, 'info', 0);
         try {
             const result = await TangSerial.readBRAM(baseAddr, count, (msg) => _fpgaLog(msg));
             if (result.words.length === 0) {
-                _fpgaLog('Read BRAM: no data received — is the Ti60 F225 bitstream built with READ_BRAM support?');
+                _showFpgaToast('Read BRAM', 'No data received \u2014 is the bitstream built with READ_BRAM?', 'err', 8000);
+                _fpgaLog('Read BRAM: no data received \u2014 is the Ti60 F225 bitstream built with READ_BRAM support?');
                 return;
             }
             const PER_LINE = 8;
@@ -6248,7 +6366,9 @@ function fpgaReadBRAM() {
             }
             const con = document.getElementById('editorConsole');
             if (con) { con.textContent += out; con.scrollTop = con.scrollHeight; }
+            _showFpgaToast('BRAM Read Complete', result.words.length + ' words dumped to console.', 'ok', 4000);
         } catch(e) {
+            _showFpgaToast('Read BRAM Error', e.message, 'err', 6000);
             _fpgaLog('Read BRAM error: ' + e.message);
         }
     }

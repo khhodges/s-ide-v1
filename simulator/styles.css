@@ -4615,6 +4615,75 @@ a.next-step-link:hover {
 
 .patch-toast-fade { opacity: 0; }
 
+.fpga-toast {
+    position: fixed;
+    top: 3.5rem;
+    right: 1.5rem;
+    z-index: 2100;
+    min-width: 300px;
+    max-width: 440px;
+    background: #0d1b2a;
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+    overflow: hidden;
+    animation: fpga-toast-in 0.25s ease-out;
+    transition: opacity 0.35s ease;
+}
+@keyframes fpga-toast-in {
+    from { transform: translateY(-12px); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+.fpga-toast-info    { border: 2px solid #3b82f6; }
+.fpga-toast-ok      { border: 2px solid #22c55e; }
+.fpga-toast-warn    { border: 2px solid #f59e0b; }
+.fpga-toast-err     { border: 2px solid #ef4444; }
+
+.fpga-toast-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.8rem;
+}
+.fpga-toast-info .fpga-toast-header { background: rgba(59,130,246,0.15); }
+.fpga-toast-ok   .fpga-toast-header { background: rgba(34,197,94,0.15); }
+.fpga-toast-warn .fpga-toast-header { background: rgba(245,158,11,0.15); }
+.fpga-toast-err  .fpga-toast-header { background: rgba(239,68,68,0.15); }
+
+.fpga-toast-icon {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+.fpga-toast-info .fpga-toast-icon { color: #3b82f6; }
+.fpga-toast-ok   .fpga-toast-icon { color: #22c55e; }
+.fpga-toast-warn .fpga-toast-icon { color: #f59e0b; }
+.fpga-toast-err  .fpga-toast-icon { color: #ef4444; }
+
+.fpga-toast-title {
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+.fpga-toast-close {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 0 0.2rem;
+    line-height: 1;
+}
+.fpga-toast-close:hover { color: #fff; }
+
+.fpga-toast-body {
+    padding: 0.4rem 0.8rem 0.6rem;
+    font-size: 0.78rem;
+    color: #b0c4d8;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+.fpga-toast-fade { opacity: 0; }
+
 .cr-inject-bar {
     display: flex;
     gap: 0.5rem;
