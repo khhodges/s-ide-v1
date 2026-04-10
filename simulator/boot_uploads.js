@@ -178,5 +178,124 @@ const BOOT_UPLOADS = [
             { name: 'Reset', code: [0x19C00000] },
             { name: 'Test', code: [0x19C00000] }
         ]
+    },
+    {
+        abstraction: 'UART',
+        type: 'boot',
+        index: 11,
+        grants: ['L', 'S', 'E'],
+        capabilities: [],
+        methods: []
+    },
+    {
+        abstraction: 'LED',
+        type: 'boot',
+        index: 12,
+        grants: ['L', 'S', 'E'],
+        capabilities: [],
+        methods: []
+    },
+    {
+        abstraction: 'Button',
+        type: 'boot',
+        index: 13,
+        grants: ['L', 'E'],
+        capabilities: [],
+        methods: []
+    },
+    {
+        abstraction: 'Timer',
+        type: 'boot',
+        index: 14,
+        grants: ['L', 'S', 'E'],
+        capabilities: [],
+        methods: []
+    },
+    {
+        abstraction: 'Display',
+        type: 'boot',
+        index: 15,
+        grants: ['L', 'S', 'E'],
+        capabilities: [],
+        methods: []
+    },
+    {
+        abstraction: 'SlideRule',
+        type: 'boot',
+        index: 16,
+        grants: ['E'],
+        capabilities: [
+            { target: 18, name: 'Constants', grants: ['E'] }
+        ],
+        methods: [
+            { name: 'Multiply', code: [
+                0x7f600000, 0x7f260000, 0x7f600000, 0x7f2e0000, 0x7f600000,
+                0x770e0000, 0x8d00000c, 0x7f600000, 0x87660000, 0x7f0e0000,
+                0x7f600001, 0x7f2e0000, 0x7f600000, 0x770e0000, 0x8e807fff,
+                0x67608001, 0x7f360000, 0x7f600001, 0x77360000, 0x88800017,
+                0x7f620000, 0x7f660000, 0x7f260000, 0x97600001, 0x7f060000,
+                0x9f608001, 0x7f0e0000, 0x7f600001, 0x772e0000, 0x88800021,
+                0x7f600000, 0x87660000, 0x7f260000, 0x7f020000, 0x1f000000
+            ]},
+            { name: 'Divide', code: [
+                0x7f600000, 0x770e0000, 0x88800006, 0x7f600000, 0x7f060000,
+                0x1f000000, 0x7f600000, 0x7f260000, 0x7f600000, 0x77060000,
+                0x8d000010, 0x7f600000, 0x87660000, 0x7f060000, 0x7f620001,
+                0x7f260000, 0x7f600000, 0x770e0000, 0x8d000018, 0x7f600000,
+                0x87660000, 0x7f0e0000, 0x7f620001, 0x7f260000, 0x7f600000,
+                0x7f2e0000, 0x77008000, 0x8d807fff, 0x87600000, 0x7f060000,
+                0x7f628001, 0x7f2e0000, 0x7f600001, 0x77260000, 0x88800026,
+                0x7f600000, 0x87660000, 0x7f2e0000, 0x7f028000, 0x1f000000
+            ]},
+            { name: 'Sqrt', code: [
+                0x7f600000, 0x77060000, 0x88800006, 0x7f600000, 0x7f060000,
+                0x1f000000, 0x7f600001, 0x77060000, 0x8880000c, 0x7f600001,
+                0x7f060000, 0x1f000000, 0x9f600001, 0x7f260000, 0x7f600000,
+                0x7f2e0000, 0x7f600014, 0x772e0000, 0x8d007fff, 0x7f600000,
+                0x7f360000, 0x7f380000, 0x773a0000, 0x8d807fff, 0x87638000,
+                0x7f3e0000, 0x7f630001, 0x7f360000, 0x7f620000, 0x7f660000,
+                0x7f460000, 0x9f640001, 0x7f460000, 0x7f240000, 0x7f628001,
+                0x7f2e0000, 0x7f020000, 0x1f000000
+            ]},
+            { name: 'Mod', code: [0x19C00000] },
+            { name: 'Sin', code: [0x19C00000] },
+            { name: 'Cos', code: [0x19C00000] },
+            { name: 'Tan', code: [0x19C00000] },
+            { name: 'Asin', code: [0x19C00000] },
+            { name: 'Acos', code: [0x19C00000] },
+            { name: 'Atan', code: [0x19C00000] },
+            { name: 'ToDegrees', code: [0x1f000000] },
+            { name: 'ToRadians', code: [0x1f000000] },
+            { name: 'Bernoulli', code: [0x19C00000] }
+        ]
+    },
+    {
+        abstraction: 'Abacus',
+        type: 'boot',
+        index: 17,
+        grants: ['E'],
+        capabilities: [],
+        methods: [
+            { name: 'Add', code: [0x7f600000, 0x7f660000, 0x7f260000, 0x7f020000, 0x1f000000] },
+            { name: 'Sub', code: [0x87600000, 0x7f260000, 0x7f020000, 0x1f000000] },
+            { name: 'Mul', code: [0x19C00000] },
+            { name: 'Div', code: [0x19C00000] },
+            { name: 'Mod', code: [0x19C00000] },
+            { name: 'Abs', code: [0x19C00000] }
+        ]
+    },
+    {
+        abstraction: 'Constants',
+        type: 'boot',
+        index: 18,
+        grants: ['E'],
+        capabilities: [],
+        methods: [
+            { name: 'Pi', code: [0x7f600003, 0x7f060000, 0x1f000000] },
+            { name: 'E', code: [0x7f600002, 0x7f060000, 0x1f000000] },
+            { name: 'Phi', code: [0x7f600001, 0x7f060000, 0x1f000000] },
+            { name: 'Zero', code: [0x7f600000, 0x7f060000, 0x1f000000] },
+            { name: 'One', code: [0x7f600001, 0x7f060000, 0x1f000000] }
+        ]
     }
 ];
