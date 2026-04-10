@@ -6171,8 +6171,11 @@ async function fpgaConnectToggle() {
     _fpgaLog('FPGA: Connecting \u2014 select your FPGA serial port in the browser dialog\u2026');
     try {
         await TangSerial.connect();
-        _showFpgaToast('FPGA Connected', 'Serial port open \u2014 ready to send/receive.', 'ok', 4000);
-        _fpgaLog('FPGA: Connected \u2713');
+        var _pi = TangSerial.portInfo();
+        var _pidMsg = (_pi && _pi.vid) ? ' [VID=0x' + _pi.vid + ' PID=0x' + _pi.pid + ']' : '';
+        var _warn8086 = (_pi && _pi.vid === '8086') ? '\n\u26A0 This looks like your PC\u2019s built-in Intel UART, not the FPGA.\nTry a different port (USB1/USB2/USB3).' : '';
+        _showFpgaToast('FPGA Connected', 'Serial port open' + _pidMsg + _warn8086, _warn8086 ? 'warn' : 'ok', _warn8086 ? 10000 : 4000);
+        _fpgaLog('FPGA: Connected \u2713' + _pidMsg + (_warn8086 ? '\n  WARNING: Intel VID detected — likely wrong port!' : ''));
     } catch(e) {
         const msg = e.message || String(e);
         if (msg.includes('permissions policy') || msg.includes('disallowed')) {
