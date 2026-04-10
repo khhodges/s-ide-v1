@@ -202,7 +202,107 @@ def _generate_self_signed_cert():
     return cert_path, key_path
 
 
+def _scan_ports():
+    """List all serial ports and probe each for incoming data."""
+    import glob
+    ports = sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*') + glob.glob('/dev/ttyS*'))
+    ports = [p for p in ports if not p.startswith('/dev/ttyS') or int(p.replace('/dev/ttyS','')) < 4]
+    print(f'Found {len(ports)} serial port(s): {", ".join(ports) if ports else "(none)"}')
+    print()
+    for port in ports:
+        try:
+            s = serial.Serial(port, 115200, timeout=0.5)
+            time.sleep(0.1)
+            w = s.in_waiting
+            chunk = s.read(max(w, 64)) if True else b''
+            s.close()
+            if chunk:
+                print(f'  {port}: OPEN OK — got {len(chunk)} bytes: {chunk[:32].hex()} ascii={chunk[:32]}')
+            else:
+                print(f'  {port}: OPEN OK — 0 bytes waiting')
+        except Exception as e:
+            print(f'  {port}: FAILED — {e}')
+    print()
+
+
+def _monitor_mode(port, baud):
+    """Open port and print everything received for 10 seconds."""
+    print(f'MONITOR MODE: listening on {port} @ {baud} for 10 seconds...')
+    print(f'  (Flash the FPGA, then run this within 3 seconds to catch the boot banner)')
+    print()
+    try:
+        s = serial.Serial(port, baud, timeout=0.1)
+    except Exception as e:
+        print(f'  FAILED to open {port}: {e}')
+        return
+    total = 0
+    start = time.time()
+    while time.time() - start < 10:
+        w = s.in_waiting
+        if w:
+            chunk = s.read(w)
+            total += len(chunk)
+            elapsed = time.time() - start
+            hex_str = chunk.hex()
+            try:
+                ascii_str = chunk.decode('ascii', errors='replace')
+            except:
+                ascii_str = ''
+            print(f'  [{elapsed:5.2f}s] +{len(chunk)} bytes (total {total}): hex={hex_str}')
+            if ascii_str.strip():
+                print(f'         ascii: {repr(ascii_str)}')
+        else:
+            time.sleep(0.01)
+    s.close()
+    print()
+    if total == 0:
+        print(f'  RESULT: 0 bytes received in 10 seconds.')
+        print(f'  This means either:')
+        print(f'    1. {port} is not bridged to the FPGA UART pins')
+        print(f'    2. The BL616 firmware is not in UART bridge mode')
+        print(f'    3. The baud rate is wrong (try --monitor {port} 9600)')
+    else:
+        print(f'  RESULT: {total} bytes received — UART link is working!')
+    print()
+
+
+def _probe_bauds(port):
+    """Try common baud rates and listen briefly on each."""
+    bauds = [115200, 9600, 19200, 38400, 57600, 230400, 460800, 921600, 1000000, 2000000]
+    print(f'BAUD PROBE: trying {len(bauds)} rates on {port}...')
+    print()
+    for baud in bauds:
+        try:
+            s = serial.Serial(port, baud, timeout=0.3)
+            time.sleep(0.3)
+            w = s.in_waiting
+            chunk = s.read(max(w, 32))
+            s.close()
+            if chunk:
+                print(f'  {baud:>7d}: GOT {len(chunk)} bytes — {chunk[:16].hex()} ascii={repr(chunk[:16].decode("ascii", errors="replace"))}')
+            else:
+                print(f'  {baud:>7d}: (silence)')
+        except Exception as e:
+            print(f'  {baud:>7d}: FAILED — {e}')
+    print()
+
+
 if __name__ == '__main__':
+    if len(sys.argv) > 1 and sys.argv[1] == '--scan':
+        _scan_ports()
+        sys.exit(0)
+
+    if len(sys.argv) > 1 and sys.argv[1] == '--monitor':
+        port = sys.argv[2] if len(sys.argv) > 2 else '/dev/ttyUSB1'
+        baud = int(sys.argv[3]) if len(sys.argv) > 3 else 115200
+        _monitor_mode(port, baud)
+        sys.exit(0)
+
+    if len(sys.argv) > 1 and sys.argv[1] == '--probe-bauds':
+        port = sys.argv[2] if len(sys.argv) > 2 else '/dev/ttyUSB1'
+        _probe_bauds(port)
+        sys.exit(0)
+
     cert_path, key_path = _generate_self_signed_cert()
     use_https = cert_path is not None
 
