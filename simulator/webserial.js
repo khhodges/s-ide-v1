@@ -149,8 +149,7 @@ const TangSerial = (function() {
         } catch(e) {}
         finally {
             activeReader = null;
-            try { await r.cancel(); } catch(e2) {}
-            try { r.releaseLock(); } catch(e3) {}
+            try { r.releaseLock(); } catch(e2) {}
         }
     }
 
@@ -208,8 +207,7 @@ const TangSerial = (function() {
             status('Read error: ' + e.message);
         } finally {
             activeReader = null;
-            try { await r.cancel(); } catch(e2) {}
-            try { r.releaseLock(); } catch(e3) {}
+            try { r.releaseLock(); } catch(e2) {}
         }
 
         const rxTotal = rxBytes.length;
@@ -299,8 +297,7 @@ const TangSerial = (function() {
             status('Read error: ' + e.message);
         } finally {
             activeReader = null;
-            try { await r.cancel(); } catch(e2) {}
-            try { r.releaseLock(); } catch(e3) {}
+            try { r.releaseLock(); } catch(e2) {}
         }
 
         return { bytesSent: probe.length, bytesReceived: rxBytes.length, rawBytes: rxBytes };
@@ -413,8 +410,7 @@ const TangSerial = (function() {
                 status('Read error: ' + e.message);
             } finally {
                 activeReader = null;
-                try { await r.cancel(); } catch(e2) {}
-                try { r.releaseLock(); } catch(e3) {}
+                try { r.releaseLock(); } catch(e2) {}
             }
             return rxBuf;
         }
@@ -514,8 +510,7 @@ const TangSerial = (function() {
                     }
                 }
             } finally {
-                try { await r.cancel(); } catch(e2) {}
-                try { r.releaseLock(); } catch(e3) {}
+                try { r.releaseLock(); } catch(e2) {}
             }
             return { rxBuf: rxBuf, rxLen: rxOff };
         }
