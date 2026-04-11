@@ -104,7 +104,7 @@ The Church Machine runs on two FPGA boards. Both execute the same
 instruction set and enforce the same capability security. The difference
 is capacity.
 
-### Efinix Ti60 F225 — Full Profile
+### [Efinix Ti60 F225](https://www.digikey.com/en/products/detail/efinix-inc/TI60F225C-DK/15672425) — Full Profile
 
 The Ti60 is the reference platform. It has room for the complete Church
 Machine, including features that push the boundaries of what a
