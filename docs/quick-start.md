@@ -140,14 +140,39 @@ from unboxing to running your own code on real silicon.
 - A **USB-C cable** (data, not charge-only)
 - A computer running **Linux** or **ChromeOS** (with Linux container)
 
-### Step 1 — Download the official bitstream and flash your Church Machine
+### Step 1 — Write your code in the IDE
 
-Plug in the Tang Nano 20K via USB-C and flash the official bitstream.
-This writes the Church Machine itself — the processor, capability
-registers, namespace controller, boot ROM, and security model — into
-the FPGA. After flashing you have a real Church Machine on silicon.
+You do not need a board to start. Open the Church Machine IDE in your
+browser and begin writing code immediately.
 
-**Install openFPGALoader** (one time):
+1. Open the Church Machine IDE
+2. Click **CRs** in the toolbar
+3. Click on a CR — for example, **CR14** (instruction fetch)
+4. Click **Edit** to open the abstraction creator
+5. Write or modify your Church Machine assembly
+
+### Step 2 — Compile and test in the simulator
+
+Click **Patch**. This assembles your code into binary machine words and
+writes them into the simulator memory. The simulator enforces every one
+of the six Laws — the same capability checks that run on real silicon.
+
+Step through instructions, inspect registers, and check for capability
+faults. If the assembler reports errors, fix them and click Patch
+again. Everything you see in the simulator transfers directly to
+hardware — the instruction set, the security model, the faults.
+
+---
+
+### Step 3 — Download the official bitstream and flash your Church Machine
+
+When you are ready for real hardware, plug in the Tang Nano 20K via
+USB-C and flash the official bitstream. This writes the Church Machine
+itself — the processor, capability registers, namespace controller,
+boot ROM, and security model — into the FPGA. After flashing you have
+a real Church Machine on silicon.
+
+**Install tools** (one time):
 
 ```bash
 # OSS CAD Suite (includes openFPGALoader, nextpnr, gowin_pack)
@@ -158,7 +183,7 @@ source ~/oss-cad-suite/environment
 pip3 install pyserial
 ```
 
-**Download the bitstream:**
+**Download the FPGA package:**
 
 Open the Church Machine IDE, go to **Builder**, select **Tang Nano 20K**,
 and click **Download FPGA Package**. Or download from
@@ -187,7 +212,7 @@ make pnr pack    # nextpnr + gowin_pack
 make prog        # openFPGALoader
 ```
 
-### Step 2 — Check the USB ports
+### Step 4 — Check the USB ports
 
 ```bash
 ls /dev/ttyUSB*
@@ -207,7 +232,7 @@ sudo usermod -aG dialout $USER   # permanent fix (log out and back in)
 sudo chmod 666 /dev/ttyUSB*      # quick fix
 ```
 
-### Step 3 — Verify success (100% checklist)
+### Step 5 — Verify success (100% checklist)
 
 When the bitstream finishes flashing, the Church Machine boots
 automatically. The boot ROM initialises every capability register,
@@ -258,7 +283,7 @@ If something is wrong, find your symptom below:
 | "Cell ledN not found" in nextpnr log | Stale Verilog (old build) | Click Build in IDE, re-download ZIP |
 | Permission denied on /dev/ttyUSB* | User not in dialout group | `sudo usermod -aG dialout $USER` then log out/in |
 
-### Step 4 — Connect to the IDE and deploy code
+### Step 6 — Connect to the IDE and deploy code
 
 After flashing, connect the board to the Church Machine IDE so you can
 deploy code from the browser.
@@ -410,24 +435,6 @@ single confident action — not a multi-stage deployment pipeline.
 IDE ── write ──► Patch (one click) ──► FPGA runs under full capability enforcement
 ```
 
-### Step 5 — Write your code
-
-1. Open the Church Machine IDE in your browser
-2. Click **CRs** in the toolbar
-3. Click on a CR — for example, **CR14** (instruction fetch)
-4. Click **Edit** to open the abstraction creator
-5. Write or modify your Church Machine assembly
-
-### Step 6 — Compile and test in the simulator
-
-Click **Patch**. This assembles your code into binary machine words and
-writes them into the simulator memory. This is the compilation step —
-it produces the binary that will be sent to the FPGA.
-
-Step through instructions, inspect registers, and check for capability
-faults before committing to real hardware. If the assembler reports
-errors, fix them and click Patch again.
-
 ### Step 7 — Export the patch file
 
 Click **Export Patch**. This packages the compiled binary into a `.patch`
@@ -482,8 +489,8 @@ preview and the script output.
 - **led1** stops blinking (core now running your code)
 - **led2** OFF = no fault, ON = capability fault triggered
 
-To change your code, repeat Steps 5–9: edit, compile, export, patch.
-Each cycle takes under a minute.
+To change your code, repeat Steps 1–2 then 7–9: edit, compile, export,
+patch. Each cycle takes under a minute.
 
 ---
 
