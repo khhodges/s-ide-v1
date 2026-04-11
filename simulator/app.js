@@ -2140,7 +2140,7 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
         const width = imm & 0x1F;
         const sTag = _crTag(crSrc, crPets);
         const drV = sim && sim.dr ? (sim.dr[crSrc] >>> 0) : null;
-        const valStr = drV !== null ? ` (=${drV})` : '';
+        const valStr = drV !== null ? ` (=${_fmtVal(drV)})` : '';
         return { desc: _escDecomp(`bfext DR${crDst} \u2190 ${sTag}[${pos}:${pos+width-1}]${valStr}`), compiler: false };
     }
 
@@ -2154,23 +2154,24 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
     if (opcode === 14) {
         const dV = sim && sim.dr ? (sim.dr[crDst] >>> 0) : null;
         const sV = sim && sim.dr ? (sim.dr[crSrc] >>> 0) : null;
-        const vals = (dV !== null && sV !== null) ? ` (${dV} vs ${sV})` : '';
+        const vals = (dV !== null && sV !== null) ? ` (${_fmtVal(dV)} vs ${_fmtVal(sV)})` : '';
         return { desc: _escDecomp(`mcmp DR${crDst}, DR${crSrc}${vals}`), compiler: false };
     }
 
     if (opcode === 15 || opcode === 16) {
         const op = opcode === 15 ? '+' : '\u2212';
-        const mnem = opcode === 15 ? 'iadd' : 'isub';
         const isImm = (imm & 0x4000) !== 0;
         const srcV = sim && sim.dr ? (sim.dr[crSrc] >>> 0) : null;
         if (isImm) {
             const immVal = imm & 0x3FFF;
-            const valStr = srcV !== null ? ` (${srcV}${op}${immVal}=${opcode === 15 ? ((srcV + immVal) >>> 0) : ((srcV - immVal) >>> 0)})` : '';
+            const res = opcode === 15 ? ((srcV + immVal) >>> 0) : ((srcV - immVal) >>> 0);
+            const valStr = srcV !== null ? ` (${_fmtVal(srcV)}${op}${immVal}=${_fmtVal(res)})` : '';
             return { desc: _escDecomp(`DR${crDst}= DR${crSrc} ${op} #${immVal}${valStr}`), compiler: false };
         } else {
             const drOp = imm & 0xF;
             const opV = sim && sim.dr ? (sim.dr[drOp] >>> 0) : null;
-            const valStr = (srcV !== null && opV !== null) ? ` (${srcV}${op}${opV}=${opcode === 15 ? ((srcV + opV) >>> 0) : ((srcV - opV) >>> 0)})` : '';
+            const res = opcode === 15 ? ((srcV + opV) >>> 0) : ((srcV - opV) >>> 0);
+            const valStr = (srcV !== null && opV !== null) ? ` (${_fmtVal(srcV)}${op}${_fmtVal(opV)}=${_fmtVal(res)})` : '';
             return { desc: _escDecomp(`DR${crDst}= DR${crSrc} ${op} DR${drOp}${valStr}`), compiler: false };
         }
     }
@@ -2183,7 +2184,8 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
     if (opcode === 18) {
         const shamt = imm & 0x1F;
         const srcV = sim && sim.dr ? (sim.dr[crSrc] >>> 0) : null;
-        const valStr = srcV !== null ? ` (${srcV}\u00AB${shamt}=${(srcV << shamt) >>> 0})` : '';
+        const res = (srcV << shamt) >>> 0;
+        const valStr = srcV !== null ? ` (${_fmtVal(srcV)}\u00AB${shamt}=${_fmtVal(res)})` : '';
         return { desc: _escDecomp(`DR${crDst}= DR${crSrc} \u00AB ${shamt}${valStr}`), compiler: false };
     }
 
@@ -2192,7 +2194,8 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
         const shamt = imm & 0x1F;
         const srcV = sim && sim.dr ? (sim.dr[crSrc] >>> 0) : null;
         const sym = arith ? '\u00BB\u00BB' : '\u00BB';
-        const valStr = srcV !== null ? ` (${srcV}${sym}${shamt}=${arith ? (srcV >> shamt) : (srcV >>> shamt)})` : '';
+        const res = arith ? (srcV >> shamt) : (srcV >>> shamt);
+        const valStr = srcV !== null ? ` (${_fmtVal(srcV)}${sym}${shamt}=${_fmtVal(res)})` : '';
         return { desc: _escDecomp(`DR${crDst}= DR${crSrc} ${sym} ${shamt}${valStr}`), compiler: false };
     }
 
@@ -2202,6 +2205,12 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
     }
 
     return null;
+}
+
+function _fmtVal(v) {
+    v = v >>> 0;
+    if (v <= 9999) return String(v);
+    return '0x' + v.toString(16).toUpperCase();
 }
 
 function _escDecomp(s) {
