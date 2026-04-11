@@ -39,7 +39,7 @@ _rx_lock   = threading.Lock()
 _reader_running = False
 
 CALLHOME_MAGIC = bytes([0xCE, 0x11])
-CALLHOME_PKT_LEN = 14
+CALLHOME_PKT_LEN = 17
 CALLHOME_ACK = bytes([0xCE, 0x22])
 
 _IDE_SERVER_URL = None
@@ -60,13 +60,13 @@ def _handle_callhome(pkt):
     board_type = pkt[2]
     fw_major = pkt[3]
     fw_minor = pkt[4]
-    build_tag = pkt[5]
-    uid_bytes = pkt[6:14]
+    build_sig = list(pkt[5:9])
+    uid_bytes = pkt[9:17]
     uid_hex = uid_bytes.hex()
     _device_uid = uid_hex
     board_name, profile = BOARD_TYPES.get(board_type, (f"Unknown-0x{board_type:02X}", "Full"))
-    build_label = "Official" if build_tag == 0xAA else "Custom"
-    print(f'  [CALL HOME] Board: {board_name}  FW: {fw_major}.{fw_minor}  Build: {build_label}  UID: {uid_hex}')
+    sig_hex = bytes(build_sig).hex()
+    print(f'  [CALL HOME] Board: {board_name}  FW: {fw_major}.{fw_minor}  Sig: {sig_hex}  UID: {uid_hex}')
 
     with _ser_lock:
         s = _ser
@@ -78,14 +78,14 @@ def _handle_callhome(pkt):
             print(f'  [CALL HOME] ACK send failed: {e}')
 
     if _IDE_SERVER_URL:
-        _register_with_ide(uid_hex, board_type, board_name, profile, fw_major, fw_minor, build_tag)
+        _register_with_ide(uid_hex, board_type, board_name, profile, fw_major, fw_minor, build_sig)
         if not _heartbeat_running:
             _heartbeat_running = True
             hb = threading.Thread(target=_heartbeat_thread, daemon=True)
             hb.start()
 
 
-def _register_with_ide(uid, board_type, board_name, profile, fw_major, fw_minor, build_tag=0):
+def _register_with_ide(uid, board_type, board_name, profile, fw_major, fw_minor, build_sig=None):
     import socket
     try:
         import urllib.request
@@ -95,7 +95,7 @@ def _register_with_ide(uid, board_type, board_name, profile, fw_major, fw_minor,
             "profile": profile,
             "fw_major": fw_major,
             "fw_minor": fw_minor,
-            "build_tag": build_tag,
+            "build_sig": bytes(build_sig or [0,0,0,0]).hex(),
             "bridge_host": socket.gethostname(),
             "bridge_port": HTTP_PORT,
             "bridge_scheme": _BRIDGE_SCHEME,

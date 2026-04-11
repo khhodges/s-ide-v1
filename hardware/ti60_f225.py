@@ -32,11 +32,11 @@ class ChurchTi60F225(Elaboratable):
       - No BSRAM init FSM — Memory init= handles pre-loading directly
     """
 
-    def __init__(self, clk_freq=50_000_000, baud=115200, sim_mode=False, community_build=False):
+    def __init__(self, clk_freq=50_000_000, baud=115200, sim_mode=False, build_sig=None):
         self.clk_freq = clk_freq
         self.baud = baud
         self.sim_mode = sim_mode
-        self.community_build = community_build
+        self.build_sig = build_sig or [0x00, 0x00, 0x00, 0x00]
 
         self.uart_tx = Signal(init=1)
         self.uart_rx = Signal()
@@ -455,14 +455,12 @@ class ChurchTi60F225(Elaboratable):
         BOARD_TYPE_ID = 0x03
         FW_MAJOR = 1
         FW_MINOR = 0
-        BUILD_TAG = 0xAA if not getattr(self, 'community_build', False) else 0x00
         DEVICE_UID = [0x54, 0x69, 0x36, 0x30, 0x46, 0x00, 0x00, 0x01]
         CALLHOME_PKT = Array([C(v, 8) for v in [
             0xCE, 0x11,
             BOARD_TYPE_ID,
             FW_MAJOR, FW_MINOR,
-            BUILD_TAG,
-        ] + DEVICE_UID])
+        ] + self.build_sig + DEVICE_UID])
         callhome_idx = Signal(range(len(CALLHOME_PKT) + 1))
         callhome_byte = Signal(8)
         m.d.comb += callhome_byte.eq(CALLHOME_PKT[callhome_idx])

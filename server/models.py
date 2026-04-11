@@ -50,7 +50,8 @@ def register_models(db):
         last_seen = Column(Float, default=0.0)
         first_seen = Column(DateTime, server_default=func.now())
         boot_count = Column(Integer, default=0)
-        build_tag = Column(Integer, default=0)
+        build_sig = Column(String(8), default="00000000")
+        build_verified = Column(Integer, default=0)
         label = Column(String(255), default="")
 
     return Project, TutorialProgress, Device

@@ -1176,8 +1176,22 @@ def bitstream_list():
 
 
 import time as _time
+import hmac as _hmac
+import hashlib as _hashlib
 
 DEVICE_ONLINE_TIMEOUT = 90
+
+def _verify_build_sig(board_type, fw_major, fw_minor, sig_hex):
+    key = os.environ.get("BUILD_SIGNING_KEY", "")
+    if not key or not sig_hex or sig_hex == "00000000":
+        return False
+    try:
+        sig_bytes = bytes.fromhex(sig_hex)
+    except ValueError:
+        return False
+    msg = bytes([board_type, fw_major, fw_minor])
+    expected = _hmac.new(key.encode(), msg, _hashlib.sha256).digest()[:4]
+    return _hmac.compare_digest(sig_bytes, expected)
 
 @app.route("/api/device/register", methods=["POST"])
 def device_register():
@@ -1188,8 +1202,9 @@ def device_register():
     board_type = int(data.get("board_type", 0))
     fw_major = int(data.get("fw_major", 1))
     fw_minor = int(data.get("fw_minor", 0))
-    build_tag = int(data.get("build_tag", 0))
+    build_sig_hex = data.get("build_sig", "00000000")
     profile = data.get("profile", "Full")
+    build_verified = _verify_build_sig(board_type, fw_major, fw_minor, build_sig_hex)
     bridge_host = data.get("bridge_host", "")
     bridge_port = int(data.get("bridge_port", 0))
     bridge_scheme = data.get("bridge_scheme", "http")
@@ -1204,7 +1219,8 @@ def device_register():
         dev.profile = profile
         dev.fw_major = fw_major
         dev.fw_minor = fw_minor
-        dev.build_tag = build_tag
+        dev.build_sig = build_sig_hex
+        dev.build_verified = 1 if build_verified else 0
         dev.bridge_host = bridge_host
         dev.bridge_port = bridge_port
         dev.bridge_scheme = bridge_scheme
@@ -1220,7 +1236,8 @@ def device_register():
             profile=profile,
             fw_major=fw_major,
             fw_minor=fw_minor,
-            build_tag=build_tag,
+            build_sig=build_sig_hex,
+            build_verified=1 if build_verified else 0,
             bridge_host=bridge_host,
             bridge_port=bridge_port,
             bridge_scheme=bridge_scheme,
@@ -1278,8 +1295,8 @@ def device_list():
             "status": "online" if is_online else "offline",
             "last_seen": d.last_seen,
             "boot_count": d.boot_count,
-            "build_tag": getattr(d, 'build_tag', 0) or 0,
-            "official": (getattr(d, 'build_tag', 0) or 0) == 0xAA,
+            "build_verified": bool(getattr(d, 'build_verified', 0)),
+            "official": bool(getattr(d, 'build_verified', 0)),
             "label": d.label or "",
         })
     db.session.commit()
