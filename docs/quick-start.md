@@ -268,7 +268,7 @@ If something is wrong, find your symptom below:
 | 1 solid + 1 blinking only | led3 missing from port list | Stale Verilog — click Build in IDE and re-download |
 | 2 blinking + 0 solid | Unexpected state | Report with serial log |
 | 3 LEDs correct but serial blank | Wrong serial port | Use `/dev/ttyUSB1` (UART), not `/dev/ttyUSB0` (JTAG) |
-| 3 LEDs + serial OK but no call-home | Bridge not running | Run `./bridge.sh --ide=URL` |
+| 3 LEDs + serial OK but no call-home | Bridge not running or wrong IDE URL | Run `./bridge.sh --ide=URL`; verify URL matches your IDE |
 | Board in Devices panel but offline after 90s | Heartbeat lost (USB disconnect) | Reconnect USB; restart bridge |
 | "Cell ledN not found" in nextpnr log | Stale Verilog (old build) | Click Build in IDE, re-download ZIP |
 | Permission denied on /dev/ttyUSB* | User not in dialout group | `sudo usermod -aG dialout $USER` then log out/in |

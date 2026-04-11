@@ -710,7 +710,7 @@ make prog        # flash via openFPGALoader
 | 1 solid + 1 blinking only | led3 missing from port list | Stale Verilog — click Build in IDE and re-download |
 | 2 blinking + 0 solid | Unexpected state | Report with serial log |
 | 3 LEDs correct but serial blank | Wrong serial port | Use `/dev/ttyUSB1` (UART), not `/dev/ttyUSB0` (JTAG) |
-| 3 LEDs + serial OK but no call-home | Bridge not running | Run `./bridge.sh --ide=URL` |
+| 3 LEDs + serial OK but no call-home | Bridge not running or wrong IDE URL | Run `./bridge.sh --ide=URL`; verify URL matches your IDE |
 | Board shows offline after 90s | Heartbeat lost | Check USB connection |
 | "Cell ledN not found" in nextpnr | Stale Verilog | Rebuild from IDE Builder |
 
