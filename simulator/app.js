@@ -15157,15 +15157,14 @@ function renderMarkdown(md) {
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
     html = html.replace(/^---$/gm, '<hr>');
     html = html.replace(/^\> (.+)$/gm, '<blockquote>$1</blockquote>');
-    html = html.replace(/^\| (.+) \|$/gm, (match, row) => {
+    html = html.replace(/^\|(.+)\|$/gm, (match, row) => {
         const cells = row.split('|').map(c => c.trim());
-        return '<tr>' + cells.map(c => {
-            if (c.match(/^[-:]+$/)) return '';
+        if (cells.every(c => !c || /^[-:]+$/.test(c))) return '';
+        return '<tr>' + cells.filter(c => c).map(c => {
             return '<td>' + c + '</td>';
         }).join('') + '</tr>';
     });
     html = html.replace(/((<tr>.*<\/tr>\n?)+)/g, '<table>$1</table>');
-    html = html.replace(/<table>(\s*<tr>\s*<td>[-:|\s]+<\/td>\s*<\/tr>)/g, '<table>');
     html = html.replace(/<tr><\/tr>/g, '');
     html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
     html = html.replace(/((<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
