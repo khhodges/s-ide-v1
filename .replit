@@ -51,6 +51,7 @@ packages = ["fontconfig", "freetype", "ghostscript", "gitFull", "glib", "harfbuz
 [userenv]
 
 [userenv.shared]
+BUILD_SIGNING_KEY = "2026411604PMkjhh0590"
 
 [postMerge]
 path = "scripts/post-merge.sh"
