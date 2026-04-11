@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 import gzip as _gzip
 import requests as http_requests
-from flask import Flask, jsonify, send_from_directory, redirect, make_response, request
+from flask import Flask, jsonify, send_from_directory, send_file, redirect, make_response, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -937,6 +937,63 @@ def download_fpga_package():
         if build_resp.status_code != 200:
             return build_resp
     return download_fpga_zip()
+
+
+BITSTREAM_DIR = os.path.join(BASE_DIR, "bitstreams")
+os.makedirs(BITSTREAM_DIR, exist_ok=True)
+
+BITSTREAM_FILES = {
+    "tang-nano-20k": "church_tang_nano_20k.fs",
+    "tang-nano-20k-iot": "church_tang_nano_20k_iot.fs",
+    "ti60-f225": "church_ti60_f225.hex",
+}
+
+@app.route("/api/bitstream/upload", methods=["POST"])
+def bitstream_upload():
+    """Upload an official bitstream file."""
+    board = request.form.get("board", "tang-nano-20k-iot").strip().lower()
+    expected = BITSTREAM_FILES.get(board)
+    if not expected:
+        return jsonify({"error": f"Unknown board: {board}"}), 400
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"error": "No file uploaded"}), 400
+    dest = os.path.join(BITSTREAM_DIR, expected)
+    f.save(dest)
+    size = os.path.getsize(dest)
+    logging.info("Bitstream uploaded: %s (%d bytes)", expected, size)
+    return jsonify({"ok": True, "filename": expected, "size": size})
+
+
+@app.route("/api/bitstream/download/<board>")
+def bitstream_download(board):
+    """Download the official bitstream for a board."""
+    board = board.strip().lower()
+    expected = BITSTREAM_FILES.get(board)
+    if not expected:
+        return jsonify({"error": f"Unknown board: {board}"}), 404
+    path = os.path.join(BITSTREAM_DIR, expected)
+    if not os.path.isfile(path):
+        return jsonify({"error": f"No bitstream available for {board} yet. Build and upload one first."}), 404
+    return send_file(path, as_attachment=True, download_name=expected)
+
+
+@app.route("/api/bitstream/list")
+def bitstream_list():
+    """List available official bitstreams."""
+    result = []
+    for board, fname in BITSTREAM_FILES.items():
+        path = os.path.join(BITSTREAM_DIR, fname)
+        exists = os.path.isfile(path)
+        result.append({
+            "board": board,
+            "filename": fname,
+            "available": exists,
+            "size": os.path.getsize(path) if exists else 0,
+            "modified": os.path.getmtime(path) if exists else None,
+        })
+    return jsonify({"ok": True, "bitstreams": result})
+
 
 import time as _time
 

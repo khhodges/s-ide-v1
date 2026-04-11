@@ -156,25 +156,36 @@ pip3 install pyserial
 
 ### Step 2 — Download the latest bitstream
 
+Download the official tested bitstream directly from the IDE:
+
+**From the IDE (recommended):**
+Open the Church Machine IDE, go to **Builder**, and click
+**Download Official Bitstream**. Or use this direct link:
+
+```
+/api/bitstream/download/tang-nano-20k-iot
+```
+
+**From the command line:**
+
+```bash
+curl -LO https://cloomc.org/api/bitstream/download/tang-nano-20k-iot
+```
+
+**From CLOOMC.com:**
 Download approved bitstreams and tools from
-[CLOOMC.com](https://cloomc.com):
+[CLOOMC.com](https://cloomc.com).
+
+You also need the CLI patcher for manual deployments:
 
 ```
-church_tang_nano_20k_iot.fs     (bitstream)
-patch_fpga.py                   (CLI patcher)
-```
-
-Alternatively, from the Church Machine IDE (Replit project):
-
-```
-build/church_tang_nano_20k_iot.fs     (bitstream)
 tools/patch_fpga.py                   (CLI patcher)
 ```
 
-If no pre-built `.fs` file exists yet, you will need to build it from
-source — see **Building from Source** below, then come back here.
+If no official bitstream is available yet, you can build from source —
+see **Building from Source** below, then come back here.
 
-Put both files in a working directory:
+Put the files in a working directory:
 
 ```
 ~/church-fpga/
@@ -230,6 +241,67 @@ second: the machine must exist before you can give it software.
 
 **One solid + two blinking = success.** The Church Machine booted and is
 waiting for you to send it code.
+
+### Step 5b — Deploy code from the IDE (multi-board)
+
+The Church Machine IDE can deploy compiled abstractions directly to
+connected boards over the network. No need for WebSerial or the CLI
+patcher — just click Deploy in the Devices panel.
+
+**Setup (one time per host machine):**
+
+1. Plug your Tang Nano 20K boards into a USB hub (all use the same
+   bitstream — flash each one with the same `.fs` file)
+2. On the machine with the USB hub, run the bridge launcher:
+
+```bash
+# Launch one bridge per detected USB serial port
+tools/launch_bridges.sh --ide=https://cloomc.org
+```
+
+Or run individual bridges manually:
+
+```bash
+python3 server/local_bridge.py /dev/ttyUSB1 --ide=https://cloomc.org
+python3 server/local_bridge.py /dev/ttyUSB3 --ide=https://cloomc.org
+python3 server/local_bridge.py /dev/ttyUSB5 --ide=https://cloomc.org
+```
+
+3. Each board boots, sends a call-home packet, and appears in the IDE
+
+**Deploying code:**
+
+1. Open the IDE and go to **Devices** (from the hamburger menu)
+2. You will see each connected board with its status (online/offline),
+   board type badge, firmware version, and boot count
+3. Click **Deploy** on any board to push a compiled abstraction to it
+4. Select the program (from the editor or a saved namespace entry)
+5. Click **Confirm** — the IDE sends BEEF-framed data through the
+   bridge to that specific board's FPGA
+6. The board verifies the CRC, writes to BRAM, and starts execution
+7. Use **Deploy All** to push the same program to every online board
+
+**What the call-home packet does:**
+
+When a board boots with the current bitstream, it sends a 13-byte
+registration packet over UART: magic header (0xCE11), board type,
+firmware version, and an 8-byte device UID. The bridge detects this,
+sends an acknowledgment (0xCE22), and registers the board with the
+IDE server. A 60-second heartbeat keeps the board marked as online.
+
+```
+Board powers on → Boot ROM → Banner → Call Home → HALT (waiting)
+                                          ↓
+Bridge detects 0xCE11 → ACK 0xCE22 → Register with IDE server
+                                          ↓
+                              Board appears in Devices panel
+```
+
+**Labelling boards:**
+
+Each board has a label field in the Devices panel. Type a name
+(e.g. "Kitchen sensor", "Classroom #3", "Front door") to identify
+your boards when managing multiple devices.
 
 ---
 
