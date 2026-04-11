@@ -1477,9 +1477,18 @@ function editCRCodeInEditor() {
     const sel = document.getElementById('langSelector');
     if (sel) sel.value = 'assembly';
     const asmEd = document.getElementById('asmEditor');
-    if (asmEd) asmEd.value = lines.join('\n');
+    if (asmEd) {
+        asmEd.value = lines.join('\n');
+        if (!asmEd._mtbfListenerAttached) {
+            asmEd.addEventListener('input', _updateMtbfIndicator);
+            asmEd._mtbfListenerAttached = true;
+        }
+    }
+    _simRunHash = '';
+    _simRunHistory = [];
     switchCodeTab('console');
     _updateEditorPatchBar();
+    _updateMtbfIndicator();
 }
 
 var _editorCREditCR = null;
@@ -1703,8 +1712,15 @@ function _quickHash(str) {
     return (h >>> 0).toString(16);
 }
 
+function _currentEditorHash() {
+    const ed = document.getElementById('asmEditor');
+    return ed ? _quickHash(ed.value) : '';
+}
+
 function _getConsecutiveCleanRuns() {
     if (!_simRunHash) return 0;
+    const h = _currentEditorHash();
+    if (h !== _simRunHash) return 0;
     let count = 0;
     for (let i = _simRunHistory.length - 1; i >= 0; i--) {
         const r = _simRunHistory[i];
@@ -1715,12 +1731,21 @@ function _getConsecutiveCleanRuns() {
     return count;
 }
 
+function _isSourceStale() {
+    return !_simRunHash || _currentEditorHash() !== _simRunHash;
+}
+
 function _updateMtbfIndicator() {
     const el = document.getElementById('mtbfIndicator');
     if (!el) return;
+    if (_isSourceStale()) {
+        el.textContent = 'MTBF: —';
+        el.className = 'mtbf-badge mtbf-red';
+        return;
+    }
     const n = _getConsecutiveCleanRuns();
     const total = _simRunHistory.filter(r => r.hash === _simRunHash).length;
-    if (!_simRunHash || total === 0) {
+    if (total === 0) {
         el.textContent = 'MTBF: —';
         el.className = 'mtbf-badge mtbf-red';
     } else {
@@ -1730,17 +1755,17 @@ function _updateMtbfIndicator() {
 }
 
 function patchSimulator() {
+    const ed = document.getElementById('asmEditor');
+    const srcHash = ed ? _quickHash(ed.value) : '';
     const logEl = document.getElementById('crInjectLog');
     if (logEl) { logEl.style.display = 'block'; logEl.textContent = ''; }
     const result = injectCRCode(logEl);
     const logText = logEl ? logEl.textContent.trim() : '';
     showPatchModal(!!result, 'Patch Simulator', logText);
     if (result) {
-        const wordsStr = (result.newWords || []).map(w => (w >>> 0).toString(16)).join(',');
-        const newHash = _quickHash(wordsStr);
-        if (newHash !== _simRunHash) {
+        if (srcHash !== _simRunHash) {
             _simRunHistory = [];
-            _simRunHash = newHash;
+            _simRunHash = srcHash;
         }
         _updateMtbfIndicator();
         updateCRDetail();
@@ -1778,6 +1803,10 @@ async function patchFPGA() {
  * over UART — no recomputation needed.
  */
 function exportPatchFile() {
+    if (_isSourceStale()) {
+        appendOutput('Export Patch blocked — source has been edited since last Patch. Click Patch to recompile and run before exporting.', 'error');
+        return;
+    }
     const cleanRuns = _getConsecutiveCleanRuns();
     if (cleanRuns < 3) {
         appendOutput(`Export Patch blocked — requires 3 consecutive clean runs (you have ${cleanRuns}). Click Patch then Run repeatedly. The code must halt cleanly with no faults each time.`, 'error');
@@ -6132,7 +6161,7 @@ function runSim() {
         const countable = stopReason !== 'breakpoint' && stopReason !== 'bootExit'
             && sim.bootComplete && totalSteps >= 1;
         if (countable && _simRunHash) {
-            _simRunHistory.push({ hash: _simRunHash, passed: ranClean, ts: Date.now() });
+            _simRunHistory.push({ hash: _simRunHash, passed: ranClean, timestamp: Date.now() });
             _updateMtbfIndicator();
         }
         if (con) {
@@ -14991,6 +15020,10 @@ function filterLibrary() {
 function publishToLibrary() {
     if (!requirePermission('publish', 'Publish to Library')) return;
 
+    if (_isSourceStale()) {
+        appendOutput('Publish blocked — source has been edited since last Patch. Click Patch to recompile and run before publishing.', 'error');
+        return;
+    }
     const cleanRuns = _getConsecutiveCleanRuns();
     if (cleanRuns < 5) {
         appendOutput(`Publish blocked — requires 5 consecutive clean runs (you have ${cleanRuns}). Click Patch then Run repeatedly. The code must halt cleanly with no faults each time.`, 'error');
