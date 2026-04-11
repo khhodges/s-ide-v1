@@ -176,6 +176,8 @@ class ChurchOutform(Elaboratable):
         defl_win_pos   = Signal(11, name="defl_win_pos")
         defl_len_idx   = Signal(5,  name="defl_len_idx")
         defl_dist_code = Signal(5,  name="defl_dist_code")
+        defl_rx_count  = Signal(32, name="defl_rx_count")
+        rle_rx_count   = Signal(32, name="rle_rx_count")
 
         rle_count     = Signal(8, name="rle_count")
         rle_literal   = Signal(8, name="rle_literal")
@@ -422,9 +424,11 @@ class ChurchOutform(Elaboratable):
                         defl_bits   .eq(0),
                         defl_bit_cnt.eq(0),
                         defl_win_pos.eq(0),
+                        defl_rx_count.eq(0),
                     ]
                     m.next = "DEFL_BLOCK_HDR"
                 with m.Elif(method_reg == METHOD_RLE):
+                    m.d.sync += rle_rx_count.eq(0)
                     m.next = "RLE_READ_COUNT"
                 with m.Else():
                     m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_METHOD)
@@ -447,10 +451,14 @@ class ChurchOutform(Elaboratable):
                     with m.Else():
                         m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_DEFL)
                         m.next = "FAULT"
+                with m.Elif(defl_rx_count >= comp_size_reg):
+                    m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_DEFL)
+                    m.next = "FAULT"
                 with m.Elif(self.rx_valid & (defl_bit_cnt <= 24)):
                     m.d.sync += [
                         defl_bits   .eq(defl_bits | (self.rx_data << defl_bit_cnt[:5])),
                         defl_bit_cnt.eq(defl_bit_cnt + 8),
+                        defl_rx_count.eq(defl_rx_count + 1),
                     ]
 
             with m.State("DEFL_DECODE"):
@@ -501,10 +509,14 @@ class ChurchOutform(Elaboratable):
                 with m.Elif(defl_bit_cnt >= 9):
                     m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_DEFL)
                     m.next = "FAULT"
+                with m.Elif(defl_rx_count >= comp_size_reg):
+                    m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_DEFL)
+                    m.next = "FAULT"
                 with m.Elif(self.rx_valid & (defl_bit_cnt <= 24)):
                     m.d.sync += [
                         defl_bits   .eq(defl_bits | (self.rx_data << defl_bit_cnt[:5])),
                         defl_bit_cnt.eq(defl_bit_cnt + 8),
+                        defl_rx_count.eq(defl_rx_count + 1),
                     ]
 
             with m.State("DEFL_LIT_EMIT"):
@@ -581,10 +593,14 @@ class ChurchOutform(Elaboratable):
                                 defl_bit_cnt .eq(defl_bit_cnt - 5),
                             ]
                     m.next = "DEFL_DIST"
+                with m.Elif(defl_rx_count >= comp_size_reg):
+                    m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_DEFL)
+                    m.next = "FAULT"
                 with m.Elif(self.rx_valid & (defl_bit_cnt <= 24)):
                     m.d.sync += [
                         defl_bits   .eq(defl_bits | (self.rx_data << defl_bit_cnt[:5])),
                         defl_bit_cnt.eq(defl_bit_cnt + 8),
+                        defl_rx_count.eq(defl_rx_count + 1),
                     ]
 
             with m.State("DEFL_DIST"):
@@ -600,10 +616,14 @@ class ChurchOutform(Elaboratable):
                         m.next = "FAULT"
                     with m.Else():
                         m.next = "DEFL_DIST_EXTRA"
+                with m.Elif(defl_rx_count >= comp_size_reg):
+                    m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_DEFL)
+                    m.next = "FAULT"
                 with m.Elif(self.rx_valid & (defl_bit_cnt <= 24)):
                     m.d.sync += [
                         defl_bits   .eq(defl_bits | (self.rx_data << defl_bit_cnt[:5])),
                         defl_bit_cnt.eq(defl_bit_cnt + 8),
+                        defl_rx_count.eq(defl_rx_count + 1),
                     ]
 
             with m.State("DEFL_DIST_EXTRA"):
@@ -623,18 +643,24 @@ class ChurchOutform(Elaboratable):
                                 ]
                     m.d.sync += defl_copy_idx.eq(0)
                     m.next = "DEFL_COPY_RD"
+                with m.Elif(defl_rx_count >= comp_size_reg):
+                    m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_DEFL)
+                    m.next = "FAULT"
                 with m.Elif(self.rx_valid & (defl_bit_cnt <= 24)):
                     m.d.sync += [
                         defl_bits   .eq(defl_bits | (self.rx_data << defl_bit_cnt[:5])),
                         defl_bit_cnt.eq(defl_bit_cnt + 8),
+                        defl_rx_count.eq(defl_rx_count + 1),
                     ]
 
             with m.State("DEFL_COPY_RD"):
-                m.d.comb += [
-                    self.outform_busy.eq(1),
-                    win_rd.addr.eq((defl_win_pos - defl_copy_dist) & DEFL_WIN_MASK),
-                ]
-                m.next = "DEFL_COPY_EMIT"
+                m.d.comb += self.outform_busy.eq(1)
+                with m.If((defl_copy_idx == 0) & ((defl_copy_dist == 0) | (defl_copy_dist > defl_win_pos))):
+                    m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_WIN)
+                    m.next = "FAULT"
+                with m.Else():
+                    m.d.comb += win_rd.addr.eq((defl_win_pos - defl_copy_dist) & DEFL_WIN_MASK)
+                    m.next = "DEFL_COPY_EMIT"
 
             with m.State("DEFL_COPY_EMIT"):
                 m.d.comb += [
@@ -681,16 +707,29 @@ class ChurchOutform(Elaboratable):
 
             with m.State("RLE_READ_COUNT"):
                 m.d.comb += self.outform_busy.eq(1)
-                with m.If(self.rx_valid):
-                    m.d.sync += rle_count.eq(self.rx_data)
+                with m.If(rle_rx_count >= comp_size_reg):
+                    with m.If((wr_word_cnt == total_words) & (byte_buf_cnt == 0)):
+                        m.next = "CHECK_CRC32"
+                    with m.Else():
+                        m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_DEFL)
+                        m.next = "FAULT"
+                with m.Elif(self.rx_valid):
+                    m.d.sync += [
+                        rle_count.eq(self.rx_data),
+                        rle_rx_count.eq(rle_rx_count + 1),
+                    ]
                     m.next = "RLE_READ_LIT"
 
             with m.State("RLE_READ_LIT"):
                 m.d.comb += self.outform_busy.eq(1)
-                with m.If(self.rx_valid):
+                with m.If(rle_rx_count >= comp_size_reg):
+                    m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_DEFL)
+                    m.next = "FAULT"
+                with m.Elif(self.rx_valid):
                     m.d.sync += [
                         rle_literal  .eq(self.rx_data),
                         rle_remaining.eq(rle_count),
+                        rle_rx_count.eq(rle_rx_count + 1),
                     ]
                     with m.If(rle_count == 0):
                         m.next = "RLE_READ_COUNT"
