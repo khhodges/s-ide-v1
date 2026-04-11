@@ -1628,6 +1628,19 @@ async function injectCRCodeToFPGA(logEl) {
     const patch = injectCRCode(logEl);
     if (!patch) return false;
 
+    const board = getSelectedBoard();
+    if (board === 'tang-nano-20k' && typeof FULL_ONLY_OPCODES !== 'undefined') {
+        const patchWords = patch.newWords || [];
+        for (let i = 0; i < patchWords.length; i++) {
+            const opcode = (patchWords[i] >>> 27) & 0x1F;
+            if (FULL_ONLY_OPCODES.includes(opcode)) {
+                const opName = FULL_ONLY_OPCODE_NAMES[opcode] || `opcode ${opcode}`;
+                log(`ERROR: Assembled code contains Full-only instruction ${opName} at word ${i}. This cannot run on the Tang Nano 20K (IoT profile). Switch to Ti60 F225 or remove Full-only instructions (LAMBDA, CHANGE, SWITCH, ELOADCALL, XLOADLAMBDA).`);
+                return false;
+            }
+        }
+    }
+
     if (!TangSerial.isConnected()) {
         log('FPGA not connected — simulator updated only. Connect to FPGA and retry.');
         return false;
@@ -1720,6 +1733,19 @@ function exportPatchFile() {
 
     const patch = injectCRCode(logEl);
     if (!patch) return;
+
+    const board = getSelectedBoard();
+    if (board === 'tang-nano-20k' && typeof FULL_ONLY_OPCODES !== 'undefined') {
+        const patchWords = patch.newWords || [];
+        for (let i = 0; i < patchWords.length; i++) {
+            const opcode = (patchWords[i] >>> 27) & 0x1F;
+            if (FULL_ONLY_OPCODES.includes(opcode)) {
+                const opName = FULL_ONLY_OPCODE_NAMES[opcode] || `opcode ${opcode}`;
+                log(`ERROR: Assembled code contains Full-only instruction ${opName} at word ${i}. Cannot export for Tang Nano 20K (IoT profile). Switch to Ti60 F225 or remove Full-only instructions.`);
+                return;
+            }
+        }
+    }
 
     const { newWords, baseLoc, codeStart, newCW, oldCW, nsIdx } = patch;
 
@@ -2964,7 +2990,9 @@ function showNSEntryTooltip(evt, idx) {
         const absName = absMatch.name || '';
         const absLayer = absMatch.layer != null ? ` · Layer ${absMatch.layer}` : '';
         const absMethods = Array.isArray(absMatch.methods) ? absMatch.methods : [];
-        html += `<div class="ns-tt-abs-name">${absName}<span style="color:#9ca3af;font-weight:400;font-size:0.7rem;">${absLayer}</span></div>`;
+        const ttProfile = _getAbstractionProfile(absMatch);
+        const ttProfileClass = ttProfile === 'Full' ? 'profile-badge-full' : 'profile-badge-iot';
+        html += `<div class="ns-tt-abs-name">${absName}<span class="abs-profile-badge ${ttProfileClass}" style="margin-left:6px;vertical-align:middle;">${ttProfile}</span><span style="color:#9ca3af;font-weight:400;font-size:0.7rem;">${absLayer}</span></div>`;
         if (absMatch.description) {
             const d = absMatch.description;
             html += `<div style="color:#9ca3af;font-size:0.72rem;margin-bottom:0.25rem;">${d.slice(0,100)}${d.length > 100 ? '…' : ''}</div>`;
@@ -3235,6 +3263,15 @@ function _implStatusSeed() {
     _implStatusSave();
 }
 
+function _getAbstractionProfile(abs) {
+    if (abs.profile) return abs.profile;
+    const bootEntry = (typeof BOOT_UPLOADS !== 'undefined') ? BOOT_UPLOADS.find(u => u.index === abs.index) : null;
+    if (bootEntry) {
+        return (typeof detectBootUploadProfile === 'function') ? detectBootUploadProfile(bootEntry) : 'IoT';
+    }
+    return 'IoT';
+}
+
 function _implStatusBest(abs) {
     const methods = abs.methods && abs.methods.length > 0 ? abs.methods : [];
     if (methods.length === 0) {
@@ -3366,8 +3403,11 @@ function renderAbstractions() {
                 const dotColor = IMPL_STATUS_COLORS[best] || '#9ca3af';
                 const dotTitle = IMPL_STATUS_LABELS[best] || best;
                 html += `<div class="abs-item${isActive ? ' active' : ''}" onclick="showAbstractionDetail(${abs.index})">`;
+                const absProfile = _getAbstractionProfile(abs);
+                const profileBadgeClass = absProfile === 'Full' ? 'profile-badge-full' : 'profile-badge-iot';
                 html += `<span class="abs-item-idx">${abs.index}</span>`;
                 html += `<span class="abs-item-name">${abs.name}</span>`;
+                html += `<span class="abs-profile-badge ${profileBadgeClass}" title="${absProfile} profile — ${absProfile === 'Full' ? 'Ti60 F225 only' : 'runs on both boards'}">${absProfile}</span>`;
                 html += `<span class="abs-item-dot" style="background:${dotColor};box-shadow:0 0 4px ${dotColor}80" title="${dotTitle}"></span>`;
                 html += `<span class="abs-item-desc">${abs.description}</span>`;
                 html += `</div>`;
@@ -3407,8 +3447,12 @@ function showAbstractionDetail(index) {
 
     let html = '';
 
+    const detailProfile = _getAbstractionProfile(abs);
+    const detailProfileClass = detailProfile === 'Full' ? 'profile-badge-full' : 'profile-badge-iot';
+
     html += '<div class="abs-detail-section">';
     html += `<div class="abs-detail-badge layer-${abs.layer}">Layer ${abs.layer} \u2014 ${layerName}</div>`;
+    html += ` <span class="abs-profile-badge ${detailProfileClass}" style="margin-left:4px;font-size:0.62rem;">${detailProfile}</span>`;
     html += `<div class="abs-detail-desc">${abs.description}</div>`;
     html += '</div>';
 
@@ -11664,6 +11708,31 @@ async function uploadToTang() {
         return;
     }
 
+    if (board === 'tang-nano-20k' && typeof checkUploadProfile === 'function') {
+        const fullNames = [];
+        if (typeof BOOT_UPLOADS !== 'undefined') {
+            for (const u of BOOT_UPLOADS) {
+                const check = checkUploadProfile(u, board);
+                if (!check.allowed) fullNames.push(u.abstraction);
+            }
+        }
+        if (abstractionRegistry) {
+            const allAbs = abstractionRegistry.getAllAbstractions();
+            for (const abs of allAbs) {
+                const profile = _getAbstractionProfile(abs);
+                if (profile === 'Full') {
+                    if (!fullNames.includes(abs.name)) fullNames.push(abs.name);
+                }
+            }
+        }
+        if (fullNames.length > 0) {
+            con.textContent += `ERROR: ${fullNames.length} abstraction(s) tagged "Full" cannot run on the Tang Nano 20K (IoT profile): ${fullNames.join(', ')}\n\n`;
+            con.textContent += 'Full-only opcodes (LAMBDA, CHANGE, SWITCH, ELOADCALL, XLOADLAMBDA) are not available on the Tang Nano 20K.\n';
+            con.textContent += 'Switch to Ti60 F225 or remove Full-only instructions from these abstractions.\n';
+            return;
+        }
+    }
+
     TangSerial.setBoardLabel(boardLabel);
 
     if (!TangSerial.isSupported()) {
@@ -13657,13 +13726,16 @@ function compileAndCreateAbstraction() {
 
     const doc = buildDocBlock(result, source);
 
+    const profile = result.profile || 'IoT';
+
     const upload = {
         abstraction: result.abstractionName || 'UserAbstraction',
         type: 'abstraction',
         grants: ['E'],
         capabilities: uploadCaps,
         methods: result.methods,
-        doc: doc
+        doc: doc,
+        profile: profile
     };
 
     const addResult = abstractionRegistry.dispatchMethod(5, 'Abstraction.Add', sim, { upload: upload });
@@ -13674,11 +13746,14 @@ function compileAndCreateAbstraction() {
         return;
     }
 
+    if (addResult.result) addResult.result.profile = profile;
+
     const r = addResult.result;
     const freespace = r.allocSize - r.codeSize - r.clistCount;
     const clistStart = r.allocSize - r.clistCount;
     let listing = `Abstraction "${upload.abstraction}" created via Navana.Abstraction.Add:\n\n`;
     listing += `  NS Index:    ${r.nsIndex}\n`;
+    listing += `  Profile:     ${profile}${result.targetDirective ? ' (@target ' + result.targetDirective + ')' : ' (auto-detected)'}\n`;
     listing += `  GT Seq:      ${r.version}\n`;
     listing += `  E-GT:        0x${r.eGT.toString(16).padStart(8, '0')}\n`;
     listing += `  Location:    0x${r.location.toString(16)}\n`;
@@ -13694,9 +13769,19 @@ function compileAndCreateAbstraction() {
         listing += `    CR6 (c-list): base=0x${(r.location + clistStart).toString(16)}, limit=${r.clistCount - 1}, perms=L-only\n`;
     }
 
-    if (r.doc && abstractionRegistry) {
+    if (abstractionRegistry) {
         const abs = abstractionRegistry.getAbstraction(r.nsIndex);
-        if (abs) abs.doc = r.doc;
+        if (abs) {
+            if (r.doc) abs.doc = r.doc;
+            abs.profile = profile;
+        }
+    }
+
+    if (typeof checkUploadProfile === 'function') {
+        const boardCheck = checkUploadProfile(upload, getSelectedBoard());
+        if (!boardCheck.allowed) {
+            listing += `\n  WARNING: ${boardCheck.message}\n`;
+        }
     }
 
     if (con) con.textContent = listing;
@@ -14488,6 +14573,8 @@ function saveUploadJSON() {
 
     const doc = buildDocBlock(result, source);
 
+    const uploadProfile = result.profile || 'IoT';
+
     const upload = {
         abstraction: result.abstractionName || 'Unnamed',
         type: 'abstraction',
@@ -14497,7 +14584,8 @@ function saveUploadJSON() {
             name: m.name,
             code: m.code.map(w => '0x' + (w >>> 0).toString(16).padStart(8, '0'))
         })),
-        doc: doc
+        doc: doc,
+        profile: uploadProfile
     };
 
     const json = JSON.stringify(upload, null, 2);
@@ -14516,6 +14604,7 @@ function saveUploadJSON() {
     const lang = langNames3[result.language] || 'JavaScript';
     let listing = `Upload JSON saved as "${a.download}"\n\n`;
     listing += `CLOOMC++ [${lang}] compiled "${result.abstractionName}":\n`;
+    listing += `  Profile: ${uploadProfile}${result.targetDirective ? ' (@target ' + result.targetDirective + ')' : ' (auto-detected)'}\n`;
     listing += `  Methods: ${upload.methods.length}\n`;
     listing += `  Capabilities: ${upload.capabilities.length} (${upload.capabilities.map(c => c.name).join(', ') || 'none'})\n`;
     listing += `  Grants: ${upload.grants.join(', ')}\n`;
@@ -14803,7 +14892,8 @@ async function confirmPublish() {
             code: m.code.map(w => '0x' + (w >>> 0).toString(16).padStart(8, '0'))
         })),
         doc: doc,
-        source: source
+        source: source,
+        profile: result.profile || 'IoT'
     };
 
     try {

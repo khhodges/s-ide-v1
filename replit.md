@@ -46,6 +46,7 @@ The web IDE offers ten views (Math, Code, Tutorial, Dashboard, Namespace, Abstra
 - **Mum Tunnel Library:** A GitHub-backed shared abstraction library with API endpoints for browsing, retrieving, and publishing abstractions.
 - **GitHub Community Hub:** The GitHub view shows live repository stats (stars, forks, issues, watchers), recent commit activity with author avatars, contributor grid, quick links to Issues/PRs/Discussions/Wiki, and action cards for Push/Browse/Publish. Uses `github_api_public()` for unauthenticated fallback on public repos. Endpoints: `/api/github/community`, `/api/github/activity`, `/api/github/contributors`.
 - **Self-Documenting Abstractions:** Each compiled abstraction includes a `doc` block with metadata, auto-generated from compiler output.
+- **IoT/Full Profile Tagging:** Each compiled abstraction carries a hardware profile tag ("IoT" or "Full"). Automatic detection scans emitted machine code for Full-only opcodes (CHANGE, SWITCH, LAMBDA, ELOADCALL, XLOADLAMBDA). An optional `@target IoT` or `@target Full` directive at the top of CLOOMC source enforces profile constraints at compile time. Upload-time guards prevent deploying Full-tagged abstractions to the Tang Nano 20K. Visual profile badges (green "IoT" / orange "Full") appear in the abstraction list, detail view, and NS tooltip.
 
 ## External Dependencies
 

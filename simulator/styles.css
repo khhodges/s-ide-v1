@@ -5091,6 +5091,27 @@ a.next-step-link:hover {
     border-radius: 3px;
 }
 
+.abs-profile-badge {
+    display: inline-block;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 1px 5px;
+    border-radius: 3px;
+    line-height: 1.4;
+    text-transform: uppercase;
+}
+.profile-badge-iot {
+    background: rgba(52, 211, 153, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.3);
+}
+.profile-badge-full {
+    background: rgba(251, 146, 60, 0.18);
+    color: #fb923c;
+    border: 1px solid rgba(251, 146, 60, 0.3);
+}
+
 .abs-item-desc {
     grid-column: 1 / -1;
     font-size: 0.68rem;

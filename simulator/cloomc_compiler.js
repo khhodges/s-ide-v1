@@ -1,3 +1,44 @@
+const FULL_ONLY_OPCODES = [4, 5, 7, 8, 9];
+const FULL_ONLY_OPCODE_NAMES = { 4: 'CHANGE', 5: 'SWITCH', 7: 'LAMBDA', 8: 'ELOADCALL', 9: 'XLOADLAMBDA' };
+
+function detectProfile(methods) {
+    for (const m of methods) {
+        if (!m.code) continue;
+        for (const word of m.code) {
+            const opcode = (word >>> 27) & 0x1F;
+            if (FULL_ONLY_OPCODES.includes(opcode)) return 'Full';
+        }
+    }
+    return 'IoT';
+}
+
+function detectProfileViolations(methods, manifest) {
+    const violations = [];
+    const manifestByMethod = {};
+    if (manifest) {
+        for (const entry of manifest) {
+            if (entry.name && entry.mapping) {
+                manifestByMethod[entry.name] = entry.mapping;
+            }
+        }
+    }
+    for (const m of methods) {
+        if (!m.code) continue;
+        const mapping = manifestByMethod[m.name] || [];
+        for (let i = 0; i < m.code.length; i++) {
+            const opcode = (m.code[i] >>> 27) & 0x1F;
+            if (FULL_ONLY_OPCODES.includes(opcode)) {
+                let srcLine = null;
+                for (let j = mapping.length - 1; j >= 0; j--) {
+                    if (mapping[j].addr <= i) { srcLine = mapping[j].src; break; }
+                }
+                violations.push({ method: m.name, offset: i, opcode, opcodeName: FULL_ONLY_OPCODE_NAMES[opcode], line: srcLine });
+            }
+        }
+    }
+    return violations;
+}
+
 class CLOOMCCompiler {
     constructor() {
         this.opcodes = {
@@ -34,19 +75,54 @@ class CLOOMCCompiler {
     }
 
     compile(source, capabilities) {
-        if (this._detectEnglish(source)) {
-            return this.compileEnglish(source, capabilities);
+        const targetDirective = this._parseTargetDirective(source);
+        const cleanSource = source.replace(/^\s*@target\s+(IoT|Full)\s*$/im, '');
+        let result;
+        if (this._detectEnglish(cleanSource)) {
+            result = this.compileEnglish(cleanSource, capabilities);
+        } else if (this._detectLambda(cleanSource)) {
+            result = this.compileLambda(cleanSource, capabilities);
+        } else if (this._detectSymbolic(cleanSource)) {
+            result = this.compileSymbolic(cleanSource, capabilities);
+        } else if (this._detectHaskell(cleanSource)) {
+            result = this.compileHaskell(cleanSource, capabilities);
+        } else {
+            result = this.compileJS(cleanSource, capabilities);
         }
-        if (this._detectLambda(source)) {
-            return this.compileLambda(source, capabilities);
+        if (result.errors.length === 0 && result.methods.length > 0) {
+            result.profile = detectProfile(result.methods);
+            if (targetDirective) {
+                result.targetDirective = targetDirective;
+                if (targetDirective === 'IoT' && result.profile === 'Full') {
+                    const violations = detectProfileViolations(result.methods, result.manifest);
+                    for (const v of violations) {
+                        const lineInfo = v.line != null ? v.line : '?';
+                        result.errors.push({
+                            line: lineInfo,
+                            message: `@target IoT violation: method "${v.method}" uses Full-only opcode ${v.opcodeName} (opcode ${v.opcode}) at instruction offset ${v.offset}`
+                        });
+                    }
+                }
+            }
+        } else if (result.errors.length === 0) {
+            result.profile = 'IoT';
         }
-        if (this._detectSymbolic(source)) {
-            return this.compileSymbolic(source, capabilities);
+        return result;
+    }
+
+    _parseTargetDirective(source) {
+        const lines = source.split('\n');
+        for (const line of lines) {
+            const t = line.trim();
+            if (!t || t.startsWith('//') || t.startsWith('--')) continue;
+            const m = t.match(/^@target\s+(IoT|Full)\s*$/i);
+            if (m) {
+                const val = m[1].toLowerCase();
+                return val === 'iot' ? 'IoT' : 'Full';
+            }
+            break;
         }
-        if (this._detectHaskell(source)) {
-            return this.compileHaskell(source, capabilities);
-        }
-        return this.compileJS(source, capabilities);
+        return null;
     }
 
     compileJS(source, capabilities) {

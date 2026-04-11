@@ -47,6 +47,31 @@
 //
 // =============================================================================
 
+function detectBootUploadProfile(entry) {
+    if (!entry.methods || entry.methods.length === 0) return 'IoT';
+    if (typeof detectProfile === 'function') return detectProfile(entry.methods);
+    if (typeof FULL_ONLY_OPCODES === 'undefined') return 'IoT';
+    for (const m of entry.methods) {
+        if (!m.code) continue;
+        for (const word of m.code) {
+            const opcode = (word >>> 27) & 0x1F;
+            if (FULL_ONLY_OPCODES.includes(opcode)) return 'Full';
+        }
+    }
+    return 'IoT';
+}
+
+function checkUploadProfile(upload, boardType) {
+    const profile = upload.profile || detectBootUploadProfile(upload);
+    if (profile === 'Full' && boardType === 'tang-nano-20k') {
+        return {
+            allowed: false,
+            message: `Abstraction "${upload.abstraction || upload.name || 'unknown'}" is tagged "${profile}" (uses Full-only opcodes: LAMBDA, CHANGE, SWITCH, ELOADCALL, or XLOADLAMBDA). It cannot run on the Tang Nano 20K (IoT profile). Use the Ti60 F225 instead.`
+        };
+    }
+    return { allowed: true };
+}
+
 const BOOT_UPLOADS = [
     {
         abstraction: 'Boot.NS',
