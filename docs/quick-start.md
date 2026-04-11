@@ -197,21 +197,15 @@ from unboxing to running your own code on real silicon.
 ### Step 3 — Download the official bitstream and flash your Church Machine
 
 When you are ready for real hardware, plug in the Tang Nano 20K via
-USB-C and flash the official bitstream. This writes the Church Machine
-itself — the processor, capability registers, namespace controller,
-boot ROM, and security model — into the FPGA. After flashing you have
-a real Church Machine on silicon.
+USB-C and flash the official release. This is the fastest way to get a
+working Church Machine on silicon — no toolchain installation, no
+synthesis, no build steps. Just download, flash, and go.
 
-**Install tools** (one time):
-
-```bash
-# OSS CAD Suite (includes openFPGALoader, nextpnr, gowin_pack)
-# https://github.com/YosysHQ/oss-cad-suite-build
-source ~/oss-cad-suite/environment
-
-# pyserial (for the bridge and patch tools)
-pip3 install pyserial
-```
+> **Why the official release?** The FPGA package on CLOOMC.com contains
+> a pre-built, tested bitstream. You do not need to install Yosys,
+> nextpnr, or any FPGA toolchain to use it. Advanced users who want to
+> modify the hardware itself can build from source — see
+> *Building from source* later in this guide.
 
 **Download the FPGA package:**
 
@@ -219,7 +213,18 @@ Open the Church Machine IDE, go to **Builder**, select **Tang Nano 20K**,
 and click **Download FPGA Package**. Or download from
 [CLOOMC.com](https://cloomc.com).
 
-Extract and flash:
+**Install the flasher** (one time):
+
+```bash
+# openFPGALoader — the only tool you need for the official release
+# https://github.com/YosysHQ/oss-cad-suite-build
+source ~/oss-cad-suite/environment
+
+# pyserial (for the bridge and patch tools)
+pip3 install pyserial
+```
+
+**Extract and flash:**
 
 ```bash
 mkdir -p ~/church-fpga && cd ~/church-fpga
@@ -228,19 +233,28 @@ chmod +x flash.sh bridge.sh
 ./flash.sh
 ```
 
-`flash.sh` runs nextpnr-himbaechel → gowin_pack → openFPGALoader in
-one command. It stops on the first error with a diagnostic hint, and
-ends with a success checklist telling you what to look for.
+`flash.sh` detects the pre-built bitstream and flashes it directly
+with openFPGALoader. It stops on the first error with a diagnostic
+hint, and ends with a success checklist telling you what to look for.
 
-The ZIP contains the Verilog, netlist, constraints, Makefile, `flash.sh`,
-`bridge.sh`, `local_bridge.py`, and `BUILD.md`.
+The ZIP contains the bitstream, constraints, `flash.sh`, `bridge.sh`,
+`local_bridge.py`, and `BUILD.md`.
 
-**Manual alternative** (if you prefer individual commands):
+---
+
+**Building from source** (advanced alternative):
+
+If you want to modify the Church Machine hardware or build the
+bitstream yourself, install the full OSS CAD Suite (Yosys, nextpnr,
+gowin_pack) and run:
 
 ```bash
 make pnr pack    # nextpnr + gowin_pack
 make prog        # openFPGALoader
 ```
+
+This is only needed if you are changing the Verilog. For writing and
+deploying abstractions, the official release is all you need.
 
 ### Step 4 — Check the USB ports
 
