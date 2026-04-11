@@ -954,6 +954,9 @@ def device_register():
     profile = data.get("profile", "Full")
     bridge_host = data.get("bridge_host", "")
     bridge_port = int(data.get("bridge_port", 0))
+    bridge_scheme = data.get("bridge_scheme", "http")
+    if bridge_scheme not in ("http", "https"):
+        bridge_scheme = "http"
     serial_port = data.get("serial_port", "")
     now = _time.time()
     dev = Device.query.filter_by(device_uid=uid).first()
@@ -965,6 +968,7 @@ def device_register():
         dev.fw_minor = fw_minor
         dev.bridge_host = bridge_host
         dev.bridge_port = bridge_port
+        dev.bridge_scheme = bridge_scheme
         dev.serial_port = serial_port
         dev.status = "online"
         dev.last_seen = now
@@ -979,6 +983,7 @@ def device_register():
             fw_minor=fw_minor,
             bridge_host=bridge_host,
             bridge_port=bridge_port,
+            bridge_scheme=bridge_scheme,
             serial_port=serial_port,
             status="online",
             last_seen=now,
@@ -1050,6 +1055,81 @@ def device_set_label(device_id):
     return jsonify({"ok": True})
 
 
+ALLOWED_BRIDGE_HOSTS = {"localhost", "127.0.0.1", "::1", "penguin.linux.test"}
+
+def _is_bridge_host_allowed(host):
+    h = (host or "").strip().lower()
+    if h in ALLOWED_BRIDGE_HOSTS:
+        return True
+    if h.endswith(".local"):
+        return True
+    try:
+        import socket
+        if h == socket.gethostname().lower():
+            return True
+    except Exception:
+        pass
+    return False
+
+
+@app.route("/api/device/<int:device_id>/deploy", methods=["POST"])
+def device_deploy(device_id):
+    dev = Device.query.get(device_id)
+    if not dev:
+        return jsonify({"ok": False, "error": "device not found"}), 404
+    if dev.status != "online" or (_time.time() - (dev.last_seen or 0)) >= DEVICE_ONLINE_TIMEOUT:
+        return jsonify({"ok": False, "error": "device is offline"}), 409
+    if not dev.bridge_host or not dev.bridge_port:
+        return jsonify({"ok": False, "error": "device has no bridge configured"}), 400
+    if not _is_bridge_host_allowed(dev.bridge_host):
+        return jsonify({"ok": False, "error": "bridge host not allowed"}), 403
+
+    payload = request.get_json(silent=True) or {}
+    tx_bytes = payload.get("tx", [])
+    rx_count = int(payload.get("rx_count", 4))
+    timeout_ms = int(payload.get("timeout_ms", 5000))
+
+    if not tx_bytes:
+        return jsonify({"ok": False, "error": "empty payload"}), 400
+
+    scheme = getattr(dev, 'bridge_scheme', None) or 'http'
+    bridge_url = f"{scheme}://{dev.bridge_host}:{dev.bridge_port}"
+
+    skip_tls_verify = (scheme == 'https')
+
+    try:
+        status_resp = http_requests.get(f"{bridge_url}/status", timeout=3, verify=not skip_tls_verify)
+        status_data = status_resp.json()
+        if not status_data.get("open"):
+            conn_resp = http_requests.post(
+                f"{bridge_url}/connect",
+                json={"port": dev.serial_port, "baud": 115200},
+                timeout=5,
+                verify=not skip_tls_verify,
+            )
+            conn_data = conn_resp.json()
+            if not conn_data.get("ok"):
+                return jsonify({"ok": False, "error": f"bridge connect failed: {conn_data.get('error', 'unknown')}"}), 502
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"bridge unreachable: {e}"}), 502
+
+    try:
+        resp = http_requests.post(
+            f"{bridge_url}/transact",
+            json={"tx": tx_bytes, "rx_count": rx_count, "timeout_ms": timeout_ms},
+            timeout=(timeout_ms / 1000.0) + 5,
+            verify=not skip_tls_verify,
+        )
+        result = resp.json()
+        logging.info("Deploy to device %s (bridge %s:%s): ok=%s rx=%s",
+                     dev.device_uid, dev.bridge_host, dev.bridge_port,
+                     result.get("ok"), len(result.get("rx", [])))
+        return jsonify(result)
+    except Exception as e:
+        logging.error("Deploy proxy error for device %s: %s", dev.device_uid, e)
+        return jsonify({"ok": False, "error": f"bridge transact failed: {e}"}), 502
+
+
 Device = None
 Project = None
 TutorialProgress = None
@@ -1060,6 +1140,15 @@ with app.app_context():
     from server.models import register_models, BOARD_TYPES, PROFILE_NAMES
     Project, TutorialProgress, Device = register_models(db)
     db.create_all()
+
+    from sqlalchemy import inspect as _sa_inspect, text as _sa_text
+    _inspector = _sa_inspect(db.engine)
+    _existing_cols = {c["name"] for c in _inspector.get_columns("devices")}
+    if "bridge_scheme" not in _existing_cols:
+        db.session.execute(_sa_text("ALTER TABLE devices ADD COLUMN bridge_scheme VARCHAR(8) DEFAULT 'http'"))
+        db.session.commit()
+        logging.info("Migrated: added bridge_scheme column to devices table")
+
     logging.info("Database tables created")
 
 def _free_port(port):

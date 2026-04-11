@@ -47,6 +47,7 @@ CALLHOME_PKT_LEN = 13
 CALLHOME_ACK = bytes([0xCE, 0x22])
 
 _IDE_SERVER_URL = None
+_BRIDGE_SCHEME = 'http'
 _device_uid = None
 _heartbeat_running = False
 
@@ -98,6 +99,7 @@ def _register_with_ide(uid, board_type, board_name, profile, fw_major, fw_minor)
             "fw_minor": fw_minor,
             "bridge_host": socket.gethostname(),
             "bridge_port": HTTP_PORT,
+            "bridge_scheme": _BRIDGE_SCHEME,
             "serial_port": SERIAL_PORT,
         }).encode()
         req = urllib.request.Request(
@@ -430,6 +432,8 @@ if __name__ == '__main__':
         scheme = 'https'
     else:
         scheme = 'http'
+
+    _BRIDGE_SCHEME = scheme
 
     print(f'Church Machine FPGA Bridge ({scheme.upper()})')
     print(f'  Serial : {SERIAL_PORT} @ {BAUD} baud')

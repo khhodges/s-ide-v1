@@ -10424,3 +10424,38 @@ tr.itrace-fault td { color: #ff9999; }
     transition: background 0.15s, border-color 0.15s;
 }
 .dev-action-btn:hover { background: #333; border-color: var(--church-gold, #daa520); color: #fff; }
+.dev-action-btn.dev-action-disabled { opacity: 0.4; cursor: not-allowed; }
+.dev-deploy-all-btn {
+    background: #2d4a22;
+    border: 1px solid #4caf50;
+    color: #8bc34a;
+    padding: 4px 14px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.dev-deploy-all-btn:hover { background: #3a5a2e; color: #fff; }
+.dev-deploy-status {
+    font-size: 0.78rem;
+    margin-top: 4px;
+    font-weight: 600;
+}
+.dev-deploy-deploying { color: #ffb74d; }
+.dev-deploy-success { color: #4caf50; }
+.dev-deploy-failed { color: #ef5350; }
+.deploy-program-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #ccc;
+    transition: background 0.15s;
+}
+.deploy-program-option:hover { background: #2a2a2a; }
+.deploy-program-option input[type="radio"] { accent-color: var(--church-gold, #daa520); }
+.deploy-program-list { border: 1px solid #333; border-radius: 4px; padding: 0.3rem; }

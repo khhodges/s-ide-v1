@@ -44,6 +44,7 @@ def register_models(db):
         fw_minor = Column(Integer, default=0)
         bridge_host = Column(String(255), default="")
         bridge_port = Column(Integer, default=0)
+        bridge_scheme = Column(String(8), default="http")
         serial_port = Column(String(128), default="")
         status = Column(String(16), default="offline")
         last_seen = Column(Float, default=0.0)

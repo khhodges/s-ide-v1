@@ -15698,6 +15698,7 @@ function loadDeviceList() {
                 const lastSeen = dev.last_seen ? new Date(dev.last_seen * 1000).toLocaleString() : 'never';
                 const card = document.createElement('div');
                 card.className = 'dev-card';
+                card.id = 'devCard_' + dev.id;
                 card.innerHTML =
                     '<div class="dev-status-dot ' + (isOnline ? 'online' : 'offline') + '"></div>' +
                     '<div class="dev-info">' +
@@ -15708,12 +15709,13 @@ function loadDeviceList() {
                             '<span>Boots: ' + dev.boot_count + '</span>' +
                             '<span>Seen: ' + _escHtml(lastSeen) + '</span>' +
                         '</div>' +
+                        '<div class="dev-deploy-status" style="display:none;"></div>' +
                     '</div>' +
                     '<span class="dev-badge ' + profileClass + '">' + _escHtml(dev.profile) + '</span>' +
                     '<input class="dev-label-input" placeholder="Label" value="' + _escHtml(dev.label || '') + '" ' +
                         'onchange="setDeviceLabel(' + dev.id + ', this.value)" />' +
                     '<div class="dev-actions">' +
-                        '<button class="dev-action-btn" onclick="deviceDeploy(' + dev.id + ')" title="Deploy bitstream to this device">Deploy</button>' +
+                        '<button class="dev-action-btn' + (isOnline ? '' : ' dev-action-disabled') + '" onclick="deviceDeploy(' + dev.id + ')" title="Deploy bitstream to this device"' + (isOnline ? '' : ' disabled') + '>Deploy</button>' +
                     '</div>';
                 grid.appendChild(card);
             });
@@ -15736,7 +15738,470 @@ function setDeviceLabel(deviceId, label) {
     });
 }
 
+function _buildDeployFramesFromNS(nsIdx) {
+    if (typeof sim === 'undefined' || !sim.readNSEntry) return null;
+    var entry = sim.readNSEntry(nsIdx);
+    if (!entry) return null;
+    var loc = entry.word0_location >>> 0;
+    if (loc >= sim.memory.length) return null;
+    var hdrWord = sim.memory[loc] >>> 0;
+    var hdr = sim.parseLumpHeader(hdrWord);
+    if (!hdr.valid || hdr.cw === 0) return null;
+
+    var codeStart = loc + 1;
+    var words = [];
+    for (var i = 0; i < hdr.cw; i++) {
+        var addr = codeStart + i;
+        words.push(addr < sim.memory.length ? (sim.memory[addr] >>> 0) : 0);
+    }
+
+    var blocks = [];
+    var nsSlice = Array.from(sim.memory.slice(0, TangSerial.NS_WORDS));
+    var clSlice = Array.from(sim.memory.slice(TangSerial.NS_WORDS, TangSerial.NS_WORDS + TangSerial.CLIST_WORDS));
+    var totalNsWords = TangSerial.NS_WORDS + TangSerial.CLIST_WORDS;
+    var nsWords = new Array(totalNsWords);
+    for (var i = 0; i < TangSerial.NS_WORDS; i++) nsWords[i] = i < nsSlice.length ? nsSlice[i] : 0;
+    for (var i = 0; i < TangSerial.CLIST_WORDS; i++) nsWords[TangSerial.NS_WORDS + i] = i < clSlice.length ? clSlice[i] : 0;
+    blocks.push({ addr: 0x0000, words: nsWords });
+    blocks.push({ addr: codeStart, words: words });
+
+    function crc16ccitt(data) {
+        var crc = 0xFFFF;
+        for (var ci = 0; ci < data.length; ci++) {
+            var byte = data[ci];
+            for (var bi = 0; bi < 8; bi++) {
+                var bit = ((byte >>> (7 - bi)) & 1) ^ ((crc >>> 15) & 1);
+                crc = ((crc << 1) & 0xFFFF) ^ (bit ? 0x1021 : 0);
+            }
+        }
+        return crc;
+    }
+
+    var allFrames = [];
+    for (var b = 0; b < blocks.length; b++) {
+        var blk = blocks[b];
+        var bodyLen = 6 + blk.words.length * 4;
+        var frame = new Uint8Array(bodyLen + 2);
+        frame[0] = 0xBE;
+        frame[1] = 0xEF;
+        frame[2] = (blk.addr >> 8) & 0xFF;
+        frame[3] = blk.addr & 0xFF;
+        frame[4] = (blk.words.length >> 8) & 0xFF;
+        frame[5] = blk.words.length & 0xFF;
+        for (var i = 0; i < blk.words.length; i++) {
+            var w = blk.words[i] >>> 0;
+            frame[6 + i * 4 + 0] = w & 0xFF;
+            frame[6 + i * 4 + 1] = (w >> 8) & 0xFF;
+            frame[6 + i * 4 + 2] = (w >> 16) & 0xFF;
+            frame[6 + i * 4 + 3] = (w >> 24) & 0xFF;
+        }
+        var crc = crc16ccitt(frame.subarray(0, bodyLen));
+        frame[bodyLen] = (crc >> 8) & 0xFF;
+        frame[bodyLen + 1] = crc & 0xFF;
+        allFrames.push({ addr: blk.addr, count: blk.words.length, frame: frame, crc: crc });
+    }
+    return allFrames;
+}
+
+function _buildDeployFrames() {
+    var patch = injectCRCode(null);
+    if (!patch) return null;
+
+    var blocks = [];
+    var nsChanged = patch.newCW !== patch.oldCW;
+
+    if (nsChanged && typeof sim !== 'undefined' && typeof TangSerial !== 'undefined') {
+        var nsSlice = Array.from(sim.memory.slice(0, TangSerial.NS_WORDS));
+        var clSlice = Array.from(sim.memory.slice(TangSerial.NS_WORDS, TangSerial.NS_WORDS + TangSerial.CLIST_WORDS));
+        var totalWords = TangSerial.NS_WORDS + TangSerial.CLIST_WORDS;
+        var nsWords = new Array(totalWords);
+        for (var i = 0; i < TangSerial.NS_WORDS; i++) nsWords[i] = i < nsSlice.length ? nsSlice[i] : 0;
+        for (var i = 0; i < TangSerial.CLIST_WORDS; i++) nsWords[TangSerial.NS_WORDS + i] = i < clSlice.length ? clSlice[i] : 0;
+        blocks.push({ addr: 0x0000, words: nsWords });
+    }
+
+    blocks.push({ addr: patch.codeStart, words: patch.newWords });
+
+    function crc16ccitt(data) {
+        var crc = 0xFFFF;
+        for (var ci = 0; ci < data.length; ci++) {
+            var byte = data[ci];
+            for (var bi = 0; bi < 8; bi++) {
+                var bit = ((byte >>> (7 - bi)) & 1) ^ ((crc >>> 15) & 1);
+                crc = ((crc << 1) & 0xFFFF) ^ (bit ? 0x1021 : 0);
+            }
+        }
+        return crc;
+    }
+
+    var allFrames = [];
+    for (var b = 0; b < blocks.length; b++) {
+        var blk = blocks[b];
+        var bodyLen = 6 + blk.words.length * 4;
+        var frame = new Uint8Array(bodyLen + 2);
+        frame[0] = 0xBE;
+        frame[1] = 0xEF;
+        frame[2] = (blk.addr >> 8) & 0xFF;
+        frame[3] = blk.addr & 0xFF;
+        frame[4] = (blk.words.length >> 8) & 0xFF;
+        frame[5] = blk.words.length & 0xFF;
+        for (var i = 0; i < blk.words.length; i++) {
+            var w = blk.words[i] >>> 0;
+            frame[6 + i * 4 + 0] = w & 0xFF;
+            frame[6 + i * 4 + 1] = (w >> 8) & 0xFF;
+            frame[6 + i * 4 + 2] = (w >> 16) & 0xFF;
+            frame[6 + i * 4 + 3] = (w >> 24) & 0xFF;
+        }
+        var crc = crc16ccitt(frame.subarray(0, bodyLen));
+        frame[bodyLen] = (crc >> 8) & 0xFF;
+        frame[bodyLen + 1] = crc & 0xFF;
+        allFrames.push({ addr: blk.addr, count: blk.words.length, frame: frame, crc: crc });
+    }
+    return allFrames;
+}
+
+function _parseDeployResponse(rx, expectedAddr, expectedCount) {
+    if (rx.length >= 4) {
+        var echoAddr = (rx[0] << 8) | rx[1];
+        var echoCount = (rx[2] << 8) | rx[3];
+        if (echoAddr === (expectedAddr & 0xFFFF) && echoCount === expectedCount) {
+            return { success: true, msg: 'Echo OK: addr=0x' + echoAddr.toString(16).toUpperCase().padStart(4, '0') + ' count=' + echoCount };
+        }
+        return { success: false, msg: 'Echo mismatch: expected addr=0x' + (expectedAddr & 0xFFFF).toString(16).toUpperCase().padStart(4, '0') + ' count=' + expectedCount + ', got addr=0x' + echoAddr.toString(16).toUpperCase().padStart(4, '0') + ' count=' + echoCount };
+    }
+    if (rx.length === 1 && rx[0] === 0x15) {
+        return { success: false, msg: 'NAK — CRC mismatch on FPGA side' };
+    }
+    return { success: false, msg: 'No echo received (' + rx.length + ' bytes)' };
+}
+
+function _setDeviceDeployStatus(deviceId, status, message) {
+    var card = document.getElementById('devCard_' + deviceId);
+    if (!card) return;
+    var statusEl = card.querySelector('.dev-deploy-status');
+    if (!statusEl) return;
+    statusEl.className = 'dev-deploy-status dev-deploy-' + status;
+    statusEl.textContent = message || '';
+    statusEl.style.display = message ? 'block' : 'none';
+}
+
+function _getDeployablePrograms() {
+    var programs = [];
+    if (typeof sim !== 'undefined' && sim.readNSEntry) {
+        for (var i = 0; i < sim.nsCount; i++) {
+            var entry = sim.readNSEntry(i);
+            if (!entry) continue;
+            var loc = entry.word0_location >>> 0;
+            if (loc >= sim.memory.length) continue;
+            var hdrWord = sim.memory[loc] >>> 0;
+            var hdr = sim.parseLumpHeader(hdrWord);
+            if (!hdr.valid || hdr.cw === 0) continue;
+            var label = entry.label || ('NS[' + i + ']');
+            programs.push({ nsIdx: i, label: label, cw: hdr.cw, loc: loc });
+        }
+    }
+    return programs;
+}
+
 function deviceDeploy(deviceId) {
-    alert('Deploy to device #' + deviceId + ' — coming soon.');
+    var programs = _getDeployablePrograms();
+    var hasEditor = !!(selectedCR !== null && ((document.getElementById('asmEditor') || {}).value || '').trim());
+
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+
+    var progListHtml = '';
+    if (hasEditor) {
+        progListHtml += '<label class="deploy-program-option">' +
+            '<input type="radio" name="deployProgSrc" value="editor" checked /> ' +
+            '<span>Current editor code (compile &amp; deploy)</span>' +
+            '</label>';
+    }
+    for (var p = 0; p < programs.length; p++) {
+        var prog = programs[p];
+        var checked = (!hasEditor && p === 0) ? ' checked' : '';
+        progListHtml += '<label class="deploy-program-option">' +
+            '<input type="radio" name="deployProgSrc" value="ns:' + prog.nsIdx + '"' + checked + ' /> ' +
+            '<span>' + _escHtml(prog.label) + ' (NS[' + prog.nsIdx + '], ' + prog.cw + ' words @ 0x' + prog.loc.toString(16).toUpperCase().padStart(4, '0') + ')</span>' +
+            '</label>';
+    }
+    if (!hasEditor && programs.length === 0) {
+        progListHtml = '<div style="color:#ef5350;font-size:0.85rem;">No programs available. Write code in the editor or load an abstraction first.</div>';
+    }
+
+    overlay.innerHTML =
+        '<div class="modal-dialog" style="max-width:500px;">' +
+            '<h3 style="margin:0 0 1rem;color:var(--church-gold,#daa520);">Deploy to Device #' + deviceId + '</h3>' +
+            '<div style="color:#bbb;font-size:0.88rem;margin-bottom:0.8rem;">Select a program to deploy:</div>' +
+            '<div class="deploy-program-list" style="max-height:200px;overflow-y:auto;margin-bottom:1rem;">' + progListHtml + '</div>' +
+            '<div id="deployModalLog" style="background:#111;border:1px solid #333;border-radius:4px;padding:0.5rem;font-family:monospace;font-size:0.78rem;color:#aaa;max-height:180px;overflow-y:auto;white-space:pre-wrap;margin-bottom:1rem;display:none;"></div>' +
+            '<div style="display:flex;gap:0.5rem;justify-content:flex-end;">' +
+                '<button id="deployModalCancel" class="dev-action-btn" style="padding:6px 16px;">Cancel</button>' +
+                '<button id="deployModalConfirm" class="dev-action-btn" style="padding:6px 16px;background:#2d4a22;color:#8bc34a;border-color:#4caf50;">Deploy</button>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(overlay);
+
+    function closeModal() { overlay.remove(); document.removeEventListener('keydown', onEsc); }
+    function onEsc(e) { if (e.key === 'Escape') closeModal(); }
+    document.addEventListener('keydown', onEsc);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+    document.getElementById('deployModalCancel').addEventListener('click', closeModal);
+
+    document.getElementById('deployModalConfirm').addEventListener('click', function() {
+        var logEl = document.getElementById('deployModalLog');
+        logEl.style.display = 'block';
+        logEl.textContent = '';
+        var log = function(msg) { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; };
+
+        var selected = overlay.querySelector('input[name="deployProgSrc"]:checked');
+        if (!selected) {
+            log('ERROR: No program selected.');
+            return;
+        }
+
+        document.getElementById('deployModalConfirm').disabled = true;
+        document.getElementById('deployModalConfirm').textContent = 'Deploying…';
+        _setDeviceDeployStatus(deviceId, 'deploying', 'Deploying…');
+
+        var frames;
+        var srcVal = selected.value;
+
+        if (srcVal === 'editor') {
+            log('Compiling current editor code…');
+            frames = _buildDeployFrames();
+        } else if (srcVal.startsWith('ns:')) {
+            var nsIdx = parseInt(srcVal.substring(3), 10);
+            log('Loading NS[' + nsIdx + '] for deploy…');
+            frames = _buildDeployFramesFromNS(nsIdx);
+        }
+
+        if (!frames || frames.length === 0) {
+            log('ERROR: Failed to build frames.');
+            _setDeviceDeployStatus(deviceId, 'failed', 'Build failed');
+            document.getElementById('deployModalConfirm').disabled = false;
+            document.getElementById('deployModalConfirm').textContent = 'Deploy';
+            return;
+        }
+
+        log('Built ' + frames.length + ' BEEF frame(s). Sending to device…');
+
+        _sendFramesToDevice(deviceId, frames, log).then(function(ok) {
+            if (ok) {
+                log('');
+                log('Deploy SUCCESS.');
+                _setDeviceDeployStatus(deviceId, 'success', 'Deployed ✓');
+            } else {
+                log('');
+                log('Deploy FAILED.');
+                _setDeviceDeployStatus(deviceId, 'failed', 'Deploy failed');
+            }
+            document.getElementById('deployModalConfirm').disabled = false;
+            document.getElementById('deployModalConfirm').textContent = 'Deploy';
+        });
+    });
+}
+
+function _sendFramesToDevice(deviceId, frames, log) {
+    var idx = 0;
+    var allOk = true;
+    function sendNext() {
+        if (idx >= frames.length) {
+            if (!allOk) return Promise.resolve(false);
+            log('  Sending RUN sentinel (0xBE 0xAA)…');
+            return fetch('/api/device/' + deviceId + '/deploy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tx: [0xBE, 0xAA],
+                    rx_count: 0,
+                    timeout_ms: 1000
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.ok) {
+                    log('  RUN sentinel bridge error: ' + (data.error || 'unknown'));
+                    return false;
+                }
+                log('  RUN sent — core executing from PC=0.');
+                return true;
+            })
+            .catch(function(err) {
+                log('  RUN sentinel network error: ' + err);
+                return false;
+            });
+        }
+        var f = frames[idx];
+        log('  Frame ' + idx + ': addr=0x' + f.addr.toString(16).toUpperCase().padStart(4, '0') +
+            ' words=' + f.count + ' CRC=0x' + f.crc.toString(16).toUpperCase().padStart(4, '0') +
+            ' (' + f.frame.length + ' bytes)');
+        idx++;
+        return fetch('/api/device/' + deviceId + '/deploy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tx: Array.from(f.frame),
+                rx_count: 4,
+                timeout_ms: 5000
+            })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.ok) {
+                log('  Bridge error: ' + (data.error || 'unknown'));
+                allOk = false;
+                return sendNext();
+            }
+            var rx = data.rx || [];
+            var parsed = _parseDeployResponse(rx, f.addr, f.count);
+            log('  ' + parsed.msg);
+            if (!parsed.success) allOk = false;
+            return sendNext();
+        })
+        .catch(function(err) {
+            log('  Network error: ' + err);
+            allOk = false;
+            return sendNext();
+        });
+    }
+    return sendNext();
+}
+
+function deployAll() {
+    var programs = _getDeployablePrograms();
+    var hasEditor = !!(selectedCR !== null && ((document.getElementById('asmEditor') || {}).value || '').trim());
+
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+
+    var progListHtml = '';
+    if (hasEditor) {
+        progListHtml += '<label class="deploy-program-option">' +
+            '<input type="radio" name="deployAllSrc" value="editor" checked /> ' +
+            '<span>Current editor code (compile &amp; deploy)</span>' +
+            '</label>';
+    }
+    for (var p = 0; p < programs.length; p++) {
+        var prog = programs[p];
+        var checked = (!hasEditor && p === 0) ? ' checked' : '';
+        progListHtml += '<label class="deploy-program-option">' +
+            '<input type="radio" name="deployAllSrc" value="ns:' + prog.nsIdx + '"' + checked + ' /> ' +
+            '<span>' + _escHtml(prog.label) + ' (NS[' + prog.nsIdx + '], ' + prog.cw + ' words)</span>' +
+            '</label>';
+    }
+    if (!hasEditor && programs.length === 0) {
+        progListHtml = '<div style="color:#ef5350;font-size:0.85rem;">No programs available.</div>';
+    }
+
+    overlay.innerHTML =
+        '<div class="modal-dialog" style="max-width:520px;">' +
+            '<h3 style="margin:0 0 1rem;color:var(--church-gold,#daa520);">Deploy All — Online Boards</h3>' +
+            '<div style="color:#bbb;font-size:0.88rem;margin-bottom:0.8rem;">Select a program to deploy to all online boards:</div>' +
+            '<div class="deploy-program-list" style="max-height:160px;overflow-y:auto;margin-bottom:1rem;">' + progListHtml + '</div>' +
+            '<div id="deployAllLog" style="background:#111;border:1px solid #333;border-radius:4px;padding:0.5rem;font-family:monospace;font-size:0.78rem;color:#aaa;max-height:240px;overflow-y:auto;white-space:pre-wrap;margin-bottom:1rem;display:none;"></div>' +
+            '<div style="display:flex;gap:0.5rem;justify-content:flex-end;">' +
+                '<button id="deployAllCancel" class="dev-action-btn" style="padding:6px 16px;">Cancel</button>' +
+                '<button id="deployAllConfirm" class="dev-action-btn" style="padding:6px 16px;background:#2d4a22;color:#8bc34a;border-color:#4caf50;">Deploy All</button>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(overlay);
+
+    function closeModal() { overlay.remove(); document.removeEventListener('keydown', onEsc); }
+    function onEsc(e) { if (e.key === 'Escape') closeModal(); }
+    document.addEventListener('keydown', onEsc);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+    document.getElementById('deployAllCancel').addEventListener('click', closeModal);
+
+    document.getElementById('deployAllConfirm').addEventListener('click', function() {
+        var selected = overlay.querySelector('input[name="deployAllSrc"]:checked');
+        if (!selected) { alert('No program selected.'); return; }
+
+        var logEl = document.getElementById('deployAllLog');
+        logEl.style.display = 'block';
+        logEl.textContent = '';
+        var log = function(msg) { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; };
+
+        var frames;
+        var srcVal = selected.value;
+        if (srcVal === 'editor') {
+            log('Compiling current editor code…');
+            frames = _buildDeployFrames();
+        } else if (srcVal.startsWith('ns:')) {
+            var nsIdx = parseInt(srcVal.substring(3), 10);
+            log('Loading NS[' + nsIdx + '] for deploy…');
+            frames = _buildDeployFramesFromNS(nsIdx);
+        }
+
+        if (!frames || frames.length === 0) {
+            log('ERROR: Failed to build frames.');
+            return;
+        }
+
+        document.getElementById('deployAllConfirm').disabled = true;
+        document.getElementById('deployAllConfirm').textContent = 'Deploying…';
+
+        log('Built ' + frames.length + ' BEEF frame(s). Fetching device list…');
+
+        fetch('/api/device/list')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var _resetBtn = function() {
+                    var btn = document.getElementById('deployAllConfirm');
+                    if (btn) { btn.disabled = false; btn.textContent = 'Deploy All'; }
+                };
+                if (!data.ok || !data.devices) {
+                    log('Failed to fetch device list.');
+                    _resetBtn();
+                    return;
+                }
+                var targets = data.devices.filter(function(d) { return d.status === 'online' && d.profile === 'IoT'; });
+                if (targets.length === 0) {
+                    targets = data.devices.filter(function(d) { return d.status === 'online'; });
+                }
+                if (targets.length === 0) {
+                    log('No online devices found.');
+                    _resetBtn();
+                    return;
+                }
+                log('Deploying to ' + targets.length + ' device(s)…');
+                log('');
+
+                var i = 0;
+                function deployNext() {
+                    if (i >= targets.length) {
+                        log('');
+                        log('Deploy All complete.');
+                        document.getElementById('deployAllConfirm').disabled = false;
+                        document.getElementById('deployAllConfirm').textContent = 'Deploy All';
+                        return;
+                    }
+                    var dev = targets[i];
+                    var label = dev.label || dev.board_name || ('Device #' + dev.id);
+                    log('--- ' + label + ' (ID ' + dev.id + ', UID ' + dev.device_uid + ') ---');
+                    _setDeviceDeployStatus(dev.id, 'deploying', 'Deploying…');
+                    i++;
+                    _sendFramesToDevice(dev.id, frames, log).then(function(ok) {
+                        if (ok) {
+                            log('Result: SUCCESS');
+                            _setDeviceDeployStatus(dev.id, 'success', 'Deployed ✓');
+                        } else {
+                            log('Result: FAILED');
+                            _setDeviceDeployStatus(dev.id, 'failed', 'Deploy failed');
+                        }
+                        log('');
+                        deployNext();
+                    });
+                }
+                deployNext();
+            })
+            .catch(function() {
+                log('Network error fetching device list.');
+                var btn = document.getElementById('deployAllConfirm');
+                if (btn) { btn.disabled = false; btn.textContent = 'Deploy All'; }
+            });
+    });
 }
 
