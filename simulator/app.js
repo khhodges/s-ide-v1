@@ -6652,8 +6652,6 @@ function runSim() {
                     con.scrollTop = con.scrollHeight;
                 }
                 updateDashboard();
-                switchView('dashboard');
-                openCRDetail(14);
                 triggerLazyLoad({ token: sim.awaitingLump.token, nsIndex: sim.awaitingLump.nsIndex, label: sim.nsLabels[sim.awaitingLump.nsIndex] || 'entry_'+sim.awaitingLump.nsIndex });
                 return;
             }
@@ -7398,40 +7396,40 @@ async function triggerLazyLoad(absentResult) {
         updateDashboard(); switchView('editor'); switchCodeTab('console');
         return;
     }
-    log(`↪ Retry LOAD succeeded — continuing to HALT...`);
+    log(`↪ Retry LOAD succeeded — continuing…`);
 
-    // ── 4. Run to HALT (up to 10 000 steps) ────────────────────────────────
-    let stepCount = 0;
+    // ── 4. Run to HALT / breakpoint (up to 10 000 steps) ────────────────────
+    const breakpoints = simBreakpoints.size > 0 ? simBreakpoints : null;
     const faultsMid = sim.faultLog ? sim.faultLog.length : 0;
-    while (!sim.halted && !sim.awaitingLump && stepCount < 10000) {
-        const r = sim.step();
-        stepCount++;
-        if (!r || (sim.faultLog && sim.faultLog.length > faultsMid)) break;
-        if (r.absent) {
-            log(`⟳ Step ${stepCount}: another absent lump — Slot ${r.nsIndex}`);
-            updateDashboard(); switchView('dashboard'); openCRDetail(14);
-            triggerLazyLoad(r);
-            return;
-        }
+    const runResult = sim.run(10000, breakpoints);
+
+    if (sim.awaitingLump) {
+        log(`⟳ Another absent lump — Slot ${sim.awaitingLump.nsIndex}`);
+        triggerLazyLoad({
+            token: sim.awaitingLump.token,
+            nsIndex: sim.awaitingLump.nsIndex,
+            label: sim.nsLabels[sim.awaitingLump.nsIndex] || 'entry_' + sim.awaitingLump.nsIndex
+        });
+        return;
     }
 
     // ── 5. Report final outcome ──────────────────────────────────────────────
     const newFaults = sim.faultLog ? sim.faultLog.length - faultsMid : 0;
-    if (sim.halted && newFaults === 0) {
+    if (runResult.stopReason === 'breakpoint' && runResult.breakpointAddr != null) {
+        log(`[BP] Breakpoint at 0x${runResult.breakpointAddr.toString(16).toUpperCase().padStart(4,'0')} after ${runResult.steps} step(s) post-retry.`);
+    } else if (sim.halted && newFaults === 0) {
         const cr3ok = sim.cr[3] && sim.cr[3].word0 !== 0;
         if (!cr3ok) {
             log(`⊿ FAIL — HALT reached but CR3.word0 is null (capability not installed)`);
         } else {
             log(`✓ CR3.word0=0x${sim.cr[3].word0.toString(16).padStart(8,'0')} — capability installed`);
-            log(`✓ PASS — reached HALT after ${stepCount + 1} step(s) post-retry.`);
+            log(`✓ PASS — reached HALT after ${runResult.steps + 1} step(s) post-retry.`);
         }
     } else if (newFaults > 0) {
         const f = sim.faultLog[sim.faultLog.length - 1];
         log(`⊿ FAIL — fault after retry: ${f ? f.type + ' @ PC=' + f.pc : 'unknown'}`);
-    } else if (sim.awaitingLump) {
-        log(`⟳ Suspended — another absent lump queued (use Step to continue).`);
     } else {
-        log(`? Stopped after ${stepCount} steps (no HALT, no fault).`);
+        log(`? Stopped after ${runResult.steps} steps (no HALT, no fault).`);
     }
     updateDashboard();
     switchView('editor');
