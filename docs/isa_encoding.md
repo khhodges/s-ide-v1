@@ -104,7 +104,7 @@ Example: `IADDLT DR0, DR1, DR2` encodes opcode=0x0F, cond=11.
 |  0 | LOAD        | CR dst    | CR base   | unsigned byte offset (0–32767)               |
 |  1 | SAVE        | CR dst (c-list, S perm) | CR src (GT, B=1) | unsigned byte offset (0–32767) |
 |  2 | CALL        | CR target | 0         | 0                                            |
-|  3 | RETURN      | 0 (unused) | 0 (unused) | 12-bit mask (bit N=1 → clear CR_N) *(encoding defined; not yet implemented in hardware — see HARDWARE-DEVIATIONS.md D-2, Task #8)* |
+|  3 | RETURN      | 0          | 0          | 12-bit mask in bits [11:0] — bit N=1 clears CR_N to NULL after frame pop; bit 6 reserved (must be 0); mask=0 → no scrub |
 |  4 | CHANGE      | CR dst    | 0         | slot index (unsigned)                        |
 |  5 | SWITCH      | 0         | CR src    | new permission — lower 3 bits (0–7)          |
 |  6 | TPERM       | CR dst    | 0         | 5-bit preset code (see §6)                   |
@@ -121,43 +121,45 @@ Example: `IADDLT DR0, DR1, DR2` encodes opcode=0x0F, cond=11.
 | 12 | BFEXT    | DR dst | CR base| `(pos & 0x1F) << 5 \| (width & 0x1F)` — bits [9:5]=pos, [4:0]=width |
 | 13 | BFINS    | DR src | CR base| `(pos & 0x1F) << 5 \| (width & 0x1F)` — bits [9:5]=pos, [4:0]=width |
 | 14 | MCMP     | DR op1 | DR op2 | 0 — result goes to condition flags only, no writeback      |
-| 15 | IADD     | DR dst | DR src1| `imm15[3:0]` = DR src2 number (a register, NOT a literal)  |
-| 16 | ISUB     | DR dst | DR src1| `imm15[3:0]` = DR src2 number (a register, NOT a literal)  |
+| 15 | IADD     | DR dst | DR src1| reg: `imm15[3:0]`=DR src2; imm: `0x4000\|(val&0x3FFF)` (bit 14 selects mode) |
+| 16 | ISUB     | DR dst | DR src1| reg: `imm15[3:0]`=DR src2; imm: `0x4000\|(val&0x3FFF)` (bit 14 selects mode) |
 | 17 | BRANCH   | 0      | 0      | signed 15-bit PC-relative offset; bit 14 is the sign bit   |
 | 18 | SHL      | DR dst | DR src | `imm15[4:0]` = shift amount (0–31)                         |
 | 19 | SHR      | DR dst | DR src | `imm15[5]`=1 for ASR / 0 for LSR; `imm15[4:0]`=shift amount |
 
 #### Instruction-specific notes
 
-**BRANCH** — `imm15` is a **signed PC-relative offset** (confirmed by simulator).
+**BRANCH** — `imm15` is a **signed PC-relative offset**.
 Execution: `target_PC = current_PC + sign_extend(imm15)`. Bit 14 of imm15 is the
 sign bit. Sign-extend: `soff = (imm & 0x4000) ? (imm | 0xFFFF8000) : imm`.
 
-The built-in assembler (`assembler.js`) has a quirk when a label name is used as
-the operand: it stores the label's *absolute instruction index* rather than a
-relative offset. This only gives the correct result when the branch instruction
-happens to sit at PC 0. **For an external encoder or compiler, always compute and
-encode a proper PC-relative offset** — do not store absolute addresses.
-Numeric literals (e.g. `BRANCH -5`) always encode correctly as relative offsets.
+The assembler resolves label names to PC-relative offsets via `label_word - current_word`
+(confirmed from `assembler.js` line: `imm = this.labels[branchToken] - addr`).
+Numeric literals (e.g. `BRANCH -5`) are also encoded as-is. Both forms produce
+correct relative offsets.
 
 **MCMP** — No destination field. fld_a and fld_b both hold DR operand numbers.
 The comparison result is written only to the condition flags register. imm15 is
 always zero.
 
-**IADD / ISUB — no immediate mode.** The third operand is always a DR register
-number packed into `imm15[3:0]` (0–15). There is no literal constant mode —
-there is no bit anywhere in the word that switches between "register" and
-"immediate". The value `5` in that field means *DR5*, not the constant 5.
+**IADD / ISUB — two encoding forms for the third operand:**
 
-Loading small constants via IADD therefore depends on a register-as-constant
-convention, not on any hardware immediate mode:
-- **DR0 is hardwired to 0** — the simulator zeroes it after every instruction.
-  `IADD DRn, DR0, DRk` computes `DRn = 0 + DRk = DRk` (a register copy).
-- To load a small non-zero constant N (1–15): pre-load DRN = N somewhere in the
-  prologue, then reference DRN as the source. Or use SHL/ISUB combinations.
-- **Range limit**: only values 0–15 can be expressed this way (matching valid DR
-  indices). Constants outside this range require DREAD from a data capability or
-  a different code-generation strategy.
+The assembler distinguishes register vs. immediate via the third operand's syntax:
+
+```
+IADD DR0, DR1, DR2      ; register form  — third operand is a DR number
+IADD DR0, DR1, #42      ; immediate form — third operand is a signed literal
+```
+
+- **Register form**: `imm15 = DR_src2_index` (4 bits, 0–15 in imm15[3:0]; bits [14:4] = 0).
+- **Immediate form**: bit 14 of imm15 is set to 1 as a mode flag;
+  bits [13:0] hold the 14-bit signed immediate (`imm15 = 0x4000 | (value & 0x3FFF)`).
+
+Decoders must check `imm15 & 0x4000` to distinguish: 1 → immediate form, 0 → register form.
+
+**DR0 is hardwired to 0** — the simulator writes 0 to DR0 after every instruction.
+`IADD DRn, DR0, DRk` computes `DRn = 0 + DRk = DRk` (a register copy).
+`IADD DRn, DR0, #42` loads the literal 42 directly into DRn via immediate form.
 
 **BFEXT / BFINS** — imm packing: `imm = (pos << 5) | width`, occupying bits
 [9:0] of imm15. Bits [14:10] are unused (zero).
