@@ -2274,8 +2274,14 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
             const nsCheckIdx = sim.cr && sim.cr[crSrc] ? sim.parseGT(sim.cr[crSrc].word0).index : -1;
             if (nsCheckIdx === 12) {
                 const ledNow = (opcode === 11 && sim.ledBits !== undefined && sim.ledMode === 'program') ? (sim.ledBits >> imm) & 1 : null;
-                const nowStr = ledNow !== null ? ` · LED${imm} now ${ledNow ? 'ON' : 'OFF'}` : '';
-                valStr = ` (=${drV} → LED${imm} ${drV & 1 ? 'ON' : 'OFF'}${nowStr})`;
+                if (ledNow !== null) {
+                    const willBe = drV & 1 ? 'ON' : 'OFF';
+                    const was = ledNow ? 'ON' : 'OFF';
+                    const transition = (ledNow & 1) === (drV & 1) ? `stays ${willBe}` : `${was} \u2192 ${willBe}`;
+                    valStr = ` (LED${imm}: ${transition})`;
+                } else {
+                    valStr = ` (=${drV} \u2192 LED${imm} ${drV & 1 ? 'ON' : 'OFF'})`;
+                }
             } else if (nsCheckIdx === 11) {
                 const uartReg = imm === 0 ? 'TX' : imm === 1 ? 'STATUS' : 'RX';
                 valStr = ` (=${drV} → UART.${uartReg})`;
