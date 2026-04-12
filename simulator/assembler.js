@@ -262,6 +262,11 @@ class ChurchAssembler {
             }
             case 2: {
                 crDst = this._parseCR(parts[1], lineNum);
+                if (parts[2] && parts[3]) {
+                    opcode = 8;
+                    crSrc = this._parseCR(parts[2], lineNum);
+                    imm = this._parseImm(parts[3], lineNum);
+                }
                 break;
             }
             case 3: {
