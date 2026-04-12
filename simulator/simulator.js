@@ -2521,7 +2521,13 @@ class ChurchSimulator {
         const value = this.memory[loc + offset];
         this.dr[drIdx] = value >>> 0;
         const label = this.nsLabels[check.index] || 'data';
-        const desc = `DREAD DR${drIdx}, [CR${d.crSrc} + ${offset}] -> 0x${(value >>> 0).toString(16).toUpperCase().padStart(8,'0')} (${label})`;
+        const devNsIdx = check.index;
+        const readTag = devNsIdx === 12 ? ` [LED${offset} = ${value & 1 ? 'ON' : 'OFF'}]`
+                      : devNsIdx === 11 ? ` [UART.${offset===0?'TX':offset===1?'STATUS':'RX'} = ${value >>> 0}]`
+                      : devNsIdx === 13 ? ` [BTN = ${value >>> 0}]`
+                      : devNsIdx === 14 ? ` [TIMER.${['TICKS_LO','TICKS_HI','TOD_EPOCH','ALARM_CMP','ALARM_CTL'][offset]||'reg'} = ${value >>> 0}]`
+                      : '';
+        const desc = `DREAD DR${drIdx} ← ${value >>> 0} (0x${(value >>> 0).toString(16).toUpperCase()}) ← [CR${d.crSrc} + ${offset}] (${label})${readTag}`;
         this.output += desc + '\n';
         this.pc++;
         return { pc: this.pc - 1, instr: d, desc, pipeline: [
@@ -2564,12 +2570,12 @@ class ChurchSimulator {
         }
 
         const label = this.nsLabels[check.index] || 'data';
-        const devTag = devNsIdx === 12 ? ` [→ LED${offset} = ${value & 1 ? 'ON' : 'OFF'} (bit[0] drives pin)]`
-                     : devNsIdx === 11 ? ` [→ UART ${offset===0?'TX':offset===1?'STATUS':'RX'}]`
+        const devTag = devNsIdx === 12 ? ` [→ LED${offset} ← ${value} (${value & 1 ? 'ON' : 'OFF'})]`
+                     : devNsIdx === 11 ? ` [→ UART.${offset===0?'TX':'STATUS'} ← ${value}]`
                      : devNsIdx === 13 ? ' [→ BTN read-only]'
-                     : devNsIdx === 14 ? ` [→ TIMER ${['TICKS_LO','TICKS_HI','TOD_EPOCH','ALARM_CMP','ALARM_CTL'][offset]||'reg'}]`
+                     : devNsIdx === 14 ? ` [→ TIMER.${['TICKS_LO','TICKS_HI','TOD_EPOCH','ALARM_CMP','ALARM_CTL'][offset]||'reg'} ← ${value}]`
                      : '';
-        const desc = `DWRITE DR${drIdx}, [CR${d.crSrc} + ${offset}] <- 0x${value.toString(16).toUpperCase().padStart(8,'0')} (${label})${devTag}`;
+        const desc = `DWRITE DR${drIdx}, [CR${d.crSrc} + ${offset}] ← ${value} (0x${value.toString(16).toUpperCase()}) → ${label}${devTag}`;
         this.output += desc + '\n';
         this.pc++;
         return { pc: this.pc - 1, instr: d, desc, pipeline: [
