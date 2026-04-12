@@ -7388,7 +7388,13 @@ async function triggerLazyLoad(absentResult) {
         return;
     }
     if (retryResult.desc && retryResult.desc.startsWith('HALT')) {
-        log(`✓ PASS — HALT after retry (1 step).`);
+        const cr3ok = sim.cr[3] && sim.cr[3].word0 !== 0;
+        if (!cr3ok) {
+            log(`⊿ FAIL — HALT reached but CR3.word0 is null (LOAD did not populate CR3)`);
+        } else {
+            log(`✓ CR3.word0=0x${sim.cr[3].word0.toString(16).padStart(8,'0')} — capability installed`);
+            log(`✓ PASS — HALT after retry (1 step).`);
+        }
         updateDashboard(); switchView('dashboard'); openCRDetail(14);
         return;
     }
@@ -7412,7 +7418,13 @@ async function triggerLazyLoad(absentResult) {
     // ── 5. Report final outcome ──────────────────────────────────────────────
     const newFaults = sim.faultLog ? sim.faultLog.length - faultsMid : 0;
     if (sim.halted && newFaults === 0) {
-        log(`✓ PASS — reached HALT after ${stepCount + 1} step(s) post-retry.`);
+        const cr3ok = sim.cr[3] && sim.cr[3].word0 !== 0;
+        if (!cr3ok) {
+            log(`⊿ FAIL — HALT reached but CR3.word0 is null (capability not installed)`);
+        } else {
+            log(`✓ CR3.word0=0x${sim.cr[3].word0.toString(16).padStart(8,'0')} — capability installed`);
+            log(`✓ PASS — reached HALT after ${stepCount + 1} step(s) post-retry.`);
+        }
     } else if (newFaults > 0) {
         const f = sim.faultLog[sim.faultLog.length - 1];
         log(`⊿ FAIL — fault after retry: ${f ? f.type + ' @ PC=' + f.pc : 'unknown'}`);

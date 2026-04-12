@@ -1206,6 +1206,23 @@ class ChurchSimulator {
     }
 
 
+    // ── Absent-lump intercept (shared by LOAD, ELOADCALL, XLOADLAMBDA) ────────
+    // Called after readNSEntry() and bounds checks, before validateMAC().
+    // If the NS entry is Outform (gtType=2) the lump is not yet resident:
+    //   - suspends execution via this.awaitingLump
+    //   - returns {absent:true, nsIndex, token, label} so the instruction
+    //     handler can propagate the sentinel back through step()
+    // Returns null if the entry is not Outform (normal execution continues).
+    _absentLumpIntercept(entry, targetIdx, d, instrName) {
+        if (!entry || entry.gtType !== 2) return null;
+        const token = (entry.word0_location >>> 0).toString(16).padStart(8, '0');
+        const label = this.nsLabels[targetIdx] || 'entry_' + targetIdx;
+        this.awaitingLump = { nsIndex: targetIdx, retryPC: this.pc, d, token };
+        this.output += `\u27F3 ${instrName}: Slot ${targetIdx} (${label}) is Outform — suspending, token=0x${token}\n`;
+        return { absent: true, nsIndex: targetIdx, token, label };
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     _writeCR(crIdx, gt32, entry) {
         this.cr[crIdx].word0 = gt32;
         this.cr[crIdx].word1 = entry.word0_location >>> 0;
@@ -1588,18 +1605,8 @@ class ChurchSimulator {
         }
 
         // ── Absent-lump intercept ─────────────────────────────────────────────
-        // If the NS entry is Outform (gtType=2) the lump is not yet resident.
-        // Suspend execution and fire a fetch from GET /api/lump/<token_hex>.
-        // The fetch is driven asynchronously from app.js triggerLazyLoad().
-        // Once the lump is installed and NS entry promoted to Inform (gtType=0),
-        // app.js calls sim.receiveLump() then re-steps from the saved retry PC.
-        if (entry.gtType === 2) {
-            const token = (entry.word0_location >>> 0).toString(16).padStart(8, '0');
-            const label = this.nsLabels[targetIdx] || 'entry_' + targetIdx;
-            this.awaitingLump = { nsIndex: targetIdx, retryPC: this.pc, d, token };
-            this.output += `\u27F3 Fetching lump: Slot ${targetIdx} (${label}) token=0x${token}\n`;
-            return { absent: true, nsIndex: targetIdx, token, label };
-        }
+        const absentLoad = this._absentLumpIntercept(entry, targetIdx, d, 'LOAD');
+        if (absentLoad) return absentLoad;
         // ─────────────────────────────────────────────────────────────────────
 
         if (!this.validateMAC(entry)) {
@@ -2397,6 +2404,10 @@ class ChurchSimulator {
             this.fault('BOUNDS', `ELOADCALL: entry ${targetIdx} is null`);
             return null;
         }
+        // ── Absent-lump intercept ─────────────────────────────────────────────
+        const absentEC = this._absentLumpIntercept(entry, targetIdx, d, 'ELOADCALL');
+        if (absentEC) return absentEC;
+        // ─────────────────────────────────────────────────────────────────────
         if (!this.validateMAC(entry)) {
             this.fault('SEAL', `ELOADCALL: entry ${targetIdx} seal failed`);
             return null;
@@ -2514,6 +2525,10 @@ class ChurchSimulator {
             this.fault('BOUNDS', `XLOADLAMBDA: slot ${targetIdx} is null`);
             return null;
         }
+        // ── Absent-lump intercept ─────────────────────────────────────────────
+        const absentXL = this._absentLumpIntercept(entry, targetIdx, d, 'XLOADLAMBDA');
+        if (absentXL) return absentXL;
+        // ─────────────────────────────────────────────────────────────────────
         if (!this.validateMAC(entry)) {
             this.fault('SEAL', `XLOADLAMBDA: slot ${targetIdx} seal failed`);
             return null;
