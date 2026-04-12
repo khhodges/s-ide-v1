@@ -469,6 +469,106 @@ The lock never opens for anything without a key.
 
 ---
 
+## Abstraction, MTBF, and Reuse
+
+### What an abstraction is
+
+Every piece of software you write for the Church Machine is an
+**abstraction** — a named, capability-secured unit of logic with its
+own namespace slot, its own capability list, and one or more callable
+methods. An abstraction is not a library, a module, or a package. It is
+a logical entity that lives in the namespace, cannot be forged, and can
+only be reached through a capability you have been explicitly granted.
+
+This changes what software means. When you call `SlideRule.Sin`, you are
+not jumping to an address — you are presenting a capability to the
+hardware. The hardware checks it. If the check fails, it faults. If it
+passes, execution enters the abstraction under the permissions it was
+granted, and no others. When the method returns, your capability
+registers are exactly as they were before the call. The callee cannot
+modify your state. The hardware guarantees this on every cycle, at full
+speed.
+
+### MTBF = ∞
+
+Mean Time Between Failures on the Church Machine is not a statistic
+about hardware reliability. It is a property of your software design.
+
+A Church Machine abstraction has MTBF = ∞ when it never triggers a
+capability fault and never halts abnormally under normal operation. This
+is achievable — not just as an aspiration, but as a demonstrable,
+measurable fact. The simulator tracks cycles between faults. When that
+counter reaches millions of cycles without a single fault, you have
+evidence. When you can show by inspection that your abstraction touches
+only what it was explicitly granted, you have a proof.
+
+MTBF = ∞ is the target the IDE is designed to help you reach:
+
+- The **Fault** button shows you every capability violation — the
+  moment it happens, with full context.
+- The **CRs** panel shows every active capability at every step.
+- The **CLOOMC** compiler checks your grants at compile time before
+  the abstraction ever runs.
+
+When your abstraction runs clean in the simulator — zero faults across
+millions of cycles — it will run clean on silicon. Not because you were
+careful, but because the machine cannot permit it to misbehave. The
+transition from simulator to hardware is not a leap of faith. It is a
+proof carried in silicon.
+
+### Reuse as the engine of progress
+
+Every abstraction you verify is a foundation for the next one.
+
+When you build on `SlideRule`, you do not re-verify trigonometry — you
+inherit the hardware's enforcement of SlideRule's capability contract.
+When you call `Navana.Add`, you do not re-verify namespace writes. You
+present a capability, the hardware checks it, and you proceed on solid
+ground.
+
+This is compounding progress. In conventional computing, each new layer
+of software inherits every unfixed bug in every layer below it — thirty
+years of CVEs are the evidence. On the Church Machine, each new layer
+inherits only the **capability grants** from layers below. The
+composition of fail-safe components is still fail-safe. Not by policy,
+not by code review — by hardware enforcement on every instruction.
+
+The practical consequence: as the Mum Tunnel Library grows, the cost of
+writing a new abstraction falls. The first person who writes a verified
+sensor driver does the hard work. Everyone who builds on it afterwards
+gets the security for free. Verified bricks become verified walls.
+Verified walls become verified buildings.
+
+**Write once, verify once, reuse forever.** That is how you accelerate
+progress in the Information Age. That is what fail-safe computer science
+looks like when it compounds.
+
+### How to aim for MTBF = ∞ in practice
+
+1. **Request minimum permissions.** Your abstraction should ask for
+   exactly the capabilities it needs and no more. Minimum grants shrink
+   the attack surface and make faults easier to interpret.
+
+2. **Let the hardware tell you when you are wrong.** A capability fault
+   is not a crash — it is a precise, logged diagnostic. Read it, fix
+   the grant, run again. The machine is your test suite.
+
+3. **Run millions of cycles before you ship.** The simulator is free and
+   fast. Cycle counts cost nothing in the IDE. Drive your fault counter
+   to zero across every input class your abstraction will see.
+
+4. **Build on verified components.** Every abstraction in the Mum Tunnel
+   Library was verified by its author. When you call it, you are not
+   betting on their code — you are relying on the hardware's enforcement
+   of the capability contract they published.
+
+5. **The goal is a quiet Fault light.** The led2 on your board (Fault)
+   should never light up in normal operation. If it does, you have a
+   capability problem — and the simulator will show you exactly what it
+   is before you ever touch the board.
+
+---
+
 ## Writing and Patching Code
 
 This is your everyday workflow. Because the IDE constraints and the
