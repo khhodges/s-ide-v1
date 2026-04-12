@@ -194,7 +194,7 @@ The `perm_check.py` module provides combinational validation logic alongside mLo
 
 ### Total TSB Size
 
-The entire Church Machine trusted security base is approximately **329 lines** of synthesizable Amaranth HDL (at time of writing):
+The entire Church Machine trusted security base is approximately **300 lines** of synthesizable Amaranth HDL (at time of writing):
 - mLoad: 218 lines
 - perm_check: 111 lines
 
