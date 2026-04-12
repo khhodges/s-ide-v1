@@ -2055,6 +2055,20 @@ function _resolveClistPetName(clistBase, imm, nsIdx) {
     return null;
 }
 
+const _deviceRegNames = {
+    'LED':    ['LED0','LED1','LED2','LED3','LED4','LED5'],
+    'UART':   ['TxData','RxData','Status','BaudDiv'],
+    'Button': ['State','Edge','Mask'],
+    'Timer':  ['Count','Reload','Control','Status'],
+    'Display':['Cmd','Data','Status','CursorX','CursorY']
+};
+
+function _regName(pet, offset) {
+    if (!pet) return null;
+    const regs = _deviceRegNames[pet];
+    return (regs && offset >= 0 && offset < regs.length) ? regs[offset] : null;
+}
+
 function _crTag(crNum, crPets) {
     const pet = crPets && crPets[crNum];
     return pet ? `${pet.toLowerCase()}(CR${crNum})` : `CR${crNum}`;
@@ -2159,7 +2173,10 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
     if (opcode === 10 || opcode === 11) {
         const sTag = _crTag(crSrc, crPets);
         const verb = opcode === 10 ? 'read' : 'write';
-        return { desc: _escDecomp(`${verb}${cc} ${sTag}[${imm}]${ccDesc}`), compiler: false };
+        const pet = crPets && crPets[crSrc];
+        const rn = _regName(pet, imm);
+        const offStr = rn ? `.${rn}` : `[${imm}]`;
+        return { desc: _escDecomp(`${verb}${cc} ${sTag}${offStr}${ccDesc}`), compiler: false };
     }
 
     if (opcode === 12) {
