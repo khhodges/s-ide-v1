@@ -54,6 +54,7 @@ def register_models(db):
         build_verified = Column(Integer, default=0)
         boot_reason = Column(Integer, default=0)
         last_fault = Column(Integer, default=0)
+        fault_nia = Column(Integer, default=0)
         label = Column(String(255), default="")
 
     return Project, TutorialProgress, Device

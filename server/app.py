@@ -1259,6 +1259,10 @@ def device_register():
         last_fault = max(0, min(255, int(data.get("last_fault", 0))))
     except (ValueError, TypeError):
         last_fault = 0
+    try:
+        fault_nia = max(0, min(0xFFFFFFFF, int(data.get("fault_nia", 0))))
+    except (ValueError, TypeError):
+        fault_nia = 0
     bridge_host = data.get("bridge_host", "")
     bridge_port = int(data.get("bridge_port", 0))
     bridge_scheme = data.get("bridge_scheme", "http")
@@ -1277,6 +1281,7 @@ def device_register():
         dev.build_verified = 1 if build_verified else 0
         dev.boot_reason = boot_reason
         dev.last_fault = last_fault
+        dev.fault_nia = fault_nia
         dev.bridge_host = bridge_host
         dev.bridge_port = bridge_port
         dev.bridge_scheme = bridge_scheme
@@ -1296,6 +1301,7 @@ def device_register():
             build_verified=1 if build_verified else 0,
             boot_reason=boot_reason,
             last_fault=last_fault,
+            fault_nia=fault_nia,
             bridge_host=bridge_host,
             bridge_port=bridge_port,
             bridge_scheme=bridge_scheme,
@@ -1357,6 +1363,7 @@ def device_list():
             "official": bool(getattr(d, 'build_verified', 0)),
             "boot_reason": getattr(d, 'boot_reason', 0) or 0,
             "last_fault": getattr(d, 'last_fault', 0) or 0,
+            "fault_nia": getattr(d, 'fault_nia', 0) or 0,
             "label": d.label or "",
         })
     db.session.commit()
@@ -1475,6 +1482,10 @@ with app.app_context():
         db.session.execute(_sa_text("ALTER TABLE devices ADD COLUMN last_fault INTEGER DEFAULT 0"))
         db.session.commit()
         logging.info("Migrated: added last_fault column to devices table")
+    if "fault_nia" not in _existing_cols:
+        db.session.execute(_sa_text("ALTER TABLE devices ADD COLUMN fault_nia INTEGER DEFAULT 0"))
+        db.session.commit()
+        logging.info("Migrated: added fault_nia column to devices table")
 
     logging.info("Database tables created")
 

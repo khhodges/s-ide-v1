@@ -482,6 +482,8 @@ class ChurchTi60F225(Elaboratable):
 
         boot_reason = Signal(8, init=0x00)
         last_fault_code = Signal(8, init=0x00)
+        fault_nia = Signal(32, init=0x00000000)
+        fault_nia_idx = Signal(range(4))
 
         step_nia = Signal(32)
         step_fault = Signal(4)
@@ -544,7 +546,25 @@ class ChurchTi60F225(Elaboratable):
                         fsm_byte_data.eq(last_fault_code),
                         fsm_send_byte.eq(1),
                     ]
-                    m.next = "ENTER_FREE_RUN"
+                    m.d.sync += fault_nia_idx.eq(0)
+                    m.next = "CALL_HOME_FNIA"
+
+            with m.State("CALL_HOME_FNIA"):
+                with m.If(~debug.busy):
+                    with m.Switch(fault_nia_idx):
+                        with m.Case(0):
+                            m.d.comb += fsm_byte_data.eq(fault_nia[24:32])
+                        with m.Case(1):
+                            m.d.comb += fsm_byte_data.eq(fault_nia[16:24])
+                        with m.Case(2):
+                            m.d.comb += fsm_byte_data.eq(fault_nia[8:16])
+                        with m.Default():
+                            m.d.comb += fsm_byte_data.eq(fault_nia[0:8])
+                    m.d.comb += fsm_send_byte.eq(1)
+                    with m.If(fault_nia_idx == 3):
+                        m.next = "ENTER_FREE_RUN"
+                    with m.Else():
+                        m.d.sync += fault_nia_idx.eq(fault_nia_idx + 1)
 
             with m.State("DUMP_NIA"):
                 with m.If(~debug.busy):
@@ -605,6 +625,7 @@ class ChurchTi60F225(Elaboratable):
                     m.d.sync += [
                         last_fault_code.eq(core.fault),
                         boot_reason.eq(0x02),
+                        fault_nia.eq(core.nia),
                     ]
                     m.next = "FAULT_HALT"
                 with m.Elif(core.halt_valid):
@@ -642,6 +663,7 @@ class ChurchTi60F225(Elaboratable):
                         m.d.sync += [
                             last_fault_code.eq(core.fault),
                             boot_reason.eq(0x02),
+                            fault_nia.eq(core.nia),
                         ]
                     m.next = "STEP_LABEL"
 
