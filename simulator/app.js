@@ -6173,6 +6173,7 @@ function _bootNIARows(bootStep) {
 }
 
 function stepSim() {
+    const _savedView = currentView;
     if (!sim.bootComplete) {
         sim.auditLog = [];
         try {
@@ -6202,6 +6203,7 @@ function stepSim() {
             _autoLoadDefaultProgram();
         }
         updateDashboard();
+        if (currentView !== _savedView) switchView(_savedView);
         return;
     }
     let result;
@@ -6210,6 +6212,7 @@ function stepSim() {
     } catch(e) {
         console.error('stepSim step error:', e);
         updateDashboard();
+        if (currentView !== _savedView) switchView(_savedView);
         return;
     }
     if (result) {
@@ -6228,6 +6231,7 @@ function stepSim() {
         }
     }
     updateDashboard();
+    if (currentView !== _savedView) switchView(_savedView);
 }
 
 let walkRunning = false;
@@ -6537,12 +6541,14 @@ function slowBoot() {
 }
 
 function runSim() {
+    const _savedView = currentView;
     while (!sim.bootComplete && !sim.halted) {
         try {
             sim._bootStep();
         } catch(e) {
             console.error('runSim _bootStep error:', e);
             updateDashboard();
+            if (currentView !== _savedView) switchView(_savedView);
             return;
         }
     }
@@ -6630,6 +6636,7 @@ function runSim() {
         // Guard: updateDashboard can crash (e.g. null NS entry after stack overflow fault);
         // catch here so the Run button is always re-enabled regardless.
         try { updateDashboard(); } catch(e) { console.error('finishRun updateDashboard:', e); }
+        if (currentView !== _savedView) switchView(_savedView);
     }
 
     // Kick off the first batch
