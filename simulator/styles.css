@@ -518,9 +518,11 @@ header h1 {
 .code-decompiled { font-size: 0.82rem; padding-left: 0.6rem !important; border-left: 2px solid rgba(255,255,255,0.06); }
 .code-decompiled-compiler { color: #e0a040; font-style: italic; }
 .code-decompiled-user { color: #7ec8e3; }
-.code-decompiled-infra { color: #888; font-style: italic; }
+.code-decompiled-infra { color: #e8b84a; font-style: italic; }
 .code-row-compiler { background: rgba(224, 160, 64, 0.07); }
-.code-row-infra { opacity: 0.55; font-style: italic; }
+.code-row-infra { background: rgba(232, 184, 74, 0.08); font-style: italic; }
+.code-row-infra td { color: #e8b84a !important; }
+.code-row-infra td.cr-gt { color: #c9963a !important; }
 
 .reg-row {
     display: flex;

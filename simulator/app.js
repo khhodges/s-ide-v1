@@ -2498,9 +2498,9 @@ function updateCRDetail() {
             const _arrowTd = _brArrows.hasBranches ? '<td class="br-arrow-col"></td>' : '';
             for (const bp of _bootPreamble) {
                 codeHtml += `<tr class="code-row-infra">`;
-                codeHtml += `<td class="cr-idx" style="color:#888;">${bp.addr}</td>`;
-                codeHtml += `<td class="cr-gt" style="color:#555;">\u2014</td>`;
-                codeHtml += `<td class="code-disasm" style="color:#888;">${bp.desc}</td>`;
+                codeHtml += `<td class="cr-idx">${bp.addr}</td>`;
+                codeHtml += `<td class="cr-gt">\u2014</td>`;
+                codeHtml += `<td class="code-disasm">${bp.desc}</td>`;
                 codeHtml += _arrowTd;
                 codeHtml += `<td class="code-decompiled code-decompiled-infra">${bp.decomp}</td>`;
                 codeHtml += '</tr>';
@@ -2515,7 +2515,7 @@ function updateCRDetail() {
             codeHtml += `<tr class="code-row-infra">`;
             codeHtml += `<td class="cr-idx">0x${baseLoc.toString(16).toUpperCase().padStart(4,'0')}</td>`;
             codeHtml += `<td class="cr-gt">0x${word0.toString(16).toUpperCase().padStart(8,'0')}</td>`;
-            codeHtml += `<td class="code-disasm" style="color:var(--text-secondary);">${hdrDisasm}</td>`;
+            codeHtml += `<td class="code-disasm">${hdrDisasm}</td>`;
             if (_brArrows.hasBranches) codeHtml += '<td class="br-arrow-col"></td>';
             codeHtml += `<td class="code-decompiled code-decompiled-infra">header</td>`;
             codeHtml += '</tr>';
