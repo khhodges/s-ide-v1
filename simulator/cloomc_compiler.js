@@ -2865,7 +2865,7 @@ class CLOOMCCompiler {
         };
 
         const freeTempReg = (name) => {
-            if (name.startsWith('__tmp') && locals[name] !== undefined) {
+            if (name && name.startsWith('__') && locals[name] !== undefined) {
                 delete locals[name];
             }
         };
@@ -2920,12 +2920,26 @@ class CLOOMCCompiler {
             emitAbsCall(func.nsSlot, func.abs, func.methodIndex, lineNum);
         };
 
+        let __tmpCounter = 0;
+        const saveResult = (lineNum) => {
+            const tmpName = '__res_' + (__tmpCounter++);
+            const dr = allocPetReg(tmpName, lineNum);
+            if (dr !== 1) {
+                code.push(this.encode(this.opcodes.IADD, 14, dr, 1, 0));
+            }
+            return dr;
+        };
+
+        const findTempKey = (dr) => {
+            return Object.keys(locals).find(k => locals[k] === dr && k.startsWith('__')) || '';
+        };
+
         const compileExpr = (expr, lineNum) => {
             expr = expr.trim();
 
             const numMatch = expr.match(/^-?(0x[0-9a-fA-F]+|\d+)$/);
             if (numMatch) {
-                const tmpName = '__val_' + code.length;
+                const tmpName = '__val_' + (__tmpCounter++);
                 const dr = allocPetReg(tmpName, lineNum);
                 emitLoadImm(dr, parseInt(expr), lineNum);
                 return dr;
@@ -2956,8 +2970,8 @@ class CLOOMCCompiler {
                     argDRs.push(compileExpr(rawArgs[ai], lineNum));
                 }
                 emitFuncCall(func, argDRs, lineNum);
-                for (const a of argDRs) freeTempReg(Object.keys(locals).find(k => locals[k] === a && k.startsWith('__')) || '');
-                return 1;
+                for (const a of argDRs) freeTempReg(findTempKey(a));
+                return saveResult(lineNum);
             }
 
             const addSubPos = this._findTopLevelOp(expr, ['+', '-']);
@@ -2970,9 +2984,9 @@ class CLOOMCCompiler {
                 const opEntry = OP_TABLE[op];
                 manifest.push({ src: lineNum, addr: code.length, desc: `${left.trim()} ${op} ${right.trim()} via ${opEntry.abs}.${opEntry.method}` });
                 emitOpCall(opEntry, leftDR, rightDR, lineNum);
-                freeTempReg(Object.keys(locals).find(k => locals[k] === leftDR && k.startsWith('__')) || '');
-                freeTempReg(Object.keys(locals).find(k => locals[k] === rightDR && k.startsWith('__')) || '');
-                return 1;
+                freeTempReg(findTempKey(leftDR));
+                freeTempReg(findTempKey(rightDR));
+                return saveResult(lineNum);
             }
 
             const mulDivPos = this._findTopLevelOp(expr, ['*', '/', '%']);
@@ -2985,9 +2999,9 @@ class CLOOMCCompiler {
                 const opEntry = OP_TABLE[op];
                 manifest.push({ src: lineNum, addr: code.length, desc: `${left.trim()} ${op} ${right.trim()} via ${opEntry.abs}.${opEntry.method}` });
                 emitOpCall(opEntry, leftDR, rightDR, lineNum);
-                freeTempReg(Object.keys(locals).find(k => locals[k] === leftDR && k.startsWith('__')) || '');
-                freeTempReg(Object.keys(locals).find(k => locals[k] === rightDR && k.startsWith('__')) || '');
-                return 1;
+                freeTempReg(findTempKey(leftDR));
+                freeTempReg(findTempKey(rightDR));
+                return saveResult(lineNum);
             }
 
             if (expr.startsWith('(') && expr.endsWith(')')) {
