@@ -270,6 +270,18 @@ class ChurchSimulator {
         return true;
     }
 
+    _dispatchLoaderLoad(targetSlot) {
+        if (this.abstractionRegistry) {
+            const loaderAbs = this.abstractionRegistry.getAbstraction(this._loaderSlot);
+            if (loaderAbs && loaderAbs.dispatch && loaderAbs.dispatch['LOAD']) {
+                this.output += `[LOADER] Dispatching Loader.Load(${targetSlot}) via NS[${this._loaderSlot}]\n`;
+                const result = loaderAbs.dispatch['LOAD'](this, { dr0: targetSlot });
+                return result && result.ok;
+            }
+        }
+        return this.lazyLoad(targetSlot);
+    }
+
     on(event, fn) {
         if (!this._listeners[event]) this._listeners[event] = [];
         this._listeners[event].push(fn);
@@ -321,6 +333,7 @@ class ChurchSimulator {
 
         this.lazyManifest = {};
         this._lastLoadTargetSlot = null;
+        this._loaderSlot = 19;
 
         this._initNamespaceTable();
         this.output += '--- HARD RESET: all registers zeroed ---\n';
@@ -1770,8 +1783,8 @@ class ChurchSimulator {
         this._lastLoadTargetSlot = targetIdx;
         if (targetIdx >= this.nsCount || !this.isNSEntryValid(targetIdx)) {
             if (this.lazyManifest[targetIdx] && !this.lazyManifest[targetIdx].loaded) {
-                this.output += `[LOADER] LOAD: NS[${targetIdx}] is NULL — manifest entry found, triggering lazy load...\n`;
-                const loaded = this.lazyLoad(targetIdx);
+                this.output += `[LOADER] LOAD: NS[${targetIdx}] is NULL — manifest entry found, dispatching to Loader...\n`;
+                const loaded = this._dispatchLoaderLoad(targetIdx);
                 if (loaded) {
                     const freshEntry = this.readNSEntry(targetIdx);
                     if (!this._writeCR(d.crDst, slotGT, freshEntry)) return null;
@@ -1890,15 +1903,15 @@ class ChurchSimulator {
         const callTargetIdx = srcParsed.index;
         if (this.lazyManifest[callTargetIdx] && !this.lazyManifest[callTargetIdx].loaded) {
             if (!this.isNSEntryValid(callTargetIdx)) {
-                this.output += `[LOADER] CALL: NS[${callTargetIdx}] is NULL — manifest entry found, triggering lazy load...\n`;
-                const loaded = this.lazyLoad(callTargetIdx);
+                this.output += `[LOADER] CALL: NS[${callTargetIdx}] is NULL — manifest entry found, dispatching to Loader...\n`;
+                const loaded = this._dispatchLoaderLoad(callTargetIdx);
                 if (!loaded) {
                     this.fault('NULL_CAP', `CALL: CR${d.crDst} lazy load failed for slot ${callTargetIdx}`);
                     return null;
                 }
                 const freshEntry = this.readNSEntry(callTargetIdx);
                 this._writeCR(d.crDst, sourceGT, freshEntry);
-                this.output += `[LOADER] CALL: slot ${callTargetIdx} loaded, retrying CALL CR${d.crDst}\n`;
+                this.output += `[LOADER] CALL: slot ${callTargetIdx} loaded, proceeding with CALL CR${d.crDst}\n`;
             }
         }
         const check = this.mLoad(sourceGT, 'E', d.crDst);

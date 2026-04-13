@@ -7125,6 +7125,7 @@ function faultClear() {
     faultAlertOff();
     _defaultProgramLoaded = false;
     sim.reset();
+    _initLazyLoadManifest();
     pipelineViz.reset();
     const con = document.getElementById('editorConsole');
     if (con) con.textContent = 'FAULT: Machine cleared.';
@@ -7349,6 +7350,7 @@ function faultModalReboot() {
     if (pipelineViz) pipelineViz.setNIA(null);
     _defaultProgramLoaded = false;
     sim.reset();
+    _initLazyLoadManifest();
     pipelineViz.reset();
     bootAnimating = false;
     const con = document.getElementById('editorConsole');
@@ -7570,6 +7572,7 @@ function resetSim() {
     if (pipelineViz) pipelineViz.setNIA(null);
     _defaultProgramLoaded = false;
     sim.reset();
+    _initLazyLoadManifest();
     pipelineViz.reset();
     bootAnimating = false;
     const con = document.getElementById('editorConsole');
