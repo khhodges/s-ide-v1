@@ -3108,7 +3108,7 @@ class CLOOMCCompiler {
             errors,
             manifest: [{ name: 'run', mapping: manifest }],
             abstractionName: 'PetNameExpression',
-            capabilities: capsArray.map(c => ({ target: c.nsSlot, name: c.name, grants: ['E'] })),
+            capabilities: capsArray.map(c => c.name),
             _neededCaps: capsArray,
             _totalClistSlots: nextClistOffset,
             language: 'petname'
