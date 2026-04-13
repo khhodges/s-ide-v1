@@ -2897,14 +2897,20 @@ class CLOOMCCompiler {
                 code.push(this.encode(this.opcodes.IADD, 14, dr, 0, val | 0x4000));
             } else {
                 const low = val & 0x3FFF;
-                const hi = val >>> 14;
+                const mid = (val >>> 14) & 0x3FFF;
+                const high = (val >>> 28) & 0xF;
                 code.push(this.encode(this.opcodes.IADD, 14, dr, 0, low | 0x4000));
-                if (hi > 0) {
+                if (mid > 0 || high > 0) {
                     const tmpName = '__shl_' + code.length;
                     const t2 = allocPetReg(tmpName, lineNum);
-                    code.push(this.encode(this.opcodes.IADD, 14, t2, 0, (hi & 0x3FFF) | 0x4000));
+                    code.push(this.encode(this.opcodes.IADD, 14, t2, 0, mid | 0x4000));
                     code.push(this.encode(this.opcodes.SHL, 14, t2, t2, 14));
                     code.push(this.encode(this.opcodes.IADD, 14, dr, dr, t2));
+                    if (high > 0) {
+                        code.push(this.encode(this.opcodes.IADD, 14, t2, 0, high | 0x4000));
+                        code.push(this.encode(this.opcodes.SHL, 14, t2, t2, 28));
+                        code.push(this.encode(this.opcodes.IADD, 14, dr, dr, t2));
+                    }
                     freeTempReg(tmpName);
                 }
             }
@@ -3114,6 +3120,8 @@ class CLOOMCCompiler {
                     }
                     manifest.push({ src: i, addr: code.length, desc: `${bareFunc[1]}(${bareFunc[2]})` });
                     emitFuncCall(func, argDRs, i);
+                    const tmpKeys = Object.keys(locals).filter(k => k.startsWith('__'));
+                    for (const k of tmpKeys) delete locals[k];
                     continue;
                 }
             }
