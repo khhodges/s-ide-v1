@@ -2835,8 +2835,18 @@ class CLOOMCCompiler {
         let nextClistOffset = 16;
         let allocFailed = false;
 
+        const threadCCLimit = (() => {
+            if (typeof BOOT_UPLOADS === 'undefined') return 64;
+            const threadUpload = BOOT_UPLOADS.find(u => u.abstraction === 'Thread');
+            if (threadUpload && threadUpload.capabilities) return Math.max(threadUpload.capabilities.length + 16, 64);
+            return 64;
+        })();
+
         const requireCap = (nsSlot, name) => {
             if (!neededCaps[nsSlot]) {
+                if (nextClistOffset >= threadCCLimit) {
+                    errors.push({ line: 0, message: `Too many capabilities needed — thread c-list limit is ${threadCCLimit} entries (offset ${nextClistOffset} exceeds capacity)` });
+                }
                 neededCaps[nsSlot] = { offset: nextClistOffset++, nsSlot, name };
             }
             return neededCaps[nsSlot].offset;
@@ -2849,9 +2859,19 @@ class CLOOMCCompiler {
 
         const asmMnemonics = /^\s*(LOAD|SAVE|CALL|RETURN|CHANGE|SWITCH|TPERM|LAMBDA|ELOADCALL|XLOADLAMBDA|DREAD|DWRITE|BFEXT|BFINS|MCMP|IADD|ISUB|BRANCH|SHL|SHR|HALT|NOP)\b/i;
 
+        const PETNAME_DR_START = 1;
+        const PETNAME_DR_END = 11;
+        const PETNAME_SAFE_START = 4;
+
         const allocPetReg = (name, lineNum) => {
             if (locals[name] !== undefined) return locals[name];
-            for (let r = this.DR_LOCALS_START; r <= this.DR_LOCALS_END; r++) {
+            for (let r = PETNAME_SAFE_START; r <= PETNAME_DR_END; r++) {
+                if (!Object.values(locals).includes(r)) {
+                    locals[name] = r;
+                    return r;
+                }
+            }
+            for (let r = PETNAME_DR_START; r < PETNAME_SAFE_START; r++) {
                 if (!Object.values(locals).includes(r)) {
                     locals[name] = r;
                     return r;
@@ -2859,9 +2879,9 @@ class CLOOMCCompiler {
             }
             if (!allocFailed) {
                 allocFailed = true;
-                errors.push({ line: lineNum !== undefined ? lineNum : 0, message: `Too many variables — only ${this.DR_LOCALS_END - this.DR_LOCALS_START + 1} pet-name registers available (DR${this.DR_LOCALS_START}–DR${this.DR_LOCALS_END})` });
+                errors.push({ line: lineNum !== undefined ? lineNum : 0, message: `Too many variables — only ${PETNAME_DR_END - PETNAME_DR_START + 1} pet-name registers available (DR${PETNAME_DR_START}–DR${PETNAME_DR_END})` });
             }
-            return this.DR_LOCALS_START;
+            return PETNAME_SAFE_START;
         };
 
         const freeTempReg = (name) => {
@@ -2895,6 +2915,21 @@ class CLOOMCCompiler {
             }
         };
 
+        const protectCallRegs = (lineNum) => {
+            for (const [name, dr] of Object.entries(locals)) {
+                if (dr >= 1 && dr <= 3 && !name.startsWith('__')) {
+                    let newDR = -1;
+                    for (let r = PETNAME_SAFE_START; r <= PETNAME_DR_END; r++) {
+                        if (!Object.values(locals).includes(r)) { newDR = r; break; }
+                    }
+                    if (newDR >= 0) {
+                        code.push(this.encode(this.opcodes.IADD, 14, newDR, dr, 0));
+                        locals[name] = newDR;
+                    }
+                }
+            }
+        };
+
         const emitAbsCall = (nsSlot, absName, methodIndex, lineNum) => {
             const clistOffset = requireCap(nsSlot, absName);
             code.push(this.encode(this.opcodes.IADD, 14, 3, 0, methodIndex | 0x4000));
@@ -2905,12 +2940,14 @@ class CLOOMCCompiler {
         };
 
         const emitOpCall = (opEntry, leftDR, rightDR, lineNum) => {
+            protectCallRegs(lineNum);
             if (leftDR !== 1) code.push(this.encode(this.opcodes.IADD, 14, 1, leftDR, 0));
             if (rightDR !== 2) code.push(this.encode(this.opcodes.IADD, 14, 2, rightDR, 0));
             emitAbsCall(opEntry.nsSlot, opEntry.abs, opEntry.methodIndex, lineNum);
         };
 
         const emitFuncCall = (func, argDRs, lineNum) => {
+            protectCallRegs(lineNum);
             if (argDRs[0] !== undefined && argDRs[0] !== 1) {
                 code.push(this.encode(this.opcodes.IADD, 14, 1, argDRs[0], 0));
             }
@@ -3051,7 +3088,7 @@ class CLOOMCCompiler {
             const t = raw.trim();
             if (!t || t.startsWith(';') || t.startsWith('//') || t.startsWith('--')) continue;
 
-            if (asmMnemonics.test(t) || (asmBlock.length > 0 && /^\s*\w+:/.test(t))) {
+            if (asmMnemonics.test(t) || /^\s*\w+:\s*(LOAD|SAVE|CALL|RETURN|CHANGE|SWITCH|TPERM|LAMBDA|ELOADCALL|XLOADLAMBDA|DREAD|DWRITE|BFEXT|BFINS|MCMP|IADD|ISUB|BRANCH|SHL|SHR|HALT|NOP)?\b/i.test(t)) {
                 asmBlock.push(substitutePetNames(t));
                 asmBlockSrcLines.push(i);
                 continue;
@@ -3065,8 +3102,12 @@ class CLOOMCCompiler {
                 const func = FUNC_TABLE[funcName];
                 if (func) {
                     const rawArgs = this._splitFuncArgs(bareFunc[2]);
+                    if (rawArgs.length < func.args) {
+                        errors.push({ line: i, message: `${bareFunc[1]}() expects ${func.args} argument(s), got ${rawArgs.length}` });
+                        continue;
+                    }
                     const argDRs = [];
-                    for (let ai = 0; ai < Math.min(rawArgs.length, func.args); ai++) {
+                    for (let ai = 0; ai < func.args; ai++) {
                         argDRs.push(compileExpr(rawArgs[ai], i));
                     }
                     manifest.push({ src: i, addr: code.length, desc: `${bareFunc[1]}(${bareFunc[2]})` });
