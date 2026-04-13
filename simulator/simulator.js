@@ -613,6 +613,7 @@ class ChurchSimulator {
             const d = HW_DEVICE_SLOTS[i];
             clistGTs[8 + i] = this.createGT(0, d.nsIdx, d.perms, 1);
         }
+        clistGTs[3] = this.createGT(0, 16, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
 
         // Slot 2 (Boot.Abstr) lump layout — with lump header at word 0:
         //   Word  0:       Lump header (magic=0x1F, n_minus_6=2→lumpSize=256, cw=17, typ=0, cc=12)
