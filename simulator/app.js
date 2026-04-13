@@ -3900,17 +3900,16 @@ function _initLazyLoadManifest() {
         for (const upload of BOOT_UPLOADS) {
             if (upload.methods && upload.methods.length > 0 && upload.index >= 16) {
                 const isHot = (upload.index === 19);
-                if (!isHot) {
-                    manifest[upload.index] = {
-                        source: 'local',
-                        path: `${upload.abstraction}.lump`,
-                        size: 64,
-                        priority: 'warm',
-                        loaded: true,
-                        loadCount: 1,
-                        bootUpload: upload
-                    };
-                }
+                manifest[upload.index] = {
+                    source: 'local',
+                    path: `${upload.abstraction}.lump`,
+                    label: upload.abstraction,
+                    size: 64,
+                    priority: isHot ? 'hot' : 'warm',
+                    loaded: false,
+                    loadCount: 0,
+                    bootUpload: upload
+                };
             }
         }
     }

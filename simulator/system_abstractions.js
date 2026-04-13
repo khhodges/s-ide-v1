@@ -1324,6 +1324,14 @@ class SystemAbstractions {
                     message: `Loader.Evict: slot ${targetSlot} not in lazy load manifest`
                 };
             }
+            const entry = sim.lazyManifest[targetSlot];
+            if (entry.priority === 'hot') {
+                return {
+                    ok: false,
+                    fault: 'LOADER',
+                    message: `Loader.Evict: slot ${targetSlot} is HOT — cannot evict`
+                };
+            }
             const evicted = sim.lazyEvict(targetSlot);
             return {
                 ok: evicted,
