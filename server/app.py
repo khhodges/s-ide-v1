@@ -218,6 +218,7 @@ BOOK_CHAPTERS = [
     ]),
     ("Part VIII: The Civilisation Case", [
         "civilization-threat.md",
+        "lambda-trust-and-civilization.md",
     ]),
     ("Part IX: Hardware Implementation", [
         "boot-rom-layout.md",
