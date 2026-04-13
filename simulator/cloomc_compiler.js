@@ -2833,6 +2833,7 @@ class CLOOMCCompiler {
         const lines = source.split('\n');
         const neededCaps = {};
         let nextClistOffset = 16;
+        let allocFailed = false;
 
         const requireCap = (nsSlot, name) => {
             if (!neededCaps[nsSlot]) {
@@ -2878,9 +2879,15 @@ class CLOOMCCompiler {
             'divide':     { abs: 'SlideRule', nsSlot: 16, methodIndex: 1, args: 2 },
         };
 
+        const FUNC_NAMES = Object.keys(FUNC_TABLE)
+            .filter(k => k[0] === k[0].toLowerCase())
+            .map(k => k.charAt(0).toUpperCase() + k.slice(1))
+            .filter((v, i, a) => a.indexOf(v) === i)
+            .join(', ');
+
         const asmMnemonics = /^\s*(LOAD|SAVE|CALL|RETURN|CHANGE|SWITCH|TPERM|LAMBDA|ELOADCALL|XLOADLAMBDA|DREAD|DWRITE|BFEXT|BFINS|MCMP|IADD|ISUB|BRANCH|SHL|SHR|HALT|NOP)\b/i;
 
-        const allocPetReg = (name) => {
+        const allocPetReg = (name, lineNum) => {
             if (locals[name] !== undefined) return locals[name];
             for (let r = this.DR_LOCALS_START; r <= this.DR_LOCALS_END; r++) {
                 if (!Object.values(locals).includes(r)) {
@@ -2888,49 +2895,42 @@ class CLOOMCCompiler {
                     return r;
                 }
             }
-            for (let r = this.DR_TEMP_START; r <= this.DR_TEMP_END; r++) {
-                if (!Object.values(locals).includes(r)) {
-                    locals[name] = r;
-                    return r;
-                }
+            if (!allocFailed) {
+                allocFailed = true;
+                errors.push({ line: lineNum !== undefined ? lineNum : 0, message: `Too many variables — only ${this.DR_LOCALS_END - this.DR_LOCALS_START + 1} pet-name registers available (DR${this.DR_LOCALS_START}–DR${this.DR_LOCALS_END})` });
             }
-            return -1;
+            return this.DR_LOCALS_START;
         };
 
-        const resolveValue = (token, lineNum) => {
-            const t = token.trim();
-            const numMatch = t.match(/^-?(0x[0-9a-fA-F]+|\d+)$/);
-            if (numMatch) {
-                let val = parseInt(t);
-                const isNeg = val < 0;
-                if (isNeg) val = (-val) >>> 0;
-                const dr = allocPetReg('__tmp_' + code.length);
-                if (val === 0) {
-                    code.push(this.encode(this.opcodes.IADD, 14, dr, 0, 0));
-                } else if (val <= 0x3FFF) {
-                    code.push(this.encode(this.opcodes.IADD, 14, dr, 0, val | 0x4000));
-                } else {
-                    const low = val & 0x3FFF;
-                    const hi = val >>> 14;
-                    code.push(this.encode(this.opcodes.IADD, 14, dr, 0, low | 0x4000));
-                    if (hi > 0) {
-                        const t2 = allocPetReg('__tmp2_' + code.length);
-                        code.push(this.encode(this.opcodes.IADD, 14, t2, 0, (hi & 0x3FFF) | 0x4000));
-                        code.push(this.encode(this.opcodes.SHL, 14, t2, t2, 14));
-                        code.push(this.encode(this.opcodes.IADD, 14, dr, dr, t2));
-                        delete locals['__tmp2_' + (code.length - 3)];
-                    }
-                }
-                if (isNeg) {
-                    code.push(this.encode(this.opcodes.ISUB, 14, dr, 0, dr));
-                }
-                delete locals['__tmp_' + (code.length - (isNeg ? (val > 0x3FFF ? 5 : 2) : (val > 0x3FFF ? 4 : 1)))];
-                return dr;
+        const freeTempReg = (name) => {
+            if (name.startsWith('__tmp') && locals[name] !== undefined) {
+                delete locals[name];
             }
-            const reg = locals[t];
-            if (reg !== undefined) return reg;
-            errors.push({ line: lineNum, message: `Unknown variable '${t}' — assign it first (e.g. ${t} = 5)` });
-            return 0;
+        };
+
+        const emitLoadImm = (dr, val, lineNum) => {
+            const isNeg = val < 0;
+            if (isNeg) val = (-val) >>> 0;
+            if (val === 0) {
+                code.push(this.encode(this.opcodes.IADD, 14, dr, 0, 0));
+            } else if (val <= 0x3FFF) {
+                code.push(this.encode(this.opcodes.IADD, 14, dr, 0, val | 0x4000));
+            } else {
+                const low = val & 0x3FFF;
+                const hi = val >>> 14;
+                code.push(this.encode(this.opcodes.IADD, 14, dr, 0, low | 0x4000));
+                if (hi > 0) {
+                    const tmpName = '__shl_' + code.length;
+                    const t2 = allocPetReg(tmpName, lineNum);
+                    code.push(this.encode(this.opcodes.IADD, 14, t2, 0, (hi & 0x3FFF) | 0x4000));
+                    code.push(this.encode(this.opcodes.SHL, 14, t2, t2, 14));
+                    code.push(this.encode(this.opcodes.IADD, 14, dr, dr, t2));
+                    freeTempReg(tmpName);
+                }
+            }
+            if (isNeg) {
+                code.push(this.encode(this.opcodes.ISUB, 14, dr, 0, dr));
+            }
         };
 
         const emitAbsCall = (nsSlot, absName, methodIndex, lineNum) => {
@@ -2942,70 +2942,145 @@ class CLOOMCCompiler {
             code.push(this.encode(this.opcodes.CALL, 14, 0, 0, 0));
         };
 
+        const emitOpCall = (opEntry, leftDR, rightDR, lineNum) => {
+            if (leftDR !== 1) code.push(this.encode(this.opcodes.IADD, 14, 1, leftDR, 0));
+            if (rightDR !== 2) code.push(this.encode(this.opcodes.IADD, 14, 2, rightDR, 0));
+            emitAbsCall(opEntry.nsSlot, opEntry.abs, opEntry.methodIndex, lineNum);
+        };
+
+        const emitFuncCall = (func, argDRs, lineNum) => {
+            if (argDRs[0] !== undefined && argDRs[0] !== 1) {
+                code.push(this.encode(this.opcodes.IADD, 14, 1, argDRs[0], 0));
+            }
+            if (func.args >= 2 && argDRs[1] !== undefined && argDRs[1] !== 2) {
+                code.push(this.encode(this.opcodes.IADD, 14, 2, argDRs[1], 0));
+            }
+            emitAbsCall(func.nsSlot, func.abs, func.methodIndex, lineNum);
+        };
+
+        const compileExpr = (expr, lineNum) => {
+            expr = expr.trim();
+
+            const numMatch = expr.match(/^-?(0x[0-9a-fA-F]+|\d+)$/);
+            if (numMatch) {
+                const tmpName = '__val_' + code.length;
+                const dr = allocPetReg(tmpName, lineNum);
+                emitLoadImm(dr, parseInt(expr), lineNum);
+                return dr;
+            }
+
+            if (/^[A-Za-z_]\w*$/.test(expr)) {
+                const reg = locals[expr];
+                if (reg !== undefined) return reg;
+                errors.push({ line: lineNum, message: `Unknown variable '${expr}' — assign it first (e.g. ${expr} = 5)` });
+                return 0;
+            }
+
+            const funcMatch = expr.match(/^([A-Za-z_]\w*)\s*\((.*)\)$/);
+            if (funcMatch) {
+                const funcName = funcMatch[1].toLowerCase();
+                const func = FUNC_TABLE[funcName];
+                if (!func) {
+                    errors.push({ line: lineNum, message: `Unknown function '${funcMatch[1]}' — available: ${FUNC_NAMES}` });
+                    return 0;
+                }
+                const rawArgs = this._splitFuncArgs(funcMatch[2]);
+                if (rawArgs.length < func.args) {
+                    errors.push({ line: lineNum, message: `${funcMatch[1]}() expects ${func.args} argument(s), got ${rawArgs.length}` });
+                    return 0;
+                }
+                const argDRs = [];
+                for (let ai = 0; ai < func.args; ai++) {
+                    argDRs.push(compileExpr(rawArgs[ai], lineNum));
+                }
+                emitFuncCall(func, argDRs, lineNum);
+                for (const a of argDRs) freeTempReg(Object.keys(locals).find(k => locals[k] === a && k.startsWith('__')) || '');
+                return 1;
+            }
+
+            const addSubPos = this._findTopLevelOp(expr, ['+', '-']);
+            if (addSubPos >= 0) {
+                const op = expr[addSubPos];
+                const left = expr.substring(0, addSubPos);
+                const right = expr.substring(addSubPos + 1);
+                const leftDR = compileExpr(left, lineNum);
+                const rightDR = compileExpr(right, lineNum);
+                const opEntry = OP_TABLE[op];
+                manifest.push({ src: lineNum, addr: code.length, desc: `${left.trim()} ${op} ${right.trim()} via ${opEntry.abs}.${opEntry.method}` });
+                emitOpCall(opEntry, leftDR, rightDR, lineNum);
+                freeTempReg(Object.keys(locals).find(k => locals[k] === leftDR && k.startsWith('__')) || '');
+                freeTempReg(Object.keys(locals).find(k => locals[k] === rightDR && k.startsWith('__')) || '');
+                return 1;
+            }
+
+            const mulDivPos = this._findTopLevelOp(expr, ['*', '/', '%']);
+            if (mulDivPos >= 0) {
+                const op = expr[mulDivPos];
+                const left = expr.substring(0, mulDivPos);
+                const right = expr.substring(mulDivPos + 1);
+                const leftDR = compileExpr(left, lineNum);
+                const rightDR = compileExpr(right, lineNum);
+                const opEntry = OP_TABLE[op];
+                manifest.push({ src: lineNum, addr: code.length, desc: `${left.trim()} ${op} ${right.trim()} via ${opEntry.abs}.${opEntry.method}` });
+                emitOpCall(opEntry, leftDR, rightDR, lineNum);
+                freeTempReg(Object.keys(locals).find(k => locals[k] === leftDR && k.startsWith('__')) || '');
+                freeTempReg(Object.keys(locals).find(k => locals[k] === rightDR && k.startsWith('__')) || '');
+                return 1;
+            }
+
+            if (expr.startsWith('(') && expr.endsWith(')')) {
+                return compileExpr(expr.substring(1, expr.length - 1), lineNum);
+            }
+
+            errors.push({ line: lineNum, message: `Cannot parse expression: "${expr}"` });
+            return 0;
+        };
+
+        const substitutePetNames = (line) => {
+            return line.replace(/\b([A-Za-z_]\w*)\b/g, (match) => {
+                const upper = match.toUpperCase();
+                if (/^(DR\d+|CR\d+)$/.test(upper)) return match;
+                if (/^(LOAD|SAVE|CALL|RETURN|CHANGE|SWITCH|TPERM|LAMBDA|ELOADCALL|XLOADLAMBDA|DREAD|DWRITE|BFEXT|BFINS|MCMP|IADD|ISUB|BRANCH|SHL|SHR|HALT|NOP)$/.test(upper)) return match;
+                const reg = locals[match];
+                if (reg !== undefined) return `DR${reg}`;
+                return match;
+            });
+        };
+
         for (let i = 0; i < lines.length; i++) {
             const raw = lines[i];
             const t = raw.trim();
             if (!t || t.startsWith(';') || t.startsWith('//') || t.startsWith('--')) continue;
 
             if (asmMnemonics.test(t)) {
-                const asmResult = this._assemblePetNameRaw(t, i, code, manifest);
-                if (asmResult.error) {
-                    errors.push({ line: i, message: asmResult.error });
-                }
-                continue;
-            }
-
-            const funcAssignMatch = t.match(/^([A-Za-z_]\w*)\s*=\s*([A-Za-z_]\w*)\s*\(\s*(.*?)\s*\)$/);
-            if (funcAssignMatch) {
-                const destName = funcAssignMatch[1];
-                const funcName = funcAssignMatch[2].toLowerCase();
-                const argStr = funcAssignMatch[3];
-                const func = FUNC_TABLE[funcName];
-                if (!func) {
-                    errors.push({ line: i, message: `Unknown function '${funcAssignMatch[2]}' — available: ${Object.keys(FUNC_TABLE).filter(k => k[0] >= 'A' || k === k).join(', ')}` });
-                    continue;
-                }
-                const args = argStr.split(',').map(s => s.trim()).filter(Boolean);
-                if (args.length < func.args) {
-                    errors.push({ line: i, message: `${funcAssignMatch[2]}() expects ${func.args} argument(s), got ${args.length}` });
-                    continue;
-                }
-                const arg1DR = resolveValue(args[0], i);
-                if (arg1DR !== 1) {
-                    code.push(this.encode(this.opcodes.IADD, 14, 1, arg1DR, 0));
-                }
-                if (func.args >= 2 && args[1]) {
-                    const arg2DR = resolveValue(args[1], i);
-                    if (arg2DR !== 2) {
-                        code.push(this.encode(this.opcodes.IADD, 14, 2, arg2DR, 0));
+                const substituted = substitutePetNames(t);
+                const asmObj = new ChurchAssembler();
+                const asmResult = asmObj.assemble(substituted);
+                if (asmResult.errors && asmResult.errors.length > 0) {
+                    for (const e of asmResult.errors) {
+                        errors.push({ line: i, message: e.message });
+                    }
+                } else if (asmResult.words && asmResult.words.length > 0) {
+                    manifest.push({ src: i, addr: code.length, desc: t });
+                    for (const w of asmResult.words) {
+                        code.push(w);
                     }
                 }
-                manifest.push({ src: i, addr: code.length, desc: `${funcAssignMatch[2]}(${argStr})` });
-                emitAbsCall(func.nsSlot, func.abs, func.methodIndex, i);
-                const destDR = allocPetReg(destName);
-                if (destDR !== 1) {
-                    code.push(this.encode(this.opcodes.IADD, 14, destDR, 1, 0));
-                }
                 continue;
             }
 
-            const bareFunc = t.match(/^([A-Za-z_]\w*)\s*\(\s*(.*?)\s*\)$/);
-            if (bareFunc) {
+            const bareFunc = t.match(/^([A-Za-z_]\w*)\s*\((.*)\)$/);
+            if (bareFunc && !t.match(/^[A-Za-z_]\w*\s*=/)) {
                 const funcName = bareFunc[1].toLowerCase();
-                const argStr = bareFunc[2];
                 const func = FUNC_TABLE[funcName];
                 if (func) {
-                    const args = argStr.split(',').map(s => s.trim()).filter(Boolean);
-                    if (args.length >= 1) {
-                        const arg1DR = resolveValue(args[0], i);
-                        if (arg1DR !== 1) code.push(this.encode(this.opcodes.IADD, 14, 1, arg1DR, 0));
+                    const rawArgs = this._splitFuncArgs(bareFunc[2]);
+                    const argDRs = [];
+                    for (let ai = 0; ai < Math.min(rawArgs.length, func.args); ai++) {
+                        argDRs.push(compileExpr(rawArgs[ai], i));
                     }
-                    if (func.args >= 2 && args.length >= 2) {
-                        const arg2DR = resolveValue(args[1], i);
-                        if (arg2DR !== 2) code.push(this.encode(this.opcodes.IADD, 14, 2, arg2DR, 0));
-                    }
-                    manifest.push({ src: i, addr: code.length, desc: `${bareFunc[1]}(${argStr})` });
-                    emitAbsCall(func.nsSlot, func.abs, func.methodIndex, i);
+                    manifest.push({ src: i, addr: code.length, desc: `${bareFunc[1]}(${bareFunc[2]})` });
+                    emitFuncCall(func, argDRs, i);
                     continue;
                 }
             }
@@ -3013,51 +3088,17 @@ class CLOOMCCompiler {
             const assignMatch = t.match(/^([A-Za-z_]\w*)\s*=\s*(.+)$/);
             if (assignMatch) {
                 const destName = assignMatch[1];
-                const expr = assignMatch[2].trim();
-
-                const opMatch = expr.match(/^([A-Za-z_]\w*|(?:-?(?:0x[0-9a-fA-F]+|\d+)))\s*([\+\-\*\/%])\s*([A-Za-z_]\w*|(?:-?(?:0x[0-9a-fA-F]+|\d+)))$/);
-                if (opMatch) {
-                    const leftToken = opMatch[1];
-                    const op = opMatch[2];
-                    const rightToken = opMatch[3];
-                    const opEntry = OP_TABLE[op];
-
-                    if (op === '+' || op === '-') {
-                        const leftDR = resolveValue(leftToken, i);
-                        const rightDR = resolveValue(rightToken, i);
-                        const destDR = allocPetReg(destName);
-                        manifest.push({ src: i, addr: code.length, desc: `${destName} = ${leftToken} ${op} ${rightToken}` });
-                        if (op === '+') {
-                            code.push(this.encode(this.opcodes.IADD, 14, destDR, leftDR, rightDR));
-                        } else {
-                            code.push(this.encode(this.opcodes.ISUB, 14, destDR, leftDR, rightDR));
-                        }
-                        continue;
-                    }
-
-                    if (opEntry) {
-                        const leftDR = resolveValue(leftToken, i);
-                        if (leftDR !== 1) code.push(this.encode(this.opcodes.IADD, 14, 1, leftDR, 0));
-                        const rightDR = resolveValue(rightToken, i);
-                        if (rightDR !== 2) code.push(this.encode(this.opcodes.IADD, 14, 2, rightDR, 0));
-                        manifest.push({ src: i, addr: code.length, desc: `${destName} = ${leftToken} ${op} ${rightToken} via ${opEntry.abs}.${opEntry.method}` });
-                        emitAbsCall(opEntry.nsSlot, opEntry.abs, opEntry.methodIndex, i);
-                        const destDR = allocPetReg(destName);
-                        if (destDR !== 1) {
-                            code.push(this.encode(this.opcodes.IADD, 14, destDR, 1, 0));
-                        }
-                        continue;
-                    }
-                }
-
-                const valDR = resolveValue(expr, i);
-                const destDR = allocPetReg(destName);
-                if (valDR !== destDR) {
-                    manifest.push({ src: i, addr: code.length, desc: `${destName} = ${expr}` });
-                    code.push(this.encode(this.opcodes.IADD, 14, destDR, valDR, 0));
+                const exprStr = assignMatch[2].trim();
+                const resultDR = compileExpr(exprStr, i);
+                const destDR = allocPetReg(destName, i);
+                if (resultDR !== destDR) {
+                    manifest.push({ src: i, addr: code.length, desc: `${destName} = ${exprStr}` });
+                    code.push(this.encode(this.opcodes.IADD, 14, destDR, resultDR, 0));
                 } else {
-                    manifest.push({ src: i, addr: code.length - 1, desc: `${destName} = ${expr} (in-place)` });
+                    manifest.push({ src: i, addr: code.length - 1, desc: `${destName} = ${exprStr} (in-place)` });
                 }
+                const tmpKeys = Object.keys(locals).filter(k => k.startsWith('__'));
+                for (const k of tmpKeys) delete locals[k];
                 continue;
             }
 
@@ -3082,97 +3123,40 @@ class CLOOMCCompiler {
         };
     }
 
-    _assemblePetNameRaw(line, lineNum, code, manifest) {
-        const parts = line.replace(/,/g, ' ').replace(/\[/g, ' ').replace(/\]/g, ' ').split(/\s+/).filter(Boolean);
-        if (parts.length === 0) return {};
-        const mnemonic = parts[0].toUpperCase();
-
-        if (mnemonic === 'HALT' || mnemonic === 'NOP') {
-            manifest.push({ src: lineNum, addr: code.length, desc: mnemonic });
-            code.push(0);
-            return {};
-        }
-
-        const opcodeMap = {
-            'LOAD': 0, 'SAVE': 1, 'CALL': 2, 'RETURN': 3,
-            'CHANGE': 4, 'SWITCH': 5, 'TPERM': 6, 'LAMBDA': 7,
-            'ELOADCALL': 8, 'XLOADLAMBDA': 9,
-            'DREAD': 10, 'DWRITE': 11,
-            'BFEXT': 12, 'BFINS': 13,
-            'MCMP': 14, 'IADD': 15, 'ISUB': 16,
-            'BRANCH': 17, 'SHL': 18, 'SHR': 19,
-        };
-
-        const opcode = opcodeMap[mnemonic];
-        if (opcode === undefined) {
-            return { error: `Unknown mnemonic: ${mnemonic}` };
-        }
-
-        const parseDR = (tok) => {
-            if (!tok) return 0;
-            tok = tok.toUpperCase().replace(/,/g, '');
-            const m = tok.match(/^DR(\d+)$/);
-            return m ? Math.min(parseInt(m[1]), 15) : 0;
-        };
-        const parseCR = (tok) => {
-            if (!tok) return 0;
-            tok = tok.toUpperCase().replace(/,/g, '');
-            const m = tok.match(/^CR(\d+)$/);
-            return m ? Math.min(parseInt(m[1]), 15) : 0;
-        };
-        const parseImm = (tok) => {
-            if (!tok) return 0;
-            tok = tok.replace(/,/g, '').replace(/^#/, '');
-            if (tok.startsWith('0x') || tok.startsWith('0X')) return parseInt(tok, 16) & 0xFFFF;
-            return (parseInt(tok, 10) || 0) & 0xFFFF;
-        };
-
-        let crDst = 0, crSrc = 0, imm = 0;
-        if (opcode <= 1) {
-            crDst = parseCR(parts[1]);
-            crSrc = parseCR(parts[2]);
-            imm = parseImm(parts[3]);
-        } else if (opcode === 2) {
-            if (parts[2] && parts[3]) {
-                const p1 = (parts[1] || '').toUpperCase().replace(/,/g, '');
-                const bareNum = p1.match(/^(\d+)$/);
-                crDst = bareNum ? parseInt(bareNum[1]) & 0xF : parseCR(parts[1]);
-                crSrc = parseCR(parts[2]);
-                imm = parseImm(parts[3]);
+    _splitFuncArgs(argStr) {
+        const args = [];
+        let depth = 0;
+        let current = '';
+        for (let i = 0; i < argStr.length; i++) {
+            const ch = argStr[i];
+            if (ch === '(') depth++;
+            else if (ch === ')') depth--;
+            if (ch === ',' && depth === 0) {
+                args.push(current.trim());
+                current = '';
             } else {
-                crDst = parseCR(parts[1]);
+                current += ch;
             }
-        } else if (opcode === 3) {
-            imm = parts[1] ? parseImm(parts[1]) & 0xFFF : 0;
-        } else if (opcode >= 10 && opcode <= 11) {
-            crDst = parseDR(parts[1]);
-            crSrc = parseCR(parts[2]);
-            imm = parseImm(parts[3]);
-        } else if (opcode >= 15 && opcode <= 16) {
-            crDst = parseDR(parts[1]);
-            crSrc = parseDR(parts[2]);
-            const p3 = (parts[3] || '').replace(/,/g, '').trim();
-            if (p3.startsWith('#')) {
-                const immVal = parseInt(p3.substring(1), 10);
-                imm = 0x4000 | ((isNaN(immVal) ? 0 : immVal) & 0x3FFF);
-            } else {
-                imm = parseDR(parts[3]);
-            }
-        } else if (opcode === 17) {
-            crDst = parseDR(parts[1]);
-            imm = parseImm(parts[2]);
-        } else if (opcode === 18 || opcode === 19) {
-            crDst = parseDR(parts[1]);
-            crSrc = parseDR(parts[2]);
-            imm = parseImm(parts[3]);
-        } else {
-            crDst = parseCR(parts[1]);
-            crSrc = parseCR(parts[2]);
-            imm = parseImm(parts[3]);
         }
+        if (current.trim()) args.push(current.trim());
+        return args;
+    }
 
-        manifest.push({ src: lineNum, addr: code.length, desc: line.trim() });
-        code.push(this.encode(opcode, 14, crDst, crSrc, imm));
-        return {};
+    _findTopLevelOp(expr, ops) {
+        let depth = 0;
+        let bestPos = -1;
+        for (let i = expr.length - 1; i >= 0; i--) {
+            const ch = expr[i];
+            if (ch === ')') depth++;
+            else if (ch === '(') depth--;
+            if (depth === 0 && ops.includes(ch)) {
+                if (i === 0) continue;
+                const prev = expr[i - 1];
+                if (ch === '-' && (prev === '*' || prev === '/' || prev === '%' || prev === '+' || prev === '-' || prev === '(' || prev === ',')) continue;
+                bestPos = i;
+                break;
+            }
+        }
+        return bestPos;
     }
 }
