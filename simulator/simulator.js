@@ -106,6 +106,124 @@ class ChurchSimulator {
         this.deviceAbstractions = deviceAbs;
     }
 
+    initLazyManifest(manifest) {
+        this.lazyManifest = manifest || {};
+        const warmCount = Object.values(this.lazyManifest).filter(e => e.priority === 'warm').length;
+        const coldCount = Object.values(this.lazyManifest).filter(e => e.priority === 'cold').length;
+        if (warmCount + coldCount > 0) {
+            this.output += `[LOADER] Lazy load manifest: ${warmCount} warm, ${coldCount} cold slots registered\n`;
+        }
+    }
+
+    lazyLoad(slotIndex) {
+        const entry = this.lazyManifest[slotIndex];
+        if (!entry) return false;
+
+        const label = this.nsLabels[slotIndex] || `slot_${slotIndex}`;
+        this.output += `[LOADER] Loading ${label} (slot ${slotIndex}, priority=${entry.priority}, source=${entry.source})...\n`;
+
+        if (this.abstractionRegistry) {
+            this.abstractionRegistry.activate(slotIndex);
+        }
+
+        const bootUploads = entry.bootUpload;
+        if (bootUploads && bootUploads.methods && bootUploads.methods.length > 0) {
+            const existingEntry = this.readNSEntry(slotIndex);
+            if (existingEntry && existingEntry.word0_location > 0) {
+                const loc = existingEntry.word0_location;
+                let totalCodeWords = 0;
+                const methodCode = [];
+                for (const m of bootUploads.methods) {
+                    if (m.code && m.code.length > 0) {
+                        methodCode.push(m.code);
+                        totalCodeWords += m.code.length;
+                    }
+                }
+                let offset = 1;
+                for (const code of methodCode) {
+                    for (let i = 0; i < code.length; i++) {
+                        this.memory[loc + offset + i] = code[i];
+                    }
+                    offset += code.length;
+                }
+
+                const lumpSize = entry.size || this.SLOT_SIZE;
+                const nMinus6 = Math.max(0, Math.ceil(Math.log2(lumpSize)) - 6);
+                const cc = (bootUploads.capabilities || []).length;
+                this.memory[loc] = this.packLumpHeader(nMinus6, totalCodeWords, cc, 0);
+
+                if (cc > 0 && bootUploads.capabilities) {
+                    const clistStart = lumpSize - cc;
+                    for (let i = 0; i < cc; i++) {
+                        const cap = bootUploads.capabilities[i];
+                        const capGT = this.createGT(0, cap.target, { E: 1 }, 1);
+                        this.memory[loc + clistStart + i] = capGT;
+                    }
+                }
+
+                const lim17 = lumpSize - 1;
+                this.writeNSEntry(slotIndex, loc, lim17, 0, 0, 0, 0, 1, 0, 0);
+                this.nsLabels[slotIndex] = label;
+            }
+        }
+
+        entry.loaded = true;
+        entry.loadCount = (entry.loadCount || 0) + 1;
+        this.output += `[LOADER] ${label} loaded successfully (load #${entry.loadCount})\n`;
+
+        this.auditLog.push({
+            gate: 'Loader.Load',
+            label: label,
+            nsIndex: slotIndex,
+            requiredPerm: null,
+            checks: {
+                manifest: { pass: true },
+                install: { pass: true }
+            },
+            b: 0, f: 0,
+            result: 'pass'
+        });
+
+        this.emit('lazyLoad', { slot: slotIndex, label: label });
+        return true;
+    }
+
+    lazyEvict(slotIndex) {
+        const entry = this.lazyManifest[slotIndex];
+        if (!entry) return false;
+        if (!entry.loaded) return false;
+
+        const label = this.nsLabels[slotIndex] || `slot_${slotIndex}`;
+
+        const nsEntry = this.readNSEntry(slotIndex);
+        if (nsEntry) {
+            const loc = nsEntry.word0_location;
+            const lim = this.parseNSWord1(nsEntry.word1_limit);
+            const size = lim.limit + 1;
+            for (let i = 0; i < size; i++) {
+                this.memory[loc + i] = 0;
+            }
+        }
+
+        this.writeNSEntry(slotIndex, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+        entry.loaded = false;
+        this.output += `[LOADER] Evicted ${label} (slot ${slotIndex}) — memory freed, slot NULL\n`;
+
+        this.auditLog.push({
+            gate: 'Loader.Evict',
+            label: label,
+            nsIndex: slotIndex,
+            requiredPerm: null,
+            checks: { evict: { pass: true } },
+            b: 0, f: 0,
+            result: 'pass'
+        });
+
+        this.emit('lazyEvict', { slot: slotIndex, label: label });
+        return true;
+    }
+
     on(event, fn) {
         if (!this._listeners[event]) this._listeners[event] = [];
         this._listeners[event].push(fn);
@@ -154,6 +272,11 @@ class ChurchSimulator {
         this.lastCapability = null;
         this.auditLog = [];
         this.awaitingLump = null;
+
+        this.lazyManifest = {};
+        this.lazyLoadInProgress = false;
+        this.lazyLoadPendingSlot = null;
+        this.lazyLoadRetryState = null;
 
         this._initNamespaceTable();
         this.output += '--- HARD RESET: all registers zeroed ---\n';
@@ -322,7 +445,7 @@ class ChurchSimulator {
             { label: 'SlideRule',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
             { label: 'Abacus',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: true },
             { label: 'Constants',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Circle',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
+            { label: 'Loader',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'SUCC',          perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
             { label: 'PRED',          perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
             { label: 'ADD',           perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
@@ -349,6 +472,7 @@ class ChurchSimulator {
             { label: 'PAIR',          perms: {R:0,W:0,X:1,L:1,S:0,E:1}, chainable: false },
             { label: 'GC',            perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false, handler: 'gc' },
             { label: 'Thread',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
+            { label: 'Circle',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
         ];
     }
 
@@ -1585,6 +1709,19 @@ class ChurchSimulator {
         }
         const slotGT = this.memory[clistLoc + d.imm] || 0;
         if (slotGT === 0) {
+            if (this.lazyManifest[d.imm] && !this.lazyManifest[d.imm].loaded) {
+                this.output += `[LOADER] LOAD: c-list offset ${d.imm} is NULL — lazy loading from manifest...\n`;
+                const loaded = this.lazyLoad(d.imm);
+                if (loaded) {
+                    const newGT = this.createGT(0, d.imm, { E: 1 }, 1);
+                    this.memory[clistLoc + d.imm] = newGT;
+                    this._writeCR(d.crDst, newGT, this.readNSEntry(d.imm));
+                    this._lastLoadTargetSlot = d.imm;
+                    const label = this.nsLabels[d.imm] || `slot_${d.imm}`;
+                    this.pc++;
+                    return { pc: this.pc - 1, instr: d, desc: `LOAD CR${d.crDst} <- ${label} [lazy loaded from manifest]` };
+                }
+            }
             this.fault('NULL_CAP', `LOAD: c-list offset ${d.imm} is empty (NULL GT)`);
             return null;
         }
@@ -1599,6 +1736,7 @@ class ChurchSimulator {
         }
 
         const targetIdx = slotParsed.index;
+        this._lastLoadTargetSlot = targetIdx;
         if (targetIdx >= this.nsCount || !this.isNSEntryValid(targetIdx)) {
             this.fault('BOUNDS', `LOAD: namespace index ${targetIdx} out of bounds`);
             return null;
@@ -1693,6 +1831,21 @@ class ChurchSimulator {
     _execCall(d) {
         const sourceGT = this.cr[d.crDst].word0;
         if (sourceGT === 0) {
+            const crIdx = d.crDst;
+            const lastLoadTarget = this._lastLoadTargetSlot;
+            if (lastLoadTarget !== undefined && lastLoadTarget !== null && this.lazyManifest[lastLoadTarget]) {
+                const manifestEntry = this.lazyManifest[lastLoadTarget];
+                if (!manifestEntry.loaded) {
+                    this.output += `[LOADER] NULL_CAP on slot ${lastLoadTarget} — manifest entry found, triggering lazy load...\n`;
+                    const loaded = this.lazyLoad(lastLoadTarget);
+                    if (loaded) {
+                        const newGT = this.createGT(0, lastLoadTarget, { E: 1 }, 1);
+                        this._writeCR(crIdx, newGT, this.readNSEntry(lastLoadTarget));
+                        this.output += `[LOADER] Retrying CALL CR${crIdx} after lazy load of slot ${lastLoadTarget}\n`;
+                        return this._execCall(d);
+                    }
+                }
+            }
             this.fault('NULL_CAP', `CALL: CR${d.crDst} is NULL`);
             return null;
         }

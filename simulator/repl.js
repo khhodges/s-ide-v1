@@ -461,7 +461,7 @@ class ChurchREPL {
             'Mint': 6, 'Memory': 7, 'Scheduler': 8, 'Stack': 9,
             'DijkstraFlag': 10, 'UART': 11, 'LED': 12, 'Button': 13,
             'Timer': 14, 'Display': 15, 'SlideRule': 16, 'Abacus': 17,
-            'Constants': 18, 'Circle': 19,
+            'Constants': 18, 'Loader': 19,
             'SUCC': 20, 'PRED': 21, 'ADD': 22, 'SUB': 23,
             'MUL': 24, 'ISZERO': 25, 'TRUE': 26, 'FALSE': 27,
             'Family': 28, 'Schoolroom': 29, 'Friends': 30,
@@ -469,7 +469,7 @@ class ChurchREPL {
             'Editor': 33, 'Assembler': 34, 'Debugger': 35, 'Deployer': 36,
             'Browser': 37, 'Messenger': 38, 'Photos': 39,
             'Social': 40, 'Video': 41, 'Email': 42,
-            'PAIR': 43, 'GC': 44,
+            'PAIR': 43, 'GC': 44, 'Thread': 45, 'Circle': 46,
         };
         return map[name] !== undefined ? map[name] : '?';
     }

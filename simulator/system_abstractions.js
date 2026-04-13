@@ -109,6 +109,7 @@ class SystemAbstractions {
         this._bindScheduler();
         this._bindStack();
         this._bindDijkstraFlag();
+        this._bindLoader();
         this._bindSlideRuleArithmetic();
         this._bindSlideRuleTrig();
         this._bindSlideRuleBernoulli();
@@ -1255,6 +1256,81 @@ class SystemAbstractions {
                 ok: true,
                 result: { flagId: flagId, signaled: signaled, waiters: waiters },
                 message: `DijkstraFlag.Test: flag ${flagId} signaled=${signaled}, waiters=${waiters}`
+            };
+        });
+    }
+
+    _bindLoader() {
+        this.registry.bindMethod(19, 'Load', function(sim, args) {
+            const targetSlot = args.dr0 !== undefined ? args.dr0 : 0;
+            if (!sim.lazyManifest || !sim.lazyManifest[targetSlot]) {
+                return {
+                    ok: false,
+                    fault: 'LOADER',
+                    message: `Loader.Load: slot ${targetSlot} not in lazy load manifest`
+                };
+            }
+            const entry = sim.lazyManifest[targetSlot];
+            if (entry.loaded) {
+                return {
+                    ok: true,
+                    result: { slot: targetSlot, alreadyLoaded: true },
+                    message: `Loader.Load: slot ${targetSlot} already loaded`
+                };
+            }
+            const loaded = sim.lazyLoad(targetSlot);
+            return {
+                ok: loaded,
+                result: { slot: targetSlot, loaded: loaded },
+                message: loaded
+                    ? `Loader.Load: slot ${targetSlot} (${sim.nsLabels[targetSlot]}) loaded successfully`
+                    : `Loader.Load: failed to load slot ${targetSlot}`
+            };
+        });
+
+        this.registry.bindMethod(19, 'Prefetch', function(sim, args) {
+            const targetSlot = args.dr0 !== undefined ? args.dr0 : 0;
+            if (!sim.lazyManifest || !sim.lazyManifest[targetSlot]) {
+                return {
+                    ok: true,
+                    result: { slot: targetSlot, queued: false },
+                    message: `Loader.Prefetch: slot ${targetSlot} not in manifest — ignored`
+                };
+            }
+            const entry = sim.lazyManifest[targetSlot];
+            if (entry.loaded) {
+                return {
+                    ok: true,
+                    result: { slot: targetSlot, alreadyLoaded: true },
+                    message: `Loader.Prefetch: slot ${targetSlot} already loaded`
+                };
+            }
+            const loaded = sim.lazyLoad(targetSlot);
+            return {
+                ok: true,
+                result: { slot: targetSlot, queued: loaded },
+                message: loaded
+                    ? `Loader.Prefetch: slot ${targetSlot} (${sim.nsLabels[targetSlot]}) pre-loaded`
+                    : `Loader.Prefetch: slot ${targetSlot} queued for loading`
+            };
+        });
+
+        this.registry.bindMethod(19, 'Evict', function(sim, args) {
+            const targetSlot = args.dr0 !== undefined ? args.dr0 : 0;
+            if (!sim.lazyManifest || !sim.lazyManifest[targetSlot]) {
+                return {
+                    ok: false,
+                    fault: 'LOADER',
+                    message: `Loader.Evict: slot ${targetSlot} not in lazy load manifest`
+                };
+            }
+            const evicted = sim.lazyEvict(targetSlot);
+            return {
+                ok: evicted,
+                result: { slot: targetSlot, evicted: evicted },
+                message: evicted
+                    ? `Loader.Evict: slot ${targetSlot} evicted — memory freed`
+                    : `Loader.Evict: slot ${targetSlot} not currently loaded`
             };
         });
     }

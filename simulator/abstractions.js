@@ -258,9 +258,9 @@ class AbstractionRegistry {
             'Read-only mathematical constants',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(19, 'Circle', 3,
-            ['Area', 'Circumference'],
-            'Geometry via SlideRule — delegates trig to SlideRule, computes area and circumference',
+        this.createAbstraction(19, 'Loader', 1,
+            ['Load', 'Prefetch', 'Evict'],
+            'Lazy load — fault-driven on-demand abstraction loading. Catches NULL_CAP on manifest-registered slots, fetches and installs the lump, retries the faulting CALL transparently.',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         const churchNumerals = [
@@ -370,6 +370,11 @@ class AbstractionRegistry {
         this.createAbstraction(45, 'Thread', 1,
             ['switchTo', 'Kill', 'Compile'],
             'Thread Abstraction \u2014 switch execution to a named thread, terminate a thread, or compile a new thread with a given start abstraction',
+            { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
+
+        this.createAbstraction(46, 'Circle', 3,
+            ['Area', 'Circumference'],
+            'Geometry via SlideRule — delegates trig to SlideRule, computes area and circumference',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
     }
 }

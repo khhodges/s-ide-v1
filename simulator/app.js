@@ -291,6 +291,7 @@ function init() {
     deviceAbstractions = new DeviceAbstractions(abstractionRegistry);
     sim.initAbstractions(abstractionRegistry, systemAbstractions, deviceAbstractions);
     sim.reset();
+    _initLazyLoadManifest();
     _absMethodsLoad();
     _implStatusLoad();
 
@@ -3892,6 +3893,30 @@ function _absMethodsSave() {
     } catch(e) {}
 }
 
+function _initLazyLoadManifest() {
+    if (!sim) return;
+    const manifest = {};
+    if (typeof BOOT_UPLOADS !== 'undefined') {
+        for (const upload of BOOT_UPLOADS) {
+            if (upload.methods && upload.methods.length > 0 && upload.index >= 16) {
+                const isHot = (upload.index === 19);
+                if (!isHot) {
+                    manifest[upload.index] = {
+                        source: 'local',
+                        path: `${upload.abstraction}.lump`,
+                        size: 64,
+                        priority: 'warm',
+                        loaded: true,
+                        loadCount: 1,
+                        bootUpload: upload
+                    };
+                }
+            }
+        }
+    }
+    sim.initLazyManifest(manifest);
+}
+
 function _absMethodsLoad() {
     try {
         const d = localStorage.getItem('cm_userMethodData');
@@ -4351,6 +4376,7 @@ function getMethodPurposes(abs) {
         'SlideRule': { 'Multiply': 'SlideRule.Multiply(a, b) — DR0*DR1, method index 0', 'Divide': 'SlideRule.Divide(a, b) — DR0/DR1 (truncated), method index 1. Division by zero returns 0.', 'Sqrt': 'SlideRule.Sqrt(x) — floor(√DR0), method index 2', 'Mod': 'SlideRule.Mod(a, b) — DR0%DR1, method index 3. Mod by zero returns 0.', 'Sin': 'SlideRule.Sin(angle) — CORDIC sine in fixed-point (16-bit fractional), method index 4', 'Cos': 'SlideRule.Cos(angle) — CORDIC cosine in fixed-point (16-bit fractional), method index 5', 'Tan': 'SlideRule.Tan(angle) — CORDIC tangent in fixed-point (16-bit fractional), method index 6', 'Asin': 'SlideRule.Asin(x) — CORDIC inverse sine, result in fixed-point radians, method index 7', 'Acos': 'SlideRule.Acos(x) — CORDIC inverse cosine, result in fixed-point radians, method index 8', 'Atan': 'SlideRule.Atan(x) — CORDIC inverse tangent, result in fixed-point radians, method index 9', 'ToDegrees': 'SlideRule.ToDegrees(rad) — fixed-point radians → degrees (×180/π), method index 10', 'ToRadians': 'SlideRule.ToRadians(deg) — degrees → fixed-point radians (×π/180), method index 11', 'Bernoulli': 'SlideRule.Bernoulli(n) — exact rational Bernoulli number B(n). Numerator in DR(dst), denominator in DR(dst+1). Odd n>1 returns 0/1. Method index 12.', 'Abs': 'SlideRule.Abs(n) — |DR0|, method index 13', 'Pow': 'SlideRule.Pow(base, exp) — base^exp (integer, exp≥0), method index 14. Negative exponent returns 0.', 'Min': 'SlideRule.Min(a, b) — min(DR0, DR1), method index 15', 'Max': 'SlideRule.Max(a, b) — max(DR0, DR1), method index 16', 'GCD': 'SlideRule.GCD(a, b) — greatest common divisor of DR0 and DR1, method index 17', 'Factorial': 'SlideRule.Factorial(n) — n! (integer), method index 18. Negative n returns 0.', 'Log2': 'SlideRule.Log2(n) — floor(log₂(n)), method index 19. n<1 returns 0.', 'Atan2': 'SlideRule.Atan2(y, x) — two-argument arctangent, method index 20', 'Signum': 'SlideRule.Signum(n) — sign of DR0: +1, 0, or −1, method index 21' },
         'Abacus': { 'Add': 'Abacus.Add(a, b) — integer add', 'Sub': 'Abacus.Sub(a, b) — integer subtract', 'Mul': 'Abacus.Mul(a, b) — integer multiply', 'Div': 'Abacus.Div(a, b) — integer divide', 'Mod': 'Abacus.Mod(a, b) — remainder', 'Abs': 'Abacus.Abs(x) — absolute value' },
         'Constants': { 'Pi': 'Constants.Pi() — return \u03c0 as IEEE 754', 'E': 'Constants.E() — return e', 'Phi': 'Constants.Phi() — return \u03c6', 'Zero': 'Constants.Zero() — return 0.0', 'One': 'Constants.One() — return 1.0' },
+        'Loader': { 'Load': 'Loader.Load(slot) — fault-driven lazy load of a warm/cold abstraction', 'Prefetch': 'Loader.Prefetch(slot) — hint-driven pre-load without blocking', 'Evict': 'Loader.Evict(slot) — unload a cold abstraction to free memory' },
         'Circle': { 'Area': 'Circle.Area(radius) — \u03c0r\u00b2 via SlideRule.Multiply + Constants.Pi', 'Circumference': 'Circle.Circumference(radius) — 2\u03c0r via SlideRule' },
         'Family': { 'Register': 'Family.Register(parent_GT, child_GT) — bind parent-child in c-list', 'Hello': 'Family.Hello(target_GT) — send greeting to any family member via their GT', 'Oversight': 'Family.Oversight(child_GT) — parent queries child activity' },
         'Schoolroom': { 'Join': 'Schoolroom.Join(class_GT) — student enters class', 'Lesson': 'Schoolroom.Lesson(class_GT, content_GT) — teacher posts lesson', 'Submit': 'Schoolroom.Submit(work_GT) — student submits work', 'Grade': 'Schoolroom.Grade(work_GT, score) — teacher grades work' },
@@ -5201,9 +5227,41 @@ CALL   CR1              ; DR0 <- 0x00000000 (0.0)`,
 LOAD   CR1, NS[18]      ; Load Constants E-GT
 CALL   CR1              ; DR0 <- 0x3F800000 (1.0)`,
         },
+        'Loader': {
+            'Load': `; Loader.Load — fault-driven lazy load
+; Normally called automatically by the fault handler
+; when a CALL targets a warm/cold NULL slot.
+; Can also be called explicitly:
+DWRITE DR0, #16         ; Slot 16 (SlideRule)
+LOAD   CR1, NS[19]      ; Load Loader E-GT
+CALL   CR1              ; Loader.Load(16):
+;   1. Read manifest[16] — source, path, size, priority
+;   2. Fetch lump bytes (UART or local)
+;   3. Memory.Allocate(size)
+;   4. Write lump into allocated region
+;   5. Navana.Abstraction.Add(slot, lump)
+;   6. Mint.Create(GT for loaded abstraction)
+; Slot 16 is now live — subsequent CALLs work`,
+            'Prefetch': `; Loader.Prefetch — hint-driven pre-load
+DWRITE DR0, #16         ; Slot to prefetch
+DWRITE DR3, #1          ; Method index 1 (Prefetch)
+LOAD   CR1, NS[19]      ; Load Loader E-GT
+CALL   CR1              ; Returns immediately
+; Lump will be loaded in background
+; No fault if already loaded`,
+            'Evict': `; Loader.Evict — unload a cold abstraction
+DWRITE DR0, #16         ; Slot to evict
+DWRITE DR3, #2          ; Method index 2 (Evict)
+LOAD   CR1, NS[19]      ; Load Loader E-GT
+CALL   CR1              ; Loader.Evict(16):
+;   1. Clear NS entry for slot 16
+;   2. Memory.Free(slot 16 lump region)
+;   3. NULL the GT — next CALL triggers re-load
+; Slot 16 is now NULL — saves memory`,
+        },
         'Circle': {
             'Area': `; Circle.Area — pi * r^2 (delegates to SlideRule)
-LOAD   CR1, NS[19]      ; Load Circle E-GT
+LOAD   CR1, NS[46]      ; Load Circle E-GT
 DWRITE DR0, #0x40A00000 ; Radius: 5.0
 
 CALL   CR1              ; Circle.Area internally:
@@ -5215,7 +5273,7 @@ CALL   CR1              ; Circle.Area internally:
 ; DR0 <- 0x429CE5A0 (78.54)
 ; Circle has no trig itself — delegates to SlideRule`,
             'Circumference': `; Circle.Circumference — 2 * pi * r
-LOAD   CR1, NS[19]      ; Load Circle E-GT
+LOAD   CR1, NS[46]      ; Load Circle E-GT
 DWRITE DR0, #0x40A00000 ; Radius: 5.0
 
 CALL   CR1              ; Circle.Circumference internally:

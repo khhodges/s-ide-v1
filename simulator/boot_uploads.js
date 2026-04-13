@@ -245,6 +245,23 @@ const BOOT_UPLOADS = [
         methods: []
     },
     {
+        abstraction: 'Loader',
+        type: 'abstraction',
+        index: 19,
+        grants: ['E'],
+        capabilities: [
+            { target: 5, name: 'Navana', grants: ['E'] },
+            { target: 6, name: 'Mint', grants: ['E'] },
+            { target: 7, name: 'Memory', grants: ['E'] },
+            { target: 11, name: 'UART', grants: ['E'] }
+        ],
+        methods: [
+            { name: 'Load', code: [0x7F600000, 0x7F060000, 0x1F000000] },
+            { name: 'Prefetch', code: [0x7F600000, 0x7F060000, 0x1F000000] },
+            { name: 'Evict', code: [0x7F600000, 0x7F060000, 0x1F000000] }
+        ]
+    },
+    {
         abstraction: 'SlideRule',
         type: 'boot',
         index: 16,

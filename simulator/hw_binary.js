@@ -76,7 +76,7 @@ const HW_NS_LABELS = {
     16: 'SlideRule',
     17: 'Abacus',
     18: 'Constants',
-    19: 'Circle',
+    19: 'Loader',
     20: 'SUCC',
     21: 'PRED',
     22: 'ADD',
@@ -102,6 +102,8 @@ const HW_NS_LABELS = {
     42: 'Email',
     43: 'PAIR',
     44: 'GC',
+    45: 'Thread',
+    46: 'Circle',
 };
 
 const TANG_NANO_20K = {

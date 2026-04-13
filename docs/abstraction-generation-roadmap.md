@@ -72,7 +72,8 @@ Computational abstractions for arithmetic, trigonometry, geometry.
 | 16 | SlideRule | Add, Sub, Mul, Div, Sqrt, Log, Pow, Sin, Cos, Tan, Asin, Acos, Atan, ToDegrees, ToRadians | 15 | IEEE 754 FP; CORDIC on hardware |
 | 17 | Abacus | Add, Sub, Mul, Div, Mod, Abs | 6 | 64-bit integer |
 | 18 | Constants | Pi, E, Phi, Zero, One | 5 | Read-only |
-| 19 | Circle | Area, Circumference | 2 | Delegates to SlideRule |
+| 19 | Loader | Load, Prefetch, Evict | 3 | Lazy load on-demand |
+| 46 | Circle | Area, Circumference | 2 | Delegates to SlideRule |
 
 **Status**: 🟡 Partially complete (SlideRule reference implementation exists in Haskell)  
 **Blocking Issue**: FP format agreement, CORDIC implementation

@@ -375,7 +375,13 @@ IEEE 754 floating-point arithmetic with full trigonometry and angle conversion. 
 
 Read-only mathematical constants. Returns pre-computed values with full precision.
 
-### 19 — Circle
+### 19 — Loader
+
+**Methods**: Load, Prefetch, Evict
+
+Lazy load — fault-driven on-demand abstraction loading. Catches NULL_CAP on manifest-registered slots, fetches and installs the lump, retries the faulting CALL transparently. The Loader is always resident (hot priority) and holds GTs for Navana, Mint, Memory, and UART. Critical for the Tang Nano 20K where 64 KB of BRAM cannot hold all abstractions simultaneously.
+
+### 46 — Circle
 
 **Methods**: Area, Circumference
 
