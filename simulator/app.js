@@ -1601,16 +1601,39 @@ function injectCRCode(logEl) {
     }
     if (!src.trim()) { log('Error: Editor is empty and no code found in this CR lump. Click Edit to write code first.'); return null; }
 
-    const asmObj = new ChurchAssembler();
-    const result = asmObj.assemble(src);
-    if (result.errors && result.errors.length > 0) {
-        log('Assembly failed:');
-        result.errors.forEach(e => log(`  Line ${e.line}: ${e.message}`));
-        return null;
-    }
+    let newWords, newCW;
+    let petNameCaps = null;
 
-    const newWords = result.words || [];
-    const newCW = newWords.length;
+    const compiler = new CLOOMCCompiler();
+    if (compiler._detectPetName(src)) {
+        log('Pet-name expression mode detected.');
+        const compResult = compiler.compilePetName(src, []);
+        if (compResult.errors && compResult.errors.length > 0) {
+            log('Pet-name compilation failed:');
+            compResult.errors.forEach(e => log(`  Line ${e.line}: ${e.message}`));
+            return null;
+        }
+        const allCode = [];
+        for (const m of compResult.methods) {
+            if (m.code) allCode.push(...m.code);
+        }
+        newWords = allCode;
+        newCW = newWords.length;
+        if (compResult._neededCaps && compResult._neededCaps.length > 0) {
+            petNameCaps = compResult._neededCaps;
+        }
+        log(`Compiled ${newCW} instruction${newCW !== 1 ? 's' : ''} (language: petname).`);
+    } else {
+        const asmObj = new ChurchAssembler();
+        const result = asmObj.assemble(src);
+        if (result.errors && result.errors.length > 0) {
+            log('Assembly failed:');
+            result.errors.forEach(e => log(`  Line ${e.line}: ${e.message}`));
+            return null;
+        }
+        newWords = result.words || [];
+        newCW = newWords.length;
+    }
 
     delete _lumpManifests[nsIdx];
 
@@ -1663,6 +1686,32 @@ function injectCRCode(logEl) {
         }
 
         log(`Resized: lump cw updated, NS[${nsIdx}] limit17=${newLimit17} (cw=${newCW}), CRC recomputed (gt_seq=${existingGtSeq} preserved).`);
+    }
+
+    if (petNameCaps && petNameCaps.length > 0) {
+        const threadNsBase = sim.NS_TABLE_BASE + 1 * sim.NS_ENTRY_WORDS;
+        const threadLoc = sim.memory[threadNsBase] >>> 0;
+        const threadHdrWord = sim.memory[threadLoc] >>> 0;
+        const threadHdr = sim.parseLumpHeader(threadHdrWord);
+        if (threadHdr.valid && threadHdr.cc > 0) {
+            const threadClistBase = threadLoc + threadHdr.lumpSize - threadHdr.cc;
+            for (const cap of petNameCaps) {
+                if (cap.offset < threadHdr.cc) {
+                    const clistAddr = threadClistBase + cap.offset;
+                    if (clistAddr < sim.memory.length) {
+                        const w2 = sim.memory[sim.NS_TABLE_BASE + cap.nsSlot * sim.NS_ENTRY_WORDS + 2] >>> 0;
+                        const gtSeq = (w2 >>> 25) & 0x7F;
+                        const gtWord = sim.createGT(gtSeq, cap.nsSlot, { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 }, 1);
+                        sim.memory[clistAddr] = gtWord;
+                        log(`  thread c-list[${cap.offset}] <- GT for ${cap.name} (NS[${cap.nsSlot}], GT=0x${gtWord.toString(16).toUpperCase().padStart(8, '0')})`);
+                    }
+                } else {
+                    log(`  Warning: c-list offset ${cap.offset} exceeds thread cc=${threadHdr.cc}`);
+                }
+            }
+        } else {
+            log('  Warning: Thread lump header invalid — cannot set up pet-name capabilities.');
+        }
     }
 
     log(`Simulator patched — ${newCW} word${newCW !== 1 ? 's' : ''} written.`);
@@ -5141,186 +5190,179 @@ CALL   CR1              ; Display.Scroll via E perm:
         },
         'SlideRule': {
             'Multiply': `; SlideRule.Multiply — DR1 * DR2
-; Method index 0 (below 15: use method selector directly)
+; Method index 0 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #2     ; Left operand
 IADD   DR2, DR0, #3     ; Right operand
-CALL   0, CR6, 16       ; method=0 (Multiply), c-list offset 16 (SlideRule)
-                         ; DR1 <- 6`,
+IADD   DR3, DR0, #0     ; Method selector: Multiply (index 0)
+CALL   CR1              ; DR1 <- 6`,
             'Divide': `; SlideRule.Divide — DR1 / DR2
-; Method index 1 (below 15: use method selector directly)
+; Method index 1 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #10    ; Dividend
 IADD   DR2, DR0, #2     ; Divisor
-CALL   1, CR6, 16       ; method=1 (Divide), c-list offset 16 (SlideRule)
-                         ; DR1 <- 5
+IADD   DR3, DR0, #1     ; Method selector: Divide (index 1)
+CALL   CR1              ; DR1 <- 5
 ; Div by zero returns 0 with fault message`,
             'Sqrt': `; SlideRule.Sqrt — floor(sqrt(DR1))
-; Method index 2 (below 15: use method selector directly)
+; Method index 2 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #9     ; Input
-CALL   2, CR6, 16       ; method=2 (Sqrt), c-list offset 16 (SlideRule)
-                         ; DR1 <- 3`,
+IADD   DR3, DR0, #2     ; Method selector: Sqrt (index 2)
+CALL   CR1              ; DR1 <- 3`,
             'Mod': `; SlideRule.Mod — DR1 % DR2
-; Method index 3 (below 15: use method selector directly)
+; Method index 3 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #10    ; Dividend
 IADD   DR2, DR0, #3     ; Divisor
-CALL   3, CR6, 16       ; method=3 (Mod), c-list offset 16 (SlideRule)
-                         ; DR1 <- 1`,
+IADD   DR3, DR0, #3     ; Method selector: Mod (index 3)
+CALL   CR1              ; DR1 <- 1`,
             'Sin': `; SlideRule.Sin — sine (radians)
-; Method index 4 (below 15: use method selector directly)
+; Method index 4 — via NS LOAD + DR3 method select
 ; FPGA uses CORDIC; simulator uses IEEE 754
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #0x3FC90FDB  ; pi/2 (1.5708 rad)
-CALL   4, CR6, 16       ; method=4 (Sin), c-list offset 16 (SlideRule)
-                         ; DR1 <- 0x3F800000 (1.0)`,
+IADD   DR3, DR0, #4     ; Method selector: Sin (index 4)
+CALL   CR1              ; DR1 <- 0x3F800000 (1.0)`,
             'Cos': `; SlideRule.Cos — cosine (radians)
-; Method index 5 (below 15: use method selector directly)
+; Method index 5 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #0     ; 0.0 rad
-CALL   5, CR6, 16       ; method=5 (Cos), c-list offset 16 (SlideRule)
-                         ; DR1 <- 0x3F800000 (1.0)`,
+IADD   DR3, DR0, #5     ; Method selector: Cos (index 5)
+CALL   CR1              ; DR1 <- 0x3F800000 (1.0)`,
             'Tan': `; SlideRule.Tan — tangent (radians)
-; Method index 6 (below 15: use method selector directly)
+; Method index 6 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #0x3F490FDB  ; pi/4 (0.7854 rad)
-CALL   6, CR6, 16       ; method=6 (Tan), c-list offset 16 (SlideRule)
-                         ; DR1 <- 0x3F800000 (1.0)
+IADD   DR3, DR0, #6     ; Method selector: Tan (index 6)
+CALL   CR1              ; DR1 <- 0x3F800000 (1.0)
 ; Near pi/2: FAULT DOMAIN_ERROR (asymptote)`,
             'Asin': `; SlideRule.Asin — inverse sine -> radians
-; Method index 7 (below 15: use method selector directly)
+; Method index 7 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #0x3F800000  ; 1.0
-CALL   7, CR6, 16       ; method=7 (Asin), c-list offset 16 (SlideRule)
-                         ; DR1 <- 0x3FC90FDB (pi/2)
+IADD   DR3, DR0, #7     ; Method selector: Asin (index 7)
+CALL   CR1              ; DR1 <- 0x3FC90FDB (pi/2)
 ; |input| > 1.0: FAULT DOMAIN_ERROR`,
             'Acos': `; SlideRule.Acos — inverse cosine -> radians
-; Method index 8 (below 15: use method selector directly)
+; Method index 8 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #0x3F800000  ; 1.0
-CALL   8, CR6, 16       ; method=8 (Acos), c-list offset 16 (SlideRule)
-                         ; DR1 <- 0x00000000 (0.0)`,
+IADD   DR3, DR0, #8     ; Method selector: Acos (index 8)
+CALL   CR1              ; DR1 <- 0x00000000 (0.0)`,
             'Atan': `; SlideRule.Atan — inverse tangent -> radians
-; Method index 9 (below 15: use method selector directly)
+; Method index 9 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #0x3F800000  ; 1.0
-CALL   9, CR6, 16       ; method=9 (Atan), c-list offset 16 (SlideRule)
-                         ; DR1 <- 0x3F490FDB (pi/4)`,
+IADD   DR3, DR0, #9     ; Method selector: Atan (index 9)
+CALL   CR1              ; DR1 <- 0x3F490FDB (pi/4)`,
             'ToDegrees': `; SlideRule.ToDegrees — radians to degrees
-; Method index 10 (below 15: use method selector directly)
+; Method index 10 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #0x40490FDB  ; pi (3.14159 rad)
-CALL   10, CR6, 16      ; method=10 (ToDegrees), c-list offset 16 (SlideRule)
-                         ; DR1 <- 0x43340000 (180.0 deg)
+IADD   DR3, DR0, #10    ; Method selector: ToDegrees (index 10)
+CALL   CR1              ; DR1 <- 0x43340000 (180.0 deg)
 ; Multiply by 180/pi internally`,
             'ToRadians': `; SlideRule.ToRadians — degrees to radians
-; Method index 11 (below 15: use method selector directly)
+; Method index 11 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #0x43340000  ; 180.0 degrees
-CALL   11, CR6, 16      ; method=11 (ToRadians), c-list offset 16 (SlideRule)
-                         ; DR1 <- 0x40490FDB (pi rad)
+IADD   DR3, DR0, #11    ; Method selector: ToRadians (index 11)
+CALL   CR1              ; DR1 <- 0x40490FDB (pi rad)
 ; Multiply by pi/180 internally`,
             'Bernoulli': `; SlideRule.Bernoulli(n) — exact rational B(n)
-; Method index 12 (below 15: use method selector directly)
+; Method index 12 — via NS LOAD + DR3 method select
 ; Returns: numerator in DR1, denominator in DR2
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #6     ; n=6 -> B(6) = 1/42
-CALL   12, CR6, 16      ; method=12 (Bernoulli), c-list offset 16 (SlideRule)
-                         ; DR1 <- 1 (numerator)
+IADD   DR3, DR0, #12    ; Method selector: Bernoulli (index 12)
+CALL   CR1              ; DR1 <- 1 (numerator)
                          ; DR2 <- 42 (denominator)
 ; Odd n>1 returns 0/1`,
             'Abs': `; SlideRule.Abs — |DR1|
-; Method index 13 (below 15: use method selector directly)
+; Method index 13 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #42    ; Input
 ISUB   DR1, DR0, DR1    ; Negate: DR1 = -42
-CALL   13, CR6, 16      ; method=13 (Abs), c-list offset 16 (SlideRule)
-                         ; DR1 <- 42`,
+IADD   DR3, DR0, #13    ; Method selector: Abs (index 13)
+CALL   CR1              ; DR1 <- 42`,
             'Pow': `; SlideRule.Pow — base^exp (integer, exp >= 0)
-; Method index 14 (below 15: use method selector directly)
+; Method index 14 — via NS LOAD + DR3 method select
 ;
-; CALL d, CRs, #imm form:
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #2     ; Base
 IADD   DR2, DR0, #10    ; Exponent
-CALL   14, CR6, 16      ; method=14 (Pow), c-list offset 16 (SlideRule)
-                         ; DR1 <- 1024
+IADD   DR3, DR0, #14    ; Method selector: Pow (index 14)
+CALL   CR1              ; DR1 <- 1024
 ; Negative exponent returns 0`,
             'Min': `; SlideRule.Min — min(DR1, DR2)
-; Method index 15 (AT the boundary: use DR3 escape)
+; Method index 15 — via NS LOAD + DR3 method select
 ;
-; CALL 15, CRs, #imm form (escape: DR3 holds method):
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #7     ; First value
 IADD   DR2, DR0, #3     ; Second value
 IADD   DR3, DR0, #15    ; Method selector: Min (index 15)
-CALL   15, CR6, 16      ; escape -> DR3=15 (Min), c-list offset 16
-                         ; DR1 <- 3`,
+CALL   CR1              ; DR1 <- 3`,
             'Max': `; SlideRule.Max — max(DR1, DR2)
-; Method index 16 (above 15: use DR3 escape)
+; Method index 16 — via NS LOAD + DR3 method select
 ;
-; CALL 15, CRs, #imm form (escape: DR3 holds method):
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #7     ; First value
 IADD   DR2, DR0, #3     ; Second value
 IADD   DR3, DR0, #16    ; Method selector: Max (index 16)
-CALL   15, CR6, 16      ; escape -> DR3=16 (Max), c-list offset 16
-                         ; DR1 <- 7`,
+CALL   CR1              ; DR1 <- 7`,
             'GCD': `; SlideRule.GCD — greatest common divisor
-; Method index 17 (above 15: use DR3 escape)
+; Method index 17 — via NS LOAD + DR3 method select
 ;
-; CALL 15, CRs, #imm form (escape: DR3 holds method):
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #12    ; First value
 IADD   DR2, DR0, #8     ; Second value
 IADD   DR3, DR0, #17    ; Method selector: GCD (index 17)
-CALL   15, CR6, 16      ; escape -> DR3=17 (GCD), c-list offset 16
-                         ; DR1 <- 4`,
+CALL   CR1              ; DR1 <- 4`,
             'Factorial': `; SlideRule.Factorial — n!
-; Method index 18 (above 15: use DR3 escape)
+; Method index 18 — via NS LOAD + DR3 method select
 ;
-; CALL 15, CRs, #imm form (escape: DR3 holds method):
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #10    ; n=10
 IADD   DR3, DR0, #18    ; Method selector: Factorial (index 18)
-CALL   15, CR6, 16      ; escape -> DR3=18 (Factorial), c-list offset 16
-                         ; DR1 <- 3628800`,
+CALL   CR1              ; DR1 <- 3628800`,
             'Log2': `; SlideRule.Log2 — floor(log2(n))
-; Method index 19 (above 15: use DR3 escape)
+; Method index 19 — via NS LOAD + DR3 method select
 ;
-; CALL 15, CRs, #imm form (escape: DR3 holds method):
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #256   ; Input
 IADD   DR3, DR0, #19    ; Method selector: Log2 (index 19)
-CALL   15, CR6, 16      ; escape -> DR3=19 (Log2), c-list offset 16
-                         ; DR1 <- 8
+CALL   CR1              ; DR1 <- 8
 ; n<1 returns 0`,
             'Atan2': `; SlideRule.Atan2 — atan2(y, x)
-; Method index 20 (above 15: use DR3 escape)
+; Method index 20 — via NS LOAD + DR3 method select
 ;
-; CALL 15, CRs, #imm form (escape: DR3 holds method):
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #0x3F800000  ; y = 1.0
 IADD   DR2, DR0, #0x3F800000  ; x = 1.0
 IADD   DR3, DR0, #20    ; Method selector: Atan2 (index 20)
-CALL   15, CR6, 16      ; escape -> DR3=20 (Atan2), c-list offset 16
-                         ; DR1 <- 0x3F490FDB (pi/4)`,
+CALL   CR1              ; DR1 <- 0x3F490FDB (pi/4)`,
             'Signum': `; SlideRule.Signum — sign of DR1: +1, 0, or -1
-; Method index 21 (above 15: use DR3 escape)
+; Method index 21 — via NS LOAD + DR3 method select
 ;
-; CALL 15, CRs, #imm form (escape: DR3 holds method):
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
 IADD   DR1, DR0, #42    ; Positive input
 IADD   DR3, DR0, #21    ; Method selector: Signum (index 21)
-CALL   15, CR6, 16      ; escape -> DR3=21 (Signum), c-list offset 16
-                         ; DR1 <- 1`,
+CALL   CR1              ; DR1 <- 1`,
         },
         'Abacus': {
             'Add': `; Abacus.Add — integer addition (Turing domain data)

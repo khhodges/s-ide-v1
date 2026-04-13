@@ -78,7 +78,9 @@ class CLOOMCCompiler {
         const targetDirective = this._parseTargetDirective(source);
         const cleanSource = source.replace(/^\s*@target\s+(IoT|Full)\s*$/im, '');
         let result;
-        if (this._detectEnglish(cleanSource)) {
+        if (this._detectPetName(cleanSource)) {
+            result = this.compilePetName(cleanSource, capabilities);
+        } else if (this._detectEnglish(cleanSource)) {
             result = this.compileEnglish(cleanSource, capabilities);
         } else if (this._detectLambda(cleanSource)) {
             result = this.compileLambda(cleanSource, capabilities);
@@ -2797,5 +2799,380 @@ class CLOOMCCompiler {
         e = e.replace(/\b(\w+)\s+shifted\s+right\s+(?:by\s+)?(\d+)\b/gi, '$1 >> $2');
 
         return e.trim();
+    }
+
+    _detectPetName(source) {
+        const lines = source.split('\n');
+        let petNameScore = 0;
+        const asmMnemonics = /^\s*(LOAD|SAVE|CALL|RETURN|CHANGE|SWITCH|TPERM|LAMBDA|ELOADCALL|XLOADLAMBDA|DREAD|DWRITE|BFEXT|BFINS|MCMP|IADD|ISUB|BRANCH|SHL|SHR|HALT|NOP)\b/i;
+        const assignPattern = /^\s*[A-Za-z_]\w*\s*=\s*.+/;
+        const funcCallPattern = /^\s*(?:[A-Za-z_]\w*\s*=\s*)?(?:Sqrt|GCD|Factorial|Log2|Abs|Min|Max|Pow|Sin|Cos|Tan|Asin|Acos|Atan|Atan2|ToDegrees|ToRadians|Bernoulli|Signum|Mod)\s*\(/i;
+        const operatorPattern = /^\s*[A-Za-z_]\w*\s*=\s*[A-Za-z_\d]\S*\s*[\+\-\*\/%]\s*/;
+        let asmLines = 0;
+        let exprLines = 0;
+        for (const line of lines) {
+            const t = line.trim();
+            if (!t || t.startsWith(';') || t.startsWith('//') || t.startsWith('--')) continue;
+            if (asmMnemonics.test(t)) { asmLines++; continue; }
+            if (funcCallPattern.test(t)) { petNameScore += 3; exprLines++; continue; }
+            if (operatorPattern.test(t)) { petNameScore += 2; exprLines++; continue; }
+            if (assignPattern.test(t)) { petNameScore += 1; exprLines++; continue; }
+        }
+        if (this._detectEnglish(source)) return false;
+        if (/^\s*abstraction\s+\w+/m.test(source)) return false;
+        if (/^\s*method\s+\w+/m.test(source)) return false;
+        if (/^\s*(?:create|define|make)\s+(?:an?\s+)?abstraction/im.test(source)) return false;
+        return petNameScore >= 2 && exprLines >= 1;
+    }
+
+    compilePetName(source, capabilities) {
+        const errors = [];
+        const code = [];
+        const manifest = [];
+        const locals = {};
+        const lines = source.split('\n');
+        const neededCaps = {};
+        let nextClistOffset = 16;
+
+        const requireCap = (nsSlot, name) => {
+            if (!neededCaps[nsSlot]) {
+                neededCaps[nsSlot] = { offset: nextClistOffset++, nsSlot, name };
+            }
+            return neededCaps[nsSlot].offset;
+        };
+
+        const OP_TABLE = {
+            '+': { abs: 'Abacus', nsSlot: 17, method: 'Add', methodIndex: 0 },
+            '-': { abs: 'Abacus', nsSlot: 17, method: 'Sub', methodIndex: 1 },
+            '*': { abs: 'SlideRule', nsSlot: 16, method: 'Multiply', methodIndex: 0 },
+            '/': { abs: 'SlideRule', nsSlot: 16, method: 'Divide', methodIndex: 1 },
+            '%': { abs: 'SlideRule', nsSlot: 16, method: 'Mod', methodIndex: 3 },
+        };
+
+        const FUNC_TABLE = {
+            'sqrt':       { abs: 'SlideRule', nsSlot: 16, methodIndex: 2, args: 1 },
+            'mod':        { abs: 'SlideRule', nsSlot: 16, methodIndex: 3, args: 2 },
+            'sin':        { abs: 'SlideRule', nsSlot: 16, methodIndex: 4, args: 1 },
+            'cos':        { abs: 'SlideRule', nsSlot: 16, methodIndex: 5, args: 1 },
+            'tan':        { abs: 'SlideRule', nsSlot: 16, methodIndex: 6, args: 1 },
+            'asin':       { abs: 'SlideRule', nsSlot: 16, methodIndex: 7, args: 1 },
+            'acos':       { abs: 'SlideRule', nsSlot: 16, methodIndex: 8, args: 1 },
+            'atan':       { abs: 'SlideRule', nsSlot: 16, methodIndex: 9, args: 1 },
+            'todegrees':  { abs: 'SlideRule', nsSlot: 16, methodIndex: 10, args: 1 },
+            'toradians':  { abs: 'SlideRule', nsSlot: 16, methodIndex: 11, args: 1 },
+            'bernoulli':  { abs: 'SlideRule', nsSlot: 16, methodIndex: 12, args: 1 },
+            'abs':        { abs: 'SlideRule', nsSlot: 16, methodIndex: 13, args: 1 },
+            'pow':        { abs: 'SlideRule', nsSlot: 16, methodIndex: 14, args: 2 },
+            'min':        { abs: 'SlideRule', nsSlot: 16, methodIndex: 15, args: 2 },
+            'max':        { abs: 'SlideRule', nsSlot: 16, methodIndex: 16, args: 2 },
+            'gcd':        { abs: 'SlideRule', nsSlot: 16, methodIndex: 17, args: 2 },
+            'factorial':  { abs: 'SlideRule', nsSlot: 16, methodIndex: 18, args: 1 },
+            'log2':       { abs: 'SlideRule', nsSlot: 16, methodIndex: 19, args: 1 },
+            'atan2':      { abs: 'SlideRule', nsSlot: 16, methodIndex: 20, args: 2 },
+            'signum':     { abs: 'SlideRule', nsSlot: 16, methodIndex: 21, args: 1 },
+            'add':        { abs: 'Abacus', nsSlot: 17, methodIndex: 0, args: 2 },
+            'sub':        { abs: 'Abacus', nsSlot: 17, methodIndex: 1, args: 2 },
+            'mul':        { abs: 'Abacus', nsSlot: 17, methodIndex: 2, args: 2 },
+            'div':        { abs: 'Abacus', nsSlot: 17, methodIndex: 3, args: 2 },
+            'multiply':   { abs: 'SlideRule', nsSlot: 16, methodIndex: 0, args: 2 },
+            'divide':     { abs: 'SlideRule', nsSlot: 16, methodIndex: 1, args: 2 },
+        };
+
+        const asmMnemonics = /^\s*(LOAD|SAVE|CALL|RETURN|CHANGE|SWITCH|TPERM|LAMBDA|ELOADCALL|XLOADLAMBDA|DREAD|DWRITE|BFEXT|BFINS|MCMP|IADD|ISUB|BRANCH|SHL|SHR|HALT|NOP)\b/i;
+
+        const allocPetReg = (name) => {
+            if (locals[name] !== undefined) return locals[name];
+            for (let r = this.DR_LOCALS_START; r <= this.DR_LOCALS_END; r++) {
+                if (!Object.values(locals).includes(r)) {
+                    locals[name] = r;
+                    return r;
+                }
+            }
+            for (let r = this.DR_TEMP_START; r <= this.DR_TEMP_END; r++) {
+                if (!Object.values(locals).includes(r)) {
+                    locals[name] = r;
+                    return r;
+                }
+            }
+            return -1;
+        };
+
+        const resolveValue = (token, lineNum) => {
+            const t = token.trim();
+            const numMatch = t.match(/^-?(0x[0-9a-fA-F]+|\d+)$/);
+            if (numMatch) {
+                let val = parseInt(t);
+                const isNeg = val < 0;
+                if (isNeg) val = (-val) >>> 0;
+                const dr = allocPetReg('__tmp_' + code.length);
+                if (val === 0) {
+                    code.push(this.encode(this.opcodes.IADD, 14, dr, 0, 0));
+                } else if (val <= 0x3FFF) {
+                    code.push(this.encode(this.opcodes.IADD, 14, dr, 0, val | 0x4000));
+                } else {
+                    const low = val & 0x3FFF;
+                    const hi = val >>> 14;
+                    code.push(this.encode(this.opcodes.IADD, 14, dr, 0, low | 0x4000));
+                    if (hi > 0) {
+                        const t2 = allocPetReg('__tmp2_' + code.length);
+                        code.push(this.encode(this.opcodes.IADD, 14, t2, 0, (hi & 0x3FFF) | 0x4000));
+                        code.push(this.encode(this.opcodes.SHL, 14, t2, t2, 14));
+                        code.push(this.encode(this.opcodes.IADD, 14, dr, dr, t2));
+                        delete locals['__tmp2_' + (code.length - 3)];
+                    }
+                }
+                if (isNeg) {
+                    code.push(this.encode(this.opcodes.ISUB, 14, dr, 0, dr));
+                }
+                delete locals['__tmp_' + (code.length - (isNeg ? (val > 0x3FFF ? 5 : 2) : (val > 0x3FFF ? 4 : 1)))];
+                return dr;
+            }
+            const reg = locals[t];
+            if (reg !== undefined) return reg;
+            errors.push({ line: lineNum, message: `Unknown variable '${t}' — assign it first (e.g. ${t} = 5)` });
+            return 0;
+        };
+
+        const emitAbsCall = (nsSlot, absName, methodIndex, lineNum) => {
+            const clistOffset = requireCap(nsSlot, absName);
+            code.push(this.encode(this.opcodes.IADD, 14, 3, 0, methodIndex | 0x4000));
+            manifest.push({ src: lineNum, addr: code.length, desc: `LOAD CR0, CR6, #${clistOffset}  (${absName} from thread c-list)` });
+            code.push(this.encode(this.opcodes.LOAD, 14, 0, 6, clistOffset));
+            manifest.push({ src: lineNum, addr: code.length, desc: `CALL CR0 (method ${methodIndex})` });
+            code.push(this.encode(this.opcodes.CALL, 14, 0, 0, 0));
+        };
+
+        for (let i = 0; i < lines.length; i++) {
+            const raw = lines[i];
+            const t = raw.trim();
+            if (!t || t.startsWith(';') || t.startsWith('//') || t.startsWith('--')) continue;
+
+            if (asmMnemonics.test(t)) {
+                const asmResult = this._assemblePetNameRaw(t, i, code, manifest);
+                if (asmResult.error) {
+                    errors.push({ line: i, message: asmResult.error });
+                }
+                continue;
+            }
+
+            const funcAssignMatch = t.match(/^([A-Za-z_]\w*)\s*=\s*([A-Za-z_]\w*)\s*\(\s*(.*?)\s*\)$/);
+            if (funcAssignMatch) {
+                const destName = funcAssignMatch[1];
+                const funcName = funcAssignMatch[2].toLowerCase();
+                const argStr = funcAssignMatch[3];
+                const func = FUNC_TABLE[funcName];
+                if (!func) {
+                    errors.push({ line: i, message: `Unknown function '${funcAssignMatch[2]}' — available: ${Object.keys(FUNC_TABLE).filter(k => k[0] >= 'A' || k === k).join(', ')}` });
+                    continue;
+                }
+                const args = argStr.split(',').map(s => s.trim()).filter(Boolean);
+                if (args.length < func.args) {
+                    errors.push({ line: i, message: `${funcAssignMatch[2]}() expects ${func.args} argument(s), got ${args.length}` });
+                    continue;
+                }
+                const arg1DR = resolveValue(args[0], i);
+                if (arg1DR !== 1) {
+                    code.push(this.encode(this.opcodes.IADD, 14, 1, arg1DR, 0));
+                }
+                if (func.args >= 2 && args[1]) {
+                    const arg2DR = resolveValue(args[1], i);
+                    if (arg2DR !== 2) {
+                        code.push(this.encode(this.opcodes.IADD, 14, 2, arg2DR, 0));
+                    }
+                }
+                manifest.push({ src: i, addr: code.length, desc: `${funcAssignMatch[2]}(${argStr})` });
+                emitAbsCall(func.nsSlot, func.abs, func.methodIndex, i);
+                const destDR = allocPetReg(destName);
+                if (destDR !== 1) {
+                    code.push(this.encode(this.opcodes.IADD, 14, destDR, 1, 0));
+                }
+                continue;
+            }
+
+            const bareFunc = t.match(/^([A-Za-z_]\w*)\s*\(\s*(.*?)\s*\)$/);
+            if (bareFunc) {
+                const funcName = bareFunc[1].toLowerCase();
+                const argStr = bareFunc[2];
+                const func = FUNC_TABLE[funcName];
+                if (func) {
+                    const args = argStr.split(',').map(s => s.trim()).filter(Boolean);
+                    if (args.length >= 1) {
+                        const arg1DR = resolveValue(args[0], i);
+                        if (arg1DR !== 1) code.push(this.encode(this.opcodes.IADD, 14, 1, arg1DR, 0));
+                    }
+                    if (func.args >= 2 && args.length >= 2) {
+                        const arg2DR = resolveValue(args[1], i);
+                        if (arg2DR !== 2) code.push(this.encode(this.opcodes.IADD, 14, 2, arg2DR, 0));
+                    }
+                    manifest.push({ src: i, addr: code.length, desc: `${bareFunc[1]}(${argStr})` });
+                    emitAbsCall(func.nsSlot, func.abs, func.methodIndex, i);
+                    continue;
+                }
+            }
+
+            const assignMatch = t.match(/^([A-Za-z_]\w*)\s*=\s*(.+)$/);
+            if (assignMatch) {
+                const destName = assignMatch[1];
+                const expr = assignMatch[2].trim();
+
+                const opMatch = expr.match(/^([A-Za-z_]\w*|(?:-?(?:0x[0-9a-fA-F]+|\d+)))\s*([\+\-\*\/%])\s*([A-Za-z_]\w*|(?:-?(?:0x[0-9a-fA-F]+|\d+)))$/);
+                if (opMatch) {
+                    const leftToken = opMatch[1];
+                    const op = opMatch[2];
+                    const rightToken = opMatch[3];
+                    const opEntry = OP_TABLE[op];
+
+                    if (op === '+' || op === '-') {
+                        const leftDR = resolveValue(leftToken, i);
+                        const rightDR = resolveValue(rightToken, i);
+                        const destDR = allocPetReg(destName);
+                        manifest.push({ src: i, addr: code.length, desc: `${destName} = ${leftToken} ${op} ${rightToken}` });
+                        if (op === '+') {
+                            code.push(this.encode(this.opcodes.IADD, 14, destDR, leftDR, rightDR));
+                        } else {
+                            code.push(this.encode(this.opcodes.ISUB, 14, destDR, leftDR, rightDR));
+                        }
+                        continue;
+                    }
+
+                    if (opEntry) {
+                        const leftDR = resolveValue(leftToken, i);
+                        if (leftDR !== 1) code.push(this.encode(this.opcodes.IADD, 14, 1, leftDR, 0));
+                        const rightDR = resolveValue(rightToken, i);
+                        if (rightDR !== 2) code.push(this.encode(this.opcodes.IADD, 14, 2, rightDR, 0));
+                        manifest.push({ src: i, addr: code.length, desc: `${destName} = ${leftToken} ${op} ${rightToken} via ${opEntry.abs}.${opEntry.method}` });
+                        emitAbsCall(opEntry.nsSlot, opEntry.abs, opEntry.methodIndex, i);
+                        const destDR = allocPetReg(destName);
+                        if (destDR !== 1) {
+                            code.push(this.encode(this.opcodes.IADD, 14, destDR, 1, 0));
+                        }
+                        continue;
+                    }
+                }
+
+                const valDR = resolveValue(expr, i);
+                const destDR = allocPetReg(destName);
+                if (valDR !== destDR) {
+                    manifest.push({ src: i, addr: code.length, desc: `${destName} = ${expr}` });
+                    code.push(this.encode(this.opcodes.IADD, 14, destDR, valDR, 0));
+                } else {
+                    manifest.push({ src: i, addr: code.length - 1, desc: `${destName} = ${expr} (in-place)` });
+                }
+                continue;
+            }
+
+            errors.push({ line: i, message: `Cannot parse pet-name expression: "${t}"` });
+        }
+
+        if (code.length === 0 || (code[code.length - 1] !== 0)) {
+            code.push(0);
+        }
+
+        const methods = [{ name: 'run', code: code }];
+        const capsArray = Object.values(neededCaps);
+        return {
+            methods,
+            errors,
+            manifest: [{ name: 'run', mapping: manifest }],
+            abstractionName: 'PetNameExpression',
+            capabilities: capsArray.map(c => ({ target: c.nsSlot, name: c.name, grants: ['E'] })),
+            _neededCaps: capsArray,
+            _totalClistSlots: nextClistOffset,
+            language: 'petname'
+        };
+    }
+
+    _assemblePetNameRaw(line, lineNum, code, manifest) {
+        const parts = line.replace(/,/g, ' ').replace(/\[/g, ' ').replace(/\]/g, ' ').split(/\s+/).filter(Boolean);
+        if (parts.length === 0) return {};
+        const mnemonic = parts[0].toUpperCase();
+
+        if (mnemonic === 'HALT' || mnemonic === 'NOP') {
+            manifest.push({ src: lineNum, addr: code.length, desc: mnemonic });
+            code.push(0);
+            return {};
+        }
+
+        const opcodeMap = {
+            'LOAD': 0, 'SAVE': 1, 'CALL': 2, 'RETURN': 3,
+            'CHANGE': 4, 'SWITCH': 5, 'TPERM': 6, 'LAMBDA': 7,
+            'ELOADCALL': 8, 'XLOADLAMBDA': 9,
+            'DREAD': 10, 'DWRITE': 11,
+            'BFEXT': 12, 'BFINS': 13,
+            'MCMP': 14, 'IADD': 15, 'ISUB': 16,
+            'BRANCH': 17, 'SHL': 18, 'SHR': 19,
+        };
+
+        const opcode = opcodeMap[mnemonic];
+        if (opcode === undefined) {
+            return { error: `Unknown mnemonic: ${mnemonic}` };
+        }
+
+        const parseDR = (tok) => {
+            if (!tok) return 0;
+            tok = tok.toUpperCase().replace(/,/g, '');
+            const m = tok.match(/^DR(\d+)$/);
+            return m ? Math.min(parseInt(m[1]), 15) : 0;
+        };
+        const parseCR = (tok) => {
+            if (!tok) return 0;
+            tok = tok.toUpperCase().replace(/,/g, '');
+            const m = tok.match(/^CR(\d+)$/);
+            return m ? Math.min(parseInt(m[1]), 15) : 0;
+        };
+        const parseImm = (tok) => {
+            if (!tok) return 0;
+            tok = tok.replace(/,/g, '').replace(/^#/, '');
+            if (tok.startsWith('0x') || tok.startsWith('0X')) return parseInt(tok, 16) & 0xFFFF;
+            return (parseInt(tok, 10) || 0) & 0xFFFF;
+        };
+
+        let crDst = 0, crSrc = 0, imm = 0;
+        if (opcode <= 1) {
+            crDst = parseCR(parts[1]);
+            crSrc = parseCR(parts[2]);
+            imm = parseImm(parts[3]);
+        } else if (opcode === 2) {
+            if (parts[2] && parts[3]) {
+                const p1 = (parts[1] || '').toUpperCase().replace(/,/g, '');
+                const bareNum = p1.match(/^(\d+)$/);
+                crDst = bareNum ? parseInt(bareNum[1]) & 0xF : parseCR(parts[1]);
+                crSrc = parseCR(parts[2]);
+                imm = parseImm(parts[3]);
+            } else {
+                crDst = parseCR(parts[1]);
+            }
+        } else if (opcode === 3) {
+            imm = parts[1] ? parseImm(parts[1]) & 0xFFF : 0;
+        } else if (opcode >= 10 && opcode <= 11) {
+            crDst = parseDR(parts[1]);
+            crSrc = parseCR(parts[2]);
+            imm = parseImm(parts[3]);
+        } else if (opcode >= 15 && opcode <= 16) {
+            crDst = parseDR(parts[1]);
+            crSrc = parseDR(parts[2]);
+            const p3 = (parts[3] || '').replace(/,/g, '').trim();
+            if (p3.startsWith('#')) {
+                const immVal = parseInt(p3.substring(1), 10);
+                imm = 0x4000 | ((isNaN(immVal) ? 0 : immVal) & 0x3FFF);
+            } else {
+                imm = parseDR(parts[3]);
+            }
+        } else if (opcode === 17) {
+            crDst = parseDR(parts[1]);
+            imm = parseImm(parts[2]);
+        } else if (opcode === 18 || opcode === 19) {
+            crDst = parseDR(parts[1]);
+            crSrc = parseDR(parts[2]);
+            imm = parseImm(parts[3]);
+        } else {
+            crDst = parseCR(parts[1]);
+            crSrc = parseCR(parts[2]);
+            imm = parseImm(parts[3]);
+        }
+
+        manifest.push({ src: lineNum, addr: code.length, desc: line.trim() });
+        code.push(this.encode(opcode, 14, crDst, crSrc, imm));
+        return {};
     }
 }
