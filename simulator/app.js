@@ -1689,28 +1689,20 @@ function injectCRCode(logEl) {
     }
 
     if (petNameCaps && petNameCaps.length > 0) {
-        const threadNsBase = sim.NS_TABLE_BASE + 1 * sim.NS_ENTRY_WORDS;
-        const threadLoc = sim.memory[threadNsBase] >>> 0;
-        const threadHdrWord = sim.memory[threadLoc] >>> 0;
-        const threadHdr = sim.parseLumpHeader(threadHdrWord);
-        if (threadHdr.valid && threadHdr.cc > 0) {
-            const threadClistBase = threadLoc + threadHdr.lumpSize - threadHdr.cc;
-            for (const cap of petNameCaps) {
-                if (cap.offset < threadHdr.cc) {
-                    const clistAddr = threadClistBase + cap.offset;
-                    if (clistAddr < sim.memory.length) {
-                        const w2 = sim.memory[sim.NS_TABLE_BASE + cap.nsSlot * sim.NS_ENTRY_WORDS + 2] >>> 0;
-                        const gtSeq = (w2 >>> 25) & 0x7F;
-                        const gtWord = sim.createGT(gtSeq, cap.nsSlot, { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 }, 1);
-                        sim.memory[clistAddr] = gtWord;
-                        log(`  thread c-list[${cap.offset}] <- GT for ${cap.name} (NS[${cap.nsSlot}], GT=0x${gtWord.toString(16).toUpperCase().padStart(8, '0')})`);
-                    }
-                } else {
-                    log(`  Warning: c-list offset ${cap.offset} exceeds thread cc=${threadHdr.cc}`);
-                }
+        const clistBase = sim.cr[6].word1;
+        for (let ci = 0; ci < petNameCaps.length; ci++) {
+            const cap = petNameCaps[ci];
+            const clistOffset = cap.capIndex + 1;
+            const clistAddr = clistBase + clistOffset;
+            if (clistAddr < sim.memory.length) {
+                const w2 = sim.memory[sim.NS_TABLE_BASE + cap.nsSlot * sim.NS_ENTRY_WORDS + 2] >>> 0;
+                const gtSeq = (w2 >>> 25) & 0x7F;
+                const gtWord = sim.createGT(gtSeq, cap.nsSlot, { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 }, 1);
+                sim.memory[clistAddr] = gtWord;
+                log(`  c-list[${clistOffset}] <- GT for ${cap.name} (NS[${cap.nsSlot}], GT=0x${gtWord.toString(16).toUpperCase().padStart(8, '0')})`);
+            } else {
+                log(`  Warning: c-list address 0x${clistAddr.toString(16)} out of range`);
             }
-        } else {
-            log('  Warning: Thread lump header invalid — cannot set up pet-name capabilities.');
         }
     }
 

@@ -2832,24 +2832,14 @@ class CLOOMCCompiler {
         const locals = {};
         const lines = source.split('\n');
         const neededCaps = {};
-        let nextClistOffset = 16;
+        let nextCapIndex = 0;
         let allocFailed = false;
-
-        const threadCCLimit = (() => {
-            if (typeof BOOT_UPLOADS === 'undefined') return 64;
-            const threadUpload = BOOT_UPLOADS.find(u => u.abstraction === 'Thread');
-            if (threadUpload && threadUpload.capabilities) return Math.max(threadUpload.capabilities.length + 16, 64);
-            return 64;
-        })();
 
         const requireCap = (nsSlot, name) => {
             if (!neededCaps[nsSlot]) {
-                if (nextClistOffset >= threadCCLimit) {
-                    errors.push({ line: 0, message: `Too many capabilities needed — thread c-list limit is ${threadCCLimit} entries (offset ${nextClistOffset} exceeds capacity)` });
-                }
-                neededCaps[nsSlot] = { offset: nextClistOffset++, nsSlot, name };
+                neededCaps[nsSlot] = { capIndex: nextCapIndex++, nsSlot, name };
             }
-            return neededCaps[nsSlot].offset;
+            return neededCaps[nsSlot].capIndex + 1;
         };
 
         const tables = CLOOMCCompiler._buildPetNameTables();
@@ -2958,11 +2948,12 @@ class CLOOMCCompiler {
         };
 
         let __tmpCounter = 0;
-        const saveResult = (lineNum) => {
+        const saveResult = (lineNum, outputDR) => {
+            const srcDR = outputDR || 1;
             const tmpName = '__res_' + (__tmpCounter++);
             const dr = allocPetReg(tmpName, lineNum);
-            if (dr !== 1) {
-                code.push(this.encode(this.opcodes.IADD, 14, dr, 1, 0));
+            if (dr !== srcDR) {
+                code.push(this.encode(this.opcodes.IADD, 14, dr, srcDR, 0));
             }
             return dr;
         };
@@ -3008,7 +2999,7 @@ class CLOOMCCompiler {
                 }
                 emitFuncCall(func, argDRs, lineNum);
                 for (const a of argDRs) freeTempReg(findTempKey(a));
-                return saveResult(lineNum);
+                return saveResult(lineNum, func.outputDR);
             }
 
             const addSubPos = this._findTopLevelOp(expr, ['+', '-']);
@@ -3023,7 +3014,8 @@ class CLOOMCCompiler {
                 emitOpCall(opEntry, leftDR, rightDR, lineNum);
                 freeTempReg(findTempKey(leftDR));
                 freeTempReg(findTempKey(rightDR));
-                return saveResult(lineNum);
+                const opFunc = FUNC_TABLE[opEntry.method.toLowerCase()];
+                return saveResult(lineNum, opFunc ? opFunc.outputDR : 1);
             }
 
             const mulDivPos = this._findTopLevelOp(expr, ['*', '/', '%']);
@@ -3038,7 +3030,8 @@ class CLOOMCCompiler {
                 emitOpCall(opEntry, leftDR, rightDR, lineNum);
                 freeTempReg(findTempKey(leftDR));
                 freeTempReg(findTempKey(rightDR));
-                return saveResult(lineNum);
+                const mulFunc = FUNC_TABLE[opEntry.method.toLowerCase()];
+                return saveResult(lineNum, mulFunc ? mulFunc.outputDR : 1);
             }
 
             if (expr.startsWith('(') && expr.endsWith(')')) {
@@ -3151,7 +3144,6 @@ class CLOOMCCompiler {
             abstractionName: 'PetNameExpression',
             capabilities: capsArray.map(c => c.name),
             _neededCaps: capsArray,
-            _totalClistSlots: nextClistOffset,
             language: 'petname'
         };
     }
@@ -3214,13 +3206,20 @@ class CLOOMCCompiler {
             return (inputStr.match(/DR\d+/g) || []).length;
         };
 
+        const parseOutputDR = (outputStr) => {
+            if (!outputStr) return 1;
+            const match = outputStr.match(/DR(\d+)/);
+            return match ? parseInt(match[1]) : 1;
+        };
+
         for (const [absName, methods] of Object.entries(regConv)) {
             const nsSlot = nsSlotMap[absName];
             if (nsSlot === undefined) continue;
             for (const [methodName, conv] of Object.entries(methods)) {
                 const args = countArgs(conv.input);
+                const outputDR = parseOutputDR(conv.output);
                 funcTable[methodName.toLowerCase()] = {
-                    abs: absName, nsSlot, methodIndex: conv.index, args
+                    abs: absName, nsSlot, methodIndex: conv.index, args, outputDR
                 };
             }
         }
@@ -3236,7 +3235,7 @@ class CLOOMCCompiler {
                 if (!funcTable[key]) {
                     const args = (absName === 'Abacus' && (key === 'add' || key === 'sub' || key === 'mul' || key === 'div' || key === 'mod')) ? 2
                         : (absName === 'Abacus' && key === 'abs') ? 1 : 1;
-                    funcTable[key] = { abs: absName, nsSlot, methodIndex: mi, args };
+                    funcTable[key] = { abs: absName, nsSlot, methodIndex: mi, args, outputDR: 1 };
                 }
             }
         }
