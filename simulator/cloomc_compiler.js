@@ -2837,7 +2837,7 @@ class CLOOMCCompiler {
             if (funcPattern.test(t)) { petNameScore += 3; exprLines++; continue; }
             if (constPattern && constPattern.test(t)) { petNameScore += 2; exprLines++; continue; }
             if (operatorPattern.test(t)) { petNameScore += 2; exprLines++; continue; }
-            if (assignPattern.test(t)) { petNameScore += 1; exprLines++; continue; }
+            if (assignPattern.test(t)) { petNameScore += 2; exprLines++; continue; }
         }
         return petNameScore >= 2 && exprLines >= 1;
     }
