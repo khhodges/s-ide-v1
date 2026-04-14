@@ -2824,7 +2824,7 @@ class CLOOMCCompiler {
         const lines = source.split('\n');
         let petNameScore = 0;
         const asmMnemonics = /^\s*(LOAD|SAVE|CALL|RETURN|CHANGE|SWITCH|TPERM|LAMBDA|ELOADCALL|XLOADLAMBDA|DREAD|DWRITE|BFEXT|BFINS|MCMP|IADD|ISUB|BRANCH\w*|SHL|SHR|HALT|NOP)\b/i;
-        const operatorPattern = /^\s*[A-Za-z_]\w*\s*=\s*[A-Za-z_\d]\S*\s*[\+\-\*\/%]\s*/;
+        const operatorPattern = /^\s*[A-Za-z_]\w*\s*=\s*[A-Za-z_\d]\S*\s*[\+\-\*\/%\^]\s*/;
         const assignPattern = /^\s*[A-Za-z_]\w*\s*=\s*.+/;
         const petLoadPattern = /^\s*LOAD\s+([A-Za-z_]\w*)\s*$/i;
         let exprLines = 0;
@@ -3020,6 +3020,7 @@ class CLOOMCCompiler {
 
         const compileExpr = (expr, lineNum) => {
             expr = expr.trim();
+            expr = this._insertImplicitMul(expr, FUNC_TABLE);
 
             const numMatch = expr.match(/^-?(0x[0-9a-fA-F]+|\d+)$/);
             if (numMatch) {
@@ -3094,6 +3095,21 @@ class CLOOMCCompiler {
                 freeTempReg(findTempKey(rightDR));
                 const mulFunc = FUNC_TABLE[opEntry.method.toLowerCase()];
                 return saveResult(lineNum, mulFunc ? mulFunc.outputDR : 1);
+            }
+
+            const powPos = this._findTopLevelOp(expr, ['^']);
+            if (powPos >= 0) {
+                const left = expr.substring(0, powPos);
+                const right = expr.substring(powPos + 1);
+                const leftDR = compileExpr(left, lineNum);
+                const rightDR = compileExpr(right, lineNum);
+                const opEntry = OP_TABLE['^'];
+                manifest.push({ src: lineNum, addr: code.length, desc: `${left.trim()} ^ ${right.trim()} via ${opEntry.abs}.${opEntry.method}` });
+                emitOpCall(opEntry, leftDR, rightDR, lineNum);
+                freeTempReg(findTempKey(leftDR));
+                freeTempReg(findTempKey(rightDR));
+                const powFunc = FUNC_TABLE[opEntry.method.toLowerCase()];
+                return saveResult(lineNum, powFunc ? powFunc.outputDR : 1);
             }
 
             if (expr.startsWith('(') && expr.endsWith(')')) {
@@ -3267,6 +3283,34 @@ class CLOOMCCompiler {
         return args;
     }
 
+    _insertImplicitMul(expr, funcTable) {
+        const tokens = [];
+        const re = /(0x[0-9a-fA-F]+|[A-Za-z_]\w*|\d+(?:\.\d+)?(?:e[+-]?\d+)?|[+\-*/%^(),]|\S)/gi;
+        let m;
+        while ((m = re.exec(expr)) !== null) {
+            tokens.push(m[0]);
+        }
+        if (tokens.length <= 1) return expr;
+        let result = tokens[0];
+        for (let i = 1; i < tokens.length; i++) {
+            const prev = tokens[i - 1];
+            const cur = tokens[i];
+            const prevIsVal = /^[A-Za-z_\w]/.test(prev) || prev === ')' || /^\d/.test(prev);
+            const curIsVal = /^[A-Za-z_]/.test(cur) || cur === '(' || /^\d/.test(cur);
+            if (prevIsVal && curIsVal) {
+                if (prev === ')' && cur === '(') {
+                    result += '*';
+                } else if (/^[A-Za-z_]\w*$/.test(prev) && cur === '(') {
+                    // skip — this is a function call like Sqrt(x)
+                } else {
+                    result += '*';
+                }
+            }
+            result += cur;
+        }
+        return result;
+    }
+
     _findTopLevelOp(expr, ops) {
         let depth = 0;
         let bestPos = -1;
@@ -3307,8 +3351,8 @@ class CLOOMCCompiler {
     static _buildPetNameTables() {
         const opTable = {};
         const funcTable = {};
-        const opMapping = { '+': 'Add', '-': 'Sub', '*': 'Multiply', '/': 'Divide', '%': 'Mod' };
-        const opAbsPreference = { '+': 'Abacus', '-': 'Abacus', '*': 'SlideRule', '/': 'SlideRule', '%': 'SlideRule' };
+        const opMapping = { '+': 'Add', '-': 'Sub', '*': 'Multiply', '/': 'Divide', '%': 'Mod', '^': 'Pow' };
+        const opAbsPreference = { '+': 'Abacus', '-': 'Abacus', '*': 'SlideRule', '/': 'SlideRule', '%': 'SlideRule', '^': 'SlideRule' };
 
         const regConv = (typeof METHOD_REGISTER_CONVENTIONS !== 'undefined') ? METHOD_REGISTER_CONVENTIONS : {};
         const bootUploads = (typeof BOOT_UPLOADS !== 'undefined') ? BOOT_UPLOADS : [];
@@ -3383,6 +3427,7 @@ class CLOOMCCompiler {
         if (!opTable['*']) opTable['*'] = { abs: 'SlideRule', nsSlot: 16, method: 'Multiply', methodIndex: 0 };
         if (!opTable['/']) opTable['/'] = { abs: 'SlideRule', nsSlot: 16, method: 'Divide', methodIndex: 1 };
         if (!opTable['%']) opTable['%'] = { abs: 'SlideRule', nsSlot: 16, method: 'Mod', methodIndex: 3 };
+        if (!opTable['^']) opTable['^'] = { abs: 'SlideRule', nsSlot: 16, method: 'Pow', methodIndex: 14 };
 
         const funcNames = Object.keys(funcTable)
             .map(k => k.charAt(0).toUpperCase() + k.slice(1))

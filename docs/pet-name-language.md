@@ -50,6 +50,7 @@ Standard infix operators are supported. The compiler routes each operation to th
 | `*` | Multiplication | SlideRule.Multiply |
 | `/` | Division | SlideRule.Divide |
 | `%` | Modulo | SlideRule.Mod |
+| `^` | Exponentiation | SlideRule.Pow |
 
 ```
 sum = a + b
@@ -57,14 +58,29 @@ diff = x - 10
 product = width * height
 ratio = total / count
 remainder = n % 3
+power = x ^ 3
 ```
 
-Operator precedence follows standard rules: `*`, `/`, `%` bind tighter than `+`, `-`. Use parentheses to override:
+Operator precedence follows standard rules: `^` binds tightest, then `*`, `/`, `%`, then `+`, `-`. Use parentheses to override:
 
 ```
 result = (a + b) * c
 nested = ((x + 1) * (y - 2)) / z
+cube = x ^ 3
 ```
+
+### Implicit Multiplication
+
+Adjacent values without an operator are treated as multiplication. This lets you write mathematical expressions naturally:
+
+```
+area = Pi radius^2          ; same as Pi * radius^2
+circumference = 2 Pi radius ; same as 2 * Pi * radius
+volume = 4 Pi r^3 / 3       ; same as 4 * Pi * r^3 / 3
+result = 2(x + 1)           ; same as 2 * (x + 1)
+```
+
+Function calls are not affected: `Sqrt(x)` is still a function call, not `Sqrt * x`.
 
 ---
 
