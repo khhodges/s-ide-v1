@@ -9434,15 +9434,6 @@ function generateChallenge() {
     if (answerEl) { answerEl.value = ''; answerEl.focus(); }
 }
 
-function getGradeTier(grade) {
-    if (grade === 'K' || grade === '1' || grade === '2') return 'early';
-    if (grade === '3' || grade === '4' || grade === '5') return 'elementary';
-    if (grade === '6' || grade === '7' || grade === '8') return 'middle';
-    if (grade === '9' || grade === '10') return 'high';
-    if (grade === '11' || grade === '12' || grade === 'IB') return 'advanced';
-    return 'early';
-}
-
 function pickProblem(tier, solved) {
     const pools = {
         early: [
