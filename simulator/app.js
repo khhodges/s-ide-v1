@@ -1615,6 +1615,7 @@ function showCRPopup(evt, crIdx) {
             html += `</table>`;
         }
     }
+    }
 
     const dismissBtn = `<button class="zdp-dismiss" onclick="hideCRPopup(true)" title="Close">&times;</button>`;
     pop.innerHTML = dismissBtn + html;
