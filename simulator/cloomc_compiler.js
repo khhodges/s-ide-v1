@@ -3227,6 +3227,14 @@ class CLOOMCCompiler {
 
         const methods = [{ name: 'run', code: code }];
         const capsArray = Object.values(neededCaps).sort((a, b) => a.capIndex - b.capIndex);
+        const drMap = {};
+        for (const [name, reg] of Object.entries(locals)) {
+            if (!name.startsWith('__')) drMap[reg] = name;
+        }
+        const crMap = {};
+        for (const [name, reg] of Object.entries(crLocals)) {
+            crMap[reg] = name;
+        }
         return {
             methods,
             errors,
@@ -3234,7 +3242,9 @@ class CLOOMCCompiler {
             abstractionName: 'PetNameExpression',
             capabilities: capsArray.map(c => c.name),
             _neededCaps: capsArray,
-            language: 'petname'
+            language: 'petname',
+            _petNameDR: drMap,
+            _petNameCR: crMap
         };
     }
 

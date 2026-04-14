@@ -110,6 +110,8 @@ let lastAssembledWords = null;
 let lastAssembledCapabilities = null;
 let lastMethodTableSize = 0;
 let _lumpManifests = {};
+let _petNameDRMap = {};
+let _petNameCRMap = {};
 let abstractionRegistry = null;
 let systemAbstractions = null;
 let deviceAbstractions = null;
@@ -881,7 +883,8 @@ function updateCRDisplay() {
             html += `<tr class="cr-separator"><td colspan="${COLS + 1}">&#9472;&#9472; Not in GT zone &#9472;&#9472; CR12 Thread Identity (Priv) \u00b7 CR13 IRQ (System) \u00b7 CR14\u201315 Privileged &#9472;&#9472;</td></tr>`;
         }
         const cr = sim.getFormattedCR(i);
-        const name = localNames[i] || '';
+        const petCR = _petNameCRMap[i];
+        const name = petCR || localNames[i] || '';
         const meta = crMeta[i];
         const nullCls = cr.isNull ? ' cr-null' : ' cr-active';
         const groupCls = meta.group === 'system' ? ' cr-system' : meta.group === 'privil' ? ' cr-privil' : (meta.role === 'arch' ? ' cr-arch' : '');
@@ -959,7 +962,8 @@ function openCRDetail(crIdx) {
             0: 'Result', 1: 'Arg 1', 6: 'C-List',
             12: 'Thread', 13: 'IRQ', 14: 'CLOOMC', 15: 'Namespace'
         };
-        const name = localNames[crIdx] || '';
+        const petCR = _petNameCRMap[crIdx];
+        const name = petCR || localNames[crIdx] || '';
         detailTab.textContent = `CR${crIdx}${name ? ' \u2014 ' + name : ''}`;
         detailTab.style.display = '';
     }
@@ -1310,7 +1314,9 @@ function showZonePopup(evt, zone, nsIdx) {
             const val  = drSrc ? live : mem;
             const cls  = val ? 'zdp-val' : 'zdp-dim';
             const src  = drSrc ? '' : '<span class="zdp-lbl"> (mem)</span>';
-            html += `<tr><td style="color:#a855f7;">DR${i}</td><td class="${cls}">${hexW(val)}${src}</td></tr>`;
+            const pn = _petNameDRMap[i];
+            const drLabel = pn ? `DR${i} (${pn})` : `DR${i}`;
+            html += `<tr><td style="color:#a855f7;">${drLabel}</td><td class="${cls}">${hexW(val)}${src}</td></tr>`;
         }
         html += `</table>`;
 
@@ -1622,8 +1628,12 @@ function injectCRCode(logEl) {
         if (compResult._neededCaps && compResult._neededCaps.length > 0) {
             petNameCaps = compResult._neededCaps;
         }
+        _petNameDRMap = compResult._petNameDR || {};
+        _petNameCRMap = compResult._petNameCR || {};
         log(`Compiled ${newCW} instruction${newCW !== 1 ? 's' : ''} (language: petname).`);
     } else {
+        _petNameDRMap = {};
+        _petNameCRMap = {};
         const asmObj = new ChurchAssembler();
         const result = asmObj.assemble(src);
         if (result.errors && result.errors.length > 0) {
@@ -2208,6 +2218,11 @@ function _crTag(crNum, crPets) {
     return pet ? `${pet.toLowerCase()}(CR${crNum})` : `CR${crNum}`;
 }
 
+function _drTag(drNum) {
+    const pet = _petNameDRMap[drNum];
+    return pet ? `${pet}(DR${drNum})` : `DR${drNum}`;
+}
+
 function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
     word = word >>> 0;
     if (word === 0) return null;
@@ -2334,7 +2349,7 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
                 valStr = ` (=${_fmtVal(drV)})`;
             }
         }
-        return { desc: _escDecomp(`${verb}${cc} DR${crDst}, ${sTag}${offStr}${valStr}${ccDesc}`), compiler: false };
+        return { desc: _escDecomp(`${verb}${cc} ${_drTag(crDst)}, ${sTag}${offStr}${valStr}${ccDesc}`), compiler: false };
     }
 
     if (opcode === 12) {
@@ -2343,21 +2358,21 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
         const sTag = _crTag(crSrc, crPets);
         const drV = sim && sim.dr ? (sim.dr[crSrc] >>> 0) : null;
         const valStr = drV !== null ? ` (=${_fmtVal(drV)})` : '';
-        return { desc: _escDecomp(`bfext${cc} DR${crDst} \u2190 ${sTag}[${pos}:${pos+width-1}]${valStr}${ccDesc}`), compiler: false };
+        return { desc: _escDecomp(`bfext${cc} ${_drTag(crDst)} \u2190 ${sTag}[${pos}:${pos+width-1}]${valStr}${ccDesc}`), compiler: false };
     }
 
     if (opcode === 13) {
         const pos = (imm >>> 5) & 0x1F;
         const width = imm & 0x1F;
         const sTag = _crTag(crSrc, crPets);
-        return { desc: _escDecomp(`bfins${cc} ${sTag}[${pos}:${pos+width-1}] \u2190 DR${crDst}${ccDesc}`), compiler: false };
+        return { desc: _escDecomp(`bfins${cc} ${sTag}[${pos}:${pos+width-1}] \u2190 ${_drTag(crDst)}${ccDesc}`), compiler: false };
     }
 
     if (opcode === 14) {
         const dV = sim && sim.dr ? (sim.dr[crDst] >>> 0) : null;
         const sV = sim && sim.dr ? (sim.dr[crSrc] >>> 0) : null;
         const vals = (dV !== null && sV !== null) ? ` (${_fmtVal(dV)} vs ${_fmtVal(sV)})` : '';
-        return { desc: _escDecomp(`mcmp${cc} DR${crDst}, DR${crSrc}${vals}${ccDesc}`), compiler: false };
+        return { desc: _escDecomp(`mcmp${cc} ${_drTag(crDst)}, ${_drTag(crSrc)}${vals}${ccDesc}`), compiler: false };
     }
 
     if (opcode === 15 || opcode === 16) {
@@ -2368,13 +2383,13 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
             const immVal = imm & 0x3FFF;
             const res = opcode === 15 ? ((srcV + immVal) >>> 0) : ((srcV - immVal) >>> 0);
             const valStr = srcV !== null ? ` (${_fmtVal(srcV)}${op}${immVal}=${_fmtVal(res)})` : '';
-            return { desc: _escDecomp(`DR${crDst}= DR${crSrc} ${op} #${immVal}${valStr}${ccDesc}`), compiler: false };
+            return { desc: _escDecomp(`${_drTag(crDst)}= ${_drTag(crSrc)} ${op} #${immVal}${valStr}${ccDesc}`), compiler: false };
         } else {
             const drOp = imm & 0xF;
             const opV = sim && sim.dr ? (sim.dr[drOp] >>> 0) : null;
             const res = opcode === 15 ? ((srcV + opV) >>> 0) : ((srcV - opV) >>> 0);
             const valStr = (srcV !== null && opV !== null) ? ` (${_fmtVal(srcV)}${op}${_fmtVal(opV)}=${_fmtVal(res)})` : '';
-            return { desc: _escDecomp(`DR${crDst}= DR${crSrc} ${op} DR${drOp}${valStr}${ccDesc}`), compiler: false };
+            return { desc: _escDecomp(`${_drTag(crDst)}= ${_drTag(crSrc)} ${op} ${_drTag(drOp)}${valStr}${ccDesc}`), compiler: false };
         }
     }
 
@@ -2390,7 +2405,7 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
         const srcV = sim && sim.dr ? (sim.dr[crSrc] >>> 0) : null;
         const res = (srcV << shamt) >>> 0;
         const valStr = srcV !== null ? ` (${_fmtVal(srcV)}\u00AB${shamt}=${_fmtVal(res)})` : '';
-        return { desc: _escDecomp(`DR${crDst}= DR${crSrc} \u00AB ${shamt}${valStr}${ccDesc}`), compiler: false };
+        return { desc: _escDecomp(`${_drTag(crDst)}= ${_drTag(crSrc)} \u00AB ${shamt}${valStr}${ccDesc}`), compiler: false };
     }
 
     if (opcode === 19) {
@@ -2400,7 +2415,7 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
         const sym = arith ? '\u00BB\u00BB' : '\u00BB';
         const res = arith ? (srcV >> shamt) : (srcV >>> shamt);
         const valStr = srcV !== null ? ` (${_fmtVal(srcV)}${sym}${shamt}=${_fmtVal(res)})` : '';
-        return { desc: _escDecomp(`DR${crDst}= DR${crSrc} ${sym} ${shamt}${valStr}${ccDesc}`), compiler: false };
+        return { desc: _escDecomp(`${_drTag(crDst)}= ${_drTag(crSrc)} ${sym} ${shamt}${valStr}${ccDesc}`), compiler: false };
     }
 
     if (stored && stored[addr]) {
@@ -2433,7 +2448,8 @@ function updateCRDetail() {
         0: 'Result', 1: 'Arg 1', 6: 'C-List',
         12: 'Thread', 13: 'IRQ', 14: 'CLOOMC', 15: 'Namespace'
     };
-    const name = localNames[crIdx] || '';
+    const petCR = _petNameCRMap[crIdx];
+    const name = petCR || localNames[crIdx] || '';
 
     if (cr.isNull) {
         titleEl.textContent = `CR${crIdx}${name ? ' \u2014 ' + name : ''} (NULL)`;
@@ -2948,7 +2964,8 @@ function updateDRDisplay() {
     let html = '';
     for (let i = 0; i < 16; i++) {
         const val = sim.dr[i];
-        const special = i === 0 ? ' (zero)' : '';
+        const petName = _petNameDRMap[i];
+        const special = i === 0 ? ' (zero)' : (petName ? ` (${petName})` : '');
         html += `<div class="reg-row ${val === 0 ? 'reg-null' : 'reg-active'}">`;
         html += `<span class="reg-label">DR${i.toString().padStart(2, ' ')}${special}</span>`;
         html += `<span class="reg-value">0x${(val >>> 0).toString(16).toUpperCase().padStart(8, '0')}</span>`;
