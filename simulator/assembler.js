@@ -263,10 +263,11 @@ class ChurchAssembler {
             case 2: {
                 if (parts[2] && parts[3]) {
                     crDst = this._parseCRorBare(parts[1], lineNum);
-                    crSrc = this._parseCR(parts[2], lineNum);
+                    crSrc = this._parseCRorBare(parts[2], lineNum);
                     imm = this._parseImm(parts[3], lineNum);
                 } else if (parts[2]) {
-                    this.errors.push({ line: lineNum, message: 'CALL takes one operand (CALL CRn) or three (CALL CRd, CRs, #imm). Two-operand form is not supported.' });
+                    crDst = this._parseCR(parts[1], lineNum);
+                    crSrc = this._parseCRorBare(parts[2], lineNum);
                 } else {
                     crDst = this._parseCR(parts[1], lineNum);
                 }
@@ -537,7 +538,11 @@ class ChurchAssembler {
         switch (opcode) {
             case 0: return `${mnemonic} CR${crDst}, CR${crSrc}, ${imm}`;
             case 1: return `${mnemonic} CR${crDst}, CR${crSrc}, ${imm}`;
-            case 2: return !(imm & 0x4000) ? `${mnemonic} CR${crDst}, CR${crSrc}, #${imm}` : `${mnemonic} CR${crDst}`;
+            case 2: {
+                if (imm & 0x4000) return `${mnemonic} CR${crDst}`;
+                if (imm) return `${mnemonic} CR${crDst}, ${crSrc}, #${imm}`;
+                return `${mnemonic} CR${crDst}, ${crSrc}`;
+            }
             case 3: {
                 const retMask = imm & 0xFFF;
                 return retMask ? `${mnemonic} 0b${retMask.toString(2).padStart(12, '0')}` : mnemonic;
