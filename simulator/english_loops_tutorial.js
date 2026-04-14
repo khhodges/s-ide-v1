@@ -23,9 +23,11 @@ class EnglishLoopsTutorial {
 <div class="sr-comp-side sr-comp-side-right">
 <div class="sr-comp-side-panel open">
 <div class="sr-comp-side-title">The Spectrum</div>
-<p><strong>BRANCH</strong> is familiar but unpredictable (pipeline stalls on misprediction).</p>
+<p><strong>BRANCH</strong> is familiar but unpredictable. A processor pipeline fetches, decodes, and begins executing the <em>next</em> instruction before the current one finishes. When it hits a BRANCH, it must guess which way the branch will go &mdash; continue the loop or exit? This guess is called <strong>branch prediction</strong>.</p>
+<p>If the guess is <strong>right</strong>, execution continues at full speed. If the guess is <strong>wrong</strong> (a <em>misprediction</em>), the pipeline has already started working on the wrong instructions. It must flush everything it speculatively started, rewind, and restart from the correct path. That flush is a <strong>pipeline stall</strong> &mdash; wasted cycles where the processor does nothing useful.</p>
+<p>On a loop that runs 100 times, the final iteration (when the branch exits instead of looping back) will almost certainly mispredict. On a short loop (3&ndash;5 iterations), the misprediction cost is a significant fraction of total execution time. Worse: speculative execution of wrong-path instructions is the root cause of <strong>Spectre</strong> and <strong>Meltdown</strong> &mdash; the processor leaks secrets through cache timing while executing instructions it will later discard.</p>
 <p><strong>CALL</strong> is predictable and secure (full capability check, namespace gate swap) but pushes a 2-word frame.</p>
-<p><strong>LAMBDA</strong> is the lightest &mdash; only a 1-word frame, no namespace swap, no gate overhead. It is the fastest recursion primitive on the Church Machine.</p>
+<p><strong>LAMBDA</strong> is the lightest &mdash; only a 1-word frame, no namespace swap, no gate overhead. It is the fastest recursion primitive on the Church Machine. Both CALL and LAMBDA have <strong>no branch prediction</strong> &mdash; the target is always known (CR6), so the pipeline never speculates and never stalls.</p>
 </div>
 </div>
 </div>`
