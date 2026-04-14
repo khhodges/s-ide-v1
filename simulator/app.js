@@ -6607,32 +6607,43 @@ function assembleAndLoad() {
             listing += '  LOOP STYLE COMPARISON\n';
             listing += '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n';
             const countInstrs = (codeArr) => {
-                let branches = 0, calls = 0, mcmps = 0, total = codeArr.length;
+                let branches = 0, calls = 0, lambdas = 0, mcmps = 0, total = codeArr.length;
                 for (const w of codeArr) {
                     const op = (w >>> 27) & 0x1F;
                     if (op === 17) branches++;
                     if (op === 2) calls++;
+                    if (op === 7) lambdas++;
                     if (op === 14) mcmps++;
                 }
-                return { branches, calls, mcmps, total };
+                return { branches, calls, lambdas, mcmps, total };
+            };
+            const styleMap = {
+                'WhileSum': 'WHILE LOOP (MCMP + BRANCH)',
+                'RecurseSum': 'RECURSIVE REPEAT (CALL CR6, SZ=1)',
+                'LambdaSum': 'LAMBDA RECURSION (LAMBDA CR6, SZ=0)'
             };
             for (const m of methods) {
                 const s = countInstrs(m.code || []);
-                const style = m.name === 'WhileSum' ? 'WHILE LOOP (MCMP + BRANCH)' : 'RECURSIVE REPEAT (CALL CR6)';
+                const style = styleMap[m.name] || m.name;
                 listing += '  ' + m.name + ' \u2014 ' + style + ':\n';
-                listing += '    ' + s.total + ' instructions, ' + s.branches + ' BRANCH, ' + s.calls + ' CALL, ' + s.mcmps + ' MCMP\n\n';
+                listing += '    ' + s.total + ' instructions, ' + s.branches + ' BRANCH, ' + s.calls + ' CALL, ' + s.lambdas + ' LAMBDA, ' + s.mcmps + ' MCMP\n\n';
             }
             const whileM = methods.find(m => m.name === 'WhileSum');
             const recurseM = methods.find(m => m.name === 'RecurseSum');
-            if (whileM && recurseM) {
+            const lambdaM = methods.find(m => m.name === 'LambdaSum');
+            if (whileM && recurseM && lambdaM) {
                 const ws = countInstrs(whileM.code || []);
                 const rs = countInstrs(recurseM.code || []);
+                const ls = countInstrs(lambdaM.code || []);
                 listing += '  \u2500\u2500 TRADEOFF \u2500\u2500\n';
-                listing += '    While loop:  ' + ws.branches + ' BRANCH per iteration (compare + loop-back)\n';
-                listing += '    Recursive:   ' + rs.calls + ' CALL per iteration (self-invocation via CR6)\n';
-                listing += '    \u2192 While is compact but branches can stall the pipeline\n';
-                listing += '    \u2192 Recursive uses CALL \u2014 capability-checked, predictable timing\n';
-                listing += '    \u2192 Both produce identical results: n + (n-1) + ... + 1\n';
+                listing += '    While loop:      ' + ws.branches + ' BRANCH per iteration (compare + loop-back)\n';
+                listing += '    Repeat (CALL):   ' + rs.calls + ' CALL per iteration (2-word frame, namespace swap)\n';
+                listing += '    Lambda (LAMBDA): ' + ls.lambdas + ' LAMBDA per iteration (1-word frame, no swap)\n';
+                listing += '\n';
+                listing += '    \u2192 While: compact but branches can stall the pipeline\n';
+                listing += '    \u2192 CALL:  capability-checked, predictable, heavier frame (SZ=1)\n';
+                listing += '    \u2192 LAMBDA: lightest recursion \u2014 1-word frame, no namespace gate\n';
+                listing += '    \u2192 All three produce identical results: n + (n-1) + ... + 1\n';
                 listing += '\n';
             }
         }
@@ -15743,28 +15754,30 @@ abstraction Heap {
         'sliderule_hs': `-- SlideRule — Haskell front-end\n-- Integer arithmetic on Church Machine hardware\n-- Proves both languages compile to the same 20-instruction target\n\nabstraction SlideRuleHS {\n    capabilities { Constants }\n\n    -- Basic arithmetic\n    method Add(a, b) = a + b\n\n    method Sub(a, b) = a - b\n\n    method Mul(a, b) = a * b\n\n    -- Integer square root via conditional lookup (floor)\n    method Sqrt(n) = if n < 1 then 0 else if n < 4 then 1 else if n < 9 then 2 else if n < 16 then 3 else if n < 25 then 4 else if n < 36 then 5 else if n < 49 then 6 else if n < 64 then 7 else if n < 81 then 8 else if n < 100 then 9 else 10\n\n    -- Power of 2 via conditional lookup\n    method Pow2(exp) = if exp == 0 then 1 else if exp == 1 then 2 else if exp == 2 then 4 else if exp == 3 then 8 else if exp == 4 then 16 else if exp == 5 then 32 else if exp == 6 then 64 else if exp == 7 then 128 else 256\n\n    -- Absolute value\n    method Abs(n) = if n < 0 then 0 - n else n\n\n    -- Signum: -1, 0, or 1\n    method Signum(n) = if n == 0 then 0 else if n > 0 then 1 else 0 - 1\n\n    -- Max of two values\n    method Max(a, b) = if a > b then a else b\n\n    -- Min of two values\n    method Min(a, b) = if a < b then a else b\n\n    -- Clamp value between lo and hi\n    method Clamp(x, lo, hi) = if x < lo then lo else if x > hi then hi else x\n}`,
         'english_hello': `Create an abstraction called Hello\n\nAdd a method called Greet that takes who\nSet result to who plus 1\nReturn the result`,
         'english_counter': `Create an abstraction called Counter\n\nAdd a method called Increment that takes value\nSet result to value plus 1\nReturn the result\n\nAdd a method called Add that takes a and b\nSet result to a plus b\nReturn the result\n\nAdd a method called Double that takes x\nSet result to x plus x\nReturn the result`,
-        'english_loops': `-- ENGLISH: Loops — Two Ways to Iterate
+        'english_loops': `-- ENGLISH: Loops — Three Ways to Iterate
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 --
--- The Church Machine offers TWO loop styles in English:
+-- The Church Machine offers THREE loop styles in English:
 --
 -- 1. WHILE LOOPS (compiled path):
 --    "While x is greater than 0" / "End while"
 --    Compiles to: MCMP + BRANCH (traditional loop)
 --    Familiar, efficient for tight inner loops.
 --
--- 2. RECURSIVE REPEAT (Church path):
+-- 2. RECURSIVE REPEAT (CALL path):
 --    "Repeat with x minus 1"
 --    Compiles to: CALL CR6 (re-invoke self)
---    No branch instructions — constant-time control flow.
---    Each iteration goes through the capability system.
+--    Capability-checked, predictable control flow.
+--    Pushes a 2-word stack frame (SZ=1).
 --
--- Both produce the same result. The While loop uses
--- branches (pipeline stalls possible). The Repeat uses
--- function calls (predictable, capability-checked).
+-- 3. LAMBDA RECURSION (lightest path):
+--    "Apply lambda with x minus 1"
+--    Compiles to: LAMBDA CR6 (lightweight self-invoke)
+--    Only a 1-word stack frame (SZ=0).
+--    No namespace swap — fastest recursion primitive.
 --
--- This is what makes the Church Machine unique:
--- you choose your control flow tradeoff in plain English.
+-- All three produce the same result. Each trades off
+-- between familiarity, security, and overhead.
 --
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -15782,10 +15795,10 @@ While n is greater than 0
 End while
 Return total
 
--- ── RECURSIVE REPEAT (Church, uses CALL) ──────────
+-- ── RECURSIVE REPEAT (CALL CR6, 2-word frame) ────
 -- Same computation: n + (n-1) + ... + 1
 -- Uses self-invocation instead of looping.
--- No BRANCH — each "iteration" is a CALL through CR6.
+-- CALL pushes a full 2-word frame and validates capabilities.
 
 Add a method called RecurseSum that takes n and total
 If n is equal to 0
@@ -15793,7 +15806,20 @@ If n is equal to 0
 End if
 Set total to total plus n
 Set n to n minus 1
-Repeat with n, total`,
+Repeat with n, total
+
+-- ── LAMBDA RECURSION (LAMBDA CR6, 1-word frame) ──
+-- Same computation: n + (n-1) + ... + 1
+-- Uses LAMBDA instead of CALL — lighter stack frame,
+-- no namespace gate swap. Fastest recursion primitive.
+
+Add a method called LambdaSum that takes n and total
+If n is equal to 0
+    Return total
+End if
+Set total to total plus n
+Set n to n minus 1
+Apply lambda with n, total`,
         'lambda_church': `-- LAMBDA CALCULUS
 -- Church Numerals \u2014 numbers as pure functions
 -- \u03BBf.\u03BBx.x = 0, \u03BBf.\u03BBx.f x = 1, \u03BBf.\u03BBx.f (f x) = 2 ...

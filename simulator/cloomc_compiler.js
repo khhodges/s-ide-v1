@@ -1002,6 +1002,25 @@ class CLOOMCCompiler {
             return;
         }
 
+        // relambda() — lightweight self-recursion via LAMBDA CR6 (SZ=0 frame, no namespace swap)
+        const relambdaMatch = text.match(/^relambda\s*\(\s*(.*?)\s*\)$/);
+        if (relambdaMatch) {
+            const argStr = relambdaMatch[1];
+            if (argStr) {
+                const args = argStr.split(',').map(s => s.trim()).filter(Boolean);
+                for (let a = 0; a < args.length && a + this.DR_ARGS_START <= this.DR_ARGS_END; a++) {
+                    const targetDR = a + this.DR_ARGS_START;
+                    const argDR = this._resolveExpr(args[a], code, locals, rom, errors, stmt.lineNum, method);
+                    if (argDR !== targetDR) {
+                        code.push(this.encode(this.opcodes.IADD, 14, targetDR, argDR, 0));
+                    }
+                }
+            }
+            manifest.push({ src: stmt.lineNum, addr: code.length, desc: 'LAMBDA CR6 (relambda self — lightweight)' });
+            code.push(this.encode(this.opcodes.LAMBDA, 14, 6, 0, 0));
+            return;
+        }
+
         const callMatch = text.match(/^(?:(\w+)\s*=\s*)?call\s*\(\s*(\w+)\.(\w+)\s*\(\s*(.*?)\s*\)\s*\)$/);
         if (callMatch) {
             const resultVar = callMatch[1] || null;
@@ -2448,6 +2467,7 @@ class CLOOMCCompiler {
             if (t.match(/^(while|repeat while|loop while)\s+.+\s+(is|equals|is equal to|is greater than|is less than|is not)\s+/)) englishScore++;
             if (t.match(/^(end while|end loop)$/)) englishScore++;
             if (t.match(/^(repeat|recurse|recall|call self|call again)\s+(with\s+)?/)) englishScore++;
+            if (t.match(/^(apply lambda|lambda repeat|lambda recurse|lambda self)\s+(with\s+)?/)) englishScore++;
             if (t.match(/^(it needs|it uses|it requires|using)\s+/)) englishScore++;
             if (t.match(/\b(plus|minus|times|divided by|multiplied by|added to|subtracted from)\b/)) englishScore++;
             if (t.match(/^(read|write|load|save)\s+(from|to|the value)\s+/)) englishScore++;
@@ -2805,6 +2825,13 @@ class CLOOMCCompiler {
             const argsExpr = this._translateEnglishExpr(repeatMatch[1]);
             const args = argsExpr.split(',').map(s => s.trim()).join(', ');
             return `recall(${args})`;
+        }
+
+        const lambdaRepeatMatch = lo.match(/^(?:apply lambda|lambda repeat|lambda recurse|lambda self)\s+(?:with\s+)?(.+)/);
+        if (lambdaRepeatMatch) {
+            const argsExpr = this._translateEnglishExpr(lambdaRepeatMatch[1]);
+            const args = argsExpr.split(',').map(s => s.trim()).join(', ');
+            return `relambda(${args})`;
         }
 
         if (lo === 'end if' || lo === 'end' || lo === '}') {
