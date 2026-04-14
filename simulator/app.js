@@ -889,7 +889,7 @@ function updateCRDisplay() {
         const nullCls = cr.isNull ? ' cr-null' : ' cr-active';
         const groupCls = meta.group === 'system' ? ' cr-system' : meta.group === 'privil' ? ' cr-privil' : (meta.role === 'arch' ? ' cr-arch' : '');
         const clickable = !cr.isNull ? ' cr-clickable' : '';
-        html += `<tr class="${nullCls}${groupCls}${clickable}" ${!cr.isNull ? `onclick="openCRDetail(${i})" onmouseenter="showCRPopup(event,${i})" onmouseleave="hideCRPopup()"` : ''}>`;
+        html += `<tr class="${nullCls}${groupCls}${clickable}" onmouseenter="showCRPopup(event,${i})" onmouseleave="hideCRPopup()" ${!cr.isNull ? `onclick="openCRDetail(${i})"` : ''}>`;
         html += `<td class="cr-idx">${i}</td>`;
         html += `<td class="cr-m ${cr.mBit ? 'cr-m-set' : ''}">${cr.mBit}</td>`;
         html += `<td class="cr-name">${name}</td>`;
@@ -1497,16 +1497,37 @@ function showCRPopup(evt, crIdx) {
     if (!pop || !sim) return;
 
     const cr = sim.getFormattedCR(crIdx);
-    if (cr.isNull) return;
 
     const hexW = w => '0x' + (w >>> 0).toString(16).toUpperCase().padStart(8, '0');
     const petCR = _petNameCRMap[crIdx];
+    const _archNames = { 0: 'Result', 1: 'Arg 1', 6: 'C-List', 12: 'Thread', 13: 'IRQ', 14: 'CLOOMC', 15: 'Namespace' };
+    const _reservedCRs = new Set([0, 6, 12, 13, 14, 15]);
+
+    let html = '';
+
+    if (cr.isNull) {
+        const archName = _archNames[crIdx];
+        const isReserved = _reservedCRs.has(crIdx);
+        if (isReserved) {
+            const titleName = archName ? ` — ${archName}` : '';
+            html += `<div class="zdp-title" style="border-color:#6b7280;color:#9ca3af;">CR${crIdx}${titleName} · NULL</div>`;
+            html += `<table>`;
+            html += `<tr><td>Status</td><td class="zdp-dim">NULL (all words zero)</td></tr>`;
+            html += `<tr><td>Role</td><td class="zdp-note">Reserved (${archName || 'architectural'})</td></tr>`;
+            html += `</table>`;
+        } else {
+            html += `<div class="zdp-title" style="border-color:#374151;color:#6b7280;">CR${crIdx} · EMPTY</div>`;
+            html += `<table>`;
+            html += `<tr><td>Status</td><td class="zdp-dim">Empty — available for use</td></tr>`;
+            html += `<tr><td>Role</td><td class="zdp-note">Programmer register (CR1–CR5, CR7–CR11)</td></tr>`;
+            html += `</table>`;
+        }
+    } else {
+
     const nsIdx = cr.gtIndex;
     const nsLabel = (sim.nsLabels && sim.nsLabels[nsIdx]) || '';
     const displayName = petCR || nsLabel || '';
     const hasL = cr.perms.indexOf('L') !== -1;
-
-    let html = '';
 
     if (hasL) {
         const titleName = displayName ? ` — ${displayName}` : '';
