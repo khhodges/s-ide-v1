@@ -2981,7 +2981,8 @@ class CLOOMCCompiler {
                 code.push(this.encode(this.opcodes.LOAD, 14, cr, 6, clistOffset));
                 loadedCRs[absName] = true;
             }
-            manifest.push({ src: lineNum, addr: code.length, desc: `CALL CR${cr} (method ${methodIndex})` });
+            const mName = this._resolveMethodName(absName, methodIndex);
+            manifest.push({ src: lineNum, addr: code.length, desc: `CALL ${absName}.${mName || methodIndex} via CR${cr}` });
             code.push(this.encode(this.opcodes.CALL, 14, cr, 0, 0));
         };
 
@@ -3281,6 +3282,22 @@ class CLOOMCCompiler {
         }
         if (current.trim()) args.push(current.trim());
         return args;
+    }
+
+    _resolveMethodName(absName, methodIndex) {
+        const regConv = (typeof METHOD_REGISTER_CONVENTIONS !== 'undefined') ? METHOD_REGISTER_CONVENTIONS : {};
+        const conv = regConv[absName];
+        if (conv) {
+            const entry = Object.entries(conv).find(([, v]) => v.index === methodIndex);
+            if (entry) return entry[0];
+        }
+        const bootUploads = (typeof BOOT_UPLOADS !== 'undefined') ? BOOT_UPLOADS : [];
+        for (const upload of bootUploads) {
+            if (upload.abstraction === absName && upload.methods) {
+                if (methodIndex < upload.methods.length) return upload.methods[methodIndex].name;
+            }
+        }
+        return null;
     }
 
     _insertImplicitMul(expr, funcTable) {

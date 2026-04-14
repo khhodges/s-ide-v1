@@ -2270,7 +2270,40 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
     if (opcode === 2) {
         if (crDst === 6) return { desc: _escDecomp(`recall${cc} self${ccDesc}`), compiler: false };
         const tag = _crTag(crDst, crPets);
-        return { desc: _escDecomp(`call${cc} ${tag}${ccDesc}`), compiler: false };
+        let methodStr = '';
+        const pet = crPets && crPets[crDst];
+        if (pet && typeof METHOD_REGISTER_CONVENTIONS !== 'undefined') {
+            const conv = METHOD_REGISTER_CONVENTIONS[pet];
+            if (conv) {
+                let dr3Val = null;
+                if (sim && sim.memory && addr > 0) {
+                    const prevW = sim.memory[addr - 1] >>> 0;
+                    const prevOp = (prevW >>> 27) & 0x1F;
+                    const prevDst = (prevW >>> 19) & 0xF;
+                    const prevImm = prevW & 0x7FFF;
+                    if (prevOp === 15 && prevDst === 3 && (prevImm & 0x4000)) {
+                        dr3Val = prevImm & 0x3FFF;
+                    }
+                    if (dr3Val === null) {
+                        const prev2W = addr > 1 ? (sim.memory[addr - 2] >>> 0) : 0;
+                        const p2Op = (prev2W >>> 27) & 0x1F;
+                        const p2Dst = (prev2W >>> 19) & 0xF;
+                        const p2Imm = prev2W & 0x7FFF;
+                        if (p2Op === 15 && p2Dst === 3 && (p2Imm & 0x4000)) {
+                            dr3Val = p2Imm & 0x3FFF;
+                        }
+                    }
+                }
+                if (dr3Val === null && sim && sim.dr) {
+                    dr3Val = sim.dr[3] >>> 0;
+                }
+                if (dr3Val !== null) {
+                    const mEntry = Object.entries(conv).find(([, v]) => v.index === dr3Val);
+                    if (mEntry) methodStr = `.${mEntry[0]}`;
+                }
+            }
+        }
+        return { desc: _escDecomp(`call${cc} ${tag}${methodStr}${ccDesc}`), compiler: false };
     }
 
     if (opcode === 3) return { desc: _escDecomp(`return${cc}${ccDesc}`), compiler: false };
@@ -2308,7 +2341,25 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
         const pet = _resolveClistPetName(clistBase, imm, nsIdx);
         if (pet) {
             if (crPets) crPets[crDst] = pet;
-            return { desc: _escDecomp(`eloadcall${cc} ${pet.toLowerCase()}(CR${crDst})${ccDesc}`), compiler: true, pet: pet };
+            let eMethodStr = '';
+            if (typeof METHOD_REGISTER_CONVENTIONS !== 'undefined') {
+                const eConv = METHOD_REGISTER_CONVENTIONS[pet];
+                if (eConv) {
+                    let eDr3 = null;
+                    if (sim && sim.memory && addr > 0) {
+                        const ePrev = sim.memory[addr - 1] >>> 0;
+                        if (((ePrev >>> 27) & 0x1F) === 15 && ((ePrev >>> 19) & 0xF) === 3 && (ePrev & 0x4000)) {
+                            eDr3 = ePrev & 0x3FFF;
+                        }
+                    }
+                    if (eDr3 === null && sim && sim.dr) eDr3 = sim.dr[3] >>> 0;
+                    if (eDr3 !== null) {
+                        const eM = Object.entries(eConv).find(([, v]) => v.index === eDr3);
+                        if (eM) eMethodStr = `.${eM[0]}`;
+                    }
+                }
+            }
+            return { desc: _escDecomp(`eloadcall${cc} ${pet.toLowerCase()}${eMethodStr}(CR${crDst})${ccDesc}`), compiler: true, pet: pet };
         }
         return { desc: _escDecomp(`eloadcall${cc} clist[${imm}] \u2192 CR${crDst}${ccDesc}`), compiler: true };
     }
