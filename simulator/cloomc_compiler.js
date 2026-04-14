@@ -2838,10 +2838,14 @@ class CLOOMCCompiler {
         const code = [];
         const manifest = [];
         const locals = {};
+        const crLocals = {};
         const lines = source.split('\n');
         const neededCaps = {};
         let nextCapIndex = 0;
         let allocFailed = false;
+        let crAllocFailed = false;
+
+        const RESERVED_CRS = new Set([0, 6, 12, 13, 14, 15]);
 
         const requireCap = (nsSlot, name) => {
             if (!neededCaps[nsSlot]) {
@@ -2850,10 +2854,34 @@ class CLOOMCCompiler {
             return neededCaps[nsSlot].capIndex + 1;
         };
 
+        const allocCR = (name, lineNum) => {
+            if (crLocals[name] !== undefined) return crLocals[name];
+            const usedCRs = new Set(Object.values(crLocals));
+            for (let cr = 1; cr <= 11; cr++) {
+                if (!RESERVED_CRS.has(cr) && !usedCRs.has(cr)) {
+                    crLocals[name] = cr;
+                    return cr;
+                }
+            }
+            if (!crAllocFailed) {
+                crAllocFailed = true;
+                errors.push({ line: lineNum !== undefined ? lineNum : 0, message: `Too many capabilities loaded — no free CR available (CR0, CR6, CR12–CR15 are reserved)` });
+            }
+            return 1;
+        };
+
         const tables = CLOOMCCompiler._buildPetNameTables();
         const OP_TABLE = tables.opTable;
         const FUNC_TABLE = tables.funcTable;
         const FUNC_NAMES = tables.funcNames;
+
+        const CAP_NAMES = {};
+        for (const [fname, fentry] of Object.entries(FUNC_TABLE)) {
+            const absLower = fentry.abs.toLowerCase();
+            if (!CAP_NAMES[absLower]) {
+                CAP_NAMES[absLower] = fentry;
+            }
+        }
 
         const asmMnemonics = /^\s*(LOAD|SAVE|CALL|RETURN|CHANGE|SWITCH|TPERM|LAMBDA|ELOADCALL|XLOADLAMBDA|DREAD|DWRITE|BFEXT|BFINS|MCMP|IADD|ISUB|BRANCH|SHL|SHR|HALT|NOP)\b/i;
 
@@ -2936,11 +2964,12 @@ class CLOOMCCompiler {
 
         const emitAbsCall = (nsSlot, absName, methodIndex, lineNum) => {
             const clistOffset = requireCap(nsSlot, absName);
+            const cr = allocCR(absName, lineNum);
             code.push(this.encode(this.opcodes.IADD, 14, 3, 0, methodIndex | 0x4000));
-            manifest.push({ src: lineNum, addr: code.length, desc: `LOAD CR0, CR6, #${clistOffset}  (${absName} from thread c-list)` });
-            code.push(this.encode(this.opcodes.LOAD, 14, 0, 6, clistOffset));
-            manifest.push({ src: lineNum, addr: code.length, desc: `CALL CR0 (method ${methodIndex})` });
-            code.push(this.encode(this.opcodes.CALL, 14, 0, 0, 0));
+            manifest.push({ src: lineNum, addr: code.length, desc: `LOAD CR${cr}, CR6, #${clistOffset}  (${absName} GT from c-list)` });
+            code.push(this.encode(this.opcodes.LOAD, 14, cr, 6, clistOffset));
+            manifest.push({ src: lineNum, addr: code.length, desc: `CALL CR${cr} (method ${methodIndex})` });
+            code.push(this.encode(this.opcodes.CALL, 14, cr, 0, 0));
         };
 
         const emitOpCall = (opEntry, leftDR, rightDR, lineNum) => {
@@ -3061,6 +3090,8 @@ class CLOOMCCompiler {
                 const upper = match.toUpperCase();
                 if (/^(DR\d+|CR\d+)$/.test(upper)) return match;
                 if (/^(LOAD|SAVE|CALL|RETURN|CHANGE|SWITCH|TPERM|LAMBDA|ELOADCALL|XLOADLAMBDA|DREAD|DWRITE|BFEXT|BFINS|MCMP|IADD|ISUB|BRANCH|SHL|SHR|HALT|NOP)$/.test(upper)) return match;
+                const cr = crLocals[match];
+                if (cr !== undefined) return `CR${cr}`;
                 const reg = locals[match];
                 if (reg !== undefined) return `DR${reg}`;
                 return match;
@@ -3095,6 +3126,27 @@ class CLOOMCCompiler {
             const raw = lines[i];
             const t = raw.trim();
             if (!t || t.startsWith(';') || t.startsWith('//') || t.startsWith('--')) continue;
+
+            const petLoadMatch = t.match(/^\s*LOAD\s+([A-Za-z_]\w*)\s*$/i);
+            if (petLoadMatch) {
+                const petName = petLoadMatch[1];
+                if (/^(CR\d+|DR\d+)$/i.test(petName)) {
+                    asmBlock.push(substitutePetNames(t));
+                    asmBlockSrcLines.push(i);
+                    continue;
+                }
+                flushAsmBlock();
+                const capEntry = CAP_NAMES[petName.toLowerCase()];
+                if (!capEntry) {
+                    errors.push({ line: i, message: `LOAD ${petName}: "${petName}" is not a known capability in the c-list — access denied` });
+                    continue;
+                }
+                const clistOffset = requireCap(capEntry.nsSlot, capEntry.abs);
+                const cr = allocCR(petName, i);
+                manifest.push({ src: i, addr: code.length, desc: `LOAD CR${cr}, CR6, #${clistOffset}  (${petName} GT from c-list)` });
+                code.push(this.encode(this.opcodes.LOAD, 14, cr, 6, clistOffset));
+                continue;
+            }
 
             if (asmMnemonics.test(t) || /^\s*\w+:\s*(LOAD|SAVE|CALL|RETURN|CHANGE|SWITCH|TPERM|LAMBDA|ELOADCALL|XLOADLAMBDA|DREAD|DWRITE|BFEXT|BFINS|MCMP|IADD|ISUB|BRANCH|SHL|SHR|HALT|NOP)?\b/i.test(t)) {
                 asmBlock.push(substitutePetNames(t));
