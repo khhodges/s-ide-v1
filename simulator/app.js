@@ -889,7 +889,7 @@ function updateCRDisplay() {
         const nullCls = cr.isNull ? ' cr-null' : ' cr-active';
         const groupCls = meta.group === 'system' ? ' cr-system' : meta.group === 'privil' ? ' cr-privil' : (meta.role === 'arch' ? ' cr-arch' : '');
         const clickable = !cr.isNull ? ' cr-clickable' : '';
-        html += `<tr class="${nullCls}${groupCls}${clickable}" ${!cr.isNull ? `onclick="openCRDetail(${i})"` : ''}>`;
+        html += `<tr class="${nullCls}${groupCls}${clickable}" ${!cr.isNull ? `onclick="openCRDetail(${i})" onmouseenter="showCRPopup(event,${i})" onmouseleave="hideCRPopup()"` : ''}>`;
         html += `<td class="cr-idx">${i}</td>`;
         html += `<td class="cr-m ${cr.mBit ? 'cr-m-set' : ''}">${cr.mBit}</td>`;
         html += `<td class="cr-name">${name}</td>`;
@@ -1470,6 +1470,128 @@ function showZonePopup(evt, zone, nsIdx) {
     if (left + pw > vw - 8) left = Math.max(8, vw - pw - 8);
     pop.style.left = left + 'px';
     pop.style.top  = top  + 'px';
+}
+
+let _crPopupTimer = null;
+
+function cancelHideCRPopup() {
+    if (_crPopupTimer) { clearTimeout(_crPopupTimer); _crPopupTimer = null; }
+}
+
+function hideCRPopup(immediate) {
+    if (immediate) {
+        cancelHideCRPopup();
+        const pop = document.getElementById('cr-hover-popup');
+        if (pop) pop.style.display = 'none';
+        return;
+    }
+    _crPopupTimer = setTimeout(() => {
+        const pop = document.getElementById('cr-hover-popup');
+        if (pop) pop.style.display = 'none';
+    }, 80);
+}
+
+function showCRPopup(evt, crIdx) {
+    cancelHideCRPopup();
+    const pop = document.getElementById('cr-hover-popup');
+    if (!pop || !sim) return;
+
+    const cr = sim.getFormattedCR(crIdx);
+    if (cr.isNull) return;
+
+    const hexW = w => '0x' + (w >>> 0).toString(16).toUpperCase().padStart(8, '0');
+    const petCR = _petNameCRMap[crIdx];
+    const nsIdx = cr.gtIndex;
+    const nsLabel = (sim.nsLabels && sim.nsLabels[nsIdx]) || '';
+    const displayName = petCR || nsLabel || '';
+    const hasL = cr.perms.indexOf('L') !== -1;
+
+    let html = '';
+
+    if (hasL) {
+        const titleName = displayName ? ` — ${displayName}` : '';
+        html += `<div class="zdp-title" style="border-color:#f4b942;color:#f4b942;">CR${crIdx}${titleName} · C-List</div>`;
+        html += `<table>`;
+        html += `<tr><td>Type</td><td class="zdp-val">${cr.gtTypeName}</td></tr>`;
+        html += `<tr><td>NS Slot</td><td class="zdp-val">${nsIdx}</td></tr>`;
+        html += `<tr><td>Location</td><td class="zdp-hex">${hexW(cr.word1_location)}</td></tr>`;
+
+        const loc = cr.word1_location >>> 0;
+        const hdrWord = (loc < sim.memory.length) ? (sim.memory[loc] >>> 0) : 0;
+        const hdr = sim.parseLumpHeader(hdrWord);
+        if (hdr.valid && hdr.cc > 0) {
+            const lumpSize = hdr.lumpSize;
+            const clistBase = loc + lumpSize - hdr.cc;
+            html += `<tr><td colspan="2" style="color:#6b8faf;padding-top:0.25rem;">C-List entries (${hdr.cc} slots):</td></tr>`;
+            for (let j = 0; j < hdr.cc; j++) {
+                const addr = clistBase + j;
+                if (addr >= sim.memory.length) break;
+                const gtWord = sim.memory[addr] >>> 0;
+                if (gtWord === 0) {
+                    html += `<tr><td style="color:#f4b942;">[${j}]</td><td class="zdp-dim">NULL</td></tr>`;
+                } else {
+                    const gt = sim.parseGT(gtWord);
+                    const perms = (gt.permissions.B?'B':'-')+(gt.permissions.R?'R':'-')+(gt.permissions.W?'W':'-')+(gt.permissions.X?'X':'-')+(gt.permissions.L?'L':'-')+(gt.permissions.S?'S':'-')+(gt.permissions.E?'E':'-');
+                    const lbl = (sim.nsLabels && sim.nsLabels[gt.index]) || '';
+                    const lblStr = lbl ? ` <span class="zdp-lbl">(${lbl})</span>` : '';
+                    html += `<tr><td style="color:#f4b942;">[${j}]</td><td class="zdp-hex">${hexW(gtWord)} <span class="zdp-note">${gt.typeName}</span> s=${gt.index}${lblStr} [${perms}]</td></tr>`;
+                }
+            }
+        } else if (sim.nsClistMap && sim.nsClistMap[nsIdx]) {
+            const children = sim.nsClistMap[nsIdx];
+            html += `<tr><td colspan="2" style="color:#6b8faf;padding-top:0.25rem;">C-List children (${children.length}):</td></tr>`;
+            for (let j = 0; j < children.length; j++) {
+                const childIdx = children[j];
+                const lbl = (sim.nsLabels && sim.nsLabels[childIdx]) || '';
+                html += `<tr><td style="color:#f4b942;">[${j}]</td><td class="zdp-val">NS[${childIdx}]${lbl ? ' <span class="zdp-lbl">('+lbl+')</span>' : ''}</td></tr>`;
+            }
+        } else {
+            html += `<tr><td colspan="2" class="zdp-empty">no c-list entries found</td></tr>`;
+        }
+        html += `</table>`;
+    } else {
+        const titleName = displayName ? ` — ${displayName}` : '';
+        html += `<div class="zdp-title" style="border-color:#60a5fa;color:#60a5fa;">CR${crIdx}${titleName}</div>`;
+        html += `<table>`;
+        html += `<tr><td>Type</td><td class="zdp-val">${cr.gtTypeName}</td></tr>`;
+        html += `<tr><td>NS Slot</td><td class="zdp-val">${nsIdx}${nsLabel ? ' <span class="zdp-lbl">('+nsLabel+')</span>' : ''}</td></tr>`;
+        html += `<tr><td>Perms</td><td class="zdp-val">[${cr.perms}]</td></tr>`;
+        html += `<tr><td>Location</td><td class="zdp-hex">${hexW(cr.word1_location)}</td></tr>`;
+        html += `<tr><td>Limit</td><td class="zdp-hex">0x${cr.limit17.toString(16).toUpperCase().padStart(5, '0')}</td></tr>`;
+        if (cr.perms.indexOf('X') !== -1) {
+            html += `<tr><td>Role</td><td class="zdp-note">Code (executable)</td></tr>`;
+        } else if (cr.perms.indexOf('R') !== -1 && cr.perms.indexOf('W') !== -1) {
+            html += `<tr><td>Role</td><td class="zdp-note">Data (read/write)</td></tr>`;
+        } else if (cr.perms.indexOf('R') !== -1) {
+            html += `<tr><td>Role</td><td class="zdp-note">Data (read-only)</td></tr>`;
+        } else if (cr.perms.indexOf('E') !== -1) {
+            html += `<tr><td>Role</td><td class="zdp-note">Entry gate (callable)</td></tr>`;
+        }
+        html += `</table>`;
+    }
+
+    const dismissBtn = `<button class="zdp-dismiss" onclick="hideCRPopup(true)" title="Close">&times;</button>`;
+    pop.innerHTML = dismissBtn + html;
+    pop.style.display = 'block';
+
+    const rect = evt.currentTarget.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    pop.style.left = '-9999px'; pop.style.top = '-9999px';
+    const pw = pop.offsetWidth || 300;
+    const ph = pop.offsetHeight || 200;
+    const spaceBelow = vh - rect.bottom - 8;
+    const spaceAbove = rect.top - 8;
+    let top;
+    if (spaceBelow >= ph || spaceBelow >= spaceAbove) {
+        top = rect.bottom + 6;
+    } else {
+        top = Math.max(8, rect.top - ph - 6);
+    }
+    let left = rect.left;
+    if (left + pw > vw - 8) left = Math.max(8, vw - pw - 8);
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
 }
 
 var _editorCREditActive = false;
