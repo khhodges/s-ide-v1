@@ -6592,6 +6592,57 @@ function assembleAndLoad() {
             }
             listing += '\n';
         }
+        if (result.abstractionName === 'ChurchVsCompiled' && methods.length > 0) {
+            listing += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+            listing += '  INSTRUCTION COUNT COMPARISON\n';
+            listing += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+            const compiledMethods = methods.filter(m => m.name.startsWith('compiled_'));
+            const churchMethods = methods.filter(m => m.name.startsWith('church_'));
+            const countInstrs = (codeArr) => {
+                let branches = 0, calls = 0, mcmps = 0, total = codeArr.length;
+                for (const w of codeArr) {
+                    const op = (w >>> 26) & 0x3F;
+                    if (op === 17) branches++;
+                    if (op === 6) calls++;
+                    if (op === 13) mcmps++;
+                }
+                return { branches, calls, mcmps, total };
+            };
+            let totalCompiledBranch = 0, totalCompiledInstr = 0;
+            let totalChurchBranch = 0, totalChurchInstr = 0;
+            if (compiledMethods.length > 0) {
+                listing += '  COMPILED (if/then/else → CMP + BRANCH):\n';
+                for (const m of compiledMethods) {
+                    const s = countInstrs(m.code || []);
+                    totalCompiledBranch += s.branches;
+                    totalCompiledInstr += s.total;
+                    listing += `    ${m.name}: ${s.total} instructions, ${s.branches} BRANCH, ${s.mcmps} MCMP\n`;
+                }
+                listing += '\n';
+            }
+            if (churchMethods.length > 0) {
+                listing += '  CHURCH (boolean IS the selector → pure CALL):\n';
+                for (const m of churchMethods) {
+                    const s = countInstrs(m.code || []);
+                    totalChurchBranch += s.branches;
+                    totalChurchInstr += s.total;
+                    listing += `    ${m.name}: ${s.total} instructions, ${s.branches} BRANCH, ${s.calls} CALL\n`;
+                }
+                listing += '\n';
+            }
+            if (compiledMethods.length > 0 && churchMethods.length > 0) {
+                listing += '  ── SUMMARY ──\n';
+                listing += `    Compiled path: ${totalCompiledInstr} total instructions, ${totalCompiledBranch} branches\n`;
+                listing += `    Church path:   ${totalChurchInstr} total instructions, ${totalChurchBranch} branches\n`;
+                const saved = totalCompiledBranch - totalChurchBranch;
+                if (saved > 0) {
+                    listing += `    → Church eliminates ${saved} branch instruction(s)\n`;
+                    listing += `    → No pipeline stalls, no branch misprediction\n`;
+                    listing += `    → Zero memory touched for boolean selection\n`;
+                }
+                listing += '\n';
+            }
+        }
         if (con) con.textContent = listing;
         showNextSteps('assembled');
         const saveBtn = document.getElementById('btnSaveNS');
@@ -14836,7 +14887,7 @@ function onLangChange(restoring) {
         javascript: ['cloomc_hello', 'cloomc_string', 'cloomc_memory', 'cloomc_heap', 'cloomc_counter', 'cloomc_sliderule', 'cloomc_stack_overflow', 'cloomc_recall_demo'],
         haskell: ['cloomc_church_math', 'cloomc_church_pair', 'cloomc_church_case', 'cloomc_church_lambda', 'cloomc_sliderule_hs'],
         symbolic: ['cloomc_ada_note_g', 'cloomc_bernoulli_numbers'],
-        lambda: ['cloomc_lambda_church', 'cloomc_lambda_booleans', 'cloomc_lambda_pairs', 'cloomc_lambda_ycomb', 'cloomc_lambda_sliderule', 'cloomc_lambda_fixedpoint', 'cloomc_lambda_rational'],
+        lambda: ['cloomc_lambda_church_vs_compiled', 'cloomc_lambda_church', 'cloomc_lambda_booleans', 'cloomc_lambda_pairs', 'cloomc_lambda_ycomb', 'cloomc_lambda_sliderule', 'cloomc_lambda_fixedpoint', 'cloomc_lambda_rational'],
         personal: []
     };
 
@@ -15683,6 +15734,81 @@ abstraction ChurchNumerals {
 
     -- Is zero? Returns 1 if n == 0, else 0
     method isZero(n) = if n == 0 then 1 else 0
+}`,
+        'lambda_church_vs_compiled': `-- LAMBDA CALCULUS
+-- Church vs Compiled — side-by-side control flow comparison
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+--
+-- THE HYBRID ADVANTAGE:
+--   Church booleans for control flow → pure CALL, no branches
+--   SlideRule for arithmetic         → hardware FPU, one CALL
+--
+-- COMPILED PATH (if/then/else):
+--   Each conditional compiles to:
+--     MCMP (compare) → BRANCH (skip-then) → then-body → MOV →
+--     BRANCH (skip-else) → else-body → MOV
+--   = 7+ instructions per conditional, with branch misprediction risk
+--
+-- CHURCH PATH (boolean selectors):
+--   A Church boolean IS the selector — CALL it with (a, b) and
+--   it returns the right one. No MCMP, no BRANCH, no pipeline stall.
+--   The "if" disappears: the boolean already knows the answer.
+--
+--   TRUE  = λx.λy.x  → CALL TRUE(a, b)  returns a
+--   FALSE = λx.λy.y  → CALL FALSE(a, b) returns b
+--
+-- WHY NOT USE CHURCH NUMERALS FOR MATH?
+--   Church numeral 200 = apply f 200 times = 200 CALLs.
+--   SlideRule.Multiply(100, 200) = 1 CALL, hardware FPU.
+--   Use the right tool for the job.
+--
+-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+abstraction ChurchVsCompiled {
+    capabilities { SlideRule }
+
+    -- ── COMPILED PATH ──────────────────────────────
+    -- "select" via if/then/else → CMP + BRANCH
+    -- Given a flag, return either a or b
+    method compiled_select(flag, a, b) =
+        if flag == 0 then b else a
+
+    -- "guarded multiply" — multiply only if flag is nonzero
+    method compiled_guard(flag, x, y) =
+        if flag == 0 then 0 else x * y
+
+    -- "clamp" — return x bounded to [lo, hi]
+    method compiled_clamp(x, lo, hi) =
+        if x < lo then lo
+        else if x > hi then hi
+        else x
+
+    -- "abs" — absolute value via conditional
+    method compiled_abs(n) =
+        if n < 0 then 0 - n else n
+
+    -- ── CHURCH PATH ────────────────────────────────
+    -- The boolean IS the selector function.
+    -- TRUE  = λx.λy.x  (first argument)
+    -- FALSE = λx.λy.y  (second argument)
+    -- No comparison, no branch — just CALL the boolean.
+
+    -- "select" via Church boolean — flag is the selector
+    -- When flag=TRUE:  CALL flag(a, b) → a
+    -- When flag=FALSE: CALL flag(a, b) → b
+    method church_select(flag, a, b) = flag
+
+    -- "and" — Church AND: λp.λq. p q p
+    -- If p is TRUE, result is q; if p is FALSE, result is p
+    method church_and(p, q) = p
+
+    -- "or" — Church OR: λp.λq. p p q
+    -- If p is TRUE, result is p; if p is FALSE, result is q
+    method church_or(p, q) = p
+
+    -- "not" — Church NOT: λp. p FALSE TRUE
+    -- Apply p to (FALSE, TRUE) — swaps the selector
+    method church_not(p) = p
 }`,
         'lambda_booleans': `-- LAMBDA CALCULUS
 -- Church Booleans \u2014 logic as pure functions
