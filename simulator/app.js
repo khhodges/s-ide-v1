@@ -6621,7 +6621,7 @@ function assembleAndLoad() {
                 listing += '\n';
             }
             if (churchMethods.length > 0) {
-                listing += '  DIRECT (pure arithmetic \u2192 no MCMP, no BRANCH):\n';
+                listing += '  CHURCH (\u03BB-application \u2192 CALL selectors, no BRANCH):\n';
                 for (const m of churchMethods) {
                     const s = countInstrs(m.code || []);
                     totalChurchBranch += s.branches;
@@ -6634,12 +6634,12 @@ function assembleAndLoad() {
             if (compiledMethods.length > 0 && churchMethods.length > 0) {
                 listing += '  \u2500\u2500 SUMMARY \u2500\u2500\n';
                 listing += '    Compiled path: ' + totalCompiledInstr + ' total instructions, ' + totalCompiledBranch + ' branches\n';
-                listing += '    Direct path:   ' + totalChurchInstr + ' total instructions, ' + totalChurchBranch + ' branches\n';
+                listing += '    Church path:   ' + totalChurchInstr + ' total instructions, ' + totalChurchBranch + ' branches, ' + totalChurchCall + ' CALLs\n';
                 const saved = totalCompiledBranch - totalChurchBranch;
                 if (saved > 0) {
-                    listing += '    \u2192 Direct path eliminates ' + saved + ' branch instruction(s)\n';
+                    listing += '    \u2192 Church eliminates ' + saved + ' branch instruction(s) using CALL selectors\n';
                     listing += '    \u2192 No pipeline stalls, no branch misprediction\n';
-                    listing += '    \u2192 Constant execution time (no data-dependent branches)\n';
+                    listing += '    \u2192 Constant execution time (selection by CALL, not BRANCH)\n';
                 }
                 listing += '\n';
             }
@@ -15737,24 +15737,24 @@ abstraction ChurchNumerals {
     method isZero(n) = if n == 0 then 1 else 0
 }`,
         'lambda_church_vs_compiled': `-- LAMBDA CALCULUS
--- Compiled vs Direct \u2014 when branches cost more than they save
+-- Church vs Compiled \u2014 control flow by CALL vs BRANCH
 -- \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
 --
--- Each pair of methods produces IDENTICAL results.
--- The "compiled" version guards with if/then/else,
--- generating MCMP + BRANCH instructions (7+ per guard).
--- The "church" version uses direct arithmetic \u2014
--- the math already handles edge cases correctly,
--- so branches are unnecessary overhead.
+-- COMPILED PATH (if/then/else):
+--   Each conditional compiles to:
+--     MCMP \u2192 BRANCH \u2192 then-body \u2192 MOV \u2192 BRANCH \u2192 else-body \u2192 MOV
+--   = 7+ instructions per conditional, branch misprediction risk
 --
--- COMPILED: if n == 0 then 0 else n + n
---   \u2192 MCMP, BRANCH, ADD, MOV, BRANCH, LITERAL, MOV, RETURN
---   = 8 instructions, 2 branches, 1 compare
+-- CHURCH PATH (\u03BB-application as selector):
+--   A Church boolean IS the if/then/else. It is a function:
+--     TRUE  = \u03BBx.\u03BBy.x  \u2192 CALL TRUE(a)(b) returns a
+--     FALSE = \u03BBx.\u03BBy.y  \u2192 CALL FALSE(a)(b) returns b
+--   Selection is two CALL instructions \u2014 no compare, no branch.
+--   The pipeline never stalls; execution time is constant.
 --
--- DIRECT:   n + n
---   \u2192 ADD, RETURN
---   = 2 instructions, 0 branches, 0 compares
---   (0 + 0 = 0 already, the guard was pointless)
+-- Each pair solves the same problem:
+--   compiled_X uses if/then/else  \u2192 MCMP + BRANCH
+--   church_X   uses \u03BB-application \u2192 CALL + CALL
 --
 -- Press Assemble to see the instruction-count comparison!
 --
@@ -15764,51 +15764,52 @@ abstraction ChurchVsCompiled {
     capabilities { }
 
     -- \u2500\u2500 COMPILED PATH \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-    -- Each method guards with if/then/else, producing
-    -- MCMP + BRANCH instructions even when unnecessary.
+    -- Uses if/then/else \u2192 generates MCMP + BRANCH
 
-    -- Double n, but guard against zero
-    -- (pointless: 0+0 = 0 anyway)
-    method compiled_double(n) =
-        if n == 0 then 0 else n + n
+    -- Select a or b based on flag (1=a, 0=b)
+    method compiled_select(flag, a, b) =
+        if flag == 0 then b else a
 
-    -- Add a and b, but guard against a being zero
-    -- (pointless: 0+b = b anyway)
-    method compiled_add(a, b) =
-        if a == 0 then b else a + b
+    -- Guarded add: add x+y only when flag is set
+    method compiled_guard(flag, x, y) =
+        if flag == 0 then x else x + y
 
-    -- Triple sum, guarded against all-zero
-    -- (pointless: 0+0+0 = 0 anyway)
-    method compiled_sum3(a, b, c) =
-        if a == 0 then
-            if b == 0 then c
-            else b + c
-        else a + b + c
+    -- Nested conditional: three-way branch
+    method compiled_classify(n) =
+        if n == 0 then 0
+        else if n == 1 then 10
+        else 20
 
-    -- Subtract with zero guard
-    -- (pointless: a-0 = a anyway)
-    method compiled_sub(a, b) =
-        if b == 0 then a else a - b
+    -- Double conditional: sign function
+    method compiled_sign(n, pos, neg) =
+        if n == 0 then 0
+        else if n > 0 then pos
+        else neg
 
-    -- \u2500\u2500 DIRECT PATH \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-    -- Same computations, same results, zero branches.
-    -- The arithmetic already handles every edge case.
+    -- \u2500\u2500 CHURCH PATH \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+    -- Uses \u03BB-application as control flow. Each selector
+    -- is a function applied to two choices via CALL.
+    -- selector a b \u2192 CALL(CALL(selector, a), b)
+    -- No MCMP, no BRANCH, constant-time execution.
 
-    -- Double n: n+n is always correct (including n=0)
-    method church_double(n) =
-        n + n
+    -- Select a or b: apply the selector to both choices
+    -- selector = TRUE(\u03BBx.\u03BBy.x) returns a, FALSE(\u03BBx.\u03BBy.y) returns b
+    method church_select(selector, a, b) =
+        selector a b
 
-    -- Add a and b: always correct (including a=0)
-    method church_add(a, b) =
-        a + b
+    -- Guarded add: apply selector to choose x or x+y
+    -- selector(x + y)(x) picks the right outcome
+    method church_guard(selector, x, y) =
+        selector (x + y) x
 
-    -- Triple sum: always correct (including all zeros)
-    method church_sum3(a, b, c) =
-        a + b + c
+    -- Classify: chain two selectors for three-way choice
+    -- s1 picks between 0 and (s2 picks between 10 and 20)
+    method church_classify(s1, s2) =
+        s1 0 (s2 10 20)
 
-    -- Subtract: always correct (including b=0)
-    method church_sub(a, b) =
-        a - b
+    -- Sign: chain two selectors for three outcomes
+    method church_sign(s1, s2, pos, neg) =
+        s1 0 (s2 pos neg)
 }`,
         'lambda_booleans': `-- LAMBDA CALCULUS
 -- Church Booleans \u2014 logic as pure functions
