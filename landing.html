@@ -32,10 +32,16 @@
         }
         .cards {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 14px;
             width: 100%;
-            max-width: 1200px;
+            max-width: 1400px;
+        }
+        @media (max-width: 1100px) {
+            .cards { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 700px) {
+            .cards { grid-template-columns: 1fr; }
         }
         .card {
             background: #141a28;
@@ -182,6 +188,22 @@
                 <span class="feature">Test Log</span>
             </div>
             <div class="arrow" style="color: #ffd54f;">Open Test Harness &rarr;</div>
+        </a>
+        <a href="/patents/" class="card" style="background: linear-gradient(135deg, #1a1e2e 0%, #2a1a28 100%); border-color: #f472b6;">
+            <h2>Patent Portfolio</h2>
+            <div class="tag" style="color: #f472b6;">8 PDFs &middot; 45 Figures &middot; April 2026</div>
+            <p>
+                Complete patent portfolio: base filing, three CIPs, consolidated document,
+                and 45 interactive technical figures. All documents available as
+                print-ready PDFs on white backgrounds.
+            </p>
+            <div class="features">
+                <span class="feature" style="background: rgba(244,114,182,0.1); color: #f472b6; border-color: rgba(244,114,182,0.2);">8 PDFs</span>
+                <span class="feature" style="background: rgba(244,114,182,0.1); color: #f472b6; border-color: rgba(244,114,182,0.2);">45 Figures</span>
+                <span class="feature" style="background: rgba(244,114,182,0.1); color: #f472b6; border-color: rgba(244,114,182,0.2);">Searchable</span>
+                <span class="feature" style="background: rgba(244,114,182,0.1); color: #f472b6; border-color: rgba(244,114,182,0.2);">Print-Ready</span>
+            </div>
+            <div class="arrow" style="color: #f472b6;">Browse Patents &rarr;</div>
         </a>
     </div>
     <footer>

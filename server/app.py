@@ -165,6 +165,30 @@ def simulator_static(path):
 def docs_figures(path):
     return send_from_directory(os.path.join(DOCS_DIR, "figures"), path)
 
+PATENTS_DIR = os.path.join(DOCS_DIR, "patents")
+
+@app.route("/patents/")
+def patents_index():
+    resp = make_response(send_from_directory(PATENTS_DIR, "index.html"))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
+
+@app.route("/patents/files/<path:filename>")
+def patents_file(filename):
+    resp = make_response(send_from_directory(PATENTS_DIR, filename))
+    if filename.endswith(".pdf"):
+        resp.headers["Content-Type"] = "application/pdf"
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
+
+@app.route("/figures/<path:path>")
+def figures_html(path):
+    if not path.endswith(".html"):
+        path = path + ".html"
+    resp = make_response(send_from_directory(os.path.join(DOCS_DIR, "figures"), path))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
+
 BOOK_CHAPTERS = [
     ("Getting Started", [
         "quick-start.md",
