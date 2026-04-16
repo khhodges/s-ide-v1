@@ -4669,10 +4669,23 @@ async function _fetchAndShowLumpBinary(token, lump) {
         t += regionRow('\u2500\u2500 Header \u2500\u2500');
         if (words.length > 0) t += dataRow(0, words[0], dis(words[0]));
 
+        // Consistency guard: if binary length disagrees with metadata lump_size,
+        // use the actual fetched word count as the authoritative bound.
+        const totalWords = numWords;
+        const effLumpSize = (lumpSize > 0 && lumpSize <= totalWords) ? lumpSize : totalWords;
+        const effClistStart = cc > 0 ? Math.max(0, effLumpSize - cc) : effLumpSize;
+        const codeEnd = Math.min(cw + 1, effClistStart, totalWords);
+
+        if (lumpSize !== totalWords) {
+            t += `<tr class="lump-hex-region-row"><td colspan="4" style="color:#f59e0b">`
+               + `\u26a0 Metadata lump_size=${lumpSize}w but binary is ${totalWords}w `
+               + `\u2014 displaying all ${totalWords} fetched words`
+               + `</td></tr>`;
+        }
+
         // ── Words 1..cw: code (disassembled, with method boundary labels) ─
-        if (cw >= codeStart) {
+        if (codeEnd > codeStart) {
             t += regionRow('\u2500\u2500 Code \u2500\u2500');
-            const codeEnd = Math.min(cw + 1, lumpSize, words.length);
             for (let i = codeStart; i < codeEnd; i++) {
                 if (methodBoundary[i] !== undefined) {
                     t += `<tr class="lump-hex-method-row"><td colspan="4">\u25c6\u00a0${e(methodBoundary[i])}</td></tr>`;
@@ -4681,14 +4694,34 @@ async function _fetchAndShowLumpBinary(token, lump) {
             }
         }
 
+        // ── Padding: words cw+1..clistStart-1 ────────────────────────────
+        const paddingStart = codeEnd;
+        const paddingEnd   = effClistStart;
+        if (paddingEnd > paddingStart) {
+            const padCount = paddingEnd - paddingStart;
+            t += regionRow(`\u2500\u2500 Padding (${padCount} word${padCount !== 1 ? 's' : ''}) \u2500\u2500`);
+            for (let i = paddingStart; i < paddingEnd && i < totalWords; i++) {
+                t += dataRow(i, words[i], e('(unused)'));
+            }
+        }
+
         // ── C-list ────────────────────────────────────────────────────────
-        if (cc > 0 && clistStart < lumpSize) {
+        if (cc > 0 && effClistStart < effLumpSize) {
             t += regionRow(`\u2500\u2500 C-List (${cc} slot${cc !== 1 ? 's' : ''}) \u2500\u2500`);
-            for (let i = clistStart; i < lumpSize && i < words.length; i++) {
-                const slotIdx = i - clistStart;
+            for (let i = effClistStart; i < effLumpSize && i < totalWords; i++) {
+                const slotIdx = i - effClistStart;
                 const w       = words[i] >>> 0;
                 const ann     = w === 0 ? `C-list[${slotIdx}]: null` : `C-list[${slotIdx}]: 0x${hexw(w)}`;
                 t += dataRow(i, w, e(ann));
+            }
+        }
+
+        // ── Extra words beyond effLumpSize (should not normally occur) ────
+        if (totalWords > effLumpSize) {
+            const extraCount = totalWords - effLumpSize;
+            t += regionRow(`\u2500\u2500 Extra (${extraCount} word${extraCount !== 1 ? 's' : ''} beyond lump_size) \u2500\u2500`);
+            for (let i = effLumpSize; i < totalWords; i++) {
+                t += dataRow(i, words[i], e('(beyond lump_size)'));
             }
         }
 
