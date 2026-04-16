@@ -4588,7 +4588,7 @@ function showLumpDetail(token) {
     if (!isNamespace) {
         html += `<div class="lump-detail-section">`;
         html += `<div class="lump-section-title">Binary <span class="lump-binary-badge">${parseInt(lump.lump_size) || 0} words · ${((parseInt(lump.lump_size) || 0) * 4)} bytes</span></div>`;
-        html += `<div class="lump-hex-loading" id="lumpBinBody_${e(token)}">Loading binary\u2026</div>`;
+        html += `<div class="lump-hex-loading" id="lumpBinBody_${token}">Loading binary\u2026</div>`;
         html += `</div>`;
     }
 
