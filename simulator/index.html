@@ -26,7 +26,7 @@
     })();
     </script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a1a'/%3E%3Ctext x='16' y='23' font-family='serif' font-size='22' font-weight='bold' fill='%23daa520' text-anchor='middle'%3E%CE%BB%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=20260416b">
+    <link rel="stylesheet" href="styles.css?v=20260416c">
     <style>
         .app-loading {
             position: fixed; inset: 0; z-index: 99999;
@@ -56,6 +56,11 @@
         }
         @keyframes app-pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
         @keyframes app-slide { 0%{transform:translateX(-200%)} 100%{transform:translateX(450%)} }
+        /* hamburger mega-menu — inline to bypass CSS file cache */
+        #hamDropdown { display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:9999; background:var(--bg-panel,#12121f); border:1px solid var(--border,#2a2a4a); border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,0.5); padding:0.35rem 0.2rem; grid-template-columns:repeat(6,auto); max-height:calc(100vh - 60px); overflow-y:auto; }
+        #hamDropdown.ham-open { display:grid !important; }
+        .ham-group { display:flex; flex-direction:column; min-width:130px; border-right:1px solid var(--border,#2a2a4a); padding:0.2rem 0; }
+        .ham-group:last-child { border-right:none; }
     </style>
 </head>
 <body>

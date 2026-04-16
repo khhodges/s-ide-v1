@@ -424,13 +424,12 @@ function goBack() {
 function toggleHamburger() {
     const dd = document.getElementById('hamDropdown');
     if (!dd) return;
-    const open = dd.style.display !== 'none';
-    dd.style.display = open ? 'none' : 'flex';
+    dd.classList.toggle('ham-open');
 }
 
 function closeHamburger() {
     const dd = document.getElementById('hamDropdown');
-    if (dd) dd.style.display = 'none';
+    if (dd) dd.classList.remove('ham-open');
 }
 
 document.addEventListener('click', function(e) {
