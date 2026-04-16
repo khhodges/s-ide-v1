@@ -5673,6 +5673,207 @@ a.next-step-link:hover {
     border: 1px solid var(--border);
 }
 
+.lumps-layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 1rem;
+    height: calc(100vh - 70px);
+    overflow: hidden;
+}
+
+.lumps-list-panel {
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.lumps-list-panel .panel {
+    height: 100%;
+}
+
+.lumps-detail-panel {
+    overflow-y: auto;
+}
+
+.lumps-detail-panel .panel {
+    height: 100%;
+    overflow-y: auto;
+}
+
+.lumps-catalog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.lumps-refresh-btn {
+    background: #C89B3C;
+    color: #141414;
+    border: none;
+    font-weight: 700;
+    font-size: 0.72rem;
+    padding: 5px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.lumps-refresh-btn:hover {
+    background: #d4a94a;
+}
+
+.lumps-placeholder {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 3rem 1rem;
+    line-height: 1.6;
+}
+
+.lumps-loading {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.lump-item {
+    padding: 0.55rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    border: 1px solid transparent;
+    margin-bottom: 2px;
+}
+
+.lump-item:hover {
+    background: rgba(30, 60, 120, 0.3);
+    border-color: rgba(100, 160, 255, 0.15);
+}
+
+.lump-item.active {
+    background: rgba(30, 60, 120, 0.5);
+    border-color: var(--church-gold);
+}
+
+.lump-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.2rem;
+}
+
+.lump-item-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.lump-mtbf-badge {
+    font-size: 0.55rem;
+    padding: 1px 6px;
+}
+
+.lump-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+}
+
+.lump-token {
+    font-family: 'Courier New', monospace;
+    color: #8ab4f8;
+}
+
+.lump-detail-sections {
+    padding: 0.5rem 0;
+}
+
+.lump-detail-section {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.lump-detail-section:last-child {
+    border-bottom: none;
+}
+
+.lump-section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--church-gold);
+    margin-bottom: 0.4rem;
+}
+
+.lump-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(100, 160, 255, 0.12);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.lump-detail-table th {
+    padding: 0.3rem 0.5rem;
+    text-align: left;
+    font-size: 0.68rem;
+    color: var(--church-gold);
+    font-weight: 600;
+    border-bottom: 1px solid rgba(100, 160, 255, 0.15);
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.lump-detail-table td {
+    padding: 0.25rem 0.5rem;
+    border-bottom: 1px solid rgba(100, 160, 255, 0.08);
+}
+
+.lump-detail-table td:first-child {
+    color: var(--text-secondary);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.lump-detail-table tr:last-child td {
+    border-bottom: none;
+}
+
+.lump-detail-table code {
+    background: rgba(100, 160, 255, 0.1);
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    font-size: 0.68rem;
+    font-family: 'Courier New', monospace;
+}
+
+.lump-detail-actions {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.lump-delete-btn {
+    background: rgba(160, 30, 30, 0.5);
+    color: #ff9999;
+    border: 1px solid rgba(200, 60, 60, 0.4);
+    font-size: 0.72rem;
+    padding: 6px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.lump-delete-btn:hover {
+    background: rgba(200, 40, 40, 0.6);
+}
+
 @media (max-width: 768px) {
     header {
         flex-wrap: wrap;
@@ -5772,6 +5973,15 @@ a.next-step-link:hover {
     }
 
     .abs-list-panel {
+        max-height: 40vh;
+    }
+
+    .lumps-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .lumps-list-panel {
         max-height: 40vh;
     }
 

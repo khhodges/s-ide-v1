@@ -1589,6 +1589,75 @@ def save_lump():
         "size_bytes": len(lump_bytes)
     })
 
+@app.route("/api/lumps/list")
+def list_lumps():
+    """Return JSON array of all saved lumps with full sidecar metadata."""
+    import glob as _glob
+    lumps_dir = os.path.join(os.path.dirname(__file__), 'lumps')
+
+    manifest_path = os.path.join(lumps_dir, 'manifest.json')
+    manifest = []
+    if os.path.isfile(manifest_path):
+        try:
+            with open(manifest_path, 'r') as fh:
+                manifest = json.load(fh)
+        except Exception:
+            manifest = []
+
+    result = []
+    for entry in manifest:
+        token8 = entry.get('token', '')
+        sidecar_path = os.path.join(lumps_dir, f'{token8}.json')
+        if os.path.isfile(sidecar_path):
+            try:
+                with open(sidecar_path, 'r') as fh:
+                    sidecar = json.load(fh)
+                result.append(sidecar)
+                continue
+            except Exception:
+                pass
+        result.append(entry)
+
+    return jsonify(result)
+
+
+@app.route("/api/lumps/<token>", methods=["DELETE"])
+def delete_lump(token):
+    """Delete a lump binary, sidecar, and manifest entry."""
+    token8 = token.lower().zfill(8)[:8]
+    lumps_dir = os.path.join(os.path.dirname(__file__), 'lumps')
+
+    lump_path = os.path.join(lumps_dir, f'{token8}.lump')
+    sidecar_path = os.path.join(lumps_dir, f'{token8}.json')
+    deleted = []
+
+    if os.path.isfile(lump_path):
+        os.remove(lump_path)
+        deleted.append(f'{token8}.lump')
+    if os.path.isfile(sidecar_path):
+        os.remove(sidecar_path)
+        deleted.append(f'{token8}.json')
+
+    LAZY_LUMPS.pop(token8, None)
+    LAZY_LUMPS.pop(token8.lstrip('0') or '0', None)
+
+    manifest_path = os.path.join(lumps_dir, 'manifest.json')
+    if os.path.isfile(manifest_path):
+        try:
+            with open(manifest_path, 'r') as fh:
+                manifest = json.load(fh)
+            manifest = [e for e in manifest if e.get('token') != token8]
+            with open(manifest_path, 'w') as fh:
+                json.dump(manifest, fh, indent=2)
+        except Exception:
+            pass
+
+    if not deleted:
+        return jsonify({"error": f"No lump found for token 0x{token8}"}), 404
+
+    print(f'[lumps] Deleted {", ".join(deleted)}', flush=True)
+    return jsonify({"ok": True, "token": token8, "deleted": deleted})
+
 # ──────────────────────────────────────────────────────────────────────────────
 
 

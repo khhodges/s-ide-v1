@@ -94,6 +94,7 @@
                             <button class="ham-item" id="hamItem-gc" onclick="switchView('gc');closeHamburger()">GC</button>
                             <button class="ham-item" id="hamItem-github" onclick="switchView('github');closeHamburger()">GitHub</button>
                             <button class="ham-item" id="hamItem-devices" onclick="switchView('devices');closeHamburger()">Devices</button>
+                            <button class="ham-item" id="hamItem-lumps" onclick="switchView('lumps');closeHamburger()">Lumps</button>
                         </div>
                     </div>
                     <button class="btn btn-view cr-cycle-btn" id="crCycleBtn"
@@ -400,6 +401,28 @@
                     <div class="panel-title" id="absDetailTitle">Select an abstraction</div>
                     <div id="absDetailContent">
                         <div class="abs-placeholder">Click any abstraction on the left to see its methods, permissions, and how it fits into the CR6/CR14 canonical form.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="lumps" class="view">
+        <div class="lumps-layout">
+            <div class="lumps-list-panel">
+                <div class="panel">
+                    <div class="panel-title lumps-catalog-header">
+                        <span>LUMP Repository</span>
+                        <button class="btn lumps-refresh-btn" onclick="renderLumps()">Refresh</button>
+                    </div>
+                    <div id="lumpsListContent"></div>
+                </div>
+            </div>
+            <div class="lumps-detail-panel">
+                <div class="panel">
+                    <div class="panel-title" id="lumpsDetailTitle">Select a lump</div>
+                    <div id="lumpsDetailContent">
+                        <div class="lumps-placeholder">Click any lump on the left to see its methods, pet names, MTBF, deployment info, and capabilities.</div>
                     </div>
                 </div>
             </div>

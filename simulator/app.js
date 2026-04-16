@@ -355,7 +355,7 @@ function init() {
     updateLineNumbers();
     loadNamespaceState();
     checkBootId();
-    const views = ['repl','editor','tutorial','dashboard','namespace','abstractions','pipeline','trace','reference','docs','builder'];
+    const views = ['repl','editor','tutorial','dashboard','namespace','abstractions','lumps','pipeline','trace','reference','docs','builder'];
     const hash = window.location.hash.replace('#', '');
     let startView = views.includes(hash) ? hash : null;
     if (!startView) {
@@ -472,6 +472,7 @@ function switchView(viewId) {
     if (viewId === 'github') loadGitHubCommunity();
     if (viewId === 'namespace') updateNamespace();
     if (viewId === 'abstractions') renderAbstractions();
+    if (viewId === 'lumps') renderLumps();
     if (viewId === 'pipeline') pipelineViz.render();
     if (viewId === 'builder' && typeof initBuilder === 'function') initBuilder();
     if (viewId === 'builder') initHardwareBuildPanel();
@@ -4335,6 +4336,198 @@ function renderAbstractions() {
 function toggleAbsLayer(layer) {
     absCollapsedLayers[layer] = !absCollapsedLayers[layer];
     renderAbstractions();
+}
+
+let _lumpsCache = [];
+let _selectedLumpToken = null;
+
+function renderLumps() {
+    const listEl = document.getElementById('lumpsListContent');
+    if (!listEl) return;
+    listEl.innerHTML = '<div class="lumps-loading">Loading lumps...</div>';
+
+    fetch('/api/lumps/list')
+        .then(r => r.json())
+        .then(lumps => {
+            _lumpsCache = lumps;
+            if (!lumps || lumps.length === 0) {
+                listEl.innerHTML = '<div class="lumps-placeholder">No lumps saved yet. Use Build LUMP in the editor to compile and save an abstraction.</div>';
+                return;
+            }
+            let html = '';
+            for (const lump of lumps) {
+                const token = lump.token || '????????';
+                const name = lump.abstraction || 'Unknown';
+                const size = lump.lump_size || 0;
+                const methods = lump.methods || [];
+                const lang = lump.language || '';
+                const profile = lump.profile || '';
+                const mtbf = lump.mtbf || {};
+                const mtbfStatus = mtbf.status || 'unknown';
+                const mtbfClass = mtbfStatus === 'green' ? 'mtbf-green' : mtbfStatus === 'amber' ? 'mtbf-amber' : 'mtbf-red';
+                const isActive = _selectedLumpToken === token;
+
+                html += `<div class="lump-item${isActive ? ' active' : ''}" onclick="showLumpDetail('${token}')">`;
+                html += `<div class="lump-item-header">`;
+                html += `<span class="lump-item-name">${name}</span>`;
+                if (mtbf.status) {
+                    html += `<span class="mtbf-badge ${mtbfClass} lump-mtbf-badge">${mtbfStatus.toUpperCase()}</span>`;
+                }
+                html += `</div>`;
+                html += `<div class="lump-item-meta">`;
+                html += `<span class="lump-token">0x${token}</span>`;
+                html += `<span class="lump-size">${size}w</span>`;
+                html += `<span class="lump-methods">${methods.length} method${methods.length !== 1 ? 's' : ''}</span>`;
+                if (lang) html += `<span class="lump-lang">${lang}</span>`;
+                if (profile) html += `<span class="lump-profile">${profile}</span>`;
+                html += `</div>`;
+                html += `</div>`;
+            }
+            listEl.innerHTML = html;
+        })
+        .catch(err => {
+            listEl.innerHTML = `<div class="lumps-placeholder">Error loading lumps: ${err.message}</div>`;
+        });
+}
+
+function showLumpDetail(token) {
+    _selectedLumpToken = token;
+    const listEl = document.getElementById('lumpsListContent');
+    if (listEl) {
+        listEl.querySelectorAll('.lump-item').forEach(el => el.classList.remove('active'));
+        listEl.querySelectorAll('.lump-item').forEach(el => {
+            if (el.querySelector('.lump-token')?.textContent === `0x${token}`) el.classList.add('active');
+        });
+    }
+
+    const lump = _lumpsCache.find(l => l.token === token);
+    if (!lump) return;
+
+    const titleEl = document.getElementById('lumpsDetailTitle');
+    const contentEl = document.getElementById('lumpsDetailContent');
+    if (!titleEl || !contentEl) return;
+
+    titleEl.textContent = lump.abstraction || 'Unknown Lump';
+
+    let html = '<div class="lump-detail-sections">';
+
+    html += '<div class="lump-detail-section">';
+    html += '<table class="lump-detail-table"><tbody>';
+    html += `<tr><td>Token</td><td>0x${lump.token}</td></tr>`;
+    if (lump.ns_slot !== null && lump.ns_slot !== undefined) html += `<tr><td>NS Slot</td><td>${lump.ns_slot}</td></tr>`;
+    html += `<tr><td>Lump Size</td><td>${lump.lump_size} words (${lump.lump_size * 4} bytes)</td></tr>`;
+    html += `<tr><td>Code Words</td><td>${lump.cw || 0}</td></tr>`;
+    html += `<tr><td>C-List Slots</td><td>${lump.cc || 0}</td></tr>`;
+    if (lump.language) html += `<tr><td>Language</td><td>${lump.language}</td></tr>`;
+    if (lump.profile) html += `<tr><td>Profile</td><td>${lump.profile}</td></tr>`;
+    const grants = lump.grants || [];
+    if (grants.length > 0) html += `<tr><td>Grants</td><td>[${grants.join(', ')}]</td></tr>`;
+    html += '</tbody></table>';
+    html += '</div>';
+
+    const methods = lump.methods || [];
+    if (methods.length > 0) {
+        html += '<div class="lump-detail-section">';
+        html += '<div class="lump-section-title">Methods</div>';
+        html += '<table class="lump-detail-table"><thead><tr><th>#</th><th>Name</th><th>Offset</th><th>Length</th></tr></thead><tbody>';
+        for (let i = 0; i < methods.length; i++) {
+            const m = methods[i];
+            html += `<tr><td>${i}</td><td>${m.name}</td><td>${m.offset}</td><td>${m.length}</td></tr>`;
+        }
+        html += '</tbody></table>';
+        html += '</div>';
+    }
+
+    const petNames = lump.pet_names || {};
+    const drNames = petNames.DR || {};
+    const crNames = petNames.CR || {};
+    const hasPetNames = Object.keys(drNames).length > 0 || Object.keys(crNames).length > 0;
+    if (hasPetNames) {
+        html += '<div class="lump-detail-section">';
+        html += '<div class="lump-section-title">Pet Names</div>';
+        html += '<table class="lump-detail-table"><thead><tr><th>Register</th><th>Name</th></tr></thead><tbody>';
+        for (const [reg, name] of Object.entries(drNames)) {
+            html += `<tr><td>${reg}</td><td>${name}</td></tr>`;
+        }
+        for (const [reg, name] of Object.entries(crNames)) {
+            html += `<tr><td>${reg}</td><td>${name}</td></tr>`;
+        }
+        html += '</tbody></table>';
+        html += '</div>';
+    }
+
+    const mtbf = lump.mtbf || {};
+    if (mtbf.status) {
+        const mtbfClass = mtbf.status === 'green' ? 'mtbf-green' : mtbf.status === 'amber' ? 'mtbf-amber' : 'mtbf-red';
+        html += '<div class="lump-detail-section">';
+        html += '<div class="lump-section-title">MTBF Reliability</div>';
+        html += '<table class="lump-detail-table"><tbody>';
+        html += `<tr><td>Status</td><td><span class="mtbf-badge ${mtbfClass}">${mtbf.status.toUpperCase()}</span></td></tr>`;
+        html += `<tr><td>Clean Runs</td><td>${mtbf.consecutive_clean || 0}</td></tr>`;
+        html += `<tr><td>Total Runs</td><td>${mtbf.total_runs || 0}</td></tr>`;
+        if (mtbf.source_hash) html += `<tr><td>Source Hash</td><td><code>${mtbf.source_hash}</code></td></tr>`;
+        html += '</tbody></table>';
+        html += '</div>';
+    }
+
+    const deploy = lump.deployment || {};
+    if (deploy.built_at || deploy.target_board) {
+        html += '<div class="lump-detail-section">';
+        html += '<div class="lump-section-title">Deployment</div>';
+        html += '<table class="lump-detail-table"><tbody>';
+        if (deploy.target_board) html += `<tr><td>Target Board</td><td>${deploy.target_board}</td></tr>`;
+        if (deploy.profile) html += `<tr><td>Profile</td><td>${deploy.profile}</td></tr>`;
+        if (deploy.built_at) {
+            const d = new Date(deploy.built_at);
+            html += `<tr><td>Built At</td><td>${d.toLocaleString()}</td></tr>`;
+        }
+        if (deploy.builder) html += `<tr><td>Builder</td><td>${deploy.builder}</td></tr>`;
+        html += '</tbody></table>';
+        html += '</div>';
+    }
+
+    const caps = lump.capabilities || [];
+    if (caps.length > 0) {
+        html += '<div class="lump-detail-section">';
+        html += '<div class="lump-section-title">Capabilities</div>';
+        html += '<table class="lump-detail-table"><thead><tr><th>#</th><th>Name</th><th>NS Index</th></tr></thead><tbody>';
+        for (let i = 0; i < caps.length; i++) {
+            const c = caps[i];
+            const nsStr = (c.nsIndex !== undefined && c.nsIndex >= 0) ? `NS[${c.nsIndex}]` : 'unresolved';
+            html += `<tr><td>${i}</td><td>${c.name}</td><td>${nsStr}</td></tr>`;
+        }
+        html += '</tbody></table>';
+        html += '</div>';
+    }
+
+    html += '<div class="lump-detail-actions">';
+    html += `<button class="btn lump-delete-btn" onclick="deleteLump('${token}')">Delete Lump</button>`;
+    html += '</div>';
+
+    html += '</div>';
+    contentEl.innerHTML = html;
+}
+
+function deleteLump(token) {
+    if (!confirm(`Delete lump 0x${token}? This cannot be undone.`)) return;
+    fetch(`/api/lumps/${token}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(resp => {
+            if (resp.ok) {
+                _selectedLumpToken = null;
+                const titleEl = document.getElementById('lumpsDetailTitle');
+                const contentEl = document.getElementById('lumpsDetailContent');
+                if (titleEl) titleEl.textContent = 'Select a lump';
+                if (contentEl) contentEl.innerHTML = '<div class="lumps-placeholder">Lump deleted.</div>';
+                renderLumps();
+                appendOutput(`Deleted lump 0x${token}`, 'info');
+            } else {
+                appendOutput(`Delete failed: ${resp.error || 'unknown error'}`, 'error');
+            }
+        })
+        .catch(err => {
+            appendOutput(`Delete error: ${err.message}`, 'error');
+        });
 }
 
 function showAbstractionDetail(index) {
