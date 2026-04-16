@@ -1629,9 +1629,9 @@ def delete_lump(token):
     """Delete a lump binary, sidecar, and manifest entry."""
     import re as _re
     raw = token.lower().replace('0x', '', 1)
-    token8 = raw.zfill(8)[:8]
-    if not _re.fullmatch(r'[0-9a-f]{8}', token8):
-        return jsonify({"error": "Invalid token — must be hex characters"}), 400
+    if not _re.fullmatch(r'[0-9a-f]{1,8}', raw):
+        return jsonify({"error": "Invalid token — must be 1-8 hex characters"}), 400
+    token8 = raw.zfill(8)
     lumps_dir = os.path.join(os.path.dirname(__file__), 'lumps')
 
     lump_path = os.path.join(lumps_dir, f'{token8}.lump')
