@@ -505,6 +505,8 @@ function switchView(viewId) {
             document.querySelectorAll('.example-tab').forEach(t => t.classList.remove('active'));
             renderUserTabs();
             updateSaveUserTabBtn();
+            const outputEl = document.getElementById('assemblyOutput');
+            if (outputEl) outputEl.innerHTML = '';
             const sel = document.getElementById('langSelector');
             if (sel) showIntro(sel.value);
         }
