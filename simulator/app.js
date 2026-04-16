@@ -1779,8 +1779,8 @@ function showCRPopup(evt, crIdx) {
                     for (let _w = baseLoc2 + 1; _w < cEnd2 && _w < sim.memory.length; _w++) {
                         const _wd = sim.memory[_w] >>> 0;
                         if (((_wd >>> 27) & 0x1F) === 7) {
-                            const _crSrcIdx = (_wd >>> 15) & 0xF;
-                            const _tmplCR = sim.getFormattedCR ? sim.getFormattedCR(_crSrcIdx) : null;
+                            const _crDstIdx = (_wd >>> 19) & 0xF;
+                            const _tmplCR = sim.getFormattedCR ? sim.getFormattedCR(_crDstIdx) : null;
                             if (_tmplCR && !_tmplCR.isNull && (_tmplCR.word1_location >>> 0) === baseLoc2) {
                                 isSelfLoop = true;
                                 break;
