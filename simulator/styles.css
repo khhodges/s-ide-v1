@@ -4636,6 +4636,24 @@ a.next-step-link:hover {
     border-bottom-color: #f4b942;
 }
 
+.dr-hover-target {
+    cursor: help;
+    border-bottom: 1px dotted rgba(168,85,247,0.4);
+    transition: color 0.15s;
+}
+.dr-hover-target:hover {
+    color: #c084fc;
+    border-bottom-color: #a855f7;
+}
+
+.dr-hover-row {
+    cursor: help;
+    transition: background 0.12s;
+}
+.dr-hover-row:hover {
+    background: rgba(168,85,247,0.08);
+}
+
 .crd-action-group {
     display: inline-flex;
     align-items: center;

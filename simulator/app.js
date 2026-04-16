@@ -1105,7 +1105,7 @@ function renderCListEntryDetail(nsIdx, entry) {
                         const addr = loc + 1 + w;
                         if (addr >= sim.memory.length) break;
                         const word = _cw1[w];
-                        const decoded = word === 0 ? 'HALT' : _wrapCRHover(asm.disassemble(word));
+                        const decoded = word === 0 ? 'HALT' : _wrapRegHover(asm.disassemble(word));
                         const isPC   = sim.bootComplete && (addr === (sim.memory[sim.NS_TABLE_BASE + 2 * sim.NS_ENTRY_WORDS] || (2 * sim.SLOT_SIZE)) + 1 + sim.pc);
                         const dimmed = word === 0 ? ' style="opacity:0.35;"' : '';
                         const _dc = _decompileWord(word, addr, nsIdx, _clBase, _crPets1);
@@ -1117,7 +1117,7 @@ function renderCListEntryDetail(nsIdx, entry) {
                         codeHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
                         codeHtml += `<td class="code-disasm">${decoded}</td>`;
                         if (_ba1.hasBranches) codeHtml += `<td class="br-arrow-col">${_ba1.html[w]}</td>`;
-                        codeHtml += `<td class="code-decompiled ${_dcCls}">${_dc ? _wrapCRHover(_dc.desc) : ''}</td>`;
+                        codeHtml += `<td class="code-decompiled ${_dcCls}">${_dc ? _wrapRegHover(_dc.desc) : ''}</td>`;
                         codeHtml += '</tr>';
                     }
                     codeHtml += '</tbody></table>';
@@ -1189,7 +1189,7 @@ function renderCListEntryDetail(nsIdx, entry) {
                     const addr = loc + w;
                     if (addr >= sim.memory.length) break;
                     const word = _cw2[w];
-                    const decoded = word === 0 ? 'HALT' : _wrapCRHover(asm2.disassemble(word));
+                    const decoded = word === 0 ? 'HALT' : _wrapRegHover(asm2.disassemble(word));
                     const dimmed = word === 0 ? ' style="opacity:0.35;"' : '';
                     const _dc2 = _decompileWord(word, addr, nsIdx, _clBase2, _crPets2);
                     const _dc2Cls = _dc2 ? (_dc2.compiler ? 'code-decompiled-compiler' : 'code-decompiled-user') : '';
@@ -1200,7 +1200,7 @@ function renderCListEntryDetail(nsIdx, entry) {
                     codeHtml2 += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
                     codeHtml2 += `<td class="code-disasm">${decoded}</td>`;
                     if (_ba2.hasBranches) codeHtml2 += `<td class="br-arrow-col">${_ba2.html[w]}</td>`;
-                    codeHtml2 += `<td class="code-decompiled ${_dc2Cls}">${_dc2 ? _wrapCRHover(_dc2.desc) : ''}</td></tr>`;
+                    codeHtml2 += `<td class="code-decompiled ${_dc2Cls}">${_dc2 ? _wrapRegHover(_dc2.desc) : ''}</td></tr>`;
                 }
                 codeHtml2 += '</tbody></table>';
                 h += codeHtml2;
@@ -1539,6 +1539,108 @@ function hideCRPopup(immediate) {
     }, 80);
 }
 
+function _positionPopup(pop, evt) {
+    const rect = evt.currentTarget.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    pop.style.left = '-9999px'; pop.style.top = '-9999px';
+    const pw = pop.offsetWidth || 260;
+    const ph = pop.offsetHeight || 160;
+    const spaceBelow = vh - rect.bottom - 8;
+    const spaceAbove = rect.top - 8;
+    let top;
+    if (spaceBelow >= ph || spaceBelow >= spaceAbove) {
+        top = rect.bottom + 6;
+    } else {
+        top = Math.max(8, rect.top - ph - 6);
+    }
+    let left = rect.left;
+    if (left + pw > vw - 8) left = Math.max(8, vw - pw - 8);
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+}
+
+function showDRPopup(evt, drIdx) {
+    cancelHideCRPopup();
+    const pop = document.getElementById('cr-hover-popup');
+    if (!pop || !sim) return;
+
+    const val = sim.dr[drIdx] >>> 0;
+    const valSigned = val | 0;
+    const petName = _petNameDRMap[drIdx];
+    const hexW = w => '0x' + (w >>> 0).toString(16).toUpperCase().padStart(8, '0');
+    const _drArchNames = { 0: 'Accumulator', 1: 'Argument 1' };
+    const archName = _drArchNames[drIdx];
+    const titleExtra = petName ? ` — ${petName}` : (archName ? ` — ${archName}` : '');
+
+    let html = '';
+    if (val === 0) {
+        html += `<div class="zdp-title" style="border-color:#374151;color:#6b7280;">DR${drIdx}${titleExtra} · ZERO</div>`;
+        html += `<table>`;
+        html += `<tr><td>Value</td><td class="zdp-hex">0x00000000 <span class="zdp-lbl">(zero)</span></td></tr>`;
+        if (drIdx === 0) {
+            html += `<tr><td>Role</td><td class="zdp-note">Accumulator — holds operation result</td></tr>`;
+        } else if (archName) {
+            html += `<tr><td>Role</td><td class="zdp-note">${archName}</td></tr>`;
+        } else if (petName) {
+            html += `<tr><td>Pet name</td><td class="zdp-note">${petName}</td></tr>`;
+        }
+        html += `</table>`;
+    } else {
+        html += `<div class="zdp-title" style="border-color:#a855f7;color:#c084fc;">DR${drIdx}${titleExtra}</div>`;
+        html += `<table>`;
+        html += `<tr><td>Hex</td><td class="zdp-hex">${hexW(val)}</td></tr>`;
+        if (valSigned < 0) {
+            html += `<tr><td>Decimal</td><td class="zdp-val">${valSigned} <span class="zdp-lbl">(unsigned: ${val})</span></td></tr>`;
+        } else {
+            html += `<tr><td>Decimal</td><td class="zdp-val">${val}</td></tr>`;
+        }
+        if (petName) html += `<tr><td>Pet name</td><td class="zdp-note">${petName}</td></tr>`;
+        if (archName && !petName) html += `<tr><td>Role</td><td class="zdp-note">${archName}</td></tr>`;
+
+        if (sim.getFormattedCR) {
+            for (let i = 0; i < 16; i++) {
+                const cr = sim.getFormattedCR(i);
+                if (!cr || cr.isNull) continue;
+                if ((cr.word1_location >>> 0) === val) {
+                    const nsLbl = (sim.nsLabels && sim.nsLabels[cr.gtIndex]) || '';
+                    html += `<tr><td colspan="2" style="color:#f4b942;padding-top:0.3rem;">&#x25C6; Base of CR${i} (${cr.gtTypeName})</td></tr>`;
+                    html += `<tr><td>NS Slot</td><td class="zdp-val">${cr.gtIndex}${nsLbl ? ' <span class="zdp-lbl">('+nsLbl+')</span>' : ''}</td></tr>`;
+                    html += `<tr><td>Perms</td><td class="zdp-val">[${cr.perms}]</td></tr>`;
+                    break;
+                }
+            }
+        }
+
+        if (sim.getFormattedCR) {
+            for (let i = 0; i < 16; i++) {
+                const cr = sim.getFormattedCR(i);
+                if (!cr || cr.isNull || cr.perms.indexOf('X') === -1) continue;
+                const base = cr.word1_location >>> 0;
+                const limit = cr.limit17 || 0;
+                if (val > base && val <= base + limit) {
+                    const nsLbl = (sim.nsLabels && sim.nsLabels[cr.gtIndex]) || '';
+                    const offset = val - base;
+                    const isSelf = (sim.pc >>> 0) >= base && (sim.pc >>> 0) <= base + limit;
+                    if (isSelf) {
+                        html += `<tr><td colspan="2" style="color:#fbbf24;padding-top:0.3rem;">&#x21BB; Self-loop target — within current lump${nsLbl ? ' ('+nsLbl+')' : ''} +${offset}</td></tr>`;
+                    } else {
+                        html += `<tr><td colspan="2" style="color:#7dd3fc;padding-top:0.3rem;">&#x2192; Code offset +${offset} in CR${i}${nsLbl ? ' ('+nsLbl+')' : ''}</td></tr>`;
+                    }
+                    break;
+                }
+            }
+        }
+
+        html += `</table>`;
+    }
+
+    const dismissBtn = `<button class="zdp-dismiss" onclick="hideCRPopup(true)" title="Close">&times;</button>`;
+    pop.innerHTML = dismissBtn + html;
+    pop.style.display = 'block';
+    _positionPopup(pop, evt);
+}
+
 function showCRPopup(evt, crIdx) {
     cancelHideCRPopup();
     const pop = document.getElementById('cr-hover-popup');
@@ -1653,6 +1755,18 @@ function showCRPopup(evt, crIdx) {
             html += `<tr><td>Limit</td><td class="zdp-hex">0x${cr.limit17.toString(16).toUpperCase().padStart(5, '0')}</td></tr>`;
             if (cr.perms.indexOf('X') !== -1) {
                 html += `<tr><td>Role</td><td class="zdp-note">Code (executable)</td></tr>`;
+                const baseLoc2 = cr.word1_location >>> 0;
+                if (baseLoc2 < sim.memory.length) {
+                    const lhdr2 = sim.parseLumpHeader ? sim.parseLumpHeader(sim.memory[baseLoc2] >>> 0) : null;
+                    const cEnd2 = lhdr2 && lhdr2.valid ? baseLoc2 + 1 + lhdr2.cw : baseLoc2 + Math.min(cr.limit17 || 0, 64);
+                    let hasLambda = false;
+                    for (let _w = baseLoc2 + 1; _w < cEnd2 && _w < sim.memory.length; _w++) {
+                        if (((sim.memory[_w] >>> 27) & 0x1F) === 7) { hasLambda = true; break; }
+                    }
+                    if (hasLambda) {
+                        html += `<tr><td>Pattern</td><td class="zdp-note">&#x21BB; Self-loop <span class="zdp-lbl">(LAMBDA closure)</span></td></tr>`;
+                    }
+                }
             } else if (cr.perms.indexOf('R') !== -1 && cr.perms.indexOf('W') !== -1) {
                 html += `<tr><td>Role</td><td class="zdp-note">Data (read/write)</td></tr>`;
             } else if (cr.perms.indexOf('R') !== -1) {
@@ -1668,25 +1782,7 @@ function showCRPopup(evt, crIdx) {
     const dismissBtn = `<button class="zdp-dismiss" onclick="hideCRPopup(true)" title="Close">&times;</button>`;
     pop.innerHTML = dismissBtn + html;
     pop.style.display = 'block';
-
-    const rect = evt.currentTarget.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    pop.style.left = '-9999px'; pop.style.top = '-9999px';
-    const pw = pop.offsetWidth || 300;
-    const ph = pop.offsetHeight || 200;
-    const spaceBelow = vh - rect.bottom - 8;
-    const spaceAbove = rect.top - 8;
-    let top;
-    if (spaceBelow >= ph || spaceBelow >= spaceAbove) {
-        top = rect.bottom + 6;
-    } else {
-        top = Math.max(8, rect.top - ph - 6);
-    }
-    let left = rect.left;
-    if (left + pw > vw - 8) left = Math.max(8, vw - pw - 8);
-    pop.style.left = left + 'px';
-    pop.style.top = top + 'px';
+    _positionPopup(pop, evt);
 }
 
 var _editorCREditActive = false;
@@ -2616,6 +2712,17 @@ function _wrapCRHover(html) {
     });
 }
 
+function _wrapDRHover(html) {
+    return html.replace(/\bDR(1[0-5]|[0-9])\b/g, function(m, d) {
+        const n = parseInt(d, 10);
+        return `<span class="dr-hover-target" onmouseenter="showDRPopup(event,${n})" onmouseleave="hideCRPopup()">${m}</span>`;
+    });
+}
+
+function _wrapRegHover(html) {
+    return _wrapDRHover(_wrapCRHover(html));
+}
+
 function _crTag(crNum, crPets) {
     const pet = crPets && crPets[crNum];
     return pet ? `${pet.toLowerCase()}(CR${crNum})` : `CR${crNum}`;
@@ -3082,10 +3189,10 @@ function updateCRDetail() {
             const isCompiler = decomp && decomp.compiler;
             let rowClass = isPC ? 'code-pc-row' : (isBP ? 'code-bp-row' : (isCompiler ? 'code-row-compiler' : ''));
 
-            const decoded  = word === 0 ? 'NOP / HALT' : _wrapCRHover(asm.disassemble(word));
+            const decoded  = word === 0 ? 'NOP / HALT' : _wrapRegHover(asm.disassemble(word));
             const bpDot    = isBP ? '<span class="bp-dot" title="Breakpoint">&#x25CF;</span> ' : '';
             const decompTd = decomp
-                ? `<td class="code-decompiled ${isCompiler ? 'code-decompiled-compiler' : 'code-decompiled-user'}">${_wrapCRHover(decomp.desc)}</td>`
+                ? `<td class="code-decompiled ${isCompiler ? 'code-decompiled-compiler' : 'code-decompiled-user'}">${_wrapRegHover(decomp.desc)}</td>`
                 : '<td class="code-decompiled"></td>';
 
             codeHtml += `<tr class="${rowClass}" style="cursor:pointer;" title="Double-click to set breakpoint" ondblclick="openBreakPopoverAt(${addr})">`;
@@ -3425,7 +3532,7 @@ function updateDRDisplay() {
         const val = sim.dr[i];
         const petName = _petNameDRMap[i];
         const special = i === 0 ? ' (zero)' : (petName ? ` (${petName})` : '');
-        html += `<div class="reg-row ${val === 0 ? 'reg-null' : 'reg-active'}">`;
+        html += `<div class="reg-row ${val === 0 ? 'reg-null' : 'reg-active'} dr-hover-row" onmouseenter="showDRPopup(event,${i})" onmouseleave="hideCRPopup()">`;
         html += `<span class="reg-label">DR${i.toString().padStart(2, ' ')}${special}</span>`;
         html += `<span class="reg-value">0x${(val >>> 0).toString(16).toUpperCase().padStart(8, '0')}</span>`;
         html += `<span class="reg-decimal">${val}</span>`;
