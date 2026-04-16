@@ -424,7 +424,7 @@ class ChurchAssembler {
 
     _parseCR(token, lineNum) {
         if (!token) {
-            this.errors.push({ line: lineNum, message: 'A capability register (like CR0, CR6, CR14) is needed here, but nothing was given.' });
+            this.errors.push({ line: lineNum, message: 'A capability register (like CR0, CR6, CR14, or hex 0x0–0xF) is needed here, but nothing was given.' });
             return 0;
         }
         token = token.toUpperCase().replace(/,/g, '');
@@ -435,7 +435,14 @@ class ChurchAssembler {
             this.errors.push({ line: lineNum, message: `CR${idx} is too big! Capability registers go from CR0 to CR15 (that's 16 registers).` });
             return 0;
         }
-        this.errors.push({ line: lineNum, message: `Expected a capability register like CR0 or CR6, but got "${token}". Capability registers start with CR followed by a number 0-15.` });
+        const hexMatch = token.match(/^0X([0-9A-F]+)$/);
+        if (hexMatch) {
+            const idx = parseInt(hexMatch[1], 16);
+            if (idx >= 0 && idx <= 15) return idx;
+            this.errors.push({ line: lineNum, message: `0x${hexMatch[1]} (=${idx}) is out of range for a capability register — must be 0x0–0xF (CR0–CR15).` });
+            return 0;
+        }
+        this.errors.push({ line: lineNum, message: `Expected a capability register like CR0, CR6, or hex 0x6, but got "${token}". Capability registers are CR0–CR15 (or 0x0–0xF).` });
         return 0;
     }
 
@@ -463,13 +470,13 @@ class ChurchAssembler {
             this.errors.push({ line: lineNum, message: `Method selector ${idx} is too big — must be 0–15.` });
             return 0;
         }
-        this.errors.push({ line: lineNum, message: `Expected a method selector (0–15 or CR0–CR15), but got "${token}".` });
+        this.errors.push({ line: lineNum, message: `Expected a method selector (0–15, 0x0–0xF, or CR0–CR15), but got "${token}".` });
         return 0;
     }
 
     _parseDR(token, lineNum) {
         if (!token) {
-            this.errors.push({ line: lineNum, message: 'A data register (like DR0, DR1) is needed here, but nothing was given.' });
+            this.errors.push({ line: lineNum, message: 'A data register (like DR0, DR1, or hex 0x0–0xF) is needed here, but nothing was given.' });
             return 0;
         }
         token = token.toUpperCase().replace(/,/g, '');
@@ -480,7 +487,14 @@ class ChurchAssembler {
             this.errors.push({ line: lineNum, message: `DR${idx} is too big! Data registers go from DR0 to DR15 (that's 16 registers).` });
             return 0;
         }
-        this.errors.push({ line: lineNum, message: `Expected a data register like DR0 or DR1, but got "${token}". Data registers start with DR followed by a number 0-15.` });
+        const hexMatch = token.match(/^0X([0-9A-F]+)$/);
+        if (hexMatch) {
+            const idx = parseInt(hexMatch[1], 16);
+            if (idx >= 0 && idx <= 15) return idx;
+            this.errors.push({ line: lineNum, message: `0x${hexMatch[1]} (=${idx}) is out of range for a data register — must be 0x0–0xF (DR0–DR15).` });
+            return 0;
+        }
+        this.errors.push({ line: lineNum, message: `Expected a data register like DR0, DR1, or hex 0x1, but got "${token}". Data registers are DR0–DR15 (or 0x0–0xF).` });
         return 0;
     }
 
