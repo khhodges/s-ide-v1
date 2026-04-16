@@ -4585,6 +4585,13 @@ function showLumpDetail(token) {
     }
     }
 
+    if (!isNamespace) {
+        html += `<div class="lump-detail-section">`;
+        html += `<div class="lump-section-title">Binary <span class="lump-binary-badge">${parseInt(lump.lump_size) || 0} words · ${((parseInt(lump.lump_size) || 0) * 4)} bytes</span></div>`;
+        html += `<div class="lump-hex-loading" id="lumpBinBody_${e(token)}">Loading binary\u2026</div>`;
+        html += `</div>`;
+    }
+
     html += '<div class="lump-detail-actions">';
     html += `<button class="btn lump-delete-btn" data-delete-token="${e(token)}">Delete Lump</button>`;
     html += '</div>';
@@ -4593,6 +4600,104 @@ function showLumpDetail(token) {
     contentEl.innerHTML = html;
     const delBtn = contentEl.querySelector('.lump-delete-btn[data-delete-token]');
     if (delBtn) delBtn.addEventListener('click', () => deleteLump(delBtn.dataset.deleteToken));
+
+    if (!isNamespace) {
+        _fetchAndShowLumpBinary(token, lump);
+    }
+}
+
+async function _fetchAndShowLumpBinary(token, lump) {
+    const bodyEl = document.getElementById(`lumpBinBody_${token}`);
+    if (!bodyEl) return;
+
+    const e    = _escHtml;
+    const hexw = w => (w >>> 0).toString(16).padStart(8, '0').toUpperCase();
+    const dis  = w => {
+        if (typeof assembler !== 'undefined' && assembler) {
+            try { return e(assembler.disassemble(w >>> 0)); } catch (_) {}
+        }
+        return '';
+    };
+
+    try {
+        const resp = await fetch(`/api/lump/${token}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const buf  = await resp.arrayBuffer();
+        if (buf.byteLength < 4) throw new Error('Binary too small');
+
+        const view     = new DataView(buf);
+        const numWords = buf.byteLength >>> 2;
+        const words    = [];
+        for (let i = 0; i < numWords; i++) words.push(view.getUint32(i * 4, false));
+
+        const cw       = parseInt(lump.cw)        || 0;
+        const cc       = parseInt(lump.cc)        || 0;
+        const lumpSize = parseInt(lump.lump_size) || numWords;
+        const methods  = lump.methods             || [];
+
+        // Build method-boundary map: absolute word index → method name.
+        // m.offset is measured from word 1 (the first code word).
+        const methodBoundary = {};
+        for (const m of methods) {
+            const absWord = 1 + (parseInt(m.offset) || 0);
+            methodBoundary[absWord] = m.name;
+        }
+
+        // Layout: word 0 = header, words 1..cw = code, last cc words = C-list.
+        const codeStart  = 1;
+        const clistStart = lumpSize - cc;
+
+        const regionRow = label =>
+            `<tr class="lump-hex-region-row"><td colspan="4">${e(label)}</td></tr>`;
+
+        const dataRow = (idx, word, disasmStr) => {
+            const addr = ((idx * 4) >>> 0).toString(16).toUpperCase().padStart(4, '0');
+            return `<tr>`
+                + `<td class="lump-hex-word">${idx}</td>`
+                + `<td class="lump-hex-addr">0x${addr}</td>`
+                + `<td class="lump-hex-val">${hexw(word)}</td>`
+                + `<td class="lump-hex-disasm">${disasmStr}</td>`
+                + `</tr>`;
+        };
+
+        let t = '<table class="lump-hex-table">';
+        t += '<thead><tr>'
+           + '<th>Word</th><th>Addr</th><th>Hex</th><th>Disassembly / Annotation</th>'
+           + '</tr></thead><tbody>';
+
+        // ── Word 0: header ────────────────────────────────────────────────
+        t += regionRow('\u2500\u2500 Header \u2500\u2500');
+        if (words.length > 0) t += dataRow(0, words[0], dis(words[0]));
+
+        // ── Words 1..cw: code (disassembled, with method boundary labels) ─
+        if (cw >= codeStart) {
+            t += regionRow('\u2500\u2500 Code \u2500\u2500');
+            const codeEnd = Math.min(cw + 1, lumpSize, words.length);
+            for (let i = codeStart; i < codeEnd; i++) {
+                if (methodBoundary[i] !== undefined) {
+                    t += `<tr class="lump-hex-method-row"><td colspan="4">\u25c6\u00a0${e(methodBoundary[i])}</td></tr>`;
+                }
+                t += dataRow(i, words[i], dis(words[i]));
+            }
+        }
+
+        // ── C-list ────────────────────────────────────────────────────────
+        if (cc > 0 && clistStart < lumpSize) {
+            t += regionRow(`\u2500\u2500 C-List (${cc} slot${cc !== 1 ? 's' : ''}) \u2500\u2500`);
+            for (let i = clistStart; i < lumpSize && i < words.length; i++) {
+                const slotIdx = i - clistStart;
+                const w       = words[i] >>> 0;
+                const ann     = w === 0 ? `C-list[${slotIdx}]: null` : `C-list[${slotIdx}]: 0x${hexw(w)}`;
+                t += dataRow(i, w, e(ann));
+            }
+        }
+
+        t += '</tbody></table>';
+        bodyEl.outerHTML = t;
+
+    } catch (err) {
+        bodyEl.textContent = `Failed to load binary: ${err.message}`;
+    }
 }
 
 function deleteLump(token) {

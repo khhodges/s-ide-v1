@@ -5895,6 +5895,79 @@ a.next-step-link:hover {
     border-top: 1px solid rgba(255,255,255,0.05);
 }
 
+/* ── LUMP binary hex-dump / disassembly table ──────────────────────────── */
+.lump-binary-badge {
+    font-size: 0.62rem;
+    font-weight: 400;
+    color: #6b7280;
+    margin-left: 0.5rem;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.lump-hex-loading {
+    color: #6b7280;
+    font-size: 0.73rem;
+    font-style: italic;
+    padding: 0.4rem 0;
+}
+
+.lump-hex-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.71rem;
+    font-family: 'Courier New', monospace;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(100, 160, 255, 0.12);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.lump-hex-table th {
+    padding: 0.25rem 0.45rem;
+    text-align: left;
+    font-size: 0.63rem;
+    color: var(--church-gold);
+    font-weight: 600;
+    border-bottom: 1px solid rgba(100, 160, 255, 0.15);
+    background: rgba(0, 0, 0, 0.15);
+    white-space: nowrap;
+}
+
+.lump-hex-table td {
+    padding: 0.18rem 0.45rem;
+    border-bottom: 1px solid rgba(100, 160, 255, 0.06);
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.lump-hex-table tr:last-child td { border-bottom: none; }
+
+.lump-hex-word  { color: #6b7280; min-width: 3rem; }
+.lump-hex-addr  { color: #52525b; min-width: 4rem; }
+.lump-hex-val   { color: rgba(206, 145, 120, 0.95); letter-spacing: 0.5px; min-width: 7rem; }
+.lump-hex-disasm { color: #a0c4ff; }
+
+.lump-hex-region-row td {
+    background: rgba(0, 0, 0, 0.35);
+    color: #4b5563;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    padding: 0.18rem 0.45rem;
+    border-bottom: 1px solid rgba(100, 160, 255, 0.1);
+    font-family: inherit;
+}
+
+.lump-hex-method-row td {
+    background: rgba(100, 160, 255, 0.04);
+    color: var(--church-gold);
+    font-size: 0.64rem;
+    font-style: italic;
+    padding: 0.18rem 0.45rem;
+    border-bottom: 1px solid rgba(100, 160, 255, 0.08);
+}
+
 .lump-delete-btn {
     background: rgba(160, 30, 30, 0.5);
     color: #ff9999;
