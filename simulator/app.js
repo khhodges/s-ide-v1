@@ -18481,6 +18481,23 @@ function initCodeCopyButtons() {
     observer.observe(document.body, { childList: true, subtree: true });
 }
 
+function _devRelativeTime(unixSec) {
+    const diff = Math.floor(Date.now() / 1000) - unixSec;
+    if (diff < 60) return diff + 's ago';
+    if (diff < 3600) return Math.floor(diff / 60) + ' min ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' hr ago';
+    return Math.floor(diff / 86400) + 'd ago';
+}
+
+function setDeviceLabelAndSync(deviceId, label) {
+    setDeviceLabel(deviceId, label);
+    const nameEl = document.getElementById('devRowName_' + deviceId);
+    if (nameEl) {
+        const boardName = nameEl.dataset.boardName || '';
+        nameEl.textContent = label.trim() || boardName;
+    }
+}
+
 function loadDeviceList() {
     const grid = document.getElementById('devGrid');
     if (!grid) return;
@@ -18493,48 +18510,76 @@ function loadDeviceList() {
                 return;
             }
             grid.innerHTML = '';
+            const _bootReasonNames = {0: 'Cold', 1: 'Warm', 2: 'Fault'};
+            const _faultNames = {
+                0:'None',1:'PERM_R',2:'PERM_W',3:'PERM_X',4:'PERM_L',5:'PERM_S',
+                6:'PERM_E',7:'NULL_CAP',8:'BOUNDS',9:'VERSION',10:'SEAL',
+                11:'INVALID_OP',12:'TPERM_RSV',13:'DOMAIN_PURITY',14:'BIND',
+                15:'F_BIT',16:'STACK_OVERFLOW',17:'ABSENT_OUTFORM',
+                18:'STACK_CORRUPT',19:'STACK_UNDERFLOW'
+            };
             data.devices.forEach(dev => {
                 const isOnline = dev.status === 'online';
                 const profileClass = dev.profile === 'IoT' ? 'dev-badge-iot' : 'dev-badge-full';
-                const lastSeen = dev.last_seen ? new Date(dev.last_seen * 1000).toLocaleString() : 'never';
-                const _bootReasonNames = {0: 'Cold', 1: 'Warm', 2: 'Fault'};
-                const _faultNames = {
-                    0:'None',1:'PERM_R',2:'PERM_W',3:'PERM_X',4:'PERM_L',5:'PERM_S',
-                    6:'PERM_E',7:'NULL_CAP',8:'BOUNDS',9:'VERSION',10:'SEAL',
-                    11:'INVALID_OP',12:'TPERM_RSV',13:'DOMAIN_PURITY',14:'BIND',
-                    15:'F_BIT',16:'STACK_OVERFLOW',17:'ABSENT_OUTFORM',
-                    18:'STACK_CORRUPT',19:'STACK_UNDERFLOW'
-                };
+                const petName = (dev.label || '').trim() || dev.board_name;
+                const statusChip = isOnline
+                    ? 'Online'
+                    : 'Offline' + (dev.last_seen ? ' · ' + _devRelativeTime(dev.last_seen) : '');
                 const bootReasonStr = _bootReasonNames[dev.boot_reason] || ('0x' + (dev.boot_reason || 0).toString(16));
                 const faultStr = dev.last_fault ? (_faultNames[dev.last_fault] || ('0x' + dev.last_fault.toString(16))) : '';
                 const niaStr = dev.fault_nia ? ' @ 0x' + dev.fault_nia.toString(16).toUpperCase().padStart(4, '0') : '';
                 const faultBadge = dev.boot_reason === 2 && dev.last_fault
-                    ? ' <span class="dev-fault-badge">' + _escHtml(faultStr) + _escHtml(niaStr) + '</span>'
+                    ? '<span class="dev-fault-badge">' + _escHtml(faultStr) + _escHtml(niaStr) + '</span>'
                     : '';
-                const card = document.createElement('div');
-                card.className = 'dev-card';
-                card.id = 'devCard_' + dev.id;
-                card.innerHTML =
+
+                const wrap = document.createElement('div');
+                wrap.className = 'dev-entry';
+                wrap.id = 'devEntry_' + dev.id;
+
+                const row = document.createElement('div');
+                row.className = 'dev-row';
+                row.innerHTML =
                     '<div class="dev-status-dot ' + (isOnline ? 'online' : 'offline') + '"></div>' +
-                    '<div class="dev-info">' +
-                        '<div class="dev-name">' + _escHtml(dev.board_name) + '</div>' +
-                        '<div class="dev-meta">' +
-                            '<span>UID: ' + _escHtml(dev.device_uid) + '</span>' +
-                            '<span>FW: ' + _escHtml(dev.fw_version) + '</span>' +
-                            '<span>Boots: ' + dev.boot_count + '</span>' +
-                            '<span>Boot: ' + _escHtml(bootReasonStr) + faultBadge + '</span>' +
-                            '<span>Seen: ' + _escHtml(lastSeen) + '</span>' +
-                        '</div>' +
-                        '<div class="dev-deploy-status" style="display:none;"></div>' +
-                    '</div>' +
+                    '<span class="dev-row-name" id="devRowName_' + dev.id + '" data-board-name="' + _escHtml(dev.board_name) + '">' + _escHtml(petName) + '</span>' +
+                    '<span class="dev-status-chip ' + (isOnline ? 'chip-online' : 'chip-offline') + '">' + _escHtml(statusChip) + '</span>' +
                     '<span class="dev-badge ' + profileClass + '">' + _escHtml(dev.profile) + '</span>' +
-                    '<span class="dev-badge ' + (dev.official ? 'dev-badge-official' : 'dev-badge-custom') + '">' + (dev.official ? 'Official' : 'Custom Build') + '</span>' +
-                    '<input class="dev-label-input" placeholder="Label" value="' + _escHtml(dev.label || '') + '" ' +
-                        'onchange="setDeviceLabel(' + dev.id + ', this.value)" />' +
-                    '<div class="dev-actions">' +
+                    '<span class="dev-chevron">&#x25B6;</span>';
+
+                const detail = document.createElement('div');
+                detail.className = 'dev-detail';
+                detail.id = 'devDetail_' + dev.id;
+                detail.innerHTML =
+                    '<div class="dev-detail-grid">' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">UID</span><span class="dev-detail-val">' + _escHtml(dev.device_uid) + '</span></div>' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">FW</span><span class="dev-detail-val">' + _escHtml(dev.fw_version) + '</span></div>' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">Boots</span><span class="dev-detail-val">' + dev.boot_count + '</span></div>' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">Boot reason</span><span class="dev-detail-val">' + _escHtml(bootReasonStr) + (faultBadge ? ' ' + faultBadge : '') + '</span></div>' +
+                        (dev.bridge_host ? '<div class="dev-detail-item"><span class="dev-detail-label">Bridge</span><span class="dev-detail-val">' + _escHtml(dev.bridge_host) + ':' + _escHtml(String(dev.bridge_port || '')) + '</span></div>' : '') +
+                        (dev.serial_port ? '<div class="dev-detail-item"><span class="dev-detail-label">Serial</span><span class="dev-detail-val">' + _escHtml(dev.serial_port) + '</span></div>' : '') +
+                    '</div>' +
+                    '<div class="dev-detail-footer">' +
+                        '<label class="dev-detail-label-row">' +
+                            '<span class="dev-detail-label">Pet name</span>' +
+                            '<input class="dev-label-input" id="devLabelInput_' + dev.id + '" placeholder="Label" value="' + _escHtml(dev.label || '') + '" ' +
+                                'onchange="setDeviceLabelAndSync(' + dev.id + ', this.value)" />' +
+                        '</label>' +
+                        '<div class="dev-deploy-status" id="devDeployStatus_' + dev.id + '" style="display:none;"></div>' +
                         '<button class="dev-action-btn' + (isOnline ? '' : ' dev-action-disabled') + '" onclick="deviceDeploy(' + dev.id + ')" title="Deploy bitstream to this device"' + (isOnline ? '' : ' disabled') + '>Deploy</button>' +
                     '</div>';
-                grid.appendChild(card);
+
+                row.addEventListener('click', function() {
+                    const isOpen = detail.style.display !== 'none';
+                    document.querySelectorAll('.dev-detail').forEach(d => { d.style.display = 'none'; });
+                    document.querySelectorAll('.dev-row').forEach(r => r.classList.remove('dev-row-open'));
+                    if (!isOpen) {
+                        detail.style.display = 'block';
+                        row.classList.add('dev-row-open');
+                    }
+                });
+
+                wrap.appendChild(row);
+                wrap.appendChild(detail);
+                grid.appendChild(wrap);
             });
         })
         .catch(() => {
@@ -18810,9 +18855,7 @@ function _parseDeployResponse(rx, expectedAddr, expectedCount) {
 }
 
 function _setDeviceDeployStatus(deviceId, status, message) {
-    var card = document.getElementById('devCard_' + deviceId);
-    if (!card) return;
-    var statusEl = card.querySelector('.dev-deploy-status');
+    var statusEl = document.getElementById('devDeployStatus_' + deviceId);
     if (!statusEl) return;
     statusEl.className = 'dev-deploy-status dev-deploy-' + status;
     statusEl.textContent = message || '';
