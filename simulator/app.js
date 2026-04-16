@@ -9276,7 +9276,7 @@ DREAD DR1, CR1, 0      ; FAULT: Salvation lacks R permission
 ; BTN (slot 10) has R only, no W.
 ; DWRITE requires W. Should FAULT.
 LOAD CR2, CR6, 10      ; CR2 = BTN (R only)
-DWRITE CR2, 0, DR1     ; FAULT: BTN lacks W permission
+DWRITE DR1, CR2, 0     ; FAULT: BTN lacks W permission
 
 ; --- If we get here, something is broken ---
 HALT
