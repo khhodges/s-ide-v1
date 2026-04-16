@@ -413,7 +413,10 @@
                 <div class="panel">
                     <div class="panel-title lumps-catalog-header">
                         <span>LUMP Repository</span>
-                        <button class="btn lumps-refresh-btn" onclick="renderLumps()">Refresh</button>
+                        <div class="lumps-toolbar-btns">
+                            <button class="btn lumps-new-ns-btn" onclick="showNamespaceBuilder()">+ Namespace</button>
+                            <button class="btn lumps-refresh-btn" onclick="renderLumps()">Refresh</button>
+                        </div>
                     </div>
                     <div id="lumpsListContent"></div>
                 </div>

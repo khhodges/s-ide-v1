@@ -45,3 +45,13 @@ The "Build LUMP" button compiles any CLOOMC++ abstraction and produces a deploya
 - `<token8>.json` — metadata sidecar with: method table (name/offset/length), pet name mappings (DR and CR aliases), MTBF data (clean runs, total runs, status), deployment info (target board, profile, build timestamp), capability list with NS resolution, language, and grants.
 
 Token assignment: from provided token hint, or `ns_slot << 8`, or SHA-256 hash of abstraction name. The manifest (`server/lumps/manifest.json`) is auto-updated on each save. Saved lumps are also loaded into `LAZY_LUMPS` in-memory for immediate serving via `GET /api/lump/<token>`.
+
+## Namespace LUMP Builder
+
+The "New Namespace LUMP" workflow (accessible via "+ Namespace" button in the LUMP Repository toolbar) lets users create Namespace LUMPs (`typ=10`, `cw=0`). The builder form supports:
+- App name/ID, base address (hex), size exponent n (6–14), and locator count (cc)
+- NS Table slot editor with NULL, Outform, and Bundled entry states
+- Outform entries: 64-bit SHA256 hash prefix, locator index, and flags (required/bundle/pinned)
+- Bundled entries: select an existing lump from the catalog to include in the output zip
+
+Building POSTs to `POST /api/namespace/build`, which produces a downloadable `<app_name>.namespace.zip` containing `App.bin` (valid Namespace LUMP binary) and `manifest.json`. The namespace lump is also saved to `server/lumps/` and appears in the lump list with an "NS" badge. The detail view for namespace lumps shows app_id, base, n, locator count, and NS Table entries instead of methods/pet names.

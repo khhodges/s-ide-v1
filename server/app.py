@@ -1624,6 +1624,261 @@ def list_lumps():
     return jsonify(result)
 
 
+def _crc16_ccitt(data_bytes):
+    crc = 0xFFFF
+    for b in data_bytes:
+        crc ^= b << 8
+        for _ in range(8):
+            if crc & 0x8000:
+                crc = (crc << 1) ^ 0x1021
+            else:
+                crc = crc << 1
+            crc &= 0xFFFF
+    return crc
+
+
+@app.route("/api/namespace/build", methods=["POST"])
+def build_namespace():
+    """Build a Namespace LUMP binary and return it as a downloadable namespace.zip."""
+    import datetime as _dt
+    payload = request.get_json(force=True, silent=True)
+    if not payload:
+        return jsonify({"error": "Invalid JSON payload"}), 400
+
+    app_id = payload.get("app_id", "").strip()
+    if not app_id:
+        return jsonify({"error": "app_id is required"}), 400
+
+    base_hex = payload.get("base_hex", "0").strip()
+    try:
+        base_addr = int(base_hex, 16)
+    except ValueError:
+        return jsonify({"error": "Invalid base address hex"}), 400
+
+    n = int(payload.get("n", 10))
+    if n < 6 or n > 14:
+        return jsonify({"error": "Size exponent n must be 6–14"}), 400
+
+    cc = int(payload.get("cc", 0))
+    ns_table_start = int(payload.get("ns_table_start", 0))
+    entries = payload.get("entries", [])
+
+    lump_size = 1 << n
+    if ns_table_start < 1:
+        ns_table_start = lump_size - (len(entries) * 3)
+        if ns_table_start < 1:
+            return jsonify({"error": "Too many entries for the given lump size"}), 400
+
+    ns_table_words_needed = len(entries) * 3
+    if ns_table_start + ns_table_words_needed > lump_size:
+        return jsonify({"error": "NS Table exceeds lump size"}), 400
+
+    header = (0x1F << 27) | ((n - 6) << 23) | (0 << 10) | (0b10 << 8) | (cc & 0xFF)
+
+    words = [0] * lump_size
+    words[0] = header
+
+    lumps_dir = os.path.join(os.path.dirname(__file__), 'lumps')
+    bundled_files = {}
+
+    for entry in entries:
+        slot = int(entry.get("slot", 0))
+        state = entry.get("state", "null").lower()
+        word_offset = ns_table_start + slot * 3
+
+        if word_offset + 2 >= lump_size:
+            return jsonify({"error": f"Slot {slot} exceeds lump size at offset {word_offset}"}), 400
+
+        if state == "null":
+            words[word_offset] = 0
+            words[word_offset + 1] = 0
+            words[word_offset + 2] = 0
+
+        elif state == "outform":
+            hash_prefix = entry.get("hash_prefix", "").strip()
+            if len(hash_prefix) != 16:
+                return jsonify({"error": f"Slot {slot}: Outform hash prefix must be exactly 16 hex chars"}), 400
+            try:
+                hash_bytes = bytes.fromhex(hash_prefix)
+            except ValueError:
+                return jsonify({"error": f"Slot {slot}: Invalid hex in hash prefix"}), 400
+
+            w1 = int.from_bytes(hash_bytes[0:4], 'big')
+            w2 = int.from_bytes(hash_bytes[4:8], 'big')
+
+            loc_idx = int(entry.get("loc_idx", 0)) & 0xFF
+            flags = 0
+            if entry.get("flag_required"):
+                flags |= 0x01
+            if entry.get("flag_bundle"):
+                flags |= 0x02
+            if entry.get("flag_pinned"):
+                flags |= 0x04
+
+            w3 = (loc_idx << 17) | (flags << 9) | 0x1FF
+
+            words[word_offset] = w1
+            words[word_offset + 1] = w2
+            words[word_offset + 2] = w3
+
+        elif state == "bundled" or state == "live":
+            lump_token = entry.get("lump_token", "").strip()
+            if not lump_token:
+                return jsonify({"error": f"Slot {slot}: Bundled entry requires a lump token"}), 400
+
+            lump_path = os.path.join(lumps_dir, f'{lump_token}.lump')
+            if not os.path.isfile(lump_path):
+                return jsonify({"error": f"Slot {slot}: Lump file {lump_token}.lump not found"}), 400
+
+            with open(lump_path, 'rb') as fh:
+                lump_binary = fh.read()
+
+            lump_word_count = len(lump_binary) // 4
+            limit_offset = max(0, lump_word_count - 1)
+
+            w1 = 0
+            w2 = (0 << 28) | (limit_offset & 0x1FFFFF)
+
+            gt_w0_low25 = 0
+            crc_data = _struct.pack('>I', gt_w0_low25) + _struct.pack('>I', w1) + _struct.pack('>I', w2)
+            crc_val = _crc16_ccitt(crc_data)
+            if crc_val == 0x1FF:
+                crc_val = 0x1FE
+
+            w3 = crc_val & 0xFFFF
+
+            words[word_offset] = w1
+            words[word_offset + 1] = w2
+            words[word_offset + 2] = w3
+
+            label = entry.get("label", lump_token)
+            bundled_files[f"{label}.bin"] = lump_binary
+
+    app_bin = _struct.pack(f'>{lump_size}I', *[w & 0xFFFFFFFF for w in words])
+
+    manifest_entries = []
+    for entry in entries:
+        state = entry.get("state", "null").lower()
+        me = {
+            "slot": int(entry.get("slot", 0)),
+            "label": entry.get("label", ""),
+            "state": state,
+        }
+        if state == "outform":
+            me["hash"] = "sha256:" + entry.get("hash_prefix", "")
+            me["loc_idx"] = int(entry.get("loc_idx", 0))
+            me["flags"] = 0
+            if entry.get("flag_required"):
+                me["flags"] |= 1
+            if entry.get("flag_bundle"):
+                me["flags"] |= 2
+            if entry.get("flag_pinned"):
+                me["flags"] |= 4
+            me["file"] = None
+        elif state in ("bundled", "live"):
+            me["file"] = entry.get("label", entry.get("lump_token", "")) + ".bin"
+            me["hash"] = None
+        else:
+            me["file"] = None
+            me["hash"] = None
+        manifest_entries.append(me)
+
+    ns_manifest = {
+        "app_id": app_id,
+        "version": "1.0.0",
+        "ns_lump": "App.bin",
+        "base": f"0x{base_addr:08X}",
+        "n": n,
+        "ns_table_start": ns_table_start,
+        "entries": manifest_entries,
+    }
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("App.bin", app_bin)
+        zf.writestr("manifest.json", json.dumps(ns_manifest, indent=2))
+        for fname, fdata in bundled_files.items():
+            zf.writestr(fname, fdata)
+    buf.seek(0)
+
+    safe_name = "".join(c for c in app_id if c.isalnum() or c in "._-") or "namespace"
+    from flask import Response as _Response
+    resp = _Response(
+        buf.read(),
+        mimetype='application/zip',
+        headers={
+            'Content-Disposition': f'attachment; filename="{safe_name}.namespace.zip"',
+        })
+
+    sidecar = {
+        "token": _hashlib.sha256(app_id.encode()).hexdigest()[:8],
+        "abstraction": app_id,
+        "ns_slot": None,
+        "lump_size": lump_size,
+        "cw": 0,
+        "cc": cc,
+        "typ": 10,
+        "lump_type": "namespace",
+        "profile": "IoT",
+        "language": "namespace",
+        "methods": [],
+        "capabilities": [],
+        "pet_names": {"DR": {}, "CR": {}},
+        "mtbf": {"consecutive_clean": 0, "total_runs": 0, "status": "unknown", "source_hash": ""},
+        "deployment": {
+            "target_board": "ti60-f225",
+            "profile": "IoT",
+            "built_at": _dt.datetime.utcnow().isoformat() + "Z",
+            "builder": "CLOOMC++ IDE v1.0"
+        },
+        "grants": [],
+        "namespace_meta": {
+            "app_id": app_id,
+            "base": f"0x{base_addr:08X}",
+            "n": n,
+            "cc": cc,
+            "ns_table_start": ns_table_start,
+            "entries": manifest_entries,
+        }
+    }
+    token8 = sidecar["token"]
+    os.makedirs(lumps_dir, exist_ok=True)
+
+    lump_path = os.path.join(lumps_dir, f'{token8}.lump')
+    with open(lump_path, 'wb') as fh:
+        fh.write(app_bin)
+
+    sidecar_path = os.path.join(lumps_dir, f'{token8}.json')
+    with open(sidecar_path, 'w') as fh:
+        json.dump(sidecar, fh, indent=2)
+
+    manifest_path = os.path.join(lumps_dir, 'manifest.json')
+    manifest = []
+    if os.path.isfile(manifest_path):
+        try:
+            with open(manifest_path, 'r') as fh2:
+                manifest = json.load(fh2)
+        except Exception:
+            manifest = []
+    manifest = [e for e in manifest if e.get('token') != token8]
+    manifest.append({
+        "token": token8,
+        "abstraction": app_id,
+        "ns_slot": None,
+        "lump_size": lump_size,
+        "cw": 0,
+        "cc": cc,
+        "typ": 10,
+        "methods": [],
+        "grants": [],
+    })
+    with open(manifest_path, 'w') as fh2:
+        json.dump(manifest, fh2, indent=2)
+
+    print(f'[namespace] Built {safe_name}.namespace.zip ({len(app_bin)} bytes, {len(entries)} entries)', flush=True)
+    return resp
+
+
 @app.route("/api/lumps/<token>", methods=["DELETE"])
 def delete_lump(token):
     """Delete a lump binary, sidecar, and manifest entry."""

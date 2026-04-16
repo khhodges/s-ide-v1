@@ -4386,8 +4386,11 @@ function renderLumps() {
                 const safeLang = _escHtml(lang);
                 const safeProfile = _escHtml(profile);
                 html += `<div class="lump-item${isActive ? ' active' : ''}" data-token="${safeToken}">`;
+                const isNamespace = lump.lump_type === 'namespace' || lump.typ === 10;
                 html += `<div class="lump-item-header">`;
-                html += `<span class="lump-item-name">${safeName}</span>`;
+                html += `<span class="lump-item-name">${safeName}`;
+                if (isNamespace) html += `<span class="ns-type-badge">NS</span>`;
+                html += `</span>`;
                 if (mtbf.status) {
                     html += `<span class="mtbf-badge ${mtbfClass} lump-mtbf-badge">${_escHtml(mtbfStatus.toUpperCase())}</span>`;
                 }
@@ -4428,25 +4431,65 @@ function showLumpDetail(token) {
     const contentEl = document.getElementById('lumpsDetailContent');
     if (!titleEl || !contentEl) return;
 
-    titleEl.textContent = lump.abstraction || 'Unknown Lump';
+    const isNamespace = lump.lump_type === 'namespace' || lump.typ === 10;
+    titleEl.textContent = (lump.abstraction || 'Unknown Lump') + (isNamespace ? ' — Namespace LUMP' : '');
 
     let html = '<div class="lump-detail-sections">';
 
     const e = _escHtml;
-    html += '<div class="lump-detail-section">';
-    html += '<table class="lump-detail-table"><tbody>';
-    html += `<tr><td>Token</td><td>0x${e(lump.token)}</td></tr>`;
-    if (lump.ns_slot !== null && lump.ns_slot !== undefined) html += `<tr><td>NS Slot</td><td>${parseInt(lump.ns_slot) || 0}</td></tr>`;
-    html += `<tr><td>Lump Size</td><td>${parseInt(lump.lump_size) || 0} words (${(parseInt(lump.lump_size) || 0) * 4} bytes)</td></tr>`;
-    html += `<tr><td>Code Words</td><td>${parseInt(lump.cw) || 0}</td></tr>`;
-    html += `<tr><td>C-List Slots</td><td>${parseInt(lump.cc) || 0}</td></tr>`;
-    if (lump.language) html += `<tr><td>Language</td><td>${e(lump.language)}</td></tr>`;
-    if (lump.profile) html += `<tr><td>Profile</td><td>${e(lump.profile)}</td></tr>`;
-    const grants = lump.grants || [];
-    if (grants.length > 0) html += `<tr><td>Grants</td><td>[${grants.map(g => e(g)).join(', ')}]</td></tr>`;
-    html += '</tbody></table>';
-    html += '</div>';
 
+    if (isNamespace) {
+        const nsMeta = lump.namespace_meta || {};
+        html += '<div class="lump-detail-section">';
+        html += '<div class="lump-section-title">Namespace LUMP</div>';
+        html += '<table class="lump-detail-table"><tbody>';
+        html += `<tr><td>Token</td><td>0x${e(lump.token)}</td></tr>`;
+        if (nsMeta.app_id) html += `<tr><td>App ID</td><td>${e(nsMeta.app_id)}</td></tr>`;
+        if (nsMeta.base) html += `<tr><td>Base Address</td><td>${e(nsMeta.base)}</td></tr>`;
+        if (nsMeta.n) html += `<tr><td>Size (n)</td><td>${parseInt(nsMeta.n)} (${(1 << parseInt(nsMeta.n))} words)</td></tr>`;
+        html += `<tr><td>Locator Count (cc)</td><td>${parseInt(nsMeta.cc || lump.cc) || 0}</td></tr>`;
+        if (nsMeta.ns_table_start) html += `<tr><td>NS Table Start</td><td>word ${parseInt(nsMeta.ns_table_start)}</td></tr>`;
+        html += `<tr><td>Lump Size</td><td>${parseInt(lump.lump_size) || 0} words (${(parseInt(lump.lump_size) || 0) * 4} bytes)</td></tr>`;
+        html += '</tbody></table>';
+        html += '</div>';
+
+        const nsEntries = nsMeta.entries || [];
+        if (nsEntries.length > 0) {
+            html += '<div class="lump-detail-section">';
+            html += '<div class="lump-section-title">NS Table Entries</div>';
+            html += '<table class="lump-detail-table"><thead><tr><th>Slot</th><th>Label</th><th>State</th><th>Details</th></tr></thead><tbody>';
+            for (const ent of nsEntries) {
+                html += `<tr><td>${parseInt(ent.slot)}</td><td>${e(ent.label || '')}</td><td>${e(ent.state || 'null')}</td><td>`;
+                if (ent.state === 'outform') {
+                    html += `hash: ${e(ent.hash || '')}, loc_idx: ${ent.loc_idx || 0}`;
+                    if (ent.flags) html += `, flags: 0x${(ent.flags || 0).toString(16)}`;
+                } else if (ent.state === 'bundled' || ent.state === 'live') {
+                    html += `file: ${e(ent.file || 'n/a')}`;
+                } else {
+                    html += 'all-zero';
+                }
+                html += '</td></tr>';
+            }
+            html += '</tbody></table>';
+            html += '</div>';
+        }
+    } else {
+        html += '<div class="lump-detail-section">';
+        html += '<table class="lump-detail-table"><tbody>';
+        html += `<tr><td>Token</td><td>0x${e(lump.token)}</td></tr>`;
+        if (lump.ns_slot !== null && lump.ns_slot !== undefined) html += `<tr><td>NS Slot</td><td>${parseInt(lump.ns_slot) || 0}</td></tr>`;
+        html += `<tr><td>Lump Size</td><td>${parseInt(lump.lump_size) || 0} words (${(parseInt(lump.lump_size) || 0) * 4} bytes)</td></tr>`;
+        html += `<tr><td>Code Words</td><td>${parseInt(lump.cw) || 0}</td></tr>`;
+        html += `<tr><td>C-List Slots</td><td>${parseInt(lump.cc) || 0}</td></tr>`;
+        if (lump.language) html += `<tr><td>Language</td><td>${e(lump.language)}</td></tr>`;
+        if (lump.profile) html += `<tr><td>Profile</td><td>${e(lump.profile)}</td></tr>`;
+        const grants = lump.grants || [];
+        if (grants.length > 0) html += `<tr><td>Grants</td><td>[${grants.map(g => e(g)).join(', ')}]</td></tr>`;
+        html += '</tbody></table>';
+        html += '</div>';
+    }
+
+    if (!isNamespace) {
     const methods = lump.methods || [];
     if (methods.length > 0) {
         html += '<div class="lump-detail-section">';
@@ -4521,6 +4564,7 @@ function showLumpDetail(token) {
         html += '</tbody></table>';
         html += '</div>';
     }
+    }
 
     html += '<div class="lump-detail-actions">';
     html += `<button class="btn lump-delete-btn" data-delete-token="${e(token)}">Delete Lump</button>`;
@@ -4552,6 +4596,225 @@ function deleteLump(token) {
         .catch(err => {
             appendOutput(`Delete error: ${err.message}`, 'error');
         });
+}
+
+let _nsBuilderSlots = [];
+
+function showNamespaceBuilder() {
+    _selectedLumpToken = null;
+    _nsBuilderSlots = [{ label: '', state: 'null', hash_prefix: '', loc_idx: 0, flag_required: false, flag_bundle: false, flag_pinned: false, lump_token: '' }];
+
+    const listEl = document.getElementById('lumpsListContent');
+    if (listEl) {
+        listEl.querySelectorAll('.lump-item').forEach(el => el.classList.remove('active'));
+    }
+
+    const titleEl = document.getElementById('lumpsDetailTitle');
+    const contentEl = document.getElementById('lumpsDetailContent');
+    if (!titleEl || !contentEl) return;
+
+    titleEl.textContent = 'New Namespace LUMP';
+    _renderNsBuilderForm(contentEl);
+}
+
+function _renderNsBuilderForm(contentEl) {
+    const e = _escHtml;
+    let sizeOpts = '';
+    for (let n = 6; n <= 14; n++) {
+        const words = 1 << n;
+        const bytes = words * 4;
+        const sel = n === 10 ? ' selected' : '';
+        sizeOpts += `<option value="${n}"${sel}>n=${n} (${words} words / ${bytes} bytes)</option>`;
+    }
+
+    let lumpOpts = '<option value="">-- select lump --</option>';
+    for (const lump of _lumpsCache) {
+        if (lump.lump_type === 'namespace' || lump.typ === 10) continue;
+        const tk = e(lump.token || '');
+        const nm = e(lump.abstraction || lump.token || '');
+        lumpOpts += `<option value="${tk}">${nm} (0x${tk})</option>`;
+    }
+
+    let html = '<div class="ns-builder-form">';
+    html += '<div class="ns-form-group"><label>App Name / ID</label><input type="text" id="nsAppId" placeholder="com.example.MyApp"></div>';
+    html += '<div class="ns-form-group"><label>Base Address (hex)</label><input type="text" id="nsBaseHex" value="00010000" placeholder="00010000"></div>';
+    html += `<div class="ns-form-group"><label>Size Exponent (n)</label><select id="nsN">${sizeOpts}</select></div>`;
+    html += '<div class="ns-form-group"><label>Locator Count (cc)</label><input type="number" id="nsCc" value="3" min="0" max="255"></div>';
+
+    html += '<div class="lump-section-title" style="margin-top:1rem">NS Table Slots</div>';
+    html += '<div id="nsSlotEditor"></div>';
+    html += '<button class="ns-slot-add-btn" onclick="_nsAddSlot()">+ Add Slot</button>';
+
+    html += '<div style="margin-top:1rem"><button class="ns-build-btn" id="nsBuildBtn" onclick="_nsBuild()">Build namespace.zip</button></div>';
+    html += '</div>';
+
+    contentEl.innerHTML = html;
+    _renderNsSlots(lumpOpts);
+}
+
+function _renderNsSlots(lumpOptsOverride) {
+    const container = document.getElementById('nsSlotEditor');
+    if (!container) return;
+
+    const e = _escHtml;
+    let lumpOpts = lumpOptsOverride;
+    if (!lumpOpts) {
+        lumpOpts = '<option value="">-- select lump --</option>';
+        for (const lump of _lumpsCache) {
+            if (lump.lump_type === 'namespace' || lump.typ === 10) continue;
+            const tk = e(lump.token || '');
+            const nm = e(lump.abstraction || lump.token || '');
+            lumpOpts += `<option value="${tk}">${nm} (0x${tk})</option>`;
+        }
+    }
+
+    let html = '<table class="ns-slot-table"><thead><tr><th>#</th><th>Label</th><th>State</th><th>Details</th><th></th></tr></thead><tbody>';
+    for (let i = 0; i < _nsBuilderSlots.length; i++) {
+        const s = _nsBuilderSlots[i];
+        html += `<tr>`;
+        html += `<td>${i}</td>`;
+        html += `<td><input type="text" value="${e(s.label)}" onchange="_nsSlotField(${i},'label',this.value)" style="width:120px"></td>`;
+        html += `<td><select onchange="_nsSlotField(${i},'state',this.value)">`;
+        html += `<option value="null"${s.state === 'null' ? ' selected' : ''}>NULL</option>`;
+        html += `<option value="outform"${s.state === 'outform' ? ' selected' : ''}>Outform</option>`;
+        html += `<option value="bundled"${s.state === 'bundled' ? ' selected' : ''}>Bundled</option>`;
+        html += `</select></td>`;
+        html += '<td>';
+        if (s.state === 'outform') {
+            html += `<div class="ns-slot-fields">`;
+            html += `<input type="text" value="${e(s.hash_prefix)}" onchange="_nsSlotField(${i},'hash_prefix',this.value)" placeholder="16 hex chars (SHA256 prefix)" style="width:180px;font-family:monospace">`;
+            html += `<input type="number" value="${s.loc_idx}" onchange="_nsSlotField(${i},'loc_idx',parseInt(this.value)||0)" min="0" max="255" style="width:60px" title="Locator index">`;
+            html += `<label><input type="checkbox" ${s.flag_required ? 'checked' : ''} onchange="_nsSlotField(${i},'flag_required',this.checked)"> Required</label>`;
+            html += `<label><input type="checkbox" ${s.flag_bundle ? 'checked' : ''} onchange="_nsSlotField(${i},'flag_bundle',this.checked)"> Bundle</label>`;
+            html += `<label><input type="checkbox" ${s.flag_pinned ? 'checked' : ''} onchange="_nsSlotField(${i},'flag_pinned',this.checked)"> Pinned</label>`;
+            html += `</div>`;
+        } else if (s.state === 'bundled') {
+            let opts = lumpOpts.replace(`value="${e(s.lump_token)}"`, `value="${e(s.lump_token)}" selected`);
+            html += `<select onchange="_nsSlotField(${i},'lump_token',this.value)" style="width:200px">${opts}</select>`;
+        } else {
+            html += '<span style="color:var(--text-secondary);font-size:0.68rem">All-zero entry</span>';
+        }
+        html += '</td>';
+        html += `<td style="white-space:nowrap">`;
+        if (i > 0) html += `<button class="ns-slot-remove-btn" onclick="_nsMoveSlot(${i},-1)" title="Move up" style="margin-right:2px">↑</button>`;
+        if (i < _nsBuilderSlots.length - 1) html += `<button class="ns-slot-remove-btn" onclick="_nsMoveSlot(${i},1)" title="Move down" style="margin-right:2px">↓</button>`;
+        html += `<button class="ns-slot-remove-btn" onclick="_nsRemoveSlot(${i})">×</button>`;
+        html += `</td>`;
+        html += '</tr>';
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function _nsSlotField(idx, field, value) {
+    if (idx < 0 || idx >= _nsBuilderSlots.length) return;
+    _nsBuilderSlots[idx][field] = value;
+    if (field === 'state') {
+        _renderNsSlots();
+    }
+}
+
+function _nsAddSlot() {
+    _nsBuilderSlots.push({ label: '', state: 'null', hash_prefix: '', loc_idx: 0, flag_required: false, flag_bundle: false, flag_pinned: false, lump_token: '' });
+    _renderNsSlots();
+}
+
+function _nsMoveSlot(idx, dir) {
+    const target = idx + dir;
+    if (target < 0 || target >= _nsBuilderSlots.length) return;
+    const tmp = _nsBuilderSlots[idx];
+    _nsBuilderSlots[idx] = _nsBuilderSlots[target];
+    _nsBuilderSlots[target] = tmp;
+    _renderNsSlots();
+}
+
+function _nsRemoveSlot(idx) {
+    _nsBuilderSlots.splice(idx, 1);
+    _renderNsSlots();
+}
+
+function _nsBuild() {
+    const appId = (document.getElementById('nsAppId')?.value || '').trim();
+    if (!appId) { alert('App Name / ID is required'); return; }
+
+    const baseHex = (document.getElementById('nsBaseHex')?.value || '0').trim();
+    const n = parseInt(document.getElementById('nsN')?.value || '10');
+    const cc = parseInt(document.getElementById('nsCc')?.value || '3');
+
+    if (n < 6 || n > 14) { alert('Size exponent must be 6–14'); return; }
+
+    for (let i = 0; i < _nsBuilderSlots.length; i++) {
+        const s = _nsBuilderSlots[i];
+        if (s.state === 'outform') {
+            const hp = (s.hash_prefix || '').trim();
+            if (!/^[0-9a-fA-F]{16}$/.test(hp)) {
+                alert(`Slot ${i}: Outform hash prefix must be exactly 16 hex characters`);
+                return;
+            }
+        }
+        if (s.state === 'bundled') {
+            if (!s.lump_token) {
+                alert(`Slot ${i}: Please select a lump for the Bundled entry`);
+                return;
+            }
+            if (!_lumpsCache.find(l => l.token === s.lump_token)) {
+                alert(`Slot ${i}: Selected lump not found in catalog`);
+                return;
+            }
+        }
+    }
+
+    const entries = _nsBuilderSlots.map((s, i) => ({
+        slot: i,
+        label: s.label,
+        state: s.state,
+        hash_prefix: s.hash_prefix || '',
+        loc_idx: s.loc_idx || 0,
+        flag_required: !!s.flag_required,
+        flag_bundle: !!s.flag_bundle,
+        flag_pinned: !!s.flag_pinned,
+        lump_token: s.lump_token || '',
+    }));
+
+    const btn = document.getElementById('nsBuildBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Building...'; }
+
+    fetch('/api/namespace/build', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            app_id: appId,
+            base_hex: baseHex,
+            n: n,
+            cc: cc,
+            ns_table_start: 0,
+            entries: entries,
+        })
+    })
+    .then(r => {
+        if (!r.ok) {
+            return r.json().then(j => { throw new Error(j.error || `HTTP ${r.status}`); });
+        }
+        return r.blob();
+    })
+    .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${appId.replace(/[^a-zA-Z0-9._-]/g, '_')}.namespace.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        appendOutput(`Built namespace ${appId} — downloading zip`, 'info');
+        if (btn) { btn.disabled = false; btn.textContent = 'Build namespace.zip'; }
+        renderLumps();
+    })
+    .catch(err => {
+        appendOutput(`Namespace build error: ${err.message}`, 'error');
+        alert(`Build failed: ${err.message}`);
+        if (btn) { btn.disabled = false; btn.textContent = 'Build namespace.zip'; }
+    });
 }
 
 function showAbstractionDetail(index) {
