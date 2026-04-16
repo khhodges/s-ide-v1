@@ -12025,6 +12025,7 @@ function closeSettings() {
 
 function showReleaseHistory() {
     const history = [
+        { date: '2026-04-16 UTC', title: 'One-Click Build LUMP', changes: ['Build LUMP button: one-click compile-to-binary for any CLOOMC++ abstraction in any language mode', 'Produces spec-compliant .lump binary: header (magic 0x1F + n-6 + cw + typ + cc), method table, code region, c-list, big-endian uint32', 'Console shows full lump layout: header hex, methods with offsets, capability list, freespace, file size', 'Available in toolbar (green button) and Editor Actions dropdown; auto-disabled in Assembly mode'] },
         { date: '2026-04-16 UTC', title: 'English String Abstraction', changes: ['EN: String example — 14 of 15 planned methods for packed 4-char-per-word string operations written in plain English (ReplaceChar deferred: requires bitwise AND/OR masking not yet in English translator)', 'Pack4/Unpack, IsLetter/IsDigit/IsUpper/IsLower/IsSpace, ToUpper/ToLower, CharToDigit/DigitToChar, ReverseWord, CompareWords, CountLetters', 'Byte extraction via shift-and-subtract (no bfext needed) — pure English front-end, zero hardware dependencies', 'New EN: String tab in CLOOMC++ IDE with category-organized source and ASCII reference header'] },
         { date: '2026-04-15 UTC', title: 'Patent Portfolio & Figure Audit', changes: ['Browsable /patents/ page: 8 PDFs with color-coded badges (FULL/BASE/CIP/COVER), 45 HTML figures with category filters and live search', 'Figure audit complete: 14 dark-background figures converted to white, 5 missing figures created (HP-35 opcode chart, Ada Lovelace model, 3 Lambda Recursion CIP figures), 4 new I/O Addressing figures', 'Consolidated patent document (2,818 lines): cover letter + Part I base patent + Addendum A (CLOOMC++) + Addendum B (Abstract GT I/O) + Addendum C (Lambda Recursion)', 'Lambda Recursion CIP finalized: 7 patent claims — CR6 self-invocation, idempotent re-entry, O(1) trifecta, two-RETURN exit, three loop styles, English NL compilation, pet-name constants', 'All patent PDFs regenerated with fpdf2: Unicode support, letter-size pages, multi-line table cells, page numbering', 'Server routes added: /patents/, /patents/files/, /figures/ for browsing patent portfolio'] },
         { date: '2026-04-12 UTC', title: 'SlideRule Abstraction, LED MMIO & Doc Review', changes: ['SlideRule abstraction complete (NS slot 16): 22 methods in CLOOMC++ source — 13 core (Add, Sub, Mul, Div, Mod, Sqrt, Pow, Sin, Cos, Tan, ASin, ACos, ATan2) + 9 extended (Sinh, Cosh, Exp, Log, Log2, Log10, ToDegrees, ToRadians, Bernoulli)', 'CLOOMC++ compiler bugs fixed: multi-word method bodies, semicolon handling, capability block parsing', '4 lumps build cleanly: Constants, LED, SlideRule, SlideRuleHS (token=00001000, cw=2602, methods=22)', 'LED abstraction (NS slot 12): FPGA MMIO bindings for Efinix Ti60 F225 (NS slot 12)', 'Navana.Init boot sequence: ordered capability grants, slot pre-population on boot ROM start', 'IntegerOps (Clamp+Abs) and PackedString (Pack4+Unpack+IsLetter+ToUpper) JS examples in IDE tabs', 'CR5 instance-data convention clarified: hardware pushes CR5 to cr5_stack on CALL, restores on RETURN', 'Branding cleanup: CTMM_64 → ChurchMachine_64, RV32_CAP → IoT_32 throughout docs', 'Doc review (9 fixes): GT type table, register count, GT width, patent dates, network-transparency status, TSB line count (329 → ~300), Results row in prologue property table'] },
@@ -14934,6 +14935,8 @@ function onLangChange(restoring) {
     const lang = sel.value;
     const btnSaveNS = document.getElementById('btnSaveNS');
     if (btnSaveNS) btnSaveNS.disabled = (lang !== 'assembly' || !lastAssembledWords);
+    const btnBuildLump = document.getElementById('btnBuildLump');
+    if (btnBuildLump) btnBuildLump.disabled = (lang === 'assembly');
 
     const langExampleGroups = {
         english: ['cloomc_english_hello', 'cloomc_english_counter', 'cloomc_english_string', 'cloomc_english_loops'],
@@ -15217,6 +15220,139 @@ function compileDraft() {
     showNextSteps('draft');
     trackAction('draft', { name: result.abstractionName, lang: result.language });
     appendOutput(`Draft: "${result.abstractionName}" — ${result.methods.length} methods, ${clistCount} caps, ${allocSize} alloc`, 'info');
+}
+
+function buildAndDownloadLump() {
+    const editor = document.getElementById('asmEditor');
+    if (!editor || !cloomcCompiler) return;
+    const source = editor.value;
+    const con = document.getElementById('editorConsole');
+    switchCodeTab('console');
+
+    const isHighLevel = cloomcCompiler._detectPetName(source) ||
+                        cloomcCompiler._detectEnglish(source) ||
+                        cloomcCompiler._detectHaskell(source) ||
+                        cloomcCompiler._detectSymbolic(source) ||
+                        /^\s*abstraction\s+\w+/m.test(source);
+    if (!isHighLevel) {
+        if (con) con.textContent = 'Build LUMP requires a CLOOMC++ abstraction (JavaScript, Haskell, English, Lambda, or Symbolic).\nAssembly programs cannot be packaged as lumps — use Save to NS instead.';
+        return;
+    }
+
+    const result = cloomcCompiler.compile(source, []);
+
+    if (result.errors.length > 0) {
+        const errText = result.errors.map(e => `Line ${e.line || '?'}: ${e.message}`).join('\n');
+        if (con) { con.textContent = `Build LUMP — compilation errors:\n${errText}`; con.scrollTop = 0; }
+        showNextSteps('error');
+        return;
+    }
+
+    const langNames = { english: 'English', haskell: 'Haskell', symbolic: 'Symbolic Math (Ada)', javascript: 'JavaScript', lambda: 'Lambda Calculus' };
+    const langLabel = langNames[result.language] || 'JavaScript';
+    const absName = result.abstractionName || 'Unnamed';
+    const caps = result.capabilities || [];
+    const cc = caps.length;
+    const profile = result.profile || 'IoT';
+
+    const methodTable = [];
+    const allCode = [];
+    const numMethods = result.methods.length;
+
+    let codeOffset = numMethods;
+    for (const m of result.methods) {
+        methodTable.push(codeOffset);
+        const words = m.code || [];
+        allCode.push(...words);
+        codeOffset += words.length;
+    }
+
+    const codeRegion = [...methodTable, ...allCode];
+    const cw = codeRegion.length;
+
+    let lumpSize = 64;
+    while (lumpSize < 1 + cw + cc) lumpSize <<= 1;
+
+    let nMinus6 = 0;
+    while ((64 << nMinus6) < lumpSize) nMinus6++;
+
+    const header = ((0x1F & 0x1F) << 27) |
+                   ((nMinus6 & 0x0F) << 23) |
+                   ((cw & 0x1FFF) << 10) |
+                   ((0 & 0x03) << 8) |
+                   (cc & 0xFF);
+
+    const lumpWords = new Uint32Array(lumpSize);
+    lumpWords[0] = header >>> 0;
+    for (let i = 0; i < cw; i++) {
+        lumpWords[1 + i] = (codeRegion[i] >>> 0);
+    }
+    const clistStart = lumpSize - cc;
+    for (let i = 0; i < cc; i++) {
+        lumpWords[clistStart + i] = 0x00000000;
+    }
+
+    const binaryBuf = new ArrayBuffer(lumpSize * 4);
+    const view = new DataView(binaryBuf);
+    for (let i = 0; i < lumpSize; i++) {
+        view.setUint32(i * 4, lumpWords[i], false);
+    }
+
+    const blob = new Blob([binaryBuf], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = absName + '.lump';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const freespace = lumpSize - 1 - cw - cc;
+    const sizeBytes = lumpSize * 4;
+
+    let listing = `═══════════════════════════════════════════════════\n`;
+    listing += `  LUMP BUILT — "${absName}" [${langLabel}]\n`;
+    listing += `═══════════════════════════════════════════════════\n\n`;
+    listing += `  Header:    0x${(header >>> 0).toString(16).padStart(8, '0')}\n`;
+    listing += `  Lump Size: ${lumpSize} words (2^${Math.log2(lumpSize)})\n`;
+    listing += `  Code:      ${cw} words (cw = ${numMethods} method-table + ${cw - numMethods} instructions)\n`;
+    listing += `  C-List:    ${cc} slot${cc !== 1 ? 's' : ''} (cc)\n`;
+    listing += `  Freespace: ${freespace} words\n`;
+    listing += `  Profile:   ${profile}\n`;
+
+    if (cc > 0) {
+        listing += `\n  Capabilities:\n`;
+        for (let i = 0; i < caps.length; i++) {
+            listing += `    [${i}] ${caps[i]}\n`;
+        }
+    }
+
+    listing += `\n  Methods:\n`;
+    let methodOffset = numMethods;
+    for (let i = 0; i < result.methods.length; i++) {
+        const m = result.methods[i];
+        const len = (m.code || []).length;
+        listing += `    [${i}] ${m.name.padEnd(20)} offset=${methodOffset.toString().padStart(4)}  length=${len}\n`;
+        methodOffset += len;
+    }
+
+    listing += `\n  Lump Layout:\n`;
+    listing += `    ┌─────────────────────────────────────────────┐\n`;
+    listing += `    │ Word 0:  Header   0x${(header >>> 0).toString(16).padStart(8, '0')}             │\n`;
+    listing += `    │ Words 1..${cw}:  Code region (${cw} words)${' '.repeat(Math.max(0, 9 - cw.toString().length))}│\n`;
+    listing += `    │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │\n`;
+    listing += `    │ Freespace: ${freespace} words${' '.repeat(Math.max(0, 24 - freespace.toString().length))}│\n`;
+    listing += `    │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │\n`;
+    listing += `    │ C-List:  ${cc} slots (offset ${clistStart})${' '.repeat(Math.max(0, 19 - cc.toString().length - clistStart.toString().length))}│\n`;
+    listing += `    └─────────────────────────────────────────────┘\n`;
+    listing += `    Total: ${lumpSize} words = ${sizeBytes} bytes\n`;
+
+    listing += `\n  Downloaded: ${absName}.lump (${sizeBytes} bytes)\n`;
+
+    if (con) { con.textContent = listing; con.scrollTop = 0; }
+    trackAction('build_lump', { name: absName, lang: result.language, size: lumpSize });
+    appendOutput(`Built LUMP: "${absName}" — ${result.methods.length} methods, ${lumpSize} words, ${sizeBytes} bytes`, 'info');
 }
 
 function compileCLOOMC() {
