@@ -5665,6 +5665,7 @@ function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
         const LS_KEY_GLOBAL = 'lump-edit-split-ratio';
         const contentType = (lump && lump.content_type) ? lump.content_type.toLowerCase() : '';
         const LS_KEY = contentType ? `lump-edit-split-ratio:${contentType}` : LS_KEY_GLOBAL;
+        const LS_KEY_LUMP = tk ? `lump-edit-split-ratio:${contentType}:${tk}` : LS_KEY;
 
         function applyColumns(leftPx) {
             const totalPx = splitPane.offsetWidth - DIVIDER_PX;
@@ -5686,7 +5687,7 @@ function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
             document.removeEventListener('mouseup', onMouseUp);
             const totalPx = splitPane.offsetWidth - DIVIDER_PX;
             const ratio = leftPane.offsetWidth / totalPx;
-            try { localStorage.setItem(LS_KEY, String(ratio)); } catch (_) {}
+            try { localStorage.setItem(LS_KEY_LUMP, String(ratio)); } catch (_) {}
         }
 
         divider.addEventListener('mousedown', function (e) {
@@ -5702,7 +5703,10 @@ function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
 
         return function restoreRatio() {
             try {
-                let saved = localStorage.getItem(LS_KEY);
+                let saved = localStorage.getItem(LS_KEY_LUMP);
+                if (saved === null && LS_KEY_LUMP !== LS_KEY) {
+                    saved = localStorage.getItem(LS_KEY);
+                }
                 if (saved === null && LS_KEY !== LS_KEY_GLOBAL) {
                     saved = localStorage.getItem(LS_KEY_GLOBAL);
                 }
