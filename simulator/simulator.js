@@ -204,7 +204,7 @@ class ChurchSimulator {
         const totalDataWords = dataWords.length;
 
         const oldHdr = this.parseLumpHeader(this.memory[loc]);
-        const cc = oldHdr.valid ? oldHdr.cc : (bootUpload.capabilities || []).length;
+        const cc = Math.max(oldHdr.valid ? oldHdr.cc : 0, (bootUpload.capabilities || []).length);
         const nMinus6 = Math.max(0, Math.ceil(Math.log2(lumpSize)) - 6);
         this.memory[loc] = this.packLumpHeader(nMinus6, totalCodeWords, cc, 0);
 
