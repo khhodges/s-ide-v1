@@ -446,9 +446,12 @@
                 <div class="panel">
                     <div class="panel-title lumps-catalog-header">
                         <span>LUMP Repository</span>
-                        <div class="lumps-toolbar-btns">
-                            <button class="btn lumps-new-ns-btn" onclick="showNamespaceBuilder()">+ Namespace</button>
-                            <button class="btn lumps-refresh-btn" onclick="renderLumps()">Refresh</button>
+                        <div class="ham-wrap" id="lumpsActionsWrap">
+                            <button class="btn ham-btn" id="lumpsActionsBtn" onclick="toggleLumpsActions()" data-tooltip="Actions — Namespace · Refresh">&#9776;</button>
+                            <div class="ham-dropdown lumps-actions-dropdown" id="lumpsActionsDropdown" style="display:none;">
+                                <button class="ham-item" onclick="showNamespaceBuilder();closeLumpsActions()">+ Namespace</button>
+                                <button class="ham-item" onclick="renderLumps();closeLumpsActions()">Refresh</button>
+                            </div>
                         </div>
                     </div>
                     <div id="lumpsListContent"></div>

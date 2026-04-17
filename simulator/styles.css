@@ -5759,21 +5759,12 @@ a.next-step-link:hover {
     gap: 8px;
 }
 
-.lumps-refresh-btn {
-    background: #C89B3C;
-    color: #141414;
-    border: none;
-    font-weight: 700;
-    font-size: 0.72rem;
-    padding: 5px 14px;
-    border-radius: 4px;
-    cursor: pointer;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.lumps-refresh-btn:hover {
-    background: #d4a94a;
+.lumps-actions-dropdown {
+    right: 0;
+    left: auto;
+    flex-direction: column;
+    min-width: 130px;
+    grid-template-columns: none;
 }
 
 .lumps-placeholder {
@@ -6000,28 +5991,6 @@ a.next-step-link:hover {
     background: rgba(200, 40, 40, 0.6);
 }
 
-.lumps-toolbar-btns {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-}
-
-.lumps-new-ns-btn {
-    background: #2d7d46;
-    color: #e0ffe0;
-    border: 1px solid #3a9955;
-    font-weight: 700;
-    font-size: 0.72rem;
-    padding: 5px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.lumps-new-ns-btn:hover {
-    background: #38955a;
-}
 
 .ns-type-badge {
     display: inline-block;

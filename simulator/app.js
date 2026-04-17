@@ -458,6 +458,8 @@ document.addEventListener('click', function(e) {
     if (wrap && !wrap.contains(e.target)) closeHamburger();
     const eaWrap = document.getElementById('editorActionsWrap');
     if (eaWrap && !eaWrap.contains(e.target)) closeEditorActions();
+    const laWrap = document.getElementById('lumpsActionsWrap');
+    if (laWrap && !laWrap.contains(e.target)) closeLumpsActions();
 });
 
 function toggleEditorActions() {
@@ -469,6 +471,18 @@ function toggleEditorActions() {
 
 function closeEditorActions() {
     const dd = document.getElementById('editorActionsDropdown');
+    if (dd) dd.style.display = 'none';
+}
+
+function toggleLumpsActions() {
+    const dd = document.getElementById('lumpsActionsDropdown');
+    if (!dd) return;
+    const open = dd.style.display !== 'none';
+    dd.style.display = open ? 'none' : 'flex';
+}
+
+function closeLumpsActions() {
+    const dd = document.getElementById('lumpsActionsDropdown');
     if (dd) dd.style.display = 'none';
 }
 
