@@ -25,7 +25,7 @@
   "deployment": {
     "target_board": "ti60-f225",
     "profile": "IoT",
-    "built_at": "2026-04-17T14:08:59.449621Z",
+    "built_at": "2026-04-17T14:12:37.042947Z",
     "builder": "IDE LUMP Upload"
   },
   "grants": [

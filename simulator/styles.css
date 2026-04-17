@@ -3645,14 +3645,15 @@ a.next-step-link:hover {
 
 .modal-overlay {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 52px; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.7);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1002;
-    padding-top: 48px;
+    padding: 1rem;
     box-sizing: border-box;
+    overflow-y: auto;
 }
 
 .modal-dialog {
@@ -3662,6 +3663,8 @@ a.next-step-link:hover {
     padding: 1.5rem;
     min-width: 320px;
     max-width: 420px;
+    max-height: calc(100vh - 70px);
+    overflow-y: auto;
 }
 
 .modal-title {
