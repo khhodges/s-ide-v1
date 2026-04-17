@@ -5940,6 +5940,42 @@ a.next-step-link:hover {
     padding: 0.4rem 0;
 }
 
+.lump-hex-table-wide {
+    min-width: max-content;
+}
+.lump-hex-table-wide th,
+.lump-hex-table-wide td {
+    white-space: nowrap;
+}
+.lump-hex-table td.lump-hex-ascii {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.1em;
+    color: #b8d4ff;
+    border-left: 1px solid rgba(100, 160, 255, 0.15);
+    padding-left: 0.6rem;
+}
+.lump-hex-table td.lump-hex-empty {
+    background: transparent;
+}
+.lump-hex-hdr-row td {
+    background: rgba(200, 168, 75, 0.08);
+    color: var(--church-gold, #c8a84b);
+}
+.lump-hex-clist-row td {
+    background: rgba(100, 200, 255, 0.06);
+    color: #7effea;
+}
+.lump-hex-pad-row td {
+    background: transparent;
+    color: #4b5563;
+}
+.lump-hex-table td.lump-hex-addr {
+    color: #6b7280;
+    font-family: 'Courier New', monospace;
+    border-right: 1px solid rgba(100, 160, 255, 0.12);
+    padding-right: 0.6rem;
+}
+
 .lump-hex-table {
     width: 100%;
     border-collapse: collapse;
@@ -6043,6 +6079,7 @@ a.next-step-link:hover {
 .lump-ct-md     { background: #1e2d4a; color: #7eb8ff; }
 .lump-ct-img    { background: #3a1e4a; color: #e07eff; }
 .lump-ct-thread { background: #1e3a3a; color: #7effea; }
+.lump-ct-outform{ background: #4a3a1e; color: #ffe07e; }
 
 /* ── LUMP detail tab bar ───────────────────────────────── */
 .lump-tabs-bar {
@@ -6079,7 +6116,7 @@ a.next-step-link:hover {
     display: none;
     flex-direction: column;
     flex: 1;
-    overflow-y: auto;
+    overflow: auto;
     min-height: 0;
 }
 .lump-tab-panel-active {

@@ -4962,13 +4962,6 @@ function showLumpDetail(token) {
     }
     }
 
-    if (!isNamespace) {
-        html += `<div class="lump-detail-section">`;
-        html += `<div class="lump-section-title">Binary <span class="lump-binary-badge">${parseInt(lump.lump_size) || 0} words · ${((parseInt(lump.lump_size) || 0) * 4)} bytes</span></div>`;
-        html += `<div class="lump-hex-loading" id="lumpBinBody_${token}">Loading binary\u2026</div>`;
-        html += `</div>`;
-    }
-
     html += '<div class="lump-detail-actions">';
     html += `<button class="btn lump-delete-btn" data-delete-token="${e(token)}">Delete Lump</button>`;
     html += '</div>';
@@ -4989,129 +4982,76 @@ function showLumpDetail(token) {
 }
 
 async function _fetchAndShowLumpBinary(token, lump) {
-    const bodyEl = document.getElementById(`lumpBinBody_${token}`);
+    const tk = (token || '').replace(/[^a-z0-9]/gi, '');
+    const bodyEl = document.getElementById(`lumpBinBody_${tk}`);
     if (!bodyEl) return;
 
     const e    = _escHtml;
-    const hexw = w => (w >>> 0).toString(16).padStart(8, '0').toUpperCase();
-    const dis  = w => {
-        if (typeof assembler !== 'undefined' && assembler) {
-            try { return e(assembler.disassemble(w >>> 0)); } catch (_) {}
+    const hexw = w => (w >>> 0).toString(16).padStart(8, '0').toUpperCase().replace(/(.{2})/g, '$1 ').trim();
+    const pack4ascii = w => {
+        let s = '';
+        for (let sh = 24; sh >= 0; sh -= 8) {
+            const b = (w >>> sh) & 0xFF;
+            s += (b >= 32 && b < 127) ? String.fromCharCode(b) : '.';
         }
-        return '';
+        return s;
     };
 
     try {
-        const resp = await fetch(`/api/lump/${token}`);
+        const resp = await fetch(`/api/lump/${token}/words`);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const buf  = await resp.arrayBuffer();
-        if (buf.byteLength < 4) throw new Error('Binary too small');
-
-        const view     = new DataView(buf);
-        const numWords = buf.byteLength >>> 2;
-        const words    = [];
-        for (let i = 0; i < numWords; i++) words.push(view.getUint32(i * 4, false));
+        const data  = await resp.json();
+        const words = data.words || [];
+        const numWords = words.length;
 
         const cw       = parseInt(lump.cw)        || 0;
         const cc       = parseInt(lump.cc)        || 0;
         const lumpSize = parseInt(lump.lump_size) || numWords;
-        const methods  = lump.methods             || [];
+        if (!numWords) throw new Error('Empty lump');
 
-        // Build method-boundary map: absolute word index → method name.
-        // m.offset is measured from word 1 (the first code word).
-        const methodBoundary = {};
-        for (const m of methods) {
-            const absWord = 1 + (parseInt(m.offset) || 0);
-            methodBoundary[absWord] = m.name;
+        const COLS = 8;
+        const rowCount = Math.ceil(numWords / COLS);
+
+        let t = '<table class="lump-hex-table lump-hex-table-wide"><thead><tr>'
+            + '<th>Addr</th>';
+        for (let c = 0; c < COLS; c++) t += `<th>+${c}</th>`;
+        t += '<th>Pack4 ASCII</th></tr></thead><tbody>';
+
+        for (let row = 0; row < rowCount; row++) {
+            const baseIdx  = row * COLS;
+            const baseAddr = (baseIdx * 4).toString(16).toUpperCase().padStart(6, '0');
+            let rowHex  = '';
+            let rowAsc  = '';
+            let rowClass = '';
+            if (baseIdx === 0)                   rowClass = 'lump-hex-hdr-row';
+            else if (baseIdx >= lumpSize - cc && cc > 0) rowClass = 'lump-hex-clist-row';
+            else if (baseIdx >= cw + 1)          rowClass = 'lump-hex-pad-row';
+
+            for (let c = 0; c < COLS; c++) {
+                const i = baseIdx + c;
+                if (i < numWords) {
+                    rowHex += `<td>${hexw(words[i])}</td>`;
+                    rowAsc += pack4ascii(words[i]);
+                } else {
+                    rowHex += '<td class="lump-hex-empty"></td>';
+                }
+            }
+            t += `<tr class="${rowClass}"><td class="lump-hex-addr">0x${baseAddr}</td>${rowHex}`;
+            t += `<td class="lump-hex-ascii">${e(rowAsc)}</td></tr>`;
         }
 
-        // Layout: word 0 = header, words 1..cw = code, last cc words = C-list.
-        const codeStart  = 1;
-        const clistStart = lumpSize - cc;
-
-        const regionRow = label =>
-            `<tr class="lump-hex-region-row"><td colspan="4">${e(label)}</td></tr>`;
-
-        const dataRow = (idx, word, disasmStr) => {
-            const addr = ((idx * 4) >>> 0).toString(16).toUpperCase().padStart(4, '0');
-            return `<tr>`
-                + `<td class="lump-hex-word">${idx}</td>`
-                + `<td class="lump-hex-addr">0x${addr}</td>`
-                + `<td class="lump-hex-val">${hexw(word)}</td>`
-                + `<td class="lump-hex-disasm">${disasmStr}</td>`
-                + `</tr>`;
-        };
-
-        let t = '<table class="lump-hex-table">';
-        t += '<thead><tr>'
-           + '<th>Word</th><th>Addr</th><th>Hex</th><th>Disassembly / Annotation</th>'
-           + '</tr></thead><tbody>';
-
-        // ── Word 0: header ────────────────────────────────────────────────
-        t += regionRow('\u2500\u2500 Header \u2500\u2500');
-        if (words.length > 0) t += dataRow(0, words[0], dis(words[0]));
-
-        // Consistency guard: if binary length disagrees with metadata lump_size,
-        // use the actual fetched word count as the authoritative bound.
-        const totalWords = numWords;
-        const effLumpSize = (lumpSize > 0 && lumpSize <= totalWords) ? lumpSize : totalWords;
-        const effClistStart = cc > 0 ? Math.max(0, effLumpSize - cc) : effLumpSize;
-        const codeEnd = Math.min(cw + 1, effClistStart, totalWords);
-
-        if (lumpSize !== totalWords) {
-            t += `<tr class="lump-hex-region-row"><td colspan="4" style="color:#f59e0b">`
-               + `\u26a0 Metadata lump_size=${lumpSize}w but binary is ${totalWords}w `
-               + `\u2014 displaying all ${totalWords} fetched words`
+        if (lumpSize !== numWords) {
+            t += `<tr class="lump-hex-region-row"><td colspan="${COLS + 2}" style="color:#f59e0b">`
+               + `\u26a0 Metadata lump_size=${lumpSize}w but /words returned ${numWords}w`
                + `</td></tr>`;
         }
 
-        // ── Words 1..cw: code (disassembled, with method boundary labels) ─
-        if (codeEnd > codeStart) {
-            t += regionRow('\u2500\u2500 Code \u2500\u2500');
-            for (let i = codeStart; i < codeEnd; i++) {
-                if (methodBoundary[i] !== undefined) {
-                    t += `<tr class="lump-hex-method-row"><td colspan="4">\u25c6\u00a0${e(methodBoundary[i])}</td></tr>`;
-                }
-                t += dataRow(i, words[i], dis(words[i]));
-            }
-        }
-
-        // ── Padding: words cw+1..clistStart-1 ────────────────────────────
-        const paddingStart = codeEnd;
-        const paddingEnd   = effClistStart;
-        if (paddingEnd > paddingStart) {
-            const padCount = paddingEnd - paddingStart;
-            t += regionRow(`\u2500\u2500 Padding (${padCount} word${padCount !== 1 ? 's' : ''}) \u2500\u2500`);
-            for (let i = paddingStart; i < paddingEnd && i < totalWords; i++) {
-                t += dataRow(i, words[i], e('(unused)'));
-            }
-        }
-
-        // ── C-list ────────────────────────────────────────────────────────
-        if (cc > 0 && effClistStart < effLumpSize) {
-            t += regionRow(`\u2500\u2500 C-List (${cc} slot${cc !== 1 ? 's' : ''}) \u2500\u2500`);
-            for (let i = effClistStart; i < effLumpSize && i < totalWords; i++) {
-                const slotIdx = i - effClistStart;
-                const w       = words[i] >>> 0;
-                const ann     = w === 0 ? `C-list[${slotIdx}]: null` : `C-list[${slotIdx}]: 0x${hexw(w)}`;
-                t += dataRow(i, w, e(ann));
-            }
-        }
-
-        // ── Extra words beyond effLumpSize (should not normally occur) ────
-        if (totalWords > effLumpSize) {
-            const extraCount = totalWords - effLumpSize;
-            t += regionRow(`\u2500\u2500 Extra (${extraCount} word${extraCount !== 1 ? 's' : ''} beyond lump_size) \u2500\u2500`);
-            for (let i = effLumpSize; i < totalWords; i++) {
-                t += dataRow(i, words[i], e('(beyond lump_size)'));
-            }
-        }
-
         t += '</tbody></table>';
-        bodyEl.outerHTML = t;
+        bodyEl.innerHTML = t;
+        bodyEl.className = '';
 
     } catch (err) {
-        bodyEl.textContent = `Failed to load binary: ${err.message}`;
+        bodyEl.textContent = `Failed to load hex dump: ${err.message}`;
     }
 }
 
@@ -5137,12 +5077,13 @@ function _lumpTypeBadge(lump) {
     const ct = (lump.content_type || '').toLowerCase();
     const lt = (lump.lump_type   || '').toLowerCase();
     const typ = lump.typ;
-    if (lt === 'namespace')                         return '<span class="lump-ct-badge lump-ct-ns">NS</span>';
-    if (ct === 'text')                              return '<span class="lump-ct-badge lump-ct-text">TXT</span>';
-    if (ct === 'markdown')                          return '<span class="lump-ct-badge lump-ct-md">MD</span>';
-    if (ct === 'image')                             return '<span class="lump-ct-badge lump-ct-img">IMG</span>';
-    if (ct === 'thread' || typ === 2)               return '<span class="lump-ct-badge lump-ct-thread">THR</span>';
-    if (ct === 'code'   || typ === 0)               return '<span class="lump-ct-badge lump-ct-code">CODE</span>';
+    if (lt === 'namespace')                            return '<span class="lump-ct-badge lump-ct-ns">NS</span>';
+    if (ct === 'text')                                 return '<span class="lump-ct-badge lump-ct-text">TXT</span>';
+    if (ct === 'markdown')                             return '<span class="lump-ct-badge lump-ct-md">MD</span>';
+    if (ct === 'image')                                return '<span class="lump-ct-badge lump-ct-img">IMG</span>';
+    if (ct === 'thread' || typ === 2)                  return '<span class="lump-ct-badge lump-ct-thread">THR</span>';
+    if (typ === 3 || ct === 'outform')                 return '<span class="lump-ct-badge lump-ct-outform">OTF</span>';
+    if (ct === 'code'   || typ === 0)                  return '<span class="lump-ct-badge lump-ct-code">CODE</span>';
     if (ct === 'data' || ct === 'binary' || typ === 1) return '<span class="lump-ct-badge lump-ct-data">DATA</span>';
     return '';
 }
@@ -5265,30 +5206,64 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
 }
 
 function _renderLumpImageContent(bodyEl, lump, dataWords) {
+    bodyEl.innerHTML = '';
+    bodyEl.className = 'lump-content-image';
+
+    // Reconstruct raw bytes from word array
+    const bytes = new Uint8Array(dataWords.length * 4);
+    let bi = 0;
+    for (const word of dataWords) {
+        bytes[bi++] = (word >>> 24) & 0xFF;
+        bytes[bi++] = (word >>> 16) & 0xFF;
+        bytes[bi++] = (word >>>  8) & 0xFF;
+        bytes[bi++] =  word         & 0xFF;
+    }
+
+    // Detect PNG (89 50 4E 47) or JPEG (FF D8 FF)
+    const isPng  = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
+    const isJpeg = bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF;
+    const isGif  = bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46;
+    const isEncoded = isPng || isJpeg || isGif;
+
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:0.72rem;color:var(--text-secondary);margin-bottom:0.5rem;';
+
+    if (isEncoded) {
+        const mime = isPng ? 'image/png' : isJpeg ? 'image/jpeg' : 'image/gif';
+        const blob = new Blob([bytes], { type: mime });
+        const url  = URL.createObjectURL(blob);
+        const imgEl = document.createElement('img');
+        imgEl.style.cssText = 'max-width:100%;border-radius:4px;display:block;';
+        imgEl.onload  = () => {
+            info.textContent = `${imgEl.naturalWidth} \u00d7 ${imgEl.naturalHeight} px \u00b7 ${mime} \u00b7 ${bytes.length} bytes`;
+            URL.revokeObjectURL(url);
+        };
+        imgEl.onerror = () => {
+            info.textContent = `Could not decode image (${bytes.length} bytes)`;
+            URL.revokeObjectURL(url);
+        };
+        imgEl.src = url;
+        bodyEl.appendChild(info);
+        bodyEl.appendChild(imgEl);
+        return;
+    }
+
+    // Fall back to raw RGBA canvas render
     const w = parseInt(lump.image_width)  || 0;
     const h = parseInt(lump.image_height) || 0;
     if (!w || !h) {
-        bodyEl.className = '';
-        bodyEl.innerHTML = '<div class="lumps-placeholder">Image dimensions not set. Re-import and specify width \u00d7 height.</div>';
+        bodyEl.innerHTML = '<div class="lumps-placeholder">Unknown image format. For raw RGBA, re-import and specify width \u00d7 height.</div>';
         return;
     }
+    info.textContent = `${w} \u00d7 ${h} px \u00b7 RGBA \u00b7 ${bytes.length} bytes`;
     const canvas = document.createElement('canvas');
     canvas.width  = w;
     canvas.height = h;
-    canvas.style.cssText = 'max-width:100%;image-rendering:pixelated;border-radius:4px;display:block;margin:0.5rem 0;';
-    const ctx = canvas.getContext('2d');
-    const img = ctx.createImageData(w, h);
-    let byteIdx = 0;
-    for (const word of dataWords) {
-        const bytes = [(word >>> 24) & 0xFF, (word >>> 16) & 0xFF, (word >>> 8) & 0xFF, word & 0xFF];
-        for (const b of bytes) { if (byteIdx < img.data.length) img.data[byteIdx++] = b; }
-    }
-    ctx.putImageData(img, 0, 0);
-    bodyEl.innerHTML = '';
-    bodyEl.className = 'lump-content-image';
-    const info = document.createElement('div');
-    info.style.cssText = 'font-size:0.72rem;color:var(--text-secondary);margin-bottom:0.5rem;';
-    info.textContent = `${w} \u00d7 ${h} px \u00b7 RGBA`;
+    canvas.style.cssText = 'max-width:100%;image-rendering:pixelated;border-radius:4px;display:block;';
+    const ctx    = canvas.getContext('2d');
+    const imgData = ctx.createImageData(w, h);
+    for (let i = 0; i < imgData.data.length && i < bytes.length; i++) imgData.data[i] = bytes[i];
+    ctx.putImageData(imgData, 0, 0);
     bodyEl.appendChild(info);
     bodyEl.appendChild(canvas);
 }
@@ -5339,9 +5314,11 @@ function _lumpImportToggleUI(ct) {
     if (!modal) return;
     const isText  = ct === 'text' || ct === 'markdown';
     const isImage = ct === 'image';
-    modal.querySelector('#lumpImportPasteRow').style.display = isText  ? '' : 'none';
-    modal.querySelector('#lumpImportFileRow' ).style.display = isText  ? 'none' : '';
+    modal.querySelector('#lumpImportPasteRow').style.display = isText ? '' : 'none';
+    modal.querySelector('#lumpImportFileRow' ).style.display = '';
     modal.querySelector('#lumpImportImgRow'  ).style.display = isImage ? '' : 'none';
+    const fileLabel = modal.querySelector('#lumpImportFileLabel');
+    if (fileLabel) fileLabel.textContent = isText ? 'File (optional — overrides paste)' : 'File';
 }
 
 async function _submitLumpImport() {
@@ -5357,12 +5334,21 @@ async function _submitLumpImport() {
 
     let dataB64 = '';
     const isText = ct === 'text' || ct === 'markdown';
-    if (isText) {
+    const hasFile = fileEl.files && fileEl.files.length > 0;
+
+    if (isText && hasFile) {
+        // File overrides paste for text types — read as binary to preserve encoding
+        const buf = await fileEl.files[0].arrayBuffer();
+        let binary = '';
+        const bytes = new Uint8Array(buf);
+        for (const b of bytes) binary += String.fromCharCode(b);
+        dataB64 = btoa(binary);
+    } else if (isText) {
         const text = pasteEl.value;
-        if (!text.trim()) { errEl.textContent = 'Paste some text first.'; return; }
+        if (!text.trim()) { errEl.textContent = 'Paste some text or select a file.'; return; }
         dataB64 = btoa(unescape(encodeURIComponent(text)));
     } else {
-        if (!fileEl.files.length) { errEl.textContent = 'Select a file first.'; return; }
+        if (!hasFile) { errEl.textContent = 'Select a file first.'; return; }
         const buf = await fileEl.files[0].arrayBuffer();
         let binary = '';
         const bytes = new Uint8Array(buf);
