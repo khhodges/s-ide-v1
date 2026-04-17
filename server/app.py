@@ -1675,6 +1675,9 @@ def import_lump():
     data_word_count = padded_len // 4
 
     total_needed = 1 + data_word_count
+    MAX_LUMP_WORDS = 1 << 14  # n=14 → 16384 words → 65536 bytes
+    if total_needed > MAX_LUMP_WORDS:
+        return jsonify({"error": f"Payload too large: {data_word_count} data words exceeds max {MAX_LUMP_WORDS - 1}"}), 400
     n = max(6, _math.ceil(_math.log2(max(total_needed, 2))))
     n = min(n, 14)
     lump_size = 1 << n

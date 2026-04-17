@@ -4818,6 +4818,8 @@ function showLumpDetail(token) {
         (isNamespace ? ' — Namespace LUMP' : ` — ${_lumpTitleLabel}`);
 
     const _tk = token.replace(/[^a-z0-9]/gi, '');
+    delete _lumpContentLoaded[_tk];
+    delete _lumpHexLoaded[_tk];
     let _tabBar = `<div class="lump-tabs-bar" id="lumpTabBar_${_tk}">` +
         `<button class="lump-tab lump-tab-active" onclick="_switchLumpTab('${_tk}','overview')">Overview</button>`;
     if (!isNamespace) _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','content')">Content</button>`;
@@ -5062,7 +5064,7 @@ function _lumpContentTypeLabel(lump) {
     const ct = (lump.content_type || '').toLowerCase();
     const lt = (lump.lump_type   || '').toLowerCase();
     const typ = lump.typ;
-    if (lt === 'namespace')               return 'Namespace';
+    if (lt === 'namespace' || typ === 10) return 'Namespace';
     if (ct === 'text')                    return 'Text';
     if (ct === 'markdown')                return 'Markdown';
     if (ct === 'image')                   return 'Image';
@@ -5079,7 +5081,7 @@ function _lumpTypeBadge(lump) {
     const ct = (lump.content_type || '').toLowerCase();
     const lt = (lump.lump_type   || '').toLowerCase();
     const typ = lump.typ;
-    if (lt === 'namespace')                            return '<span class="lump-ct-badge lump-ct-ns">NS</span>';
+    if (lt === 'namespace' || typ === 10)              return '<span class="lump-ct-badge lump-ct-ns">NS</span>';
     if (ct === 'text')                                 return '<span class="lump-ct-badge lump-ct-text">TXT</span>';
     if (ct === 'markdown')                             return '<span class="lump-ct-badge lump-ct-md">MD</span>';
     if (ct === 'image')                                return '<span class="lump-ct-badge lump-ct-img">IMG</span>';
