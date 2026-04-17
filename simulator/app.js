@@ -367,6 +367,37 @@ function init() {
     switchView(startView);
     switchMathMode('hp35');
 
+    // Global keyboard shortcuts: Ctrl+<letter> → switch top-level view.
+    // Skipped when focus is inside any text input / textarea / contenteditable.
+    document.addEventListener('keydown', function _ideNavShortcut(e) {
+        if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+        const tag = document.activeElement ? document.activeElement.tagName : '';
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' ||
+            (document.activeElement && document.activeElement.isContentEditable)) return;
+        // Map letter → view name
+        const NAV = {
+            a: 'abstractions',   // Abstractions
+            b: 'builder',        // Builder / Hardware
+            c: 'editor',         // Create (code editor)
+            d: 'dashboard',      // Dashboard / Simulator
+            g: 'gc',             // Garbage Collector
+            l: 'lumps',          // Lumps repository
+            m: 'repl',           // Math (REPL / SlideRule)
+            n: 'namespace',      // Namespace viewer
+            p: 'pipeline',       // Pipeline visualiser
+            r: 'reference',      // Reference docs
+            t: 'trace',          // Trace log
+            u: 'tutorial',       // tUtorial
+            v: 'devices',        // deVices
+            y: 'docs',           // docs (no better letter free)
+        };
+        const key = e.key.toLowerCase();
+        if (NAV[key]) {
+            e.preventDefault();
+            switchView(NAV[key]);
+        }
+    });
+
     requestAnimationFrame(() => {
         updateDashboard();
         pipelineViz.render();
