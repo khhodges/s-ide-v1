@@ -5627,6 +5627,10 @@ function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
     leftPane.appendChild(ta);
     splitPane.appendChild(leftPane);
 
+    const divider = document.createElement('div');
+    divider.className = 'lump-edit-split-divider';
+    splitPane.appendChild(divider);
+
     const rightPane = document.createElement('div');
     rightPane.className = 'lump-edit-split-right';
     const livePreview = document.createElement('div');
@@ -5634,6 +5638,43 @@ function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
     renderFn(livePreview, text);
     rightPane.appendChild(livePreview);
     splitPane.appendChild(rightPane);
+
+    (function _initDividerDrag() {
+        let startX = 0;
+        let startLeftPx = 0;
+        const DIVIDER_PX = 6;
+
+        function applyColumns(leftPx) {
+            const totalPx = splitPane.offsetWidth - DIVIDER_PX;
+            const clamped = Math.max(80, Math.min(totalPx - 80, leftPx));
+            const rightPx = totalPx - clamped;
+            splitPane.style.gridTemplateColumns = `${clamped}px ${DIVIDER_PX}px ${rightPx}px`;
+        }
+
+        function onMouseMove(e) {
+            const delta = e.clientX - startX;
+            applyColumns(startLeftPx + delta);
+        }
+
+        function onMouseUp() {
+            divider.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        divider.addEventListener('mousedown', function (e) {
+            e.preventDefault();
+            startX = e.clientX;
+            startLeftPx = leftPane.offsetWidth;
+            divider.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+    })();
 
     editorArea.appendChild(splitPane);
 

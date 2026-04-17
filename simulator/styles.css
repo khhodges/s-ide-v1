@@ -6282,10 +6282,22 @@ a.next-step-link:hover {
 }
 .lump-edit-split {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
+    grid-template-columns: 1fr 6px 1fr;
     width: 100%;
     min-height: 220px;
+}
+.lump-edit-split-divider {
+    width: 6px;
+    cursor: col-resize;
+    background: var(--border, #3c3c3c);
+    border-radius: 3px;
+    transition: background 0.15s;
+    position: relative;
+    user-select: none;
+}
+.lump-edit-split-divider:hover,
+.lump-edit-split-divider.dragging {
+    background: var(--accent, #569cd6);
 }
 .lump-edit-split-left {
     display: flex;
@@ -6327,7 +6339,10 @@ a.next-step-link:hover {
 }
 @media (max-width: 600px) {
     .lump-edit-split {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
+    }
+    .lump-edit-split-divider {
+        display: none;
     }
     .lump-edit-split-right {
         max-height: 240px;
