@@ -4766,6 +4766,13 @@ let _selectedLumpToken = null;
 let _nsdgTooltipData = {};
 let _lumpEditDirty = false;
 
+window.addEventListener('beforeunload', function (e) {
+    if (_lumpEditDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
 async function renderLumps() {
     const listEl = document.getElementById('lumpsListContent');
     if (!listEl) return;
