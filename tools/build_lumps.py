@@ -129,12 +129,15 @@ def build_lump(payload, verbose=False):
             offset = canonical_offsets[alias_of]
             canon_entry = next((e for e in method_table if e['name'] == alias_of), None)
             length = canon_entry['length'] if canon_entry else 0
-            method_table.append({
+            entry = {
                 'name'   : m.get('name', '?'),
                 'offset' : offset,
                 'length' : length,
                 'aliasOf': alias_of,
-            })
+            }
+            if 'pet_names' in m:
+                entry['pet_names'] = m['pet_names']
+            method_table.append(entry)
         else:
             words = parse_code(m)
             if not words:
@@ -142,11 +145,14 @@ def build_lump(payload, verbose=False):
             offset = len(all_code)
             all_code.extend(words)
             canonical_offsets[m.get('name', '?')] = offset
-            method_table.append({
+            entry = {
                 'name'  : m.get('name', '?'),
                 'offset': offset,
                 'length': len(words),
-            })
+            }
+            if 'pet_names' in m:
+                entry['pet_names'] = m['pet_names']
+            method_table.append(entry)
 
     cw = len(all_code)
     lump_size = next_pow2_ge64(1 + cw + cc)

@@ -5321,12 +5321,30 @@ function showLumpDetail(token) {
     if (!isNamespace) {
     const methods = lump.methods || [];
     if (methods.length > 0) {
+        const anyMethodPN = methods.some(m => {
+            const dr = ((m.pet_names || {}).DR) || {};
+            return Object.keys(dr).length > 0;
+        });
         html += '<div class="lump-detail-section">';
         html += '<div class="lump-section-title">Methods</div>';
-        html += '<table class="lump-detail-table"><thead><tr><th>#</th><th>Name</th><th>Offset</th><th>Length</th></tr></thead><tbody>';
+        if (anyMethodPN) {
+            html += '<table class="lump-detail-table"><thead><tr><th>#</th><th>Name</th><th>Offset</th><th>Len</th><th>DR Parameters</th></tr></thead><tbody>';
+        } else {
+            html += '<table class="lump-detail-table"><thead><tr><th>#</th><th>Name</th><th>Offset</th><th>Len</th></tr></thead><tbody>';
+        }
         for (let i = 0; i < methods.length; i++) {
             const m = methods[i];
-            html += `<tr><td>${i}</td><td>${e(m.name)}</td><td>${parseInt(m.offset) || 0}</td><td>${parseInt(m.length) || 0}</td></tr>`;
+            const aliasCell = m.aliasOf ? ` <span style="color:#6b7280;font-size:0.78rem;">→ ${e(m.aliasOf)}</span>` : '';
+            if (anyMethodPN) {
+                const drMap = ((m.pet_names || {}).DR) || {};
+                const drStr = Object.entries(drMap)
+                    .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                    .map(([k, v]) => `DR${k}=${v}`)
+                    .join(', ');
+                html += `<tr><td>${i}</td><td>${e(m.name)}${aliasCell}</td><td>${parseInt(m.offset) || 0}</td><td>${parseInt(m.length) || 0}</td><td style="color:#a855f7;font-size:0.78rem;">${e(drStr)}</td></tr>`;
+            } else {
+                html += `<tr><td>${i}</td><td>${e(m.name)}${aliasCell}</td><td>${parseInt(m.offset) || 0}</td><td>${parseInt(m.length) || 0}</td></tr>`;
+            }
         }
         html += '</tbody></table>';
         html += '</div>';
@@ -17554,15 +17572,6 @@ function buildAndDownloadLump() {
     const mtbfTotal = _simRunHash ? _simRunHistory.filter(r => r.hash === _simRunHash).length : 0;
     const mtbfStatus = mtbfTotal === 0 ? 'unknown' : (mtbfClean >= 5 ? 'green' : mtbfClean >= 3 ? 'amber' : 'red');
 
-    const methodMeta = [];
-    let mOff = 0;
-    for (let i = 0; i < result.methods.length; i++) {
-        const m = result.methods[i];
-        const len = (m.code || []).length;
-        methodMeta.push({ name: m.name, offset: mOff, length: len });
-        mOff += len;
-    }
-
     const drPetNames = {};
     for (const [k, v] of Object.entries(_petNameDRMap)) {
         drPetNames[`DR${k}`] = v;
@@ -17570,6 +17579,30 @@ function buildAndDownloadLump() {
     const crPetNames = {};
     for (const [k, v] of Object.entries(_petNameCRMap)) {
         crPetNames[`CR${k}`] = v;
+    }
+
+    // Build numeric-keyed DR/CR maps for stamping onto per-method pet_names
+    const _drNumericMap = {};
+    for (const [k, v] of Object.entries(_petNameDRMap)) { _drNumericMap[String(k)] = v; }
+    const _crNumericMap = {};
+    for (const [k, v] of Object.entries(_petNameCRMap)) { _crNumericMap[String(k)] = v; }
+    const _hasGlobalPN = Object.keys(_drNumericMap).length > 0 || Object.keys(_crNumericMap).length > 0;
+
+    const methodMeta = [];
+    let mOff = 0;
+    for (let i = 0; i < result.methods.length; i++) {
+        const m = result.methods[i];
+        const len = (m.code || []).length;
+        const entry = { name: m.name, offset: mOff, length: len };
+        if (m.aliasOf) entry.aliasOf = m.aliasOf;
+        // Per-method pet names: prefer the method's own annotation; fall back to global (PetName mode)
+        if (m.pet_names) {
+            entry.pet_names = m.pet_names;
+        } else if (_hasGlobalPN) {
+            entry.pet_names = { DR: _drNumericMap, CR: _crNumericMap };
+        }
+        methodMeta.push(entry);
+        mOff += len;
     }
 
     let resolvedNsSlot = null;
@@ -17670,7 +17703,12 @@ function buildAndDownloadLump() {
     listing += `\n  Methods:\n`;
     for (let i = 0; i < methodMeta.length; i++) {
         const m = methodMeta[i];
-        listing += `    [${i}] ${m.name.padEnd(20)} offset=${m.offset.toString().padStart(4)}  length=${m.length}\n`;
+        const aliasNote = m.aliasOf ? ` → ${m.aliasOf}` : '';
+        const drMap = ((m.pet_names || {}).DR) || {};
+        const drNote = Object.keys(drMap).length > 0
+            ? '  [' + Object.entries(drMap).sort(([a],[b]) => parseInt(a)-parseInt(b)).map(([k,v]) => `DR${k}=${v}`).join(', ') + ']'
+            : '';
+        listing += `    [${i}] ${m.name.padEnd(20)} offset=${m.offset.toString().padStart(4)}  length=${m.length}${aliasNote}${drNote}\n`;
     }
 
     listing += `\n  Deployment:\n`;

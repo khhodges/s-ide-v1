@@ -10,6 +10,7 @@
   "methods": [
     {
       "name": "Dispatch",
+      "pet_names": { "DR": { "0": "method" } },
       "code": [
         "0x0000000e",
         "0x0000001c",
@@ -43,6 +44,7 @@
     },
     {
       "name": "GetWordCount",
+      "pet_names": { "DR": { "0": "str" } },
       "code": [
         "0x7f600000",
         "0x77160000",
@@ -55,6 +57,7 @@
     },
     {
       "name": "GetCharCount",
+      "pet_names": { "DR": { "0": "str" } },
       "code": [
         "0x7f604001",
         "0x77160000",
@@ -73,6 +76,7 @@
     },
     {
       "name": "GetByteCount",
+      "pet_names": { "DR": { "0": "str" } },
       "code": [
         "0x7f604002",
         "0x77160000",
@@ -91,6 +95,7 @@
     },
     {
       "name": "GetCharByte",
+      "pet_names": { "DR": { "0": "str", "1": "idx" } },
       "code": [
         "0x9f608008",
         "0x7f2e0000",
@@ -104,6 +109,7 @@
     },
     {
       "name": "IsUppercase",
+      "pet_names": { "DR": { "0": "c" } },
       "code": [
         "0x7f604040",
         "0x770e0000",
@@ -118,6 +124,7 @@
     },
     {
       "name": "IsLowercase",
+      "pet_names": { "DR": { "0": "c" } },
       "code": [
         "0x7f604060",
         "0x770e0000",
@@ -140,6 +147,7 @@
     },
     {
       "name": "IsDigit",
+      "pet_names": { "DR": { "0": "c" } },
       "code": [
         "0x7f60402f",
         "0x770e0000",
@@ -174,6 +182,7 @@
     },
     {
       "name": "IsSpace",
+      "pet_names": { "DR": { "0": "c" } },
       "code": [
         "0x7f604020",
         "0x770e0000",
@@ -189,6 +198,7 @@
     },
     {
       "name": "ToUppercase",
+      "pet_names": { "DR": { "0": "c" } },
       "code": [
         "0x7f604060",
         "0x770e0000",
@@ -210,6 +220,7 @@
     },
     {
       "name": "ToLowercase",
+      "pet_names": { "DR": { "0": "c" } },
       "code": [
         "0x7f604040",
         "0x770e0000",
@@ -229,6 +240,7 @@
     },
     {
       "name": "NormaliseDigit",
+      "pet_names": { "DR": { "0": "c" } },
       "code": [
         "0x7f60402f",
         "0x770e0000",
@@ -248,6 +260,7 @@
     },
     {
       "name": "Offset",
+      "pet_names": { "DR": { "0": "c" } },
       "code": [
         "0x7f60c030",
         "0x7f260000",
@@ -257,6 +270,7 @@
     },
     {
       "name": "StringOp",
+      "pet_names": { "DR": { "0": "src", "1": "dst", "2": "len" } },
       "code": [
         "0x9f608018",
         "0x7f260000",
@@ -299,6 +313,7 @@
     },
     {
       "name": "CheckNonZero",
+      "pet_names": { "DR": { "0": "val" } },
       "code": [
         "0x77090000",
         "0x88800004",
@@ -309,6 +324,7 @@
     },
     {
       "name": "CheckPositive",
+      "pet_names": { "DR": { "0": "val" } },
       "code": [
         "0x77090000",
         "0x8e800004",
@@ -319,6 +335,7 @@
     },
     {
       "name": "ComputeBase",
+      "pet_names": { "DR": { "0": "c" } },
       "code": [
         "0x87608002",
         "0x7f260000",
@@ -328,6 +345,7 @@
     },
     {
       "name": "Classify",
+      "pet_names": { "DR": { "0": "c" } },
       "code": [
         "0x7f600000",
         "0x7f260000",

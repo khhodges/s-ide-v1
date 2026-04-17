@@ -13,37 +13,73 @@
     {
       "name": "Dispatch",
       "offset": 0,
-      "length": 28
+      "length": 28,
+      "pet_names": {
+        "DR": {
+          "0": "method"
+        }
+      }
     },
     {
       "name": "GetWordCount",
       "offset": 28,
-      "length": 7
+      "length": 7,
+      "pet_names": {
+        "DR": {
+          "0": "str"
+        }
+      }
     },
     {
       "name": "GetCharCount",
       "offset": 35,
-      "length": 13
+      "length": 13,
+      "pet_names": {
+        "DR": {
+          "0": "str"
+        }
+      }
     },
     {
       "name": "GetByteCount",
       "offset": 48,
-      "length": 13
+      "length": 13,
+      "pet_names": {
+        "DR": {
+          "0": "str"
+        }
+      }
     },
     {
       "name": "GetCharByte",
       "offset": 61,
-      "length": 8
+      "length": 8,
+      "pet_names": {
+        "DR": {
+          "0": "str",
+          "1": "idx"
+        }
+      }
     },
     {
       "name": "IsUppercase",
       "offset": 69,
-      "length": 9
+      "length": 9,
+      "pet_names": {
+        "DR": {
+          "0": "c"
+        }
+      }
     },
     {
       "name": "IsLowercase",
       "offset": 78,
-      "length": 9
+      "length": 9,
+      "pet_names": {
+        "DR": {
+          "0": "c"
+        }
+      }
     },
     {
       "name": "ReturnFalse",
@@ -53,7 +89,12 @@
     {
       "name": "IsDigit",
       "offset": 90,
-      "length": 9
+      "length": 9,
+      "pet_names": {
+        "DR": {
+          "0": "c"
+        }
+      }
     },
     {
       "name": "IsAlpha",
@@ -88,7 +129,12 @@
     {
       "name": "IsSpace",
       "offset": 99,
-      "length": 6
+      "length": 6,
+      "pet_names": {
+        "DR": {
+          "0": "c"
+        }
+      }
     },
     {
       "name": "IsAlphaNum",
@@ -99,7 +145,12 @@
     {
       "name": "ToUppercase",
       "offset": 105,
-      "length": 10
+      "length": 10,
+      "pet_names": {
+        "DR": {
+          "0": "c"
+        }
+      }
     },
     {
       "name": "Stub",
@@ -109,7 +160,12 @@
     {
       "name": "ToLowercase",
       "offset": 116,
-      "length": 10
+      "length": 10,
+      "pet_names": {
+        "DR": {
+          "0": "c"
+        }
+      }
     },
     {
       "name": "StubExt",
@@ -120,7 +176,12 @@
     {
       "name": "NormaliseDigit",
       "offset": 126,
-      "length": 10
+      "length": 10,
+      "pet_names": {
+        "DR": {
+          "0": "c"
+        }
+      }
     },
     {
       "name": "IsHex",
@@ -131,32 +192,64 @@
     {
       "name": "Offset",
       "offset": 136,
-      "length": 4
+      "length": 4,
+      "pet_names": {
+        "DR": {
+          "0": "c"
+        }
+      }
     },
     {
       "name": "StringOp",
       "offset": 140,
-      "length": 37
+      "length": 37,
+      "pet_names": {
+        "DR": {
+          "0": "src",
+          "1": "dst",
+          "2": "len"
+        }
+      }
     },
     {
       "name": "CheckNonZero",
       "offset": 177,
-      "length": 5
+      "length": 5,
+      "pet_names": {
+        "DR": {
+          "0": "val"
+        }
+      }
     },
     {
       "name": "CheckPositive",
       "offset": 182,
-      "length": 5
+      "length": 5,
+      "pet_names": {
+        "DR": {
+          "0": "val"
+        }
+      }
     },
     {
       "name": "ComputeBase",
       "offset": 187,
-      "length": 4
+      "length": 4,
+      "pet_names": {
+        "DR": {
+          "0": "c"
+        }
+      }
     },
     {
       "name": "Classify",
       "offset": 191,
-      "length": 90
+      "length": 90,
+      "pet_names": {
+        "DR": {
+          "0": "c"
+        }
+      }
     }
   ],
   "capabilities": [],
