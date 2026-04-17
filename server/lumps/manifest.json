@@ -4,33 +4,48 @@
     "abstraction": "Constants",
     "ns_slot": 18,
     "lump_size": 64,
-    "cw": 15,
+    "cw": 27,
     "cc": 0,
     "methods": [
       {
         "name": "Pi",
         "offset": 0,
-        "length": 3
+        "length": 7,
+        "pet_names": {
+          "DR": {}
+        }
       },
       {
         "name": "E",
-        "offset": 3,
-        "length": 3
+        "offset": 7,
+        "length": 7,
+        "pet_names": {
+          "DR": {}
+        }
       },
       {
         "name": "Phi",
-        "offset": 6,
-        "length": 3
+        "offset": 14,
+        "length": 7,
+        "pet_names": {
+          "DR": {}
+        }
       },
       {
         "name": "Zero",
-        "offset": 9,
-        "length": 3
+        "offset": 21,
+        "length": 2,
+        "pet_names": {
+          "DR": {}
+        }
       },
       {
         "name": "One",
-        "offset": 12,
-        "length": 3
+        "offset": 23,
+        "length": 4,
+        "pet_names": {
+          "DR": {}
+        }
       }
     ],
     "grants": [
