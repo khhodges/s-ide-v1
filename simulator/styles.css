@@ -6280,6 +6280,31 @@ a.next-step-link:hover {
     gap: 0.35rem;
     width: 100%;
 }
+.lump-edit-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 220px;
+}
+.lump-edit-split-left {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.lump-edit-split-right {
+    min-width: 0;
+    border: 1px solid var(--border, #3c3c3c);
+    border-radius: 4px;
+    padding: 0.5rem;
+    background: var(--bg-secondary, #252526);
+    overflow-y: auto;
+    max-height: 420px;
+}
+.lump-edit-live-preview {
+    width: 100%;
+    word-break: break-word;
+}
 .lump-edit-textarea {
     width: 100%;
     min-height: 180px;
@@ -6293,6 +6318,20 @@ a.next-step-link:hover {
     line-height: 1.5;
     resize: vertical;
     box-sizing: border-box;
+}
+.lump-edit-split-left .lump-edit-textarea {
+    flex: 1;
+    min-height: 220px;
+    max-height: 420px;
+    resize: none;
+}
+@media (max-width: 600px) {
+    .lump-edit-split {
+        grid-template-columns: 1fr;
+    }
+    .lump-edit-split-right {
+        max-height: 240px;
+    }
 }
 .lump-edit-textarea:focus {
     outline: none;

@@ -5610,11 +5610,28 @@ function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
     editorArea.className = 'lump-edit-area';
     editorArea.style.display = 'none';
 
+    const splitPane = document.createElement('div');
+    splitPane.className = 'lump-edit-split';
+
+    const leftPane = document.createElement('div');
+    leftPane.className = 'lump-edit-split-left';
+
     const ta = document.createElement('textarea');
     ta.className = 'lump-edit-textarea';
     ta.value = text;
     ta.spellcheck = false;
-    editorArea.appendChild(ta);
+    leftPane.appendChild(ta);
+    splitPane.appendChild(leftPane);
+
+    const rightPane = document.createElement('div');
+    rightPane.className = 'lump-edit-split-right';
+    const livePreview = document.createElement('div');
+    livePreview.className = 'lump-edit-live-preview';
+    renderFn(livePreview, text);
+    rightPane.appendChild(livePreview);
+    splitPane.appendChild(rightPane);
+
+    editorArea.appendChild(splitPane);
 
     const actionRow = document.createElement('div');
     actionRow.className = 'lump-edit-actions';
@@ -5636,6 +5653,15 @@ function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
     editorArea.appendChild(actionRow);
     wrapper.appendChild(editorArea);
 
+    let _debounceTimer = null;
+    ta.addEventListener('input', () => {
+        clearTimeout(_debounceTimer);
+        _debounceTimer = setTimeout(() => {
+            livePreview.innerHTML = '';
+            renderFn(livePreview, ta.value);
+        }, 300);
+    });
+
     editBtn.addEventListener('click', () => {
         editBtn.style.display = 'none';
         preview.style.display = 'none';
@@ -5644,14 +5670,20 @@ function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
     });
 
     cancelBtn.addEventListener('click', () => {
+        clearTimeout(_debounceTimer);
         ta.value = text;
+        livePreview.innerHTML = '';
+        renderFn(livePreview, text);
         statusEl.textContent = '';
         editorArea.style.display = 'none';
         preview.style.display = '';
         editBtn.style.display = '';
     });
 
-    saveBtn.addEventListener('click', () => _saveLumpText(token, ta.value, wrapper, lump));
+    saveBtn.addEventListener('click', () => {
+        clearTimeout(_debounceTimer);
+        _saveLumpText(token, ta.value, wrapper, lump);
+    });
 
     return wrapper;
 }
