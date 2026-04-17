@@ -4,46 +4,46 @@
     "abstraction": "Constants",
     "ns_slot": 18,
     "lump_size": 64,
-    "cw": 5,
+    "cw": 15,
     "dw": 5,
-    "cc": 0,
+    "cc": 2,
     "methods": [
       {
         "name": "Pi",
         "offset": 0,
-        "length": 1,
+        "length": 3,
         "pet_names": {
           "DR": {}
         }
       },
       {
         "name": "E",
-        "offset": 1,
-        "length": 1,
+        "offset": 3,
+        "length": 3,
         "pet_names": {
           "DR": {}
         }
       },
       {
         "name": "Phi",
-        "offset": 2,
-        "length": 1,
+        "offset": 6,
+        "length": 3,
         "pet_names": {
           "DR": {}
         }
       },
       {
         "name": "Zero",
-        "offset": 3,
-        "length": 1,
+        "offset": 9,
+        "length": 3,
         "pet_names": {
           "DR": {}
         }
       },
       {
         "name": "One",
-        "offset": 4,
-        "length": 1,
+        "offset": 12,
+        "length": 3,
         "pet_names": {
           "DR": {}
         }
@@ -52,14 +52,16 @@
     "grants": [
       "E"
     ],
-    "data_offset": 6,
+    "data_offset": 16,
     "data_word_names": [
       "Pi",
       "E",
       "Phi",
       "Zero",
       "One"
-    ]
+    ],
+    "self_data_r": true,
+    "code_rx": true
   },
   {
     "token": "00000c00",

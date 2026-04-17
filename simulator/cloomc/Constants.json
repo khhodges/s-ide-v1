@@ -6,7 +6,10 @@
   "grants": [
     "E"
   ],
-  "capabilities": [],
+  "capabilities": [
+    { "type": "code-RX" },
+    { "type": "self-data-R" }
+  ],
   "data_words": [
     "0x40490FDB",
     "0x402DF854",
@@ -19,27 +22,27 @@
     {
       "name": "Pi",
       "pet_names": { "DR": {} },
-      "code": ["0x1f000000"]
+      "code": ["0x07030001", "0x57000000", "0x1F000000"]
     },
     {
       "name": "E",
       "pet_names": { "DR": {} },
-      "code": ["0x1f000000"]
+      "code": ["0x07030001", "0x57000001", "0x1F000000"]
     },
     {
       "name": "Phi",
       "pet_names": { "DR": {} },
-      "code": ["0x1f000000"]
+      "code": ["0x07030001", "0x57000002", "0x1F000000"]
     },
     {
       "name": "Zero",
       "pet_names": { "DR": {} },
-      "code": ["0x1f000000"]
+      "code": ["0x07030001", "0x57000003", "0x1F000000"]
     },
     {
       "name": "One",
       "pet_names": { "DR": {} },
-      "code": ["0x1f000000"]
+      "code": ["0x07030001", "0x57000004", "0x1F000000"]
     }
   ]
 }

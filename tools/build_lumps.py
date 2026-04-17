@@ -198,6 +198,12 @@ def build_lump(payload, verbose=False):
         manifest_entry['data_offset'] = 1 + cw
         manifest_entry['data_word_names'] = data_word_names
 
+    cap_types = [c.get('type', '') for c in capabilities]
+    if 'self-data-R' in cap_types:
+        manifest_entry['self_data_r'] = True
+    if 'code-RX' in cap_types:
+        manifest_entry['code_rx'] = True
+
     if verbose:
         print(f'  {name:<20} token={token8}  lump_size={lump_size:4d}  '
               f'cw={cw:3d}  cc={cc}  methods={len(method_table)}')
