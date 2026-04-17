@@ -378,7 +378,6 @@ function init() {
         const NAV = {
             a: 'abstractions',   // Abstractions
             b: 'builder',        // Builder / Hardware
-            c: 'editor',         // Create (code editor)
             d: 'dashboard',      // Dashboard / Simulator
             g: 'gc',             // Garbage Collector
             l: 'lumps',          // Lumps repository
