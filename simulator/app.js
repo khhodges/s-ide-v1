@@ -3046,17 +3046,17 @@ function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
     if (opcode === 12) {
         const pos = (imm >>> 5) & 0x1F;
         const width = imm & 0x1F;
-        const sTag = _crTag(crSrc, crPets);
-        const drV = sim && sim.dr ? (sim.dr[crSrc] >>> 0) : null;
-        const valStr = drV !== null ? ` (=${_fmtVal(drV)})` : '';
-        return { desc: _escDecomp(`bfext${cc} ${_drTag(crDst)} \u2190 ${sTag}[${pos}:${pos+width-1}]${valStr}${ccDesc}`), compiler: false };
+        const srcV = sim && sim.dr ? (sim.dr[crSrc] >>> 0) : null;
+        const valStr = srcV !== null ? ` (=${_fmtVal(srcV)})` : '';
+        return { desc: _escDecomp(`bfext${cc} ${_drTag(crDst)} \u2190 ${_drTag(crSrc)}[${pos}:${pos+width-1}]${valStr}${ccDesc}`), compiler: false };
     }
 
     if (opcode === 13) {
         const pos = (imm >>> 5) & 0x1F;
         const width = imm & 0x1F;
-        const sTag = _crTag(crSrc, crPets);
-        return { desc: _escDecomp(`bfins${cc} ${sTag}[${pos}:${pos+width-1}] \u2190 ${_drTag(crDst)}${ccDesc}`), compiler: false };
+        const srcV = sim && sim.dr ? (sim.dr[crSrc] >>> 0) : null;
+        const valStr = srcV !== null ? ` (=${_fmtVal(srcV)})` : '';
+        return { desc: _escDecomp(`bfins${cc} ${_drTag(crDst)}[${pos}:${pos+width-1}] \u2190 ${_drTag(crSrc)}${valStr}${ccDesc}`), compiler: false };
     }
 
     if (opcode === 14) {
@@ -6092,15 +6092,15 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
                 const sym = crAliasSym(crSrc);
                 return `${condStr}data[${crName(crSrc)}+${imm}]${sym ? ` (${sym})` : ''} ← DR${crDst}`;
             }
-            case 12: {  // BFEXT DRd, CRs, pos, w
+            case 12: {  // BFEXT DRd, DRs, pos, w
                 const pos   = (imm >>> 5) & 0x1F;
                 const width = imm & 0x1F;
-                return `${condStr}DR${crDst} = bits[${pos}:${pos+width-1}] of CR${crSrc}`;
+                return `${condStr}DR${crDst} = bits[${pos}:${pos+width-1}] of DR${crSrc}`;
             }
-            case 13: {  // BFINS DRd, CRs, pos, w
+            case 13: {  // BFINS DRd, DRs, pos, w
                 const pos   = (imm >>> 5) & 0x1F;
                 const width = imm & 0x1F;
-                return `${condStr}insert ${width}b of CR${crSrc} at pos ${pos} into DR${crDst}`;
+                return `${condStr}insert ${width}b from DR${crSrc} at pos ${pos} into DR${crDst}`;
             }
             case 14: {  // MCMP DRd, DRs
                 return `${condStr}compare DR${crDst} vs DR${crSrc} → flags`;
@@ -16540,61 +16540,65 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 12, mnemonic: 'BFEXT', domain: 'turing',
-        syntax: 'BFEXT DRd, CRs, pos, width',
-        brief: 'Extract a bitfield from a GT-protected word',
-        encoding: 'opcode[5]=01100 | cond[4] | DRd[4] | CRs[4] | pos[5]<<5 | width[5]',
+        syntax: 'BFEXT DRd, DRs, pos, width',
+        brief: 'Extract a bitfield from a data register',
+        encoding: 'opcode[5]=01100 | cond[4] | DRd[4] | DRs[4] | pos[5]<<5 | width[5]',
         fields: [
-            { name: 'DRd', desc: 'Destination data register for extracted bits' },
-            { name: 'CRs', desc: 'GT pointing to data (must have R permission)' },
+            { name: 'DRd', desc: 'Destination data register (receives extracted bits, zero-extended)' },
+            { name: 'DRs', desc: 'Source data register to extract from' },
             { name: 'pos', desc: 'Bit position to start extraction (0-31)' },
             { name: 'width', desc: 'Number of bits to extract (1-32)' },
         ],
-        permission: 'R (Read) on CRs',
+        permission: 'None',
         flags: 'None',
         details:
             '  31    27│26   23│22   19│18   15│14  10│9    5│4    0\n'
           + '  ┌──────┬──────┬──────┬──────┬──────┬──────┬──────┐\n'
-          + '  │01100 │ cond │  DRd │  CRs │  ─   │ pos  │ wid  │\n'
+          + '  │01100 │ cond │  DRd │  DRs │  ─   │ pos  │ wid  │\n'
           + '  └──────┴──────┴──────┴──────┴──────┴──────┴──────┘\n'
           + '   5-bit   4-bit   4-bit   4-bit  5-bit  5-bit  5-bit\n\n'
           + 'DRd = destination (extracted bits, right-aligned, zero-extended).\n'
-          + 'CRs = GT covering the data object (must have R permission).\n'
+          + 'DRs = source data register (Turing domain only — no capability required).\n'
           + 'imm15 split:  [14:10] = unused (─)  [9:5] = pos  [4:0] = width\n'
           + '  pos   = bit position to start extraction (0–31)\n'
           + '  width = number of bits to extract (1–32)\n\n'
-          + 'Reads word 0 of the GT-protected region, extracts bits [pos+width-1:pos],\n'
-          + 'right-aligns them, and zero-extends into DRd.\n'
-          + 'Useful for parsing packed structures, GT header fields, device registers.',
-        example: 'BFEXT DR1, CR2, 8, 4  ; Extract 4 bits starting at bit 8',
+          + 'Extracts bits [pos+width-1:pos] from DRs, right-aligns them,\n'
+          + 'and zero-extends into DRd. Pure data-register operation — no\n'
+          + 'capability or memory access required.\n'
+          + 'Useful for parsing packed integers, pair fields (fst/snd), and\n'
+          + 'protocol fields packed into a single 32-bit word.',
+        example: 'BFEXT DR1, DR2, 8, 4  ; Extract 4 bits starting at bit 8 of DR2',
     },
     {
         opcode: 13, mnemonic: 'BFINS', domain: 'turing',
-        syntax: 'BFINS DRd, CRs, pos, width',
-        brief: 'Insert a bitfield into a GT-protected word',
-        encoding: 'opcode[5]=01101 | cond[4] | DRd[4] | CRs[4] | pos[5]<<5 | width[5]',
+        syntax: 'BFINS DRd, DRs, pos, width',
+        brief: 'Insert a bitfield from one data register into another',
+        encoding: 'opcode[5]=01101 | cond[4] | DRd[4] | DRs[4] | pos[5]<<5 | width[5]',
         fields: [
-            { name: 'DRd', desc: 'Source data register (low bits inserted)' },
-            { name: 'CRs', desc: 'GT pointing to data (must have W permission)' },
+            { name: 'DRd', desc: 'Destination data register (read-modify-write: receives inserted bits)' },
+            { name: 'DRs', desc: 'Source data register (low bits are inserted into DRd)' },
             { name: 'pos', desc: 'Bit position to start insertion (0-31)' },
             { name: 'width', desc: 'Number of bits to insert (1-32)' },
         ],
-        permission: 'W (Write) on CRs',
+        permission: 'None',
         flags: 'None',
         details:
             '  31    27│26   23│22   19│18   15│14  10│9    5│4    0\n'
           + '  ┌──────┬──────┬──────┬──────┬──────┬──────┬──────┐\n'
-          + '  │01101 │ cond │  DRd │  CRs │  ─   │ pos  │ wid  │\n'
+          + '  │01101 │ cond │  DRd │  DRs │  ─   │ pos  │ wid  │\n'
           + '  └──────┴──────┴──────┴──────┴──────┴──────┴──────┘\n'
           + '   5-bit   4-bit   4-bit   4-bit  5-bit  5-bit  5-bit\n\n'
-          + 'DRd = source (low \'width\' bits are inserted).\n'
-          + 'CRs = GT covering the data object (must have W permission).\n'
+          + 'DRd = destination (read-modify-write: all bits outside [pos+width-1:pos] preserved).\n'
+          + 'DRs = source — its low \'width\' bits are inserted at position pos of DRd.\n'
           + 'imm15 split:  [14:10] = unused (─)  [9:5] = pos  [4:0] = width\n'
           + '  pos   = bit position to start insertion (0–31)\n'
           + '  width = number of bits to insert (1–32)\n\n'
-          + 'Reads word 0 of the protected region, replaces bits [pos+width-1:pos]\n'
-          + 'with the low \'width\' bits of DRd, and writes back. All other bits in\n'
-          + 'the word are preserved — no full read-modify-write required in software.',
-        example: 'BFINS DR1, CR2, 8, 4  ; Insert low 4 bits of DR1 at bit 8',
+          + 'Reads DRd, replaces bits [pos+width-1:pos] with the low \'width\'\n'
+          + 'bits of DRs, and writes back to DRd. Pure data-register operation —\n'
+          + 'no capability or memory access required.\n'
+          + 'Complement of BFEXT. Used to pack two values into one word,\n'
+          + 'e.g. pair packing: SHL DRd, fst, 16  then  BFINS DRd, snd, 0, 16.',
+        example: 'BFINS DR1, DR2, 8, 4  ; Insert low 4 bits of DR2 into DR1 at bit 8',
     },
     {
         opcode: 14, mnemonic: 'MCMP', domain: 'turing',

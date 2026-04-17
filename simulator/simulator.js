@@ -2988,49 +2988,26 @@ class ChurchSimulator {
     }
 
     _execBfext(d) {
-        const dataGT = this.cr[d.crSrc].word0;
-        if (dataGT === 0) {
-            this.fault('NULL_CAP', `BFEXT: CR${d.crSrc} is NULL`);
-            return null;
-        }
-        const loc = this.cr[d.crSrc].word1;
-        const check = this.mLoad(dataGT, 'R', d.crSrc, loc);
-        if (!check.ok) {
-            this.fault(check.fault, `BFEXT: CR${d.crSrc}: ${check.message}`);
-            return null;
-        }
         const pos = (d.imm >>> 5) & 0x1F;
         const width = d.imm & 0x1F;
         if (width === 0 || pos + width > 32) {
             this.fault('BOUNDS', `BFEXT: invalid bitfield pos=${pos} width=${width}`);
             return null;
         }
-        const word = this.memory[loc] >>> 0;
+        const word = this.dr[d.crSrc] >>> 0;
         const mask = ((1 << width) - 1) >>> 0;
         const value = (word >>> pos) & mask;
         const drIdx = d.crDst;
         this.dr[drIdx] = value >>> 0;
-        const label = this.nsLabels[check.index] || 'data';
-        const desc = `BFEXT DR${drIdx}, [CR${d.crSrc}], pos=${pos}, w=${width} -> 0x${value.toString(16).toUpperCase()} (${label})`;
+        const desc = `BFEXT DR${drIdx}, DR${d.crSrc}, pos=${pos}, w=${width} -> 0x${value.toString(16).toUpperCase()}`;
         this.output += desc + '\n';
         this.pc++;
         return { pc: this.pc - 1, instr: d, desc, pipeline: [
-            { stage: 'BFEXT', desc: `Extract bits [${pos}:${pos+width-1}] from ${label} into DR${drIdx}`, perm: 'R', status: 'pass' },
+            { stage: 'BFEXT', desc: `Extract bits [${pos}:${pos+width-1}] from DR${d.crSrc} into DR${drIdx}`, perm: '-', status: 'pass' },
         ]};
     }
 
     _execBfins(d) {
-        const dataGT = this.cr[d.crSrc].word0;
-        if (dataGT === 0) {
-            this.fault('NULL_CAP', `BFINS: CR${d.crSrc} is NULL`);
-            return null;
-        }
-        const loc = this.cr[d.crSrc].word1;
-        const check = this.mLoad(dataGT, 'W', d.crSrc, loc);
-        if (!check.ok) {
-            this.fault(check.fault, `BFINS: CR${d.crSrc}: ${check.message}`);
-            return null;
-        }
         const pos = (d.imm >>> 5) & 0x1F;
         const width = d.imm & 0x1F;
         if (width === 0 || pos + width > 32) {
@@ -3038,17 +3015,16 @@ class ChurchSimulator {
             return null;
         }
         const drIdx = d.crDst;
-        const insertVal = this.dr[drIdx] >>> 0;
+        const insertVal = this.dr[d.crSrc] >>> 0;
         const mask = (((1 << width) - 1) << pos) >>> 0;
-        const oldWord = this.memory[loc] >>> 0;
+        const oldWord = this.dr[drIdx] >>> 0;
         const newWord = ((oldWord & ~mask) | ((insertVal << pos) & mask)) >>> 0;
-        this.memory[loc] = newWord;
-        const label = this.nsLabels[check.index] || 'data';
-        const desc = `BFINS DR${drIdx}, [CR${d.crSrc}], pos=${pos}, w=${width} <- 0x${(insertVal & ((1 << width) - 1)).toString(16).toUpperCase()} (${label})`;
+        this.dr[drIdx] = newWord;
+        const desc = `BFINS DR${drIdx}, DR${d.crSrc}, pos=${pos}, w=${width} <- 0x${(insertVal & ((1 << width) - 1)).toString(16).toUpperCase()}`;
         this.output += desc + '\n';
         this.pc++;
         return { pc: this.pc - 1, instr: d, desc, pipeline: [
-            { stage: 'BFINS', desc: `Insert bits [${pos}:${pos+width-1}] from DR${drIdx} into ${label}`, perm: 'W', status: 'pass' },
+            { stage: 'BFINS', desc: `Insert bits [${pos}:${pos+width-1}] from DR${d.crSrc} into DR${drIdx}`, perm: '-', status: 'pass' },
         ]};
     }
 

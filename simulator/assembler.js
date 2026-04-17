@@ -329,7 +329,7 @@ class ChurchAssembler {
             }
             case 12: {
                 crDst = this._parseDR(parts[1], lineNum);
-                crSrc = this._parseCR(parts[2], lineNum);
+                crSrc = this._parseDR(parts[2], lineNum);
                 const pos12 = this._parseImm(parts[3], lineNum) & 0x1F;
                 const wid12 = this._parseImm(parts[4], lineNum) & 0x1F;
                 imm = (pos12 << 5) | wid12;
@@ -337,7 +337,7 @@ class ChurchAssembler {
             }
             case 13: {
                 crDst = this._parseDR(parts[1], lineNum);
-                crSrc = this._parseCR(parts[2], lineNum);
+                crSrc = this._parseDR(parts[2], lineNum);
                 const pos13 = this._parseImm(parts[3], lineNum) & 0x1F;
                 const wid13 = this._parseImm(parts[4], lineNum) & 0x1F;
                 imm = (pos13 << 5) | wid13;
@@ -610,17 +610,17 @@ class ChurchAssembler {
             case 10: return `${mnemonic}  DR${crDst}, CR${crSrc}[${hexOff(imm)}]`;
             // DWRITE DRd, CRs[offset]  — write data word via capability
             case 11: return `${mnemonic}  DR${crDst}, CR${crSrc}[${hexOff(imm)}]`;
-            // BFEXT DRd, CRs, pos, w  — bit-field extract
+            // BFEXT DRd, DRs, pos, w  — bit-field extract
             case 12: {
                 const pos   = (imm >>> 5) & 0x1F;
                 const width = imm & 0x1F;
-                return `${mnemonic}  DR${crDst}, CR${crSrc}, pos=${pos}, w=${width}`;
+                return `${mnemonic}  DR${crDst}, DR${crSrc}, pos=${pos}, w=${width}`;
             }
-            // BFINS DRd, CRs, pos, w  — bit-field insert
+            // BFINS DRd, DRs, pos, w  — bit-field insert
             case 13: {
                 const pos   = (imm >>> 5) & 0x1F;
                 const width = imm & 0x1F;
-                return `${mnemonic}  DR${crDst}, CR${crSrc}, pos=${pos}, w=${width}`;
+                return `${mnemonic}  DR${crDst}, DR${crSrc}, pos=${pos}, w=${width}`;
             }
             // MCMP DRd, DRs  — compare, update condition flags
             case 14: return `${mnemonic}  DR${crDst}, DR${crSrc}`;
