@@ -4763,6 +4763,7 @@ function toggleAbsLayer(layer) {
 
 let _lumpsCache = [];
 let _selectedLumpToken = null;
+let _nsdgTooltipData = {};
 
 async function renderLumps() {
     const listEl = document.getElementById('lumpsListContent');
@@ -4867,6 +4868,9 @@ function _buildNsDepGraph(nsMeta, lump) {
     svg += `<text x="${nsCX}" y="${nsCY + 4}" text-anchor="middle" font-size="9" fill="#eaeaea" font-family="monospace">${e(nsLabel)}</text>`;
     svg += `<text x="${nsCX}" y="${nsCY + 17}" text-anchor="middle" font-size="7.5" fill="#7a7a5a" font-family="monospace">0x${e(nsToken)}</text>`;
 
+    _nsdgTooltipData = {};
+    const _tipPfx = (lump.token || String(Date.now())).replace(/[^a-z0-9]/gi, '').substring(0, 16);
+
     for (let i = 0; i < active.length; i++) {
         const ent = active[i];
         const rowCY = PAD_T + i * ROW_H + ROW_H / 2;
@@ -4880,9 +4884,30 @@ function _buildNsDepGraph(nsMeta, lump) {
                        : ent.state === 'live'    ? '#4ade80'
                        :                           '#a78bfa';
         const slotLabel = (ent.label || `slot ${ent.slot}`).substring(0, 20);
+
+        const slotTipKey = `${_tipPfx}_s${i}`;
+        let slotTipHtml = `<div class="nsdg-tip-title">[${parseInt(ent.slot)}] ${e((ent.state || '').toUpperCase())}</div>`;
+        slotTipHtml += `<div class="nsdg-tip-row"><span class="nsdg-tip-lbl">Label</span><span class="nsdg-tip-val">${e(ent.label || `slot ${ent.slot}`)}</span></div>`;
+        if (ent.flags !== undefined && ent.flags !== null) {
+            const _fb = ent.flags >>> 0;
+            const _fl = [];
+            if (_fb & 1) _fl.push('required');
+            if (_fb & 2) _fl.push('bundle');
+            if (_fb & 4) _fl.push('pinned');
+            const _fs = _fl.length ? _fl.join(' | ') : `0x${_fb.toString(16).padStart(2, '0')}`;
+            slotTipHtml += `<div class="nsdg-tip-row"><span class="nsdg-tip-lbl">Flags</span><span class="nsdg-tip-val">${_fs}</span></div>`;
+        }
+        slotTipHtml += `<div class="nsdg-tip-row"><span class="nsdg-tip-lbl">loc_idx</span><span class="nsdg-tip-val">${ent.loc_idx !== undefined ? parseInt(ent.loc_idx) : '—'}</span></div>`;
+        if (ent.hash) {
+            slotTipHtml += `<div class="nsdg-tip-row"><span class="nsdg-tip-lbl">Hash</span><span class="nsdg-tip-val nsdg-tip-mono">0x${e(ent.hash.substring(0, 20))}</span></div>`;
+        }
+        _nsdgTooltipData[slotTipKey] = { html: slotTipHtml };
+
+        svg += `<g onmouseenter="showNsdgTooltip(event,'${slotTipKey}')" onmouseleave="hideNsdgTooltip()">`;
         svg += `<rect x="${slotX}" y="${rowCY - SLOT_H / 2}" width="${SLOT_W}" height="${SLOT_H}" rx="4" fill="#081828" stroke="${stateCol}" stroke-width="1.2"/>`;
         svg += `<text x="${slotX + 6}" y="${rowCY - 5}" font-size="7" font-weight="bold" fill="${stateCol}" font-family="monospace">[${parseInt(ent.slot)}] ${e((ent.state || '').toUpperCase())}</text>`;
         svg += `<text x="${slotX + 6}" y="${rowCY + 8}" font-size="9" fill="#dde8f0" font-family="monospace">${e(slotLabel)}</text>`;
+        svg += `</g>`;
 
         const isOutform = ent.state === 'outform';
         const isBundled = ent.state === 'bundled' || ent.state === 'live';
@@ -4910,11 +4935,33 @@ function _buildNsDepGraph(nsMeta, lump) {
                 tgtLine2 = '';
             }
 
+            const tgtTipKey = `${_tipPfx}_t${i}`;
+            let tgtTipHtml;
+            if (isOutform) {
+                tgtTipHtml = `<div class="nsdg-tip-title">OUTFORM</div>`;
+                if (ent.hash) tgtTipHtml += `<div class="nsdg-tip-row"><span class="nsdg-tip-lbl">Hash</span><span class="nsdg-tip-val nsdg-tip-mono">0x${e(ent.hash)}</span></div>`;
+                tgtTipHtml += `<div class="nsdg-tip-row"><span class="nsdg-tip-lbl">loc_idx</span><span class="nsdg-tip-val">${ent.loc_idx !== undefined ? parseInt(ent.loc_idx) : '—'}</span></div>`;
+            } else if (tgtLump) {
+                tgtTipHtml = `<div class="nsdg-tip-title">${e(tgtLump.abstraction || tgtTok)}</div>`;
+                tgtTipHtml += `<div class="nsdg-tip-row"><span class="nsdg-tip-lbl">Token</span><span class="nsdg-tip-val nsdg-tip-mono">0x${e(tgtTok)}</span></div>`;
+                if (tgtLump.cw !== undefined) tgtTipHtml += `<div class="nsdg-tip-row"><span class="nsdg-tip-lbl">CW</span><span class="nsdg-tip-val">${parseInt(tgtLump.cw)}</span></div>`;
+                if (tgtLump.cc !== undefined) tgtTipHtml += `<div class="nsdg-tip-row"><span class="nsdg-tip-lbl">CC</span><span class="nsdg-tip-val">${parseInt(tgtLump.cc)}</span></div>`;
+                const sz = parseInt(tgtLump.lump_size) || 0;
+                tgtTipHtml += `<div class="nsdg-tip-row"><span class="nsdg-tip-lbl">Size</span><span class="nsdg-tip-val">${sz}w / ${sz * 4}B</span></div>`;
+                tgtTipHtml += `<div class="nsdg-tip-nav">Click to inspect &#8594;</div>`;
+            } else {
+                tgtTipHtml = `<div class="nsdg-tip-title">${e(tgtLine1)}</div>`;
+                if (tgtTok) tgtTipHtml += `<div class="nsdg-tip-row"><span class="nsdg-tip-lbl">Token</span><span class="nsdg-tip-val nsdg-tip-mono">0x${e(tgtTok)}</span></div>`;
+                if (ent.file) tgtTipHtml += `<div class="nsdg-tip-row"><span class="nsdg-tip-lbl">File</span><span class="nsdg-tip-val">${e(ent.file.split('/').pop())}</span></div>`;
+            }
+            _nsdgTooltipData[tgtTipKey] = { html: tgtTipHtml };
+
             const clickable = !!tgtLump;
             const clickAttr = clickable ? ` style="cursor:pointer" onclick="showLumpDetail('${tgtTok}')"` : '';
             const titleEl = clickable ? `<title>Navigate to ${e(tgtLump.abstraction || tgtTok)}</title>` : '';
+            const tipAttrs = ` onmouseenter="showNsdgTooltip(event,'${tgtTipKey}')" onmouseleave="hideNsdgTooltip()"`;
 
-            svg += `<g${clickAttr}>${titleEl}`;
+            svg += `<g${clickAttr}${tipAttrs}>${titleEl}`;
             svg += `<rect x="${tgtX}" y="${rowCY - TGT_H / 2}" width="${TGT_W}" height="${TGT_H}" rx="4" fill="#080810" stroke="${tgtStroke}" stroke-width="${clickable ? '1.8' : '1'}"/>`;
             if (clickable) svg += `<rect x="${tgtX}" y="${rowCY - TGT_H / 2}" width="${TGT_W}" height="${TGT_H}" rx="4" fill="${tgtCol}" fill-opacity="0.04"/>`;
             svg += `<text x="${tgtX + 7}" y="${rowCY - 5}" font-size="9" font-weight="${clickable ? 'bold' : 'normal'}" fill="${tgtCol}" font-family="monospace">${e(tgtLine1)}</text>`;
@@ -4928,6 +4975,34 @@ function _buildNsDepGraph(nsMeta, lump) {
     svg += `<text x="8" y="${legY}" font-size="7" fill="#4a6a6a" font-family="monospace">bundled/live &#9632;  outform &#9670;  click a lump node to navigate</text>`;
     svg += `</svg>`;
     return svg;
+}
+
+function showNsdgTooltip(evt, key) {
+    const data = _nsdgTooltipData[key];
+    if (!data) return;
+    let tip = document.getElementById('nsdg-tooltip');
+    if (!tip) {
+        tip = document.createElement('div');
+        tip.id = 'nsdg-tooltip';
+        tip.className = 'nsdg-tooltip';
+        document.body.appendChild(tip);
+    }
+    tip.innerHTML = data.html;
+    tip.style.display = 'block';
+    const vw = window.innerWidth || 800;
+    let tx = evt.clientX + 16;
+    let ty = evt.clientY + 12;
+    tip.style.left = tx + 'px';
+    tip.style.top = ty + 'px';
+    requestAnimationFrame(() => {
+        const tw = tip.offsetWidth;
+        if (tx + tw > vw - 8) tip.style.left = Math.max(8, evt.clientX - tw - 8) + 'px';
+    });
+}
+
+function hideNsdgTooltip() {
+    const tip = document.getElementById('nsdg-tooltip');
+    if (tip) tip.style.display = 'none';
 }
 
 function showLumpDetail(token) {

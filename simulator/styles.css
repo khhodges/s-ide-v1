@@ -6343,6 +6343,64 @@ a.next-step-link:hover {
     user-select: none;
 }
 
+.nsdg-tooltip {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    background: #111820;
+    border: 1px solid rgba(100, 160, 255, 0.25);
+    border-radius: 6px;
+    padding: 8px 10px;
+    min-width: 160px;
+    max-width: 280px;
+    pointer-events: none;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.55);
+    font-family: monospace;
+    font-size: 0.72rem;
+    line-height: 1.45;
+}
+
+.nsdg-tip-title {
+    font-weight: 700;
+    font-size: 0.78rem;
+    color: #e0e8f8;
+    margin-bottom: 5px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(100,160,255,0.15);
+}
+
+.nsdg-tip-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 3px;
+}
+
+.nsdg-tip-lbl {
+    color: #6a8aaa;
+    flex-shrink: 0;
+}
+
+.nsdg-tip-val {
+    color: #c8dce8;
+    text-align: right;
+    word-break: break-all;
+}
+
+.nsdg-tip-mono {
+    font-family: monospace;
+    font-size: 0.68rem;
+}
+
+.nsdg-tip-nav {
+    margin-top: 6px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(100,160,255,0.12);
+    color: #4a9a7a;
+    font-size: 0.68rem;
+    text-align: right;
+}
+
 .ns-builder-form {
     padding: 0.5rem 0;
 }
