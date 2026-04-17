@@ -4764,6 +4764,7 @@ function toggleAbsLayer(layer) {
 let _lumpsCache = [];
 let _selectedLumpToken = null;
 let _nsdgTooltipData = {};
+let _lumpEditDirty = false;
 
 async function renderLumps() {
     const listEl = document.getElementById('lumpsListContent');
@@ -5196,6 +5197,8 @@ function hideNsdgTooltip() {
 }
 
 function showLumpDetail(token) {
+    if (_lumpEditDirty && !confirm('Discard changes?')) return;
+    _lumpEditDirty = false;
     _selectedLumpToken = token;
     const listEl = document.getElementById('lumpsListContent');
     if (listEl) {
@@ -5580,6 +5583,7 @@ async function _saveLumpText(token, text, bodyEl, lump) {
         });
         const result = await resp.json();
         if (!resp.ok) throw new Error(result.error || `HTTP ${resp.status}`);
+        _lumpEditDirty = false;
         if (statusEl) { statusEl.textContent = 'Saved.'; statusEl.style.color = 'var(--accent-green, #4caf50)'; }
         setTimeout(() => _loadLumpContent(token, lump), 800);
     } catch (err) {
@@ -5663,6 +5667,7 @@ function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
     });
 
     editBtn.addEventListener('click', () => {
+        _lumpEditDirty = true;
         editBtn.style.display = 'none';
         preview.style.display = 'none';
         editorArea.style.display = '';
@@ -5670,6 +5675,8 @@ function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
     });
 
     cancelBtn.addEventListener('click', () => {
+        if (ta.value !== text && !confirm('Discard changes?')) return;
+        _lumpEditDirty = false;
         clearTimeout(_debounceTimer);
         ta.value = text;
         livePreview.innerHTML = '';
