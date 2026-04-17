@@ -1651,6 +1651,82 @@ def get_lump_words(token_hex):
     return jsonify({"token": key8, "words": words, "count": num_words})
 
 
+_EDITABLE_CONTENT_TYPES = {'text', 'markdown', 'image', 'grayscale', 'binary', 'doc'}
+
+
+@app.route("/api/lump/<token>/content", methods=["PUT"])
+def put_lump_content(token):
+    """Overwrite the content of a text, markdown, or image lump in-place."""
+    import base64 as _b64, math as _math
+
+    raw  = token.lower()
+    key8 = (raw[:8] if len(raw) >= 8 else raw).zfill(8)
+    lumps_dir    = os.path.join(os.path.dirname(__file__), 'lumps')
+    lump_path    = os.path.join(lumps_dir, f'{key8}.lump')
+    sidecar_path = os.path.join(lumps_dir, f'{key8}.json')
+
+    if not os.path.isfile(lump_path):
+        return jsonify({"error": f"Lump {key8} not found"}), 404
+
+    sidecar = {}
+    if os.path.isfile(sidecar_path):
+        try:
+            with open(sidecar_path, 'r') as fh:
+                sidecar = json.load(fh)
+        except Exception:
+            pass
+
+    ct = (sidecar.get('content_type') or '').lower()
+    if ct and ct not in _EDITABLE_CONTENT_TYPES:
+        return jsonify({"error": f"Lump content_type '{ct}' is not editable via this endpoint"}), 400
+
+    payload = request.get_json(force=True, silent=True) or {}
+
+    if 'text' in payload:
+        raw_bytes = payload['text'].encode('utf-8')
+    elif 'data_b64' in payload:
+        try:
+            raw_bytes = _b64.b64decode(payload['data_b64'], validate=True)
+        except Exception:
+            return jsonify({"error": "Invalid base64 data"}), 400
+    else:
+        return jsonify({"error": "Payload must include 'text' or 'data_b64'"}), 400
+
+    padded_len   = (len(raw_bytes) + 3) & ~3
+    padded_bytes = raw_bytes + b'\x00' * (padded_len - len(raw_bytes))
+    data_word_count = padded_len // 4
+
+    total_needed = 1 + data_word_count
+    MAX_LUMP_WORDS = 1 << 14
+    if total_needed > MAX_LUMP_WORDS:
+        return jsonify({"error": f"Payload too large: {data_word_count} data words"}), 400
+
+    n = max(6, _math.ceil(_math.log2(max(total_needed, 2))))
+    n = min(n, 14)
+    lump_size   = 1 << n
+    n_minus_6   = n - 6
+    cw          = min(data_word_count, lump_size - 1)
+
+    header = (0x1F << 27) | (n_minus_6 << 23) | (cw << 10) | (0x01 << 8) | 0
+    data_words = list(_struct.unpack(f'>{data_word_count}I', padded_bytes))
+    all_words  = ([header] + data_words)[:lump_size]
+    all_words += [0] * max(0, lump_size - len(all_words))
+
+    lump_bytes = _struct.pack(f'>{lump_size}I', *[int(w) & 0xFFFFFFFF for w in all_words])
+    with open(lump_path, 'wb') as fh:
+        fh.write(lump_bytes)
+    LAZY_LUMPS[key8] = lump_bytes
+    LAZY_LUMPS[key8.lstrip('0') or '0'] = lump_bytes
+
+    sidecar['cw']        = cw
+    sidecar['lump_size'] = lump_size
+    with open(sidecar_path, 'w') as fh:
+        json.dump(sidecar, fh, indent=2)
+
+    print(f'[lumps/content PUT] {key8} cw={cw} lump_size={lump_size} {len(lump_bytes)}B', flush=True)
+    return jsonify({"ok": True, "token": key8, "cw": cw, "lump_size": lump_size})
+
+
 @app.route("/api/lumps/import", methods=["POST"])
 def import_lump():
     """Pack an uploaded file (base64) into a data LUMP and save with sidecar."""

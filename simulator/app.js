@@ -5249,6 +5249,95 @@ function _pack4Decode(words) {
     return td.decode(bytes.subarray(0, end));
 }
 
+async function _saveLumpText(token, text, bodyEl, lump) {
+    const saveBtn = bodyEl.querySelector('.lump-edit-save-btn');
+    const statusEl = bodyEl.querySelector('.lump-edit-status');
+    if (saveBtn) saveBtn.disabled = true;
+    if (statusEl) statusEl.textContent = 'Saving\u2026';
+    try {
+        const resp = await fetch(`/api/lump/${token}/content`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text }),
+        });
+        const result = await resp.json();
+        if (!resp.ok) throw new Error(result.error || `HTTP ${resp.status}`);
+        if (statusEl) { statusEl.textContent = 'Saved.'; statusEl.style.color = 'var(--accent-green, #4caf50)'; }
+        setTimeout(() => _loadLumpContent(token, lump), 800);
+    } catch (err) {
+        if (statusEl) { statusEl.textContent = `Error: ${err.message}`; statusEl.style.color = 'var(--red, #e53935)'; }
+        if (saveBtn) saveBtn.disabled = false;
+    }
+}
+
+function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'lump-edit-wrapper';
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'lump-edit-toolbar';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn lump-edit-btn';
+    editBtn.textContent = 'Edit';
+    toolbar.appendChild(editBtn);
+    wrapper.appendChild(toolbar);
+
+    const preview = document.createElement('div');
+    preview.className = 'lump-edit-preview';
+    renderFn(preview, text);
+    wrapper.appendChild(preview);
+
+    const editorArea = document.createElement('div');
+    editorArea.className = 'lump-edit-area';
+    editorArea.style.display = 'none';
+
+    const ta = document.createElement('textarea');
+    ta.className = 'lump-edit-textarea';
+    ta.value = text;
+    ta.spellcheck = false;
+    editorArea.appendChild(ta);
+
+    const actionRow = document.createElement('div');
+    actionRow.className = 'lump-edit-actions';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'btn lump-edit-save-btn';
+    saveBtn.textContent = 'Save';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn lump-edit-cancel-btn';
+    cancelBtn.textContent = 'Cancel';
+
+    const statusEl = document.createElement('span');
+    statusEl.className = 'lump-edit-status';
+
+    actionRow.appendChild(saveBtn);
+    actionRow.appendChild(cancelBtn);
+    actionRow.appendChild(statusEl);
+    editorArea.appendChild(actionRow);
+    wrapper.appendChild(editorArea);
+
+    editBtn.addEventListener('click', () => {
+        editBtn.style.display = 'none';
+        preview.style.display = 'none';
+        editorArea.style.display = '';
+        ta.focus();
+    });
+
+    cancelBtn.addEventListener('click', () => {
+        ta.value = text;
+        statusEl.textContent = '';
+        editorArea.style.display = 'none';
+        preview.style.display = '';
+        editBtn.style.display = '';
+    });
+
+    saveBtn.addEventListener('click', () => _saveLumpText(token, ta.value, wrapper, lump));
+
+    return wrapper;
+}
+
 async function _loadLumpContent(token, lump) {
     const tk = token.replace(/[^a-z0-9]/gi, '');
     const bodyEl = document.getElementById(`lumpContentBody_${tk}`);
@@ -5268,17 +5357,26 @@ async function _loadLumpContent(token, lump) {
             const text = _pack4Decode(dataWords);
             bodyEl.innerHTML = '';
             bodyEl.className = '';
-            const pre = document.createElement('pre');
-            pre.className = 'lump-content-text';
-            pre.textContent = text || '(empty)';
-            bodyEl.appendChild(pre);
+            const editor = _buildTextEditor(token, text, bodyEl, lump, (el, t) => {
+                const pre = document.createElement('pre');
+                pre.className = 'lump-content-text';
+                pre.textContent = t || '(empty)';
+                el.appendChild(pre);
+            });
+            bodyEl.appendChild(editor);
         } else if (ct === 'markdown') {
             const text = _pack4Decode(dataWords);
             bodyEl.innerHTML = '';
-            bodyEl.className = 'lump-content-markdown';
-            bodyEl.innerHTML = renderMarkdown(text || '');
+            bodyEl.className = '';
+            const editor = _buildTextEditor(token, text, bodyEl, lump, (el, t) => {
+                const md = document.createElement('div');
+                md.className = 'lump-content-markdown';
+                md.innerHTML = renderMarkdown(t || '');
+                el.appendChild(md);
+            });
+            bodyEl.appendChild(editor);
         } else if (ct === 'image' || ct === 'grayscale') {
-            _renderLumpImageContent(bodyEl, lump, dataWords);
+            _renderLumpImageContent(bodyEl, lump, dataWords, token);
         } else if (ct === 'thread' || typ === 2) {
             _renderLumpThreadContent(bodyEl, lump, words);
         } else if (ct === 'doc' || ct === 'binary') {
@@ -5337,9 +5435,62 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
     bodyEl.className = '';
 }
 
-function _renderLumpImageContent(bodyEl, lump, dataWords) {
+function _renderLumpImageContent(bodyEl, lump, dataWords, token) {
     bodyEl.innerHTML = '';
     bodyEl.className = 'lump-content-image';
+
+    if (token) {
+        const replaceBar = document.createElement('div');
+        replaceBar.className = 'lump-edit-toolbar';
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        fileInput.id = `lumpReplaceFile_${token.replace(/[^a-z0-9]/gi, '')}`;
+        const replaceBtn = document.createElement('button');
+        replaceBtn.className = 'btn lump-edit-btn';
+        replaceBtn.textContent = 'Replace file';
+        const statusEl = document.createElement('span');
+        statusEl.className = 'lump-edit-status';
+        statusEl.style.marginLeft = '0.5rem';
+        replaceBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            replaceBtn.disabled = true;
+            statusEl.textContent = 'Uploading\u2026';
+            statusEl.style.color = '';
+            try {
+                const arrayBuf = await file.arrayBuffer();
+                const bytes = new Uint8Array(arrayBuf);
+                let b64 = '';
+                const chunk = 8192;
+                for (let i = 0; i < bytes.length; i += chunk) {
+                    b64 += String.fromCharCode(...bytes.subarray(i, i + chunk));
+                }
+                b64 = btoa(b64);
+                const resp = await fetch(`/api/lump/${token}/content`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ data_b64: b64 }),
+                });
+                const result = await resp.json();
+                if (!resp.ok) throw new Error(result.error || `HTTP ${resp.status}`);
+                statusEl.textContent = 'Replaced.';
+                statusEl.style.color = 'var(--accent-green, #4caf50)';
+                setTimeout(() => _loadLumpContent(token, lump), 800);
+            } catch (err) {
+                statusEl.textContent = `Error: ${err.message}`;
+                statusEl.style.color = 'var(--red, #e53935)';
+                replaceBtn.disabled = false;
+            }
+            fileInput.value = '';
+        });
+        replaceBar.appendChild(fileInput);
+        replaceBar.appendChild(replaceBtn);
+        replaceBar.appendChild(statusEl);
+        bodyEl.appendChild(replaceBar);
+    }
 
     // Reconstruct raw bytes from word array
     const bytes = new Uint8Array(dataWords.length * 4);
