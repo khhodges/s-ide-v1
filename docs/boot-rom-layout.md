@@ -170,7 +170,7 @@ Initial c-list for Boot.Abstr (NS Slot 2).  CR6 points here after boot.
 |-----|-------|------|------|-------|
 | 0 | R\|X | 3 | — | Boot-internal: code/constants |
 | 1 | X | 4 | — | Boot-internal: boot code |
-| 2 | NULL | 0 | — | Filled by SAVE epilogue |
+| 2 | NULL | 0 | — | Initially NULL; targeted by `SAVE CR6, CR1, #2` at BOOT_PROGRAM word 12 (persists whatever GT CR1 holds at that point — see BOOT_PROGRAM table for CR1 provenance) |
 | 3 | E | 2 | — | Boot-internal: Boot.Abstr |
 | 4 | E | 4 | Salvation | First user abstraction |
 | 5 | E | 5 | Navana | Namespace controller |

@@ -703,7 +703,17 @@ class ChurchSimulator {
         for (let i = 0; i < bootClistCount; i++) {
             this.memory[bootAbstrLoc + clistStart + i] = clistGTs[i];
         }
-        this.memory[bootAbstrLoc + clistStart] = 0;  // GT[0] = null (filled by SAVE epilogue)
+        // KNOWN DIVERGENCE: the loop above writes clistGTs[0] (R|X to NS slot 3
+        // per docs/boot-rom-layout.md DEMO_CLIST), then this line overwrites it
+        // with NULL. The original code commented this as "filled by SAVE
+        // epilogue", but no current boot step actually re-fills it. The boot
+        // program's BOOT_PROGRAM word 1 (LOAD CR1, CR6[0]) therefore sees a
+        // NULL token in the simulator. This pre-dates the foundation-lump
+        // architecture work and will be replaced wholesale by the
+        // programmer-authored boot image (Tasks #214–#217); for now, keep the
+        // existing behavior to avoid altering simulator semantics.
+        // See docs/foundation-lump-design.md §4.
+        this.memory[bootAbstrLoc + clistStart] = 0;
 
         // NS entry: limit17 = lumpSize - cc - 1 = 238  (valid PC range 0..237 via +1 fetch offset)
         const codeRegionLimit   = lumpSize - bootClistCount - 1;  // = 238
