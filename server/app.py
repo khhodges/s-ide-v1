@@ -149,6 +149,120 @@ def favicon():
 def boot_id():
     return jsonify({"bootId": BOOT_ID, "version": BUILD_VERSION})
 
+# ---------------------------------------------------------------------------
+# Boot Image Designer config (Task #214 — Step 1: memory allocation)
+# ---------------------------------------------------------------------------
+# Programmer-controlled boot-image config persisted as a single project-level
+# JSON file. Future Tasks #215–#217 extend the same file with `step2`
+# (resident lumps), `step3` (reserved empty NS slots), and the binary image
+# generator settings.
+BOOT_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "boot_config.json")
+BOOT_CONFIG_SCHEMA_VERSION = 1
+
+# Hardware profile data shown to the programmer as read-only reference.
+# Per docs/foundation-lump-design.md §3 the IDE never derives sizes — it only
+# surfaces what the chosen target board offers.
+HARDWARE_PROFILES = {
+    "tang-nano-20k": {
+        "label": "Sipeed Tang Nano 20K",
+        "totalRamWords": 16384,
+        "addressBits": 16,
+        "notes": "Gowin GW2AR-18 — 64 KB block SRAM available for namespace",
+    },
+    "tang-nano-20k-iot": {
+        "label": "Sipeed Tang Nano 20K IoT",
+        "totalRamWords": 16384,
+        "addressBits": 16,
+        "notes": "Gowin GW2AR-18 + BL702 call-home — same 64 KB SRAM budget",
+    },
+    "ti60-f225": {
+        "label": "Efinix Ti60 F225",
+        "totalRamWords": 65536,
+        "addressBits": 18,
+        "notes": "Efinix Titanium Ti60 F225 — ~256 KB embedded RAM available for namespace",
+    },
+}
+
+DEFAULT_BOOT_CONFIG = {
+    "schemaVersion": BOOT_CONFIG_SCHEMA_VERSION,
+    "targetBoard": "tang-nano-20k",
+    "step1": {
+        "totalNamespaceWords": 16384,
+        "namespaceLumpWords": 64,
+        "threadLumpWords": 256,
+        "abstractionLumpWords": 256,
+    },
+}
+
+def _is_pow2(n):
+    return isinstance(n, int) and n > 0 and (n & (n - 1)) == 0
+
+def _validate_step1(target_board, step1):
+    if target_board not in HARDWARE_PROFILES:
+        return f"Unknown target board: {target_board}"
+    profile = HARDWARE_PROFILES[target_board]
+    fields = ("totalNamespaceWords", "namespaceLumpWords",
+              "threadLumpWords", "abstractionLumpWords")
+    for f in fields:
+        v = step1.get(f)
+        if not isinstance(v, int) or v <= 0:
+            return f"step1.{f} must be a positive integer"
+    total = step1["totalNamespaceWords"]
+    if total > profile["totalRamWords"]:
+        return (f"totalNamespaceWords ({total}) exceeds {profile['label']} "
+                f"budget ({profile['totalRamWords']} words)")
+    for f in ("totalNamespaceWords", "namespaceLumpWords",
+              "threadLumpWords", "abstractionLumpWords"):
+        if not _is_pow2(step1[f]):
+            return f"step1.{f} must be a power of 2"
+        if step1[f] < 64:
+            return f"step1.{f} must be at least 64 words (FPGA minimum slot)"
+    foundation_sum = (step1["namespaceLumpWords"] +
+                      step1["threadLumpWords"] +
+                      step1["abstractionLumpWords"])
+    if foundation_sum > total:
+        return (f"Sum of foundational lump sizes ({foundation_sum}) exceeds "
+                f"totalNamespaceWords ({total})")
+    return None
+
+@app.route("/api/boot-config", methods=["GET"])
+def boot_config_get():
+    if os.path.isfile(BOOT_CONFIG_PATH):
+        try:
+            with open(BOOT_CONFIG_PATH, "r") as f:
+                cfg = json.load(f)
+        except Exception as e:
+            return jsonify({"error": f"Failed to read boot_config.json: {e}"}), 500
+    else:
+        cfg = DEFAULT_BOOT_CONFIG
+    return jsonify({"config": cfg, "profiles": HARDWARE_PROFILES})
+
+@app.route("/api/boot-config", methods=["POST"])
+def boot_config_post():
+    data = request.get_json(silent=True) or {}
+    target_board = data.get("targetBoard")
+    step1 = data.get("step1") or {}
+    err = _validate_step1(target_board, step1)
+    if err:
+        return jsonify({"ok": False, "error": err}), 400
+    cfg = {
+        "schemaVersion": BOOT_CONFIG_SCHEMA_VERSION,
+        "targetBoard": target_board,
+        "step1": {
+            "totalNamespaceWords": int(step1["totalNamespaceWords"]),
+            "namespaceLumpWords": int(step1["namespaceLumpWords"]),
+            "threadLumpWords": int(step1["threadLumpWords"]),
+            "abstractionLumpWords": int(step1["abstractionLumpWords"]),
+        },
+    }
+    try:
+        with open(BOOT_CONFIG_PATH, "w") as f:
+            json.dump(cfg, f, indent=2)
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"Failed to write boot_config.json: {e}"}), 500
+    return jsonify({"ok": True, "config": cfg})
+
 @app.route("/simulator/")
 def simulator_index():
     filepath = os.path.join(SIMULATOR_DIR, "index.html")

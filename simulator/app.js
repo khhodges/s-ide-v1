@@ -296,6 +296,14 @@ function init() {
     deviceAbstractions = new DeviceAbstractions(abstractionRegistry);
     sim.initAbstractions(abstractionRegistry, systemAbstractions, deviceAbstractions);
     sim.reset();
+    // Boot Image Designer Step 1 (Task #214): fetch the project boot config in
+    // the background. If it differs from the defaults the simulator just used,
+    // re-reset to apply the programmer-chosen lump sizes. Errors are non-fatal.
+    _loadBootConfig().then(() => {
+        if (window.bootConfig && window.bootConfig.step1) {
+            try { sim.reset(); } catch (e) { console.warn('[bootConfig] re-reset failed:', e); }
+        }
+    });
     _initLazyLoadManifest();
     _absMethodsLoad();
     _implStatusLoad();
@@ -4205,6 +4213,157 @@ function renderMemoryDump(location, limit, nsIndex) {
     }
     html += '</tbody></table>';
     return html;
+}
+
+// ===========================================================================
+// Boot Image Designer — Step 1: memory allocation (Task #214)
+// ---------------------------------------------------------------------------
+// Loads/saves a project-level boot config via /api/boot-config. The config is
+// also exposed as window.bootConfig so simulator.js (initSim) can pick up
+// programmer-chosen lump sizes when constructing the boot image.
+// See docs/foundation-lump-design.md §4 for the design rationale.
+// ===========================================================================
+let _hardwareProfiles = null;
+
+function _bdIsPow2(n) { return Number.isInteger(n) && n > 0 && (n & (n - 1)) === 0; }
+
+function _loadBootConfig() {
+    return fetch('/api/boot-config')
+        .then(r => r.json())
+        .then(data => {
+            window.bootConfig = data.config || null;
+            _hardwareProfiles = data.profiles || {};
+            return data;
+        })
+        .catch(err => {
+            console.warn('[bootConfig] fetch failed:', err);
+            return null;
+        });
+}
+
+function openBootDesigner() {
+    const overlay = document.getElementById('bootDesignerOverlay');
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+    document.getElementById('bdStatus').textContent = '';
+    document.getElementById('bdError').textContent = '';
+    _loadBootConfig().then(() => {
+        const sel = document.getElementById('bdTargetBoard');
+        sel.innerHTML = '';
+        const profiles = _hardwareProfiles || {};
+        Object.keys(profiles).forEach(key => {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = profiles[key].label || key;
+            sel.appendChild(opt);
+        });
+        const cfg = window.bootConfig || {};
+        sel.value = cfg.targetBoard || sel.value;
+        const s1 = cfg.step1 || {};
+        document.getElementById('bdTotal').value  = s1.totalNamespaceWords  || 16384;
+        document.getElementById('bdNs').value     = s1.namespaceLumpWords   || 64;
+        document.getElementById('bdThread').value = s1.threadLumpWords      || 256;
+        document.getElementById('bdAbstr').value  = s1.abstractionLumpWords || 256;
+        bdRefreshHwInfo();
+        ['bdTotal','bdNs','bdThread','bdAbstr'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.oninput = _bdValidate;
+        });
+    });
+}
+
+function closeBootDesigner() {
+    const overlay = document.getElementById('bootDesignerOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function bdRefreshHwInfo() {
+    const sel = document.getElementById('bdTargetBoard');
+    const info = document.getElementById('bdHwInfo');
+    if (!sel || !info) return;
+    const p = (_hardwareProfiles || {})[sel.value];
+    if (!p) { info.textContent = 'No hardware profile data.'; return; }
+    info.innerHTML =
+        `<strong>${p.label}</strong><br>` +
+        `Total RAM available for namespace: <strong>${p.totalRamWords} words</strong> ` +
+        `(${(p.totalRamWords*4/1024).toFixed(1)} KB at 32-bit)<br>` +
+        `Address bits: ${p.addressBits}<br>` +
+        `<span style="color:#888;">${p.notes || ''}</span>`;
+    _bdValidate();
+}
+
+function _bdValidate() {
+    const sel = document.getElementById('bdTargetBoard');
+    const p = (_hardwareProfiles || {})[sel.value] || { totalRamWords: 0, label: '?' };
+    const total  = parseInt(document.getElementById('bdTotal').value, 10);
+    const nsLump = parseInt(document.getElementById('bdNs').value, 10);
+    const thrLump = parseInt(document.getElementById('bdThread').value, 10);
+    const absLump = parseInt(document.getElementById('bdAbstr').value, 10);
+    const errEl = document.getElementById('bdError');
+    const sumEl = document.getElementById('bdSummary');
+    const saveBtn = document.getElementById('bdSaveBtn');
+    let err = '';
+    const fields = [['Total namespace memory', total],
+                    ['Namespace Lump', nsLump],
+                    ['Thread Lump', thrLump],
+                    ['Abstraction Lump', absLump]];
+    for (const [name, v] of fields) {
+        if (!Number.isFinite(v) || v <= 0) { err = `${name} must be a positive integer.`; break; }
+        if (!_bdIsPow2(v))                  { err = `${name} must be a power of 2.`; break; }
+        if (v < 64)                         { err = `${name} must be at least 64 words.`; break; }
+    }
+    if (!err && total > p.totalRamWords) {
+        err = `Total namespace memory (${total}) exceeds ${p.label} budget (${p.totalRamWords} words).`;
+    }
+    const sum = (nsLump||0) + (thrLump||0) + (absLump||0);
+    if (!err && sum > total) {
+        err = `Foundational lumps sum to ${sum} words but only ${total} are budgeted.`;
+    }
+    errEl.textContent = err;
+    saveBtn.disabled = !!err;
+    saveBtn.style.opacity = err ? '0.5' : '1';
+    const free = total - sum;
+    sumEl.innerHTML =
+        `Foundational lumps total: <strong>${sum}</strong> words. ` +
+        `Free for resident lumps + reserved slots (Steps 2 & 3): ` +
+        `<strong>${free >= 0 ? free : 0}</strong> words.`;
+    return !err;
+}
+
+function saveBootDesigner() {
+    if (!_bdValidate()) return;
+    const payload = {
+        targetBoard: document.getElementById('bdTargetBoard').value,
+        step1: {
+            totalNamespaceWords:  parseInt(document.getElementById('bdTotal').value, 10),
+            namespaceLumpWords:   parseInt(document.getElementById('bdNs').value, 10),
+            threadLumpWords:      parseInt(document.getElementById('bdThread').value, 10),
+            abstractionLumpWords: parseInt(document.getElementById('bdAbstr').value, 10),
+        }
+    };
+    const status = document.getElementById('bdStatus');
+    const errEl = document.getElementById('bdError');
+    status.textContent = 'Saving…';
+    errEl.textContent = '';
+    fetch('/api/boot-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    })
+        .then(r => r.json().then(j => ({ ok: r.ok, body: j })))
+        .then(({ ok, body }) => {
+            if (!ok || body.ok === false) {
+                status.textContent = '';
+                errEl.textContent = (body && body.error) || 'Save failed.';
+                return;
+            }
+            window.bootConfig = body.config;
+            status.textContent = 'Saved. Reset the simulator to apply the new lump sizes.';
+        })
+        .catch(err => {
+            status.textContent = '';
+            errEl.textContent = 'Save failed: ' + err;
+        });
 }
 
 function updateNamespace() {

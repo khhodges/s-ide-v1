@@ -604,8 +604,14 @@ class ChurchSimulator {
         // Timer: 5 words (TICKS_LO, TICKS_HI, TOD_EPOCH, ALARM_CMP, CTL)   → limit17 = 4
         const DEVICE_REG_LIMITS = { 11: 2, 12: 5, 13: 0, 14: 4 };
 
-        const THREAD_LUMP_SIZE = 256;
-        const BOOT_ABSTR_LUMP_SIZE = 256;
+        // Boot Image Designer Step 1 (Task #214): if a project boot config has
+        // been saved by the IDE, use the programmer-chosen lump sizes. Otherwise
+        // fall back to the historical demo defaults so existing tutorials still
+        // work unchanged. See docs/foundation-lump-design.md §4.
+        const _bcStep1 = (typeof window !== 'undefined' && window.bootConfig
+                          && window.bootConfig.step1) ? window.bootConfig.step1 : null;
+        const THREAD_LUMP_SIZE     = (_bcStep1 && _bcStep1.threadLumpWords)      || 256;
+        const BOOT_ABSTR_LUMP_SIZE = (_bcStep1 && _bcStep1.abstractionLumpWords) || 256;
         const slotSizes = {};
         slotSizes[1] = THREAD_LUMP_SIZE;
         slotSizes[2] = BOOT_ABSTR_LUMP_SIZE;

@@ -413,9 +413,65 @@
             <div class="ns-toolbar">
                 <button class="btn btn-primary btn-sm" onclick="exportAllNamespace()" data-tooltip="Export All — Download all namespace entries as a JSON file">Export All</button>
                 <button class="btn btn-primary btn-sm" onclick="importNamespaceFile()" data-tooltip="Import — Load namespace entries from a JSON or binary file">Import</button>
+                <button class="btn btn-primary btn-sm" onclick="openBootDesigner()" data-tooltip="Boot Image Designer — Programmer-controlled boot image configuration (Step 1: foundational lump sizes)">Boot Image Designer</button>
                 <input type="file" id="nsImportFile" style="display:none;" accept=".json,.bin" onchange="handleNSImport(event)">
             </div>
             <div id="namespaceTable"></div>
+        </div>
+    </div>
+
+    <!-- Boot Image Designer modal (Task #214 — Step 1: memory allocation) -->
+    <div id="bootDesignerOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+        <div style="background:#1e1e1e;color:#ddd;border:1px solid #444;border-radius:6px;width:min(720px,92vw);max-height:90vh;overflow:auto;padding:18px 22px;font-family:inherit;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h2 style="margin:0;font-size:1.1rem;color:#fff;">Boot Image Designer — Step 1 of 3: Memory Allocation</h2>
+                <button onclick="closeBootDesigner()" style="background:transparent;color:#ccc;border:none;font-size:1.4rem;cursor:pointer;">×</button>
+            </div>
+            <div style="font-size:0.85rem;color:#aaa;margin-bottom:14px;">
+                You are designing the boot image. The IDE shows the target board's memory budget;
+                <em>you</em> choose the sizes. See <code>docs/foundation-lump-design.md §4</code>.
+                Steps 2 (resident lumps) and 3 (reserved empty NS slots) come next.
+            </div>
+
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                <label style="min-width:140px;">Target board:</label>
+                <select id="bdTargetBoard" onchange="bdRefreshHwInfo()" style="background:#111;color:#ddd;border:1px solid #555;padding:4px 8px;flex:1;"></select>
+            </div>
+
+            <div id="bdHwInfo" style="background:#111;border:1px solid #333;border-radius:4px;padding:10px 12px;margin-bottom:14px;font-size:0.85rem;color:#cfcfcf;"></div>
+
+            <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                <thead>
+                    <tr style="text-align:left;color:#aaa;border-bottom:1px solid #333;">
+                        <th style="padding:6px 4px;">Field</th>
+                        <th style="padding:6px 4px;width:160px;">Words (power of 2, ≥ 64)</th>
+                        <th style="padding:6px 4px;">Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td style="padding:6px 4px;">Total namespace memory</td>
+                        <td><input type="number" id="bdTotal" min="64" step="1" style="width:140px;background:#111;color:#ddd;border:1px solid #555;padding:3px 6px;"></td>
+                        <td style="color:#888;">Must fit inside the board RAM budget above.</td></tr>
+                    <tr><td style="padding:6px 4px;">Namespace Lump</td>
+                        <td><input type="number" id="bdNs" min="64" step="1" style="width:140px;background:#111;color:#ddd;border:1px solid #555;padding:3px 6px;"></td>
+                        <td style="color:#888;">Anchors NS slot 0; size driven by how many NS entries you'll need.</td></tr>
+                    <tr><td style="padding:6px 4px;">Thread Lump</td>
+                        <td><input type="number" id="bdThread" min="64" step="1" style="width:140px;background:#111;color:#ddd;border:1px solid #555;padding:3px 6px;"></td>
+                        <td style="color:#888;">Initial thread's registers, stack, heap.</td></tr>
+                    <tr><td style="padding:6px 4px;">Abstraction Lump</td>
+                        <td><input type="number" id="bdAbstr" min="64" step="1" style="width:140px;background:#111;color:#ddd;border:1px solid #555;padding:3px 6px;"></td>
+                        <td style="color:#888;">Initial abstraction (code + C-list).</td></tr>
+                </tbody>
+            </table>
+
+            <div id="bdSummary" style="margin-top:12px;font-size:0.85rem;color:#aaa;"></div>
+            <div id="bdError" style="margin-top:8px;font-size:0.85rem;color:#f55;min-height:1.2em;"></div>
+
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
+                <button class="btn btn-sm" onclick="closeBootDesigner()" style="background:#333;color:#ddd;border:1px solid #555;">Cancel</button>
+                <button class="btn btn-primary btn-sm" id="bdSaveBtn" onclick="saveBootDesigner()">Save boot config</button>
+            </div>
+            <div id="bdStatus" style="margin-top:8px;font-size:0.8rem;color:#7c7;min-height:1em;"></div>
         </div>
     </div>
 
