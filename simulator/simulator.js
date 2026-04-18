@@ -85,6 +85,13 @@
 // Offset of the caps zone (CR0-CR11 GT home slots) inside a 256-word thread lump
 const THREAD_CAPS_OFFSET = 244;
 
+// Boot entry indirection constants (Task #229).
+// These must be at module scope so all methods (loadProgram, _bootStep, etc.)
+// can reference them without scoping issues.
+const BOOT_ENTRY_NS_SLOT   = 3;  // NS slot of the real boot execution lump (Boot.Entry)
+const BOOT_ENTRY_CLIST_IDX = 3;  // index in Boot.Abstr director c-list that holds the E-GT
+const DIRECTOR_CC          = 4;  // Boot.Abstr director c-list size (indices 0..3)
+
 class ChurchSimulator {
     constructor() {
         this._listeners = {};
@@ -728,9 +735,7 @@ class ChurchSimulator {
         const THREAD_LUMP_SIZE     = (_bcStep1 && _bcStep1.threadLumpWords)      || 256;
         const BOOT_ABSTR_LUMP_SIZE = (_bcStep1 && _bcStep1.abstractionLumpWords) || 256;
         const NS_LUMP_SIZE         = (_bcStep1 && _bcStep1.namespaceLumpWords)   || this.SLOT_SIZE;
-        const BOOT_ENTRY_NS_SLOT   = 3;   // NS slot holding the real boot execution lump
-        const BOOT_ENTRY_CLIST_IDX = 3;   // index into Boot.Abstr director c-list that holds the E-GT
-        const DIRECTOR_CC          = 4;   // Boot.Abstr director c-list size (indices 0..3)
+        // BOOT_ENTRY_NS_SLOT, BOOT_ENTRY_CLIST_IDX, DIRECTOR_CC — module-level constants
         const slotSizes = {};
         slotSizes[0] = NS_LUMP_SIZE;
         slotSizes[1] = THREAD_LUMP_SIZE;
