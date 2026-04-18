@@ -4222,6 +4222,7 @@ function renderMemoryDump(location, limit, nsIndex) {
 // ===========================================================================
 let _hardwareProfiles = null;
 let _lumpCatalog = [];          // [{abstraction, nsSlot, lumpSize, token}]
+let _bdLimits = { maxNsEntries: 256, baseNamedNsCount: 47 };
 // In-memory mirror of the Step 2 lump grid while the modal is open.
 // Keyed by nsSlot → {resident, physAddr, lumpSize, abstraction}.
 let _bdStep2State = {};
@@ -4238,6 +4239,7 @@ function _loadBootConfig() {
             window.bootConfig = (data && data.config) || null;
             _hardwareProfiles = (data && data.profiles) || {};
             _lumpCatalog      = (data && data.lumpCatalog) || [];
+            if (data && data.limits) _bdLimits = data.limits;
             return data;
         })
         .catch(err => {
@@ -4458,23 +4460,23 @@ function _bdValidate() {
             occ.push({start: st.physAddr, end: st.physAddr + sz, label: lbl});
         }
     }
-    // Step 3 — validate empty NS slot reservation count.
-    const MAX_NS_ENTRIES = 256; // keep in sync with simulator NS_TABLE_RESERVE/3
+    // Step 3 — validate empty NS slot reservation count. Capacity rule
+    // matches the server (_validate_step3): the simulator unconditionally
+    // writes baseNamedNsCount entries from the default abstraction
+    // catalog at boot, so Step 3 reserves slots ON TOP of that baseline.
+    const maxNs = _bdLimits.maxNsEntries || 256;
+    const baseNs = _bdLimits.baseNamedNsCount || 47;
     const emptyEl = document.getElementById('bdEmptySlots');
     const emptyCount = emptyEl ? parseInt(emptyEl.value, 10) : 0;
     if (!err && (!Number.isFinite(emptyCount) || emptyCount < 0)) {
         err = 'Empty NS slot count must be a non-negative integer.';
     }
     if (!err) {
-        // Determine highest named NS slot in use (foundational + device + Step 2 catalog).
-        const used = new Set([0,1,2,11,12,13,14,15]);
-        for (const slotStr of Object.keys(_bdStep2State)) used.add(parseInt(slotStr, 10));
-        let highest = -1;
-        used.forEach(v => { if (v > highest) highest = v; });
-        const need = highest + 1 + emptyCount;
-        if (need > MAX_NS_ENTRIES) {
-            err = `Reserving ${emptyCount} empty NS slots after the ${highest+1} named ` +
-                  `slots would need ${need} entries but the NS table only holds ${MAX_NS_ENTRIES}.`;
+        const need = baseNs + emptyCount;
+        if (need > maxNs) {
+            err = `Reserving ${emptyCount} empty NS slots after the ${baseNs} ` +
+                  `named slots written at boot would need ${need} entries but ` +
+                  `the NS table only holds ${maxNs}. Max reservable: ${maxNs - baseNs}.`;
         }
     }
     errEl.textContent = err;

@@ -218,6 +218,14 @@ DEFAULT_BOOT_CONFIG = {
 # Hard ceiling on how many entries fit in the NS table (matches simulator
 # NS_TABLE_RESERVE / NS_ENTRY_WORDS = 0x300 / 3 = 256).
 MAX_NS_ENTRIES = 256
+# How many named NS entries the simulator's default abstraction catalog
+# writes during _initNamespaceTable() (Boot.NS, Boot.Thread, Boot.Abstr,
+# Salvation, …, Circle — slots 0..46). This is the baseline that Step 3
+# empty-slot reservation must fit on top of, NOT just the foundational +
+# device + Step 2 catalog slots — the simulator writes the whole default
+# abstraction catalog regardless of what's in Step 2. Keep in sync with
+# simulator.js _getAbstractionCatalog() default list length.
+BASE_NAMED_NS_COUNT = 47
 
 # Slots reserved for foundational lumps (Step 1) and device MMIO regions —
 # the programmer cannot place an additional resident lump body here. Slots
@@ -335,20 +343,15 @@ def _validate_step3(step3, step1, step2):
     n = step3.get("emptySlotCount", 0)
     if not isinstance(n, int) or n < 0:
         return "step3.emptySlotCount must be a non-negative integer"
-    # Compute the highest slot index in use (foundational + device MMIO +
-    # Step 2 catalog entries that the programmer included). Empty slots
-    # are appended after the highest, so the upper bound is one past it.
-    used = set(RESERVED_NS_SLOTS)
-    if step2 and isinstance(step2, dict):
-        for e in (step2.get("lumps") or []):
-            if isinstance(e, dict) and isinstance(e.get("nsSlot"), int):
-                used.add(e["nsSlot"])
-    highest = (max(used) if used else -1)
-    end = highest + 1 + n
+    # The simulator's _initNamespaceTable() writes BASE_NAMED_NS_COUNT named
+    # entries from the default abstraction catalog regardless of what Step 2
+    # contains. Step 3 reserves additional empty entries on top of that
+    # baseline, so the cap is BASE_NAMED_NS_COUNT + n <= MAX_NS_ENTRIES.
+    end = BASE_NAMED_NS_COUNT + n
     if end > MAX_NS_ENTRIES:
-        return (f"step3.emptySlotCount ({n}) plus the {highest+1} named NS "
-                f"slots would need {end} entries but the NS table only holds "
-                f"{MAX_NS_ENTRIES}")
+        return (f"step3.emptySlotCount ({n}) plus the {BASE_NAMED_NS_COUNT} "
+                f"named NS slots written at boot would need {end} entries "
+                f"but the NS table only holds {MAX_NS_ENTRIES}")
     return None
 
 def _is_pow2(n):
@@ -430,6 +433,10 @@ def boot_config_get():
         "defaults": DEFAULT_BOOT_CONFIG,
         "profiles": HARDWARE_PROFILES,
         "lumpCatalog": _load_lump_catalog(),
+        "limits": {
+            "maxNsEntries": MAX_NS_ENTRIES,
+            "baseNamedNsCount": BASE_NAMED_NS_COUNT,
+        },
     })
 
 @app.route("/api/boot-config", methods=["POST"])

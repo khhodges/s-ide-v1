@@ -738,7 +738,18 @@ class ChurchSimulator {
         if (emptyCount > 0) {
             const startIdx = this.nsCount;
             const maxEntries = (this.NS_TABLE_RESERVE / this.NS_ENTRY_WORDS) | 0;
-            const endIdx = Math.min(startIdx + emptyCount, maxEntries);
+            const endIdx = startIdx + emptyCount;
+            if (endIdx > maxEntries) {
+                // Validation in the IDE/server prevents this; if we reach
+                // here the boot config was hand-edited or out of sync.
+                // Fail loudly rather than silently under-applying — the
+                // lazy loader expects the configured number of slots.
+                throw new Error(
+                    `Boot config step3.emptySlotCount=${emptyCount} would push ` +
+                    `nsCount from ${startIdx} to ${endIdx}, exceeding the NS ` +
+                    `table capacity (${maxEntries}). Reduce the count or ` +
+                    `enlarge the namespace table.`);
+            }
             for (let idx = startIdx; idx < endIdx; idx++) {
                 const base = this.NS_TABLE_BASE + idx * this.NS_ENTRY_WORDS;
                 this.memory[base + 0] = 0;
