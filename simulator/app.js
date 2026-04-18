@@ -922,15 +922,16 @@ function updateLedStrip() {
     const descEl      = document.getElementById('ledDR0Desc');
     const indexChipEl = document.getElementById('ledIndexDisplay');
     if (readoutEl && badgeEl && descEl && indexChipEl) {
-        const dr0 = sim.lastLedDR0;
-        if (dr0 === null || dr0 === undefined) {
+        const sr = sim.lastSignedReturn;
+        if (!sr || sr.absIndex !== 12) {
             readoutEl.style.display = 'none';
         } else {
             readoutEl.style.display = 'flex';
-            const idx = sim.lastLedIndex;
+            const idx = sr.ledIndex;
+            const dr0 = sr.dr0;
             indexChipEl.textContent = idx !== null && idx !== undefined ? `LED ${idx}` : 'LED ?';
             badgeEl.textContent = String(dr0);
-            badgeEl.className = 'led-dr0-badge ' + (dr0 > 0 ? 'led-dr0-green' : dr0 < 0 ? 'led-dr0-red' : 'led-dr0-grey');
+            badgeEl.className = 'dr0-badge ' + (dr0 > 0 ? 'dr0-badge-green' : dr0 < 0 ? 'dr0-badge-red' : 'dr0-badge-grey');
             if (dr0 > 0)      descEl.textContent = dr0 === 1 ? '(on / success)' : '(success)';
             else if (dr0 === 0) descEl.textContent = '(off)';
             else               descEl.textContent = dr0 === -1 ? '(invalid offset)' : '(fault)';
@@ -958,7 +959,7 @@ function updateDashboard() {
     updateGateLog();
     if (selectedCR !== null) updateCRDetail();
     if (pipelineViz && !pipelineViz.animating) pipelineViz.render();
-    _refreshLedAbsReadout();
+    _refreshSignedReturnReadout();
 }
 
 function updateGateLog() {
@@ -7286,34 +7287,52 @@ function _nsBuild() {
     });
 }
 
-function _buildLedLiveHtml() {
-    const _dr0 = sim ? sim.lastLedDR0 : null;
-    const _idx = sim ? sim.lastLedIndex : null;
-    if (_dr0 === null || _dr0 === undefined) {
-        return '<div class="abs-note-text" id="absLedLiveBody">No LED CALL has been executed yet. ' +
-            'Step through a program that calls <code>LED.Set</code>, <code>LED.Clear</code>, <code>LED.Toggle</code>, or <code>LED.State</code> ' +
-            'and the signed DR0 result will appear here.</div>';
+function _signedReturnDesc(dr0, absIndex) {
+    if (absIndex === 12) {
+        if (dr0 > 0)        return dr0 === 1 ? 'on / success' : 'success';
+        if (dr0 === 0)      return 'off';
+        return dr0 === -1 ? 'invalid offset' : 'fault';
     }
-    const _badgeClass = _dr0 > 0 ? 'led-dr0-green' : (_dr0 < 0 ? 'led-dr0-red' : 'led-dr0-grey');
-    let _desc;
-    if (_dr0 > 0)        _desc = _dr0 === 1 ? 'on / success' : 'success';
-    else if (_dr0 === 0) _desc = 'off';
-    else                 _desc = _dr0 === -1 ? 'invalid offset' : 'fault';
-    const _idxText = _idx !== null && _idx !== undefined ? `LED ${_idx}` : 'LED ?';
-    return `<div class="abs-led-last-return" id="absLedLiveBody">` +
-        `<span class="led-index-chip">${_idxText}</span>` +
-        `<span style="color:var(--text-secondary);font-size:0.8rem;">Last return:</span> ` +
-        `<span class="led-dr0-badge ${_badgeClass}" style="font-size:0.85rem;padding:2px 8px;">${_dr0}</span>` +
-        `<span class="led-dr0-desc" style="margin-left:6px;">(${_desc})</span>` +
+    if (dr0 > 0)            return 'success';
+    if (dr0 === 0)          return 'zero';
+    return 'fault';
+}
+
+function _buildSignedReturnHtml(absIndex) {
+    const sr = sim ? sim.lastSignedReturn : null;
+    if (!sr || sr.absIndex !== absIndex || sr.dr0 === 0) {
+        return '';
+    }
+    const _dr0 = sr.dr0;
+    const _badgeClass = _dr0 > 0 ? 'dr0-badge-green' : (_dr0 < 0 ? 'dr0-badge-red' : 'dr0-badge-grey');
+    const _desc = _signedReturnDesc(_dr0, absIndex);
+    const _chipText = (absIndex === 12)
+        ? (sr.ledIndex !== null && sr.ledIndex !== undefined ? `LED ${sr.ledIndex}` : 'LED ?')
+        : sr.methodName;
+    const _chipClass = (absIndex === 12) ? 'signed-return-chip signed-return-chip-led' : 'signed-return-chip';
+    return `<div class="abs-detail-label">Last return</div>` +
+        `<div class="abs-signed-return" id="absSignedReturnBody">` +
+        `<span class="${_chipClass}">${_chipText}</span>` +
+        `<span style="color:var(--text-secondary);font-size:0.8rem;">DR0:</span> ` +
+        `<span class="dr0-badge ${_badgeClass}" style="font-size:0.85rem;padding:2px 8px;">${_dr0}</span>` +
+        `<span class="dr0-badge-desc" style="margin-left:6px;">(${_desc})</span>` +
         `</div>` +
         `<div class="abs-note-text" style="margin-top:6px;">DR0 carries the signed result for one instruction cycle after the CALL. ` +
         `Use <code>BGE</code> (branch if &ge; 0, success) or <code>BLT</code> (branch if &lt; 0, fault) immediately after the CALL to act on the result.</div>`;
 }
 
-function _refreshLedAbsReadout() {
-    const section = document.getElementById('absLedLiveSection');
+function _refreshSignedReturnReadout() {
+    const section = document.getElementById('absSignedReturnSection');
     if (!section) return;
-    section.innerHTML = '<div class="abs-detail-label">Live DR0 Readout</div>' + _buildLedLiveHtml();
+    const absIdx = (typeof selectedAbsIndex === 'number') ? selectedAbsIndex : -1;
+    const html = _buildSignedReturnHtml(absIdx);
+    if (!html) {
+        section.style.display = 'none';
+        section.innerHTML = '';
+    } else {
+        section.style.display = '';
+        section.innerHTML = html;
+    }
 }
 
 function showAbstractionDetail(index) {
@@ -7504,10 +7523,11 @@ function showAbstractionDetail(index) {
         html += '</div>';
     }
 
-    if (abs.name === 'LED') {
-        html += '<div class="abs-detail-section abs-led-live-section" id="absLedLiveSection">';
-        html += '<div class="abs-detail-label">Live DR0 Readout</div>';
-        html += _buildLedLiveHtml();
+    {
+        const _srHtml = _buildSignedReturnHtml(abs.index);
+        const _srStyle = _srHtml ? '' : ' style="display:none;"';
+        html += `<div class="abs-detail-section abs-signed-return-section" id="absSignedReturnSection"${_srStyle}>`;
+        html += _srHtml;
         html += '</div>';
     }
 

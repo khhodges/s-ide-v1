@@ -1698,7 +1698,7 @@ header h1 {
     white-space: nowrap;
 }
 
-.led-dr0-badge {
+.dr0-badge {
     display: inline-block;
     border-radius: 4px;
     padding: 1px 7px;
@@ -1708,34 +1708,51 @@ header h1 {
     white-space: nowrap;
 }
 
-.led-dr0-green {
+.dr0-badge-green {
     background: rgba(74, 222, 128, 0.15);
     color: var(--church-green);
     border: 1px solid rgba(74, 222, 128, 0.35);
 }
 
-.led-dr0-grey {
+.dr0-badge-grey {
     background: rgba(160, 160, 160, 0.12);
     color: var(--text-secondary);
     border: 1px solid rgba(160, 160, 160, 0.25);
 }
 
-.led-dr0-red {
+.dr0-badge-red {
     background: rgba(248, 113, 113, 0.15);
     color: var(--error);
     border: 1px solid rgba(248, 113, 113, 0.35);
 }
 
-.led-dr0-desc {
+.dr0-badge-desc {
     color: var(--text-secondary);
     font-size: 0.73rem;
 }
 
-.abs-led-live-section {
+.abs-signed-return-section {
     border-left: 3px solid var(--church-blue);
 }
 
-.abs-led-last-return {
+.signed-return-chip {
+    background: #2a2235;
+    color: var(--church-purple, #c084fc);
+    border: 1px solid #4a3b5a;
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 0.72rem;
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+.signed-return-chip-led {
+    background: #1b2d45;
+    color: var(--church-blue);
+    border-color: #2d4a6a;
+}
+
+.abs-signed-return {
     display: flex;
     align-items: center;
     gap: 8px;

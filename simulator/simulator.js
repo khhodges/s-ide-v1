@@ -432,9 +432,11 @@ class ChurchSimulator {
         }
 
         this.dr = new Array(16).fill(0);
-        this._preserveDR0 = false;  // set by device CALL paths that return signed DR0
-        this.lastLedDR0 = null;     // signed DR0 from the most-recent LED CALL (null = none yet)
-        this.lastLedIndex = null;   // LED index dispatched in that CALL
+        this._preserveDR0 = false;  // set by CALL paths that return signed DR0
+        // Generalised signed-return readout: tracks the most recent CALL that adopted
+        // the _preserveDR0 convention. Shape: {absIndex, methodName, dr0, ledIndex?}.
+        // null = no signed-return CALL has executed yet.
+        this.lastSignedReturn = null;
 
         this.pc = 0;
         this.physicalPC = 0;
@@ -483,6 +485,29 @@ class ChurchSimulator {
         this.emit('stateChange', this.getState());
     }
 
+    /**
+     * Centralised signed-return capture. Any CALL path that adopts the
+     * `_preserveDR0` convention (currently LED.Set/Clear/Toggle/State and the
+     * LED driver handler; future SlideRule error paths, IntegerOps Clamp/Abs,
+     * etc.) must funnel through this helper. It writes DR0, sets
+     * `_preserveDR0 = true` so step() skips the zero-register wipe for one
+     * cycle, and records `lastSignedReturn` for the live readout in the
+     * Abstractions detail panel.
+     *
+     * @param {number} absIndex   Namespace index of the dispatched abstraction.
+     * @param {string} methodName Method name dispatched.
+     * @param {number} signed     Signed result to write to DR0.
+     * @param {Object|null} extras Optional metadata (e.g. {ledIndex}).
+     */
+    _recordSignedReturn(absIndex, methodName, signed, extras) {
+        this.dr[0] = signed;
+        this._preserveDR0 = true;
+        this.lastSignedReturn = Object.assign(
+            { absIndex: absIndex, methodName: methodName, dr0: signed },
+            extras || {}
+        );
+    }
+
     _returnToBoot() {
         for (let i = 0; i < 16; i++) {
             this._clearCR(i);
@@ -503,8 +528,7 @@ class ChurchSimulator {
         this.bootStep = 0;
         this.ledBits = 0;
         this.ledMode = 'boot';
-        this.lastLedDR0 = null;
-        this.lastLedIndex = null;
+        this.lastSignedReturn = null;
         this.output += '[PP250] Machine state cleared. Re-entering boot sequence.\n';
         this.emit('stateChange', this.getState());
     }
@@ -2547,14 +2571,14 @@ class ChurchSimulator {
                 this.output += `  ${result.message}\n`;
             }
             if (result && result.result !== undefined && typeof result.result === 'number') {
-                if (check.index === LED_ABS_IDX) {
-                    // LED signed-return convention: result goes to DR0 (zero register bypassed
+                if (result.preserveDR0) {
+                    // Signed-return convention: result goes to DR0 (zero register bypassed
                     // for one instruction so caller can branch on DR0's sign via BGE/BLT).
-                    this.dr[0] = result.result;
-                    this._preserveDR0 = true;
-                    this.lastLedDR0 = result.result;
-                    this.lastLedIndex = ledIndex;
-                    this.output += `DR0 = ${result.result}  [LED.${methodName} index=${ledIndex}]\n`;
+                    // Generic: any abstraction method may opt in by returning preserveDR0:true.
+                    const extras = (check.index === LED_ABS_IDX) ? { ledIndex } : null;
+                    this._recordSignedReturn(check.index, methodName, result.result, extras);
+                    const tag = (check.index === LED_ABS_IDX) ? ` index=${ledIndex}` : '';
+                    this.output += `DR0 = ${result.result}  [${label}.${methodName}${tag}]\n`;
                 } else if (encodedDstReg !== null) {
                     this.dr[encodedDstReg] = result.result;
                 } else {
@@ -2640,10 +2664,8 @@ class ChurchSimulator {
                     const _ledMethodName = _ledMethodNames[_ledMethodSel <= 3 ? _ledMethodSel : 0] || 'Set';
                     const _ledOffsetDisp = dr1 & 0x3F;
                     if (result && result.result !== undefined && typeof result.result === 'number') {
-                        this.dr[0] = result.result;
-                        this._preserveDR0 = true;
-                        this.lastLedDR0 = result.result;
-                        this.lastLedIndex = _ledOffsetDisp;
+                        // Generic signed-return capture (LED driver path always uses the convention).
+                        this._recordSignedReturn(12, _ledMethodName, result.result, { ledIndex: _ledOffsetDisp });
                         this.output += `DR0 = ${result.result}  [LED.${_ledMethodName} index=${_ledOffsetDisp}]\n`;
                     }
                     if (result && !result.ok && result.fault) {
@@ -3634,7 +3656,7 @@ class ChurchSimulator {
         this.bootComplete = false;
         this.mElevation = false;
         this.bootStep = 0;
-        this.ledBits = 0; this.ledMode = 'boot'; this.lastLedDR0 = null; this.lastLedIndex = null;
+        this.ledBits = 0; this.ledMode = 'boot'; this.lastSignedReturn = null;
         this.faultLog = [];
         this._instrHistory = [];
         this.stepCount = 0;
@@ -3739,7 +3761,7 @@ class ChurchSimulator {
         this.bootComplete = false;
         this.mElevation = false;
         this.bootStep = 0;
-        this.ledBits = 0; this.ledMode = 'boot'; this.lastLedDR0 = null; this.lastLedIndex = null;
+        this.ledBits = 0; this.ledMode = 'boot'; this.lastSignedReturn = null;
         this.faultLog = [];
         this._instrHistory = [];
         this.stepCount = 0;
