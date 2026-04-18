@@ -247,26 +247,33 @@ def _validate_step1(target_board, step1):
 
 @app.route("/api/boot-config", methods=["GET"])
 def boot_config_get():
+    # Returns the persisted project boot config, or `null` when none exists.
+    # When `config` is null the simulator MUST keep its historical defaults
+    # (65536-word memory, 64/256/256 lump sizes) — the IDE only changes the
+    # boot image when the programmer has explicitly saved a config. The
+    # `defaults` field carries form values to prefill the modal so the
+    # programmer has a sensible starting point to edit.
     path = None
     if os.path.isfile(BOOT_CONFIG_PATH):
         path = BOOT_CONFIG_PATH
     elif os.path.isfile(BOOT_CONFIG_LEGACY_PATH):
         path = BOOT_CONFIG_LEGACY_PATH
+    cfg = None
     if path is not None:
         try:
             with open(path, "r") as f:
                 cfg = json.load(f)
         except Exception as e:
             return jsonify({"error": f"Failed to read boot-config.json: {e}"}), 500
-        # Defensive: if a hand-edited config is structurally invalid, fall
-        # back to defaults rather than ship garbage to the client.
         s1 = cfg.get("step1") if isinstance(cfg, dict) else None
         if (not isinstance(cfg, dict)
             or _validate_step1(cfg.get("targetBoard"), s1 or {}) is not None):
-            cfg = DEFAULT_BOOT_CONFIG
-    else:
-        cfg = DEFAULT_BOOT_CONFIG
-    return jsonify({"config": cfg, "profiles": HARDWARE_PROFILES})
+            cfg = None  # corrupt/stale file — fall through to "no config"
+    return jsonify({
+        "config": cfg,
+        "defaults": DEFAULT_BOOT_CONFIG,
+        "profiles": HARDWARE_PROFILES,
+    })
 
 @app.route("/api/boot-config", methods=["POST"])
 def boot_config_post():

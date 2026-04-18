@@ -295,15 +295,12 @@ function init() {
     systemAbstractions = new SystemAbstractions(abstractionRegistry);
     deviceAbstractions = new DeviceAbstractions(abstractionRegistry);
     sim.initAbstractions(abstractionRegistry, systemAbstractions, deviceAbstractions);
+    // window.bootConfig was prefetched by the DOMContentLoaded handler before
+    // init() ran (Task #214 Step 1), so this single reset already uses the
+    // programmer-chosen lump sizes when present, and historical defaults
+    // otherwise. No re-reset is needed — that previously caused a race with
+    // loadNamespaceState() that could wipe restored state.
     sim.reset();
-    // Boot Image Designer Step 1 (Task #214): fetch the project boot config in
-    // the background. If it differs from the defaults the simulator just used,
-    // re-reset to apply the programmer-chosen lump sizes. Errors are non-fatal.
-    _loadBootConfig().then(() => {
-        if (window.bootConfig && window.bootConfig.step1) {
-            try { sim.reset(); } catch (e) { console.warn('[bootConfig] re-reset failed:', e); }
-        }
-    });
     _initLazyLoadManifest();
     _absMethodsLoad();
     _implStatusLoad();
@@ -4227,12 +4224,15 @@ let _hardwareProfiles = null;
 
 function _bdIsPow2(n) { return Number.isInteger(n) && n > 0 && (n & (n - 1)) === 0; }
 
+// Used by the modal to refresh state. The DOMContentLoaded handler
+// performs the *initial* prefetch so window.bootConfig is set before
+// the simulator boots; this function just refreshes from the server.
 function _loadBootConfig() {
     return fetch('/api/boot-config')
         .then(r => r.json())
         .then(data => {
-            window.bootConfig = data.config || null;
-            _hardwareProfiles = data.profiles || {};
+            window.bootConfig = (data && data.config) || null;
+            _hardwareProfiles = (data && data.profiles) || {};
             return data;
         })
         .catch(err => {
@@ -4247,7 +4247,7 @@ function openBootDesigner() {
     overlay.style.display = 'flex';
     document.getElementById('bdStatus').textContent = '';
     document.getElementById('bdError').textContent = '';
-    _loadBootConfig().then(() => {
+    _loadBootConfig().then(data => {
         const sel = document.getElementById('bdTargetBoard');
         sel.innerHTML = '';
         const profiles = _hardwareProfiles || {};
@@ -4257,7 +4257,9 @@ function openBootDesigner() {
             opt.textContent = profiles[key].label || key;
             sel.appendChild(opt);
         });
-        const cfg = window.bootConfig || {};
+        // Prefill from saved config when present, otherwise from server
+        // defaults so the programmer has a reasonable starting point.
+        const cfg = window.bootConfig || (data && data.defaults) || {};
         sel.value = cfg.targetBoard || sel.value;
         const s1 = cfg.step1 || {};
         document.getElementById('bdTotal').value  = s1.totalNamespaceWords  || 16384;
@@ -20514,11 +20516,27 @@ window.addEventListener('pagehide', () => { if (activeUserTabId && userTabDirty)
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
-    init();
-    initAllTabOverflows();
-    adjustViewTop();
-    initCodeCopyButtons();
-    updateFPGAStatusBtn();
+    // Boot Image Designer Step 1 (Task #214): if the project has a saved
+    // boot config, prefetch it BEFORE init() so the simulator's first reset
+    // already sees the programmer-chosen lump sizes. When no config exists
+    // the server returns config:null and the simulator keeps its historical
+    // 65536/64/256/256 defaults — this avoids both (a) silently changing
+    // memory size on no-config startup and (b) a re-reset race that would
+    // wipe restored namespace state.
+    const _bootCfgReady = fetch('/api/boot-config')
+        .then(r => r.json())
+        .then(data => {
+            _hardwareProfiles = (data && data.profiles) || {};
+            window.bootConfig = (data && data.config) || null;
+        })
+        .catch(err => { console.warn('[bootConfig] prefetch failed:', err); });
+    _bootCfgReady.finally(() => {
+        init();
+        initAllTabOverflows();
+        adjustViewTop();
+        initCodeCopyButtons();
+        updateFPGAStatusBtn();
+    });
 });
 
 function addCopyButton(pre) {
