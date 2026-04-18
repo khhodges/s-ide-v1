@@ -334,10 +334,10 @@ def generate_boot_image(cfg, lumps_dir):
     for off, (ns_idx, perms) in enumerate(hw_slots):
         clist_gts[8 + off] = create_gt(0, ns_idx, perms, 1)
 
-    # c-list[3]: E-GT to Boot.Entry (NS slot 3) — the boot indirection pointer.
-    # This value goes into both Boot.Abstr director c-list[3] (pointer B:04 follows)
-    # and Boot.Entry's own c-list[3] (a self-reference). Same slot = same GT word.
-    clist_gts[3] = create_gt(0, BOOT_ENTRY_NS_SLOT, {"E":1}, 1)
+    # c-list[BOOT_ENTRY_CLIST_IDX]: E-GT to Boot.Entry — the boot indirection pointer.
+    # Goes into both Boot.Abstr director c-list[BOOT_ENTRY_CLIST_IDX] (B:04 follows it)
+    # and Boot.Entry's own c-list[BOOT_ENTRY_CLIST_IDX] (a self-reference).
+    clist_gts[BOOT_ENTRY_CLIST_IDX] = create_gt(0, BOOT_ENTRY_NS_SLOT, {"E":1}, 1)
 
     # Memory-manager GT at c-list[0]: R|W capability over NS slot 0 (full namespace).
     mem_mgr_gt = create_gt(0, 0, {"R":1, "W":1}, 1)

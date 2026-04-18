@@ -862,7 +862,7 @@ class ChurchSimulator {
         // c-list[3] → E-GT to Boot.Entry (NS slot 3): the boot indirection pointer.
         // This value lands in both Boot.Abstr director's c-list[3] (the pointer B:04 follows)
         // and Boot.Entry's own c-list[3] (a self-reference, matching the prior Boot.Abstr pattern).
-        clistGTs[3] = this.createGT(0, BOOT_ENTRY_NS_SLOT, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
+        clistGTs[BOOT_ENTRY_CLIST_IDX] = this.createGT(0, BOOT_ENTRY_NS_SLOT, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
 
         const NUC_CODE_WORDS    = 17;
         const DEMO_CLIST_SIZE   = 17;
@@ -1047,7 +1047,7 @@ class ChurchSimulator {
                 // boot execution lump (default: NS slot 3 = Boot.Entry), then mLoads
                 // it exactly as the CALL microcode would. CR14 and CR6 are derived from
                 // the target lump's header — not from slot 2.
-                const LOAD_NUC_CLIST_IDX = 3;                                       // index into director c-list that holds the boot entry E-GT
+                const LOAD_NUC_CLIST_IDX = BOOT_ENTRY_CLIST_IDX;                   // index into director c-list that holds the boot entry E-GT
                 const dirBase    = abstrEntry.word0_location;                       // physical base of Boot.Abstr director lump
                 const dirHdrWord = this.memory[dirBase] >>> 0;                      // director lump header word
                 const dirHdr     = this.parseLumpHeader(dirHdrWord);               // decode {magic, cc, cw, lumpSize, valid}
