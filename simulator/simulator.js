@@ -653,7 +653,7 @@ class ChurchSimulator {
             { label: 'Boot.NS',      perms: {R:0,W:0,X:0,L:0,S:0,E:0}, chainable: false },
             { label: 'Boot.Thread',   perms: {R:0,W:0,X:0,L:0,S:0,E:0}, chainable: false },
             { label: 'Boot.Abstr',    perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: '(empty)',       perms: {R:0,W:0,X:0,L:0,S:0,E:0}, chainable: false },
+            { label: 'Boot.Entry',    perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'Salvation',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'Navana',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'Mint',          perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
@@ -728,10 +728,14 @@ class ChurchSimulator {
         const THREAD_LUMP_SIZE     = (_bcStep1 && _bcStep1.threadLumpWords)      || 256;
         const BOOT_ABSTR_LUMP_SIZE = (_bcStep1 && _bcStep1.abstractionLumpWords) || 256;
         const NS_LUMP_SIZE         = (_bcStep1 && _bcStep1.namespaceLumpWords)   || this.SLOT_SIZE;
+        const BOOT_ENTRY_NS_SLOT   = 3;   // NS slot holding the real boot execution lump
+        const BOOT_ENTRY_CLIST_IDX = 3;   // index into Boot.Abstr director c-list that holds the E-GT
+        const DIRECTOR_CC          = 4;   // Boot.Abstr director c-list size (indices 0..3)
         const slotSizes = {};
         slotSizes[0] = NS_LUMP_SIZE;
         slotSizes[1] = THREAD_LUMP_SIZE;
-        slotSizes[2] = BOOT_ABSTR_LUMP_SIZE;
+        slotSizes[2] = this.SLOT_SIZE;               // Boot.Abstr director: always 64 words (minimum)
+        slotSizes[BOOT_ENTRY_NS_SLOT] = BOOT_ABSTR_LUMP_SIZE;  // Boot.Entry: abstractionLumpWords
 
         // Boot Image Designer Step 2 (Task #215): per-slot physAddr overrides
         // for programmer-declared resident lumps. NS entries for those slots
@@ -753,21 +757,6 @@ class ChurchSimulator {
         let runningOffset = 0;
         for (let i = 0; i < abstractions.length; i++) {
             const a = abstractions[i];
-            if (i === 3) {
-                // Math.Add — Outform slot: lump is absent and will be fetched on demand.
-                // Token (word0) is the 32-bit key sent to GET /api/lump/<token_hex>.
-                // gtType=2 (Outform), F-bit=1 (Far/remote), clistCount=1.
-                // writeNSEntry computes a valid MAC from (token, limit17=0) so
-                // validateMAC would technically pass, but the Outform intercept in
-                // _execLoad fires before the MAC check — this is intentional.
-                const MATH_ADD_TOKEN = 0xDEAD0003;
-                this.writeNSEntry(i, MATH_ADD_TOKEN, 0, 0, 1 /*fFlag*/, 0, 0, 2 /*gtType=Outform*/, 0, 1 /*clistCount=1*/);
-                this.nsLabels[i] = 'Math.Add';
-                const gtWord = this.createGT(0, i, {R:0, W:0, X:0, L:0, S:0, E:1}, 1);
-                clistGTs.push(gtWord);
-                clistChildren.push(i);
-                continue;
-            }
             // Step 2 physAddr override (if any) replaces the runningOffset
             // location for this slot, but does not advance runningOffset —
             // resident lumps are placed in the usable region (after the
@@ -865,49 +854,60 @@ class ChurchSimulator {
             const d = HW_DEVICE_SLOTS[i];
             clistGTs[8 + i] = this.createGT(0, d.nsIdx, d.perms, 1);
         }
-        clistGTs[3] = this.createGT(0, 16, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
+        // c-list[3] → E-GT to Boot.Entry (NS slot 3): the boot indirection pointer.
+        // This value lands in both Boot.Abstr director's c-list[3] (the pointer B:04 follows)
+        // and Boot.Entry's own c-list[3] (a self-reference, matching the prior Boot.Abstr pattern).
+        clistGTs[3] = this.createGT(0, BOOT_ENTRY_NS_SLOT, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
 
-        // Slot 2 (Boot.Abstr) lump layout — with lump header at word 0:
-        //   Word  0:       Lump header (magic=0x1F, n_minus_6=2→lumpSize=256, cw=17, typ=0, cc=17)
-        //   Words 1–17:   Code region  (NUC_CODE_WORDS = 17 instructions; loaded by loadProgram)
-        //   Words 18–238: Freespace    (221 words, available for code growth via Patch)
-        //   Words 239–255:C-list       (17 GT words, at physical end; slots 8–13=LED[0-5], 14=UART, 15=BTN, 16=TIMER)
-        //   Physical backing: BOOT_ABSTR_LUMP_SIZE = 256 words (n_minus_6=2 → 2^8 = 256)
-        //   → CR14: base=lump_start, limit=cw-1=16  (code region; cload reads cw from lump header)
-        //   → CR6:  base=lump_start+239, limit=cc-1=16  (c-list at physical end)
         const NUC_CODE_WORDS    = 17;
         const DEMO_CLIST_SIZE   = 17;
-        const bootAbstrLoc      = this.memory[this.NS_TABLE_BASE + 2 * this.NS_ENTRY_WORDS];
-        // Derive n_minus_6 from the configured Boot.Abstr lump size so the
-        // header tracks programmer-chosen sizes (was hardcoded to 2).
-        const N_MINUS_6         = Math.max(0, Math.ceil(Math.log2(BOOT_ABSTR_LUMP_SIZE)) - 6);
-        const lumpSize          = BOOT_ABSTR_LUMP_SIZE;
         // Truncate to hardware DEMO_CLIST size — entries beyond idx 16 are simulator-only abstractions
         // not present in the boot c-list on real hardware.
         clistGTs.length         = DEMO_CLIST_SIZE;
-        const bootClistCount    = DEMO_CLIST_SIZE;
-        const clistStart        = lumpSize - bootClistCount;  // = 239 (c-list at physical end)
 
-        // Word 0: lump header — hardware reads this to simultaneously derive CR14 and CR6
-        this.memory[bootAbstrLoc] = this.packLumpHeader(N_MINUS_6, NUC_CODE_WORDS, bootClistCount, 0);
+        // Memory-manager GT at c-list[0]: covers full namespace memory (NS slot 0).
+        // Written to both Boot.Abstr director and Boot.Entry c-lists.
+        const memMgrGT = this.createGT(0, 0, {R:1, W:1, X:0, L:0, S:0, E:0}, 1);
 
-        // C-list at physical end (words 239–255); words 1–17 filled by loadProgram
-        for (let i = 0; i < bootClistCount; i++) {
-            this.memory[bootAbstrLoc + clistStart + i] = clistGTs[i];
+        // ── Boot.Abstr director (NS Slot 2) ──────────────────────────────────────
+        // Thin "boot director" shim: lumpSize=SLOT_SIZE=64, cw=0 (no code),
+        // cc=DIRECTOR_CC=4 (c-list indices 0–3 only). B:04 LOAD_NUC reads
+        // c-list[BOOT_ENTRY_CLIST_IDX=3] to follow the E-GT to Boot.Entry.
+        const dirLumpSize   = this.SLOT_SIZE;                        // 64 words
+        const dirClistStart = dirLumpSize - DIRECTOR_CC;             // = 60
+        const bootAbstrLoc  = this.memory[this.NS_TABLE_BASE + 2 * this.NS_ENTRY_WORDS];
+        this.memory[bootAbstrLoc] = this.packLumpHeader(0, 0, DIRECTOR_CC, 0);  // n_minus_6=0, cw=0, cc=4
+        for (let i = 0; i < DIRECTOR_CC; i++) {
+            this.memory[bootAbstrLoc + dirClistStart + i] = clistGTs[i];
         }
-        // C-list slot 0 = memory-manager GT for NS slot 0 (R|W over the full
-        // namespace). Matches server/boot_image.py — when a programmer-
-        // authored boot image is loaded, this slot must hand the boot code
-        // an actual capability for the memory it manages, not a NULL token.
-        // See docs/foundation-lump-design.md §4 and Tasks #214–#217/#223.
-        this.memory[bootAbstrLoc + clistStart] = this.createGT(0, 0, {R:1, W:1, X:0, L:0, S:0, E:0}, 1);
+        this.memory[bootAbstrLoc + dirClistStart + 0] = memMgrGT;   // c-list[0] = memory-manager GT
+        const dirCodeLimit  = dirLumpSize - DIRECTOR_CC - 1;         // = 59
+        const dirNSBase     = this.NS_TABLE_BASE + 2 * this.NS_ENTRY_WORDS;
+        this.memory[dirNSBase + 1] = this.packNSWord1(dirCodeLimit, 0, 0, 0, 0, 1, DIRECTOR_CC);
+        this.memory[dirNSBase + 2] = this.makeVersionSeals(0, bootAbstrLoc, dirCodeLimit);
+        this.nsClistMap[2] = [0, 1, 2, 3];                          // director owns indices 0–3
 
-        // NS entry: limit17 = lumpSize - cc - 1 = 238  (valid PC range 0..237 via +1 fetch offset)
-        const codeRegionLimit   = lumpSize - bootClistCount - 1;  // = 238
-        const bootNSBase        = this.NS_TABLE_BASE + 2 * this.NS_ENTRY_WORDS;
-        const bootW1            = this.packNSWord1(codeRegionLimit, 0, 0, 0, 0, 1, bootClistCount);
-        this.memory[bootNSBase + 1] = bootW1;
-        this.memory[bootNSBase + 2] = this.makeVersionSeals(0, bootAbstrLoc, codeRegionLimit);
+        // ── Boot.Entry lump (NS Slot 3) ────────────────────────────────────────────
+        // Real boot execution lump: inherits what Boot.Abstr used to have.
+        //   Word  0:          Lump header (n_minus_6, cw=NUC_CODE_WORDS, cc=DEMO_CLIST_SIZE)
+        //   Words 1–17:       Code region (NUC_CODE_WORDS=17; loaded by loadProgram)
+        //   Words 18..(end-DEMO_CLIST_SIZE-1): Freespace
+        //   Words (end-DEMO_CLIST_SIZE)..(end-1): C-list (17 GTs at physical end)
+        // CR14 (R+X) and CR6 (E) are derived from this lump's header in B:04.
+        const bootEntryLoc     = this.memory[this.NS_TABLE_BASE + BOOT_ENTRY_NS_SLOT * this.NS_ENTRY_WORDS];
+        const entryN_MINUS_6   = Math.max(0, Math.ceil(Math.log2(BOOT_ABSTR_LUMP_SIZE)) - 6);
+        const entryLumpSize    = BOOT_ABSTR_LUMP_SIZE;
+        const entryClistStart  = entryLumpSize - DEMO_CLIST_SIZE;
+        this.memory[bootEntryLoc] = this.packLumpHeader(entryN_MINUS_6, NUC_CODE_WORDS, DEMO_CLIST_SIZE, 0);
+        for (let i = 0; i < DEMO_CLIST_SIZE; i++) {
+            this.memory[bootEntryLoc + entryClistStart + i] = clistGTs[i];
+        }
+        this.memory[bootEntryLoc + entryClistStart + 0] = memMgrGT; // c-list[0] = memory-manager GT
+        const entryCRLimit     = entryLumpSize - DEMO_CLIST_SIZE - 1;
+        const entryNSBase      = this.NS_TABLE_BASE + BOOT_ENTRY_NS_SLOT * this.NS_ENTRY_WORDS;
+        this.memory[entryNSBase + 1] = this.packNSWord1(entryCRLimit, 0, 0, 0, 0, 1, DEMO_CLIST_SIZE);
+        this.memory[entryNSBase + 2] = this.makeVersionSeals(0, bootEntryLoc, entryCRLimit);
+        this.nsClistMap[BOOT_ENTRY_NS_SLOT] = clistChildren;         // Boot.Entry owns full capability list
     }
 
     _bootStep() {
@@ -1036,76 +1036,113 @@ class ChurchSimulator {
                     return false;
                 }
 
-                // ── Step 2: Read lump header (word 0) ────────────────────────────────
-                const base = abstrEntry.word0_location;                             // physical memory index of Boot.Abstr lump word 0
-                const hdrWord = this.memory[base] >>> 0;                            // raw 32-bit lump header word (magic | cc | cw | lumpSize)
-                const hdr = this.parseLumpHeader(hdrWord);                          // decode header fields into {magic, cc, cw, lumpSize, valid}
-                if (!hdr.valid) {                                                    // magic field must be 0x1F; any other value = corrupt image
-                    this.fault('BOOT', `LOAD_NUC: lump header magic=0x${hdr.magic.toString(16)} (expected 0x1F)`);
+                // ── Step 2: Follow boot-entry E-GT from director c-list[3] ──────────────
+                // Boot.Abstr (slot 2) is now a thin director shim. B:04 reads its
+                // c-list[BOOT_ENTRY_CLIST_IDX] to obtain an E-GT pointing at the real
+                // boot execution lump (default: NS slot 3 = Boot.Entry), then mLoads
+                // it exactly as the CALL microcode would. CR14 and CR6 are derived from
+                // the target lump's header — not from slot 2.
+                const LOAD_NUC_CLIST_IDX = 3;                                       // index into director c-list that holds the boot entry E-GT
+                const dirBase    = abstrEntry.word0_location;                       // physical base of Boot.Abstr director lump
+                const dirHdrWord = this.memory[dirBase] >>> 0;                      // director lump header word
+                const dirHdr     = this.parseLumpHeader(dirHdrWord);               // decode {magic, cc, cw, lumpSize, valid}
+                if (!dirHdr.valid) {
+                    this.fault('BOOT', `LOAD_NUC: Boot.Abstr director header magic=0x${dirHdr.magic.toString(16)} (expected 0x1F)`);
                     return false;
                 }
-                const cw        = hdr.cw;                                           // code-words count (used by IDE for heap allocation; not used here)
-                const cc        = hdr.cc;                                           // c-list word count: fixes start of c-list zone in the lump
+                const dirClistBase = dirBase + dirHdr.lumpSize - dirHdr.cc;        // physical start of director c-list
+                const bootEntryGT  = this.memory[dirClistBase + LOAD_NUC_CLIST_IDX] >>> 0; // E-GT at c-list[3]
+                if (!bootEntryGT) {
+                    this.fault('BOOT', `LOAD_NUC: director c-list[${LOAD_NUC_CLIST_IDX}] is NULL — no boot entry GT`);
+                    return false;
+                }
+                const entryCheck = this.mLoad(bootEntryGT, 'E', undefined);        // E-perm mLoad: validates the boot entry NS entry
+                if (!entryCheck.ok) {
+                    this.fault('BOOT', `LOAD_NUC: Boot.Entry mLoad failed: ${entryCheck.message}`);
+                    return false;
+                }
+                if (entryCheck.parsed.type !== 1) {
+                    this.fault('BOOT', `LOAD_NUC: Boot.Entry type is ${entryCheck.parsed.typeName}, must be Inform`);
+                    return false;
+                }
+                const entryNSEntry  = entryCheck.entry;                             // NS entry for Boot.Entry (slot 3)
+                const entryNSParsed = this.parseNSWord1(entryNSEntry.word1_limit);
+                if (entryNSParsed.f === 1) {
+                    this.fault('BOOT', 'LOAD_NUC: Boot.Entry has F-bit set (Far) — FAULT');
+                    return false;
+                }
+                const bootEntrySlot = this.parseGT(bootEntryGT).index;             // NS slot of Boot.Entry (typically 3)
+                this.output += `[BOOT] LOAD_NUC INDIR — director c-list[${LOAD_NUC_CLIST_IDX}] → E-GT for NS Slot ${bootEntrySlot} (Boot.Entry)\n`;
+
+                // ── Step 3: Read Boot.Entry lump header (word 0) ──────────────────────
+                const base = entryNSEntry.word0_location;                           // physical base of Boot.Entry lump
+                const hdrWord = this.memory[base] >>> 0;                            // raw 32-bit lump header word
+                const hdr = this.parseLumpHeader(hdrWord);                          // decode {magic, cc, cw, lumpSize, valid}
+                if (!hdr.valid) {
+                    this.fault('BOOT', `LOAD_NUC: Boot.Entry lump header magic=0x${hdr.magic.toString(16)} (expected 0x1F)`);
+                    return false;
+                }
+                const cw        = hdr.cw;                                           // code-words count
+                const cc        = hdr.cc;                                           // c-list word count
                 const lumpSz    = hdr.lumpSize;                                     // total lump size in 32-bit words
-                const clistStart = lumpSz - cc;                                     // c-list begins at the physical end of the slot (offset from base)
-                if (cc === 0) {                                                      // a zero cc means no C-List — CR6 cannot be set, so boot cannot proceed
-                    this.fault('BOOT', 'LOAD_NUC: lump header cc=0 — no C-List');
+                const clistStart = lumpSz - cc;                                     // c-list begins at physical end of lump
+                if (cc === 0) {
+                    this.fault('BOOT', 'LOAD_NUC: Boot.Entry lump header cc=0 — no C-List');
                     return false;
                 }
 
-                // ── Step 3: Push sentinel CALL frame ─────────────────────────────────
-                // CALL microcode saves the caller's CR6 E-GT and a frame word on the
-                // stack before overwriting CR6/CR14.  We replicate that here so that
-                // RETURN from the root abstraction sees a valid (sentinel) frame and
-                // reboots rather than crashing with an empty-stack fault.
-                const sp_max = 243;                                                  // stack ceiling: lumpSize(256) - caps(12) - 1 = 243
-                const oldCR6GT = this.cr[6].word0 >>> 0;                            // snapshot E-type GT written by B:03 INIT_ABSTR
-                const sentinelFrameWord = this._packFrameWordRaw(0x7FFF, 1, sp_max); // frameWord: NIA=0x7FFF (poison, all 15 bits set), sz=1 (CALL frame), prev_STO=sp_max
-                this.callStack.push({               // push to JS call-stack mirror so RETURN handler can inspect it
-                    sentinel: true,                 // flag: RETURN will detect this and raise STACK_UNDERFLOW fault
-                    returnPC: 0x7FFF,               // poison return address — never executed, catches stray RETs
-                    savedCRs: this.cr.map(c => ({...c})), // snapshot of all CRs at boot entry point
-                    savedDRs: [...this.dr],         // snapshot of all DRs (all zero at boot)
-                    savedFlags: {...this.flags},     // snapshot of flags (all clear at boot)
-                    savedSTO: sp_max,               // previous STO = sp_max (the empty-stack sentinel value)
-                    sz: 1,                          // sz=1 → CALL-type frame (not LAMBDA)
-                    frameWord: sentinelFrameWord,   // packed frame word for display in thread lump view
+                // ── Step 4: Push sentinel CALL frame ──────────────────────────────────
+                // Sentinel uses oldCR6GT (snapshot of B:03's CR6 = E-GT for slot 2 /
+                // Boot.Abstr director) as the "saved caller CR6" in the frame. This is
+                // correct — the sentinel represents the call from the director into
+                // Boot.Entry. returnPC=0x7FFF is the poison value; RETURN detects it and
+                // raises STACK_UNDERFLOW instead of jumping to a garbage address.
+                const sp_max = 243;                                                  // thread stack ceiling: THREAD_LUMP_SIZE(256) - caps(12) - 1
+                const oldCR6GT = this.cr[6].word0 >>> 0;                            // snapshot E-type GT written by B:03 INIT_ABSTR (slot 2)
+                const sentinelFrameWord = this._packFrameWordRaw(0x7FFF, 1, sp_max);
+                this.callStack.push({
+                    sentinel: true,
+                    returnPC: 0x7FFF,
+                    savedCRs: this.cr.map(c => ({...c})),
+                    savedDRs: [...this.dr],
+                    savedFlags: {...this.flags},
+                    savedSTO: sp_max,
+                    sz: 1,
+                    frameWord: sentinelFrameWord,
                 });
-                const threadBase = this.cr[12] && this.cr[12].word1;               // physical base of thread lump (from CR12 NS entry, set in B:02)
+                const threadBase = this.cr[12] && this.cr[12].word1;
                 if (threadBase) {
-                    this.memory[threadBase + sp_max]     = sentinelFrameWord;       // lump[+sp_max] = frame word (visible in ② stack zone as orange "sentinel")
-                    this.memory[threadBase + sp_max - 1] = oldCR6GT;               // lump[+sp_max-1] = saved E-type CR6 GT from B:03
+                    this.memory[threadBase + sp_max]     = sentinelFrameWord;
+                    this.memory[threadBase + sp_max - 1] = oldCR6GT;
                 }
-                this.sto = sp_max - 2;              // STO = sp_max-2: two words consumed by the sentinel frame (frame word + E-GT)
+                this.sto = sp_max - 2;
 
-                // ── Step 4: Derive CR14 (code) and CR6 (c-list) from lump header ─────
-                // Hardware does this simultaneously from the header word; both tokens
-                // are Inform-type, zero gt_seq, referencing Slot 2 (same physical lump).
-                const cr14GT = this.createGT(0, 2, {R:1,W:0,X:1,L:0,S:0,E:0}, 1);         // R+X Inform GT for Slot 2 → CR14 is the code-execution token
-                const cr14Word1 = this.packNSWord1(cw - 1, 0, 0, 0, 0, 1, 0);              // NS word1 encodes limit = cw-1 (inclusive last valid PC, matching NS format convention)
+                // ── Step 5: Derive CR14 (code) and CR6 (c-list) from Boot.Entry header ─
+                // Both tokens reference Boot.Entry's NS slot (not slot 2). This is the
+                // CALL-microcode derivation applied to the indirected target lump.
+                const cr14GT = this.createGT(0, bootEntrySlot, {R:1,W:0,X:1,L:0,S:0,E:0}, 1);  // R+X code token
+                const cr14Word1 = this.packNSWord1(cw - 1, 0, 0, 0, 0, 1, 0);
                 this.cr[14] = {
-                    word0: cr14GT,                  // Golden Token identifying the code lump
-                    word1: base,                    // physical base address of lump (first instruction at base+0)
-                    word2: cr14Word1,               // limit word (cw-1 = inclusive last valid PC; used by _fetchInstruction with > check)
-                    word3: abstrEntry.word2_seals,  // seal field copied from NS entry (version + seal bits)
-                    m: this.mElevation ? 1 : 0     // M-elevation is still ON at this point (cleared below)
-                };
-
-                const cr6GT = this.createGT(0, 2, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);          // E-perm Inform GT for Slot 2 → CR6 is the c-list token (E allows recursive CALL via CR6)
-                const cr6Word1 = this.packNSWord1(cc - 1, 0, 0, 0, 0, 1, 0);               // NS word1 encodes limit = cc − 1 (covers all c-list words)
-                this.cr[6] = {
-                    word0: cr6GT,                   // Golden Token with E-perm (E allows CALL via CR6 for recursive abstraction)
-                    word1: (base + clistStart) >>> 0, // physical base of c-list zone (= base + lumpSz − cc)
-                    word2: cr6Word1,                // limit word for the c-list region
-                    word3: abstrEntry.word2_seals,  // same seal field as CR14
+                    word0: cr14GT,
+                    word1: base,                    // physical base of Boot.Entry lump
+                    word2: cr14Word1,
+                    word3: entryNSEntry.word2_seals,
                     m: this.mElevation ? 1 : 0
                 };
-                // NOTE: CR6 is NOT written back to the caps zone (+250) — it lives exclusively
-                // in CALL stack frames.  The caps zone entry for CR6 remains 0 until a SAVE runs.
 
-                // ── Step 5: Set PC and emit log ───────────────────────────────────────
-                this.pc = 0;                        // first instruction of Boot Abstraction is at lump word 0 (offset from lump base)
-                this.output += `[BOOT] LOAD_NUC — hdr=0x${hdrWord.toString(16).toUpperCase().padStart(8,'0')} (cw=${cw},cc=${cc},lumpSize=${lumpSz}); CR14+CR6 ← simultaneous from lump header; CR14(X,cw=${cw},lim=0..${cw-1}) CR6(E,base=0x${(base+clistStart).toString(16).toUpperCase()},lim=${cc-1}), PC=0\n`;
+                const cr6GT = this.createGT(0, bootEntrySlot, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);   // E-perm c-list token
+                const cr6Word1 = this.packNSWord1(cc - 1, 0, 0, 0, 0, 1, 0);
+                this.cr[6] = {
+                    word0: cr6GT,
+                    word1: (base + clistStart) >>> 0,
+                    word2: cr6Word1,
+                    word3: entryNSEntry.word2_seals,
+                    m: this.mElevation ? 1 : 0
+                };
+
+                // ── Step 6: Set PC and emit log ───────────────────────────────────────
+                this.pc = 0;
+                this.output += `[BOOT] LOAD_NUC — Boot.Entry Slot ${bootEntrySlot} hdr=0x${hdrWord.toString(16).toUpperCase().padStart(8,'0')} (cw=${cw},cc=${cc},lumpSize=${lumpSz}); CR14+CR6 ← Boot.Entry lump header; CR14(X,cw=${cw},lim=0..${cw-1}) CR6(E,base=0x${(base+clistStart).toString(16).toUpperCase()},lim=${cc-1}), PC=0\n`;
                 this.output += `[BOOT] SENTINEL CALL — frame@+${sp_max}=0x${sentinelFrameWord.toString(16).toUpperCase().padStart(8,'0')} (NIA=0x7FFF,sz=1,prev_STO=${sp_max}), E-GT@+${sp_max-1}=0x${oldCR6GT.toString(16).toUpperCase().padStart(8,'0')}, STO=${this.sto}\n`;
 
                 // ── Step 6 (B:05): COMPLETE ───────────────────────────────────────────
@@ -3466,7 +3503,7 @@ class ChurchSimulator {
     }
 
     loadProgram(words, startAddr) {
-        const abstrSlot = 2;
+        const abstrSlot = BOOT_ENTRY_NS_SLOT;  // Boot.Entry is NS slot 3 after Task #229
         const abstrBase = this.NS_TABLE_BASE + abstrSlot * this.NS_ENTRY_WORDS;
         const codeLoc = this.memory[abstrBase] || (abstrSlot * this.SLOT_SIZE);
         const baseAddr = this.bootComplete ? codeLoc : (startAddr || 0);

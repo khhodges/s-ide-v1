@@ -21,13 +21,15 @@ as a fallback when no image is present.
 
 Layout (all words 32-bit little-endian):
 
-    [0 .. NS_LUMP_SIZE)                    Namespace lump body (header @0)
-    [NS_LUMP_SIZE .. +THREAD_LUMP_SIZE)    Thread lump body  (header @0)
-    [.. +ABSTR_LUMP_SIZE)                  Boot.Abstr body   (header @0,
-                                            c-list at physical end)
+    [0 .. NS_LUMP_SIZE)                      Namespace lump body (header @0)
+    [NS_LUMP_SIZE .. +THREAD_LUMP_SIZE)      Thread lump body    (header @0)
+    [.. +SLOT_SIZE)                          Boot.Abstr director (header @0,
+                                              c-list[3]=E-GT→Boot.Entry)
+    [.. +ABSTR_LUMP_SIZE)                    Boot.Entry body     (header @0,
+                                              code + c-list at physical end)
     [resident lump bodies at programmer
      -chosen physAddr]
-    [NS_TABLE_BASE .. +NS_TABLE_RESERVE)   Namespace table
+    [NS_TABLE_BASE .. +NS_TABLE_RESERVE)     Namespace table
        (256 entries × 3 words; named slots followed by Step-3 reserved
         empties; remainder zero)
 """
@@ -44,10 +46,9 @@ SLOT_SIZE        = 0x40         # 64 words
 # DEVICE_REG_LIMITS and hardware/boot_rom.py _MMIO_ENTRIES).
 DEVICE_REG_LIMITS = {11: 2, 12: 5, 13: 0, 14: 4}
 
-# NS slot 3 is the Math.Add Outform demonstration slot — a remote token
-# fetched on demand. Token must match simulator.js MATH_ADD_TOKEN.
-MATH_ADD_OUTFORM_SLOT  = 3
-MATH_ADD_OUTFORM_TOKEN = 0xDEAD0003
+BOOT_ENTRY_NS_SLOT   = 3   # NS slot holding the real boot execution lump (Boot.Entry)
+BOOT_ENTRY_CLIST_IDX = 3   # index in Boot.Abstr director c-list that holds the boot entry E-GT
+DIRECTOR_CLIST_SIZE  = 4   # Boot.Abstr director c-list size (indices 0..3)
 
 # Default abstraction catalog — ports simulator.js _getAbstractionCatalog()
 # fallback list (used when no abstractionRegistry is wired in). The boot
@@ -57,7 +58,7 @@ DEFAULT_ABSTRACTION_CATALOG = [
     ("Boot.NS",       {"R":0,"W":0,"X":0,"L":0,"S":0,"E":0}, False),
     ("Boot.Thread",   {"R":0,"W":0,"X":0,"L":0,"S":0,"E":0}, False),
     ("Boot.Abstr",    {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("(empty)",       {"R":0,"W":0,"X":0,"L":0,"S":0,"E":0}, False),
+    ("Boot.Entry",    {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
     ("Salvation",     {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
     ("Navana",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
     ("Mint",          {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
@@ -250,22 +251,18 @@ def generate_boot_image(cfg, lumps_dir):
             phys_override[int(e["nsSlot"])] = int(e["physAddr"])
 
     catalog = DEFAULT_ABSTRACTION_CATALOG
-    slot_sizes = {0: ns_size, 1: thread_size, 2: abstr_size}
+    slot_sizes = {
+        0: ns_size,
+        1: thread_size,
+        2: SLOT_SIZE,      # Boot.Abstr director: always 64 words (minimum)
+        BOOT_ENTRY_NS_SLOT: abstr_size,  # Boot.Entry: abstractionLumpWords
+    }
 
     # ----- NS entries ----------------------------------------------------
     clist_gts = []
     running_offset = 0
     locations = {}                              # idx -> location word
     for i, (label, perms, chainable) in enumerate(catalog):
-        # Slot 3 (Math.Add) is an Outform — fixed token & gt_type=2.
-        if i == MATH_ADD_OUTFORM_SLOT:
-            base = ns_table_base + i * NS_ENTRY_WORDS
-            mem[base + 0] = MATH_ADD_OUTFORM_TOKEN
-            mem[base + 1] = pack_ns_word1(0, 0, 1, 0, 0, 2, 1)   # f=1, gtType=2, clistCount=1
-            mem[base + 2] = make_version_seals(0, MATH_ADD_OUTFORM_TOKEN, 0)
-            clist_gts.append(create_gt(0, i, {"E":1}, 1))
-            continue
-
         my_size  = slot_sizes.get(i, SLOT_SIZE)
         override = phys_override.get(i)
         if i == 0:
@@ -322,16 +319,12 @@ def generate_boot_image(cfg, lumps_dir):
     thread_loc = locations[1]
     mem[thread_loc] = pack_lump_header(_ns_n_minus_6(thread_size), 32, 64, 2)
 
-    # Boot.Abstr (NS slot 2): hardware DEMO_CLIST layout — 17 c-list
-    # entries at physical end, code window cw=17 starting at word 1.
     NUC_CODE_WORDS  = 17
     DEMO_CLIST_SIZE = 17
 
-    # Hardware device GTs (clist slots 8..16) — match simulator.js
-    # HW_DEVICE_SLOTS table.
-    rw_perms  = {"R":1,"W":1}
-    led_gt    = lambda: create_gt(0, 12, rw_perms, 1)
-    hw_slots  = [(12, rw_perms)] * 6 + [
+    # Hardware device GTs (clist slots 8..16) — match simulator.js HW_DEVICE_SLOTS.
+    rw_perms = {"R":1,"W":1}
+    hw_slots = [(12, rw_perms)] * 6 + [
         (11, rw_perms),
         (13, {"R":1}),
         (14, rw_perms),
@@ -341,39 +334,53 @@ def generate_boot_image(cfg, lumps_dir):
     for off, (ns_idx, perms) in enumerate(hw_slots):
         clist_gts[8 + off] = create_gt(0, ns_idx, perms, 1)
 
-    # Slot 3: E-perm to NS slot 16 (SlideRule) — boot-internal.
-    clist_gts[3] = create_gt(0, 16, {"E":1}, 1)
+    # c-list[3]: E-GT to Boot.Entry (NS slot 3) — the boot indirection pointer.
+    # This value goes into both Boot.Abstr director c-list[3] (pointer B:04 follows)
+    # and Boot.Entry's own c-list[3] (a self-reference). Same slot = same GT word.
+    clist_gts[3] = create_gt(0, BOOT_ENTRY_NS_SLOT, {"E":1}, 1)
 
-    # Memory-manager GT at clist slot 0: covers full namespace memory
-    # (NS slot 0). Replaces the legacy NULL "SAVE epilogue" placeholder
-    # called out in the task — when a programmer-authored boot image is
-    # loaded, this slot must hand the boot code an actual capability for
-    # the memory it manages.
-    clist_gts[0] = create_gt(0, 0, {"R":1, "W":1}, 1)
+    # Memory-manager GT at c-list[0]: R|W capability over NS slot 0 (full namespace).
+    mem_mgr_gt = create_gt(0, 0, {"R":1, "W":1}, 1)
+    clist_gts[0] = mem_mgr_gt
 
-    # Truncate to hardware DEMO_CLIST size (slots beyond 16 are
+    # Truncate to hardware DEMO_CLIST size (entries beyond idx 16 are
     # simulator-only and not part of the boot ROM image).
     clist_gts = clist_gts[:DEMO_CLIST_SIZE]
 
-    boot_abstr_loc = locations[2]
-    lump_size      = abstr_size
-    clist_start    = lump_size - DEMO_CLIST_SIZE
+    # ----- Boot.Abstr director (NS slot 2) --------------------------------
+    # Thin "boot director" shim: lumpSize=SLOT_SIZE=64, cw=0 (no code),
+    # cc=DIRECTOR_CLIST_SIZE=4. c-list[3] = E-GT to Boot.Entry; B:04 follows it.
+    boot_abstr_loc  = locations[2]
+    dir_lump_size   = SLOT_SIZE                        # 64 words (always minimum)
+    dir_clist_start = dir_lump_size - DIRECTOR_CLIST_SIZE  # = 60
+    mem[boot_abstr_loc] = pack_lump_header(0, 0, DIRECTOR_CLIST_SIZE, 0)  # n_minus_6=0, cw=0, cc=4
+    for i in range(DIRECTOR_CLIST_SIZE):
+        mem[boot_abstr_loc + dir_clist_start + i] = clist_gts[i] & 0xFFFFFFFF
+    mem[boot_abstr_loc + dir_clist_start + 0] = mem_mgr_gt & 0xFFFFFFFF   # c-list[0] = memory-manager GT
+    dir_code_limit  = dir_lump_size - DIRECTOR_CLIST_SIZE - 1              # = 59
+    dir_ns_base     = ns_table_base + 2 * NS_ENTRY_WORDS
+    mem[dir_ns_base + 1] = pack_ns_word1(dir_code_limit, 0, 0, 0, 0, 1, DIRECTOR_CLIST_SIZE)
+    mem[dir_ns_base + 2] = make_version_seals(0, boot_abstr_loc, dir_code_limit)
 
-    # Word 0: lump header drives both CR14 and CR6 derivation in hardware.
-    mem[boot_abstr_loc] = pack_lump_header(
+    # ----- Boot.Entry lump (NS slot 3) ------------------------------------
+    # Real boot execution lump: inherits what Boot.Abstr used to have.
+    #   Word  0:      Lump header (n_minus_6, cw=NUC_CODE_WORDS, cc=DEMO_CLIST_SIZE)
+    #   Words 1–17:   Code region (loaded by the boot program loader)
+    #   Words 18..(end-DEMO_CLIST_SIZE-1): Freespace
+    #   Words (end-DEMO_CLIST_SIZE)..(end-1): C-list (17 GTs at physical end)
+    # B:04 derives CR14 (R+X) and CR6 (E) from this lump's header.
+    boot_entry_loc     = locations[BOOT_ENTRY_NS_SLOT]
+    entry_lump_size    = abstr_size
+    entry_clist_start  = entry_lump_size - DEMO_CLIST_SIZE
+    mem[boot_entry_loc] = pack_lump_header(
         _ns_n_minus_6(abstr_size), NUC_CODE_WORDS, DEMO_CLIST_SIZE, 0)
-
-    # C-list at physical end of the lump.
     for i, gt in enumerate(clist_gts):
-        mem[boot_abstr_loc + clist_start + i] = gt & 0xFFFFFFFF
-
-    # Update NS slot 2 word1: limit = lumpSize - cc - 1 (covers code
-    # region only, c-list lives past it). Re-seal accordingly.
-    code_region_limit = lump_size - DEMO_CLIST_SIZE - 1
-    boot_ns_base = ns_table_base + 2 * NS_ENTRY_WORDS
-    mem[boot_ns_base + 1] = pack_ns_word1(
-        code_region_limit, 0, 0, 0, 0, 1, DEMO_CLIST_SIZE)
-    mem[boot_ns_base + 2] = make_version_seals(0, boot_abstr_loc, code_region_limit)
+        mem[boot_entry_loc + entry_clist_start + i] = gt & 0xFFFFFFFF
+    mem[boot_entry_loc + entry_clist_start + 0] = mem_mgr_gt & 0xFFFFFFFF  # c-list[0] = memory-manager GT
+    entry_cr_limit     = entry_lump_size - DEMO_CLIST_SIZE - 1
+    entry_ns_base      = ns_table_base + BOOT_ENTRY_NS_SLOT * NS_ENTRY_WORDS
+    mem[entry_ns_base + 1] = pack_ns_word1(entry_cr_limit, 0, 0, 0, 0, 1, DEMO_CLIST_SIZE)
+    mem[entry_ns_base + 2] = make_version_seals(0, boot_entry_loc, entry_cr_limit)
 
     # ----- Resident lump bodies (Step 2) --------------------------------
     token_map = _load_catalog_token_map(

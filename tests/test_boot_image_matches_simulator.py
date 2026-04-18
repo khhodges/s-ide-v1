@@ -94,8 +94,14 @@ CONFIGS = [
 
 # ---- helpers --------------------------------------------------------------
 
-def _region_of(word_index, total_words, ns_size, thread_size, abstr_size):
-    """Human-readable name for the foundation region containing word_index."""
+DIRECTOR_LUMP_SIZE = 64  # Boot.Abstr director is always SLOT_SIZE=64 words
+
+def _region_of(word_index, total_words, ns_size, thread_size, entry_size):
+    """Human-readable name for the foundation region containing word_index.
+
+    After Task #229: Boot.Abstr director is always 64 words (SLOT_SIZE);
+    Boot.Entry (NS slot 3) takes abstractionLumpWords (= entry_size here).
+    """
     ns_table_base = total_words - NS_TABLE_RESERVE
     if word_index >= ns_table_base:
         slot = (word_index - ns_table_base) // NS_ENTRY_WORDS
@@ -106,8 +112,11 @@ def _region_of(word_index, total_words, ns_size, thread_size, abstr_size):
         return "Boot.NS lump"
     if word_index < ns_size + thread_size:
         return "Boot.Thread lump"
-    if word_index < ns_size + thread_size + abstr_size:
-        return "Boot.Abstr lump"
+    dir_end = ns_size + thread_size + DIRECTOR_LUMP_SIZE
+    if word_index < dir_end:
+        return "Boot.Abstr director lump (slot 2, 64 words)"
+    if word_index < dir_end + entry_size:
+        return "Boot.Entry lump (slot 3)"
     return "resident / free region"
 
 

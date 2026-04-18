@@ -239,9 +239,10 @@ BASE_NAMED_NS_COUNT = 47
 
 # Slots reserved for foundational lumps (Step 1) and device MMIO regions —
 # the programmer cannot place an additional resident lump body here. Slots
-# 0–2 are foundational lumps; 11–15 are device register windows (UART, LED,
-# Button, Timer, Display) backed by hardware MMIO not by lump memory.
-RESERVED_NS_SLOTS = set(range(0, 3)) | set(range(11, 16))
+# 0–3 are foundational lumps (NS, Thread, Boot.Abstr director, Boot.Entry);
+# 11–15 are device register windows (UART, LED, Button, Timer, Display)
+# backed by hardware MMIO not by lump memory.
+RESERVED_NS_SLOTS = set(range(0, 4)) | set(range(11, 16))
 LUMPS_MANIFEST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    "lumps", "manifest.json")
 
