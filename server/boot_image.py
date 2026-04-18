@@ -50,6 +50,11 @@ BOOT_ENTRY_NS_SLOT   = 3   # NS slot holding the real boot execution lump (Boot.
 BOOT_ENTRY_CLIST_IDX = 3   # index in Boot.Abstr director c-list that holds the boot entry E-GT
 DIRECTOR_CLIST_SIZE  = 4   # Boot.Abstr director c-list size (indices 0..3)
 
+# Format-version tag written to mem[NS_TABLE_BASE - 1] so loadBootImage()
+# can reject stale binaries that pre-date the Boot.Entry indirection layout.
+# Increment whenever the binary format changes incompatibly.
+BOOT_IMAGE_FORMAT_TAG = 0xB0070229  # "BOOT 0229" — must match simulator.js
+
 # Default abstraction catalog — ports simulator.js _getAbstractionCatalog()
 # fallback list (used when no abstractionRegistry is wired in). The boot
 # image is produced from this canonical list so server and simulator
@@ -397,6 +402,10 @@ def generate_boot_image(cfg, lumps_dir):
     entry_ns_base      = ns_table_base + BOOT_ENTRY_NS_SLOT * NS_ENTRY_WORDS
     mem[entry_ns_base + 1] = pack_ns_word1(entry_cr_limit, 0, 0, 0, 0, 1, DEMO_CLIST_SIZE)
     mem[entry_ns_base + 2] = make_version_seals(0, boot_entry_loc, entry_cr_limit)
+
+    # Format-version tag: written immediately before the NS table so that
+    # loadBootImage() can detect and reject stale pre-Task-#229 binaries.
+    mem[ns_table_base - 1] = BOOT_IMAGE_FORMAT_TAG & 0xFFFFFFFF
 
     # ----- Resident lump bodies (Step 2) --------------------------------
     token_map = _load_catalog_token_map(

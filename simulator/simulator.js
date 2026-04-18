@@ -140,6 +140,19 @@ class ChurchSimulator {
     loadBootImage(arrayBuffer) {
         if (!arrayBuffer || arrayBuffer.byteLength < 4) return false;
         const src = new Uint32Array(arrayBuffer);
+
+        // Format-version guard: reject binaries generated before Task #229
+        // (the Boot.Entry indirection layout).  The tag is written by
+        // boot_image.py at mem[NS_TABLE_BASE - 1] = src[src.length - NS_TABLE_RESERVE - 1].
+        const BOOT_IMAGE_FORMAT_TAG = 0xB0070229;  // must match boot_image.py
+        const tagIdx = src.length - this.NS_TABLE_RESERVE - 1;
+        if (tagIdx >= 0 && tagIdx < src.length) {
+            if ((src[tagIdx] >>> 0) !== BOOT_IMAGE_FORMAT_TAG) {
+                this.output += `[BOOTIMG] WARNING: stale boot image (format tag mismatch at word ${tagIdx}); ignoring binary — using built-in namespace defaults.\n`;
+                return false;   // keep the memory already set up by _initNamespaceTable()
+            }
+        }
+
         const n   = Math.min(src.length, this.memory.length);
         for (let i = 0; i < n; i++) this.memory[i] = src[i] >>> 0;
         // Recount NS entries from the table now that it's been replaced.
@@ -913,6 +926,13 @@ class ChurchSimulator {
         this.memory[entryNSBase + 1] = this.packNSWord1(entryCRLimit, 0, 0, 0, 0, 1, DEMO_CLIST_SIZE);
         this.memory[entryNSBase + 2] = this.makeVersionSeals(0, bootEntryLoc, entryCRLimit);
         this.nsClistMap[BOOT_ENTRY_NS_SLOT] = clistChildren;         // Boot.Entry owns full capability list
+
+        // Format-version tag: written immediately before the NS table (at
+        // NS_TABLE_BASE - 1) so that loadBootImage() can detect and reject
+        // stale binaries generated before the Boot.Entry indirection layout.
+        // Must match boot_image.py BOOT_IMAGE_FORMAT_TAG and the value in loadBootImage().
+        const BOOT_IMAGE_FORMAT_TAG_INIT = 0xB0070229;
+        this.memory[this.NS_TABLE_BASE - 1] = BOOT_IMAGE_FORMAT_TAG_INIT >>> 0;
     }
 
     _bootStep() {
