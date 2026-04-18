@@ -19,6 +19,10 @@ args = "Church Machine IDE"
 task = "workflow.run"
 args = "boot-image-matches-sim"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "boot-image-loads-and-boots"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -38,6 +42,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python3 -m pytest tests/test_boot_image_matches_simulator.py -v"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "boot-image-loads-and-boots"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest tests/test_boot_image_loads_and_boots.py -v"
 
 [workflows.workflow.metadata]
 isValidation = true
