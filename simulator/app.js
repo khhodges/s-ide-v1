@@ -7411,17 +7411,15 @@ CALL   CR2                ; CALL Navana detects Abstract GT in CR1:
 
 ; ── STEP 3: CALL LED driver — set LED 3 ON ────
 ; CR1 now holds E-perm LED driver (not PassKey)
-DWRITE DR1, #3            ; LED number (0-5)
-DWRITE DR2, #1            ; Colour/state: 1=on
-CALL   CR1                ; LED.Set via E-perm driver:
-;   1. DR1[31:24] = method (0=Set,1=Clear,2=Pattern,3=Get)
-;   2. DR1[7:0]   = LED number
-;   3. DR2[7:0]   = colour/state
-;   4. Hardware write at 0xFE10 (invisible to caller)
-;   5. DR1 <- updated LED state
+; LED identity is encoded in CR1's capability offset (no DR args needed)
+CALL   CR1                ; LED.Set via E-perm driver (zero-argument call):
+;   1. DR1[31:24] = method (0=Set,1=Clear,2=Toggle,3=State)
+;   2. LED index derived from capability offset in CR1 (no DR2)
+;   3. Hardware write at 0xFE10 (invisible to caller)
+;   4. DR0 <- signed return (≥0 success, -1 invalid capability offset)
 ; Gate Log shows full chain of custody:
 ;   PassKey presented -> Navana validated ->
-;   LED.Set(3,1) called -> device write committed`,
+;   LED.Set called via capability offset -> device write committed`,
             'CallLEDDriver': `; LED via Navana PassKey — capability-offset API
 ;
 ; Assumes PassKey already validated (Step 1-2 done)

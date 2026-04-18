@@ -2020,11 +2020,13 @@ class ChurchSimulator {
             this.fault(check.fault, `CALL: ${callCrLabel}: ${check.message}`);
             return null;
         }
-        // For LED abstraction (NS 12): the GT's gt_seq field encodes the LED identity (0–5).
-        // The boot mints one LED GT per LED; gt_seq=0 → LED 0, gt_seq=1 → LED 1, etc.
-        // This replaces the old hardcoded c-list slot arithmetic (d.imm - 8).
-        if (check.index === 12) {
-            check.ledIndex = srcParsed.gt_seq & 0x7;
+        // For LED abstraction (NS 12): extract the call-site capability offset from d.imm.
+        // In c-list indexed CALL the d.imm field IS the C-list slot address — this is the
+        // same offset the hardware uses to identify the addressed LED (0–5).
+        // LED_CLIST_BASE is the boot-defined first LED slot; ledIndex = d.imm - LED_CLIST_BASE.
+        const LED_CLIST_BASE = 8;
+        if (check.index === 12 && isClistIndexed) {
+            check.ledIndex = d.imm - LED_CLIST_BASE;  // raw call-site offset; handler validates 0–5
         }
         const nsEntry = check.entry;
         const word1 = this.parseNSWord1(nsEntry.word1_limit);
@@ -2353,8 +2355,8 @@ class ChurchSimulator {
         this.output += desc + '\n';
 
         if (this.abstractionRegistry) {
-            // For LED (NS 12): ledIndex comes from the GT's gt_seq field, set on check
-            // by _execCall after mLoad. The boot mints one GT per LED with gt_seq=led_num.
+            // For LED (NS 12): ledIndex = d.imm - LED_CLIST_BASE (the call-site C-list offset).
+            // _execCall sets check.ledIndex after mLoad; handler validates range 0–5.
             const LED_ABS_IDX = 12;
             const ledIndex = (check.index === LED_ABS_IDX && check.ledIndex !== undefined)
                 ? check.ledIndex
