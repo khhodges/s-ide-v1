@@ -207,7 +207,17 @@ DEFAULT_BOOT_CONFIG = {
     "step2": {
         "lumps": []
     },
+    # Step 3 (Task #216): how many empty NS slots to reserve at boot for
+    # lumps that don't exist yet at design time. The runtime lazy loader
+    # claims these slots on demand when new lumps are created.
+    "step3": {
+        "emptySlotCount": 0
+    },
 }
+
+# Hard ceiling on how many entries fit in the NS table (matches simulator
+# NS_TABLE_RESERVE / NS_ENTRY_WORDS = 0x300 / 3 = 256).
+MAX_NS_ENTRIES = 256
 
 # Slots reserved for foundational lumps (Step 1) and device MMIO regions —
 # the programmer cannot place an additional resident lump body here. Slots
@@ -310,6 +320,37 @@ def _validate_step2(step2, step1, target_board):
         occupied.append((phys, phys + lump_size, f"{cat.get('abstraction')} (NS {slot})"))
     return None
 
+def _validate_step3(step3, step1, step2):
+    """Validate the optional Step 3 (empty NS slot reservation) section.
+
+    `step3.emptySlotCount` is the number of blank NS entries to append at
+    boot for the runtime lazy loader to claim. Must be a non-negative int
+    that, combined with the foundational + device + Step 2 catalog slots
+    actually present, fits within MAX_NS_ENTRIES.
+    """
+    if step3 is None:
+        return None
+    if not isinstance(step3, dict):
+        return "step3 must be an object"
+    n = step3.get("emptySlotCount", 0)
+    if not isinstance(n, int) or n < 0:
+        return "step3.emptySlotCount must be a non-negative integer"
+    # Compute the highest slot index in use (foundational + device MMIO +
+    # Step 2 catalog entries that the programmer included). Empty slots
+    # are appended after the highest, so the upper bound is one past it.
+    used = set(RESERVED_NS_SLOTS)
+    if step2 and isinstance(step2, dict):
+        for e in (step2.get("lumps") or []):
+            if isinstance(e, dict) and isinstance(e.get("nsSlot"), int):
+                used.add(e["nsSlot"])
+    highest = (max(used) if used else -1)
+    end = highest + 1 + n
+    if end > MAX_NS_ENTRIES:
+        return (f"step3.emptySlotCount ({n}) plus the {highest+1} named NS "
+                f"slots would need {end} entries but the NS table only holds "
+                f"{MAX_NS_ENTRIES}")
+    return None
+
 def _is_pow2(n):
     return isinstance(n, int) and n > 0 and (n & (n - 1)) == 0
 
@@ -381,6 +422,9 @@ def boot_config_get():
             s2 = cfg.get("step2")
             if s2 is not None and _validate_step2(s2, s1, cfg.get("targetBoard")) is not None:
                 cfg.pop("step2", None)
+            s3 = cfg.get("step3")
+            if s3 is not None and _validate_step3(s3, s1, cfg.get("step2")) is not None:
+                cfg.pop("step3", None)
     return jsonify({
         "config": cfg,
         "defaults": DEFAULT_BOOT_CONFIG,
@@ -400,6 +444,10 @@ def boot_config_post():
     err2 = _validate_step2(step2, step1, target_board)
     if err2:
         return jsonify({"ok": False, "error": err2}), 400
+    step3 = data.get("step3")
+    err3 = _validate_step3(step3, step1, step2)
+    if err3:
+        return jsonify({"ok": False, "error": err3}), 400
     cfg = {
         "schemaVersion": BOOT_CONFIG_SCHEMA_VERSION,
         "targetBoard": target_board,
@@ -422,6 +470,8 @@ def boot_config_post():
             cfg.setdefault("step2", {"lumps": []})
             norm.append(row)
         cfg["step2"] = {"lumps": norm}
+    if step3 is not None:
+        cfg["step3"] = {"emptySlotCount": int(step3.get("emptySlotCount", 0) or 0)}
     try:
         with open(BOOT_CONFIG_PATH, "w") as f:
             json.dump(cfg, f, indent=2)

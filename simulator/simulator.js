@@ -725,6 +725,30 @@ class ChurchSimulator {
         }
         this.nsClistMap[2] = clistChildren;
 
+        // Step 3 (Task #216): reserve N blank NS entries at the end of the
+        // table for the runtime lazy loader to claim when new lumps are
+        // created. The IDE doesn't decide what goes in these slots — only
+        // how much headroom to leave. Slot 0's clistCount stays = the
+        // number of NAMED entries (the namespace lump describes only the
+        // lumps it knows about); reserved entries are addressable via
+        // nsCount but carry no descriptor until the lazy loader fills them.
+        const step3 = (typeof window !== 'undefined' && window.bootConfig && window.bootConfig.step3) || null;
+        const emptyCount = (step3 && Number.isFinite(step3.emptySlotCount))
+                            ? Math.max(0, step3.emptySlotCount | 0) : 0;
+        if (emptyCount > 0) {
+            const startIdx = this.nsCount;
+            const maxEntries = (this.NS_TABLE_RESERVE / this.NS_ENTRY_WORDS) | 0;
+            const endIdx = Math.min(startIdx + emptyCount, maxEntries);
+            for (let idx = startIdx; idx < endIdx; idx++) {
+                const base = this.NS_TABLE_BASE + idx * this.NS_ENTRY_WORDS;
+                this.memory[base + 0] = 0;
+                this.memory[base + 1] = 0;
+                this.memory[base + 2] = 0;
+                this.nsLabels[idx] = '(reserved)';
+            }
+            this.nsCount = endIdx;
+        }
+
         const THREAD_SW = 32;
         const THREAD_CC = 64;
         const THREAD_N_MINUS_6 = 2;

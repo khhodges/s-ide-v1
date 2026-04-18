@@ -486,6 +486,19 @@
             </table>
             <div id="bdLumpEmpty" style="font-size:0.82rem;color:#888;margin-top:6px;"></div>
 
+            <h3 style="margin:18px 0 6px;font-size:0.95rem;color:#fff;border-top:1px solid #333;padding-top:14px;">Step 3: Empty NS Slots</h3>
+            <div style="font-size:0.82rem;color:#aaa;margin-bottom:8px;">
+                Reserve N empty NS slots at the end of the namespace table for lumps that don't
+                exist yet at design time. The runtime lazy loader claims one of these on demand
+                when a new lump is created. Pure headroom — the IDE doesn't decide what goes here.
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:0.85rem;color:#ddd;">
+                <label for="bdEmptySlots">Reserve</label>
+                <input type="number" id="bdEmptySlots" min="0" step="1" value="0"
+                       style="width:90px;background:#111;color:#ddd;border:1px solid #555;padding:3px 6px;">
+                <span style="color:#aaa;">empty NS slots for runtime growth.</span>
+            </div>
+
             <div id="bdError" style="margin-top:12px;font-size:0.85rem;color:#f55;min-height:1.2em;"></div>
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">

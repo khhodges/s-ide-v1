@@ -4277,6 +4277,15 @@ function openBootDesigner() {
             if (el) el.oninput = _bdValidate;
         });
         _bdInitStep2(cfg);
+        // Step 3 (Task #216): empty NS slot reservation. Prefill from saved
+        // config or fall back to 0 (historical behaviour: no extra slots).
+        const s3 = (cfg.step3) || (data && data.defaults && data.defaults.step3) || {};
+        const emptyEl = document.getElementById('bdEmptySlots');
+        if (emptyEl) {
+            emptyEl.value = Number.isFinite(s3.emptySlotCount) ? s3.emptySlotCount : 0;
+            emptyEl.oninput = _bdValidate;
+        }
+        _bdValidate();
     });
 }
 
@@ -4449,6 +4458,25 @@ function _bdValidate() {
             occ.push({start: st.physAddr, end: st.physAddr + sz, label: lbl});
         }
     }
+    // Step 3 — validate empty NS slot reservation count.
+    const MAX_NS_ENTRIES = 256; // keep in sync with simulator NS_TABLE_RESERVE/3
+    const emptyEl = document.getElementById('bdEmptySlots');
+    const emptyCount = emptyEl ? parseInt(emptyEl.value, 10) : 0;
+    if (!err && (!Number.isFinite(emptyCount) || emptyCount < 0)) {
+        err = 'Empty NS slot count must be a non-negative integer.';
+    }
+    if (!err) {
+        // Determine highest named NS slot in use (foundational + device + Step 2 catalog).
+        const used = new Set([0,1,2,11,12,13,14,15]);
+        for (const slotStr of Object.keys(_bdStep2State)) used.add(parseInt(slotStr, 10));
+        let highest = -1;
+        used.forEach(v => { if (v > highest) highest = v; });
+        const need = highest + 1 + emptyCount;
+        if (need > MAX_NS_ENTRIES) {
+            err = `Reserving ${emptyCount} empty NS slots after the ${highest+1} named ` +
+                  `slots would need ${need} entries but the NS table only holds ${MAX_NS_ENTRIES}.`;
+        }
+    }
     errEl.textContent = err;
     saveBtn.disabled = !!err;
     saveBtn.style.opacity = err ? '0.5' : '1';
@@ -4482,6 +4510,9 @@ function saveBootDesigner() {
             abstractionLumpWords: parseInt(document.getElementById('bdAbstr').value, 10),
         },
         step2: { lumps: step2Lumps },
+        step3: {
+            emptySlotCount: parseInt(document.getElementById('bdEmptySlots').value, 10) || 0,
+        },
     };
     const status = document.getElementById('bdStatus');
     const errEl = document.getElementById('bdError');
