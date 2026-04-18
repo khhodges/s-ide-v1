@@ -100,6 +100,19 @@ class ChurchSimulator {
         this.reset();
     }
 
+    // Boot Image Designer Step 1 (Task #214): the size of the namespace memory
+    // window (in 32-bit words). Driven by window.bootConfig.step1.totalNamespaceWords
+    // when the IDE has saved a project boot config; otherwise falls back to the
+    // historical demo default so existing tutorials keep working.
+    _namespaceMemoryWords() {
+        try {
+            const t = (typeof window !== 'undefined' && window.bootConfig
+                       && window.bootConfig.step1 && window.bootConfig.step1.totalNamespaceWords);
+            if (Number.isInteger(t) && t >= 64) return t;
+        } catch (_) { /* no window in tests */ }
+        return 65536;
+    }
+
     initAbstractions(registry, systemAbs, deviceAbs) {
         this.abstractionRegistry = registry;
         this.systemAbstractions = systemAbs;
@@ -366,7 +379,10 @@ class ChurchSimulator {
         this.faultLog = [];
         this._instrHistory = [];
 
-        this.memory = new Uint32Array(65536);
+        // Boot Image Designer Step 1 (Task #214): namespace memory window size
+        // is programmer-chosen via the Boot Image Designer (totalNamespaceWords).
+        // Falls back to historical 65536 when no project boot config is loaded.
+        this.memory = new Uint32Array(this._namespaceMemoryWords());
 
         this.nsLabels = {};
         this.nsCount = 0;
@@ -612,7 +628,9 @@ class ChurchSimulator {
                           && window.bootConfig.step1) ? window.bootConfig.step1 : null;
         const THREAD_LUMP_SIZE     = (_bcStep1 && _bcStep1.threadLumpWords)      || 256;
         const BOOT_ABSTR_LUMP_SIZE = (_bcStep1 && _bcStep1.abstractionLumpWords) || 256;
+        const NS_LUMP_SIZE         = (_bcStep1 && _bcStep1.namespaceLumpWords)   || this.SLOT_SIZE;
         const slotSizes = {};
+        slotSizes[0] = NS_LUMP_SIZE;
         slotSizes[1] = THREAD_LUMP_SIZE;
         slotSizes[2] = BOOT_ABSTR_LUMP_SIZE;
 
@@ -636,8 +654,11 @@ class ChurchSimulator {
             }
             const loc = (i === 0) ? 0 : runningOffset;
             const mySize = slotSizes[i] || this.SLOT_SIZE;
+            // Slot 0 is the namespace physical-memory descriptor; the
+            // namespace lump it anchors reserves NS_LUMP_SIZE words so
+            // subsequent slots start after it (Task #214 Step 1).
             if (i > 0) runningOffset += mySize;
-            else runningOffset = this.SLOT_SIZE;
+            else runningOffset = NS_LUMP_SIZE;
             const lim17 = (i === 0) ? (this.memory.length - 1)
                         : (DEVICE_REG_LIMITS[i] !== undefined ? DEVICE_REG_LIMITS[i]
                         : (mySize - 1));
@@ -3339,7 +3360,7 @@ class ChurchSimulator {
     loadHardwareBinary(hwProgram, hwNamespace, hwClist, hwLabels, abstractions) {
         this.reset();
 
-        this.memory = new Uint32Array(65536);
+        this.memory = new Uint32Array(this._namespaceMemoryWords());
         this.nsLabels = {};
         this.nsCount = 0;
         this.nsClistMap = {};
@@ -3480,7 +3501,7 @@ class ChurchSimulator {
     loadImageFromBinary(nsWords, clistWords, bootProgram) {
         this.reset();
 
-        this.memory = new Uint32Array(65536);
+        this.memory = new Uint32Array(this._namespaceMemoryWords());
         this.nsLabels = {};
         this.nsCount = 0;
         this.nsClistMap = {};

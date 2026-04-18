@@ -4287,8 +4287,9 @@ function bdRefreshHwInfo() {
         `<strong>${p.label}</strong><br>` +
         `Total RAM available for namespace: <strong>${p.totalRamWords} words</strong> ` +
         `(${(p.totalRamWords*4/1024).toFixed(1)} KB at 32-bit)<br>` +
-        `Address bits: ${p.addressBits}<br>` +
-        `<span style="color:#888;">${p.notes || ''}</span>`;
+        `Address bits: ${p.addressBits}` +
+        (p.addressRange ? `<br>Address range: <code>${p.addressRange}</code>` : '') +
+        `<br><span style="color:#888;">${p.notes || ''}</span>`;
     _bdValidate();
 }
 

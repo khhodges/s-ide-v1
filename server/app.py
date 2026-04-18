@@ -156,30 +156,39 @@ def boot_id():
 # JSON file. Future Tasks #215–#217 extend the same file with `step2`
 # (resident lumps), `step3` (reserved empty NS slots), and the binary image
 # generator settings.
+# File spec uses a hyphen (boot-config.json) per docs/foundation-lump-design.md §4.
 BOOT_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                "boot_config.json")
+                                "boot-config.json")
+# Legacy filename from an earlier draft of this task — read for backward
+# compatibility, then migrated to the canonical name on next save.
+BOOT_CONFIG_LEGACY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                       "boot_config.json")
 BOOT_CONFIG_SCHEMA_VERSION = 1
 
 # Hardware profile data shown to the programmer as read-only reference.
 # Per docs/foundation-lump-design.md §3 the IDE never derives sizes — it only
-# surfaces what the chosen target board offers.
+# surfaces what the chosen target board offers. `addressRange` is the byte
+# range of the namespace memory window the chosen board exposes.
 HARDWARE_PROFILES = {
     "tang-nano-20k": {
         "label": "Sipeed Tang Nano 20K",
         "totalRamWords": 16384,
         "addressBits": 16,
+        "addressRange": "0x0000_0000 – 0x0000_FFFF (64 KB byte-addressable)",
         "notes": "Gowin GW2AR-18 — 64 KB block SRAM available for namespace",
     },
     "tang-nano-20k-iot": {
         "label": "Sipeed Tang Nano 20K IoT",
         "totalRamWords": 16384,
         "addressBits": 16,
+        "addressRange": "0x0000_0000 – 0x0000_FFFF (64 KB byte-addressable)",
         "notes": "Gowin GW2AR-18 + BL702 call-home — same 64 KB SRAM budget",
     },
     "ti60-f225": {
         "label": "Efinix Ti60 F225",
         "totalRamWords": 65536,
         "addressBits": 18,
+        "addressRange": "0x0000_0000 – 0x0003_FFFF (256 KB byte-addressable)",
         "notes": "Efinix Titanium Ti60 F225 — ~256 KB embedded RAM available for namespace",
     },
 }
@@ -228,12 +237,23 @@ def _validate_step1(target_board, step1):
 
 @app.route("/api/boot-config", methods=["GET"])
 def boot_config_get():
+    path = None
     if os.path.isfile(BOOT_CONFIG_PATH):
+        path = BOOT_CONFIG_PATH
+    elif os.path.isfile(BOOT_CONFIG_LEGACY_PATH):
+        path = BOOT_CONFIG_LEGACY_PATH
+    if path is not None:
         try:
-            with open(BOOT_CONFIG_PATH, "r") as f:
+            with open(path, "r") as f:
                 cfg = json.load(f)
         except Exception as e:
-            return jsonify({"error": f"Failed to read boot_config.json: {e}"}), 500
+            return jsonify({"error": f"Failed to read boot-config.json: {e}"}), 500
+        # Defensive: if a hand-edited config is structurally invalid, fall
+        # back to defaults rather than ship garbage to the client.
+        s1 = cfg.get("step1") if isinstance(cfg, dict) else None
+        if (not isinstance(cfg, dict)
+            or _validate_step1(cfg.get("targetBoard"), s1 or {}) is not None):
+            cfg = DEFAULT_BOOT_CONFIG
     else:
         cfg = DEFAULT_BOOT_CONFIG
     return jsonify({"config": cfg, "profiles": HARDWARE_PROFILES})
