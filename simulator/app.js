@@ -3877,13 +3877,13 @@ function renderBootNSImage() {
     html += '</tbody></table>';
 
     // ── Section 3: Boot.Abstr C-list ──────────────────────────────────────
-    const slot2Entry = sim.readNSEntry(2);
-    if (slot2Entry) {
+    const bootAbstrEntry = sim.readNSEntry(3);
+    if (bootAbstrEntry) {
         // Derive layout from lump header at word 0 (hardware-accurate)
-        const s2loc      = slot2Entry.word0_location;
+        const s2loc      = bootAbstrEntry.word0_location;
         const s2hdrWord  = (s2loc < sim.memory.length) ? (sim.memory[s2loc] >>> 0) : 0;
         const s2hdr      = sim.parseLumpHeader(s2hdrWord);
-        const s2lim      = sim.parseNSWord1(slot2Entry.word1_limit);
+        const s2lim      = sim.parseNSWord1(bootAbstrEntry.word1_limit);
         const clistCount = s2hdr.valid ? s2hdr.cc : (s2lim.clistCount || 0);
         const lumpSzB    = s2hdr.valid ? s2hdr.lumpSize : (sim.SLOT_SIZE || 64);
         const clistStart = lumpSzB - clistCount;  // c-list at physical end
@@ -3898,7 +3898,7 @@ function renderBootNSImage() {
             const addrHex = '0x' + addr.toString(16).toUpperCase().padStart(4,'0');
             const gtHex   = '0x' + (gtWord>>>0).toString(16).toUpperCase().padStart(8,'0');
             if (gtWord === 0) {
-                html += `<tr style="opacity:0.3;"><td style="color:#888">${i}</td><td>${addrHex}</td><td style="font-family:monospace;">${gtHex}</td><td colspan="4" style="color:#555;">NULL — Slot 3 (reserved empty)</td></tr>`;
+                html += `<tr style="opacity:0.3;"><td style="color:#888">${i}</td><td>${addrHex}</td><td style="font-family:monospace;">${gtHex}</td><td colspan="4" style="color:#555;">NULL — Slot ${i} (free)</td></tr>`;
                 continue;
             }
             const gt       = sim.parseGT(gtWord);

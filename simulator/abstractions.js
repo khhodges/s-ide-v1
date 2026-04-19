@@ -175,13 +175,13 @@ class AbstractionRegistry {
             'Initial thread identity (CR8)',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 0 } });
 
-        this.createAbstraction(2, 'Boot.Abstr', 0, [],
+        this.createAbstraction(2, '(free)', 0, [],
+            'Free/null slot — Boot.Abstr director eliminated (Task #247)',
+            { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 0 } });
+
+        this.createAbstraction(3, 'Boot.Abstr', 0, [],
             'Boot abstraction — combined code (CR14) + c-list (CR6) in one slot',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
-
-        this.createAbstraction(3, '(empty)', 0, [],
-            'Reserved — empty slot (was Boot.CLOOMC before merge)',
-            { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 0 } });
 
         this.createAbstraction(4, 'Salvation', 1,
             ['LOAD', 'TPERM', 'LAMBDA', 'TransitionToNavana'],
