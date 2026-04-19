@@ -71,6 +71,15 @@ class ChurchMLoad(Elaboratable):
         self.version_reset_en = Signal()
         self.version_reset_addr = Signal(32)
 
+        # Outform detection outputs (combinatorial pulses / stable latched values)
+        self.outform_start_out  = Signal()   # pulses when c-list GT has typ=OUTFORM
+        self.outform_gt_raw     = Signal(32) # latched GT word from c-list
+        self.outform_slot_id    = Signal(16) # slot_id from the Outform GT
+        self.outform_clist_addr = Signal(32) # byte address of the c-list slot (Mint write-back)
+        # Inputs from outform FSM
+        self.outform_done_in    = Signal()
+        self.outform_fault_in   = Signal()
+
     def elaborate(self, platform):
         m = Module()
 
@@ -112,6 +121,11 @@ class ChurchMLoad(Elaboratable):
         m.d.comb += ns_index_in_bounds.eq(result_gt.slot_id < ns_ns_w2.limit_offset[:16])
 
         ns_w3_saved = Signal(32)
+
+        # Latched outform context (set in FETCH_GT when typ == GT_TYPE_OUTFORM)
+        outform_clist_addr_reg = Signal(32)
+        outform_gt_raw_reg     = Signal(32)
+        outform_slot_id_reg    = Signal(16)
 
         local_mem_addr  = Signal(32)
         local_mem_rd_en = Signal()
@@ -182,7 +196,15 @@ class ChurchMLoad(Elaboratable):
                 ]
                 with m.If(self.mem_rd_valid):
                     m.d.sync += result_view.word0_gt.eq(self.mem_rd_data)
-                    m.next = "CHECK_NS"
+                    with m.If(self.mem_rd_data[23:25] == GT_TYPE_OUTFORM):
+                        m.d.sync += [
+                            outform_clist_addr_reg.eq(clist_gt_addr),
+                            outform_gt_raw_reg.eq(self.mem_rd_data),
+                            outform_slot_id_reg.eq(self.mem_rd_data[:16]),
+                        ]
+                        m.next = "TRIGGER_OUTFORM"
+                    with m.Else():
+                        m.next = "CHECK_NS"
 
             with m.State("CHECK_NS"):
                 with m.If(~ns_index_in_bounds):
@@ -252,11 +274,28 @@ class ChurchMLoad(Elaboratable):
             with m.State("FAULT"):
                 m.next = "IDLE"
 
+            with m.State("TRIGGER_OUTFORM"):
+                # outform_start_out pulses combinatorially this cycle; go wait.
+                m.next = "WAIT_OUTFORM"
+
+            with m.State("WAIT_OUTFORM"):
+                with m.If(self.outform_fault_in):
+                    m.d.sync += fault_type_reg.eq(FaultType.ABSENT_OUTFORM)
+                    m.next = "FAULT"
+                with m.Elif(self.outform_done_in):
+                    # Mint has installed the lump and patched the c-list slot.
+                    # Re-read the c-list slot — now it contains an Inform GT.
+                    m.next = "FETCH_GT"
+
         m.d.comb += [
             self.sub_busy.eq(~fsm.ongoing("IDLE")),
             self.sub_done.eq(fsm.ongoing("COMPLETE")),
             self.sub_fault.eq(fsm.ongoing("FAULT")),
             self.sub_fault_type.eq(fault_type_reg),
+            self.outform_start_out.eq(fsm.ongoing("TRIGGER_OUTFORM")),
+            self.outform_gt_raw.eq(outform_gt_raw_reg),
+            self.outform_slot_id.eq(outform_slot_id_reg),
+            self.outform_clist_addr.eq(outform_clist_addr_reg),
         ]
 
         return m

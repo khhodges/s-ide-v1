@@ -37,6 +37,7 @@ class ChurchOutformIoT(Elaboratable):
 
         self.tx_valid = Signal()
         self.tx_data  = Signal(8)
+        self.tx_ack   = Signal()
         self.rx_valid = Signal()
         self.rx_data  = Signal(8)
 
@@ -140,11 +141,12 @@ class ChurchOutformIoT(Elaboratable):
                     self.outform_busy.eq(1),
                     self.tx_valid.eq(1),
                 ]
-                with m.If(tx_byte_cnt == TUNNEL_REQ_LEN - 1):
-                    m.d.sync += tx_byte_cnt.eq(0)
-                    m.next = "TUNNEL_CONNECT"
-                with m.Else():
-                    m.d.sync += tx_byte_cnt.eq(tx_byte_cnt + 1)
+                with m.If(self.tx_ack):
+                    with m.If(tx_byte_cnt == TUNNEL_REQ_LEN - 1):
+                        m.d.sync += tx_byte_cnt.eq(0)
+                        m.next = "TUNNEL_CONNECT"
+                    with m.Else():
+                        m.d.sync += tx_byte_cnt.eq(tx_byte_cnt + 1)
 
             with m.State("TUNNEL_CONNECT"):
                 m.d.comb += self.outform_busy.eq(1)

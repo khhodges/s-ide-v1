@@ -6,7 +6,7 @@ from .layouts import GT_LAYOUT, CAP_REG_LAYOUT
 from .core import ChurchCore
 from .boot_rom import (BootRom, BOOT_PROGRAM, DEMO_NAMESPACE, DEMO_CLIST,
                         NUC_LUMP_HEADER, SLIDERULE_LUMP_HEADER)
-from .uart_tx import DebugPrinter
+from .uart_tx import DebugPrinter, UartTx
 from .uart_rx import UartRx
 from .crc16 import CRC16_CCITT
 
@@ -372,7 +372,29 @@ class ChurchTangNano20K(Elaboratable):
         btn_press = Signal()
         m.d.comb += btn_press.eq(btn_prev & ~btn_sync[2])
 
-        m.d.comb += self.uart_tx.eq(debug.tx)
+        if self.iot_profile:
+            outform_uart = UartTx(self.clk_freq, self.baud)
+            m.submodules.outform_uart = outform_uart
+
+            m.d.comb += [
+                outform_uart.data.eq(core.outform_tx_data),
+                outform_uart.start.eq(core.outform_tx_valid & ~outform_uart.busy),
+                core.outform_tx_ack.eq(outform_uart.done),
+                core.outform_rx_valid.eq(Mux(core.outform_busy, uart_rx.valid, 0)),
+                core.outform_rx_data.eq(uart_rx.data),
+            ]
+
+            with m.If(core.outform_busy):
+                m.d.comb += self.uart_tx.eq(outform_uart.tx)
+            with m.Else():
+                m.d.comb += self.uart_tx.eq(debug.tx)
+        else:
+            m.d.comb += [
+                core.outform_tx_ack.eq(0),
+                core.outform_rx_valid.eq(0),
+                core.outform_rx_data.eq(0),
+                self.uart_tx.eq(debug.tx),
+            ]
 
         # MMIO UART TX arbitration —————————————————————————————————————————
         mmio_uart_pending  = Signal()

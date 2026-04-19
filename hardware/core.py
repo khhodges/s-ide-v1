@@ -2,7 +2,7 @@ from amaranth import *
 from amaranth.lib.data import View
 
 from .hw_types import *
-from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, WORD2_LAYOUT, COND_FLAGS_LAYOUT
+from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, WORD2_LAYOUT, COND_FLAGS_LAYOUT, LUMP_HEADER_LAYOUT
 from .boot_rom import NUC_LUMP_BASE, NUC_PROGRAM_CW
 from .registers import ChurchRegisters
 from .decoder import ChurchDecoder
@@ -87,9 +87,11 @@ class ChurchCore(Elaboratable):
 
         self.outform_tx_valid = Signal()
         self.outform_tx_data  = Signal(8)
+        self.outform_tx_ack   = Signal()   # from tang_nano: UART accepted the byte
         self.outform_rx_valid = Signal()
         self.outform_rx_data  = Signal(8)
         self.outform_result_gt = Signal(32)
+        self.outform_busy     = Signal()   # to tang_nano: route UART to outform
 
     def elaborate(self, platform):
         m = Module()
@@ -231,6 +233,21 @@ class ChurchCore(Elaboratable):
         any_unit_busy = Signal()
         cross_domain_ret = Signal()
         cload_pending   = Signal()
+
+        # Early declarations for Mint FSM signals used throughout elaborate()
+        mint_busy           = Signal()
+        mint_clist_wr_en    = Signal()
+        mint_clist_addr_d   = Signal(32)  # byte addr of caller's c-list slot
+        mint_e_gt_d         = Signal(32)  # computed E-GT word written to c-list
+        mint_slot_id_reg    = Signal(16)  # latched from mLoad when outform fires
+        mint_clist_addr_reg = Signal(32)  # latched from mLoad when outform fires
+        mint_lump_size_reg  = Signal(15)  # latched lump size (words)
+        mint_dmem_rd_en     = Signal()    # Mint DMEM read request
+        mint_dmem_addr      = Signal(32)  # Mint DMEM read address
+        mint_ns_wr_en       = Signal()    # Mint NS write enable
+        mint_ns_addr        = Signal(32)  # Mint NS write address
+        mint_ns_wr_data     = Signal(32)  # Mint NS write data
+
         busy_expr = (
             u_tperm.tperm_busy | u_call.call_busy |
             u_return.busy | u_save.save_busy | u_load.load_busy |
@@ -239,7 +256,8 @@ class ChurchCore(Elaboratable):
             shl_busy_reg | shr_busy_reg | bfext_busy_reg | bfins_busy_reg | mcmp_busy_reg |
             u_cload.cload_busy | cload_pending |
             fence_pending_reg |
-            u_outform.outform_busy
+            u_outform.outform_busy |
+            mint_busy
         )
         if not self.iot_profile:
             busy_expr = busy_expr | (
@@ -360,6 +378,12 @@ class ChurchCore(Elaboratable):
             self.clist_wr_data.eq(cr_rd_data_gt),
             self.clist_wr_en.eq(0),
         ]
+        with m.If(mint_clist_wr_en):
+            m.d.comb += [
+                self.clist_addr.eq(mint_clist_addr_d),
+                self.clist_wr_data.eq(mint_e_gt_d),
+                self.clist_wr_en.eq(1),
+            ]
 
         m.d.comb += [
             u_regs.flags_in.eq(0),
@@ -1094,22 +1118,215 @@ class ChurchCore(Elaboratable):
                 u_xloadlambda.saved_nia.eq(nia_reg + 4),
             ]
 
+        # ── outform wiring ───────────────────────────────────────────────────
         m.d.comb += [
-            u_outform.outform_start.eq(0),
-            u_outform.gt_raw.eq(0),
-            u_outform.slot_id.eq(0),
+            u_outform.outform_start.eq(u_shared_mload.outform_start_out),
+            u_outform.gt_raw.eq(u_shared_mload.outform_gt_raw),
+            u_outform.slot_id.eq(u_shared_mload.outform_slot_id),
             u_outform.rx_valid.eq(self.outform_rx_valid),
             u_outform.rx_data.eq(self.outform_rx_data),
             self.outform_tx_valid.eq(u_outform.tx_valid),
             self.outform_tx_data.eq(u_outform.tx_data),
             self.outform_result_gt.eq(u_outform.result_gt),
-            u_outform.alloc_done.eq(0),
-            u_outform.alloc_fault.eq(0),
-            u_outform.alloc_base.eq(0),
-            u_outform.mint_done.eq(0),
-            u_outform.mint_fault.eq(0),
-            u_outform.mint_result_gt.eq(0),
+            self.outform_busy.eq(u_outform.outform_busy),
+            u_outform.tx_ack.eq(self.outform_tx_ack),
+            u_shared_mload.outform_done_in.eq(u_outform.outform_done),
+            u_shared_mload.outform_fault_in.eq(u_outform.outform_fault),
         ]
+
+        if self.iot_profile:
+            # Latch Mint context when mLoad fires outform_start
+            with m.If(u_shared_mload.outform_start_out):
+                m.d.sync += [
+                    mint_slot_id_reg.eq(u_shared_mload.outform_slot_id),
+                    mint_clist_addr_reg.eq(u_shared_mload.outform_clist_addr),
+                ]
+
+            # ── Watermark allocator ───────────────────────────────────────────
+            # NS(192 words) + clist(64 words) = 256 words; free space starts at 256.
+            WATERMARK_INIT = 256
+            DMEM_WORDS     = 2048
+            watermark_reg   = Signal(32, init=WATERMARK_INIT)
+            alloc_sz_w      = Signal(32)
+            alloc_mask_w    = Signal(32)
+            alloc_aligned_w = Signal(32)
+            alloc_new_wm_w  = Signal(33)
+
+            m.d.comb += alloc_sz_w.eq(C(1, 32) << u_outform.alloc_n)
+            m.d.comb += alloc_mask_w.eq(alloc_sz_w - 1)
+            m.d.comb += alloc_aligned_w.eq(
+                (watermark_reg + alloc_mask_w) & ~alloc_mask_w
+            )
+            m.d.comb += alloc_new_wm_w.eq(
+                Cat(alloc_aligned_w, C(0, 1)) + Cat(alloc_sz_w, C(0, 1))
+            )
+            alloc_fits = Signal()
+            m.d.comb += alloc_fits.eq(alloc_new_wm_w <= DMEM_WORDS)
+
+            m.d.comb += [
+                u_outform.alloc_done.eq(u_outform.alloc_req & alloc_fits),
+                u_outform.alloc_fault.eq(u_outform.alloc_req & ~alloc_fits),
+                u_outform.alloc_base.eq(alloc_aligned_w << 2),
+            ]
+            with m.If(u_outform.alloc_req & alloc_fits):
+                m.d.sync += watermark_reg.eq(alloc_new_wm_w[:32])
+
+            # ── Mint FSM ──────────────────────────────────────────────────────
+            # Validates the newly downloaded lump, writes the NS entry (3 words),
+            # and patches the caller's c-list slot with a fresh E-GT.
+            mint_base_reg     = Signal(32)
+            mint_cw_reg       = Signal(13)
+            mint_cc_reg       = Signal(8)
+            mint_scan_idx_reg = Signal(14)
+            mint_hdr_reg      = Signal(32)
+
+            # NS entry byte address: CR15.base + slot_id * 12
+            cr15_mint_view     = View(CAP_REG_LAYOUT, u_regs.cr15_namespace)
+            mint_ns_entry_base = Signal(32)
+            m.d.comb += mint_ns_entry_base.eq(
+                cr15_mint_view.word1_location
+                + (mint_slot_id_reg << 3) + (mint_slot_id_reg << 2)
+            )
+
+            # E-GT:  b=0 | perms=E(bit30) | typ=Inform(01<<23) | gt_seq=1(<<16) | slot_id
+            m.d.comb += mint_e_gt_d.eq(
+                (1 << 30) | (GT_TYPE_INFORM << 23) | (1 << 16) | mint_slot_id_reg
+            )
+            # W2: spare=0 | gt_seq=1(<<21) | limit_offset = lump_size-1
+            mint_w2 = Signal(32)
+            m.d.comb += mint_w2.eq((1 << 21) | (mint_lump_size_reg - 1)[:21])
+
+            # CRC16/CCITT-FALSE (89 bits): mint_e_gt_d[24:0] || mint_base_reg[31:0] || mint_w2[31:0]
+            mint_crc_stages = [Signal(16, name=f"mint_crc_{i}") for i in range(90)]
+            m.d.comb += mint_crc_stages[0].eq(CRC16_INIT)
+            for _i in range(89):
+                if _i < 25:
+                    _data_bit = mint_e_gt_d[24 - _i]
+                elif _i < 57:
+                    _data_bit = mint_base_reg[56 - _i]
+                else:
+                    _data_bit = mint_w2[88 - _i]
+                _top_bit = Signal(name=f"mint_crc_top_{_i}")
+                _shifted  = Signal(16, name=f"mint_crc_sh_{_i}")
+                m.d.comb += _top_bit.eq(mint_crc_stages[_i][15] ^ _data_bit)
+                m.d.comb += _shifted.eq(Cat(Const(0, 1), mint_crc_stages[_i][:15]))
+                m.d.comb += mint_crc_stages[_i + 1].eq(
+                    _shifted ^ Mux(_top_bit, CRC16_POLY, 0)
+                )
+            mint_w3 = mint_crc_stages[89]   # g_bit=0, spare=0
+
+            mint_done_comb  = Signal()
+            mint_fault_comb = Signal()
+
+            with m.FSM(name="mint") as mint_fsm:
+
+                with m.State("MINT_IDLE"):
+                    with m.If(u_outform.mint_call):
+                        m.d.sync += mint_base_reg.eq(u_outform.mint_base)
+                        m.next = "MINT_READ_HDR"
+
+                with m.State("MINT_READ_HDR"):
+                    m.d.comb += [
+                        mint_dmem_rd_en.eq(1),
+                        mint_dmem_addr.eq(mint_base_reg),
+                    ]
+                    m.d.sync += mint_hdr_reg.eq(self.dmem_rd_data)
+                    m.next = "MINT_CHECK_HDR"
+
+                with m.State("MINT_CHECK_HDR"):
+                    hdr_v   = View(LUMP_HEADER_LAYOUT, mint_hdr_reg)
+                    lsz_c   = Signal(15)
+                    m.d.comb += lsz_c.eq(1 << (hdr_v.n_minus_6 + 6))
+                    with m.If(hdr_v.magic != 0x1F):
+                        m.next = "MINT_FAULT"
+                    with m.Elif(hdr_v.n_minus_6 > 8):
+                        m.next = "MINT_FAULT"
+                    with m.Elif(hdr_v.cw > (lsz_c - hdr_v.cc - 2)):
+                        m.next = "MINT_FAULT"
+                    with m.Else():
+                        m.d.sync += [
+                            mint_lump_size_reg.eq(lsz_c),
+                            mint_cw_reg.eq(hdr_v.cw),
+                            mint_cc_reg.eq(hdr_v.cc),
+                            mint_scan_idx_reg.eq(hdr_v.cw + 1),
+                        ]
+                        m.next = "MINT_SCAN_FS"
+
+                with m.State("MINT_SCAN_FS"):
+                    scan_end_c = Signal(15)
+                    m.d.comb += scan_end_c.eq(mint_lump_size_reg - mint_cc_reg - 1)
+                    with m.If(mint_scan_idx_reg > scan_end_c):
+                        m.next = "MINT_WRITE_NS0"
+                    with m.Else():
+                        m.d.comb += [
+                            mint_dmem_rd_en.eq(1),
+                            mint_dmem_addr.eq(
+                                mint_base_reg + (mint_scan_idx_reg.as_value() << 2)
+                            ),
+                        ]
+                        with m.If(self.dmem_rd_data != 0):
+                            m.next = "MINT_FAULT"
+                        with m.Else():
+                            m.d.sync += mint_scan_idx_reg.eq(mint_scan_idx_reg + 1)
+
+                with m.State("MINT_WRITE_NS0"):
+                    m.d.comb += [
+                        mint_ns_wr_en.eq(1),
+                        mint_ns_addr.eq(mint_ns_entry_base),
+                        mint_ns_wr_data.eq(mint_base_reg),
+                    ]
+                    m.next = "MINT_WRITE_NS1"
+
+                with m.State("MINT_WRITE_NS1"):
+                    m.d.comb += [
+                        mint_ns_wr_en.eq(1),
+                        mint_ns_addr.eq(mint_ns_entry_base + 4),
+                        mint_ns_wr_data.eq(mint_w2),
+                    ]
+                    m.next = "MINT_WRITE_NS2"
+
+                with m.State("MINT_WRITE_NS2"):
+                    m.d.comb += [
+                        mint_ns_wr_en.eq(1),
+                        mint_ns_addr.eq(mint_ns_entry_base + 8),
+                        mint_ns_wr_data.eq(mint_w3),
+                    ]
+                    m.next = "MINT_WRITE_CLIST"
+
+                with m.State("MINT_WRITE_CLIST"):
+                    m.d.comb += [
+                        mint_clist_wr_en.eq(1),
+                        mint_clist_addr_d.eq(mint_clist_addr_reg),
+                    ]
+                    m.next = "MINT_DONE"
+
+                with m.State("MINT_DONE"):
+                    m.d.comb += [
+                        mint_done_comb.eq(1),
+                        u_outform.mint_result_gt.eq(mint_e_gt_d),
+                    ]
+                    m.next = "MINT_IDLE"
+
+                with m.State("MINT_FAULT"):
+                    m.d.comb += mint_fault_comb.eq(1)
+                    m.next = "MINT_IDLE"
+
+            m.d.comb += [
+                mint_busy.eq(~mint_fsm.ongoing("MINT_IDLE")),
+                u_outform.mint_done.eq(mint_done_comb),
+                u_outform.mint_fault.eq(mint_fault_comb),
+            ]
+
+        else:
+            # Non-IoT stubs
+            m.d.comb += [
+                u_outform.alloc_done.eq(0),
+                u_outform.alloc_fault.eq(0),
+                u_outform.alloc_base.eq(0),
+                u_outform.mint_done.eq(0),
+                u_outform.mint_fault.eq(0),
+                u_outform.mint_result_gt.eq(0),
+            ]
 
         CR5_STACK_DEPTH = 256
         cr5_stack = Memory(width=32, depth=CR5_STACK_DEPTH, init=[])
@@ -1309,6 +1526,11 @@ class ChurchCore(Elaboratable):
                 self.dmem_wr_data.eq(u_outform.mem_wr_data),
                 self.dmem_wr_en.eq(1),
             ]
+        with m.Elif(mint_dmem_rd_en):
+            m.d.comb += [
+                self.dmem_addr.eq(mint_dmem_addr),
+                self.dmem_rd_en.eq(1),
+            ]
         with m.Elif(u_return.mem_rd_en):
             m.d.comb += [
                 self.dmem_addr.eq(u_return.mem_rd_addr),
@@ -1342,11 +1564,19 @@ class ChurchCore(Elaboratable):
                     self.ns_wr_en.eq(0),
                 ]
         else:
-            m.d.comb += [
-                self.ns_addr.eq(0),
-                self.ns_rd_en.eq(0),
-                self.ns_wr_data.eq(0),
-                self.ns_wr_en.eq(0),
-            ]
+            with m.If(mint_ns_wr_en):
+                m.d.comb += [
+                    self.ns_addr.eq(mint_ns_addr),
+                    self.ns_rd_en.eq(0),
+                    self.ns_wr_data.eq(Cat(mint_ns_wr_data, Const(0, 64))),
+                    self.ns_wr_en.eq(1),
+                ]
+            with m.Else():
+                m.d.comb += [
+                    self.ns_addr.eq(0),
+                    self.ns_rd_en.eq(0),
+                    self.ns_wr_data.eq(0),
+                    self.ns_wr_en.eq(0),
+                ]
 
         return m
