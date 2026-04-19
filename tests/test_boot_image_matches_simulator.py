@@ -71,8 +71,10 @@ def _cfg_step2_resident():
     cfg = _cfg_default()
     cfg["step2"] = {
         "lumps": [
-            {"nsSlot": 18, "resident": True,
-             "physAddr": 4096, "lumpSize": 64},
+            # SlideRule (slot 16) is the boot entry; make it resident so B:04
+            # can read a valid lump header from its physical location.
+            {"nsSlot": 16, "resident": True,
+             "physAddr": 4096, "lumpSize": 4096},
         ],
     }
     return cfg
@@ -95,12 +97,14 @@ CONFIGS = [
 # ---- helpers --------------------------------------------------------------
 
 DIRECTOR_LUMP_SIZE = 64  # Boot.Abstr director is always SLOT_SIZE=64 words
+SLOT_SIZE          = 64  # default slot size for catalog entries
 
-def _region_of(word_index, total_words, ns_size, thread_size, entry_size):
+def _region_of(word_index, total_words, ns_size, thread_size):
     """Human-readable name for the foundation region containing word_index.
 
-    After Task #229: Boot.Abstr director is always 64 words (SLOT_SIZE);
-    Boot.Entry (NS slot 3) takes abstractionLumpWords (= entry_size here).
+    After Task #233: BOOT_ENTRY_NS_SLOT=16 (SlideRule); Boot.Entry (slot 3)
+    now gets SLOT_SIZE=64 words (same as any catalog slot) rather than
+    abstractionLumpWords, so entry_size is no longer a parameter.
     """
     ns_table_base = total_words - NS_TABLE_RESERVE
     if word_index >= ns_table_base:
@@ -115,8 +119,8 @@ def _region_of(word_index, total_words, ns_size, thread_size, entry_size):
     dir_end = ns_size + thread_size + DIRECTOR_LUMP_SIZE
     if word_index < dir_end:
         return "Boot.Abstr director lump (slot 2, 64 words)"
-    if word_index < dir_end + entry_size:
-        return "Boot.Entry lump (slot 3)"
+    if word_index < dir_end + SLOT_SIZE:
+        return "Boot.Entry catalog slot (slot 3, 64 words)"
     return "resident / free region"
 
 
@@ -167,8 +171,6 @@ def _compare(py_bytes, sim_words, cfg):
     total       = step1["totalNamespaceWords"]
     ns_size     = step1["namespaceLumpWords"]
     thread_size = step1["threadLumpWords"]
-    abstr_size  = step1["abstractionLumpWords"]
-
     assert len(py_bytes) == total * 4, (
         f"Python image length {len(py_bytes)} bytes != expected {total * 4}"
     )
@@ -197,7 +199,7 @@ def _compare(py_bytes, sim_words, cfg):
             f"{len(diffs)}+ word(s) differ between server/boot_image.py and simulator._initNamespaceTable():"
         ]
         for i, py, sim in diffs:
-            region = _region_of(i, total, ns_size, thread_size, abstr_size)
+            region = _region_of(i, total, ns_size, thread_size)
             lines.append(
                 f"  word[0x{i:05X}]  py=0x{py:08X}  sim=0x{sim:08X}  ({region})"
             )

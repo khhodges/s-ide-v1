@@ -88,7 +88,7 @@ const THREAD_CAPS_OFFSET = 244;
 // Boot entry indirection constants (Task #229).
 // These must be at module scope so all methods (loadProgram, _bootStep, etc.)
 // can reference them without scoping issues.
-const BOOT_ENTRY_NS_SLOT   = 3;  // NS slot of the real boot execution lump (Boot.Entry)
+const BOOT_ENTRY_NS_SLOT   = 16; // NS slot of the real boot execution lump (SlideRule)
 const BOOT_ENTRY_CLIST_IDX = 3;  // index in Boot.Abstr director c-list that holds the E-GT
 const DIRECTOR_CC          = 4;  // Boot.Abstr director c-list size (indices 0..3)
 
@@ -144,7 +144,7 @@ class ChurchSimulator {
         // Format-version guard: reject binaries generated before Task #229
         // (the Boot.Entry indirection layout).  The tag is written by
         // boot_image.py at mem[NS_TABLE_BASE - 1] = src[src.length - NS_TABLE_RESERVE - 1].
-        const BOOT_IMAGE_FORMAT_TAG = 0xB0070229;  // must match boot_image.py
+        const BOOT_IMAGE_FORMAT_TAG = 0xB0070233;  // must match boot_image.py
         const tagIdx = src.length - this.NS_TABLE_RESERVE - 1;
         if (tagIdx >= 0 && tagIdx < src.length) {
             if ((src[tagIdx] >>> 0) !== BOOT_IMAGE_FORMAT_TAG) {
@@ -905,33 +905,38 @@ class ChurchSimulator {
         this.memory[dirNSBase + 2] = this.makeVersionSeals(0, bootAbstrLoc, dirCodeLimit);
         this.nsClistMap[2] = [0, 1, 2, 3];                          // director owns indices 0–3
 
-        // ── Boot.Entry lump (NS Slot 3) ────────────────────────────────────────────
-        // Real boot execution lump: inherits what Boot.Abstr used to have.
-        //   Word  0:          Lump header (n_minus_6, cw=NUC_CODE_WORDS, cc=DEMO_CLIST_SIZE)
-        //   Words 1–17:       Code region (NUC_CODE_WORDS=17; loaded by loadProgram)
-        //   Words 18..(end-DEMO_CLIST_SIZE-1): Freespace
-        //   Words (end-DEMO_CLIST_SIZE)..(end-1): C-list (17 GTs at physical end)
-        // CR14 (R+X) and CR6 (E) are derived from this lump's header in B:04.
-        const bootEntryLoc     = this.memory[this.NS_TABLE_BASE + BOOT_ENTRY_NS_SLOT * this.NS_ENTRY_WORDS];
-        const entryN_MINUS_6   = Math.max(0, Math.ceil(Math.log2(BOOT_ABSTR_LUMP_SIZE)) - 6);
-        const entryLumpSize    = BOOT_ABSTR_LUMP_SIZE;
-        const entryClistStart  = entryLumpSize - DEMO_CLIST_SIZE;
-        this.memory[bootEntryLoc] = this.packLumpHeader(entryN_MINUS_6, NUC_CODE_WORDS, DEMO_CLIST_SIZE, 0);
-        for (let i = 0; i < DEMO_CLIST_SIZE; i++) {
-            this.memory[bootEntryLoc + entryClistStart + i] = clistGTs[i];
+        // ── Boot.Entry foundational lump (only when BOOT_ENTRY_NS_SLOT === 3) ────
+        // When BOOT_ENTRY_NS_SLOT is a catalog lump (e.g. SlideRule at slot 16)
+        // that lump already has its own header written by the resident loader;
+        // skip the foundational setup and let the lump header speak for itself.
+        if (BOOT_ENTRY_NS_SLOT === 3) {
+            // Real boot execution lump: inherits what Boot.Abstr used to have.
+            //   Word  0:          Lump header (n_minus_6, cw=NUC_CODE_WORDS, cc=DEMO_CLIST_SIZE)
+            //   Words 1–17:       Code region (NUC_CODE_WORDS=17; loaded by loadProgram)
+            //   Words 18..(end-DEMO_CLIST_SIZE-1): Freespace
+            //   Words (end-DEMO_CLIST_SIZE)..(end-1): C-list (17 GTs at physical end)
+            // CR14 (R+X) and CR6 (E) are derived from this lump's header in B:04.
+            const bootEntryLoc    = this.memory[this.NS_TABLE_BASE + BOOT_ENTRY_NS_SLOT * this.NS_ENTRY_WORDS];
+            const entryN_MINUS_6  = Math.max(0, Math.ceil(Math.log2(BOOT_ABSTR_LUMP_SIZE)) - 6);
+            const entryLumpSize   = BOOT_ABSTR_LUMP_SIZE;
+            const entryClistStart = entryLumpSize - DEMO_CLIST_SIZE;
+            this.memory[bootEntryLoc] = this.packLumpHeader(entryN_MINUS_6, NUC_CODE_WORDS, DEMO_CLIST_SIZE, 0);
+            for (let i = 0; i < DEMO_CLIST_SIZE; i++) {
+                this.memory[bootEntryLoc + entryClistStart + i] = clistGTs[i];
+            }
+            this.memory[bootEntryLoc + entryClistStart + 0] = memMgrGT; // c-list[0] = memory-manager GT
+            const entryCRLimit = entryLumpSize - DEMO_CLIST_SIZE - 1;
+            const entryNSBase  = this.NS_TABLE_BASE + BOOT_ENTRY_NS_SLOT * this.NS_ENTRY_WORDS;
+            this.memory[entryNSBase + 1] = this.packNSWord1(entryCRLimit, 0, 0, 0, 0, 1, DEMO_CLIST_SIZE);
+            this.memory[entryNSBase + 2] = this.makeVersionSeals(0, bootEntryLoc, entryCRLimit);
+            this.nsClistMap[BOOT_ENTRY_NS_SLOT] = clistChildren; // Boot.Entry owns full capability list
         }
-        this.memory[bootEntryLoc + entryClistStart + 0] = memMgrGT; // c-list[0] = memory-manager GT
-        const entryCRLimit     = entryLumpSize - DEMO_CLIST_SIZE - 1;
-        const entryNSBase      = this.NS_TABLE_BASE + BOOT_ENTRY_NS_SLOT * this.NS_ENTRY_WORDS;
-        this.memory[entryNSBase + 1] = this.packNSWord1(entryCRLimit, 0, 0, 0, 0, 1, DEMO_CLIST_SIZE);
-        this.memory[entryNSBase + 2] = this.makeVersionSeals(0, bootEntryLoc, entryCRLimit);
-        this.nsClistMap[BOOT_ENTRY_NS_SLOT] = clistChildren;         // Boot.Entry owns full capability list
 
         // Format-version tag: written immediately before the NS table (at
         // NS_TABLE_BASE - 1) so that loadBootImage() can detect and reject
         // stale binaries generated before the Boot.Entry indirection layout.
         // Must match boot_image.py BOOT_IMAGE_FORMAT_TAG and the value in loadBootImage().
-        const BOOT_IMAGE_FORMAT_TAG_INIT = 0xB0070229;
+        const BOOT_IMAGE_FORMAT_TAG_INIT = 0xB0070233;
         this.memory[this.NS_TABLE_BASE - 1] = BOOT_IMAGE_FORMAT_TAG_INIT >>> 0;
     }
 

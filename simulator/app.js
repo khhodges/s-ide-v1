@@ -3890,7 +3890,7 @@ function renderBootNSImage() {
             const addrHex = '0x' + addr.toString(16).toUpperCase().padStart(4,'0');
             const gtHex   = '0x' + (gtWord>>>0).toString(16).toUpperCase().padStart(8,'0');
             if (gtWord === 0) {
-                html += `<tr style="opacity:0.3;"><td style="color:#888">${i}</td><td>${addrHex}</td><td style="font-family:monospace;">${gtHex}</td><td colspan="4" style="color:#555;">NULL — Slot 3 (reserved empty)</td></tr>`;
+                html += `<tr style="opacity:0.3;"><td style="color:#888">${i}</td><td>${addrHex}</td><td style="font-family:monospace;">${gtHex}</td><td colspan="4" style="color:#555;">NULL — empty slot</td></tr>`;
                 continue;
             }
             const gt       = sim.parseGT(gtWord);
@@ -4700,6 +4700,28 @@ function updateNamespace() {
             html += `<div class="ns-detail-panel">`;
             html += `<div class="ns-detail-title">Memory at 0x${e.word0_location.toString(16).toUpperCase().padStart(4, '0')} \u2014 ${e.label || 'Slot '+i} (${lim.limit + 1} words)</div>`;
             html += renderMemoryDump(e.word0_location, lim.limit + 1, i);
+            // Boot.Abstr director (slot 2): if cw=0 (pure indirection lump),
+            // follow c-list[3] (the boot-entry E-GT) to the real execution lump
+            // and show its memory so the inspector matches what CR6/CR14 point to.
+            if (i === 2) {
+                const hdrWord = (e.word0_location < sim.memory.length) ? (sim.memory[e.word0_location] >>> 0) : 0;
+                const hdr = sim.parseLumpHeader ? sim.parseLumpHeader(hdrWord) : null;
+                const BOOT_ENTRY_IDX = 3; // BOOT_ENTRY_CLIST_IDX
+                if (hdr && hdr.valid && hdr.cw === 0 && hdr.cc > BOOT_ENTRY_IDX) {
+                    const clistStart = hdr.lumpSize - hdr.cc;
+                    const egtWord = (sim.memory[e.word0_location + clistStart + BOOT_ENTRY_IDX] || 0) >>> 0;
+                    const egt = sim.parseGT ? sim.parseGT(egtWord) : null;
+                    if (egt && egt.index > 0) {
+                        const target = sim.readNSEntry(egt.index);
+                        if (target) {
+                            const tLim = sim.parseNSWord1(target.word1_limit);
+                            const tLabel = (sim.nsLabels && sim.nsLabels[egt.index]) || ('Slot ' + egt.index);
+                            html += `<div class="ns-detail-title" style="margin-top:0.5rem;">\u21b3 Boot Entry: 0x${target.word0_location.toString(16).toUpperCase().padStart(4,'0')} \u2014 ${tLabel} (${tLim.limit + 1} words)</div>`;
+                            html += renderMemoryDump(target.word0_location, tLim.limit + 1, egt.index);
+                        }
+                    }
+                }
+            }
             html += `</div></td></tr>`;
         }
     }
@@ -4878,7 +4900,8 @@ const BOOT_SEQ_CODE = {
     // at runtime (push sentinel frame, derive CR14/CR6 from lump header, set PC=0)
     // while M-elevation is still active.
     2: [
-        '; Boot.Abstr — Boot Abstraction: code + c-list in one NS slot (Slot 2)',
+        '; Boot.Abstr — director lump (Slot 2): c-list only, cw=0; c-list[3] holds',
+        '; an E-GT that points to the real boot execution lump (SlideRule, Slot 16).',
         '; B:03, B:04 (LOAD_NUC) and B:05 (COMPLETE) are indivisible — they',
         '; all execute in the same STEP controller cycle.',
         '',

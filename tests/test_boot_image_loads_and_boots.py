@@ -19,10 +19,10 @@ and asserts:
   * The boot state machine reaches `bootComplete = true` without faulting.
   * `nsCount` matches what the config asks for (named slots + Step-3 reserves).
   * Capability registers landed on the expected NS slots:
-      - CR15 -> NS Slot 0 (Boot.NS, the namespace root)
-      - CR12 -> NS Slot 1 (Boot.Thread, the thread identity)
-      - CR14 -> NS Slot 3 (Boot.Entry, code; R+X)  [via E-GT indirection from Boot.Abstr c-list[3]]
-      - CR6  -> NS Slot 3 (Boot.Entry, c-list; E)
+      - CR15 -> NS Slot 0  (Boot.NS, the namespace root)
+      - CR12 -> NS Slot 1  (Boot.Thread, the thread identity)
+      - CR14 -> NS Slot 16 (SlideRule, code; R+X)  [via E-GT indirection from Boot.Abstr c-list[3]]
+      - CR6  -> NS Slot 16 (SlideRule, c-list; E)
   * A sentinel CALL frame was pushed (so a stray RETURN reboots cleanly).
   * PC=0 and M-elevation has been dropped after boot completes.
 
@@ -50,6 +50,12 @@ HARNESS   = os.path.join(ROOT, "tests", "sim_boot_loader.js")
 
 # ---- configs (mirror test_boot_image_matches_simulator.py) ----------------
 
+def _sliderule_resident():
+    """SlideRule (slot 16) is the boot entry; must be resident so B:04 can
+    read a valid lump header from its physical location (4096 words at 4096)."""
+    return {"nsSlot": 16, "resident": True, "physAddr": 4096, "lumpSize": 4096}
+
+
 def _cfg_default():
     return {
         "step1": {
@@ -58,6 +64,7 @@ def _cfg_default():
             "threadLumpWords":       256,
             "abstractionLumpWords":  256,
         },
+        "step2": {"lumps": [_sliderule_resident()]},
     }
 
 
@@ -69,17 +76,13 @@ def _cfg_custom_step1():
             "threadLumpWords":       512,
             "abstractionLumpWords":  512,
         },
+        "step2": {"lumps": [_sliderule_resident()]},
     }
 
 
 def _cfg_step2_resident():
     cfg = _cfg_default()
-    cfg["step2"] = {
-        "lumps": [
-            {"nsSlot": 18, "resident": True,
-             "physAddr": 4096, "lumpSize": 64},
-        ],
-    }
+    # default already includes SlideRule as resident; no extra lumps needed.
     return cfg
 
 
@@ -101,6 +104,7 @@ def _cfg_no_window():
             "threadLumpWords":       256,
             "abstractionLumpWords":  256,
         },
+        "step2": {"lumps": [_sliderule_resident()]},
     }
 
 
@@ -211,12 +215,12 @@ def test_boot_image_loads_and_boots(cfg, skip_window, expected_ns_count):
         f"CR12 should hold a GT for NS Slot 1 (Boot.Thread); got "
         f"index={_gt_index(status['cr12']['word0'])}"
     )
-    assert _gt_index(status["cr14"]["word0"]) == 3, (
-        f"CR14 should hold a GT for NS Slot 3 (Boot.Entry code); got "
+    assert _gt_index(status["cr14"]["word0"]) == 16, (
+        f"CR14 should hold a GT for NS Slot 16 (SlideRule code); got "
         f"index={_gt_index(status['cr14']['word0'])}"
     )
-    assert _gt_index(status["cr6"]["word0"]) == 3, (
-        f"CR6 should hold a GT for NS Slot 3 (Boot.Entry c-list); got "
+    assert _gt_index(status["cr6"]["word0"]) == 16, (
+        f"CR6 should hold a GT for NS Slot 16 (SlideRule c-list); got "
         f"index={_gt_index(status['cr6']['word0'])}"
     )
 
