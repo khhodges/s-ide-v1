@@ -269,12 +269,15 @@ def _load_lump_catalog():
             continue
         if slot in RESERVED_NS_SLOTS:
             continue
-        out.append({
+        e = {
             "abstraction": entry.get("abstraction"),
             "nsSlot": slot,
             "lumpSize": entry.get("lump_size"),
             "token": entry.get("token"),
-        })
+        }
+        if entry.get("media_tags"):
+            e["mediaTags"] = entry["media_tags"]
+        out.append(e)
     # Stable ordering: by ns_slot, then abstraction name.
     out.sort(key=lambda e: (e["nsSlot"], e["abstraction"] or ""))
     return out

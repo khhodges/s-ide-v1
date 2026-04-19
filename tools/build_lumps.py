@@ -199,6 +199,8 @@ def build_lump(payload, verbose=False):
         'methods'    : method_table,
         'grants'     : payload.get('grants', []),
     }
+    if payload.get('media_tags'):
+        manifest_entry['media_tags'] = payload['media_tags']
     if dw > 0:
         manifest_entry['data_offset'] = 1 + cw
         manifest_entry['data_word_names'] = data_word_names

@@ -7,13 +7,13 @@
   "priority": "hot",
   "grants": ["E"],
   "media_tags": {
-    "TEXT": "0x54455854",
-    "VOIC": "0x564F4943",
-    "LUMP": "0x4C554D50",
-    "GTKN": "0x47544B4E",
-    "JPEG": "0x4A504547",
-    "PDF_": "0x50444620",
-    "MP3_": "0x4D503320"
+    "TEXT": { "hex": "0x54455854", "description": "Plain text payload" },
+    "VOIC": { "hex": "0x564F4943", "description": "Voice / audio stream" },
+    "LUMP": { "hex": "0x4C554D50", "description": "Binary abstraction lump" },
+    "GTKN": { "hex": "0x47544B4E", "description": "Golden Token (remote capability)" },
+    "JPEG": { "hex": "0x4A504547", "description": "JPEG image data" },
+    "PDF_": { "hex": "0x50444620", "description": "PDF document" },
+    "MP3_": { "hex": "0x4D503320", "description": "MP3 compressed audio" }
   },
   "methods": [
     {

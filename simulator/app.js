@@ -4802,6 +4802,21 @@ function showNSEntryTooltip(evt, idx) {
         if (absMethods.length) {
             html += `<div style="color:#6b7280;font-size:0.7rem;margin-bottom:0.2rem;">${absMethods.length} method${absMethods.length !== 1 ? 's' : ''}: <span style="color:#c084fc;">${absMethods.slice(0,5).join(', ')}${absMethods.length > 5 ? ', …' : ''}</span></div>`;
         }
+        const catalogEntry = Array.isArray(_lumpCatalog) ? _lumpCatalog.find(c => c.nsSlot === idx) : null;
+        const mediaTags = catalogEntry && catalogEntry.mediaTags;
+        if (mediaTags && typeof mediaTags === 'object') {
+            const tagEntries = Object.entries(mediaTags);
+            if (tagEntries.length) {
+                html += `<div style="color:#6b7280;font-size:0.7rem;margin-top:0.3rem;margin-bottom:0.15rem;font-weight:600;letter-spacing:0.02em;">Media Types</div>`;
+                html += `<table style="font-size:0.69rem;border-collapse:collapse;width:100%;margin-bottom:0.1rem;">`;
+                for (const [tag, val] of tagEntries) {
+                    const hexStr = (val && val.hex) ? val.hex : (typeof val === 'string' ? val : '');
+                    const desc   = (val && val.description) ? val.description : '';
+                    html += `<tr><td style="color:#c084fc;font-family:monospace;padding:1px 6px 1px 0;white-space:nowrap;">${tag}</td><td style="color:#9ca3af;padding:1px 6px 1px 0;white-space:nowrap;font-family:monospace;">${hexStr}</td><td style="color:#d1d5db;padding:1px 0;">${desc}</td></tr>`;
+                }
+                html += `</table>`;
+            }
+        }
         html += '<hr class="ns-tt-divider">';
     }
     html += `<div class="ns-tt-row"><b>Address</b> 0x${e.word0_location.toString(16).toUpperCase().padStart(8,'0')}</div>`;
@@ -21028,6 +21043,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             _hardwareProfiles = (data && data.profiles) || {};
             window.bootConfig = (data && data.config) || null;
+            _lumpCatalog = (data && data.lumpCatalog) || [];
         })
         .catch(err => { console.warn('[bootConfig] prefetch failed:', err); });
     _bootCfgReady.finally(() => {
