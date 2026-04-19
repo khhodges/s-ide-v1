@@ -4779,19 +4779,24 @@ function showNSEntryTooltip(evt, idx) {
 
     tt.innerHTML = html;
     tt.classList.add('visible');
-    _positionNSTooltip(tt, evt);
+    // Anchor to the left edge of the 3rd column (W0: Location) of the hovered row
+    const row = evt.target.closest('tr');
+    const col3 = row ? row.querySelectorAll('td')[2] : null;
+    _positionNSTooltip(tt, evt, col3);
 }
 
-function _positionNSTooltip(tt, evt) {
-    const margin = 12;
+function _positionNSTooltip(tt, evt, anchorEl) {
+    const margin = 8;
     tt.style.left = '0px'; tt.style.top = '0px';
     const tw = tt.offsetWidth || 260;
     const th = tt.offsetHeight || 140;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    let x = evt.clientX - tw - margin;
+    // Use the left edge of the anchor element (3rd column) as the right boundary
+    const anchorX = anchorEl ? anchorEl.getBoundingClientRect().left : evt.clientX;
+    let x = anchorX - tw - margin;
     let y = evt.clientY - th / 2;
-    if (x < 8) x = evt.clientX + margin;
+    if (x < 8) x = anchorX + margin;
     if (x + tw > vw - 8) x = vw - tw - 8;
     if (y < 8) y = 8;
     if (y + th > vh - 8) y = vh - th - 8;
