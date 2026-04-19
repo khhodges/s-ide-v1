@@ -408,7 +408,14 @@ class ChurchTangNano20K(Elaboratable):
                 core.outform_rx_data.eq(uart_rx.data),
             ]
 
-            with m.If(core.outform_busy):
+            # Hold the mux on outform_uart until *both* the outform FSM is
+            # done AND the UartTx has finished the current byte.  This
+            # prevents a mid-byte mux switch from corrupting the debug UART
+            # stream if outform_busy ever de-asserts while outform_uart is
+            # still transmitting (e.g. future timing changes or a glitch).
+            outform_uart_active = Signal(name="outform_uart_active")
+            m.d.comb += outform_uart_active.eq(core.outform_busy | outform_uart.busy)
+            with m.If(outform_uart_active):
                 m.d.comb += self.uart_tx.eq(outform_uart.tx)
             with m.Else():
                 m.d.comb += self.uart_tx.eq(debug.tx)
