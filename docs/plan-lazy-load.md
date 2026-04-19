@@ -79,11 +79,19 @@ On CALL/LOAD to a valid NS entry:
 ### Step 2: Loader abstraction — CLOOMC++ source
 
 - Write `loader.cloomc` with Load, Prefetch, Evict methods
-- Load method: read manifest → fetch lump bytes → call Locator.Parse →
-  call Memory.Allocate → call Navana.Abstraction.Add
-  (The GT already exists in the c-list from boot — Mint.Create is not
-  needed. Lazy load re-populates the NS entry; it does not mint a new GT.)
-- Compile to `Loader.json`, build lump
+- **Argument convention**: the target NS slot index is passed in **DR1**
+  (DR0 is hardwired to zero and cannot carry arguments)
+- Load method (implemented in `simulator/cloomc/Loader.json`):
+  1. `Navana.Abstraction.Add` via c-list slot 0 — register the lump in the NS table
+  2. `Mint.Create` via c-list slot 1 — stamp a fresh GT for the newly-installed lump
+  3. `Memory.Allocate` via c-list slot 2 — commit the backing memory block
+  Returns DR1=1 on success.
+- Prefetch method: calls `Navana.Abstraction.Add` (hint); always returns DR1=1
+  (whether the slot was already resident is not checked at this layer — idempotence
+  is Navana's responsibility)
+- Evict method: calls `Memory.Free` via c-list slot 2, which zeroes code words
+  and sets lump header cw=0; GT and c-list are preserved; returns DR1=1 on success
+- Compile to `Loader.json`, build lump with `python3 tools/build_lumps.py`
 
 ### Step 3: Fault handler extension
 

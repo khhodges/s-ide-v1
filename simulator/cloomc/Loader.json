@@ -10,25 +10,66 @@
       "name": "Load",
       "index": 0,
       "description": "Fault-driven load. Catches NULL_CAP fault, looks up the manifest, fetches the lump, installs it, retries the faulting CALL.",
-      "inputs": ["DR0: target NS slot index"],
-      "outputs": ["DR0: 1 on success, 0 on failure"],
-      "code": ["0x1F000000"]
+      "inputs": ["DR1: target NS slot index"],
+      "outputs": ["DR1: 1 on success, 0 on failure"],
+      "comments": [
+        "LOAD CR1, CR6, 0  — load Navana GT from c-list[0] (E perm, NS slot 5)",
+        "CALL CR1          — call Navana.Abstraction.Add(DR1=slot) to register the lump in the NS table",
+        "LOAD CR1, CR6, 1  — load Mint GT from c-list[1] (E perm, NS slot 6)",
+        "CALL CR1          — call Mint.Create to stamp a fresh GT for the newly-installed lump",
+        "LOAD CR2, CR6, 2  — load Memory GT from c-list[2] (E perm, NS slot 7)",
+        "CALL CR2          — call Memory.Allocate to commit the backing memory block",
+        "IADD DR1, DR0, #1 — DR1 = 1 (success; DR0 is hardwired-zero, used as zero source)",
+        "RETURN            — return to fault handler; faulting CALL will be retried"
+      ],
+      "code": [
+        "0x070B0000",
+        "0x17080000",
+        "0x070B0001",
+        "0x17080000",
+        "0x07130002",
+        "0x17100000",
+        "0x7F084001",
+        "0x1F000000"
+      ]
     },
     {
       "name": "Prefetch",
       "index": 1,
-      "description": "Hint-driven load. A caller requests future loading of a slot without blocking. Returns immediately.",
-      "inputs": ["DR0: target NS slot index"],
-      "outputs": ["DR0: 1 if prefetch queued, 0 if already loaded"],
-      "code": ["0x1F000000"]
+      "description": "Hint-driven load. A caller requests future loading of a slot without blocking. Always returns 1 (hint submitted); whether the slot was already resident is not checked at this layer.",
+      "inputs": ["DR1: target NS slot index"],
+      "outputs": ["DR1: 1 (hint submitted to Navana)"],
+      "comments": [
+        "LOAD CR1, CR6, 0  — load Navana GT from c-list[0] (E perm, NS slot 5)",
+        "CALL CR1          — call Navana.Abstraction.Add(DR1=slot) to enqueue a background fetch hint",
+        "IADD DR1, DR0, #1 — DR1 = 1 (hint submitted; DR0 is hardwired-zero, used as zero source)",
+        "RETURN            — return immediately; caller is not blocked"
+      ],
+      "code": [
+        "0x070B0000",
+        "0x17080000",
+        "0x7F084001",
+        "0x1F000000"
+      ]
     },
     {
       "name": "Evict",
       "index": 2,
-      "description": "Unloads a cold abstraction to reclaim memory. Clears the NS slot. Next access triggers Load again.",
-      "inputs": ["DR0: target NS slot index"],
-      "outputs": ["DR0: 1 on success, 0 on failure"],
-      "code": ["0x1F000000"]
+      "description": "Unloads a cold abstraction to reclaim memory. Clears the NS slot code words and sets lump header cw=0. GT (NS entry) and c-list are preserved. Next access triggers Load again.",
+      "inputs": ["DR1: target NS slot index"],
+      "outputs": ["DR1: 1 on success, 0 on failure"],
+      "comments": [
+        "LOAD CR2, CR6, 2  — load Memory GT from c-list[2] (E perm, NS slot 7)",
+        "CALL CR2          — call Memory.Free(DR1=slot) to release the code region; zeroes code words and sets lump header cw=0",
+        "IADD DR1, DR0, #1 — DR1 = 1 (success; DR0 is hardwired-zero, used as zero source)",
+        "RETURN            — return; GT and c-list are preserved, next CALL on this slot triggers Loader.Load"
+      ],
+      "code": [
+        "0x07130002",
+        "0x17100000",
+        "0x7F084001",
+        "0x1F000000"
+      ]
     }
   ],
   "capabilities": [
