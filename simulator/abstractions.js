@@ -298,8 +298,8 @@ class AbstractionRegistry {
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(31, 'Tunnel', 1,
-            ['Register', 'Send', 'Receive', 'Fault', 'Fetch'],
-            'Resident I/O channel — FPGA\u2194IDE host over UART; Register replaces the hardwired call-home boot step (B:02\u00BD); all ongoing host communication (logs, uploads, fault reports, lazy-load fetch) goes through this abstraction',
+            ['Register', 'Send', 'Receive', 'Fault', 'Fetch', 'Call'],
+            'Resident I/O channel — FPGA\u2194IDE host over UART; self-identifying media channel (FourCC type tags: TEXT \u00b7 VOIC \u00b7 LUMP \u00b7 GTKN \u00b7 \u2026); Register replaces the hardwired call-home boot step (B:02\u00BD); Call(GT) forwards through the tunnel to a remote capability',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 1, E: 1 } });
 
         this.createAbstraction(32, 'Negotiate', 5,

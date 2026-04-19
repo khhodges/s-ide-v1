@@ -108,7 +108,7 @@ DEFAULT_ABSTRACTION_CATALOG = [
     ("Family",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
     ("Schoolroom",    {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
     ("Friends",       {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Tunnel",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
+    ("Tunnel",        {"R":0,"W":0,"X":0,"L":0,"S":1,"E":1}, False),
     ("Negotiate",     {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
     ("Editor",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
     ("Assembler",     {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),

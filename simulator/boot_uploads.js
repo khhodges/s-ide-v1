@@ -245,6 +245,23 @@ const BOOT_UPLOADS = [
         methods: []
     },
     {
+        abstraction: 'Tunnel',
+        type: 'abstraction',
+        index: 31,
+        grants: ['E'],
+        capabilities: [
+            { target: 11, name: 'UART', grants: ['E'] }
+        ],
+        methods: [
+            { name: 'Register', code: [0x1F000000] },
+            { name: 'Send',     code: [0x1F000000] },
+            { name: 'Receive',  code: [0x1F000000] },
+            { name: 'Fault',    code: [0x1F000000] },
+            { name: 'Fetch',    code: [0x1F000000] },
+            { name: 'Call',     code: [0x1F000000] }
+        ]
+    },
+    {
         abstraction: 'Loader',
         type: 'abstraction',
         index: 19,

@@ -7792,10 +7792,11 @@ function getMethodPurposes(abs) {
         'Friends': { 'Request': 'Friends.Request(peer_GT) — send friend request (needs parent approval)', 'Accept': 'Friends.Accept(requester_GT) — accept request', 'Share': 'Friends.Share(friend_GT, cap_GT) — share capability', 'Revoke': 'Friends.Revoke(cap_GT) — revoke shared capability' },
         'Tunnel': {
             'Register': 'Tunnel.Register(boot_reason, last_fault, fault_NIA) — send the 23-byte call-home identification packet [0xCE11 · board · FW · HMAC(4B) · UID(8B) · reason · fault · NIA(4B)] and await ACK. Replaces the hardwired B:02\u00BD boot step. DR0 \u2190 1 (IDE connected) | 0 (offline).',
-            'Send': 'Tunnel.Send(type_tag, word_count, payload\u2026) — transmit a tagged message to the IDE host over UART. DR1 = type tag, DR2 = word count (1\u201313), DR3\u2026 = payload words. Fire-and-forget; no ACK. DR0 \u2190 0 = queued | 0x01 = TX overrun.',
-            'Receive': 'Tunnel.Receive(timeout_steps) — block until the IDE host sends a message or timeout expires. DR1 = timeout in steps (0 = wait forever). DR0 \u2190 word count (0 = timeout), DR1 \u2190 type tag, DR2\u2026 = payload.',
+            'Send': 'Tunnel.Send(type_tag, word_count, payload\u2026) — transmit a self-identifying media packet to the IDE host. DR1 = FourCC type tag (TEXT=0x54455854 \u00b7 VOIC=0x564F4943 \u00b7 LUMP=0x4C554D50 \u00b7 GTKN=0x47544B4E \u00b7 JPEG=0x4A504547 \u00b7 \u2026), DR2 = word count (1\u201313), DR3\u2026 = payload words. Fire-and-forget; no ACK. DR0 \u2190 0 = queued | 0x01 = TX overrun.',
+            'Receive': 'Tunnel.Receive(timeout_steps) — block until the IDE host sends a self-identifying media packet or timeout expires. DR1 = timeout in steps (0 = wait forever). DR0 \u2190 word count (0 = timeout), DR1 \u2190 FourCC type tag (TEXT \u00b7 VOIC \u00b7 LUMP \u00b7 GTKN \u00b7 \u2026), DR2\u2026 = payload. Caller dispatches on DR1.',
             'Fault': 'Tunnel.Fault(fault_code, ns_idx, thread_gt, abstr_idx, method_idx, instr_offset) — report a fault with full semantic location. DR1 = fault_code, DR2 = ns_idx (active namespace slot), DR3 = thread_gt (NS index of faulting thread), DR4 = abstr_idx (NS slot of executing abstraction), DR5 = method_idx, DR6 = instr_offset. Bypasses send queue. IDE logs full location in Devices view. Fire-and-forget.',
             'Fetch': 'Tunnel.Fetch(token, expected_words, mem_GT) — request a lump binary from the IDE by NS slot token. CR2 = Memory W-GT for the write destination. DR1 = slot token, DR2 = expected size in words. Validates header (magic, CRC) before writing. DR0 \u2190 0 = installed | error code.',
+            'Call': 'Tunnel.Call(remote_GT) — forward a CALL through the tunnel to a remote capability. CR2 = remote GT (Outform, far-end abstraction). Encodes the GT as a GTKN packet (tag=0x47544B4E), transmits it, and awaits the far-end RETURN. This is the "Hello Mum" primitive: CALL(CONNECT(me, mymother)). DR0 \u2190 far-end return value.',
         },
         'Negotiate': { 'Propose': 'Negotiate.Propose(cap_GT) — request special grant (dual-approval)', 'Approve': 'Negotiate.Approve(proposal_id) — parent or teacher approves', 'Reject': 'Negotiate.Reject(proposal_id) — reject proposal', 'Status': 'Negotiate.Status(proposal_id) — query proposal state' },
         'Editor': { 'Open': 'Editor.Open(file_GT) — load DATA object into editor buffer', 'Save': 'Editor.Save() — DWRITE buffer to NS slot, recompute seal', 'Load': 'Editor.Load(nsIndex) — DREAD source from slot into buffer', 'Undo': 'Editor.Undo() — pop previous state from undo stack' },
@@ -9018,17 +9019,26 @@ CALL   CR1                ; Tunnel.Register:
 ;   3. Await ACK frame within ≈500 ms timeout
 ;   4. If ACK: IDE confirms UID + HMAC valid → DR0 ← 1
 ;   5. If timeout: offline mode → DR0 ← 0, boot continues`,
-            'Send': `; Tunnel.Send — push a message to the IDE host
-; Transmits a tagged, framed packet over the UART channel.
-; Used for log output, status events, and debug data.
+            'Send': `; Tunnel.Send — push a self-identifying media packet to the IDE
+; Every packet carries a 4-byte ASCII FourCC type tag so the
+; receiver knows what it holds without out-of-band agreement.
+; New tags are allocated without touching existing dispatch code.
 ;
-; DR1 = message type tag  (e.g. 0xA0000000 = log)
+; FourCC media tag registry (open — add tags as needed):
+;   TEXT = 0x54455854  UTF-8 text, 4 bytes/word
+;   VOIC = 0x564F4943  Voice audio, 4×8-bit PCM/word
+;   LUMP = 0x4C554D50  Lump binary header or fragment
+;   GTKN = 0x47544B4E  Golden Token (GT word + NS index)
+;   JPEG = 0x4A504547  JPEG image fragment (future)
+;   PDF_ = 0x50444620  PDF document fragment (future)
+;
+; DR1 = FourCC type tag
 ; DR2 = payload word count (1–13)
 ; DR3..DR(2+count) = payload words
 ; DR0 ← 0 = queued · 0x01 = TX buffer overrun
 
 LOAD   CR1, NS[31]        ; Load Tunnel E-GT
-DWRITE DR1, #0xA0000000   ; Type tag: log output
+DWRITE DR1, #0x54455854   ; Type tag: TEXT (0x54455854 = "TEXT")
 DWRITE DR2, #3             ; 3 payload words
 DWRITE DR3, #0x48656C6C   ; "Hell"
 DWRITE DR4, #0x6F204D75   ; "o Mu"
@@ -9101,6 +9111,29 @@ CALL   CR1                  ; Tunnel.Fetch:
 ;   4. Write validated words to CR2 base via mSave (W-perm)
 ;   5. Update NS entry: base, limit, version, seal
 ; DR0 ← 0 = lump installed · non-zero = error (timeout/CRC/size)`,
+            'Call': `; Tunnel.Call — forward a CALL through the tunnel to a remote capability
+; The "Hello Mum" primitive: the caller presents a remote GT and
+; Tunnel encodes it as a GTKN packet, transmits it, then blocks
+; awaiting the far-end RETURN.  From the caller's view this is one
+; Church instruction — apply an abstraction and receive a result.
+;
+; CALL(CONNECT(me, mymother)):
+;   1. me       = CR8 (Inform GT — thread identity)
+;   2. mymother = CR2 (Outform GT — remote service, F-bit set)
+;   3. Tunnel   = CR1 (E-GT — the tunnel itself is the channel)
+;
+; CR2 = remote GT (Outform type, F-bit set in NS word1[30])
+; DR0 ← far-end return value · non-zero on error / timeout
+
+LOAD   CR1, NS[31]        ; Load Tunnel E-GT
+LOAD   CR2, NS[55]        ; Load remote GT (mymother — F-bit=1)
+CALL   CR1                 ; Tunnel.Call:
+;   1. Read CR2 GT word and NS index
+;   2. Compose GTKN packet: [0x47544B4E · GT_word · ns_idx]
+;   3. Transmit over UART to IDE bridge
+;   4. IDE routes to far-end namespace via F-bit tunnel
+;   5. Far-end CALL executes; RETURN value relayed back
+;   6. DR0 ← far-end DR0 return value`,
         },
         'Negotiate': {
             'Propose': `; Negotiate.Propose — request special grant
