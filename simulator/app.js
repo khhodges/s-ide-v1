@@ -4789,9 +4789,10 @@ function _positionNSTooltip(tt, evt) {
     const th = tt.offsetHeight || 140;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    let x = evt.clientX + margin;
+    let x = evt.clientX - tw - margin;
     let y = evt.clientY - th / 2;
-    if (x + tw > vw - 8) x = evt.clientX - tw - margin;
+    if (x < 8) x = evt.clientX + margin;
+    if (x + tw > vw - 8) x = vw - tw - 8;
     if (y < 8) y = 8;
     if (y + th > vh - 8) y = vh - th - 8;
     tt.style.left = x + 'px';
