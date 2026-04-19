@@ -46,14 +46,14 @@ SLOT_SIZE        = 0x40         # 64 words
 # DEVICE_REG_LIMITS and hardware/boot_rom.py _MMIO_ENTRIES).
 DEVICE_REG_LIMITS = {11: 2, 12: 5, 13: 0, 14: 4}
 
-BOOT_ENTRY_NS_SLOT   = 16  # NS slot holding the real boot execution lump (SlideRule)
+BOOT_ENTRY_NS_SLOT   = 3   # NS slot holding the real boot execution lump (Boot.Entry)
 BOOT_ENTRY_CLIST_IDX = 3   # index in Boot.Abstr director c-list that holds the boot entry E-GT
 DIRECTOR_CLIST_SIZE  = 4   # Boot.Abstr director c-list size (indices 0..3)
 
 # Format-version tag written to mem[NS_TABLE_BASE - 1] so loadBootImage()
 # can reject stale binaries that pre-date the Boot.Entry indirection layout.
 # Increment whenever the binary format changes incompatibly.
-BOOT_IMAGE_FORMAT_TAG = 0xB0070233  # "BOOT 0233" — must match simulator.js
+BOOT_IMAGE_FORMAT_TAG = 0xB0070229  # "BOOT 0229" — must match simulator.js
 
 # Default abstraction catalog — ports simulator.js _getAbstractionCatalog()
 # fallback list (used when no abstractionRegistry is wired in). The boot
@@ -199,12 +199,7 @@ def _ns_n_minus_6(lump_words):
 
 
 def _read_lump_body(lumps_dir, token_hex):
-    """Read raw 32-bit words from server/lumps/<token>.lump if present.
-
-    .lump files store words in big-endian byte order (Church Machine native
-    word order); unpack with ">" so the returned integers match the values
-    that parseLumpHeader / the simulator expect to find in memory[].
-    """
+    """Read raw 32-bit LE words from server/lumps/<token>.lump if present."""
     if not token_hex:
         return None
     path = os.path.join(lumps_dir, f"{token_hex}.lump")
@@ -213,16 +208,11 @@ def _read_lump_body(lumps_dir, token_hex):
     with open(path, "rb") as f:
         raw = f.read()
     n = len(raw) // 4
-    return list(struct.unpack(f">{n}I", raw[: n * 4]))
+    return list(struct.unpack(f"<{n}I", raw[: n * 4]))
 
 
 def _load_catalog_token_map(manifest_path):
-    """ns_slot -> token_hex from server/lumps/manifest.json.
-
-    When multiple manifest entries share the same ns_slot (e.g. SlideRule and
-    SlideRuleHS both claim slot 16), use the FIRST occurrence so the primary
-    (largest) variant is selected for resident image embedding.
-    """
+    """ns_slot -> token_hex from server/lumps/manifest.json."""
     try:
         with open(manifest_path, "r") as f:
             entries = json.load(f)
@@ -232,7 +222,7 @@ def _load_catalog_token_map(manifest_path):
     for e in entries if isinstance(entries, list) else []:
         slot = e.get("ns_slot")
         tok  = e.get("token")
-        if isinstance(slot, int) and isinstance(tok, str) and slot not in out:
+        if isinstance(slot, int) and isinstance(tok, str):
             out[slot] = tok
     return out
 
@@ -263,8 +253,8 @@ def generate_boot_image(cfg, lumps_dir):
     # MMIO device-register windows must not be overridden by caller-supplied
     # physAddr values, even when generate_boot_image() is called directly
     # (bypassing the app-layer _validate_step2 guard).
-    _FOUNDATIONAL_SLOTS = {0, 1, 2, 3}        # Boot.NS, Boot.Thread, Boot.Abstr director, Boot.Entry
-    _DEVICE_REG_SLOTS   = set(range(11, 16))  # slots 11..15
+    _FOUNDATIONAL_SLOTS = set(range(0, BOOT_ENTRY_NS_SLOT + 1))  # slots 0..3
+    _DEVICE_REG_SLOTS   = set(range(11, 16))                      # slots 11..15
     _RESERVED_SLOTS     = _FOUNDATIONAL_SLOTS | _DEVICE_REG_SLOTS
 
     phys_override = {}
@@ -393,23 +383,25 @@ def generate_boot_image(cfg, lumps_dir):
     mem[dir_ns_base + 1] = pack_ns_word1(dir_code_limit, 0, 0, 0, 0, 1, DIRECTOR_CLIST_SIZE)
     mem[dir_ns_base + 2] = make_version_seals(0, boot_abstr_loc, dir_code_limit)
 
-    # ----- Boot.Entry foundational lump (only when BOOT_ENTRY_NS_SLOT == 3) --
-    # When BOOT_ENTRY_NS_SLOT is a catalog lump (e.g. SlideRule at slot 16)
-    # that lump's header is written by the resident loader; skip the
-    # foundational setup and let the lump header speak for itself.
-    if BOOT_ENTRY_NS_SLOT == 3:
-        boot_entry_loc    = locations[BOOT_ENTRY_NS_SLOT]
-        entry_lump_size   = abstr_size
-        entry_clist_start = entry_lump_size - DEMO_CLIST_SIZE
-        mem[boot_entry_loc] = pack_lump_header(
-            _ns_n_minus_6(abstr_size), NUC_CODE_WORDS, DEMO_CLIST_SIZE, 0)
-        for i, gt in enumerate(clist_gts):
-            mem[boot_entry_loc + entry_clist_start + i] = gt & 0xFFFFFFFF
-        mem[boot_entry_loc + entry_clist_start + 0] = mem_mgr_gt & 0xFFFFFFFF
-        entry_cr_limit = entry_lump_size - DEMO_CLIST_SIZE - 1
-        entry_ns_base  = ns_table_base + BOOT_ENTRY_NS_SLOT * NS_ENTRY_WORDS
-        mem[entry_ns_base + 1] = pack_ns_word1(entry_cr_limit, 0, 0, 0, 0, 1, DEMO_CLIST_SIZE)
-        mem[entry_ns_base + 2] = make_version_seals(0, boot_entry_loc, entry_cr_limit)
+    # ----- Boot.Entry lump (NS slot 3) ------------------------------------
+    # Real boot execution lump: inherits what Boot.Abstr used to have.
+    #   Word  0:      Lump header (n_minus_6, cw=NUC_CODE_WORDS, cc=DEMO_CLIST_SIZE)
+    #   Words 1–17:   Code region (loaded by the boot program loader)
+    #   Words 18..(end-DEMO_CLIST_SIZE-1): Freespace
+    #   Words (end-DEMO_CLIST_SIZE)..(end-1): C-list (17 GTs at physical end)
+    # B:04 derives CR14 (R+X) and CR6 (E) from this lump's header.
+    boot_entry_loc     = locations[BOOT_ENTRY_NS_SLOT]
+    entry_lump_size    = abstr_size
+    entry_clist_start  = entry_lump_size - DEMO_CLIST_SIZE
+    mem[boot_entry_loc] = pack_lump_header(
+        _ns_n_minus_6(abstr_size), NUC_CODE_WORDS, DEMO_CLIST_SIZE, 0)
+    for i, gt in enumerate(clist_gts):
+        mem[boot_entry_loc + entry_clist_start + i] = gt & 0xFFFFFFFF
+    mem[boot_entry_loc + entry_clist_start + 0] = mem_mgr_gt & 0xFFFFFFFF  # c-list[0] = memory-manager GT
+    entry_cr_limit     = entry_lump_size - DEMO_CLIST_SIZE - 1
+    entry_ns_base      = ns_table_base + BOOT_ENTRY_NS_SLOT * NS_ENTRY_WORDS
+    mem[entry_ns_base + 1] = pack_ns_word1(entry_cr_limit, 0, 0, 0, 0, 1, DEMO_CLIST_SIZE)
+    mem[entry_ns_base + 2] = make_version_seals(0, boot_entry_loc, entry_cr_limit)
 
     # Format-version tag: written immediately before the NS table so that
     # loadBootImage() can detect and reject stale pre-Task-#229 binaries.

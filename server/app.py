@@ -215,11 +215,7 @@ DEFAULT_BOOT_CONFIG = {
     # Step 2 (Task #215): per-lump resident/lazy decision. Empty list =
     # historical default (all catalog lumps lazy-loaded on first CALL).
     "step2": {
-        # SlideRule (slot 16) is the real boot execution lump (BOOT_ENTRY_NS_SLOT=16).
-        # It must always be resident so B:04 can read its lump header at physAddr=4096.
-        "lumps": [
-            {"nsSlot": 16, "resident": True, "physAddr": 4096, "lumpSize": 4096}
-        ]
+        "lumps": []
     },
     # Step 3 (Task #216): how many empty NS slots to reserve at boot for
     # lumps that don't exist yet at design time. The runtime lazy loader
@@ -246,11 +242,7 @@ BASE_NAMED_NS_COUNT = 47
 # 0–3 are foundational lumps (NS, Thread, Boot.Abstr director, Boot.Entry);
 # 11–15 are device register windows (UART, LED, Button, Timer, Display)
 # backed by hardware MMIO not by lump memory.
-# Slot 16 (SlideRule) is the real boot execution lump (BOOT_ENTRY_NS_SLOT);
-# it is reserved so users cannot overwrite it with an arbitrary resident.
-# The DEFAULT_BOOT_CONFIG and _validate_step2 treat it as a system-managed
-# exception that must be resident.
-RESERVED_NS_SLOTS = set(range(0, 4)) | set(range(11, 16)) | {16}
+RESERVED_NS_SLOTS = set(range(0, 4)) | set(range(11, 16))
 
 # Boot.Abstr director is always the minimum slot size (64 words).
 # Added to foundational footprint calculations after Task #229.
@@ -275,7 +267,7 @@ def _load_lump_catalog():
         slot = entry.get("ns_slot")
         if not isinstance(slot, int):
             continue
-        if slot in RESERVED_NS_SLOTS and slot != _boot_image_gen.BOOT_ENTRY_NS_SLOT:
+        if slot in RESERVED_NS_SLOTS:
             continue
         out.append({
             "abstraction": entry.get("abstraction"),
@@ -318,7 +310,7 @@ def _validate_step2(step2, step1, target_board):
         slot = entry.get("nsSlot")
         if not isinstance(slot, int) or slot < 0 or slot >= 256:
             return f"step2.lumps entry has invalid nsSlot: {slot!r}"
-        if slot in RESERVED_NS_SLOTS and slot != _boot_image_gen.BOOT_ENTRY_NS_SLOT:
+        if slot in RESERVED_NS_SLOTS:
             return (f"NS slot {slot} is reserved (foundational lump or device "
                     f"MMIO) and cannot host a resident lump")
         if slot in seen_slots:
