@@ -9,6 +9,11 @@ NS entry, checks each lump header, detects address conflicts, and decompiles
 code words via `ChurchAssembler.disassemble()`.  Every table here is
 directly reproducible from the script.
 
+> **Scope note:** The dump script iterates `nsCount` active entries (47 at
+> boot in the 16 384-word profile) rather than all 256 possible NS table
+> slots.  Slots 47–255 contain `0x00000000` words (never written) and are
+> out of scope for this audit.
+
 ---
 
 ## 1. Top-Level Memory Regions
@@ -254,20 +259,35 @@ Header: `0xF9004411` — `n_minus_6=2` → 256w, `cw=17`, `typ=0` (lump), `cc=17
 
 ## 5. IO Device Register Windows
 
-In the **65 536-word** architectural configuration device registers are at
-fixed offsets within the NS table region (specific addresses depend on the NS
-entry locations, which start from 0 as in the 16 384-word case):
+Device register windows are defined by NS entry locations, not by the NS
+table itself.  Lump slots 11–14 carry device MMIO windows at the lump
+addresses recorded in their NS entries (see §2.2), which sit in the normal
+lump area starting from address 0.  In both the 65 536-word and 16 384-word
+configurations, device registers are at the **same absolute word addresses**
+(`0x0440`, `0x0480`, `0x04C0`, `0x0500`), deep below the NS table region.
 
-| Slot | Device  | limit | Registers |
-|-----:|:--------|------:|:----------|
-|  11  | UART    |     2 | TX@+0, STATUS@+1, RX@+2 |
-|  12  | LED     |     5 | LED0–LED5 (one word per LED; bit[0]=pin) |
-|  13  | Button  |     0 | BUTTON_STATE@+0 (bitmask) |
-|  14  | Timer   |     4 | TICKS_LO@+0, TICKS_HI@+1, TOD_EPOCH@+2, ALARM_CMP@+3, CTL@+4 |
+The simulator intercepts reads and writes to `[location … location + limit]`
+for these slots and routes them to device emulation.
 
-In both configurations, the simulator intercepts reads and writes to the word
-addresses `[NS entry location … NS entry location + limit]` for these slots
-and routes them to device emulation.
+### Absolute MMIO register addresses (derived from NS entry locations)
+
+| Slot | Device | Word addr | Mnemonic | Description |
+|-----:|:-------|:---------:|:---------|:------------|
+|  11  | UART   | `0x0440`  | TX       | Write byte to transmit |
+|  11  | UART   | `0x0441`  | STATUS   | Bit[0]=tx-ready, Bit[1]=rx-ready |
+|  11  | UART   | `0x0442`  | RX       | Read received byte |
+|  12  | LED    | `0x0480`  | LED0     | LED 0 state (bit[0]=pin) |
+|  12  | LED    | `0x0481`  | LED1     | LED 1 state |
+|  12  | LED    | `0x0482`  | LED2     | LED 2 state |
+|  12  | LED    | `0x0483`  | LED3     | LED 3 state |
+|  12  | LED    | `0x0484`  | LED4     | LED 4 state |
+|  12  | LED    | `0x0485`  | LED5     | LED 5 state |
+|  13  | Button | `0x04C0`  | BUTTON_STATE | Button bitmask (read-only) |
+|  14  | Timer  | `0x0500`  | TICKS_LO | Low 32 bits of tick counter |
+|  14  | Timer  | `0x0501`  | TICKS_HI | High 32 bits of tick counter |
+|  14  | Timer  | `0x0502`  | TOD_EPOCH | Time-of-day epoch |
+|  14  | Timer  | `0x0503`  | ALARM_CMP | Alarm compare register |
+|  14  | Timer  | `0x0504`  | CTL       | Timer control (bit[0]=enable) |
 
 ---
 
