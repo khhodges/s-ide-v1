@@ -3336,7 +3336,8 @@ function updateCRDetail() {
             codeHtml += `<td class="cr-gt">0x${word0.toString(16).toUpperCase().padStart(8,'0')}</td>`;
             codeHtml += `<td class="code-disasm">${hdrDisasm}</td>`;
             if (_brArrows.hasBranches) codeHtml += '<td class="br-arrow-col"></td>';
-            codeHtml += `<td class="code-decompiled code-decompiled-infra">header</td>`;
+            const _hdrLumpName = (sim.nsLabels && sim.nsLabels[nsIdx]) || (nsIdx >= 0 ? `Slot ${nsIdx}` : '');
+            codeHtml += `<td class="code-decompiled code-decompiled-infra">header${_hdrLumpName ? ' \u00b7 <span style="color:#4ec9b0;font-weight:600;">' + _hdrLumpName + '</span>' : ''}</td>`;
             codeHtml += '</tr>';
             codeStart = baseLoc + 1;
             codeLimit = lumpHdr.cw;
