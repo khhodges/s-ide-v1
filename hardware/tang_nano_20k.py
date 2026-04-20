@@ -440,6 +440,14 @@ class ChurchTangNano20K(Elaboratable):
         with m.If(fsm_send_byte):
             m.d.comb += [debug.send_byte.eq(1), debug.byte_data.eq(fsm_byte_data)]
         with m.Elif(mmio_uart_pending & ~debug.busy):
+            # Guard reviewed (#274): debug.busy is a composite signal from
+            # DebugPrinter that drops to 0 only after uart.done fires (the
+            # UartTx DONE state sets done=1 / busy=0 for exactly one cycle,
+            # then goes to IDLE).  DebugPrinter holds busy=1 (BYTE_WAIT) while
+            # uart.done is being sampled, so debug.busy goes low only when the
+            # underlying uart is already back in IDLE.  ~debug.busy therefore
+            # implies ~uart.busy — the guard is equivalent to the outform mux
+            # guard (outform_busy | outform_uart.busy) for this use case.
             m.d.comb += [debug.send_byte.eq(1),
                          debug.byte_data.eq(mmio_uart_byte_reg)]
             m.d.sync += mmio_uart_pending.eq(0)

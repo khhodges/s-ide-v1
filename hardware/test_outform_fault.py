@@ -182,7 +182,7 @@ def test_outform_iot_crc_fault():
         ok = False
     if ok:
         print("PASS")
-    return ok
+    assert ok, "Test 1 (CRC fault recovery) had failures — see output above"
 
 
 # ---------------------------------------------------------------------------
@@ -324,7 +324,7 @@ def test_mload_wait_outform_fault_type():
         ok = False
     if ok:
         print("PASS")
-    return ok
+    assert ok, "Test 2 (mLoad WAIT_OUTFORM fault type) had failures — see output above"
 
 
 # ---------------------------------------------------------------------------
@@ -580,7 +580,7 @@ def test_outform_iot_timeout():
 
     if ok:
         print("PASS")
-    return ok
+    assert ok, "Test 3 (timeout fault) had failures — see output above"
 
 
 # ---------------------------------------------------------------------------
@@ -588,13 +588,18 @@ def test_outform_iot_timeout():
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    all_ok = True
-    all_ok &= test_outform_iot_crc_fault()
-    all_ok &= test_mload_wait_outform_fault_type()
-    all_ok &= test_outform_iot_timeout()
+    failures = []
+    for fn in (test_outform_iot_crc_fault,
+               test_mload_wait_outform_fault_type,
+               test_outform_iot_timeout):
+        try:
+            fn()
+        except AssertionError as e:
+            failures.append(str(e))
 
-    if all_ok:
+    if not failures:
         print("\nAll outform fault-recovery tests passed.")
     else:
-        print("\nSome tests FAILED.")
+        for msg in failures:
+            print(f"FAILED: {msg}")
         sys.exit(1)
