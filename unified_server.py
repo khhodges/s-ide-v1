@@ -313,6 +313,14 @@ def serve_doc(filename):
         return resp
     return Response('Not found', status=404)
 
+@app.route('/six-laws-review.pdf')
+def six_laws_pdf():
+    resp = make_response(send_from_directory(BASE_DIR, 'six-laws-review.pdf'))
+    resp.headers['Content-Type'] = 'application/pdf'
+    resp.headers['Content-Disposition'] = 'attachment; filename="six-laws-review.pdf"'
+    resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return resp
+
 @app.route('/')
 def landing_page():
     return send_from_directory(BASE_DIR, 'landing.html')

@@ -585,6 +585,14 @@ def boot_image_binary():
         return jsonify({"error": "boot-image.bin not generated yet"}), 404
     return send_file(BOOT_IMAGE_PATH, mimetype="application/octet-stream")
 
+@app.route("/six-laws-review.pdf")
+def six_laws_pdf():
+    pdf_path = os.path.join(BASE_DIR, "six-laws-review.pdf")
+    resp = make_response(send_file(pdf_path, mimetype="application/pdf"))
+    resp.headers["Content-Disposition"] = 'attachment; filename="six-laws-review.pdf"'
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
+
 @app.route("/simulator/")
 def simulator_index():
     filepath = os.path.join(SIMULATOR_DIR, "index.html")
