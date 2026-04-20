@@ -243,3 +243,402 @@ def run_testbench():
 
 if __name__ == "__main__":
     run_testbench()
+
+
+# ── #303: mSave and mLoad pipeline unit tests ─────────────────────────────────
+#
+# CTMMCapMSave and CTMMCapMLoad are standalone pipeline units (not yet wired
+# into CTMMCapCore).  Each test drives one module directly with a small Amaranth
+# simulator so the internal FSM states and memory buses are fully observable.
+
+from ctmm_cap_amaranth.mload import CTMMCapMLoad
+from ctmm_cap_amaranth.msave import CTMMCapMSave
+from ctmm_cap_amaranth.types import (
+    FNV_OFFSET_32, FNV_PRIME_32,
+    PERM_L, PERM_S, PERM_MASK_L, PERM_MASK_S,
+    GT_TYPE_INFORM,
+)
+
+
+# ── mSave happy-path ──────────────────────────────────────────────────────────
+
+def test_msave_happy_path():
+    """CTMMCapMSave writes src_gt to dst.location + index*4 when all checks pass.
+
+    Setup
+    -----
+    dst_cap:  GT with S-perm, b_flag=1, location=0x100, limit=16.
+    src_gt:   0xDEADBEEF
+    index:    3  → write addr = 0x100 + 12 = 0x10C
+
+    States exercised: IDLE → CHECK_BIND → CHECK_S → CHECK_BOUNDS →
+                      WRITE_GT (mem_wr_done asserted) → COMPLETE
+
+    Assertion: mem_wr_addr==0x10C, mem_wr_data==0xDEADBEEF, sub_done==1
+    """
+    # GT_LAYOUT: { gt_type[0:2], perms[2:8], index[8:25], version[25:32] }
+    # Amaranth Simulator requires Signal(StructLayout) to be set via a mapping.
+    # S-perm in GT_LAYOUT.perms: PERM_S=4 → perms field bit 4 → plain integer 1<<4
+    LOCATION   = 0x100
+    LIMIT      = 16
+
+    # CAP_REG_LAYOUT: word0_gt=GT_LAYOUT, word1_location=u32,
+    #                 word2_limit=u32, word3_seals=u32
+    # NS_LIMIT_LAYOUT encoded in word2_limit (u32):
+    #   { limit[0:17], reserved[17:29], g_bit[29], f_flag[30], b_flag[31] }
+    LIMIT_WORD = LIMIT | (1 << 31)   # b_flag at bit 31 of u32
+
+    DST_CAP = {
+        "word0_gt":       {"gt_type": 0, "perms": PERM_MASK_S, "index": 0, "version": 0},
+        "word1_location": LOCATION,
+        "word2_limit":    LIMIT_WORD,
+        "word3_seals":    0,
+    }
+
+    SRC_GT = 0xDEADBEEF
+    INDEX  = 3
+    EXP_WRITE_ADDR = LOCATION + (INDEX << 2)   # = 0x10C
+
+    dut = CTMMCapMSave()
+
+    async def process(ctx):
+        ctx.set(dut.sub_dst_cap, DST_CAP)
+        ctx.set(dut.sub_src_gt, SRC_GT)
+        ctx.set(dut.sub_index, INDEX)
+        ctx.set(dut.sub_start, 1)
+        await ctx.tick()
+        ctx.set(dut.sub_start, 0)
+
+        # ── Wait for WRITE_GT (mem_wr_en asserted) ───────────────────────────
+        write_seen = False
+        for _ in range(30):
+            await ctx.tick()
+            if ctx.get(dut.mem_wr_en):
+                got_addr = ctx.get(dut.mem_wr_addr)
+                got_data = ctx.get(dut.mem_wr_data)
+                assert got_addr == EXP_WRITE_ADDR, (
+                    f"mSave write addr=0x{got_addr:X}  expected=0x{EXP_WRITE_ADDR:X}"
+                )
+                assert got_data == SRC_GT, (
+                    f"mSave write data=0x{got_data:08X}  expected=0x{SRC_GT:08X}"
+                )
+                ctx.set(dut.mem_wr_done, 1)
+                await ctx.tick()
+                ctx.set(dut.mem_wr_done, 0)
+                # COMPLETE is now the current state (sub_done=1 combinatorially).
+                # The _next_ tick will transition COMPLETE → IDLE, so we must
+                # capture sub_done now, before that tick fires.
+                done_seen = bool(ctx.get(dut.sub_done))
+                write_seen = True
+                break
+        assert write_seen, "mSave: timed out waiting for WRITE_GT (mem_wr_en)"
+        assert done_seen, "mSave: sub_done was not asserted at COMPLETE"
+
+        print(
+            f"\n  mSave: wrote 0x{SRC_GT:08X} to addr 0x{EXP_WRITE_ADDR:X}"
+        )
+
+    sim = Simulator(dut)
+    sim.add_clock(1e-6)
+    sim.add_testbench(process)
+    with sim.write_vcd("/tmp/msave_happy_path.vcd"):
+        sim.run()
+    print("PASS: test_msave_happy_path")
+
+
+# ── mLoad direct-mode + mSave/mLoad round-trip ────────────────────────────────
+
+def test_mload_direct_mode():
+    """CTMMCapMLoad loads an NS entry into a cap register (direct-mode).
+
+    Direct mode skips the CR read and L-perm check (FETCH_SRC → CHECK_NS
+    directly), so this test exercises the pure NS pipeline:
+      CHECK_NS → FETCH_LOC → FETCH_LIMIT → FETCH_SEALS → CHECK_VERSION →
+      UPDATE_THREAD → COMPLETE
+
+    The test drives memory responses for the three NS reads and verifies
+    that cr_wr_data.word0_gt matches the direct_gt (perms and index intact).
+
+    Setup
+    -----
+    direct_gt:    type=INFORM, perms=L, index=5, version=3
+    cr15_ns:      location=0x200, limit=10  (index 5 < 10 → in bounds)
+    NS entry @0x23C:
+      FETCH_LOC   → word1_location = LOC_VAL  = 0x2000
+      FETCH_LIMIT → word2_limit    = LIMIT_VAL = 0x40
+      FETCH_SEALS → word3_seals   = seal | (version << 25)
+        where seal = fnv(LOC_VAL, LIMIT_VAL) & 0x1FFFFFF
+    """
+    GT_INDEX   = 5
+    GT_VERSION = 3
+    # sub_direct_gt is Signal(32) (plain unsigned), so a plain integer is correct.
+    # GT bit layout (GT_LAYOUT StructLayout used only for Amaranth elaboration;
+    # plain integer encoding: gt_type[0:2]=0, perms[2:8]=PERM_MASK_L, index[8:25], version[25:32])
+    DIRECT_GT = (GT_TYPE_INFORM) | (PERM_MASK_L << 2) | (GT_INDEX << 8) | (GT_VERSION << 25)
+
+    NS_BASE  = 0x200
+    NS_LIMIT = 10   # 17-bit limit field; index=5 < 10 → in bounds
+    # cr15_namespace is Signal(CAP_REG_LAYOUT) — must be a mapping.
+    # word2_limit is unsigned(32), so NS_LIMIT (plain int, 17-bit limit at [0:17]) is fine.
+    CR15_NS = {
+        "word0_gt":       {"gt_type": 0, "perms": 0, "index": 0, "version": 0},
+        "word1_location": NS_BASE,
+        "word2_limit":    NS_LIMIT,   # bits [0:17] = limit
+        "word3_seals":    0,
+    }
+
+    NS_ENTRY_ADDR = NS_BASE + GT_INDEX * 12   # = 0x200 + 60 = 0x23C
+
+    LOC_VAL   = 0x2000
+    LIMIT_VAL = 0x40
+    # FNV seal: truncated to 32 bits, then masked to 25 bits
+    fnv_hash  = (((FNV_OFFSET_32 ^ LOC_VAL) * FNV_PRIME_32) & 0xFFFFFFFF) ^ LIMIT_VAL
+    fnv_hash &= 0xFFFFFFFF
+    seal      = fnv_hash & 0x1FFFFFF
+    SEALS_VAL = seal | (GT_VERSION << 25)   # version must match result_gt.version
+
+    mem_model = {
+        NS_ENTRY_ADDR:     LOC_VAL,
+        NS_ENTRY_ADDR + 4: LIMIT_VAL,
+        NS_ENTRY_ADDR + 8: SEALS_VAL,
+    }
+
+    dut = CTMMCapMLoad()
+
+    async def _drive_mem_read(ctx):
+        """Wait for mem_rd_en, serve one response, then deassert mem_rd_valid."""
+        for _ in range(50):
+            await ctx.tick()
+            if ctx.get(dut.mem_rd_en):
+                addr = ctx.get(dut.mem_addr)
+                val  = mem_model.get(addr, 0)
+                ctx.set(dut.mem_rd_data, val)
+                ctx.set(dut.mem_rd_valid, 1)
+                await ctx.tick()
+                ctx.set(dut.mem_rd_valid, 0)
+                return
+        raise AssertionError("mLoad: timed out waiting for mem_rd_en")
+
+    async def process(ctx):
+        ctx.set(dut.cr15_namespace, CR15_NS)
+        ctx.set(dut.sub_direct, 1)
+        ctx.set(dut.sub_direct_gt, DIRECT_GT)
+        ctx.set(dut.sub_cr_src, 0)
+        ctx.set(dut.sub_cr_dst, 1)   # ≤ 7 → UPDATE_THREAD fires
+        ctx.set(dut.sub_index, GT_INDEX)
+        ctx.set(dut.sub_start, 1)
+        await ctx.tick()
+        ctx.set(dut.sub_start, 0)
+
+        # Direct mode: FETCH_SRC skips to CHECK_NS (no clist read).
+        # Three NS reads: FETCH_LOC, FETCH_LIMIT, FETCH_SEALS.
+        await _drive_mem_read(ctx)   # FETCH_LOC
+        await _drive_mem_read(ctx)   # FETCH_LIMIT
+        await _drive_mem_read(ctx)   # FETCH_SEALS
+
+        # CHECK_VERSION → UPDATE_THREAD → COMPLETE (3 ticks, no inputs needed)
+        done_seen = False
+        fault_seen = False
+        for _ in range(10):
+            await ctx.tick()
+            if ctx.get(dut.sub_fault):
+                fault_type = ctx.get(dut.sub_fault_type)
+                fault_seen = True
+                break
+            if ctx.get(dut.sub_done):
+                wr_data    = ctx.get(dut.cr_wr_data)
+                wr_en      = ctx.get(dut.cr_wr_en)
+                done_seen  = True
+                break
+
+        assert not fault_seen, (
+            f"mLoad faulted unexpectedly: fault_type={fault_type}"
+        )
+        assert done_seen, "mLoad: timed out waiting for sub_done"
+        assert wr_en, "mLoad: cr_wr_en not asserted at COMPLETE"
+
+        # cr_wr_data is Signal(CAP_REG_LAYOUT) — a structured Amaranth View.
+        # Access individual scalar fields (unsigned) directly; ctx.get() returns int.
+        loaded_index = ctx.get(dut.cr_wr_data.word0_gt.index)
+        loaded_perms = ctx.get(dut.cr_wr_data.word0_gt.perms)
+        assert loaded_index == GT_INDEX, (
+            f"mLoad cr_wr.index={loaded_index}  expected={GT_INDEX}"
+        )
+        assert (loaded_perms >> PERM_L) & 1, (
+            f"mLoad cr_wr perms=0x{loaded_perms:02X} — L-bit (bit {PERM_L}) not set"
+        )
+
+        print(
+            f"\n  mLoad (direct): loaded GT index={loaded_index}, "
+            f"perms=0x{loaded_perms:02X}, from NS entry @0x{NS_ENTRY_ADDR:X}"
+        )
+
+    sim = Simulator(dut)
+    sim.add_clock(1e-6)
+    sim.add_testbench(process)
+    with sim.write_vcd("/tmp/mload_direct_mode.vcd"):
+        sim.run()
+    print("PASS: test_mload_direct_mode")
+
+
+def test_mload_msave_round_trip():
+    """Round-trip: mSave writes a GT, mLoad reads it back; perms and index match.
+
+    Two independent simulators share a Python dict as the backing store.
+    mSave is run first; its mem_wr_addr/mem_wr_data are captured into the dict.
+    mLoad (direct mode) is run second; its FETCH_LOC response comes from the dict
+    and the loaded GT must equal the saved GT.
+    """
+    CAP_GT     = (GT_TYPE_INFORM) | (PERM_MASK_L << 2) | (7 << 8) | (1 << 25)
+    CLIST_BASE  = 0x500
+    CLIST_LIMIT = 16
+    INDEX       = 0
+    EXP_WRITE_ADDR = CLIST_BASE + (INDEX << 2)   # = 0x500
+
+    # mSave dst_cap: Signal(CAP_REG_LAYOUT) → must be a mapping.
+    # NS_LIMIT_LAYOUT in word2_limit (u32): b_flag at bit 31, limit at bits [0:17].
+    CLIST_DST_CAP = {
+        "word0_gt":       {"gt_type": 0, "perms": PERM_MASK_S, "index": 0, "version": 0},
+        "word1_location": CLIST_BASE,
+        "word2_limit":    CLIST_LIMIT | (1 << 31),   # limit=16, b_flag=1
+        "word3_seals":    0,
+    }
+
+    # ── Step 1: mSave ─────────────────────────────────────────────────────────
+    backing_store: dict = {}   # addr → data, filled by mSave
+
+    dut_save = CTMMCapMSave()
+
+    async def save_process(ctx):
+        ctx.set(dut_save.sub_dst_cap, CLIST_DST_CAP)
+        ctx.set(dut_save.sub_src_gt, CAP_GT)
+        ctx.set(dut_save.sub_index, INDEX)
+        ctx.set(dut_save.sub_start, 1)
+        await ctx.tick()
+        ctx.set(dut_save.sub_start, 0)
+        for _ in range(30):
+            await ctx.tick()
+            if ctx.get(dut_save.mem_wr_en):
+                backing_store[ctx.get(dut_save.mem_wr_addr)] = ctx.get(dut_save.mem_wr_data)
+                ctx.set(dut_save.mem_wr_done, 1)
+                await ctx.tick()
+                ctx.set(dut_save.mem_wr_done, 0)
+                break
+        for _ in range(10):
+            await ctx.tick()
+            if ctx.get(dut_save.sub_done):
+                break
+
+    sim_save = Simulator(dut_save)
+    sim_save.add_clock(1e-6)
+    sim_save.add_testbench(save_process)
+    with sim_save.write_vcd("/tmp/round_trip_save.vcd"):
+        sim_save.run()
+
+    assert EXP_WRITE_ADDR in backing_store, (
+        f"mSave did not write to 0x{EXP_WRITE_ADDR:X}; got: {backing_store}"
+    )
+    assert backing_store[EXP_WRITE_ADDR] == CAP_GT, (
+        f"mSave wrote 0x{backing_store[EXP_WRITE_ADDR]:08X}  expected=0x{CAP_GT:08X}"
+    )
+
+    # ── Step 2: mLoad (direct mode; NS entry maps clist slot → CLIST_BASE) ───
+    # Direct GT has same cap_gt so index=7, version=1, type=INFORM.
+    GT_INDEX   = (CAP_GT >> 8) & 0x1FFFF   # = 7
+    GT_VERSION = (CAP_GT >> 25) & 0x7F     # = 1
+
+    NS_BASE  = 0x300
+    NS_LIMIT = 16
+    # cr15_namespace is Signal(CAP_REG_LAYOUT) — must be a mapping.
+    CR15_NS = {
+        "word0_gt":       {"gt_type": 0, "perms": 0, "index": 0, "version": 0},
+        "word1_location": NS_BASE,
+        "word2_limit":    NS_LIMIT,   # bits [0:17] = limit
+        "word3_seals":    0,
+    }
+    NS_ENTRY_ADDR = NS_BASE + GT_INDEX * 12
+
+    # NS entry gives location=CLIST_BASE, limit=CLIST_LIMIT
+    LOC_VAL   = CLIST_BASE
+    LIMIT_VAL = CLIST_LIMIT
+    fnv_hash  = (((FNV_OFFSET_32 ^ LOC_VAL) * FNV_PRIME_32) & 0xFFFFFFFF) ^ LIMIT_VAL
+    fnv_hash &= 0xFFFFFFFF
+    seal      = fnv_hash & 0x1FFFFFF
+    SEALS_VAL = seal | (GT_VERSION << 25)
+
+    mem_model = {
+        NS_ENTRY_ADDR:     LOC_VAL,
+        NS_ENTRY_ADDR + 4: LIMIT_VAL,
+        NS_ENTRY_ADDR + 8: SEALS_VAL,
+    }
+
+    dut_load = CTMMCapMLoad()
+
+    async def load_process(ctx):
+        ctx.set(dut_load.cr15_namespace, CR15_NS)
+        ctx.set(dut_load.sub_direct, 1)
+        ctx.set(dut_load.sub_direct_gt, CAP_GT)
+        ctx.set(dut_load.sub_cr_src, 0)
+        ctx.set(dut_load.sub_cr_dst, 2)
+        ctx.set(dut_load.sub_index, GT_INDEX)
+        ctx.set(dut_load.sub_start, 1)
+        await ctx.tick()
+        ctx.set(dut_load.sub_start, 0)
+
+        async def drive_read():
+            for _ in range(50):
+                await ctx.tick()
+                if ctx.get(dut_load.mem_rd_en):
+                    addr = ctx.get(dut_load.mem_addr)
+                    val  = mem_model.get(addr, 0)
+                    ctx.set(dut_load.mem_rd_data, val)
+                    ctx.set(dut_load.mem_rd_valid, 1)
+                    await ctx.tick()
+                    ctx.set(dut_load.mem_rd_valid, 0)
+                    return
+            raise AssertionError("round-trip mLoad: timed out waiting for mem_rd_en")
+
+        await drive_read()   # FETCH_LOC
+        await drive_read()   # FETCH_LIMIT
+        await drive_read()   # FETCH_SEALS
+
+        done_seen = False
+        for _ in range(10):
+            await ctx.tick()
+            if ctx.get(dut_load.sub_fault):
+                raise AssertionError(
+                    f"round-trip mLoad faulted: type={ctx.get(dut_load.sub_fault_type)}"
+                )
+            if ctx.get(dut_load.sub_done):
+                wr_data   = ctx.get(dut_load.cr_wr_data)
+                done_seen = True
+                break
+        assert done_seen, "round-trip mLoad: timed out waiting for sub_done"
+
+        # Verify loaded GT index and type match the saved CAP_GT via field access.
+        loaded_index = ctx.get(dut_load.cr_wr_data.word0_gt.index)
+        loaded_perms = ctx.get(dut_load.cr_wr_data.word0_gt.perms)
+        loaded_type  = ctx.get(dut_load.cr_wr_data.word0_gt.gt_type)
+        exp_index    = (CAP_GT >> 8) & 0x1FFFF
+        exp_perms    = (CAP_GT >> 2) & 0x3F
+        exp_type     = CAP_GT & 0x3
+        assert loaded_index == exp_index, (
+            f"round-trip: index={loaded_index}  expected={exp_index}"
+        )
+        assert loaded_perms == exp_perms, (
+            f"round-trip: perms=0x{loaded_perms:02X}  expected=0x{exp_perms:02X}"
+        )
+        assert loaded_type == exp_type, (
+            f"round-trip: gt_type={loaded_type}  expected={exp_type}"
+        )
+        print(
+            f"\n  round-trip: mSave wrote GT index={exp_index}, perms=0x{exp_perms:02X} → "
+            f"mLoad recovered index={loaded_index}, perms=0x{loaded_perms:02X} ✓"
+        )
+
+    sim_load = Simulator(dut_load)
+    sim_load.add_clock(1e-6)
+    sim_load.add_testbench(load_process)
+    with sim_load.write_vcd("/tmp/round_trip_load.vcd"):
+        sim_load.run()
+    print("PASS: test_mload_msave_round_trip")

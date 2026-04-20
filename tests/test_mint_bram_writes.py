@@ -94,6 +94,87 @@ def build_lean_header(payload: bytes) -> bytes:
     return struct.pack("<II", len(payload), crc)
 
 
+def build_lump_payload_bad_magic() -> bytes:
+    """256-byte lump with magic=0x00 — MINT_CHECK_HDR must reject (bad magic)."""
+    header_word = (0x00 << 27) | (0 << 23) | (2 << 10) | (0 << 8) | 0
+    payload  = struct.pack("<I", header_word)
+    payload += struct.pack("<I", 0x00000001)
+    payload += struct.pack("<I", 0x00000002)
+    payload += bytes(64 * 4 - 3 * 4)
+    assert len(payload) == 256
+    return payload
+
+
+def build_lump_payload_bad_n_minus_6() -> bytes:
+    """256-byte lump with n_minus_6=9 — MINT_CHECK_HDR must reject (>8)."""
+    header_word = (0x1F << 27) | (9 << 23) | (2 << 10) | (0 << 8) | 0
+    payload  = struct.pack("<I", header_word)
+    payload += struct.pack("<I", 0x00000001)
+    payload += struct.pack("<I", 0x00000002)
+    payload += bytes(64 * 4 - 3 * 4)
+    assert len(payload) == 256
+    return payload
+
+
+def build_lump_payload_cc_too_large() -> bytes:
+    """256-byte lump with cc=63, n_minus_6=0 → lump_size=64 → lsize-2=62 < 63.
+
+    MINT_CHECK_HDR: hdr_v.cc > (lsz_c - 2) → cc=63 > 62 → MINT_FAULT.
+    """
+    header_word = (0x1F << 27) | (0 << 23) | (2 << 10) | (0 << 8) | 63
+    payload  = struct.pack("<I", header_word)
+    payload += struct.pack("<I", 0x00000001)
+    payload += struct.pack("<I", 0x00000002)
+    payload += bytes(64 * 4 - 3 * 4)
+    assert len(payload) == 256
+    return payload
+
+
+def build_lump_payload_nonzero_freespace() -> bytes:
+    """256-byte lump with a non-zero word in the free-space region.
+
+    Header is valid (cc=0, n_minus_6=0, cw=2).  MINT_SCAN_FS must scan
+    words 3..63 and fault when it sees word[3] = 0xDEADBEEF.
+    """
+    header_word = (0x1F << 27) | (0 << 23) | (2 << 10) | (0 << 8) | 0
+    payload  = struct.pack("<I", header_word)
+    payload += struct.pack("<I", 0x00000001)
+    payload += struct.pack("<I", 0x00000002)
+    payload += struct.pack("<I", 0xDEADBEEF)   # first free-space word — must be 0
+    payload += bytes(64 * 4 - 4 * 4)
+    assert len(payload) == 256
+    return payload
+
+
+# Cap-word values used by the cc>0 happy-path test (#280).
+CC_CAP_WORD_0 = 0x12345678
+CC_CAP_WORD_1 = 0xABCDEF01
+
+
+def build_lump_payload_with_cc() -> bytes:
+    """256-byte lump with cc=2: two capability words at the tail.
+
+    Layout (little-endian words, n_minus_6=0 → lump_size=64):
+      word[0]      : header — magic=0x1F, n_minus_6=0, cw=2, typ=0, cc=2
+      word[1..2]   : code words
+      word[3..61]  : zero free-space  (MINT_SCAN_FS scans idx 3..61)
+      word[62..63] : capability tail  (CC_CAP_WORD_0, CC_CAP_WORD_1)
+
+    After minting, MINT_COPY_CLIST_RD/WR copies these two words into the new
+    slot's clist area at mint_clist_slot_base + 0 and mint_clist_slot_base + 4.
+    For slot_id=0: byte base = 768, word indices 192 and 193 in the clist BRAM.
+    """
+    header_word = (0x1F << 27) | (0 << 23) | (2 << 10) | (0 << 8) | 2
+    payload  = struct.pack("<I", header_word)
+    payload += struct.pack("<I", 0x00000001)        # code word 0
+    payload += struct.pack("<I", 0x00000002)        # code word 1
+    payload += bytes(59 * 4)                        # free-space words 3..61 (zero)
+    payload += struct.pack("<I", CC_CAP_WORD_0)     # cap tail word 0 (word 62)
+    payload += struct.pack("<I", CC_CAP_WORD_1)     # cap tail word 1 (word 63)
+    assert len(payload) == 256
+    return payload
+
+
 # ── Harness ───────────────────────────────────────────────────────────────────
 
 class ChurchCoreMintHarness(Elaboratable):
@@ -115,17 +196,19 @@ class ChurchCoreMintHarness(Elaboratable):
       slot s → word indices 3s, 3s+1, 3s+2
       (When cr15.word1_location=0 at reset, mint_ns_entry_base = slot_id*12)
 
-    clist memory (64 words):
+    clist memory (clist_depth words, default 64):
       E-GT written at word index core.clist_addr >> 2
+      For cc>0 tests use clist_depth=256 so the cc-tail writes at byte 768+
+      (slot_id*256) map within the memory (word base 192 for slot_id=0).
     """
 
-    DMEM_DEPTH  = 2048
-    NS_DEPTH    = 192
-    CLIST_DEPTH = 64
+    DMEM_DEPTH = 2048
+    NS_DEPTH   = 192
 
-    def __init__(self, slot_id: int, clist_slot_baddr: int):
+    def __init__(self, slot_id: int, clist_slot_baddr: int, clist_depth: int = 64):
         self._slot_id           = slot_id
         self._clist_slot_baddr  = clist_slot_baddr
+        self._clist_depth       = clist_depth
 
         # Outform I/O (drive from test)
         self.outform_start = Signal()
@@ -152,8 +235,8 @@ class ChurchCoreMintHarness(Elaboratable):
         self.ns_rd_addr = Signal(range(self.NS_DEPTH))
         self.ns_rd_data = Signal(32)
 
-        # clist memory readback ports
-        self.clist_rd_addr = Signal(range(self.CLIST_DEPTH))
+        # clist memory readback ports (width depends on clist_depth)
+        self.clist_rd_addr = Signal(range(clist_depth))
         self.clist_rd_data = Signal(32)
 
     def elaborate(self, platform):
@@ -211,8 +294,8 @@ class ChurchCoreMintHarness(Elaboratable):
         ]
 
         # ── clist memory (separate; receives Mint clist writes) ────────────────
-        cl_mem = LibMemory(shape=unsigned(32), depth=self.CLIST_DEPTH,
-                           init=[0] * self.CLIST_DEPTH)
+        cl_mem = LibMemory(shape=unsigned(32), depth=self._clist_depth,
+                           init=[0] * self._clist_depth)
         m.submodules.cl_mem = cl_mem
 
         cl_rd = cl_mem.read_port(domain="comb")
@@ -521,6 +604,264 @@ def test_mint_bram_writes():
     print("PASS: test_mint_bram_writes")
 
 
+# ── Fault-path helper ─────────────────────────────────────────────────────────
+
+async def _run_outform_protocol(ctx, dut, payload: bytes):
+    """Drive the full outform IoT protocol for `payload` on `dut`.
+
+    Fires outform_start, acks the tunnel-request TX burst, sends the connect
+    byte + lean header, waits for the allocator, then streams all payload bytes.
+    Returns without asserting — caller checks whatever it wants after.
+    """
+    lean_hdr = build_lean_header(payload)
+
+    ctx.set(dut.outform_start, 1)
+    await ctx.tick()
+    ctx.set(dut.outform_start, 0)
+
+    await ack_tx_bytes(ctx, dut, TUNNEL_REQ_LEN)
+    await send_byte(ctx, dut, 0xAC)
+    await send_bytes(ctx, dut, lean_hdr)
+    await wait_for_alloc(ctx, dut)
+    await send_bytes(ctx, dut, payload)
+
+
+def _run_mint_fault_test(build_payload_fn, case_label: str):
+    """Run a single Mint fault case: verify outform completes with no NS writes.
+
+    Strategy
+    --------
+    A malformed lump causes the Mint FSM to enter MINT_FAULT → MINT_IDLE (one
+    cycle), which drives mint_fault_comb=1.  The outform FSM sees mint_fault and
+    transitions WAIT_MINT → FAULT → IDLE, dropping outform_busy to 0.
+
+    Absence of NS writes is the observable proxy for MINT_FAULT having fired:
+    the FSM skipped MINT_WRITE_NS0/1/2 entirely.  Absence of clist writes other
+    than at CLIST_BADDR (none in fault cases) is an additional check.
+    """
+    SLOT_ID     = 0
+    CLIST_BADDR = 4
+
+    payload = build_payload_fn()
+    dut = ChurchCoreMintHarness(slot_id=SLOT_ID, clist_slot_baddr=CLIST_BADDR)
+
+    async def process(ctx):
+        await _run_outform_protocol(ctx, dut, payload)
+        ns_writes, clist_writes = await drain_ns_clist_writes(ctx, dut)
+
+        assert ns_writes == {}, (
+            f"{case_label}: expected 0 NS writes (MINT_FAULT), "
+            f"got {len(ns_writes)}: {ns_writes}"
+        )
+        assert clist_writes == {}, (
+            f"{case_label}: expected 0 clist writes (MINT_FAULT), "
+            f"got {len(clist_writes)}: {clist_writes}"
+        )
+
+    sim = Simulator(dut)
+    sim.add_clock(1e-6)
+    sim.add_testbench(process)
+    with sim.write_vcd(f"/tmp/mint_fault_{case_label}.vcd"):
+        sim.run()
+    print(f"PASS: {case_label}")
+
+
+# ── #279: Mint fault-path tests ───────────────────────────────────────────────
+
+def test_mint_fault_bad_magic():
+    """MINT_CHECK_HDR rejects lump with magic != 0x1F → no NS writes."""
+    _run_mint_fault_test(build_lump_payload_bad_magic, "test_mint_fault_bad_magic")
+
+
+def test_mint_fault_bad_n_minus_6():
+    """MINT_CHECK_HDR rejects lump with n_minus_6=9 (>8) → no NS writes."""
+    _run_mint_fault_test(
+        build_lump_payload_bad_n_minus_6, "test_mint_fault_bad_n_minus_6"
+    )
+
+
+def test_mint_fault_cc_too_large():
+    """MINT_CHECK_HDR rejects lump with cc > lump_size-2 → no NS writes."""
+    _run_mint_fault_test(build_lump_payload_cc_too_large, "test_mint_fault_cc_too_large")
+
+
+def test_mint_fault_nonzero_freespace():
+    """MINT_SCAN_FS rejects lump with non-zero free-space word → no NS writes."""
+    _run_mint_fault_test(
+        build_lump_payload_nonzero_freespace, "test_mint_fault_nonzero_freespace"
+    )
+
+
+# ── #280: Mint with cc>0 (MINT_COPY_CLIST_RD/WR path) ────────────────────────
+
+def test_mint_bram_writes_with_cc():
+    """Mint FSM correctly copies cc=2 tail words into the slot's clist area.
+
+    Procedure
+    ---------
+    Same outform protocol as test_mint_bram_writes, but the lump has cc=2.
+    After minting, in addition to the three NS writes and the E-GT clist write,
+    the Mint FSM must issue two MINT_COPY_CLIST_WR writes at:
+      byte 768 + 0  (word index 192) → CC_CAP_WORD_0
+      byte 768 + 4  (word index 193) → CC_CAP_WORD_1
+    (For slot_id=0: mint_clist_slot_base = 768 + (0 << 8) = 768.)
+
+    The harness uses clist_depth=256 so those word indices (192, 193) fall
+    within the allocated LibMemory and can be read back after simulation.
+
+    Assertions
+    ----------
+    Live write events:
+      ns_writes  — 3 entries (NS0/1/2 intact)
+      clist_writes — 3 entries: E-GT at CLIST_BADDR, CC_CAP_WORD_0 at 768,
+                                CC_CAP_WORD_1 at 772
+    BRAM readback:
+      ns[slot*3+0]   == alloc_base
+      ns[slot*3+1]   == W2
+      ns[slot*3+2]   == CRC16 seal
+      clist[caller]  == E-GT
+      clist[192]     == CC_CAP_WORD_0
+      clist[193]     == CC_CAP_WORD_1
+    """
+    SLOT_ID         = 0
+    CLIST_BADDR     = 4       # byte 4 → word 1 (caller's E-GT slot)
+    LUMP_WORDS      = 64      # n_minus_6=0 → 2^6 = 64
+    WATERMARK_INIT  = 256
+    ALLOC_BASE      = WATERMARK_INIT * 4   # = 0x400
+
+    # Slot's clist area starts at byte 768 + (slot_id << 8) = 768 for slot 0.
+    CC_CLIST_BYTE_BASE = 768 + (SLOT_ID << 8)   # = 768
+    CC_WORD_IDX_0 = CC_CLIST_BYTE_BASE >> 2      # = 192
+    CC_WORD_IDX_1 = CC_WORD_IDX_0 + 1            # = 193
+
+    payload  = build_lump_payload_with_cc()
+    lean_hdr = build_lean_header(payload)
+
+    dut = ChurchCoreMintHarness(
+        slot_id=SLOT_ID,
+        clist_slot_baddr=CLIST_BADDR,
+        clist_depth=256,        # large enough for word indices 192 and 193
+    )
+
+    async def process(ctx):
+        await _run_outform_protocol(ctx, dut, payload)
+        ns_writes, clist_writes = await drain_ns_clist_writes(ctx, dut)
+
+        # ── Compute reference values ──────────────────────────────────────────
+        exp_e_gt = ref_e_gt(SLOT_ID)
+        exp_ns0  = ALLOC_BASE
+        exp_ns1  = ref_w2(LUMP_WORDS)
+        exp_ns2  = ref_crc16(exp_e_gt, ALLOC_BASE, exp_ns1)
+
+        ns_ba0 = SLOT_ID * 12 + 0
+        ns_ba1 = SLOT_ID * 12 + 4
+        ns_ba2 = SLOT_ID * 12 + 8
+
+        # ── Live write events: NS ─────────────────────────────────────────────
+        assert len(ns_writes) == 3, (
+            f"Expected 3 NS writes, got {len(ns_writes)}: {ns_writes}"
+        )
+        assert ns_writes.get(ns_ba0) == exp_ns0, (
+            f"live ns[0]=0x{ns_writes.get(ns_ba0, 0):08X}  expected=0x{exp_ns0:08X}"
+        )
+        assert ns_writes.get(ns_ba1) == exp_ns1, (
+            f"live ns[1]=0x{ns_writes.get(ns_ba1, 0):08X}  expected W2=0x{exp_ns1:08X}"
+        )
+        assert ns_writes.get(ns_ba2) == exp_ns2, (
+            f"live ns[2]=0x{ns_writes.get(ns_ba2, 0):04X}  expected CRC16=0x{exp_ns2:04X}"
+        )
+
+        # ── Live write events: clist (E-GT + 2 cc-tail words) ────────────────
+        assert len(clist_writes) == 3, (
+            f"Expected 3 clist writes (E-GT + 2 cc words), "
+            f"got {len(clist_writes)}: {clist_writes}"
+        )
+        assert clist_writes.get(CLIST_BADDR) == exp_e_gt, (
+            f"live E-GT=0x{clist_writes.get(CLIST_BADDR, 0):08X}  "
+            f"expected=0x{exp_e_gt:08X}"
+        )
+        cc_ba0 = CC_CLIST_BYTE_BASE        # = 768
+        cc_ba1 = CC_CLIST_BYTE_BASE + 4    # = 772
+        assert clist_writes.get(cc_ba0) == CC_CAP_WORD_0, (
+            f"live cc_word_0=0x{clist_writes.get(cc_ba0, 0):08X}  "
+            f"expected=0x{CC_CAP_WORD_0:08X}"
+        )
+        assert clist_writes.get(cc_ba1) == CC_CAP_WORD_1, (
+            f"live cc_word_1=0x{clist_writes.get(cc_ba1, 0):08X}  "
+            f"expected=0x{CC_CAP_WORD_1:08X}"
+        )
+
+        # ── Allow one extra tick so BRAM read port reflects last writes ───────
+        await ctx.tick()
+
+        # ── BRAM readback: NS ─────────────────────────────────────────────────
+        ctx.set(dut.ns_rd_addr, ns_ba0 >> 2); await ctx.tick()
+        ns_word0 = ctx.get(dut.ns_rd_data)
+        ctx.set(dut.ns_rd_addr, ns_ba1 >> 2); await ctx.tick()
+        ns_word1 = ctx.get(dut.ns_rd_data)
+        ctx.set(dut.ns_rd_addr, ns_ba2 >> 2); await ctx.tick()
+        ns_word2 = ctx.get(dut.ns_rd_data)
+
+        assert ns_word0 == exp_ns0, (
+            f"bram ns[0]=0x{ns_word0:08X}  expected alloc_base=0x{exp_ns0:08X}"
+        )
+        assert ns_word1 == exp_ns1, (
+            f"bram ns[1]=0x{ns_word1:08X}  expected W2=0x{exp_ns1:08X}"
+        )
+        assert ns_word2 == exp_ns2, (
+            f"bram ns[2]=0x{ns_word2:04X}  expected CRC16=0x{exp_ns2:04X}"
+        )
+
+        # ── BRAM readback: clist (E-GT and cc-tail words) ─────────────────────
+        ctx.set(dut.clist_rd_addr, CLIST_BADDR >> 2); await ctx.tick()
+        clist_e_gt = ctx.get(dut.clist_rd_data)
+
+        ctx.set(dut.clist_rd_addr, CC_WORD_IDX_0); await ctx.tick()
+        clist_cc0 = ctx.get(dut.clist_rd_data)
+
+        ctx.set(dut.clist_rd_addr, CC_WORD_IDX_1); await ctx.tick()
+        clist_cc1 = ctx.get(dut.clist_rd_data)
+
+        assert clist_e_gt == exp_e_gt, (
+            f"bram clist[caller]=0x{clist_e_gt:08X}  expected E-GT=0x{exp_e_gt:08X}"
+        )
+        assert clist_cc0 == CC_CAP_WORD_0, (
+            f"bram clist[{CC_WORD_IDX_0}]=0x{clist_cc0:08X}  "
+            f"expected CC_CAP_WORD_0=0x{CC_CAP_WORD_0:08X}"
+        )
+        assert clist_cc1 == CC_CAP_WORD_1, (
+            f"bram clist[{CC_WORD_IDX_1}]=0x{clist_cc1:08X}  "
+            f"expected CC_CAP_WORD_1=0x{CC_CAP_WORD_1:08X}"
+        )
+
+        print(
+            f"\n  [cc>0 live write events]\n"
+            f"    ns writes (3): OK\n"
+            f"    clist E-GT  @ {CLIST_BADDR}: 0x{clist_writes[CLIST_BADDR]:08X}\n"
+            f"    clist cc[0] @ {cc_ba0}: 0x{clist_writes[cc_ba0]:08X}\n"
+            f"    clist cc[1] @ {cc_ba1}: 0x{clist_writes[cc_ba1]:08X}\n"
+            f"\n  [BRAM readback]\n"
+            f"    ns[slot*3+0]       = 0x{ns_word0:08X}  (alloc_base)\n"
+            f"    ns[slot*3+1] (W2)  = 0x{ns_word1:08X}\n"
+            f"    ns[slot*3+2] (W3)  = 0x{ns_word2:04X}    (CRC16)\n"
+            f"    clist[caller]      = 0x{clist_e_gt:08X}  (E-GT)\n"
+            f"    clist[{CC_WORD_IDX_0}]  cc[0] = 0x{clist_cc0:08X}\n"
+            f"    clist[{CC_WORD_IDX_1}]  cc[1] = 0x{clist_cc1:08X}"
+        )
+
+    sim = Simulator(dut)
+    sim.add_clock(1e-6)
+    sim.add_testbench(process)
+    with sim.write_vcd("/tmp/mint_bram_writes_with_cc.vcd"):
+        sim.run()
+    print("PASS: test_mint_bram_writes_with_cc")
+
+
 if __name__ == "__main__":
     test_mint_bram_writes()
+    test_mint_fault_bad_magic()
+    test_mint_fault_bad_n_minus_6()
+    test_mint_fault_cc_too_large()
+    test_mint_fault_nonzero_freespace()
+    test_mint_bram_writes_with_cc()
     print("\nAll ChurchCore Mint BRAM write tests passed.")
