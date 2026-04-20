@@ -1,4 +1,4 @@
-# RV32-Cap FPGA Pin Constraints
+# CTMMCap FPGA Pin Constraints
 # Target: Lattice ECP5 (ULX3S, OrangeCrab, or similar)
 # Edit pin locations to match your specific board
 
