@@ -4639,9 +4639,12 @@ function updateNamespace() {
         if (!e) continue;
         const manifest = sim.lazyManifest ? sim.lazyManifest[i] : null;
         let codeNotResident = false;
-        if (manifest && !manifest.loaded && e.word0_location > 0) {
-            const hdr = sim.parseLumpHeader(sim.memory[e.word0_location]);
-            if (!hdr.valid || hdr.cw === 0) codeNotResident = true;
+        if (manifest && e.word0_location > 0) {
+            // Use lump header magic as the authoritative residency signal:
+            // eviction zeroes the entire lump so magic=0x00 ≠ 0x1F (not resident).
+            // This reflects the hardware-visible state regardless of the loaded flag.
+            const lumpHdr = sim.memory ? sim.parseLumpHeader(sim.memory[e.word0_location]) : null;
+            if (lumpHdr && !lumpHdr.valid) codeNotResident = true;
         }
         const lim = sim.parseNSWord1(e.word1_limit);
         const ver = (e.word2_seals >>> 25) & 0x7F;
@@ -4763,9 +4766,9 @@ function showNSEntryTooltip(evt, idx) {
 
     const manifest = sim.lazyManifest ? sim.lazyManifest[idx] : null;
     let codeNotResident = false;
-    if (manifest && !manifest.loaded && e.word0_location > 0) {
-        const hdr = sim.parseLumpHeader(sim.memory[e.word0_location]);
-        if (!hdr.valid || hdr.cw === 0) codeNotResident = true;
+    if (manifest && e.word0_location > 0) {
+        const lumpHdr = sim.memory ? sim.parseLumpHeader(sim.memory[e.word0_location]) : null;
+        if (lumpHdr && !lumpHdr.valid) codeNotResident = true;
     }
 
     const lim = sim.parseNSWord1(e.word1_limit);

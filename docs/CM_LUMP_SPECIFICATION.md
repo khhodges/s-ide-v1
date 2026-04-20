@@ -88,12 +88,16 @@ corrupting state.
 32 bits total. No spare bits. No dead fields. `code_base = base + 4` always.
 `PC = 1` always.
 
-> **Lazy-load convention:** For callable lumps (`typ=00`), `cw=0` signals
-> "code not resident." The GT (NS entry) and c-list remain valid, but the
-> code region is empty. CALL/LOAD to such a lump triggers a
-> `CODE_NOT_RESIDENT` fault, which the Loader intercepts to fetch and
-> install the code words and update `cw` to the real count. Eviction
-> reverses this: code words are zeroed and `cw` is set back to 0.
+> **Lazy-load convention (Mode 1 — Restore):** When a lump is evicted from memory
+> the **entire lump** (header + code + c-list) is zeroed. The word at `base`
+> becomes 0x00000000 — magic = 0x00 ≠ 0x1F. This is the hardware-visible
+> residency signal. CALL/LOAD to such a slot reads the header, sees
+> `magic ≠ 0x1F`, and triggers `CODE_NOT_RESIDENT`. The Loader restores the
+> lump at any valid address within the existing NS grant, then updates
+> `word0_location` and recomputes the seal. **The NS entry authority (type,
+> limit, gt_seq, seal) is never changed** — it is the capability reference
+> that survives eviction. The freed memory block is available for alternative
+> objects while the lump is absent.
 
 ### Example Header Words
 

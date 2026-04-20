@@ -383,7 +383,13 @@ Read-only mathematical constants. Returns pre-computed values with full precisio
 
 **Methods**: Load, Prefetch, Evict
 
-Lazy load — fault-driven on-demand code loading. Detects CODE_NOT_RESIDENT (lump header cw=0) on manifest-registered slots, fetches and installs the code words, updates the lump header cw, and retries the faulting CALL transparently. The GT (NS entry) and c-list are always preserved — only code residency changes. The Loader is always resident (hot priority) and holds GTs for Navana, Memory, Locator, and UART. Critical for the Tang Nano 20K where 64 KB of BRAM cannot hold all abstractions simultaneously.
+Lazy load — fault-driven on-demand code loading. Operates in two modes:
+
+**Mode 1 — Restore** (Inform GT, lump evicted): Detects `CODE_NOT_RESIDENT` (lump header magic = 0x00 ≠ 0x1F, since the entire lump is zeroed on eviction) on manifest-registered slots. The NS entry authority (type, limit, gt_seq, seal) is always preserved — it is the capability reference and is never modified. Eviction zeroes the entire lump (header + code + c-list) so the memory block is free for alternative objects. On restore, the Loader writes the full lump (header + code + c-list) at a valid address within the existing NS grant, updates `word0_location`, and recomputes the seal. No new authority is minted — the existing NS entry is the grant.
+
+**Mode 2 — Construct** (Abstract GT, object never instantiated): Reserved for objects that have no NS entry or lump yet. The Abstract capability is the authority that permits minting a new Inform entry. Not yet implemented in the simulator — the fault hook (`OBJ_NOT_RESIDENT`) is reserved clean.
+
+The Loader is always resident (hot priority) and holds GTs for Navana, Memory, Locator, and UART. Critical for the Tang Nano 20K where 64 KB of BRAM cannot hold all abstractions simultaneously.
 
 ### 46 — Circle
 

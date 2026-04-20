@@ -243,14 +243,16 @@ class ChurchSimulator {
                     entry.allocSize = entry.size || this.SLOT_SIZE;
                     const loc = nsEntry.word0_location;
                     const hdr = this.parseLumpHeader(this.memory[loc]);
-                    const cw = hdr.valid ? hdr.cw : 0;
-                    const cc = hdr.valid ? hdr.cc : 0;
-                    for (let i = 1; i < (1 + cw); i++) {
+                    // Zero the ENTIRE lump (header + code + c-list) so the block
+                    // is free for alternative objects.  The NS entry authority
+                    // (type, limit, gt_seq, seal) is never touched — it is the
+                    // capability reference that survives eviction.
+                    const lumpSize = hdr.valid ? hdr.lumpSize : (entry.allocSize || this.SLOT_SIZE);
+                    for (let i = 0; i < lumpSize; i++) {
                         this.memory[loc + i] = 0;
                     }
-                    const lumpSize = entry.allocSize;
-                    const nMinus6 = Math.max(0, Math.ceil(Math.log2(lumpSize)) - 6);
-                    this.memory[loc] = this.packLumpHeader(nMinus6, 0, cc, 0);
+                    // memory[loc] is now 0: magic=0 ≠ 0x1F → parseLumpHeader.valid=false
+                    // → CODE_NOT_RESIDENT triggers on first CALL/LOAD to this slot.
                 }
                 entry.loaded = false;
                 entry.loadCount = 0;
@@ -263,7 +265,7 @@ class ChurchSimulator {
         if (warmCount + coldCount > 0) {
             this.output += `[LOADER] Lazy load manifest: ${hotCount} hot, ${warmCount} warm, ${coldCount} cold slots registered\n`;
             if (warmCount > 0) {
-                this.output += `[LOADER] ${warmCount} warm slot(s) code evicted (GT preserved) — will lazy-load on first CALL\n`;
+                this.output += `[LOADER] ${warmCount} warm slot(s): entire lump zeroed (header+code+c-list), NS entry authority preserved — will lazy-load on first CALL/LOAD\n`;
             }
         }
     }
@@ -375,10 +377,25 @@ class ChurchSimulator {
             }
         }
 
+        // Update NS entry word0_location to the chosen physical address and
+        // recompute the seal (word2).  Type, limit, and gt_seq are never changed.
+        // This is Mode 1 (Restore): the Loader places the lump within the existing
+        // grant; no new authority is minted.
+        const nsBase = this.NS_TABLE_BASE + slotIndex * this.NS_ENTRY_WORDS;
+        const nsW0Prev = this.memory[nsBase + 0];
+        const nsW1     = this.memory[nsBase + 1];
+        const nsW2Prev = this.memory[nsBase + 2];
+        if (nsW0Prev !== 0 || nsW1 !== 0) {
+            const gt_seq   = (nsW2Prev >>> 25) & 0x7F;
+            const parsedW1 = this.parseNSWord1(nsW1);
+            this.memory[nsBase + 0] = loc >>> 0;
+            this.memory[nsBase + 2] = this.makeVersionSeals(gt_seq, loc, parsedW1.limit);
+        }
+
         entry.loaded = true;
         entry.loadCount = (entry.loadCount || 0) + 1;
         const dataNote = totalDataWords > 0 ? `, ${totalDataWords} data words` : '';
-        this.output += `[LOADER] ${label} code installed at 0x${loc.toString(16)} (${lumpSize} words, ${totalCodeWords} code words${dataNote}, load #${entry.loadCount}) — GT preserved\n`;
+        this.output += `[LOADER] ${label} code installed at 0x${loc.toString(16)} (${lumpSize} words, ${totalCodeWords} code words${dataNote}, load #${entry.loadCount}) — GT preserved, seal recomputed\n`;
 
         this.auditLog.push({
             gate: 'Loader.Load',
@@ -412,19 +429,18 @@ class ChurchSimulator {
         if (nsEntry && nsEntry.word0_location > 0) {
             const loc = nsEntry.word0_location;
             const hdr = this.parseLumpHeader(this.memory[loc]);
-            if (hdr.valid && hdr.cw > 0) {
-                for (let i = 1; i < (1 + hdr.cw); i++) {
-                    this.memory[loc + i] = 0;
-                }
+            // Zero the ENTIRE lump (header + code + c-list) so the block is
+            // free for alternative objects.  NS entry authority (type, limit,
+            // gt_seq, seal) is never changed — only lump memory is freed.
+            const lumpSize = hdr.valid ? hdr.lumpSize : (entry.allocSize || this.SLOT_SIZE);
+            for (let i = 0; i < lumpSize; i++) {
+                this.memory[loc + i] = 0;
             }
-            const lumpSize = entry.allocSize || this.SLOT_SIZE;
-            const nMinus6 = Math.max(0, Math.ceil(Math.log2(lumpSize)) - 6);
-            const cc = hdr.valid ? hdr.cc : 0;
-            this.memory[loc] = this.packLumpHeader(nMinus6, 0, cc, 0);
+            // memory[loc] is now 0: magic=0 ≠ 0x1F → CODE_NOT_RESIDENT on next CALL/LOAD.
         }
 
         entry.loaded = false;
-        this.output += `[LOADER] Evicted ${label} (slot ${slotIndex}) — code cleared, GT preserved\n`;
+        this.output += `[LOADER] Evicted ${label} (slot ${slotIndex}) — entire lump zeroed, NS entry authority preserved\n`;
 
         this.auditLog.push({
             gate: 'Loader.Evict',
@@ -2118,9 +2134,13 @@ class ChurchSimulator {
             return null;
         }
         if (this.lazyManifest[targetIdx] && !this.lazyManifest[targetIdx].loaded) {
+            // Mode 1 — Restore: NS entry is valid but lump header magic is 0x00
+            // (entire lump was zeroed on eviction).  Dispatch the Loader to
+            // restore the lump at a valid address within the existing NS grant.
+            // Type, limit, and gt_seq of the NS entry are never changed by the Loader.
             const lumpHdr = this.parseLumpHeader(this.memory[entry.word0_location]);
-            if (!lumpHdr.valid || lumpHdr.cw === 0) {
-                this.output += `[LOADER] LOAD: NS[${targetIdx}] code not resident (cw=0) — dispatching Loader...\n`;
+            if (!lumpHdr.valid) {
+                this.output += `[LOADER] LOAD: NS[${targetIdx}] lump not resident (header magic=0x${(this.memory[entry.word0_location] >>> 27 & 0x1F).toString(16).toUpperCase()}, expected 0x1F) — dispatching Loader (Mode 1)...\n`;
                 const loaded = this._dispatchLoaderLoad(targetIdx);
                 if (loaded) {
                     const freshEntry = this.readNSEntry(targetIdx);
@@ -2133,6 +2153,9 @@ class ChurchSimulator {
                 }
                 this.fault('CODE_NOT_RESIDENT', `LOAD: slot ${targetIdx} lazy load failed`);
                 return null;
+                // TODO Mode 2 (OBJ_NOT_RESIDENT): when GT type is Abstract → dispatch
+                // Loader.Construct to allocate a fresh NS slot and lump, then return
+                // the new Inform GT to the thread's designated return register.
             }
         }
 
@@ -2234,17 +2257,21 @@ class ChurchSimulator {
         }
         const callTargetIdx = srcParsed.index;
         if (this.lazyManifest[callTargetIdx] && !this.lazyManifest[callTargetIdx].loaded) {
+            // Mode 1 — Restore: NS entry is valid but lump header magic is 0x00
+            // (entire lump was zeroed on eviction).  Dispatch the Loader to
+            // restore the lump.  NS entry authority never changes.
             const callNsEntry = this.readNSEntry(callTargetIdx);
             if (callNsEntry && callNsEntry.word0_location > 0) {
                 const callLumpHdr = this.parseLumpHeader(this.memory[callNsEntry.word0_location]);
-                if (!callLumpHdr.valid || callLumpHdr.cw === 0) {
-                    this.output += `[LOADER] CALL: NS[${callTargetIdx}] code not resident (cw=0) — dispatching Loader...\n`;
+                if (!callLumpHdr.valid) {
+                    this.output += `[LOADER] CALL: NS[${callTargetIdx}] lump not resident (header magic=0x${(this.memory[callNsEntry.word0_location] >>> 27 & 0x1F).toString(16).toUpperCase()}, expected 0x1F) — dispatching Loader (Mode 1)...\n`;
                     const loaded = this._dispatchLoaderLoad(callTargetIdx);
                     if (!loaded) {
                         this.fault('CODE_NOT_RESIDENT', `CALL: CR${d.crDst} lazy load failed for slot ${callTargetIdx}`);
                         return null;
+                        // TODO Mode 2 (OBJ_NOT_RESIDENT): GT type Abstract → Loader.Construct
                     }
-                    this.output += `[LOADER] CALL: slot ${callTargetIdx} code loaded, proceeding with CALL CR${d.crDst}\n`;
+                    this.output += `[LOADER] CALL: slot ${callTargetIdx} lump restored, proceeding with CALL CR${d.crDst}\n`;
                 }
             }
         }
