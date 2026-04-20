@@ -149,7 +149,7 @@ All Church instructions that access the namespace route through the **mLoad mast
 
 **Operation**:
 1. Index CRd at offset idx; verify the GT has E permission — FAULT on fail
-2. Suspend outgoing thread: save per-thread state (DR0–DR15, CR0–CR11, CR14, CR15, STO, PC, FLAGS) into its thread lump
+2. Suspend outgoing thread: save per-thread state (DR0–DR15, CR0–CR11, STO, PC, FLAGS) into its thread lump; CR13, CR14, CR15 are never touched
 3. Activate incoming thread: restore per-thread state from its thread lump
 4. The suspended thread resumes exactly where it left off
 
@@ -158,8 +158,9 @@ All Church instructions that access the namespace route through the **mLoad mast
 | Aspect | Detail |
 |--------|--------|
 | **Permission Check** | E (Enter) on Thread Abstraction GT at CRd[idx] |
-| **Per-Thread Saved/Restored** | DR0–DR15, CR0–CR11, CR14 (code), CR15 (namespace root), STO, PC, FLAGS |
-| **System-Wide Unchanged** | CR12 (data fault handler), CR13 (interrupt handler) |
+| **Per-Thread Saved/Restored** | DR0–DR15, CR0–CR11, STO, PC, FLAGS |
+| **System-Wide Unchanged** | CR13 (IRQ handler), CR14 (transient code — re-derived by cLoad), CR15 (namespace root) |
+| **Thread Identity Saved/Restored** | CR12 (Thread Identity — lump base + word count) |
 | **G-bit Reset** | Yes — on accessed namespace entries |
 
 ---

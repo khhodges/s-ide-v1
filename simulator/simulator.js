@@ -2218,44 +2218,10 @@ class ChurchSimulator {
     }
 
     _execCall(d) {
-        let sourceGT;
-        const isClistIndexed = d.imm !== 0 && !(d.imm & 0x4000);
-        if (isClistIndexed) {
-            const clistGT = this.cr[d.crSrc].word0;
-            if (clistGT === 0) {
-                this.fault('NULL_CAP', `CALL: CR${d.crSrc} c-list is NULL`);
-                return null;
-            }
-            let clistLoc, clistSize;
-            if (d.crSrc === 6) {
-                clistLoc = this.cr[d.crSrc].word1;
-                clistSize = this.parseNSWord1(this.cr[6].word2).clistCount;
-            } else {
-                const lumpBase = this.cr[d.crSrc].word1;
-                const hdrRead = this._capRead(d.crSrc, lumpBase, 'R', `CALL CR${d.crSrc} lump-hdr`);
-                if (!hdrRead.ok) { this.fault(hdrRead.fault, hdrRead.message); return null; }
-                const hdr = this.parseLumpHeader(hdrRead.value);
-                clistLoc = (hdr.valid && hdr.cc > 0) ? (lumpBase + hdr.lumpSize - hdr.cc) >>> 0 : lumpBase;
-                clistSize = (hdr.valid && hdr.cc > 0) ? hdr.cc : 1;
-            }
-            const absAddr = (clistLoc + d.imm) >>> 0;
-            const clistRange = { base: clistLoc, upperBound: (clistLoc + clistSize - 1) >>> 0 };
-            const loadCheck = this.mLoad(clistGT, d.crSrc === 6 ? null : 'L', d.crSrc, absAddr, clistRange);
-            if (!loadCheck.ok) {
-                this.fault(loadCheck.fault, `CALL c-list LOAD: CR${d.crSrc}: ${loadCheck.message}`);
-                return null;
-            }
-            sourceGT = this.memory[clistLoc + d.imm] || 0;
-            if (sourceGT === 0) {
-                this.fault('NULL_CAP', `CALL: c-list CR${d.crSrc} offset ${d.imm} is empty`);
-                return null;
-            }
-        } else {
-            sourceGT = this.cr[d.crDst].word0;
-            if (sourceGT === 0) {
-                this.fault('NULL_CAP', `CALL: CR${d.crDst} is NULL`);
-                return null;
-            }
+        const sourceGT = this.cr[d.crDst].word0;
+        if (sourceGT === 0) {
+            this.fault('NULL_CAP', `CALL: CR${d.crDst} is NULL`);
+            return null;
         }
         const srcParsed = this.parseGT(sourceGT);
         if (srcParsed.type === 0) {
@@ -2282,19 +2248,11 @@ class ChurchSimulator {
                 }
             }
         }
-        const callCrLabel = isClistIndexed ? `CR${d.crSrc}+${d.imm}` : `CR${d.crDst}`;
-        const check = this.mLoad(sourceGT, 'E', isClistIndexed ? d.crSrc : d.crDst);
+        const callCrLabel = `CR${d.crDst}`;
+        const check = this.mLoad(sourceGT, 'E', d.crDst);
         if (!check.ok) {
             this.fault(check.fault, `CALL: ${callCrLabel}: ${check.message}`);
             return null;
-        }
-        // For LED abstraction (NS 12): extract the call-site capability offset from d.imm.
-        // In c-list indexed CALL the d.imm field IS the C-list slot address — this is the
-        // same offset the hardware uses to identify the addressed LED (0–5).
-        // LED_CLIST_BASE is the boot-defined first LED slot; ledIndex = d.imm - LED_CLIST_BASE.
-        const LED_CLIST_BASE = 8;
-        if (check.index === 12 && isClistIndexed) {
-            check.ledIndex = d.imm - LED_CLIST_BASE;  // raw call-site offset; handler validates 0–5
         }
         const nsEntry = check.entry;
         const word1 = this.parseNSWord1(nsEntry.word1_limit);
@@ -2876,7 +2834,7 @@ class ChurchSimulator {
         const presetMasks = [
             [],                ['R'],           ['R','W'],       ['X'],
             ['R','X'],         ['R','W','X'],   ['L'],           ['S'],
-            ['E'],             ['L','S'],       null,            null,
+            ['E'],             ['L','S'],       ['W'],           null,
             null,              null,  null,  null,
         ];
 

@@ -90,12 +90,12 @@ class SlideRuleTutorial {
                 content: `<p>A Golden Token (GT) is a 32-bit unforgeable capability — one word stored in a c-list slot:</p>
 <pre class="sr-encoding"> 31      25 24  23 22      16 15           0
 &#x250C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x252C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x252C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x252C;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2510;
-&#x2502;B R W X  &#x2502; typ  &#x2502;  gt_seq   &#x2502;  object_id   &#x2502;
-&#x2502; L S E   &#x2502; [2]  &#x2502;   [7]    &#x2502;    [16]     &#x2502;
+&#x2502;B E S L  &#x2502; typ  &#x2502;  gt_seq   &#x2502;  object_id   &#x2502;
+&#x2502; X W R   &#x2502; [2]  &#x2502;   [7]    &#x2502;    [16]     &#x2502;
 &#x2502;  [7]    &#x2502;      &#x2502;          &#x2502;             &#x2502;
 &#x2514;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2534;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2534;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2534;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2500;&#x2518;</pre>
 <table class="sr-table sr-table-wide"><tr><th>Field</th><th>Bits</th><th>Purpose</th></tr>
-<tr><td>Perms (B&thinsp;R&thinsp;W&thinsp;X&thinsp;L&thinsp;S&thinsp;E)</td><td>7</td><td>Capability permissions. Turing domain: R(ead), W(rite), X(ecute). Church domain: L(oad), S(ave), E(nter). B = Bounds (access-size limit). MSB=B, LSB=E.</td></tr>
+<tr><td>Perms (B&thinsp;E&thinsp;S&thinsp;L&thinsp;X&thinsp;W&thinsp;R)</td><td>7</td><td>Capability permissions. Turing domain: R(ead), W(rite), X(ecute). Church domain: L(oad), S(ave), E(nter). B = Bounds (access-size limit). MSB=B (bit&nbsp;31), LSB=R (bit&nbsp;25).</td></tr>
 <tr><td>typ</td><td>2</td><td>00=NULL (invalid), 01=Inform (GT points to an NS entry &rarr; memory lump), 10=Outform (GT resolved by Abstraction Library, e.g. GitHub), 11=Abstract (GT <em>is</em> the value).</td></tr>
 <tr><td>gt_seq</td><td>7</td><td>Revocation counter. Incrementing gt_seq in the NS entry instantly invalidates every derived copy — the next mLoad that presents a stale gt_seq faults.</td></tr>
 <tr><td>object_id</td><td>16</td><td>Index into the namespace (65&thinsp;536 possible entries).</td></tr>
