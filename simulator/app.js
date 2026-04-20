@@ -929,13 +929,13 @@ function updateLedStrip() {
         } else {
             readoutEl.style.display = 'flex';
             const idx = sr.ledIndex;
-            const dr0 = sr.dr0;
+            const dr1 = sr.dr1;
             indexChipEl.textContent = idx !== null && idx !== undefined ? `LED ${idx}` : 'LED ?';
-            badgeEl.textContent = String(dr0);
-            badgeEl.className = 'dr0-badge ' + (dr0 > 0 ? 'dr0-badge-green' : dr0 < 0 ? 'dr0-badge-red' : 'dr0-badge-grey');
-            if (dr0 > 0)      descEl.textContent = dr0 === 1 ? '(on / success)' : '(success)';
-            else if (dr0 === 0) descEl.textContent = '(off)';
-            else               descEl.textContent = dr0 === -1 ? '(invalid offset)' : '(fault)';
+            badgeEl.textContent = String(dr1);
+            badgeEl.className = 'dr0-badge ' + (dr1 > 0 ? 'dr0-badge-green' : dr1 < 0 ? 'dr0-badge-red' : 'dr0-badge-grey');
+            if (dr1 > 0)      descEl.textContent = dr1 === 1 ? '(on / success)' : '(success)';
+            else if (dr1 === 0) descEl.textContent = '(off)';
+            else               descEl.textContent = dr1 === -1 ? '(invalid offset)' : '(fault)';
         }
     }
 }
@@ -7384,25 +7384,25 @@ function _nsBuild() {
     });
 }
 
-function _signedReturnDesc(dr0, absIndex) {
+function _signedReturnDesc(dr1, absIndex) {
     if (absIndex === 12) {
-        if (dr0 > 0)        return dr0 === 1 ? 'on / success' : 'success';
-        if (dr0 === 0)      return 'off';
-        return dr0 === -1 ? 'invalid offset' : 'fault';
+        if (dr1 > 0)        return dr1 === 1 ? 'on / success' : 'success';
+        if (dr1 === 0)      return 'off';
+        return dr1 === -1 ? 'invalid offset' : 'fault';
     }
-    if (dr0 > 0)            return 'success';
-    if (dr0 === 0)          return 'zero';
+    if (dr1 > 0)            return 'success';
+    if (dr1 === 0)          return 'zero';
     return 'fault';
 }
 
 function _buildSignedReturnHtml(absIndex) {
     const sr = sim ? sim.lastSignedReturn : null;
-    if (!sr || sr.absIndex !== absIndex || sr.dr0 === 0) {
+    if (!sr || sr.absIndex !== absIndex || sr.dr1 === 0) {
         return '';
     }
-    const _dr0 = sr.dr0;
-    const _badgeClass = _dr0 > 0 ? 'dr0-badge-green' : (_dr0 < 0 ? 'dr0-badge-red' : 'dr0-badge-grey');
-    const _desc = _signedReturnDesc(_dr0, absIndex);
+    const _dr1 = sr.dr1;
+    const _badgeClass = _dr1 > 0 ? 'dr0-badge-green' : (_dr1 < 0 ? 'dr0-badge-red' : 'dr0-badge-grey');
+    const _desc = _signedReturnDesc(_dr1, absIndex);
     const _chipText = (absIndex === 12)
         ? (sr.ledIndex !== null && sr.ledIndex !== undefined ? `LED ${sr.ledIndex}` : 'LED ?')
         : sr.methodName;
@@ -7410,12 +7410,12 @@ function _buildSignedReturnHtml(absIndex) {
     return `<div class="abs-detail-label">Last return</div>` +
         `<div class="abs-signed-return" id="absSignedReturnBody">` +
         `<span class="${_chipClass}">${_chipText}</span>` +
-        `<span style="color:var(--text-secondary);font-size:0.8rem;">DR0:</span> ` +
-        `<span class="dr0-badge ${_badgeClass}" style="font-size:0.85rem;padding:2px 8px;">${_dr0}</span>` +
+        `<span style="color:var(--text-secondary);font-size:0.8rem;">DR1:</span> ` +
+        `<span class="dr0-badge ${_badgeClass}" style="font-size:0.85rem;padding:2px 8px;">${_dr1}</span>` +
         `<span class="dr0-badge-desc" style="margin-left:6px;">(${_desc})</span>` +
         `</div>` +
-        `<div class="abs-note-text" style="margin-top:6px;">DR0 carries the signed result for one instruction cycle after the CALL. ` +
-        `Use <code>BGE</code> (branch if &ge; 0, success) or <code>BLT</code> (branch if &lt; 0, fault) immediately after the CALL to act on the result.</div>`;
+        `<div class="abs-note-text" style="margin-top:6px;">DR1 carries the signed result after the CALL (≥0 success, &lt;0 fault). ` +
+        `Use <code>BGE</code> (branch if &ge; 0) or <code>BLT</code> (branch if &lt; 0) immediately after the CALL to act on the result.</div>`;
 }
 
 function _refreshSignedReturnReadout() {

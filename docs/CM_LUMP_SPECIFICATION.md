@@ -928,8 +928,9 @@ By convention **DR5 is the heap allocation pointer** — a raw 32-bit integer
 offset (relative to Zone ④ base, word 17) giving the next free word in the
 heap. DR5 pairs with CR5 (the Heap GT) to form the complete heap register
 pair: CR5 supplies the access right, DR5 supplies the position. DR5 is
-the only DR with an architecture-level convention; DR0–DR4 and DR6–DR15
-remain fully general-purpose.
+the only DR with an architecture-level convention beyond DR0; DR1–DR4
+and DR6–DR15 remain fully general-purpose. DR0 is hardwired zero —
+the simulator writes 0 to DR0 unconditionally after every instruction.
 
 ---
 

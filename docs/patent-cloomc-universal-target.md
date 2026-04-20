@@ -352,7 +352,7 @@ Nine risks (R001-R009) have been identified, documented, and resolved:
 | R005 | MEDIUM | C-list offset mismatch | RESOLVED (ROM derived from capabilities array) |
 | R006 | MEDIUM | Haskell closure variable capture | RESOLVED (closures capture DR only, never CR) |
 | R007 | HIGH | Upload validation integer underflow | RESOLVED (Navana validates all uploads) |
-| R008 | MEDIUM | Register spilling / calling convention | RESOLVED (fixed convention DR0-3/DR4-11/DR12-15) |
+| R008 | MEDIUM | Register spilling / calling convention | RESOLVED (fixed convention DR0=zero/DR1-3/DR4-11/DR12-15) |
 | R009 | FOUNDATIONAL | Namespace isolation guarantee | SECURE (all contingencies resolved) |
 
 ### End-to-End Verification
