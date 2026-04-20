@@ -103,12 +103,92 @@ A graphics program needs to clamp RGB values to 0-255 range:
 
 ### With a macro (code duplicated 3 times):
 ```asm
-; Each use copies ~6 instructions. 3 channels = 18 instructions in binary.
+; DR0 = 0 (zero register)
+; DR11 = R channel, DR12 = G channel, DR13 = B channel
+
+; --- clamp R inline ---
+IADD  DR10, DR11, #0    ; DR10 = R value
+MCMP   DR10, DR0        ; compare with 0
+BRANCHGE .r_not_neg     ; if >= 0, skip
+IADD   DR10, DR0, #0   ; DR10 = 0
+BRANCH .r_check_high
+.r_not_neg:
+.r_check_high:
+IADD   DR5, DR0, #255  ; DR5 = 255
+MCMP   DR10, DR5        ; compare with 255
+BRANCHLE .r_done        ; if <= 255, in range
+IADD   DR10, DR0, #255 ; DR10 = 255
+.r_done:
+IADD  DR11, DR10, #0    ; store clamped R
+
+; --- clamp G inline (identical body, different labels) ---
+IADD  DR10, DR12, #0    ; DR10 = G value
+MCMP   DR10, DR0
+BRANCHGE .g_not_neg
+IADD   DR10, DR0, #0
+BRANCH .g_check_high
+.g_not_neg:
+.g_check_high:
+IADD   DR5, DR0, #255
+MCMP   DR10, DR5
+BRANCHLE .g_done
+IADD   DR10, DR0, #255
+.g_done:
+IADD  DR12, DR10, #0    ; store clamped G
+
+; --- clamp B inline (identical body again) ---
+IADD  DR10, DR13, #0    ; DR10 = B value
+MCMP   DR10, DR0
+BRANCHGE .b_not_neg
+IADD   DR10, DR0, #0
+BRANCH .b_check_high
+.b_not_neg:
+.b_check_high:
+IADD   DR5, DR0, #255
+MCMP   DR10, DR5
+BRANCHLE .b_done
+IADD   DR10, DR0, #255
+.b_done:
+IADD  DR13, DR10, #0    ; store clamped B
+
+; 10 instructions × 3 channels = 30 instructions in binary.
+; No shared body — the assembler emits three full copies.
 ```
 
 ### With CALL (code exists once, heavy overhead):
 ```asm
-; 10+ cycles overhead per invocation. 3 channels = 30+ cycles wasted on ceremony.
+; CR8 holds E-GT pointing to clamp_fn (domain crossing required)
+; DR0 = 0 (zero register)
+; DR11 = R channel, DR12 = G channel, DR13 = B channel
+
+IADD  DR10, DR11, #0    ; DR10 = R value
+CALL  CR8, 0x0          ; clamp R — pushes [E-GT · saved-PC] frame, domain cross
+IADD  DR11, DR10, #0    ; store clamped R
+
+IADD  DR10, DR12, #0    ; DR10 = G value
+CALL  CR8, 0x0          ; clamp G — 10+ cycles overhead again
+IADD  DR12, DR10, #0    ; store clamped G
+
+IADD  DR10, DR13, #0    ; DR10 = B value
+CALL  CR8, 0x0          ; clamp B — 10+ cycles overhead again
+IADD  DR13, DR10, #0    ; store clamped B
+
+; Clamp function body (exists once, entered via CALL):
+clamp_fn:
+  MCMP   DR10, DR0        ; compare DR10 with 0
+  BRANCHGE .not_neg       ; if DR10 >= 0, skip zeroing
+  IADD   DR10, DR0, #0   ; DR10 = 0
+  BRANCH .check_high
+.not_neg:
+.check_high:
+  IADD   DR5, DR0, #255  ; DR5 = 255
+  MCMP   DR10, DR5        ; compare DR10 with 255
+  BRANCHLE .done          ; if DR10 <= 255, in range
+  IADD   DR10, DR0, #255 ; DR10 = 255
+.done:
+  RETURN                  ; pops CALL frame (2 words: E-GT + saved PC), restores domain
+
+; 3 invocations × 10+ cycles = 30+ cycles overhead on ceremony alone.
 ```
 
 ### With LAMBDA (code exists once, near-zero overhead):
