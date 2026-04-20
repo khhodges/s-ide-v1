@@ -114,9 +114,9 @@ class ChurchSimulator {
         // NS_TABLE_BASE is recomputed in reset() (and in the binary loaders)
         // so it always sits at the top of the allocated namespace memory window.
         // For the historical 65536-word memory this evaluates to 0xFD00.
-        this.NS_TABLE_RESERVE = 0x300;   // 256 entries × 3 words
+        this.NS_TABLE_RESERVE = 0x400;   // 256 entries × 4 words
         this.NS_TABLE_BASE = 0xFD00;
-        this.NS_ENTRY_WORDS = 3;
+        this.NS_ENTRY_WORDS = 4;
         this.MAX_NS_ENTRIES = 256;
         this.SLOT_SIZE = 0x40;   // 64 words — FPGA minimum slot allocation (boot_rom.py line 339)
 
@@ -669,11 +669,12 @@ class ChurchSimulator {
         return { magic, n_minus_6, lumpSize, cw, typ, cc, valid: magic === 0x1F };
     }
 
-    writeNSEntry(idx, location, limit17, bFlag, fFlag, gBit, chainable, gtType, version, clistCount) {
+    writeNSEntry(idx, location, limit17, bFlag, fFlag, gBit, chainable, gtType, version, clistCount, abstract_gt) {
         const base = this.NS_TABLE_BASE + idx * this.NS_ENTRY_WORDS;
         this.memory[base + 0] = location >>> 0;
         this.memory[base + 1] = this.packNSWord1(limit17, bFlag, fFlag, gBit, chainable, gtType, clistCount || 0);
         this.memory[base + 2] = this.makeVersionSeals(version || 0, location, limit17);
+        this.memory[base + 3] = (abstract_gt || 0) >>> 0;
         if (idx >= this.nsCount) this.nsCount = idx + 1;
     }
 
@@ -683,12 +684,14 @@ class ChurchSimulator {
         const w0 = this.memory[base + 0];
         const w1 = this.memory[base + 1];
         const w2 = this.memory[base + 2];
+        const w3 = this.memory[base + 3];
         if (w0 === 0 && w1 === 0) return null;
         const parsed = this.parseNSWord1(w1);
         return {
             word0_location: w0,
             word1_limit: w1,
             word2_seals: w2,
+            word3_abstract_gt: w3,
             gBit: parsed.g,
             gtType: parsed.gtType,
             clistCount: parsed.clistCount,
@@ -753,7 +756,7 @@ class ChurchSimulator {
             { label: 'Family',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'Schoolroom',    perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'Friends',       perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Tunnel',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
+            { label: 'Tunnel',        perms: {R:0,W:0,X:0,L:0,S:1,E:1}, chainable: false },
             { label: 'Negotiate',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'Editor',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'Assembler',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
@@ -858,7 +861,8 @@ class ChurchSimulator {
                         : (DEVICE_REG_LIMITS[i] !== undefined ? DEVICE_REG_LIMITS[i]
                         : (mySize - 1));
             const nsTableCount = (i === 0) ? abstractions.length : 0;
-            this.writeNSEntry(i, loc, lim17, 0, 0, 0, a.chainable ? 1 : 0, 1, 0, nsTableCount);
+            const abstractGtWord = (this.getPermBits(a.perms) << 25) >>> 0;
+            this.writeNSEntry(i, loc, lim17, 0, 0, 0, a.chainable ? 1 : 0, 1, 0, nsTableCount, abstractGtWord);
             this.nsLabels[i] = a.label;
             if (a.handler) {
                 this.nsHandlers[i] = a.handler;
@@ -1753,7 +1757,7 @@ class ChurchSimulator {
         this.cr[crIdx].word0 = gt32;
         this.cr[crIdx].word1 = entry.word0_location >>> 0;
         this.cr[crIdx].word2 = entry.word1_limit >>> 0;
-        this.cr[crIdx].word3 = entry.word2_seals >>> 0;
+        this.cr[crIdx].word3 = this.mElevation ? ((entry.word3_abstract_gt || 0) >>> 0) : 0;
         this.cr[crIdx].m = this.mElevation ? 1 : 0;
         if (crIdx <= 11 && crIdx !== 6) {
             const threadBase = this.cr[12] && this.cr[12].word1;
@@ -4111,7 +4115,8 @@ class ChurchSimulator {
         const totalLen = 1 + codeLen;
         const lim17 = Math.min(totalLen - 1, 0x1FFFF);
         const gtWord = this.createGT(0, idx, perms, gtType);
-        this.writeNSEntry(idx, loc, lim17, 0, 0, 0, 0, gtType, 0);
+        const abstractGtWord = (this.getPermBits(perms) << 25) >>> 0;
+        this.writeNSEntry(idx, loc, lim17, 0, 0, 0, 0, gtType, 0, undefined, abstractGtWord);
         this.nsLabels[idx] = label;
         this.memory[loc] = gtWord;
         for (let i = 0; i < codeLen; i++) {
@@ -4132,7 +4137,8 @@ class ChurchSimulator {
         for (let j = 0; j < this.SLOT_SIZE; j++) {
             if (loc + j < this.memory.length) this.memory[loc + j] = 0;
         }
-        this.writeNSEntry(idx, loc, lim17, 0, 0, 0, 0, gtType, 0);
+        const abstractGtWord = (this.getPermBits(perms) << 25) >>> 0;
+        this.writeNSEntry(idx, loc, lim17, 0, 0, 0, 0, gtType, 0, undefined, abstractGtWord);
         this.nsLabels[idx] = label;
         this.memory[loc] = gtWord;
         for (let i = 0; i < codeLen; i++) {
@@ -4161,7 +4167,7 @@ class ChurchSimulator {
         const loc = entry.word0_location;
         const lim17 = Math.min(dataWords.length - 1, 0x1FFFF);
         const parsed = this.parseNSWord1(entry.word1_limit);
-        this.writeNSEntry(idx, loc, lim17, parsed.b, parsed.f, parsed.g, parsed.chainable, parsed.gtType, (entry.word2_seals >>> 25) & 0x7F);
+        this.writeNSEntry(idx, loc, lim17, parsed.b, parsed.f, parsed.g, parsed.chainable, parsed.gtType, (entry.word2_seals >>> 25) & 0x7F, undefined, entry.word3_abstract_gt || 0);
         for (let i = 0; i < dataWords.length; i++) {
             this.memory[loc + i] = dataWords[i] >>> 0;
         }

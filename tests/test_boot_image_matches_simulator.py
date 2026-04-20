@@ -105,7 +105,7 @@ def _region_of(word_index, total_words, ns_size, thread_size, entry_size):
     ns_table_base = total_words - NS_TABLE_RESERVE
     if word_index >= ns_table_base:
         slot = (word_index - ns_table_base) // NS_ENTRY_WORDS
-        field = ["word0_location", "word1_limits", "word2_seals"][
+        field = ["word0_location", "word1_limits", "word2_seals", "word3_abstract_gt"][
             (word_index - ns_table_base) % NS_ENTRY_WORDS]
         return f"NS table slot {slot} ({field})"
     if word_index < ns_size:

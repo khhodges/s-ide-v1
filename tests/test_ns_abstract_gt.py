@@ -119,7 +119,7 @@ def test_ns_gate_fetches_w3():
                 ctx.set(dut.mem_rd_valid, 0)
                 ctx.set(dut.mem_rd_data, 0)
             if ctx.get(dut.ns_gate_done):
-                result["raw_w3"] = ctx.get(dut.raw_w3)
+                result["ns_abstract_gt"] = ctx.get(dut.ns_abstract_gt)
                 break
 
     sim = Simulator(dut)
@@ -128,9 +128,9 @@ def test_ns_gate_fetches_w3():
     with sim.write_vcd("/dev/null"):
         sim.run()
 
-    assert "raw_w3" in result, "ns_gate never reached DONE within MAX_TICKS"
-    assert result["raw_w3"] == ABSTRACT_GT, (
-        f"raw_w3=0x{result['raw_w3']:08X}  expected ABSTRACT_GT=0x{ABSTRACT_GT:08X}"
+    assert "ns_abstract_gt" in result, "ns_gate never reached DONE within MAX_TICKS"
+    assert result["ns_abstract_gt"] == ABSTRACT_GT, (
+        f"ns_abstract_gt=0x{result['ns_abstract_gt']:08X}  expected ABSTRACT_GT=0x{ABSTRACT_GT:08X}"
     )
 
 

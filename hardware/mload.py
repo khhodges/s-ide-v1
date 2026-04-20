@@ -300,7 +300,7 @@ class ChurchMLoad(Elaboratable):
             self.outform_gt_raw.eq(outform_gt_raw_reg),
             self.outform_slot_id.eq(outform_slot_id_reg),
             self.outform_clist_addr.eq(outform_clist_addr_reg),
-            self.ns_abstract_gt.eq(Mux(m_elevated_reg, u_ns_gate.raw_w3, 0)),
+            self.ns_abstract_gt.eq(Mux(m_elevated_reg, u_ns_gate.ns_abstract_gt, 0)),
         ]
 
         return m

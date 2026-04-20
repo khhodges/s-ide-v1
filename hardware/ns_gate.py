@@ -34,7 +34,7 @@ class ChurchNSGate(Elaboratable):
     ───────
         raw_base          NS W0  lump base byte address
         raw_w2            NS W1  authority (identical layout to CR W2)
-        raw_w3            NS W3  abstract GT annotation (M-bit gated in mLoad)
+        ns_abstract_gt    NS W3  abstract GT annotation (M-bit gated by ChurchMLoad)
         ns_entry_addr_out byte address of the NS entry (CR15 base + slot_id << 4)
 
     All outputs are valid while ns_gate_done is asserted and remain
@@ -68,7 +68,7 @@ class ChurchNSGate(Elaboratable):
 
         self.raw_base          = Signal(32)
         self.raw_w2            = Signal(32)
-        self.raw_w3            = Signal(32)
+        self.ns_abstract_gt    = Signal(32)
         self.ns_entry_addr_out = Signal(32)
 
         self.mem_addr     = Signal(32)
@@ -187,7 +187,7 @@ class ChurchNSGate(Elaboratable):
             self.ns_gate_fault_type.eq(fault_type_reg),
             self.raw_base.eq(raw_base_reg),
             self.raw_w2.eq(raw_w2_reg),
-            self.raw_w3.eq(raw_w3_reg),
+            self.ns_abstract_gt.eq(raw_w3_reg),
             self.ns_entry_addr_out.eq(ns_entry_addr),
         ]
 

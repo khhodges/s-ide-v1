@@ -30,15 +30,15 @@ Layout (all words 32-bit little-endian):
     [resident lump bodies at programmer
      -chosen physAddr]
     [NS_TABLE_BASE .. +NS_TABLE_RESERVE)     Namespace table
-       (256 entries × 3 words; named slots followed by Step-3 reserved
+       (256 entries × 4 words; named slots followed by Step-3 reserved
         empties; remainder zero)
 """
 import json
 import os
 import struct
 
-NS_TABLE_RESERVE = 0x300        # 768 words = 256 entries × 3
-NS_ENTRY_WORDS   = 3
+NS_TABLE_RESERVE = 0x400        # 1024 words = 256 entries × 4
+NS_ENTRY_WORDS   = 4
 MAX_NS_ENTRIES   = 256
 SLOT_SIZE        = 0x40         # 64 words
 
@@ -71,6 +71,24 @@ BOOT_ROM_WORDS = [
     0x1F028000, # [11] RETURN AL, CR5
     0x0F308002, # [12] SAVE   AL, CR6,  CR1, #2
 ]
+
+def _abstract_gt_word(perms_dict):
+    """Encode a perms dict as an Abstract GT word (bits 30:25 = perms[5:0]).
+
+    Mirrors hardware/boot_rom.py _abstract_gt_word() and simulator.js
+    getPermBits() << 25.  Abstract GTs encode only the permission intent;
+    slot_id, gt_seq, gt_type, and b_flag are all zero.
+    """
+    mask = (
+        (1  if perms_dict.get("R") else 0) |
+        (2  if perms_dict.get("W") else 0) |
+        (4  if perms_dict.get("X") else 0) |
+        (8  if perms_dict.get("L") else 0) |
+        (16 if perms_dict.get("S") else 0) |
+        (32 if perms_dict.get("E") else 0)
+    )
+    return (mask & 0x3F) << 25
+
 
 # Default abstraction catalog — ports simulator.js _getAbstractionCatalog()
 # fallback list (used when no abstractionRegistry is wired in). The boot
@@ -346,6 +364,7 @@ def generate_boot_image(cfg, lumps_dir):
         mem[base + 1] = pack_ns_word1(lim17, 0, 0, 0, 1 if chainable else 0,
                                       1, clist_count)
         mem[base + 2] = make_version_seals(0, loc, lim17)
+        mem[base + 3] = _abstract_gt_word(perms)
         clist_gts.append(create_gt(0, i, perms, 1))
 
     ns_count = len(catalog)
