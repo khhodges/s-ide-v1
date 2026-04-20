@@ -1,0 +1,33 @@
+name: Hardware Simulation
+
+on:
+  push:
+    paths:
+      - 'ctmm_cap_amaranth/**'
+      - 'requirements.txt'
+      - 'pyproject.toml'
+  pull_request:
+    paths:
+      - 'ctmm_cap_amaranth/**'
+      - 'requirements.txt'
+      - 'pyproject.toml'
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  testbench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install amaranth
+
+      - name: Run CTMMCap hardware testbench
+        run: python -m ctmm_cap_amaranth.testbench
