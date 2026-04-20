@@ -1,28 +1,7 @@
 from amaranth import *
 
 from .hw_types import *
-
-
-def crc16_ccitt(gt_bits, location, word1_w2, poly=0x1021, init=0xFFFF):
-    """CRC-16/CCITT over GT[24:0] (25 bits, MSB first) + location (32 bits) + word1_w2 (32 bits).
-    Total: 89 bits, poly=0x1021, init=0xFFFF.
-    gt_bits   : lower 25 bits of the 32-bit GT word (gt_type[1:0] | gt_seq[6:0] | slot_id[15:0])
-                perms[30:25] and b_flag[31] are NOT included in the sealed input
-    location  : NS word0_location (code base address)
-    word1_w2  : NS word1_w2 (limit_offset | gt_seq)
-
-    CLOOMC listing cross-ref: simulator/secure_boot_tutorial.js §"GT Seal Verification"
-    The hardware recomputes this CRC on LAMBDA, CALL, RETURN, and mLoad; a mismatch fires SEAL_MISMATCH.
-    """
-    crc = init
-    for bit in range(24, -1, -1):
-        top = ((crc >> 15) ^ ((gt_bits >> bit) & 1)) & 1
-        crc = ((crc << 1) & 0xFFFF) ^ (poly if top else 0)
-    for word in (location, word1_w2):
-        for bit in range(31, -1, -1):
-            top = ((crc >> 15) ^ ((word >> bit) & 1)) & 1
-            crc = ((crc << 1) & 0xFFFF) ^ (poly if top else 0)
-    return crc & 0xFFFF
+from .integrity32 import integrity32
 
 
 def encode_church(opcode, cond=CondCode.AL, cr_dst=0, cr_src=0, imm=0):
@@ -357,33 +336,29 @@ NUC_LUMP_HEADER = (0x1F << 27) | (NUC_PROGRAM_CW << 10)  # magic=0x1F, cw=17, n_
 
 
 def _make_ns_entry(gt_type, perms, slot_id, gt_seq, location, alloc_size, cw=0, cc=0, n_minus_6=0):
-    """Build a 3-word NS entry (stride = slot_id * 12, i.e. 12 bytes per entry).
+    """Build a 4-word NS entry (stride = slot_id << 4, i.e. 16 bytes per entry).
 
     Layout:
-      word0_location (+0): lump base byte address (location)
-      word1_w2       (+4): limit_offset[20:0] | gt_seq[6:0] | spare[3:0]
-                           limit_offset = alloc_size - 1  (last valid index)
-      word2_w3       (+8): crc[15:0] | g_bit | spare[14:0]
-                           crc = CRC-16/CCITT over GT[24:0] + location + word1_w2
+      word0_location  (+0):  lump base byte address (location)
+      word1_authority (+4):  limit_offset[20:0] | gt_seq[6:0] | g_bit[28]=0 | spare[3:0]
+                             limit_offset = alloc_size - 1  (last valid word index)
+                             Identical bit layout to CR W2 (WORD2_LAYOUT).
+      word2_integrity (+8):  integrity32(W0, W1 with g_bit masked)
+                             Parallel 32-bit check; g_bit excluded so GC can set it freely.
+      word3_pad       (+12): 0 — reserved for future fields; absorbs stride without changes.
 
     The lump header (LUMP_HEADER_LAYOUT) is at word 0 of the lump itself (at location),
     not cached in the NS table entry.
 
-    The GT bits used in the CRC are the lower 25 bits of the GT word (no b_flag or top perms).
-
     CLOOMC listing cross-ref: simulator/secure_boot_tutorial.js §"Boot ROM Cross-Reference"
     GT Word 0 fields: slot_id[15:0], gt_seq[22:16], gt_type[24:23], perms[30:25]
     """
-    gt_word0 = make_gt(gt_type, perms, slot_id, gt_seq)
-    gt25 = gt_word0 & 0x1FFFFFF
-
     limit_offset = max(0, alloc_size - 1) & 0x1FFFFF
-    word1_w2 = ((gt_seq & 0x7F) << 21) | limit_offset
+    word1_authority = ((gt_seq & 0x7F) << 21) | limit_offset
 
-    crc = crc16_ccitt(gt25, location, word1_w2)
-    word2_w3 = crc & 0xFFFF
+    word2_integrity = integrity32(location, word1_authority)
 
-    return [location, word1_w2, word2_w3]
+    return [location, word1_authority, word2_integrity, 0]
 
 
 # ---------------------------------------------------------------------------

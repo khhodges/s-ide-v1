@@ -2,7 +2,7 @@ from amaranth import *
 from amaranth.lib.data import View
 
 from .hw_types import *
-from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, WORD2_LAYOUT, WORD3_LAYOUT, LUMP_HEADER_LAYOUT
+from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, WORD2_LAYOUT, LUMP_HEADER_LAYOUT
 from .ns_gate import ChurchNSGate
 
 
@@ -84,7 +84,6 @@ class ChurchCLoad(Elaboratable):
 
         raw_base = Signal(32)
         raw_w2   = Signal(32)
-        raw_w3   = Signal(32)
 
         cc_reg        = Signal(8)
         cw_reg        = Signal(13)   # _hdr.cw: authoritative code-word count from lump header
@@ -122,7 +121,7 @@ class ChurchCLoad(Elaboratable):
             cr14_w2_view.limit_offset.eq(cw_reg - 1),    # cw-1 (inclusive last valid PC; cw from lump header, not allocation size)
             cr14_w2_view.gt_seq.eq(e_gt_view.gt_seq),
             cr14_w2_view.spare.eq(0),
-            cr14_view.word3_w3.eq(raw_w3),
+            cr14_w2_view.g_bit.eq(0),
         ]
 
         # ── CR6 build (original E-GT in W0, reduced c-list view in W1–W3) ──────
@@ -137,7 +136,7 @@ class ChurchCLoad(Elaboratable):
             cr6_w2_view.limit_offset.eq(cc_reg - 1),
             cr6_w2_view.gt_seq.eq(e_gt_view.gt_seq),
             cr6_w2_view.spare.eq(0),
-            cr6_view.word3_w3.eq(raw_w3),
+            cr6_w2_view.g_bit.eq(0),
         ]
 
         local_cr_wr_addr = Signal(4)
@@ -157,7 +156,6 @@ class ChurchCLoad(Elaboratable):
                         e_gt_latched.eq(self.e_gt),
                         raw_base.eq(0),
                         raw_w2.eq(0),
-                        raw_w3.eq(0),
                         cc_reg.eq(0),
                         cw_reg.eq(0),
                         n_minus_6_reg.eq(0),
@@ -204,7 +202,6 @@ class ChurchCLoad(Elaboratable):
                     m.d.sync += [
                         raw_base.eq(u_ns_gate.raw_base),
                         raw_w2.eq(u_ns_gate.raw_w2),
-                        raw_w3.eq(u_ns_gate.raw_w3),
                     ]
                     m.next = "FETCH_HDR"
 

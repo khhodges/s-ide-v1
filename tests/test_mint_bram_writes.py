@@ -2,7 +2,7 @@
 tests/test_mint_bram_writes.py
 
 Simulate the Mint FSM inside ChurchCore(iot_profile=True) and verify that
-the correct 3-word NS entry and E-GT are actually written to the NS and
+the correct 4-word NS entry and E-GT are actually written to the NS and
 clist BRAMs by the hardware FSM.
 
 test_mint_bram_writes
@@ -16,11 +16,12 @@ test_mint_bram_writes
   - Drives the IoT protocol: connect byte + lean header + 256-byte lump payload.
   - Waits for outform_busy to de-assert, then checks both:
       * Live write events (NS writes appeared → Mint FSM processed mint_call)
-      * BRAM readback:
-          ns[slot*3 + 0] == alloc_base   (lump base pointer)
-          ns[slot*3 + 1] == W2           (gt_seq=1, limit_offset=63)
-          ns[slot*3 + 2] == CRC-16 seal  (CCITT-FALSE over e_gt||base||w2)
-          clist[caller]  == E-GT         (E-perm, Inform, seq=1, slot_id)
+      * BRAM readback (stride = slot_id << 4, i.e. 16 bytes per entry):
+          ns[slot*4 + 0] == alloc_base      (lump base pointer)
+          ns[slot*4 + 1] == W1              (gt_seq=1, limit_offset=63)
+          ns[slot*4 + 2] == integrity32     (parallel 32-bit check, replaces CRC-16)
+          ns[slot*4 + 3] == 0               (pad word)
+          clist[caller]  == E-GT            (E-perm, Inform, seq=1, slot_id)
 """
 
 import sys
@@ -36,7 +37,8 @@ from amaranth.sim import Simulator
 
 from hardware.core import ChurchCore
 from hardware.outform_iot import TUNNEL_REQ_LEN
-from hardware.hw_types import GT_TYPE_INFORM, CRC16_POLY, CRC16_INIT
+from hardware.hw_types import GT_TYPE_INFORM
+from hardware.integrity32 import integrity32
 
 MAX_TICKS = 20_000
 
@@ -53,20 +55,9 @@ def ref_w2(lump_size_words: int) -> int:
     return (1 << 21) | ((lump_size_words - 1) & 0x1FFFFF)
 
 
-def ref_crc16(e_gt: int, base: int, w2: int) -> int:
-    """CRC16/CCITT-FALSE over e_gt[24:0] || base[31:0] || w2[31:0], MSB-first."""
-    crc  = CRC16_INIT & 0xFFFF
-    bits = []
-    for i in range(24, -1, -1):
-        bits.append((e_gt >> i) & 1)
-    for i in range(31, -1, -1):
-        bits.append((base >> i) & 1)
-    for i in range(31, -1, -1):
-        bits.append((w2 >> i) & 1)
-    for bit in bits:
-        top = (crc >> 15) & 1
-        crc = ((crc << 1) & 0xFFFF) ^ (CRC16_POLY if (top ^ bit) else 0)
-    return crc & 0xFFFF
+def ref_integrity32(base: int, w1: int) -> int:
+    """integrity32(W0=base, W1=w1) — parallel 32-bit check, g_bit[28] masked."""
+    return integrity32(base, w1)
 
 
 # ── Lump construction ─────────────────────────────────────────────────────────
@@ -203,7 +194,7 @@ class ChurchCoreMintHarness(Elaboratable):
     """
 
     DMEM_DEPTH = 2048
-    NS_DEPTH   = 192
+    NS_DEPTH   = 256
 
     def __init__(self, slot_id: int, clist_slot_baddr: int, clist_depth: int = 64):
         self._slot_id           = slot_id
@@ -442,9 +433,10 @@ def test_mint_bram_writes():
 
     Assertions (both live-write and BRAM readback paths)
     -----------------------------------------------------
-    ns[slot*3+0]  == alloc_base               (lump pointer)
-    ns[slot*3+1]  == W2 = (1<<21)|(63)        (gt_seq=1, limit_offset=63)
-    ns[slot*3+2]  == CRC16 seal               (CCITT-FALSE, 89-bit input)
+    ns[slot*4+0]  == alloc_base               (lump pointer)
+    ns[slot*4+1]  == W1 = (1<<21)|(63)        (gt_seq=1, limit_offset=63)
+    ns[slot*4+2]  == integrity32(W0, W1)      (parallel 32-bit check)
+    ns[slot*4+3]  == 0                         (pad word)
     clist[caller] == E-GT                      (E-perm, Inform, seq=1, slot)
     """
     SLOT_ID         = 0
@@ -492,17 +484,19 @@ def test_mint_bram_writes():
         exp_e_gt = ref_e_gt(SLOT_ID)
         exp_ns0  = ALLOC_BASE
         exp_ns1  = ref_w2(LUMP_WORDS)
-        exp_ns2  = ref_crc16(exp_e_gt, ALLOC_BASE, exp_ns1)
+        exp_ns2  = ref_integrity32(ALLOC_BASE, exp_ns1)
+        exp_ns3  = 0   # pad word
 
         # NS entry byte addresses for slot_id=0 with cr15.word1_location=0:
-        #   mint_ns_entry_base = 0 + (0<<3) + (0<<2) = 0
-        ns_ba0 = 0 + SLOT_ID * 12 + 0   # = 0
-        ns_ba1 = 0 + SLOT_ID * 12 + 4   # = 4
-        ns_ba2 = 0 + SLOT_ID * 12 + 8   # = 8
+        #   mint_ns_entry_base = 0 + (0 << 4) = 0  (16-byte stride)
+        ns_ba0 = SLOT_ID * 16 + 0    # = 0
+        ns_ba1 = SLOT_ID * 16 + 4    # = 4
+        ns_ba2 = SLOT_ID * 16 + 8    # = 8
+        ns_ba3 = SLOT_ID * 16 + 12   # = 12 (pad)
 
         # ── Assertions on live write-event captures ───────────────────────────
-        assert len(ns_writes) == 3, (
-            f"Expected 3 NS writes (WRITE_NS0/1/2), got {len(ns_writes)}: {ns_writes}"
+        assert len(ns_writes) == 4, (
+            f"Expected 4 NS writes (WRITE_NS0/1/2/3), got {len(ns_writes)}: {ns_writes}"
         )
         assert ns_ba0 in ns_writes, (
             f"No NS write at byte addr {ns_ba0}; got: {ns_writes}"
@@ -513,14 +507,20 @@ def test_mint_bram_writes():
         assert ns_ba2 in ns_writes, (
             f"No NS write at byte addr {ns_ba2}; got: {ns_writes}"
         )
+        assert ns_ba3 in ns_writes, (
+            f"No NS write at byte addr {ns_ba3}; got: {ns_writes}"
+        )
         assert ns_writes[ns_ba0] == exp_ns0, (
             f"live ns[0]=0x{ns_writes[ns_ba0]:08X}  expected=0x{exp_ns0:08X}"
         )
         assert ns_writes[ns_ba1] == exp_ns1, (
-            f"live ns[1]=0x{ns_writes[ns_ba1]:08X}  expected W2=0x{exp_ns1:08X}"
+            f"live ns[1]=0x{ns_writes[ns_ba1]:08X}  expected W1=0x{exp_ns1:08X}"
         )
         assert ns_writes[ns_ba2] == exp_ns2, (
-            f"live ns[2]=0x{ns_writes[ns_ba2]:04X}  expected CRC16=0x{exp_ns2:04X}"
+            f"live ns[2]=0x{ns_writes[ns_ba2]:08X}  expected integrity32=0x{exp_ns2:08X}"
+        )
+        assert ns_writes[ns_ba3] == exp_ns3, (
+            f"live ns[3]=0x{ns_writes[ns_ba3]:08X}  expected pad=0x{exp_ns3:08X}"
         )
         assert CLIST_BADDR in clist_writes, (
             f"No clist write at byte addr {CLIST_BADDR}; got: {clist_writes}"
@@ -533,21 +533,14 @@ def test_mint_bram_writes():
         await ctx.tick()
 
         # ── Read NS memory (BRAM readback) ────────────────────────────────────
-        ns_word0_idx = ns_ba0 >> 2   # = 0
-        ns_word1_idx = ns_ba1 >> 2   # = 1
-        ns_word2_idx = ns_ba2 >> 2   # = 2
-
-        ctx.set(dut.ns_rd_addr, ns_word0_idx)
-        await ctx.tick()
+        ctx.set(dut.ns_rd_addr, ns_ba0 >> 2); await ctx.tick()
         ns_word0 = ctx.get(dut.ns_rd_data)
-
-        ctx.set(dut.ns_rd_addr, ns_word1_idx)
-        await ctx.tick()
+        ctx.set(dut.ns_rd_addr, ns_ba1 >> 2); await ctx.tick()
         ns_word1 = ctx.get(dut.ns_rd_data)
-
-        ctx.set(dut.ns_rd_addr, ns_word2_idx)
-        await ctx.tick()
+        ctx.set(dut.ns_rd_addr, ns_ba2 >> 2); await ctx.tick()
         ns_word2 = ctx.get(dut.ns_rd_data)
+        ctx.set(dut.ns_rd_addr, ns_ba3 >> 2); await ctx.tick()
+        ns_word3 = ctx.get(dut.ns_rd_data)
 
         # ── Read clist memory (BRAM readback) ─────────────────────────────────
         ctx.set(dut.clist_rd_addr, CLIST_BADDR >> 2)
@@ -556,13 +549,16 @@ def test_mint_bram_writes():
 
         # ── Assertions on BRAM readback contents ─────────────────────────────
         assert ns_word0 == exp_ns0, (
-            f"bram ns[slot*3+0]=0x{ns_word0:08X}  expected alloc_base=0x{exp_ns0:08X}"
+            f"bram ns[slot*4+0]=0x{ns_word0:08X}  expected alloc_base=0x{exp_ns0:08X}"
         )
         assert ns_word1 == exp_ns1, (
-            f"bram ns[slot*3+1]=0x{ns_word1:08X}  expected W2=0x{exp_ns1:08X}"
+            f"bram ns[slot*4+1]=0x{ns_word1:08X}  expected W1=0x{exp_ns1:08X}"
         )
         assert ns_word2 == exp_ns2, (
-            f"bram ns[slot*3+2]=0x{ns_word2:04X}  expected CRC16=0x{exp_ns2:04X}"
+            f"bram ns[slot*4+2]=0x{ns_word2:08X}  expected integrity32=0x{exp_ns2:08X}"
+        )
+        assert ns_word3 == exp_ns3, (
+            f"bram ns[slot*4+3]=0x{ns_word3:08X}  expected pad=0x{exp_ns3:08X}"
         )
         assert clist_e_gt == exp_e_gt, (
             f"bram clist[caller]=0x{clist_e_gt:08X}  expected E-GT=0x{exp_e_gt:08X}"
@@ -583,15 +579,17 @@ def test_mint_bram_writes():
             f"\n  [live write events]\n"
             f"    ns write @  0: 0x{ns_writes[ns_ba0]:08X}  (alloc_base)\n"
             f"    ns write @  4: 0x{ns_writes[ns_ba1]:08X}  "
-            f"(W2: gt_seq=1, limit_offset={LUMP_WORDS-1})\n"
-            f"    ns write @  8: 0x{ns_writes[ns_ba2]:04X}      (CRC16 seal)\n"
+            f"(W1: gt_seq=1, limit_offset={LUMP_WORDS-1})\n"
+            f"    ns write @  8: 0x{ns_writes[ns_ba2]:08X}  (integrity32)\n"
+            f"    ns write @ 12: 0x{ns_writes[ns_ba3]:08X}  (pad=0)\n"
             f"    clist write @ {CLIST_BADDR}: 0x{clist_writes[CLIST_BADDR]:08X}  "
             f"(E-GT: E-perm, Inform, seq=1, slot={SLOT_ID})\n"
             f"\n  [BRAM readback]\n"
-            f"    ns[slot*3+0]         = 0x{ns_word0:08X}  (alloc_base)\n"
-            f"    ns[slot*3+1]  (W2)   = 0x{ns_word1:08X}  "
+            f"    ns[slot*4+0]         = 0x{ns_word0:08X}  (alloc_base)\n"
+            f"    ns[slot*4+1]  (W1)   = 0x{ns_word1:08X}  "
             f"(gt_seq=1, limit_offset={LUMP_WORDS-1})\n"
-            f"    ns[slot*3+2]  (W3)   = 0x{ns_word2:04X}      (CRC16 seal)\n"
+            f"    ns[slot*4+2]  (W2)   = 0x{ns_word2:08X}  (integrity32)\n"
+            f"    ns[slot*4+3]  (pad)  = 0x{ns_word3:08X}\n"
             f"    clist[caller] (E-GT) = 0x{clist_e_gt:08X}  "
             f"(E-perm, Inform, seq=1, slot={SLOT_ID})"
         )
@@ -712,13 +710,14 @@ def test_mint_bram_writes_with_cc():
     Assertions
     ----------
     Live write events:
-      ns_writes  — 3 entries (NS0/1/2 intact)
+      ns_writes  — 4 entries (NS0/1/2/3 intact; stride 16 bytes)
       clist_writes — 3 entries: E-GT at CLIST_BADDR, CC_CAP_WORD_0 at 768,
                                 CC_CAP_WORD_1 at 772
     BRAM readback:
-      ns[slot*3+0]   == alloc_base
-      ns[slot*3+1]   == W2
-      ns[slot*3+2]   == CRC16 seal
+      ns[slot*4+0]   == alloc_base
+      ns[slot*4+1]   == W1
+      ns[slot*4+2]   == integrity32(W0, W1)
+      ns[slot*4+3]   == 0 (pad)
       clist[caller]  == E-GT
       clist[192]     == CC_CAP_WORD_0
       clist[193]     == CC_CAP_WORD_1
@@ -751,24 +750,29 @@ def test_mint_bram_writes_with_cc():
         exp_e_gt = ref_e_gt(SLOT_ID)
         exp_ns0  = ALLOC_BASE
         exp_ns1  = ref_w2(LUMP_WORDS)
-        exp_ns2  = ref_crc16(exp_e_gt, ALLOC_BASE, exp_ns1)
+        exp_ns2  = ref_integrity32(ALLOC_BASE, exp_ns1)
+        exp_ns3  = 0   # pad word
 
-        ns_ba0 = SLOT_ID * 12 + 0
-        ns_ba1 = SLOT_ID * 12 + 4
-        ns_ba2 = SLOT_ID * 12 + 8
+        ns_ba0 = SLOT_ID * 16 + 0
+        ns_ba1 = SLOT_ID * 16 + 4
+        ns_ba2 = SLOT_ID * 16 + 8
+        ns_ba3 = SLOT_ID * 16 + 12
 
         # ── Live write events: NS ─────────────────────────────────────────────
-        assert len(ns_writes) == 3, (
-            f"Expected 3 NS writes, got {len(ns_writes)}: {ns_writes}"
+        assert len(ns_writes) == 4, (
+            f"Expected 4 NS writes, got {len(ns_writes)}: {ns_writes}"
         )
         assert ns_writes.get(ns_ba0) == exp_ns0, (
             f"live ns[0]=0x{ns_writes.get(ns_ba0, 0):08X}  expected=0x{exp_ns0:08X}"
         )
         assert ns_writes.get(ns_ba1) == exp_ns1, (
-            f"live ns[1]=0x{ns_writes.get(ns_ba1, 0):08X}  expected W2=0x{exp_ns1:08X}"
+            f"live ns[1]=0x{ns_writes.get(ns_ba1, 0):08X}  expected W1=0x{exp_ns1:08X}"
         )
         assert ns_writes.get(ns_ba2) == exp_ns2, (
-            f"live ns[2]=0x{ns_writes.get(ns_ba2, 0):04X}  expected CRC16=0x{exp_ns2:04X}"
+            f"live ns[2]=0x{ns_writes.get(ns_ba2, 0):08X}  expected integrity32=0x{exp_ns2:08X}"
+        )
+        assert ns_writes.get(ns_ba3) == exp_ns3, (
+            f"live ns[3]=0x{ns_writes.get(ns_ba3, 0):08X}  expected pad=0x{exp_ns3:08X}"
         )
 
         # ── Live write events: clist (E-GT + 2 cc-tail words) ────────────────
@@ -801,15 +805,20 @@ def test_mint_bram_writes_with_cc():
         ns_word1 = ctx.get(dut.ns_rd_data)
         ctx.set(dut.ns_rd_addr, ns_ba2 >> 2); await ctx.tick()
         ns_word2 = ctx.get(dut.ns_rd_data)
+        ctx.set(dut.ns_rd_addr, ns_ba3 >> 2); await ctx.tick()
+        ns_word3 = ctx.get(dut.ns_rd_data)
 
         assert ns_word0 == exp_ns0, (
             f"bram ns[0]=0x{ns_word0:08X}  expected alloc_base=0x{exp_ns0:08X}"
         )
         assert ns_word1 == exp_ns1, (
-            f"bram ns[1]=0x{ns_word1:08X}  expected W2=0x{exp_ns1:08X}"
+            f"bram ns[1]=0x{ns_word1:08X}  expected W1=0x{exp_ns1:08X}"
         )
         assert ns_word2 == exp_ns2, (
-            f"bram ns[2]=0x{ns_word2:04X}  expected CRC16=0x{exp_ns2:04X}"
+            f"bram ns[2]=0x{ns_word2:08X}  expected integrity32=0x{exp_ns2:08X}"
+        )
+        assert ns_word3 == exp_ns3, (
+            f"bram ns[3]=0x{ns_word3:08X}  expected pad=0x{exp_ns3:08X}"
         )
 
         # ── BRAM readback: clist (E-GT and cc-tail words) ─────────────────────
@@ -836,14 +845,15 @@ def test_mint_bram_writes_with_cc():
 
         print(
             f"\n  [cc>0 live write events]\n"
-            f"    ns writes (3): OK\n"
+            f"    ns writes (4): OK\n"
             f"    clist E-GT  @ {CLIST_BADDR}: 0x{clist_writes[CLIST_BADDR]:08X}\n"
             f"    clist cc[0] @ {cc_ba0}: 0x{clist_writes[cc_ba0]:08X}\n"
             f"    clist cc[1] @ {cc_ba1}: 0x{clist_writes[cc_ba1]:08X}\n"
             f"\n  [BRAM readback]\n"
-            f"    ns[slot*3+0]       = 0x{ns_word0:08X}  (alloc_base)\n"
-            f"    ns[slot*3+1] (W2)  = 0x{ns_word1:08X}\n"
-            f"    ns[slot*3+2] (W3)  = 0x{ns_word2:04X}    (CRC16)\n"
+            f"    ns[slot*4+0]       = 0x{ns_word0:08X}  (alloc_base)\n"
+            f"    ns[slot*4+1] (W1)  = 0x{ns_word1:08X}\n"
+            f"    ns[slot*4+2] (W2)  = 0x{ns_word2:08X}  (integrity32)\n"
+            f"    ns[slot*4+3] (pad) = 0x{ns_word3:08X}\n"
             f"    clist[caller]      = 0x{clist_e_gt:08X}  (E-GT)\n"
             f"    clist[{CC_WORD_IDX_0}]  cc[0] = 0x{clist_cc0:08X}\n"
             f"    clist[{CC_WORD_IDX_1}]  cc[1] = 0x{clist_cc1:08X}"

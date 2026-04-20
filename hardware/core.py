@@ -4,6 +4,7 @@ from amaranth.lib.data import View
 
 from .hw_types import *
 from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, WORD2_LAYOUT, COND_FLAGS_LAYOUT, LUMP_HEADER_LAYOUT
+from .integrity32 import integrity32_amaranth
 from .boot_rom import NUC_LUMP_BASE, NUC_PROGRAM_CW
 from .registers import ChurchRegisters
 from .decoder import ChurchDecoder
@@ -495,7 +496,7 @@ class ChurchCore(Elaboratable):
                 u_regs.dr_wr_en.eq(0),
             ]
 
-        # boot_cap_wr: full 128-bit CR write during boot initialization.
+        # boot_cap_wr: full 96-bit CR write during boot initialization.
         # Used to set word1_location and word2_w2 (e.g. CR6/CR15) in one cycle.
         # Defaults to 0; driven from the boot state switch below.
         boot_cap_wr_en   = Signal()
@@ -637,7 +638,7 @@ class ChurchCore(Elaboratable):
 
         with m.Switch(boot_state_reg):
             with m.Case(BootState.LOAD_NS):
-                # CR15 (namespace cap): full 128-bit write to include word1_location=0
+                # CR15 (namespace cap): full 96-bit write to include word1_location=0
                 # (NS at dmem byte 0) and word2_w2=18 (limit: slots 0..18 accessible).
                 # ns_gt: slot_id=0, gt_seq=0, GT_TYPE_INFORM, perms=0
                 # word0_gt = (GT_TYPE_INFORM<<23) | 0 = 0x00800000
@@ -649,7 +650,6 @@ class ChurchCore(Elaboratable):
                         C(0x00800000, 32),  # word0_gt: GT_TYPE_INFORM, slot_id=0
                         C(0,          32),  # word1_location = 0 (NS at dmem start)
                         C(18,         32),  # word2_w2: limit_offset=18 (slots 0-18)
-                        C(0,          32),  # word3_w3
                     )),
                 ]
             with m.Case(BootState.INIT_THRD):
@@ -663,7 +663,7 @@ class ChurchCore(Elaboratable):
                 ]
                 m.d.comb += [boot_wr_en[8].eq(1), boot_wr_gt[8].eq(thrd_gt)]
             with m.Case(BootState.INIT_CLIST):
-                # CR6 (c-list cap): full 128-bit write to include word1_location=0x400
+                # CR6 (c-list cap): full 96-bit write to include word1_location=0x400
                 # (DEMO_CLIST at dmem byte 0x400 = word 256) and word2_w2=63
                 # (limit: indices 0..63 accessible).
                 # cr6_gt: slot_id=2, GT_TYPE_INFORM, perms=PERM_MASK_E, gt_seq=0
@@ -675,7 +675,6 @@ class ChurchCore(Elaboratable):
                         C(0x40800002, 32),  # word0_gt: PERM_MASK_E, GT_TYPE_INFORM, slot=2
                         C(0x400,      32),  # word1_location = 0x400 (DEMO_CLIST base)
                         C(63,         32),  # word2_w2: limit_offset=63 (64 entries)
-                        C(0,          32),  # word3_w3
                     )),
                 ]
             with m.Case(BootState.LOAD_NUC):
@@ -1215,12 +1214,11 @@ class ChurchCore(Elaboratable):
             mint_copy_data_reg = Signal(32)  # holds DMEM word between read→write cycles
             mint_hdr_reg       = Signal(32)
 
-            # NS entry byte address: CR15.base + slot_id * 12
+            # NS entry byte address: CR15.base + slot_id << 4 (16-byte stride)
             cr15_mint_view     = View(CAP_REG_LAYOUT, u_regs.cr15_namespace)
             mint_ns_entry_base = Signal(32)
             m.d.comb += mint_ns_entry_base.eq(
-                cr15_mint_view.word1_location
-                + (mint_slot_id_reg << 3) + (mint_slot_id_reg << 2)
+                cr15_mint_view.word1_location + (mint_slot_id_reg << 4)
             )
 
             # c-list BRAM base for the new slot (after NS area):
@@ -1240,24 +1238,9 @@ class ChurchCore(Elaboratable):
             mint_w2 = Signal(32)
             m.d.comb += mint_w2.eq((1 << 21) | (mint_lump_size_reg - 1)[:21])
 
-            # CRC16/CCITT-FALSE (89 bits): mint_e_gt_d[24:0] || mint_base_reg[31:0] || mint_w2[31:0]
-            mint_crc_stages = [Signal(16, name=f"mint_crc_{i}") for i in range(90)]
-            m.d.comb += mint_crc_stages[0].eq(CRC16_INIT)
-            for _i in range(89):
-                if _i < 25:
-                    _data_bit = mint_e_gt_d[24 - _i]
-                elif _i < 57:
-                    _data_bit = mint_base_reg[56 - _i]
-                else:
-                    _data_bit = mint_w2[88 - _i]
-                _top_bit = Signal(name=f"mint_crc_top_{_i}")
-                _shifted  = Signal(16, name=f"mint_crc_sh_{_i}")
-                m.d.comb += _top_bit.eq(mint_crc_stages[_i][15] ^ _data_bit)
-                m.d.comb += _shifted.eq(Cat(Const(0, 1), mint_crc_stages[_i][:15]))
-                m.d.comb += mint_crc_stages[_i + 1].eq(
-                    _shifted ^ Mux(_top_bit, CRC16_POLY, 0)
-                )
-            mint_w3 = mint_crc_stages[89]   # g_bit=0, spare=0
+            # integrity32(W0=mint_base_reg, W1=mint_w2) — replaces 90-stage CRC chain
+            mint_integrity = Signal(32)
+            integrity32_amaranth(m, mint_base_reg, mint_w2, mint_integrity)
 
             mint_done_comb  = Signal()
             mint_fault_comb = Signal()
@@ -1338,7 +1321,15 @@ class ChurchCore(Elaboratable):
                     m.d.comb += [
                         mint_ns_wr_en.eq(1),
                         mint_ns_addr.eq(mint_ns_entry_base + 8),
-                        mint_ns_wr_data.eq(mint_w3),
+                        mint_ns_wr_data.eq(mint_integrity),
+                    ]
+                    m.next = "MINT_WRITE_NS3"
+
+                with m.State("MINT_WRITE_NS3"):
+                    m.d.comb += [
+                        mint_ns_wr_en.eq(1),
+                        mint_ns_addr.eq(mint_ns_entry_base + 12),
+                        mint_ns_wr_data.eq(0),
                     ]
                     m.next = "MINT_COPY_CLIST_RD"
 

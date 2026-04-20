@@ -39,11 +39,10 @@ def _pack32_le(v):
 #   [24:23] gt_type   ( 2 bits)  GT_TYPE_INFORM=1, GT_TYPE_OUTFORM=2
 #   [30:25] perms     ( 6 bits)  PERM_L is bit index 3 within perms
 #   [31]    b_flag    ( 1 bit )
-# CAP_REG_LAYOUT (128 bits):
-#   [31:0]   word0_gt
-#   [63:32]  word1_location
-#   [95:64]  word2_w2   (WORD2_LAYOUT: limit_offset[20:0] | gt_seq[6:0] | spare[3:0])
-#   [127:96] word3_w3
+# CAP_REG_LAYOUT (96 bits):
+#   [31:0]  word0_gt
+#   [63:32] word1_location
+#   [95:64] word2_w2   (WORD2_LAYOUT: limit_offset[20:0] | gt_seq[6:0] | g_bit[28] | spare[2:0])
 # ---------------------------------------------------------------------------
 
 _GT_TYPE_INFORM  = 0b01
@@ -60,13 +59,12 @@ def _word0_gt(gt_type, slot_id=1, perms=0):
     )
 
 
-def _cap_reg(word0_gt, word1_location=0, word2_w2=0, word3_w3=0):
-    """Pack a 128-bit CAP_REG value."""
+def _cap_reg(word0_gt, word1_location=0, word2_w2=0):
+    """Pack a 96-bit CAP_REG value."""
     return (
           (word0_gt & 0xFFFFFFFF)
         | ((word1_location & 0xFFFFFFFF) << 32)
         | ((word2_w2       & 0xFFFFFFFF) << 64)
-        | ((word3_w3       & 0xFFFFFFFF) << 96)
     )
 
 
@@ -224,7 +222,6 @@ def test_mload_wait_outform_fault_type():
         },
         "word1_location": 0x00010000,   # c-list base address
         "word2_w2":       100,          # limit_offset = 100 → index 0 in bounds
-        "word3_w3":       0,
     }
 
     # Build the outform GT word (plain integer; mem_rd_data is Signal(32)).
@@ -238,7 +235,7 @@ def test_mload_wait_outform_fault_type():
         ctx.set(dut.mem_rd_valid,       1)               # memory always ready
         ctx.set(dut.cr15_namespace,     {
             "word0_gt": {"slot_id": 0, "gt_seq": 0, "gt_type": 0, "perms": 0, "b_flag": 0},
-            "word1_location": 0, "word2_w2": 0, "word3_w3": 0,
+            "word1_location": 0, "word2_w2": 0,
         })                                               # namespace cap (unused here)
         ctx.set(dut.sub_m_elevated,     0)
         ctx.set(dut.sub_index,          0)

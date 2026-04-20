@@ -9,8 +9,10 @@ test_iot_lazy_load_integrated
   Integration test: uses a real watermark allocator and Mint FSM
   (mirroring the logic in hardware/core.py) with an in-memory DMEM,
   then reads back the NS and clist memories and checks:
-    ns[slot*3+0] == alloc_base
-    ns[slot*3+1] == expected W2
+    ns[slot*4+0] == alloc_base
+    ns[slot*4+1] == W1 (gt_seq=1, limit_offset)
+    ns[slot*4+2] == integrity32 check word
+    ns[slot*4+3] == 0 (pad)
     clist[caller_slot] == valid E-GT
 
 test_iot_lazy_load_toplevel  [PRIMARY DELIVERABLE for Task #264]
@@ -19,9 +21,10 @@ test_iot_lazy_load_toplevel  [PRIMARY DELIVERABLE for Task #264]
   end-to-end (16 cycles/bit, 8N1).  Injects outform_start via the test_mode
   bypass; feeds connect byte + lean header + 256-byte payload; then verifies
   the debug signals show:
-    ns[slot*3+0] == alloc_base (0x400)
-    ns[slot*3+1] == W2         (gt_seq=1, limit_offset=63)
-    ns[slot*3+2] == CRC16 seal
+    ns[slot*4+0] == alloc_base (0x400)
+    ns[slot*4+1] == W1         (gt_seq=1, limit_offset=63)
+    ns[slot*4+2] == integrity32 seal
+    ns[slot*4+3] == 0 (pad)
     clist[caller] == valid E-GT (E-perm, Inform, seq=1, slot=0)
 """
 
@@ -41,7 +44,8 @@ from hardware.outform_iot import (
     ChurchOutformIoT, TUNNEL_REQ_LEN, IOT_HDR_LEN,
     OUTFORM_FAULT_HDR, OUTFORM_FAULT_CRC32, OUTFORM_FAULT_ALLOC, OUTFORM_FAULT_MINT,
 )
-from hardware.hw_types import GT_TYPE_INFORM, CRC16_POLY, CRC16_INIT
+from hardware.hw_types import GT_TYPE_INFORM
+from hardware.integrity32 import integrity32, integrity32_amaranth
 from hardware.layouts import LUMP_HEADER_LAYOUT
 
 MAX_TICKS = 8000
@@ -83,20 +87,9 @@ def ref_w2(lump_size_words: int) -> int:
     return (1 << 21) | ((lump_size_words - 1) & 0x1FFFFF)
 
 
-def ref_crc16(e_gt: int, base: int, w2: int) -> int:
-    """CRC16/CCITT-FALSE over e_gt[24:0] || base[31:0] || w2[31:0], MSB-first."""
-    crc = CRC16_INIT & 0xFFFF
-    bits = []
-    for i in range(24, -1, -1):
-        bits.append((e_gt >> i) & 1)
-    for i in range(31, -1, -1):
-        bits.append((base >> i) & 1)
-    for i in range(31, -1, -1):
-        bits.append((w2 >> i) & 1)
-    for bit in bits:
-        top = (crc >> 15) & 1
-        crc = ((crc << 1) & 0xFFFF) ^ (CRC16_POLY if (top ^ bit) else 0)
-    return crc & 0xFFFF
+def ref_integrity32(base: int, w1: int) -> int:
+    """integrity32(W0=base, W1=w1) — parallel 32-bit check, g_bit[28] masked."""
+    return integrity32(base, w1)
 
 
 # ── Simulation helpers (shared by both tests) ─────────────────────────────────
@@ -358,12 +351,10 @@ class OutformIoTHarness(Elaboratable):
         mint_slot_id_reg    = Signal(16, init=self._slot_id)
         mint_clist_addr_reg = Signal(32, init=self._clist_slot_baddr)
 
-        # NS entry byte-address: NS_BASE + slot_id * 12
+        # NS entry byte-address: NS_BASE + slot_id * 16  (16-byte stride)
         mint_ns_entry_base = Signal(32)
         m.d.comb += mint_ns_entry_base.eq(
-            self.NS_BASE
-            + (mint_slot_id_reg << 3)
-            + (mint_slot_id_reg << 2)
+            self.NS_BASE + (mint_slot_id_reg << 4)
         )
 
         # E-GT: perms=E(bit30) | typ=Inform(01<<23) | gt_seq=1(<<16) | slot_id
@@ -376,22 +367,9 @@ class OutformIoTHarness(Elaboratable):
         mint_w2 = Signal(32)
         m.d.comb += mint_w2.eq((1 << 21) | (mint_lump_sz_reg - 1)[:21])
 
-        # W3: CRC16/CCITT-FALSE over mint_e_gt[24:0] || mint_base[31:0] || mint_w2[31:0]
-        _crc = [Signal(16, name=f"hcrc{i}") for i in range(90)]
-        m.d.comb += _crc[0].eq(CRC16_INIT)
-        for _i in range(89):
-            if _i < 25:
-                _db = mint_e_gt[24 - _i]
-            elif _i < 57:
-                _db = mint_base_reg[56 - _i]
-            else:
-                _db = mint_w2[88 - _i]
-            _top = Signal(name=f"hcrc_top{_i}")
-            _sh  = Signal(16, name=f"hcrc_sh{_i}")
-            m.d.comb += _top.eq(_crc[_i][15] ^ _db)
-            m.d.comb += _sh.eq(Cat(Const(0, 1), _crc[_i][:15]))
-            m.d.comb += _crc[_i + 1].eq(_sh ^ Mux(_top, CRC16_POLY, 0))
-        mint_w3 = _crc[89]
+        # NS word 2: integrity32(W0=mint_base, W1=mint_w2) — replaces CRC-16 chain
+        mint_w3 = Signal(32)
+        integrity32_amaranth(m, mint_base_reg, mint_w2, mint_w3)
 
         mint_done_s  = Signal()
         mint_fault_s = Signal()
@@ -465,6 +443,14 @@ class OutformIoTHarness(Elaboratable):
                     ns_wr_en  .eq(1),
                     ns_wr_addr.eq(mint_ns_entry_base + 8),
                     ns_wr_data.eq(mint_w3),
+                ]
+                m.next = "WRITE_NS3"
+
+            with m.State("WRITE_NS3"):
+                m.d.comb += [
+                    ns_wr_en  .eq(1),
+                    ns_wr_addr.eq(mint_ns_entry_base + 12),
+                    ns_wr_data.eq(0),
                 ]
                 m.next = "COPY_CLIST_RD"
 
@@ -592,9 +578,10 @@ def test_iot_lazy_load_integrated():
 
     Uses OutformIoTHarness which mirrors the core.py IoT block.
     After outform_done, reads NS and clist memories directly and checks:
-      ns[slot*3 + 0]   == alloc_base       (lump byte-address pointer)
-      ns[slot*3 + 1]   == W2               (gt_seq=1, limit_offset=63)
-      ns[slot*3 + 2]   == CRC16 seal W3    (matches Python ref_crc16)
+      ns[slot*4 + 0]   == alloc_base       (lump byte-address pointer)
+      ns[slot*4 + 1]   == W1               (gt_seq=1, limit_offset=63)
+      ns[slot*4 + 2]   == integrity32      (parallel 32-bit check)
+      ns[slot*4 + 3]   == 0                (pad word)
       clist[caller_idx] == E-GT            (E-perm, Inform, gt_seq=1, slot)
     """
     SLOT_ID    = 3
@@ -639,22 +626,20 @@ def test_iot_lazy_load_integrated():
             await ctx.tick()
 
         # ── Read NS memory ────────────────────────────────────────────────────
-        # NS entry base: slot_id * 12 bytes = slot_id * 3 words
-        ns_word0_idx = (OutformIoTHarness.NS_BASE + SLOT_ID * 12 + 0) >> 2
-        ns_word1_idx = (OutformIoTHarness.NS_BASE + SLOT_ID * 12 + 4) >> 2
-        ns_word2_idx = (OutformIoTHarness.NS_BASE + SLOT_ID * 12 + 8) >> 2
+        # NS entry base: slot_id * 16 bytes = slot_id * 4 words  (16-byte stride)
+        ns_word0_idx = (OutformIoTHarness.NS_BASE + SLOT_ID * 16 + 0)  >> 2
+        ns_word1_idx = (OutformIoTHarness.NS_BASE + SLOT_ID * 16 + 4)  >> 2
+        ns_word2_idx = (OutformIoTHarness.NS_BASE + SLOT_ID * 16 + 8)  >> 2
+        ns_word3_idx = (OutformIoTHarness.NS_BASE + SLOT_ID * 16 + 12) >> 2
 
-        ctx.set(dut.ns_rd_addr, ns_word0_idx)
-        await ctx.tick()
+        ctx.set(dut.ns_rd_addr, ns_word0_idx); await ctx.tick()
         ns_word0 = ctx.get(dut.ns_rd_data)
-
-        ctx.set(dut.ns_rd_addr, ns_word1_idx)
-        await ctx.tick()
+        ctx.set(dut.ns_rd_addr, ns_word1_idx); await ctx.tick()
         ns_word1 = ctx.get(dut.ns_rd_data)
-
-        ctx.set(dut.ns_rd_addr, ns_word2_idx)
-        await ctx.tick()
+        ctx.set(dut.ns_rd_addr, ns_word2_idx); await ctx.tick()
         ns_word2 = ctx.get(dut.ns_rd_data)
+        ctx.set(dut.ns_rd_addr, ns_word3_idx); await ctx.tick()
+        ns_word3 = ctx.get(dut.ns_rd_data)
 
         # ── Read clist memory ─────────────────────────────────────────────────
         ctx.set(dut.clist_rd_addr, CLIST_BADDR >> 2)
@@ -665,17 +650,21 @@ def test_iot_lazy_load_integrated():
         exp_ns0  = ALLOC_BASE_BYTES
         exp_ns1  = ref_w2(LUMP_WORDS)
         exp_e_gt = ref_e_gt(SLOT_ID)
-        exp_ns2  = ref_crc16(exp_e_gt, ALLOC_BASE_BYTES, exp_ns1)
+        exp_ns2  = ref_integrity32(ALLOC_BASE_BYTES, exp_ns1)
+        exp_ns3  = 0   # pad word
 
         # ── Assertions against actual memory contents ─────────────────────────
         assert ns_word0 == exp_ns0, (
-            f"ns[slot*3+0]=0x{ns_word0:08X}  expected alloc_base=0x{exp_ns0:08X}"
+            f"ns[slot*4+0]=0x{ns_word0:08X}  expected alloc_base=0x{exp_ns0:08X}"
         )
         assert ns_word1 == exp_ns1, (
-            f"ns[slot*3+1]=0x{ns_word1:08X}  expected W2=0x{exp_ns1:08X}"
+            f"ns[slot*4+1]=0x{ns_word1:08X}  expected W1=0x{exp_ns1:08X}"
         )
         assert ns_word2 == exp_ns2, (
-            f"ns[slot*3+2]=0x{ns_word2:08X}  expected W3(CRC16)=0x{exp_ns2:04X}"
+            f"ns[slot*4+2]=0x{ns_word2:08X}  expected integrity32=0x{exp_ns2:08X}"
+        )
+        assert ns_word3 == exp_ns3, (
+            f"ns[slot*4+3]=0x{ns_word3:08X}  expected pad=0x{exp_ns3:08X}"
         )
         assert clist_e_gt == exp_e_gt, (
             f"clist[slot]=0x{clist_e_gt:08X}  expected E-GT=0x{exp_e_gt:08X}"
@@ -693,11 +682,11 @@ def test_iot_lazy_load_integrated():
         )
 
         print(
-            f"  ns[slot*3+0]       = 0x{ns_word0:08X}  (alloc_base)\n"
-            f"  ns[slot*3+1] (W2)  = 0x{ns_word1:08X}  "
+            f"  ns[slot*4+0]       = 0x{ns_word0:08X}  (alloc_base)\n"
+            f"  ns[slot*4+1] (W1)  = 0x{ns_word1:08X}  "
             f"(gt_seq=1, limit_offset={LUMP_WORDS-1})\n"
-            f"  ns[slot*3+2] (W3)  = 0x{ns_word2:04X}      "
-            f"(CRC16 seal)\n"
+            f"  ns[slot*4+2] (W2)  = 0x{ns_word2:08X}  (integrity32)\n"
+            f"  ns[slot*4+3] (pad) = 0x{ns_word3:08X}\n"
             f"  clist[caller] (E-GT)= 0x{clist_e_gt:08X}  "
             f"(E-perm, Inform, seq=1, slot={SLOT_ID})"
         )
@@ -714,9 +703,10 @@ def test_iot_lazy_load_toplevel():
     """
     Top-level integration test: drives ChurchTangNano20K(iot_profile=True,
     sim_mode=True) end-to-end through the real UART bit path, then verifies:
-      ns[slot*3+0] == alloc_base (0x400)
-      ns[slot*3+1] == W2         (gt_seq=1, limit_offset=63)
-      ns[slot*3+2] == CRC16 seal
+      ns[slot*4+0] == alloc_base (0x400)
+      ns[slot*4+1] == W1         (gt_seq=1, limit_offset=63)
+      ns[slot*4+2] == integrity32 seal
+      ns[slot*4+3] == 0 (pad)
       clist[caller] == valid E-GT (E-perm, Inform, seq=1, slot=0)
 
     Clock: 16 cycles per bit (clk_freq=16, baud=1).
@@ -734,7 +724,7 @@ def test_iot_lazy_load_toplevel():
 
     E_GT  = ref_e_gt(SLOT_ID)
     W2    = ref_w2(LUMP_WORDS)
-    W3    = ref_crc16(E_GT, ALLOC_BASE, W2)
+    W3    = ref_integrity32(ALLOC_BASE, W2)   # integrity32(W0=base, W1=w1)
 
     payload   = build_lump_payload()
     lean_hdr  = build_lean_header(payload)
@@ -815,19 +805,25 @@ def test_iot_lazy_load_toplevel():
         # NS word 0 (alloc_base)
         ns_word0 = ns_writes.get(0)
         assert ns_word0 == ALLOC_BASE, (
-            f"ns[slot*3+0]: got 0x{ns_word0:08X} want 0x{ALLOC_BASE:08X}"
+            f"ns[slot*4+0]: got 0x{ns_word0:08X} want 0x{ALLOC_BASE:08X}"
         )
 
-        # NS word 1 (W2)
+        # NS word 1 (W1)
         ns_word1 = ns_writes.get(4)
         assert ns_word1 == W2, (
-            f"ns[slot*3+1] W2: got 0x{ns_word1:08X} want 0x{W2:08X}"
+            f"ns[slot*4+1] W1: got 0x{ns_word1:08X} want 0x{W2:08X}"
         )
 
-        # NS word 2 (CRC16 seal)
+        # NS word 2 (integrity32)
         ns_word2 = ns_writes.get(8)
         assert ns_word2 == W3, (
-            f"ns[slot*3+2] CRC16: got 0x{ns_word2:04X} want 0x{W3:04X}"
+            f"ns[slot*4+2] integrity32: got 0x{ns_word2:08X} want 0x{W3:08X}"
+        )
+
+        # NS word 3 (pad = 0)
+        ns_word3 = ns_writes.get(12)
+        assert ns_word3 == 0, (
+            f"ns[slot*4+3] pad: got 0x{ns_word3:08X} want 0x00000000"
         )
 
         # clist E-GT: check address, then structural fields
@@ -849,11 +845,11 @@ def test_iot_lazy_load_toplevel():
         )
 
         print(
-            f"  ns[slot*3+0]        = 0x{ns_word0:08X}  (alloc_base)\n"
-            f"  ns[slot*3+1] (W2)   = 0x{ns_word1:08X}  "
+            f"  ns[slot*4+0]        = 0x{ns_word0:08X}  (alloc_base)\n"
+            f"  ns[slot*4+1] (W1)   = 0x{ns_word1:08X}  "
             f"(gt_seq=1, limit_offset={LUMP_WORDS-1})\n"
-            f"  ns[slot*3+2] (W3)   = 0x{ns_word2:04X}      "
-            f"(CRC16 seal)\n"
+            f"  ns[slot*4+2] (W2)   = 0x{ns_word2:08X}  (integrity32)\n"
+            f"  ns[slot*4+3] (pad)  = 0x{ns_word3:08X}\n"
             f"  clist[caller] (E-GT)= 0x{clist_e_gt:08X}  "
             f"(E-perm, Inform, seq=1, slot={SLOT_ID})"
         )

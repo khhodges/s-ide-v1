@@ -2,33 +2,41 @@ from amaranth import *
 from amaranth.lib.data import View
 
 from .hw_types import *
-from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, WORD2_LAYOUT, WORD3_LAYOUT
+from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, WORD2_LAYOUT
+from .integrity32 import integrity32_amaranth
 
 
 class ChurchNSGate(Elaboratable):
     """Shared NS integrity gate used by both mLoad and cLoad.
 
-    Given a 32-bit GT Word 0, performs the three sequential NS table reads
-    and the two-stage integrity check (gt_seq match + CRC-16/CCITT) that
-    both mLoad and cLoad require before acting on a Golden Token.
+    Given a 32-bit GT Word 0, performs three sequential NS table reads
+    and a single-cycle parallel integrity check (integrity32) before
+    acting on a Golden Token.
 
-    FSM
-    ───
-        IDLE → FETCH_LOC → FETCH_W2 → [FETCH_W3] → CHECK_VERSION → DONE
+    NS entry layout (16-byte stride, slot_id << 4):
+        W0 (+0)  location   — lump base byte address
+        W1 (+4)  authority  — identical layout to CR W2 (WORD2_LAYOUT)
+                             g_bit at [28]; masked out before integrity check
+        W2 (+8)  integrity  — integrity32(W0, W1 with g_bit cleared)
+        W3 (+12) pad        — reserved; not read
+
+    FSM (seal-check enabled)
+    ────────────────────────
+        IDLE → FETCH_LOC → FETCH_W1 → FETCH_W2 → CHECK_INTEGRITY → DONE
                                                                    → FAULT
 
-    FETCH_W3 and both checks are compiled in only when enable_seal_check is
-    True (the production default).  Without seal-check, FETCH_W2 → DONE
-    via a pass-through CHECK_VERSION state.
+    FSM (seal-check disabled)
+    ─────────────────────────
+        IDLE → FETCH_LOC → FETCH_W1 → CHECK_VERSION → DONE → FAULT
 
     Outputs
     ───────
-        raw_base          NS[+0]  lump base byte address
-        raw_w2            NS[+4]  gt_seq | limit_offset
-        raw_w3            NS[+8]  crc | g_bit  (0 when seal check disabled)
-        ns_entry_addr_out byte address of the NS entry (CR15 base + slot*12)
+        raw_base          NS W0  lump base byte address
+        raw_w2            NS W1  authority (identical layout to CR W2)
+        raw_w3            0 (kept for interface compat; unused by callers)
+        ns_entry_addr_out byte address of the NS entry (CR15 base + slot_id << 4)
 
-    All four outputs are valid while ns_gate_done is asserted and remain
+    All outputs are valid while ns_gate_done is asserted and remain
     stable until the next ns_gate_start (they are registered).
 
     Memory bus
@@ -76,42 +84,25 @@ class ChurchNSGate(Elaboratable):
 
         raw_base_reg = Signal(32)
         raw_w2_reg   = Signal(32)
-        raw_w3_reg   = Signal(32)
 
         ns_view       = View(CAP_REG_LAYOUT, self.cr15_namespace)
         ns_entry_addr = Signal(32)
         m.d.comb += ns_entry_addr.eq(
-            ns_view.word1_location + (gt_view.slot_id * 12)
+            ns_view.word1_location + (gt_view.slot_id << 4)
         )
 
         if self.enable_seal_check:
             raw_w2_view = View(WORD2_LAYOUT, raw_w2_reg)
-            raw_w3_view = View(WORD3_LAYOUT, raw_w3_reg)
 
             gt_seq_match = Signal()
             m.d.comb += gt_seq_match.eq(gt_view.gt_seq == raw_w2_view.gt_seq)
 
-            crc_stages = [Signal(16, name=f"nsg_crc16_{i}") for i in range(90)]
-            m.d.comb += crc_stages[0].eq(CRC16_INIT)
-            for i in range(89):
-                if i < 25:
-                    data_bit = gt_latched[24 - i]
-                elif i < 57:
-                    data_bit = raw_base_reg[56 - i]
-                else:
-                    data_bit = raw_w2_reg[88 - i]
-                top_bit = Signal(name=f"nsg_crc16_top_{i}")
-                shifted  = Signal(16, name=f"nsg_crc16_sh_{i}")
-                m.d.comb += top_bit.eq(crc_stages[i][15] ^ data_bit)
-                m.d.comb += shifted.eq(Cat(Const(0, 1), crc_stages[i][:15]))
-                m.d.comb += crc_stages[i + 1].eq(
-                    shifted ^ Mux(top_bit, CRC16_POLY, 0)
-                )
+            raw_integrity_reg = Signal(32)
+            computed_integrity = Signal(32)
+            integrity32_amaranth(m, raw_base_reg, raw_w2_reg, computed_integrity)
 
-            crc16_result = Signal(16, name="nsg_crc16_result")
-            m.d.comb += crc16_result.eq(crc_stages[89])
             seal_ok = Signal()
-            m.d.comb += seal_ok.eq(crc16_result == raw_w3_view.crc)
+            m.d.comb += seal_ok.eq(computed_integrity == raw_integrity_reg)
 
         with m.FSM(name="ns_gate") as fsm:
 
@@ -121,9 +112,10 @@ class ChurchNSGate(Elaboratable):
                         gt_latched.eq(self.gt_word0),
                         raw_base_reg.eq(0),
                         raw_w2_reg.eq(0),
-                        raw_w3_reg.eq(0),
                         fault_type_reg.eq(FaultType.NONE),
                     ]
+                    if self.enable_seal_check:
+                        m.d.sync += raw_integrity_reg.eq(0)
                     m.next = "FETCH_LOC"
 
             with m.State("FETCH_LOC"):
@@ -133,9 +125,9 @@ class ChurchNSGate(Elaboratable):
                 ]
                 with m.If(self.mem_rd_valid):
                     m.d.sync += raw_base_reg.eq(self.mem_rd_data)
-                    m.next = "FETCH_W2"
+                    m.next = "FETCH_W1"
 
-            with m.State("FETCH_W2"):
+            with m.State("FETCH_W1"):
                 m.d.comb += [
                     self.mem_addr.eq(ns_entry_addr + 4),
                     self.mem_rd_en.eq(1),
@@ -143,22 +135,21 @@ class ChurchNSGate(Elaboratable):
                 with m.If(self.mem_rd_valid):
                     m.d.sync += raw_w2_reg.eq(self.mem_rd_data)
                     if self.enable_seal_check:
-                        m.next = "FETCH_W3"
+                        m.next = "FETCH_W2"
                     else:
                         m.next = "CHECK_VERSION"
 
             if self.enable_seal_check:
-                with m.State("FETCH_W3"):
+                with m.State("FETCH_W2"):
                     m.d.comb += [
                         self.mem_addr.eq(ns_entry_addr + 8),
                         self.mem_rd_en.eq(1),
                     ]
                     with m.If(self.mem_rd_valid):
-                        m.d.sync += raw_w3_reg.eq(self.mem_rd_data)
-                        m.next = "CHECK_VERSION"
+                        m.d.sync += raw_integrity_reg.eq(self.mem_rd_data)
+                        m.next = "CHECK_INTEGRITY"
 
-            with m.State("CHECK_VERSION"):
-                if self.enable_seal_check:
+                with m.State("CHECK_INTEGRITY"):
                     with m.If(~gt_seq_match):
                         m.d.sync += fault_type_reg.eq(FaultType.VERSION)
                         m.next = "FAULT"
@@ -167,7 +158,8 @@ class ChurchNSGate(Elaboratable):
                         m.next = "FAULT"
                     with m.Else():
                         m.next = "DONE"
-                else:
+            else:
+                with m.State("CHECK_VERSION"):
                     m.next = "DONE"
 
             with m.State("DONE"):
@@ -183,7 +175,7 @@ class ChurchNSGate(Elaboratable):
             self.ns_gate_fault_type.eq(fault_type_reg),
             self.raw_base.eq(raw_base_reg),
             self.raw_w2.eq(raw_w2_reg),
-            self.raw_w3.eq(raw_w3_reg),
+            self.raw_w3.eq(0),
             self.ns_entry_addr_out.eq(ns_entry_addr),
         ]
 

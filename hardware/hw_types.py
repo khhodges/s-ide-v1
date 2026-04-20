@@ -40,9 +40,8 @@ GT_PERM_BITS    = 6
 GT_TYPE_BITS    = 2
 GT_WIDTH        = 32
 
-CR_WIDTH        = 128
+CR_WIDTH        = 96
 WORD_WIDTH      = 32
-SEAL_BITS       = 16
 
 MAX_NS_ENTRIES  = 1 << GT_SLOT_ID_BITS
 MAX_GT_SEQ      = (1 << GT_SEQ_BITS) - 1
@@ -55,10 +54,6 @@ ENABLE_SEAL_CHECK = True
 ENABLE_FUSED_OPS = True
 ENABLE_CHANGE_SWITCH = True
 ENABLE_GC = True
-
-CRC16_POLY    = 0x1021
-CRC16_INIT    = 0xFFFF
-CRC_SEAL_MASK = (1 << SEAL_BITS) - 1
 
 # Reserved hardware sentinel addresses used in word1_location of SWITCH PassKeys.
 # These values occupy the I/O peripheral address space — a range no real RAM

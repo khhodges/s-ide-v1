@@ -13,19 +13,13 @@ CAP_REG_LAYOUT = StructLayout({
     "word0_gt":       GT_LAYOUT,
     "word1_location": unsigned(32),
     "word2_w2":       unsigned(32),
-    "word3_w3":       unsigned(32),
 })
 
 WORD2_LAYOUT = StructLayout({
     "limit_offset": unsigned(21),
     "gt_seq":       unsigned(7),
-    "spare":        unsigned(4),
-})
-
-WORD3_LAYOUT = StructLayout({
-    "crc":   unsigned(16),
-    "g_bit": unsigned(1),
-    "spare": unsigned(15),
+    "g_bit":        unsigned(1),
+    "spare":        unsigned(3),
 })
 
 LUMP_HEADER_LAYOUT = StructLayout({
@@ -36,16 +30,21 @@ LUMP_HEADER_LAYOUT = StructLayout({
     "magic":     unsigned(5),    # bits [31:27] — always 0x1F; traps if executed
 })
 
-# 3-word Namespace Entry layout (stride = slot_id * 12, i.e. 12 bytes):
+# 4-word Namespace Entry layout (stride = slot_id << 4, i.e. 16 bytes per entry):
 #   word0_location (+0):  lump base byte address (32-bit pointer)
-#   word1_w2       (+4):  WORD2_LAYOUT  — limit_offset[20:0] | gt_seq[6:0] | spare[3:0]
-#   word2_w3       (+8):  WORD3_LAYOUT  — crc[15:0] | g_bit | spare[14:0]
+#   word1_authority (+4): WORD2_LAYOUT — limit_offset[20:0] | gt_seq[6:0] | g_bit[28] | spare[31:29]
+#                         Identical bit layout to CR W2.  g_bit[28] may be set by GC without
+#                         invalidating W2 (integrity32 masks g_bit before computing the check).
+#   word2_integrity (+8): integrity32(W0, W1 with g_bit cleared) — 32-bit parallel check.
+#   word3_pad      (+12): reserved (zero), absorbs future fields without a stride change.
+#
 # The lump header (LUMP_HEADER_LAYOUT) lives at word 0 of the lump itself (at word0_location),
 # not in the NS table.  Hardware reads it via a separate memory fetch from word0_location.
 NS_ENTRY_LAYOUT = StructLayout({
-    "word0_location": unsigned(32),
-    "word1_w2":       unsigned(32),
-    "word2_w3":       unsigned(32),
+    "word0_location":  unsigned(32),
+    "word1_authority": unsigned(32),
+    "word2_integrity": unsigned(32),
+    "word3_pad":       unsigned(32),
 })
 
 COND_FLAGS_LAYOUT = StructLayout({

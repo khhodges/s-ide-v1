@@ -2,7 +2,7 @@ from amaranth import *
 from amaranth.lib.data import View
 
 from .hw_types import *
-from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, NS_ENTRY_LAYOUT, WORD2_LAYOUT, WORD3_LAYOUT
+from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, NS_ENTRY_LAYOUT, WORD2_LAYOUT
 from .ns_gate import ChurchNSGate
 
 
@@ -121,7 +121,7 @@ class ChurchMLoad(Elaboratable):
         ns_index_in_bounds = Signal()
         m.d.comb += ns_index_in_bounds.eq(result_gt.slot_id < ns_ns_w2.limit_offset[:16])
 
-        ns_w3_saved = Signal(32)
+        ns_w1_saved = Signal(32)
 
         # Latched outform context (set in FETCH_GT when typ == GT_TYPE_OUTFORM)
         outform_clist_addr_reg = Signal(32)
@@ -229,28 +229,21 @@ class ChurchMLoad(Elaboratable):
                     m.d.sync += [
                         result_view.word1_location.eq(u_ns_gate.raw_base),
                         result_view.word2_w2.eq(u_ns_gate.raw_w2),
-                        result_view.word3_w3.eq(u_ns_gate.raw_w3),
                     ]
                     if self.enable_seal_check:
-                        m.d.sync += ns_w3_saved.eq(u_ns_gate.raw_w3)
+                        m.d.sync += ns_w1_saved.eq(u_ns_gate.raw_w2)
                         m.next = "RESET_GBIT"
                     else:
                         m.next = "UPDATE_THREAD"
 
             if self.enable_seal_check:
                 with m.State("RESET_GBIT"):
-                    gbit_cleared_w3  = Signal(32)
-                    gbit_cleared_view = View(WORD3_LAYOUT, gbit_cleared_w3)
-                    ns_w3_view = View(WORD3_LAYOUT, ns_w3_saved)
+                    gbit_cleared_w1 = Signal(32)
+                    m.d.comb += gbit_cleared_w1.eq(ns_w1_saved & ~(1 << 28))
                     m.d.comb += [
-                        gbit_cleared_view.crc.eq(ns_w3_view.crc),
-                        gbit_cleared_view.g_bit.eq(0),
-                        gbit_cleared_view.spare.eq(ns_w3_view.spare),
-                    ]
-                    m.d.comb += [
-                        local_mem_addr.eq(u_ns_gate.ns_entry_addr_out + 8),
+                        local_mem_addr.eq(u_ns_gate.ns_entry_addr_out + 4),
                         local_mem_wr_en.eq(1),
-                        local_mem_wr_data.eq(gbit_cleared_w3),
+                        local_mem_wr_data.eq(gbit_cleared_w1),
                         self.gbit_reset_done.eq(1),
                     ]
                     m.next = "UPDATE_THREAD"

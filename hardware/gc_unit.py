@@ -2,7 +2,7 @@ from amaranth import *
 from amaranth.lib.data import View
 
 from .hw_types import *
-from .layouts import NS_ENTRY_LAYOUT, WORD2_LAYOUT, WORD3_LAYOUT
+from .layouts import NS_ENTRY_LAYOUT, WORD2_LAYOUT
 
 
 class ChurchGCUnit(Elaboratable):
@@ -36,17 +36,16 @@ class ChurchGCUnit(Elaboratable):
         mark_counter = Signal(32)
         garbage_counter = Signal(32)
 
-        # NS_ENTRY_LAYOUT (3 words at stride slot_id*12):
-        #   word_select(0, 32) = word0_location (+0)  — lump base byte address
-        #   word_select(1, 32) = word1_w2       (+4)  — limit_offset | gt_seq  (WORD2_LAYOUT)
-        #   word_select(2, 32) = word2_w3       (+8)  — crc | g_bit            (WORD3_LAYOUT)
-        # Lump header is at lump word 0 (word0_location), NOT cached in the NS table.
+        # NS_ENTRY_LAYOUT (4 words at stride slot_id << 4, i.e. 16 bytes per entry):
+        #   word_select(0, 32) = word0_location  (+0)  — lump base byte address
+        #   word_select(1, 32) = word1_authority (+4)  — WORD2_LAYOUT: limit_offset | gt_seq | g_bit[28] | spare
+        #   word_select(2, 32) = word2_integrity (+8)  — integrity32(W0, W1 with g_bit masked)
+        # The GC bus carries 3 × 32 bits (W0, W1, W2). W3 (pad) is not fetched.
+        # g_bit is at W1[28].  GC reads/writes W1; integrity stays valid (g_bit masked in check).
         latched_entry = Signal(32 * 3)
-        latched_w1 = latched_entry.word_select(1, 32)   # word1_w2: limit | gt_seq
-        latched_w2 = latched_entry.word_select(2, 32)   # word2_w3: crc | g_bit
+        latched_w1 = latched_entry.word_select(1, 32)   # word1_authority (+4): g_bit at [28]
 
-        w1_view = View(WORD2_LAYOUT, latched_w1)   # gt_seq lives here
-        w2_view = View(WORD3_LAYOUT, latched_w2)   # g_bit / crc live here
+        w1_view = View(WORD2_LAYOUT, latched_w1)   # g_bit and gt_seq live here
 
         next_version = Signal(7)
         m.d.comb += next_version.eq(w1_view.gt_seq + 1)
@@ -78,10 +77,10 @@ class ChurchGCUnit(Elaboratable):
 
             with m.State("MARK_WRITE"):
                 wr_entry = Signal(32 * 3)
-                wr_w2 = wr_entry.word_select(2, 32)   # word2_w3 (+8): crc | g_bit
-                wr_w2_view = View(WORD3_LAYOUT, wr_w2)
+                wr_w1 = wr_entry.word_select(1, 32)   # word1_authority (+4): g_bit at [28]
+                wr_w1_view = View(WORD2_LAYOUT, wr_w1)
                 m.d.comb += wr_entry.eq(latched_entry)
-                m.d.comb += wr_w2_view.g_bit.eq(1)
+                m.d.comb += wr_w1_view.g_bit.eq(1)
 
                 m.d.comb += [
                     self.ns_addr.eq(current_index),
@@ -89,7 +88,7 @@ class ChurchGCUnit(Elaboratable):
                     self.ns_wr_en.eq(1),
                 ]
 
-                with m.If(~w2_view.g_bit):
+                with m.If(~w1_view.g_bit):
                     m.d.sync += mark_counter.eq(mark_counter + 1)
 
                 m.d.sync += current_index.eq(current_index + 1)
@@ -112,7 +111,7 @@ class ChurchGCUnit(Elaboratable):
                 m.next = "SWEEP_CHECK"
 
             with m.State("SWEEP_CHECK"):
-                with m.If(w2_view.g_bit):
+                with m.If(w1_view.g_bit):
                     m.d.sync += garbage_counter.eq(garbage_counter + 1)
                     m.next = "SWEEP_WRITE"
                 with m.Else():
@@ -124,7 +123,7 @@ class ChurchGCUnit(Elaboratable):
 
             with m.State("SWEEP_WRITE"):
                 swept_entry = Signal(32 * 3)
-                swept_w1 = swept_entry.word_select(1, 32)   # word1_w2 (+4): gt_seq | limit_offset
+                swept_w1 = swept_entry.word_select(1, 32)   # word1_authority (+4): gt_seq | g_bit
                 swept_w1_view = View(WORD2_LAYOUT, swept_w1)
                 m.d.comb += [
                     swept_entry.eq(0),

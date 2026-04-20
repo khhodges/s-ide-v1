@@ -2,7 +2,8 @@ from amaranth import *
 from amaranth.lib.data import View
 
 from .hw_types import *
-from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, WORD2_LAYOUT, WORD3_LAYOUT
+from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, WORD2_LAYOUT
+from .integrity32 import integrity32_amaranth
 
 
 class ChurchMSave(Elaboratable):
@@ -55,37 +56,23 @@ class ChurchMSave(Elaboratable):
 
         ns_ns_w2 = View(WORD2_LAYOUT, ns_view.word2_w2)
         ns_entry_addr = Signal(32)
-        m.d.comb += ns_entry_addr.eq(ns_view.word1_location + (src_gt_view.slot_id * 12))
+        m.d.comb += ns_entry_addr.eq(ns_view.word1_location + (src_gt_view.slot_id << 4))
 
         ns_location_reg = Signal(32)
-        ns_w2_reg = Signal(32)
-        ns_w2_view = View(WORD2_LAYOUT, ns_w2_reg)
+        ns_w1_reg = Signal(32)
+        ns_w1_view = View(WORD2_LAYOUT, ns_w1_reg)
 
         if self.enable_seal_check:
-            ns_w3_reg = Signal(32)
-            ns_w3_view = View(WORD3_LAYOUT, ns_w3_reg)
+            ns_integrity_reg = Signal(32)
 
             gt_seq_match = Signal()
-            m.d.comb += gt_seq_match.eq(src_gt_view.gt_seq == ns_w2_view.gt_seq)
+            m.d.comb += gt_seq_match.eq(src_gt_view.gt_seq == ns_w1_view.gt_seq)
 
-            crc_stages = [Signal(16, name=f"crc16_{i}") for i in range(90)]
-            m.d.comb += crc_stages[0].eq(0xFFFF)
-            for i in range(89):
-                if i < 25:
-                    data_bit = src_gt_reg[24 - i]
-                elif i < 57:
-                    data_bit = ns_location_reg[56 - i]
-                else:
-                    data_bit = ns_w2_reg[88 - i]
-                top_bit = Signal(name=f"crc16_top_{i}")
-                shifted = Signal(16, name=f"crc16_sh_{i}")
-                m.d.comb += top_bit.eq(crc_stages[i][15] ^ data_bit)
-                m.d.comb += shifted.eq(Cat(Const(0, 1), crc_stages[i][:15]))
-                m.d.comb += crc_stages[i + 1].eq(shifted ^ Mux(top_bit, 0x1021, 0))
-            crc16_result = Signal(16, name="crc16_result")
-            m.d.comb += crc16_result.eq(crc_stages[89])
+            computed_integrity = Signal(32)
+            integrity32_amaranth(m, ns_location_reg, ns_w1_reg, computed_integrity)
+
             seal_ok = Signal()
-            m.d.comb += seal_ok.eq(crc16_result == ns_w3_view.crc)
+            m.d.comb += seal_ok.eq(computed_integrity == ns_integrity_reg)
 
         with m.FSM(name="msave") as fsm:
             with m.State("IDLE"):
@@ -126,30 +113,28 @@ class ChurchMSave(Elaboratable):
                 ]
                 with m.If(self.mem_rd_valid):
                     m.d.sync += ns_location_reg.eq(self.mem_rd_data)
-                    m.next = "FETCH_NS_W2"
+                    m.next = "FETCH_NS_W1"
 
-            with m.State("FETCH_NS_W2"):
-                # word1_w2 is at NS entry offset +4 (limit_offset | gt_seq)
+            with m.State("FETCH_NS_W1"):
                 m.d.comb += [
                     self.mem_rd_addr.eq(ns_entry_addr + 4),
                     self.mem_rd_en.eq(1),
                 ]
                 with m.If(self.mem_rd_valid):
-                    m.d.sync += ns_w2_reg.eq(self.mem_rd_data)
+                    m.d.sync += ns_w1_reg.eq(self.mem_rd_data)
                     if self.enable_seal_check:
-                        m.next = "FETCH_NS_W3"
+                        m.next = "FETCH_NS_INTEGRITY"
                     else:
                         m.next = "WRITE_GT"
 
             if self.enable_seal_check:
-                with m.State("FETCH_NS_W3"):
-                    # word2_w3 is at NS entry offset +8 (crc | g_bit)
+                with m.State("FETCH_NS_INTEGRITY"):
                     m.d.comb += [
                         self.mem_rd_addr.eq(ns_entry_addr + 8),
                         self.mem_rd_en.eq(1),
                     ]
                     with m.If(self.mem_rd_valid):
-                        m.d.sync += ns_w3_reg.eq(self.mem_rd_data)
+                        m.d.sync += ns_integrity_reg.eq(self.mem_rd_data)
                         m.next = "CHECK_VERSION"
 
                 with m.State("CHECK_VERSION"):
