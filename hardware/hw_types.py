@@ -190,6 +190,7 @@ class FaultType(IntEnum):
     OUTFORM_ALLOC   = 0x16   # Outform download: memory allocator rejected the lump size
     OUTFORM_MINT    = 0x17   # Outform download: Mint capability-minting step failed
     OUTFORM_HDR     = 0x18   # Outform download: header validation failed (bad length/alignment)
+    OUTFORM_TIMEOUT = 0x19   # Outform download: server stopped sending bytes (watchdog expired)
 
 
 class BootState(IntEnum):

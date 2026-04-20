@@ -2,10 +2,13 @@ from amaranth import *
 
 from .hw_types import FaultType
 
-OUTFORM_FAULT_CRC32  = FaultType.OUTFORM_CRC
-OUTFORM_FAULT_ALLOC  = FaultType.OUTFORM_ALLOC
-OUTFORM_FAULT_MINT   = FaultType.OUTFORM_MINT
-OUTFORM_FAULT_HDR    = FaultType.OUTFORM_HDR
+OUTFORM_FAULT_CRC32   = FaultType.OUTFORM_CRC
+OUTFORM_FAULT_ALLOC   = FaultType.OUTFORM_ALLOC
+OUTFORM_FAULT_MINT    = FaultType.OUTFORM_MINT
+OUTFORM_FAULT_HDR     = FaultType.OUTFORM_HDR
+OUTFORM_FAULT_TIMEOUT = FaultType.OUTFORM_TIMEOUT
+
+DEFAULT_TIMEOUT_CYCLES = 1_000_000
 
 CRC32_POLY  = 0xEDB88320
 CRC32_INIT  = 0xFFFFFFFF
@@ -27,7 +30,8 @@ class ChurchOutformIoT(Elaboratable):
     and raw STORE-only payload.  CRC-32 integrity validation is preserved.
     """
 
-    def __init__(self):
+    def __init__(self, timeout_cycles=DEFAULT_TIMEOUT_CYCLES):
+        self._timeout_cycles    = timeout_cycles
         self.outform_start      = Signal()
         self.outform_busy       = Signal()
         self.outform_done       = Signal()
@@ -78,6 +82,9 @@ class ChurchOutformIoT(Elaboratable):
 
         tx_byte_cnt  = Signal(3)
         hdr_byte_cnt = Signal(4)
+
+        timeout_cnt    = Signal(32)
+        timeout_limit  = self._timeout_cycles
 
         payload_len_reg = Signal(32)
         crc32_stored    = Signal(32)
@@ -135,6 +142,7 @@ class ChurchOutformIoT(Elaboratable):
                         byte_buf       .eq(0),
                         byte_buf_cnt   .eq(0),
                         result_gt_reg  .eq(0),
+                        timeout_cnt    .eq(0),
                     ]
                     m.next = "TUNNEL_HUNT"
 
@@ -145,7 +153,10 @@ class ChurchOutformIoT(Elaboratable):
                 ]
                 with m.If(self.tx_ack):
                     with m.If(tx_byte_cnt == TUNNEL_REQ_LEN - 1):
-                        m.d.sync += tx_byte_cnt.eq(0)
+                        m.d.sync += [
+                            tx_byte_cnt.eq(0),
+                            timeout_cnt.eq(0),
+                        ]
                         m.next = "TUNNEL_CONNECT"
                     with m.Else():
                         m.d.sync += tx_byte_cnt.eq(tx_byte_cnt + 1)
@@ -153,11 +164,18 @@ class ChurchOutformIoT(Elaboratable):
             with m.State("TUNNEL_CONNECT"):
                 m.d.comb += self.outform_busy.eq(1)
                 with m.If(self.rx_valid):
+                    m.d.sync += timeout_cnt.eq(0)
                     m.next = "RECV_HDR_LEAN"
+                with m.Elif(timeout_cnt + 1 >= timeout_limit):
+                    m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_TIMEOUT)
+                    m.next = "FAULT"
+                with m.Else():
+                    m.d.sync += timeout_cnt.eq(timeout_cnt + 1)
 
             with m.State("RECV_HDR_LEAN"):
                 m.d.comb += self.outform_busy.eq(1)
                 with m.If(self.rx_valid):
+                    m.d.sync += timeout_cnt.eq(0)
                     with m.Switch(hdr_byte_cnt):
                         with m.Case(0): m.d.sync += payload_len_reg[ 0: 8].eq(self.rx_data)
                         with m.Case(1): m.d.sync += payload_len_reg[ 8:16].eq(self.rx_data)
@@ -170,6 +188,11 @@ class ChurchOutformIoT(Elaboratable):
                     m.d.sync += hdr_byte_cnt.eq(hdr_byte_cnt + 1)
                     with m.If(hdr_byte_cnt == IOT_HDR_LEN - 1):
                         m.next = "DERIVE_N"
+                with m.Elif(timeout_cnt + 1 >= timeout_limit):
+                    m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_TIMEOUT)
+                    m.next = "FAULT"
+                with m.Else():
+                    m.d.sync += timeout_cnt.eq(timeout_cnt + 1)
 
             with m.State("DERIVE_N"):
                 m.d.comb += self.outform_busy.eq(1)
@@ -226,7 +249,10 @@ class ChurchOutformIoT(Elaboratable):
             with m.State("RECV_PAYLOAD"):
                 m.d.comb += self.outform_busy.eq(1)
                 with m.If(self.rx_valid):
-                    m.d.sync += crc_acc.eq(crc_next)
+                    m.d.sync += [
+                        crc_acc    .eq(crc_next),
+                        timeout_cnt.eq(0),
+                    ]
                     with m.If(byte_buf_cnt == 3):
                         m.d.comb += [
                             self.mem_wr_addr.eq(base_reg + (wr_word_cnt << 2)),
@@ -246,6 +272,11 @@ class ChurchOutformIoT(Elaboratable):
                             with m.Case(1): m.d.sync += byte_buf[ 8:16].eq(self.rx_data)
                             with m.Case(2): m.d.sync += byte_buf[16:24].eq(self.rx_data)
                         m.d.sync += byte_buf_cnt.eq(byte_buf_cnt + 1)
+                with m.Elif(timeout_cnt + 1 >= timeout_limit):
+                    m.d.sync += self.outform_fault_type.eq(OUTFORM_FAULT_TIMEOUT)
+                    m.next = "FAULT"
+                with m.Else():
+                    m.d.sync += timeout_cnt.eq(timeout_cnt + 1)
 
             with m.State("CHECK_CRC32"):
                 m.d.comb += self.outform_busy.eq(1)

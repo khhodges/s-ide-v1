@@ -16,6 +16,8 @@ from .outform_iot import ChurchOutformIoT
 from .mload import ChurchMLoad
 from .hw_types import FaultType
 
+TIMEOUT_TEST_CYCLES = 8
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -326,6 +328,213 @@ def test_mload_wait_outform_fault_type():
 
 
 # ---------------------------------------------------------------------------
+# Test 3: ChurchOutformIoT raises OUTFORM_TIMEOUT when the server stops
+#         sending bytes mid-transfer.  Three sub-cases:
+#   3a: timeout fires in TUNNEL_CONNECT (no first byte from server)
+#   3b: timeout fires in RECV_HDR_LEAN (server sends 3 header bytes then stops)
+#   3c: timeout fires in RECV_PAYLOAD  (server sends all header bytes +
+#       some payload bytes, then stops)
+# ---------------------------------------------------------------------------
+
+def _run_timeout_subcase(subcase_name, rx_bytes_before_silence, phase):
+    """Drive the outform IoT FSM with a small timeout, send *rx_bytes_before_silence*
+    RX bytes, then go silent.  Expect OUTFORM_TIMEOUT fault and recovery to IDLE.
+
+    *phase* is one of 'TUNNEL_CONNECT', 'RECV_HDR_LEAN', or 'RECV_PAYLOAD'.
+    """
+    dut = ChurchOutformIoT(timeout_cycles=TIMEOUT_TEST_CYCLES)
+    results = {}
+
+    async def testbench(ctx):
+        ctx.set(dut.outform_start, 0)
+        ctx.set(dut.tx_ack,        0)
+        ctx.set(dut.rx_valid,      0)
+        ctx.set(dut.rx_data,       0)
+        ctx.set(dut.alloc_done,    0)
+        ctx.set(dut.alloc_fault,   0)
+        ctx.set(dut.alloc_base,    0x1000)
+        ctx.set(dut.mint_done,     0)
+        ctx.set(dut.mint_fault,    0)
+        ctx.set(dut.gt_raw,        0xCAFEBABE)
+        ctx.set(dut.slot_id,       0x0001)
+        await ctx.tick()
+
+        ctx.set(dut.outform_start, 1)
+        await ctx.tick()
+        ctx.set(dut.outform_start, 0)
+
+        for _ in range(TUNNEL_REQ_LEN):
+            ctx.set(dut.tx_ack, 1)
+            await ctx.tick()
+        ctx.set(dut.tx_ack, 0)
+
+        for i in range(rx_bytes_before_silence):
+            ctx.set(dut.rx_valid, 1)
+            ctx.set(dut.rx_data,  0x00)
+            await ctx.tick()
+        ctx.set(dut.rx_valid, 0)
+
+        if phase == 'RECV_PAYLOAD':
+            for _ in range(3):
+                await ctx.tick()
+            ctx.set(dut.alloc_done, 1)
+            await ctx.tick()
+            ctx.set(dut.alloc_done, 0)
+
+        for _ in range(TIMEOUT_TEST_CYCLES + 4):
+            await ctx.tick()
+
+        results["fault"]      = ctx.get(dut.outform_fault)
+        results["fault_type"] = ctx.get(dut.outform_fault_type)
+        results["busy"]       = ctx.get(dut.outform_busy)
+
+        for _ in range(3):
+            await ctx.tick()
+        results["busy_after"] = ctx.get(dut.outform_busy)
+
+    sim = Simulator(dut)
+    sim.add_clock(1e-6)
+    sim.add_testbench(testbench)
+
+    with sim.write_vcd("/dev/null"):
+        sim.run()
+
+    ok = True
+    print(f"  [{subcase_name}] outform_fault_type : {results.get('fault_type')} "
+          f"(expected {int(FaultType.OUTFORM_TIMEOUT)} = OUTFORM_TIMEOUT)")
+    print(f"  [{subcase_name}] outform_busy after : {results.get('busy_after')} "
+          f"(expected 0 = not wedged)")
+
+    if results.get("fault_type") != int(FaultType.OUTFORM_TIMEOUT):
+        print(f"  FAIL [{subcase_name}]: wrong fault type — expected OUTFORM_TIMEOUT (0x19).")
+        ok = False
+    if results.get("busy_after") != 0:
+        print(f"  FAIL [{subcase_name}]: outform_busy still high — processor is wedged!")
+        ok = False
+    return ok
+
+
+def _run_timeout_subcase_payload():
+    """Sub-case 3c: timeout in RECV_PAYLOAD.
+
+    Sends the full header via TUNNEL_CONNECT + RECV_HDR_LEAN, completes ALLOC,
+    then sends 4 payload bytes before going silent.  Expects OUTFORM_TIMEOUT.
+    """
+    subcase_name = "3c: RECV_PAYLOAD timeout (4 payload bytes then silent)"
+    dut = ChurchOutformIoT(timeout_cycles=TIMEOUT_TEST_CYCLES)
+    results = {}
+
+    PAYLOAD_LEN = 64 * 4
+    GOOD_CRC    = 0x00000000
+    hdr_bytes   = _pack32_le(PAYLOAD_LEN) + _pack32_le(GOOD_CRC)
+
+    async def testbench(ctx):
+        ctx.set(dut.outform_start, 0)
+        ctx.set(dut.tx_ack,        0)
+        ctx.set(dut.rx_valid,      0)
+        ctx.set(dut.rx_data,       0)
+        ctx.set(dut.alloc_done,    0)
+        ctx.set(dut.alloc_fault,   0)
+        ctx.set(dut.alloc_base,    0x1000)
+        ctx.set(dut.mint_done,     0)
+        ctx.set(dut.mint_fault,    0)
+        ctx.set(dut.gt_raw,        0xCAFEBABE)
+        ctx.set(dut.slot_id,       0x0001)
+        await ctx.tick()
+
+        ctx.set(dut.outform_start, 1)
+        await ctx.tick()
+        ctx.set(dut.outform_start, 0)
+
+        for _ in range(TUNNEL_REQ_LEN):
+            ctx.set(dut.tx_ack, 1)
+            await ctx.tick()
+        ctx.set(dut.tx_ack, 0)
+
+        ctx.set(dut.rx_valid, 1)
+        ctx.set(dut.rx_data,  0x00)
+        await ctx.tick()
+        ctx.set(dut.rx_valid, 0)
+
+        for b in hdr_bytes:
+            ctx.set(dut.rx_valid, 1)
+            ctx.set(dut.rx_data,  b)
+            await ctx.tick()
+        ctx.set(dut.rx_valid, 0)
+
+        for _ in range(3):
+            await ctx.tick()
+
+        ctx.set(dut.alloc_done, 1)
+        await ctx.tick()
+        ctx.set(dut.alloc_done, 0)
+
+        for _ in range(4):
+            ctx.set(dut.rx_valid, 1)
+            ctx.set(dut.rx_data,  0x00)
+            await ctx.tick()
+        ctx.set(dut.rx_valid, 0)
+
+        for _ in range(TIMEOUT_TEST_CYCLES + 4):
+            await ctx.tick()
+
+        results["fault"]      = ctx.get(dut.outform_fault)
+        results["fault_type"] = ctx.get(dut.outform_fault_type)
+        results["busy"]       = ctx.get(dut.outform_busy)
+
+        for _ in range(3):
+            await ctx.tick()
+        results["busy_after"] = ctx.get(dut.outform_busy)
+
+    sim = Simulator(dut)
+    sim.add_clock(1e-6)
+    sim.add_testbench(testbench)
+
+    with sim.write_vcd("/dev/null"):
+        sim.run()
+
+    ok = True
+    print(f"  [{subcase_name}] outform_fault_type : {results.get('fault_type')} "
+          f"(expected {int(FaultType.OUTFORM_TIMEOUT)} = OUTFORM_TIMEOUT)")
+    print(f"  [{subcase_name}] outform_busy after : {results.get('busy_after')} "
+          f"(expected 0 = not wedged)")
+
+    if results.get("fault_type") != int(FaultType.OUTFORM_TIMEOUT):
+        print(f"  FAIL [{subcase_name}]: wrong fault type — expected OUTFORM_TIMEOUT (0x19).")
+        ok = False
+    if results.get("busy_after") != 0:
+        print(f"  FAIL [{subcase_name}]: outform_busy still high — processor is wedged!")
+        ok = False
+    return ok
+
+
+def test_outform_iot_timeout():
+    """The outform IoT unit should raise outform_fault with OUTFORM_TIMEOUT when
+    the server stops sending bytes in any waiting state, and must return to IDLE."""
+
+    ok = True
+    print("\n=== Test 3: outform IoT timeout fault recovery ===")
+
+    ok &= _run_timeout_subcase(
+        "3a: TUNNEL_CONNECT timeout",
+        rx_bytes_before_silence=0,
+        phase='TUNNEL_CONNECT',
+    )
+
+    ok &= _run_timeout_subcase(
+        "3b: RECV_HDR_LEAN timeout (3 of 8 header bytes received)",
+        rx_bytes_before_silence=1 + 3,
+        phase='RECV_HDR_LEAN',
+    )
+
+    ok &= _run_timeout_subcase_payload()
+
+    if ok:
+        print("PASS")
+    return ok
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -333,6 +542,7 @@ if __name__ == "__main__":
     all_ok = True
     all_ok &= test_outform_iot_crc_fault()
     all_ok &= test_mload_wait_outform_fault_type()
+    all_ok &= test_outform_iot_timeout()
 
     if all_ok:
         print("\nAll outform fault-recovery tests passed.")
