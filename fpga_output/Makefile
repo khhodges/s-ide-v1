@@ -1,4 +1,4 @@
-# RV32-Cap FPGA Build Makefile
+# CTMMCap FPGA Build Makefile
 # Open-source toolchain: Yosys + nextpnr + icepack/ecppack
 #
 # Prerequisites (install on your local machine):
@@ -46,7 +46,7 @@ gen:
         cd .. && python -m ctmm_cap_amaranth.gen_verilog -o fpga_output
 
 info:
-        @echo "RV32-Cap FPGA Build"
+        @echo "CTMMCap FPGA Build"
         @echo "  Target:      $(TARGET)"
         @echo "  Top module:  $(TOP)"
         @echo "  Verilog:     $(VERILOG)"
