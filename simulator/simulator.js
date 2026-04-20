@@ -4182,7 +4182,7 @@ class ChurchSimulator {
             dump.push({
                 index: i,
                 label: this.nsLabels[i] || '',
-                raw: [this.memory[base], this.memory[base + 1], this.memory[base + 2]],
+                raw: [this.memory[base], this.memory[base + 1], this.memory[base + 2], this.memory[base + 3]],
             });
         }
         return dump;

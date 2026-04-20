@@ -3550,6 +3550,10 @@ function updateCRDetail() {
         html += `<tr><td>W1: Limit</td><td>0x${lim.limit.toString(16).toUpperCase().padStart(5,'0')} (${lim.limit + 1} words)</td></tr>`;
         html += `<tr><td>W2: GT Seq</td><td>${sealGtSeq}</td></tr>`;
         html += `<tr><td>W2: CRC Seal</td><td>0x${sealCRC.toString(16).toUpperCase().padStart(4,'0')}</td></tr>`;
+        const w3raw = (entry.word3_abstract_gt || 0) >>> 0;
+        const w3PermBits = (w3raw >>> 25) & 0x3F;
+        const w3PermStr = [['R',1],['W',2],['X',4],['L',8],['S',16],['E',32]].filter(([,b]) => w3PermBits & b).map(([n]) => n).join('') || '-';
+        html += `<tr><td>W3: Abstract GT</td><td>0x${w3raw.toString(16).toUpperCase().padStart(8,'0')} <span style="color:#aaa;font-size:0.85em;">[${w3PermStr}]</span></td></tr>`;
         html += `<tr><td>CR Permissions</td><td>[${gtPermStr}]</td></tr>`;
         if (entry.codeLength !== undefined) {
             html += `<tr><td>Code Length</td><td>${entry.codeLength} words (${entry.codeLength * 4} bytes)</td></tr>`;
