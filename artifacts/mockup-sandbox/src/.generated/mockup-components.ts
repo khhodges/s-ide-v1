@@ -4,5 +4,7 @@ export const modules: ModuleMap = {
   "./components/mockups/church-ide/CommandPalette.tsx": () => import("../components/mockups/church-ide/CommandPalette.tsx"),
   "./components/mockups/church-ide/LabBench.tsx": () => import("../components/mockups/church-ide/LabBench.tsx"),
   "./components/mockups/church-ide/Notebook.tsx": () => import("../components/mockups/church-ide/Notebook.tsx"),
+  "./components/mockups/church-ide/PolishContentFirst.tsx": () => import("../components/mockups/church-ide/PolishContentFirst.tsx"),
+  "./components/mockups/church-ide/PolishStructured.tsx": () => import("../components/mockups/church-ide/PolishStructured.tsx"),
   "./components/mockups/church-ide/TerminalFirst.tsx": () => import("../components/mockups/church-ide/TerminalFirst.tsx")
 };
