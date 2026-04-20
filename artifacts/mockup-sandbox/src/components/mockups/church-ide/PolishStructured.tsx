@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ChevronDown, Menu, Play, FastForward, RotateCcw, AlertTriangle, Zap, Footprints } from 'lucide-react';
 
 const MENU_GROUPS = [
@@ -32,8 +32,24 @@ export function PolishStructured() {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
   const [activeGroup, setActiveGroup] = useState('Test');
   const [activeItem, setActiveItem] = useState('Simulator');
+  const [isHoveringBtn, setIsHoveringBtn] = useState(false);
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeGroupData = MENU_GROUPS.find(g => g.name === activeGroup);
+
+  const handleBtnMouseEnter = () => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    if (!isMenuOpen) setIsHoveringBtn(true);
+  };
+
+  const handleBtnMouseLeave = () => {
+    hoverTimeout.current = setTimeout(() => setIsHoveringBtn(false), 120);
+  };
+
+  const handleBtnClick = () => {
+    setIsHoveringBtn(false);
+    setIsMenuOpen(prev => !prev);
+  };
 
   return (
     <div className="w-full h-screen flex flex-col font-sans text-[#eaeaea] bg-[#1a1a2e] overflow-hidden">
@@ -44,15 +60,41 @@ export function PolishStructured() {
             <span className="text-[#fbbf24] font-bold text-lg tracking-[1px]">λ Church Machine</span>
           </div>
 
-          <button 
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors border border-[#2d3748]
-              ${isMenuOpen ? 'bg-[#0f3460] text-white' : 'bg-[#16213e] hover:bg-[#0f3460] text-[#eaeaea]'}`}
-          >
-            <Menu className="w-4 h-4" />
-            <span>{activeItem}</span>
-            <ChevronDown className="w-4 h-4 text-[#fbbf24]" />
-          </button>
+          {/* Hamburger button with hover popup */}
+          <div className="relative">
+            <button
+              onClick={handleBtnClick}
+              onMouseEnter={handleBtnMouseEnter}
+              onMouseLeave={handleBtnMouseLeave}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-sm font-medium transition-colors border border-[#2d3748]
+                ${isMenuOpen ? 'bg-[#0f3460] text-white' : 'bg-[#16213e] hover:bg-[#0f3460] text-[#eaeaea]'}`}
+            >
+              <Menu className="w-4 h-4" />
+              <ChevronDown className="w-3.5 h-3.5 text-[#fbbf24]" />
+            </button>
+
+            {/* Hover popup — only when menu is closed */}
+            {isHoveringBtn && !isMenuOpen && (
+              <div
+                className="absolute left-0 top-full mt-1.5 z-50 pointer-events-none"
+                style={{ minWidth: '180px' }}
+              >
+                <div className="bg-[#16213e] border border-[#2d3748] rounded shadow-xl px-3 py-2 text-xs font-mono">
+                  <div className="text-[#a0a0a0] mb-0.5 uppercase tracking-wider" style={{ fontSize: '10px' }}>Current view</div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[#fbbf24]">{activeGroup}</span>
+                    <span className="text-[#2d3748]">›</span>
+                    <span className="text-[#eaeaea]">{activeItem}</span>
+                  </div>
+                </div>
+                {/* Arrow tip */}
+                <div
+                  className="absolute -top-[5px] left-3 w-2.5 h-2.5 bg-[#16213e] border-l border-t border-[#2d3748] rotate-45"
+                  style={{ marginTop: '1px' }}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -133,8 +175,8 @@ export function PolishStructured() {
                       setIsMenuOpen(false);
                     }}
                     className={`w-full text-left px-4 py-2.5 rounded text-sm transition-colors
-                      ${activeItem === item && activeGroup === 'Test'
-                        ? 'bg-[#e94560] text-white' 
+                      ${activeItem === item
+                        ? 'bg-[#e94560] text-white'
                         : 'text-[#eaeaea] hover:bg-[#0f3460]'}`}
                   >
                     {item}
