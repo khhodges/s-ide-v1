@@ -12,3 +12,4 @@ server/boot-config.json
 # Generated VCD simulation traces and build artifacts
 build/*.vcd
 /tmp/*.vcd
+**/*.vcd
