@@ -339,7 +339,10 @@ class ChurchCore(Elaboratable):
                 with m.Case(ChurchOpcode.SWITCH):
                     m.d.comb += required_perms.eq(PERM_MASK_L)
                 with m.Case(ChurchOpcode.CHANGE):
-                    m.d.comb += required_perms.eq(PERM_MASK_L)
+                    # Permission check is done inside ChurchChange (change.py):
+                    # CR12/CR13 require S-perm + location match; CR14/CR15 require L-perm.
+                    # M-elevation during boot bypasses both checks.
+                    m.d.comb += required_perms.eq(0)
                 with m.Case(ChurchOpcode.LAMBDA):
                     m.d.comb += required_perms.eq(PERM_MASK_X)
                 with m.Case(ChurchOpcode.ELOADCALL):
@@ -1066,6 +1069,8 @@ class ChurchCore(Elaboratable):
             m.d.comb += [
                 u_change.change_start.eq(change_start_sig),
                 u_change.cr_src.eq(cr_src),
+                u_change.cr_dst.eq(cr_dst),
+                u_change.m_elevated.eq(boot_state_reg != BootState.COMPLETE),
                 u_change.index.eq(cap_index),
                 u_change.change_mask.eq(u_decoder.call_mask),
                 u_change.cr_rd_data.eq(u_regs.cr_rd_data),

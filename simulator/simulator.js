@@ -85,6 +85,20 @@
 // Offset of the caps zone (CR0-CR11 GT home slots) inside a 256-word thread lump
 const THREAD_CAPS_OFFSET = 244;
 
+// ── Church Hardware Address Range (0xFFFFFF00 – 0xFFFFFFFF) ─────────────────
+// Privileged control-register ports and M-bit authority ports.
+// These 32-bit word addresses are used by the CHANGE authority check and by
+// NS capability entries (slots 19-22 in boot_rom.py).
+const CHURCH_HW_RANGE_BASE   = 0xFFFFFF00; // first word of the HW address range
+const CR_PORT_CR12            = 0xFFFFFF0C; // CHANGE CR12 authority port (thread stack)
+const CR_PORT_CR13            = 0xFFFFFF0D; // CHANGE CR13 authority port (interrupt handler)
+const CR_PORT_CR14            = 0xFFFFFF0E; // CHANGE CR14 authority port (code register)
+const CR_PORT_CR15            = 0xFFFFFF0F; // CHANGE CR15 authority port (namespace root)
+const M_BIT_PORT_CR12         = 0xFFFFFF1C; // M-bit authority port for CR12
+const M_BIT_PORT_CR13         = 0xFFFFFF1D; // M-bit authority port for CR13
+const M_BIT_PORT_CR14         = 0xFFFFFF1E; // M-bit authority port for CR14
+const M_BIT_PORT_CR15         = 0xFFFFFF1F; // M-bit authority port for CR15
+
 // Module-scope boot constants — referenced by loadProgram, _bootStep, etc.
 const BOOT_ABSTR_NS_SLOT   = 3;  // NS slot of the Boot Abstraction lump (Boot.Abstr)
 
@@ -2892,6 +2906,22 @@ class ChurchSimulator {
 
         // ── System-wide registers (CR12/CR13): direct privileged write, no save ──
         if (d.crDst === 12 || d.crDst === 13) {
+            // Authority check: source cap must carry S-perm and its location must
+            // match the target CR's port address in the Church Hardware Address Range.
+            // M-elevation during boot (this.mElevation) bypasses this check.
+            if (!this.mElevation) {
+                const srcParsed = this.parseGT(this.cr[d.crSrc].word0);
+                if (!srcParsed.permissions['S']) {
+                    this.fault('PERM_S', `CHANGE CR${d.crDst}: source CR${d.crSrc} lacks S-perm (required for system-wide CR12/CR13 write)`);
+                    return null;
+                }
+                const expectedPort = (d.crDst === 12) ? CR_PORT_CR12 : CR_PORT_CR13;
+                const srcLocation = (this.cr[d.crSrc].word1 >>> 0);
+                if (srcLocation !== (expectedPort >>> 0)) {
+                    this.fault('PERM_S', `CHANGE CR${d.crDst}: source CR${d.crSrc} location 0x${srcLocation.toString(16).padStart(8,'0')} does not match CR${d.crDst} port address 0x${expectedPort.toString(16).padStart(8,'0')}`);
+                    return null;
+                }
+            }
             if (!this._writeCR(d.crDst, gt, entry)) return null;
             const desc = `CHANGE CR${d.crDst} (system-wide; CR12/CR13 unchanged by context switch) <- [CR${d.crSrc}+${targetIdx}]`;
             this.output += desc + '\n';
@@ -2994,6 +3024,16 @@ class ChurchSimulator {
         }
 
         const parsed = this.parseGT(gt);
+
+        // X⊕LSE domain-purity check: a well-formed GT must not combine X with
+        // any of L/S/E.  This mirrors the hardware tperm.py result_perms check
+        // that faults TPERM_RSV when X and (L|S|E) are both present.
+        const perms = parsed.permissions;
+        if (perms['X'] && (perms['L'] || perms['S'] || perms['E'])) {
+            this.fault('TPERM_RSV', `TPERM CR${d.crDst}: malformed GT — X may not combine with L/S/E`);
+            return null;
+        }
+
         const required = presetMasks[presetCode];
         const hasAll = required.every(p => parsed.permissions[p] === 1);
 

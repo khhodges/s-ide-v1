@@ -55,6 +55,63 @@ ENABLE_FUSED_OPS = True
 ENABLE_CHANGE_SWITCH = True
 ENABLE_GC = True
 
+# ---------------------------------------------------------------------------
+# Church Hardware Address Range — 0xFFFFFF00 to 0xFFFFFFFF
+#
+# A unified 256-address region that governs privileged CR register access
+# and I/O device ports through capability-based authority.  Possessing a
+# capability whose address covers a port is the sole authority to access it.
+# ---------------------------------------------------------------------------
+CHURCH_HW_RANGE_BASE = 0xFFFFFF00
+CHURCH_HW_RANGE_END  = 0xFFFFFFFF
+
+# Segment 1 — CR Ports (0xFFFFFF00–0xFFFFFF0F)
+# L-perm → authority to load from that CR.
+# S-perm → authority to CHANGE (store to) that CR.
+CR_PORT_BASE = 0xFFFFFF00
+CR_PORT_CR12 = 0xFFFFFF0C   # thread stack         (system-wide)
+CR_PORT_CR13 = 0xFFFFFF0D   # interrupt handler    (system-wide)
+CR_PORT_CR14 = 0xFFFFFF0E   # code register        (per-thread)
+CR_PORT_CR15 = 0xFFFFFF0F   # namespace root       (per-thread)
+
+# Segment 2 — M Bit Ports (0xFFFFFF10–0xFFFFFF1F)
+# S-perm → authority to set the M bit on a GT installed into that CR.
+M_BIT_PORT_BASE = 0xFFFFFF10
+M_BIT_PORT_CR12 = 0xFFFFFF1C
+M_BIT_PORT_CR13 = 0xFFFFFF1D
+M_BIT_PORT_CR14 = 0xFFFFFF1E
+M_BIT_PORT_CR15 = 0xFFFFFF1F
+
+# Segment 3 — I/O Device Ports (0xFFFFFF20–0xFFFFFFEE)
+# R-perm → read register.  W-perm → write register.
+IO_PORT_BASE            = 0xFFFFFF20
+IO_PORT_UART_TX         = 0xFFFFFF20
+IO_PORT_UART_STATUS     = 0xFFFFFF21
+IO_PORT_UART_RX         = 0xFFFFFF22
+IO_PORT_LED0            = 0xFFFFFF23
+IO_PORT_LED1            = 0xFFFFFF24
+IO_PORT_LED2            = 0xFFFFFF25
+IO_PORT_LED3            = 0xFFFFFF26
+IO_PORT_LED4            = 0xFFFFFF27
+IO_PORT_LED5            = 0xFFFFFF28
+IO_PORT_BUTTON          = 0xFFFFFF29
+IO_PORT_TIMER_TICKS_LO  = 0xFFFFFF2A
+IO_PORT_TIMER_TICKS_HI  = 0xFFFFFF2B
+IO_PORT_TIMER_TOD_EPOCH = 0xFFFFFF2C
+IO_PORT_TIMER_ALARM_CMP = 0xFFFFFF2D
+IO_PORT_TIMER_CTL       = 0xFFFFFF2E
+IO_PORT_DISP_DMA_SRC_LO = 0xFFFFFF2F
+IO_PORT_DISP_DMA_SRC_HI = 0xFFFFFF30
+IO_PORT_DISP_DMA_LEN    = 0xFFFFFF31
+IO_PORT_DISP_DMA_CTL    = 0xFFFFFF32
+IO_PORT_DISP_CMD        = 0xFFFFFF33
+IO_PORT_TOUCH_X         = 0xFFFFFF34
+IO_PORT_TOUCH_Y         = 0xFFFFFF35
+IO_PORT_TOUCH_Z         = 0xFFFFFF36   # pressure
+IO_PORT_TOUCH_STATUS    = 0xFFFFFF37
+IO_PORT_NEXT            = 0xFFFFFF38   # next unallocated I/O port
+
+# Segment 4 — Existing Sentinels (0xFFFFFFEF–0xFFFFFFFF)
 # Reserved hardware sentinel addresses used in word1_location of SWITCH PassKeys.
 # These values occupy the I/O peripheral address space — a range no real RAM
 # lump base address can occupy — ensuring no ambiguity with live capabilities.

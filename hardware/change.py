@@ -23,6 +23,9 @@ class ChurchChange(Elaboratable):
         self.cr_wr_data = Signal(CAP_REG_LAYOUT)
         self.cr_wr_en = Signal()
 
+        self.cr_dst = Signal(4)       # 12/13 = system-wide; 14/15 = per-thread ctx switch
+        self.m_elevated = Signal()    # 1 during boot — bypasses CR12/CR13 authority check
+
         self.cr12_thread = Signal(CAP_REG_LAYOUT)
         self.cr15_namespace = Signal(CAP_REG_LAYOUT)
 
@@ -88,6 +91,16 @@ class ChurchChange(Elaboratable):
         crn_view = View(CAP_REG_LAYOUT, crn_reg_latched)
         crn_gt = View(GT_LAYOUT, crn_view.word0_gt)
         crn_has_l_perm = crn_gt.perms[PERM_L]
+        crn_has_s_perm = crn_gt.perms[PERM_S]
+
+        # Authority check for CHANGE CR12/CR13: source cap location must equal
+        # the corresponding CR port address in the Church Hardware Address Range.
+        cr_port_match = Signal()
+        m.d.comb += cr_port_match.eq(
+            Mux(self.cr_dst == 12,
+                crn_view.word1_location == CR_PORT_CR12,
+                crn_view.word1_location == CR_PORT_CR13)
+        )
 
         cr12_view = View(CAP_REG_LAYOUT, self.cr12_thread)
         cr12_gt = View(GT_LAYOUT, cr12_view.word0_gt)
@@ -177,7 +190,11 @@ class ChurchChange(Elaboratable):
             with m.State("LATCH_CRN"):
                 m.d.sync += crn_reg_latched.eq(self.cr_rd_data)
                 m.d.comb += self.cr_rd_addr.eq(self.cr_src)
-                with m.If(~crn_has_l_perm):
+                with m.If(self.cr_dst <= 13):
+                    # CR12/CR13 system-wide: authority check happens in next state
+                    # (crn_reg_latched will be valid there)
+                    m.next = "CHECK_CR12_AUTH"
+                with m.Elif(~crn_has_l_perm):
                     m.d.sync += [fault_latched.eq(1), fault_type_latched.eq(FaultType.PERM_L)]
                     m.next = "FAULT"
                 with m.Elif(cr12_null):
@@ -185,6 +202,42 @@ class ChurchChange(Elaboratable):
                     m.next = "FAULT"
                 with m.Else():
                     m.next = "SAVE_DR"
+
+            with m.State("CHECK_CR12_AUTH"):
+                # crn_reg_latched is valid here (latched at end of LATCH_CRN).
+                # M-elevated boot path bypasses authority; post-boot requires:
+                #   • source cap carries S-perm
+                #   • source cap location matches the target CR's port address
+                with m.If(self.m_elevated):
+                    m.next = "CR12_CR13_LOAD"
+                with m.Elif(~crn_has_s_perm):
+                    m.d.sync += [fault_latched.eq(1), fault_type_latched.eq(FaultType.PERM_S)]
+                    m.next = "FAULT"
+                with m.Elif(~cr_port_match):
+                    m.d.sync += [fault_latched.eq(1), fault_type_latched.eq(FaultType.PERM_S)]
+                    m.next = "FAULT"
+                with m.Else():
+                    m.next = "CR12_CR13_LOAD"
+
+            with m.State("CR12_CR13_LOAD"):
+                # Load the GT from NS[index] (via source cap authority) directly
+                # into CR12 or CR13 — no per-thread context save/restore.
+                m.d.comb += [
+                    mload_src.eq(self.cr_src),
+                    mload_dst.eq(self.cr_dst),
+                    mload_index.eq(index_latched),
+                ]
+                m.d.sync += mload_start_reg.eq(1)
+                m.d.sync += [mload_done_latched.eq(0), mload_fault_latched.eq(0)]
+                with m.If(u_mload.sub_done):
+                    m.d.sync += mload_done_latched.eq(1)
+                with m.If(u_mload.sub_fault):
+                    m.d.sync += mload_fault_latched.eq(1)
+                    m.d.sync += [fault_latched.eq(1), fault_type_latched.eq(u_mload.sub_fault_type)]
+                with m.If(mload_fault_latched):
+                    m.next = "FAULT"
+                with m.Elif(mload_done_latched):
+                    m.next = "COMPLETE"
 
             with m.State("SAVE_DR"):
                 m.d.comb += self.dr_rd_addr.eq(save_index[:4])

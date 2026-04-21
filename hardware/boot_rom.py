@@ -402,6 +402,21 @@ def _make_ns_entry(gt_type, perms, slot_id, gt_seq, location, alloc_size, cw=0, 
 #             offset 2 = TOD_EPOCH (R/W), offset 3 = ALARM_CMP (R/W),
 #             offset 4 = ALARM_CTL (R/W: [0]=armed, [1]=fired)
 #   Slot 15: Display   — reserved for future display device
+#   Slot 16: SlideRule (E)  — Layer 3 Mathematics (8 methods)
+#   Slot 17: (empty)
+#   Slot 18: Constants (R)  — Layer 3 read-only constants
+#
+# Church Hardware Address Range capability slots:
+# (These caps are restricted to Thread Manager and IRQ Manager C-lists only.)
+#
+#   Slot 19: CR12_PORT_CAP  — 0xFFFFFF0C, S-perm, limit=0
+#             Authority to CHANGE CR12 (thread stack).
+#   Slot 20: CR13_PORT_CAP  — 0xFFFFFF0D, S-perm, limit=0
+#             Authority to CHANGE CR13 (interrupt handler).
+#   Slot 21: CR12_MBIT_CAP  — 0xFFFFFF1C, S-perm, limit=0
+#             Authority to set the M bit on a GT installed into CR12.
+#   Slot 22: CR13_MBIT_CAP  — 0xFFFFFF1D, S-perm, limit=0
+#             Authority to set the M bit on a GT installed into CR13.
 #
 # Physical LED mapping (R bit = bit 0 of each word):
 #   Ti60 F225 (4 LEDs active-HIGH):
@@ -413,6 +428,13 @@ MMIO_LED_SLOT   = 12
 MMIO_UART_SLOT  = 11
 MMIO_BTN_SLOT   = 13
 MMIO_TIMER_SLOT = 14
+
+# Church Hardware Address Range NS slot assignments
+# S-perm caps restricted to Thread Manager and IRQ Manager C-lists only.
+CHURCH_HW_CR12_PORT_SLOT  = 19   # authority to CHANGE CR12  (0xFFFFFF0C, S-perm)
+CHURCH_HW_CR13_PORT_SLOT  = 20   # authority to CHANGE CR13  (0xFFFFFF0D, S-perm)
+CHURCH_HW_CR12_MBIT_SLOT  = 21   # authority for CR12 M-bit  (0xFFFFFF1C, S-perm)
+CHURCH_HW_CR13_MBIT_SLOT  = 22   # authority for CR13 M-bit  (0xFFFFFF1D, S-perm)
 
 MMIO_LED_ADDR   = 0x40000000   # offsets 0–4: LED0–LED4, bits[2:0]={B,G,R}
 MMIO_UART_ADDR  = 0x40000014   # TX=+0, STATUS=+4, RX=+8 bytes → offsets 0,1,2 words
@@ -460,12 +482,24 @@ _SYSTEM_ABSTRACTION_SLOTS = {
     15: ('Display',      PERM_MASK_E),
 }
 
-NS_SLOT_COUNT = 19
+NS_SLOT_COUNT = 23   # expanded to include Church HW Range port authority caps (slots 19-22)
+
+# Church HW Range NS entry metadata: (location, size_in_words, gt_type, perms)
+_CHURCH_HW_ENTRIES = {
+    CHURCH_HW_CR12_PORT_SLOT: (CR_PORT_CR12, 1, GT_TYPE_INFORM, PERM_MASK_S),
+    CHURCH_HW_CR13_PORT_SLOT: (CR_PORT_CR13, 1, GT_TYPE_INFORM, PERM_MASK_S),
+    CHURCH_HW_CR12_MBIT_SLOT: (M_BIT_PORT_CR12, 1, GT_TYPE_INFORM, PERM_MASK_S),
+    CHURCH_HW_CR13_MBIT_SLOT: (M_BIT_PORT_CR13, 1, GT_TYPE_INFORM, PERM_MASK_S),
+}
 
 DEMO_NAMESPACE = []
 for _i in range(NS_SLOT_COUNT):
     if _i in _MMIO_ENTRIES:
         _loc, _sz, _gtype, _perms = _MMIO_ENTRIES[_i]
+        _entry = _make_ns_entry(_gtype, _perms, _i, 0, _loc, _sz,
+                                abstract_gt=_abstract_gt_word(_perms))
+    elif _i in _CHURCH_HW_ENTRIES:
+        _loc, _sz, _gtype, _perms = _CHURCH_HW_ENTRIES[_i]
         _entry = _make_ns_entry(_gtype, _perms, _i, 0, _loc, _sz,
                                 abstract_gt=_abstract_gt_word(_perms))
     elif _i == 0:

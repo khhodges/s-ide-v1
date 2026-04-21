@@ -42,6 +42,29 @@ def _run(scenarios):
     return {r["name"]: r for r in json.loads(proc.stdout.decode())}
 
 
+# Church Hardware Address Range constants (mirrors simulator/simulator.js and hw_types.py).
+# Used to build authority-cap preloads for T8 / T11.
+#
+# GT word layout as decoded by simulator.js parseGT():
+#   bits [15: 0]  slot_id   (index into NS table)
+#   bits [22:16]  gt_seq    (version counter)
+#   bits [24:23]  gt_type   (0b01 = Inform)
+#   bits [31:25]  permBits  ordered: R(0) W(1) X(2) L(3) S(4) E(5) B(6)
+#                           → S is at permBits bit 4 → gt32 bit 29
+#
+# NOTE: The simulator's perm-bit ordering differs from hardware GT_LAYOUT.
+#       Use the simulator ordering here since these constants feed JS tests.
+#
+# Inform-type GT with no perms, slot_id=1 (Boot.Thread), gt_seq=0:
+#   = (0b01 << 23) | 1 = 0x00800001
+#
+# Add S-perm (permBits bit 4 → gt32 bit 29):
+#   = 0x00800001 | (1 << 29) = 0x20800001
+#
+_GT_INFORM_NO_PERM_SLOT1  = 0x00800001   # Inform, slot_id=1, no perms
+_GT_INFORM_S_PERM_SLOT1   = 0x20800001   # Inform, slot_id=1, S-perm only (bit 29)
+_CR_PORT_CR12              = 0xFFFFFF0C   # CHANGE CR12 authority port address
+
 SCENARIOS = [
     # opcode, crDst, crSrc, imm, name
     # T1: LOAD (opcode=0, Church) with crDst=12  → PRIV_REG (crDst fence)
@@ -59,14 +82,26 @@ SCENARIOS = [
     dict(name="T6_DWRITE_crSrc14", opcode=11, crDst=0,  crSrc=14, imm=0),
     # T7: CHANGE (opcode=4) crDst=0 (< 12)       → PRIV_REG from _execChange
     dict(name="T7_CHANGE_crDst0",  opcode=4,  crDst=0,  crSrc=0,  imm=0),
-    # T8: CHANGE (opcode=4) crDst=12, crSrc=12   → success (system-wide, no ctx switch)
-    dict(name="T8_CHANGE_CR12_ok", opcode=4,  crDst=12, crSrc=12, imm=1),
+    # T8: CHANGE (opcode=4) crDst=12, crSrc=0, imm=1
+    #     → success (system-wide, no ctx switch).
+    #     Authority check requires source cap to have S-perm and location=CR_PORT_CR12.
+    #     Preload CR0 with an S-perm Inform GT (slot_id=1, gt_seq=0) and
+    #     word1=0xFFFFFF0C so both authority conditions pass.
+    dict(name="T8_CHANGE_CR12_ok", opcode=4, crDst=12, crSrc=0, imm=1,
+         preloadCaps=[{"cr": 0, "word0": _GT_INFORM_S_PERM_SLOT1,
+                       "word1": _CR_PORT_CR12}]),
     # T9: CHANGE crDst=14 (per-thread context switch) → decode fence passed (no PRIV_REG);
     #     _execChange enters save/restore path.  crSrc=12 (thread stack GT) does not
     #     carry L-perm so PERM_L fires — confirming the save path was reached, not the fence.
     dict(name="T9_CHANGE_CR14_fence_pass", opcode=4, crDst=14, crSrc=12, imm=0),
     # T10: CHANGE crDst=15 (per-thread namespace root) → same: decode fence passed.
     dict(name="T10_CHANGE_CR15_fence_pass", opcode=4, crDst=15, crSrc=12, imm=0),
+    # T11: CHANGE CR12 with no S-perm on source cap → PERM_S fault.
+    #     Preload CR0 with an Inform GT at slot 1 but carrying no permissions.
+    #     The authority check fires (not M-elevated) and rejects the operation.
+    dict(name="T11_CHANGE_CR12_no_authority", opcode=4, crDst=12, crSrc=0, imm=1,
+         preloadCaps=[{"cr": 0, "word0": _GT_INFORM_NO_PERM_SLOT1,
+                       "word1": _CR_PORT_CR12}]),
 ]
 
 
@@ -131,3 +166,10 @@ class TestChangePrivilege:
             f"CHANGE crDst=15 should pass decode fence (no PRIV_REG), got: {r}")
         assert r.get("faultCode") != "PRIV_REG", (
             f"faultCode must not be PRIV_REG; _execChange save path was reached, got: {r}")
+
+    def test_T11_change_CR12_no_authority(self, results):
+        r = results["T11_CHANGE_CR12_no_authority"]
+        assert r.get("faulted"), (
+            f"CHANGE CR12 without S-perm authority should fault, got: {r}")
+        assert r.get("faultCode") == "PERM_S", (
+            f"expected PERM_S fault (S-perm absent), got faultCode={r.get('faultCode')}: {r}")

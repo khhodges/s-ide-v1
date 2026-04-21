@@ -6,7 +6,12 @@
 // full fault string says.
 //
 // Stdin: JSON array of scenario objects, each with:
-//   { "name": "...", "opcode": N, "cond": N, "crDst": N, "crSrc": N, "imm": N }
+//   { "name": "...", "opcode": N, "cond": N, "crDst": N, "crSrc": N, "imm": N,
+//     "preloadCaps": [{ "cr": N, "word0": N, "word1": N }, ...] }
+//
+//   preloadCaps (optional): list of CR slots to overwrite after boot, before
+//   step() is called.  Useful for injecting authority caps (e.g. S-perm with
+//   CR_PORT location) that the boot sequence doesn't install in user CRs.
 //
 // Stdout: JSON array of result objects, each with:
 //   { "name": "...", "faulted": bool, "faultCode": "...", "faultMsg": "..." }
@@ -60,6 +65,17 @@ process.stdin.on('end', () => {
 
         // Write at the physical address the CPU will fetch for PC=0.
         sim.memory[codeBase + 1] = instr >>> 0;
+
+        // Inject authority caps before step() if the scenario requests it.
+        // This lets tests supply S-perm caps with CR_PORT locations without
+        // needing a full privilege-manager boot.
+        if (Array.isArray(sc.preloadCaps)) {
+            for (const cap of sc.preloadCaps) {
+                if (sim.cr[cap.cr] === undefined) sim.cr[cap.cr] = {};
+                sim.cr[cap.cr].word0 = cap.word0 >>> 0;
+                sim.cr[cap.cr].word1 = cap.word1 >>> 0;
+            }
+        }
 
         // Reset PC and clear halted/fault state so step() runs cleanly.
         sim.pc = 0;

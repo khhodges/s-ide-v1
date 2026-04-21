@@ -36,6 +36,17 @@ class ChurchTperm(Elaboratable):
         new_perms = Signal(6)
         is_reserved = Signal()
 
+        # X ⊕ LSE exclusion: a capability may not combine X with L, S, or E.
+        # Computed from new_perms & target_gt.perms (the TPERM result).
+        result_perms = Signal(6)
+        m.d.comb += result_perms.eq(new_perms & target_gt.perms)
+        is_xlse_conflict = Signal()
+        m.d.comb += is_xlse_conflict.eq(
+            result_perms[PERM_X] & (
+                result_perms[PERM_L] | result_perms[PERM_S] | result_perms[PERM_E]
+            )
+        )
+
         with m.Switch(preset_reg):
             with m.Case(TpermPreset.CLEAR):
                 m.d.comb += new_perms.eq(0)
@@ -81,6 +92,10 @@ class ChurchTperm(Elaboratable):
                     m.next = "FAULT"
                 with m.Elif(~can_only_reduce):
                     m.d.sync += [fault_flag.eq(1), fault_latched.eq(FaultType.DOMAIN_PURITY)]
+                    m.next = "FAULT"
+                with m.Elif(is_xlse_conflict):
+                    # X cannot coexist with L, S, or E — Church Hardware Address Range rule
+                    m.d.sync += [fault_flag.eq(1), fault_latched.eq(FaultType.TPERM_RSV)]
                     m.next = "FAULT"
                 with m.Else():
                     m.next = "APPLY"
