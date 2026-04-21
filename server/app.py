@@ -688,13 +688,6 @@ CHURCH_SIM_DIR = os.path.join(BASE_DIR, "church_sim")
 TEST_HARNESS_DIR = os.path.join(BASE_DIR, "test_harness")
 BUSINESS_DIR = os.path.join(DOCS_DIR, "business")
 
-@app.route("/church-sim/")
-def church_sim_index():
-    return send_from_directory(CHURCH_SIM_DIR, "index.html")
-
-@app.route("/church-sim/<path:path>")
-def church_sim_static(path):
-    return send_from_directory(CHURCH_SIM_DIR, path)
 
 
 @app.route("/business/plan.html")
