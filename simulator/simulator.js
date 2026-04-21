@@ -134,6 +134,17 @@ class ChurchSimulator {
         this.MAX_NS_ENTRIES = 256;
         this.SLOT_SIZE = 0x40;   // 64 words — FPGA minimum slot allocation (boot_rom.py line 339)
 
+        // TPERM preset → required-permission array.
+        // Exposed as an instance property so tests can inject non-standard
+        // presets to exercise the X⊕LSE domain-purity fault path.
+        // Null entries are "reserved" presets that set Z=0 and do not modify the cap.
+        this.tpermPresetMasks = [
+            [],                ['R'],           ['R','W'],       ['X'],
+            ['R','X'],         ['R','W','X'],   ['L'],           ['S'],
+            ['E'],             ['L','S'],       ['W'],           null,
+            null,              null,  null,  null,
+        ];
+
         this.abstractionRegistry = null;
         this.systemAbstractions = null;
         this.deviceAbstractions = null;
@@ -2993,13 +3004,7 @@ class ChurchSimulator {
         const gt = this.cr[d.crDst].word0;
         const bSet = (d.imm >>> 4) & 1;
         const presetCode = d.imm & 0xF;
-
-        const presetMasks = [
-            [],                ['R'],           ['R','W'],       ['X'],
-            ['R','X'],         ['R','W','X'],   ['L'],           ['S'],
-            ['E'],             ['L','S'],       ['W'],           null,
-            null,              null,  null,  null,
-        ];
+        const presetMasks = this.tpermPresetMasks;
 
         if (presetMasks[presetCode] === null) {
             this.flags.Z = false;
