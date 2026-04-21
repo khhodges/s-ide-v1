@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Boot Image Builder for RV32-Cap (Sim-32) Simulator
+Boot Image Builder for Capability (Sim-32) Simulator
 
 Constructs a binary memory image containing:
 - Namespace table at base address

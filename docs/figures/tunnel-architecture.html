@@ -112,10 +112,10 @@
   <rect x="70" y="370" width="380" height="30" rx="4" fill="#eaf5ee" stroke="#2ecc71" stroke-width="1"/>
   <text class="cell" x="260" y="385" fill="#2ecc71">Accessed via CAP.LOAD CR0, #7 (R permission)</text>
 
-  <!-- ===== Machine B (Priscilla / RV32-Cap) ===== -->
+  <!-- ===== Machine B (Priscilla / Capability) ===== -->
   <rect x="570" y="45" width="460" height="380" rx="12" fill="#f0e8fa" stroke="#c39bd3" stroke-width="2"/>
   <text class="ph" x="800" y="70" text-anchor="middle" fill="#c39bd3">META MACHINE B (Priscilla)</text>
-  <text class="ls" x="800" y="88" fill="#c39bd3">RV32-Cap &bull; RISC-V base ISA</text>
+  <text class="ls" x="800" y="88" fill="#c39bd3">Capability &bull; RISC-V base ISA</text>
 
   <!-- Thread registers -->
   <rect x="590" y="105" width="200" height="105" rx="6" fill="#f0f0fa" stroke="#3a3a4a" stroke-width="1"/>
@@ -301,7 +301,7 @@
   <text class="lt" x="60" y="1299" fill="#555555" font-size="12">dies instantly — no "revocation list" to distribute, no race condition, no stale reference. One version bump = total kill.</text>
 
   <text class="lt" x="60" y="1325" fill="#c39bd3" font-size="13" font-weight="bold">Cross-architecture transparency:</text>
-  <text class="lt" x="60" y="1343" fill="#555555" font-size="12">Machine A (CTMM, 64-bit) and Machine B (RV32-Cap, 32-bit) use the same capability protocol. The ABI descriptor</text>
+  <text class="lt" x="60" y="1343" fill="#555555" font-size="12">Machine A (CTMM, 64-bit) and Machine B (Capability, 32-bit) use the same capability protocol. The ABI descriptor</text>
   <text class="lt" x="60" y="1359" fill="#555555" font-size="12">in each namespace entry maps registers between architectures. Network cost (~10ms) dwarfs ABI translation (~50ns).</text>
 
 </svg>

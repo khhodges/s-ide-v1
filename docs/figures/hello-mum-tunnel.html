@@ -24,7 +24,7 @@
 <body>
 
 <h1>Figure 14 &mdash; &ldquo;Hello Mum&rdquo; Encrypted Capability Tunnel</h1>
-<p class="subtitle">Kenneth (CTMM Sim-64) calls Priscilla (RV32-Cap Sim-32) with a single Church instruction, 3 Golden Tokens, and 7 Zeroes. Two heterogeneous machines communicate securely with no OS, no VM, no privilege hardware, and no superuser at any layer.</p>
+<p class="subtitle">Kenneth (CTMM Sim-64) calls Priscilla (Capability Sim-32) with a single Church instruction, 3 Golden Tokens, and 7 Zeroes. Two heterogeneous machines communicate securely with no OS, no VM, no privilege hardware, and no superuser at any layer.</p>
 
 <svg viewBox="0 0 1100 1750" xmlns="http://www.w3.org/2000/svg">
   <defs>
@@ -131,9 +131,9 @@
   <text class="code-sm" x="70" y="500" fill="#e74c3c">No OS kernel &bull; No virtual memory &bull; No privilege rings &bull; No superuser</text>
   <text class="code-sm" x="70" y="516" fill="#555555">Only atomic abstractions, namespace entries, mLoad gate, Golden Tokens</text>
 
-  <!-- ===== Machine B: Priscilla / RV32-Cap ===== -->
+  <!-- ===== Machine B: Priscilla / Capability ===== -->
   <rect x="590" y="160" width="480" height="440" rx="14" fill="#f0f5fa" stroke="#2ecc71" stroke-width="2.5"/>
-  <text class="ph" x="830" y="185" text-anchor="middle" fill="#2ecc71">PRISCILLA &mdash; RV32-Cap Sim-32</text>
+  <text class="ph" x="830" y="185" text-anchor="middle" fill="#2ecc71">PRISCILLA &mdash; Capability Sim-32</text>
   <text class="ls" x="830" y="203" fill="#2ecc71">RISC-V RV32I &bull; 32-bit Golden Tokens &bull; x0-x31</text>
 
   <!-- Priscilla's registers -->

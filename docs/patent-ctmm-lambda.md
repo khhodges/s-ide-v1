@@ -639,7 +639,7 @@ CALL(CONNECT(me, mymother))
 
 This single Church instruction uses 3 Golden Tokens and achieves all 7 Zeroes: zero OS, zero VM, zero privilege escalation, zero superuser, zero unauthorized code execution, zero unauthorized data access, zero containment escape. The escalation paths exploited by malware, ransomware, and AI breakout are structurally eliminated — not mitigated by software, but absent from the hardware.
 
-The Hello Mum example is implemented as a bidirectional messaging system ("Hello Mum / Hello Son") between two simulated CTMM machines — Kenneth (CTMM, Sim-64) and Priscilla (RV32-Cap, Sim-32) — demonstrating secure cross-architecture communication through an encrypted capability tunnel with interactive notifications, timestamps, and reply capabilities.
+The Hello Mum example is implemented as a bidirectional messaging system ("Hello Mum / Hello Son") between two simulated CTMM machines — Kenneth (CTMM, Sim-64) and Priscilla (Capability, Sim-32) — demonstrating secure cross-architecture communication through an encrypted capability tunnel with interactive notifications, timestamps, and reply capabilities.
 
 ### 13. Abstraction Nesting and Resource Management
 
@@ -905,4 +905,4 @@ Nested box diagram showing the caller's view (`CALL(Thread.Mint(type, size, acce
 
 ### Figure 14: Hello Mum — Secure Cross-Architecture Communication
 
-Diagram showing Kenneth's CTMM machine (Sim-64) and Priscilla's RV32-Cap machine (Sim-32) connected by an encrypted capability tunnel. Shows the single Church instruction `CALL(CONNECT(me, mymother))`, the 3 Golden Tokens involved, and the 7 Zeroes achieved. Annotated with the absence of OS, VM, privilege hardware, and superuser at every layer.
+Diagram showing Kenneth's CTMM machine (Sim-64) and Priscilla's Capability machine (Sim-32) connected by an encrypted capability tunnel. Shows the single Church instruction `CALL(CONNECT(me, mymother))`, the 3 Golden Tokens involved, and the 7 Zeroes achieved. Annotated with the absence of OS, VM, privilege hardware, and superuser at every layer.

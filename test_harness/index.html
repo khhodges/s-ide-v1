@@ -228,7 +228,7 @@
             <iframe id="ctmm-frame" class="sim-iframe" src="/ctmm/"></iframe>
         </div>
         <div class="sim-panel">
-            <div class="sim-panel-header rv32">Priscilla (RV32-Cap Sim-32) &mdash; "mymother"</div>
+            <div class="sim-panel-header rv32">Priscilla (Capability Sim-32) &mdash; "mymother"</div>
             <iframe id="rv32-frame" class="sim-iframe" src="/rv32/"></iframe>
         </div>
         <div class="log-panel">
@@ -287,7 +287,7 @@
                 seen: false,
                 details: {
                     from: '<b>Kenneth</b> (CTMM Sim-64)',
-                    to: '<b>Priscilla</b> (RV32-Cap Sim-32)',
+                    to: '<b>Priscilla</b> (Capability Sim-32)',
                     items: [
                         { label: 'Instruction', value: 'CALL(CONNECT(me, mymother))' },
                         { label: 'Golden Tokens', value: '3 (Tunnel Key + Service + ABI)' },
@@ -310,7 +310,7 @@
                 timestamp: Date.now(),
                 seen: false,
                 details: {
-                    from: '<b>Priscilla</b> (RV32-Cap Sim-32)',
+                    from: '<b>Priscilla</b> (Capability Sim-32)',
                     to: '<b>Kenneth</b> (CTMM Sim-64)',
                     items: [
                         { label: 'Instruction', value: 'CALL(CONNECT(mymother, son))' },
@@ -354,7 +354,7 @@
             const rv32Notif = checkDelivery('ctmm-tunnel-notification');
             if (rv32Notif && rv32Notif.message === 'Hello Mum') {
                 log('Notification stored in localStorage', 'success');
-                log('RV32-Cap should show badge (check iframe)', 'info');
+                log('Capability should show badge (check iframe)', 'info');
             } else {
                 log('Notification delivery check: stored OK', 'success');
             }

@@ -4512,7 +4512,7 @@ function sendCtmmReply(replyText) {
         seen: false,
         details: {
             from: '<b>Kenneth</b> (CTMM Sim-64)',
-            to: '<b>Priscilla</b> (RV32-Cap Sim-32)',
+            to: '<b>Priscilla</b> (Capability Sim-32)',
             items: [
                 { label: 'Instruction', value: 'CALL(CONNECT(me, mymother))' },
                 { label: 'Golden Tokens', value: '3 (Tunnel Key + Service + ABI)' },
@@ -4675,7 +4675,7 @@ function executeMethodSelector(absName, methodSelector) {
             case 'REGISTER': {
                 const nameCode = dr1;
                 const archCode = dr2;
-                const archName = archCode === 1 ? 'CTMM-64' : archCode === 2 ? 'RV32-Cap' : `arch-${archCode}`;
+                const archName = archCode === 1 ? 'CTMM-64' : archCode === 2 ? 'Capability' : `arch-${archCode}`;
                 const remoteAddr = 0xC7440000 + nameCode;
                 window._familyRegistry[nameCode] = { name: nameCode, arch: archName, archCode: archCode, addr: remoteAddr, bound: false };
                 desc = `REGISTER(name=${nameCode}, arch=${archName}) → registered at 0x${remoteAddr.toString(16).toUpperCase()}, tunnel key pair created`;
@@ -5008,7 +5008,7 @@ function executeEditorInstruction(instr) {
                             seen: false,
                             details: {
                                 from: '<b>Kenneth</b> (CTMM Sim-64)',
-                                to: '<b>Priscilla</b> (RV32-Cap Sim-32)',
+                                to: '<b>Priscilla</b> (Capability Sim-32)',
                                 items: [
                                     { label: 'Instruction', value: 'CALL(CONNECT(me, mymother))' },
                                     { label: 'Golden Tokens', value: '3 (Tunnel Key + Service + ABI)' },
@@ -5023,7 +5023,7 @@ function executeEditorInstruction(instr) {
                         const sendQ = Array.isArray(existingQ) ? existingQ : [];
                         sendQ.push(tunnelNotification);
                         localStorage.setItem('ctmm-tunnel-notification', JSON.stringify(sendQ));
-                        result += '\n  [NOTIFICATION] Sent to Priscilla (RV32-Cap) \u2014 check her Sim-32 page';
+                        result += '\n  [NOTIFICATION] Sent to Priscilla (Capability) \u2014 check her Sim-32 page';
                     } else {
                         resolveCallTarget(callTargetName);
                         const absData = abstractionCLists[callTargetName];
@@ -5129,7 +5129,7 @@ function executeEditorInstruction(instr) {
                 if (isHelloSon) {
                     setTimeout(() => {
                         showTunnelMessage('receive', 'Hello Son', {
-                            from: '<b>Priscilla</b> (RV32-Cap Sim-32)',
+                            from: '<b>Priscilla</b> (Capability Sim-32)',
                             to: '<b>Kenneth</b> (CTMM Sim-64)',
                             items: [
                                 { label: 'Source', value: 'Reverse tunnel from mymother' },
@@ -5478,7 +5478,7 @@ function setupHelloMumNamespace() {
     if (!ensureBooted()) return;
 
     if (!window._familyRegistry) window._familyRegistry = {};
-    window._familyRegistry[1] = { name: 1, arch: 'RV32-Cap', archCode: 2, addr: 0xC7440001, bound: true };
+    window._familyRegistry[1] = { name: 1, arch: 'Capability', archCode: 2, addr: 0xC7440001, bound: true };
 
     const tunnelKey = simulator.createCapability("Tunnel_Key_Mum", ["R"]);
     tunnelKey.type = "Inform";
@@ -5497,7 +5497,7 @@ function setupHelloMumNamespace() {
     abiDescriptor.type = "Inform";
     abiDescriptor.abiMap = {
         src_arch: "CTMM-64", src_regs: "DR0-DR15 (64-bit)",
-        dst_arch: "RV32-Cap", dst_regs: "x0-x31 (32-bit)",
+        dst_arch: "Capability", dst_regs: "x0-x31 (32-bit)",
         arg_map: "DR0→x10, DR1→x11, DR2→x12, DR3→x13, DR4→x14, DR5→x15, DR6→x16, DR7→x17, DR8→x18",
         ret_map: "x10→DR0"
     };
@@ -5521,7 +5521,7 @@ function setupHelloMumNamespace() {
           tooltip: "HMAC-SHA256 tunnel key for encrypted channel to mymother." },
         { name: "Mum_Messaging", type: "Abstraction", perms: ["E"],
           word1_location: 0xC7440001, word2_limit: (1 << 31) | (1 << 30) | 0x200,
-          tooltip: "Outform+Far GT — remote messaging to mymother (RV32-Cap) @ 0xC7440001. F=1 B=1. Address placed by FamilyRegistry at bind time." },
+          tooltip: "Outform+Far GT — remote messaging to mymother (Capability) @ 0xC7440001. F=1 B=1. Address placed by FamilyRegistry at bind time." },
         { name: "ABI_Mum", type: "Abstraction", perms: ["R"],
           word1_location: 0xA400, word2_limit: 0x100,
           tooltip: "ABI descriptor: DR0-DR8 (64-bit) → x10-x18 (32-bit)." },
@@ -5585,13 +5585,13 @@ function setupHelloMumNamespace() {
     log('No DNS. No IP lookup. The capability IS the address.', 'info');
     log('', 'info');
     log('"me" (Kenneth) = CTMM Sim-64 (DR0-DR15, 64-bit)', 'info');
-    log('"mymother" (Priscilla) = RV32-Cap Sim-32 (x0-x31, 32-bit)', 'info');
+    log('"mymother" (Priscilla) = Capability Sim-32 (x0-x31, 32-bit)', 'info');
     log('', 'info');
     log('PART 1: Send "Hello Mum" → mymother (Priscilla)', 'info');
     log('PART 2: Receive "Hello Son" ← mymother (Priscilla)', 'info');
     log('', 'info');
     log('Click Step to trace the bidirectional flow.', 'info');
-    log('Open RV32-Cap Simulator for "mymother" side.', 'info');
+    log('Open Capability Simulator for "mymother" side.', 'info');
     log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
     editorLog('Hello Mum/Son: Namespace ready. Step to send + receive.', 'success');
 }
@@ -8864,7 +8864,7 @@ SAVE CR1, [CR0+1]    ; Save to it</pre>
                 text: `<h3>Two Machines, Two Architectures</h3>
                 <p>The proof-of-concept uses <strong>both simulators</strong> to demonstrate architecture independence:</p>
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 0.5rem 0;">
-                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">Property</th><th>"me" (CTMM Sim-64)</th><th>"mymother" (RV32-Cap Sim-32)</th></tr>
+                    <tr style="background: var(--bg-tertiary);"><th style="padding: 0.3rem;">Property</th><th>"me" (CTMM Sim-64)</th><th>"mymother" (Capability Sim-32)</th></tr>
                     <tr><td>ISA</td><td>ARM-inspired CTMM</td><td>RISC-V RV32I + cap extensions</td></tr>
                     <tr style="background: var(--bg-tertiary);"><td>Data registers</td><td>DR0-DR15 (64-bit)</td><td>x0-x31 (32-bit)</td></tr>
                     <tr><td>Capability regs</td><td>CR0-CR15 (64-bit GTs)</td><td>CR0-CR15 (32-bit GTs)</td></tr>
@@ -9123,7 +9123,7 @@ ADDI 8 109    ; DR8 = 'm' (ASCII 109)</pre>
             },
             {
                 text: `<h3>Step 7: The Other Side (mymother)</h3>
-                <p>On mymother's RV32-Cap machine, the message arrives through the tunnel. The messaging service:</p>
+                <p>On mymother's Capability machine, the message arrives through the tunnel. The messaging service:</p>
                 <ol style="font-size: 0.85rem;">
                     <li><strong>Decrypts</strong> the payload using the matching tunnel key</li>
                     <li><strong>Validates</strong> the payload MAC (HMAC-SHA256)</li>
@@ -9133,11 +9133,11 @@ ADDI 8 109    ; DR8 = 'm' (ASCII 109)</pre>
                 </ol>
                 <p>The service code <strong>never knows</strong> the caller was on a different architecture. It just executed a function and returned results.</p>
                 <div class="highlight">
-                    You can see the mymother side by clicking <strong>"MyMother &rarr;"</strong> in the top bar to open the RV32-Cap Simulator.
+                    You can see the mymother side by clicking <strong>"MyMother &rarr;"</strong> in the top bar to open the Capability Simulator.
                 </div>`,
                 demo: `<div class="demo-title">mymother Receives</div>
                 <div class="demo-content">
-                    <pre style="background: #1e1e2e; padding: 0.6rem; border-radius: 6px; font-size: 0.7rem; color: #e2e8f0;">; mymother's RV32-Cap messaging service
+                    <pre style="background: #1e1e2e; padding: 0.6rem; border-radius: 6px; font-size: 0.7rem; color: #e2e8f0;">; mymother's Capability messaging service
 ; Arguments arrive per ABI descriptor:
 ;   x10='H' x11='e' x12='l' x13='l' x14='o'
 ;   x15=' ' x16='M' x17='u' x18='m'
@@ -9196,7 +9196,7 @@ RETURN                     ; Back through tunnel</pre>
                 <div class="key-concept">
                     <strong>What to observe:</strong> Each LOAD triggers an mLoad validation chain. Each TPERM confirms permissions before proceeding. The CALL instruction detects the Outform type and enters the tunnel path. The entire flow is <strong>one intent, three tokens, seven zeroes</strong>.
                 </div>
-                <p>Then open the <strong>RV32-Cap Simulator</strong> (MyMother link) to see the receiving side.</p>`,
+                <p>Then open the <strong>Capability Simulator</strong> (MyMother link) to see the receiving side.</p>`,
                 interactive: {
                     type: "quiz",
                     question: "How many Golden Tokens does the Hello Mum proof require?",
@@ -16343,7 +16343,7 @@ function showTunnelNotification() {
     if (existing) existing.remove();
 
     const items = (notif.details && notif.details.items) || [];
-    const from = (notif.details && notif.details.from) || '<b>Priscilla</b> (RV32-Cap Sim-32)';
+    const from = (notif.details && notif.details.from) || '<b>Priscilla</b> (Capability Sim-32)';
     const to = (notif.details && notif.details.to) || '<b>Kenneth</b> (CTMM Sim-64)';
     const message = notif.message || 'Hello Son';
 

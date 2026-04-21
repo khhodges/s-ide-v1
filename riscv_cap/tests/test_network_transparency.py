@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Network Transparency Design Validation Tests for RV32-Cap (Sim-32)
+Network Transparency Design Validation Tests for Capability (Sim-32)
 
 Validates the architectural design for CALL(CONNECT(me, mymother)):
   - GT Type field encoding (Inform, Outform, NULL, Abstract)

@@ -142,7 +142,7 @@ function renderPagesDirectory() {
         navCard('/', 'Home', 'landing', ts, 'Landing page with links to all simulators.'),
         navCard('/church/', 'Church Machine', 'Pure Church', tc, '10 opcodes, zero Turing instructions, REPL, pipeline, Bernoulli tutorial.'),
         navCard('/ctmm/', 'CTMM Simulator', 'Sim-64', ts, 'Custom ISA, 64-bit Golden Tokens, namespace browser, assembly editor.'),
-        navCard('/rv32/', 'RV32-Cap Simulator', 'RISC-V', tr, 'RISC-V RV32I with capability security extensions, 32-bit GTs.'),
+        navCard('/rv32/', 'Capability Simulator', 'RISC-V', tr, 'RISC-V RV32I with capability security extensions, 32-bit GTs.'),
     );
     fill('pagesReference',
         card('/church/flowchart.html', 'Microcode Flowchart', 'Church', tc, 'All 20 instructions with memory bus annotations, TSB gates, GC cycle, fault catalog.'),

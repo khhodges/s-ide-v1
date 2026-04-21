@@ -612,7 +612,7 @@ def rv32_index():
     index_path = os.path.join(RISCV_CAP_DIR, "index.html")
     if os.path.isfile(index_path):
         return send_from_directory(RISCV_CAP_DIR, "index.html")
-    return make_response("RV32-Cap simulator not found", 404)
+    return make_response("Capability simulator not found", 404)
 
 @app.route("/rv32/<path:path>")
 def rv32_static(path):

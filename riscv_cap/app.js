@@ -333,7 +333,7 @@ loop:
     ecall                 # halt`,
 
         'access': `# =============================================
-# ACCESS.ASM — LAMBDA TEST HARNESS (RV32-Cap)
+# ACCESS.ASM — LAMBDA TEST HARNESS (Capability)
 # =============================================
 # Purpose: Demonstrates the CAP.LAMBDA instruction
 # applying Church functions to data registers.
@@ -406,7 +406,7 @@ done:
         'hello_mum': `# ================================================
 # HELLO MUM / HELLO SON — Bidirectional Tunnel
 # ================================================
-# Priscilla's machine (RV32-Cap Sim-32) — "mymother"
+# Priscilla's machine (Capability Sim-32) — "mymother"
 #
 # PART 1: Receive "Hello Mum" from Kenneth (CTMM)
 #   Kenneth's CALL(CONNECT(me, mymother)) arrives
@@ -530,7 +530,7 @@ function setupHelloMumNamespace() {
     appendConsole('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     appendConsole('HELLO MUM / HELLO SON — Bidirectional Tunnel');
     appendConsole('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    appendConsole('"mymother" (Priscilla) = RV32-Cap Sim-32');
+    appendConsole('"mymother" (Priscilla) = Capability Sim-32');
     appendConsole('"me" (Kenneth)        = CTMM Sim-64');
     appendConsole('');
     appendConsole('--- BINDING PROVENANCE (FamilyRegistry) ---');
@@ -701,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 timestamp: Date.now(),
                 seen: false,
                 details: {
-                    from: '<b>Priscilla</b> (RV32-Cap Sim-32)',
+                    from: '<b>Priscilla</b> (Capability Sim-32)',
                     to: '<b>Kenneth</b> (CTMM Sim-64)',
                     items: [
                         { label: 'Instruction', value: 'CALL(CONNECT(mymother, son))' },
@@ -999,7 +999,7 @@ function sendHelloSon() {
         timestamp: Date.now(),
         seen: false,
         details: {
-            from: '<b>Priscilla</b> (RV32-Cap Sim-32)',
+            from: '<b>Priscilla</b> (Capability Sim-32)',
             to: '<b>Kenneth</b> (CTMM Sim-64)',
             items: [
                 { label: 'Instruction', value: 'CALL(CONNECT(mymother, son))' },
@@ -1028,7 +1028,7 @@ function sendRv32Reply(replyText) {
         timestamp: Date.now(),
         seen: false,
         details: {
-            from: '<b>Priscilla</b> (RV32-Cap Sim-32)',
+            from: '<b>Priscilla</b> (Capability Sim-32)',
             to: '<b>Kenneth</b> (CTMM Sim-64)',
             items: [
                 { label: 'Instruction', value: 'CALL(CONNECT(mymother, son))' },
@@ -1066,7 +1066,7 @@ function showTunnelNotification() {
         { label: 'ABI Mapping', value: 'DR0-DR5 (64-bit) \u2192 x10-x15 (32-bit)' }
     ];
     const from = (notif.details && notif.details.from) || '<b>Kenneth</b> (CTMM Sim-64)';
-    const to = (notif.details && notif.details.to) || '<b>Priscilla</b> (RV32-Cap Sim-32)';
+    const to = (notif.details && notif.details.to) || '<b>Priscilla</b> (Capability Sim-32)';
     const message = notif.message || 'Hello Mum';
     const safeMessage = escapeTunnelHtml(message);
     const timeStr = formatTunnelTime(notif.timestamp);

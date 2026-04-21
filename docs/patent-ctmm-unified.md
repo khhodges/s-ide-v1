@@ -534,7 +534,7 @@ The architecture is implemented in two hardware description languages:
 
 **SystemVerilog**: Parallel hardware implementation providing the same architectural coverage.
 
-**Sim-32 (RV32-Cap)**: A 32-bit GT system based on RISC-V RV32I with custom Church extensions, implemented as a web simulator demonstrating all architectural features including the dual-gate TSB, B-bit enforcement, and PP250 garbage collection.
+**Sim-32 (Capability)**: A 32-bit GT system based on RISC-V RV32I with custom Church extensions, implemented as a web simulator demonstrating all architectural features including the dual-gate TSB, B-bit enforcement, and PP250 garbage collection.
 
 **Pure Church Machine**: A standalone Church-only 32-bit processor with 10 opcodes (including fused ELOADCALL and XLOADLAMBDA for cycle reduction), implementing ARM-style conditional execution.
 
@@ -552,7 +552,7 @@ A Haskell implementation (~1,000 lines, 6 modules) providing an interactive prog
 
 ### Web Simulators
 
-Three web-based simulators (CTMM Sim-64, RV32-Cap Sim-32, Pure Church Machine) demonstrate all architectural features interactively, including the dual-gate TSB, B-bit enforcement, PP250 garbage collection, LAMBDA execution, and cross-architecture tunnel messaging.
+Three web-based simulators (CTMM Sim-64, Capability Sim-32, Pure Church Machine) demonstrate all architectural features interactively, including the dual-gate TSB, B-bit enforcement, PP250 garbage collection, LAMBDA execution, and cross-architecture tunnel messaging.
 
 ---
 
