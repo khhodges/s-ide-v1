@@ -371,7 +371,7 @@ SlideRule has more than 15 methods, so c-list indexed calls use the **escape con
 
 **Methods**: Add, Sub, Mul, Div, Mod, Abs
 
-64-bit integer arithmetic. Named after the oldest known computing device.
+32-bit integer arithmetic. Named after the oldest known computing device.
 
 ### 18 — Constants
 

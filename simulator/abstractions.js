@@ -250,7 +250,7 @@ class AbstractionRegistry {
 
         this.createAbstraction(17, 'Abacus', 3,
             ['Add', 'Sub', 'Mul', 'Div', 'Mod', 'Abs'],
-            '64-bit integer arithmetic',
+            '32-bit integer arithmetic',
             { perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 }, chainable: true });
 
         this.createAbstraction(18, 'Constants', 3,

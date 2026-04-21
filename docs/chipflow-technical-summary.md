@@ -32,44 +32,49 @@ The Church-Turing Meta-Machine (CTMM) is a capability-based processor architectu
 ## 2. Golden Token Data Structure
 
 ```
-GT_LAYOUT (64 bits):
-  offset [31:0]  — Namespace entry offset (32 bits)
-  spare  [56:32] — Reserved (25 bits)
-  g_bit  [57]    — Garbage collection mark bit (1 bit)
-  perms  [63:58] — Permission field (6 bits)
+GT_LAYOUT (32 bits):
+  slot_id  [15:0]   — 16-bit namespace slot ID
+  gt_seq   [22:16]  — 7-bit version / sequence number
+  gt_type  [24:23]  — 2-bit type: NULL/Inform/Outform/Abstract
+  perms    [30:25]  — 6-bit permissions: B R W X L S E
+  b_flag   [31]     — 1-bit batch flag
 
-Permission Bits:
-  [0] R — Read       (Turing domain)
-  [1] W — Write      (Turing domain)
-  [2] X — Execute    (Turing domain)
-  [3] L — Load       (Church domain)
-  [4] S — Save       (Church domain)
-  [5] E — Enter      (Church domain)
+Permission Bits (perms[30:25]):
+  [25] R — Read       (Turing domain)
+  [26] W — Write      (Turing domain)
+  [27] X — Execute    (Turing domain)
+  [28] L — Load       (Church domain)
+  [29] S — Save       (Church domain)
+  [30] E — Enter      (Church domain)
 
-GT Type Field (2 bits, within spare):
+GT Type Field (gt_type[24:23]):
   00 — NULL     (empty/invalid)
   01 — Inform   (local reference — NS lookup, lump in local memory)
   10 — Outform  (calls the IDE — absent lump, Locator fires on first LOAD)
-  11 — Abstract (calls the abstraction abstraction — self-defining value, e.g., PassKey)
+  11 — Abstract (self-defining value, e.g., PassKey)
+
+Note: The G-bit (garbage collection mark) lives in WORD2_LAYOUT of the
+namespace entry (limit_offset[20:0] | gt_seq[6:0] | g_bit[28] | spare[31:29]),
+NOT in the GT itself.
 ```
 
-**Capability Register (CR) Layout — 4 words, 256 bits:**
+**Capability Register (CR) Layout — 3 words, 96 bits:**
 
 ```
 CAP_REG_LAYOUT:
-  word0_gt        — Golden Token (GT_LAYOUT, 64 bits)
-  word1_location  — Base address in namespace (64 bits)
-  word2_limit     — Size/bounds limit (64 bits)
-  word3_seals     — Version/MAC seals (64 bits)
+  word0_gt        — Golden Token (GT_LAYOUT, 32 bits)
+  word1_location  — Base address / lump pointer (32 bits)
+  word2_w2        — WORD2_LAYOUT: limit_offset[20:0] | gt_seq[6:0] | g_bit | spare[2:0]
 ```
 
-**Namespace Entry — 3 words, 192 bits:**
+**Namespace Entry — 4 words, 128 bits:**
 
 ```
 NS_ENTRY_LAYOUT:
-  word1_location  — Base address (64 bits)
-  word2_limit     — Size limit (64 bits)
-  word3_seals     — Version + MAC (64 bits)
+  word0_location    (+0)  — lump base byte address (32 bits)
+  word1_authority   (+4)  — WORD2_LAYOUT: limit_offset | gt_seq | g_bit | spare
+  word2_integrity   (+8)  — integrity32 check word (32 bits)
+  word3_abstract_gt (+12) — advisory Abstract GT (GT_LAYOUT, 32 bits)
 ```
 
 ---
@@ -145,7 +150,7 @@ All instructions use a **32-bit fixed-width format** with a 4-bit condition code
 |--------|------|------:|--------|-------------|
 | CTMMCore | core.py | 463 | Complete | Top-level integration, state machine, 5-phase boot sequencer |
 | CTMMDecoder | decoder.py | 136 | Complete | 32-bit instruction decode, Church/Turing split, 3-bit CR / 4-bit DR addressing |
-| CTMMRegisters | registers.py | 114 | Complete | CR0-CR15 (256-bit capability, 4×64-bit words) + DR0-DR15 (64-bit data) + NZCV flags. Note: Sim-32 (Tang Nano 20K) uses 128-bit CRs (4×32-bit words). |
+| CTMMRegisters | registers.py | 114 | Complete | CR0-CR15 (96-bit capability, 3×32-bit words: GT + location + W2) + DR0-DR15 (32-bit data) + NZCV flags. |
 | CTMMPermCheck | perm_check.py | 96 | Complete | 6-bit permission validation (R/W/X/L/S/E) |
 | CTMMMLoad | mload.py | 217 | Complete | The Golden Rule gate — permission, bounds, G-bit reset, thread shadow |
 | CTMMMSave | msave.py | 90 | Complete | Namespace write path with permission check |
@@ -191,25 +196,25 @@ imem_addr      : Signal(32)    # out — instruction address (NIA)
 imem_data      : Signal(32)    # in  — 32-bit instruction word
 imem_valid     : Signal(1)     # in  — instruction data valid
 
-# Namespace Memory (read/write, 192-bit entries)
+# Namespace Memory (read/write, 128-bit entries)
 ns_addr        : Signal(32)    # out — namespace entry address
 ns_rd_en       : Signal(1)     # out — read enable
-ns_rd_data     : Signal(192)   # in  — namespace entry (3 x 64-bit words)
-ns_wr_data     : Signal(192)   # out — write data
+ns_rd_data     : Signal(128)   # in  — namespace entry (4 x 32-bit words)
+ns_wr_data     : Signal(128)   # out — write data
 ns_wr_en       : Signal(1)     # out — write enable
 
-# C-List Memory (read/write, 64-bit GTs)
+# C-List Memory (read/write, 32-bit GTs)
 clist_addr     : Signal(32)    # out — C-List entry address
 clist_rd_en    : Signal(1)     # out — read enable
-clist_rd_data  : Signal(64)    # in  — Golden Token data
-clist_wr_data  : Signal(64)    # out — write data
+clist_rd_data  : Signal(32)    # in  — Golden Token data
+clist_wr_data  : Signal(32)    # out — write data
 clist_wr_en    : Signal(1)     # out — write enable
 
-# Data Memory (read/write, 64-bit)
+# Data Memory (read/write, 32-bit)
 dmem_addr      : Signal(32)    # out — data address
 dmem_rd_en     : Signal(1)     # out — read enable
-dmem_rd_data   : Signal(64)    # in  — read data
-dmem_wr_data   : Signal(64)    # out — write data
+dmem_rd_data   : Signal(32)    # in  — read data
+dmem_wr_data   : Signal(32)    # out — write data
 dmem_wr_en     : Signal(1)     # out — write enable
 
 # Boot Control
@@ -500,9 +505,9 @@ ctmm_amaranth/
 
 ## 11. Key Design Decisions
 
-1. **64-bit Golden Tokens** — Large enough for 32-bit namespace offsets + 6-bit permissions + G-bit + type field + spare bits. Fits cleanly in a single memory word.
+1. **32-bit Golden Tokens** — Compact enough to fit in a single 32-bit memory word: 16-bit slot ID + 7-bit sequence + 2-bit type + 6-bit permissions + 1-bit batch flag = 32 bits. The G-bit lives in the namespace entry's WORD2_LAYOUT, keeping the GT immutable during GC.
 
-2. **256-bit Capability Registers** — 4-word structure (GT + location + limit + seals) gives hardware everything needed for validation without additional memory fetches.
+2. **96-bit Capability Registers** — 3-word structure (GT + location + W2) gives hardware everything needed for validation without additional memory fetches.
 
 3. **Separate CR and DR register files** — Hardware-enforced domain separation. No instruction can move data between CR and DR files except through mLoad.
 
