@@ -15607,7 +15607,7 @@ const WELCOME_SLIDES = [
         `The Church-Turing Meta-Machine (CTMM) is a <strong>32-bit clean-start architecture</strong> devised by Kenneth J Hamer-Hodges, FIEE. ` +
         `It replaces the legacy von Neumann model with hardware-enforced Church instructions &mdash; ` +
         `every capability access goes through an unforgeable Golden Token.</p>` +
-        `<div style="font-weight:600;color:var(--church-gold);font-size:0.88rem;margin-bottom:0.45rem;">The 10 Church Instructions</div>` +
+        `<div style="font-weight:600;color:var(--church-gold);font-size:0.88rem;margin-bottom:0.45rem;">The 11 Church Instructions</div>` +
         `<table style="width:100%;border-collapse:collapse;font-size:0.8rem;line-height:1.5;">` +
         `<thead><tr>` +
         `<th style="text-align:left;padding:0.25rem 0.5rem;border-bottom:1px solid rgba(218,165,32,0.3);color:var(--church-gold);font-weight:600;">Instruction</th>` +
@@ -15621,8 +15621,9 @@ const WELCOME_SLIDES = [
         `<tr style="background:rgba(255,255,255,0.03);"><td style="padding:0.2rem 0.5rem;font-family:monospace;color:#ddd;white-space:nowrap;">STM</td><td style="padding:0.2rem 0.5rem;color:#bbb;">Store Multiple &mdash; write several Context Registers to consecutive C-List entries</td></tr>` +
         `<tr><td style="padding:0.2rem 0.5rem;font-family:monospace;color:#ddd;white-space:nowrap;">CALL</td><td style="padding:0.2rem 0.5rem;color:#bbb;">Enter an abstraction &mdash; push return state and switch capability context</td></tr>` +
         `<tr style="background:rgba(255,255,255,0.03);"><td style="padding:0.2rem 0.5rem;font-family:monospace;color:#ddd;white-space:nowrap;">RETURN</td><td style="padding:0.2rem 0.5rem;color:#bbb;">Leave an abstraction &mdash; pop return state and restore caller&rsquo;s context</td></tr>` +
-        `<tr><td style="padding:0.2rem 0.5rem;font-family:monospace;color:#ddd;white-space:nowrap;">CHANGE</td><td style="padding:0.2rem 0.5rem;color:#bbb;">Create a new thread Golden Token and load it into the Thread register (CR8)</td></tr>` +
-        `<tr style="background:rgba(255,255,255,0.03);"><td style="padding:0.2rem 0.5rem;font-family:monospace;color:#ddd;white-space:nowrap;">SWITCH</td><td style="padding:0.2rem 0.5rem;color:#bbb;">Load a capability into any system register (Thread, Interrupt, Fault, or Namespace)</td></tr>` +
+        `<tr><td style="padding:0.2rem 0.5rem;font-family:monospace;color:#ddd;white-space:nowrap;">CHANGE</td><td style="padding:0.2rem 0.5rem;color:#bbb;">Privileged register write &mdash; install a Golden Token into CR12&ndash;CR15; CR14/CR15 trigger a full per-thread context switch</td></tr>` +
+        `<tr style="background:rgba(255,255,255,0.03);"><td style="padding:0.2rem 0.5rem;font-family:monospace;color:#ddd;white-space:nowrap;">SWITCH</td><td style="padding:0.2rem 0.5rem;color:#bbb;">Switch namespace &mdash; atomically reload CR15 with a new namespace root for domain isolation</td></tr>` +
+        `<tr><td style="padding:0.2rem 0.5rem;font-family:monospace;color:#ddd;white-space:nowrap;">TPERM</td><td style="padding:0.2rem 0.5rem;color:#bbb;">Test GT permissions and bounds &mdash; verify a Golden Token carries required permission bits before use (sets Z flag)</td></tr>` +
         `</tbody></table>`
     },
     {
