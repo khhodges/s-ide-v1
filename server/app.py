@@ -644,6 +644,19 @@ def ctmm_static(path):
 def docs_figures(path):
     return send_from_directory(os.path.join(DOCS_DIR, "figures"), path)
 
+@app.route("/docs/<path:filename>")
+def docs_raw(filename):
+    if '..' in filename or filename.startswith('/'):
+        return make_response("Invalid path", 400)
+    if not filename.endswith('.md'):
+        return make_response("Only markdown files allowed", 400)
+    filepath = os.path.realpath(os.path.join(DOCS_DIR, filename))
+    if not filepath.startswith(os.path.realpath(DOCS_DIR)):
+        return make_response("Invalid path", 400)
+    if not os.path.isfile(filepath):
+        return make_response("Not found", 404)
+    return send_from_directory(DOCS_DIR, filename, mimetype="text/plain")
+
 PATENTS_DIR = os.path.join(DOCS_DIR, "patents")
 SIX_LAWS_DIR = os.path.join(DOCS_DIR, "six-laws")
 

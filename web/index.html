@@ -21,7 +21,7 @@
                     <button onclick="switchView('capabilities')" class="btn btn-view tooltip-bottom" id="viewBtn-capabilities" data-tooltip="Explore Golden Tokens">Capabilities</button>
                     <button onclick="switchView('abstractionZoom')" class="btn btn-view tooltip-bottom" id="viewBtn-abstractionZoom" data-tooltip="Zoom into an abstraction — view its C-List and active CR6 entries">Zoom</button>
                     <button onclick="switchView('hp35calc')" class="btn btn-view tooltip-bottom" id="viewBtn-hp35calc" data-tooltip="HP-35 Scientific Calculator — pure lambda calculus RPN engine">HP-35</button>
-                    <button onclick="switchView('instructions')" class="btn btn-view tooltip-bottom" id="viewBtn-instructions" data-tooltip="View Church and Turing instruction sets">Instructions</button>
+                    <button onclick="switchView('instructions')" class="btn btn-view tooltip-bottom" id="viewBtn-instructions" data-tooltip="Hardware instruction set reference">ISA Ref</button>
                     <button onclick="switchView('tutorial')" class="btn btn-view tooltip-bottom" id="viewBtn-tutorial" data-tooltip="Learn CTMM concepts">Tutorial</button>
                     <button onclick="switchView('code')" class="btn btn-view tooltip-bottom" id="viewBtn-code" data-tooltip="Browse simulator source code">Code</button>
                 </div>
@@ -669,30 +669,13 @@ RETURN                  ; Result: 7 on display</pre>
         </section>
 
         <section id="instructions" class="view">
-            <div class="instructions-layout">
-                <div class="instr-header">
-                    <h2>Instructions</h2>
-                    <div class="instr-tabs">
-                        <button class="instr-tab active" id="tabChurch" onclick="switchInstrTab('church')" data-tooltip="Church capability instructions for secure object access">Church</button>
-                        <button class="instr-tab" id="tabTuring" onclick="switchInstrTab('turing')" data-tooltip="Turing ARM-style instructions for computation">Turing</button>
-                        <button class="instr-tab" id="tabTiming" onclick="switchInstrTab('timing')" data-tooltip="Instruction cycle counts and timing estimates">Timing</button>
-                        <button class="instr-tab" id="tabGtTypes" onclick="switchInstrTab('gtTypes')" data-tooltip="Golden Token types and programmable method-selector security">GT Types</button>
-                    </div>
+            <div class="code-viewer-layout" style="height:100%;display:flex;flex-direction:column;">
+                <div class="code-viewer-header" style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 1rem;border-bottom:1px solid var(--border);">
+                    <span style="font-family:'SF Mono','Fira Code',monospace;font-size:0.8rem;color:var(--text-muted);">docs/instruction-set.md</span>
+                    <a href="/docs/instruction-set.md" target="_blank" style="margin-left:auto;font-size:0.75rem;color:var(--link);text-decoration:none;" title="Open raw doc">&#8599; raw</a>
                 </div>
-                
-                <div class="instr-content" id="instrContent">
-                    <div class="instr-panel" id="instrChurch">
-                        <div class="instr-grid" id="churchInstrGrid"></div>
-                    </div>
-                    <div class="instr-panel hidden" id="instrTuring">
-                        <div class="instr-grid" id="turingInstrGrid"></div>
-                    </div>
-                    <div class="instr-panel hidden" id="instrTiming">
-                        <div id="timingContent"></div>
-                    </div>
-                    <div class="instr-panel hidden" id="instrGtTypes">
-                        <div id="gtTypesContent"></div>
-                    </div>
+                <div id="hwInstrContent" class="code-viewer-content markdown-body" style="flex:1;overflow:auto;padding:1.25rem 1.5rem;">
+                    <p style="color:var(--text-muted);">Loading hardware reference…</p>
                 </div>
             </div>
         </section>

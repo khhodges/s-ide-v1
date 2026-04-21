@@ -16727,4 +16727,18 @@ document.addEventListener('DOMContentLoaded', () => {
     loadLandingContent();
     checkRv32TunnelNotifications();
     setInterval(checkRv32TunnelNotifications, 2000);
+    loadHwInstrReference();
 });
+
+async function loadHwInstrReference() {
+    const el = document.getElementById('hwInstrContent');
+    if (!el) return;
+    try {
+        const r = await fetch('/docs/instruction-set.md?t=' + Date.now());
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const md = await r.text();
+        el.innerHTML = '<div class="markdown-body">' + renderMarkdown(md) + '</div>';
+    } catch (err) {
+        el.innerHTML = '<p style="color:var(--danger);">Could not load hardware reference: ' + err.message + '</p>';
+    }
+}
