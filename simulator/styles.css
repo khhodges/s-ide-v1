@@ -1945,6 +1945,27 @@ a.next-step-link:hover {
 .ns-label { color: var(--church-blue); font-style: italic; font-weight: 400; cursor: default; }
 .ns-label-col { font-style: italic; }
 .ns-flag { text-align: center; color: var(--church-gold); font-weight: 600; }
+.ns-idx-cell { text-align: center; }
+.ns-boot-btn {
+    display: inline-block;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    min-width: 1.6rem;
+    text-align: center;
+    border-radius: 3px;
+    padding: 1px 4px;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.ns-boot-btn:hover { color: #fbbf24; background: rgba(251,191,36,0.12); }
+.ns-boot-btn.boot-entry-active {
+    color: #fbbf24;
+    font-size: 0.9rem;
+    background: rgba(251,191,36,0.18);
+    box-shadow: 0 0 6px rgba(251,191,36,0.4);
+}
 
 .ns-entry-tooltip {
     display: none;
