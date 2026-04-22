@@ -12538,25 +12538,25 @@ module \top.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data, cr_
   wire [31:0] \cr7.word3_seals ;
   (* init = 128'h00000000000000000000000000000000 *)
   (* src = "/home/runner/workspace/hardware/registers.py:37" *)
-  wire [127:0] cr7_cloomc;
+  wire [127:0] cr14_cloomc;
   (* src = "/home/runner/workspace/hardware/registers.py:37" *)
-  wire [31:0] \cr7_cloomc.word0_gt ;
+  wire [31:0] \cr14_cloomc.word0_gt ;
   (* src = "/home/runner/workspace/hardware/registers.py:37" *)
-  wire \cr7_cloomc.word0_gt.b_flag ;
+  wire \cr14_cloomc.word0_gt.b_flag ;
   (* src = "/home/runner/workspace/hardware/registers.py:37" *)
-  wire [6:0] \cr7_cloomc.word0_gt.gt_seq ;
+  wire [6:0] \cr14_cloomc.word0_gt.gt_seq ;
   (* src = "/home/runner/workspace/hardware/registers.py:37" *)
-  wire [1:0] \cr7_cloomc.word0_gt.gt_type ;
+  wire [1:0] \cr14_cloomc.word0_gt.gt_type ;
   (* src = "/home/runner/workspace/hardware/registers.py:37" *)
-  wire [5:0] \cr7_cloomc.word0_gt.perms ;
+  wire [5:0] \cr14_cloomc.word0_gt.perms ;
   (* src = "/home/runner/workspace/hardware/registers.py:37" *)
-  wire [15:0] \cr7_cloomc.word0_gt.slot_id ;
+  wire [15:0] \cr14_cloomc.word0_gt.slot_id ;
   (* src = "/home/runner/workspace/hardware/registers.py:37" *)
-  wire [31:0] \cr7_cloomc.word1_location ;
+  wire [31:0] \cr14_cloomc.word1_location ;
   (* src = "/home/runner/workspace/hardware/registers.py:37" *)
-  wire [31:0] \cr7_cloomc.word2_limit ;
+  wire [31:0] \cr14_cloomc.word2_limit ;
   (* src = "/home/runner/workspace/hardware/registers.py:37" *)
-  wire [31:0] \cr7_cloomc.word3_seals ;
+  wire [31:0] \cr14_cloomc.word3_seals ;
   (* src = "/home/runner/workspace/hardware/registers.py:41" *)
   input [31:0] cr7_gt_wr_data;
   wire [31:0] cr7_gt_wr_data;
@@ -13710,7 +13710,7 @@ module \top.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data, cr_
   assign cr_word_rd_sel = 2'h0;
   assign cr_word_rd_addr = 4'h0;
   assign cr6_clist = cr6;
-  assign cr7_cloomc = cr7;
+  assign cr14_cloomc = cr14;
   assign cr8_thread = cr8;
   assign cr15_namespace = cr15;
   assign dr_rd_addr1 = 4'h0;
@@ -13887,15 +13887,15 @@ module \top.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data, cr_
   assign \cr6_clist.word1_location  = cr6[63:32];
   assign \cr6_clist.word2_limit  = cr6[95:64];
   assign \cr6_clist.word3_seals  = cr6[127:96];
-  assign \cr7_cloomc.word0_gt  = cr7[31:0];
-  assign \cr7_cloomc.word0_gt.slot_id  = cr7[15:0];
-  assign \cr7_cloomc.word0_gt.gt_seq  = cr7[22:16];
-  assign \cr7_cloomc.word0_gt.gt_type  = cr7[24:23];
-  assign \cr7_cloomc.word0_gt.perms  = cr7[30:25];
-  assign \cr7_cloomc.word0_gt.b_flag  = cr7[31];
-  assign \cr7_cloomc.word1_location  = cr7[63:32];
-  assign \cr7_cloomc.word2_limit  = cr7[95:64];
-  assign \cr7_cloomc.word3_seals  = cr7[127:96];
+  assign \cr14_cloomc.word0_gt  = cr14[31:0];
+  assign \cr14_cloomc.word0_gt.slot_id  = cr14[15:0];
+  assign \cr14_cloomc.word0_gt.gt_seq  = cr14[22:16];
+  assign \cr14_cloomc.word0_gt.gt_type  = cr14[24:23];
+  assign \cr14_cloomc.word0_gt.perms  = cr14[30:25];
+  assign \cr14_cloomc.word0_gt.b_flag  = cr14[31];
+  assign \cr14_cloomc.word1_location  = cr14[63:32];
+  assign \cr14_cloomc.word2_limit  = cr14[95:64];
+  assign \cr14_cloomc.word3_seals  = cr14[127:96];
   assign \cr8_thread.word0_gt  = cr8[31:0];
   assign \cr8_thread.word0_gt.slot_id  = cr8[15:0];
   assign \cr8_thread.word0_gt.gt_seq  = cr8[22:16];

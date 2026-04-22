@@ -7034,23 +7034,23 @@ module \top.core.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data
   wire [31:0] \cr7.word3_seals ;
   (* init = 128'h00000000000000000000000000000000 *)
   (* src = "/home/runner/workspace/church_machine/registers.py:37" *)
-  wire [127:0] cr7_cloomc;
+  wire [127:0] cr14_cloomc;
   (* src = "/home/runner/workspace/church_machine/registers.py:37" *)
-  wire [31:0] \cr7_cloomc.word0_gt ;
+  wire [31:0] \cr14_cloomc.word0_gt ;
   (* src = "/home/runner/workspace/church_machine/registers.py:37" *)
-  wire [1:0] \cr7_cloomc.word0_gt.gt_type ;
+  wire [1:0] \cr14_cloomc.word0_gt.gt_type ;
   (* src = "/home/runner/workspace/church_machine/registers.py:37" *)
-  wire [16:0] \cr7_cloomc.word0_gt.index ;
+  wire [16:0] \cr14_cloomc.word0_gt.index ;
   (* src = "/home/runner/workspace/church_machine/registers.py:37" *)
-  wire [5:0] \cr7_cloomc.word0_gt.perms ;
+  wire [5:0] \cr14_cloomc.word0_gt.perms ;
   (* src = "/home/runner/workspace/church_machine/registers.py:37" *)
-  wire [6:0] \cr7_cloomc.word0_gt.version ;
+  wire [6:0] \cr14_cloomc.word0_gt.version ;
   (* src = "/home/runner/workspace/church_machine/registers.py:37" *)
-  wire [31:0] \cr7_cloomc.word1_location ;
+  wire [31:0] \cr14_cloomc.word1_location ;
   (* src = "/home/runner/workspace/church_machine/registers.py:37" *)
-  wire [31:0] \cr7_cloomc.word2_limit ;
+  wire [31:0] \cr14_cloomc.word2_limit ;
   (* src = "/home/runner/workspace/church_machine/registers.py:37" *)
-  wire [31:0] \cr7_cloomc.word3_seals ;
+  wire [31:0] \cr14_cloomc.word3_seals ;
   (* src = "/home/runner/workspace/church_machine/registers.py:41" *)
   input [31:0] cr7_gt_wr_data;
   wire [31:0] cr7_gt_wr_data;
@@ -8006,7 +8006,7 @@ module \top.core.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data
   assign cr_word_rd_sel = 2'h0;
   assign cr_word_rd_addr = 4'h0;
   assign cr6_clist = cr6;
-  assign cr7_cloomc = cr7;
+  assign cr14_cloomc = cr14;
   assign cr8_thread = cr8;
   assign cr15_namespace = cr15;
   assign dr_rd_addr1 = 4'h0;
@@ -8165,14 +8165,14 @@ module \top.core.u_registers (rst, clear_all, cr_rd_addr, cr_wr_addr, cr_wr_data
   assign \cr6_clist.word1_location  = cr6[63:32];
   assign \cr6_clist.word2_limit  = cr6[95:64];
   assign \cr6_clist.word3_seals  = cr6[127:96];
-  assign \cr7_cloomc.word0_gt  = cr7[31:0];
-  assign \cr7_cloomc.word0_gt.gt_type  = cr7[1:0];
-  assign \cr7_cloomc.word0_gt.perms  = cr7[7:2];
-  assign \cr7_cloomc.word0_gt.index  = cr7[24:8];
-  assign \cr7_cloomc.word0_gt.version  = cr7[31:25];
-  assign \cr7_cloomc.word1_location  = cr7[63:32];
-  assign \cr7_cloomc.word2_limit  = cr7[95:64];
-  assign \cr7_cloomc.word3_seals  = cr7[127:96];
+  assign \cr14_cloomc.word0_gt  = cr14[31:0];
+  assign \cr14_cloomc.word0_gt.gt_type  = cr14[1:0];
+  assign \cr14_cloomc.word0_gt.perms  = cr14[7:2];
+  assign \cr14_cloomc.word0_gt.index  = cr14[24:8];
+  assign \cr14_cloomc.word0_gt.version  = cr14[31:25];
+  assign \cr14_cloomc.word1_location  = cr14[63:32];
+  assign \cr14_cloomc.word2_limit  = cr14[95:64];
+  assign \cr14_cloomc.word3_seals  = cr14[127:96];
   assign \cr8_thread.word0_gt  = cr8[31:0];
   assign \cr8_thread.word0_gt.gt_type  = cr8[1:0];
   assign \cr8_thread.word0_gt.perms  = cr8[7:2];

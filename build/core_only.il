@@ -5490,7 +5490,7 @@ module \top.u_registers
 
   attribute \src "/home/runner/workspace/church_machine/registers.py:37"
   attribute \init 128'00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-  wire width 128 \cr7_cloomc
+  wire width 128 \cr14_cloomc
 
   attribute \src "/home/runner/workspace/church_machine/registers.py:38"
   attribute \init 128'00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -6182,28 +6182,28 @@ module \top.u_registers
   wire width 32 \cr6_clist.word3_seals
 
   attribute \src "/home/runner/workspace/church_machine/registers.py:37"
-  wire width 32 \cr7_cloomc.word0_gt
+  wire width 32 \cr14_cloomc.word0_gt
 
   attribute \src "/home/runner/workspace/church_machine/registers.py:37"
-  wire width 2 \cr7_cloomc.word0_gt.gt_type
+  wire width 2 \cr14_cloomc.word0_gt.gt_type
 
   attribute \src "/home/runner/workspace/church_machine/registers.py:37"
-  wire width 6 \cr7_cloomc.word0_gt.perms
+  wire width 6 \cr14_cloomc.word0_gt.perms
 
   attribute \src "/home/runner/workspace/church_machine/registers.py:37"
-  wire width 17 \cr7_cloomc.word0_gt.index
+  wire width 17 \cr14_cloomc.word0_gt.index
 
   attribute \src "/home/runner/workspace/church_machine/registers.py:37"
-  wire width 7 \cr7_cloomc.word0_gt.version
+  wire width 7 \cr14_cloomc.word0_gt.version
 
   attribute \src "/home/runner/workspace/church_machine/registers.py:37"
-  wire width 32 \cr7_cloomc.word1_location
+  wire width 32 \cr14_cloomc.word1_location
 
   attribute \src "/home/runner/workspace/church_machine/registers.py:37"
-  wire width 32 \cr7_cloomc.word2_limit
+  wire width 32 \cr14_cloomc.word2_limit
 
   attribute \src "/home/runner/workspace/church_machine/registers.py:37"
-  wire width 32 \cr7_cloomc.word3_seals
+  wire width 32 \cr14_cloomc.word3_seals
 
   attribute \src "/home/runner/workspace/church_machine/registers.py:38"
   wire width 32 \cr8_thread.word0_gt
@@ -9117,7 +9117,7 @@ module \top.u_registers
 connect \cr_word_rd_sel 2'00
 connect \cr_word_rd_addr 4'0000
 connect \cr6_clist \cr6 [127:0]
-connect \cr7_cloomc \cr7 [127:0]
+connect \cr14_cloomc \cr14 [127:0]
 connect \cr8_thread \cr8 [127:0]
 connect \cr15_namespace \cr15 [127:0]
 connect \dr_rd_addr1 4'0000
@@ -9276,14 +9276,14 @@ connect \cr6_clist.word0_gt.version \cr6 [31:25]
 connect \cr6_clist.word1_location \cr6 [63:32]
 connect \cr6_clist.word2_limit \cr6 [95:64]
 connect \cr6_clist.word3_seals \cr6 [127:96]
-connect \cr7_cloomc.word0_gt \cr7 [31:0]
-connect \cr7_cloomc.word0_gt.gt_type \cr7 [1:0]
-connect \cr7_cloomc.word0_gt.perms \cr7 [7:2]
-connect \cr7_cloomc.word0_gt.index \cr7 [24:8]
-connect \cr7_cloomc.word0_gt.version \cr7 [31:25]
-connect \cr7_cloomc.word1_location \cr7 [63:32]
-connect \cr7_cloomc.word2_limit \cr7 [95:64]
-connect \cr7_cloomc.word3_seals \cr7 [127:96]
+connect \cr14_cloomc.word0_gt \cr14 [31:0]
+connect \cr14_cloomc.word0_gt.gt_type \cr14 [1:0]
+connect \cr14_cloomc.word0_gt.perms \cr14 [7:2]
+connect \cr14_cloomc.word0_gt.index \cr14 [24:8]
+connect \cr14_cloomc.word0_gt.version \cr14 [31:25]
+connect \cr14_cloomc.word1_location \cr14 [63:32]
+connect \cr14_cloomc.word2_limit \cr14 [95:64]
+connect \cr14_cloomc.word3_seals \cr14 [127:96]
 connect \cr8_thread.word0_gt \cr8 [31:0]
 connect \cr8_thread.word0_gt.gt_type \cr8 [1:0]
 connect \cr8_thread.word0_gt.perms \cr8 [7:2]
