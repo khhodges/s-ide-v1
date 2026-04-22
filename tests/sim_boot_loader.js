@@ -111,7 +111,11 @@ process.stdin.on('end', () => {
             nsIndex: e.nsIndex != null ? e.nsIndex : null,
             result: e.result,
             checks: e.checks || null,
+            bootStepName: e.bootStepName || null,
         })),
+        pipelineOutput: typeof sim._auditPipeline === 'function'
+            ? sim._auditPipeline()
+            : [],
     };
     process.stdout.write(JSON.stringify(status));
 });

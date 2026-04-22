@@ -1125,7 +1125,7 @@ class ChurchSimulator {
                 const _GT_TYPE_NAMES_B3   = ['NULL', 'Inform', 'Outform', 'Abstract'];
                 const _b3ActualNSTypeName = _GT_TYPE_NAMES_B3[_b3ActualNSType & 3] || 'Unknown';
                 const _b3NSTypePass       = _b3ActualNSType === 1;
-                this._auditNSType(this.bootEntrySlot, _b3Label, _b3ActualNSType, _b3ActualNSTypeName);
+                this._auditNSType(this.bootEntrySlot, _b3Label, _b3ActualNSType, _b3ActualNSTypeName, 'INIT_ABSTR');
                 if (!_b3NSTypePass) {
                     this.fault('TYPE', `INIT_ABSTR: ${_b3Label} type is ${_b3ActualNSTypeName}, must be Inform`);
                     return false;
@@ -1166,7 +1166,7 @@ class ChurchSimulator {
                 const _GT_TYPE_NAMES    = ['NULL', 'Inform', 'Outform', 'Abstract'];
                 const _actualNSTypeName = _GT_TYPE_NAMES[_actualNSType & 3] || 'Unknown';
                 const _nsTypePass = _actualNSType === 1;
-                this._auditNSType(this.bootEntrySlot, _b4Label, _actualNSType, _actualNSTypeName);
+                this._auditNSType(this.bootEntrySlot, _b4Label, _actualNSType, _actualNSTypeName, 'LOAD_NUC');
                 if (!_nsTypePass) {                                                                         // must be Inform (type=1)
                     this.fault('TYPE', `LOAD_NUC: ${_b4Label} type is ${_actualNSTypeName}, must be Inform`);
                     return false;
@@ -3740,7 +3740,8 @@ class ChurchSimulator {
     // Push an NS.Type gate-log entry for the NS entry type check in _bootStep B:03
     // and B:04.  Called immediately after each mLoad succeeds so the outcome is always
     // recorded, whether the type is correct (Inform, type=1) or not.
-    _auditNSType(nsIndex, label, actualType, actualTypeName) {
+    // bootStepName should be 'INIT_ABSTR' (B:03) or 'LOAD_NUC' (B:04).
+    _auditNSType(nsIndex, label, actualType, actualTypeName, bootStepName) {
         const typePass = actualType === 1;
         this.auditLog.push({
             gate: 'NS.Type',
@@ -3757,6 +3758,7 @@ class ChurchSimulator {
             b: null, f: null,
             result: typePass ? 'pass' : 'fail',
             stepCtx: this._currentInstrLabel || null,
+            bootStepName: bootStepName || null,
         });
     }
 
@@ -3791,10 +3793,21 @@ class ChurchSimulator {
                 pass: v.pass,
                 perm: v.perm || null,
             }));
+            // For NS.Type entries, prefix the stage and description with the
+            // originating boot step name (INIT_ABSTR for B:03, LOAD_NUC for B:04)
+            // so the audit panel shows a precise step label.
+            let stage, desc;
+            if (a.gate === 'NS.Type' && a.bootStepName) {
+                stage = `${a.bootStepName} – NS.Type`;
+                desc  = `${a.bootStepName} – NS.Type(NS[${a.nsIndex}]="${a.label}") ${a.result}`;
+            } else {
+                stage = a.gate;
+                desc  = `${a.gate}(NS[${a.nsIndex}]="${a.label}"${a.requiredPerm ? ', '+a.requiredPerm : ''})`;
+            }
             return {
-                stage: a.gate,
+                stage,
                 type: a.gate,
-                desc: `${a.gate}(NS[${a.nsIndex}]="${a.label}"${a.requiredPerm ? ', '+a.requiredPerm : ''})`,
+                desc,
                 label: a.label,
                 nsIndex: a.nsIndex,
                 requiredPerm: a.requiredPerm,
@@ -3802,6 +3815,7 @@ class ChurchSimulator {
                 status: a.result,
                 b: a.b,
                 f: a.f,
+                bootStepName: a.bootStepName || null,
             };
         });
     }

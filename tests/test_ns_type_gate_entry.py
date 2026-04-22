@@ -260,6 +260,73 @@ def test_b03_ns_type_audit_entry_wrong_type():
     )
 
 
+def test_pipeline_output_stage_labels_for_ns_type_entries():
+    """_auditPipeline() must emit correct stage labels for B:03 and B:04 NS.Type entries.
+
+    For a valid boot image:
+    - The first NS.Type pipeline entry must have stage="INIT_ABSTR – NS.Type"
+      (from B:03 INIT_ABSTR).
+    - The second NS.Type pipeline entry must have stage="LOAD_NUC – NS.Type"
+      (from B:04 LOAD_NUC).
+    This locks in the UI-facing contract added in Task #374.
+    """
+    cfg   = _default_cfg()
+    image = generate_boot_image(cfg, LUMPS_DIR)
+
+    status = _run_harness(cfg, image)
+
+    pipeline = status.get("pipelineOutput", [])
+    ns_type_pipeline = [e for e in pipeline if e.get("type") == "NS.Type"]
+
+    assert len(ns_type_pipeline) >= 2, (
+        "Expected at least two NS.Type pipeline entries (one from B:03, one from B:04); "
+        f"got {len(ns_type_pipeline)}: {ns_type_pipeline}"
+    )
+
+    b03_stage = ns_type_pipeline[0].get("stage", "")
+    assert b03_stage == "INIT_ABSTR \u2013 NS.Type", (
+        f"Expected first NS.Type pipeline entry stage='INIT_ABSTR \u2013 NS.Type' (B:03); "
+        f"got {b03_stage!r}"
+    )
+
+    b04_stage = ns_type_pipeline[1].get("stage", "")
+    assert b04_stage == "LOAD_NUC \u2013 NS.Type", (
+        f"Expected second NS.Type pipeline entry stage='LOAD_NUC \u2013 NS.Type' (B:04); "
+        f"got {b04_stage!r}"
+    )
+
+
+def test_pipeline_output_stage_label_for_b03_fail():
+    """_auditPipeline() must label a B:03 NS.Type fail with the INIT_ABSTR prefix.
+
+    When the boot NS slot has the wrong type (Outform instead of Inform):
+    - The NS.Type pipeline entry must have stage="INIT_ABSTR – NS.Type".
+    - Its status must be 'fail'.
+    """
+    cfg   = _default_cfg()
+    image = generate_boot_image(cfg, LUMPS_DIR)
+    bad_image = _patch_ns_slot_gttype(image, cfg, BOOT_ABSTR_NS_SLOT, 2)  # Outform
+
+    status = _run_harness(cfg, bad_image)
+
+    pipeline = status.get("pipelineOutput", [])
+    ns_type_pipeline = [e for e in pipeline if e.get("type") == "NS.Type"]
+
+    assert ns_type_pipeline, (
+        "Expected at least one NS.Type pipeline entry when boot has wrong NS type; "
+        f"pipelineOutput={pipeline}"
+    )
+
+    b03_entry = ns_type_pipeline[0]
+    b03_stage = b03_entry.get("stage", "")
+    assert b03_stage == "INIT_ABSTR \u2013 NS.Type", (
+        f"Expected stage='INIT_ABSTR \u2013 NS.Type' for B:03 fail entry; got {b03_stage!r}"
+    )
+    assert b03_entry.get("status") == "fail", (
+        f"Expected status='fail' for B:03 NS.Type pipeline entry; got {b03_entry.get('status')!r}"
+    )
+
+
 def test_b03_ns_type_pass_entry_present_before_b04_entry():
     """Correct Inform gtType → B:03 produces its own NS.Type pass entry before B:04's.
 
