@@ -200,6 +200,16 @@ class ChurchSimulator {
             }
         }
 
+        // Boot-entry slot: stored at mem[NS_TABLE_BASE - 2] by the generator.
+        const entrySlotIdx = tagIdx - 1;
+        if (entrySlotIdx >= 0 && entrySlotIdx < src.length) {
+            const storedSlot = src[entrySlotIdx] & 0xFF;
+            if (storedSlot !== this.bootEntrySlot) {
+                this.bootEntrySlot = storedSlot;
+                this.output += `[BOOTIMG] Boot entry restored from image: Slot ${storedSlot}\n`;
+            }
+        }
+
         const n   = Math.min(src.length, this.memory.length);
         for (let i = 0; i < n; i++) this.memory[i] = src[i] >>> 0;
         // Recount NS entries from the table now that it's been replaced.
@@ -1009,6 +1019,9 @@ class ChurchSimulator {
         this.memory[entryNSBase + 2] = this.makeVersionSeals(0, bootEntryLoc, entryCRLimit);
         this.nsClistMap[BOOT_ABSTR_NS_SLOT] = clistChildren;         // Boot.Abstr owns full capability list
 
+        // Boot-entry slot: written at NS_TABLE_BASE - 2 (mirrors boot_image.py).
+        // loadBootImage() reads this word and restores bootEntrySlot from the image.
+        this.memory[this.NS_TABLE_BASE - 2] = this.bootEntrySlot >>> 0;
         // Format-version tag: written immediately before the NS table (at
         // NS_TABLE_BASE - 1) so that loadBootImage() can detect and reject
         // stale binaries. Bumped to 0x247 (Task #247) — Boot.Abstr director
@@ -1213,7 +1226,7 @@ class ChurchSimulator {
 
                 // ── Step 5: Set PC and emit log ───────────────────────────────────────
                 this.pc = 0;
-                this.output += `[BOOT] LOAD_NUC — LED flash Slot ${bootEntrySlot} hdr=0x${hdrWord.toString(16).toUpperCase().padStart(8,'0')} (cw=${cw},cc=${cc},lumpSize=${lumpSz}); CR14+CR6 ← LED flash lump header; CR14(X,cw=${cw},lim=0..${cw-1}) CR6(E,base=0x${(base+clistStart).toString(16).toUpperCase()},lim=${cc-1}), PC=0\n`;
+                this.output += `[BOOT] LOAD_NUC — ${_b4Label} (Slot ${bootEntrySlot}) hdr=0x${hdrWord.toString(16).toUpperCase().padStart(8,'0')} (cw=${cw},cc=${cc},lumpSize=${lumpSz}); CR14+CR6 ← ${_b4Label} lump header; CR14(X,cw=${cw},lim=0..${cw-1}) CR6(E,base=0x${(base+clistStart).toString(16).toUpperCase()},lim=${cc-1}), PC=0\n`;
                 this.output += `[BOOT] SENTINEL CALL — frame@+${sp_max}=0x${sentinelFrameWord.toString(16).toUpperCase().padStart(8,'0')} (NIA=0x7FFF,sz=1,prev_STO=${sp_max}), E-GT@+${sp_max-1}=0x${oldCR6GT.toString(16).toUpperCase().padStart(8,'0')}, STO=${this.sto}\n`;
 
                 // ── Step 6 (B:05): COMPLETE ───────────────────────────────────────────

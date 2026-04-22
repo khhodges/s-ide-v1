@@ -445,6 +445,10 @@ def generate_boot_image(cfg, lumps_dir, boot_entry_slot=None):
     mem[entry_ns_base + 1] = pack_ns_word1(entry_cr_limit, 0, 0, 0, 0, 1, DEMO_CLIST_SIZE)
     mem[entry_ns_base + 2] = make_version_seals(0, boot_entry_loc, entry_cr_limit)
 
+    # Boot-entry slot: stored at NS_TABLE_BASE - 2 so that loadBootImage()
+    # can restore the user's selected boot entry when loading the image.
+    # Default is BOOT_ABSTR_NS_SLOT (= 3); only the low byte is used.
+    mem[ns_table_base - 2] = boot_entry_slot & 0xFF
     # Format-version tag: written immediately before the NS table so that
     # loadBootImage() can detect and reject stale pre-Task-#229 binaries.
     mem[ns_table_base - 1] = BOOT_IMAGE_FORMAT_TAG & 0xFFFFFFFF

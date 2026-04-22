@@ -332,7 +332,7 @@ function init() {
     // here after a previous session generated an image.
     _probeBootImage().then(buf => {
         if (buf) { window.bootImage = buf; window.bootImageAvailable = true;
-                   try { sim.loadBootImage(buf); } catch(e) { console.warn('[bootImage] apply failed:', e); } }
+                   try { sim.loadBootImage(buf); _syncBootEntryFromSim(); } catch(e) { console.warn('[bootImage] apply failed:', e); } }
     });
     sim.on('programLoaded', () => {
         if (currentView === 'namespace') updateNamespace();
@@ -4578,13 +4578,13 @@ function _probeBootImage() {
 // programmer-authored binary survives manual resets.
 function _maybeApplyBootImage() {
     if (window.bootImage) {
-        try { sim.loadBootImage(window.bootImage); } catch (e) { console.warn('[bootImage] apply failed:', e); }
+        try { sim.loadBootImage(window.bootImage); _syncBootEntryFromSim(); } catch (e) { console.warn('[bootImage] apply failed:', e); }
         return;
     }
     if (window.bootImageAvailable) {
         _probeBootImage().then(buf => {
             if (buf) { window.bootImage = buf;
-                       try { sim.loadBootImage(buf); } catch(e){ console.warn('[bootImage] apply failed:', e); } }
+                       try { sim.loadBootImage(buf); _syncBootEntryFromSim(); } catch(e){ console.warn('[bootImage] apply failed:', e); } }
         });
     }
 }
@@ -4629,7 +4629,7 @@ function generateBootImage() {
             _probeBootImage().then(buf => {
                 if (buf) {
                     window.bootImage = buf;
-                    try { sim.loadBootImage(buf); } catch(e) { console.warn('[bootImage] apply failed:', e); }
+                    try { sim.loadBootImage(buf); _syncBootEntryFromSim(); } catch(e) { console.warn('[bootImage] apply failed:', e); }
                 }
             });
         })
@@ -5334,8 +5334,30 @@ function toggleAbsLayer(layer) {
 function setBootEntrySlot(idx) {
     bootEntrySlot = idx;
     localStorage.setItem('bootEntrySlot', String(idx));
-    if (sim) sim.bootEntrySlot = idx;
+    if (sim) {
+        sim.bootEntrySlot = idx;
+        // Preflight: warn if the chosen slot has no installed lump
+        const entry = sim.readNSEntry(idx);
+        const isEmpty = !entry || (entry.word0_location === 0 && entry.word1_limit === 0);
+        if (isEmpty) {
+            const label = (sim.nsLabels && sim.nsLabels[idx])
+                || abstractionRegistry?.abstractions?.[idx]?.name
+                || `Slot ${idx}`;
+            sim.output += `[BOOT] WARNING: boot entry set to Slot ${idx} (${label}) — no lump installed. Boot will fault at B:04.\n`;
+            if (typeof sim.emit === 'function') sim.emit('stateChange', sim.getState());
+        }
+    }
     renderAbstractions();
+}
+
+function _syncBootEntryFromSim() {
+    if (!sim) return;
+    const fromSim = sim.bootEntrySlot;
+    if (fromSim !== bootEntrySlot) {
+        bootEntrySlot = fromSim;
+        localStorage.setItem('bootEntrySlot', String(fromSim));
+        renderAbstractions();
+    }
 }
 
 let _lumpsCache = [];
