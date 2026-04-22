@@ -43,8 +43,6 @@ class CTMMCapCall(Elaboratable):
     def elaborate(self, platform):
         m = Module()
 
-        CR6_CLIST = 6
-        CR7_NUCLEUS = 7
         MAX_SRC_REG = 5
         B_BIT_POS = 31
         LIMIT_WIDTH = 32
@@ -82,8 +80,8 @@ class CTMMCapCall(Elaboratable):
         mload_dst = Signal(4)
         mload_index = Signal(17)
         m.d.comb += [
-            mload_src.eq(Mux(phase, CR6_CLIST, self.cr_src)),
-            mload_dst.eq(Mux(phase, CR7_NUCLEUS, CR6_CLIST)),
+            mload_src.eq(Mux(phase, CR_CLIST, self.cr_src)),
+            mload_dst.eq(Mux(phase, CR_NUCLEUS, CR_CLIST)),
             mload_index.eq(Mux(phase, 0, self.index)),
         ]
 

@@ -46,8 +46,6 @@ class ChurchReturn(Elaboratable):
         m = Module()
 
         CR5_SCRATCH = 5
-        CR6_CLIST = 6
-        CR7_NUCLEUS = 7
 
         return_cap = Signal(CAP_REG_LAYOUT)
         ret_view = View(CAP_REG_LAYOUT, return_cap)
@@ -87,12 +85,12 @@ class ChurchReturn(Elaboratable):
                 ]
             with m.Case(1):
                 m.d.comb += [
-                    mload_dst.eq(CR6_CLIST),
+                    mload_dst.eq(CR_CLIST),
                     mload_direct_gt.eq(saved_cr6_gt),
                 ]
             with m.Default():
                 m.d.comb += [
-                    mload_dst.eq(CR7_NUCLEUS),
+                    mload_dst.eq(CR_NUCLEUS),
                     mload_direct_gt.eq(saved_cr7_gt),
                 ]
 

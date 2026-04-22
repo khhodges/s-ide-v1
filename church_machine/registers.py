@@ -34,7 +34,7 @@ class ChurchRegisters(Elaboratable):
         self.cr_word_rd_data = Signal(32)
 
         self.cr6_clist = Signal(CAP_REG_LAYOUT)
-        self.cr7_cloomc = Signal(CAP_REG_LAYOUT)
+        self.cr14_cloomc = Signal(CAP_REG_LAYOUT)
         self.cr8_thread = Signal(CAP_REG_LAYOUT)
         self.cr15_namespace = Signal(CAP_REG_LAYOUT)
 
@@ -76,7 +76,7 @@ class ChurchRegisters(Elaboratable):
 
         m.d.comb += [
             self.cr6_clist.eq(cap_regs[CR_CLIST]),
-            self.cr7_cloomc.eq(cap_regs[CR_CLOOMC]),
+            self.cr14_cloomc.eq(cap_regs[CR_CLOOMC]),
             self.cr8_thread.eq(cap_regs[CR_THREAD]),
             self.cr15_namespace.eq(cap_regs[CR_NAMESPACE]),
         ]

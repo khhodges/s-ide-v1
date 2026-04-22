@@ -43,9 +43,6 @@ class CTMMReturn(Elaboratable):
     def elaborate(self, platform):
         m = Module()
 
-        CR6_CLIST = 6
-        CR7_NUCLEUS = 7
-
         u_mload = CTMMMLoad()
         m.submodules.u_mload = u_mload
 
@@ -92,12 +89,12 @@ class CTMMReturn(Elaboratable):
                 ]
             with m.Case(1):
                 m.d.comb += [
-                    mload_dst.eq(CR6_CLIST),
+                    mload_dst.eq(CR_CLIST),
                     mload_direct_gt.eq(saved_cr6_gt),
                 ]
             with m.Default():
                 m.d.comb += [
-                    mload_dst.eq(CR7_NUCLEUS),
+                    mload_dst.eq(CR_NUCLEUS),
                     mload_direct_gt.eq(saved_cr7_gt),
                 ]
 
@@ -204,7 +201,7 @@ class CTMMReturn(Elaboratable):
             with m.State("PHASE1_DONE"):
                 m.d.comb += [
                     local_cr_wr_en.eq(1),
-                    local_cr_wr_addr.eq(CR6_CLIST),
+                    local_cr_wr_addr.eq(CR_CLIST),
                     local_cr_wr_data.eq(cr6_latched),
                 ]
                 m.d.sync += [phase.eq(2), sub_done_latched.eq(0), sub_fault_latched.eq(0)]
