@@ -554,7 +554,7 @@ def boot_image_generate():
     entry_slot = body.get("entrySlot", None)
     if entry_slot is not None:
         try:
-            entry_slot = int(entry_slot)
+            entry_slot = max(0, min(255, int(entry_slot)))
         except (TypeError, ValueError):
             entry_slot = None
     try:

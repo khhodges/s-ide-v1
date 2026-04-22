@@ -5310,7 +5310,7 @@ function renderAbstractions() {
                 html += `<div class="abs-item${isActive ? ' active' : ''}" onclick="showAbstractionDetail(${abs.index})">`;
                 const absProfile = _getAbstractionProfile(abs);
                 const profileBadgeClass = absProfile === 'Full' ? 'profile-badge-full' : 'profile-badge-iot';
-                html += `<span class="abs-item-idx abs-boot-entry-btn${isBootEntry ? ' boot-entry-active' : ''}" onclick="event.stopPropagation();setBootEntrySlot(${abs.index})" title="${isBootEntry ? 'Boot entry (click to remove)' : 'Set as boot entry'}">${isBootEntry ? '\u26a1' : abs.index}</span>`;
+                html += `<span class="abs-item-idx abs-boot-entry-btn${isBootEntry ? ' boot-entry-active' : ''}" onclick="event.stopPropagation();setBootEntrySlot(${abs.index})" title="${isBootEntry ? 'Current boot entry' : 'Set as boot entry'}">${isBootEntry ? '\u26a1' : abs.index}</span>`;
                 html += `<span class="abs-item-name">${abs.name}</span>`;
                 html += `<span class="abs-profile-badge ${profileBadgeClass}" title="${absProfile} profile — ${absProfile === 'Full' ? 'Ti60 F225 only' : 'runs on both boards'}">${absProfile}</span>`;
                 html += `<span class="abs-item-dot" style="background:${dotColor};box-shadow:0 0 4px ${dotColor}80" title="${dotTitle}"></span>`;
@@ -5332,6 +5332,7 @@ function toggleAbsLayer(layer) {
 }
 
 function setBootEntrySlot(idx) {
+    idx = Math.max(0, Math.min(255, Math.trunc(Number(idx)) || 0));
     bootEntrySlot = idx;
     localStorage.setItem('bootEntrySlot', String(idx));
     if (sim) {
