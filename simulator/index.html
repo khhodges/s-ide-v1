@@ -26,7 +26,7 @@
     })();
     </script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a1a'/%3E%3Ctext x='16' y='23' font-family='serif' font-size='22' font-weight='bold' fill='%23daa520' text-anchor='middle'%3E%CE%BB%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=20260422e">
+    <link rel="stylesheet" href="styles.css?v=20260422f">
     <style>
         .app-loading {
             position: fixed; inset: 0; z-index: 99999;
@@ -1383,6 +1383,16 @@
     <div class="modal-dialog lump-type-selector-dialog">
         <div class="modal-title">Add LUMP — Choose Type</div>
         <div class="lump-type-grid">
+            <button class="lump-type-card lump-type-card-inform" onclick="selectLumpType('inform')">
+                <span class="lump-type-icon">&#x2139;</span>
+                <span class="lump-type-name">Inform</span>
+                <span class="lump-type-desc">Callable abstraction — NS gtType=Inform(1), lump typ=00. All standard Boot.Abstr lumps are Inform type.</span>
+            </button>
+            <button class="lump-type-card lump-type-card-outform" onclick="selectLumpType('outform')">
+                <span class="lump-type-icon">&#x21A5;</span>
+                <span class="lump-type-name">Outform</span>
+                <span class="lump-type-desc">Output-type abstraction — NS gtType=Outform(2), lump typ=11. Used for hardware output and data-producing capabilities.</span>
+            </button>
             <button class="lump-type-card" onclick="selectLumpType('code')">
                 <span class="lump-type-icon">⚙</span>
                 <span class="lump-type-name">Code</span>

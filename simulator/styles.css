@@ -6167,6 +6167,7 @@ a.next-step-link:hover {
 }
 .lump-ct-ns     { background: #2d7d46; color: #e0ffe0; }
 .lump-ct-code   { background: #1e3a6e; color: #7eb8ff; }
+.lump-ct-inform { background: #1a4040; color: #4ecdc4; }
 .lump-ct-data   { background: #4a2d1e; color: #ffb87e; }
 .lump-ct-text   { background: #2d3a1e; color: #b8ff7e; }
 .lump-ct-md     { background: #1e2d4a; color: #7eb8ff; }
@@ -6853,6 +6854,28 @@ a.next-step-link:hover {
 .lump-type-card:hover {
     border-color: var(--church-gold);
     background: rgba(200,155,60,0.07);
+}
+
+.lump-type-card-inform {
+    border-color: #2a6b6b;
+}
+.lump-type-card-inform:hover {
+    border-color: #4ecdc4;
+    background: rgba(78,205,196,0.07);
+}
+.lump-type-card-inform .lump-type-icon {
+    color: #4ecdc4;
+}
+
+.lump-type-card-outform {
+    border-color: #6b4a1e;
+}
+.lump-type-card-outform:hover {
+    border-color: #ffe07e;
+    background: rgba(255,224,126,0.07);
+}
+.lump-type-card-outform .lump-type-icon {
+    color: #ffe07e;
 }
 
 .lump-type-card-ns {

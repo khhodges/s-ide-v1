@@ -569,6 +569,8 @@ function selectLumpType(type) {
     if (listEl) listEl.querySelectorAll('.lump-item').forEach(el => el.classList.remove('active'));
 
     const labels = {
+        inform:   'Inform Lump (NS gtType=1, typ=00)',
+        outform:  'Outform Lump (NS gtType=2, typ=11)',
         code:     'Code Lump (typ=00)',
         data:     'Data Lump (typ=01)',
         thread:   'Thread Lump (typ=10)',
@@ -577,6 +579,8 @@ function selectLumpType(type) {
         image:    'Image Lump (.type=image)',
     };
     const notes = {
+        inform:   'Inform lumps are the standard callable abstraction type in the Church Machine capability model. The NS entry\'s <strong>gtType=Inform(1)</strong> permits CALL, LOAD, and TPERM(E) access. The lump header uses <strong>typ=00</strong> (code). All Boot.Abstr lumps and the pre-built abstractions (LED flash, Constants, SlideRule, etc.) are Inform type. Authoring: use <strong>Build LUMP ↓</strong> in the Editor.',
+        outform:  'Outform lumps are the output-type abstraction in the Church Machine capability model. The NS entry\'s <strong>gtType=Outform(2)</strong> restricts the capability to output-producing access. The lump header uses <strong>typ=11</strong> (Outform). Used for hardware output capabilities and data-producing abstractions. Authoring via the IDE is coming in a future release.',
         code:     'Code lumps contain abstraction methods and are compiled from CLOOMC++ or Assembly source in the Editor. Use <strong>Build LUMP ↓</strong> in the Editor toolbar to compile and download a deployable .lump binary.',
         data:     'Data lumps store raw word arrays — constants, lookup tables, or binary blobs. Each 32-bit word maps directly to hardware memory. Data lump authoring via the IDE is coming in a future release.',
         thread:   'Thread lumps encapsulate a concurrent thread instance with its own capability c-list (typ=10). Thread authoring via the IDE is coming in a future release.',
@@ -6172,6 +6176,7 @@ function _lumpContentTypeLabel(lump) {
     if (ct === 'doc')                     return 'Document';
     if (ct === 'thread' || typ === 2)     return 'Thread';
     if (ct === 'outform' || typ === 3)    return 'Outform';
+    if (ct === 'inform')                  return 'Inform';
     if (ct === 'code'    || typ === 0)    return 'Code';
     if (ct === 'data' || ct === 'binary' || typ === 1) return 'Data';
     return 'LUMP';
@@ -6189,6 +6194,7 @@ function _lumpTypeBadge(lump) {
     if (ct === 'doc')                                  return '<span class="lump-ct-badge lump-ct-doc">DOC</span>';
     if (ct === 'thread' || typ === 2)                  return '<span class="lump-ct-badge lump-ct-thread">THR</span>';
     if (typ === 3 || ct === 'outform')                 return '<span class="lump-ct-badge lump-ct-outform">OTF</span>';
+    if (ct === 'inform')                               return '<span class="lump-ct-badge lump-ct-inform">INF</span>';
     if (ct === 'code'   || typ === 0)                  return '<span class="lump-ct-badge lump-ct-code">CODE</span>';
     if (ct === 'data' || ct === 'binary' || typ === 1) return '<span class="lump-ct-badge lump-ct-data">DATA</span>';
     return '';
