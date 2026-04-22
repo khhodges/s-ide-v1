@@ -105,6 +105,13 @@ process.stdin.on('end', () => {
         cr12: crSnap(12),
         cr14: crSnap(14),
         cr15: crSnap(15),
+        auditLog: (sim.auditLog || []).map((e) => ({
+            gate:   e.gate,
+            label:  e.label,
+            nsIndex: e.nsIndex != null ? e.nsIndex : null,
+            result: e.result,
+            checks: e.checks || null,
+        })),
     };
     process.stdout.write(JSON.stringify(status));
 });

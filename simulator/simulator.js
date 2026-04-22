@@ -1154,10 +1154,13 @@ class ChurchSimulator {
                     this.fault('BOOT', `LOAD_NUC mLoad(${_b4Label}) failed: ${entryCheck.message}`);
                     return false;
                 }
-                const _nsTypePass = entryCheck.parsed.type === 1;
-                this._auditNSType(this.bootEntrySlot, _b4Label, entryCheck.parsed.type, entryCheck.parsed.typeName);
+                const _actualNSType     = entryCheck.entry.gtType;
+                const _GT_TYPE_NAMES    = ['NULL', 'Inform', 'Outform', 'Abstract'];
+                const _actualNSTypeName = _GT_TYPE_NAMES[_actualNSType & 3] || 'Unknown';
+                const _nsTypePass = _actualNSType === 1;
+                this._auditNSType(this.bootEntrySlot, _b4Label, _actualNSType, _actualNSTypeName);
                 if (!_nsTypePass) {                                                                         // must be Inform (type=1)
-                    this.fault('TYPE', `LOAD_NUC: ${_b4Label} type is ${entryCheck.parsed.typeName}, must be Inform`);
+                    this.fault('TYPE', `LOAD_NUC: ${_b4Label} type is ${_actualNSTypeName}, must be Inform`);
                     return false;
                 }
                 const entryNSEntry  = entryCheck.entry;                             // NS entry for boot entry abstraction
