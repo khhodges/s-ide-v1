@@ -288,11 +288,14 @@ To replace Startup.Config without a full image reflash:
 1. Build a new 64-word lump body (new method implementations and/or data
    region values).
 2. Call `PATCH_LUMP` with the Startup.Config GT and the new lump body.
-   The patch takes effect immediately in memory — no reboot is required for
-   the patch itself to be applied.
-3. Boot.Abstr's c-list[4] continues to point to NS slot 2; on the next
-   invocation of Boot.Abstr (e.g. after a PP250 restart), the patched lump
-   is called automatically.
+   The memory update is immediate — the lump bytes are replaced in-place with
+   no reboot.  However, if an Execute call is in progress at the moment the
+   patch is applied, that in-flight call continues to run from the old code.
+   The patched lump takes effect on the **next** invocation of Execute (i.e.
+   the next time Boot.Abstr calls Startup.Config, typically after a PP250
+   restart).
+3. Boot.Abstr's c-list[4] continues to point to NS slot 2 unchanged; no
+   modification to Boot.Abstr or the thread lump is needed.
 
 Constraints:
 - The patched lump must implement the Execute method (method index 0 in the
