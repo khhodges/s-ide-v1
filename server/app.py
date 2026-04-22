@@ -619,8 +619,8 @@ def boot_image_upload():
     if not payload:
         return jsonify({"ok": False, "error": "Invalid JSON body"}), 400
 
-    data_b64 = payload.get("data_b64") or ""
-    if not data_b64:
+    data_b64 = payload.get("data_b64")
+    if data_b64 is None:
         return jsonify({"ok": False, "error": "Missing 'data_b64' field"}), 400
 
     try:
