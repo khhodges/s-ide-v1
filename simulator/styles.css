@@ -11830,6 +11830,8 @@ tr.itrace-fault td { color: #ff9999; }
 .trace-fault-label:hover {
     background: rgba(220, 80, 80, 0.22);
     border-color: rgba(220, 80, 80, 0.7);
+    animation: none;
+    opacity: 1;
 }
 .trace-fault-label:hover::after {
     content: ' \00d7';
