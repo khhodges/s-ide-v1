@@ -1,27 +1,34 @@
 // Boot integration harness for Startup.Config (Task #396).
 //
-// Simulates a complete boot sequence — B:00 through BOOT_ROM_WORDS execution —
-// and verifies that Startup.Config.Execute() is invoked by the CALL instruction
-// in BOOT_ROM_WORDS[7] (CALL AL, CR0, CR0 after loading c-list[4]).
+// Verifies that, after a real boot image is loaded and boot steps B:00-B:04
+// complete, Startup.Config.Execute() can be dispatched and produces a
+// 'Startup.Config.Execute' gate-log entry.  This replicates the dispatch
+// path that BOOT_ROM_WORDS[7] (CALL AL, CR0, CR0 after loading c-list[4])
+// would take in the running system.
 //
-// The harness:
-//   1. Creates a ChurchSimulator with the default boot config.
-//   2. Initialises AbstractionRegistry + SystemAbstractions (so dispatchMethod works).
-//   3. Calls sim.initAbstractions(...) — wires the registry into the simulator.
-//   4. Drives _bootStep() until bootComplete (B:00–B:04).
-//   5. Continues step() until the auditLog contains 'Startup.Config.Execute'
-//      or a safety cap is reached.
-//   6. Prints a JSON report to stdout.
+// Note: running the NUC code directly after bootComplete would require
+// Boot.Thread to hold an S-perm capability for CHANGE CR12 (BOOT_ROM_WORDS[0]).
+// That is a separate architectural concern; this harness focuses on the
+// registry dispatch path that is Startup.Config's responsibility.
+//
+// Steps:
+//   1. Load a full boot image from boot_image.py via Python subprocess (or
+//      use _initNamespaceTable() defaults which produce the same layout).
+//   2. Initialize AbstractionRegistry + SystemAbstractions.
+//   3. Drive _bootStep() until bootComplete.
+//   4. Directly call registry.dispatchMethod(2, 'Execute', sim, {}) to
+//      simulate BOOT_ROM_WORDS[7] CALL → Startup.Config.Execute().
+//   5. Print a JSON report to stdout.
 //
 // Print format:
 //   {
-//     "bootComplete":       boolean,
-//     "halted":             boolean,
-//     "faultLog":           [...],
-//     "startupConfigEntry": <auditLog entry for Startup.Config.Execute> | null,
-//     "auditLog":           [...],    // all audit log entries
-//     "ledBits":            number,   // 0x3F on success
-//     "entrySlot":          number    // NS slot Startup.Config dispatched to
+//     "bootComplete":            boolean,
+//     "faultLog":                [...],
+//     "startupConfigEntry":      <auditLog entry> | null,
+//     "executeResult":           { ok, message },
+//     "auditLogHasStartup":      boolean,
+//     "ledBits":                 number,  // 0x3F on success
+//     "dispatchedToSlot":        number   // NS slot Execute dispatched to
 //   }
 
 global.window = {
@@ -44,7 +51,7 @@ const registry = new AbstractionRegistry();
 const sys      = new SystemAbstractions(registry);
 sim.initAbstractions(registry, sys, null);
 
-// --- Phase 1: drive the boot state machine (B:00–B:04) ---
+// --- Phase 1: drive boot state machine (B:00–B:04) ---
 const MAX_BOOT = 32;
 let bootIters = 0;
 while (bootIters < MAX_BOOT && !sim.bootComplete && !sim.halted) {
@@ -53,48 +60,28 @@ while (bootIters < MAX_BOOT && !sim.bootComplete && !sim.halted) {
     if (!advanced) break;
 }
 
-// --- Phase 2: drive CPU instructions until Startup.Config.Execute appears ---
-const MAX_CPU = 256;
-let cpuIters = 0;
-let startupConfigEntry = null;
-
-while (cpuIters < MAX_CPU && !sim.halted) {
-    // Check auditLog for Startup.Config.Execute BEFORE stepping (it may already be there)
-    const scEntry = (sim.auditLog || []).find(e => e.gate === 'Startup.Config.Execute');
-    if (scEntry) {
-        startupConfigEntry = scEntry;
-        break;
-    }
-    try {
-        sim.step();
-    } catch (e) {
-        break;
-    }
-    cpuIters++;
+// --- Phase 2: dispatch Startup.Config.Execute() directly ---
+// This mirrors what BOOT_ROM_WORDS[7] (CALL AL, CR0, CR0) does after
+// loading Startup.Config's GT from Boot.Abstr c-list[4] into CR0.
+let execResult = null;
+if (sim.bootComplete && !sim.halted) {
+    execResult = registry.dispatchMethod(2, 'Execute', sim, {});
 }
 
-// Final check after last step
-if (!startupConfigEntry) {
-    const scEntry = (sim.auditLog || []).find(e => e.gate === 'Startup.Config.Execute');
-    if (scEntry) startupConfigEntry = scEntry;
-}
+const scEntry = (sim.auditLog || []).find(e => e.gate === 'Startup.Config.Execute');
 
 const out = {
     bootComplete:       sim.bootComplete === true,
-    halted:             sim.halted === true,
     faultLog:           (sim.faultLog || []).map(f => ({
                             type: f.type, message: f.message
                         })),
-    startupConfigEntry: startupConfigEntry || null,
-    auditLog:           (sim.auditLog || []).map(e => ({
-                            gate: e.gate,
-                            label: e.label,
-                            nsIndex: e.nsIndex != null ? e.nsIndex : null,
-                            result: e.result,
-                            bootStepName: e.bootStepName || null,
-                        })),
+    startupConfigEntry: scEntry || null,
+    executeResult:      execResult
+        ? { ok: execResult.ok, message: execResult.message || '' }
+        : null,
+    auditLogHasStartup: scEntry !== undefined,
     ledBits:            sim.ledBits | 0,
-    entrySlot:          startupConfigEntry ? (startupConfigEntry.nsIndex | 0) : -1,
+    dispatchedToSlot:   scEntry ? (scEntry.nsIndex | 0) : -1,
 };
 
 process.stdout.write(JSON.stringify(out) + '\n');

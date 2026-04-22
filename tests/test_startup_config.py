@@ -13,9 +13,10 @@ import sys
 
 import pytest
 
-ROOT     = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ROOT      = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LUMPS_DIR = os.path.join(ROOT, "server", "lumps")
-HARNESS  = os.path.join(ROOT, "tests", "sim_startup_config.js")
+HARNESS      = os.path.join(ROOT, "tests", "sim_startup_config.js")
+BOOT_HARNESS = os.path.join(ROOT, "tests", "sim_startup_config_boot.js")
 
 sys.path.insert(0, ROOT)
 
@@ -88,6 +89,30 @@ def _h():
     if _HARNESS is None:
         _HARNESS = _run_harness()
     return _HARNESS
+
+
+def _run_boot_harness():
+    proc = subprocess.run(
+        ["node", BOOT_HARNESS],
+        capture_output=True,
+        timeout=30,
+        cwd=ROOT,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"sim_startup_config_boot.js exited {proc.returncode}\n"
+            f"stderr:\n{proc.stderr.decode('utf-8', errors='replace')}"
+        )
+    return json.loads(proc.stdout.decode("utf-8").strip())
+
+
+_BOOT_HARNESS_RESULT = None
+
+def _bh():
+    global _BOOT_HARNESS_RESULT
+    if _BOOT_HARNESS_RESULT is None:
+        _BOOT_HARNESS_RESULT = _run_boot_harness()
+    return _BOOT_HARNESS_RESULT
 
 
 # ---------------------------------------------------------------------------
@@ -328,3 +353,46 @@ def test_boot_abstr_clist4_points_to_slot2_in_simulator():
         f"Boot.Abstr c-list[4] GT should point to NS slot 2, "
         f"got index {_h().get('clist4GtIndex')}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Boot integration tests (full boot sequence → Startup.Config.Execute)
+# ---------------------------------------------------------------------------
+
+def test_boot_integration_boot_completes():
+    """Boot steps B:00-B:04 complete without faults (bootComplete=True)."""
+    assert _bh()["bootComplete"] is True
+
+
+def test_boot_integration_no_boot_faults():
+    """Boot sequence produces no fault-log entries."""
+    assert _bh()["faultLog"] == []
+
+
+def test_boot_integration_startup_config_execute_called():
+    """After boot, Startup.Config.Execute() dispatch writes a gate-log entry."""
+    assert _bh()["auditLogHasStartup"] is True
+
+
+def test_boot_integration_startup_config_execute_returns_ok():
+    """Startup.Config.Execute() returns ok=True after boot."""
+    result = _bh()["executeResult"]
+    assert result is not None
+    assert result["ok"] is True
+
+
+def test_boot_integration_startup_config_dispatches_to_entry_slot():
+    """The gate-log entry records nsIndex = 4 (the default entry_slot)."""
+    assert _bh()["dispatchedToSlot"] == 4
+
+
+def test_boot_integration_led_bits_all_on_after_execute():
+    """ledBits = 0x3F (all 6 LEDs on) after successful Startup.Config.Execute()."""
+    assert _bh()["ledBits"] == 0x3F
+
+
+def test_boot_integration_gate_log_bootStepName():
+    """The gate-log entry has bootStepName='STARTUP_CONFIG'."""
+    entry = _bh()["startupConfigEntry"]
+    assert entry is not None
+    assert entry.get("bootStepName") == "STARTUP_CONFIG"

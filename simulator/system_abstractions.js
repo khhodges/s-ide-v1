@@ -205,18 +205,32 @@ class SystemAbstractions {
             // All pre-checks passed — dispatch to configured entry slot
             sim.ledBits = 0x3F;
             const entryLabel = (sim.nsLabels && sim.nsLabels[entrySlot]) || `NS[${entrySlot}]`;
+            let calleeOk = true;
+            let calleeMessage = '';
+            if (sim.abstractionRegistry) {
+                const calleeResult = sim.abstractionRegistry.dispatchMethod(entrySlot, 'Execute', sim, args);
+                // Only treat as CALLEE_FAILED if the callee explicitly returned an
+                // execution error.  A 'METHOD' fault (no Execute on the target) is
+                // acceptable — the target abstraction is not required to implement Execute.
+                if (calleeResult && calleeResult.ok === false && calleeResult.fault !== 'METHOD') {
+                    calleeOk = false;
+                    calleeMessage = calleeResult.message || `NS[${entrySlot}].Execute failed`;
+                    bumpFaultCount(sim);
+                }
+            }
             if (sim.auditLog) {
                 sim.auditLog.push({
                     gate: 'Startup.Config.Execute',
                     label: entryLabel,
                     nsIndex: entrySlot,
-                    result: 'PASS',
+                    result: calleeOk ? 'PASS' : 'FAIL',
                     checks: null,
                     bootStepName: 'STARTUP_CONFIG',
                 });
             }
-            if (sim.abstractionRegistry) {
-                sim.abstractionRegistry.dispatchMethod(entrySlot, 'Execute', sim, args);
+            if (!calleeOk) {
+                return { ok: false, result: 8, fault: 'CALLEE_FAILED',
+                         message: `Startup.Config.Execute: CALLEE_FAILED (${calleeMessage})` };
             }
             return { ok: true, result: 0,
                      message: `Startup.Config.Execute → ${entryLabel}` };
