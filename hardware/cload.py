@@ -222,7 +222,7 @@ class ChurchCLoad(Elaboratable):
 
             with m.State("WRITE_CR14"):
                 m.d.comb += [
-                    local_cr_wr_addr.eq(CR_CODE),
+                    local_cr_wr_addr.eq(CR_CLOOMC),
                     local_cr_wr_data.eq(cr14_out),
                     local_cr_wr_en.eq(1),
                 ]

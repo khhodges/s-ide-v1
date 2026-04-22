@@ -30,7 +30,6 @@ CR_CLIST        = 6
 CR_THREAD_STACK = 12   # CR12: thread stack capability (canonical name)
 CR_INTERRUPT    = 13
 CR_CLOOMC       = 14   # CR14: code register / CLOOMC (canonical name)
-CR_CODE         = 14   # alias for CR_CLOOMC — kept for call/cload hardware modules
 CR_NAMESPACE    = 15
 
 GT_SEQ_BITS     = 7

@@ -607,7 +607,7 @@ class ChurchCore(Elaboratable):
         with m.Elif(u_return.complete & ~cross_domain_ret):
             # Lambda-fast RETURN: no cload follows — fence goes inactive.
             m.d.sync += [code_lo_reg.eq(0), code_hi_reg.eq(0)]
-        with m.Elif(u_cload.cr_wr_en & (u_cload.cr_wr_addr == CR_CODE)):
+        with m.Elif(u_cload.cr_wr_en & (u_cload.cr_wr_addr == CR_CLOOMC)):
             # cload (triggered by cross-domain RETURN) restores the caller's code cap
             # into CR14.  Re-establish the fence and release the stall.
             cr14_cload_view = View(CAP_REG_LAYOUT, u_cload.cr_wr_data)
