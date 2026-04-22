@@ -6603,7 +6603,8 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
         switch (op) {
             case 0: {  // LOAD CRd, CRs[imm]
                 if (crSrc === 6 && cc > 0) {
-                    const nm = clistSlotName[imm] || `slot ${imm}`;
+                    const nsName = abstractionRegistry && abstractionRegistry.abstractions[imm] ? abstractionRegistry.abstractions[imm].name : null;
+                    const nm = nsName || clistSlotName[imm] || `slot ${imm}`;
                     return `${condStr}CR${crDst} ← c-list[${imm}] (${nm})`;
                 }
                 const sym = crAliasSym(crSrc);
@@ -6627,7 +6628,8 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
             }
             case 4: {  // CHANGE CRd, CRs[imm]
                 if (crSrc === 6 && cc > 0) {
-                    const nm = clistSlotName[imm] || `slot ${imm}`;
+                    const nsName = abstractionRegistry && abstractionRegistry.abstractions[imm] ? abstractionRegistry.abstractions[imm].name : null;
+                    const nm = nsName || clistSlotName[imm] || `slot ${imm}`;
                     return `${condStr}hot-swap CR${crDst} ← c-list[${imm}] (${nm})`;
                 }
                 return `${condStr}update CR${crDst} via ${crName(crSrc)}[${imm}]`;
@@ -6646,14 +6648,16 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
             }
             case 8: {  // ELOADCALL CRd, CRs[imm]
                 if (crSrc === 6 && cc > 0) {
-                    const nm = clistSlotName[imm] || `slot ${imm}`;
+                    const nsName = abstractionRegistry && abstractionRegistry.abstractions[imm] ? abstractionRegistry.abstractions[imm].name : null;
+                    const nm = nsName || clistSlotName[imm] || `slot ${imm}`;
                     return `${condStr}fused load + call c-list[${imm}] (${nm}) → CR${crDst}`;
                 }
                 return `${condStr}fused load + call ${crName(crSrc)}[${imm}] → CR${crDst}`;
             }
             case 9: {  // XLOADLAMBDA CRd, CRs[imm]
                 if (crSrc === 6 && cc > 0) {
-                    const nm = clistSlotName[imm] || `slot ${imm}`;
+                    const nsName = abstractionRegistry && abstractionRegistry.abstractions[imm] ? abstractionRegistry.abstractions[imm].name : null;
+                    const nm = nsName || clistSlotName[imm] || `slot ${imm}`;
                     return `${condStr}fused load + lambda c-list[${imm}] (${nm}) → CR${crDst}`;
                 }
                 return `${condStr}fused load + lambda ${crName(crSrc)}[${imm}] → CR${crDst}`;
@@ -6767,14 +6771,18 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
 
             // Build symbolic annotation (capability arrow shown next to mnemonic)
             let ann = '';
+            const _nsOrClistName = idx => {
+                const nsEntry = abstractionRegistry && abstractionRegistry.abstractions[idx];
+                return (nsEntry ? nsEntry.name : null) || clistSlotName[idx];
+            };
             if ((op === 0 || op === 4) && crSrc === 6 && cc > 0) {
-                const nm = clistSlotName[imm];
+                const nm = _nsOrClistName(imm);
                 if (nm) ann = `<span class="lump-sym-ann">\u2190 ${e(nm)}</span>`;
             } else if (op === 2 && crAlias[crDst] !== undefined && cc > 0) {
-                const nm = clistSlotName[crAlias[crDst]];
+                const nm = _nsOrClistName(crAlias[crDst]);
                 if (nm) ann = `<span class="lump-sym-ann">\u2192 ${e(nm)}</span>`;
             } else if ((op === 8 || op === 9) && crSrc === 6 && cc > 0) {
-                const nm = clistSlotName[imm];
+                const nm = _nsOrClistName(imm);
                 if (nm) ann = `<span class="lump-sym-ann">\u21D2 ${e(nm)}</span>`;
             }
 
