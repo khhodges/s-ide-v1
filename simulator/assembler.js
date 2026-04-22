@@ -489,32 +489,36 @@ class ChurchAssembler {
             this.errors.push({ line: lineNum, message: 'A capability register (like CR0, CR6, CR14, 6, or hex 0x0–0xF) is needed here, but nothing was given.' });
             return 0;
         }
-        // Level 2: check if this token is an abstraction name already loaded into a CR.
+        // Preserve original-case token for Level 2 and error messages.
         const rawTok = token.replace(/,/g, '').trim();
-        if (this.nsLoaded[rawTok] !== undefined) return this.nsLoaded[rawTok];
 
-        token = token.toUpperCase().replace(/,/g, '');
-        const m = token.match(/^CR(\d+)$/);
+        // Explicit register syntax takes priority over any alias.
+        const uToken = token.toUpperCase().replace(/,/g, '');
+        const m = uToken.match(/^CR(\d+)$/);
         if (m) {
             const idx = parseInt(m[1]);
             if (idx >= 0 && idx <= 15) return idx;
             this.errors.push({ line: lineNum, message: `CR${idx} is too big! Capability registers go from CR0 to CR15 (that's 16 registers).` });
             return 0;
         }
-        const hexMatch = token.match(/^0X([0-9A-F]+)$/);
+        const hexMatch = uToken.match(/^0X([0-9A-F]+)$/);
         if (hexMatch) {
             const idx = parseInt(hexMatch[1], 16);
             if (idx >= 0 && idx <= 15) return idx;
             this.errors.push({ line: lineNum, message: `0x${hexMatch[1]} (=${idx}) is out of range for a capability register — must be 0x0–0xF (CR0–CR15).` });
             return 0;
         }
-        const bareMatch = token.match(/^(\d+)$/);
+        const bareMatch = uToken.match(/^(\d+)$/);
         if (bareMatch) {
             const idx = parseInt(bareMatch[1]);
             if (idx >= 0 && idx <= 15) return idx;
             this.errors.push({ line: lineNum, message: `${idx} is out of range for a capability register — must be 0–15 (CR0–CR15).` });
             return 0;
         }
+
+        // Level 2: check if this token is an abstraction name already loaded into a CR.
+        if (this.nsLoaded[rawTok] !== undefined) return this.nsLoaded[rawTok];
+
         let hint = '';
         const knownNames  = Object.keys(this.nsSymbols);
         const loadedNames = Object.keys(this.nsLoaded);
