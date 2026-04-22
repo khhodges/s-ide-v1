@@ -11153,7 +11153,7 @@ function showFaultModal(f) {
     const historyHtml = allFaults.length > 1
         ? allFaults.slice(-5).map((fl, i, arr) => {
             const isCurrent = (i === arr.length - 1);
-            return `<span class="fault-hist-item${isCurrent ? ' fault-hist-current' : ''}"><button class="gate-loc-step-link fault-hist-step-link" onclick="faultModalDismiss();jumpToTraceStep(${fl.step})" title="Jump to step ${fl.step} in the Trace view">[step ${fl.step}]</button> ${fl.type}</span>`;
+            return `<span class="fault-hist-item${isCurrent ? ' fault-hist-current' : ''}"><button class="gate-loc-step-link fault-hist-step-link" onclick="faultModalDismiss();jumpToTraceStep(${fl.step},'${fl.type.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}');" title="Jump to step ${fl.step} in the Trace view">[step ${fl.step}]</button> ${fl.type}</span>`;
           }).join('')
         : '';
 
@@ -11310,7 +11310,7 @@ function showFaultModal(f) {
             </div>
             <div class="fault-detail-row">
                 <span class="fault-detail-label">Step</span>
-                <span class="fault-detail-value"><button class="gate-loc-step-link fault-step-link" onclick="faultModalDismiss();jumpToTraceStep(${f.step})" title="Jump to this step in the Trace view">#${f.step}</button></span>
+                <span class="fault-detail-value"><button class="gate-loc-step-link fault-step-link" onclick="faultModalDismiss();jumpToTraceStep(${f.step},'${(f.type||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}');" title="Jump to this step in the Trace view">#${f.step}</button></span>
             </div>
             ${historyHtml ? `<div class="fault-detail-row fault-history-row">
                 <span class="fault-detail-label">History</span>
@@ -21538,7 +21538,7 @@ function renderTraceView() {
     if (wrap) wrap.scrollTop = wrap.scrollHeight;
 }
 
-function jumpToTraceStep(stepNum) {
+function jumpToTraceStep(stepNum, faultType) {
     switchView('trace');
     if (_traceRenderedCount < _traceData.length) {
         _traceFlushRender();
@@ -21549,9 +21549,16 @@ function jumpToTraceStep(stepNum) {
     if (!target) return;
     document.querySelectorAll('.trace-row-highlighted').forEach(el => el.classList.remove('trace-row-highlighted'));
     document.querySelectorAll('.trace-gatelog-back').forEach(el => el.remove());
+    document.querySelectorAll('.trace-fault-label').forEach(el => el.remove());
     target.classList.add('trace-row-highlighted');
     const firstTd = target.querySelector('td');
     if (firstTd) {
+        if (faultType) {
+            const faultLabel = document.createElement('span');
+            faultLabel.className = 'trace-fault-label';
+            faultLabel.textContent = faultType;
+            firstTd.insertBefore(faultLabel, firstTd.firstChild);
+        }
         const backBtn = document.createElement('button');
         backBtn.className = 'trace-gatelog-back';
         backBtn.title = 'Return to Gate Log';

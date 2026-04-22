@@ -11811,6 +11811,26 @@ tr.itrace-fault td { color: #ff9999; }
     background: rgba(232, 160, 80, 0.25);
     border-color: rgba(232, 160, 80, 0.7);
 }
+.trace-fault-label {
+    display: inline-block;
+    margin-right: 0.45em;
+    padding: 1px 6px;
+    font-size: 0.7rem;
+    font-family: inherit;
+    line-height: 1.4;
+    color: rgba(220, 80, 80, 0.95);
+    background: rgba(220, 80, 80, 0.12);
+    border: 1px solid rgba(220, 80, 80, 0.4);
+    border-radius: 3px;
+    white-space: nowrap;
+    vertical-align: middle;
+    animation: trace-fault-label-fade 5s ease-out forwards;
+}
+@keyframes trace-fault-label-fade {
+    0%   { opacity: 1; }
+    60%  { opacity: 1; }
+    100% { opacity: 0.25; }
+}
 .trace-td-changed {
     color: #f1c40f !important;
     font-weight: bold;
