@@ -3730,10 +3730,11 @@ class ChurchSimulator {
     _auditLumpHeader(nsIndex, label, hdr) {
         const magicPass = hdr.valid;
         const ccPass    = magicPass && (hdr.cc > 0);
-        const typPass   = magicPass && (hdr.typ === 1);   // must be Inform (typ=1)
+        // Hardware only checks MAGIC and CC from the lump header word at B:04 LOAD_NUC.
+        // The typ field (bits [9:8]) is never validated by the hardware at this step;
+        // the NS entry type check happens earlier via entryCheck.parsed.type.
         const checks = { magic: { pass: magicPass, rawMagic: hdr.magic } };
-        if (magicPass) checks.cc  = { pass: ccPass };
-        if (magicPass) checks.typ = { pass: typPass, typVal: hdr.typ };
+        if (magicPass) checks.cc = { pass: ccPass };
         this.auditLog.push({
             gate: 'Lump.Header',
             label,
@@ -3741,7 +3742,7 @@ class ChurchSimulator {
             requiredPerm: null,
             checks,
             b: null, f: null,
-            result: (magicPass && ccPass && typPass) ? 'pass' : 'fail',
+            result: (magicPass && ccPass) ? 'pass' : 'fail',
             stepCtx: this._currentInstrLabel || null,
         });
     }
