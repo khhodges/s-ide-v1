@@ -61,6 +61,30 @@
 //           ISUB DR1, DR1, #1
 //           BRANCHNE loop_top      ; equivalent to BRANCHNE -1
 //
+// NAMED ABSTRACTION SYMBOLS  (NS shorthand)
+//   The assembler accepts registered abstraction names wherever a CR source
+//   operand appears, in two complementary ways:
+//
+//   Level 1 — two-operand LOAD/SAVE/ELOADCALL/XLOADLAMBDA shorthand:
+//     LOAD  CRdst, Name          → LOAD  CRdst, CR6, slot
+//     SAVE  CRdst, Name          → SAVE  CRdst, CR6, slot
+//     ELOADCALL  CRdst, Name     → ELOADCALL  CRdst, CR6, slot
+//     XLOADLAMBDA  CRdst, Name   → XLOADLAMBDA  CRdst, CR6, slot
+//   CR6 is the c-list root by convention.  For LOAD and SAVE the assembler
+//   also records  Name → CRdst  in an internal map so the Level-2 rule kicks
+//   in immediately for subsequent instructions in the same program.
+//
+//   Level 2 — loaded-CR resolution in any CR operand position:
+//   After  LOAD CR11, SlideRule  is assembled, the name SlideRule is known to
+//   be in CR11.  Any subsequent instruction that names SlideRule where a CR is
+//   expected resolves to CR11 automatically:
+//     CALL    SlideRule              → CALL    CR11
+//     SWITCH  SlideRule              → SWITCH  CR11
+//     LOAD    CR5, SlideRule, 3      → LOAD    CR5, CR11, 3
+//     ELOADCALL CR0, SlideRule, 2   → ELOADCALL CR0, CR11, 2
+//   Names are matched case-sensitively (SlideRule ≠ sliderule).
+//   Unknown names produce an error listing all known abstraction and loaded names.
+//
 // POST-ASSEMBLY BRANCH BOUNDS CHECK
 //   After encoding all words, the assembler verifies that every BRANCH
 //   target falls within [0, total_code_words).  Out-of-range targets are
@@ -111,11 +135,26 @@ class ChurchAssembler {
         };
         this.labels = {};
         this.errors = [];
+        this.nsSymbols = {};  // name → NS slot index (populated by setNamespace())
+        this.nsLoaded  = {};  // name → CR index      (updated during assembly)
+    }
+
+    setNamespace(map) {
+        this.nsSymbols = Object.assign({}, map);
+        this.nsLoaded  = {};   // clear stale CR assignments
+    }
+
+    _resolveNSName(token) {
+        if (!token) return null;
+        const name = token.replace(/,/g, '').trim();
+        const slot = this.nsSymbols[name];
+        return slot !== undefined ? slot : null;
     }
 
     assemble(source) {
         this.labels = {};
         this.errors = [];
+        this.nsLoaded = {};   // reset per-assembly loaded-CR tracking
         const lines = source.split('\n');
         const instructions = [];
 
@@ -250,14 +289,28 @@ class ChurchAssembler {
         switch (opcode) {
             case 0: {
                 crDst = this._parseCR(parts[1], lineNum);
-                crSrc = this._parseCR(parts[2], lineNum);
-                imm = this._parseImm(parts[3], lineNum);
+                const nsSlot0 = this._resolveNSName(parts[2]);
+                if (nsSlot0 !== null && !parts[3]) {
+                    crSrc = 6;   // CR6 = c-list root by convention
+                    imm   = nsSlot0;
+                    this.nsLoaded[(parts[2] || '').replace(/,/g, '').trim()] = crDst;
+                } else {
+                    crSrc = this._parseCR(parts[2], lineNum);
+                    imm   = this._parseImm(parts[3], lineNum);
+                }
                 break;
             }
             case 1: {
                 crDst = this._parseCR(parts[1], lineNum);
-                crSrc = this._parseCR(parts[2], lineNum);
-                imm = this._parseImm(parts[3], lineNum);
+                const nsSlot1 = this._resolveNSName(parts[2]);
+                if (nsSlot1 !== null && !parts[3]) {
+                    crSrc = 6;
+                    imm   = nsSlot1;
+                    this.nsLoaded[(parts[2] || '').replace(/,/g, '').trim()] = crDst;
+                } else {
+                    crSrc = this._parseCR(parts[2], lineNum);
+                    imm   = this._parseImm(parts[3], lineNum);
+                }
                 break;
             }
             case 2: {
@@ -302,14 +355,26 @@ class ChurchAssembler {
             }
             case 8: {
                 crDst = this._parseCR(parts[1], lineNum);
-                crSrc = this._parseCR(parts[2], lineNum);
-                imm = this._parseImm(parts[3], lineNum);
+                const nsSlot8 = this._resolveNSName(parts[2]);
+                if (nsSlot8 !== null && !parts[3]) {
+                    crSrc = 6;
+                    imm   = nsSlot8;
+                } else {
+                    crSrc = this._parseCR(parts[2], lineNum);
+                    imm   = this._parseImm(parts[3], lineNum);
+                }
                 break;
             }
             case 9: {
                 crDst = this._parseCR(parts[1], lineNum);
-                crSrc = this._parseCR(parts[2], lineNum);
-                imm = this._parseImm(parts[3], lineNum);
+                const nsSlot9 = this._resolveNSName(parts[2]);
+                if (nsSlot9 !== null && !parts[3]) {
+                    crSrc = 6;
+                    imm   = nsSlot9;
+                } else {
+                    crSrc = this._parseCR(parts[2], lineNum);
+                    imm   = this._parseImm(parts[3], lineNum);
+                }
                 break;
             }
             case 10: {
@@ -424,6 +489,10 @@ class ChurchAssembler {
             this.errors.push({ line: lineNum, message: 'A capability register (like CR0, CR6, CR14, 6, or hex 0x0–0xF) is needed here, but nothing was given.' });
             return 0;
         }
+        // Level 2: check if this token is an abstraction name already loaded into a CR.
+        const rawTok = token.replace(/,/g, '').trim();
+        if (this.nsLoaded[rawTok] !== undefined) return this.nsLoaded[rawTok];
+
         token = token.toUpperCase().replace(/,/g, '');
         const m = token.match(/^CR(\d+)$/);
         if (m) {
@@ -446,7 +515,15 @@ class ChurchAssembler {
             this.errors.push({ line: lineNum, message: `${idx} is out of range for a capability register — must be 0–15 (CR0–CR15).` });
             return 0;
         }
-        this.errors.push({ line: lineNum, message: `Expected a capability register like CR0, CR6, 6, or hex 0x6, but got "${token}". Capability registers are CR0–CR15 (or 0–15, or 0x0–0xF).` });
+        let hint = '';
+        const knownNames  = Object.keys(this.nsSymbols);
+        const loadedNames = Object.keys(this.nsLoaded);
+        if (knownNames.length) {
+            const shown = knownNames.slice(0, 6).join(', ');
+            hint += ` Known abstractions: ${shown}${knownNames.length > 6 ? '…' : ''}.`;
+        }
+        if (loadedNames.length) hint += ` Loaded in CRs: ${loadedNames.join(', ')}.`;
+        this.errors.push({ line: lineNum, message: `Expected a capability register like CR0, CR6, 6, or hex 0x6, but got "${rawTok}".${hint}` });
         return 0;
     }
 

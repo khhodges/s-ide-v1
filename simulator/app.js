@@ -295,6 +295,16 @@ function init() {
     systemAbstractions = new SystemAbstractions(abstractionRegistry);
     deviceAbstractions = new DeviceAbstractions(abstractionRegistry);
     sim.initAbstractions(abstractionRegistry, systemAbstractions, deviceAbstractions);
+    // Wire abstraction names into the assembler symbol table so the named
+    // shorthand syntax works:  LOAD CR11, SlideRule  (Level 1), and after
+    // that instruction any  CALL SlideRule  → CALL CR11  (Level 2).
+    {
+        const _nsSymMap = {};
+        for (const [slot, abs] of Object.entries(abstractionRegistry.abstractions)) {
+            _nsSymMap[abs.name] = parseInt(slot);
+        }
+        assembler.setNamespace(_nsSymMap);
+    }
     // window.bootConfig was prefetched by the DOMContentLoaded handler before
     // init() ran (Task #214 Step 1), so this single reset already uses the
     // programmer-chosen lump sizes when present, and historical defaults
