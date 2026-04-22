@@ -53,7 +53,7 @@ Authoritative sources: `hardware/hw_types.py`, `hardware/layouts.py`, `hardware/
 
 ### D-4: CR Register Remap (Dual Names)
 
-- **Hardware** (`hw_types.py`): `CR_THREAD = 12`, `CR_DFAULT = 12` (same register). `CR_CODE = 14`, `CR_CLOOMC = 14` (same register).
+- **Hardware** (`hw_types.py`): `CR_THREAD = 12`, `CR_THREAD_STACK = 12` (same register). `CR_CODE = 14`, `CR_CLOOMC = 14` (same register).
 - **Docs**: `architecture.md` lines 227–229 uses both names. The dual naming is documented but creates potential confusion about whether these are distinct registers or aliases.
 - **Decision**: Should docs standardize on one canonical name per register, or keep both names with explicit alias notation?
 - **Affected files**: `architecture.md`, `boot-permission-rules.md`
