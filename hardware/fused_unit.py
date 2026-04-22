@@ -46,7 +46,6 @@ class ChurchELoadCall(Elaboratable):
     def elaborate(self, platform):
         m = Module()
 
-        CR6_CLIST = 6
         MAX_SRC_REG = 5
 
         u_mload = ChurchMLoad()
@@ -85,12 +84,12 @@ class ChurchELoadCall(Elaboratable):
             with m.Case(1):
                 m.d.comb += [
                     mload_src.eq(self.cr_dst),
-                    mload_dst.eq(CR6_CLIST),
+                    mload_dst.eq(CR_CLIST),
                     mload_index.eq(0),
                 ]
             with m.Default():
                 m.d.comb += [
-                    mload_src.eq(CR6_CLIST),
+                    mload_src.eq(CR_CLIST),
                     mload_dst.eq(CR_NUCLEUS),
                     mload_index.eq(0),
                 ]
