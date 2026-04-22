@@ -18,6 +18,13 @@ Exercises the JavaScript simulator via Node.js to verify:
      not exercise: mLoad succeeds but the post-mLoad F-bit check in
      _execCall halts with F_BIT.  (Task #362)
 
+  4. The mSave gate's F_BIT check (simulator.js ~line 1484) fires when the
+     TARGET NS slot has F=1.  Because _execSave always passes targetIdx=null,
+     this branch is exercised by calling mSave() directly with a non-null
+     targetIdx whose NS entry has bit 30 set.  A synthetic GT with B=1 and a
+     matching gt_seq is used so that the earlier version/seal/bind checks all
+     pass, isolating the far-bit path cleanly.  (Task #363)
+
 A regression in any of these paths would be caught here without requiring
 a full IDE boot.
 """

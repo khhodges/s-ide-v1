@@ -185,6 +185,71 @@ function fail(msg) { ERRORS.push(msg); }
     console.log('[PASS] CALL F_BIT runtime fault fired: "' + fBitFault.message + '"');
 })();
 
+// ─── Test 4: mSave fires F_BIT when the TARGET NS slot has F=1 ───────────────
+//
+// The mSave gate at simulator.js ~line 1484 checks the F-bit on the TARGET slot
+// (not the source).  _execSave always passes targetIdx=null so this branch can
+// only be exercised by calling mSave directly.  This test does exactly that:
+//
+//   1. Boot the simulator so valid NS entries exist.
+//   2. Build a synthetic GT for bootEntrySlot with B=1 (so bindPass succeeds)
+//      and a matching gt_seq (so the version check passes).  The CRC seal on
+//      the NS entry is not affected because the seal covers only
+//      (word0_location, limit17) — bit 30 (F) is outside that range.
+//   3. Inject F=1 into bootEntrySlot's word1 and pass bootEntrySlot as targetIdx.
+//   4. Assert mSave returns { ok: false, fault: 'F_BIT' }.
+
+(function testMSaveFBitFault() {
+    const sim = new ChurchSimulator();
+
+    // Boot the simulator completely so all NS entries are initialised.
+    let steps = 0;
+    while (!sim.bootComplete && !sim.halted && steps < 200) {
+        sim._bootStep();
+        steps++;
+    }
+
+    if (!sim.bootComplete) {
+        fail('Boot did not complete for mSave F_BIT test: ' +
+             (sim.faultLog && sim.faultLog.length
+                 ? sim.faultLog[sim.faultLog.length - 1].message
+                 : '(no fault)'));
+        return;
+    }
+
+    // Read the boot-entry NS entry to extract the current gt_seq so the
+    // synthetic GT passes the version check inside mSave.
+    const slotIdx = sim.bootEntrySlot;
+    const memBase = sim.NS_TABLE_BASE + slotIdx * sim.NS_ENTRY_WORDS;
+    const word2   = sim.memory[memBase + 2];
+    const gt_seq  = (word2 >>> 25) & 0x7F;
+
+    // Construct a synthetic GT with B=1 so that bindPass succeeds and
+    // execution reaches the farPass check.  Only the GT bits are modified;
+    // the NS entry itself (and therefore its CRC seal) is untouched here.
+    const syntheticGT = sim.createGT(gt_seq, slotIdx, { B: 1, E: 1 }, 1);
+
+    // Inject F=1 (bit 30) into the target slot's word1.  The seal covers
+    // only (word0_location, limit17) so bit 30 is safe to flip without
+    // invalidating the seal.
+    sim.memory[memBase + 1] = (sim.memory[memBase + 1] | (1 << 30)) >>> 0;
+
+    // Call mSave directly with targetIdx=slotIdx so the far-bit check fires.
+    const result = sim.mSave(syntheticGT, slotIdx, 6);
+
+    if (result.ok) {
+        fail('mSave unexpectedly succeeded when target slot has F=1 — F_BIT check missing');
+        return;
+    }
+
+    if (result.fault !== 'F_BIT') {
+        fail('Expected mSave to return F_BIT when target slot has F=1, got: ' + result.fault);
+        return;
+    }
+
+    console.log('[PASS] mSave F_BIT fault fired for far target slot: "' + result.message + '"');
+})();
+
 // ─── Report ──────────────────────────────────────────────────────────────────
 
 if (ERRORS.length > 0) {
