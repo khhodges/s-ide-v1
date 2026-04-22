@@ -121,13 +121,13 @@ class SystemAbstractions {
     _bindStartupConfig() {
         // Startup.Config lump data layout (lump word = NS slot 2 physical location + offset):
         //   lump[0]  : lump header (packLumpHeader result — 0 for data-only)
-        //   lump[1]  : data[0] = entry_slot  (default 4 = NS[4] LED flash, the first user abstraction)
+        //   lump[1]  : data[0] = entry_slot  (default 4 = NS[4] Salvation, the first user abstraction)
         //   lump[2]  : data[1] = config_version (STARTUP_CONFIG_VERSION = 0x00000001)
         //   lump[3]  : data[2] = flags (reserved, must be 0)
         //   lump[4]  : data[3] = fault_count (incremented on Execute pre-check failure)
         //   lump[5..63] : data[4..62] = user params (R/W via ReadParam/WriteParam)
         //
-        // Default entry_slot is 4 (NS[4] = LED flash), NOT 3 (Boot.Abstr).
+        // Default entry_slot is 4 (NS[4] = Salvation), NOT 3 (Boot.Abstr = NS[3] = LED flash).
         // Slot 3 is rejected by SetEntry as RECURSIVE_SLOT because Boot.Abstr calls
         // Startup.Config.Execute(), making slot 3 → Boot.Abstr → slot 2 → slot 3 recursive.
         //
@@ -314,7 +314,7 @@ class SystemAbstractions {
         });
 
         this.registry.bindMethod(2, 'Reset', function(sim, args) {
-            setData(sim, 0, STARTUP_CONFIG_DEFAULT_ENTRY); // entry_slot = 4 (LED flash, default)
+            setData(sim, 0, STARTUP_CONFIG_DEFAULT_ENTRY); // entry_slot = 4 (Salvation, default)
             setData(sim, 2, 0);                             // flags = 0
             for (let k = 3; k < 63; k++) setData(sim, k, 0); // fault_count + user params = 0
             // data[1] (config_version) is intentionally preserved across Reset
