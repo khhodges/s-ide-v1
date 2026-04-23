@@ -345,7 +345,10 @@ class ChurchCall(Elaboratable):
                 m.next = "CHECK_PERM"
 
             with m.State("CHECK_PERM"):
-                with m.If(~src_has_e_perm):
+                with m.If(src_gt.gt_type == GT_TYPE_ABSTRACT):
+                    m.d.sync += [fault_latched.eq(1), fault_type_latched.eq(FaultType.INVALID_OP)]
+                    m.next = "FAULT"
+                with m.Elif(~src_has_e_perm):
                     m.d.sync += [fault_latched.eq(1), fault_type_latched.eq(FaultType.PERM_E)]
                     m.next = "FAULT"
                 with m.Else():

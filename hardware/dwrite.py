@@ -91,6 +91,9 @@ class ChurchDWrite(Elaboratable):
                 with m.If(gt_null):
                     m.d.comb += [self.fault.eq(1), self.fault_type.eq(FaultType.NULL_CAP)]
                     m.next = "IDLE"
+                with m.Elif(cr_gt.gt_type == GT_TYPE_ABSTRACT):
+                    m.d.comb += [self.fault.eq(1), self.fault_type.eq(FaultType.INVALID_OP)]
+                    m.next = "IDLE"
                 with m.Elif(~has_w):
                     m.d.comb += [self.fault.eq(1), self.fault_type.eq(FaultType.PERM_W)]
                     m.next = "IDLE"

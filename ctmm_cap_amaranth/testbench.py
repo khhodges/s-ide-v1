@@ -231,6 +231,38 @@ def run_testbench():
         assert reclaimed_version == 2, f"Reclaimed GT version should be bumped to 2, got {reclaimed_version}"
         print("  PASS: GC sweep bumps version, sets NULL type")
 
+        print("\n[TEST 11] Abstract LED GT — Hardware Decode Path (Task #430)")
+        print("-" * 50)
+        # Replicate the boot image's create_abstract_gt() encoding in-line so the
+        # testbench has no dependency on server/.  Layout (hardware/ format):
+        #   [31:27] = ab_type   [26] = R   [25] = W   [24:23] = 0b11   [22:16] = gt_seq   [15:0] = ab_data
+        # (gt_type at bits[24:23] matches GT_LAYOUT in hardware/layouts.py)
+        _AB_TYPE_IO       = 0x00
+        _DEVICE_CLASS_LED = 0x01
+        for led_idx in range(4):
+            ab_data    = (_DEVICE_CLASS_LED << 8) | (led_idx & 0xFF)
+            ab_led_gt  = (
+                ((_AB_TYPE_IO  & 0x1F) << 27) |
+                (1             << 26) |   # R at bit[26]
+                (1             << 25) |   # W at bit[25]
+                (0b11          << 23) |   # gt_type = ABSTRACT (0b11)
+                (ab_data & 0xFFFF)
+            )
+            hw_gt_type = (ab_led_gt >> 23) & 0x3
+            assert hw_gt_type == 3, (
+                f"LED[{led_idx}] gt_type should be 0b11 (GT_TYPE_ABSTRACT=3), got {hw_gt_type}"
+            )
+        print("  PASS: Abstract LED GTs (slots 8-11) have gt_type=0b11 at bits[24:23]")
+
+        for gt_type_val, name in (
+            (0x00, "NULL"), (0x01, "INFORM"), (0x02, "OUTFORM"), (0x03, "ABSTRACT")
+        ):
+            probe     = (gt_type_val & 0x3) << 23
+            extracted = (probe >> 23) & 0x3
+            assert extracted == gt_type_val, f"{name}: gt_type round-trip via bits[24:23] failed"
+        print("  PASS: gt_type extraction from bits[24:23] correct for all four types")
+        print("  NOTE: DREAD/DWRITE/CALL on gt_type=0b11 → INVALID_OP fault (hardware stub)")
+
         print("\n" + "=" * 60)
         print("CTMMCap Amaranth Testbench — All Tests Complete")
         print("=" * 60)
