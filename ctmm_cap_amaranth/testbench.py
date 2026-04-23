@@ -396,7 +396,8 @@ def run_testbench():
             f"got cr15_m_flag={m_flag_post_change}")
         print("  PASS 12C: CHANGE does not reset M-flag (M preserved across CHANGE)")
 
-        # ── 12D: Integrity mismatch in WRITEBACK → INVALID_OP fault ─────
+        # ── 12D: Valid GT type, integrity mismatch in WRITEBACK → INVALID_OP fault ──
+        # (Task #441: "valid GT + wrong integrity word" fault path — WRITEBACK branch.)
         # M=1 from test 12C; XR11=Abstract GT (valid, non-NULL); XR12=A12_NS_LOC,
         # XR13=A12_NS_AUTH, XR14=A12_NS_INT (from cr15_m_set after 12B writeback).
         # Corrupt XR14 via ADDI so integrity32(XR12,XR13) ≠ XR14.
@@ -477,7 +478,9 @@ def run_testbench():
 
         print("  PASS 12E: CHANGE M-flag restore path verified (restore-1 / restore-0 / priority)")
 
-        # ── 12F: NULL GT in XR11 → FAULT state → INVALID_OP fault ─────
+        # ── 12F: NULL GT in XR11 → FAULT state (IDLE→FAULT path) → INVALID_OP ──────
+        # (Separate fault path from 12D: NULL GT is rejected in IDLE before WRITEBACK
+        # even runs, so the integrity check is bypassed entirely — IDLE→FAULT dispatch.)
         # After 12E step-3, M=0. Re-set M=1 with valid shadow, then corrupt XR11
         # to carry a NULL GT so the IDLE validator rejects it before WRITEBACK.
         ctx.set(dut.cr15_m_set, 1)
