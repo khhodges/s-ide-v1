@@ -2558,6 +2558,18 @@ class ChurchSimulator {
             this._resetAllMBits();
             return this._dispatchAbstractCall(d, sourceGT);
         }
+        // Far-cap pre-check: reject before M-window writeback so that F_BIT fault
+        // takes priority over any M-window state (e.g. NULL DR11 with M-bit set).
+        // Architecturally, a far-capability violation is detected at capability
+        // decode time, before any side-effects of the CALL boundary are triggered.
+        {
+            const preBase = this.NS_TABLE_BASE + srcParsed.index * this.NS_ENTRY_WORDS;
+            const preW1   = this.memory[preBase + 1];
+            if ((preW1 >>> 30) & 1) {
+                this.fault('F_BIT', `CALL: CR${d.crDst} has F-bit set (Far)`);
+                return null;
+            }
+        }
         // M-window writeback gate: Inform-type CALL path only.
         // Fires before NS lookup and stack push; not called on Abstract-GT dispatch.
         if (!this._mwinWriteback()) return null;
