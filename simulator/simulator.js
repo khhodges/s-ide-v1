@@ -2357,6 +2357,28 @@ class ChurchSimulator {
             }
         }
 
+        if (slotParsed.type === 3) {
+            const info = this.parseAbstractGT(slotGT);
+            const fakeEntry = { word0_location: 0, word1_limit: 0, word3_abstract_gt: 0 };
+            if (!this._writeCR(d.crDst, slotGT, fakeEntry)) return null;
+            const CLASS_NAMES = ['IO','M-Elev','','','',''];
+            const DC_NAMES   = {
+                [ChurchSimulator.DEVICE_CLASS_LED]:     'LED',
+                [ChurchSimulator.DEVICE_CLASS_UART]:    'UART',
+                [ChurchSimulator.DEVICE_CLASS_BUTTON]:  'BTN',
+                [ChurchSimulator.DEVICE_CLASS_TIMER]:   'TIMER',
+                [ChurchSimulator.DEVICE_CLASS_DISPLAY]: 'DISPLAY',
+            };
+            const dcName = DC_NAMES[info.device_class] || `dc=0x${info.device_class.toString(16).toUpperCase()}`;
+            const abLabel = info.ab_type === ChurchSimulator.AB_TYPE_IO
+                ? `Abstract.${dcName}[${info.device_data}]`
+                : `Abstract(ab_type=0x${info.ab_type.toString(16).toUpperCase()})`;
+            const desc = `LOAD CR${d.crDst}, [CR${d.crSrc} + ${d.imm}] \u2192 ${abLabel}`;
+            this.output += desc + '\n';
+            this.pc++;
+            return { pc: this.pc - 1, instr: d, desc };
+        }
+
         const targetIdx = slotParsed.index;
         this._lastLoadTargetSlot = targetIdx;
         if (targetIdx >= this.nsCount || !this.isNSEntryValid(targetIdx)) {
