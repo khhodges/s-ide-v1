@@ -223,8 +223,10 @@ class SystemAbstractions {
                     gate: 'Startup.Config.Execute',
                     label: entryLabel,
                     nsIndex: entrySlot,
-                    result: calleeOk ? 'PASS' : 'FAIL',
-                    checks: null,
+                    requiredPerm: null,
+                    checks: { execute: { pass: calleeOk } },
+                    b: 0, f: 0,
+                    result: calleeOk ? 'pass' : 'fail',
                     bootStepName: 'STARTUP_CONFIG',
                 });
             }

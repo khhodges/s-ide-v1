@@ -4144,7 +4144,7 @@ class ChurchSimulator {
 
     _auditPipeline() {
         return this.auditLog.map(a => {
-            const checks = a.checks;
+            const checks = a.checks || {};
             const checkList = Object.entries(checks).map(([k, v]) => ({
                 name: k.toUpperCase(),
                 pass: v.pass,

@@ -1030,7 +1030,7 @@ function updateGateLog() {
         html += `<span class="gate-result ${pass ? 'result-pass' : 'result-fail'}">${pass ? '\u2713 PASS' : '\u2717 FAULT'}</span>`;
         html += `</div>`;
         html += `<div class="gate-checks">`;
-        for (const [k, v] of Object.entries(a.checks)) {
+        for (const [k, v] of Object.entries(a.checks || {})) {
             let label;
             if (k === 'magic') {
                 label = v.pass
@@ -1065,7 +1065,7 @@ function updateGateLog() {
         // When the gate failed on perm and is a DREAD/DWRITE mLoad, the range check was never
         // reached.  Show a greyed-out badge so the user knows the scope was not verified.
         const isDReadWrite = a.gate === 'mLoad' && a.requiredPerm && (a.requiredPerm === 'R' || a.requiredPerm === 'W');
-        if (!pass && isDReadWrite && !a.checks.range) {
+        if (!pass && isDReadWrite && !(a.checks && a.checks.range)) {
             html += `<span class="gate-check check-skipped" title="Perm check failed before scope could be verified">&mdash;&nbsp;SCOPE&nbsp;(not&nbsp;checked)</span>`;
         }
         if (!isLumpHdr && !isNSType) {
@@ -10270,7 +10270,7 @@ function stepSim() {
             pipelineViz.setNIA(_bootNIARows(sim.bootStep));
             if (pipelineViz.mode === 'audit') {
                 pipelineViz.showFullPipeline(sim.auditLog.map(a => {
-                    const checks = Object.entries(a.checks).map(([k, v]) => ({ name: k.toUpperCase(), pass: v.pass, perm: v.perm || null }));
+                    const checks = Object.entries(a.checks || {}).map(([k, v]) => ({ name: k.toUpperCase(), pass: v.pass, perm: v.perm || null }));
                     return { stage: a.gate, type: a.gate, desc: `${a.gate}(NS[${a.nsIndex}]="${a.label}"${a.requiredPerm ? ', '+a.requiredPerm : ''})`, label: a.label, nsIndex: a.nsIndex, requiredPerm: a.requiredPerm, checks, status: a.result, b: a.b, f: a.f };
                 }));
             } else {
