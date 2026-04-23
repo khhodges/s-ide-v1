@@ -3,6 +3,7 @@ from amaranth.lib.data import View
 
 from .types import *
 from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, COND_FLAGS_LAYOUT
+from hardware.integrity32 import integrity32_amaranth, integrity32
 from .registers import CTMMCapRegisters
 from .decoder import CTMMCapDecoder
 from .perm_check import CTMMCapPermCheck
@@ -636,6 +637,12 @@ class CTMMCapCore(Elaboratable):
         xr11_valid   = Signal()
         m.d.comb += xr11_valid.eq(xr11_gt_type != GT_TYPE_NULL)
 
+        # Integrity check on the latched shadow — XR14 must equal integrity32(XR12, XR13).
+        mwin_integrity_computed = Signal(32)
+        integrity32_amaranth(m, mwin_xr12_lat, mwin_xr13_lat, mwin_integrity_computed)
+        mwin_integrity_ok = Signal()
+        m.d.comb += mwin_integrity_ok.eq(mwin_integrity_computed == mwin_xr14_lat)
+
         with m.FSM(name="mwin"):
             with m.State("IDLE"):
                 m.d.comb += mwin_busy.eq(0)
@@ -653,15 +660,23 @@ class CTMMCapCore(Elaboratable):
 
             with m.State("WRITEBACK"):
                 m.d.comb += mwin_busy.eq(1)
-                mwin_wr_view = View(CAP_REG_LAYOUT, mwin_cr_wr_data)
-                m.d.comb += [
-                    mwin_wr_view.word0_gt.eq(mwin_xr11_lat),
-                    mwin_wr_view.word1_location.eq(mwin_xr12_lat),
-                    mwin_wr_view.word2_limit.eq(mwin_xr13_lat),
-                    mwin_wr_view.word3_seals.eq(mwin_xr14_lat),
-                    mwin_cr_wr_en.eq(1),
-                    mwin_m_clear_en.eq(1),
-                ]
+                # Integrity check: reject the writeback if XR14 ≠ integrity32(XR12, XR13)
+                with m.If(mwin_integrity_ok):
+                    mwin_wr_view = View(CAP_REG_LAYOUT, mwin_cr_wr_data)
+                    m.d.comb += [
+                        mwin_wr_view.word0_gt.eq(mwin_xr11_lat),
+                        mwin_wr_view.word1_location.eq(mwin_xr12_lat),
+                        mwin_wr_view.word2_limit.eq(mwin_xr13_lat),
+                        mwin_wr_view.word3_seals.eq(0),   # integrity tag not written back
+                        mwin_cr_wr_en.eq(1),
+                        mwin_m_clear_en.eq(1),
+                    ]
+                with m.Else():
+                    m.d.comb += [
+                        mwin_fault_sig.eq(1),
+                        mwin_fault_type.eq(FaultType.INVALID_OP),
+                        mwin_m_clear_en.eq(1),
+                    ]
                 m.next = "IDLE"
 
             with m.State("FAULT"):
@@ -674,13 +689,44 @@ class CTMMCapCore(Elaboratable):
                 m.next = "IDLE"
 
         # Wire M-set, M-clear, and CHANGE M-flag restore to u_regs
+        # M-set fires on Abstract-GT CALL (mgt_set_trigger) or test port (cr15_m_set).
+        # For the test-port path, m_set_dr values are sourced from CR15 + integrity32 below.
         m.d.comb += [
-            u_regs.m_set_en.eq(self.cr15_m_set),
+            u_regs.m_set_en.eq(self.cr15_m_set | u_call.mgt_set_trigger),
             u_regs.m_clear_en.eq(mwin_m_clear_en),
             # m_flag_restore: in hardware driven by u_change outputs;
             # exposed as a test port here for direct verification.
             u_regs.m_flag_restore_en.eq(self.m_flag_restore_en),
             u_regs.m_flag_restore_val.eq(self.m_flag_restore_val),
+        ]
+
+        # M-window shadow data sources (Mux: mgt_set_trigger > cr15_m_set).
+        # For the cr15_m_set path, compute integrity32 here so WRITEBACK passes.
+        cr15_ns_mset_view = View(CAP_REG_LAYOUT, u_regs.cr15_namespace)
+        cr15_m_set_integrity = Signal(32)
+        integrity32_amaranth(
+            m,
+            cr15_ns_mset_view.word1_location,
+            cr15_ns_mset_view.word2_limit,
+            cr15_m_set_integrity,
+        )
+        m.d.comb += [
+            u_regs.m_set_dr11.eq(
+                Mux(u_call.mgt_set_trigger, u_call.mgt_gt_word,
+                    cr15_ns_mset_view.word0_gt.as_value())
+            ),
+            u_regs.m_set_dr12.eq(
+                Mux(u_call.mgt_set_trigger, u_call.mgt_ns_location,
+                    cr15_ns_mset_view.word1_location)
+            ),
+            u_regs.m_set_dr13.eq(
+                Mux(u_call.mgt_set_trigger, u_call.mgt_ns_authority,
+                    cr15_ns_mset_view.word2_limit)
+            ),
+            u_regs.m_set_dr14.eq(
+                Mux(u_call.mgt_set_trigger, u_call.mgt_ns_integrity,
+                    cr15_m_set_integrity)
+            ),
         ]
 
         # Expose M-window observability signals

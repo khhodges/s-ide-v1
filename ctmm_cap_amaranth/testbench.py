@@ -4,6 +4,7 @@ from amaranth.sim import Simulator
 from .types import *
 from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, COND_FLAGS_LAYOUT
 from .core import CTMMCapCore
+from hardware.integrity32 import integrity32
 
 
 def build_gt(index, perms, gt_type=GT_TYPE_INFORM, version=0):
@@ -287,13 +288,18 @@ def run_testbench():
         # The other CR15 words are 0 (not set during boot)
         boot_ns_gt = build_gt(0, 0, gt_type=GT_TYPE_INFORM, version=0)  # = 0
 
+        # XR14 is now the integrity tag: integrity32(XR12=CR15.loc=0, XR13=CR15.limit=0)
+        expected_xr14 = integrity32(0, 0)   # = 0xDEADBEEF when both inputs are 0
         assert m_flag == 1, f"cr15_m_flag should be 1 after M-set, got {m_flag}"
         assert xr11 == boot_ns_gt, (
             f"XR11 should equal CR15.word0_gt={boot_ns_gt:#010x}, got {xr11:#010x}")
         assert xr12 == 0, f"XR12 should equal CR15.word1_location=0, got {xr12:#010x}"
         assert xr13 == 0, f"XR13 should equal CR15.word2_limit=0, got {xr13:#010x}"
-        assert xr14 == 0, f"XR14 should equal CR15.word3_seals=0, got {xr14:#010x}"
-        print("  PASS 12A: M-set copies CR15→XR11-XR14; cr15_m_flag=1")
+        assert xr14 == expected_xr14, (
+            f"XR14 should equal integrity32(loc=0,lim=0)={expected_xr14:#010x}, "
+            f"got {xr14:#010x}")
+        print("  PASS 12A: M-set populates XR11-XR14 with GT/NS-loc/NS-auth/integrity32; "
+              "cr15_m_flag=1")
 
         # ── 12B: Valid M-writeback via trigger — M cleared, no fault ─────
         ctx.set(dut.cr15_m_writeback_trigger, 1)
@@ -333,40 +339,43 @@ def run_testbench():
             f"got cr15_m_flag={m_flag_post_change}")
         print("  PASS 12C: CHANGE does not reset M-flag (M preserved across CHANGE)")
 
-        # ── 12D: Invalid M-writeback (NULL GT in XR11) → INVALID_OP fault ─
-        # M=1 from test 12C. Write NULL_GT to XR11 via ADDI instruction.
-        # NULL_GT = build_null_gt() = GT_TYPE_NULL encoded = 0b10 = 2
-        null_gt_val = build_null_gt()   # = 2 in ctmm_cap_amaranth encoding
-        addi_null = encode_ctmm_i(
-            null_gt_val, 0, int(CTMMFunct3ArithI.ADDI), 11, int(CTMMOpcode.ARITHI))
-        ctx.set(dut.imem_data, addi_null)
+        # ── 12D: Integrity mismatch in WRITEBACK → INVALID_OP fault ─────
+        # M=1 from test 12C; XR11=INFORM GT (valid), XR12=0, XR13=0, XR14=0xDEADBEEF.
+        # Corrupt XR14 via ADDI so integrity32(XR12,XR13) ≠ XR14.
+        assert ctx.get(dut.cr15_m_flag) == 1, "M should still be 1 entering 12D"
+        corrupt_integrity = 0x42
+        addi_corrupt = encode_ctmm_i(
+            corrupt_integrity, 0, int(CTMMFunct3ArithI.ADDI), 14, int(CTMMOpcode.ARITHI))
+        ctx.set(dut.imem_data, addi_corrupt)
         ctx.set(dut.imem_valid, 1)
-        await ctx.tick()          # ADDI fires: XR11 ← null_gt_val = 2
+        await ctx.tick()          # ADDI fires: XR14 ← 0x42 (corrupted integrity tag)
         ctx.set(dut.imem_valid, 0)
-        await ctx.tick()          # XR11=null_gt_val settles
+        await ctx.tick()          # XR14 settles
 
-        xr11_null = ctx.get(dut.dbg_m_xr11)
-        assert xr11_null == null_gt_val, (
-            f"XR11 should be NULL_GT={null_gt_val}, got {xr11_null}")
-        assert ctx.get(dut.cr15_m_flag) == 1, "M should still be 1 before invalid writeback"
+        xr14_corrupt = ctx.get(dut.dbg_m_xr14)
+        assert xr14_corrupt == corrupt_integrity, (
+            f"XR14 should be {corrupt_integrity:#x} after ADDI, got {xr14_corrupt:#010x}")
+        assert ctx.get(dut.cr15_m_flag) == 1, "M should still be 1 before integrity check"
 
-        # Trigger M-writeback — XR11[1:0]=0b10=GT_TYPE_NULL → FAULT
+        # Trigger M-writeback — XR11=INFORM GT (valid) → WRITEBACK state.
+        # integrity32(XR12=0, XR13=0)=0xDEADBEEF ≠ XR14=0x42 → integrity fail → INVALID_OP
         ctx.set(dut.cr15_m_writeback_trigger, 1)
-        await ctx.tick()          # IDLE: latch XR11-XR14, xr11_valid=0 → FAULT
+        await ctx.tick()          # IDLE: latch XR11-XR14, xr11_valid=1 → WRITEBACK
         ctx.set(dut.cr15_m_writeback_trigger, 0)
-        # FSM is now in FAULT state — read fault signals here
+        # FSM is now in WRITEBACK state; integrity check fires combinatorially
         fault_v_d = ctx.get(dut.fault_valid)
         fault_t_d = ctx.get(dut.fault)
-        await ctx.tick()          # FAULT executes: m_clear_en=1, fault raised → IDLE
-        m_flag_after_fault = ctx.get(dut.cr15_m_flag)
+        await ctx.tick()          # WRITEBACK: m_clear_en=1, fault raised → IDLE
+        m_flag_after_d = ctx.get(dut.cr15_m_flag)
 
         assert fault_v_d == 1, (
-            f"Expected fault on NULL GT M-writeback, got fault_valid={fault_v_d}")
+            f"Expected fault on integrity mismatch, got fault_valid={fault_v_d}")
         assert fault_t_d == FaultType.INVALID_OP, (
-            f"Expected INVALID_OP fault on NULL GT writeback, got fault={fault_t_d}")
-        assert m_flag_after_fault == 0, (
-            f"M should be cleared after invalid writeback fault, got {m_flag_after_fault}")
-        print("  PASS 12D: NULL GT in XR11 → INVALID_OP fault, M cleared")
+            f"Expected INVALID_OP on integrity mismatch, got fault={fault_t_d}")
+        assert m_flag_after_d == 0, (
+            f"M should be cleared after integrity fault, got {m_flag_after_d}")
+        print("  PASS 12D: Corrupted XR14 → integrity mismatch in WRITEBACK → INVALID_OP, "
+              "M cleared")
 
         # ── 12E: CHANGE M-flag save/restore path ─────────────────────
         # After 12D the M-flag is 0.  Exercise the m_flag_restore_en/val
@@ -409,7 +418,49 @@ def run_testbench():
             f"12E: m_flag_restore_val=0 should clear M when restore_en=1, got {m_after_prio}")
 
         print("  PASS 12E: CHANGE M-flag restore path verified (restore-1 / restore-0 / priority)")
-        print("  PASS: All M-window lifecycle cases verified (set / writeback / CHANGE / fault / restore)")
+
+        # ── 12F: NULL GT in XR11 → FAULT state → INVALID_OP fault ─────
+        # After 12E step-3, M=0. Re-set M=1 with valid shadow, then corrupt XR11
+        # to carry a NULL GT so the IDLE validator rejects it before WRITEBACK.
+        ctx.set(dut.cr15_m_set, 1)
+        await ctx.tick()          # M=1; XR11=boot_ns_gt=0 (INFORM), XR14=0xDEADBEEF
+        ctx.set(dut.cr15_m_set, 0)
+        await ctx.tick()          # Settle
+
+        null_gt_val = build_null_gt()   # = GT_TYPE_NULL encoded = 0b10 = 2
+        addi_null_xr11 = encode_ctmm_i(
+            null_gt_val, 0, int(CTMMFunct3ArithI.ADDI), 11, int(CTMMOpcode.ARITHI))
+        ctx.set(dut.imem_data, addi_null_xr11)
+        ctx.set(dut.imem_valid, 1)
+        await ctx.tick()          # ADDI fires: XR11 ← null_gt_val = 2 (NULL GT)
+        ctx.set(dut.imem_valid, 0)
+        await ctx.tick()          # XR11=null_gt_val settles
+
+        xr11_null = ctx.get(dut.dbg_m_xr11)
+        assert xr11_null == null_gt_val, (
+            f"12F: XR11 should be NULL_GT={null_gt_val}, got {xr11_null}")
+        assert ctx.get(dut.cr15_m_flag) == 1, "12F: M should be 1 before NULL GT writeback"
+
+        # Trigger M-writeback — XR11[1:0]=0b10=GT_TYPE_NULL → IDLE dispatches to FAULT
+        ctx.set(dut.cr15_m_writeback_trigger, 1)
+        await ctx.tick()          # IDLE: xr11_valid=0 → FAULT state
+        ctx.set(dut.cr15_m_writeback_trigger, 0)
+        # FSM is now in FAULT state — fault signals driven combinatorially
+        fault_v_f = ctx.get(dut.fault_valid)
+        fault_t_f = ctx.get(dut.fault)
+        await ctx.tick()          # FAULT executes: m_clear_en=1 → IDLE
+        m_flag_after_f = ctx.get(dut.cr15_m_flag)
+
+        assert fault_v_f == 1, (
+            f"12F: Expected fault on NULL GT M-writeback, got fault_valid={fault_v_f}")
+        assert fault_t_f == FaultType.INVALID_OP, (
+            f"12F: Expected INVALID_OP on NULL GT, got fault={fault_t_f}")
+        assert m_flag_after_f == 0, (
+            f"12F: M should be cleared after NULL GT fault, got {m_flag_after_f}")
+        print("  PASS 12F: NULL GT in XR11 → FAULT state → INVALID_OP, M cleared")
+
+        print("  PASS: All M-window lifecycle cases verified "
+              "(set / writeback / CHANGE / integrity-fault / restore / null-gt-fault)")
 
         print("\n" + "=" * 60)
         print("CTMMCap Amaranth Testbench — All Tests Complete")
@@ -567,10 +618,11 @@ def test_mload_direct_mode():
         "word3_seals":    0,
     }
 
-    NS_ENTRY_ADDR = NS_BASE + GT_INDEX * 12   # = 0x200 + 60 = 0x23C
+    NS_ENTRY_ADDR = NS_BASE + (GT_INDEX << 4)   # 16-byte stride = 0x200 + 80 = 0x250
 
     LOC_VAL   = 0x2000
     LIMIT_VAL = 0x40
+    INTEGRITY_VAL = integrity32(LOC_VAL, LIMIT_VAL)   # NS entry word2_integrity
     # FNV seal: truncated to 32 bits, then masked to 25 bits
     fnv_hash  = (((FNV_OFFSET_32 ^ LOC_VAL) * FNV_PRIME_32) & 0xFFFFFFFF) ^ LIMIT_VAL
     fnv_hash &= 0xFFFFFFFF
@@ -578,9 +630,10 @@ def test_mload_direct_mode():
     SEALS_VAL = seal | (GT_VERSION << 25)   # version must match result_gt.version
 
     mem_model = {
-        NS_ENTRY_ADDR:     LOC_VAL,
-        NS_ENTRY_ADDR + 4: LIMIT_VAL,
-        NS_ENTRY_ADDR + 8: SEALS_VAL,
+        NS_ENTRY_ADDR:      LOC_VAL,
+        NS_ENTRY_ADDR + 4:  LIMIT_VAL,
+        NS_ENTRY_ADDR + 8:  INTEGRITY_VAL,   # word2_integrity (mLoad reads but doesn't validate)
+        NS_ENTRY_ADDR + 12: SEALS_VAL,
     }
 
     dut = CTMMCapMLoad()
@@ -611,9 +664,10 @@ def test_mload_direct_mode():
         ctx.set(dut.sub_start, 0)
 
         # Direct mode: FETCH_SRC skips to CHECK_NS (no clist read).
-        # Three NS reads: FETCH_LOC, FETCH_LIMIT, FETCH_SEALS.
+        # Four NS reads: FETCH_LOC, FETCH_LIMIT, FETCH_INTEGRITY, FETCH_SEALS.
         await _drive_mem_read(ctx)   # FETCH_LOC
         await _drive_mem_read(ctx)   # FETCH_LIMIT
+        await _drive_mem_read(ctx)   # FETCH_INTEGRITY (read+discard; not validated by mLoad)
         await _drive_mem_read(ctx)   # FETCH_SEALS
 
         # CHECK_VERSION → UPDATE_THREAD → COMPLETE (3 ticks, no inputs needed)
@@ -736,20 +790,22 @@ def test_mload_msave_round_trip():
         "word2_limit":    NS_LIMIT,   # bits [0:17] = limit
         "word3_seals":    0,
     }
-    NS_ENTRY_ADDR = NS_BASE + GT_INDEX * 12
+    NS_ENTRY_ADDR = NS_BASE + (GT_INDEX << 4)   # 16-byte stride
 
     # NS entry gives location=CLIST_BASE, limit=CLIST_LIMIT
     LOC_VAL   = CLIST_BASE
     LIMIT_VAL = CLIST_LIMIT
+    INTEGRITY_VAL = integrity32(LOC_VAL, LIMIT_VAL)   # NS entry word2_integrity
     fnv_hash  = (((FNV_OFFSET_32 ^ LOC_VAL) * FNV_PRIME_32) & 0xFFFFFFFF) ^ LIMIT_VAL
     fnv_hash &= 0xFFFFFFFF
     seal      = fnv_hash & 0x1FFFFFF
     SEALS_VAL = seal | (GT_VERSION << 25)
 
     mem_model = {
-        NS_ENTRY_ADDR:     LOC_VAL,
-        NS_ENTRY_ADDR + 4: LIMIT_VAL,
-        NS_ENTRY_ADDR + 8: SEALS_VAL,
+        NS_ENTRY_ADDR:      LOC_VAL,
+        NS_ENTRY_ADDR + 4:  LIMIT_VAL,
+        NS_ENTRY_ADDR + 8:  INTEGRITY_VAL,   # word2_integrity (mLoad reads but doesn't validate)
+        NS_ENTRY_ADDR + 12: SEALS_VAL,
     }
 
     dut_load = CTMMCapMLoad()
@@ -780,6 +836,7 @@ def test_mload_msave_round_trip():
 
         await drive_read()   # FETCH_LOC
         await drive_read()   # FETCH_LIMIT
+        await drive_read()   # FETCH_INTEGRITY (read+discard; not validated by mLoad)
         await drive_read()   # FETCH_SEALS
 
         done_seen = False

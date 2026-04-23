@@ -70,7 +70,7 @@ class CTMMCapMLoad(Elaboratable):
         m.d.comb += clist_gt_addr.eq(src_view.word1_location + (index_reg << 2))
 
         ns_entry_addr = Signal(32)
-        m.d.comb += ns_entry_addr.eq(ns_view.word1_location + (result_gt.index * 12))
+        m.d.comb += ns_entry_addr.eq(ns_view.word1_location + (result_gt.index << 4))
 
         result_seals = View(SEALS_LAYOUT, result_view.word3_seals)
 
@@ -164,11 +164,21 @@ class CTMMCapMLoad(Elaboratable):
                 ]
                 with m.If(self.mem_rd_valid):
                     m.d.sync += result_view.word2_limit.eq(self.mem_rd_data)
+                    m.next = "FETCH_INTEGRITY"
+
+            with m.State("FETCH_INTEGRITY"):
+                # Read NS entry word2_integrity (at +8); not validated by mLoad —
+                # only used for M-window writeback integrity check in core.
+                m.d.comb += [
+                    self.mem_addr.eq(ns_entry_addr + 8),
+                    self.mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
                     m.next = "FETCH_SEALS"
 
             with m.State("FETCH_SEALS"):
                 m.d.comb += [
-                    self.mem_addr.eq(ns_entry_addr + 8),
+                    self.mem_addr.eq(ns_entry_addr + 12),
                     self.mem_rd_en.eq(1),
                 ]
                 with m.If(self.mem_rd_valid):

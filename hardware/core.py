@@ -103,16 +103,17 @@ class ChurchCore(Elaboratable):
         self.outform_gt_raw_in     = Signal(32)
 
         # M-window (CR15 namespace M-flag latch + DR11-DR13 shadow) — Task #432
-        # cr15_m_set: pulse to copy CR15 → DR11-DR13 and set M-flag (test injection)
-        # cr15_m_writeback_trigger: pulse to validate DR11 and write back to CR15
+        # cr15_m_set: pulse to load DR11-DR14 from CR15 + integrity32 and set M-flag (test)
+        # cr15_m_writeback_trigger: pulse to validate DR11/integrity and write back to CR15
         # cr15_m_flag: current M-flag state (combinatorial read)
-        # dbg_m_dr11/12/13: combinatorial reads of DR11-DR13 for test inspection
+        # dbg_m_dr11/12/13/14: combinatorial reads of DR11-DR14 for test inspection
         self.cr15_m_set               = Signal()
         self.cr15_m_writeback_trigger = Signal()
         self.cr15_m_flag              = Signal()
         self.dbg_m_dr11               = Signal(32)
         self.dbg_m_dr12               = Signal(32)
         self.dbg_m_dr13               = Signal(32)
+        self.dbg_m_dr14               = Signal(32)
 
     def elaborate(self, platform):
         m = Module()
@@ -580,6 +581,38 @@ class ChurchCore(Elaboratable):
             self.dbg_m_dr11.eq(u_regs.m_dr11),
             self.dbg_m_dr12.eq(u_regs.m_dr12),
             self.dbg_m_dr13.eq(u_regs.m_dr13),
+            self.dbg_m_dr14.eq(u_regs.m_dr14),
+        ]
+
+        # M-window shadow data sources — mgt_set_trigger (from Abstract-GT CALL) takes
+        # priority over cr15_m_set (test/microcode injection port).
+        # For the cr15_m_set path we compute integrity32 here so the WRITEBACK check
+        # succeeds without the test needing to pre-calculate it.
+        cr15_ns_view_mset = View(CAP_REG_LAYOUT, u_regs.cr15_namespace)
+        cr15_m_set_integrity = Signal(32)
+        integrity32_amaranth(
+            m,
+            cr15_ns_view_mset.word1_location,
+            cr15_ns_view_mset.word2_w2,
+            cr15_m_set_integrity,
+        )
+        m.d.comb += [
+            u_regs.m_set_dr11.eq(
+                Mux(u_call.mgt_set_trigger, u_call.mgt_gt_word,
+                    cr15_ns_view_mset.word0_gt.as_value())
+            ),
+            u_regs.m_set_dr12.eq(
+                Mux(u_call.mgt_set_trigger, u_call.mgt_ns_location,
+                    cr15_ns_view_mset.word1_location)
+            ),
+            u_regs.m_set_dr13.eq(
+                Mux(u_call.mgt_set_trigger, u_call.mgt_ns_authority,
+                    cr15_ns_view_mset.word2_w2)
+            ),
+            u_regs.m_set_dr14.eq(
+                Mux(u_call.mgt_set_trigger, u_call.mgt_ns_integrity,
+                    cr15_m_set_integrity)
+            ),
         ]
 
         with m.If(u_return.reboot_request):
@@ -1504,15 +1537,22 @@ class ChurchCore(Elaboratable):
             u_regs.cr15_m_flag
         )
 
-        # Latched snapshot of DR11-DR13 captured in IDLE → {WRITEBACK|FAULT} transition
+        # Latched snapshot of DR11-DR14 captured in IDLE → {WRITEBACK|FAULT} transition
         mwin_dr11_lat = Signal(32)
         mwin_dr12_lat = Signal(32)
         mwin_dr13_lat = Signal(32)
+        mwin_dr14_lat = Signal(32)
 
         # Combinatorial: decode DR11 gt_type (bits[24:23]) for NULL check.
         # In hardware, GT_TYPE_NULL = 0b00 at bits[24:23].
         mwin_dr11_valid = Signal()
         m.d.comb += mwin_dr11_valid.eq(u_regs.m_dr11[23:25] != GT_TYPE_NULL)
+
+        # Integrity check on the latched shadow — must match integrity32(DR12, DR13).
+        mwin_integrity_computed = Signal(32)
+        integrity32_amaranth(m, mwin_dr12_lat, mwin_dr13_lat, mwin_integrity_computed)
+        mwin_integrity_ok = Signal()
+        m.d.comb += mwin_integrity_ok.eq(mwin_integrity_computed == mwin_dr14_lat)
 
         with m.FSM(name="mwin"):
             with m.State("IDLE"):
@@ -1520,7 +1560,8 @@ class ChurchCore(Elaboratable):
                     mwin_busy.eq(0),
                     mwin_cr_wr_en.eq(0),
                     mwin_cr_wr_data.eq(0),
-                    mwin_m_set_en.eq(self.cr15_m_set),
+                    # M-set fires on CALL M-GT dispatch (mgt_set_trigger) or test port
+                    mwin_m_set_en.eq(self.cr15_m_set | u_call.mgt_set_trigger),
                     mwin_m_clear_en.eq(0),
                     mwin_fault_valid.eq(0),
                 ]
@@ -1529,6 +1570,7 @@ class ChurchCore(Elaboratable):
                         mwin_dr11_lat.eq(u_regs.m_dr11),
                         mwin_dr12_lat.eq(u_regs.m_dr12),
                         mwin_dr13_lat.eq(u_regs.m_dr13),
+                        mwin_dr14_lat.eq(u_regs.m_dr14),
                     ]
                     with m.If(mwin_dr11_valid):
                         m.next = "WRITEBACK"
@@ -1536,17 +1578,26 @@ class ChurchCore(Elaboratable):
                         m.next = "FAULT"
 
             with m.State("WRITEBACK"):
-                mwin_wr_view = View(CAP_REG_LAYOUT, mwin_cr_wr_data)
-                m.d.comb += [
-                    mwin_busy.eq(1),
-                    mwin_wr_view.word0_gt.eq(mwin_dr11_lat),
-                    mwin_wr_view.word1_location.eq(mwin_dr12_lat),
-                    mwin_wr_view.word2_w2.eq(mwin_dr13_lat),
-                    mwin_cr_wr_en.eq(1),
-                    mwin_m_set_en.eq(0),
-                    mwin_m_clear_en.eq(1),
-                    mwin_fault_valid.eq(0),
-                ]
+                m.d.comb += mwin_busy.eq(1)
+                # Integrity check: reject the writeback if DR14 ≠ integrity32(DR12, DR13)
+                with m.If(mwin_integrity_ok):
+                    mwin_wr_view = View(CAP_REG_LAYOUT, mwin_cr_wr_data)
+                    m.d.comb += [
+                        mwin_wr_view.word0_gt.eq(mwin_dr11_lat),
+                        mwin_wr_view.word1_location.eq(mwin_dr12_lat),
+                        mwin_wr_view.word2_w2.eq(mwin_dr13_lat),
+                        mwin_cr_wr_en.eq(1),
+                        mwin_m_set_en.eq(0),
+                        mwin_m_clear_en.eq(1),
+                        mwin_fault_valid.eq(0),
+                    ]
+                with m.Else():
+                    m.d.comb += [
+                        mwin_cr_wr_en.eq(0),
+                        mwin_m_set_en.eq(0),
+                        mwin_m_clear_en.eq(1),
+                        mwin_fault_valid.eq(1),
+                    ]
                 m.next = "IDLE"
 
             with m.State("FAULT"):

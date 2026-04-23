@@ -16,9 +16,10 @@ CAP_REG_LAYOUT = StructLayout({
 })
 
 NS_ENTRY_LAYOUT = StructLayout({
-    "word0_location": unsigned(32),
-    "word1_limit":    unsigned(32),
-    "word2_seals":    unsigned(32),
+    "word0_location":  unsigned(32),
+    "word1_limit":     unsigned(32),
+    "word2_integrity": unsigned(32),   # integrity32(word0_location, word1_limit)
+    "word3_seals":     unsigned(32),   # FNV seal for mLoad validation (version|seal)
 })
 
 NS_LIMIT_LAYOUT = StructLayout({

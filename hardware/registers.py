@@ -65,7 +65,7 @@ class ChurchRegisters(Elaboratable):
         self.cr_null_mask    = Signal(12)
 
         # M-window controls — CR15 M-flag
-        # m_set_en:          copy CR15 words → DR11-DR13 (3-word hardware CR), DR14=0, set flag
+        # m_set_en:          populate DR11-DR14 from m_set_dr11-14, set cr15_m_flag
         # m_clear_en:        clear cr15_m_flag (no writeback; used on fault path)
         # m_flag_restore_en: CHANGE restore: set cr15_m_flag = m_flag_restore_val (no DR copy)
         self.m_set_en          = Signal()
@@ -73,10 +73,19 @@ class ChurchRegisters(Elaboratable):
         self.m_flag_restore_en  = Signal()
         self.m_flag_restore_val = Signal()
 
+        # M-set data words: driven by core when m_set_en fires.
+        # For CALL M-GT path:  dr11=GT_word, dr12=NS_location, dr13=NS_authority, dr14=NS_integrity
+        # For cr15_m_set port: dr11-14 sourced from CR15 fields + computed integrity32
+        self.m_set_dr11 = Signal(32)
+        self.m_set_dr12 = Signal(32)
+        self.m_set_dr13 = Signal(32)
+        self.m_set_dr14 = Signal(32)
+
         # Combinatorial reads of the M-window DRs (always valid)
         self.m_dr11 = Signal(32)
         self.m_dr12 = Signal(32)
         self.m_dr13 = Signal(32)
+        self.m_dr14 = Signal(32)
 
         # Current M-flag state
         self.cr15_m_flag = Signal()
@@ -112,11 +121,12 @@ class ChurchRegisters(Elaboratable):
             self.cr15_namespace.eq(cap_regs[CR_NAMESPACE]),
         ]
 
-        # M-window: combinatorial DR11-DR13 reads and flag output
+        # M-window: combinatorial DR11-DR14 reads and flag output
         m.d.comb += [
             self.m_dr11.eq(data_regs[11]),
             self.m_dr12.eq(data_regs[12]),
             self.m_dr13.eq(data_regs[13]),
+            self.m_dr14.eq(data_regs[14]),
             self.cr15_m_flag.eq(cr15_m_reg),
         ]
 
@@ -158,15 +168,14 @@ class ChurchRegisters(Elaboratable):
             with m.If(self.dr_wr_en & (self.dr_wr_addr != 0)):
                 m.d.sync += data_regs[self.dr_wr_addr].eq(self.dr_wr_data)
 
-            # M-set: copy CR15 words → DR11-DR13 (3-word CR), DR14=0, set flag
-            # Placed AFTER dr_wr_en so m_set_en takes priority for DR11-DR13
-            cr15_view_w = View(CAP_REG_LAYOUT, cap_regs[CR_NAMESPACE])
+            # M-set: populate DR11-DR14 from m_set_dr11-14 inputs, set flag.
+            # Placed AFTER dr_wr_en so m_set_en takes priority for DR11-DR14.
             with m.If(self.m_set_en):
                 m.d.sync += cr15_m_reg.eq(1)
-                m.d.sync += data_regs[11].eq(cr15_view_w.word0_gt)
-                m.d.sync += data_regs[12].eq(cr15_view_w.word1_location)
-                m.d.sync += data_regs[13].eq(cr15_view_w.word2_w2)
-                m.d.sync += data_regs[14].eq(0)
+                m.d.sync += data_regs[11].eq(self.m_set_dr11)
+                m.d.sync += data_regs[12].eq(self.m_set_dr12)
+                m.d.sync += data_regs[13].eq(self.m_set_dr13)
+                m.d.sync += data_regs[14].eq(self.m_set_dr14)
             with m.Elif(self.m_clear_en):
                 m.d.sync += cr15_m_reg.eq(0)
             # CHANGE restore: set M-flag to saved value (no DR copy); lower priority

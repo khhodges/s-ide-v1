@@ -46,13 +46,19 @@ class CTMMCapRegisters(Elaboratable):
         self.clear_all = Signal()
 
         # M-window controls — CR15 M-flag
-        # m_set_en:         copy CR15 words → XR11-XR14, XR15=0, set cr15_m_flag
+        # m_set_en:         populate XR11-XR14 from m_set_dr11-14, XR15=0, set cr15_m_flag
         # m_clear_en:       clear cr15_m_flag (no writeback; used on fault path)
         # m_flag_restore_en: CHANGE restore: set cr15_m_flag = m_flag_restore_val (no XR copy)
         self.m_set_en          = Signal()
         self.m_clear_en        = Signal()
         self.m_flag_restore_en  = Signal()
         self.m_flag_restore_val = Signal()
+
+        # Data sources for M-window shadow (XR11-XR14) — driven by core
+        self.m_set_dr11 = Signal(32)   # raw Abstract GT word (word0_gt of src cap)
+        self.m_set_dr12 = Signal(32)   # NS entry word0_location
+        self.m_set_dr13 = Signal(32)   # NS entry word1_limit (authority)
+        self.m_set_dr14 = Signal(32)   # NS entry word2_integrity
 
         # Combinatorial read of the M-window XRs (always valid)
         self.m_xr11 = Signal(32)
@@ -133,15 +139,14 @@ class CTMMCapRegisters(Elaboratable):
             with m.If(self.xr_wr_en & (self.xr_wr_addr != 0)):
                 m.d.sync += data_regs[self.xr_wr_addr].eq(self.xr_wr_data)
 
-            # M-set: copy CR15 → XR11-XR14, XR15=0, set flag
-            # Placed AFTER xr_wr_en so m_set_en wins for XR11-XR15
-            cr15_view = View(CAP_REG_LAYOUT, cap_regs[CR_NAMESPACE])
+            # M-set: populate XR11-XR14 from m_set_dr11-14 inputs, XR15=0, set flag.
+            # Placed AFTER xr_wr_en so m_set_en wins for XR11-XR15.
             with m.If(self.m_set_en):
                 m.d.sync += cr15_m_reg.eq(1)
-                m.d.sync += data_regs[11].eq(cr15_view.word0_gt)
-                m.d.sync += data_regs[12].eq(cr15_view.word1_location)
-                m.d.sync += data_regs[13].eq(cr15_view.word2_limit)
-                m.d.sync += data_regs[14].eq(cr15_view.word3_seals)
+                m.d.sync += data_regs[11].eq(self.m_set_dr11)
+                m.d.sync += data_regs[12].eq(self.m_set_dr12)
+                m.d.sync += data_regs[13].eq(self.m_set_dr13)
+                m.d.sync += data_regs[14].eq(self.m_set_dr14)
                 m.d.sync += data_regs[15].eq(0)
             with m.Elif(self.m_clear_en):
                 m.d.sync += cr15_m_reg.eq(0)

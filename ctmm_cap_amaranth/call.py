@@ -40,6 +40,14 @@ class CTMMCapCall(Elaboratable):
         self.dr_clear_mask = Signal(16)
         self.cr_clear_mask = Signal(16)
 
+        # M-GT dispatch outputs — pulsed for one cycle when M_FETCH_DONE fires.
+        # Signals core to load the M-window shadow (XR11-XR14) from these values.
+        self.mgt_set_trigger  = Signal()
+        self.mgt_gt_word      = Signal(32)   # raw 32-bit Abstract GT (src cap's word0_gt)
+        self.mgt_ns_location  = Signal(32)   # NS entry word0_location
+        self.mgt_ns_authority = Signal(32)   # NS entry word1_limit (authority)
+        self.mgt_ns_integrity = Signal(32)   # NS entry word2_integrity
+
     def elaborate(self, platform):
         m = Module()
 
@@ -68,6 +76,22 @@ class CTMMCapCall(Elaboratable):
         b_clear_wr_en = Signal()
         b_clear_wr_addr = Signal(4)
         b_clear_wr_data = Signal(CAP_REG_LAYOUT)
+
+        # M-GT dispatch latches + direct memory read override
+        mgt_gt_lat  = Signal(32)
+        mgt_gt_view = View(GT_LAYOUT, mgt_gt_lat)
+        ns_loc_lat  = Signal(32)
+        ns_auth_lat = Signal(32)
+        ns_int_lat  = Signal(32)
+
+        local_mem_rd_addr = Signal(32)
+        local_mem_rd_en   = Signal()
+
+        ns_view = View(CAP_REG_LAYOUT, self.cr15_namespace)
+        mgt_ns_entry_base = Signal(32)
+        m.d.comb += mgt_ns_entry_base.eq(
+            ns_view.word1_location + (mgt_gt_view.index << 4)
+        )
 
         src_in_range = Signal()
         m.d.comb += src_in_range.eq(self.cr_src <= MAX_SRC_REG)
@@ -103,8 +127,9 @@ class CTMMCapCall(Elaboratable):
             self.cr_wr_addr.eq(Mux(b_clear_wr_en, b_clear_wr_addr, u_mload.cr_wr_addr)),
             self.cr_wr_data.eq(Mux(b_clear_wr_en, b_clear_wr_data, u_mload.cr_wr_data)),
             self.cr_wr_en.eq(u_mload.cr_wr_en | b_clear_wr_en),
-            self.mem_addr.eq(u_mload.mem_addr),
-            self.mem_rd_en.eq(u_mload.mem_rd_en),
+            # M-GT fetch states own the memory bus; fall back to u_mload otherwise
+            self.mem_addr.eq(Mux(local_mem_rd_en, local_mem_rd_addr, u_mload.mem_addr)),
+            self.mem_rd_en.eq(local_mem_rd_en | u_mload.mem_rd_en),
             self.thread_wr_en.eq(u_mload.thread_wr_en),
             self.thread_wr_idx.eq(u_mload.thread_wr_idx),
             self.thread_wr_data.eq(u_mload.thread_wr_data),
@@ -145,7 +170,13 @@ class CTMMCapCall(Elaboratable):
                 m.next = "CHECK_PERM"
 
             with m.State("CHECK_PERM"):
-                with m.If(~src_has_l_perm):
+                with m.If(src_gt.gt_type == GT_TYPE_ABSTRACT):
+                    # M-GT dispatch: latch the Abstract GT word and fetch 3 NS entry
+                    # words (location/limit/integrity) from Mem[CR15.loc + index<<4].
+                    # No lump or stack frame — M-window set fires at M_FETCH_DONE.
+                    m.d.sync += mgt_gt_lat.eq(src_view.word0_gt.as_value())
+                    m.next = "M_FETCH_NS0"
+                with m.Elif(~src_has_l_perm):
                     m.d.sync += [fault_latched.eq(1), fault_type_latched.eq(FaultType.PERM_L)]
                     m.next = "FAULT"
                 with m.Else():
@@ -228,15 +259,57 @@ class CTMMCapCall(Elaboratable):
             with m.State("FAULT"):
                 m.next = "IDLE"
 
+            # ── M-GT dispatch states ──────────────────────────────────────────
+            # Entered from CHECK_PERM when src GT has gt_type == GT_TYPE_ABSTRACT.
+            # Reads 3 NS entry words (location/limit/integrity) using 16-byte stride.
+            # mgt_set_trigger fires for one cycle at M_FETCH_DONE; no lump is loaded.
+
+            with m.State("M_FETCH_NS0"):
+                m.d.comb += [
+                    local_mem_rd_addr.eq(mgt_ns_entry_base),
+                    local_mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
+                    m.d.sync += ns_loc_lat.eq(self.mem_rd_data)
+                    m.next = "M_FETCH_NS1"
+
+            with m.State("M_FETCH_NS1"):
+                m.d.comb += [
+                    local_mem_rd_addr.eq(mgt_ns_entry_base + 4),
+                    local_mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
+                    m.d.sync += ns_auth_lat.eq(self.mem_rd_data)
+                    m.next = "M_FETCH_NS2"
+
+            with m.State("M_FETCH_NS2"):
+                m.d.comb += [
+                    local_mem_rd_addr.eq(mgt_ns_entry_base + 8),
+                    local_mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
+                    m.d.sync += ns_int_lat.eq(self.mem_rd_data)
+                    m.next = "M_FETCH_DONE"
+
+            with m.State("M_FETCH_DONE"):
+                # mgt_set_trigger pulses for this one cycle (driven combinatorially).
+                # call_complete is asserted so core advances past the CALL instruction.
+                m.next = "IDLE"
+
         m.d.comb += [
             self.call_busy.eq(~fsm.ongoing("IDLE")),
-            self.call_complete.eq(fsm.ongoing("COMPLETE")),
+            self.call_complete.eq(fsm.ongoing("COMPLETE") | fsm.ongoing("M_FETCH_DONE")),
             self.call_fault.eq(fault_latched),
             self.fault_type.eq(fault_type_latched),
             self.nia_set.eq(fsm.ongoing("COMPLETE")),
             self.nia_value.eq(0),
             self.dr_clear_mask.eq(Mux(fsm.ongoing("COMPLETE"), dr_clear_computed, 0)),
             self.cr_clear_mask.eq(Mux(fsm.ongoing("COMPLETE"), cr_clear_computed, 0)),
+            self.mgt_set_trigger.eq(fsm.ongoing("M_FETCH_DONE")),
+            self.mgt_gt_word.eq(mgt_gt_lat),
+            self.mgt_ns_location.eq(ns_loc_lat),
+            self.mgt_ns_authority.eq(ns_auth_lat),
+            self.mgt_ns_integrity.eq(ns_int_lat),
         ]
 
         return m

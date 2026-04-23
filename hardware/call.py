@@ -95,6 +95,15 @@ class ChurchCall(Elaboratable):
         self.code_lo_out = Signal(32)
         self.code_hi_out = Signal(32)
 
+        # M-GT dispatch outputs — pulsed for one cycle when M_FETCH_DONE fires.
+        # Signals core to load the M-window shadow (DR11-DR14) from these values
+        # rather than executing the normal lump/stack pipeline.
+        self.mgt_set_trigger  = Signal()
+        self.mgt_gt_word      = Signal(32)   # raw 32-bit Abstract GT (src cap's word0_gt)
+        self.mgt_ns_location  = Signal(32)   # NS entry word0_location
+        self.mgt_ns_authority = Signal(32)   # NS entry word1_authority
+        self.mgt_ns_integrity = Signal(32)   # NS entry word2_integrity
+
     def elaborate(self, platform):
         m = Module()
 
@@ -141,6 +150,21 @@ class ChurchCall(Elaboratable):
         # Callee E-GT: the raw 32-bit GT deposited into CR6 by Phase 1 mLoad.
         # Latched in PHASE1_DONE (while cr_rd_addr == CR6, combinatorial read-back).
         callee_egt_latched = Signal(32)
+
+        # M-GT dispatch latches: populated during M_FETCH_NS0/1/2 states.
+        # mgt_gt_lat: raw Abstract GT word from src_reg_latched.word0_gt.
+        # ns_*_lat: 3 NS entry words fetched from Mem[CR15.loc + slot_id<<4 + N].
+        mgt_gt_lat  = Signal(32)
+        mgt_gt_view = View(GT_LAYOUT, mgt_gt_lat)
+        ns_loc_lat  = Signal(32)
+        ns_auth_lat = Signal(32)
+        ns_int_lat  = Signal(32)
+
+        # NS entry base address for the latched Abstract GT: CR15.location + (slot_id << 4)
+        mgt_ns_entry_base = Signal(32)
+        m.d.comb += mgt_ns_entry_base.eq(
+            cr15_view.word1_location + (mgt_gt_view.slot_id << 4)
+        )
 
         # CALL frame word (spec §"Zone ② — LIFO Stack"):
         #   bit[31]    = SZ = 1  (CALL frame tag)
@@ -346,11 +370,11 @@ class ChurchCall(Elaboratable):
 
             with m.State("CHECK_PERM"):
                 with m.If(src_gt.gt_type == GT_TYPE_ABSTRACT):
-                    # Stub: Abstract GTs have no lump to execute.  INVALID_OP is
-                    # the interim fault until the hardware Abstract Manager provides
-                    # an invoke path (Task #432 / full M-window hardware).
-                    m.d.sync += [fault_latched.eq(1), fault_type_latched.eq(FaultType.INVALID_OP)]
-                    m.next = "FAULT"
+                    # M-GT dispatch: latch the Abstract GT word and fetch 3 NS entry
+                    # words (location/authority/integrity) from Mem[CR15.loc+slot<<4].
+                    # No lump or stack frame — M-window set fires at M_FETCH_DONE.
+                    m.d.sync += mgt_gt_lat.eq(src_view.word0_gt.as_value())
+                    m.next = "M_FETCH_NS0"
                 with m.Elif(~src_has_e_perm):
                     m.d.sync += [fault_latched.eq(1), fault_type_latched.eq(FaultType.PERM_E)]
                     m.next = "FAULT"
@@ -556,13 +580,60 @@ class ChurchCall(Elaboratable):
             with m.State("FAULT"):
                 m.next = "IDLE"
 
+            # ── M-GT dispatch states ──────────────────────────────────────────
+            # Entered from CHECK_PERM when src GT has gt_type == GT_TYPE_ABSTRACT.
+            # Reads 3 NS entry words (location/authority/integrity) via the direct
+            # memory bus and then fires mgt_set_trigger for one cycle (M_FETCH_DONE).
+            # No lump is loaded, no stack frame is pushed, nia_set is NOT asserted.
+
+            with m.State("M_FETCH_NS0"):
+                # Fetch NS entry word0_location
+                m.d.comb += [
+                    self.mem_rd_addr.eq(mgt_ns_entry_base),
+                    self.mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
+                    m.d.sync += ns_loc_lat.eq(self.mem_rd_data)
+                    m.next = "M_FETCH_NS1"
+
+            with m.State("M_FETCH_NS1"):
+                # Fetch NS entry word1_authority
+                m.d.comb += [
+                    self.mem_rd_addr.eq(mgt_ns_entry_base + 4),
+                    self.mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
+                    m.d.sync += ns_auth_lat.eq(self.mem_rd_data)
+                    m.next = "M_FETCH_NS2"
+
+            with m.State("M_FETCH_NS2"):
+                # Fetch NS entry word2_integrity
+                m.d.comb += [
+                    self.mem_rd_addr.eq(mgt_ns_entry_base + 8),
+                    self.mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
+                    m.d.sync += ns_int_lat.eq(self.mem_rd_data)
+                    m.next = "M_FETCH_DONE"
+
+            with m.State("M_FETCH_DONE"):
+                # mgt_set_trigger pulses for this one cycle (driven combinatorially below).
+                # call_complete is also asserted so core proceeds past the CALL instruction.
+                # The FSM returns to IDLE on the next cycle.
+                m.next = "IDLE"
+
         m.d.comb += [
             self.call_busy.eq(~fsm.ongoing("IDLE")),
-            self.call_complete.eq(fsm.ongoing("COMPLETE")),
+            self.call_complete.eq(fsm.ongoing("COMPLETE") | fsm.ongoing("M_FETCH_DONE")),
             self.call_fault.eq(fault_latched),
             self.fault_type.eq(fault_type_latched),
             self.nia_set.eq(fsm.ongoing("COMPLETE")),
             self.nia_value.eq(nia_computed),
+            self.mgt_set_trigger.eq(fsm.ongoing("M_FETCH_DONE")),
+            self.mgt_gt_word.eq(mgt_gt_lat),
+            self.mgt_ns_location.eq(ns_loc_lat),
+            self.mgt_ns_authority.eq(ns_auth_lat),
+            self.mgt_ns_integrity.eq(ns_int_lat),
         ]
 
         return m
