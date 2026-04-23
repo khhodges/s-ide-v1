@@ -1,0 +1,1931 @@
+function saveUploadJSON() {
+    const editor = document.getElementById('asmEditor');
+    if (!editor || !cloomcCompiler) return;
+    const source = editor.value;
+    const con = document.getElementById('editorConsole');
+
+    const result = cloomcCompiler.compile(source, []);
+
+    if (result.errors.length > 0) {
+        const errText = result.errors.map(e => `Line ${e.line || '?'}: ${e.message}`).join('\n');
+        if (con) con.textContent = `CLOOMC++ compilation errors:\n${errText}`;
+        return;
+    }
+
+    const unresolved = [];
+    const uploadCaps = (result.capabilities || []).map((capName) => {
+        let target = -1;
+        if (sim && sim.abstractionRegistry) {
+            const allAbs = sim.abstractionRegistry.abstractions || [];
+            for (let i = 0; i < allAbs.length; i++) {
+                if (allAbs[i] && allAbs[i].name && allAbs[i].name.toUpperCase() === capName.toUpperCase()) {
+                    target = i;
+                    break;
+                }
+            }
+        }
+        if (target < 0) unresolved.push(capName);
+        return { target: target, name: capName, grants: ['E'] };
+    });
+
+    const doc = buildDocBlock(result, source);
+
+    const uploadProfile = result.profile || 'IoT';
+
+    const upload = {
+        abstraction: result.abstractionName || 'Unnamed',
+        type: 'abstraction',
+        grants: ['E'],
+        capabilities: uploadCaps,
+        methods: result.methods.map(m => ({
+            name: m.name,
+            code: m.code.map(w => '0x' + (w >>> 0).toString(16).padStart(8, '0'))
+        })),
+        doc: doc,
+        profile: uploadProfile
+    };
+
+    const json = JSON.stringify(upload, null, 2);
+
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (result.abstractionName || 'upload') + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const langNames3 = { english: 'English', haskell: 'Haskell', symbolic: 'Symbolic Math (Ada)', javascript: 'JavaScript', lambda: 'Lambda Calculus' };
+    const lang = langNames3[result.language] || 'JavaScript';
+    let listing = `Upload JSON saved as "${a.download}"\n\n`;
+    listing += `CLOOMC++ [${lang}] compiled "${result.abstractionName}":\n`;
+    listing += `  Profile: ${uploadProfile}${result.targetDirective ? ' (@target ' + result.targetDirective + ')' : ' (auto-detected)'}\n`;
+    listing += `  Methods: ${upload.methods.length}\n`;
+    listing += `  Capabilities: ${upload.capabilities.length} (${upload.capabilities.map(c => c.name).join(', ') || 'none'})\n`;
+    listing += `  Grants: ${upload.grants.join(', ')}\n`;
+    if (unresolved.length > 0) {
+        listing += `  WARNING: Unresolved capabilities: ${unresolved.join(', ')} (target=-1, boot system to resolve)\n`;
+    }
+    listing += `\nUpload JSON preview:\n${json}`;
+
+    if (con) con.textContent = listing;
+    appendOutput(`Saved upload JSON for "${result.abstractionName}"`, 'info');
+}
+
+function buildDocBlock(result, source) {
+    const settings = getStudentSettings();
+    const sel = document.getElementById('langSelector');
+    const lang = sel ? sel.value : (result.language || 'javascript');
+    const langNames = { english: 'English', javascript: 'JavaScript', haskell: 'Haskell', symbolic: 'Symbolic Math (Ada)', lambda: 'Lambda Calculus', assembly: 'Assembly' };
+    const caps = result.capabilities || [];
+    const methods = (result.methods || []).map(m => ({
+        name: m.name,
+        params: m.params || [],
+        instructions: (m.code || []).length
+    }));
+
+    const lines = source.split('\n');
+    const sourcePreview = lines.slice(0, 20).join('\n') + (lines.length > 20 ? '\n...' : '');
+
+    return {
+        author: settings.name || 'Anonymous',
+        date: new Date().toISOString().split('T')[0],
+        language: lang,
+        languageLabel: langNames[lang] || lang,
+        description: `${methods.length} method${methods.length !== 1 ? 's' : ''}, ${caps.length} capabilit${caps.length !== 1 ? 'ies' : 'y'}, language: ${langNames[lang] || lang}`,
+        tags: [],
+        methods: methods,
+        capabilities: caps,
+        sourcePreview: sourcePreview
+    };
+}
+
+async function exportSimulatorToGitHub() {
+    const btn = document.getElementById('dashTab-export');
+    if (btn) btn.textContent = 'Pushing...';
+
+    const phases = [];
+    phases.push({ heading: '=== Push to GitHub ===', lines: ['Connecting to GitHub API...'] });
+
+    var tok = showGitHubConsole(phases, 'push', 'Connecting to GitHub...');
+
+    try {
+        const r = await fetch('/api/github/export-simulator', { method: 'POST' });
+        const data = await r.json();
+        if (data.ok) {
+            const fileLines = (data.pushed || []).map(function(f) { return '  + ' + f; });
+            appendGitHubPhase({ heading: '--- Files Pushed ---', lines: fileLines }, tok);
+            appendGitHubPhase({ heading: '=== Push Complete ===', lines: [
+                'Total files exported: ' + data.total,
+                'All files pushed successfully.'
+            ]}, tok);
+            updateGitHubStatus('Push complete — ' + data.total + ' files exported.', false, tok);
+        } else {
+            const msg = data.errors ? data.errors.join('\n') : (data.error || 'Unknown error');
+            const pushed = data.pushed ? data.pushed.length : 0;
+            appendGitHubPhase({ heading: '--- Push Results ---', lines: [
+                'Files pushed: ' + pushed,
+                '',
+                'Errors:',
+                msg
+            ]}, tok);
+            updateGitHubStatus('Push completed with errors.', true, tok);
+        }
+    } catch (e) {
+        appendGitHubPhase({ heading: '--- Error ---', lines: [
+            'Push failed: ' + e.message,
+            '',
+            'Check that GitHub is configured and accessible.'
+        ]}, tok);
+        updateGitHubStatus('Push failed — ' + e.message, true, tok);
+    } finally {
+        if (btn) btn.textContent = 'Push to GitHub';
+    }
+}
+
+let libraryCache = null;
+let libraryAllItems = [];
+
+async function showLibrary() {
+    if (!requirePermission('browseLibrary', 'Browse Library')) return;
+
+    const phases = [];
+    phases.push({ heading: '=== Get from GitHub ===', lines: ['Connecting to Mum Tunnel Library...'] });
+    var tok = showGitHubConsole(phases, 'get', 'Fetching library index...');
+
+    const repoLink = document.getElementById('libraryGitHubLink');
+    let repoUrl = '';
+    if (repoLink) {
+        repoLink.href = '/api/library/repo-url';
+        try {
+            const r = await fetch('/api/library/repo-url');
+            if (r.ok) {
+                const data = await r.json();
+                if (data.url) { repoLink.href = data.url; repoUrl = data.url; }
+            }
+        } catch (e) {}
+    }
+
+    try {
+        const langFilter = document.getElementById('libraryLangFilter');
+        const langParam = langFilter && langFilter.value ? '?language=' + langFilter.value : '';
+        const resp = await fetch('/api/library/browse' + langParam);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        libraryAllItems = data.items || [];
+
+        if (libraryAllItems.length > 0) {
+            const itemLines = libraryAllItems.slice(0, 20).map(function(item) {
+                var doc = item.doc || {};
+                return '  ' + (item.name || 'Untitled') + ' — ' + (doc.language || 'unknown') + ' by ' + (doc.author || 'Anonymous');
+            });
+            if (libraryAllItems.length > 20) itemLines.push('  ... and ' + (libraryAllItems.length - 20) + ' more');
+            appendGitHubPhase({ heading: '--- Abstractions Found ---', lines: itemLines }, tok);
+            appendGitHubPhase({ heading: '=== Fetch Complete ===', lines: [
+                'Found ' + libraryAllItems.length + ' shared abstractions.',
+                repoUrl ? 'Repository: ' + repoUrl : ''
+            ]}, tok);
+            updateGitHubStatus('Loaded ' + libraryAllItems.length + ' abstractions. Opening library...', false, tok);
+        } else {
+            appendGitHubPhase({ heading: '=== Library Empty ===', lines: [
+                'No shared abstractions found.',
+                'Be the first to publish!'
+            ]}, tok);
+            updateGitHubStatus('Library is empty.', false, tok);
+        }
+
+        var capturedItems = libraryAllItems;
+        _ghAutoCloseTimer = setTimeout(function() {
+            _ghAutoCloseTimer = null;
+            if (tok === _ghConsoleToken) {
+                closeGitHubConsole();
+                document.getElementById('libraryModal').style.display = 'flex';
+                renderLibraryGrid(capturedItems);
+            }
+        }, 1500);
+
+    } catch (e) {
+        appendGitHubPhase({ heading: '--- Error ---', lines: [
+            'Could not load library: ' + e.message,
+            '',
+            'Check your network connection and try again.'
+        ]}, tok);
+        updateGitHubStatus('Fetch failed — ' + e.message, true, tok);
+    }
+}
+
+async function loadLibraryItems() {
+    const grid = document.getElementById('libraryGrid');
+    if (!grid) return;
+    grid.innerHTML = '<div class="library-loading">Loading shared abstractions...</div>';
+
+    try {
+        const langFilter = document.getElementById('libraryLangFilter');
+        const langParam = langFilter && langFilter.value ? `?language=${langFilter.value}` : '';
+        const resp = await fetch(`/api/library/browse${langParam}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        libraryAllItems = data.items || [];
+        renderLibraryGrid(libraryAllItems);
+    } catch (e) {
+        grid.innerHTML = `<div class="library-empty">Could not load library: ${e.message}</div>`;
+    }
+}
+
+function renderLibraryGrid(items) {
+    const grid = document.getElementById('libraryGrid');
+    if (!grid) return;
+
+    if (items.length === 0) {
+        grid.innerHTML = '<div class="library-empty">No shared abstractions yet. Be the first to publish!</div>';
+        return;
+    }
+
+    let html = '';
+    for (const item of items) {
+        const doc = item.doc || {};
+        const langClass = 'lang-' + (doc.language || 'javascript');
+        const langLabel = doc.languageLabel || doc.language || 'Unknown';
+        const tags = (doc.tags || []);
+        html += '<div class="library-card">';
+        html += `<div class="library-card-name">${escapeHTML(item.name || 'Untitled')}</div>`;
+        html += `<div class="library-card-meta">`;
+        html += `<span class="library-lang-badge ${langClass}">${escapeHTML(langLabel)}</span>`;
+        html += `<span>by ${escapeHTML(doc.author || 'Anonymous')}</span>`;
+        html += `<span>${escapeHTML(doc.date || '')}</span>`;
+        html += `</div>`;
+        html += `<div class="library-card-desc">${escapeHTML(doc.description || '')}</div>`;
+        if (tags.length > 0) {
+            html += '<div class="library-card-tags">';
+            for (const t of tags) html += `<span class="library-tag">${escapeHTML(t)}</span>`;
+            html += '</div>';
+        }
+        html += `<div class="library-card-actions">`;
+        html += `<button class="btn btn-primary" onclick="importFromLibrary('${escapeHTML(item.path || '')}')">Import</button>`;
+        html += `</div>`;
+        html += '</div>';
+    }
+    grid.innerHTML = html;
+}
+
+function escapeHTML(str) {
+    const el = document.createElement('span');
+    el.textContent = str;
+    return el.innerHTML;
+}
+
+function filterLibrary() {
+    const search = (document.getElementById('librarySearch').value || '').toLowerCase();
+    const langFilter = document.getElementById('libraryLangFilter').value;
+
+    let filtered = libraryAllItems;
+    if (langFilter) {
+        filtered = filtered.filter(item => (item.doc && item.doc.language) === langFilter);
+    }
+    if (search) {
+        filtered = filtered.filter(item => {
+            const name = (item.name || '').toLowerCase();
+            const desc = (item.doc && item.doc.description || '').toLowerCase();
+            const author = (item.doc && item.doc.author || '').toLowerCase();
+            const tags = (item.doc && item.doc.tags || []).join(' ').toLowerCase();
+            return name.includes(search) || desc.includes(search) || author.includes(search) || tags.includes(search);
+        });
+    }
+    renderLibraryGrid(filtered);
+}
+
+function publishToLibrary() {
+    if (!requirePermission('publish', 'Publish to Library')) return;
+
+    if (_isSourceStale()) {
+        appendOutput('Publish blocked — source has been edited since last Patch. Click Patch to recompile and run before publishing.', 'error');
+        return;
+    }
+    const cleanRuns = _getConsecutiveCleanRuns();
+    if (cleanRuns < 5) {
+        appendOutput(`Publish blocked — requires 5 consecutive clean runs (you have ${cleanRuns}). Click Patch then Run repeatedly. The code must halt cleanly with no faults each time.`, 'error');
+        return;
+    }
+
+    const settings = getStudentSettings();
+    if (!settings.openSource) {
+        appendOutput('Publish blocked — Open Source membership required. Open Settings and tick "Open Source member" to agree to the CLOOMC Open Source licence before publishing.', 'error');
+        return;
+    }
+
+    const editor = document.getElementById('asmEditor');
+    if (!editor || !cloomcCompiler) return;
+    const source = editor.value;
+
+    const result = cloomcCompiler.compile(source, []);
+    if (result.errors.length > 0) {
+        alert('Compile first — there are errors in the current source.');
+        return;
+    }
+
+    const doc = buildDocBlock(result, source);
+    const preview = document.getElementById('publishPreview');
+    if (preview) {
+        preview.textContent = `Abstraction: ${result.abstractionName}\nMethods: ${doc.methods.map(m => m.name).join(', ')}\nCapabilities: ${doc.capabilities.join(', ') || 'none'}\nLanguage: ${doc.languageLabel}\nAuthor: ${doc.author}`;
+    }
+
+    document.getElementById('publishDescription').value = doc.description;
+    document.getElementById('publishTags').value = '';
+    document.getElementById('publishModal').style.display = 'flex';
+    document.getElementById('publishModal')._compiledResult = result;
+    document.getElementById('publishModal')._source = source;
+}
+
+async function confirmPublish() {
+    const modal = document.getElementById('publishModal');
+    const result = modal._compiledResult;
+    const source = modal._source;
+    if (!result) return;
+
+    const description = document.getElementById('publishDescription').value.trim();
+    const tagsRaw = document.getElementById('publishTags').value.trim();
+    const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+    const doc = buildDocBlock(result, source);
+    doc.description = description || doc.description;
+    doc.tags = tags;
+
+    const uploadCaps = (result.capabilities || []).map((capName) => {
+        return { target: -1, name: capName, grants: ['E'] };
+    });
+
+    const settings = getStudentSettings();
+    const payload = {
+        abstraction: result.abstractionName || 'Unnamed',
+        type: 'abstraction',
+        grants: ['E'],
+        capabilities: uploadCaps,
+        methods: result.methods.map(m => ({
+            name: m.name,
+            code: m.code.map(w => '0x' + (w >>> 0).toString(16).padStart(8, '0'))
+        })),
+        doc: doc,
+        source: source,
+        profile: result.profile || 'IoT',
+        simTestPassed: _getConsecutiveCleanRuns() >= 5,
+        mtbfScore: _getConsecutiveCleanRuns(),
+        totalRuns: _simRunHistory.filter(r => r.hash === _simRunHash).length,
+        openSourceConsent: !!settings.openSource
+    };
+
+    try {
+        const resp = await fetch('/api/library/publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        modal.style.display = 'none';
+        appendOutput(`Published "${result.abstractionName}" to Mum Tunnel Library`, 'info');
+        await loadLibraryItems();
+    } catch (e) {
+        alert(`Publish failed: ${e.message}`);
+    }
+}
+
+async function importFromLibrary(path) {
+    try {
+        const resp = await fetch(`/api/library/get/${encodeURIComponent(path)}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        if (data.source) {
+            const editor = document.getElementById('asmEditor');
+            if (editor) {
+                editor.value = data.source;
+                updateLineNumbers();
+                saveEditorState();
+            }
+
+            if (data.doc && data.doc.language) {
+                const sel = document.getElementById('langSelector');
+                if (sel) {
+                    sel.value = data.doc.language;
+                    onLangChange(true);
+                }
+            }
+
+            document.getElementById('libraryModal').style.display = 'none';
+            appendOutput(`Imported "${data.abstraction || path}" from Mum Tunnel Library`, 'info');
+            switchCodeTab('console');
+        }
+    } catch (e) {
+        alert(`Import failed: ${e.message}`);
+    }
+}
+
+let docsLoaded = false;
+let docsData = null;
+
+async function loadDocsView() {
+    if (docsLoaded) return;
+    try {
+        const resp = await fetch('/api/docs/list');
+        docsData = await resp.json();
+        renderDocsFileList();
+        docsLoaded = true;
+        loadDoc('quick-start.md');
+    } catch (e) {
+        const body = document.getElementById('docsContentBody');
+        if (body) body.innerHTML = '<div class="docs-placeholder">Failed to load document list.</div>';
+    }
+}
+
+function renderDocsFileList() {
+    const docsList = document.getElementById('docsFileList');
+    const figsList = document.getElementById('docsFigureList');
+    if (!docsList || !figsList || !docsData) return;
+
+    if (docsData.chapters && docsData.chapters.length > 0) {
+        let chapterNum = 0;
+        docsList.innerHTML = docsData.chapters.map(ch => {
+            chapterNum++;
+            const items = ch.docs.map((d, i) => {
+                const sizeKB = (d.size / 1024).toFixed(1);
+                const label = d.name.replace('.md', '');
+                return `<div class="docs-file-item" onclick="loadDoc('${d.name}')" data-doc="${d.name}"><span class="docs-chapter-num">${chapterNum}.${i + 1}</span><span>${label}</span><span class="file-size">${sizeKB} KB</span></div>`;
+            }).join('');
+            return `<div class="docs-chapter-group"><div class="docs-chapter-title">${ch.title}</div>${items}</div>`;
+        }).join('');
+    } else {
+        docsList.innerHTML = docsData.docs.map(d => {
+            const sizeKB = (d.size / 1024).toFixed(1);
+            const label = d.name.replace('.md', '');
+            return `<div class="docs-file-item" onclick="loadDoc('${d.name}')" data-doc="${d.name}"><span>${label}</span><span class="file-size">${sizeKB} KB</span></div>`;
+        }).join('');
+    }
+
+    figsList.innerHTML = docsData.figures.map(f => {
+        const label = f.name.replace('.html', '');
+        const sizeKB = (f.size / 1024).toFixed(1);
+        return `<div class="docs-file-item" onclick="loadFigure('${f.name}')" data-fig="${f.name}"><span>${label}</span><span class="file-size">${sizeKB} KB</span></div>`;
+    }).join('');
+}
+
+async function loadDoc(filename) {
+    document.querySelectorAll('.docs-file-item').forEach(el => el.classList.remove('active'));
+    const active = document.querySelector(`.docs-file-item[data-doc="${filename}"]`);
+    if (active) active.classList.add('active');
+
+    const title = document.getElementById('docsContentTitle');
+    const body = document.getElementById('docsContentBody');
+    if (title) title.textContent = filename;
+    if (body) body.innerHTML = '<div class="docs-placeholder">Loading...</div>';
+
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        const sidebar = document.querySelector('.docs-sidebar');
+        if (sidebar) sidebar.classList.add('docs-sidebar-collapsed');
+    }
+
+    try {
+        const resp = await fetch('/api/docs/read/' + filename);
+        const data = await resp.json();
+        if (body) body.innerHTML = renderMarkdown(data.content);
+    } catch (e) {
+        if (body) body.innerHTML = '<div class="docs-placeholder">Failed to load document.</div>';
+    }
+
+    if (isMobile) {
+        const docsView = document.getElementById('docs');
+        if (docsView) docsView.scrollTop = 0;
+    }
+}
+
+function loadFigure(filename) {
+    document.querySelectorAll('.docs-file-item').forEach(el => el.classList.remove('active'));
+    const active = document.querySelector(`.docs-file-item[data-fig="${filename}"]`);
+    if (active) active.classList.add('active');
+
+    const title = document.getElementById('docsContentTitle');
+    const body = document.getElementById('docsContentBody');
+    const label = filename.replace('.html', '');
+    if (title) title.textContent = 'Figure: ' + label;
+    if (body) body.innerHTML = `<iframe class="docs-figure-frame" src="/docs/figures/${filename}"></iframe>`;
+
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        const sidebar = document.querySelector('.docs-sidebar');
+        if (sidebar) sidebar.classList.add('docs-sidebar-collapsed');
+        const docsView = document.getElementById('docs');
+        if (docsView) docsView.scrollTop = 0;
+    }
+}
+
+function docsBackToList() {
+    const sidebar = document.querySelector('.docs-sidebar');
+    if (sidebar) {
+        sidebar.classList.remove('docs-sidebar-collapsed');
+        sidebar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function renderMarkdown(md) {
+    let html = escapeHtml(md);
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code) => {
+        return '<pre><code>' + code.trim() + '</code></pre>';
+    });
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;margin:8px 0;border-radius:6px;">');
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    html = html.replace(/^---$/gm, '<hr>');
+    html = html.replace(/^\> (.+)$/gm, '<blockquote>$1</blockquote>');
+    html = html.replace(/^\|(.+)\|$/gm, (match, row) => {
+        const cells = row.split('|').map(c => c.trim());
+        if (cells.every(c => !c || /^[-:]+$/.test(c))) return '';
+        return '<tr>' + cells.filter(c => c).map(c => {
+            return '<td>' + c + '</td>';
+        }).join('') + '</tr>';
+    });
+    html = html.replace(/((<tr>.*<\/tr>\n?)+)/g, '<table>$1</table>');
+    html = html.replace(/<tr><\/tr>/g, '');
+    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/((<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+    html = html.replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>');
+    const lines = html.split('\n');
+    const result = [];
+    let inPre = false;
+    for (const line of lines) {
+        if (line.includes('<pre>')) inPre = true;
+        if (line.includes('</pre>')) inPre = false;
+        if (!inPre && line.trim() && !line.startsWith('<')) {
+            result.push('<p>' + line + '</p>');
+        } else {
+            result.push(line);
+        }
+    }
+    return result.join('\n');
+}
+
+var _nextStepsHidden = false;
+
+function toggleNextSteps() {
+    _nextStepsHidden = !_nextStepsHidden;
+    const box = document.getElementById('nextStepsBox');
+    if (!box) return;
+    const body = box.querySelector('.next-steps-body');
+    const arrow = box.querySelector('.next-steps-arrow');
+    if (body) body.style.display = _nextStepsHidden ? 'none' : '';
+    if (arrow) arrow.textContent = _nextStepsHidden ? '▶' : '▼';
+}
+
+function showNextSteps(context) {
+    const box = document.getElementById('nextStepsBox');
+    if (!box) return;
+
+    const link = (label, view) => `<a class="next-step-link" href="#" onclick="event.preventDefault();switchView('${view}')">${label}</a>`;
+    const steps = {
+        'compiled': `
+            <ul>
+                <li>${link('Name this abstract idea', 'abstractions')} — does the abstraction name describe what it does?</li>
+                <li>${link('Check the Namespace', 'namespace')} — see where your abstraction will live once created.</li>
+                <li><strong>Step through it</strong> — click <strong>Step</strong> to watch each instruction execute one at a time.</li>
+                <li><strong>Create Abstraction</strong> — when you are ready, click the green button to give your idea a Body in the Church Machine.</li>
+            </ul>`,
+        'assembled': `
+            <ul>
+                <li><strong>Step through it</strong> — click <strong>Step</strong> to execute one instruction at a time and watch the registers change.</li>
+                <li><strong>Run it</strong> — click <strong>Run</strong> to execute all instructions until halt or fault.</li>
+                <li>${link('Check the Namespace', 'namespace')} — see the namespace slots and save your program.</li>
+                <li>${link('View the Pipeline', 'pipeline')} — watch instructions flow through the mLoad pipeline.</li>
+            </ul>`,
+        'created': `
+            <ul>
+                <li>${link('Check the Namespace', 'namespace')} — see your new abstraction\'s entry in the namespace table.</li>
+                <li>${link('Inspect it in Abstractions', 'abstractions')} — see the lump layout, c-list, and Golden Token.</li>
+                <li>${link('View the Pipeline', 'pipeline')} — watch how capabilities are checked in hardware.</li>
+                <li>${link('Read the Reference', 'reference')} — look up instructions and permission bits.</li>
+            </ul>`,
+        'error': `
+            <ul>
+                <li><strong>Read the error</strong> — the line number tells you where to look.</li>
+                <li><strong>Check your syntax</strong> — does every <code>{</code> have a matching <code>}</code>?</li>
+                <li>${link('Try the Tutorial', 'tutorial')} — guided lessons to help you learn the syntax.</li>
+                <li>${link('Read the Reference', 'reference')} — look up instruction formats and examples.</li>
+            </ul>`,
+        'draft': `
+            <ul>
+                <li>${link('Check the Namespace', 'namespace')} — see where your abstraction will be placed.</li>
+                <li>${link('Inspect Abstractions', 'abstractions')} — review existing abstractions and their layouts.</li>
+                <li>${link('View the Pipeline', 'pipeline')} — understand how the mLoad pipeline processes capabilities.</li>
+                <li><strong>Compile</strong> — click <strong>Compile</strong> to see the actual machine instructions.</li>
+            </ul>`
+    };
+
+    const bodyHTML = steps[context] || '';
+    if (!bodyHTML) { box.innerHTML = ''; return; }
+
+    const arrowChar = _nextStepsHidden ? '▶' : '▼';
+    const bodyDisplay = _nextStepsHidden ? 'display:none' : '';
+    box.innerHTML = `<div class="next-steps-header" onclick="toggleNextSteps()"><span class="next-steps-arrow">${arrowChar}</span><span class="next-steps-label">Next Steps</span></div><div class="next-steps-body" style="${bodyDisplay}">${bodyHTML}</div>`;
+}
+
+function initConsoleAutoSwitch() {
+    const con = document.getElementById('editorConsole');
+    if (!con) return;
+    const observer = new MutationObserver(function() {
+        if (currentView === 'editor') {
+            switchCodeTab('console');
+        }
+    });
+    observer.observe(con, { childList: true, characterData: true, subtree: true });
+}
+
+function initEditorDivider() {
+    const divider = document.getElementById('editorDivider');
+    if (!divider) return;
+    const layout = divider.parentElement;
+    const panels = layout.querySelectorAll('.editor-panel');
+    if (panels.length < 2) return;
+    const leftPanel = panels[0];
+    const rightPanel = panels[1];
+    let dragging = false;
+
+    divider.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        dragging = true;
+        divider.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        const rect = layout.getBoundingClientRect();
+        const leftPct = Math.max(15, Math.min(85, ((e.clientX - rect.left) / rect.width) * 100));
+        const rightPct = 100 - leftPct;
+        leftPanel.style.flex = 'none';
+        leftPanel.style.width = leftPct + '%';
+        rightPanel.style.flex = 'none';
+        rightPanel.style.width = rightPct + '%';
+    });
+
+    document.addEventListener('mouseup', function() {
+        if (!dragging) return;
+        dragging = false;
+        divider.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    });
+
+    divider.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        dragging = true;
+        divider.classList.add('dragging');
+    }, { passive: false });
+
+    document.addEventListener('touchmove', function(e) {
+        if (!dragging) return;
+        const touch = e.touches[0];
+        const rect = layout.getBoundingClientRect();
+        const leftPct = Math.max(15, Math.min(85, ((touch.clientX - rect.left) / rect.width) * 100));
+        const rightPct = 100 - leftPct;
+        leftPanel.style.flex = 'none';
+        leftPanel.style.width = leftPct + '%';
+        rightPanel.style.flex = 'none';
+        rightPanel.style.width = rightPct + '%';
+    }, { passive: true });
+
+    document.addEventListener('touchend', function() {
+        if (!dragging) return;
+        dragging = false;
+        divider.classList.remove('dragging');
+    });
+}
+
+function initReplDivider() {
+    const divider = document.getElementById('replDivider');
+    if (!divider) return;
+    const layout = divider.parentElement;
+    const panel = layout.querySelector('.repl-panel');
+    const sidebar = layout.querySelector('.repl-sidebar');
+    let dragging = false;
+
+    divider.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        dragging = true;
+        divider.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        const rect = layout.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const total = rect.width - 10;
+        const leftPct = Math.max(15, Math.min(85, (x / rect.width) * 100));
+        const rightPct = 100 - leftPct;
+        panel.style.flex = 'none';
+        panel.style.width = leftPct + '%';
+        sidebar.style.flex = 'none';
+        sidebar.style.width = rightPct + '%';
+    });
+
+    document.addEventListener('mouseup', function() {
+        if (!dragging) return;
+        dragging = false;
+        divider.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    });
+
+    divider.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        dragging = true;
+        divider.classList.add('dragging');
+    }, { passive: false });
+
+    document.addEventListener('touchmove', function(e) {
+        if (!dragging) return;
+        const touch = e.touches[0];
+        const rect = layout.getBoundingClientRect();
+        const leftPct = Math.max(15, Math.min(85, ((touch.clientX - rect.left) / rect.width) * 100));
+        const rightPct = 100 - leftPct;
+        panel.style.flex = 'none';
+        panel.style.width = leftPct + '%';
+        sidebar.style.flex = 'none';
+        sidebar.style.width = rightPct + '%';
+    }, { passive: true });
+
+    document.addEventListener('touchend', function() {
+        if (!dragging) return;
+        dragging = false;
+        divider.classList.remove('dragging');
+    });
+}
+
+function initTabOverflow(container) {
+    if (!container || container.dataset.overflowInit) return;
+    container.dataset.overflowInit = '1';
+
+    var hamburger = document.createElement('button');
+    hamburger.className = 'tab-overflow-btn';
+    hamburger.innerHTML = '\u2630';
+    hamburger.title = 'More tabs';
+
+    var dropdown = document.createElement('div');
+    dropdown.className = 'tab-overflow-dropdown';
+
+    container.appendChild(hamburger);
+    document.body.appendChild(dropdown);
+
+    function closeDropdown() { dropdown.classList.remove('open'); }
+
+    hamburger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var rect = hamburger.getBoundingClientRect();
+        var top = rect.bottom + 2;
+        var left = rect.right - 160;
+        if (left < 4) left = 4;
+        if (top + 200 > window.innerHeight) top = rect.top - 200;
+        dropdown.style.top = top + 'px';
+        dropdown.style.left = left + 'px';
+        dropdown.style.right = '';
+        dropdown.classList.toggle('open');
+    });
+
+    document.addEventListener('click', closeDropdown);
+
+    dropdown.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+
+    function updateOverflow() {
+        var tabs = Array.from(container.querySelectorAll('.math-mode-tab, .sidebar-tab'));
+        tabs.forEach(function(t) { t.classList.remove('overflow-hidden'); });
+        hamburger.classList.remove('visible', 'has-active');
+        dropdown.innerHTML = '';
+        dropdown.classList.remove('open');
+
+        var visibleTabs = tabs.filter(function(t) { return t.style.display !== 'none'; });
+        if (visibleTabs.length === 0) return;
+
+        var totalTabWidth = 0;
+        var tabWidths = [];
+        visibleTabs.forEach(function(t) {
+            var w = t.getBoundingClientRect().width;
+            tabWidths.push(w);
+            totalTabWidth += w;
+        });
+
+        var containerWidth = container.getBoundingClientRect().width;
+        if (totalTabWidth <= containerWidth) return;
+
+        hamburger.classList.add('visible');
+        var hbWidth = hamburger.getBoundingClientRect().width || 36;
+        var availableWidth = containerWidth - hbWidth;
+        var usedWidth = 0;
+        var overflowedTabs = [];
+        var hasActiveInOverflow = false;
+
+        for (var i = 0; i < visibleTabs.length; i++) {
+            if (usedWidth + tabWidths[i] > availableWidth) {
+                overflowedTabs.push(visibleTabs[i]);
+            } else {
+                usedWidth += tabWidths[i];
+            }
+        }
+
+        if (overflowedTabs.length === 0) {
+            hamburger.classList.remove('visible');
+            return;
+        }
+
+        overflowedTabs.forEach(function(tab) {
+            tab.classList.add('overflow-hidden');
+            var item = document.createElement('button');
+            item.textContent = tab.textContent;
+            if (tab.classList.contains('active')) {
+                item.classList.add('active');
+                hasActiveInOverflow = true;
+            }
+            item.addEventListener('click', function() {
+                tab.click();
+                dropdown.classList.remove('open');
+                setTimeout(updateOverflow, 50);
+            });
+            dropdown.appendChild(item);
+        });
+
+        if (hasActiveInOverflow) {
+            hamburger.classList.add('has-active');
+        }
+    }
+
+    var observer = new ResizeObserver(function() {
+        requestAnimationFrame(updateOverflow);
+    });
+    observer.observe(container);
+
+    var updating = false;
+    var mutObserver = new MutationObserver(function(mutations) {
+        if (updating) return;
+        var dominated = mutations.some(function(m) {
+            return m.target.classList.contains('tab-overflow-btn') || m.target.classList.contains('tab-overflow-dropdown');
+        });
+        if (dominated) return;
+        updating = true;
+        setTimeout(function() { updateOverflow(); updating = false; }, 20);
+    });
+    mutObserver.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+
+    updateOverflow();
+}
+
+function initAllTabOverflows() {
+    document.querySelectorAll('.math-mode-tabs, .sidebar-tabs').forEach(initTabOverflow);
+}
+
+function adjustViewTop() {
+    const toolbar = document.querySelector('.fixed-toolbar');
+    if (!toolbar) return;
+    const h = toolbar.offsetHeight;
+    document.querySelectorAll('.view').forEach(v => { v.style.top = h + 'px'; });
+}
+
+window.addEventListener('resize', adjustViewTop);
+window.addEventListener('beforeunload', () => { if (activeUserTabId && userTabDirty) saveActiveUserTab(); });
+window.addEventListener('pagehide', () => { if (activeUserTabId && userTabDirty) saveActiveUserTab(); });
+
+(function initPullToRefresh() {
+    let startY = 0;
+    let pulling = false;
+    let indicator = null;
+
+    function getIndicator() {
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.className = 'pull-refresh-indicator';
+            indicator.innerHTML = '<span class="pull-refresh-arrow">&#8635;</span><span class="pull-refresh-text">Pull to refresh</span>';
+            document.body.appendChild(indicator);
+        }
+        return indicator;
+    }
+
+    document.addEventListener('touchstart', function(e) {
+        const activeView = document.querySelector('.view.active');
+        if (!activeView || activeView.scrollTop > 5) return;
+        const toolbar = document.querySelector('.fixed-toolbar');
+        const toolbarBottom = toolbar ? toolbar.offsetHeight : 60;
+        const touchY = e.touches[0].clientY;
+        if (touchY > toolbarBottom + 100) return;
+        startY = touchY;
+        pulling = true;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function(e) {
+        if (!pulling) return;
+        const dy = e.touches[0].clientY - startY;
+        if (dy < 0) { pulling = false; return; }
+        if (dy > 10) {
+            const ind = getIndicator();
+            const progress = Math.min(dy / 120, 1);
+            const offset = Math.min(dy * 0.4, 60);
+            ind.style.transform = `translateX(-50%) translateY(${offset}px)`;
+            ind.style.opacity = progress;
+            ind.querySelector('.pull-refresh-arrow').style.transform = `rotate(${progress * 360}deg)`;
+            if (progress >= 1) {
+                ind.querySelector('.pull-refresh-text').textContent = 'Release to refresh';
+                ind.classList.add('ready');
+            } else {
+                ind.querySelector('.pull-refresh-text').textContent = 'Pull to refresh';
+                ind.classList.remove('ready');
+            }
+            ind.style.display = 'flex';
+        }
+    }, { passive: true });
+
+    function resetIndicator() {
+        if (!indicator) return;
+        indicator.style.opacity = '0';
+        indicator.style.transform = 'translateX(-50%) translateY(0)';
+        setTimeout(() => { if (indicator) indicator.style.display = 'none'; }, 200);
+    }
+
+    document.addEventListener('touchend', function() {
+        if (!pulling) return;
+        pulling = false;
+        const ind = indicator;
+        if (ind && ind.classList.contains('ready')) {
+            ind.querySelector('.pull-refresh-text').textContent = 'Refreshing...';
+            ind.querySelector('.pull-refresh-arrow').style.animation = 'pullSpin 0.6s linear infinite';
+            setTimeout(() => location.reload(), 400);
+        } else {
+            resetIndicator();
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchcancel', function() {
+        pulling = false;
+        resetIndicator();
+    }, { passive: true });
+})();
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Boot Image Designer Step 1 (Task #214): if the project has a saved
+    // boot config, prefetch it BEFORE init() so the simulator's first reset
+    // already sees the programmer-chosen lump sizes. When no config exists
+    // the server returns config:null and the simulator keeps its historical
+    // 65536/64/256/256 defaults — this avoids both (a) silently changing
+    // memory size on no-config startup and (b) a re-reset race that would
+    // wipe restored namespace state.
+    const _bootCfgReady = fetch('/api/boot-config')
+        .then(r => r.json())
+        .then(data => {
+            _hardwareProfiles = (data && data.profiles) || {};
+            window.bootConfig = (data && data.config) || null;
+            _lumpCatalog = (data && data.lumpCatalog) || [];
+        })
+        .catch(err => { console.warn('[bootConfig] prefetch failed:', err); });
+    _bootCfgReady.finally(() => {
+        init();
+        initAllTabOverflows();
+        adjustViewTop();
+        initCodeCopyButtons();
+        updateFPGAStatusBtn();
+    });
+});
+
+function addCopyButton(pre) {
+    if (pre.querySelector('.code-copy-btn')) return;
+    const btn = document.createElement('button');
+    btn.className = 'code-copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const clone = pre.cloneNode(true);
+        clone.querySelectorAll('.code-copy-btn').forEach(function(b) { b.remove(); });
+        const text = clone.textContent;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() {
+                btn.textContent = 'Copied!';
+                btn.classList.add('copied');
+                setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+            }).catch(function() {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch(_) {}
+                document.body.removeChild(ta);
+                btn.textContent = 'Copied!';
+                btn.classList.add('copied');
+                setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+            });
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            btn.textContent = 'Copied!';
+            btn.classList.add('copied');
+            setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+        }
+    });
+    pre.appendChild(btn);
+}
+
+const _traceData = [];
+const _TRACE_MAX = 50000;
+let _traceRenderedCount = 0;
+let _tracePendingRAF = false;
+
+function _traceRecordStep(result) {
+    if (!result) return;
+    const state = sim.getState();
+    const instr = result.instr;
+    const entry = {
+        step: state.stepCount,
+        pc: result.pc,
+        opName: instr ? sim.opName(instr.opcode) : '',
+        cond: instr ? sim.condName(instr.cond) : '',
+        dst: instr ? instr.crDst : '',
+        src: instr ? instr.crSrc : '',
+        desc: result.desc || '',
+        skipped: !!result.skipped,
+        dr: state.dr.slice(),
+        flags: { N: state.flags.N, Z: state.flags.Z, C: state.flags.C, V: state.flags.V },
+        sto: state.sto,
+    };
+    if (_traceData.length >= _TRACE_MAX) {
+        const removeCount = _traceData.length - _TRACE_MAX + 1000;
+        _traceData.splice(0, removeCount);
+        const tbody = document.getElementById('traceTableBody');
+        if (tbody) {
+            const rows = tbody.children;
+            const domRemove = Math.min(removeCount, rows.length);
+            for (let r = 0; r < domRemove; r++) tbody.removeChild(rows[0]);
+        }
+        _traceRenderedCount = Math.max(0, _traceRenderedCount - removeCount);
+    }
+    _traceData.push(entry);
+    if (!_tracePendingRAF) {
+        _tracePendingRAF = true;
+        requestAnimationFrame(_traceFlushRender);
+    }
+}
+
+function _traceFlushRender() {
+    _tracePendingRAF = false;
+    if (_traceRenderedCount >= _traceData.length) return;
+    const tbody = document.getElementById('traceTableBody');
+    if (!tbody) return;
+    const frag = document.createDocumentFragment();
+    const start = _traceRenderedCount;
+    for (let i = start; i < _traceData.length; i++) {
+        frag.appendChild(_traceBuildRow(i));
+    }
+    tbody.appendChild(frag);
+    _traceRenderedCount = _traceData.length;
+    const countEl = document.getElementById('traceRowCount');
+    if (countEl) countEl.textContent = _traceData.length.toLocaleString() + ' rows';
+    if (currentView === 'trace') {
+        const wrap = document.getElementById('traceTableWrap');
+        if (wrap) wrap.scrollTop = wrap.scrollHeight;
+    }
+}
+
+function _traceBuildRow(idx) {
+    const entry = _traceData[idx];
+    const prev = idx > 0 ? _traceData[idx - 1] : null;
+    const tr = document.createElement('tr');
+    tr.dataset.step = entry.step;
+    if (entry.skipped) tr.className = 'trace-row-skipped';
+
+    const cells = [
+        entry.step,
+        entry.pc,
+        entry.opName,
+        entry.cond,
+        entry.dst,
+        entry.src,
+        entry.desc,
+    ];
+    for (let c = 0; c < cells.length; c++) {
+        const td = document.createElement('td');
+        td.textContent = cells[c];
+        tr.appendChild(td);
+    }
+    for (let d = 0; d < 16; d++) {
+        const td = document.createElement('td');
+        td.textContent = entry.dr[d] >>> 0;
+        if (prev && (entry.dr[d] >>> 0) !== (prev.dr[d] >>> 0)) {
+            td.className = 'trace-td-changed';
+        }
+        tr.appendChild(td);
+    }
+    const flagKeys = ['N', 'Z', 'C', 'V'];
+    for (const fk of flagKeys) {
+        const td = document.createElement('td');
+        td.textContent = entry.flags[fk] ? '1' : '0';
+        if (prev && entry.flags[fk] !== prev.flags[fk]) {
+            td.className = 'trace-td-changed';
+        }
+        tr.appendChild(td);
+    }
+    const stoTd = document.createElement('td');
+    stoTd.textContent = entry.sto;
+    if (prev && entry.sto !== prev.sto) {
+        stoTd.className = 'trace-td-changed';
+    }
+    tr.appendChild(stoTd);
+    return tr;
+}
+
+function clearTrace() {
+    _traceData.length = 0;
+    _traceRenderedCount = 0;
+    const tbody = document.getElementById('traceTableBody');
+    if (tbody) tbody.innerHTML = '';
+    const countEl = document.getElementById('traceRowCount');
+    if (countEl) countEl.textContent = '0 rows';
+}
+
+function renderTraceView() {
+    if (_traceRenderedCount < _traceData.length) {
+        _traceFlushRender();
+    }
+    const wrap = document.getElementById('traceTableWrap');
+    if (wrap) wrap.scrollTop = wrap.scrollHeight;
+}
+
+function jumpToTraceStep(stepNum, faultType) {
+    switchView('trace');
+    if (_traceRenderedCount < _traceData.length) {
+        _traceFlushRender();
+    }
+    const tbody = document.getElementById('traceTableBody');
+    if (!tbody) return;
+    const target = tbody.querySelector(`tr[data-step="${stepNum}"]`);
+    if (!target) return;
+    document.querySelectorAll('.trace-row-highlighted').forEach(el => el.classList.remove('trace-row-highlighted'));
+    document.querySelectorAll('.trace-gatelog-back').forEach(el => el.remove());
+    document.querySelectorAll('.trace-fault-label').forEach(el => el.remove());
+    target.classList.add('trace-row-highlighted');
+    const firstTd = target.querySelector('td');
+    if (firstTd) {
+        if (faultType) {
+            const faultLabel = document.createElement('span');
+            faultLabel.className = 'trace-fault-label';
+            faultLabel.textContent = faultType;
+            faultLabel.title = 'Click to dismiss';
+            faultLabel.addEventListener('click', function() { faultLabel.remove(); });
+            faultLabel.addEventListener('animationend', function() { faultLabel.remove(); });
+            firstTd.insertBefore(faultLabel, firstTd.firstChild);
+        }
+        const backBtn = document.createElement('button');
+        backBtn.className = 'trace-gatelog-back';
+        backBtn.title = 'Return to Gate Log';
+        backBtn.textContent = '\u2190 Gate Log';
+        backBtn.addEventListener('click', function() {
+            switchView('dashboard');
+            switchDashTab('gatelog');
+        });
+        firstTd.insertBefore(backBtn, firstTd.firstChild);
+    }
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+function initCodeCopyButtons() {
+    document.querySelectorAll('pre').forEach(addCopyButton);
+    const observer = new MutationObserver(function(mutations) {
+        for (const m of mutations) {
+            for (const node of m.addedNodes) {
+                if (node.nodeType !== 1) continue;
+                if (node.tagName === 'PRE') addCopyButton(node);
+                node.querySelectorAll && node.querySelectorAll('pre').forEach(addCopyButton);
+            }
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function _devRelativeTime(unixSec) {
+    const diff = Math.floor(Date.now() / 1000) - unixSec;
+    if (diff < 60) return diff + 's ago';
+    if (diff < 3600) return Math.floor(diff / 60) + ' min ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' hr ago';
+    return Math.floor(diff / 86400) + 'd ago';
+}
+
+function setDeviceLabelAndSync(deviceId, label) {
+    setDeviceLabel(deviceId, label);
+    const nameEl = document.getElementById('devRowName_' + deviceId);
+    if (nameEl) {
+        const boardName = nameEl.dataset.boardName || '';
+        nameEl.textContent = label.trim() || boardName;
+    }
+}
+
+function loadDeviceList() {
+    const grid = document.getElementById('devGrid');
+    if (!grid) return;
+    grid.innerHTML = '<div class="dev-empty">Loading...</div>';
+    fetch('/api/device/list')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.ok || !data.devices || data.devices.length === 0) {
+                grid.innerHTML = '<div class="dev-empty">No devices registered. Connect a board via the local bridge to see it here.</div>';
+                return;
+            }
+            grid.innerHTML = '';
+            const _bootReasonNames = {0: 'Cold', 1: 'Warm', 2: 'Fault'};
+            const _faultNames = {
+                0:'None',1:'PERM_R',2:'PERM_W',3:'PERM_X',4:'PERM_L',5:'PERM_S',
+                6:'PERM_E',7:'NULL_CAP',8:'BOUNDS',9:'VERSION',10:'SEAL',
+                11:'INVALID_OP',12:'TPERM_RSV',13:'DOMAIN_PURITY',14:'BIND',
+                15:'F_BIT',16:'STACK_OVERFLOW',17:'ABSENT_OUTFORM',
+                18:'STACK_CORRUPT',19:'STACK_UNDERFLOW',
+                21:'OUTFORM_CRC',22:'OUTFORM_ALLOC',23:'OUTFORM_MINT',24:'OUTFORM_HDR'
+            };
+            data.devices.forEach(dev => {
+                const isOnline = dev.status === 'online';
+                const profileClass = dev.profile === 'IoT' ? 'dev-badge-iot' : 'dev-badge-full';
+                const petName = (dev.label || '').trim() || dev.board_name;
+                const statusChip = isOnline
+                    ? 'Online'
+                    : 'Offline' + (dev.last_seen ? ' · ' + _devRelativeTime(dev.last_seen) : '');
+                const bootReasonStr = _bootReasonNames[dev.boot_reason] || ('0x' + (dev.boot_reason || 0).toString(16));
+                const faultStr = dev.last_fault ? (_faultNames[dev.last_fault] || ('0x' + dev.last_fault.toString(16))) : '';
+                const niaStr = dev.fault_nia ? ' @ 0x' + dev.fault_nia.toString(16).toUpperCase().padStart(4, '0') : '';
+                const faultBadge = dev.boot_reason === 2 && dev.last_fault
+                    ? '<span class="dev-fault-badge">' + _escHtml(faultStr) + _escHtml(niaStr) + '</span>'
+                    : '';
+
+                const wrap = document.createElement('div');
+                wrap.className = 'dev-entry';
+                wrap.id = 'devEntry_' + dev.id;
+
+                const row = document.createElement('div');
+                row.className = 'dev-row';
+                row.innerHTML =
+                    '<div class="dev-status-dot ' + (isOnline ? 'online' : 'offline') + '"></div>' +
+                    '<span class="dev-row-name" id="devRowName_' + dev.id + '" data-board-name="' + _escHtml(dev.board_name) + '">' + _escHtml(petName) + '</span>' +
+                    '<span class="dev-status-chip ' + (isOnline ? 'chip-online' : 'chip-offline') + '">' + _escHtml(statusChip) + '</span>' +
+                    '<span class="dev-badge ' + profileClass + '">' + _escHtml(dev.profile) + '</span>' +
+                    '<span class="dev-chevron">&#x25B6;</span>';
+
+                const detail = document.createElement('div');
+                detail.className = 'dev-detail';
+                detail.id = 'devDetail_' + dev.id;
+                detail.innerHTML =
+                    '<div class="dev-detail-grid">' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">UID</span><span class="dev-detail-val">' + _escHtml(dev.device_uid) + '</span></div>' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">FW</span><span class="dev-detail-val">' + _escHtml(dev.fw_version) + '</span></div>' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">Boots</span><span class="dev-detail-val">' + dev.boot_count + '</span></div>' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">Boot reason</span><span class="dev-detail-val">' + _escHtml(bootReasonStr) + (faultBadge ? ' ' + faultBadge : '') + '</span></div>' +
+                        (dev.bridge_host ? '<div class="dev-detail-item"><span class="dev-detail-label">Bridge</span><span class="dev-detail-val">' + _escHtml(dev.bridge_host) + ':' + _escHtml(String(dev.bridge_port || '')) + '</span></div>' : '') +
+                        (dev.serial_port ? '<div class="dev-detail-item"><span class="dev-detail-label">Serial</span><span class="dev-detail-val">' + _escHtml(dev.serial_port) + '</span></div>' : '') +
+                    '</div>' +
+                    '<div class="dev-detail-footer">' +
+                        '<label class="dev-detail-label-row">' +
+                            '<span class="dev-detail-label">Pet name</span>' +
+                            '<input class="dev-label-input" id="devLabelInput_' + dev.id + '" placeholder="Label" value="' + _escHtml(dev.label || '') + '" ' +
+                                'onchange="setDeviceLabelAndSync(' + dev.id + ', this.value)" />' +
+                        '</label>' +
+                        '<div class="dev-deploy-status" id="devDeployStatus_' + dev.id + '" style="display:none;"></div>' +
+                        '<button class="dev-action-btn' + (isOnline ? '' : ' dev-action-disabled') + '" onclick="deviceDeploy(' + dev.id + ')" title="Deploy bitstream to this device"' + (isOnline ? '' : ' disabled') + '>Deploy</button>' +
+                    '</div>';
+
+                detail.style.display = 'none';
+                row.addEventListener('click', function() {
+                    const isOpen = row.classList.contains('dev-row-open');
+                    document.querySelectorAll('.dev-detail').forEach(d => { d.style.display = 'none'; });
+                    document.querySelectorAll('.dev-row').forEach(r => r.classList.remove('dev-row-open'));
+                    if (!isOpen) {
+                        detail.style.display = 'block';
+                        row.classList.add('dev-row-open');
+                    }
+                });
+
+                wrap.appendChild(row);
+                wrap.appendChild(detail);
+                grid.appendChild(wrap);
+            });
+        })
+        .catch(() => {
+            grid.innerHTML = '<div class="dev-empty">Failed to load devices.</div>';
+        });
+}
+
+function _escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setDeviceLabel(deviceId, label) {
+    fetch('/api/device/' + deviceId + '/label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: label })
+    });
+}
+
+function _resolveNIA(nia) {
+    if (!nia || typeof sim === 'undefined' || !sim.readNSEntry || !sim.parseLumpHeader) {
+        return { raw: nia, label: '0x' + (nia >>> 0).toString(16).toUpperCase().padStart(4, '0') };
+    }
+    for (var nsIdx = 0; nsIdx < (sim.nsCount || 0); nsIdx++) {
+        var entry = sim.readNSEntry(nsIdx);
+        if (!entry) continue;
+        var loc = entry.word0_location >>> 0;
+        if (loc >= sim.memory.length) continue;
+        var hdrWord = sim.memory[loc] >>> 0;
+        var hdr = sim.parseLumpHeader(hdrWord);
+        if (!hdr.valid || hdr.cw === 0) continue;
+        var codeStart = loc + 1;
+        var codeEnd = codeStart + hdr.cw - 1;
+        if (nia >= codeStart && nia <= codeEnd) {
+            var offset = nia - codeStart;
+            var absName = sim.nsLabels[nsIdx] || ('NS[' + nsIdx + ']');
+            var absObj = (typeof abstractionRegistry !== 'undefined') ? abstractionRegistry.getAbstraction(nsIdx) : null;
+            var methodName = '';
+            if (absObj && absObj.result && absObj.result.methods) {
+                methodName = absObj.result.methods[0] || '';
+            }
+            return {
+                raw: nia,
+                nsIdx: nsIdx,
+                absName: absName,
+                method: methodName,
+                offset: offset,
+                label: absName + (methodName ? '.' + methodName : '') + ':' + offset
+            };
+        }
+    }
+    return { raw: nia, label: '0x' + (nia >>> 0).toString(16).toUpperCase().padStart(4, '0') };
+}
+
+var _faultTypeNames = {
+    0:'NONE',1:'PERM_R',2:'PERM_W',3:'PERM_X',4:'PERM_L',5:'PERM_S',
+    6:'PERM_E',7:'NULL_CAP',8:'BOUNDS',9:'VERSION',10:'SEAL',
+    11:'INVALID_OP',12:'TPERM_RSV',13:'DOMAIN_PURITY',14:'BIND',
+    15:'F_BIT',16:'STACK_OVERFLOW',17:'ABSENT_OUTFORM',
+    18:'STACK_CORRUPT',19:'STACK_UNDERFLOW',
+    21:'OUTFORM_CRC',22:'OUTFORM_ALLOC',23:'OUTFORM_MINT',24:'OUTFORM_HDR'
+};
+
+function showDeviceFaultLog(deviceUid) {
+    fetch('/api/device/faults' + (deviceUid ? '?device_uid=' + encodeURIComponent(deviceUid) : ''))
+        .then(r => r.json())
+        .then(data => {
+            if (!data.ok) return;
+            var events = data.events || [];
+            var mtbfMap = data.mtbf_by_nia || {};
+
+            var html = '<div class="fault-log-container">';
+            html += '<div class="fault-log-title">MTBF by Instruction Address</div>';
+
+            var niaKeys = Object.keys(mtbfMap);
+            if (niaKeys.length === 0) {
+                html += '<div class="fault-log-empty">No fault events recorded.</div>';
+            } else {
+                niaKeys.sort(function(a, b) {
+                    var ia = mtbfMap[a], ib = mtbfMap[b];
+                    var ma = ia.mtbf !== null ? ia.mtbf : Infinity;
+                    var mb = ib.mtbf !== null ? ib.mtbf : Infinity;
+                    if (ma !== mb) return ma - mb;
+                    return ib.count - ia.count;
+                });
+                html += '<table class="fault-mtbf-table"><thead><tr>' +
+                    '<th>Address</th><th>Location</th><th>Faults</th><th>MTBF</th>' +
+                    '</tr></thead><tbody>';
+                niaKeys.forEach(function(niaStr) {
+                    var nia = parseInt(niaStr);
+                    var resolved = _resolveNIA(nia);
+                    var info = mtbfMap[niaStr];
+                    var mtbfStr = info.mtbf !== null ? _formatMTBF(info.mtbf) : '\u2014';
+                    var mtbfClass = info.mtbf === null ? '' : (info.mtbf > 3600 ? 'mtbf-cell-green' : info.mtbf > 300 ? 'mtbf-cell-amber' : 'mtbf-cell-red');
+                    html += '<tr>' +
+                        '<td class="fault-addr">0x' + (nia >>> 0).toString(16).toUpperCase().padStart(4, '0') + '</td>' +
+                        '<td class="fault-loc">' + _escHtml(resolved.label) + '</td>' +
+                        '<td class="fault-count">' + info.count + '</td>' +
+                        '<td class="fault-mtbf ' + mtbfClass + '">' + mtbfStr + '</td>' +
+                        '</tr>';
+                });
+                html += '</tbody></table>';
+            }
+
+            html += '<div class="fault-log-title" style="margin-top:1rem;">Recent Fault Events</div>';
+            if (events.length === 0) {
+                html += '<div class="fault-log-empty">No fault events.</div>';
+            } else {
+                html += '<table class="fault-events-table"><thead><tr>' +
+                    '<th>Time</th><th>Device</th><th>Fault</th><th>Location</th>' +
+                    '</tr></thead><tbody>';
+                events.slice(0, 50).forEach(function(ev) {
+                    var resolved = _resolveNIA(ev.fault_nia);
+                    var fName = _faultTypeNames[ev.fault_type] || ('0x' + ev.fault_type.toString(16));
+                    var ts = ev.timestamp ? new Date(ev.timestamp * 1000).toLocaleString() : '—';
+                    html += '<tr>' +
+                        '<td class="fault-ts">' + _escHtml(ts) + '</td>' +
+                        '<td class="fault-dev">' + _escHtml(ev.device_uid) + '</td>' +
+                        '<td class="dev-fault-badge">' + _escHtml(fName) + '</td>' +
+                        '<td class="fault-loc">' + _escHtml(resolved.label) + '</td>' +
+                        '</tr>';
+                });
+                html += '</tbody></table>';
+            }
+            html += '</div>';
+
+            showModal('Fault Log \u2014 MTBF per Instruction', html);
+        });
+}
+
+function _formatMTBF(seconds) {
+    if (seconds >= 86400) return (seconds / 86400).toFixed(1) + 'd';
+    if (seconds >= 3600) return (seconds / 3600).toFixed(1) + 'h';
+    if (seconds >= 60) return (seconds / 60).toFixed(1) + 'm';
+    return seconds.toFixed(1) + 's';
+}
+
+function _buildDeployFramesFromNS(nsIdx) {
+    if (typeof sim === 'undefined' || !sim.readNSEntry) return null;
+    var entry = sim.readNSEntry(nsIdx);
+    if (!entry) return null;
+    var loc = entry.word0_location >>> 0;
+    if (loc >= sim.memory.length) return null;
+    var hdrWord = sim.memory[loc] >>> 0;
+    var hdr = sim.parseLumpHeader(hdrWord);
+    if (!hdr.valid || hdr.cw === 0) return null;
+
+    var codeStart = loc + 1;
+    var words = [];
+    for (var i = 0; i < hdr.cw; i++) {
+        var addr = codeStart + i;
+        words.push(addr < sim.memory.length ? (sim.memory[addr] >>> 0) : 0);
+    }
+
+    var blocks = [];
+    var nsSlice = Array.from(sim.memory.slice(0, TangSerial.NS_WORDS));
+    var clSlice = Array.from(sim.memory.slice(TangSerial.NS_WORDS, TangSerial.NS_WORDS + TangSerial.CLIST_WORDS));
+    var totalNsWords = TangSerial.NS_WORDS + TangSerial.CLIST_WORDS;
+    var nsWords = new Array(totalNsWords);
+    for (var i = 0; i < TangSerial.NS_WORDS; i++) nsWords[i] = i < nsSlice.length ? nsSlice[i] : 0;
+    for (var i = 0; i < TangSerial.CLIST_WORDS; i++) nsWords[TangSerial.NS_WORDS + i] = i < clSlice.length ? clSlice[i] : 0;
+    blocks.push({ addr: 0x0000, words: nsWords });
+    blocks.push({ addr: codeStart, words: words });
+
+    function crc16ccitt(data) {
+        var crc = 0xFFFF;
+        for (var ci = 0; ci < data.length; ci++) {
+            var byte = data[ci];
+            for (var bi = 0; bi < 8; bi++) {
+                var bit = ((byte >>> (7 - bi)) & 1) ^ ((crc >>> 15) & 1);
+                crc = ((crc << 1) & 0xFFFF) ^ (bit ? 0x1021 : 0);
+            }
+        }
+        return crc;
+    }
+
+    var allFrames = [];
+    for (var b = 0; b < blocks.length; b++) {
+        var blk = blocks[b];
+        var bodyLen = 6 + blk.words.length * 4;
+        var frame = new Uint8Array(bodyLen + 2);
+        frame[0] = 0xBE;
+        frame[1] = 0xEF;
+        frame[2] = (blk.addr >> 8) & 0xFF;
+        frame[3] = blk.addr & 0xFF;
+        frame[4] = (blk.words.length >> 8) & 0xFF;
+        frame[5] = blk.words.length & 0xFF;
+        for (var i = 0; i < blk.words.length; i++) {
+            var w = blk.words[i] >>> 0;
+            frame[6 + i * 4 + 0] = w & 0xFF;
+            frame[6 + i * 4 + 1] = (w >> 8) & 0xFF;
+            frame[6 + i * 4 + 2] = (w >> 16) & 0xFF;
+            frame[6 + i * 4 + 3] = (w >> 24) & 0xFF;
+        }
+        var crc = crc16ccitt(frame.subarray(0, bodyLen));
+        frame[bodyLen] = (crc >> 8) & 0xFF;
+        frame[bodyLen + 1] = crc & 0xFF;
+        allFrames.push({ addr: blk.addr, count: blk.words.length, frame: frame, crc: crc });
+    }
+    return allFrames;
+}
+
+function _buildDeployFrames() {
+    var patch = injectCRCode(null);
+    if (!patch) return null;
+
+    var blocks = [];
+    var nsChanged = patch.newCW !== patch.oldCW;
+
+    if (nsChanged && typeof sim !== 'undefined' && typeof TangSerial !== 'undefined') {
+        var nsSlice = Array.from(sim.memory.slice(0, TangSerial.NS_WORDS));
+        var clSlice = Array.from(sim.memory.slice(TangSerial.NS_WORDS, TangSerial.NS_WORDS + TangSerial.CLIST_WORDS));
+        var totalWords = TangSerial.NS_WORDS + TangSerial.CLIST_WORDS;
+        var nsWords = new Array(totalWords);
+        for (var i = 0; i < TangSerial.NS_WORDS; i++) nsWords[i] = i < nsSlice.length ? nsSlice[i] : 0;
+        for (var i = 0; i < TangSerial.CLIST_WORDS; i++) nsWords[TangSerial.NS_WORDS + i] = i < clSlice.length ? clSlice[i] : 0;
+        blocks.push({ addr: 0x0000, words: nsWords });
+    }
+
+    blocks.push({ addr: patch.codeStart, words: patch.newWords });
+
+    function crc16ccitt(data) {
+        var crc = 0xFFFF;
+        for (var ci = 0; ci < data.length; ci++) {
+            var byte = data[ci];
+            for (var bi = 0; bi < 8; bi++) {
+                var bit = ((byte >>> (7 - bi)) & 1) ^ ((crc >>> 15) & 1);
+                crc = ((crc << 1) & 0xFFFF) ^ (bit ? 0x1021 : 0);
+            }
+        }
+        return crc;
+    }
+
+    var allFrames = [];
+    for (var b = 0; b < blocks.length; b++) {
+        var blk = blocks[b];
+        var bodyLen = 6 + blk.words.length * 4;
+        var frame = new Uint8Array(bodyLen + 2);
+        frame[0] = 0xBE;
+        frame[1] = 0xEF;
+        frame[2] = (blk.addr >> 8) & 0xFF;
+        frame[3] = blk.addr & 0xFF;
+        frame[4] = (blk.words.length >> 8) & 0xFF;
+        frame[5] = blk.words.length & 0xFF;
+        for (var i = 0; i < blk.words.length; i++) {
+            var w = blk.words[i] >>> 0;
+            frame[6 + i * 4 + 0] = w & 0xFF;
+            frame[6 + i * 4 + 1] = (w >> 8) & 0xFF;
+            frame[6 + i * 4 + 2] = (w >> 16) & 0xFF;
+            frame[6 + i * 4 + 3] = (w >> 24) & 0xFF;
+        }
+        var crc = crc16ccitt(frame.subarray(0, bodyLen));
+        frame[bodyLen] = (crc >> 8) & 0xFF;
+        frame[bodyLen + 1] = crc & 0xFF;
+        allFrames.push({ addr: blk.addr, count: blk.words.length, frame: frame, crc: crc });
+    }
+    return allFrames;
+}
+
+function _parseDeployResponse(rx, expectedAddr, expectedCount) {
+    if (rx.length >= 4) {
+        var echoAddr = (rx[0] << 8) | rx[1];
+        var echoCount = (rx[2] << 8) | rx[3];
+        if (echoAddr === (expectedAddr & 0xFFFF) && echoCount === expectedCount) {
+            return { success: true, msg: 'Echo OK: addr=0x' + echoAddr.toString(16).toUpperCase().padStart(4, '0') + ' count=' + echoCount };
+        }
+        return { success: false, msg: 'Echo mismatch: expected addr=0x' + (expectedAddr & 0xFFFF).toString(16).toUpperCase().padStart(4, '0') + ' count=' + expectedCount + ', got addr=0x' + echoAddr.toString(16).toUpperCase().padStart(4, '0') + ' count=' + echoCount };
+    }
+    if (rx.length === 1 && rx[0] === 0x15) {
+        return { success: false, msg: 'NAK — CRC mismatch on FPGA side' };
+    }
+    return { success: false, msg: 'No echo received (' + rx.length + ' bytes)' };
+}
+
+function _setDeviceDeployStatus(deviceId, status, message) {
+    var statusEl = document.getElementById('devDeployStatus_' + deviceId);
+    if (!statusEl) return;
+    statusEl.className = 'dev-deploy-status dev-deploy-' + status;
+    statusEl.textContent = message || '';
+    statusEl.style.display = message ? 'block' : 'none';
+}
+
+function _getDeployablePrograms() {
+    var programs = [];
+    if (typeof sim !== 'undefined' && sim.readNSEntry) {
+        for (var i = 0; i < sim.nsCount; i++) {
+            var entry = sim.readNSEntry(i);
+            if (!entry) continue;
+            var loc = entry.word0_location >>> 0;
+            if (loc >= sim.memory.length) continue;
+            var hdrWord = sim.memory[loc] >>> 0;
+            var hdr = sim.parseLumpHeader(hdrWord);
+            if (!hdr.valid || hdr.cw === 0) continue;
+            var label = entry.label || ('NS[' + i + ']');
+            programs.push({ nsIdx: i, label: label, cw: hdr.cw, loc: loc });
+        }
+    }
+    return programs;
+}
+
+function deviceDeploy(deviceId) {
+    var programs = _getDeployablePrograms();
+    var hasEditor = !!(selectedCR !== null && ((document.getElementById('asmEditor') || {}).value || '').trim());
+
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+
+    var progListHtml = '';
+    if (hasEditor) {
+        progListHtml += '<label class="deploy-program-option">' +
+            '<input type="radio" name="deployProgSrc" value="editor" checked /> ' +
+            '<span>Current editor code (compile &amp; deploy)</span>' +
+            '</label>';
+    }
+    for (var p = 0; p < programs.length; p++) {
+        var prog = programs[p];
+        var checked = (!hasEditor && p === 0) ? ' checked' : '';
+        progListHtml += '<label class="deploy-program-option">' +
+            '<input type="radio" name="deployProgSrc" value="ns:' + prog.nsIdx + '"' + checked + ' /> ' +
+            '<span>' + _escHtml(prog.label) + ' (NS[' + prog.nsIdx + '], ' + prog.cw + ' words @ 0x' + prog.loc.toString(16).toUpperCase().padStart(4, '0') + ')</span>' +
+            '</label>';
+    }
+    if (!hasEditor && programs.length === 0) {
+        progListHtml = '<div style="color:#ef5350;font-size:0.85rem;">No programs available. Write code in the editor or load an abstraction first.</div>';
+    }
+
+    overlay.innerHTML =
+        '<div class="modal-dialog" style="max-width:500px;">' +
+            '<h3 style="margin:0 0 1rem;color:var(--church-gold,#daa520);">Deploy to Device #' + deviceId + '</h3>' +
+            '<div style="color:#bbb;font-size:0.88rem;margin-bottom:0.8rem;">Select a program to deploy:</div>' +
+            '<div class="deploy-program-list" style="max-height:200px;overflow-y:auto;margin-bottom:1rem;">' + progListHtml + '</div>' +
+            '<div id="deployModalLog" style="background:#111;border:1px solid #333;border-radius:4px;padding:0.5rem;font-family:monospace;font-size:0.78rem;color:#aaa;max-height:180px;overflow-y:auto;white-space:pre-wrap;margin-bottom:1rem;display:none;"></div>' +
+            '<div style="display:flex;gap:0.5rem;justify-content:flex-end;">' +
+                '<button id="deployModalCancel" class="dev-action-btn" style="padding:6px 16px;">Cancel</button>' +
+                '<button id="deployModalConfirm" class="dev-action-btn" style="padding:6px 16px;background:#2d4a22;color:#8bc34a;border-color:#4caf50;">Deploy</button>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(overlay);
+
+    function closeModal() { overlay.remove(); document.removeEventListener('keydown', onEsc); }
+    function onEsc(e) { if (e.key === 'Escape') closeModal(); }
+    document.addEventListener('keydown', onEsc);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+    document.getElementById('deployModalCancel').addEventListener('click', closeModal);
+
+    document.getElementById('deployModalConfirm').addEventListener('click', function() {
+        var logEl = document.getElementById('deployModalLog');
+        logEl.style.display = 'block';
+        logEl.textContent = '';
+        var log = function(msg) { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; };
+
+        var selected = overlay.querySelector('input[name="deployProgSrc"]:checked');
+        if (!selected) {
+            log('ERROR: No program selected.');
+            return;
+        }
+
+        document.getElementById('deployModalConfirm').disabled = true;
+        document.getElementById('deployModalConfirm').textContent = 'Deploying…';
+        _setDeviceDeployStatus(deviceId, 'deploying', 'Deploying…');
+
+        var frames;
+        var srcVal = selected.value;
+
+        if (srcVal === 'editor') {
+            log('Compiling current editor code…');
+            frames = _buildDeployFrames();
+        } else if (srcVal.startsWith('ns:')) {
+            var nsIdx = parseInt(srcVal.substring(3), 10);
+            log('Loading NS[' + nsIdx + '] for deploy…');
+            frames = _buildDeployFramesFromNS(nsIdx);
+        }
+
+        if (!frames || frames.length === 0) {
+            log('ERROR: Failed to build frames.');
+            _setDeviceDeployStatus(deviceId, 'failed', 'Build failed');
+            document.getElementById('deployModalConfirm').disabled = false;
+            document.getElementById('deployModalConfirm').textContent = 'Deploy';
+            return;
+        }
+
+        log('Built ' + frames.length + ' BEEF frame(s). Sending to device…');
+
+        _sendFramesToDevice(deviceId, frames, log).then(function(ok) {
+            if (ok) {
+                log('');
+                log('Deploy SUCCESS.');
+                _setDeviceDeployStatus(deviceId, 'success', 'Deployed ✓');
+            } else {
+                log('');
+                log('Deploy FAILED.');
+                _setDeviceDeployStatus(deviceId, 'failed', 'Deploy failed');
+            }
+            document.getElementById('deployModalConfirm').disabled = false;
+            document.getElementById('deployModalConfirm').textContent = 'Deploy';
+        });
+    });
+}
+
+function _sendFramesToDevice(deviceId, frames, log) {
+    var idx = 0;
+    var allOk = true;
+    function sendNext() {
+        if (idx >= frames.length) {
+            if (!allOk) return Promise.resolve(false);
+            log('  Sending RUN sentinel (0xBE 0xAA)…');
+            return fetch('/api/device/' + deviceId + '/deploy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tx: [0xBE, 0xAA],
+                    rx_count: 0,
+                    timeout_ms: 1000
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.ok) {
+                    log('  RUN sentinel bridge error: ' + (data.error || 'unknown'));
+                    return false;
+                }
+                log('  RUN sent — core executing from PC=0.');
+                return true;
+            })
+            .catch(function(err) {
+                log('  RUN sentinel network error: ' + err);
+                return false;
+            });
+        }
+        var f = frames[idx];
+        log('  Frame ' + idx + ': addr=0x' + f.addr.toString(16).toUpperCase().padStart(4, '0') +
+            ' words=' + f.count + ' CRC=0x' + f.crc.toString(16).toUpperCase().padStart(4, '0') +
+            ' (' + f.frame.length + ' bytes)');
+        idx++;
+        return fetch('/api/device/' + deviceId + '/deploy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tx: Array.from(f.frame),
+                rx_count: 4,
+                timeout_ms: 5000
+            })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.ok) {
+                log('  Bridge error: ' + (data.error || 'unknown'));
+                allOk = false;
+                return sendNext();
+            }
+            var rx = data.rx || [];
+            var parsed = _parseDeployResponse(rx, f.addr, f.count);
+            log('  ' + parsed.msg);
+            if (!parsed.success) allOk = false;
+            return sendNext();
+        })
+        .catch(function(err) {
+            log('  Network error: ' + err);
+            allOk = false;
+            return sendNext();
+        });
+    }
+    return sendNext();
+}
+
+function deployAll() {
+    var programs = _getDeployablePrograms();
+    var hasEditor = !!(selectedCR !== null && ((document.getElementById('asmEditor') || {}).value || '').trim());
+
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.display = 'flex';
+
+    var progListHtml = '';
+    if (hasEditor) {
+        progListHtml += '<label class="deploy-program-option">' +
+            '<input type="radio" name="deployAllSrc" value="editor" checked /> ' +
+            '<span>Current editor code (compile &amp; deploy)</span>' +
+            '</label>';
+    }
+    for (var p = 0; p < programs.length; p++) {
+        var prog = programs[p];
+        var checked = (!hasEditor && p === 0) ? ' checked' : '';
+        progListHtml += '<label class="deploy-program-option">' +
+            '<input type="radio" name="deployAllSrc" value="ns:' + prog.nsIdx + '"' + checked + ' /> ' +
+            '<span>' + _escHtml(prog.label) + ' (NS[' + prog.nsIdx + '], ' + prog.cw + ' words)</span>' +
+            '</label>';
+    }
+    if (!hasEditor && programs.length === 0) {
+        progListHtml = '<div style="color:#ef5350;font-size:0.85rem;">No programs available.</div>';
+    }
+
+    overlay.innerHTML =
+        '<div class="modal-dialog" style="max-width:520px;">' +
+            '<h3 style="margin:0 0 1rem;color:var(--church-gold,#daa520);">Deploy All — Online Boards</h3>' +
+            '<div style="color:#bbb;font-size:0.88rem;margin-bottom:0.8rem;">Select a program to deploy to all online boards:</div>' +
+            '<div class="deploy-program-list" style="max-height:160px;overflow-y:auto;margin-bottom:1rem;">' + progListHtml + '</div>' +
+            '<div id="deployAllLog" style="background:#111;border:1px solid #333;border-radius:4px;padding:0.5rem;font-family:monospace;font-size:0.78rem;color:#aaa;max-height:240px;overflow-y:auto;white-space:pre-wrap;margin-bottom:1rem;display:none;"></div>' +
+            '<div style="display:flex;gap:0.5rem;justify-content:flex-end;">' +
+                '<button id="deployAllCancel" class="dev-action-btn" style="padding:6px 16px;">Cancel</button>' +
+                '<button id="deployAllConfirm" class="dev-action-btn" style="padding:6px 16px;background:#2d4a22;color:#8bc34a;border-color:#4caf50;">Deploy All</button>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(overlay);
+
+    function closeModal() { overlay.remove(); document.removeEventListener('keydown', onEsc); }
+    function onEsc(e) { if (e.key === 'Escape') closeModal(); }
+    document.addEventListener('keydown', onEsc);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
+    document.getElementById('deployAllCancel').addEventListener('click', closeModal);
+
+    document.getElementById('deployAllConfirm').addEventListener('click', function() {
+        var selected = overlay.querySelector('input[name="deployAllSrc"]:checked');
+        if (!selected) { alert('No program selected.'); return; }
+
+        var logEl = document.getElementById('deployAllLog');
+        logEl.style.display = 'block';
+        logEl.textContent = '';
+        var log = function(msg) { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; };
+
+        var frames;
+        var srcVal = selected.value;
+        if (srcVal === 'editor') {
+            log('Compiling current editor code…');
+            frames = _buildDeployFrames();
+        } else if (srcVal.startsWith('ns:')) {
+            var nsIdx = parseInt(srcVal.substring(3), 10);
+            log('Loading NS[' + nsIdx + '] for deploy…');
+            frames = _buildDeployFramesFromNS(nsIdx);
+        }
+
+        if (!frames || frames.length === 0) {
+            log('ERROR: Failed to build frames.');
+            return;
+        }
+
+        document.getElementById('deployAllConfirm').disabled = true;
+        document.getElementById('deployAllConfirm').textContent = 'Deploying…';
+
+        log('Built ' + frames.length + ' BEEF frame(s). Fetching device list…');
+
+        fetch('/api/device/list')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var _resetBtn = function() {
+                    var btn = document.getElementById('deployAllConfirm');
+                    if (btn) { btn.disabled = false; btn.textContent = 'Deploy All'; }
+                };
+                if (!data.ok || !data.devices) {
+                    log('Failed to fetch device list.');
+                    _resetBtn();
+                    return;
+                }
+                var targets = data.devices.filter(function(d) { return d.status === 'online' && d.profile === 'IoT'; });
+                if (targets.length === 0) {
+                    targets = data.devices.filter(function(d) { return d.status === 'online'; });
+                }
+                if (targets.length === 0) {
+                    log('No online devices found.');
+                    _resetBtn();
+                    return;
+                }
+                log('Deploying to ' + targets.length + ' device(s)…');
+                log('');
+
+                var i = 0;
+                function deployNext() {
+                    if (i >= targets.length) {
+                        log('');
+                        log('Deploy All complete.');
+                        document.getElementById('deployAllConfirm').disabled = false;
+                        document.getElementById('deployAllConfirm').textContent = 'Deploy All';
+                        return;
+                    }
+                    var dev = targets[i];
+                    var label = dev.label || dev.board_name || ('Device #' + dev.id);
+                    log('--- ' + label + ' (ID ' + dev.id + ', UID ' + dev.device_uid + ') ---');
+                    _setDeviceDeployStatus(dev.id, 'deploying', 'Deploying…');
+                    i++;
+                    _sendFramesToDevice(dev.id, frames, log).then(function(ok) {
+                        if (ok) {
+                            log('Result: SUCCESS');
+                            _setDeviceDeployStatus(dev.id, 'success', 'Deployed ✓');
+                        } else {
+                            log('Result: FAILED');
+                            _setDeviceDeployStatus(dev.id, 'failed', 'Deploy failed');
+                        }
+                        log('');
+                        deployNext();
+                    });
+                }
+                deployNext();
+            })
+            .catch(function() {
+                log('Network error fetching device list.');
+                var btn = document.getElementById('deployAllConfirm');
+                if (btn) { btn.disabled = false; btn.textContent = 'Deploy All'; }
+            });
+    });
+}
+

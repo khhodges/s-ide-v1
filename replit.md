@@ -29,9 +29,52 @@ The system employs a scale-free abstraction model with 47 abstractions across 9 
 
 45 HTML figures in `docs/figures/` — all use white backgrounds (#ffffff) with dark text/lines for clean printing. Figures cover architecture diagrams, boot sequences, dispatch styles, lambda calculus flows, namespace architecture, I/O addressing, MTBF qualification, and more. PDF patents in `docs/patents/` are regenerated from markdown sources using `tools/md_to_pdf.py` (fpdf-based, no HTML figure embedding).
 
+## Frontend Code Structure
+
+The browser simulator (`simulator/`) is split across multiple files:
+
+**JavaScript modules** (loaded sequentially in `simulator/index.html`):
+- `app-shell.js` — hamburger, views, tabs, tooltips, back navigation
+- `app-tools.js` — HP-35 calculator, abacus, slide rule, math challenge
+- `app-cr-display.js` — CR/DR popup panels, zone scroll, thread layout
+- `app-cr-detail.js` — CR detail tabs, c-list display, CR state rendering
+- `app-memory.js` — memory hex viewer, page browsing, search
+- `app-abstractions.js` — abstraction viewer, NS table, lazy-load manifest
+- `app-lumps.js` — lump type selector, lump viewer, lump repo toolbar
+- `app-absdetail.js` — abstraction detail panel, MTBF, deploy tab, library
+- `app-run.js` — boot flow, stepping, dashboard, gate log, LED strip, fault codes
+- `app-compile.js` — editor tabs, CLOOMC compiler, lang-switch, patch
+- `app-misc.js` — docs view, reference, init, DOMContentLoaded wiring
+
+**CSS files** (loaded in order):
+- `styles-base.css` — CSS reset, variables, colour tokens, layout shell
+- `styles-toolbar.css` — top toolbar, sim icon buttons
+- `styles-editor.css` — editor, code tabs, breakpoints, run popover
+- `styles-dashboard.css` — dashboard tabs, gate log, LED strip, boot steps
+- `styles-lumps.css` — lump viewer, hex dump, content badges
+- `styles-gatelog.css` — gate log entries and annotations
+- `styles-fault.css` — fault display, fault code table
+- `styles-tools.css` — HP-35, abacus, slide rule, math challenge, docs
+
+**Simulator core:** `simulator/simulator.js` (~4900 lines) — single `ChurchSimulator` class. The `_clearMWindow(crIdx)` method clears only the M-bit; CR word commits go through `_mwinWriteback()`. The deprecated `writeBack=true` code path and `word4` struct field were removed (Task #448).
+
+## Test Structure
+
+Tests are organised into 6 subdirectories under `tests/`:
+- `tests/boot/` — boot image loading, validation, upload/serve endpoints, startup config
+- `tests/simulator/` — simulator invariants, DR0 constraints, startup config behaviour
+- `tests/mwindow/` — M-window writeback, seal validation
+- `tests/gates/` — namespace gate entries, privilege fence, TPERM/XLSE, passkey switch, far-cap fault
+- `tests/abstractions/` — abstract GT encoding, DREAD/DWRITE, NS abstract GT, UART dispatch
+- `tests/devices/` — outform IoT, BRAM mint writes, UART mux glitch, receive lump CRC
+
+Each subdirectory has a JS harness (`sim_*.js`) alongside its Python test wrappers. JS harnesses use `require('../../simulator/simulator.js')` (two levels up from subdirectory). Python tests derive `ROOT` as `os.path.join(os.path.dirname(__file__), "..", "..")`.
+
+One pre-existing failure: `tests/gates/test_far_cap_fault.py::test_far_cap_fault_f_bit` — CALL F_BIT fault fires as INVALID_OP instead; unrelated to this refactor session.
+
 ## Hardware Simulation Tests
 
-Three pytest tests in `tests/test_outform_iot.py` cover the IoT lazy-load pipeline:
+Three pytest tests in `tests/devices/test_outform_iot.py` cover the IoT lazy-load pipeline:
 
 - `test_iot_lazy_load_golden` — fast FSM smoke test with mock alloc/mint drivers
 - `test_iot_lazy_load_integrated` — integration harness with real watermark allocator + Mint FSM (LibMemory, async reads)

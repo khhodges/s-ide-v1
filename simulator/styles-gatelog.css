@@ -1,0 +1,476 @@
+/* ── TSB Audit Mode ─────────────────────────────────────────────── */
+.pipeline-audit .audit-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 0;
+}
+
+.audit-gate {
+    border-radius: 6px;
+    padding: 10px 14px;
+    border-left: 4px solid #555;
+    background: rgba(30, 30, 40, 0.7);
+    transition: background 0.2s;
+}
+
+.audit-gate.gate-pass {
+    border-left-color: #33cc66;
+    background: rgba(20, 60, 35, 0.6);
+}
+
+.audit-gate.gate-fail {
+    border-left-color: #cc3344;
+    background: rgba(60, 20, 25, 0.6);
+}
+
+.audit-gate.gate-active {
+    box-shadow: 0 0 0 2px rgba(200, 155, 60, 0.6);
+}
+
+.audit-gate.gate-done {
+    opacity: 0.85;
+}
+
+.gate-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.82rem;
+}
+
+.gate-type-badge {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 2px 7px;
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+.gate-mload {
+    background: rgba(40, 110, 170, 0.4);
+    color: #7ec8f0;
+    border: 1px solid rgba(120, 180, 230, 0.35);
+}
+
+.gate-msave {
+    background: rgba(140, 80, 20, 0.4);
+    color: #f0bb6a;
+    border: 1px solid rgba(220, 160, 60, 0.35);
+}
+
+.gate-navana {
+    background: rgba(100, 40, 140, 0.4);
+    color: #c8a0f0;
+    border: 1px solid rgba(160, 100, 220, 0.35);
+}
+
+.gate-lump {
+    background: rgba(150, 80, 10, 0.35);
+    color: #e8a840;
+    border: 1px solid rgba(200, 130, 30, 0.4);
+}
+
+.gate-nstype {
+    background: rgba(30, 110, 80, 0.35);
+    color: #60d4a8;
+    border: 1px solid rgba(60, 180, 120, 0.4);
+}
+
+/* ── Gate Log panel title bar ───────────────────────────────────────────── */
+.gate-log-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.gate-log-titlebar .panel-title {
+    flex: 1;
+    margin: 0;
+}
+.gate-reset-btn {
+    flex-shrink: 0;
+    background: rgba(40, 60, 90, 0.85);
+    color: #8bc4f0;
+    border: 1px solid rgba(100, 160, 220, 0.4);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+}
+.gate-reset-btn:hover {
+    background: rgba(60, 100, 150, 0.9);
+    color: #cde6ff;
+    border-color: rgba(140, 200, 255, 0.6);
+}
+
+/* ── Gate-log fault location footer ────────────────────────────────────── */
+.gate-location {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px 4px 8px;
+    font-size: 10px;
+    background: rgba(120, 30, 30, 0.18);
+    border-top: 1px solid rgba(200, 80, 80, 0.18);
+    border-radius: 0 0 4px 4px;
+    color: #c0906a;
+    font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+}
+.gate-loc-step {
+    color: #c0906a;
+    font-weight: 600;
+}
+.gate-loc-step-link {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: #e8a070;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: rgba(232, 160, 112, 0.4);
+    text-underline-offset: 2px;
+    transition: color 0.15s;
+}
+.gate-loc-step-link:hover {
+    color: #ffbe88;
+    text-decoration-color: rgba(255, 190, 136, 0.7);
+}
+.fault-step-link {
+    font-family: inherit;
+    font-size: inherit;
+}
+.gate-loc-sep {
+    color: #604040;
+    user-select: none;
+}
+.gate-loc-pc {
+    color: #a08060;
+}
+.gate-loc-instr {
+    color: #d4b080;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.gate-label {
+    color: #e8e0d0;
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gate-perm-req {
+    color: #aaa;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.gate-perm-req b {
+    color: #f0d080;
+}
+
+.gate-result {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.result-pass {
+    color: #33cc66;
+    background: rgba(30, 80, 45, 0.5);
+}
+
+.result-fail {
+    color: #cc3344;
+    background: rgba(80, 25, 30, 0.5);
+}
+
+.gate-checks {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.gate-check {
+    font-family: 'Courier New', monospace;
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+.check-pass {
+    background: rgba(30, 80, 45, 0.5);
+    color: #55ee88;
+    border: 1px solid rgba(50, 140, 70, 0.4);
+}
+
+.check-fail {
+    background: rgba(80, 20, 25, 0.5);
+    color: #ff6677;
+    border: 1px solid rgba(160, 50, 60, 0.4);
+}
+
+.check-range.check-pass {
+    background: rgba(20, 55, 70, 0.55);
+    color: #5dd6f5;
+    border: 1px solid rgba(40, 120, 160, 0.4);
+}
+
+.check-range.check-fail {
+    background: rgba(80, 45, 10, 0.6);
+    color: #ffaa33;
+    border: 1px solid rgba(180, 100, 20, 0.5);
+    font-weight: 700;
+}
+
+.check-skipped {
+    background: rgba(40, 40, 50, 0.4);
+    color: #888;
+    border: 1px dashed rgba(120, 120, 140, 0.35);
+    font-style: italic;
+}
+
+.fault-scope-section {
+    margin-bottom: 0.85rem;
+    border: 1px solid rgba(255, 170, 50, 0.4);
+    border-left: 4px solid #ffaa33;
+    border-radius: 5px;
+    padding: 8px 12px;
+    background: rgba(80, 45, 10, 0.3);
+}
+
+.fault-scope-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #ffaa33;
+    margin-bottom: 4px;
+}
+
+.fault-scope-detail {
+    font-size: 0.82rem;
+    color: #e0c080;
+}
+
+.fault-scope-detail code {
+    background: rgba(255, 170, 50, 0.15);
+    border-radius: 3px;
+    padding: 1px 4px;
+    color: #ffcc66;
+    font-family: var(--font-mono, monospace);
+}
+
+.fault-trace-section {
+    margin-bottom: 0.85rem;
+    border: 1px solid rgba(100,180,220,0.18);
+    border-radius: 5px;
+    overflow: hidden;
+    font-size: 0.8rem;
+}
+.fault-trace-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #88bbdd;
+    background: rgba(0,0,0,0.22);
+    padding: 4px 10px;
+    border-bottom: 1px solid rgba(100,180,220,0.12);
+}
+.fault-trace-scroll {
+    overflow-x: auto;
+    max-height: 160px;
+    overflow-y: auto;
+}
+.fault-trace-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.78rem;
+}
+.fault-trace-table thead th {
+    background: rgba(0,0,0,0.18);
+    color: var(--text-secondary);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    text-align: left;
+    border-bottom: 1px solid rgba(100,180,220,0.12);
+    white-space: nowrap;
+}
+.fault-trace-table tbody tr:nth-child(even) {
+    background: rgba(0,0,0,0.10);
+}
+.fault-trace-table tbody tr:hover {
+    background: rgba(80,160,220,0.10);
+}
+.fault-trace-table tbody td {
+    padding: 3px 8px;
+    white-space: nowrap;
+}
+.itrace-step { color: var(--text-secondary); }
+.itrace-addr { color: #88ddaa; }
+.itrace-raw  { color: #aaa; font-size: 0.72rem; }
+.itrace-instr { color: #ddeeff; }
+tr.itrace-fault {
+    background: rgba(220, 60, 60, 0.18) !important;
+    border-left: 3px solid #e05555;
+}
+tr.itrace-fault td { color: #ff9999; }
+
+.gate-flag {
+    font-family: 'Courier New', monospace;
+    font-size: 0.72rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: #aaa;
+    background: rgba(40, 40, 50, 0.5);
+    border: 1px solid rgba(100, 100, 120, 0.3);
+}
+
+/* Regular instruction steps inside audit mode */
+.audit-instr-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    border-radius: 5px;
+    background: rgba(25, 25, 35, 0.5);
+    border-left: 4px solid rgba(100, 100, 120, 0.4);
+    font-size: 0.8rem;
+}
+
+.audit-instr-step.instr-done {
+    opacity: 0.75;
+}
+
+.instr-stage-badge {
+    font-family: 'Courier New', monospace;
+    font-size: 0.72rem;
+    font-weight: bold;
+    color: #c8c0b0;
+    background: rgba(50, 50, 65, 0.6);
+    padding: 2px 7px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    min-width: 52px;
+    text-align: center;
+}
+
+.instr-desc {
+    color: #b0a898;
+    flex: 1;
+    font-size: 0.78rem;
+}
+
+.instr-status-ok  { color: #33cc66; font-weight: bold; }
+.instr-status-fail { color: #cc3344; font-weight: bold; }
+
+.pipeline-fault {
+    color: #cc3344;
+    font-weight: bold;
+}
+
+/* TSB Audit guide (empty state) */
+.audit-guide ol.audit-guide-steps {
+    text-align: left;
+    margin: 10px 0 10px 0;
+    padding-left: 1.4em;
+    color: #c8c0b0;
+    font-size: 0.82rem;
+    line-height: 1.8;
+}
+.audit-guide ol.audit-guide-steps li b {
+    color: #f0d080;
+}
+
+/* Gate Log empty state */
+.gate-log-empty {
+    padding: 16px;
+    color: #9a9080;
+    font-size: 0.84rem;
+    text-align: center;
+}
+.gate-log-empty p {
+    margin: 0 0 8px 0;
+}
+
+/* NIA table on Pipeline page — vertical layout */
+.nia-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 6px 0 10px 0;
+    font-size: 0.82rem;
+    background: rgba(0,0,0,0.18);
+    border: 1px solid rgba(180,160,100,0.15);
+    border-radius: 5px;
+    overflow: hidden;
+}
+.nia-table td {
+    padding: 4px 10px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.nia-row-last td { color: #7a7060; border-bottom: 1px solid rgba(180,160,100,0.10); }
+.nia-row-curr td { background: rgba(220,180,40,0.08); border-bottom: 1px solid rgba(180,160,100,0.10); }
+.nia-row-next td { color: #7a7060; }
+
+/* label column */
+.nia-lbl {
+    width: 54px;
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: lowercase;
+    letter-spacing: 0.04em;
+    border-right: 1px solid rgba(180,160,100,0.13);
+}
+.nia-row-last .nia-lbl { color: #8a7a60; }
+.nia-row-curr .nia-lbl { color: #f0d060; }
+.nia-row-next .nia-lbl { color: #8a7a60; }
+
+/* address column */
+.nia-addr { width: 66px; }
+.nia-row-last .nia-addr code { color: #908060; font-family: var(--font-mono, monospace); font-size: 0.82rem; }
+.nia-row-curr .nia-addr code { color: #ffe060; font-family: var(--font-mono, monospace); font-size: 0.84rem; font-weight: 700; }
+.nia-row-next .nia-addr code { color: #908060; font-family: var(--font-mono, monospace); font-size: 0.82rem; }
+
+/* disassembly column */
+.nia-disasm { width: 52%; }
+.nia-row-last .nia-disasm code { color: #7a7060; font-family: var(--font-mono, monospace); font-size: 0.80rem; }
+.nia-row-curr .nia-disasm code { color: #d0c890; font-family: var(--font-mono, monospace); font-size: 0.82rem; }
+.nia-row-next .nia-disasm code { color: #7a7060; font-family: var(--font-mono, monospace); font-size: 0.80rem; }
+
+/* program / offset column */
+.nia-loc { text-align: right; }
+.nia-loc-text {
+    display: inline-block;
+    font-size: 0.76rem;
+    font-family: var(--font-mono, monospace);
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(180,160,80,0.10);
+}
+.nia-row-last .nia-loc-text { color: #7a7060; }
+.nia-row-curr .nia-loc-text { color: #c0a840; background: rgba(180,160,80,0.17); }
+.nia-row-next .nia-loc-text { color: #7a7060; }
+

@@ -1,0 +1,2322 @@
+function _signedReturnDesc(dr1, absIndex) {
+    if (absIndex === 12) {
+        if (dr1 > 0)        return dr1 === 1 ? 'on / success' : 'success';
+        if (dr1 === 0)      return 'off';
+        return dr1 === -1 ? 'invalid offset' : 'fault';
+    }
+    if (dr1 > 0)            return 'success';
+    if (dr1 === 0)          return 'zero';
+    return 'fault';
+}
+
+function _buildSignedReturnHtml(absIndex) {
+    const sr = sim ? sim.lastSignedReturn : null;
+    if (!sr || sr.absIndex !== absIndex || sr.dr1 === 0) {
+        return '';
+    }
+    const _dr1 = sr.dr1;
+    const _badgeClass = _dr1 > 0 ? 'dr0-badge-green' : (_dr1 < 0 ? 'dr0-badge-red' : 'dr0-badge-grey');
+    const _desc = _signedReturnDesc(_dr1, absIndex);
+    const _chipText = (absIndex === 12)
+        ? (sr.ledIndex !== null && sr.ledIndex !== undefined ? `LED ${sr.ledIndex}` : 'LED ?')
+        : sr.methodName;
+    const _chipClass = (absIndex === 12) ? 'signed-return-chip signed-return-chip-led' : 'signed-return-chip';
+    return `<div class="abs-detail-label">Last return</div>` +
+        `<div class="abs-signed-return" id="absSignedReturnBody">` +
+        `<span class="${_chipClass}">${_chipText}</span>` +
+        `<span style="color:var(--text-secondary);font-size:0.8rem;">DR1:</span> ` +
+        `<span class="dr0-badge ${_badgeClass}" style="font-size:0.85rem;padding:2px 8px;">${_dr1}</span>` +
+        `<span class="dr0-badge-desc" style="margin-left:6px;">(${_desc})</span>` +
+        `</div>` +
+        `<div class="abs-note-text" style="margin-top:6px;">DR1 carries the signed result after the CALL (≥0 success, &lt;0 fault). ` +
+        `Use <code>BGE</code> (branch if &ge; 0) or <code>BLT</code> (branch if &lt; 0) immediately after the CALL to act on the result.</div>`;
+}
+
+function _refreshSignedReturnReadout() {
+    const section = document.getElementById('absSignedReturnSection');
+    if (!section) return;
+    const absIdx = (typeof selectedAbsIndex === 'number') ? selectedAbsIndex : -1;
+    const html = _buildSignedReturnHtml(absIdx);
+    if (!html) {
+        section.style.display = 'none';
+        section.innerHTML = '';
+    } else {
+        section.style.display = '';
+        section.innerHTML = html;
+    }
+}
+
+function showAbstractionDetail(index) {
+    selectedAbsIndex = index;
+    renderAbstractions();
+
+    if (!abstractionRegistry) return;
+    const abs = abstractionRegistry.getAbstraction(index);
+    if (!abs) return;
+
+    const titleEl = document.getElementById('absDetailTitle');
+    const contentEl = document.getElementById('absDetailContent');
+    if (!titleEl || !contentEl) return;
+
+    const layerNames = abstractionRegistry.getLayerNames();
+    const layerName = layerNames[abs.layer] || `Layer ${abs.layer}`;
+    titleEl.textContent = `${abs.name} \u2014 Abstraction ${abs.index}`;
+
+    const p = abs.perms || {};
+    const permStr = (p.B?'B':'')+(p.R?'R':'')+(p.W?'W':'')+(p.X?'X':'')+(p.L?'L':'')+(p.S?'S':'')+(p.E?'E':'') || 'none';
+
+    let html = '';
+
+    const detailProfile = _getAbstractionProfile(abs);
+    const detailProfileClass = detailProfile === 'Full' ? 'profile-badge-full' : 'profile-badge-iot';
+
+    html += '<div class="abs-detail-section">';
+    html += `<div class="abs-detail-badge layer-${abs.layer}">Layer ${abs.layer} \u2014 ${layerName}</div>`;
+    html += ` <span class="abs-profile-badge ${detailProfileClass}" style="margin-left:4px;font-size:0.62rem;">${detailProfile}</span>`;
+    html += `<div class="abs-detail-desc">${abs.description}</div>`;
+    html += '</div>';
+
+    {
+        const methodPurposes = getMethodPurposes(abs);
+        const methodExamples = getMethodExamples(abs);
+        const methods = (abs.methods && abs.methods.length > 0) ? abs.methods : [];
+        const uid = abs.index;
+        html += '<div class="abs-detail-section abs-methods-section">';
+        html += '<div class="abs-detail-label">Methods</div>';
+        if (methods.length === 0) {
+            html += '<div class="abs-method-empty">No methods registered \u2014 CALL enters the abstraction directly.</div>';
+            const absLvlStatus = _implStatusGet(`abs:${uid}`);
+            const absStatusOpts = IMPL_STATUS_LEVELS.map(s =>
+                `<option value="${s}"${s === absLvlStatus ? ' selected' : ''}>${IMPL_STATUS_LABELS[s]}</option>`
+            ).join('');
+            html += `<div class="abs-method-tabs abs-method-tabs-empty" style="display:flex;align-items:center;gap:6px;margin-top:4px">`;
+            html += `<span style="font-size:0.65rem;color:var(--text-secondary)">Status:</span>`;
+            html += `<select class="impl-status-select impl-status-${absLvlStatus}" title="Abstraction implementation status" onchange="_implStatusSet('abs:${uid}',this.value);showAbstractionDetail(${uid})">${absStatusOpts}</select>`;
+            html += `<button class="btn abs-method-ctrl-btn" title="Add method" onclick="absShowAddForm(${uid})">+</button>`;
+            html += '</div>';
+        } else {
+            html += `<div class="abs-method-tabs" id="abs-tabs-${uid}">`;
+            for (let mi = 0; mi < methods.length; mi++) {
+                const m = methods[mi];
+                const active = mi === 0 ? ' abs-method-tab-active' : '';
+                const mStatus = _implStatusGet(`${uid}:${m}`);
+                const badgeLabel = IMPL_STATUS_SHORT[mStatus] || mStatus;
+                html += `<span class="abs-method-tab${active}" onclick="absSelectMethod(this,'abs-panel-${uid}-${mi}')">`;
+                html += `${m}`;
+                html += `<span class="abs-method-status-badge abs-method-status-badge-${mStatus}" onclick="event.stopPropagation();absToggleStatusDropdown(${uid},${mi},event)" title="Status: ${IMPL_STATUS_LABELS[mStatus]} — click to change">`;
+                html += `<span class="abs-method-status-badge-dot"></span>${badgeLabel}`;
+                html += `</span>`;
+                html += `</span>`;
+            }
+            html += `<span class="abs-method-tab-spacer"></span>`;
+            html += `<button class="btn abs-method-ctrl-btn" title="Add method" onclick="absShowAddForm(${uid})">+</button>`;
+            html += `<button class="btn abs-method-ctrl-btn abs-method-del-ctrl" title="Delete method" onclick="absShowDeleteForm(${uid})">\u2212</button>`;
+            html += '</div>';
+            html += `<div class="abs-method-panels" id="abs-panels-${uid}">`;
+            for (let mi = 0; mi < methods.length; mi++) {
+                const m = methods[mi];
+                const purpose = methodPurposes[m] || 'Dispatched via CALL';
+                const example = methodExamples[m] || null;
+                const display = mi === 0 ? '' : ' style="display:none"';
+                html += `<div class="abs-method-panel-item" id="abs-panel-${uid}-${mi}"${display}>`;
+                html += `<div class="abs-method-panel-header">`;
+                html += `<div class="abs-method-panel-name">${abs.name}.${m}</div>`;
+                html += `<button class="btn abs-method-ctrl-btn abs-method-edit-btn" title="Edit method" onclick="absShowEditForm(${uid},${mi})">&#9998;</button>`;
+                html += `</div>`;
+                html += `<div class="abs-method-panel-desc">${purpose}</div>`;
+                const regConv = METHOD_REGISTER_CONVENTIONS[abs.name] && METHOD_REGISTER_CONVENTIONS[abs.name][m];
+                if (regConv) {
+                    html += '<table class="abs-reg-conv-table"><tbody>';
+                    html += `<tr><td>Method Index</td><td>${regConv.index}</td></tr>`;
+                    html += `<tr><td>Input</td><td>${regConv.input}</td></tr>`;
+                    html += `<tr><td>Output</td><td>${regConv.output}</td></tr>`;
+                    html += `<tr><td>Dispatch</td><td><code>${regConv.dispatch}</code></td></tr>`;
+                    if (regConv.note) {
+                        html += `<tr><td>Note</td><td>${regConv.note}</td></tr>`;
+                    }
+                    html += '</tbody></table>';
+                }
+                if (example) {
+                    html += `<pre class="abs-method-panel-code">${example}</pre>`;
+                }
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+        html += `<div class="abs-method-form-container" id="abs-form-${uid}"></div>`;
+        html += '</div>';
+    }
+
+    const _methods = (abs.methods && abs.methods.length > 0) ? abs.methods : [];
+    if (BOOT_SEQ_CODE[abs.index] !== undefined && _methods.length === 0) {
+        html += '<div class="abs-detail-section abs-boot-code-section">';
+        html += '<div class="abs-detail-label">Boot Sequence Code</div>';
+        html += '<div class="abs-boot-code-desc">Installed implementation \u2014 executed by the STEP controller at power-on reset. Mirrors <code>_bootStep()</code> in simulator.js exactly.</div>';
+        html += `<pre class="abs-method-panel-code abs-boot-code-pre">${BOOT_SEQ_CODE[abs.index]}</pre>`;
+        html += '</div>';
+    }
+
+    html += '<div class="abs-detail-section">';
+    html += '<div class="abs-detail-label">Properties</div>';
+    html += '<table class="abs-props-table"><tbody>';
+    html += `<tr><td>Index</td><td>${abs.index}</td></tr>`;
+    html += `<tr><td>Name</td><td>${abs.name}</td></tr>`;
+    html += `<tr><td>Layer</td><td>${abs.layer} \u2014 ${layerName}</td></tr>`;
+    html += `<tr><td>Permissions</td><td>[${permStr}]</td></tr>`;
+    html += `<tr><td>Chainable</td><td>${abs.chainable ? 'Yes' : 'No'}</td></tr>`;
+    if (abs.handler) {
+        html += `<tr><td>Handler</td><td>${abs.handler}</td></tr>`;
+    }
+    const faults = abs.faultCount || 0;
+    const mtbf = (abstractionRegistry && faults > 0) ? abstractionRegistry.getMTBF(abs.index) : Infinity;
+    const mtbfStr = mtbf === Infinity ? '\u221e (no faults)' : `${(mtbf / 1000).toFixed(1)}s`;
+    html += `<tr><td>Fault Count</td><td>${faults}</td></tr>`;
+    html += `<tr><td>MTBF</td><td>${mtbfStr}</td></tr>`;
+    html += '</tbody></table>';
+    html += '</div>';
+
+    html += '<div class="abs-detail-section">';
+    html += '<div class="abs-detail-label">CR6/CR14 Canonical Form</div>';
+    html += '<div class="abs-canonical">';
+    html += '<div class="abs-canonical-diagram">';
+    html += `<div class="abs-cr-box cr6-box">`;
+    html += `<div class="abs-cr-label">CR6 (C-List)</div>`;
+    html += `<div class="abs-cr-content">GT \u2192 NS[${abs.index}]</div>`;
+    html += `<div class="abs-cr-perms">[E] Enter permission</div>`;
+    html += `</div>`;
+    html += `<div class="abs-cr-arrow">\u2192 CALL \u2192</div>`;
+    html += `<div class="abs-cr-box cr7-box">`;
+    html += `<div class="abs-cr-label">CR14 (CLOOMC)</div>`;
+    html += `<div class="abs-cr-content">Code at NS[${abs.index}].location</div>`;
+    html += `<div class="abs-cr-perms">[X] Execute permission</div>`;
+    html += `</div>`;
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+
+    if (abs.doc) {
+        html += '<div class="abs-detail-section abs-doc-section">';
+        html += '<div class="abs-doc-label">Self-Documentation</div>';
+        if (abs.doc.author) html += `<div class="abs-doc-field"><strong>Author:</strong> ${abs.doc.author}</div>`;
+        if (abs.doc.date) html += `<div class="abs-doc-field"><strong>Date:</strong> ${abs.doc.date}</div>`;
+        if (abs.doc.languageLabel) html += `<div class="abs-doc-field"><strong>Language:</strong> ${abs.doc.languageLabel}</div>`;
+        if (abs.doc.description) html += `<div class="abs-doc-field"><strong>Description:</strong> ${abs.doc.description}</div>`;
+        if (abs.doc.tags && abs.doc.tags.length > 0) html += `<div class="abs-doc-field"><strong>Tags:</strong> ${abs.doc.tags.join(', ')}</div>`;
+        if (abs.doc.methods && abs.doc.methods.length > 0) {
+            html += '<div class="abs-doc-field"><strong>Method Signatures:</strong></div>';
+            for (const m of abs.doc.methods) {
+                const params = m.params && m.params.length > 0 ? `(${m.params.join(', ')})` : '()';
+                html += `<div class="abs-doc-field" style="padding-left:1rem;">${m.name}${params} — ${m.instructions} instruction${m.instructions !== 1 ? 's' : ''}</div>`;
+            }
+        }
+        html += '</div>';
+    }
+
+    if (abs.layer === 7) {
+        html += '<div class="abs-detail-section abs-note-security">';
+        html += '<div class="abs-detail-label">Internet Security Model</div>';
+        html += '<div class="abs-note-text">Layer 7 abstractions use L (Load) permission for accessing remote resources. ';
+        html += 'The F-bit (Far) on namespace entries routes access through encrypted capability tunnels. ';
+        html += 'All Internet abstractions require parent-approved contact lists \u2014 children can only reach ';
+        html += 'endpoints whose GTs appear in their c-list. No ambient authority, no URLs, no DNS \u2014 ';
+        html += 'only capabilities.</div>';
+        html += '</div>';
+    }
+
+    if (abs.layer === 5) {
+        html += '<div class="abs-detail-section abs-note-security">';
+        html += '<div class="abs-detail-label">Namespace Isolation</div>';
+        html += '<div class="abs-note-text">Layer 5 social abstractions operate within isolated namespaces. ';
+        html += 'Each child\'s social interactions are mediated through CALL/RETURN \u2014 the abstraction ';
+        html += 'receives only the capabilities explicitly passed by the caller. Parent oversight is ';
+        html += 'enforced via the Family abstraction (NS[28]) which must approve all social connections. ';
+        html += 'SWITCH instruction can move between namespace domains atomically.</div>';
+        html += '</div>';
+    }
+
+    {
+        const _srHtml = _buildSignedReturnHtml(abs.index);
+        const _srStyle = _srHtml ? '' : ' style="display:none;"';
+        html += `<div class="abs-detail-section abs-signed-return-section" id="absSignedReturnSection"${_srStyle}>`;
+        html += _srHtml;
+        html += '</div>';
+    }
+
+    if (abs.name === 'SlideRule') {
+        html += '<div class="abs-detail-section abs-note-security">';
+        html += '<div class="abs-detail-label">Namespace Extension Model</div>';
+        html += '<div class="abs-note-text">SlideRule demonstrates the Church Machine\u2019s extensibility principle: ';
+        html += 'one CALL opcode, one namespace entry (NS[16]), and 22 methods accessed via two dispatch rules.<br><br>';
+        html += '<b>Rule 1 \u2014 Direct (methods 0\u201314):</b> <code>CALL d, CRs, #imm</code> \u2014 the method index is the bare number <code>d</code> ';
+        html += 'encoded directly in the instruction. Example: <code>CALL 0, CR6, 16</code> calls Multiply (index 0) from c-list offset 16.<br>';
+        html += '<b>Rule 2 \u2014 DR3 Escape (methods 15+):</b> <code>CALL 15, CRs, #imm</code> \u2014 when <code>d=15</code>, the hardware reads DR3 ';
+        html += 'as the actual method index. Set DR3 first, then issue the escape CALL. ';
+        html += 'Example: <code>IADD DR3, DR0, #17</code> then <code>CALL 15, CR6, 16</code> calls GCD (index 17).<br><br>';
+        html += 'Adding a new method means adding one entry to the dispatch table \u2014 no new instructions, no hardware changes, no grammar changes. ';
+        html += 'The namespace IS the extension mechanism.</div>';
+        html += '</div>';
+    }
+
+    contentEl.innerHTML = html;
+}
+
+function absSelectMethod(tabEl, panelId) {
+    const tabsContainer = tabEl.parentElement;
+    tabsContainer.querySelectorAll('.abs-method-tab').forEach(t => t.classList.remove('abs-method-tab-active'));
+    tabEl.classList.add('abs-method-tab-active');
+    const panelsContainer = tabsContainer.nextElementSibling;
+    if (panelsContainer) {
+        panelsContainer.querySelectorAll('.abs-method-panel-item').forEach(p => p.style.display = 'none');
+    }
+    const panel = document.getElementById(panelId);
+    if (panel) panel.style.display = '';
+}
+
+function absShowAddForm(absIdx) {
+    const fc = document.getElementById(`abs-form-${absIdx}`);
+    if (!fc) return;
+    if (fc.dataset.mode === 'add') { fc.innerHTML = ''; fc.dataset.mode = ''; return; }
+    fc.dataset.mode = 'add';
+    fc.innerHTML = `
+<div class="abs-method-form">
+  <div class="abs-method-form-title">Add Method</div>
+  <label class="abs-method-form-label">Method name</label>
+  <input class="abs-method-form-input" id="abs-add-name-${absIdx}" type="text" placeholder="e.g. Run" spellcheck="false">
+  <label class="abs-method-form-label">Description</label>
+  <textarea class="abs-method-form-textarea" id="abs-add-desc-${absIdx}" rows="2" placeholder="What this method does…"></textarea>
+  <label class="abs-method-form-label">Pseudocode / Assembly (optional)</label>
+  <textarea class="abs-method-form-textarea abs-method-form-code" id="abs-add-code-${absIdx}" rows="4" placeholder="; assembly here…" spellcheck="false"></textarea>
+  <div class="abs-method-form-actions">
+    <button class="btn btn-sm" onclick="absSaveMethod(${absIdx})">Save</button>
+    <button class="btn btn-sm abs-method-form-cancel" onclick="absHideForm(${absIdx})">Cancel</button>
+  </div>
+</div>`;
+}
+
+function absShowDeleteForm(absIdx) {
+    const fc = document.getElementById(`abs-form-${absIdx}`);
+    if (!fc) return;
+    if (fc.dataset.mode === 'del') { fc.innerHTML = ''; fc.dataset.mode = ''; return; }
+    const abs = abstractionRegistry && abstractionRegistry.getAbstraction(absIdx);
+    if (!abs || !abs.methods || abs.methods.length === 0) return;
+    fc.dataset.mode = 'del';
+    let opts = abs.methods.map(m => `<option value="${m}">${m}</option>`).join('');
+    fc.innerHTML = `
+<div class="abs-method-form">
+  <div class="abs-method-form-title">Delete Method</div>
+  <label class="abs-method-form-label">Select method to remove</label>
+  <select class="abs-method-form-select" id="abs-del-select-${absIdx}">${opts}</select>
+  <div class="abs-method-form-actions">
+    <button class="btn btn-sm abs-method-del-confirm" onclick="absDeleteMethod(${absIdx})">Delete</button>
+    <button class="btn btn-sm abs-method-form-cancel" onclick="absHideForm(${absIdx})">Cancel</button>
+  </div>
+</div>`;
+}
+
+function absHideForm(absIdx) {
+    const fc = document.getElementById(`abs-form-${absIdx}`);
+    if (fc) { fc.innerHTML = ''; fc.dataset.mode = ''; }
+}
+
+function absShowEditForm(absIdx, mi) {
+    const fc = document.getElementById(`abs-form-${absIdx}`);
+    if (!fc) return;
+    const abs = abstractionRegistry && abstractionRegistry.getAbstraction(absIdx);
+    if (!abs) return;
+    const mName = abs.methods[mi];
+    if (!mName) return;
+    if (fc.dataset.mode === 'edit' && fc.dataset.editTarget === mName) {
+        fc.innerHTML = ''; fc.dataset.mode = ''; fc.dataset.editTarget = ''; return;
+    }
+    const purposes = getMethodPurposes(abs);
+    const examples = getMethodExamples(abs);
+    const curDesc = purposes[mName] || '';
+    const curCode = examples[mName] || '';
+    const safe = mName.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    fc.dataset.mode = 'edit';
+    fc.dataset.editTarget = mName;
+    fc.innerHTML = `
+<div class="abs-method-form">
+  <div class="abs-method-form-title">Edit \u2014 ${safe}</div>
+  <label class="abs-method-form-label">Description</label>
+  <textarea class="abs-method-form-textarea" id="abs-edit-desc-${absIdx}" rows="2">${curDesc.replace(/</g,'&lt;')}</textarea>
+  <label class="abs-method-form-label">Pseudocode / Assembly</label>
+  <textarea class="abs-method-form-textarea abs-method-form-code" id="abs-edit-code-${absIdx}" rows="4" spellcheck="false">${curCode.replace(/</g,'&lt;')}</textarea>
+  <div class="abs-method-form-actions">
+    <button class="btn btn-sm" onclick="absUpdateMethod(${absIdx})">Save</button>
+    <button class="btn btn-sm abs-method-form-cancel" onclick="absHideForm(${absIdx})">Cancel</button>
+  </div>
+</div>`;
+    fc.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function absUpdateMethod(absIdx) {
+    const fc = document.getElementById(`abs-form-${absIdx}`);
+    const mName = fc ? fc.dataset.editTarget : null;
+    if (!mName) return;
+    const descEl = document.getElementById(`abs-edit-desc-${absIdx}`);
+    const codeEl = document.getElementById(`abs-edit-code-${absIdx}`);
+    if (!descEl) return;
+    const key = `${absIdx}:${mName}`;
+    userMethodData[key] = {
+        purpose: descEl.value.trim(),
+        example: codeEl ? codeEl.value.trim() : ''
+    };
+    _absMethodsSave();
+    showAbstractionDetail(absIdx);
+}
+
+function absSaveMethod(absIdx) {
+    const nameEl = document.getElementById(`abs-add-name-${absIdx}`);
+    const descEl = document.getElementById(`abs-add-desc-${absIdx}`);
+    const codeEl = document.getElementById(`abs-add-code-${absIdx}`);
+    if (!nameEl) return;
+    const name = nameEl.value.trim();
+    if (!name) { nameEl.focus(); return; }
+    const abs = abstractionRegistry && abstractionRegistry.getAbstraction(absIdx);
+    if (!abs) return;
+    if (!abs.methods) abs.methods = [];
+    if (!abs.methods.includes(name)) abs.methods.push(name);
+    const key = `${absIdx}:${name}`;
+    userMethodData[key] = {
+        purpose: descEl ? descEl.value.trim() : '',
+        example: codeEl ? codeEl.value.trim() : ''
+    };
+    userMethodLists[absIdx] = abs.methods.slice();
+    _absMethodsSave();
+    showAbstractionDetail(absIdx);
+}
+
+function absDeleteMethod(absIdx) {
+    const sel = document.getElementById(`abs-del-select-${absIdx}`);
+    if (!sel) return;
+    const name = sel.value;
+    if (!confirm(`Delete method "${name}"? This cannot be undone.`)) return;
+    const abs = abstractionRegistry && abstractionRegistry.getAbstraction(absIdx);
+    if (!abs || !abs.methods) return;
+    abs.methods = abs.methods.filter(m => m !== name);
+    delete userMethodData[`${absIdx}:${name}`];
+    userMethodLists[absIdx] = abs.methods.slice();
+    _absMethodsSave();
+    showAbstractionDetail(absIdx);
+}
+
+const METHOD_REGISTER_CONVENTIONS = {
+    'LED': {
+        'Set':    { index: 0, input: 'none (LED = capability offset 0\u20135 in C-list slot)', output: 'DR0 = 1 (success) or DR0 = -1 (invalid offset)',  dispatch: 'CALL 0, CR6, #(8+led)', note: 'C-list slot 8 = LED 0, 9 = LED 1, \u2026 13 = LED 5. No DR arg needed.' },
+        'Clear':  { index: 1, input: 'none (LED = capability offset 0\u20135 in C-list slot)', output: 'DR0 = 1 (success) or DR0 = -1 (invalid offset)',  dispatch: 'CALL 1, CR6, #(8+led)' },
+        'Toggle': { index: 2, input: 'none (LED = capability offset 0\u20135 in C-list slot)', output: 'DR0 = 1 (success) or DR0 = -1 (invalid offset)',  dispatch: 'CALL 2, CR6, #(8+led)' },
+        'State':  { index: 3, input: 'none (LED = capability offset 0\u20135 in C-list slot)', output: 'DR0 = 1 (on), DR0 = 0 (off), DR0 = -1 (fault)',   dispatch: 'CALL 3, CR6, #(8+led)', note: 'Signed return: \u22650 success, <0 fault. Caller checks BGE/BLT on DR0.' },
+    },
+    'SlideRule': {
+        'Multiply':  { index: 0,  input: 'DR1 (a), DR2 (b)', output: 'DR1 = a * b',  dispatch: 'CALL 0, CRs, #imm' },
+        'Divide':    { index: 1,  input: 'DR1 (a), DR2 (b)', output: 'DR1 = a / b',  dispatch: 'CALL 1, CRs, #imm' },
+        'Sqrt':      { index: 2,  input: 'DR1 (x)',           output: 'DR1 = \u221ax',     dispatch: 'CALL 2, CRs, #imm' },
+        'Mod':       { index: 3,  input: 'DR1 (a), DR2 (b)', output: 'DR1 = a % b',  dispatch: 'CALL 3, CRs, #imm' },
+        'Sin':       { index: 4,  input: 'DR1 (radians)',     output: 'DR1 = sin(x)', dispatch: 'CALL 4, CRs, #imm' },
+        'Cos':       { index: 5,  input: 'DR1 (radians)',     output: 'DR1 = cos(x)', dispatch: 'CALL 5, CRs, #imm' },
+        'Tan':       { index: 6,  input: 'DR1 (radians)',     output: 'DR1 = tan(x)', dispatch: 'CALL 6, CRs, #imm' },
+        'Asin':      { index: 7,  input: 'DR1 (x)',           output: 'DR1 = asin(x)', dispatch: 'CALL 7, CRs, #imm' },
+        'Acos':      { index: 8,  input: 'DR1 (x)',           output: 'DR1 = acos(x)', dispatch: 'CALL 8, CRs, #imm' },
+        'Atan':      { index: 9,  input: 'DR1 (x)',           output: 'DR1 = atan(x)', dispatch: 'CALL 9, CRs, #imm' },
+        'ToDegrees': { index: 10, input: 'DR1 (radians)',     output: 'DR1 = degrees', dispatch: 'CALL 10, CRs, #imm' },
+        'ToRadians': { index: 11, input: 'DR1 (degrees)',     output: 'DR1 = radians', dispatch: 'CALL 11, CRs, #imm' },
+        'Bernoulli': { index: 12, input: 'DR1 (n)',           output: 'DR1 = numerator, DR2 = denominator', dispatch: 'CALL 12, CRs, #imm', note: 'Dual-register return: exact rational B(n).' },
+        'Abs':       { index: 13, input: 'DR1 (n)',           output: 'DR1 = |n|',    dispatch: 'CALL 13, CRs, #imm' },
+        'Pow':       { index: 14, input: 'DR1 (base), DR2 (exp)', output: 'DR1 = base^exp', dispatch: 'CALL 14, CRs, #imm' },
+        'Min':       { index: 15, input: 'DR1 (a), DR2 (b)', output: 'DR1 = min(a,b)', dispatch: 'DR3=15, CALL 15, CRs, #imm' },
+        'Max':       { index: 16, input: 'DR1 (a), DR2 (b)', output: 'DR1 = max(a,b)', dispatch: 'DR3=16, CALL 15, CRs, #imm' },
+        'GCD':       { index: 17, input: 'DR1 (a), DR2 (b)', output: 'DR1 = gcd(a,b)', dispatch: 'DR3=17, CALL 15, CRs, #imm' },
+        'Factorial': { index: 18, input: 'DR1 (n)',           output: 'DR1 = n!',     dispatch: 'DR3=18, CALL 15, CRs, #imm' },
+        'Log2':      { index: 19, input: 'DR1 (n)',           output: 'DR1 = floor(log2(n))', dispatch: 'DR3=19, CALL 15, CRs, #imm' },
+        'Atan2':     { index: 20, input: 'DR1 (y), DR2 (x)', output: 'DR1 = atan2(y,x)', dispatch: 'DR3=20, CALL 15, CRs, #imm' },
+        'Signum':    { index: 21, input: 'DR1 (n)',           output: 'DR1 = sign(n)', dispatch: 'DR3=21, CALL 15, CRs, #imm' },
+    },
+};
+
+function getMethodPurposes(abs) {
+    const purposes = {};
+    const knownPurposes = {
+        'Salvation': { 'LOAD': 'Proves namespace lookup', 'TPERM': 'Proves permission check', 'LAMBDA': 'Proves Church reduction', 'TransitionToNavana': 'Transitions to Navana (does not RETURN)' },
+        'Navana': { 'Init': 'Initialize all abstractions', 'Manage': 'Abstraction lifecycle management', 'Monitor': 'System health monitoring', 'IDS': 'Intrusion Detection via GT anomalies' },
+        'Mint': { 'Create': 'Mint.Create(type, size, perms, [bind], [far]) — CALL Memory.Allocate for backing storage, find free NS entry, increment version, write NS entry, forge ready-to-use GT', 'Revoke': 'Mint.Revoke(nsIndex) — increment version, kill all GT copies instantly', 'Transfer': 'Mint.Transfer(gt, target_clist, slot) — move GT between c-lists' },
+        'Memory': { 'Allocate': 'Memory.Allocate(size) — reserve a memory region, return location and size', 'Free': 'Memory.Free(location) — release a memory region, zero its contents', 'Resize': 'Memory.Resize(location, newSize) — adjust the size of an existing allocation' },
+        'Scheduler': { 'Yield': 'Scheduler.Yield() — save thread state, switch to next ready thread', 'Spawn': 'Scheduler.Spawn(code_GT, entry) — create thread with isolated CR set', 'Wait': 'Scheduler.Wait(flag_GT) — block thread on DijkstraFlag', 'Stop': 'Scheduler.Stop(threadID) — terminate thread, release CRs' },
+        'Stack': { 'Push': 'Stack.Push(value) — DWRITE to stack location, increment depth', 'Pop': 'Stack.Pop() — decrement depth, DREAD from stack location', 'Peek': 'Stack.Peek() — DREAD top without decrementing', 'Depth': 'Stack.Depth() — return current entry count' },
+        'DijkstraFlag': { 'Wait': 'DijkstraFlag.Wait() — P() operation: block if unsignaled', 'Signal': 'DijkstraFlag.Signal() — V() operation: wake one waiter or set flag', 'Reset': 'DijkstraFlag.Reset() — clear flag to unsignaled state', 'Test': 'DijkstraFlag.Test() — non-blocking read of flag state' },
+        'UART': { 'Send': 'UART.Send(byte) — SAVE byte to device (S perm)', 'Receive': 'UART.Receive() — LOAD byte from device (L perm)', 'SetBaud': 'UART.SetBaud(rate) — configure via CALL (E perm)' },
+        'LED': { 'Set': 'LED.Set \u2014 turn on the LED identified by the capability offset (0\u20135). No DR args. DR0 \u22650 success, <0 fault.', 'Clear': 'LED.Clear \u2014 turn off the LED identified by the capability offset (0\u20135). No DR args. DR0 \u22650 success, <0 fault.', 'Toggle': 'LED.Toggle \u2014 flip the LED identified by the capability offset. No DR args. DR0 \u22650 success, <0 fault.', 'State': 'LED.State \u2014 read the on/off state of the LED at the capability offset. Returns DR0=1 (on), DR0=0 (off), DR0<0 (fault).' },
+        'Button': { 'Read': 'Button.Read() — LOAD state from device (L perm)', 'WaitPress': 'Button.WaitPress() — block via Scheduler until press (E perm)', 'OnEvent': 'Button.OnEvent() — dequeue press/release event (E perm)' },
+        'Timer': { 'Start': 'Timer.Start(channel) — SAVE start command to device (S perm)', 'Stop': 'Timer.Stop(channel) — SAVE stop command (S perm)', 'Read': 'Timer.Read() — LOAD elapsed ticks from device (L perm)', 'SetAlarm': 'Timer.SetAlarm(ticks) — SAVE threshold to device (S perm)' },
+        'Display': { 'Write': 'Display.Write(char) — SAVE character to device (S perm)', 'Clear': 'Display.Clear() — SAVE clear command (S perm)', 'Scroll': 'Display.Scroll(lines) — SAVE scroll command (S perm)' },
+        'SlideRule': { 'Multiply': 'SlideRule.Multiply(a, b) — DR1*DR2. CALL 0, CRs, #imm', 'Divide': 'SlideRule.Divide(a, b) — DR1/DR2 (truncated). CALL 1, CRs, #imm. Div by zero returns 0.', 'Sqrt': 'SlideRule.Sqrt(x) — floor(√DR1). CALL 2, CRs, #imm', 'Mod': 'SlideRule.Mod(a, b) — DR1%DR2. CALL 3, CRs, #imm. Mod by zero returns 0.', 'Sin': 'SlideRule.Sin(angle) — CORDIC sine (fixed-point). CALL 4, CRs, #imm', 'Cos': 'SlideRule.Cos(angle) — CORDIC cosine (fixed-point). CALL 5, CRs, #imm', 'Tan': 'SlideRule.Tan(angle) — CORDIC tangent (fixed-point). CALL 6, CRs, #imm', 'Asin': 'SlideRule.Asin(x) — CORDIC inverse sine. CALL 7, CRs, #imm', 'Acos': 'SlideRule.Acos(x) — CORDIC inverse cosine. CALL 8, CRs, #imm', 'Atan': 'SlideRule.Atan(x) — CORDIC inverse tangent. CALL 9, CRs, #imm', 'ToDegrees': 'SlideRule.ToDegrees(rad) — radians → degrees (×180/π). CALL 10, CRs, #imm', 'ToRadians': 'SlideRule.ToRadians(deg) — degrees → radians (×π/180). CALL 11, CRs, #imm', 'Bernoulli': 'SlideRule.Bernoulli(n) — exact rational B(n). DR1=numerator, DR2=denominator. CALL 12, CRs, #imm', 'Abs': 'SlideRule.Abs(n) — |DR1|. CALL 13, CRs, #imm', 'Pow': 'SlideRule.Pow(base, exp) — base^exp (exp≥0). CALL 14, CRs, #imm', 'Min': 'SlideRule.Min(a, b) — min(DR1, DR2). DR3=15, CALL 15, CRs, #imm (escape)', 'Max': 'SlideRule.Max(a, b) — max(DR1, DR2). DR3=16, CALL 15, CRs, #imm (escape)', 'GCD': 'SlideRule.GCD(a, b) — gcd(DR1, DR2). DR3=17, CALL 15, CRs, #imm (escape)', 'Factorial': 'SlideRule.Factorial(n) — n!. DR3=18, CALL 15, CRs, #imm (escape)', 'Log2': 'SlideRule.Log2(n) — floor(log₂(n)). DR3=19, CALL 15, CRs, #imm (escape)', 'Atan2': 'SlideRule.Atan2(y, x) — two-argument arctangent. DR3=20, CALL 15, CRs, #imm (escape)', 'Signum': 'SlideRule.Signum(n) — sign(DR1): +1/0/−1. DR3=21, CALL 15, CRs, #imm (escape)' },
+        'Abacus': { 'Add': 'Abacus.Add(a, b) — integer add', 'Sub': 'Abacus.Sub(a, b) — integer subtract', 'Mul': 'Abacus.Mul(a, b) — integer multiply', 'Div': 'Abacus.Div(a, b) — integer divide', 'Mod': 'Abacus.Mod(a, b) — remainder', 'Abs': 'Abacus.Abs(x) — absolute value' },
+        'Constants': { 'Pi': 'Constants.Pi() — return \u03c0 as IEEE 754', 'E': 'Constants.E() — return e', 'Phi': 'Constants.Phi() — return \u03c6', 'Zero': 'Constants.Zero() — return 0.0', 'One': 'Constants.One() — return 1.0' },
+        'Loader': { 'Load': 'Loader.Load(slot) — fault-driven lazy load of a warm/cold abstraction', 'Prefetch': 'Loader.Prefetch(slot) — hint-driven pre-load without blocking', 'Evict': 'Loader.Evict(slot) — unload a cold abstraction to free memory' },
+        'Circle': { 'Area': 'Circle.Area(radius) — \u03c0r\u00b2 via SlideRule.Multiply + Constants.Pi', 'Circumference': 'Circle.Circumference(radius) — 2\u03c0r via SlideRule' },
+        'Family': { 'Register': 'Family.Register(parent_GT, child_GT) — bind parent-child in c-list', 'Hello': 'Family.Hello(target_GT) — send greeting to any family member via their GT', 'Oversight': 'Family.Oversight(child_GT) — parent queries child activity' },
+        'Schoolroom': { 'Join': 'Schoolroom.Join(class_GT) — student enters class', 'Lesson': 'Schoolroom.Lesson(class_GT, content_GT) — teacher posts lesson', 'Submit': 'Schoolroom.Submit(work_GT) — student submits work', 'Grade': 'Schoolroom.Grade(work_GT, score) — teacher grades work' },
+        'Friends': { 'Request': 'Friends.Request(peer_GT) — send friend request (needs parent approval)', 'Accept': 'Friends.Accept(requester_GT) — accept request', 'Share': 'Friends.Share(friend_GT, cap_GT) — share capability', 'Revoke': 'Friends.Revoke(cap_GT) — revoke shared capability' },
+        'Tunnel': {
+            'Register': 'Tunnel.Register(boot_reason, last_fault, fault_NIA) — send the 23-byte call-home identification packet [0xCE11 · board · FW · HMAC(4B) · UID(8B) · reason · fault · NIA(4B)] and await ACK. Replaces the hardwired B:02\u00BD boot step. DR0 \u2190 1 (IDE connected) | 0 (offline).',
+            'Send': 'Tunnel.Send(type_tag, word_count, payload\u2026) — transmit a self-identifying media packet to the IDE host. DR1 = FourCC type tag (TEXT=0x54455854 \u00b7 VOIC=0x564F4943 \u00b7 LUMP=0x4C554D50 \u00b7 GTKN=0x47544B4E \u00b7 JPEG=0x4A504547 \u00b7 \u2026), DR2 = word count (1\u201313), DR3\u2026 = payload words. Fire-and-forget; no ACK. DR0 \u2190 0 = queued | 0x01 = TX overrun.',
+            'Receive': 'Tunnel.Receive(timeout_steps) — block until the IDE host sends a self-identifying media packet or timeout expires. DR1 = timeout in steps (0 = wait forever). DR0 \u2190 word count (0 = timeout), DR1 \u2190 FourCC type tag (TEXT \u00b7 VOIC \u00b7 LUMP \u00b7 GTKN \u00b7 \u2026), DR2\u2026 = payload. Caller dispatches on DR1.',
+            'Fault': 'Tunnel.Fault(fault_code, ns_idx, thread_gt, abstr_idx, method_idx, instr_offset) — report a fault with full semantic location. DR1 = fault_code, DR2 = ns_idx (active namespace slot), DR3 = thread_gt (NS index of faulting thread), DR4 = abstr_idx (NS slot of executing abstraction), DR5 = method_idx, DR6 = instr_offset. Bypasses send queue. IDE logs full location in Devices view. Fire-and-forget.',
+            'Fetch': 'Tunnel.Fetch(token, expected_words, mem_GT) — request a lump binary from the IDE by NS slot token. CR2 = Memory W-GT for the write destination. DR1 = slot token, DR2 = expected size in words. Validates header (magic, CRC) before writing. DR0 \u2190 0 = installed | error code.',
+            'Call': 'Tunnel.Call(remote_GT) — forward a CALL through the tunnel to a remote capability. CR2 = remote GT (Outform, far-end abstraction). Encodes the GT as a GTKN packet (tag=0x47544B4E), transmits it, and awaits the far-end RETURN. This is the "Hello Mum" primitive: CALL(CONNECT(me, mymother)). DR0 \u2190 far-end return value.',
+        },
+        'Negotiate': { 'Propose': 'Negotiate.Propose(cap_GT) — request special grant (dual-approval)', 'Approve': 'Negotiate.Approve(proposal_id) — parent or teacher approves', 'Reject': 'Negotiate.Reject(proposal_id) — reject proposal', 'Status': 'Negotiate.Status(proposal_id) — query proposal state' },
+        'Editor': { 'Open': 'Editor.Open(file_GT) — load DATA object into editor buffer', 'Save': 'Editor.Save() — DWRITE buffer to NS slot, recompute seal', 'Load': 'Editor.Load(nsIndex) — DREAD source from slot into buffer', 'Undo': 'Editor.Undo() — pop previous state from undo stack' },
+        'Assembler': { 'Assemble': 'Assembler.Assemble(source_GT) — parse + encode to 32-bit instructions', 'Disassemble': 'Assembler.Disassemble(binary_GT) — decode instructions to text', 'Validate': 'Assembler.Validate(source_GT) — check syntax + register refs' },
+        'Debugger': { 'Step': 'Debugger.Step() — fetch-decode-execute one instruction', 'Run': 'Debugger.Run() — execute until halt/breakpoint/fault', 'Breakpoint': 'Debugger.Breakpoint(address) — set/clear breakpoint', 'Inspect': 'Debugger.Inspect(address) — read and decode memory/NS entry' },
+        'Deployer': (function() {
+            const b = getSelectedBoard();
+            const chip = b === 'ti60-f225' ? 'Efinix Ti60F225' : 'Gowin GW2AR-18';
+            const brd  = b === 'ti60-f225' ? 'Ti60 F225' : 'Tang Nano';
+            return { 'Build': `Deployer.Build(binary_GT) — package for ${chip}`, 'Upload': `Deployer.Upload() — send via UART to ${brd} (S perm)`, 'Verify': 'Deployer.Verify() — readback + checksum via UART (L perm)', 'Boot': 'Deployer.Boot() — send boot command, FPGA begins execution' };
+        })(),
+        'Browser': { 'Navigate': 'Browser.Navigate(site_GT) — LOAD content via L perm (no URLs)', 'Back': 'Browser.Back() — pop previous site GT from history', 'Bookmark': 'Browser.Bookmark(site_GT) — SAVE GT to bookmark c-list', 'Search': 'Browser.Search(scope_GT) — search within GT scope only' },
+        'Messenger': { 'Send': 'Messenger.Send(recipient_GT, msg_GT) — send to approved contact', 'Receive': 'Messenger.Receive() — dequeue from inbox c-list', 'Contacts': 'Messenger.Contacts() — list parent-approved contact GTs', 'Block': 'Messenger.Block(contact_GT) — Mint.Revoke contact GT' },
+        'Photos': { 'View': 'Photos.View(photo_GT) — LOAD photo data via L perm', 'Share': 'Photos.Share(photo_GT, recipient_GT) — TPERM to L-only, transfer', 'Upload': 'Photos.Upload(data_GT) — Memory.Allocate + store photo', 'Album': 'Photos.Album() — walk album c-list, return count' },
+        'Social': { 'Post': 'Social.Post(content_GT) — publish to followers\' feed c-lists', 'Read': 'Social.Read() — LOAD next feed entry via L perm', 'Follow': 'Social.Follow(account_GT) — request follow (parent-gated)', 'Feed': 'Social.Feed() — count feed items available' },
+        'Video': { 'Watch': 'Video.Watch(video_GT) — LOAD + stream via L perm', 'Search': 'Video.Search(scope_GT) — search within approved scope', 'Playlist': 'Video.Playlist() — walk playlist c-list', 'Share': 'Video.Share(video_GT, recipient_GT) — TPERM to L-only, transfer' },
+        'Email': { 'Compose': 'Email.Compose(recipient_GT, body_GT) — allocate + send to inbox', 'Read': 'Email.Read() — dequeue from inbox c-list', 'Reply': 'Email.Reply(original_GT, body_GT) — reply in thread chain', 'Contacts': 'Email.Contacts() — list parent-approved email contacts' },
+        'GC': { 'Scan': 'GC.Scan() — walk CRs + c-lists, set G-bit on live NS entries', 'Identify': 'GC.Identify() — find entries where G-bit != polarity', 'Clear': 'GC.Clear() — zero word0+word1 on garbage entries', 'Flip': 'GC.Flip() — toggle polarity for bidirectional cycle' },
+        'Thread': {
+            'switchTo': 'Thread.switchTo(thread_GT) — issues CHANGE targeting thread_GT; saves the calling thread\u2019s full context (DR0\u2013DR15, PC, FLAGS, STO, CR0\u2013CR11, CR14, CR15) into its lump, then restores the target thread\u2019s saved context and resumes it at its saved PC. Requires E perm on thread_GT.',
+            'Kill':     'Thread.Kill(thread_GT) — terminates the target thread: suspends it via CHANGE, releases its lump via Memory.Free, revokes its Thread GT via Mint.Revoke (incrementing gt_seq so all live copies of the GT become instantly invalid). Requires E perm on thread_GT.',
+            'Compile':  'Thread.Compile(f_GT) \u2014 creates a new Thread Abstraction whose initial start abstraction is f. Calls Memory.Allocate for a fresh lump (GT zone + LIFO stack + heap + DR file), calls Mint.Create(Inform, lumpSize, 0) to mint a zero-perm thread stack GT (CR12 of the new thread), stores f_GT into the new thread\u2019s c-list as CR0 (the return/first-call slot), and returns the new Thread GT to the caller. The new thread is ready to run as soon as switchTo is called on its GT.',
+        },
+        'Boot.Thread': {
+            'run': 'Boot.Thread.run \u2014 The initial thread\u2019s continuous existence as the hardware execution context. ' +
+                   'CR12 holds the thread stack GT as an \u2018Inform\u2019: perms=[none], meaning no E-bit, so no code can invoke it via CALL. ' +
+                   'The final comment in B:02 \u2014 \u201cInforms-only: cannot be used for direct CALL\u201d \u2014 means exactly this: ' +
+                   'the thread does not run by being invoked. It runs because it IS the processor\u2019s current execution context \u2014 ' +
+                   'the STEP controller simply advances PC through the thread\u2019s code lump each cycle. ' +
+                   'You cannot CALL a thread from outside; you can only CHANGE into one via Thread.switchTo (which requires E perm on the Thread GT, not on CR12).',
+        },
+    };
+    const base = knownPurposes[abs.name] ? Object.assign({}, knownPurposes[abs.name]) : purposes;
+    for (const m of abs.methods) {
+        const key = `${abs.index}:${m}`;
+        if (userMethodData[key] && userMethodData[key].purpose) {
+            base[m] = userMethodData[key].purpose;
+        } else if (!base[m]) {
+            base[m] = 'Dispatched via CALL';
+        }
+    }
+    return base;
+}
+
+function getMethodExamples(abs) {
+    const examples = {
+        'Salvation': {
+            'LOAD': `; Salvation.LOAD — prove namespace lookup via mLoad pipeline
+; mLoad 7-step: type check -> version match -> seal verify
+;   -> bounds check -> perm check -> F-bit -> deliver
+LOAD   CR1, NS[4]       ; mLoad pipeline validates GT:
+                         ;   1. Type != NULL (00=NULL, 01=Inform, 10=Outform, 11=Abstract)
+                         ;   2. GT.gt_seq == NS[4].word2[31:25]
+                         ;   3. CRC-16 seal(word0,word1) == word2[15:0]
+                         ;   4. Index 4 within NS bounds
+                         ;   5. L perm required for LOAD
+                         ;   6. F-bit=0 (local, not tunneled)
+                         ;   7. CR1 <- 128-bit capability register
+; CR1.word0 = GT packed: Ver(7)|Idx(17)|Perms(6)|Type(2)
+; CR1.word1 = NS[4].word0 (location)
+; CR1.word2 = NS[4].word1 (B|F|G|...|limit[16:0])
+; CR1.word3 = NS[4].word2 (version[31:25]|seal[24:0])`,
+            'TPERM': `; Salvation.TPERM — prove GT health check
+; TPERM checks permissions + validity + bounds in one cycle
+; Sets Z flag: Z=1 = all passed, Z=0 = something failed
+; Never traps — enables conditional execution (try-catch)
+LOAD   CR1, NS[4]       ; CR1 holds Salvation GT [E]
+TPERM  CR1, E            ; Check E permission, valid, MAC
+; Z=1: permission present, GT valid
+; Z=0: permission denied or GT invalid
+; Subsequent EQ instructions skip if Z=0
+; Note: TPERM can also restrict permissions (monotonic)
+; — permissions can only be removed, never added.`,
+            'LAMBDA': `; Salvation.LAMBDA — prove Church numeral reduction
+; LAMBDA dispatches a method within an abstraction
+; It is NOT a security block — just an instruction
+LOAD   CR1, NS[20]      ; Load SUCC GT (X+L+E perms)
+                         ;   mLoad validates X perm for code
+DWRITE DR1, #3           ; Church numeral 3 in data register
+LAMBDA CR1, DR1          ; Apply SUCC: DR1 <- SUCC(3) = 4
+                         ;   CR1 must have X perm (code exec)
+                         ;   SUCC's CLOOMC is a DATA-domain object
+; Result: DR1 = 4`,
+            'TransitionToNavana': `; Salvation -> Navana transition (Salvation does NOT return)
+; Boot flow: Boot -> CALL Salvation -> Salvation -> Navana
+; Navana runs forever as the namespace controller
+LOAD   CR2, NS[5]       ; Load Navana E-GT via mLoad
+                         ;   7-step pipeline validates:
+                         ;   ver match, seal check, E perm
+CALL   CR2              ; Enter Navana:
+                         ;   1. Push return state to call stack
+                         ;   2. CR6 <- E-GT (c-list for Navana)
+                         ;   3. CR14 <- X-GT (CLOOMC, privileged)
+                         ;   4. B-bits cleared on all CRs
+                         ;   5. PC <- Navana code entry point
+; Navana takes over — runs indefinitely, never RETURNs`,
+        },
+        'Navana': {
+            'Init': `; Navana.Init — bootstrap all abstractions (Layer 1-8)
+; Navana is the namespace controller, runs forever
+; Init walks the abstraction table and creates each one
+LOAD   CR1, NS[5]       ; Load Navana E-GT
+CALL   CR1              ; Enter Navana
+                         ;   CR6 <- Navana c-list
+                         ;   CR14 <- Navana CLOOMC (DATA-domain, privileged)
+; Inside Navana.Init:
+;   for each abstraction index 6..44:
+;     LOAD  CR3, NS[7]  ; Load Memory GT
+;     CALL  CR3          ; Memory.Allocate -> backing storage
+;     LOAD  CR4, NS[6]  ; Load Mint GT
+;     CALL  CR4          ; Mint.Create -> NS entry + GT
+;   Navana.Init never returns — enters event loop`,
+            'Manage': `; Navana.Manage — abstraction lifecycle
+; Navana dispatches create/destroy/call/inspect uniformly
+; Every abstraction shares this polymorphic interface
+LOAD   CR1, NS[5]       ; Load Navana E-GT
+DWRITE DR1, #33         ; Target: Editor abstraction (NS[33])
+DWRITE DR2, #0          ; Operation: 0=create
+CALL   CR1              ; Navana.Manage dispatches:
+;   1. Mint.Create(type, size, perms):
+;      a. Memory.Allocate(size) -> location
+;      b. Find free NS entry
+;      c. Write NS entry + compute seal
+;      d. Forge GT with version/perms
+;   2. Return GT to caller via CR`,
+            'Monitor': `; Navana.Monitor — system health / MTBF tracking
+; Every abstraction is a security block with MTBF
+; MTBF = uptime / faultCount for that block
+LOAD   CR1, NS[5]       ; Load Navana E-GT
+CALL   CR1              ; Navana.Monitor checks:
+;   for each abstraction 0..44:
+;     read faultCount from registry
+;     compute MTBF = activeTime / faultCount
+;     if MTBF < threshold: flag degraded
+;   DR1 <- total fault count across all blocks
+;   DR2 <- index of lowest-MTBF abstraction`,
+            'IDS': `; Navana.IDS — Intrusion Detection System
+; Detects GT forgery attempts and version anomalies
+LOAD   CR1, NS[5]       ; Load Navana E-GT
+CALL   CR1              ; Navana.IDS scans:
+;   for each active NS entry:
+;     recompute seal = CRC-16(word0, word1)
+;     compare seal vs word2[15:0]
+;     if mismatch: FAULT — tampered entry
+;     check version consistency across all GTs
+;     if GT.version > NS.version: stale/forged
+;   Report anomalies to Navana.Monitor`,
+            'ValidatePassKey': `; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+; LED via Navana PassKey — complete 3-step flow
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+; PassKey = ABSTRACTION GT (type=0b11=Abstract)
+;   GT index encodes: device[15:8] | permMask[7:4] | id[3:0]
+; Navana = gatekeeper. Validates PassKey,
+;   writes E-perm LED driver GT to C-list slot 8+N.
+; LED driver = callable. No DR args — the capability IS the LED.
+; Caller never sees hardware address or NS index.
+;
+; Step 1: Load PassKey from thread's c-list
+; Step 2: CALL Navana with PassKey in CR1
+; Step 3: CALL LED driver at C-list offset — no DR args needed
+
+; ── STEP 1: Load PassKey ──────────────────────
+LOAD   CR1, [CR6 + 0]   ; Load PassKey GT from thread c-list
+                          ;   Abstract type (0b11)
+                          ;   Index encodes: device=LED(0x01),
+                          ;     permMask=ALL(0x0F), id
+                          ;   Placed by Navana.Init at boot
+
+; ── STEP 2: CALL Navana — present PassKey ─────
+LOAD   CR2, NS[5]        ; Load Navana E-GT
+                          ;   CR1 still holds PassKey
+CALL   CR2                ; CALL Navana detects Abstract GT in CR1:
+;   Navana.ValidatePassKey dispatched automatically:
+;   1. Parse CR1 GT: type must be Abstract (0b11)
+;   2. Decode index: device selector, perm mask
+;   3. Lookup in Navana's PassKey registry
+;   4. Check not revoked, not tampered
+;   5. Write E-perm LED driver GT into C-list slot 8+N (LED N)
+;   6. Store permMask for driver calls
+;   DR1 <- permMask granted
+; If invalid: PERM fault — no hardware state changes
+
+; ── STEP 3: CALL LED driver — set LED 3 ON ────
+; E-perm LED driver GT is now at C-list offset 11 (LED 3 = 8+3)
+; No DR argument needed — the capability IS the LED
+CALL   0, CR6, #11       ; LED.Set on LED 3 (C-list offset 11):
+;   1. Method = 0 (Set) encoded in CALL immediate
+;   2. LED identity = C-list offset 11 (8 base + 3 for LED 3)
+;   3. Hardware write at 0xFE10 (invisible to caller)
+;   4. DR0 <- signed return (≥0 success, -1 invalid capability offset)
+; Gate Log shows full chain of custody:
+;   PassKey presented -> Navana validated ->
+;   LED.Set called via capability offset -> device write committed`,
+            'CallLEDDriver': `; LED via Navana PassKey — capability-offset API
+;
+; Assumes PassKey already validated (Step 1-2 done)
+; Navana writes LED driver GTs into C-list slots 8..13 (LED 0..5)
+; LED identity = C-list slot offset (8=LED0 ... 13=LED5)
+; No DR argument needed — the capability IS the LED
+
+; ---- LED.Set on LED 2 (C-list offset 10) ----
+CALL   0, CR6, #10        ; Set LED 2; DR0 <- 1 (ok) or -1 (fault)
+BGE    DR0, #0, .ok       ; branch if non-negative (success)
+; handle fault (DR0 < 0)
+
+.ok:
+; ---- LED.State on LED 2 ----
+CALL   3, CR6, #10        ; Read LED 2 state; DR0 = 1(on) / 0(off) / -1(fault)
+BGE    DR0, #0, .got_state
+; handle fault
+.got_state:
+; DR0 = current on/off state`,
+            'MintPassKey': `; Navana.MintPassKey — create a new PassKey
+; PRIVILEGED: requires M-elevation (boot/kernel only)
+; Unprivileged callers get PERM fault.
+LOAD   CR1, NS[5]        ; Load Navana E-GT
+DWRITE DR1, #4            ; DR1=4 selects MintPassKey method
+DWRITE DR2, #0x010F       ; DR2[15:8]=device(LED=0x01), DR2[7:0]=permMask(ALL=0x0F)
+CALL   CR1                ; Navana.MintPassKey:
+;   1. Check M-elevation (unprivileged -> PERM fault)
+;   2. Allocate PassKey ID (monotonic counter)
+;   3. Pack Abstract GT (type=0b11):
+;      index = device[15:8] | permMask[7:4] | id[3:0]
+;      E perm for CALL capability
+;   4. Store in Navana's private PassKey registry
+;   5. CR1 <- PassKey GT (ready to grant to thread)
+; PassKey is unforgeable:
+;   - Only Navana can mint (M-elevation required)
+;   - GT index encoding cross-checked against registry
+;   - Thread receives but cannot modify or copy`,
+        },
+        'Mint': {
+            'Create': `; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+; Mint.Create(type, size, perms, [bind], [far])
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+;   type:  00=NULL  01=Inform  10=Outform  11=Abstract
+;          NULL cannot be created (it IS the zero value)
+;   size:  words to allocate via Memory.Allocate
+;   perms: any valid combo within ONE domain:
+;     Turing domain:  R, W, X  (any combo: R, RW, RX, RWX, W, X, WX)
+;     Church domain:  L, S, E  (any combo: L, LS, LE, LSE, S, E, SE)
+;   bind:  B-bit (default 0, auto-cleared by CALL)
+;   far:   F-bit (default 0, auto-set for Outform)
+;
+; Process:
+;   1. Domain purity check (Turing OR Church, never mixed)
+;   2. CALL Memory.Allocate(size) for backing storage (returns location)
+;   3. Find free NS entry (Mint manages NS table)
+;   4. Increment version (never reset — monotonic)
+;   5. Write 3-word NS entry with B/F flags + seal
+;   6. Pack GT, return ready to use
+;
+; Returns: GT packed as Version(7)|Index(17)|Perms(6)|Type(2)
+; Faults:  DOMAIN_PURITY, OOM, TYPE (NULL not creatable)
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+; ── EXAMPLE A: Inform + Turing R,W (data buffer) ──────────
+LOAD   CR1, NS[6]       ; Load Mint E-GT (mLoad validates)
+DWRITE DR1, #1          ; type = 01 (Inform)
+DWRITE DR2, #128        ; size = 128 words
+DWRITE DR3, #0b000011   ; perms = R+W (Turing domain)
+                         ;   bit0=R, bit1=W
+CALL   CR1              ; Mint.Create internally:
+;   1. Domain purity: R+W = Turing only — OK
+;   2. CALL Memory.Allocate(128):
+;      Memory scans NS for free slot (word0=0 AND word1=0)
+;      skips reserved 0..44, finds e.g. slot 50
+;      returns { nsIndex: 50, location: 0x3200 }
+;   3. Version increment:
+;      read NS[50].word2, extract ver = (word2>>25)&0x7F
+;      newVer = (ver + 1) & 0x7F  (never reset to 0)
+;   4. Pack NS entry at NS_TABLE_BASE + 50*3:
+;      word0 = location (0x3200)
+;      word1 = B(0)|F(0)|G(0)|type(01)|...|limit(127)
+;      word2 = (newVer<<25) | CRC16_seal(loc, limit)
+;   5. Pack GT:
+;      GT = (seq<<16)|(50)|(0b000001<<25)|(0b01<<23)
+;         = seq=1, idx=50, R+W, Inform
+; Result: CR1 <- ready-to-use GT for NS[50]
+
+; ── EXAMPLE B: Inform + Turing R,W,X (full data+code) ────
+LOAD   CR1, NS[6]       ; Load Mint E-GT
+DWRITE DR1, #1          ; type = 01 (Inform)
+DWRITE DR2, #64         ; size = 64 words
+DWRITE DR3, #0b000111   ; perms = R+W+X (full Turing)
+                         ;   bit0=R, bit1=W, bit2=X
+CALL   CR1              ; Mint.Create:
+;   Domain purity: R+W+X = Turing only — OK
+;   Memory.Allocate(64) -> location for backing storage
+;   Mint finds free NS entry, increments version, packs GT
+; Result: CR1 <- GT with full Turing access
+;   DREAD/DWRITE for data, LAMBDA for execution
+
+; ── EXAMPLE C: Inform + Turing X only (execute-only code) ─
+LOAD   CR1, NS[6]       ; Load Mint E-GT
+DWRITE DR1, #1          ; type = 01 (Inform)
+DWRITE DR2, #32         ; size = 32 words
+DWRITE DR3, #0b000100   ; perms = X only (Turing)
+                         ;   bit2=X — execute but no read
+CALL   CR1              ; Mint.Create:
+;   Code object you can run but not inspect
+;   CR14 loads via X perm (privileged code register)
+
+; ── EXAMPLE D: Inform + Church L,S,E (c-list) ────────────
+LOAD   CR1, NS[6]       ; Load Mint E-GT
+DWRITE DR1, #1          ; type = 01 (Inform)
+DWRITE DR2, #16         ; size = 16 slots
+DWRITE DR3, #0b111000   ; perms = L+S+E (full Church)
+                         ;   bit3=L, bit4=S, bit5=E
+CALL   CR1              ; Mint.Create:
+;   Domain purity: L+S+E = Church only — OK
+;   Memory.Allocate(16) -> location for c-list storage
+;   Mint finds free NS entry, increments version
+; Result: CR1 <- GT for c-list
+;   L: LOAD GTs from this c-list
+;   S: SAVE GTs into this c-list
+;   E: CALL/enter through this c-list
+
+; ── EXAMPLE E: Inform + Church E only (abstraction) ──────
+LOAD   CR1, NS[6]       ; Load Mint E-GT
+DWRITE DR1, #1          ; type = 01 (Inform)
+DWRITE DR2, #8          ; size = 8 words
+DWRITE DR3, #0b100000   ; perms = E only (Church)
+                         ;   bit5=E
+CALL   CR1              ; Mint.Create:
+;   Standard abstraction entry point — E only
+;   Can CALL but cannot LOAD/SAVE
+
+; ── EXAMPLE F: Inform + Bind flag ─────────────────────────
+LOAD   CR1, NS[6]       ; Load Mint E-GT
+DWRITE DR1, #1          ; type = 01 (Inform)
+DWRITE DR2, #64         ; size = 64 words
+DWRITE DR3, #0b000011   ; perms = R+W (Turing)
+DWRITE DR4, #1          ; bind = 1 (B-bit set)
+CALL   CR1              ; Mint.Create:
+;   B-bit=1 in word1[31] — GT bound to a thread
+;   B-bit auto-cleared by CALL (hardware enforced)
+;   Prevents GT from being used before binding
+
+; ── EXAMPLE G: Outform + Far + Church L,E (remote) ───────
+LOAD   CR1, NS[6]       ; Load Mint E-GT
+DWRITE DR1, #2          ; type = 10 (Outform)
+DWRITE DR2, #32         ; size = 32 words (local proxy)
+DWRITE DR3, #0b101000   ; perms = L+E (Church)
+                         ;   bit3=L, bit5=E
+CALL   CR1              ; Mint.Create:
+;   Outform: F-bit auto-set (Far = remote resource)
+;   CALL Memory.Allocate for URL proxy object
+;   mLoad step 6 detects F-bit, routes through Tunnel
+;   All access mediated by encrypted capability tunnel
+
+; ── EXAMPLE H: Abstract type (new abstraction) ───────────
+LOAD   CR1, NS[6]       ; Load Mint E-GT
+DWRITE DR1, #3          ; type = 11 (Abstract)
+DWRITE DR2, #256        ; size = 256 words
+DWRITE DR3, #0b100000   ; perms = E only (Church)
+CALL   CR1              ; Mint.Create:
+;   Abstract type: this GT represents a new abstraction
+;   Responds to polymorphic interface: create/destroy/call/inspect
+;   Navana manages its lifecycle
+
+; ── ILLEGAL: NULL type (FAULT) ────────────────────────────
+; DWRITE DR1, #0          ; type = 00 (NULL) — ILLEGAL!
+;   -> FAULT: TYPE
+;   NULL is the zero/absent value, not creatable
+
+; ── ILLEGAL: Mixed domain (FAULT) ─────────────────────────
+; DWRITE DR2, #0b001011 ; R+W+L — ILLEGAL!
+;   Turing(R,W) mixed with Church(L)
+;   -> FAULT: DOMAIN_PURITY`,
+            'Revoke': `; Mint.Revoke — instant revocation via version increment
+; Incrementing the version in the NS entry kills ALL
+; outstanding copies of the GT — they will fail mLoad
+; step 2 (version mismatch) on next use
+LOAD   CR1, NS[6]       ; Load Mint E-GT
+DWRITE DR1, #50         ; Target NS slot to revoke
+
+CALL   CR1              ; Mint.Revoke:
+;   base = NS_TABLE_BASE + 50 * 3
+;   word2 = mem[base+2]
+;   oldVer = (word2 >>> 25) & 0x7F     ; extract version
+;   newVer = (oldVer + 1) & 0x7F       ; increment (wraps at 128)
+;   seal = word2 & 0xFFFF               ; preserve CRC-16 seal
+;   mem[base+2] = (newVer << 25) | seal ; write back
+;
+; All GTs with old version are now dead:
+;   any LOAD/CALL with stale GT hits mLoad step 2:
+;   GT.version(7 bits) != NS[50].word2.version(7 bits)
+;   -> FAULT: VERSION_MISMATCH
+; DR1 <- new version number`,
+            'Transfer': `; Mint.Transfer — move GT between c-lists
+; The c-list IS the parental approval — transferring a GT
+; to a child's c-list grants them access to that resource
+LOAD   CR1, NS[6]       ; Load Mint E-GT
+LOAD   CR2, NS[50]      ; Source: GT to transfer
+LOAD   CR3, NS[60]      ; Target: destination c-list GT
+
+; Transfer requires:
+;   1. Caller holds L perm on source c-list (can read GT)
+;   2. Caller holds S perm on target c-list (can write GT)
+;   3. B-bit (Bind) on source GT must be 0 (transferable)
+;      B-bit is auto-cleared by CALL instruction
+CALL   CR1              ; Mint.Transfer:
+;   read GT from source c-list[slot]
+;   validate B-bit = 0 (can be moved)
+;   SAVE GT to target c-list[slot] via S perm
+;   optionally zero source slot (move vs copy)
+; The child now has the GT in their c-list`,
+        },
+        'Memory': {
+            'Allocate': `; Memory.Allocate — reserve a memory region
+; Memory manages address space as a pool of allocations.
+; It does NOT manage the NS table — that is Mint/Navana's job.
+LOAD   CR1, NS[7]       ; Load Memory E-GT via mLoad
+DWRITE DR1, #128        ; Request 128 words of storage
+
+CALL   CR1              ; Memory.Allocate:
+;   1. Check if requested size fits in available memory
+;      (next free address + size must not exceed NS_TABLE_BASE)
+;      if no room: FAULT OOM
+;   2. Record allocation at current free address
+;   3. Advance free address pointer by size
+;
+; DR1 <- base location address
+; DR2 <- allocation size (128)
+; Memory only returns a location — Mint.Create handles
+; the NS entry, GT creation, and version management`,
+            'Free': `; Memory.Free — release a memory region
+LOAD   CR1, NS[7]       ; Load Memory E-GT
+DWRITE DR1, #0x2D00     ; Location to free (from original Allocate)
+
+CALL   CR1              ; Memory.Free:
+;   1. Look up allocation at given location
+;      if not found: FAULT BOUNDS
+;   2. Zero the memory contents
+;   3. Remove allocation record
+; The NS entry is NOT touched — use Mint.Revoke to
+; invalidate GTs, then free the backing memory here`,
+            'Resize': `; Memory.Resize — adjust allocation size
+LOAD   CR1, NS[7]       ; Load Memory E-GT
+DWRITE DR1, #0x2D00     ; Location to resize (from original Allocate)
+DWRITE DR2, #256        ; New size (words)
+
+CALL   CR1              ; Memory.Resize:
+;   1. Look up allocation at given location
+;      if not found: FAULT BOUNDS
+;   2. Update the allocation record with new size
+; NOTE: if an NS entry references this location,
+; Mint must also update the NS entry's limit field
+; and recompute the CRC-16 seal separately`,
+        },
+        'Scheduler': {
+            'Yield': `; Scheduler.Yield — voluntarily yield time slice
+LOAD   CR1, NS[8]       ; Load Scheduler E-GT
+CALL   CR1              ; Scheduler.Yield:
+;   1. Save current thread state (CRs, DRs, flags, PC)
+;   2. Select next ready thread from run queue
+;   3. Restore next thread's state
+;   4. Transfer control (PC <- next thread's saved PC)
+; Current thread goes to back of run queue`,
+            'Spawn': `; Scheduler.Spawn — create a new thread
+; Each thread gets its own CR set and namespace view
+LOAD   CR1, NS[8]       ; Load Scheduler E-GT
+LOAD   CR2, NS[50]      ; Code GT for new thread (X perm)
+                         ;   must be DATA-domain object
+DWRITE DR1, #0x0200     ; Entry point address within code
+
+CALL   CR1              ; Scheduler.Spawn:
+;   1. Memory.Allocate for thread control block
+;   2. Initialize CRs (copy parent's c-list subset)
+;   3. Set new thread PC = entry point
+;   4. Each child thread has isolated namespace view
+;   5. Add to run queue
+; DR1 <- new thread ID`,
+            'Wait': `; Scheduler.Wait — block thread on DijkstraFlag
+; Thread stops running until the flag is signaled
+LOAD   CR1, NS[8]       ; Load Scheduler E-GT
+LOAD   CR2, NS[10]      ; DijkstraFlag GT (event source)
+
+CALL   CR1              ; Scheduler.Wait:
+;   1. Remove current thread from run queue
+;   2. Add to DijkstraFlag's wait queue
+;   3. Save thread state
+;   4. Switch to next ready thread
+; Thread resumes when DijkstraFlag.Signal fires`,
+            'Stop': `; Scheduler.Stop — terminate a thread
+LOAD   CR1, NS[8]       ; Load Scheduler E-GT
+DWRITE DR1, #2          ; Thread ID to terminate
+
+CALL   CR1              ; Scheduler.Stop:
+;   1. Remove thread from run/wait queue
+;   2. Memory.Free thread control block
+;   3. Clear thread's CRs (release capabilities)
+;   4. If terminated thread held GTs, they become
+;      unreachable (GC will reclaim via G-bit scan)`,
+        },
+        'Stack': {
+            'Push': `; Stack.Push — push value onto managed stack
+; Stack uses a Memory-allocated DATA region for storage
+LOAD   CR1, NS[9]       ; Load Stack E-GT
+DWRITE DR1, #42         ; Value to push
+
+CALL   CR1              ; Stack.Push:
+;   1. Check stack not full (depth < limit from word1)
+;   2. DWRITE value to mem[location + depth]
+;      location = NS[stack_slot].word0
+;   3. Increment depth counter
+;   4. If full: WARN STACK_OVERFLOW — thread suspended for programmed recovery`,
+            'Pop': `; Stack.Pop — pop value from stack
+LOAD   CR1, NS[9]       ; Load Stack E-GT
+
+CALL   CR1              ; Stack.Pop:
+;   1. Check stack not empty (depth > 0)
+;   2. Decrement depth counter
+;   3. DREAD value from mem[location + depth]
+;   4. If empty: FAULT STACK_UNDERFLOW
+; DR1 <- popped value`,
+            'Peek': `; Stack.Peek — read top without removing
+LOAD   CR1, NS[9]       ; Load Stack E-GT
+
+CALL   CR1              ; Stack.Peek:
+;   1. Check stack not empty
+;   2. DREAD mem[location + depth - 1]
+;   3. Do NOT decrement depth
+; DR1 <- top value (stack unchanged)`,
+            'Depth': `; Stack.Depth — query current stack depth
+LOAD   CR1, NS[9]       ; Load Stack E-GT
+
+CALL   CR1              ; Stack.Depth:
+;   DR1 <- current number of entries on stack`,
+        },
+        'DijkstraFlag': {
+            'Wait': `; DijkstraFlag.Wait — block thread until flag signaled
+; Implements Dijkstra's semaphore P() operation
+; Integrates with Scheduler for thread management
+LOAD   CR1, NS[10]      ; Load DijkstraFlag E-GT
+
+CALL   CR1              ; DijkstraFlag.Wait:
+;   1. Test flag state
+;   2. If signaled: clear flag, continue (no block)
+;   3. If not signaled:
+;      a. Add current thread to flag's wait queue
+;      b. Scheduler.Wait(this flag) — block thread
+;      c. Thread sleeps until Signal wakes it
+; Thread resumes here after being signaled`,
+            'Signal': `; DijkstraFlag.Signal — wake one waiting thread
+; Implements Dijkstra's semaphore V() operation
+LOAD   CR1, NS[10]      ; Load DijkstraFlag E-GT
+
+CALL   CR1              ; DijkstraFlag.Signal:
+;   1. If threads waiting on this flag:
+;      a. Remove one thread from wait queue
+;      b. Scheduler.Spawn/resume that thread
+;   2. If no threads waiting:
+;      a. Set flag state = signaled
+;      b. Next Wait() will consume it immediately`,
+            'Reset': `; DijkstraFlag.Reset — clear flag state
+LOAD   CR1, NS[10]      ; Load DijkstraFlag E-GT
+
+CALL   CR1              ; DijkstraFlag.Reset:
+;   1. Clear flag to unsignaled state
+;   2. Does NOT affect threads in wait queue
+;   3. Used to re-arm one-shot events`,
+            'Test': `; DijkstraFlag.Test — non-blocking check
+LOAD   CR1, NS[10]      ; Load DijkstraFlag E-GT
+
+CALL   CR1              ; DijkstraFlag.Test:
+;   1. Read flag state without blocking
+;   2. Does NOT consume the signal
+;   DR1 <- 1 if signaled, 0 if not`,
+        },
+        'UART': {
+            'Send': `; UART.Send — transmit byte via Church domain S perm
+; Hardware devices use L/S/E only (Church domain)
+; NOT R/W (that's Turing domain for DATA objects)
+LOAD   CR1, NS[11]      ; Load UART GT [L,S,E] via mLoad
+                         ;   mLoad checks: type, version, seal,
+                         ;   bounds, perms, F-bit, deliver
+DWRITE DR1, #0x41       ; Byte to send ('A') in data register
+SAVE   CR1, DR1         ; S perm: save data TO device
+                         ;   SAVE checks S permission on GT
+                         ;   Church domain: capability-gated I/O
+; Byte queued for transmission on pin 69 (TX)`,
+            'Receive': `; UART.Receive — read byte via Church domain L perm
+LOAD   CR1, NS[11]      ; Load UART GT [L,S,E]
+
+LOAD   DR1, CR1         ; L perm: load data FROM device
+                         ;   LOAD checks L permission on GT
+                         ;   Only capability holders can read UART
+; DR1 <- received byte from pin 70 (RX)
+; If no byte available: DR1 = 0, Z flag set`,
+            'SetBaud': `; UART.SetBaud — configure baud rate via CALL
+LOAD   CR1, NS[11]      ; Load UART E-GT
+DWRITE DR1, #115200     ; Target baud rate
+
+CALL   CR1              ; UART.SetBaud via E perm:
+;   1. Validate baud rate is supported
+;   2. Configure UART divider register
+;   3. BL616 USB bridge at 27MHz clock
+; Note: E perm required for configuration methods
+; L/S only for data transfer`,
+        },
+        'LED': {
+            'Set': `; LED.Set — turn LED on via S (Save) permission
+; Tang Nano 20K: 6 LEDs on pins 15-20 (active-low)
+; LED identity = C-list slot offset (8=LED0, 9=LED1 ... 13=LED5)
+; No DR arg needed — the capability selects the LED.
+CALL   0, CR6, #11      ; LED.Set LED 3 (C-list offset 11)
+;   DR0 <- 1 (success), or DR0 <- -1 (invalid offset)
+BGE    DR0, #0, .ok     ; non-negative = success
+.ok:`,
+            'Clear': `; LED.Clear — turn LED off (no DR arg)
+; LED identity from C-list slot: offset 8=LED0, 9=LED1 ... 13=LED5
+CALL   1, CR6, #11      ; LED.Clear LED 3 (C-list offset 11)
+;   DR0 <- 1 (success), DR0 <- -1 (fault)
+BGE    DR0, #0, .ok     ; check sign
+.ok:`,
+            'Toggle': `; LED.Toggle — flip LED state (no DR arg)
+; LED identity from C-list slot: offset 8=LED0, 9=LED1 ... 13=LED5
+CALL   2, CR6, #11      ; LED.Toggle LED 3 (C-list offset 11)
+;   DR0 <- 1 (success), DR0 <- -1 (fault)`,
+            'State': `; LED.State — read on/off state (no DR arg)
+; LED identity from C-list slot: offset 8=LED0, 9=LED1 ... 13=LED5
+CALL   3, CR6, #11      ; LED.State LED 3 (C-list offset 11)
+;   DR0 = 1 (on), DR0 = 0 (off), DR0 = -1 (fault)
+BGE    DR0, #0, .got_state
+; DR0 < 0: capability fault
+.got_state:
+; DR0 = current LED state (0 or 1)`,
+        },
+        'Button': {
+            'Read': `; Button.Read — read button state via L perm
+; Button is L+E only (no S — you can't write to a button)
+; Tang Nano 20K button on pin 88
+LOAD   CR1, NS[13]      ; Load Button GT [L,E]
+LOAD   DR1, CR1         ; L perm: load state from device
+; DR1 <- 1 if pressed, 0 if released`,
+            'WaitPress': `; Button.WaitPress — block until button press
+LOAD   CR1, NS[13]      ; Load Button GT [L,E]
+
+CALL   CR1              ; Button.WaitPress via E perm:
+;   1. Read current state via L perm
+;   2. If pressed: return immediately
+;   3. If released: Scheduler.Wait on button event
+;      thread blocks until hardware interrupt
+; DR1 <- 1 (pressed) when thread resumes`,
+            'OnEvent': `; Button.OnEvent — dequeue button event
+LOAD   CR1, NS[13]      ; Load Button GT [L,E]
+
+CALL   CR1              ; Button.OnEvent via E perm:
+;   1. Check event queue (press/release transitions)
+;   2. If event pending: dequeue and return
+;   3. If no event: DR1 = 0, Z flag set
+; DR1 <- event type (1=press, 2=release, 0=none)`,
+        },
+        'Timer': {
+            'Start': `; Timer.Start — begin counting via S perm
+LOAD   CR1, NS[14]      ; Load Timer GT [L,S,E]
+DWRITE DR1, #0          ; Timer channel
+
+SAVE   CR1, DR1         ; S perm: save "start" to device
+; Timer begins counting from 27MHz clock`,
+            'Stop': `; Timer.Stop — halt timer via S perm
+LOAD   CR1, NS[14]      ; Load Timer GT [L,S,E]
+DWRITE DR1, #0          ; Timer channel
+
+CALL   CR1              ; Timer.Stop via E perm:
+;   S perm: write stop command to device
+;   Timer halts, counter preserved for reading`,
+            'Read': `; Timer.Read — get elapsed time via L perm
+LOAD   CR1, NS[14]      ; Load Timer GT [L,S,E]
+
+LOAD   DR1, CR1         ; L perm: load elapsed from device
+; DR1 <- elapsed ticks since Start
+; At 27MHz: ticks / 27000000 = seconds`,
+            'SetAlarm': `; Timer.SetAlarm — set alarm threshold via S perm
+LOAD   CR1, NS[14]      ; Load Timer GT [L,S,E]
+DWRITE DR1, #27000000   ; Alarm at 1 second (27M ticks)
+
+SAVE   CR1, DR1         ; S perm: save alarm to device
+; When counter reaches threshold:
+;   hardware signals DijkstraFlag for this timer
+;   waiting thread wakes via DijkstraFlag.Signal`,
+        },
+        'Display': {
+            'Write': `; Display.Write — write character via S perm
+LOAD   CR1, NS[15]      ; Load Display GT [L,S,E]
+DWRITE DR1, #0x48       ; Character 'H'
+
+SAVE   CR1, DR1         ; S perm: save char to device
+; Character appears at current cursor position`,
+            'Clear': `; Display.Clear — clear screen via E perm
+LOAD   CR1, NS[15]      ; Load Display GT [L,S,E]
+
+CALL   CR1              ; Display.Clear via E perm:
+;   S perm: write clear command to device
+;   All pixels/chars zeroed, cursor reset to (0,0)`,
+            'Scroll': `; Display.Scroll — scroll display via E perm
+LOAD   CR1, NS[15]      ; Load Display GT [L,S,E]
+DWRITE DR1, #1          ; Scroll 1 line up
+
+CALL   CR1              ; Display.Scroll via E perm:
+;   S perm: write scroll command to device
+;   Top line lost, bottom line cleared`,
+        },
+        'SlideRule': {
+            'Multiply': `; SlideRule.Multiply — DR1 * DR2
+; Method index 0 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #2     ; Left operand
+IADD   DR2, DR0, #3     ; Right operand
+IADD   DR3, DR0, #0     ; Method selector: Multiply (index 0)
+CALL   CR1              ; DR1 <- 6`,
+            'Divide': `; SlideRule.Divide — DR1 / DR2
+; Method index 1 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #10    ; Dividend
+IADD   DR2, DR0, #2     ; Divisor
+IADD   DR3, DR0, #1     ; Method selector: Divide (index 1)
+CALL   CR1              ; DR1 <- 5
+; Div by zero returns 0 with fault message`,
+            'Sqrt': `; SlideRule.Sqrt — floor(sqrt(DR1))
+; Method index 2 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #9     ; Input
+IADD   DR3, DR0, #2     ; Method selector: Sqrt (index 2)
+CALL   CR1              ; DR1 <- 3`,
+            'Mod': `; SlideRule.Mod — DR1 % DR2
+; Method index 3 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #10    ; Dividend
+IADD   DR2, DR0, #3     ; Divisor
+IADD   DR3, DR0, #3     ; Method selector: Mod (index 3)
+CALL   CR1              ; DR1 <- 1`,
+            'Sin': `; SlideRule.Sin — sine (radians)
+; Method index 4 — via NS LOAD + DR3 method select
+; FPGA uses CORDIC; simulator uses IEEE 754
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #0x3FC90FDB  ; pi/2 (1.5708 rad)
+IADD   DR3, DR0, #4     ; Method selector: Sin (index 4)
+CALL   CR1              ; DR1 <- 0x3F800000 (1.0)`,
+            'Cos': `; SlideRule.Cos — cosine (radians)
+; Method index 5 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #0     ; 0.0 rad
+IADD   DR3, DR0, #5     ; Method selector: Cos (index 5)
+CALL   CR1              ; DR1 <- 0x3F800000 (1.0)`,
+            'Tan': `; SlideRule.Tan — tangent (radians)
+; Method index 6 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #0x3F490FDB  ; pi/4 (0.7854 rad)
+IADD   DR3, DR0, #6     ; Method selector: Tan (index 6)
+CALL   CR1              ; DR1 <- 0x3F800000 (1.0)
+; Near pi/2: FAULT DOMAIN_ERROR (asymptote)`,
+            'Asin': `; SlideRule.Asin — inverse sine -> radians
+; Method index 7 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #0x3F800000  ; 1.0
+IADD   DR3, DR0, #7     ; Method selector: Asin (index 7)
+CALL   CR1              ; DR1 <- 0x3FC90FDB (pi/2)
+; |input| > 1.0: FAULT DOMAIN_ERROR`,
+            'Acos': `; SlideRule.Acos — inverse cosine -> radians
+; Method index 8 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #0x3F800000  ; 1.0
+IADD   DR3, DR0, #8     ; Method selector: Acos (index 8)
+CALL   CR1              ; DR1 <- 0x00000000 (0.0)`,
+            'Atan': `; SlideRule.Atan — inverse tangent -> radians
+; Method index 9 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #0x3F800000  ; 1.0
+IADD   DR3, DR0, #9     ; Method selector: Atan (index 9)
+CALL   CR1              ; DR1 <- 0x3F490FDB (pi/4)`,
+            'ToDegrees': `; SlideRule.ToDegrees — radians to degrees
+; Method index 10 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #0x40490FDB  ; pi (3.14159 rad)
+IADD   DR3, DR0, #10    ; Method selector: ToDegrees (index 10)
+CALL   CR1              ; DR1 <- 0x43340000 (180.0 deg)
+; Multiply by 180/pi internally`,
+            'ToRadians': `; SlideRule.ToRadians — degrees to radians
+; Method index 11 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #0x43340000  ; 180.0 degrees
+IADD   DR3, DR0, #11    ; Method selector: ToRadians (index 11)
+CALL   CR1              ; DR1 <- 0x40490FDB (pi rad)
+; Multiply by pi/180 internally`,
+            'Bernoulli': `; SlideRule.Bernoulli(n) — exact rational B(n)
+; Method index 12 — via NS LOAD + DR3 method select
+; Returns: numerator in DR1, denominator in DR2
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #6     ; n=6 -> B(6) = 1/42
+IADD   DR3, DR0, #12    ; Method selector: Bernoulli (index 12)
+CALL   CR1              ; DR1 <- 1 (numerator)
+                         ; DR2 <- 42 (denominator)
+; Odd n>1 returns 0/1`,
+            'Abs': `; SlideRule.Abs — |DR1|
+; Method index 13 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #42    ; Input
+ISUB   DR1, DR0, DR1    ; Negate: DR1 = -42
+IADD   DR3, DR0, #13    ; Method selector: Abs (index 13)
+CALL   CR1              ; DR1 <- 42`,
+            'Pow': `; SlideRule.Pow — base^exp (integer, exp >= 0)
+; Method index 14 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #2     ; Base
+IADD   DR2, DR0, #10    ; Exponent
+IADD   DR3, DR0, #14    ; Method selector: Pow (index 14)
+CALL   CR1              ; DR1 <- 1024
+; Negative exponent returns 0`,
+            'Min': `; SlideRule.Min — min(DR1, DR2)
+; Method index 15 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #7     ; First value
+IADD   DR2, DR0, #3     ; Second value
+IADD   DR3, DR0, #15    ; Method selector: Min (index 15)
+CALL   CR1              ; DR1 <- 3`,
+            'Max': `; SlideRule.Max — max(DR1, DR2)
+; Method index 16 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #7     ; First value
+IADD   DR2, DR0, #3     ; Second value
+IADD   DR3, DR0, #16    ; Method selector: Max (index 16)
+CALL   CR1              ; DR1 <- 7`,
+            'GCD': `; SlideRule.GCD — greatest common divisor
+; Method index 17 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #12    ; First value
+IADD   DR2, DR0, #8     ; Second value
+IADD   DR3, DR0, #17    ; Method selector: GCD (index 17)
+CALL   CR1              ; DR1 <- 4`,
+            'Factorial': `; SlideRule.Factorial — n!
+; Method index 18 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #10    ; n=10
+IADD   DR3, DR0, #18    ; Method selector: Factorial (index 18)
+CALL   CR1              ; DR1 <- 3628800`,
+            'Log2': `; SlideRule.Log2 — floor(log2(n))
+; Method index 19 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #256   ; Input
+IADD   DR3, DR0, #19    ; Method selector: Log2 (index 19)
+CALL   CR1              ; DR1 <- 8
+; n<1 returns 0`,
+            'Atan2': `; SlideRule.Atan2 — atan2(y, x)
+; Method index 20 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #0x3F800000  ; y = 1.0
+IADD   DR2, DR0, #0x3F800000  ; x = 1.0
+IADD   DR3, DR0, #20    ; Method selector: Atan2 (index 20)
+CALL   CR1              ; DR1 <- 0x3F490FDB (pi/4)`,
+            'Signum': `; SlideRule.Signum — sign of DR1: +1, 0, or -1
+; Method index 21 — via NS LOAD + DR3 method select
+;
+LOAD   CR1, NS[16]      ; Load SlideRule E-GT from NS
+IADD   DR1, DR0, #42    ; Positive input
+IADD   DR3, DR0, #21    ; Method selector: Signum (index 21)
+CALL   CR1              ; DR1 <- 1`,
+        },
+        'Abacus': {
+            'Add': `; Abacus.Add — integer addition (Turing domain data)
+LOAD   CR1, NS[17]      ; Load Abacus E-GT
+DWRITE DR1, #7
+DWRITE DR2, #5
+CALL   CR1              ; DR1 <- 12
+; Overflow: sets V (overflow) flag`,
+            'Sub': `; Abacus.Sub — integer subtract
+LOAD   CR1, NS[17]      ; Load Abacus E-GT
+DWRITE DR1, #10
+DWRITE DR2, #3
+CALL   CR1              ; DR1 <- 7
+; Underflow: sets N (negative) flag`,
+            'Mul': `; Abacus.Mul — integer multiply
+LOAD   CR1, NS[17]      ; Load Abacus E-GT
+DWRITE DR1, #6
+DWRITE DR2, #7
+CALL   CR1              ; DR1 <- 42`,
+            'Div': `; Abacus.Div — integer divide
+LOAD   CR1, NS[17]      ; Load Abacus E-GT
+DWRITE DR1, #42
+DWRITE DR2, #6
+CALL   CR1              ; DR1 <- 7 (quotient)
+; Div by zero: FAULT MATH_ERROR`,
+            'Mod': `; Abacus.Mod — modulo (remainder)
+LOAD   CR1, NS[17]      ; Load Abacus E-GT
+DWRITE DR1, #17
+DWRITE DR2, #5
+CALL   CR1              ; DR1 <- 2`,
+            'Abs': `; Abacus.Abs — absolute value
+LOAD   CR1, NS[17]      ; Load Abacus E-GT
+DWRITE DR1, #-42        ; Negative input (two's complement)
+CALL   CR1              ; DR1 <- 42`,
+        },
+        'Constants': {
+            'Pi': `; Constants.Pi — return pi as IEEE 754
+LOAD   CR1, NS[18]      ; Load Constants E-GT
+CALL   CR1              ; DR1 <- 0x40490FDB (3.14159265)`,
+            'E': `; Constants.E — return Euler's number
+LOAD   CR1, NS[18]      ; Load Constants E-GT
+CALL   CR1              ; DR1 <- 0x402DF854 (2.71828183)`,
+            'Phi': `; Constants.Phi — return golden ratio
+LOAD   CR1, NS[18]      ; Load Constants E-GT
+CALL   CR1              ; DR1 <- 0x3FCFBE77 (1.61803399)`,
+            'Zero': `; Constants.Zero — return 0
+LOAD   CR1, NS[18]      ; Load Constants E-GT
+CALL   CR1              ; DR1 <- 0x00000000 (0.0)`,
+            'One': `; Constants.One — return 1
+LOAD   CR1, NS[18]      ; Load Constants E-GT
+CALL   CR1              ; DR1 <- 0x3F800000 (1.0)`,
+        },
+        'Loader': {
+            'Load': `; Loader.Load — fault-driven lazy load
+; Normally called automatically by the fault handler
+; when a CALL targets a warm/cold NULL slot.
+; Can also be called explicitly:
+DWRITE DR1, #16         ; Slot 16 (SlideRule)
+LOAD   CR1, NS[19]      ; Load Loader E-GT
+CALL   CR1              ; Loader.Load(16):
+;   1. Read manifest[16] — source, path, size, priority
+;   2. Fetch lump bytes (UART or local)
+;   3. Memory.Allocate(size)
+;   4. Write lump into allocated region
+;   5. Navana.Abstraction.Add(slot, lump)
+;   6. Mint.Create(GT for loaded abstraction)
+; Slot 16 is now live — subsequent CALLs work`,
+            'Prefetch': `; Loader.Prefetch — hint-driven pre-load
+DWRITE DR1, #16         ; Slot to prefetch
+DWRITE DR3, #1          ; Method index 1 (Prefetch)
+LOAD   CR1, NS[19]      ; Load Loader E-GT
+CALL   CR1              ; Returns immediately
+; Lump will be loaded in background
+; No fault if already loaded`,
+            'Evict': `; Loader.Evict — unload a cold abstraction
+DWRITE DR1, #16         ; Slot to evict
+DWRITE DR3, #2          ; Method index 2 (Evict)
+LOAD   CR1, NS[19]      ; Load Loader E-GT
+CALL   CR1              ; Loader.Evict(16):
+;   1. Clear NS entry for slot 16
+;   2. Memory.Free(slot 16 lump region)
+;   3. NULL the GT — next CALL triggers re-load
+; Slot 16 is now NULL — saves memory`,
+        },
+        'Circle': {
+            'Area': `; Circle.Area — pi * r^2 (delegates to SlideRule)
+LOAD   CR1, NS[46]      ; Load Circle E-GT
+DWRITE DR1, #0x40A00000 ; Radius: 5.0
+
+CALL   CR1              ; Circle.Area internally:
+;   1. LOAD CR2, NS[16] — get SlideRule GT
+;   2. CALL SlideRule.Multiply(r, r)  -> r^2 = 25.0
+;   3. LOAD CR3, NS[18] — get Constants GT
+;   4. CALL Constants.Pi             -> pi
+;   5. CALL SlideRule.Multiply(pi, r^2) -> 78.5398
+; DR1 <- 0x429CE5A0 (78.54)
+; Circle has no trig itself — delegates to SlideRule`,
+            'Circumference': `; Circle.Circumference — 2 * pi * r
+LOAD   CR1, NS[46]      ; Load Circle E-GT
+DWRITE DR1, #0x40A00000 ; Radius: 5.0
+
+CALL   CR1              ; Circle.Circumference internally:
+;   1. CALL Constants.Pi             -> pi
+;   2. CALL SlideRule.Multiply(2.0, pi) -> 2*pi
+;   3. CALL SlideRule.Multiply(2pi, r)  -> 31.4159
+; DR1 <- 0x41FB53D1 (31.416)`,
+        },
+        'SUCC': {
+            'Apply': `; SUCC.Apply — Church successor via LAMBDA
+; Church numerals use LAMBDA instruction, not CALL
+; LAMBDA dispatches within an abstraction (not a security block)
+LOAD   CR1, NS[20]      ; Load SUCC GT [X]
+                         ;   X perm only (Turing domain — code object)
+                         ;   SUCC's CLOOMC holds the reduction code
+DWRITE DR1, #3          ; Church numeral 3
+
+LAMBDA CR1, DR1         ; Apply SUCC:
+                         ;   CR1 must have X perm (execute code)
+                         ;   SUCC's code performs: f(f(f(x))) -> f(f(f(f(x))))
+                         ;   i.e. add one application of f
+; DR1 <- 4 (Church numeral for successor of 3)`,
+        },
+        'PRED': {
+            'Apply': `; PRED.Apply — Church predecessor
+LOAD   CR1, NS[21]      ; Load PRED GT [X]
+DWRITE DR1, #5          ; Church numeral 5
+
+LAMBDA CR1, DR1         ; Apply PRED:
+                         ;   Removes one application of f
+                         ;   f(f(f(f(f(x))))) -> f(f(f(f(x))))
+; DR1 <- 4 (predecessor of 5)
+; PRED(0) = 0 (Church numerals have no negatives)`,
+        },
+        'ADD': {
+            'Apply': `; ADD.Apply — Church addition
+LOAD   CR1, NS[22]      ; Load ADD GT [X]
+DWRITE DR1, #3          ; First Church numeral
+DWRITE DR2, #4          ; Second Church numeral
+
+LAMBDA CR1, DR1         ; Apply ADD:
+                         ;   ADD m n = apply SUCC m times to n
+                         ;   3 + 4 = SUCC(SUCC(SUCC(4))) = 7
+; DR1 <- 7`,
+        },
+        'SUB': {
+            'Apply': `; SUB.Apply — Church subtraction
+LOAD   CR1, NS[23]      ; Load SUB GT [X]
+DWRITE DR1, #7
+DWRITE DR2, #3
+
+LAMBDA CR1, DR1         ; Apply SUB:
+                         ;   SUB m n = apply PRED n times to m
+                         ;   7 - 3 = PRED(PRED(PRED(7))) = 4
+; DR1 <- 4
+; SUB where n > m yields 0 (no negatives)`,
+        },
+        'MUL': {
+            'Apply': `; MUL.Apply — Church multiplication
+LOAD   CR1, NS[24]      ; Load MUL GT [X]
+DWRITE DR1, #3
+DWRITE DR2, #4
+
+LAMBDA CR1, DR1         ; Apply MUL:
+                         ;   MUL m n = compose m and n
+                         ;   3 * 4 = apply (ADD 4) three times to 0
+; DR1 <- 12`,
+        },
+        'ISZERO': {
+            'Apply': `; ISZERO.Apply — Church zero test
+LOAD   CR1, NS[25]      ; Load ISZERO GT [X]
+DWRITE DR1, #0          ; Church numeral to test
+
+LAMBDA CR1, DR1         ; Apply ISZERO:
+                         ;   if numeral is 0 (no f applications):
+                         ;     return TRUE (Church boolean)
+                         ;   else:
+                         ;     return FALSE
+; DR1 <- TRUE (NS[26] GT) because input was 0`,
+        },
+        'PAIR': {
+            'Apply': `; PAIR.Apply — Church pair constructor
+LOAD   CR1, NS[43]      ; Load PAIR GT [X]
+DWRITE DR1, #10         ; First element
+DWRITE DR2, #20         ; Second element
+
+LAMBDA CR1, DR1         ; Apply PAIR:
+                         ;   Construct pair: \\f. f 10 20
+                         ;   Extract first:  PAIR TRUE  -> 10
+                         ;   Extract second: PAIR FALSE -> 20
+; DR1 <- PAIR(10, 20) encoded as closure`,
+        },
+        'Family': {
+            'Register': `; Family.Register — bind parent-child relationship
+; The c-list IS the parental approval mechanism
+LOAD   CR1, NS[28]      ; Load Family E-GT
+LOAD   CR2, NS[50]      ; Parent GT (identifies parent)
+LOAD   CR3, NS[51]      ; Child GT (identifies child)
+
+CALL   CR1              ; Family.Register:
+;   1. Verify CR2 is a valid parent GT (mLoad pipeline)
+;   2. Verify CR3 is a valid child GT
+;   3. Add parent GT to child's c-list (via Mint.Transfer)
+;   4. Add child GT to parent's oversight c-list
+;   5. Parent's c-list controls what child can access
+; The c-list IS the parental control — not a filter,
+; not a blocklist. The child can ONLY reach GTs in
+; their c-list, and parent controls that c-list.`,
+            'Hello': `; Family.Hello(target_GT) — greet any family member
+; Mum is a GT, not a method name. Hello works with ANY GT.
+LOAD   CR1, NS[28]      ; Load Family E-GT
+LOAD   CR2, NS[50]      ; target_GT — could be:
+                         ;   Mum's GT, Dad's GT, sibling's GT,
+                         ;   teacher's GT, friend's GT...
+                         ;   the GT carries the identity
+
+CALL   CR1              ; Family.Hello(CR2):
+;   1. mLoad validates target_GT (type, ver, seal, perms)
+;   2. Verify target is in caller's c-list
+;      (parent must have approved this contact)
+;   3. Send greeting/request to target
+;   4. Target receives via their own Family abstraction
+; Hello(Mum_GT) sends to Mum
+; Hello(Sibling_GT) sends to sibling
+; Same method, different GT — that's capability security`,
+            'Oversight': `; Family.Oversight — parent queries child activity
+LOAD   CR1, NS[28]      ; Load Family E-GT
+LOAD   CR2, NS[51]      ; Child GT
+
+CALL   CR1              ; Family.Oversight:
+;   1. Verify caller is parent (holds parent GT)
+;   2. Read child's abstraction usage log
+;   3. Report which GTs the child accessed
+;   4. Report fault counts on child's blocks
+; DR1 <- activity summary
+; Parent can then Mint.Revoke any GT to restrict access`,
+        },
+        'Schoolroom': {
+            'Join': `; Schoolroom.Join — student enters class
+LOAD   CR1, NS[29]      ; Load Schoolroom E-GT
+LOAD   CR2, NS[60]      ; Classroom GT (from student's c-list)
+                         ;   Parent must have placed this GT there
+
+CALL   CR1              ; Schoolroom.Join:
+;   1. Verify classroom GT is valid (mLoad)
+;   2. Verify student GT is in classroom's roster
+;   3. Mint.Create a session GT for this student
+;   4. Add lesson materials GTs to student's c-list`,
+            'Lesson': `; Schoolroom.Lesson — teacher posts lesson material
+LOAD   CR1, NS[29]      ; Load Schoolroom E-GT
+LOAD   CR2, NS[60]      ; Classroom GT
+LOAD   CR3, NS[70]      ; Lesson content GT (DATA object)
+
+CALL   CR1              ; Schoolroom.Lesson:
+;   1. Verify teacher GT has authority over classroom
+;   2. Memory.Allocate for lesson storage
+;   3. Mint.Create GT for lesson (X perm for students)
+;   4. Mint.Transfer lesson GT to each student's c-list`,
+            'Submit': `; Schoolroom.Submit — student submits work
+LOAD   CR1, NS[29]      ; Load Schoolroom E-GT
+LOAD   CR2, NS[71]      ; Work GT (student's DATA object)
+
+CALL   CR1              ; Schoolroom.Submit:
+;   1. Verify student is enrolled (has session GT)
+;   2. Mint.Create a read-only GT for the work
+;   3. Mint.Transfer work GT to teacher's c-list
+;   4. Student keeps their R+W copy, teacher gets R only`,
+            'Grade': `; Schoolroom.Grade — teacher grades submitted work
+LOAD   CR1, NS[29]      ; Load Schoolroom E-GT
+LOAD   CR2, NS[71]      ; Work GT (teacher's read copy)
+DWRITE DR1, #85         ; Grade: 85%
+
+CALL   CR1              ; Schoolroom.Grade:
+;   1. Verify teacher authority
+;   2. Memory.Allocate for grade record
+;   3. Mint.Create grade GT, transfer to student's c-list
+;   4. Student can LOAD the grade GT to see their score`,
+        },
+        'Friends': {
+            'Request': `; Friends.Request — send friend request (parent-gated)
+LOAD   CR1, NS[30]      ; Load Friends E-GT
+LOAD   CR2, NS[52]      ; Target peer GT
+
+CALL   CR1              ; Friends.Request:
+;   1. Verify target is in caller's namespace
+;   2. Create pending request (needs parent approval)
+;   3. Negotiate.Propose for parent+peer-parent approval
+;   4. Both parents must Negotiate.Approve before
+;      any capability sharing is possible`,
+            'Accept': `; Friends.Accept — accept friend request
+LOAD   CR1, NS[30]      ; Load Friends E-GT
+LOAD   CR2, NS[52]      ; Requester GT
+
+CALL   CR1              ; Friends.Accept:
+;   1. Verify pending request exists
+;   2. Verify both parents have approved (Negotiate)
+;   3. Mint.Create shared-space GT for both friends
+;   4. Transfer shared GT to both c-lists`,
+            'Share': `; Friends.Share — share capability with friend
+LOAD   CR1, NS[30]      ; Load Friends E-GT
+LOAD   CR2, NS[52]      ; Friend GT
+LOAD   CR3, NS[80]      ; GT to share (capability)
+
+CALL   CR1              ; Friends.Share:
+;   1. Verify friendship exists (both accepted)
+;   2. TPERM: restrict shared GT permissions
+;      (friend gets <= what sharer holds)
+;   3. Mint.Transfer restricted GT to friend's c-list
+;   4. Original GT unchanged in sharer's c-list`,
+            'Revoke': `; Friends.Revoke — revoke shared capability
+LOAD   CR1, NS[30]      ; Load Friends E-GT
+LOAD   CR2, NS[80]      ; GT to revoke
+
+CALL   CR1              ; Friends.Revoke:
+;   1. Mint.Revoke: increment version on NS entry
+;   2. All copies of this GT (in friend's c-list) die
+;   3. Friend's next mLoad hits version mismatch -> FAULT`,
+        },
+        'Tunnel': {
+            'Register': `; Tunnel.Register — identify this board to the IDE host
+; Replaces the hardwired B:02½ CALL_HOME boot step.
+; Sends the 23-byte call-home packet and awaits ACK.
+;
+; Packet layout (23 bytes):
+;   [0xCE11(2B) · board_type(1B) · fw_version(1B) ·
+;    HMAC-SHA256(4B) · UID(8B) ·
+;    boot_reason(1B) · last_fault(1B) · fault_NIA(4B)]
+;
+; DR1 = boot_reason  (0=cold, 1=warm, 2=fault-recovery)
+; DR2 = last_fault   (0 if no prior fault)
+; DR3 = fault_NIA    (0 if no prior fault)
+; DR0 ← 1 (IDE connected + ACK received) | 0 (offline)
+
+LOAD   CR1, NS[31]       ; Load Tunnel E-GT (resident, layer 1)
+DWRITE DR1, #0            ; boot_reason = 0 (cold boot)
+DWRITE DR2, #0            ; last_fault  = 0 (none)
+DWRITE DR3, #0x00000000   ; fault_NIA   = 0 (none)
+CALL   CR1                ; Tunnel.Register:
+;   1. Compose 23-byte packet from board ROM + DR args
+;   2. Transmit over UART to IDE bridge
+;   3. Await ACK frame within ≈500 ms timeout
+;   4. If ACK: IDE confirms UID + HMAC valid → DR0 ← 1
+;   5. If timeout: offline mode → DR0 ← 0, boot continues`,
+            'Send': `; Tunnel.Send — push a self-identifying media packet to the IDE
+; Every packet carries a 4-byte ASCII FourCC type tag so the
+; receiver knows what it holds without out-of-band agreement.
+; New tags are allocated without touching existing dispatch code.
+;
+; FourCC media tag registry (open — add tags as needed):
+;   TEXT = 0x54455854  UTF-8 text, 4 bytes/word
+;   VOIC = 0x564F4943  Voice audio, 4×8-bit PCM/word
+;   LUMP = 0x4C554D50  Lump binary header or fragment
+;   GTKN = 0x47544B4E  Golden Token (GT word + NS index)
+;   JPEG = 0x4A504547  JPEG image fragment (future)
+;   PDF_ = 0x50444620  PDF document fragment (future)
+;
+; DR1 = FourCC type tag
+; DR2 = payload word count (1–13)
+; DR3..DR(2+count) = payload words
+; DR0 ← 0 = queued · 0x01 = TX buffer overrun
+
+LOAD   CR1, NS[31]        ; Load Tunnel E-GT
+DWRITE DR1, #0x54455854   ; Type tag: TEXT (0x54455854 = "TEXT")
+DWRITE DR2, #3             ; 3 payload words
+DWRITE DR3, #0x48656C6C   ; "Hell"
+DWRITE DR4, #0x6F204D75   ; "o Mu"
+DWRITE DR5, #0x6D000000   ; "m\0\0\0"
+CALL   CR1                 ; Tunnel.Send:
+;   1. Frame: [type_tag · word_count · DR3..DR5]
+;   2. Transmit framed packet over UART
+;   3. Fire-and-forget — no ACK required
+; DR0 ← 0 = sent · 0x01 = overrun (drop this packet)`,
+            'Receive': `; Tunnel.Receive — wait for a message from the IDE host
+; Blocks the calling thread until data arrives or timeout.
+; Navana calls this in its main event loop to receive
+; upload commands, patch requests, and configuration data.
+;
+; DR1 = timeout in CPU steps (0 = wait forever)
+; DR0 ← received word count (0 = timeout, no data)
+; DR1 ← message type tag
+; DR2..DR(n+1) ← payload words
+
+LOAD   CR1, NS[31]        ; Load Tunnel E-GT
+DWRITE DR1, #5000          ; Timeout: 5 000 steps
+CALL   CR1                 ; Tunnel.Receive:
+;   1. Poll UART RX for an incoming framed packet
+;   2. On timeout: DR0 ← 0, RETURN
+;   3. Read header → DR1 = type_tag, DR0 = word_count
+;   4. Read up to 13 payload words into DR2..DR14
+;   5. Caller dispatches on DR1 type_tag`,
+            'Fault': `; Tunnel.Fault — report a fault with full semantic location
+; High-priority: bypasses the normal send queue.
+; Called by the fault handler before any recovery action.
+; IDE logs the full location in the Devices view for this board.
+;
+; DR1 = fault_code   (e.g. 0x10=PERM, 0x42=RANGE, 0x80=VERSION)
+; DR2 = ns_idx       — active namespace slot
+; DR3 = thread_gt    — NS index of the faulting thread
+; DR4 = abstr_idx    — NS slot of the executing abstraction
+; DR5 = method_idx   — method index within the abstraction
+; DR6 = instr_offset — instruction offset within the method
+
+LOAD   CR1, NS[31]        ; Load Tunnel E-GT
+DWRITE DR1, #0x42          ; Fault code: RANGE violation
+DWRITE DR2, #0x0000        ; Namespace: NS[0] (boot namespace)
+DWRITE DR3, #0x0001        ; Thread:    NS[1] (boot thread)
+DWRITE DR4, #0x0013        ; Abstraction: NS[19] — Loader
+DWRITE DR5, #0x0000        ; Method: 0 (Load)
+DWRITE DR6, #0x0003        ; Instruction offset: 3
+CALL   CR1                 ; Tunnel.Fault:
+;   1. Compose fault packet: [0xFA17 · fault_code · ns_idx · thread_gt · abstr_idx · method_idx · instr_offset]
+;   2. Transmit immediately (pre-empts TX queue — high priority)
+;   3. IDE records full fault location in Devices view
+;   4. Fire-and-forget — RETURN, caller handles recovery`,
+            'Fetch': `; Tunnel.Fetch — request and receive a lump from the IDE
+; Called by Loader when a NULL_CAP fault hits a cold slot.
+; Validates the incoming lump (magic, size, CRC) before
+; writing it to memory and updating the NS entry.
+;
+; CR2 = Memory W-GT (write-perm buffer ≥ expected_words)
+; DR1 = NS slot token (index of requested abstraction)
+; DR2 = expected lump size in words
+; DR0 ← 0 = installed · non-zero = error code
+
+LOAD   CR1, NS[31]        ; Load Tunnel E-GT
+LOAD   CR2, NS[7]          ; Load Memory W-GT (write destination)
+DWRITE DR1, #0x0025        ; Token: NS[37] — Browser abstraction
+DWRITE DR2, #64             ; Expected: 64 words (one slot)
+CALL   CR1                  ; Tunnel.Fetch:
+;   1. Transmit fetch request: [0xFE7C · token · expected_words]
+;   2. Await IDE response: lump header + data words (≤500 ms)
+;   3. Validate: magic=0x1F · size=DR2 · CRC-16 over all words
+;   4. Write validated words to CR2 base via mSave (W-perm)
+;   5. Update NS entry: base, limit, version, seal
+; DR0 ← 0 = lump installed · non-zero = error (timeout/CRC/size)`,
+            'Call': `; Tunnel.Call — forward a CALL through the tunnel to a remote capability
+; The "Hello Mum" primitive: the caller presents a remote GT and
+; Tunnel encodes it as a GTKN packet, transmits it, then blocks
+; awaiting the far-end RETURN.  From the caller's view this is one
+; Church instruction — apply an abstraction and receive a result.
+;
+; CALL(CONNECT(me, mymother)):
+;   1. me       = CR8 (Inform GT — the caller's thread GT)
+;   2. mymother = CR2 (Outform GT — remote service, F-bit set)
+;   3. Tunnel   = CR1 (E-GT — the tunnel itself is the channel)
+;
+; CR2 = remote GT (Outform type, F-bit set in NS word1[30])
+; DR0 ← far-end return value · non-zero on error / timeout
+
+LOAD   CR1, NS[31]        ; Load Tunnel E-GT
+LOAD   CR2, NS[55]        ; Load remote GT (mymother — F-bit=1)
+CALL   CR1                 ; Tunnel.Call:
+;   1. Read CR2 GT word and NS index
+;   2. Compose GTKN packet: [0x47544B4E · GT_word · ns_idx]
+;   3. Transmit over UART to IDE bridge
+;   4. IDE routes to far-end namespace via F-bit tunnel
+;   5. Far-end CALL executes; RETURN value relayed back
+;   6. DR0 ← far-end DR0 return value`,
+        },
+        'Negotiate': {
+            'Propose': `; Negotiate.Propose — request special grant
+; Dual-approval: parent AND teacher must both approve
+LOAD   CR1, NS[32]      ; Load Negotiate E-GT
+LOAD   CR2, NS[80]      ; Requested capability GT
+
+CALL   CR1              ; Negotiate.Propose:
+;   1. Create proposal record (Memory.Allocate)
+;   2. Mint.Create proposal GT for parent
+;   3. Mint.Create proposal GT for teacher
+;   4. Both must Negotiate.Approve before grant
+; DR1 <- proposal ID`,
+            'Approve': `; Negotiate.Approve — parent or teacher approves
+LOAD   CR1, NS[32]      ; Load Negotiate E-GT
+DWRITE DR1, #1          ; Proposal ID
+
+CALL   CR1              ; Negotiate.Approve:
+;   1. Verify caller is authorized approver
+;   2. Record approval (parent or teacher)
+;   3. If BOTH have approved:
+;      a. Mint.Create the requested GT
+;      b. Mint.Transfer to child's c-list
+;      c. Log grant for audit trail
+;   4. If only one approved: wait for other`,
+            'Reject': `; Negotiate.Reject — reject proposal
+LOAD   CR1, NS[32]      ; Load Negotiate E-GT
+DWRITE DR1, #1          ; Proposal ID
+
+CALL   CR1              ; Negotiate.Reject:
+;   1. Mark proposal as rejected
+;   2. Mint.Revoke proposal GTs
+;   3. Notify other approver of rejection`,
+            'Status': `; Negotiate.Status — check proposal state
+LOAD   CR1, NS[32]      ; Load Negotiate E-GT
+DWRITE DR1, #1          ; Proposal ID
+
+CALL   CR1              ; Negotiate.Status:
+; DR1 <- status: 0=pending, 1=parent_ok,
+;   2=teacher_ok, 3=both_approved, 4=rejected`,
+        },
+        'Editor': {
+            'Open': `; Editor.Open — open source file from namespace
+LOAD   CR1, NS[33]      ; Load Editor E-GT
+LOAD   CR2, NS[80]      ; File GT (DATA-domain object, R+W)
+                         ;   mLoad validates R perm for reading
+
+CALL   CR1              ; Editor.Open:
+;   1. mLoad CR2 (validates type, ver, seal, R perm)
+;   2. DREAD file contents from location (word0)
+;      up to limit (word1[16:0]) bytes
+;   3. Load into editor buffer
+;   4. File is a DATA object — Turing domain (R+W)`,
+            'Save': `; Editor.Save — save source to namespace
+LOAD   CR1, NS[33]      ; Load Editor E-GT
+
+CALL   CR1              ; Editor.Save:
+;   1. Get editor buffer contents
+;   2. If no existing slot: Memory.Allocate new DATA slot
+;   3. DWRITE buffer to mem[location] (W perm required)
+;   4. Recompute seal: CRC-16(word0, word1) for integrity
+;   5. Update word2 = (gt_seq << 25) | newCRC`,
+            'Load': `; Editor.Load — load source from NS slot into editor
+LOAD   CR1, NS[33]      ; Load Editor E-GT
+DWRITE DR1, #80         ; NS slot containing source
+
+CALL   CR1              ; Editor.Load:
+;   1. LOAD GT for NS[80] (needs L perm in c-list)
+;   2. mLoad validates: type, ver, seal, bounds
+;   3. DREAD contents into editor buffer
+;   4. Source is DATA domain — code is never Church domain`,
+            'Undo': `; Editor.Undo — undo last edit
+LOAD   CR1, NS[33]      ; Load Editor E-GT
+
+CALL   CR1              ; Editor.Undo:
+;   1. Pop previous state from undo stack
+;   2. Restore editor buffer
+;   3. Stack managed via Stack abstraction internally`,
+        },
+        'Assembler': {
+            'Assemble': `; Assembler.Assemble — source to machine code
+; Output is a DATA-domain object (code is DATA, not Church)
+LOAD   CR1, NS[34]      ; Load Assembler E-GT
+LOAD   CR2, NS[80]      ; Source GT (DATA object, R perm)
+
+CALL   CR1              ; Assembler.Assemble:
+;   1. DREAD source text from CR2's location
+;   2. Parse assembly mnemonics
+;   3. Encode each instruction as 32-bit word:
+;      opcode(5)|cond(4)|dst(4)|src(4)|imm(15)
+;   4. Memory.Allocate for output binary (new DATA slot)
+;   5. DWRITE binary to new slot
+;   6. Mint.Create GT for binary (R+X perms)
+;      Code is a DATA-domain object with X permission
+; CR2 <- binary GT (DATA domain, X perm for execution)`,
+            'Disassemble': `; Assembler.Disassemble — binary to assembly text
+LOAD   CR1, NS[34]      ; Load Assembler E-GT
+LOAD   CR2, NS[81]      ; Binary GT (DATA object, X perm)
+
+CALL   CR1              ; Assembler.Disassemble:
+;   1. DREAD binary words from CR2's location
+;   2. Decode each 32-bit instruction:
+;      opcode(5)|cond(4)|dst(4)|src(4)|imm(15)
+;   3. Generate assembly text
+;   4. Memory.Allocate for output text
+;   5. Mint.Create GT for text (R+W perms)
+; CR2 <- source text GT`,
+            'Validate': `; Assembler.Validate — check code validity
+LOAD   CR1, NS[34]      ; Load Assembler E-GT
+LOAD   CR2, NS[80]      ; Source GT
+
+CALL   CR1              ; Assembler.Validate:
+;   1. Parse source for syntax errors
+;   2. Check register references (CR0-15, DR0-15)
+;   3. Verify condition codes (EQ,NE,CS,CC,MI,PL,...)
+;   4. Check opcode encoding fits 5-bit field
+; DR1 <- 1 if valid, 0 if errors found
+; DR2 <- error count`,
+        },
+        'Debugger': {
+            'Step': `; Debugger.Step — single-step one instruction
+LOAD   CR1, NS[35]      ; Load Debugger E-GT
+
+CALL   CR1              ; Debugger.Step:
+;   1. Fetch instruction at current PC
+;   2. Decode: opcode(5)|cond(4)|dst(4)|src(4)|imm(15)
+;   3. Evaluate condition code against flags (N,Z,C,V)
+;   4. If condition met: execute instruction
+;   5. If LOAD/CALL: run full mLoad 7-step pipeline
+;   6. Update PC, flags, step counter
+;   7. Return state snapshot to IDE`,
+            'Run': `; Debugger.Run — run until halt or breakpoint
+LOAD   CR1, NS[35]      ; Load Debugger E-GT
+
+CALL   CR1              ; Debugger.Run:
+;   1. Loop: fetch-decode-execute
+;   2. Check breakpoint list each cycle
+;   3. If PC matches breakpoint: halt, report
+;   4. If FAULT: halt, report fault type and PC
+;   5. Max steps limit prevents infinite loops`,
+            'Breakpoint': `; Debugger.Breakpoint — set/clear breakpoint
+LOAD   CR1, NS[35]      ; Load Debugger E-GT
+DWRITE DR1, #0x0040     ; Address to break at
+
+CALL   CR1              ; Debugger.Breakpoint:
+;   1. If address already has breakpoint: clear it
+;   2. If no breakpoint: set one at DR1
+;   3. Breakpoints stored in debugger's DATA slot`,
+            'Inspect': `; Debugger.Inspect — inspect register or memory
+LOAD   CR1, NS[35]      ; Load Debugger E-GT
+DWRITE DR1, #0x0100     ; Memory address to inspect
+
+CALL   CR1              ; Debugger.Inspect:
+;   1. If address is in NS table range (>= 0xFD00):
+;      read NS entry (3 words), decode fields
+;   2. If address is in data memory:
+;      DREAD the word at that address
+;   3. Return decoded view (GT fields, NS entry fields)
+; DR1 <- value at inspected address`,
+        },
+        'Deployer': (function() {
+            const b = getSelectedBoard();
+            const isTi60 = b === 'ti60-f225';
+            const chip     = isTi60 ? 'Efinix Ti60F225' : 'Gowin GW2AR-18';
+            const brdName  = isTi60 ? 'Ti60 F225' : 'Tang Nano 20K';
+            const uartNote = isTi60 ? ';   3. UART via FTDI FT232H USB bridge (50MHz clock)' : ';   3. UART TX on pin 69 -> BL616 USB bridge';
+            const clkNote  = isTi60 ? ';   5. 50MHz clock begins instruction execution' : ';   5. 27MHz clock begins instruction execution';
+            const bootLine = isTi60 ? `;   2. ${brdName} begins executing from boot vector` : `;   2. ${brdName} begins executing from boot vector`;
+            return {
+                'Build': `; Deployer.Build — compile binary for ${brdName}\nLOAD   CR1, NS[36]      ; Load Deployer E-GT\nLOAD   CR2, NS[81]      ; Binary GT (DATA object)\n\nCALL   CR1              ; Deployer.Build:\n;   1. DREAD binary from CR2's location\n;   2. Add boot vector and NS table initialization\n;   3. Package for FPGA: ${chip} bitstream\n;   4. Memory.Allocate for deployment image\n;   5. Mint.Create GT for image\n; CR2 <- deployment image GT`,
+                'Upload': `; Deployer.Upload — send to ${brdName} via UART\nLOAD   CR1, NS[36]      ; Load Deployer E-GT\n\nCALL   CR1              ; Deployer.Upload:\n;   1. LOAD UART GT from c-list (NS[11])\n;   2. For each word in deployment image:\n;      SAVE word to UART (S perm on UART GT)\n${uartNote}\n;   4. Wait for ACK after each block`,
+                'Verify': `; Deployer.Verify — verify upload integrity\nLOAD   CR1, NS[36]      ; Load Deployer E-GT\n\nCALL   CR1              ; Deployer.Verify:\n;   1. Request readback from ${brdName} via UART\n;   2. LOAD bytes from UART (L perm)\n;   3. Compare against original image\n;   4. Compute checksum match\n; DR1 <- 1 if verified, 0 if mismatch`,
+                'Boot': `; Deployer.Boot — boot the FPGA\nLOAD   CR1, NS[36]      ; Load Deployer E-GT\n\nCALL   CR1              ; Deployer.Boot:\n;   1. Send boot command via UART\n${bootLine}\n;   3. FPGA initializes NS table (slots 0-45)\n;   4. Boot -> Salvation -> Navana (same as simulator)\n${clkNote}`,
+            };
+        })(),
+        'Browser': {
+            'Navigate': `; Browser.Navigate — go to GT-addressed site
+; No URLs, no DNS — only capability-addressed resources
+LOAD   CR1, NS[37]      ; Load Browser E-GT [L,E]
+LOAD   CR2, NS[90]      ; Site GT from child's c-list
+                         ;   Parent placed this GT in the c-list
+                         ;   Child can ONLY reach sites in c-list
+
+CALL   CR1              ; Browser.Navigate:
+;   1. mLoad validates site GT (type, ver, seal, L perm)
+;   2. If F-bit=1: route through Tunnel (encrypted)
+;   3. LOAD page content via L perm on site GT
+;   4. Render content in display
+; No ambient authority — no way to reach unlisted sites`,
+            'Back': `; Browser.Back — navigate back
+LOAD   CR1, NS[37]      ; Load Browser E-GT
+CALL   CR1              ; Pop previous site GT from history stack`,
+            'Bookmark': `; Browser.Bookmark — save GT bookmark to c-list
+LOAD   CR1, NS[37]      ; Load Browser E-GT
+LOAD   CR2, NS[90]      ; Site GT to bookmark
+
+CALL   CR1              ; Browser.Bookmark:
+;   1. Verify GT is valid (mLoad)
+;   2. SAVE GT to bookmark c-list (S perm)
+;   3. Bookmark is just a GT in the c-list`,
+            'Search': `; Browser.Search — search within GT scope
+LOAD   CR1, NS[37]      ; Load Browser E-GT [L,E]
+LOAD   CR2, NS[91]      ; Search scope GT (e.g. library site)
+
+CALL   CR1              ; Browser.Search:
+;   1. LOAD search index via L perm on scope GT
+;   2. Results are GTs in the scope's c-list
+;   3. Child can only see results parent approved`,
+        },
+        'Messenger': {
+            'Send': `; Messenger.Send — send message to approved contact
+LOAD   CR1, NS[38]      ; Load Messenger E-GT [L,E]
+LOAD   CR2, NS[50]      ; Recipient GT (must be in c-list)
+LOAD   CR3, NS[85]      ; Message content GT (DATA object)
+
+CALL   CR1              ; Messenger.Send:
+;   1. Verify recipient GT is in caller's c-list
+;      (parent must have approved this contact)
+;   2. If F-bit=1: route via Tunnel (encrypted)
+;   3. SAVE message to recipient's inbox c-list
+;   4. Signal recipient via DijkstraFlag`,
+            'Receive': `; Messenger.Receive — read incoming message
+LOAD   CR1, NS[38]      ; Load Messenger E-GT [L,E]
+
+CALL   CR1              ; Messenger.Receive:
+;   1. LOAD from inbox c-list (L perm)
+;   2. Dequeue oldest message GT
+;   3. If no messages: Scheduler.Wait on inbox event
+; CR2 <- message content GT (DATA object)`,
+            'Contacts': `; Messenger.Contacts — list parent-approved contacts
+LOAD   CR1, NS[38]      ; Load Messenger E-GT [L,E]
+
+CALL   CR1              ; Messenger.Contacts:
+;   1. Walk the contact c-list
+;   2. Each contact is a GT placed by parent
+;   3. Return count and list of valid GTs
+; DR1 <- number of approved contacts`,
+            'Block': `; Messenger.Block — block a contact
+LOAD   CR1, NS[38]      ; Load Messenger E-GT
+LOAD   CR2, NS[52]      ; Contact GT to block
+
+CALL   CR1              ; Messenger.Block:
+;   1. Mint.Revoke the contact GT (version bump)
+;   2. Contact can no longer send messages
+;   3. Parent notified via Family.Oversight`,
+        },
+        'Photos': {
+            'View': `; Photos.View — view a photo
+LOAD   CR1, NS[39]      ; Load Photos E-GT [L,E]
+LOAD   CR2, NS[85]      ; Photo GT (DATA object)
+
+CALL   CR1              ; Photos.View:
+;   1. mLoad validates photo GT (type, ver, seal, L perm)
+;   2. DREAD photo data from location (word0)
+;   3. Render on Display (via Display.Write with S perm)`,
+            'Share': `; Photos.Share — share photo with GT
+LOAD   CR1, NS[39]      ; Load Photos E-GT
+LOAD   CR2, NS[85]      ; Photo GT
+LOAD   CR3, NS[50]      ; Recipient GT
+
+CALL   CR1              ; Photos.Share:
+;   1. TPERM: create read-only copy of photo GT (L only)
+;   2. Mint.Transfer restricted GT to recipient's c-list
+;   3. Recipient can View but not modify`,
+            'Upload': `; Photos.Upload — upload new photo
+LOAD   CR1, NS[39]      ; Load Photos E-GT
+LOAD   CR2, NS[86]      ; Photo data GT (DATA object, R+W)
+
+CALL   CR1              ; Photos.Upload:
+;   1. Memory.Allocate for photo storage
+;   2. DWRITE photo data to new slot
+;   3. Mint.Create GT with L perm (view-only)
+;   4. Compute seal for integrity verification`,
+            'Album': `; Photos.Album — manage photo album
+LOAD   CR1, NS[39]      ; Load Photos E-GT
+
+CALL   CR1              ; Photos.Album:
+;   1. Walk album c-list (each entry is a photo GT)
+;   2. Return count and metadata
+; DR1 <- album entry count`,
+        },
+        'Social': {
+            'Post': `; Social.Post — post content to feed
+LOAD   CR1, NS[40]      ; Load Social E-GT [L,E]
+LOAD   CR2, NS[85]      ; Content GT (DATA object)
+
+CALL   CR1              ; Social.Post:
+;   1. Memory.Allocate for post storage
+;   2. DWRITE content to new slot
+;   3. Mint.Create GT for post (L perm for followers)
+;   4. Distribute post GT to followers' feed c-lists`,
+            'Read': `; Social.Read — read feed
+LOAD   CR1, NS[40]      ; Load Social E-GT [L,E]
+
+CALL   CR1              ; Social.Read:
+;   1. Walk feed c-list (each entry is a post GT)
+;   2. LOAD post content via L perm on each GT
+; CR2 <- next feed entry GT`,
+            'Follow': `; Social.Follow — follow an account
+LOAD   CR1, NS[40]      ; Load Social E-GT
+LOAD   CR2, NS[55]      ; Account GT (must be in c-list)
+
+CALL   CR1              ; Social.Follow:
+;   1. Verify account GT is parent-approved
+;   2. Request follow via Negotiate (if needed)
+;   3. Account's posts will appear in feed c-list`,
+            'Feed': `; Social.Feed — get feed items
+LOAD   CR1, NS[40]      ; Load Social E-GT
+
+CALL   CR1              ; Social.Feed:
+;   1. Count entries in feed c-list
+; DR1 <- number of feed items available`,
+        },
+        'Video': {
+            'Watch': `; Video.Watch — play a video
+LOAD   CR1, NS[41]      ; Load Video E-GT [L,E]
+LOAD   CR2, NS[85]      ; Video GT (DATA object)
+
+CALL   CR1              ; Video.Watch:
+;   1. mLoad validates video GT (L perm required)
+;   2. DREAD video data from location
+;   3. If F-bit=1: stream via Tunnel (encrypted)
+;   4. Render on Display via S perm`,
+            'Search': `; Video.Search — search videos within GT scope
+LOAD   CR1, NS[41]      ; Load Video E-GT
+LOAD   CR2, NS[91]      ; Search scope GT (library/channel)
+
+CALL   CR1              ; Video.Search:
+;   1. LOAD search index via L perm on scope GT
+;   2. Results filtered to parent-approved GTs only
+;   3. Results placed in caller's c-list`,
+            'Playlist': `; Video.Playlist — manage playlist
+LOAD   CR1, NS[41]      ; Load Video E-GT
+
+CALL   CR1              ; Video.Playlist:
+;   1. Walk playlist c-list
+;   2. Each entry is a video GT
+; DR1 <- playlist length`,
+            'Share': `; Video.Share — share video GT
+LOAD   CR1, NS[41]      ; Load Video E-GT
+LOAD   CR2, NS[85]      ; Video GT
+LOAD   CR3, NS[50]      ; Recipient GT
+
+CALL   CR1              ; Video.Share:
+;   1. TPERM: restrict to L-only (view but not copy)
+;   2. Mint.Transfer to recipient's c-list`,
+        },
+        'Email': {
+            'Compose': `; Email.Compose — compose and send email
+LOAD   CR1, NS[42]      ; Load Email E-GT [L,E]
+LOAD   CR2, NS[50]      ; Recipient GT (must be in contacts c-list)
+LOAD   CR3, NS[85]      ; Body GT (DATA object)
+
+CALL   CR1              ; Email.Compose:
+;   1. Verify recipient GT in contacts c-list
+;   2. Memory.Allocate for email storage
+;   3. DWRITE body to new slot
+;   4. Mint.Create email GT
+;   5. If F-bit=1: route via Tunnel (encrypted)
+;   6. SAVE to recipient's inbox c-list`,
+            'Read': `; Email.Read — read incoming email
+LOAD   CR1, NS[42]      ; Load Email E-GT [L,E]
+
+CALL   CR1              ; Email.Read:
+;   1. LOAD from inbox c-list (L perm)
+;   2. Dequeue oldest email GT
+;   3. DREAD email body from GT's location
+; CR2 <- email content GT`,
+            'Reply': `; Email.Reply — reply to an email
+LOAD   CR1, NS[42]      ; Load Email E-GT
+LOAD   CR2, NS[86]      ; Original email GT (for thread)
+LOAD   CR3, NS[85]      ; Reply body GT (DATA object)
+
+CALL   CR1              ; Email.Reply:
+;   1. Extract sender GT from original email
+;   2. Verify sender is still in contacts c-list
+;   3. Memory.Allocate for reply
+;   4. Link reply to original (thread chain via GTs)
+;   5. Send via same path as Compose`,
+            'Contacts': `; Email.Contacts — list email contacts
+LOAD   CR1, NS[42]      ; Load Email E-GT
+
+CALL   CR1              ; Email.Contacts:
+;   1. Walk email contacts c-list
+;   2. Each contact is a GT placed by parent
+; DR1 <- number of email contacts`,
+        },
+        'GC': {
+            'Scan': `; GC.Scan — mark live entries via G-bit
+; PP250 deterministic GC with bidirectional G-bit
+; G-bit in word1[29] of each NS entry
+LOAD   CR1, NS[44]      ; Load GC E-GT
+
+CALL   CR1              ; GC.Scan:
+;   1. Walk all 16 CRs (CR0-CR15):
+;      for each valid CR with a GT:
+;        extract index from GT bits [24:8]
+;        read NS[index].word1
+;        set G-bit (word1[29] = current polarity)
+;   2. Walk all c-list entries reachable from CRs:
+;      for each GT in c-list:
+;        set G-bit on referenced NS entry
+;   3. Any entry NOT marked is garbage
+; mLoad step 7 also resets G-bit on every access`,
+            'Identify': `; GC.Identify — find garbage entries
+LOAD   CR1, NS[44]      ; Load GC E-GT
+
+CALL   CR1              ; GC.Identify:
+;   1. Scan NS table (slots 46..nsCount):
+;      read word1[29] (G-bit) for each entry
+;      if G-bit != current polarity: entry is garbage
+;   2. Build garbage list
+; DR1 <- number of garbage entries found
+; Skip boot slots 0-45 (always live)`,
+            'Clear': `; GC.Clear — zero garbage memory
+LOAD   CR1, NS[44]      ; Load GC E-GT
+
+CALL   CR1              ; GC.Clear:
+;   1. For each garbage entry from Identify:
+;      zero word0 (location = 0)
+;      zero word1 (limit/flags = 0)
+;      preserve word2 (version stays for stale GT detection)
+;   2. Memory at old locations now free
+;   3. Slots available for Memory.Allocate reuse
+; DR1 <- number of entries cleared`,
+            'Flip': `; GC.Flip — invert GC polarity
+LOAD   CR1, NS[44]      ; Load GC E-GT
+
+CALL   CR1              ; GC.Flip:
+;   1. Toggle polarity flag (0 -> 1 or 1 -> 0)
+;   2. After flip, ALL entries appear as garbage
+;      until next Scan marks live ones
+;   3. This enables the bidirectional GC cycle:
+;      Scan(polarity=0) -> Identify -> Clear
+;      Flip
+;      Scan(polarity=1) -> Identify -> Clear
+;      Flip ... (repeat)`,
+        },
+        'Thread': {
+            'switchTo': `; Thread.switchTo(thread_GT) — context switch to target thread
+; CR0 holds Thread GT with E perm (obtained from Scheduler c-list)
+TPERM  CR0, E           ; verify E perm on thread GT
+CHANGE AL, CR0, CR0, #0 ; CHANGE: save calling thread context into
+                         ;   its lump (DR0-15, PC, FLAGS, STO, CR12,
+                         ;   CR14, CR15), then restore target thread
+                         ;   context from its lump and resume at
+                         ;   saved PC. CR0 indexes the thread c-list.
+; After CHANGE: execution continues in the target thread`,
+            'Kill': `; Thread.Kill(thread_GT) — terminate target thread
+; CR1 holds target Thread GT (E perm)
+TPERM  CR1, E           ; verify E perm — must hold thread GT
+CALL   CR_mem, #Free    ; Memory.Free(thread_GT.lumpBase) —
+                         ;   release thread lump back to allocator
+CALL   CR_mint, #Revoke ; Mint.Revoke(thread_GT) —
+                         ;   increment gt_seq in NS entry;
+                         ;   all live copies of the GT instantly
+                         ;   become version-mismatched (dead)
+; Thread is now fully terminated: lump freed, GT revoked`,
+            'Compile': `; Thread.Compile(f_GT) — create a new thread, f is the start abstraction
+; CR1 holds f_GT (E perm) — the initial abstraction to run
+TPERM  CR1, E           ; verify E perm on start abstraction
+CALL   CR_mem, #Alloc   ; Memory.Allocate(lumpSize) ->
+                         ;   lump: [GT zone 12w][LIFO stack][heap][DR 16w]
+CALL   CR_mint, #Create ; Mint.Create(Inform, lumpSize, perms=0) ->
+                         ;   CR12 of new thread (zero-perm Inform GT)
+                         ;   word0_location = lump base
+                         ;   word0_limit    = lumpSize - 1
+DWRITE DR1, lump[0]     ; store f_GT into new thread's GT zone word 0
+                         ;   (CR0 of the new thread = first-call slot)
+; Returns: new Thread GT — call Thread.switchTo to begin execution`,
+        },
+        'Boot.Thread': {
+            'run': `; Boot.Thread.run — B:02 INIT_THRD boot step (Slot 1)
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+; This method IS the thread — it has no entry point.
+; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+B:02  INIT_THRD
+      GT12 ← createGT(Slot=1, perms=[none], type=Inform)
+      entry ← mLoad(GT12)       ; load NS entry for Slot 1
+      CR12 ← { word0=GT12, word1=entry.base,
+               word2=entry.word1_limit, word3=entry.seals }
+      ; CR12 = Thread stack — Priv zone, zero perms
+      ; Informs-only: cannot be used for direct CALL  ◄── see below
+
+; ── What does the last line mean? ─────────────────
+;
+; CR12 holds an Inform GT: perms=[none] means no E-bit.
+; In the Church Machine, CALL requires E perm on the GT
+; in CR6. CR12 holds the thread stack capability,
+; not an *entry point*. It is an Inform — zero perms —
+; and also encodes the thread lump bounds for stack checks.
+;
+; The thread does NOT run by being invoked.
+; It runs because it IS the hardware execution context:
+;   - The STEP controller advances PC each cycle through
+;     the thread's code lump, unconditionally.
+;   - No CALL instruction is needed; the thread simply is.
+;
+; To switch threads: Thread.switchTo(thread_GT)
+;   — that requires E perm on the *Thread GT* (not CR12),
+;     and uses CHANGE to save/restore full register state.
+;
+; An Inform is a capability with zero permissions.
+; It can be passed, stored, and compared, but never used
+; to invoke computation. The thread stack tells the
+; hardware where the thread lump lives — and encodes lump bounds.`,
+        },
+    };
+    const base = Object.assign({}, examples[abs.name] || {});
+    for (const m of abs.methods) {
+        const key = `${abs.index}:${m}`;
+        if (userMethodData[key] && userMethodData[key].example) {
+            base[m] = userMethodData[key].example;
+        }
+    }
+    return base;
+}
+

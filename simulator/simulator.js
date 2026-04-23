@@ -529,7 +529,7 @@ class ChurchSimulator {
     reset() {
         this.cr = [];
         for (let i = 0; i < 16; i++) {
-            this.cr[i] = { word0: 0, word1: 0, word2: 0, word3: 0, word4: 0, m: 0 };
+            this.cr[i] = { word0: 0, word1: 0, word2: 0, word3: 0, m: 0 };
         }
 
         this.dr = new Array(16).fill(0);
@@ -1927,7 +1927,7 @@ class ChurchSimulator {
     }
 
     _clearCR(crIdx) {
-        this.cr[crIdx] = { word0: 0, word1: 0, word2: 0, word3: 0, word4: 0, m: 0 };
+        this.cr[crIdx] = { word0: 0, word1: 0, word2: 0, word3: 0, m: 0 };
         if (crIdx <= 11 && crIdx !== 6) {
             const threadBase = this.cr[12] && this.cr[12].word1;
             if (threadBase) {
@@ -1994,30 +1994,8 @@ class ChurchSimulator {
         return false;
     }
 
-    _clearMWindow(crIdx, writeBack = true) {
-        // DEPRECATED (writeBack=true path).
-        // Legacy unchecked round-trip: copies DR11–DR15 back to CRn (all 5 words).
-        // This path is no longer correct for any CR after Task #444 because DR14/DR15
-        // semantics changed: DR14 now carries the precomputed integrity token and
-        // DR15 carries the advisory seals word, so word3/word4 slots written below
-        // would contain stale integrity/seals data rather than the original capability
-        // words.  For CR15 specifically, commits MUST go through _mwinWriteback()
-        // (three-gate check; hardware/ret.py Task #440).  For other CRs the caller
-        // is responsible for knowing whether writeBack is still appropriate.
-        // All existing callers in this file use writeBack=false (they only need the
-        // M-bit cleared); the hard guard below prevents accidental CR15 misuse.
-        if (writeBack && crIdx === 15) {
-            throw new Error('[SIM] _clearMWindow(15, writeBack=true): CR15 commits must go through _mwinWriteback() — legacy unchecked path is not safe for CR15 after Task #444');
-        }
-        const cr = this.cr[crIdx];
-        if (writeBack) {
-            cr.word0 = this.dr[11] >>> 0;
-            cr.word1 = this.dr[12] >>> 0;
-            cr.word2 = this.dr[13] >>> 0;
-            cr.word3 = this.dr[14] >>> 0;  // legacy: holds integrity token post-Task#444, not word3 slot
-            cr.word4 = this.dr[15] >>> 0;  // legacy: holds seals word post-Task#444, not word4 slot
-        }
-        cr.m = 0;
+    _clearMWindow(crIdx) {
+        this.cr[crIdx].m = 0;
     }
 
     _resetAllMBits() {
@@ -3607,7 +3585,7 @@ class ChurchSimulator {
         this._setMWindow(crIdx);
         const info = this.parseAbstractGT(this.dr[11]);
         if (!info.R) {
-            this._clearMWindow(crIdx, false);
+            this._clearMWindow(crIdx);
             this.fault('PERM_R', `DREAD: Abstract GT lacks R permission`);
             return null;
         }
@@ -3617,7 +3595,7 @@ class ChurchSimulator {
                 const ledIdx = info.device_data;
                 const value  = (this.ledBits >>> ledIdx) & 1;
                 this._writeDR(drIdx, value);
-                this._clearMWindow(crIdx, false);
+                this._clearMWindow(crIdx);
                 const label = this._abstractLedLabel(ledIdx);
                 const desc  = `DREAD DR${drIdx} ← ${value} [${label} = ${value ? 'ON' : 'OFF'}]`;
                 this.output += desc + '\n';
@@ -3630,13 +3608,13 @@ class ChurchSimulator {
             if (info.device_class === ChurchSimulator.DEVICE_CLASS_UART) {
                 const regIdx = info.device_data;
                 if (regIdx > 2) {
-                    this._clearMWindow(crIdx, false);
+                    this._clearMWindow(crIdx);
                     this.fault('INVALID_OP', `DREAD: UART device_data=${regIdx} out of range [0..2]`);
                     return null;
                 }
                 const value = this.uartRegs[regIdx] >>> 0;
                 this._writeDR(drIdx, value);
-                this._clearMWindow(crIdx, false);
+                this._clearMWindow(crIdx);
                 const regName = ['TX', 'STATUS', 'RX'][regIdx];
                 const desc = `DREAD DR${drIdx} ← ${value} [UART.${regName}]`;
                 this.output += desc + '\n';
@@ -3649,13 +3627,13 @@ class ChurchSimulator {
             if (info.device_class === ChurchSimulator.DEVICE_CLASS_BUTTON) {
                 const regIdx = info.device_data;
                 if (regIdx !== 0) {
-                    this._clearMWindow(crIdx, false);
+                    this._clearMWindow(crIdx);
                     this.fault('INVALID_OP', `DREAD: Button device_data=${regIdx} out of range [0..0]`);
                     return null;
                 }
                 const value = this.buttonState >>> 0;
                 this._writeDR(drIdx, value);
-                this._clearMWindow(crIdx, false);
+                this._clearMWindow(crIdx);
                 const desc = `DREAD DR${drIdx} ← 0x${value.toString(16).toUpperCase()} [Button.state]`;
                 this.output += desc + '\n';
                 this.pc++;
@@ -3667,13 +3645,13 @@ class ChurchSimulator {
             if (info.device_class === ChurchSimulator.DEVICE_CLASS_TIMER) {
                 const regIdx = info.device_data;
                 if (regIdx > 4) {
-                    this._clearMWindow(crIdx, false);
+                    this._clearMWindow(crIdx);
                     this.fault('INVALID_OP', `DREAD: Timer device_data=${regIdx} out of range [0..4]`);
                     return null;
                 }
                 const value = this.timerRegs[regIdx] >>> 0;
                 this._writeDR(drIdx, value);
-                this._clearMWindow(crIdx, false);
+                this._clearMWindow(crIdx);
                 const regName = ['TICKS_LO', 'TICKS_HI', 'TOD_EPOCH', 'ALARM_CMP', 'CTL'][regIdx];
                 const desc = `DREAD DR${drIdx} ← ${value} [Timer.${regName}]`;
                 this.output += desc + '\n';
@@ -3684,7 +3662,7 @@ class ChurchSimulator {
                 ]};
             }
         }
-        this._clearMWindow(crIdx, false);
+        this._clearMWindow(crIdx);
         this.fault('INVALID_OP', `DREAD: Abstract GT ab_type=0x${info.ab_type.toString(16).toUpperCase()} device_class=0x${info.device_class.toString(16).toUpperCase()} not handled`);
         return null;
     }
@@ -3694,7 +3672,7 @@ class ChurchSimulator {
         this._setMWindow(crIdx);
         const info = this.parseAbstractGT(this.dr[11]);
         if (!info.W) {
-            this._clearMWindow(crIdx, false);
+            this._clearMWindow(crIdx);
             this.fault('PERM_W', `DWRITE: Abstract GT lacks W permission`);
             return null;
         }
@@ -3719,7 +3697,7 @@ class ChurchSimulator {
                         }
                     }
                 }
-                this._clearMWindow(crIdx, false);
+                this._clearMWindow(crIdx);
                 const label = this._abstractLedLabel(ledIdx);
                 const desc  = `DWRITE DR${drIdx} → ${label} ← ${value} (${value & 1 ? 'ON' : 'OFF'})`;
                 this.output += desc + '\n';
@@ -3732,13 +3710,13 @@ class ChurchSimulator {
             if (info.device_class === ChurchSimulator.DEVICE_CLASS_UART) {
                 const regIdx = info.device_data;
                 if (regIdx > 2) {
-                    this._clearMWindow(crIdx, false);
+                    this._clearMWindow(crIdx);
                     this.fault('INVALID_OP', `DWRITE: UART device_data=${regIdx} out of range [0..2]`);
                     return null;
                 }
                 const value = this.dr[drIdx] >>> 0;
                 this.uartRegs[regIdx] = value;
-                this._clearMWindow(crIdx, false);
+                this._clearMWindow(crIdx);
                 const regName = ['TX', 'STATUS', 'RX'][regIdx];
                 const desc = `DWRITE DR${drIdx} → UART.${regName} ← ${value}`;
                 this.output += desc + '\n';
@@ -3751,13 +3729,13 @@ class ChurchSimulator {
             if (info.device_class === ChurchSimulator.DEVICE_CLASS_TIMER) {
                 const regIdx = info.device_data;
                 if (regIdx > 4) {
-                    this._clearMWindow(crIdx, false);
+                    this._clearMWindow(crIdx);
                     this.fault('INVALID_OP', `DWRITE: Timer device_data=${regIdx} out of range [0..4]`);
                     return null;
                 }
                 const value = this.dr[drIdx] >>> 0;
                 this.timerRegs[regIdx] = value;
-                this._clearMWindow(crIdx, false);
+                this._clearMWindow(crIdx);
                 const regName = ['TICKS_LO', 'TICKS_HI', 'TOD_EPOCH', 'ALARM_CMP', 'CTL'][regIdx];
                 const desc = `DWRITE DR${drIdx} → Timer.${regName} ← ${value}`;
                 this.output += desc + '\n';
@@ -3768,7 +3746,7 @@ class ChurchSimulator {
                 ]};
             }
         }
-        this._clearMWindow(crIdx, false);
+        this._clearMWindow(crIdx);
         this.fault('INVALID_OP', `DWRITE: Abstract GT ab_type=0x${info.ab_type.toString(16).toUpperCase()} device_class=0x${info.device_class.toString(16).toUpperCase()} not handled`);
         return null;
     }
@@ -3794,7 +3772,7 @@ class ChurchSimulator {
                 }
                 this.ledMode = 'program';
                 this._writeDR(1, ledResult);
-                this._clearMWindow(crIdx, false);   // RETURN resets M anyway; writeback idempotent
+                this._clearMWindow(crIdx);   // RETURN resets M anyway; writeback idempotent
                 const label = this._abstractLedLabel(ledIdx);
                 const desc  = `CALL ${label}.${METHOD_NAMES[method]} → DR1=${ledResult}`;
                 this.output += desc + '\n';
@@ -3805,7 +3783,7 @@ class ChurchSimulator {
                 ]};
             }
         }
-        this._clearMWindow(crIdx, false);
+        this._clearMWindow(crIdx);
         const abTypeHex = info.ab_type.toString(16).toUpperCase();
         const dcHex     = info.device_class.toString(16).toUpperCase();
         this.fault('INVALID_OP', `CALL: Abstract GT (ab_type=0x${abTypeHex} device_class=0x${dcHex}) has no CALL methods — use DREAD/DWRITE`);

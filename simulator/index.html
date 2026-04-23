@@ -26,7 +26,14 @@
     })();
     </script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a1a'/%3E%3Ctext x='16' y='23' font-family='serif' font-size='22' font-weight='bold' fill='%23daa520' text-anchor='middle'%3E%CE%BB%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=20260422g">
+    <link rel="stylesheet" href="styles-base.css?v=20260423">
+    <link rel="stylesheet" href="styles-toolbar.css?v=20260423">
+    <link rel="stylesheet" href="styles-editor.css?v=20260423">
+    <link rel="stylesheet" href="styles-dashboard.css?v=20260423">
+    <link rel="stylesheet" href="styles-lumps.css?v=20260423">
+    <link rel="stylesheet" href="styles-gatelog.css?v=20260423">
+    <link rel="stylesheet" href="styles-fault.css?v=20260423">
+    <link rel="stylesheet" href="styles-tools.css?v=20260423">
     <style>
         .app-loading {
             position: fixed; inset: 0; z-index: 99999;
@@ -1388,7 +1395,17 @@
     <script async src="english_loops_tutorial.js"></script>
     <script async src="english_string_tutorial.js"></script>
     <script async src="builder.js"></script>
-    <script src="app.js"></script>
+    <script src="app-shell.js"></script>
+    <script src="app-tools.js"></script>
+    <script src="app-cr-display.js"></script>
+    <script src="app-cr-detail.js"></script>
+    <script src="app-memory.js"></script>
+    <script src="app-abstractions.js"></script>
+    <script src="app-lumps.js"></script>
+    <script src="app-absdetail.js"></script>
+    <script src="app-run.js"></script>
+    <script src="app-compile.js"></script>
+    <script src="app-misc.js"></script>
 <div id="lumpTypeSelectorModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeLumpTypeSelector()">
     <div class="modal-dialog lump-type-selector-dialog">
         <div class="modal-title">Add LUMP — Choose Type</div>
