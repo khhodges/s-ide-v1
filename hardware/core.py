@@ -357,7 +357,12 @@ class ChurchCore(Elaboratable):
             with m.Case(ChurchOpcode.SAVE):
                 m.d.comb += required_perms.eq(0)
             with m.Case(ChurchOpcode.CALL):
-                m.d.comb += required_perms.eq(PERM_MASK_E)
+                # Abstract GTs bypass E-perm: the call FSM dispatches to M_FETCH_NS.
+                hw_perm_gt_view = View(GT_LAYOUT, perm_gt_sig)
+                with m.If(hw_perm_gt_view.gt_type == GT_TYPE_ABSTRACT):
+                    m.d.comb += required_perms.eq(0)
+                with m.Else():
+                    m.d.comb += required_perms.eq(PERM_MASK_E)
             if not self.iot_profile:
                 with m.Case(ChurchOpcode.SWITCH):
                     m.d.comb += required_perms.eq(PERM_MASK_L)
