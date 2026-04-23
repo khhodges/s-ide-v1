@@ -436,6 +436,16 @@ class CTMMCapCore(Elaboratable):
         mwin_fault_sig  = Signal()
         mwin_fault_type = Signal(4)
 
+        # Unconditional defaults — ensures no latch inference in synthesis.
+        # FSM states selectively override these via m.d.comb += within each state.
+        m.d.comb += [
+            mwin_cr_wr_en.eq(0),
+            mwin_cr_wr_data.eq(0),
+            mwin_m_clear_en.eq(0),
+            mwin_fault_sig.eq(0),
+            mwin_fault_type.eq(0),
+        ]
+
         m.d.comb += [
             u_regs.cr_wr_addr.eq(
                 Mux(mwin_cr_wr_en, CR_NAMESPACE,
