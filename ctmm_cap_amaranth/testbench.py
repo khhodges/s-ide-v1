@@ -11,6 +11,12 @@ def build_gt(index, perms, gt_type=GT_TYPE_INFORM, version=0):
     return (gt_type & 0x3) | ((perms & 0x3F) << 2) | ((index & 0x1FFFF) << 8) | ((version & 0x7F) << 25)
 
 
+def build_seal(location, limit, version):
+    fnv_hash = (((FNV_OFFSET_32 ^ location) * FNV_PRIME_32) & 0xFFFFFFFF) ^ limit
+    seal = fnv_hash & FNV_SEAL_MASK
+    return seal | ((version & 0x7F) << 25)
+
+
 def build_null_gt():
     return build_gt(0, 0, gt_type=GT_TYPE_NULL)
 
@@ -306,7 +312,7 @@ def run_testbench():
         A12_NS_LOC  = 0x4000
         A12_NS_AUTH = 0x00020008
         A12_NS_INT  = integrity32(A12_NS_LOC, A12_NS_AUTH)
-        A12_NS_SEAL = (A12_GT_VERSION << 25) | 0x5678   # version=0, seal=0x5678
+        A12_NS_SEAL = build_seal(A12_NS_LOC, A12_NS_AUTH, A12_GT_VERSION)
 
         A12_CALL = encode_church(ChurchOpcode.CALL, cr_dst=0, cr_src=1)
         ctx.set(dut.dmem_rd_data, A12_NS_LOC)   # pre-arm NS0 for M_FETCH_NS0
@@ -749,9 +755,125 @@ def run_testbench():
         print("  PASS 12I: Valid integrity + gt_seq revocation mismatch "
               "(XR11[22:16]=5 ≠ XR13[27:21]=0) in WRITEBACK → INVALID_OP, M cleared")
 
+        # ── 12J: Full seal word validation — valid and invalid paths ──────────
+        # (Task #443: 25-bit seal field check added to WRITEBACK.)
+        #
+        # The seal check recomputes fnv32(XR12, XR13) & 0x1FFFFFF in hardware and
+        # compares it against XR15[24:0] (SEALS_LAYOUT.seal).  A mismatch raises
+        # INVALID_OP + M-clear exactly like the other WRITEBACK guards.
+        #
+        # 12J-valid:   CALL with correct FNV seal → WRITEBACK → no fault, M cleared.
+        # 12J-invalid: CALL with wrong seal value  → WRITEBACK → INVALID_OP, M cleared.
+        #
+        # Prerequisites: M=0 after 12I cleanup.
+        assert ctx.get(dut.cr15_m_flag) == 0, "12J: M should be 0 entering test"
+
+        # Use a simple GT: index=1 (XR11[22:16] = 0), version=2.
+        # Keep NS_AUTH bits[27:21]=0 so gtseq_ok=True.
+        J12_GT_INDEX   = 1
+        J12_GT_VERSION = 2
+        j12_gt_word = build_gt(J12_GT_INDEX, 0, gt_type=GT_TYPE_ABSTRACT,
+                               version=J12_GT_VERSION)
+
+        ctx.set(dut.dbg_cap_wr_en,   1)
+        ctx.set(dut.dbg_cap_wr_addr, 1)
+        ctx.set(dut.dbg_cap_wr_data, {
+            "word0_gt":       {"gt_type": GT_TYPE_ABSTRACT, "perms": 0,
+                               "index": J12_GT_INDEX, "version": J12_GT_VERSION},
+            "word1_location": 0,
+            "word2_limit":    0,
+            "word3_seals":    0,
+        })
+        await ctx.tick()
+        ctx.set(dut.dbg_cap_wr_en, 0)
+
+        J12_NS_LOC  = 0x7000
+        J12_NS_AUTH = 0x00000010   # bits[27:21]=0 → gtseq_ok=True
+        J12_NS_INT  = integrity32(J12_NS_LOC, J12_NS_AUTH)
+        J12_NS_SEAL_VALID   = build_seal(J12_NS_LOC, J12_NS_AUTH, J12_GT_VERSION)
+        J12_NS_SEAL_INVALID = J12_NS_SEAL_VALID ^ 0x1   # flip one seal bit — version unchanged
+
+        # ── 12J-valid: correct FNV seal → writeback succeeds ─────────────────
+        J12_CALL = encode_church(ChurchOpcode.CALL, cr_dst=0, cr_src=1)
+        ctx.set(dut.dmem_rd_data, J12_NS_LOC)
+        ctx.set(dut.imem_data,    J12_CALL)
+        ctx.set(dut.imem_valid,   1)
+        await ctx.tick()
+        ctx.set(dut.imem_valid, 0)
+
+        await ctx.tick()    # CHECK_SRC  → READ_SRC
+        await ctx.tick()    # READ_SRC   → CHECK_PERM
+        await ctx.tick()    # CHECK_PERM → M_FETCH_NS0
+
+        await ctx.tick()    # M_FETCH_NS0 → M_FETCH_NS1
+        ctx.set(dut.dmem_rd_data, J12_NS_AUTH)
+        await ctx.tick()    # M_FETCH_NS1 → M_FETCH_NS2
+        ctx.set(dut.dmem_rd_data, J12_NS_INT)
+        await ctx.tick()    # M_FETCH_NS2 → M_FETCH_NS3
+        ctx.set(dut.dmem_rd_data, J12_NS_SEAL_VALID)
+        await ctx.tick()    # M_FETCH_NS3 → M_FETCH_DONE
+        await ctx.tick()    # M_FETCH_DONE → IDLE (mgt_set_trigger; XR11-XR15 set)
+
+        assert ctx.get(dut.cr15_m_flag) == 1, "12J-valid: M should be 1 after CALL"
+
+        ctx.set(dut.cr15_m_writeback_trigger, 1)
+        await ctx.tick()    # IDLE: latch shadow, xr11_valid=1 → WRITEBACK
+        ctx.set(dut.cr15_m_writeback_trigger, 0)
+        fault_v_jv = ctx.get(dut.fault_valid)
+        fault_t_jv = ctx.get(dut.fault)
+        await ctx.tick()    # WRITEBACK: all checks pass → CR15 written, M cleared → IDLE
+        m_flag_jv  = ctx.get(dut.cr15_m_flag)
+
+        assert fault_v_jv == 0, (
+            f"12J-valid: No fault expected with correct FNV seal, got fault_valid={fault_v_jv} "
+            f"fault_type={fault_t_jv}")
+        assert m_flag_jv == 0, (
+            f"12J-valid: M should be cleared after valid seal writeback, got {m_flag_jv}")
+        print("  PASS 12J-valid: Correct FNV seal in WRITEBACK → no fault, M cleared")
+
+        # ── 12J-invalid: wrong seal value → WRITEBACK raises INVALID_OP ───────
+        # Re-run the same CALL but with a corrupted seal word (one bit flipped).
+        ctx.set(dut.dmem_rd_data, J12_NS_LOC)
+        ctx.set(dut.imem_data,    J12_CALL)
+        ctx.set(dut.imem_valid,   1)
+        await ctx.tick()
+        ctx.set(dut.imem_valid, 0)
+
+        await ctx.tick()    # CHECK_SRC  → READ_SRC
+        await ctx.tick()    # READ_SRC   → CHECK_PERM
+        await ctx.tick()    # CHECK_PERM → M_FETCH_NS0
+
+        await ctx.tick()    # M_FETCH_NS0 → M_FETCH_NS1
+        ctx.set(dut.dmem_rd_data, J12_NS_AUTH)
+        await ctx.tick()    # M_FETCH_NS1 → M_FETCH_NS2
+        ctx.set(dut.dmem_rd_data, J12_NS_INT)
+        await ctx.tick()    # M_FETCH_NS2 → M_FETCH_NS3
+        ctx.set(dut.dmem_rd_data, J12_NS_SEAL_INVALID)
+        await ctx.tick()    # M_FETCH_NS3 → M_FETCH_DONE
+        await ctx.tick()    # M_FETCH_DONE → IDLE (mgt_set_trigger; XR11-XR15 set)
+
+        assert ctx.get(dut.cr15_m_flag) == 1, "12J-invalid: M should be 1 after CALL"
+
+        ctx.set(dut.cr15_m_writeback_trigger, 1)
+        await ctx.tick()    # IDLE: latch shadow, xr11_valid=1 → WRITEBACK
+        ctx.set(dut.cr15_m_writeback_trigger, 0)
+        fault_v_ji = ctx.get(dut.fault_valid)
+        fault_t_ji = ctx.get(dut.fault)
+        await ctx.tick()    # WRITEBACK: seal_ok=False → fault + M-clear → IDLE
+        m_flag_ji  = ctx.get(dut.cr15_m_flag)
+
+        assert fault_v_ji == 1, (
+            f"12J-invalid: Expected fault on seal mismatch, got fault_valid={fault_v_ji}")
+        assert fault_t_ji == FaultType.INVALID_OP, (
+            f"12J-invalid: Expected INVALID_OP on seal mismatch, got fault={fault_t_ji}")
+        assert m_flag_ji == 0, (
+            f"12J-invalid: M should be cleared after seal fault, got {m_flag_ji}")
+        print("  PASS 12J-invalid: Flipped seal bit in WRITEBACK → INVALID_OP, M cleared")
+
         print("  PASS: All M-window lifecycle cases verified "
               "(set / writeback / CHANGE / integrity-fault / restore / "
-              "null-gt-fault / no-stack-push / real-call-path / gt_seq-fault)")
+              "null-gt-fault / no-stack-push / real-call-path / gt_seq-fault / "
+              "seal-valid / seal-invalid)")
 
         print("\n" + "=" * 60)
         print("CTMMCap Amaranth Testbench — All Tests Complete")

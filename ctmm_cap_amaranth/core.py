@@ -696,6 +696,21 @@ class CTMMCapCore(Elaboratable):
             mwin_gtseq_ok.eq(mwin_gt_gtseq == mwin_ns_gtseq),
         ]
 
+        # Seal check — XR15[24:0] must equal fnv32(XR12, XR13) & 0x1FFFFFF.
+        # The FNV seal is the lower 25 bits of the one-round FNV-1a hash of the
+        # NS entry location (XR12) and limit/authority (XR13).  A mismatch means
+        # the seals word was replaced with a stale or replayed version since M-set.
+        mwin_seal_computed = Signal(32)
+        mwin_seal_masked   = Signal(25)
+        mwin_seal_ok       = Signal()
+        m.d.comb += [
+            mwin_seal_computed.eq(
+                ((FNV_OFFSET_32 ^ mwin_xr12_lat) * FNV_PRIME_32) ^ mwin_xr13_lat
+            ),
+            mwin_seal_masked.eq(mwin_seal_computed[:25]),
+            mwin_seal_ok.eq(mwin_seal_masked == View(SEALS_LAYOUT, mwin_xr15_lat).seal),
+        ]
+
         with m.FSM(name="mwin"):
             with m.State("IDLE"):
                 m.d.comb += mwin_busy.eq(0)
@@ -714,11 +729,12 @@ class CTMMCapCore(Elaboratable):
 
             with m.State("WRITEBACK"):
                 m.d.comb += mwin_busy.eq(1)
-                # Full validation: all three checks must pass; any failure → INVALID_OP + M-clear.
-                #   integrity32(XR12,XR13)==XR14  (integrity_ok)
-                #   GT.version==seals.version      (version_ok — revocation via XR11[31:25]/XR15[31:25])
-                #   XR11[22:16]==XR13[27:21]       (gtseq_ok  — revocation via hardware gt_seq fields)
-                with m.If(mwin_integrity_ok & mwin_version_ok & mwin_gtseq_ok):
+                # Full validation: all four checks must pass; any failure → INVALID_OP + M-clear.
+                #   integrity32(XR12,XR13)==XR14       (integrity_ok)
+                #   GT.version==seals.version           (version_ok — revocation via XR11[31:25]/XR15[31:25])
+                #   XR11[22:16]==XR13[27:21]            (gtseq_ok  — revocation via hardware gt_seq fields)
+                #   fnv32(XR12,XR13)&0x1FFFFFF==XR15[24:0]  (seal_ok — full seal word validation)
+                with m.If(mwin_integrity_ok & mwin_version_ok & mwin_gtseq_ok & mwin_seal_ok):
                     mwin_wr_view = View(CAP_REG_LAYOUT, mwin_cr_wr_data)
                     m.d.comb += [
                         mwin_wr_view.word0_gt.eq(mwin_xr11_lat),
