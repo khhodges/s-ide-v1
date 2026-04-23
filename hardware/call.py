@@ -160,12 +160,6 @@ class ChurchCall(Elaboratable):
         ns_auth_lat = Signal(32)
         ns_int_lat  = Signal(32)
 
-        # NS entry base address for the latched Abstract GT: CR15.location + (slot_id << 4)
-        mgt_ns_entry_base = Signal(32)
-        m.d.comb += mgt_ns_entry_base.eq(
-            cr15_view.word1_location + (mgt_gt_view.slot_id << 4)
-        )
-
         # CALL frame word (spec §"Zone ② — LIFO Stack"):
         #   bit[31]    = SZ = 1  (CALL frame tag)
         #   bits[30:16] = return_PC = caller_pc + 1  (word offset after CALL)
@@ -240,6 +234,12 @@ class ChurchCall(Elaboratable):
         cr14_view = View(CAP_REG_LAYOUT, self.cr14_code)
         cr14_gt = View(GT_LAYOUT, cr14_view.word0_gt)
         cr15_view = View(CAP_REG_LAYOUT, self.cr15_namespace)
+
+        # NS entry base address for Abstract GT M-GT dispatch: CR15.location + (slot_id << 4)
+        mgt_ns_entry_base = Signal(32)
+        m.d.comb += mgt_ns_entry_base.eq(
+            cr15_view.word1_location + (mgt_gt_view.slot_id << 4)
+        )
 
         callee_ns_entry_addr = Signal(32)
         m.d.comb += callee_ns_entry_addr.eq(

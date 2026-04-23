@@ -571,11 +571,9 @@ class ChurchCore(Elaboratable):
                 u_shared_mload.cr_wr_en | u_tperm.cr_wr_en | u_call.cr_wr_en |
                 u_return.cr_wr_en | cr_wr_en_extra
             ),
-            # M-window set/clear + CHANGE restore connect to u_regs controls
+            # M-window set/clear connect to u_regs controls
             u_regs.m_set_en.eq(mwin_m_set_en),
             u_regs.m_clear_en.eq(mwin_m_clear_en),
-            u_regs.m_flag_restore_en.eq(u_change.m_flag_restore_en),
-            u_regs.m_flag_restore_val.eq(u_change.m_flag_restore_val),
             # Expose M-flag and shadow DR reads
             self.cr15_m_flag.eq(u_regs.cr15_m_flag),
             self.dbg_m_dr11.eq(u_regs.m_dr11),
@@ -583,6 +581,13 @@ class ChurchCore(Elaboratable):
             self.dbg_m_dr13.eq(u_regs.m_dr13),
             self.dbg_m_dr14.eq(u_regs.m_dr14),
         ]
+
+        # CHANGE restore signals only exist on the full profile (not IoT)
+        if not self.iot_profile:
+            m.d.comb += [
+                u_regs.m_flag_restore_en.eq(u_change.m_flag_restore_en),
+                u_regs.m_flag_restore_val.eq(u_change.m_flag_restore_val),
+            ]
 
         # M-window shadow data sources — mgt_set_trigger (from Abstract-GT CALL) takes
         # priority over cr15_m_set (test/microcode injection port).
@@ -702,8 +707,8 @@ class ChurchCore(Elaboratable):
             self.flags.eq(u_regs.flags),
         ]
 
-        boot_wr_en = [Signal(name=f"boot_cr{i}_wr_en") for i in range(16)]
-        boot_wr_gt = [Signal(GT_LAYOUT, name=f"boot_cr{i}_wr_gt") for i in range(16)]
+        boot_wr_en = [Signal(name=f"boot_cap{i}_wr_en") for i in range(16)]
+        boot_wr_gt = [Signal(GT_LAYOUT, name=f"boot_cap{i}_wr_gt") for i in range(16)]
 
         with m.Switch(boot_state_reg):
             with m.Case(BootState.LOAD_NS):
@@ -775,8 +780,8 @@ class ChurchCore(Elaboratable):
                     code_hi_reg.eq(NUC_LUMP_BASE),
                 ]
 
-        runtime_wr_en = [Signal(name=f"rt_cr{i}_wr_en") for i in range(16)]
-        runtime_wr_gt = [Signal(GT_LAYOUT, name=f"rt_cr{i}_wr_gt") for i in range(16)]
+        runtime_wr_en = [Signal(name=f"rt_cap{i}_wr_en") for i in range(16)]
+        runtime_wr_gt = [Signal(GT_LAYOUT, name=f"rt_cap{i}_wr_gt") for i in range(16)]
 
         if not self.iot_profile:
             switch_change_active = Signal()

@@ -87,6 +87,7 @@ class ChurchOutform(Elaboratable):
 
         self.tx_valid = Signal()
         self.tx_data  = Signal(8)
+        self.tx_ack   = Signal()
         self.rx_valid = Signal()
         self.rx_data  = Signal(8)
 
