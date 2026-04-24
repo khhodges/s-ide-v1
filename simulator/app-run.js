@@ -294,7 +294,7 @@ function _buildNIARows(prevAddr, currAddr) {
 }
 
 const _BOOT_STEPS = [
-    { addrStr: 'B:00',  disasm: 'FAULT_RST',  label: 'Clear all CRs / DRs',                                                          offset: null, prog: 'boot' },
+    { addrStr: 'B:00',  disasm: 'FAULT_RST',  label: 'Capture fault context \u2192 clear all CRs / DRs',                           offset: null, prog: 'boot' },
     { addrStr: 'B:01',  disasm: 'LOAD_NS',    label: 'CR15 \u2190 NS[0] Namespace (base=0x0000, full memory)',                        offset: null, prog: 'boot' },
     { addrStr: 'B:02',  disasm: 'INIT_THRD',  label: 'CR12 \u2190 NS[1] thread stack GT \u00b7 CR5(RW) \u2190 heap (CHANGE-consistent)', offset: null, prog: 'boot' },
     { addrStr: 'B:02\u00bd', disasm: 'CALL_HOME', label: 'Tunnel.Register \u2192 23-byte packet \u00b7 await ACK',                   offset: null, prog: 'boot' },
@@ -337,6 +337,10 @@ function stepSim() {
             updateDashboard();
             return;
         }
+        // Accumulate this step's gate entries into the persistent boot audit trail
+        if (sim.auditLog.length > 0) {
+            _bootAuditAccum.push(...sim.auditLog);
+        }
         if (con) {
             con.textContent += `\n[boot ${_stepPhaseNum}/7] ${sim.output.split('\n').filter(l => l).pop()}`;
             con.scrollTop = con.scrollHeight;
@@ -344,7 +348,8 @@ function stepSim() {
         if (pipelineViz) {
             pipelineViz.setNIA(_bootNIARows(sim.bootStep));
             if (pipelineViz.mode === 'audit') {
-                pipelineViz.showFullPipeline(sim.auditLog.map(a => {
+                const _auditSource = _bootAuditAccum.length > 0 ? _bootAuditAccum : sim.auditLog;
+                pipelineViz.showFullPipeline(_auditSource.map(a => {
                     const checks = Object.entries(a.checks || {}).map(([k, v]) => ({ name: k.toUpperCase(), pass: v.pass, perm: v.perm || null }));
                     return { stage: a.gate, type: a.gate, desc: `${a.gate}(NS[${a.nsIndex}]="${a.label}"${a.requiredPerm ? ', '+a.requiredPerm : ''})`, label: a.label, nsIndex: a.nsIndex, requiredPerm: a.requiredPerm, checks, status: a.result, b: a.b, f: a.f };
                 }));
@@ -725,6 +730,11 @@ function walkNext() {
 
 let bootAnimating = false;
 let _bootAnimTimer = null;
+
+// Accumulates TSB audit gate entries across ALL boot phases so the audit panel
+// shows the full capability gate history even after later steps clear auditLog.
+// Cleared only when the sim is reset (resetSim / resetAndStep / faultClear).
+let _bootAuditAccum = [];
 let _defaultProgramLoaded = false;
 function _autoLoadDefaultProgram() {
     if (_defaultProgramLoaded) {
@@ -783,6 +793,10 @@ function slowBoot() {
             const _slowPhaseNum = sim.bootStep + 1;  // capture before _bootStep() — case 6 (COMPLETE) doesn't increment bootStep
             sim.auditLog = [];
             sim._bootStep();
+            // Accumulate this step's gate entries into the persistent boot audit trail
+            if (sim.auditLog.length > 0) {
+                _bootAuditAccum.push(...sim.auditLog);
+            }
             const con = document.getElementById('editorConsole');
             if (con) {
                 const lastLine = (sim.output || '').split('\n').filter(l => l).pop() || '';
@@ -792,7 +806,8 @@ function slowBoot() {
             if (pipelineViz) {
                 pipelineViz.setNIA(_bootNIARows(sim.bootStep));
                 if (pipelineViz.mode === 'audit') {
-                    pipelineViz.showFullPipeline(sim.auditLog.map(a => {
+                    const _auditSource = _bootAuditAccum.length > 0 ? _bootAuditAccum : sim.auditLog;
+                    pipelineViz.showFullPipeline(_auditSource.map(a => {
                         const checks = Object.entries(a.checks || {}).map(([k, v]) => ({ name: k.toUpperCase(), pass: v.pass, perm: v.perm || null }));
                         return { stage: a.gate, type: a.gate, desc: `${a.gate}(NS[${a.nsIndex}]="${a.label}"${a.requiredPerm ? ', '+a.requiredPerm : ''})`, label: a.label, nsIndex: a.nsIndex, requiredPerm: a.requiredPerm, checks, status: a.result, b: a.b, f: a.f };
                     }));
@@ -1296,6 +1311,7 @@ function faultClear() {
     _lastFault = null;
     faultAlertOff();
     _defaultProgramLoaded = false;
+    _bootAuditAccum = [];
     sim.reset();
     _initLazyLoadManifest();
     pipelineViz.reset();
@@ -1571,6 +1587,7 @@ function faultModalReboot() {
     faultAlertOff();
     if (pipelineViz) pipelineViz.setNIA(null);
     _defaultProgramLoaded = false;
+    _bootAuditAccum = [];
     sim.reset();
     _initLazyLoadManifest();
     pipelineViz.reset();
@@ -1836,6 +1853,7 @@ function resetSim() {
     faultAlertOff();
     if (pipelineViz) pipelineViz.setNIA(null);
     _defaultProgramLoaded = false;
+    _bootAuditAccum = [];
     sim.reset();
     _initLazyLoadManifest();
     pipelineViz.reset();
@@ -1852,6 +1870,7 @@ function resetAndStep() {
     faultAlertOff();
     if (pipelineViz) pipelineViz.setNIA(null);
     _defaultProgramLoaded = false;
+    _bootAuditAccum = [];
     sim.reset();
     _initLazyLoadManifest();
     pipelineViz.reset();

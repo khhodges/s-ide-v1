@@ -580,6 +580,7 @@ class ChurchSimulator {
         this.faultLog = [];
         this._instrHistory = [];
         this._currentInstrLabel = null;
+        this.faultViolationData = null;   // populated by B:00 FAULT_RST from last faultLog entry
 
         // Boot Image Designer Step 1 (Task #214): namespace memory window size
         // is programmer-chosen via the Boot Image Designer (totalNamespaceWords).
@@ -1105,6 +1106,55 @@ class ChurchSimulator {
             // at every cold or warm reset.
             // ════════════════════════════════════════════════════════════════════
             case 0: {
+                // ── Capture fault-violation context BEFORE clearing CRs ──────────────
+                // If a fault caused this reset, snapshot the violation address while
+                // the CRs still hold Namespace / Thread / Abstraction context.
+                // This data is forwarded to CALL_HOME (B:02½) in the boot packet.
+                if (this.faultLog && this.faultLog.length > 0) {
+                    const _lfe = this.faultLog[this.faultLog.length - 1];
+                    const _snap = _lfe.crSnapshot || [];
+                    // Extract NS slot index from a CR's GT word (bits [15:0])
+                    const _crSlot  = cr => (cr && cr.word0) ? (cr.word0 & 0xFFFF) : null;
+                    const _crLabel = slot => {
+                        if (slot === null) return '—';
+                        return (this.nsLabels && this.nsLabels[slot]) ? this.nsLabels[slot] : `NS[${slot}]`;
+                    };
+                    const _nsSlot  = _crSlot(_snap[15]);   // Namespace  (CR15)
+                    const _thrSlot = _crSlot(_snap[12]);   // Thread     (CR12)
+                    const _absSlot = _crSlot(_snap[14]);   // Abstraction (CR14)
+                    // Method / instruction from the last entry in instrHistory
+                    const _hist    = _lfe.instrHistory || [];
+                    const _lastI   = _hist.length > 0 ? _hist[_hist.length - 1] : null;
+                    const _methodStr = _lastI
+                        ? `${_lastI.opName}(CR${_lastI.crDst},CR${_lastI.crSrc},imm=${_lastI.imm})`
+                        : '—';
+                    // Offset = physicalPC within the abstraction lump
+                    // Abstraction lump base is CR14.word1 (physical base address)
+                    const _absBase = (_snap[14] && _snap[14].word1 !== undefined) ? (_snap[14].word1 >>> 0) : 0;
+                    const _faultPC = (_lfe.physicalPC || 0) >>> 0;
+                    const _offset  = _faultPC - _absBase;
+                    this.faultViolationData = {
+                        namespace:   { nsSlot: _nsSlot,  label: _crLabel(_nsSlot) },
+                        thread:      { nsSlot: _thrSlot, label: _crLabel(_thrSlot) },
+                        abstraction: { nsSlot: _absSlot, label: _crLabel(_absSlot) },
+                        method:      _methodStr,
+                        instruction: _lastI
+                            ? { physicalPC: _lastI.physicalPC, opName: _lastI.opName,
+                                crDst: _lastI.crDst, crSrc: _lastI.crSrc, imm: _lastI.imm }
+                            : null,
+                        offset:      _offset,
+                        pc:          _lfe.pc      || 0,
+                        physicalPC:  _faultPC,
+                        faultType:   _lfe.type    || '?',
+                        faultMsg:    _lfe.message || '?',
+                    };
+                    this.output += `[BOOT] FAULT_RST — Captured fault context: ` +
+                        `${_crLabel(_nsSlot)}.${_crLabel(_thrSlot)}.${_crLabel(_absSlot)}.${_methodStr} ` +
+                        `@ physPC=0x${_faultPC.toString(16).toUpperCase()} offset=+${_offset}\n`;
+                } else {
+                    this.faultViolationData = null;  // cold boot — no prior fault
+                }
+                // ── Now wipe all architectural state ─────────────────────────────────
                 for (let i = 0; i < 16; i++) {   // iterate CR0–CR15 (all 16 capability registers)
                     this._clearCR(i);             // set each CR to NULL (word0=0, word1=0, …)
                 }
@@ -1230,6 +1280,14 @@ class ChurchSimulator {
                 }
 
                 this.output += `[BOOT] CALL_HOME — Tunnel.Register(boot_reason=${_bootReason}, last_fault=${_lastFault}, fault_NIA=0x${_faultNIA.toString(16).toUpperCase()}) ACK=${_ack} (${_callHomeMode})\n`;
+                if (this.faultViolationData) {
+                    const fv = this.faultViolationData;
+                    this.output +=
+                        `[BOOT] CALL_HOME — FaultViolation: ` +
+                        `${fv.namespace.label}.${fv.thread.label}.${fv.abstraction.label}.${fv.method} ` +
+                        `@ physPC=0x${fv.physicalPC.toString(16).toUpperCase()} offset=+${fv.offset} ` +
+                        `[${fv.faultType}: ${fv.faultMsg}]\n`;
+                }
                 this.callHomeStatus = _callHomeMode;  // 'online' or 'offline' — cleared on reset
                 this.callHomeTimestamp = Date.now();  // ms since epoch — cleared on reset
                 this.bootStep++;                  // advance state machine → B:03  (offline-safe: always advance)
