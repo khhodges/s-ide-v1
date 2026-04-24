@@ -151,7 +151,7 @@ class ChurchSimulator {
         this.systemAbstractions = null;
         this.deviceAbstractions = null;
 
-        // Which NS slot the boot sequence jumps to at B:03/B:04.
+        // Which NS slot the boot sequence jumps to at B:05/B:06.
         // Defaults to BOOT_ABSTR_NS_SLOT (3 = LED flash); overridden by app.js
         // when the user selects a different boot-entry abstraction.
         // Intentionally NOT reset by reset() — persists across soft resets.
@@ -1036,12 +1036,12 @@ class ChurchSimulator {
         const memMgrGT = this.createGT(0, 0, {R:1, W:1, X:0, L:0, S:0, E:0}, 1);
 
         // ── Boot.Abstr lump (NS Slot 3) ────────────────────────────────────────────
-        // The Boot Abstraction: directly loaded by B:03/B:04 (no director hop).
+        // The Boot Abstraction: directly loaded by B:05/B:06 (no director hop).
         //   Word  0:          Lump header (n_minus_6, cw=NUC_CODE_WORDS, cc=DEMO_CLIST_SIZE)
         //   Words 1–17:       Code region (NUC_CODE_WORDS=17; loaded by loadProgram)
         //   Words 18..(end-DEMO_CLIST_SIZE-1): Freespace
         //   Words (end-DEMO_CLIST_SIZE)..(end-1): C-list (18 GTs at physical end)
-        // CR14 (R+X) and CR6 (E) are derived from this lump's header in B:04.
+        // CR14 (R+X) and CR6 (E) are derived from this lump's header in B:06.
         const bootEntryLoc     = this.memory[this.NS_TABLE_BASE + BOOT_ABSTR_NS_SLOT * this.NS_ENTRY_WORDS];
         const entryN_MINUS_6   = Math.max(0, Math.ceil(Math.log2(BOOT_ABSTR_LUMP_SIZE)) - 6);
         const entryLumpSize    = BOOT_ABSTR_LUMP_SIZE;
@@ -1111,7 +1111,7 @@ class ChurchSimulator {
                 // ── Capture fault-violation context BEFORE clearing CRs ──────────────
                 // If a fault caused this reset, snapshot the violation address while
                 // the CRs still hold Namespace / Thread / Abstraction context.
-                // This data is forwarded to CALL_HOME (B:02½) in the boot packet.
+                // This data is forwarded to CALL_HOME (B:04) in the boot packet.
                 if (this.faultLog && this.faultLog.length > 0) {
                     const _lfe = this.faultLog[this.faultLog.length - 1];
                     const _snap = _lfe.crSnapshot || [];
@@ -1221,15 +1221,15 @@ class ChurchSimulator {
                 }
                 this._writeCR(12, gt12, check12.entry);                            // CR12 ← thread stack token (encodes lump base + size)
                 this.output += `[BOOT] INIT_THRD — CR12 <- mLoad(Slot 1) thread stack GT (zero perms, Inform)\n`;
-                // Stash the thread NS entry for use in B:02a INIT_HEAP (case 3)
+                // Stash the thread NS entry for use in B:03 INIT_HEAP (case 3)
                 this._initThrdEntry = check12.entry;
-                this.bootStep++;                  // advance state machine → B:02a
+                this.bootStep++;                  // advance state machine → B:03
                 this.ledBits = 0b000011;          // LED bit 1 still on; bit 2 reserved for INIT_HEAP
                 break;
             }
 
             // ════════════════════════════════════════════════════════════════════
-            // B:02a  INIT_HEAP  (case 3)
+            // B:03  INIT_HEAP  (case 3)
             // Establish CR5 (Heap) as an RW capability over the thread lump.
             // Consistent with CHANGE CR12 hardware behaviour which synthesizes CR5
             // from the incoming thread's lump header at the same time it sets CR12.
@@ -1266,13 +1266,13 @@ class ChurchSimulator {
                     result: 'pass',
                     stepCtx: 'INIT_HEAP CR5←heap',
                 });
-                this.bootStep++;                  // advance state machine → B:02½
+                this.bootStep++;                  // advance state machine → B:04
                 this.ledBits = 0b000111;          // LED bit 2 ON = INIT_HEAP complete
                 break;
             }
 
             // ════════════════════════════════════════════════════════════════════
-            // B:02½  CALL_HOME  (case 4)
+            // B:04  CALL_HOME  (case 4)
             // Send the Tunnel.Register identification packet and await ACK.
             // Offline-safe: always advances bootStep regardless of ACK result.
             // When the abstraction registry is available, dispatches via
@@ -1333,16 +1333,16 @@ class ChurchSimulator {
                     result: 'pass',
                     stepCtx: 'CALL_HOME',
                 });
-                this.bootStep++;                  // advance state machine → B:03  (offline-safe: always advance)
+                this.bootStep++;                  // advance state machine → B:05  (offline-safe: always advance)
                 this.ledBits = 0b001111;          // LED bit 3 ON = CALL_HOME complete
                 break;
             }
 
             // ════════════════════════════════════════════════════════════════════
-            // B:03  INIT_ABSTR  (case 5)
+            // B:05  INIT_ABSTR  (case 5)
             // Load Boot.Abstr (NS Slot 3) into CR6 with E-perm.
             // Slot 2 is a free/null entry — Task #247.
-            // The E-type GT written here is snapshotted as oldCR6GT in B:04 and
+            // The E-type GT written here is snapshotted as oldCR6GT in B:06 and
             // saved to the sentinel call frame in the thread stack.
             // ════════════════════════════════════════════════════════════════════
             case 5: {
@@ -1362,15 +1362,15 @@ class ChurchSimulator {
                     this.fault('TYPE', `INIT_ABSTR: ${_b3Label} type is ${_b3ActualNSTypeName}, must be Inform`);
                     return false;
                 }
-                this._writeCR(6, gt6, check6.entry);                                               // CR6 ← E-type token for boot entry (saved to sentinel frame in B:04)
+                this._writeCR(6, gt6, check6.entry);                                               // CR6 ← E-type token for boot entry (saved to sentinel frame in B:06)
                 this.output += `[BOOT] INIT_ABSTR — CR6 <- mLoad(Slot ${this.bootEntrySlot}, ${_b3Label}) (E, M-elevation)\n`;
-                this.bootStep++;                  // advance state machine → B:04
+                this.bootStep++;                  // advance state machine → B:06
                 this.ledBits = 0b011111;          // LED bit 4 ON = INIT_ABSTR complete
                 break;
             }
 
             // ════════════════════════════════════════════════════════════════════
-            // B:04  LOAD_NUC  (case 6)
+            // B:06  LOAD_NUC  (case 6)
             // "Load Nucleus": the hardware's CALL microcode for Boot.Abstr.
             // Slot 2 is a free/null entry (Task #247).
             //
@@ -1431,11 +1431,11 @@ class ChurchSimulator {
                 }
 
                 // ── Step 3: Push sentinel CALL frame ──────────────────────────────────
-                // Sentinel saves oldCR6GT (E-GT for Boot.Abstr written by B:03 INIT_ABSTR)
+                // Sentinel saves oldCR6GT (E-GT for Boot.Abstr written by B:05 INIT_ABSTR)
                 // as the "saved caller CR6". returnPC=0x7FFF is a poison value; RETURN
                 // detects it and raises STACK_UNDERFLOW instead of jumping to garbage.
                 const sp_max = 243;                                                  // thread stack ceiling: THREAD_LUMP_SIZE(256) - caps(12) - 1
-                const oldCR6GT = this.cr[6].word0 >>> 0;                            // snapshot E-GT for Boot.Abstr written by B:03 INIT_ABSTR
+                const oldCR6GT = this.cr[6].word0 >>> 0;                            // snapshot E-GT for Boot.Abstr written by B:05 INIT_ABSTR
                 const sentinelFrameWord = this._packFrameWordRaw(0x7FFF, 1, sp_max);
                 this.callStack.push({
                     sentinel: true,
@@ -1501,13 +1501,13 @@ class ChurchSimulator {
                     stepCtx: 'LOAD_NUC CR6',
                 });
 
-                this.bootStep++;                  // advance state machine → B:05 (COMPLETE)
+                this.bootStep++;                  // advance state machine → B:07 (COMPLETE)
                 this.ledBits = 0b111111;          // all 6 LEDs on = LOAD_NUC complete
                 break;
             }
 
             // ════════════════════════════════════════════════════════════════════
-            // B:05  COMPLETE  (case 7)
+            // B:07  COMPLETE  (case 7)
             // Run Startup.Config.Execute(), drop M-elevation, mark boot done.
             // ════════════════════════════════════════════════════════════════════
             case 7: {
@@ -4556,10 +4556,10 @@ class ChurchSimulator {
         ];
     }
 
-    // Push an NS.Type gate-log entry for the NS entry type check in _bootStep B:03
-    // and B:04.  Called immediately after each mLoad succeeds so the outcome is always
+    // Push an NS.Type gate-log entry for the NS entry type check in _bootStep B:05
+    // and B:06.  Called immediately after each mLoad succeeds so the outcome is always
     // recorded, whether the type is correct (Inform, type=1) or not.
-    // bootStepName should be 'INIT_ABSTR' (B:03) or 'LOAD_NUC' (B:04).
+    // bootStepName should be 'INIT_ABSTR' (B:05) or 'LOAD_NUC' (B:06).
     _auditNSType(nsIndex, label, actualType, actualTypeName, bootStepName) {
         const typePass = actualType === 1;
         this.auditLog.push({
@@ -4581,13 +4581,13 @@ class ChurchSimulator {
         });
     }
 
-    // Push a Lump.Header gate-log entry for a lump header read in _bootStep B:04.
+    // Push a Lump.Header gate-log entry for a lump header read in _bootStep B:06.
     // Called immediately after parseLumpHeader() so the outcome is always recorded,
     // whether the header is valid or not.
     _auditLumpHeader(nsIndex, label, hdr) {
         const magicPass = hdr.valid;
         const ccPass    = magicPass && (hdr.cc > 0);
-        // Hardware only checks MAGIC and CC from the lump header word at B:04 LOAD_NUC.
+        // Hardware only checks MAGIC and CC from the lump header word at B:06 LOAD_NUC.
         // The typ field (bits [9:8]) is never validated by the hardware at this step;
         // the NS entry type check happens earlier via entryCheck.parsed.type.
         const checks = { magic: { pass: magicPass, rawMagic: hdr.magic } };
@@ -4613,7 +4613,7 @@ class ChurchSimulator {
                 perm: v.perm || null,
             }));
             // For NS.Type entries, prefix the stage and description with the
-            // originating boot step name (INIT_ABSTR for B:03, LOAD_NUC for B:04)
+            // originating boot step name (INIT_ABSTR for B:05, LOAD_NUC for B:06)
             // so the audit panel shows a precise step label.
             let stage, desc;
             if (a.gate === 'NS.Type' && a.bootStepName) {
