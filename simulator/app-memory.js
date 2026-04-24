@@ -157,6 +157,20 @@ function updateCRDetail() {
         }
 
         const _crPets3 = {};
+
+        const _brLabelCondNames = ['EQ','NE','CS','CC','MI','PL','VS','VC','HI','LS','GE','LT','GT','LE','','NV'];
+        const _brTargetSet = new Set();
+        for (let i = 0; i < _codeWords.length; i++) {
+            const _w = _codeWords[i] >>> 0;
+            if (((_w >>> 27) & 0x1F) !== 17) continue;
+            const _rawImm = _w & 0x7FFF;
+            const _soff = (_rawImm & 0x4000) ? (_rawImm | 0xFFFF8000) : _rawImm;
+            const _tgt = i + _soff;
+            if (_tgt >= 0 && _tgt < _codeWords.length) _brTargetSet.add(_tgt);
+        }
+        const _brLabelMap = new Map();
+        Array.from(_brTargetSet).sort((a, b) => a - b).forEach((idx, n) => _brLabelMap.set(idx, `L${n}`));
+
         let hasCodeData = lumpHdr.valid;
         for (let w = 0; w < _codeWords.length; w++) {
             const addr = codeStart + w;
@@ -168,11 +182,32 @@ function updateCRDetail() {
                 : ((addr === (sim.programBaseAddr || 0) + sim.pc) || (addr === sim.pc));
             const isBP    = simBreakpoints.has(addr);
 
+            if (_brLabelMap.has(w)) {
+                const _lbl = _brLabelMap.get(w);
+                const _colspan = _brArrows.hasBranches ? 5 : 4;
+                codeHtml += `<tr class="code-row-label"><td colspan="${_colspan}" class="code-label-line">${_lbl}:</td></tr>`;
+            }
+
             const decomp = _decompileWord(word, addr, nsIdx, _lumpClistBase, _crPets3);
             const isCompiler = decomp && decomp.compiler;
             let rowClass = isPC ? 'code-pc-row' : (isBP ? 'code-bp-row' : (isCompiler ? 'code-row-compiler' : ''));
 
-            const decoded  = word === 0 ? 'NOP / HALT' : _wrapRegHover(asm.disassemble(word));
+            let decoded;
+            if (word === 0) {
+                decoded = 'NOP / HALT';
+            } else if (((word >>> 27) & 0x1F) === 17) {
+                const _rawImm = word & 0x7FFF;
+                const _soff = (_rawImm & 0x4000) ? (_rawImm | 0xFFFF8000) : _rawImm;
+                const _tgt = w + _soff;
+                const _condCode = (word >>> 23) & 0xF;
+                const _mnemonic = 'BRANCH' + _brLabelCondNames[_condCode];
+                const _labelName = _brLabelMap.get(_tgt);
+                decoded = _labelName !== undefined
+                    ? _wrapRegHover(`${_mnemonic}  ${_labelName}`)
+                    : _wrapRegHover(asm.disassemble(word));
+            } else {
+                decoded = _wrapRegHover(asm.disassemble(word));
+            }
             const bpDot    = isBP ? '<span class="bp-dot" title="Breakpoint">&#x25CF;</span> ' : '';
             const decompTd = decomp
                 ? `<td class="code-decompiled ${isCompiler ? 'code-decompiled-compiler' : 'code-decompiled-user'}">${_wrapRegHover(decomp.desc)}</td>`

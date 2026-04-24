@@ -420,6 +420,8 @@
 .code-row-infra { background: rgba(232, 184, 74, 0.08); font-style: italic; }
 .code-row-infra td { color: #e8b84a !important; }
 .code-row-infra td.cr-gt { color: #c9963a !important; }
+.code-row-label td { padding: 0 !important; line-height: 1; }
+.code-label-line { color: #9cdcfe; font-family: var(--font-mono, monospace); font-size: 0.82em; padding: 0.1rem 0.5rem !important; user-select: text; }
 
 .reg-row {
     display: flex;
