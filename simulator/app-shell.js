@@ -68,7 +68,7 @@
 // EVENT LISTENERS
 //   sim.on('stateChange', ...)  — re-render CR/DR tables + memory after each step
 //   window.onresize             — reflow pipeline SVG
-//   document.onkeydown          — F8 = step, F5 = run, Escape = stop
+//   document.onkeydown          — F8 = step, F5 = run, Escape = stop, Ctrl+R = reboot
 //
 // FILE LAYOUT (other JS files loaded by index.html)
 //   simulator.js          — ChurchSimulator (CPU, GC, NS, boot)
@@ -406,18 +406,26 @@ function init() {
             a: 'abstractions',   // Abstractions
             b: 'builder',        // Builder / Hardware
             d: 'dashboard',      // Dashboard / Simulator
+            f: 'reference',      // reFerences docs (r is reserved for Reboot)
             g: 'gc',             // Garbage Collector
             l: 'lumps',          // Lumps repository
             m: 'repl',           // Math (REPL / SlideRule)
             n: 'namespace',      // Namespace viewer
             p: 'pipeline',       // Pipeline visualiser
-            r: 'reference',      // Reference docs
             t: 'trace',          // Trace log
             u: 'tutorial',       // tUtorial
             v: 'devices',        // deVices
             y: 'docs',           // docs (no better letter free)
         };
         const key = e.key.toLowerCase();
+        // Ctrl+R — Reboot: reset and re-run the boot sequence.
+        // preventDefault stops the browser page-refresh so the shortcut works
+        // correctly even when the simulator is embedded in an iframe.
+        if (key === 'r') {
+            e.preventDefault();
+            resetSim();
+            return;
+        }
         if (NAV[key]) {
             e.preventDefault();
             switchView(NAV[key]);
