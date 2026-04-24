@@ -173,7 +173,7 @@ function renderCListEntryDetail(nsIdx, entry) {
             const typNames  = ['lump','data','Thread','Outform'];
             // ── Lump Header ──────────────────────────────────────────────────
             h += `<div class="clist-detail-title" style="margin-top:0.4rem;color:var(--church-gold);">Header`
-               + ` <span style="font-size:0.72rem;color:#3f3f46;">word 0 \u00b7 ${hdrHex}`
+               + ` <span style="font-size:0.72rem;">word 0 \u00b7 ${hdrHex}`
                + ` \u00b7 magic=0x${hdr.magic.toString(16).toUpperCase()}`
                + ` \u00b7 n\u22126=${hdr.n_minus_6}\u2192${lumpSize}w`
                + ` \u00b7 cw=${cw} \u00b7 typ=${typNames[hdr.typ]||hdr.typ} \u00b7 cc=${cc}`
@@ -238,7 +238,7 @@ function renderCListEntryDetail(nsIdx, entry) {
                 const freeBase = loc + 1 + actualCodeEnd;
                 const freeEnd  = loc + clistStart - 1;
                 h += `<div class="clist-detail-title" style="margin-top:0.3rem;color:var(--church-gold);">Freespace`
-                   + ` <span style="font-size:0.72rem;color:#3f3f46;">`
+                   + ` <span style="font-size:0.72rem;">`
                    + `words +${1 + actualCodeEnd}\u2013+${clistStart - 1}`
                    + ` \u00b7 ${totalFreeWords} unused words`
                    + ` \u00b7 0x${freeBase.toString(16).toUpperCase().padStart(4,'0')}\u20130x${freeEnd.toString(16).toUpperCase().padStart(4,'0')}`
