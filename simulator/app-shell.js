@@ -394,6 +394,14 @@ function init() {
     }
     if (!startView) startView = 'docs';
     switchView(startView);
+    // If the page was opened directly to the dashboard (e.g. from the landing
+    // page link) and auto-boot is enabled, fire the boot sequence now.
+    // switchView('dashboard') calls restoreAutoBootPref() so the checkbox
+    // is already in its correct state here.
+    if (startView === 'dashboard') {
+        const _abChk = document.getElementById('autoBootChk');
+        if (_abChk && _abChk.checked) resetSim();
+    }
     switchMathMode('hp35');
 
     // Global keyboard shortcuts: Ctrl+<letter> → switch top-level view.
