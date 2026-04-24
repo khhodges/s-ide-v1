@@ -591,7 +591,7 @@ function updateCRDetail() {
 
     // ── Error Report ──────────────────────────────────────────────────────────
     {
-        const _slotFaults = (sim.auditLog || []).filter(e => e.nsIdx === nsIdx);
+        const _slotFaults = (sim.auditLog || []).filter(e => e.nsIndex === nsIdx);
         html += '<div class="crd-lump-section">';
         html += '<div class="crd-lump-section-label">Error Report</div>';
         if (_slotFaults.length === 0) {
@@ -601,11 +601,37 @@ function updateCRDetail() {
             html += '<table class="cr-table crd-error-table"><thead><tr><th>Step</th><th>Event</th><th>Detail</th></tr></thead><tbody>';
             for (let i = 0; i < _maxRows; i++) {
                 const _ef = _slotFaults[i];
-                const _evtStep   = _ef.step != null ? _ef.step : '\u2014';
-                const _evtEvent  = _ef.event || _ef.type || '\u2014';
-                const _evtDetail = (_ef.detail || _ef.message || '');
+                // stepCtx is either an object {step, pc, opName, ...} or a plain string or null
+                let _evtStep = '\u2014';
+                if (_ef.stepCtx != null) {
+                    if (typeof _ef.stepCtx === 'object') {
+                        _evtStep = _ef.stepCtx.step != null ? '#' + _ef.stepCtx.step : ('PC:0x' + (_ef.stepCtx.pc || 0).toString(16));
+                    } else {
+                        _evtStep = String(_ef.stepCtx);
+                    }
+                }
+                const _evtEvent = _ef.gate || '\u2014';
+                // Build a concise detail string from the structured audit entry
+                let _evtDetail = '';
+                if (_ef.desc) {
+                    _evtDetail = _ef.desc;
+                } else if (_ef.checks && typeof _ef.checks === 'object') {
+                    const _failedChecks = Object.entries(_ef.checks)
+                        .filter(([, v]) => v && v.pass === false)
+                        .map(([k]) => k.toUpperCase());
+                    if (_failedChecks.length > 0) {
+                        _evtDetail = 'FAIL: ' + _failedChecks.join(', ');
+                    } else {
+                        _evtDetail = _ef.result === 'pass' ? 'pass' : (_ef.result || '');
+                        if (_ef.requiredPerm) _evtDetail += ' perm=' + _ef.requiredPerm;
+                    }
+                } else {
+                    _evtDetail = _ef.result || '';
+                }
                 const _truncated = _evtDetail.length > 60 ? _evtDetail.slice(0, 60) + '\u2026' : _evtDetail;
-                html += `<tr><td class="cr-idx">${_evtStep}</td><td>${_evtEvent}</td><td style="font-size:0.78rem;">${_truncated}</td></tr>`;
+                const _isFail = _ef.result === 'fail';
+                const _rowStyle = _isFail ? ' style="color:var(--church-red,#e05555);"' : '';
+                html += `<tr${_rowStyle}><td class="cr-idx">${_evtStep}</td><td>${_evtEvent}</td><td style="font-size:0.78rem;">${_truncated}</td></tr>`;
             }
             html += '</tbody></table>';
             if (_slotFaults.length > 50) {
