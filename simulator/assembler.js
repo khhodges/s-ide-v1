@@ -799,6 +799,27 @@ class ChurchAssembler {
             // CALL CRd[, sel[, #extra]]  — invoke capability
             case 2: {
                 if (imm & 0x4000) return `${mnemonic}  CR${crDst}`;
+                const sel = crSrc;
+                // Try to resolve method name: invert nsLoaded (name→crIdx) to find
+                // what abstraction is bound to crDst, then look up the method name
+                // for the selector index in methodConventions.
+                let resolvedMethod = null;
+                for (const [name, crIdx] of Object.entries(this.nsLoaded || {})) {
+                    if (crIdx === crDst) {
+                        const conv = this.methodConventions[name];
+                        if (conv) {
+                            for (const [mName, mData] of Object.entries(conv)) {
+                                if (mData.index === sel) { resolvedMethod = mName; break; }
+                            }
+                        }
+                        break;
+                    }
+                }
+                if (resolvedMethod !== null) {
+                    return imm
+                        ? `${mnemonic}  CR${crDst}, ${resolvedMethod}, #${imm}`
+                        : `${mnemonic}  CR${crDst}, ${resolvedMethod}`;
+                }
                 if (imm) return `${mnemonic}  CR${crDst}, sel=${crSrc}, #${imm}`;
                 return crSrc ? `${mnemonic}  CR${crDst}, sel=${crSrc}` : `${mnemonic}  CR${crDst}`;
             }

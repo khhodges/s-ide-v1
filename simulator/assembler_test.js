@@ -99,6 +99,43 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
         errors.length > 0 ? errors[0].message : '(no error)');
 }
 
+// ── Disassembly: method name resolution (task-483) ───────────────────────────
+
+// T6: disassemble() resolves CALL CR11, 0 → "CALL  CR11, Multiply" after binding.
+{
+    const a = new ChurchAssembler(CONVENTIONS);
+    a.setNamespace(NS_SYMBOLS);
+    const result = a.assemble('LOAD CR11, SlideRule\nCALL CR11, Multiply');
+    const word = result.words[1];  // CALL word, selector=0
+    const dis  = a.disassemble(word);
+    assert('T6 disassemble CALL CR11,0 → includes "Multiply"',
+        dis.includes('Multiply'), 'got: ' + dis);
+    assert('T6 disassemble CALL CR11,0 → includes "CR11"',
+        dis.includes('CR11'), 'got: ' + dis);
+}
+
+// T7: disassemble() resolves CALL CR11, 1 → "CALL  CR11, Divide".
+{
+    const a = new ChurchAssembler(CONVENTIONS);
+    a.setNamespace(NS_SYMBOLS);
+    const result = a.assemble('LOAD CR11, SlideRule\nCALL CR11, Divide');
+    const word = result.words[1];  // CALL word, selector=1
+    const dis  = a.disassemble(word);
+    assert('T7 disassemble CALL CR11,1 → includes "Divide"',
+        dis.includes('Divide'), 'got: ' + dis);
+}
+
+// T8: disassemble() without binding context falls back to raw form.
+{
+    const a = new ChurchAssembler(CONVENTIONS);
+    // No assemble() call — nsLoaded is empty, no binding context
+    // Encode CALL CR11, selector=1 manually: opcode=2, crDst=11, crSrc=1
+    const word = (2 << 27) | (14 << 23) | (11 << 19) | (1 << 15);
+    const dis = a.disassemble(word >>> 0);
+    assert('T8 disassemble without binding context emits raw sel form',
+        !dis.includes('Divide') && !dis.includes('Multiply'), 'got: ' + dis);
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
