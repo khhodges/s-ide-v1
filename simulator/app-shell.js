@@ -283,7 +283,7 @@ function confirmNewTab() {
 function init() {
     sim = new ChurchSimulator();
     sim.bootEntrySlot = bootEntrySlot;  // apply user-selected boot entry before first reset
-    assembler = new ChurchAssembler();
+    assembler = new ChurchAssembler(typeof METHOD_REGISTER_CONVENTIONS !== 'undefined' ? METHOD_REGISTER_CONVENTIONS : {});
     pipelineViz = new PipelineVisualizer('pipelineContainer');
     pipelineViz.setNIAProvider(() => {
         if (!sim.bootComplete) return _bootNIARows(sim.bootStep);

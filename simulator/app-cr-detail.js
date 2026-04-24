@@ -65,7 +65,7 @@ function injectCRCode(logEl) {
     } else {
         _petNameDRMap = {};
         _petNameCRMap = {};
-        const asmObj = new ChurchAssembler();
+        const asmObj = new ChurchAssembler(typeof METHOD_REGISTER_CONVENTIONS !== 'undefined' ? METHOD_REGISTER_CONVENTIONS : {});
         const result = asmObj.assemble(src);
         if (result.errors && result.errors.length > 0) {
             log('Assembly failed:');

@@ -85,6 +85,18 @@
 //   Names are matched case-sensitively (SlideRule ≠ sliderule).
 //   Unknown names produce an error listing all known abstraction and loaded names.
 //
+//   Level 3 — named method selectors in CALL:
+//   When the assembler is constructed with a methodConventions map (e.g.
+//   METHOD_REGISTER_CONVENTIONS), the second operand of CALL may be a method
+//   name instead of a raw integer:
+//     CALL SlideRule, Multiply       → CALL CR11, 0
+//     CALL SlideRule, Divide         → CALL CR11, 1
+//     CALL SlideRule, Sqrt           → CALL CR11, 2
+//   The abstraction name must have been previously bound via LOAD (Level 2).
+//   Numeric selectors still work alongside named selectors:
+//     CALL SlideRule, 0              → CALL CR11, 0  (identical encoding)
+//   If the method name is not found a clear error lists the known methods.
+//
 // POST-ASSEMBLY BRANCH BOUNDS CHECK
 //   After encoding all words, the assembler verifies that every BRANCH
 //   target falls within [0, total_code_words).  Out-of-range targets are
@@ -108,7 +120,8 @@
 // =============================================================================
 
 class ChurchAssembler {
-    constructor() {
+    constructor(methodConventions = {}) {
+        this.methodConventions = methodConventions;
         this.opcodes = {
             'LOAD': 0, 'SAVE': 1, 'CALL': 2, 'RETURN': 3,
             'CHANGE': 4, 'SWITCH': 5, 'TPERM': 6, 'LAMBDA': 7,
@@ -320,11 +333,38 @@ class ChurchAssembler {
                 break;
             }
             case 2: {
+                crDst = this._parseCR(parts[1], lineNum);
                 if (parts[2]) {
-                    crDst = this._parseCR(parts[1], lineNum);
-                    crSrc = this._parseCRorBare(parts[2], lineNum);
-                } else {
-                    crDst = this._parseCR(parts[1], lineNum);
+                    const tok2upper = parts[2].toUpperCase().replace(/,/g, '').trim();
+                    const isNumericSelector = /^CR\d+$/.test(tok2upper) || /^0X[0-9A-F]+$/.test(tok2upper) || /^\d+$/.test(tok2upper);
+                    if (!isNumericSelector) {
+                        const rawTok1 = (parts[1] || '').replace(/,/g, '').trim();
+                        const rawTok2 = (parts[2] || '').replace(/,/g, '').trim();
+                        let absName = this.nsLoaded[rawTok1] !== undefined ? rawTok1 : null;
+                        if (!absName) {
+                            for (const [name, idx] of Object.entries(this.nsLoaded)) {
+                                if (idx === crDst) { absName = name; break; }
+                            }
+                        }
+                        if (absName && this.methodConventions[absName]) {
+                            const methodEntry = this.methodConventions[absName][rawTok2];
+                            if (methodEntry !== undefined) {
+                                const idx = methodEntry.index;
+                                if (idx >= 0 && idx <= 15) {
+                                    crSrc = idx;
+                                } else {
+                                    this.errors.push({ line: lineNum, message: `Method "${rawTok2}" of ${absName} has index ${idx} which is out of range — method selectors must be 0–15.` });
+                                }
+                            } else {
+                                const known = Object.keys(this.methodConventions[absName]).join(', ');
+                                this.errors.push({ line: lineNum, message: `"${rawTok2}" is not a known method of ${absName}. Known methods: ${known}.` });
+                            }
+                        } else {
+                            crSrc = this._parseCRorBare(parts[2], lineNum);
+                        }
+                    } else {
+                        crSrc = this._parseCRorBare(parts[2], lineNum);
+                    }
                 }
                 break;
             }
