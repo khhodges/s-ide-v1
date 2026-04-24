@@ -39,6 +39,10 @@ args = "boot-image-upload-endpoint"
 task = "workflow.run"
 args = "boot-image-serve-endpoints"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "assembler-tests"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -104,6 +108,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python -m pytest tests/boot/test_boot_image_serve_endpoints.py -v"
+
+[[workflows.workflow]]
+name = "assembler-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/assembler_test.js"
+
+[workflows.workflow.metadata]
+isValidation = true
 
 [[ports]]
 localPort = 5000
