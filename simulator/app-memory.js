@@ -657,6 +657,27 @@ function setPipelineMode(mode) {
     }
 }
 
+// Called when the user clicks an audit gate label in the pipeline TSB panel.
+// Finds the CR that currently holds a GT pointing at nsIdx, opens its detail
+// in the Dashboard Register view.  Falls back to the Namespace table view if
+// no CR carries that slot.
+function pipelineGateClick(nsIdx) {
+    // Scan CRs 0–15: find the first one whose GT index matches nsIdx
+    let found = -1;
+    for (let c = 0; c < 16; c++) {
+        const cr = sim.cr[c];
+        if (!cr || !cr.word0) continue;
+        const parsed = sim.parseGT(cr.word0);
+        if (parsed.index === nsIdx) { found = c; break; }
+    }
+    if (found >= 0) {
+        switchView('dashboard');
+        openCRDetail(found);
+    } else {
+        switchView('namespace');
+    }
+}
+
 let nsExpandedSlot = -1;
 
 function toggleNSDetail(idx) {

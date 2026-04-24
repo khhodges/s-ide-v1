@@ -171,6 +171,16 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+.gate-label-link {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: rgba(220,180,100,0.35);
+    text-underline-offset: 2px;
+}
+.gate-label-link:hover {
+    color: #ffe080;
+    text-decoration-color: rgba(220,180,100,0.85);
+}
 
 .gate-perm-req {
     color: #aaa;

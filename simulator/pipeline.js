@@ -273,7 +273,7 @@ class PipelineVisualizer {
                 html += `<div class="audit-gate ${overallPass ? 'gate-pass' : 'gate-fail'} ${isActive ? 'gate-active' : ''} ${isDone ? 'gate-done' : ''}">`;
                 html += `<div class="gate-header">`;
                 html += `<span class="gate-type-badge gate-${step.type.toLowerCase()}">${step.type}</span>`;
-                html += `<span class="gate-label">NS[${step.nsIndex}] &ldquo;${step.label}&rdquo;</span>`;
+                html += `<span class="gate-label gate-label-link" onclick="pipelineGateClick(${step.nsIndex})" title="Open register detail for NS[${step.nsIndex}]">NS[${step.nsIndex}] &ldquo;${step.label}&rdquo;</span>`;
                 if (step.requiredPerm) {
                     html += `<span class="gate-perm-req">requires&nbsp;<b>${step.requiredPerm}</b></span>`;
                 }
