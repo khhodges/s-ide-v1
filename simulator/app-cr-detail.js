@@ -1001,6 +1001,14 @@ function _applyMethodDRNames(text, methodObj) {
     });
 }
 
+function _applyCRNames(text) {
+    if (!_petNameCRMap || Object.keys(_petNameCRMap).length === 0) return text;
+    return text.replace(/\bCR(\d+)\b/g, (match, numStr) => {
+        const pet = _petNameCRMap[parseInt(numStr)];
+        return pet ? `${pet}(CR${numStr})` : match;
+    });
+}
+
 function _decompileWord(word, addr, nsIdx, clistBase, crPets) {
     word = word >>> 0;
     if (word === 0) return null;
