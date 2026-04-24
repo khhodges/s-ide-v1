@@ -623,6 +623,67 @@ class ChurchAssembler {
         return val & 0xFFFF;
     }
 
+    // ── Static helper: decompile an array of raw words to assembly lines ──────
+    //
+    // Reproduces the label-emission logic used by editCRCodeInEditor() in
+    // app-cr-display.js so the same code path is reachable from tests and from
+    // other call sites without coupling to the DOM or a running simulator.
+    //
+    // Input:  trimmedWords — array of uint32 instruction words (trailing zeroes
+    //                        already stripped by the caller if desired).
+    // Output: lines[] — one string per output line, ready for join('\n').
+    //   • Label definitions ("L0:", "L1:", …) are inserted before the word
+    //     they name whenever a BRANCH within the array targets that word.
+    //   • BRANCH mnemonics use the label name instead of a raw signed offset
+    //     when the target is within the array and has a label.
+    //   • Out-of-range BRANCH targets (not covered by a label) fall back to
+    //     the numeric offset form produced by disassemble().
+    //   • Word 0x00000000 is emitted as "NOP".
+    static decompileWords(trimmedWords) {
+        const _condNames = ['EQ','NE','CS','CC','MI','PL','VS','VC','HI','LS','GE','LT','GT','LE','','NV'];
+        const asm = new ChurchAssembler();
+
+        const branchTargetSet = new Set();
+        for (let i = 0; i < trimmedWords.length; i++) {
+            const w = trimmedWords[i] >>> 0;
+            if (((w >>> 27) & 0x1F) !== 17) continue;
+            const rawImm = w & 0x7FFF;
+            const soff = (rawImm & 0x4000) ? (rawImm | 0xFFFF8000) : rawImm;
+            const target = i + soff;
+            if (target >= 0 && target < trimmedWords.length) {
+                branchTargetSet.add(target);
+            }
+        }
+
+        const sortedTargets = Array.from(branchTargetSet).sort((a, b) => a - b);
+        const labelMap = new Map();
+        sortedTargets.forEach((idx, n) => labelMap.set(idx, `L${n}`));
+
+        const lines = [];
+        for (let i = 0; i < trimmedWords.length; i++) {
+            const word = trimmedWords[i] >>> 0;
+            if (labelMap.has(i)) {
+                lines.push(labelMap.get(i) + ':');
+            }
+            if (((word >>> 27) & 0x1F) === 17) {
+                const rawImm = word & 0x7FFF;
+                const soff = (rawImm & 0x4000) ? (rawImm | 0xFFFF8000) : rawImm;
+                const target = i + soff;
+                const condCode = (word >>> 23) & 0xF;
+                const mnemonic = 'BRANCH' + _condNames[condCode];
+                const labelName = labelMap.get(target);
+                if (labelName !== undefined) {
+                    lines.push(`${mnemonic}  ${labelName}`);
+                } else {
+                    lines.push(asm.disassemble(word));
+                }
+            } else {
+                lines.push(word === 0 ? 'NOP' : asm.disassemble(word));
+            }
+        }
+        return lines;
+    }
+
     disassemble(word) {
         word = word >>> 0;
         if (word === 0) return 'HALT';
