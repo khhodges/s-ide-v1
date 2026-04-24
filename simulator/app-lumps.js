@@ -39,8 +39,8 @@ function showLumpDetail(token) {
         _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">CW</span>${parseInt(lump.cw)}</span>`;
     if (lump.cc !== undefined && lump.cc !== null)
         _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">CC</span>${parseInt(lump.cc)}</span>`;
-    // Resize button — only for standalone lumps (not the synthetic boot lump)
-    if (lump.lump_type !== 'boot') {
+    // Resize button — show for all lumps; server rejects read-only ones gracefully
+    {
         const _curSize  = parseInt(lump.lump_size) || 0;
         const _cw       = parseInt(lump.cw) || 0;
         const _cc       = parseInt(lump.cc) || 0;
