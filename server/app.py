@@ -2020,6 +2020,81 @@ def _load_bundled_lumps():
 
 _load_bundled_lumps()
 
+# ── Boot Abstraction lump (NS slot 3, "LED flash") ───────────────────────────────
+# The boot lump is baked directly into boot-image.bin rather than stored as a
+# standalone .lump file.  Extract it at startup so the Lump Repository can show it.
+
+_BOOT_ABSTR_META = {}   # populated by _load_boot_abstr_lump(); empty means not found
+
+def _load_boot_abstr_lump():
+    """Parse boot-image.bin, extract Boot.Abstr (NS slot 3) and cache in LAZY_LUMPS.
+
+    boot-image.bin is stored little-endian (matching validate_boot_image / simulator.js).
+    The extracted word array is re-packed big-endian for LAZY_LUMPS, matching the
+    convention used by all other *.lump files and the get_lump_words endpoint.
+    """
+    boot_path = os.path.join(os.path.dirname(__file__), 'lumps', 'boot-image.bin')
+    if not os.path.isfile(boot_path):
+        return
+    try:
+        with open(boot_path, 'rb') as fh:
+            raw = fh.read()
+        n_words = len(raw) // 4
+        if n_words < 1024:
+            return
+        # boot-image.bin is little-endian — mirrors validate_boot_image() and simulator.js
+        mem = list(_struct.unpack(f'<{n_words}I', raw[:n_words * 4]))
+        # NS table lives at the last 1024 words of the image.
+        ns_table_base = n_words - 1024   # NS_TABLE_RESERVE = 1024
+        NS_ENTRY_WORDS = 4
+        BOOT_ABSTR_NS_SLOT = 3
+        boot_ns_base = ns_table_base + BOOT_ABSTR_NS_SLOT * NS_ENTRY_WORDS
+        word0_location = mem[boot_ns_base]   # NS entry word0 = physical word address of lump
+        if word0_location == 0 or word0_location + 1 >= n_words:
+            return
+        # Parse lump header: [31:27]=0x1F magic, [26:23]=n_minus_6, [22:10]=cw, [9:8]=typ, [7:0]=cc
+        hdr = mem[word0_location]
+        n_minus_6 = (hdr >> 23) & 0xF
+        cw        = (hdr >> 10) & 0x1FFF
+        cc        = hdr & 0xFF
+        lump_size = 1 << (n_minus_6 + 6)
+        if word0_location + lump_size > n_words:
+            return
+        lump_words = mem[word0_location:word0_location + lump_size]
+        # Store as big-endian bytes — matches *.lump file convention and get_lump_words
+        LAZY_LUMPS['00000003'] = _struct.pack(f'>{lump_size}I', *lump_words)
+        _BOOT_ABSTR_META.update({
+            "token":       "00000003",
+            "abstraction": "LED flash",
+            "ns_slot":     BOOT_ABSTR_NS_SLOT,
+            "lump_size":   lump_size,
+            "cw":          cw,
+            "cc":          cc,
+            "lump_type":   "boot",
+            "language":    "ISA",
+            "description": (
+                "Boot Abstraction (Boot.Abstr) — the lump executed by the hardware ROM "
+                "during boot phases B:01–B:05.  Loads the NS lump, Thread lump, and "
+                "Startup.Config, then jumps to the default entry (NS slot 4, Salvation)."
+            ),
+            "methods": [
+                {
+                    "name":        "Boot",
+                    "offset":      0,
+                    "length":      cw,
+                    "description": "Hardware boot sequence entry point.",
+                    "inputs":      [],
+                    "outputs":     [],
+                }
+            ],
+        })
+        print(f'[boot] Boot.Abstr extracted: {lump_size}w at mem[{word0_location}], '
+              f'cw={cw}, cc={cc}', flush=True)
+    except Exception as exc:
+        print(f'[boot] Failed to extract Boot.Abstr lump: {exc}', flush=True)
+
+_load_boot_abstr_lump()
+
 # ── Mum Tunnel Library fallback ─────────────────────────────────────────────────
 def _fetch_lump_from_library(token_hex):
     """Search the Mum Tunnel Library (GitHub) for an abstraction whose token matches.
@@ -2327,6 +2402,12 @@ def list_lumps():
             except Exception:
                 pass
         result.append(entry)
+
+    # Prepend the Boot Abstraction (NS slot 3, "LED flash") as a synthetic entry.
+    # It is baked into boot-image.bin and is not a standalone .lump file, so it
+    # would otherwise be absent from the repository view.
+    if _BOOT_ABSTR_META:
+        result = [dict(_BOOT_ABSTR_META)] + result
 
     return jsonify(result)
 

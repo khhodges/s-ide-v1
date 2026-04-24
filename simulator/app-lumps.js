@@ -339,6 +339,7 @@ function _lumpTypeBadge(lump) {
     const ct = (lump.content_type || '').toLowerCase();
     const lt = (lump.lump_type   || '').toLowerCase();
     const typ = lump.typ;
+    if (lt === 'boot')                                 return '<span class="lump-ct-badge lump-ct-boot">BOOT</span>';
     if (lt === 'namespace' || typ === 10)              return '<span class="lump-ct-badge lump-ct-ns">NS</span>';
     if (ct === 'text')                                 return '<span class="lump-ct-badge lump-ct-text">TXT</span>';
     if (ct === 'markdown')                             return '<span class="lump-ct-badge lump-ct-md">MD</span>';
