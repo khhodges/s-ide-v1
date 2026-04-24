@@ -88,10 +88,11 @@
 //   Level 3 — named method selectors in CALL:
 //   When the assembler is constructed with a methodConventions map (e.g.
 //   METHOD_REGISTER_CONVENTIONS), the second operand of CALL may be a method
-//   name instead of a raw integer:
-//     CALL SlideRule, Multiply       → CALL CR11, 0
+//   name instead of a raw integer.  Two equivalent syntaxes are accepted:
+//     CALL SlideRule, Multiply       → CALL CR11, 0   (comma-separated form)
+//     CALL SlideRule.Multiply        → CALL CR11, 0   (dot-notation form)
 //     CALL SlideRule, Divide         → CALL CR11, 1
-//     CALL SlideRule, Sqrt           → CALL CR11, 2
+//     CALL SlideRule.Sqrt            → CALL CR11, 2
 //   The abstraction name must have been previously bound via LOAD (Level 2).
 //   Numeric selectors still work alongside named selectors:
 //     CALL SlideRule, 0              → CALL CR11, 0  (identical encoding)
@@ -333,6 +334,36 @@ class ChurchAssembler {
                 break;
             }
             case 2: {
+                // Dot-notation: CALL SlideRule.Multiply (single token, no parts[2])
+                const rawDotTok = (parts[1] || '').replace(/,/g, '').trim();
+                if (!parts[2] && rawDotTok.includes('.')) {
+                    const dotIdx = rawDotTok.indexOf('.');
+                    const dotAbsName = rawDotTok.slice(0, dotIdx);
+                    const dotMethodName = rawDotTok.slice(dotIdx + 1);
+                    const crSlot = this.nsLoaded[dotAbsName];
+                    if (crSlot !== undefined) {
+                        crDst = crSlot;
+                        if (this.methodConventions[dotAbsName]) {
+                            const methodEntry = this.methodConventions[dotAbsName][dotMethodName];
+                            if (methodEntry !== undefined) {
+                                const idx = methodEntry.index;
+                                if (idx >= 0 && idx <= 15) {
+                                    crSrc = idx;
+                                } else {
+                                    this.errors.push({ line: lineNum, message: `Method "${dotMethodName}" of ${dotAbsName} has index ${idx} which is out of range — method selectors must be 0–15.` });
+                                }
+                            } else {
+                                const known = Object.keys(this.methodConventions[dotAbsName]).join(', ');
+                                this.errors.push({ line: lineNum, message: `"${dotMethodName}" is not a known method of ${dotAbsName}. Known methods: ${known}.` });
+                            }
+                        } else {
+                            this.errors.push({ line: lineNum, message: `No method conventions registered for "${dotAbsName}".` });
+                        }
+                    } else {
+                        this.errors.push({ line: lineNum, message: `"${dotAbsName}" has not been loaded. Use LOAD to bind it first.` });
+                    }
+                    break;
+                }
                 crDst = this._parseCR(parts[1], lineNum);
                 if (parts[2]) {
                     const tok2upper = parts[2].toUpperCase().replace(/,/g, '').trim();
