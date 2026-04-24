@@ -293,6 +293,18 @@ function updateDashboard() {
     _refreshSignedReturnReadout();
 }
 
+function updateToolbarIdeBadge() {
+    const el = document.getElementById('toolbarIdeBadge');
+    if (!el) return;
+    const status = (sim && sim.callHomeStatus) || null;
+    if (status === null) {
+        el.innerHTML = '';
+        return;
+    }
+    const isOnline = status === 'online';
+    el.innerHTML = `<span class="info-ide-badge toolbar-ide-badge ${isOnline ? 'info-ide-online' : 'info-ide-offline'}">IDE: ${status}</span>`;
+}
+
 function updateGateLog() {
     const container = document.getElementById('gateLogContent');
     if (!container) return;

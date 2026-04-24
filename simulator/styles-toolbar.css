@@ -732,6 +732,11 @@
     color: rgba(156,163,175,0.7);
 }
 
+.toolbar-ide-badge {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.45rem;
+}
+
 .editor-layout {
     display: flex;
     flex: 1;

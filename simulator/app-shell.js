@@ -322,7 +322,7 @@ function init() {
         cloomcCompiler = new CLOOMCCompiler();
     }
 
-    sim.on('stateChange', () => { updateDashboard(); updateLedStrip(); });
+    sim.on('stateChange', () => { updateDashboard(); updateLedStrip(); updateToolbarIdeBadge(); });
     sim.on('step', _traceRecordStep);
     sim.on('reset', clearTrace);
     // Task #217: every reset rebuilds memory[] from scratch via
