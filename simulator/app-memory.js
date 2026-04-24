@@ -244,7 +244,7 @@ function updateCRDetail() {
 
     if (showCList) {
         html += '<div class="cr-detail-section">';
-        html += '<div class="cr-detail-heading">C-List View \u2014 Capability Slots</div>';
+        html += '<div class="cr-detail-heading">C-List View \u2014 Lump in Memory</div>';
         const clistBase = cr.word1_location >>> 0;
         // Derive cc from the lump header (authoritative source), falling back to
         // the NS entry's clistCount field, then to the legacy limit17+1 formula.
@@ -257,6 +257,20 @@ function updateCRDetail() {
         const clistCount = (_clHdr.valid && _clHdr.cc > 0)
                            ? _clHdr.cc
                            : (_clNSLim.clistCount > 0 ? _clNSLim.clistCount : cr.limit17 + 1);
+
+        // ── Full lump memory layout ──────────────────────────────────────────────────
+        // Show the complete lump in memory (header + code + freespace + c-list).
+        // This uses the NS entry's word0_location as the lump base.
+        if (_clNSE) {
+            html += renderCListEntryDetail(nsIdx, _clNSE);
+        } else {
+            html += `<div style="color:var(--text-secondary);padding:0.5rem 0;">No NS entry for slot ${nsIdx}.</div>`;
+        }
+
+        // ── Capability Slots — Resolved ──────────────────────────────────────────────
+        // Enhanced table showing NS Idx, type, permissions, and pet name for each slot.
+        // Click any row to inspect that NS entry's lump in full detail.
+        html += '<div class="cr-detail-subheading" style="margin-top:0.75rem;">Capability Slots \u2014 Resolved</div>';
         html += '<table class="cr-table"><thead><tr>';
         html += '<th>Slot</th><th>GT Word</th><th>NS Idx</th><th>Type</th><th>Perms</th><th>Pet Name</th>';
         html += '</tr></thead><tbody>';
