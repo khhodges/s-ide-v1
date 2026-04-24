@@ -304,7 +304,6 @@ function patchSimulator() {
         }
         _updateMtbfIndicator();
         updateCRDetail();
-        runSim();
     }
 }
 
