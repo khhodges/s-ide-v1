@@ -43,6 +43,10 @@ args = "boot-image-serve-endpoints"
 task = "workflow.run"
 args = "assembler-tests"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "assembler-tests-watch"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -118,7 +122,18 @@ task = "shell.exec"
 args = "node simulator/assembler_test.js"
 
 [workflows.workflow.metadata]
-isValidation = true
+outputType = "console"
+
+[[workflows.workflow]]
+name = "assembler-tests-watch"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/watch_assembler_tests.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [[ports]]
 localPort = 5000
