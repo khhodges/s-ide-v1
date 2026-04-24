@@ -622,6 +622,14 @@ function updateInfoDisplay() {
         <div class="info-item"><span class="info-label">Security Gates</span><span class="info-value">mLoad (R\u2192DREAD, W\u2192DWRITE, X\u2192LAMBDA, L\u2192LOAD, S\u2192SAVE, E\u2192CALL) + mSave (Version, Seal, Bounds, B-bit, F-bit)</span></div>
         <div class="info-item"><span class="info-label">Security Blocks</span><span class="info-value">Each abstraction is a security block with MTBF \u2014 Turing hidden inside Church-callable entries, CALL in, RETURN out, atomic</span></div>
         <div class="info-item"><span class="info-label">Abstraction Layers</span><span class="info-value">9 layers, ${abstractionRegistry ? abstractionRegistry.count() : 46} abstractions (Boot, System, Hardware, Math, Lambda Calculus, Social, IDE, Internet, GC)</span></div>
+        ${(() => {
+            const status = (sim && sim.callHomeStatus) || null;
+            if (status === null) {
+                return `<div class="info-item"><span class="info-label">IDE Connection</span><span class="info-value"><span class="info-ide-pending">\u2014</span></span></div>`;
+            }
+            const isOnline = status === 'online';
+            return `<div class="info-item"><span class="info-label">IDE Connection</span><span class="info-value"><span class="info-ide-badge ${isOnline ? 'info-ide-online' : 'info-ide-offline'}">IDE: ${status}</span></span></div>`;
+        })()}
     `;
 }
 

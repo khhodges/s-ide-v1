@@ -703,6 +703,29 @@
 .info-label { color: var(--text-secondary); }
 .info-value { color: var(--text-primary); font-family: 'Courier New', monospace; }
 
+.info-ide-badge {
+    display: inline-block;
+    padding: 0.05rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.68rem;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+.info-ide-online {
+    background: rgba(52,211,153,0.15);
+    color: rgba(52,211,153,0.95);
+    border: 1px solid rgba(52,211,153,0.35);
+}
+.info-ide-offline {
+    background: rgba(239,68,68,0.1);
+    color: rgba(239,68,68,0.75);
+    border: 1px solid rgba(239,68,68,0.25);
+}
+.info-ide-pending {
+    color: rgba(156,163,175,0.6);
+}
+
 .editor-layout {
     display: flex;
     flex: 1;
