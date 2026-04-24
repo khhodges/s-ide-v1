@@ -190,6 +190,11 @@ function injectCRCode(logEl) {
         _clearAsmErrors();
         newWords = result.words || [];
         newCW = newWords.length;
+        const _asmAliases = asmObj.getAliases();
+        _petNameDRMap = {};
+        for (const [alias, regIdx] of Object.entries(_asmAliases.dr || {})) _petNameDRMap[regIdx] = alias;
+        _petNameCRMap = {};
+        for (const [alias, regIdx] of Object.entries(_asmAliases.cr || {})) _petNameCRMap[regIdx] = alias;
     }
 
     delete _lumpManifests[nsIdx];

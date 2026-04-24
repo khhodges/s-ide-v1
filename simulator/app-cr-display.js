@@ -212,7 +212,7 @@ function renderCListEntryDetail(nsIdx, entry) {
                         const addr = loc + 1 + w;
                         if (addr >= sim.memory.length) break;
                         const word = _cw1[w];
-                        const decoded = word === 0 ? 'HALT' : _wrapRegHover(asm.disassemble(word));
+                        const decoded = word === 0 ? 'HALT' : _wrapRegHover(_applyMethodDRNames(asm.disassemble(word), null));
                         const isPC   = sim.bootComplete && (addr === (sim.memory[sim.NS_TABLE_BASE + 2 * sim.NS_ENTRY_WORDS] || (2 * sim.SLOT_SIZE)) + 1 + sim.pc);
                         const dimmed = word === 0 ? ' style="opacity:0.35;"' : '';
                         const _dc = _decompileWord(word, addr, nsIdx, _clBase, _crPets1);
@@ -296,7 +296,7 @@ function renderCListEntryDetail(nsIdx, entry) {
                     const addr = loc + w;
                     if (addr >= sim.memory.length) break;
                     const word = _cw2[w];
-                    const decoded = word === 0 ? 'HALT' : _wrapRegHover(asm2.disassemble(word));
+                    const decoded = word === 0 ? 'HALT' : _wrapRegHover(_applyMethodDRNames(asm2.disassemble(word), null));
                     const dimmed = word === 0 ? ' style="opacity:0.35;"' : '';
                     const _dc2 = _decompileWord(word, addr, nsIdx, _clBase2, _crPets2);
                     const _dc2Cls = _dc2 ? (_dc2.compiler ? 'code-decompiled-compiler' : 'code-decompiled-user') : '';
