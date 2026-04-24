@@ -185,6 +185,7 @@ function assembleAndLoad() {
             }
         }
         if (con) con.textContent = listing;
+        if (typeof _clearAsmErrors === 'function') _clearAsmErrors();
         showNextSteps('assembled');
         const saveBtn = document.getElementById('btnSaveNS');
         if (saveBtn) saveBtn.disabled = false;
@@ -198,9 +199,14 @@ function assembleAndLoad() {
         const errText = result.errors.map(e => `Line ${e.line}: ${e.message}`).join('\n');
         if (con) con.textContent = `Assembly errors:\n${errText}`;
         window._assemblerSymbols = null;
+        lastAssembledWords = null;
+        const _errSaveBtn = document.getElementById('btnSaveNS');
+        if (_errSaveBtn) _errSaveBtn.disabled = true;
+        if (typeof _showAsmErrors === 'function') _showAsmErrors(result.errors);
         showNextSteps('error');
         return;
     }
+    if (typeof _clearAsmErrors === 'function') _clearAsmErrors();
 
     lastAssembledWords = result.words.slice();
     _defaultProgramLoaded = true;

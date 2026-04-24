@@ -483,9 +483,11 @@ function compileDraftAssembly(source, con) {
     if (result.errors.length > 0) {
         const errText = result.errors.map(e => `Line ${e.line}: ${e.message}`).join('\n');
         if (con) { con.textContent = `Assembly Draft — errors:\n${errText}`; con.scrollTop = 0; }
+        if (typeof _showAsmErrors === 'function') _showAsmErrors(result.errors);
         showNextSteps('error');
         return;
     }
+    if (typeof _clearAsmErrors === 'function') _clearAsmErrors();
     const words = result.words;
     const codeSize = words.length;
     const allocSize = Math.max(32, nextPow2(codeSize));

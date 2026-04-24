@@ -781,6 +781,31 @@ function updateNamespace() {
     container.innerHTML = html;
 }
 
+function _showAsmErrors(errors) {
+    const panel = document.getElementById('asmErrorPanel');
+    if (!panel) return;
+    if (!errors || errors.length === 0) { _clearAsmErrors(); return; }
+    const count = errors.length;
+    let html = '<div class="asm-error-panel-header">'
+             + '<span class="asm-error-panel-icon">&#x26A0;</span>'
+             + '<span class="asm-error-panel-title">Assembly error' + (count > 1 ? 's' : '') + ' \u2014 code not applied</span>'
+             + '</div>'
+             + '<ul class="asm-error-panel-list">';
+    errors.forEach(function(e) {
+        html += '<li><span class="asm-error-line">Line ' + e.line + ':</span>' + escapeHtml(e.message) + '</li>';
+    });
+    html += '</ul>';
+    panel.innerHTML = html;
+    panel.style.display = 'flex';
+}
+
+function _clearAsmErrors() {
+    const panel = document.getElementById('asmErrorPanel');
+    if (!panel) return;
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+}
+
 function assembleAndLoad() {
     const editor = document.getElementById('asmEditor');
     if (!editor) return;
@@ -793,8 +818,13 @@ function assembleAndLoad() {
     if (result.errors.length > 0) {
         const errText = result.errors.map(e => `Line ${e.line}: ${e.message}`).join('\n');
         if (console) console.textContent = `Assembly errors:\n${errText}`;
+        lastAssembledWords = null;
+        const _errSaveBtn = document.getElementById('btnSaveNS');
+        if (_errSaveBtn) _errSaveBtn.disabled = true;
+        _showAsmErrors(result.errors);
         return;
     }
+    _clearAsmErrors();
 
     sim.loadProgram(result.words, 0);
     lastAssembledWords = result.words.slice();

@@ -1,3 +1,28 @@
+function _showAsmErrors(errors) {
+    var panel = document.getElementById('asmErrorPanel');
+    if (!panel) return;
+    if (!errors || errors.length === 0) { _clearAsmErrors(); return; }
+    var count = errors.length;
+    var html = '<div class="asm-error-panel-header">'
+             + '<span class="asm-error-panel-icon">&#x26A0;</span>'
+             + '<span class="asm-error-panel-title">Assembly error' + (count > 1 ? 's' : '') + ' \u2014 code not applied</span>'
+             + '</div>'
+             + '<ul class="asm-error-panel-list">';
+    errors.forEach(function(e) {
+        html += '<li><span class="asm-error-line">Line ' + e.line + ':</span>' + _escHtml(e.message) + '</li>';
+    });
+    html += '</ul>';
+    panel.innerHTML = html;
+    panel.style.display = 'flex';
+}
+
+function _clearAsmErrors() {
+    var panel = document.getElementById('asmErrorPanel');
+    if (!panel) return;
+    panel.style.display = 'none';
+    panel.innerHTML = '';
+}
+
 function _updateEditorPatchBar() {
     var bar = document.getElementById('editorPatchBar');
     if (!bar) return;
@@ -14,6 +39,7 @@ function clearEditorCREdit() {
     _editorCREditActive = false;
     _editorCREditCR = null;
     _editorCREditNS = null;
+    _clearAsmErrors();
     _updateEditorPatchBar();
     var asmEd = document.getElementById('asmEditor');
     if (asmEd) asmEd.value = '';
@@ -68,10 +94,12 @@ function injectCRCode(logEl) {
         const asmObj = new ChurchAssembler(typeof METHOD_REGISTER_CONVENTIONS !== 'undefined' ? METHOD_REGISTER_CONVENTIONS : {});
         const result = asmObj.assemble(src);
         if (result.errors && result.errors.length > 0) {
+            _showAsmErrors(result.errors);
             log('Assembly failed:');
             result.errors.forEach(e => log(`  Line ${e.line}: ${e.message}`));
             return null;
         }
+        _clearAsmErrors();
         newWords = result.words || [];
         newCW = newWords.length;
     }
