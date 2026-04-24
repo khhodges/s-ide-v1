@@ -611,7 +611,7 @@ function updateCRDetail() {
                     }
                 }
                 const _evtEvent = _ef.gate || '\u2014';
-                // Build a concise detail string from the structured audit entry
+                // Build a concise summary string for the collapsed row
                 let _evtDetail = '';
                 if (_ef.desc) {
                     _evtDetail = _ef.desc;
@@ -630,8 +630,55 @@ function updateCRDetail() {
                 }
                 const _truncated = _evtDetail.length > 60 ? _evtDetail.slice(0, 60) + '\u2026' : _evtDetail;
                 const _isFail = _ef.result === 'fail';
-                const _rowStyle = _isFail ? ' style="color:var(--church-red,#e05555);"' : '';
-                html += `<tr${_rowStyle}><td class="cr-idx">${_evtStep}</td><td>${_evtEvent}</td><td style="font-size:0.78rem;">${_truncated}</td></tr>`;
+                const _rowColor = _isFail ? 'color:var(--church-red,#e05555);' : '';
+                const _hasChecks = _ef.checks && typeof _ef.checks === 'object' && Object.keys(_ef.checks).length > 0;
+                // Build detail grid HTML (pre-rendered into the hidden row)
+                let _detailHtml = '';
+                if (_hasChecks) {
+                    _detailHtml += '<div class="crd-check-grid">';
+                    for (const [_ck, _cv] of Object.entries(_ef.checks)) {
+                        if (!_cv || typeof _cv !== 'object') continue;
+                        const _pass = _cv.pass !== false;
+                        const _badgeClass = _pass ? 'pass' : 'fail';
+                        const _badgeLabel = _pass ? 'OK' : 'FAIL';
+                        // Build the human-readable value for this check
+                        let _valStr = '';
+                        if (_ck === 'perm') {
+                            _valStr = _cv.perm ? 'requires ' + _cv.perm : '';
+                            if (!_pass) _valStr += (_valStr ? ' \u2014 ' : '') + 'missing';
+                        } else if (_ck === 'range') {
+                            const _addr = '0x' + (_cv.address >>> 0).toString(16);
+                            const _base = '0x' + (_cv.base >>> 0).toString(16);
+                            const _lim  = '0x' + (_cv.limit >>> 0).toString(16);
+                            _valStr = _addr + ' in [' + _base + '..' + _lim + ']';
+                            if (!_pass) _valStr = _addr + ' outside [' + _base + '..' + _lim + ']';
+                        } else if (_ck === 'version' && !_pass) {
+                            _valStr = 'GT seq mismatch';
+                        } else if (_ck === 'seal' && !_pass) {
+                            _valStr = 'CRC invalid';
+                        } else if (_ck === 'bind' && !_pass) {
+                            _valStr = 'bind check failed';
+                        } else if (_ck === 'far' && !_pass) {
+                            _valStr = 'far check failed';
+                        }
+                        _detailHtml += '<span class="crd-check-item">';
+                        _detailHtml += `<span class="crd-check-name">${_ck}</span>`;
+                        _detailHtml += `<span class="crd-check-badge ${_badgeClass}">${_badgeLabel}</span>`;
+                        if (_valStr) _detailHtml += `<span class="crd-check-value">${_valStr}</span>`;
+                        _detailHtml += '</span>';
+                    }
+                    _detailHtml += '</div>';
+                } else if (_ef.desc) {
+                    _detailHtml = `<span style="color:var(--text-secondary);font-size:0.76rem;">${_ef.desc}</span>`;
+                }
+                const _rowId = 'crd-fault-detail-' + nsIdx + '-' + i;
+                const _clickable = _hasChecks || _ef.desc;
+                const _rowClass = _clickable ? 'crd-fault-row' : '';
+                const _onclickAttr = _clickable ? ` onclick="window.__crdToggleFaultDetail('${_rowId}',this)"` : '';
+                html += `<tr class="${_rowClass}" style="${_rowColor}"${_onclickAttr}><td class="cr-idx">${_evtStep}</td><td>${_evtEvent}</td><td style="font-size:0.78rem;">${_truncated}</td></tr>`;
+                if (_clickable) {
+                    html += `<tr id="${_rowId}" class="crd-fault-detail-row" style="display:none;"><td colspan="3">${_detailHtml}</td></tr>`;
+                }
             }
             html += '</tbody></table>';
             if (_slotFaults.length > 50) {
@@ -2433,6 +2480,17 @@ let absCollapsedLayers = {};
 let bootEntrySlot = (() => { const s = parseInt(localStorage.getItem('bootEntrySlot'), 10); return Number.isFinite(s) ? Math.max(0, Math.min(255, s)) : 3; })();
 let userMethodData = {};
 let userMethodLists = {};
+
+// ── Fault Detail Toggle ────────────────────────────────────────────────────
+window.__crdToggleFaultDetail = function(detailRowId, summaryRow) {
+    const detailRow = document.getElementById(detailRowId);
+    if (!detailRow) return;
+    const isOpen = detailRow.style.display !== 'none';
+    detailRow.style.display = isOpen ? 'none' : '';
+    if (summaryRow) {
+        summaryRow.classList.toggle('expanded', !isOpen);
+    }
+};
 
 // ── Boot Sequence Code ─────────────────────────────────────────────────────
 // Actual hardware boot steps that install each Layer-0 abstraction.

@@ -4383,3 +4383,81 @@ a.next-step-link:hover {
     padding: 0.2rem 0.4rem;
 }
 
+.crd-fault-row {
+    cursor: pointer;
+    user-select: none;
+}
+
+.crd-fault-row:hover {
+    background: var(--hover-bg, rgba(255,255,255,0.05));
+}
+
+.crd-fault-row td:first-child::before {
+    content: '\25B6';
+    display: inline-block;
+    font-size: 0.6rem;
+    margin-right: 0.3rem;
+    transition: transform 0.15s;
+    color: var(--text-secondary);
+    vertical-align: middle;
+}
+
+.crd-fault-row.expanded td:first-child::before {
+    transform: rotate(90deg);
+}
+
+.crd-fault-detail-row td {
+    background: var(--panel-bg-deeper, rgba(0,0,0,0.25));
+    padding: 0.35rem 0.6rem 0.35rem 1.4rem;
+    border-top: none;
+}
+
+.crd-check-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.75rem;
+    font-size: 0.76rem;
+}
+
+.crd-check-item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+
+.crd-check-badge {
+    display: inline-block;
+    padding: 0 0.3rem;
+    border-radius: 3px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+}
+
+.crd-check-badge.pass {
+    background: rgba(80,200,100,0.18);
+    color: #5ec46e;
+    border: 1px solid rgba(80,200,100,0.35);
+}
+
+.crd-check-badge.fail {
+    background: rgba(220,80,80,0.18);
+    color: var(--church-red, #e05555);
+    border: 1px solid rgba(220,80,80,0.35);
+}
+
+.crd-check-name {
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+}
+
+.crd-check-value {
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 0.74rem;
+}
+
