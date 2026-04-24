@@ -407,6 +407,7 @@ class ChurchAssembler {
         switch (opcode) {
             case 0: {
                 crDst = this._parseCR(parts[1], lineNum);
+                this._checkPrivCR(crDst, 'LOAD', lineNum);
                 const nsSlot0 = this._resolveNSName(parts[2]);
                 if (nsSlot0 !== null && !parts[3]) {
                     crSrc = 6;   // CR6 = c-list root by convention
@@ -420,6 +421,7 @@ class ChurchAssembler {
             }
             case 1: {
                 crDst = this._parseCR(parts[1], lineNum);
+                this._checkPrivCR(crDst, 'SAVE', lineNum);
                 const nsSlot1 = this._resolveNSName(parts[2]);
                 if (nsSlot1 !== null && !parts[3]) {
                     crSrc = 6;
@@ -534,6 +536,7 @@ class ChurchAssembler {
             }
             case 8: {
                 crDst = this._parseCR(parts[1], lineNum);
+                this._checkPrivCR(crDst, 'ELOADCALL', lineNum);
                 const nsSlot8 = this._resolveNSName(parts[2]);
                 if (nsSlot8 !== null && !parts[3]) {
                     crSrc = 6;
@@ -546,6 +549,7 @@ class ChurchAssembler {
             }
             case 9: {
                 crDst = this._parseCR(parts[1], lineNum);
+                this._checkPrivCR(crDst, 'XLOADLAMBDA', lineNum);
                 const nsSlot9 = this._resolveNSName(parts[2]);
                 if (nsSlot9 !== null && !parts[3]) {
                     crSrc = 6;
@@ -663,9 +667,24 @@ class ChurchAssembler {
         ) >>> 0;
     }
 
+    // Emit an error if idx refers to CR12–CR15 (the Privilege Zone).
+    // Called after _parseCR() for any instruction that writes to crDst.
+    // Returns true if an error was pushed (callers may abort further checks).
+    _checkPrivCR(idx, mnemonic, lineNum) {
+        if (idx >= 12 && idx <= 15) {
+            const names = { 12: 'Thread', 13: 'Nucleus', 14: 'Current-Lump', 15: 'Namespace' };
+            this.errors.push({
+                line: lineNum,
+                message: `CR${idx} (${names[idx] || 'Privilege Zone'}) is in the Privilege Zone — CR12\u2013CR15 are kernel-managed and cannot be a destination for ${mnemonic}. Use CR0\u2013CR11 instead.`,
+            });
+            return true;
+        }
+        return false;
+    }
+
     _parseCR(token, lineNum) {
         if (!token) {
-            this.errors.push({ line: lineNum, message: 'A capability register (like CR0, CR6, CR14, 6, or hex 0x0–0xF) is needed here, but nothing was given.' });
+            this.errors.push({ line: lineNum, message: 'A capability register (like CR0, CR6, CR11, 6, or hex 0x0\u20130xF) is needed here, but nothing was given.' });
             return 0;
         }
         // Preserve original-case token for Level 2 and error messages.

@@ -394,6 +394,62 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
     assert('P11 malformed .pet (missing register): error', b.errors.length > 0, 'expected an error');
 }
 
+// P12: Privilege Zone — CR12–CR15 cannot be a destination for LOAD / SAVE /
+//      ELOADCALL / XLOADLAMBDA. CALL is unrestricted (control-flow only).
+{
+    // P12a: LOAD CR12 → error (Thread register)
+    const a = new ChurchAssembler();
+    a.assemble('LOAD CR12, CR6, 0');
+    assert('P12a LOAD CR12: error', a.errors.length > 0, 'expected an error');
+    assert('P12a LOAD CR12: error mentions privilege zone or CR12',
+        a.errors.some(e => e.message.includes('CR12') && (e.message.includes('Privilege') || e.message.includes('kernel'))),
+        a.errors.map(e => e.message).join('; '));
+
+    // P12b: LOAD CR15 → error (Namespace register)
+    const b = new ChurchAssembler();
+    b.assemble('LOAD CR15, CR6, 0');
+    assert('P12b LOAD CR15: error', b.errors.length > 0, 'expected an error');
+    assert('P12b LOAD CR15: error mentions CR15',
+        b.errors.some(e => e.message.includes('CR15')),
+        b.errors.map(e => e.message).join('; '));
+
+    // P12c: SAVE CR14 → error
+    const c = new ChurchAssembler();
+    c.assemble('SAVE CR14, CR6, 0');
+    assert('P12c SAVE CR14: error', c.errors.length > 0, 'expected an error');
+    assert('P12c SAVE CR14: error mentions CR14',
+        c.errors.some(e => e.message.includes('CR14')),
+        c.errors.map(e => e.message).join('; '));
+
+    // P12d: ELOADCALL CR13 → error
+    const d = new ChurchAssembler();
+    d.assemble('ELOADCALL CR13, CR6, 0');
+    assert('P12d ELOADCALL CR13: error', d.errors.length > 0, 'expected an error');
+    assert('P12d ELOADCALL CR13: error mentions CR13',
+        d.errors.some(e => e.message.includes('CR13')),
+        d.errors.map(e => e.message).join('; '));
+
+    // P12e: XLOADLAMBDA CR12 → error
+    const e = new ChurchAssembler();
+    e.assemble('XLOADLAMBDA CR12, CR6, 0');
+    assert('P12e XLOADLAMBDA CR12: error', e.errors.length > 0, 'expected an error');
+    assert('P12e XLOADLAMBDA CR12: error mentions CR12',
+        e.errors.some(e2 => e2.message.includes('CR12')),
+        e.errors.map(e2 => e2.message).join('; '));
+
+    // P12f: LOAD CR11 → no error (CR11 is the last valid user register)
+    const f = new ChurchAssembler();
+    f.assemble('LOAD CR11, CR6, 0');
+    assert('P12f LOAD CR11: no error (CR0–CR11 are valid)', f.errors.length === 0,
+        f.errors.map(e => e.message).join('; '));
+
+    // P12g: CALL CR12, 0 → no error (CALL is control-flow, not a dest write)
+    const g = new ChurchAssembler();
+    g.assemble('CALL CR12, 0');
+    assert('P12g CALL CR12: no error (CALL not restricted)', g.errors.length === 0,
+        g.errors.map(e => e.message).join('; '));
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
