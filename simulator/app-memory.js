@@ -46,11 +46,45 @@ function updateCRDetail() {
     const _editLumpHdr = sim.parseLumpHeader(_editWord0);
     const showEditButton = showCode && _editLumpHdr.valid;
 
-    const _activeTabLabel = crDetailTab === 'register' ? 'Register' : crDetailTab === 'binary' ? 'Binary' : 'Content';
+    // ── Correct default tab for this CR's capabilities ───────────────────────
+    if (crDetailTab === 'code' && !showCode) {
+        crDetailTab = showCList ? 'clist' : 'lump';
+    }
+
+    // ── Hoist shared data used across multiple panels ─────────────────────────
+    const _baseLoc      = cr.word1_location >>> 0;
+    const _limitVal     = cr.limit17;
+    const _baseWord0    = (_baseLoc < sim.memory.length) ? (sim.memory[_baseLoc] >>> 0) : 0;
+    const _lumpHdr      = sim.parseLumpHeader(_baseWord0);
+    let _lumpClistBase  = 0;
+    if (_lumpHdr.valid && _lumpHdr.cc > 0) {
+        _lumpClistBase = _baseLoc + _lumpHdr.lumpSize - _lumpHdr.cc;
+    } else {
+        const _nsEtmp = sim.readNSEntry(nsIdx);
+        if (_nsEtmp) {
+            const _nsLimtmp = sim.parseNSWord1(_nsEtmp.word1_limit);
+            if (_nsLimtmp.clistCount > 0) {
+                _lumpClistBase = (_nsEtmp.word0_location >>> 0) + (_nsLimtmp.limit + 1) - _nsLimtmp.clistCount;
+            }
+        }
+    }
+    const _sharedNSE    = sim.readNSEntry(nsIdx);
+    const _clBase       = _sharedNSE ? (_sharedNSE.word0_location >>> 0) : 0;
+    const _clHdr        = (_clBase > 0 && _clBase < sim.memory.length)
+                          ? sim.parseLumpHeader(sim.memory[_clBase] >>> 0)
+                          : { valid: false };
+    const _clNSLim      = sim.parseNSWord1(cr.word2_limit_raw);
+    const _clistCount   = (_clHdr.valid && _clHdr.cc > 0)
+                          ? _clHdr.cc
+                          : (_clNSLim.clistCount > 0 ? _clNSLim.clistCount : cr.limit17 + 1);
+    const _clistBase    = cr.word1_location >>> 0;
+    const _absName      = (sim.nsLabels && sim.nsLabels[nsIdx]) || '';
+    const _absLabel     = _absName ? (_absName + ' Abstraction') : '';
+
     let html = '';
     html += '<div class="crd-menu-bar">';
     html += `<button class="crd-hamburger" onclick="toggleCRDetailMenu(event)" title="Views &amp; Actions">&#x2630;</button>`;
-    html += `<span class="crd-menu-active-label" id="crdMenuActiveLabel">${_activeTabLabel}</span>`;
+    html += `<span class="crd-menu-active-label" id="crdMenuActiveLabel">${_absLabel}</span>`;
     if (showThread) {
         html += `<span class="crd-zone-nav" title="Jump to zone \u00b7 hover for live data">`;
         html += `<button class="crd-tab crd-tab-zone" onclick="scrollToThreadZone('hdr')" onmouseenter="showZonePopup(event,'hdr',${nsIdx})" onmouseleave="hideZonePopup()">Hdr</button>`;
@@ -63,9 +97,12 @@ function updateCRDetail() {
     }
     html += '<div class="crd-menu-dropdown" id="crdMenuDropdown" style="display:none">';
     html += '<div class="crd-menu-section-label">View</div>';
-    html += `<button class="crd-menu-item${crDetailTab==='content'?' crd-menu-item-active':''}" data-tab="content" id="crdTab-content" onclick="switchCRDetailTab('content');toggleCRDetailMenu()">Content</button>`;
-    html += `<button class="crd-menu-item${crDetailTab==='register'?' crd-menu-item-active':''}" data-tab="register" id="crdTab-register" onclick="switchCRDetailTab('register');toggleCRDetailMenu()">Register</button>`;
-    html += `<button class="crd-menu-item${crDetailTab==='binary'?' crd-menu-item-active':''}" data-tab="binary" id="crdTab-binary" onclick="switchCRDetailTab('binary');toggleCRDetailMenu()">Binary</button>`;
+    if (showCode) {
+        html += `<button class="crd-menu-item${crDetailTab==='code'?' crd-menu-item-active':''}" data-tab="code" id="crdTab-code" onclick="switchCRDetailTab('code');toggleCRDetailMenu()">Code</button>`;
+    }
+    html += `<button class="crd-menu-item${crDetailTab==='clist'?' crd-menu-item-active':''}" data-tab="clist" id="crdTab-clist" onclick="switchCRDetailTab('clist');toggleCRDetailMenu()">C-List</button>`;
+    html += `<button class="crd-menu-item${crDetailTab==='lump'?' crd-menu-item-active':''}" data-tab="lump" id="crdTab-lump" onclick="switchCRDetailTab('lump');toggleCRDetailMenu()">Lump</button>`;
+    html += `<button class="crd-menu-item${crDetailTab==='api'?' crd-menu-item-active':''}" data-tab="api" id="crdTab-api" onclick="switchCRDetailTab('api');toggleCRDetailMenu()">API</button>`;
     if (showEditButton) {
         html += '<div class="crd-menu-divider"></div>';
         html += '<div class="crd-menu-section-label">Simulator</div>';
@@ -76,40 +113,35 @@ function updateCRDetail() {
         html += `<button class="crd-menu-item crd-menu-item-fpga" onclick="patchFPGA();toggleCRDetailMenu()" title="Patch FPGA \u2014 Runs Patch Simulator first, then uploads the updated lump to the Ti60 F225 over WebSerial (UART). Requires an active hardware connection.">&#x21A9; Patch FPGA</button>`;
         html += `<button class="crd-menu-item crd-menu-item-fpga" onclick="exportPatchFile();toggleCRDetailMenu()" title="Export Patch \u2014 Assembles the code and downloads a .patch file with UART frames, CRC, and RUN sentinel. Flash with: python3 patch_fpga.py /dev/ttyUSB1 file.patch">&#x2B73; Export Patch</button>`;
         html += `<button class="crd-menu-item crd-menu-item-fpga" onclick="exportLumpAsPatch();toggleCRDetailMenu()" title="Lump\u2192Patch \u2014 Pick a pre-built .lump binary, validate its header, and wrap it into a .patch UART frame file for FPGA flashing.">&#x2B73; Lump\u2192Patch</button>`;
+    }
+    html += '<div class="crd-menu-divider"></div>';
+    html += '<div class="crd-menu-section-label">Debug</div>';
+    html += `<button class="crd-menu-item${crDetailTab==='register'?' crd-menu-item-active':''}" data-tab="register" id="crdTab-register" onclick="switchCRDetailTab('register');toggleCRDetailMenu()">Register</button>`;
+    html += `<button class="crd-menu-item${crDetailTab==='binary'?' crd-menu-item-active':''}" data-tab="binary" id="crdTab-binary" onclick="switchCRDetailTab('binary');toggleCRDetailMenu()">Binary</button>`;
+    if (showEditButton) {
         html += '<div class="crd-menu-divider"></div>';
         html += `<button class="crd-menu-item crd-menu-item-publish" onclick="publishToLibrary();toggleCRDetailMenu()" title="Publish \u2014 Compile and publish this abstraction to the Mum Tunnel Library on GitHub, including machine words, c-list, source, and metadata.">&#x21E1; Publish</button>`;
     }
     html += '</div>';
     html += '</div>';
 
-    html += `<div class="crd-panel" id="crdPanel-content" style="display:${crDetailTab==='content'?'block':'none'}">`;
-    html += '<div class="cr-detail-grid">';
-
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Panel: Code — disassembly table (only rendered when X permission is held)
+    // ═══════════════════════════════════════════════════════════════════════════
     if (showCode) {
+    html += `<div class="crd-panel" id="crdPanel-code" style="display:${crDetailTab==='code'?'block':'none'}">`;
+    html += '<div class="cr-detail-grid">';
+    {
         html += '<div class="cr-detail-section">';
         html += '<div class="cr-detail-heading">Code View \u2014 Executable Memory</div>';
-        const baseLoc   = cr.word1_location >>> 0;
-        const limitVal  = cr.limit17;
+        const baseLoc   = _baseLoc;
+        const limitVal  = _limitVal;
         const asm       = new ChurchAssembler();
-
-        const word0 = (baseLoc < sim.memory.length) ? (sim.memory[baseLoc] >>> 0) : 0;
-        const lumpHdr = sim.parseLumpHeader(word0);
+        const word0     = _baseWord0;
+        const lumpHdr   = _lumpHdr;
 
         let codeStart = baseLoc;
         let codeLimit = limitVal + 1;
-
-        let _lumpClistBase = 0;
-        if (lumpHdr.valid && lumpHdr.cc > 0) {
-            _lumpClistBase = baseLoc + lumpHdr.lumpSize - lumpHdr.cc;
-        } else {
-            const _nsE = sim.readNSEntry(nsIdx);
-            if (_nsE) {
-                const _nsLim = sim.parseNSWord1(_nsE.word1_limit);
-                if (_nsLim.clistCount > 0) {
-                    _lumpClistBase = (_nsE.word0_location >>> 0) + (_nsLim.limit + 1) - _nsLim.clistCount;
-                }
-            }
-        }
 
         let _codeStartPre = codeStart, _codeLimitPre = codeLimit;
         if (lumpHdr.valid) { _codeStartPre = baseLoc + 1; _codeLimitPre = lumpHdr.cw; }
@@ -128,8 +160,6 @@ function updateCRDetail() {
         codeHtml += '</tr></thead><tbody>';
 
         // Show boot preamble rows only while boot is in progress or has faulted.
-        // After a clean boot they are no longer relevant and should not appear
-        // above the CLOOMC instructions in the code view.
         if (nsIdx === bootEntrySlot && !(sim.bootComplete && !sim.halted)) {
             const _beLabel = (sim.nsLabels && sim.nsLabels[bootEntrySlot]) || `Slot ${bootEntrySlot}`;
             const _bootPreamble = [
@@ -165,7 +195,7 @@ function updateCRDetail() {
             codeHtml += `<td class="cr-gt">0x${word0.toString(16).toUpperCase().padStart(8,'0')}</td>`;
             codeHtml += `<td class="code-disasm">${hdrDisasm}</td>`;
             if (_brArrows.hasBranches) codeHtml += '<td class="br-arrow-col"></td>';
-            const _hdrLumpName = (sim.nsLabels && sim.nsLabels[nsIdx]) || (nsIdx >= 0 ? `Slot ${nsIdx}` : '');
+            const _hdrLumpName = _absName || (nsIdx >= 0 ? `Slot ${nsIdx}` : '');
             codeHtml += `<td class="code-decompiled code-decompiled-infra">header${_hdrLumpName ? ' \u00b7 <span style="color:#4ec9b0;font-weight:600;">' + _hdrLumpName + '</span>' : ''}</td>`;
             codeHtml += '</tr>';
             codeStart = baseLoc + 1;
@@ -251,51 +281,31 @@ function updateCRDetail() {
             html += codeHtml;
         }
 
-        html += `<pre id="crInjectLog" class="cr-inject-log" style="display:none;"></pre>`;
-
         html += '</div>';
     }
 
+    html += '</div></div>';
+    } // end if (showCode) — Code panel
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Panel: C-List — capability slots
+    // ═══════════════════════════════════════════════════════════════════════════
+    html += `<div class="crd-panel" id="crdPanel-clist" style="display:${crDetailTab==='clist'?'block':'none'}">`;
+    html += '<div class="cr-detail-grid">';
+    html += '<div class="cr-detail-section">';
+    html += '<div class="cr-detail-heading">C-List \u2014 Capability Slots</div>';
+
     if (showCList) {
-        html += '<div class="cr-detail-section">';
-        html += '<div class="cr-detail-heading">C-List View \u2014 Lump in Memory</div>';
-        const clistBase = cr.word1_location >>> 0;
-        // Derive cc from the lump header (authoritative source), falling back to
-        // the NS entry's clistCount field, then to the legacy limit17+1 formula.
-        const _clNSE   = sim.readNSEntry(nsIdx);
-        const _clBase  = _clNSE ? (_clNSE.word0_location >>> 0) : 0;
-        const _clHdr   = (_clBase > 0 && _clBase < sim.memory.length)
-                         ? sim.parseLumpHeader(sim.memory[_clBase] >>> 0)
-                         : { valid: false };
-        const _clNSLim = sim.parseNSWord1(cr.word2_limit_raw);
-        const clistCount = (_clHdr.valid && _clHdr.cc > 0)
-                           ? _clHdr.cc
-                           : (_clNSLim.clistCount > 0 ? _clNSLim.clistCount : cr.limit17 + 1);
-
-        // ── Full lump memory layout ──────────────────────────────────────────────────
-        // Show the complete lump in memory (header + code + freespace + c-list).
-        // This uses the NS entry's word0_location as the lump base.
-        if (_clNSE) {
-            html += renderCListEntryDetail(nsIdx, _clNSE);
-        } else {
-            html += `<div style="color:var(--text-secondary);padding:0.5rem 0;">No NS entry for slot ${nsIdx}.</div>`;
-        }
-
-        // ── Capability Slots — Resolved ──────────────────────────────────────────────
-        // Enhanced table showing NS Idx, type, permissions, and pet name for each slot.
-        // Click any row to inspect that NS entry's lump in full detail.
-        html += '<div class="cr-detail-subheading" style="margin-top:0.75rem;">Capability Slots \u2014 Resolved</div>';
         html += '<table class="cr-table"><thead><tr>';
         html += '<th>Slot</th><th>GT Word</th><th>NS Idx</th><th>Type</th><th>Perms</th><th>Pet Name</th>';
         html += '</tr></thead><tbody>';
-        for (let i = 0; i < clistCount; i++) {
-            const addr = clistBase + i;
+        for (let i = 0; i < _clistCount; i++) {
+            const addr = _clistBase + i;
             const gtWord = (addr < sim.memory.length) ? (sim.memory[addr] >>> 0) : 0;
             const parsed = sim.parseGT(gtWord);
             const permsStr = Object.entries(parsed.permissions).filter(([,v]) => v).map(([k]) => k).join('');
             let nsLabel = '';
             if (parsed.type === 3 && gtWord !== 0) {
-                // Abstract GT: lower 16 bits are ab_data, not an NS slot index — derive name from device fields.
                 const ab = sim.parseAbstractGT(gtWord);
                 const AB_TYPE_NAMES  = { 0: 'I/O', 1: 'M-Elevation' };
                 const DEVICE_CLASSES = { 1: 'LED', 2: 'UART', 3: 'Button', 4: 'Timer', 5: 'Display' };
@@ -328,15 +338,72 @@ function updateCRDetail() {
             }
         }
         html += '</tbody></table>';
-        html += '</div>';
+    } else if (showCode && _lumpHdr.valid && _lumpHdr.cc > 0 && _lumpClistBase > 0) {
+        html += '<table class="cr-table"><thead><tr>';
+        html += '<th>Slot</th><th>GT Word</th><th>NS Idx</th><th>Type</th><th>Perms</th><th>Pet Name</th>';
+        html += '</tr></thead><tbody>';
+        for (let i = 0; i < _lumpHdr.cc; i++) {
+            const addr = _lumpClistBase + i;
+            const gtWord = (addr < sim.memory.length) ? (sim.memory[addr] >>> 0) : 0;
+            const parsed = sim.parseGT(gtWord);
+            const permsStr = Object.entries(parsed.permissions).filter(([,v]) => v).map(([k]) => k).join('');
+            let nsLabel = '';
+            if (parsed.type === 3 && gtWord !== 0) {
+                const ab = sim.parseAbstractGT(gtWord);
+                const AB_TYPE_NAMES  = { 0: 'I/O', 1: 'M-Elevation' };
+                const DEVICE_CLASSES = { 1: 'LED', 2: 'UART', 3: 'Button', 4: 'Timer', 5: 'Display' };
+                if (ab.ab_type === 0) {
+                    const dc = DEVICE_CLASSES[ab.device_class] || `dc${ab.device_class}`;
+                    nsLabel = `${dc}[${ab.device_data}]`;
+                } else {
+                    nsLabel = `${AB_TYPE_NAMES[ab.ab_type] || `ab${ab.ab_type}`} 0x${ab.ab_data.toString(16).toUpperCase()}`;
+                }
+            } else {
+                nsLabel = (sim.nsLabels && sim.nsLabels[parsed.index]) ? sim.nsLabels[parsed.index] : '';
+            }
+            const hasGT = gtWord !== 0;
+            html += `<tr class="${hasGT ? 'cr-active' : ''}">`;
+            html += `<td class="cr-idx">${i}</td>`;
+            html += `<td class="cr-gt">0x${gtWord.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+            html += `<td>${hasGT ? parsed.index : '\u2014'}</td>`;
+            html += `<td>${hasGT ? parsed.typeName : '\u2014'}</td>`;
+            html += `<td class="cr-perms">[${permsStr || '\u2014'}]</td>`;
+            html += `<td class="cr-name">${nsLabel}</td>`;
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+    } else if (showCode && _lumpHdr.valid && _lumpHdr.cc === 0) {
+        html += '<div style="color:var(--text-secondary);font-style:italic;padding:0.5rem 0;">(no c-list entries in this lump)</div>';
+    } else {
+        html += '<div style="color:var(--text-secondary);font-style:italic;padding:0.5rem 0;">(no c-list entries in this lump)</div>';
     }
 
+    html += '</div>';
+    html += '</div></div>';
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Panel: Lump — memory layout + Ownership + MTBF + Error Report
+    // ═══════════════════════════════════════════════════════════════════════════
+    html += `<div class="crd-panel" id="crdPanel-lump" style="display:${crDetailTab==='lump'?'block':'none'}">`;
+    html += '<div class="cr-detail-grid">';
+
+    // Memory layout (renderCListEntryDetail) — only if permitted
+    if ((showCode || showCList) && _sharedNSE) {
+        html += renderCListEntryDetail(nsIdx, _sharedNSE);
+    } else if (!(showCode || showCList)) {
+        html += `<div class="cr-detail-section"><div style="color:var(--text-secondary);padding:0.5rem 0;">GT permissions control memory layout visibility.</div></div>`;
+    } else {
+        html += `<div class="cr-detail-section"><div style="color:var(--text-secondary);padding:0.5rem 0;">No NS entry for slot ${nsIdx}.</div></div>`;
+    }
+
+    // Thread memory layout (if applicable)
     if (showThread) {
         html += '<div class="cr-detail-section cr-detail-section-thread">';
         html += renderThreadMemoryLayout(nsIdx);
         html += '</div>';
     }
 
+    // Namespace root view (if applicable)
     if (showNS) {
         html += '<div class="cr-detail-section">';
         html += '<div class="cr-detail-heading">Namespace Root \u2014 All Entries</div>';
@@ -366,22 +433,23 @@ function updateCRDetail() {
         html += '</div>';
     }
 
+    // Data view (if applicable)
     if (showData) {
         const dataBase = cr.word1_location >>> 0;
         const dataLimit = cr.limit17;
         const wordCount = Math.min(dataLimit + 1, 64);
-        const nsEntryD = sim.readNSEntry(nsIdx);
-        const nsLabel = nsEntryD ? (nsEntryD.label || `NS[${nsIdx}]`) : `NS[${nsIdx}]`;
+        const nsEntryD = _sharedNSE;
+        const nsLabelD = nsEntryD ? (nsEntryD.label || `NS[${nsIdx}]`) : `NS[${nsIdx}]`;
         const permDesc = [hasR ? 'R' : '', hasW ? 'W' : ''].filter(Boolean).join('|');
 
         const DEVICE_SLOTS = { 12: 'LED', 11: 'UART', 13: 'Button', 14: 'Timer' };
         const isDevice = nsIdx in DEVICE_SLOTS;
 
         html += '<div class="cr-detail-section">';
-        html += `<div class="cr-detail-heading">Data View \u2014 ${nsLabel} (NS[${nsIdx}]) [${permDesc}]</div>`;
+        html += `<div class="cr-detail-heading">Data View \u2014 ${nsLabelD} (NS[${nsIdx}]) [${permDesc}]</div>`;
 
         html += '<table class="cr-table cr-detail-words"><tbody>';
-        html += `<tr><td style="color:var(--church-blue)">Target</td><td>NS[${nsIdx}] \u2014 <strong>${nsLabel}</strong></td></tr>`;
+        html += `<tr><td style="color:var(--church-blue)">Target</td><td>NS[${nsIdx}] \u2014 <strong>${nsLabelD}</strong></td></tr>`;
         html += `<tr><td style="color:var(--church-blue)">Permissions</td><td class="cr-perms">[${permDesc}]</td></tr>`;
         html += `<tr><td style="color:var(--church-blue)">Base address</td><td>0x${dataBase.toString(16).toUpperCase().padStart(8,'0')}</td></tr>`;
         html += `<tr><td style="color:var(--church-blue)">Size</td><td>${wordCount} word${wordCount !== 1 ? 's' : ''} (limit ${dataLimit})</td></tr>`;
@@ -391,54 +459,228 @@ function updateCRDetail() {
         html += '</tbody></table>';
 
         if (isDevice && nsIdx === 12) {
-            // LED_DEV: 5 registers (offset 0-4 = LED0-LED4); bit[0] = R (red) drives pin
-            // Only bit[0] physically lights the LED on Ti60 F225 — bits[2:1] are G,B (wired but no pin)
             html += '<div class="cr-detail-heading" style="margin-top:0.75rem;">LED Registers</div>';
             html += '<table class="cr-table code-view-table" style="margin-bottom:0.3rem;">';
             html += '<thead><tr><th>Offset</th><th>Name</th><th>Hex</th><th>Pin</th></tr></thead><tbody>';
             for (let ledIdx = 0; ledIdx <= 4; ledIdx++) {
                 const addr = dataBase + ledIdx;
                 const val = (addr < sim.memory.length) ? (sim.memory[addr] >>> 0) : 0;
-                const rBit = val & 1;  // bit[0] = R = drives LED pin
-                const pinLabel = ledIdx <= 3 ? (rBit ? 'ON' : 'off') : (rBit ? 'ON (no pin)' : '—');
+                const rBit = val & 1;
+                const pinLabel = ledIdx <= 3 ? (rBit ? 'ON' : 'off') : (rBit ? 'ON (no pin)' : '\u2014');
                 const pinColor = (rBit && ledIdx <= 3) ? '#22ff44' : (rBit ? '#ffaa22' : 'var(--text-secondary)');
-                html += `<tr>`;
-                html += `<td class="cr-idx">+${ledIdx}</td>`;
-                html += `<td>LED${ledIdx}</td>`;
-                html += `<td class="cr-gt">0x${val.toString(16).toUpperCase().padStart(8,'0')}</td>`;
-                html += `<td style="color:${pinColor};font-weight:${rBit?'bold':'normal'}">${pinLabel}</td>`;
-                html += `</tr>`;
+                html += `<tr><td class="cr-idx">+${ledIdx}</td><td>LED${ledIdx}</td><td class="cr-gt">0x${val.toString(16).toUpperCase().padStart(8,'0')}</td><td style="color:${pinColor};font-weight:${rBit?'bold':'normal'}">${pinLabel}</td></tr>`;
             }
             html += '</tbody></table>';
-            html += '<div style="color:var(--text-secondary);font-size:0.72rem;padding-bottom:0.3rem;">bit[0]=R drives pin · bit[1]=G · bit[2]=B (Ti60: only R connected)</div>';
+            html += '<div style="color:var(--text-secondary);font-size:0.72rem;padding-bottom:0.3rem;">bit[0]=R drives pin \u00b7 bit[1]=G \u00b7 bit[2]=B (Ti60: only R connected)</div>';
         }
 
         if (wordCount > 0 && nsIdx !== 12) {
-            // LED device (nsIdx=12) already shows its registers in the LED Registers table above
             html += '<div class="cr-detail-heading" style="margin-top:0.75rem;">Memory Contents</div>';
             html += '<table class="cr-table code-view-table"><thead><tr><th>Addr</th><th>Hex</th><th>Dec</th></tr></thead><tbody>';
             for (let w = 0; w < wordCount; w++) {
                 const addr = dataBase + w;
                 if (addr >= sim.memory.length) break;
                 const val = sim.memory[addr] >>> 0;
-                html += '<tr>';
-                html += `<td class="cr-idx">+${w}</td>`;
-                html += `<td class="cr-gt">0x${val.toString(16).toUpperCase().padStart(8,'0')}</td>`;
-                html += `<td>${val}</td>`;
-                html += '</tr>';
+                html += `<tr><td class="cr-idx">+${w}</td><td class="cr-gt">0x${val.toString(16).toUpperCase().padStart(8,'0')}</td><td>${val}</td></tr>`;
             }
             html += '</tbody></table>';
         }
         html += '</div>';
     }
 
-    if (!showCode && !showCList && !showThread && !showNS && !showData) {
-        html += '<div class="cr-detail-section">';
-        html += '<div class="cr-detail-heading">Capability Info</div>';
-        html += '<div style="color:var(--text-secondary);padding:0.5rem;">GT permissions control visibility. This capability does not grant viewable access (no R, W, X, or L). Run boot sequence to populate registers.</div>';
+    // ── Ownership ─────────────────────────────────────────────────────────────
+    {
+        const _mfst = _lumpManifests[nsIdx];
+        html += '<div class="crd-lump-section">';
+        html += '<div class="crd-lump-section-label">Ownership</div>';
+        if (_mfst) {
+            html += '<table class="cr-table cr-detail-words"><tbody>';
+            const _owRows = [
+                ['Name',           _absName],
+                ['Profile',        _mfst.profile],
+                ['Grants',         Array.isArray(_mfst.grants) && _mfst.grants.length ? _mfst.grants.join(', ') : (_mfst.grants || null)],
+                ['Built at',       _mfst.deployment && _mfst.deployment.built_at],
+                ['Target board',   _mfst.deployment && _mfst.deployment.target_board],
+                ['Deploy profile', _mfst.deployment && _mfst.deployment.profile],
+            ];
+            let _anyOwRow = false;
+            for (const [k, v] of _owRows) {
+                if (v == null || v === '' || v === false) continue;
+                html += `<tr><td style="color:var(--church-blue);width:130px;">${k}</td><td>${v}</td></tr>`;
+                _anyOwRow = true;
+            }
+            if (!_anyOwRow) {
+                html += `<tr><td colspan="2" style="color:var(--text-secondary);font-style:italic;">No ownership fields in manifest.</td></tr>`;
+            }
+            html += '</tbody></table>';
+        } else {
+            html += '<div style="color:var(--text-secondary);font-style:italic;">(no ownership metadata \u2014 compile and publish to add)</div>';
+        }
         html += '</div>';
     }
 
+    // ── MTBF Reliability ──────────────────────────────────────────────────────
+    {
+        const _mfst  = _lumpManifests[nsIdx];
+        const _mtbf  = _mfst && _mfst.mtbf;
+        const _abs   = sim.abstractionRegistry && sim.abstractionRegistry.getAbstraction && sim.abstractionRegistry.getAbstraction(nsIdx);
+        const _rtFaults = _abs ? (_abs.faultCount || 0) : null;
+        const _rtMTBF   = (_abs && _rtFaults > 0 && sim.abstractionRegistry.getMTBF)
+                          ? sim.abstractionRegistry.getMTBF(nsIdx) : null;
+
+        html += '<div class="crd-lump-section">';
+        html += '<div class="crd-lump-section-label">MTBF Reliability</div>';
+
+        if (!_mtbf && _rtFaults === null) {
+            html += '<div style="color:var(--text-secondary);font-style:italic;">(no MTBF data recorded yet)</div>';
+        } else {
+            html += '<table class="cr-table cr-detail-words"><tbody>';
+            if (_mtbf) {
+                const _mtbfStatus = (_mtbf.status || 'unknown').toLowerCase();
+                const _mtbfClass  = _mtbfStatus === 'green' ? 'mtbf-green'
+                                  : _mtbfStatus === 'amber' ? 'mtbf-amber'
+                                  : _mtbfStatus === 'red'   ? 'mtbf-red'
+                                  : 'mtbf-unknown';
+                const _mtbfLabel  = _mtbf.status ? _mtbf.status.charAt(0).toUpperCase() + _mtbf.status.slice(1) : 'Unknown';
+                html += `<tr><td style="color:var(--church-blue);width:130px;">Status</td><td><span class="mtbf-badge ${_mtbfClass}">${_mtbfLabel}</span></td></tr>`;
+                if (_mtbf.consecutive_clean != null) {
+                    html += `<tr><td style="color:var(--church-blue)">Clean runs</td><td>${_mtbf.consecutive_clean}</td></tr>`;
+                }
+                if (_mtbf.total_runs != null) {
+                    html += `<tr><td style="color:var(--church-blue)">Total runs</td><td>${_mtbf.total_runs}</td></tr>`;
+                }
+                if (_mtbf.source_hash) {
+                    html += `<tr><td style="color:var(--church-blue)">Source hash</td><td><code>${_mtbf.source_hash}</code></td></tr>`;
+                }
+            }
+            html += `<tr><td style="color:var(--church-blue);width:130px;">Live fault count</td><td>${_rtFaults !== null ? _rtFaults : '\u2014'}</td></tr>`;
+            const _liveMTBFStr = _rtFaults === null ? '\u2014'
+                               : _rtMTBF != null    ? (_rtMTBF / 1000).toFixed(1) + 's'
+                               : '\u221e (no faults)';
+            html += `<tr><td style="color:var(--church-blue)">Live MTBF</td><td>${_liveMTBFStr}</td></tr>`;
+            html += '</tbody></table>';
+        }
+        html += '</div>';
+    }
+
+    // ── Error Report ──────────────────────────────────────────────────────────
+    {
+        const _slotFaults = (sim.auditLog || []).filter(e => e.nsIdx === nsIdx);
+        html += '<div class="crd-lump-section">';
+        html += '<div class="crd-lump-section-label">Error Report</div>';
+        if (_slotFaults.length === 0) {
+            html += '<div style="color:var(--text-secondary);font-style:italic;">(no gate log events recorded for this slot \u2014 boot gate log is cleared after clean boot)</div>';
+        } else {
+            const _maxRows = Math.min(_slotFaults.length, 50);
+            html += '<table class="cr-table crd-error-table"><thead><tr><th>Step</th><th>Event</th><th>Detail</th></tr></thead><tbody>';
+            for (let i = 0; i < _maxRows; i++) {
+                const _ef = _slotFaults[i];
+                const _evtStep   = _ef.step != null ? _ef.step : '\u2014';
+                const _evtEvent  = _ef.event || _ef.type || '\u2014';
+                const _evtDetail = (_ef.detail || _ef.message || '');
+                const _truncated = _evtDetail.length > 60 ? _evtDetail.slice(0, 60) + '\u2026' : _evtDetail;
+                html += `<tr><td class="cr-idx">${_evtStep}</td><td>${_evtEvent}</td><td style="font-size:0.78rem;">${_truncated}</td></tr>`;
+            }
+            html += '</tbody></table>';
+            if (_slotFaults.length > 50) {
+                html += `<div style="color:var(--text-secondary);font-size:0.75rem;padding-top:0.25rem;">(${_slotFaults.length - 50} more entries not shown)</div>`;
+            }
+        }
+        html += '</div>';
+    }
+
+    html += '<pre id="crInjectLog" class="cr-inject-log" style="display:none;"></pre>';
+
+    html += '</div></div>';
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Panel: API — pet names + method conventions
+    // ═══════════════════════════════════════════════════════════════════════════
+    html += `<div class="crd-panel" id="crdPanel-api" style="display:${crDetailTab==='api'?'block':'none'}">`;
+    html += '<div class="cr-detail-grid">';
+    html += '<div class="cr-detail-section">';
+
+    // Pet Names
+    html += '<div class="crd-api-section-label">Pet Names</div>';
+    {
+        const _mfstPN  = _lumpManifests[nsIdx];
+        const _mfstDR  = (_mfstPN && _mfstPN.pet_names && _mfstPN.pet_names.DR) || {};
+        const _mfstCR  = (_mfstPN && _mfstPN.pet_names && _mfstPN.pet_names.CR) || {};
+        const _pnRows  = [];
+        for (let i = 0; i < 16; i++) {
+            const _alias = _mfstDR[i] || _mfstDR[String(i)] || _petNameDRMap[i] || _petNameDRMap[String(i)];
+            if (_alias) _pnRows.push([`DR${i}`, _alias]);
+        }
+        for (let i = 0; i < 16; i++) {
+            const _alias = _mfstCR[i] || _mfstCR[String(i)] || _petNameCRMap[i] || _petNameCRMap[String(i)];
+            if (_alias) _pnRows.push([`CR${i}`, _alias]);
+        }
+        if (_pnRows.length === 0) {
+            html += '<div style="color:var(--text-secondary);font-style:italic;margin-bottom:0.75rem;">(no pet names defined for this abstraction)</div>';
+        } else {
+            html += '<table class="cr-table" style="margin-bottom:0.75rem;"><thead><tr><th>Register</th><th>Alias</th></tr></thead><tbody>';
+            for (const [reg, alias] of _pnRows) {
+                html += `<tr><td class="cr-idx">${reg}</td><td class="cr-name">${alias}</td></tr>`;
+            }
+            html += '</tbody></table>';
+        }
+    }
+
+    // Methods & Example API
+    html += '<div class="crd-api-section-label">Methods &amp; Example API</div>';
+    {
+        const _conv    = (typeof METHOD_REGISTER_CONVENTIONS !== 'undefined' && METHOD_REGISTER_CONVENTIONS[_absName]) || {};
+        const _mfstMth = (_lumpManifests[nsIdx] && _lumpManifests[nsIdx].methods) || {};
+        const _mthKeys = Array.from(new Set([...Object.keys(_conv), ...Object.keys(_mfstMth)]));
+        _mthKeys.sort((a, b) => {
+            const ia = (_conv[a] && _conv[a].index != null) ? _conv[a].index : (_mfstMth[a] && _mfstMth[a].index != null) ? _mfstMth[a].index : 999;
+            const ib = (_conv[b] && _conv[b].index != null) ? _conv[b].index : (_mfstMth[b] && _mfstMth[b].index != null) ? _mfstMth[b].index : 999;
+            return ia - ib;
+        });
+
+        if (_mthKeys.length === 0) {
+            html += '<div style="color:var(--text-secondary);font-style:italic;">(no methods defined \u2014 abstraction has no published calling convention)</div>';
+        } else {
+            for (const _mname of _mthKeys) {
+                const _mc   = _conv[_mname] || {};
+                const _mm   = _mfstMth[_mname] || {};
+                const _midx = _mc.index != null ? _mc.index : (_mm.index != null ? _mm.index : '\u2014');
+                const _min  = _mc.input  || _mm.input  || '\u2014';
+                const _mout = _mc.output || _mm.output || '\u2014';
+                const _mdis = _mc.dispatch || _mm.dispatch || null;
+                const _mnote= _mc.note   || _mm.note   || null;
+
+                html += '<div class="crd-api-method-block">';
+                html += `<div style="font-weight:700;color:var(--church-gold);margin-bottom:0.25rem;">${_mname}</div>`;
+                html += '<table class="cr-table" style="margin-bottom:0.4rem;"><tbody>';
+                html += `<tr><td style="color:var(--church-blue);width:100px;">Index</td><td>${_midx}</td></tr>`;
+                html += `<tr><td style="color:var(--church-blue)">Input DRs</td><td>${_min}</td></tr>`;
+                html += `<tr><td style="color:var(--church-blue)">Output DRs</td><td>${_mout}</td></tr>`;
+                if (_mdis) {
+                    html += `<tr><td style="color:var(--church-blue)">Dispatch</td><td><code>${_mdis}</code></td></tr>`;
+                }
+                html += '</tbody></table>';
+
+                const _exLines = [];
+                if (_midx !== '\u2014') {
+                    _exLines.push(`LOAD  DR3, #${_midx}     ; method selector`);
+                }
+                if (_mdis) {
+                    _exLines.push(`${_mdis}  ; ${_absName || 'abs'}.${_mname}`);
+                } else {
+                    _exLines.push(`CALL  CR0, CR14, #0  ; ${_absName || 'abs'}.${_mname}`);
+                }
+                html += `<pre class="crd-api-dispatch">${_exLines.join('\n')}</pre>`;
+
+                if (_mnote) {
+                    html += `<div class="crd-api-note">${_mnote}</div>`;
+                }
+                html += '</div>';
+            }
+        }
+    }
+
+    html += '</div>';
     html += '</div></div>';
 
     html += `<div class="crd-panel" id="crdPanel-register" style="display:${crDetailTab==='register'?'block':'none'}">`;

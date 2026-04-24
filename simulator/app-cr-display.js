@@ -109,7 +109,7 @@ function _applyCRCycleState() {
 
 function openCRDetail(crIdx) {
     selectedCR = crIdx;
-    crDetailTab = 'content';
+    crDetailTab = 'code';
     const detailTab = document.getElementById('dashTab-crdetail');
     if (detailTab) {
         const cr = sim.getFormattedCR(crIdx);
@@ -126,7 +126,7 @@ function openCRDetail(crIdx) {
     updateCRDetail();
 }
 
-let crDetailTab = 'content';
+let crDetailTab = 'code';
 let clistExpandedIdx = null;
 
 function toggleCListEntry(nsIdx) {
@@ -337,15 +337,13 @@ function switchCRDetailTab(tab) {
     document.querySelectorAll('.crd-menu-item[data-tab]').forEach(it => it.classList.remove('crd-menu-item-active'));
     const menuItem = document.querySelector(`.crd-menu-item[data-tab="${tab}"]`);
     if (menuItem) menuItem.classList.add('crd-menu-item-active');
-    const lbl = document.getElementById('crdMenuActiveLabel');
-    if (lbl) lbl.textContent = tab === 'register' ? 'Register' : tab === 'binary' ? 'Binary' : 'Content';
     document.querySelectorAll('.crd-panel').forEach(p => p.style.display = 'none');
     const panel = document.getElementById('crdPanel-' + tab);
     if (panel) panel.style.display = 'block';
 }
 
 function scrollToThreadZone(zone) {
-    switchCRDetailTab('content');
+    switchCRDetailTab('lump');
     // Allow the panel to become visible before scrolling
     requestAnimationFrame(() => {
         // Helper: measure sticky offset (tabs row + thread-layout header)

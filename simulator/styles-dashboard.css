@@ -4316,3 +4316,70 @@ a.next-step-link:hover {
     border-top: 1px solid rgba(255,255,255,0.05);
 }
 
+/* ── CR Detail: Lump tab sections ──────────────────────────────────────────── */
+.crd-lump-section {
+    margin-top: 1rem;
+    padding: 0.6rem 0.75rem;
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.crd-lump-section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--church-blue);
+    margin-bottom: 0.5rem;
+}
+
+/* ── CR Detail: API tab ────────────────────────────────────────────────────── */
+.crd-api-section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--church-blue);
+    margin-top: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.crd-api-method-block {
+    margin-bottom: 1rem;
+    padding: 0.5rem 0.6rem;
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.crd-api-dispatch {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    background: #0a0a1a;
+    color: var(--church-gold);
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    margin: 0.25rem 0 0.1rem;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.crd-api-note {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-top: 0.2rem;
+}
+
+/* ── CR Detail: Error Report table ─────────────────────────────────────────── */
+.crd-error-table {
+    width: 100%;
+    font-size: 0.78rem;
+}
+
+.crd-error-table th,
+.crd-error-table td {
+    padding: 0.2rem 0.4rem;
+}
+
