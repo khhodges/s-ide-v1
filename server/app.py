@@ -2517,8 +2517,17 @@ def resize_lump(token_hex):
     words) intact; removes the unused freespace words between them.  The new
     lump size is the smallest power of 2 >= (1 + cw + cc), minimum 64 words.
 
-    Only standalone .lump files can be resized.  Synthetic lumps (e.g. the boot
-    lump extracted from boot-image.bin) are rejected with a 400 error.
+    Two paths are supported:
+
+    * Standalone .lump files — read from the file, repack, write back, update
+      the sidecar JSON and manifest.
+
+    * Boot lump (token 00000003) embedded in boot-image.bin — repack the lump
+      in-place inside the binary memory image, update NS slot 3 words 1 and 2
+      (cr_limit and CRC-16/XMODEM seal), write boot-image.bin back, then
+      refresh LAZY_LUMPS and _BOOT_ABSTR_META via _load_boot_abstr_lump().
+
+    Lumps that do not fall into either category are rejected with a 400 error.
     """
     import math as _math
     raw   = token_hex.lower()
@@ -2526,6 +2535,97 @@ def resize_lump(token_hex):
     lumps_dir    = os.path.join(os.path.dirname(__file__), 'lumps')
     lump_path    = os.path.join(lumps_dir, f'{key8}.lump')
     sidecar_path = os.path.join(lumps_dir, f'{key8}.json')
+
+    # Special branch: boot lump embedded in boot-image.bin (token 00000003).
+    # There is no standalone .lump file for this token; resize it in-place inside
+    # the binary, update NS slot 3, then write the file back.
+    if not os.path.isfile(lump_path) and key8 == '00000003' and _BOOT_ABSTR_META:
+        boot_path = os.path.join(os.path.dirname(__file__), 'lumps', 'boot-image.bin')
+        if not os.path.isfile(boot_path):
+            return jsonify({"error": "boot-image.bin not found"}), 400
+        with open(boot_path, 'rb') as fh:
+            raw = fh.read()
+        n_words = len(raw) // 4
+        if n_words < 1024:
+            return jsonify({"error": "boot-image.bin too small to contain NS table"}), 400
+        # boot-image.bin is little-endian, mirroring _load_boot_abstr_lump()
+        mem_bi = list(_struct.unpack(f'<{n_words}I', raw[:n_words * 4]))
+
+        # Locate NS slot 3 entry (NS_TABLE_RESERVE=1024, NS_ENTRY_WORDS=4, BOOT_ABSTR_NS_SLOT=3)
+        ns_table_base = n_words - 1024
+        boot_ns_base  = ns_table_base + 3 * 4
+        word0_location = mem_bi[boot_ns_base]
+        if word0_location == 0 or word0_location + 1 >= n_words:
+            return jsonify({"error": "Boot lump location in NS slot 3 is invalid"}), 400
+
+        # Parse lump header (little-endian word, same bit layout as big-endian .lump)
+        hdr = mem_bi[word0_location]
+        if (hdr >> 27) & 0x1F != 0x1F:
+            return jsonify({"error": "Bad lump magic in boot lump header"}), 400
+        n_minus_6 = (hdr >> 23) & 0xF
+        cw        = (hdr >> 10) & 0x1FFF
+        cc        = hdr & 0xFF
+        typ       = (hdr >> 8) & 0x3
+        old_size  = 1 << (n_minus_6 + 6)
+
+        if word0_location + old_size > n_words:
+            return jsonify({"error": "Boot lump region extends beyond boot-image.bin"}), 400
+
+        # Compute minimum size (same formula as standalone path)
+        min_content = 1 + cw + cc
+        new_n = max(6, _math.ceil(_math.log2(max(min_content, 2))))
+        new_n = min(new_n, 14)
+        new_size = 1 << new_n
+
+        if new_size >= old_size:
+            return jsonify({"ok": True, "already_minimal": True,
+                            "lump_size": old_size, "cw": cw, "cc": cc})
+
+        # Capture code and c-list from the current lump region
+        code_words  = mem_bi[word0_location + 1 : word0_location + 1 + cw]
+        clist_words = (mem_bi[word0_location + old_size - cc : word0_location + old_size]
+                       if cc > 0 else [])
+
+        # Repack lump in-place: header | code | freespace zeros | c-list
+        freespace = new_size - 1 - cw - cc
+        mem_bi[word0_location] = _pack_lump_header(new_n - 6, cw, cc, typ)
+        for i, w in enumerate(code_words):
+            mem_bi[word0_location + 1 + i] = int(w) & 0xFFFFFFFF
+        for i in range(freespace):
+            mem_bi[word0_location + 1 + cw + i] = 0
+        for i, w in enumerate(clist_words):
+            mem_bi[word0_location + new_size - cc + i] = int(w) & 0xFFFFFFFF
+        # Zero the freed tail of the old lump region
+        for i in range(new_size, old_size):
+            mem_bi[word0_location + i] = 0
+
+        # Update NS slot 3 word 1 (new cr_limit) and word 2 (recomputed CRC-16/XMODEM seal)
+        new_cr_limit = new_size - cc - 1
+        mem_bi[boot_ns_base + 1] = _boot_image_gen.pack_ns_word1(
+            new_cr_limit, 0, 0, 0, 0, 1, cc)
+        mem_bi[boot_ns_base + 2] = _boot_image_gen.make_version_seals(
+            0, word0_location, new_cr_limit)
+
+        # Serialize back to little-endian bytes and write boot-image.bin
+        new_bytes = _struct.pack(f'<{n_words}I', *[int(w) & 0xFFFFFFFF for w in mem_bi])
+        with open(boot_path, 'wb') as fh:
+            fh.write(new_bytes)
+
+        # Refresh LAZY_LUMPS and _BOOT_ABSTR_META from the updated file
+        _load_boot_abstr_lump()
+
+        # Sanity check: validate the updated image
+        try:
+            _boot_image_gen.validate_boot_image(new_bytes)
+        except ValueError as ve:
+            return jsonify({"error": f"Post-resize validation failed: {ve}"}), 500
+
+        saved = old_size - new_size
+        print(f'[lump/resize] boot-image 00000003: {old_size}w → {new_size}w '
+              f'(cw={cw}, cc={cc}, cr_limit={new_cr_limit}, saved {saved}w)', flush=True)
+        return jsonify({"ok": True, "already_minimal": False,
+                        "old_size": old_size, "lump_size": new_size,
+                        "cw": cw, "cc": cc, "saved_words": saved})
 
     if not os.path.isfile(lump_path):
         return jsonify({"error": f"Lump {key8} has no standalone file — only standalone lumps can be resized"}), 400
