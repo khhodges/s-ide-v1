@@ -1,5 +1,24 @@
 var _activeAsmErrors = [];
 
+function _jumpToAsmLine(lineNum) {
+    var editor = document.getElementById('asmEditor');
+    if (!editor || !lineNum) return;
+    var lines = editor.value.split('\n');
+    var targetLine = Math.max(1, Math.min(lineNum, lines.length));
+    var offset = 0;
+    for (var i = 0; i < targetLine - 1; i++) {
+        offset += lines[i].length + 1;
+    }
+    var lineLen = lines[targetLine - 1] ? lines[targetLine - 1].length : 0;
+    editor.focus();
+    editor.setSelectionRange(offset, offset + lineLen);
+    var style = getComputedStyle(editor);
+    var lineHeight = parseFloat(style.lineHeight) || 19.2;
+    var paddingTop = parseFloat(style.paddingTop) || 0;
+    var targetScrollTop = paddingTop + (targetLine - 1) * lineHeight - editor.clientHeight / 3;
+    editor.scrollTop = Math.max(0, targetScrollTop);
+}
+
 function _showAsmErrors(errors) {
     var panel = document.getElementById('asmErrorPanel');
     if (!panel) return;
@@ -11,10 +30,19 @@ function _showAsmErrors(errors) {
              + '</div>'
              + '<ul class="asm-error-panel-list">';
     errors.forEach(function(e) {
-        html += '<li><span class="asm-error-line">Line ' + e.line + ':</span>' + _escHtml(e.message) + '</li>';
+        html += '<li>'
+              + '<button type="button" class="asm-error-item" data-line="' + e.line + '" title="Jump to line ' + e.line + '">'
+              + '<span class="asm-error-line">Line ' + e.line + ':</span>' + _escHtml(e.message)
+              + '</button>'
+              + '</li>';
     });
     html += '</ul>';
     panel.innerHTML = html;
+    panel.querySelectorAll('.asm-error-item').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            _jumpToAsmLine(parseInt(btn.getAttribute('data-line'), 10));
+        });
+    });
     panel.style.display = 'flex';
     _activeAsmErrors = errors.slice();
     _highlightAsmErrorLines(errors);

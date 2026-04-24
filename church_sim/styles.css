@@ -441,6 +441,8 @@ header h1 {
 .asm-error-panel-title { color: #fca5a5; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .asm-error-panel-list { list-style: none; padding: 0; margin: 0.1rem 0 0 1.35rem; display: flex; flex-direction: column; gap: 0.15rem; }
 .asm-error-panel-list li { font-family: 'Courier New', monospace; font-size: 0.78rem; color: #fca5a5; line-height: 1.4; }
+.asm-error-item { display: block; width: 100%; background: none; border: none; text-align: left; font-family: 'Courier New', monospace; font-size: 0.78rem; color: #fca5a5; line-height: 1.4; cursor: pointer; border-radius: 3px; padding: 0.05rem 0.25rem; margin: 0 -0.25rem; transition: background 0.12s; }
+.asm-error-item:hover { background: rgba(239, 68, 68, 0.18); color: #fecaca; }
 .asm-error-line { color: #f87171; font-weight: 700; margin-right: 0.35rem; }
 
 .code-editor-wrap {

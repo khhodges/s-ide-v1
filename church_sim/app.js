@@ -781,6 +781,25 @@ function updateNamespace() {
     container.innerHTML = html;
 }
 
+function _jumpToAsmLine(lineNum) {
+    const editor = document.getElementById('asmEditor');
+    if (!editor || !lineNum) return;
+    const lines = editor.value.split('\n');
+    const targetLine = Math.max(1, Math.min(lineNum, lines.length));
+    let offset = 0;
+    for (let i = 0; i < targetLine - 1; i++) {
+        offset += lines[i].length + 1;
+    }
+    const lineLen = lines[targetLine - 1] ? lines[targetLine - 1].length : 0;
+    editor.focus();
+    editor.setSelectionRange(offset, offset + lineLen);
+    const style = getComputedStyle(editor);
+    const lineHeight = parseFloat(style.lineHeight) || 19.2;
+    const paddingTop = parseFloat(style.paddingTop) || 0;
+    const targetScrollTop = paddingTop + (targetLine - 1) * lineHeight - editor.clientHeight / 3;
+    editor.scrollTop = Math.max(0, targetScrollTop);
+}
+
 function _showAsmErrors(errors) {
     const panel = document.getElementById('asmErrorPanel');
     if (!panel) return;
@@ -792,10 +811,19 @@ function _showAsmErrors(errors) {
              + '</div>'
              + '<ul class="asm-error-panel-list">';
     errors.forEach(function(e) {
-        html += '<li><span class="asm-error-line">Line ' + e.line + ':</span>' + escapeHtml(e.message) + '</li>';
+        html += '<li>'
+              + '<button type="button" class="asm-error-item" data-line="' + e.line + '" title="Jump to line ' + e.line + '">'
+              + '<span class="asm-error-line">Line ' + e.line + ':</span>' + escapeHtml(e.message)
+              + '</button>'
+              + '</li>';
     });
     html += '</ul>';
     panel.innerHTML = html;
+    panel.querySelectorAll('.asm-error-item').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            _jumpToAsmLine(parseInt(btn.getAttribute('data-line'), 10));
+        });
+    });
     panel.style.display = 'flex';
 }
 
