@@ -725,6 +725,12 @@
 .info-ide-pending {
     color: rgba(156,163,175,0.6);
 }
+.info-ide-time {
+    margin-left: 0.4rem;
+    font-size: 0.68rem;
+    font-family: 'Courier New', monospace;
+    color: rgba(156,163,175,0.7);
+}
 
 .editor-layout {
     display: flex;

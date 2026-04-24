@@ -628,7 +628,21 @@ function updateInfoDisplay() {
                 return `<div class="info-item"><span class="info-label">IDE Connection</span><span class="info-value"><span class="info-ide-pending">\u2014</span></span></div>`;
             }
             const isOnline = status === 'online';
-            return `<div class="info-item"><span class="info-label">IDE Connection</span><span class="info-value"><span class="info-ide-badge ${isOnline ? 'info-ide-online' : 'info-ide-offline'}">IDE: ${status}</span></span></div>`;
+            const ts = (sim && sim.callHomeTimestamp) || null;
+            let timeStr = '';
+            if (ts) {
+                const diffMs = Date.now() - ts;
+                const diffS = Math.floor(diffMs / 1000);
+                if (diffS < 60) {
+                    timeStr = ` \u2014 ${diffS}s ago`;
+                } else if (diffS < 3600) {
+                    timeStr = ` \u2014 ${Math.floor(diffS / 60)}m ago`;
+                } else {
+                    timeStr = ` \u2014 ${Math.floor(diffS / 3600)}h ago`;
+                }
+            }
+            const titleAttr = ts ? ` title="${new Date(ts).toLocaleString()}"` : '';
+            return `<div class="info-item"><span class="info-label">IDE Connection</span><span class="info-value"><span class="info-ide-badge ${isOnline ? 'info-ide-online' : 'info-ide-offline'}">IDE: ${status}</span><span class="info-ide-time"${titleAttr}>${timeStr}</span></span></div>`;
         })()}
     `;
 }
