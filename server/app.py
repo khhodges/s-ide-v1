@@ -2110,7 +2110,13 @@ def _load_boot_abstr_lump():
                     _s300cc  = _s300hdr & 0xFF
                     _s300nm6 = (_s300hdr >> 23) & 0xF
                     _s300sz  = 1 << (_s300nm6 + 6)
-                    if _s300cw == 17 and 0 < _s300cc <= 18 and _s300n >= 18:
+                    # Magic [31:27] must be 0x1F; cw must be NUC_CODE_WORDS
+                    # (17); cc must be in range; file must cover the declared
+                    # lump size and at least DEMO_CLIST_SIZE (18) words.
+                    # Constants 17/18 are hardcoded pending task #564.
+                    if ((_s300hdr >> 27) == 0x1F and _s300cw == 17 and
+                            0 < _s300cc <= 18 and
+                            _s300n >= _s300sz and _s300n >= 18):
                         _BOOT_ABSTR_META['lump_size'] = _s300sz
                         _BOOT_ABSTR_META['cc']        = _s300cc
                         LAZY_LUMPS['00000003'] = _s300raw[:_s300n * 4]
