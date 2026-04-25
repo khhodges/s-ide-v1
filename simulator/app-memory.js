@@ -244,6 +244,17 @@ function updateCRDetail() {
 
         const _crPets3 = {};
 
+        // Pre-compute clobber warnings so the code table can highlight offending rows
+        const _earlyRefResult = (lumpHdr.valid && lumpHdr.cw > 0)
+            ? _computeReferencedCListSlots(baseLoc + 1, lumpHdr.cw) : null;
+        const _earlyClobberWarnings = (_earlyRefResult && _earlyRefResult.clobberWarnings)
+            ? _earlyRefResult.clobberWarnings : [];
+        const _clobberWordMap = new Map(); // word index → [{cr, prevAliasedAtWord}]
+        for (const _cwe of _earlyClobberWarnings) {
+            if (!_clobberWordMap.has(_cwe.word)) _clobberWordMap.set(_cwe.word, []);
+            _clobberWordMap.get(_cwe.word).push(_cwe);
+        }
+
         const _brLabelCondNames = ['EQ','NE','CS','CC','MI','PL','VS','VC','HI','LS','GE','LT','GT','LE','','NV'];
         const _brTargetSet = new Set();
         for (let i = 0; i < _codeWords.length; i++) {
@@ -277,6 +288,8 @@ function updateCRDetail() {
             const decomp = _decompileWord(word, addr, nsIdx, _lumpClistBase, _crPets3);
             const isCompiler = decomp && decomp.compiler;
             let rowClass = isPC ? 'code-pc-row' : (isBP ? 'code-bp-row' : (isCompiler ? 'code-row-compiler' : ''));
+            const _clobberInfos = _clobberWordMap.get(w);
+            if (_clobberInfos) rowClass = (rowClass ? rowClass + ' ' : '') + 'code-row-clobber';
 
             let decoded;
             if (word === 0) {
@@ -295,6 +308,9 @@ function updateCRDetail() {
                 decoded = _wrapRegHover(asm.disassemble(word));
             }
             const bpDot    = isBP ? '<span class="bp-dot" title="Breakpoint">&#x25CF;</span> ' : '';
+            const _clobberIcon = _clobberInfos
+                ? `<span class="code-clobber-icon" title="${_clobberInfos.map(c => `CR${c.cr} alias clobbered here (set at word\u00A0${c.prevAliasedAtWord})`).join('\n')}">&#x26A0;</span> `
+                : '';
             const decompTd = decomp
                 ? `<td class="code-decompiled ${isCompiler ? 'code-decompiled-compiler' : 'code-decompiled-user'}">${_wrapRegHover(decomp.desc)}</td>`
                 : '<td class="code-decompiled"></td>';
@@ -302,7 +318,7 @@ function updateCRDetail() {
             codeHtml += `<tr class="${rowClass}" style="cursor:pointer;" title="Double-click to set breakpoint" ondblclick="openBreakPopoverAt(${addr})">`;
             codeHtml += `<td class="cr-idx">0x${addr.toString(16).toUpperCase().padStart(4,'0')}</td>`;
             codeHtml += `<td class="cr-gt">0x${word.toString(16).toUpperCase().padStart(8,'0')}</td>`;
-            codeHtml += `<td class="code-disasm">${bpDot}${decoded}</td>`;
+            codeHtml += `<td class="code-disasm">${bpDot}${_clobberIcon}${decoded}</td>`;
             if (_brArrows.hasBranches) codeHtml += `<td class="br-arrow-col">${_brArrows.html[w]}</td>`;
             codeHtml += decompTd;
             codeHtml += '</tr>';

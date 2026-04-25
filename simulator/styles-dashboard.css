@@ -2985,6 +2985,21 @@ a.next-step-link:hover {
 .clist-clobber-dismiss:hover {
     color: #ccc;
 }
+.code-row-clobber {
+    border-left: 3px solid #ff6b55;
+    background: rgba(255, 80, 60, 0.06);
+}
+.code-row-clobber:hover {
+    background: rgba(255, 80, 60, 0.12) !important;
+}
+.code-clobber-icon {
+    color: #ff6b55;
+    font-size: 0.8em;
+    cursor: help;
+    margin-right: 0.2em;
+    vertical-align: middle;
+    text-shadow: 0 0 4px rgba(255, 80, 60, 0.4);
+}
 .crd-menu-active-label {
     font-size: 0.82rem;
     font-weight: 700;
