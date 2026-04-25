@@ -597,24 +597,29 @@ def generate_boot_image(cfg, lumps_dir, boot_entry_slot=None):
             _bsn = len(_bsraw) // 4
             # Saved lumps are packed big-endian by /api/lumps/save.
             _bswords = list(struct.unpack(f">{_bsn}I", _bsraw[:_bsn * 4]))
-            # Validate: lump size and code-word count must match expected layout.
-            if _bsn == entry_lump_size:
-                _bshdr = _bswords[0]
-                _bscw  = (_bshdr >> 10) & 0x1FFF
-                _bscc  = _bshdr & 0xFF
-                if _bscw == NUC_CODE_WORDS and 0 < _bscc <= DEMO_CLIST_SIZE:
-                    # Copy all DEMO_CLIST_SIZE words from the saved lump's
-                    # c-list region (which includes freed/zero gaps after POLA).
-                    _bs_clist_base = _bsn - DEMO_CLIST_SIZE
-                    for _ci in range(DEMO_CLIST_SIZE):
-                        mem[boot_entry_loc + entry_clist_start + _ci] = (
-                            _bswords[_bs_clist_base + _ci] & 0xFFFFFFFF)
-                    # Patch lump header cc; keep n_minus_6 and cw unchanged.
-                    mem[boot_entry_loc] = pack_lump_header(
-                        _ns_n_minus_6(entry_lump_size), NUC_CODE_WORDS, _bscc, 0)
-                    # Update NS entry word1 cc; keep limit17 and permission bits.
-                    mem[entry_ns_base + 1] = pack_ns_word1(
-                        entry_cr_limit, 0, 0, 0, 0, 1, _bscc)
+            # Validate: code-word count must match the boot ROM; cc must be
+            # in range.  Size is NOT checked — the saved lump may be smaller
+            # than abstractionLumpWords (e.g. 64w) if it was written before a
+            # boot-config change or after compress.  The copy arithmetic below
+            # works for any saved lump >= 64 words: the last DEMO_CLIST_SIZE
+            # words of the saved lump map correctly to the boot image's
+            # DEMO_CLIST_SIZE-slot c-list region regardless of saved-lump size.
+            _bshdr = _bswords[0]
+            _bscw  = (_bshdr >> 10) & 0x1FFF
+            _bscc  = _bshdr & 0xFF
+            if _bscw == NUC_CODE_WORDS and 0 < _bscc <= DEMO_CLIST_SIZE:
+                # Copy all DEMO_CLIST_SIZE words from the saved lump's
+                # c-list region (which includes freed/zero gaps after POLA).
+                _bs_clist_base = _bsn - DEMO_CLIST_SIZE
+                for _ci in range(DEMO_CLIST_SIZE):
+                    mem[boot_entry_loc + entry_clist_start + _ci] = (
+                        _bswords[_bs_clist_base + _ci] & 0xFFFFFFFF)
+                # Patch lump header cc; keep n_minus_6 and cw unchanged.
+                mem[boot_entry_loc] = pack_lump_header(
+                    _ns_n_minus_6(entry_lump_size), NUC_CODE_WORDS, _bscc, 0)
+                # Update NS entry word1 cc; keep limit17 and permission bits.
+                mem[entry_ns_base + 1] = pack_ns_word1(
+                    entry_cr_limit, 0, 0, 0, 0, 1, _bscc)
         except Exception:
             pass  # Fall back silently to the hardcoded defaults above.
 
