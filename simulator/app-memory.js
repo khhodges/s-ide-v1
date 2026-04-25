@@ -2024,9 +2024,8 @@ function openBootDesigner() {
         document.getElementById('bdTotal').value  = s1.totalNamespaceWords  || 16384;
         document.getElementById('bdNs').value     = s1.namespaceLumpWords   || 64;
         document.getElementById('bdThread').value = s1.threadLumpWords      || 256;
-        document.getElementById('bdAbstr').value  = s1.abstractionLumpWords || 256;
         bdRefreshHwInfo();
-        ['bdTotal','bdNs','bdThread','bdAbstr'].forEach(id => {
+        ['bdTotal','bdNs','bdThread'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.oninput = _bdValidate;
         });
@@ -2054,9 +2053,10 @@ function _bdInitStep2(cfg) {
     // Suggested default phys addresses grow upward from the foundational
     // region; each row falls back to a sensible default if the user toggles
     // resident without picking an address.
+    const BOOT_ABSTR_DEFAULT_SIZE = 64; // Boot.Abstr size is always 64w min (Task #568/569)
     let cursor = (parseInt(document.getElementById('bdNs').value, 10) || 0)
                + (parseInt(document.getElementById('bdThread').value, 10) || 0)
-               + (parseInt(document.getElementById('bdAbstr').value, 10) || 0);
+               + BOOT_ABSTR_DEFAULT_SIZE;
     for (const cat of _lumpCatalog) {
         const saved = savedMap[cat.nsSlot];
         const resident = !!(saved && saved.resident);
@@ -2154,15 +2154,13 @@ function _bdValidate() {
     const total  = parseInt(document.getElementById('bdTotal').value, 10);
     const nsLump = parseInt(document.getElementById('bdNs').value, 10);
     const thrLump = parseInt(document.getElementById('bdThread').value, 10);
-    const absLump = parseInt(document.getElementById('bdAbstr').value, 10);
     const errEl = document.getElementById('bdError');
     const sumEl = document.getElementById('bdSummary');
     const saveBtn = document.getElementById('bdSaveBtn');
     let err = '';
     const fields = [['Total namespace memory', total],
                     ['Namespace Lump', nsLump],
-                    ['Thread Lump', thrLump],
-                    ['Abstraction Lump', absLump]];
+                    ['Thread Lump', thrLump]];
     for (const [name, v] of fields) {
         if (!Number.isFinite(v) || v <= 0) { err = `${name} must be a positive integer.`; break; }
         if (!_bdIsPow2(v))                  { err = `${name} must be a power of 2.`; break; }
@@ -2171,7 +2169,8 @@ function _bdValidate() {
     if (!err && total > p.totalRamWords) {
         err = `Total namespace memory (${total}) exceeds ${p.label} budget (${p.totalRamWords} words).`;
     }
-    const sum = (nsLump||0) + (thrLump||0) + (absLump||0);
+    const BOOT_ABSTR_DEFAULT_SIZE = 64; // Boot.Abstr always 64w minimum (Task #568/569)
+    const sum = (nsLump||0) + (thrLump||0) + BOOT_ABSTR_DEFAULT_SIZE;
     const NS_TABLE_RESERVE = 0x300; // 768 words; keep in sync with simulator.js
     const usable = (total||0) - NS_TABLE_RESERVE;
     if (!err && sum > total) {
@@ -2261,7 +2260,6 @@ function saveBootDesigner() {
             totalNamespaceWords:  parseInt(document.getElementById('bdTotal').value, 10),
             namespaceLumpWords:   parseInt(document.getElementById('bdNs').value, 10),
             threadLumpWords:      parseInt(document.getElementById('bdThread').value, 10),
-            abstractionLumpWords: parseInt(document.getElementById('bdAbstr').value, 10),
         },
         step2: { lumps: step2Lumps },
         step3: {

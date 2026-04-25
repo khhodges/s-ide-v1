@@ -283,7 +283,6 @@ DEFAULT_BOOT_CONFIG = {
         "totalNamespaceWords": 16384,
         "namespaceLumpWords": 64,
         "threadLumpWords": 256,
-        "abstractionLumpWords": 256,
     },
     # Step 2 (Task #215): per-lump resident/lazy decision. Empty list =
     # historical default (all catalog lumps lazy-loaded on first CALL).
@@ -485,11 +484,8 @@ def _validate_step1(target_board, step1):
         v = step1.get(f)
         if not isinstance(v, int) or v <= 0:
             return f"step1.{f} must be a positive integer"
-    # abstractionLumpWords is deprecated (Task #568) — warn and ignore if present.
-    if "abstractionLumpWords" in step1:
-        v = step1["abstractionLumpWords"]
-        if not isinstance(v, int) or v <= 0:
-            return "step1.abstractionLumpWords must be a positive integer (deprecated)"
+    # abstractionLumpWords is deprecated (Task #568/569) — silently ignore if present in
+    # legacy saved configs; the generator derives the size from the saved lump directly.
     total = step1["totalNamespaceWords"]
     if total > profile["totalRamWords"]:
         return (f"totalNamespaceWords ({total}) exceeds {profile['label']} "
@@ -589,10 +585,6 @@ def boot_config_post():
             "threadLumpWords": int(step1["threadLumpWords"]),
         },
     }
-    # abstractionLumpWords is deprecated (Task #568) — preserve in saved config if present
-    # so legacy tools that re-read the config don't lose the field.
-    if "abstractionLumpWords" in step1:
-        cfg["step1"]["abstractionLumpWords"] = int(step1["abstractionLumpWords"])
     if step2 is not None:
         norm = []
         for e in (step2.get("lumps") or []):
