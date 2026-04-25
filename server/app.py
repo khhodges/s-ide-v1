@@ -2371,13 +2371,39 @@ def save_lump():
 
     print(f'[lumps] Saved {token8}.lump ({len(lump_bytes)} bytes) + {token8}.json', flush=True)
 
-    return jsonify({
-        "ok":     True,
-        "token":  token8,
-        "lump":   f'{token8}.lump',
-        "sidecar": f'{token8}.json',
-        "size_bytes": len(lump_bytes)
-    })
+    # ── Auto-regenerate boot-image.bin ────────────────────────────────────────
+    # If boot-image.bin already exists and a boot config is present, regenerate
+    # it so the saved lump is persisted across server reboots.  Failures are
+    # non-fatal — the lump is safely on disk regardless.
+    boot_refreshed = False
+    boot_refresh_note = None
+    if os.path.isfile(BOOT_IMAGE_PATH):
+        try:
+            cfg_bi, err_bi = _read_saved_boot_config()
+            if not err_bi:
+                blob_bi = _boot_image_gen.generate_boot_image(cfg_bi, LUMPS_DIR)
+                with open(BOOT_IMAGE_PATH, 'wb') as _bif:
+                    _bif.write(blob_bi)
+                boot_refreshed = True
+                print(f'[lumps] boot-image.bin regenerated ({len(blob_bi)} bytes)', flush=True)
+            else:
+                boot_refresh_note = f'boot config unavailable: {err_bi}'
+        except Exception as _bie:
+            boot_refresh_note = str(_bie)
+            logging.warning('[lumps] boot-image.bin regeneration failed: %s', _bie)
+
+    resp: dict = {
+        "ok":          True,
+        "token":       token8,
+        "lump":        f'{token8}.lump',
+        "lump_path":   f'server/lumps/{token8}.lump',
+        "sidecar":     f'{token8}.json',
+        "size_bytes":  len(lump_bytes),
+        "boot_image_refreshed": boot_refreshed,
+    }
+    if boot_refresh_note:
+        resp["boot_image_note"] = boot_refresh_note
+    return jsonify(resp)
 
 @app.route("/api/lumps/list")
 def list_lumps():

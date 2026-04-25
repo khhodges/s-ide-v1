@@ -2750,7 +2750,10 @@ window.lumpCompress = async function(nsIdx) {
         });
         const data2 = await resp2.json();
         if (!resp2.ok) throw new Error(data2.error || 'Server error');
-        const detail = `${parts.join('; ')}\ntoken: ${data2.token}\n${data2.lump_path || 'server/lumps/'}`;
+        const _biLine2 = data2.boot_image_refreshed ? '\u2713 boot-image.bin refreshed \u2014 change persists on reboot'
+                       : data2.boot_image_note      ? `\u26A0 boot image not updated: ${data2.boot_image_note}`
+                       : '';
+        const detail = [parts.join('; '), `token: ${data2.token}`, data2.lump_path || 'server/lumps/', _biLine2].filter(Boolean).join('\n');
         log(`Compressed NS${nsIdx}: ${parts.join('; ')}. Saved \u2014 token: ${data2.token}`);
         if (typeof showPatchModal === 'function') showPatchModal(true, _saveTitle, detail);
     } catch (e) {
@@ -2798,8 +2801,11 @@ window.lumpSaveLump = async function(nsIdx) {
         });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Server error');
-        const msg = `token: ${data.token}\n${data.lump_path || 'server/lumps/'}`;
-        log(`Saved \u2014 ${msg.split('\n')[0]}`);
+        const _biLine = data.boot_image_refreshed ? '\u2713 boot-image.bin refreshed — change persists on reboot'
+                      : data.boot_image_note      ? `\u26A0 boot image not updated: ${data.boot_image_note}`
+                      : '';
+        const msg = [`token: ${data.token}`, data.lump_path || 'server/lumps/', _biLine].filter(Boolean).join('\n');
+        log(`Saved \u2014 token: ${data.token}`);
         if (typeof showPatchModal === 'function') showPatchModal(true, `Save Lump \u2014 NS${nsIdx} \u201C${absName}\u201D`, msg);
     } catch (e) {
         log(`Save failed: ${e.message}`);
@@ -3042,6 +3048,8 @@ window.applyPOLA = async function(nsIdx) {
         if (!resp.ok) throw new Error(data.error || 'Server error');
         logLines[logLines.length - 1] = `Saved \u2014 token: ${data.token}`;
         if (data.lump_path) logLines.push(data.lump_path);
+        if (data.boot_image_refreshed) logLines.push('\u2713 boot-image.bin refreshed \u2014 change persists on reboot');
+        else if (data.boot_image_note) logLines.push(`\u26A0 boot image not updated: ${data.boot_image_note}`);
     } catch (e) {
         saveOk = false;
         logLines[logLines.length - 1] = `Optimize done but save failed: ${e.message}`;
