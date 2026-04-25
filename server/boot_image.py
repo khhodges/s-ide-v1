@@ -597,17 +597,18 @@ def generate_boot_image(cfg, lumps_dir, boot_entry_slot=None):
             _bsn = len(_bsraw) // 4
             # Saved lumps are packed big-endian by /api/lumps/save.
             _bswords = list(struct.unpack(f">{_bsn}I", _bsraw[:_bsn * 4]))
-            # Validate: code-word count must match the boot ROM; cc must be
-            # in range.  Size is NOT checked — the saved lump may be smaller
-            # than abstractionLumpWords (e.g. 64w) if it was written before a
-            # boot-config change or after compress.  The copy arithmetic below
-            # works for any saved lump >= 64 words: the last DEMO_CLIST_SIZE
-            # words of the saved lump map correctly to the boot image's
-            # DEMO_CLIST_SIZE-slot c-list region regardless of saved-lump size.
+            # Validate: code-word count must match the boot ROM; cc must be in
+            # range; lump must be long enough to index its c-list tail.  Size
+            # is NOT required to equal entry_lump_size — the saved lump may be
+            # 64w (written before a boot-config change) or compressed smaller.
+            # The copy arithmetic works for any saved lump where
+            # _bsn >= DEMO_CLIST_SIZE: the last DEMO_CLIST_SIZE words map
+            # correctly to the boot image's 18-slot c-list region.
             _bshdr = _bswords[0]
             _bscw  = (_bshdr >> 10) & 0x1FFF
             _bscc  = _bshdr & 0xFF
-            if _bscw == NUC_CODE_WORDS and 0 < _bscc <= DEMO_CLIST_SIZE:
+            if (_bsn >= DEMO_CLIST_SIZE and
+                    _bscw == NUC_CODE_WORDS and 0 < _bscc <= DEMO_CLIST_SIZE):
                 # Copy all DEMO_CLIST_SIZE words from the saved lump's
                 # c-list region (which includes freed/zero gaps after POLA).
                 _bs_clist_base = _bsn - DEMO_CLIST_SIZE
