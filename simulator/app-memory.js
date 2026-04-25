@@ -2864,7 +2864,7 @@ window.__crdToggleFaultDetail = function(detailRowId, summaryRow) {
 // ── C-List static analysis helpers ─────────────────────────────────────────
 
 // Scan the code words at [codeBase .. codeBase+codeCount-1] and return
-// { direct, indirect } where:
+// { direct, indirect, clobberWarnings } where:
 //   direct          — Set of c-list slot indices referenced by LOAD/SAVE/ELOADCALL/
 //                     XLOADLAMBDA instructions whose crSrc field is 6 (CR6 = c-list root).
 //   indirect        — Set of c-list slot indices reached via a CR alias: a register
@@ -2873,77 +2873,208 @@ window.__crdToggleFaultDetail = function(detailRowId, summaryRow) {
 //                     Chained aliases (CR2 ← CR1, CR1 ← CR6[n]) are also tracked.
 //   clobberWarnings — Array of { word, cr, prevAliasedAtWord } entries emitted when a
 //                     LOAD overwrites a previously-aliased CR with an unrelated value.
-//                     Callers may surface these as notes to the user.
+//                     prevAliasedAtWord is -1 when the alias entered the block from a
+//                     predecessor (back-edge or merge).  Callers may surface these as
+//                     notes to the user.
 // Slots absent from both direct and indirect are candidates for POLA removal.
+//
+// Algorithm overview:
+//   The function uses a basic-block CFG with an iterative worklist (fixpoint) to
+//   propagate alias information across back-edges.  This makes alias tracking
+//   accurate inside loops: an alias established in one iteration of a loop body is
+//   visible to earlier instructions in the next iteration.
+//
+//   Phase 1 — Identify basic-block entry points by scanning for BRANCH (opcode 17)
+//              instructions; branch targets and fall-through successors start new
+//              blocks.
+//   Phase 2 — Build the CFG successor list for each block.
+//   Phase 3 — Fixpoint: propagate CR alias bitmasks (one bit per CR 0-15) across
+//              the CFG using a worklist until the entry alias set of every block
+//              stabilises.  The alias bitmask is a 16-bit integer; a 1 in bit n
+//              means CRn currently holds a c-list capability.
+//   Phase 4 — Final collection pass: walk each block using its fixpoint entry
+//              alias mask and accumulate direct / indirect / clobberWarnings.
+//
+// Opcodes that use crSrc as a c-list base and may write crDst:
+//   0 = LOAD  crDst ← memory[crSrc + imm]   (crSrc is address base; writes crDst)
+//   1 = SAVE  memory[crSrc + imm] ← crDst   (crSrc is address base; crDst not written)
+//   8 = ELOADCALL                            (crSrc is the c-list base; not written)
+//   9 = XLOADLAMBDA                          (crSrc is the c-list base; not written)
+// Only LOAD (opcode 0) modifies crDst as a register; the others only dereference crSrc.
 function _computeReferencedCListSlots(codeBase, codeCount) {
-    // Forward sequential pass that tracks live CR aliases as we process each
-    // instruction in program order.  This is more accurate than the old two-pass
-    // flow-insensitive approach in three ways:
-    //
-    //   1. Clobber detection — when LOAD writes crDst from a source that is
-    //      neither CR6 nor an alias, crDst is removed from the alias set.  The
-    //      old code kept the alias permanently once it was ever established.
-    //
-    //   2. Chained aliases — if CR1 is loaded from CR6 and then CR2 is loaded
-    //      from CR1, both slots are recorded and CR2 is also treated as an alias
-    //      for subsequent indirect accesses.
-    //
-    //   3. Source-order sensitivity — an alias established after an indirect use
-    //      no longer back-propagates to annotate that earlier use.
-    //
-    // Limitation: the pass is still single-pass (no fixpoint iteration across
-    // back-edges / loops) and is conservative at forward branch targets — aliases
-    // active on either path in are preserved, which may produce false positives
-    // for the "alias dies on exactly one branch" pattern.  clobberWarnings
-    // captures positions where a previously-aliased CR was overwritten before a
-    // merge point so callers can surface a note to the user.
-    //
-    // Opcodes that use crSrc as a c-list base and may write crDst:
-    //   0 = LOAD  crDst ← memory[crSrc + imm]   (writes crDst register)
-    //   1 = SAVE  memory[crDst + imm] ← crSrc   (crDst is address base, not written)
-    //   8 = ELOADCALL                            (crDst used as address base, not written)
-    //   9 = XLOADLAMBDA                          (crDst used as address base, not written)
-    // Only LOAD (opcode 0) modifies crDst as a register; the others just dereference crSrc/crDst.
+    const BRANCH_OPCODE = 17;
 
-    const direct          = new Set();
-    const indirect        = new Set();
-    const clobberWarnings = []; // { word: w, cr, prevAliasedAtWord }
-    const aliasCR         = new Set(); // live alias set: CRs currently holding a c-list cap
-    const aliasOrigin     = {};        // aliasOrigin[cr] = word-index where alias was established
+    // ── Phase 1: Collect basic-block entry points ─────────────────────────────
+    // Word 0 always starts a block.  Every branch target and every fall-through
+    // successor (word after a branch) also starts a block.
 
+    const blockStartSet = new Set([0]);
     for (let w = 0; w < codeCount; w++) {
         const addr = codeBase + w;
         if (addr >= sim.memory.length) break;
         const word   = sim.memory[addr] >>> 0;
         const opcode = (word >>> 27) & 0x1F;
-        const crDst  = (word >>> 19) & 0xF;
-        const crSrc  = (word >>> 15) & 0xF;
-        const imm    = word & 0x7FFF;
+        if (opcode === BRANCH_OPCODE) {
+            if (w + 1 < codeCount) blockStartSet.add(w + 1);
+            let off = word & 0x7FFF;
+            if (off & 0x4000) off = off - 0x8000; // sign-extend 15-bit
+            const target = w + off;
+            if (target >= 0 && target < codeCount) blockStartSet.add(target);
+        }
+    }
 
-        if (opcode === 0 || opcode === 1 || opcode === 8 || opcode === 9) {
-            if (crSrc === 6) {
-                // Direct access via CR6.
-                direct.add(imm);
-                if (opcode === 0) {
-                    // LOAD crDst ← [CR6 + imm]: crDst now holds a capability from the c-list.
-                    aliasCR.add(crDst);
-                    aliasOrigin[crDst] = w;
+    const sortedStarts = Array.from(blockStartSet).sort((a, b) => a - b);
+    const numBlocks    = sortedStarts.length;
+
+    // Build word → block-index map.
+    const wordToBlock = new Int32Array(codeCount).fill(-1);
+    for (let bi = 0; bi < numBlocks; bi++) {
+        const start = sortedStarts[bi];
+        const end   = bi + 1 < numBlocks ? sortedStarts[bi + 1] : codeCount;
+        for (let w = start; w < end; w++) wordToBlock[w] = bi;
+    }
+
+    // ── Phase 2: Build successor lists ───────────────────────────────────────
+    const successors = [];
+    for (let bi = 0; bi < numBlocks; bi++) {
+        successors.push([]);
+        const start = sortedStarts[bi];
+        const end   = bi + 1 < numBlocks ? sortedStarts[bi + 1] : codeCount;
+        let hasBranch = false;
+        for (let w = start; w < end; w++) {
+            const addr = codeBase + w;
+            if (addr >= sim.memory.length) break;
+            const word   = sim.memory[addr] >>> 0;
+            const opcode = (word >>> 27) & 0x1F;
+            if (opcode === BRANCH_OPCODE) {
+                hasBranch = true;
+                // Fall-through successor.
+                if (w + 1 < codeCount) {
+                    const ft = wordToBlock[w + 1];
+                    if (ft !== -1 && !successors[bi].includes(ft)) successors[bi].push(ft);
                 }
-            } else if (aliasCR.has(crSrc)) {
-                // Indirect access via a CR that was (directly or transitively) loaded from CR6.
-                if (!direct.has(imm)) indirect.add(imm);
-                if (opcode === 0) {
-                    // Chained alias: crDst now holds a cap reachable via the c-list.
-                    aliasCR.add(crDst);
-                    aliasOrigin[crDst] = w;
+                // Branch-target successor.
+                let off = word & 0x7FFF;
+                if (off & 0x4000) off = off - 0x8000;
+                const target = w + off;
+                if (target >= 0 && target < codeCount) {
+                    const tb = wordToBlock[target];
+                    if (tb !== -1 && !successors[bi].includes(tb)) successors[bi].push(tb);
                 }
-            } else if (opcode === 0) {
-                // LOAD crDst ← [non-alias crSrc + imm]: crDst is overwritten with an
-                // unrelated value — remove it from the alias set (clobber).
-                if (aliasCR.has(crDst)) {
-                    clobberWarnings.push({ word: w, cr: crDst, prevAliasedAtWord: aliasOrigin[crDst] });
-                    aliasCR.delete(crDst);
-                    delete aliasOrigin[crDst];
+            }
+        }
+        if (!hasBranch && bi + 1 < numBlocks) {
+            successors[bi].push(bi + 1);
+        }
+    }
+
+    // ── Phase 3: Fixpoint over alias bitmasks ────────────────────────────────
+    // inAliases[bi]  = bitmask of CRs known to hold a c-list cap at block entry.
+    // outAliases[bi] = bitmask of CRs holding a c-list cap at block exit.
+    // We use a "may" (union) join — if a CR is aliased on any incoming path it is
+    // treated as aliased at the merge point.
+    const inAliases  = new Uint32Array(numBlocks);
+    const outAliases = new Uint32Array(numBlocks);
+
+    function blockExitMask(bi, entryMask) {
+        const start = sortedStarts[bi];
+        const end   = bi + 1 < numBlocks ? sortedStarts[bi + 1] : codeCount;
+        let mask = entryMask >>> 0;
+        for (let w = start; w < end; w++) {
+            const addr = codeBase + w;
+            if (addr >= sim.memory.length) break;
+            const word   = sim.memory[addr] >>> 0;
+            const opcode = (word >>> 27) & 0x1F;
+            if (opcode === 0 || opcode === 1 || opcode === 8 || opcode === 9) {
+                const crDst = (word >>> 19) & 0xF;
+                const crSrc = (word >>> 15) & 0xF;
+                if (crSrc === 6) {
+                    if (opcode === 0) mask = (mask | (1 << crDst)) >>> 0;
+                } else if (mask & (1 << crSrc)) {
+                    if (opcode === 0) mask = (mask | (1 << crDst)) >>> 0;
+                } else if (opcode === 0) {
+                    mask = (mask & ~(1 << crDst)) >>> 0; // clobber
+                }
+            }
+        }
+        return mask;
+    }
+
+    // Initialise worklist with all blocks.
+    const inWorklist = new Uint8Array(numBlocks).fill(1);
+    const worklist   = Array.from({length: numBlocks}, (_, i) => i);
+
+    while (worklist.length > 0) {
+        const bi    = worklist.shift();
+        inWorklist[bi] = 0;
+        const newOut = blockExitMask(bi, inAliases[bi]);
+        if (newOut !== outAliases[bi]) {
+            outAliases[bi] = newOut;
+            for (const succ of successors[bi]) {
+                const newIn = (inAliases[succ] | newOut) >>> 0;
+                if (newIn !== inAliases[succ]) {
+                    inAliases[succ] = newIn;
+                    if (!inWorklist[succ]) {
+                        inWorklist[succ] = 1;
+                        worklist.push(succ);
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Phase 4: Final collection pass ───────────────────────────────────────
+    // Walk each block using its fixpoint entry alias mask, collecting direct /
+    // indirect slot references and clobber warnings.
+    const direct          = new Set();
+    const indirect        = new Set();
+    const clobberWarnings = [];
+
+    for (let bi = 0; bi < numBlocks; bi++) {
+        const start = sortedStarts[bi];
+        const end   = bi + 1 < numBlocks ? sortedStarts[bi + 1] : codeCount;
+        let aliasMask = inAliases[bi] >>> 0;
+
+        // Track the word index where each CR was most recently aliased within
+        // this block.  -1 means the alias arrived from a predecessor block.
+        const aliasOrigin = {};
+        for (let cr = 0; cr < 16; cr++) {
+            if (aliasMask & (1 << cr)) aliasOrigin[cr] = -1;
+        }
+
+        for (let w = start; w < end; w++) {
+            const addr = codeBase + w;
+            if (addr >= sim.memory.length) break;
+            const word   = sim.memory[addr] >>> 0;
+            const opcode = (word >>> 27) & 0x1F;
+            const crDst  = (word >>> 19) & 0xF;
+            const crSrc  = (word >>> 15) & 0xF;
+            const imm    = word & 0x7FFF;
+
+            if (opcode === 0 || opcode === 1 || opcode === 8 || opcode === 9) {
+                if (crSrc === 6) {
+                    // Direct access via CR6 (c-list root).
+                    direct.add(imm);
+                    if (opcode === 0) {
+                        aliasMask = (aliasMask | (1 << crDst)) >>> 0;
+                        aliasOrigin[crDst] = w;
+                    }
+                } else if (aliasMask & (1 << crSrc)) {
+                    // Indirect access via an aliased CR.
+                    if (!direct.has(imm)) indirect.add(imm);
+                    if (opcode === 0) {
+                        // Chained alias: crDst now holds a transitive c-list cap.
+                        aliasMask = (aliasMask | (1 << crDst)) >>> 0;
+                        aliasOrigin[crDst] = w;
+                    }
+                } else if (opcode === 0) {
+                    // LOAD from a non-alias source: crDst is clobbered.
+                    if (aliasMask & (1 << crDst)) {
+                        const prev = (aliasOrigin[crDst] !== undefined) ? aliasOrigin[crDst] : -1;
+                        clobberWarnings.push({ word: w, cr: crDst, prevAliasedAtWord: prev });
+                        aliasMask = (aliasMask & ~(1 << crDst)) >>> 0;
+                        delete aliasOrigin[crDst];
+                    }
                 }
             }
         }

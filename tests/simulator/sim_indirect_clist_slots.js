@@ -298,6 +298,91 @@ function encodeBranch(condCode, signedOffset) {
     if (ok) pass(label);
 })();
 
+// ─── T9: Back-edge loop — alias established after use in program order ────────
+// The alias is set up AFTER the instruction that uses it in linear order, but
+// the BRANCH at the end loops back so the alias is live on the second iteration.
+// A single-pass analysis misses slot 3; the fixpoint pass must find it.
+//
+// Word 0: SAVE CR0,[CR1+3]    (use CR1 — not yet aliased on first scan, but live
+//                              via the back-edge on subsequent iterations)
+// Word 1: LOAD CR1,[CR6+5]    (alias CR1 from c-list slot 5)
+// Word 2: BRANCH -2            (back-edge to word 0; offset = 0 - 2 = -2)
+//
+// Expected: direct={5}, indirect={3}
+
+(function testT9BackEdgeLoopAliasAfterUse() {
+    const label = 'T9: back-edge loop — alias established after use (fixpoint required)';
+    const words = [
+        encodeSave(0, 1, 3),     // word 0: SAVE CR0,[CR1+3]  — use before alias in linear order
+        encodeLoad(1, 6, 5),     // word 1: LOAD CR1,[CR6+5]  — alias CR1
+        encodeBranch(0, -2),     // word 2: BRANCH -2          — back-edge to word 0
+    ];
+    const { direct, indirect, clobberWarnings } = makeHarness(words).run();
+    let ok = true;
+    if (!direct.has(5))    { fail(label, 'slot 5 missing from direct'); ok = false; }
+    if (!indirect.has(3))  { fail(label, 'slot 3 missing from indirect (back-edge alias not propagated)'); ok = false; }
+    if (clobberWarnings.length !== 0) { fail(label, `Unexpected clobber warning`); ok = false; }
+    if (ok) pass(label);
+})();
+
+// ─── T10: Alias established before loop, used inside loop body ───────────────
+// CR1 is aliased before the loop header.  Inside the loop, CR1 is used in a
+// SAVE and the loop branches back to the SAVE.  The alias must remain live
+// throughout the loop and the fixpoint must not drop it.
+//
+// Word 0: LOAD CR1,[CR6+5]    (alias CR1, before the loop)
+// Word 1: SAVE CR0,[CR1+3]    (use CR1 inside loop — slot 3 indirect)
+// Word 2: BRANCH -1            (back-edge to word 1; offset = 1 - 2 = -1)
+//
+// Expected: direct={5}, indirect={3}
+
+(function testT10AliasBeforeLoopUsedInside() {
+    const label = 'T10: alias before loop, used inside loop body (no regression)';
+    const words = [
+        encodeLoad(1, 6, 5),     // word 0: CR1 ← c-list[5]   (outside loop)
+        encodeSave(0, 1, 3),     // word 1: SAVE CR0,[CR1+3]  (inside loop)
+        encodeBranch(0, -1),     // word 2: BRANCH -1          (back-edge to word 1)
+    ];
+    const { direct, indirect, clobberWarnings } = makeHarness(words).run();
+    let ok = true;
+    if (!direct.has(5))    { fail(label, 'slot 5 missing from direct'); ok = false; }
+    if (!indirect.has(3))  { fail(label, 'slot 3 missing from indirect'); ok = false; }
+    if (clobberWarnings.length !== 0) { fail(label, `Unexpected clobber warning`); ok = false; }
+    if (ok) pass(label);
+})();
+
+// ─── T11: Loop with alias clobber inside — must not leak across back-edge ─────
+// CR1 is aliased from CR6 in the loop header.  It is then clobbered inside the
+// loop body before the back-edge.  The fixpoint must see that CR1 is NOT aliased
+// at the top of the loop on the second iteration.
+//
+// Word 0: LOAD CR1,[CR6+5]    (alias CR1 — loop header, direct slot 5)
+// Word 1: LOAD CR1,[CR3+0]    (clobber CR1 with unrelated value → clobberWarning)
+// Word 2: BRANCH -2            (back-edge to word 0)
+//
+// After fixpoint: the only outgoing alias from the loop body is empty (CR1
+// clobbered before back-edge), so the back-edge contributes no alias to word 0.
+// Expected: direct={5}, indirect={}, exactly 1 clobberWarning for CR1
+
+(function testT11LoopClobberDoesNotLeak() {
+    const label = 'T11: clobber inside loop — alias does not leak across back-edge';
+    const words = [
+        encodeLoad(1, 6, 5),     // word 0: CR1 ← c-list[5]   loop header
+        encodeLoad(1, 3, 0),     // word 1: CR1 ← [CR3+0]     clobber
+        encodeBranch(0, -2),     // word 2: BRANCH -2          back-edge to word 0
+    ];
+    const { direct, indirect, clobberWarnings } = makeHarness(words).run();
+    let ok = true;
+    if (!direct.has(5))      { fail(label, 'slot 5 missing from direct'); ok = false; }
+    if (indirect.size !== 0) { fail(label, `Expected no indirect slots, got ${indirect.size}`); ok = false; }
+    if (clobberWarnings.length !== 1) {
+        fail(label, `Expected 1 clobber warning, got ${clobberWarnings.length}`); ok = false;
+    } else if (clobberWarnings[0].cr !== 1) {
+        fail(label, `Clobber warning should name CR1, got CR${clobberWarnings[0].cr}`); ok = false;
+    }
+    if (ok) pass(label);
+})();
+
 // ─── Report ───────────────────────────────────────────────────────────────────
 
 if (ERRORS.length > 0) {
