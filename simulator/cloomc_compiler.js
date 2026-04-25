@@ -3364,6 +3364,12 @@ class CLOOMCCompiler {
                 continue;
             }
 
+            if (/^[A-Za-z_]\w*:$/.test(t)) {
+                asmBlock.push(t);
+                asmBlockSrcLines.push(i);
+                continue;
+            }
+
             flushAsmBlock();
 
             const bareFunc = t.match(/^([A-Za-z_]\w*)\s*\((.*)\)$/);
@@ -3633,4 +3639,8 @@ class CLOOMCCompiler {
 
         return { opTable, funcTable, funcNames };
     }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = CLOOMCCompiler;
 }
