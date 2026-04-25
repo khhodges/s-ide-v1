@@ -319,8 +319,11 @@ function updateCRDetail() {
     html += '<div class="cr-detail-heading">C-List \u2014 Capability Slots</div>';
 
     if (showCList) {
+        const _refCodeBase  = _clBase + 1;
+        const _refCodeCount = (_clHdr.valid && _clHdr.cw > 0) ? _clHdr.cw : 0;
+        const _refSlots     = _refCodeCount > 0 ? _computeReferencedCListSlots(_refCodeBase, _refCodeCount) : null;
         html += '<table class="cr-table"><thead><tr>';
-        html += '<th>Slot</th><th>GT Word</th><th>NS Idx</th><th>Type</th><th>Perms</th><th>Pet Name</th>';
+        html += '<th>Slot</th><th>GT Word</th><th>NS Idx</th><th>Type</th><th>Perms</th><th>Pet Name</th><th></th>';
         html += '</tr></thead><tbody>';
         for (let i = 0; i < _clistCount; i++) {
             const addr = _clistBase + i;
@@ -343,7 +346,8 @@ function updateCRDetail() {
             }
             const isExpanded = (clistExpandedIdx === i);
             const hasGT = gtWord !== 0;
-            html += `<tr class="${hasGT ? 'cr-active clist-clickable' : ''}${isExpanded ? ' clist-selected' : ''}" `;
+            const isUnref = hasGT && _refSlots !== null && !_refSlots.has(i);
+            html += `<tr class="${hasGT ? 'cr-active clist-clickable' : ''}${isExpanded ? ' clist-selected' : ''}${isUnref ? ' clist-unref-row' : ''}" `;
             html += hasGT ? `onclick="toggleCListEntry(${i})" title="Click to inspect NS[${parsed.index}]"` : '';
             html += '>';
             html += `<td class="cr-idx">${i}</td>`;
@@ -352,18 +356,26 @@ function updateCRDetail() {
             html += `<td>${hasGT ? parsed.typeName : '\u2014'}</td>`;
             html += `<td class="cr-perms">[${permsStr || '\u2014'}]</td>`;
             html += `<td class="cr-name">${nsLabel}</td>`;
+            if (isUnref) {
+                html += `<td onclick="event.stopPropagation()"><span class="clist-unref-badge">unref</span><button class="clist-zero-btn" onclick="zeroLumpSlot(${addr})" title="Zero this slot — marks GT as null/empty">&#xD7;&nbsp;zero</button></td>`;
+            } else {
+                html += '<td></td>';
+            }
             html += '</tr>';
             if (isExpanded && hasGT) {
                 const nsEntry = sim.readNSEntry(parsed.index);
                 if (nsEntry) {
-                    html += `<tr class="clist-detail-row"><td colspan="6">${renderCListEntryDetail(parsed.index, nsEntry)}</td></tr>`;
+                    html += `<tr class="clist-detail-row"><td colspan="7">${renderCListEntryDetail(parsed.index, nsEntry)}</td></tr>`;
                 }
             }
         }
         html += '</tbody></table>';
     } else if (showCode && _lumpHdr.valid && _lumpHdr.cc > 0 && _lumpClistBase > 0) {
+        const _ref2CodeBase  = _baseLoc + 1;
+        const _ref2CodeCount = (_lumpHdr.valid && _lumpHdr.cw > 0) ? _lumpHdr.cw : 0;
+        const _ref2Slots     = _ref2CodeCount > 0 ? _computeReferencedCListSlots(_ref2CodeBase, _ref2CodeCount) : null;
         html += '<table class="cr-table"><thead><tr>';
-        html += '<th>Slot</th><th>GT Word</th><th>NS Idx</th><th>Type</th><th>Perms</th><th>Pet Name</th>';
+        html += '<th>Slot</th><th>GT Word</th><th>NS Idx</th><th>Type</th><th>Perms</th><th>Pet Name</th><th></th>';
         html += '</tr></thead><tbody>';
         for (let i = 0; i < _lumpHdr.cc; i++) {
             const addr = _lumpClistBase + i;
@@ -385,13 +397,19 @@ function updateCRDetail() {
                 nsLabel = (sim.nsLabels && sim.nsLabels[parsed.index]) ? sim.nsLabels[parsed.index] : '';
             }
             const hasGT = gtWord !== 0;
-            html += `<tr class="${hasGT ? 'cr-active' : ''}">`;
+            const isUnref2 = hasGT && _ref2Slots !== null && !_ref2Slots.has(i);
+            html += `<tr class="${hasGT ? 'cr-active' : ''}${isUnref2 ? ' clist-unref-row' : ''}">`;
             html += `<td class="cr-idx">${i}</td>`;
             html += `<td class="cr-gt">0x${gtWord.toString(16).toUpperCase().padStart(8,'0')}</td>`;
             html += `<td>${hasGT ? parsed.index : '\u2014'}</td>`;
             html += `<td>${hasGT ? parsed.typeName : '\u2014'}</td>`;
             html += `<td class="cr-perms">[${permsStr || '\u2014'}]</td>`;
             html += `<td class="cr-name">${nsLabel}</td>`;
+            if (isUnref2) {
+                html += `<td><span class="clist-unref-badge">unref</span><button class="clist-zero-btn" onclick="zeroLumpSlot(${addr})" title="Zero this slot — marks GT as null/empty">&#xD7;&nbsp;zero</button></td>`;
+            } else {
+                html += '<td></td>';
+            }
             html += '</tr>';
         }
         html += '</tbody></table>';
@@ -2646,6 +2664,37 @@ window.__crdToggleFaultDetail = function(detailRowId, summaryRow) {
         summaryRow.classList.toggle('expanded', !isOpen);
     }
 };
+
+// ── C-List static analysis helpers ─────────────────────────────────────────
+
+// Scan the code words at [codeBase .. codeBase+codeCount-1] and return a Set
+// of c-list slot indices directly referenced by any LOAD / SAVE / ELOADCALL /
+// XLOADLAMBDA instruction whose crSrc field is 6 (CR6 = c-list root).
+// Slots reached via a different base register are NOT included — this is a
+// conservative first-pass; slots absent from the set are candidates for removal.
+function _computeReferencedCListSlots(codeBase, codeCount) {
+    const refs = new Set();
+    for (let w = 0; w < codeCount; w++) {
+        const addr = codeBase + w;
+        if (addr >= sim.memory.length) break;
+        const word   = sim.memory[addr] >>> 0;
+        const opcode = (word >>> 27) & 0x1F;
+        const crSrc  = (word >>> 15) & 0xF;
+        const imm    = word & 0x7FFF;
+        if ((opcode === 0 || opcode === 1 || opcode === 8 || opcode === 9) && crSrc === 6) {
+            refs.add(imm);
+        }
+    }
+    return refs;
+}
+
+// Zero a single c-list slot in simulator memory (marks the GT as null/empty).
+// Called by the "× zero" button in the C-List panel.
+function zeroLumpSlot(addr) {
+    if (!sim || addr < 0 || addr >= sim.memory.length) return;
+    sim.memory[addr] = 0;
+    updateCRDetail();
+}
 
 // ── Boot Sequence Code ─────────────────────────────────────────────────────
 // Actual hardware boot steps that install each Layer-0 abstraction.
