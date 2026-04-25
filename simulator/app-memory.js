@@ -111,7 +111,10 @@ function updateCRDetail() {
             html += `<button class="crd-action-btn crd-action-btn-compress${_canCmp2 ? '' : ' crd-action-btn-dim'}" ` +
                     `onclick="${_canCmp2 ? `lumpCompress(${nsIdx})` : ''}" ` +
                     `${_canCmp2 ? '' : 'disabled '}` +
-                    `title="${_canCmp2 ? `Compress \u2014 remove ${_cmpLsz - _cmpMin}w of freespace (${_cmpLsz}w \u2192 ${_cmpMin}w)` : 'Already at minimum size'}">\u2913\u202FCompress</button>`;
+                    `title="${_canCmp2 ? `Compress \u2014 shrink freespace + trim unused c-list GTs, then auto-save` : 'Already at minimum size \u2014 no freespace or unused GTs'}">\u2913\u202FCompress</button>`;
+            html += `<button class="crd-action-btn crd-action-btn-compress" ` +
+                    `onclick="lumpSaveLump(${nsIdx})" ` +
+                    `title="Save Lump \u2014 persist the current lump binary to server/lumps/ so it survives restarts">\u2193\u202FSave</button>`;
         }
         html += '</div>';
     }
@@ -2615,10 +2618,11 @@ let userMethodData = {};
 let userMethodLists = {};
 
 // ── Lump Compress ─────────────────────────────────────────────────────────
-// Resizes the lump at nsIdx in simulator memory to its minimum power-of-2 size
-// (smallest 2^k ≥ 1 header + cw code words + cc c-list slots), zero-fills the
-// freed tail, and updates the NS table entry's limit field in-place.
-window.lumpCompress = function(nsIdx) {
+// Resizes the lump at nsIdx in simulator memory to its minimum power-of-2 size.
+// Also trims trailing null (zero-word) c-list GTs that are not referenced by
+// any instruction, reducing cc before computing the minimum size.
+// After a successful shrink the lump is automatically saved to server/lumps/.
+window.lumpCompress = async function(nsIdx) {
     const logEl = document.getElementById('crInjectLog');
     function log(msg) { if (logEl) { logEl.style.display = 'block'; logEl.textContent = msg; } }
 
@@ -2630,25 +2634,44 @@ window.lumpCompress = function(nsIdx) {
     const hdr = sim.parseLumpHeader(sim.memory[baseLoc] >>> 0);
     if (!hdr.valid) { log('No valid lump header at 0x' + baseLoc.toString(16)); return; }
 
-    const { cw, cc, typ, n_minus_6 } = hdr;
+    const { cw, typ, n_minus_6 } = hdr;
+    let cc = hdr.cc;
     const currentSize = hdr.lumpSize;
 
+    // ── Step 1: read c-list words from their current position ────────────────
+    const clistWords = [];
+    for (let i = 0; i < cc; i++) clistWords.push(sim.memory[baseLoc + currentSize - cc + i] >>> 0);
+
+    // ── Step 2: trim trailing null GTs not referenced by any instruction ──────
+    const refSlots = _computeReferencedCListSlots(baseLoc + 1, cw);
+    let trimmed = 0;
+    while (cc > 0) {
+        const slotIdx = cc - 1;
+        if (clistWords[slotIdx] === 0 && !refSlots.has(slotIdx)) {
+            clistWords.pop();
+            cc--;
+            trimmed++;
+        } else {
+            break;
+        }
+    }
+
+    // ── Step 3: compute minimum lump size with effective cc ───────────────────
     let minSize = 64;
     while (minSize < (1 + cw + cc)) minSize <<= 1;
 
-    if (minSize >= currentSize) {
-        log(`Already at minimum size (${currentSize} words = 1 hdr + ${cw}w code + ${cc} c-list + ${currentSize - 1 - cw - cc} free).`);
+    const didShrink   = minSize < currentSize;
+    const didTrim     = trimmed > 0;
+
+    if (!didShrink && !didTrim) {
+        log(`Already at minimum size (${currentSize}w = 1 hdr + ${cw}w code + ${hdr.cc} c-list + ${currentSize - 1 - cw - hdr.cc} free). No unused GT slots to trim.`);
         return;
     }
 
     let newNM6 = 0;
     while ((64 << newNM6) < minSize) newNM6++;
 
-    // Save c-list words from old tail position
-    const clistWords = [];
-    for (let i = 0; i < cc; i++) clistWords.push(sim.memory[baseLoc + currentSize - cc + i] >>> 0);
-
-    // Write new header
+    // ── Step 4: write new header ──────────────────────────────────────────────
     sim.memory[baseLoc] = sim.packLumpHeader(newNM6, cw, cc, typ) >>> 0;
 
     // Zero freespace within new lump (code already in-place at [1..cw])
@@ -2660,14 +2683,37 @@ window.lumpCompress = function(nsIdx) {
     // Zero freed trailing words
     for (let i = minSize; i < currentSize; i++) sim.memory[baseLoc + i] = 0;
 
-    // Update NS entry word1: preserve b/f/g/chainable/gtType, update clistCount+limit
+    // ── Step 5: update NS entry word1 ─────────────────────────────────────────
     const nsBase = sim.NS_TABLE_BASE + nsIdx * sim.NS_ENTRY_WORDS;
     const oldW1  = sim.memory[nsBase + 1] >>> 0;
     const topBits = oldW1 & 0xFC000000;
     sim.memory[nsBase + 1] = (topBits | ((cc & 0x1FF) << 17) | ((minSize - 1) & 0x1FFFF)) >>> 0;
 
-    log(`Compressed NS${nsIdx}: ${currentSize}\u2192${minSize} words (saved ${currentSize - minSize} words, n_minus_6 ${n_minus_6}\u2192${newNM6}).`);
+    const parts = [];
+    if (didShrink) parts.push(`freespace ${currentSize - minSize}w removed (${currentSize}w \u2192 ${minSize}w)`);
+    if (didTrim)   parts.push(`${trimmed} null GT${trimmed !== 1 ? 's' : ''} trimmed from c-list tail`);
+    log(`Compressed NS${nsIdx}: ${parts.join('; ')}. Saving\u2026`);
     updateCRDetail();
+
+    // ── Step 6: auto-save to server so the result persists across restarts ────
+    try {
+        const lumpSize2 = minSize;
+        const words2 = [];
+        for (let i = 0; i < lumpSize2; i++) words2.push(sim.memory[baseLoc + i] >>> 0);
+        const absName2 = (sim.nsLabels && sim.nsLabels[nsIdx]) || 'Unnamed';
+        const typeNames2 = ['code', 'data', 'thread', 'outform'];
+        const meta2 = { abstraction: absName2, ns_slot: nsIdx, content_type: typeNames2[typ] || 'code', cw, cc, lump_size: lumpSize2 };
+        const resp2 = await fetch('/api/lumps/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ binary: words2, metadata: meta2 }),
+        });
+        const data2 = await resp2.json();
+        if (!resp2.ok) throw new Error(data2.error || 'Server error');
+        log(`Compressed NS${nsIdx}: ${parts.join('; ')}. Saved \u2014 token: ${data2.token}`);
+    } catch (e) {
+        log(`Compress done but auto-save failed: ${e.message}. Use \u2193\u202FSave to retry.`);
+    }
 };
 
 // ── Lump Save (to server) ──────────────────────────────────────────────────
