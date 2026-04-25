@@ -39,7 +39,7 @@ function showLumpDetail(token) {
         _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">CW</span>${parseInt(lump.cw)}</span>`;
     if (lump.cc !== undefined && lump.cc !== null)
         _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">CC</span>${parseInt(lump.cc)}</span>`;
-    // Resize button — show for all lumps; server rejects read-only ones gracefully
+    // Resize button — always shown; disabled when already at minimum size
     {
         const _curSize  = parseInt(lump.lump_size) || 0;
         const _cw       = parseInt(lump.cw) || 0;
@@ -47,12 +47,13 @@ function showLumpDetail(token) {
         const _minCont  = 1 + _cw + _cc;
         let   _minSize  = 64;
         while (_minSize < _minCont) _minSize *= 2;
-        if (_curSize > _minSize) {
-            const _saved = _curSize - _minSize;
-            _headerStrip += `<button class="lump-hs-resize-btn" onclick="_resizeLump('${_e(lump.token)}')" title="Remove unused freespace — shrink from ${_curSize}w to ${_minSize}w (save ${_saved}w)">Shrink to ${_minSize}w ▼</button>`;
-        } else {
-            _headerStrip += `<span class="lump-hs-chip lump-hs-minimal" title="Lump is already at minimum size (1 + ${_cw} + ${_cc} = ${_minCont} → ${_curSize}w)">Minimal ✓</span>`;
-        }
+        const _canShrink = _curSize > _minSize;
+        const _saved = _curSize - _minSize;
+        _headerStrip += `<button class="lump-hs-resize-btn${_canShrink ? '' : ' lump-hs-resize-disabled'}" ` +
+            `onclick="${_canShrink ? `_resizeLump('${_e(lump.token)}')` : ''}" ` +
+            `${_canShrink ? '' : 'disabled '}` +
+            `title="${_canShrink ? `Remove unused freespace — shrink from ${_curSize}w to ${_minSize}w (save ${_saved}w)` : `Already at minimum size (${_curSize}w)`}">` +
+            `Shrink to ${_minSize}w ▼</button>`;
     }
     _headerStrip += `</div>`;
 

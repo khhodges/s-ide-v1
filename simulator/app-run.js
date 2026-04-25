@@ -5598,12 +5598,20 @@ function getSelectedBoard() {
     return localStorage.getItem('fpga_board_target') || 'tang-nano-20k';
 }
 
+function getBoardShortLabel(board) {
+    if (board === 'ti60-f225') return 'Ti60 F225';
+    if (board === 'tang-nano-20k-iot') return 'Tang Nano IoT';
+    return 'Tang Nano 20K';
+}
+
 function setSelectedBoard(board) {
     localStorage.setItem('fpga_board_target', board);
     const sel = document.getElementById('hardwareBoardSel');
     if (sel) sel.value = board;
     const settingSel = document.getElementById('settingFPGABoard');
     if (settingSel) settingSel.value = board;
+    const lbl = document.getElementById('hwLedBoardLabel');
+    if (lbl) lbl.textContent = getBoardShortLabel(board);
 }
 
 function getBoardLabel(board) {
@@ -5689,6 +5697,8 @@ function _renderBuildNextSteps(isTi60) {
 function initHardwareBuildPanel() {
     const sel = document.getElementById('hardwareBoardSel');
     if (sel) sel.value = getSelectedBoard();
+    const lbl = document.getElementById('hwLedBoardLabel');
+    if (lbl) lbl.textContent = getBoardShortLabel(getSelectedBoard());
     updateHardwarePanelLabel();
 }
 
