@@ -565,6 +565,10 @@ async function renderLumps() {
         listEl.innerHTML = html;
         listEl.querySelectorAll('.lump-item[data-token]').forEach(el => {
             el.addEventListener('click', () => showLumpDetail(el.dataset.token));
+            el.addEventListener('dblclick', () => {
+                const lump = _lumpsCache.find(l => l.token === el.dataset.token);
+                if (lump && lump.abstraction) _goToAbstractionByName(lump.abstraction);
+            });
         });
 
         if (_selectedLumpToken) {

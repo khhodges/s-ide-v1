@@ -1782,3 +1782,11 @@ function _nsBuild() {
     });
 }
 
+function _goToAbstractionByName(name) {
+    if (!name || !abstractionRegistry) return;
+    const abs = abstractionRegistry.getByName(name);
+    if (!abs) return;
+    switchView('abstractions');
+    showAbstractionDetail(abs.index);
+}
+
