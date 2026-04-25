@@ -2696,13 +2696,13 @@ window.lumpCompress = async function(nsIdx) {
     updateCRDetail();
 
     // ── Step 6: auto-save to server so the result persists across restarts ────
+    const _saveName = (sim.nsLabels && sim.nsLabels[nsIdx]) || 'Unnamed';
+    const _saveTitle = `Compress + Save \u2014 NS${nsIdx} \u201C${_saveName}\u201D`;
     try {
-        const lumpSize2 = minSize;
         const words2 = [];
-        for (let i = 0; i < lumpSize2; i++) words2.push(sim.memory[baseLoc + i] >>> 0);
-        const absName2 = (sim.nsLabels && sim.nsLabels[nsIdx]) || 'Unnamed';
+        for (let i = 0; i < minSize; i++) words2.push(sim.memory[baseLoc + i] >>> 0);
         const typeNames2 = ['code', 'data', 'thread', 'outform'];
-        const meta2 = { abstraction: absName2, ns_slot: nsIdx, content_type: typeNames2[typ] || 'code', cw, cc, lump_size: lumpSize2 };
+        const meta2 = { abstraction: _saveName, ns_slot: nsIdx, content_type: typeNames2[typ] || 'code', cw, cc, lump_size: minSize };
         const resp2 = await fetch('/api/lumps/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2710,9 +2710,12 @@ window.lumpCompress = async function(nsIdx) {
         });
         const data2 = await resp2.json();
         if (!resp2.ok) throw new Error(data2.error || 'Server error');
+        const detail = `${parts.join('; ')}\ntoken: ${data2.token}\n${data2.lump_path || 'server/lumps/'}`;
         log(`Compressed NS${nsIdx}: ${parts.join('; ')}. Saved \u2014 token: ${data2.token}`);
+        if (typeof showPatchModal === 'function') showPatchModal(true, _saveTitle, detail);
     } catch (e) {
         log(`Compress done but auto-save failed: ${e.message}. Use \u2193\u202FSave to retry.`);
+        if (typeof showPatchModal === 'function') showPatchModal(false, _saveTitle, `Compress OK. Save failed: ${e.message}\nUse \u2193\u202FSave to retry.`);
     }
 };
 
@@ -2755,9 +2758,12 @@ window.lumpSaveLump = async function(nsIdx) {
         });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Server error');
-        log(`Saved \u2014 token: ${data.token} \u2192 ${data.lump_path || 'server/lumps/'}`);
+        const msg = `token: ${data.token}\n${data.lump_path || 'server/lumps/'}`;
+        log(`Saved \u2014 ${msg.split('\n')[0]}`);
+        if (typeof showPatchModal === 'function') showPatchModal(true, `Save Lump \u2014 NS${nsIdx} \u201C${absName}\u201D`, msg);
     } catch (e) {
         log(`Save failed: ${e.message}`);
+        if (typeof showPatchModal === 'function') showPatchModal(false, `Save Lump \u2014 NS${nsIdx} \u201C${absName}\u201D`, e.message);
     }
 };
 
