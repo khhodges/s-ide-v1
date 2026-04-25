@@ -207,8 +207,12 @@ def _compare(py_bytes, sim_words, cfg):
 # ---- the test -------------------------------------------------------------
 
 @pytest.mark.parametrize("cfg", CONFIGS)
-def test_boot_image_matches_simulator(cfg):
-    py_bytes  = generate_boot_image(cfg, LUMPS_DIR)
+def test_boot_image_matches_simulator(cfg, tmp_path):
+    # Use an empty temporary lumps directory so that user-saved lumps (e.g.
+    # 00000300.lump with a POLA-modified cc) never influence the boot image
+    # generated here.  The simulator harness always uses its own hardcoded
+    # defaults, so the Python generator must too for this parity test.
+    py_bytes  = generate_boot_image(cfg, str(tmp_path))
     sim_words = _run_simulator(cfg)
     _compare(py_bytes, sim_words, cfg)
 
