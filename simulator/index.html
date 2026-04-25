@@ -27,7 +27,7 @@
     </script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a1a'/%3E%3Ctext x='16' y='23' font-family='serif' font-size='22' font-weight='bold' fill='%23daa520' text-anchor='middle'%3E%CE%BB%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="styles-base.css?v=20260425">
-    <link rel="stylesheet" href="styles-toolbar.css?v=20260425d">
+    <link rel="stylesheet" href="styles-toolbar.css?v=20260425g">
     <link rel="stylesheet" href="styles-editor.css?v=20260423">
     <link rel="stylesheet" href="styles-dashboard.css?v=20260425f">
     <link rel="stylesheet" href="styles-lumps.css?v=20260424d">
@@ -144,7 +144,7 @@
                 </div>
                 <div class="sim-exec-btns">
                     <button class="btn btn-warning sim-icon-btn fault-idle" id="toolFaultBtn" onclick="faultRecall()" data-tooltip="Fault — Click to recall the fault report">&#x26A1;</button>
-                    <button class="btn btn-success sim-icon-btn" onclick="stepSim()" data-tooltip="Step — Execute one instruction">&#x1F463;</button>
+                    <button class="btn btn-success sim-icon-btn" id="toolStepBtn" onclick="stepSim()" data-tooltip="Step — Execute one instruction">&#x1F463;</button>
                     <button class="btn btn-walk sim-icon-btn" id="toolWalkBtn" onclick="walkToggle()" data-tooltip="Walk — Animate step-by-step execution">&#x1F6B6;</button>
                     <div class="break-wrap" id="breakWrap">
                         <button class="btn btn-break sim-icon-btn" id="toolBreakBtn" onclick="toggleBreakPopover()" data-tooltip="Breakpoint — Set/clear PC breakpoints for Run and Walk">&#x25CF;</button>
@@ -201,6 +201,8 @@
                 </div>
             </nav>
         </header>
+        <div id="capPopover" class="toolbar-cap-popover" style="display:none;" aria-live="polite"></div>
+        <div id="flagsPopover" class="toolbar-flags-popover" style="display:none;" aria-live="polite"></div>
     </div>
 
     <div id="dashboard" class="view">
@@ -1403,7 +1405,7 @@
     <script src="app-tools.js"></script>
     <script src="app-cr-display.js?v=20260424k"></script>
     <script src="app-cr-detail.js"></script>
-    <script src="app-memory.js?v=20260425f"></script>
+    <script src="app-memory.js?v=20260425g"></script>
     <script src="app-abstractions.js?v=20260424h"></script>
     <script src="app-lumps.js?v=20260424f"></script>
     <script src="app-absdetail.js"></script>

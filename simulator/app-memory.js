@@ -1176,49 +1176,95 @@ function updateDRDisplay() {
     container.innerHTML = html;
 }
 
+let _flagsHoverReady = false;
+function _initFlagsHover() {
+    if (_flagsHoverReady) return;
+    _flagsHoverReady = true;
+    const stepBtn = document.getElementById('toolStepBtn');
+    const pop     = document.getElementById('flagsPopover');
+    if (!stepBtn || !pop) return;
+    function _posFlagsPop() {
+        const r = stepBtn.getBoundingClientRect();
+        pop.style.top  = (r.bottom + 5) + 'px';
+        const left = Math.max(4, r.left + r.width / 2 - (pop.offsetWidth || 120) / 2);
+        pop.style.left = left + 'px';
+    }
+    stepBtn.addEventListener('mouseenter', () => {
+        _posFlagsPop();
+        pop.style.display = 'flex';
+        setTimeout(_posFlagsPop, 0);
+    });
+    stepBtn.addEventListener('mouseleave', (e) => {
+        if (!pop.contains(e.relatedTarget)) pop.style.display = 'none';
+    });
+    pop.addEventListener('mouseleave', (e) => {
+        if (!stepBtn.contains(e.relatedTarget)) pop.style.display = 'none';
+    });
+}
+
 function updateFlagsDisplay() {
     const container = document.getElementById('flagsDisplay');
     if (!container) return;
+    _initFlagsHover();
     const f = sim.flags;
-    const bootLabel = !sim.bootComplete ? `BOOT ${sim.bootStep}/4` : '';
+    const bootLabel   = !sim.bootComplete ? `BOOT ${sim.bootStep}/4` : '';
     const statusLabel = sim.halted ? 'HALTED' : (sim.bootComplete ? 'READY' : 'RESET');
     const cap = sim.lastCapability;
-    let capHtml = '';
-    if (cap) {
-        const p = cap.perms;
-        const gateNames = {L:'LOAD',S:'SAVE',E:'CALL',R:'DREAD',W:'DWRITE',X:'LAMBDA'};
-        const gateName = gateNames[cap.op] || cap.op || 'mLoad';
-        const req = cap.op;
-        capHtml = `
-        <span class="flags-sep"></span>
-        <span class="cap-group-label">${gateName}</span>
-        <span class="cap-bit ${p.R ? 'cap-on' : ''} ${req==='R' ? 'cap-req' : ''}">R</span>
-        <span class="cap-bit ${p.W ? 'cap-on' : ''} ${req==='W' ? 'cap-req' : ''}">W</span>
-        <span class="cap-bit ${p.X ? 'cap-on' : ''} ${req==='X' ? 'cap-req' : ''}">X</span>
-        <span class="cap-sep">|</span>
-        <span class="cap-bit ${p.L ? 'cap-on' : ''} ${req==='L' ? 'cap-req' : ''}">L</span>
-        <span class="cap-bit ${p.S ? 'cap-on' : ''} ${req==='S' ? 'cap-req' : ''}">S</span>
-        <span class="cap-bit ${p.E ? 'cap-on' : ''} ${req==='E' ? 'cap-req' : ''}">E</span>
-        <span class="cap-sep">|</span>
-        <span class="cap-bit ${cap.b ? 'cap-on cap-b' : ''}">B</span>
-        <span class="cap-bit ${cap.f ? 'cap-on cap-f' : ''}">F</span>
-        <span class="cap-bit ${cap.versionMatch ? 'cap-on cap-v' : 'cap-fail'}">V${cap.versionMatch ? '\u2713' : '\u2717'}</span>
-        <span class="cap-label">${cap.label}</span>`;
+
+    // ── Compact status chip in the flags-led-row ──────────────────────────
+    container.innerHTML =
+        (bootLabel ? `<span class="flag-info flag-boot">${bootLabel}</span>` : '') +
+        `<span class="flag-info flag-status${sim.halted ? ' flag-status-halted' : ''}">${statusLabel}</span>`;
+
+    // ── Flags popover (anchored below step button, shown on hover) ─────────
+    const flagsPop = document.getElementById('flagsPopover');
+    if (flagsPop) {
+        flagsPop.innerHTML =
+            `<span class="flag ${f.N ? 'flag-set' : ''}">N</span>` +
+            `<span class="flag ${f.Z ? 'flag-set' : ''}">Z</span>` +
+            `<span class="flag ${f.C ? 'flag-set' : ''}">C</span>` +
+            `<span class="flag ${f.V ? 'flag-set' : ''}">V</span>` +
+            `<span class="flags-sep"></span>` +
+            `<span class="flag-info">PC:&nbsp;${sim.pc}</span>` +
+            `<span class="flag-info">Steps:&nbsp;${sim.stepCount}</span>` +
+            `<span class="flag-info">Stack:&nbsp;${sim.callStack.length}</span>` +
+            `<span class="flag-info">STO:&nbsp;${sim.sto}</span>`;
     }
-    container.innerHTML = `
-        <span class="flags-sep"></span>
-        <span class="flag ${f.N ? 'flag-set' : ''}">N</span>
-        <span class="flag ${f.Z ? 'flag-set' : ''}">Z</span>
-        <span class="flag ${f.C ? 'flag-set' : ''}">C</span>
-        <span class="flag ${f.V ? 'flag-set' : ''}">V</span>
-        <span class="flag-info">PC: ${sim.pc}</span>
-        <span class="flag-info">Steps: ${sim.stepCount}</span>
-        <span class="flag-info">Stack: ${sim.callStack.length}</span>
-        <span class="flag-info">STO: ${sim.sto}</span>
-        ${bootLabel ? `<span class="flag-info flag-boot">${bootLabel}</span>` : ''}
-        <span class="flag-info">${statusLabel}</span>
-        ${capHtml}
-    `;
+
+    // ── Cap popover (anchored below fault button, auto-shows on halt) ──────
+    const capPop = document.getElementById('capPopover');
+    if (capPop) {
+        if (sim.halted && cap) {
+            const p = cap.perms;
+            const gateNames = {L:'LOAD',S:'SAVE',E:'CALL',R:'DREAD',W:'DWRITE',X:'LAMBDA'};
+            const gateName  = gateNames[cap.op] || cap.op || 'mLoad';
+            const req = cap.op;
+            capPop.innerHTML =
+                `<span class="cap-group-label">${gateName}</span>` +
+                `<span class="cap-bit ${p.R?'cap-on':''} ${req==='R'?'cap-req':''}">R</span>` +
+                `<span class="cap-bit ${p.W?'cap-on':''} ${req==='W'?'cap-req':''}">W</span>` +
+                `<span class="cap-bit ${p.X?'cap-on':''} ${req==='X'?'cap-req':''}">X</span>` +
+                `<span class="cap-sep">|</span>` +
+                `<span class="cap-bit ${p.L?'cap-on':''} ${req==='L'?'cap-req':''}">L</span>` +
+                `<span class="cap-bit ${p.S?'cap-on':''} ${req==='S'?'cap-req':''}">S</span>` +
+                `<span class="cap-bit ${p.E?'cap-on':''} ${req==='E'?'cap-req':''}">E</span>` +
+                `<span class="cap-sep">|</span>` +
+                `<span class="cap-bit ${cap.b?'cap-on cap-b':''}">B</span>` +
+                `<span class="cap-bit ${cap.f?'cap-on cap-f':''}">F</span>` +
+                `<span class="cap-bit ${cap.versionMatch?'cap-on cap-v':'cap-fail'}">V${cap.versionMatch?'\u2713':'\u2717'}</span>` +
+                `<span class="cap-label">${cap.label}</span>`;
+            const faultBtn = document.getElementById('toolFaultBtn');
+            if (faultBtn) {
+                const r = faultBtn.getBoundingClientRect();
+                capPop.style.top  = (r.bottom + 5) + 'px';
+                capPop.style.left = r.left + 'px';
+            }
+            capPop.style.display = 'flex';
+        } else {
+            capPop.innerHTML = '';
+            capPop.style.display = 'none';
+        }
+    }
 }
 
 function updateInfoDisplay() {
