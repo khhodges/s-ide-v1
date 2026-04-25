@@ -47,6 +47,10 @@ args = "assembler-tests"
 task = "workflow.run"
 args = "assembler-tests-watch"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "e2e-tests"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -134,6 +138,17 @@ args = "node simulator/watch_assembler_tests.js"
 
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow]]
+name = "e2e-tests"
+author = "agent"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "CHROMIUM=$(which chromium) && mkdir -p .cache/ms-playwright/chromium-1217/chrome-linux64 && ln -sf \"$CHROMIUM\" .cache/ms-playwright/chromium-1217/chrome-linux64/chrome && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npx playwright test"
 
 [[ports]]
 localPort = 5000

@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.chromium
     pkgs.libdrm
     pkgs.gdk-pixbuf
     pkgs.gtk3

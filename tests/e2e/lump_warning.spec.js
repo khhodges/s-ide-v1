@@ -45,6 +45,11 @@ test.describe('no-LUMP warning toast', () => {
     });
 
     test('shows "No compiled LUMP found" toast after double-clicking an abstraction with no LUMP', async ({ page }) => {
+        // Open the hamburger menu so the nav items become visible.
+        const hamBtn = page.locator('#hamBtn');
+        await hamBtn.waitFor({ state: 'visible' });
+        await hamBtn.click();
+
         // Navigate to the Abstractions view via the hamburger menu button.
         const absBtn = page.locator('#hamItem-abstractions');
         await absBtn.waitFor({ state: 'visible' });
@@ -117,7 +122,11 @@ test.describe('happy-path LUMP navigation', () => {
     });
 
     test('double-clicking an abstraction with a compiled LUMP switches to the LUMP repository and highlights the correct row', async ({ page }) => {
-        // ── Step 1: open the Abstractions view ───────────────────────────────
+        // ── Step 1: open the hamburger menu, then switch to Abstractions ──────
+        const hamBtn = page.locator('#hamBtn');
+        await hamBtn.waitFor({ state: 'visible' });
+        await hamBtn.click();
+
         const absBtn = page.locator('#hamItem-abstractions');
         await absBtn.waitFor({ state: 'visible' });
         await absBtn.click();

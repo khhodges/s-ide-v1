@@ -1,6 +1,14 @@
 'use strict';
 
 const { defineConfig, devices } = require('@playwright/test');
+const { execSync } = require('child_process');
+
+let systemChromium;
+try {
+    systemChromium = execSync('which chromium', { encoding: 'utf8' }).trim();
+} catch (_) {
+    systemChromium = undefined;
+}
 
 module.exports = defineConfig({
     testDir: './tests/e2e',
@@ -15,7 +23,11 @@ module.exports = defineConfig({
     projects: [
         {
             name: 'chromium',
-            use: { ...devices['Desktop Chrome'] },
+            use: {
+                ...devices['Desktop Chrome'],
+                channel: 'chromium',
+                ...(systemChromium ? { executablePath: systemChromium } : {}),
+            },
         },
     ],
 });
