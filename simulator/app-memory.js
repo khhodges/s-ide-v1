@@ -2971,12 +2971,21 @@ window.applyPOLA = async function(nsIdx) {
             }
         }
     }
-    // Flag moved slots that had no CR6 reference (potential indirect access)
-    for (const [oldSlot, newSlot] of oldToNew) {
-        if (!refSlots.has(oldSlot) && newSlot !== oldSlot) {
-            const _pg2 = sim.parseGT(newGTs[newSlot]);
-            const _pn2 = (_pg2 && sim.nsLabels && sim.nsLabels[_pg2.index]) ? sim.nsLabels[_pg2.index] : `slot${oldSlot}`;
-            indirectWarnings.push(`  slot ${oldSlot}\u2192${newSlot} \u201C${_pn2}\u201D (not in CR6 scan)`);
+    // Flag instructions with crSrc != 6 whose immediate slot was moved (NOT rewritten — may be stale)
+    for (let w = 0; w < cw; w++) {
+        const addr = baseLoc + 1 + w;
+        if (addr >= sim.memory.length) break;
+        const word2   = sim.memory[addr] >>> 0;
+        const opcode2 = (word2 >>> 27) & 0x1F;
+        const crSrc2  = (word2 >>> 15) & 0xF;
+        const slot2   = word2 & 0x7FFF;
+        if ((opcode2 === 0 || opcode2 === 1 || opcode2 === 8 || opcode2 === 9) && crSrc2 !== 6) {
+            if (oldToNew.has(slot2) && oldToNew.get(slot2) !== slot2) {
+                const newSlot2 = oldToNew.get(slot2);
+                const _pgI = sim.parseGT(newGTs[newSlot2]);
+                const _pnI = (_pgI && sim.nsLabels && sim.nsLabels[_pgI.index]) ? sim.nsLabels[_pgI.index] : `slot${slot2}`;
+                indirectWarnings.push(`  code[${w}] slot ${slot2}\u2192${newSlot2} \u201C${_pnI}\u201D (crSrc=CR${crSrc2}, not rewritten)`);
+            }
         }
     }
 
