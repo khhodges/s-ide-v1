@@ -712,11 +712,13 @@ function showDRPopup(evt, drIdx) {
     const hexW = w => '0x' + (w >>> 0).toString(16).toUpperCase().padStart(8, '0');
     const _drArchNames = { 0: 'Accumulator', 1: 'Argument 1' };
     const archName = _drArchNames[drIdx];
-    const titleExtra = petName ? ` — ${petName}` : (archName ? ` — ${archName}` : '');
+    const _drLabel = petName || archName || '';
+    const _drMain  = _drLabel || `DR${drIdx}`;
+    const _drSub   = _drLabel ? ` <span class="popup-sub-id">(DR${drIdx})</span>` : '';
 
     let html = '';
     if (val === 0) {
-        html += `<div class="zdp-title" style="border-color:#374151;color:#6b7280;">DR${drIdx}${titleExtra} · ZERO</div>`;
+        html += `<div class="zdp-title" style="border-color:#374151;color:#6b7280;">${_drMain}${_drSub} · ZERO</div>`;
         html += `<table>`;
         html += `<tr><td>Value</td><td class="zdp-hex">0x00000000 <span class="zdp-lbl">(zero)</span></td></tr>`;
         if (drIdx === 0) {
@@ -728,7 +730,7 @@ function showDRPopup(evt, drIdx) {
         }
         html += `</table>`;
     } else {
-        html += `<div class="zdp-title" style="border-color:#a855f7;color:#c084fc;">DR${drIdx}${titleExtra}</div>`;
+        html += `<div class="zdp-title" style="border-color:#a855f7;color:#c084fc;">${_drMain}${_drSub}</div>`;
         html += `<table>`;
         html += `<tr><td>Hex</td><td class="zdp-hex">${hexW(val)}</td></tr>`;
         if (valSigned < 0) {
@@ -850,16 +852,24 @@ function showCListPopup(evt, clistBase, cc) {
         if (addr >= sim.memory.length) break;
         const gtWord = sim.memory[addr] >>> 0;
         if (gtWord === 0) {
-            html += `<tr><td class="clist-sel-idx">[${j}]</td><td class="zdp-dim" colspan="2">null</td></tr>`;
+            html += `<tr><td class="clist-sel-idx popup-sub-id">[${j}]</td><td class="zdp-dim" colspan="2">null</td></tr>`;
         } else {
             anyEntry = true;
             const lbl = (typeof _gtPetName === 'function') ? _gtPetName(gtWord) : '';
             const safeLbl = lbl ? lbl.replace(/\\/g, '\\\\').replace(/'/g, "\\'") : '';
-            const nameCell = lbl
-                ? `<td class="clist-sel-name" onclick="clistSelectName('${safeLbl}')" title="Insert '${lbl}' at cursor">${lbl} <span class="clist-sel-arrow">&#x2B9E;</span></td>`
-                : `<td class="zdp-hex" style="font-size:0.71rem;">${hexW(gtWord)}</td>`;
-            const nsCell = lbl ? `<td class="zdp-hex" style="font-size:0.71rem;">${hexW(gtWord)}</td>` : `<td></td>`;
-            html += `<tr><td class="clist-sel-idx">[${j}]</td>${nameCell}${nsCell}</tr>`;
+            if (lbl) {
+                html += `<tr>` +
+                    `<td class="clist-sel-name" onclick="clistSelectName('${safeLbl}')" title="Insert '${lbl}' at cursor">${lbl} <span class="clist-sel-arrow">&#x2B9E;</span></td>` +
+                    `<td class="zdp-hex" style="font-size:0.71rem;">${hexW(gtWord)}</td>` +
+                    `<td class="clist-sel-idx popup-sub-id">[${j}]</td>` +
+                    `</tr>`;
+            } else {
+                html += `<tr>` +
+                    `<td class="clist-sel-idx">[${j}]</td>` +
+                    `<td class="zdp-hex" style="font-size:0.71rem;">${hexW(gtWord)}</td>` +
+                    `<td></td>` +
+                    `</tr>`;
+            }
         }
     }
     if (!anyEntry) html += `<tr><td colspan="3" class="zdp-empty">C-List is empty</td></tr>`;
@@ -893,16 +903,17 @@ function showCListSlotPopup(evt, clistBase, slotIdx, cc) {
     } else {
         const gtWord = sim.memory[addr] >>> 0;
         const lbl = (gtWord !== 0 && typeof _gtPetName === 'function') ? _gtPetName(gtWord) : '';
-        const titleLbl = lbl ? ` \u2014 ${lbl}` : (gtWord === 0 ? ' \u00B7 NULL' : '');
-        const titleColor = gtWord === 0 ? '#374151' : '#f4b942';
         const titleBorder = gtWord === 0 ? '#374151' : '#f4b942';
-        const titleText = gtWord === 0 ? '#6b7280' : '#f4b942';
-        html += `<div class="zdp-title" style="border-color:${titleBorder};color:${titleText};">clist[${slotIdx}]${titleLbl}</div>`;
+        const titleText   = gtWord === 0 ? '#6b7280' : '#f4b942';
+        const titleMain   = lbl ? lbl : `clist[${slotIdx}]`;
+        const titleSuffix = lbl
+            ? ` <span class="popup-sub-id">\u00b7 slot\u00a0${slotIdx}</span>`
+            : (gtWord === 0 ? ' \u00b7 NULL' : '');
+        html += `<div class="zdp-title" style="border-color:${titleBorder};color:${titleText};">${titleMain}${titleSuffix}</div>`;
         html += `<table>`;
 
         if (gtWord !== 0) {
             html += `<tr><td>GT word</td><td class="zdp-hex">${hexW(gtWord)}</td></tr>`;
-            if (lbl) html += `<tr><td>Pet name</td><td class="zdp-note">${lbl}</td></tr>`;
             if (sim.parseGT) {
                 const gt = sim.parseGT(gtWord);
                 if (gt) {
@@ -970,8 +981,9 @@ function showCRPopup(evt, crIdx) {
         const archName = _archNames[crIdx];
         const isReserved = _reservedCRs.has(crIdx);
         if (isReserved) {
-            const titleName = archName ? ` — ${archName}` : '';
-            html += `<div class="zdp-title" style="border-color:#6b7280;color:#9ca3af;">CR${crIdx}${titleName} · NULL</div>`;
+            const _nullMain = archName || `CR${crIdx}`;
+            const _nullSub  = archName ? ` <span class="popup-sub-id">(CR${crIdx})</span>` : '';
+            html += `<div class="zdp-title" style="border-color:#6b7280;color:#9ca3af;">${_nullMain}${_nullSub} · NULL</div>`;
             html += `<table>`;
             html += `<tr><td>Status</td><td class="zdp-dim">NULL (all words zero)</td></tr>`;
             html += `<tr><td>Role</td><td class="zdp-note">Reserved (${archName || 'architectural'})</td></tr>`;
@@ -988,14 +1000,15 @@ function showCRPopup(evt, crIdx) {
     const nsIdx = cr.gtIndex;
     const nsLabel = (sim.nsLabels && sim.nsLabels[nsIdx]) || '';
     const displayName = petCR || nsLabel || '';
+    const _crMain = displayName || `CR${crIdx}`;
+    const _crSub  = displayName ? ` <span class="popup-sub-id">(CR${crIdx})</span>` : '';
     const hasL = cr.perms.indexOf('L') !== -1;
 
     if (hasL) {
-        const titleName = displayName ? ` — ${displayName}` : '';
-        html += `<div class="zdp-title" style="border-color:#f4b942;color:#f4b942;">CR${crIdx}${titleName} · C-List</div>`;
+        html += `<div class="zdp-title" style="border-color:#f4b942;color:#f4b942;">${_crMain}${_crSub} · C-List</div>`;
         html += `<table>`;
         html += `<tr><td>Type</td><td class="zdp-val">${cr.gtTypeName}</td></tr>`;
-        html += `<tr><td>NS Slot</td><td class="zdp-val">${nsIdx}</td></tr>`;
+        html += `<tr><td>NS Slot</td><td class="zdp-val">${nsLabel ? nsLabel+' <span class="popup-sub-id">('+nsIdx+')</span>' : nsIdx}</td></tr>`;
         html += `<tr><td>Location</td><td class="zdp-hex">${hexW(cr.word1_location)}</td></tr>`;
 
         const loc = cr.word1_location >>> 0;
@@ -1039,12 +1052,11 @@ function showCRPopup(evt, crIdx) {
             14: { name: 'Timer',  ioBase: '0xFE30', regs: ['TICKS_LO','TICKS_HI','TOD_EPOCH','ALARM_CMP','ALARM_CTL'] },
         };
         const dev = _deviceInfo[nsIdx];
-        const titleName = displayName ? ` — ${displayName}` : '';
         if (dev) {
-            html += `<div class="zdp-title" style="border-color:#4ade80;color:#4ade80;">CR${crIdx}${titleName} · I/O Device</div>`;
+            html += `<div class="zdp-title" style="border-color:#4ade80;color:#4ade80;">${_crMain}${_crSub} · I/O Device</div>`;
             html += `<table>`;
             html += `<tr><td>Device</td><td class="zdp-val">${dev.name}</td></tr>`;
-            html += `<tr><td>NS Slot</td><td class="zdp-val">${nsIdx}</td></tr>`;
+            html += `<tr><td>NS Slot</td><td class="zdp-val">${nsLabel ? nsLabel+' <span class="popup-sub-id">('+nsIdx+')</span>' : nsIdx}</td></tr>`;
             html += `<tr><td>Perms</td><td class="zdp-val">[${cr.perms}]</td></tr>`;
             html += `<tr><td>I/O Base</td><td class="zdp-hex">${dev.ioBase} <span class="zdp-lbl">(memory-mapped)</span></td></tr>`;
             html += `<tr><td>Registers</td><td class="zdp-val">${dev.regs.length}</td></tr>`;
@@ -1057,10 +1069,10 @@ function showCRPopup(evt, crIdx) {
             html += `<tr><td>Role</td><td class="zdp-note">I/O range (device registers)</td></tr>`;
             html += `</table>`;
         } else {
-            html += `<div class="zdp-title" style="border-color:#60a5fa;color:#60a5fa;">CR${crIdx}${titleName}</div>`;
+            html += `<div class="zdp-title" style="border-color:#60a5fa;color:#60a5fa;">${_crMain}${_crSub}</div>`;
             html += `<table>`;
             html += `<tr><td>Type</td><td class="zdp-val">${cr.gtTypeName}</td></tr>`;
-            html += `<tr><td>NS Slot</td><td class="zdp-val">${nsIdx}${nsLabel ? ' <span class="zdp-lbl">('+nsLabel+')</span>' : ''}</td></tr>`;
+            html += `<tr><td>NS Slot</td><td class="zdp-val">${nsLabel ? nsLabel+' <span class="popup-sub-id">('+nsIdx+')</span>' : nsIdx}</td></tr>`;
             html += `<tr><td>Perms</td><td class="zdp-val">[${cr.perms}]</td></tr>`;
             html += `<tr><td>Location</td><td class="zdp-hex">${hexW(cr.word1_location)}</td></tr>`;
             html += `<tr><td>Limit</td><td class="zdp-hex">0x${cr.limit17.toString(16).toUpperCase().padStart(5, '0')}</td></tr>`;

@@ -3279,6 +3279,14 @@ a.next-step-link:hover {
     width: 100%;
     border-collapse: collapse;
 }
+.popup-sub-id {
+    color: #6b7280;
+    font-size: 0.78em;
+    font-weight: normal;
+    opacity: 0.8;
+    font-family: var(--font-mono, monospace);
+}
+
 .clist-sel-idx {
     color: #f4b942;
     font-family: var(--font-mono, monospace);
@@ -3286,6 +3294,11 @@ a.next-step-link:hover {
     padding: 2px 6px;
     width: 2.2rem;
     white-space: nowrap;
+}
+.clist-sel-idx.popup-sub-id {
+    color: #6b7280;
+    font-size: 0.72rem;
+    width: 1.8rem;
 }
 .clist-sel-name {
     color: #7dd3fc;

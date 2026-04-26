@@ -620,7 +620,7 @@ function updateCRDetail() {
             html += '<div style="color:var(--text-secondary);padding:0.5rem;">Namespace table is empty.</div>';
         } else {
             html += '<table class="cr-table"><thead><tr>';
-            html += '<th>Idx</th><th>Label</th><th>W0: Location</th><th>W1: Type</th><th>W1: F</th><th>W1: G</th><th>W1: Chain</th>';
+            html += '<th>Label</th><th class="popup-sub-id">Idx</th><th>W0: Location</th><th>W1: Type</th><th>W1: F</th><th>W1: G</th><th>W1: Chain</th>';
             html += '</tr></thead><tbody>';
             const typeNames = ['NULL','Inform','Outform','Abstract'];
             for (let i = 0; i < sim.nsCount; i++) {
@@ -628,8 +628,8 @@ function updateCRDetail() {
                 if (!e) continue;
                 const loc = e.word0_location >>> 0;
                 html += '<tr class="cr-active">';
-                html += `<td class="cr-idx">${i}</td>`;
                 html += `<td class="cr-name">${e.label || ''}</td>`;
+                html += `<td class="cr-idx popup-sub-id">${i}</td>`;
                 html += `<td>0x${loc.toString(16).toUpperCase().padStart(8,'0')}</td>`;
                 html += `<td>${typeNames[e.gtType] || '?'}</td>`;
                 html += `<td class="cr-flag">${sim.parseNSWord1(e.word1_limit).f}</td>`;
@@ -1811,7 +1811,10 @@ function renderThreadMemoryLayout(nsIndex) {
             const lbl = _gtPetName(word);
             decoded = `<span style="color:#60a5fa;">${gt.typeName}</span> Slot=${gt.index}${lbl ? ' <i style="color:#93c5fd;">('+lbl+')</i>' : ''} p=[${perms}] seq${gt.gt_seq}`;
         }
-        html += `<tr><td style="color:#f4b942;">CR${i}</td><td style="color:#555;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.9);font-family:monospace;">${hex}</td><td>${decoded}</td></tr>`;
+        const _capPet  = (typeof _petNameCRMap !== 'undefined' && _petNameCRMap) ? (_petNameCRMap[i] || '') : '';
+        const _capMain = _capPet || `CR${i}`;
+        const _capSub  = _capPet ? `<br><span class="popup-sub-id">CR${i}</span>` : '';
+        html += `<tr><td style="color:#f4b942;">${_capMain}${_capSub}</td><td style="color:#555;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.9);font-family:monospace;">${hex}</td><td>${decoded}</td></tr>`;
     }
     html += '</tbody></table>';
 
