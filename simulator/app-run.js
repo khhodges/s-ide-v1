@@ -1780,7 +1780,7 @@ function showFaultModal(f) {
     }
 
     const instrTrace = f.instrHistory || [];
-    let instrTraceSection = '';
+    let traceTableHtml = '';
     if (instrTrace.length > 0) {
         let traceRows = '';
         for (const h of instrTrace) {
@@ -1816,23 +1816,62 @@ function showFaultModal(f) {
             const cls = isFault ? ' class="itrace-fault"' : '';
             traceRows += `<tr${cls}${rowOnclick}><td class="itrace-step">${h.step}</td><td class="itrace-addr">${addr}</td><td class="itrace-raw">${rawHex}</td><td class="itrace-instr">${instrHtml}${clistAnnotation}</td></tr>`;
         }
-        instrTraceSection = `
-        <div class="fault-trace-section fault-trace-collapsible">
-            <div class="fault-trace-toggle" onclick="this.closest('.fault-trace-collapsible').classList.toggle('fault-trace-open')" title="Click to expand/collapse instruction trace">
-                <span class="fault-trace-toggle-arrow">&#x25B6;</span>
-                <span class="fault-trace-toggle-label">TRACE</span>
-                <span class="fault-trace-toggle-count">(last ${instrTrace.length} instruction${instrTrace.length !== 1 ? 's' : ''})</span>
-            </div>
-            <div class="fault-trace-body">
+        traceTableHtml = `
                 <div class="fault-trace-scroll">
                     <table class="fault-trace-table">
                         <thead><tr><th>Step</th><th>Address</th><th>Raw</th><th>Instruction</th></tr></thead>
                         <tbody>${traceRows}</tbody>
                     </table>
-                </div>
+                </div>`;
+    }
+    const _traceFaultDetailsHtml = `
+                <div class="fault-detail-grid fault-trace-fault-details">
+                    <div class="fault-detail-row">
+                        <span class="fault-detail-label">Code</span>
+                        <span class="fault-detail-value"><code class="fault-code-val">${codeStr}</code></span>
+                    </div>
+                    <div class="fault-detail-row">
+                        <span class="fault-detail-label">PC</span>
+                        <span class="fault-detail-value"><code>${pcHex}</code></span>
+                    </div>
+                    <div class="fault-detail-row fault-instr-row"
+                         ${_editLineNum
+                            ? `onclick="faultModalOpenEditor(${_editLineNum})" title="Click to open editor at line ${_editLineNum}"`
+                            : (ns && ns.nsIdx != null
+                                ? `onclick="faultModalOpenBinaryLump(${ns.nsIdx})" title="Click to open lump in code view"`
+                                : `onclick="faultModalOpenEditor(null)" title="Click to open editor"`)}
+                         style="cursor:pointer">
+                        <span class="fault-detail-label">Instruction</span>
+                        <span class="fault-detail-value">
+                            <code class="fault-instr-code">${_petDisasm(disasm, _scopeBadOffsetStr)}</code>
+                            <span class="fault-instr-edit-hint">&#x270E;${_editLineNum ? `&nbsp;line&nbsp;${_editLineNum}` : (ns && ns.nsIdx != null ? '&nbsp;view lump' : '&nbsp;edit')}</span>
+                        </span>
+                    </div>
+                    ${_faultCListPetName != null ? `<div class="fault-detail-row">
+                        <span class="fault-detail-label">C-List</span>
+                        <span class="fault-detail-value"><code>clist[${_faultCListSlot}]</code> <span class="fault-clist-petname">${_faultCListPetName}</span></span>
+                    </div>` : ''}
+                    <div class="fault-detail-row">
+                        <span class="fault-detail-label">Location</span>
+                        <span class="fault-detail-value">${nsStr}</span>
+                    </div>
+                    <div class="fault-detail-row">
+                        <span class="fault-detail-label">Step</span>
+                        <span class="fault-detail-value"><button class="gate-loc-step-link fault-step-link" onclick="faultModalDismiss();jumpToTraceStep(${f.step},'${(f.type||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}');" title="Jump to this step in the Trace view">#${f.step}</button></span>
+                    </div>
+                </div>`;
+    const instrTraceSection = `
+        <div class="fault-trace-section fault-trace-collapsible">
+            <div class="fault-trace-toggle" onclick="this.closest('.fault-trace-collapsible').classList.toggle('fault-trace-open')" title="Click to expand/collapse trace">
+                <span class="fault-trace-toggle-arrow">&#x25B6;</span>
+                <span class="fault-trace-toggle-label">TRACE</span>
+                ${instrTrace.length > 0 ? `<span class="fault-trace-toggle-count">(last ${instrTrace.length} instruction${instrTrace.length !== 1 ? 's' : ''})</span>` : ''}
+            </div>
+            <div class="fault-trace-body">
+                ${_traceFaultDetailsHtml}
+                ${traceTableHtml}
             </div>
         </div>`;
-    }
 
     const overlay = document.createElement('div');
     overlay.id = 'faultModalOverlay';
@@ -1859,49 +1898,16 @@ function showFaultModal(f) {
             <button class="btn btn-warning" onclick="faultModalInvestigate()">&#x1F50D; Investigate</button>
             ${isOutformFault ? '<button class="btn btn-primary" onclick="faultModalRetryDownload()">&#x21BB; Retry Download</button>' : ''}
             <button class="btn btn-primary" onclick="faultModalEditCode()" title="Open the assembly editor to inspect and correct the faulting code">&#x270E; Edit Code</button>
-            ${instrTrace.length > 0 ? '<button class="btn btn-muted fault-trace-btn" id="faultTraceToggleBtn" onclick="faultModalToggleTrace(this)" title="Show/hide instruction trace (last ' + instrTrace.length + ' instructions)">&#x25B6; Trace</button>' : ''}
+            <button class="btn btn-muted fault-trace-btn" id="faultTraceToggleBtn" onclick="faultModalToggleTrace(this)" title="Show/hide trace details">&#x25B6; Trace</button>
             <button class="btn btn-muted" onclick="faultModalClearAndDismiss()" title="Clear fault state — stops the flashing alert">&#x2715; Clear</button>
         </div>
         <div class="${_msgClass}" ${_editOnclick}>${_transformFaultMsg(f.message)}${_editBadge}</div>
-        <div class="fault-detail-grid">
-            <div class="fault-detail-row">
-                <span class="fault-detail-label">Code</span>
-                <span class="fault-detail-value"><code class="fault-code-val">${codeStr}</code></span>
-            </div>
-            <div class="fault-detail-row">
-                <span class="fault-detail-label">PC</span>
-                <span class="fault-detail-value"><code>${pcHex}</code></span>
-            </div>
-            <div class="fault-detail-row fault-instr-row"
-                 ${_editLineNum
-                    ? `onclick="faultModalOpenEditor(${_editLineNum})" title="Click to open editor at line ${_editLineNum}"`
-                    : (ns && ns.nsIdx != null
-                        ? `onclick="faultModalOpenBinaryLump(${ns.nsIdx})" title="Click to open lump in code view"`
-                        : `onclick="faultModalOpenEditor(null)" title="Click to open editor"`)}
-                 style="cursor:pointer">
-                <span class="fault-detail-label">Instruction</span>
-                <span class="fault-detail-value">
-                    <code class="fault-instr-code">${_petDisasm(disasm, _scopeBadOffsetStr)}</code>
-                    <span class="fault-instr-edit-hint">&#x270E;${_editLineNum ? `&nbsp;line&nbsp;${_editLineNum}` : (ns && ns.nsIdx != null ? '&nbsp;view lump' : '&nbsp;edit')}</span>
-                </span>
-            </div>
-            ${_faultCListPetName != null ? `<div class="fault-detail-row">
-                <span class="fault-detail-label">C-List</span>
-                <span class="fault-detail-value"><code>clist[${_faultCListSlot}]</code> <span class="fault-clist-petname">${_faultCListPetName}</span></span>
-            </div>` : ''}
-            <div class="fault-detail-row">
-                <span class="fault-detail-label">Location</span>
-                <span class="fault-detail-value">${nsStr}</span>
-            </div>
-            <div class="fault-detail-row">
-                <span class="fault-detail-label">Step</span>
-                <span class="fault-detail-value"><button class="gate-loc-step-link fault-step-link" onclick="faultModalDismiss();jumpToTraceStep(${f.step},'${(f.type||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'")}');" title="Jump to this step in the Trace view">#${f.step}</button></span>
-            </div>
-            ${historyHtml ? `<div class="fault-detail-row fault-history-row">
+        ${historyHtml ? `<div class="fault-detail-grid">
+            <div class="fault-detail-row fault-history-row">
                 <span class="fault-detail-label">History</span>
                 <span class="fault-detail-value">${historyHtml}</span>
-            </div>` : ''}
-        </div>
+            </div>
+        </div>` : ''}
         ${scopeSection}
         ${outformSection}
         ${instrTraceSection}

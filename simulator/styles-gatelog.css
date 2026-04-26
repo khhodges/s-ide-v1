@@ -396,6 +396,19 @@
     border-bottom: 1px solid rgba(100,180,220,0.18);
 }
 
+.fault-trace-fault-details {
+    margin: 0;
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid rgba(100,180,220,0.15);
+}
+.fault-trace-fault-details .fault-detail-label {
+    background: rgba(0,0,0,0.25);
+}
+.fault-trace-fault-details .fault-detail-row:last-child {
+    border-bottom: none;
+}
+
 .fault-trace-scroll {
     overflow-x: auto;
     max-height: 160px;
