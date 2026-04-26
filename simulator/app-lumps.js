@@ -1288,9 +1288,10 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
                 const nsLabel  = abstractionRegistry && abstractionRegistry.abstractions && abstractionRegistry.abstractions[gtSlotId]
                     ? (abstractionRegistry.abstractions[gtSlotId].name || '')
                     : '';
-                const nameHtml = petName
-                    ? `<span class="lump-gt-chip-name">${e(petName)}</span>`
-                    : `<span class="lump-gt-chip-name lump-gt-name-unresolved">NS[${e(nsLabel || String(gtSlotId))}]</span>`;
+                const displayName = petName || nsLabel;
+                const nameHtml = displayName
+                    ? `<span class="lump-gt-chip-name">${e(displayName)}</span>`
+                    : `<span class="lump-gt-chip-name lump-gt-name-unresolved">NS[${gtSlotId}]</span>`;
                 html += `<div class="lump-gt-chip" data-slot="${s}">` +
                         `<span class="lump-gt-chip-dot"></span>` +
                         nameHtml +
