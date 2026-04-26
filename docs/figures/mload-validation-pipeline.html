@@ -19,9 +19,31 @@
   h1 { font-size: 22px; color: #b8860b; margin-bottom: 6px; text-align: center; }
   .subtitle { font-size: 13px; color: #555555; margin-bottom: 30px; text-align: center; max-width: 780px; }
   svg { max-width: 100%; height: auto; }
+  .fig-close {
+    position: fixed;
+    top: 12px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    background: #f0f0f0;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    font-size: 20px;
+    line-height: 30px;
+    text-align: center;
+    color: #555555;
+    cursor: pointer;
+    z-index: 999;
+    text-decoration: none;
+    display: block;
+    transition: background 0.15s, color 0.15s;
+  }
+  .fig-close:hover { background: #e0e0e0; color: #111111; }
 </style>
 </head>
 <body>
+
+<button class="fig-close" onclick="window.close(); history.back();" title="Close">&times;</button>
 
 <h1>Figure 12 &mdash; mLoad Validation Pipeline</h1>
 <p class="subtitle">Five sequential checks. Any failure at any stage routes to the single FAULT handler. No partial state, no silent fallback, no recovery. Every namespace access in the entire machine passes through this pipeline.</p>
