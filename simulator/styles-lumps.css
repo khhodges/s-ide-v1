@@ -476,12 +476,12 @@
     font-style: italic;
 }
 .lump-gt-chip-meta {
-    color: #6b7280;
-    font-size: 0.62rem;
+    color: var(--text-secondary, #8a9aaa);
+    font-size: 0.68rem;
     font-weight: 400;
     margin-left: auto;
     flex-shrink: 0;
-    letter-spacing: 0.01em;
+    white-space: nowrap;
     font-family: 'Courier New', monospace;
 }
 .lump-gt-meta-null {
