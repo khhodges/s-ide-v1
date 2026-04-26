@@ -833,11 +833,11 @@ function _colorizeComment(text) {
     let out = '';
     let i   = 0;
     while (i < text.length) {
-        // Quoted pet name  "LED[0]" / "myAbstraction" / …
+        // Quoted pet name  "LED[0]" / "myAbstraction" / …  — strip quotes, color the inner name
         if (text[i] === '"') {
             const end = text.indexOf('"', i + 1);
             if (end !== -1) {
-                out += `<span class="lump-com-pet">${_h(text.slice(i, end + 1))}</span>`;
+                out += `<span class="lump-com-pet">${_h(text.slice(i + 1, end))}</span>`;
                 i = end + 1;
                 continue;
             }
