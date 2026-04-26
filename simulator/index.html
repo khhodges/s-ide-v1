@@ -284,6 +284,9 @@
                                 <button class="ham-item" onclick="saveUploadJSON();closeEditorActions()" data-tooltip="Save Abstraction — Compile and save the abstraction definition file">Save Abstraction</button>
                                 <button class="ham-item" id="btnSaveUserTab" disabled onclick="saveActiveUserTab();closeEditorActions()" data-tooltip="Save Program — Save the current user program (C+S)">Save Program</button>
                                 <button class="ham-item" id="btnSaveNS" disabled onclick="showSaveToNamespace();closeEditorActions()" data-tooltip="Save to NS — Save the assembled program as a namespace entry">Save to NS</button>
+                                <div class="ham-divider"></div>
+                                <div class="ham-group-title">Keyboard Shortcuts</div>
+                                <div class="ham-item" style="pointer-events:none;display:flex;justify-content:space-between;gap:0.5rem;">C-List picker<kbd class="ham-kbd">C+Shift+C</kbd></div>
                             </div>
                         </div>
                         <select id="langSelector" class="lang-selector" onchange="onLangChange()" title="Source language">
