@@ -65,7 +65,7 @@ function showLumpDetail(token) {
     // ── Action bar (Edit + Delete) shown below the header strip ─────────────
     let _actionBar = `<div class="lump-action-bar">`;
     if (!isNamespace) {
-        _actionBar += `<button class="btn lump-edit-btn" data-edit-token="${_e(token)}" title="View and edit lump content, code, and GT">&#9998; Edit</button>`;
+        _actionBar += `<button class="btn lump-edit-btn" data-edit-token="${_e(token)}" title="Edit \u2014 Open the code editor (Create page)">&#9998; Edit</button>`;
     }
     _actionBar += `<button class="btn lump-delete-btn lump-delete-top-btn" data-delete-token="${_e(token)}" title="Delete this lump">Delete</button>`;
     _actionBar += `</div>`;
@@ -296,7 +296,7 @@ function showLumpDetail(token) {
     const delBtn = contentEl.querySelector('.lump-delete-btn[data-delete-token]');
     if (delBtn) delBtn.addEventListener('click', () => deleteLump(delBtn.dataset.deleteToken));
     const editBtn = contentEl.querySelector('.lump-edit-btn[data-edit-token]');
-    if (editBtn) editBtn.addEventListener('click', () => _switchLumpTab(_tk, 'content'));
+    if (editBtn) editBtn.addEventListener('click', () => switchView('editor'));
     _lumpActiveTab[_tk] = 'overview';
     const nsdgWrap = contentEl.querySelector('.ns-dep-graph-wrap[id]');
     if (nsdgWrap) _initNsDepGraphPanZoom(nsdgWrap.id);
