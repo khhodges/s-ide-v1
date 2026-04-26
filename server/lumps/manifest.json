@@ -135,7 +135,9 @@
     "self_data_r": true,
     "pool_w": true,
     "pool_ns_base": 50,
-    "pool_size": 14
+    "pool_size": 14,
+    "author": "Test",
+    "version": "1.0"
   },
   {
     "token": "00000c00",

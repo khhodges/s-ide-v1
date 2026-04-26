@@ -1,0 +1,138 @@
+{
+  "token": "00001200",
+  "abstraction": "Constants",
+  "ns_slot": 18,
+  "lump_size": 64,
+  "cw": 18,
+  "dw": 5,
+  "cc": 2,
+  "methods": [
+    {
+      "name": "Pi",
+      "offset": 0,
+      "length": 3,
+      "pet_names": {
+        "DR": {}
+      },
+      "description": "Return the IEEE-754 single-precision value of \u03c0 (3.14159265\u2026) in DR0.",
+      "inputs": [],
+      "outputs": [
+        "DR0: \u03c0 \u2248 3.14159265 (0x40490FDB)"
+      ],
+      "comments": [
+        "load self-data-R cap (c-list[0]) into CR0 \u2014 grants read-only access to embedded data words",
+        "read data word [0] (\u03c0 = 3.14159265\u2026) via CR0 into DR0",
+        "return \u03c0 in DR0 to caller"
+      ]
+    },
+    {
+      "name": "E",
+      "offset": 3,
+      "length": 3,
+      "pet_names": {
+        "DR": {}
+      },
+      "description": "Return the IEEE-754 single-precision value of e (2.71828182\u2026) in DR0.",
+      "inputs": [],
+      "outputs": [
+        "DR0: e \u2248 2.71828182 (0x402DF854)"
+      ],
+      "comments": [
+        "load self-data-R cap (c-list[0]) into CR0 \u2014 grants read-only access to embedded data words",
+        "read data word [1] (e = 2.71828182\u2026) via CR0 into DR0",
+        "return e in DR0 to caller"
+      ]
+    },
+    {
+      "name": "Phi",
+      "offset": 6,
+      "length": 3,
+      "pet_names": {
+        "DR": {}
+      },
+      "description": "Return the IEEE-754 single-precision golden ratio \u03c6 (1.61803398\u2026) in DR0.",
+      "inputs": [],
+      "outputs": [
+        "DR0: \u03c6 \u2248 1.61803398 (0x3FCF1BBD)"
+      ],
+      "comments": [
+        "load self-data-R cap (c-list[0]) into CR0 \u2014 grants read-only access to embedded data words",
+        "read data word [2] (\u03c6 = 1.61803398\u2026) via CR0 into DR0",
+        "return \u03c6 in DR0 to caller"
+      ]
+    },
+    {
+      "name": "Zero",
+      "offset": 9,
+      "length": 3,
+      "pet_names": {
+        "DR": {}
+      },
+      "description": "Return IEEE-754 positive zero (0.0) in DR0.",
+      "inputs": [],
+      "outputs": [
+        "DR0: 0.0 (0x00000000)"
+      ],
+      "comments": [
+        "load self-data-R cap (c-list[0]) into CR0 \u2014 grants read-only access to embedded data words",
+        "read data word [3] (0.0) via CR0 into DR0",
+        "return 0.0 in DR0 to caller"
+      ]
+    },
+    {
+      "name": "One",
+      "offset": 12,
+      "length": 3,
+      "pet_names": {
+        "DR": {}
+      },
+      "description": "Return IEEE-754 1.0 in DR0.",
+      "inputs": [],
+      "outputs": [
+        "DR0: 1.0 (0x3F800000)"
+      ],
+      "comments": [
+        "load self-data-R cap (c-list[0]) into CR0 \u2014 grants read-only access to embedded data words",
+        "read data word [4] (1.0) via CR0 into DR0",
+        "return 1.0 in DR0 to caller"
+      ]
+    },
+    {
+      "name": "Add",
+      "offset": 15,
+      "length": 3,
+      "pet_names": {
+        "DR": {
+          "0": "XYZ"
+        }
+      },
+      "description": "Store a user-supplied 32-bit value XYZ in the next free pool slot and return a sealed, read-only Abstract GT capability pointing to that slot. Returns FAULT if the pool (14 slots) is full.",
+      "inputs": [
+        "DR0: XYZ \u2014 any IEEE-754 or raw 32-bit value to store"
+      ],
+      "outputs": [
+        "CR0: Abstract GT (type=3, R-only) to the allocated pool slot; FAULT if full"
+      ],
+      "comments": [
+        "load pool-W GT (c-list[1]) into CR1 \u2014 grants write access to the 14-word user constant pool",
+        "write XYZ (DR0) to pool slot offset 0 via CR1; bindMethod intercepts to scan the bitmap, place value, and mark slot as occupied",
+        "return: Abstract GT (sealed R-only handle to the allocated pool slot) is placed in CR0 by bindMethod before this RETURN executes"
+      ]
+    }
+  ],
+  "grants": [
+    "E"
+  ],
+  "data_offset": 19,
+  "data_word_names": [
+    "Pi",
+    "E",
+    "Phi",
+    "Zero",
+    "One"
+  ],
+  "self_data_r": true,
+  "pool_w": true,
+  "pool_ns_base": 50,
+  "pool_size": 14
+}

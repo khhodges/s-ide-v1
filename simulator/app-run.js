@@ -1,8 +1,127 @@
+function _normalizePetNameKeys(rawMap) {
+    const out = {};
+    for (const [k, v] of Object.entries(rawMap || {})) {
+        const n = (typeof k === 'string' && k.match(/^[A-Za-z]+\d+$/))
+            ? parseInt(k.replace(/^[A-Za-z]+/, ''))
+            : parseInt(k);
+        if (!isNaN(n) && v) out[n] = v;
+    }
+    return out;
+}
+
+function _applyLumpPetNames(lump, methodIdx) {
+    const globalDR = _normalizePetNameKeys(((lump.pet_names || {}).DR) || {});
+    const globalCR = _normalizePetNameKeys(((lump.pet_names || {}).CR) || {});
+    const mergedDR = Object.assign({}, globalDR);
+    const mergedCR = Object.assign({}, globalCR);
+    if (methodIdx !== undefined && methodIdx !== null) {
+        const method = (lump.methods || [])[methodIdx];
+        if (method && method.pet_names) {
+            Object.assign(mergedDR, _normalizePetNameKeys((method.pet_names.DR) || {}));
+            Object.assign(mergedCR, _normalizePetNameKeys((method.pet_names.CR) || {}));
+        }
+    }
+    _petNameDRMap = mergedDR;
+    _petNameCRMap = mergedCR;
+}
+
+function _clearLumpPetNames() {
+    _petNameDRMap = {};
+    _petNameCRMap = {};
+}
+
+// Cache of lump binary words for tier-4 boot matching (null = not started).
+// Populated asynchronously; keyed by token → Uint32Array of lump words.
+let _lumpWordsCache = null;
+
+function _triggerLumpWordsPreload() {
+    if (_lumpWordsCache !== null) return;
+    _lumpWordsCache = {};
+    if (!Array.isArray(_lumpsCache) || _lumpsCache.length === 0) return;
+    for (const lump of _lumpsCache) {
+        const tok = lump.token;
+        if (!tok) continue;
+        fetch(`/api/lump/${tok}/words`)
+            .then(r => r.ok ? r.json() : null)
+            .then(words => {
+                if (Array.isArray(words) && words.length > 0) {
+                    _lumpWordsCache[tok] = new Uint32Array(words.map(w => w >>> 0));
+                }
+            })
+            .catch(() => {});
+    }
+}
+
+function _applyBootLumpPetNames() {
+    if (!sim || !sim.bootComplete) return;
+    const cr14 = sim.getFormattedCR ? sim.getFormattedCR(14) : null;
+    if (!cr14 || cr14.isNull) return;
+    const nsIdx = cr14.gtIndex;
+    if (nsIdx === undefined || nsIdx === null) return;
+    if (!Array.isArray(_lumpsCache) || _lumpsCache.length === 0) return;
+
+    // Trigger async word preload on first call (results available on next boot).
+    _triggerLumpWordsPreload();
+
+    // Tier 1: match by ns_slot metadata
+    let lump = _lumpsCache.find(l =>
+        l.ns_slot !== undefined && l.ns_slot !== null && parseInt(l.ns_slot) === nsIdx
+    );
+    // Tier 2: match by NS label name (case-insensitive)
+    if (!lump) {
+        const nsLabel = (sim.nsLabels && sim.nsLabels[nsIdx]) ? sim.nsLabels[nsIdx].toLowerCase() : null;
+        if (nsLabel) {
+            lump = _lumpsCache.find(l => l.name && l.name.toLowerCase() === nsLabel);
+        }
+    }
+    // Tier 3: match by CR14 word1_location falling within an nsTable slot range
+    if (!lump) {
+        const cr14Loc = (cr14.word1_location !== undefined && cr14.word1_location !== null)
+            ? (cr14.word1_location >>> 0) : null;
+        if (cr14Loc !== null && sim.nsTable) {
+            for (const [slotIdx, nse] of Object.entries(sim.nsTable)) {
+                const slotBase = nse && nse.word0_location !== undefined
+                    ? (nse.word0_location >>> 0) : null;
+                if (slotBase !== null && cr14Loc >= slotBase && cr14Loc < slotBase + 0x10000) {
+                    const si = parseInt(slotIdx);
+                    lump = _lumpsCache.find(l =>
+                        l.ns_slot !== undefined && l.ns_slot !== null && parseInt(l.ns_slot) === si
+                    );
+                    if (lump) break;
+                }
+            }
+        }
+    }
+    // Tier 4: binary-word comparison — compare sim.memory at the NS slot base
+    // against preloaded lump word arrays (available after first async preload).
+    if (!lump && _lumpWordsCache && Object.keys(_lumpWordsCache).length > 0 && sim.nsTable) {
+        const nse = sim.nsTable[nsIdx];
+        const slotBase = (nse && nse.word0_location !== undefined) ? (nse.word0_location >>> 0) : null;
+        if (slotBase !== null && sim.memory) {
+            const COMPARE_WORDS = 8;
+            for (const tok of Object.keys(_lumpWordsCache)) {
+                const cached = _lumpWordsCache[tok];
+                if (!cached || cached.length < COMPARE_WORDS) continue;
+                let matches = 0;
+                for (let wi = 0; wi < COMPARE_WORDS; wi++) {
+                    if ((sim.memory[slotBase + wi] >>> 0) === cached[wi]) matches++;
+                }
+                if (matches >= COMPARE_WORDS - 1) {
+                    lump = _lumpsCache.find(l => l.token === tok);
+                    if (lump) break;
+                }
+            }
+        }
+    }
+    if (lump) _applyLumpPetNames(lump);
+}
+
 function assembleAndLoad() {
     const editor = document.getElementById('asmEditor');
     if (!editor) return;
     const source = editor.value;
     saveEditorState();
+    _clearLumpPetNames();
 
     _runStopped = true;
     sim.running = false;
@@ -772,12 +891,18 @@ function _autoLoadDefaultProgram() {
                 }
             }
         }
+        // Only apply boot lump pet names when no source-compiled program is
+        // loaded — in source-assembled context the compiler owns the alias maps.
+        if (!lastAssembledWords || lastAssembledWords.length === 0) {
+            _applyBootLumpPetNames();
+        }
         return;
     }
     _defaultProgramLoaded = true;
     loadExample('led_blink');
     assembleAndLoad();
     _applyPendingSimLoad();
+    _applyBootLumpPetNames();
 }
 function slowBoot() {
     if (bootAnimating || sim.bootComplete || sim.halted) return;
@@ -1338,6 +1463,7 @@ function faultClear() {
     faultAlertOff();
     _defaultProgramLoaded = false;
     _bootAuditAccum = [];
+    _clearLumpPetNames();
     sim.reset();
     _initLazyLoadManifest();
     pipelineViz.reset();
@@ -1501,7 +1627,10 @@ function showFaultModal(f) {
         </div>` : '';
 
     // ── Pet name alias maps (number → name) for register annotation ──────────
-    const _petCR = {}, _petDR = {};
+    // Seed from global lump pet names first, then layer in compiler aliases so
+    // source-compiled names win over lump metadata when both are present.
+    const _petCR = Object.assign({}, _petNameCRMap || {});
+    const _petDR = Object.assign({}, _petNameDRMap || {});
     if (assembler) {
         const _al = assembler.getAliases();
         for (const [nm, num] of Object.entries(_al.cr || {})) _petCR[num] = nm;
@@ -2115,6 +2244,7 @@ function resetSim() {
     if (pipelineViz) pipelineViz.setNIA(null);
     _defaultProgramLoaded = false;
     _bootAuditAccum = [];
+    _clearLumpPetNames();
     sim.reset();
     _initLazyLoadManifest();
     pipelineViz.reset();
@@ -2132,6 +2262,7 @@ function resetAndStep() {
     if (pipelineViz) pipelineViz.setNIA(null);
     _defaultProgramLoaded = false;
     _bootAuditAccum = [];
+    _clearLumpPetNames();
     sim.reset();
     _initLazyLoadManifest();
     pipelineViz.reset();

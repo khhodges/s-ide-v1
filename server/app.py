@@ -2606,19 +2606,39 @@ def patch_lump_meta(token):
     lumps_dir    = os.path.join(os.path.dirname(__file__), 'lumps')
     sidecar_path = os.path.join(lumps_dir, f'{key8}.json')
 
-    # Boot.Abstr (token "00000003") is synthetic — no sidecar file exists until the
-    # first authorship edit.  Bootstrap one from _BOOT_ABSTR_META so the PATCH can
-    # proceed and subsequent reads return the persisted author/version.
+    # When no sidecar exists yet, bootstrap one so the PATCH can proceed and
+    # subsequent reads return persisted metadata.  Priority:
+    #   1. Boot.Abstr (token "00000003") — seed from in-memory _BOOT_ABSTR_META.
+    #   2. Any other lump — seed from the matching manifest.json entry, or a
+    #      minimal stub if it is in LAZY_LUMPS but not in the manifest.
     if not os.path.isfile(sidecar_path):
+        seed = None
         if key8 == '00000003' and _BOOT_ABSTR_META:
             seed = dict(_BOOT_ABSTR_META)
-            try:
-                with open(sidecar_path, 'w') as _sf:
-                    json.dump(seed, _sf, indent=2)
-            except Exception as _se:
-                return jsonify({"error": f"Could not create sidecar: {_se}"}), 500
         else:
+            # Try the manifest first
+            manifest_path = os.path.join(lumps_dir, 'manifest.json')
+            if os.path.isfile(manifest_path):
+                try:
+                    with open(manifest_path, 'r') as _mf:
+                        _manifest = json.load(_mf)
+                    for _entry in _manifest:
+                        if (_entry.get('token', '') or '').lower().zfill(8) == key8:
+                            seed = dict(_entry)
+                            break
+                except Exception:
+                    pass
+            # Fall back to a minimal stub when the lump binary is known
+            if seed is None and (key8 in LAZY_LUMPS or
+                                 os.path.isfile(os.path.join(lumps_dir, f'{key8}.lump'))):
+                seed = {'token': key8, 'abstraction': key8}
+        if seed is None:
             return jsonify({"error": "Lump sidecar not found"}), 404
+        try:
+            with open(sidecar_path, 'w') as _sf:
+                json.dump(seed, _sf, indent=2)
+        except Exception as _se:
+            return jsonify({"error": f"Could not create sidecar: {_se}"}), 500
 
     payload = request.get_json(force=True, silent=True) or {}
 

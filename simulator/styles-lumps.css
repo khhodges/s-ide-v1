@@ -121,6 +121,35 @@
     background: rgba(200, 40, 40, 0.6);
 }
 
+/* ── Action bar (Edit + Delete) — sits between header strip and tabs ─────── */
+.lump-action-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px 5px 10px;
+    border-bottom: 1px solid rgba(100, 160, 255, 0.08);
+    background: rgba(20, 20, 36, 0.25);
+}
+
+.lump-edit-btn {
+    background: rgba(60, 120, 200, 0.18);
+    color: #88aaee;
+    border: 1px solid rgba(80, 140, 220, 0.35);
+    font-size: 0.72rem;
+    padding: 4px 13px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.lump-edit-btn:hover {
+    background: rgba(80, 140, 220, 0.3);
+    color: #aaccff;
+    border-color: rgba(100, 160, 240, 0.55);
+}
+
+.lump-delete-top-btn {
+    margin-left: auto;
+    padding: 4px 13px;
+}
 
 .ns-type-badge {
     display: inline-block;

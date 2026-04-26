@@ -111,8 +111,51 @@ function openCRDetail(crIdx) {
     selectedCR = crIdx;
     crDetailTab = 'code';
     const detailTab = document.getElementById('dashTab-crdetail');
+    const cr = sim.getFormattedCR(crIdx);
+
+    // ── Binary-path pet names: apply lump-level pet names when the CR holds
+    // a known lump from the repository (identified by its NS slot / gtIndex).
+    // If sim.pc falls within a method of that lump, also pass the methodIdx so
+    // method-level pet names override the lump-level defaults.
+    if (cr && !cr.isNull) {
+        const nsIdx = cr.gtIndex;
+        if (nsIdx !== undefined && nsIdx !== null && typeof _lumpsCache !== 'undefined' && Array.isArray(_lumpsCache)) {
+            const lump = _lumpsCache.find(l =>
+                l.ns_slot !== undefined && l.ns_slot !== null && parseInt(l.ns_slot) === nsIdx
+            );
+            // Only supplement pet names in binary-lump context; when the assembler
+            // has source-compiled CR aliases, let those take priority and skip.
+            const _hasAsmAliases = typeof assembler !== 'undefined' && assembler &&
+                Object.keys((assembler.getAliases && assembler.getAliases().cr) || {}).length > 0;
+            if (lump && !_hasAsmAliases && typeof _applyLumpPetNames === 'function') {
+                let methodIdx = undefined;
+                try {
+                    const nse = sim.nsTable && sim.nsTable[nsIdx];
+                    const slotBase = nse && nse.word0_location !== undefined
+                        ? (nse.word0_location >>> 0) : null;
+                    const numMethods = (lump.methods || []).length;
+                    if (slotBase !== null && numMethods > 0 && sim.pc >= slotBase) {
+                        const pcOffset = sim.pc - slotBase;
+                        // Method table: words [slotBase+0 .. slotBase+numMethods-1]
+                        // each word is the code-entry offset (from slotBase) for that method.
+                        const entries = [];
+                        for (let mi = 0; mi < numMethods; mi++) {
+                            entries.push(sim.memory[slotBase + mi] >>> 0);
+                        }
+                        for (let mi = numMethods - 1; mi >= 0; mi--) {
+                            if (pcOffset >= entries[mi]) {
+                                methodIdx = mi;
+                                break;
+                            }
+                        }
+                    }
+                } catch(e) { methodIdx = undefined; }
+                _applyLumpPetNames(lump, methodIdx);
+            }
+        }
+    }
+
     if (detailTab) {
-        const cr = sim.getFormattedCR(crIdx);
         const localNames = {
             0: 'Result', 1: 'Arg 1', 6: 'C-List',
             12: 'Thread', 13: 'IRQ', 14: 'CLOOMC', 15: 'Namespace'

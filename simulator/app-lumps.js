@@ -62,7 +62,15 @@ function showLumpDetail(token) {
     if (!isNamespace) _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','content')">Content</button>`;
     _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','hexdump')">Hex Dump</button></div>`;
 
-    let html = _headerStrip + _tabBar + `<div class="lump-tab-panel lump-tab-panel-active" id="lumpTabOverview_${_tk}"><div class="lump-detail-sections">`;
+    // ── Action bar (Edit + Delete) shown below the header strip ─────────────
+    let _actionBar = `<div class="lump-action-bar">`;
+    if (!isNamespace) {
+        _actionBar += `<button class="btn lump-edit-btn" data-edit-token="${_e(token)}" title="View and edit lump content, code, and GT">&#9998; Edit</button>`;
+    }
+    _actionBar += `<button class="btn lump-delete-btn lump-delete-top-btn" data-delete-token="${_e(token)}" title="Delete this lump">Delete</button>`;
+    _actionBar += `</div>`;
+
+    let html = _headerStrip + _actionBar + _tabBar + `<div class="lump-tab-panel lump-tab-panel-active" id="lumpTabOverview_${_tk}"><div class="lump-detail-sections">`;
 
     const e = _escHtml;
 
@@ -275,10 +283,6 @@ function showLumpDetail(token) {
     }
     }
 
-    html += '<div class="lump-detail-actions">';
-    html += `<button class="btn lump-delete-btn" data-delete-token="${e(token)}">Delete Lump</button>`;
-    html += '</div>';
-
     html += '</div></div>';
 
     if (!isNamespace) {
@@ -291,6 +295,8 @@ function showLumpDetail(token) {
     contentEl.innerHTML = html;
     const delBtn = contentEl.querySelector('.lump-delete-btn[data-delete-token]');
     if (delBtn) delBtn.addEventListener('click', () => deleteLump(delBtn.dataset.deleteToken));
+    const editBtn = contentEl.querySelector('.lump-edit-btn[data-edit-token]');
+    if (editBtn) editBtn.addEventListener('click', () => _switchLumpTab(_tk, 'content'));
     _lumpActiveTab[_tk] = 'overview';
     const nsdgWrap = contentEl.querySelector('.ns-dep-graph-wrap[id]');
     if (nsdgWrap) _initNsDepGraphPanZoom(nsdgWrap.id);
