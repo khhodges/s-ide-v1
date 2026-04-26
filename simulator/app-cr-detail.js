@@ -14,14 +14,17 @@ function _jumpToAsmLine(lineNum) {
     for (var i = 0; i < targetLine - 1; i++) {
         offset += lines[i].length + 1;
     }
-    var lineLen = lines[targetLine - 1] ? lines[targetLine - 1].length : 0;
     editor.focus();
-    editor.setSelectionRange(offset, offset + lineLen);
+    // Position cursor at start of the line without selecting text —
+    // a full-line selection would show as blue and fight the red error overlay.
+    editor.setSelectionRange(offset, offset);
     var style = getComputedStyle(editor);
     var lineHeight = parseFloat(style.lineHeight) || 19.2;
     var paddingTop = parseFloat(style.paddingTop) || 0;
     var targetScrollTop = paddingTop + (targetLine - 1) * lineHeight - editor.clientHeight / 3;
     editor.scrollTop = Math.max(0, targetScrollTop);
+    var overlay = document.getElementById('asmErrorOverlay');
+    if (overlay) overlay.scrollTop = editor.scrollTop;
 }
 
 function _getSyntaxSuggestion(msg) {
