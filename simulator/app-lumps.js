@@ -1259,12 +1259,19 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
         html += `<div class="lump-clist-section"><div class="lump-clist-title">MyGoldenTokens <span class="lump-gt-count">(${cc} ${cc === 1 ? 'capability' : 'capabilities'})</span></div>`;
         html += `<div class="lump-gt-chips">`;
         for (let s = 0; s < cc; s++) {
-            const wIdx = clistStart + s;
-            const wVal = wIdx < words.length ? (words[wIdx] >>> 0) : 0;
-            const hexTok = wVal.toString(16).toUpperCase().padStart(8, '0');
+            const wIdx   = clistStart + s;
+            const wVal   = wIdx < words.length ? (words[wIdx] >>> 0) : 0;
             const resolved = wVal ? _clistName(wVal) : '';
-            const permBits = wVal & 0x1F;
-            const permStr  = permBits.toString(2).padStart(5, '0');
+
+            // Decode GT word fields (32-bit format)
+            const gtSlotId = wVal & 0xFFFF;                       // bits[15:0]  — NS slot index
+            const gtSeq    = (wVal >>> 16) & 0x7F;                // bits[22:16] — revocation version
+            const gtType   = (wVal >>> 23) & 0x3;                 // bits[24:23] — type
+            const gtPerms  = (wVal >>> 25) & 0x3F;                // bits[30:25] — 6-bit perms (RWXLSE)
+            const gtTypeStr = ['NULL','Inf','Out','Abs'][gtType];
+            const permLabels = 'RWXLSE';
+            const permStr = permLabels.split('').map((c, i) => (gtPerms >> i) & 1 ? c : '-').join('');
+
             if (!wVal) {
                 html += `<div class="lump-gt-chip lump-gt-chip-null">` +
                         `<span class="lump-gt-chip-dot lump-gt-dot-null"></span>` +
@@ -1272,20 +1279,19 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
                         `<span class="lump-gt-chip-meta lump-gt-meta-null">#${s}</span>` +
                         `</div>`;
             } else {
-                const _lm = _lumpsCache ? _lumpsCache.find(l => {
+                const _lm   = _lumpsCache ? _lumpsCache.find(l => {
                     const h = wVal.toString(16).padStart(8, '0');
                     const t = (l.token || '').toLowerCase();
                     return t === h || t.replace(/^0+/, '') === h.replace(/^0+/, '');
                 }) : null;
-                const typeLabel = _lm ? _lumpContentTypeLabel(_lm) : '?';
-                const petName   = resolved || (_lm ? (_lm.abstraction || '') : '');
-                const nameHtml  = petName
+                const petName = resolved || (_lm ? (_lm.abstraction || '') : '');
+                const nameHtml = petName
                     ? `<span class="lump-gt-chip-name">${e(petName)}</span>`
-                    : `<span class="lump-gt-chip-name lump-gt-name-unresolved">0x${hexTok}</span>`;
+                    : `<span class="lump-gt-chip-name lump-gt-name-unresolved">NS[${gtSlotId}]</span>`;
                 html += `<div class="lump-gt-chip" data-slot="${s}">` +
                         `<span class="lump-gt-chip-dot"></span>` +
                         nameHtml +
-                        `<span class="lump-gt-chip-meta">0x${hexTok} · ${e(typeLabel)} · ${permStr} · #${s}</span>` +
+                        `<span class="lump-gt-chip-meta">${permStr} · ${gtTypeStr} · #${gtSlotId} · v${gtSeq}</span>` +
                         `</div>`;
             }
         }
