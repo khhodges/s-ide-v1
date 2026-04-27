@@ -630,6 +630,45 @@ function selectLumpType(type) {
     };
 
     if (titleEl) titleEl.textContent = `New ${labels[type] || type}`;
+
+    if (type === 'code' || type === 'inform') {
+        const blankTemplate =
+            `; New CLOOMC++ Abstraction\n` +
+            `; Replace <Name> with your abstraction name and define methods below.\n` +
+            `;\n` +
+            `; Pet names map capability registers to human-readable names.\n` +
+            `; Use Lambda and Macro constructs — no RAW ISA, no hex opcodes.\n` +
+            `\n` +
+            `Abstraction <Name> {\n` +
+            `    ; Capabilities (c-list entries — give each a pet name)\n` +
+            `    ; Example: CR0 = str, CR1 = count, CR2 = result\n` +
+            `\n` +
+            `    Method Init(str, count) {\n` +
+            `        ; Initialise the abstraction state\n` +
+            `        result ← 0\n` +
+            `        RETURN result\n` +
+            `    }\n` +
+            `}\n`;
+
+        if (contentEl) contentEl.innerHTML = '';
+        const srcEl = document.getElementById('lumpWsSourceContent');
+        if (srcEl) {
+            srcEl.__sourceLoaded = true;
+            srcEl.innerHTML = `<div class="lump-source-toolbar">
+                <span class="lump-source-lang-badge">CLOOMC++</span>
+                <button class="lump-source-btn" onclick="_lumpSourceCompile()" title="Compile \u2014 Compile source and preview in Binary tab">&#9654; Compile</button>
+                <button class="lump-source-btn" onclick="_lumpSourceDraft()" title="Draft \u2014 Show structural layout without building binary">Draft</button>
+                <button class="lump-source-btn lump-source-btn-build" onclick="_lumpSourceBuildLump()" title="Build LUMP \u2014 Compile and download .lump binary">Build LUMP &#8595;</button>
+            </div>
+            <textarea class="lump-source-textarea" id="lumpSourceEditor" spellcheck="false" autocorrect="off" autocapitalize="off">${blankTemplate.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+            <div class="lump-source-status" id="lumpSourceStatus">Edit the template above, then Compile or Build LUMP.</div>`;
+        }
+        const bar = document.getElementById('lumpWsTabBar');
+        if (bar) bar.style.display = 'flex';
+        if (typeof switchLumpWsTab === 'function') switchLumpWsTab('source');
+        return;
+    }
+
     if (contentEl) contentEl.innerHTML = `<div class="lumps-placeholder" style="text-align:left;padding:1.5rem 1rem;">
         <div style="font-size:0.95rem;font-weight:600;color:var(--church-gold);margin-bottom:0.6rem;">${labels[type] || type}</div>
         <div style="font-size:0.82rem;line-height:1.65;color:var(--text-secondary);">${notes[type] || ''}</div>
@@ -639,6 +678,14 @@ function selectLumpType(type) {
 let _viewLocked = false;
 function switchView(viewId) {
     if (_viewLocked) return;
+    if (viewId === 'abstractions') {
+        if (typeof _selectedLumpToken !== 'undefined') _selectedLumpToken = null;
+        switchView('lumps');
+        if (typeof switchLumpWsTab === 'function') switchLumpWsTab('logic');
+        const btn = document.getElementById('hamItem-abstractions');
+        if (btn) btn.classList.add('ham-active');
+        return;
+    }
     if (viewId !== currentView && currentView === 'trace') {
         document.querySelectorAll('.trace-row-highlighted').forEach(el => el.classList.remove('trace-row-highlighted'));
         document.querySelectorAll('.trace-gatelog-back').forEach(el => el.remove());
@@ -662,7 +709,12 @@ function switchView(viewId) {
     if (viewId === 'namespace') updateNamespace();
     if (viewId === 'memory')    renderMemoryView();
     if (viewId === 'abstractions') renderAbstractions();
-    if (viewId === 'lumps') renderLumps();
+    if (viewId === 'lumps') {
+        const _wsBar = document.getElementById('lumpWsTabBar');
+        if (_wsBar) _wsBar.style.display = 'flex';
+        if (typeof switchLumpWsTab === 'function' && !_selectedLumpToken) switchLumpWsTab('logic');
+        renderLumps();
+    }
     if (viewId === 'pipeline') pipelineViz.render();
     if (viewId === 'builder' && typeof initBuilder === 'function') initBuilder();
     if (viewId === 'builder') {

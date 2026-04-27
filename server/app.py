@@ -2514,6 +2514,40 @@ def get_lump_words(token_hex):
     return jsonify({"token": key8, "words": words, "count": num_words})
 
 
+@app.route("/api/lump-source/<name>")
+def get_lump_source(name):
+    """Return the CLOOMC++ functional source for a named lump.
+
+    Looks in simulator/cloomc/<name>.cloomc (case-insensitive match).
+    Returns {"name": name, "source": "..."} on success.
+    Returns {"error": "...", "binary_only": true} with 404 if no functional
+    source file exists for this lump name.
+    """
+    import re as _re
+    if not _re.match(r'^[A-Za-z0-9_.\-]+$', name):
+        return jsonify({"error": "Invalid name"}), 400
+
+    cloomc_dir = os.path.join(os.path.dirname(__file__), '..', 'simulator', 'cloomc')
+    cloomc_dir = os.path.normpath(cloomc_dir)
+
+    candidate = os.path.join(cloomc_dir, f'{name}.cloomc')
+    if os.path.isfile(candidate):
+        with open(candidate, 'r', encoding='utf-8', errors='replace') as fh:
+            source = fh.read()
+        return jsonify({"name": name, "source": source, "binary_only": False})
+
+    for fname in os.listdir(cloomc_dir) if os.path.isdir(cloomc_dir) else []:
+        if fname.lower() == f'{name.lower()}.cloomc':
+            with open(os.path.join(cloomc_dir, fname), 'r', encoding='utf-8', errors='replace') as fh:
+                source = fh.read()
+            return jsonify({"name": name, "source": source, "binary_only": False})
+
+    return jsonify({
+        "error": f"No functional CLOOMC++ source found for '{name}'",
+        "binary_only": True
+    }), 404
+
+
 _EDITABLE_CONTENT_TYPES = {'text', 'markdown', 'image', 'grayscale', 'binary', 'doc'}
 
 

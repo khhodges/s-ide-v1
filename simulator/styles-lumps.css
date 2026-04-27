@@ -127,6 +127,305 @@
     background: rgba(200, 40, 40, 0.6);
 }
 
+/* ── LUMP workspace outer tabs (Logic / Source / Binary) ─────────────────── */
+.lump-ws-tabbar {
+    display: flex;
+    gap: 2px;
+    padding: 6px 10px 0 10px;
+    border-bottom: 2px solid rgba(100, 160, 255, 0.12);
+    background: rgba(12, 12, 22, 0.4);
+}
+
+.lump-ws-tab {
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 5px 16px;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 5px 5px 0 0;
+    background: transparent;
+    color: var(--text-secondary, #888);
+    cursor: pointer;
+    transition: background 0.14s, color 0.14s, border-color 0.14s;
+    position: relative;
+    bottom: -2px;
+}
+
+.lump-ws-tab:hover {
+    background: rgba(100, 160, 255, 0.07);
+    color: #c0d8ff;
+    border-color: rgba(100, 160, 255, 0.18);
+}
+
+.lump-ws-tab-active {
+    background: rgba(20, 20, 40, 0.8);
+    color: var(--church-gold, #daa520);
+    border-color: rgba(100, 160, 255, 0.25);
+    border-bottom-color: rgba(20, 20, 40, 0.8);
+}
+
+.lump-ws-panel {
+    display: none;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.lump-ws-panel-active {
+    display: block;
+}
+
+/* ── Logic tab content ───────────────────────────────────────────────────── */
+.lump-logic-section {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(100, 160, 255, 0.08);
+}
+
+.lump-logic-layer-badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 12px;
+    background: rgba(100, 160, 255, 0.12);
+    color: #88aaee;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+}
+
+.lump-logic-desc {
+    font-size: 0.81rem;
+    color: var(--text-secondary, #9ca3af);
+    line-height: 1.55;
+    margin-top: 4px;
+}
+
+.lump-logic-methods-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--church-gold, #daa520);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.lump-logic-method-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(100, 160, 255, 0.06);
+    font-size: 0.78rem;
+}
+
+.lump-logic-method-row:last-child {
+    border-bottom: none;
+}
+
+.lump-logic-method-name {
+    color: #a0d4ff;
+    font-weight: 600;
+    min-width: 120px;
+    font-family: 'Courier New', monospace;
+}
+
+.lump-logic-method-status {
+    font-size: 0.68rem;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.lump-logic-caps-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 4px;
+}
+
+.lump-logic-cap-chip {
+    font-size: 0.7rem;
+    font-family: 'Courier New', monospace;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(100, 200, 255, 0.08);
+    color: #7effea;
+    border: 1px solid rgba(100, 200, 255, 0.18);
+}
+
+.lump-logic-no-abs {
+    padding: 18px 16px;
+    color: var(--text-secondary, #6b7280);
+    font-size: 0.82rem;
+    font-style: italic;
+    line-height: 1.6;
+}
+
+.lump-logic-catalog-header {
+    padding: 10px 14px 8px;
+    font-size: 0.70rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-secondary, #6b7280);
+    border-bottom: 1px solid rgba(100, 160, 255, 0.08);
+    margin-bottom: 4px;
+}
+
+/* ── Compile result panel (Binary tab, shown after Source tab compile) ───── */
+.lump-source-compile-result {
+    margin: 10px 12px;
+    border: 1px solid rgba(100, 200, 100, 0.2);
+    border-radius: 6px;
+    background: rgba(60, 120, 60, 0.08);
+    overflow: hidden;
+}
+.lump-source-compile-result-title {
+    padding: 6px 12px 5px;
+    font-size: 0.70rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #7ec87e;
+    border-bottom: 1px solid rgba(100, 200, 100, 0.15);
+    background: rgba(60, 120, 60, 0.12);
+}
+.lump-source-compile-result-pre {
+    margin: 0;
+    padding: 10px 12px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.70rem;
+    color: #b4e6b4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 220px;
+    overflow-y: auto;
+}
+.lscb-title-err { color: #f87171 !important; background: rgba(120,40,40,0.18) !important; border-bottom-color: rgba(200,80,80,0.18) !important; }
+.lscb-error { margin: 0; padding: 10px 12px; font-family: 'JetBrains Mono','Fira Code',monospace; font-size: 0.70rem; color: #f87171; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow-y: auto; }
+.lscb-header { padding: 8px 12px; font-size: 0.74rem; color: #a3b4c8; border-bottom: 1px solid rgba(100,200,100,0.1); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lscb-abs { font-weight: 700; color: #e2e8f0; }
+.lscb-stat { color: #7ec87e; font-size: 0.69rem; }
+.lscb-lang { color: #93c5fd; font-size: 0.68rem; font-style: italic; }
+.lscb-back { color: #7ec87e; font-size: 0.69rem; text-decoration: none; }
+.lscb-back:hover { text-decoration: underline; }
+.lscb-methods { padding: 6px 0; }
+.lscb-method { padding: 5px 12px; border-bottom: 1px solid rgba(100,200,100,0.06); }
+.lscb-method-name { font-family: 'JetBrains Mono','Fira Code',monospace; font-size: 0.71rem; font-weight: 600; color: #93c5fd; }
+.lscb-word-count { font-size: 0.67rem; color: #6b7280; margin-left: 6px; }
+.lscb-alias { font-size: 0.69rem; color: #6b7280; font-style: italic; }
+.lscb-words { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.lscb-word { font-family: 'JetBrains Mono','Fira Code',monospace; font-size: 0.65rem; color: #b4e6b4; background: rgba(60,120,60,0.15); border: 1px solid rgba(100,200,100,0.12); border-radius: 3px; padding: 1px 4px; cursor: default; }
+
+/* ── Source tab content ──────────────────────────────────────────────────── */
+.lump-source-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-bottom: 1px solid rgba(100, 160, 255, 0.1);
+    background: rgba(12, 12, 22, 0.35);
+    flex-wrap: wrap;
+}
+
+.lump-source-lang-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 9px;
+    border-radius: 10px;
+    background: rgba(192, 132, 252, 0.15);
+    color: #c084fc;
+    border: 1px solid rgba(192, 132, 252, 0.25);
+    margin-right: auto;
+}
+
+.lump-source-btn {
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid rgba(100, 160, 255, 0.35);
+    background: rgba(60, 120, 200, 0.18);
+    color: #88aaee;
+    transition: background 0.13s, color 0.13s;
+}
+
+.lump-source-btn:hover {
+    background: rgba(80, 140, 220, 0.3);
+    color: #aaccff;
+}
+
+.lump-source-btn-build {
+    border-color: rgba(80, 200, 100, 0.4);
+    background: rgba(40, 120, 60, 0.2);
+    color: #66bb6a;
+}
+
+.lump-source-btn-build:hover {
+    background: rgba(60, 150, 80, 0.35);
+    color: #88dd8a;
+}
+
+.lump-source-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 340px;
+    max-height: 65vh;
+    background: #090914;
+    color: #c8d4e8;
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    border: none;
+    border-bottom: 1px solid rgba(100, 160, 255, 0.1);
+    padding: 10px 14px;
+    resize: vertical;
+    outline: none;
+}
+
+.lump-source-textarea:focus {
+    background: #0b0b18;
+}
+
+.lump-source-status {
+    padding: 5px 14px;
+    font-size: 0.72rem;
+    color: var(--text-secondary, #6b7280);
+    min-height: 24px;
+}
+
+.lump-source-status.ok { color: #66bb6a; }
+.lump-source-status.err { color: #ef4444; }
+
+.lump-source-binary-only {
+    padding: 24px 20px;
+    text-align: center;
+}
+
+.lump-source-binary-only-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+    opacity: 0.5;
+}
+
+.lump-source-binary-only-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-secondary, #888);
+    margin-bottom: 6px;
+}
+
+.lump-source-binary-only-desc {
+    font-size: 0.78rem;
+    color: #4b5563;
+    line-height: 1.6;
+}
+
 /* ── Action bar (Edit + Delete) — sits between header strip and tabs ─────── */
 .lump-action-bar {
     display: flex;

@@ -30,7 +30,7 @@
     <link rel="stylesheet" href="styles-toolbar.css?v=20260425g">
     <link rel="stylesheet" href="styles-editor.css?v=20260425h">
     <link rel="stylesheet" href="styles-dashboard.css?v=20260426b">
-    <link rel="stylesheet" href="styles-lumps.css?v=20260427c">
+    <link rel="stylesheet" href="styles-lumps.css?v=20260427g">
     <link rel="stylesheet" href="styles-gatelog.css?v=20260424g">
     <link rel="stylesheet" href="styles-fault.css?v=20260426a">
     <link rel="stylesheet" href="styles-tools.css?v=20260423">
@@ -98,7 +98,7 @@
                         <div class="ham-dropdown" id="hamDropdown" style="display:none;">
                             <div class="ham-group">
                                 <div class="ham-group-title">Develop</div>
-                                <button class="ham-item" id="hamItem-editor" onclick="switchView('editor');closeHamburger()">Create</button>
+                                <button class="ham-item" id="hamItem-editor" onclick="switchView('editor');closeHamburger()">Programs</button>
                                 <button class="ham-item" id="hamItem-repl" onclick="switchView('repl');closeHamburger()">Math<kbd class="ham-kbd">C+M</kbd></button>
                                 <button class="ham-item" id="hamItem-namespace" onclick="switchView('namespace');closeHamburger()">Namespace<kbd class="ham-kbd">C+N</kbd></button>
                                 <button class="ham-item" id="hamItem-memory" onclick="switchView('memory');closeHamburger()">Memory Dump</button>
@@ -115,7 +115,7 @@
                             </div>
                             <div class="ham-group">
                                 <div class="ham-group-title">Review</div>
-                                <button class="ham-item" id="hamItem-abstractions" onclick="switchView('abstractions');closeHamburger()">Abstractions<kbd class="ham-kbd">C+A</kbd></button>
+                                <button class="ham-item" id="hamItem-abstractions" onclick="switchView('abstractions');closeHamburger()">Logic Catalog<kbd class="ham-kbd">C+A</kbd></button>
                                 <button class="ham-item" id="hamItem-tutorial" onclick="switchView('tutorial');closeHamburger()">Tutorial<kbd class="ham-kbd">C+U</kbd></button>
                                 <button class="ham-item" id="hamItem-reference" onclick="switchView('reference');closeHamburger()">Reference<kbd class="ham-kbd">C+F</kbd></button>
                                 <button class="ham-item" id="hamItem-docs" onclick="switchView('docs');closeHamburger()">Docs<kbd class="ham-kbd">C+Y</kbd></button>
@@ -138,7 +138,7 @@
                             <div class="ham-group">
                                 <div class="ham-group-title">Install</div>
                                 <button class="ham-item" id="hamItem-builder" onclick="switchView('builder');closeHamburger()">Builder<kbd class="ham-kbd">C+B</kbd></button>
-                                <button class="ham-item" id="hamItem-lumps" onclick="switchView('lumps');closeHamburger()">Lumps<kbd class="ham-kbd">C+L</kbd></button>
+                                <button class="ham-item" id="hamItem-lumps" onclick="switchView('lumps');closeHamburger()">LUMP<kbd class="ham-kbd">C+L</kbd></button>
                 <button class="ham-item" id="hamItem-lumps-import" onclick="switchView('lumps');closeHamburger();setTimeout(showLumpImportModal,150)">Import LUMP</button>
                                 <button class="ham-item" id="hamItem-bitstreams" onclick="switchView('builder');switchBuilderViewTab('cyberspace');closeHamburger()">Bitstreams</button>
                             </div>
@@ -617,8 +617,21 @@
             <div class="lumps-detail-panel">
                 <div class="panel">
                     <div class="panel-title" id="lumpsDetailTitle">Select a lump</div>
-                    <div id="lumpsDetailContent">
-                        <div class="lumps-placeholder">Click any lump on the left to see its methods, pet names, MTBF, deployment info, and capabilities.</div>
+                    <div class="lump-ws-tabbar" id="lumpWsTabBar" style="display:none;">
+                        <button class="lump-ws-tab" id="lumpWsTab-logic" onclick="switchLumpWsTab('logic')">Logic</button>
+                        <button class="lump-ws-tab" id="lumpWsTab-source" onclick="switchLumpWsTab('source')">Source</button>
+                        <button class="lump-ws-tab lump-ws-tab-active" id="lumpWsTab-binary" onclick="switchLumpWsTab('binary')">Binary</button>
+                    </div>
+                    <div class="lump-ws-panel" id="lumpWsPanel-logic" style="display:none;">
+                        <div id="lumpWsLogicContent"><div class="lumps-placeholder">Select a lump to see its public interface.</div></div>
+                    </div>
+                    <div class="lump-ws-panel" id="lumpWsPanel-source" style="display:none;">
+                        <div id="lumpWsSourceContent"><div class="lumps-placeholder">Select a lump to see its source.</div></div>
+                    </div>
+                    <div class="lump-ws-panel lump-ws-panel-active" id="lumpWsPanel-binary">
+                        <div id="lumpsDetailContent">
+                            <div class="lumps-placeholder">Click any lump on the left to see its methods, pet names, MTBF, deployment info, and capabilities.</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1418,7 +1431,7 @@
     <script src="app-cr-detail.js?v=20260426b"></script>
     <script src="app-memory.js?v=20260427c"></script>
     <script src="app-abstractions.js?v=20260425r"></script>
-    <script src="app-lumps.js?v=20260427c"></script>
+    <script src="app-lumps.js?v=20260427i"></script>
     <script src="app-absdetail.js?v=20260426b"></script>
     <script src="app-run.js?v=20260426a"></script>
     <script src="app-compile.js?v=20260425h"></script>

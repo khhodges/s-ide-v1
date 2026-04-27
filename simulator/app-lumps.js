@@ -304,6 +304,18 @@ function showLumpDetail(token) {
     const _defaultTab = isNamespace ? 'overview' : 'content';
     const restoreTab = (_lumpEditorOpen[_tk] && !isNamespace) ? 'content' : (_prevTab && _prevTab !== 'overview' ? _prevTab : _defaultTab);
     _switchLumpTab(_tk, restoreTab);
+
+    // ── Workspace outer tabs (Logic / Source / Binary) ──────────────────
+    if (!isNamespace) {
+        const srcEl = document.getElementById('lumpWsSourceContent');
+        if (srcEl) srcEl.__sourceLoaded = false;
+        _populateLumpLogicTab(lump);
+        // Always default to Binary tab when a lump is selected
+        _lumpWsActiveTab = 'binary';
+        _showLumpWorkspaceTabs();
+    } else {
+        _hideLumpWorkspaceTabs();
+    }
 }
 
 async function _fetchAndShowLumpBinary(token, lump) {
@@ -385,6 +397,387 @@ const _lumpContentLoaded  = {};
 const _lumpHexLoaded      = {};
 const _lumpEditorOpen     = {};
 const _lumpEditorDraftText = {};
+
+// ── Workspace outer tabs (Logic / Source / Binary) ────────────────────────
+
+let _lumpWsActiveTab = 'binary';
+
+function switchLumpWsTab(tab) {
+    _lumpWsActiveTab = tab;
+    const tabs = ['logic', 'source', 'binary'];
+    for (const t of tabs) {
+        const btn = document.getElementById(`lumpWsTab-${t}`);
+        const panel = document.getElementById(`lumpWsPanel-${t}`);
+        if (btn) btn.classList.toggle('lump-ws-tab-active', t === tab);
+        if (panel) {
+            panel.classList.toggle('lump-ws-panel-active', t === tab);
+            panel.style.display = (t === tab) ? 'block' : 'none';
+        }
+    }
+    if (tab === 'logic' && !_selectedLumpToken) {
+        _populateLumpLogicCatalog();
+    }
+    if (tab === 'source' && _selectedLumpToken) {
+        const lump = _lumpsCache.find(l => l.token === _selectedLumpToken);
+        if (lump && !document.getElementById('lumpWsSourceContent').__sourceLoaded) {
+            _populateLumpSourceTab(lump);
+        }
+    }
+}
+
+function _showLumpWorkspaceTabs() {
+    const bar = document.getElementById('lumpWsTabBar');
+    if (bar) bar.style.display = 'flex';
+    switchLumpWsTab(_lumpWsActiveTab);
+}
+
+function _hideLumpWorkspaceTabs() {
+    const bar = document.getElementById('lumpWsTabBar');
+    if (bar) bar.style.display = 'none';
+    ['logic','source','binary'].forEach(t => {
+        const panel = document.getElementById(`lumpWsPanel-${t}`);
+        if (panel) panel.style.display = t === 'binary' ? 'block' : 'none';
+    });
+}
+
+function _populateLumpLogicCatalog() {
+    const el = document.getElementById('lumpWsLogicContent');
+    if (!el) return;
+    if (typeof abstractionRegistry === 'undefined' || !abstractionRegistry) {
+        el.innerHTML = '<div class="lump-logic-section"><div class="lump-logic-desc">Abstraction catalog not loaded.</div></div>';
+        return;
+    }
+    const layerNames = abstractionRegistry.getLayerNames ? abstractionRegistry.getLayerNames() : {};
+    let html = '<div class="lump-logic-catalog-header">Logic Catalog &mdash; double-click any entry to jump to its LUMP</div>';
+    for (let layer = 0; layer <= 8; layer++) {
+        const abstractions = abstractionRegistry.getLayer ? abstractionRegistry.getLayer(layer) : [];
+        if (!abstractions || abstractions.length === 0) continue;
+        const layerName = layerNames[layer] || `Layer ${layer}`;
+        html += `<div class="abs-layer-group">`;
+        html += `<div class="abs-layer-header"><span class="abs-layer-title">Layer ${layer} \u2014 ${layerName}</span>`;
+        html += `<span class="abs-layer-count">(${abstractions.length})</span></div>`;
+        html += `<div class="abs-layer-items">`;
+        for (const abs of abstractions) {
+            const best = (typeof _implStatusBest === 'function') ? _implStatusBest(abs) : 'pseudo';
+            const dotColor = (typeof IMPL_STATUS_COLORS !== 'undefined') ? (IMPL_STATUS_COLORS[best] || '#9ca3af') : '#9ca3af';
+            const dotTitle = (typeof IMPL_STATUS_LABELS !== 'undefined') ? (IMPL_STATUS_LABELS[best] || best) : best;
+            const absProfile = (typeof _getAbstractionProfile === 'function') ? _getAbstractionProfile(abs) : 'IoT';
+            const profileBadgeClass = absProfile === 'Full' ? 'profile-badge-full' : 'profile-badge-iot';
+            html += `<div class="abs-item" onclick="showAbstractionDetail(${abs.index})" ondblclick="event.stopPropagation();_goToLumpByAbstractionName(abstractionRegistry.getAbstraction(${abs.index}).name)" title="Double-click to jump to this abstraction\u2019s LUMP in the Repository">`;
+            html += `<span class="abs-item-idx">${abs.index}</span>`;
+            html += `<span class="abs-item-name">${abs.name}</span>`;
+            html += `<span class="abs-profile-badge ${profileBadgeClass}">${absProfile}</span>`;
+            html += `<span class="abs-item-dot" style="background:${dotColor};box-shadow:0 0 4px ${dotColor}80" title="${dotTitle}"></span>`;
+            html += `<span class="abs-item-desc">${abs.description}</span>`;
+            html += `</div>`;
+        }
+        html += `</div></div>`;
+    }
+    el.innerHTML = html;
+}
+
+function _populateLumpLogicTab(lump) {
+    const el = document.getElementById('lumpWsLogicContent');
+    if (!el) return;
+    const e = _escHtml;
+    const absName = lump.abstraction || '';
+    const abs = (typeof abstractionRegistry !== 'undefined' && abstractionRegistry)
+        ? (() => {
+            if (!abstractionRegistry.abstractions) return null;
+            return Object.values(abstractionRegistry.abstractions).find(a => a.name === absName) || null;
+          })()
+        : null;
+
+    if (!abs) {
+        const methods = lump.methods || [];
+        const caps = lump.capabilities || [];
+        let html = '<div class="lump-logic-section">';
+        html += `<div class="lump-logic-layer-badge">No logic metadata</div>`;
+        html += `<div class="lump-logic-desc">No abstraction catalog entry found for <strong>${e(absName || 'this lump')}</strong>. Showing binary-derived interface below.</div>`;
+        html += '</div>';
+        if (methods.length > 0) {
+            html += '<div class="lump-logic-section">';
+            html += `<div class="lump-logic-methods-title">Methods (from binary)</div>`;
+            for (const m of methods) {
+                html += `<div class="lump-logic-method-row"><span class="lump-logic-method-name">${e(m.name)}</span></div>`;
+            }
+            html += '</div>';
+        }
+        if (caps.length > 0) {
+            html += '<div class="lump-logic-section">';
+            html += `<div class="lump-logic-methods-title">Capabilities</div>`;
+            html += `<div class="lump-logic-caps-list">`;
+            for (const c of caps) {
+                html += `<span class="lump-logic-cap-chip">${e(c.name)}</span>`;
+            }
+            html += `</div></div>`;
+        }
+        el.innerHTML = html;
+        return;
+    }
+
+    const layerNames = abstractionRegistry.getLayerNames ? abstractionRegistry.getLayerNames() : {};
+    const layerName = layerNames[abs.layer] || `Layer ${abs.layer}`;
+    const profile = (typeof _getAbstractionProfile === 'function') ? _getAbstractionProfile(abs) : (abs.profile || 'IoT');
+    const profileClass = profile === 'Full' ? 'profile-badge-full' : 'profile-badge-iot';
+    const perms = abs.perms || {};
+    const permStr = (perms.B?'B':'')+(perms.R?'R':'')+(perms.W?'W':'')+(perms.X?'X':'')+(perms.L?'L':'')+(perms.S?'S':'')+(perms.E?'E':'') || 'none';
+
+    let html = '<div class="lump-logic-section">';
+    html += `<span class="lump-logic-layer-badge">Layer ${abs.layer} \u2014 ${e(layerName)}</span>`;
+    html += ` <span class="abs-profile-badge ${profileClass}" style="font-size:0.62rem;">${e(profile)}</span>`;
+    if (abs.description) {
+        html += `<div class="lump-logic-desc">${e(abs.description)}</div>`;
+    }
+    if (permStr !== 'none') {
+        html += `<div style="margin-top:6px;font-size:0.72rem;color:#6b7280;">Permissions: <code style="color:#88aaee;">${e(permStr)}</code></div>`;
+    }
+    html += '</div>';
+
+    const methods = abs.methods || [];
+    if (methods.length > 0) {
+        html += '<div class="lump-logic-section">';
+        html += `<div class="lump-logic-methods-title">Methods &mdash; ${methods.length} public</div>`;
+        for (const mName of methods) {
+            const mKey = `${abs.index}:${mName}`;
+            const status = (typeof _implStatusGet === 'function') ? _implStatusGet(mKey) : 'pseudo';
+            const statusColor = (typeof IMPL_STATUS_COLORS !== 'undefined') ? (IMPL_STATUS_COLORS[status] || '#6b7280') : '#6b7280';
+            const statusLabel = (typeof IMPL_STATUS_SHORT !== 'undefined') ? (IMPL_STATUS_SHORT[status] || status) : status;
+            html += `<div class="lump-logic-method-row">`;
+            html += `<span class="lump-logic-method-name">${e(mName)}</span>`;
+            html += `<span class="lump-logic-method-status" style="background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor}44;">${e(statusLabel)}</span>`;
+            html += `</div>`;
+        }
+        html += '</div>';
+    }
+
+    const absCaps = abs.capabilities || [];
+    const lumpCaps = lump.capabilities || [];
+    const allCaps = absCaps.length > 0 ? absCaps : lumpCaps.map(c => c.name);
+    if (allCaps.length > 0) {
+        html += '<div class="lump-logic-section">';
+        html += `<div class="lump-logic-methods-title">Capabilities</div>`;
+        html += `<div class="lump-logic-caps-list">`;
+        for (const c of allCaps) {
+            const cn = typeof c === 'string' ? c : (c.name || '');
+            html += `<span class="lump-logic-cap-chip">${e(cn)}</span>`;
+        }
+        html += `</div></div>`;
+    }
+
+    if (abs.description_long) {
+        html += '<div class="lump-logic-section">';
+        html += `<div class="lump-logic-methods-title">Notes</div>`;
+        html += `<div class="lump-logic-desc">${e(abs.description_long)}</div>`;
+        html += '</div>';
+    }
+
+    el.innerHTML = html;
+}
+
+function _isRawISASource(src) {
+    // RAW ISA signals are checked first and take absolute priority.
+    // A file like WordString.cloomc uses CLOOMC abstraction structure but annotates
+    // every method with [RAW ISA] and inline hex opcodes — it must be treated as raw.
+
+    // [RAW ISA] method annotation (e.g. "public method Foo [RAW ISA] {")
+    const hasRawAnnotation = /\[RAW\s+ISA\]/i.test(src);
+    // RAW_ISA keyword or bare "RAW ISA" phrase
+    const hasRawMarker = /\b(RAW_ISA|RAW\s+ISA)\b/.test(src);
+    // Low-level MACRO definitions
+    const hasMacroPattern = /^\s*MACRO\s+[A-Z]/m.test(src);
+    // Bare hex opcode lines (8 hex digits preceded only by whitespace)
+    const hasHexOpcodes = /^\s+[0-9a-fA-F]{8}\b/m.test(src);
+    // Bare ISA instruction names that would not appear in functional CLOOMC++
+    const hasISAInstructions = /^\s*(mLoad|mSave|ELOADCALL|XLOADLAMBDA|TPERM|LAMBDA)\b/m.test(src);
+
+    // Any RAW ISA signal makes the whole file binary-only, regardless of CLOOMC scaffolding
+    return hasRawAnnotation || hasRawMarker || hasMacroPattern || hasHexOpcodes || hasISAInstructions;
+}
+
+async function _populateLumpSourceTab(lump) {
+    const el = document.getElementById('lumpWsSourceContent');
+    if (!el) return;
+    el.__sourceLoaded = true;
+    const absName = lump.abstraction || '';
+    const e = _escHtml;
+
+    el.innerHTML = `<div class="lump-source-status">Loading source\u2026</div>`;
+
+    const _showBinaryOnly = (reason) => {
+        const displayName = absName || lump.token || 'This lump';
+        const fileHint = absName ? `<code>${e(absName)}.cloomc</code>` : 'a named <code>.cloomc</code> source file';
+        el.innerHTML = `<div class="lump-source-binary-only">
+            <div class="lump-source-binary-only-icon">&#128190;</div>
+            <div class="lump-source-binary-only-title">Binary-only &mdash; no functional source available</div>
+            <div class="lump-source-binary-only-desc">
+                <strong>${e(displayName)}</strong> ${reason}<br><br>
+                To add functional source, author ${fileHint} using
+                pet-name mechanics (capability registers as named variables, Lambda/Macro
+                constructs as building blocks) and place it in <code>simulator/cloomc/</code>.
+            </div>
+        </div>`;
+    };
+
+    // No abstraction name → no source file can exist; show binary-only notice immediately
+    if (!absName) {
+        _showBinaryOnly('has no associated abstraction name, so no CLOOMC++ source can be located.');
+        return;
+    }
+
+    try {
+        const resp = await fetch(`/api/lump-source/${encodeURIComponent(absName)}`);
+        const data = await resp.json();
+
+        if (resp.ok && !data.binary_only && data.source) {
+            const src = data.source;
+            if (_isRawISASource(src)) {
+                _showBinaryOnly('was compiled from RAW ISA or low-level assembly and has no CLOOMC++ pet-name source. The Binary tab shows the compiled form.');
+                return;
+            }
+            let html = '<div class="lump-source-toolbar">';
+            html += `<span class="lump-source-lang-badge">CLOOMC++</span>`;
+            html += `<button class="lump-source-btn" onclick="_lumpSourceCompile()" title="Compile \u2014 Compile source and update Binary tab">&#9654; Compile</button>`;
+            html += `<button class="lump-source-btn" onclick="_lumpSourceDraft()" title="Draft \u2014 Show structural layout without building binary">Draft</button>`;
+            html += `<button class="lump-source-btn lump-source-btn-build" onclick="_lumpSourceBuildLump()" title="Build LUMP \u2014 Compile and download .lump binary">Build LUMP &#8595;</button>`;
+            html += '</div>';
+            html += `<textarea class="lump-source-textarea" id="lumpSourceEditor" spellcheck="false" autocorrect="off" autocapitalize="off">${e(src)}</textarea>`;
+            html += `<div class="lump-source-status" id="lumpSourceStatus"></div>`;
+            el.innerHTML = html;
+        } else {
+            _showBinaryOnly('was compiled from RAW ISA or assembly and has no CLOOMC++ pet-name source on file. The Binary tab shows the compiled form.');
+        }
+    } catch (err) {
+        el.innerHTML = `<div class="lump-source-status err">Error loading source: ${e(err.message)}</div>`;
+    }
+}
+
+function _lumpSourceProxyEdit(fn) {
+    const editor = document.getElementById('lumpSourceEditor');
+    if (!editor) return false;
+    const asmEd = document.getElementById('asmEditor');
+    if (!asmEd) return false;
+    const prev = asmEd.value;
+    asmEd.value = editor.value;
+    try { fn(); } finally { asmEd.value = prev; }
+    return true;
+}
+
+function _lumpSourceCompile() {
+    const status = document.getElementById('lumpSourceStatus');
+    if (status) { status.textContent = 'Compiling\u2026'; status.className = 'lump-source-status'; }
+    try {
+        const editor = document.getElementById('lumpSourceEditor');
+        if (!editor) return;
+        const src = editor.value;
+
+        if (typeof cloomcCompiler === 'undefined' || !cloomcCompiler) {
+            if (status) { status.textContent = 'Compiler not available.'; status.className = 'lump-source-status err'; }
+            return;
+        }
+
+        const result = cloomcCompiler.compile(src, []);
+
+        if (result.errors && result.errors.length > 0) {
+            const errText = result.errors.map(err => `Line ${err.line || '?'}: ${err.message}`).join('\n');
+            if (status) { status.textContent = `Compile failed \u2014 ${result.errors.length} error(s).`; status.className = 'lump-source-status err'; }
+            _lumpSourceShowCompiledBinary(null, errText);
+            switchLumpWsTab('binary');
+            return;
+        }
+
+        if (status) { status.textContent = 'Compiled \u2014 Binary tab updated.'; status.className = 'lump-source-status ok'; }
+        _lumpSourceShowCompiledBinary(result, null);
+        switchLumpWsTab('binary');
+
+    } catch (err) {
+        if (status) { status.textContent = `Compile error: ${err.message}`; status.className = 'lump-source-status err'; }
+    }
+}
+
+function _lumpSourceShowCompiledBinary(result, errText) {
+    const contentEl = document.getElementById('lumpsDetailContent');
+    if (!contentEl) return;
+    const e = _escHtml;
+    const hexw = w => (w >>> 0).toString(16).padStart(8, '0').toUpperCase().replace(/(.{2})/g, '$1 ').trim();
+
+    let inner = '';
+    if (errText) {
+        inner = `<pre class="lscb-error">${e(errText)}</pre>`;
+    } else {
+        let totalWords = 0;
+        let methodsHtml = '';
+        for (const m of (result.methods || [])) {
+            if (m.aliasOf) {
+                methodsHtml += `<div class="lscb-method"><span class="lscb-method-name">${e(m.name)}</span>`
+                    + ` <span class="lscb-alias">\u2192 alias of ${e(m.aliasOf)}</span></div>`;
+                continue;
+            }
+            const code = m.code || [];
+            totalWords += code.length;
+            let wordsHtml = '';
+            for (let i = 0; i < code.length; i++) {
+                wordsHtml += `<span class="lscb-word" title="word ${i}">${hexw(code[i])}</span>`;
+            }
+            methodsHtml += `<div class="lscb-method">`
+                + `<span class="lscb-method-name">${e(m.name)}</span>`
+                + ` <span class="lscb-word-count">${code.length}w</span>`
+                + `<div class="lscb-words">${wordsHtml || '<em style="color:#6b7280">no code words</em>'}</div></div>`;
+        }
+        const absName = result.abstractionName || '(unnamed)';
+        const mCount = (result.methods || []).filter(m => !m.aliasOf).length;
+        const lang = result.language || 'cloomc';
+        const tok = _selectedLumpToken ? `&nbsp;\u2014&nbsp;<a class="lscb-back" href="#" onclick="event.preventDefault();showLumpDetail('${e(_selectedLumpToken)}')">&#8592; Show saved lump</a>` : '';
+        inner = `<div class="lscb-header">`
+            + `<span class="lscb-abs">${e(absName)}</span>`
+            + ` <span class="lscb-stat">${mCount} method${mCount !== 1 ? 's' : ''}</span>`
+            + ` <span class="lscb-stat">${totalWords} code word${totalWords !== 1 ? 's' : ''}</span>`
+            + ` <span class="lscb-lang">${e(lang)}</span>`
+            + tok
+            + `</div>`
+            + `<div class="lscb-methods">${methodsHtml || '<em style="padding:8px;display:block;color:#6b7280;">No methods compiled.</em>'}</div>`;
+    }
+
+    const titleText = errText ? '\u26A0 Compile Errors' : '\u25BA Compiled Binary \u2014 In-Memory (unsaved)';
+    const titleClass = errText ? 'lump-source-compile-result-title lscb-title-err' : 'lump-source-compile-result-title';
+    contentEl.innerHTML = `<div class="lump-source-compile-result" id="lumpSourceCompileResult">`
+        + `<div class="${titleClass}">${titleText}</div>`
+        + inner
+        + `</div>`;
+}
+
+function _lumpSourceDraft() {
+    const status = document.getElementById('lumpSourceStatus');
+    if (status) { status.textContent = 'Drafting\u2026'; status.className = 'lump-source-status'; }
+    try {
+        if (typeof compileDraft === 'function') {
+            _lumpSourceProxyEdit(() => compileDraft());
+        }
+        if (status) { status.textContent = 'Draft complete \u2014 see Programs console.'; status.className = 'lump-source-status ok'; }
+    } catch (err) {
+        if (status) { status.textContent = `Draft error: ${err.message}`; status.className = 'lump-source-status err'; }
+    }
+}
+
+function _lumpSourceBuildLump() {
+    const editor = document.getElementById('lumpSourceEditor');
+    const status = document.getElementById('lumpSourceStatus');
+    if (!editor) return;
+    const src = editor.value;
+    if (status) { status.textContent = 'Building\u2026'; status.className = 'lump-source-status'; }
+    try {
+        const asmEd = document.getElementById('asmEditor');
+        if (asmEd && typeof buildAndDownloadLump === 'function') {
+            const prev = asmEd.value;
+            asmEd.value = src;
+            buildAndDownloadLump();
+            asmEd.value = prev;
+        }
+        if (status) { status.textContent = 'Build triggered. Check Programs view.'; status.className = 'lump-source-status ok'; }
+    } catch (err) {
+        if (status) { status.textContent = `Build error: ${err.message}`; status.className = 'lump-source-status err'; }
+    }
+}
 
 function _lumpContentTypeLabel(lump) {
     const ct = (lump.content_type || '').toLowerCase();
