@@ -1,3 +1,9 @@
+/* ── Condition-code abbreviation tooltip ─────────────────────────────────── */
+.cond-abbr {
+    border-bottom: 1px dotted #7aa2cc;
+    cursor: help;
+}
+
 /* ── LUMP binary hex-dump / disassembly table ──────────────────────────── */
 .lump-binary-badge {
     font-size: 0.62rem;

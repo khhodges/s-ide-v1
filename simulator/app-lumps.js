@@ -830,6 +830,7 @@ async function _loadLumpContent(token, lump) {
 //   .lump-com-cr   → CR cap registers      (yellow)
 function _colorizeComment(text) {
     const _h = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const _ccLong = {EQ:'Equal',NE:'Not Equal',CS:'Carry Set',CC:'Carry Clear',MI:'Minus',PL:'Plus',VS:'Overflow Set',VC:'Overflow Clear',HI:'Higher',LS:'Lower or Same',GE:'Greater or Equal',LT:'Less Than',GT:'Greater Than',LE:'Less or Equal',AL:'Always',NV:'Never'};
     let out = '';
     let i   = 0;
     while (i < text.length) {
@@ -867,6 +868,14 @@ function _colorizeComment(text) {
         if (crM) {
             out += `<span class="lump-com-cr">${_h(crM[0])}</span>`;
             i += crM[0].length;
+            continue;
+        }
+        // Condition code abbreviation  EQ NE CS CC MI PL VS VC HI LS GE LT GT LE AL NV
+        const ccM = text.slice(i).match(/^(EQ|NE|CS|CC|MI|PL|VS|VC|HI|LS|GE|LT|GT|LE|AL|NV)\b/);
+        if (ccM) {
+            const abbr = ccM[1];
+            out += `<span class="cond-abbr" title="${abbr}\u00A0\u2014\u00A0${_ccLong[abbr]}">${abbr}</span>`;
+            i += abbr.length;
             continue;
         }
         // Plain character — HTML-escape
@@ -1158,6 +1167,8 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
     // Mirror exactly what the Code View table does: find all BRANCH targets,
     // assign L0…Ln labels in address order, compute per-row SVG arrows.
     const _lumpCondAbbr = ['EQ','NE','CS','CC','MI','PL','VS','VC','HI','LS','GE','LT','GT','LE','','NV'];
+    const _condLong     = ['Equal','Not Equal','Carry Set','Carry Clear','Minus','Plus','Overflow Set','Overflow Clear','Higher','Lower or Same','Greater or Equal','Less Than','Greater Than','Less or Equal','Always','Never'];
+    const _condSpan = (abbr, idx) => `<span class="cond-abbr" title="${abbr}\u00A0\u2014\u00A0${_condLong[idx]}">${abbr}</span>`;
     const _lumpCodeWords = [];
     for (let _ci = 1; _ci < effEnd; _ci++) _lumpCodeWords.push(words[_ci] >>> 0);
 
@@ -1279,6 +1290,7 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
                     return pet ? `${pet}(DR${numStr})` : match;
                 });
             }
+            let disHtml = null;
 
             // BRANCH: replace raw PC-offset text with symbolic label (L0, L1, …)
             if (op === 17) {
@@ -1288,6 +1300,9 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
                 if (_blabel !== undefined) {
                     const _bcond = _lumpCondAbbr[cond];
                     disText     = `BRANCH${_bcond}  ${_blabel}`;
+                    disHtml     = cond === 14
+                        ? `BRANCH\u00A0\u00A0${_blabel}`
+                        : `BRANCH${_condSpan(_bcond, cond)}\u00A0\u00A0${_blabel}`;
                     commentText = staticCmt || `branch → ${_blabel}${cond !== 14 ? ` [if ${_bcond}]` : ''}`;
                 }
             }
@@ -1307,7 +1322,7 @@ function _renderLumpCodeContent(bodyEl, lump, words) {
                     `<span class="lump-code-addr lump-code-binary">\u00A00x${addr}</span>` +
                     `<span class="lump-code-hex lump-code-binary">${hex}</span>` +
                     `<span class="lump-code-comment">${_colorizeComment(commentText)}</span>` +
-                    `<span class="lump-code-instr">${e(disText)}${ann ? ' ' + ann : ''}</span>` +
+                    `<span class="lump-code-instr">${disHtml !== null ? disHtml : e(disText)}${ann ? ' ' + ann : ''}</span>` +
                     `</div>`;
 
             instrRelIdx++;

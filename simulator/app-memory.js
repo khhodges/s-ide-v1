@@ -293,6 +293,7 @@ function updateCRDetail() {
         }
 
         const _brLabelCondNames = ['EQ','NE','CS','CC','MI','PL','VS','VC','HI','LS','GE','LT','GT','LE','','NV'];
+        const _brCondLong       = ['Equal','Not Equal','Carry Set','Carry Clear','Minus','Plus','Overflow Set','Overflow Clear','Higher','Lower or Same','Greater or Equal','Less Than','Greater Than','Less or Equal','Always','Never'];
         const _brTargetSet = new Set();
         for (let i = 0; i < _codeWords.length; i++) {
             const _w = _codeWords[i] >>> 0;
@@ -338,10 +339,13 @@ function updateCRDetail() {
                 const _soff = (_rawImm & 0x4000) ? (_rawImm | 0xFFFF8000) : _rawImm;
                 const _tgt = w + _soff;
                 const _condCode = (word >>> 23) & 0xF;
-                const _mnemonic = 'BRANCH' + _brLabelCondNames[_condCode];
+                const _condAbbr = _brLabelCondNames[_condCode];
+                const _mnemonicHtml = _condCode === 14
+                    ? 'BRANCH'
+                    : `BRANCH<span class="cond-abbr" title="${_condAbbr}\u00A0\u2014\u00A0${_brCondLong[_condCode]}">${_condAbbr}</span>`;
                 const _labelName = _brLabelMap.get(_tgt);
                 decoded = _labelName !== undefined
-                    ? _wrapRegHover(`${_mnemonic}  ${_labelName}`)
+                    ? _wrapRegHover(`${_mnemonicHtml}\u00A0\u00A0${_labelName}`)
                     : _wrapRegHover(asm.disassemble(word));
             } else {
                 decoded = _wrapRegHover(asm.disassemble(word));
