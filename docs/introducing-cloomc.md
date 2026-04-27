@@ -184,7 +184,7 @@ The CLOOMC IDE is available now as a web application. You do not need to install
 
 2. **Read the handbook** — a guided introduction to the architecture, written for beginners with no assumed background in hardware or security.
 
-3. **Try the tutorials** — hands-on exercises that walk you through writing your first abstraction, compiling it, sealing it, and running it in the simulator.
+3. **Try the tutorials** — hands-on exercises that walk you through writing your first abstraction, compiling it, sealing it, and running it in the simulator. The [Namespace Vocabulary Tutorial](namespace-vocabulary-tutorial.md) is a good starting point: it walks step by step from raw registers to the application-level vocabulary described in this document.
 
 4. **Join the project** — the Church Machine is open source. Every line of code, every document, every hardware design is public. Contributions are welcome from programmers, educators, security researchers, and anyone who believes that computing can be better than it is.
 
