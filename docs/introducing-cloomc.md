@@ -122,6 +122,48 @@ The IDE targets the Efinix Ti60 F225 FPGA — a chip with 60,000 logic elements 
 
 ---
 
+## The Namespace as Vocabulary
+
+Every abstraction added to a namespace is not merely a component. It is a new word.
+
+This is the model that drives every language and IDE design decision in the Church Machine project, and it is worth stating plainly: as a namespace grows, the collection of pet names and abstraction names it contains becomes a domain-specific language for that application. The developer who writes against a mature namespace does not write at the level of the machine. They write at the level of the problem.
+
+### From Machine Words to Application Words
+
+The growth has three stages.
+
+**Stage one — machine-level pet names.** A fresh namespace contains only the names the hardware needs: data registers, capability registers, raw entry points. A developer writing at this level is essentially writing annotated assembly. The vocabulary is the vocabulary of the chip.
+
+**Stage two — abstraction-level pet names.** As sealed abstractions are added — WordString, Mint, a networking stack, a storage layer — their public method names enter the namespace. The developer now writes in terms of operations that have meaning beyond the hardware: `WordString.GetCharCount`, `Mint.Create`. The vocabulary is the vocabulary of the platform.
+
+**Stage three — application-level vocabulary.** This is the destination. As domain abstractions accumulate, the namespace acquires the language of the application itself. A PP250 telecommunications system, for example, builds a namespace of Contact, Identity, Routing, and Media abstractions. The CLOOMC++ source written against that namespace eventually reads:
+
+    Contact.Connect(me, myMother)
+
+That single line is a direct translation into a CALL instruction plus Golden Token arguments. The developer who writes it does not need to know anything about embedded telephony, physical location resolution, medium selection (voice, text, email), or network routing. All of that is hidden behind lump seals as private methods. The namespace has become the language of the application.
+
+### Why the Lump Seal Makes the Vocabulary Trustworthy
+
+A domain-specific language is only useful if its words mean what they say. In a conventional system, any caller can bypass an abstraction's interface — through raw memory access, through a pointer into a private function, through a patched binary. The vocabulary is advisory. The developer cannot rely on the word meaning what the abstraction author intended.
+
+On the Church Machine, the lump seal changes this. When a CLOOMC abstraction is sealed:
+
+- Its private methods are structurally unreachable from outside. No external caller can invoke `Routing.SelectMedium` directly, even if they know its byte offset. The dispatch table does not route there, and the lump seal prevents any modification of the code region that would add such a route.
+- Its public methods are the complete and exclusive interface. The word `Contact.Connect` means exactly what the abstraction author defined — no more, no less — because there is no path to any other behaviour.
+- That meaning is permanent. A sealed abstraction cannot be patched, redirected, or corrupted by another program. The hardware will not allow it.
+
+The result is a vocabulary that carries a mathematical guarantee. When the application-level developer writes `Contact.Connect(me, myMother)`, they are not trusting a convention or relying on a colleague's discipline. They are invoking a sealed contract whose behaviour was verified at build time and cannot change.
+
+### The Grammar Is CLOOMC++
+
+The vocabulary is the namespace. The grammar is CLOOMC++.
+
+CLOOMC++ is not a compiler target that happens to accept high-level syntax. It is the grammar that makes the vocabulary usable — the rules by which abstraction names are composed into statements, statements into methods, and methods into sealed components that themselves become new words. Every abstraction the developer seals is a contribution to the language. Every namespace that ships with a mature application is, in the precise linguistic sense, a finished language: a complete vocabulary for expressing that application's domain, backed by hardware-enforced semantics that make every word trustworthy.
+
+This is the architecture's destination. Not a machine that runs code. A machine in which writing code at the application level is writing in the language of the application — because the namespace is that language, the lump seal is what makes its words reliable, and CLOOMC++ is the grammar that holds it together.
+
+---
+
 ## What This Means for You
 
 If you are not a programmer, you might wonder why any of this matters to you. The answer is simple: every digital service you depend on — banking, healthcare, communications, transport, voting — runs on software built on the wrong foundation. That foundation cannot be patched. It must be replaced.

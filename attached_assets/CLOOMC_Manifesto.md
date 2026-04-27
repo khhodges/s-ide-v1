@@ -107,9 +107,27 @@ Change control, audit trails, and fraud detection all flow from this mechanism. 
 
 ---
 
+## VII. The Seventh Principle — The Namespace Is a Living Vocabulary
+
+A program is not a sequence of instructions. It is a namespace — and a namespace is not merely a registry. It is a language in the making.
+
+Every abstraction added to a namespace contributes a new word: a name that carries a precise, hardware-enforced meaning, backed by the lump seal that keeps its implementation private and its public contract permanent. As a namespace grows, the collection of these words constitutes a domain-specific language for the application that uses it. The developer who writes against a mature namespace does not write at the level of the machine. They write at the level of the problem the machine is solving.
+
+A PP250 telecommunications system, for example, builds a namespace of Contact, Identity, Routing, and Media abstractions. The CLOOMC++ source written against that namespace eventually reads:
+
+    Contact.Connect(me, myMother)
+
+That single line is a direct translation into a CALL instruction plus Golden Token arguments. Physical location resolution, medium selection, network routing, and session management are hidden behind lump seals as private methods — structurally unreachable from outside, not merely undocumented. The namespace has become the language of the application.
+
+**CLOOMC++ is not merely a compiler target. It is the grammar of that language.** The vocabulary is the namespace. The words are the abstraction names and their public methods. The grammar is the CLOOMC++ syntax that composes those names into statements, methods, and new sealed abstractions — which themselves become words. The lump seal is what makes the vocabulary trustworthy: each word means exactly what its author defined, its implementation is hidden, and that meaning cannot be changed by any caller, any patch, or any exploit.
+
+We declare that the namespace is the language; that every sealed abstraction is a verified word in that language; that the lump seal is what makes each word reliable; and that the growth of a namespace toward application-level vocabulary is not incidental to the architecture but its intended destination.
+
+---
+
 ## Declaration
 
-These six laws are not aspirations. They are the mechanical consequences of building a computer on the mathematics of the Lambda Calculus, enforced at the hardware level, not the software level.
+These six laws and the seventh principle are not aspirations. They are the mechanical consequences of building a computer on the mathematics of the Lambda Calculus, enforced at the hardware level, not the software level.
 
 The binary computer outsourced its security to software — to operating systems, firewalls, antivirus engines, and human administrators — and that outsourcing has failed for decades. Cybercrime is not a technical problem awaiting a cleverer patch. It is an architectural problem, and architectural problems require architectural answers.
 
@@ -120,9 +138,10 @@ We declare that every binding must live inside a capability.
 We declare that rights must be given, never seized.  
 We declare that computation must not exceed its grant.  
 We declare that authority must always be revocable.  
-We declare that seals must verify origin without disclosure.
+We declare that seals must verify origin without disclosure.  
+We declare that the namespace is a living vocabulary, that every sealed abstraction is a verified word in that vocabulary, and that writing at the level of the application domain — not the machine — is the intended destination of the architecture.
 
-These six laws, enforced in silicon, are the foundation of a failsafe, democratic, and mathematically sound cyberspace — one that can accommodate artificial intelligence of any capability without surrendering human control, and one that places authority where it belongs: in the hands of citizens, not in the ambient privileges of whoever happens to be logged on.
+These six laws and the seventh principle, enforced in silicon, are the foundation of a failsafe, democratic, and mathematically sound cyberspace — one that can accommodate artificial intelligence of any capability without surrendering human control, and one that places authority where it belongs: in the hands of citizens, not in the ambient privileges of whoever happens to be logged on.
 
 The architecture exists. The mathematics is settled. The machine can be built.
 
