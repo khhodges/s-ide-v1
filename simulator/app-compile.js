@@ -521,6 +521,11 @@ function compileDraftAssembly(source, con) {
     showNextSteps('draft');
 }
 
+function _getActiveSourceLabel() {
+    const tab = document.querySelector('.example-tab.active');
+    return tab ? tab.textContent.trim() : null;
+}
+
 function compileDraft() {
     const editor = document.getElementById('asmEditor');
     if (!editor) return;
@@ -562,8 +567,10 @@ function compileDraft() {
     const clistStart = allocSize - clistCount;
     const freespace = allocSize - codeSize - clistCount;
 
+    const _draftSrcLabel = _getActiveSourceLabel();
+    const _draftSrcHint = _draftSrcLabel ? ` · ${_draftSrcLabel}` : '';
     let draft = `═══════════════════════════════════════════════════\n`;
-    draft += `  CLOOMC++ DRAFT — "${result.abstractionName}" [${langLabel}]\n`;
+    draft += `  CLOOMC++ DRAFT — "${result.abstractionName}" [${langLabel}]${_draftSrcHint}\n`;
     draft += `═══════════════════════════════════════════════════\n\n`;
 
     draft += `  Methods (${result.methods.length}):\n`;
@@ -945,7 +952,9 @@ function compileCLOOMC() {
 
     const langNames2 = { english: 'English', haskell: 'Haskell', symbolic: 'Symbolic Math (Ada)', javascript: 'JavaScript', lambda: 'Lambda Calculus' };
     const lang = langNames2[result.language] || 'JavaScript';
-    let listing = `; CLOOMC++ [${lang}] compiled "${result.abstractionName}" — ${result.methods.length} method${result.methods.length !== 1 ? 's' : ''}\n\n`;
+    const _compileSrcLabel = _getActiveSourceLabel();
+    const _compileSrcHint = _compileSrcLabel ? ` · source: ${_compileSrcLabel}` : '';
+    let listing = `; CLOOMC++ [${lang}] compiled "${result.abstractionName}"${_compileSrcHint} — ${result.methods.length} method${result.methods.length !== 1 ? 's' : ''}\n\n`;
 
     const manifestByMethod = {};
     if (result.manifest) {
@@ -985,7 +994,9 @@ function compileCLOOMC() {
     if (con) { con.textContent = listing; con.scrollTop = 0; }
     showNextSteps('compiled');
     trackAction('compile', { name: result.abstractionName, lang: result.language });
-    appendOutput(`CLOOMC++ compiled "${result.abstractionName}" — ${result.methods.length} methods`, 'info');
+    const _outSrcLabel = _getActiveSourceLabel();
+    const _outSrcHint = _outSrcLabel ? ` · ${_outSrcLabel}` : '';
+    appendOutput(`CLOOMC++ compiled "${result.abstractionName}"${_outSrcHint} — ${result.methods.length} methods`, 'info');
 }
 
 function compileAndCreateAbstraction() {
