@@ -293,9 +293,11 @@
                     </label>
                     <span class="toolbar-separator"></span>
                     <button class="btn btn-toolbar btn-gc tooltip-bottom" onclick="runGCCycle()" data-tooltip="Run garbage collection cycle: Mark all entries, scan from roots, sweep unreachable">GC Scan</button>
+                    <span class="toolbar-separator"></span>
+                    <button id="vocabViewToggle" class="btn btn-toolbar btn-vocab tooltip-bottom" onclick="toggleVocabularyView()" data-tooltip="Toggle vocabulary view: groups abstractions by domain and shows public words">Vocabulary</button>
                 </div>
             </div>
-            <div class="namespace-layout">
+            <div class="namespace-layout" id="namespaceLayout">
                 <div class="ns-panel ns-objects">
                     <h2>Namespace Objects</h2>
                     <p class="ns-intro">Click to select, then use toolbar buttons above</p>
@@ -310,6 +312,15 @@
                     <div class="hier-container" id="hierarchyTree">
                         <div class="ns-empty">Boot system to view hierarchy</div>
                     </div>
+                </div>
+            </div>
+            <div id="vocabularyLayout" class="vocab-layout" style="display:none;">
+                <div class="vocab-header">
+                    <h2 class="vocab-title">Namespace Vocabulary</h2>
+                    <p class="vocab-subtitle">Public words available to callers — grouped by domain. Private methods are excluded.</p>
+                </div>
+                <div id="vocabularyContent" class="vocab-content">
+                    <div class="ns-empty">Boot system to view vocabulary</div>
                 </div>
             </div>
         </section>

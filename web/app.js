@@ -1025,6 +1025,10 @@ function updateNamespaceDisplay() {
     if (!simulator.cr15 || simulator.cr15.name === 'NULL') {
         nsPanel.innerHTML = '<div class="ns-empty">Namespace not loaded</div>';
         hierPanel.innerHTML = '<div class="ns-empty">Boot system to view hierarchy</div>';
+        if (vocabularyViewActive) {
+            const content = document.getElementById('vocabularyContent');
+            if (content) content.innerHTML = buildVocabularyView();
+        }
         return;
     }
     
@@ -1070,6 +1074,110 @@ function updateNamespaceDisplay() {
     hierPanel.innerHTML = buildHierarchyTree();
     
     attachContextMenuListeners();
+
+    if (vocabularyViewActive) {
+        const content = document.getElementById('vocabularyContent');
+        if (content) content.innerHTML = buildVocabularyView();
+    }
+}
+
+// ==================== VOCABULARY VIEW ====================
+
+let vocabularyViewActive = false;
+
+const abstractionDomains = {
+    SlideRule:       { domain: 'Mathematics',  desc: 'Floating-point arithmetic' },
+    Abacus:          { domain: 'Mathematics',  desc: '64-bit integer arithmetic' },
+    Circle:          { domain: 'Geometry',     desc: 'Circle geometry calculations' },
+    DateTime:        { domain: 'Time',         desc: 'ISO 8601 date and time' },
+    Lambda:          { domain: 'Computation',  desc: 'Church lambda calculus primitives' },
+    Stack:           { domain: 'Computation',  desc: 'Church-encoded RPN stack' },
+    HP35:            { domain: 'Calculator',   desc: 'HP-35 scientific calculator' },
+    Constants:       { domain: 'Constants',    desc: 'Physical and mathematical constants' },
+    Mint:            { domain: 'System',       desc: 'Capability forge (namespace method)' },
+    FamilyRegistry:  { domain: 'Networking',   desc: 'Secure machine-to-machine binding' }
+};
+
+function getPublicWords(absName) {
+    const abs = abstractionCLists[absName];
+    if (!abs) return [];
+    if (abs.methodSelector) {
+        return Object.values(abs.methodSelector);
+    }
+    return abs.clist
+        .filter(item => item.type === 'Function')
+        .map(item => item.name.replace(/^GT_/, ''));
+}
+
+function buildVocabularyView() {
+    if (!simulator.cr15 || simulator.cr15.name === 'NULL') {
+        return '<div class="ns-empty">Boot system to view vocabulary</div>';
+    }
+
+    const domainMap = {};
+    Object.keys(abstractionCLists).forEach(absName => {
+        const meta = abstractionDomains[absName] || { domain: 'Other', desc: '' };
+        const domain = meta.domain;
+        if (!domainMap[domain]) domainMap[domain] = [];
+        domainMap[domain].push(absName);
+    });
+
+    const domainOrder = ['Mathematics', 'Geometry', 'Time', 'Computation', 'Calculator', 'Constants', 'System', 'Networking', 'Other'];
+    const sortedDomains = Object.keys(domainMap).sort((a, b) => {
+        const ai = domainOrder.indexOf(a);
+        const bi = domainOrder.indexOf(b);
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+
+    let html = '';
+    sortedDomains.forEach(domain => {
+        html += `<div class="vocab-domain-card">`;
+        html += `<div class="vocab-domain-header"><span class="vocab-domain-name">${domain}</span></div>`;
+        domainMap[domain].forEach(absName => {
+            const meta = abstractionDomains[absName] || {};
+            const mathBadge = mathTypeBadges[absName] || 'ABS';
+            const words = getPublicWords(absName);
+            html += `<div class="vocab-abstraction">`;
+            html += `<div class="vocab-abs-header">`;
+            html += `<span class="math-type-badge math-${mathBadge.toLowerCase()}">${mathBadge}</span>`;
+            html += `<span class="vocab-abs-name">${absName}</span>`;
+            if (meta.desc) html += `<span class="vocab-abs-desc">${meta.desc}</span>`;
+            html += `</div>`;
+            if (words.length > 0) {
+                html += `<div class="vocab-word-list">`;
+                words.forEach(word => {
+                    html += `<span class="vocab-word">${word}</span>`;
+                });
+                html += `</div>`;
+            } else {
+                html += `<div class="vocab-no-words">No public words</div>`;
+            }
+            html += `</div>`;
+        });
+        html += `</div>`;
+    });
+    return html;
+}
+
+function toggleVocabularyView() {
+    const namespaceLayout = document.getElementById('namespaceLayout');
+    const vocabLayout = document.getElementById('vocabularyLayout');
+    const toggle = document.getElementById('vocabViewToggle');
+    if (!namespaceLayout || !vocabLayout || !toggle) return;
+
+    vocabularyViewActive = !vocabularyViewActive;
+
+    if (vocabularyViewActive) {
+        namespaceLayout.style.display = 'none';
+        vocabLayout.style.display = 'block';
+        toggle.classList.add('btn-vocab-active');
+        const content = document.getElementById('vocabularyContent');
+        if (content) content.innerHTML = buildVocabularyView();
+    } else {
+        namespaceLayout.style.display = '';
+        vocabLayout.style.display = 'none';
+        toggle.classList.remove('btn-vocab-active');
+    }
 }
 
 function renderDynamicChildren(parentName) {

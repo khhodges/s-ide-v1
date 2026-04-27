@@ -4949,6 +4949,131 @@ body.tooltip-hidden [data-tooltip]:hover::after {
     background: rgba(233, 69, 96, 0.15);
 }
 
+/* ==================== VOCABULARY VIEW ==================== */
+
+.btn-toolbar.btn-vocab {
+    border-color: #a78bfa;
+    color: #a78bfa;
+}
+
+.btn-toolbar.btn-vocab:hover,
+.btn-toolbar.btn-vocab.btn-vocab-active {
+    background: #a78bfa;
+    border-color: #a78bfa;
+    color: #fff;
+}
+
+.vocab-layout {
+    padding: 0;
+}
+
+.vocab-header {
+    padding: 1rem 0 1rem 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+}
+
+.vocab-title {
+    color: #a78bfa;
+    margin: 0 0 0.25rem 0;
+    font-size: 1.2rem;
+}
+
+.vocab-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.vocab-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.vocab-domain-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.vocab-domain-header {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.15) 0%, rgba(167, 139, 250, 0.05) 100%);
+    border-bottom: 1px solid rgba(167, 139, 250, 0.25);
+    padding: 0.6rem 1rem;
+}
+
+.vocab-domain-name {
+    font-weight: bold;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #a78bfa;
+}
+
+.vocab-abstraction {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.vocab-abstraction:last-child {
+    border-bottom: none;
+}
+
+.vocab-abs-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.vocab-abs-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.vocab-abs-desc {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    flex-basis: 100%;
+    margin-top: 0.1rem;
+    font-style: italic;
+}
+
+.vocab-word-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+}
+
+.vocab-word {
+    display: inline-block;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.15rem 0.5rem;
+    font-family: 'Consolas', monospace;
+    font-size: 0.78rem;
+    color: var(--text-primary);
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.vocab-word:hover {
+    border-color: #a78bfa;
+    color: #a78bfa;
+}
+
+.vocab-no-words {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
 /* ==================== CONTEXT MENU ==================== */
 
 .context-menu {
