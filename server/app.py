@@ -2524,7 +2524,7 @@ def get_lump_source(name):
     source file exists for this lump name.
     """
     import re as _re
-    if not _re.match(r'^[A-Za-z0-9_.\-]+$', name):
+    if not _re.match(r'^[A-Za-z0-9_ .\-]+$', name):
         return jsonify({"error": "Invalid name"}), 400
 
     cloomc_dir = os.path.join(os.path.dirname(__file__), '..', 'simulator', 'cloomc')

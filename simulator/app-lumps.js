@@ -645,6 +645,11 @@ async function _populateLumpSourceTab(lump) {
 
     try {
         const resp = await fetch(`/api/lump-source/${encodeURIComponent(absName)}`);
+        const ct = resp.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+            _showBinaryOnly('has no functional CLOOMC++ source on file. The Binary tab shows the compiled form.');
+            return;
+        }
         const data = await resp.json();
 
         if (resp.ok && !data.binary_only && data.source) {
