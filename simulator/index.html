@@ -70,6 +70,12 @@
         .ham-group:last-child { border-right:none; }
         .ham-item { width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:space-between; gap:0.75rem; }
         .ham-kbd { font-family:'Courier New',monospace; font-size:0.62rem; color:#555577; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:3px; padding:1px 4px; letter-spacing:0.2px; flex-shrink:0; }
+        @media (max-width:640px) {
+            #hamDropdown.ham-open { grid-template-columns:1fr; max-height:calc(100vh - 60px); overflow-y:auto; }
+            .ham-group { border-right:none; border-bottom:1px solid var(--border,#2a2a4a); }
+            .ham-group:last-child { border-bottom:none; }
+            .ham-item { padding-top:0.55rem; padding-bottom:0.55rem; width:100%; }
+        }
     </style>
 </head>
 <body>
