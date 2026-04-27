@@ -7,7 +7,7 @@
 
 The binary computer is frozen in time. Born of Cold War necessity, supplier convenience through centralized backward compatibility, and never unfrozen, it carries architectural wounds that no patch, firewall, or antivirus can heal. Its shared virtual memory is a public square where any program — trivial game or hostile malware — inherits the full power and authority of the superuser through the logged-on user by default, simply by existing. Cybercrime, ransomware, zero-day exploits, and the spectre of an AI breakout are not accidents. They are the predictable consequences of an exposed engine design that was never sound to begin with. Problems will grow. AI will cause damage beyond our imagination. The outdated architecture of computer science is flawed and operates outside its Cold War, stand-alone limits.
 
-We do not propose another patch, because patching cannot fix hardware problems.
+We do not propose another patch, because patching cannot hardware or protect civilization in the Information Age.
 
 We propose the architecture that should have been built first: the Church-Turing machine, grounded in the Lambda Calculus, governed by capability-based addressing, and protected by six laws that are not policies but mathematical facts. These laws do not require trust. They require only that the hardware enforce them, and the hardware can.
 
