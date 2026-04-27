@@ -131,8 +131,8 @@ class CLOOMCCompiler {
         const errors = [];
         // Auto-wrap code that has no abstraction/method declaration
         if (!/^\s*abstraction\s+\w+/m.test(source)) {
-            const hasMethod = /^\s*method\s+\w+/m.test(source);
-            const nameMatch = source.match(/^\s*method\s+(\w+)/m);
+            const hasMethod = /^\s*(?:public\s+|private\s+)?method\s+\w+/m.test(source);
+            const nameMatch = source.match(/^\s*(?:public\s+|private\s+)?method\s+(\w+)/m);
             const autoName = nameMatch ? nameMatch[1].charAt(0).toUpperCase() + nameMatch[1].slice(1) + 'Abstraction' : 'MyAbstraction';
             source = hasMethod
                 ? `abstraction ${autoName} {\n${source}\n}`
@@ -149,11 +149,11 @@ class CLOOMCCompiler {
 
         for (const method of parsed.methods) {
             if (method.aliasOf) {
-                methods.push({ name: method.name, aliasOf: method.aliasOf });
+                methods.push({ name: method.name, aliasOf: method.aliasOf, visibility: method.visibility || 'public' });
                 continue;
             }
             if (method.rawIsa) {
-                methods.push({ name: method.name, code: method.rawIsa });
+                methods.push({ name: method.name, code: method.rawIsa, visibility: method.visibility || 'public' });
                 manifest.push({ name: method.name, mapping: [] });
                 continue;
             }
@@ -161,7 +161,7 @@ class CLOOMCCompiler {
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
-                methods.push({ name: method.name, code: result.code });
+                methods.push({ name: method.name, code: result.code, visibility: method.visibility || 'public' });
                 manifest.push({ name: method.name, mapping: result.manifest });
             }
         }
@@ -179,6 +179,18 @@ class CLOOMCCompiler {
             }
         }
 
+        if (errors.length === 0 && methods.length > 0) {
+            const hasDispatch = methods.some(m => m.name === 'Dispatch' || m.name === 'M00');
+            const hasExplicitVisibility = parsed.methods.some(m => m.explicitVisibility);
+            if (!hasDispatch && hasExplicitVisibility) {
+                const dispatch = this._generateAutoDispatch(methods);
+                if (dispatch) {
+                    methods.unshift(dispatch);
+                    manifest.unshift({ name: 'Dispatch', mapping: [] });
+                }
+            }
+        }
+
         return { methods, errors, manifest, abstractionName: parsed.name, capabilities: parsed.capabilities || [], language: 'javascript' };
     }
 
@@ -191,7 +203,7 @@ class CLOOMCCompiler {
                 continue;
             }
             if (/\u03BB[a-z]\s*\./.test(t)) return true;
-            if (/^method\s+\w+\s*\([^)]*\)\s*=\s*.*\u03BB[a-z]\s*\./.test(t)) return true;
+            if (/^(?:public\s+|private\s+)?method\s+\w+\s*\([^)]*\)\s*=\s*.*\u03BB[a-z]\s*\./.test(t)) return true;
         }
         return false;
     }
@@ -209,11 +221,11 @@ class CLOOMCCompiler {
 
         for (const method of parsed.methods) {
             if (method.aliasOf) {
-                methods.push({ name: method.name, aliasOf: method.aliasOf });
+                methods.push({ name: method.name, aliasOf: method.aliasOf, visibility: method.visibility || 'public' });
                 continue;
             }
             if (method.rawIsa) {
-                methods.push({ name: method.name, code: method.rawIsa });
+                methods.push({ name: method.name, code: method.rawIsa, visibility: method.visibility || 'public' });
                 manifest.push({ name: method.name, mapping: [] });
                 continue;
             }
@@ -221,7 +233,7 @@ class CLOOMCCompiler {
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
-                methods.push({ name: method.name, code: result.code });
+                methods.push({ name: method.name, code: result.code, visibility: method.visibility || 'public' });
                 manifest.push({ name: method.name, mapping: result.manifest });
             }
         }
@@ -235,6 +247,18 @@ class CLOOMCCompiler {
                     m.aliasOf = _bodyIndex.get(fp);
                 } else {
                     _bodyIndex.set(fp, m.name);
+                }
+            }
+        }
+
+        if (errors.length === 0 && methods.length > 0) {
+            const hasDispatch = methods.some(m => m.name === 'Dispatch' || m.name === 'M00');
+            const hasExplicitVisibility = parsed.methods.some(m => m.explicitVisibility);
+            if (!hasDispatch && hasExplicitVisibility) {
+                const dispatch = this._generateAutoDispatch(methods);
+                if (dispatch) {
+                    methods.unshift(dispatch);
+                    manifest.unshift({ name: 'Dispatch', mapping: [] });
                 }
             }
         }
@@ -297,19 +321,26 @@ class CLOOMCCompiler {
                 continue;
             }
 
-            const methodMatch = line.match(/^method\s+(\w+)\s*\(([^)]*)\)\s*=\s*(.+)$/);
+            const visMatch = line.match(/^(public|private)\s+/);
+            const visibility = visMatch ? visMatch[1] : 'public';
+            const explicitVisibility = !!visMatch;
+            const cleanLine = visMatch ? line.slice(visMatch[0].length) : line;
+
+            const methodMatch = cleanLine.match(/^method\s+(\w+)\s*\(([^)]*)\)\s*=\s*(.+)$/);
             if (methodMatch) {
                 const method = {
                     name: methodMatch[1],
                     params: methodMatch[2] ? methodMatch[2].split(',').map(p => p.trim()).filter(Boolean) : [],
                     expr: methodMatch[3].trim(),
                     startLine: i,
-                    isLambda: true
+                    isLambda: true,
+                    visibility,
+                    explicitVisibility
                 };
                 i++;
                 while (i < lines.length) {
                     const contLine = lines[i].trim();
-                    if (!contLine || contLine.startsWith('--') || contLine.startsWith('method ') || contLine === '}') break;
+                    if (!contLine || contLine.startsWith('--') || contLine.match(/^(?:public\s+|private\s+)?method\s+/) || contLine === '}') break;
                     method.expr += ' ' + contLine;
                     i++;
                 }
@@ -317,20 +348,22 @@ class CLOOMCCompiler {
                 continue;
             }
 
-            const blockMethodMatch = line.match(/^method\s+(\w+)\s*\(([^)]*)\)\s*=\s*$/);
+            const blockMethodMatch = cleanLine.match(/^method\s+(\w+)\s*\(([^)]*)\)\s*=\s*$/);
             if (blockMethodMatch) {
                 const method = {
                     name: blockMethodMatch[1],
                     params: blockMethodMatch[2] ? blockMethodMatch[2].split(',').map(p => p.trim()).filter(Boolean) : [],
                     expr: '',
                     startLine: i,
-                    isLambda: true
+                    isLambda: true,
+                    visibility,
+                    explicitVisibility
                 };
                 i++;
                 while (i < lines.length) {
                     const contLine = lines[i].trim();
                     if (!contLine || contLine.startsWith('--')) { i++; continue; }
-                    if (contLine.startsWith('method ') || contLine === '}') break;
+                    if (contLine.match(/^(?:public\s+|private\s+)?method\s+/) || contLine === '}') break;
                     method.expr += (method.expr ? ' ' : '') + contLine;
                     i++;
                 }
@@ -608,7 +641,7 @@ class CLOOMCCompiler {
         for (const line of lines) {
             const t = line.trim();
             if (t.startsWith('--')) continue;
-            if (t.match(/^method\s+\w+\s*\([^)]*\)\s*=\s*/)) return true;
+            if (t.match(/^(?:public\s+|private\s+)?method\s+\w+\s*\([^)]*\)\s*=\s*/)) return true;
             if (t.includes('\\') && t.includes('->')) return true;
             if (t.match(/\bcase\b.*\bof\b/)) return true;
             if (t.match(/\blet\b.*\bin\b/)) return true;
@@ -701,16 +734,22 @@ class CLOOMCCompiler {
                 continue;
             }
 
+            // Strip optional public/private visibility prefix
+            const visMatch = line.match(/^(public|private)\s+/);
+            const visibility = visMatch ? visMatch[1] : 'public';
+            const explicitVisibility = !!visMatch;
+            const cleanLine = visMatch ? line.slice(visMatch[0].length) : line;
+
             // method Name = aliasOf Target;  (explicit alias, no code body)
-            const aliasMatch = line.match(/^method\s+(\w+)\s*(?:\([^)]*\))?\s*=\s*aliasOf\s+(\w+)\s*;/);
+            const aliasMatch = cleanLine.match(/^method\s+(\w+)\s*(?:\([^)]*\))?\s*=\s*aliasOf\s+(\w+)\s*;/);
             if (aliasMatch) {
-                result.methods.push({ name: aliasMatch[1], aliasOf: aliasMatch[2], params: [], body: [], startLine: i });
+                result.methods.push({ name: aliasMatch[1], aliasOf: aliasMatch[2], params: [], body: [], startLine: i, visibility, explicitVisibility });
                 i++;
                 continue;
             }
 
             // method Name [RAW ISA] { 0xHEX ... }  (inline ISA words)
-            const rawIsaMatch = line.match(/^method\s+(\w+)\s*(?:\([^)]*\))?\s*\[RAW ISA\]\s*\{/);
+            const rawIsaMatch = cleanLine.match(/^method\s+(\w+)\s*(?:\([^)]*\))?\s*\[RAW ISA\]\s*\{/);
             if (rawIsaMatch) {
                 const rawWords = [];
                 i++;
@@ -724,14 +763,14 @@ class CLOOMCCompiler {
                     }
                     i++;
                 }
-                result.methods.push({ name: rawIsaMatch[1], rawIsa: rawWords, params: [], body: [], startLine: i });
+                result.methods.push({ name: rawIsaMatch[1], rawIsa: rawWords, params: [], body: [], startLine: i, visibility, explicitVisibility });
                 continue;
             }
 
             // method Name(...) { ... }  or  method Name { ... }  (optional parens)
-            const methodMatch = line.match(/^method\s+(\w+)\s*(?:\(([^)]*)\))?\s*\{/);
+            const methodMatch = cleanLine.match(/^method\s+(\w+)\s*(?:\(([^)]*)\))?\s*\{/);
             if (methodMatch) {
-                const method = { name: methodMatch[1], params: [], body: [], startLine: i };
+                const method = { name: methodMatch[1], params: [], body: [], startLine: i, visibility, explicitVisibility };
                 if (methodMatch[2] && methodMatch[2].trim()) {
                     method.params = methodMatch[2].split(',').map(p => p.trim()).filter(Boolean);
                 }
@@ -771,6 +810,78 @@ class CLOOMCCompiler {
             i++;
         }
         return i;
+    }
+
+    _generateAutoDispatch(methods) {
+        // Collect only public methods (private methods are not dispatched externally)
+        const publicMethods = methods.filter(m => (m.visibility || 'public') === 'public');
+        const N = publicMethods.length;
+        if (N === 0) {
+            // All methods are private: emit a single-word RETURN stub so the lump
+            // entrypoint is a harmless return rather than the first private method body.
+            return { name: 'Dispatch', code: [this.encode(this.opcodes.RETURN, 14, 0, 0, 0)], visibility: 'public' };
+        }
+
+        // Compute absolute word offset of each method body within the lump.
+        // Auto-dispatch (M00) occupies the first (3*N + 2) words:
+        //   1 word  — ISUB DR15, DR0, DR0   (initialize counter)
+        //   N * 3   — IADD + MCMP + BRANCHEQ per public method
+        //   1 word  — RETURN AL              (unknown selector fallthrough)
+        const dispatchSize = 3 * N + 2;
+
+        // Map method name → absolute word offset (only code-bearing methods)
+        const codeOffsets = {};
+        let currentOffset = dispatchSize;
+        for (const m of methods) {
+            if (m.aliasOf) continue;
+            if (!m.code) continue;
+            codeOffsets[m.name] = currentOffset;
+            currentOffset += m.code.length;
+        }
+
+        // Resolve aliasOf transitively
+        const resolveOffset = (name, seen = new Set()) => {
+            if (seen.has(name)) return null;
+            seen.add(name);
+            if (codeOffsets[name] !== undefined) return codeOffsets[name];
+            const m = methods.find(x => x.name === name);
+            if (!m || !m.aliasOf) return null;
+            return resolveOffset(m.aliasOf, seen);
+        };
+        for (const m of methods) {
+            if (m.aliasOf && codeOffsets[m.name] === undefined) {
+                const resolved = resolveOffset(m.aliasOf);
+                if (resolved !== null) codeOffsets[m.name] = resolved;
+            }
+        }
+
+        // Generate the dispatch code words
+        const code = [];
+
+        // ISUB DR15, DR0, DR0  —  set DR15 = 0 (initialize method counter)
+        // encode(ISUB=16, AL=14, dst=DR15, src=DR0, imm=0)
+        code.push(this.encode(this.opcodes.ISUB, 14, 15, 0, 0));
+
+        for (const m of publicMethods) {
+            const targetOffset = codeOffsets[m.name];
+            if (targetOffset === undefined) continue;
+
+            // IADD DR15, DR15, #1  —  increment counter
+            code.push(this.encode(this.opcodes.IADD, 14, 15, 15, 1 | 0x4000));
+
+            // MCMP DR0, DR15  —  compare selector (DR0) with counter
+            code.push(this.encode(this.opcodes.MCMP, 14, 0, 15, 0));
+
+            // BRANCHEQ → targetOffset  —  branch if selector matches
+            const branchPos = code.length;
+            const relOffset = targetOffset - branchPos;
+            code.push(this.encode(this.opcodes.BRANCH, this.conditions.EQ, 0, 0, relOffset & 0x7FFF));
+        }
+
+        // RETURN AL  —  unknown selector: return without action
+        code.push(this.encode(this.opcodes.RETURN, 14, 0, 0, 0));
+
+        return { name: 'Dispatch', code, visibility: 'public' };
     }
 
     _compileMethod(method, rom, capNames) {
@@ -1269,11 +1380,11 @@ class CLOOMCCompiler {
 
         for (const method of parsed.methods) {
             if (method.aliasOf) {
-                methods.push({ name: method.name, aliasOf: method.aliasOf });
+                methods.push({ name: method.name, aliasOf: method.aliasOf, visibility: method.visibility || 'public' });
                 continue;
             }
             if (method.rawIsa) {
-                methods.push({ name: method.name, code: method.rawIsa });
+                methods.push({ name: method.name, code: method.rawIsa, visibility: method.visibility || 'public' });
                 manifest.push({ name: method.name, mapping: [] });
                 continue;
             }
@@ -1281,7 +1392,7 @@ class CLOOMCCompiler {
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
-                methods.push({ name: method.name, code: result.code });
+                methods.push({ name: method.name, code: result.code, visibility: method.visibility || 'public' });
                 manifest.push({ name: method.name, mapping: result.manifest });
             }
         }
@@ -1295,6 +1406,18 @@ class CLOOMCCompiler {
                     m.aliasOf = _bodyIndex.get(fp);
                 } else {
                     _bodyIndex.set(fp, m.name);
+                }
+            }
+        }
+
+        if (errors.length === 0 && methods.length > 0) {
+            const hasDispatch = methods.some(m => m.name === 'Dispatch' || m.name === 'M00');
+            const hasExplicitVisibility = parsed.methods.some(m => m.explicitVisibility);
+            if (!hasDispatch && hasExplicitVisibility) {
+                const dispatch = this._generateAutoDispatch(methods);
+                if (dispatch) {
+                    methods.unshift(dispatch);
+                    manifest.unshift({ name: 'Dispatch', mapping: [] });
                 }
             }
         }
@@ -1357,19 +1480,26 @@ class CLOOMCCompiler {
                 continue;
             }
 
-            const methodMatch = line.match(/^method\s+(\w+)\s*\(([^)]*)\)\s*=\s*(.+)$/);
+            const visMatch = line.match(/^(public|private)\s+/);
+            const visibility = visMatch ? visMatch[1] : 'public';
+            const explicitVisibility = !!visMatch;
+            const cleanLine = visMatch ? line.slice(visMatch[0].length) : line;
+
+            const methodMatch = cleanLine.match(/^method\s+(\w+)\s*\(([^)]*)\)\s*=\s*(.+)$/);
             if (methodMatch) {
                 const method = {
                     name: methodMatch[1],
                     params: methodMatch[2] ? methodMatch[2].split(',').map(p => p.trim()).filter(Boolean) : [],
                     expr: methodMatch[3].trim(),
                     startLine: i,
-                    isLambda: true
+                    isLambda: true,
+                    visibility,
+                    explicitVisibility
                 };
                 i++;
                 while (i < lines.length) {
                     const contLine = lines[i].trim();
-                    if (!contLine || contLine.startsWith('--') || contLine.startsWith('method ') || contLine === '}') break;
+                    if (!contLine || contLine.startsWith('--') || contLine.match(/^(?:public\s+|private\s+)?method\s+/) || contLine === '}') break;
                     method.expr += ' ' + contLine;
                     i++;
                 }
@@ -1377,20 +1507,22 @@ class CLOOMCCompiler {
                 continue;
             }
 
-            const blockMethodMatch = line.match(/^method\s+(\w+)\s*\(([^)]*)\)\s*=\s*$/);
+            const blockMethodMatch = cleanLine.match(/^method\s+(\w+)\s*\(([^)]*)\)\s*=\s*$/);
             if (blockMethodMatch) {
                 const method = {
                     name: blockMethodMatch[1],
                     params: blockMethodMatch[2] ? blockMethodMatch[2].split(',').map(p => p.trim()).filter(Boolean) : [],
                     expr: '',
                     startLine: i,
-                    isLambda: true
+                    isLambda: true,
+                    visibility,
+                    explicitVisibility
                 };
                 i++;
                 while (i < lines.length) {
                     const contLine = lines[i].trim();
                     if (!contLine || contLine.startsWith('--')) { i++; continue; }
-                    if (contLine.startsWith('method ') || contLine === '}') break;
+                    if (contLine.match(/^(?:public\s+|private\s+)?method\s+/) || contLine === '}') break;
                     method.expr += (method.expr ? ' ' : '') + contLine;
                     i++;
                 }
@@ -2111,8 +2243,20 @@ class CLOOMCCompiler {
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
-                methods.push({ name: method.name, code: result.code });
+                methods.push({ name: method.name, code: result.code, visibility: method.visibility || 'public' });
                 manifest.push({ name: method.name, mapping: result.manifest });
+            }
+        }
+
+        if (errors.length === 0 && methods.length > 0) {
+            const hasDispatch = methods.some(m => m.name === 'Dispatch' || m.name === 'M00');
+            const hasExplicitVisibility = parsed.methods.some(m => m.explicitVisibility);
+            if (!hasDispatch && hasExplicitVisibility) {
+                const dispatch = this._generateAutoDispatch(methods);
+                if (dispatch) {
+                    methods.unshift(dispatch);
+                    manifest.unshift({ name: 'Dispatch', mapping: [] });
+                }
             }
         }
 
@@ -2184,9 +2328,14 @@ class CLOOMCCompiler {
                 continue;
             }
 
-            const methodMatch = line.match(/^method\s+(\w+)\s*(?:\(([^)]*)\))?\s*\{/);
+            const visMatch = line.match(/^(public|private)\s+/);
+            const visibility = visMatch ? visMatch[1] : 'public';
+            const explicitVisibility = !!visMatch;
+            const cleanLine = visMatch ? line.slice(visMatch[0].length) : line;
+
+            const methodMatch = cleanLine.match(/^method\s+(\w+)\s*(?:\(([^)]*)\))?\s*\{/);
             if (methodMatch) {
-                const method = { name: methodMatch[1], params: [], body: [] };
+                const method = { name: methodMatch[1], params: [], body: [], visibility, explicitVisibility };
                 if (methodMatch[2]) {
                     method.params = methodMatch[2].split(',').map(s => s.trim()).filter(Boolean);
                 }
@@ -2588,11 +2737,11 @@ class CLOOMCCompiler {
 
         for (const method of parsed.methods) {
             if (method.aliasOf) {
-                methods.push({ name: method.name, aliasOf: method.aliasOf });
+                methods.push({ name: method.name, aliasOf: method.aliasOf, visibility: method.visibility || 'public' });
                 continue;
             }
             if (method.rawIsa) {
-                methods.push({ name: method.name, code: method.rawIsa });
+                methods.push({ name: method.name, code: method.rawIsa, visibility: method.visibility || 'public' });
                 manifest.push({ name: method.name, mapping: [] });
                 continue;
             }
@@ -2600,7 +2749,7 @@ class CLOOMCCompiler {
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
-                methods.push({ name: method.name, code: result.code });
+                methods.push({ name: method.name, code: result.code, visibility: method.visibility || 'public' });
                 manifest.push({ name: method.name, mapping: result.manifest });
             }
         }
@@ -2614,6 +2763,18 @@ class CLOOMCCompiler {
                     m.aliasOf = _bodyIndex.get(fp);
                 } else {
                     _bodyIndex.set(fp, m.name);
+                }
+            }
+        }
+
+        if (errors.length === 0 && methods.length > 0) {
+            const hasDispatch = methods.some(m => m.name === 'Dispatch' || m.name === 'M00');
+            const hasExplicitVisibility = parsed.methods.some(m => m.explicitVisibility);
+            if (!hasDispatch && hasExplicitVisibility) {
+                const dispatch = this._generateAutoDispatch(methods);
+                if (dispatch) {
+                    methods.unshift(dispatch);
+                    manifest.unshift({ name: 'Dispatch', mapping: [] });
                 }
             }
         }
@@ -2664,11 +2825,13 @@ class CLOOMCCompiler {
                 continue;
             }
 
-            const methodMatch = lo.match(/^(?:add|define|create)\s+(?:an?\s+)?method\s+(?:called|named)\s+(\w+)/);
+            const methodMatch = lo.match(/^(?:add|define|create)\s+(?:an?\s+)?(?:(public|private)\s+)?method\s+(?:called|named)\s+(\w+)/);
             if (methodMatch) {
                 if (currentMethod) result.methods.push(currentMethod);
                 const name = t.match(/(?:called|named)\s+(\w+)/i)[1];
-                currentMethod = { name: name, params: [], body: [], startLine: i };
+                const visibility = methodMatch[1] || 'public';
+                const explicitVisibility = !!methodMatch[1];
+                currentMethod = { name: name, params: [], body: [], startLine: i, visibility, explicitVisibility };
 
                 const paramMatch = lo.match(/(?:that takes|which takes|with parameters?|with inputs?)\s+(.+)/);
                 if (paramMatch) {
@@ -2755,12 +2918,21 @@ class CLOOMCCompiler {
                 continue;
             }
 
-            const methodMatch = t.match(/^(\w+)\s*\(([^)]*)\)\s*:?\s*$/);
+            const blockVisMatch = t.match(/^(public|private)\s+(\w+)\s*\(([^)]*)\)\s*:?\s*$/);
+            const methodMatch = blockVisMatch ? null : t.match(/^(\w+)\s*\(([^)]*)\)\s*:?\s*$/);
+            if (blockVisMatch) {
+                if (currentMethod) result.methods.push(currentMethod);
+                const visibility = blockVisMatch[1];
+                const name = blockVisMatch[2];
+                const params = blockVisMatch[3].split(',').map(s => s.trim()).filter(Boolean);
+                currentMethod = { name, params, body: [], startLine: i, visibility, explicitVisibility: true };
+                continue;
+            }
             if (methodMatch) {
                 if (currentMethod) result.methods.push(currentMethod);
                 const name = methodMatch[1];
                 const params = methodMatch[2].split(',').map(s => s.trim()).filter(Boolean);
-                currentMethod = { name, params, body: [], startLine: i };
+                currentMethod = { name, params, body: [], startLine: i, visibility: 'public', explicitVisibility: false };
                 continue;
             }
 
