@@ -5,7 +5,7 @@
   "lump_size": 512,
   "typ": 0,
   "content_type": "code",
-  "cw": 281,
+  "cw": 294,
   "cc": 0,
   "profile": "IoT",
   "language": "json",
@@ -13,7 +13,7 @@
     {
       "name": "Dispatch",
       "offset": 0,
-      "length": 28,
+      "length": 41,
       "pet_names": {
         "DR": {
           "0": "method"
@@ -22,7 +22,7 @@
     },
     {
       "name": "GetWordCount",
-      "offset": 28,
+      "offset": 41,
       "length": 7,
       "pet_names": {
         "DR": {
@@ -32,16 +32,6 @@
     },
     {
       "name": "GetCharCount",
-      "offset": 35,
-      "length": 13,
-      "pet_names": {
-        "DR": {
-          "0": "str"
-        }
-      }
-    },
-    {
-      "name": "GetByteCount",
       "offset": 48,
       "length": 13,
       "pet_names": {
@@ -51,8 +41,18 @@
       }
     },
     {
-      "name": "GetCharByte",
+      "name": "GetByteCount",
       "offset": 61,
+      "length": 13,
+      "pet_names": {
+        "DR": {
+          "0": "str"
+        }
+      }
+    },
+    {
+      "name": "GetCharByte",
+      "offset": 74,
       "length": 8,
       "pet_names": {
         "DR": {
@@ -63,7 +63,7 @@
     },
     {
       "name": "IsUppercase",
-      "offset": 69,
+      "offset": 82,
       "length": 9,
       "pet_names": {
         "DR": {
@@ -73,7 +73,7 @@
     },
     {
       "name": "IsLowercase",
-      "offset": 78,
+      "offset": 91,
       "length": 9,
       "pet_names": {
         "DR": {
@@ -83,12 +83,12 @@
     },
     {
       "name": "ReturnFalse",
-      "offset": 87,
+      "offset": 100,
       "length": 3
     },
     {
       "name": "IsDigit",
-      "offset": 90,
+      "offset": 103,
       "length": 9,
       "pet_names": {
         "DR": {
@@ -98,37 +98,37 @@
     },
     {
       "name": "IsAlpha",
-      "offset": 87,
+      "offset": 100,
       "length": 3,
       "aliasOf": "ReturnFalse"
     },
     {
       "name": "IsUpperExt",
-      "offset": 69,
+      "offset": 82,
       "length": 9,
       "aliasOf": "IsUppercase"
     },
     {
       "name": "IsPunct",
-      "offset": 87,
+      "offset": 100,
       "length": 3,
       "aliasOf": "ReturnFalse"
     },
     {
       "name": "IsLowerExt",
-      "offset": 78,
+      "offset": 91,
       "length": 9,
       "aliasOf": "IsLowercase"
     },
     {
       "name": "IsSymbol",
-      "offset": 87,
+      "offset": 100,
       "length": 3,
       "aliasOf": "ReturnFalse"
     },
     {
       "name": "IsSpace",
-      "offset": 99,
+      "offset": 112,
       "length": 6,
       "pet_names": {
         "DR": {
@@ -138,13 +138,13 @@
     },
     {
       "name": "IsAlphaNum",
-      "offset": 87,
+      "offset": 100,
       "length": 3,
       "aliasOf": "ReturnFalse"
     },
     {
       "name": "ToUppercase",
-      "offset": 105,
+      "offset": 118,
       "length": 10,
       "pet_names": {
         "DR": {
@@ -154,12 +154,12 @@
     },
     {
       "name": "Stub",
-      "offset": 115,
+      "offset": 128,
       "length": 1
     },
     {
       "name": "ToLowercase",
-      "offset": 116,
+      "offset": 129,
       "length": 10,
       "pet_names": {
         "DR": {
@@ -169,13 +169,13 @@
     },
     {
       "name": "StubExt",
-      "offset": 115,
+      "offset": 128,
       "length": 1,
       "aliasOf": "Stub"
     },
     {
       "name": "NormaliseDigit",
-      "offset": 126,
+      "offset": 139,
       "length": 10,
       "pet_names": {
         "DR": {
@@ -185,13 +185,13 @@
     },
     {
       "name": "IsHex",
-      "offset": 87,
+      "offset": 100,
       "length": 3,
       "aliasOf": "ReturnFalse"
     },
     {
       "name": "Offset",
-      "offset": 136,
+      "offset": 149,
       "length": 4,
       "pet_names": {
         "DR": {
@@ -201,7 +201,7 @@
     },
     {
       "name": "StringOp",
-      "offset": 140,
+      "offset": 153,
       "length": 37,
       "pet_names": {
         "DR": {
@@ -213,7 +213,7 @@
     },
     {
       "name": "CheckNonZero",
-      "offset": 177,
+      "offset": 190,
       "length": 5,
       "pet_names": {
         "DR": {
@@ -223,7 +223,7 @@
     },
     {
       "name": "CheckPositive",
-      "offset": 182,
+      "offset": 195,
       "length": 5,
       "pet_names": {
         "DR": {
@@ -233,7 +233,7 @@
     },
     {
       "name": "ComputeBase",
-      "offset": 187,
+      "offset": 200,
       "length": 4,
       "pet_names": {
         "DR": {
@@ -243,7 +243,7 @@
     },
     {
       "name": "Classify",
-      "offset": 191,
+      "offset": 204,
       "length": 90,
       "pet_names": {
         "DR": {
@@ -266,12 +266,12 @@
   "deployment": {
     "target_board": "ti60-f225",
     "profile": "IoT",
-    "built_at": "2026-04-17T16:20:00Z",
-    "builder": "build_lumps.py (deduped via aliasOf)"
+    "built_at": "2026-04-27T00:00:00Z",
+    "builder": "conventional MCMP+BRANCHEQ dispatch (no GT/c-list)"
   },
   "grants": [
     "E"
   ],
   "author": "Final Author",
-  "version": "3.0.0"
+  "version": "3.1.0"
 }

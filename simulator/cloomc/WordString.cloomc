@@ -1,12 +1,22 @@
 abstraction WordString {
-  // M00 — dispatch table (14 data words) + routing instructions (14 words)
-  // DR0=method
+  // M00 — conventional MCMP+BRANCHEQ linear dispatch (41 words)
+  // DR0=method selector (1-13); DR15 used as scratch counter
+  // No GT/c-list slot references — pure compare-and-branch
   method Dispatch [RAW ISA] {
-    0x0000000E 0x0000001C 0x00000045 0x0000005A 0x00000045 0x0000004E
-    0x00000063 0x00000069 0x00000074 0x0000007E 0x00000088 0x0000008C
-    0x000000B1 0x000000BF 0x97608018 0x7F2E0000 0x97610010 0x7F360000
-    0x97618008 0x7F3E0000 0x7F628006 0x7F460000 0x7F640007 0x7F460000
-    0x7F640004 0x7F460000 0x7F0C0000 0x1F000000
+    0x87F00000 0x7FF7C001 0x77078000 0x88000026  // ISUB DR15,DR0,DR0; IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M01(GetWordCount)
+    0x7FF7C001 0x77078000 0x8800002A              // IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M02(GetCharCount)
+    0x7FF7C001 0x77078000 0x88000034              // IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M03(GetByteCount)
+    0x7FF7C001 0x77078000 0x8800003E              // IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M04(GetCharByte)
+    0x7FF7C001 0x77078000 0x88000043              // IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M05(IsUppercase)
+    0x7FF7C001 0x77078000 0x88000049              // IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M06(IsLowercase)
+    0x7FF7C001 0x77078000 0x8800004F              // IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M07(ReturnFalse)
+    0x7FF7C001 0x77078000 0x8800004F              // IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M08(IsDigit)
+    0x7FF7C001 0x77078000 0x88000049              // IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M09(=ReturnFalse)
+    0x7FF7C001 0x77078000 0x88000034              // IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M10(=IsUppercase)
+    0x7FF7C001 0x77078000 0x88000043              // IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M11(=ReturnFalse)
+    0x7FF7C001 0x77078000 0x88000037              // IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M12(=IsLowercase)
+    0x7FF7C001 0x77078000 0x8800003D              // IADD DR15,DR15,#1; MCMP DR0,DR15; BRANCHEQ→M13(=ReturnFalse)
+    0x1F000000                                    // RETURN AL (unknown selector)
   }
 
   // M01 — return number of words in the string object
