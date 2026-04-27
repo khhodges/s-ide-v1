@@ -114,3 +114,9 @@ id = "7S22tuQ3M-IwaQCmzL7YR"
 uri = "file://attached_assets/CLOOMC_Manifesto.md"
 type = "text"
 title = "The CLOOMC Manifesto"
+
+[[outputs]]
+id = "hQbwKA-12Ct35s7aVwkMS"
+uri = "file://docs/patent-all-claims-consolidated.md"
+type = "text"
+title = "CTMM — All Claims Consolidated (Patent Office)"
