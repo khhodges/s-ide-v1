@@ -1,0 +1,83 @@
+abstraction Contact {
+    // Stage 3 application-level abstraction from the namespace vocabulary tutorial.
+    //
+    // Public interface (selectors 1–3):
+    //   selector 1 → Connect(callerToken, calleeToken)
+    //   selector 2 → Disconnect(sessionToken)
+    //   selector 3 → GetStatus(sessionToken)
+    //
+    // Private (no selector, structurally unreachable from outside):
+    //   ResolveLocation(addressToken) — internal address resolution helper
+    //
+    // Capabilities:
+    //   Identity  — resolves identity tokens to network addresses
+    //   Routing   — selects the best available communication medium
+    //   Media     — opens, closes, and queries communication sessions
+    //   Mint      — allocates capability tokens for new session objects
+    //
+    // The compiled lump exposes only three selectors to external callers.
+    // Routing.SelectMedium and Media.Open/Close/QueryStatus are called
+    // internally but are not reachable from outside the seal.
+    // ResolveLocation is likewise sealed out of the dispatch table.
+    //
+    // See docs/namespace-vocabulary-tutorial.md §Stage 3 for the design
+    // rationale, and docs/method-access-control.md for the public/private
+    // enforcement mechanism.
+
+    capabilities {
+        Identity    // resolve identity tokens to network addresses
+        Routing     // select communication medium (private use only)
+        Media       // open/close/query sessions (private use only)
+        Mint        // allocate session capability tokens
+    }
+
+    // Connect: establish a person-to-person session.
+    //
+    // Resolves both caller and callee to network addresses, selects the
+    // best available medium, opens a session, and returns a session token
+    // to the caller.  All medium selection and session negotiation is
+    // sealed inside this method — the caller never sees Routing or Media.
+    //
+    // Returns: sessionToken (GT for the new session object)
+    public method Connect(callerToken, calleeToken) {
+        callerAddress = Identity.Lookup(callerToken)
+        calleeAddress = Identity.Lookup(calleeToken)
+        medium = Routing.SelectMedium(callerAddress, calleeAddress)
+        session = Media.Open(medium, callerAddress, calleeAddress)
+        sessionToken = Mint.Create(64, 0x3)
+        return(sessionToken)
+    }
+
+    // Disconnect: close an existing session.
+    //
+    // Releases the session identified by sessionToken.
+    // After this call the sessionToken is no longer valid.
+    //
+    // Returns: 0
+    public method Disconnect(sessionToken) {
+        Media.Close(sessionToken)
+        return(0)
+    }
+
+    // GetStatus: query the current state of a session.
+    //
+    // Returns a status word from the underlying Media layer.
+    // The caller does not need to know which medium is in use.
+    //
+    // Returns: status word (0 = offline/closed, 1 = active, other = medium-defined)
+    public method GetStatus(sessionToken) {
+        status = Media.QueryStatus(sessionToken)
+        return(status)
+    }
+
+    // ResolveLocation: internal address resolution helper.
+    //
+    // Calls Identity.GetAddress to map an address token to a raw network
+    // location.  This method is private — it is compiled into the lump at
+    // its offset but has no dispatch-table entry, so no external selector
+    // can reach it.  The lump seal makes this structural, not advisory.
+    private method ResolveLocation(addressToken) {
+        raw = Identity.GetAddress(addressToken)
+        return(raw)
+    }
+}
