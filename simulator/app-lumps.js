@@ -183,7 +183,7 @@ function showLumpDetail(token) {
     }
 
     if (!isNamespace) {
-    const methods = lump.methods || [];
+    const methods = (lump.methods || []).filter(m => !m.aliasOf);
     if (methods.length > 0) {
         const anyMethodPN = methods.some(m => {
             const dr = ((m.pet_names || {}).DR) || {};
@@ -198,16 +198,15 @@ function showLumpDetail(token) {
         }
         for (let i = 0; i < methods.length; i++) {
             const m = methods[i];
-            const aliasCell = m.aliasOf ? ` <span style="color:#6b7280;font-size:0.78rem;">→ ${e(m.aliasOf)}</span>` : '';
             if (anyMethodPN) {
                 const drMap = ((m.pet_names || {}).DR) || {};
                 const drStr = Object.entries(drMap)
                     .sort(([a], [b]) => parseInt(a) - parseInt(b))
                     .map(([k, v]) => `DR${k}=${v}`)
                     .join(', ');
-                html += `<tr><td>${i}</td><td>${e(m.name)}${aliasCell}</td><td>${parseInt(m.offset) || 0}</td><td>${parseInt(m.length) || 0}</td><td style="color:#a855f7;font-size:0.78rem;">${e(drStr)}</td></tr>`;
+                html += `<tr><td>${i}</td><td>${e(m.name)}</td><td>${parseInt(m.offset) || 0}</td><td>${parseInt(m.length) || 0}</td><td style="color:#a855f7;font-size:0.78rem;">${e(drStr)}</td></tr>`;
             } else {
-                html += `<tr><td>${i}</td><td>${e(m.name)}${aliasCell}</td><td>${parseInt(m.offset) || 0}</td><td>${parseInt(m.length) || 0}</td></tr>`;
+                html += `<tr><td>${i}</td><td>${e(m.name)}</td><td>${parseInt(m.offset) || 0}</td><td>${parseInt(m.length) || 0}</td></tr>`;
             }
         }
         html += '</tbody></table>';
@@ -495,10 +494,11 @@ function _populateLumpLogicTab(lump) {
         html += `<div class="lump-logic-layer-badge">No logic metadata</div>`;
         html += `<div class="lump-logic-desc">No abstraction catalog entry found for <strong>${e(absName || 'this lump')}</strong>. Showing binary-derived interface below.</div>`;
         html += '</div>';
-        if (methods.length > 0) {
+        const realMethods = methods.filter(m => !m.aliasOf);
+        if (realMethods.length > 0) {
             html += '<div class="lump-logic-section">';
             html += `<div class="lump-logic-methods-title">Methods (from binary)</div>`;
-            for (const m of methods) {
+            for (const m of realMethods) {
                 html += `<div class="lump-logic-method-row"><span class="lump-logic-method-name">${e(m.name)}</span></div>`;
             }
             html += '</div>';
@@ -535,7 +535,8 @@ function _populateLumpLogicTab(lump) {
     }
     html += '</div>';
 
-    const methods = abs.methods || [];
+    const _aliasNames = new Set((lump.methods || []).filter(m => m.aliasOf).map(m => m.name));
+    const methods = (abs.methods || []).filter(mName => !_aliasNames.has(mName));
     if (methods.length > 0) {
         html += '<div class="lump-logic-section">';
         html += `<div class="lump-logic-methods-title">Methods &mdash; ${methods.length} public</div>`;
