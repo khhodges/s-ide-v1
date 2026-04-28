@@ -3666,7 +3666,8 @@ class ChurchSimulator {
             // lump's first word), which is not a valid GT and would cause _writeCR's
             // home-slot mLoad authority check to fault.  The RESTORE_CALL FSM is a hardware-
             // privileged operation that bypasses normal capability authority checking.
-            if (d.crDst === 12 && (this.mElevation || isFirstActivation)) {
+            const doRestoreCall = d.crDst === 12 && (this.mElevation || isFirstActivation);
+            if (doRestoreCall) {
                 const threadEntry = this.readNSEntry(targetIdx);
                 if (threadEntry) {
                     const tBase = threadEntry.word0_location;
@@ -3692,7 +3693,7 @@ class ChurchSimulator {
                 }
             }
 
-            const desc = `CHANGE CR${d.crDst} (system-wide; CR12/CR13 unchanged by context switch) <- [CR${d.crSrc}+${targetIdx}]`;
+            const desc = `CHANGE CR${d.crDst} (system-wide${doRestoreCall ? `; RESTORE_CALL: CR0–CR11 loaded from thread[+${THREAD_CAPS_OFFSET}..+${THREAD_CAPS_OFFSET + 11}]` : '; CR12/CR13 unchanged by context switch'}) <- [CR${d.crSrc}+${targetIdx}]`;
             this.output += desc + '\n';
             this.pc++;
             return { pc: this.pc - 1, instr: d, desc };
