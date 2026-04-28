@@ -1418,6 +1418,20 @@ class ChurchSimulator {
                 }
                 this._writeCR(6, gt6, check6.entry);                                               // CR6 ← E-type token for boot entry (saved to sentinel frame in B:06)
                 this.output += `[BOOT] INIT_ABSTR — CR6 <- mLoad(Slot ${this.bootEntrySlot}, ${_b3Label}) (E, M-elevation)\n`;
+
+                // Auto-install boot-entry E-GT into Zone ① CR0 (thread offset +244) if empty.
+                // Bridges the gap between IDE convention (double-click to install) and the boot
+                // sequence: a user who boots without manually installing CR0 will no longer see
+                // CR0 as NULL during simulation.
+                const _b5ThreadEntry = this.readNSEntry(1);
+                if (_b5ThreadEntry && _b5ThreadEntry.word0_location) {
+                    const _b5CR0Addr = (_b5ThreadEntry.word0_location >>> 0) + THREAD_CAPS_OFFSET;
+                    if ((this.memory[_b5CR0Addr] >>> 0) === 0) {
+                        this.memory[_b5CR0Addr] = this.createGT(0, this.bootEntrySlot, {E:1}, 1);
+                        this.output += `[BOOT] INIT_ABSTR — CR0 home (offset +${THREAD_CAPS_OFFSET}) <- boot-entry E-GT auto-installed (Slot ${this.bootEntrySlot})\n`;
+                    }
+                }
+
                 this.bootStep++;                  // advance state machine → B:06
                 this.ledBits = 0b011111;          // LED bit 4 ON = INIT_ABSTR complete
                 break;
