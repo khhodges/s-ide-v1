@@ -2071,7 +2071,9 @@ function showFaultModal(f) {
         <div class="fault-modal-header">
             <span class="fault-type-badge" style="background:${color}22;border-color:${color};color:${color}">${f.type}</span>
             <span class="fault-modal-title">Machine Fault</span>
-            ${ns && ns.label ? `<span class="fault-modal-lump-chip">${ns.label.replace(/</g,'&lt;').replace(/>/g,'&gt;')}<span class="fault-modal-lump-offset">+${ns.offset}</span></span>` : ''}
+            ${ns && ns.label ? (ns.nsIdx != null
+                ? `<button class="fault-modal-lump-chip fault-modal-lump-chip-link" onclick="faultModalOpenBinaryLump(${ns.nsIdx})" title="Click to open lump in code view">${ns.label.replace(/</g,'&lt;').replace(/>/g,'&gt;')}<span class="fault-modal-lump-offset">+${ns.offset}</span></button>`
+                : `<span class="fault-modal-lump-chip">${ns.label.replace(/</g,'&lt;').replace(/>/g,'&gt;')}<span class="fault-modal-lump-offset">+${ns.offset}</span></span>`) : ''}
             <button class="fault-modal-close" onclick="faultModalDismiss()" title="Close">&times;</button>
         </div>
         <div class="modal-buttons fault-modal-actions">

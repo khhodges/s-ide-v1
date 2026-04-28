@@ -61,6 +61,19 @@
     margin-left: 2px;
 }
 
+.fault-modal-lump-chip-link {
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.fault-modal-lump-chip-link:hover {
+    background: rgba(100, 180, 220, 0.24);
+    border-color: rgba(100, 180, 220, 0.6);
+    color: #b8e0f4;
+}
+
 .fault-modal-close {
     background: none;
     border: none;
