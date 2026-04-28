@@ -28,6 +28,7 @@ from server.boot_image import (
     create_abstract_gt, create_gt,
     generate_boot_image,
     NS_TABLE_RESERVE, NS_ENTRY_WORDS,
+    DEFAULT_ABSTRACTION_CATALOG,
 )
 
 LUMPS_DIR = os.path.join(ROOT, "server", "lumps")
@@ -153,7 +154,7 @@ def _get_clist_words(img_bytes, cfg):
     step1 = cfg["step1"]
     total   = int(step1["totalNamespaceWords"])
     ns_size = int(step1["namespaceLumpWords"])
-    NS_CATALOG_COUNT = 47   # len(DEFAULT_ABSTRACTION_CATALOG)
+    NS_CATALOG_COUNT = len(DEFAULT_ABSTRACTION_CATALOG)
     DEMO_CLIST_SIZE  = 18
 
     words = list(struct.unpack(f"<{total}I", img_bytes))
