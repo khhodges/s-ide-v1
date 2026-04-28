@@ -3023,6 +3023,30 @@ function loadExample(name) {
 ; repeated subtraction (ISUB loop), exactly
 ; as a child would compute them by hand.
 ;
+; *** INTEGER ARITHMETIC WARNING ***
+; This assembly rendering uses INTEGER arithmetic
+; only. All registers hold whole numbers; division
+; discards the remainder (truncates toward zero).
+;
+; As a direct consequence, Operation 4 computes
+; 7 ÷ 9 = 0 (remainder 7), NOT 7/9. Every
+; subsequent coefficient built on that result is
+; also 0, so the final value in DR15 (V24) will
+; be 0 — not the expected -1/30.
+;
+; This is not a bug: integer truncation is the
+; correct behaviour for a machine with no
+; rational-number support. The assembly listing
+; exists to demonstrate Ada's 25-operation
+; structure on real Church Machine opcodes.
+;
+; To see exact rational results (-1/30 in DR24),
+; load the CLOOMC preset instead. The CLOOMC
+; symbolic front-end compiles to rational-
+; arithmetic bytecode and produces all
+; intermediate fractions exactly as Ada's
+; trace shows (Op 4 → 7/9, Op 5 → 7/18, …).
+;
 ; Variable mapping (Ada → Church Machine):
 ;   DR1  = V1  = 1 (constant)
 ;   DR2  = V2  = 2 (constant)

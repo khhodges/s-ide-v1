@@ -472,6 +472,14 @@ For production use, `SlideRule.Bernoulli(n)` computes any Bernoulli number in a 
 
 The trace tables above are hand-computed and analytically verified. This section shows how to run the same computation in the Church Machine simulator and cross-check each trace row against the live register state.
 
+> **CLOOMC vs assembly — rational vs integer arithmetic.**
+> The IDE's Code view offers two presets for Ada's Note G:
+>
+> * **CLOOMC preset** (`ada_note_g.cloomc`, loaded when the editor is in CLOOMC mode) — compiles to *rational-arithmetic* bytecode. Every division produces an exact fraction: Op 4 yields **7/9**, Op 5 yields **7/18**, and the final result in DR24 is **−1/30**. This is the preset described throughout this section.
+> * **Assembly preset** (`ada_note_g` in the assembly examples, loaded when the editor is in assembly/raw mode) — runs on the Church Machine's integer-only register file. Division discards the remainder (truncates toward zero). As a result, Op 4 computes **7 ÷ 9 = 0**, every subsequent coefficient is also 0, and DR15 (the assembly rendering's result register) ends at **0**, not −1/30. This is not a defect; it is the expected behaviour of a machine with no rational-number support. The assembly listing demonstrates Ada's 25-operation structure on real Church Machine opcodes, not fractional arithmetic.
+>
+> All intermediate values, checkpoints, and expected register contents in this "How to Verify" section refer exclusively to the **CLOOMC preset**.
+
 ### Loading the Program
 
 1. Open the Church Machine IDE.
