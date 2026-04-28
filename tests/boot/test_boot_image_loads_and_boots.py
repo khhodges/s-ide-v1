@@ -22,7 +22,7 @@ and asserts:
       - CR15 -> NS Slot 0 (Boot.NS, the namespace root)
       - CR12 -> NS Slot 1 (Boot.Thread, the thread identity)
       - CR14 -> NS Slot 3 (Boot.Abstr, code; R+X)  [direct — no director hop since Task #247]
-      - CR6  -> NS Slot 3 (Boot.Abstr, c-list; E)
+      - CR6  -> NULL (cc=0 CLOOMC design: no c-list at HALT; Task #651)
   * A sentinel CALL frame was pushed (so a stray RETURN reboots cleanly).
   * PC=0 and M-elevation has been dropped after boot completes.
 
@@ -212,8 +212,8 @@ def test_boot_image_loads_and_boots(cfg, skip_window, expected_ns_count):
         f"CR14 should hold a GT for NS Slot 3 (Boot.Abstr code); got "
         f"index={_gt_index(status['cr14']['word0'])}"
     )
-    assert _gt_index(status["cr6"]["word0"]) == 3, (
-        f"CR6 should hold a GT for NS Slot 3 (Boot.Abstr c-list); got "
+    assert _gt_index(status["cr6"]["word0"]) == 0, (
+        f"CR6 should be NULL at HALT (cc=0 CLOOMC design, Task #651 — no c-list); got "
         f"index={_gt_index(status['cr6']['word0'])}"
     )
 

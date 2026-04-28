@@ -626,7 +626,9 @@ function _applyPendingSimLoad() {
         const nsBase  = sim.NS_TABLE_BASE + BOOT_ABSTR_SLOT * sim.NS_ENTRY_WORDS;
         const w1f     = sim.parseNSWord1(sim.memory[nsBase + 1]);
         if (w1f.clistCount === 0) {
-            const lumpBase  = sim.cr[6].word1;              // 0x180 — set by _writeCR at B:04
+            // B:06 cc=0 leaves CR6 NULL (correct: no c-list at HALT).
+            // Read lumpBase from NS entry word0 directly — do NOT use cr[6].word1 (= 0).
+            const lumpBase  = sim.memory[nsBase] >>> 0;     // NS word0 = physical lump base (0x180)
             const lumpHdr   = sim.memory[lumpBase] >>> 0;
             const hdrParsed = sim.parseLumpHeader(lumpHdr);
             const SLOT_SIZE = hdrParsed.lumpSize;           // 64 words for default Boot.Abstr
@@ -639,15 +641,20 @@ function _applyPendingSimLoad() {
             // Patch lump header cc (bits [7:0])
             sim.memory[lumpBase] = ((lumpHdr & ~0xFF) | (cc & 0xFF)) >>> 0;
             // Patch NS entry clistCount (bits [25:17] of word1)
-            sim.memory[nsBase + 1] = sim.packNSWord1(
+            const nsWord1Updated = sim.packNSWord1(
                 w1f.limit, w1f.b, w1f.f, w1f.g, w1f.chainable, w1f.gtType, cc
             );
-            // Patch CR6: word1 → c-list base; word2.clistCount → cc
-            sim.cr[6].word1 = clistBase;
-            const cr6W2f = sim.parseNSWord1(sim.cr[6].word2 >>> 0);
-            sim.cr[6].word2 = sim.packNSWord1(
-                cr6W2f.limit, cr6W2f.b, cr6W2f.f, cr6W2f.g, cr6W2f.chainable, cr6W2f.gtType, cc
-            );
+            sim.memory[nsBase + 1] = nsWord1Updated;
+            // Build CR6 from scratch with E-GT, correct c-list base, and updated NS word1.
+            // CR6 was NULL at HALT (cc=0 CLOOMC design); promote it now the c-list exists.
+            const cr6GT = sim.createGT(0, BOOT_ABSTR_SLOT, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
+            sim.cr[6] = {
+                word0: cr6GT,
+                word1: clistBase >>> 0,
+                word2: nsWord1Updated >>> 0,
+                word3: sim.memory[nsBase + 2] >>> 0,
+                m: 0,
+            };
         }
     }
     // ── Sequential capabilities (CLOOMC compiler path) ──────────────────────────

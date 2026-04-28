@@ -1517,7 +1517,11 @@ class ChurchSimulator {
                     // CLOOMC design (Task #651): no c-list in Boot.Abstr.
                     // thread[+244] stays NULL until Startup.Config.SetEntry is called (B:08 → Execute → SetEntry).
                     // The 3-instruction program (CHANGE→TPERM→CALL) reads it from caps zone at runtime.
-                    this.output += `[BOOT] NUC_CLIST — cc=0 (no c-list, CHANGE→TPERM→CALL path); sentinel pushed (frame@+${sp_max}, STO=${this.sto})\n`;
+                    // CR6 was written by B:05 INIT_ABSTR with the Boot.Abstr E-GT; that GT is already
+                    // snapshotted into the sentinel frame above (thread[+242]).  Since cc=0 means there
+                    // is no c-list at all, CR6 must be cleared to NULL so the machine state is consistent.
+                    this.cr[6] = { word0: 0, word1: 0, word2: 0, word3: 0, m: 0 };
+                    this.output += `[BOOT] NUC_CLIST — cc=0 (no c-list, CHANGE→TPERM→CALL path); CR6←NULL; sentinel pushed (frame@+${sp_max}, STO=${this.sto})\n`;
                     this.output += `[BOOT] SENTINEL CALL — frame@+${sp_max}=0x${sentinelFrameWord.toString(16).toUpperCase().padStart(8,'0')} (NIA=0x7FFF,sz=1,prev_STO=${sp_max}), E-GT@+${sp_max-1}=0x${oldCR6GT.toString(16).toUpperCase().padStart(8,'0')}, STO=${this.sto}\n`;
                     this.auditLog.push({
                         gate: 'SENTINEL',
