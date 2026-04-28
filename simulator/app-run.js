@@ -7444,6 +7444,26 @@ function exportAllNamespace() {
     URL.revokeObjectURL(url);
 }
 
+function downloadNamespaceLump() {
+    fetch('/api/namespace-lump.json')
+        .then(r => {
+            if (!r.ok) return r.json().then(d => { throw new Error(d.error || r.statusText); });
+            return r.text();
+        })
+        .then(text => {
+            const blob = new Blob([text], { type: 'application/json' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
+            a.download = 'namespace-lump.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        })
+        .catch(err => {
+            alert('Download Namespace JSON failed: ' + err.message);
+        });
+}
+
 let importTargetIdx = null;
 
 function importEntryMemory(idx) {

@@ -711,6 +711,142 @@ def boot_image_exists():
     """Return whether a boot-image.bin currently exists on disk."""
     return jsonify({"exists": os.path.isfile(BOOT_IMAGE_PATH)})
 
+
+@app.route("/api/namespace-lump.json", methods=["GET"])
+def namespace_lump_json():
+    """Return a self-describing JSON manifest of the NS lump (NS Slot 0).
+
+    Reads the current boot-config and the last generated boot-image.bin
+    (or falls back to synthesising from the config when the binary is absent
+    or stale). The response includes per-slot metadata for every named slot
+    in the namespace and is suitable for offline auditing without the IDE.
+    """
+    import struct as _st
+    cfg, err = _read_saved_boot_config()
+    if err or cfg is None:
+        cfg = {
+            "step1": {
+                "totalNamespaceWords": 16384,
+                "namespaceLumpWords": 64,
+                "threadLumpWords": 256,
+            }
+        }
+    step1      = cfg["step1"]
+    total      = int(step1["totalNamespaceWords"])
+    ns_size    = int(step1["namespaceLumpWords"])
+
+    use_cached = False
+    if os.path.isfile(BOOT_IMAGE_PATH):
+        with open(BOOT_IMAGE_PATH, "rb") as _f:
+            _cached = _f.read()
+        try:
+            _boot_image_gen.validate_boot_image(_cached, total)
+            img_bytes  = _cached
+            use_cached = True
+        except Exception:
+            pass
+    if not use_cached:
+        try:
+            img_bytes = _boot_image_gen.generate_boot_image(cfg, LUMPS_DIR)
+        except Exception as _e:
+            return jsonify({"error": f"Failed to generate boot image: {_e}"}), 500
+
+    words          = list(_st.unpack(f"<{total}I", img_bytes[:total * 4]))
+    ns_table_base  = total - _boot_image_gen.NS_TABLE_RESERVE
+    ns_entry_words = _boot_image_gen.NS_ENTRY_WORDS
+    catalog        = _boot_image_gen.DEFAULT_ABSTRACTION_CATALOG
+
+    hdr       = words[0]
+    hdr_magic = (hdr >> 27) & 0x1F
+    hdr_nm6   = (hdr >> 23) & 0xF
+    hdr_cw    = (hdr >> 10) & 0x1FFF
+    hdr_cc    = hdr & 0xFF
+    ns_lump_size = 1 << (hdr_nm6 + 6) if hdr_magic == 0x1F else ns_size
+
+    slot_count = max(hdr_cc, len(catalog))
+    slots = []
+    for i in range(slot_count):
+        ns_base = ns_table_base + i * ns_entry_words
+        if ns_base + ns_entry_words > total:
+            break
+        w0, w1, w2, w3 = words[ns_base], words[ns_base+1], words[ns_base+2], words[ns_base+3]
+
+        limit17     = w1 & 0x1FFFF
+        clist_count = (w1 >> 17) & 0x1FF
+        gt_type     = (w1 >> 26) & 0x3
+        chainable   = bool((w1 >> 28) & 0x1)
+
+        label = None
+        if i < len(catalog):
+            entry = catalog[i]
+            if entry is not None:
+                label = entry[0] if isinstance(entry, tuple) else entry.get("label")
+        if not label:
+            label = "(free)" if (w0 == 0 and w1 == 0) else f"slot{i}"
+
+        perm_mask = (w3 >> 25) & 0x3F
+        perms = {
+            "R": bool(perm_mask & 1),
+            "W": bool(perm_mask & 2),
+            "X": bool(perm_mask & 4),
+            "L": bool(perm_mask & 8),
+            "S": bool(perm_mask & 16),
+            "E": bool(perm_mask & 32),
+        }
+
+        lump_base       = w0 if i != 0 else 0
+        lump_size_words = 0
+        lump_cw_val     = 0
+        lump_cc_val     = 0
+        if 0 <= lump_base < total:
+            lh       = words[lump_base]
+            lh_magic = (lh >> 27) & 0x1F
+            if lh_magic == 0x1F:
+                lh_nm6      = (lh >> 23) & 0xF
+                lump_size_words = 1 << (lh_nm6 + 6)
+                lump_cw_val = (lh >> 10) & 0x1FFF
+                lump_cc_val = lh & 0xFF
+
+        gt_word = 0
+        if hdr_magic == 0x1F and hdr_cc > 0 and i < hdr_cc:
+            clist_start = ns_lump_size - hdr_cc
+            if 0 <= clist_start + i < total:
+                gt_word = words[clist_start + i]
+
+        slots.append({
+            "index":        i,
+            "label":        label,
+            "type":         gt_type,
+            "permissions":  perms,
+            "chainable":    chainable,
+            "lumpBase":     lump_base,
+            "lumpSize":     lump_size_words,
+            "clistCount":   clist_count,
+            "codeWordCount": lump_cw_val,
+            "gtWord":       f"0x{gt_word:08X}",
+            "nsTableWords": [
+                f"0x{w0:08X}",
+                f"0x{w1:08X}",
+                f"0x{w2:08X}",
+                f"0x{w3:08X}",
+            ],
+        })
+
+    manifest = {
+        "physicalBase":    0,
+        "physicalSize":    ns_lump_size if hdr_magic == 0x1F else ns_size,
+        "cc":              hdr_cc if hdr_magic == 0x1F else 0,
+        "cw":              hdr_cw if hdr_magic == 0x1F else 0,
+        "totalMemoryWords": total,
+        "nsTableBase":     ns_table_base,
+        "slots":           slots,
+    }
+    resp = make_response(json.dumps(manifest, indent=2))
+    resp.headers["Content-Type"] = "application/json"
+    resp.headers["Content-Disposition"] = "attachment; filename=namespace-lump.json"
+    return resp
+
+
 def _validate_boot_image_bytes(image_bytes):
     """Raise ValueError if image_bytes fails the basic structural checks.
 

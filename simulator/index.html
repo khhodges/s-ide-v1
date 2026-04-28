@@ -459,6 +459,7 @@
                 <button class="btn btn-primary btn-sm" onclick="exportAllNamespace()" data-tooltip="Export All — Download all namespace entries as a JSON file">Export All</button>
                 <button class="btn btn-primary btn-sm" onclick="importNamespaceFile()" data-tooltip="Import — Load namespace entries from a JSON or binary file">Import</button>
                 <button class="btn btn-primary btn-sm" onclick="openBootDesigner()" data-tooltip="Boot Image Designer — Programmer-controlled boot image configuration (Step 1: foundational lump sizes)">Boot Image Designer</button>
+                <button class="btn btn-primary btn-sm" onclick="downloadNamespaceLump()" data-tooltip="Download Namespace JSON — Export a self-describing manifest of every namespace slot">Download Namespace JSON</button>
                 <input type="file" id="nsImportFile" style="display:none;" accept=".json,.bin" onchange="handleNSImport(event)">
             </div>
             <div id="namespaceTable"></div>

@@ -1040,8 +1040,27 @@ class ChurchSimulator {
         // Slot 17: TIMER_DEV moved from slot 16 to avoid NS-slot conflict
         clistGTs[17] = this.createAbstractGT(ChurchSimulator.AB_TYPE_IO, {R:1,W:1}, 0,
             ((ChurchSimulator.DEVICE_CLASS_TIMER  & 0xFF) << 8) | 0);  // TIMER_DEV R|W  reg0=TICKS_LO
+        // Memory-manager GT at c-list[0]: R|W Inform capability over NS slot 0 (full namespace).
+        // Mirrors boot_image.py "Memory-manager GT at c-list[0]" so the NS lump c-list matches
+        // the Python-generated boot image exactly (Task #694).
+        clistGTs[0] = this.createGT(0, 0, {R:1, W:1}, 1);
         const NUC_CODE_WORDS    = 3;
         const DEMO_CLIST_SIZE   = 18;
+
+        // ── NS lump header and c-list (Task #694) ────────────────────────────────────
+        // Write a valid lump header at memory[0] for the NS lump (Slot 0):
+        //   magic=0x1F, n_minus_6=log2(NS_LUMP_SIZE)-6, cw=0, cc=catalog count, typ=0.
+        // Write one GT word per catalog slot (named or null) into the NS lump c-list tail
+        // at words NS_LUMP_SIZE−nsCatalogCount through NS_LUMP_SIZE−1.
+        // This must happen BEFORE clistGTs is truncated to DEMO_CLIST_SIZE so that
+        // catalog slots beyond 17 still have their NS-loop GT values available.
+        const nsLumpNMinus6   = Math.max(0, Math.ceil(Math.log2(NS_LUMP_SIZE)) - 6);
+        const nsCatalogCount  = abstractions.length;
+        this.memory[0] = this.packLumpHeader(nsLumpNMinus6, 0, nsCatalogCount, 0);
+        for (let ci = 0; ci < nsCatalogCount; ci++) {
+            this.memory[NS_LUMP_SIZE - nsCatalogCount + ci] = (clistGTs[ci] || 0) >>> 0;
+        }
+
         // Slots 0–16 map to NS slots 0–16 (or contain hardware-device Abstract GTs at 8–15).
         // Slot 17 (TIMER_DEV) is simulator-only; not present in the boot c-list on real hardware.
         clistGTs.length         = DEMO_CLIST_SIZE;

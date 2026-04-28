@@ -582,6 +582,18 @@ def generate_boot_image(cfg, lumps_dir, boot_entry_slot=None):
     mem_mgr_gt = create_gt(0, 0, {"R":1, "W":1}, 1)
     clist_gts[0] = mem_mgr_gt
 
+    # ── NS lump header and c-list (Task #694) ────────────────────────────────────
+    # Write a valid lump header at mem[0] for the NS lump (Slot 0):
+    #   magic=0x1F, n_minus_6=log2(ns_size)-6, cw=0, cc=catalog count, typ=0.
+    # Write one GT word per catalog slot (named or null) into the NS lump c-list tail
+    # at words ns_size − ns_catalog_count through ns_size − 1.
+    # This must happen BEFORE clist_gts is truncated so that catalog slots beyond
+    # DEMO_CLIST_SIZE still have their NS-loop GT values available.
+    ns_catalog_count = len(catalog)
+    mem[0] = pack_lump_header(_ns_n_minus_6(ns_size), 0, ns_catalog_count, 0)
+    for ci in range(ns_catalog_count):
+        mem[ns_size - ns_catalog_count + ci] = clist_gts[ci] if ci < len(clist_gts) else 0
+
     # Truncate to DEMO_CLIST_SIZE.
     # Slot 16 = SlideRule Inform GT; slot 17 = TIMER_DEV Abstract GT (moved from 16, Task #461).
     clist_gts = clist_gts[:DEMO_CLIST_SIZE]
