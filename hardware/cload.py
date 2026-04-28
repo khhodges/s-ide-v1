@@ -106,7 +106,7 @@ class ChurchCLoad(Elaboratable):
             u_ns_gate.mem_rd_valid.eq(u_ns_gate.ns_gate_busy & self.mem_rd_valid),
         ]
 
-        # ── CR14 build (X-only, M=1, B=0) ─────────────────────────────────────
+        # ── CR14 build (RX, M=1, B=0) ──────────────────────────────────────────
         cr14_out     = Signal(CAP_REG_LAYOUT)
         cr14_view    = View(CAP_REG_LAYOUT, cr14_out)
         cr14_gt_view = View(GT_LAYOUT, cr14_view.word0_gt)
@@ -115,7 +115,7 @@ class ChurchCLoad(Elaboratable):
             cr14_gt_view.slot_id.eq(e_gt_view.slot_id),
             cr14_gt_view.gt_seq.eq(e_gt_view.gt_seq),
             cr14_gt_view.gt_type.eq(e_gt_view.gt_type),
-            cr14_gt_view.perms.eq(PERM_MASK_X),
+            cr14_gt_view.perms.eq(PERM_MASK_R | PERM_MASK_X),
             cr14_gt_view.b_flag.eq(0),
             cr14_view.word1_location.eq(raw_base + 4),
             cr14_w2_view.limit_offset.eq(cw_reg - 1),    # cw-1 (inclusive last valid PC; cw from lump header, not allocation size)

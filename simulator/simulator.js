@@ -3204,8 +3204,9 @@ class ChurchSimulator {
                         if (cr14Word1p.f !== 1) {
                             const cr14Check = this.mLoad(cr14GTVal, 'X', undefined);
                             if (cr14Check.ok) {
-                                this._writeCR(14, cr14GTVal, cr14Check.entry);
-                                cr14Desc = `, CR14 <- X-GT(Slot ${cr14Parsed.index})`;
+                                const rxGT = this.createGT(cr14Parsed.gt_seq, cr14Parsed.index, {R:1,W:0,X:1,L:0,S:0,E:0}, cr14Parsed.type);
+                                this._writeCR(14, rxGT, cr14Check.entry);
+                                cr14Desc = `, CR14 <- RX-GT(Slot ${cr14Parsed.index})`;
                             }
                         }
                     }

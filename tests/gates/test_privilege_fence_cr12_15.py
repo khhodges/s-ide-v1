@@ -13,7 +13,7 @@ Architecture rules under test (simulator/simulator.js ~line 2048):
      requires crDst ∈ {12,13,14,15} — anything else → PRIV_REG.
   4. CHANGE CR12/CR13 (system-wide) completes without a context switch.
   5. DWRITE with CR14 source fails with PERMISSION (not PRIV_REG) because
-     CR14 holds code (X-only); W is intentionally absent.
+     CR14 holds code (RX, no W); W is intentionally absent.
 
 All tests boot the simulator once, inject a single instruction word at PC=0,
 execute one step(), and assert the expected fault (or non-fault) outcome.
@@ -75,10 +75,10 @@ SCENARIOS = [
     dict(name="T3_SAVE_crSrc13",   opcode=1,  crDst=0,  crSrc=13, imm=0),
     # T4: DREAD (opcode=10) with crSrc=13        → PRIV_REG (not CR14)
     dict(name="T4_DREAD_crSrc13",  opcode=10, crDst=0,  crSrc=13, imm=0),
-    # T5: DREAD (opcode=10) with crSrc=14        → NO PRIV_REG (CR14 exception)
+    # T5: DREAD (opcode=10) with crSrc=14        → NO fault at all (CR14 is RX; DREAD succeeds)
     dict(name="T5_DREAD_crSrc14",  opcode=10, crDst=0,  crSrc=14, imm=0),
     # T6: DWRITE (opcode=11) with crSrc=14       → PERMISSION fault (not PRIV_REG;
-    #     CR14 is X-only so DWRITE's W check fires; decode fence is passed)
+    #     CR14 is RX (no W) so DWRITE's W check fires; decode fence is passed)
     dict(name="T6_DWRITE_crSrc14", opcode=11, crDst=0,  crSrc=14, imm=0),
     # T7: CHANGE (opcode=4) crDst=0 (< 12)       → PRIV_REG from _execChange
     dict(name="T7_CHANGE_crDst0",  opcode=4,  crDst=0,  crSrc=0,  imm=0),
@@ -133,6 +133,8 @@ class TestPrivFenceCrSrc:
         r = results["T5_DREAD_crSrc14"]
         assert not r.get("privFault"), (
             f"DREAD CR14 should pass privilege fence but got: {r}")
+        assert not r.get("faulted"), (
+            f"DREAD CR14 should succeed completely (CR14 is RX) but got: {r}")
 
     def test_T6_dwrite_crSrc14_perm_not_priv(self, results):
         r = results["T6_DWRITE_crSrc14"]
