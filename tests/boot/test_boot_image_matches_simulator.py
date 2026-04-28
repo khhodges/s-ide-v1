@@ -220,7 +220,7 @@ def test_boot_image_matches_simulator(cfg, tmp_path):
 
 # ---- saved-lump path tests -------------------------------------------------
 
-def _make_boot_abstr_lump(lump_size, cc, nuc_code_words=17, demo_clist_size=18):
+def _make_boot_abstr_lump(lump_size, cc, nuc_code_words=3, demo_clist_size=18):
     """Synthesise a valid big-endian Boot.Abstr .lump file of `lump_size` words.
 
     The header encodes: magic=0x1F, n_minus_6, cw=nuc_code_words, typ=0, cc.
@@ -241,8 +241,8 @@ def _make_boot_abstr_lump(lump_size, cc, nuc_code_words=17, demo_clist_size=18):
 
 
 @pytest.mark.parametrize("lump_size,cc", [
-    (64,  17),  # 64w with full cc (minimum size, full c-list)
-    (128, 10),  # 128w with reduced cc (larger lump, partial c-list)
+    (64,  0),   # 64w with cc=0 (CLOOMC design: no c-list, CHANGE→TPERM→CALL)
+    (128, 0),   # 128w with cc=0 (larger lump, no c-list)
 ])
 def test_boot_image_places_saved_lump(tmp_path, lump_size, cc):
     """generate_boot_image() places a valid 00000300.lump at Boot.Abstr's slot.

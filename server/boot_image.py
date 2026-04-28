@@ -72,22 +72,12 @@ _MANDATORY_NS_SLOTS = (0, 1, STARTUP_CONFIG_NS_SLOT, BOOT_ABSTR_NS_SLOT)  # slot
 BOOT_IMAGE_FORMAT_TAG = 0xB0070563  # "BOOT 0563" — must match simulator.js; bumped Task #563/568 (dynamic Boot.Abstr placement)
 
 # Pre-computed 32-bit instruction words from hardware/boot_rom.py BOOT_PROGRAM
-# (Task #237). Written into Boot.Abstr lump code region so the binary matches
-# the CLOOMC listing. Must stay in sync with simulator.js BOOT_ROM_WORDS.
+# (Task #651 redesign). Boot.Abstr is now cc=0, cw=3.
+# Must stay in sync with simulator.js BOOT_ROM_WORDS and hardware/boot_rom.py BOOT_PROGRAM.
 BOOT_ROM_WORDS = [
-    0x27660001, # [0]  CHANGE AL, CR12, CR12, #1
-    0x070B0000, # [1]  LOAD   AL, CR1,  CR6[0]
-    0x07130001, # [2]  LOAD   AL, CR2,  CR6[1]
-    0x37100003, # [3]  TPERM  AL, CR2,  #X
-    0x3F100000, # [4]  LAMBDA AL, CR2
-    0x07030004, # [5]  LOAD   AL, CR0,  CR6[4]   ← now loads Startup.Config GT (Task #512)
-    0x37000008, # [6]  TPERM  AL, CR0,  #E
-    0x17000000, # [7]  CALL   AL, CR0,  CR0      ← enters Startup.Config, not Salvation directly
-    0x073B0001, # [8]  LOAD   AL, CR7,  CR6[1]
-    0x37380003, # [9]  TPERM  AL, CR7,  #X
-    0x3F380000, # [10] LAMBDA AL, CR7
-    0x1F028000, # [11] RETURN AL, CR5
-    0x0F308002, # [12] SAVE   AL, CR6,  CR1, #2
+    0x27660001, # [0]  CHANGE AL, CR12, CR12, #1  — switch to Boot.Thread; RESTORE loads CR0 from thread[+244]
+    0x37000008, # [1]  TPERM  AL, CR0,  #E        — restrict CR0 to E-permission only
+    0x17000000, # [2]  CALL   AL, CR0,  CR0        — enter configured first abstraction
 ]
 
 # Pre-computed 32-bit CLOOMC instruction words for the Startup.Config code region (Task #512).
@@ -444,7 +434,7 @@ def generate_boot_image(cfg, lumps_dir, boot_entry_slot=None):
                 _bsnm6 = (_bshdr >> 23) & 0xF
                 _bssz  = 1 << (_bsnm6 + 6)
                 if ((_bshdr >> 27) == 0x1F and _bscw == NUC_CODE_WORDS
-                        and 0 < _bscc <= DEMO_CLIST_SIZE and _bsn >= _bssz):
+                        and _bscc <= DEMO_CLIST_SIZE and _bsn >= _bssz):
                     actual_abstr_size = _bssz
                     abstr_words = _bswords[:_bssz]
         except Exception:
@@ -560,16 +550,12 @@ def generate_boot_image(cfg, lumps_dir, boot_entry_slot=None):
     # simulator scans for non-zero entries.
 
     # ----- Foundational lump headers -------------------------------------
-    # Thread lump (NS slot 1): cw=32, cc=64, typ=2.
+    # Thread lump (NS slot 1): cw=32, cc=12, typ=2.
+    # cc=12: c-list spans words +244..+255 (256-12=244=THREAD_CAPS_OFFSET).
+    # thread[+244] = CR0 home slot for the programmable Entry E-GT (Task #651).
+    # This word is NULL (0x00000000) at boot — written only via Startup.Config.SetEntry.
     thread_loc = locations[1]
-    mem[thread_loc] = pack_lump_header(_ns_n_minus_6(thread_size), 32, 64, 2)
-
-    # Thread caps zone — CR0 home slot at word offset +244 (absolute word 0x0134 when
-    # thread_loc=0x40).  Default value: LED flash E-GT (NS slot 3, E-perm, Inform type).
-    # make_gt(GT_TYPE_INFORM=1, PERM_MASK_E=1<<5=32, slot_id=BOOT_ABSTR_NS_SLOT=3, seq=0)
-    # = (32 << 25) | (1 << 23) | 3 = 0x40800003
-    THREAD_CAPS_OFFSET = 244
-    mem[thread_loc + THREAD_CAPS_OFFSET] = 0x40800003  # LED flash E-GT (slot 3, E-perm, Inform)
+    mem[thread_loc] = pack_lump_header(_ns_n_minus_6(thread_size), 32, 12, 2)
 
     # Hardware device GTs (clist slots 8..17) — match simulator.js HW_DEVICE_SLOTS.
     # Slots 8–13: Abstract LED GTs (Task #406) — type=0b11, no NS slot, no lump.
@@ -601,12 +587,13 @@ def generate_boot_image(cfg, lumps_dir, boot_entry_slot=None):
     clist_gts = clist_gts[:DEMO_CLIST_SIZE]
 
     # ----- Boot.Abstr lump (NS slot 3) ------------------------------------
-    # The Boot Abstraction: directly loaded by B:03/B:04 (no director hop).
-    #   Word  0:      Lump header (n_minus_6, cw=NUC_CODE_WORDS, cc=DEMO_CLIST_SIZE)
-    #   Words 1–17:   Code region (loaded by the boot program loader)
-    #   Words 18..(end-cc-1): Freespace
-    #   Words (end-cc)..(end-1): C-list (cc GTs at physical end)
-    # B:04 derives CR14 (R+X) and CR6 (E) from this lump's header.
+    # The Boot Abstraction: directly loaded by B:03 (INIT_ABSTR), no director hop.
+    # Task #651 redesign: cc=0 (no c-list), cw=NUC_CODE_WORDS=3.
+    #   Word  0:      Lump header (n_minus_6, cw=3, cc=0)
+    #   Words 1–3:    Code region: CHANGE→TPERM→CALL (3 instructions)
+    #   Words 4..end: Freespace (no c-list)
+    # B:06 NUC_CLIST sees cc=0 and skips c-list install; CHANGE first-activation
+    # restores CR0..CR11 from thread caps zone, giving CR0 = programmable E-GT.
     boot_entry_loc  = locations[BOOT_ABSTR_NS_SLOT]
     entry_ns_base   = ns_table_base + BOOT_ABSTR_NS_SLOT * NS_ENTRY_WORDS
 
@@ -623,20 +610,15 @@ def generate_boot_image(cfg, lumps_dir, boot_entry_slot=None):
         mem[entry_ns_base + 2] = make_version_seals(0, boot_entry_loc, entry_cr_limit)
     else:
         # No saved lump — synthesise the default Boot.Abstr at 64 words.
-        entry_clist_start = actual_abstr_size - DEMO_CLIST_SIZE
+        # Task #651: cc=0, cw=3. No c-list. Entry E-GT read from thread caps zone (thread[+244]).
         mem[boot_entry_loc] = pack_lump_header(
-            _ns_n_minus_6(actual_abstr_size), NUC_CODE_WORDS, DEMO_CLIST_SIZE, 0)
-        # Write BOOT_PROGRAM instruction words into the code region.
+            _ns_n_minus_6(actual_abstr_size), NUC_CODE_WORDS, 0, 0)
+        # Write 3 BOOT_PROGRAM instruction words into the code region (words 1..3).
         for i, word in enumerate(BOOT_ROM_WORDS[:NUC_CODE_WORDS]):
             mem[boot_entry_loc + 1 + i] = word & 0xFFFFFFFF
-        for i, gt in enumerate(clist_gts):
-            mem[boot_entry_loc + entry_clist_start + i] = gt & 0xFFFFFFFF
-        mem[boot_entry_loc + entry_clist_start + 0] = mem_mgr_gt & 0xFFFFFFFF  # c-list[0] = memory-manager GT
-        # c-list[4] must point to Startup.Config (NS slot 2) so BOOT_ROM_WORDS[7] CALL
-        # dispatches to Startup.Config.Execute() on every reset (Task #396).
-        mem[boot_entry_loc + entry_clist_start + 4] = clist_gts[STARTUP_CONFIG_NS_SLOT] & 0xFFFFFFFF
-        entry_cr_limit = actual_abstr_size - DEMO_CLIST_SIZE - 1
-        mem[entry_ns_base + 1] = pack_ns_word1(entry_cr_limit, 0, 0, 0, 0, 1, DEMO_CLIST_SIZE)
+        # cc=0: no c-list region. All words after the code region are freespace (already zero).
+        entry_cr_limit = actual_abstr_size - 1
+        mem[entry_ns_base + 1] = pack_ns_word1(entry_cr_limit, 0, 0, 0, 0, 1, 0)
         mem[entry_ns_base + 2] = make_version_seals(0, boot_entry_loc, entry_cr_limit)
 
     # ----- Startup.Config lump (NS slot 2) --------------------------------

@@ -277,6 +277,12 @@ class SystemAbstractions {
                          message: `Startup.Config.SetEntry: ENTRY_NULL (NS[${slot}])` };
             }
             setData(sim, 0, slot);
+            // Task #651: Also write E-GT to thread caps zone CR0 slot (thread[+244])
+            // so the new 3-instruction Boot.Abstr CHANGE → TPERM → CALL path picks it up.
+            const threadBase = sim.memory[sim.NS_TABLE_BASE + 1 * sim.NS_ENTRY_WORDS] >>> 0;
+            const capsOffset = (typeof THREAD_CAPS_OFFSET !== 'undefined') ? THREAD_CAPS_OFFSET : 244;
+            const eGT = sim.createGT(0, slot, {E:1}, 1);
+            sim.memory[threadBase + capsOffset] = eGT >>> 0;
             return { ok: true, result: 0,
                      message: `Startup.Config.SetEntry(${slot}) → ok` };
         });

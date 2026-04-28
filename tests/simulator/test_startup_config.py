@@ -175,31 +175,27 @@ def test_boot_image_startup_config_fault_count_zero():
     assert fault_count == 0
 
 
-def test_boot_image_boot_abstr_clist4_points_to_startup_config(tmp_path):
-    """Boot.Abstr's c-list[4] must be a GT pointing at NS slot 2 (Startup.Config).
+def test_boot_image_boot_abstr_has_cc0_cw3(tmp_path):
+    """Boot.Abstr lump header must have cc=0 and cw=3 (Task #651 CLOOMC redesign).
 
     Uses a temp lumps dir (no saved 00000300.lump) so the default 64w synthesized
-    Boot.Abstr — which always has DEMO_CLIST_SIZE=18 c-list entries — is used.
-    This ensures c-list[4] is always in range regardless of any saved lump in
-    the real server/lumps directory (Task #568).
+    Boot.Abstr is used.  Verifies the 3-instruction CHANGE→TPERM→CALL layout
+    (no c-list, cc=0).
     """
+    from server.boot_image import NUC_CODE_WORDS
     cfg = _default_cfg()
     words = _image_words(cfg, lumps_dir=str(tmp_path))
     # Boot.Abstr lump location from NS table slot 3
     base = _ns_table_base(words, cfg)
     boot_abstr_loc = words[base + BOOT_ABSTR_NS_SLOT * NS_ENTRY_WORDS]
-    # Derive abstr_size and cc from the lump header (Task #568 — abstractionLumpWords deprecated)
-    hdr        = words[boot_abstr_loc]
-    n_minus_6  = (hdr >> 23) & 0xF
-    abstr_size = 1 << (n_minus_6 + 6)
-    cc         = hdr & 0xFF
-    clist_start = abstr_size - cc
-    clist4_gt = words[boot_abstr_loc + clist_start + 4]
-    # GT bits[8:0] = NS slot index
-    gt_index = clist4_gt & 0x1FF
-    assert gt_index == STARTUP_CONFIG_NS_SLOT, (
-        f"Boot.Abstr c-list[4] GT index should be {STARTUP_CONFIG_NS_SLOT} "
-        f"(Startup.Config), got {gt_index} (GT word 0x{clist4_gt:08x})"
+    hdr = words[boot_abstr_loc]
+    cc  = hdr & 0xFF
+    cw  = (hdr >> 10) & 0x1FFF
+    assert cc == 0, (
+        f"Boot.Abstr lump header cc should be 0 (no c-list, Task #651), got {cc}"
+    )
+    assert cw == NUC_CODE_WORDS, (
+        f"Boot.Abstr lump header cw should be {NUC_CODE_WORDS}, got {cw}"
     )
 
 
@@ -352,11 +348,11 @@ def test_nsCount_unchanged():
     assert _h()["nsCount"] == 47
 
 
-def test_boot_abstr_clist4_points_to_slot2_in_simulator():
-    """In the simulator, Boot.Abstr's c-list[4] GT index is 2 (Startup.Config)."""
-    assert _h()["clist4IsSlot2"] is True, (
-        f"Boot.Abstr c-list[4] GT should point to NS slot 2, "
-        f"got index {_h().get('clist4GtIndex')}"
+def test_boot_abstr_has_cc0_cw3_in_simulator():
+    """In the simulator, Boot.Abstr lump header has cc=0 and cw=3 (Task #651)."""
+    assert _h()["bootAbstrIsCC0CW3"] is True, (
+        f"Boot.Abstr lump header should have cc=0 and cw=3 (Task #651 CLOOMC redesign), "
+        f"got cc={_h().get('bootAbstrActualCc')}"
     )
 
 

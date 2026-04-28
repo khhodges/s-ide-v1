@@ -54,86 +54,26 @@ def make_gt(gt_type=GT_TYPE_NULL, perms=0, slot_id=0, gt_seq=0, b_flag=0):
 
 
 # ---------------------------------------------------------------------------
-# BOOT_PROGRAM — the instruction ROM executed from reset
+# BOOT_PROGRAM — the instruction ROM executed from reset (Task #651 redesign)
 #
-# CLOOMC listing cross-ref: simulator/secure_boot_tutorial.js
-#   §B:02 INIT_THRD    → BOOT_PROGRAM[0]  CHANGE AL, CR12, CR12, #1
-#   §B:03 INIT_ABSTR   → BOOT_PROGRAM[1]  LOAD  AL, CR1, CR6[0]   ; code/constants GT (R|X, Slot 3) → CR1
-#                      → BOOT_PROGRAM[2]  LOAD  AL, CR2, CR6[1]   ; boot code GT (X, Slot 4) → CR2
-#                      → BOOT_PROGRAM[3]  TPERM AL, CR2, #X       ; restrict to X only
-#                      → BOOT_PROGRAM[4]  LAMBDA AL, CR2          ; enter boot code (1st seal checkpoint)
-#   §B:04 LOAD_NUC     → BOOT_PROGRAM[5]  LOAD  AL, CR0, CR6[4]   ; Salvation E-GT → CR0
-#                      → BOOT_PROGRAM[6]  TPERM AL, CR0, #E       ; restrict to E
-#                      → BOOT_PROGRAM[7]  CALL  AL, CR0, CR0      ; enter user abstr (2nd seal checkpoint)
-#   §Epilogue          → BOOT_PROGRAM[8]  LOAD  AL, CR7, CR6[1]   ; reload boot code GT (Slot 4)
-#                      → BOOT_PROGRAM[9]  TPERM AL, CR7, #X       ; restrict to X
-#                      → BOOT_PROGRAM[10] LAMBDA AL, CR7          ; re-enter boot finalisation
-#                      → BOOT_PROGRAM[11] RETURN AL, CR5          ; boot complete; mask CR5
-#                      → BOOT_PROGRAM[12] SAVE  AL, CR6, CR1, #2  ; persist Thread GT to c-list[2]
+# Boot.Abstr CLOOMC: cc=0, cw=3. No c-list. Programmable entry via thread caps zone.
+#
+#   [0] CHANGE AL, CR12, CR12, #1
+#         Switch to Boot.Thread (NS slot 1). Hardware RESTORE_CALL FSM reads
+#         CR0–CR11 from thread caps zone (thread[+244..+255]).
+#         CR0 ← thread[+244] = programmable Entry E-GT (NULL until configured).
+#   [1] TPERM  AL, CR0,  #E
+#         Restrict CR0 to E-permission only.
+#   [2] CALL   AL, CR0,  CR0
+#         Enter configured first abstraction. Faults NULL_CAP if thread[+244]=0.
+#
+# To configure: write an E-GT for the desired NS slot to thread lump word 0x0134
+# (absolute word address = thread base + THREAD_CAPS_OFFSET + 0).
 # ---------------------------------------------------------------------------
-BOOT_PROGRAM = []
-if ENABLE_CHANGE_SWITCH:
-    # B:02 INIT_THRD — switch to thread context
-    # CLOOMC: CHANGE AL, CR12, CR12, #1
-    BOOT_PROGRAM.append(
-        encode_church(ChurchOpcode.CHANGE, CondCode.AL, cr_dst=12, cr_src=12, imm=1))
-
-BOOT_PROGRAM += [
-    # B:03 INIT_ABSTR — load code/constants GT into CR1 from c-list[0]
-    # CLOOMC: LOAD AL, CR1, CR6[0]  → make_gt(GT_TYPE_INFORM, R|X, slot_id=3, gt_seq=0)
-    encode_church(ChurchOpcode.LOAD, CondCode.AL, cr_dst=1, cr_src=6, imm=0),
-
-    # B:03 — load boot code GT into CR2 from c-list[1]
-    # CLOOMC: LOAD AL, CR2, CR6[1]  → make_gt(GT_TYPE_INFORM, X, slot_id=4, gt_seq=0)
-    encode_church(ChurchOpcode.LOAD, CondCode.AL, cr_dst=2, cr_src=6, imm=1),
-
-    # B:03 — restrict CR2 to X permission only (TPERM does not check seal)
-    # CLOOMC: TPERM AL, CR2, #X
-    encode_church(ChurchOpcode.TPERM, CondCode.AL, cr_dst=2, imm=TpermPreset.X),
-
-    # B:03 INIT_ABSTR — enter boot code via LAMBDA (1-word frame; CR6 unchanged)
-    # CLOOMC: LAMBDA AL, CR2
-    # SECURITY CHECKPOINT 1: hardware re-validates CRC-16 seal of NS Slot 4 here.
-    # A SEAL_MISMATCH fault fires if NS Slot 4 (boot code) has been tampered with.
-    encode_church(ChurchOpcode.LAMBDA, CondCode.AL, cr_dst=2),
-
-    # B:04 LOAD_NUC — load Startup.Config E-GT into CR0 from c-list[4] (Task #512)
-    # CLOOMC: LOAD AL, CR0, CR6[4]  → make_gt(GT_TYPE_INFORM, E, slot_id=2, gt_seq=0)
-    encode_church(ChurchOpcode.LOAD, CondCode.AL, cr_dst=0, cr_src=6, imm=4),
-
-    # B:04 — restrict CR0 to E permission only before CALL
-    # CLOOMC: TPERM AL, CR0, #E
-    encode_church(ChurchOpcode.TPERM, CondCode.AL, cr_dst=0, imm=TpermPreset.E),
-
-    # B:04 LOAD_NUC — CALL into Startup.Config (which then calls configured entry)
-    # CLOOMC: CALL AL, CR0, CR0
-    # SECURITY CHECKPOINT 2: hardware re-validates CRC-16 seal of NS Slot 2 here.
-    # On success:
-    #   CR14 derived from NS Slot 2: base=0x0200, limit=63 (word), perm=RX only (no W)
-    #   CR6  derived from NS Slot 2: base=clistStart, limit=0 (1 c-list entry), perm=L
-    #   2-word CALL frame pushed onto thread LIFO stack (STO += 2)
-    #   PC = 0 — Startup.Config code begins executing (LOAD/TPERM/CALL chain to configured entry)
-    encode_church(ChurchOpcode.CALL, CondCode.AL, cr_dst=0, cr_src=0),
-
-    # Epilogue (after user RETURN) — reload Boot.Abstr code GT
-    # CLOOMC: LOAD AL, CR7, CR6[1]
-    encode_church(ChurchOpcode.LOAD, CondCode.AL, cr_dst=7, cr_src=6, imm=1),
-
-    # Epilogue — restrict CR14 to X permission only
-    # CLOOMC: TPERM AL, CR7, #X
-    encode_church(ChurchOpcode.TPERM, CondCode.AL, cr_dst=7, imm=TpermPreset.X),
-
-    # Epilogue — re-enter boot finalisation via LAMBDA
-    # CLOOMC: LAMBDA AL, CR7
-    encode_church(ChurchOpcode.LAMBDA, CondCode.AL, cr_dst=7),
-
-    # Epilogue — boot complete; RETURN with capability mask clearing CR5
-    # CLOOMC: RETURN AL, CR5  (mask bit 5 = 0b100000 clears CR5)
-    encode_church(ChurchOpcode.RETURN, CondCode.AL, cr_src=5),
-
-    # Epilogue — persist Thread GT (CR1) into c-list slot 2 for runtime use
-    # CLOOMC: SAVE AL, CR6, CR1, #2
-    encode_church(ChurchOpcode.SAVE, CondCode.AL, cr_dst=6, cr_src=1, imm=2),
+BOOT_PROGRAM = [
+    encode_church(ChurchOpcode.CHANGE, CondCode.AL, cr_dst=12, cr_src=12, imm=1),
+    encode_church(ChurchOpcode.TPERM,  CondCode.AL, cr_dst=0,  imm=TpermPreset.E),
+    encode_church(ChurchOpcode.CALL,   CondCode.AL, cr_dst=0,  cr_src=0),
 ]
 
 while len(BOOT_PROGRAM) < 256:

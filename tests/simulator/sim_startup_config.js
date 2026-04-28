@@ -23,7 +23,7 @@
 //   Execute_fault    { ok, fault }  (BAD_FLAGS pre-check)
 //   nsLabel2         string label of NS slot 2
 //   nsCount          number
-//   clist4IsSlot2    bool  — Boot.Abstr c-list[4] points to NS slot 2
+//   bootAbstrIsCC0CW3  bool  — Boot.Abstr lump header has cc=0 and cw=3 (Task #651)
 
 global.window = {
     bootConfig: {
@@ -175,15 +175,13 @@ out.nsLabel2 = sim.nsLabels[2] || '';
 // nsCount
 out.nsCount = sim.nsCount | 0;
 
-// Check Boot.Abstr c-list[4] points to NS slot 2
+// Check Boot.Abstr lump header: Task #651 redesign — cc=0 (no c-list), cw=3
 // Boot.Abstr lump is at NS_TABLE_BASE + 3*NS_ENTRY_WORDS → word0 = physical location
 const bootAbstrLoc = sim.memory[sim.NS_TABLE_BASE + 3 * sim.NS_ENTRY_WORDS];
-const bootAbstrLumpSize = 64; // BOOT_ABSTR_DEFAULT_SIZE (Task #568)
-const clistStart = bootAbstrLumpSize - 18; // DEMO_CLIST_SIZE = 18
-const clist4Word = sim.memory[bootAbstrLoc + clistStart + 4];
-// GT index bits [8:0] = NS slot index
-const gtIndex = clist4Word & 0x1FF;
-out.clist4IsSlot2 = (gtIndex === 2);
-out.clist4GtIndex = gtIndex;
+const bootAbstrHdr = sim.memory[bootAbstrLoc] >>> 0;
+const bootAbstrCc = bootAbstrHdr & 0xFF;          // bits[7:0] = cc
+const bootAbstrCw = (bootAbstrHdr >> 10) & 0x1FFF; // bits[22:10] = cw
+out.bootAbstrIsCC0CW3 = (bootAbstrCc === 0 && bootAbstrCw === 3); // true = Task #651 CLOOMC design
+out.bootAbstrActualCc = bootAbstrCc; // actual cc from lump header (0 expected)
 
 process.stdout.write(JSON.stringify(out) + '\n');
