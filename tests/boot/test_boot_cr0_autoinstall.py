@@ -1,4 +1,4 @@
-"""Tests for the B:05 CR0 auto-install guard (Tasks #661, #663).
+"""Tests for the B:05 CR0 auto-install guard (Tasks #661, #663, #665).
 
 Task #657 added a guard in the B:05 (INIT_ABSTR) boot step that writes the
 boot-entry E-GT into the thread lump's CR0 home slot (memory[threadLoc + 244])
@@ -6,7 +6,7 @@ whenever that word is zero.  The existing boot tests all pass through
 resetMemory() / _initNamespaceTable(), which pre-fills the slot — so the
 conditional branch never fires in CI.
 
-Two branches of the guard are tested here:
+Three branches of the guard are tested here:
 
   test_cr0_auto_installed_by_b05_when_slot_is_zero  (Task #661)
     1. Generate a normal boot image and load it into the simulator.
@@ -23,6 +23,11 @@ Two branches of the guard are tested here:
     memory[threadLoc + 244] before B:05 runs.  After B:05 the sentinel must
     be unchanged — the guard's "already populated" skip path must NOT
     overwrite a pre-existing value.
+
+  test_cr0_not_written_by_b05_when_thread_ns_entry_is_missing  (Task #665)
+    NS slot 1 (Boot.Thread) is blanked entirely before B:05 runs so that
+    readNSEntry(1) returns null.  B:05 must complete without faulting or
+    halting, and memory[threadLoc + 244] must remain zero.
 
 The Node.js harness (sim_cr0_autoinstall_harness.js) performs the simulator
 work and returns a JSON report; this module drives the harness and checks the
@@ -60,17 +65,22 @@ def _default_cfg():
     }
 
 
-def _run_harness(cfg, image_bytes, *, sentinel_value=0):
+def _run_harness(cfg, image_bytes, *, sentinel_value=0, nullify_thread_ns_entry=False):
     """Invoke sim_cr0_autoinstall_harness.js and return the parsed JSON dict.
 
     sentinel_value — when non-zero the harness writes this value into
     memory[threadLoc + 244] before B:05 instead of zeroing it (sentinel mode).
+
+    nullify_thread_ns_entry — when True the harness blanks NS slot 1 in the
+    namespace table before B:05 runs so that readNSEntry(1) returns null
+    (nullify mode, Task #665).
     """
     payload = json.dumps({
-        "config":        cfg,
-        "imageBase64":   base64.b64encode(image_bytes).decode("ascii"),
-        "skipWindow":    False,
-        "sentinelValue": sentinel_value,
+        "config":               cfg,
+        "imageBase64":          base64.b64encode(image_bytes).decode("ascii"),
+        "skipWindow":           False,
+        "sentinelValue":        sentinel_value,
+        "nullifyThreadNSEntry": nullify_thread_ns_entry,
     })
     proc = subprocess.run(
         ["node", HARNESS],
@@ -231,4 +241,74 @@ def test_cr0_not_overwritten_by_b05_when_slot_is_populated():
     assert status["autoInstallLogged"] is False, (
         "B:05 logged an auto-install message even though CR0 was already "
         f"populated; b05OutputDelta={status['b05OutputDelta']!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Task #665 — null NS entry: B:05 must silently skip when slot 1 is missing
+# ---------------------------------------------------------------------------
+
+def test_cr0_not_written_by_b05_when_thread_ns_entry_is_missing():
+    """B:05 must not fault or write CR0 when readNSEntry(1) returns null.
+
+    The guard in B:05 (simulator.js around line 1413-1420) first checks
+    whether readNSEntry(1) returns a valid entry with a word0_location.
+    When NS slot 1 has been blanked (both word0 and word1 are zero) the helper
+    returns null and the entire CR0 write must be skipped silently.
+
+    Specifically:
+    - The harness blanks NS slot 1 in the namespace table before B:05 runs.
+    - readNSEntry(1) must return null (the harness confirms this with
+      the ``nullified`` flag).
+    - After B:05 the simulator must not have faulted or halted.
+    - memory[threadLoc + 244] (CR0 home, located from the pre-nullify address)
+      must still be zero — no write occurred.
+    - The simulator's console output for B:05 must NOT contain the
+      auto-install log line.
+    """
+    cfg   = _default_cfg()
+    image = generate_boot_image(cfg, LUMPS_DIR)
+
+    status = _run_harness(cfg, image, nullify_thread_ns_entry=True)
+
+    # Harness must have loaded the image and reached B:05 cleanly.
+    assert status["loaded"] is True, (
+        f"loadBootImage() failed; status={status}"
+    )
+    assert status["bootStepBeforeB05"] == 5, (
+        f"Expected harness to pause at bootStep=5 (start of B:05) but "
+        f"got bootStepBeforeB05={status['bootStepBeforeB05']}"
+    )
+
+    # NS slot 1 must have been blanked successfully before B:05 ran.
+    assert status["nullified"] is True, (
+        "Harness could not blank NS slot 1 (readNSEntry(1) still returned "
+        f"non-null after zeroing); status={status}"
+    )
+
+    # B:05 must not have faulted.
+    assert status["faultLog"] == [], (
+        "B:05 raised unexpected fault(s) when NS slot 1 was missing: " +
+        "; ".join(f"[{f['type']}] {f['message']}" for f in status["faultLog"])
+    )
+    assert status["halted"] is False, (
+        f"Simulator halted unexpectedly during B:05; status={status}"
+    )
+
+    # The step counter must have advanced from 5 to 6 (B:05 → B:06).
+    assert status["bootStepAfterB05"] == 6, (
+        f"bootStep should be 6 after B:05 but got {status['bootStepAfterB05']}"
+    )
+
+    # CR0 home must still be zero — the guard skipped the write entirely.
+    cr0_value = status["cr0HomeValue"]
+    assert cr0_value == 0, (
+        f"B:05 wrote to CR0 home even though NS slot 1 was null: "
+        f"memory[threadLoc + 244] = 0x{cr0_value:08x}; status={status}"
+    )
+
+    # The auto-install log line must NOT appear.
+    assert status["autoInstallLogged"] is False, (
+        "B:05 logged an auto-install message even though NS slot 1 was missing; "
+        f"b05OutputDelta={status['b05OutputDelta']!r}"
     )

@@ -1,8 +1,8 @@
-// Harness for test_boot_cr0_autoinstall.py (Tasks #661, #663).
+// Harness for test_boot_cr0_autoinstall.py (Tasks #661, #663, #665).
 //
-// Exercises two branches of the B:05 CR0 auto-install guard:
+// Exercises three branches of the B:05 CR0 auto-install guard:
 //
-//   Default mode  (sentinelValue absent / 0):
+//   Default mode  (sentinelValue absent / 0, nullifyThreadNSEntry absent):
 //     Zeros memory[threadLoc + THREAD_CAPS_OFFSET] before running B:05 so the
 //     guard fires and writes the boot-entry E-GT.
 //
@@ -11,12 +11,18 @@
 //     the guard's "already populated" branch is taken and the slot is left
 //     unchanged.  Used by Task #663 to verify the skip path.
 //
+//   Nullify mode  (nullifyThreadNSEntry: true):
+//     Blanks NS slot 1 (Boot.Thread) in the namespace table so that
+//     readNSEntry(1) returns null before B:05 runs.  Verifies that B:05
+//     silently skips the CR0 write without faulting (Task #665).
+//
 // Input (stdin, JSON):
 //   {
-//     "config":        { ... boot config ... },
-//     "imageBase64":   "<base64 raw LE binary>",
-//     "skipWindow":    false,
-//     "sentinelValue": 0          // optional — non-zero activates sentinel mode
+//     "config":                { ... boot config ... },
+//     "imageBase64":           "<base64 raw LE binary>",
+//     "skipWindow":            false,
+//     "sentinelValue":         0,    // optional — non-zero activates sentinel mode
+//     "nullifyThreadNSEntry":  false // optional — true activates nullify mode
 //   }
 //
 // Protocol:
@@ -25,6 +31,8 @@
 //   3. Read threadLoc from readNSEntry(1).word0_location.
 //   4a. Default mode:  zero memory[threadLoc + THREAD_CAPS_OFFSET].
 //   4b. Sentinel mode: write sentinelValue into that slot.
+//   4c. Nullify mode:  blank all four words of NS slot 1 so readNSEntry(1)
+//       returns null; cr0Addr is preserved from step 3 for result checking.
 //   5. Run one more _bootStep()  (executes B:05).
 //   6. Report the CR0 home value, the expected GT, bootEntrySlot, faultLog, …
 
@@ -40,7 +48,8 @@ process.stdin.on('end', () => {
     const sentinelValue = (env.sentinelValue !== undefined && env.sentinelValue !== null)
         ? (env.sentinelValue >>> 0)
         : 0;
-    const sentinelMode = sentinelValue !== 0;
+    const sentinelMode  = sentinelValue !== 0;
+    const nullifyMode   = !!env.nullifyThreadNSEntry;
 
     if (env.skipWindow) {
         // no global.window — simulator uses historical 65536-word default
@@ -77,12 +86,22 @@ process.stdin.on('end', () => {
     const cr0Addr     = threadLoc !== null ? threadLoc + THREAD_CAPS_OFFSET : null;
     const valueBeforeWrite = (cr0Addr !== null) ? (sim.memory[cr0Addr] >>> 0) : null;
 
-    if (cr0Addr !== null) {
+    let nullified = false;
+    if (nullifyMode) {
+        // Blank NS slot 1 so readNSEntry(1) returns null when B:05 runs.
+        // We keep cr0Addr derived above so we can assert CR0 was not written.
+        const ns1Base = sim.NS_TABLE_BASE + 1 * sim.NS_ENTRY_WORDS;
+        sim.memory[ns1Base + 0] = 0;
+        sim.memory[ns1Base + 1] = 0;
+        sim.memory[ns1Base + 2] = 0;
+        sim.memory[ns1Base + 3] = 0;
+        nullified = sim.readNSEntry(1) === null;
+    } else if (cr0Addr !== null) {
         sim.memory[cr0Addr] = sentinelMode ? sentinelValue : 0;
     }
 
-    const zeroed          = (!sentinelMode && cr0Addr !== null) ? (sim.memory[cr0Addr] >>> 0) === 0 : false;
-    const sentinelWritten = (sentinelMode && cr0Addr !== null)
+    const zeroed          = (!sentinelMode && !nullifyMode && cr0Addr !== null) ? (sim.memory[cr0Addr] >>> 0) === 0 : false;
+    const sentinelWritten = (sentinelMode && !nullifyMode && cr0Addr !== null)
         ? (sim.memory[cr0Addr] >>> 0) === sentinelValue
         : false;
 
@@ -109,6 +128,7 @@ process.stdin.on('end', () => {
         zeroed:              zeroed,
         sentinelValue:       sentinelValue,
         sentinelWritten:     sentinelWritten,
+        nullified:           nullified,
         b05Returned:         b05Returned,
         cr0HomeValue:        cr0HomeValue,
         expectedGT:          expectedGT,
