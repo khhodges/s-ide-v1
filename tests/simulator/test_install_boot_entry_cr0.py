@@ -109,3 +109,34 @@ def test_function_originates_from_production_file():
     assert "function _installBootEntryGTIntoCR0" in src, (
         f"fnSource does not match the production function declaration: {src!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Run 2 tests — nsExpandedSlot=45 (second thread slot in view)
+# ---------------------------------------------------------------------------
+
+def _h2():
+    """Return the run-2 sub-object from the harness output."""
+    return _h()["run2"]
+
+
+def test_run2_function_returns_true():
+    """_installBootEntryGTIntoCR0() returns True when nsExpandedSlot=45."""
+    assert _h2()["returned"] is True
+
+
+def test_run2_cr0_log_line_present():
+    """sim.output contains a '[IDE] CR0 \u2190' line when nsExpandedSlot=45."""
+    line = _h2()["simOutputLine"]
+    assert line.startswith("[IDE] CR0 \u2190"), (
+        f"Expected '[IDE] CR0 \u2190' line in run-2 sim.output, got: {line!r}"
+    )
+
+
+def test_run2_gt_word_written_to_slot45_cr0():
+    """The GT word is written to NS slot 45's CR0 address when nsExpandedSlot=45."""
+    data = _h2()
+    assert data["slot45CrValue"] == data["gtWordExpected"], (
+        f"NS slot 45 CR0 value ({data['slot45CrValue']!r}) does not match "
+        f"expected GT word ({data['gtWordExpected']!r})"
+    )
