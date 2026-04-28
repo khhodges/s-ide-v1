@@ -1805,12 +1805,43 @@ function renderThreadMemoryLayout(nsIndex) {
         const _capPet  = (typeof _petNameCRMap !== 'undefined' && _petNameCRMap) ? (_petNameCRMap[i] || '') : '';
         const _capMain = _capPet || `CR${i}`;
         const _capSub  = _capPet ? `<br><span class="popup-sub-id">CR${i}</span>` : '';
-        html += `<tr><td style="color:#f4b942;">${_capMain}${_capSub}</td><td style="color:#555;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.9);font-family:monospace;">${hex}</td><td>${decoded}</td></tr>`;
+        const _cr0Hint = (i === 0 && word === 0 && sim.bootEntrySlot !== null && sim.bootEntrySlot !== undefined)
+            ? ` ondblclick="_installBootEntryGTIntoCR0()" style="cursor:pointer;" title="Double-click to install boot-entry E-GT (Slot ${sim.bootEntrySlot}) into CR0"`
+            : '';
+        const _cr0DecodedExtra = (i === 0 && word === 0 && sim.bootEntrySlot !== null && sim.bootEntrySlot !== undefined)
+            ? `<span style="color:#6b7280;font-size:0.8em;margin-left:6px;" title="Double-click this row to install the first-LUMP E-GT">⚡ double-click to install E-GT for Slot ${sim.bootEntrySlot}</span>`
+            : '';
+        html += `<tr${_cr0Hint}><td style="color:#f4b942;">${_capMain}${_capSub}</td><td style="color:#555;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.9);font-family:monospace;">${hex}</td><td>${decoded}${_cr0DecodedExtra}</td></tr>`;
     }
     html += '</tbody></table>';
 
     html += '</div>';
     return html;
+}
+
+function _installBootEntryGTIntoCR0() {
+    if (!sim) return false;
+    const bSlot = sim.bootEntrySlot;
+    if (bSlot === null || bSlot === undefined) return false;
+    const gtWord = sim.createGT(0, bSlot, {E:1}, 1);
+    // Write to the primary thread (NS slot 1 — the boot thread).
+    // If the user is currently viewing a different thread slot in the namespace
+    // panel, also write there, so the visible Zone ① table immediately updates.
+    const targets = new Set([1]);
+    if (nsExpandedSlot >= 0 && THREAD_NS_SLOTS.has(nsExpandedSlot)) targets.add(nsExpandedSlot);
+    let wrote = false;
+    for (const nsIdx of targets) {
+        const entry = sim.readNSEntry(nsIdx);
+        if (entry && entry.word0_location) {
+            sim.memory[entry.word0_location + THREAD_LAYOUT.CAPS_START] = gtWord;
+            wrote = true;
+        }
+    }
+    if (wrote) {
+        if (typeof updateCRDetail === 'function') updateCRDetail();
+        if (typeof updateNamespace === 'function') updateNamespace();
+    }
+    return wrote;
 }
 
 function renderMemoryDump(location, limit, nsIndex) {

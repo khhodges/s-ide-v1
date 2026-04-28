@@ -744,6 +744,18 @@ lump memory by SAVE/LOAD.
 +255  CR11   — General-purpose
 ```
 
+> **Convention — Zone ① CR0 (offset +244): First-LUMP E-GT**
+> CR0 (the first slot of Zone ①, at word offset +244 in the thread data
+> structure) conventionally holds the **E-GT for the first LUMP** — the
+> boot-entry lump marked ⚡ in the IDE's Abstractions view. The E-GT Word 0
+> is computed as `createGT(gt_seq=0, object_id=bootEntrySlot, perms={E:1}, typ=01)`,
+> which encodes permission bit E at bit 30, Inform type (`01`) at bits 24:23,
+> sequence number at bits 22:16, and the NS slot index at bits 15:0. The IDE
+> writes this word into thread memory at offset +244 when the user
+> double-clicks the boot-entry LUMP in the Lump Repository or double-clicks
+> the CR0 row in the Zone ① table (when CR0 is NULL). The thread memory view
+> refreshes immediately to show the installed E-GT instead of NULL.
+
 CR0 and CR2–CR11 are all **general-purpose** capability registers — exactly
 as DR0–DR15 are general-purpose data registers. The architecture assigns no
 fixed semantic to any of them. The same rule applies to both domains: a

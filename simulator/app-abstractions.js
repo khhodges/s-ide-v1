@@ -573,7 +573,14 @@ async function renderLumps() {
             el.addEventListener('click', () => showLumpDetail(el.dataset.token));
             el.addEventListener('dblclick', () => {
                 const lump = _lumpsCache.find(l => l.token === el.dataset.token);
-                if (lump && lump.abstraction) _goToAbstractionByName(lump.abstraction);
+                if (!lump) return;
+                const lumpNsSlot = (lump.ns_slot !== null && lump.ns_slot !== undefined) ? parseInt(lump.ns_slot) : null;
+                const isBootEntry = (lumpNsSlot !== null && lumpNsSlot === bootEntrySlot) ||
+                    (lump.abstraction && sim && sim.nsLabels && sim.nsLabels[bootEntrySlot] === lump.abstraction);
+                if (isBootEntry && typeof _installBootEntryGTIntoCR0 === 'function' && _installBootEntryGTIntoCR0()) {
+                    return;
+                }
+                if (lump.abstraction) _goToAbstractionByName(lump.abstraction);
             });
         });
 
