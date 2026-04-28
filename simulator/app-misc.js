@@ -575,7 +575,7 @@ function renderMarkdown(md) {
     return result.join('\n');
 }
 
-var _nextStepsHidden = false;
+var _nextStepsHidden = true;
 
 function toggleNextSteps() {
     _nextStepsHidden = !_nextStepsHidden;
@@ -588,6 +588,7 @@ function toggleNextSteps() {
 }
 
 function showNextSteps(context) {
+    _nextStepsHidden = true;
     const box = document.getElementById('nextStepsBox');
     if (!box) return;
 
