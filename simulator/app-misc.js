@@ -1000,6 +1000,11 @@ document.addEventListener('DOMContentLoaded', () => {
         init();
         // Restore the fault log from the previous session so the Gate Log still
         // shows old faults (with the correct lump-name snapshot) after a reload.
+        // Do NOT call faultAlertOn() here — stale faults from a prior session
+        // must not trigger the alert icon on page load.  The icon fires only for
+        // live faults in the current session (handled by sim.on('fault', …) in
+        // app-shell.js).  Calling faultAlertOn() on restore was the root cause
+        // of the "flashing fault icon on hard reboot" bug.
         if (typeof _restoreFaultLog === 'function') {
             _restoreFaultLog();
             if (sim && sim.faultLog && sim.faultLog.length > 0) {
@@ -1009,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     _lastFault = sim.faultLog[sim.faultLog.length - 1];
                 }
                 if (typeof updateGateLog === 'function') updateGateLog();
-                if (typeof faultAlertOn === 'function') faultAlertOn();
+                // faultAlertOn() intentionally omitted — see comment above.
             }
         }
         initAllTabOverflows();
