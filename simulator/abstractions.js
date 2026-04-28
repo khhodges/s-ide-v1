@@ -56,6 +56,9 @@ class AbstractionRegistry {
             perms: options.perms || { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 },
             chainable: options.chainable || false,
             handler: options.handler || null,
+            // parent: index of the abstraction this one inherits from (null = no parent).
+            // dispatchMethod() walks the parent chain when a method is not found locally.
+            parent: (options.parent !== undefined && options.parent !== null) ? options.parent : null,
             dispatch: {},
             invokeCount: 0,
             faultCount: 0,
@@ -72,6 +75,53 @@ class AbstractionRegistry {
         this.layers[layer].push(abstraction);
 
         return abstraction;
+    }
+
+    // ── Method inheritance helpers ─────────────────────────────────────────────
+
+    // Walk the parent chain and return the first abstraction that has a bound
+    // (non-null) dispatch entry for methodName, or null if none exists.
+    _resolveMethod(index, methodName) {
+        const upper = methodName.toUpperCase();
+        let visited = new Set();
+        let current = index;
+        while (current !== null && current !== undefined) {
+            if (visited.has(current)) break;  // cycle guard
+            visited.add(current);
+            const a = this.abstractions[current];
+            if (!a) break;
+            if (Object.prototype.hasOwnProperty.call(a.dispatch, upper) && a.dispatch[upper] !== null) {
+                return { abstraction: a, fn: a.dispatch[upper] };
+            }
+            current = a.parent;
+        }
+        return null;
+    }
+
+    // Return all method names visible on this abstraction: own methods first,
+    // then any parent methods not already shadowed.  Each entry is
+    //   { name, own: bool, from: abstractionName }
+    getAllMethods(index) {
+        const seen = new Set();
+        const result = [];
+        let visited = new Set();
+        let current = index;
+        while (current !== null && current !== undefined) {
+            if (visited.has(current)) break;
+            visited.add(current);
+            const a = this.abstractions[current];
+            if (!a) break;
+            const own = (current === index);
+            for (const m of a.methods) {
+                const upper = m.toUpperCase();
+                if (!seen.has(upper)) {
+                    seen.add(upper);
+                    result.push({ name: m, own, from: a.name });
+                }
+            }
+            current = a.parent;
+        }
+        return result;
     }
 
     create(index, params) {
@@ -93,12 +143,16 @@ class AbstractionRegistry {
     inspect(index) {
         const a = this.abstractions[index];
         if (!a) return { ok: false, fault: 'ABSTRACTION', message: `Abstraction ${index} not found` };
+        const parentAbs = (a.parent !== null) ? this.abstractions[a.parent] : null;
         return {
             ok: true,
             result: {
                 index: a.index, name: a.name, layer: a.layer,
                 methods: a.methods, description: a.description,
                 perms: a.perms, chainable: a.chainable,
+                parent: a.parent,
+                parentName: parentAbs ? parentAbs.name : null,
+                allMethods: this.getAllMethods(index),
                 faultCount: a.faultCount,
                 mtbf: this.getMTBF(index)
             }
@@ -195,12 +249,16 @@ class AbstractionRegistry {
     dispatchMethod(index, methodName, sim, args) {
         const a = this.abstractions[index];
         if (!a) return { ok: false, fault: 'ABSTRACTION', message: `Abstraction ${index} not found` };
-        const fn = a.dispatch[methodName.toUpperCase()];
-        if (!fn) return { ok: false, fault: 'METHOD', message: `Method ${methodName} not found on ${a.name}` };
+        // Walk the parent chain to find the first bound handler.
+        const resolved = this._resolveMethod(index, methodName);
+        if (!resolved) {
+            const allNames = this.getAllMethods(index).map(m => m.name).join(', ');
+            return { ok: false, fault: 'METHOD', message: `Method ${methodName} not found on ${a.name} (available: ${allNames || 'none'})` };
+        }
         a.invokeCount++;
         if (!a.firstActiveTime) a.firstActiveTime = Date.now();
         this._saveStats();
-        return fn(sim, args);
+        return resolved.fn(sim, args);
     }
 
     count() {
@@ -420,8 +478,8 @@ class AbstractionRegistry {
 
         this.createAbstraction(46, 'Circle', 3,
             ['Area', 'Circumference'],
-            'Geometry via SlideRule — delegates trig to SlideRule, computes area and circumference',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
+            'Geometry via SlideRule — declares own Area and Circumference methods; inherits all SlideRule maths (Multiply, Sqrt, Sin, Cos, \u2026) from parent SlideRule',
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 }, parent: 16 });
     }
 }
 

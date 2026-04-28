@@ -275,6 +275,44 @@ ${this._p2Sizes()}
 </div>
 <div class="sr-key-concept"><div class="sr-concept-title">No Mutable State in an Abstraction</div>
 <p>Unlike a Thread, a Programmed Abstraction has <strong>no mutable live state</strong> in its lump between calls. Its code words are never writable (CR14 carries RX, never W). Its C-List can be written only via SAVE (S permission), and only by code that holds a SAVE-permissioned GT for that c-list. If no such GT is issued, the abstraction\u2019s capabilities are frozen at upload time.</p></div>`
+            },
+            {
+                title: 'Method Inheritance \u2014 Extending an Abstraction',
+                type: 'inheritance',
+                content: `<p>An abstraction can declare a <strong>parent</strong>. When a method call arrives for a name the child does not define locally, the dispatcher walks the parent chain until it finds a bound handler &mdash; or faults with <code>METHOD</code> if none exists.</p>
+<p>The concrete example already in the system: <strong>Circle</strong> (Layer\u202f3, index\u202f46) declares its own <code>Area</code> and <code>Circumference</code> methods and sets <code>parent\u202f=\u202fSlideRule</code> (index\u202f16). Calling <code>Circle.Multiply</code> at the simulator level silently delegates to <code>SlideRule.Multiply</code>.</p>
+<table class="sr-table">
+<tr><th>Method</th><th>Declared on</th><th>Resolved via</th></tr>
+<tr><td><code>Area</code></td><td>Circle (own)</td><td>Circle dispatch table</td></tr>
+<tr><td><code>Circumference</code></td><td>Circle (own)</td><td>Circle dispatch table</td></tr>
+<tr><td><code>Multiply</code></td><td>inherited</td><td>parent: SlideRule</td></tr>
+<tr><td><code>Sqrt</code></td><td>inherited</td><td>parent: SlideRule</td></tr>
+<tr><td><code>Sin</code>, <code>Cos</code>, \u2026</td><td>inherited</td><td>parent: SlideRule</td></tr>
+</table>
+<div class="sr-key-concept"><div class="sr-concept-title">Inheritance is a Registry Concept, Not a Hardware Concept</div>
+<p>The Church Machine hardware has no knowledge of parent chains &mdash; it executes the 32-bit instruction words it finds in the lump it was called into. Inheritance lives entirely in the <em>abstraction registry</em>: the IDE-side table that maps abstraction names to metadata and JavaScript simulation handlers.</p>
+<p>At the <strong>assembly level</strong>, Circle\u2019s own C-List holds its own methods (<code>Area</code>\u202f=\u202fslot\u202f0, <code>Circumference</code>\u202f=\u202fslot\u202f1) and a capability to SlideRule (in some later slot). Circle\u2019s <code>Area</code> lump code calls <code>ELOADCALL (SlideRule GT), Multiply</code> &mdash; explicit delegation, not transparent inheritance at the instruction level. The registry inheritance makes this delegation <em>visible and navigable</em> from the IDE without altering the hardware model.</p>
+</div>
+<div class="sr-key-concept"><div class="sr-concept-title">Defining a Parent</div>
+<pre class="sr-code sr-code-asm">// In AbstractionRegistry._registerAll():
+this.createAbstraction(46, 'Circle', 3,
+    ['Area', 'Circumference'],
+    'Geometry \u2014 own methods; inherits all SlideRule maths',
+    { parent: 16 }   // 16 = SlideRule
+);
+
+// getAllMethods(46) now returns:
+// [
+//   { name: 'Area',          own: true,  from: 'Circle' },
+//   { name: 'Circumference', own: true,  from: 'Circle' },
+//   { name: 'Multiply',      own: false, from: 'SlideRule' },
+//   { name: 'Sqrt',          own: false, from: 'SlideRule' },
+//   ...22 SlideRule methods total
+// ]</pre>
+</div>
+<div class="sr-key-concept"><div class="sr-concept-title">Override by Declaring the Method Locally</div>
+<p>A child that <em>does</em> add its own <code>Multiply</code> to its dispatch table will have that handler called first &mdash; the parent entry is shadowed exactly as in classical single-dispatch OOP. The parent is only reached when no local binding exists.</p>
+</div>`
             }
         ];
     }

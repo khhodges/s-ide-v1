@@ -291,50 +291,62 @@ class CLOOMCTutorial {
 </div>`
             },
             {
-                title: "Machine Code SlideRule",
+                title: "Machine Code SlideRule — Assembler Source",
                 type: "code",
                 lang: "asm",
-                content: `<p>The Machine code front-end bypasses the compiler entirely. 32-bit instruction words are injected verbatim into the upload JSON &mdash; no parsing, no compilation:</p>
-<pre class="sr-code sr-code-asm">// SlideRule — direct machine code
-// Each method is an array of 32-bit hex words
+                content: `<p>The Machine Code front-end accepts <strong>assembler source</strong> rather than raw hex words. The assembler produces 32-bit instruction words verbatim &mdash; no higher-level compiler involved. <code>.pet</code> declarations give registers readable names without emitting any machine words:</p>
+<pre class="sr-code sr-code-asm">; SlideRule.Add — two-register addition
+.pet  a    DR0    ; first argument (and return value)
+.pet  b    DR1    ; second argument
 
-"methods": [
-  {
-    "name": "Add",
-    "code": [
-      "0x7F600000",  // IADD DR0, DR0, DR1
-      "0x1F800000"   // RETURN
-    ]
-  },
-  {
-    "name": "Sub",
-    "code": [
-      "0x87600000",  // ISUB DR0, DR0, DR1
-      "0x1F800000"   // RETURN
-    ]
-  },
-  {
-    "name": "Mul",
-    "code": [
-      "0x8F808000",  // MOVI DR4, 0       (acc = 0)
-      "0x8F828000",  // MOVI DR5, 0       (sign = 0)
-      "0xA7610000",  // MCMP DR1, 0
-      "0xB0040000",  // BRANCH.GE +4
-      "0x87618000",  // ISUB DR1, DR1, DR0 (negate)
-      "0x7FE28001",  // IADD DR5, DR5, 1
-      "0x97600001",  // BFEXT DR3, DR1, 0, 1
-      "0xA7618000",  // MCMP DR3, 1
-      "0xB0020000",  // BRANCH.NE +2
-      "0x7F808000",  // IADD DR4, DR4, DR0
-      "0x9F600001",  // SHL  DR0, DR0, 1
-      "0x9F610001",  // SHR  DR1, DR1, 1
-      "0xA7610000",  // MCMP DR1, 0
-      "0xB0F90000",  // BRANCH.GT -7
-      "0x1F800000"   // RETURN
-    ]
-  }
-]</pre>
-<p><strong>Key characteristics:</strong> No abstraction &mdash; the programmer writes raw opcodes. Every bit of every word is under direct control. Useful for hand-optimised inner loops, hardware drivers, or bootstrapping the compiler itself. The upload JSON accepts these arrays directly alongside compiler-generated methods.</p>`
+    IADD  a, a, b         ; DR0 = a + b
+    RETURN                 ; result in DR0</pre>
+<pre class="sr-code sr-code-asm">; SlideRule.Sub — subtraction
+.pet  a    DR0
+.pet  b    DR1
+
+    ISUB  a, a, b         ; DR0 = a - b
+    RETURN</pre>
+<pre class="sr-code sr-code-asm">; SlideRule.Mul — shift-and-add (O(log n), integer)
+.pet  a    DR0    ; first argument / shift register
+.pet  b    DR1    ; second argument / loop counter
+.pet  acc  DR4    ; accumulator
+.pet  bit  DR3    ; current LSB of b
+
+        MOVI  acc, 0          ; acc = 0
+loop:   BFEXT bit, b, 0, 1    ; bit = b[0] (LSB)
+        MCMP  bit, 1
+        BRANCHNE skip         ; if LSB == 0, skip add
+        IADD  acc, acc, a     ; acc += a (current power of 2)
+skip:   SHL   a,   a,   #1    ; a <<= 1
+        SHR   b,   b,   #1    ; b >>= 1 (unsigned)
+        MCMP  b,   #0
+        BRANCHGT loop         ; repeat while b &gt; 0
+        MOVI  a,   0
+        IADD  a,   a,   acc   ; DR0 = result
+        RETURN</pre>
+<p><strong>Key characteristics:</strong> No higher-level compiler &mdash; the programmer writes opcodes directly. <code>.pet</code> makes register roles visible without any runtime cost. Every instruction maps 1:1 to a 32-bit word.</p>
+<div class="sr-key-concept">
+<div class="sr-concept-title">setSharedAliases &mdash; Project-Wide Calling Conventions</div>
+<p>Each method above repeats the same <code>.pet a DR0 / .pet b DR1</code> header. The assembler&rsquo;s <code>setSharedAliases</code> declares these conventions once, project-wide, so every lump inherits them automatically. Local <code>.pet</code> inside a method overrides the shared convention for that lump only:</p>
+<pre class="sr-code sr-code-asm">// Startup — once, before assembling any lump
+ChurchAssembler.setSharedAliases(
+    { a: 0, b: 1, acc: 4, bit: 3 },   // DR calling convention: all lumps
+    {}                                  // CR calling convention: none shared
+);
+
+// Now SlideRule.Add needs zero .pet lines — a and b are already defined:
+    IADD  a, a, b
+    RETURN
+
+// Circle.Area needs a different register layout &mdash; override with .pet:
+.pet  r     DR0    ; radius (shadows the shared "a" alias)
+.pet  pi    CR5    ; read-only constant loaded from c-list
+    DREAD  acc, pi, #0     ; acc = π (from data region)
+    IADD   r,  r,  r       ; r = 2r  (intermediate)
+    RETURN                  ; (full Area = π·r² needs more steps)</pre>
+<p>The shared aliases are exactly the project&rsquo;s <strong>calling convention</strong> &mdash; the agreement between caller and callee about which DRs carry which roles. Encoding it in one call instead of hundreds of <code>.pet</code> lines means it is impossible for individual lumps to silently drift from the standard.</p>
+</div>`
             },
             {
                 title: "Compiled Output Comparison",

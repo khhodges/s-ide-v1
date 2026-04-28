@@ -474,6 +474,14 @@ const METHOD_REGISTER_CONVENTIONS = {
         'Atan2':     { index: 20, input: 'DR1 (y), DR2 (x)', output: 'DR1 = atan2(y,x)', dispatch: 'DR3=20, CALL 15, CRs, #imm' },
         'Signum':    { index: 21, input: 'DR1 (n)',           output: 'DR1 = sign(n)', dispatch: 'DR3=21, CALL 15, CRs, #imm' },
     },
+    // Circle inherits all SlideRule methods (Multiply, Sqrt, Sin, Cos, …) via the
+    // parent chain in AbstractionRegistry — Circle.Area and Circle.Circumference
+    // are its own c-list entries; SlideRule methods dispatch through Circle's
+    // SlideRule GT held in its c-list.
+    'Circle': {
+        'Area':          { index: 0, input: 'DR1 (radius)',              output: 'DR1 = \u03c0r\u00b2',          dispatch: 'CALL 0, CRc',          note: 'Delegates to SlideRule.Multiply and Constants.Pi internally.' },
+        'Circumference': { index: 1, input: 'DR1 (radius)',              output: 'DR1 = 2\u03c0r',             dispatch: 'CALL 1, CRc',          note: 'Delegates to SlideRule.Multiply and Constants.Pi internally.' },
+    },
 };
 
 function getMethodPurposes(abs) {
