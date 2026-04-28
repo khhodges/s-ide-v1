@@ -3732,9 +3732,21 @@ class ChurchSimulator {
             return { pc: resumePC, instr: d, desc };
         }
 
-        // 2b. First activation of this thread slot: install the gt from the instruction
-        //     and start the new thread at PC=0.
-        if (!this._writeCR(d.crDst, gt, entry)) return null;
+        // 2b. First activation of this thread slot: synthesise a valid R+X GT for the
+        //     target NS slot and install it into the destination CR.
+        //
+        //     The raw word at entry.word0_location is the thread lump header
+        //     (magic + cc + cw), NOT a valid Golden Token.  Writing it into
+        //     CR14.word0 would corrupt every subsequent mLoad / code-lump fetch
+        //     with a bogus NS index or version.  This is the same class of bug
+        //     fixed for CR12 in Task #655.
+        //
+        //     Instead synthesise a valid R+X GT matching the B:07 NUC_CODE boot
+        //     ROM pattern (line 1575: createGT with R+X, same gt_seq as the NS
+        //     entry so mLoad's version check passes).
+        const fa_gt_seq = (entry.word2_seals >>> 25) & 0x7F;
+        const codeGT = this.createGT(fa_gt_seq, targetIdx, {R:1,W:0,X:1,L:0,S:0,E:0}, 1);
+        if (!this._writeCR(d.crDst, codeGT, entry)) return null;
         // Restore CR0–CR11 from the incoming thread lump's caps zone (THREAD_CAPS_OFFSET).
         // Mirrors hardware RESTORE_CALL FSM: cr_index=i → c-list[i] → thread word tBase+THREAD_CAPS_OFFSET+i.
         // CR0 slot (thread[+244]) holds the programmable Entry E-GT (written by SetEntry / setBootEntrySlot).
