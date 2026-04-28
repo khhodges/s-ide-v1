@@ -661,9 +661,13 @@ async function _populateLumpSourceTab(lump) {
             }
             let html = '<div class="lump-source-toolbar">';
             html += `<span class="lump-source-lang-badge">CLOOMC++</span>`;
+            html += `<div class="lump-source-ham-wrap">`;
+            html += `<button class="lump-source-ham-btn" onclick="_toggleLumpMenu(this)" title="Editor actions">&#9776;</button>`;
+            html += `<div class="lump-source-menu">`;
+            html += `<button class="lump-source-menu-item" onclick="document.querySelectorAll('.lump-source-menu.open').forEach(m=>m.classList.remove('open'));_lumpSourceDraft()" title="Draft \u2014 Show structural layout without building binary">Draft</button>`;
+            html += `<button class="lump-source-menu-item lump-source-menu-item-build" onclick="document.querySelectorAll('.lump-source-menu.open').forEach(m=>m.classList.remove('open'));_lumpSourceBuildLump()" title="Build LUMP \u2014 Compile and download .lump binary">Build LUMP &#8595;</button>`;
+            html += `</div></div>`;
             html += `<button class="lump-source-btn" onclick="_lumpSourceCompile()" title="Compile \u2014 Compile source and update Binary tab">&#9654; Compile</button>`;
-            html += `<button class="lump-source-btn" onclick="_lumpSourceDraft()" title="Draft \u2014 Show structural layout without building binary">Draft</button>`;
-            html += `<button class="lump-source-btn lump-source-btn-build" onclick="_lumpSourceBuildLump()" title="Build LUMP \u2014 Compile and download .lump binary">Build LUMP &#8595;</button>`;
             html += '</div>';
             html += `<textarea class="lump-source-textarea" id="lumpSourceEditor" spellcheck="false" autocorrect="off" autocapitalize="off">${e(src)}</textarea>`;
             html += `<div class="lump-source-status" id="lumpSourceStatus"></div>`;
@@ -685,6 +689,23 @@ function _lumpSourceProxyEdit(fn) {
     asmEd.value = editor.value;
     try { fn(); } finally { asmEd.value = prev; }
     return true;
+}
+
+function _toggleLumpMenu(btn) {
+    const menu = btn.parentElement.querySelector('.lump-source-menu');
+    if (!menu) return;
+    const isOpen = menu.classList.contains('open');
+    document.querySelectorAll('.lump-source-menu.open').forEach(m => m.classList.remove('open'));
+    if (!isOpen) {
+        menu.classList.add('open');
+        const closeHandler = (e) => {
+            if (!btn.parentElement.contains(e.target)) {
+                menu.classList.remove('open');
+                document.removeEventListener('click', closeHandler, true);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeHandler, true), 0);
+    }
 }
 
 function _lumpSourceCompile() {

@@ -660,9 +660,14 @@ function selectLumpType(type) {
             srcEl.__sourceLoaded = true;
             srcEl.innerHTML = `<div class="lump-source-toolbar">
                 <span class="lump-source-lang-badge">CLOOMC++</span>
+                <div class="lump-source-ham-wrap">
+                    <button class="lump-source-ham-btn" onclick="_toggleLumpMenu(this)" title="Editor actions">&#9776;</button>
+                    <div class="lump-source-menu">
+                        <button class="lump-source-menu-item" onclick="document.querySelectorAll('.lump-source-menu.open').forEach(m=>m.classList.remove('open'));_lumpSourceDraft()" title="Draft \u2014 Show structural layout without building binary">Draft</button>
+                        <button class="lump-source-menu-item lump-source-menu-item-build" onclick="document.querySelectorAll('.lump-source-menu.open').forEach(m=>m.classList.remove('open'));_lumpSourceBuildLump()" title="Build LUMP \u2014 Compile and download .lump binary">Build LUMP &#8595;</button>
+                    </div>
+                </div>
                 <button class="lump-source-btn" onclick="_lumpSourceCompile()" title="Compile \u2014 Compile source and preview in Binary tab">&#9654; Compile</button>
-                <button class="lump-source-btn" onclick="_lumpSourceDraft()" title="Draft \u2014 Show structural layout without building binary">Draft</button>
-                <button class="lump-source-btn lump-source-btn-build" onclick="_lumpSourceBuildLump()" title="Build LUMP \u2014 Compile and download .lump binary">Build LUMP &#8595;</button>
             </div>
             <textarea class="lump-source-textarea" id="lumpSourceEditor" spellcheck="false" autocorrect="off" autocapitalize="off">${blankTemplate.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
             <div class="lump-source-status" id="lumpSourceStatus">Edit the template above, then Compile or Build LUMP.</div>`;

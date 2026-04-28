@@ -387,6 +387,75 @@
     color: #88dd8a;
 }
 
+.lump-source-ham-wrap {
+    position: relative;
+}
+
+.lump-source-ham-btn {
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 3px 9px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid rgba(100, 160, 255, 0.25);
+    background: rgba(60, 120, 200, 0.1);
+    color: #88aaee;
+    transition: background 0.13s, color 0.13s;
+    line-height: 1.4;
+}
+
+.lump-source-ham-btn:hover {
+    background: rgba(80, 140, 220, 0.25);
+    color: #aaccff;
+}
+
+.lump-source-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    z-index: 200;
+    background: #0e0e1e;
+    border: 1px solid rgba(100, 160, 255, 0.2);
+    border-radius: 5px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55);
+    min-width: 140px;
+    flex-direction: column;
+    padding: 4px 0;
+}
+
+.lump-source-menu.open {
+    display: flex;
+}
+
+.lump-source-menu-item {
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 7px 14px;
+    text-align: left;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: #88aaee;
+    transition: background 0.1s, color 0.1s;
+    white-space: nowrap;
+}
+
+.lump-source-menu-item:hover {
+    background: rgba(80, 140, 220, 0.2);
+    color: #aaccff;
+}
+
+.lump-source-menu-item-build {
+    color: #66bb6a;
+}
+
+.lump-source-menu-item-build:hover {
+    background: rgba(60, 150, 80, 0.2);
+    color: #88dd8a;
+}
+
 .lump-source-textarea {
     width: 100%;
     box-sizing: border-box;
