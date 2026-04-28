@@ -514,6 +514,55 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
         p.errors.map(e => e.message).join('; '));
 }
 
+// ── LED[N] Abstract GT bracket syntax ────────────────────────────────────────
+
+// L1: LOAD CR3, LED[0]  →  same word as  LOAD CR3, CR6, #8
+{
+    const a1 = new ChurchAssembler();
+    const r1 = a1.assemble('LOAD CR3, CR6, #8');
+    const a2 = new ChurchAssembler();
+    const r2 = a2.assemble('LOAD CR3, LED[0]');
+    assert('L1 LED[0]: no assembly errors', a2.errors.length === 0,
+        a2.errors.map(e => e.message).join('; '));
+    assert('L1 LED[0]: same word as LOAD CR3, CR6, #8',
+        r1.words[0] === r2.words[0],
+        `explicit=0x${(r1.words[0]>>>0).toString(16)} bracket=0x${(r2.words[0]>>>0).toString(16)}`);
+}
+
+// L2: LOAD CR5, LED[5]  →  same word as  LOAD CR5, CR6, #13
+{
+    const a1 = new ChurchAssembler();
+    const r1 = a1.assemble('LOAD CR5, CR6, #13');
+    const a2 = new ChurchAssembler();
+    const r2 = a2.assemble('LOAD CR5, LED[5]');
+    assert('L2 LED[5]: no assembly errors', a2.errors.length === 0,
+        a2.errors.map(e => e.message).join('; '));
+    assert('L2 LED[5]: same word as LOAD CR5, CR6, #13',
+        r1.words[0] === r2.words[0],
+        `explicit=0x${(r1.words[0]>>>0).toString(16)} bracket=0x${(r2.words[0]>>>0).toString(16)}`);
+}
+
+// L3: LED[6] is out of range — _resolveNSName returns null, parser should error
+{
+    const a = new ChurchAssembler();
+    a.assemble('LOAD CR3, LED[6]');
+    assert('L3 LED[6] out-of-range: produces an error', a.errors.length > 0,
+        'expected an error for LED[6]');
+}
+
+// L4: lower-case led[0] is accepted (case-insensitive)
+{
+    const a1 = new ChurchAssembler();
+    const r1 = a1.assemble('LOAD CR3, CR6, #8');
+    const a2 = new ChurchAssembler();
+    const r2 = a2.assemble('LOAD CR3, led[0]');
+    assert('L4 led[0] lowercase: no errors', a2.errors.length === 0,
+        a2.errors.map(e => e.message).join('; '));
+    assert('L4 led[0] lowercase: same word as LOAD CR3, CR6, #8',
+        r1.words[0] === r2.words[0],
+        `explicit=0x${(r1.words[0]>>>0).toString(16)} bracket=0x${(r2.words[0]>>>0).toString(16)}`);
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);

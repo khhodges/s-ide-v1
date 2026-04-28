@@ -194,6 +194,26 @@ class ChurchAssembler {
         this.nsLoaded  = {};   // clear stale CR assignments
     }
 
+    // _resolveNSNameBracket(nameToken, idxToken)
+    // Tries _resolveNSName(nameToken) first; if that fails and idxToken is a
+    // bare decimal digit, attempts the bracket form "NAME[N]".  Returns
+    // { slot, key, consumed } on success, or null on failure.
+    // This handles the tokenizer splitting "LED[0]" into two tokens "LED" "0".
+    _resolveNSNameBracket(nameToken, idxToken) {
+        const name = (nameToken || '').replace(/,/g, '').trim();
+        const idx  = (idxToken  || '').replace(/,/g, '').trim();
+
+        const slot = this._resolveNSName(nameToken);
+        if (slot !== null) return { slot, key: name, consumed: false };
+
+        if (idx && /^\d+$/.test(idx)) {
+            const combined  = name + '[' + idx + ']';
+            const slotBr = this._resolveNSName(combined);
+            if (slotBr !== null) return { slot: slotBr, key: combined, consumed: true };
+        }
+        return null;
+    }
+
     _resolveNSName(token) {
         if (!token) return null;
         const name = token.replace(/,/g, '').trim();
@@ -204,7 +224,15 @@ class ChurchAssembler {
         // 2. Namespace Table (populated via setNamespace from the abstraction slot map)
         if (this.nsSymbols[name] !== undefined) return this.nsSymbols[name];
 
-        // 3. Abstract registry (last resort — returns the abstraction's own index)
+        // 3. LED[N] Abstract GT shorthand — LED[0]–LED[5] are boot-loaded AGTs
+        //    at c-list slots 8–13.  LOAD CR3, LED[0]  →  LOAD CR3, CR6, #8
+        const ledMatch = name.match(/^LED\[(\d)\]$/i);
+        if (ledMatch) {
+            const n = parseInt(ledMatch[1], 10);
+            if (n >= 0 && n <= 5) return 8 + n;
+        }
+
+        // 4. Abstract registry (last resort — returns the abstraction's own index)
         const reg = ChurchAssembler._sharedRegistry;
         if (reg) {
             const abs = reg.getByName(name);
@@ -444,11 +472,11 @@ class ChurchAssembler {
             case 0: {
                 crDst = this._parseCR(parts[1], lineNum);
                 this._checkPrivCR(crDst, 'LOAD', lineNum);
-                const nsSlot0 = this._resolveNSName(parts[2]);
-                if (nsSlot0 !== null && !parts[3]) {
+                const res0 = this._resolveNSNameBracket(parts[2], parts[3]);
+                if (res0 !== null && (!parts[3] || res0.consumed)) {
                     crSrc = 6;   // CR6 = c-list root by convention
-                    imm   = nsSlot0;
-                    this.nsLoaded[(parts[2] || '').replace(/,/g, '').trim()] = crDst;
+                    imm   = res0.slot;
+                    this.nsLoaded[res0.key] = crDst;
                 } else {
                     crSrc = this._parseCR(parts[2], lineNum);
                     this._checkPrivCR(crSrc, 'LOAD', lineNum);
@@ -459,11 +487,11 @@ class ChurchAssembler {
             case 1: {
                 crDst = this._parseCR(parts[1], lineNum);
                 this._checkPrivCR(crDst, 'SAVE', lineNum);
-                const nsSlot1 = this._resolveNSName(parts[2]);
-                if (nsSlot1 !== null && !parts[3]) {
+                const res1 = this._resolveNSNameBracket(parts[2], parts[3]);
+                if (res1 !== null && (!parts[3] || res1.consumed)) {
                     crSrc = 6;
-                    imm   = nsSlot1;
-                    this.nsLoaded[(parts[2] || '').replace(/,/g, '').trim()] = crDst;
+                    imm   = res1.slot;
+                    this.nsLoaded[res1.key] = crDst;
                 } else {
                     crSrc = this._parseCR(parts[2], lineNum);
                     this._checkPrivCR(crSrc, 'SAVE', lineNum);
@@ -582,10 +610,10 @@ class ChurchAssembler {
             case 8: {
                 crDst = this._parseCR(parts[1], lineNum);
                 this._checkPrivCR(crDst, 'ELOADCALL', lineNum);
-                const nsSlot8 = this._resolveNSName(parts[2]);
-                if (nsSlot8 !== null && !parts[3]) {
+                const res8 = this._resolveNSNameBracket(parts[2], parts[3]);
+                if (res8 !== null && (!parts[3] || res8.consumed)) {
                     crSrc = 6;
-                    imm   = nsSlot8;
+                    imm   = res8.slot;
                 } else {
                     crSrc = this._parseCR(parts[2], lineNum);
                     this._checkPrivCR(crSrc, 'ELOADCALL', lineNum);
@@ -596,10 +624,10 @@ class ChurchAssembler {
             case 9: {
                 crDst = this._parseCR(parts[1], lineNum);
                 this._checkPrivCR(crDst, 'XLOADLAMBDA', lineNum);
-                const nsSlot9 = this._resolveNSName(parts[2]);
-                if (nsSlot9 !== null && !parts[3]) {
+                const res9 = this._resolveNSNameBracket(parts[2], parts[3]);
+                if (res9 !== null && (!parts[3] || res9.consumed)) {
                     crSrc = 6;
-                    imm   = nsSlot9;
+                    imm   = res9.slot;
                 } else {
                     crSrc = this._parseCR(parts[2], lineNum);
                     this._checkPrivCR(crSrc, 'XLOADLAMBDA', lineNum);
