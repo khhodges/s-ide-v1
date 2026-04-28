@@ -160,14 +160,19 @@
     gap: 5px;
     padding: 3px 8px 4px 8px;
     font-size: 10px;
-    background: rgba(120, 30, 30, 0.18);
-    border-top: 1px solid rgba(200, 80, 80, 0.18);
+    background: rgba(60, 80, 100, 0.13);
+    border-top: 1px solid rgba(100, 140, 180, 0.14);
     border-radius: 0 0 4px 4px;
-    color: #c0906a;
+    color: #8aaccc;
     font-family: 'JetBrains Mono', 'Fira Mono', monospace;
 }
-.gate-loc-step {
+.gate-location-fault {
+    background: rgba(120, 30, 30, 0.18);
+    border-top-color: rgba(200, 80, 80, 0.18);
     color: #c0906a;
+}
+.gate-loc-step {
+    color: inherit;
     font-weight: 600;
 }
 .gate-loc-step-link {
@@ -184,25 +189,46 @@
     text-underline-offset: 2px;
     transition: color 0.15s;
 }
+.gate-location .gate-loc-step-link {
+    color: #78b4e8;
+    text-decoration-color: rgba(120, 180, 232, 0.4);
+}
+.gate-location-fault .gate-loc-step-link {
+    color: #e8a070;
+    text-decoration-color: rgba(232, 160, 112, 0.4);
+}
 .gate-loc-step-link:hover {
     color: #ffbe88;
     text-decoration-color: rgba(255, 190, 136, 0.7);
+}
+.gate-location .gate-loc-step-link:hover {
+    color: #a8d4ff;
+    text-decoration-color: rgba(168, 212, 255, 0.7);
 }
 .fault-step-link {
     font-family: inherit;
     font-size: inherit;
 }
 .gate-loc-sep {
-    color: #604040;
+    color: #506070;
     user-select: none;
 }
+.gate-location-fault .gate-loc-sep {
+    color: #604040;
+}
 .gate-loc-pc {
+    color: #7090a8;
+}
+.gate-location-fault .gate-loc-pc {
     color: #a08060;
 }
 .gate-loc-instr {
-    color: #d4b080;
+    color: #90c0e0;
     font-weight: 600;
     letter-spacing: 0.02em;
+}
+.gate-location-fault .gate-loc-instr {
+    color: #d4b080;
 }
 
 .gate-label {

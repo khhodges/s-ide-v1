@@ -470,22 +470,31 @@ function updateGateLog() {
             html += `<span class="gate-flag">B=${a.b}</span><span class="gate-flag">F=${a.f}</span>`;
         }
         html += `</div>`;
-        // Fault location footer — only shown when an instruction context is available
-        // (i.e. fault came from a runtime step(), not a boot-phase _bootStep()).
-        if (!pass && a.stepCtx) {
+        // Instruction context footer — shown for every gate entry that has step context
+        // (i.e. any runtime step(), not a boot-phase _bootStep()).
+        if (a.stepCtx) {
             const ctx = a.stepCtx;
-            let instrStr;
+            let rawDisasm;
             if (ctx.instrWord != null) {
                 const disasm = (assembler || new ChurchAssembler()).disassemble(ctx.instrWord);
-                if (disasm.startsWith('???')) {
-                    instrStr = `${ctx.opName}&nbsp;CR${ctx.crDst},&nbsp;CR${ctx.crSrc},&nbsp;#${ctx.imm}`;
-                } else {
-                    instrStr = disasm.replace(/ /g, '&nbsp;');
-                }
+                rawDisasm = disasm.startsWith('???')
+                    ? `${ctx.opName} CR${ctx.crDst}, CR${ctx.crSrc}, #${ctx.imm}`
+                    : disasm;
             } else {
-                instrStr = `${ctx.opName}&nbsp;CR${ctx.crDst},&nbsp;CR${ctx.crSrc},&nbsp;#${ctx.imm}`;
+                rawDisasm = `${ctx.opName} CR${ctx.crDst}, CR${ctx.crSrc}, #${ctx.imm}`;
             }
-            html += `<div class="gate-location">`;
+            // Apply pet names (CR/DR aliases)
+            const _gPetCR = Object.assign({}, _petNameCRMap || {});
+            const _gPetDR = Object.assign({}, _petNameDRMap || {});
+            if (assembler && assembler.getAliases) {
+                const _al = assembler.getAliases();
+                for (const [nm, num] of Object.entries(_al.cr || {})) _gPetCR[num] = nm;
+                for (const [nm, num] of Object.entries(_al.dr || {})) _gPetDR[num] = nm;
+            }
+            const instrStr = rawDisasm
+                .replace(/\bCR(\d+)\b/g, (m, n) => { const a = _gPetCR[+n]; return a ? `<span class="itrace-pet" title="CR${n}">${a}</span>` : m; })
+                .replace(/\bDR(\d+)\b/g, (m, n) => { const a = _gPetDR[+n]; return a ? `<span class="itrace-pet" title="DR${n}">${a}</span>` : m; });
+            html += `<div class="gate-location${pass ? '' : ' gate-location-fault'}">`;
             html += `<button class="gate-loc-step gate-loc-step-link" onclick="jumpToTraceStep(${ctx.step})" title="Jump to this step in the Trace view">Step&nbsp;#${ctx.step}</button>`;
             html += `<span class="gate-loc-sep">&middot;</span>`;
             html += `<span class="gate-loc-pc">PC&nbsp;=&nbsp;${ctx.pc}</span>`;
