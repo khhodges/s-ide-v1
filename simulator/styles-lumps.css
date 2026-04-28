@@ -4133,6 +4133,84 @@ pre:hover .code-copy-btn {
     justify-content: flex-end;
 }
 
+.lump-tier-a-section {
+    margin-top: 0.75rem;
+    border-top: 1px solid rgba(251, 191, 36, 0.25);
+    padding-top: 0.5rem;
+}
+
+.lump-tier-a-header {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--church-gold, #fbbf24);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem 0.35rem;
+}
+
+.lump-tier-a-header-sub {
+    font-weight: 400;
+    color: var(--text-secondary, #888);
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.lump-tier-a-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.5rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    background: rgba(251, 191, 36, 0.04);
+    margin-bottom: 2px;
+    font-size: 0.72rem;
+}
+
+.lump-tier-a-name {
+    font-weight: 700;
+    color: var(--text-primary, #e8e0c8);
+    min-width: 4.5rem;
+}
+
+.lump-tier-a-slot {
+    font-family: monospace;
+    font-size: 0.68rem;
+    color: var(--text-secondary, #888);
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    padding: 0 0.3rem;
+}
+
+.lump-tier-a-status {
+    font-size: 0.68rem;
+    font-weight: 600;
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 3px;
+    padding: 0 0.35rem;
+    white-space: nowrap;
+}
+
+.lump-tier-a-milestone {
+    font-size: 0.68rem;
+    color: var(--text-secondary, #888);
+    flex: 1;
+}
+
+.lump-tier-a-test-id {
+    font-family: monospace;
+    font-size: 0.66rem;
+    color: rgba(251, 191, 36, 0.7);
+    background: rgba(251, 191, 36, 0.07);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    border-radius: 3px;
+    padding: 0 0.35rem;
+    white-space: nowrap;
+    cursor: default;
+}
+
 .sr-instr-tip {
     position: relative;
     cursor: help;

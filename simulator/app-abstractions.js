@@ -539,49 +539,74 @@ async function renderLumps() {
             if (_matched) _selectedLumpToken = _matched.token;
             _pendingLumpAbstractionName = null;
         }
-        if (!lumps || lumps.length === 0) {
-            listEl.innerHTML = '<div class="lumps-placeholder">No lumps saved yet. Use Build LUMP in the editor to compile and save an abstraction.</div>';
-            return;
-        }
-        let html = '';
-        for (const lump of lumps) {
-            const token = lump.token || '????????';
-            const name = lump.abstraction || 'Unknown';
-            const size = lump.lump_size || 0;
-            const methods = lump.methods || [];
-            const lang = lump.language || '';
-            const profile = lump.profile || '';
-            const mtbf = lump.mtbf || {};
-            const mtbfStatus = mtbf.status || 'unknown';
-            const mtbfClass = mtbfStatus === 'green' ? 'mtbf-green'
-                            : mtbfStatus === 'amber'  ? 'mtbf-amber'
-                            : (mtbfStatus === 'unknown' || mtbfStatus === 'untested') ? 'mtbf-unknown'
-                            : 'mtbf-red';
-            const isActive = _selectedLumpToken === token;
+        // Tier A post-launch tracking — always rendered regardless of saved-lump count
+        const _TIER_A_LUMPS = [
+            { name: 'Store',    slot: 47, testId: 'TEST-STORE'    },
+            { name: 'Clock',    slot: 48, testId: 'TEST-CLOCK'    },
+            { name: 'Notify',   slot: 49, testId: 'TEST-NOTIFY'   },
+            { name: 'Identity', slot: 50, testId: 'TEST-IDENTITY' },
+        ];
 
-            const safeToken = _escHtml(token);
-            const safeName = _escHtml(name);
-            const safeLang = _escHtml(lang);
-            const safeProfile = _escHtml(profile);
-            html += `<div class="lump-item${isActive ? ' active' : ''}" data-token="${safeToken}">`;
-            html += `<div class="lump-item-header">`;
-            html += `<span class="lump-item-name">${safeName}`;
-            html += _lumpTypeBadge(lump);
-            html += `</span>`;
-            if (mtbf.status) {
-                const mtbfLabel = (mtbfStatus === 'unknown' || mtbfStatus === 'untested') ? 'UNKNOWN' : mtbfStatus.toUpperCase();
-                html += `<span class="mtbf-badge ${mtbfClass} lump-mtbf-badge" title="${(mtbfStatus === 'unknown' || mtbfStatus === 'untested') ? 'MTBF unknown — needs testing before deployment' : ''}">${_escHtml(mtbfLabel)}</span>`;
+        let html = '';
+        if (!lumps || lumps.length === 0) {
+            html = '<div class="lumps-placeholder">No lumps saved yet. Use Build LUMP in the editor to compile and save an abstraction.</div>';
+        } else {
+            for (const lump of lumps) {
+                const token = lump.token || '????????';
+                const name = lump.abstraction || 'Unknown';
+                const size = lump.lump_size || 0;
+                const methods = lump.methods || [];
+                const lang = lump.language || '';
+                const profile = lump.profile || '';
+                const mtbf = lump.mtbf || {};
+                const mtbfStatus = mtbf.status || 'unknown';
+                const mtbfClass = mtbfStatus === 'green' ? 'mtbf-green'
+                                : mtbfStatus === 'amber'  ? 'mtbf-amber'
+                                : (mtbfStatus === 'unknown' || mtbfStatus === 'untested') ? 'mtbf-unknown'
+                                : 'mtbf-red';
+                const isActive = _selectedLumpToken === token;
+
+                const safeToken = _escHtml(token);
+                const safeName = _escHtml(name);
+                const safeLang = _escHtml(lang);
+                const safeProfile = _escHtml(profile);
+                html += `<div class="lump-item${isActive ? ' active' : ''}" data-token="${safeToken}">`;
+                html += `<div class="lump-item-header">`;
+                html += `<span class="lump-item-name">${safeName}`;
+                html += _lumpTypeBadge(lump);
+                html += `</span>`;
+                if (mtbf.status) {
+                    const mtbfLabel = (mtbfStatus === 'unknown' || mtbfStatus === 'untested') ? 'UNKNOWN' : mtbfStatus.toUpperCase();
+                    html += `<span class="mtbf-badge ${mtbfClass} lump-mtbf-badge" title="${(mtbfStatus === 'unknown' || mtbfStatus === 'untested') ? 'MTBF unknown — needs testing before deployment' : ''}">${_escHtml(mtbfLabel)}</span>`;
+                }
+                html += `</div>`;
+                html += `<div class="lump-item-meta">`;
+                html += `<span class="lump-token">0x${safeToken}</span>`;
+                html += `<span class="lump-size">${size}w</span>`;
+                html += `<span class="lump-methods">${methods.length} method${methods.length !== 1 ? 's' : ''}</span>`;
+                if (lang) html += `<span class="lump-lang">${safeLang}</span>`;
+                if (profile) html += `<span class="lump-profile">${safeProfile}</span>`;
+                html += `</div>`;
+                html += `</div>`;
             }
-            html += `</div>`;
-            html += `<div class="lump-item-meta">`;
-            html += `<span class="lump-token">0x${safeToken}</span>`;
-            html += `<span class="lump-size">${size}w</span>`;
-            html += `<span class="lump-methods">${methods.length} method${methods.length !== 1 ? 's' : ''}</span>`;
-            if (lang) html += `<span class="lump-lang">${safeLang}</span>`;
-            if (profile) html += `<span class="lump-profile">${safeProfile}</span>`;
-            html += `</div>`;
+        }
+
+        // Tier A section — always render all four rows unconditionally
+        html += `<div class="lump-tier-a-section">`;
+        html += `<div class="lump-tier-a-header">Tier A &mdash; Post-Launch Milestones <span class="lump-tier-a-header-sub">(&le;12 weeks post-launch)</span></div>`;
+        for (const ta of _TIER_A_LUMPS) {
+            const safeTestId = _escHtml(ta.testId);
+            const safeName   = _escHtml(ta.name);
+            html += `<div class="lump-tier-a-row">`;
+            html += `<span class="lump-tier-a-name">${safeName}</span>`;
+            html += `<span class="lump-tier-a-slot">slot&nbsp;${ta.slot}</span>`;
+            html += `<span class="lump-tier-a-status">Missing</span>`;
+            html += `<span class="lump-tier-a-milestone">Tier A (&le;12 weeks post-launch)</span>`;
+            html += `<span class="lump-tier-a-test-id" title="Acceptance test gate">${safeTestId}</span>`;
             html += `</div>`;
         }
+        html += `</div>`;
+
         listEl.innerHTML = html;
         listEl.querySelectorAll('.lump-item[data-token]').forEach(el => {
             el.addEventListener('click', () => showLumpDetail(el.dataset.token));
