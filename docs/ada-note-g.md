@@ -271,7 +271,7 @@ Loop pass suffixes: **a** = first pass of the inner loop (V10: 2 → 1), **b** =
 
 ### Trace Part B — V11 through V24
 
-V14 and V15 are not assigned by any of the 25 operations in Ada's original table (V15 is used as a scratch register only in the CLOOMC implementation, not in Ada's published diagram). Both columns remain 0 throughout; they are included here for completeness of the V1–V15, V21–V24 range.
+V14 and V15 are not assigned by any of the 25 operations in Ada's original table, nor by the CLOOMC implementation in `ada_note_g.cloomc`. Both columns remain 0 throughout; they are included here for completeness of the V1–V15, V21–V24 range. (The low-level assembly rendering of the same program uses DR14 as a scratch register for multiply/divide subroutines, but that is an assembly implementation detail — see the "How to Verify" section below.)
 
 | Step | Op | V11 | V12 | V13 | V14 | V15 | V21 | V22 | V23 | V24 |
 |------|----|-----|-----|-----|-----|-----|-----|-----|-----|-----|
@@ -389,6 +389,80 @@ The variable mapping follows Ada's original exactly: V24 receives the final resu
 The CLOOMC program is written in the Church Machine's Symbolic Mathematics front-end, which maps naturally to the Analytical Engine's one-operation-per-step model: each line corresponds to one row of Ada's table, with each intermediate result explicitly named.
 
 For production use, `SlideRule.Bernoulli(n)` computes any Bernoulli number in a single CALL instruction. The `ada_note_g.cloomc` program exists to preserve Ada's algorithm for historical fidelity — a direct operational translation of the 1843 table into a language the Church Machine can execute, with the one correction that Bromley determined the original required.
+
+---
+
+## How to Verify This Trace Using the CLOOMC Simulator
+
+The trace tables above are hand-computed and analytically verified. This section shows how to run the same computation in the Church Machine simulator and cross-check each trace row against the live register state.
+
+### Loading the Program
+
+1. Open the Church Machine IDE.
+2. Click the **Code** tab in the toolbar.
+3. Click the **Ada Note G** preset tab (labelled "Ada Note G" in the example row). This loads `simulator/cloomc/ada_note_g.cloomc` directly. Alternatively, paste the contents of that file into the editor.
+4. Click **Assemble**. The status bar should confirm a successful compilation with no errors and report the number of assembled words.
+5. Click **Run** (or **Run to HALT**) to execute the program to completion. The simulator halts on the `halt` instruction at the end of `compute()`.
+
+The CLOOMC Symbolic Mathematics front-end compiles to rational-arithmetic bytecode. All intermediate results are exact fractions — no floating-point rounding occurs at any step.
+
+### Console Output
+
+When the run completes without faults, the simulator's console area shows a single status line:
+
+```
+Boot complete. Ran N steps. Done.
+```
+
+where *N* is the total instruction count (the exact number varies with the CLOOMC compiler version). If the console instead shows `Faulted.`, a security or arithmetic fault occurred — check the fault log in the Dashboard view. If it shows `Max steps reached`, the loop did not terminate, which indicates a coding error in the loop counter logic.
+
+The IDE automatically switches to the **Dashboard** view on clean completion, where the register values can be read directly.
+
+### Expected State at HALT
+
+When the program halts, open the **Dashboard** view and inspect the data registers. The key values, matched to the final row of each trace section, are:
+
+| Variable | Dashboard register | Expected value | Trace row |
+|----------|--------------------|---------------|-----------|
+| V10 | DR10 | **0** | Step 23b — loop counter exhausted after 2 passes |
+| V13 | DR13 | **1/30** | Step 22b — accumulated sum before negation |
+| V24 | DR24 | **−1/30** | Step 24 — final result B₇ |
+| V3  | DR3  | **5** | Step 25 — n incremented ready for B₉ |
+
+V24 = −1/30 is the result Ada computed on paper in Note G. Any other value in DR24 indicates either a wrong Op 4 operand order (if the result is ≈ 139/630, the Bromley bug is present) or a coding error elsewhere.
+
+### Checking Intermediate Steps
+
+To verify individual trace rows, use the **Step** button or set a breakpoint after any single `let` statement. The following checkpoints correspond to key rows in the trace tables:
+
+| After executing… | Check | Expected | Trace row |
+|------------------|-------|----------|-----------|
+| Op 4 (`let V11 = V4 / V5`) | DR11 | **7/9** | Step 4, Part B |
+| Op 5 (`let V11 = V11 / V2`) | DR11 | **7/18** | Step 5, Part B |
+| Op 6 (`let V13 = V13 - V11`) | DR13 | **−7/18** | Step 6, Part B |
+| Op 9 (`let V11 = V6 / V7`) | DR11 | **4** | Step 9, Part B |
+| Op 10 (`let V12 = V21 * V11`) | DR12 | **2/3** | Step 10, Part B |
+| Op 11 (`let V13 = V12 + V13`) | DR13 | **5/18** | Step 11, Part B |
+| Op 16a (`let V11 = V8 * V11`, 1st loop pass) | DR11 | **28/3** | Step 16a, Part B |
+| Op 20a (`let V11 = V9 * V11`, 1st loop pass) | DR11 | **14** | Step 20a, Part B |
+| Op 21a (`let V12 = V22 * V11`, 1st loop pass) | DR12 | **−7/15** | Step 21a, Part B |
+| Op 22a (`let V13 = V12 + V13`, 1st loop pass) | DR13 | **−17/90** | Step 22a, Part B |
+| Op 21b (`let V12 = V22 * V11`, 2nd loop pass) | DR12 | **2/9** | Step 21b, Part B |
+| Op 22b (`let V13 = V12 + V13`, 2nd loop pass) | DR13 | **1/30** | Step 22b, Part B |
+| Op 24 (`let V24 = V24 - V13`) | DR24 | **−1/30** | Step 24, Part B |
+
+### Note on Variable Numbering: V15 and the Assembly Rendering
+
+The trace table caption in Part B notes that "V15 is used as a scratch register only in the CLOOMC implementation." That remark was written against an earlier draft of the implementation and no longer applies to the current file. **`ada_note_g.cloomc` does not assign V15.** DR15 (= V15 in Ada's numbering) remains 0 throughout the entire execution, exactly as shown in the trace table column.
+
+The source of the confusion is the low-level assembly rendering of the same algorithm, which appears as the `ada_note_g` preset in the IDE's **Code** view when the editor is in assembly mode. That rendering maps Ada's 25 operations onto raw Church Machine instructions using integer arithmetic, and it requires an extra scratch register — **DR14** — for the multiply and divide subroutine loops (since the Church Machine has no MUL or DIV opcodes; multiplication and division are done by repeated IADD/ISUB). In that assembly rendering:
+
+- **DR14** = scratch loop counter for the multiply/divide subroutines (no Ada equivalent; purely an implementation artefact)
+- **DR15** = the final result, corresponding to Ada's **V24**
+
+The DRn registers in the assembly rendering do not follow Ada's V-numbering beyond DR1–DR13. DR14 and DR15 are an artefact of fitting Ada's 25 operations plus the necessary multiply/divide loops into the machine's 16-register file. The CLOOMC symbolic front-end hides this entirely: it uses Ada's V-names directly and compiles to rational arithmetic, so V24 receives the final result with no V15 involvement at any point.
+
+**Summary:** when running `ada_note_g.cloomc` in the CLOOMC simulator, ignore DR15 — it is always 0. The result is in **DR24** (= V24), matching Ada's original diagram.
 
 ---
 
