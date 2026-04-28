@@ -3284,6 +3284,32 @@ window.applyPOLA = async function(nsIdx) {
     }
     const newCC = newGTs.length;
 
+    // ── Step 4c: update assembler.nsSymbols for Abstract LED GTs ───────────
+    // Abstract GT:      type bits [24:23] = 0b11
+    // AB_TYPE_IO:       bits [31:27] = 0x00
+    // DEVICE_CLASS_LED: bits [15:8]  = 0x01
+    // device_data:      bits [7:0]   = LED index (0–5)
+    const ledRemappings = [];
+    for (let i = 0; i < cc; i++) {
+        const gt = oldGTs[i];
+        if (gt === 0) continue;
+        if (((gt >>> 23) & 0x3) === 3 &&
+            ((gt >>> 27) & 0x1F) === 0 &&
+            ((gt >>> 8) & 0xFF) === 1) {
+            const deviceData = gt & 0xFF;
+            if (deviceData >= 0 && deviceData <= 5 && oldToNew.has(i)) {
+                const newSlot = oldToNew.get(i);
+                const key = 'LED[' + deviceData + ']';
+                if (typeof assembler !== 'undefined' && assembler && assembler.nsSymbols) {
+                    assembler.nsSymbols[key] = newSlot;
+                }
+                if (newSlot !== i) {
+                    ledRemappings.push(`  ${key}: slot ${i} \u2192 ${newSlot}`);
+                }
+            }
+        }
+    }
+
     // Early exit if nothing changed
     if (zeroedCount === 0 && newCC === cc) {
         if (typeof showPatchModal === 'function')
@@ -3511,6 +3537,10 @@ window.applyPOLA = async function(nsIdx) {
                 logLines.push(`  slot ${oldSlot} \u2192 ${newSlot}${_pn3 ? ` \u201C${_pn3}\u201D` : ''}`);
             }
         }
+    }
+    if (ledRemappings.length > 0) {
+        logLines.push(`LED pet-name${ledRemappings.length !== 1 ? 's' : ''} remapped:`);
+        logLines.push(...ledRemappings);
     }
     if (rewriteCount > 0) logLines.push(`Rewrote ${rewriteCount} instruction word${rewriteCount !== 1 ? 's' : ''}`);
     if (changedSourceLines.length > 0)
