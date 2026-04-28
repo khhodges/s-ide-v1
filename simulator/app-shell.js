@@ -336,7 +336,7 @@ function init() {
     // here after a previous session generated an image.
     _probeBootImage().then(buf => {
         if (buf) { window.bootImage = buf; window.bootImageAvailable = true;
-                   try { sim.loadBootImage(buf); _syncBootEntryFromSim(); } catch(e) { console.warn('[bootImage] apply failed:', e); } }
+                   try { sim.loadBootImage(buf); _applyBootEntryToSim(); } catch(e) { console.warn('[bootImage] apply failed:', e); } }
     });
     sim.on('programLoaded', () => {
         if (currentView === 'namespace') updateNamespace();

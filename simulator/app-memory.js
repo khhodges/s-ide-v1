@@ -2359,13 +2359,13 @@ function _probeBootImage() {
 // programmer-authored binary survives manual resets.
 function _maybeApplyBootImage() {
     if (window.bootImage) {
-        try { sim.loadBootImage(window.bootImage); _syncBootEntryFromSim(); } catch (e) { console.warn('[bootImage] apply failed:', e); }
+        try { sim.loadBootImage(window.bootImage); _applyBootEntryToSim(); } catch (e) { console.warn('[bootImage] apply failed:', e); }
         return;
     }
     if (window.bootImageAvailable) {
         _probeBootImage().then(buf => {
             if (buf) { window.bootImage = buf;
-                       try { sim.loadBootImage(buf); _syncBootEntryFromSim(); } catch(e){ console.warn('[bootImage] apply failed:', e); } }
+                       try { sim.loadBootImage(buf); _applyBootEntryToSim(); } catch(e){ console.warn('[bootImage] apply failed:', e); } }
         });
     }
 }
@@ -2410,7 +2410,7 @@ function generateBootImage() {
             _probeBootImage().then(buf => {
                 if (buf) {
                     window.bootImage = buf;
-                    try { sim.loadBootImage(buf); _syncBootEntryFromSim(); } catch(e) { console.warn('[bootImage] apply failed:', e); }
+                    try { sim.loadBootImage(buf); _applyBootEntryToSim(); } catch(e) { console.warn('[bootImage] apply failed:', e); }
                 }
             });
         })

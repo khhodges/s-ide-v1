@@ -504,6 +504,13 @@ function _syncBootEntryFromSim() {
     }
 }
 
+function _applyBootEntryToSim() {
+    if (!sim) return;
+    if (sim.bootEntrySlot !== bootEntrySlot) {
+        sim.bootEntrySlot = bootEntrySlot;
+    }
+}
+
 let _lumpsCache = [];
 let _selectedLumpToken = null;
 let _pendingLumpAbstractionName = null;
