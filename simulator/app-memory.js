@@ -1838,6 +1838,14 @@ function _installBootEntryGTIntoCR0() {
         }
     }
     if (wrote) {
+        const gtHex = '0x' + (gtWord >>> 0).toString(16).toUpperCase().padStart(8, '0');
+        const logLine = `[IDE] CR0 \u2190 E-GT(Slot ${bSlot}) ${gtHex} \u2014 boot-entry first-LUMP installed`;
+        sim.output += logLine + '\n';
+        const con = document.getElementById('editorConsole');
+        if (con) {
+            con.textContent += '\n' + logLine;
+            con.scrollTop = con.scrollHeight;
+        }
         if (typeof updateCRDetail === 'function') updateCRDetail();
         if (typeof updateNamespace === 'function') updateNamespace();
     }
