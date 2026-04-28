@@ -162,6 +162,11 @@ NUM_TURING_OPCODES = 10
 NUM_TOTAL_OPCODES = NUM_CHURCH_OPCODES + NUM_TURING_OPCODES
 
 
+# Opcodes 0b10110–0b11101 (26–29) are reserved for future instructions
+# (e.g. floating-point).  0x1E is the last slot before the lump-header magic.
+OPCODE_WORD = 0b11110   # = 0x1E = 30 — inline data constant; INVALID_OP if executed
+
+
 class CondCode(IntEnum):
     EQ = 0b0000
     NE = 0b0001

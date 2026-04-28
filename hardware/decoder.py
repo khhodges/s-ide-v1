@@ -9,7 +9,7 @@ class ChurchDecoder(Elaboratable):
     """Church Machine decoder — clean 32-bit instruction format.
 
     Instruction format (32 bits) — matches patent Section 14:
-        [31:27]  opcode    — 5 bits (10 Church opcodes + 10 Turing + 12 reserved)
+        [31:27]  opcode    — 5 bits (10 Church opcodes + 10 Turing + 11 reserved; 0x1E=WORD data)
         [26:23]  condition — 4 bits (ARM-style conditional execution)
         [22:19]  cr_dst    — 4 bits (destination CR for Church ops; DR index for Turing ops)
         [18:15]  cr_src    — 4 bits (source CR for Church ops; DR index for Turing ops)

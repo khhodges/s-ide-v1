@@ -13,12 +13,15 @@
 //
 // INSTRUCTION ENCODING  (32-bit word, big-endian field layout)
 //
-//   All instructions share a common header:
-//     bits[31:28]  opcode   (4 bits, 0–18)
-//     bit [27]     condition enable
+//   Standard instruction header (opcodes 0–19):
+//     bits[31:27]  opcode   (5 bits, 0–19 for instructions; 0x1E=WORD; 0x1F=lump header)
 //     bits[26:23]  condition code (ARM-style: EQ/NE/CS/CC/MI/PL/VS/VC/
 //                                              HI/LS/GE/LT/GT/LE/AL/NV)
 //     bits[22:0]   operand fields  (vary by opcode — see cases in assemble())
+//
+//   WORD directive (opcode 0x1E) — inline data constant:
+//     bits[31:27]  0x1E
+//     bits[26:0]   27-bit data payload  (INVALID_OP if executed; read via DREAD CR14)
 //
 // OPCODES
 //   0  LOAD       CR ← NS[idx]          Load abstraction GT into CR
@@ -41,6 +44,9 @@
 //  17  BRANCH     conditional branch    PC-relative jump
 //  18  SHL        shift left            DR ← DR << n
 //  19  SHR        shift right           DR ← DR >> n  (logical)
+//  --  (20–29 reserved for future instructions, e.g. floating-point)
+// 0x1E WORD       inline data constant  bits[26:0] = 27-bit payload
+// 0x1F             lump header magic    (not an instruction)
 //
 // CONDITION CODES  (ARM-compatible, bits[26:23])
 //   0  EQ  Equal                     Z=1
@@ -158,6 +164,7 @@ class ChurchAssembler {
             'BFEXT': 12, 'BFINS': 13,
             'MCMP': 14, 'IADD': 15, 'ISUB': 16,
             'BRANCH': 17, 'SHL': 18, 'SHR': 19,
+            'WORD': 0x1E,
         };
         this.conditions = {
             'EQ': 0, 'NE': 1, 'CS': 2, 'CC': 3,
@@ -736,6 +743,27 @@ class ChurchAssembler {
                 imm = (arith << 5) | shamt;
                 break;
             }
+            case 0x1E: {
+                // WORD value — inline 27-bit data constant embedded in the code lump.
+                // bits[31:27] = 0x1E; bits[26:0] = payload.  No condition, no CR fields.
+                // Read back with: DREAD DR, CR14, #offset (hardware raises INVALID_OP if executed).
+                // Uses a direct 27-bit parse rather than _parseImm which caps at 16 bits.
+                let rawTok = (parts[1] || '').replace(/,/g, '').trim();
+                if (rawTok.startsWith('#')) rawTok = rawTok.substring(1);
+                let wordVal = 0;
+                if (rawTok.startsWith('0x') || rawTok.startsWith('0X')) {
+                    wordVal = parseInt(rawTok, 16);
+                } else if (rawTok.startsWith('0b') || rawTok.startsWith('0B')) {
+                    wordVal = parseInt(rawTok.substring(2), 2);
+                } else {
+                    wordVal = parseInt(rawTok, 10);
+                }
+                if (isNaN(wordVal)) {
+                    this.errors.push({ line: lineNum, message: `WORD expects a numeric value (decimal, 0x hex, or 0b binary) but got "${rawTok}".` });
+                    wordVal = 0;
+                }
+                return ((0x1E << 27) | (wordVal >>> 0 & 0x7FFFFFF)) >>> 0;
+            }
         }
 
         return (
@@ -990,6 +1018,12 @@ class ChurchAssembler {
 
         const opNames   = ['LOAD','SAVE','CALL','RETURN','CHANGE','SWITCH','TPERM','LAMBDA','ELOADCALL','XLOADLAMBDA','DREAD','DWRITE','BFEXT','BFINS','MCMP','IADD','ISUB','BRANCH','SHL','SHR'];
         const condNames = ['EQ','NE','CS','CC','MI','PL','VS','VC','HI','LS','GE','LT','GT','LE','','NV'];
+
+        // WORD inline data constant — 27-bit payload in bits[26:0]
+        if (opcode === 0x1E) {
+            const data = word & 0x7FFFFFF;
+            return `WORD 0x${data.toString(16).toUpperCase().padStart(7, '0')}`;
+        }
 
         // Lump header: magic=0x1F in top 5 bits — format: magic(5)|n_minus_6(4)|cw(13)|typ(2)|cc(8)
         // typ: 00=lump, 01=data, 10=thread, 11=outform

@@ -571,6 +571,46 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
         `explicit=0x${(r1.words[0]>>>0).toString(16)} bracket=0x${(r2.words[0]>>>0).toString(16)}`);
 }
 
+// ── WORD inline data constant ─────────────────────────────────────────────────
+
+// W1: WORD 1  — no errors, opcode field = 0x1E, payload = 1
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('WORD 1');
+    assert('W1 WORD 1: no errors', a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('W1 WORD 1: one word emitted', r.words.length === 1, `length=${r.words.length}`);
+    const w = r.words[0] >>> 0;
+    assert('W1 WORD 1: opcode field = 0x1E', (w >>> 27) === 0x1E, `opcode=${(w>>>27).toString(16)}`);
+    assert('W1 WORD 1: payload = 1',          (w & 0x7FFFFFF) === 1, `payload=${w & 0x7FFFFFF}`);
+}
+
+// W2: WORD 0x1234567  — 27-bit hex payload
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('WORD 0x1234567');
+    assert('W2 WORD hex: no errors', a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    const w = r.words[0] >>> 0;
+    assert('W2 WORD hex: opcode 0x1E', (w >>> 27) === 0x1E,        `opcode=${(w>>>27).toString(16)}`);
+    assert('W2 WORD hex: payload',     (w & 0x7FFFFFF) === 0x1234567, `payload=0x${(w&0x7FFFFFF).toString(16)}`);
+}
+
+// W3: disassemble WORD word → "WORD 0x0000001"
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('WORD 1');
+    const dis = a.disassemble(r.words[0]);
+    assert('W3 WORD disassemble: starts with WORD', dis.startsWith('WORD '), `dis="${dis}"`);
+    assert('W3 WORD disassemble: payload visible',  dis.includes('1'),        `dis="${dis}"`);
+}
+
+// W4: WORD produces opcode 0x1E, not anything in the 0–19 range
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('WORD 42');
+    const w = r.words[0] >>> 0;
+    assert('W4 WORD opcode is 0x1E not 0-19', (w >>> 27) === 0x1E, `opcode=${(w>>>27).toString(16)}`);
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);

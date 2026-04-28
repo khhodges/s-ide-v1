@@ -2731,6 +2731,9 @@ class ChurchSimulator {
             case 17: result = this._execBranch(d); break;
             case 18: result = this._execShl(d); break;
             case 19: result = this._execShr(d); break;
+            case 0x1E:
+                this.fault('INVALID_OP', `WORD (opcode 0x1E) is an inline data constant and cannot be executed — check your RETURN placement`);
+                return null;
             default:
                 this.fault('INVALID_OP', `Unknown opcode ${d.opcode}`);
                 return null;
