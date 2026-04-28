@@ -169,6 +169,11 @@ function openCRDetail(crIdx) {
     updateCRDetail();
 }
 
+function openCRDetailAtPC(pc) {
+    _crDetailHighlightPC = (pc !== undefined && pc !== null) ? (pc >>> 0) : null;
+    openCRDetail(14);
+}
+
 let crDetailTab = 'code';
 let clistExpandedIdx = null;
 

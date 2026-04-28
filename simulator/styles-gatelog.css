@@ -32,6 +32,29 @@
     opacity: 0.85;
 }
 
+.audit-gate-clickable {
+    cursor: pointer;
+    position: relative;
+}
+.audit-gate-clickable::after {
+    content: '\25BA\00A0code';
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: 0.68rem;
+    color: rgba(120, 180, 240, 0.5);
+    font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+}
+.audit-gate-clickable:hover {
+    background: rgba(30, 50, 80, 0.8) !important;
+    box-shadow: 0 0 0 1px rgba(80, 140, 220, 0.35);
+}
+.audit-gate-clickable:hover::after {
+    color: rgba(140, 200, 255, 0.85);
+}
+
 .gate-header {
     display: flex;
     align-items: center;

@@ -1,3 +1,5 @@
+var _crDetailHighlightPC = null;
+
 function _resolveCListPetName(gtWord) {
     if (!gtWord || gtWord === 0) return null;
     try {
@@ -325,6 +327,9 @@ function updateCRDetail() {
             const isPC    = lumpHdr.valid
                 ? (addr === baseLoc + 1 + sim.pc)
                 : ((addr === (sim.programBaseAddr || 0) + sim.pc) || (addr === sim.pc));
+            const isGateHL = _crDetailHighlightPC !== null && (lumpHdr.valid
+                ? (addr === baseLoc + 1 + _crDetailHighlightPC)
+                : ((addr === (sim.programBaseAddr || 0) + _crDetailHighlightPC) || (addr === _crDetailHighlightPC)));
             const isBP    = simBreakpoints.has(addr);
 
             if (_brLabelMap.has(w)) {
@@ -336,6 +341,7 @@ function updateCRDetail() {
             const decomp = _decompileWord(word, addr, nsIdx, _lumpClistBase, _crPets3);
             const isCompiler = decomp && decomp.compiler;
             let rowClass = isPC ? 'code-pc-row' : (isBP ? 'code-bp-row' : (isCompiler ? 'code-row-compiler' : ''));
+            if (isGateHL) rowClass = (rowClass ? rowClass + ' ' : '') + 'code-gate-row';
             const _clobberInfos = _clobberWordMap.get(w);
             if (_clobberInfos) rowClass = (rowClass ? rowClass + ' ' : '') + 'code-row-clobber';
             const _clobberOriginInfos = _clobberOriginMap.get(w);
@@ -1316,8 +1322,10 @@ function updateCRDetail() {
         contentEl.classList.remove('crd-content-thread');
     }
     requestAnimationFrame(() => {
-        const pcRow = contentEl.querySelector('.code-pc-row');
-        if (pcRow) pcRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const scrollTarget = (_crDetailHighlightPC !== null
+            ? contentEl.querySelector('.code-gate-row')
+            : null) || contentEl.querySelector('.code-pc-row');
+        if (scrollTarget) scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 }
 

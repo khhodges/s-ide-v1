@@ -450,7 +450,8 @@ function updateGateLog() {
         else if (isLumpHdr) badgeClass = 'gate-lump';
         else if (isNSType)  badgeClass = 'gate-nstype';
         else                badgeClass = 'gate-mload';
-        html += `<div class="audit-gate ${pass ? 'gate-pass' : 'gate-fail'}">`;
+        const _hasClickPC = a.stepCtx && typeof a.stepCtx === 'object' && a.stepCtx.pc !== undefined;
+        html += `<div class="audit-gate ${pass ? 'gate-pass' : 'gate-fail'}${_hasClickPC ? ' audit-gate-clickable' : ''}"${_hasClickPC ? ` onclick="openCRDetailAtPC(${a.stepCtx.pc})" title="Click to view instruction in CR14 code view"` : ''}>`;
         html += `<div class="gate-header">`;
         html += `<span class="gate-type-badge ${badgeClass}">${a.gate}</span>`;
         html += `<span class="gate-label">NS[${a.nsIndex}] &ldquo;${a.label}&rdquo;</span>`;
@@ -525,7 +526,7 @@ function updateGateLog() {
                 .replace(/\bCR(\d+)\b/g, (m, n) => { const a = _gPetCR[+n]; return a ? `<span class="itrace-pet" title="CR${n}">${a}</span>` : m; })
                 .replace(/\bDR(\d+)\b/g, (m, n) => { const a = _gPetDR[+n]; return a ? `<span class="itrace-pet" title="DR${n}">${a}</span>` : m; });
             html += `<div class="gate-location${pass ? '' : ' gate-location-fault'}">`;
-            html += `<button class="gate-loc-step gate-loc-step-link" onclick="jumpToTraceStep(${ctx.step})" title="Jump to this step in the Trace view">Step&nbsp;#${ctx.step}</button>`;
+            html += `<button class="gate-loc-step gate-loc-step-link" onclick="event.stopPropagation();jumpToTraceStep(${ctx.step})" title="Jump to this step in the Trace view">Step&nbsp;#${ctx.step}</button>`;
             html += `<span class="gate-loc-sep">&middot;</span>`;
             html += `<span class="gate-loc-pc">PC&nbsp;=&nbsp;${ctx.pc}</span>`;
             html += `<span class="gate-loc-sep">&middot;</span>`;

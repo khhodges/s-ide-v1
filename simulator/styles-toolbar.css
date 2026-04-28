@@ -461,6 +461,8 @@
 .code-disasm { color: var(--church-green); }
 .code-pc-row { background: rgba(233, 69, 96, 0.2) !important; }
 .code-pc-row td { color: var(--text-primary) !important; font-weight: 600; }
+.code-gate-row { background: rgba(59, 130, 246, 0.22) !important; }
+.code-gate-row td { color: var(--text-primary) !important; font-weight: 600; }
 .code-decompiled-hdr { color: var(--church-blue); min-width: 120px; }
 .br-arrow-hdr { width: 0; padding: 0 !important; border: none; }
 .br-arrow-col { padding: 0 !important; vertical-align: middle; border-left: none !important; border-right: none !important; line-height: 0; }
