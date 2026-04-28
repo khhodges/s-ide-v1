@@ -189,19 +189,95 @@ For n=3 the inner loop runs n−2=**1** time, using B₃ (−1/30) loaded in V22
 
 ---
 
+### Abbreviated Trace — n=5 (computing B₉)
+
+For n=5 the inner loop runs n−2=**3** times, using B₃ (−1/30) in V22, B₅ (1/42) in V23, and B₇ (−1/30) in V24. The loop advancement step is extended to `let V22 = V23; let V23 = V24` at the end of each pass, sliding the B-chain window forward so each pass reads the next Bernoulli number.
+
+**Initial state (n=5 run):**
+
+| Variable | Value | Meaning |
+|----------|-------|---------|
+| V1  | 1     | Constant 1 |
+| V2  | 2     | Constant 2 |
+| V3  | 5     | n=5 |
+| V21 | 1/6   | B₁ (seed) |
+| V22 | −1/30 | B₃ (restored from V20 scratch after Run 3 overwrote it) |
+| V23 | 1/42  | B₅ (result of Run 2, unchanged by Run 3) |
+| V24 | −1/30 | B₇ (result of Run 3) |
+| V4–V13, V25 | 0 | Working columns, cleared |
+
+**Key computed values:**
+
+| Block | Ops | Variable | Value | How |
+|-------|-----|----------|-------|-----|
+| Setup | 1   | V4=V5=V6 | 10    | 2×5 |
+| Setup | 2   | V4       | 9     | 10−1 = 2n−1 |
+| Setup | 3   | V5       | 11    | 10+1 = 2n+1 |
+| Setup | 4   | V11      | 9/11  | V4÷V5 (Bromley correction) |
+| Setup | 5   | V11      | 9/22  | (9/11)÷2 |
+| Setup | 6   | V13      | −9/22 | 0−9/22 = A₀ |
+| Setup | 7   | V10      | 4     | 5−1 = n−1 (loop counter) |
+| 1st term | 8 | V7  | 2     | denominator counter initialised |
+| 1st term | 9 | V11 | 5     | V6÷V7 = 10÷2 (A₁ first factor) |
+| 1st term | 10 | V12 | 5/6   | V21×V11 = (1/6)×5 = B₁×A₁ |
+| 1st term | 11 | V13 | 14/33 | 5/6+(−9/22) = 55/66−27/66 = 28/66 |
+| 1st term | 12 | V10 | 3     | 4−1 → three loop passes follow |
+| Inner loop (pass 1) | 13 | V6  | 9    | 10−1 |
+| Inner loop (pass 1) | 14 | V7  | 3    | 2+1 |
+| Inner loop (pass 1) | 15 | V8  | 3    | 9÷3 |
+| Inner loop (pass 1) | 16 | V11 | 15   | 3×5 |
+| Inner loop (pass 1) | 17 | V6  | 8    | 9−1 |
+| Inner loop (pass 1) | 18 | V7  | 4    | 3+1 |
+| Inner loop (pass 1) | 19 | V9  | 2    | 8÷4 |
+| Inner loop (pass 1) | 20 | V11 | 30   | 2×15 → A₂=30 |
+| Inner loop (pass 1) | 21 | V12 | −1   | V22×V11 = (−1/30)×30 = B₃×A₂ |
+| Inner loop (pass 1) | 22 | V13 | −19/33 | −1+14/33 = −33/33+14/33 |
+| Inner loop (pass 1) | advance | V22 | 1/42  | V23 (= B₅) |
+| Inner loop (pass 1) | advance | V23 | −1/30 | V24 (= B₇) |
+| Inner loop (pass 2) | 13 | V6  | 7    | 8−1 |
+| Inner loop (pass 2) | 14 | V7  | 5    | 4+1 |
+| Inner loop (pass 2) | 15 | V8  | 7/5  | 7÷5 |
+| Inner loop (pass 2) | 16 | V11 | 42   | (7/5)×30 |
+| Inner loop (pass 2) | 17 | V6  | 6    | 7−1 |
+| Inner loop (pass 2) | 18 | V7  | 6    | 5+1 |
+| Inner loop (pass 2) | 19 | V9  | 1    | 6÷6 |
+| Inner loop (pass 2) | 20 | V11 | 42   | 1×42 → A₃=42 |
+| Inner loop (pass 2) | 21 | V12 | 1    | V22×V11 = (1/42)×42 = B₅×A₃ |
+| Inner loop (pass 2) | 22 | V13 | 14/33 | 1+(−19/33) = 33/33−19/33 |
+| Inner loop (pass 2) | advance | V22 | −1/30 | V23 (= B₇) |
+| Inner loop (pass 2) | advance | V23 | −1/30 | V24 (= B₇) |
+| Inner loop (pass 3) | 13 | V6  | 5    | 6−1 |
+| Inner loop (pass 3) | 14 | V7  | 7    | 6+1 |
+| Inner loop (pass 3) | 15 | V8  | 5/7  | 5÷7 |
+| Inner loop (pass 3) | 16 | V11 | 30   | (5/7)×42 |
+| Inner loop (pass 3) | 17 | V6  | 4    | 5−1 |
+| Inner loop (pass 3) | 18 | V7  | 8    | 7+1 |
+| Inner loop (pass 3) | 19 | V9  | 1/2  | 4÷8 |
+| Inner loop (pass 3) | 20 | V11 | 15   | (1/2)×30 → A₄=15 |
+| Inner loop (pass 3) | 21 | V12 | −1/2 | V22×V11 = (−1/30)×15 = B₇×A₄ |
+| Inner loop (pass 3) | 22 | V13 | −5/66 | −1/2+14/33 = −33/66+28/66 |
+| Inner loop (pass 3) | 23 | V10 | 0    | 1−1 → loop exits |
+| Finalize | 24 | V25 | **5/66** | 0−(−5/66) |
+| Finalize | 25 | V3  | 6    | advance n for next run |
+
+**Result: B₉ = 5/66.** This value is written into V25.
+
+---
+
 ### The Series Build-up
 
-The three runs form a chain: each run reads Bernoulli numbers produced by its predecessors and writes one new value that the next run will read.
+The four runs form a chain: each run reads Bernoulli numbers produced by its predecessors and writes one new value that the next run will read.
 
 | Run | n | Loop passes | Bernoulli numbers read | Result written to |
 |-----|---|-------------|------------------------|-------------------|
 | 1st | 2 | 0 | B₁ = 1/6 only | V22 ← B₃ = −1/30 |
 | 2nd | 3 | 1 | B₁ = 1/6, B₃ = −1/30 | V23 ← B₅ = 1/42 |
 | 3rd | 4 | 2 | B₁ = 1/6, B₃ = −1/30, B₅ = 1/42 | V24 ← B₇ = −1/30 |
+| 4th | 5 | 3 | B₁ = 1/6, B₃ = −1/30, B₅ = 1/42, B₇ = −1/30 | V25 ← B₉ = 5/66 |
 
 This self-referential structure is precisely what makes Note G remarkable. The 25 operations are not a one-off calculation but a reusable program: the same barrel of cards, advanced from n=2 upward, produces every odd Bernoulli number in sequence. Ada made this explicit by labelling V21–V23 as "previously computed" values and by including Operation 25 — which increments V3 (i.e., n) — as the final step, so the Engine is left ready to begin the next computation immediately.
 
-The complete three-run chain is implemented as an executable CLOOMC program in `simulator/cloomc/ada_note_g_series.cloomc`. It seeds only V21 = 1/6 by hand, then runs the 25-operation program for n=2, n=3, and n=4 in sequence. The result of each run is transferred into the next run's Store before execution begins, exactly mirroring the feed-forward structure described above. A scratch register (V20, outside Ada's original V1–V24 layout) is used to preserve the computed B₃ across the n=3 run, compensating for a CLOOMC loop-advance step that would otherwise overwrite V22; this workaround is explained in the file header. Comments in the file tie each sub-invocation to the abbreviated traces in the sections above.
+The complete four-run chain is implemented as an executable CLOOMC program in `simulator/cloomc/ada_note_g_series.cloomc`. It seeds only V21 = 1/6 by hand, then runs the 25-operation program for n=2, n=3, n=4, and n=5 in sequence. The result of each run is transferred into the next run's Store before execution begins, exactly mirroring the feed-forward structure described above. A scratch register (V20, outside Ada's original V1–V24 layout) holds the computed B₃ and is used to restore V22 before both the n=4 and n=5 runs, compensating for a CLOOMC loop-advance step at the end of each inner loop that would otherwise leave V22 pointing at the wrong Bernoulli number; this workaround is explained in the file header. Comments in the file tie each sub-invocation to the abbreviated traces in the sections above.
 
 ---
 
