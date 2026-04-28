@@ -1548,9 +1548,48 @@ const _FAULT_DESCRIPTIONS = {
     STACK_CORRUPT:  'The call-stack integrity check failed — the saved return address or frame data has been overwritten. This may indicate a buffer overflow or stray write that corrupted the stack region.',
 };
 
+// ── Fault-note localStorage persistence ──────────────────────────────────────
+const _FAULT_NOTE_LS_PREFIX = 'cm_fault_note:';
+
+function _faultNoteKey(f) {
+    const pc = (f.physicalPC !== undefined && f.physicalPC !== null) ? f.physicalPC : f.pc;
+    return _FAULT_NOTE_LS_PREFIX + f.type + ':' + (pc >>> 0) + ':' + f.step;
+}
+
+function _saveFaultNote(f, note) {
+    try {
+        if (note) {
+            localStorage.setItem(_faultNoteKey(f), note);
+        } else {
+            localStorage.removeItem(_faultNoteKey(f));
+        }
+    } catch(e) {}
+}
+
+function _loadFaultNote(f) {
+    try { return localStorage.getItem(_faultNoteKey(f)) || ''; } catch(e) { return ''; }
+}
+
+function _clearAllFaultNotes() {
+    try {
+        const keys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith(_FAULT_NOTE_LS_PREFIX)) keys.push(k);
+        }
+        for (const k of keys) localStorage.removeItem(k);
+    } catch(e) {}
+}
+
 function showFaultModal(f) {
     const existing = document.getElementById('faultModalOverlay');
     if (existing) existing.remove();
+
+    // Populate userNote from localStorage if not already set in memory
+    if (!f.userNote) {
+        const stored = _loadFaultNote(f);
+        if (stored) f.userNote = stored;
+    }
 
     // Snapshot the current awaitingLump so the Retry Download button can use it
     // even if sim.awaitingLump is cleared before the user clicks.
@@ -1954,7 +1993,7 @@ function showFaultModal(f) {
             <input id="faultUserNoteInput" class="fault-user-note-input" type="text" maxlength="300"
                 placeholder="Add a plain-English description of this fault\u2026"
                 value="${(f.userNote || '').replace(/"/g, '&quot;')}"
-                oninput="(function(v){var fl=sim.faultLog;if(fl&&fl.length>0){fl[fl.length-1].userNote=v;}if(typeof updateGateLog==='function')updateGateLog();})(this.value)">
+                oninput="(function(v){var fl=sim.faultLog;if(fl&&fl.length>0){fl[fl.length-1].userNote=v;if(typeof _saveFaultNote==='function')_saveFaultNote(fl[fl.length-1],v);}if(typeof updateGateLog==='function')updateGateLog();})(this.value)">
         </div>
         ${historyHtml ? `<div class="fault-detail-grid">
             <div class="fault-detail-row fault-history-row">
@@ -2055,6 +2094,9 @@ function faultModalClearAndDismiss() {
     faultModalDismiss();
     _lastFault = null;
     faultAlertOff();
+    _clearAllFaultNotes();
+    if (sim && sim.faultLog) sim.faultLog = [];
+    if (typeof updateGateLog === 'function') updateGateLog();
 }
 
 function faultModalRetryDownload() {

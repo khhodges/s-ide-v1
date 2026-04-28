@@ -389,8 +389,10 @@ function updateGateLog() {
             html += `<span class="fault-gate-banner-src"><code>${lfSrcLine.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></span>`;
         }
         html += `</div>`;
-        if (lf.userNote) {
-            html += `<div class="fault-gate-banner-note">&#x1F4DD;&nbsp;${lf.userNote.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
+        const _lfNote = lf.userNote || (typeof _loadFaultNote === 'function' ? _loadFaultNote(lf) : '');
+        if (_lfNote) {
+            if (!lf.userNote) lf.userNote = _lfNote;
+            html += `<div class="fault-gate-banner-note">&#x1F4DD;&nbsp;${_lfNote.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>`;
         }
         html += `</div>`;
     }
