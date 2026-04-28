@@ -1591,7 +1591,7 @@ const _FAULT_LOG_LS_KEY = 'cm_fault_log';
 
 // The subset of fault-object fields we serialise (skips the large instrHistory array).
 const _FAULT_LOG_FIELDS = ['type','message','pc','physicalPC','step','faultStep','userNote',
-                           '_nsSnapshot','crSnapshot','drSnapshot','flagsSnapshot'];
+                           '_nsSnapshot','faultLabel','crSnapshot','drSnapshot','flagsSnapshot'];
 
 function _saveFaultLog() {
     try {
@@ -1609,7 +1609,9 @@ function _saveFaultLog() {
                 const _cr14s = f.crSnapshot && f.crSnapshot[14];
                 if (_cr14s && _cr14s.word0) {
                     const _ni = _cr14s.word0 & 0xFFFF;
-                    const _lbl = (sim.nsLabels && sim.nsLabels[_ni]) || `NS[${_ni}]`;
+                    // Prefer the label captured at fault() time (immune to eviction churn);
+                    // fall back to the live nsLabels table only when not available.
+                    const _lbl = f.faultLabel || (sim.nsLabels && sim.nsLabels[_ni]) || `NS[${_ni}]`;
                     const _base = (_cr14s.word1 !== undefined && _cr14s.word1 !== null) ? (_cr14s.word1 >>> 0) : 0;
                     const _fpc = (f.physicalPC !== undefined && f.physicalPC !== null) ? f.physicalPC : f.pc;
                     f._nsSnapshot = { label: _lbl, nsIdx: _ni, offset: _fpc - _base };
@@ -1689,7 +1691,8 @@ function showFaultModal(f) {
         const _cr14lazy = f.crSnapshot && f.crSnapshot[14];
         if (_cr14lazy && _cr14lazy.word0) {
             const _ni = _cr14lazy.word0 & 0xFFFF;
-            const _lbl = (sim.nsLabels && sim.nsLabels[_ni]) || `NS[${_ni}]`;
+            // Prefer the label captured at fault() time; fall back to live nsLabels.
+            const _lbl = f.faultLabel || (sim.nsLabels && sim.nsLabels[_ni]) || `NS[${_ni}]`;
             const _base = (_cr14lazy.word1 !== undefined && _cr14lazy.word1 !== null) ? (_cr14lazy.word1 >>> 0) : 0;
             f._nsSnapshot = { label: _lbl, nsIdx: _ni, offset: pc - _base };
         } else {
@@ -1705,7 +1708,8 @@ function showFaultModal(f) {
     let locationNs;
     if (_cr14snap && _cr14snap.word0) {
         const _ni   = _cr14snap.word0 & 0xFFFF;
-        const _lbl  = (sim.nsLabels && sim.nsLabels[_ni]) || `NS[${_ni}]`;
+        // Prefer the label captured at fault() time; fall back to live nsLabels.
+        const _lbl  = f.faultLabel || (sim.nsLabels && sim.nsLabels[_ni]) || `NS[${_ni}]`;
         const _base = (_cr14snap.word1 !== undefined && _cr14snap.word1 !== null) ? (_cr14snap.word1 >>> 0) : 0;
         locationNs  = { label: _lbl, nsIdx: _ni, offset: pc - _base };
     } else {

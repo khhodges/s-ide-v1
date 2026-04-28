@@ -2470,6 +2470,13 @@ class ChurchSimulator {
         const lastH = this._instrHistory && this._instrHistory.length > 0
             ? this._instrHistory[this._instrHistory.length - 1] : null;
         const faultStep = (lastH && lastH.step === this.stepCount) ? this.stepCount : null;
+        // Resolve the executing lump's label NOW, before any eviction can change nsLabels.
+        const _cr14 = this.cr && this.cr[14];
+        let faultLabel = null;
+        if (_cr14 && _cr14.word0) {
+            const _ni = _cr14.word0 & 0xFFFF;
+            faultLabel = (this.nsLabels && this.nsLabels[_ni]) || `NS[${_ni}]`;
+        }
         const entry = {
             type, message, pc: this.pc, physicalPC: this.physicalPC, step: this.stepCount,
             crSnapshot: this.cr ? this.cr.map(c => c ? {...c} : null) : [],
@@ -2477,6 +2484,7 @@ class ChurchSimulator {
             flagsSnapshot: this.flags ? {...this.flags} : {},
             instrHistory: this._instrHistory ? this._instrHistory.map(h => ({...h})) : [],
             faultStep: faultStep,
+            faultLabel: faultLabel,
         };
         this.faultLog.push(entry);
         this.output += `FAULT [${type}] at PC=${this.pc}: ${message}\n`;
