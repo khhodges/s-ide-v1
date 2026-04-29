@@ -670,6 +670,13 @@ function updateLiveLumpBanner() {
     _liveLumpLastNsIdx = state.nsIdx;
     if (nsChanged) {
         _liveLumpInputCache = { name: '', version: '' };
+        // Pre-populate version from the most recently saved lump for this NS slot.
+        if (typeof _lumpsCache !== 'undefined' && Array.isArray(_lumpsCache)) {
+            const saved = _lumpsCache.find(l =>
+                l.ns_slot !== null && l.ns_slot !== undefined &&
+                parseInt(l.ns_slot) === state.nsIdx);
+            if (saved && saved.version) _liveLumpInputCache.version = saved.version;
+        }
     } else {
         const nameEl    = document.getElementById('liveLumpName');
         const versionEl = document.getElementById('liveLumpVersion');
@@ -695,20 +702,27 @@ function updateLiveLumpBanner() {
     const fmtCc   = state.cc   !== null && state.cc   !== undefined ? e(String(state.cc))   : '?';
     el.innerHTML =
         '<div class="live-lump-banner">' +
-        '<div class="live-lump-banner-title">Live Lump \u2014 CR14 / NS' + e(String(state.nsIdx)) + '</div>' +
-        '<div class="live-lump-banner-fields">' +
-        '<span class="live-lump-field"><span class="live-lump-field-label">Abstraction</span><span class="live-lump-field-val">' + e(state.absName) + '</span></span>' +
+        // ── Left column: identity + stats ──────────────────────────────
+        '<div class="live-lump-banner-left">' +
+        '<div class="live-lump-banner-title">Live Lump \u2014 CR14\u00A0/\u00A0NS' + e(String(state.nsIdx)) + '</div>' +
+        '<div class="live-lump-abstr-name">' + e(state.absName) + '</div>' +
+        '<div class="live-lump-banner-stats">' +
         '<span class="live-lump-field"><span class="live-lump-field-label">Base</span><span class="live-lump-field-val live-lump-mono">0x' + e(state.baseLoc.toString(16).toUpperCase().padStart(4, '0')) + '</span></span>' +
         '<span class="live-lump-field"><span class="live-lump-field-label">Size</span><span class="live-lump-field-val">' + fmtSize + '</span></span>' +
         '<span class="live-lump-field"><span class="live-lump-field-label">cw</span><span class="live-lump-field-val">' + fmtCw + '</span></span>' +
         '<span class="live-lump-field"><span class="live-lump-field-label">cc</span><span class="live-lump-field-val">' + fmtCc + '</span></span>' +
-        sealBadge +
         '</div>' +
+        '</div>' +
+        // ── Right column: seal badge + warnings ────────────────────────
+        '<div class="live-lump-banner-right">' +
+        sealBadge +
         warningsRow +
+        '</div>' +
+        // ── Save row — spans both columns ──────────────────────────────
         '<div class="live-lump-banner-save-row">' +
-        '<input class="live-lump-input" type="text" id="liveLumpName" placeholder="Name (override)" value="' + nameVal + '">' +
-        '<input class="live-lump-input" type="text" id="liveLumpVersion" placeholder="Version (e.g. 1.0.0)" value="' + e(versionVal) + '">' +
-        '<button class="live-lump-save-btn" onclick="_liveLumpSave(' + state.nsIdx + ')">\u2193 Save Lump</button>' +
+        '<input class="live-lump-input" type="text" id="liveLumpName" placeholder="Name" value="' + nameVal + '">' +
+        '<input class="live-lump-input live-lump-version-input" type="text" id="liveLumpVersion" placeholder="Version" value="' + e(versionVal) + '">' +
+        '<button class="live-lump-save-btn" onclick="_liveLumpSave(' + state.nsIdx + ')">\u2193\u202FSave Lump</button>' +
         '</div>' +
         '</div>';
 }

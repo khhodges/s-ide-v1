@@ -4259,40 +4259,68 @@ pre:hover .code-copy-btn {
 /* ── Live Lump Banner ──────────────────────────────────────────────────────── */
 
 .live-lump-banner {
-    background: rgba(40, 55, 40, 0.6);
-    border: 1px solid rgba(125, 211, 168, 0.25);
-    border-radius: 5px;
-    margin: 0.4rem 0.4rem 0.6rem 0.4rem;
-    padding: 0.55rem 0.65rem 0.5rem;
+    background: rgba(22, 38, 28, 0.92);
+    border-bottom: 2px solid rgba(125, 211, 168, 0.28);
+    margin: 0;
+    padding: 0.7rem 1.1rem 0.65rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 1.4rem;
+    row-gap: 0;
+    align-items: start;
 }
 
 .live-lump-banner-empty {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
     color: var(--text-secondary, #666);
     font-size: 0.72rem;
     font-style: italic;
     text-align: center;
-    padding: 0.45rem 0.5rem;
-    margin: 0.4rem 0.4rem 0.5rem;
-    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    margin: 0;
+}
+
+.live-lump-banner-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    min-width: 0;
+}
+
+.live-lump-banner-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
+    flex-shrink: 0;
 }
 
 .live-lump-banner-title {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.06em;
     color: #7dd3a8;
     text-transform: uppercase;
-    margin-bottom: 0.4rem;
+    opacity: 0.8;
 }
 
-.live-lump-banner-fields {
+.live-lump-abstr-name {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #e8ffe4;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.live-lump-banner-stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem 0.7rem;
+    gap: 0.3rem 0.75rem;
     align-items: center;
-    margin-bottom: 0.45rem;
+    margin-top: 0.05rem;
 }
 
 .live-lump-field {
@@ -4310,6 +4338,14 @@ pre:hover .code-copy-btn {
 .live-lump-field-val {
     color: var(--text-primary, #ddd);
     font-size: 0.72rem;
+}
+
+.live-lump-banner-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.7rem;
+    align-items: center;
+    margin-bottom: 0.45rem;
 }
 
 .live-lump-mono {
@@ -4444,9 +4480,13 @@ pre:hover .code-copy-btn {
 
 .live-lump-banner-save-row {
     display: flex;
-    gap: 0.4rem;
+    gap: 0.45rem;
     align-items: center;
     flex-wrap: wrap;
+    grid-column: 1 / -1;
+    margin-top: 0.5rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid rgba(125, 211, 168, 0.12);
 }
 
 .live-lump-input {
@@ -4454,10 +4494,11 @@ pre:hover .code-copy-btn {
     border: 1px solid rgba(255,255,255,0.15);
     border-radius: 3px;
     color: var(--text-primary, #ddd);
-    font-size: 0.72rem;
-    padding: 0.18rem 0.4rem;
+    font-size: 0.78rem;
+    padding: 0.25rem 0.5rem;
     flex: 1;
     min-width: 0;
+    height: 1.9rem;
 }
 
 .live-lump-input:focus {
@@ -4466,16 +4507,21 @@ pre:hover .code-copy-btn {
     background: rgba(255,255,255,0.09);
 }
 
+.live-lump-version-input {
+    flex: 0 0 9rem;
+}
+
 .live-lump-save-btn {
     background: rgba(125, 211, 168, 0.15);
     border: 1px solid rgba(125, 211, 168, 0.4);
     border-radius: 3px;
     color: #7dd3a8;
     cursor: pointer;
-    font-size: 0.71rem;
+    font-size: 0.78rem;
     font-weight: 600;
-    padding: 0.2rem 0.6rem;
+    padding: 0.25rem 0.8rem;
     white-space: nowrap;
+    height: 1.9rem;
     transition: background 0.15s, border-color 0.15s;
 }
 
