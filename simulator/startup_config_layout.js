@@ -36,3 +36,27 @@
         window.StartupConfigLayout = _SC;
     }
 })();
+
+// Failsafe: inject "Turing DR Test ✦" tab if missing from HTML (cache-busting guard).
+// This file has no version tag so browsers always revalidate it via ETag.
+(function _ensureTuringDRTab() {
+    if (typeof document === 'undefined') return;
+    function _inject() {
+        if (document.querySelector('[data-example="led_turing_full"]')) return;
+        var anchor = document.querySelector('[data-example="turing_test"]');
+        if (!anchor) return;
+        var btn = document.createElement('button');
+        btn.className = 'example-tab';
+        btn.setAttribute('data-example', 'led_turing_full');
+        btn.setAttribute('data-tooltip', 'Turing DR Test \u2014 Full visual ISA test across all DR0\u2013DR15 registers');
+        btn.style.color = '#4ade80';
+        btn.onclick = function() { if (typeof loadExample === 'function') loadExample('led_turing_full'); };
+        btn.textContent = 'Turing DR Test \u2736';
+        anchor.parentNode.insertBefore(btn, anchor.nextSibling);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _inject);
+    } else {
+        _inject();
+    }
+})();
