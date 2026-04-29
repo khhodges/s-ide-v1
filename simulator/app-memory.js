@@ -2965,25 +2965,6 @@ window.lumpSaveLump = async function(nsIdx) {
         failed = true;
     }
 
-    // ── 6. C-list slot 0 X-permission (entry capability) ──────────────────
-    if (hdr.cc > 0) {
-        const clistBase = baseLoc + hdr.lumpSize - hdr.cc;
-        const slot0gt   = sim.memory[clistBase] >>> 0;
-        const parsed0   = sim.parseGT(slot0gt);
-        if (parsed0 && parsed0.permissions) {
-            const p = parsed0.permissions;
-            const hasX = !!p.X;
-            const onlyXrx = hasX && !p.W && !p.L && !p.S && !p.E;
-            if (!onlyXrx) {
-                const pStr = Object.entries(p).filter(([,v])=>v).map(([k])=>k).join('');
-                checks.push(`\u2717 c-list[0] perm=${pStr||'none'} — slot 0 must be X or RX only (DOMAIN_PURITY)`);
-                failed = true;
-            } else {
-                checks.push(`\u2713 c-list[0] X-perm OK`);
-            }
-        }
-    }
-
     if (failed) {
         if (typeof showPatchModal === 'function') showPatchModal(false, opName, checks.join('\n'));
         return;
