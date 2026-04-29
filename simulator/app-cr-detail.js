@@ -352,8 +352,72 @@ function injectCRCode(logEl) {
 
     const maxCW = Math.max(0, lumpHdr.lumpSize - lumpHdr.cc - 1);
     if (newCW > maxCW) {
-        log(`Error: Code too large — ${newCW} words, max ${maxCW} words (lumpSize=${lumpHdr.lumpSize}, c-list=${lumpHdr.cc}).`);
-        return null;
+        // ── NEW-LUMP PATH ────────────────────────────────────────────────────
+        // Code too large for the existing lump — allocate a fresh properly-sized
+        // LUMP in the extended-code area (same logic as sim.loadProgram).
+        const DEMO_CC       = 18;
+        const EXTENDED_BASE = 0x0400;
+        let newLumpSize = 64;
+        while (newLumpSize < 1 + newCW + DEMO_CC) newLumpSize <<= 1;
+
+        if (EXTENDED_BASE + newLumpSize > sim.NS_TABLE_BASE) {
+            log(`Error: Code too large — ${newCW} words, max ${maxCW} words (lumpSize=${lumpHdr.lumpSize}, c-list=${lumpHdr.cc}).`);
+            return null;
+        }
+
+        const n_minus_6   = Math.max(0, Math.log2(newLumpSize) - 6) | 0;
+        const newLumpBase = EXTENDED_BASE;
+
+        // Write new lump header (cc=0) + code words
+        sim.memory[newLumpBase] = sim.packLumpHeader(n_minus_6, newCW, 0, 0);
+        for (let i = 0; i < newCW; i++) {
+            sim.memory[newLumpBase + 1 + i] = newWords[i] >>> 0;
+        }
+
+        // Update NS entry: location, limit17, cc=0, reseal
+        const nsBase2       = sim.NS_TABLE_BASE + nsIdx * sim.NS_ENTRY_WORDS;
+        const oldW1nl       = sim.memory[nsBase2 + 1] >>> 0;
+        const oldW2nl       = sim.memory[nsBase2 + 2] >>> 0;
+        const w1fnl         = sim.parseNSWord1(oldW1nl);
+        const existingGtSeq = (oldW2nl >>> 25) & 0x7F;
+        sim.memory[nsBase2 + 0] = newLumpBase >>> 0;
+        sim.memory[nsBase2 + 1] = sim.packNSWord1(newCW, w1fnl.b, w1fnl.f, w1fnl.g, w1fnl.chainable, w1fnl.gtType, 0);
+        sim.memory[nsBase2 + 2] = sim.makeVersionSeals(existingGtSeq, newLumpBase, newCW);
+
+        // Update the patched CR (word1 = new base, word2/word3 = updated NS words)
+        if (sim.cr[crIdx]) {
+            sim.cr[crIdx].word1 = newLumpBase >>> 0;
+            sim.cr[crIdx].word2 = sim.memory[nsBase2 + 1];
+            sim.cr[crIdx].word3 = sim.memory[nsBase2 + 2];
+        }
+
+        // Reset CR6 so the DEMO_CLIST injection below rebuilds it for the new lump
+        if (sim.cr[6]) sim.cr[6] = { word0: 0, word1: 0, word2: 0, word3: 0, m: 0 };
+
+        // Inject DEMO_CLIST into new lump (mirrors _applyPendingSimLoad lazy injection)
+        if (sim.bootComplete && sim.demoClistGTs && sim.demoClistGTs.length > 0) {
+            const cc        = sim.demoClistGTs.length;
+            const clistBase = newLumpBase + newLumpSize - cc;
+            for (let i = 0; i < cc; i++) {
+                sim.memory[clistBase + i] = sim.demoClistGTs[i] >>> 0;
+            }
+            const updatedHdr = sim.memory[newLumpBase] >>> 0;
+            sim.memory[newLumpBase] = ((updatedHdr & ~0xFF) | (cc & 0xFF)) >>> 0;
+            const nsW1Updated = sim.packNSWord1(newCW, w1fnl.b, w1fnl.f, w1fnl.g, w1fnl.chainable, w1fnl.gtType, cc);
+            sim.memory[nsBase2 + 1] = nsW1Updated;
+            const cr6GT = sim.createGT(0, nsIdx, { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 }, 1);
+            sim.cr[6] = { word0: cr6GT, word1: clistBase >>> 0, word2: nsW1Updated >>> 0, word3: sim.memory[nsBase2 + 2] >>> 0, m: 0 };
+            if (sim.cr[crIdx]) { sim.cr[crIdx].word2 = nsW1Updated; }
+        }
+
+        log(`New LUMP allocated at 0x${newLumpBase.toString(16)} (${newLumpSize} words) for ${newCW}-word program.`);
+        log(`Simulator patched — ${newCW} word${newCW !== 1 ? 's' : ''} written.`);
+
+        sim.pc = 0; sim.halted = false; sim.running = false; sim.sto = 243;
+        sim.callStack = []; sim.flags = { N: false, Z: false, C: false, V: false };
+        sim.lambdaActive = false; sim.lambdaReturnPC = 0; sim.lambdaCachedFrame = null;
+        updateCRDisplay(); updateDRDisplay(); updateFlagsDisplay(); updateInfoDisplay();
+        return { newWords, baseLoc: newLumpBase, codeStart: newLumpBase + 1, newCW, oldCW: lumpHdr.cw, nsIdx };
     }
 
     log(`CR${crIdx}  NS[${nsIdx}]  base=0x${baseLoc.toString(16).toUpperCase().padStart(4,'0')}  old cw=${oldCW}  new cw=${newCW}  (max ${maxCW})`);
@@ -593,10 +657,60 @@ window._reapplyStickyPatches = function() {
         const hdr2 = sim.parseLumpHeader(sim.memory[baseLoc2] >>> 0);
         if (!hdr2.valid) continue;
 
-        const { words, newCW } = patch;
-        const oldCW2 = hdr2.cw;
-        const codeStart2 = baseLoc2 + 1;
+        const { words, newCW, crIdx: patchCRIdx } = patch;
+        const maxCW2    = Math.max(0, hdr2.lumpSize - hdr2.cc - 1);
 
+        if (newCW > maxCW2) {
+            // Large program — allocate a new LUMP in the extended-code area
+            // (mirrors the new-LUMP path in injectCRCode / sim.loadProgram).
+            const DEMO_CC       = 18;
+            const EXTENDED_BASE = 0x0400;
+            let newLumpSize = 64;
+            while (newLumpSize < 1 + newCW + DEMO_CC) newLumpSize <<= 1;
+            if (EXTENDED_BASE + newLumpSize > sim.NS_TABLE_BASE) {
+                console.warn('[sticky] Program too large to re-apply NS[' + nsIdx2 + '] (' + newCW + 'w) — skipped');
+                continue;
+            }
+            const n_minus_6   = Math.max(0, Math.log2(newLumpSize) - 6) | 0;
+            const newLumpBase = EXTENDED_BASE;
+            sim.memory[newLumpBase] = sim.packLumpHeader(n_minus_6, newCW, 0, 0);
+            for (let i = 0; i < newCW; i++) sim.memory[newLumpBase + 1 + i] = words[i] >>> 0;
+
+            const nsBase2r  = sim.NS_TABLE_BASE + nsIdx2 * sim.NS_ENTRY_WORDS;
+            const oldW1r    = sim.memory[nsBase2r + 1] >>> 0;
+            const oldW2r    = sim.memory[nsBase2r + 2] >>> 0;
+            const w1fr      = sim.parseNSWord1(oldW1r);
+            const gtSeqr    = (oldW2r >>> 25) & 0x7F;
+            sim.memory[nsBase2r + 0] = newLumpBase >>> 0;
+            sim.memory[nsBase2r + 1] = sim.packNSWord1(newCW, w1fr.b, w1fr.f, w1fr.g, w1fr.chainable, w1fr.gtType, 0);
+            sim.memory[nsBase2r + 2] = sim.makeVersionSeals(gtSeqr, newLumpBase, newCW);
+
+            if (patchCRIdx != null && sim.cr[patchCRIdx]) {
+                sim.cr[patchCRIdx].word1 = newLumpBase >>> 0;
+                sim.cr[patchCRIdx].word2 = sim.memory[nsBase2r + 1];
+                sim.cr[patchCRIdx].word3 = sim.memory[nsBase2r + 2];
+            }
+            if (sim.cr[6]) sim.cr[6] = { word0: 0, word1: 0, word2: 0, word3: 0, m: 0 };
+
+            if (sim.bootComplete && sim.demoClistGTs && sim.demoClistGTs.length > 0) {
+                const cc        = sim.demoClistGTs.length;
+                const clistBase = newLumpBase + newLumpSize - cc;
+                for (let i = 0; i < cc; i++) sim.memory[clistBase + i] = sim.demoClistGTs[i] >>> 0;
+                const updHdr   = sim.memory[newLumpBase] >>> 0;
+                sim.memory[newLumpBase] = ((updHdr & ~0xFF) | (cc & 0xFF)) >>> 0;
+                const nsW1r    = sim.packNSWord1(newCW, w1fr.b, w1fr.f, w1fr.g, w1fr.chainable, w1fr.gtType, cc);
+                sim.memory[nsBase2r + 1] = nsW1r;
+                const cr6GTr   = sim.createGT(0, nsIdx2, { R:0, W:0, X:0, L:0, S:0, E:1 }, 1);
+                sim.cr[6] = { word0: cr6GTr, word1: clistBase >>> 0, word2: nsW1r >>> 0, word3: sim.memory[nsBase2r + 2] >>> 0, m: 0 };
+                if (patchCRIdx != null && sim.cr[patchCRIdx]) sim.cr[patchCRIdx].word2 = nsW1r;
+            }
+            console.log('[sticky] Re-applied large patch NS[' + nsIdx2 + '] (' + newCW + 'w) → new LUMP at 0x' + newLumpBase.toString(16));
+            continue;
+        }
+
+        // ── Patch-in-place (code fits in existing lump) ──────────────────────
+        const oldCW2    = hdr2.cw;
+        const codeStart2 = baseLoc2 + 1;
         for (let i = 0; i < newCW; i++) {
             if (codeStart2 + i < sim.memory.length)
                 sim.memory[codeStart2 + i] = words[i] >>> 0;
