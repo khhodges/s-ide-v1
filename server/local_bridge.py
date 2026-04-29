@@ -7,12 +7,18 @@ The browser IDE talks to this script over HTTP; this script talks to the FPGA
 over UART.
 
 Usage:
-    python3 server/local_bridge.py [port] [baud] [http_port] [--ide=URL]
+    python3 server/local_bridge.py [port] [baud] [http_port] [--ide=URL] [--report-launch]
 
 Defaults:
     port      = /dev/ttyUSB1
     baud      = 115200
     http_port = 8766
+
+Flags:
+    --ide=URL          Report device call-home packets to the IDE server at URL.
+    --report-launch    Automatically POST TEST-09 passing status to the IDE
+                       server when a 0x55 UART round-trip is observed.
+                       Requires --ide=URL to be set.
 
 Then in the Church Machine IDE click  "Bridge"  instead of the normal connect
 button, and enter the bridge URL when prompted (default already filled in).
@@ -46,6 +52,8 @@ _IDE_SERVER_URL = None
 _BRIDGE_SCHEME = 'http'
 _device_uid = None
 _heartbeat_running = False
+_REPORT_LAUNCH = False
+_launch_test_reported = set()
 
 BOARD_TYPES = {
     0x01: ("TN20K-IoT", "IoT"),
@@ -143,6 +151,39 @@ def _heartbeat_thread():
         except Exception:
             pass
         time.sleep(60)
+
+
+def _report_launch_test(test_id, status="passing", notes=""):
+    """POST a launch-test status update to the IDE server."""
+    global _launch_test_reported
+    if not _IDE_SERVER_URL:
+        print(f'  [LAUNCH] Cannot report {test_id}: no --ide=URL configured')
+        return
+    if test_id in _launch_test_reported and status == "passing":
+        return
+    try:
+        import urllib.request
+        payload = json.dumps({
+            "status": status,
+            "device_uid": _device_uid or "",
+            "notes": notes,
+        }).encode()
+        req = urllib.request.Request(
+            f"{_IDE_SERVER_URL}/api/launch-tests/{test_id}",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="PUT",
+        )
+        resp = urllib.request.urlopen(req, timeout=10)
+        result = json.loads(resp.read())
+        if result.get("ok"):
+            print(f'  [LAUNCH] {test_id} reported as {status}')
+            if status == "passing":
+                _launch_test_reported.add(test_id)
+        else:
+            print(f'  [LAUNCH] {test_id} report failed: {result}')
+    except Exception as e:
+        print(f'  [LAUNCH] {test_id} report error: {e}')
 
 
 # ── background reader ────────────────────────────────────────────────────────
@@ -285,6 +326,14 @@ class Handler(BaseHTTPRequestHandler):
                         time.sleep(0.005)
                 print(f'  [transact] RX {len(rx)} bytes: {rx.hex() if rx else "(empty)"}')
                 self._json_resp({'ok': True, 'rx': list(rx)})
+                if (_REPORT_LAUNCH and _IDE_SERVER_URL
+                        and tx_bytes == bytes([0x55]) and rx_count > 0 and len(rx) >= rx_count):
+                    threading.Thread(
+                        target=_report_launch_test,
+                        args=("TEST-09",),
+                        kwargs={"status": "passing", "notes": "0x55 UART round-trip succeeded via local_bridge.py"},
+                        daemon=True,
+                    ).start()
             except Exception as e:
                 print(f'  [transact] ERROR: {e}')
                 self._json_resp({'ok': False, 'error': str(e)})
@@ -432,7 +481,8 @@ if __name__ == '__main__':
     for a in sys.argv[1:]:
         if a.startswith('--ide='):
             _IDE_SERVER_URL = a[6:].rstrip('/')
-            break
+        elif a == '--report-launch':
+            _REPORT_LAUNCH = True
 
     cert_path, key_path = _generate_self_signed_cert()
     use_https = cert_path is not None
@@ -452,6 +502,11 @@ if __name__ == '__main__':
         print(f'  IDE Server: {_IDE_SERVER_URL}')
     else:
         print(f'  IDE Server: (not configured — use --ide=URL to enable call-home)')
+    if _REPORT_LAUNCH:
+        if _IDE_SERVER_URL:
+            print(f'  Launch reporting: ENABLED (TEST-09 will be reported on 0x55 UART round-trip)')
+        else:
+            print(f'  Launch reporting: --report-launch set but --ide=URL missing; reporting disabled')
     print()
     if use_https:
         print('IMPORTANT — first time setup:')
