@@ -651,6 +651,7 @@ async function renderLumps() {
 // updateDashboard() (no-op when the banner element is not in the DOM).
 
 let _liveLumpLastNsIdx = null;
+let _liveLumpInputCache = { name: '', version: '' };
 
 function updateLiveLumpBanner() {
     const el = document.getElementById('liveLumpBanner');
@@ -660,16 +661,23 @@ function updateLiveLumpBanner() {
     const state = (typeof _getLiveLumpState === 'function') ? _getLiveLumpState() : null;
     if (!state) {
         _liveLumpLastNsIdx = null;
+        _liveLumpInputCache = { name: '', version: '' };
         el.innerHTML = '<div class="live-lump-banner live-lump-banner-empty">\u2014 simulator not running \u2014</div>';
         return;
     }
     const e = _escHtml;
     const nsChanged = (state.nsIdx !== _liveLumpLastNsIdx);
     _liveLumpLastNsIdx = state.nsIdx;
-    const prevName    = nsChanged ? '' : (document.getElementById('liveLumpName')?.value    ?? '');
-    const prevVersion = nsChanged ? '' : (document.getElementById('liveLumpVersion')?.value ?? '');
-    const nameVal    = prevName    || e(state.absName);
-    const versionVal = prevVersion;
+    if (nsChanged) {
+        _liveLumpInputCache = { name: '', version: '' };
+    } else {
+        const nameEl    = document.getElementById('liveLumpName');
+        const versionEl = document.getElementById('liveLumpVersion');
+        if (nameEl)    _liveLumpInputCache.name    = nameEl.value;
+        if (versionEl) _liveLumpInputCache.version = versionEl.value;
+    }
+    const nameVal    = _liveLumpInputCache.name    || e(state.absName);
+    const versionVal = _liveLumpInputCache.version;
     const sealBadge = state.sealOk
         ? '<span class="live-lump-seal live-lump-seal-ok">\u2713 SEAL OK</span>'
         : '<span class="live-lump-seal live-lump-seal-fail">\u2717 SEAL FAIL</span>';
@@ -696,6 +704,7 @@ function _liveLumpSave(nsIdx) {
     const name    = ((document.getElementById('liveLumpName')    || {}).value || '').trim();
     const version = ((document.getElementById('liveLumpVersion') || {}).value || '').trim();
     _pendingLumpMeta = { name: name || undefined, version: version || undefined };
+    _liveLumpInputCache = { name: '', version: '' };
     if (typeof lumpSaveLump === 'function') lumpSaveLump(nsIdx);
 }
 
