@@ -4338,6 +4338,9 @@ pre:hover .code-copy-btn {
 }
 
 .live-lump-warnings {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
     font-size: 0.70rem;
     color: #e0a055;
     background: rgba(224, 160, 85, 0.10);
@@ -4346,10 +4349,28 @@ pre:hover .code-copy-btn {
     padding: 0.18rem 0.5rem;
     margin-top: 0.25rem;
     line-height: 1.4;
+    cursor: help;
+}
+
+.live-lump-warnings-text {
+    flex: 1;
+    min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    cursor: help;
+}
+
+.live-lump-warn-badge {
+    flex-shrink: 0;
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 0.05rem 0.45rem;
+    border-radius: 8px;
+    background: rgba(224, 160, 85, 0.22);
+    border: 1px solid rgba(224, 160, 85, 0.45);
+    color: #f0ba70;
+    white-space: nowrap;
 }
 
 .live-lump-warnings[data-tooltip]::after {

@@ -683,8 +683,11 @@ function updateLiveLumpBanner() {
         : '<span class="live-lump-seal live-lump-seal-fail">\u2717 SEAL FAIL</span>';
     const warnings = Array.isArray(state.warnings) ? state.warnings : [];
     const warningsTooltip = warnings.map(w => e(w)).join('&#10;');
+    const warnBadge = warnings.length >= 2
+        ? '<span class="live-lump-warn-badge">' + warnings.length + ' warnings</span>'
+        : '';
     const warningsRow = warnings.length > 0
-        ? '<div class="live-lump-warnings" data-tooltip="' + warningsTooltip + '">\u26A0 ' + e(warnings.join(' \u00B7 ')) + '</div>'
+        ? '<div class="live-lump-warnings" data-tooltip="' + warningsTooltip + '"><span class="live-lump-warnings-text">\u26A0 ' + e(warnings.join(' \u00B7 ')) + '</span>' + warnBadge + '</div>'
         : '';
     const fmtSize = state.lumpSize !== null && state.lumpSize !== undefined ? e(String(state.lumpSize)) + 'w' : '?';
     const fmtCw   = state.cw   !== null && state.cw   !== undefined ? e(String(state.cw))   : '?';
