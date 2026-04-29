@@ -363,7 +363,7 @@ function onLangChange(restoring) {
 
     const langExampleGroups = {
         english: ['cloomc_english_hello', 'cloomc_english_counter', 'cloomc_english_string', 'cloomc_english_loops', 'cloomc_english_contact', 'cloomc_english_contact_stage2'],
-        assembly: ['ada_note_g', 'selftest', 'load_save', 'bernoulli', 'conditional', 'gc_test', 'turing_test', 'led_blink', 'salvation', 'perm_attack', 'bind_attack', 'tperm_halt'],
+        assembly: ['ada_note_g', 'selftest', 'load_save', 'bernoulli', 'conditional', 'gc_test', 'turing_test', 'led_turing_full', 'led_blink', 'salvation', 'perm_attack', 'bind_attack', 'tperm_halt'],
         javascript: ['cloomc_hello', 'cloomc_string', 'cloomc_memory', 'cloomc_heap', 'cloomc_counter', 'cloomc_sliderule', 'cloomc_contact', 'cloomc_contact_stage2', 'cloomc_contact_call', 'cloomc_stack_overflow', 'cloomc_recall_demo'],
         haskell: ['cloomc_church_math', 'cloomc_church_pair', 'cloomc_church_case', 'cloomc_church_lambda', 'cloomc_sliderule_hs'],
         symbolic: ['cloomc_ada_note_g', 'cloomc_ada_note_g_published_bug', 'cloomc_bernoulli_numbers'],
