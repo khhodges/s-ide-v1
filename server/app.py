@@ -932,11 +932,10 @@ _SIMULATOR_HTML_VERSION = "r20260429c"
 @app.route("/simulator")
 @app.route("/simulator/")
 def simulator_index():
-    # Redirect to a versioned path so the proxy never serves a stale HTML.
-    return redirect(f"/simulator/{_SIMULATOR_HTML_VERSION}/", code=302)
+    # Redirect to a versioned URL that the proxy has never cached.
+    return redirect(f"/simulator/~/{_SIMULATOR_HTML_VERSION}", code=302)
 
-@app.route("/simulator/<version>/")
-@app.route("/simulator/<version>")
+@app.route("/simulator/~/<version>")
 def simulator_versioned(version):
     filepath = os.path.join(SIMULATOR_DIR, "index.html")
     if os.path.isfile(filepath):
