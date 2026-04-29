@@ -4337,6 +4337,20 @@ pre:hover .code-copy-btn {
     border: 1px solid rgba(224, 85, 85, 0.3);
 }
 
+.live-lump-warnings {
+    font-size: 0.70rem;
+    color: #e0a055;
+    background: rgba(224, 160, 85, 0.10);
+    border: 1px solid rgba(224, 160, 85, 0.28);
+    border-radius: 3px;
+    padding: 0.18rem 0.5rem;
+    margin-top: 0.25rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .live-lump-banner-save-row {
     display: flex;
     gap: 0.4rem;

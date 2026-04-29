@@ -2887,15 +2887,53 @@ function _getLiveLumpState() {
     if (!baseLoc || baseLoc >= sim.memory.length) return null;
     const hdrWord = sim.memory[baseLoc] >>> 0;
     const hdr = (typeof sim.parseLumpHeader === 'function') ? sim.parseLumpHeader(hdrWord) : null;
-    if (!hdr || !hdr.valid) return null;
     const absName = (sim.nsLabels && sim.nsLabels[nsIdx]) || 'Unnamed';
+
+    // ── Bad magic — return partial state so the banner can surface the warning
+    if (!hdr || !hdr.valid) {
+        return {
+            nsIdx, absName, baseLoc,
+            lumpSize: null, cw: null, cc: null,
+            sealOk: false, storedSeal: '????', expectedSeal: '????',
+            warnings: [`BAD MAGIC: header=0x${hdrWord.toString(16).toUpperCase().padStart(8, '0')} (expected magic=0x1F)`],
+            invalid: true,
+        };
+    }
+
     const sealOk = (typeof sim.validateMAC === 'function') ? sim.validateMAC(nse) : false;
     const lim = (typeof sim.parseNSWord1 === 'function') ? sim.parseNSWord1(nse.word1_limit) : { limit: 0 };
     const storedSeal = (nse.word2_seals & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
     const expectedSeal = (typeof sim.computeSeal === 'function')
         ? (sim.computeSeal(baseLoc, lim.limit) & 0xFFFF).toString(16).toUpperCase().padStart(4, '0')
         : '????';
-    return { nsIdx, absName, baseLoc, lumpSize: hdr.lumpSize, cw: hdr.cw, cc: hdr.cc, sealOk, storedSeal, expectedSeal };
+
+    // ── Dry-run validation warnings ────────────────────────────────────────
+    const warnings = [];
+    if (hdr.cw < 1) {
+        warnings.push('cw=0: lump must have at least one code word');
+    }
+    if (1 + hdr.cw + hdr.cc > hdr.lumpSize) {
+        warnings.push(`BOUNDS: 1+cw+cc=${1 + hdr.cw + hdr.cc} exceeds lumpSize=${hdr.lumpSize}`);
+    }
+    if (!sealOk) {
+        warnings.push(`SEAL FAIL: stored=0x${storedSeal} \u2260 computed=0x${expectedSeal}`);
+    }
+    if (hdr.cc > 0 && typeof sim.parseGT === 'function') {
+        const clistBase = baseLoc + hdr.lumpSize - hdr.cc;
+        const slot0gt   = sim.memory[clistBase] >>> 0;
+        const parsed0   = sim.parseGT(slot0gt);
+        if (parsed0 && parsed0.permissions) {
+            const p = parsed0.permissions;
+            const hasX = !!p.X;
+            const onlyXrx = hasX && !p.W && !p.L && !p.S && !p.E;
+            if (!onlyXrx) {
+                const pStr = Object.entries(p).filter(([, v]) => v).map(([k]) => k).join('');
+                warnings.push(`c-list[0] perm=${pStr || 'none'}: slot 0 must be X or RX only`);
+            }
+        }
+    }
+
+    return { nsIdx, absName, baseLoc, lumpSize: hdr.lumpSize, cw: hdr.cw, cc: hdr.cc, sealOk, storedSeal, expectedSeal, warnings };
 }
 
 // ── Lump Save (to server) ──────────────────────────────────────────────────

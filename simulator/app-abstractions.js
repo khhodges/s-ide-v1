@@ -681,17 +681,25 @@ function updateLiveLumpBanner() {
     const sealBadge = state.sealOk
         ? '<span class="live-lump-seal live-lump-seal-ok">\u2713 SEAL OK</span>'
         : '<span class="live-lump-seal live-lump-seal-fail">\u2717 SEAL FAIL</span>';
+    const warnings = Array.isArray(state.warnings) ? state.warnings : [];
+    const warningsRow = warnings.length > 0
+        ? '<div class="live-lump-warnings">\u26A0 ' + e(warnings.join(' \u00B7 ')) + '</div>'
+        : '';
+    const fmtSize = state.lumpSize !== null && state.lumpSize !== undefined ? e(String(state.lumpSize)) + 'w' : '?';
+    const fmtCw   = state.cw   !== null && state.cw   !== undefined ? e(String(state.cw))   : '?';
+    const fmtCc   = state.cc   !== null && state.cc   !== undefined ? e(String(state.cc))   : '?';
     el.innerHTML =
         '<div class="live-lump-banner">' +
         '<div class="live-lump-banner-title">Live Lump \u2014 CR14 / NS' + e(String(state.nsIdx)) + '</div>' +
         '<div class="live-lump-banner-fields">' +
         '<span class="live-lump-field"><span class="live-lump-field-label">Abstraction</span><span class="live-lump-field-val">' + e(state.absName) + '</span></span>' +
         '<span class="live-lump-field"><span class="live-lump-field-label">Base</span><span class="live-lump-field-val live-lump-mono">0x' + e(state.baseLoc.toString(16).toUpperCase().padStart(4, '0')) + '</span></span>' +
-        '<span class="live-lump-field"><span class="live-lump-field-label">Size</span><span class="live-lump-field-val">' + e(String(state.lumpSize)) + 'w</span></span>' +
-        '<span class="live-lump-field"><span class="live-lump-field-label">cw</span><span class="live-lump-field-val">' + e(String(state.cw)) + '</span></span>' +
-        '<span class="live-lump-field"><span class="live-lump-field-label">cc</span><span class="live-lump-field-val">' + e(String(state.cc)) + '</span></span>' +
+        '<span class="live-lump-field"><span class="live-lump-field-label">Size</span><span class="live-lump-field-val">' + fmtSize + '</span></span>' +
+        '<span class="live-lump-field"><span class="live-lump-field-label">cw</span><span class="live-lump-field-val">' + fmtCw + '</span></span>' +
+        '<span class="live-lump-field"><span class="live-lump-field-label">cc</span><span class="live-lump-field-val">' + fmtCc + '</span></span>' +
         sealBadge +
         '</div>' +
+        warningsRow +
         '<div class="live-lump-banner-save-row">' +
         '<input class="live-lump-input" type="text" id="liveLumpName" placeholder="Name (override)" value="' + nameVal + '">' +
         '<input class="live-lump-input" type="text" id="liveLumpVersion" placeholder="Version (e.g. 1.0.0)" value="' + e(versionVal) + '">' +
