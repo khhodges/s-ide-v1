@@ -597,10 +597,21 @@ async function renderLumps() {
         for (const ta of _TIER_A_LUMPS) {
             const safeTestId = _escHtml(ta.testId);
             const safeName   = _escHtml(ta.name);
+            const matchingLump = (lumps || []).find(l => l.abstraction === ta.name);
+            const isPresent = !!matchingLump;
             html += `<div class="lump-tier-a-row">`;
-            html += `<span class="lump-tier-a-name">${safeName}</span>`;
+            if (isPresent) {
+                const safeToken = _escHtml(matchingLump.token);
+                html += `<span class="lump-tier-a-name"><a class="lump-tier-a-link" href="#" onclick="event.preventDefault();showLumpDetail('${safeToken}')">${safeName}</a></span>`;
+            } else {
+                html += `<span class="lump-tier-a-name">${safeName}</span>`;
+            }
             html += `<span class="lump-tier-a-slot">slot&nbsp;${ta.slot}</span>`;
-            html += `<span class="lump-tier-a-status">Missing</span>`;
+            if (isPresent) {
+                html += `<span class="lump-tier-a-status lump-tier-a-status-present">In Progress</span>`;
+            } else {
+                html += `<span class="lump-tier-a-status">Missing</span>`;
+            }
             html += `<span class="lump-tier-a-milestone">Tier A (&le;12 weeks post-launch)</span>`;
             html += `<a class="lump-tier-a-test-id" href="#" onclick="openDocAnchor('launch.md','${ta.docAnchor}'); return false;" title="View acceptance test definition">${safeTestId}</a>`;
             html += `</div>`;

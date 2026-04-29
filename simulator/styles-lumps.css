@@ -4193,6 +4193,24 @@ pre:hover .code-copy-btn {
     white-space: nowrap;
 }
 
+.lump-tier-a-status-present {
+    background: rgba(251, 191, 36, 0.14);
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.35);
+}
+
+.lump-tier-a-link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: rgba(232, 224, 200, 0.4);
+    text-underline-offset: 2px;
+}
+
+.lump-tier-a-link:hover {
+    color: var(--church-gold, #fbbf24);
+    text-decoration-color: var(--church-gold, #fbbf24);
+}
+
 .lump-tier-a-milestone {
     font-size: 0.68rem;
     color: var(--text-secondary, #888);
