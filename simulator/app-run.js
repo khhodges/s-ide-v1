@@ -958,6 +958,7 @@ function _autoLoadDefaultProgram() {
     assembleAndLoad();
     _applyPendingSimLoad();
     _applyBootLumpPetNames();
+    if (typeof updateLiveLumpBanner === 'function') updateLiveLumpBanner();
 }
 function slowBoot() {
     if (bootAnimating || sim.bootComplete || sim.halted) return;

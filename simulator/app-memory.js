@@ -2870,11 +2870,42 @@ window.lumpCompress = async function(nsIdx) {
     if (typeof renderLumps   === 'function') renderLumps();
 };
 
+// ── Live Lump State Helper ──────────────────────────────────────────────────
+// Reads CR14 from the running simulator and returns a plain descriptor for
+// the lump currently loaded there, or null if the sim is not booted.
+let _pendingLumpMeta = {};
+
+function _getLiveLumpState() {
+    if (!sim || !sim.bootComplete) return null;
+    const cr14 = (typeof sim.getFormattedCR === 'function') ? sim.getFormattedCR(14) : null;
+    if (!cr14 || cr14.isNull) return null;
+    const nsIdx = cr14.gtIndex;
+    if (nsIdx === undefined || nsIdx === null) return null;
+    const nse = (typeof sim.readNSEntry === 'function') ? sim.readNSEntry(nsIdx) : null;
+    if (!nse) return null;
+    const baseLoc = nse.word0_location >>> 0;
+    if (!baseLoc || baseLoc >= sim.memory.length) return null;
+    const hdrWord = sim.memory[baseLoc] >>> 0;
+    const hdr = (typeof sim.parseLumpHeader === 'function') ? sim.parseLumpHeader(hdrWord) : null;
+    if (!hdr || !hdr.valid) return null;
+    const absName = (sim.nsLabels && sim.nsLabels[nsIdx]) || 'Unnamed';
+    const sealOk = (typeof sim.validateMAC === 'function') ? sim.validateMAC(nse) : false;
+    const lim = (typeof sim.parseNSWord1 === 'function') ? sim.parseNSWord1(nse.word1_limit) : { limit: 0 };
+    const storedSeal = (nse.word2_seals & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+    const expectedSeal = (typeof sim.computeSeal === 'function')
+        ? (sim.computeSeal(baseLoc, lim.limit) & 0xFFFF).toString(16).toUpperCase().padStart(4, '0')
+        : '????';
+    return { nsIdx, absName, baseLoc, lumpSize: hdr.lumpSize, cw: hdr.cw, cc: hdr.cc, sealOk, storedSeal, expectedSeal };
+}
+
 // ── Lump Save (to server) ──────────────────────────────────────────────────
 // Reads the current lump binary from simulator memory and POSTs it to
 // /api/lumps/save, storing it as a named .lump file in server/lumps/.
 window.lumpSaveLump = async function(nsIdx) {
-    const absName = (sim.nsLabels && sim.nsLabels[nsIdx]) || 'Unnamed';
+    let absName = (sim.nsLabels && sim.nsLabels[nsIdx]) || 'Unnamed';
+    const _meta = _pendingLumpMeta || {};
+    _pendingLumpMeta = {};
+    if (_meta.name) absName = _meta.name;
     const opName  = `Save Lump \u2014 NS${nsIdx} \u201C${absName}\u201D`;
     const checks  = [];   // collected validation lines shown before save
     let   failed  = false;
@@ -2971,6 +3002,7 @@ window.lumpSaveLump = async function(nsIdx) {
         cc:          hdr.cc,
         lump_size:   hdr.lumpSize,
     };
+    if (_meta.version) metadata.version = _meta.version;
     try {
         const resp = await fetch('/api/lumps/save', {
             method:  'POST',

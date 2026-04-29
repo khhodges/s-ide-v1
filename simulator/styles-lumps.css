@@ -4256,3 +4256,143 @@ pre:hover .code-copy-btn {
     line-height: 1.4;
 }
 
+/* ── Live Lump Banner ──────────────────────────────────────────────────────── */
+
+.live-lump-banner {
+    background: rgba(40, 55, 40, 0.6);
+    border: 1px solid rgba(125, 211, 168, 0.25);
+    border-radius: 5px;
+    margin: 0.4rem 0.4rem 0.6rem 0.4rem;
+    padding: 0.55rem 0.65rem 0.5rem;
+}
+
+.live-lump-banner-empty {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-secondary, #666);
+    font-size: 0.72rem;
+    font-style: italic;
+    text-align: center;
+    padding: 0.45rem 0.5rem;
+    margin: 0.4rem 0.4rem 0.5rem;
+    border-radius: 4px;
+}
+
+.live-lump-banner-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #7dd3a8;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+}
+
+.live-lump-banner-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.7rem;
+    align-items: center;
+    margin-bottom: 0.45rem;
+}
+
+.live-lump-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-size: 0.71rem;
+}
+
+.live-lump-field-label {
+    color: var(--text-secondary, #888);
+    font-size: 0.65rem;
+}
+
+.live-lump-field-val {
+    color: var(--text-primary, #ddd);
+    font-size: 0.72rem;
+}
+
+.live-lump-mono {
+    font-family: monospace;
+}
+
+.live-lump-seal {
+    display: inline-block;
+    font-size: 0.67rem;
+    font-weight: 700;
+    padding: 0.05rem 0.35rem;
+    border-radius: 3px;
+    letter-spacing: 0.03em;
+}
+
+.live-lump-seal-ok {
+    color: #7dd3a8;
+    background: rgba(125, 211, 168, 0.12);
+    border: 1px solid rgba(125, 211, 168, 0.3);
+}
+
+.live-lump-seal-fail {
+    color: #e05555;
+    background: rgba(224, 85, 85, 0.12);
+    border: 1px solid rgba(224, 85, 85, 0.3);
+}
+
+.live-lump-banner-save-row {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.live-lump-input {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 3px;
+    color: var(--text-primary, #ddd);
+    font-size: 0.72rem;
+    padding: 0.18rem 0.4rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.live-lump-input:focus {
+    outline: none;
+    border-color: rgba(125, 211, 168, 0.5);
+    background: rgba(255,255,255,0.09);
+}
+
+.live-lump-save-btn {
+    background: rgba(125, 211, 168, 0.15);
+    border: 1px solid rgba(125, 211, 168, 0.4);
+    border-radius: 3px;
+    color: #7dd3a8;
+    cursor: pointer;
+    font-size: 0.71rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.live-lump-save-btn:hover {
+    background: rgba(125, 211, 168, 0.28);
+    border-color: rgba(125, 211, 168, 0.65);
+}
+
+/* ── Patch-toast save link ──────────────────────────────────────────────────── */
+
+.patch-toast-save-link {
+    display: block;
+    margin: 0.45rem 0.6rem 0.3rem;
+    font-size: 0.75rem;
+    color: #7dd3a8;
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.patch-toast-save-link:hover {
+    text-decoration: underline;
+    color: #a3e6c5;
+}
+

@@ -625,6 +625,22 @@ function patchSimulator() {
     const logText = logEl ? logEl.textContent.trim() : '';
     showPatchModal(!!result, 'Patch Simulator', logText);
     if (result) {
+        const _patchToastEl = document.getElementById('patchToastOverlay');
+        if (_patchToastEl) {
+            const _saveLnk = document.createElement('a');
+            _saveLnk.href = '#';
+            _saveLnk.className = 'patch-toast-save-link';
+            _saveLnk.textContent = '\u2192 Save to Repository';
+            _saveLnk.onclick = function(ev) {
+                ev.preventDefault();
+                if (typeof switchView === 'function') switchView('lumps');
+                setTimeout(function() {
+                    const _b = document.getElementById('liveLumpBanner');
+                    if (_b) _b.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 150);
+            };
+            _patchToastEl.appendChild(_saveLnk);
+        }
         if (srcHash !== _simRunHash) {
             _simRunHistory = [];
             _simRunHash = srcHash;

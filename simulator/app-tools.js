@@ -302,6 +302,7 @@ function updateDashboard() {
     if (selectedCR !== null) updateCRDetail();
     if (pipelineViz && !pipelineViz.animating) pipelineViz.render();
     _refreshSignedReturnReadout();
+    if (typeof updateLiveLumpBanner === 'function') updateLiveLumpBanner();
 }
 
 function updateToolbarIdeBadge() {

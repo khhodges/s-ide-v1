@@ -639,9 +639,64 @@ async function renderLumps() {
             // (lump_size, cc, etc.) are reflected without a manual click.
             showLumpDetail(_selectedLumpToken);
         }
+        updateLiveLumpBanner();
     } catch (err) {
         listEl.innerHTML = `<div class="lumps-placeholder">Error loading lumps: ${_escHtml(err.message)}</div>`;
     }
+}
+
+// ── Live Lump Banner ─────────────────────────────────────────────────────────
+// Renders a status banner at the top of the LUMP Repository reflecting the
+// lump currently loaded in CR14.  Called from renderLumps() and from
+// updateDashboard() (no-op when the banner element is not in the DOM).
+
+let _liveLumpLastNsIdx = null;
+
+function updateLiveLumpBanner() {
+    const el = document.getElementById('liveLumpBanner');
+    if (!el) return;
+    const lumpsView = document.getElementById('lumps');
+    if (lumpsView && lumpsView.style.display === 'none') return;
+    const state = (typeof _getLiveLumpState === 'function') ? _getLiveLumpState() : null;
+    if (!state) {
+        _liveLumpLastNsIdx = null;
+        el.innerHTML = '<div class="live-lump-banner live-lump-banner-empty">\u2014 simulator not running \u2014</div>';
+        return;
+    }
+    const e = _escHtml;
+    const nsChanged = (state.nsIdx !== _liveLumpLastNsIdx);
+    _liveLumpLastNsIdx = state.nsIdx;
+    const prevName    = nsChanged ? '' : (document.getElementById('liveLumpName')?.value    ?? '');
+    const prevVersion = nsChanged ? '' : (document.getElementById('liveLumpVersion')?.value ?? '');
+    const nameVal    = prevName    || e(state.absName);
+    const versionVal = prevVersion;
+    const sealBadge = state.sealOk
+        ? '<span class="live-lump-seal live-lump-seal-ok">\u2713 SEAL OK</span>'
+        : '<span class="live-lump-seal live-lump-seal-fail">\u2717 SEAL FAIL</span>';
+    el.innerHTML =
+        '<div class="live-lump-banner">' +
+        '<div class="live-lump-banner-title">Live Lump \u2014 CR14 / NS' + e(String(state.nsIdx)) + '</div>' +
+        '<div class="live-lump-banner-fields">' +
+        '<span class="live-lump-field"><span class="live-lump-field-label">Abstraction</span><span class="live-lump-field-val">' + e(state.absName) + '</span></span>' +
+        '<span class="live-lump-field"><span class="live-lump-field-label">Base</span><span class="live-lump-field-val live-lump-mono">0x' + e(state.baseLoc.toString(16).toUpperCase().padStart(4, '0')) + '</span></span>' +
+        '<span class="live-lump-field"><span class="live-lump-field-label">Size</span><span class="live-lump-field-val">' + e(String(state.lumpSize)) + 'w</span></span>' +
+        '<span class="live-lump-field"><span class="live-lump-field-label">cw</span><span class="live-lump-field-val">' + e(String(state.cw)) + '</span></span>' +
+        '<span class="live-lump-field"><span class="live-lump-field-label">cc</span><span class="live-lump-field-val">' + e(String(state.cc)) + '</span></span>' +
+        sealBadge +
+        '</div>' +
+        '<div class="live-lump-banner-save-row">' +
+        '<input class="live-lump-input" type="text" id="liveLumpName" placeholder="Name (override)" value="' + nameVal + '">' +
+        '<input class="live-lump-input" type="text" id="liveLumpVersion" placeholder="Version (e.g. 1.0.0)" value="' + e(versionVal) + '">' +
+        '<button class="live-lump-save-btn" onclick="_liveLumpSave(' + state.nsIdx + ')">\u2193 Save Lump</button>' +
+        '</div>' +
+        '</div>';
+}
+
+function _liveLumpSave(nsIdx) {
+    const name    = ((document.getElementById('liveLumpName')    || {}).value || '').trim();
+    const version = ((document.getElementById('liveLumpVersion') || {}).value || '').trim();
+    _pendingLumpMeta = { name: name || undefined, version: version || undefined };
+    if (typeof lumpSaveLump === 'function') lumpSaveLump(nsIdx);
 }
 
 function _buildNsDepGraph(nsMeta, lump, showNull) {
