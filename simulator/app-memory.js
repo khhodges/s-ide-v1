@@ -2858,86 +2858,140 @@ window.lumpCompress = async function(nsIdx) {
     const parts = [];
     if (didShrink) parts.push(`freespace ${currentSize - minSize}w removed (${currentSize}w \u2192 ${minSize}w)`);
     if (didTrim)   parts.push(`${trimmed} null GT${trimmed !== 1 ? 's' : ''} trimmed from c-list tail`);
-    log(`Compressed NS${nsIdx}: ${parts.join('; ')}. Saving\u2026`);
+    const _saveName  = (sim.nsLabels && sim.nsLabels[nsIdx]) || 'Unnamed';
+    const _saveTitle = `Compress \u2014 NS${nsIdx} \u201C${_saveName}\u201D`;
+    const _detail    = [
+        parts.join('; '),
+        '\u2139 Compress complete \u2014 click \u2193\u202FSave Lump to persist this lump to the repository.',
+    ].filter(Boolean).join('\n');
+    log(`Compressed NS${nsIdx}: ${parts.join('; ')}.`);
     updateCRDetail();
-
-    // ── Step 6: auto-save to server so the result persists across restarts ────
-    const _saveName = (sim.nsLabels && sim.nsLabels[nsIdx]) || 'Unnamed';
-    const _saveTitle = `Compress + Save \u2014 NS${nsIdx} \u201C${_saveName}\u201D`;
-    try {
-        const words2 = [];
-        for (let i = 0; i < minSize; i++) words2.push(sim.memory[baseLoc + i] >>> 0);
-        const typeNames2 = ['code', 'data', 'thread', 'outform'];
-        const meta2 = { abstraction: _saveName, ns_slot: nsIdx, content_type: typeNames2[typ] || 'code', cw, cc, lump_size: minSize };
-        const resp2 = await fetch('/api/lumps/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ binary: words2, metadata: meta2 }),
-        });
-        const data2 = await resp2.json();
-        if (!resp2.ok) throw new Error(data2.error || 'Server error');
-        const _biLine2 = data2.boot_image_refreshed ? '\u2713 boot-image.bin refreshed \u2014 change persists on reboot'
-                       : data2.boot_image_note      ? `\u26A0 boot image not updated: ${data2.boot_image_note}`
-                       : '';
-        const detail = [parts.join('; '), `token: ${data2.token}`, data2.lump_path || 'server/lumps/', _biLine2].filter(Boolean).join('\n');
-        log(`Compressed NS${nsIdx}: ${parts.join('; ')}. Saved \u2014 token: ${data2.token}`);
-        if (typeof showPatchModal === 'function') showPatchModal(true, _saveTitle, detail);
-        if (typeof renderLumps === 'function') renderLumps();
-    } catch (e) {
-        log(`Compress done but auto-save failed: ${e.message}. Use \u2193\u202FSave to retry.`);
-        if (typeof showPatchModal === 'function') showPatchModal(false, _saveTitle, `Compress OK. Save failed: ${e.message}\nUse \u2193\u202FSave to retry.`);
-    }
+    if (typeof showPatchModal === 'function') showPatchModal(true, _saveTitle, _detail);
+    if (typeof renderLumps   === 'function') renderLumps();
 };
 
 // ── Lump Save (to server) ──────────────────────────────────────────────────
 // Reads the current lump binary from simulator memory and POSTs it to
 // /api/lumps/save, storing it as a named .lump file in server/lumps/.
 window.lumpSaveLump = async function(nsIdx) {
-    const logEl = document.getElementById('crInjectLog');
-    function log(msg) { if (logEl) { logEl.style.display = 'block'; logEl.textContent = msg; } }
-
-    const nse = sim.readNSEntry(nsIdx);
-    if (!nse) { log('No NS entry for slot ' + nsIdx); return; }
-    const baseLoc = nse.word0_location >>> 0;
-    if (baseLoc === 0 || baseLoc >= sim.memory.length) { log('Bad lump base address'); return; }
-
-    const hdr = sim.parseLumpHeader(sim.memory[baseLoc] >>> 0);
-    if (!hdr.valid) { log('No valid lump header at 0x' + baseLoc.toString(16)); return; }
-
-    const lumpSize = hdr.lumpSize;
-    const words = [];
-    for (let i = 0; i < lumpSize; i++) words.push(sim.memory[baseLoc + i] >>> 0);
-
     const absName = (sim.nsLabels && sim.nsLabels[nsIdx]) || 'Unnamed';
+    const opName  = `Save Lump \u2014 NS${nsIdx} \u201C${absName}\u201D`;
+    const checks  = [];   // collected validation lines shown before save
+    let   failed  = false;
+
+    // ── 1. NS entry ────────────────────────────────────────────────────────
+    const nse = sim.readNSEntry(nsIdx);
+    if (!nse) {
+        if (typeof showPatchModal === 'function')
+            showPatchModal(false, opName, `NS slot ${nsIdx}: no entry in namespace table.`);
+        return;
+    }
+    checks.push(`NS${nsIdx}  word0=0x${(nse.word0_location>>>0).toString(16).toUpperCase().padStart(8,'0')}` +
+                `  word1=0x${(nse.word1_limit>>>0).toString(16).toUpperCase().padStart(8,'0')}` +
+                `  word2=0x${(nse.word2_seals>>>0).toString(16).toUpperCase().padStart(8,'0')}`);
+
+    // ── 2. Base address ────────────────────────────────────────────────────
+    const baseLoc = nse.word0_location >>> 0;
+    if (baseLoc === 0 || baseLoc >= sim.memory.length) {
+        if (typeof showPatchModal === 'function')
+            showPatchModal(false, opName, `Bad lump base address: 0x${baseLoc.toString(16)}`);
+        return;
+    }
+    checks.push(`base=0x${baseLoc.toString(16).toUpperCase().padStart(4,'0')}`);
+
+    // ── 3. Lump header magic ───────────────────────────────────────────────
+    const hdr = sim.parseLumpHeader(sim.memory[baseLoc] >>> 0);
+    if (!hdr.valid) {
+        checks.push(`\u2717 BAD MAGIC: header word 0x${(sim.memory[baseLoc]>>>0).toString(16).toUpperCase().padStart(8,'0')} (expected magic=0x1F)`);
+        if (typeof showPatchModal === 'function') showPatchModal(false, opName, checks.join('\n'));
+        return;
+    }
+    checks.push(`\u2713 magic=0x1F  lumpSize=${hdr.lumpSize}  cw=${hdr.cw}  cc=${hdr.cc}  typ=${hdr.typ}`);
+
+    // ── 4. Lump bounds (cw + cc + 1 ≤ lumpSize) ───────────────────────────
+    if (hdr.cw < 1) {
+        checks.push('\u2717 cw=0: lump must have at least one code word.');
+        failed = true;
+    } else {
+        checks.push(`\u2713 cw=${hdr.cw} \u2265 1`);
+    }
+    if (1 + hdr.cw + hdr.cc > hdr.lumpSize) {
+        checks.push(`\u2717 BOUNDS: 1+cw+cc = ${1+hdr.cw+hdr.cc} exceeds lumpSize=${hdr.lumpSize}`);
+        failed = true;
+    } else {
+        checks.push(`\u2713 1+cw+cc=${1+hdr.cw+hdr.cc} \u2264 lumpSize=${hdr.lumpSize}`);
+    }
+
+    // ── 5. SEAL (version-seal CRC check) ──────────────────────────────────
+    const sealOk = sim.validateMAC(nse);
+    const storedSeal   = (nse.word2_seals & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+    const lim          = sim.parseNSWord1(nse.word1_limit);
+    const expectedSeal = (sim.computeSeal(baseLoc, lim.limit) & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+    if (sealOk) {
+        checks.push(`\u2713 SEAL OK: stored=0x${storedSeal}  computed=0x${expectedSeal}  limit17=${lim.limit}`);
+    } else {
+        checks.push(`\u2717 SEAL FAIL: stored=0x${storedSeal} \u2260 computed=0x${expectedSeal}  limit17=${lim.limit}`);
+        failed = true;
+    }
+
+    // ── 6. C-list slot 0 X-permission (entry capability) ──────────────────
+    if (hdr.cc > 0) {
+        const clistBase = baseLoc + hdr.lumpSize - hdr.cc;
+        const slot0gt   = sim.memory[clistBase] >>> 0;
+        const parsed0   = sim.parseGT(slot0gt);
+        if (parsed0 && parsed0.permissions) {
+            const p = parsed0.permissions;
+            const hasX = !!p.X;
+            const onlyXrx = hasX && !p.W && !p.L && !p.S && !p.E;
+            if (!onlyXrx) {
+                const pStr = Object.entries(p).filter(([,v])=>v).map(([k])=>k).join('');
+                checks.push(`\u2717 c-list[0] perm=${pStr||'none'} — slot 0 must be X or RX only (DOMAIN_PURITY)`);
+                failed = true;
+            } else {
+                checks.push(`\u2713 c-list[0] X-perm OK`);
+            }
+        }
+    }
+
+    if (failed) {
+        if (typeof showPatchModal === 'function') showPatchModal(false, opName, checks.join('\n'));
+        return;
+    }
+
+    // ── 7. All checks passed — write to repository ─────────────────────────
+    checks.push(`\u2139 All checks passed. Saving ${hdr.lumpSize}-word lump\u2026`);
+    const words = [];
+    for (let i = 0; i < hdr.lumpSize; i++) words.push(sim.memory[baseLoc + i] >>> 0);
     const typeNames = ['code', 'data', 'thread', 'outform'];
     const metadata = {
         abstraction: absName,
-        ns_slot: nsIdx,
+        ns_slot:     nsIdx,
         content_type: typeNames[hdr.typ] || 'code',
-        cw: hdr.cw,
-        cc: hdr.cc,
-        lump_size: lumpSize,
+        cw:          hdr.cw,
+        cc:          hdr.cc,
+        lump_size:   hdr.lumpSize,
     };
-
-    log(`Saving ${lumpSize}-word lump for \u201C${absName}\u201D (NS${nsIdx})\u2026`);
     try {
         const resp = await fetch('/api/lumps/save', {
-            method: 'POST',
+            method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ binary: words, metadata }),
+            body:    JSON.stringify({ binary: words, metadata }),
         });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.error || 'Server error');
-        const _biLine = data.boot_image_refreshed ? '\u2713 boot-image.bin refreshed — change persists on reboot'
-                      : data.boot_image_note      ? `\u26A0 boot image not updated: ${data.boot_image_note}`
-                      : '';
-        const msg = [`token: ${data.token}`, data.lump_path || 'server/lumps/', _biLine].filter(Boolean).join('\n');
-        log(`Saved \u2014 token: ${data.token}`);
-        if (typeof showPatchModal === 'function') showPatchModal(true, `Save Lump \u2014 NS${nsIdx} \u201C${absName}\u201D`, msg);
-        if (typeof renderLumps === 'function') renderLumps();
+        const biLine = data.boot_image_refreshed
+            ? '\u2713 boot-image.bin refreshed \u2014 change persists on reboot'
+            : data.boot_image_note
+            ? `\u26A0 boot image not updated: ${data.boot_image_note}`
+            : '';
+        checks.push(`\u2713 Saved \u2014 token: ${data.token}`);
+        if (data.lump_path)  checks.push(data.lump_path);
+        if (biLine)          checks.push(biLine);
+        if (typeof showPatchModal === 'function') showPatchModal(true, opName, checks.join('\n'));
+        if (typeof renderLumps   === 'function') renderLumps();
     } catch (e) {
-        log(`Save failed: ${e.message}`);
-        if (typeof showPatchModal === 'function') showPatchModal(false, `Save Lump \u2014 NS${nsIdx} \u201C${absName}\u201D`, e.message);
+        checks.push(`\u2717 Save failed: ${e.message}`);
+        if (typeof showPatchModal === 'function') showPatchModal(false, opName, checks.join('\n'));
     }
 };
 
@@ -3295,25 +3349,8 @@ window.applyPOLA = async function(nsIdx) {
             const _pnInd = (_pgInd && sim.nsLabels && sim.nsLabels[_pgInd.index]) ? sim.nsLabels[_pgInd.index] : `slot${s}`;
             logLines0.push(`  \u26A0 indirect: slot ${s} \u201C${_pnInd}\u201D`);
         }
-        if (zeroedCount > 0) {
-            logLines0.push('Saving\u2026');
-            try {
-                const saveWords0 = [];
-                for (let i = 0; i < lumpSize; i++) saveWords0.push(sim.memory[baseLoc + i] >>> 0);
-                const typeNames0 = ['code', 'data', 'thread', 'outform'];
-                const meta0 = { abstraction: absName, ns_slot: nsIdx, content_type: typeNames0[typ] || 'code', cw, cc, lump_size: lumpSize };
-                const resp0 = await fetch('/api/lumps/save', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ binary: saveWords0, metadata: meta0 }),
-                });
-                const data0 = await resp0.json();
-                if (!resp0.ok) throw new Error(data0.error || 'Server error');
-                logLines0[logLines0.length - 1] = `Saved \u2014 token: ${data0.token}`;
-                if (data0.lump_path) logLines0.push(data0.lump_path);
-            } catch (e0) {
-                logLines0[logLines0.length - 1] = `Zeroing done but save failed: ${e0.message}`;
-            }
-        }
+        if (zeroedCount > 0)
+            logLines0.push('\u2139 Zeroing complete \u2014 click \u2193\u202FSave Lump to persist this lump to the repository.');
         if (typeof showPatchModal === 'function') showPatchModal(true, title, logLines0.join('\n'));
         if (typeof renderLumps === 'function') renderLumps();
         return;
@@ -3616,31 +3653,11 @@ window.applyPOLA = async function(nsIdx) {
         logLines.push(...indirectWarnings);
     }
 
-    // ── Step 9: auto-save ──────────────────────────────────────────────────
-    let saveOk = true;
-    logLines.push('Saving\u2026');
-    try {
-        const saveWords = [];
-        for (let i = 0; i < lumpSize; i++) saveWords.push(sim.memory[baseLoc + i] >>> 0);
-        const typeNames = ['code', 'data', 'thread', 'outform'];
-        const meta = { abstraction: absName, ns_slot: nsIdx, content_type: typeNames[typ] || 'code', cw, cc: newCC, lump_size: lumpSize };
-        const resp = await fetch('/api/lumps/save', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ binary: saveWords, metadata: meta }),
-        });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || 'Server error');
-        logLines[logLines.length - 1] = `Saved \u2014 token: ${data.token}`;
-        if (data.lump_path) logLines.push(data.lump_path);
-        if (data.boot_image_refreshed) logLines.push('\u2713 boot-image.bin refreshed \u2014 change persists on reboot');
-        else if (data.boot_image_note) logLines.push(`\u26A0 boot image not updated: ${data.boot_image_note}`);
-    } catch (e) {
-        saveOk = false;
-        logLines[logLines.length - 1] = `Optimize done but save failed: ${e.message}`;
-    }
+    // ── Step 9: report — programmer must click ↓ Save Lump to persist ─────
+    logLines.push('\u2139 POLA complete \u2014 click \u2193\u202FSave Lump to persist this lump to the repository.');
 
-    if (typeof showPatchModal === 'function') showPatchModal(saveOk, title, logLines.join('\n'));
-    if (saveOk && typeof renderLumps === 'function') renderLumps();
+    if (typeof showPatchModal === 'function') showPatchModal(true, title, logLines.join('\n'));
+    if (typeof renderLumps === 'function') renderLumps();
 };
 
 // ── Boot Sequence Code ─────────────────────────────────────────────────────
