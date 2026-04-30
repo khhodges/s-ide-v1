@@ -4466,6 +4466,32 @@ a.next-step-link:hover {
     flex: 1;
     overflow-y: auto;
     min-height: 0;
+    padding: 0.5rem 0.25rem 0.25rem;
+}
+
+.lump-picker-select {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--bg-secondary, #1a1a2e);
+    color: var(--text-primary, #e8e0c8);
+    border: 1px solid var(--border-color, #3a3a5c);
+    border-radius: 4px;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.82rem;
+    font-family: inherit;
+    cursor: pointer;
+    margin-bottom: 0.5rem;
+    appearance: auto;
+}
+
+.lump-picker-select:focus {
+    outline: 2px solid var(--accent-color, #7c6af7);
+    outline-offset: 1px;
+}
+
+.lump-picker-select option {
+    background: var(--bg-secondary, #1a1a2e);
+    color: var(--text-primary, #e8e0c8);
 }
 
 .lumps-detail-panel {
