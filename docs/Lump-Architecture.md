@@ -204,9 +204,8 @@ data (NS Table entries), not GT slots.
 ├─────────────────────────────────────────────────────────┤
 │  Words NS_TABLE_END+1..lumpSize-1   Trailing zeros      │
 ├─────────────────────────────────────────────────────────┤
-│  Words PYSICAL_MEMORY +1..lumpSize-1   Trailing zeros   │
-└─────────────────────────────────────────────────────────┘└─────────────────────────────────────────────────────────┘
-```
+│  Words PYSICAL_MEMORY +1..lumpSize-1   LUMP zone        │
+└─────────────────────────────────────────────────────────┘
 
 Each NS Table entry is three 32-bit words and carries one of three states:
 
