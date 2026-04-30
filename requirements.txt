@@ -10,3 +10,4 @@ markdown
 waitress
 weasyprint
 fpdf2
+apscheduler

@@ -162,6 +162,54 @@ def boot_id():
     return jsonify({"bootId": BOOT_ID, "version": BUILD_VERSION})
 
 # ---------------------------------------------------------------------------
+# Daily report — manual trigger
+# ---------------------------------------------------------------------------
+
+@app.route("/report/send-now")
+def report_send_now():
+    """Manually trigger the daily report email. Returns JSON confirmation.
+
+    Requires Authorization: Bearer <REPORT_TOKEN> header or ?token=<REPORT_TOKEN>.
+    """
+    from daily_report import check_report_auth as _check_auth
+    if not _check_auth(request):
+        return jsonify({"error": "Unauthorized — supply token via Authorization header or ?token="}), 401
+    try:
+        from daily_report import send_daily_report as _send_report, generate_report as _gen_report
+        ok, msg = _send_report(db_path)
+        plain, _, cost = _gen_report(db_path)
+        import datetime
+        return jsonify({
+            "sent": ok,
+            "message": msg,
+            "date": datetime.date.today().isoformat(),
+            "estimated_cost_today": round(cost, 2),
+            "recipient": "sipanticinc@gmail.com",
+        })
+    except Exception as exc:
+        logging.exception("Error in /report/send-now")
+        return jsonify({"sent": False, "message": str(exc)}), 500
+
+@app.route("/report/task-run", methods=["POST"])
+def report_task_run():
+    """Record a task agent run for cost tracking. POST {task_id, note?}.
+
+    Requires Authorization: Bearer <REPORT_TOKEN> header or ?token=<REPORT_TOKEN>.
+    """
+    from daily_report import check_report_auth as _check_auth
+    if not _check_auth(request):
+        return jsonify({"error": "Unauthorized — supply token via Authorization header or ?token="}), 401
+    try:
+        from daily_report import record_task_run as _record
+        data = request.get_json(silent=True) or {}
+        note = data.get("note", data.get("task_id", ""))
+        _record(db_path, event_type="task_run", note=note)
+        return jsonify({"recorded": True})
+    except Exception as exc:
+        logging.warning("Error in /report/task-run: %s", exc)
+        return jsonify({"recorded": False, "error": str(exc)}), 500
+
+# ---------------------------------------------------------------------------
 # CTMM web app API stubs (used by web/app.js + web/index.html)
 # These endpoints are called by the CTMM simulator frontend served at /ctmm/.
 # The server does not run Replit Auth so auth always reports unauthenticated.
@@ -4156,6 +4204,41 @@ with app.app_context():
     logging.info("Launch tests seeded/migrated")
 
     logging.info("Database tables created")
+
+    from daily_report import _ensure_tracking_table as _dr_ensure_table, get_report_token as _get_report_token
+    _dr_ensure_table(db_path)
+    _report_token = _get_report_token()
+    logging.info(
+        "Report tracking table ready | auth enabled (set REPORT_TOKEN secret to persist token)"
+    )
+
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+        from apscheduler.triggers.cron import CronTrigger
+
+        _sched_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scheduler.db")
+        _jobstores = {
+            "default": SQLAlchemyJobStore(url=f"sqlite:///{_sched_db}")
+        }
+        _scheduler = BackgroundScheduler(jobstores=_jobstores, timezone="UTC")
+
+        def _scheduled_report_job():
+            from daily_report import send_daily_report as _send
+            ok, msg = _send(db_path)
+            logging.info("Scheduled daily report: ok=%s msg=%s", ok, msg)
+
+        _scheduler.add_job(
+            _scheduled_report_job,
+            CronTrigger(hour=5, minute=0, timezone="UTC"),
+            id="daily_report",
+            replace_existing=True,
+            name="Daily progress and cost report",
+        )
+        _scheduler.start()
+        logging.info("APScheduler started — daily report scheduled at 05:00 UTC")
+    except Exception as _sched_exc:
+        logging.warning("APScheduler could not start: %s", _sched_exc)
 
 def _free_port(port):
     """Kill any process holding the given port using /proc/net/tcp."""

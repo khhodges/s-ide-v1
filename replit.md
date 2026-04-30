@@ -34,6 +34,20 @@ The architecture uses a scale-free abstraction model with 47 abstractions in 9 l
 - **localStorage:** Client-side storage for IDE state.
 - **oss-cad-suite:** FPGA toolchain for synthesis and programming.
 - **GitHub:** Integrated for the Mum Tunnel shared abstraction library and community features.
+- **APScheduler:** Background scheduler for daily email reports (persisted in `server/scheduler.db`).
+- **Resend:** Transactional email provider for daily progress reports.
+
+## Daily Progress Report (Task #759)
+An automated daily report emails `sipanticinc@gmail.com` at **05:00 UTC** every day via Resend.
+
+- **Report module:** `server/daily_report.py` — generates six-section report and sends via Resend
+- **Scheduler:** APScheduler with SQLite job store (`server/scheduler.db`) — survives server restarts
+- **Manual trigger:** `GET /report/send-now` — triggers immediately and returns JSON confirmation
+- **Cost tracking:** `POST /report/task-run` — records a task agent run in the `report_tracking` table
+- **Tracking table:** `report_tracking` in `server/church_machine.db`
+- **From address:** Uses `onboarding@resend.dev` (Resend's pre-verified test domain) unless `RESEND_FROM_EMAIL` env var is set to a verified domain
+- **Auth:** Both endpoints require `Authorization: Bearer <token>` or `?token=<token>` where the token comes from the `REPORT_TOKEN` env var (set as a Replit secret; a random token is generated at startup if unset)
+- **Six report sections:** tasks merged today, in progress, queued next, test suite status, Ti60 call-home status, cost summary with billing link
 
 ## Gotchas / Known Traps
 
