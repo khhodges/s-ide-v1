@@ -84,7 +84,7 @@ The AM has one job at the boundary: accept a cryptographic string in, issue a lo
 
 **Authorisation** — the AM checks what the current session's authority permits. A session with restricted authority may receive a handle with fewer capabilities than the cryptographic string would otherwise allow.
 
-**Issuance** — the AM creates a local session handle that encodes the authorised capabilities and returns it to the caller. The handle is valid for the lifetime of the session, or until it is explicitly released, evicted, or retired.
+**Issuance** — the AM creates a local session handle that encodes the authorised capabilities and returns it to the caller. The handle is valid for the lifetime of the session, or until it is explicitly released, evicted, or retired. On the CTMM, the concrete lower half of this step is performed by the Mint mechanism; see the [Mint spec](./mint.md).
 
 The AM does not expose the cryptographic string to the caller. It does not expose the internal representation of the handle. It does not expose where the entity lives, how it is stored, or how it is executed. The boundary is strict.
 
@@ -170,7 +170,7 @@ This section shows how the four disciplines map onto the current Church-Turing M
 
 The CTMM's local session handle is a **32-bit Golden Token (GT)**. The GT word encodes the handle's capabilities in specific bit fields: permission bits, a type field, a sequence counter, and a slot index. These fields are implementation detail — hardware-checked on every use, never visible to user code as named fields.
 
-A caller receiving a GT from the AM holds a 32-bit value. The hardware enforces what they can do with it. The caller cannot inspect the slot index to learn where the entity lives, cannot modify the permission bits to elevate their access, and cannot construct a valid GT without going through the AM (in the CTMM: the Mint abstraction, which is not user-accessible). The discipline is satisfied structurally: the hardware makes it impossible to violate.
+A caller receiving a GT from the AM holds a 32-bit value. The hardware enforces what they can do with it. The caller cannot inspect the slot index to learn where the entity lives, cannot modify the permission bits to elevate their access, and cannot construct a valid GT without going through the AM (in the CTMM: the Mint abstraction, which is not user-accessible — see the [Mint spec](./mint.md)). The discipline is satisfied structurally: the hardware makes it impossible to violate.
 
 The universal model maps cleanly: the GT is the local session handle. Its internal layout — defined in `docs/memory-manager.md §2` — is CTMM-specific detail, below the AM's interface.
 

@@ -28,7 +28,7 @@ memory implementation fails to meet.
 | `Memory.Allocate` returns a raw address, not a GT | The caller can construct arbitrary memory references — no capability discipline |
 | No power-of-2 quantisation | Lump sizes are arbitrary; the hardware bounds model is not enforced at allocation time |
 | No domain separation | A code region and a capability-list region are indistinguishable at the GT level — the hardware cannot enforce their different use rules |
-| `Mint.Create` ignores the `perms` argument | GT permission bits are never encoded; every issued GT is identical and meaningless |
+| `Mint.Create` ignores the `perms` argument | GT permission bits are never encoded; every issued GT is identical and meaningless (see [Mint spec](./mint.md) for the corrected specification) |
 | No identity or quota on memory requests | Any caller with an E-GT to Memory can exhaust physical RAM without limit or attribution |
 
 This document specifies a replacement that closes all five gaps. It consists of four
@@ -48,7 +48,8 @@ already how the system behaves. This document names it.
 ## 2. Reference: GT Word Bit Layout
 
 Every GT is a single 32-bit word. The hardware checks specific bits on every instruction
-that uses it. No instruction reveals the physical address behind the token.
+that uses it. No instruction reveals the physical address behind the token. The
+[Mint spec](./mint.md) is the specification for how this word is assembled at issuance time.
 
 ```
 Bit  31   30   29   28   27   26   25   24─23   22────16   15────────0
