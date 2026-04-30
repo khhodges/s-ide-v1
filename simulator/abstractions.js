@@ -288,8 +288,8 @@ class AbstractionRegistry {
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(4, 'Salvation', 1,
-            ['LOAD', 'TPERM', 'LAMBDA', 'TransitionToNavana'],
-            'First callable abstraction — proves CALL works, then transitions to Navana (does not RETURN)',
+            ['LOAD', 'TPERM', 'LAMBDA', 'TransitionToNavana', 'Execute'],
+            'First callable abstraction — proves CALL works, calls Navana.Init, then transitions to Navana (does not RETURN)',
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(5, 'Navana', 1,
@@ -481,19 +481,19 @@ class AbstractionRegistry {
             'Geometry via SlideRule — declares own Area and Circumference methods; inherits all SlideRule maths (Multiply, Sqrt, Sin, Cos, \u2026) from parent SlideRule',
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 }, parent: 16 });
 
-        this.createAbstraction(47, 'Billing', 0,
+        this.createAbstraction(47, 'Billing', 1,
             ['Open', 'Charge', 'Reissue', 'Close', 'Balance'],
-            'P-GT quota enforcer — opens billing accounts, charges/credits quota against a P-GT, and closes accounts',
+            'Per-account Passkey P-GT quota enforcer — issues system P-GT at boot; all TuringMemory allocations are charged against the active account',
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(48, 'TuringMemory', 0,
+        this.createAbstraction(48, 'TuringMemory', 1,
             ['AllocCode', 'FreeCode'],
-            'Domain-separated code allocator — allocates and frees code memory regions with P-GT quota enforcement via Billing',
+            'Domain-separated code allocation — validates P-GT quota via Billing.Charge then allocates via PhysicalPool; issues R+X (no W) GTs for code immutability',
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
-        this.createAbstraction(49, 'ChurchMemory', 0,
+        this.createAbstraction(49, 'ChurchMemory', 1,
             ['AllocAbstract', 'Free'],
-            'Abstract handle allocator — allocates and frees abstract namespace slot handles for Church-style object management',
+            'Abstract handle issuance — tracks per-NS-slot reference counts for abstract (Church-domain) capability handles',
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
     }
 }

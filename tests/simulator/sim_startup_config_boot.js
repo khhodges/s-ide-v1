@@ -55,6 +55,8 @@ while (bootIters < MAX_BOOT && !sim.bootComplete && !sim.halted) {
 
 const scEntry = (sim.auditLog || []).find(e => e.gate === 'Startup.Config.Execute');
 
+const memStats = sys.getMemoryStats();
+
 const out = {
     bootComplete:       sim.bootComplete === true,
     faultLog:           (sim.faultLog || []).map(f => ({
@@ -65,6 +67,11 @@ const out = {
     auditLogHasStartup: scEntry !== undefined,
     ledBits:            sim.ledBits | 0,
     dispatchedToSlot:   scEntry ? (scEntry.nsIndex | 0) : -1,
+    memStats: {
+        billingAccounts: memStats.billingAccounts,
+        systemPgt:       memStats.systemPgt,
+        turingWordsUsed: memStats.turingWordsUsed,
+    },
 };
 
 process.stdout.write(JSON.stringify(out) + '\n');

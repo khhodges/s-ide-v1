@@ -397,6 +397,22 @@ class SystemAbstractions {
                 message: 'Salvation complete — handing control to Navana (Namespace controller). Navana runs indefinitely.'
             };
         });
+        this.registry.bindMethod(4, 'Execute', function(sim, args) {
+            const registry = sim.abstractionRegistry;
+            let initResult = null;
+            if (registry) {
+                initResult = registry.dispatchMethod(5, 'Init', sim, args || {});
+            }
+            const initOk = !!(initResult && initResult.ok);
+            return {
+                ok: initOk,
+                result: initOk ? 1 : 0,
+                initStatus: initResult || null,
+                message: initOk
+                    ? 'Salvation.Execute: security pipeline verified — Navana.Init called'
+                    : 'Salvation.Execute: Navana.Init dispatch failed or was not bound'
+            };
+        });
     }
 
     _bindNavana() {
@@ -565,28 +581,34 @@ class SystemAbstractions {
                 const uartBufRes = registry.dispatchMethod(7, 'Allocate', sim, { size: 512  });
 
                 // Step 3 — Navana.ADD -> Mint.Encode (correct 3-step flow)
+                // Only register a code lump in the NS when its AllocCode succeeded.
+                // A failed allocation must not produce an NS entry with location=0.
                 let srGT = 0, constGT = 0;
-                const srAddRes = registry.dispatchMethod(5, 'ADD', sim, {
-                    location: srRes    && srRes.ok    ? srRes.result.location    : 0,
-                    limit: 16384, gtType: 1, label: 'SlideRule'
-                });
-                if (srAddRes && srAddRes.ok) {
-                    const encSr = registry.dispatchMethod(6, 'Encode', sim, {
-                        base: srAddRes.result.nsIndex, exp: srAddRes.result.version,
-                        permsBits: 0x20, bindable: 0, far: 0
+                if (srRes && srRes.ok) {
+                    const srAddRes = registry.dispatchMethod(5, 'ADD', sim, {
+                        location: srRes.result.location,
+                        limit: 16384, gtType: 1, label: 'SlideRule'
                     });
-                    if (encSr && encSr.ok) srGT = encSr.result;
+                    if (srAddRes && srAddRes.ok) {
+                        const encSr = registry.dispatchMethod(6, 'Encode', sim, {
+                            base: srAddRes.result.nsIndex, exp: srAddRes.result.version,
+                            permsBits: 0x20, bindable: 0, far: 0
+                        });
+                        if (encSr && encSr.ok) srGT = encSr.result;
+                    }
                 }
-                const constAddRes = registry.dispatchMethod(5, 'ADD', sim, {
-                    location: constRes && constRes.ok ? constRes.result.location : 0,
-                    limit: 256, gtType: 1, label: 'Constants'
-                });
-                if (constAddRes && constAddRes.ok) {
-                    const encConst = registry.dispatchMethod(6, 'Encode', sim, {
-                        base: constAddRes.result.nsIndex, exp: constAddRes.result.version,
-                        permsBits: 0x20, bindable: 0, far: 0
+                if (constRes && constRes.ok) {
+                    const constAddRes = registry.dispatchMethod(5, 'ADD', sim, {
+                        location: constRes.result.location,
+                        limit: 256, gtType: 1, label: 'Constants'
                     });
-                    if (encConst && encConst.ok) constGT = encConst.result;
+                    if (constAddRes && constAddRes.ok) {
+                        const encConst = registry.dispatchMethod(6, 'Encode', sim, {
+                            base: constAddRes.result.nsIndex, exp: constAddRes.result.version,
+                            permsBits: 0x20, bindable: 0, far: 0
+                        });
+                        if (encConst && encConst.ok) constGT = encConst.result;
+                    }
                 }
 
                 navanaState.bootAllocations = {

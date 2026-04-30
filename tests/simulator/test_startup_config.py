@@ -344,12 +344,17 @@ def test_ns_label_slot2_is_startup_config():
 
 
 def test_nsCount_unchanged():
-    """nsCount remains 50 after adding Startup.Config at slot 2.
+    """nsCount is 51 after Startup.Config.Execute runs and Navana.Init wires in.
 
-    Task #760 Stage 1 grew the catalog from 47 to 50 by appending
+    Task #760 Stage 1 grew the static catalog from 47 to 50 by appending
     Billing (NS[47]), TuringMemory (NS[48]), ChurchMemory (NS[49]).
+    Task #765 wires Salvation.Execute -> Navana.Init, which dynamically adds
+    NS entries only for allocations that succeeded (AllocCode ok=true).
+    In the small test memory (16 384 words), the 16 384-word SlideRule AllocCode
+    fails OOM so no SlideRule NS entry is created; the 256-word Constants
+    AllocCode succeeds, adding one entry (NS[50]).  Total: 51.
     """
-    assert _h()["nsCount"] == 50
+    assert _h()["nsCount"] == 51
 
 
 def test_boot_abstr_has_cc0_cw3_in_simulator():
@@ -400,6 +405,26 @@ def test_boot_integration_gate_log_bootStepName():
     entry = _bh()["startupConfigEntry"]
     assert entry is not None
     assert entry.get("bootStepName") == "STARTUP_CONFIG"
+
+
+def test_boot_integration_billing_account_opened_after_boot():
+    """After boot, Navana.Init opens one system Billing account (billingAccounts == 1).
+
+    This directly validates Task #765: getMemoryStats() returns live non-zero values
+    after booting (the Memory panel objective).
+    """
+    assert _bh()["memStats"]["billingAccounts"] == 1
+
+
+def test_boot_integration_system_pgt_nonzero_after_boot():
+    """After boot, Navana.Init creates a system P-GT that is non-zero and non-null."""
+    pgt = _bh()["memStats"]["systemPgt"]
+    assert pgt is not None and pgt != 0, f"Expected non-zero systemPgt, got {pgt!r}"
+
+
+def test_boot_integration_turing_words_used_nonzero_after_boot():
+    """After boot, TuringMemory has allocated at least one code region (turingWordsUsed > 0)."""
+    assert _bh()["memStats"]["turingWordsUsed"] > 0
 
 
 def test_boot_integration_execute_failure_halts_boot():
