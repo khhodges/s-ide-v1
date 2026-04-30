@@ -407,7 +407,7 @@ class AbstractionRegistry {
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 1, E: 1 } });
 
         this.createAbstraction(32, 'Keystone', 5,
-            ['Connect', 'Hello'],
+            ['Init', 'Connect', 'Hello'],
             'Application namespace — first boot-resident application_namespace lump (NS[32], token 00002000). Connect(mum_identity_word) verifies Mum\'s Ed25519 identity and issues an Outform E-GT into c-list slot 1. Hello() forwards a CALL through the Tunnel to Mum.Greet(); returns FAULT_NO_CONTACT (0xDEAD0001) if Connect has not been called.',
             { author: 'SIPantic', version: '1.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 

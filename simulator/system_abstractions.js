@@ -638,6 +638,13 @@ class SystemAbstractions {
                 sim.nsClistMap[1].push({ gt: ledPK.gt, device: 'LED', passKeyId: ledPK.id });
             }
 
+            // Wire Tunnel E-GT (NS[31]) into Keystone (NS[32]) c-list slot 0 at boot.
+            let keystoneWired = false;
+            if (sim.abstractionRegistry) {
+                const ksInit = sim.abstractionRegistry.dispatchMethod(32, 'Init', sim, {});
+                keystoneWired = !!(ksInit && ksInit.ok && ksInit.result);
+            }
+
             const deviceCount = Object.keys(navanaState.deviceRegistry).length;
             const hasSysPgt   = !!navanaState.sysPgt;
             const hasBoot     = !!navanaState.bootAllocations;
@@ -652,10 +659,11 @@ class SystemAbstractions {
                     devices: { pass: deviceCount > 0 },
                     passkeys: { pass: !!ledPK },
                     billing:  { pass: hasSysPgt },
-                    bootAlloc: { pass: hasBoot }
+                    bootAlloc: { pass: hasBoot },
+                    keystoneClist0: { pass: keystoneWired }
                 },
                 b: 0, f: 0,
-                result: 'pass'
+                result: (deviceCount > 0 && hasSysPgt && keystoneWired) ? 'pass' : 'warn'
             });
 
             return {
@@ -2375,6 +2383,27 @@ class SystemAbstractions {
         const FAULT_NO_CONTACT = 0xDEAD0001;
         const GREET_RESPONSE   = 0x48454C4C;
         const KEYSTONE_NS      = 32;
+        const TUNNEL_NS        = 31;
+
+        this.registry.bindMethod(KEYSTONE_NS, 'Init', function(sim, args) {
+            // Wire the Tunnel E-GT (NS[31]) into Keystone c-list slot 0 at boot.
+            // This satisfies the boot-wiring contract declared in manifest.json:
+            //   capabilities[0] = { slot:0, target_ns:31, wired_at_boot:true }
+            const tunnelGT = sim.createGT(0, TUNNEL_NS, { E: 1 }, 1);
+            const entry = sim.readNSEntry(KEYSTONE_NS);
+            if (entry) {
+                const hdr = sim.parseLumpHeader(sim.memory[entry.word0_location]);
+                const clistBase = entry.word0_location + hdr.lumpSize - hdr.cc;
+                sim.memory[clistBase + 0] = tunnelGT >>> 0;
+                if (!sim.nsClistMap[KEYSTONE_NS]) sim.nsClistMap[KEYSTONE_NS] = [];
+                sim.nsClistMap[KEYSTONE_NS][0] = { gt: tunnelGT, name: 'Tunnel' };
+            }
+            return {
+                ok: true,
+                result: tunnelGT >>> 0,
+                message: `Keystone.Init: Tunnel E-GT (NS[${TUNNEL_NS}]) wired into c-list slot 0`
+            };
+        });
 
         this.registry.bindMethod(KEYSTONE_NS, 'Connect', function(sim, args) {
             const identityWord = (args && args[0] !== undefined) ? (args[0] >>> 0) : 0;

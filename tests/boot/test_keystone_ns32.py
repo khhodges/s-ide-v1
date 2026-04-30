@@ -447,3 +447,128 @@ def test_hello_after_connect_returns_greet_response():
         f"Hello() returned 0x{data['result']:08X}, "
         f"expected GREET_RESPONSE=0x{GREET_RESPONSE:08X}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 5 — Keystone.Init() wires Tunnel E-GT into c-list slot 0 at boot
+# ---------------------------------------------------------------------------
+
+_INIT_WIRE_HARNESS = """\
+"use strict";
+const SystemAbstractions = require("./simulator/system_abstractions.js");
+
+// Minimal mock simulator with a Keystone lump (64 words, cc=2).
+// Slot 0 starts as NULL GT; Init() must fill it with the Tunnel E-GT.
+const KEYSTONE_NS = 32;
+const TUNNEL_NS   = 31;
+const LUMP_SIZE   = 64;
+const CC          = 2;
+const PHYS_BASE   = 0;
+const CLIST_BASE  = PHYS_BASE + LUMP_SIZE - CC;   // 62
+
+const memory = new Array(LUMP_SIZE).fill(0);
+// Minimal lump header: magic=0x1F, n_minus_6=0, cw=0, cc=2
+memory[PHYS_BASE] = (0x1F << 27) | (0 << 23) | (0 << 10) | CC;
+
+const sim = {
+    memory,
+    nsClistMap: { [KEYSTONE_NS]: [] },
+    readNSEntry: (ns) => ns === KEYSTONE_NS
+        ? { word0_location: PHYS_BASE, ns_slot: KEYSTONE_NS }
+        : null,
+    parseLumpHeader: (word) => {
+        const cc = word & 0xFF;
+        const lumpSize = 1 << (((word >>> 23) & 0xF) + 6);
+        return { cc, lumpSize };
+    },
+    createGT: (seq, ns, perms, type) => {
+        const E = perms.E ? 1 : 0;
+        return ((0x1F << 27) | (E << 30) | (ns & 0xFFFF)) >>> 0;
+    },
+    abstractionRegistry: null,  // not needed for this test
+};
+
+const _methods = {};
+const registry = {
+    bindMethod(ns, name, fn) { _methods[`${ns}.${name}`] = fn; },
+};
+
+const sa = Object.create(SystemAbstractions.prototype);
+sa.registry = registry;
+sa._initKeystone();
+
+// Call Keystone.Init() — the boot-wiring step.
+const initFn = _methods[`${KEYSTONE_NS}.Init`];
+if (!initFn) {
+    process.stdout.write(JSON.stringify({ ok: false, message: "Keystone.Init not bound" }) + "\\n");
+    process.exit(1);
+}
+initFn(sim, {});
+
+// Read c-list slot 0 — must be non-zero (the Tunnel E-GT).
+const slot0 = sim.memory[CLIST_BASE + 0] >>> 0;
+const tunnelNSInSlot = slot0 & 0xFFFF;
+const ebitSet = ((slot0 >>> 30) & 1) === 1;
+
+if (slot0 === 0) {
+    process.stdout.write(JSON.stringify({ ok: false, result: 0,
+        message: "c-list slot 0 is still NULL GT after Keystone.Init()" }) + "\\n");
+    process.exit(1);
+}
+
+const ok = (tunnelNSInSlot === TUNNEL_NS) && ebitSet;
+process.stdout.write(JSON.stringify({
+    ok,
+    result: slot0,
+    tunnelNS: tunnelNSInSlot,
+    eBitSet: ebitSet,
+    message: ok
+        ? `slot 0 = 0x${slot0.toString(16).toUpperCase().padStart(8,'0')} — Tunnel E-GT wired correctly`
+        : `slot 0 = 0x${slot0.toString(16).toUpperCase().padStart(8,'0')} — wrong GT (ns=${tunnelNSInSlot}, E=${ebitSet})`
+}) + "\\n");
+process.exit(ok ? 0 : 1);
+"""
+
+
+def test_keystone_init_wires_tunnel_gt_into_clist_slot0():
+    """Keystone.Init() writes a valid Tunnel E-GT (NS[31]) into c-list slot 0.
+
+    This is the core boot-wiring contract from Task #769: after _initKeystone()
+    binds the Init method and Init() is called (as Navana.Init does at boot),
+    sim.memory[clist_base + 0] must hold a non-zero E-GT pointing at NS[31].
+
+    A regression here means the cold-boot path for Keystone.Hello() will see a
+    NULL GT in slot 0 and cannot route through the Tunnel without a lazy-load.
+    """
+    proc = subprocess.run(
+        ["node", "--input-type=commonjs"],
+        input=_INIT_WIRE_HARNESS.encode("utf-8"),
+        capture_output=True,
+        timeout=10,
+        cwd=ROOT,
+    )
+    stdout = proc.stdout.decode("utf-8", errors="replace").strip()
+    stderr = proc.stderr.decode("utf-8", errors="replace").strip()
+
+    assert proc.returncode == 0, (
+        f"Keystone.Init wire harness exited {proc.returncode}.\n"
+        f"stdout: {stdout}\nstderr: {stderr}"
+    )
+
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        pytest.fail(
+            f"Harness produced non-JSON output: {exc}\nstdout: {stdout}"
+        )
+
+    assert data.get("ok") is True, (
+        f"Keystone.Init() did not wire Tunnel GT into slot 0; "
+        f"result=0x{data.get('result', 0):08X}, message={data.get('message')!r}"
+    )
+    assert data.get("tunnelNS") == TUNNEL_SLOT, (
+        f"c-list slot 0 NS index = {data.get('tunnelNS')}, expected {TUNNEL_SLOT} (Tunnel)"
+    )
+    assert data.get("eBitSet") is True, (
+        f"Tunnel GT in c-list slot 0 has E-bit clear: 0x{data.get('result', 0):08X}"
+    )
