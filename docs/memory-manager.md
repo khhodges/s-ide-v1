@@ -5,7 +5,7 @@
 
 ## Domain-Separated Allocation, Passkey Billing, and a Self-Organising Namespace
 
-**Status: DRAFT — awaiting approval before implementation**
+**Status: DRAFT — design questions resolved; ready for implementation approval**
 **Author: design session 2026-04-29 / 2026-04-30**
 **Depends on: `docs/golden-tokens.md`, `docs/abstractions.md`, `docs/Lump-Architecture.md`**
 
@@ -124,7 +124,7 @@ Bit  31──27   26  25   24─23   22────16   15──────0
 |---|---|---|
 | `0x00` | `AB_TYPE_IO` | Hardware device handle (LED, UART, Button, Timer, Display) |
 | `0x01` | `AB_TYPE_M_ELEVATION` | M-bit authority token — sets CRn(M=1) |
-| `0x02` | *(reserved for P-GT — see Q7)* | Billing Passkey — see §6 |
+| `0x02` | `AB_TYPE_PGT` | Billing Passkey — see §6 |
 
 ---
 
@@ -718,31 +718,88 @@ After:
 
 ---
 
-## 13. Open questions — decisions required before implementation
+## 13. Design decisions — resolved 2026-04-30
 
-**Q2 — Billing table storage**
-The quota table needs persistent storage across reboots (so a system-class P-GT issued
-at boot can recover the same account IDs). Should this live in a reserved memory region
-provisioned at boot, or should Billing always reissue fresh accounts at every boot
-(simpler, but quotas reset on power cycle)?
+All four questions below were open at draft time and are now decided. No further
+questions block implementation.
 
-**Q3 — P-GT freshness enforcement**
-Abstract GTs have no NS entry so the hardware does not check `gt_seq` automatically.
-Should Billing maintain a per-account `current_seq` field and reject P-GTs with a stale
-sequence, or is Revoke-by-zeroing-quota sufficient without sequence tracking?
+**Q2 — Billing table storage — Decision: reissue fresh accounts at every boot**
 
-**Q4 — `AllocAbstract` memory charging**
-`ChurchMemory.AllocAbstract` wraps an existing NS entry without allocating new memory,
-so no Billing charge is made. Is this correct, or should issuing a new E-GT for an
-existing lump carry a small flat fee to prevent unbounded E-GT proliferation?
+The Billing quota table is ephemeral. On every boot, Billing creates accounts from
+scratch: the system-class account is issued during `Navana.Init`, and any user-class
+accounts are provisioned at that time by the boot policy. Quotas reset on power cycle.
 
-**Q7 — `ab_type` value for P-GT** *(blocks §6 implementation)*
-`ab_type = 0x02` is proposed as the P-GT class identifier. Confirm this value is not
-allocated to any other use before implementation begins. If 0x02 is taken, choose the
-next unallocated value and update §6.2 and `Billing.Charge`'s validation mask
-accordingly.
+Rationale: The boot sequence already brings all abstractions up fresh. Adding persistent
+storage for quota records — whether in reserved RAM or flash — would require a
+persistence layer that does not yet exist and imposes ordering constraints on the boot
+sequence. The benefit (surviving reboots with the same quota balances) is not required
+for the current use cases. If persistent quotas are needed in the future they can be
+added as a separate Billing extension without changing the core Charge/TopUp/Revoke
+interface.
 
-*Q1, Q5, and Q6 from the previous draft are resolved:*
+Consequence: The `account_id` values in the quota table are ephemeral. A P-GT held
+across a reboot refers to an `account_id` that no longer exists in the new Billing
+table; `Charge` will fault `QUOTA_EXCEEDED` (table entry absent → remaining = 0).
+This is safe and expected: the caller must obtain a fresh P-GT after any reboot.
+
+**Q3 — P-GT freshness enforcement — Decision: Billing maintains `current_seq` per account**
+
+Billing adds a `current_seq` field to each quota record. `Billing.Charge` rejects any
+P-GT whose `gt_seq` field does not match the stored `current_seq` for that `account_id`
+with a `BAD_PGT_SEQ` fault. `Billing.Reissue` increments `current_seq` and returns a
+new P-GT with the updated sequence.
+
+Rationale: §6.5 already promises that stale P-GTs are rejected at `Charge` time after
+a `Reissue`. That promise requires the sequence to be tracked. Revoke-by-zeroing alone
+is sufficient to block future charges but does not invalidate outstanding copies held in
+c-lists that the caller may have distributed. The `current_seq` check closes that gap
+without requiring any recall of old P-GTs. The check is a single word comparison inside
+`Billing.Charge` — zero additional cost to the common path.
+
+Updated quota record (add one field to §6.3 table):
+
+| Field | Type | Meaning |
+|---|---|---|
+| `account_id` | 16-bit | Key; matches P-GT `ab_data` field |
+| `words_remaining` | 32-bit | Current allocation budget in words |
+| `words_used` | 32-bit | Cumulative words ever committed |
+| `quota_class` | 4-bit | Controls default limits and B-bit policy |
+| `current_seq` | 7-bit | Valid sequence counter; must match P-GT `gt_seq` |
+
+`Billing.Issue` sets `current_seq = freshSeq()`. `Billing.Reissue` increments
+`current_seq` before building the new P-GT word.
+
+**Q4 — `AllocAbstract` memory charging — Decision: no charge**
+
+`ChurchMemory.AllocAbstract` issues no Billing charge. The current design is correct.
+
+Rationale: `AllocAbstract` allocates no physical memory and claims no new NS slot. It
+returns a 32-bit E-GT value that the caller stores in one word of their existing c-list.
+That c-list word was already charged to the caller's quota when their c-list lump was
+allocated via `ChurchMemory.Allocate`. No additional resource is consumed per E-GT
+beyond the c-list word it occupies.
+
+Unbounded E-GT proliferation cannot occur: each E-GT must reside in a c-list word,
+c-list capacity is quota-bounded, and quota is enforced at `ChurchMemory.Allocate` time.
+A caller cannot obtain more E-GTs than they have c-list words, and they cannot obtain
+more c-list words than their quota allows. No flat fee is needed.
+
+**Q7 — `ab_type` value for P-GT — Decision: confirm `ab_type = 0x02`**
+
+`AB_TYPE_PGT = 0x02` is confirmed as the P-GT class identifier. The value is not
+allocated to any other use. The full allocation table is:
+
+| Value | Constant | Use |
+|---|---|---|
+| `0x00` | `AB_TYPE_IO` | Hardware device handle (LED, UART, Button, Timer, Display) |
+| `0x01` | `AB_TYPE_M_ELEVATION` | M-bit authority token — sets CRn(M=1) |
+| `0x02` | `AB_TYPE_PGT` | Billing Passkey |
+
+§6.2 and `Billing.Charge`'s validation mask (`pgt[31:27] != 0b00010`) are consistent
+with this value and require no change. §2.2 has been updated to use the `AB_TYPE_PGT`
+constant name.
+
+*Previously resolved questions:*
 - *Q1 (NS renumbering strategy): resolved — first-come-first-served per §9.2; no pre-assignment; no renumbering.*
 - *Q5 (backward-compat Memory shim): resolved — Memory stays at its current slot until PhysicalPool passes tests and replaces it.*
 - *Q6 (LumpFactory necessity): deferred — LumpFactory earns a slot when it is built and tested, or is omitted if TuringMemory/ChurchMemory prove sufficient in practice.*
@@ -750,7 +807,7 @@ accordingly.
 ---
 
 *This document describes design intent only. No source files have been modified.
-Implementation begins only after all open questions in §13 are resolved and this
+All design questions in §13 are now resolved. Implementation may begin after this
 document is approved.*
 
 ---
