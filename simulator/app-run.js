@@ -10324,14 +10324,14 @@ CALL CR6, 2          ; L perm required on slot 2`
         brief: 'The execution context: registers, stack, heap, and C-List tail in one lump.',
         detail: `A thread is a single execution context managed by the CHANGE instruction.
 
-Memory layout (word 0 = base address, addresses increase downward):
-  [0]    Header word  typ=0x0A | cc (heap size) | reserved
-  [1–16] DR0–DR15     Saved data registers (32-bit each)
-  [17…]  Heap ↓       cc words; bump allocation; DR5 = frontier
-  [?]    Freespace    17+cc words to sp_max (IDE-defined)
-  [sp…]  Stack ↑      CALL frame: [E-GT · frame-word] (STO -= 2)
-                       LAMBDA frame: [frame-word] (STO -= 1)
-  [tail] C-List       CR0–CR11 (12 words, fixed tail)
+Memory layout (FS words total; HS, SS, FS are set by the IDE under programmer control):
+  [0]              Header word      typ=0x0A | cc=HS (heap words) | cw=SS (stack words)
+  [1–16]           DR0–DR15         Saved data registers (32-bit each)              Zone ⑤
+  [17..HS]         Heap ↑           HS words; bump allocation; DR5 = frontier        Zone ④
+  [HS+1..FS-13-SS] Freespace        dynamic gap; Mint-verified all-zero              Zone ③
+  [FS-12-SS..FS-13] Stack ↓         SS words; CALL: [E-GT · frame-word] (STO -= 2)  Zone ②
+                                              LAMBDA: [frame-word] (STO -= 1)
+  [FS-12..FS-1]    C-List           CR0–CR11 (12 words, architecture-fixed tail)    Zone ①
 
 STO register = current stack top (word index).
 CHANGE saves current DRs into [1–16] and per-thread CRs (CR0–CR11, CR14, CR15); CR12/CR13 are system-wide and unchanged.`,

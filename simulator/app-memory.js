@@ -1648,24 +1648,31 @@ function renderBootNSImage() {
     return html;
 }
 
-// Thread slot layout constants (words within a 256-word slot)
-// Word 0 is the lump header (0xF900_020C: magic=0x1F, n-6=2, cw=0, typ=10, cc=12).
-// Physical layout (word 0 at top, word 255 at bottom):
-//   +0          Lump Header  (1 word)
-//   +1  … +16   Zone ⑤ Data Registers — DR0..DR15  (16 words)
-//   +17 … +80   Zone ④ Heap ↑ — fixed size, grows upward  (64 words)
-//   +81 … +211  Zone ③ Freespace — dynamic gap  (131 words)
-//   +212 … +243 Zone ② LIFO Stack ↓ — STO initial = 212  (32 words)
-//   +244 … +255 Zone ① Capabilities — CR0..CR11 GT Word 0; c-list tail  (12 words)
+// Thread lump sizing parameters — set by the IDE under programmer control.
+// FS = Full lump size  (F = full):  total words in the thread lump.
+// HS = Heap size       (H = heap):  max heap words; stored in header cc field.
+// SS = Stack size      (S = stack): stack words;    stored in header cw field.
+// Architecture-fixed zones: DR = 16 words (DR0–DR15), Caps = 12 words (CR0–CR11).
+const THREAD_FS = 256;  // Full size  (FS)
+const THREAD_HS =  64;  // Heap size  (HS)
+const THREAD_SS =  32;  // Stack size (SS)
+
+// Physical layout (word 0 at top, word FS-1 at bottom):
+//   +0                     Lump Header (1 word)
+//   +1        … +16        Zone ⑤ Data Registers — DR0..DR15 (16 words, fixed)
+//   +17       … +HS        Zone ④ Heap ↑ — HS words; grows upward
+//   +HS+1     … +FS-13-SS  Zone ③ Freespace — dynamic gap; Mint-verified all-zero
+//   +FS-12-SS … +FS-13     Zone ② LIFO Stack ↓ — SS words; grows downward
+//   +FS-12    … +FS-1      Zone ① Capabilities — CR0..CR11 GT Word 0; c-list tail (12 words, fixed)
 const THREAD_LAYOUT = {
-    HEADER_WORD:  0,
-    THREAD_HEADER: 0xF900_8240,
-    DR_START:     1,   DR_END:     16,  DR_WORDS:     16,
-    HEAP_START:  17,   HEAP_END:   80,  HEAP_WORDS:   64,
-    FREE_START:  81,   FREE_END:  211,  FREE_WORDS:  131,
-    STACK_START: 212,  STACK_END: 243,  STACK_WORDS:  32,
-    CAPS_START:  244,  CAPS_END:  255,  CAPS_WORDS:   12,
-    TOTAL:      256,
+    HEADER_WORD:   0,
+    THREAD_HEADER: 0xF900_8240,  // magic=0x1F · n-6=log2(FS)-6 · cw=SS · typ=10 · cc=HS
+    DR_START:      1,              DR_END:    16,                        DR_WORDS:   16,
+    HEAP_START:   17,              HEAP_END:  17 + THREAD_HS - 1,        HEAP_WORDS: THREAD_HS,
+    FREE_START:   17 + THREAD_HS, FREE_END:  THREAD_FS - THREAD_SS - 13, FREE_WORDS: THREAD_FS - 17 - THREAD_HS - THREAD_SS - 12,
+    STACK_START:  THREAD_FS - THREAD_SS - 12, STACK_END: THREAD_FS - 13, STACK_WORDS: THREAD_SS,
+    CAPS_START:   THREAD_FS - 12, CAPS_END:  THREAD_FS - 1,             CAPS_WORDS: 12,
+    TOTAL:        THREAD_FS,
 };
 const THREAD_NS_SLOTS = new Set([1, 45]);
 
@@ -1686,10 +1693,10 @@ function renderThreadMemoryLayout(nsIndex) {
     // ── Sticky header block (title + lump header) ─────────────────────────
     const headerWord = sim.memory[slotBase + TL.HEADER_WORD] || TL.THREAD_HEADER;
     html += `<div class="thread-layout-sticky" id="thread-zone-hdr">`;
-    html += `<div class="thread-layout-header">${label} — Thread Memory Layout<span class="thread-layout-subhead">NS Slot ${nsIndex} · base ${addrOf(0)} · 256 words (1\u202F024 bytes)</span></div>`;
+    html += `<div class="thread-layout-header">${label} — Thread Memory Layout<span class="thread-layout-subhead">NS Slot ${nsIndex} · base ${addrOf(0)} · ${THREAD_FS} words·FS (${THREAD_FS * 4}\u202Fbytes)</span></div>`;
     html += `<div class="thread-lump-hdr-block">`;
     html += `<span class="thread-lump-hdr-label">Lump Header</span>`;
-    html += `<span class="thread-lump-hdr-note">word 0 · magic=0x1F · n\u22126=2 (256w) · sw=32 · typ=10 (Thread) · cc=64</span>`;
+    html += `<span class="thread-lump-hdr-note">word 0 · magic=0x1F · n\u22126=${Math.log2(THREAD_FS) - 6} (${THREAD_FS}w·FS) · cw=${THREAD_SS}\u202F(SS) · typ=10 (Thread) · cc=${THREAD_HS}\u202F(HS)</span>`;
     html += `<div class="thread-lump-hdr-row">`;
     html += `<span class="thread-lump-off">+0</span>`;
     html += `<span class="thread-lump-addr">${addrOf(0)}</span>`;
@@ -1717,7 +1724,7 @@ function renderThreadMemoryLayout(nsIndex) {
     for (let i = TL.HEAP_START; i <= TL.HEAP_END; i++) {
         if (sim.memory[slotBase + i]) heapNonZero++;
     }
-    html += secHdr('④', 'Heap ↑', `64 words · offset +17 … +80 · base ${addrOf(TL.HEAP_START)} · ${heapNonZero} word${heapNonZero!==1?'s':''} allocated`, '#22c55e', 'thread-zone-4');
+    html += secHdr('④', 'Heap ↑', `${THREAD_HS} words·HS · offset +${TL.HEAP_START} … +${TL.HEAP_END} · base ${addrOf(TL.HEAP_START)} · ${heapNonZero} word${heapNonZero!==1?'s':''} allocated`, '#22c55e', 'thread-zone-4');
     html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>Off</th><th>Addr</th><th>Hex</th><th>Decoded</th></tr></thead><tbody>';
     for (let i = 0; i < TL.HEAP_WORDS; i++) {
         const off  = TL.HEAP_START + i;
@@ -1733,9 +1740,9 @@ function renderThreadMemoryLayout(nsIndex) {
     for (let i = TL.FREE_START; i <= TL.FREE_END; i++) {
         if (sim.memory[slotBase + i]) freeNonZero++;
     }
-    html += secHdr('③', 'Freespace', `131 words · offset +81 … +211 · ${freeNonZero} non-zero · shrinks as stack grows ↓ and heap grows ↑`, '#6b7280', 'thread-zone-3');
+    html += secHdr('③', 'Freespace', `${TL.FREE_WORDS} words · offset +${TL.FREE_START} … +${TL.FREE_END} · ${freeNonZero} non-zero · shrinks as stack grows ↓ and heap grows ↑`, '#6b7280', 'thread-zone-3');
     if (freeNonZero === 0) {
-        html += '<div class="thread-free-empty">All 131 words are zero — region is unallocated.</div>';
+        html += `<div class="thread-free-empty">All ${TL.FREE_WORDS} words are zero — region is unallocated.</div>`;
     } else {
         html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>Off</th><th>Addr</th><th>Hex</th><th>Note</th></tr></thead><tbody>';
         for (let i = TL.FREE_START; i <= TL.FREE_END; i++) {
@@ -1784,10 +1791,10 @@ function renderThreadMemoryLayout(nsIndex) {
         html += `<tr id="thread-stack-row-${off}"${rowStyle}><td style="color:#38bdf8;">+${off}</td><td style="font-family:monospace;">${addrOf(off)}</td><td style="color:rgba(206,145,120,0.85);font-family:monospace;">${hex}</td><td>${decoded}</td></tr>`;
     }
     html += '</tbody></table>';
-    html += secHdr('②', 'LIFO Stack ↑', `32 words · STO=${stoLive} · grows ↑ · sentinel: E-GT@+242, fw@+243 (NIA=0x7FFF) · ${stackUsed} word${stackUsed!==1?'s':''} non-zero`, '#38bdf8', 'thread-zone-2');
+    html += secHdr('②', 'LIFO Stack ↓', `${THREAD_SS} words·SS · offset +${TL.STACK_START} … +${TL.STACK_END} · STO=${stoLive} · grows ↓ · ${stackUsed} word${stackUsed!==1?'s':''} non-zero`, '#38bdf8', 'thread-zone-2');
 
     // ── Zone ①: Capabilities (+244 … +255) ───────────────────────────────
-    html += secHdr('①', 'Capabilities', `12 words · CR0–CR11 · offset +244 … +255 · c-list tail · saved/restored on context switch`, '#f4b942', 'thread-zone-1');
+    html += secHdr('①', 'Capabilities', `12 words·fixed · CR0–CR11 · offset +${TL.CAPS_START} … +${TL.CAPS_END} · c-list tail · saved/restored on context switch`, '#f4b942', 'thread-zone-1');
     html += '<table class="ns-mem-table thread-zone-table"><thead><tr><th>CR</th><th>Offset</th><th>Addr</th><th>Hex</th><th>Decoded (GT)</th></tr></thead><tbody>';
     for (let i = 0; i < TL.CAPS_WORDS; i++) {
         const off  = TL.CAPS_START + i;

@@ -160,14 +160,14 @@ architecture-fixed, not recorded in `cc`.
 ├─────────────────────────────────────────────────────────┤
 │  Words 17..HS    Heap HS size set by IDE (grows upward) │  Zone ④
 ├─────────────────────────────────────────────────────────┤
-│  Words HS+1..FS-13-SS   Freespace (all-zero; Mint verified)    │  Zone ③
+│  Words HS+1..FS-13-SS   Freespace (zero; Mint verified) │  Zone ③
 ├─────────────────────────────────────────────────────────┤
-│  Words FS-13-SS..FS-13  LIFO Stack (grows downward)            │  Zone ②
+│  Words FS-13-SS..FS-13  LIFO Stack (grows downward)     │  Zone ②
 ├─────────────────────────────────────────────────────────┤
-│  Words FS-12..FS  Initial CR0–CR11 GT Word 0 values      │  Zone ①
-└─────────────────────────────────────────────────────────┘ where FS, SS, & HS (F=full, S=stack, & H=heap) are set by the IDE under programmer control
-```
+│  Words FS-12..FS  Initial CR0–CR11 GT Word 0 values     │  Zone ①
+└─────────────────────────────────────────────────────────┘ 
 
+- Where FS, SS, & HS (F=full, S=stack, & H=heap) are set by the IDE under programmer control
 - Zone ① is pre-populated by the IDE at compile time with the thread's
   birth capabilities (one GT Word 0 per context register slot).
 - Zone ③ must be all-zero in the distributed binary; Mint.Thread verifies
@@ -203,7 +203,9 @@ data (NS Table entries), not GT slots.
 │                  NS Table  (N × 3-word entries)         │
 ├─────────────────────────────────────────────────────────┤
 │  Words NS_TABLE_END+1..lumpSize-1   Trailing zeros      │
-└─────────────────────────────────────────────────────────┘
+├─────────────────────────────────────────────────────────┤
+│  Words PYSICAL_MEMORY +1..lumpSize-1   Trailing zeros   │
+└─────────────────────────────────────────────────────────┘└─────────────────────────────────────────────────────────┘
 ```
 
 Each NS Table entry is three 32-bit words and carries one of three states:
