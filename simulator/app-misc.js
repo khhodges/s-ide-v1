@@ -616,7 +616,7 @@ function toggleNextSteps() {
 }
 
 function showNextSteps(context) {
-    _nextStepsHidden = true;
+    _nextStepsHidden = false;   // always expand when a new context is shown
     const box = document.getElementById('nextStepsBox');
     if (!box) return;
 
