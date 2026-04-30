@@ -158,7 +158,7 @@ architecture-fixed, not recorded in `cc`.
 ├─────────────────────────────────────────────────────────┤
 │  Words 1..16     Data Registers DR0–DR15                │  Zone ⑤
 ├─────────────────────────────────────────────────────────┤
-│  Words 17..80    Heap (grows upward)                    │  Zone ④
+│  Words 17..80    Heap max size set by IDE (grows upward) │  Zone ④
 ├─────────────────────────────────────────────────────────┤
 │  Words 81..211   Freespace (all-zero; Mint verified)    │  Zone ③
 ├─────────────────────────────────────────────────────────┤
