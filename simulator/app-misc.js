@@ -1467,9 +1467,12 @@ function loadDeviceList() {
                 const faultBadge = dev.boot_reason === 2 && dev.last_fault
                     ? '<span class="dev-fault-badge">' + _escHtml(faultStr) + _escHtml(niaStr) + '</span>'
                     : '';
+                const _ts = dev.tunnel_status || 'pending';
                 const tunnelBadge = tunnelOnline
                     ? '<span class="dev-tunnel-badge" title="Hello-Mum tunnel verified — GREET_RESPONSE received">Tunnel online</span>'
-                    : '';
+                    : _ts === 'offline'
+                        ? '<span class="dev-tunnel-badge-offline" title="Hello-Mum handshake failed at boot">Tunnel offline</span>'
+                        : '<span class="dev-tunnel-badge-pending" title="Tunnel handshake not yet confirmed">Checking...</span>';
 
                 const wrap = document.createElement('div');
                 wrap.className = 'dev-entry';
@@ -1494,7 +1497,7 @@ function loadDeviceList() {
                         '<div class="dev-detail-item"><span class="dev-detail-label">FW</span><span class="dev-detail-val">' + _escHtml(dev.fw_version) + '</span></div>' +
                         '<div class="dev-detail-item"><span class="dev-detail-label">Boots</span><span class="dev-detail-val">' + dev.boot_count + '</span></div>' +
                         '<div class="dev-detail-item"><span class="dev-detail-label">Boot reason</span><span class="dev-detail-val">' + _escHtml(bootReasonStr) + (faultBadge ? ' ' + faultBadge : '') + '</span></div>' +
-                        '<div class="dev-detail-item"><span class="dev-detail-label">Tunnel</span><span class="dev-detail-val">' + (tunnelOnline ? '<span class="dev-tunnel-badge" title="Hello-Mum handshake succeeded at boot">Tunnel online</span>' : _escHtml(dev.tunnel_status || 'pending')) + '</span></div>' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">Tunnel</span><span class="dev-detail-val">' + (tunnelOnline ? '<span class="dev-tunnel-badge" title="Hello-Mum handshake succeeded at boot">Tunnel online</span>' : (_ts === 'offline' ? '<span class="dev-tunnel-badge-offline" title="Hello-Mum handshake failed at boot">Tunnel offline</span>' : '<span class="dev-tunnel-badge-pending" title="Tunnel handshake not yet confirmed">Checking...</span>')) + '</span></div>' +
                         (dev.bridge_host ? '<div class="dev-detail-item"><span class="dev-detail-label">Bridge</span><span class="dev-detail-val">' + _escHtml(dev.bridge_host) + ':' + _escHtml(String(dev.bridge_port || '')) + '</span></div>' : '') +
                         (dev.serial_port ? '<div class="dev-detail-item"><span class="dev-detail-label">Serial</span><span class="dev-detail-val">' + _escHtml(dev.serial_port) + '</span></div>' : '') +
                     '</div>' +
