@@ -621,7 +621,7 @@ def send_daily_report(db_path):
         return False, msg
 
     if not from_email or from_email.lower().endswith("@gmail.com"):
-        from_email = os.environ.get("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+        from_email = os.environ.get("RESEND_FROM_EMAIL", "noreply@churchmachine.io")
 
     plain, html, cost_today = generate_report(db_path)
     date_str = datetime.date.today().strftime("%Y-%m-%d")
