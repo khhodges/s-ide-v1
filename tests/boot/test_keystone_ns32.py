@@ -1030,3 +1030,233 @@ def test_keystone_slot0_wiring_survives_boot_image_round_trip():
     assert data.get("ok") is True, (
         f"Round-trip wiring check failed: {data.get('message')!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 10 (T5) — Tunnel.Call bound by _initKeystone returns GREET_RESPONSE
+#               when cr2 is a valid MumGT (after Init + Connect)
+# ---------------------------------------------------------------------------
+
+_TUNNEL_CALL_KEYSTONE_HARNESS = """\
+"use strict";
+const SystemAbstractions = require("./simulator/system_abstractions.js");
+
+const KEYSTONE_NS    = 32;
+const TUNNEL_NS      = 31;
+const LUMP_SIZE      = 64;
+const CC             = 2;
+const PHYS_BASE      = 0;
+const CLIST_BASE_OFF = LUMP_SIZE - CC;   // 62
+
+// Valid mum identity: protocol tag = 1 in bits[31:28], rest non-zero.
+const VALID_IDENTITY = (1 << 28) | 0x0FACADE;
+const GREET_RESPONSE = 0x48454C4C;
+
+const memory = new Array(LUMP_SIZE).fill(0);
+memory[PHYS_BASE] = (0x1F << 27) | (0 << 23) | (0 << 10) | CC;
+
+const sim = {
+    memory,
+    nsClistMap: { [KEYSTONE_NS]: [] },
+    readNSEntry: (ns) => ns === KEYSTONE_NS
+        ? { word0_location: PHYS_BASE, ns_slot: KEYSTONE_NS }
+        : null,
+    parseLumpHeader: (word) => ({
+        cc: word & 0xFF,
+        lumpSize: 1 << (((word >>> 23) & 0xF) + 6),
+    }),
+    createGT: (seq, ns, perms, type) =>
+        ((0x1F << 27) | ((perms.E ? 1 : 0) << 30) | (ns & 0xFFFF)) >>> 0,
+    abstractionRegistry: null,
+};
+
+const _methods = {};
+const registry = {
+    bindMethod(ns, name, fn) { _methods[`${ns}.${name}`] = fn; },
+};
+
+const sa = Object.create(SystemAbstractions.prototype);
+sa.registry = registry;
+sa._initKeystone();
+
+// Call Keystone.Init() explicitly — this is the boot-wiring step that writes
+// the Tunnel E-GT into c-list slot 0, matching the literal task requirement.
+const initFn = _methods[`${KEYSTONE_NS}.Init`];
+if (!initFn) {
+    process.stdout.write(JSON.stringify({ ok: false,
+        message: "Keystone.Init not bound by _initKeystone()" }) + "\\n");
+    process.exit(1);
+}
+initFn(sim, {});
+
+// Call Connect() to fill slot 1 with MumGT.
+const connectFn = _methods[`${KEYSTONE_NS}.Connect`];
+const connectResult = connectFn(sim, [VALID_IDENTITY]);
+if (connectResult.result !== 1) {
+    process.stdout.write(JSON.stringify({ ok: false, step: "Connect",
+        message: connectResult.message }) + "\\n");
+    process.exit(1);
+}
+
+// Read back the MumGT that Connect() stored in slot 1.
+const mumGT = sim.memory[PHYS_BASE + CLIST_BASE_OFF + 1] >>> 0;
+
+// Invoke Tunnel.Call bound by _initKeystone — cr2=mumGT (non-zero).
+const tunnelCallFn = _methods[`${TUNNEL_NS}.Call`];
+if (!tunnelCallFn) {
+    process.stdout.write(JSON.stringify({ ok: false,
+        message: "Tunnel.Call not bound by _initKeystone()" }) + "\\n");
+    process.exit(1);
+}
+
+const result = tunnelCallFn(sim, { cr2: mumGT });
+const ok = result.ok === true && (result.result >>> 0) === GREET_RESPONSE;
+
+process.stdout.write(JSON.stringify({
+    ok,
+    result: result.result >>> 0,
+    fault: result.fault || null,
+    mumGT,
+    message: result.message || "",
+}) + "\\n");
+process.exit(ok ? 0 : 1);
+"""
+
+
+def test_tunnel_call_with_valid_mum_gt_returns_greet_response():
+    """Tunnel.Call bound by _initKeystone() returns ok=True and result=0x48454C4C
+    after Init() + Connect(valid_word) with a non-zero MumGT in slot 1.
+
+    Follows the literal boot sequence: Keystone.Init() is called first (wires
+    the Tunnel E-GT into c-list slot 0), then Connect(valid_identity) fills
+    slot 1 with MumGT, then Tunnel.Call({cr2: mumGT}) is invoked.
+
+    Expects the canonical GREET_RESPONSE (0x48454C4C, 'HELL') and ok=True —
+    the Stage 4 live-bridge behavior.  Distinct from Test 8 (_bindTunnel),
+    which echoes cr2 instead of returning GREET_RESPONSE.
+    """
+    proc = subprocess.run(
+        ["node", "--input-type=commonjs"],
+        input=_TUNNEL_CALL_KEYSTONE_HARNESS.encode("utf-8"),
+        capture_output=True,
+        timeout=10,
+        cwd=ROOT,
+    )
+    stdout = proc.stdout.decode("utf-8", errors="replace").strip()
+    stderr = proc.stderr.decode("utf-8", errors="replace").strip()
+
+    assert proc.returncode == 0, (
+        f"Tunnel.Call(mumGT) harness exited {proc.returncode}.\n"
+        f"stdout: {stdout}\nstderr: {stderr}"
+    )
+
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        pytest.fail(
+            f"Harness produced non-JSON output: {exc}\nstdout: {stdout}"
+        )
+
+    GREET_RESPONSE = 0x48454C4C
+    assert data.get("ok") is True, (
+        f"Tunnel.Call(mumGT) did not return ok=True; "
+        f"result=0x{data.get('result', 0):08X}, fault={data.get('fault')!r}, "
+        f"message={data.get('message')!r}"
+    )
+    assert data["result"] == GREET_RESPONSE, (
+        f"Tunnel.Call(mumGT) returned 0x{data['result']:08X}, "
+        f"expected GREET_RESPONSE=0x{GREET_RESPONSE:08X}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 11 (T6) — Tunnel.Call bound by _initKeystone returns ok=False and
+#                fault='NO_CONTACT' when cr2 is zero (NULL GT)
+# ---------------------------------------------------------------------------
+
+_TUNNEL_CALL_NULL_GT_HARNESS = """\
+"use strict";
+const SystemAbstractions = require("./simulator/system_abstractions.js");
+
+const TUNNEL_NS = 31;
+
+// Minimal mock sim — Tunnel.Call bound by _initKeystone does not read memory.
+const sim = {
+    memory: new Array(64).fill(0),
+};
+
+const _methods = {};
+const registry = {
+    bindMethod(ns, name, fn) { _methods[`${ns}.${name}`] = fn; },
+};
+
+const sa = Object.create(SystemAbstractions.prototype);
+sa.registry = registry;
+sa._initKeystone();
+
+const tunnelCallFn = _methods[`${TUNNEL_NS}.Call`];
+if (!tunnelCallFn) {
+    process.stdout.write(JSON.stringify({ ok: false,
+        message: "Tunnel.Call not bound by _initKeystone()" }) + "\\n");
+    process.exit(1);
+}
+
+// cr2 = 0 (NULL GT) — Connect() was never called.
+const result = tunnelCallFn(sim, { cr2: 0 });
+const ok = result.ok === false && result.fault === "NO_CONTACT";
+
+process.stdout.write(JSON.stringify({
+    ok,
+    resultOk: result.ok,
+    fault: result.fault || null,
+    result: (result.result >>> 0),
+    message: result.message || "",
+}) + "\\n");
+process.exit(ok ? 0 : 1);
+"""
+
+
+def test_tunnel_call_with_null_gt_returns_no_contact():
+    """Tunnel.Call bound by _initKeystone() returns ok=False and fault='NO_CONTACT'
+    when cr2 is zero (NULL GT).
+
+    This guards the pre-connect guard in the Stage 4 Tunnel.Call binding: if
+    the caller passes cr2=0 (i.e. Keystone.Connect() was never called and slot 1
+    is still NULL), the bridge must refuse with ok=False and fault='NO_CONTACT'.
+
+    A regression here means the guard was loosened to allow NULL GTs through,
+    which would cause Mum.Greet() to be invoked with no valid capability token.
+    """
+    proc = subprocess.run(
+        ["node", "--input-type=commonjs"],
+        input=_TUNNEL_CALL_NULL_GT_HARNESS.encode("utf-8"),
+        capture_output=True,
+        timeout=10,
+        cwd=ROOT,
+    )
+    stdout = proc.stdout.decode("utf-8", errors="replace").strip()
+    stderr = proc.stderr.decode("utf-8", errors="replace").strip()
+
+    assert proc.returncode == 0, (
+        f"Tunnel.Call(cr2=0) harness exited {proc.returncode}.\n"
+        f"stdout: {stdout}\nstderr: {stderr}"
+    )
+
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        pytest.fail(
+            f"Harness produced non-JSON output: {exc}\nstdout: {stdout}"
+        )
+
+    assert data.get("ok") is True, (
+        f"Tunnel.Call(cr2=0) guard failed; "
+        f"resultOk={data.get('resultOk')!r}, fault={data.get('fault')!r}, "
+        f"message={data.get('message')!r}"
+    )
+    assert data.get("resultOk") is False, (
+        f"Tunnel.Call(cr2=0) returned ok=True, expected ok=False"
+    )
+    assert data.get("fault") == "NO_CONTACT", (
+        f"Tunnel.Call(cr2=0) fault={data.get('fault')!r}, expected 'NO_CONTACT'"
+    )
