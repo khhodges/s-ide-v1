@@ -1,39 +1,54 @@
 # Memory Manager Design
 
-**v1.0 — 2026-04-29**
+**v2.0 — 2026-04-30**
 **CONFIDENTIAL**
 
-## Domain-Separated Allocation with Passkey Billing
+## Domain-Separated Allocation, Passkey Billing, and a Self-Organising Namespace
 
 **Status: DRAFT — awaiting approval before implementation**
-**Author: design session 2026-04-29**
-**Depends on: `docs/golden-tokens.md`, `docs/abstractions.md`**
+**Author: design session 2026-04-29 / 2026-04-30**
+**Depends on: `docs/golden-tokens.md`, `docs/abstractions.md`, `docs/Lump-Architecture.md`**
 
 ---
 
 ## 1. Motivation
 
-The current `Memory` abstraction (NS[7]) is a flat bump-pointer allocator. It has three
-problems that this design addresses:
+The Church Machine is a capability computer. Every object a program can touch — a memory
+region, a callable service, a hardware device, a connection to a machine on the far side
+of the planet — is represented by a single 32-bit Golden Token. The hardware enforces
+the token's permission bits on every instruction that uses it. There is no other access
+control mechanism. There is no privileged mode. There is no kernel call gate. There are
+only tokens.
+
+This purity is the machine's greatest strength. It is also a standard that the current
+memory implementation fails to meet.
 
 | Problem | Consequence |
 |---|---|
-| Returns raw addresses, not GTs | Caller can construct arbitrary memory references — no capability discipline |
-| No power-of-2 quantization | Lump sizes are arbitrary; hardware bounds model is not enforced at allocation time |
-| No domain separation | A caller asking for a code region gets the same kind of handle as one asking for a c-list region — the hardware cannot distinguish them at use time |
+| `Memory.Allocate` returns a raw address, not a GT | The caller can construct arbitrary memory references — no capability discipline |
+| No power-of-2 quantisation | Lump sizes are arbitrary; the hardware bounds model is not enforced at allocation time |
+| No domain separation | A code region and a capability-list region are indistinguishable at the GT level — the hardware cannot enforce their different use rules |
 | `Mint.Create` ignores the `perms` argument | GT permission bits are never encoded; every issued GT is identical and meaningless |
 | No identity or quota on memory requests | Any caller with an E-GT to Memory can exhaust physical RAM without limit or attribution |
 
-This document specifies a replacement consisting of four cooperating abstractions:
-`PhysicalPool`, `TuringMemory`, `ChurchMemory`, and `Billing`, unified by a thin
-orchestration layer `LumpFactory`.
+This document specifies a replacement that closes all five gaps. It consists of four
+cooperating abstractions — `PhysicalPool`, `TuringMemory`, `ChurchMemory`, and `Billing`
+— unified by a thin orchestration layer `LumpFactory`. Together they complete the
+capability model for memory, making the hardware's promise hold all the way down to the
+allocator.
+
+Beyond fixing these five bugs, this document also records the discovered architecture of
+the Namespace itself: how slots are assigned, how lumps arrive and depart, how threads
+claim cores, and how Tunnels extend a namespace across any number of cooperating machines
+anywhere on earth. That architecture — described in §9 — requires no new code. It is
+already how the system behaves. This document names it.
 
 ---
 
 ## 2. Reference: GT Word Bit Layout
 
-Every GT is a single 32-bit word. The hardware checks specific bits on every
-instruction that uses it. No instruction reveals the physical address behind the token.
+Every GT is a single 32-bit word. The hardware checks specific bits on every instruction
+that uses it. No instruction reveals the physical address behind the token.
 
 ```
 Bit  31   30   29   28   27   26   25   24─23   22────16   15────────0
@@ -43,13 +58,20 @@ Bit  31   30   29   28   27   26   25   24─23   22────16   15───
       [31]  [30] [29] [28] [27] [26] [25] [24:23]  [22:16]    [15:0]
 ```
 
-| Field | Width | Meaning |
-|---|---|---|
-| `slot_id` | 16 | Index into the Namespace table (hardware looks up base + limit) |
-| `gt_seq` | 7 | Revocation freshness counter; must match NS Entry Word 1 `gt_seq` |
-| `type` | 2 | `00`=NULL `01`=Inform `10`=Outform `11`=Abstract |
-| `perms` | 6 | R W X L S E — checked individually by hardware on each use |
-| `B` | 1 | Bind flag — 1 = GT may be propagated via `mSave` to another c-list |
+Seven permission bits occupy [31:25] as a unit. B is the highest; R is the lowest.
+
+| Field | Bits | Width | Meaning |
+|---|---|---|---|
+| `slot_id` | [15:0] | 16 | Index into the Namespace table (hardware looks up base + limit) |
+| `gt_seq` | [22:16] | 7 | Revocation freshness counter; must match NS Entry Word 2 `gt_seq` |
+| `type` | [24:23] | 2 | `00`=NULL `01`=Inform `10`=Outform `11`=Abstract |
+| `R` | [25] | 1 | Read permission (Turing domain) |
+| `W` | [26] | 1 | Write permission (Turing domain) |
+| `X` | [27] | 1 | Execute permission (Turing domain) |
+| `L` | [28] | 1 | Load capability (Church domain) |
+| `S` | [29] | 1 | Save capability (Church domain) |
+| `E` | [30] | 1 | Enter (call) permission (Church domain) |
+| `B` | [31] | 1 | Bind flag — 1 = GT may be propagated via `mSave` to another c-list |
 
 ### 2.1 Permission rules
 
@@ -96,6 +118,14 @@ Bit  31──27   26  25   24─23   22────16   15──────0
      └────────┴───┴───┴──────┴──────────┴──────────┘
 ```
 
+`ab_type` values currently allocated:
+
+| Value | Constant | Use |
+|---|---|---|
+| `0x00` | `AB_TYPE_IO` | Hardware device handle (LED, UART, Button, Timer, Display) |
+| `0x01` | `AB_TYPE_M_ELEVATION` | M-bit authority token — sets CRn(M=1) |
+| `0x02` | *(reserved for P-GT — see Q7)* | Billing Passkey — see §6 |
+
 ---
 
 ## 3. Layer 0 — `PhysicalPool`
@@ -105,11 +135,17 @@ no opinion about domain, permissions, or GTs. It is **kernel-internal only** —
 user-visible E-GT is ever issued for PhysicalPool. Only `TuringMemory` and
 `ChurchMemory` hold a capability to it.
 
-### 3.1 Size quantization
+### 3.1 Size quantisation
 
 All lumps must be exactly 2ⁿ words, where 6 ≤ n ≤ 14 (64 words through 16 384 words).
-This matches the hardware `n-6` field in the lump header and the ZIP-derivation rule
-in `docs/abstractions.md §ZIP → Header Word`.
+This matches the hardware `n-6` field in the lump header described in
+`docs/Lump-Architecture.md` and the ZIP-derivation rule in `docs/abstractions.md §ZIP → Header Word`.
+
+The thread lump sizes established in `simulator/app-memory.js` —
+`THREAD_FS = 256 words` (full stack), `THREAD_HS = 64 words` (half stack),
+`THREAD_SS = 32 words` (slim stack) — all satisfy the 2ⁿ constraint (n = 8, 6, 5
+respectively) and serve as concrete quota inputs when TuringMemory.Allocate is called
+for thread lumps at boot.
 
 ```
 Claim(requestedWords):
@@ -118,15 +154,15 @@ Claim(requestedWords):
         exp = exp + 1
     if exp > 14:
         fault LUMP_TOO_LARGE
-    quantizedWords = 1 << exp
+    quantisedWords = 1 << exp
 
     base    = read(freePointer)
-    newFree = base + quantizedWords
+    newFree = base + quantisedWords
     write(freePointer, newFree)
-    return (base, quantizedWords, exp)
+    return (base, quantisedWords, exp)
 ```
 
-Quantization happens **before** the Billing charge (§6), so the charge is always the
+Quantisation happens **before** the Billing charge (§6), so the charge is always the
 real committed size — a caller cannot request 63 words to get 64 words for the price
 of 63.
 
@@ -134,7 +170,7 @@ of 63.
 
 | Method | Parameters | Returns | Notes |
 |---|---|---|---|
-| `Claim(requestedWords)` | words ≥ 1 | `(base, quantizedWords, exp)` | Quantizes then commits |
+| `Claim(requestedWords)` | words ≥ 1 | `(base, quantisedWords, exp)` | Quantises then commits |
 | `Release(base)` | physical base | `0` | Returns block to free pool |
 
 ---
@@ -168,9 +204,8 @@ abstraction TuringMemory {
     }
 
     public method Allocate(requestedWords, pgt):
-        // Charge quota (quantized size — see §6.3)
-        (exp, quantized) = PhysicalPool.quantizeOnly(requestedWords)
-        Billing.Charge(pgt, quantized)          // faults QUOTA_EXCEEDED if over budget
+        (exp, quantised) = PhysicalPool.quantiseOnly(requestedWords)
+        Billing.Charge(pgt, quantised)          // faults QUOTA_EXCEEDED if over budget
         (base, size, exp) = PhysicalPool.Claim(requestedWords)
         gt = Mint.Encode(base, exp, perms=RW, bindable=0, far=0)
         nsSlot = Navana.Add(base, size)
@@ -178,8 +213,8 @@ abstraction TuringMemory {
         return gt
 
     public method AllocCode(requestedWords, pgt):
-        (exp, quantized) = PhysicalPool.quantizeOnly(requestedWords)
-        Billing.Charge(pgt, quantized)
+        (exp, quantised) = PhysicalPool.quantiseOnly(requestedWords)
+        Billing.Charge(pgt, quantised)
         (base, size, exp) = PhysicalPool.Claim(requestedWords)
         gt = Mint.Encode(base, exp, perms=RX, bindable=0, far=0)
         nsSlot = Navana.Add(base, size)
@@ -236,8 +271,8 @@ abstraction ChurchMemory {
     }
 
     public method Allocate(requestedWords, pgt):
-        (exp, quantized) = PhysicalPool.quantizeOnly(requestedWords)
-        Billing.Charge(pgt, quantized)
+        (exp, quantised) = PhysicalPool.quantiseOnly(requestedWords)
+        Billing.Charge(pgt, quantised)
         (base, size, exp) = PhysicalPool.Claim(requestedWords)
         gt = Mint.Encode(base, exp, perms=LS, bindable=1, far=0)
         nsSlot = Navana.Add(base, size)
@@ -245,8 +280,8 @@ abstraction ChurchMemory {
         return gt
 
     public method AllocCList(requestedWords, pgt):
-        (exp, quantized) = PhysicalPool.quantizeOnly(requestedWords)
-        Billing.Charge(pgt, quantized)
+        (exp, quantised) = PhysicalPool.quantiseOnly(requestedWords)
+        Billing.Charge(pgt, quantised)
         (base, size, exp) = PhysicalPool.Claim(requestedWords)
         gt = Mint.Encode(base, exp, perms=L, bindable=1, far=0)
         nsSlot = Navana.Add(base, size)
@@ -286,15 +321,16 @@ pass it as a parameter to memory APIs.
 ```
 Bit  31──27        26  25   24─23   22────16   15──────────0
      ┌────────────┬───┬───┬──────┬──────────┬──────────────┐
-     │ 0b00001    │ 0 │ 0 │  11  │  gt_seq  │  account_id  │
-     │ (PID class)│ R │ W │(Abs) │ freshness│  (16 bits)   │
+     │ 0b00010    │ 0 │ 0 │  11  │  gt_seq  │  account_id  │
+     │ (P-GT cls) │ R │ W │(Abs) │ freshness│  (16 bits)   │
      └────────────┴───┴───┴──────┴──────────┴──────────────┘
 ```
 
-`ab_type = 0b00001` is the PID class identifier. `account_id` is a 16-bit opaque key
-that Billing uses to look up the quota record. `gt_seq` is a freshness counter that
-increments on each reissue, invalidating any copies of an old P-GT without requiring
-the caller to return it.
+`ab_type = 0b00010` (0x02) is the P-GT class identifier — chosen to avoid collision
+with `AB_TYPE_IO` (0x00) and `AB_TYPE_M_ELEVATION` (0x01) which are already in use.
+`account_id` is a 16-bit opaque key that Billing uses to look up the quota record.
+`gt_seq` is a freshness counter that increments on each reissue, invalidating any copies
+of an old P-GT without requiring the caller to return it.
 
 The P-GT word itself costs zero words of physical memory. It is pure state in the
 32-bit register — no lump, no NS entry, no allocation.
@@ -331,11 +367,10 @@ abstraction Billing {
     }
 
     // Issue — create a new P-GT for an account.
-    // Returns the 32-bit Abstract GT word; no physical memory allocated.
     public method Issue(account_id, initial_words, quota_class):
         write(quotaTable[account_id], initial_words)
         write(classTable[account_id], quota_class)
-        pgt = build_abstract_gt(ab_type=0b00001,
+        pgt = build_abstract_gt(ab_type=0b00010,
                                 R=0, W=0,
                                 gt_seq=freshSeq(),
                                 ab_data=account_id)
@@ -343,10 +378,9 @@ abstraction Billing {
         return pgt
 
     // Charge — validate and atomically decrement quota.
-    // Faults QUOTA_EXCEEDED if budget insufficient; faults BAD_PGT if malformed.
     public method Charge(pgt, requested_words):
         if pgt[24:23] != 0b11        → fault BAD_PGT_TYPE
-        if pgt[31:27] != 0b00001     → fault BAD_PGT_CLASS
+        if pgt[31:27] != 0b00010     → fault BAD_PGT_CLASS
         account_id = pgt[15:0]
         remaining  = read(quotaTable[account_id])
         if remaining < requested_words → fault QUOTA_EXCEEDED
@@ -361,20 +395,19 @@ abstraction Billing {
         return remaining + words
 
     // Revoke — zero the quota; future Charge calls fault QUOTA_EXCEEDED.
-    // The P-GT word is not recalled — it becomes a dead key.
     public method Revoke(account_id):
         write(quotaTable[account_id], 0)
         return 0
 
     // Reissue — bump gt_seq to invalidate existing P-GT copies; return new P-GT.
     public method Reissue(account_id):
-        pgt = build_abstract_gt(ab_type=0b00001,
+        pgt = build_abstract_gt(ab_type=0b00010,
                                 R=0, W=0,
-                                gt_seq=freshSeq(),     // new seq — old copies rejected
+                                gt_seq=freshSeq(),
                                 ab_data=account_id)
         return pgt
 
-    // Balance — read remaining quota (for diagnostics; caller must hold a valid P-GT).
+    // Balance — read remaining quota.
     public method Balance(pgt):
         account_id = pgt[15:0]
         return read(quotaTable[account_id])
@@ -383,9 +416,9 @@ abstraction Billing {
 
 ### 6.5 Why revocation works without recalling the P-GT
 
-The P-GT is an Abstract GT — no NS entry, no `gt_seq` check. Billing validates the
-P-GT by inspecting the `ab_type` and `ab_data` fields directly and then consulting its
-internal table. When `Revoke(account_id)` zeros the quota, every subsequent
+The P-GT is an Abstract GT — no NS entry, no hardware `gt_seq` check. Billing validates
+the P-GT by inspecting the `ab_type` and `ab_data` fields directly and then consulting
+its internal table. When `Revoke(account_id)` zeros the quota, every subsequent
 `Billing.Charge(pgt, n)` for any P-GT carrying that `account_id` will fault
 `QUOTA_EXCEEDED` regardless of how many copies of the P-GT exist in how many c-lists.
 
@@ -409,12 +442,6 @@ abstraction LumpFactory {
         Billing             // c-list[2]
     }
 
-    // AllocAndMint — allocate and issue a GT in one call.
-    //   domain:    0 = Turing  1 = Church
-    //   permsBits: 6-bit mask [R,W,X,L,S,E] aligned to domain
-    //   bindable:  only meaningful for Turing (Church is always B=1)
-    //   far:       1 = Outform type (lazy placeholder)
-    //   pgt:       Passkey P-GT for quota
     public method AllocAndMint(requestedWords, domain, permsBits, bindable, far, pgt):
         turingBits = permsBits & 0b000111
         churchBits = permsBits & 0b111000
@@ -426,7 +453,7 @@ abstraction LumpFactory {
             else:
                 return TuringMemory.Allocate(requestedWords, pgt)
         else:
-            eBit = permsBits & 0b100000
+            eBit  = permsBits & 0b100000
             lsBit = permsBits & 0b011000
             if eBit and lsBit → fault E_ISOLATION
             if eBit:
@@ -436,9 +463,8 @@ abstraction LumpFactory {
             else:
                 return ChurchMemory.Allocate(requestedWords, pgt)
 
-    // Free — revoke GT and return memory.
     public method Free(gt, pgt):
-        domain = (gt[28] | gt[29] | gt[30]) ? 1 : 0   // any Church bit = Church domain
+        domain = (gt[28] | gt[29] | gt[30]) ? 1 : 0
         if domain == 1:
             return ChurchMemory.Free(gt, pgt)
         else:
@@ -468,38 +494,171 @@ Billing.Issue (P-GT)     │* │0 │0 │0 │0 │0 │0 │11 Abstr  │ non
 
 **Hardware enforcement of the table above:**
 - Row 1 (R,W): `DREAD` and `DWRITE` succeed; `CALL` faults (E=0); `mLoad` faults (L=0)
-- Row 2 (R,X): `DREAD` succeeds (debugger readable); `DWRITE` faults (W=0 — code immutable); execute succeeds
+- Row 2 (R,X): `DREAD` succeeds; `DWRITE` faults (W=0 — code immutable); execute succeeds
 - Row 3 (L,S): `mLoad` and `mSave` succeed; `DREAD` faults (R=0); `CALL` faults (E=0)
-- Row 4 (L): `mLoad` succeeds; `mSave` faults (S=0); c-list is sealed after construction
-- Row 5 (E): `CALL` succeeds; `mLoad` faults (L=0); `mSave` faults (S=0); E is standalone
-- Row 6 (P-GT): no instruction succeeds (Abstract, R=0, W=0); hardware treats it as a bare value
+- Row 4 (L): `mLoad` succeeds; `mSave` faults (S=0); c-list is sealed
+- Row 5 (E): `CALL` succeeds; `mLoad` faults (L=0); `mSave` faults (S=0)
+- Row 6 (P-GT): no instruction succeeds; hardware treats it as a bare value
 
 ---
 
-## 9. NS slot assignment
+## 9. Namespace Architecture
 
-The boot-order constraint is strict: a service cannot hold a capability to something
-installed after it. The proposed NS assignments preserve the existing kernel layout
-and insert new services between existing entries.
+### 9.1 The Namespace is a sparse, self-organising registry
 
-| NS Slot | Name | Layer | Notes |
-|---|---|---|---|
-| 0 | Boot.NS | 0 | Unchanged |
-| 1 | Boot.Thread | 0 | Unchanged |
-| 2 | Startup.Config | 0 | Unchanged |
-| 3 | LED flash | 0 | Unchanged |
-| 4 | Salvation | 1 | Unchanged |
-| 5 | Navana | 1 | Updated: holds P-GT for system-class; updated c-list |
-| 6 | Mint | 1 | Updated: `Create` replaced by `Encode` |
-| 7 | **PhysicalPool** | 1 | Renamed from `Memory`; kernel-internal only |
-| 8 | **Billing** | 1 | New |
-| 9 | **TuringMemory** | 1 | New |
-| 10 | **ChurchMemory** | 1 | New |
-| 11 | **LumpFactory** | 1 | New |
-| 12 | Scheduler | 1 | Renumbered from 8 |
-| 13 | Stack | 1 | Renumbered from 9 |
-| 14 | DijkstraFlag | 1 | Renumbered from 10 |
-| 15+ | UART, LED, Button… | 2 | Renumbered accordingly |
+The Namespace table is a flat indexed array of up to 65 535 entries. Each entry
+occupies three words and records the base address, size, and revocation sequence of one
+lump. An empty entry costs three zeroed words. The hardware is indifferent to gaps —
+a CALL to NS[4] costs exactly the same as a CALL to NS[31].
+
+This sparsity is not a defect. It is the foundation of a self-organising system.
+
+**Current live registry** (from `server/lumps/manifest.json` — the only authoritative
+source):
+
+| NS Slot | Abstraction | Notes |
+|---|---|---|
+| 3 | LED flash | Hardware boot lump |
+| 12 | LED | Full LED abstraction (Set, Clear, Toggle, State) |
+| 16 | SlideRule | Complete IEEE-754 floating-point library (22 methods) |
+| 16 | SlideRuleHS | Hardware-safe floating-point variant (reduced method set) |
+| 18 | Constants | π, e, φ, 0, 1 — with user constant pool |
+| 19 | Loader | |
+| 31 | Tunnel | Remote namespace bridge (see §9.5) |
+| — | WordString | Built; slot assigned at first load |
+
+All other slots are empty and available. The new memory abstractions specified in §§3–7
+will occupy whichever slots are free when they are implemented and pass tests.
+
+### 9.2 Slot assignment policy: first-come, first-served; lowest free first
+
+**A lump earns its slot number. No slot is pre-allocated to an unbuilt abstraction.**
+
+When a lump is installed, it takes the lowest available slot number above the thread
+block (§9.3). This keeps the active population clustered at the bottom of the table.
+The high end of the 65 535-slot space may never be reached — on a device that runs
+SlideRule and LED all day, the high-water mark stays in the low tens. The NS table's
+memory footprint (which lives at the top of physical RAM, `high-water × 3 words`) is
+therefore proportional to peak concurrent occupancy, not to the total number of
+abstractions ever designed.
+
+### 9.3 Thread slots — the degree of parallelism
+
+Threads are lumps. They occupy NS slots. The first block of NS slots — from 0 to T−1
+— is reserved at boot for threads, where T is the **degree of parallelism**: an
+IDE-configured setting that determines how many threads this namespace can run
+simultaneously. Each thread slot holds a complete thread lump: header, data register
+file, capability list, stack, and heap.
+
+```
+NS[0]       Thread 0   ┐
+NS[1]       Thread 1   │  IDE-configured parallelism degree T
+NS[2]       Thread 2   │  These are the "cores" of this namespace
+…                      │
+NS[T−1]     Thread T−1 ┘
+NS[T]       ← first free slot for arriving lumps
+NS[T+1…]    dynamic lump space (lowest-free-first)
+```
+
+The thread count is the only pre-planned assignment in the namespace. Everything above
+NS[T−1] fills in as lumps arrive.
+
+### 9.4 Lump lifecycle: lazy load and two-case eviction
+
+**Lazy load**: A lump does not occupy a slot until something calls it for the first
+time. The Outform GT mechanism handles this — an Outform GT is a promise that the lump
+will be fetched and installed on first call. The caller sees no difference; from its
+perspective the CALL always works. The slot number appears in the issued GT only after
+installation.
+
+**Eviction — two cases:**
+
+| Case | Behaviour | When |
+|---|---|---|
+| **Early return** | Lump finishes quickly; slot held | Called frequently; holding the slot avoids reload overhead on the next call. Acts as a warm cache entry. |
+| **Slow return** | Lump finishes slowly; slot surrendered | Infrequent use or memory pressure. Slot returns to the free pool immediately. |
+
+**Why eviction is safe — the `gt_seq` counter:**
+
+Every GT records the `gt_seq` value current at the time the lump was installed. When a
+surrendered slot is reused by a different lump, the new NS entry receives a fresh
+`gt_seq`. The hardware rejects every outstanding GT for the old occupant with a
+`VERSION` fault on the very next use. No explicit recall of old GTs is needed. Revocation
+is automatic, zero-cost, and immediate.
+
+**The complete slot lifecycle:**
+
+```
+slot empty
+  → lump arrives (lazy load)      — slot filled, gt_seq = N, E-GTs issued
+  → early return                   — slot held,  gt_seq unchanged, GTs still valid
+  → slow return / eviction         — slot cleared, memory freed
+  → new lump arrives               — slot refilled, gt_seq = N+1, old GTs dead
+```
+
+### 9.5 Natural memory balance and GC as tidy-up
+
+Because surrendered slots become the new lowest-free candidates, the active lump
+population churns in place near the bottom of the table. The high-water mark rises only
+when peak concurrent occupancy genuinely grows — and it falls again when slow-return
+lumps drain and GC compacts the remaining gaps.
+
+In a traditional managed runtime, GC is a **necessity**: fragmentation eventually makes
+allocation impossible and the system stalls. Here, fragmentation cannot block allocation.
+The next free slot is always usable regardless of gaps around it. GC is therefore a
+**tidy-up** — it runs when convenient to lower the high-water mark and reduce the NS
+table's footprint in RAM. It is never urgent. It is never a survival operation.
+
+The system memory footprint therefore tracks actual use, not worst-case planning:
+
+```
+physical RAM
+
+  ┌─────────────────────────────┐ ← top of RAM
+  │  NS table (3 words × HWM)  │  grows from top downward
+  │  HWM = peak concurrent      │  stays small on quiet devices
+  ├─────────────────────────────┤
+  │  lump memory (power-of-2)  │  grows from bottom upward
+  │  only what is actually      │  Billing quotas prevent runaway
+  │  installed right now        │
+  └─────────────────────────────┘ ← base of RAM
+```
+
+### 9.6 Tunnels — a namespace that spans the world
+
+A Tunnel is an ordinary lump occupying an ordinary NS slot. From the caller's
+perspective, calling through a Tunnel is identical to calling any local service: present
+an E-GT, pass arguments in data registers, receive a result. The permission model —
+domain purity, `gt_seq` revocation, B-bit propagation — applies at every use, without
+exception.
+
+What happens inside the Tunnel is that the capability call is serialised and dispatched
+to a **remote namespace of the same type** running on another machine. That machine
+executes the call in one of its own thread slots and returns the result across the
+connection.
+
+Because cooperating namespaces share the same lump structure and slot conventions, a GT
+that is valid locally is structurally meaningful remotely. The capability model is
+end-to-end: there is no point in the chain where trust is assumed rather than enforced.
+
+```
+Tokyo namespace                    London namespace
+  Thread 0 – 3                       Thread 0 – 3
+  SlideRule    NS[12]                 SlideRule    NS[12]
+  Constants    NS[18]                 Constants    NS[18]
+  Tunnel ─────────────────────────►  (receives CALL, executes in Thread 1, returns)
+  NS[31]
+```
+
+A Paris namespace can hold Tunnels to both. Chains of Tunnels can span any number of
+machines. Each hop is just a CALL through an E-GT. The security model holds at every
+hop because the hardware enforces it at the point of use, not at the point of trust.
+
+This is distributed computing without a privileged runtime, without a trusted
+intermediary, and without any mechanism other than the one the hardware already enforces
+locally. A sensor in Helsinki and a display wall in São Paulo can cooperate through a
+chain of capability calls that looks, to every piece of code involved, exactly like
+calling a local service.
 
 ---
 
@@ -549,55 +708,50 @@ After:
 |---|---|---|
 | `simulator/cloomc/memory.cloomc` | Rename + rework | Becomes `physical_pool.cloomc`; only `Claim` and `Release`; no perms |
 | `simulator/cloomc/mint.cloomc` | Rework | Replace `Create` with `Encode(base, exp, permsBits, bindable, far)` |
-| `simulator/cloomc/navana.cloomc` | Update | Use TuringMemory + ChurchMemory + system P-GT in `Init` |
+| `simulator/cloomc/navana.cloomc` | Update | Use TuringMemory + ChurchMemory + system P-GT in `Init`; fix stale "NS slot 0" comment on line 1 (actual slot is 5) |
 | `simulator/cloomc/billing.cloomc` | **New** | Billing abstraction as specified in §6 |
 | `simulator/cloomc/turing_memory.cloomc` | **New** | TuringMemory as specified in §4 |
 | `simulator/cloomc/church_memory.cloomc` | **New** | ChurchMemory as specified in §5 |
 | `simulator/cloomc/lump_factory.cloomc` | **New** | LumpFactory as specified in §7 |
-| `simulator/abstractions.js` | Update | Register four new abstractions; renumber existing NS slots 8–14+ |
+| `simulator/system_abstractions.js` | Update | Register new abstractions; assign slots by first-come-first-served policy per §9.2 |
+| `simulator/boot_uploads.js` | Update | Lines 24–39: stale NS slot comment block (NS[2]=Boot.Memory etc.) does not match the live manifest; remove or replace with the §9.1 live registry |
 
 ---
 
 ## 13. Open questions — decisions required before implementation
 
-The following items need an answer before any code changes are made:
-
-**Q1 — NS slot renumbering**
-Renumbering existing abstractions from slot 8 upward will break any hardcoded slot
-references in boot firmware, tutorials, and tests. Should the new services be inserted
-at high slot numbers (e.g., 100+) to avoid renumbering, or should the clean layout
-in §9 be used with a coordinated renumber pass?
-
 **Q2 — Billing table storage**
 The quota table needs persistent storage across reboots (so a system-class P-GT issued
-at boot can recover the same account IDs). Should this live in a reserved memory
-region provisioned at boot, or should Billing always reissue fresh accounts at every
-boot (simpler, but quotas reset on power cycle)?
+at boot can recover the same account IDs). Should this live in a reserved memory region
+provisioned at boot, or should Billing always reissue fresh accounts at every boot
+(simpler, but quotas reset on power cycle)?
 
 **Q3 — P-GT freshness enforcement**
-The current design uses `gt_seq` in the P-GT for reissue invalidation but Abstract GTs
-have no NS entry so the hardware does not check `gt_seq` automatically. Should Billing
-maintain a per-account `current_seq` field and reject P-GTs with a stale sequence, or
-is Revoke-by-zeroing-quota sufficient without sequence tracking?
+Abstract GTs have no NS entry so the hardware does not check `gt_seq` automatically.
+Should Billing maintain a per-account `current_seq` field and reject P-GTs with a stale
+sequence, or is Revoke-by-zeroing-quota sufficient without sequence tracking?
 
 **Q4 — `AllocAbstract` memory charging**
 `ChurchMemory.AllocAbstract` wraps an existing NS entry without allocating new memory,
 so no Billing charge is made. Is this correct, or should issuing a new E-GT for an
-existing lump carry a small flat fee (to prevent unbounded E-GT proliferation)?
+existing lump carry a small flat fee to prevent unbounded E-GT proliferation?
 
-**Q5 — Compatibility shim**
-Should the old `Memory` NS slot remain as a backward-compatible shim that internally
-calls `TuringMemory.Allocate` with a system-class P-GT, to avoid breaking existing
-tutorials and boot_uploads.js? Or is a clean break preferred?
+**Q7 — `ab_type` value for P-GT** *(blocks §6 implementation)*
+`ab_type = 0x02` is proposed as the P-GT class identifier. Confirm this value is not
+allocated to any other use before implementation begins. If 0x02 is taken, choose the
+next unallocated value and update §6.2 and `Billing.Charge`'s validation mask
+accordingly.
 
-**Q6 — LumpFactory necessity**
-Given that TuringMemory and ChurchMemory already cover all cases, is `LumpFactory`
-worth the extra NS slot and boot-time allocation? It is convenient but not essential.
+*Q1, Q5, and Q6 from the previous draft are resolved:*
+- *Q1 (NS renumbering strategy): resolved — first-come-first-served per §9.2; no pre-assignment; no renumbering.*
+- *Q5 (backward-compat Memory shim): resolved — Memory stays at its current slot until PhysicalPool passes tests and replaces it.*
+- *Q6 (LumpFactory necessity): deferred — LumpFactory earns a slot when it is built and tested, or is omitted if TuringMemory/ChurchMemory prove sufficient in practice.*
 
 ---
 
 *This document describes design intent only. No source files have been modified.
 Implementation begins only after all open questions in §13 are resolved and this
 document is approved.*
+
 ---
 *Confidential — Kenneth Hamer-Hodges — April 2026*

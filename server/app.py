@@ -1134,6 +1134,7 @@ BOOK_CHAPTERS = [
         "Lump-Architecture.md",
     ]),
     ("Part XI: Implementation Plans", [
+        "memory-manager.md",
         "plan-lazy-load.md",
         "plan-call-mum.md",
         "plan-browser.md",

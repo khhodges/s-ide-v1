@@ -283,7 +283,7 @@ Each node in this graph is a sealed lump. Each edge is a Golden Token validated 
 
 **Sealed vocabulary.** The dispatch table of every abstraction is built at compile time and sealed with the lump. A caller can only invoke selectors that the author chose to make public. There is no reflection, no dynamic dispatch, no way to bypass the dispatch table from outside.
 
-**Pet names as a security audit trail.** When a fault occurs during `Contact.Connect`, the IDE's fault display names the faulting abstraction, the faulting capability (its pet name from the c-list), and the violated boundary. The chain `Thread → Contact → Routing → UART: bounds fault at offset 7, limit 4` is shown explicitly. The developer knows exactly which link in the DNA was violated.
+**Pet names as a security audit trail.** When a fault occurs during `Contact.Connect`, the IDE's fault display names the faulting abstraction, the faulting capability (its pet name from the c-list), and the violated boundary. The chain `Application → Namespace → Thread → Contact → Routing → UART: bounds fault at offset 7, limit 4` is shown explicitly. The developer knows exactly which link in the DNA was violated.
 
 ---
 
