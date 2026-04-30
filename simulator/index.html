@@ -237,6 +237,13 @@
             </div>
             <div id="flagsDisplay" class="flags-bar"></div>
         </div>
+        <div class="dash-tabs">
+            <button class="dash-tab active" id="dashTab-cr" onclick="switchDashTab('cr')" data-tooltip="CRs — Context Registers CR0–CR15">CRs</button>
+            <button class="dash-tab" id="dashTab-dr" onclick="switchDashTab('dr')" data-tooltip="DRs — Data Registers DR0–DR15">DRs</button>
+            <button class="dash-tab" id="dashTab-gatelog" onclick="switchDashTab('gatelog')" data-tooltip="Gate Log — mLoad / mSave from last Step">Gate Log</button>
+            <button class="dash-tab" id="dashTab-state" onclick="switchDashTab('state')" data-tooltip="State — Machine Architecture info">State</button>
+            <button class="dash-tab" id="dashTab-memstats" onclick="switchDashTab('memstats')" data-tooltip="Memory — Foundation Layer Status">Mem</button>
+        </div>
         <div id="dashPanel-cr" class="dash-panel active">
             <div class="panel">
                 <div class="panel-title">CR0-CR15 -- 128-bit Context Registers (4 x 32-bit words)</div>
