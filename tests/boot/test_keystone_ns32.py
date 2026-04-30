@@ -356,6 +356,7 @@ _CONNECT_HELLO_HARNESS = """\
 const SystemAbstractions = require("./simulator/system_abstractions.js");
 
 const KEYSTONE_NS    = 32;
+const TUNNEL_NS      = 31;
 const LUMP_SIZE      = 64;
 const CC             = 2;
 const PHYS_BASE      = 0;
@@ -380,6 +381,7 @@ const sim = {
     }),
     createGT: (seq, ns, perms, type) =>
         ((0x1F << 27) | ((perms.E ? 1 : 0) << 30) | (ns & 0xFFFF)) >>> 0,
+    abstractionRegistry: null,
 };
 
 const _methods = {};
@@ -390,6 +392,11 @@ const registry = {
 const sa = Object.create(SystemAbstractions.prototype);
 sa.registry = registry;
 sa._initKeystone();
+
+// Simulate Init() boot-wiring: pre-fill slot 0 with the Tunnel E-GT.
+// In production this is done by Keystone.Init() during Navana.Init().
+const tunnelGT = sim.createGT(0, TUNNEL_NS, { E: 1 }, 1);
+sim.memory[PHYS_BASE + CLIST_BASE_OFF + 0] = tunnelGT >>> 0;
 
 const connectFn = _methods[`${KEYSTONE_NS}.Connect`];
 const helloFn   = _methods[`${KEYSTONE_NS}.Hello`];
@@ -571,4 +578,238 @@ def test_keystone_init_wires_tunnel_gt_into_clist_slot0():
     )
     assert data.get("eBitSet") is True, (
         f"Tunnel GT in c-list slot 0 has E-bit clear: 0x{data.get('result', 0):08X}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 6 — Hello() returns FAULT_NO_CONTACT when slot 0 (Tunnel) is NULL
+#          even when slot 1 (MumGT) is non-NULL (Connect was called but
+#          Init was not).  This distinguishes the slot-0 guard from the
+#          pre-connect slot-1 guard that existed before Task #773.
+# ---------------------------------------------------------------------------
+
+_HELLO_SLOT0_NULL_HARNESS = """\
+"use strict";
+const SystemAbstractions = require("./simulator/system_abstractions.js");
+
+const KEYSTONE_NS    = 32;
+const LUMP_SIZE      = 64;
+const CC             = 2;
+const PHYS_BASE      = 0;
+const CLIST_BASE_OFF = LUMP_SIZE - CC;   // 62
+
+const FAULT_NO_CONTACT = 0xDEAD0001;
+// Non-zero sentinel value for slot 1 — simulates Connect() having been called.
+const FAKE_MUM_GT = 0xC0FFEE01;
+
+const memory = new Array(LUMP_SIZE).fill(0);
+memory[PHYS_BASE] = (0x1F << 27) | (0 << 23) | (0 << 10) | CC;
+// Slot 0 (Tunnel) stays NULL — Init() was never called.
+// Slot 1 (MumGT) is non-zero — Connect() has been called.
+memory[PHYS_BASE + CLIST_BASE_OFF + 1] = FAKE_MUM_GT >>> 0;
+
+const sim = {
+    memory,
+    nsClistMap: { [KEYSTONE_NS]: [] },
+    readNSEntry: (ns) => ns === KEYSTONE_NS
+        ? { word0_location: PHYS_BASE, ns_slot: KEYSTONE_NS }
+        : null,
+    parseLumpHeader: (word) => ({
+        cc: word & 0xFF,
+        lumpSize: 1 << (((word >>> 23) & 0xF) + 6),
+    }),
+    createGT: (seq, ns, perms, type) =>
+        ((0x1F << 27) | ((perms.E ? 1 : 0) << 30) | (ns & 0xFFFF)) >>> 0,
+    abstractionRegistry: null,
+};
+
+const _methods = {};
+const registry = {
+    bindMethod(ns, name, fn) { _methods[`${ns}.${name}`] = fn; },
+};
+
+const sa = Object.create(SystemAbstractions.prototype);
+sa.registry = registry;
+sa._initKeystone();
+
+const helloFn = _methods[`${KEYSTONE_NS}.Hello`];
+const result  = helloFn(sim, []);
+
+const ok = (result.result >>> 0) === FAULT_NO_CONTACT;
+process.stdout.write(JSON.stringify({
+    ok,
+    result: result.result >>> 0,
+    message: result.message || "",
+    slot0: sim.memory[PHYS_BASE + CLIST_BASE_OFF + 0],
+    slot1: sim.memory[PHYS_BASE + CLIST_BASE_OFF + 1],
+}) + "\\n");
+process.exit(ok ? 0 : 1);
+"""
+
+
+def test_hello_slot0_null_returns_fault_no_contact():
+    """Hello() returns FAULT_NO_CONTACT when slot 0 (Tunnel) is NULL, even
+    when slot 1 (MumGT) is non-zero.
+
+    This test is distinct from test_hello_before_connect_returns_fault_no_contact
+    (which has both slots NULL).  Here Connect() has been called so slot 1 is
+    non-zero, but Init() was never called so slot 0 is still NULL.  The new
+    routing path added in Task #773 must guard on slot 0, not slot 1.
+    """
+    proc = subprocess.run(
+        ["node", "--input-type=commonjs"],
+        input=_HELLO_SLOT0_NULL_HARNESS.encode("utf-8"),
+        capture_output=True,
+        timeout=10,
+        cwd=ROOT,
+    )
+    stdout = proc.stdout.decode("utf-8", errors="replace").strip()
+    stderr = proc.stderr.decode("utf-8", errors="replace").strip()
+
+    assert proc.returncode == 0, (
+        f"Hello-slot0-null harness exited {proc.returncode}.\n"
+        f"stdout: {stdout}\nstderr: {stderr}"
+    )
+
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        pytest.fail(
+            f"Harness produced non-JSON output: {exc}\nstdout: {stdout}"
+        )
+
+    assert data.get("ok") is True, (
+        f"Hello() did not return FAULT_NO_CONTACT when slot 0 is NULL; "
+        f"result=0x{data.get('result', 0):08X}, message={data.get('message')!r}"
+    )
+    assert data["result"] == FAULT_NO_CONTACT, (
+        f"Hello() returned 0x{data['result']:08X}, "
+        f"expected FAULT_NO_CONTACT=0x{FAULT_NO_CONTACT:08X}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 7 — Hello() calls abstractionRegistry.dispatchMethod(31, 'Call', ...)
+#          with the MumGT from slot 1 when slot 0 (Tunnel) is wired
+# ---------------------------------------------------------------------------
+
+_HELLO_DISPATCH_HARNESS = """\
+"use strict";
+const SystemAbstractions = require("./simulator/system_abstractions.js");
+
+const KEYSTONE_NS    = 32;
+const TUNNEL_NS      = 31;
+const LUMP_SIZE      = 64;
+const CC             = 2;
+const PHYS_BASE      = 0;
+const CLIST_BASE_OFF = LUMP_SIZE - CC;   // 62
+
+const VALID_IDENTITY = (1 << 28) | 0x0FACADE;
+
+const memory = new Array(LUMP_SIZE).fill(0);
+memory[PHYS_BASE] = (0x1F << 27) | (0 << 23) | (0 << 10) | CC;
+
+// Capture dispatchMethod calls for assertion.
+const dispatchCalls = [];
+
+const sim = {
+    memory,
+    nsClistMap: { [KEYSTONE_NS]: [] },
+    readNSEntry: (ns) => ns === KEYSTONE_NS
+        ? { word0_location: PHYS_BASE, ns_slot: KEYSTONE_NS }
+        : null,
+    parseLumpHeader: (word) => ({
+        cc: word & 0xFF,
+        lumpSize: 1 << (((word >>> 23) & 0xF) + 6),
+    }),
+    createGT: (seq, ns, perms, type) =>
+        ((0x1F << 27) | ((perms.E ? 1 : 0) << 30) | (ns & 0xFFFF)) >>> 0,
+    abstractionRegistry: {
+        dispatchMethod(nsIndex, method, simRef, args) {
+            dispatchCalls.push({ nsIndex, method, args: Object.assign({}, args) });
+            return { ok: true, result: 0 };
+        },
+    },
+};
+
+const _methods = {};
+const registry = {
+    bindMethod(ns, name, fn) { _methods[`${ns}.${name}`] = fn; },
+};
+
+const sa = Object.create(SystemAbstractions.prototype);
+sa.registry = registry;
+sa._initKeystone();
+
+// Boot-wire slot 0 with Tunnel E-GT (Init() contract).
+const tunnelGT = sim.createGT(0, TUNNEL_NS, { E: 1 }, 1);
+sim.memory[PHYS_BASE + CLIST_BASE_OFF + 0] = tunnelGT >>> 0;
+
+// Call Connect() to fill slot 1 with MumGT.
+const connectFn = _methods[`${KEYSTONE_NS}.Connect`];
+const connectResult = connectFn(sim, [VALID_IDENTITY]);
+if (connectResult.result !== 1) {
+    process.stdout.write(JSON.stringify({ ok: false, step: "Connect",
+        message: connectResult.message }) + "\\n");
+    process.exit(1);
+}
+
+// Read back the MumGT that Connect() stored in slot 1.
+const mumGT = sim.memory[PHYS_BASE + CLIST_BASE_OFF + 1] >>> 0;
+
+// Call Hello() — should trigger dispatchMethod(31, 'Call', sim, { cr2: mumGT }).
+const helloFn = _methods[`${KEYSTONE_NS}.Hello`];
+helloFn(sim, []);
+
+// Assert the dispatch was recorded correctly.
+const call = dispatchCalls[0];
+const ok = call
+    && call.nsIndex === TUNNEL_NS
+    && call.method === "Call"
+    && (call.args.cr2 >>> 0) === mumGT;
+
+process.stdout.write(JSON.stringify({
+    ok: !!ok,
+    dispatchCalls,
+    mumGT,
+    message: ok
+        ? "dispatchMethod called with correct nsIndex, method, and cr2"
+        : "dispatchMethod call mismatch: " + JSON.stringify(call || null),
+}) + "\\n");
+process.exit(ok ? 0 : 1);
+"""
+
+
+def test_hello_dispatches_tunnel_call_with_mum_gt():
+    """Hello() calls abstractionRegistry.dispatchMethod(31, 'Call', ..., {cr2: mumGT})
+    when slot 0 (Tunnel) is wired and slot 1 (MumGT) was filled by Connect().
+
+    Directly exercises the Tunnel forwarding step added in Task #773 by supplying
+    a mock abstractionRegistry that records dispatchMethod invocations.
+    """
+    proc = subprocess.run(
+        ["node", "--input-type=commonjs"],
+        input=_HELLO_DISPATCH_HARNESS.encode("utf-8"),
+        capture_output=True,
+        timeout=10,
+        cwd=ROOT,
+    )
+    stdout = proc.stdout.decode("utf-8", errors="replace").strip()
+    stderr = proc.stderr.decode("utf-8", errors="replace").strip()
+
+    assert proc.returncode == 0, (
+        f"Hello-dispatch harness exited {proc.returncode}.\n"
+        f"stdout: {stdout}\nstderr: {stderr}"
+    )
+
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        pytest.fail(
+            f"Harness produced non-JSON output: {exc}\nstdout: {stdout}"
+        )
+
+    assert data.get("ok") is True, (
+        f"Hello() did not dispatch Tunnel.Call correctly; "
+        f"message={data.get('message')!r}, dispatchCalls={data.get('dispatchCalls')!r}"
     )

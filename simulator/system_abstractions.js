@@ -2447,23 +2447,31 @@ class SystemAbstractions {
         });
 
         this.registry.bindMethod(KEYSTONE_NS, 'Hello', function(sim, args) {
-            // Read c-list slot 1 directly from the Keystone lump in memory.
+            // Read c-list slot 0 (Tunnel GT) and slot 1 (MumGT) from the Keystone lump.
             const entry = sim.readNSEntry(KEYSTONE_NS);
-            let mumGT = 0;
+            let tunnelGT = 0;
+            let mumGT    = 0;
             if (entry) {
-                const hdr = sim.parseLumpHeader(sim.memory[entry.word0_location]);
+                const hdr      = sim.parseLumpHeader(sim.memory[entry.word0_location]);
                 const clistBase = entry.word0_location + hdr.lumpSize - hdr.cc;
-                mumGT = (sim.memory[clistBase + 1] >>> 0);
+                tunnelGT = (sim.memory[clistBase + 0] >>> 0);
+                mumGT    = (sim.memory[clistBase + 1] >>> 0);
             }
 
-            if (!mumGT) {
+            // Slot 0 must hold the Tunnel GT (wired at boot by Init()).
+            if (!tunnelGT) {
                 const hex = FAULT_NO_CONTACT.toString(16).toUpperCase().padStart(8, '0');
                 return {
                     ok: true,
                     result: FAULT_NO_CONTACT,
                     fault: 'NO_CONTACT',
-                    message: `Keystone.Hello(): c-list slot 1 is NULL GT \u2014 FAULT_NO_CONTACT (0x${hex}). Call Connect(mum_identity_word) first.`
+                    message: `Keystone.Hello(): c-list slot 0 (Tunnel) is NULL GT \u2014 FAULT_NO_CONTACT (0x${hex}). Tunnel not wired \u2014 call Init() first.`
                 };
+            }
+
+            // Forward through Tunnel.Call(mumGT) to reach the far end (Mum).
+            if (sim.abstractionRegistry) {
+                sim.abstractionRegistry.dispatchMethod(TUNNEL_NS, 'Call', sim, { cr2: mumGT });
             }
 
             const hex = GREET_RESPONSE.toString(16).toUpperCase().padStart(8, '0');
