@@ -128,7 +128,9 @@ def _register_with_ide(uid, board_type, board_name, profile, fw_major, fw_minor,
         resp = urllib.request.urlopen(req, timeout=10)
         result = json.loads(resp.read())
         if result.get("ok"):
-            print(f'  [CALL HOME] Registered with IDE — boot #{result.get("boot_count", "?")}')
+            tunnel = result.get("tunnel_status", "pending")
+            tunnel_str = " — Tunnel online ✓" if tunnel == "online" else f" — Tunnel: {tunnel}"
+            print(f'  [CALL HOME] Registered with IDE — boot #{result.get("boot_count", "?")}{tunnel_str}')
         else:
             print(f'  [CALL HOME] IDE registration response: {result}')
     except Exception as e:

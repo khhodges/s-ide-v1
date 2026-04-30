@@ -1455,6 +1455,7 @@ function loadDeviceList() {
             };
             data.devices.forEach(dev => {
                 const isOnline = dev.status === 'online';
+                const tunnelOnline = dev.tunnel_status === 'online';
                 const profileClass = dev.profile === 'IoT' ? 'dev-badge-iot' : 'dev-badge-full';
                 const petName = (dev.label || '').trim() || dev.board_name;
                 const statusChip = isOnline
@@ -1465,6 +1466,9 @@ function loadDeviceList() {
                 const niaStr = dev.fault_nia ? ' @ 0x' + dev.fault_nia.toString(16).toUpperCase().padStart(4, '0') : '';
                 const faultBadge = dev.boot_reason === 2 && dev.last_fault
                     ? '<span class="dev-fault-badge">' + _escHtml(faultStr) + _escHtml(niaStr) + '</span>'
+                    : '';
+                const tunnelBadge = tunnelOnline
+                    ? '<span class="dev-tunnel-badge" title="Hello-Mum tunnel verified — GREET_RESPONSE received">Tunnel online</span>'
                     : '';
 
                 const wrap = document.createElement('div');
@@ -1477,6 +1481,7 @@ function loadDeviceList() {
                     '<div class="dev-status-dot ' + (isOnline ? 'online' : 'offline') + '"></div>' +
                     '<span class="dev-row-name" id="devRowName_' + dev.id + '" data-board-name="' + _escHtml(dev.board_name) + '">' + _escHtml(petName) + '</span>' +
                     '<span class="dev-status-chip ' + (isOnline ? 'chip-online' : 'chip-offline') + '">' + _escHtml(statusChip) + '</span>' +
+                    (tunnelBadge || '') +
                     '<span class="dev-badge ' + profileClass + '">' + _escHtml(dev.profile) + '</span>' +
                     '<span class="dev-chevron">&#x25B6;</span>';
 
@@ -1489,6 +1494,7 @@ function loadDeviceList() {
                         '<div class="dev-detail-item"><span class="dev-detail-label">FW</span><span class="dev-detail-val">' + _escHtml(dev.fw_version) + '</span></div>' +
                         '<div class="dev-detail-item"><span class="dev-detail-label">Boots</span><span class="dev-detail-val">' + dev.boot_count + '</span></div>' +
                         '<div class="dev-detail-item"><span class="dev-detail-label">Boot reason</span><span class="dev-detail-val">' + _escHtml(bootReasonStr) + (faultBadge ? ' ' + faultBadge : '') + '</span></div>' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">Tunnel</span><span class="dev-detail-val">' + (tunnelOnline ? '<span class="dev-tunnel-badge" title="Hello-Mum handshake succeeded at boot">Tunnel online</span>' : _escHtml(dev.tunnel_status || 'pending')) + '</span></div>' +
                         (dev.bridge_host ? '<div class="dev-detail-item"><span class="dev-detail-label">Bridge</span><span class="dev-detail-val">' + _escHtml(dev.bridge_host) + ':' + _escHtml(String(dev.bridge_port || '')) + '</span></div>' : '') +
                         (dev.serial_port ? '<div class="dev-detail-item"><span class="dev-detail-label">Serial</span><span class="dev-detail-val">' + _escHtml(dev.serial_port) + '</span></div>' : '') +
                     '</div>' +

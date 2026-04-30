@@ -3784,6 +3784,150 @@ def _auto_populate_boot_tests(device_uid, boot_reason, last_fault, timestamp):
         logging.warning("_auto_populate_boot_tests: %s", e)
 
 
+def _mum_do_greet():
+    """Run the server-side Mum.Greet() handshake and return a result dict.
+
+    Mirrors the three-step client-side Hello-Mum flow:
+      Navana.Init equivalent   — ensure the Mum Ed25519 identity is initialised
+      Keystone.Connect equiv.  — validate the identity word protocol tag
+      Keystone.Hello equiv.    — execute Mum.Greet() and return GREET_RESPONSE
+
+    Returns a dict with keys:
+      ok (bool)       — True iff the handshake succeeded
+      result (int)    — GREET_RESPONSE (0x48454C4C) on success, 0 on failure
+      result_hex (str)
+      message (str)
+      tunnel (str)    — "online" | "offline"
+
+    Never raises; all errors are caught and returned as ok=False.
+    """
+    GREET_RESPONSE = 0x48454C4C
+    try:
+        try:
+            import mum as _mum
+        except ImportError:
+            from server import mum as _mum
+
+        # Step 1 — Navana.Init equivalent: initialise Mum identity key
+        _mum.get_identity_string()
+
+        # Step 2 — Keystone.Connect equivalent: validate protocol-version nibble
+        word = _mum.get_identity_word()
+        version_nibble = (word >> 28) & 0xF
+        if version_nibble != 1:
+            return {
+                "ok": False, "result": 0, "result_hex": "0x00000000",
+                "message": f"Keystone.Connect: unknown protocol tag 0x{version_nibble:X} — rejected",
+                "tunnel": "offline",
+            }
+
+        # Step 3 — Keystone.Hello → Mum.Greet() equivalent
+        hex_val = f"0x{GREET_RESPONSE:08X}"
+        return {
+            "ok": True,
+            "result": GREET_RESPONSE,
+            "result_hex": hex_val,
+            "message": f"Mum.Greet() \u2192 {hex_val} (\u2018HELL\u2019) \u2014 Tunnel bridge online",
+            "tunnel": "online",
+        }
+    except Exception as exc:
+        return {
+            "ok": False, "result": 0, "result_hex": "0x00000000",
+            "message": f"Hello-Mum handshake error: {exc}",
+            "tunnel": "offline",
+        }
+
+
+_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_HELLO_MUM_HARNESS = os.path.join(_ROOT_DIR, "tests", "boot", "sim_hello_mum_flow.js")
+_BOOT_CFG_FOR_FLOW = {
+    "step1": {
+        "totalNamespaceWords": 16384,
+        "namespaceLumpWords":  64,
+        "threadLumpWords":     256,
+    }
+}
+
+
+def _run_hello_mum_flow(dev):
+    """Run the Hello-Mum sequence via the sim_hello_mum_flow.js harness.
+
+    Dispatches the full Navana.Init → Keystone.Connect → Keystone.Hello chain
+    through the JavaScript simulator, then forwards Tunnel.Call as a real HTTP
+    POST to this IDE server's /mum/hello endpoint.  tunnel_status is set to
+    'online' only when the harness reports ok=True, bridgeHit=True, and
+    greetResult == GREET_RESPONSE (0x48454C4C).  Sets 'offline' otherwise.
+
+    bridge_url is read from app.config['SELF_BASE_URL'] (set at server startup
+    and in test fixtures).  Falls back to 'http://127.0.0.1:5000'.  This avoids
+    trusting the incoming Host header (no SSRF vector).
+
+    Must be called inside an active app-context with an open DB session.
+    """
+    GREET_RESPONSE = 0x48454C4C
+
+    try:
+        try:
+            import mum as _mum
+        except ImportError:
+            from server import mum as _mum
+
+        # Step 1 — Navana.Init equivalent: ensure Mum identity is initialised
+        _mum.get_identity_string()
+
+        # Step 2 — Keystone.Connect equivalent: validate identity word
+        identity_word = _mum.get_identity_word()
+        if ((identity_word >> 28) & 0xF) != 1:
+            dev.tunnel_status = "offline"
+            logging.warning("Hello-Mum auto-flow: device=%s invalid protocol tag", dev.device_uid)
+            return
+
+        # Step 3 — Keystone.Hello → Tunnel.Call via JS harness → /mum/hello
+        lumps_dir = os.path.join(_SERVER_DIR, "lumps")
+        img_bytes = _boot_image_gen.generate_boot_image(_BOOT_CFG_FOR_FLOW, lumps_dir)
+        img_b64   = base64.b64encode(img_bytes).decode("ascii")
+
+        bridge_url = app.config.get("SELF_BASE_URL", "http://127.0.0.1:5000")
+
+        envelope = json.dumps({
+            "imageBase64":  img_b64,
+            "config":       _BOOT_CFG_FOR_FLOW,
+            "identityWord": identity_word,
+            "bridgeUrl":    bridge_url,
+        }).encode("utf-8")
+
+        proc = subprocess.run(
+            ["node", _HELLO_MUM_HARNESS],
+            input=envelope,
+            capture_output=True,
+            timeout=30,
+            cwd=_ROOT_DIR,
+        )
+
+        stdout = proc.stdout.decode("utf-8", errors="replace").strip()
+        try:
+            result = json.loads(stdout) if stdout else {}
+        except json.JSONDecodeError:
+            result = {}
+
+        greet     = int(result.get("greetResult", 0)) & 0xFFFFFFFF
+        bridge_hit = result.get("bridgeHit", False)
+
+        if proc.returncode == 0 and greet == GREET_RESPONSE and bridge_hit:
+            dev.tunnel_status = "online"
+        else:
+            dev.tunnel_status = "offline"
+
+        logging.info(
+            "Hello-Mum auto-flow: device=%s tunnel_status=%s greet=0x%08X bridgeHit=%s",
+            dev.device_uid, dev.tunnel_status, greet, bridge_hit,
+        )
+
+    except Exception as exc:
+        logging.warning("Hello-Mum auto-flow: device=%s error=%s", getattr(dev, "device_uid", "?"), exc)
+        dev.tunnel_status = "offline"
+
+
 @app.route("/api/device/register", methods=["POST"])
 def device_register():
     data = request.get_json(silent=True) or {}
@@ -3871,13 +4015,17 @@ def device_register():
 
     _auto_populate_boot_tests(uid, boot_reason, last_fault, now)
 
-    logging.info("Device registered: %s (%s) via %s:%s",
-                 uid, dev.board_name, bridge_host, bridge_port)
+    _run_hello_mum_flow(dev)
+    db.session.commit()
+
+    logging.info("Device registered: %s (%s) via %s:%s tunnel=%s",
+                 uid, dev.board_name, bridge_host, bridge_port, dev.tunnel_status)
     return jsonify({
         "ok": True,
         "device_id": dev.id,
         "board_name": dev.board_name,
         "boot_count": dev.boot_count,
+        "tunnel_status": dev.tunnel_status,
     })
 
 
@@ -3924,6 +4072,7 @@ def device_list():
             "last_fault": getattr(d, 'last_fault', 0) or 0,
             "fault_nia": getattr(d, 'fault_nia', 0) or 0,
             "label": d.label or "",
+            "tunnel_status": getattr(d, 'tunnel_status', 'pending') or 'pending',
         })
     db.session.commit()
     return jsonify({"ok": True, "devices": result})
@@ -4176,6 +4325,10 @@ with app.app_context():
         db.session.execute(_sa_text("ALTER TABLE devices ADD COLUMN fault_nia INTEGER DEFAULT 0"))
         db.session.commit()
         logging.info("Migrated: added fault_nia column to devices table")
+    if "tunnel_status" not in _existing_cols:
+        db.session.execute(_sa_text("ALTER TABLE devices ADD COLUMN tunnel_status VARCHAR(16) DEFAULT 'pending'"))
+        db.session.commit()
+        logging.info("Migrated: added tunnel_status column to devices table")
 
     _existing_launch = {t.test_id: t for t in LaunchTest.query.all()}
     for seed_id, seed_name, seed_desc, _auto in LAUNCH_TESTS_SEED:
@@ -4381,22 +4534,19 @@ def mum_hello():
     The caller (simulator UI) dispatches here after Keystone.Connect() has
     placed a MumGT in c-list slot 1.
 
+    Delegates to _mum_do_greet() — the same function used by the automatic
+    Hello-Mum trigger fired when a board registers.
+
     Returns:
       { ok, result, result_hex, message, tunnel }
     """
-    try:
-        import mum as _mum
-    except ImportError:
-        from server import mum as _mum
-    _mum.get_identity_string()          # ensure key is initialised
-    GREET_RESPONSE = 0x48454C4C         # 'HELL' in big-endian ASCII
-    hex_val = f"0x{GREET_RESPONSE:08X}"
+    resp = _mum_do_greet()
     return jsonify({
-        "ok": True,
-        "result": GREET_RESPONSE,
-        "result_hex": hex_val,
-        "message": f"Mum.Greet() \u2192 {hex_val} (\u2018HELL\u2019) \u2014 Tunnel bridge online",
-        "tunnel": "online",
+        "ok": resp.get("ok", False),
+        "result": resp.get("result", 0),
+        "result_hex": resp.get("result_hex", "0x00000000"),
+        "message": resp.get("message", ""),
+        "tunnel": resp.get("tunnel", "offline"),
     })
 
 

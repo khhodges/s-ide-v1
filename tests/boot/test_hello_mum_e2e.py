@@ -1,5 +1,8 @@
 """End-to-end integration test for the Hello-Mum flow on a real boot image.
 
+Also covers the automatic Hello-Mum trigger that fires when a new board
+registers via /api/device/register (test_auto_hello_mum_on_board_register).
+
 Verifies the full causal chain that the unit tests cannot cover in isolation:
 
     Board boot image
@@ -38,6 +41,7 @@ import socket
 import subprocess
 import sys
 import threading
+import urllib.request
 
 import pytest
 
@@ -78,15 +82,21 @@ def _free_port():
 def _start_flask_thread(port):
     """Start the Flask app in a background thread on *port*.
 
+    Uses ThreadedWSGIServer so the server can handle concurrent connections.
+    This is required because the auto Hello-Mum trigger spawns a Node.js
+    harness (sim_hello_mum_flow.js) that makes a real curl POST to
+    /mum/hello on this same server while device_register is still executing.
+    A single-threaded server would deadlock on that loopback request.
+
     Returns the thread (already started).  The server is ready once it begins
     accepting connections, which the caller is expected to verify with a brief
     retry loop before running the harness.
     """
     from server.app import app  # noqa: E402 — deferred to avoid side-effects
 
-    from werkzeug.serving import make_server
+    from werkzeug.serving import ThreadedWSGIServer
 
-    srv = make_server('127.0.0.1', port, app)
+    srv = ThreadedWSGIServer('127.0.0.1', port, app)
 
     t = threading.Thread(target=srv.serve_forever, daemon=True)
     t.start()
@@ -121,11 +131,17 @@ def boot_image_b64():
 def bridge_server():
     """Start the Flask server on a random port and yield the bridge URL.
 
+    Sets app.config['SELF_BASE_URL'] to the test server's origin before
+    starting so that _run_hello_mum_flow() sends its Tunnel.Call loopback
+    to this ephemeral port (not the default 5000).
+
     The server thread is daemonised so it is cleaned up automatically when the
     test process exits.  We call srv.shutdown() explicitly in the finaliser so
     that the port is released before the next test module starts.
     """
+    from server.app import app as _flask_app
     port = _free_port()
+    _flask_app.config['SELF_BASE_URL'] = f"http://127.0.0.1:{port}"
     _t, srv = _start_flask_thread(port)
     ready = _wait_for_port(port)
     assert ready, f"Flask bridge server did not start on port {port} within 5 s"
@@ -301,4 +317,138 @@ def test_hello_mum_greet_response_propagated_through_bridge(harness_result):
     assert greet == bridge, (
         f"Keystone.Hello() result 0x{greet:08X} != bridge response 0x{(bridge or 0):08X} — "
         "the value was not propagated correctly from /mum/hello back through Tunnel.Call."
+    )
+
+
+# ---------------------------------------------------------------------------
+# Automatic Hello-Mum trigger on board registration
+# ---------------------------------------------------------------------------
+
+def _http_post_json(url, payload):
+    """POST *payload* (dict) as JSON to *url*; return parsed response dict."""
+    body = json.dumps(payload).encode("utf-8")
+    req  = urllib.request.Request(
+        url, data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _http_get_json(url):
+    """GET *url* and return parsed JSON dict."""
+    with urllib.request.urlopen(url, timeout=10) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+@pytest.fixture(scope="module")
+def registered_device(bridge_server):
+    """Register a synthetic board and return the /api/device/register response.
+
+    Uses a unique UID so it does not collide with any persistent device rows
+    from earlier test runs.
+    """
+    payload = {
+        "device_uid":  "TESTBOOT0000CAFE",
+        "board_type":  0x03,
+        "fw_major":    1,
+        "fw_minor":    0,
+        "build_sig":   "AABBCCDD",
+        "profile":     "Full",
+        "boot_reason": 0,
+        "last_fault":  0,
+        "fault_nia":   0,
+        "bridge_host": "127.0.0.1",
+        "bridge_port": 9999,
+        "bridge_scheme": "http",
+    }
+    return _http_post_json(f"{bridge_server}/api/device/register", payload)
+
+
+def test_auto_hello_mum_register_response_ok(registered_device):
+    """The /api/device/register response must report ok=True."""
+    assert registered_device.get("ok") is True, (
+        f"Device registration failed: {registered_device}"
+    )
+
+
+def test_auto_hello_mum_trigger_fires_on_register(registered_device):
+    """After a board registers, the Hello-Mum flow must run automatically.
+
+    Confirms the automatic Navana.Init → Keystone.Connect → Keystone.Hello
+    sequence fires during registration: the response must include
+    tunnel_status='online', proving the GREET_RESPONSE was received.
+    """
+    ts = registered_device.get("tunnel_status")
+    assert ts == "online", (
+        f"tunnel_status={ts!r} after /api/device/register — "
+        "expected 'online', meaning the auto Hello-Mum flow did not fire or "
+        "the Mum identity key was not initialised correctly.\n"
+        f"full response: {registered_device}"
+    )
+
+
+def test_auto_hello_mum_offline_when_handshake_fails(bridge_server):
+    """When the Mum.Greet() handshake fails, tunnel_status must be 'offline'.
+
+    Patches server.app._mum_do_greet to return an error response, simulating
+    a broken identity key or unreachable tunnel.  Confirms the device registers
+    successfully (ok=True) but with tunnel_status='offline' — not 'online'.
+
+    This is the negative-path regression that prevents false positives from
+    a shortcut implementation that always sets tunnel_status='online'.
+    """
+    from unittest.mock import patch
+    import server.app as _app_mod
+
+    payload = {
+        "device_uid":  "TESTBOOT0000DEAD",
+        "board_type":  0x03,
+        "fw_major":    1,
+        "fw_minor":    0,
+        "build_sig":   "DEADBEEF",
+        "profile":     "Full",
+        "boot_reason": 0,
+        "last_fault":  0,
+        "fault_nia":   0,
+        "bridge_host": "127.0.0.1",
+        "bridge_port": 9998,
+        "bridge_scheme": "http",
+    }
+    broken_response = {
+        "ok": False, "result": 0, "result_hex": "0x00000000",
+        "message": "simulated key failure", "tunnel": "offline",
+    }
+    with patch.object(_app_mod, '_mum_do_greet', return_value=broken_response):
+        resp = _http_post_json(f"{bridge_server}/api/device/register", payload)
+
+    assert resp.get("ok") is True, (
+        f"Device registration itself should succeed even when handshake fails: {resp}"
+    )
+    ts = resp.get("tunnel_status")
+    assert ts == "offline", (
+        f"tunnel_status={ts!r} — expected 'offline' when handshake returns ok=False.\n"
+        "A shortcut that always sets tunnel_status='online' would fail this check."
+    )
+
+
+def test_auto_hello_mum_visible_in_device_list(bridge_server, registered_device):
+    """The device list must expose tunnel_status='online' for the registered board.
+
+    This verifies the badge data is available to the Devices view frontend.
+    """
+    data = _http_get_json(f"{bridge_server}/api/device/list")
+    assert data.get("ok") is True, f"/api/device/list returned ok=False: {data}"
+
+    uid = "TESTBOOT0000CAFE"
+    matching = [d for d in data.get("devices", []) if d.get("device_uid") == uid]
+    assert matching, (
+        f"Registered device UID={uid!r} not found in /api/device/list.\n"
+        f"devices: {[d.get('device_uid') for d in data.get('devices', [])]}"
+    )
+    ts = matching[0].get("tunnel_status")
+    assert ts == "online", (
+        f"device_uid={uid!r}: tunnel_status={ts!r} in /api/device/list — "
+        "expected 'online'.  The Devices view would not show the Tunnel online badge."
     )

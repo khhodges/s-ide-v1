@@ -56,6 +56,7 @@ def register_models(db):
         last_fault = Column(Integer, default=0)
         fault_nia = Column(Integer, default=0)
         label = Column(String(255), default="")
+        tunnel_status = Column(String(16), default="pending")
 
     class FaultEvent(db.Model):
         __tablename__ = "fault_events"
