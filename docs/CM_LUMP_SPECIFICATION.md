@@ -1490,6 +1490,14 @@ already owns.
 
 ---
 
+## Cross-references
+
+- [`Lump-Architecture.md`](Lump-Architecture.md) — Accessible overview of the Lump object model
+- [`foundation-lump-design.md`](foundation-lump-design.md) — Lump design rationale and layout rules
+- [`architecture.md`](architecture.md) — Overall Church Machine architecture
+
+---
+
 *Document applies to: Church Machine IDE simulator · Boot.NS slots 0 (Boot.NS), 1 (Boot.Thread), 2 (Boot.Abstr), 45 (Thread) · Tang Nano 20 K + Efinix Ti60 F225 targets.*
 ---
 *Confidential — Kenneth Hamer-Hodges — April 2026*
