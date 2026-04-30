@@ -175,5 +175,11 @@ These registers are protected from direct instruction access. The only way to wr
 | **CR15** | Namespace | Namespace root — defines the security boundary of the entire system |
 
 CR6 and CR14 are re-derived by CALL/RETURN via mLoad. CR12 is saved and restored by CHANGE (thread switching). CR13 and CR15 are system-wide and unchanged by CHANGE. The privileged zone (CR12–CR15) cannot be addressed by normal programmer instructions.
+
+---
+
+## See Also
+
+- [Lump-Architecture.md](Lump-Architecture.md) — Lump object structure, Header Word encoding, and zone layout
 ---
 *Confidential — Kenneth Hamer-Hodges — April 2026*

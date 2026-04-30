@@ -202,5 +202,11 @@ directly.
 The `b_flag=1` on device GTs marks them as IDE-bound to a physical
 peripheral. The b_flag bit is excluded from the CRC seal input so the
 runtime can clear it on un-bind without recomputing the NS entry seal.
+
+---
+
+## See Also
+
+- [Lump-Architecture.md](Lump-Architecture.md) — Lump object structure, Header Word encoding, and zone layout
 ---
 *Confidential — Kenneth Hamer-Hodges — April 2026*

@@ -216,5 +216,11 @@ The G-bit reset on every namespace access is not optional — it is a security i
 - **Use-after-free**: Revoked entries have their `gt_seq` incremented, instantly invalidating stale Golden Tokens.
 - **Resource leaks**: Unreachable entries are identified and reclaimed.
 - **GC evasion**: No instruction can access namespace without triggering G-bit reset.
+
+---
+
+## See Also
+
+- [Lump-Architecture.md](Lump-Architecture.md) — Lump object structure, Header Word encoding, and zone layout
 ---
 *Confidential — Kenneth Hamer-Hodges — April 2026*

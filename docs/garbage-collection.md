@@ -155,5 +155,11 @@ The mLoad module (`ctmm_amaranth/mload.py`) mirrors the SystemVerilog implementa
 ## Key Design Principle
 
 The G-bit reset happens on **every** namespace access because reachability determines liveness, not permissions. An entry accessed through a SAVE (S permission) is just as live as one accessed through a LOAD (L permission). The mLoad path enforces this uniformly.
+
+---
+
+## See Also
+
+- [Lump-Architecture.md](Lump-Architecture.md) — Lump object structure, Header Word encoding, and zone layout
 ---
 *Confidential — Kenneth Hamer-Hodges — April 2026*
