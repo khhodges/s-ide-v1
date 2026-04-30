@@ -16,19 +16,63 @@
             align-items: center;
             padding: 20px 16px;
         }
-        h1 {
-            font-size: 1.6rem;
-            color: #e2e8f0;
-            margin-bottom: 4px;
-            text-align: center;
+        .ide-nav {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            width: 100%;
+            max-width: 1280px;
+            background: #111827;
+            border: 1px solid #1e2a3a;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
         }
-        .subtitle {
-            font-size: 0.85rem;
+        .nav-col {
+            padding: 16px 14px 20px;
+            border-right: 1px solid #1e2a3a;
+        }
+        .nav-col:last-child { border-right: none; }
+        .nav-col-header {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #daa520;
+            margin-bottom: 12px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            color: #c8d6e5;
+            text-decoration: none;
+            padding: 3px 0;
+            line-height: 1.55;
+            transition: color 0.15s;
+            white-space: nowrap;
+        }
+        .nav-item:hover { color: #ffffff; }
+        .nav-item.nav-item-highlight { color: #f97316; }
+        .nav-item.nav-item-highlight:hover { color: #fb923c; }
+        .nav-kbd {
+            font-size: 0.62rem;
+            font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
             color: #8892a4;
-            margin-bottom: 16px;
-            text-align: center;
-            max-width: 620px;
-            line-height: 1.5;
+            background: #1e2a3a;
+            border: 1px solid #2d3a4a;
+            border-radius: 3px;
+            padding: 1px 5px;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+        @media (max-width: 900px) {
+            .ide-nav { grid-template-columns: repeat(3, 1fr); }
+            .nav-col:nth-child(3) { border-right: none; }
+        }
+        @media (max-width: 600px) {
+            .ide-nav { grid-template-columns: repeat(2, 1fr); }
+            .nav-col:nth-child(2) { border-right: none; }
+            .nav-col:nth-child(3) { border-right: 1px solid #1e2a3a; }
         }
         .cards {
             display: grid;
@@ -104,7 +148,6 @@
             display: block;
             z-index: 1;
         }
-        /* stretch the arrow link to cover the entire card */
         .card .arrow::after {
             content: '';
             position: absolute;
@@ -122,11 +165,55 @@
     </style>
 </head>
 <body>
-    <h1>Capability Security Simulators</h1>
-    <p class="subtitle">
-        Interactive simulators for Kenneth Hamer-Hodges' failsafe capability-based architecture.
-        Golden Tokens enforce the Church-Turing security model with clean domain separation.
-    </p>
+    <nav class="ide-nav">
+        <div class="nav-col">
+            <div class="nav-col-header">DEVELOP</div>
+            <a class="nav-item" href="/simulator/#editor">Programs</a>
+            <a class="nav-item" href="/simulator/#repl">Math <span class="nav-kbd">C+M</span></a>
+            <a class="nav-item" href="/simulator/#namespace">Namespace <span class="nav-kbd">C+N</span></a>
+            <a class="nav-item" href="/simulator/#memory">Memory Dump</a>
+        </div>
+        <div class="nav-col">
+            <div class="nav-col-header">TEST</div>
+            <a class="nav-item" href="/simulator/#dashboard">Simulator <span class="nav-kbd">C+D</span></a>
+            <a class="nav-item" href="/simulator/#dashboard">Data Registers</a>
+            <a class="nav-item" href="/simulator/#dashboard">Gate Log</a>
+            <a class="nav-item" href="/simulator/#dashboard">Machine State</a>
+            <a class="nav-item" href="/simulator/#pipeline">Pipeline <span class="nav-kbd">C+P</span></a>
+            <a class="nav-item" href="/simulator/#trace">Trace <span class="nav-kbd">C+T</span></a>
+            <a class="nav-item" href="/simulator/#gc">GC <span class="nav-kbd">C+G</span></a>
+        </div>
+        <div class="nav-col">
+            <div class="nav-col-header">REVIEW</div>
+            <a class="nav-item" href="/simulator/#abstractions">Logic Catalog <span class="nav-kbd">C+A</span></a>
+            <a class="nav-item" href="/simulator/#tutorial">Tutorial <span class="nav-kbd">C+U</span></a>
+            <a class="nav-item" href="/simulator/#reference">Reference <span class="nav-kbd">C+F</span></a>
+            <a class="nav-item nav-item-highlight" href="/simulator/#docs">Docs <span class="nav-kbd">C+Y</span></a>
+            <a class="nav-item" href="/simulator/#sitemap">Site Map</a>
+        </div>
+        <div class="nav-col">
+            <div class="nav-col-header">HARDWARE</div>
+            <a class="nav-item" href="/simulator/#devices">FPGA</a>
+            <a class="nav-item" href="/simulator/#devices">Bridge</a>
+            <a class="nav-item" href="/simulator/#devices">BRAM</a>
+            <a class="nav-item" href="/simulator/#builder">Efinix Ti60 F225</a>
+            <a class="nav-item" href="/simulator/#builder">Tang Nano 20K</a>
+            <a class="nav-item" href="/simulator/#builder">Tang Nano 20K IoT</a>
+        </div>
+        <div class="nav-col">
+            <div class="nav-col-header">CONFIGURE</div>
+            <a class="nav-item" href="/simulator/#devices">Devices <span class="nav-kbd">C+V</span></a>
+            <a class="nav-item" href="/simulator/#devices">Launch Readiness</a>
+            <a class="nav-item" href="/simulator/#github">GitHub</a>
+        </div>
+        <div class="nav-col">
+            <div class="nav-col-header">INSTALL</div>
+            <a class="nav-item" href="/simulator/#builder">Builder <span class="nav-kbd">C+B</span></a>
+            <a class="nav-item" href="/simulator/#lumps">LUMP <span class="nav-kbd">C+L</span></a>
+            <a class="nav-item" href="/simulator/#lumps">Import LUMP</a>
+            <a class="nav-item" href="/simulator/#builder">Bitstreams</a>
+        </div>
+    </nav>
     <div class="cards">
 
         <!-- CTMM Introduction -->
