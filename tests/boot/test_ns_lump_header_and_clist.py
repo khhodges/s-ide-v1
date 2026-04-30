@@ -104,14 +104,14 @@ def test_ns_lump_header_typ(boot_words):
 
 
 def test_ns_lump_header_cc(boot_words):
-    """memory[0] bits[7:0] == 47  (one c-list slot per catalog entry)."""
+    """memory[0] bits[7:0] == CATALOG_COUNT (one c-list slot per catalog entry)."""
     hdr = boot_words[0]
     cc = hdr & 0xFF
     assert cc == CATALOG_COUNT, f"cc={cc} expected {CATALOG_COUNT}"
 
 
 def test_ns_lump_header_full_word(boot_words):
-    """memory[0] equals pack_lump_header(n_minus_6=0, cw=0, cc=47, typ=0)."""
+    """memory[0] equals pack_lump_header(n_minus_6=0, cw=0, cc=CATALOG_COUNT, typ=0)."""
     expected = pack_lump_header(_ns_n_minus_6(NS_LUMP_SIZE), 0, CATALOG_COUNT, 0)
     assert boot_words[0] == expected, (
         f"memory[0]=0x{boot_words[0]:08X}  expected 0x{expected:08X}"
@@ -123,9 +123,14 @@ def test_ns_lump_header_full_word(boot_words):
 # ---------------------------------------------------------------------------
 
 def test_clist_base_offset():
-    """C-list starts at word 17 for the default 64-word NS lump (64 - 47 = 17)."""
-    assert CLIST_BASE == 17, (
-        f"CLIST_BASE={CLIST_BASE}; expected 17 for a {NS_LUMP_SIZE}-word lump "
+    """C-list starts at word NS_LUMP_SIZE - CATALOG_COUNT for the default NS lump.
+
+    With 50 catalog entries and a 64-word NS lump the c-list base is
+    64 - 50 = 14.  (Task #760 Stage 1 grew the catalog from 47 to 50.)
+    """
+    expected = NS_LUMP_SIZE - CATALOG_COUNT
+    assert CLIST_BASE == expected, (
+        f"CLIST_BASE={CLIST_BASE}; expected {expected} for a {NS_LUMP_SIZE}-word lump "
         f"with {CATALOG_COUNT} catalog entries"
     )
 

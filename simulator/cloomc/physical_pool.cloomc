@@ -1,0 +1,60 @@
+// PhysicalPool — Layer 0 physical page dispenser.  NS slot 7.
+//
+// Replaces the old Memory abstraction (same NS slot — no call-site changes).
+// Carries no opinion about domain, permissions, or GTs.  Kernel-internal only
+// — no user-visible E-GT is ever issued for PhysicalPool.  Only TuringMemory
+// and ChurchMemory hold a capability to it.
+//
+// Size quantisation: every allocation is rounded up to the next power-of-2
+// number of words, with a minimum of 64 words.  The CLOOMC spec uses a
+// doubling loop starting at 64; the JS binding uses the standard bit-trick
+// (n--, OR-cascade, n++) for identical results in fewer cycles.
+//
+// Free list and coalescing: the JS binding maintains a sorted free list and
+// coalesces adjacent blocks on every Free call, retracting the watermark when
+// the highest free block is immediately below it.  The CLOOMC spec simplifies
+// Free to a watermark-only model for ISA compliance; the extended behaviour is
+// documented in system_abstractions.js _bindMemory().
+//
+// OOM signalling: Allocate compares newFree against CR7[1] (NS_TABLE_BASE).
+// On overflow the spec returns 0 (error); the JS binding returns { fault: OOM }.
+//
+// CR7 layout:
+//   CR7[0] = nextFreeAddr (watermark pointer)
+//   CR7[1] = limit (NS_TABLE_BASE — maximum allowed watermark)
+//
+// Capabilities:
+//   none — PhysicalPool is a watermark allocator with free list; it keeps
+//          its state in JS closure (_memoryState on the SystemAbstractions
+//          instance).
+
+abstraction PhysicalPool {
+    capabilities {
+    }
+
+    // Allocate(size) — power-of-2 quantisation via doubling loop, minimum 64w.
+    // Checks the free list first (JS binding only); falls back to watermark.
+    // Returns 0 on OOM (caller must check); JS binding faults OOM instead.
+    method Allocate(size) {
+        var n = 64
+        while (n < size) {
+            n = n * 2
+        }
+        var location = read(CR7, 0)
+        var newFree = location + n
+        var limit = read(CR7, 1)
+        if (newFree > limit) {
+            return(0)
+        }
+        write(CR7, 0, newFree)
+        return(location, n)
+    }
+
+    // Free(loc) — return the block at loc to the free list (JS binding) or
+    // discard (CLOOMC spec only writes a tombstone sentinel).
+    // Coalescing and watermark retraction are handled entirely in JS.
+    method Free(loc) {
+        write(CR7, 2, loc)
+        return(0)
+    }
+}

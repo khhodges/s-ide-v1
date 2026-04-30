@@ -5,13 +5,19 @@
 // Navana.Add / Navana.Remove to manage the live namespace.
 //
 // Capabilities:
-//   c-list[0] (CR7) = Memory abstraction    — allocation of physical pages
-//   c-list[1] (CR8) = Mint abstraction      — creation of typed GTs
+//   c-list[0] (CR7) = PhysicalPool abstraction   — raw physical page allocator (NS[7])
+//   c-list[1] (CR8) = Mint abstraction            — creation of typed GTs (NS[6])
+//   c-list[2] (CR9) = Billing abstraction         — per-account P-GT quota (NS[47])
+//   c-list[3] (CR10) = TuringMemory abstraction   — code allocation with quota (NS[48])
+//   c-list[4] (CR11) = ChurchMemory abstraction   — abstract handle issuance (NS[49])
 
 abstraction Navana {
     capabilities {
-        Memory
+        PhysicalPool
         Mint
+        Billing
+        TuringMemory
+        ChurchMemory
     }
 
     // Init() — boot-time namespace initialisation.
@@ -20,7 +26,23 @@ abstraction Navana {
     // Claims physical memory for every software abstraction that must be
     // resident at boot, then returns 1 to signal success.
     //
-    // Memory layout claimed (all sizes in bytes, 256-byte aligned):
+    // Boot sequence (Stage 1 — Foundation Memory Layers):
+    //   Step 0 — Open a system Billing account with unlimited quota.
+    //            All boot-time allocations are charged against this account.
+    //
+    //   Step 1 — Allocate code regions for software lumps via TuringMemory.
+    //            TuringMemory calls Billing.Charge, then PhysicalPool.Allocate,
+    //            so the quota ledger reflects actual committed size.
+    //
+    //   Step 2 — Allocate working-memory buffers via PhysicalPool directly.
+    //            Buffers are data regions (R/W), not code; they are not subject
+    //            to the code-immutability rule.
+    //
+    //   Step 3 — Register each lump via Navana.Add -> Mint.Encode (three-step
+    //            Mint.Encode flow) to produce a callable GT.  Step 3 is handled
+    //            entirely by the JS boot sequence in system_abstractions.js.
+    //
+    // Memory layout claimed (all sizes in bytes, power-of-2 aligned):
     //
     //   Layer 3 — fixed-point mathematics library
     //     SlideRule  : 16 384 bytes  (4 096-word lump, 22 methods)
@@ -40,34 +62,36 @@ abstraction Navana {
     // only their working-memory buffers are claimed here.
     //
     method Init() {
-        // Layer 3 — fixed-point math library
-        srBase    = call(Memory.Allocate(16384))
-        constBase = call(Memory.Allocate(256))
+        // Step 0 — Open a system Billing account (unlimited quota, quota_class=3)
+        sysPgt = call(Billing.Open(0x7FFFFFFF, 3))
 
-        // Layer 1 — kernel primitives
-        schedBase = call(Memory.Allocate(1024))
-        stackBase = call(Memory.Allocate(512))
-        flagBase  = call(Memory.Allocate(256))
+        // Step 1 — Allocate code regions for resident software lumps
+        //          via TuringMemory.AllocCode(p_gt, words).
+        //          TuringMemory validates p_gt via Billing.Charge before calling
+        //          PhysicalPool.Allocate, so the quota ledger reflects committed size.
+        srBase = call(TuringMemory.AllocCode(sysPgt, 16384))
+        constBase = call(TuringMemory.AllocCode(sysPgt, 256))
+
+        // Step 2 — Allocate working-memory buffers directly (data regions)
+        schedBase = call(PhysicalPool.Allocate(1024))
+        stackBase = call(PhysicalPool.Allocate(512))
+        flagBase = call(PhysicalPool.Allocate(256))
 
         // Layer 2 — hardware driver working buffers
-        ledBuf  = call(Memory.Allocate(64))
-        uartBuf = call(Memory.Allocate(512))
+        ledBuf = call(PhysicalPool.Allocate(64))
+        uartBuf = call(PhysicalPool.Allocate(512))
 
-        // Create enter-capable GTs for the two resident software lumps
-        // so the scheduler can CALL into them once they are loaded.
+        // Step 3 — Register each lump in the NS and issue Enter-capable GTs.
+        // The required 3-step flow is: Navana.Add -> (nsSlot, seq) -> Mint.Encode.
+        // Navana.Add is a self-call (Navana is not in its own c-list) and the
+        // multi-return capture (nsSlot, seq) = call(...) is not supported by the
+        // ISA; both sub-steps are therefore handled entirely by the JS boot
+        // sequence in system_abstractions.js _bindNavana() Init binding.
         //
-        // Three-step Mint.Encode flow for each lump:
-        //   Step 1 — Memory.Allocate  (done above: srBase, constBase)
-        //   Step 2 — Navana.Add       registers the lump; returns (base, exp)
-        //   Step 3 — Mint.Encode      assembles the GT word from those fields
-        //
-        // gtType=1 (Inform), permsBits=0x20 (E only), bindable=0, far=0
-
-        (srNs, srExp)       = call(Navana.Add(srBase,    16384, 1, 0))
-        srGT                = call(Mint.Encode(srNs, srExp, 0x20, 0, 0))
-
-        (constNs, constExp) = call(Navana.Add(constBase, 256,   1, 0))
-        constGT             = call(Mint.Encode(constNs, constExp, 0x20, 0, 0))
+        // JS Step 3a: Navana.ADD(srBase,    16384, gtType=1) -> (srNsSlot, srVersion)
+        // JS Step 3b: Mint.Encode(srNsSlot, srVersion, permsBits=0x20, 0, 0) -> srGT
+        // JS Step 3c: Navana.ADD(constBase, 256,   gtType=1) -> (constNsSlot, constVersion)
+        // JS Step 3d: Mint.Encode(constNsSlot, constVersion, permsBits=0x20, 0, 0) -> constGT
 
         // Signal successful boot to Salvation (non-zero = OK).
         return(1)
@@ -95,7 +119,7 @@ abstraction Navana {
     // clistCount : number of GT entries in the lump's c-list region.
     // Returns the base address of the newly allocated region.
     method AbstractionAdd(location, limit, clistCount) {
-        result = call(Memory.Allocate(limit))
+        result = call(PhysicalPool.Allocate(limit))
         return(result)
     }
 

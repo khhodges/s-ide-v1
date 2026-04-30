@@ -344,8 +344,12 @@ def test_ns_label_slot2_is_startup_config():
 
 
 def test_nsCount_unchanged():
-    """nsCount remains 47 after adding Startup.Config at slot 2."""
-    assert _h()["nsCount"] == 47
+    """nsCount remains 50 after adding Startup.Config at slot 2.
+
+    Task #760 Stage 1 grew the catalog from 47 to 50 by appending
+    Billing (NS[47]), TuringMemory (NS[48]), ChurchMemory (NS[49]).
+    """
+    assert _h()["nsCount"] == 50
 
 
 def test_boot_abstr_has_cc0_cw3_in_simulator():

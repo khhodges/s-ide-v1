@@ -1,0 +1,43 @@
+// ChurchMemory — domain-separated abstract handle allocation.  NS slot 49.
+//
+// Issues only Church-domain handles.  A caller holding an E-GT to ChurchMemory
+// can never receive an R-, W-, or X-permissioned region.
+//
+// AllocAbstract wraps an existing NS entry in an Enter-capable abstract handle.
+// No new physical memory is claimed — it wraps an already-installed lump.
+// This is how user code obtains a callable reference to a resident service.
+//
+// No Billing charge for AllocAbstract: physical memory was charged at AllocCode
+// or Memory.Allocate time.  (Resolved Q4 — Church wrapping is free.)
+//
+// Bounds validation: AllocAbstract checks that ns_slot is in the range
+// [0, nsCount) before issuing a handle.  An out-of-range slot returns 0
+// (error); the JS binding faults BOUNDS instead.  nsCount is stored in
+// CR7[0] of the ChurchMemory lump data area at boot time.
+//
+// Capabilities:
+//   none — ChurchMemory validates NS slots against its own bounds knowledge,
+//          held in word[0] of its lump data area at boot time.
+
+abstraction ChurchMemory {
+    capabilities {
+    }
+
+    // AllocAbstract(ns_slot) — wrap existing NS entry in an Enter-capable handle.
+    // Returns ns_slot as the handle on success; returns 0 on out-of-range.
+    // JS binding faults BOUNDS on out-of-range instead of returning 0.
+    method AllocAbstract(ns_slot) {
+        var ns_count = read(CR7, 0)
+        if (ns_slot >= ns_count) {
+            return(0)
+        }
+        var handle = bfext(ns_slot, 0, 16)
+        return(handle)
+    }
+
+    // Free(handle) — release the abstract handle (no-op for simple handles;
+    // reference-counted by the JS binding to track active wrappers).
+    method Free(handle) {
+        return(0)
+    }
+}

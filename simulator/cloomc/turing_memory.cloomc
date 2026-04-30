@@ -1,0 +1,51 @@
+// TuringMemory — domain-separated code allocation with quota.  NS slot 48.
+//
+// Issues only Turing-domain GTs.  A caller holding an E-GT to TuringMemory
+// can never receive an L-, S-, or E-permissioned region regardless of what
+// they request.  The encoding is structural.
+//
+// GT patterns issued by AllocCode:
+//   R=1, X=1, W=0 — read + execute; no write after load.
+// Code is immutable once installed: the hardware allows the instruction
+// pointer to enter the region (X) and allows a debugger to read it (R),
+// but writing into a live code region is structurally prevented.
+//
+// Quota flow:
+//   AllocCode calls Billing.Charge(p_gt, words) — must pass p_gt for seq
+//   validation.  If Billing.Charge succeeds but PhysicalPool.Allocate fails,
+//   the charged words are immediately credited back to the account so no
+//   quota is leaked.
+//   FreeCode calls PhysicalPool.Free and then credits the words back to
+//   Billing by calling Billing.Charge with a negative delta (implementation
+//   detail: the JS binding directly adjusts quotaRemaining).
+//
+// Capabilities:
+//   c-list[0] (CR7) = PhysicalPool  — raw allocator
+//   c-list[1] (CR8) = Billing       — quota enforcer
+
+abstraction TuringMemory {
+    capabilities {
+        PhysicalPool
+        Billing
+    }
+
+    // AllocCode(p_gt, words) — validate quota via Billing; allocate via PhysicalPool.
+    // p_gt must be a valid, non-stale P-GT for the requesting account.
+    // Returns the physical base address of the allocated code region.
+    // Returns 0 on failure (BAD_PGT_SEQ, QUOTA_EXCEEDED, or OOM).
+    // JS binding faults instead of returning 0.
+    method AllocCode(p_gt, words) {
+        call(Billing.Charge(p_gt, words))
+        result = call(PhysicalPool.Allocate(words))
+        return(result)
+    }
+
+    // FreeCode(p_gt, loc) — free code region at loc; credit quota back to Billing.
+    // p_gt must match the account used at AllocCode time.
+    // JS binding refunds quotaRemaining directly since Billing has no public
+    // TopUp method in Stage 1.
+    method FreeCode(p_gt, loc) {
+        call(PhysicalPool.Free(loc))
+        return(0)
+    }
+}

@@ -303,6 +303,90 @@ function updateDashboard() {
     if (pipelineViz && !pipelineViz.animating) pipelineViz.render();
     _refreshSignedReturnReadout();
     if (typeof updateLiveLumpBanner === 'function') updateLiveLumpBanner();
+    updateMemoryStatsPanel();
+}
+
+function updateMemoryStatsPanel() {
+    const el = document.getElementById('memStatsContent');
+    if (!el) return;
+
+    const sa = (sim && sim.systemAbstractions) ? sim.systemAbstractions : null;
+    const stats = sa ? sa.getMemoryStats() : null;
+
+    if (!stats) {
+        el.innerHTML = '<div style="color:var(--text-secondary,#9ca3af);padding:1rem;font-family:monospace;font-size:0.82rem;">Memory layer statistics not yet available — boot the simulator first.</div>';
+        return;
+    }
+
+    const memTotal = (sim && sim.NS_TABLE_BASE) ? sim.NS_TABLE_BASE : 0;
+    const watermark = stats.physicalWatermark;
+    const watermarkPct = memTotal > 0 ? Math.min(100, Math.round(watermark / memTotal * 100)) : 0;
+    const watermarkColor = watermarkPct > 80 ? '#f87171' : watermarkPct > 60 ? '#fbbf24' : '#4ade80';
+
+    const turingUsed = stats.turingWordsUsed;
+    const turingTotal = stats.turingQuotaTotal;
+    const turingPct = turingTotal > 0 ? Math.min(100, Math.round(turingUsed / turingTotal * 100)) : 0;
+
+    const churchSlots = stats.churchSlotsUsed;
+    const churchTotal = stats.churchSlotsTotal || (sim && sim.nsCount) || 0;
+    const churchPct   = churchTotal > 0 ? Math.min(100, Math.round(churchSlots / churchTotal * 100)) : 0;
+
+    const systemPgt = stats.systemPgt;
+    const systemPgtHex = systemPgt ? ('0x' + (systemPgt >>> 0).toString(16).toUpperCase().padStart(8, '0')) : 'not issued';
+    const systemSeq = stats.systemSeq;
+    const billingAccounts = stats.billingAccounts;
+
+    function bar(pct, color) {
+        return `<div style="background:#1a1a2e;border-radius:3px;height:8px;width:100%;max-width:220px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:8px;">` +
+            `<div style="background:${color};width:${pct}%;height:100%;border-radius:3px;transition:width 0.2s;"></div></div>`;
+    }
+
+    function row(label, value, extraHtml) {
+        return `<tr><td style="padding:5px 10px 5px 0;color:#9ca3af;font-size:0.8rem;white-space:nowrap;min-width:160px;">${label}</td>` +
+            `<td style="padding:5px 0;font-family:monospace;font-size:0.82rem;color:#e5e7eb;">${value}${extraHtml || ''}</td></tr>`;
+    }
+
+    const html = `
+<details open style="margin:0;">
+<summary style="cursor:pointer;padding:8px 0 4px;color:#daa520;font-size:0.88rem;font-weight:600;letter-spacing:0.04em;list-style:none;">
+&#9660; PhysicalPool &mdash; Layer 0
+</summary>
+<table style="border-collapse:collapse;width:100%;margin:4px 0 12px 8px;">
+${row('Watermark', `0x${watermark.toString(16).toUpperCase().padStart(5,'0')} / 0x${memTotal.toString(16).toUpperCase().padStart(5,'0')} (${watermarkPct}%)`, bar(watermarkPct, watermarkColor))}
+${row('NS_TABLE_BASE', `0x${memTotal.toString(16).toUpperCase().padStart(5,'0')}`)}
+</table>
+</details>
+
+<details open style="margin:0;">
+<summary style="cursor:pointer;padding:8px 0 4px;color:#7dd3fc;font-size:0.88rem;font-weight:600;letter-spacing:0.04em;list-style:none;">
+&#9660; TuringMemory &mdash; Layer 1a
+</summary>
+<table style="border-collapse:collapse;width:100%;margin:4px 0 12px 8px;">
+${row('Code words used', `${turingUsed.toLocaleString()} / ${turingTotal === 0x7FFFFFFF ? '∞' : turingTotal.toLocaleString()}`, turingTotal < 0x7FFFFFFF ? bar(turingPct, turingPct > 80 ? '#f87171' : '#7dd3fc') : '')}
+</table>
+</details>
+
+<details open style="margin:0;">
+<summary style="cursor:pointer;padding:8px 0 4px;color:#a78bfa;font-size:0.88rem;font-weight:600;letter-spacing:0.04em;list-style:none;">
+&#9660; ChurchMemory &mdash; Layer 1b
+</summary>
+<table style="border-collapse:collapse;width:100%;margin:4px 0 12px 8px;">
+${row('Abstract handles', `${churchSlots} / ${churchTotal > 0 ? churchTotal : '\u2014'} (${churchPct}%)`, churchTotal > 0 ? bar(churchPct, churchPct > 80 ? '#f87171' : '#a78bfa') : '')}
+</table>
+</details>
+
+<details open style="margin:0;">
+<summary style="cursor:pointer;padding:8px 0 4px;color:#fbbf24;font-size:0.88rem;font-weight:600;letter-spacing:0.04em;list-style:none;">
+&#9660; Billing &mdash; Layer 2
+</summary>
+<table style="border-collapse:collapse;width:100%;margin:4px 0 12px 8px;">
+${row('Active accounts', `${billingAccounts}`)}
+${row('System P-GT', systemPgtHex)}
+${row('System seq', `${systemSeq}`)}
+</table>
+</details>`;
+
+    el.innerHTML = html;
 }
 
 function updateToolbarIdeBadge() {

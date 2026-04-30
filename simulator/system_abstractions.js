@@ -72,7 +72,7 @@
 //   ELOADCALL CR, n  — loads c-list[n] into CR then calls it.
 //
 // KEY METHODS
-//   _bindAll()      — registers all 46 abstractions in NS-index order
+//   _bindAll()      — registers all 50 abstractions in NS-index order
 //   _makeMethod(src) — wraps an assembly string as a callable method
 //   _defaultClist() — builds a standard c-list from the registry
 //
@@ -117,6 +117,9 @@ class SystemAbstractions {
         this._bindNavana();
         this._bindMint();
         this._bindMemory();
+        this._bindBilling();
+        this._bindTuringMemory();
+        this._bindChurchMemory();
         this._bindScheduler();
         this._bindStack();
         this._bindDijkstraFlag();
@@ -127,6 +130,34 @@ class SystemAbstractions {
         this._bindSlideRuleExtended();
         this._bindConstants();
         this._initKeystone();
+    }
+
+    getMemoryStats() {
+        const ms = this._memoryState || {};
+        const bs = this._billingState || {};
+        const ts = this._turingMemoryState || {};
+        const cs = this._churchMemoryState || {};
+
+        const accounts = bs.accounts || {};
+        const accountList = Object.values(accounts);
+        const activeAccounts = accountList.filter(a => !a.closed);
+        const totalQuota = activeAccounts.reduce((s, a) => s + a.quotaTotal, 0);
+        const usedQuota  = activeAccounts.reduce((s, a) => s + (a.quotaTotal - a.quotaRemaining), 0);
+        const systemAccount = accountList.find(a => a.isSystem && !a.closed);
+
+        return {
+            physicalWatermark: ms.nextFreeAddr || 0,
+            physicalTotal: 0,
+            turingWordsUsed: ts.wordsUsed || 0,
+            turingQuotaTotal: ts.quotaTotal || 0,
+            churchSlotsUsed: cs.slotsUsed || 0,
+            churchSlotsTotal: cs.nsCount || 0,
+            billingAccounts: activeAccounts.length,
+            billingTotalQuota: totalQuota,
+            billingUsedQuota: usedQuota,
+            systemPgt: bs.systemPgt || null,
+            systemSeq: systemAccount ? systemAccount.seq : 0,
+        };
     }
 
     _bindStartupConfig() {
@@ -500,6 +531,74 @@ class SystemAbstractions {
                 navanaState.managedAbstractions = all.map(a => ({ index: a.index, name: a.name, layer: a.layer }));
             }
 
+            // ----------------------------------------------------------------
+            // Stage 1 — Foundation Memory Layers boot sequence
+            // Mirrors the CLOOMC spec in navana.cloomc Init() method.
+            //
+            // Step 0: Open a system Billing account (unlimited quota, class=3).
+            //         All boot-time TuringMemory allocations are charged here.
+            // Step 1: Allocate code regions via TuringMemory.AllocCode.
+            // Step 2: Allocate working-memory buffers via PhysicalPool directly.
+            // Step 3: Register each code lump in the NS (Navana.ADD) and encode
+            //         an Enter-capable GT (Mint.Encode).  The 3-step flow is:
+            //           AllocCode -> Navana.ADD -> Mint.Encode(nsSlot, seq, ...)
+            // ----------------------------------------------------------------
+            navanaState.bootAllocations = null;
+            const billingOpen = registry && registry.dispatchMethod(47, 'Open', sim, {
+                quota_words: 0x7FFFFFFF, quota_class: 3
+            });
+            if (billingOpen && billingOpen.ok) {
+                const sysPgt = billingOpen.result.pgt;
+                navanaState.sysPgt      = sysPgt;
+                navanaState.sysAccountId = billingOpen.result.accountId;
+
+                // Step 1 — code regions (quota charged via TuringMemory)
+                const srRes    = registry.dispatchMethod(48, 'AllocCode', sim, { p_gt: sysPgt, words: 16384 });
+                const constRes = registry.dispatchMethod(48, 'AllocCode', sim, { p_gt: sysPgt, words: 256   });
+
+                // Step 2 — data working buffers (raw PhysicalPool, no quota)
+                const schedRes   = registry.dispatchMethod(7, 'Allocate', sim, { size: 1024 });
+                const stackRes   = registry.dispatchMethod(7, 'Allocate', sim, { size: 512  });
+                const flagRes    = registry.dispatchMethod(7, 'Allocate', sim, { size: 256  });
+                const ledBufRes  = registry.dispatchMethod(7, 'Allocate', sim, { size: 64   });
+                const uartBufRes = registry.dispatchMethod(7, 'Allocate', sim, { size: 512  });
+
+                // Step 3 — Navana.ADD -> Mint.Encode (correct 3-step flow)
+                let srGT = 0, constGT = 0;
+                const srAddRes = registry.dispatchMethod(5, 'ADD', sim, {
+                    location: srRes    && srRes.ok    ? srRes.result.location    : 0,
+                    limit: 16384, gtType: 1, label: 'SlideRule'
+                });
+                if (srAddRes && srAddRes.ok) {
+                    const encSr = registry.dispatchMethod(6, 'Encode', sim, {
+                        base: srAddRes.result.nsIndex, exp: srAddRes.result.version,
+                        permsBits: 0x20, bindable: 0, far: 0
+                    });
+                    if (encSr && encSr.ok) srGT = encSr.result;
+                }
+                const constAddRes = registry.dispatchMethod(5, 'ADD', sim, {
+                    location: constRes && constRes.ok ? constRes.result.location : 0,
+                    limit: 256, gtType: 1, label: 'Constants'
+                });
+                if (constAddRes && constAddRes.ok) {
+                    const encConst = registry.dispatchMethod(6, 'Encode', sim, {
+                        base: constAddRes.result.nsIndex, exp: constAddRes.result.version,
+                        permsBits: 0x20, bindable: 0, far: 0
+                    });
+                    if (encConst && encConst.ok) constGT = encConst.result;
+                }
+
+                navanaState.bootAllocations = {
+                    sliderule:    srRes    && srRes.ok    ? Object.assign({}, srRes.result,    { gt: srGT    }) : null,
+                    constants:    constRes && constRes.ok ? Object.assign({}, constRes.result, { gt: constGT }) : null,
+                    scheduler:    schedRes   && schedRes.ok   ? schedRes.result   : null,
+                    stack:        stackRes   && stackRes.ok   ? stackRes.result   : null,
+                    dijkstraFlag: flagRes    && flagRes.ok    ? flagRes.result    : null,
+                    ledBuffer:    ledBufRes  && ledBufRes.ok  ? ledBufRes.result  : null,
+                    uartBuffer:   uartBufRes && uartBufRes.ok ? uartBufRes.result : null,
+                };
+            }
+
             navanaState.deviceRegistry = {};
             for (const [name, nsIdx] of Object.entries(DEVICE_NS_SLOTS)) {
                 const entry = sim.readNSEntry(nsIdx);
@@ -540,7 +639,9 @@ class SystemAbstractions {
             }
 
             const deviceCount = Object.keys(navanaState.deviceRegistry).length;
-            const msg = `Navana.Init: initialized ${navanaState.managedAbstractions.length} abstractions, discovered ${deviceCount} devices (${Object.keys(navanaState.deviceRegistry).join(', ')}), minted ${Object.keys(navanaState.passKeys).length} PassKey(s). Running indefinitely.`;
+            const hasSysPgt   = !!navanaState.sysPgt;
+            const hasBoot     = !!navanaState.bootAllocations;
+            const msg = `Navana.Init: initialized ${navanaState.managedAbstractions.length} abstractions, discovered ${deviceCount} devices (${Object.keys(navanaState.deviceRegistry).join(', ')}), minted ${Object.keys(navanaState.passKeys).length} PassKey(s)${hasSysPgt ? `, Stage-1 boot layers allocated (sysPgt=0x${(navanaState.sysPgt >>> 0).toString(16)})` : ''}. Running indefinitely.`;
 
             sim.auditLog.push({
                 gate: 'Navana.Init',
@@ -549,7 +650,9 @@ class SystemAbstractions {
                 requiredPerm: null,
                 checks: {
                     devices: { pass: deviceCount > 0 },
-                    passkeys: { pass: !!ledPK }
+                    passkeys: { pass: !!ledPK },
+                    billing:  { pass: hasSysPgt },
+                    bootAlloc: { pass: hasBoot }
                 },
                 b: 0, f: 0,
                 result: 'pass'
@@ -562,7 +665,10 @@ class SystemAbstractions {
                     abstractionCount: navanaState.managedAbstractions.length,
                     deviceCount: deviceCount,
                     devices: Object.keys(navanaState.deviceRegistry),
-                    passKeys: ledPK ? [{ id: ledPK.id, device: ledPK.device, gt: ledPK.gt }] : []
+                    passKeys: ledPK ? [{ id: ledPK.id, device: ledPK.device, gt: ledPK.gt }] : [],
+                    sysPgt: navanaState.sysPgt || null,
+                    sysAccountId: navanaState.sysAccountId || null,
+                    bootAllocations: navanaState.bootAllocations || null
                 },
                 message: msg
             };
@@ -1301,52 +1407,88 @@ class SystemAbstractions {
         if (!this._memoryState) {
             this._memoryState = {
                 allocations: {},
+                freeList: [],
                 nextFreeAddr: 45 * 0x100,
             };
         }
         const memState = this._memoryState;
 
-        this.registry.bindMethod(7, 'Allocate', function(sim, args) {
-            const requested = args.size || 16;
-            const size = Math.max(32, nextPow2(requested));
-
-            const location = memState.nextFreeAddr;
-            if (location + size > sim.NS_TABLE_BASE) {
-                return { ok: false, fault: 'OOM', message: `Memory.Allocate(${requested}→${size}): out of memory — next=0x${location.toString(16)}, limit=0x${sim.NS_TABLE_BASE.toString(16)}` };
+        function flCoalesce() {
+            const fl = memState.freeList;
+            fl.sort((a, b) => a.loc - b.loc);
+            let merged = true;
+            while (merged) {
+                merged = false;
+                for (let i = 0; i < fl.length - 1; i++) {
+                    if (fl[i].loc + fl[i].size === fl[i + 1].loc) {
+                        fl.splice(i, 2, { loc: fl[i].loc, size: fl[i].size + fl[i + 1].size });
+                        merged = true;
+                        break;
+                    }
+                }
             }
+            const last = fl.length > 0 ? fl[fl.length - 1] : null;
+            if (last && last.loc + last.size === memState.nextFreeAddr) {
+                memState.nextFreeAddr = last.loc;
+                fl.pop();
+            }
+        }
 
-            memState.allocations[location] = { location: location, size: size };
+        function flClaim(size) {
+            const fl = memState.freeList;
+            for (let i = 0; i < fl.length; i++) {
+                if (fl[i].size >= size) {
+                    const loc = fl[i].loc;
+                    if (fl[i].size > size) {
+                        fl[i] = { loc: loc + size, size: fl[i].size - size };
+                    } else {
+                        fl.splice(i, 1);
+                    }
+                    return loc;
+                }
+            }
+            return -1;
+        }
+
+        function doAllocate(sim, requested, label) {
+            const size = Math.max(64, nextPow2(requested));
+            const free = flClaim(size);
+            if (free >= 0) {
+                memState.allocations[free] = { location: free, size };
+                return { ok: true, result: { location: free, size }, message: `${label}: ${size}w at 0x${free.toString(16)} (from free list)` };
+            }
+            const location = memState.nextFreeAddr;
+            const limit = sim.NS_TABLE_BASE || 0xFFFF;
+            if (location + size > limit) {
+                return { ok: false, fault: 'OOM', message: `${label}(${requested}\u2192${size}): OOM \u2014 watermark=0x${location.toString(16)} limit=0x${limit.toString(16)}` };
+            }
+            memState.allocations[location] = { location, size };
             memState.nextFreeAddr = location + size;
+            return { ok: true, result: { location, size }, message: `${label}: ${size}w at 0x${location.toString(16)}` };
+        }
 
-            return {
-                ok: true,
-                result: { location: location, size: size },
-                message: `Memory.Allocate: ${size} words (pow2, requested ${requested}) at 0x${location.toString(16)}`
-            };
+        memState._doAllocate = doAllocate;
+
+        this.registry.bindMethod(7, 'Allocate', function(sim, args) {
+            return doAllocate(sim, args.size || 16, 'PhysicalPool.Allocate');
         });
 
         this.registry.bindMethod(7, 'Free', function(sim, args) {
-            const location = args.location;
-            if (location === undefined || location === null) {
-                return { ok: false, fault: 'ARGS', message: 'Memory.Free: location required' };
+            const location = args.location !== undefined ? args.location : (args.loc !== undefined ? args.loc : null);
+            if (location === null) {
+                return { ok: false, fault: 'ARGS', message: 'PhysicalPool.Free: location required' };
             }
-
             const alloc = memState.allocations[location];
             if (!alloc) {
-                return { ok: false, fault: 'BOUNDS', message: `Memory.Free: no allocation at 0x${location.toString(16)}` };
-            }
-
-            for (let i = 0; i < alloc.size; i++) {
-                if (location + i < sim.memory.length) {
-                    sim.memory[location + i] = 0;
-                }
+                return { ok: false, fault: 'BOUNDS', message: `PhysicalPool.Free: no allocation at 0x${location.toString(16)}` };
             }
             delete memState.allocations[location];
-
+            memState.freeList.push({ loc: location, size: alloc.size });
+            flCoalesce();
             return {
                 ok: true,
-                result: { location: location, size: alloc.size },
-                message: `Memory.Free: ${alloc.size} words at 0x${location.toString(16)} released`
+                result: { location, size: alloc.size },
+                message: `PhysicalPool.Free: ${alloc.size}w at 0x${location.toString(16)} returned to free list`
             };
         });
 
@@ -1354,21 +1496,271 @@ class SystemAbstractions {
             const location = args.location;
             const newSize = args.size || 32;
             if (location === undefined || location === null) {
-                return { ok: false, fault: 'ARGS', message: 'Memory.Resize: location required' };
+                return { ok: false, fault: 'ARGS', message: 'PhysicalPool.Resize: location required' };
             }
-
             const alloc = memState.allocations[location];
             if (!alloc) {
-                return { ok: false, fault: 'BOUNDS', message: `Memory.Resize: no allocation at 0x${location.toString(16)}` };
+                return { ok: false, fault: 'BOUNDS', message: `PhysicalPool.Resize: no allocation at 0x${location.toString(16)}` };
             }
-
             alloc.size = newSize;
+            return {
+                ok: true,
+                result: { location, size: newSize },
+                message: `PhysicalPool.Resize: 0x${location.toString(16)} resized to ${newSize}w`
+            };
+        });
+
+        this.registry.bindMethod(7, 'Claim', function(sim, args) {
+            return doAllocate(sim, args.size || 16, 'PhysicalPool.Claim');
+        });
+
+        this.registry.bindMethod(7, 'Release', function(sim, args) {
+            const location = args.location !== undefined ? args.location : (args.loc !== undefined ? args.loc : null);
+            if (location === null) {
+                return { ok: false, fault: 'ARGS', message: 'PhysicalPool.Release: location required' };
+            }
+            const alloc = memState.allocations[location];
+            if (!alloc) {
+                return { ok: true, result: 0, message: `PhysicalPool.Release: 0x${location.toString(16)} not tracked (already free)` };
+            }
+            delete memState.allocations[location];
+            memState.freeList.push({ loc: location, size: alloc.size });
+            flCoalesce();
+            return { ok: true, result: 0, message: `PhysicalPool.Release: freed ${alloc.size}w at 0x${location.toString(16)}` };
+        });
+    }
+
+    _bindBilling() {
+        if (!this._billingState) {
+            this._billingState = {
+                accounts: {},
+                nextAccountId: 1,
+                globalSeq: 0,
+                systemPgt: null,
+            };
+        }
+        const bs = this._billingState;
+
+        const AB_TYPE_PGT = 0x02;
+
+        function buildPgt(accountId, seq) {
+            return (((AB_TYPE_PGT & 0x1F) << 27) | (0b11 << 23) | ((seq & 0x7F) << 16) | (accountId & 0xFFFF)) >>> 0;
+        }
+
+        function freshSeq() {
+            return (++bs.globalSeq) & 0x7F;
+        }
+
+        function parsePgt(pgt) {
+            return { accountId: pgt & 0xFFFF, seq: (pgt >>> 16) & 0x7F };
+        }
+
+        this.registry.bindMethod(47, 'Open', function(sim, args) {
+            const quotaWords = args.quota_words !== undefined ? args.quota_words : (args.dr1 !== undefined ? args.dr1 : 65536);
+            const quotaClass = args.quota_class !== undefined ? args.quota_class : 3;
+            const isSystem   = quotaClass >= 3;
+            const accountId  = bs.nextAccountId++;
+            const seq        = freshSeq();
+
+            bs.accounts[accountId] = {
+                accountId,
+                quotaRemaining: isSystem ? 0x7FFFFFFF : quotaWords,
+                quotaTotal:     isSystem ? 0x7FFFFFFF : quotaWords,
+                seq,
+                quotaClass,
+                isSystem,
+                closed: false,
+            };
+
+            const pgt = buildPgt(accountId, seq);
+            if (isSystem && !bs.systemPgt) bs.systemPgt = pgt;
 
             return {
                 ok: true,
-                result: { location: location, size: newSize },
-                message: `Memory.Resize: allocation at 0x${location.toString(16)} resized to ${newSize} words`
+                result: { pgt, accountId, seq },
+                message: `Billing.Open: account ${accountId} quota=${isSystem ? '\u221e' : quotaWords}w seq=${seq} pgt=0x${(pgt >>> 0).toString(16).padStart(8, '0')}`
             };
+        });
+
+        this.registry.bindMethod(47, 'Charge', function(sim, args) {
+            const pgt   = args.p_gt !== undefined ? args.p_gt : (args.pgt !== undefined ? args.pgt : 0);
+            const words = args.words !== undefined ? args.words : (args.dr2 !== undefined ? args.dr2 : 0);
+
+            const { accountId, seq: pgtSeq } = parsePgt(pgt);
+            const acct = bs.accounts[accountId];
+
+            if (!acct || acct.closed) {
+                return { ok: false, fault: 'BAD_PGT_SEQ', message: `Billing.Charge: account ${accountId} not found or closed` };
+            }
+            if (pgtSeq !== acct.seq) {
+                return { ok: false, fault: 'BAD_PGT_SEQ', message: `Billing.Charge: stale seq=${pgtSeq} expected=${acct.seq}` };
+            }
+            if (!acct.isSystem && acct.quotaRemaining < words) {
+                return { ok: false, fault: 'QUOTA_EXCEEDED', message: `Billing.Charge: quota ${acct.quotaRemaining}w < requested ${words}w` };
+            }
+            if (!acct.isSystem) acct.quotaRemaining -= words;
+
+            return {
+                ok: true,
+                result: 1,
+                message: `Billing.Charge: account ${accountId} charged ${words}w remaining=${acct.isSystem ? '\u221e' : acct.quotaRemaining}w`
+            };
+        });
+
+        this.registry.bindMethod(47, 'Reissue', function(sim, args) {
+            const pgt = args.p_gt !== undefined ? args.p_gt : (args.pgt !== undefined ? args.pgt : 0);
+            const { accountId } = parsePgt(pgt);
+            const acct = bs.accounts[accountId];
+            if (!acct || acct.closed) {
+                return { ok: false, fault: 'BAD_PGT_SEQ', message: `Billing.Reissue: account ${accountId} not found or closed` };
+            }
+            const newSeq = freshSeq();
+            acct.seq = newSeq;
+            const newPgt = buildPgt(accountId, newSeq);
+            return {
+                ok: true,
+                result: { pgt: newPgt, seq: newSeq },
+                message: `Billing.Reissue: account ${accountId} new seq=${newSeq} pgt=0x${(newPgt >>> 0).toString(16).padStart(8, '0')}`
+            };
+        });
+
+        this.registry.bindMethod(47, 'Close', function(sim, args) {
+            const pgt = args.p_gt !== undefined ? args.p_gt : (args.pgt !== undefined ? args.pgt : 0);
+            const { accountId, seq: pgtSeq } = parsePgt(pgt);
+            const acct = bs.accounts[accountId];
+            if (!acct || acct.closed) {
+                return { ok: false, fault: 'BAD_PGT_SEQ', message: `Billing.Close: account ${accountId} not found or already closed` };
+            }
+            if (pgtSeq !== acct.seq) {
+                return { ok: false, fault: 'BAD_PGT_SEQ', message: `Billing.Close: stale seq=${pgtSeq} expected=${acct.seq}` };
+            }
+            const remaining = acct.isSystem ? 0x7FFFFFFF : acct.quotaRemaining;
+            acct.closed = true;
+            return {
+                ok: true,
+                result: remaining,
+                message: `Billing.Close: account ${accountId} closed`
+            };
+        });
+
+        this.registry.bindMethod(47, 'Balance', function(sim, args) {
+            const pgt = args.p_gt !== undefined ? args.p_gt : (args.pgt !== undefined ? args.pgt : 0);
+            const { accountId } = parsePgt(pgt);
+            const acct = bs.accounts[accountId];
+            if (!acct || acct.closed) {
+                return { ok: false, fault: 'BAD_PGT_SEQ', message: `Billing.Balance: account ${accountId} not active` };
+            }
+            return {
+                ok: true,
+                result: acct.isSystem ? 0x7FFFFFFF : acct.quotaRemaining,
+                message: `Billing.Balance: account ${accountId} remaining=${acct.isSystem ? '\u221e' : acct.quotaRemaining}w`
+            };
+        });
+    }
+
+    _bindTuringMemory() {
+        if (!this._turingMemoryState) {
+            this._turingMemoryState = {
+                wordsUsed: 0,
+                quotaTotal: 0x7FFFFFFF,
+                allocations: {},
+            };
+        }
+        const ts   = this._turingMemoryState;
+        const self = this;
+
+        function billingCredit(p_gt, quantised) {
+            const bs = self._billingState;
+            if (!bs) return;
+            const accountId = p_gt & 0xFFFF;
+            const acct = bs.accounts[accountId];
+            if (acct && !acct.closed && !acct.isSystem) {
+                acct.quotaRemaining = Math.min(acct.quotaTotal, acct.quotaRemaining + quantised);
+            }
+        }
+
+        this.registry.bindMethod(48, 'AllocCode', function(sim, args) {
+            const requested = args.words !== undefined ? args.words : (args.size !== undefined ? args.size : 64);
+            const quantised = Math.max(64, nextPow2(requested));
+            const p_gt = args.p_gt !== undefined ? args.p_gt
+                       : (args.pgt !== undefined ? args.pgt
+                       : ((self._billingState && self._billingState.systemPgt) || 0));
+
+            const billingResult = self.registry.dispatchMethod(47, 'Charge', sim, { p_gt, words: quantised });
+            if (!billingResult || !billingResult.ok) {
+                const fault = (billingResult && billingResult.fault) || 'BAD_PGT_SEQ';
+                return { ok: false, fault, message: `TuringMemory.AllocCode: billing rejected (${fault})` };
+            }
+
+            const memResult = self.registry.dispatchMethod(7, 'Allocate', sim, { size: requested });
+            if (!memResult || !memResult.ok) {
+                billingCredit(p_gt, quantised);
+                return { ok: false, fault: 'OOM', message: `TuringMemory.AllocCode: OOM \u2014 quota refunded` };
+            }
+
+            ts.wordsUsed += quantised;
+            ts.allocations[memResult.result.location] = { size: quantised, p_gt };
+
+            return {
+                ok: true,
+                result: { location: memResult.result.location, size: memResult.result.size },
+                message: `TuringMemory.AllocCode: ${quantised}w at 0x${memResult.result.location.toString(16)}`
+            };
+        });
+
+        this.registry.bindMethod(48, 'FreeCode', function(sim, args) {
+            const loc   = args.loc !== undefined ? args.loc : (args.location !== undefined ? args.location : 0);
+            const alloc = ts.allocations[loc];
+            const quantised = alloc ? alloc.size : 0;
+            const p_gt      = alloc ? alloc.p_gt : 0;
+            if (quantised > 0) {
+                ts.wordsUsed = Math.max(0, ts.wordsUsed - quantised);
+                delete ts.allocations[loc];
+                self.registry.dispatchMethod(7, 'Free', sim, { location: loc });
+                billingCredit(p_gt, quantised);
+            }
+            return { ok: true, result: 0, message: `TuringMemory.FreeCode: freed ${quantised}w at 0x${loc.toString(16)}` };
+        });
+    }
+
+    _bindChurchMemory() {
+        if (!this._churchMemoryState) {
+            this._churchMemoryState = {
+                slotsUsed: 0,
+                handles: {},
+            };
+        }
+        const cs = this._churchMemoryState;
+
+        this.registry.bindMethod(49, 'AllocAbstract', function(sim, args) {
+            const nsSlot  = args.ns_slot !== undefined ? args.ns_slot : (args.dr1 !== undefined ? args.dr1 : 0);
+            const nsCount = sim.nsCount || 64;
+            cs.nsCount = nsCount;
+
+            if (nsSlot < 0 || nsSlot >= nsCount) {
+                return { ok: false, fault: 'BOUNDS', message: `ChurchMemory.AllocAbstract: ns_slot ${nsSlot} out of range [0,${nsCount})` };
+            }
+
+            cs.handles[nsSlot] = (cs.handles[nsSlot] || 0) + 1;
+            if (cs.handles[nsSlot] === 1) cs.slotsUsed++;
+
+            return {
+                ok: true,
+                result: { handle: nsSlot },
+                message: `ChurchMemory.AllocAbstract: ns_slot=${nsSlot} \u2192 abstract handle`
+            };
+        });
+
+        this.registry.bindMethod(49, 'Free', function(sim, args) {
+            const nsSlot = args.ns_slot !== undefined ? args.ns_slot : (args.handle !== undefined ? args.handle : 0);
+            if (cs.handles[nsSlot]) {
+                cs.handles[nsSlot]--;
+                if (cs.handles[nsSlot] === 0) {
+                    delete cs.handles[nsSlot];
+                    cs.slotsUsed = Math.max(0, cs.slotsUsed - 1);
+                }
+            }
+            return { ok: true, result: 0, message: `ChurchMemory.Free: handle for ns_slot=${nsSlot} released` };
         });
     }
 

@@ -109,6 +109,7 @@
                                 <button class="ham-item" id="hamItem-dashboard-dr" onclick="switchView('dashboard');switchDashTab('dr');closeHamburger()">Data Registers</button>
                                 <button class="ham-item" id="hamItem-dashboard-gatelog" onclick="switchView('dashboard');switchDashTab('gatelog');closeHamburger()">Gate Log</button>
                                 <button class="ham-item" id="hamItem-dashboard-state" onclick="switchView('dashboard');switchDashTab('state');closeHamburger()">Machine State</button>
+                                <button class="ham-item" id="hamItem-dashboard-memstats" onclick="switchView('dashboard');switchDashTab('memstats');closeHamburger()">Memory Layers</button>
                                 <button class="ham-item" id="hamItem-pipeline" onclick="switchView('pipeline');closeHamburger()">Pipeline<kbd class="ham-kbd">C+P</kbd></button>
                                 <button class="ham-item" id="hamItem-trace" onclick="switchView('trace');closeHamburger()">Trace<kbd class="ham-kbd">C+T</kbd></button>
                                 <button class="ham-item" id="hamItem-gc" onclick="switchView('gc');closeHamburger()">GC<kbd class="ham-kbd">C+G</kbd></button>
@@ -267,6 +268,12 @@
             <div class="panel">
                 <div class="panel-title">Machine Architecture</div>
                 <div id="machineInfo"></div>
+            </div>
+        </div>
+        <div id="dashPanel-memstats" class="dash-panel">
+            <div class="panel">
+                <div class="panel-title">Memory &mdash; Foundation Layer Status</div>
+                <div id="memStatsContent"></div>
             </div>
         </div>
     </div>

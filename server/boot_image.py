@@ -204,8 +204,11 @@ DEFAULT_ABSTRACTION_CATALOG = [
     ("GC",            {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
     ("Thread",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
     ("Circle",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
+    ("Billing",       {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),   # NS[47] — P-GT quota enforcer (Task #760 Stage 1)
+    ("TuringMemory",  {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),   # NS[48] — domain-separated code allocator (Task #760 Stage 1)
+    ("ChurchMemory",  {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),   # NS[49] — abstract handle allocator (Task #760 Stage 1)
 ]
-assert len(DEFAULT_ABSTRACTION_CATALOG) == 47, "catalog drift vs simulator.js"
+assert len(DEFAULT_ABSTRACTION_CATALOG) == 50, "catalog drift vs simulator.js"
 
 
 # ----- bit-packing helpers (mirror simulator.js exactly) ---------------------

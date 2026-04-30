@@ -858,6 +858,9 @@ class ChurchSimulator {
             { label: 'GC',            perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false, handler: 'gc' },
             { label: 'Thread',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'Circle',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
+            { label: 'Billing',       perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },   // NS[47] — P-GT quota enforcer (Task #760 Stage 1)
+            { label: 'TuringMemory',  perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },   // NS[48] — domain-separated code allocator (Task #760 Stage 1)
+            { label: 'ChurchMemory',  perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },   // NS[49] — abstract handle allocator (Task #760 Stage 1)
         ];
     }
 

@@ -1,0 +1,114 @@
+// Billing — per-account Passkey P-GT quota enforcer.  NS slot 47.
+//
+// The Passkey Golden Token (P-GT) is an Abstract-type GT (ab_type=0x02)
+// that serves as an unforgeable identity credential and quota key.
+// It is passive: it cannot be CALLed, mLoaded, or DREADed.
+//
+// Quota classes:
+//   basic    (0) —     4 096 words
+//   standard (1) —    65 536 words
+//   premium  (2) —   524 288 words
+//   system   (3) — unlimited  (issued during Navana.Init only)
+//
+// P-GT word layout (Abstract type, ab_type=0x02):
+//   bits [22:16] = gt_seq   (per-account freshness counter, 7-bit)
+//   bits [15:0]  = account_id (opaque key into the quota table)
+//
+// Per-account current_seq: each account record stores a current_seq field
+// that is compared against the seq field extracted from the P-GT on every
+// Charge and Close call.  A stale (revoked or pre-Reissue) P-GT will have
+// a seq that no longer matches current_seq and will fault BAD_PGT_SEQ.
+//
+// Design decisions (resolved):
+//   Q2 — Billing quota is ephemeral; not persisted across reboots.
+//   Q3 — Per-account current_seq tracks P-GT freshness (implemented below).
+//
+// CLOOMC spec note: The JS binding (system_abstractions.js _bindBilling)
+// implements a full multi-account hash table keyed by account_id.  The
+// CLOOMC spec below models a single-slot simplified ISA view because the
+// hardware DWRITE instruction only supports immediate (fixed) offsets.
+// CR7 layout for the simplified single-account spec:
+//   CR7[0] = next_account_id counter
+//   CR7[1] = current_seq (7-bit global counter)
+//   CR7[2] = quota_remaining
+//   CR7[3] = account_current_seq
+//   CR7[4] = account_closed flag
+//
+// Capabilities:
+//   none — Billing maintains a private closure-local quota table.
+
+abstraction Billing {
+    capabilities {
+    }
+
+    // Open(quota_words, quota_class) — create a new account; issue a P-GT.
+    // Assigns a fresh account_id and a fresh seq; encodes both in the P-GT.
+    // Returns the P-GT word for the caller to store as a capability.
+    method Open(quota_words, quota_class) {
+        var account_id = read(CR7, 0)
+        write(CR7, 0, account_id + 1)
+        var seq = read(CR7, 1)
+        var seq_inc = seq + 1
+        var seq_new = bfext(seq_inc, 0, 7)
+        write(CR7, 1, seq_new)
+        write(CR7, 2, quota_words)
+        write(CR7, 3, seq_new)
+        write(CR7, 4, 0)
+        var pgt = account_id
+        bfins(pgt, seq_new, 16, 7)
+        return(pgt)
+    }
+
+    // Charge(p_gt, words) — validate P-GT freshness; deduct words from quota.
+    // Returns 1 on success; returns 0 on BAD_PGT_SEQ or QUOTA_EXCEEDED.
+    // JS binding faults instead of returning 0.
+    method Charge(p_gt, words) {
+        var pgt_seq = bfext(p_gt, 16, 7)
+        var current_seq = read(CR7, 3)
+        var closed = read(CR7, 4)
+        if (closed != 0) {
+            return(0)
+        }
+        if (pgt_seq != current_seq) {
+            return(0)
+        }
+        var remaining = read(CR7, 2)
+        if (remaining < words) {
+            return(0)
+        }
+        write(CR7, 2, remaining - words)
+        return(1)
+    }
+
+    // Reissue(p_gt) — increment current_seq; return fresh P-GT.
+    // Old P-GT copies with the stale seq become invalid on the next Charge.
+    method Reissue(p_gt) {
+        var account_id = bfext(p_gt, 0, 16)
+        var seq = read(CR7, 1)
+        var seq_inc = seq + 1
+        var seq_new = bfext(seq_inc, 0, 7)
+        write(CR7, 1, seq_new)
+        write(CR7, 3, seq_new)
+        var new_pgt = account_id
+        bfins(new_pgt, seq_new, 16, 7)
+        return(new_pgt)
+    }
+
+    // Close(p_gt) — validate P-GT seq; mark account closed; return remaining.
+    method Close(p_gt) {
+        var pgt_seq = bfext(p_gt, 16, 7)
+        var current_seq = read(CR7, 3)
+        if (pgt_seq != current_seq) {
+            return(0)
+        }
+        var remaining = read(CR7, 2)
+        write(CR7, 4, 1)
+        return(remaining)
+    }
+
+    // Balance(p_gt) — return remaining quota for the account.
+    method Balance(p_gt) {
+        var remaining = read(CR7, 2)
+        return(remaining)
+    }
+}
