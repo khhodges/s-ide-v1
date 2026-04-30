@@ -25,17 +25,7 @@
 // Stdout: JSON array of result objects
 
 global.window = { bootConfig: {} };
-const ChurchSimulator = require('../../simulator/simulator.js');
-
-function bootSim() {
-    const sim = new ChurchSimulator();
-    let steps = 0;
-    while (!sim.bootComplete && !sim.halted && steps < 200) {
-        sim._bootStep();
-        steps++;
-    }
-    return sim;
-}
+const { bootSim } = require('./sim_helpers');
 
 function runTperm(scenarioName, crIdx, word0GT, customPresetSlot, customPresetPerms) {
     const sim = bootSim();

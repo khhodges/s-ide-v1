@@ -18,8 +18,6 @@
 
 global.window = { bootConfig: {} };
 
-const ChurchSimulator = require('../../simulator/simulator.js');
-
 const fs   = require('fs');
 const path = require('path');
 const vm   = require('vm');
@@ -27,45 +25,10 @@ const bootUploadsCode = fs.readFileSync(
     path.join(__dirname, '..', '..', 'simulator', 'boot_uploads.js'), 'utf8');
 vm.runInThisContext(bootUploadsCode);
 
+const { bootSim, setupCR6 } = require('./sim_helpers');
+
 const ERRORS = [];
 function fail(msg) { ERRORS.push(msg); }
-
-// ─── Helper: fully boot the simulator ────────────────────────────────────────
-
-function bootSim() {
-    const sim = new ChurchSimulator();
-    let steps = 0;
-    while (!sim.bootComplete && !sim.halted && steps < 300) {
-        sim._bootStep();
-        steps++;
-    }
-    return sim;
-}
-
-// ─── Helper: initialise CR6 to a valid c-list capability ─────────────────────
-//
-// After a full boot with cc=0 (no c-list in the default boot entry), the
-// NUC_CLIST step sets CR6 to all-zeros.  LOAD [CR6 + n] then faults with
-// NULL_CAP before reaching the Mode 2 path under test.
-//
-// This helper points CR6 at a 2-slot scratch region starting at address 500
-// (safely between the code buffer at ~384 and the NS table at 64512).  The
-// region is zeroed by default and can be populated by the test before the
-// LOAD instruction fires.
-
-function setupCR6(sim) {
-    const slotIdx = sim.bootEntrySlot;
-    const nsBase  = sim.NS_TABLE_BASE + slotIdx * sim.NS_ENTRY_WORDS;
-    const gt_seq  = (sim.memory[nsBase + 2] >>> 25) & 0x7F;
-    const eGT     = sim.createGT(gt_seq, slotIdx, { E: 1 }, 1);
-    sim.cr[6] = {
-        word0: eGT,
-        word1: 500,
-        word2: sim.packNSWord1(0, 0, 0, 0, 0, 1, 2),
-        word3: 0,
-        m:     0,
-    };
-}
 
 // ─── Test 1: LOAD on Outform GT fires Mode 2 loader and CR holds Inform GT ───
 

@@ -18,8 +18,6 @@
 
 global.window = { bootConfig: {} };
 
-const ChurchSimulator = require('../../simulator/simulator.js');
-
 // boot_uploads.js is a browser global script (no module.exports).
 // Load it by evaluating it in the current context so BOOT_UPLOADS is visible.
 const fs   = require('fs');
@@ -29,20 +27,10 @@ const bootUploadsCode = fs.readFileSync(
     path.join(__dirname, '..', '..', 'simulator', 'boot_uploads.js'), 'utf8');
 vm.runInThisContext(bootUploadsCode);
 
+const { bootSim } = require('./sim_helpers');
+
 const ERRORS = [];
 function fail(msg) { ERRORS.push(msg); }
-
-// ─── Helper: fully boot the simulator ────────────────────────────────────────
-
-function bootSim() {
-    const sim = new ChurchSimulator();
-    let steps = 0;
-    while (!sim.bootComplete && !sim.halted && steps < 300) {
-        sim._bootStep();
-        steps++;
-    }
-    return sim;
-}
 
 // ─── Test 1: initLazyManifest marks cold NS entries as Outform (gtType=2) ───
 
