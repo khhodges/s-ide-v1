@@ -633,6 +633,7 @@ def send_daily_report(db_path):
         params = {
             "from": from_email,
             "to": [REPORT_TO],
+            "reply_to": REPORT_TO,
             "subject": subject,
             "html": html,
             "text": plain,
