@@ -447,11 +447,17 @@ function stepSim() {
             const ok = instantBoot();
             const con = document.getElementById('editorConsole');
             if (con) {
-                const name = (window._lastCLOOMCResult && window._lastCLOOMCResult.abstractionName) || 'abstraction';
                 con.className = '';
-                con.textContent = ok
-                    ? `Auto-booted \u2014 \u201c${name}\u201d loaded \u2014 click Step or Run`
-                    : 'Auto-boot failed \u2014 machine halted during boot sequence';
+                if (ok) {
+                    const r = window._lastCLOOMCResult;
+                    const name    = (r && r.abstractionName) || 'abstraction';
+                    const nWords  = (lastAssembledWords  && lastAssembledWords.length)  || 0;
+                    const nMeth   = lastMethodTableSize || 0;
+                    const mLabel  = nMeth === 1 ? 'method' : 'methods';
+                    con.textContent = `Auto-booted \u2014 \u201c${name}\u201d loaded \u2014 ${nWords} words, ${nMeth} ${mLabel} \u2014 click Step or Run`;
+                } else {
+                    con.textContent = 'Auto-boot failed \u2014 machine halted during boot sequence';
+                }
             }
             if (ok) switchView('dashboard');
             return;

@@ -1070,7 +1070,8 @@ function loadCLOOMCIntoSim() {
     // If the machine is not yet booted, silently complete the full boot sequence
     // now so the user lands on the dashboard ready to Step immediately — no
     // manual boot clicking required.
-    if (!sim.bootComplete) {
+    const _wasAlreadyBooted = sim.bootComplete;
+    if (!_wasAlreadyBooted) {
         instantBoot();
         // _autoLoadDefaultProgram() inside instantBoot loaded lastAssembledWords;
         // _pendingSimLoad stays true so _applyPendingSimLoad() on first Step
@@ -1093,7 +1094,8 @@ function loadCLOOMCIntoSim() {
     const con = document.getElementById('editorConsole');
     if (con) {
         con.className = '';
-        con.textContent = `Auto-booted \u2014 \u201c${result.abstractionName}\u201d loaded${_loadSrcHint} \u2014 ${words.length} words, ${methodTableSize} method${methodTableSize !== 1 ? 's' : ''} \u2014 click Step or Run`;
+        const _bootPrefix = _wasAlreadyBooted ? 'Loaded' : 'Auto-booted';
+        con.textContent = `${_bootPrefix} \u2014 \u201c${result.abstractionName}\u201d loaded${_loadSrcHint} \u2014 ${words.length} words, ${methodTableSize} method${methodTableSize !== 1 ? 's' : ''} \u2014 click Step or Run`;
     }
 
     // Open the simulator dashboard so the user lands on the Step / Run controls
