@@ -961,6 +961,11 @@ function _autoLoadDefaultProgram() {
             if (lastMethodTableSize > 0) {
                 sim.pc = lastMethodTableSize;
             }
+            // Restore the namespace label for Boot.Abstr (sim.reset() clears
+            // nsLabels) so the CR detail heading shows the abstraction name
+            // rather than the boot-image default after reset.
+            const _bSlot = (typeof BOOT_ABSTR_NS_SLOT !== 'undefined') ? BOOT_ABSTR_NS_SLOT : 3;
+            if (sim.nsLabels && sim.programName) sim.nsLabels[_bSlot] = sim.programName;
             if (sim.bootComplete && lastAssembledCapabilities && lastAssembledCapabilities.length > 0) {
                 const clistBase = sim.cr[6].word1;
                 for (let ci = 0; ci < lastAssembledCapabilities.length; ci++) {
@@ -2585,7 +2590,9 @@ function resetSim() {
     if (sim && sim.faultLog) sim.faultLog = [];
     try { localStorage.removeItem(_FAULT_LOG_LS_KEY); } catch(e) {}
     if (pipelineViz) pipelineViz.setNIA(null);
-    _defaultProgramLoaded = false;
+    // Do NOT clear _defaultProgramLoaded — _autoLoadDefaultProgram() will
+    // reload the user's compiled program after boot completes so the PC
+    // returns to the correct start instruction automatically.
     _bootAuditAccum = [];
     _clearLumpPetNames();
     sim.reset();
@@ -2606,7 +2613,7 @@ function resetAndStep() {
     if (sim && sim.faultLog) sim.faultLog = [];
     try { localStorage.removeItem(_FAULT_LOG_LS_KEY); } catch(e) {}
     if (pipelineViz) pipelineViz.setNIA(null);
-    _defaultProgramLoaded = false;
+    // Do NOT clear _defaultProgramLoaded — see resetSim() comment.
     _bootAuditAccum = [];
     _clearLumpPetNames();
     sim.reset();
