@@ -1149,9 +1149,15 @@ function loadCLOOMCIntoSim() {
     switchView('dashboard');
     // Refresh the invoke-method button visibility now that an abstraction is loaded
     if (typeof refreshInvokeBtn === 'function') refreshInvokeBtn();
-    // Re-render the CR detail if one is selected so the heading reflects the new name
-    if (typeof selectedCR !== 'undefined' && selectedCR !== null &&
-        typeof updateCRDetail === 'function') updateCRDetail();
+    // Open CR14 (the CLOOMC register) detail panel directly on the API tab so
+    // the user sees methods and call examples immediately on entering the sim.
+    if (typeof openCRDetail === 'function') {
+        openCRDetail(14);
+        if (typeof switchCRDetailTab === 'function') switchCRDetailTab('api');
+    } else if (typeof selectedCR !== 'undefined' && selectedCR !== null &&
+               typeof updateCRDetail === 'function') {
+        updateCRDetail();
+    }
 }
 
 function compileAndCreateAbstraction() {
