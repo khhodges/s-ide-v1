@@ -253,10 +253,10 @@ function prepareCallSite(sim) {
     // ── Step 4: RETURN at lump[+3] — must unwind to returnPC = 1 ──
     const f3 = sim.faultLog.length;
     sim.step();
-    const newFaults = sim.faultLog.slice(f3);
-    if (newFaults.length > 0) {
+    const newFaults3 = sim.faultLog.slice(f3);
+    if (newFaults3.length > 0) {
         fail('Test 3: unexpected fault(s) during RETURN — ' +
-             newFaults.map(f => `${f.type}: ${f.message}`).join('; '));
+             newFaults3.map(f => `${f.type}: ${f.message}`).join('; '));
         return;
     }
 
@@ -285,6 +285,104 @@ function prepareCallSite(sim) {
     console.log('[PASS] Test 3: RETURN unwound to returnPC=1 (CALL_pc+1) after stepping through lump');
     console.log(`[PASS] Test 3: callStack.length=1 (sentinel only) after RETURN`);
     console.log(`[PASS] Test 3: CR14.word1=${sim.cr[14].word1} restored to caller codeBase=${callerCodeBase}`);
+})();
+
+// ── Test 4: Mode 1 — evicted lump is restored by lazy loader before CALL ──────
+//
+// Simulates a lump that was previously resident (NS entry intact, Inform GT)
+// but whose header was subsequently zeroed by the eviction path.  A CALL on
+// this slot must:
+//   (a) detect lazyManifest[slot].loaded === false + invalid header → Mode 1
+//   (b) call _dispatchLoaderLoad to restore the lump in-place
+//   (c) proceed with the CALL normally → PC = 0, CR14.word1 = LUMP_BASE
+//   (d) mark lazyManifest[slot].loaded === true
+//   (e) raise no faults
+
+(function testMode1EvictedLumpRestore() {
+    const sim = bootSim();
+    if (!sim.bootComplete) {
+        fail('Test 4: boot did not complete');
+        return;
+    }
+
+    // 1. Write a valid NS entry and lump header at LUMP_BASE for SLOT.
+    setupResidentLump(sim);
+
+    // 2. Build a minimal bootUpload for SLOT (two NV-condition LOAD words —
+    //    the same as setupResidentLump so the restored lump is self-consistent).
+    const NV_INSTR = sim.encodeInstruction(0 /* LOAD */, 0xF /* NV */, 0, 6, 0);
+    const bootUpload = {
+        index: SLOT,
+        methods: [{ name: 'main', code: [NV_INSTR, NV_INSTR] }],
+        capabilities: [0],  // one null capability → cc=1, matching the NS entry clistCount=1
+        data_words: [],
+    };
+
+    // 3. Register slot as 'warm': initLazyManifest zeroes the lump header +
+    //    code, sets allocBase = LUMP_BASE, sets loaded = false.
+    //    NS entry authority (Inform, limit, gt_seq) is preserved intact.
+    sim.initLazyManifest({
+        [SLOT]: {
+            priority:   'warm',
+            label:      'TestSlot',
+            source:     'boot_upload',
+            size:       64,
+            bootUpload: bootUpload,
+        }
+    });
+
+    // Pre-condition: lump header must now be zero (evicted).
+    if (sim.memory[LUMP_BASE] !== 0) {
+        fail(`Test 4: pre-condition failed — memory[LUMP_BASE] should be 0 after eviction, got 0x${sim.memory[LUMP_BASE].toString(16)}`);
+        return;
+    }
+    // Pre-condition: manifest entry must exist and be unloaded.
+    if (!sim.lazyManifest[SLOT] || sim.lazyManifest[SLOT].loaded) {
+        fail('Test 4: pre-condition failed — lazyManifest[SLOT].loaded should be false after warm init');
+        return;
+    }
+
+    // 4. Set up the CALL site (Inform GT in CR1, CALL CR1 at fetch address).
+    prepareCallSite(sim);
+
+    const faultsBefore = sim.faultLog.length;
+    sim.step();  // execute CALL CR1 — should trigger Mode 1 restore then CALL
+    const newFaults = sim.faultLog.slice(faultsBefore);
+
+    // (a) No faults.
+    if (newFaults.length > 0) {
+        fail('Test 4: unexpected fault(s) during Mode 1 CALL — ' +
+             newFaults.map(f => `${f.type}: ${f.message}`).join('; '));
+        return;
+    }
+
+    // (b) PC = 0 after the restored CALL completes.
+    if (sim.pc !== 0) {
+        fail(`Test 4: expected PC=0 after Mode 1 CALL, got PC=${sim.pc}`);
+        return;
+    }
+
+    // (c) CR14.word1 must point at the lump base.
+    if (sim.cr[14].word1 !== LUMP_BASE) {
+        fail(`Test 4: expected CR14.word1=${LUMP_BASE} after Mode 1 CALL, got ${sim.cr[14].word1}`);
+        return;
+    }
+
+    // (d) lazyManifest[SLOT].loaded must be true after the restore.
+    if (!sim.lazyManifest[SLOT] || !sim.lazyManifest[SLOT].loaded) {
+        fail('Test 4: lazyManifest[SLOT].loaded is not true after Mode 1 restore+CALL');
+        return;
+    }
+
+    // (e) Lump header at LUMP_BASE must now be valid (non-zero magic).
+    const hdr = sim.parseLumpHeader(sim.memory[LUMP_BASE]);
+    if (!hdr.valid) {
+        fail(`Test 4: lump header at LUMP_BASE is still invalid after Mode 1 restore (memory[LUMP_BASE]=0x${sim.memory[LUMP_BASE].toString(16)})`);
+        return;
+    }
+
+    console.log('[PASS] Test 4: Mode 1 evicted-lump restore — PC=0, no faults, lump header valid');
+    console.log(`[PASS] Test 4: lazyManifest[${SLOT}].loaded = true, CR14.word1 = ${sim.cr[14].word1}`);
 })();
 
 // ── Report ────────────────────────────────────────────────────────────────────
