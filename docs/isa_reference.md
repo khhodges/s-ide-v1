@@ -152,19 +152,21 @@ to an all-zero word unless a reboot is the intended outcome.
 
 Four flags: **N** (negative), **Z** (zero), **C** (carry), **V** (overflow).
 
-> **A.2 — BFEXT and BFINS never write any flags.**
+> **A.2 — BFEXT and BFINS do write flags: N and Z reflect the result; C and V are always cleared.**
 >
-> Both bitfield instructions (`_execBfext`, `_execBfins` in `simulator.js`) return
-> a result object with no flag assignments. The flag register is left exactly as it
-> was by the last flag-writing instruction. The most common mistake:
+> Hardware (`core.py` lines 1140–1143, 1169–1172) sets N = result[31],
+> Z = (result == 0), C = 0, V = 0 for both instructions. The simulator
+> (`_execBfext`, `_execBfins`) matches this behaviour.
+>
+> This means a BFEXT result can be tested directly with a conditional branch:
 >
 > ```
-> BFEXT  DR1, DR2, 0, 8      ; extract byte — flags are NOT updated
-> BRANCH EQ, handle_zero     ; tests Z from a previous instruction, not from the extract
+> BFEXT  DR1, DR2, 0, 8      ; extract byte — Z = 1 if byte is zero
+> BRANCH EQ, handle_zero     ; correctly tests the extracted byte
 > ```
 >
-> To test whether the extracted value is zero, follow BFEXT with `MCMP DR1, DR0`
-> (compare the result against the hardwired-zero register), then branch.
+> Note that C and V are **cleared**, not preserved. Any preceding instruction's
+> carry or overflow flag is lost after BFEXT or BFINS.
 
 Flag-writing summary across all 20 instructions:
 
@@ -182,8 +184,8 @@ Flag-writing summary across all 20 instructions:
 | XLOADLAMBDA | — | — | — | — | |
 | DREAD       | — | — | — | — | |
 | DWRITE      | — | — | — | — | |
-| BFEXT       | — | — | — | — | **Flags unchanged — see A.2 above** |
-| BFINS       | — | — | — | — | **Flags unchanged — see A.2 above** |
+| BFEXT       | ✓ | ✓ | 0 | 0 | N = result[31]; Z = (result==0); C and V cleared — see A.2 |
+| BFINS       | ✓ | ✓ | 0 | 0 | N = result[31]; Z = (result==0); C and V cleared — see A.2 |
 | MCMP        | ✓ | ✓ | ✓ | ✓ | Subtraction flags: a − b; no result register |
 | IADD        | ✓ | ✓ | ✓ | ✓ | Addition flags |
 | ISUB        | ✓ | ✓ | ✓ | ✓ | Subtraction flags |

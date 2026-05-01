@@ -4620,7 +4620,11 @@ class ChurchSimulator {
         const value = (word >>> pos) & mask;
         const drIdx = d.crDst;
         this._writeDR(drIdx, value);
-        const desc = `BFEXT DR${drIdx}, DR${d.crSrc}, pos=${pos}, w=${width} -> 0x${value.toString(16).toUpperCase()}`;
+        this.flags.N = ((value >>> 31) & 1) === 1;
+        this.flags.Z = value === 0;
+        this.flags.C = false;
+        this.flags.V = false;
+        const desc = `BFEXT DR${drIdx}, DR${d.crSrc}, pos=${pos}, w=${width} -> 0x${value.toString(16).toUpperCase()} [Z=${this.flags.Z?1:0} N=${this.flags.N?1:0} C=0 V=0]`;
         this.output += desc + '\n';
         this.pc++;
         return { pc: this.pc - 1, instr: d, desc, pipeline: [
@@ -4641,7 +4645,11 @@ class ChurchSimulator {
         const oldWord = this.dr[drIdx] >>> 0;
         const newWord = ((oldWord & ~mask) | ((insertVal << pos) & mask)) >>> 0;
         this._writeDR(drIdx, newWord);
-        const desc = `BFINS DR${drIdx}, DR${d.crSrc}, pos=${pos}, w=${width} <- 0x${(insertVal & ((1 << width) - 1)).toString(16).toUpperCase()}`;
+        this.flags.N = ((newWord >>> 31) & 1) === 1;
+        this.flags.Z = newWord === 0;
+        this.flags.C = false;
+        this.flags.V = false;
+        const desc = `BFINS DR${drIdx}, DR${d.crSrc}, pos=${pos}, w=${width} <- 0x${(insertVal & ((1 << width) - 1)).toString(16).toUpperCase()} [Z=${this.flags.Z?1:0} N=${this.flags.N?1:0} C=0 V=0]`;
         this.output += desc + '\n';
         this.pc++;
         return { pc: this.pc - 1, instr: d, desc, pipeline: [
