@@ -441,6 +441,21 @@ function _bootNIARows(bootStep) {
 
 function stepSim() {
     if (!sim.bootComplete) {
+        // If a compiled abstraction is waiting, skip the manual boot ceremony
+        // and silently complete all boot phases so the user can step their code.
+        if (_pendingSimLoad) {
+            const ok = instantBoot();
+            const con = document.getElementById('editorConsole');
+            if (con) {
+                const name = (window._lastCLOOMCResult && window._lastCLOOMCResult.abstractionName) || 'abstraction';
+                con.className = '';
+                con.textContent = ok
+                    ? `Auto-booted \u2014 \u201c${name}\u201d loaded \u2014 click Step or Run`
+                    : 'Auto-boot failed \u2014 machine halted during boot sequence';
+            }
+            if (ok) switchView('dashboard');
+            return;
+        }
         // If the boot animation is running (Boot button was clicked), cancel it
         // so the user can step through boot manually.
         if (bootAnimating) {
@@ -511,6 +526,8 @@ function stepSim() {
         openCRDetail(14);
         return;
     }
+    // Track RETURN so the watch strip can highlight DR0 (the return value)
+    window._lastStepWasReturn = !!(result && result.opName === 'RETURN');
     if (result && result.absent) {
         // Absent-lump: simulator suspended waiting for a lazy-load fetch.
         const con = document.getElementById('editorConsole');
@@ -963,6 +980,33 @@ function _autoLoadDefaultProgram() {
     _applyBootLumpPetNames();
     if (typeof updateLiveLumpBanner === 'function') updateLiveLumpBanner();
 }
+// ── instantBoot ──────────────────────────────────────────────────────────────
+// Silently completes all boot phases in a tight loop — no animation, no view
+// switches, no delays.  Used by "Load into Sim" and the stepSim() fallback so
+// the user lands on a fully-booted machine ready to step their abstraction.
+// Returns true on clean boot, false if the machine halted or failed.
+function instantBoot() {
+    if (sim.bootComplete) return true;
+    if (bootAnimating) {
+        if (_bootAnimTimer !== null) { clearTimeout(_bootAnimTimer); _bootAnimTimer = null; }
+        bootAnimating = false;
+    }
+    _bootAuditAccum = [];
+    sim.auditLog = [];
+    let safety = 0;
+    while (!sim.bootComplete && !sim.halted && safety++ < 30) {
+        try { sim._bootStep(); } catch(e) { console.error('instantBoot error:', e); break; }
+        if (sim.auditLog.length > 0) { _bootAuditAccum.push(...sim.auditLog); sim.auditLog = []; }
+    }
+    if (sim.bootComplete && !sim.halted) {
+        sim.auditLog = [];
+        _autoLoadDefaultProgram();
+        updateDashboard();
+        return true;
+    }
+    return false;
+}
+
 function slowBoot() {
     if (bootAnimating || sim.bootComplete || sim.halted) return;
     bootAnimating = true;

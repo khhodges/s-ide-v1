@@ -28,7 +28,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a1a'/%3E%3Ctext x='16' y='23' font-family='serif' font-size='22' font-weight='bold' fill='%23daa520' text-anchor='middle'%3E%CE%BB%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="styles-base.css?v=20260425">
     <link rel="stylesheet" href="styles-toolbar.css?v=20260429g">
-    <link rel="stylesheet" href="styles-editor.css?v=20260430i">
+    <link rel="stylesheet" href="styles-editor.css?v=20260501a">
     <link rel="stylesheet" href="styles-dashboard.css?v=20260430a">
     <link rel="stylesheet" href="styles-lumps.css?v=20260430a">
     <link rel="stylesheet" href="styles-gatelog.css?v=20260430c">
@@ -184,6 +184,7 @@
                             <button class="btn btn-sm btn-success run-go-btn" onclick="runSimGo()">Go</button>
                         </div>
                     </div>
+                    <button class="btn btn-invoke sim-icon-btn" id="btnInvokeMethod" onclick="openInvokeModal()" style="display:none;" data-tooltip="Invoke Method — Set up a method call: choose method, fill in arguments, configure registers">&#x2609;</button>
                     <button class="btn btn-warning sim-icon-btn" onclick="resetSim()" data-tooltip="Boot — Reset and run the boot sequence (C+R)">&#x21BA;</button>
                     <button class="btn btn-lazy sim-icon-btn" onclick="runLazyLoadTest()" data-tooltip="Lazy Load Test — Load absent Math.Add lump on demand, verify end-to-end lazy fetch">&#x29BF;</button>
                 </div>
@@ -260,6 +261,7 @@
         <div id="dashPanel-dr" class="dash-panel">
             <div class="panel">
                 <div class="panel-title">DR0-DR15 -- 32-bit Values (DR0 = zero)</div>
+                <div id="watchStrip"></div>
                 <div id="drRegs"></div>
             </div>
         </div>
@@ -1415,6 +1417,25 @@
         </div>
     </div>
 
+    <!-- ── Invoke Method dialog ────────────────────────────────────────────── -->
+    <div id="invokeDialog" class="modal-overlay" style="display:none;">
+        <div class="modal-dialog invoke-dialog">
+            <div class="modal-title" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>Invoke Method</span>
+                <button onclick="closeInvokeModal()" style="background:none;border:none;color:#9ca3af;font-size:1.2rem;cursor:pointer;line-height:1;padding:0;" data-tooltip="Close">&times;</button>
+            </div>
+            <p class="invoke-hint">Select a method, fill in arguments, then click <strong>Set Up Call</strong>. DR0 is set to the method selector automatically.</p>
+            <label class="modal-label">Method:
+                <select id="invokeMethodSel" class="modal-input" onchange="_renderInvokeParams()"></select>
+            </label>
+            <div id="invokeParams" class="invoke-params-area"></div>
+            <div class="modal-buttons">
+                <button class="btn btn-primary" onclick="invokeSetupCall()" data-tooltip="Set Up Call — Write selector and arguments into registers, then click Step or Run">Set Up Call</button>
+                <button class="btn btn-warning" onclick="closeInvokeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div id="createNSDialog" class="modal-overlay" style="display:none;">
         <div class="modal-dialog">
             <div class="modal-title">Create Namespace Entry</div>
@@ -1561,7 +1582,7 @@
     <script src="repl.js"></script>
     <script src="hp35.js"></script>
     <script async src="history.js"></script>
-    <script src="cloomc_compiler.js?v=20260430m"></script>
+    <script src="cloomc_compiler.js?v=20260501a"></script>
     <script async src="abacus.js"></script>
     <script async src="sliderule.js"></script>
     <script async src="tutorial.js"></script>
@@ -1577,16 +1598,17 @@
     <script async src="english_contact_tutorial.js"></script>
     <script async src="builder.js"></script>
     <script src="app-shell.js?v=20260430g"></script>
-    <script src="app-tools.js?v=20260430c"></script>
+    <script src="app-tools.js?v=20260501a"></script>
     <script src="app-cr-display.js?v=20260429b"></script>
     <script src="app-cr-detail.js?v=20260429i"></script>
     <script src="app-memory.js?v=20260430c"></script>
     <script src="app-abstractions.js?v=20260430a"></script>
     <script src="app-lumps.js?v=20260430d"></script>
     <script src="app-absdetail.js?v=20260428d"></script>
-    <script src="app-run.js?v=20260430g"></script>
-    <script src="app-compile.js?v=20260430n"></script>
-    <script src="app-misc.js?v=20260430k"></script>
+    <script src="app-run.js?v=20260501a"></script>
+    <script src="app-compile.js?v=20260501a"></script>
+    <script src="app-invoke.js?v=20260501a"></script>
+    <script src="app-misc.js?v=20260501a"></script>
     <!-- jsQR — client-side QR code decoder (camera scanning for Hello Mum panel) -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>

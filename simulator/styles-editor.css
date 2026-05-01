@@ -269,6 +269,162 @@
 
 .btn-lazy:hover { background: #064e3b; }
 
+/* ── Invoke Method button ──────────────────────────────────────────────────── */
+.btn-invoke {
+    background: #1e1030;
+    border-color: #a78bfa;
+    color: #a78bfa;
+}
+.btn-invoke:hover { background: #2e1a50; }
+
+/* ── Watch strip ───────────────────────────────────────────────────────────── */
+#watchStrip { min-height: 0; }
+.watch-strip-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 6px 4px;
+    border-bottom: 1px solid #2d2d3a;
+    margin-bottom: 4px;
+    align-items: center;
+}
+.watch-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background: #1a1a2e;
+    border: 1px solid #3b3b55;
+    border-radius: 5px;
+    padding: 3px 6px;
+    font-size: 0.72rem;
+    line-height: 1.25;
+    min-width: 96px;
+    position: relative;
+    transition: border-color 0.15s, background 0.15s;
+}
+.watch-chip-changed {
+    border-color: #facc15;
+    background: #29230a;
+    animation: watch-flash 0.35s ease-out;
+}
+.watch-chip-return {
+    border-color: #34d399;
+    background: #0d2418;
+}
+@keyframes watch-flash {
+    0%   { background: #453a0d; }
+    100% { background: #29230a; }
+}
+.watch-chip-name {
+    color: #818cf8;
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.watch-chip-label {
+    color: #9ca3af;
+    font-size: 0.65rem;
+    margin-top: 1px;
+}
+.watch-chip-val {
+    color: #e2e8f0;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.75rem;
+    margin-top: 2px;
+    letter-spacing: 0.04em;
+}
+.watch-chip-rm {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    background: none;
+    border: none;
+    color: #4b5563;
+    font-size: 0.75rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.watch-chip:hover .watch-chip-rm { opacity: 1; }
+.watch-chip-rm:hover { color: #f87171; }
+
+.watch-add-btn {
+    background: none;
+    border: 1px dashed #3b3b55;
+    color: #6b7280;
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s;
+}
+.watch-add-btn:hover { border-color: #818cf8; color: #818cf8; }
+
+/* ── Invoke Method dialog ──────────────────────────────────────────────────── */
+.invoke-dialog { max-width: 460px; }
+
+.invoke-hint {
+    color: #9ca3af;
+    font-size: 0.82rem;
+    margin: 0 0 0.85rem;
+    line-height: 1.45;
+}
+
+.invoke-params-area {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0.6rem 0;
+    min-height: 32px;
+}
+.invoke-no-params {
+    color: #6b7280;
+    font-size: 0.82rem;
+    font-style: italic;
+}
+.invoke-param-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.invoke-param-label {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 120px;
+}
+.invoke-param-name {
+    color: #e2e8f0;
+    font-size: 0.84rem;
+    font-weight: 500;
+}
+.invoke-param-reg {
+    color: #818cf8;
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    background: #1e1b4b;
+    border-radius: 3px;
+    padding: 1px 4px;
+}
+.invoke-param-input {
+    flex: 1;
+    background: #141420;
+    border: 1px solid #3b3b55;
+    border-radius: 4px;
+    color: #e2e8f0;
+    padding: 4px 7px;
+    font-size: 0.84rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+.invoke-param-input:focus {
+    outline: none;
+    border-color: #818cf8;
+}
+
 .btn-deploy {
     background: #1e3a5f;
     border-color: var(--church-blue);

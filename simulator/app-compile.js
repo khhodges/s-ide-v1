@@ -1067,6 +1067,16 @@ function loadCLOOMCIntoSim() {
     window._assemblerSymbols = { labels, lumpName: sim.programName };
     _pendingSimLoad          = true;
 
+    // If the machine is not yet booted, silently complete the full boot sequence
+    // now so the user lands on the dashboard ready to Step immediately — no
+    // manual boot clicking required.
+    if (!sim.bootComplete) {
+        instantBoot();
+        // _autoLoadDefaultProgram() inside instantBoot loaded lastAssembledWords;
+        // _pendingSimLoad stays true so _applyPendingSimLoad() on first Step
+        // re-positions PC correctly via the full setup path.
+    }
+
     // Update the button to give immediate visual feedback
     const btn = document.getElementById('btnLoadIntoSim');
     if (btn) {
@@ -1075,16 +1085,21 @@ function loadCLOOMCIntoSim() {
         btn.disabled = true;
     }
 
-    // Switch the next-steps hints to the "assembled" state so the user sees
-    // "click Step to execute one instruction at a time"
+    // Switch the next-steps hints to the "assembled" state
     showNextSteps('assembled');
 
     const _loadSrcLabel = _getActiveSourceLabel();
     const _loadSrcHint  = _loadSrcLabel ? ` · ${_loadSrcLabel}` : '';
-    appendOutput(`Loaded \u201c${result.abstractionName}\u201d${_loadSrcHint} into simulator \u2014 ${words.length} words, ${methodTableSize} method${methodTableSize !== 1 ? 's' : ''} \u2014 click Step or Run`, 'info');
+    const con = document.getElementById('editorConsole');
+    if (con) {
+        con.className = '';
+        con.textContent = `Auto-booted \u2014 \u201c${result.abstractionName}\u201d loaded${_loadSrcHint} \u2014 ${words.length} words, ${methodTableSize} method${methodTableSize !== 1 ? 's' : ''} \u2014 click Step or Run`;
+    }
 
     // Open the simulator dashboard so the user lands on the Step / Run controls
     switchView('dashboard');
+    // Refresh the invoke-method button visibility now that an abstraction is loaded
+    if (typeof refreshInvokeBtn === 'function') refreshInvokeBtn();
 }
 
 function compileAndCreateAbstraction() {

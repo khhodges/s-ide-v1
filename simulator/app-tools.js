@@ -304,6 +304,8 @@ function updateDashboard() {
     _refreshSignedReturnReadout();
     if (typeof updateLiveLumpBanner === 'function') updateLiveLumpBanner();
     updateMemoryStatsPanel();
+    if (typeof renderWatchStrip === 'function') renderWatchStrip();
+    if (typeof refreshInvokeBtn === 'function') refreshInvokeBtn();
 }
 
 function updateMemoryStatsPanel() {
