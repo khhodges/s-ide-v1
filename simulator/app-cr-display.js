@@ -424,6 +424,19 @@ function switchCRDetailTab(tab) {
     document.querySelectorAll('.crd-panel').forEach(p => p.style.display = 'none');
     const panel = document.getElementById('crdPanel-' + tab);
     if (panel) panel.style.display = 'block';
+    const labelEl = document.getElementById('crdMenuActiveLabel');
+    if (labelEl) {
+        const absLabel = labelEl.dataset.absLabel || '';
+        const tabLabel =
+            tab === 'clist'    ? 'C-List'   :
+            tab === 'api'      ? 'API'      :
+            tab === 'lump'     ? 'Lump'     :
+            tab === 'register' ? 'Register' :
+            tab === 'binary'   ? 'Binary'   : '';
+        labelEl.textContent = absLabel
+            ? (tabLabel ? `${absLabel} \u2014 ${tabLabel}` : absLabel)
+            : (tabLabel || 'Code');
+    }
 }
 
 function scrollToThreadZone(zone) {

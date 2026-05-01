@@ -873,6 +873,7 @@ function walkNext() {
         return;
     }
     const result = sim.step();
+    window._lastStepWasReturn = !!(result && result.opName === 'RETURN');
     if (!result) {
         walkRunning = false;
         updateWalkBtn();

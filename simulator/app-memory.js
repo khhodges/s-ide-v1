@@ -114,7 +114,10 @@ function updateCRDetail() {
         crDetailTab === 'binary'   ? 'Binary'   : 'Code';
     let html = '';
     html += '<div class="crd-menu-bar">';
-    html += `<span class="crd-menu-active-label" id="crdMenuActiveLabel">${_absLabel}</span>`;
+    const _headingText = _absLabel
+        ? (_activeTabLabel && _activeTabLabel !== 'Code' ? `${_absLabel} \u2014 ${_activeTabLabel}` : _absLabel)
+        : _activeTabLabel;
+    html += `<span class="crd-menu-active-label" id="crdMenuActiveLabel" data-abs-label="${_absLabel.replace(/"/g,'&quot;')}">${_headingText}</span>`;
     if (showCode) {
         html += '<div class="crd-tab-strip">';
         html += `<button class="crd-tab${crDetailTab==='code'?' active':''}" onclick="switchCRDetailTab('code')">Code</button>`;
