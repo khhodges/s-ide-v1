@@ -1201,7 +1201,7 @@ class ChurchSimulator {
                     // Abstraction lump base is CR14.word1 (physical base address)
                     const _absBase = (_snap[14] && _snap[14].word1 !== undefined) ? (_snap[14].word1 >>> 0) : 0;
                     const _faultPC = (_lfe.physicalPC || 0) >>> 0;
-                    const _offset  = _faultPC - _absBase;
+                    const _offset  = _faultPC - (_absBase + 1);
                     this.faultViolationData = {
                         namespace:   { nsSlot: _nsSlot,  label: _crLabel(_nsSlot) },
                         thread:      { nsSlot: _thrSlot, label: _crLabel(_thrSlot) },
@@ -3072,7 +3072,10 @@ class ChurchSimulator {
             return handlerResult;
         }
 
-        if (this.abstractionRegistry) {
+        const lumpIsResident = nsEntry.word0_location > 0 &&
+            this.parseLumpHeader(this.memory[nsEntry.word0_location]).valid;
+
+        if (!lumpIsResident && this.abstractionRegistry) {
             const abstraction = this.abstractionRegistry.getAbstraction(check.index);
             if (abstraction && abstraction.methods.length > 0) {
                 this.abstractionRegistry.activate(check.index);
