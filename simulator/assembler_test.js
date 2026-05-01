@@ -866,6 +866,160 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
     ChurchAssembler.setSharedAliases({}, {});
 }
 
+// ── ELOADCALL method-index encoding ──────────────────────────────────────────
+// SlideRule is at c-list slot 3 (NS_SYMBOLS = { 'SlideRule': 3 }).
+// imm15 layout: bits[14:8] = method index (1-based, 0 = fast-path / no method)
+//               bits[7:0]  = c-list row.
+
+// EL1: Simple form — no method operand → method bits are 0, row = slot.
+//      ELOADCALL CR0, SlideRule  →  crDst=0, crSrc=6, imm = 0x0003
+{
+    const a = new ChurchAssembler(CONVENTIONS);
+    a.setNamespace(NS_SYMBOLS);
+    const r = a.assemble('ELOADCALL CR0, SlideRule');
+    const word   = r.words[0];
+    const opcode = (word >>> 27) & 0x1F;
+    const crDst  = (word >>> 19) & 0xF;
+    const crSrc  = (word >>> 15) & 0xF;
+    const imm    = word & 0x7FFF;
+    assert('EL1 ELOADCALL CR0, SlideRule: no errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EL1 opcode = 8 (ELOADCALL)', opcode === 8, 'got ' + opcode);
+    assert('EL1 crDst = 0', crDst === 0, 'got ' + crDst);
+    assert('EL1 crSrc = 6 (default namespace register)', crSrc === 6, 'got ' + crSrc);
+    assert('EL1 imm = 0x0003 (row=3, method=0)', imm === 0x0003, 'got 0x' + imm.toString(16));
+}
+
+// EL2: Method-named form — Multiply (index 0) → 1-based bits[14:8] = 1.
+//      ELOADCALL CR0, SlideRule, Multiply  →  imm = (1<<8)|3 = 0x0103
+{
+    const a = new ChurchAssembler(CONVENTIONS);
+    a.setNamespace(NS_SYMBOLS);
+    const r = a.assemble('ELOADCALL CR0, SlideRule, Multiply');
+    const word = r.words[0];
+    const imm  = word & 0x7FFF;
+    assert('EL2 ELOADCALL CR0, SlideRule, Multiply: no errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EL2 imm = 0x0103 (method Multiply=0→1-based 1, row=3)',
+        imm === 0x0103, 'got 0x' + imm.toString(16));
+}
+
+// EL3: Method-named form — Divide (index 1) → 1-based bits[14:8] = 2.
+//      ELOADCALL CR0, SlideRule, Divide  →  imm = (2<<8)|3 = 0x0203
+{
+    const a = new ChurchAssembler(CONVENTIONS);
+    a.setNamespace(NS_SYMBOLS);
+    const r = a.assemble('ELOADCALL CR0, SlideRule, Divide');
+    const word = r.words[0];
+    const imm  = word & 0x7FFF;
+    assert('EL3 ELOADCALL CR0, SlideRule, Divide: no errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EL3 imm = 0x0203 (method Divide=1→1-based 2, row=3)',
+        imm === 0x0203, 'got 0x' + imm.toString(16));
+}
+
+// EL4: Numeric 0-based index form — index 0 → 1-based bits[14:8] = 1.
+//      ELOADCALL CR0, SlideRule, 0  →  imm = (1<<8)|3 = 0x0103
+{
+    const a = new ChurchAssembler(CONVENTIONS);
+    a.setNamespace(NS_SYMBOLS);
+    const r = a.assemble('ELOADCALL CR0, SlideRule, 0');
+    const word = r.words[0];
+    const imm  = word & 0x7FFF;
+    assert('EL4 ELOADCALL CR0, SlideRule, 0 (numeric): no errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EL4 imm = 0x0103 (numeric 0-based 0 → 1-based 1, row=3)',
+        imm === 0x0103, 'got 0x' + imm.toString(16));
+}
+
+// EL5: Explicit CRsrc form without method — ELOADCALL CR0, CR11, #5
+//      crDst=0, crSrc=11, imm = 0x0005 (row=5, method=0)
+{
+    const a = new ChurchAssembler(CONVENTIONS);
+    const r = a.assemble('ELOADCALL CR0, CR11, #5');
+    const word   = r.words[0];
+    const crDst  = (word >>> 19) & 0xF;
+    const crSrc  = (word >>> 15) & 0xF;
+    const imm    = word & 0x7FFF;
+    assert('EL5 ELOADCALL CR0, CR11, #5 (explicit, no method): no errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EL5 crDst = 0', crDst === 0, 'got ' + crDst);
+    assert('EL5 crSrc = 11', crSrc === 11, 'got ' + crSrc);
+    assert('EL5 imm = 0x0005 (row=5, method=0)', imm === 0x0005, 'got 0x' + imm.toString(16));
+}
+
+// EL6: Explicit CRsrc form with numeric method index.
+//      ELOADCALL CR0, CR11, #5, 2  →  method 0-based 2 → 1-based 3
+//      crDst=0, crSrc=11, imm = (3<<8)|5 = 0x0305
+{
+    const a = new ChurchAssembler(CONVENTIONS);
+    const r = a.assemble('ELOADCALL CR0, CR11, #5, 2');
+    const word  = r.words[0];
+    const crSrc = (word >>> 15) & 0xF;
+    const imm   = word & 0x7FFF;
+    assert('EL6 ELOADCALL CR0, CR11, #5, 2 (explicit with method): no errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EL6 crSrc = 11', crSrc === 11, 'got ' + crSrc);
+    assert('EL6 imm = 0x0305 (method 2→1-based 3 in bits[14:8], row=5)',
+        imm === 0x0305, 'got 0x' + imm.toString(16));
+}
+
+// EL7: Unknown method name produces a targeted error listing known methods.
+{
+    const a = new ChurchAssembler(CONVENTIONS);
+    a.setNamespace(NS_SYMBOLS);
+    a.assemble('ELOADCALL CR0, SlideRule, UnknownOp');
+    assert('EL7 ELOADCALL unknown method: produces an error',
+        a.errors.length > 0, 'expected at least one error');
+    assert('EL7 error says "not a known method" and mentions UnknownOp',
+        a.errors.some(e => e.message.includes('not a known method') && e.message.includes('UnknownOp')),
+        a.errors.map(e => e.message).join('; '));
+    assert('EL7 error lists a known method (Multiply)',
+        a.errors.some(e => e.message.includes('Multiply')),
+        a.errors.map(e => e.message).join('; '));
+}
+
+// EL8: No conventions registered for the abstraction → clear error.
+{
+    const a = new ChurchAssembler({});   // empty conventions
+    a.setNamespace(NS_SYMBOLS);
+    a.assemble('ELOADCALL CR0, SlideRule, Multiply');
+    assert('EL8 ELOADCALL no conventions: produces an error',
+        a.errors.length > 0, 'expected at least one error');
+    assert('EL8 error mentions "No method conventions"',
+        a.errors.some(e => e.message.includes('No method conventions')),
+        a.errors.map(e => e.message).join('; '));
+}
+
+// EL9: Disassembler output — no method index → omits method field.
+//      Assemble ELOADCALL CR0, SlideRule (imm=0x0003) then disassemble.
+{
+    const a = new ChurchAssembler(CONVENTIONS);
+    a.setNamespace(NS_SYMBOLS);
+    const r   = a.assemble('ELOADCALL CR0, SlideRule');
+    const dis = a.disassemble(r.words[0]);
+    assert('EL9 disassemble ELOADCALL (no method): includes ELOADCALL',
+        dis.includes('ELOADCALL'), 'got: ' + dis);
+    assert('EL9 disassemble ELOADCALL (no method): includes CR0',
+        dis.includes('CR0'), 'got: ' + dis);
+    assert('EL9 disassemble ELOADCALL (no method): does not include a trailing method index',
+        !/, \d+$/.test(dis.trim()), 'got: ' + dis);
+}
+
+// EL10: Disassembler output — with method index → appends 0-based index.
+//       Assemble ELOADCALL CR0, SlideRule, Multiply (imm=0x0103) then disassemble.
+//       Expected suffix: ", 0"  (Multiply is index 0, 1-based stored as 1 → display as 0)
+{
+    const a = new ChurchAssembler(CONVENTIONS);
+    a.setNamespace(NS_SYMBOLS);
+    const r   = a.assemble('ELOADCALL CR0, SlideRule, Multiply');
+    const dis = a.disassemble(r.words[0]);
+    assert('EL10 disassemble ELOADCALL (with method): includes ELOADCALL',
+        dis.includes('ELOADCALL'), 'got: ' + dis);
+    assert('EL10 disassemble ELOADCALL (with method): ends with ", 0" (0-based Multiply index)',
+        dis.trim().endsWith(', 0'), 'got: ' + dis);
+}
+
 // ── LTF: led_turing_full snippet regression ───────────────────────────────────
 // Loads the led_turing_full assembly from _TURING_DR_TEST_SOURCE in app-run.js,
 // assembles it, and asserts zero errors.  This catches any edit that introduces
