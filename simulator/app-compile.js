@@ -1070,7 +1070,7 @@ function loadCLOOMCIntoSim() {
     // Update the button to give immediate visual feedback
     const btn = document.getElementById('btnLoadIntoSim');
     if (btn) {
-        btn.textContent = 'Loaded \u2014 click Step \u25b6';
+        btn.textContent = 'Loaded \u2713';
         btn.classList.add('cmp-load-sim-btn--done');
         btn.disabled = true;
     }
@@ -1082,6 +1082,9 @@ function loadCLOOMCIntoSim() {
     const _loadSrcLabel = _getActiveSourceLabel();
     const _loadSrcHint  = _loadSrcLabel ? ` · ${_loadSrcLabel}` : '';
     appendOutput(`Loaded \u201c${result.abstractionName}\u201d${_loadSrcHint} into simulator \u2014 ${words.length} words, ${methodTableSize} method${methodTableSize !== 1 ? 's' : ''} \u2014 click Step or Run`, 'info');
+
+    // Open the simulator dashboard so the user lands on the Step / Run controls
+    switchView('dashboard');
 }
 
 function compileAndCreateAbstraction() {
