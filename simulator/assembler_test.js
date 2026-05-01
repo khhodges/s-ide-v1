@@ -1395,6 +1395,118 @@ const ChurchSimulator = require('./simulator.js');
         `expected 0x${expected.toString(16).toUpperCase()} got 0x${got.toString(16).toUpperCase()}`);
 }
 
+// ── ST: End-to-end step() integration tests for SHR / ASR ───────────────────
+// These tests assemble a real SHR instruction, inject it into the simulator's
+// flat memory at address 0 (the pre-boot fetch path reads memory[pc] directly),
+// prime the source DR with a known value, call step() exactly once, and inspect
+// the destination DR.  This exercises the full instruction-fetch → decode →
+// _execShr path rather than calling _execShr directly.
+
+// ST1: ASR on a negative value via step() must sign-extend.
+//   Input:  DR1 = 0x80000000, shift 4, ASR
+//   Expected DR3 = 0xF8000000
+{
+    const asmST1 = new ChurchAssembler();
+    const rST1   = asmST1.assemble('SHR DR3, DR1, 4, ASR');
+    assert('ST1 SHR DR3, DR1, 4, ASR assembles with no errors',
+        asmST1.errors.length === 0,
+        asmST1.errors.map(e => e.message).join('; '));
+
+    const simST1 = new ChurchSimulator();
+    simST1.memory[0] = rST1.words[0] >>> 0;
+    simST1.dr[1]     = 0x80000000;
+    simST1.step();
+    const gotST1     = simST1.dr[3] >>> 0;
+    const expST1     = 0xF8000000;
+    assert('ST1 ASR negative via step(): DR3 = 0xF8000000',
+        gotST1 === expST1,
+        `expected 0x${expST1.toString(16).toUpperCase()} got 0x${gotST1.toString(16).toUpperCase()}`);
+    assert('ST1 ASR negative via step(): N flag set',
+        simST1.flags.N === true,
+        `N=${simST1.flags.N}`);
+}
+
+// ST2: LSR on the same negative value via step() must zero-extend.
+//   Input:  DR1 = 0x80000000, shift 4, LSR (no ASR keyword)
+//   Expected DR3 = 0x08000000
+{
+    const asmST2 = new ChurchAssembler();
+    const rST2   = asmST2.assemble('SHR DR3, DR1, 4');
+    assert('ST2 SHR DR3, DR1, 4 (LSR) assembles with no errors',
+        asmST2.errors.length === 0,
+        asmST2.errors.map(e => e.message).join('; '));
+
+    const simST2 = new ChurchSimulator();
+    simST2.memory[0] = rST2.words[0] >>> 0;
+    simST2.dr[1]     = 0x80000000;
+    simST2.step();
+    const gotST2     = simST2.dr[3] >>> 0;
+    const expST2     = 0x08000000;
+    assert('ST2 LSR negative via step(): DR3 = 0x08000000 (no sign extension)',
+        gotST2 === expST2,
+        `expected 0x${expST2.toString(16).toUpperCase()} got 0x${gotST2.toString(16).toUpperCase()}`);
+    assert('ST2 LSR negative via step(): N flag clear',
+        simST2.flags.N === false,
+        `N=${simST2.flags.N}`);
+}
+
+// ST3: ASR shift-by-31 on 0x80000000 via step() must produce 0xFFFFFFFF.
+//   Shifting the most-negative value right 31 places arithmetically fills all
+//   bits with the sign bit, yielding all-ones (= -1 in two's complement).
+{
+    const asmST3 = new ChurchAssembler();
+    const rST3   = asmST3.assemble('SHR DR3, DR1, 31, ASR');
+    assert('ST3 SHR DR3, DR1, 31, ASR assembles with no errors',
+        asmST3.errors.length === 0,
+        asmST3.errors.map(e => e.message).join('; '));
+
+    const simST3 = new ChurchSimulator();
+    simST3.memory[0] = rST3.words[0] >>> 0;
+    simST3.dr[1]     = 0x80000000;
+    simST3.step();
+    const gotST3     = simST3.dr[3] >>> 0;
+    const expST3     = 0xFFFFFFFF;
+    assert('ST3 ASR shift-31 via step(): DR3 = 0xFFFFFFFF (all sign bits)',
+        gotST3 === expST3,
+        `expected 0x${expST3.toString(16).toUpperCase()} got 0x${gotST3.toString(16).toUpperCase()}`);
+    assert('ST3 ASR shift-31 via step(): N flag set',
+        simST3.flags.N === true,
+        `N=${simST3.flags.N}`);
+    assert('ST3 ASR shift-31 via step(): C flag clear (bit 30 of 0x80000000 is 0)',
+        simST3.flags.C === false,
+        `C=${simST3.flags.C}`);
+}
+
+// ST4: Two-instruction sequence — DWRITE-style: set DR1 via direct assignment,
+//      then step() twice through a program that chains shifts.
+//      Program: [SHR DR3, DR1, 1, ASR]   → DR3 = 0xC0000000
+//               [SHR DR5, DR3, 1, ASR]   → DR5 = 0xE0000000
+//   This confirms decode and PC advance between consecutive SHR instructions.
+{
+    const asmST4 = new ChurchAssembler();
+    const rST4   = asmST4.assemble('SHR DR3, DR1, 1, ASR\nSHR DR5, DR3, 1, ASR');
+    assert('ST4 two-SHR program assembles with no errors',
+        asmST4.errors.length === 0,
+        asmST4.errors.map(e => e.message).join('; '));
+
+    const simST4 = new ChurchSimulator();
+    simST4.memory[0] = rST4.words[0] >>> 0;
+    simST4.memory[1] = rST4.words[1] >>> 0;
+    simST4.dr[1]     = 0x80000000;
+
+    simST4.step();
+    const midST4 = simST4.dr[3] >>> 0;
+    assert('ST4 after step 1: DR3 = 0xC0000000',
+        midST4 === 0xC0000000,
+        `expected 0xC0000000 got 0x${midST4.toString(16).toUpperCase()}`);
+
+    simST4.step();
+    const gotST4 = simST4.dr[5] >>> 0;
+    assert('ST4 after step 2: DR5 = 0xE0000000',
+        gotST4 === 0xE0000000,
+        `expected 0xE0000000 got 0x${gotST4.toString(16).toUpperCase()}`);
+}
+
 // ── LTF: led_turing_full snippet regression ───────────────────────────────────
 // Loads the led_turing_full assembly from _TURING_DR_TEST_SOURCE in app-run.js,
 // assembles it, and asserts zero errors.  This catches any edit that introduces
