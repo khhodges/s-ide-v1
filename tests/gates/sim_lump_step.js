@@ -186,6 +186,107 @@ function prepareCallSite(sim) {
     console.log('[PASS] Test 2: PC advanced 0 → 1 → 2 one instruction at a time inside compiled lump');
 })();
 
+// ── Test 3: RETURN unwinds call frame back to CALL site (pc+1) ───────────────
+//
+// After CALL → step → step, a RETURN instruction at lump[+3] must:
+//   • restore PC to the saved return PC  (CALL was at pc=0 → returnPC = 1)
+//   • leave only the boot sentinel on the call stack (length === 1)
+//   • restore CR14.word1 back to the original caller's code base
+
+(function testReturnAfterLumpSteps() {
+    const sim = bootSim();
+    if (!sim.bootComplete) {
+        fail('Test 3: boot did not complete');
+        return;
+    }
+
+    setupResidentLump(sim);
+
+    // Place an unconditional RETURN at lump word [+3], after the two NV NOPs.
+    // encodeInstruction(opcode=3 RETURN, cond=0xE AL, crDst=0, crSrc=0, imm=0)
+    sim.memory[LUMP_BASE + 3] = sim.encodeInstruction(3 /* RETURN */, 0xE /* AL */, 0, 0, 0) >>> 0;
+
+    prepareCallSite(sim);
+
+    // Save the caller's code base so we can verify CR14 restoration later.
+    const callerCodeBase = sim.cr[14].word1;
+
+    // ── Step 1: execute CALL CR1 ──
+    const f0 = sim.faultLog.length;
+    sim.step();
+    if (sim.faultLog.length > f0) {
+        const f = sim.faultLog[f0];
+        fail(`Test 3: fault during CALL — ${f.type}: ${f.message}`);
+        return;
+    }
+    if (sim.pc !== 0) {
+        fail(`Test 3: pre-condition failed — expected PC=0 after CALL, got PC=${sim.pc}`);
+        return;
+    }
+
+    // ── Step 2: first NV instruction inside lump (lump[+1]) → PC = 1 ──
+    const f1 = sim.faultLog.length;
+    sim.step();
+    if (sim.faultLog.length > f1) {
+        const f = sim.faultLog[f1];
+        fail(`Test 3: fault on step 2 (first NV) — ${f.type}: ${f.message}`);
+        return;
+    }
+    if (sim.pc !== 1) {
+        fail(`Test 3: expected PC=1 after first NV step, got PC=${sim.pc}`);
+        return;
+    }
+
+    // ── Step 3: second NV instruction inside lump (lump[+2]) → PC = 2 ──
+    const f2 = sim.faultLog.length;
+    sim.step();
+    if (sim.faultLog.length > f2) {
+        const f = sim.faultLog[f2];
+        fail(`Test 3: fault on step 3 (second NV) — ${f.type}: ${f.message}`);
+        return;
+    }
+    if (sim.pc !== 2) {
+        fail(`Test 3: expected PC=2 after second NV step, got PC=${sim.pc}`);
+        return;
+    }
+
+    // ── Step 4: RETURN at lump[+3] — must unwind to returnPC = 1 ──
+    const f3 = sim.faultLog.length;
+    sim.step();
+    const newFaults = sim.faultLog.slice(f3);
+    if (newFaults.length > 0) {
+        fail('Test 3: unexpected fault(s) during RETURN — ' +
+             newFaults.map(f => `${f.type}: ${f.message}`).join('; '));
+        return;
+    }
+
+    // The CALL was at pc=0, so returnPC = pc+1 = 1.
+    if (sim.pc !== 1) {
+        fail(`Test 3: expected PC=1 after RETURN (returnPC=CALL_pc+1=1), got PC=${sim.pc}`);
+        return;
+    }
+
+    // Only the boot sentinel should remain on the call stack (length === 1).
+    if (sim.callStack.length !== 1) {
+        fail(`Test 3: expected callStack.length=1 (sentinel only) after RETURN, got ${sim.callStack.length}`);
+        return;
+    }
+    if (!sim.callStack[0].sentinel) {
+        fail('Test 3: bottom-of-stack entry after RETURN is not the sentinel frame');
+        return;
+    }
+
+    // CR14.word1 must have been restored to the caller's code base.
+    if (sim.cr[14].word1 !== callerCodeBase) {
+        fail(`Test 3: expected CR14.word1=${callerCodeBase} (caller codeBase) after RETURN, got ${sim.cr[14].word1}`);
+        return;
+    }
+
+    console.log('[PASS] Test 3: RETURN unwound to returnPC=1 (CALL_pc+1) after stepping through lump');
+    console.log(`[PASS] Test 3: callStack.length=1 (sentinel only) after RETURN`);
+    console.log(`[PASS] Test 3: CR14.word1=${sim.cr[14].word1} restored to caller codeBase=${callerCodeBase}`);
+})();
+
 // ── Report ────────────────────────────────────────────────────────────────────
 
 if (ERRORS.length > 0) {

@@ -1,7 +1,7 @@
 """Simulator regression test: stepping into a compiled lump.
 
-Exercises the JavaScript simulator via Node.js to verify two properties
-added / required by Task #829's lump-resident guard in _execCall (line ~3078):
+Exercises the JavaScript simulator via Node.js to verify three properties
+of lump-resident execution (Task #829/_execCall guard, Task #831/RETURN path):
 
   Test 1 — PC = 0 after CALL on a resident lump
     After a CALL instruction dispatches to a slot whose compiled lump is
@@ -15,6 +15,13 @@ added / required by Task #829's lump-resident guard in _execCall (line ~3078):
       0 → 1 → 2
     This confirms the dispatcher did not jump atomically and that the
     simulator preserves instruction-level granularity inside the lump.
+
+  Test 3 — RETURN unwinds call frame back to the CALL site (pc+1)
+    After CALL → step → step, executing the RETURN instruction placed at
+    lump word 3 must restore PC to the saved return PC (CALL was at pc=0,
+    so returnPC = 1).  The call stack must contain only the boot sentinel
+    (length === 1), and CR14 must be restored to the caller's code base.
+    This catches regressions in _execReturn's frame-pop / PC-restore path.
 
 Harness: tests/gates/sim_lump_step.js
 """
