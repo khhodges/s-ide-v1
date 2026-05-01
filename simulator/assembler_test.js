@@ -1586,6 +1586,167 @@ const ChurchSimulator = require('./simulator.js');
     assert('SH3 SHL shifts bit off top via step(): C flag set', simSH3.flags.C === true,  `C=${simSH3.flags.C}`);
 }
 
+// ── IA: IADD step()-level integration tests ───────────────────────────────────
+// Each test assembles an IADD instruction via ChurchAssembler, injects the
+// encoded word into simulator.memory[0], primes source DRs, calls step() once,
+// and asserts the destination DR value plus all four arithmetic flags (Z, N, C, V).
+
+// IA1: Simple immediate addition — result is positive, no flags set.
+//   IADD DR2, DR1, #5  with DR1 = 3  →  DR2 = 8
+//   Z=false, N=false, C=false, V=false
+{
+    const asmIA1 = new ChurchAssembler();
+    const rIA1   = asmIA1.assemble('IADD DR2, DR1, #5');
+    assert('IA1 IADD DR2, DR1, #5 assembles with no errors',
+        asmIA1.errors.length === 0,
+        asmIA1.errors.map(e => e.message).join('; '));
+
+    const simIA1 = new ChurchSimulator();
+    simIA1.memory[0] = rIA1.words[0] >>> 0;
+    simIA1.dr[1] = 3;
+    simIA1.step();
+
+    assert('IA1 result DR2 = 8',
+        (simIA1.dr[2] >>> 0) === 8,
+        `got ${simIA1.dr[2] >>> 0}`);
+    assert('IA1 Z flag clear', simIA1.flags.Z === false, `Z=${simIA1.flags.Z}`);
+    assert('IA1 N flag clear', simIA1.flags.N === false, `N=${simIA1.flags.N}`);
+    assert('IA1 C flag clear', simIA1.flags.C === false, `C=${simIA1.flags.C}`);
+    assert('IA1 V flag clear', simIA1.flags.V === false, `V=${simIA1.flags.V}`);
+}
+
+// IA2: Unsigned overflow (carry) — wraps to zero, Z and C set.
+//   IADD DR2, DR1, DR3  with DR1 = 0xFFFFFFFF, DR3 = 1  →  DR2 = 0
+//   Z=true, N=false, C=true, V=false  (sa=1, sb=0 → sa≠sb → V=false)
+{
+    const asmIA2 = new ChurchAssembler();
+    const rIA2   = asmIA2.assemble('IADD DR2, DR1, DR3');
+    assert('IA2 IADD DR2, DR1, DR3 assembles with no errors',
+        asmIA2.errors.length === 0,
+        asmIA2.errors.map(e => e.message).join('; '));
+
+    const simIA2 = new ChurchSimulator();
+    simIA2.memory[0] = rIA2.words[0] >>> 0;
+    simIA2.dr[1] = 0xFFFFFFFF;
+    simIA2.dr[3] = 1;
+    simIA2.step();
+
+    assert('IA2 result DR2 = 0',
+        (simIA2.dr[2] >>> 0) === 0,
+        `got 0x${(simIA2.dr[2] >>> 0).toString(16).toUpperCase()}`);
+    assert('IA2 Z flag set',   simIA2.flags.Z === true,  `Z=${simIA2.flags.Z}`);
+    assert('IA2 N flag clear', simIA2.flags.N === false,  `N=${simIA2.flags.N}`);
+    assert('IA2 C flag set',   simIA2.flags.C === true,  `C=${simIA2.flags.C}`);
+    assert('IA2 V flag clear', simIA2.flags.V === false,  `V=${simIA2.flags.V}`);
+}
+
+// IA3: Signed overflow (positive + positive = negative) — V and N set.
+//   IADD DR2, DR1, DR3  with DR1 = 0x7FFFFFFF, DR3 = 1  →  DR2 = 0x80000000
+//   Z=false, N=true, C=false, V=true  (sa=0, sb=0, sr=1 → same-sign inputs, opposite result)
+{
+    const asmIA3 = new ChurchAssembler();
+    const rIA3   = asmIA3.assemble('IADD DR2, DR1, DR3');
+    assert('IA3 IADD DR2, DR1, DR3 assembles with no errors',
+        asmIA3.errors.length === 0,
+        asmIA3.errors.map(e => e.message).join('; '));
+
+    const simIA3 = new ChurchSimulator();
+    simIA3.memory[0] = rIA3.words[0] >>> 0;
+    simIA3.dr[1] = 0x7FFFFFFF;
+    simIA3.dr[3] = 1;
+    simIA3.step();
+
+    const gotIA3 = simIA3.dr[2] >>> 0;
+    assert('IA3 result DR2 = 0x80000000',
+        gotIA3 === 0x80000000,
+        `got 0x${gotIA3.toString(16).toUpperCase()}`);
+    assert('IA3 Z flag clear', simIA3.flags.Z === false, `Z=${simIA3.flags.Z}`);
+    assert('IA3 N flag set',   simIA3.flags.N === true,  `N=${simIA3.flags.N}`);
+    assert('IA3 C flag clear', simIA3.flags.C === false, `C=${simIA3.flags.C}`);
+    assert('IA3 V flag set',   simIA3.flags.V === true,  `V=${simIA3.flags.V}`);
+}
+
+// ── IS: ISUB step()-level integration tests ───────────────────────────────────
+// Mirror of the IA section: assemble via ChurchAssembler, inject, prime, step(),
+// assert DR result and all four flags.
+
+// IS1: Simple immediate subtraction — positive result, C set (no borrow).
+//   ISUB DR2, DR1, #3  with DR1 = 10  →  DR2 = 7
+//   Z=false, N=false, C=true (a>=b), V=false
+{
+    const asmIS1 = new ChurchAssembler();
+    const rIS1   = asmIS1.assemble('ISUB DR2, DR1, #3');
+    assert('IS1 ISUB DR2, DR1, #3 assembles with no errors',
+        asmIS1.errors.length === 0,
+        asmIS1.errors.map(e => e.message).join('; '));
+
+    const simIS1 = new ChurchSimulator();
+    simIS1.memory[0] = rIS1.words[0] >>> 0;
+    simIS1.dr[1] = 10;
+    simIS1.step();
+
+    assert('IS1 result DR2 = 7',
+        (simIS1.dr[2] >>> 0) === 7,
+        `got ${simIS1.dr[2] >>> 0}`);
+    assert('IS1 Z flag clear', simIS1.flags.Z === false, `Z=${simIS1.flags.Z}`);
+    assert('IS1 N flag clear', simIS1.flags.N === false, `N=${simIS1.flags.N}`);
+    assert('IS1 C flag set',   simIS1.flags.C === true,  `C=${simIS1.flags.C}`);
+    assert('IS1 V flag clear', simIS1.flags.V === false,  `V=${simIS1.flags.V}`);
+}
+
+// IS2: Subtraction to zero — Z and C set.
+//   ISUB DR2, DR1, DR3  with DR1 = 5, DR3 = 5  →  DR2 = 0
+//   Z=true, N=false, C=true (a>=b), V=false
+{
+    const asmIS2 = new ChurchAssembler();
+    const rIS2   = asmIS2.assemble('ISUB DR2, DR1, DR3');
+    assert('IS2 ISUB DR2, DR1, DR3 assembles with no errors',
+        asmIS2.errors.length === 0,
+        asmIS2.errors.map(e => e.message).join('; '));
+
+    const simIS2 = new ChurchSimulator();
+    simIS2.memory[0] = rIS2.words[0] >>> 0;
+    simIS2.dr[1] = 5;
+    simIS2.dr[3] = 5;
+    simIS2.step();
+
+    assert('IS2 result DR2 = 0',
+        (simIS2.dr[2] >>> 0) === 0,
+        `got ${simIS2.dr[2] >>> 0}`);
+    assert('IS2 Z flag set',   simIS2.flags.Z === true,  `Z=${simIS2.flags.Z}`);
+    assert('IS2 N flag clear', simIS2.flags.N === false, `N=${simIS2.flags.N}`);
+    assert('IS2 C flag set',   simIS2.flags.C === true,  `C=${simIS2.flags.C}`);
+    assert('IS2 V flag clear', simIS2.flags.V === false, `V=${simIS2.flags.V}`);
+}
+
+// IS3: Signed overflow (positive - negative = negative) — V, N set; C clear.
+//   ISUB DR2, DR1, DR3  with DR1 = 0x7FFFFFFF, DR3 = 0xFFFFFFFF  →  DR2 = 0x80000000
+//   Unsigned: 0x7FFFFFFF < 0xFFFFFFFF → C=false (borrow)
+//   Signed:   sa=0, sb=1 (different signs); sr=1 ≠ sa → V=true
+//   Z=false, N=true, C=false, V=true
+{
+    const asmIS3 = new ChurchAssembler();
+    const rIS3   = asmIS3.assemble('ISUB DR2, DR1, DR3');
+    assert('IS3 ISUB DR2, DR1, DR3 assembles with no errors',
+        asmIS3.errors.length === 0,
+        asmIS3.errors.map(e => e.message).join('; '));
+
+    const simIS3 = new ChurchSimulator();
+    simIS3.memory[0] = rIS3.words[0] >>> 0;
+    simIS3.dr[1] = 0x7FFFFFFF;
+    simIS3.dr[3] = 0xFFFFFFFF;
+    simIS3.step();
+
+    const gotIS3 = simIS3.dr[2] >>> 0;
+    assert('IS3 result DR2 = 0x80000000',
+        gotIS3 === 0x80000000,
+        `got 0x${gotIS3.toString(16).toUpperCase()}`);
+    assert('IS3 Z flag clear', simIS3.flags.Z === false, `Z=${simIS3.flags.Z}`);
+    assert('IS3 N flag set',   simIS3.flags.N === true,  `N=${simIS3.flags.N}`);
+    assert('IS3 C flag clear', simIS3.flags.C === false, `C=${simIS3.flags.C}`);
+    assert('IS3 V flag set',   simIS3.flags.V === true,  `V=${simIS3.flags.V}`);
+}
+
 // ── LTF: led_turing_full snippet regression ───────────────────────────────────
 // Loads the led_turing_full assembly from _TURING_DR_TEST_SOURCE in app-run.js,
 // assembles it, and asserts zero errors.  This catches any edit that introduces
