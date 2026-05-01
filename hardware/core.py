@@ -1107,7 +1107,7 @@ class ChurchCore(Elaboratable):
 
         # Sign-extend source to 64 bits for arithmetic shift right
         shr_src_sx = Signal(64)
-        m.d.comb += shr_src_sx.eq(Cat(u_regs.dr_rd_data1, Repl(u_regs.dr_rd_data1[31], 32)))
+        m.d.comb += shr_src_sx.eq(Cat(u_regs.dr_rd_data1, u_regs.dr_rd_data1[31].replicate(32)))
         lsr_result = Signal(32)
         asr_result = Signal(32)
         m.d.comb += [
@@ -1121,11 +1121,15 @@ class ChurchCore(Elaboratable):
         # SHL: last bit out = source[32 - shift_amt] → (source >> (32-shift_amt))[0]
         shr_c_bit = Signal()
         shl_c_bit = Signal()
+        shr_c_shift = Signal(5)
+        shl_c_shift = Signal(6)
         m.d.comb += [
+            shr_c_shift.eq((shift_amt - 1)[:5]),
+            shl_c_shift.eq((32 - shift_amt)[:6]),
             shr_c_bit.eq(Mux(shift_amt == 0, 0,
-                             (u_regs.dr_rd_data1 >> (shift_amt - 1))[0])),
+                             (u_regs.dr_rd_data1 >> shr_c_shift)[0])),
             shl_c_bit.eq(Mux(shift_amt == 0, 0,
-                             (u_regs.dr_rd_data1 >> (32 - shift_amt))[0])),
+                             (u_regs.dr_rd_data1 >> shl_c_shift)[0])),
         ]
 
         shl_flags_view = View(COND_FLAGS_LAYOUT, shl_flags_sig)
