@@ -1108,11 +1108,11 @@ def business_deck():
 
 @app.route("/docs/patent-unified.html")
 def patent_unified():
-    return send_from_directory(DOCS_DIR, "patent-ctmm-unified.html")
+    return send_from_directory(os.path.join(DOCS_DIR, "figures"), "patent-ctmm-unified.html")
 
 @app.route("/docs/switch-lifecycle.html")
 def switch_lifecycle_html():
-    return send_from_directory(DOCS_DIR, "switch-lifecycle.html")
+    return send_from_directory(os.path.join(DOCS_DIR, "figures"), "switch-lifecycle.html")
 
 BOOK_CHAPTERS = [
     ("Getting Started", [
