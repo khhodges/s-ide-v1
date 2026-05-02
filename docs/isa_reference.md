@@ -1377,15 +1377,15 @@ word = ((opcode & 0x1F) << 27)
 | AL        | 14   | (always)             | unconditional    |
 | NV        | 15   | (never)              | static no-op     |
 
-### 8.4 Design Question Notes (Group E)
+### 8.4 Closed Design Decisions (Group E)
 
-The following open questions affect instruction behaviour but are not yet decided. They are tracked here to prevent spec ambiguity from silently propagating into implementations.
+These questions are now resolved. Recorded here to prevent the decisions from being re-opened.
 
-| ID | Instruction | Question | Current behaviour |
-|----|-------------|----------|-------------------|
-| E-1 | IADD / ISUB | Can `#-1` be encoded? | No — immediate is unsigned 0–16383. Use `ISUB DRd, DR0, #1` to get −1. |
-| E-2 | RETURN | Is bit 6 of the mask reserved (CR6 always restored from frame)? | Assembler: no restriction. Hardware: CR6 is always re-derived by cload; mask bit 6 would be a no-op or clash. Decision pending. |
-| E-3 | DREAD CR14 | Is X-in-place-of-R the only special case, or does a broader X→R substitution apply? | Simulator: CR14-specific only (`d.crSrc === 14`). Hardware: enforced by code-fence permission check. |
-| E-4 | CHANGE | Assembler restricts both operands to CR12. Is this an architectural rule or only a toolchain convention? | Assembler restriction (assembler.js case 4). Hardware `change.py` is broader (any CR12–CR15 destination). Decision: document as assembler convention, not ISA restriction. |
+| ID | Instruction | Decision |
+|----|-------------|----------|
+| E-1 | IADD / ISUB | Immediate is unsigned 0–16383. `#-1` cannot be encoded directly; use `ISUB DRd, DR0, #1`. **Closed.** |
+| E-2 | RETURN mask bit 6 | Bit 6 is reserved and must be zero. Hardware always re-derives CR6 unconditionally via cload; mask bit 6 has no effect and is not implemented. Assembler should reject it. **Closed — D-2 updated.** |
+| E-3 | DREAD CR14 | X-in-place-of-R is CR14-specific only. No broader X→R substitution applies. **Closed.** |
+| E-4 | CHANGE operand restriction | Assembler convention only, not an ISA rule. Hardware `change.py` accepts any CR12–CR15 destination. The assembler restriction is a toolchain safety guard. **Closed.** |
 
-**Deviation flags:** SWITCH (D-11), SHR/SHL carry+ASR (D-12, closed). TPERM reserved-preset fault (C.1, Task #873). TPERM Mode 2 (C.3, Task #874, closed).
+**Deviation flags:** SWITCH (D-11, open). SHR/SHL carry+ASR (D-12, closed). TPERM reserved-preset fault (D-3, docs now corrected). TPERM Mode 2 (C.3, Task #874, closed).

@@ -216,7 +216,7 @@ TPERM CRs, #preset [, offset]
 - **Z = 1**: all checks passed (permissions present, valid, in bounds)
 - **Z = 0**: one or more checks failed
 
-**No trap**: TPERM never faults. If checks fail, the Z flag says so and software decides what to do via conditional execution. The CRs themselves enforce safety — an actual read/write to an invalid or out-of-bounds region will FAULT at that point. TPERM is the "ask first" instruction.
+**Faulting**: TPERM faults with `TPERM_RSV` if the preset code is reserved (codes 11–15 and their B-modifier variants 0x1B–0x1F). For all valid presets, TPERM never traps — if checks fail the Z flag says so and software decides what to do via conditional execution. The CRs themselves enforce safety — an actual read/write to an invalid or out-of-bounds region will FAULT at that point. TPERM is the "ask first" instruction.
 
 No namespace access occurs — TPERM is a register-local read-only operation. No G-bit reset.
 

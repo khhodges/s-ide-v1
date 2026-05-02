@@ -30,33 +30,23 @@ Authoritative sources: `hardware/hw_types.py`, `hardware/layouts.py`, `hardware/
 
 ## Open Deviations (D-1 through D-9)
 
-### D-1: Minimum Lump Size — Enforcement Gap
+### D-1: Minimum Lump Size — CLOSED
 
-- **Hardware**: `hw_types.py` `n_minus_6` field encodes lump size as `2^(val+6)`, minimum = 64 words. `boot_rom.py` demo entries now use `alloc_size=64`.
-- **Docs**: Prose corrected (C-2), but `architecture.md` and `abstractions.md` do not state whether hardware enforces the minimum or silently accepts smaller values. The simulator's `system_abstractions.js` `nextPow2()` function historically accepted smaller values.
-- **Decision**: Does hardware enforce `n_minus_6 ≥ 0` (rejecting sub-64-word lumps), or is the minimum advisory?
-- **Affected files**: `architecture.md`, `abstractions.md`
-- **Pending task**: Related to CONSISTENCY-AUDIT Critical Issue #2
+- **Decision (architect, May 2026)**: 64 words is an **advisory minimum** — the `n_minus_6` encoding physically cannot express sub-64-word lumps (`n_minus_6 = 0` gives 64 words; the field has no value for smaller). Hardware never receives a smaller-than-64-word lump because the encoding cannot represent one. The minimum is therefore self-enforcing by encoding, not by a run-time fault check.
+- **Action taken**: `architecture.md` updated; no hardware change required. **CLOSED.**
 
-### D-2: RETURN MASK Field — Not Implemented
+### D-2: RETURN MASK Field — CLOSED (bit 6 reserved; full mask not implemented)
 
-- **Hardware**: `ret.py` has no mask signal or mask-based register clearing. The RETURN FSM re-derives CR6/CR14 via the separate cload unit, but has no general-purpose mask mechanism. `fused_unit.py` (ELOADCALL/XLOADLAMBDA) has a mask mechanism, but RETURN does not.
-- **Docs**: `boot_rom.py` lines 138–139 encode `RETURN AL, CR5` with comment "mask bit 5 = 0b100000 clears CR5." This mask behavior is not implemented. `isa_encoding.md` now notes this gap.
-- **Decision**: Should RETURN gain a mask field, or should the boot epilogue use a different mechanism?
-- **Affected files**: `boot_rom.py`, `instruction-set.md`, `isa_encoding.md`
-- **Pending task**: Task #8 (RETURN MASK)
+- **Decision (architect, May 2026)**: The mask field in RETURN is currently **not implemented** in hardware (`ret.py` has no mask logic). Mask bit 6 is **reserved and must be zero** — hardware always re-derives CR6 unconditionally via cload; a set bit 6 has no effect and must not be encoded. The remaining mask bits (0–5, 7–11) are also unimplemented; hardware ignores them. No hardware mask mechanism will be added at this time. The boot epilogue should use bare `RETURN` (mask=0).
+- **Action taken**: `instruction-set.md` and `isa_reference.md §8.4` updated (E-2 closed). Assembler should warn if any mask bit is set. Task #8 retracted. **CLOSED.**
 
-### D-3: TPERM Faulting Model — PARTIALLY CLOSED (Task #873)
+### D-3: TPERM Faulting Model — CLOSED (Task #873 + doc fix May 2026)
 
-- **Hardware**: `tperm.py` lines 78–84 — reserved presets (codes 11–15; note code 10 = 'W' is valid) fault with `TPERM_RSV`; non-monotonic restriction faults with `DOMAIN_PURITY`. `core.py` lines 1168–1169 propagate these as hard faults. The documented health-check mode (Mode 1: flag-setting with bounds check, no fault) does not appear in hardware.
-- **Docs**: `instruction-set.md` line 237 says reserved presets produce "Z=0, no fault." Line 160 says "TPERM never faults."
-- **Simulator fix (Task #873)**: Two gaps closed in `simulator/simulator.js` `_execTperm`:
-  - **(C.1) Reserved-preset gap CLOSED**: Simulator now calls `this.fault('TPERM_RSV', …)` for preset codes 11–15 (and their B-modifier variants 0x1B–0x1F). Previously returned silent Z=0. Simulator now matches hardware behaviour.
-  - **(C.2) GT bounds check ADDED**: After confirming the GT is non-NULL and the preset is valid, the simulator reads the NS entry for the GT's index and verifies `word0_location + limit < NS_TABLE_BASE`. On failure, sets Z=0, N=1, C=0, V=0 (flag-setting, not a hard fault) — matching hardware.
-- **Remaining open sub-issues**:
-  - (a) `instruction-set.md` and `church-instructions.md` still say reserved presets produce "Z=0, no fault" — docs need updating to match hardware + simulator.
-  - (b) Health-check mode (Mode 1) is not in hardware; planning decision still pending.
-- **Affected files**: `simulator/simulator.js` (fixed), `instruction-set.md`, `church-instructions.md` (docs still need update)
+- **Hardware**: `tperm.py` lines 78–84 — reserved presets (codes 11–15 and B-variants 0x1B–0x1F) fault with `TPERM_RSV`. Non-monotonic restriction faults with `DOMAIN_PURITY`. `core.py` propagates these as hard faults.
+- **Simulator fix (Task #873)**: `_execTperm` now calls `this.fault('TPERM_RSV', …)` for reserved presets; GT bounds check added (Z=0,N=1 on fail, not a hard fault). Simulator matches hardware.
+- **Doc fix (May 2026)**: `instruction-set.md` and `church-instructions.md` updated — "TPERM never faults" replaced with correct faulting description; preset table row 10–15 updated from "Z=0, no fault" to "FAULT (TPERM_RSV)".
+- **Health-check Mode 1**: Not present in hardware. No hardware change planned. This sub-item is deferred indefinitely.
+- **Status**: **CLOSED.** All three artefacts (hardware, simulator, docs) now agree on reserved-preset behaviour.
 
 ### D-4: CR Register Remap (Dual Names)
 
@@ -64,21 +54,15 @@ Authoritative sources: `hardware/hw_types.py`, `hardware/layouts.py`, `hardware/
 
 **CR14 — RESOLVED**: `CR_CODE = 14` (old alias) has been removed from `hw_types.py`. The single canonical constant is now `CR_CLOOMC = 14`. All callers in `hardware/core.py`, `hardware/cload.py`, and `hardware/registers.py` have been updated to use `CR_CLOOMC`.
 
-### D-5: Navana.Init Wiring
+### D-5: Navana.Init Wiring — CLOSED
 
-- **Docs**: `abstractions.md` and `abstraction-generation-roadmap.md` list Navana methods including Init. `architecture.md` describes Salvation transitioning to Navana permanently.
-- **Hardware**: Boot ROM boots to NUC_PROGRAM at NS slot 4. Navana.Init as a callable entry point is not wired in the boot ROM. The transition from Salvation to Navana is a direct CALL.
-- **Decision**: Is Navana.Init a method that needs to be callable, or is the current boot flow the intended final architecture?
-- **Affected files**: `abstractions.md`, `architecture.md`
-- **Pending task**: None currently tracked — architect to confirm boot flow design intent
+- **Decision (architect, May 2026)**: Navana is a **normal LUMP** with a callable Init entry point. The boot ROM's direct CALL is a bootstrap shortcut, not the final design. Navana.Init must be reachable as a standard method call so that any authorised caller can re-initialise or extend the namespace controller.
+- **Action required**: Boot ROM wiring and `abstractions.md` to be updated in a follow-up task to expose Navana.Init as a method-table entry. **OPEN — pending implementation task.**
 
-### D-6: FPGA MMIO / LED Pin Routing
+### D-6: FPGA MMIO / LED Pin Routing — CLOSED
 
-- **Docs**: `hardware-tang-nano-20k.md` documents 5 usable LED pins (led0–led2, led4–led5, skipping led3/pin 14 for PSRAM CE). MMIO base at 0x40000000.
-- **Hardware**: Platform files define I/O mappings per-target. LED assignments documented per-platform but not cross-referenced in architecture docs.
-- **Decision**: Should MMIO address map be in `architecture.md`? Is led3 skip handled in all synthesis scripts?
-- **Affected files**: `hardware-tang-nano-20k.md`, `architecture.md`
-- **Pending task**: None currently tracked — architect to decide scope of MMIO documentation
+- **Decision (architect, May 2026)**: A short MMIO summary table added to `architecture.md` (Memory Architecture section). Per-platform detail (pin numbers, active polarity) remains in `hardware-tang-nano-20k.md` and `hardware-ti60-f225.md`.
+- **Action taken**: `architecture.md` updated with MMIO base address and register summary. **CLOSED.**
 
 ### D-7: SAVE Operand Roles — Hardware Mismatch in app.js INSTRUCTION_DATA
 

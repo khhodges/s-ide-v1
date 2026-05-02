@@ -102,7 +102,7 @@ RETURN [mask]
 
 **Encoding**: `opcode[5]=00011 | cond[4] | 0[11] | mask[12]`
 
-`mask` is a 12-bit literal in bits [11:0]. Bit N = 1 clears CR_N to NULL after the frame is restored. Bit 6 is reserved (must be 0 — CR6 is always restored from the frame E-GT). Bare `RETURN` (mask=0) is the no-op default and is fully backward-compatible.
+`mask` is a 12-bit literal in bits [11:0]. The mask field is currently **not implemented** in hardware — all bits are ignored. Bit 6 is **reserved and must be 0**: CR6 is always re-derived unconditionally by cload regardless of the mask. All other mask bits (0–5, 7–11) are also unimplemented and must be 0. Use bare `RETURN` (mask=0). Encoding a non-zero mask will produce no error on current hardware but the clearing does not occur.
 
 **Execution order**:
 1. Pop 2-word frame
@@ -172,7 +172,7 @@ TPERM CRs, #preset, offset
 - **Z = 1**: all checks passed (permissions present, valid, in bounds)
 - **Z = 0**: one or more checks failed
 
-**No trap**: TPERM never faults. If checks fail, the Z flag says so and software decides what to do via conditional execution. The actual read/write instructions that follow enforce safety — an access to an invalid or out-of-bounds region will FAULT at that point. TPERM is the "ask first" instruction.
+**Faulting**: TPERM faults with `TPERM_RSV` if the preset code is reserved (codes 11–15 and their B-modifier variants 0x1B–0x1F). For all valid presets, TPERM never traps — if checks fail the Z flag says so and software decides what to do via conditional execution. The actual read/write instructions that follow enforce safety — an access to an invalid or out-of-bounds region will FAULT at that point. TPERM is the "ask first" instruction.
 
 ##### Conditional Execution: Zero-Cost Try-Catch
 
@@ -249,7 +249,7 @@ ANDs the preset mask with CRd's current permissions. Permissions can only be rem
 | 7 | S | S |
 | 8 | E | E |
 | 9 | LS | L, S |
-| 10–15 | (reserved) | Ignored — Z=0, no fault |
+| 10–15 | (reserved) | **FAULT** (`TPERM_RSV`) — hard fault, not Z=0 |
 
 **E isolation**: E permission must not be combined with L or S in a single GT. E grants entry into an abstraction as a black box; L or S grant c-list visibility. A holder of both could inspect or modify the abstraction's hidden implementation — violating encapsulation. Codes 10 (LE), 11 (SE), 12 (LSE) are therefore reserved. Codes 13–15 are reserved for cross-domain and other reasons.
 

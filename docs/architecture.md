@@ -236,6 +236,30 @@ The 16-bit physical address space is accessed through the GT gate via mLoad:
 0xFF00 – 0xFFFF    Machine registers (read-only inspection)
 ```
 
+### MMIO Register Map
+
+All hardware I/O devices are mapped at base address `0x40000000` (bit 30 set, bit 31 clear). The register selector is `addr[5:2]` (4-bit word index within the MMIO range). Per-platform pin assignments and active polarity are in `hardware-tang-nano-20k.md` and `hardware-ti60-f225.md`.
+
+| Offset | Address      | Device  | Register     | Description |
+|--------|-------------|---------|--------------|-------------|
+| 0      | `0x40000000` | LED     | LED[0]       | LED 0 state — `[2:0]={B,G,R}` |
+| 1      | `0x40000004` | LED     | LED[1]       | LED 1 state |
+| 2      | `0x40000008` | LED     | LED[2]       | LED 2 state |
+| 3      | `0x4000000C` | LED     | LED[3]       | LED 3 state (Tang: drives `led4` pin; `led3` pin is PSRAM CE) |
+| 4      | `0x40000010` | LED     | LED[4]       | LED 4 state |
+| 5      | `0x40000014` | UART    | TX           | Write byte to transmit |
+| 6      | `0x40000018` | UART    | STATUS       | Bit[0]=tx-ready, Bit[1]=rx-ready |
+| 7      | `0x4000001C` | UART    | RX           | Read received byte |
+| 8      | `0x40000020` | Button  | BUTTON_STATE | Button bitmask (read-only) |
+| 9      | `0x40000024` | —       | (reserved)   | |
+| 10     | `0x40000028` | Timer   | TICKS_LO     | Low 32 bits of tick counter |
+| 11     | `0x4000002C` | Timer   | TICKS_HI     | High 32 bits of tick counter |
+| 12     | `0x40000030` | Timer   | TOD_EPOCH    | Time-of-day epoch |
+| 13     | `0x40000034` | Timer   | ALARM_CMP    | Alarm compare register |
+| 14     | `0x40000038` | Timer   | CTL          | Timer control — bit[0]=enable |
+
+Access via DREAD/DWRITE using an Abstract GT whose `word1_location` falls in the `0xFE000000–0xFEFFFFFF` local peripheral range. The hardware routes `word1_location[7:0]` to the MMIO register selector.
+
 ### Abstract Address Space (32-bit word1_location)
 
 Abstract GTs (`gt_type = 11₂`) bypass the 16-bit physical map entirely. Their
@@ -435,6 +459,10 @@ The **Loader** (NS[19]) manages warm-slot lazy loading. On resource-constrained 
 - **Restore**: The Loader writes the full lump (header + code + c-list) at a valid address within the existing NS grant, updates `word0_location`, and recomputes the seal. Type, limit, and gt_seq are never changed — no new authority is minted.
 
 This is distinct from the Outform/Locator protocol (Mode 2), which handles objects that were never instantiated and requires minting a new Inform NS entry from an Abstract capability grant.
+
+### Lump Size Minimum
+
+The `n_minus_6` field in the lump header encodes `lumpSize = 2^(n_minus_6 + 6)`. With `n_minus_6 = 0` the minimum representable lump is 64 words — the field has no encoding for a smaller size. The 64-word minimum is therefore self-enforcing by encoding: hardware can never receive a sub-64-word lump because the encoding cannot represent one. Software and the compiler must allocate at least 64 words (`SLOT_SIZE`).
 
 ### Upload Format
 
