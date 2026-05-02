@@ -76,7 +76,7 @@ Authoritative sources: `hardware/hw_types.py`, `hardware/layouts.py`, `hardware/
 - **Resolution (Task #451)**: All docs (`architecture.md`, `call-stack.md`, `garbage-collection.md`, `church-instructions.md`, `AMARANTH-SIMULATOR-AUDIT-2026-04-23.md`) and simulator comments updated to match the specification in `CM_LUMP_SPECIFICATION.md`. The `saved_cr5_gt` signal and `RESTORE_CR5`/`PHASE0` FSM states have been removed from all CALL and RETURN units respectively.
 - **Status**: RESOLVED
 
-### D-9: LAMBDA Recursion — Idempotent Re-Entry via CR6 (Revised Design)
+### D-9: LAMBDA Recursion — Idempotent Re-Entry via CR6 — CLOSED (Task #887)
 
 - **Current hardware**: LAMBDA (opcode 7) uses `lambda_active_reg` (1-bit flag) and `lambda_pc_reg` (return address). The parent patent specifies non-nestable LAMBDA: a second LAMBDA while `lambda_active` is set causes a FAULT. CALL-mediated nesting is the only way to nest.
 - **Discovery — return address invariance**: When LAMBDA CR6 self-invokes, every recursive call writes the **same return address** (PC+4 of the LAMBDA CR6 instruction) to `lambda_pc`. Re-executing LAMBDA CR6 while `lambda_active` is already set is **idempotent** — the same value overwrites the same register.
@@ -99,6 +99,7 @@ Authoritative sources: `hardware/hw_types.py`, `hardware/layouts.py`, `hardware/
 - **Risk**: Extremely low. Single-line FAULT condition change in `core.py`. No format changes, no new registers, no multi-file impact.
 - **Affected files**: `hardware/core.py` (FAULT condition only)
 - **Patent**: Documented in `docs/patent-ctmm-lambda-recursion-2026.md` (Claims 1–7)
+- **Status**: CLOSED — implemented in `hardware/core.py`: `nested_lambda_fault` signal fires when `lambda_active_reg = 1` AND `cr_dst != 6`; `lambda_start_sig` gated to suppress when fault fires; fault wired to `FaultType.INVALID_OP` in the fault chain. LAMBDA CR6 re-entry while active proceeds silently (idempotent write to `lambda_pc_reg`).
 
 ### D-10: CALL Method-Table Dispatch — PC=0 Eliminated
 

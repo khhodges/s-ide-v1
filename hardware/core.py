@@ -338,9 +338,15 @@ class ChurchCore(Elaboratable):
         )
 
         lambda_start_sig = Signal()
+        nested_lambda_fault = Signal()
         if not self.iot_profile:
+            m.d.comb += nested_lambda_fault.eq(
+                cond_exec_enable & is_church_op & (church_op == ChurchOpcode.LAMBDA) & ~any_unit_busy
+                & lambda_active_reg & (cr_dst != CR_CLIST)
+            )
             m.d.comb += lambda_start_sig.eq(
                 cond_exec_enable & is_church_op & (church_op == ChurchOpcode.LAMBDA) & ~any_unit_busy
+                & ~(lambda_active_reg & (cr_dst != CR_CLIST))
             )
 
         tperm_start_sig = Signal()
@@ -1994,6 +2000,8 @@ class ChurchCore(Elaboratable):
         if not self.iot_profile:
             with m.Elif(u_lambda.lambda_fault):
                 m.d.comb += [self.fault.eq(u_lambda.fault_type), self.fault_valid.eq(1)]
+            with m.Elif(nested_lambda_fault):
+                m.d.comb += [self.fault.eq(FaultType.INVALID_OP), self.fault_valid.eq(1)]
         with m.Elif(u_tperm.tperm_fault):
             m.d.comb += [self.fault.eq(u_tperm.fault_type), self.fault_valid.eq(1)]
         with m.Elif(u_call.call_fault):
