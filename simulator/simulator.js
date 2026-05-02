@@ -4009,6 +4009,13 @@ class ChurchSimulator {
 
     _execLambda(d) {
         const crIdx = d.crDst;
+        // D-9 idempotent re-entry rule (hardware/core.py nested_lambda_fault):
+        //   LAMBDA CR6 (CR_CLIST) while lambdaActive=1 → idempotent, permitted.
+        //   LAMBDA CRn (n≠6)      while lambdaActive=1 → INVALID_OP fault.
+        if (this.lambdaActive && crIdx !== 6) {
+            this.fault('INVALID_OP', `LAMBDA CR${crIdx}: nested LAMBDA while lambda_active=1 is not permitted (CR${crIdx} ≠ CR6/CR_CLIST)`);
+            return null;
+        }
         const targetGT = this.cr[crIdx].word0;
         if (targetGT === 0) {
             this.fault('NULL_CAP', `LAMBDA: CR${crIdx} is NULL`);
