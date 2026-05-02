@@ -1,5 +1,11 @@
 # Amaranth ↔ Simulator Audit
 
+> **HISTORICAL DOCUMENT — SUPERSEDED**
+> This audit was current as of April 23, 2026. Most gaps identified here have since been closed:
+> TPERM reserved-preset fault (D-3), LAMBDA CR6 re-entry (Task #890), RETURN mask warning (Task #888),
+> and SWITCH hardware fix (Task #887) are all resolved. D-11 (SWITCH simulator) remains open.
+> Do not use this document as a live reference — consult `HARDWARE-DEVIATIONS.md` for current status.
+
 **v1.0 — 2026-04-29**
 **CONFIDENTIAL**
 

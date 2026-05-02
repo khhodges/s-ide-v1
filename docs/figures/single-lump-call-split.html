@@ -100,7 +100,7 @@
   <text x="570" y="82" font-size="11" fill="#333">1. mLoad: type &#x2192; version &#x2192; seal &#x2192; bounds &#x2192; E-perm &#x2192; F-bit &#x2192; deliver</text>
   <text x="570" y="100" font-size="11" fill="#333">2. Parse W1: extract clistCount and limit</text>
   <text x="570" y="118" font-size="11" fill="#c62828" font-weight="bold">3. clistStart = (limit + 1) - clistCount = 256 - 3 = 253</text>
-  <text x="570" y="136" font-size="11" fill="#333">4. Create CR14 (code) + CR6 (c-list), set PC = 0</text>
+  <text x="570" y="136" font-size="11" fill="#333">4. Create CR14 (code) + CR6 (c-list), PC = method-table entry</text>
 
   <!-- Arrow from CALL to the split diagram -->
   <line x1="790" y1="150" x2="790" y2="195" stroke="#c62828" stroke-width="2" marker-end="url(#ah-red)"/>

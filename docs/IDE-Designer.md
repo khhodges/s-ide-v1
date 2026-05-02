@@ -136,10 +136,11 @@ abstraction Mint {
 The compiled lump layout:
 
 ```
-M00  Dispatch     — selectors: 1→Create, 2→Transfer (Revoke absent)
-M01  Create       — public, selector 1
-M02  Revoke       — private: compiled in place; no dispatch route to it
-M03  Transfer     — public, selector 2
+word 0   lump header      — never executable
+word 1   method entry 1   → Create (public, method index 1)
+word 2   method entry 2   → Transfer (public, method index 2)
+word 3   method entry 3   → 0 (Revoke — private: hardware faults on CALL)
+...      method bodies     — Create, Revoke, Transfer code
 ```
 
 No external selector reaches `Revoke`. A caller who tries to invoke it directly will fault — not because `Revoke` is undocumented, but because the dispatch table does not contain a route to it, and the lump seal prevents any external modification of the dispatch table.
@@ -242,8 +243,7 @@ The pet-name compiler translates this into five machine instructions:
 1. `LOAD CRn, CR6, #slot_Contact` — fetch the Contact GT into a capability register
 2. `LOAD DR1, CR6, #slot_me` — fetch the `me` GT into DR1 (first argument)
 3. `LOAD DR2, CR6, #slot_myMother` — fetch the `myMother` GT into DR2
-4. `IADD DR0, DR0, #1` — set selector 1 (the `Connect` selector)
-5. `CALL CRn` — invoke Contact
+4. `CALL CRn, #1` — invoke Contact with method index 1 (the `Connect` method; index encoded in imm15)
 
 That is all. Everything else — identity resolution, medium selection, session negotiation, token creation — is inside the sealed `Contact` lump, where it belongs.
 

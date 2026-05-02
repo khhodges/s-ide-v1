@@ -172,7 +172,7 @@ TPERM CRs, #preset, offset
 - **Z = 1**: all checks passed (permissions present, valid, in bounds)
 - **Z = 0**: one or more checks failed
 
-**Faulting**: TPERM faults with `TPERM_RSV` if the preset code is reserved (codes 11–15 and their B-modifier variants 0x1B–0x1F). For all valid presets, TPERM never traps — if checks fail the Z flag says so and software decides what to do via conditional execution. The actual read/write instructions that follow enforce safety — an access to an invalid or out-of-bounds region will FAULT at that point. TPERM is the "ask first" instruction.
+**Faulting**: TPERM faults with `TPERM_RSV` if the preset code is reserved (codes 11–15 and their B-modifier variants 0x1B–0x1F). For all valid presets, TPERM does not fault — if a permission check fails the Z flag says so and software decides what to do via conditional execution. The actual LOAD/SAVE/CALL instructions that follow enforce safety. TPERM is the "ask first" instruction.
 
 ##### Conditional Execution: Zero-Cost Try-Catch
 

@@ -29,7 +29,7 @@
 //   2  CALL       invoke CR             Enter abstraction, push call frame
 //   3  RETURN     unwind call frame     Return to caller
 //   4  CHANGE     DR ← imm / DR op DR  Integer / immediate data-register op
-//   5  SWITCH     swap CR pair          Exchange two CRs atomically
+//   5  SWITCH     privileged CR install  PassKey-gated one-way install into CR13/CR15
 //   6  TPERM      thread permission     Assert / revoke thread privilege
 //   7  LAMBDA     create closure        Mint a new capability from template
 //   8  ELOADCALL  c-list[n] → CALL      Load from c-list and call in one op
@@ -1260,7 +1260,7 @@ class ChurchAssembler {
             }
             // CHANGE CRd, CRs[idx]  — load GT via c-list capability into CRd
             case 4: return `${mnemonic}  CR${crDst}, CR${crSrc}[${hexOff(imm)}]`;
-            // SWITCH CRa, CRb  — atomically swap two CRs
+            // SWITCH CRs, #tgt  — PassKey-gated one-way install of CRs into CR13 (tgt=5) or CR15 (tgt=7)
             case 5: return `${mnemonic}  CR${crSrc}, CR${imm & 0x7}`;
             // TPERM CRd, preset[B]  — assert/attenuate permission
             case 6: {

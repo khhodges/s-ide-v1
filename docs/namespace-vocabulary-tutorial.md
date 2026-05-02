@@ -191,13 +191,14 @@ abstraction Mint {
 The compiled lump layout is:
 
 ```
-M00  Dispatch     — auto-generated (selectors: 1→Create, 2→Transfer only)
-M01  Create       — public, selector 1
-M02  Revoke       — private: compiled at its offset; absent from dispatch table
-M03  Transfer     — public, selector 2
+word 0   lump header      — never executable
+word 1   method entry 1   → Create (public, method index 1)
+word 2   method entry 2   → Transfer (public, method index 2)
+word 3   method entry 3   → 0 (Revoke — private: no dispatch route)
+...      method bodies     — Create, Revoke, Transfer code
 ```
 
-No external selector reaches `Revoke`. The dispatch table does not route to it. The lump seal prevents any external code from modifying M00 to add such a route. `Revoke` exists in the binary, but it is unreachable from outside — in the same sense that a dead code path in a compiled binary is unreachable, except that here the unreachability is enforced by the hardware seal, not merely by convention.
+No external selector reaches `Revoke`. The hardware method table stores zero (private) at Revoke's index — a CALL with that method index faults with `PRIVATE_METHOD` before a single instruction of the callee executes. The lump seal prevents any external modification of the table. `Revoke` exists in the binary but is hardware-unreachable from outside, enforced by the seal, not merely by convention.
 
 This is why the Stage 2 vocabulary is trustworthy. When you call `Mint.Create`, you are not relying on `Revoke` being undocumented. You are relying on a mathematical property of the sealed lump: there is no path from any external call to `Revoke`. The word `Mint.Create` means exactly what the abstraction author defined — because the seal makes that meaning permanent.
 

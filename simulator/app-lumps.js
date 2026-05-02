@@ -1541,7 +1541,7 @@ function _renderLumpCodeContent(bodyEl, lump, words, token) {
                 return `${condStr}update CR${crDst} via ${crName(crSrc)}[${imm}]`;
             }
             case 5: {  // SWITCH CRs, CRb
-                return `${condStr}swap CR${crSrc} ↔ CR${imm & 0x7}`;
+                return `${condStr}SWITCH CR${crSrc} → CR${(imm & 0x7) === 5 ? '13' : (imm & 0x7) === 7 ? '15' : (imm & 0x7)} (PassKey install)`;
             }
             case 6: {  // TPERM CRd, preset[B]
                 const presets = ['CLEAR','R','RW','X','RX','RWX','L','S','E','LS'];

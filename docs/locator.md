@@ -19,7 +19,7 @@ to write the Live NS slot, then `RETURN`s. The hardware automatically retries
 the `LOAD` instruction against the now-Live NS slot, and the calling thread
 continues normally.
 
-This model keeps the hardware NS table small (256 slots × 16 bytes = 4 KB)
+This model keeps the hardware NS table small (256 slots × 12 bytes = 3 KB)
 and allows a practically unlimited catalogue of abstractions to be available
 without pre-loading them all.
 

@@ -380,8 +380,8 @@ Flag-writing summary across all 20 instructions:
 > ```
 >
 > **Reserved preset + B-modifier:** codes 0x1B–0x1F are reserved; behaviour
-> matches A-13 (simulator: Z=0 no fault; hardware: FAULT — see D-3 in
-> `HARDWARE-DEVIATIONS.md`).
+> matches A-13 — both hardware and simulator fault with `TPERM_RSV` (D-3 closed;
+> simulator aligned with hardware as of Task #873).
 
 ---
 
@@ -804,7 +804,7 @@ B-modifier variants (bit 4 = 1): add 0x10 to any valid code (e.g. `EB = 0x18`). 
 
 **Semantics** (in order):
 1. **NULL check**: if `CRd.word0 == 0` → Z=0, N=1, C=0, V=0, return immediately (no fault).
-2. **Reserved preset check**: if preset code (bits[3:0]) is `0x0B–0x0F` → Z=0, N=1, C=0, V=0. Hardware additionally faults with `TPERM_RSV` (see D-3 in `HARDWARE-DEVIATIONS.md`).
+2. **Reserved preset check**: if preset code (bits[3:0]) is `0x0B–0x0F` → `FAULT(TPERM_RSV)`. Both hardware and simulator fault here (D-3 closed — simulator aligned with hardware, Task #873).
 3. **Domain-purity check**: if the intersection of the preset's required permissions and the GT's held permissions would combine X with any of L/S/E → `FAULT(TPERM_RSV)`.
 4. **Permission test**: `hasAll = required_permissions.every(p => GT.permissions[p])`.
 5. **B-modifier**: if bit 4 is set and `hasAll == true` → clear bit 31 of `CRd.word0` (the Busy bit) in place.
@@ -817,7 +817,7 @@ B-modifier variants (bit 4 = 1): add 0x10 to any valid code (e.g. `EB = 0x18`). 
 |-------|-----------|
 | `TPERM_RSV` | Result permissions would combine X with L/S/E (domain-purity violation) |
 
-Note: reserved preset codes (0x0B–0x0F) are a hard fault on hardware but produce Z=0 in the simulator (see D-3).
+Reserved preset codes (0x0B–0x0F) fault with `TPERM_RSV` in both hardware and simulator (D-3 closed — aligned as of Task #873).
 
 **Example:** Test for E permission; clear B-bit if present.
 ```
@@ -1384,7 +1384,7 @@ These questions are now resolved. Recorded here to prevent the decisions from be
 | ID | Instruction | Decision |
 |----|-------------|----------|
 | E-1 | IADD / ISUB | Immediate is unsigned 0–16383. `#-1` cannot be encoded directly; use `ISUB DRd, DR0, #1`. **Closed.** |
-| E-2 | RETURN mask bit 6 | Bit 6 is reserved and must be zero. Hardware always re-derives CR6 unconditionally via cload; mask bit 6 has no effect and is not implemented. Assembler should reject it. **Closed — D-2 updated.** |
+| E-2 | RETURN mask | The entire 12-bit mask field is not implemented in current hardware — all bits ignored. Bit 6 is reserved and must be zero (CR6 always re-derived unconditionally by cload). Assembler warns on any non-zero mask (Task #888). Use bare `RETURN`. **Closed — D-2 updated.** |
 | E-3 | DREAD CR14 | X-in-place-of-R is CR14-specific only. No broader X→R substitution applies. **Closed.** |
 | E-4 | CHANGE operand restriction | Assembler convention only, not an ISA rule. Hardware `change.py` accepts any CR12–CR15 destination. The assembler restriction is a toolchain safety guard. **Closed.** |
 

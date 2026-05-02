@@ -1,5 +1,9 @@
 # Simulator ↔ Hardware Mismatch Report
 
+> **HISTORICAL DOCUMENT — SUPERSEDED**
+> All GT type-name mismatches documented here have been corrected. This report is preserved for
+> historical reference only. Do not use it as a live reference — consult `HARDWARE-DEVIATIONS.md`.
+
 **v1.0 — 2026-04-29**
 **CONFIDENTIAL**
 

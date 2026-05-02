@@ -37,7 +37,7 @@ This document maps each instruction across all implementation layers for verific
 - [ ] LOAD: Verify L permission check, bounds check, MAC validation
 - [ ] SAVE: Verify S permission check, B-bit on source, bounds check
 - [ ] CALL: Verify E permission, DR/CR mask handling, DR8-15 auto-clear
-- [ ] RETURN: Verify stack pop, context restore, mask handling
+- [ ] RETURN: Verify stack pop, context restore (mask field not implemented — skip mask handling)
 - [ ] CHANGE: Verify thread switch, monitor clearing
 - [ ] SWITCH: Verify C-List context switch
 - [x] TPERM: Flag model Z=1=pass/Z=0=fail confirmed. Valid presets 0-9 (CLEAR through LS). Codes 10-15 reserved/ignored (Z=0, no FAULT): codes 10-12 violate E isolation (LE/SE/LSE expose abstraction internals); code 13 violates domain purity (cross-domain); codes 14-15 unassigned. Conditional execution (EQ/NE etc.) works via standard condition-check gate before dispatch. B-flag (bit 4 of imm) clears GT B-bit on pass. Named B-variants: RB, RWB, XB, RXB, RWXB, LB, SB, EB, LSB.

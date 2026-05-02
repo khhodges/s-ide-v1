@@ -41,7 +41,7 @@ Secure-boot firmware.  13 real instructions, remainder zero-padded to 256.
 | 8 | `LOAD CR7, CR6[1]` | Epilogue | Reload boot code GT |
 | 9 | `TPERM CR7, #X` | Epilogue | Restrict to X |
 | 10 | `LAMBDA CR7` | Epilogue | Re-enter boot finalisation |
-| 11 | `RETURN CR5` | Epilogue | Boot complete; mask CR5 |
+| 11 | `RETURN` | Epilogue | Boot complete; bare RETURN (mask field not implemented) |
 | 12 | `SAVE CR6, CR1, #2` | Epilogue | Persist Thread GT to c-list[2] |
 
 ---

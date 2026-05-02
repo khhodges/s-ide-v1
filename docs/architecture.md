@@ -176,7 +176,7 @@ offset 0                       lumpSize-cc        lumpSize
 
 CR14: location = raw_base,             limit = (lumpSize - cc) - 1,  perms = X-only
 CR6:  location = raw_base + lumpSize - cc*4,  limit = cc - 1,        perms = L-only
-PC = 0
+PC   = method_table[method_index] word offset  (method index 0 → word 1; index n → memory[raw_base + n×4])
 ```
 
 The c-list count and lump size come from the **lump header** in memory, not from a field in the NS entry.
@@ -336,7 +336,7 @@ Instruction fetch uses CR14 ([CLOOMC](https://sipantic.blogspot.com/2025/03/xx.h
 
 - PC is an offset within the current code object, not an absolute address
 - Bounds checked against CR14's limit
-- CALL sets PC=0 and CR14 to callee's [CLOOMC](https://sipantic.blogspot.com/2025/03/xx.html)
+- CALL sets CR14 to callee's [CLOOMC](https://sipantic.blogspot.com/2025/03/xx.html) and PC to the method-table entry (hardware dispatch via imm15; method index 0 → word 1)
 - RETURN restores saved CR14 and PC
 
 ## CALL / RETURN
@@ -350,7 +350,7 @@ CALL performs:
    - CR14 (code): location = raw_base, limit = (lumpSize - cc) - 1, perms = **X-only** (privileged)
    - CR6 (c-list): location = raw_base + (lumpSize - cc) × 4, limit = cc - 1, perms = **L-only**
 5. Push 2-word call frame: [caller's E-GT | NIA+machine_indicators]
-6. Set PC = 0
+6. Set PC to method-table entry: read `memory[raw_base + method_index × 4]`; zero entry → `FAULT(PRIVATE_METHOD)`; else PC = that word offset. Method index 0 short-circuits to word 1 (lump header at word 0 is never executable).
 
 **Frame layout** — 2 words only:
 - Word 0: The caller's own E-GT (the GT that identified the calling abstraction).

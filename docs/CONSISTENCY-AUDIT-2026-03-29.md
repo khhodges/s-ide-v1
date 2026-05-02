@@ -1,5 +1,10 @@
 # Consistency Audit: Tutorials, Documentation, and Amaranth Hardware
 
+> **HISTORICAL DOCUMENT — SUPERSEDED**
+> This audit was current as of March 2026. Most issues identified here have since been resolved:
+> D-1 through D-6, D-9, D-10, D-12 are closed; D-7, D-8, and D-11 remain open.
+> Do not use this document as a live reference — consult `HARDWARE-DEVIATIONS.md` for current status.
+
 **v1.0 — 2026-04-29**
 **CONFIDENTIAL**
 

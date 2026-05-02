@@ -138,12 +138,12 @@ All Church instructions that access the namespace route through the **mLoad mast
 | **CR5** | Thread register — installed by CHANGE from Zone ④ bounds; not touched by CALL/RETURN |
 | **PC Restore** | NIA from Word 1 |
 | **Machine Indicators** | Restored from Word 1 (LAMBDA-active, flags, stackSpace, etc.) |
-| **Mask** | bits [11:0], bit N=1 → CR_N to NULL after frame restoration. Bit 6 reserved (CR6 always restored from E-GT). All marked CRs cleared in one parallel clock edge — zero overhead. mask=0 → bare `RETURN`, no scrub. |
+| **Mask** | bits [11:0] — **not implemented in current hardware**; all bits ignored. Bit 6 reserved (must be 0 — CR6 always re-derived from E-GT). Assembler warns if any bit is set. Use bare `RETURN` (mask=0). |
 | **Unchanged** | DR0–DR15 and non-masked CRs retain callee values |
 | **Stack Underflow** | FAULT: no saved context |
 | **Stack Indicators** | stackFrames and stackSpace updated |
 
-**Why the mask is programmer-declared**: GTs are first-class values — a callee may legitimately return a GT in CR0. Only the programmer knows which CRs carry return values vs. internal working state. The CLOOMC compiler emits the mask as a compile-time literal from a `clear:` annotation. The hardware enforces it in the instruction.
+**Mask field status**: The mask field is reserved for future implementation. It is not enforced by current hardware — encoding a non-zero mask produces an assembler warning but the clearing does not occur. Always use bare `RETURN` (mask=0) in current programs.
 
 ---
 
@@ -216,7 +216,7 @@ TPERM CRs, #preset [, offset]
 - **Z = 1**: all checks passed (permissions present, valid, in bounds)
 - **Z = 0**: one or more checks failed
 
-**Faulting**: TPERM faults with `TPERM_RSV` if the preset code is reserved (codes 11–15 and their B-modifier variants 0x1B–0x1F). For all valid presets, TPERM never traps — if checks fail the Z flag says so and software decides what to do via conditional execution. The CRs themselves enforce safety — an actual read/write to an invalid or out-of-bounds region will FAULT at that point. TPERM is the "ask first" instruction.
+**Faulting**: TPERM faults with `TPERM_RSV` if the preset code is reserved (codes 11–15 and their B-modifier variants 0x1B–0x1F). For all valid presets, TPERM does not fault — if a permission check fails the Z flag says so and software decides what to do via conditional execution. The actual LOAD/SAVE/CALL instructions that follow enforce safety. TPERM is the "ask first" instruction.
 
 No namespace access occurs — TPERM is a register-local read-only operation. No G-bit reset.
 
