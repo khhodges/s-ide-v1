@@ -1984,6 +1984,161 @@ const ChurchSimulator = require('./simulator.js');
     assert('BF4 BFINS zero result: C=0',   simBF4.flags.C === false, `C=${simBF4.flags.C}`);
 }
 
+// BF5: BFEXT — max-width extract (w=31, pos=0) → bits[30:0] extracted, N=0, Z=0, C=0.
+//   DR2 = 0xFFFFFFFF (all bits set).  BFEXT DR1, DR2, 0, 31 extracts bits[30:0].
+//   Width=31 is the maximum encodable in the 5-bit field.  mask=0x7FFFFFFF; value=0x7FFFFFFF.
+//   NOTE: width=32 encodes as 0 (32 & 0x1F = 0), which the simulator rejects as a BOUNDS
+//   fault — full-word extraction via BFEXT is not supported by the encoding; see BF9.
+{
+    const asmBF5 = new ChurchAssembler();
+    const rBF5   = asmBF5.assemble('BFEXT DR1, DR2, 0, 31');
+    assert('BF5 BFEXT DR1, DR2, 0, 31 assembles with no errors',
+        asmBF5.errors.length === 0,
+        asmBF5.errors.map(e => e.message).join('; '));
+
+    const simBF5 = new ChurchSimulator();
+    simBF5.memory[0] = rBF5.words[0] >>> 0;
+    simBF5.dr[2] = 0xFFFFFFFF >>> 0;   // all bits set; bits[30:0] = 0x7FFFFFFF
+    simBF5.step();
+    assert('BF5 BFEXT max-width: DR1=0x7FFFFFFF', simBF5.dr[1] === 0x7FFFFFFF, `DR1=0x${simBF5.dr[1].toString(16)}`);
+    assert('BF5 BFEXT max-width: Z=0',            simBF5.flags.Z === false,     `Z=${simBF5.flags.Z}`);
+    assert('BF5 BFEXT max-width: N=0',            simBF5.flags.N === false,     `N=${simBF5.flags.N}`);
+    assert('BF5 BFEXT max-width: C=0',            simBF5.flags.C === false,     `C=${simBF5.flags.C}`);
+}
+
+// BF6: BFEXT — high-bit position boundary: extract bit 31 of source (pos=31, w=1).
+//   DR2 = 0x80000000 (only bit 31 set).  mask = 1; value = (0x80000000 >>> 31) & 1 = 1.
+//   ISA note: BFEXT can NEVER set N=1.  The mask for any valid width (1–31) is at most
+//   0x7FFFFFFF, so bit 31 of the extracted value is always 0 after masking.  N=1 from a
+//   bitfield result is only achievable via BFINS (see BF7), where the written word can
+//   have bit 31 set independently of any extraction mask.
+{
+    const asmBF6 = new ChurchAssembler();
+    const rBF6   = asmBF6.assemble('BFEXT DR1, DR2, 31, 1');
+    assert('BF6 BFEXT DR1, DR2, 31, 1 assembles with no errors',
+        asmBF6.errors.length === 0,
+        asmBF6.errors.map(e => e.message).join('; '));
+
+    const simBF6 = new ChurchSimulator();
+    simBF6.memory[0] = rBF6.words[0] >>> 0;
+    simBF6.dr[2] = 0x80000000 >>> 0;   // bit 31 set in source
+    simBF6.step();
+    assert('BF6 BFEXT high-bit pos: DR1=1',  simBF6.dr[1] === 1,     `DR1=${simBF6.dr[1]}`);
+    assert('BF6 BFEXT high-bit pos: Z=0',    simBF6.flags.Z === false, `Z=${simBF6.flags.Z}`);
+    assert('BF6 BFEXT high-bit pos: N=0',    simBF6.flags.N === false, `N=${simBF6.flags.N}`);
+    assert('BF6 BFEXT high-bit pos: C=0',    simBF6.flags.C === false, `C=${simBF6.flags.C}`);
+}
+
+// BF7: BFINS — insert value into bit 31 (pos=31, w=1) → result has bit 31 set → N=1.
+//   DR1 = 0 (destination), DR2 = 1 (value to insert at pos 31).
+//   mask = 0x80000000; newWord = 0x80000000.  N=1 because (newWord >>> 31) & 1 = 1.
+//   This is the canonical way to produce N=1 from a bitfield instruction in this ISA.
+{
+    const asmBF7 = new ChurchAssembler();
+    const rBF7   = asmBF7.assemble('BFINS DR1, DR2, 31, 1');
+    assert('BF7 BFINS DR1, DR2, 31, 1 assembles with no errors',
+        asmBF7.errors.length === 0,
+        asmBF7.errors.map(e => e.message).join('; '));
+
+    const simBF7 = new ChurchSimulator();
+    simBF7.memory[0] = rBF7.words[0] >>> 0;
+    simBF7.dr[1] = 0x00000000;   // destination: empty
+    simBF7.dr[2] = 1;            // value: insert 1 → bit 31 of newWord
+    simBF7.step();
+    assert('BF7 BFINS N=1: DR1=0x80000000', simBF7.dr[1] === (0x80000000 >>> 0), `DR1=0x${simBF7.dr[1].toString(16)}`);
+    assert('BF7 BFINS N=1: Z=0',            simBF7.flags.Z === false,            `Z=${simBF7.flags.Z}`);
+    assert('BF7 BFINS N=1: N=1',            simBF7.flags.N === true,             `N=${simBF7.flags.N}`);
+    assert('BF7 BFINS N=1: C=0',            simBF7.flags.C === false,            `C=${simBF7.flags.C}`);
+}
+
+// BF8: BFINS — partial overwrite: destination bits outside the field must be preserved.
+//   DR1 = 0x0000FF00 (bits 15:8 set, outside the 4-bit field at pos 0).
+//   DR2 = 0xA (= 0b1010).  BFINS DR1, DR2, 0, 4 inserts into bits[3:0].
+//   Expected: newWord = 0x0000FF0A — bits[15:8] preserved, bits[3:0] = 0xA.
+{
+    const asmBF8 = new ChurchAssembler();
+    const rBF8   = asmBF8.assemble('BFINS DR1, DR2, 0, 4');
+    assert('BF8 BFINS DR1, DR2, 0, 4 assembles with no errors',
+        asmBF8.errors.length === 0,
+        asmBF8.errors.map(e => e.message).join('; '));
+
+    const simBF8 = new ChurchSimulator();
+    simBF8.memory[0] = rBF8.words[0] >>> 0;
+    simBF8.dr[1] = 0x0000FF00;   // destination: bits outside field already set
+    simBF8.dr[2] = 0xA;          // source: insert 0b1010 at pos 0
+    simBF8.step();
+    assert('BF8 BFINS partial overwrite: DR1=0x0000FF0A', simBF8.dr[1] === 0x0000FF0A, `DR1=0x${simBF8.dr[1].toString(16)}`);
+    assert('BF8 BFINS partial overwrite: Z=0',            simBF8.flags.Z === false,     `Z=${simBF8.flags.Z}`);
+    assert('BF8 BFINS partial overwrite: N=0',            simBF8.flags.N === false,     `N=${simBF8.flags.N}`);
+    assert('BF8 BFINS partial overwrite: C=0',            simBF8.flags.C === false,     `C=${simBF8.flags.C}`);
+}
+
+// BF9: BFEXT — full-word encoding limit: width=32 encodes as 0 (32 & 0x1F = 0) → BOUNDS fault.
+//   This documents that full-word extraction (32 bits) is not representable in the 5-bit
+//   width field; the assembler silently truncates to 0, and the simulator correctly rejects it.
+{
+    const asmBF9 = new ChurchAssembler();
+    const rBF9   = asmBF9.assemble('BFEXT DR1, DR2, 0, 32');
+    assert('BF9 BFEXT DR1, DR2, 0, 32 assembles with no errors',
+        asmBF9.errors.length === 0,
+        asmBF9.errors.map(e => e.message).join('; '));
+
+    const simBF9 = new ChurchSimulator();
+    simBF9.memory[0] = rBF9.words[0] >>> 0;
+    simBF9.dr[2] = 0xFFFFFFFF >>> 0;
+    simBF9.step();
+    assert('BF9 BFEXT w=32 (→ w=0): simulator halts with BOUNDS',
+        simBF9.halted === true,
+        `halted=${simBF9.halted}`);
+    assert('BF9 BFEXT w=32 (→ w=0): faultLog contains BOUNDS',
+        simBF9.faultLog.some(f => f.type === 'BOUNDS'),
+        'faultLog: ' + simBF9.faultLog.map(f => f.type).join(', '));
+}
+
+// BF10: BFINS — BOUNDS fault when width=0 (width=0 is always invalid).
+//   BFINS DR1, DR2, 0, 0 encodes width=0; simulator must halt with a BOUNDS fault.
+{
+    const asmBF10 = new ChurchAssembler();
+    const rBF10   = asmBF10.assemble('BFINS DR1, DR2, 0, 0');
+    assert('BF10 BFINS DR1, DR2, 0, 0 assembles with no errors',
+        asmBF10.errors.length === 0,
+        asmBF10.errors.map(e => e.message).join('; '));
+
+    const simBF10 = new ChurchSimulator();
+    simBF10.memory[0] = rBF10.words[0] >>> 0;
+    simBF10.dr[1] = 0;
+    simBF10.dr[2] = 1;
+    simBF10.step();
+    assert('BF10 BFINS width=0: simulator halts with BOUNDS',
+        simBF10.halted === true,
+        `halted=${simBF10.halted}`);
+    assert('BF10 BFINS width=0: faultLog contains BOUNDS',
+        simBF10.faultLog.some(f => f.type === 'BOUNDS'),
+        'faultLog: ' + simBF10.faultLog.map(f => f.type).join(', '));
+}
+
+// BF11: BFINS — BOUNDS fault when pos+width > 32 (pos=31, w=2 → 31+2=33>32).
+//   Simulator must record a BOUNDS fault and halt.
+{
+    const asmBF11 = new ChurchAssembler();
+    const rBF11   = asmBF11.assemble('BFINS DR1, DR2, 31, 2');
+    assert('BF11 BFINS DR1, DR2, 31, 2 assembles with no errors',
+        asmBF11.errors.length === 0,
+        asmBF11.errors.map(e => e.message).join('; '));
+
+    const simBF11 = new ChurchSimulator();
+    simBF11.memory[0] = rBF11.words[0] >>> 0;
+    simBF11.dr[1] = 0;
+    simBF11.dr[2] = 1;
+    simBF11.step();
+    assert('BF11 BFINS BOUNDS pos+width>32: simulator halts',
+        simBF11.halted === true,
+        `halted=${simBF11.halted}`);
+    assert('BF11 BFINS BOUNDS pos+width>32: faultLog contains BOUNDS',
+        simBF11.faultLog.some(f => f.type === 'BOUNDS'),
+        'faultLog: ' + simBF11.faultLog.map(f => f.type).join(', '));
+}
+
 // ── LTF: led_turing_full snippet regression ───────────────────────────────────
 // Loads the led_turing_full assembly from _TURING_DR_TEST_SOURCE in app-run.js,
 // assembles it, and asserts zero errors.  This catches any edit that introduces
