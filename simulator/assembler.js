@@ -817,16 +817,28 @@ class ChurchAssembler {
             case 12: {
                 crDst = this._parseDR(parts[1], lineNum);
                 crSrc = this._parseDR(parts[2], lineNum);
+                const rawWid12 = this._parseImm(parts[4], lineNum);
                 const pos12 = this._parseImm(parts[3], lineNum) & 0x1F;
-                const wid12 = this._parseImm(parts[4], lineNum) & 0x1F;
+                const wid12 = rawWid12 & 0x1F;
+                if (wid12 === 0) {
+                    this.errors.push({ line: lineNum, message: `BFEXT: width must be ≥ 1 (got ${rawWid12})` });
+                } else if (pos12 + wid12 > 32) {
+                    this.errors.push({ line: lineNum, message: `BFEXT: pos+width must be ≤ 32 (pos=${pos12}, width=${wid12}, sum=${pos12 + wid12})` });
+                }
                 imm = (pos12 << 5) | wid12;
                 break;
             }
             case 13: {
                 crDst = this._parseDR(parts[1], lineNum);
                 crSrc = this._parseDR(parts[2], lineNum);
+                const rawWid13 = this._parseImm(parts[4], lineNum);
                 const pos13 = this._parseImm(parts[3], lineNum) & 0x1F;
-                const wid13 = this._parseImm(parts[4], lineNum) & 0x1F;
+                const wid13 = rawWid13 & 0x1F;
+                if (wid13 === 0) {
+                    this.errors.push({ line: lineNum, message: `BFINS: width must be ≥ 1 (got ${rawWid13})` });
+                } else if (pos13 + wid13 > 32) {
+                    this.errors.push({ line: lineNum, message: `BFINS: pos+width must be ≤ 32 (pos=${pos13}, width=${wid13}, sum=${pos13 + wid13})` });
+                }
                 imm = (pos13 << 5) | wid13;
                 break;
             }

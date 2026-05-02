@@ -2078,70 +2078,73 @@ const ChurchSimulator = require('./simulator.js');
     assert('BF8 BFINS partial overwrite: C=0',            simBF8.flags.C === false,     `C=${simBF8.flags.C}`);
 }
 
-// BF9: BFEXT — full-word encoding limit: width=32 encodes as 0 (32 & 0x1F = 0) → BOUNDS fault.
-//   This documents that full-word extraction (32 bits) is not representable in the 5-bit
-//   width field; the assembler silently truncates to 0, and the simulator correctly rejects it.
+// BF9: BFEXT — width=32 truncates to 0 in the 5-bit field → assembler must reject it.
+//   The assembler now catches this at assemble time (width=0 after masking) rather than
+//   letting it silently produce a word that causes a runtime BOUNDS fault.
 {
     const asmBF9 = new ChurchAssembler();
-    const rBF9   = asmBF9.assemble('BFEXT DR1, DR2, 0, 32');
-    assert('BF9 BFEXT DR1, DR2, 0, 32 assembles with no errors',
-        asmBF9.errors.length === 0,
-        asmBF9.errors.map(e => e.message).join('; '));
-
-    const simBF9 = new ChurchSimulator();
-    simBF9.memory[0] = rBF9.words[0] >>> 0;
-    simBF9.dr[2] = 0xFFFFFFFF >>> 0;
-    simBF9.step();
-    assert('BF9 BFEXT w=32 (→ w=0): simulator halts with BOUNDS',
-        simBF9.halted === true,
-        `halted=${simBF9.halted}`);
-    assert('BF9 BFEXT w=32 (→ w=0): faultLog contains BOUNDS',
-        simBF9.faultLog.some(f => f.type === 'BOUNDS'),
-        'faultLog: ' + simBF9.faultLog.map(f => f.type).join(', '));
+    asmBF9.assemble('BFEXT DR1, DR2, 0, 32');
+    assert('BF9 BFEXT DR1, DR2, 0, 32 emits assembler error (width=32 → masked=0)',
+        asmBF9.errors.length > 0,
+        'expected ≥1 error, got 0');
+    assert('BF9 BFEXT w=32 error mentions width',
+        asmBF9.errors.some(e => /width/i.test(e.message)),
+        'errors: ' + asmBF9.errors.map(e => e.message).join('; '));
 }
 
-// BF10: BFINS — BOUNDS fault when width=0 (width=0 is always invalid).
-//   BFINS DR1, DR2, 0, 0 encodes width=0; simulator must halt with a BOUNDS fault.
+// BF10: BFINS — width=0 is always invalid → assembler must reject it.
+//   Previously this silently encoded to width=0 and caused a runtime BOUNDS fault;
+//   the assembler now catches it with an error at assemble time.
 {
     const asmBF10 = new ChurchAssembler();
-    const rBF10   = asmBF10.assemble('BFINS DR1, DR2, 0, 0');
-    assert('BF10 BFINS DR1, DR2, 0, 0 assembles with no errors',
-        asmBF10.errors.length === 0,
-        asmBF10.errors.map(e => e.message).join('; '));
-
-    const simBF10 = new ChurchSimulator();
-    simBF10.memory[0] = rBF10.words[0] >>> 0;
-    simBF10.dr[1] = 0;
-    simBF10.dr[2] = 1;
-    simBF10.step();
-    assert('BF10 BFINS width=0: simulator halts with BOUNDS',
-        simBF10.halted === true,
-        `halted=${simBF10.halted}`);
-    assert('BF10 BFINS width=0: faultLog contains BOUNDS',
-        simBF10.faultLog.some(f => f.type === 'BOUNDS'),
-        'faultLog: ' + simBF10.faultLog.map(f => f.type).join(', '));
+    asmBF10.assemble('BFINS DR1, DR2, 0, 0');
+    assert('BF10 BFINS DR1, DR2, 0, 0 emits assembler error (width=0)',
+        asmBF10.errors.length > 0,
+        'expected ≥1 error, got 0');
+    assert('BF10 BFINS width=0 error mentions width',
+        asmBF10.errors.some(e => /width/i.test(e.message)),
+        'errors: ' + asmBF10.errors.map(e => e.message).join('; '));
 }
 
-// BF11: BFINS — BOUNDS fault when pos+width > 32 (pos=31, w=2 → 31+2=33>32).
-//   Simulator must record a BOUNDS fault and halt.
+// BF11: BFINS — pos+width > 32 (pos=31, w=2 → 33 > 32) → assembler must reject it.
+//   Previously this reached the simulator and caused a runtime BOUNDS fault;
+//   the assembler now catches it with an error at assemble time.
 {
     const asmBF11 = new ChurchAssembler();
-    const rBF11   = asmBF11.assemble('BFINS DR1, DR2, 31, 2');
-    assert('BF11 BFINS DR1, DR2, 31, 2 assembles with no errors',
-        asmBF11.errors.length === 0,
-        asmBF11.errors.map(e => e.message).join('; '));
+    asmBF11.assemble('BFINS DR1, DR2, 31, 2');
+    assert('BF11 BFINS DR1, DR2, 31, 2 emits assembler error (pos+width=33 > 32)',
+        asmBF11.errors.length > 0,
+        'expected ≥1 error, got 0');
+    assert('BF11 BFINS pos+width>32 error mentions pos+width or sum',
+        asmBF11.errors.some(e => /pos\+width|sum/i.test(e.message)),
+        'errors: ' + asmBF11.errors.map(e => e.message).join('; '));
+}
 
-    const simBF11 = new ChurchSimulator();
-    simBF11.memory[0] = rBF11.words[0] >>> 0;
-    simBF11.dr[1] = 0;
-    simBF11.dr[2] = 1;
-    simBF11.step();
-    assert('BF11 BFINS BOUNDS pos+width>32: simulator halts',
-        simBF11.halted === true,
-        `halted=${simBF11.halted}`);
-    assert('BF11 BFINS BOUNDS pos+width>32: faultLog contains BOUNDS',
-        simBF11.faultLog.some(f => f.type === 'BOUNDS'),
-        'faultLog: ' + simBF11.faultLog.map(f => f.type).join(', '));
+// BFE1: BFEXT — width=0 explicit → assembler emits error, not a silent encode.
+//   Distinct from BF9 (which tests the masking edge case): here the programmer
+//   literally writes width=0.
+{
+    const asmBFE1 = new ChurchAssembler();
+    asmBFE1.assemble('BFEXT DR1, DR2, 4, 0');
+    assert('BFE1 BFEXT DR1, DR2, 4, 0 emits assembler error (width=0)',
+        asmBFE1.errors.length > 0,
+        'expected ≥1 error, got 0');
+    assert('BFE1 BFEXT width=0 error mentions BFEXT and width',
+        asmBFE1.errors.some(e => /BFEXT/i.test(e.message) && /width/i.test(e.message)),
+        'errors: ' + asmBFE1.errors.map(e => e.message).join('; '));
+}
+
+// BFE2: BFEXT — pos+width > 32 (pos=31, w=2 → sum=33) → assembler emits error.
+//   Mirror of BF11 but for BFEXT; confirms the check applies to both instructions.
+{
+    const asmBFE2 = new ChurchAssembler();
+    asmBFE2.assemble('BFEXT DR1, DR2, 31, 2');
+    assert('BFE2 BFEXT DR1, DR2, 31, 2 emits assembler error (pos+width=33 > 32)',
+        asmBFE2.errors.length > 0,
+        'expected ≥1 error, got 0');
+    assert('BFE2 BFEXT pos+width>32 error mentions BFEXT and pos+width or sum',
+        asmBFE2.errors.some(e => /BFEXT/i.test(e.message) && /pos\+width|sum/i.test(e.message)),
+        'errors: ' + asmBFE2.errors.map(e => e.message).join('; '));
 }
 
 // ── LTF: led_turing_full snippet regression ───────────────────────────────────
