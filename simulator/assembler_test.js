@@ -1852,6 +1852,122 @@ const ChurchSimulator = require('./simulator.js');
     }
 }
 
+// ── TP: TPERM simulator integration tests (task-873) ─────────────────────────
+// These tests exercise _execTperm directly via step() to verify:
+//   C.1 — reserved presets fault with TPERM_RSV (not silent Z=0)
+//   C.2 — out-of-bounds GT base+size fails the bounds check (Z=0, not Z=1)
+//   Regression — valid preset + in-range GT still passes (Z=1)
+//
+// TPERM instruction word layout: opcode[31:27]=6, crDst[22:19], imm[14:0]
+// GT word layout: permBits[31:25], type[24:23], seq[22:16], index[15:0]
+//   R perm = permBits bit 0; Inform type = 0b01
+
+// GT word for CR0: R permission, Inform type, NS index 0, seq 0
+// GT bits: permBits[31:25]=0b0000001(R), type[24:23]=0b01(Inform), seq[22:16]=0, index[15:0]=0
+const TP_GT_R_IDX0 = ((0b0000001 << 25) | (0b01 << 23) | 0) >>> 0;
+
+// Instruction word format: opcode[31:27], cond[26:23], crDst[22:19], crSrc[18:15], imm[14:0]
+// AL (always-execute) condition = 0xE in bits[26:23]
+
+// TPERM CR0, R  (opcode=6, cond=AL=0xE, crDst=0, imm=1)
+const TP_INSTR_R   = ((6 << 27) | (0xE << 23) | (0 << 19) | 1) >>> 0;
+
+// TPERM CR0, RSV11 (opcode=6, cond=AL=0xE, crDst=0, imm=11)
+const TP_INSTR_RSV = ((6 << 27) | (0xE << 23) | (0 << 19) | 11) >>> 0;
+
+// TP1: Reserved preset (code 11) → hard fault, simulator halts
+{
+    const sim = new ChurchSimulator();
+    sim.memory[0] = TP_INSTR_RSV;
+    sim.cr[0] = { word0: TP_GT_R_IDX0, word1: 0, word2: 0 };
+    sim.step();
+    assert('TP1 reserved preset code 11: simulator halts (fault)', sim.halted === true,
+        `halted=${sim.halted}`);
+    assert('TP1 reserved preset code 11: fault log contains TPERM_RSV',
+        sim.faultLog.some(f => f.type === 'TPERM_RSV'),
+        'faultLog: ' + sim.faultLog.map(f => f.type).join(', '));
+}
+
+// TP2: Valid preset (R) + out-of-bounds GT → bounds check fail → Z=0, N=1, not halted
+{
+    const sim = new ChurchSimulator();
+    sim.memory[0] = TP_INSTR_R;
+    sim.cr[0] = { word0: TP_GT_R_IDX0, word1: 0, word2: 0 };
+    // NS entry 0: location = NS_TABLE_BASE - 1, limit = 2
+    // upperBound = (NS_TABLE_BASE - 1) + 2 = NS_TABLE_BASE + 1 >= NS_TABLE_BASE → fail
+    sim.memory[sim.NS_TABLE_BASE + 0] = sim.NS_TABLE_BASE - 1;
+    sim.memory[sim.NS_TABLE_BASE + 1] = 2;
+    sim.step();
+    assert('TP2 out-of-bounds GT: Z=0', sim.flags.Z === false, `Z=${sim.flags.Z}`);
+    assert('TP2 out-of-bounds GT: N=1', sim.flags.N === true,  `N=${sim.flags.N}`);
+    assert('TP2 out-of-bounds GT: C=0', sim.flags.C === false, `C=${sim.flags.C}`);
+    assert('TP2 out-of-bounds GT: V=0', sim.flags.V === false, `V=${sim.flags.V}`);
+    assert('TP2 out-of-bounds GT: not halted (bounds fail is not a hard fault)',
+        sim.halted === false, `halted=${sim.halted}`);
+}
+
+// TP3: Valid preset (R) + in-range GT → bounds check pass → Z=1 (regression)
+{
+    const sim = new ChurchSimulator();
+    sim.memory[0] = TP_INSTR_R;
+    sim.cr[0] = { word0: TP_GT_R_IDX0, word1: 0, word2: 0 };
+    // NS entry 0: location = 100, limit = 50
+    // sumF64 = 150, well below NS_TABLE_BASE → pass
+    sim.memory[sim.NS_TABLE_BASE + 0] = 100;
+    sim.memory[sim.NS_TABLE_BASE + 1] = 50;
+    sim.step();
+    assert('TP3 in-range GT with R perm: Z=1', sim.flags.Z === true,  `Z=${sim.flags.Z}`);
+    assert('TP3 in-range GT with R perm: N=0', sim.flags.N === false, `N=${sim.flags.N}`);
+    assert('TP3 in-range GT with R perm: not halted', sim.halted === false, `halted=${sim.halted}`);
+}
+
+// TP4: location=0 + large limit → bounds check must still fail (no bypass for base=0)
+{
+    const sim = new ChurchSimulator();
+    sim.memory[0] = TP_INSTR_R;
+    sim.cr[0] = { word0: TP_GT_R_IDX0, word1: 0, word2: 0 };
+    // NS entry 0: location = 0, limit = NS_TABLE_BASE (exceeds allowed region)
+    // sumF64 = 0 + NS_TABLE_BASE = NS_TABLE_BASE >= NS_TABLE_BASE → fail
+    sim.memory[sim.NS_TABLE_BASE + 0] = 0;
+    sim.memory[sim.NS_TABLE_BASE + 1] = sim.NS_TABLE_BASE;  // stored directly in limit17 bits
+    sim.step();
+    assert('TP4 location=0 + over-limit: Z=0', sim.flags.Z === false, `Z=${sim.flags.Z}`);
+    assert('TP4 location=0 + over-limit: N=1', sim.flags.N === true,  `N=${sim.flags.N}`);
+    assert('TP4 location=0 + over-limit: not halted (not a hard fault)',
+        sim.halted === false, `halted=${sim.halted}`);
+}
+
+// TP5: overflow case — large base + large limit wraps 32-bit but overflows detection catches it
+{
+    const sim = new ChurchSimulator();
+    sim.memory[0] = TP_INSTR_R;
+    sim.cr[0] = { word0: TP_GT_R_IDX0, word1: 0, word2: 0 };
+    // NS entry 0: location = 0xFFFF0000 (near top of 32-bit space), limit = 0x1FFFF (max 17-bit)
+    // True sum = 0xFFFF0000 + 0x1FFFF = 0x1000EFFFF > 0xFFFFFFFF → overflow → fail
+    sim.memory[sim.NS_TABLE_BASE + 0] = 0xFFFF0000;
+    sim.memory[sim.NS_TABLE_BASE + 1] = 0x1FFFF;  // max 17-bit limit in bits[16:0]
+    sim.step();
+    assert('TP5 overflow (base+limit > 0xFFFFFFFF): Z=0', sim.flags.Z === false, `Z=${sim.flags.Z}`);
+    assert('TP5 overflow (base+limit > 0xFFFFFFFF): N=1', sim.flags.N === true,  `N=${sim.flags.N}`);
+    assert('TP5 overflow (base+limit > 0xFFFFFFFF): not halted',
+        sim.halted === false, `halted=${sim.halted}`);
+}
+
+// TP6: B-modifier form of reserved preset (imm=0x1B, presetCode=11, B=1) also faults
+{
+    // imm = (B<<4) | presetCode = (1<<4) | 11 = 0x1B
+    const TP_INSTR_RSV_B = ((6 << 27) | (0xE << 23) | (0 << 19) | 0x1B) >>> 0;
+    const sim = new ChurchSimulator();
+    sim.memory[0] = TP_INSTR_RSV_B;
+    sim.cr[0] = { word0: TP_GT_R_IDX0, word1: 0, word2: 0 };
+    sim.step();
+    assert('TP6 B-modifier reserved preset (0x1B): simulator halts (fault)',
+        sim.halted === true, `halted=${sim.halted}`);
+    assert('TP6 B-modifier reserved preset (0x1B): fault log contains TPERM_RSV',
+        sim.faultLog.some(f => f.type === 'TPERM_RSV'),
+        'faultLog: ' + sim.faultLog.map(f => f.type).join(', '));
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);

@@ -139,7 +139,7 @@ class ChurchSimulator {
         // TPERM preset → required-permission array.
         // Exposed as an instance property so tests can inject non-standard
         // presets to exercise the X⊕LSE domain-purity fault path.
-        // Null entries are "reserved" presets that set Z=0 and do not modify the cap.
+        // Null entries (codes 11–15) are reserved presets — _execTperm faults TPERM_RSV.
         this.tpermPresetMasks = [
             [],                ['R'],           ['R','W'],       ['X'],
             ['R','X'],         ['R','W','X'],   ['L'],           ['S'],
@@ -3856,14 +3856,8 @@ class ChurchSimulator {
         const presetMasks = this.tpermPresetMasks;
 
         if (presetMasks[presetCode] === null) {
-            this.flags.Z = false;
-            this.flags.N = true;
-            this.flags.C = false;
-            this.flags.V = false;
-            const desc = `TPERM CR${d.crDst}, RSV${presetCode} [reserved, ignored] — Z=0`;
-            this.output += desc + '\n';
-            this.pc++;
-            return { pc: this.pc - 1, instr: d, desc };
+            this.fault('TPERM_RSV', `TPERM CR${d.crDst}: reserved preset code ${presetCode} — hardware fault`);
+            return null;
         }
 
         if (gt === 0) {
@@ -3879,6 +3873,33 @@ class ChurchSimulator {
 
         const parsed = this.parseGT(gt);
         const required = presetMasks[presetCode];
+
+        // GT bounds check (C.2): verify base + size fits inside the permitted
+        // memory region (below the NS table).  Hardware rejects the GT when the
+        // span [word0_location .. word0_location + limit] overlaps the NS table.
+        // This is a flag-setting failure, not a hard fault.
+        // Uses JS float64 arithmetic (no >>> 0) to detect 32-bit overflow:
+        // if location + limitOffset > 0xFFFFFFFF the true sum still fits in
+        // float64, so we can compare it against NS_TABLE_BASE without wrapping.
+        if (parsed.index < this.MAX_NS_ENTRIES) {
+            const nsEntryBase = this.NS_TABLE_BASE + parsed.index * this.NS_ENTRY_WORDS;
+            const location    = (this.memory[nsEntryBase]     >>> 0);  // word0: base (words)
+            const limitWord   = (this.memory[nsEntryBase + 1] >>> 0);  // word1: packed
+            const limitOffset = this.parseNSWord1(limitWord).limit;    // bits[16:0]
+            // Check unconditionally — location=0 is a valid base address.
+            // sumF64 is computed in float64 so 32-bit overflow is detectable.
+            const sumF64 = location + limitOffset;
+            if (sumF64 >= this.NS_TABLE_BASE || sumF64 > 0xFFFFFFFF) {
+                this.flags.Z = false;
+                this.flags.N = true;
+                this.flags.C = false;
+                this.flags.V = false;
+                const desc = `TPERM CR${d.crDst}: GT bounds fail (${location}+${limitOffset}=${sumF64} >= NS=${this.NS_TABLE_BASE}) — Z=0`;
+                this.output += desc + '\n';
+                this.pc++;
+                return { pc: this.pc - 1, instr: d, desc };
+            }
+        }
 
         // X⊕LSE domain-purity check on the TPERM result permissions.
         // Mirrors hardware tperm.py: result_perms = new_perms & target_gt.perms

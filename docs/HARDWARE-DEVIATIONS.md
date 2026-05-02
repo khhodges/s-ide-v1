@@ -46,13 +46,17 @@ Authoritative sources: `hardware/hw_types.py`, `hardware/layouts.py`, `hardware/
 - **Affected files**: `boot_rom.py`, `instruction-set.md`, `isa_encoding.md`
 - **Pending task**: Task #8 (RETURN MASK)
 
-### D-3: TPERM Faulting Model
+### D-3: TPERM Faulting Model — PARTIALLY CLOSED (Task #873)
 
-- **Hardware**: `tperm.py` lines 78–84 — reserved presets (codes 10–15) fault with `TPERM_RSV`; non-monotonic restriction faults with `DOMAIN_PURITY`. `core.py` lines 1168–1169 propagate these as hard faults. The documented health-check mode (Mode 1: flag-setting with bounds check, no fault) does not appear in hardware.
+- **Hardware**: `tperm.py` lines 78–84 — reserved presets (codes 11–15; note code 10 = 'W' is valid) fault with `TPERM_RSV`; non-monotonic restriction faults with `DOMAIN_PURITY`. `core.py` lines 1168–1169 propagate these as hard faults. The documented health-check mode (Mode 1: flag-setting with bounds check, no fault) does not appear in hardware.
 - **Docs**: `instruction-set.md` line 237 says reserved presets produce "Z=0, no fault." Line 160 says "TPERM never faults."
-- **Decision**: (a) Should hardware fault or set Z=0 on reserved presets? (b) Is health-check mode (Mode 1) planned for hardware? (c) Should docs match hardware faulting behavior?
-- **Affected files**: `instruction-set.md`, `church-instructions.md`
-- **Pending task**: None currently tracked — architect to decide and assign
+- **Simulator fix (Task #873)**: Two gaps closed in `simulator/simulator.js` `_execTperm`:
+  - **(C.1) Reserved-preset gap CLOSED**: Simulator now calls `this.fault('TPERM_RSV', …)` for preset codes 11–15 (and their B-modifier variants 0x1B–0x1F). Previously returned silent Z=0. Simulator now matches hardware behaviour.
+  - **(C.2) GT bounds check ADDED**: After confirming the GT is non-NULL and the preset is valid, the simulator reads the NS entry for the GT's index and verifies `word0_location + limit < NS_TABLE_BASE`. On failure, sets Z=0, N=1, C=0, V=0 (flag-setting, not a hard fault) — matching hardware.
+- **Remaining open sub-issues**:
+  - (a) `instruction-set.md` and `church-instructions.md` still say reserved presets produce "Z=0, no fault" — docs need updating to match hardware + simulator.
+  - (b) Health-check mode (Mode 1) is not in hardware; planning decision still pending.
+- **Affected files**: `simulator/simulator.js` (fixed), `instruction-set.md`, `church-instructions.md` (docs still need update)
 
 ### D-4: CR Register Remap (Dual Names)
 
