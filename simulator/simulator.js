@@ -3850,6 +3850,77 @@ class ChurchSimulator {
     }
 
     _execTperm(d) {
+        // Mode 2: capability attenuation — imm15 = 0x7FFF (all 15 bits set).
+        // Reads the source GT from CRd, reads the requested permission subset from CRs,
+        // validates that requested ⊆ source (no expansion), then writes the attenuated
+        // GT (source NS metadata + requested permissions) back to CRd.
+        // Flags: Z=1 on success, Z=0 on failure (NULL source or expansion attempt); N=!Z, C=0, V=0.
+        if (d.imm === 0x7FFF) {
+            const srcGT = this.cr[d.crDst].word0;
+
+            // NULL source GT → Z=0, N=1, no fault
+            if (srcGT === 0) {
+                this.flags.Z = false;
+                this.flags.N = true;
+                this.flags.C = false;
+                this.flags.V = false;
+                const desc = `TPERM CR${d.crDst}, ATTENUATE [MODE2] NULL source GT — Z=0`;
+                this.output += desc + '\n';
+                this.pc++;
+                return { pc: this.pc - 1, instr: d, desc };
+            }
+
+            const srcParsed = this.parseGT(srcGT);
+            const reqGT     = this.cr[d.crSrc].word0;
+            const reqParsed = this.parseGT(reqGT);
+            const srcPerms  = srcParsed.permissions;
+            const reqPerms  = reqParsed.permissions;
+
+            // Validate: every requested permission must already be held by the source GT.
+            // If any requested bit is absent from the source, it is an expansion attempt → Z=0.
+            const PERM_KEYS = ['R', 'W', 'X', 'L', 'S', 'E'];
+            let isExpansion = false;
+            for (const p of PERM_KEYS) {
+                if (reqPerms[p] && !srcPerms[p]) {
+                    isExpansion = true;
+                    break;
+                }
+            }
+
+            const srcPermStr = PERM_KEYS.filter(p => srcPerms[p]).join('') || 'CLEAR';
+            const reqPermStr = PERM_KEYS.filter(p => reqPerms[p]).join('') || 'CLEAR';
+
+            if (isExpansion) {
+                this.flags.Z = false;
+                this.flags.N = true;
+                this.flags.C = false;
+                this.flags.V = false;
+                const desc = `TPERM CR${d.crDst}, ATTENUATE [MODE2] expansion {${reqPermStr}} ⊄ {${srcPermStr}} — Z=0`;
+                this.output += desc + '\n';
+                this.pc++;
+                return { pc: this.pc - 1, instr: d, desc };
+            }
+
+            // Build attenuated GT: source NS metadata (index, version, type) + requested permissions.
+            // The B (Busy) bit is object-lock metadata, not a grantable permission — inherit it
+            // from the source GT so the lock state of the object is preserved accurately.
+            const newPerms = { R: reqPerms.R, W: reqPerms.W, X: reqPerms.X,
+                               L: reqPerms.L, S: reqPerms.S, E: reqPerms.E,
+                               B: srcPerms.B };
+            const newGT = this.createGT(srcParsed.gt_seq, srcParsed.index, newPerms, srcParsed.type);
+            this.cr[d.crDst].word0 = newGT;
+
+            this.flags.Z = true;
+            this.flags.N = false;
+            this.flags.C = false;
+            this.flags.V = false;
+
+            const desc = `TPERM CR${d.crDst}, ATTENUATE [MODE2] {${srcPermStr}} → {${reqPermStr}} — Z=1`;
+            this.output += desc + '\n';
+            this.pc++;
+            return { pc: this.pc - 1, instr: d, desc };
+        }
+
         const gt = this.cr[d.crDst].word0;
         const bSet = (d.imm >>> 4) & 1;
         const presetCode = d.imm & 0xF;

@@ -2121,6 +2121,116 @@ const TP_INSTR_RSV = ((6 << 27) | (0xE << 23) | (0 << 19) | 11) >>> 0;
         'faultLog: ' + sim.faultLog.map(f => f.type).join(', '));
 }
 
+// ── SM: TPERM Mode 2 (capability attenuation) simulator tests (task-874) ──────
+// These tests exercise _execTperm Mode 2 (imm=0x7FFF) via step() directly.
+//
+// Instruction encoding: opcode[31:27]=6, cond[26:23]=0xE (AL), crDst[22:19], crSrc[18:15], imm[14:0]=0x7FFF
+// CRd (crDst=0, CR0) holds the source GT (the authority being attenuated).
+// CRs (crSrc=1, CR1) holds the requested permission template GT.
+//
+// GT word layout (bits): B[31] E[30] S[29] L[28] X[27] W[26] R[25] type[24:23] seq[22:16] index[15:0]
+// Inform type = 0b01 (bit 23 set).
+
+// TPERM CR0, CR1, 0x7FFF  (Mode 2 attenuation — imm=0x7FFF, crDst=0, crSrc=1)
+// opcode=6, cond=AL=0xE, crDst=0, crSrc=1, imm=0x7FFF
+const SM_MODE2_INSTR = ((6 << 27) | (0xE << 23) | (0 << 19) | (1 << 15) | 0x7FFF) >>> 0;
+
+// GT with R,W,E permissions, Inform type, NS index 0, seq 0
+// permBits: R=bit0=1, W=bit1=1, E=bit5=1 → 0b100011=0x23; shifted to [31:25]: 0x23<<25=0x46000000
+// Inform type: bit23=1 → 0x00800000
+const SM_GT_RWE = ((0x23 << 25) | (0x01 << 23)) >>> 0;
+
+// GT with R,E permissions (subset of RWE), Inform type, NS index 1, seq 0
+// permBits: R=1, E=1 → 0b100001=0x21; 0x21<<25=0x42000000; index=1
+const SM_GT_RE_IDX1 = ((0x21 << 25) | (0x01 << 23) | 1) >>> 0;
+
+// GT with R,W permissions, Inform type, NS index 0, seq 0
+// permBits: R=1, W=1 → 0b000011=0x03; 0x03<<25=0x06000000
+const SM_GT_RW = ((0x03 << 25) | (0x01 << 23)) >>> 0;
+
+// GT with R,W,X permissions (expansion beyond RW), Inform type, NS index 1, seq 0
+// permBits: R=1, W=1, X=1 → 0b000111=0x07; 0x07<<25=0x0E000000; index=1
+const SM_GT_RWX_IDX1 = ((0x07 << 25) | (0x01 << 23) | 1) >>> 0;
+
+// GT with R,W,E permissions, Inform type, NS index 1, seq 0 (for identity test crSrc)
+const SM_GT_RWE_IDX1 = ((0x23 << 25) | (0x01 << 23) | 1) >>> 0;
+
+// SM1: Valid attenuation (strict subset) — CRd={R,W,E}, CRs={R,E} → Z=1, attenuated GT written
+{
+    const sim = new ChurchSimulator();
+    sim.memory[0] = SM_MODE2_INSTR;
+    sim.cr[0] = { word0: SM_GT_RWE, word1: 0, word2: 0 };       // source: R,W,E
+    sim.cr[1] = { word0: SM_GT_RE_IDX1, word1: 0, word2: 0 };   // requested: R,E (subset)
+    sim.step();
+    assert('SM1 valid attenuation: Z=1', sim.flags.Z === true,  `Z=${sim.flags.Z}`);
+    assert('SM1 valid attenuation: N=0', sim.flags.N === false, `N=${sim.flags.N}`);
+    assert('SM1 valid attenuation: C=0', sim.flags.C === false, `C=${sim.flags.C}`);
+    assert('SM1 valid attenuation: V=0', sim.flags.V === false, `V=${sim.flags.V}`);
+    assert('SM1 valid attenuation: not halted', sim.halted === false, `halted=${sim.halted}`);
+    // CR0 should now hold a GT with R,E permissions and the source's NS index (0), not index 1
+    const sim1 = new ChurchSimulator();
+    const newGTParsed = sim1.parseGT(sim.cr[0].word0);
+    assert('SM1 attenuated GT: R=1', newGTParsed.permissions.R === 1, `R=${newGTParsed.permissions.R}`);
+    assert('SM1 attenuated GT: W=0', newGTParsed.permissions.W === 0, `W=${newGTParsed.permissions.W}`);
+    assert('SM1 attenuated GT: E=1', newGTParsed.permissions.E === 1, `E=${newGTParsed.permissions.E}`);
+    assert('SM1 attenuated GT: NS index preserved (0)', newGTParsed.index === 0, `index=${newGTParsed.index}`);
+}
+
+// SM2: Expansion attempt fails — CRd={R,W}, CRs={R,W,X} (X not in source) → Z=0, not halted
+{
+    const sim = new ChurchSimulator();
+    sim.memory[0] = SM_MODE2_INSTR;
+    const srcWordBefore = SM_GT_RW;
+    sim.cr[0] = { word0: srcWordBefore, word1: 0, word2: 0 };    // source: R,W
+    sim.cr[1] = { word0: SM_GT_RWX_IDX1, word1: 0, word2: 0 };  // requested: R,W,X (X is expansion)
+    sim.step();
+    assert('SM2 expansion attempt: Z=0', sim.flags.Z === false, `Z=${sim.flags.Z}`);
+    assert('SM2 expansion attempt: N=1', sim.flags.N === true,  `N=${sim.flags.N}`);
+    assert('SM2 expansion attempt: C=0', sim.flags.C === false, `C=${sim.flags.C}`);
+    assert('SM2 expansion attempt: V=0', sim.flags.V === false, `V=${sim.flags.V}`);
+    assert('SM2 expansion attempt: not halted (soft failure, not hard fault)',
+        sim.halted === false, `halted=${sim.halted}`);
+    assert('SM2 expansion attempt: CR0 word0 unchanged',
+        sim.cr[0].word0 === srcWordBefore,
+        `CR0.word0=0x${(sim.cr[0].word0>>>0).toString(16)} expected=0x${(srcWordBefore>>>0).toString(16)}`);
+}
+
+// SM3: Identity attenuation (same permissions) — CRd={R,W,E}, CRs={R,W,E} → Z=1 (identity is valid)
+{
+    const sim = new ChurchSimulator();
+    sim.memory[0] = SM_MODE2_INSTR;
+    sim.cr[0] = { word0: SM_GT_RWE, word1: 0, word2: 0 };       // source: R,W,E (NS index 0)
+    sim.cr[1] = { word0: SM_GT_RWE_IDX1, word1: 0, word2: 0 };  // requested: R,W,E (same perms, NS index 1)
+    sim.step();
+    assert('SM3 identity attenuation: Z=1', sim.flags.Z === true,  `Z=${sim.flags.Z}`);
+    assert('SM3 identity attenuation: N=0', sim.flags.N === false, `N=${sim.flags.N}`);
+    assert('SM3 identity attenuation: C=0', sim.flags.C === false, `C=${sim.flags.C}`);
+    assert('SM3 identity attenuation: V=0', sim.flags.V === false, `V=${sim.flags.V}`);
+    assert('SM3 identity attenuation: not halted', sim.halted === false, `halted=${sim.halted}`);
+    // Result GT should have source's NS index (0), not CRs's index (1)
+    const sim3 = new ChurchSimulator();
+    const newGT3 = sim3.parseGT(sim.cr[0].word0);
+    assert('SM3 identity: NS index preserved from source (0)', newGT3.index === 0, `index=${newGT3.index}`);
+    assert('SM3 identity: R=1', newGT3.permissions.R === 1, `R=${newGT3.permissions.R}`);
+    assert('SM3 identity: W=1', newGT3.permissions.W === 1, `W=${newGT3.permissions.W}`);
+    assert('SM3 identity: E=1', newGT3.permissions.E === 1, `E=${newGT3.permissions.E}`);
+}
+
+// SM4: NULL source GT — CRd=NULL (word0=0) → Z=0, N=1, not halted
+{
+    const sim = new ChurchSimulator();
+    sim.memory[0] = SM_MODE2_INSTR;
+    sim.cr[0] = { word0: 0, word1: 0, word2: 0 };               // source: NULL GT
+    sim.cr[1] = { word0: SM_GT_RE_IDX1, word1: 0, word2: 0 };   // requested: R,E (irrelevant)
+    sim.step();
+    assert('SM4 NULL source GT: Z=0', sim.flags.Z === false, `Z=${sim.flags.Z}`);
+    assert('SM4 NULL source GT: N=1', sim.flags.N === true,  `N=${sim.flags.N}`);
+    assert('SM4 NULL source GT: C=0', sim.flags.C === false, `C=${sim.flags.C}`);
+    assert('SM4 NULL source GT: V=0', sim.flags.V === false, `V=${sim.flags.V}`);
+    assert('SM4 NULL source GT: not halted (null is soft failure)',
+        sim.halted === false, `halted=${sim.halted}`);
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);

@@ -472,6 +472,67 @@ Flag-writing summary across all 20 instructions:
 
 ---
 
+### A.17 — TPERM Mode 2: capability attenuation (`imm15 = 0x7FFF`)
+
+> **A.17 — `TPERM CRd, CRs, 0x7FFF` attenuates CRd's GT to the permission subset held in CRs.**
+>
+> When `imm15 = 0x7FFF` (all 15 immediate bits set), TPERM enters **Mode 2
+> (attenuation)** instead of the normal preset-test path. The two-register form
+> uses:
+>
+> | Field  | Role |
+> |--------|------|
+> | `CRd`  | Source GT — the full-authority capability being attenuated (read and written) |
+> | `CRs`  | Permission template — GT whose permission bits specify the desired narrower set |
+>
+> **Semantics:**
+>
+> 1. If `CRd.word0 = 0` (NULL source GT): Z = 0, N = 1, C = 0, V = 0. Return. No fault.
+> 2. Parse permission bits from `CRd` (source) and `CRs` (requested subset).
+> 3. **Subset validation:** for every permission bit set in `CRs`, verify the same
+>    bit is also set in `CRd`. If any bit in `CRs` is absent from `CRd`, the caller
+>    is attempting to *expand* authority beyond what they hold — Z = 0, N = 1,
+>    C = 0, V = 0. `CRd` is **not** modified. Return. No hard fault.
+> 4. **Construct attenuated GT:** copy `CRd`'s NS index, version (`gt_seq`), and
+>    GT type; replace the permission bits with those from `CRs`.
+> 5. Write the attenuated GT to `CRd`.
+> 6. Z = 1, N = 0, C = 0, V = 0.
+>
+> **Encoding:**
+> ```
+> TPERM CRd, CRs, 0x7FFF
+>   imm15[14:0] = 0x7FFF  (sentinel — all bits set)
+>   fld_a       = CRd index
+>   fld_b       = CRs index
+> ```
+>
+> **Identity attenuation** (`CRs` has the same permissions as `CRd`) is valid and
+> succeeds (Z = 1). The result is a logically equivalent GT written to `CRd`
+> (same permissions and NS metadata).
+>
+> **NULL `CRs`** (template GT word = 0) requests zero permissions (CLEAR). This is
+> a valid strict subset of any non-NULL source: Z = 1, and `CRd` receives a
+> zero-permission GT with the source's NS metadata.
+>
+> **B-modifier and domain-purity checks** do not apply to Mode 2. Those checks
+> (A.9, A.11) are in the normal preset path (Mode 1) which is bypassed when
+> `imm15 = 0x7FFF`.
+>
+> **Flag invariant:** N = !Z, C = 0, V = 0 always (same as Mode 1 — see A.10).
+>
+> **Use case — handing a restricted capability to untrusted code:**
+> ```
+> ; CR0 holds an R,W,E GT for a shared buffer.
+> ; We want to hand CR1 an R-only copy so the callee cannot write.
+> LOAD  CR1, CR0          ; CR1 = copy of source GT (same perms — temporary)
+> ; ... set up a template GT with only R in CR1 (e.g. by constructing from scratch)
+> TPERM CR0, CR1, 0x7FFF ; attenuation: CR0 gets R-only, source NS metadata
+> BRANCH NE, fault        ; Z=0 → expansion attempted (should not happen here)
+> CALL  CR0               ; call callee with attenuated R-only token
+> ```
+
+---
+
 ## 7. Instruction Reference — All 20 Opcodes
 
 > **Encoding note**: The 32-bit word layout used throughout this section is:
@@ -772,6 +833,9 @@ TPERM AL, CR2, R         ; preset R = 0x01
                           ; opcode=6, cond=14, fld_a=2, fld_b=0, imm=1
                           ; encoding: 0x37100001
 ```
+
+**Mode 2 (attenuation sentinel):** `imm15 = 0x7FFF` triggers permission
+attenuation rather than a preset test — see A.17 in §6.
 
 ---
 
@@ -1323,3 +1387,5 @@ The following open questions affect instruction behaviour but are not yet decide
 | E-2 | RETURN | Is bit 6 of the mask reserved (CR6 always restored from frame)? | Assembler: no restriction. Hardware: CR6 is always re-derived by cload; mask bit 6 would be a no-op or clash. Decision pending. |
 | E-3 | DREAD CR14 | Is X-in-place-of-R the only special case, or does a broader X→R substitution apply? | Simulator: CR14-specific only (`d.crSrc === 14`). Hardware: enforced by code-fence permission check. |
 | E-4 | CHANGE | Assembler restricts both operands to CR12. Is this an architectural rule or only a toolchain convention? | Assembler restriction (assembler.js case 4). Hardware `change.py` is broader (any CR12–CR15 destination). Decision: document as assembler convention, not ISA restriction. |
+
+**Deviation flags:** SWITCH (D-11), SHR/SHL carry+ASR (D-12, closed). TPERM reserved-preset fault (C.1, Task #873). TPERM Mode 2 (C.3, Task #874, closed).
