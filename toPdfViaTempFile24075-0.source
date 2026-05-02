@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Kenneth J Hamer-Hodges" />
+  <title>SWITCH Lifecycle &amp; PassKey Install — Release 1</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="/home/runner/workspace/release/r1/ctmm-pdf.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">SWITCH Lifecycle & PassKey Install — Release 1</h1>
+<p class="subtitle">Church-Turing Meta-Machine</p>
+<p class="author">Kenneth J Hamer-Hodges</p>
+<p class="date">May 2026</p>
+</header>
+<h1 id="switch-instruction-full-lifecycle-and-chain-of-trust">SWITCH
+Instruction — Full Lifecycle and Chain of Trust</h1>
+<p><strong>v1.0 — 2026-05-02</strong> <strong>CONFIDENTIAL</strong></p>
+<hr />
+<h2 id="overview">Overview</h2>
+<p>SWITCH is the only instruction in the Church Machine that can write
+to the system-wide privileged capability registers CR13 (interrupt
+handler) and CR15 (namespace root). Understanding it fully requires
+tracing three phases: the one-time namespace birth that creates the root
+of trust, the boot sequence that loads the initial namespace, and the
+runtime PassKey ceremony that authorises any subsequent privileged
+register replacement.</p>
+<p>The hardware FSM checks (type, sentinel, target) are necessary but
+not sufficient for security. The full guarantee depends on the chain of
+trust established in software upstream of the instruction.</p>
+<hr />
+<h2 id="phase-0-namespace-birth">Phase 0 — Namespace Birth</h2>
+<p><em>Occurs once, at manufacture or first system configuration. Never
+repeated for the same namespace instance.</em></p>
+<pre><code>Hardware RNG
+     │
+     │  128-bit secret — known to nobody yet
+     ▼
+Mint.Encode(
+    type    = Abstract,
+    ab_data = secret,
+    perms   = {} (none)
+)
+     │
+     │  produces NS_IDENTITY_GT (32-bit Abstract GT, no NS entry)
+     ▼
+     ├──► Stored in Mint&#39;s private c-list
+     │    (Mint&#39;s root of trust — never shared further)
+     │
+     └──► Returned to the namespace creator
+          (kept as the &quot;owner credential&quot;)</code></pre>
+<p>After this phase exactly two parties hold the NS Identity:
+<strong>Mint</strong> and the <strong>original namespace owner</strong>.
+No other code path can produce it or derive it.</p>
+<p>This is the “lead into gold” step. The random number is inert data —
+lead. Running it through Mint produces an unforgeable Abstract GT — gold
+— that the hardware will accept as proof of identity.</p>
+<hr />
+<h2 id="phase-1-boot-every-power-on">Phase 1 — Boot (every
+power-on)</h2>
+<p><em>The boot ROM runs with M-elevation permanently asserted,
+bypassing the L-permission check inside mLoad. NS integrity32 is still
+verified.</em></p>
+<pre><code>Power-on / Reset
+     │
+     ▼
+B:00  FAULT_RST   clear all CRs, DRs, M-elevation ON, LEDs = 0b000001
+     │
+     ▼
+B:01  LOAD_NS     mLoad( NS[0] = Boot.NS ) → CR15
+                  ↑ M-elevation bypasses L-perm; integrity32 still checked
+                  ↑ CR15 goes from NULL → namespace root
+     │
+     ▼
+B:02  INIT_THRD   mLoad( NS[1] = Boot.Thread ) → CR12
+     │
+     ▼
+B:03  INIT_ABSTR  mLoad( NS[3] = Boot.Abstr ) → CR6
+     │
+     ▼
+B:04  LOAD_NUC    CR14 ← Boot.Abstr code region
+     │
+     ▼
+Boot.Abstr executes
+     │
+     └──► calls Startup.Config.Execute()
+               └──► calls configured main abstraction (NS[entry_slot])</code></pre>
+<p><strong>After boot:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Register</th>
+<th>Contents</th>
+<th>Scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CR12</td>
+<td>Thread Stack GT</td>
+<td>System-wide; unchanged by CHANGE</td>
+</tr>
+<tr>
+<td>CR13</td>
+<td>NULL or boot default</td>
+<td>System-wide; unchanged by CHANGE</td>
+</tr>
+<tr>
+<td>CR14</td>
+<td>Boot.Abstr code GT</td>
+<td>Per-thread; re-derived on every CALL</td>
+</tr>
+<tr>
+<td>CR15</td>
+<td>Boot.NS root GT</td>
+<td>System-wide; unchanged by CHANGE</td>
+</tr>
+</tbody>
+</table>
+<p>SWITCH is <strong>not</strong> used during normal boot. The boot
+ROM’s M-elevation is the bootstrap mechanism. SWITCH is only needed to
+<em>replace</em> CR13 or CR15 while the machine is already running.</p>
+<hr />
+<h2 id="phase-2-passkey-issuance-runtime">Phase 2 — PassKey Issuance
+(runtime)</h2>
+<p><em>Required before any SWITCH can execute. The caller must prove
+namespace ownership to Mint before Mint will produce a PassKey.</em></p>
+<pre><code>Caller holds:
+  • NS_IDENTITY_GT  (proof of namespace ownership — from Phase 0)
+  • new capability they want installed in CR15 (or CR13)
+          │
+          ▼
+Caller → Mint.IssuePassKey( NS_IDENTITY_GT, target = CR15 )
+          │
+          ▼
+     ┌────────────────────────────────────────────┐
+     │  Does NS_IDENTITY_GT match the copy        │
+     │  stored in Mint&#39;s private c-list?          │
+     └────────────────────────────────────────────┘
+          │                    │
+        MATCH              NO MATCH
+          │                    │
+          ▼                    ▼
+   Mint.Encode(           REFUSE — fault
+     type    = Abstract,
+     ab_data = &lt;internal key&gt;,
+     word1_location = 0xFFFFFFFF   ← sentinel for CR15
+   )                              (0xFFFFFFFE for CR13)
+          │
+          ▼
+   PassKey Abstract GT (32-bit word)
+   + sentinel baked into word1_location by Mint
+          │
+          ▼
+   Mint.Transfer( PassKey → caller&#39;s CR, e.g. CR0 )
+   B=0: the PassKey cannot be copied further by user code (mSave faults)</code></pre>
+<p>The sentinel values (<code>0xFFFFFFFF</code> for CR15,
+<code>0xFFFFFFFE</code> for CR13) sit at the top of the hardware I/O
+address range — addresses no live lump base can ever occupy — so there
+is no ambiguity with a real memory capability.</p>
+<hr />
+<h2 id="phase-3-the-switch-instruction-executes">Phase 3 — The SWITCH
+Instruction Executes</h2>
+<p><em>Hardware FSM in <code>hardware/switch.py</code>. Five sequential
+checks before mLoad.</em></p>
+<pre><code>SWITCH CR0, #7       (CR0 holds PassKey; #7 = Tgt field for CR15)
+
+  dest_cr = CR8 + Tgt = CR8 + 7 = CR15
+
+  ① CHECK_TARGET
+       Tgt ∈ {5, 7}?   (5 → CR13,  7 → CR15)
+       NO  → INVALID_OP fault
+       YES → ②
+
+  ② CHECK_SRC
+       source CR index in range 0–7?
+       NO  → INVALID_OP fault
+       YES → ③
+
+  ③ READ_SRC
+       latch full contents of CR0 (the PassKey capability)
+       ↓
+
+  ④ CHECK_PASSKEY_TYPE
+       CR0.word0_gt.gt_type == 0b11 (Abstract)?
+       NO  → INVALID_OP  (Inform, Outform, NULL all rejected)
+       YES → ⑤
+
+  ⑤ CHECK_PASSKEY_SENTINEL
+       CR0.word1_location == 0xFFFFFFFF  (sentinel for CR15)?
+       NO  → INVALID_OP  (wrong target — e.g. a CR13 PassKey cannot SWITCH CR15)
+       YES → ⑥
+
+  ⑥ ChurchMLoad( src=CR0, dst=CR15, m_elevated=1 )
+       – L-permission check bypassed (m_elevated)
+       – bounds check on PassKey&#39;s c-list limit
+       – NS entry integrity32 verified
+       – gt_seq revocation check
+       – g-bit reset
+       – CR15 ← new capability
+       – thread table shadow updated
+
+     SUCCESS:  CR15 now holds the new namespace root capability
+               CR0 is UNCHANGED — one-way install, not a swap
+
+     FAULT:    any mLoad validation failure propagates normally</code></pre>
+<hr />
+<h2 id="the-complete-chain-of-trust">The Complete Chain of Trust</h2>
+<pre><code>Phase 0: Random Number
+     │
+     └──► NS_IDENTITY_GT ─────────────────────────────► Mint (private copy)
+                │                                              │
+                │  owner presents at request time              │
+                └──────────────────────────────────────────────┘
+                                                               │
+                                                  Mint verifies identity
+                                                               │
+                                                               ▼
+                                                 PassKey Abstract GT issued
+                                                 (sentinel set by Mint)
+                                                               │
+                                                  Mint.Transfer → caller&#39;s CR
+                                                               │
+                                                               ▼
+                                                  SWITCH CRn, #target
+                                                               │
+                                              ① target valid (5 or 7)?
+                                              ② source in range (0–7)?
+                                              ③ source is Abstract GT?
+                                              ④ sentinel matches target?
+                                              ⑤ mLoad validates NS entry
+                                                               │
+                                                               ▼
+                                                 CR13 or CR15 updated
+                                                 (system-wide, immediate)</code></pre>
+<hr />
+<h2 id="five-guarantees-this-chain-provides">Five Guarantees This Chain
+Provides</h2>
+<table>
+<colgroup>
+<col style="width: 45%" />
+<col style="width: 54%" />
+</colgroup>
+<thead>
+<tr>
+<th>Guarantee</th>
+<th>Enforced by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Only the namespace owner can trigger a SWITCH</td>
+<td>Mint refuses PassKey without NS_IDENTITY_GT</td>
+</tr>
+<tr>
+<td>A PassKey for CR13 cannot install into CR15</td>
+<td>Sentinel check in hardware FSM (⑤)</td>
+</tr>
+<tr>
+<td>Any ordinary capability (Inform/Outform) cannot be SWITCHed</td>
+<td>Abstract GT type check in hardware FSM (④)</td>
+</tr>
+<tr>
+<td>The capability being installed is authentic and unrevoked</td>
+<td>mLoad NSGate: integrity32 + gt_seq check (⑥)</td>
+</tr>
+<tr>
+<td>The old CR15/CR13 value is not secretly moved anywhere</td>
+<td>One-way install — source CR unchanged, no swap</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="what-the-hardware-alone-cannot-enforce">What the Hardware Alone
+Cannot Enforce</h2>
+<p>The three hardware FSM checks (Abstract type, sentinel, target
+validity) are necessary conditions, not sufficient ones. They verify the
+<em>form</em> of the PassKey but know nothing about whether Mint
+verified the NS Identity before issuing it. That verification is a
+software-level protocol and depends on:</p>
+<ol type="1">
+<li><strong>Mint’s private c-list</strong> being unreadable by any
+user-level code</li>
+<li><strong>NS_IDENTITY_GT</strong> never being placed in a bindable
+(B=1) c-list slot, preventing propagation beyond the initial two
+holders</li>
+<li><strong>Mint refusing</strong> all PassKey requests that do not
+present the matching NS_IDENTITY_GT</li>
+</ol>
+<p>If any of these three software conditions fail, the hardware checks
+are insufficient — a forged PassKey could reach SWITCH. The hardware is
+the last line of defence, not the only one.</p>
+<hr />
+<h2 id="simulator-status-d-11-closed-task-880">Simulator Status (D-11 —
+CLOSED, Task #880)</h2>
+<p>The simulator <code>_execSwitch</code> was rewritten in May 2026
+(Task #880) to match hardware exactly. The old atomic CR swap is gone.
+The new implementation enforces all three hardware checks in the same
+order as <code>hardware/switch.py</code>:</p>
+<ol type="1">
+<li><strong>Target validity</strong> — <code>imm &amp; 0x7</code> must
+be 5 (→CR13) or 7 (→CR15); else <code>FAULT(INVALID_OP)</code></li>
+<li><strong>PassKey type</strong> — source must be Abstract GT (type 3);
+NULL and non-Abstract → <code>FAULT(INVALID_OP)</code></li>
+<li><strong>Sentinel check</strong> — <code>source.word1</code> must be
+<code>0xFFFFFFFE</code> (CR13) or <code>0xFFFFFFFF</code> (CR15); else
+<code>FAULT(INVALID_OP)</code></li>
+</ol>
+<p>One-way install: <code>this.cr[destCR] = { ...srcCR }</code>. Source
+CR unchanged.</p>
+<p>The assembler also now rejects crSrc &gt; 7 for SWITCH (CR8–CR11
+would silently truncate to CR0–CR3 in the hardware 3-bit crSrc
+field).</p>
+<p><strong>D-11 is closed. Simulator and hardware are in
+agreement.</strong></p>
+<hr />
+<h2 id="related-files">Related Files</h2>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hardware/switch.py</code></td>
+<td>Hardware FSM — target check, PassKey type check, sentinel check,
+mLoad call</td>
+</tr>
+<tr>
+<td><code>hardware/mload.py</code></td>
+<td>ChurchMLoad — NS validation, g-bit reset, CR write</td>
+</tr>
+<tr>
+<td><code>hardware/hw_types.py</code></td>
+<td>Sentinel constants, GT type constants, target Tgt values</td>
+</tr>
+<tr>
+<td><code>simulator/simulator.js</code></td>
+<td><code>_execSwitch</code> — PassKey-gated one-way install (D-11
+closed)</td>
+</tr>
+<tr>
+<td><code>simulator/assembler.js</code></td>
+<td>SWITCH case 5 — crSrc ≤ 7 guard added</td>
+</tr>
+<tr>
+<td><code>docs/HARDWARE-DEVIATIONS.md</code></td>
+<td>D-11 — CLOSED; all deviations resolved</td>
+</tr>
+<tr>
+<td><code>docs/mint.md</code></td>
+<td>Mint issuance protocol, Abstract GT note (§9)</td>
+</tr>
+<tr>
+<td><code>docs/abstract-gt.md</code></td>
+<td>Abstract GT word layout and ab_type registry</td>
+</tr>
+<tr>
+<td><code>docs/namespace-security.md</code></td>
+<td>mLoad validation pipeline, NS entry format</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Confidential — Kenneth Hamer-Hodges — May 2026</em></p>
+</body>
+</html>

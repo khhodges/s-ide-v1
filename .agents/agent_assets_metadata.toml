@@ -132,3 +132,87 @@ id = "U386KvPA9OxVfvkUMGWxv"
 uri = "file://docs/export/pdf/golden-tokens.pdf"
 type = "pdf"
 title = "Golden Tokens — sample PDF export"
+
+[[outputs]]
+id = "BsrcyQ6pvo9BR3BlEdm47"
+uri = "file://release/r1/ctmm-r1-01-isa-reference.pdf"
+type = "pdf"
+title = "01 — ISA Reference (Hardware Specification)"
+
+[[outputs]]
+id = "P59qpD0SKwShlsuToCi3j"
+uri = "file://release/r1/ctmm-r1-02-isa-encoding.pdf"
+type = "pdf"
+title = "02 — ISA Encoding (Hardware Specification)"
+
+[[outputs]]
+id = "XSkXWeUCquQqR-AF_s33s"
+uri = "file://release/r1/ctmm-r1-03-architecture.pdf"
+type = "pdf"
+title = "03 — Architecture Overview (Hardware Specification)"
+
+[[outputs]]
+id = "rPlZHD4tZCM7c_PPnDoWd"
+uri = "file://release/r1/ctmm-r1-04-church-instructions.pdf"
+type = "pdf"
+title = "04 — Church Instructions (Hardware Specification)"
+
+[[outputs]]
+id = "dhFmfrRUCktgH-rdxdo2J"
+uri = "file://release/r1/ctmm-r1-05-instruction-set.pdf"
+type = "pdf"
+title = "05 — Full Instruction Set (Hardware Specification)"
+
+[[outputs]]
+id = "gbctkLZoUJepp1azKZDCh"
+uri = "file://release/r1/ctmm-r1-06-golden-tokens.pdf"
+type = "pdf"
+title = "06 — Golden Tokens (Security & Capabilities)"
+
+[[outputs]]
+id = "2pkyzce4iai93_-RIxDtN"
+uri = "file://release/r1/ctmm-r1-07-abstract-gt.pdf"
+type = "pdf"
+title = "07 — Abstract Golden Token (Security & Capabilities)"
+
+[[outputs]]
+id = "0O58pbTJmIiBRZSlpqckZ"
+uri = "file://release/r1/ctmm-r1-08-namespace-security.pdf"
+type = "pdf"
+title = "08 — Namespace Security (Security & Capabilities)"
+
+[[outputs]]
+id = "7rXaNE3_IVuR4KuSiXNgp"
+uri = "file://release/r1/ctmm-r1-09-mint.pdf"
+type = "pdf"
+title = "09 — Mint & PassKey Issuance (Security & Capabilities)"
+
+[[outputs]]
+id = "6Afvjkd6XoBftjJF__CzE"
+uri = "file://release/r1/ctmm-r1-10-mload.pdf"
+type = "pdf"
+title = "10 — Machine Load / mLoad (Security & Capabilities)"
+
+[[outputs]]
+id = "cs7hC5VdOZL1bhvYflCMA"
+uri = "file://release/r1/ctmm-r1-11-switch-lifecycle.pdf"
+type = "pdf"
+title = "11 — SWITCH Lifecycle & PassKey Install (Security & Capabilities)"
+
+[[outputs]]
+id = "vl9QqEGt0vhNACnbEL2rM"
+uri = "file://release/r1/ctmm-r1-12-boot-rom-layout.pdf"
+type = "pdf"
+title = "12 — Boot ROM Layout (Boot Sequence)"
+
+[[outputs]]
+id = "aHhbmKhI3dBUWRNd84yqy"
+uri = "file://release/r1/ctmm-r1-13-boot-permission-rules.pdf"
+type = "pdf"
+title = "13 — Boot Permission Rules (Boot Sequence)"
+
+[[outputs]]
+id = "UMs84C-QvAP8an-sqBdc4"
+uri = "file://release/r1/ctmm-r1-14-hardware-deviations.pdf"
+type = "pdf"
+title = "14 — Hardware Deviations — All Closed (Conformance)"

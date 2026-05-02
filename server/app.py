@@ -976,6 +976,84 @@ def six_laws_pdf():
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return resp
 
+# ── Release 1 PDF downloads ──────────────────────────────────────────────────
+_RELEASE_1_DIR = os.path.join(BASE_DIR, "release", "r1")
+
+_RELEASE_1_MANIFEST = [
+    # (filename, display_title, category)
+    ("ctmm-r1-01-isa-reference.pdf",        "ISA Reference",                    "Hardware Specification"),
+    ("ctmm-r1-02-isa-encoding.pdf",         "ISA Encoding",                     "Hardware Specification"),
+    ("ctmm-r1-03-architecture.pdf",         "Architecture Overview",             "Hardware Specification"),
+    ("ctmm-r1-04-church-instructions.pdf",  "Church Instructions",              "Hardware Specification"),
+    ("ctmm-r1-05-instruction-set.pdf",      "Full Instruction Set",             "Hardware Specification"),
+    ("ctmm-r1-06-golden-tokens.pdf",        "Golden Tokens",                    "Security & Capabilities"),
+    ("ctmm-r1-07-abstract-gt.pdf",          "Abstract Golden Token",            "Security & Capabilities"),
+    ("ctmm-r1-08-namespace-security.pdf",   "Namespace Security",               "Security & Capabilities"),
+    ("ctmm-r1-09-mint.pdf",                 "Mint & PassKey Issuance",          "Security & Capabilities"),
+    ("ctmm-r1-10-mload.pdf",               "Machine Load (mLoad)",             "Security & Capabilities"),
+    ("ctmm-r1-11-switch-lifecycle.pdf",     "SWITCH Lifecycle & PassKey Install","Security & Capabilities"),
+    ("ctmm-r1-12-boot-rom-layout.pdf",      "Boot ROM Layout",                  "Boot Sequence"),
+    ("ctmm-r1-13-boot-permission-rules.pdf","Boot Permission Rules",            "Boot Sequence"),
+    ("ctmm-r1-14-hardware-deviations.pdf",  "Hardware Deviations — All Closed", "Conformance"),
+]
+
+@app.route("/release/r1/")
+@app.route("/release/r1")
+def release_r1_index():
+    rows = ""
+    current_cat = None
+    for fname, title, cat in _RELEASE_1_MANIFEST:
+        if cat != current_cat:
+            current_cat = cat
+            rows += f'<tr class="cat-row"><td colspan="3">{cat}</td></tr>\n'
+        size_kb = 0
+        p = os.path.join(_RELEASE_1_DIR, fname)
+        if os.path.exists(p):
+            size_kb = os.path.getsize(p) // 1024
+        rows += (
+            f'<tr><td>{title}</td>'
+            f'<td class="sz">{size_kb} KB</td>'
+            f'<td><a href="/release/r1/{fname}">Download PDF</a></td></tr>\n'
+        )
+    html = f"""<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<title>CTMM Release 1 — Document Set</title>
+<style>
+  body{{font-family:system-ui,sans-serif;background:#0a0e17;color:#c8d6e5;padding:32px;max-width:860px;margin:0 auto}}
+  h1{{color:#daa520;margin-bottom:4px}}
+  .sub{{color:#64748b;margin-bottom:28px;font-size:.9rem}}
+  table{{width:100%;border-collapse:collapse;font-size:.9rem}}
+  th{{text-align:left;padding:7px 10px;background:#111827;color:#daa520;border-bottom:2px solid #1e2a3a}}
+  td{{padding:6px 10px;border-bottom:1px solid #1e2a3a;vertical-align:middle}}
+  tr.cat-row td{{background:#0d1117;color:#60a5fa;font-weight:700;font-size:.78rem;
+                letter-spacing:.08em;padding:10px 10px 4px;border-bottom:none}}
+  a{{color:#4ade80;text-decoration:none}} a:hover{{text-decoration:underline}}
+  .sz{{color:#64748b;font-family:monospace}}
+</style></head><body>
+<h1>CTMM Release 1 — Document Set</h1>
+<p class="sub">Church-Turing Meta-Machine &middot; Kenneth J Hamer-Hodges &middot; May 2026 &middot; 14 documents</p>
+<table>
+<thead><tr><th>Document</th><th>Size</th><th>Download</th></tr></thead>
+<tbody>{rows}</tbody>
+</table>
+<p style="margin-top:24px;font-size:.8rem;color:#4a5568">
+  <a href="/">&larr; Home</a>
+</p>
+</body></html>"""
+    return html
+
+@app.route("/release/r1/<path:filename>")
+def release_r1_pdf(filename):
+    safe = os.path.basename(filename)
+    pdf_path = os.path.join(_RELEASE_1_DIR, safe)
+    if not os.path.isfile(pdf_path) or not safe.endswith(".pdf"):
+        return "Not found", 404
+    resp = make_response(send_file(pdf_path, mimetype="application/pdf"))
+    resp.headers["Content-Disposition"] = f'attachment; filename="{safe}"'
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return resp
+
 _SIMULATOR_HTML_VERSION = "r20260501k"
 
 @app.route("/simulator")
