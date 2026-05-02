@@ -7689,7 +7689,7 @@ function openSettings() {
     renderProgressReport();
     renderFamilyIntroQR();
     const releaseEl = document.getElementById('settingsReleasePublishedAt');
-    if (releaseEl) releaseEl.textContent = '2026-04-24 UTC';
+    if (releaseEl) releaseEl.textContent = '2026-05-02 UTC';
     const anyPerm = hasAnyPopupDismissedPerm();
     const showAllCheck = document.getElementById('showAllPopupsCheck');
     if (showAllCheck) showAllCheck.checked = !anyPerm;
@@ -7756,6 +7756,23 @@ function closeSettings() {
 
 function showReleaseHistory() {
     const history = [
+        { date: '2026-05-02 UTC', title: 'Doc Audit, ISA Corrections & Hardware Alignment', changes: [
+            'Full 14-item stale-documentation audit completed: all stale claims corrected across docs, simulator comments, and figures',
+            'RETURN mask: marked as not implemented in all docs (call-stack.md, church-instructions.md, boot-rom-layout.md, instruction-matrix.md) — mask field silently ignored by hardware; assembler now warns on any non-zero mask (Task #888)',
+            'SWITCH semantics: replaced "atomic CR swap" with correct "PassKey-gated one-way install into CR13/CR15" in assembler.js comments and app-lumps.js disassembler output',
+            'TPERM D-3 closed: removed 3 stale notes claiming simulator produces Z=0 for reserved preset codes — simulator now faults with TPERM_RSV identical to hardware (Task #873)',
+            'ISA reference E-2 corrected: "Assembler should reject" → "Assembler warns" to match Task #888 warn-only implementation',
+            'CALL PC entry: replaced all PC=0 claims with hardware method-table dispatch description (method index in imm15; index 0 → word 1) across call-stack.md, architecture.md, and two SVG figures',
+            'HARDWARE-DEVIATIONS.md: section header updated from "Open Deviations (D-1 through D-9)" to a status summary (9 closed, D-7/D-8/D-11 open)',
+            'Method-table lump layout: replaced stale "M00 Dispatch — auto-generated" diagrams in namespace-vocabulary-tutorial.md and IDE-Designer.md with correct hardware table layout',
+            'locator.md NS table size corrected: 16 bytes → 12 bytes, 4 KB → 3 KB (3-word NS entries)',
+            '"TPERM never traps" phrasing clarified to "does not fault" in church-instructions.md and instruction-set.md — avoids confusion with TPERM_RSV reserved-preset fault',
+            'Historical audit docs stamped: CONSISTENCY-AUDIT, AMARANTH-SIMULATOR-AUDIT, SIMULATOR-HARDWARE-GAPS, SIMULATOR-HARDWARE-MISMATCH all carry SUPERSEDED banners pointing to HARDWARE-DEVIATIONS.md',
+            'Task #887 merged: D-9 LAMBDA hardware fix — CR6 state correctly preserved on LAMBDA CR6 re-entry path in Amaranth hardware',
+            'Task #888 merged: RETURN mask assembler warning — assembler warns on any non-zero mask or reserved bit 6 instead of silently encoding',
+            'Task #890 merged: LAMBDA CR6 re-entry simulator test added to gate suite',
+            'Task #17 merged: Navana.Init wired as a callable method-table entry (method index 1 in the boot namespace slot)',
+        ] },
         { date: '2026-04-30 UTC', title: 'Hello Mum Pipeline, Hardware Bridge & LUMP Tokens Tab', changes: [
             'QR code display fixed: identity QR now rendered with a self-contained pure-stdlib generator — no external package required',
             'Hello Mum pipeline complete: board registration triggers Navana.Init → Keystone.Connect → Keystone.Hello automatically; tunnel_status ("online" / "offline" / "pending") stored per device and returned in every heartbeat response',
