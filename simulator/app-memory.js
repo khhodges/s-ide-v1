@@ -53,6 +53,9 @@ function updateCRDetail() {
     const hasW = parsedPerms.W;
     const crMbit = sim.cr[crIdx].m;
     const nsIdx = cr.gtIndex;
+    // Switch the editor's source context to this NS slot (saves outgoing,
+    // restores incoming from localStorage or sticky-patch src fallback).
+    if (typeof _asmSrcSwitchContext === 'function') _asmSrcSwitchContext(nsIdx);
 
     const codeRegs = [7];
     const clistRegs = [6];

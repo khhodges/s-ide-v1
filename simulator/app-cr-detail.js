@@ -5,6 +5,96 @@ var _activeAsmErrors = [];
 // Re-applied automatically after every boot sequence completes.
 var _stickyPatches = {};
 
+// ── Editor source persistence (localStorage, keyed by NS slot) ────────────
+// #asmEditor source is auto-saved on every keystroke, keyed by NS slot, so
+// it survives CR-panel switches and page refresh.  The patch → test → edit
+// loop therefore never loses in-flight source.
+// Sticky patches are also serialised to localStorage so they survive refresh
+// and are re-applied automatically on the next boot.
+var _asmEditorNsIdx = null;   // NS slot currently "owned" by #asmEditor
+
+function _asmSrcKey(nsIdx)    { return 'cm_asm_src_'  + nsIdx; }
+function _asmStickyKey(nsIdx) { return 'cm_sticky_p_' + nsIdx; }
+
+function _asmSrcSave(nsIdx, text) {
+    if (nsIdx === null || nsIdx === undefined) return;
+    try { localStorage.setItem(_asmSrcKey(nsIdx), text || ''); } catch(_) {}
+}
+function _asmSrcLoad(nsIdx) {
+    try { return localStorage.getItem(_asmSrcKey(nsIdx)); } catch(_) { return null; }
+}
+
+// Switch the editor's "owned" NS slot.  Flushes the outgoing slot's source
+// to localStorage, then restores the incoming slot's source
+// (localStorage → sticky-patch src fallback → leave blank for a fresh CR).
+// Called by updateCRDetail() on every CR selection change.
+function _asmSrcSwitchContext(newNsIdx) {
+    const ed = document.getElementById('asmEditor');
+    if (!ed) return;
+    // Flush outgoing slot before switching.
+    if (_asmEditorNsIdx !== null && _asmEditorNsIdx !== newNsIdx) {
+        _asmSrcSave(_asmEditorNsIdx, ed.value);
+    }
+    _asmEditorNsIdx = newNsIdx;
+    if (newNsIdx === null) return;
+    // Restore incoming slot.
+    const saved = _asmSrcLoad(newNsIdx);
+    if (saved !== null) {
+        ed.value = saved;
+    } else {
+        const sp = _stickyPatches[newNsIdx];
+        if (sp && sp.src) ed.value = sp.src;
+        // else leave editor as-is (blank for a fresh CR, unchanged for same CR)
+    }
+}
+
+function _persistStickyPatch(nsIdx) {
+    const p = _stickyPatches[nsIdx];
+    if (!p) return;
+    try { localStorage.setItem(_asmStickyKey(nsIdx), JSON.stringify(p)); } catch(_) {}
+}
+
+function _clearPersistedStickyPatch(nsIdx) {
+    try { localStorage.removeItem(_asmStickyKey(nsIdx)); } catch(_) {}
+    // If the editor currently owns this slot, also wipe the source draft and
+    // blank the editor — the user explicitly cleared the patch, so they want
+    // a clean slate.
+    if (_asmEditorNsIdx === nsIdx) {
+        try { localStorage.removeItem(_asmSrcKey(nsIdx)); } catch(_) {}
+        const ed = document.getElementById('asmEditor');
+        if (ed) ed.value = '';
+    }
+}
+
+// Restore sticky patches persisted from a previous session.  Runs once at
+// script load so _reapplyStickyPatches() (called at boot) can find them.
+(function _restorePersistedStickyPatches() {
+    try {
+        const PREFIX = 'cm_sticky_p_';
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith(PREFIX)) {
+                try {
+                    const p = JSON.parse(localStorage.getItem(k));
+                    if (p && typeof p.nsIdx === 'number' && Array.isArray(p.words)) {
+                        _stickyPatches[p.nsIdx] = p;
+                    }
+                } catch(_) {}
+            }
+        }
+    } catch(_) {}
+})();
+
+// Wire up keystroke auto-save once the DOM is ready.
+document.addEventListener('DOMContentLoaded', function() {
+    const ed = document.getElementById('asmEditor');
+    if (ed) {
+        ed.addEventListener('input', function() {
+            _asmSrcSave(_asmEditorNsIdx, ed.value);
+        });
+    }
+});
+
 function _jumpToAsmLine(lineNum) {
     var editor = document.getElementById('asmEditor');
     if (!editor || !lineNum) return;
@@ -645,7 +735,8 @@ function patchSimulator() {
             _simRunHistory = [];
             _simRunHash = srcHash;
         }
-        // Store sticky patch — survives reset+boot, re-applied automatically
+        // Store sticky patch — survives reset+boot, re-applied automatically.
+        // Also persist to localStorage so it survives page refresh.
         _stickyPatches[result.nsIdx] = {
             words: result.newWords,
             newCW: result.newCW,
@@ -653,6 +744,8 @@ function patchSimulator() {
             crIdx: selectedCR,
             src,
         };
+        _asmSrcSave(result.nsIdx, src);
+        _persistStickyPatch(result.nsIdx);
         _updateMtbfIndicator();
         updateCRDetail();
     }
@@ -764,12 +857,23 @@ window._reapplyStickyPatches = function() {
             }
         }
         console.log('[sticky] Re-applied patch NS[' + nsIdx2 + '] (' + newCW + 'w)');
+
+        // Restore source to editor if this slot is currently active and the
+        // editor is blank — keeps the patch → reset → test → edit loop intact.
+        if (patch.src) {
+            _asmSrcSave(nsIdx2, patch.src);
+            if (_asmEditorNsIdx === nsIdx2) {
+                const _re = document.getElementById('asmEditor');
+                if (_re && !_re.value.trim()) _re.value = patch.src;
+            }
+        }
     }
 };
 
 // Remove a sticky patch by NS slot index (called from the Code tab clear button).
 window.clearStickyPatch = function(nsIdx) {
     delete _stickyPatches[nsIdx];
+    _clearPersistedStickyPatch(nsIdx);
     if (typeof updateCRDetail === 'function') updateCRDetail();
 };
 
