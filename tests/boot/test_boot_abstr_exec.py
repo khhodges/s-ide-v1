@@ -145,8 +145,12 @@ def _word0_hex(snap):
 # ── the test ──────────────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("cfg", CONFIGS)
-def test_boot_abstr_exec(cfg):
-    image  = generate_boot_image(cfg, LUMPS_DIR)
+def test_boot_abstr_exec(cfg, tmp_path):
+    # Use an empty tmp_path so no user-saved 00000300.lump can replace the
+    # canonical 3-instruction boot stub (CHANGE→TPERM→CALL).  The test steps
+    # through those exact instructions; a user lump would produce different
+    # instruction bytes and fail the instruction-level assertions.
+    image  = generate_boot_image(cfg, str(tmp_path))
     status = _run_harness(cfg, image)
 
     # ── boot phase must complete cleanly ──────────────────────────────────────

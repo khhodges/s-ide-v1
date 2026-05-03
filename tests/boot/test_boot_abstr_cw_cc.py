@@ -137,9 +137,25 @@ def _write_lump_300(cw=SAVED_CW, cc=SAVED_CC):
 
 
 def _simulate_server_restart():
-    """Call _load_boot_abstr_lump() to synchronise _BOOT_ABSTR_META with the
-    current on-disk state — the same call made at server startup."""
+    """Regenerate boot-image.bin then sync _BOOT_ABSTR_META — mirrors server startup.
+
+    A real server restart re-runs generate_boot_image() before calling
+    _load_boot_abstr_lump().  Without that regeneration step, a stale
+    boot-image.bin (written during a previous test or user session) causes
+    _load_boot_abstr_lump() to report cw/cc from the old image rather than
+    the current on-disk state of the lumps directory.
+    """
     import server.app as _app
+    from server.boot_image import generate_boot_image as _gen_bi
+    try:
+        cfg, err = _app._read_saved_boot_config()
+        if not err:
+            blob = _gen_bi(cfg, LUMPS_DIR)
+            boot_path = os.path.join(LUMPS_DIR, "boot-image.bin")
+            with open(boot_path, "wb") as fh:
+                fh.write(blob)
+    except Exception:
+        pass
     _app._load_boot_abstr_lump()
 
 

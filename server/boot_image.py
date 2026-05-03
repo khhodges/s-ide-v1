@@ -455,10 +455,18 @@ def generate_boot_image(cfg, lumps_dir, boot_entry_slot=None):
                 _bscc  = _bshdr & 0xFF
                 _bsnm6 = (_bshdr >> 23) & 0xF
                 _bssz  = 1 << (_bsnm6 + 6)
-                if ((_bshdr >> 27) == 0x1F and _bscw == NUC_CODE_WORDS
-                        and _bscc <= DEMO_CLIST_SIZE and _bsn >= _bssz):
+                if ((_bshdr >> 27) == 0x1F
+                        and _bscc <= DEMO_CLIST_SIZE and _bsn >= _bssz
+                        and (1 + _bscw + _bscc) <= _bssz):
                     actual_abstr_size = _bssz
-                    abstr_words = _bswords[:_bssz]
+                    # Strip cc to 0: the DEMO_CLIST is injected at runtime
+                    # by the simulator's LAZY-LOAD mechanism in app-run.js
+                    # (_applyPendingSimLoad).  Embedding a non-zero cc here
+                    # would make B:06 NUC_CLIST set CR6 ≠ NULL at HALT,
+                    # breaking the CLOOMC cc=0 invariant (Task #651) and
+                    # silently blocking the LAZY injection from firing.
+                    _hdr_cc0 = _bswords[0] & ~0xFF   # zero bits [7:0] = cc
+                    abstr_words = [_hdr_cc0] + list(_bswords[1:_bssz])
         except Exception:
             pass  # Fall back to default 64w Boot.Abstr silently.
 

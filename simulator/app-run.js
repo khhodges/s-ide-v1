@@ -655,20 +655,22 @@ function _applyPendingSimLoad() {
     const slot2Base  = sim.bootComplete ? (sim.memory[abstrBase2] || (2 * sim.SLOT_SIZE)) : 0;
     const progBase   = (slot3Base >= 0x0400) ? slot3Base + 1 : slot2Base;
     sim.programBaseAddr = progBase;
-    // ── LAZY-LOAD c-list: cc=0 → DEMO_CLIST_SIZE ────────────────────────────────
+    // ── LAZY-LOAD c-list: cc < DEMO_CLIST_SIZE → inject full DEMO_CLIST ────────
     // Boot.Abstr boots with cc=0 (CLOOMC/no-c-list design, Task #651).  When the
     // NUC_PROGRAM is loaded at Run time it accesses LOAD CRn, CR6, 8 which needs
     // the hardware DEMO_CLIST (LED[0..5], UART, BTN, Timer, SlideRule) pre-placed
     // in c-list slots [8..17].  This block is "the LAZY LOAD that does work on
-    // First CALL": it promotes Boot.Abstr from cc=0 to cc=18, writes the pre-
-    // computed Abstract GTs (saved as sim.demoClistGTs in _initNamespaceTable) into
+    // First CALL": it promotes Boot.Abstr to cc=18, writes the pre-computed
+    // Abstract GTs (saved as sim.demoClistGTs in _initNamespaceTable) into
     // the FREE region of the 64-word lump (words 46–63, above the code at 1–17),
     // then patches the NS entry clistCount and CR6 so the range check passes.
+    // Fires whenever clistCount < DEMO_CLIST_SIZE: handles both the cc=0 (normal
+    // boot stub) and cc=1..17 (saved before LAZY injection ran) cases.
     if (sim.bootComplete && sim.demoClistGTs && sim.demoClistGTs.length > 0) {
         const BOOT_ABSTR_SLOT = 3;
         const nsBase  = sim.NS_TABLE_BASE + BOOT_ABSTR_SLOT * sim.NS_ENTRY_WORDS;
         const w1f     = sim.parseNSWord1(sim.memory[nsBase + 1]);
-        if (w1f.clistCount === 0) {
+        if (w1f.clistCount < sim.demoClistGTs.length) {
             // B:06 cc=0 leaves CR6 NULL (correct: no c-list at HALT).
             // Read lumpBase from NS entry word0 directly — do NOT use cr[6].word1 (= 0).
             const lumpBase  = sim.memory[nsBase] >>> 0;     // NS word0 = physical lump base (0x180)
