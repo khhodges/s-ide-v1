@@ -302,6 +302,7 @@
                                 <button class="ham-item" onclick="compileDraft();closeEditorActions()" style="color:#C89B3C;" data-tooltip="Draft — Show compilation draft: methods, capabilities, and lump layout">Draft</button>
                                 <button class="ham-item" onclick="showCreateNamespace();closeEditorActions()" data-tooltip="Create Namespace — Reserve a namespace slot for your abstraction">Create Namespace</button>
                                 <button class="ham-item" onclick="compileAndCreateAbstraction();closeEditorActions()" data-tooltip="Create Abstraction — Compile and create via Navana.Abstraction.Add">Create Abstraction</button>
+                                <button class="ham-item" onclick="auditLumpOnly();closeEditorActions()" data-tooltip="Audit LUMP — Compile and run structural consistency checks without downloading or saving">Audit LUMP</button>
                                 <button class="ham-item" id="btnBuildLumpMenu" onclick="buildAndDownloadLump();closeEditorActions()" style="color:#66bb6a;" data-tooltip="Build LUMP — Compile any language and download a deployable binary .lump file">Build LUMP ↓</button>
                                 <button class="ham-item" onclick="exportLumpAsPatch();closeEditorActions()" style="color:#66bb6a;" data-tooltip="Export Lump as Patch — Load a pre-built .lump file and convert to a .patch file for FPGA flashing">Lump → Patch ↓</button>
                                 <button class="ham-item" onclick="showEditorCListPopup(event);closeEditorActions()" style="color:#7dd3fc;" data-tooltip="C-List — Browse capability names and insert into editor (Ctrl+Shift+C)">C-List</button>
@@ -1605,6 +1606,7 @@
     <script src="pet_name_audit.js"></script>
     <script src="app-memory.js?v=20260503i"></script>
     <script src="app-abstractions.js?v=20260430a"></script>
+    <script src="lump-audit.js?v=20260503a"></script>
     <script src="app-lumps.js?v=20260430d"></script>
     <script src="app-absdetail.js?v=20260428d"></script>
     <script src="app-run.js?v=20260503b"></script>

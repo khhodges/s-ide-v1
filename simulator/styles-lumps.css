@@ -1454,6 +1454,7 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
+    flex-wrap: wrap;
 }
 .lump-edit-save-btn {
     font-size: 0.72rem;
@@ -4545,5 +4546,143 @@ pre:hover .code-copy-btn {
 .patch-toast-save-link:hover {
     text-decoration: underline;
     color: #a3e6c5;
+}
+
+/* ── LUMP Audit panel ───────────────────────────────────────────────────── */
+
+.lump-audit-loading {
+    color: var(--text-secondary, #8888aa);
+    font-size: 0.73rem;
+    font-style: italic;
+    padding: 0.35rem 0.5rem;
+}
+
+.lump-audit-panel {
+    border-radius: 4px;
+    border: 1px solid rgba(100, 160, 255, 0.15);
+    background: rgba(0, 0, 0, 0.18);
+    margin: 0.45rem 0 0.25rem;
+    font-size: 0.73rem;
+    overflow: hidden;
+}
+
+.lump-audit-panel-pass {
+    border-color: rgba(100, 210, 120, 0.3);
+    background: rgba(60, 160, 80, 0.07);
+}
+.lump-audit-panel-warn {
+    border-color: rgba(224, 160, 85, 0.4);
+    background: rgba(180, 120, 40, 0.08);
+}
+.lump-audit-panel-error {
+    border-color: rgba(220, 80, 80, 0.4);
+    background: rgba(160, 40, 40, 0.09);
+}
+
+.lump-audit-header {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem 0.65rem;
+    font-weight: 600;
+    font-size: 0.73rem;
+    user-select: none;
+}
+
+.lump-audit-panel-pass  .lump-audit-header { color: #6dd89a; background: rgba(60, 160, 80, 0.1); }
+.lump-audit-panel-warn  .lump-audit-header { color: #f0ba70; background: rgba(180, 120, 40, 0.12); }
+.lump-audit-panel-error .lump-audit-header { color: #f08070; background: rgba(160, 40, 40, 0.14); }
+
+.lump-audit-icon {
+    font-size: 0.85rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.lump-audit-summary {
+    flex: 1;
+    min-width: 0;
+}
+
+.lump-audit-body {
+    padding: 0.3rem 0.2rem 0.35rem;
+}
+
+.lump-audit-row {
+    display: grid;
+    grid-template-columns: 2.8rem 6.5rem 1fr;
+    align-items: baseline;
+    gap: 0.3rem 0.55rem;
+    padding: 0.18rem 0.55rem;
+    border-bottom: 1px solid rgba(100, 160, 255, 0.05);
+    font-size: 0.71rem;
+    line-height: 1.5;
+}
+
+.lump-audit-row:last-child { border-bottom: none; }
+
+.lump-audit-row-pass   { color: #8bd4a8; }
+.lump-audit-row-warn   { color: #e0a055; }
+.lump-audit-row-error  { color: #e07070; }
+
+.lump-audit-rule-id {
+    font-family: 'Courier New', monospace;
+    font-size: 0.66rem;
+    opacity: 0.75;
+    white-space: nowrap;
+}
+
+.lump-audit-msg {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.lump-audit-detail {
+    color: var(--text-secondary, #9090b0);
+    font-size: 0.68rem;
+    line-height: 1.4;
+}
+.lump-audit-row-warn  .lump-audit-detail { color: #c08840; }
+.lump-audit-row-error .lump-audit-detail { color: #b05050; }
+
+/* Audit button in action bar */
+.lump-audit-btn {
+    background: rgba(80, 120, 200, 0.12);
+    color: #88aaee;
+    border: 1px solid rgba(80, 120, 220, 0.3);
+    font-size: 0.72rem;
+    padding: 4px 13px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.lump-audit-btn:hover {
+    background: rgba(80, 120, 220, 0.25);
+    color: #aaccff;
+    border-color: rgba(100, 150, 240, 0.5);
+}
+.lump-audit-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+/* Inline audit section inside text-editor action row */
+.lump-audit-inline-wrap {
+    width: 100%;
+    margin-top: 0.3rem;
+}
+
+/* Audit warning banner shown when save is allowed despite warnings */
+.lump-audit-warn-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.6rem;
+    background: rgba(180, 120, 40, 0.14);
+    border: 1px solid rgba(224, 160, 85, 0.35);
+    border-radius: 4px;
+    color: #e0a055;
+    font-size: 0.71rem;
+    margin-top: 0.3rem;
 }
 

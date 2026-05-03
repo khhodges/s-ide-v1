@@ -66,13 +66,15 @@ function showLumpDetail(token) {
     }
     _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','hexdump')">Hex Dump</button></div>`;
 
-    // ── Action bar (Edit + Delete) shown below the header strip ─────────────
+    // ── Action bar (Edit + Audit + Delete) shown below the header strip ──────
     let _actionBar = `<div class="lump-action-bar">`;
     if (!isNamespace) {
         _actionBar += `<button class="btn lump-edit-btn" data-edit-token="${_e(token)}" title="Edit \u2014 Open the code editor (Create page)">&#9998; Edit</button>`;
+        _actionBar += `<button class="btn lump-audit-btn" data-audit-token="${_e(token)}" title="Audit \u2014 Run pre-save consistency checks on this LUMP binary">\u2699 Audit</button>`;
     }
     _actionBar += `<button class="btn lump-delete-btn lump-delete-top-btn" data-delete-token="${_e(token)}" title="Delete this lump">Delete</button>`;
     _actionBar += `</div>`;
+    _actionBar += `<div class="lump-audit-results-wrap" id="lumpAuditResults_${_tk}"></div>`;
 
     let html = _headerStrip + _actionBar + _tabBar + `<div class="lump-tab-panel${isNamespace ? ' lump-tab-panel-active' : ''}" id="lumpTabOverview_${_tk}"><div class="lump-detail-sections">`;
 
@@ -302,6 +304,21 @@ function showLumpDetail(token) {
     if (delBtn) delBtn.addEventListener('click', () => deleteLump(delBtn.dataset.deleteToken));
     const editBtn = contentEl.querySelector('.lump-edit-btn[data-edit-token]');
     if (editBtn) editBtn.addEventListener('click', () => openLumpInEditor(editBtn.dataset.editToken));
+    const auditBtn = contentEl.querySelector('.lump-audit-btn[data-audit-token]');
+    if (auditBtn) {
+        auditBtn.addEventListener('click', () => {
+            const _auditToken = auditBtn.dataset.auditToken;
+            const _auditLump  = _lumpsCache.find(l => l.token === _auditToken);
+            const _auditWrap  = document.getElementById(`lumpAuditResults_${_auditToken.replace(/[^a-z0-9]/gi, '')}`);
+            if (!_auditWrap) return;
+            const _manifest = _auditLump ? { cw: _auditLump.cw, cc: _auditLump.cc, lump_size: _auditLump.lump_size } : null;
+            if (typeof lumpAuditFromServer === 'function') {
+                auditBtn.disabled = true;
+                lumpAuditFromServer(_auditToken, _manifest, _auditWrap, { collapsible: true, startOpen: true })
+                    .finally(() => { auditBtn.disabled = false; });
+            }
+        });
+    }
     _lumpActiveTab[_tk] = isNamespace ? 'overview' : 'content';
     const nsdgWrap = contentEl.querySelector('.ns-dep-graph-wrap[id]');
     if (nsdgWrap) _initNsDepGraphPanZoom(nsdgWrap.id);
@@ -1142,6 +1159,11 @@ function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
     saveBtn.className = 'btn lump-edit-save-btn';
     saveBtn.textContent = 'Save';
 
+    const auditEdBtn = document.createElement('button');
+    auditEdBtn.className = 'btn lump-audit-btn';
+    auditEdBtn.textContent = '\u2699 Audit';
+    auditEdBtn.title = 'Audit \u2014 simulate the binary that saving the current text would produce and run structural checks on it';
+
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'btn lump-edit-cancel-btn';
     cancelBtn.textContent = 'Cancel';
@@ -1150,9 +1172,67 @@ function _buildTextEditor(token, text, bodyEl, lump, renderFn) {
     statusEl.className = 'lump-edit-status';
 
     actionRow.appendChild(saveBtn);
+    actionRow.appendChild(auditEdBtn);
     actionRow.appendChild(cancelBtn);
     actionRow.appendChild(statusEl);
+
+    const auditResultsWrap = document.createElement('div');
+    auditResultsWrap.className = 'lump-audit-inline-wrap';
+    actionRow.appendChild(auditResultsWrap);
+
     editorArea.appendChild(actionRow);
+
+    auditEdBtn.addEventListener('click', () => {
+        if (typeof lumpAudit !== 'function' || typeof lumpAuditRenderPanel !== 'function') return;
+
+        // Simulate the exact binary the server would produce via PUT /api/lump/{token}/content.
+        // Server logic (app.py put_lump_content): UTF-8 encode → pad to 4 bytes → pack big-endian
+        // words → compute n/cw/header → pad to lump_size.
+        const _enc      = new TextEncoder();
+        const _rawBytes = _enc.encode(ta.value);
+        const _padLen   = (_rawBytes.length + 3) & ~3;
+        const _padBytes = new Uint8Array(_padLen);
+        _padBytes.set(_rawBytes);
+        const _dwCount  = _padLen >> 2;
+        const _needed   = 1 + _dwCount;
+        let _n = Math.max(6, Math.ceil(Math.log2(Math.max(_needed, 2))));
+        _n = Math.min(_n, 14);
+        const _lumpSize = 1 << _n;
+        const _cw = Math.min(_dwCount, _lumpSize - 1);
+        const _header = ((0x1F << 27) | ((_n - 6) << 23) | (_cw << 10) | (0x01 << 8)) >>> 0;
+        const _words = new Array(_lumpSize).fill(0);
+        _words[0] = _header;
+        const _dv = new DataView(_padBytes.buffer);
+        for (let _i = 0; _i < _dwCount && (1 + _i) < _lumpSize; _i++) {
+            _words[1 + _i] = _dv.getUint32(_i * 4, false) >>> 0;
+        }
+
+        const _auditResults  = lumpAudit(_words, { cw: _cw, cc: 0, lump_size: _lumpSize });
+        const _hasErrors     = lumpAuditHasErrors(_auditResults);
+        const _hasWarnings   = lumpAuditHasWarnings(_auditResults);
+
+        auditResultsWrap.innerHTML = '';
+        lumpAuditRenderPanel(auditResultsWrap, _auditResults, { collapsible: true, startOpen: true });
+
+        saveBtn.disabled = _hasErrors;
+        if (_hasErrors) {
+            statusEl.textContent = 'Fix audit errors before saving.';
+            statusEl.style.color = 'var(--red, #e53935)';
+        } else if (_hasWarnings) {
+            statusEl.textContent = 'Warnings found \u2014 save with care.';
+            statusEl.style.color = '#e0a055';
+        } else {
+            statusEl.textContent = '';
+        }
+    });
+
+    // When content changes after a failed audit, keep Save disabled but prompt re-audit.
+    ta.addEventListener('input', () => {
+        if (saveBtn.disabled) {
+            statusEl.textContent = 'Content changed \u2014 re-run Audit before saving.';
+            statusEl.style.color = '#e0a055';
+        }
+    }, { passive: true });
     wrapper.appendChild(editorArea);
 
     if (startOpen) {

@@ -701,6 +701,17 @@ function buildAndDownloadLump() {
     const cc = caps.length;
     const profile = result.profile || 'IoT';
 
+    // C-list overflow guard — header cc field is 8 bits (max 255 entries).
+    if (cc > 255) {
+        let _ovfListing = `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n`;
+        _ovfListing += `  BUILD FAILED \u2014 "${absName}"\n`;
+        _ovfListing += `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\n`;
+        _ovfListing += `  \u2717 [RCC] C-list overflow: ${cc} capabilities exceed the 8-bit header limit (max 255).\n`;
+        _ovfListing += `  Remove ${cc - 255} capability reference${cc - 255 !== 1 ? 's' : ''} from the abstraction.\n`;
+        if (con) { con.textContent = _ovfListing; con.scrollTop = 0; }
+        return;
+    }
+
     const allCode = [];
     const numMethods = result.methods.length;
 
@@ -746,6 +757,30 @@ function buildAndDownloadLump() {
     const clistStart = lumpSize - cc;
     for (let i = 0; i < cc; i++) {
         lumpWords[clistStart + i] = resolvedCaps[i].nsIndex >= 0 ? (resolvedCaps[i].nsIndex & 0xFFFFFFFF) : 0x00000000;
+    }
+
+    // ── Pre-save audit — run on assembled binary BEFORE download or server save ──
+    let _auditResults = [];
+    let _auditErrors  = [];
+    let _auditWarns   = [];
+    if (typeof lumpAudit === 'function') {
+        _auditResults = lumpAudit(Array.from(lumpWords), null);
+        _auditErrors  = _auditResults.filter(r => r.severity === 'error');
+        _auditWarns   = _auditResults.filter(r => r.severity === 'warn');
+    }
+
+    if (_auditErrors.length > 0) {
+        let _errListing = `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n`;
+        _errListing += `  AUDIT FAILED \u2014 "${absName}" not downloaded or saved\n`;
+        _errListing += `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\n`;
+        _errListing += `  The assembled binary has structural errors. Fix them and rebuild:\n\n`;
+        for (const r of _auditResults) {
+            const _sym = r.severity === 'pass' ? '\u2713' : r.severity === 'warn' ? '\u26a0' : '\u2717';
+            _errListing += `    ${_sym} [${r.ruleId}] ${r.message} \u2014 ${r.detail}\n`;
+        }
+        _errListing += `\n  \u2717 ${_auditErrors.length} error${_auditErrors.length !== 1 ? 's' : ''} \u2014 binary not downloaded or saved.\n`;
+        if (con) { con.textContent = _errListing; con.scrollTop = 0; }
+        return;
     }
 
     const binaryBuf = new ArrayBuffer(lumpSize * 4);
@@ -926,12 +961,114 @@ function buildAndDownloadLump() {
     listing += `    └─────────────────────────────────────────────┘\n`;
     listing += `    Total: ${lumpSize} words = ${sizeBytes} bytes\n`;
 
+    if (_auditResults.length > 0) {
+        listing += `\n  Pre-build Audit:\n`;
+        for (const r of _auditResults) {
+            const _sym = r.severity === 'pass' ? '\u2713' : r.severity === 'warn' ? '\u26a0' : '\u2717';
+            listing += `    ${_sym} [${r.ruleId}] ${r.message} \u2014 ${r.detail}\n`;
+        }
+        if (_auditWarns.length > 0) {
+            listing += `\n  \u26a0 Audit: ${_auditWarns.length} warning${_auditWarns.length !== 1 ? 's' : ''} \u2014 review before deploying.\n`;
+        } else {
+            listing += `\n  \u2713 Audit passed \u2014 all checks OK.\n`;
+        }
+    }
+
     listing += `\n  Downloaded: ${absName}.lump (${sizeBytes} bytes)\n`;
     listing += `  Saved to: server/lumps/ (binary + metadata sidecar)\n`;
 
     if (con) { con.textContent = listing; con.scrollTop = 0; }
     trackAction('build_lump', { name: absName, lang: result.language, size: lumpSize });
     appendOutput(`Built LUMP: "${absName}" — ${result.methods.length} methods, ${lumpSize} words, ${sizeBytes} bytes`, 'info');
+}
+
+function auditLumpOnly() {
+    if (typeof lumpAudit !== 'function') return;
+    const editor = document.getElementById('asmEditor');
+    if (!editor || !cloomcCompiler) return;
+    const source = editor.value;
+    const con = document.getElementById('editorConsole');
+    if (con) con.className = '';
+    switchCodeTab('console');
+
+    const isHighLevel = cloomcCompiler._detectPetName(source) ||
+                        cloomcCompiler._detectEnglish(source) ||
+                        cloomcCompiler._detectHaskell(source) ||
+                        cloomcCompiler._detectSymbolic(source) ||
+                        /^\s*abstraction\s+\w+/m.test(source);
+    if (!isHighLevel) {
+        if (con) con.textContent = 'Audit LUMP requires a CLOOMC++ abstraction (JavaScript, Haskell, English, Lambda, or Symbolic).';
+        return;
+    }
+
+    const result = cloomcCompiler.compile(source, []);
+    if (result.errors.length > 0) {
+        const errText = result.errors.map(e => `Line ${e.line || '?'}: ${e.message}`).join('\n');
+        if (con) { con.textContent = `Audit LUMP — compilation errors:\n${errText}`; con.scrollTop = 0; }
+        return;
+    }
+
+    const absName = result.abstractionName || 'Unnamed';
+    const caps    = result.capabilities || [];
+    const cc      = caps.length;
+
+    // C-list overflow guard — same as buildAndDownloadLump (header cc field is 8 bits).
+    if (cc > 255) {
+        let _ovf = `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n`;
+        _ovf += `  AUDIT FAILED \u2014 "${absName}"\n`;
+        _ovf += `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\n`;
+        _ovf += `  \u2717 [RCC] C-list overflow: ${cc} capabilities exceed 8-bit header limit (max 255).\n`;
+        _ovf += `  Remove ${cc - 255} capability reference${cc - 255 !== 1 ? 's' : ''} before building.\n`;
+        if (con) { con.textContent = _ovf; con.scrollTop = 0; }
+        return;
+    }
+
+    const allCode = [];
+    for (const m of result.methods) { allCode.push(...(m.code || [])); }
+    const cw = allCode.length;
+
+    let lumpSize = 64;
+    while (lumpSize < 1 + cw + cc) lumpSize <<= 1;
+
+    let nMinus6 = 0;
+    while ((64 << nMinus6) < lumpSize) nMinus6++;
+
+    const header = ((0x1F & 0x1F) << 27) |
+                   ((nMinus6 & 0x0F) << 23) |
+                   ((cw & 0x1FFF) << 10) |
+                   ((0 & 0x03) << 8) |
+                   (cc & 0xFF);
+
+    const lumpWords = new Uint32Array(lumpSize);
+    lumpWords[0] = header >>> 0;
+    for (let i = 0; i < cw; i++) { lumpWords[1 + i] = (allCode[i] >>> 0); }
+    // C-list slots populated with zero (unresolved NS indices) — same layout as buildAndDownloadLump.
+    const _auditClistStart = lumpSize - cc;
+    for (let i = 0; i < cc; i++) { lumpWords[_auditClistStart + i] = 0; }
+
+    const auditResults = lumpAudit(Array.from(lumpWords), null);
+    const auditErrors  = auditResults.filter(r => r.severity === 'error');
+    const auditWarns   = auditResults.filter(r => r.severity === 'warn');
+
+    let listing = `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n`;
+    listing += `  LUMP AUDIT \u2014 "${absName}"\n`;
+    listing += `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n\n`;
+    listing += `  Binary: ${lumpSize} words, cw=${cw}, cc=${cc}\n`;
+    listing += `  Header: 0x${(header >>> 0).toString(16).padStart(8, '0')}\n\n`;
+    listing += `  Checks:\n`;
+    for (const r of auditResults) {
+        const _sym = r.severity === 'pass' ? '\u2713' : r.severity === 'warn' ? '\u26a0' : '\u2717';
+        listing += `    ${_sym} [${r.ruleId}] ${r.message} \u2014 ${r.detail}\n`;
+    }
+    if (auditErrors.length > 0) {
+        listing += `\n  \u2717 AUDIT FAILED: ${auditErrors.length} error${auditErrors.length !== 1 ? 's' : ''} \u2014 fix before Build LUMP.\n`;
+    } else if (auditWarns.length > 0) {
+        listing += `\n  \u26a0 Audit passed with ${auditWarns.length} warning${auditWarns.length !== 1 ? 's' : ''} \u2014 review before deploying.\n`;
+    } else {
+        listing += `\n  \u2713 All checks passed \u2014 safe to Build LUMP.\n`;
+    }
+
+    if (con) { con.textContent = listing; con.scrollTop = 0; }
 }
 
 function compileCLOOMC() {
