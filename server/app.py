@@ -2420,11 +2420,19 @@ def _load_boot_abstr_lump():
         })
         print(f'[boot] Boot.Abstr extracted: {lump_size}w at mem[{word0_location}], '
               f'cw={cw}, cc={cc}', flush=True)
-        # Check whether the programmer's saved lump (00000300.lump, written by
-        # /api/lumps/save for ns_slot=3) exists on disk.  If it does and carries
-        # valid lump magic (top 5 bits = 0x1F), use its cw/cc for display and
-        # update LAZY_LUMPS['00000003'] so the Binary tab word rendering is
-        # consistent.  boot-image.bin is not changed by this block.
+        # SINGLE SOURCE OF TRUTH: LAZY_LUMPS['00000003'] always holds the binary
+        # extracted from boot-image.bin above.  We deliberately do NOT override it
+        # with any saved programmer lump (00000300.lump) because that would create
+        # two different binaries under the same token — one shown by the Code View
+        # (which reads sim.memory from boot-image.bin) and another shown by the LUMP
+        # panel and audit (which read LAZY_LUMPS).  Any such divergence silently
+        # misleads the programmer.  cw / cc / lump_size are authoritative from the
+        # boot-image header already set above.
+        #
+        # Sidecar annotations (author, version, pet_names, capabilities) are
+        # programmer-supplied metadata and are safe to merge — they do not affect the
+        # binary.  Prefer 00000300.json (written by /api/lumps/save for ns_slot=3);
+        # fall back to 00000003.json for backward-compat.
         _saved300_path = os.path.join(os.path.dirname(__file__), 'lumps', '00000300.lump')
         if os.path.isfile(_saved300_path):
             try:
@@ -2433,27 +2441,17 @@ def _load_boot_abstr_lump():
                 _s300n = len(_s300raw) // 4
                 if _s300n >= 1:
                     _s300words = list(_struct.unpack(f'>{_s300n}I', _s300raw[:_s300n * 4]))
-                    _s300hdr = _s300words[0]
-                    if (_s300hdr >> 27) == 0x1F:
-                        _s300cw  = (_s300hdr >> 10) & 0x1FFF
-                        _s300cc  = _s300hdr & 0xFF
-                        _s300nm6 = (_s300hdr >> 23) & 0xF
-                        _s300sz  = 1 << (_s300nm6 + 6)
-                        if _s300n >= _s300sz:
-                            LAZY_LUMPS['00000003'] = _struct.pack(
-                                f'>{_s300sz}I', *_s300words[:_s300sz])
-                            _BOOT_ABSTR_META['cw'] = _s300cw
-                            _BOOT_ABSTR_META['cc'] = _s300cc
-                            _BOOT_ABSTR_META['lump_size'] = _s300sz
-                            if _BOOT_ABSTR_META.get('methods'):
-                                _BOOT_ABSTR_META['methods'][0]['length'] = _s300cw
-                            print(f'[boot] 00000300.lump override: cw={_s300cw}, cc={_s300cc}',
-                                  flush=True)
+                    _s300hdr  = _s300words[0]
+                    _boot_raw = LAZY_LUMPS.get('00000003', b'')
+                    if _s300raw[:len(_boot_raw)] != _boot_raw:
+                        print('[boot] WARNING: 00000300.lump differs from boot-image.bin binary '
+                              '— ignoring saved binary to keep Code View and LUMP panel in sync.',
+                              flush=True)
+                    else:
+                        print('[boot] 00000300.lump matches boot-image.bin binary — consistent.',
+                              flush=True)
             except Exception as _e300:
-                print(f'[boot] 00000300.lump override failed: {_e300}', flush=True)
-        # Restore author/version/cw/cc from sidecar.  Prefer 00000300.json (written
-        # by /api/lumps/save for ns_slot=3); fall back to 00000003.json for
-        # backward-compat with metadata edits stored under the legacy name.
+                print(f'[boot] 00000300.lump consistency check failed: {_e300}', flush=True)
         _lumps_dir_sc = os.path.dirname(__file__)
         _sidecar_300 = os.path.join(_lumps_dir_sc, 'lumps', '00000300.json')
         _sidecar_003 = os.path.join(_lumps_dir_sc, 'lumps', '00000003.json')
@@ -2463,7 +2461,9 @@ def _load_boot_abstr_lump():
             try:
                 with open(_sidecar_path) as _s03f:
                     _s03 = json.load(_s03f)
-                for _f03 in ('author', 'version', 'cw', 'cc', 'pet_names', 'capabilities'):
+                # Only merge annotation fields — never cw/cc/lump_size, which must
+                # always reflect the actual boot-image binary already set above.
+                for _f03 in ('author', 'version', 'pet_names', 'capabilities'):
                     if _f03 in _s03:
                         _BOOT_ABSTR_META[_f03] = _s03[_f03]
             except Exception:
