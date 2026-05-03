@@ -371,6 +371,18 @@ function init() {
         // boot-image catalog entries take precedence; only truly empty slots
         // (like user-defined slot 50+) are restored from localStorage.
         loadNamespaceState();
+        // Dashboard auto-boot fires HERE (inside the .then) so that:
+        //   1. window.bootImage is already set → sim.reset() → _maybeApplyBootImage()
+        //      loads the correct binary immediately.
+        //   2. _clearBootImageStickyPatches() has already run → _stickyPatches is
+        //      empty → _reapplyStickyPatches() inside _autoLoadDefaultProgram() is
+        //      a no-op → the stale sticky patch can never overwrite sim.memory.
+        // Previously this was synchronous (before the fetch resolved), so boot ran
+        // against _initNamespaceTable() defaults with the stale patch still live.
+        if (startView === 'dashboard' && !sim.bootComplete) {
+            const _abChk = document.getElementById('autoBootChk');
+            if (_abChk && _abChk.checked) resetSim();
+        }
     });
     sim.on('programLoaded', () => {
         if (currentView === 'namespace') updateNamespace();
@@ -445,14 +457,6 @@ function init() {
                 if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 120);
         }
-    }
-    // If the page was opened directly to the dashboard (e.g. from the landing
-    // page link) and auto-boot is enabled, fire the boot sequence now.
-    // switchView('dashboard') calls restoreAutoBootPref() so the checkbox
-    // is already in its correct state here.
-    if (startView === 'dashboard') {
-        const _abChk = document.getElementById('autoBootChk');
-        if (_abChk && _abChk.checked) resetSim();
     }
     switchMathMode('hp35');
 

@@ -2508,7 +2508,7 @@ function generateBootImage() {
             _probeBootImage().then(buf => {
                 if (buf) {
                     window.bootImage = buf;
-                    try { sim.loadBootImage(buf); _applyBootEntryToSim(); } catch(e) { console.warn('[bootImage] apply failed:', e); }
+                    try { sim.loadBootImage(buf); _applyBootEntryToSim(); if (typeof window._clearBootImageStickyPatches === 'function') window._clearBootImageStickyPatches(sim.nsCount || 0); } catch(e) { console.warn('[bootImage] apply failed:', e); }
                 }
             });
         })
