@@ -2060,6 +2060,11 @@ def _make_fpga_zip(is_ti60, paths, zip_name, build_md):
         project_xml = project_xml.replace(
             '../build/church_ti60_f225.v', 'church_ti60_f225.v'
         )
+        # Inject peri.xml reference so Efinity can find the periphery configuration
+        project_xml = project_xml.replace(
+            '<efx:inter_file name=""/>',
+            '<efx:inter_file name="church_ti60_f225.peri.xml"/>'
+        )
         # Inject USB programmer target so Efinity IDE can flash without manual setup
         programmer_block = (
             '    <efx:programmer>\n'
