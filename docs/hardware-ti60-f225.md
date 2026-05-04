@@ -39,6 +39,29 @@ production synthesis on EFT90A silicon.
    efinity --version
    ```
 
+#### ChromeOS / Crostini (Linux container on Chromebook)
+
+Efinity crashes on startup under Crostini due to GPU/OpenGL unavailability.
+Launch with X11 platform forced and software rendering:
+
+```bash
+QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 /home/$USER/efinity/2025.2/bin/efinity &
+```
+
+Create a permanent launcher so you never have to remember the flags:
+
+```bash
+cat > ~/efinity.sh << 'EOF'
+#!/bin/bash
+QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 /home/$USER/efinity/2025.2/bin/efinity "$@"
+EOF
+chmod +x ~/efinity.sh
+```
+
+Then run `~/efinity.sh` to open it. The serial port blocking the FPGA Connect
+button is Efinity's built-in serial terminal — close it (Tools menu) before
+switching back to the Church Machine IDE.
+
 ### 2. openFPGALoader (for CLI flashing)
 
 ```bash

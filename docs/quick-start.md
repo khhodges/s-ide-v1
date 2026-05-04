@@ -965,6 +965,11 @@ Then in Chrome:
 
 1. Accept the self-signed certificate at `https://penguin.linux.test:8766/status`
    (on native Linux: `https://localhost:8766/status`)
+
+> **Efinity on Crostini:** if Efinity IDE crashes on startup, launch it with
+> `QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 ~/efinity/2025.2/bin/efinity &`
+> — this forces X11 + software rendering, which is required in the ChromeOS
+> Linux container. See `docs/hardware-ti60-f225.md` for a permanent launcher script.
 2. Hard refresh the IDE (Ctrl+Shift+R)
 3. Click **Bridge** in the toolbar, accept the default URL
 4. Use **Patch FPGA** instead of Export Patch — it sends code directly
