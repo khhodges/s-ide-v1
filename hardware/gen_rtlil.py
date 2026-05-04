@@ -14,6 +14,8 @@ def _rtlil_to_verilog(il_path, v_path):
         f"hierarchy -top top; "
         f"proc; "
         f"flatten; "
+        f"alumacc; "
+        f"techmap; "
         f"clean; "
         f"write_verilog -noattr {v_path}"
     )
