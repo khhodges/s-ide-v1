@@ -2218,6 +2218,32 @@ def download_fpga_verilog():
                      mimetype="text/plain")
 
 
+@app.route("/api/download/fpga-sdc")
+def download_fpga_sdc():
+    """Download just the SDC constraints file for the selected board."""
+    board = request.args.get("board", "ti60-f225").strip().lower()
+    _, paths, _, _, _, _ = _fpga_paths(board)
+    sdc_path = paths.get("sdc")
+    if not sdc_path or not os.path.isfile(sdc_path):
+        return jsonify({"error": "No SDC found for this board."}), 404
+    filename = os.path.basename(sdc_path)
+    return send_file(sdc_path, as_attachment=True, download_name=filename,
+                     mimetype="text/plain")
+
+
+@app.route("/api/download/fpga-peri")
+def download_fpga_peri():
+    """Download just the peri.xml periphery config for the selected board."""
+    board = request.args.get("board", "ti60-f225").strip().lower()
+    _, paths, _, _, _, _ = _fpga_paths(board)
+    peri_path = paths.get("peri")
+    if not peri_path or not os.path.isfile(peri_path):
+        return jsonify({"error": "No peri.xml found for this board."}), 404
+    filename = os.path.basename(peri_path)
+    return send_file(peri_path, as_attachment=True, download_name=filename,
+                     mimetype="application/xml")
+
+
 @app.route("/api/download/fpga-package")
 def download_fpga_package():
     """Legacy: build + download in one shot (kept for backwards compatibility)."""
