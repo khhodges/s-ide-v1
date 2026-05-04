@@ -7640,11 +7640,10 @@ function _renderBuildNextSteps(isTi60) {
     const el = document.getElementById('buildNextSteps');
     if (!el) return;
     const steps = isTi60 ? [
-        'Open Efinity IDE, create Titanium project (Ti60F225)',
-        'Add church_ti60_f225.v as source file',
-        'Interface Editor → Import ti60_f225.isf',
+        'Extract the zip to any folder',
+        'File → Open Project → church_ti60_f225.xml',
         'Run Synthesis → P&R → Generate Bitstream',
-        'Program via Efinity Programmer (JTAG / USB)',
+        'Tool → Programmer → Program (JTAG / USB)',
     ] : [
         'Install OSS CAD Suite (oss-cad-suite-build on GitHub)',
         'Unzip the package, then run: make pnr pack',
