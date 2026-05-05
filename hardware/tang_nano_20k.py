@@ -42,13 +42,16 @@ class GowinBSRAM(Elaboratable):
 
 class ChurchTangNano20K(Elaboratable):
     def __init__(self, clk_freq=27_000_000, baud=115200, sim_mode=False,
-                 iot_profile=False, build_sig=None, test_mode=False):
+                 iot_profile=False, build_sig=None, test_mode=False, board_id=None):
         self.clk_freq = clk_freq
         self.baud = baud
         self.sim_mode = sim_mode
         self.iot_profile = iot_profile
         self.test_mode = test_mode
         self.build_sig = build_sig or [0x00, 0x00, 0x00, 0x00]
+        # board_id overrides the default IoT/Full split so 9K can be 0x04
+        # while 20K-IoT stays 0x01.  None = use legacy default.
+        self._board_id = board_id
 
         self.uart_tx = Signal(init=1)
         self.uart_rx = Signal()
@@ -521,16 +524,29 @@ class ChurchTangNano20K(Elaboratable):
 
         m.d.comb += core.gc_start.eq(0)
 
-        banner_str = "CHURCH TN20K-IoT v1.0\r\n" if self.iot_profile else "CHURCH TN20K v1.0\r\n"
+        # board_id=0x04 → 9K-IoT; 0x01 → 20K-IoT; 0x02 → 20K-Full (legacy default)
+        if self._board_id is not None:
+            BOARD_TYPE_ID = self._board_id
+        else:
+            BOARD_TYPE_ID = 0x01 if self.iot_profile else 0x02
+
+        if BOARD_TYPE_ID == 0x04:
+            banner_str = "CHURCH TN9K-IoT v1.0\r\n"
+            DEVICE_UID = [0x54, 0x4E, 0x39, 0x4B, 0x00, 0x00, 0x00, 0x01]
+        elif self.iot_profile:
+            banner_str = "CHURCH TN20K-IoT v1.0\r\n"
+            DEVICE_UID = [0x54, 0x4E, 0x32, 0x30, 0x4B, 0x00, 0x00, 0x01]
+        else:
+            banner_str = "CHURCH TN20K v1.0\r\n"
+            DEVICE_UID = [0x54, 0x4E, 0x32, 0x30, 0x4B, 0x00, 0x00, 0x01]
+
         BANNER = Array([C(ord(c), 8) for c in banner_str])
         banner_idx = Signal(range(len(BANNER) + 1))
         banner_byte = Signal(8)
         m.d.comb += banner_byte.eq(BANNER[banner_idx])
 
-        BOARD_TYPE_ID = 0x01 if self.iot_profile else 0x02
         FW_MAJOR = 1
         FW_MINOR = 0
-        DEVICE_UID = [0x54, 0x4E, 0x32, 0x30, 0x4B, 0x00, 0x00, 0x01]
         CALLHOME_PKT = Array([C(v, 8) for v in [
             0xCE, 0x11,
             BOARD_TYPE_ID,

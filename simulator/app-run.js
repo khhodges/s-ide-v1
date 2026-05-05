@@ -8240,9 +8240,14 @@ const WHATS_NEW_FEATURES = [
         title: "FPGA call-home",
         html: `<div style="font-weight:700;color:var(--church-gold);font-size:1.05rem;margin-bottom:0.75rem;">&#x1F4E1; FPGA call-home &mdash; boards register automatically</div>` +
             `<p style="font-size:0.9rem;line-height:1.65;margin-bottom:0.75rem;">` +
-            `When a Tang Nano 20K boots with the current bitstream, it sends a 23-byte call-home packet ` +
+            `When a board boots with the current bitstream, it sends a 23-byte call-home packet ` +
             `over UART (including boot reason, last fault code, and faulting instruction address). The bridge detects this, sends an acknowledgment, and registers the board with the IDE. ` +
             `A 60-second heartbeat keeps the board marked as online.</p>` +
+            `<p style="font-size:0.88rem;color:#bbb;line-height:1.6;margin-bottom:0.5rem;">` +
+            `Board type byte in the packet: <code>0x01</code> = Tang Nano 20K IoT &nbsp;·&nbsp; ` +
+            `<code>0x02</code> = Tang Nano 20K Full &nbsp;·&nbsp; ` +
+            `<code>0x03</code> = Ti60 F225 &nbsp;·&nbsp; ` +
+            `<code>0x04</code> = Tang Nano 9K IoT</p>` +
             `<p style="font-size:0.88rem;color:#aaa;line-height:1.5;margin:0;">` +
             `No manual registration needed &mdash; plug in, flash, run bridge, done.</p>`
     }

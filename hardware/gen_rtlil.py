@@ -339,7 +339,7 @@ def generate_rtlil_tang_nano_9k(output_dir="build"):
     os.makedirs(output_dir, exist_ok=True)
 
     top = ChurchTangNano20K(clk_freq=27_000_000, baud=115200, sim_mode=False,
-                            iot_profile=True)
+                            iot_profile=True, board_id=0x04)
 
     ports = [
         top.uart_tx, top.uart_rx, top.push_button,
