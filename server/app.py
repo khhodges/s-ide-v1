@@ -1987,6 +1987,101 @@ echo "Next step: run ./bridge.sh --ide=https://cloomc.org"
 echo "  to connect this board to the Church Machine IDE."
 """
 
+FLASH_9K_SH = """#!/usr/bin/env bash
+set -euo pipefail
+
+RTLIL="church_tang_nano_9k.il"
+DEVICE="GW1NR-LV9QN88PC6/I5"
+FAMILY="GW1N-9C"
+JSON="church_tang_nano_9k.json"
+VERILOG="church_tang_nano_9k.v"
+CST="tang_nano_9k.cst"
+FS="church_tang_nano_9k.fs"
+FREQ="27"
+
+echo "========================================"
+echo " Church Machine — Tang Nano 9K Flash"
+echo " (IoT profile — reduced ISA)"
+echo "========================================"
+echo ""
+
+# Step 0: Yosys synthesis (if JSON netlist is missing)
+if [ ! -f "$JSON" ] && [ -f "$RTLIL" ]; then
+    echo "[0/3] Running Yosys synthesis from RTLIL..."
+    if ! yosys -p "read_rtlil $RTLIL; synth_gowin -top top -json $JSON -vout $VERILOG" 2>&1; then
+        echo ""
+        echo "FAIL: Yosys synthesis failed."
+        echo "  Hint: Ensure OSS CAD Suite is sourced (source oss-cad-suite/environment)"
+        exit 1
+    fi
+    echo "  OK — $JSON generated"
+    echo ""
+elif [ ! -f "$JSON" ]; then
+    echo "ERROR: Neither $JSON nor $RTLIL found."
+    echo "  Re-download the build package from the IDE."
+    exit 1
+fi
+
+# Step 1: Place and Route
+echo "[1/3] Place and route (nextpnr-himbaechel)..."
+if ! nextpnr-himbaechel --json "$JSON" \\
+    --write "${JSON%.json}_pnr.json" \\
+    --device "$DEVICE" \\
+    --vopt family="$FAMILY" \\
+    --vopt cst="$CST" \\
+    --freq "$FREQ" 2>&1; then
+    echo ""
+    echo "FAIL: nextpnr-himbaechel failed."
+    echo "  Hint: If you see 'Cell ledN not found', re-download the package from IDE."
+    exit 1
+fi
+echo "  OK"
+echo ""
+
+# Step 2: Pack bitstream
+echo "[2/3] Packing bitstream (gowin_pack)..."
+if ! gowin_pack -d "$FAMILY" -o "$FS" "${JSON%.json}_pnr.json" 2>&1; then
+    echo ""
+    echo "FAIL: gowin_pack failed."
+    echo "  Hint: Ensure OSS CAD Suite is sourced (source oss-cad-suite/environment)"
+    exit 1
+fi
+echo "  OK — $FS generated"
+echo ""
+
+# Step 3: Flash
+echo "[3/3] Flashing to Tang Nano 9K (openFPGALoader)..."
+if ! openFPGALoader -b tangnano9k "$FS" 2>&1; then
+    echo ""
+    echo "FAIL: openFPGALoader failed."
+    echo ""
+    echo "  Troubleshooting:"
+    echo "  1. Unplug USB-C, wait 5 seconds, plug back in, then retry."
+    echo "  2. Try a different USB-C cable (some cables have flaky data lines)."
+    echo "  3. Press the RESET button on the board, then retry."
+    echo "  4. Check USB ports:  ls /dev/ttyUSB*"
+    echo "     → You should see ttyUSB0 (JTAG) and ttyUSB1 (UART)."
+    echo "     → Run: dmesg | tail -20  to see kernel USB messages."
+    exit 1
+fi
+echo ""
+
+echo "========================================"
+echo " SUCCESS — Church Machine 9K flashed!"
+echo "========================================"
+echo ""
+echo "Check the LEDs now:"
+echo "  led0 (pin 10): Solid ON      — boot complete"
+echo "  led1 (pin 11): Blinking      — core halted, waiting for code"
+echo "  led2 (pin 13): OFF           — no capability fault"
+echo "  led3 (pin 14): Blinking ~1Hz — heartbeat (clock alive)"
+echo ""
+echo "One solid + two blinking = success!"
+echo ""
+echo "Next step: run ./bridge.sh --ide=https://cloomc.org"
+echo "  to connect this board to the Church Machine IDE."
+"""
+
 BRIDGE_SH = """#!/usr/bin/env bash
 set -euo pipefail
 
@@ -2227,9 +2322,10 @@ def _make_fpga_zip(is_ti60, paths, zip_name, build_md):
                 zf.write(json_path,         os.path.basename(json_path))
             zf.write(paths["cst"],      os.path.basename(paths["cst"]))
             zf.write(paths["makefile"], "Makefile")
+            flash_script = FLASH_9K_SH if zip_name == "church-nano-9k-package.zip" else FLASH_SH
             flash_info = zipfile.ZipInfo("flash.sh")
             flash_info.external_attr = 0o755 << 16
-            zf.writestr(flash_info, FLASH_SH.lstrip('\n'))
+            zf.writestr(flash_info, flash_script.lstrip('\n'))
             bridge_info = zipfile.ZipInfo("bridge.sh")
             bridge_info.external_attr = 0o755 << 16
             zf.writestr(bridge_info, BRIDGE_SH.lstrip('\n'))
