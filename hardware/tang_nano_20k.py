@@ -26,7 +26,7 @@ class GowinBSRAM(Elaboratable):
 
         mem = LibMemory(shape=unsigned(32), depth=self.depth, init=[0] * self.depth)
         m.submodules.mem = mem
-        rd_port = mem.read_port(domain="comb")
+        rd_port = mem.read_port(domain="sync")
         wr_port = mem.write_port()
 
         m.d.comb += [
@@ -329,6 +329,14 @@ class ChurchTangNano20K(Elaboratable):
                 core.ns_rd_data.eq(Cat(bsram.rd_data, C(0, 64))),
                 core.clist_rd_data.eq(bsram.rd_data),
             ]
+
+            # GowinBSRAM uses domain="sync" (1-cycle read latency) so BSRAM
+            # inference fires in Yosys.  Drive dmem_rd_valid identically to
+            # the sim_mode path: register the read-enable and OR in same-cycle
+            # MMIO reads so the core never stalls on an MMIO access.
+            _dmem_rd_valid_r = Signal()
+            m.d.sync += _dmem_rd_valid_r.eq(core.dmem_rd_en & ~is_mmio)
+            m.d.comb += core.dmem_rd_valid.eq(_dmem_rd_valid_r | is_mmio_read)
 
             wr_data = Signal(32)
             wr_en = Signal()

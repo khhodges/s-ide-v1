@@ -1909,7 +1909,7 @@ echo ""
 # Step 0: Yosys synthesis (if JSON netlist is missing)
 if [ ! -f "$JSON" ] && [ -f "$RTLIL" ]; then
     echo "[0/3] Running Yosys synthesis from RTLIL..."
-    if ! yosys -p "read_rtlil $RTLIL; synth_gowin -top top -json $JSON -vout $VERILOG" 2>&1; then
+    if ! yosys -p "read_rtlil $RTLIL; synth_gowin -top top -no-rw-check -json $JSON -vout $VERILOG" 2>&1; then
         echo ""
         echo "FAIL: Yosys synthesis failed."
         echo "  Hint: Ensure OSS CAD Suite is sourced (source oss-cad-suite/environment)"
@@ -2008,7 +2008,7 @@ echo ""
 # Step 0: Yosys synthesis (if JSON netlist is missing)
 if [ ! -f "$JSON" ] && [ -f "$RTLIL" ]; then
     echo "[0/3] Running Yosys synthesis from RTLIL..."
-    if ! yosys -p "read_rtlil $RTLIL; synth_gowin -top top -json $JSON -vout $VERILOG" 2>&1; then
+    if ! yosys -p "read_rtlil $RTLIL; synth_gowin -top top -no-rw-check -json $JSON -vout $VERILOG" 2>&1; then
         echo ""
         echo "FAIL: Yosys synthesis failed."
         echo "  Hint: Ensure OSS CAD Suite is sourced (source oss-cad-suite/environment)"
@@ -2246,7 +2246,7 @@ def _fpga_paths(board):
         gen_args = ["python3", "-m", "hardware.gen_rtlil", "build", "--9k"]
         synth_cmd_tpl = (
             "read_rtlil {rtlil}; "
-            "synth_gowin -top top -json {json} -vout {verilog}"
+            "synth_gowin -top top -no-rw-check -json {json} -vout {verilog}"
         )
     else:
         paths = {
@@ -2261,7 +2261,7 @@ def _fpga_paths(board):
         gen_args = ["python3", "-m", "hardware.gen_rtlil", "build"]
         synth_cmd_tpl = (
             "read_rtlil {rtlil}; "
-            "synth_gowin -top top -json {json} -vout {verilog}"
+            "synth_gowin -top top -no-rw-check -json {json} -vout {verilog}"
         )
     return is_ti60, paths, zip_name, build_md, gen_args, synth_cmd_tpl
 
