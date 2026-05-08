@@ -203,18 +203,42 @@
         matches.forEach(function (item) {
             var flatIdx = allFlatItems.length;
             allFlatItems.push(item);
-            pickerBodyEl.appendChild(makeItemRow(item, flatIdx));
+            pickerBodyEl.appendChild(makeItemRow(item, flatIdx, q));
         });
 
         setSelected(0);
     }
 
-    function makeItemRow(item, flatIdx) {
+    // Populate el with label text, wrapping the first occurrence of q in a
+    // <span class="asm-picker-match"> highlight span.  Uses DOM nodes so no
+    // HTML escaping is needed and monospace layout is preserved.
+    function applyHighlight(el, label, q) {
+        var idx = label.toLowerCase().indexOf(q);
+        if (idx === -1) {
+            el.appendChild(document.createTextNode(label));
+            return;
+        }
+        var before = label.substring(0, idx);
+        var matched = label.substring(idx, idx + q.length);
+        var after = label.substring(idx + q.length);
+        if (before) el.appendChild(document.createTextNode(before));
+        var mark = document.createElement('span');
+        mark.className = 'asm-picker-match';
+        mark.textContent = matched;
+        el.appendChild(mark);
+        if (after) el.appendChild(document.createTextNode(after));
+    }
+
+    function makeItemRow(item, flatIdx, query) {
         var row = document.createElement('div');
         row.className = 'asm-picker-item';
         row.setAttribute('role', 'option');
         row.setAttribute('data-idx', flatIdx);
-        row.textContent = item.label;
+        if (query) {
+            applyHighlight(row, item.label, query);
+        } else {
+            row.textContent = item.label;
+        }
         row.addEventListener('mousedown', function (e) {
             e.preventDefault();
             currentOnSelect(item);

@@ -8379,3 +8379,8 @@ body.landing-mode .auth-section {
     font-size: 0.72rem;
     font-style: italic;
 }
+
+.asm-picker-match {
+    color: var(--accent, #e94560);
+    font-weight: 700;
+}

@@ -1118,3 +1118,8 @@
     font-size: 0.72rem;
     font-style: italic;
 }
+
+.asm-picker-match {
+    color: #f4b942;
+    font-weight: 700;
+}
