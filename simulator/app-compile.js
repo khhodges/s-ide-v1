@@ -1501,6 +1501,16 @@ function loadCLOOMCExample(name) {
         'memory': '/simulator/cloomc/memory.cloomc',
         'sliderule_hs': '/simulator/cloomc/sliderule_hs.cloomc'
     };
+    const fileLanguages = {
+        'sliderule': 'javascript',
+        'contact': 'javascript',
+        'contact_stage2': 'javascript',
+        'contact_call': 'javascript',
+        'english_contact_stage2': 'english',
+        'ada_note_g_published_bug': 'ada',
+        'memory': 'javascript',
+        'sliderule_hs': 'haskell'
+    };
     if (fileExamples[name]) {
         fetch(fileExamples[name])
             .then(r => r.ok ? r.text() : Promise.reject('File not found'))
@@ -1508,11 +1518,27 @@ function loadCLOOMCExample(name) {
                 editor.value = code;
                 saveEditorState();
                 updateLineNumbers();
+                // Activate the matching tab — data-example may have a 'cloomc_' prefix
                 document.querySelectorAll('.example-tab').forEach(t => {
-                    t.classList.toggle('active', t.dataset.example === name);
+                    const de = t.dataset.example || '';
+                    t.classList.toggle('active',
+                        de === name || de === 'cloomc_' + name);
                 });
+                // Set the correct language for this file
                 const sel = document.getElementById('langSelector');
-                if (sel) sel.value = 'cloomc';
+                const fileLang = fileLanguages[name] || 'javascript';
+                if (sel && sel.value !== fileLang) {
+                    sel.value = fileLang;
+                    // Update button states without triggering a full lang-change cycle
+                    // (onLangChange would reload the default example and overwrite our content)
+                    if (typeof renderSyntaxRef === 'function') {
+                        const syntaxPanel = document.getElementById('codeSyntaxPanel');
+                        if (syntaxPanel && syntaxPanel.style.display !== 'none') {
+                            renderSyntaxRef(fileLang);
+                        }
+                    }
+                    if (typeof showIntro === 'function') showIntro(fileLang);
+                }
                 if (typeof historySetCodeExample === 'function') historySetCodeExample(name);
                 const nb = document.getElementById('presetNoticeBar');
                 if (nb) nb.style.display = 'none';
