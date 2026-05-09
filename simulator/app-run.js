@@ -5055,6 +5055,63 @@ BRANCH recurse            ; loop (after RETURN)
 overflow_halt:
 HALT
 `,
+        'bind_attack': `; ============================================================
+; Abstraction:  BindAttack
+; Description:  Adversarial bind-bit and SAVE/SEAL violation tests — should all FAULT
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: None
+; ============================================================
+; Methods:
+;   1. attack1_save_no_b — SAVE without B bit set → FAULT
+;   2. attack2_seal_wrong_slot — SEAL to out-of-range NS slot → FAULT
+;   3. attack3_rebind_sealed — SAVE to already-sealed GT → FAULT
+;   4. verify_b_bit — Confirm B bit must be explicitly granted
+; ============================================================
+;
+; The Bind bit (B=1) in a Golden Token authorises SAVE (capability hand-off).
+; Every SAVE without B=1 must FAULT; mLoad is the enforcing gate.
+;
+; Boot C-List layout:
+;   [4] Salvation (E)  [5] Navana (E)
+;   [6] Mint (E)       [7] Memory (E)
+;   [8] LED (RW)       [9] UART (RW)
+;   [10] BTN (R)       [11] TIMER (RW)
+
+; ─── ATTACK 1: SAVE without B bit set ──────────────────────
+; Salvation (slot 4) has E only — B bit is 0.
+; SAVE requires B=1. Should FAULT immediately.
+LOAD CR0, CR6, 4       ; CR0 = Salvation (E, B=0)
+SAVE CR0, CR5, 0       ; FAULT: B bit not set — binding denied
+
+; ─── ATTACK 2: SEAL to an out-of-range NS slot ───────────────
+; SEAL binds a GT to a specific NS slot.
+; Slot 0x3FFF (max+1) is beyond the namespace limit.
+LOAD CR1, CR6, 6       ; CR1 = Mint (E)
+SEAL CR1, 0x3FFF       ; FAULT: NS slot out of range
+
+; ─── ATTACK 3: SAVE to already-sealed GT ─────────────────────
+; Once SEAL is applied, the GT is immutable.
+; Attempting SAVE on a sealed GT should FAULT.
+LOAD CR2, CR6, 5       ; CR2 = Navana (E, B=0, already sealed by boot)
+SAVE CR2, CR5, 1       ; FAULT: GT is sealed — no rebinding allowed
+
+; ─── If any attack succeeded, execution reaches here ──────
+; That would indicate a security violation in mLoad.
+HALT
+
+; ─── ATTACK 4: Verify B-bit must be explicitly granted ─────
+; TPERM checks: does CR6 (the C-List root) carry the B bit?
+; Boot grants B=0 everywhere by default — B must be explicit.
+LOAD CR3, CR6, 8       ; CR3 = LED (RW)
+TPERM CR3, B           ; Z=1 if B granted — should be Z=0
+BRANCHEQ bind_granted  ; B was granted (unexpected!)
+HALT                   ; correct: B not granted, test passes
+bind_granted:
+HALT                   ; fail: B bit present without explicit grant
+`,
         'led_control': `; ============================================================
 ; Abstraction:  LedControl
 ; Description:  LED control — LED blink nucleus program on Ti60 F225 FPGA; Turing DR Test in _TURING_DR_TEST_SOURCE
