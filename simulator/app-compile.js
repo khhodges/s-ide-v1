@@ -1524,7 +1524,7 @@ function loadCLOOMCExample(name) {
     const examples = {
         'mint': `// ============================================================
 // Abstraction:  Mint
-// Description:  Creates and validates Golden Token capability words
+// Description:  Mints (creates) and revokes Golden Token capability words
 // Author:       Church Machine Educational Platform
 // Version:      1.0
 // Created:      2026-05-09
@@ -1532,9 +1532,8 @@ function loadCLOOMCExample(name) {
 // Dependencies: Navana, Memory
 // ============================================================
 // Methods:
-//   1. Encode(ns, exp, perms, bindable, far) — create a Golden Token word
-//   2. Decode(gt) — unpack fields from a Golden Token
-//   3. Validate(gt) — check GT integrity (well-formed, not expired)
+//   1. Create(size, perms) — allocate space for a new Golden Token; delegates to Memory.Allocate
+//   2. Revoke(index) — invalidate an existing GT by index (clears namespace entry)
 // ============================================================
 // ── Mint: Creating New Golden Tokens ──
 // Mint depends on Memory (listed in capabilities).
@@ -2454,69 +2453,6 @@ abstraction ChurchEncoding {
     -- Compiled path: MCMP DR_p, DR_zero + BRANCHEQ then_label + BRANCH else_label
     method ifthenelse(p, a, b) = if p == 0 then b else a
 }`,
-'lambda_church_encoding': `-- ============================================================
--- Abstraction:  ChurchEncoding
--- Description:  Church booleans and Church pairs as pure functions
--- Author:       Church Machine Educational Platform
--- Version:      1.0
--- Created:      2026-05-09
--- Language:     Lambda Calculus
--- Dependencies: None
--- ============================================================
--- Methods:
---   1. true_(x, y) \u2014 Church TRUE: \u03BBx.\u03BBy.x
---   2. false_(x, y) \u2014 Church FALSE: \u03BBx.\u03BBy.y
---   3. and_(p, q) \u2014 Church AND: \u03BBp.\u03BBq.p q p
---   4. or_(p, q) \u2014 Church OR: \u03BBp.\u03BBq.p p q
---   5. not_(p) \u2014 Church NOT: \u03BBp.p FALSE TRUE
---   6. ifthenelse(p, a, b) \u2014 Church IF-THEN-ELSE
---   7. pair(a, b) \u2014 Church PAIR: \u03BBx.\u03BBy.\u03BBf.f x y
---   8. fst_(p) \u2014 first element: \u03BBp.p (\u03BBx.\u03BBy.x)
---   9. snd_(p) \u2014 second element: \u03BBp.p (\u03BBx.\u03BBy.y)
---  10. swap(p) \u2014 swap pair elements
---  11. mapBoth(p, n) \u2014 add n to both elements
--- ============================================================
--- LAMBDA CALCULUS: Church Booleans and Church Pairs
--- TRUE  = \u03BBx.\u03BBy.x  (select first)
--- FALSE = \u03BBx.\u03BBy.y  (select second)
--- PAIR  = \u03BBx.\u03BBy.\u03BBf.f x y
-
-abstraction ChurchEncoding {
-    capabilities { }
-
-    -- Church TRUE: \u03BBx.\u03BBy.x
-    method true_(x, y) = x
-
-    -- Church FALSE: \u03BBx.\u03BBy.y
-    method false_(x, y) = y
-
-    -- AND: \u03BBp.\u03BBq.p q p
-    method and_(p, q) = if p == 0 then 0 else q
-
-    -- OR: \u03BBp.\u03BBq.p p q
-    method or_(p, q) = if p == 0 then q else p
-
-    -- NOT: \u03BBp.p FALSE TRUE
-    method not_(p) = if p == 0 then 1 else 0
-
-    -- IF-THEN-ELSE: \u03BBp.\u03BBa.\u03BBb.p a b
-    method ifthenelse(p, a, b) = if p == 0 then b else a
-
-    -- Make a pair from two values: \u03BBx.\u03BBy.\u03BBf.f x y
-    method pair(a, b) = (a, b)
-
-    -- First element: \u03BBp.p (\u03BBx.\u03BBy.x)
-    method fst_(p) = fst p
-
-    -- Second element: \u03BBp.p (\u03BBx.\u03BBy.y)
-    method snd_(p) = snd p
-
-    -- Swap elements
-    method swap(p) = (snd p, fst p)
-
-    -- Apply n to both elements
-    method mapBoth(p, n) = (fst p + n, snd p + n)
-}`,
         'lambda_fixed_point': `-- ============================================================
 -- Abstraction:  FixedPoint
 -- Description:  Y combinator and fixed-point decimal arithmetic
@@ -2611,9 +2547,13 @@ abstraction FixedPoint {
 --   3. Square(x) \u2014 A/D scale: x\u00b2
 --   4. Sqrt(n) \u2014 A/D scale: integer \u221an
 --   5. Cube(x) \u2014 K/D scale: x\u00b3
---   6. Reciprocal(x) \u2014 CI/D scale: 1/x (integer approx)
---   7. Abs(n) \u2014 absolute value
---   8. Clamp(x, lo, hi) \u2014 clamp to [lo, hi]
+--   6. CubeRoot(n) \u2014 K/D scale: integer \u221bn (Newton\u2019s approximation)
+--   7. Reciprocal(x) \u2014 CI/D scale: 1/x (integer approx)
+--   8. SineApprox(deg) \u2014 sine approximation via polynomial (degrees)
+--   9. Abs(n) \u2014 absolute value
+--  10. Clamp(x, lo, hi) \u2014 clamp to [lo, hi]
+--  11. Max(a, b) \u2014 larger of two values
+--  12. Min(a, b) \u2014 smaller of two values
 -- ============================================================
 -- LAMBDA CALCULUS
 -- Slide Rule \u2014 logarithmic computation as pure functions
@@ -2726,12 +2666,17 @@ abstraction LambdaSlideRule {
 -- Dependencies: None
 -- ============================================================
 -- Methods:
---   1. add(n1, d1, n2, d2) \u2014 add two fractions: n1/d1 + n2/d2
---   2. sub(n1, d1, n2, d2) \u2014 subtract fractions
---   3. mul(n1, d1, n2, d2) \u2014 multiply fractions
---   4. div(n1, d1, n2, d2) \u2014 divide fractions
---   5. isEqual(n1, d1, n2, d2) \u2014 test equality
---   6. gcd(a, b) \u2014 greatest common divisor (Euclidean)
+--   1. numerator(n, d) \u2014 normalised numerator (divides by gcd)
+--   2. denominator(n, d) \u2014 normalised denominator (divides by gcd)
+--   3. addNum(n1, d1, n2, d2) \u2014 numerator of n1/d1 + n2/d2
+--   4. addDen(n1, d1, n2, d2) \u2014 denominator of n1/d1 + n2/d2
+--   5. subNum(n1, d1, n2, d2) \u2014 numerator of n1/d1 \u2212 n2/d2
+--   6. mulNum(n1, d1, n2, d2) \u2014 numerator of n1/d1 \u00d7 n2/d2
+--   7. mulDen(n1, d1, n2, d2) \u2014 denominator of n1/d1 \u00d7 n2/d2
+--   8. divNum(n1, d1, n2, d2) \u2014 numerator of (n1/d1) / (n2/d2)
+--   9. divDen(n1, d1, n2, d2) \u2014 denominator of (n1/d1) / (n2/d2)
+--  10. isEqual(n1, d1, n2, d2) \u2014 test equality (cross-multiply)
+--  11. gcd(a, b) \u2014 greatest common divisor (Euclidean algorithm)
 -- ============================================================
 -- LAMBDA CALCULUS
 -- Rational Arithmetic \u2014 exact fractions on integer hardware
@@ -3115,7 +3060,7 @@ abstraction AbstractionLifecycle {
 
         'physical_pool': `// ============================================================
 // Abstraction:  DMABuffer
-// Description:  Raw physical word allocation: paired Allocate/Free and Claim/Release
+// Description:  DMA buffer management: Reserve, scratch allocation, and paired scratch buffers
 // Author:       Church Machine Educational Platform
 // Version:      1.0
 // Created:      2026-05-09
@@ -3123,10 +3068,10 @@ abstraction AbstractionLifecycle {
 // Dependencies: None
 // ============================================================
 // Methods:
-//   1. Allocate(size) — reserve scratch words; return (location, actual_size)
-//   2. Free(location) — release a previously allocated scratch block
-//   3. Claim(size) — permanently claim DMA-visible words
-//   4. Release(location) — release a permanently claimed DMA region
+//   1. Reserve(size) — reserve a block of 'size' physical words; returns (location, size)
+//   2. Scratch(words) — allocate a scratch buffer; delegates to Memory.Allocate
+//   3. Drop(location) — return a scratch buffer to the pool via Memory.Free
+//   4. ScratchPair(words) — allocate two matched scratch buffers; rolls back on failure
 // ============================================================
 // ── Memory (NS 7): Raw Physical Word Allocation ──
 // Memory is the bottom of the Church Machine's
