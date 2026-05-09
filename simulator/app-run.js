@@ -5177,7 +5177,7 @@ BRANCHNE outer_off
 
 BRANCH led_on             ; loop forever
 
-` + '; ────────────────────────────────────────────────────────────\n; Section 2: Turing DR Test ✦\n; ────────────────────────────────────────────────────────────\n' + _TURING_DR_TEST_SOURCE,
+` + '; ────────────────────────────────────────────────────────────\n; Section 2: Turing DR Test ✦\n; ────────────────────────────────────────────────────────────\n' + _TURING_DR_TEST_SOURCE.slice(_TURING_DR_TEST_SOURCE.indexOf('; Turing DR Test')),
     };
 
     const code = examples[name];
