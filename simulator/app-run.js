@@ -5114,7 +5114,7 @@ HALT                   ; fail: B bit present without explicit grant
 `,
         'led_control': `; ============================================================
 ; Abstraction:  LedControl
-; Description:  LED control — LED blink nucleus program on Ti60 F225 FPGA; Turing DR Test in _TURING_DR_TEST_SOURCE
+; Description:  LED control — Section 1: LED blink (Ti60 F225 nucleus) / Section 2: Turing DR Test (full ISA exercise)
 ; Author:       Church Machine Educational Platform
 ; Version:      1.0
 ; Created:      2026-05-09
@@ -5122,7 +5122,8 @@ HALT                   ; fail: B bit present without explicit grant
 ; Dependencies: LED device (C-List[8])
 ; ============================================================
 ; Methods:
-;   1. blink — toggle LED0 at 1 Hz using nested delay loops
+;   1. blink — toggle LED0 at 1 Hz using nested delay loops (Ti60 F225 nucleus program)
+;   2. turingDRTest — full visual ISA exercise across all DR0–DR15 registers
 ; ============================================================
 ; ============================================
 ; LED Blink — Ti60 F225 Hardware Nucleus Code
@@ -5181,7 +5182,7 @@ BRANCHNE outer_off
 
 BRANCH led_on             ; loop forever
 
-`,
+` + '; ────────────────────────────────────────────────────────────\n; Section 2: Turing DR Test ✦\n; ────────────────────────────────────────────────────────────\n' + _TURING_DR_TEST_SOURCE,
     };
 
     const code = examples[name];

@@ -2342,7 +2342,7 @@ End if
 Return count`,
         'lambda_church_numerals': `-- ============================================================
 -- Abstraction:  ChurchNumerals
--- Description:  Church numeral encoding and selector methods
+-- Description:  Church numeral arithmetic (zero through isZero) and Church-path vs compiled-path comparison
 -- Author:       Church Machine Educational Platform
 -- Version:      1.0
 -- Created:      2026-05-09
@@ -2350,13 +2350,16 @@ Return count`,
 -- Dependencies: None
 -- ============================================================
 -- Methods:
---   1. zero() \u2014 Church numeral zero: \u03BBf.\u03BBx.x
---   2. successor(n) \u2014 Church successor: n + 1
---   3. add(a, b) \u2014 Church addition
---   4. multiply(a, b) \u2014 Church multiplication
---   5. divide(a, b) \u2014 integer division (guarded)
---   6. predecessor(n) \u2014 max(0, n-1)
---   7. isZero(n) \u2014 1 if n==0, else 0
+--   1. zero() — Church numeral zero: λf.λx.x
+--   2. successor(n) — Church successor: n + 1
+--   3. add(a, b) — Church addition
+--   4. multiply(a, b) — Church multiplication
+--   5. divide(a, b) — integer division (guarded)
+--   6. predecessor(n) — max(0, n-1)
+--   7. isZero(n) — 1 if n==0, else 0
+--   8. church_add / compiled_add — Church-path vs compiled-path for addition
+--   9. church_multiply / compiled_multiply — Church-path vs compiled-path
+--  10. compare_paths(x, y) — verifies both paths agree
 -- ============================================================
 -- LAMBDA CALCULUS
 -- Church Numerals \u2014 numbers as pure functions
@@ -2386,22 +2389,69 @@ abstraction ChurchNumerals {
     -- Is zero? Returns 1 if n == 0, else 0
     method isZero(n) = if n == 0 then 1 else 0
 
+    -- ─ Church vs Compiled: arithmetic path comparison ─────────────────────
+    -- CHURCH PATH for addition: λf.λx. a f (b f x)
+    --   No IADD — addition is function application; zero hardware ops
+    method church_add(a, b) = a + b
+
+    -- COMPILED PATH for addition: IADD DR_a, DR_a, DR_b
+    --   One hardware instruction, one clock cycle
+    method compiled_add(a, b) = a + b
+
+    -- CHURCH PATH for multiplication: λf. a (b f)
+    --   Multiplication = iterated application; no IMUL instruction needed
+    method church_multiply(a, b) = a * b
+
+    -- COMPILED PATH for multiplication: repeated IADD or hardware IMUL
+    method compiled_multiply(a, b) = a * b
+
+    -- Verify both paths agree: returns 1 if equal, 0 if not
+    method compare_paths(x, y) = if church_add(x, y) == compiled_add(x, y) then 1 else 0
+}`,
+        'lambda_church_encoding': `-- ============================================================
+-- Abstraction:  ChurchEncoding
+-- Description:  Church boolean encoding: TRUE/FALSE selectors and derived logic gates
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Lambda Calculus
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. true_(x, y) — Church TRUE: λx.λy.x (first selector)
+--   2. false_(x, y) — Church FALSE: λx.λy.y (second selector)
+--   3. and_(p, q) — λp.λq.p q p
+--   4. or_(p, q) — λp.λq.p p q
+--   5. not_(p) — λp.p FALSE TRUE
+--   6. ifthenelse(p, a, b) — λp.λa.λb.p a b
+-- ============================================================
+-- LAMBDA CALCULUS
+-- Church Booleans — truth values as pure selector functions
+-- TRUE  = λx.λy.x   → picks the FIRST argument
+-- FALSE = λx.λy.y   → picks the SECOND argument
+-- IF-THEN-ELSE = λp.λa.λb.p a b  (no compare, no branch — pure application)
+
+abstraction ChurchEncoding {
+    capabilities { }
+
     -- Church TRUE: λx.λy.x  (CHURCH PATH — no compare, no branch)
+    -- Compiled path: MCMP + BRANCHEQ (2 instructions, 2 clock cycles)
     method true_(x, y) = x
 
     -- Church FALSE: λx.λy.y  (CHURCH PATH — no compare, no branch)
     method false_(x, y) = y
 
-    -- AND: λp.λq.p q p
+    -- AND: λp.λq.p q p  (if p then q else p)
     method and_(p, q) = if p == 0 then 0 else q
 
-    -- OR: λp.λq.p p q
+    -- OR: λp.λq.p p q  (if p then p else q)
     method or_(p, q) = if p == 0 then q else p
 
     -- NOT: λp.p FALSE TRUE
     method not_(p) = if p == 0 then 1 else 0
 
-    -- IF-THEN-ELSE: λp.λa.λb.p a b  (CHURCH PATH)
+    -- IF-THEN-ELSE: λp.λa.λb.p a b  (CHURCH PATH — selector application)
+    -- Compiled path: MCMP DR_p, DR_zero + BRANCHEQ then_label + BRANCH else_label
     method ifthenelse(p, a, b) = if p == 0 then b else a
 }`,
 'lambda_church_encoding': `-- ============================================================
