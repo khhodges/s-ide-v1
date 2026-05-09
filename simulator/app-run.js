@@ -4263,6 +4263,8 @@ BRANCH fail               ; infinite halt loop
 `;
 
 function loadExample(name) {
+    // User explicitly chose an example — discard any wizard scaffold.
+    window._wizardScaffoldActive = false;
     const editor = document.getElementById('asmEditor');
     if (!editor) return;
     _editorCREditActive = false;

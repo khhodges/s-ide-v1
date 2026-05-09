@@ -613,6 +613,10 @@
         var ed = document.getElementById('asmEditor');
         if (ed) {
             ed.value = scaffold;
+            // Mark the editor as holding a wizard scaffold so that switching the
+            // language dropdown does NOT replace it with a built-in example.
+            // The flag is cleared only when the user explicitly loads an example tab.
+            window._wizardScaffoldActive = true;
             ed.dispatchEvent(new Event('input', { bubbles: true }));
             ed.focus();
         }

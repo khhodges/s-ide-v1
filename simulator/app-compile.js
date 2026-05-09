@@ -393,20 +393,25 @@ function onLangChange(restoring) {
 
     if (!restoring) {
         if (!activeUserTabId && lang !== 'personal') {
-            const defaults = {
-                english: 'english_hello',
-                assembly: 'selftest',
-                javascript: 'hello',
-                haskell: 'church_math',
-                symbolic: 'ada_note_g',
-                lambda: 'lambda_church'
-            };
-            const defaultExample = defaults[lang];
-            if (defaultExample) {
-                if (lang === 'assembly') {
-                    loadExample(defaultExample);
-                } else {
-                    loadCLOOMCExample(defaultExample);
+            // If the editor holds a wizard-generated scaffold, preserve it across
+            // language switches so the user can write method bodies in any language.
+            // The scaffold is only discarded when the user explicitly picks an example tab.
+            if (!window._wizardScaffoldActive) {
+                const defaults = {
+                    english: 'english_hello',
+                    assembly: 'selftest',
+                    javascript: 'hello',
+                    haskell: 'church_math',
+                    symbolic: 'ada_note_g',
+                    lambda: 'lambda_church'
+                };
+                const defaultExample = defaults[lang];
+                if (defaultExample) {
+                    if (lang === 'assembly') {
+                        loadExample(defaultExample);
+                    } else {
+                        loadCLOOMCExample(defaultExample);
+                    }
                 }
             }
             showIntro(lang);
@@ -1472,6 +1477,8 @@ function compileAndCreateAbstraction() {
 }
 
 function loadCLOOMCExample(name) {
+    // User explicitly chose an example — discard any wizard scaffold.
+    window._wizardScaffoldActive = false;
     const editor = document.getElementById('asmEditor');
     if (!editor) return;
     _editorCREditActive = false;
