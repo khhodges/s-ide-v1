@@ -18,6 +18,9 @@
     var TOTAL_STEPS = 4;
 
     // ── Wizard state ─────────────────────────────────────────────────────────
+    // deps entries: { slot: N, label: 'Name' }           — live NS entry
+    //               { slot: null, label: 'Name',          — planned / undefined
+    //                 custom: true, note: '' }
     var state = {
         name: '',
         methods: [],
@@ -305,6 +308,7 @@
             'C-List slot <code>CR0</code>–<code>CR17</code>. You can skip this if the ' +
             'abstraction needs no external capabilities.</p>';
 
+        // ── Live NS entries ───────────────────────────────────────────────────
         var candidates = getDependencyCandidates();
         var grid = document.createElement('div');
         grid.className = 'abswiz-deps-grid';
@@ -337,6 +341,68 @@
         });
 
         body.appendChild(grid);
+
+        // ── Planned / not-yet-built dependencies ──────────────────────────────
+        var divider = document.createElement('div');
+        divider.className = 'abswiz-custom-deps-divider';
+        divider.innerHTML =
+            '<span class="abswiz-custom-deps-label">Planned dependencies</span>' +
+            '<span class="abswiz-custom-deps-sublabel">abstractions not yet built — named for future development</span>';
+        body.appendChild(divider);
+
+        var customTable = document.createElement('div');
+        customTable.className = 'abswiz-custom-deps-table';
+        customTable.id = 'wiz-custom-deps';
+
+        var colHdr = document.createElement('div');
+        colHdr.className = 'abswiz-custom-dep-col-hdr';
+        colHdr.innerHTML = '<span>Abstraction name</span><span>Notes (optional)</span><span></span>';
+        customTable.appendChild(colHdr);
+
+        // restore previously entered custom deps
+        var existingCustom = state.deps.filter(function (d) { return d.custom; });
+        if (existingCustom.length === 0) existingCustom = [];
+
+        function addCustomRow(d) {
+            var row = document.createElement('div');
+            row.className = 'abswiz-custom-dep-row';
+
+            var nameInp = document.createElement('input');
+            nameInp.className = 'abswiz-input abswiz-input--custom-dep-name';
+            nameInp.type = 'text';
+            nameInp.placeholder = 'e.g. CryptoEngine, FileSystem';
+            nameInp.value = d ? d.label : '';
+            nameInp.maxLength = 64;
+
+            var noteInp = document.createElement('input');
+            noteInp.className = 'abswiz-input abswiz-input--custom-dep-note';
+            noteInp.type = 'text';
+            noteInp.placeholder = 'brief description';
+            noteInp.value = d ? (d.note || '') : '';
+            noteInp.maxLength = 100;
+
+            var delBtn = document.createElement('button');
+            delBtn.className = 'abswiz-method-del';
+            delBtn.innerHTML = '&times;';
+            delBtn.title = 'Remove';
+            delBtn.addEventListener('click', function () { row.remove(); });
+
+            row.appendChild(nameInp);
+            row.appendChild(noteInp);
+            row.appendChild(delBtn);
+            customTable.appendChild(row);
+            setTimeout(function () { nameInp.focus(); }, 30);
+        }
+
+        existingCustom.forEach(function (d) { addCustomRow(d); });
+
+        body.appendChild(customTable);
+
+        var addCustomBtn = document.createElement('button');
+        addCustomBtn.className = 'abswiz-btn abswiz-btn--add-method';
+        addCustomBtn.innerHTML = '&#x2295; Add planned dependency';
+        addCustomBtn.addEventListener('click', function () { addCustomRow(null); });
+        body.appendChild(addCustomBtn);
     }
 
     // ── Step 4: Docs ──────────────────────────────────────────────────────────
@@ -412,6 +478,16 @@
                 var found = candidates.find(function (c) { return c.slot === slot; });
                 if (found) state.deps.push(found);
             });
+            // collect custom (planned) dependency rows
+            var customRows = overlayEl.querySelectorAll('#wiz-custom-deps .abswiz-custom-dep-row');
+            customRows.forEach(function (row) {
+                var inputs = row.querySelectorAll('input');
+                if (inputs.length < 2) return;
+                var label = inputs[0].value.trim();
+                if (!label) return;
+                var note = inputs[1].value.trim();
+                state.deps.push({ slot: null, label: label, custom: true, note: note });
+            });
         } else if (step === 4) {
             ['description', 'author', 'version', 'purpose'].forEach(function (k, i) {
                 var ids = ['wiz-doc-desc', 'wiz-doc-author', 'wiz-doc-version', 'wiz-doc-purpose'];
@@ -474,8 +550,15 @@
 
         if (deps.length) {
             lines.push('; Dependencies (C-List):');
-            deps.forEach(function (d, i) {
-                lines.push(';   CR' + i + ' \u2014 ' + d.label + ' (NS' + d.slot + ', E)');
+            var crIdx = 0;
+            deps.forEach(function (d) {
+                if (d.custom) {
+                    var noteStr = d.note ? ' — ' + d.note : '';
+                    lines.push(';   CR' + crIdx + ' \u2014 ' + d.label + ' (PLANNED' + noteStr + ')');
+                } else {
+                    lines.push(';   CR' + crIdx + ' \u2014 ' + d.label + ' (NS' + d.slot + ', E)');
+                }
+                crIdx++;
             });
         } else {
             lines.push('; Dependencies : none');
@@ -496,7 +579,13 @@
             lines.push('    capabilities {');
             deps.forEach(function (d, i) {
                 var comma = i < deps.length - 1 ? ',' : '';
-                lines.push('        ' + d.label + comma);
+                if (d.custom) {
+                    var noteStr = d.note ? ' (' + d.note + ')' : '';
+                    lines.push('        ; TODO: build ' + d.label + noteStr);
+                    lines.push('        ; ' + d.label + comma);
+                } else {
+                    lines.push('        ' + d.label + comma);
+                }
             });
             lines.push('    }');
         } else {

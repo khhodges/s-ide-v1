@@ -1622,6 +1622,58 @@
     padding: 5px 10px;
 }
 
+/* ── Planned (custom) dependencies ─────────────────────────────────────────── */
+.abswiz-custom-deps-divider {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid #1e1e2e;
+}
+.abswiz-custom-deps-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #aaa;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+}
+.abswiz-custom-deps-sublabel {
+    font-size: 0.65rem;
+    color: #555;
+    font-style: italic;
+}
+.abswiz-custom-deps-table {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.abswiz-custom-dep-col-hdr {
+    display: grid;
+    grid-template-columns: 1fr 1fr 24px;
+    gap: 4px;
+    padding: 0 2px 2px;
+    font-size: 0.63rem;
+    color: #555;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+.abswiz-custom-dep-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 24px;
+    gap: 4px;
+    align-items: center;
+}
+.abswiz-input--custom-dep-name {
+    font-weight: 600;
+    color: #b0d8ff;
+}
+.abswiz-input--custom-dep-note {
+    color: #888;
+    font-style: italic;
+}
+
 .clist-name {
     font-size: 0.7rem;
     color: #c9d1d9;
