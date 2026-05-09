@@ -706,23 +706,38 @@
     </div>
 
     <div id="abstractions" class="view">
-        <div class="abs-layout">
-            <div class="abs-list-panel">
-                <div class="panel">
-                    <div class="panel-title abs-catalog-header">
-                        <span>Abstraction Catalog -- 9 Layers, 46 Abstractions</span>
-                        <button class="btn abs-library-btn" onclick="showLibrary()" data-tooltip="Browse Library — Browse and share abstractions via Mum Tunnel Library">Browse Library</button>
+        <div class="abs-subtabbar">
+            <button class="abs-subtab abs-subtab-active" id="absSubtab-catalog" onclick="switchAbsSubtab('catalog')" data-tooltip="Logic Catalog — Browse all 47 abstractions by layer">Logic Catalog</button>
+            <button class="abs-subtab" id="absSubtab-sources" onclick="switchAbsSubtab('sources')" data-tooltip="Source Library — Browse all example scaffolds grouped by language">Source Library</button>
+        </div>
+        <div id="absSubpanel-catalog" class="abs-subpanel">
+            <div class="abs-layout">
+                <div class="abs-list-panel">
+                    <div class="panel">
+                        <div class="panel-title abs-catalog-header">
+                            <span>Abstraction Catalog -- 9 Layers, 46 Abstractions</span>
+                            <button class="btn abs-library-btn" onclick="showLibrary()" data-tooltip="Browse Library — Browse and share abstractions via Mum Tunnel Library">Browse Library</button>
+                        </div>
+                        <div id="absLayerList"></div>
                     </div>
-                    <div id="absLayerList"></div>
+                </div>
+                <div class="abs-detail-panel">
+                    <div class="panel">
+                        <div class="panel-title" id="absDetailTitle">Select an abstraction</div>
+                        <div id="absDetailContent">
+                            <div class="abs-placeholder">Click any abstraction on the left to see its methods, permissions, and how it fits into the CR6/CR14 canonical form.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="abs-detail-panel">
-                <div class="panel">
-                    <div class="panel-title" id="absDetailTitle">Select an abstraction</div>
-                    <div id="absDetailContent">
-                        <div class="abs-placeholder">Click any abstraction on the left to see its methods, permissions, and how it fits into the CR6/CR14 canonical form.</div>
-                    </div>
-                </div>
+        </div>
+        <div id="absSubpanel-sources" class="abs-subpanel" style="display:none;">
+            <div class="sl-toolbar">
+                <input type="text" id="slSearch" class="sl-search" placeholder="Search by abstraction or method name&hellip;" oninput="filterSourceLibrary()" autocomplete="off" spellcheck="false">
+                <span class="sl-toolbar-hint">Click <strong>Source</strong> on any card to expand, <strong>Load &rarr; Editor</strong> to open in the editor.</span>
+            </div>
+            <div id="slContent" class="sl-content">
+                <div class="sl-placeholder">Select <em>Source Library</em> to browse all example scaffolds.</div>
             </div>
         </div>
     </div>
@@ -1609,6 +1624,7 @@
     <script src="app-absdetail.js?v=20260428d"></script>
     <script src="app-run.js?v=20260509d"></script>
     <script src="app-compile.js?v=20260509d"></script>
+    <script src="app-source-library.js?v=20260509c"></script>
     <script src="app-invoke.js?v=20260501a"></script>
     <script src="app-misc.js?v=20260501a"></script>
     <script src="asm-instruction-picker.js"></script>

@@ -5180,6 +5180,8 @@ BRANCH led_on             ; loop forever
 ` + '; ────────────────────────────────────────────────────────────\n; Section 2: Turing DR Test ✦\n; ────────────────────────────────────────────────────────────\n' + _TURING_DR_TEST_SOURCE.slice(_TURING_DR_TEST_SOURCE.indexOf('; Turing DR Test')),
     };
 
+    window._asmExampleSources = examples;
+
     const code = examples[name];
     if (code) {
         editor.value = code;

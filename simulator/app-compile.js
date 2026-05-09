@@ -3503,6 +3503,10 @@ abstraction DMABuffer {
 }`,
     };
 
+    window._cloomcExampleSources = examples;
+    window._cloomcFileExamples   = fileExamples;
+    window._cloomcFileLanguages  = fileLanguages;
+
     editor.value = examples[name] || examples['integer_ops'];
     updateLineNumbers();
     saveEditorState();

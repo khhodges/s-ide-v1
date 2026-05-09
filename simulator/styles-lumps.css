@@ -4672,6 +4672,240 @@ pre:hover .code-copy-btn {
     margin-top: 0.3rem;
 }
 
+/* ═══════════════════════════════════════════════════════
+   SOURCE LIBRARY — Abstractions view sub-tab
+   ═══════════════════════════════════════════════════════ */
+
+/* Sub-tab bar inside the Abstractions view */
+.abs-subtabbar {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid rgba(180, 140, 60, 0.3);
+    background: rgba(0,0,0,0.18);
+    padding: 0 0.5rem;
+    flex-shrink: 0;
+}
+
+.abs-subtab {
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-secondary, #9090b0);
+    font-size: 0.82rem;
+    font-weight: 500;
+    padding: 0.5rem 1.1rem 0.4rem;
+    cursor: pointer;
+    margin-bottom: -2px;
+    transition: color 0.15s, border-color 0.15s;
+    letter-spacing: 0.01em;
+}
+.abs-subtab:hover {
+    color: #d4aa50;
+    border-bottom-color: rgba(180,140,60,0.4);
+}
+.abs-subtab.abs-subtab-active {
+    color: #d4aa50;
+    border-bottom-color: #d4aa50;
+    background: rgba(180,140,60,0.06);
+}
+
+/* Sub-panels that fill the remaining view height */
+.abs-subpanel {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Make sure #abstractions is a flex column so subtabbar + subpanel fill properly */
+#abstractions.view.active {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Toolbar (search bar) ── */
+.sl-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.55rem 1rem 0.45rem;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+}
+
+.sl-search {
+    flex: 1 1 0;
+    min-width: 0;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 4px;
+    color: #ddd;
+    font-size: 0.82rem;
+    padding: 0.3rem 0.6rem;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+}
+.sl-search:focus {
+    border-color: rgba(180,140,60,0.55);
+    background: rgba(255,255,255,0.09);
+}
+.sl-search::placeholder { color: #666; }
+
+.sl-toolbar-hint {
+    color: #666;
+    font-size: 0.73rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+@media (max-width: 600px) { .sl-toolbar-hint { display: none; } }
+
+/* ── Scrollable content area ── */
+.sl-content {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.6rem 0.8rem 1.5rem;
+}
+
+.sl-loading, .sl-placeholder {
+    text-align: center;
+    color: #666;
+    font-size: 0.82rem;
+    padding: 2rem 1rem;
+}
+
+/* ── Language group ── */
+.sl-group {
+    margin-bottom: 1.4rem;
+}
+
+.sl-group-header {
+    font-size: 0.73rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #b8903a;
+    border-bottom: 1px solid rgba(180,140,60,0.25);
+    padding: 0.15rem 0.1rem 0.3rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ── Individual card ── */
+.sl-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 5px;
+    margin-bottom: 0.35rem;
+    overflow: hidden;
+    transition: border-color 0.15s;
+}
+.sl-card:hover {
+    border-color: rgba(180,140,60,0.35);
+}
+
+.sl-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.38rem 0.7rem 0.38rem 0.8rem;
+    flex-wrap: wrap;
+}
+
+.sl-card-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #d0d0e8;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.sl-method-count {
+    font-size: 0.71rem;
+    color: #666;
+    flex-shrink: 0;
+}
+
+/* ── Language badges ── */
+.sl-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 1px 6px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    border: 1px solid transparent;
+}
+.sl-badge-js  { background: rgba(247,220,64,0.13); color: #f7dc40; border-color: rgba(247,220,64,0.3); }
+.sl-badge-asm { background: rgba(120,200,120,0.13); color: #70c870; border-color: rgba(100,200,100,0.3); }
+.sl-badge-hs  { background: rgba(120,130,220,0.13); color: #9898e8; border-color: rgba(120,130,220,0.3); }
+.sl-badge-sym { background: rgba(200,120,80,0.13);  color: #e08858; border-color: rgba(200,120,80,0.3); }
+.sl-badge-en  { background: rgba(80,190,200,0.13);  color: #58c8d0; border-color: rgba(80,190,200,0.3); }
+.sl-badge-lc  { background: rgba(180,100,220,0.13); color: #c070e8; border-color: rgba(180,100,220,0.3); }
+
+/* ── Card action buttons ── */
+.sl-card-actions {
+    display: flex;
+    gap: 0.3rem;
+    flex-shrink: 0;
+}
+
+.sl-load-btn,
+.sl-toggle-btn {
+    font-size: 0.7rem;
+    padding: 2px 9px;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    white-space: nowrap;
+}
+.sl-load-btn {
+    background: rgba(180,140,60,0.14);
+    color: #c8a040;
+    border-color: rgba(180,140,60,0.35);
+}
+.sl-load-btn:hover {
+    background: rgba(180,140,60,0.28);
+    color: #e8c060;
+    border-color: rgba(180,140,60,0.6);
+}
+.sl-toggle-btn {
+    background: rgba(255,255,255,0.05);
+    color: #8888a8;
+    border-color: rgba(255,255,255,0.12);
+}
+.sl-toggle-btn:hover {
+    background: rgba(255,255,255,0.10);
+    color: #aaaace;
+}
+
+/* ── Read-only source pane ── */
+.sl-source-pre {
+    font-family: 'Consolas', 'Fira Code', 'Source Code Pro', monospace;
+    font-size: 0.73rem;
+    line-height: 1.55;
+    color: #b8c8d8;
+    background: rgba(0,0,0,0.35);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding: 0.7rem 1rem;
+    margin: 0;
+    white-space: pre;
+    overflow-x: auto;
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+    .sl-card-header { gap: 0.35rem; padding: 0.45rem 0.55rem; }
+    .sl-card-name   { font-size: 0.78rem; }
+    .sl-load-btn,
+    .sl-toggle-btn  { font-size: 0.67rem; padding: 2px 7px; }
+    .sl-source-pre  { font-size: 0.68rem; }
+}
+
 /* Audit warning banner shown when save is allowed despite warnings */
 .lump-audit-warn-banner {
     display: flex;

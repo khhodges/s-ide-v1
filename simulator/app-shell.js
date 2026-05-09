@@ -739,11 +739,6 @@ function switchView(viewId) {
     if (_viewLocked) return;
     if (viewId === 'abstractions') {
         if (typeof _selectedLumpToken !== 'undefined') _selectedLumpToken = null;
-        switchView('lumps');
-        if (typeof switchLumpWsTab === 'function') switchLumpWsTab('logic');
-        const btn = document.getElementById('hamItem-abstractions');
-        if (btn) btn.classList.add('ham-active');
-        return;
     }
     if (viewId !== currentView && currentView === 'trace') {
         document.querySelectorAll('.trace-row-highlighted').forEach(el => el.classList.remove('trace-row-highlighted'));
