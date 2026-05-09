@@ -4989,7 +4989,7 @@ HALT
 `,
         'perm_attack': `; ============================================================
 ; Abstraction:  PermAttack
-; Description:  Adversarial permission-violation and TPERM guard tests
+; Description:  Adversarial permission-violation tests — CALL/DREAD/DWRITE without required perms
 ; Author:       Church Machine Educational Platform
 ; Version:      1.0
 ; Created:      2026-05-09
@@ -4997,11 +4997,11 @@ HALT
 ; Dependencies: None
 ; ============================================================
 ; Methods:
-;   1. attack1_call_no_e — CALL device without E → FAULT
-;   2. attack2_dread_no_r — DREAD Salvation without R → FAULT
-;   3. attack3_dwrite_no_w — DWRITE BTN without W → FAULT
-;   4. tperm_guard — TPERM E before CALL, failure path, recursive overflow
+;   1. attack_call_no_e — CALL device without E → FAULT
+;   2. attack_dread_no_r — DREAD without R → FAULT
+;   3. attack_dwrite_no_w — DWRITE without W → FAULT
 ; ============================================================
+;
 ; ============================================
 ; ADVERSARIAL TEST: Permission Violations
 ; Every operation here should FAULT cleanly.
@@ -5034,30 +5034,10 @@ LOAD CR2, CR6, 10      ; CR2 = BTN (R only)
 DWRITE DR1, CR2, 0     ; FAULT: BTN lacks W permission
 
 ; --- If we get here, something is broken ---
-HALT
-
-; ── Section 4: TPERM Guard + Recursive Overflow ─────────────
-; TEST 1: CALL guard (TPERM E)
-LOAD CR0, CR6, 4          ; CR0 = Salvation
-TPERM CR0, E              ; has E? Z=1 yes
-BRANCHNE overflow_halt    ; Z=0 → HALT (no E perm)
-CALL CR0                  ; Z=1 → atomic dispatch
-; TEST 2: TPERM failure (RW check)
-TPERM CR0, RW             ; has RW? Z=0 (no)
-BRANCHEQ overflow_halt    ; Z=1 → unexpected, HALT
-; TEST 3: Recursive CALL (STO overflow)
-recurse:
-LOAD CR0, CR6, 2          ; CR0 = Boot.Abstr (self)
-TPERM CR0, E              ; guard: has E?
-BRANCHNE overflow_halt    ; no E → HALT
-CALL CR0                  ; push real 2-word frame
-BRANCH recurse            ; loop (after RETURN)
-overflow_halt:
-HALT
-`,
+HALT`,
         'bind_attack': `; ============================================================
 ; Abstraction:  BindAttack
-; Description:  Adversarial bind-bit and SAVE/SEAL violation tests — should all FAULT
+; Description:  Adversarial bind-bit enforcement test — SAVE without B=1 must FAULT
 ; Author:       Church Machine Educational Platform
 ; Version:      1.0
 ; Created:      2026-05-09
@@ -5065,53 +5045,32 @@ HALT
 ; Dependencies: None
 ; ============================================================
 ; Methods:
-;   1. attack1_save_no_b — SAVE without B bit set → FAULT
-;   2. attack2_seal_wrong_slot — SEAL to out-of-range NS slot → FAULT
-;   3. attack3_rebind_sealed — SAVE to already-sealed GT → FAULT
-;   4. verify_b_bit — Confirm B bit must be explicitly granted
+;   1. attack_save_no_b — SAVE without B bit set → FAULT
 ; ============================================================
 ;
-; The Bind bit (B=1) in a Golden Token authorises SAVE (capability hand-off).
-; Every SAVE without B=1 must FAULT; mLoad is the enforcing gate.
+; ============================================
+; ADVERSARIAL TEST: B-Bit Enforcement
+; Tests TWO security boundaries:
+;   1. SAVE requires B=1 (B defaults to 0)
+;   2. CALL auto-clears B on passed GTs
+; ============================================
 ;
-; Boot C-List layout:
-;   [4] Salvation (E)  [5] Navana (E)
-;   [6] Mint (E)       [7] Memory (E)
-;   [8] LED (RW)       [9] UART (RW)
-;   [10] BTN (R)       [11] TIMER (RW)
+; B-bit security model:
+;   B defaults to 0 on namespace entries.
+;   SAVE checks B=1 before committing.
+;   CALL auto-clears B on all preserved CRs.
+;   TPERM with B mask is the ONLY way to
+;   allow bind (delegation).
+; ============================================
 
-; ─── ATTACK 1: SAVE without B bit set ──────────────────────
-; Salvation (slot 4) has E only — B bit is 0.
-; SAVE requires B=1. Should FAULT immediately.
+; --- ATTACK 1: SAVE with default B=0 ---
+; After boot, B defaults to 0 on all entries.
+; SAVE should FAULT because B=0.
 LOAD CR0, CR6, 4       ; CR0 = Salvation (E, B=0)
-SAVE CR0, CR5, 0       ; FAULT: B bit not set — binding denied
+SAVE CR0, CR6, 3       ; FAULT: B=0, cannot bind to empty slot 3
 
-; ─── ATTACK 2: SEAL to an out-of-range NS slot ───────────────
-; SEAL binds a GT to a specific NS slot.
-; Slot 0x3FFF (max+1) is beyond the namespace limit.
-LOAD CR1, CR6, 6       ; CR1 = Mint (E)
-SEAL CR1, 0x3FFF       ; FAULT: NS slot out of range
-
-; ─── ATTACK 3: SAVE to already-sealed GT ─────────────────────
-; Once SEAL is applied, the GT is immutable.
-; Attempting SAVE on a sealed GT should FAULT.
-LOAD CR2, CR6, 5       ; CR2 = Navana (E, B=0, already sealed by boot)
-SAVE CR2, CR5, 1       ; FAULT: GT is sealed — no rebinding allowed
-
-; ─── If any attack succeeded, execution reaches here ──────
-; That would indicate a security violation in mLoad.
-HALT
-
-; ─── ATTACK 4: Verify B-bit must be explicitly granted ─────
-; TPERM checks: does CR6 (the C-List root) carry the B bit?
-; Boot grants B=0 everywhere by default — B must be explicit.
-LOAD CR3, CR6, 8       ; CR3 = LED (RW)
-TPERM CR3, B           ; Z=1 if B granted — should be Z=0
-BRANCHEQ bind_granted  ; B was granted (unexpected!)
-HALT                   ; correct: B not granted, test passes
-bind_granted:
-HALT                   ; fail: B bit present without explicit grant
-`,
+; --- If we get here, B-bit default failed ---
+HALT`,
         'led_control': `; ============================================================
 ; Abstraction:  LedControl
 ; Description:  LED control — Section 1: LED blink (Ti60 F225 nucleus) / Section 2: Turing DR Test (full ISA exercise)

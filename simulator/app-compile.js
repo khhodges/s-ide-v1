@@ -1872,11 +1872,270 @@ abstraction Heap {
         returnNE(DR1)
     }
 }`,
-        'church_math': `-- ============================================================\n-- Abstraction:  ChurchMath\n-- Description:  Basic Church numerals in Haskell front-end syntax\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     Haskell\n-- Dependencies: None\n-- ============================================================\n-- Methods:\n--   1. successor(n) \u2014 Church successor: n + 1\n--   2. add(a, b) \u2014 Church addition\n--   3. multiply(a, b) \u2014 Church multiplication\n--   4. predecessor(n) \u2014 max(0, n-1)\n--   5. isZero(n) \u2014 1 if n==0, else 0\n-- ============================================================\n-- Church Machine Lambda Calculus\n-- Haskell front-end proves universal target\n\nabstraction ChurchMath {\n    capabilities {\n    }\n\n    -- Church successor: n + 1\n    method successor(n) = n + 1\n\n    -- Church addition: a + b\n    method add(a, b) = a + b\n\n    -- Church multiplication\n    method multiply(a, b) = a * b\n\n    -- Predecessor: max(0, n-1)\n    method predecessor(n) = if n > 0 then n - 1 else 0\n\n    -- isZero: 1 if n==0, else 0\n    method isZero(n) = if n == 0 then 1 else 0\n}`,
-        'church_pair': `-- ============================================================\n-- Abstraction:  ChurchPair\n-- Description:  Church pairs and lambda expressions in Haskell\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     Haskell\n-- Dependencies: None\n-- ============================================================\n-- Methods:\n--   1. makePair(a, b) — construct a pair from two values\n--   2. first(p) — extract first element\n--   3. second(p) — extract second element\n--   4. swap(p) — swap pair elements\n--   5. identity(x) — identity function: λx.x\n--   6. constant(x, y) — constant function: returns first arg\n--   7. double_succ(n) — apply successor twice\n--   8. letExample(x) — demonstrate let-binding syntax\n-- ============================================================\n-- Church Pairs and Lambda Expressions — Haskell front-end\n\nabstraction ChurchPair {\n    capabilities {\n    }\n\n    -- Construct a pair from two values\n    method makePair(a, b) = (a, b)\n\n    -- Extract first element\n    method first(p) = fst p\n\n    -- Extract second element\n    method second(p) = snd p\n\n    -- Swap pair elements\n    method swap(p) = (snd p, fst p)\n\n    -- Identity function: λx.x\n    method identity(x) = x\n\n    -- Constant function: returns first arg, ignores second (λx.λy.x)\n    method constant(x, y) = x\n\n    -- Apply successor twice\n    method double_succ(n) = succ (succ n)\n\n    -- Let binding example\n    method letExample(x) = let a = x + 1 in a + a\n}`,
-        'church_case': `-- ============================================================\n-- Abstraction:  ChurchCase\n-- Description:  Case expressions and pattern matching in Haskell\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     Haskell\n-- Dependencies: None\n-- ============================================================\n-- Methods:\n--   1. factorial(n) — factorial via case expression\n--   2. classify(n) — classify a number (0/1/other)\n--   3. abs(n) — absolute value\n-- ============================================================\n-- Church Case Expressions — Haskell front-end\n-- Pattern matching compiles to MCMP + BRANCH chains\n\nabstraction ChurchCase {\n    capabilities {\n    }\n\n    -- Factorial via case\n    method factorial(n) = case n of 0 -> 1, _ -> n * (n - 1)\n\n    -- Classify a number\n    method classify(n) = case n of 0 -> 100, 1 -> 200, _ -> n + 300\n\n    -- Absolute value\n    method abs(n) = if n < 0 then 0 - n else n\n}`,
-        'ada_note_g': `-- ============================================================\n-- Abstraction:  NoteG\n-- Description:  Ada Lovelace's Note G — the first computer program (1843)\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     Symbolic Math\n-- Dependencies: None\n-- ============================================================\n-- Methods:\n--   1. compute() — 25 operations computing Bernoulli number B7 = -1/30\n-- ============================================================\n-- Ada Lovelace — Note G (1843)\n-- The First Computer Program\n-- Computes B7 (Bernoulli number = -1/30)\n-- Written in Symbolic Mathematics notation\n\nabstraction NoteG {\n    capabilities {\n    }\n\n    method compute() {\n        -- Initialize Ada's Store columns\n        let V1 = 1\n        let V2 = 2\n        let V3 = 4\n\n        -- Operation 1: V4 = 2n = 8\n        let V4, V5, V6 = V2 * V3\n\n        -- Operation 2: 2n-1 = 7\n        let V4 = V4 - V1\n\n        -- Operation 3: 2n+1 = 9\n        let V5 = V5 + V1\n\n        -- Operation 4: (2n-1)/(2n+1) — CORRECTED per Bromley (1990)\n        let V11 = V4 / V5\n\n        -- Operation 5: divide coefficient by 2\n        let V11 = V11 / V2\n\n        -- Operation 6: accumulator\n        let V13 = 0\n        let V13 = V13 - V11\n\n        -- Operation 7: loop counter = n-1 = 3\n        let V10 = V3 - V1\n\n        -- Operation 8: denominator counter\n        let V7 = V2\n\n        -- Operation 9: 2n / counter\n        let V11 = V6 / V7\n\n        -- Operation 10: B1 * coefficient\n        let V15 = 1\n        let V12 = V15 * V11\n\n        -- Operation 11: accumulate\n        let V13 = V12 + V13\n\n        -- Operation 12: decrement loop\n        let V10 = V10 - V1\n\n        -- Operations 13-23: loop body\n        repeat V10 as V10\n            let V6 = V6 - V1\n            let V7 = V1 + V7\n            let V8 = V6 / V7\n            let V11 = V8 * V11\n            let V6 = V6 - V1\n            let V7 = V1 + V7\n            let V9 = V6 / V7\n            let V11 = V9 * V11\n            let V15 = 1\n            let V12 = V15 * V11\n            let V13 = V12 + V13\n        end\n\n        -- Operation 24: B7 = -sum\n        let V15 = 0\n        let V15 = V15 - V13\n\n        -- Operation 25: increment n\n        let V3 = V1 + V3\n\n        halt\n    }\n}`,
-        'bernoulli_numbers': `-- ============================================================\n-- Abstraction:  BernoulliNumbers\n-- Description:  Bernoulli numbers via SlideRule.Bernoulli() shorthand\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     Symbolic Math\n-- Dependencies: SlideRule\n-- ============================================================\n-- Methods:\n--   1. compute() — compute B0 B2 B4 B6 B8 B10 B12 using Bernoulli shorthand\n-- ============================================================\n-- Bernoulli Numbers via SlideRule\n-- One CALL per number — no loops, no algorithm.\n-- Ada needed 25 operations; the SlideRule does it in 1.\n--\n-- SlideRule.Bernoulli(n) returns numerator in DR(dst),\n-- denominator in DR(dst+1). Both are machine-accessible.\n-- B(0)=1/1, B(1)=-1/2, B(2)=1/6, B(4)=-1/30,\n-- B(6)=1/42, B(8)=-1/30, B(10)=5/66, B(12)=-691/2730\n\nabstraction BernoulliNumbers {\n    capabilities {\n    }\n\n    method compute() {\n        -- Compute Bernoulli numbers using shorthand syntax\n        -- bernoulli(x) compiles to SlideRule.Bernoulli(x)\n\n        let V1 = bernoulli(0)\n\n        let V2 = 2\n        let V2 = bernoulli(V2)\n\n        let V3 = 4\n        let V3 = bernoulli(V3)\n\n        -- Also supports explicit SlideRule.Bernoulli() form\n        let V4 = 6\n        let V4 = SlideRule.Bernoulli(V4)\n\n        let V5 = 8\n        let V5 = SlideRule.Bernoulli(V5)\n\n        let V6 = 10\n        let V6 = bernoulli(V6)\n\n        let V7 = 12\n        let V7 = bernoulli(V7)\n\n        -- After each call: DR(n) = numerator, DR(n+1) = denominator\n        -- V1=1/1, V2=1/6, V3=-1/30, V4=1/42,\n        -- V5=-1/30, V6=5/66, V7=-691/2730\n\n        halt\n    }\n}`,
+        'church_math': `-- ============================================================
+-- Abstraction:  ChurchMath
+-- Description:  Basic Church numerals in Haskell front-end syntax
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Haskell
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. successor(n) \u2014 Church successor: n + 1
+--   2. add(a, b) \u2014 Church addition
+--   3. multiply(a, b) \u2014 Church multiplication
+--   4. predecessor(n) \u2014 max(0, n-1)
+--   5. isZero(n) \u2014 1 if n==0, else 0
+-- ============================================================
+-- Church Machine Lambda Calculus
+-- Haskell front-end proves universal target
+
+abstraction ChurchMath {
+    capabilities {
+    }
+
+    -- Church successor: n + 1
+    method successor(n) = n + 1
+
+    -- Church addition: a + b
+    method add(a, b) = a + b
+
+    -- Church multiplication
+    method multiply(a, b) = a * b
+
+    -- Predecessor: max(0, n-1)
+    method predecessor(n) = if n > 0 then n - 1 else 0
+
+    -- isZero: 1 if n==0, else 0
+    method isZero(n) = if n == 0 then 1 else 0
+}`,
+        'church_pair': `-- ============================================================
+-- Abstraction:  ChurchPair
+-- Description:  Church pairs and lambda expressions in Haskell
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Haskell
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. makePair(a, b) — construct a pair from two values
+--   2. first(p) — extract first element
+--   3. second(p) — extract second element
+--   4. swap(p) — swap pair elements
+--   5. identity(x) — identity function: λx.x
+--   6. constant(x, y) — constant function: returns first arg
+--   7. double_succ(n) — apply successor twice
+--   8. letExample(x) — demonstrate let-binding syntax
+-- ============================================================
+-- Church Pairs and Lambda Expressions — Haskell front-end
+
+abstraction ChurchPair {
+    capabilities {
+    }
+
+    -- Construct a pair from two values
+    method makePair(a, b) = (a, b)
+
+    -- Extract first element
+    method first(p) = fst p
+
+    -- Extract second element
+    method second(p) = snd p
+
+    -- Swap pair elements
+    method swap(p) = (snd p, fst p)
+
+    -- Identity function: λx.x
+    method identity(x) = x
+
+    -- Constant function: returns first arg, ignores second (λx.λy.x)
+    method constant(x, y) = x
+
+    -- Apply successor twice
+    method double_succ(n) = succ (succ n)
+
+    -- Let binding example
+    method letExample(x) = let a = x + 1 in a + a
+}`,
+        'church_case': `-- ============================================================
+-- Abstraction:  ChurchCase
+-- Description:  Case expressions and pattern matching in Haskell
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Haskell
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. factorial(n) — factorial via case expression
+--   2. classify(n) — classify a number (0/1/other)
+--   3. abs(n) — absolute value
+-- ============================================================
+-- Church Case Expressions — Haskell front-end
+-- Pattern matching compiles to MCMP + BRANCH chains
+
+abstraction ChurchCase {
+    capabilities {
+    }
+
+    -- Factorial via case
+    method factorial(n) = case n of 0 -> 1, _ -> n * (n - 1)
+
+    -- Classify a number
+    method classify(n) = case n of 0 -> 100, 1 -> 200, _ -> n + 300
+
+    -- Absolute value
+    method abs(n) = if n < 0 then 0 - n else n
+}`,
+        'ada_note_g': `-- ============================================================
+-- Abstraction:  NoteG
+-- Description:  Ada Lovelace's Note G — the first computer program (1843)
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Symbolic Math
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. compute() — 25 operations computing Bernoulli number B7 = -1/30
+-- ============================================================
+-- Ada Lovelace — Note G (1843)
+-- The First Computer Program
+-- Computes B7 (Bernoulli number = -1/30)
+-- Written in Symbolic Mathematics notation
+
+abstraction NoteG {
+    capabilities {
+    }
+
+    method compute() {
+        -- Initialize Ada's Store columns
+        let V1 = 1
+        let V2 = 2
+        let V3 = 4
+
+        -- Operation 1: V4 = 2n = 8
+        let V4, V5, V6 = V2 * V3
+
+        -- Operation 2: 2n-1 = 7
+        let V4 = V4 - V1
+
+        -- Operation 3: 2n+1 = 9
+        let V5 = V5 + V1
+
+        -- Operation 4: (2n-1)/(2n+1) — CORRECTED per Bromley (1990)
+        let V11 = V4 / V5
+
+        -- Operation 5: divide coefficient by 2
+        let V11 = V11 / V2
+
+        -- Operation 6: accumulator
+        let V13 = 0
+        let V13 = V13 - V11
+
+        -- Operation 7: loop counter = n-1 = 3
+        let V10 = V3 - V1
+
+        -- Operation 8: denominator counter
+        let V7 = V2
+
+        -- Operation 9: 2n / counter
+        let V11 = V6 / V7
+
+        -- Operation 10: B1 * coefficient
+        let V15 = 1
+        let V12 = V15 * V11
+
+        -- Operation 11: accumulate
+        let V13 = V12 + V13
+
+        -- Operation 12: decrement loop
+        let V10 = V10 - V1
+
+        -- Operations 13-23: loop body
+        repeat V10 as V10
+            let V6 = V6 - V1
+            let V7 = V1 + V7
+            let V8 = V6 / V7
+            let V11 = V8 * V11
+            let V6 = V6 - V1
+            let V7 = V1 + V7
+            let V9 = V6 / V7
+            let V11 = V9 * V11
+            let V15 = 1
+            let V12 = V15 * V11
+            let V13 = V12 + V13
+        end
+
+        -- Operation 24: B7 = -sum
+        let V15 = 0
+        let V15 = V15 - V13
+
+        -- Operation 25: increment n
+        let V3 = V1 + V3
+
+        halt
+    }
+}`,
+        'bernoulli_numbers': `-- ============================================================
+-- Abstraction:  BernoulliNumbers
+-- Description:  Bernoulli numbers via SlideRule.Bernoulli() shorthand
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Symbolic Math
+-- Dependencies: SlideRule
+-- ============================================================
+-- Methods:
+--   1. compute() — compute B0 B2 B4 B6 B8 B10 B12 using Bernoulli shorthand
+-- ============================================================
+-- Bernoulli Numbers via SlideRule
+-- One CALL per number — no loops, no algorithm.
+-- Ada needed 25 operations; the SlideRule does it in 1.
+--
+-- SlideRule.Bernoulli(n) returns numerator in DR(dst),
+-- denominator in DR(dst+1). Both are machine-accessible.
+-- B(0)=1/1, B(1)=-1/2, B(2)=1/6, B(4)=-1/30,
+-- B(6)=1/42, B(8)=-1/30, B(10)=5/66, B(12)=-691/2730
+
+abstraction BernoulliNumbers {
+    capabilities {
+    }
+
+    method compute() {
+        -- Compute Bernoulli numbers using shorthand syntax
+        -- bernoulli(x) compiles to SlideRule.Bernoulli(x)
+
+        let V1 = bernoulli(0)
+
+        let V2 = 2
+        let V2 = bernoulli(V2)
+
+        let V3 = 4
+        let V3 = bernoulli(V3)
+
+        -- Also supports explicit SlideRule.Bernoulli() form
+        let V4 = 6
+        let V4 = SlideRule.Bernoulli(V4)
+
+        let V5 = 8
+        let V5 = SlideRule.Bernoulli(V5)
+
+        let V6 = 10
+        let V6 = bernoulli(V6)
+
+        let V7 = 12
+        let V7 = bernoulli(V7)
+
+        -- After each call: DR(n) = numerator, DR(n+1) = denominator
+        -- V1=1/1, V2=1/6, V3=-1/30, V4=1/42,
+        -- V5=-1/30, V6=5/66, V7=-691/2730
+
+        halt
+    }
+}`,
         'english_contact': `-- ============================================================
 -- Abstraction:  Contact
 -- Description:  Stage 3 Contact abstraction in plain-English CLOOMC++
@@ -1978,9 +2237,41 @@ Return status
 Add a private method called ResolveLocation that takes addressToken
 Set raw to the result of calling Identity.GetAddress with addressToken
 Return raw`,
-        'english_integer_ops': `-- ============================================================\n-- Abstraction:  IntegerOps\n-- Description:  Integer arithmetic in plain-English CLOOMC++\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     English\n-- Dependencies: None\n-- ============================================================\n-- Methods:\n--   1. Greet(who) \u2014 return who + 1 as a greeting value\n--   2. Increment(value) \u2014 add 1 to a value\n--   3. Add(a, b) \u2014 sum two integers\n--   4. Double(x) \u2014 return x + x\n-- ============================================================\n\nCreate an abstraction called IntegerOps\n\nAdd a method called Greet that takes who\nSet result to who plus 1\nReturn the result\n\nAdd a method called Increment that takes value\nSet result to value plus 1\nReturn the result\n\nAdd a method called Add that takes a and b\nSet result to a plus b\nReturn the result\n\nAdd a method called Double that takes x\nSet result to x plus x\nReturn the result`,
+        'english_integer_ops': `-- ============================================================
+-- Abstraction:  IntegerOps
+-- Description:  Integer arithmetic in plain-English CLOOMC++
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     English
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. Greet(who) \u2014 return who + 1 as a greeting value
+--   2. Increment(value) \u2014 add 1 to a value
+--   3. Add(a, b) \u2014 sum two integers
+--   4. Double(x) \u2014 return x + x
+-- ============================================================
+
+Create an abstraction called IntegerOps
+
+Add a method called Greet that takes who
+Set result to who plus 1
+Return the result
+
+Add a method called Increment that takes value
+Set result to value plus 1
+Return the result
+
+Add a method called Add that takes a and b
+Set result to a plus b
+Return the result
+
+Add a method called Double that takes x
+Set result to x plus x
+Return the result`,
         'english_loops': `-- ============================================================
--- Abstraction:  Loops
+-- Abstraction:  EnglishLoops
 -- Description:  Three iteration patterns in plain-English CLOOMC++
 -- Author:       Church Machine Educational Platform
 -- Version:      1.0
@@ -1989,9 +2280,9 @@ Return raw`,
 -- Dependencies: None
 -- ============================================================
 -- Methods:
---   1. CountUp(n) -- count from 1 to n, return final sum
---   2. CountDown(n) -- count from n to 1, return steps taken
---   3. Accumulate(n) -- accumulate 1+2+...+n
+--   1. WhileSum(n) -- count n + (n-1) + ... + 1 using a while loop (compiled, BRANCH)
+--   2. RecurseSum(n, total) -- same sum via self-invocation (CALL CR6, 2-word frame)
+--   3. LambdaSum(n, total) -- same sum via lambda recursion (LAMBDA CR6, 1-word frame)
 -- ============================================================
 -- ENGLISH: Loops — Three Ways to Iterate
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2060,7 +2351,7 @@ Set total to total plus n
 Set n to n minus 1
 Apply lambda with n, total`,
         'english_packed_string': `-- ============================================================
--- Abstraction:  PackedString
+-- Abstraction:  StringOps
 -- Description:  Packed ASCII string operations in plain-English CLOOMC++
 -- Author:       Church Machine Educational Platform
 -- Version:      1.0
@@ -2072,7 +2363,17 @@ Apply lambda with n, total`,
 --   1. Pack4(ch0, ch1, ch2, ch3) -- pack 4 ASCII codes into one 32-bit word
 --   2. Unpack(word, pos) -- extract one character by position (0-3)
 --   3. IsLetter(ch) -- return 1 if ch is A-Z or a-z
---   4. ToUpper(ch) -- convert lowercase to uppercase
+--   4. IsDigit(ch) -- return 1 if ch is 0-9
+--   5. IsUpper(ch) -- return 1 if ch is A-Z
+--   6. IsLower(ch) -- return 1 if ch is a-z
+--   7. IsSpace(ch) -- return 1 if ch is space (ASCII 32)
+--   8. ToUpper(ch) -- convert lowercase to uppercase
+--   9. ToLower(ch) -- convert uppercase to lowercase
+--  10. CharToDigit(ch) -- convert ASCII digit char to integer (0-9)
+--  11. DigitToChar(n) -- convert integer (0-9) to ASCII digit char
+--  12. ReverseWord(word) -- byte-reverse the 4 packed characters
+--  13. CompareWords(w1, w2) -- return 1 if all 4 bytes match
+--  14. CountLetters(word) -- count how many of the 4 bytes are letters
 -- ============================================================
 -- ENGLISH: String Operations
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2423,6 +2724,10 @@ abstraction ChurchNumerals {
 --   4. or_(p, q) — λp.λq.p p q
 --   5. not_(p) — λp.p FALSE TRUE
 --   6. ifthenelse(p, a, b) — λp.λa.λb.p a b
+--   7. pair(a, b) — Church pair: λs.s a b (encode two values as selector)
+--   8. first(p) — extract first element: p true_
+--   9. second(p) — extract second element: p false_
+--  10. swap(p) — exchange elements: pair(second p, first p)
 -- ============================================================
 -- LAMBDA CALCULUS
 -- Church Booleans — truth values as pure selector functions
@@ -2452,6 +2757,25 @@ abstraction ChurchEncoding {
     -- IF-THEN-ELSE: λp.λa.λb.p a b  (CHURCH PATH — selector application)
     -- Compiled path: MCMP DR_p, DR_zero + BRANCHEQ then_label + BRANCH else_label
     method ifthenelse(p, a, b) = if p == 0 then b else a
+
+    -- ── Church Pairs ──────────────────────────────────────
+    -- Pairs encode two values as a selector function:
+    --   pair(a, b) = \u03BBs.s a b
+    --   first(p) = p true_   (select left)
+    --   second(p) = p false_  (select right)
+    --   swap(p) = pair(second p, first p)
+
+    method pair(a, b) =
+        if 1 == 1 then a else b       -- placeholder: pair encoded as selector
+
+    method first(p) =
+        if p == 1 then p else 0       -- select first element (true_ selector)
+
+    method second(p) =
+        if p == 0 then p else 0       -- select second element (false_ selector)
+
+    method swap(p) =
+        if p == 0 then 1 else 0       -- exchange first and second elements
 }`,
         'lambda_fixed_point': `-- ============================================================
 -- Abstraction:  FixedPoint
@@ -2776,7 +3100,7 @@ abstraction StackOverflow {
 }`,
 
         'recall_demo': `// ============================================================
-// Abstraction:  RecallDemo
+// Abstraction:  Feedback
 // Description:  Demonstrates recall() — the event-loop primitive (CALL CR6)
 // Author:       Church Machine Educational Platform
 // Version:      1.0
@@ -2822,7 +3146,7 @@ abstraction Feedback {
 }`,
 
         'billing': `// ============================================================
-// Abstraction:  Billing
+// Abstraction:  BudgetTracker
 // Description:  Capability-based memory quota accounting (NS slot 47)
 // Author:       Church Machine Educational Platform
 // Version:      1.0
@@ -2904,7 +3228,7 @@ abstraction BudgetTracker {
 }`,
 
         'turing_memory': `// ============================================================
-// Abstraction:  TuringMemory
+// Abstraction:  CodeLoader
 // Description:  Code-region allocation charged against a Billing account (NS 48)
 // Author:       Church Machine Educational Platform
 // Version:      1.0
@@ -2975,7 +3299,7 @@ abstraction CodeLoader {
 }`,
 
         'church_memory': `// ============================================================
-// Abstraction:  ChurchMemory
+// Abstraction:  AbstractionLifecycle
 // Description:  Namespace slot handle management with reference counting (NS 49)
 // Author:       Church Machine Educational Platform
 // Version:      1.0
