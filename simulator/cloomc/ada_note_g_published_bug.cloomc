@@ -1,3 +1,15 @@
+-- ============================================================
+-- Abstraction:  NoteGPublishedBug
+-- Description:  Ada's Note G with Op 4 operand order as published (incorrect)
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Symbolic Math
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. compute() — 25 operations with Ada's published (buggy) Op 4; result ≠ -1/30
+-- ============================================================
 -- Ada Lovelace — Note G (1843)
 -- The First Computer Program — PUBLISHED (BUGGY) VERSION
 -- Computes B7 with Ada's original (incorrect) Op 4 operand order.

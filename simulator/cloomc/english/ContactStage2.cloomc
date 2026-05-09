@@ -1,3 +1,15 @@
+-- ============================================================
+-- Abstraction:  ContactStage2
+-- Description:  Stage 2 caller in plain-English CLOOMC++ (no Contact abstraction yet)
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     English
+-- Dependencies: Identity, WordString, Memory, Navana, Mint
+-- ============================================================
+-- Methods:
+--   1. run() — assemble a connection manually using platform pet names
+-- ============================================================
 -- ENGLISH: Contact Stage 2 — Abstraction-Level Pet Names
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 --

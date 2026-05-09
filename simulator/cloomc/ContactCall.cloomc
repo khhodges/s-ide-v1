@@ -1,3 +1,15 @@
+// ============================================================
+// Abstraction:  ContactCall
+// Description:  Stage 3 caller — Contact.Connect hides all platform details
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: Contact
+// ============================================================
+// Methods:
+//   1. run() — call Contact.Connect(me, myMother); return session token
+// ============================================================
 // ── Stage 3 Caller: Contact.Connect ──
 // This is the complete application-level program from the namespace
 // vocabulary tutorial (§Stage 3).  It shows what developer code looks

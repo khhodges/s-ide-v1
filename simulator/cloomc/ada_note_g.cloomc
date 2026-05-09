@@ -1,3 +1,15 @@
+-- ============================================================
+-- Abstraction:  NoteG
+-- Description:  Ada Lovelace's Note G — the first computer program (1843)
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Symbolic Math
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. compute() — 25 operations computing Bernoulli number B7 = -1/30
+-- ============================================================
 -- Ada Lovelace — Note G (1843)
 -- The First Computer Program
 -- Computes B7 (Bernoulli number = -1/30)

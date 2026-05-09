@@ -1,3 +1,15 @@
+// ============================================================
+// Abstraction:  ContactStage2
+// Description:  Stage 2 caller — abstraction-level pet names (no Contact yet)
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: Identity, WordString, Memory, Navana, Mint
+// ============================================================
+// Methods:
+//   1. run() — assemble a connection manually using platform abstractions
+// ============================================================
 // ── Stage 2 Caller: Abstraction-Level Pet Names ──
 // This is the Stage 2 program from the namespace vocabulary tutorial (§Stage 2).
 // It shows what developer code looks like once platform abstractions —

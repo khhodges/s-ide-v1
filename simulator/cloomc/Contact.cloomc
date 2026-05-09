@@ -1,3 +1,18 @@
+// ============================================================
+// Abstraction:  Contact
+// Description:  Application-level person-to-person communication (Stage 3)
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: Identity, Routing, Media, Memory, Navana, Mint
+// ============================================================
+// Methods:
+//   1. Connect(callerToken, calleeToken) — establish a session; returns sessionToken
+//   2. Disconnect(sessionToken) — close an existing session
+//   3. GetStatus(sessionToken) — query session state (0=closed, 1=active)
+//   [private] ResolveLocation(addressToken) — internal address-resolution helper
+// ============================================================
 abstraction Contact {
     // Stage 3 application-level abstraction from the namespace vocabulary tutorial.
     //

@@ -1,3 +1,36 @@
+// ============================================================
+// Abstraction:  SlideRule
+// Description:  Logarithmic-style math via CORDIC integer arithmetic
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: Constants
+// ============================================================
+// Methods:
+//   1. Multiply(a, b) — binary shift-and-add multiplication
+//   2. Divide(a, b) — repeated subtraction integer division
+//   3. Sqrt(n) — integer square root (digit-by-digit method)
+//   4. Mod(a, b) — remainder after integer division
+//   5. Sin(angle) — CORDIC sine (scaled integer, not degrees)
+//   6. Cos(angle) — CORDIC cosine
+//   7. Tan(angle) — CORDIC tangent
+//   8. Atan(y, x) — CORDIC arc-tangent
+//   9. Exp(x) — exponential approximation
+//  10. Ln(x) — natural logarithm approximation
+//  11. Pow(base, exp) — integer power
+//  12. Abs(n) — absolute value
+//  13. Max(a, b) — maximum of two values
+//  14. Min(a, b) — minimum of two values
+//  15. Clamp(x, lo, hi) — clamp to [lo, hi]
+//  16. GCD(a, b) — greatest common divisor (Euclidean algorithm)
+//  17. LCM(a, b) — least common multiple
+//  18. Log2(n) — integer floor log base 2
+//  19. Bernoulli(n) — nth Bernoulli number (rational: numerator, denominator)
+//  20. Factorial(n) — factorial n!
+//  21. Fibonacci(n) — nth Fibonacci number
+//  22. IsPrime(n) — Miller-style primality test
+// ============================================================
 abstraction SlideRule {
     capabilities { Constants }
 

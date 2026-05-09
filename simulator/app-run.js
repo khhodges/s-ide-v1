@@ -999,12 +999,11 @@ function _autoLoadDefaultProgram() {
         return;
     }
     _defaultProgramLoaded = true;
-    loadExample('led_blink');
+    loadExample('capability_test');
     // Do NOT auto-assemble here. assembleAndLoad() → sim.loadProgram() would
-    // overwrite Boot.Abstr word[0] with the led_blink first instruction
-    // (LOAD CR3, CR6[8] = 0x071B0008), masking the boot image's correct value
-    // (LOAD CR3, CR6[0] = 0x071B0000) in Code View on every boot.
-    // The led_blink example comments already direct the user to assemble
+    // overwrite Boot.Abstr word[0] with the capability_test first instruction,
+    // masking the boot image's correct value in Code View on every boot.
+    // The capability_test example comments already direct the user to assemble
     // manually ("2. Assemble this code, then click Step").  Once they do,
     // lastAssembledWords is set and the if-branch above reloads it on every
     // subsequent boot automatically.
@@ -3087,7 +3086,19 @@ function closeGitHubConsole() {
 // ── Turing DR Test source ─────────────────────────────────────────────────
 // Canonical source for the led_turing_full example (Turing DR Test ✦).
 // Used by loadExample() and runTuringSimGate() (pre-flash simulation gate).
-const _TURING_DR_TEST_SOURCE = `; Turing DR Test ✦ — Full ISA Visual Test Across All DR0–DR15
+const _TURING_DR_TEST_SOURCE = `; ============================================================
+; Abstraction:  TuringDRTest
+; Description:  Full ISA visual test across all DR0-DR15 registers
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: LED device (C-List[8])
+; ============================================================
+; Methods:
+;   1. main — 6-phase visual test; all pass → 6 LEDs blink 3×; fault → LED2 latches
+; ============================================================
+; Turing DR Test ✦ — Full ISA Visual Test Across All DR0–DR15
 ; Exercises all 10 Turing instructions across 16 data registers:
 ;   DREAD, DWRITE, BFEXT, BFINS, MCMP, IADD, ISUB, BRANCH, SHL, SHR
 ; ============================================================
@@ -4278,7 +4289,19 @@ function loadExample(name) {
     updateSaveUserTabBtn();
 
     const examples = {
-        'ada_note_g': `; ============================================
+        'ada_note_g': `; ============================================================
+; Abstraction:  NoteGAssembly
+; Description:  Ada Lovelace's Note G (1843): 25 ops on Church Machine assembly
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: None
+; ============================================================
+; Methods:
+;   1. main — 25 assembly operations computing B7 = -1/30 (integer truncated)
+; ============================================================
+; ============================================
 ; Ada Lovelace — Note G (1843)
 ; The First Computer Program
 ; Computes B7 (Bernoulli number = -1/30)
@@ -4693,7 +4716,26 @@ HALT
 .word 1                    ; offset 104: B3 (stand-in)
 .word 1                    ; offset 105: B5 (stand-in)
 `,
-        'selftest': `; ============================================
+        'capability_test': `; ============================================================
+; Abstraction:  CapabilityTest
+; Description:  Church Machine capability-based self-test: LOAD, TPERM, CALL
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: None
+; ============================================================
+; Methods:
+;   1. test1_load — LOAD all system abstractions from boot C-List
+;   2. test2_tperm_pass — TPERM: verify E/RW permissions pass
+;   3. test3_tperm_fail — TPERM: verify L permission fails (Z=0)
+;   4. test4_conditional — LOADEQ/LOADNE conditional loads
+;   5. test5_switch — SWITCH register swap
+;   6. test6_turing — IADD, ISUB, MCMP, SHL, SHR arithmetic
+;   7. test7_call — CALL Salvation via direct mode
+;   8. test8_eloadcall — ELOADCALL fused Load+TPERM+Call
+; ============================================================
+; ============================================
 ; Church Machine Self-Test
 ; Tests opcodes using boot C-List (12 entries)
 ; Boot must complete before assembling
@@ -4752,7 +4794,22 @@ ELOADCALL CR0, CR6, 4  ; Load Salvation + check E + call
 ; --- All tests complete ---
 HALT
 `,
-        'load_save': `; Load and Save example
+        'system_patterns': `; ============================================================
+; Abstraction:  SystemPatterns
+; Description:  System-level patterns: load/save, conditional, GC test
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: None
+; ============================================================
+; Methods:
+;   1. load_and_save — LOAD/TPERM/CALL sequence using boot C-List
+;   2. conditional — TPERM-conditioned LOAD and CALL patterns
+;   3. gc_test — PP250 GC cycle exercise with LOAD/TPERM/CALL
+; ============================================================
+
+; ── Section 1: Load and Save ──────────────────────────────
 ; Boot C-List: [4]=Salvation(E) [5]=Navana(E) [8]=LED(RW)
 LOAD CR0, CR6, 4       ; CR0 = Salvation (E)
 TPERM CR0, E           ; Check E permission → Z=1
@@ -4762,8 +4819,49 @@ LOAD CR2, CR6, 8       ; CR2 = LED (RW)
 TPERM CR2, RW          ; Check R+W → Z=1
 CALL CR0, 0xF          ; CALL Salvation (atomic dispatch)
 HALT
+
+; ── Section 2: Conditional Execution ──────────────────────
+; Boot C-List: [4]=Salvation(E) [5]=Navana(E) [8]=LED(RW)
+LOAD CR0, CR6, 4       ; Load Salvation (E)
+TPERM CR0, E           ; Check E — sets Z=1 (pass)
+LOADEQ CR1, CR6, 5    ; Load Navana only if equal (Z=1) → EXEC
+CALLNE CR0, 0xF       ; SKIP (Z=1, so NE is false)
+TPERM CR0, L           ; Salvation has L? FAIL → Z=0
+LOADEQ CR2, CR6, 6    ; SKIP (Z=0, not equal)
+LOADNE CR2, CR6, 7    ; EXEC (Z=0, is not-equal) → Memory
+HALT
+
+; ── Section 3: GC Test (PP250) ────────────────────────────
+; Boot C-List: [4]=Salvation(E) [5]=Navana(E) [6]=Mint(E) [7]=Memory(E)
+LOAD CR0, CR6, 4       ; CR0 = Salvation (E)
+LOAD CR1, CR6, 5       ; CR1 = Navana    (E)
+LOAD CR2, CR6, 6       ; CR2 = Mint      (E)
+LOAD CR3, CR6, 7       ; CR3 = Memory    (E)
+LOAD CR4, CR6, 8       ; CR4 = LED       (RW)
+TPERM CR0, E           ; Salvation has E? PASS
+TPERM CR1, E           ; Navana has E? PASS
+TPERM CR2, E           ; Mint has E? PASS
+TPERM CR3, E           ; Memory has E? PASS
+TPERM CR4, RW          ; LED has R+W? PASS
+CALL CR0, 0xF          ; Direct mode: enter Salvation (atomic dispatch)
+HALT
 `,
-        'bernoulli': `; Bernoulli Sum Identity — Pure Turing Arithmetic
+        'compute_demo': `; ============================================================
+; Abstraction:  ComputeDemo
+; Description:  Bernoulli sum identity and Turing ISA exercise
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: None
+; ============================================================
+; Methods:
+;   1. bernoulli_sum — Bernoulli sum S(n) = n(n+1)/2 (Ada's insight)
+;   2. turing_test — Exercise IADD, ISUB, MCMP, BRANCH, SHL, SHR
+; ============================================================
+
+; ── Section 1: Bernoulli Sum Identity ──────────────────────
+; Bernoulli Sum Identity — Pure Turing Arithmetic
 ; Computes S(n) = 1 + 2 + ... + n = n(n+1)/2
 ; Ada's insight: summation formulas ARE Bernoulli numbers
 ; B0 = 1, and sum(k, k=1..n) = n²/2 + n*B0/1
@@ -4801,115 +4899,42 @@ BRANCH loop
 
 done:
 ; DR3 = 55 (formula), DR5 = 55 (loop) — match!
-HALT
-`,
-        'conditional': `; Conditional execution demo
-; Boot C-List: [4]=Salvation(E) [5]=Navana(E) [8]=LED(RW)
-LOAD CR0, CR6, 4       ; Load Salvation (E)
-TPERM CR0, E           ; Check E \u2014 sets Z=1 (pass)
 
-; This executes only if Z=1 (TPERM passed)
-LOADEQ CR1, CR6, 5     ; Load Navana only if equal (Z=1) → EXEC
-CALLNE CR0, 0xF        ; SKIP (Z=1, so NE is false)
-
-; Force Z=0 via failed TPERM
-TPERM CR0, L           ; Salvation has L? FAIL → Z=0
-
-; This would skip if Z=0 (TPERM failed)
-LOADEQ CR2, CR6, 6     ; SKIP (Z=0, not equal)
-LOADNE CR2, CR6, 7     ; EXEC (Z=0, is not-equal) → Memory
-
-HALT
-`,
-        'gc_test': `; ============================================
-; Church Machine GC Test (PP250)
-; Exercises LOAD, TPERM, CALL with boot C-List
-; Boot must complete before assembling
-; ============================================
-;
-; Boot C-List layout:
-;   [4] Salvation (E)  [5] Navana (E)
-;   [6] Mint (E)       [7] Memory (E)
-;   [8] LED (RW)       [9] UART (RW)
-;   [10] BTN (R)       [11] TIMER (RW)
-
-; --- Load subset into CRs ---
-LOAD CR0, CR6, 4       ; CR0 = Salvation (E)
-LOAD CR1, CR6, 5       ; CR1 = Navana    (E)
-LOAD CR2, CR6, 6       ; CR2 = Mint      (E)
-LOAD CR3, CR6, 7       ; CR3 = Memory    (E)
-LOAD CR4, CR6, 8       ; CR4 = LED       (RW)
-
-; --- Verify permissions ---
-TPERM CR0, E           ; Salvation has E? PASS
-TPERM CR1, E           ; Navana has E? PASS
-TPERM CR2, E           ; Mint has E? PASS
-TPERM CR3, E           ; Memory has E? PASS
-TPERM CR4, RW          ; LED has R+W? PASS
-
-; --- CALL Salvation: checks E via mLoad ---
-CALL CR0, 0xF          ; Direct mode: enter Salvation (atomic dispatch)
-
-HALT
-`,
-        'led_turing_full': _TURING_DR_TEST_SOURCE,
-        'turing_test': `; ============================================
-; Turing ISA Test
+; ── Section 2: Turing ISA Test ────────────────────────────
 ; Exercises IADD, ISUB, MCMP, BRANCH, SHL, SHR
-; ============================================
-;
-; Turing ISA (11 instructions):
-;   DREAD, DWRITE, BFEXT, BFINS  (R/W via GT)
-;   MCMP, IADD, ISUB, BRANCH
-;   SHL, SHR (logical/arithmetic)
-;   RETURN (shared with Church)
-; ============================================
-
-; --- Initialize DR1 = 0 ---
 IADD DR1, DR0, DR0     ; DR1 = 0 (Z=1)
-
-; --- Load system abstractions (boot C-List) ---
 LOAD CR0, CR6, 4       ; CR0 = Salvation (E)
 TPERM CR0, E           ; Verify E → Z=1
-
-; --- Integer arithmetic ---
 IADD DR3, DR1, DR2     ; DR3 = DR1 + DR2
 ISUB DR4, DR3, DR1     ; DR4 = DR3 - DR1
-
-; --- MCMP: compare DR4 vs DR2 ---
 MCMP DR4, DR2          ; Should be equal (Z=1)
 BRANCHEQ +2            ; Skip if equal
 IADD DR5, DR1, DR1     ; Skipped
-
-; --- MCMP: nonzero compare ---
-MCMP DR3, DR4          ; DR3 vs DR4
-BRANCHNE +2            ; Skip if not equal
-ISUB DR6, DR1, DR1     ; Skipped if equal
-
-; --- Zero flag test ---
 ISUB DR7, DR3, DR3     ; DR7 = 0 (Z=1)
 BRANCHEQ +2            ; Branch taken
 IADD DR8, DR1, DR1     ; Skipped
-
-; --- SHL: Shift left ---
 IADD DR9, DR3, DR0     ; DR9 = DR3 (copy)
 SHL DR10, DR9, 4       ; DR10 = DR9 << 4
-
-; --- SHR: Logical shift right ---
 SHR DR11, DR10, 2      ; DR11 = DR10 >> 2
-
-; --- SHR: Arithmetic shift right ---
-ISUB DR12, DR0, DR3    ; DR12 = negative
-SHR DR13, DR12, 1, ASR ; DR13 sign-extending
-
-; --- Verify: SHL then SHR restores ---
 SHL DR14, DR3, 8       ; DR14 = DR3 << 8
 SHR DR15, DR14, 8      ; DR15 = DR14 >> 8
 MCMP DR15, DR3         ; Should be equal (Z=1)
-
 HALT
 `,
-        'salvation': `; ============================================
+        'led_turing_full': _TURING_DR_TEST_SOURCE,
+        'salvation': `; ============================================================
+; Abstraction:  Salvation
+; Description:  First callable abstraction: proves LOAD+TPERM+CALL works
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: None
+; ============================================================
+; Methods:
+;   1. main \u2014 LOAD Salvation, TPERM check, CALL \u2192 transitions to Navana
+; ============================================================
+; ============================================
 ; Salvation \u2014 First Callable Abstraction
 ; Proves CALL works, transitions to Navana
 ; ============================================
@@ -4938,7 +4963,22 @@ CALL CR0, 0xF          ; Direct mode: CR0 is the E-GT — enter Salvation
 
 HALT
 `,
-        'perm_attack': `; ============================================
+        'perm_attack': `; ============================================================
+; Abstraction:  PermAttack
+; Description:  Adversarial permission-violation and TPERM guard tests
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: None
+; ============================================================
+; Methods:
+;   1. attack1_call_no_e — CALL device without E → FAULT
+;   2. attack2_dread_no_r — DREAD Salvation without R → FAULT
+;   3. attack3_dwrite_no_w — DWRITE BTN without W → FAULT
+;   4. tperm_guard — TPERM E before CALL, failure path, recursive overflow
+; ============================================================
+; ============================================
 ; ADVERSARIAL TEST: Permission Violations
 ; Every operation here should FAULT cleanly.
 ; mLoad is the single guard at the gate.
@@ -4971,8 +5011,39 @@ DWRITE DR1, CR2, 0     ; FAULT: BTN lacks W permission
 
 ; --- If we get here, something is broken ---
 HALT
+
+; ── Section 4: TPERM Guard + Recursive Overflow ─────────────
+; TEST 1: CALL guard (TPERM E)
+LOAD CR0, CR6, 4          ; CR0 = Salvation
+TPERM CR0, E              ; has E? Z=1 yes
+BRANCHNE overflow_halt    ; Z=0 → HALT (no E perm)
+CALL CR0                  ; Z=1 → atomic dispatch
+; TEST 2: TPERM failure (RW check)
+TPERM CR0, RW             ; has RW? Z=0 (no)
+BRANCHEQ overflow_halt    ; Z=1 → unexpected, HALT
+; TEST 3: Recursive CALL (STO overflow)
+recurse:
+LOAD CR0, CR6, 2          ; CR0 = Boot.Abstr (self)
+TPERM CR0, E              ; guard: has E?
+BRANCHNE overflow_halt    ; no E → HALT
+CALL CR0                  ; push real 2-word frame
+BRANCH recurse            ; loop (after RETURN)
+overflow_halt:
+HALT
 `,
-        'led_blink': `; ============================================
+        'led_control': `; ============================================================
+; Abstraction:  LedControl
+; Description:  LED blink — the exact nucleus program on Ti60 F225 FPGA
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: LED device (C-List[8])
+; ============================================================
+; Methods:
+;   1. blink — toggle LED0 at 1 Hz using nested delay loops
+; ============================================================
+; ============================================
 ; LED Blink — Ti60 F225 Hardware Nucleus Code
 ; ============================================
 ;
@@ -5029,7 +5100,19 @@ BRANCHNE outer_off
 
 BRANCH led_on             ; loop forever
 `,
-        'bind_attack': `; ============================================
+        'bind_attack': `; ============================================================
+; Abstraction:  BindAttack
+; Description:  Adversarial B-bit enforcement test: SAVE without B=1
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: None
+; ============================================================
+; Methods:
+;   1. attack1_save_no_b — SAVE with B=0 default → FAULT
+; ============================================================
+; ============================================
 ; ADVERSARIAL TEST: B-Bit Enforcement
 ; Tests TWO security boundaries:
 ;   1. SAVE requires B=1 (B defaults to 0)
@@ -5051,67 +5134,6 @@ LOAD CR0, CR6, 4       ; CR0 = Salvation (E, B=0)
 SAVE CR0, CR6, 3       ; FAULT: B=0, cannot bind to empty slot 3
 
 ; --- If we get here, B-bit default failed ---
-HALT
-`,
-        'tperm_halt': `; ============================================
-; TPERM + CALL + HALT
-; ============================================
-;
-; Three tests in one run:
-;
-;   1. CALL guard — TPERM checks E on
-;      Salvation. Z=1 → CALL; Z=0 → HALT.
-;
-;   2. TPERM failure — check RW on Salvation
-;      (has E only, not RW). Z=0 confirms
-;      failure, fall through to test 3.
-;
-;   3. Recursive CALL — self-call via
-;      Boot.Abstr (c-list[2], our own code).
-;      Each CALL pushes a real 2-word frame.
-;      ~15 frames → BOUNDS (STO < sp_min=212).
-;
-; NOTE: Salvation has handler methods so CALL
-; dispatches atomically (no frame pushed).
-; Boot.Abstr is our own code — no handler —
-; so CALL pushes a real stack frame.
-;
-; HOW TO RUN:
-;   1. Boot (Step x6 or Boot button)
-;   2. Assemble (Ctrl+Enter)
-;   3. Step or Run
-; ============================================
-
-; --- TEST 1: CALL guard (TPERM E) ---
-; Load Salvation, verify E perm, CALL if ok.
-; Salvation dispatches atomically (handler).
-
-LOAD CR0, CR6, 4          ; CR0 = Salvation
-TPERM CR0, E              ; has E? Z=1 yes, Z=0 no
-BRANCHNE halt             ; Z=0 → HALT (no E perm)
-CALL CR0                  ; Z=1 → atomic dispatch
-
-; --- TEST 2: TPERM failure (RW check) ---
-; Salvation has E but NOT RW. TPERM sets Z=0.
-; Z=0 (expected fail) → fall through to test 3.
-
-TPERM CR0, RW             ; has RW? Z=0 (no)
-BRANCHEQ halt             ; Z=1 → unexpected, HALT
-
-; --- TEST 3: Recursive CALL — overflow ---
-; Self-call via Boot.Abstr (c-list[2]).
-; This is our OWN code — no handler, so CALL
-; pushes a real 2-word frame each time.
-; ~15 frames before STO < sp_min (212).
-
-recurse:
-LOAD CR0, CR6, 2          ; CR0 = Boot.Abstr (self)
-TPERM CR0, E              ; guard: has E?
-BRANCHNE halt             ; no E → HALT
-CALL CR0                  ; push real 2-word frame
-BRANCH recurse            ; loop (after RETURN)
-
-halt:
 HALT
 `,
     };

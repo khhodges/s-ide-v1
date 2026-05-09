@@ -362,12 +362,12 @@ function onLangChange(restoring) {
     if (btnBuildLumpMenu) btnBuildLumpMenu.disabled = (lang === 'assembly');
 
     const langExampleGroups = {
-        english: ['cloomc_english_hello', 'cloomc_english_counter', 'cloomc_english_string', 'cloomc_english_loops', 'cloomc_english_contact', 'cloomc_english_contact_stage2'],
-        assembly: ['ada_note_g', 'selftest', 'load_save', 'bernoulli', 'conditional', 'gc_test', 'turing_test', 'led_turing_full', 'led_blink', 'salvation', 'perm_attack', 'bind_attack', 'tperm_halt'],
-        javascript: ['cloomc_hello', 'cloomc_string', 'cloomc_memory', 'cloomc_heap', 'cloomc_counter', 'cloomc_sliderule', 'cloomc_contact', 'cloomc_contact_stage2', 'cloomc_contact_call', 'cloomc_stack_overflow', 'cloomc_recall_demo', 'cloomc_billing', 'cloomc_turing_memory', 'cloomc_church_memory', 'cloomc_physical_pool'],
-        haskell: ['cloomc_church_math', 'cloomc_church_pair', 'cloomc_church_case', 'cloomc_church_lambda', 'cloomc_sliderule_hs'],
+        english: ['cloomc_english_integer_ops', 'cloomc_english_packed_string', 'cloomc_english_loops', 'cloomc_english_contact', 'cloomc_english_contact_stage2'],
+        assembly: ['ada_note_g', 'capability_test', 'system_patterns', 'compute_demo', 'led_control', 'led_turing_full', 'salvation', 'perm_attack', 'bind_attack'],
+        javascript: ['cloomc_integer_ops', 'cloomc_packed_string', 'cloomc_memory', 'cloomc_heap', 'cloomc_mint', 'cloomc_sliderule', 'cloomc_contact', 'cloomc_contact_stage2', 'cloomc_contact_call', 'cloomc_stack_overflow', 'cloomc_recall_demo', 'cloomc_billing', 'cloomc_turing_memory', 'cloomc_church_memory', 'cloomc_physical_pool'],
+        haskell: ['cloomc_church_math', 'cloomc_church_pair', 'cloomc_church_case', 'cloomc_sliderule_hs'],
         symbolic: ['cloomc_ada_note_g', 'cloomc_ada_note_g_published_bug', 'cloomc_bernoulli_numbers'],
-        lambda: ['cloomc_lambda_church_vs_compiled', 'cloomc_lambda_church', 'cloomc_lambda_booleans', 'cloomc_lambda_pairs', 'cloomc_lambda_ycomb', 'cloomc_lambda_sliderule', 'cloomc_lambda_fixedpoint', 'cloomc_lambda_rational'],
+        lambda: ['cloomc_lambda_church_numerals', 'cloomc_lambda_church_encoding', 'cloomc_lambda_fixed_point', 'cloomc_lambda_sliderule', 'cloomc_lambda_rational'],
         personal: []
     };
 
@@ -398,12 +398,12 @@ function onLangChange(restoring) {
             // The scaffold is only discarded when the user explicitly picks an example tab.
             if (!window._wizardScaffoldActive) {
                 const defaults = {
-                    english: 'english_hello',
-                    assembly: 'selftest',
-                    javascript: 'hello',
+                    english: 'english_integer_ops',
+                    assembly: 'capability_test',
+                    javascript: 'integer_ops',
                     haskell: 'church_math',
                     symbolic: 'ada_note_g',
-                    lambda: 'lambda_church'
+                    lambda: 'lambda_church_numerals'
                 };
                 const defaultExample = defaults[lang];
                 if (defaultExample) {
@@ -1520,7 +1520,21 @@ function loadCLOOMCExample(name) {
     }
 
     const examples = {
-        'memory': `// ── Memory Allocator using CR5 Instance Data ──
+        'memory': `// ============================================================
+// Abstraction:  Memory
+// Description:  Memory allocator using CR5 instance data (NS slot 7)
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: None
+// ============================================================
+// Methods:
+//   1. Allocate(size) — reserve size words; return (base, limit)
+//   2. Free(base) — release a previously allocated block
+//   3. Resize(base, newSize) — resize an existing block in-place
+// ============================================================
+// ── Memory Allocator using CR5 Instance Data ──
 // Base abstractions are shared code — they hold no
 // state themselves. Instance state lives in CR5,
 // the private instance data register.
@@ -1579,7 +1593,21 @@ abstraction Memory {
         return(0)
     }
 }`,
-        'mint': `// ── Mint: Creating New Golden Tokens ──
+        'mint': `// ============================================================
+// Abstraction:  Mint
+// Description:  Creates and validates Golden Token capability words
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: Navana, Memory
+// ============================================================
+// Methods:
+//   1. Encode(ns, exp, perms, bindable, far) — create a Golden Token word
+//   2. Decode(gt) — unpack fields from a Golden Token
+//   3. Validate(gt) — check GT integrity (well-formed, not expired)
+// ============================================================
+// ── Mint: Creating New Golden Tokens ──
 // Mint depends on Memory (listed in capabilities).
 // At install time the system places a GT for Memory
 // into Mint's c-list. Without that GT, Mint cannot
@@ -1610,7 +1638,23 @@ abstraction Mint {
         return(0)
     }
 }`,
-        'hello': `// ── Church Machine: Anatomy of an Abstraction ──
+        'integer_ops': `// ============================================================
+// Abstraction:  IntegerOps
+// Description:  Integer arithmetic on Church Machine hardware
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: None
+// ============================================================
+// Methods:
+//   1. Clamp(value, lo, hi) — restrict a value to a range [lo, hi]
+//   2. Abs(n) — return the magnitude of n (absolute value)
+//   3. Increment(value) — add 1 to a value
+//   4. Add(a, b) — add two integers
+//   5. Double(x) — return x + x
+// ============================================================
+// ── Church Machine: Anatomy of an Abstraction ──
 // The Church Machine is a 32-bit integer machine.
 // There are no strings, no floats, no data types.
 // Every value in a data register (DR0-DR15) is
@@ -1677,8 +1721,42 @@ abstraction IntegerOps {
         }
         return(n)
     }
+
+    // Increment: add 1 to a value.
+    // Church numerals are built entirely from this operation.
+    method Increment(value) {
+        result = value + 1
+        return(result)
+    }
+
+    // Add: sum two integers.
+    method Add(a, b) {
+        result = a + b
+        return(result)
+    }
+
+    // Double: return x + x.
+    method Double(x) {
+        result = x + x
+        return(result)
+    }
 }`,
-        'string': `// ── Building Strings on Integer Hardware ──
+        'packed_string': `// ============================================================
+// Abstraction:  PackedString
+// Description:  4-chars-per-word ASCII string encoding on 32-bit integer hardware
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: None
+// ============================================================
+// Methods:
+//   1. Pack4(ch0, ch1, ch2, ch3) — pack 4 ASCII codes into one 32-bit word
+//   2. Unpack(word, pos) — extract one character by position (0-3)
+//   3. IsLetter(ch) — return 1 if ch is A-Z or a-z
+//   4. ToUpper(ch) — convert lowercase a-z to uppercase A-Z
+// ============================================================
+// ── Building Strings on Integer Hardware ──
 // The Church Machine has no string type. Every
 // register holds a 32-bit integer. To work with
 // text, we pack characters into integers:
@@ -1755,7 +1833,22 @@ abstraction PackedString {
         return(ch)
     }
 }`,
-        'heap': `// ── Heap: A Capability-Controlled Typed Array ──
+        'heap': `// ============================================================
+// Abstraction:  Heap
+// Description:  Capability-controlled typed array allocator
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: Memory
+// ============================================================
+// Methods:
+//   1. Allocate(capacity, typeCode) — allocate a typed array; return handle GT
+//   2. Get(handle, index) — read element at index
+//   3. Set(handle, index, value) — write element at index
+//   4. Length(handle) — return number of elements
+// ============================================================
+// ── Heap: A Capability-Controlled Typed Array ──
 // In JavaScript, the heap is hidden — the engine
 // allocates and garbage-collects objects for you.
 // You never see the raw memory.
@@ -1851,15 +1944,27 @@ abstraction Heap {
         returnNE(DR1)
     }
 }`,
-        'counter': `abstraction Counter {\n    capabilities {\n    }\n    method Increment(value) {\n        result = value + 1\n        return(result)\n    }\n    method Add(a, b) {\n        result = a + b\n        return(result)\n    }\n}`,
-        'church_math': `-- Church Machine Lambda Calculus\n-- Haskell front-end proves universal target\n\nabstraction ChurchMath {\n    capabilities {\n    }\n\n    -- Church successor: n + 1\n    method successor(n) = n + 1\n\n    -- Church addition: a + b\n    method add(a, b) = a + b\n\n    -- Church multiplication\n    method multiply(a, b) = a * b\n\n    -- Predecessor: max(0, n-1)\n    method predecessor(n) = if n > 0 then n - 1 else 0\n\n    -- isZero: 1 if n==0, else 0\n    method isZero(n) = if n == 0 then 1 else 0\n}`,
-        'church_pair': `-- Church Pairs — Haskell front-end\n-- Pairs pack two 16-bit values\n\nabstraction ChurchPair {\n    capabilities {\n    }\n\n    -- Construct a pair from two values\n    method makePair(a, b) = (a, b)\n\n    -- Extract first element\n    method first(p) = fst p\n\n    -- Extract second element  \n    method second(p) = snd p\n\n    -- Swap pair elements\n    method swap(p) = (snd p, fst p)\n}`,
-        'church_case': `-- Church Case Expressions — Haskell front-end\n-- Pattern matching compiles to MCMP + BRANCH chains\n\nabstraction ChurchCase {\n    capabilities {\n    }\n\n    -- Factorial via case\n    method factorial(n) = case n of 0 -> 1, _ -> n * (n - 1)\n\n    -- Classify a number\n    method classify(n) = case n of 0 -> 100, 1 -> 200, _ -> n + 300\n\n    -- Absolute value\n    method abs(n) = if n < 0 then 0 - n else n\n}`,
-        'church_lambda': `-- Church Lambda Expressions — Haskell front-end\n-- Lambda calculus on Church Machine hardware\n\nabstraction ChurchLambda {\n    capabilities {\n    }\n\n    -- Identity function\n    method identity(x) = x\n\n    -- Constant function (returns first arg)\n    method constant(x, y) = x\n\n    -- Apply successor twice\n    method double_succ(n) = succ (succ n)\n\n    -- Let binding example\n    method letExample(x) = let a = x + 1 in a + a\n}`,
-        'ada_note_g': `-- Ada Lovelace — Note G (1843)\n-- The First Computer Program\n-- Computes B7 (Bernoulli number = -1/30)\n-- Written in Symbolic Mathematics notation\n\nabstraction NoteG {\n    capabilities {\n    }\n\n    method compute() {\n        -- Initialize Ada's Store columns\n        let V1 = 1\n        let V2 = 2\n        let V3 = 4\n\n        -- Operation 1: V4 = 2n = 8\n        let V4, V5, V6 = V2 * V3\n\n        -- Operation 2: 2n-1 = 7\n        let V4 = V4 - V1\n\n        -- Operation 3: 2n+1 = 9\n        let V5 = V5 + V1\n\n        -- Operation 4: (2n-1)/(2n+1) — CORRECTED per Bromley (1990)\n        let V11 = V4 / V5\n\n        -- Operation 5: divide coefficient by 2\n        let V11 = V11 / V2\n\n        -- Operation 6: accumulator\n        let V13 = 0\n        let V13 = V13 - V11\n\n        -- Operation 7: loop counter = n-1 = 3\n        let V10 = V3 - V1\n\n        -- Operation 8: denominator counter\n        let V7 = V2\n\n        -- Operation 9: 2n / counter\n        let V11 = V6 / V7\n\n        -- Operation 10: B1 * coefficient\n        let V15 = 1\n        let V12 = V15 * V11\n\n        -- Operation 11: accumulate\n        let V13 = V12 + V13\n\n        -- Operation 12: decrement loop\n        let V10 = V10 - V1\n\n        -- Operations 13-23: loop body\n        repeat V10 as V10\n            let V6 = V6 - V1\n            let V7 = V1 + V7\n            let V8 = V6 / V7\n            let V11 = V8 * V11\n            let V6 = V6 - V1\n            let V7 = V1 + V7\n            let V9 = V6 / V7\n            let V11 = V9 * V11\n            let V15 = 1\n            let V12 = V15 * V11\n            let V13 = V12 + V13\n        end\n\n        -- Operation 24: B7 = -sum\n        let V15 = 0\n        let V15 = V15 - V13\n\n        -- Operation 25: increment n\n        let V3 = V1 + V3\n\n        halt\n    }\n}`,
-        'bernoulli_numbers': `-- Bernoulli Numbers via SlideRule\n-- One CALL per number — no loops, no algorithm.\n-- Ada needed 25 operations; the SlideRule does it in 1.\n--\n-- SlideRule.Bernoulli(n) returns numerator in DR(dst),\n-- denominator in DR(dst+1). Both are machine-accessible.\n-- B(0)=1/1, B(1)=-1/2, B(2)=1/6, B(4)=-1/30,\n-- B(6)=1/42, B(8)=-1/30, B(10)=5/66, B(12)=-691/2730\n\nabstraction BernoulliNumbers {\n    capabilities {\n    }\n\n    method compute() {\n        -- Compute Bernoulli numbers using shorthand syntax\n        -- bernoulli(x) compiles to SlideRule.Bernoulli(x)\n\n        let V1 = bernoulli(0)\n\n        let V2 = 2\n        let V2 = bernoulli(V2)\n\n        let V3 = 4\n        let V3 = bernoulli(V3)\n\n        -- Also supports explicit SlideRule.Bernoulli() form\n        let V4 = 6\n        let V4 = SlideRule.Bernoulli(V4)\n\n        let V5 = 8\n        let V5 = SlideRule.Bernoulli(V5)\n\n        let V6 = 10\n        let V6 = bernoulli(V6)\n\n        let V7 = 12\n        let V7 = bernoulli(V7)\n\n        -- After each call: DR(n) = numerator, DR(n+1) = denominator\n        -- V1=1/1, V2=1/6, V3=-1/30, V4=1/42,\n        -- V5=-1/30, V6=5/66, V7=-691/2730\n\n        halt\n    }\n}`,
-        'sliderule_hs': `-- SlideRule — Haskell front-end\n-- Integer arithmetic on Church Machine hardware\n-- Proves both languages compile to the same 20-instruction target\n\nabstraction SlideRuleHS {\n    capabilities { Constants }\n\n    -- Basic arithmetic\n    method Add(a, b) = a + b\n\n    method Sub(a, b) = a - b\n\n    method Mul(a, b) = a * b\n\n    -- Integer square root via conditional lookup (floor)\n    method Sqrt(n) = if n < 1 then 0 else if n < 4 then 1 else if n < 9 then 2 else if n < 16 then 3 else if n < 25 then 4 else if n < 36 then 5 else if n < 49 then 6 else if n < 64 then 7 else if n < 81 then 8 else if n < 100 then 9 else 10\n\n    -- Power of 2 via conditional lookup\n    method Pow2(exp) = if exp == 0 then 1 else if exp == 1 then 2 else if exp == 2 then 4 else if exp == 3 then 8 else if exp == 4 then 16 else if exp == 5 then 32 else if exp == 6 then 64 else if exp == 7 then 128 else 256\n\n    -- Absolute value\n    method Abs(n) = if n < 0 then 0 - n else n\n\n    -- Signum: -1, 0, or 1\n    method Signum(n) = if n == 0 then 0 else if n > 0 then 1 else 0 - 1\n\n    -- Max of two values\n    method Max(a, b) = if a > b then a else b\n\n    -- Min of two values\n    method Min(a, b) = if a < b then a else b\n\n    -- Clamp value between lo and hi\n    method Clamp(x, lo, hi) = if x < lo then lo else if x > hi then hi else x\n}`,
-        'english_contact': `-- ENGLISH: Contact — Stage 3 Application-Level Abstraction
+        'church_math': `-- ============================================================\n-- Abstraction:  ChurchMath\n-- Description:  Basic Church numerals in Haskell front-end syntax\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     Haskell\n-- Dependencies: None\n-- ============================================================\n-- Methods:\n--   1. successor(n) \u2014 Church successor: n + 1\n--   2. add(a, b) \u2014 Church addition\n--   3. multiply(a, b) \u2014 Church multiplication\n--   4. predecessor(n) \u2014 max(0, n-1)\n--   5. isZero(n) \u2014 1 if n==0, else 0\n-- ============================================================\n-- Church Machine Lambda Calculus\n-- Haskell front-end proves universal target\n\nabstraction ChurchMath {\n    capabilities {\n    }\n\n    -- Church successor: n + 1\n    method successor(n) = n + 1\n\n    -- Church addition: a + b\n    method add(a, b) = a + b\n\n    -- Church multiplication\n    method multiply(a, b) = a * b\n\n    -- Predecessor: max(0, n-1)\n    method predecessor(n) = if n > 0 then n - 1 else 0\n\n    -- isZero: 1 if n==0, else 0\n    method isZero(n) = if n == 0 then 1 else 0\n}`,
+        'church_pair': `-- ============================================================\n-- Abstraction:  ChurchPair\n-- Description:  Church pairs and lambda expressions in Haskell\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     Haskell\n-- Dependencies: None\n-- ============================================================\n-- Methods:\n--   1. makePair(a, b) — construct a pair from two values\n--   2. first(p) — extract first element\n--   3. second(p) — extract second element\n--   4. swap(p) — swap pair elements\n--   5. identity(x) — identity function: λx.x\n--   6. constant(x, y) — constant function: returns first arg\n--   7. double_succ(n) — apply successor twice\n--   8. letExample(x) — demonstrate let-binding syntax\n-- ============================================================\n-- Church Pairs and Lambda Expressions — Haskell front-end\n\nabstraction ChurchPair {\n    capabilities {\n    }\n\n    -- Construct a pair from two values\n    method makePair(a, b) = (a, b)\n\n    -- Extract first element\n    method first(p) = fst p\n\n    -- Extract second element\n    method second(p) = snd p\n\n    -- Swap pair elements\n    method swap(p) = (snd p, fst p)\n\n    -- Identity function: λx.x\n    method identity(x) = x\n\n    -- Constant function: returns first arg, ignores second (λx.λy.x)\n    method constant(x, y) = x\n\n    -- Apply successor twice\n    method double_succ(n) = succ (succ n)\n\n    -- Let binding example\n    method letExample(x) = let a = x + 1 in a + a\n}`,
+        'church_case': `-- ============================================================\n-- Abstraction:  ChurchCase\n-- Description:  Case expressions and pattern matching in Haskell\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     Haskell\n-- Dependencies: None\n-- ============================================================\n-- Methods:\n--   1. factorial(n) — factorial via case expression\n--   2. classify(n) — classify a number (0/1/other)\n--   3. abs(n) — absolute value\n-- ============================================================\n-- Church Case Expressions — Haskell front-end\n-- Pattern matching compiles to MCMP + BRANCH chains\n\nabstraction ChurchCase {\n    capabilities {\n    }\n\n    -- Factorial via case\n    method factorial(n) = case n of 0 -> 1, _ -> n * (n - 1)\n\n    -- Classify a number\n    method classify(n) = case n of 0 -> 100, 1 -> 200, _ -> n + 300\n\n    -- Absolute value\n    method abs(n) = if n < 0 then 0 - n else n\n}`,
+        'ada_note_g': `-- ============================================================\n-- Abstraction:  NoteG\n-- Description:  Ada Lovelace's Note G — the first computer program (1843)\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     Symbolic Math\n-- Dependencies: None\n-- ============================================================\n-- Methods:\n--   1. compute() — 25 operations computing Bernoulli number B7 = -1/30\n-- ============================================================\n-- Ada Lovelace — Note G (1843)\n-- The First Computer Program\n-- Computes B7 (Bernoulli number = -1/30)\n-- Written in Symbolic Mathematics notation\n\nabstraction NoteG {\n    capabilities {\n    }\n\n    method compute() {\n        -- Initialize Ada's Store columns\n        let V1 = 1\n        let V2 = 2\n        let V3 = 4\n\n        -- Operation 1: V4 = 2n = 8\n        let V4, V5, V6 = V2 * V3\n\n        -- Operation 2: 2n-1 = 7\n        let V4 = V4 - V1\n\n        -- Operation 3: 2n+1 = 9\n        let V5 = V5 + V1\n\n        -- Operation 4: (2n-1)/(2n+1) — CORRECTED per Bromley (1990)\n        let V11 = V4 / V5\n\n        -- Operation 5: divide coefficient by 2\n        let V11 = V11 / V2\n\n        -- Operation 6: accumulator\n        let V13 = 0\n        let V13 = V13 - V11\n\n        -- Operation 7: loop counter = n-1 = 3\n        let V10 = V3 - V1\n\n        -- Operation 8: denominator counter\n        let V7 = V2\n\n        -- Operation 9: 2n / counter\n        let V11 = V6 / V7\n\n        -- Operation 10: B1 * coefficient\n        let V15 = 1\n        let V12 = V15 * V11\n\n        -- Operation 11: accumulate\n        let V13 = V12 + V13\n\n        -- Operation 12: decrement loop\n        let V10 = V10 - V1\n\n        -- Operations 13-23: loop body\n        repeat V10 as V10\n            let V6 = V6 - V1\n            let V7 = V1 + V7\n            let V8 = V6 / V7\n            let V11 = V8 * V11\n            let V6 = V6 - V1\n            let V7 = V1 + V7\n            let V9 = V6 / V7\n            let V11 = V9 * V11\n            let V15 = 1\n            let V12 = V15 * V11\n            let V13 = V12 + V13\n        end\n\n        -- Operation 24: B7 = -sum\n        let V15 = 0\n        let V15 = V15 - V13\n\n        -- Operation 25: increment n\n        let V3 = V1 + V3\n\n        halt\n    }\n}`,
+        'bernoulli_numbers': `-- ============================================================\n-- Abstraction:  BernoulliNumbers\n-- Description:  Bernoulli numbers via SlideRule.Bernoulli() shorthand\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     Symbolic Math\n-- Dependencies: SlideRule\n-- ============================================================\n-- Methods:\n--   1. compute() — compute B0 B2 B4 B6 B8 B10 B12 using Bernoulli shorthand\n-- ============================================================\n-- Bernoulli Numbers via SlideRule\n-- One CALL per number — no loops, no algorithm.\n-- Ada needed 25 operations; the SlideRule does it in 1.\n--\n-- SlideRule.Bernoulli(n) returns numerator in DR(dst),\n-- denominator in DR(dst+1). Both are machine-accessible.\n-- B(0)=1/1, B(1)=-1/2, B(2)=1/6, B(4)=-1/30,\n-- B(6)=1/42, B(8)=-1/30, B(10)=5/66, B(12)=-691/2730\n\nabstraction BernoulliNumbers {\n    capabilities {\n    }\n\n    method compute() {\n        -- Compute Bernoulli numbers using shorthand syntax\n        -- bernoulli(x) compiles to SlideRule.Bernoulli(x)\n\n        let V1 = bernoulli(0)\n\n        let V2 = 2\n        let V2 = bernoulli(V2)\n\n        let V3 = 4\n        let V3 = bernoulli(V3)\n\n        -- Also supports explicit SlideRule.Bernoulli() form\n        let V4 = 6\n        let V4 = SlideRule.Bernoulli(V4)\n\n        let V5 = 8\n        let V5 = SlideRule.Bernoulli(V5)\n\n        let V6 = 10\n        let V6 = bernoulli(V6)\n\n        let V7 = 12\n        let V7 = bernoulli(V7)\n\n        -- After each call: DR(n) = numerator, DR(n+1) = denominator\n        -- V1=1/1, V2=1/6, V3=-1/30, V4=1/42,\n        -- V5=-1/30, V6=5/66, V7=-691/2730\n\n        halt\n    }\n}`,
+        'sliderule_hs': `-- ============================================================\n-- Abstraction:  SlideRuleHS\n-- Description:  Haskell front-end for slide-rule integer math\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     Haskell\n-- Dependencies: Constants\n-- ============================================================\n-- Methods:\n--   1. Add(a, b) — integer addition\n--   2. Sub(a, b) — integer subtraction\n--   3. Mul(a, b) — integer multiplication\n--   4. Sqrt(n) — integer square root (conditional lookup)\n--   5. Pow2(exp) — power of 2 (conditional lookup)\n--   6. Abs(n) — absolute value\n--   7. Signum(n) — sign: -1, 0, or 1\n--   8. Max(a, b) — maximum of two values\n--   9. Min(a, b) — minimum of two values\n--  10. Clamp(x, lo, hi) — clamp to [lo, hi]\n-- ============================================================\n-- SlideRule — Haskell front-end\n-- Integer arithmetic on Church Machine hardware\n-- Proves both languages compile to the same 20-instruction target\n\nabstraction SlideRuleHS {\n    capabilities { Constants }\n\n    -- Basic arithmetic\n    method Add(a, b) = a + b\n\n    method Sub(a, b) = a - b\n\n    method Mul(a, b) = a * b\n\n    -- Integer square root via conditional lookup (floor)\n    method Sqrt(n) = if n < 1 then 0 else if n < 4 then 1 else if n < 9 then 2 else if n < 16 then 3 else if n < 25 then 4 else if n < 36 then 5 else if n < 49 then 6 else if n < 64 then 7 else if n < 81 then 8 else if n < 100 then 9 else 10\n\n    -- Power of 2 via conditional lookup\n    method Pow2(exp) = if exp == 0 then 1 else if exp == 1 then 2 else if exp == 2 then 4 else if exp == 3 then 8 else if exp == 4 then 16 else if exp == 5 then 32 else if exp == 6 then 64 else if exp == 7 then 128 else 256\n\n    -- Absolute value\n    method Abs(n) = if n < 0 then 0 - n else n\n\n    -- Signum: -1, 0, or 1\n    method Signum(n) = if n == 0 then 0 else if n > 0 then 1 else 0 - 1\n\n    -- Max of two values\n    method Max(a, b) = if a > b then a else b\n\n    -- Min of two values\n    method Min(a, b) = if a < b then a else b\n\n    -- Clamp value between lo and hi\n    method Clamp(x, lo, hi) = if x < lo then lo else if x > hi then hi else x\n}`,
+        'english_contact': `-- ============================================================
+-- Abstraction:  Contact
+-- Description:  Stage 3 Contact abstraction in plain-English CLOOMC++
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     English
+-- Dependencies: Identity, Routing, Media, Memory, Navana, Mint
+-- ============================================================
+-- Methods:
+--   1. Connect(callerToken, calleeToken) -- establish a session
+--   2. Disconnect(sessionToken) -- close an existing session
+--   3. GetStatus(sessionToken) -- query session state
+-- ============================================================
+-- ENGLISH: Contact — Stage 3 Application-Level Abstraction
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 --
 -- Contact is the Stage 3 example from the namespace
@@ -1946,9 +2051,22 @@ Return status
 Add a private method called ResolveLocation that takes addressToken
 Set raw to the result of calling Identity.GetAddress with addressToken
 Return raw`,
-        'english_hello': `Create an abstraction called Hello\n\nAdd a method called Greet that takes who\nSet result to who plus 1\nReturn the result`,
-        'english_counter': `Create an abstraction called Counter\n\nAdd a method called Increment that takes value\nSet result to value plus 1\nReturn the result\n\nAdd a method called Add that takes a and b\nSet result to a plus b\nReturn the result\n\nAdd a method called Double that takes x\nSet result to x plus x\nReturn the result`,
-        'english_loops': `-- ENGLISH: Loops — Three Ways to Iterate
+        'english_integer_ops': `-- ============================================================\n-- Abstraction:  IntegerOps\n-- Description:  Integer arithmetic in plain-English CLOOMC++\n-- Author:       Church Machine Educational Platform\n-- Version:      1.0\n-- Created:      2026-05-09\n-- Language:     English\n-- Dependencies: None\n-- ============================================================\n-- Methods:\n--   1. Greet(who) \u2014 return who + 1 as a greeting value\n--   2. Increment(value) \u2014 add 1 to a value\n--   3. Add(a, b) \u2014 sum two integers\n--   4. Double(x) \u2014 return x + x\n-- ============================================================\n\nCreate an abstraction called IntegerOps\n\nAdd a method called Greet that takes who\nSet result to who plus 1\nReturn the result\n\nAdd a method called Increment that takes value\nSet result to value plus 1\nReturn the result\n\nAdd a method called Add that takes a and b\nSet result to a plus b\nReturn the result\n\nAdd a method called Double that takes x\nSet result to x plus x\nReturn the result`,
+        'english_loops': `-- ============================================================
+-- Abstraction:  Loops
+-- Description:  Three iteration patterns in plain-English CLOOMC++
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     English
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. CountUp(n) -- count from 1 to n, return final sum
+--   2. CountDown(n) -- count from n to 1, return steps taken
+--   3. Accumulate(n) -- accumulate 1+2+...+n
+-- ============================================================
+-- ENGLISH: Loops — Three Ways to Iterate
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 --
 -- The Church Machine offers THREE loop styles in English:
@@ -2014,7 +2132,22 @@ End if
 Set total to total plus n
 Set n to n minus 1
 Apply lambda with n, total`,
-        'english_string': `-- ENGLISH: String Operations
+        'english_packed_string': `-- ============================================================
+-- Abstraction:  PackedString
+-- Description:  Packed ASCII string operations in plain-English CLOOMC++
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     English
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. Pack4(ch0, ch1, ch2, ch3) -- pack 4 ASCII codes into one 32-bit word
+--   2. Unpack(word, pos) -- extract one character by position (0-3)
+--   3. IsLetter(ch) -- return 1 if ch is A-Z or a-z
+--   4. ToUpper(ch) -- convert lowercase to uppercase
+-- ============================================================
+-- ENGLISH: String Operations
 -- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 --
 -- The Church Machine has no string type. Every register
@@ -2279,7 +2412,25 @@ If ch3 is greater than 96
     End if
 End if
 Return count`,
-        'lambda_church': `-- LAMBDA CALCULUS
+        'lambda_church_numerals': `-- ============================================================
+-- Abstraction:  ChurchNumerals
+-- Description:  Church numeral encoding and selector methods
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Lambda Calculus
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. zero() \u2014 Church numeral zero: \u03BBf.\u03BBx.x
+--   2. successor(n) \u2014 Church successor: n + 1
+--   3. add(a, b) \u2014 Church addition
+--   4. multiply(a, b) \u2014 Church multiplication
+--   5. divide(a, b) \u2014 integer division (guarded)
+--   6. predecessor(n) \u2014 max(0, n-1)
+--   7. isZero(n) \u2014 1 if n==0, else 0
+-- ============================================================
+-- LAMBDA CALCULUS
 -- Church Numerals \u2014 numbers as pure functions
 -- \u03BBf.\u03BBx.x = 0, \u03BBf.\u03BBx.f x = 1, \u03BBf.\u03BBx.f (f x) = 2 ...
 
@@ -2306,8 +2457,26 @@ abstraction ChurchNumerals {
 
     -- Is zero? Returns 1 if n == 0, else 0
     method isZero(n) = if n == 0 then 1 else 0
+
+    -- Church TRUE: λx.λy.x  (CHURCH PATH — no compare, no branch)
+    method true_(x, y) = x
+
+    -- Church FALSE: λx.λy.y  (CHURCH PATH — no compare, no branch)
+    method false_(x, y) = y
+
+    -- AND: λp.λq.p q p
+    method and_(p, q) = if p == 0 then 0 else q
+
+    -- OR: λp.λq.p p q
+    method or_(p, q) = if p == 0 then q else p
+
+    -- NOT: λp.p FALSE TRUE
+    method not_(p) = if p == 0 then 1 else 0
+
+    -- IF-THEN-ELSE: λp.λa.λb.p a b  (CHURCH PATH)
+    method ifthenelse(p, a, b) = if p == 0 then b else a
 }`,
-        'lambda_church_vs_compiled': `-- LAMBDA CALCULUS
+        'REMOVED_lambda_church_vs_compiled': `-- LAMBDA CALCULUS
 -- Church vs Compiled \u2014 control flow by CALL vs BRANCH
 -- \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
 --
@@ -2383,12 +2552,34 @@ abstraction ChurchVsCompiled {
     method church_sign(s1, s2, pos, neg) =
         s1 0 (s2 pos neg)
 }`,
-        'lambda_booleans': `-- LAMBDA CALCULUS
--- Church Booleans \u2014 logic as pure functions
+        'lambda_church_encoding': `-- ============================================================
+-- Abstraction:  ChurchEncoding
+-- Description:  Church booleans and Church pairs as pure functions
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Lambda Calculus
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. true_(x, y) \u2014 Church TRUE: \u03BBx.\u03BBy.x
+--   2. false_(x, y) \u2014 Church FALSE: \u03BBx.\u03BBy.y
+--   3. and_(p, q) \u2014 Church AND: \u03BBp.\u03BBq.p q p
+--   4. or_(p, q) \u2014 Church OR: \u03BBp.\u03BBq.p p q
+--   5. not_(p) \u2014 Church NOT: \u03BBp.p FALSE TRUE
+--   6. ifthenelse(p, a, b) \u2014 Church IF-THEN-ELSE
+--   7. pair(a, b) \u2014 Church PAIR: \u03BBx.\u03BBy.\u03BBf.f x y
+--   8. fst_(p) \u2014 first element: \u03BBp.p (\u03BBx.\u03BBy.x)
+--   9. snd_(p) \u2014 second element: \u03BBp.p (\u03BBx.\u03BBy.y)
+--  10. swap(p) \u2014 swap pair elements
+--  11. mapBoth(p, n) \u2014 add n to both elements
+-- ============================================================
+-- LAMBDA CALCULUS: Church Booleans and Church Pairs
 -- TRUE  = \u03BBx.\u03BBy.x  (select first)
 -- FALSE = \u03BBx.\u03BBy.y  (select second)
+-- PAIR  = \u03BBx.\u03BBy.\u03BBf.f x y
 
-abstraction ChurchBooleans {
+abstraction ChurchEncoding {
     capabilities { }
 
     -- Church TRUE: \u03BBx.\u03BBy.x
@@ -2408,37 +2599,51 @@ abstraction ChurchBooleans {
 
     -- IF-THEN-ELSE: \u03BBp.\u03BBa.\u03BBb.p a b
     method ifthenelse(p, a, b) = if p == 0 then b else a
-}`,
-        'lambda_pairs': `-- LAMBDA CALCULUS
--- Church Pairs \u2014 data structures as pure functions
--- PAIR  = \u03BBx.\u03BBy.\u03BBf.f x y
--- FST   = \u03BBp.p (\u03BBx.\u03BBy.x)
--- SND   = \u03BBp.p (\u03BBx.\u03BBy.y)
 
-abstraction ChurchPairs {
-    capabilities { }
-
-    -- Make a pair from two values
+    -- Make a pair from two values: \u03BBx.\u03BBy.\u03BBf.f x y
     method pair(a, b) = (a, b)
 
-    -- First element
+    -- First element: \u03BBp.p (\u03BBx.\u03BBy.x)
     method fst_(p) = fst p
 
-    -- Second element
+    -- Second element: \u03BBp.p (\u03BBx.\u03BBy.y)
     method snd_(p) = snd p
 
     -- Swap elements
     method swap(p) = (snd p, fst p)
 
-    -- Apply function to both elements
+    -- Apply n to both elements
     method mapBoth(p, n) = (fst p + n, snd p + n)
 }`,
-        'lambda_ycomb': `-- LAMBDA CALCULUS
--- Y Combinator \u2014 recursion from pure functions
+        'lambda_fixed_point': `-- ============================================================
+-- Abstraction:  FixedPoint
+-- Description:  Y combinator and fixed-point decimal arithmetic
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Lambda Calculus
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. factorial(n) \u2014 n! via Y combinator recursion pattern
+--   2. fibonacci(n) \u2014 nth Fibonacci
+--   3. power(base, exp) \u2014 base^exp via repeated multiplication
+--   4. sumTo(n) \u2014 sum 1..n: n*(n+1)/2
+--   5. toFixed(n) \u2014 integer to fixed-point (scale 100)
+--   6. fromFixed(f) \u2014 fixed-point to integer (truncates)
+--   7. addFixed(a, b) \u2014 add two fixed-point values
+--   8. subFixed(a, b) \u2014 subtract two fixed-point values
+--   9. mulFixed(a, b) \u2014 multiply fixed-point (rescaled)
+--  10. divFixed(a, b) \u2014 divide fixed-point (pre-scaled)
+--  11. percent(whole, pct) \u2014 what is pct% of whole?
+--  12. roundFixed(f) \u2014 round fixed-point to nearest integer
+-- ============================================================
+-- LAMBDA CALCULUS
+-- Y Combinator and Fixed-Point Arithmetic
 -- Y = \u03BBf.(\u03BBx.f (x x)) (\u03BBx.f (x x))
--- The Y combinator enables recursion without self-reference
+-- Scale factor = 100 (two decimal places: 3.14 stored as 314)
 
-abstraction YCombinator {
+abstraction FixedPoint {
     capabilities { }
 
     -- Factorial: n! = n * (n-1) * ... * 1
@@ -2462,8 +2667,53 @@ abstraction YCombinator {
 
     -- Sum 1..n: n*(n+1)/2
     method sumTo(n) = n * (n + 1)
+
+    -- Convert integer to fixed-point: n → n * 100
+    method toFixed(n) = n * 100
+
+    -- Convert fixed-point back to integer (truncates): f → f / 100
+    method fromFixed(f) = f / 100
+
+    -- Add two fixed-point values (both already scaled)
+    method addFixed(a, b) = a + b
+
+    -- Subtract two fixed-point values
+    method subFixed(a, b) = a - b
+
+    -- Multiply fixed-point: (a * b) / 100
+    method mulFixed(a, b) = (a * b) / 100
+
+    -- Divide fixed-point: (a * 100) / b
+    method divFixed(a, b) =
+        if b == 0 then 0
+        else (a * 100) / b
+
+    -- Percentage: what is pct% of whole?
+    method percent(whole, pct) = (whole * pct) / 100
+
+    -- Round fixed-point to nearest integer
+    method roundFixed(f) = (f + 50) / 100
 }`,
-        'lambda_sliderule': `-- LAMBDA CALCULUS
+        'lambda_sliderule': `-- ============================================================
+-- Abstraction:  SlideRule
+-- Description:  Logarithmic slide-rule operations as pure functions
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Lambda Calculus
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. Multiply(a, b) \u2014 C/D scale: a \u00d7 b
+--   2. Divide(a, b) \u2014 C/D scale: a / b
+--   3. Square(x) \u2014 A/D scale: x\u00b2
+--   4. Sqrt(n) \u2014 A/D scale: integer \u221an
+--   5. Cube(x) \u2014 K/D scale: x\u00b3
+--   6. Reciprocal(x) \u2014 CI/D scale: 1/x (integer approx)
+--   7. Abs(n) \u2014 absolute value
+--   8. Clamp(x, lo, hi) \u2014 clamp to [lo, hi]
+-- ============================================================
+-- LAMBDA CALCULUS
 -- Slide Rule \u2014 logarithmic computation as pure functions
 -- A slide rule computes via log identities:
 --   log(a \u00d7 b) = log(a) + log(b)
@@ -2609,7 +2859,24 @@ abstraction FixedPointMath {
     -- \u03BBf.(f + 50) / 100  (banker\u2019s rounding approx)
     method roundFixed(f) = (f + 50) / 100
 }`,
-        'lambda_rational': `-- LAMBDA CALCULUS
+        'lambda_rational': `-- ============================================================
+-- Abstraction:  RationalArith
+-- Description:  Exact rational number arithmetic on 32-bit integer hardware
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Lambda Calculus
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. add(n1, d1, n2, d2) \u2014 add two fractions: n1/d1 + n2/d2
+--   2. sub(n1, d1, n2, d2) \u2014 subtract fractions
+--   3. mul(n1, d1, n2, d2) \u2014 multiply fractions
+--   4. div(n1, d1, n2, d2) \u2014 divide fractions
+--   5. isEqual(n1, d1, n2, d2) \u2014 test equality
+--   6. gcd(a, b) \u2014 greatest common divisor (Euclidean)
+-- ============================================================
+-- LAMBDA CALCULUS
 -- Rational Arithmetic \u2014 exact fractions on integer hardware
 -- A fraction is (numerator, denominator)
 -- 1/3 + 1/6 = (1\u00d76 + 1\u00d73) / (3\u00d76) = 9/18 = 1/2
@@ -2659,7 +2926,19 @@ abstraction RationalArith {
         else if a > b then a - b
         else b - a
 }`,
-        'stack_overflow': `// ── Stack Overflow Experiment ──
+        'stack_overflow': `// ============================================================
+// Abstraction:  StackOverflow
+// Description:  Recursive self-call experiment: watch STO drain to BOUNDS fault
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: StackOverflow (self)
+// ============================================================
+// Methods:
+//   1. run() — entry point: call self recursively until BOUNDS fault fires
+// ============================================================
+// ── Stack Overflow Experiment ──
 // The Church Machine thread lump has 256 words.
 // The IDE sets sw=32 stack words in the thread
 // header. sp_max=243, sp_min=212 (= sp_max-sw+1).
@@ -2694,7 +2973,19 @@ abstraction StackOverflow {
     }
 }`,
 
-        'recall_demo': `// ── recall() — Re-call self via CR6 ──
+        'recall_demo': `// ============================================================
+// Abstraction:  RecallDemo
+// Description:  Demonstrates recall() — the event-loop primitive (CALL CR6)
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: None
+// ============================================================
+// Methods:
+//   1. run() — enter the event loop via recall()
+// ============================================================
+// ── recall() — Re-call self via CR6 ──
 // recall() compiles to a single instruction: CALL CR6
 // CR6 always holds the current abstraction, so this
 // re-enters the same abstraction from its entry point.
@@ -2728,7 +3019,22 @@ abstraction Feedback {
     }
 }`,
 
-        'billing': `// ── Billing (NS 47): Capability-Based Memory Quota ──
+        'billing': `// ============================================================
+// Abstraction:  Billing
+// Description:  Capability-based memory quota accounting (NS slot 47)
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: Memory, Navana, Mint
+// ============================================================
+// Methods:
+//   1. Open(quota) — open a billing account with a memory quota
+//   2. Charge(account, amount) — deduct amount from account quota
+//   3. Balance(account) — return remaining quota
+//   4. Close(account) — close account and release resources
+// ============================================================
+// ── Billing (NS 47): Capability-Based Memory Quota ──
 // In a conventional OS, memory limits are enforced by
 // a privileged kernel that any code can try to subvert.
 // On the Church Machine, memory quotas ARE the hardware.
@@ -2795,7 +3101,20 @@ abstraction BudgetTracker {
     }
 }`,
 
-        'turing_memory': `// ── TuringMemory (NS 48): Code-Region Allocation ──
+        'turing_memory': `// ============================================================
+// Abstraction:  TuringMemory
+// Description:  Code-region allocation charged against a Billing account (NS 48)
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: Billing, Memory
+// ============================================================
+// Methods:
+//   1. AllocCode(account, size) — allocate code region charged to account
+//   2. FreeCode(region) — release a previously allocated code region
+// ============================================================
+// ── TuringMemory (NS 48): Code-Region Allocation ──
 // TuringMemory (NS 48) allocates code regions —
 // contiguous physical-memory ranges for executable
 // code. On the Church Machine, code and data live
@@ -2853,7 +3172,20 @@ abstraction CodeLoader {
     }
 }`,
 
-        'church_memory': `// ── ChurchMemory (NS 49): Namespace Slot Handles ──
+        'church_memory': `// ============================================================
+// Abstraction:  ChurchMemory
+// Description:  Namespace slot handle management with reference counting (NS 49)
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: Navana, Billing
+// ============================================================
+// Methods:
+//   1. AllocAbstract(lump, billingAccount) — register a lump; return handle GT
+//   2. Free(handle) — decrement ref count; release NS slot when zero
+// ============================================================
+// ── ChurchMemory (NS 49): Namespace Slot Handles ──
 // Every abstraction on the Church Machine lives at a
 // namespace slot (NS[n]). ChurchMemory (NS 49) manages
 // the lifetime of those slots — it provides reference-
@@ -2924,7 +3256,22 @@ abstraction AbstractionLifecycle {
     }
 }`,
 
-        'physical_pool': `// ── Memory (NS 7): Raw Physical Word Allocation ──
+        'physical_pool': `// ============================================================
+// Abstraction:  PhysicalPool
+// Description:  Raw physical word allocation: paired Allocate/Free and Claim/Release
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: None
+// ============================================================
+// Methods:
+//   1. Allocate(size) — reserve scratch words; return (location, actual_size)
+//   2. Free(location) — release a previously allocated scratch block
+//   3. Claim(size) — permanently claim DMA-visible words
+//   4. Release(location) — release a permanently claimed DMA region
+// ============================================================
+// ── Memory (NS 7): Raw Physical Word Allocation ──
 // Memory is the bottom of the Church Machine's
 // memory hierarchy — raw word-addressed blocks with
 // no quota, no billing, and no garbage collection.
@@ -3005,10 +3352,10 @@ abstraction DMABuffer {
 
     const sel = document.getElementById('langSelector');
     if (sel) {
-        const isHaskell = ['church_math','church_pair','church_case','church_lambda','sliderule_hs'].includes(name);
+        const isHaskell = ['church_math','church_pair','church_case','sliderule_hs'].includes(name);
         const isSymbolic = ['ada_note_g', 'ada_note_g_published_bug', 'bernoulli_numbers'].includes(name);
-        const isEnglish = ['english_hello','english_counter','english_string','english_loops','english_contact','english_contact_stage2'].includes(name);
-        const isLambda = ['lambda_church','lambda_booleans','lambda_pairs','lambda_ycomb','lambda_sliderule','lambda_fixedpoint','lambda_rational','lambda_church_vs_compiled'].includes(name);
+        const isEnglish = ['english_integer_ops','english_packed_string','english_loops','english_contact','english_contact_stage2'].includes(name);
+        const isLambda = ['lambda_church_numerals','lambda_church_encoding','lambda_fixed_point','lambda_sliderule','lambda_rational'].includes(name);
         sel.value = isLambda ? 'lambda' : isEnglish ? 'english' : isSymbolic ? 'symbolic' : isHaskell ? 'haskell' : 'javascript';
     }
 

@@ -1,3 +1,17 @@
+// ============================================================
+// Abstraction:  Memory
+// Description:  Raw physical word allocator (NS slot 7)
+// Author:       Church Machine Educational Platform
+// Version:      1.0
+// Created:      2026-05-09
+// Language:     CLOOMC++
+// Dependencies: None
+// ============================================================
+// Methods:
+//   1. Allocate(size) — reserve size words; return (location, actual_size)
+//   2. Free(location) — release a previously allocated block
+//   3. Resize(location, newSize) — resize an existing block in-place
+// ============================================================
 abstraction Memory {
     capabilities {
     }

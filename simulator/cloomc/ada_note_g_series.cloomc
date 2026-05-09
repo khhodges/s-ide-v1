@@ -1,3 +1,15 @@
+-- ============================================================
+-- Abstraction:  NoteGSeries
+-- Description:  Ada's Note G run four times to compute B3 B5 B7 B9
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Symbolic Math
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. compute_series() — four sequential Note G runs: n=2,3,4,5 → B3 B5 B7 B9
+-- ============================================================
 -- Ada Lovelace — Note G (1843)
 -- The First Computer Program — Series Build-up
 -- Runs the 25-operation program four times in sequence:

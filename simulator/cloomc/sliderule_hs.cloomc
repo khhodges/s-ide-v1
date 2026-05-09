@@ -1,7 +1,26 @@
--- SlideRule — Haskell front-end
--- Integer arithmetic on Church Machine hardware
--- Proves both languages compile to the same 20-instruction target
-
+-- ============================================================
+-- Abstraction:  SlideRuleHS
+-- Description:  Haskell front-end for slide-rule integer math
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Haskell
+-- Dependencies: Constants
+-- ============================================================
+-- Methods:
+--   1. Add(a, b) — integer addition
+--   2. Sub(a, b) — integer subtraction
+--   3. Mul(a, b) — integer multiplication
+--   4. Sqrt(n) — integer square root (conditional lookup)
+--   5. Pow2(exp) — power of 2 (conditional lookup)
+--   6. Abs(n) — absolute value
+--   7. Signum(n) — sign: -1, 0, or 1
+--   8. Max(a, b) — maximum of two values
+--   9. Min(a, b) — minimum of two values
+--  10. Clamp(x, lo, hi) — clamp to [lo, hi]
+-- ============================================================
+-- Proves both languages (CLOOMC++ JS and Haskell) compile to
+-- the same 20-instruction Church Machine hardware target.
 abstraction SlideRuleHS {
     capabilities { Constants }
 
