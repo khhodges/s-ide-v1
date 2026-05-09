@@ -1507,7 +1507,7 @@ function loadCLOOMCExample(name) {
         'contact_stage2': 'javascript',
         'contact_call': 'javascript',
         'english_contact_stage2': 'english',
-        'ada_note_g_published_bug': 'ada',
+        'ada_note_g_published_bug': 'symbolic',
         'memory': 'javascript',
         'sliderule_hs': 'haskell'
     };
