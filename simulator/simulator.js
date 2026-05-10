@@ -3014,7 +3014,20 @@ class ChurchSimulator {
         // before the GT propagates into any C-List slot in memory.
         const srcGTParsed = this.parseGT(srcGT);
         if (srcGTParsed.malformed) {
-            this.fault('DOMAIN_PURITY', `SAVE: CR${d.crDst} contains malformed GT — ${srcGTParsed.malformedReason}`);
+            this.auditLog.push({
+                gate: 'malformedGT',
+                desc: `malformedGT: ${srcGTParsed.malformedReason}`,
+                reason: srcGTParsed.malformedReason,
+                label: `CR${d.crDst}`,
+                nsIndex: null,
+                requiredPerm: null,
+                checks: { malformed: { pass: false } },
+                b: 0, f: 0,
+                result: 'fault',
+            });
+            this.fault('DOMAIN_PURITY',
+                `SAVE: CR${d.crDst} contains malformed GT — ${srcGTParsed.malformedReason}`,
+                { malformedReason: srcGTParsed.malformedReason });
             return null;
         }
         // Resolve the destination C-list NS index before calling mSave so that
