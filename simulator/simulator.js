@@ -2602,7 +2602,7 @@ class ChurchSimulator {
         ) >>> 0;
     }
 
-    fault(type, message) {
+    fault(type, message, meta = null) {
         const lastH = this._instrHistory && this._instrHistory.length > 0
             ? this._instrHistory[this._instrHistory.length - 1] : null;
         const faultStep = (lastH && lastH.step === this.stepCount) ? this.stepCount : null;
@@ -2621,6 +2621,7 @@ class ChurchSimulator {
             instrHistory: this._instrHistory ? this._instrHistory.map(h => ({...h})) : [],
             faultStep: faultStep,
             faultLabel: faultLabel,
+            ...(meta || {}),
         };
         this.faultLog.push(entry);
         this.output += `FAULT [${type}] at PC=${this.pc}: ${message}\n`;
@@ -2868,7 +2869,20 @@ class ChurchSimulator {
         // violate isDomainPure or isSinglePerm, completing the defence chain
         // that createGT() starts at construction time.
         if (slotParsed.malformed) {
-            this.fault('DOMAIN_PURITY', `LOAD: C-List slot ${d.imm} contains malformed GT — ${slotParsed.malformedReason}`);
+            this.auditLog.push({
+                gate: 'malformedGT',
+                desc: `malformedGT: ${slotParsed.malformedReason}`,
+                reason: slotParsed.malformedReason,
+                label: `C-List slot ${d.imm}`,
+                nsIndex: null,
+                requiredPerm: null,
+                checks: { malformed: { pass: false } },
+                b: 0, f: 0,
+                result: 'fault',
+            });
+            this.fault('DOMAIN_PURITY',
+                `LOAD: C-List slot ${d.imm} contains malformed GT — ${slotParsed.malformedReason}`,
+                { malformedReason: slotParsed.malformedReason });
             return null;
         }
 
@@ -5155,9 +5169,15 @@ class ChurchSimulator {
             if (a.gate === 'NS.Type' && a.bootStepName) {
                 stage = `${a.bootStepName} – NS.Type`;
                 desc  = `${a.bootStepName} – NS.Type(NS[${a.nsIndex}]="${a.label}") ${a.result}`;
-            } else {
+            } else if (a.desc !== undefined) {
+                stage = a.gate;
+                desc  = a.desc;
+            } else if (a.nsIndex !== null && a.nsIndex !== undefined) {
                 stage = a.gate;
                 desc  = `${a.gate}(NS[${a.nsIndex}]="${a.label}"${a.requiredPerm ? ', '+a.requiredPerm : ''})`;
+            } else {
+                stage = a.gate;
+                desc  = `${a.gate} — ${a.label}`;
             }
             return {
                 stage,

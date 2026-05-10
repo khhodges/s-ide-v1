@@ -1727,7 +1727,8 @@ const _FAULT_LOG_LS_KEY = 'cm_fault_log';
 
 // The subset of fault-object fields we serialise (skips the large instrHistory array).
 const _FAULT_LOG_FIELDS = ['type','message','pc','physicalPC','step','faultStep','userNote',
-                           '_nsSnapshot','faultLabel','crSnapshot','drSnapshot','flagsSnapshot'];
+                           '_nsSnapshot','faultLabel','crSnapshot','drSnapshot','flagsSnapshot',
+                           'malformedReason'];
 
 function _saveFaultLog() {
     try {
@@ -2086,6 +2087,22 @@ function showFaultModal(f) {
         }
     }
 
+    // ── Malformed GT callout (DOMAIN_PURITY from hand-crafted GT) ────────────
+    let malformedGTSection = '';
+    if (f.type === 'DOMAIN_PURITY' && f.malformedReason) {
+        malformedGTSection = `
+        <div class="fault-scope-section">
+            <div class="fault-scope-label">&#x26A0; Malformed Golden Token</div>
+            <div class="fault-scope-detail">
+                The GT in the C-List was rejected before mLoad ran:
+                <code>${f.malformedReason}</code>.
+                Hand-crafted or STORE-written GTs must satisfy both
+                domain-purity (no mixing of Turing {R,W,X} and Church {L,S,E} bits)
+                and single-permission rules.
+            </div>
+        </div>`;
+    }
+
     // ── General fault description callout ────────────────────────────────────
     let descSection = '';
     {
@@ -2260,6 +2277,7 @@ function showFaultModal(f) {
                 <span class="fault-detail-value">${historyHtml}</span>
             </div>
         </div>` : ''}
+        ${malformedGTSection}
         ${scopeSection}
         ${outformSection}
         ${instrTraceSection}
