@@ -37,7 +37,18 @@ function updateCRDisplay() {
         }
         const cr = sim.getFormattedCR(i);
         const petCR = _petNameCRMap[i];
-        const name = petCR || localNames[i] || '';
+        let name = petCR || localNames[i] || '';
+        if (!name && cr.word0_gt && cr.word0_gt !== '00000000') {
+            try {
+                const _raw = parseInt(cr.word0_gt, 16) >>> 0;
+                const _p = sim.parseGT(_raw);
+                if (_p.type === 3) {
+                    const _ab = sim.parseAbstractGT(_raw);
+                    const _DC = { 1: 'LED', 2: 'UART', 3: 'Button', 4: 'Timer', 5: 'Display' };
+                    if (_ab.ab_type === 0) name = `${_DC[_ab.device_class] || 'dc'+_ab.device_class}[${_ab.device_data}]`;
+                }
+            } catch(_e) {}
+        }
         const meta = crMeta[i];
         const nullCls = cr.isNull ? ' cr-null' : ' cr-active';
         const groupCls = meta.group === 'system' ? ' cr-system' : meta.group === 'privil' ? ' cr-privil' : (meta.role === 'arch' ? ' cr-arch' : '');

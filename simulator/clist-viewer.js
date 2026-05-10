@@ -193,6 +193,17 @@
             }
 
             var petName = petMap[i] || (s.nsLabels && s.nsLabels[nsIdx]) || '';
+            if (!petName && gt.type === 3) {
+                try {
+                    var ab = s.parseAbstractGT(rawWord);
+                    var DC = { 1: 'LED', 2: 'UART', 3: 'Button', 4: 'Timer', 5: 'Display' };
+                    if (ab.ab_type === 0) {
+                        petName = (DC[ab.device_class] || ('dc' + ab.device_class)) + '[' + ab.device_data + ']';
+                    } else {
+                        petName = 'M-Elev 0x' + ab.ab_data.toString(16).toUpperCase();
+                    }
+                } catch (e2) { /* ignore */ }
+            }
 
             html += '<div class="clist-row" data-slot="' + i + '" tabindex="-1">' +
                 '<span class="clist-slot">CR' + i + '</span>' +
