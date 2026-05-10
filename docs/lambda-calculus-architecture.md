@@ -27,7 +27,7 @@ This document traces each correspondence in detail, giving educators, students, 
 
 In lambda calculus, the environment Γ maps variable names to their values. On the Church Machine, the environment is an **Abstraction** in a **Namespace**: directional hierarchy array of Golden Tokens, the DNA structure of a functional software application structures the fault-tolerant configuration using one per slot of meta-data per Golden Token, indexed by a word offset in the immutable Golden Token.
 
-At boot the hardware loads the **Boot C-List** into CR6. This 18-slot array is the initial Γ for every program that runs from boot code. It is the complete set of names the boot abstraction can see — no other capabilities exist at this point.
+At boot the hardware loads the predefined **'Boot' Namespace** into CR15. This the resident object list of Golden Token Meta Data slots. This array is the list Γ for every function abstraction that runs from boot. This Namepace list is the complete set of static, named digital objects called **Lumps,** each one referenced by Golden Tokens owned by individual Abstractions in their own private C-List of GTs each one with explicite usage permissions. The boot abstraction can see only the GTs in its own private c-list following the **POLA** the principle of least authority. No other objects exist at this point.
 
 ### DEMO_CLIST — 18-Slot Boot Environment
 

@@ -1394,6 +1394,15 @@ function _resolveClistPetName(clistBase, imm, nsIdx) {
         const gtWord = sim.memory[clistBase + imm] >>> 0;
         if (gtWord !== 0) {
             const parsed = sim.parseGT(gtWord);
+            if (parsed.type === 3) {
+                // Abstract GT: bits[15:0] is ab_data = (device_class<<8)|instance, not an NS slot.
+                try {
+                    const ab = sim.parseAbstractGT(gtWord);
+                    const DC = { 1: 'LED', 2: 'UART', 3: 'Button', 4: 'Timer', 5: 'Display' };
+                    if (ab.ab_type === 0) return `${DC[ab.device_class] || 'dc'+ab.device_class}[${ab.device_data}]`;
+                    return `M-Elev 0x${ab.ab_data.toString(16).toUpperCase()}`;
+                } catch(_e) {}
+            }
             return (sim.nsLabels && sim.nsLabels[parsed.index]) || `NS[${parsed.index}]`;
         }
     }
