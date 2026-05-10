@@ -522,7 +522,7 @@ function updateCRDetail() {
                 const DEVICE_CLASSES = { 1: 'LED', 2: 'UART', 3: 'Button', 4: 'Timer', 5: 'Display' };
                 if (ab.ab_type === 0) {
                     const dc = DEVICE_CLASSES[ab.device_class] || `dc${ab.device_class}`;
-                    nsLabel = `${dc}${ab.device_data}`;
+                    nsLabel = `${dc}[${ab.device_data}]`;
                 } else {
                     nsLabel = `${AB_TYPE_NAMES[ab.ab_type] || `ab${ab.ab_type}`} 0x${ab.ab_data.toString(16).toUpperCase()}`;
                 }
@@ -531,14 +531,15 @@ function updateCRDetail() {
             }
             const isExpanded = (clistExpandedIdx === i);
             const hasGT = gtWord !== 0;
+            const isAbstract = hasGT && parsed.type === 3;
             const isIndirect = hasGT && _indSlots && _indSlots.has(i);
             const isUnref = hasGT && !isIndirect && (_refSlots === null || !_refSlots.has(i));
             html += `<tr class="${hasGT ? 'cr-active clist-clickable' : ''}${isExpanded ? ' clist-selected' : ''}${isUnref ? ' clist-unref-row' : ''}${isIndirect ? ' clist-indirect-row' : ''}" `;
-            html += hasGT ? `onclick="toggleCListEntry(${i})" title="Click to inspect NS[${parsed.index}]"` : '';
+            html += hasGT ? `onclick="toggleCListEntry(${i})" title="${isAbstract ? nsLabel + ' (Abstract GT \u2014 no NS slot)' : 'Click to inspect NS[' + parsed.index + ']'}"` : '';
             html += '>';
             html += `<td class="cr-idx">${i}</td>`;
             html += `<td class="cr-gt">0x${gtWord.toString(16).toUpperCase().padStart(8,'0')}</td>`;
-            html += `<td>${hasGT ? parsed.index : '\u2014'}</td>`;
+            html += `<td>${hasGT ? (isAbstract ? '\u2014' : parsed.index) : '\u2014'}</td>`;
             html += `<td>${hasGT ? parsed.typeName : '\u2014'}</td>`;
             html += `<td class="cr-perms">[${permsStr || '\u2014'}]</td>`;
             html += `<td class="cr-name">${nsLabel}</td>`;
@@ -610,7 +611,7 @@ function updateCRDetail() {
                 const DEVICE_CLASSES = { 1: 'LED', 2: 'UART', 3: 'Button', 4: 'Timer', 5: 'Display' };
                 if (ab.ab_type === 0) {
                     const dc = DEVICE_CLASSES[ab.device_class] || `dc${ab.device_class}`;
-                    nsLabel = `${dc}${ab.device_data}`;
+                    nsLabel = `${dc}[${ab.device_data}]`;
                 } else {
                     nsLabel = `${AB_TYPE_NAMES[ab.ab_type] || `ab${ab.ab_type}`} 0x${ab.ab_data.toString(16).toUpperCase()}`;
                 }
@@ -618,12 +619,13 @@ function updateCRDetail() {
                 nsLabel = (sim.nsLabels && sim.nsLabels[parsed.index]) ? sim.nsLabels[parsed.index] : '';
             }
             const hasGT = gtWord !== 0;
+            const isAbstract2 = hasGT && parsed.type === 3;
             const isIndirect2 = hasGT && _ind2Slots && _ind2Slots.has(i);
             const isUnref2 = hasGT && !isIndirect2 && (_ref2Slots === null || !_ref2Slots.has(i));
             html += `<tr class="${hasGT ? 'cr-active' : ''}${isUnref2 ? ' clist-unref-row' : ''}${isIndirect2 ? ' clist-indirect-row' : ''}">`;
             html += `<td class="cr-idx">${i}</td>`;
             html += `<td class="cr-gt">0x${gtWord.toString(16).toUpperCase().padStart(8,'0')}</td>`;
-            html += `<td>${hasGT ? parsed.index : '\u2014'}</td>`;
+            html += `<td>${hasGT ? (isAbstract2 ? '\u2014' : parsed.index) : '\u2014'}</td>`;
             html += `<td>${hasGT ? parsed.typeName : '\u2014'}</td>`;
             html += `<td class="cr-perms">[${permsStr || '\u2014'}]</td>`;
             html += `<td class="cr-name">${nsLabel}</td>`;
@@ -1716,7 +1718,7 @@ function renderBootNSImage() {
             html += `<td style="color:rgba(200,155,60,0.8);font-size:0.73rem;">${i}</td>`;
             html += `<td style="font-family:monospace;color:#525252;font-size:0.73rem;">${addrHex}</td>`;
             html += `<td style="font-family:monospace;color:rgba(206,145,120,0.85);font-size:0.73rem;">${gtHex}</td>`;
-            html += `<td style="color:#f59e0b;font-size:0.73rem;">${gt.index}</td>`;
+            html += `<td style="color:#f59e0b;font-size:0.73rem;">${gt.type === 3 ? '\u2014' : gt.index}</td>`;
             html += `<td style="color:#93c5fd;font-style:italic;font-size:0.73rem;">${_bootHtmlEsc(slotLabel)}</td>`;
             html += `<td style="color:#4ade80;font-family:monospace;font-size:0.73rem;">${permStr}</td>`;
             html += `<td style="color:${tCol};font-size:0.73rem;">${gt.typeName}</td>`;
@@ -1861,7 +1863,7 @@ function renderThreadMemoryLayout(nsIndex) {
                 if (gt.type !== 0) {
                     const perms = Object.entries(gt.permissions).filter(([,v])=>v).map(([k])=>k).join('') || 'none';
                     const lbl = _gtPetName(word);
-                    decoded = `GT → <span style="color:#38bdf8;">${gt.typeName}</span> Slot=${gt.index}${lbl?' <i style="color:#93c5fd;">('+lbl+')</i>':''} [${perms}]`;
+                    decoded = `GT → <span style="color:#38bdf8;">${gt.typeName}</span>${gt.type === 3 ? '' : ' Slot='+gt.index}${lbl?' <i style="color:#93c5fd;">('+lbl+')</i>':''} [${perms}]`;
                 } else {
                     const returnPC = niaBits;
                     decoded = `<span style="color:#9ca3af;">frame word: returnPC=${returnPC}, sz=${szBit}, prev_STO=${prevSTO}</span>`;
@@ -1888,7 +1890,7 @@ function renderThreadMemoryLayout(nsIndex) {
             const gt = sim.parseGT(word);
             const perms = Object.entries(gt.permissions).filter(([,v])=>v).map(([k])=>k).join('') || 'none';
             const lbl = _gtPetName(word);
-            decoded = `<span style="color:#60a5fa;">${gt.typeName}</span> Slot=${gt.index}${lbl ? ' <i style="color:#93c5fd;">('+lbl+')</i>' : ''} p=[${perms}] seq${gt.gt_seq}`;
+            decoded = `<span style="color:#60a5fa;">${gt.typeName}</span>${gt.type === 3 ? '' : ' Slot='+gt.index}${lbl ? ' <i style="color:#93c5fd;">('+lbl+')</i>' : ''} p=[${perms}] seq${gt.gt_seq}`;
         }
         const _capPet  = (typeof _petNameCRMap !== 'undefined' && _petNameCRMap) ? (_petNameCRMap[i] || '') : '';
         const _capMain = _capPet || `CR${i}`;
