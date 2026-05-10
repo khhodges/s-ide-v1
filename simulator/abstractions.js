@@ -329,27 +329,27 @@ class AbstractionRegistry {
         this.createAbstraction(11, 'UART', 2,
             ['Send', 'Receive', 'SetBaud'],
             'Serial communication — Tang Nano 20K BL616 bridge',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 1, S: 1, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(12, 'LED', 2,
             ['Set', 'Clear', 'Toggle', 'State'],
             '6 onboard LEDs — visual output for children\'s programs. LED identity is the capability offset (0\u20135) in the C-list; no DR arguments. DR0 return: \u22650 success, <0 failure.',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 1, S: 1, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(13, 'Button', 2,
             ['Read', 'WaitPress', 'OnEvent'],
             'Push button input — user interaction',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(14, 'Timer', 2,
             ['Start', 'Stop', 'Read', 'SetAlarm'],
             'Hardware timer — delays, timeouts, scheduling support',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 1, S: 1, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(15, 'Display', 2,
             ['Write', 'Clear', 'Scroll'],
             'HDMI output (Tang Nano 20K has HDMI) — text/graphics display',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 1, S: 1, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(16, 'SlideRule', 3,
             ['Multiply', 'Divide', 'Sqrt', 'Mod', 'Sin', 'Cos', 'Tan', 'Asin', 'Acos', 'Atan', 'ToDegrees', 'ToRadians', 'Bernoulli', 'Abs', 'Pow', 'Min', 'Max', 'GCD', 'Factorial', 'Log2', 'Atan2', 'Signum'],
@@ -387,7 +387,7 @@ class AbstractionRegistry {
                 ? [] : ['Apply'];
             this.createAbstraction(idx, name, 4, methods,
                 `Church numeral: ${desc}`,
-                { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 1, L: 1, S: 0, E: 1 } });
+                { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
         }
 
         this.createAbstraction(28, 'Family', 5,
@@ -408,7 +408,7 @@ class AbstractionRegistry {
         this.createAbstraction(31, 'Tunnel', 1,
             ['Register', 'Send', 'Receive', 'Fault', 'Fetch', 'Call'],
             'Resident I/O channel — FPGA\u2194IDE host over UART; self-identifying media channel (FourCC type tags: TEXT \u00b7 VOIC \u00b7 LUMP \u00b7 GTKN \u00b7 \u2026); Register replaces the hardwired call-home boot step (B:02\u00BD); Call(GT) forwards through the tunnel to a remote capability',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 1, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(32, 'Keystone', 5,
             ['Init', 'Connect', 'Hello'],
@@ -438,37 +438,37 @@ class AbstractionRegistry {
         this.createAbstraction(37, 'Browser', 7,
             ['Navigate', 'Back', 'Bookmark', 'Search'],
             'Web browser — child LOADs site GTs from c-list',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(38, 'Messenger', 7,
             ['Send', 'Receive', 'Contacts', 'Block'],
             'Messaging — parent-approved contacts',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(39, 'Photos', 7,
             ['View', 'Share', 'Upload', 'Album'],
             'Photo sharing — child LOADs recipient GTs',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(40, 'Social', 7,
             ['Post', 'Read', 'Follow', 'Feed'],
             'Social feed — child LOADs account GTs',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(41, 'Video', 7,
             ['Watch', 'Search', 'Playlist', 'Share'],
             'Video viewing — child LOADs channel GTs',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(42, 'Email', 7,
             ['Compose', 'Read', 'Reply', 'Contacts'],
             'Email — child LOADs contact GTs',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 1, S: 0, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(43, 'PAIR', 4,
             ['Apply'],
             'Church pair constructor',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 1, L: 1, S: 0, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(44, 'GC', 8,
             ['Scan', 'Identify', 'Clear', 'Flip'],
