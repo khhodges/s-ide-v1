@@ -228,7 +228,7 @@ class PipelineVisualizer {
 
     _renderAudit() {
         const steps = this.stageData || [];
-        const tsbGates = ['mLoad', 'mSave', 'HEAP', 'RST', 'CALL_HOME', 'CR_WR', 'CMPL'];
+        const tsbGates = ['mLoad', 'mSave', 'HEAP', 'RST', 'CALL_HOME', 'CR_WR', 'CMPL', 'malformedGT'];
 
         let html = '<div class="pipeline-wrapper pipeline-audit">';
 
@@ -332,7 +332,7 @@ class PipelineVisualizer {
                 ? `\u2713 ${capCount} capability gate${capCount !== 1 ? 's' : ''} · ${totalCount} register action${totalCount !== 1 ? 's' : ''} passed`
                 : `\u2717 register action fault`;
             html += '</div>';
-            html += `<div class="pipeline-detail">${capCount} cap gate${capCount !== 1 ? 's' : ''} (mLoad/mSave/HEAP/CR_WR) · ${totalCount - capCount} boot event${totalCount - capCount !== 1 ? 's' : ''} (RST/CALL_HOME/CMPL) — full boot register audit</div>`;
+            html += `<div class="pipeline-detail">${capCount} cap gate${capCount !== 1 ? 's' : ''} (mLoad/mSave/HEAP/CR_WR) · ${totalCount - capCount} event${totalCount - capCount !== 1 ? 's' : ''} (RST/CALL_HOME/CMPL/malformedGT) — full boot register audit</div>`;
         } else {
             html += '<div class="pipeline-current">No register actions this step</div>';
             html += '<div class="pipeline-detail">This instruction did not invoke mLoad, mSave, or a direct CR write</div>';

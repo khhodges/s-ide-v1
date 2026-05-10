@@ -140,6 +140,12 @@
     border: 1px solid rgba(40, 160, 80, 0.4);
 }
 
+.gate-malformedgt {
+    background: rgba(160, 30, 40, 0.5);
+    color: #ff7788;
+    border: 1px solid rgba(220, 60, 70, 0.5);
+}
+
 /* ── Gate description row (shown inside gate cards for boot-phase entries) ─ */
 .gate-desc-row {
     font-size: 0.73rem;
