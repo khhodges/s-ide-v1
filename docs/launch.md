@@ -113,33 +113,20 @@ Each test is observable without source-level access. Pass/fail is determined by 
 
 ### Social Tests
 
-**TEST-10: Family** — On a simulated child device, call `Family.Register` with a parent endpoint introduction. The NS table gains an Outform+Far entry for the parent. Call `Family.Hello(Mum_GT, "hello")`: the message appears at the parent's bridge receiver within 5 seconds. Call `Family.Oversight`: the parent receives the child's fault count and loaded abstraction list. No plaintext message is visible on the wire (encrypted by Tunnel).
-*(SIM: loopback via local\_bridge.py; verified by bridge log)*
-
-**TEST-11: Tunnel** — Call `Tunnel.Connect(outform_GT)` where `outform_GT` refers to a running peer. A session GT is returned. Call `Tunnel.Send(session_GT, payload)`: the peer receives the payload with magic `0xCE11` intact and CRC-32 valid. Call `Tunnel.Receive(session_GT)` on the peer: returns the payload. Call `Tunnel.Close(session_GT)`: the session GT is revoked; a subsequent `Send` on the old session GT faults with `VERSION_MISMATCH`.
+**TEST-10: Tunnel** — Call `Tunnel.Connect(outform_GT)` where `outform_GT` refers to a running peer. A session GT is returned. Call `Tunnel.Send(session_GT, payload)`: the peer receives the payload with magic `0xCE11` intact and CRC-32 valid. Call `Tunnel.Receive(session_GT)` on the peer: returns the payload. Call `Tunnel.Close(session_GT)`: the session GT is revoked; a subsequent `Send` on the old session GT faults with `VERSION_MISMATCH`.
 *(SIM: two simulator instances connected via local\_bridge.py)*
 
-**TEST-12: Negotiate** — Teacher calls `Negotiate.Propose(SlideRule_GT, E_perm, child_GT)`. The proposal arrives at the parent device via Tunnel. Parent calls `Negotiate.Approve(proposal_GT)`: Mint creates a SlideRule GT, SAVE places it in the child's c-list; the child can then `CALL(SlideRule_GT)` successfully. Parent calls `Negotiate.Reject` on a pending proposal: the proposal GT is revoked; child never receives the capability. A second approval attempt on the same proposal faults with `VERSION_MISMATCH`.
+**TEST-11: Negotiate** — Teacher calls `Negotiate.Propose(SlideRule_GT, E_perm, child_GT)`. The proposal arrives at the parent device via Tunnel. Parent calls `Negotiate.Approve(proposal_GT)`: Mint creates a SlideRule GT, SAVE places it in the child's c-list; the child can then `CALL(SlideRule_GT)` successfully. Parent calls `Negotiate.Reject` on a pending proposal: the proposal GT is revoked; child never receives the capability. A second approval attempt on the same proposal faults with `VERSION_MISMATCH`.
 *(SIM: three-party simulator test: child / teacher / parent)*
-
-### Education Test
-
-**TEST-13: Schoolroom** — Teacher calls `Schoolroom.Lesson(lesson_GT, student_GT)` distributing a DATA object to the student. Student's NS table gains a lesson entry. Student calls `Schoolroom.Submit(answer_GT)`: the submission arrives at the teacher. Teacher calls `Schoolroom.Grade(submission_GT, score)`: the student receives `score` in DR0 within 5 seconds. A student without the lesson GT cannot call `Submit` (faults with `PERMISSION_DENIED`).
-*(SIM: two simulator instances; teacher and student roles)*
 
 ### Arithmetic Test
 
-**TEST-14: Abacus** — Call `Abacus.Add(3, 4)`: returns 7. Call `Abacus.Mul(6, 7)`: returns 42. Call `Abacus.Div(10, 3)`: returns 3 (integer floor). Call `Abacus.Div(10, 0)`: faults with `DIVISION_BY_ZERO`. Call `Abacus.Mod(17, 5)`: returns 2. Call `Abacus.Abs(-99)`: returns 99. All six methods pass in sequence without fault.
+**TEST-12: Abacus** — Call `Abacus.Add(3, 4)`: returns 7. Call `Abacus.Mul(6, 7)`: returns 42. Call `Abacus.Div(10, 3)`: returns 3 (integer floor). Call `Abacus.Div(10, 0)`: faults with `DIVISION_BY_ZERO`. Call `Abacus.Mod(17, 5)`: returns 2. Call `Abacus.Abs(-99)`: returns 99. All six methods pass in sequence without fault.
 *(SIM: standard arithmetic unit test)*
-
-### Communication Test
-
-**TEST-15: Friends** — Child A calls `Friends.Request(child_B_GT)`. The request arrives at Child B's parent for approval via Negotiate. Parent approves. Child A calls `Friends.Share(tool_GT, child_B_GT)`: Child B's NS table gains a GT for the shared tool. Child B successfully calls the shared tool. Child A calls `Friends.Revoke(child_B_GT)`: the shared GT version increments; Child B's subsequent call faults. An unapproved `Friends.Share` attempt (without prior parent approval) faults with `PERMISSION_DENIED`.
-*(SIM: three-party test: Child A, Child B, Parent)*
 
 ### Storage Test
 
-**TEST-16: Loader** — Load a lump that is marked `Outform` (not yet resident). The Loader detects `CODE_NOT_RESIDENT` (header magic `0x00`), fetches the ZIP from Home Base (`server/lumps/`), inflates it, writes the lump at a valid address within the existing NS grant, and updates `word0_location`. The caller receives a valid Inform GT and calls the newly loaded lump successfully. Evict the lump under memory pressure: the lump header is zeroed. On next use, Loader fetches and re-inflates it transparently. The NS entry authority (type, limit, gt\_seq, seal) is unchanged throughout.
+**TEST-13: Loader** — Load a lump that is marked `Outform` (not yet resident). The Loader detects `CODE_NOT_RESIDENT` (header magic `0x00`), fetches the ZIP from Home Base (`server/lumps/`), inflates it, writes the lump at a valid address within the existing NS grant, and updates `word0_location`. The caller receives a valid Inform GT and calls the newly loaded lump successfully. Evict the lump under memory pressure: the lump header is zeroed. On next use, Loader fetches and re-inflates it transparently. The NS entry authority (type, limit, gt\_seq, seal) is unchanged throughout.
 *(SIM: Loader round-trip with simulated eviction)*
 
 ---
@@ -375,21 +362,14 @@ Transport
 [ ] TEST-09  UART          — Byte send/receive at 115200 and 9600; permission denied faults
 
 Social
-[ ] TEST-10  Family        — Hello delivers encrypted message to parent within 5 s
-[ ] TEST-11  Tunnel        — Connect → Send → Receive → Close; stale session faults
-[ ] TEST-12  Negotiate     — Approve delivers GT to child; Reject never delivers; replay faults
-
-Education
-[ ] TEST-13  Schoolroom    — Lesson distributed; Submit delivered; Grade returned; no-GT faults
+[ ] TEST-10  Tunnel        — Connect → Send → Receive → Close; stale session faults
+[ ] TEST-11  Negotiate     — Approve delivers GT to child; Reject never delivers; replay faults
 
 Arithmetic
-[ ] TEST-14  Abacus        — Add, Sub, Mul, Div, Mod, Abs all correct; Div-by-zero faults
-
-Communication
-[ ] TEST-15  Friends       — Share delivers GT; Revoke kills it; unapproved share faults
+[ ] TEST-12  Abacus        — Add, Sub, Mul, Div, Mod, Abs all correct; Div-by-zero faults
 
 Storage
-[ ] TEST-16  Loader        — Absent lump fetched, inflated, installed; eviction transparent;
+[ ] TEST-13  Loader        — Absent lump fetched, inflated, installed; eviction transparent;
                              NS authority unchanged throughout
 ```
 

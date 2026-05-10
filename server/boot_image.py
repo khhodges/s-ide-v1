@@ -185,25 +185,25 @@ DEFAULT_ABSTRACTION_CATALOG = [
     ("ISZERO",        {"R":0,"W":0,"X":1,"L":0,"S":0,"E":0}, False),
     ("TRUE",          {"R":0,"W":0,"X":0,"L":1,"S":0,"E":0}, False),
     ("FALSE",         {"R":0,"W":0,"X":0,"L":1,"S":0,"E":0}, False),
-    ("Family",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Schoolroom",    {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Friends",       {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
+    None,             # slot 28 freed — Family (future idea, see docs/future-abstractions.md)
+    None,             # slot 29 freed — Schoolroom (future idea, see docs/future-abstractions.md)
+    None,             # slot 30 freed — Friends (future idea, see docs/future-abstractions.md)
     ("Tunnel",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
     ("Keystone",      {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Editor",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Assembler",     {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Debugger",      {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Deployer",      {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Browser",       {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Messenger",     {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Photos",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Social",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Video",         {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Email",         {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
+    None,             # slot 33 freed — Editor (future idea, see docs/future-abstractions.md)
+    None,             # slot 34 freed — Assembler (future idea, see docs/future-abstractions.md)
+    None,             # slot 35 freed — Debugger (future idea, see docs/future-abstractions.md)
+    None,             # slot 36 freed — Deployer (future idea, see docs/future-abstractions.md)
+    None,             # slot 37 freed — Browser (future idea, see docs/future-abstractions.md)
+    None,             # slot 38 freed — Messenger (future idea, see docs/future-abstractions.md)
+    None,             # slot 39 freed — Photos (future idea, see docs/future-abstractions.md)
+    None,             # slot 40 freed — Social (future idea, see docs/future-abstractions.md)
+    None,             # slot 41 freed — Video (future idea, see docs/future-abstractions.md)
+    None,             # slot 42 freed — Email (future idea, see docs/future-abstractions.md)
     ("PAIR",          {"R":0,"W":0,"X":1,"L":0,"S":0,"E":0}, False),
     ("GC",            {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
     ("Thread",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
-    ("Circle",        {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),
+    None,             # slot 46 freed — Circle (future idea, see docs/future-abstractions.md)
     ("Billing",       {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),   # NS[47] — P-GT quota enforcer (Task #760 Stage 1)
     ("TuringMemory",  {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),   # NS[48] — domain-separated code allocator (Task #760 Stage 1)
     ("ChurchMemory",  {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),   # NS[49] — abstract handle allocator (Task #760 Stage 1)

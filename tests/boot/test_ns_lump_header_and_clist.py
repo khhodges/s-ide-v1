@@ -235,20 +235,27 @@ def test_timer_gt_at_clist_17(boot_words):
 
 
 # ---------------------------------------------------------------------------
-# 5.  Last few c-list entries (catalog slots 44–46)
+# 5.  Last few c-list entries (catalog slots 44–45) and freed slot 46
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("slot,name,perms", [
     (44, "GC",     {"E": 1}),
     (45, "Thread", {"E": 1}),
-    (46, "Circle", {"E": 1}),
 ])
 def test_last_clist_entries(boot_words, slot, name, perms):
-    """clist[44..46] == E-perm Inform GTs for GC, Thread, Circle."""
+    """clist[44..45] == E-perm Inform GTs for GC and Thread."""
     expected = create_gt(0, slot, perms, 1)
     actual = boot_words[CLIST_BASE + slot]
     assert actual == expected, (
         f"clist[{slot}] ({name}) 0x{actual:08X} != expected 0x{expected:08X}"
+    )
+
+
+def test_clist_slot46_freed(boot_words):
+    """clist[46] == 0 — slot 46 (Circle) was freed in Task #970."""
+    actual = boot_words[CLIST_BASE + 46]
+    assert actual == 0, (
+        f"clist[46] (freed Circle slot) 0x{actual:08X} != expected 0x00000000"
     )
 
 

@@ -852,25 +852,25 @@ class ChurchSimulator {
             { label: 'ISZERO',        perms: {R:0,W:0,X:1,L:0,S:0,E:0}, chainable: false },
             { label: 'TRUE',          perms: {R:0,W:0,X:0,L:1,S:0,E:0}, chainable: false },
             { label: 'FALSE',         perms: {R:0,W:0,X:0,L:1,S:0,E:0}, chainable: false },
-            { label: 'Family',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Schoolroom',    perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Friends',       perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
+            null,              // slot 28 freed — Family (future idea, see docs/future-abstractions.md)
+            null,              // slot 29 freed — Schoolroom (future idea, see docs/future-abstractions.md)
+            null,              // slot 30 freed — Friends (future idea, see docs/future-abstractions.md)
             { label: 'Tunnel',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
             { label: 'Keystone',      perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Editor',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Assembler',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Debugger',      perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Deployer',      perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Browser',       perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Messenger',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Photos',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Social',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Video',         perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Email',         perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
+            null,              // slot 33 freed — Editor (future idea, see docs/future-abstractions.md)
+            null,              // slot 34 freed — Assembler (future idea, see docs/future-abstractions.md)
+            null,              // slot 35 freed — Debugger (future idea, see docs/future-abstractions.md)
+            null,              // slot 36 freed — Deployer (future idea, see docs/future-abstractions.md)
+            null,              // slot 37 freed — Browser (future idea, see docs/future-abstractions.md)
+            null,              // slot 38 freed — Messenger (future idea, see docs/future-abstractions.md)
+            null,              // slot 39 freed — Photos (future idea, see docs/future-abstractions.md)
+            null,              // slot 40 freed — Social (future idea, see docs/future-abstractions.md)
+            null,              // slot 41 freed — Video (future idea, see docs/future-abstractions.md)
+            null,              // slot 42 freed — Email (future idea, see docs/future-abstractions.md)
             { label: 'PAIR',          perms: {R:0,W:0,X:1,L:0,S:0,E:0}, chainable: false },
             { label: 'GC',            perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false, handler: 'gc' },
             { label: 'Thread',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
-            { label: 'Circle',        perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },
+            null,              // slot 46 freed — Circle (future idea, see docs/future-abstractions.md)
             { label: 'Billing',       perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },   // NS[47] — P-GT quota enforcer (Task #760 Stage 1)
             { label: 'TuringMemory',  perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },   // NS[48] — domain-separated code allocator (Task #760 Stage 1)
             { label: 'ChurchMemory',  perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },   // NS[49] — abstract handle allocator (Task #760 Stage 1)
