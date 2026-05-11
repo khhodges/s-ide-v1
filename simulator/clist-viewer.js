@@ -131,44 +131,41 @@
         }).join('');
     }
 
-    function buildContent() {
-        /* global sim, _petNameCRMap */
-        var s = (typeof sim !== 'undefined') ? sim : null;
+    // ── Inline GT decode (used by the static-binary path, no sim needed) ─────
+    function _decodeGTWord(raw32) {
+        raw32 = raw32 >>> 0;
+        var permBits = (raw32 >>> 25) & 0x7F;
+        return {
+            type:  (raw32 >>> 23) & 0x3,
+            index:  raw32 & 0xFFFF,
+            permissions: {
+                B: (permBits >>> 6) & 1,
+                E: (permBits >>> 5) & 1,
+                S: (permBits >>> 4) & 1,
+                L: (permBits >>> 3) & 1,
+                X: (permBits >>> 2) & 1,
+                W: (permBits >>> 1) & 1,
+                R: (permBits >>> 0) & 1,
+            },
+        };
+    }
 
-        if (!s || !s.bootComplete) {
-            return emptyState('No C-List loaded — boot a program first.');
-        }
+    function _decodeAbstractGTWord(raw32) {
+        raw32 = raw32 >>> 0;
+        var ab_type      = (raw32 >>> 27) & 0x1F;
+        var ab_data      =  raw32 & 0xFFFF;
+        var device_class = (ab_data >>> 8) & 0xFF;
+        var device_data  =  ab_data & 0xFF;
+        return { ab_type, device_class, device_data, ab_data };
+    }
 
-        var cr6 = s.cr && s.cr[6];
-        if (!cr6 || (cr6.word0 >>> 0) === 0) {
-            return emptyState('No C-List loaded — boot a program first.');
-        }
-
-        var clistBase  = cr6.word1 >>> 0;
-        var clistCount = 0;
-        try {
-            clistCount = s.parseNSWord1(cr6.word2).clistCount;
-        } catch (e) {
-            clistCount = 0;
-        }
-
-        if (clistCount === 0) {
-            return emptyState('No C-List loaded — boot a program first.');
-        }
-
-        var petMap = (typeof _petNameCRMap !== 'undefined') ? (_petNameCRMap || {}) : {};
-
-        var html = '<div class="clist-viewer-header">' +
-            '<span class="clist-viewer-title">C-List (CR6)</span>' +
-            '<span class="clist-viewer-hint">\u2191\u2193 navigate \u00b7 Enter insert \u00b7 Esc close</span>' +
-            '</div>' +
-            '<div class="clist-viewer-body">';
-
-        for (var i = 0; i < clistCount; i++) {
-            var rawWord = (s.memory && s.memory[clistBase + i] !== undefined)
-                ? (s.memory[clistBase + i] >>> 0)
-                : 0;
-            var isNull = rawWord === 0;
+    // ── Build rows HTML from a flat array of raw GT words ────────────────────
+    function _buildRowsFromWords(gtWords, petMap, nsLabels, nsTable, s) {
+        var DC = { 1: 'LED', 2: 'UART', 3: 'Button', 4: 'Timer', 5: 'Display' };
+        var html = '';
+        for (var i = 0; i < gtWords.length; i++) {
+            var rawWord = gtWords[i] >>> 0;
+            var isNull  = rawWord === 0;
 
             if (isNull) {
                 html += '<div class="clist-row clist-row--null" data-slot="' + i + '" tabindex="-1">' +
@@ -178,44 +175,107 @@
                 continue;
             }
 
-            var gt = {};
-            try { gt = s.parseGT(rawWord); } catch (e) { gt = { permissions: {}, index: 0 }; }
-
-            var nsIdx = gt.index || 0;
-            var nsEntry = s.nsTable && s.nsTable[nsIdx];
+            var gt = _decodeGTWord(rawWord);
+            var nsIdx   = gt.index || 0;
             var bFlag = 0, fFlag = 0;
-            if (nsEntry) {
+            if (nsTable && nsTable[nsIdx]) {
                 try {
-                    var nsParsed = s.parseNSWord1(nsEntry.word1_limit);
-                    bFlag = nsParsed.b || 0;
-                    fFlag = nsParsed.f || 0;
+                    var nsParsed = s && s.parseNSWord1 ? s.parseNSWord1(nsTable[nsIdx].word1_limit) : null;
+                    if (nsParsed) { bFlag = nsParsed.b || 0; fFlag = nsParsed.f || 0; }
                 } catch (e2) { /* ignore */ }
             }
 
-            var petName = petMap[i] || (s.nsLabels && s.nsLabels[nsIdx]) || '';
+            var petName = (petMap && petMap[i]) || (nsLabels && nsLabels[nsIdx]) || '';
             if (!petName && gt.type === 3) {
                 try {
-                    var ab = s.parseAbstractGT(rawWord);
-                    var DC = { 1: 'LED', 2: 'UART', 3: 'Button', 4: 'Timer', 5: 'Display' };
-                    if (ab.ab_type === 0) {
-                        petName = (DC[ab.device_class] || ('dc' + ab.device_class)) + '[' + ab.device_data + ']';
-                    } else {
-                        petName = 'M-Elev 0x' + ab.ab_data.toString(16).toUpperCase();
-                    }
+                    var ab = _decodeAbstractGTWord(rawWord);
+                    petName = ab.ab_type === 0
+                        ? (DC[ab.device_class] || ('dc' + ab.device_class)) + '[' + ab.device_data + ']'
+                        : 'M-Elev 0x' + ab.ab_data.toString(16).toUpperCase();
                 } catch (e2) { /* ignore */ }
             }
 
+            var displayName = petName || ('0x' + (rawWord >>> 0).toString(16).toUpperCase().padStart(8, '0'));
             html += '<div class="clist-row" data-slot="' + i + '" tabindex="-1">' +
                 '<span class="clist-slot">CR' + i + '</span>' +
                 '<span class="clist-perms">' + permChipsHtml(gt.permissions) + '</span>' +
                 '<span class="clist-b-badge' + (bFlag ? ' clist-b-badge--on' : '') + '" title="Bind bit">B</span>' +
                 '<span class="clist-f-badge' + (fFlag ? ' clist-f-badge--on' : '') + '" title="Fault-on-use bit">F</span>' +
-                '<span class="clist-name">' + escHtml(petName || '\u2014') + '</span>' +
+                '<span class="clist-name">' + escHtml(displayName) + '</span>' +
                 '</div>';
         }
-
-        html += '</div>';
         return html;
+    }
+
+    function _wrapRows(titleExtra, rows) {
+        return '<div class="clist-viewer-header">' +
+            '<span class="clist-viewer-title">C-List' + (titleExtra ? ' \u2014 ' + titleExtra : ' (CR6)') + '</span>' +
+            '<span class="clist-viewer-hint">\u2191\u2193 navigate \u00b7 Enter insert \u00b7 Esc close</span>' +
+            '</div>' +
+            '<div class="clist-viewer-body">' + rows + '</div>';
+    }
+
+    // ── Async builder: live-sim takes priority when booted; static-binary otherwise ──
+    async function buildContentAsync() {
+        /* global sim, _petNameCRMap */
+        var s      = (typeof sim !== 'undefined') ? sim : null;
+        var petMap = (typeof _petNameCRMap !== 'undefined') ? (_petNameCRMap || {}) : {};
+
+        // ── Path 1: live sim (boot-complete) — preferred when simulator is running ─
+        if (s && s.bootComplete) {
+            var cr6 = s.cr && s.cr[6];
+            if (cr6 && (cr6.word0 >>> 0) !== 0) {
+                var clistBase  = cr6.word1 >>> 0;
+                var clistCount = 0;
+                try {
+                    clistCount = s.parseNSWord1(cr6.word2).clistCount;
+                } catch (e) { clistCount = 0; }
+
+                if (clistCount > 0) {
+                    var liveWords = [];
+                    for (var j = 0; j < clistCount; j++) {
+                        liveWords.push((s.memory && s.memory[clistBase + j] !== undefined)
+                            ? (s.memory[clistBase + j] >>> 0)
+                            : 0);
+                    }
+                    var liveRows = _buildRowsFromWords(liveWords, petMap,
+                        s.nsLabels, s.nsTable, s);
+                    return _wrapRows(null, liveRows);
+                }
+            }
+        }
+
+        // ── Path 2: decode from the last saved LUMP binary (no boot required) ─
+        var savedToken = window._editorLastSavedToken || null;
+        if (savedToken) {
+            try {
+                var resp = await fetch('/api/lump/' + savedToken + '/words');
+                if (resp.ok) {
+                    var data = await resp.json();
+                    var words = data.words;
+                    if (words && words.length > 0) {
+                        var hdr      = words[0] >>> 0;
+                        var cc       = hdr & 0xFF;
+                        var nMinus6  = (hdr >>> 23) & 0xF;
+                        var lumpSize = 1 << (nMinus6 + 6);
+
+                        if (cc > 0 && lumpSize <= words.length && (lumpSize - cc) >= 0) {
+                            var gtWords = words.slice(lumpSize - cc, lumpSize);
+                            var rows = _buildRowsFromWords(gtWords, petMap,
+                                s && s.nsLabels, s && s.nsTable, s);
+                            return _wrapRows('saved binary', rows);
+                        }
+                        return emptyState('This LUMP has no C-List (cc = 0).');
+                    }
+                }
+            } catch (e) { /* fall through */ }
+        }
+
+        // ── Path 3: nothing available ─────────────────────────────────────────
+        if (!savedToken) {
+            return emptyState('No LUMP saved yet — compile and save first.');
+        }
+        return emptyState('No C-List loaded — boot a program first.');
     }
 
     function emptyState(msg) {
@@ -265,12 +325,28 @@
         focusedRow = -1;
 
         var popup = getOrCreatePopup();
-        popup.innerHTML = buildContent();
+
+        // Show a loading spinner immediately, then populate asynchronously
+        popup.innerHTML = '<div class="clist-viewer-header">' +
+            '<span class="clist-viewer-title">C-List</span>' +
+            '</div>' +
+            '<div class="clist-viewer-empty" style="opacity:0.6;">\u29BF Loading\u2026</div>';
         popup.style.display = 'flex';
         positionPopup();
 
         var btn = document.querySelector('.btn-clist-viewer');
         if (btn) btn.classList.add('btn-clist-viewer--active');
+
+        buildContentAsync().then(function (html) {
+            if (popup.style.display !== 'none') {
+                popup.innerHTML = html;
+                positionPopup();
+            }
+        }).catch(function () {
+            if (popup.style.display !== 'none') {
+                popup.innerHTML = emptyState('C-List unavailable.');
+            }
+        });
     }
 
     function hideViewer() {

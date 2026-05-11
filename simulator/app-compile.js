@@ -948,6 +948,7 @@ function buildAndDownloadLump() {
     }).then(r => r.json()).then(resp => {
         if (resp.ok) {
             appendOutput(`Saved to library: lumps/${resp.lump} — token 0x${resp.token} · MTBF: UNKNOWN (needs testing)`, 'info');
+            window._editorLastSavedToken = resp.token;
             renderLumps();
             const savedToken = resp.token;
             setTimeout(() => {
@@ -1154,6 +1155,7 @@ function compileCLOOMC() {
     const con = document.getElementById('editorConsole');
     if (con) con.className = '';
     switchCodeTab('console');
+    window._editorLastSavedToken = null;
 
     _runStopped = true;
     sim.running = false;
