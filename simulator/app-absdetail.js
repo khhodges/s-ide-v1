@@ -348,10 +348,19 @@ function showAbstractionDetail(index) {
                     const hdr = sim.parseLumpHeader(headerWord);
                     if (hdr.valid) {
                         clistLoaded = true;
-                        cc = hdr.cc;
-                        const clistStart = lumpBase + hdr.lumpSize - cc;
-                        for (let si = 0; si < cc; si++) {
-                            clistSlots.push(sim.memory[clistStart + si] >>> 0);
+                        if (hdr.typ === 2) {
+                            const capsOff = (typeof THREAD_CAPS_OFFSET !== 'undefined') ? THREAD_CAPS_OFFSET : 244;
+                            cc = 12;
+                            const clistStart = lumpBase + capsOff;
+                            for (let si = 0; si < 12; si++) {
+                                clistSlots.push(sim.memory[clistStart + si] >>> 0);
+                            }
+                        } else {
+                            cc = hdr.cc;
+                            const clistStart = lumpBase + hdr.lumpSize - cc;
+                            for (let si = 0; si < cc; si++) {
+                                clistSlots.push(sim.memory[clistStart + si] >>> 0);
+                            }
                         }
                     }
                 }
