@@ -679,13 +679,9 @@
 /* ── LUMP tab panels ───────────────────────────────────── */
 .lump-tab-panel {
     display: none;
-    flex-direction: column;
-    flex: 1;
-    overflow: auto;
-    min-height: 0;
 }
 .lump-tab-panel-active {
-    display: flex;
+    display: block;
 }
 
 /* ── LUMP code content viewer ──────────────────────────── */

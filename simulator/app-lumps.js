@@ -1917,6 +1917,61 @@ function _renderLumpCodeContent(bodyEl, lump, words, token) {
     }
     html += '</div></div>';  // close .lump-methods-section and .lump-content-code
 
+    // C-list GTs inline section — same word data already in hand, no extra fetch needed
+    if (cc > 0) {
+        const _clistStart  = lumpSize - cc;
+        const _gtCRPetNames = (lump.pet_names || {}).CR || {};
+        const _abDevClass  = ['?','LED','UART','Button','Timer','Display'];
+        html += `<div class="lump-clist-section">`;
+        html += `<div class="lump-clist-title">MyGoldenTokens <span class="lump-gt-count">(${cc} ${cc === 1 ? 'capability' : 'capabilities'})</span></div>`;
+        html += `<div class="lump-gt-chips">`;
+        for (let _gs = 0; _gs < cc; _gs++) {
+            const _wIdx  = _clistStart + _gs;
+            const _wVal  = _wIdx < words.length ? (words[_wIdx] >>> 0) : 0;
+            const _gType = (_wVal >>> 23) & 0x3;
+            const _gSeq  = (_wVal >>> 16) & 0x7F;
+            if (!_wVal) {
+                html += `<div class="lump-gt-chip lump-gt-chip-null lump-gt-chip-empty">` +
+                        `<span class="lump-gt-chip-dot lump-gt-dot-null"></span>` +
+                        `<span class="lump-gt-chip-name lump-gt-name-null">\u2014 empty \u2014</span>` +
+                        `<span class="lump-gt-chip-meta lump-gt-meta-null">#${_gs}</span>` +
+                        `</div>`;
+            } else if (_gType === 3) {
+                const _abType  = (_wVal >>> 27) & 0x1F;
+                const _rBit    = (_wVal >>> 26) & 1;
+                const _wBit    = (_wVal >>> 25) & 1;
+                const _abData  = _wVal & 0xFFFF;
+                const _dCls    = (_abData >>> 8) & 0xFF;
+                const _dDat    = _abData & 0xFF;
+                const _pStr    = (_rBit ? 'R' : '-') + (_wBit ? 'W' : '-');
+                const _mName   = _gtCRPetNames[_gs] || _gtCRPetNames[String(_gs)] || '';
+                const _clsLbl  = _abType === 0 ? (_abDevClass[_dCls] || `Dev${_dCls}`) : `ab${_abType}`;
+                const _derived = _abType === 0 ? `${_clsLbl}${_dDat}` : `Abs[${_abType}]`;
+                const _dName   = _mName || _derived;
+                html += `<div class="lump-gt-chip" data-slot="${_gs}">` +
+                        `<span class="lump-gt-chip-dot"></span>` +
+                        `<span class="lump-gt-chip-name">${e(_dName)}</span>` +
+                        `<span class="lump-gt-chip-meta">${_pStr} \u00B7 Abs \u00B7 ${_clsLbl} \u00B7 v${_gSeq}</span>` +
+                        `</div>`;
+            } else {
+                const _slotId  = _wVal & 0xFFFF;
+                const _gPerms  = (_wVal >>> 25) & 0x3F;
+                const _gTStr   = ['NULL','Inf','Out','Abs'][_gType];
+                const _pStr    = 'RWXLSE'.split('').map((c, i) => (_gPerms >> i) & 1 ? c : '-').join('');
+                const _mName   = _gtCRPetNames[_gs] || _gtCRPetNames[String(_gs)] || '';
+                const _nameHtml = _mName
+                    ? `<span class="lump-gt-chip-name">${e(_mName)}</span>`
+                    : `<span class="lump-gt-chip-name lump-gt-name-unresolved">NS[${_slotId}]</span>`;
+                html += `<div class="lump-gt-chip" data-slot="${_gs}">` +
+                        `<span class="lump-gt-chip-dot"></span>` +
+                        _nameHtml +
+                        `<span class="lump-gt-chip-meta">${_pStr} \u00B7 ${_gTStr} \u00B7 #${_slotId} \u00B7 v${_gSeq}</span>` +
+                        `</div>`;
+            }
+        }
+        html += `</div></div>`;
+    }
+
     // Built-in data words section
     const dw          = parseInt(lump.dw)          || 0;
     const dataOffset  = parseInt(lump.data_offset) || 0;
