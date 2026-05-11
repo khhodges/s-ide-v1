@@ -27,6 +27,37 @@
     var activeEditor = null;
     var focusedRow   = -1;
 
+    // ── NS slot→name cache (populated once from /api/lumps/list) ─────────────
+    var _nsSlotNameCache   = null;   // null = not yet fetched; {} = fetched (may be empty)
+    var _nsSlotNamePromise = null;   // in-flight promise — prevents duplicate concurrent fetches
+
+    function _fetchNsSlotNames() {
+        if (_nsSlotNameCache !== null) return Promise.resolve(_nsSlotNameCache);
+        if (_nsSlotNamePromise !== null) return _nsSlotNamePromise;
+        _nsSlotNamePromise = fetch('/api/lumps/list').then(function (resp) {
+            return resp.ok ? resp.json() : [];
+        }).then(function (lumps) {
+            var map = {};
+            if (Array.isArray(lumps)) {
+                lumps.forEach(function (entry) {
+                    var slot = entry.ns_slot;
+                    var name = entry.abstraction || entry.name || '';
+                    if (slot !== null && slot !== undefined && name) {
+                        map[slot] = name;
+                    }
+                });
+            }
+            _nsSlotNameCache = map;
+            _nsSlotNamePromise = null;
+            return map;
+        }).catch(function () {
+            _nsSlotNameCache = {};
+            _nsSlotNamePromise = null;
+            return {};
+        });
+        return _nsSlotNamePromise;
+    }
+
     // ── DOM helpers ───────────────────────────────────────────────────────────
     function getOrCreatePopup() {
         if (popupEl) return popupEl;
@@ -261,8 +292,12 @@
 
                         if (cc > 0 && lumpSize <= words.length && (lumpSize - cc) >= 0) {
                             var gtWords = words.slice(lumpSize - cc, lumpSize);
+                            // Merge sim nsLabels (if any) with server manifest names
+                            var manifestNames = await _fetchNsSlotNames();
+                            var mergedNsLabels = Object.assign({}, manifestNames,
+                                (s && s.nsLabels) ? s.nsLabels : {});
                             var rows = _buildRowsFromWords(gtWords, petMap,
-                                s && s.nsLabels, s && s.nsTable, s);
+                                mergedNsLabels, s && s.nsTable, s);
                             return _wrapRows('saved binary', rows);
                         }
                         return emptyState('This LUMP has no C-List (cc = 0).');
