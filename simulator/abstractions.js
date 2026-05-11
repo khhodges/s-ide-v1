@@ -294,13 +294,13 @@ class AbstractionRegistry {
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(4, 'Salvation', 1,
-            ['LOAD', 'TPERM', 'LAMBDA', 'TransitionToNavana'],
-            'Built-in system test — proves CALL, LOAD, TPERM, LAMBDA work on first boot; user-selectable boot entry. Does not chain to Navana.',
+            ['Create', 'Release', 'Find', 'Transfer', 'Validate', 'Audit'],
+            'Golden Token guardian — issues, revokes, transfers, and audits GTs across the entire system. Every operation requires a PassKey GT that identifies the caller and bills resource usage against it.',
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(5, 'Navana', 1,
-            ['Init', 'Add', 'Remove', 'Abstraction.Add', 'Abstraction.Remove', 'Abstraction.Update', 'Manage', 'Monitor', 'IDS'],
-            'Namespace controller — master NS writer, runs indefinitely, manages all abstractions via uploads (does not RETURN)',
+            ['Create', 'Release', 'Find', 'Update', 'Manage', 'Monitor', 'IDS'],
+            'Namespace slot guardian — allocates, releases, and resolves NS slots; keeps the namespace table consistent. Callers supply a PassKey GT to authenticate and bill slot operations. Runs indefinitely (does not RETURN).',
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(6, 'Mint', 1,
@@ -309,8 +309,8 @@ class AbstractionRegistry {
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(7, 'Memory', 1,
-            ['Allocate', 'Free', 'Resize', 'Claim', 'Release'],
-            'Memory allocation — reserves memory regions for DATA objects (does not manage the NS table)',
+            ['Create', 'Release', 'Find', 'Resize', 'Claim'],
+            'Physical RAM zone guardian — allocates and releases memory regions (lumps) within the namespace RAM zone. Every operation requires a PassKey GT to authenticate the caller and bill memory usage against it.',
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
 
         this.createAbstraction(8, 'Scheduler', 1,
