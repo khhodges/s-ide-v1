@@ -69,6 +69,15 @@
 
         // ── Delegated click handler: handles row clicks without inline onclick ─
         popupEl.addEventListener('click', function (e) {
+            var backBtn = e.target.closest('[data-action="show-view"]');
+            if (backBtn) { showViewer(); return; }
+
+            var addBtn = e.target.closest('[data-action="show-picker"]');
+            if (addBtn) { showPicker(); return; }
+
+            var pickerRow = e.target.closest('.clist-picker-row[data-cap-name]');
+            if (pickerRow) { _insertCapability(pickerRow.dataset.capName); return; }
+
             var row = e.target.closest('.clist-row[data-slot]');
             if (!row || row.classList.contains('clist-row--null')) return;
             insertCROperand(parseInt(row.dataset.slot, 10));
@@ -91,13 +100,17 @@
     function onDocKeyDown(e) {
         if (!isVisible()) return;
 
+        var inPicker = !!(popupEl && popupEl.querySelector('.clist-back-btn'));
+
         if (e.key === 'Escape') {
             e.preventDefault();
-            hideViewer();
+            if (inPicker) showViewer(); else hideViewer();
             return;
         }
 
-        var rows = popupEl ? popupEl.querySelectorAll('.clist-row[data-slot]') : [];
+        var rows = inPicker
+            ? (popupEl ? popupEl.querySelectorAll('.clist-picker-row[data-cap-name]') : [])
+            : (popupEl ? popupEl.querySelectorAll('.clist-row[data-slot]') : []);
         if (!rows.length) return;
 
         if (e.key === 'ArrowDown') {
@@ -111,7 +124,11 @@
         } else if (e.key === 'Enter') {
             e.preventDefault();
             if (focusedRow >= 0 && focusedRow < rows.length) {
-                insertCROperand(parseInt(rows[focusedRow].dataset.slot, 10));
+                if (inPicker) {
+                    _insertCapability(rows[focusedRow].dataset.capName);
+                } else {
+                    insertCROperand(parseInt(rows[focusedRow].dataset.slot, 10));
+                }
             }
         }
     }
@@ -241,7 +258,10 @@
     function _wrapRows(titleExtra, rows) {
         return '<div class="clist-viewer-header">' +
             '<span class="clist-viewer-title">C-List' + (titleExtra ? ' \u2014 ' + titleExtra : ' (CR6)') + '</span>' +
+            '<span style="display:flex;align-items:center;gap:6px;">' +
+            '<button class="clist-add-btn" data-action="show-picker" title="Add a capability to the source c-list">\u2295 Add</button>' +
             '<span class="clist-viewer-hint">\u2191\u2193 navigate \u00b7 Enter insert \u00b7 Esc close</span>' +
+            '</span>' +
             '</div>' +
             '<div class="clist-viewer-body">' + rows + '</div>';
     }
@@ -347,6 +367,145 @@
 
         popup.style.left = left + 'px';
         popup.style.top  = top  + 'px';
+    }
+
+    // ── GT Picker ─────────────────────────────────────────────────────────────
+    var PICKER_DEVICES = [
+        { name: 'LED0',     hint: 'LED \u00b7 device 0' },
+        { name: 'LED1',     hint: 'LED \u00b7 device 1' },
+        { name: 'LED2',     hint: 'LED \u00b7 device 2' },
+        { name: 'LED3',     hint: 'LED \u00b7 device 3' },
+        { name: 'LED4',     hint: 'LED \u00b7 device 4' },
+        { name: 'LED5',     hint: 'LED \u00b7 device 5' },
+        { name: 'UART0',    hint: 'UART \u00b7 device 0' },
+        { name: 'Button0',  hint: 'Button \u00b7 device 0' },
+        { name: 'Timer0',   hint: 'Timer \u00b7 device 0' },
+        { name: 'Display0', hint: 'Display \u00b7 device 0' },
+    ];
+
+    async function buildPickerContentAsync() {
+        var s = (typeof sim !== 'undefined') ? sim : null;
+        var bodyRows = '';
+
+        // Section 1: Abstractions — Inform GTs from lump library (ns_slot != null)
+        try {
+            var lresp = await fetch('/api/lumps/list');
+            if (lresp.ok) {
+                var lumps = await lresp.json();
+                var withSlots = Array.isArray(lumps) ? lumps.filter(function (l) {
+                    return l.ns_slot !== null && l.ns_slot !== undefined &&
+                           (l.abstraction || l.name);
+                }) : [];
+                if (withSlots.length > 0) {
+                    bodyRows += '<div class="clist-picker-section-header">Abstractions</div>';
+                    withSlots.forEach(function (l) {
+                        var name = escHtml(l.abstraction || l.name);
+                        bodyRows += '<div class="clist-picker-row" data-cap-name="' + name + '">' +
+                            '<span class="clist-picker-type clist-picker-type--inform">Inform</span>' +
+                            '<span class="clist-picker-name">' + name + '</span>' +
+                            '<span class="clist-picker-hint">NS[' + l.ns_slot + ']</span>' +
+                            '</div>';
+                    });
+                }
+            }
+        } catch (e2) { /* network error — skip section */ }
+
+        // Section 2: Devices — Abstract GTs (hardcoded device capability names)
+        bodyRows += '<div class="clist-picker-section-header">Devices</div>';
+        PICKER_DEVICES.forEach(function (d) {
+            bodyRows += '<div class="clist-picker-row" data-cap-name="' + d.name + '">' +
+                '<span class="clist-picker-type clist-picker-type--abstract">Abstract</span>' +
+                '<span class="clist-picker-name">' + d.name + '</span>' +
+                '<span class="clist-picker-hint">' + escHtml(d.hint) + '</span>' +
+                '</div>';
+        });
+
+        // Section 3: Outform GTs — from running sim nsTable (F-bit set), if booted
+        if (s && s.nsTable && s.nsLabels) {
+            var outRows = '';
+            for (var oi = 0; oi < s.nsTable.length; oi++) {
+                var oentry = s.nsTable[oi];
+                if (!oentry) continue;
+                try {
+                    var onp = s.parseNSWord1(oentry.word1_limit);
+                    if (onp && onp.f === 1) {
+                        var olbl = escHtml((s.nsLabels && s.nsLabels[oi]) || ('NS[' + oi + ']'));
+                        outRows += '<div class="clist-picker-row" data-cap-name="' + olbl + '">' +
+                            '<span class="clist-picker-type clist-picker-type--outform">Outform</span>' +
+                            '<span class="clist-picker-name">' + olbl + '</span>' +
+                            '<span class="clist-picker-hint">NS[' + oi + '] F-bit</span>' +
+                            '</div>';
+                    }
+                } catch (e3) { /* skip */ }
+            }
+            if (outRows) {
+                bodyRows += '<div class="clist-picker-section-header">Outform</div>' + outRows;
+            }
+        }
+
+        return '<div class="clist-viewer-header">' +
+            '<button class="clist-back-btn" data-action="show-view">\u2190 Back</button>' +
+            '<span class="clist-viewer-title">Add Capability</span>' +
+            '<span class="clist-viewer-hint">click to add \u00b7 Esc to go back</span>' +
+            '</div>' +
+            '<div class="clist-viewer-body">' + bodyRows + '</div>';
+    }
+
+    function showPicker() {
+        var popup = getOrCreatePopup();
+        focusedRow = -1;
+        popup.innerHTML = '<div class="clist-viewer-header">' +
+            '<button class="clist-back-btn" data-action="show-view">\u2190 Back</button>' +
+            '<span class="clist-viewer-title">Add Capability</span>' +
+            '</div>' +
+            '<div class="clist-viewer-empty" style="opacity:0.6;">\u29BF Loading\u2026</div>';
+        buildPickerContentAsync().then(function (html) {
+            if (popup.style.display !== 'none') {
+                popup.innerHTML = html;
+                positionPopup();
+            }
+        }).catch(function () {
+            if (popup.style.display !== 'none') {
+                popup.innerHTML = '<div class="clist-viewer-empty">Picker unavailable.</div>';
+            }
+        });
+    }
+
+    function _insertCapability(capName) {
+        var ed = activeEditor || document.getElementById('asmEditor');
+        if (!ed) { hideViewer(); return; }
+        var src = ed.value;
+
+        // Find the first capabilities { ... } block
+        var capRe = /capabilities\s*\{([^}]*)\}/;
+        var cm = capRe.exec(src);
+        if (cm) {
+            var inner = cm[1];
+            var existing = inner.split(/[\s,]+/)
+                .map(function (n) { return n.trim(); })
+                .filter(Boolean);
+            if (existing.indexOf(capName) === -1) {
+                var closingBrace = cm.index + cm[0].lastIndexOf('}');
+                var sep = inner.trim().length > 0 ? ',\n        ' : '\n        ';
+                ed.value = src.slice(0, closingBrace) + sep + capName + '\n    ' + src.slice(closingBrace);
+                ed.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        } else {
+            // No capabilities block — insert after the abstraction { opening line
+            var absRe = /(abstraction\s+\w+\s*\{[^\n]*)/;
+            var am = absRe.exec(src);
+            if (am) {
+                var pos = am.index + am[0].length;
+                ed.value = src.slice(0, pos) +
+                    '\n    capabilities {\n        ' + capName + '\n    }' +
+                    src.slice(pos);
+            } else {
+                ed.value = 'capabilities {\n    ' + capName + '\n}\n\n' + src;
+            }
+            ed.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        hideViewer();
+        ed.focus();
     }
 
     // ── Public API ────────────────────────────────────────────────────────────

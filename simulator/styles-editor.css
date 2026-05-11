@@ -1307,6 +1307,112 @@
     font-style: italic;
 }
 
+/* ── C-List viewer — Add button ────────────────────────────────────────── */
+.clist-add-btn {
+    background: rgba(244, 185, 66, 0.1);
+    border: 1px solid rgba(244, 185, 66, 0.35);
+    border-radius: 3px;
+    color: #f4b942;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    cursor: pointer;
+    transition: background 0.12s;
+    flex-shrink: 0;
+    line-height: 1.6;
+}
+.clist-add-btn:hover {
+    background: rgba(244, 185, 66, 0.24);
+}
+
+/* ── C-List viewer — GT Picker panel ────────────────────────────────────── */
+.clist-back-btn {
+    background: none;
+    border: 1px solid #333;
+    border-radius: 3px;
+    color: #8892a4;
+    font-size: 0.6rem;
+    padding: 1px 6px;
+    cursor: pointer;
+    transition: color 0.12s;
+    flex-shrink: 0;
+    margin-right: 4px;
+    line-height: 1.6;
+}
+.clist-back-btn:hover {
+    color: #c9d1d9;
+    border-color: #555;
+}
+
+.clist-picker-section-header {
+    font-size: 0.59rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    color: #4a5568;
+    text-transform: uppercase;
+    padding: 6px 10px 3px;
+    border-top: 1px solid #1a1a2e;
+}
+.clist-picker-section-header:first-child {
+    border-top: none;
+}
+
+.clist-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.clist-picker-row:last-child { border-bottom: none; }
+.clist-picker-row:hover,
+.clist-picker-row.clist-row--focused {
+    background: rgba(244, 185, 66, 0.09);
+}
+
+.clist-picker-type {
+    font-size: 0.57rem;
+    font-weight: 700;
+    font-family: 'Courier New', Courier, monospace;
+    padding: 1px 4px;
+    border-radius: 3px;
+    border: 1px solid;
+    flex-shrink: 0;
+    min-width: 46px;
+    text-align: center;
+    line-height: 1.5;
+}
+.clist-picker-type--inform {
+    color: #f4b942;
+    border-color: rgba(244,185,66,0.4);
+    background: rgba(244,185,66,0.1);
+}
+.clist-picker-type--abstract {
+    color: #a78bfa;
+    border-color: rgba(167,139,250,0.4);
+    background: rgba(167,139,250,0.1);
+}
+.clist-picker-type--outform {
+    color: #34d399;
+    border-color: rgba(52,211,153,0.4);
+    background: rgba(52,211,153,0.1);
+}
+
+.clist-picker-name {
+    font-size: 0.72rem;
+    color: #c9d1d9;
+    font-family: 'Courier New', Courier, monospace;
+    flex: 1;
+}
+
+.clist-picker-hint {
+    font-size: 0.62rem;
+    color: #4a5568;
+    flex-shrink: 0;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Abstraction Wizard — New Abstraction button + modal
    ═══════════════════════════════════════════════════════════════════════════ */
