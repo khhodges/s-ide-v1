@@ -10062,7 +10062,7 @@ const INSTRUCTION_DATA = [
           + '  3. CALL  — enter the abstraction\n'
           + 'Reduces the common 3-instruction entry sequence to a single word.',
         example: 'ELOADCALL CR0, CR6, 12  ; Load word 12 of C-List CR6, verify E, enter',
-        mState: { badge: 'M↓', note: 'Fused LOAD+TPERM(E)+CALL — identical M-state semantics to CALL. Hardware clears M on all CRs at dispatch; CR6 M=1 set transiently for callee duration.' },
+        mState: { badge: 'M↑', note: 'Fused LOAD+TPERM(E)+CALL — identical M-state semantics to CALL. Caller CRs are saved to the call stack; CR6 and CR14 are written for the callee context and then CR6.M=1 and CR14.M=1 are set explicitly (not via mElevation). Net: M↑ on CR6+CR14 for the callee duration.' },
     },
     {
         opcode: 9, mnemonic: 'XLOADLAMBDA', domain: 'church',

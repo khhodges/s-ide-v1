@@ -4381,6 +4381,8 @@ class ChurchSimulator {
         if (cr14Check) {
             this._writeCR(6, slotGT, clistEntry);
             this._writeCR(14, cr14GT, cr14Check.entry);
+            this.cr[6].m = 1;   // M set explicitly — matches CALL; _writeCR respects global mElevation (false post-boot)
+            this.cr[14].m = 1;  // M set explicitly — matches CALL; _writeCR respects global mElevation (false post-boot)
         }
 
         const label = this.nsLabels[targetIdx] || 'abstraction';
