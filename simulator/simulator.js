@@ -4488,6 +4488,12 @@ class ChurchSimulator {
         }
 
         if (!this._writeCR(d.crDst, slotGT, entry)) return null;
+        // M-bit: no explicit assignment needed here — intentional difference from ELOADCALL.
+        // LAMBDA does not cross a domain boundary, so M is M-neutral per the ISA spec
+        // (LAMBDA / REDUCE row: "M-neutral").  _writeCR already sets cr[crDst].m = 0
+        // post-boot (mElevation = false), which is correct.  ELOADCALL must set CR6.m=1
+        // and CR14.m=1 because it fuses a CALL which requires M-elevated c-list access;
+        // XLOADLAMBDA fuses a LAMBDA which carries no such requirement.
 
         if (!slotParsed.permissions.X) {
             this.fault('PERMISSION', `XLOADLAMBDA TPERM: CR${d.crDst} lacks X permission`);
