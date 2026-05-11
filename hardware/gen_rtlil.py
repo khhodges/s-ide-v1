@@ -6,6 +6,7 @@ from amaranth import ClockSignal
 from amaranth.back.rtlil import convert
 from .tang_nano_20k import ChurchTangNano20K
 from .ti60_f225 import ChurchTi60F225
+from .wukong_xc7a100t import ChurchWukongXC7A100T
 
 
 def _extract_port_body(text, start):
@@ -385,6 +386,37 @@ def generate_rtlil_ti60(output_dir="build"):
     return il_path
 
 
+def generate_rtlil_wukong(output_dir="build"):
+    """Generate RTLIL + Verilog for QMTECH Wukong Artix-7 XC7A100T.
+
+    The Verilog output is generic (no Xilinx vendor cells) and is fed into
+    Vivado for Artix-7 synthesis, place-and-route, and bitstream generation.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    top = ChurchWukongXC7A100T(clk_freq=100_000_000, baud=115200, sim_mode=False)
+
+    ports = [
+        top.clk_in, top.uart_tx, top.uart_rx, top.push_button,
+        ClockSignal("sync"),
+    ] + list(top.led)
+
+    rtlil_text = convert(top, ports=ports)
+
+    il_path = os.path.join(output_dir, "church_wukong_xc7a100t.il")
+    with open(il_path, "w") as f:
+        f.write(rtlil_text)
+
+    print(f"Generated: {il_path}")
+    print(f"  File size: {len(rtlil_text):,} bytes")
+    print(f"  Lines: {rtlil_text.count(chr(10)):,}")
+
+    v_path = os.path.join(output_dir, "church_wukong_xc7a100t.v")
+    _rtlil_to_verilog(il_path, v_path)
+
+    return il_path
+
+
 def generate_rtlil(output_dir="build"):
     return generate_rtlil_tang_nano(output_dir)
 
@@ -399,10 +431,14 @@ if __name__ == "__main__":
             board = "ti60-f225"
         elif arg == "--9k":
             board = "tang-nano-9k"
+        elif arg == "--wukong":
+            board = "wukong-xc7a100t"
 
     if board == "ti60-f225":
         generate_rtlil_ti60(output_dir)
     elif board == "tang-nano-9k":
         generate_rtlil_tang_nano_9k(output_dir)
+    elif board == "wukong-xc7a100t":
+        generate_rtlil_wukong(output_dir)
     else:
         generate_rtlil_tang_nano(output_dir)

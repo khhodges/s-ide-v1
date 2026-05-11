@@ -425,7 +425,7 @@ class ChurchWukongXC7A100T(Elaboratable):
         banner_byte = Signal(8)
         m.d.comb += banner_byte.eq(BANNER[banner_idx])
 
-        BOARD_TYPE_ID = 0x04
+        BOARD_TYPE_ID = 0x06
         FW_MAJOR = 1
         FW_MINOR = 0
         DEVICE_UID = [0x57, 0x75, 0x6B, 0x6F, 0x6E, 0x67, 0x00, 0x01]

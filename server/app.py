@@ -330,6 +330,13 @@ HARDWARE_PROFILES = {
         "addressRange": "0x0000_0000 – 0x0003_FFFF (256 KB byte-addressable)",
         "notes": "Efinix Titanium Ti60 F225 — ~256 KB embedded RAM available for namespace",
     },
+    "wukong-xc7a100t": {
+        "label": "QMTECH Wukong Artix-7 XC7A100T",
+        "totalRamWords": 16384,
+        "addressBits": 14,
+        "addressRange": "0x0000_0000 – 0x0000_7FFF (32 KB byte-addressable)",
+        "notes": "Xilinx Artix-7 XC7A100T — 2048-word on-chip BRAM; Vivado 2020+ required for P&R",
+    },
 }
 
 DEFAULT_BOOT_CONFIG = {
@@ -2137,6 +2144,83 @@ fi
 exec python3 "$BRIDGE" "$PORT" "${EXTRA_ARGS[@]}"
 """
 
+BUILD_MD_WUKONG = """# Church Machine — QMTECH Wukong Artix-7 XC7A100T Build Package
+
+## What's Inside
+
+- `church_wukong_xc7a100t.il`  — Amaranth RTLIL (authoritative design source)
+- `church_wukong_xc7a100t.v`   — Generic Verilog (Yosys from RTLIL; Vivado synthesises this)
+- `wukong_xc7a100t.xdc`        — Vivado XDC pin constraints (clock, UART, LEDs, button)
+- `wukong_xc7a100t.tcl`        — Vivado project creation + build script (run once)
+- `BUILD.md`                   — This file
+
+## Quick Start
+
+### Step 1 — Open Vivado (2020.x or later)
+
+Extract the zip anywhere. From the Vivado Tcl Console or a shell with Vivado on PATH:
+
+```tcl
+cd /path/to/extracted/church-wukong-package
+source wukong_xc7a100t.tcl
+```
+
+The script creates a project in `vivado_wukong/`, adds `church_wukong_xc7a100t.v` and
+`wukong_xc7a100t.xdc`, runs synthesis + implementation, and writes the bitstream to:
+
+```
+vivado_wukong/church_wukong_xc7a100t.bit
+```
+
+### Step 2 — Flash
+
+Connect the QMTECH Wukong board via JTAG (on-board Digilent HS2 or external programmer).
+In Vivado: **Tools → Hardware Manager → Open Target → Program Device**.
+Select `church_wukong_xc7a100t.bit` and click **Program**.
+
+Alternatively from a shell with `openocd` (Artix-7 JTAG target):
+
+```bash
+openocd -f interface/ftdi/digilent-hs2.cfg -f target/xc7a.cfg \
+  -c "init; program vivado_wukong/church_wukong_xc7a100t.bit verify reset exit"
+```
+
+### Step 3 — Connect UART
+
+The Wukong board has no built-in USB-UART. Connect an external 3.3 V USB-UART adapter
+to PMOD J1 pins 1/2: **TX = H17 (board → host), RX = G17 (host → board)**.
+
+```bash
+pip3 install pyserial
+python3 local_bridge.py --port /dev/ttyUSB0 --baud 115200
+```
+
+The board then appears in the IDE **Devices** panel within seconds.
+
+## LED Pinout (active-LOW — drive low to illuminate)
+
+| LED | Pin | Signal            |
+|-----|-----|-------------------|
+| LD1 | M26 | Boot in progress  |
+| LD2 | N26 | Running / Halted  |
+| LD3 | P26 | Fault             |
+| LD4 | P25 | Boot complete     |
+
+Hold **KEY1** (P16) for 1 second to exit halted state and enter free-run mode.
+
+## Clock
+
+50 MHz crystal (W19) → MMCM → 100 MHz system clock. The MMCM is instantiated as a
+black-box wrapper in the Amaranth Verilog; Vivado infers and constrains it from the XDC.
+
+## Device
+
+- **FPGA**: Xilinx Artix-7 XC7A100T-1FGG676C (101,440 LUTs, 4,860 Kbit BRAM)
+- **UART**: 115200 baud — PMOD J1 pins 1/2 (external USB-UART adapter required)
+- **Board**: QMTECH Wukong Starter Kit
+"""
+
+
 BUILD_MD_TI60 = """# Church Machine — Efinix Ti60 F225 Build Package
 
 ## What's Inside
@@ -2248,6 +2332,23 @@ def _fpga_paths(board):
             "read_rtlil {rtlil}; "
             "synth_gowin -top top -no-rw-check -json {json} -vout {verilog}"
         )
+    elif board == "wukong-xc7a100t":
+        paths = {
+            "rtlil":   os.path.join(build_dir, "church_wukong_xc7a100t.il"),
+            "verilog": os.path.join(build_dir, "church_wukong_xc7a100t.v"),
+            "xdc":     os.path.join(hw_dir,    "wukong_xc7a100t.xdc"),
+            "tcl":     os.path.join(hw_dir,    "wukong_xc7a100t.tcl"),
+        }
+        zip_name = "church-wukong-package.zip"
+        build_md = BUILD_MD_WUKONG
+        gen_args = ["python3", "-m", "hardware.gen_rtlil", "build", "--wukong"]
+        synth_cmd_tpl = (
+            "read_rtlil {rtlil}; "
+            "hierarchy -top top; "
+            "proc; flatten; "
+            "opt -mux_undef -undriven; opt; opt_reduce; opt_clean; opt -fast; clean; "
+            "write_verilog -noattr {verilog}"
+        )
     else:
         paths = {
             "rtlil":   os.path.join(build_dir, "church_tang_nano_20k.il"),
@@ -2266,10 +2367,23 @@ def _fpga_paths(board):
     return is_ti60, paths, zip_name, build_md, gen_args, synth_cmd_tpl
 
 
-def _make_fpga_zip(is_ti60, paths, zip_name, build_md):
+def _make_fpga_zip(board, is_ti60, paths, zip_name, build_md):
     """Zip up already-built FPGA artifacts and return (BytesIO, zip_name)."""
     hw_dir = os.path.join(BASE_DIR, "hardware")
     buf = io.BytesIO()
+    if board == "wukong-xc7a100t":
+        bridge_path = os.path.join(BASE_DIR, "server", "local_bridge.py")
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+            if os.path.isfile(paths["rtlil"]):
+                zf.write(paths["rtlil"], os.path.basename(paths["rtlil"]))
+            if os.path.isfile(paths["verilog"]):
+                zf.write(paths["verilog"], os.path.basename(paths["verilog"]))
+            zf.write(paths["xdc"], os.path.basename(paths["xdc"]))
+            zf.write(paths["tcl"], os.path.basename(paths["tcl"]))
+            if os.path.isfile(bridge_path):
+                zf.write(bridge_path, "local_bridge.py")
+            zf.writestr("BUILD.md", build_md)
+        return buf, zip_name
     if is_ti60:
         with open(paths["project"], 'r') as f:
             project_xml = f.read()
@@ -2406,7 +2520,7 @@ def download_fpga_zip():
         return jsonify({"error": "No build found for this board. Run Build first."}), 404
 
     try:
-        buf, zip_name = _make_fpga_zip(is_ti60, paths, zip_name, build_md)
+        buf, zip_name = _make_fpga_zip(board, is_ti60, paths, zip_name, build_md)
         zip_data = buf.getvalue()
         resp = make_response(zip_data)
         resp.headers['Content-Type'] = 'application/zip'
@@ -2482,6 +2596,7 @@ BITSTREAM_FILES = {
     "tang-nano-20k-iot": "church_tang_nano_20k_iot.fs",
     "tang-nano-9k": "church_tang_nano_9k.fs",
     "ti60-f225": "church_ti60_f225.hex",
+    "wukong-xc7a100t": "church_wukong_xc7a100t.bit",
 }
 
 @app.route("/api/bitstream/upload", methods=["POST"])
