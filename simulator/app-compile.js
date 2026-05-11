@@ -22,10 +22,11 @@ function renderReference() {
     INSTRUCTION_DATA.forEach(instr => {
         const card = document.createElement('div');
         card.className = 'instr-card' + (selectedInstr === instr.opcode ? ' active' : '');
+        const mBadge = instr.mState ? `<span class="instr-mstate-badge mstate-${instr.mState}">${_mStateBadgeText(instr.mState)}</span>` : '';
         card.innerHTML = `
             <span class="instr-opcode">${instr.opcode}</span>
-            <span class="instr-mnemonic">${instr.mnemonic}</span>${instr.mState && instr.mState.badge ? `<span style="display:inline-block;padding:0 5px;border-radius:3px;font-weight:700;font-size:0.7rem;margin-left:4px;vertical-align:middle;background:${instr.mState.badge==='M↑'?'#7a5c0a':instr.mState.badge==='M↓'?'#0a3d6b':instr.mState.badge==='M!'?'#6b0a0a':'#3a0a6b'};color:#fff;">${instr.mState.badge}</span>` : ''}
-            <span class="instr-brief">${instr.brief}</span>
+            <span class="instr-mnemonic">${instr.mnemonic}</span>
+            <span class="instr-brief">${instr.brief}${mBadge ? '&ensp;' + mBadge : ''}</span>
         `;
         card.onclick = () => {
             _refTipHide();
@@ -50,6 +51,19 @@ function renderReference() {
     turingList.appendChild(returnCard);
 }
 
+function _mStateBadgeText(state) {
+    const map = { up: 'M\u2191', down: 'M\u2193', fault: 'M!', swap: 'M\u2195', pulse: 'M\u007e' };
+    return map[state] || '';
+}
+
+function _mStateBadgeHtml(instr) {
+    if (!instr.mState) return '';
+    const label = _mStateBadgeText(instr.mState);
+    const note = instr.mStateNote ? ` title="${instr.mStateNote.replace(/"/g, '&quot;')}"` : '';
+    const discrepancyWarning = instr.mState === 'fault' ? '<span class="instr-mstate-discrepancy"> \u26a0 Not yet enforced in simulator or HDL</span>' : '';
+    return `<span class="instr-mstate-badge mstate-${instr.mState}"${note}>${label}</span>${discrepancyWarning}`;
+}
+
 function showInstructionDetail(opcode) {
     selectedInstr = opcode;
     const instr = INSTRUCTION_DATA.find(i => i.opcode === opcode);
@@ -64,6 +78,15 @@ function showInstructionDetail(opcode) {
     const domainLabel = instr.domain === 'church' ? 'Church Domain' : 'Turing Domain';
     const domainClass = instr.domain === 'church' ? 'church' : 'turing';
     title.textContent = `${instr.mnemonic} \u2014 Opcode ${instr.opcode}`;
+
+    const mStateSection = instr.mState ? `
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">M-State Effect</div>
+            <div class="instr-mstate-row">
+                ${_mStateBadgeHtml(instr)}
+                ${instr.mStateNote ? `<span class="instr-mstate-note">${instr.mStateNote}</span>` : ''}
+            </div>
+        </div>` : '';
 
     content.innerHTML = `
         <div class="instr-detail-section">
@@ -101,10 +124,7 @@ function showInstructionDetail(opcode) {
             <div class="instr-detail-value">${instr.flags}</div>
         </div>
 
-        ${instr.mState ? `<div class="instr-detail-section">
-            <div class="instr-detail-label">M-State (per-CR elevation)</div>
-            <div class="instr-detail-value">${instr.mState.badge ? `<span style="display:inline-block;padding:1px 7px;border-radius:4px;font-weight:700;font-size:0.8rem;margin-right:6px;background:${instr.mState.badge==='M↑'?'#7a5c0a':instr.mState.badge==='M↓'?'#0a3d6b':instr.mState.badge==='M!'?'#6b0a0a':'#3a0a6b'};color:#fff;">${instr.mState.badge}</span>` : ''}${instr.mState.note}</div>
-        </div>` : ''}
+        ${mStateSection}
 
         <div class="instr-detail-section">
             <div class="instr-detail-label">Description</div>

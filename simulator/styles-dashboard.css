@@ -3882,6 +3882,123 @@ a.next-step-link:hover {
     margin: 0;
 }
 
+.instr-mstate-badge {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 800;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.5px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    vertical-align: middle;
+    white-space: nowrap;
+    cursor: default;
+}
+
+.instr-mstate-badge.mstate-up {
+    background: rgba(218, 165, 32, 0.18);
+    color: var(--church-gold);
+    border: 1px solid rgba(218, 165, 32, 0.55);
+}
+
+.instr-mstate-badge.mstate-down {
+    background: rgba(251, 146, 60, 0.18);
+    color: #fb923c;
+    border: 1px solid rgba(251, 146, 60, 0.55);
+}
+
+.instr-mstate-badge.mstate-fault {
+    background: rgba(239, 68, 68, 0.18);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.55);
+}
+
+.instr-mstate-badge.mstate-swap {
+    background: rgba(96, 165, 250, 0.18);
+    color: var(--church-blue);
+    border: 1px solid rgba(96, 165, 250, 0.5);
+}
+
+.instr-mstate-badge.mstate-pulse {
+    background: rgba(45, 212, 191, 0.15);
+    color: #2dd4bf;
+    border: 1px solid rgba(45, 212, 191, 0.45);
+}
+
+.instr-mstate-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+}
+
+.instr-mstate-note {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    flex: 1;
+    min-width: 0;
+}
+
+.instr-mstate-discrepancy {
+    font-size: 0.76rem;
+    color: #fb923c;
+    font-weight: 600;
+}
+
+.mbit-rules-box {
+    margin: 0.5rem 0.5rem 0.25rem;
+    background: rgba(218, 165, 32, 0.04);
+    border: 1px solid rgba(218, 165, 32, 0.18);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.mbit-rules-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--church-gold);
+    padding: 0.4rem 0.65rem;
+    background: rgba(218, 165, 32, 0.08);
+    border-bottom: 1px solid rgba(218, 165, 32, 0.15);
+}
+
+.mbit-rules-body {
+    font-size: 0.73rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    padding: 0.5rem 0.7rem;
+}
+
+.mbit-rules-list {
+    margin: 0.3rem 0 0.4rem 1.1rem;
+    padding: 0;
+    list-style: disc;
+}
+
+.mbit-rules-list li {
+    margin-bottom: 0.2rem;
+}
+
+.mbit-rules-list code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.72rem;
+    background: rgba(0,0,0,0.25);
+    padding: 1px 4px;
+    border-radius: 2px;
+    color: var(--church-gold);
+}
+
+.mbit-legend {
+    display: block;
+    margin-top: 0.45rem;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
 .abs-catalog-header {
     display: flex;
     align-items: center;

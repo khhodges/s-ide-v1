@@ -29,7 +29,7 @@
     <link rel="stylesheet" href="styles-base.css?v=20260425">
     <link rel="stylesheet" href="styles-toolbar.css?v=20260509e">
     <link rel="stylesheet" href="styles-editor.css?v=20260509a">
-    <link rel="stylesheet" href="styles-dashboard.css?v=20260510j">
+    <link rel="stylesheet" href="styles-dashboard.css?v=20260511a">
     <link rel="stylesheet" href="styles-lumps.css?v=20260510g">
     <link rel="stylesheet" href="styles-gatelog.css?v=20260510b">
     <link rel="stylesheet" href="styles-fault.css?v=20260426a">
@@ -999,6 +999,26 @@
                 </div>
                 <div class="panel" id="refPanel-hardware" style="display:none;">
                     <div class="panel-title">Hardware Instruction Set &mdash; 20 Instructions</div>
+                    <div class="mbit-rules-box">
+                        <div class="mbit-rules-title">M-bit rules &mdash; per-register inspection model</div>
+                        <div class="mbit-rules-body">
+                            The M-bit is a 1-bit flag on every CR register, separate from its GT permissions.
+                            It is set and cleared by hardware to control the <em>M-window</em> (inspection channel).
+                            <ul class="mbit-rules-list">
+                                <li><strong>CR15 M=1</strong> — Abstract Manager window open; CR15 descriptor mirrored in DR11&ndash;DR15.</li>
+                                <li><strong>CR6, CR14 M=1</strong> — set by CALL/ELOADCALL after M-elevated mLoad; marks callee registers as machine-derived.</li>
+                                <li><strong>CR12, CR15 M=1 on LOAD</strong> — set when loading via a NULL-perm GT during M-elevation (boot / M-Abstraction path).</li>
+                                <li><strong>CALL / RETURN boundary</strong> — <code>_mwinWriteback</code> gates and clears CR15.M; <code>_resetAllMBits</code> zeroes every CR before setup.</li>
+                                <li><strong>CHANGE context switch</strong> — M-bits are saved with the outgoing thread and restored with the incoming thread.</li>
+                                <li><strong>TPERM M!</strong> — architecture spec: fault if target CR has M=1 (not yet enforced in simulator or HDL &mdash; see discrepancy flag in detail pane).</li>
+                            </ul>
+                            <span class="mbit-legend"><span class="instr-mstate-badge mstate-up">M&uarr;</span> sets &ensp;
+                            <span class="instr-mstate-badge mstate-down">M&darr;</span> drops &ensp;
+                            <span class="instr-mstate-badge mstate-fault">M!</span> faults if M=1 &ensp;
+                            <span class="instr-mstate-badge mstate-swap">M&updownarrow;</span> save/restore &ensp;
+                            <span class="instr-mstate-badge mstate-pulse">M~</span> transient</span>
+                        </div>
+                    </div>
                     <div class="instr-domain-header">Church Domain (10)</div>
                     <div id="instrListChurch" class="instr-list"></div>
                     <div class="instr-domain-header">Turing Domain (10 + shared RETURN)</div>

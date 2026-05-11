@@ -9676,6 +9676,7 @@ async function testUART() {
 const INSTRUCTION_DATA = [
     {
         opcode: 0, mnemonic: 'LOAD', domain: 'church',
+        mState: 'up', mStateNote: 'Sets CRd.M=1 when loading via a NULL-perm GT during M-elevation (CR12/CR15 boot path). No M change on normal post-boot LOADs.',
         syntax: 'LOAD CRd, CRs, offset',
         brief: 'Load a Golden Token from a C-List into a context register',
         encoding: 'opcode[5]=00000 | cond[4] | CRd[4] | CRs[4] | offset[15]',
@@ -9701,6 +9702,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 1, mnemonic: 'SAVE', domain: 'church',
+        mState: null, mStateNote: null,
         syntax: 'SAVE CRd, CRs, offset',
         brief: 'Save a Golden Token into a C-List (capability list)',
         encoding: 'opcode[5]=00001 | cond[4] | CRd[4] | CRs[4] | offset[15]',
@@ -9729,6 +9731,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 2, mnemonic: 'CALL', domain: 'church',
+        mState: 'up', mStateNote: 'At CALL boundary: _mwinWriteback() gates and clears CR15.M; _resetAllMBits() zeroes all CRs; then CR6.M=1 and CR14.M=1 are set explicitly (both produced by M-elevated mLoad). Net: M↑ on CR6+CR14 after the boundary reset.',
         syntax: 'CALL CRs, offset',
         brief: 'Enter an abstraction — fetch E-GT via C-List or directly from CRs, set up CR6/CR14, push context',
         encoding: 'opcode[5]=00010 | cond[4] | CRs[4] | offset[4] | 0[15]',
@@ -9778,6 +9781,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 3, mnemonic: 'RETURN', domain: 'church',
+        mState: 'down', mStateNote: 'At RETURN boundary: _mwinWriteback() commits and clears the M-window on CR15; _resetAllMBits() zeroes all CRs; caller CRs are then restored from the saved frame snapshot (which carried their pre-CALL M=0 state).',
         syntax: 'RETURN [mask]',
         brief: 'Exit an abstraction \u2014 restore caller context; optionally scrub working CRs',
         encoding: 'opcode[5]=00011 | cond[4] | 0[11] | mask[12]',
@@ -9822,6 +9826,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 4, mnemonic: 'CHANGE', domain: 'church',
+        mState: 'swap', mStateNote: 'CR14/CR15 context-switch path: saves outgoing thread state (including all CR .M fields) into its context record; restores incoming thread state (including CR .M fields). M-bits are fully preserved across a CHANGE context switch.',
         syntax: 'CHANGE CRd, CRs[idx]',
         brief: 'Privileged register write \u2014 install a GT from CRs[idx] into privileged CR12\u2013CR15; CR14/CR15 also trigger a full per-thread context switch',
         encoding: 'opcode[5]=00100 | cond[4] | 1[1] | 1[1] | Tgt[2] | CRs[4] | idx[15]',
@@ -9865,6 +9870,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 5, mnemonic: 'SWITCH', domain: 'church',
+        mState: 'up', mStateNote: 'Copies the source Abstract PassKey CR (including its .M field) into the target (CR13 or CR15) via an M-elevated mLoad. The HDL sets sub_m_elevated=1 (switch.py:71), causing the mLoad to set M=1 on the target CR.',
         syntax: 'SWITCH CRs, imm',
         brief: 'Switch namespace \u2014 reload CR15 with a new namespace root',
         encoding: 'opcode[5]=00101 | cond[4] | 0[4] | CRs[4] | idx[15]',
@@ -9892,6 +9898,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 6, mnemonic: 'TPERM', domain: 'church',
+        mState: 'fault', mStateNote: 'Architecture spec: fault immediately if the target CR has M=1 (M-window open, GT actively in use — programming error to attenuate). NOTE: this check is not yet implemented in the simulator (_execTperm) or the Amaranth HDL (tperm.py) — see isa-m-state-documentation.md DISCREPANCY #2.',
         syntax: 'TPERM CRs, preset [, offset]  |  TPERM CRd, preset',
         brief: 'Two forms, one opcode: health-check (sets Z flag) or permission restriction (monotonic).',
         encoding: 'opcode[5]=00110 | cond[4] | reg[4] | preset[4] | offset[15]',
@@ -9969,6 +9976,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 7, mnemonic: 'LAMBDA', domain: 'church',
+        mState: null, mStateNote: null,
         syntax: 'LAMBDA CRd | LAMBDA CRd, offset',
         brief: 'In-scope lambda reduction — immediate (CRd holds GT) or store (load from CRd[offset])',
         encoding: 'opcode[5]=00111 | cond[4] | CRd[4] | 0[4] | imm15[15]  (imm15=0x7FFF → immediate; else store)',
@@ -10028,6 +10036,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 8, mnemonic: 'ELOADCALL', domain: 'church',
+        mState: 'up', mStateNote: 'Fused LOAD+TPERM+CALL. The CALL phase sets CR6.M=1 and CR14.M=1 (M-elevated mLoad for both callee registers). Inherits the full CALL M-state side-effect: M↑ on CR6 and CR14 after the boundary.',
         syntax: 'ELOADCALL CRd, CRs, offset',
         brief: 'Fused LOAD + TPERM(E) + CALL in one instruction',
         encoding: 'opcode[5]=01000 | cond[4] | CRd[4] | CRs[4] | offset[15]',
@@ -10057,6 +10066,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 9, mnemonic: 'XLOADLAMBDA', domain: 'church',
+        mState: null, mStateNote: null,
         syntax: 'XLOADLAMBDA CRd, CRs, offset',
         brief: 'Fused LOAD + TPERM(X) + LAMBDA in one instruction',
         encoding: 'opcode[5]=01001 | cond[4] | CRd[4] | CRs[4] | offset[15]',
@@ -10104,6 +10114,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 10, mnemonic: 'DREAD', domain: 'turing',
+        mState: 'pulse', mStateNote: 'Abstract GT dispatch path only: sets CRs.M=1 to open the M-inspection window (_setMWindow), dispatches to the Abstract Manager, then clears CRs.M=0 (_clearMWindow). Net effect on M is zero — transient only. Normal data GTs: no M interaction.',
         syntax: 'DREAD DRd, CRs, imm',
         brief: 'Read a data word from a GT-protected address into a data register',
         encoding: 'opcode[5]=01010 | cond[4] | DRd[4] | CRs[4] | offset[15]',
@@ -10135,6 +10146,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 11, mnemonic: 'DWRITE', domain: 'turing',
+        mState: 'pulse', mStateNote: 'Abstract GT dispatch path only: sets CRs.M=1 to open the M-inspection window (_setMWindow), dispatches to the Abstract Manager, then clears CRs.M=0 (_clearMWindow). Net effect on M is zero — transient only. Normal data GTs: no M interaction.',
         syntax: 'DWRITE DRd, CRs, imm',
         brief: 'Write a data register value to a GT-protected address',
         encoding: 'opcode[5]=01011 | cond[4] | DRd[4] | CRs[4] | offset[15]',
@@ -10165,6 +10177,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 12, mnemonic: 'BFEXT', domain: 'turing',
+        mState: null, mStateNote: null,
         syntax: 'BFEXT DRd, DRs, pos, width',
         brief: 'Extract a bitfield from a data register',
         encoding: 'opcode[5]=01100 | cond[4] | DRd[4] | DRs[4] | pos[5]<<5 | width[5]',
@@ -10197,6 +10210,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 13, mnemonic: 'BFINS', domain: 'turing',
+        mState: null, mStateNote: null,
         syntax: 'BFINS DRd, DRs, pos, width',
         brief: 'Insert a bitfield from one data register into another',
         encoding: 'opcode[5]=01101 | cond[4] | DRd[4] | DRs[4] | pos[5]<<5 | width[5]',
@@ -10229,6 +10243,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 14, mnemonic: 'MCMP', domain: 'turing',
+        mState: null, mStateNote: null,
         syntax: 'MCMP DRa, DRb',
         brief: 'Compare two data registers and set condition flags',
         encoding: 'opcode[5]=01110 | cond[4] | DRa[4] | DRb[4] | 0[15]',
@@ -10258,6 +10273,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 15, mnemonic: 'IADD', domain: 'turing',
+        mState: null, mStateNote: null,
         syntax: 'IADD DRd, DRa, DRb',
         brief: 'Integer addition with flag setting',
         encoding: 'opcode[5]=01111 | cond[4] | DRd[4] | DRa[4] | DRb[4] in imm[3:0]',
@@ -10289,6 +10305,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 16, mnemonic: 'ISUB', domain: 'turing',
+        mState: null, mStateNote: null,
         syntax: 'ISUB DRd, DRa, DRb',
         brief: 'Integer subtraction with flag setting',
         encoding: 'opcode[5]=10000 | cond[4] | DRd[4] | DRa[4] | DRb[4] in imm[3:0]',
@@ -10320,6 +10337,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 17, mnemonic: 'BRANCH', domain: 'turing',
+        mState: null, mStateNote: null,
         syntax: 'BRANCH[cond] offset',
         brief: 'Conditional branch with signed PC-relative offset \u2014 use for error catch after a conditional instruction',
         encoding: 'opcode[5]=10001 | cond[4] | 0[4] | 0[4] | signed_offset[15]',
@@ -10347,6 +10365,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 18, mnemonic: 'SHL', domain: 'turing',
+        mState: null, mStateNote: null,
         syntax: 'SHL DRd, DRs, shamt',
         brief: 'Logical shift left with flag setting',
         encoding: 'opcode[5]=10010 | cond[4] | DRd[4] | DRs[4] | shamt[5] in imm[4:0]',
@@ -10378,6 +10397,7 @@ const INSTRUCTION_DATA = [
     },
     {
         opcode: 19, mnemonic: 'SHR', domain: 'turing',
+        mState: null, mStateNote: null,
         syntax: 'SHR DRd, DRs, shamt [, ASR]',
         brief: 'Logical or arithmetic shift right with flag setting',
         encoding: 'opcode[5]=10011 | cond[4] | DRd[4] | DRs[4] | arith[1]<<5 | shamt[5]',
