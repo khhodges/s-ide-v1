@@ -189,15 +189,8 @@ function _renderBootNSDecoder(contentEl, abs) {
         [15, 'CR15 \u00b7 Step\u00a01', 0x00800000],
         [12, 'CR12 \u00b7 Step\u00a02', 0x00800001],
     ];
-    for (const [crIdx, crLabel, hwWord] of HW_GTS) {
-        // Prefer the live runtime value when the sim is booted; fall back to the
-        // architectural constant so the table is always populated.
-        const crObj  = sim.cr && sim.cr[crIdx];
-        const liveW  = crObj ? (crObj.word0 >>> 0) : 0;
-        const word   = liveW || hwWord;
-        const isLive = !!liveW;
-
-        const parsed = sim.parseGT(word);
+    for (const [, crLabel, hwWord] of HW_GTS) {
+        const parsed = sim.parseGT(hwWord);
         const p = { ...parsed.permissions, F: parsed.type === 2 ? 1 : 0 };
         let permHtml = '';
         for (const bit of ['B','R','W','X','E','L','S','F']) {
@@ -209,11 +202,10 @@ function _renderBootNSDecoder(contentEl, abs) {
              abstractionRegistry.abstractions && abstractionRegistry.abstractions[nsIdx] &&
              abstractionRegistry.abstractions[nsIdx].name) || null;
         const nameStr = lbl ? `NS[${nsIdx}] \u2014 ${lbl}` : `NS[${nsIdx}]`;
-        const gtHex = '0x' + word.toString(16).toUpperCase().padStart(8, '0');
-        const liveTag = isLive ? '' : ' <span style="color:#6b7280;font-size:0.7em;">(architectural)</span>';
+        const gtHex = '0x' + hwWord.toString(16).toUpperCase().padStart(8, '0');
         html += `<tr>`;
         html += `<td class="abs-clist-idx">${crLabel}</td>`;
-        html += `<td class="abs-clist-gt">${gtHex}${liveTag}</td>`;
+        html += `<td class="abs-clist-gt">${gtHex}</td>`;
         html += `<td class="abs-clist-perms">${permHtml}</td>`;
         html += `<td class="abs-clist-type">${parsed.typeName}</td>`;
         html += `<td class="abs-clist-name">${nameStr}</td>`;

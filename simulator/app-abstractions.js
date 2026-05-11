@@ -491,6 +491,7 @@ function setBootEntrySlot(idx) {
     }
     renderAbstractions();
     if (currentView === 'namespace') updateNamespace();
+    _refreshBootNSDetailIfOpen();
 }
 
 function _syncBootEntryFromSim() {
@@ -501,6 +502,15 @@ function _syncBootEntryFromSim() {
         localStorage.setItem('bootEntrySlot', String(fromSim));
         renderAbstractions();
         if (currentView === 'namespace') updateNamespace();
+        _refreshBootNSDetailIfOpen();
+    }
+}
+
+function _refreshBootNSDetailIfOpen() {
+    if (typeof selectedAbsIndex === 'number' && selectedAbsIndex === 0 &&
+            typeof _renderBootNSDecoder === 'function' && abstractionRegistry) {
+        const contentEl = document.getElementById('absDetailContent');
+        if (contentEl) _renderBootNSDecoder(contentEl, abstractionRegistry.getAbstraction(0));
     }
 }
 
