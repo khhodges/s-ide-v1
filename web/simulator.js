@@ -1,4 +1,4 @@
-class CTMMSimulator {
+class CMSimulator {
     constructor() {
         this.reset();
     }
@@ -1340,4 +1340,4 @@ class CTMMSimulator {
     }
 }
 
-const simulator = new CTMMSimulator();
+const simulator = new CMSimulator();
