@@ -414,6 +414,26 @@ function _capRightsHTML(text) {
     });
 }
 
+function _permsHTML(permsStr) {
+    const titles = { R: 'read', W: 'write', X: 'execute', E: 'entry' };
+    const cls    = { R: 'cap-right-r', W: 'cap-right-w', X: 'cap-right-x', E: 'cap-right-e' };
+    return permsStr.split('').map(function(ch) {
+        return cls[ch]
+            ? '<span class="' + cls[ch] + '" title="' + titles[ch] + '">' + ch + '</span>'
+            : ch;
+    }).join('');
+}
+
+function _rightsLegendHTML() {
+    return '<span class="rights-legend">' +
+        'rights key:&nbsp;' +
+        '<span class="cap-right-r" title="read">[R]</span>=read&nbsp; ' +
+        '<span class="cap-right-w" title="write">[W]</span>=write&nbsp; ' +
+        '<span class="cap-right-x" title="execute">[X]</span>=execute&nbsp; ' +
+        '<span class="cap-right-e" title="entry">[E]</span>=entry' +
+        '</span>';
+}
+
 function _clistTypeLabel(name) {
     if (typeof _lumpsCache !== 'undefined' && Array.isArray(_lumpsCache)) {
         const lump = _lumpsCache.find(l =>
@@ -2061,7 +2081,7 @@ function showFaultModal(f) {
                 <td class="freg-name">CR${i}</td>
                 <td class="freg-type">${typeChar}</td>
                 <td class="freg-slot">S${p.index}</td>
-                <td class="freg-perms">${perms}</td>
+                <td class="freg-perms">${perms === '\u2014' ? perms : _permsHTML(perms)}</td>
                 <td class="freg-base">${base}</td>
                 <td class="freg-petname">${crName}</td>
             </tr>`;
@@ -2069,7 +2089,7 @@ function showFaultModal(f) {
     });
     const crSection = crTableRows ? `
         <div class="fault-regs-section">
-            <div class="fault-regs-label">Capability Registers</div>
+            <div class="fault-regs-label">Capability Registers <span class="fault-regs-legend">${_rightsLegendHTML()}</span></div>
             <div class="fault-regs-scroll">
                 <table class="fault-regs-table">
                     <thead><tr><th>Reg</th><th>Type</th><th>Slot</th><th>Perms</th><th>Base</th><th>Name</th></tr></thead>
@@ -2324,7 +2344,8 @@ function showFaultModal(f) {
                         <thead><tr><th>Step</th><th>Address</th><th>Raw</th><th>Instruction</th></tr></thead>
                         <tbody>${traceRows}</tbody>
                     </table>
-                </div>`;
+                </div>
+                <div class="fault-trace-legend">${_rightsLegendHTML()}</div>`;
     }
     const _traceFaultDetailsHtml = `
                 <div class="fault-detail-grid fault-trace-fault-details">

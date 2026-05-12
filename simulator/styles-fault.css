@@ -243,6 +243,26 @@
     background: rgba(0,0,0,0.22);
     padding: 4px 10px;
     border-bottom: 1px solid rgba(100,140,200,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.fault-regs-legend {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    opacity: 0.85;
+}
+
+.rights-legend {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    font-family: var(--font-mono, monospace);
+    letter-spacing: 0;
+    font-weight: 400;
 }
 
 .fault-regs-scroll {

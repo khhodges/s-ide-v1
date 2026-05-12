@@ -533,6 +533,13 @@
     padding: 3px 8px;
     white-space: nowrap;
 }
+
+.fault-trace-legend {
+    padding: 3px 10px 4px;
+    border-top: 1px solid rgba(100,180,220,0.10);
+    background: rgba(0,0,0,0.12);
+}
+
 .itrace-step { color: var(--text-secondary); }
 .itrace-addr { color: #88ddaa; }
 .itrace-raw  { color: #aaa; font-size: 0.72rem; }
