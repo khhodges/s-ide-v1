@@ -708,7 +708,26 @@ class ChurchAssembler {
                 if (!parts[2] && rawDotTok.includes('.')) {
                     const dotIdx = rawDotTok.indexOf('.');
                     const dotAbsName = rawDotTok.slice(0, dotIdx);
-                    const dotMethodName = rawDotTok.slice(dotIdx + 1);
+                    const dotMethodRaw = rawDotTok.slice(dotIdx + 1);
+                    // Detect function-call style: "CALL Tunnel.Connect(Mum)" — parens are not
+                    // valid CLOOMC syntax.  Strip the suffix, identify the bare method name,
+                    // and emit a targeted error rather than falling through to _parseCR.
+                    const parenIdx = dotMethodRaw.indexOf('(');
+                    if (parenIdx !== -1) {
+                        const bareMethod = dotMethodRaw.slice(0, parenIdx);
+                        const argStr    = dotMethodRaw.slice(parenIdx + 1).replace(/\).*$/, '');
+                        let suggestion = `  LOAD  CR2, ${argStr || '<GT>'}   ; load argument into a register\n  CALL  ${dotAbsName}.${bareMethod}`;
+                        // Check if the bare method name is actually known, to give sharper advice.
+                        if (this.methodConventions[dotAbsName] && this.methodConventions[dotAbsName][bareMethod]) {
+                            const conv = this.methodConventions[dotAbsName][bareMethod];
+                            if (conv.input) suggestion += `   ; ${conv.input}`;
+                        }
+                        this.errors.push({ line: lineNum, message:
+                            `CLOOMC does not support function-call syntax — remove the "(${argStr})" from "${dotAbsName}.${bareMethod}(${argStr})". ` +
+                            `Load arguments into DR/CR registers before the CALL:\n${suggestion}` });
+                        break;
+                    }
+                    const dotMethodName = dotMethodRaw;
                     const crSlot = this.nsLoaded[dotAbsName];
                     if (crSlot !== undefined) {
                         crDst = crSlot;
