@@ -313,6 +313,7 @@ function assembleAndLoad() {
             if (typeof _autoFillCapRights === 'function') _autoFillCapRights(result.capabilities);
             const _cc = result.capabilities.length;
             listing += `\n; c-list  (${_cc} entr${_cc !== 1 ? 'ies' : 'y'})\n`;
+            listing += `; rights key: [R]=read  [W]=write  [X]=execute  [E]=entry\n`;
             for (let i = 0; i < result.capabilities.length; i++) {
                 const cap = result.capabilities[i];
                 const capName   = typeof cap === 'string' ? cap : (cap.name || String(cap));
@@ -382,6 +383,7 @@ function assembleAndLoad() {
         if (typeof _autoFillCapRights === 'function') _autoFillCapRights(result.capabilities);
         const _cc2 = result.capabilities.length;
         listing += `\n; c-list  (${_cc2} entr${_cc2 !== 1 ? 'ies' : 'y'})\n`;
+        listing += `; rights key: [R]=read  [W]=write  [X]=execute  [E]=entry\n`;
         for (let i = 0; i < result.capabilities.length; i++) {
             const cap = result.capabilities[i];
             const capName   = typeof cap === 'string' ? cap : (cap.name || String(cap));
@@ -402,10 +404,11 @@ function assembleAndLoad() {
 
 function _capRightsHTML(text) {
     const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const titles = { R: 'read', W: 'write', X: 'execute', E: 'entry' };
     return escaped.replace(/\[([RWXE]+)\]/g, function(_m, rights) {
         const letters = rights.split('').map(function(ch) {
             const cls = { R: 'cap-right-r', W: 'cap-right-w', X: 'cap-right-x', E: 'cap-right-e' }[ch];
-            return cls ? '<span class="' + cls + '">' + ch + '</span>' : ch;
+            return cls ? '<span class="' + cls + '" title="' + titles[ch] + '">' + ch + '</span>' : ch;
         }).join('');
         return '[' + letters + ']';
     });
