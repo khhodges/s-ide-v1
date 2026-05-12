@@ -376,7 +376,7 @@
                               '</span>'
                             : '';
                         srcRows += '<div class="clist-row" data-slot="' + si + '" tabindex="-1">' +
-                            '<span class="clist-slot" title="declared in source">src</span>' +
+                            '<span class="clist-slot" title="slot ' + si + ' \u2014 declared in source (not yet compiled)">CR' + si + '</span>' +
                             rightsHtml +
                             '<span class="clist-name">' + escHtml(se.name) + '</span>' +
                             '</div>';
