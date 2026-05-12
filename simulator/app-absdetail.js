@@ -899,6 +899,18 @@ const METHOD_REGISTER_CONVENTIONS = {
         'Zero': { index: 3, input: 'none', output: 'DR1 = 0.0 (IEEE 754)',      dispatch: 'CALL Constants.Zero', note: 'Returns IEEE 754 positive zero. Low-level: CALL CR11, 4.' },
         'One':  { index: 4, input: 'none', output: 'DR1 = 1.0 (IEEE 754)',      dispatch: 'CALL Constants.One',  note: 'Returns IEEE 754 1.0. Low-level: CALL CR11, 5.' },
     },
+    // Tunnel: six methods matching the manifest order (indices 0–5).
+    // These also drive the dot-notation popup (asm-method-popup.js) and the
+    // assembler's CALL Tunnel.X / ELOADCALL encoding (app-shell.js feeds
+    // METHOD_REGISTER_CONVENTIONS directly into new ChurchAssembler(conv)).
+    'Tunnel': {
+        'Register': { index: 0, input: 'DR1=boot_reason, DR2=last_fault, DR3=fault_NIA', output: 'DR0 = 1 (IDE ACK) | \u22640 (offline)', dispatch: 'CALL Tunnel.Register', note: 'Send 23-byte call-home packet to IDE and await ACK. Replaces hardwired B:02\u00bd boot step.' },
+        'Send':     { index: 1, input: 'DR1=FourCC tag, DR2=word count, DR3=first payload', output: 'DR0 = 0 (queued) | 1 (TX overrun)',      dispatch: 'CALL Tunnel.Send',     note: 'Fire-and-forget media packet. Tags: TEXT=0x54455854 \u00b7 LUMP=0x4C554D50 \u00b7 GTKN=0x47544B4E \u2026' },
+        'Receive':  { index: 2, input: 'DR1=timeout steps (0=forever)',                    output: 'DR0=word count (0=timeout), DR1=FourCC tag, DR2\u2026=payload', dispatch: 'CALL Tunnel.Receive', note: 'Block until IDE sends a media packet or timeout expires.' },
+        'Fault':    { index: 3, input: 'DR1=fault_code, DR2=ns_idx, DR3=thread_gt, DR4=abstr_idx, DR5=method_idx, DR6=instr_offset', output: 'none (fire-and-forget)', dispatch: 'CALL Tunnel.Fault', note: 'Report full semantic fault location to IDE Devices view. Bypasses send queue.' },
+        'Fetch':    { index: 4, input: 'DR1=slot token, DR2=expected words, CR2=write-GT', output: 'DR0 = 0 (installed) | error code',       dispatch: 'CALL Tunnel.Fetch',    note: 'Download lump binary from IDE by NS slot token. Validates header (magic, CRC) before writing.' },
+        'Call':     { index: 5, input: 'CR2=remote GT (Outform/far-end abstraction)',      output: 'DR0 = far-end return value',              dispatch: 'CALL Tunnel.Call',     note: 'Hello Mum primitive: forward CALL via GTKN packet to far-end Mum.Greet().' },
+    },
 };
 
 function getMethodPurposes(abs) {
