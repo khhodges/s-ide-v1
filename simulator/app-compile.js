@@ -893,6 +893,131 @@ function compileDraft() {
     appendOutput(`Draft: "${result.abstractionName}" — ${result.methods.length} methods, ${clistCount} caps, ${allocSize} alloc`, 'info');
 }
 
+// ── LUMP Release popup ────────────────────────────────────────────────────
+let _pendingLumpRelease = null;
+
+function _queueLumpRelease(data) {
+    _pendingLumpRelease = data;
+    if (data.con) {
+        const _pre = data.listing + '\n  Waiting for release confirmation\u2026\n';
+        data.con.innerHTML = _capRightsHTML(_pre);
+        data.con.scrollTop = 0;
+    }
+    const existing = (typeof _lumpsCache !== 'undefined' && Array.isArray(_lumpsCache))
+        ? _lumpsCache.find(l => l.abstraction === data.absName) : null;
+    _openLumpReleasePopup(data.absName, data.absStats, existing);
+}
+
+function _openLumpReleasePopup(absName, absStats, existing) {
+    const overlay = document.getElementById('lumpReleaseOverlay');
+    if (!overlay) return;
+    document.getElementById('lumpReleaseAbsName').textContent = absName;
+    document.getElementById('lumpReleaseStats').textContent = absStats || '';
+    const existEl = document.getElementById('lumpReleaseExisting');
+    if (existing && existing.version) {
+        existEl.className = 'lump-release-existing has-version';
+        existEl.textContent = `Previous release: v${existing.version}  \u00b7  token 0x${existing.token}`;
+    } else {
+        existEl.className = 'lump-release-existing no-version';
+        existEl.textContent = 'No previous release found \u2014 this will be the first version.';
+    }
+    const versionEl = document.getElementById('lumpReleaseVersion');
+    versionEl.value = '';
+    const notesEl = document.getElementById('lumpReleaseNotes');
+    if (notesEl) notesEl.value = '';
+    const errEl = document.getElementById('lumpReleaseVersionError');
+    if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+    const confirmBtn = document.getElementById('lumpReleaseConfirmBtn');
+    if (confirmBtn) confirmBtn.disabled = true;
+    overlay.style.display = 'flex';
+    setTimeout(() => versionEl.focus(), 60);
+}
+
+function _validateLumpReleaseVersion() {
+    if (!_pendingLumpRelease) return;
+    const versionEl = document.getElementById('lumpReleaseVersion');
+    const ver = versionEl ? versionEl.value.trim() : '';
+    const errEl = document.getElementById('lumpReleaseVersionError');
+    const confirmBtn = document.getElementById('lumpReleaseConfirmBtn');
+    const existing = (typeof _lumpsCache !== 'undefined' && Array.isArray(_lumpsCache))
+        ? _lumpsCache.find(l => l.abstraction === _pendingLumpRelease.absName) : null;
+    if (!ver) {
+        if (errEl) { errEl.textContent = 'Version is required (e.g. 1.0.0).'; errEl.style.display = 'block'; }
+        if (confirmBtn) confirmBtn.disabled = true;
+        return;
+    }
+    if (existing && existing.version && ver === existing.version) {
+        if (errEl) {
+            errEl.textContent = `\u201c${ver}\u201d matches the saved release \u2014 use a new version number.`;
+            errEl.style.display = 'block';
+        }
+        if (confirmBtn) confirmBtn.disabled = true;
+        return;
+    }
+    if (errEl) errEl.style.display = 'none';
+    if (confirmBtn) confirmBtn.disabled = false;
+}
+
+function _cancelLumpRelease() {
+    _pendingLumpRelease = null;
+    const overlay = document.getElementById('lumpReleaseOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function _confirmLumpRelease() {
+    if (!_pendingLumpRelease) return;
+    const versionEl = document.getElementById('lumpReleaseVersion');
+    const ver = versionEl ? versionEl.value.trim() : '';
+    if (!ver) { _validateLumpReleaseVersion(); return; }
+    const notesEl = document.getElementById('lumpReleaseNotes');
+    const notes = notesEl ? notesEl.value.trim() : '';
+    const overlay = document.getElementById('lumpReleaseOverlay');
+    if (overlay) overlay.style.display = 'none';
+    const data = _pendingLumpRelease;
+    _pendingLumpRelease = null;
+
+    data.savePayload.metadata.version = ver;
+    if (notes) data.savePayload.metadata.release_notes = notes;
+
+    const dlUrl = URL.createObjectURL(new Blob([data.binaryBuf], { type: 'application/octet-stream' }));
+    const a = document.createElement('a');
+    a.href = dlUrl; a.download = data.absName + '.lump';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(dlUrl);
+
+    fetch('/api/lumps/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data.savePayload)
+    }).then(r => r.json()).then(resp => {
+        if (resp.ok) {
+            appendOutput(`Saved to library: lumps/${resp.lump} \u2014 token 0x${resp.token} \u00b7 v${ver}`, 'info');
+            window._editorLastSavedToken = resp.token;
+            renderLumps();
+            const savedToken = resp.token;
+            setTimeout(() => {
+                const listEl = document.getElementById('lumpsListContent');
+                if (listEl && savedToken) {
+                    const item = listEl.querySelector(`.lump-item[data-token="${savedToken}"]`);
+                    if (item) { item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); showLumpDetail(savedToken); }
+                }
+            }, 400);
+        } else {
+            appendOutput(`Server save failed: ${resp.error || 'unknown error'}`, 'error');
+        }
+    }).catch(err => { appendOutput(`Server save error: ${err.message}`, 'error'); });
+
+    let listing = data.listing;
+    listing += `  Version:   v${ver}\n`;
+    if (notes) listing += `  Notes:     ${notes}\n`;
+    listing += `\n  Downloaded: ${data.absName}.lump (${data.sizeBytes} bytes)\n`;
+    listing += `  Saved to: server/lumps/ (binary + metadata sidecar)\n`;
+    if (data.con) { data.con.innerHTML = _capRightsHTML(listing); data.con.scrollTop = 0; }
+    if (data.trackKey) trackAction(data.trackKey, data.trackData);
+    if (data.appendMsg) appendOutput(data.appendMsg + ` \u00b7 v${ver}`, 'info');
+}
+
 function buildAndDownloadLump() {
     const editor = document.getElementById('asmEditor');
     if (!editor || !cloomcCompiler) return;
@@ -1036,16 +1161,6 @@ function buildAndDownloadLump() {
         view.setUint32(i * 4, lumpWords[i], false);
     }
 
-    const blob = new Blob([binaryBuf], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = absName + '.lump';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
     const freespace = lumpSize - 1 - cw - cc;
     const sizeBytes = lumpSize * 4;
 
@@ -1120,32 +1235,6 @@ function buildAndDownloadLump() {
         }
     };
 
-    fetch('/api/lumps/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(savePayload)
-    }).then(r => r.json()).then(resp => {
-        if (resp.ok) {
-            appendOutput(`Saved to library: lumps/${resp.lump} — token 0x${resp.token} · MTBF: UNKNOWN (needs testing)`, 'info');
-            window._editorLastSavedToken = resp.token;
-            renderLumps();
-            const savedToken = resp.token;
-            setTimeout(() => {
-                const listEl = document.getElementById('lumpsListContent');
-                if (listEl && savedToken) {
-                    const item = listEl.querySelector(`.lump-item[data-token="${savedToken}"]`);
-                    if (item) {
-                        item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        showLumpDetail(savedToken);
-                    }
-                }
-            }, 400);
-        } else {
-            appendOutput(`Server save failed: ${resp.error || 'unknown error'}`, 'error');
-        }
-    }).catch(err => {
-        appendOutput(`Server save error: ${err.message}`, 'error');
-    });
 
     let listing = `═══════════════════════════════════════════════════\n`;
     listing += `  LUMP BUILT — "${absName}" [${langLabel}]\n`;
@@ -1223,12 +1312,12 @@ function buildAndDownloadLump() {
         }
     }
 
-    listing += `\n  Downloaded: ${absName}.lump (${sizeBytes} bytes)\n`;
-    listing += `  Saved to: server/lumps/ (binary + metadata sidecar)\n`;
-
-    if (con) { con.innerHTML = _capRightsHTML(listing); con.scrollTop = 0; }
-    trackAction('build_lump', { name: absName, lang: result.language, size: lumpSize });
-    appendOutput(`Built LUMP: "${absName}" — ${result.methods.length} methods, ${lumpSize} words, ${sizeBytes} bytes`, 'info');
+    _queueLumpRelease({
+        absName, sizeBytes, binaryBuf, savePayload, con, listing,
+        absStats: `${lumpSize} words \u00b7 ${cw} code \u00b7 ${cc} c-list \u00b7 ${sizeBytes} bytes [${langLabel}]`,
+        trackKey: 'build_lump', trackData: { name: absName, lang: result.language, size: lumpSize },
+        appendMsg: `Built LUMP: "${absName}" [${langLabel}] \u2014 ${cw} words, cc=${cc}, ${sizeBytes} bytes`,
+    });
 }
 
 function _buildAndDownloadAssemblyLump(source, asmResult, con) {
@@ -1313,14 +1402,6 @@ function _buildAndDownloadAssemblyLump(source, asmResult, con) {
     const view = new DataView(binaryBuf);
     for (let i = 0; i < lumpSize; i++) view.setUint32(i * 4, lumpWords[i], false);
 
-    const blob = new Blob([binaryBuf], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = absName + '.lump';
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
     const freespace   = lumpSize - 1 - cw - cc;
     const sizeBytes   = lumpSize * 4;
     const mtbfClean   = _getConsecutiveCleanRuns();
@@ -1364,27 +1445,6 @@ function _buildAndDownloadAssemblyLump(source, asmResult, con) {
         }
     };
 
-    fetch('/api/lumps/save', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(savePayload)
-    }).then(r => r.json()).then(resp => {
-        if (resp.ok) {
-            appendOutput(`Saved to library: lumps/${resp.lump} — token 0x${resp.token}`, 'info');
-            window._editorLastSavedToken = resp.token;
-            renderLumps();
-            const savedToken = resp.token;
-            setTimeout(() => {
-                const listEl = document.getElementById('lumpsListContent');
-                if (listEl && savedToken) {
-                    const item = listEl.querySelector(`.lump-item[data-token="${savedToken}"]`);
-                    if (item) { item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); showLumpDetail(savedToken); }
-                }
-            }, 400);
-        } else {
-            appendOutput(`Server save failed: ${resp.error || 'unknown error'}`, 'error');
-        }
-    }).catch(err => { appendOutput(`Server save error: ${err.message}`, 'error'); });
 
     let listing = `\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\n`;
     listing += `  LUMP BUILT \u2014 "${absName}" [Assembly]\n`;
@@ -1415,12 +1475,12 @@ function _buildAndDownloadAssemblyLump(source, asmResult, con) {
             listing += `\n  \u2713 Audit passed \u2014 all checks OK.\n`;
         }
     }
-    listing += `\n  Downloaded: ${absName}.lump (${sizeBytes} bytes)\n`;
-    listing += `  Saved to: server/lumps/ (binary + metadata sidecar)\n`;
-
-    if (con) { con.innerHTML = _capRightsHTML(listing); con.scrollTop = 0; }
-    trackAction('build_lump', { name: absName, lang: 'assembly', size: lumpSize });
-    appendOutput(`Built LUMP: "${absName}" [Assembly] \u2014 ${cw} words, cc=${cc}, ${sizeBytes} bytes`, 'info');
+    _queueLumpRelease({
+        absName, sizeBytes, binaryBuf, savePayload, con, listing,
+        absStats: `${lumpSize} words \u00b7 ${cw} code \u00b7 ${cc} c-list \u00b7 ${sizeBytes} bytes [Assembly]`,
+        trackKey: 'build_lump', trackData: { name: absName, lang: 'assembly', size: lumpSize },
+        appendMsg: `Built LUMP: "${absName}" [Assembly] \u2014 ${cw} words, cc=${cc}, ${sizeBytes} bytes`,
+    });
 }
 
 function auditLumpOnly() {

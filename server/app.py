@@ -3114,6 +3114,7 @@ def save_lump():
         "language":     metadata.get("language", "unknown"),
         "author":       metadata.get("author", ""),
         "version":      metadata.get("version", ""),
+        "release_notes": metadata.get("release_notes", ""),
         "methods":      metadata.get("methods", []),
         "capabilities": metadata.get("capabilities", []),
         "pet_names": {

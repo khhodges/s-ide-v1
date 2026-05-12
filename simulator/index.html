@@ -29,7 +29,7 @@
     <link rel="stylesheet" href="styles-base.css?v=20260425">
     <link rel="stylesheet" href="styles-toolbar.css?v=20260512e">
     <link rel="stylesheet" href="styles-editor.css?v=20260511b">
-    <link rel="stylesheet" href="styles-dashboard.css?v=20260512d">
+    <link rel="stylesheet" href="styles-dashboard.css?v=20260512e">
     <link rel="stylesheet" href="styles-lumps.css?v=20260511b">
     <link rel="stylesheet" href="styles-gatelog.css?v=20260510b">
     <link rel="stylesheet" href="styles-fault.css?v=20260426a">
@@ -1670,7 +1670,7 @@
     <script src="app-absdetail.js?v=20260511i"></script>
     <!-- Load order matters: app-compile must precede app-run (exports LANG_EXAMPLE_GROUPS
          via window._cloomcLangExampleGroups); both must precede app-source-library. -->
-    <script src="app-compile.js?v=20260512i"></script>
+    <script src="app-compile.js?v=20260512j"></script>
     <script src="app-run.js?v=20260512m"></script>
     <script src="app-source-library.js?v=20260509d"></script>
     <script src="app-invoke.js?v=20260501a"></script>
@@ -2156,6 +2156,34 @@
 <div id="version-tag"></div>
 <div id="hamCtxMenu" class="ham-ctx-menu" style="display:none;">
     <button id="hamCtxMenuItem" class="ham-ctx-item"></button>
+</div>
+
+<!-- LUMP Release popup -->
+<div id="lumpReleaseOverlay" class="modal-overlay" style="display:none;" onclick="if(event.target===this)_cancelLumpRelease()">
+    <div class="modal-dialog lump-release-dialog">
+        <div class="modal-title">&#x1F4BE; Release LUMP</div>
+        <div id="lumpReleaseAbsName" class="lump-release-absname"></div>
+        <div id="lumpReleaseStats" class="lump-release-stats"></div>
+        <div id="lumpReleaseExisting" class="lump-release-existing no-version"></div>
+        <label class="modal-label">
+            Version <span style="color:#ef4444">*</span>
+            <input id="lumpReleaseVersion" class="modal-input" type="text"
+                   placeholder="e.g. 1.0.0" maxlength="64"
+                   oninput="_validateLumpReleaseVersion()"
+                   onkeydown="if(event.key==='Enter')_confirmLumpRelease()">
+        </label>
+        <div id="lumpReleaseVersionError" class="lump-release-version-error" style="display:none;"></div>
+        <label class="modal-label">
+            Release notes <span style="color:var(--text-secondary);font-weight:normal;">(optional)</span>
+            <textarea id="lumpReleaseNotes" class="modal-input lump-release-notes-ta" rows="3"
+                      placeholder="Describe what changed in this version&#x2026;"></textarea>
+        </label>
+        <div class="modal-buttons">
+            <button class="btn" onclick="_cancelLumpRelease()">Cancel</button>
+            <button id="lumpReleaseConfirmBtn" class="btn lump-release-confirm" disabled
+                    onclick="_confirmLumpRelease()">Save &amp; Download</button>
+        </div>
+    </div>
 </div>
 </body>
 </html>

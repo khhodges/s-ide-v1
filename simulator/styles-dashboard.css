@@ -5308,4 +5308,59 @@ a.next-step-link:hover {
     padding-top: 0.35rem;
 }
 
+/* ── LUMP Release popup ──────────────────────────────────────────────────── */
+.lump-release-dialog { max-width: 480px; }
+.lump-release-absname {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.3rem;
+    word-break: break-all;
+}
+.lump-release-stats {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-family: 'Courier New', monospace;
+    margin-bottom: 0.85rem;
+}
+.lump-release-existing {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.65rem;
+    border-radius: 4px;
+    margin-bottom: 0.9rem;
+}
+.lump-release-existing.has-version {
+    background: rgba(245,158,11,0.10);
+    border: 1px solid rgba(245,158,11,0.30);
+    color: var(--church-gold, #f59e0b);
+}
+.lump-release-existing.no-version {
+    background: rgba(90,90,90,0.15);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+}
+.lump-release-version-error {
+    font-size: 0.78rem;
+    color: #ef4444;
+    margin: -0.3rem 0 0.6rem;
+}
+.lump-release-notes-ta {
+    font-family: inherit;
+    resize: vertical;
+    min-height: 58px;
+}
+.lump-release-confirm {
+    background: var(--church-gold, #f59e0b);
+    color: #111;
+    font-weight: 700;
+    border: none;
+}
+.lump-release-confirm:not(:disabled):hover { filter: brightness(1.12); }
+.lump-release-confirm:disabled {
+    background: var(--border);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
 
