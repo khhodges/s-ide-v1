@@ -764,6 +764,7 @@ function hideRunPopover() {
 
 function _applyPendingSimLoad() {
     if (!_pendingSimLoad || !lastAssembledWords || !lastAssembledWords.length) return;
+    console.log('[applyPendingSimLoad] v20260513h caps=', JSON.stringify(lastAssembledCapabilities));
     sim.loadProgram(lastAssembledWords, 0);
     // Skip past the lump header (word 0) and method table so PC starts at the
     // first real instruction, matching _autoLoadDefaultProgram() on boot/reset.
