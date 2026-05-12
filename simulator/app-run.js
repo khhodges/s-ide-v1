@@ -310,11 +310,15 @@ function assembleAndLoad() {
             }
         }
         if (result.capabilities && result.capabilities.length > 0) {
-            listing += '\n; c-list\n';
+            const _cc = result.capabilities.length;
+            listing += `\n\u25C6 c-list  (${_cc} entr${_cc !== 1 ? 'ies' : 'y'})\n`;
             for (let i = 0; i < result.capabilities.length; i++) {
                 const cap = result.capabilities[i];
-                const capName = typeof cap === 'string' ? cap : (cap.name || String(cap));
-                listing += `;   row ${i + 1}  ${capName}\n`;
+                const capName   = typeof cap === 'string' ? cap : (cap.name || String(cap));
+                const capRights = typeof cap === 'string' ? [] : (cap.rights || []);
+                const permsStr  = capRights.length > 0 ? capRights.join('') : '\u2014';
+                const typeStr   = _clistTypeLabel(capName);
+                listing += `  \u25C6 [${i + 1}]  ${capName.padEnd(14)}${typeStr.padEnd(8)}${permsStr}\n`;
             }
         }
         if (con) con.textContent = listing;
@@ -374,11 +378,15 @@ function assembleAndLoad() {
         listing += cmt ? `${mnem.padEnd(40)}; ${cmt}\n` : `${mnem}\n`;
     }
     if (result.capabilities && result.capabilities.length > 0) {
-        listing += '\n; c-list\n';
+        const _cc2 = result.capabilities.length;
+        listing += `\n\u25C6 c-list  (${_cc2} entr${_cc2 !== 1 ? 'ies' : 'y'})\n`;
         for (let i = 0; i < result.capabilities.length; i++) {
             const cap = result.capabilities[i];
-            const capName = typeof cap === 'string' ? cap : (cap.name || String(cap));
-            listing += `;   row ${i + 1}  ${capName}\n`;
+            const capName   = typeof cap === 'string' ? cap : (cap.name || String(cap));
+            const capRights = typeof cap === 'string' ? [] : (cap.rights || []);
+            const permsStr  = capRights.length > 0 ? capRights.join('') : '\u2014';
+            const typeStr   = _clistTypeLabel(capName);
+            listing += `  \u25C6 [${i + 1}]  ${capName.padEnd(14)}${typeStr.padEnd(8)}${permsStr}\n`;
         }
     }
     if (con) con.textContent = listing;
@@ -388,6 +396,38 @@ function assembleAndLoad() {
     if (saveBtn) saveBtn.disabled = false;
 
     updateDashboard();
+}
+
+function _clistTypeLabel(name) {
+    if (typeof _lumpsCache !== 'undefined' && Array.isArray(_lumpsCache)) {
+        const lump = _lumpsCache.find(l =>
+            (l.abstraction && l.abstraction === name) || (l.name && l.name === name));
+        if (lump) {
+            const ct = (lump.content_type || '').toLowerCase();
+            const lt = (lump.lump_type   || '').toLowerCase();
+            if (lt === 'namespace')              return 'NS';
+            if (ct.startsWith('io'))             return 'IO';
+            if (ct.startsWith('math') || ct.startsWith('num')) return 'Math';
+            if (ct.startsWith('mem'))            return 'Mem';
+            if (ct.startsWith('str') || ct.startsWith('text')) return 'Text';
+            if (ct.startsWith('sys') || ct.startsWith('boot')) return 'Sys';
+            if (ct.startsWith('crypto') || ct.startsWith('sec')) return 'Sec';
+            if (ct) {
+                const first = ct.split('/')[0];
+                return first.charAt(0).toUpperCase() + first.slice(1);
+            }
+            return 'Abstr';
+        }
+    }
+    const reg = (typeof ChurchAssembler !== 'undefined') ? ChurchAssembler._sharedRegistry : null;
+    if (reg) {
+        const abs = reg.getByName(name);
+        if (abs !== null) {
+            const layerLabels = ['HW', 'Mem', 'Mint', 'IO', 'Math', 'Data', 'App', 'User', 'Sys'];
+            return layerLabels[abs.layer] || 'Abstr';
+        }
+    }
+    return '\u2014';
 }
 
 function _nsOwnerOf(addr) {
