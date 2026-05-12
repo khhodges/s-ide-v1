@@ -7837,6 +7837,7 @@ function getBoardShortLabel(board) {
     if (board === 'ti60-f225') return 'Ti60 F225';
     if (board === 'tang-nano-20k-iot') return 'Tang Nano IoT';
     if (board === 'tang-nano-9k') return 'Tang Nano 9K';
+    if (board === 'wukong-xc7a100t') return 'Wukong XC7A100T';
     return 'Tang Nano 20K';
 }
 
@@ -7854,6 +7855,7 @@ function getBoardLabel(board) {
     if (board === 'ti60-f225') return 'Efinix Ti60 F225';
     if (board === 'tang-nano-20k-iot') return 'Sipeed Tang Nano 20K IoT';
     if (board === 'tang-nano-9k') return 'Sipeed Tang Nano 9K (IoT)';
+    if (board === 'wukong-xc7a100t') return 'QMTECH Wukong Artix-7 XC7A100T';
     return 'Sipeed Tang Nano 20K';
 }
 
@@ -7932,6 +7934,14 @@ function _renderBuildNextSteps(isTi60, board) {
             'Run: chmod +x flash.sh && ./flash.sh',
             'flash.sh runs yosys → nextpnr-himbaechel → gowin_pack → openFPGALoader',
         ];
+    } else if (board === 'wukong-xc7a100t') {
+        steps = [
+            'Install Vivado 2020.x or later (Xilinx / AMD)',
+            'Extract church-wukong-package.zip to any folder',
+            'In the Vivado Tcl Console: cd /path/to/extracted && source wukong_xc7a100t.tcl',
+            'The script creates the project, runs synthesis + implementation, writes the bitstream',
+            'Tools \u2192 Hardware Manager \u2192 Open Target \u2192 Program Device \u2192 select church_wukong_xc7a100t.bit',
+        ];
     } else {
         steps = [
             'Install OSS CAD Suite (oss-cad-suite-build on GitHub)',
@@ -7969,6 +7979,8 @@ function updateHardwarePanelLabel() {
         info.textContent = 'Output: church_ti60_f225.v + church_ti60_f225.edif + ti60_f225.isf  \u2014  open in Efinity IDE (Titanium project)';
     } else if (board === 'tang-nano-9k') {
         info.textContent = 'Output: church_tang_nano_9k.il + tang_nano_9k.cst  \u2014  IoT profile (reduced ISA); run flash.sh with OSS CAD Suite';
+    } else if (board === 'wukong-xc7a100t') {
+        info.textContent = 'Output: church_wukong_xc7a100t.v + wukong_xc7a100t.xdc + wukong_xc7a100t.tcl  \u2014  source tcl in Vivado to build + program';
     } else {
         info.textContent = 'Output: church_tang_nano_20k.v + Makefile + tang_nano_20k.cst  \u2014  run make pnr pack, then make prog';
     }
@@ -9323,7 +9335,10 @@ async function downloadFPGAPackage() {
     const board = getSelectedBoard();
     const boardLabel = getBoardLabel(board);
     const isTi60 = (board === 'ti60-f225');
-    const zipName = isTi60 ? 'church-ti60-package.zip' : (board === 'tang-nano-9k' ? 'church-nano-9k-package.zip' : 'church-nano-package.zip');
+    const zipName = isTi60 ? 'church-ti60-package.zip'
+        : board === 'tang-nano-9k'    ? 'church-nano-9k-package.zip'
+        : board === 'wukong-xc7a100t' ? 'church-wukong-package.zip'
+        : 'church-nano-package.zip';
 
     const btn = document.getElementById('btnFPGAPkg');
     if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Downloading...'; }
