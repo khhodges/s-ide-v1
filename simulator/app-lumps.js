@@ -2847,6 +2847,13 @@ async function openLumpInEditor(token) {
                 '; ' + lumpName + '  ' + nsTag + addrStr +
                 '(' + codeLimit + ' word' + (codeLimit !== 1 ? 's' : '') + ')'
             ];
+            // Inject capabilities { } block from sidecar metadata when available.
+            var _lCaps = lump.capabilities;
+            if (Array.isArray(_lCaps) && _lCaps.length > 0) {
+                var _capNames = _lCaps.map(function(c) { return c.name; }).filter(Boolean).join(', ');
+                disasmLines.push('capabilities { ' + _capNames + ' }');
+                disasmLines.push('');
+            }
             if (trimmed.length === 0) {
                 disasmLines.push('; (empty lump)');
             } else if (typeof ChurchAssembler !== 'undefined') {
