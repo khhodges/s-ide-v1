@@ -5157,7 +5157,7 @@ HALT`,
 ; Abstraction:  Salvation
 ; Description:  First callable abstraction: proves LOAD+TPERM+CALL works
 ; Author:       Church Machine Educational Platform
-; Version:      1.0
+; Version:      1.1
 ; Created:      2026-05-09
 ; Language:     Assembly
 ; Dependencies: None
@@ -5177,14 +5177,29 @@ HALT`,
 ;   3. LAMBDA works (Church reduction)
 ; Then transitions to Navana (does not RETURN).
 ; Navana runs indefinitely as namespace controller.
+;
+; ── Dot-notation calling style (recommended) ────────────────
+;
+;   LOAD CR0, Salvation       ; named load  — resolves NS[4] by name
+;   CALL Salvation.main       ; dot-notation — assembler encodes offset for you
+;
+; Equivalent raw form (slot / offset numbers explicit):
+;
+;   LOAD CR0, CR6, 4          ; CR6 = boot C-List; slot 4 = Salvation
+;   CALL CR0, 0xF             ; 0xF = method-offset index for main
+;
+; Both forms produce identical machine code.  Use dot-notation in
+; new code — it stays correct even if NS slots are renumbered.
 ; ============================================
 
-; --- Load Salvation abstraction ---
-LOAD CR0, CR6, 4       ; CR0 = Salvation (E)
+; --- Load Salvation abstraction (dot-notation) ---
+LOAD CR0, Salvation    ; CR0 = Salvation (E)  — equiv: LOAD CR0, CR6, 4
 TPERM CR0, E           ; Verify E permission
 
-; --- CALL Salvation ---
-CALL CR0, 0xF          ; Direct mode: CR0 is the E-GT — enter Salvation
+; --- CALL Salvation (dot-notation) ---
+; CALL AbstrName.Method resolves the method offset automatically.
+; Equivalent raw form: CALL CR0, 0xF
+CALL Salvation.main    ; enter Salvation — dot-notation dispatches main (0xF)
 ; Salvation transitions to Navana (no RETURN)
 ; Navana runs indefinitely managing all abstractions
 
@@ -5388,7 +5403,7 @@ HALT`,
 ; Abstraction:  LedControl
 ; Description:  LED control — Section 1: LED blink (Ti60 F225 nucleus) / Section 2: Turing DR Test (full ISA exercise)
 ; Author:       Church Machine Educational Platform
-; Version:      1.1
+; Version:      1.2
 ; Created:      2026-05-09
 ; Language:     Assembly
 ; Dependencies: LED device (Abstract GT — boot C-List slot 8)
@@ -5414,19 +5429,31 @@ capabilities { LED0 }
 ;    LED strip: LED0 (green) toggles with each
 ;    DWRITE, exactly as on the physical board.
 ;
+; ── Dot-notation load style (recommended) ───────────────────
+;
+;   LOAD CR3, LED0            ; named load — resolves by device name
+;
+; Equivalent raw form (slot number explicit):
+;
+;   LOAD CR3, CR6, 8          ; CR6 = boot C-List; slot 8 = LED0
+;
+; Both produce identical machine code.  The named form (used here)
+; is preferred: it stays correct if the boot C-List is renumbered.
+;
+; LED0 is a device GT (W-perm only) — it is accessed with DWRITE,
+; not CALL.  Device GTs have no callable methods, so dot-notation
+; CALL does not apply here; dot-notation LOAD is still recommended.
+;
 ; Path: LOAD CR3, LED0   → resolves LED0 → C-List[8] → LED_DEV GT
 ;       DWRITE DR1, CR3, 0 → LED0 on
 ;       DWRITE DR0, CR3, 0 → LED0 off
-;
-; LED0 is an Abstract GT at boot C-List slot 8 (W-perm).
-; LOAD CR3, LED0 is equivalent to LOAD CR3, CR6, 8 and
-; runs identically to the FPGA binary.
 ;
 ; On the FPGA (50 MHz): 380 × 16383 iters ≈ 0.5 s
 ; per phase → 1 Hz blink total.
 ; ============================================
 
-; --- Load LED0 Abstract GT from the boot C-List ---
+; --- Load LED0 Abstract GT from the boot C-List (dot-notation) ---
+; Named load: equiv. to raw form  LOAD CR3, CR6, 8
 LOAD CR3, LED0            ; LED0 Abstract GT → CR3 (boot C-List slot 8)
 
 ; --- DR1 = 1 (the "on" value) ---
