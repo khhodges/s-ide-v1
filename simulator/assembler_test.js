@@ -2404,14 +2404,14 @@ const TP_INSTR_RSV = ((6 << 27) | (0xE << 23) | (0 << 19) | 11) >>> 0;
 // opcode=6, cond=AL=0xE, crDst=0, crSrc=1, imm=0x7FFF
 const SM_MODE2_INSTR = ((6 << 27) | (0xE << 23) | (0 << 19) | (1 << 15) | 0x7FFF) >>> 0;
 
-// GT with R,W,E permissions, Inform type, NS index 0, seq 0
-// permBits: R=bit0=1, W=bit1=1, E=bit5=1 → 0b100011=0x23; shifted to [31:25]: 0x23<<25=0x46000000
+// GT with R,W,X permissions (full Turing domain), Inform type, NS index 0, seq 0
+// permBits: R=bit0=1, W=bit1=1, X=bit2=1 → 0b000111=0x07; shifted to [31:25]: 0x07<<25=0x0E000000
 // Inform type: bit23=1 → 0x00800000
-const SM_GT_RWE = ((0x23 << 25) | (0x01 << 23)) >>> 0;
+const SM_GT_RWX = ((0x07 << 25) | (0x01 << 23)) >>> 0;
 
-// GT with R,E permissions (subset of RWE), Inform type, NS index 1, seq 0
-// permBits: R=1, E=1 → 0b100001=0x21; 0x21<<25=0x42000000; index=1
-const SM_GT_RE_IDX1 = ((0x21 << 25) | (0x01 << 23) | 1) >>> 0;
+// GT with R,W permissions (Turing subset), Inform type, NS index 1, seq 0
+// permBits: R=1, W=1 → 0b000011=0x03; 0x03<<25=0x06000000; index=1
+const SM_GT_RW_IDX1 = ((0x03 << 25) | (0x01 << 23) | 1) >>> 0;
 
 // GT with R,W permissions, Inform type, NS index 0, seq 0
 // permBits: R=1, W=1 → 0b000011=0x03; 0x03<<25=0x06000000
@@ -2421,27 +2421,24 @@ const SM_GT_RW = ((0x03 << 25) | (0x01 << 23)) >>> 0;
 // permBits: R=1, W=1, X=1 → 0b000111=0x07; 0x07<<25=0x0E000000; index=1
 const SM_GT_RWX_IDX1 = ((0x07 << 25) | (0x01 << 23) | 1) >>> 0;
 
-// GT with R,W,E permissions, Inform type, NS index 1, seq 0 (for identity test crSrc)
-const SM_GT_RWE_IDX1 = ((0x23 << 25) | (0x01 << 23) | 1) >>> 0;
-
-// SM1: Valid attenuation (strict subset) — CRd={R,W,E}, CRs={R,E} → Z=1, attenuated GT written
+// SM1: Valid attenuation (strict subset) — CRd={R,W,X}, CRs={R,W} → Z=1, attenuated GT written
 {
     const sim = new ChurchSimulator();
     sim.memory[0] = SM_MODE2_INSTR;
-    sim.cr[0] = { word0: SM_GT_RWE, word1: 0, word2: 0 };       // source: R,W,E
-    sim.cr[1] = { word0: SM_GT_RE_IDX1, word1: 0, word2: 0 };   // requested: R,E (subset)
+    sim.cr[0] = { word0: SM_GT_RWX, word1: 0, word2: 0 };       // source: R,W,X (Turing-pure)
+    sim.cr[1] = { word0: SM_GT_RW_IDX1, word1: 0, word2: 0 };   // requested: R,W (strict subset)
     sim.step();
     assert('SM1 valid attenuation: Z=1', sim.flags.Z === true,  `Z=${sim.flags.Z}`);
     assert('SM1 valid attenuation: N=0', sim.flags.N === false, `N=${sim.flags.N}`);
     assert('SM1 valid attenuation: C=0', sim.flags.C === false, `C=${sim.flags.C}`);
     assert('SM1 valid attenuation: V=0', sim.flags.V === false, `V=${sim.flags.V}`);
     assert('SM1 valid attenuation: not halted', sim.halted === false, `halted=${sim.halted}`);
-    // CR0 should now hold a GT with R,E permissions and the source's NS index (0), not index 1
+    // CR0 should now hold a GT with R,W permissions and the source's NS index (0), not index 1
     const sim1 = new ChurchSimulator();
     const newGTParsed = sim1.parseGT(sim.cr[0].word0);
     assert('SM1 attenuated GT: R=1', newGTParsed.permissions.R === 1, `R=${newGTParsed.permissions.R}`);
-    assert('SM1 attenuated GT: W=0', newGTParsed.permissions.W === 0, `W=${newGTParsed.permissions.W}`);
-    assert('SM1 attenuated GT: E=1', newGTParsed.permissions.E === 1, `E=${newGTParsed.permissions.E}`);
+    assert('SM1 attenuated GT: W=1', newGTParsed.permissions.W === 1, `W=${newGTParsed.permissions.W}`);
+    assert('SM1 attenuated GT: X=0', newGTParsed.permissions.X === 0, `X=${newGTParsed.permissions.X}`);
     assert('SM1 attenuated GT: NS index preserved (0)', newGTParsed.index === 0, `index=${newGTParsed.index}`);
 }
 
@@ -2464,12 +2461,12 @@ const SM_GT_RWE_IDX1 = ((0x23 << 25) | (0x01 << 23) | 1) >>> 0;
         `CR0.word0=0x${(sim.cr[0].word0>>>0).toString(16)} expected=0x${(srcWordBefore>>>0).toString(16)}`);
 }
 
-// SM3: Identity attenuation (same permissions) — CRd={R,W,E}, CRs={R,W,E} → Z=1 (identity is valid)
+// SM3: Identity attenuation (same permissions) — CRd={R,W}, CRs={R,W} → Z=1 (identity is valid)
 {
     const sim = new ChurchSimulator();
     sim.memory[0] = SM_MODE2_INSTR;
-    sim.cr[0] = { word0: SM_GT_RWE, word1: 0, word2: 0 };       // source: R,W,E (NS index 0)
-    sim.cr[1] = { word0: SM_GT_RWE_IDX1, word1: 0, word2: 0 };  // requested: R,W,E (same perms, NS index 1)
+    sim.cr[0] = { word0: SM_GT_RW, word1: 0, word2: 0 };        // source: R,W (NS index 0)
+    sim.cr[1] = { word0: SM_GT_RW_IDX1, word1: 0, word2: 0 };   // requested: R,W (same perms, NS index 1)
     sim.step();
     assert('SM3 identity attenuation: Z=1', sim.flags.Z === true,  `Z=${sim.flags.Z}`);
     assert('SM3 identity attenuation: N=0', sim.flags.N === false, `N=${sim.flags.N}`);
@@ -2482,7 +2479,7 @@ const SM_GT_RWE_IDX1 = ((0x23 << 25) | (0x01 << 23) | 1) >>> 0;
     assert('SM3 identity: NS index preserved from source (0)', newGT3.index === 0, `index=${newGT3.index}`);
     assert('SM3 identity: R=1', newGT3.permissions.R === 1, `R=${newGT3.permissions.R}`);
     assert('SM3 identity: W=1', newGT3.permissions.W === 1, `W=${newGT3.permissions.W}`);
-    assert('SM3 identity: E=1', newGT3.permissions.E === 1, `E=${newGT3.permissions.E}`);
+    assert('SM3 identity: X=0', newGT3.permissions.X === 0, `X=${newGT3.permissions.X}`);
 }
 
 // SM4: NULL source GT — CRd=NULL (word0=0) → Z=0, N=1, not halted
@@ -2490,7 +2487,7 @@ const SM_GT_RWE_IDX1 = ((0x23 << 25) | (0x01 << 23) | 1) >>> 0;
     const sim = new ChurchSimulator();
     sim.memory[0] = SM_MODE2_INSTR;
     sim.cr[0] = { word0: 0, word1: 0, word2: 0 };               // source: NULL GT
-    sim.cr[1] = { word0: SM_GT_RE_IDX1, word1: 0, word2: 0 };   // requested: R,E (irrelevant)
+    sim.cr[1] = { word0: SM_GT_RW_IDX1, word1: 0, word2: 0 };   // requested: R,W (irrelevant — NULL source exits early)
     sim.step();
     assert('SM4 NULL source GT: Z=0', sim.flags.Z === false, `Z=${sim.flags.Z}`);
     assert('SM4 NULL source GT: N=1', sim.flags.N === true,  `N=${sim.flags.N}`);
