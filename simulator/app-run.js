@@ -779,107 +779,124 @@ function _applyPendingSimLoad() {
     const slot2Base  = sim.bootComplete ? (sim.memory[abstrBase2] || (2 * sim.SLOT_SIZE)) : 0;
     const progBase   = (slot3Base >= 0x0400) ? slot3Base + 1 : slot2Base;
     sim.programBaseAddr = progBase;
-    // ── LAZY-LOAD c-list: cc === 0 OR user-compiled program → inject full DEMO_CLIST ──
-    // Boot.Abstr boots with cc=0 when boot_image.py determined that the saved
-    // lump's c-list is incomplete (e.g. assembler-generated cc=1 placeholder
-    // whose code references slots ≥ cc).  That path strips cc → 0 so this guard
-    // fires exactly once on first Run, promoting Boot.Abstr to cc=18 with the
-    // hardware DEMO_CLIST (LED[0..5], UART, BTN, Timer, SlideRule) placed in the
-    // FREE region of the 64-word lump (words 46–63, above the code at 1–17).
+    // ── C-list injection ──────────────────────────────────────────────────────
     //
-    // POLA-finalized lumps: boot_image.py embeds the POLA-compacted c-list with
-    // its actual cc (e.g. cc=3 for three surviving GTs).  The clistCount === 0
-    // guard does NOT fire for those, preserving the POLA slot-index mapping.
-    // Using clistCount < 18 here would overwrite the POLA c-list with the full
-    // DEMO_CLIST at its original positions, corrupting POLA-rewritten slot indices.
+    // CASE A — Non-user lump, cc=0 (boot_image.py left c-list empty):
+    //   Inject the full 18-entry DEMO_CLIST at its canonical positions
+    //   (LED0→slot 8, UART→14, etc.) and promote CR6.
     //
-    // User-compiled programs (lastAssembledCapabilities non-empty) also need the
-    // DEMO_CLIST injected regardless of the compiled cc value.  The assembler emits
-    // LOAD CR, CR6[N] using the NS-slot number N as the c-list offset (e.g. LED0 →
-    // slot 8).  A two-entry cc=2 c-list only spans positions 0–1, so LOAD CR6[8]
-    // would fail the mLoad range check and cause a fault-reset ("stale values").
-    // Forcing the DEMO_CLIST injection expands the c-list to 18 entries (covering
-    // all device slots 0–17); the named-abstraction injection below then extends
-    // further for slots ≥ 18 (e.g. Tunnel at slot 31).
+    // CASE B — User-compiled program with a  capabilities { }  block:
+    //   The assembler now emits  CR6[0], CR6[1], CR6[2] …  matching the
+    //   0-based declaration order.  Mirror that layout at runtime by writing
+    //   each capability's GT at its block position (index i):
+    //     • Hardware device (LED0–5, UART, BTN, SlideRule, Timer):
+    //         copy GT from demoClistGTs at the device's fixed DEMO_CLIST slot.
+    //     • NS-based abstraction (e.g. Tunnel at NS slot 31):
+    //         create an E-GT (with any declared rights) pointing to that slot.
+    //     • Null-GT row (e.g. Mum — no NS entry): write 0.
+    //   cc = lastAssembledCapabilities.length.  The mLoad range check passes
+    //   because the code only ever accesses offsets 0 … cc-1.
     const _hasUserCaps = !!(lastAssembledCapabilities && lastAssembledCapabilities.length > 0);
+
+    // Hardware device name → demoClistGTs array index
+    const _devSlotMap = {
+        LED0: 8, LED1: 9, LED2: 10, LED3: 11, LED4: 12, LED5: 13,
+        UART: 14, BTN: 15, SlideRule: 16, Timer: 17, Display: 14,
+    };
+
     if (sim.bootComplete && sim.demoClistGTs && sim.demoClistGTs.length > 0) {
         const BOOT_ABSTR_SLOT = 3;
-        const nsBase  = sim.NS_TABLE_BASE + BOOT_ABSTR_SLOT * sim.NS_ENTRY_WORDS;
-        const w1f     = sim.parseNSWord1(sim.memory[nsBase + 1]);
-        if (w1f.clistCount === 0 || _hasUserCaps) {
-            // B:06 cc=0 leaves CR6 NULL (correct: no c-list at HALT).
-            // Read lumpBase from NS entry word0 directly — do NOT use cr[6].word1 (= 0).
-            const lumpBase  = sim.memory[nsBase] >>> 0;     // NS word0 = physical lump base (0x180)
-            const lumpHdr   = sim.memory[lumpBase] >>> 0;
-            const hdrParsed = sim.parseLumpHeader(lumpHdr);
-            const SLOT_SIZE = hdrParsed.lumpSize;           // 64 words for default Boot.Abstr
-            const cc        = sim.demoClistGTs.length;      // 18 = DEMO_CLIST_SIZE
-            const clistBase = lumpBase + SLOT_SIZE - cc;    // 0x1AE — safely above code (1–17)
-            // Write DEMO_CLIST GTs into the free region (words 46–63)
+        const nsBase    = sim.NS_TABLE_BASE + BOOT_ABSTR_SLOT * sim.NS_ENTRY_WORDS;
+        const w1f       = sim.parseNSWord1(sim.memory[nsBase + 1]);
+        const lumpBase  = sim.memory[nsBase] >>> 0;
+        const lumpHdr   = sim.memory[lumpBase] >>> 0;
+        const hdrParsed = sim.parseLumpHeader(lumpHdr);
+        const SLOT_SIZE = hdrParsed.lumpSize;   // 64 words for default Boot.Abstr
+
+        if (_hasUserCaps) {
+            // ── CASE B: block-position injection ────────────────────────────
+            const cc        = lastAssembledCapabilities.length;
+            const clistBase = lumpBase + SLOT_SIZE - cc;
+
             for (let i = 0; i < cc; i++) {
-                sim.memory[clistBase + i] = sim.demoClistGTs[i] >>> 0;
+                const cap     = lastAssembledCapabilities[i];
+                const capName = (typeof cap === 'string' ? cap : (cap.name || '')).trim();
+                const rights  = typeof cap === 'string' ? [] : (cap.rights || []);
+                if (!capName) { sim.memory[clistBase + i] = 0; continue; }
+
+                // Hardware device — copy GT from demoClistGTs at its device slot
+                const devKey = Object.keys(_devSlotMap)
+                    .find(k => k.toLowerCase() === capName.toLowerCase());
+                if (devKey !== undefined) {
+                    sim.memory[clistBase + i] =
+                        (sim.demoClistGTs[_devSlotMap[devKey]] || 0) >>> 0;
+                    continue;
+                }
+
+                // NS-based abstraction — create GT pointing to its NS slot
+                let nsIdx = -1;
+                for (const [idx, lbl] of Object.entries(sim.nsLabels)) {
+                    if (lbl.toUpperCase() === capName.toUpperCase()) {
+                        nsIdx = parseInt(idx); break;
+                    }
+                }
+                if (nsIdx >= 0) {
+                    const perms = {R:0, W:0, X:0, L:0, S:0, E:1};
+                    for (const r of rights) {
+                        if      (r === 'R') perms.R = 1;
+                        else if (r === 'W') perms.W = 1;
+                        else if (r === 'X') perms.X = 1;
+                        else if (r === 'E') perms.E = 1;
+                    }
+                    sim.memory[clistBase + i] =
+                        sim.createGT(0, nsIdx, perms, 1) >>> 0;
+                    continue;
+                }
+
+                // Null-GT row (no device, no NS entry — e.g. Mum)
+                sim.memory[clistBase + i] = 0;
             }
+
             // Patch lump header cc (bits [7:0])
             sim.memory[lumpBase] = ((lumpHdr & ~0xFF) | (cc & 0xFF)) >>> 0;
-            // Patch NS entry clistCount (bits [25:17] of word1)
-            const nsWord1Updated = sim.packNSWord1(
+            // Patch NS entry clistCount
+            const nsWord1B = sim.packNSWord1(
                 w1f.limit, w1f.b, w1f.f, w1f.g, w1f.chainable, w1f.gtType, cc
             );
-            sim.memory[nsBase + 1] = nsWord1Updated;
-            // Build CR6 from scratch with E-GT, correct c-list base, and updated NS word1.
-            // CR6 was NULL at HALT (cc=0 CLOOMC design); promote it now the c-list exists.
-            const cr6GT = sim.createGT(0, BOOT_ABSTR_SLOT, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
+            sim.memory[nsBase + 1] = nsWord1B;
+            // Rebuild CR6 with updated c-list base and count
+            const cr6GTb = sim.createGT(0, BOOT_ABSTR_SLOT, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
             sim.cr[6] = {
-                word0: cr6GT,
+                word0: cr6GTb,
                 word1: clistBase >>> 0,
-                word2: nsWord1Updated >>> 0,
+                word2: nsWord1B >>> 0,
                 word3: sim.memory[nsBase + 2] >>> 0,
                 m: 0,
             };
-        }
-    }
-    // ── Named-abstraction capabilities (user capabilities { } block) ─────────────
-    // Capabilities declared in the source  capabilities { LED0 RW, Tunnel }  are
-    // stored in lastAssembledCapabilities as {name, rights} objects (from the
-    // assembler's _parseCapItem).  Device-class capabilities (LED0–LED5, UART,
-    // BTN, Timer) have no NS slot and are already in place from the DEMO_CLIST
-    // injection above, so they resolve to nsIdx = -1 here and are skipped.
-    //
-    // Non-device abstractions (e.g. Tunnel at NS slot 31) are NOT in the 18-entry
-    // DEMO_CLIST.  Write their E-GT at clistBase + nsIdx so the LOAD CR, CR6[nsIdx]
-    // instruction finds it at the correct offset.  Then extend clistCount to cover
-    // the largest nsIdx used, keeping the mLoad range check happy.
-    if (sim.bootComplete && _hasUserCaps) {
-        const BOOT_ABSTR_SLOT = 3;
-        const nsBase    = sim.NS_TABLE_BASE + BOOT_ABSTR_SLOT * sim.NS_ENTRY_WORDS;
-        const clistBase = sim.cr[6].word1;
-        let   maxNsIdx  = -1;
-        for (let ci = 0; ci < lastAssembledCapabilities.length; ci++) {
-            const cap     = lastAssembledCapabilities[ci];
-            const capName = typeof cap === 'string' ? cap : (cap.name || '');
-            if (!capName) continue;
-            let nsIdx = -1;
-            for (const [idx, lbl] of Object.entries(sim.nsLabels)) {
-                if (lbl.toUpperCase() === capName.toUpperCase()) { nsIdx = parseInt(idx); break; }
+
+        } else if (w1f.clistCount === 0) {
+            // ── CASE A: non-user lump with cc=0 → inject full DEMO_CLIST ────
+            // Boot.Abstr boots with cc=0 when boot_image.py left the c-list
+            // incomplete.  Promote to cc=18 using the hardware DEMO_CLIST,
+            // placed in the free region (words 46–63, above code at 1–17).
+            const cc        = sim.demoClistGTs.length;      // 18
+            const clistBase = lumpBase + SLOT_SIZE - cc;    // word 46 (0x1AE)
+            for (let i = 0; i < cc; i++) {
+                sim.memory[clistBase + i] = sim.demoClistGTs[i] >>> 0;
             }
-            if (nsIdx >= 0) {
-                const gt = sim.createGT(0, nsIdx, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
-                sim.memory[clistBase + nsIdx] = gt;
-                if (nsIdx > maxNsIdx) maxNsIdx = nsIdx;
-            }
-        }
-        // Extend clistCount if any named abstraction lives beyond the current window.
-        if (maxNsIdx >= 0) {
-            const w1fNow      = sim.parseNSWord1(sim.memory[nsBase + 1]);
-            const neededCount = maxNsIdx + 1;
-            if (neededCount > w1fNow.clistCount) {
-                const nsWord1Ext = sim.packNSWord1(
-                    w1fNow.limit, w1fNow.b, w1fNow.f, w1fNow.g,
-                    w1fNow.chainable, w1fNow.gtType, neededCount
-                );
-                sim.memory[nsBase + 1] = nsWord1Ext;
-                sim.cr[6] = { ...sim.cr[6], word2: nsWord1Ext };
-            }
+            sim.memory[lumpBase] = ((lumpHdr & ~0xFF) | (cc & 0xFF)) >>> 0;
+            const nsWord1A = sim.packNSWord1(
+                w1f.limit, w1f.b, w1f.f, w1f.g, w1f.chainable, w1f.gtType, cc
+            );
+            sim.memory[nsBase + 1] = nsWord1A;
+            const cr6GTa = sim.createGT(0, BOOT_ABSTR_SLOT, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
+            sim.cr[6] = {
+                word0: cr6GTa,
+                word1: clistBase >>> 0,
+                word2: nsWord1A >>> 0,
+                word3: sim.memory[nsBase + 2] >>> 0,
+                m: 0,
+            };
         }
     }
     _pendingSimLoad = false;
