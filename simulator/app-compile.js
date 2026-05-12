@@ -671,9 +671,11 @@ function compileDraftAssembly(source, con) {
     draft += `  Instruction Listing:\n`;
     draft += `═══════════════════════════════════════════════════\n\n`;
 
+    const _slotNames = ChurchAssembler.buildSlotNames(caps,
+        (typeof sim !== 'undefined' && sim) ? sim.nsLabels : null);
     for (let i = 0; i < words.length; i++) {
         const hex = '0x' + words[i].toString(16).padStart(8, '0');
-        const dis = assembler.disassemble(words[i]);
+        const dis = assembler.disassemble(words[i], _slotNames);
         draft += `  ${i.toString().padStart(4)}: ${hex}  ${dis}\n`;
     }
 

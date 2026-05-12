@@ -1285,7 +1285,33 @@ class ChurchAssembler {
         return { name, rights };
     }
 
-    static decompileWords(trimmedWords) {
+    // Build a slot-number → capability-name map suitable for passing to disassemble().
+    // Always includes the hardware-fixed DEMO_CLIST positions (LED0–LED5 at 8–13,
+    // UART at 14, BTN at 15, SlideRule at 16, Timer at 17).
+    // caps: array of {name} objects or strings from an assembled program's capability list.
+    // nsLabels: sim.nsLabels — maps NS slot index → label string; used to resolve
+    //   non-device abstractions (e.g. Tunnel at slot 31).
+    static buildSlotNames(caps, nsLabels) {
+        const slotNames = {
+            8: 'LED0', 9: 'LED1', 10: 'LED2', 11: 'LED3', 12: 'LED4', 13: 'LED5',
+            14: 'UART', 15: 'BTN', 16: 'SlideRule', 17: 'Timer',
+        };
+        if (caps && nsLabels) {
+            for (const cap of caps) {
+                const name = typeof cap === 'string' ? cap : (cap.name || '');
+                if (!name) continue;
+                for (const [idx, lbl] of Object.entries(nsLabels)) {
+                    if (lbl && lbl.toUpperCase() === name.toUpperCase()) {
+                        slotNames[parseInt(idx)] = name;
+                        break;
+                    }
+                }
+            }
+        }
+        return slotNames;
+    }
+
+    static decompileWords(trimmedWords, slotNames) {
         const _condNames = ['EQ','NE','CS','CC','MI','PL','VS','VC','HI','LS','GE','LT','GT','LE','','NV'];
         const asm = new ChurchAssembler();
 
@@ -1321,16 +1347,21 @@ class ChurchAssembler {
                 if (labelName !== undefined) {
                     lines.push(`${mnemonic}  ${labelName}`);
                 } else {
-                    lines.push(asm.disassemble(word));
+                    lines.push(asm.disassemble(word, slotNames));
                 }
             } else {
-                lines.push(word === 0 ? 'NOP' : asm.disassemble(word));
+                lines.push(word === 0 ? 'NOP' : asm.disassemble(word, slotNames));
             }
         }
         return lines;
     }
 
-    disassemble(word) {
+    // Optional slotNames: plain object mapping c-list slot number → capability name.
+    // When provided, LOAD/SAVE/ELOADCALL CR, CR6[N] instructions with a matching
+    // entry are shown in named form (e.g. "LOAD  CR3, LED0") instead of the raw
+    // hex-offset form ("LOAD  CR3, CR6[0x0008]").  Callers build this from the
+    // standard DEMO_CLIST mapping plus any user-declared capabilities.
+    disassemble(word, slotNames) {
         word = word >>> 0;
         if (word === 0) return 'HALT';
 
@@ -1372,7 +1403,12 @@ class ChurchAssembler {
 
         switch (opcode) {
             // LOAD CRd, CRs[offset]  — load GT from c-list
-            case 0: return `${mnemonic}  CR${crDst}, CR${crSrc}[${hexOff(imm)}]`;
+            case 0: {
+                if (crSrc === 6 && slotNames && slotNames[imm]) {
+                    return `${mnemonic}  CR${crDst}, ${slotNames[imm]}`;
+                }
+                return `${mnemonic}  CR${crDst}, CR${crSrc}[${hexOff(imm)}]`;
+            }
             // SAVE CRd, CRs[offset]  — save GT to c-list
             case 1: return `${mnemonic}  CR${crDst}, CR${crSrc}[${hexOff(imm)}]`;
             // CALL CRd[, MethodName]  — invoke capability via method-table dispatch
@@ -1424,6 +1460,11 @@ class ChurchAssembler {
             case 8: {
                 const ec8Row    = imm & 0xFF;
                 const ec8Method = (imm >>> 8) & 0x7F;
+                if (crSrc === 6 && slotNames && slotNames[ec8Row]) {
+                    const name = slotNames[ec8Row];
+                    if (ec8Method > 0) return `${mnemonic}  CR${crDst}, ${name}, ${ec8Method - 1}`;
+                    return `${mnemonic}  CR${crDst}, ${name}`;
+                }
                 if (ec8Method > 0) {
                     return `${mnemonic}  CR${crDst}, CR${crSrc}[${hexOff(ec8Row)}], ${ec8Method - 1}`;
                 }

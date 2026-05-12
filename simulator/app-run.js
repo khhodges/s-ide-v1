@@ -373,9 +373,11 @@ function assembleAndLoad() {
         return out;
     })();
 
+    const _asmSlotNames = ChurchAssembler.buildSlotNames(result.capabilities || [],
+        (typeof sim !== 'undefined' && sim) ? sim.nsLabels : null);
     let listing = `; Assembled ${result.words.length} instruction${result.words.length !== 1 ? 's' : ''}\n`;
     for (let i = 0; i < result.words.length; i++) {
-        const mnem = result.words[i] === 0 ? 'NOP' : assembler.disassemble(result.words[i]);
+        const mnem = result.words[i] === 0 ? 'NOP' : assembler.disassemble(result.words[i], _asmSlotNames);
         const cmt  = _srcComments[i] || '';
         listing += cmt ? `${mnem.padEnd(40)}; ${cmt}\n` : `${mnem}\n`;
     }
