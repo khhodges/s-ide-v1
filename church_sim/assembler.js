@@ -49,13 +49,25 @@ class ChurchAssembler {
 
             // ── MVN pseudo-instruction ─────────────────────────────────────────
             // MVN DRd, DRs  →  ~DRs  (ARM-style move-bitwise-NOT)
-            // Expands to three instructions using two's complement identity:
+            // Expands in-place using two's complement identities.
+            //
+            // Normal case (DRd ≠ DRs) — 3 instructions:
             //   ISUB DRd, DRs, DRs  ; DRd = 0
             //   ISUB DRd, DRd, DRs  ; DRd = -DRs
             //   IADD DRd, DRd, #-1  ; DRd = -DRs - 1 = ~DRs
-            // DRd must differ from DRs — same-register form is a compile-time error.
+            //
+            // Same-register case (DRd == DRs == DRx) — 4 instructions via a
+            // scratch register DRt (DR0 unless DRx is DR0, then DR1).
+            // DRx is never read after it is written, so all reads of
+            // DRx_orig happen before any write to DRx:
+            //   ISUB[cc] DRt, DRx, DRx  ; DRt = 0              (DRx unchanged)
+            //   ISUB[cc] DRt, DRt, DRx  ; DRt = -DRx_orig      (DRx unchanged)
+            //   IADD[cc] DRt, DRt, #-1  ; DRt = ~DRx_orig      (DRx unchanged)
+            //   IADD[cc] DRx, DRt, #0   ; DRx = ~DRx_orig  ✓  (copy DRt → DRx)
+            // DRt is a declared scratch register; its value after MVN is
+            // architecturally undefined (callers must not rely on it).
             // Conditional variants (MVNEQ, MVNNE, MVNMI, etc.) are supported;
-            // the condition suffix is propagated to all three expanded instructions.
+            // the condition suffix is propagated to all expanded instructions.
             {
                 const mvnMatch = line.match(/^MVN([A-Z]{2})?\b/i);
                 if (mvnMatch) {
@@ -66,14 +78,19 @@ class ChurchAssembler {
                     const dstMatch = drDst.match(/^DR(\d+)$/i);
                     const srcMatch = drSrc.match(/^DR(\d+)$/i);
                     if (dstMatch && srcMatch && parseInt(dstMatch[1]) === parseInt(srcMatch[1])) {
-                        this.errors.push({ line: lineNum + 1,
-                            message: `MVN${cc}: destination and source must be different registers (both are ${drDst.toUpperCase()}). ` +
-                                `Use a scratch register, e.g.  MVN${cc} DR1, DR2  then copy DR1 → DR2 if needed.` });
-                        continue;
+                        // Same-register case: compute result in scratch, then copy.
+                        const drx = drDst.toUpperCase();
+                        const scratchNum = parseInt(dstMatch[1]) === 0 ? 1 : 0;
+                        const drt = `DR${scratchNum}`;
+                        instructions.push({ line: `ISUB${cc} ${drt}, ${drx}, ${drx}`, lineNum: lineNum + 1 });
+                        instructions.push({ line: `ISUB${cc} ${drt}, ${drt}, ${drx}`, lineNum: lineNum + 1 });
+                        instructions.push({ line: `IADD${cc} ${drt}, ${drt}, #-1`,    lineNum: lineNum + 1 });
+                        instructions.push({ line: `IADD${cc} ${drx}, ${drt}, #0`,     lineNum: lineNum + 1 });
+                    } else {
+                        instructions.push({ line: `ISUB${cc} ${drDst}, ${drSrc}, ${drSrc}`, lineNum: lineNum + 1 });
+                        instructions.push({ line: `ISUB${cc} ${drDst}, ${drDst}, ${drSrc}`, lineNum: lineNum + 1 });
+                        instructions.push({ line: `IADD${cc} ${drDst}, ${drDst}, #-1`,      lineNum: lineNum + 1 });
                     }
-                    instructions.push({ line: `ISUB${cc} ${drDst}, ${drSrc}, ${drSrc}`, lineNum: lineNum + 1 });
-                    instructions.push({ line: `ISUB${cc} ${drDst}, ${drDst}, ${drSrc}`, lineNum: lineNum + 1 });
-                    instructions.push({ line: `IADD${cc} ${drDst}, ${drDst}, #-1`,      lineNum: lineNum + 1 });
                     continue;
                 }
             }
