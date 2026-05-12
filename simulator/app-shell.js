@@ -592,6 +592,48 @@ function closeHamburger() {
     if (dd) dd.classList.remove('ham-open');
 }
 
+const _hamCtxActions = {
+    'develop':   () => { switchView('editor');       closeHamburger(); },
+    'test':      () => { openSimulatorFromMenu(); },
+    'review':    () => { switchView('abstractions'); closeHamburger(); },
+    'hardware':  () => { switchView('devices');      closeHamburger(); },
+    'configure': () => { switchView('devices');      closeHamburger(); },
+    'install':   () => { switchView('builder');      closeHamburger(); },
+};
+
+function showHamCtxMenu(event, actionKey, label) {
+    event.preventDefault();
+    event.stopPropagation();
+    const menu = document.getElementById('hamCtxMenu');
+    if (!menu) return;
+    const item = document.getElementById('hamCtxMenuItem');
+    if (item) {
+        item.textContent = label;
+        item.onclick = function() {
+            hideHamCtxMenu();
+            const fn = _hamCtxActions[actionKey];
+            if (fn) fn();
+        };
+    }
+    menu.style.display = 'block';
+    menu.style.left = event.clientX + 'px';
+    menu.style.top  = event.clientY + 'px';
+    requestAnimationFrame(() => {
+        const r = menu.getBoundingClientRect();
+        if (r.right  > window.innerWidth  - 8) menu.style.left = (window.innerWidth  - r.width  - 8) + 'px';
+        if (r.bottom > window.innerHeight - 8) menu.style.top  = (window.innerHeight - r.height - 8) + 'px';
+    });
+}
+
+function hideHamCtxMenu() {
+    const menu = document.getElementById('hamCtxMenu');
+    if (menu) menu.style.display = 'none';
+}
+
+document.addEventListener('mousedown', function(e) {
+    if (!e.target.closest('#hamCtxMenu')) hideHamCtxMenu();
+});
+
 function openSimulatorFromMenu() {
     switchView('dashboard');
     switchDashTab('cr');
