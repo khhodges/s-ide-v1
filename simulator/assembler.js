@@ -691,6 +691,20 @@ class ChurchAssembler {
             case 2: {
                 // Dot-notation: CALL SlideRule.Multiply (single token, no parts[2])
                 const rawDotTok = (parts[1] || '').replace(/,/g, '').trim();
+                // Early-catch: user wrote "CALL Abs.Method, ExtraArg" — the comma
+                // shows they expected function-call syntax.  CALL does not take
+                // operand arguments; pass arguments in DR/CR registers before the CALL.
+                if (parts[2] && rawDotTok.includes('.')) {
+                    const _dotParts = rawDotTok.split('.');
+                    const _dAbs = _dotParts[0], _dMeth = _dotParts[1] || '';
+                    const _extra = (parts[2] || '').replace(/,/g, '').trim();
+                    this.errors.push({ line: lineNum, message:
+                        `Dot-notation CALL does not take a second operand — remove ", ${_extra}". ` +
+                        `Pass arguments in DR/CR registers before the CALL:\n` +
+                        `  LOAD  CR2, ${_extra}          ; load the remote GT into CR2\n` +
+                        `  CALL  ${_dAbs}.${_dMeth}   ; encodes as CALL CR<n>, ${(_dMeth ? _dMeth + '-index' : 'method')}` });
+                    break;
+                }
                 if (!parts[2] && rawDotTok.includes('.')) {
                     const dotIdx = rawDotTok.indexOf('.');
                     const dotAbsName = rawDotTok.slice(0, dotIdx);
