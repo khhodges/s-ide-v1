@@ -2958,6 +2958,42 @@ HALT`;
     }
 }
 
+// ── GT-constant lint gate (task-1048) ────────────────────────────────────────
+// Scans this file for every `const TP_GT_*` / `const SM_GT_*` definition and
+// asserts that the immediately following non-blank line is a matching
+// validateGTConstant(…) call.  This catches any future constant that ships
+// without its domain-purity guard.
+{
+    const fs   = require('fs');
+    const path = require('path');
+    const src  = fs.readFileSync(path.join(__dirname, 'assembler_test.js'), 'utf8');
+    const lines = src.split('\n');
+
+    const GT_DECL = /^\s*const\s+((?:TP_GT_|SM_GT_)\S+)\s*=/;
+    const GT_CALL = /^\s*validateGTConstant\(\s*['"]([^'"]+)['"]/;
+
+    for (let i = 0; i < lines.length; i++) {
+        const m = GT_DECL.exec(lines[i]);
+        if (!m) continue;
+        const constName = m[1];
+
+        // Find the next non-blank line after the declaration
+        let j = i + 1;
+        while (j < lines.length && lines[j].trim() === '') j++;
+
+        const callMatch = j < lines.length ? GT_CALL.exec(lines[j]) : null;
+        const callName  = callMatch ? callMatch[1] : null;
+
+        assert(
+            `LINT GT-${constName} has validateGTConstant on next non-blank line`,
+            callName === constName,
+            callName
+                ? `found validateGTConstant('${callName}') but expected '${constName}'`
+                : `no validateGTConstant call found after declaration (line ${i + 1})`
+        );
+    }
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
