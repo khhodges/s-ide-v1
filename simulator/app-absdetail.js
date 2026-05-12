@@ -891,13 +891,13 @@ const METHOD_REGISTER_CONVENTIONS = {
     },
     // Constants: five built-in mathematical constants.
     // Indices 0–4 match _bindConstants() in system_abstractions.js.
-    // Usage: LOAD CR11, Constants  then  CALL Constants.Pi  (dot-notation) or  CALL CR11, 0
+    // Usage: LOAD CR11, Constants  then  CALL Constants.Pi  (dot-notation) or  CALL CR11, 1  (1-based, method index 0)
     'Constants': {
-        'Pi':   { index: 0, input: 'none', output: 'DR1 = \u03c0 (IEEE 754)',  dispatch: 'CALL CR11, 0', note: 'Returns \u03c0 \u2248 3.14159 as a 32-bit value. Load Constants into a CR first, then use dot-notation: CALL Constants.Pi' },
-        'E':    { index: 1, input: 'none', output: 'DR1 = e (IEEE 754)',        dispatch: 'CALL CR11, 1', note: 'Returns Euler\u2019s number \u2248 2.71828.' },
-        'Phi':  { index: 2, input: 'none', output: 'DR1 = \u03c6 (IEEE 754)',  dispatch: 'CALL CR11, 2', note: 'Returns the golden ratio \u03c6 \u2248 1.61803.' },
-        'Zero': { index: 3, input: 'none', output: 'DR1 = 0.0 (IEEE 754)',      dispatch: 'CALL CR11, 3', note: 'Returns IEEE 754 positive zero.' },
-        'One':  { index: 4, input: 'none', output: 'DR1 = 1.0 (IEEE 754)',      dispatch: 'CALL CR11, 4', note: 'Returns IEEE 754 1.0.' },
+        'Pi':   { index: 0, input: 'none', output: 'DR1 = \u03c0 (IEEE 754)',  dispatch: 'CALL Constants.Pi', note: 'LOAD CR11, Constants first, then use dot-notation: CALL Constants.Pi. Low-level: CALL CR11, 1.' },
+        'E':    { index: 1, input: 'none', output: 'DR1 = e (IEEE 754)',        dispatch: 'CALL Constants.E',   note: 'Returns Euler\u2019s number \u2248 2.71828. Low-level: CALL CR11, 2.' },
+        'Phi':  { index: 2, input: 'none', output: 'DR1 = \u03c6 (IEEE 754)',  dispatch: 'CALL Constants.Phi', note: 'Returns the golden ratio \u03c6 \u2248 1.61803. Low-level: CALL CR11, 3.' },
+        'Zero': { index: 3, input: 'none', output: 'DR1 = 0.0 (IEEE 754)',      dispatch: 'CALL Constants.Zero', note: 'Returns IEEE 754 positive zero. Low-level: CALL CR11, 4.' },
+        'One':  { index: 4, input: 'none', output: 'DR1 = 1.0 (IEEE 754)',      dispatch: 'CALL Constants.One',  note: 'Returns IEEE 754 1.0. Low-level: CALL CR11, 5.' },
     },
 };
 
@@ -1874,21 +1874,28 @@ DWRITE DR1, #-42        ; Negative input (two's complement)
 CALL   CR1              ; DR1 <- 42`,
         },
         'Constants': {
-            'Pi': `; Constants.Pi — return pi as IEEE 754
-LOAD   CR1, NS[18]      ; Load Constants E-GT
-CALL   CR1              ; DR1 <- 0x40490FDB (3.14159265)`,
-            'E': `; Constants.E — return Euler's number
-LOAD   CR1, NS[18]      ; Load Constants E-GT
-CALL   CR1              ; DR1 <- 0x402DF854 (2.71828183)`,
-            'Phi': `; Constants.Phi — return golden ratio
-LOAD   CR1, NS[18]      ; Load Constants E-GT
-CALL   CR1              ; DR1 <- 0x3FCFBE77 (1.61803399)`,
-            'Zero': `; Constants.Zero — return 0
-LOAD   CR1, NS[18]      ; Load Constants E-GT
-CALL   CR1              ; DR1 <- 0x00000000 (0.0)`,
-            'One': `; Constants.One — return 1
-LOAD   CR1, NS[18]      ; Load Constants E-GT
-CALL   CR1              ; DR1 <- 0x3F800000 (1.0)`,
+            'Pi': `; Constants.Pi — return π as IEEE 754
+; Step 1: bind Constants by name (Level-2 load)
+LOAD   CR11, Constants   ; CR11 = Constants E-GT (NS[18])
+; Step 2: call via dot-notation — assembler encodes CALL CR11, 1
+CALL   Constants.Pi      ; DR1 <- 0x40490FDB  (π ≈ 3.14159265)
+; Low-level equivalent:  LOAD CR11, NS[18]  then  CALL CR11, 1`,
+            'E': `; Constants.E — return Euler's number as IEEE 754
+LOAD   CR11, Constants   ; CR11 = Constants E-GT (NS[18])
+CALL   Constants.E       ; DR1 <- 0x402DF854  (e ≈ 2.71828183)
+; Low-level equivalent:  CALL CR11, 2`,
+            'Phi': `; Constants.Phi — return golden ratio as IEEE 754
+LOAD   CR11, Constants   ; CR11 = Constants E-GT (NS[18])
+CALL   Constants.Phi     ; DR1 <- 0x3FCFBE77  (φ ≈ 1.61803399)
+; Low-level equivalent:  CALL CR11, 3`,
+            'Zero': `; Constants.Zero — return IEEE 754 +0.0
+LOAD   CR11, Constants   ; CR11 = Constants E-GT (NS[18])
+CALL   Constants.Zero    ; DR1 <- 0x00000000  (0.0 IEEE 754)
+; Low-level equivalent:  CALL CR11, 4`,
+            'One': `; Constants.One — return IEEE 754 1.0
+LOAD   CR11, Constants   ; CR11 = Constants E-GT (NS[18])
+CALL   Constants.One     ; DR1 <- 0x3F800000  (1.0 IEEE 754)
+; Low-level equivalent:  CALL CR11, 5`,
         },
         'Loader': {
             'Load': `; Loader.Load — fault-driven lazy load

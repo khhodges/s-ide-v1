@@ -5308,6 +5308,62 @@ SAVE CR0, CR6, 3       ; FAULT: B=0, cannot bind to empty slot 3
 
 ; --- If we get here, B-bit default failed ---
 HALT`,
+        'constants_dot': `; ============================================================
+; Abstraction:  ConstantsDot
+; Description:  Dot-notation CALL Constants.* — Pi, E, Phi, Zero, One
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-12
+; Language:     Assembly
+; Dependencies: Constants (NS[18])
+; ============================================================
+; Methods:
+;   1. main — LOAD Constants by name, CALL each via dot-notation
+; ============================================================
+;
+; Task #1027 registered Constants in METHOD_REGISTER_CONVENTIONS so
+; the assembler resolves dot-notation automatically:
+;   CALL Constants.Pi  →  CALL CR11, 1  (method 0, 1-based encoding)
+;   CALL Constants.E   →  CALL CR11, 2  (method 1)
+;
+; Method table (0-based index):
+;   Pi   (0)  → DR1 = 0x40490FDB  (π  ≈ 3.14159265)
+;   E    (1)  → DR1 = 0x402DF854  (e  ≈ 2.71828183)
+;   Phi  (2)  → DR1 = 0x3FCFBE77  (φ  ≈ 1.61803399)
+;   Zero (3)  → DR1 = 0x00000000  (0.0 IEEE 754)
+;   One  (4)  → DR1 = 0x3F800000  (1.0 IEEE 754)
+; ============================================================
+
+; ── Step 1: Bind Constants into a CR by name ────────────────
+; Level-2 load: assembler resolves "Constants" → NS[18] E-GT.
+; After this LOAD, CR11 holds the Constants capability.
+LOAD   CR11, Constants   ; CR11 = Constants (E perm, NS[18])
+TPERM  CR11, E           ; Verify E permission → Z=1
+
+; ── Step 2: CALL each constant using dot-notation ───────────
+; The assembler looks up the method index from
+; METHOD_REGISTER_CONVENTIONS and encodes CALL CR11, <index+1>.
+; No manual method numbering needed — the name is the dispatch.
+
+CALL   Constants.Pi      ; DR1 <- 0x40490FDB  (π ≈ 3.14159265)
+
+CALL   Constants.E       ; DR1 <- 0x402DF854  (e ≈ 2.71828183)
+
+CALL   Constants.Phi     ; DR1 <- 0x3FCFBE77  (φ ≈ 1.61803399)
+; Golden ratio — (1 + √5) / 2
+
+CALL   Constants.Zero    ; DR1 <- 0x00000000  (IEEE 754 +0.0)
+
+CALL   Constants.One     ; DR1 <- 0x3F800000  (IEEE 754 1.0)
+
+; ── Step 3: Use π in a comparison ───────────────────────────
+; Reload π and confirm it is non-zero (Z=0 after MCMP)
+CALL   Constants.Pi      ; DR1 <- π
+MCMP   DR1, DR0          ; DR1 vs 0 → Z=0 (π is non-zero)
+BRANCHNE done            ; take branch — π ≠ 0 confirmed
+
+done:
+HALT`,
         'led_control': `; ============================================================
 ; Abstraction:  LedControl
 ; Description:  LED control — Section 1: LED blink (Ti60 F225 nucleus) / Section 2: Turing DR Test (full ISA exercise)
@@ -11029,7 +11085,7 @@ function showAbstractionRefDetail(id) {
        Fall back to an inline list only as a safety net if load order changes. */
     const asmKeys = (window._cloomcLangExampleGroups || {}).assembly ||
         ['ada_note_g', 'capability_test', 'system_patterns', 'compute_demo',
-         'salvation', 'perm_attack', 'bind_attack', 'led_control'];
+         'led_control', 'salvation', 'constants_dot', 'perm_attack', 'bind_attack'];
     const seed = {};
     for (const key of asmKeys) seed[key] = '';
     window._asmExampleSources = seed;
