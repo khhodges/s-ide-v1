@@ -5379,7 +5379,7 @@ HALT`,
 ;     CALL   Constants.Pi         ; call method by name via CR11
 ;
 ;   Style B — fused single instruction (ELOADCALL dot-notation):
-;     ELOADCALL CR12, Constants, Pi   ; load + TPERM + call in one op
+;     ELOADCALL CR8, Constants, Pi    ; load + TPERM + call in one op
 ;
 ; Both styles resolve method names automatically from
 ; METHOD_REGISTER_CONVENTIONS — no raw numeric offsets needed.
@@ -5423,16 +5423,19 @@ BRANCHNE style_b         ; take branch — π ≠ 0 confirmed
 ; This is the recommended style when you call a method only
 ; once and don't need to hold the capability in a CR register.
 ; It is also one instruction shorter than the two-step form.
+;
+; Note: use CR0–CR11 as destination; CR12–CR15 are reserved
+; for microcode (Thread, Nucleus, Current-Lump, Namespace).
 
 style_b:
-ELOADCALL CR12, Constants, Pi    ; DR1 <- π  (load+check+call in 1 op)
-ELOADCALL CR12, Constants, E     ; DR1 <- e
-ELOADCALL CR12, Constants, Phi   ; DR1 <- φ  (golden ratio)
-ELOADCALL CR12, Constants, Zero  ; DR1 <- 0.0
-ELOADCALL CR12, Constants, One   ; DR1 <- 1.0
+ELOADCALL CR8, Constants, Pi    ; DR1 <- π  (load+check+call in 1 op)
+ELOADCALL CR8, Constants, E     ; DR1 <- e
+ELOADCALL CR8, Constants, Phi   ; DR1 <- φ  (golden ratio)
+ELOADCALL CR8, Constants, Zero  ; DR1 <- 0.0
+ELOADCALL CR8, Constants, One   ; DR1 <- 1.0
 
 ; ── Confirm π from fused path equals π from two-step path ───
-ELOADCALL CR12, Constants, Pi    ; DR1 <- π  (fused path)
+ELOADCALL CR8, Constants, Pi    ; DR1 <- π  (fused path)
 MCMP   DR1, DR0                  ; Z=0 → π ≠ 0
 BRANCHNE done
 

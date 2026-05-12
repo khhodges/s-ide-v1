@@ -2677,6 +2677,133 @@ const SW_CR1_TGT3 = ((5 << 27) | (0xE << 23) | (1 << 15) | 3) >>> 0;  // SWITCH 
         `CR2.word1=0x${(sim.cr[2].word1>>>0).toString(16)}`);
 }
 
+// ── Constants Dot example (task-1038) ────────────────────────────────────────
+// End-to-end test that assembles the full constants_dot example source
+// (mirrored from app-run.js) and asserts correct instruction encodings at
+// their real word positions.
+//
+// Instruction map (labels resolved by the assembler):
+//   word  0  LOAD   CR11, Constants
+//   word  1  TPERM  CR11, E
+//   word  2  CALL   Constants.Pi      ← CD2–CD4 assert here
+//   word  3  CALL   Constants.E
+//   word  4  CALL   Constants.Phi
+//   word  5  CALL   Constants.Zero
+//   word  6  CALL   Constants.One
+//   word  7  CALL   Constants.Pi
+//   word  8  MCMP   DR1, DR0
+//   word  9  BRANCHNE style_b  (+1)
+//   word 10  ELOADCALL CR8, Constants, Pi  ← CD6–CD10 assert here
+//   word 11  ELOADCALL CR8, Constants, E
+//   word 12  ELOADCALL CR8, Constants, Phi
+//   word 13  ELOADCALL CR8, Constants, Zero
+//   word 14  ELOADCALL CR8, Constants, One
+//   word 15  ELOADCALL CR8, Constants, Pi
+//   word 16  MCMP   DR1, DR0
+//   word 17  BRANCHNE done  (+1)
+//   word 18  HALT
+//
+// ELOADCALL name-resolution behaviour with a prior LOAD in the same assembly:
+//   When "LOAD CR11, Constants" precedes the ELOADCALL lines, the assembler's
+//   nsLoaded map records Constants→11 (the CR number).  _resolveNSName checks
+//   nsLoaded before nsSymbols, so for the ELOADCALL instructions the c-list
+//   row field (imm[7:0]) is set to 11 — the number of the CR that holds the
+//   abstraction — rather than the namespace slot 18.  This is the assembler's
+//   current defined behaviour and the assertions below pin it explicitly.
+
+{
+    const CONSTANTS_CONVENTIONS = {
+        'Constants': {
+            'Pi':   { index: 0 },
+            'E':    { index: 1 },
+            'Phi':  { index: 2 },
+            'Zero': { index: 3 },
+            'One':  { index: 4 },
+        }
+    };
+    const CONSTANTS_NS = { 'Constants': 18 };
+
+    // Full constants_dot source (mirrored from app-run.js with CR8 in Style B;
+    // CR12–CR15 are in the assembler privilege zone and are rejected for ELOADCALL).
+    const CONSTANTS_DOT_SRC = `
+LOAD   CR11, Constants
+TPERM  CR11, E
+CALL   Constants.Pi
+CALL   Constants.E
+CALL   Constants.Phi
+CALL   Constants.Zero
+CALL   Constants.One
+CALL   Constants.Pi
+MCMP   DR1, DR0
+BRANCHNE style_b
+style_b:
+ELOADCALL CR8, Constants, Pi
+ELOADCALL CR8, Constants, E
+ELOADCALL CR8, Constants, Phi
+ELOADCALL CR8, Constants, Zero
+ELOADCALL CR8, Constants, One
+ELOADCALL CR8, Constants, Pi
+MCMP   DR1, DR0
+BRANCHNE done
+done:
+HALT`;
+
+    const a = new ChurchAssembler(CONSTANTS_CONVENTIONS);
+    a.setNamespace(CONSTANTS_NS);
+    const result = a.assemble(CONSTANTS_DOT_SRC);
+
+    // CD1: the full source must assemble without errors.
+    assert('CD1 constants_dot full source assembles with no errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+
+    // CD2–CD4: word[2] = CALL Constants.Pi  (Style A, dot-notation)
+    // LOAD CR11, Constants records nsLoaded['Constants']=11, so the dot-notation
+    // CALL resolves crDst=11. Pi has 0-based index 0; stored 1-based → imm=1.
+    // Expected word: (2<<27)|(11<<19)|1 = 0x10580001  (cond=0, crSrc=0 implicit)
+    {
+        const w      = result.words[2] >>> 0;
+        const opcode = (w >>> 27) & 0x1F;
+        const crDst  = (w >>> 19) & 0xF;
+        const imm    = w & 0x7FFF;
+        assert('CD2 CALL Constants.Pi — opcode=2 (CALL)',
+            opcode === 2, `got opcode=${opcode}`);
+        assert('CD3 CALL Constants.Pi — crDst=11 (bound by preceding LOAD CR11)',
+            crDst === 11, `got crDst=${crDst}`);
+        assert('CD4 CALL Constants.Pi — imm=1 (Pi index 0, stored 1-based)',
+            imm === 1, `got imm=${imm}`);
+    }
+
+    // CD5: word count — 19 words (HALT at index 18).
+    assert('CD5 constants_dot word count = 19',
+        result.words.length === 19, `got ${result.words.length}`);
+
+    // CD6–CD10: word[10] = ELOADCALL CR8, Constants, Pi  (Style B)
+    // At this point nsLoaded['Constants']=11 from the earlier LOAD, so
+    // _resolveNSName('Constants') returns 11 (CR number) — not the NS slot 18.
+    // imm[7:0]  = 11  (c-list row = nsLoaded value for Constants)
+    // imm[14:8] =  1  (Pi index 0, stored 1-based)
+    // full imm  = (1<<8)|11 = 0x010B = 267
+    {
+        const w      = result.words[10] >>> 0;
+        const opcode = (w >>> 27) & 0x1F;
+        const crDst  = (w >>> 19) & 0xF;
+        const crSrc  = (w >>> 15) & 0xF;
+        const imm    = w & 0x7FFF;
+        const row    = imm & 0xFF;
+        const method = (imm >>> 8) & 0x7F;
+        assert('CD6 ELOADCALL CR8, Constants, Pi — opcode=8 (ELOADCALL)',
+            opcode === 8, `got opcode=${opcode}`);
+        assert('CD7 ELOADCALL CR8, Constants, Pi — crDst=8',
+            crDst === 8, `got crDst=${crDst}`);
+        assert('CD8 ELOADCALL CR8, Constants, Pi — crSrc=6 (c-list root)',
+            crSrc === 6, `got crSrc=${crSrc}`);
+        assert('CD9 ELOADCALL CR8, Constants, Pi — c-list row=11 (nsLoaded[Constants]=11)',
+            row === 11, `got row=${row}`);
+        assert('CD10 ELOADCALL CR8, Constants, Pi — method=1 (Pi index 0, stored 1-based)',
+            method === 1, `got method=${method}`);
+    }
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
