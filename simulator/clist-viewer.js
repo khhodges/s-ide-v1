@@ -27,6 +27,14 @@
     var activeEditor = null;
     var focusedRow   = -1;
 
+    // ── User-declared pet names for null c-list slots ─────────────────────────
+    // Persisted to localStorage so they survive page reloads and recompilation.
+    // Keys are numeric slot indices (stored as strings in JSON).
+    var _LS_KEY_CLIST_PET = 'church_clist_pet_names';
+    var _nullSlotPetNames = (function () {
+        try { return JSON.parse(localStorage.getItem(_LS_KEY_CLIST_PET) || '{}'); } catch (e) { return {}; }
+    }());
+
     // ── NS slot→name cache (populated once from /api/lumps/list) ─────────────
     var _nsSlotNameCache   = null;   // null = not yet fetched; {} = fetched (may be empty)
     var _nsSlotNamePromise = null;   // in-flight promise — prevents duplicate concurrent fetches
@@ -79,8 +87,13 @@
             if (pickerRow) { _insertCapability(pickerRow.dataset.capName); return; }
 
             var row = e.target.closest('.clist-row[data-slot]');
-            if (!row || row.classList.contains('clist-row--null')) return;
-            insertCROperand(parseInt(row.dataset.slot, 10));
+            if (!row) return;
+            var slotIdx = parseInt(row.dataset.slot, 10);
+            if (row.classList.contains('clist-row--null')) {
+                _editNullSlotPetName(row, slotIdx);
+                return;
+            }
+            insertCROperand(slotIdx);
         });
 
         // ── Close on outside click ─────────────────────────────────────────────
@@ -99,6 +112,9 @@
     // ── Keyboard handler ──────────────────────────────────────────────────────
     function onDocKeyDown(e) {
         if (!isVisible()) return;
+
+        // While an inline pet-name input is active, let the input handle keys itself
+        if (popupEl && popupEl.querySelector('.clist-pet-name-input')) return;
 
         var inPicker = !!(popupEl && popupEl.querySelector('.clist-back-btn'));
 
@@ -142,6 +158,49 @@
                 r.classList.remove('clist-row--focused');
             }
         });
+    }
+
+    // ── Inline pet-name editor for null c-list slots ──────────────────────────
+    function _editNullSlotPetName(row, slotIdx) {
+        var existing = _nullSlotPetNames[slotIdx] || _nullSlotPetNames[String(slotIdx)] || '';
+        row.innerHTML =
+            '<span class="clist-slot">CR' + slotIdx + '</span>' +
+            '<input class="clist-pet-name-input" type="text" ' +
+                'value="' + escHtml(existing) + '" ' +
+                'placeholder="placeholder name\u2026" maxlength="32" />';
+        var input = row.querySelector('.clist-pet-name-input');
+        if (!input) return;
+        input.focus();
+        input.select();
+
+        var _saved = false;
+        function _save() {
+            if (_saved) return;
+            _saved = true;
+            var name = input.value.trim();
+            var key = String(slotIdx);
+            if (name) {
+                _nullSlotPetNames[key] = name;
+                /* Also push into the global map so other views benefit immediately */
+                if (typeof _petNameCRMap !== 'undefined') _petNameCRMap[slotIdx] = name;
+            } else {
+                delete _nullSlotPetNames[key];
+                if (typeof _petNameCRMap !== 'undefined') delete _petNameCRMap[slotIdx];
+            }
+            try { localStorage.setItem(_LS_KEY_CLIST_PET, JSON.stringify(_nullSlotPetNames)); } catch (e2) { /* ignore */ }
+            showViewer(); /* re-render the viewer with updated names */
+        }
+        function _cancel() {
+            if (_saved) return;
+            _saved = true;
+            showViewer();
+        }
+
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter')  { e.preventDefault(); e.stopPropagation(); _save();   }
+            if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); _cancel(); }
+        }, true);
+        input.addEventListener('blur', _save);
     }
 
     // ── Insert CR operand into editor ─────────────────────────────────────────
@@ -216,10 +275,20 @@
             var isNull  = rawWord === 0;
 
             if (isNull) {
-                html += '<div class="clist-row clist-row--null" data-slot="' + i + '" tabindex="-1">' +
-                    '<span class="clist-slot">CR' + i + '</span>' +
-                    '<span class="clist-null-label">\u2014 null \u2014</span>' +
-                    '</div>';
+                var _nullPet = (petMap && (petMap[i] || petMap[String(i)])) ||
+                               (_nullSlotPetNames && (_nullSlotPetNames[i] || _nullSlotPetNames[String(i)])) || '';
+                if (_nullPet) {
+                    html += '<div class="clist-row clist-row--null clist-row--named" data-slot="' + i + '" tabindex="-1" title="Click to rename \u2018' + escHtml(_nullPet) + '\u2019 (placeholder, not yet populated)">' +
+                        '<span class="clist-slot">CR' + i + '</span>' +
+                        '<span class="clist-null-pet">' + escHtml(_nullPet) + '</span>' +
+                        '<span class="clist-null-edit-hint">\u270e</span>' +
+                        '</div>';
+                } else {
+                    html += '<div class="clist-row clist-row--null" data-slot="' + i + '" tabindex="-1" title="Click to add a placeholder name for this empty slot">' +
+                        '<span class="clist-slot">CR' + i + '</span>' +
+                        '<span class="clist-null-label">\u2014 null \u2014<span class="clist-null-hint">\u2295 name</span></span>' +
+                        '</div>';
+                }
                 continue;
             }
 

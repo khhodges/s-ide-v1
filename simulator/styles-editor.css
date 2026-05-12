@@ -1452,6 +1452,60 @@
     font-style: italic;
 }
 
+/* Null row with a user-set pet name: full opacity, pointer cursor */
+.clist-row--null.clist-row--named {
+    opacity: 0.75;
+    cursor: pointer;
+}
+.clist-row--null.clist-row--named:hover {
+    background: rgba(244, 185, 66, 0.08);
+}
+/* Plain null row: show a subtle "⊕ name" hint only on hover */
+.clist-null-hint {
+    font-size: 0.6rem;
+    color: #4a4a4a;
+    margin-left: 6px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.clist-row--null:hover .clist-null-hint {
+    opacity: 1;
+}
+/* Plain null rows become pointer on hover so the affordance is obvious */
+.clist-row--null:hover {
+    cursor: pointer;
+}
+/* Label shown on named null rows */
+.clist-null-pet {
+    font-size: 0.72rem;
+    color: #a09070;
+    font-style: italic;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.clist-null-edit-hint {
+    font-size: 0.6rem;
+    color: #555;
+    margin-left: 4px;
+    flex-shrink: 0;
+}
+/* Inline pet-name input field inside a null row */
+.clist-pet-name-input {
+    flex: 1;
+    min-width: 0;
+    background: rgba(244, 185, 66, 0.08);
+    border: 1px solid rgba(244, 185, 66, 0.45);
+    border-radius: 3px;
+    color: #f0ead0;
+    font-size: 0.72rem;
+    padding: 2px 6px;
+    outline: none;
+    font-family: inherit;
+}
+
 /* ── C-List viewer — Add button ────────────────────────────────────────── */
 .clist-add-btn {
     background: rgba(244, 185, 66, 0.1);
