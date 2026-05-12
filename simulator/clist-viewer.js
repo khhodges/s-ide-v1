@@ -14,7 +14,7 @@
 //   • AsmInstructionPicker.show is wrapped once, synchronously, at the
 //     bottom of this file, to call CListViewer.hide() before showing.
 //
-// Public API: window.CListViewer = { show, hide, toggle, isVisible }
+// Public API: window.CListViewer = { show, hide, toggle, isVisible, getNullSlotPetNames }
 
 (function () {
     'use strict';
