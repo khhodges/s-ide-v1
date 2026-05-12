@@ -272,6 +272,32 @@
         var s      = (typeof sim !== 'undefined') ? sim : null;
         var petMap = (typeof _petNameCRMap !== 'undefined') ? (_petNameCRMap || {}) : {};
 
+        // ── Path 0: source-declared capabilities (editor textarea) ────────────
+        // When the editor has a capabilities { } block, show its declared names
+        // as the primary view so the viewer stays in sync while the user edits,
+        // even before the program is compiled or run.
+        var srcEd = activeEditor || document.getElementById('asmEditor');
+        if (srcEd && srcEd.value) {
+            var capSrcRe = /capabilities\s*\{([^}]*)\}/;
+            var capSrcM  = capSrcRe.exec(srcEd.value);
+            if (capSrcM) {
+                var capSrcNames = capSrcM[1].split(/[\s,]+/)
+                    .map(function (n) { return n.trim(); })
+                    .filter(function (n) { return n && !/^[;/]/.test(n); });
+                if (capSrcNames.length > 0) {
+                    var srcRows = '';
+                    for (var si = 0; si < capSrcNames.length; si++) {
+                        var sn = capSrcNames[si];
+                        srcRows += '<div class="clist-row" data-slot="' + si + '" tabindex="-1">' +
+                            '<span class="clist-slot" title="declared in source">src</span>' +
+                            '<span class="clist-name">' + escHtml(sn) + '</span>' +
+                            '</div>';
+                    }
+                    return _wrapRows('source', srcRows);
+                }
+            }
+        }
+
         // ── Path 1: live sim (boot-complete) — preferred when simulator is running ─
         if (s && s.bootComplete) {
             var cr6 = s.cr && s.cr[6];
@@ -530,13 +556,21 @@
             }
             ed.dispatchEvent(new Event('input', { bubbles: true }));
         }
-        hideViewer();
-        // Scroll editor to the insertion / existing location and select the name
+        // Scroll editor to the insertion / existing location and select the name.
+        // When the source was actually changed, re-render the viewer so the source
+        // path immediately reflects the new entry — the popup stays open so the
+        // user can see the updated list and optionally add another capability.
+        // When the cap was already present, close the popup and refocus the editor.
         if (insertPos >= 0) {
             _scrollEditorToPos(ed, insertPos);
             ed.setSelectionRange(insertPos, insertPos + capName.length);
         }
-        ed.focus();
+        if (src !== ed.value) {
+            showViewer();
+        } else {
+            hideViewer();
+            ed.focus();
+        }
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
