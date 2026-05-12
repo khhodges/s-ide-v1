@@ -9416,6 +9416,35 @@ async function downloadFPGAPackage() {
                 '  LEDs: chase pattern = boot OK (IoT/reduced ISA profile).\n' +
                 '  See BUILD.md inside the zip for troubleshooting.\n' +
                 '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+        } else if (board === 'wukong-xc7a100t') {
+            _buildLogAppend('  church_wukong_xc7a100t.il  — Amaranth RTLIL (authoritative)\n');
+            _buildLogAppend('  church_wukong_xc7a100t.v   — Synthesisable Verilog (Yosys from RTLIL)\n');
+            _buildLogAppend('  wukong_xc7a100t.xdc        — Vivado XDC pin constraints\n');
+            _buildLogAppend('  wukong_xc7a100t.tcl        — Vivado project creation + build script\n');
+            _buildLogAppend('  BUILD.md                   — Instructions\n');
+            _buildLogAppend('\n' +
+                '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n' +
+                '  NEXT STEPS \u2014 QMTECH Wukong Artix-7 XC7A100T\n' +
+                '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n' +
+                '  Requires Vivado 2020.x or later (Xilinx / AMD).\n' +
+                '\n' +
+                '    cd ~/Downloads\n' +
+                '    unzip church-wukong-package.zip\n' +
+                '    cd church-wukong-package\n' +
+                '\n' +
+                '  In the Vivado Tcl Console:\n' +
+                '\n' +
+                '    cd /path/to/church-wukong-package\n' +
+                '    source wukong_xc7a100t.tcl\n' +
+                '\n' +
+                '  The script creates vivado_wukong/, runs synthesis +\n' +
+                '  implementation, and writes church_wukong_xc7a100t.bit.\n' +
+                '\n' +
+                '  Tools \u2192 Hardware Manager \u2192 Open Target \u2192 Program Device\n' +
+                '  Select church_wukong_xc7a100t.bit and click Program.\n' +
+                '\n' +
+                '  See BUILD.md inside the zip for full details.\n' +
+                '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n');
         } else {
             _buildLogAppend('  church_tang_nano_20k.v    — Synthesisable Verilog\n');
             _buildLogAppend('  church_tang_nano_20k.json — Yosys netlist\n');
