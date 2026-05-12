@@ -909,7 +909,7 @@ const METHOD_REGISTER_CONVENTIONS = {
         'Receive':  { index: 2, input: 'DR1=timeout steps (0=forever)',                    output: 'DR0=word count (0=timeout), DR1=FourCC tag, DR2\u2026=payload', dispatch: 'CALL Tunnel.Receive', note: 'Block until IDE sends a media packet or timeout expires.' },
         'Fault':    { index: 3, input: 'DR1=fault_code, DR2=ns_idx, DR3=thread_gt, DR4=abstr_idx, DR5=method_idx, DR6=instr_offset', output: 'none (fire-and-forget)', dispatch: 'CALL Tunnel.Fault', note: 'Report full semantic fault location to IDE Devices view. Bypasses send queue.' },
         'Fetch':    { index: 4, input: 'DR1=slot token, DR2=expected words, CR2=write-GT', output: 'DR0 = 0 (installed) | error code',       dispatch: 'CALL Tunnel.Fetch',    note: 'Download lump binary from IDE by NS slot token. Validates header (magic, CRC) before writing.' },
-        'Call':     { index: 5, input: 'CR2=remote GT (Outform/far-end abstraction)',      output: 'DR0 = far-end return value',              dispatch: 'CALL Tunnel.Call',     note: 'Hello Mum primitive: forward CALL via GTKN packet to far-end Mum.Greet().' },
+        'Connect':  { index: 5, input: 'CR2=remote GT (Outform/far-end abstraction)',      output: 'DR0 = far-end return value',              dispatch: 'CALL Tunnel.Connect', note: 'Hello Mum primitive: forward CALL via GTKN packet to far-end Mum.Greet().' },
     },
 };
 
@@ -942,7 +942,7 @@ function getMethodPurposes(abs) {
             'Receive': 'Tunnel.Receive(timeout_steps) — block until the IDE host sends a self-identifying media packet or timeout expires. DR1 = timeout in steps (0 = wait forever). DR0 \u2190 word count (0 = timeout), DR1 \u2190 FourCC type tag (TEXT \u00b7 VOIC \u00b7 LUMP \u00b7 GTKN \u00b7 \u2026), DR2\u2026 = payload. Caller dispatches on DR1.',
             'Fault': 'Tunnel.Fault(fault_code, ns_idx, thread_gt, abstr_idx, method_idx, instr_offset) — report a fault with full semantic location. DR1 = fault_code, DR2 = ns_idx (active namespace slot), DR3 = thread_gt (NS index of faulting thread), DR4 = abstr_idx (NS slot of executing abstraction), DR5 = method_idx, DR6 = instr_offset. Bypasses send queue. IDE logs full location in Devices view. Fire-and-forget.',
             'Fetch': 'Tunnel.Fetch(token, expected_words, mem_GT) — request a lump binary from the IDE by NS slot token. CR2 = Memory W-GT for the write destination. DR1 = slot token, DR2 = expected size in words. Validates header (magic, CRC) before writing. DR0 \u2190 0 = installed | error code.',
-            'Call': 'Tunnel.Call(remote_GT) — forward a CALL through the tunnel to a remote capability. CR2 = remote GT (Outform, far-end abstraction). Encodes the GT as a GTKN packet (tag=0x47544B4E), transmits it, and awaits the far-end RETURN. This is the "Hello Mum" primitive: CALL(CONNECT(me, mymother)). DR0 \u2190 far-end return value.',
+            'Connect': 'Tunnel.Connect(remote_GT) — forward a CALL through the tunnel to a remote capability. CR2 = remote GT (Outform, far-end abstraction). Encodes the GT as a GTKN packet (tag=0x47544B4E), transmits it, and awaits the far-end RETURN. This is the "Hello Mum" primitive: CALL(CONNECT(me, mymother)). DR0 \u2190 far-end return value.',
         },
         'Negotiate': { 'Propose': 'Negotiate.Propose(cap_GT) — request special grant (dual-approval)', 'Approve': 'Negotiate.Approve(proposal_id) — parent or teacher approves', 'Reject': 'Negotiate.Reject(proposal_id) — reject proposal', 'Status': 'Negotiate.Status(proposal_id) — query proposal state' },
         'Editor': { 'Open': 'Editor.Open(file_GT) — load DATA object into editor buffer', 'Save': 'Editor.Save() — DWRITE buffer to NS slot, recompute seal', 'Load': 'Editor.Load(nsIndex) — DREAD source from slot into buffer', 'Undo': 'Editor.Undo() — pop previous state from undo stack' },
@@ -2291,7 +2291,7 @@ CALL   CR1                  ; Tunnel.Fetch:
 ;   4. Write validated words to CR2 base via mSave (W-perm)
 ;   5. Update NS entry: base, limit, version, seal
 ; DR0 ← 0 = lump installed · non-zero = error (timeout/CRC/size)`,
-            'Call': `; Tunnel.Call — forward a CALL through the tunnel to a remote capability
+            'Connect': `; Tunnel.Connect — forward a CALL through the tunnel to a remote capability
 ; The "Hello Mum" primitive: the caller presents a remote GT and
 ; Tunnel encodes it as a GTKN packet, transmits it, then blocks
 ; awaiting the far-end RETURN.  From the caller's view this is one

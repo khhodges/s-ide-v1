@@ -1266,7 +1266,7 @@
         ]
       },
       {
-        "name": "Call",
+        "name": "Connect",
         "offset": 32,
         "length": 5,
         "description": "Forward a CALL through the tunnel to a remote capability. The \u2018Hello Mum\u2019 primitive: CALL(CONNECT(me, mymother)). Restricts remote_gt to E-only, invokes via CALL, then reads the far-end return value from UART RX.",
@@ -1452,7 +1452,7 @@
           "Test CR7 for NULL GT (word == 0); if NULL branch to FAULT_NO_CONTACT return",
           "FAULT_NO_CONTACT = 0xDEAD0001 \u2014 clean fault, not a crash",
           "Load Tunnel GT from c-list slot 0 into CR8",
-          "Tunnel.Call(mum_gt) \u2014 forward CALL via GTKN packet to far-end Mum.Greet()",
+          "Tunnel.Connect(mum_gt) \u2014 forward CALL via GTKN packet to far-end Mum.Greet()",
           "Receive far-end return value; return it as DR0"
         ]
       }
