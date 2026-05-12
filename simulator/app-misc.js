@@ -627,6 +627,7 @@ function showNextSteps(context) {
         'compiled': `
             <div class="next-step-actions">
                 ${btn('\uD83D\uDC63', 'Step', 'stepSim()')}
+                ${btn('\uD83D\uDEB6', 'Walk', 'walkToggle()', 'ns-btn-walk')}
             </div>
             <ul>
                 <li>${link('Name this abstract idea', 'abstractions')} — does the abstraction name describe what it does?</li>
@@ -637,6 +638,7 @@ function showNextSteps(context) {
         'assembled': `
             <div class="next-step-actions">
                 ${btn('\uD83D\uDC63', 'Step', 'stepSim()')}
+                ${btn('\uD83D\uDEB6', 'Walk', 'walkToggle()', 'ns-btn-walk')}
                 ${btn('\uD83C\uDFC3', 'Run', 'onRunBtnClick()', 'ns-btn-run')}
             </div>
             <ul>
@@ -660,6 +662,7 @@ function showNextSteps(context) {
             return `
             <div class="next-step-actions">
                 ${btn('\uD83D\uDC63', 'Step', 'stepSim()')}
+                ${btn('\uD83D\uDEB6', 'Walk', 'walkToggle()', 'ns-btn-walk')}
                 ${btn('\uD83C\uDFC3', 'Run', 'onRunBtnClick()', 'ns-btn-run')}
                 ${_saveLumpBtn}
             </div>
@@ -673,6 +676,7 @@ function showNextSteps(context) {
         'ran-fault': `
             <div class="next-step-actions">
                 ${btn('\uD83D\uDC63', 'Step', 'stepSim()')}
+                ${btn('\uD83D\uDEB6', 'Walk', 'walkToggle()', 'ns-btn-walk')}
                 ${btn('\uD83C\uDFC3', 'Run', 'onRunBtnClick()', 'ns-btn-run')}
             </div>
             <ul>
