@@ -2994,6 +2994,68 @@ HALT`;
     }
 }
 
+// ── GT-constant lint gate — extended scan (task-1049) ────────────────────────
+// Recursively scans every *.js and *.cloomc file in the simulator/ tree
+// (excluding assembler_test.js itself, which is already covered above) for GT
+// constant declarations and asserts that each one is immediately followed by a
+// validateGTConstant(…) call on the next non-blank line.
+//
+// Files may opt out of a specific declaration by placing the comment
+//   // GT-LINT-EXEMPT: <reason>
+// on the same line as the `const` declaration.  Use sparingly.
+{
+    const fs   = require('fs');
+    const path = require('path');
+
+    const GT_DECL   = /^\s*const\s+((?:TP_GT_|SM_GT_)\S+)\s*=/;
+    const GT_CALL   = /^\s*validateGTConstant\(\s*['"]([^'"]+)['"]/;
+    const GT_EXEMPT = /GT-LINT-EXEMPT/;
+
+    // Recursive collector — returns relative paths from simulator/ root
+    function collectFiles(dir, rootDir, out) {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name < b.name ? -1 : 1)) {
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                collectFiles(full, rootDir, out);
+            } else if (entry.isFile() && (entry.name.endsWith('.js') || entry.name.endsWith('.cloomc'))) {
+                const rel = path.relative(rootDir, full);
+                if (rel !== 'assembler_test.js') out.push({ rel, full });
+            }
+        }
+    }
+
+    const files = [];
+    collectFiles(__dirname, __dirname, files);
+
+    for (const { rel, full } of files) {
+        const src   = fs.readFileSync(full, 'utf8');
+        const lines = src.split('\n');
+
+        for (let i = 0; i < lines.length; i++) {
+            const m = GT_DECL.exec(lines[i]);
+            if (!m) continue;
+            if (GT_EXEMPT.test(lines[i])) continue;
+
+            const constName = m[1];
+
+            // Find the next non-blank line
+            let j = i + 1;
+            while (j < lines.length && lines[j].trim() === '') j++;
+
+            const callMatch = j < lines.length ? GT_CALL.exec(lines[j]) : null;
+            const callName  = callMatch ? callMatch[1] : null;
+
+            assert(
+                `LINT GT-${constName} in ${rel} has validateGTConstant on next non-blank line`,
+                callName === constName,
+                callName
+                    ? `found validateGTConstant('${callName}') but expected '${constName}'`
+                    : `no validateGTConstant call found after declaration (line ${i + 1})`
+            );
+        }
+    }
+}
+
 // ── Bare-call sugar BC tests (task-1050) ─────────────────────────────────────
 // Tests for the Abs.Method(args) desugaring in pass 1.
 //
