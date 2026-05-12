@@ -450,7 +450,7 @@ function init() {
     updateLineNumbers();
     loadNamespaceState();
     checkBootId();
-    const views = ['repl','editor','tutorial','dashboard','namespace','hello-mum','abstractions','lumps','pipeline','trace','reference','docs','builder','sitemap'];
+    const views = ['repl','editor','tutorial','dashboard','namespace','hello-mum','abstractions','lumps','pipeline','trace','reference','docs','builder','sitemap','gc','devices','github','memory','gt-view'];
     const rawHash = window.location.hash.replace('#', '');
     const [hashView, hashQuery] = rawHash.split('?');
     const hashParams = {};
@@ -459,7 +459,7 @@ function init() {
     if (!startView) {
         try { const saved = localStorage.getItem('church_lastView'); if (saved && views.includes(saved)) startView = saved; } catch(e) {}
     }
-    if (!startView) startView = 'docs';
+    if (!startView) startView = 'dashboard';
     switchView(startView);
     if (startView === 'namespace' && hashParams.ns !== undefined) {
         const nsSlot = parseInt(hashParams.ns, 10);
@@ -638,8 +638,6 @@ function openSimulatorFromMenu() {
     switchView('dashboard');
     switchDashTab('cr');
     closeHamburger();
-    const chk = document.getElementById('autoBootChk');
-    if (chk && chk.checked) resetSim();
 }
 
 function saveAutoBootPref() {
