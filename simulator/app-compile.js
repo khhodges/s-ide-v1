@@ -514,6 +514,44 @@ function smartCompile() {
     }
 }
 
+// Auto-fill rights for capabilities with no declared rights, sourcing defaults
+// from the sidecar grants in _lumpsCache.  Mutates caps in place so that
+// downstream draft text and _checkCapAccessRights both see the filled rights.
+// Returns {filled: [{name, defaults}]}.  Call before building draft text.
+function _autoFillCapRights(caps) {
+    const filled = [];
+    if (!Array.isArray(caps) || caps.length === 0) return { filled };
+    const hasCache = typeof _lumpsCache !== 'undefined' && Array.isArray(_lumpsCache);
+    for (const cap of caps) {
+        if (typeof cap === 'string') continue;
+        if (!cap.name) continue;
+        if (cap.rights && cap.rights.length > 0) continue;
+        const nameUC = cap.name.toUpperCase();
+        let defaults = null;
+        if (hasCache) {
+            for (const lump of _lumpsCache) {
+                const entry = (lump.capabilities || []).find(c =>
+                    c.name && c.name.toUpperCase() === nameUC &&
+                    c.grants && c.grants.length > 0);
+                if (entry) { defaults = entry.grants.map(g => g.toUpperCase()); break; }
+            }
+            if (!defaults) {
+                const lump = _lumpsCache.find(l =>
+                    (l.abstraction && l.abstraction.toUpperCase() === nameUC) ||
+                    (l.name && l.name.toUpperCase() === nameUC));
+                if (lump && Array.isArray(lump.grants) && lump.grants.length > 0) {
+                    defaults = lump.grants.map(g => g.toUpperCase());
+                }
+            }
+        }
+        if (defaults) {
+            cap.rights = defaults;
+            filled.push({ name: cap.name, defaults });
+        }
+    }
+    return { filled };
+}
+
 // Cross-check declared capability access rights for correctness.
 // caps: array of {name, rights} objects (as produced by the assembler/compiler).
 // Returns { errors: string[], warnings: string[] }.
@@ -593,6 +631,7 @@ function compileDraftAssembly(source, con) {
     if (typeof _clearAsmErrors === 'function') _clearAsmErrors();
     const words = result.words;
     const caps  = result.capabilities || [];
+    const _afResult = _autoFillCapRights(caps);
     const cc    = caps.length;
     const codeSize = words.length;
     const allocSize = Math.max(32, nextPow2(Math.max(1, codeSize + cc)));
@@ -642,6 +681,12 @@ function compileDraftAssembly(source, con) {
         let _aclExtra = '';
         try {
             const _acl = _checkCapAccessRights(caps);
+            if (_afResult && _afResult.filled.length > 0) {
+                _aclExtra += `  Auto-filled Permissions (from sidecar grants):\n`;
+                for (const f of _afResult.filled)
+                    _aclExtra += `    \u2139 ${f.name}: [${f.defaults.join('')}] inserted automatically\n`;
+                _aclExtra += '\n';
+            }
             if (_acl.errors.length > 0 || _acl.warnings.length > 0) {
                 _aclExtra += `  Access Rights Check:\n`;
                 for (const e of _acl.errors)   _aclExtra += `    \u2717 ${e}\n`;
@@ -703,6 +748,7 @@ function compileDraft() {
     const langNames = { english: 'English', haskell: 'Haskell', symbolic: 'Symbolic Math (Ada)', javascript: 'JavaScript', lambda: 'Lambda Calculus' };
     const langLabel = langNames[result.language] || 'JavaScript';
     const caps = result.capabilities || [];
+    const _afResultC = _autoFillCapRights(caps);
     const clistCount = caps.length;
     let totalCodeWords = 0;
     for (const m of result.methods) {
@@ -813,8 +859,17 @@ function compileDraft() {
         let _aclExtraC = '';
         try {
             const _aclC = _checkCapAccessRights(caps);
-            if (_aclC.errors.length > 0 || _aclC.warnings.length > 0) {
+            const _hasAclOutputC = _aclC.errors.length > 0 || _aclC.warnings.length > 0 ||
+                (_afResultC && _afResultC.filled.length > 0);
+            if (_hasAclOutputC) {
                 _aclExtraC += `\n═══════════════════════════════════════════════════\n`;
+            }
+            if (_afResultC && _afResultC.filled.length > 0) {
+                _aclExtraC += `  Auto-filled Permissions (from sidecar grants):\n`;
+                for (const f of _afResultC.filled)
+                    _aclExtraC += `    \u2139 ${f.name}: [${f.defaults.join('')}] inserted automatically\n`;
+            }
+            if (_aclC.errors.length > 0 || _aclC.warnings.length > 0) {
                 _aclExtraC += `  Access Rights Check:\n`;
                 for (const e of _aclC.errors)   _aclExtraC += `    \u2717 ${e}\n`;
                 for (const w of _aclC.warnings) _aclExtraC += `    \u26a0 ${w}\n`;
@@ -879,6 +934,7 @@ function buildAndDownloadLump() {
     const langLabel = langNames[result.language] || 'JavaScript';
     const absName = result.abstractionName || 'Unnamed';
     const caps = result.capabilities || [];
+    _autoFillCapRights(caps);
     const cc = caps.length;
     const profile = result.profile || 'IoT';
 
@@ -1177,6 +1233,7 @@ function buildAndDownloadLump() {
 
 function _buildAndDownloadAssemblyLump(source, asmResult, con) {
     const caps    = asmResult.capabilities || [];
+    _autoFillCapRights(caps);
     const cc      = caps.length;
     const codeWords = asmResult.words || [];
     const cw      = codeWords.length;
@@ -1393,6 +1450,7 @@ function auditLumpOnly() {
 
     const absName = result.abstractionName || 'Unnamed';
     const caps    = result.capabilities || [];
+    _autoFillCapRights(caps);
     const cc      = caps.length;
 
     // C-list overflow guard — same as buildAndDownloadLump (header cc field is 8 bits).

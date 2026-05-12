@@ -310,6 +310,7 @@ function assembleAndLoad() {
             }
         }
         if (result.capabilities && result.capabilities.length > 0) {
+            if (typeof _autoFillCapRights === 'function') _autoFillCapRights(result.capabilities);
             const _cc = result.capabilities.length;
             listing += `\n; c-list  (${_cc} entr${_cc !== 1 ? 'ies' : 'y'})\n`;
             for (let i = 0; i < result.capabilities.length; i++) {
@@ -378,6 +379,7 @@ function assembleAndLoad() {
         listing += cmt ? `${mnem.padEnd(40)}; ${cmt}\n` : `${mnem}\n`;
     }
     if (result.capabilities && result.capabilities.length > 0) {
+        if (typeof _autoFillCapRights === 'function') _autoFillCapRights(result.capabilities);
         const _cc2 = result.capabilities.length;
         listing += `\n; c-list  (${_cc2} entr${_cc2 !== 1 ? 'ies' : 'y'})\n`;
         for (let i = 0; i < result.capabilities.length; i++) {
