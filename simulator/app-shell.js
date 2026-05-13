@@ -543,6 +543,12 @@ function init() {
     // Global keyboard shortcuts: Ctrl+<letter> → switch top-level view.
     // Skipped when focus is inside any text input / textarea / contenteditable.
     document.addEventListener('keydown', function _ideNavShortcut(e) {
+        // Ctrl+Shift+S — Save Pseudo Code (download editor source as .cloomc)
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            savePseudoCode();
+            return;
+        }
         // Ctrl+Shift+L — jump directly to Source Library (Abstractions → Sources tab)
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'l') {
             const tag = document.activeElement ? document.activeElement.tagName : '';
