@@ -9,10 +9,13 @@
 //   T004 — pause timer fire: Scheduler.pause arms timer; step to deadline fires IRQ
 //   T005 — Wait flag-set wake: pendingWakeFlags signals sleeping thread via IRQ sweep
 //   T006 — Structured fault record: all new fields populated on an unhandled fault
+//   T008 — Scheduler.pause method-table index 4: assembled ELOADCALL encodes index 4,
+//           dispatch chain resolves to pause handler, thread transitions to sleeping
 
 const ChurchSimulator   = require('./simulator.js');
 const AbstractionRegistry = require('./abstractions.js');
 const SystemAbstractions  = require('./system_abstractions.js');
+const ChurchAssembler     = require('./assembler.js');
 
 let pass = 0;
 let fail = 0;
@@ -241,6 +244,164 @@ console.log('\n--- T007: .catch throws → catchInvoked=true, escalation ---');
     check('T007d: tier is null (all tiers exhausted — halt)', entry.tier === null);
     check('T007e: machine halted', sim.halted === true);
     check('T007f: output mentions .catch threw', sim.output.includes('threw'));
+}
+
+// ── T008: Scheduler.pause — assembled ELOADCALL + runtime dispatch integration ─
+//
+// Verifies the full chain:
+//   1. ChurchAssembler encodes Scheduler.pause() as ELOADCALL with method index 5
+//      (1-based) → 0-based index 4, matching the methods array in abstractions.js.
+//   2. The simulator's ELOADCALL dispatch path (methods[ecMethodIdx-1] → dispatchMethod)
+//      resolves to the 'pause' handler and returns ok=true (no fault/halt).
+//   3. The calling thread transitions to 'sleeping' with wakeStep set — the concrete
+//      scheduler state change that signals a correct pause rather than a fault.
+//
+// Assembler conventions used here mirror SCHED_CONVENTIONS_BC from assembler_test.js
+// (BC84–BC88 / BC90–BC94).  Encoding: pause index=4 → 1-based=5; slot=8; imm=0x0508.
+console.log('\n--- T008: Scheduler.pause assembled ELOADCALL + runtime dispatch ---');
+{
+    const { sim, registry, sysAbs } = makeTestSim();
+
+    // ── T008a/b: method-table shape (prerequisite) ──────────────────────────
+    const sched = registry.abstractions[8];
+    check('T008a: NS slot 8 is the Scheduler abstraction', sched && sched.name === 'Scheduler');
+    check('T008b: Scheduler.methods[4] === "pause" (0-based index 4)',
+        sched && sched.methods[4] === 'pause');
+
+    // ── T008c-e: assemble Scheduler.pause() and verify ELOADCALL encoding ──
+    // Use the same convention table the application assembler uses for Scheduler
+    // bare-calls (mirrors SCHED_CONVENTIONS_BC from assembler_test.js BC84-BC88).
+    const SCHED_CONV = {
+        'Scheduler': {
+            'Yield': { index: 0, input: '',              output: 'DR1' },
+            'Spawn': { index: 1, input: 'CR2=code_GT',  output: 'DR1=threadID' },
+            'Wait':  { index: 2, input: 'CR2=flag_GT',  output: 'DR1' },
+            'Stop':  { index: 3, input: 'DR1=threadID', output: 'DR1' },
+            'pause': { index: 4, input: 'DR1=ticks',    output: 'DR1' },
+        }
+    };
+    const SCHED_NS = { 'Scheduler': 8 };
+
+    const asm = new ChurchAssembler(SCHED_CONV);
+    asm.setNamespace(SCHED_NS);
+    const asmResult = asm.assemble('Scheduler.pause()\nHALT');
+
+    check('T008c: Scheduler.pause() assembles without errors',
+        asmResult.errors.length === 0,
+        (asmResult.errors[0] || {}).message);
+
+    // Decode the ELOADCALL word — same bit-field extraction the simulator uses:
+    //   imm = word & 0x7FFF
+    //   ecRow      = imm & 0xFF          → Scheduler NS slot (8)
+    //   ecMethodIdx = (imm >>> 8) & 0x7F → 1-based method index (5 for pause)
+    const eloadWord = (asmResult.words[0] || 0) >>> 0;
+    const encodedImm     = eloadWord & 0x7FFF;
+    const encodedRow     = encodedImm & 0xFF;
+    const encodedMethod1 = (encodedImm >>> 8) & 0x7F;   // 1-based
+    const encodedMethod0 = encodedMethod1 - 1;           // 0-based index into methods[]
+
+    check('T008d: assembled ELOADCALL encodes Scheduler NS slot (row=8)',
+        encodedRow === 8);
+    check('T008e: assembled ELOADCALL encodes method 5 (1-based) for pause (0-based index 4)',
+        encodedMethod1 === 5 && encodedMethod0 === 4);
+
+    // ── T008f-g: simulator ELOADCALL dispatch chain resolves to 'pause' ────
+    // The simulator does exactly:
+    //   methodName = abstraction.methods[ecMethodIdx]   (0-based, extracted above)
+    //   result     = dispatchMethod(nsSlot, methodName, sim, args)
+    // Replicate this chain to confirm the link is not broken.
+    const resolvedName = sched ? sched.methods[encodedMethod0] : undefined;
+    check('T008f: methods[encodedMethod0] resolves to "pause"', resolvedName === 'pause');
+
+    const DURATION = 10;
+    const stepAtCall = sim.stepCount;
+    const result = registry.dispatchMethod(8, resolvedName, sim, { duration: DURATION });
+
+    check('T008g: dispatch via assembled index returns ok=true (no fault)',
+        result && result.ok === true);
+
+    // ── T008h-j: concrete scheduler state — thread is sleeping, not faulted ─
+    const bootThread = sysAbs._schedulerState.threads[sysAbs._schedulerState.currentThread];
+    check('T008h: calling thread state === "sleeping" (not "running" or faulted)',
+        bootThread && bootThread.state === 'sleeping');
+    check('T008i: wakeStep is set to stepAtCall + DURATION',
+        bootThread && bootThread.wakeStep === stepAtCall + DURATION);
+    check('T008j: machine did NOT halt (pause is not a fault)',
+        !sim.halted);
+}
+
+// ── T008-step: Scheduler.pause via sim.step() — CALL CR0 with DR3=4 ─────────
+//
+// A full simulator-step integration: places a CALL instruction in memory,
+// runs sim.step(), and verifies the thread enters the sleeping state.
+//
+// The CALL instruction uses legacy mode (imm=0) which reads DR3 as the 0-based
+// method index (DR3=4 → methods[4]='pause').  Pre-boot fetch mode is used so
+// memory[pc] is read directly without CR14 lump, keeping the setup minimal
+// while still exercising the real _execCall → _dispatchAbstraction →
+// dispatchMethod path that fires for system abstractions in production.
+//
+// Encoding:  opcode=2(CALL) | cond=14(AL) | crDst=0 | crSrc=0 | imm=0
+//            = 0x17000000
+console.log('\n--- T008-step: sim.step() executes Scheduler.pause (method index 4) ---');
+{
+    const { sim: stepSim, sysAbs: stepSysAbs } = makeTestSim();
+
+    // Use pre-boot fetch (bootComplete=false) so the simulator reads instructions
+    // directly from memory[pc] without requiring a CR14 code lump.  This keeps
+    // the test self-contained while still exercising the full _execCall path.
+    stepSim.bootComplete = false;
+
+    // Write a valid NS entry for Scheduler at slot 8 so mLoad can pass.
+    // location=0 (no code lump) causes lumpIsResident=false → system-abstraction
+    // fast path fires; limit17=1, gtType=1(Inform) gives a valid non-null entry.
+    stepSim.writeNSEntry(8, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0);
+
+    // Create an E-permission Inform GT for NS slot 8 (Scheduler).
+    const schedGT = stepSim.createGT(0, 8, {E:1}, 1);
+
+    // CR0 holds the Scheduler GT (crDst=0 in CALL instruction).
+    stepSim.cr[0] = {word0: schedGT, word1: 0, word2: 0, word3: 0, m: 0};
+
+    // Legacy CALL mode reads DR3 as the 0-based method index.
+    // DR3=4 maps to methods[4]='pause'.  DR1=20 is the duration argument.
+    const STEP_DURATION = 20;
+    stepSim.dr[3] = 4;             // method index 4 → pause
+    stepSim.dr[1] = STEP_DURATION; // pause duration in simulation steps
+
+    // CALL CR0 (opcode=2, cond=AL=14, crDst=0, crSrc=0, imm=0 = legacy mode).
+    // Equivalent assembly: CALL CR0   (with DR3 pre-set to method index)
+    const CALL_CR0_LEGACY = ((2 << 27) | (14 << 23) | (0 << 19) | (0 << 15) | 0) >>> 0;
+    stepSim.memory[0] = CALL_CR0_LEGACY; // placed at PC=0
+
+    const stepResult = stepSim.step();
+
+    // T008-step-a: step() must not return null (instruction executed)
+    check('T008-step-a: step() executed the CALL instruction (non-null result)',
+        stepResult !== null);
+
+    // T008-step-b: the dispatch description confirms 'Scheduler.pause' was called
+    check('T008-step-b: step() desc confirms Scheduler.pause was dispatched',
+        stepResult && stepResult.desc &&
+        stepResult.desc.includes('Scheduler') &&
+        stepResult.desc.includes('pause'));
+
+    // T008-step-c: no faults triggered — pause is not an error path
+    check('T008-step-c: no faults logged after CALL (pause is not a fault)',
+        stepSim.faultLog.length === 0);
+
+    // T008-step-d: machine did not halt
+    check('T008-step-d: machine NOT halted after Scheduler.pause step()',
+        !stepSim.halted);
+
+    // T008-step-e: thread state changed to sleeping (concrete scheduler transition)
+    const stepThread = stepSysAbs._schedulerState.threads[0];
+    check('T008-step-e: thread[0].state === "sleeping" after step()',
+        stepThread && stepThread.state === 'sleeping');
+
+    // T008-step-f: wakeStep is set (timer deadline registered on the thread)
+    check('T008-step-f: thread[0].wakeStep is set (timer deadline > 0)',
+        stepThread && typeof stepThread.wakeStep === 'number' && stepThread.wakeStep > 0);
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────
