@@ -1234,13 +1234,13 @@ function slowBoot() {
                 }
                 updateDashboard();
                 if (!sim.halted) {
-                    // Respect a startup default view set by the ⚡ bolt
-                    // drag-and-drop, then clear the one-shot flag so that
-                    // subsequent user-triggered resets land on 'lumps' as
-                    // normal.
-                    const _postBootView = window._autoBootStartupDefaultView || 'lumps';
-                    window._autoBootStartupDefaultView = null;
-                    switchView(_postBootView);
+                    // Land on the user's default page (⚡ bolt setting) or
+                    // fall back to lumps. Clear the guard so subsequent
+                    // manual resets redirect to dashboard as normal.
+                    // Search: _startupDefaultView
+                    const _dest = window._startupDefaultView || 'lumps';
+                    window._startupDefaultView = null;
+                    switchView(_dest);
                 }
                 return;
             }
@@ -2868,9 +2868,10 @@ function runLazyLoadTest() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function resetSim() {
-    // During the startup auto-boot the default view flag is already set;
-    // skip the dashboard redirect so the chosen default view survives.
-    if (!window._autoBootStartupDefaultView) switchView('dashboard');
+    // Skip dashboard redirect when a startup default view is pending —
+    // slowBoot() will navigate there after boot completes.
+    // Search: _startupDefaultView
+    if (!window._startupDefaultView) switchView('dashboard');
     _lastFault = null;
     faultAlertOff();
     if (sim && sim.faultLog) sim.faultLog = [];

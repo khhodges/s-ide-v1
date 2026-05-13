@@ -445,18 +445,7 @@ function init() {
         // resolved) so _reapplyStickyPatches() ran with the stale patch still live.
         if (!sim.bootComplete) {
             const _abChk = document.getElementById('autoBootChk');
-            if (_abChk && _abChk.checked) {
-                // Capture any user-chosen default view so slowBoot() can
-                // land there instead of the hardcoded 'lumps' after boot
-                // completes.  Only the startup auto-boot sets this flag;
-                // user-triggered resets leave it null and get 'lumps' as
-                // before.
-                try {
-                    window._autoBootStartupDefaultView =
-                        localStorage.getItem('church_defaultView') || null;
-                } catch(e) { window._autoBootStartupDefaultView = null; }
-                resetSim();
-            }
+            if (_abChk && _abChk.checked) resetSim();
         }
     });
     sim.on('programLoaded', () => {
@@ -519,9 +508,18 @@ function init() {
     const hashParams = {};
     if (hashQuery) hashQuery.split('&').forEach(p => { const [k,v] = p.split('='); hashParams[k] = v; });
     let startView = views.includes(hashView) ? hashView : null;
-    if (!startView) {
-        try { const def = localStorage.getItem('church_defaultView'); if (def && views.includes(def)) startView = def; } catch(e) {}
-    }
+    // church_defaultView always wins over URL hash / lastView when set.
+    // Arms window._startupDefaultView so switchView() blocks the boot
+    // animation's intermediate redirects (dashboard, pipeline) until boot
+    // completes and slowBoot() clears the guard. Search: _startupDefaultView
+    window._startupDefaultView = null;
+    try {
+        const _def = localStorage.getItem('church_defaultView');
+        if (_def && views.includes(_def)) {
+            window._startupDefaultView = _def;
+            startView = _def;
+        }
+    } catch(e) {}
     if (!startView) {
         try { const saved = localStorage.getItem('church_lastView'); if (saved && views.includes(saved)) startView = saved; } catch(e) {}
     }
@@ -908,6 +906,13 @@ function selectLumpType(type) {
 let _viewLocked = false;
 function switchView(viewId) {
     if (_viewLocked) return;
+    // _startupDefaultView GUARD: while the boot animation is running,
+    // block any redirect to a non-default view (dashboard from resetSim,
+    // pipeline from slowBoot) so the user always lands on their chosen page.
+    // Set in init(); cleared by slowBoot() when boot completes.
+    // Search: _startupDefaultView
+    if (window._startupDefaultView && viewId !== window._startupDefaultView &&
+            typeof bootAnimating !== 'undefined' && bootAnimating) return;
     if (viewId === 'abstractions') {
         if (typeof _selectedLumpToken !== 'undefined') _selectedLumpToken = null;
     }
