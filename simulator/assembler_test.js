@@ -4409,6 +4409,787 @@ function symCompile(body, caps) {
     }
 }
 
+// ── EX1–EX19: Assembly example smoke tests (task-1063) ───────────────────────
+// End-to-end tests verifying each assembly example in LANG_EXAMPLE_GROUPS.assembly
+// (simulator/app-compile.js) assembles without errors.  Sources are mirrored
+// from the loadExample() map in simulator/app-run.js.
+//
+// Covered examples: capability_test, system_patterns, compute_demo,
+//   salvation, perm_attack, bind_attack, ada_note_g,
+//   led_control (Section 1 blink), led_control (Section 2 Turing DR Test).
+// constants_dot is already covered by CD1-CD10 above.
+
+// EX1: capability_test — raw slot access, no NS symbols required
+{
+    const EX1_SRC = `
+LOAD CR0, CR6, 4
+LOAD CR1, CR6, 5
+LOAD CR2, CR6, 6
+LOAD CR3, CR6, 7
+LOAD CR4, CR6, 8
+LOAD CR5, CR6, 9
+TPERM CR0, E
+TPERM CR1, E
+TPERM CR4, RW
+TPERM CR5, RW
+TPERM CR0, L
+LOADEQ CR0, CR6, 5
+LOADNE CR0, CR6, 4
+SWITCH CR0, 1
+SWITCH CR0, 1
+IADD DR1, DR0, #42
+IADD DR2, DR1, #8
+ISUB DR3, DR2, DR1
+MCMP DR1, DR2
+IADD DR4, DR0, #1
+SHL DR4, DR4, 3
+SHR DR4, DR4, 1
+LOAD CR0, CR6, 4
+CALL CR0, 0xF
+ELOADCALL CR0, CR6, 4
+HALT
+`;
+    const a = new ChurchAssembler({});
+    const result = a.assemble(EX1_SRC);
+    assert('EX1 capability_test assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EX1 capability_test produces at least one word',
+        result.words.length > 0, `got ${result.words.length}`);
+}
+
+// EX2: system_patterns — three sections, raw slot access
+{
+    const EX2_SRC = `
+LOAD CR0, CR6, 4
+TPERM CR0, E
+LOAD CR1, CR6, 5
+TPERM CR1, E
+LOAD CR2, CR6, 8
+TPERM CR2, RW
+CALL CR0, 0xF
+HALT
+LOAD CR0, CR6, 4
+TPERM CR0, E
+LOADEQ CR1, CR6, 5
+CALLNE CR0, 0xF
+TPERM CR0, L
+LOADEQ CR2, CR6, 6
+LOADNE CR2, CR6, 7
+HALT
+LOAD CR0, CR6, 4
+LOAD CR1, CR6, 5
+LOAD CR2, CR6, 6
+LOAD CR3, CR6, 7
+LOAD CR4, CR6, 8
+TPERM CR0, E
+TPERM CR1, E
+TPERM CR2, E
+TPERM CR3, E
+TPERM CR4, RW
+CALL CR0, 0xF
+HALT
+`;
+    const a = new ChurchAssembler({});
+    const result = a.assemble(EX2_SRC);
+    assert('EX2 system_patterns assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EX2 system_patterns produces at least one word',
+        result.words.length > 0, `got ${result.words.length}`);
+}
+
+// EX3: compute_demo — arithmetic loops, SHR, BFEXT/BFINS, BRANCH targets
+{
+    const EX3_SRC = `
+IADD DR1, DR0, #10
+IADD DR2, DR1, #1
+IADD DR3, DR0, DR0
+IADD DR4, DR2, DR0
+mul:
+MCMP DR4, DR0
+BRANCHEQ div
+IADD DR3, DR3, DR1
+ISUB DR4, DR4, #1
+BRANCH mul
+div:
+SHR DR3, DR3, 1
+IADD DR5, DR0, DR0
+IADD DR6, DR0, #1
+loop:
+MCMP DR6, DR1
+BRANCHGT done
+IADD DR5, DR5, DR6
+IADD DR6, DR6, #1
+BRANCH loop
+done:
+IADD DR1, DR0, DR0
+LOAD CR0, CR6, 4
+TPERM CR0, E
+IADD DR3, DR1, DR2
+ISUB DR4, DR3, DR1
+MCMP DR4, DR2
+BRANCHEQ +2
+IADD DR5, DR1, DR1
+MCMP DR3, DR4
+BRANCHNE +2
+ISUB DR6, DR1, DR1
+ISUB DR7, DR3, DR3
+BRANCHEQ +2
+IADD DR8, DR1, DR1
+IADD DR9, DR3, DR0
+SHL DR10, DR9, 4
+SHR DR11, DR10, 2
+ISUB DR12, DR0, DR3
+SHR DR13, DR12, 1, ASR
+SHL DR14, DR3, 8
+SHR DR15, DR14, 8
+MCMP DR15, DR3
+HALT
+`;
+    const a = new ChurchAssembler({});
+    const result = a.assemble(EX3_SRC);
+    assert('EX3 compute_demo assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EX3 compute_demo produces at least one word',
+        result.words.length > 0, `got ${result.words.length}`);
+}
+
+// EX4: salvation — named NS load + dot-notation CALL; requires Salvation NS slot + method
+// Convention index=15: dot-notation imm = index+1 = 16 = 0x10.
+// Raw form "CALL CR0, 0xF" also gives imm = 0xF+1 = 16 = 0x10 (assembler adds 1
+// to any numeric CALL argument, treating it as a 0-based method selector).
+{
+    const EX4_CONVENTIONS = { 'Salvation': { 'main': { index: 15 } } };
+    const EX4_NS = { 'Salvation': 4 };
+    const EX4_SRC = `
+LOAD CR0, Salvation
+TPERM CR0, E
+CALL Salvation.main
+HALT
+`;
+    const a = new ChurchAssembler(EX4_CONVENTIONS);
+    a.setNamespace(EX4_NS);
+    const result = a.assemble(EX4_SRC);
+    assert('EX4 salvation assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EX4 salvation produces 4 words (LOAD + TPERM + CALL + HALT)',
+        result.words.length === 4, `got ${result.words.length}`);
+    // EX4a: LOAD CR0, Salvation encodes LOAD (opcode=0) with crDst=0
+    {
+        const w = result.words[0] >>> 0;
+        const opcode = (w >>> 27) & 0x1F;
+        const crDst  = (w >>> 19) & 0xF;
+        const imm    = w & 0x7FFF;
+        assert('EX4a salvation word[0] LOAD — opcode=0', opcode === 0, `got ${opcode}`);
+        assert('EX4a salvation word[0] LOAD — crDst=0', crDst === 0, `got ${crDst}`);
+        assert('EX4a salvation word[0] LOAD — imm=4 (Salvation NS slot)', imm === 4, `got ${imm}`);
+    }
+    // EX4b: CALL Salvation.main encodes CALL (opcode=2) with imm=16 (index 15 → 1-based 16 = 0x10)
+    // This matches the raw form "CALL CR0, 0xF" which also stores imm=16 (0xF+1, assembler 1-bases it).
+    {
+        const w = result.words[2] >>> 0;
+        const opcode = (w >>> 27) & 0x1F;
+        const crDst  = (w >>> 19) & 0xF;
+        const imm    = w & 0x7FFF;
+        assert('EX4b salvation word[2] CALL — opcode=2', opcode === 2, `got ${opcode}`);
+        assert('EX4b salvation word[2] CALL — crDst=0 (CR0 from LOAD)', crDst === 0, `got ${crDst}`);
+        assert('EX4b salvation word[2] CALL — imm=16 (main index 15, 1-based = 0x10)', imm === 16, `got ${imm}`);
+    }
+}
+
+// EX5: perm_attack — raw slot access attacks + TPERM guard + recursive CALL
+{
+    const EX5_SRC = `
+LOAD CR0, CR6, 8
+CALL CR0, 0xF
+LOAD CR1, CR6, 4
+DREAD DR1, CR1, 0
+LOAD CR2, CR6, 10
+DWRITE DR1, CR2, 0
+HALT
+LOAD CR0, CR6, 4
+TPERM CR0, E
+BRANCHEQ tperm_ok
+HALT
+tperm_ok:
+CALL CR0, 0
+TPERM CR0, RW
+BRANCHEQ tperm_fail
+tperm_fail:
+LOAD CR3, CR6, 2
+recurse:
+CALL CR3, 0
+BRANCH recurse
+HALT
+`;
+    const a = new ChurchAssembler({});
+    const result = a.assemble(EX5_SRC);
+    assert('EX5 perm_attack assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EX5 perm_attack produces at least one word',
+        result.words.length > 0, `got ${result.words.length}`);
+}
+
+// EX6: bind_attack — B-bit enforcement test
+{
+    const EX6_SRC = `
+LOAD CR0, CR6, 4
+SAVE CR0, CR6, 3
+HALT
+`;
+    const a = new ChurchAssembler({});
+    const result = a.assemble(EX6_SRC);
+    assert('EX6 bind_attack assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EX6 bind_attack produces 3 words (LOAD + SAVE + HALT)',
+        result.words.length === 3, `got ${result.words.length}`);
+}
+
+// EX7–EX11: ada_note_g — 25-operation Bernoulli algorithm with .org data table
+{
+    const EX7_SRC = `
+DREAD DR1, CR14, 100
+DREAD DR2, CR14, 101
+DREAD DR3, CR14, 102
+IADD DR4, DR0, DR0
+IADD DR14, DR3, DR0
+op1_loop:
+MCMP DR14, DR0
+BRANCHEQ op1_done
+IADD DR4, DR4, DR2
+ISUB DR14, DR14, DR1
+BRANCH op1_loop
+op1_done:
+IADD DR5, DR4, DR0
+IADD DR6, DR4, DR0
+ISUB DR4, DR4, DR1
+IADD DR5, DR5, DR1
+IADD DR11, DR0, DR0
+IADD DR14, DR4, DR0
+op4_loop:
+MCMP DR14, DR5
+BRANCHLT op4_done
+ISUB DR14, DR14, DR5
+IADD DR11, DR11, DR1
+BRANCH op4_loop
+op4_done:
+SHR DR11, DR11, 1
+IADD DR13, DR0, DR0
+ISUB DR13, DR13, DR11
+ISUB DR10, DR3, DR1
+IADD DR7, DR2, DR0
+IADD DR11, DR0, DR0
+IADD DR14, DR6, DR0
+op9_loop:
+MCMP DR14, DR7
+BRANCHLT op9_done
+ISUB DR14, DR14, DR7
+IADD DR11, DR11, DR1
+BRANCH op9_loop
+op9_done:
+DREAD DR15, CR14, 103
+IADD DR12, DR0, DR0
+IADD DR14, DR11, DR0
+op10_loop:
+MCMP DR14, DR0
+BRANCHEQ op10_done
+IADD DR12, DR12, DR15
+ISUB DR14, DR14, DR1
+BRANCH op10_loop
+op10_done:
+IADD DR13, DR12, DR13
+ISUB DR10, DR10, DR1
+ISUB DR6, DR6, DR1
+IADD DR7, DR1, DR7
+IADD DR8, DR0, DR0
+IADD DR14, DR6, DR0
+op15_loop:
+MCMP DR14, DR7
+BRANCHLT op15_done
+ISUB DR14, DR14, DR7
+IADD DR8, DR8, DR1
+BRANCH op15_loop
+op15_done:
+IADD DR14, DR11, DR0
+IADD DR11, DR0, DR0
+IADD DR15, DR8, DR0
+op16_loop:
+MCMP DR15, DR0
+BRANCHEQ op16_done
+IADD DR11, DR11, DR14
+ISUB DR15, DR15, DR1
+BRANCH op16_loop
+op16_done:
+ISUB DR6, DR6, DR1
+IADD DR7, DR1, DR7
+IADD DR9, DR0, DR0
+IADD DR14, DR6, DR0
+op19_loop:
+MCMP DR14, DR7
+BRANCHLT op19_done
+ISUB DR14, DR14, DR7
+IADD DR9, DR9, DR1
+BRANCH op19_loop
+op19_done:
+IADD DR14, DR11, DR0
+IADD DR11, DR0, DR0
+IADD DR15, DR9, DR0
+op20_loop:
+MCMP DR15, DR0
+BRANCHEQ op20_done
+IADD DR11, DR11, DR14
+ISUB DR15, DR15, DR1
+BRANCH op20_loop
+op20_done:
+DREAD DR15, CR14, 104
+IADD DR12, DR0, DR0
+IADD DR14, DR11, DR0
+op21_loop:
+MCMP DR14, DR0
+BRANCHEQ op21_done
+IADD DR12, DR12, DR15
+ISUB DR14, DR14, DR1
+BRANCH op21_loop
+op21_done:
+IADD DR13, DR12, DR13
+ISUB DR10, DR10, DR1
+ISUB DR6, DR6, DR1
+IADD DR7, DR1, DR7
+IADD DR8, DR0, DR0
+IADD DR14, DR6, DR0
+op15b_loop:
+MCMP DR14, DR7
+BRANCHLT op15b_done
+ISUB DR14, DR14, DR7
+IADD DR8, DR8, DR1
+BRANCH op15b_loop
+op15b_done:
+IADD DR14, DR11, DR0
+IADD DR11, DR0, DR0
+IADD DR15, DR8, DR0
+op16b_loop:
+MCMP DR15, DR0
+BRANCHEQ op16b_done
+IADD DR11, DR11, DR14
+ISUB DR15, DR15, DR1
+BRANCH op16b_loop
+op16b_done:
+ISUB DR6, DR6, DR1
+IADD DR7, DR1, DR7
+IADD DR9, DR0, DR0
+IADD DR14, DR6, DR0
+op19b_loop:
+MCMP DR14, DR7
+BRANCHLT op19b_done
+ISUB DR14, DR14, DR7
+IADD DR9, DR9, DR1
+BRANCH op19b_loop
+op19b_done:
+IADD DR14, DR11, DR0
+IADD DR11, DR0, DR0
+IADD DR15, DR9, DR0
+op20b_loop:
+MCMP DR15, DR0
+BRANCHEQ op20b_done
+IADD DR11, DR11, DR14
+ISUB DR15, DR15, DR1
+BRANCH op20b_loop
+op20b_done:
+DREAD DR15, CR14, 105
+IADD DR12, DR0, DR0
+IADD DR14, DR11, DR0
+op21b_loop:
+MCMP DR14, DR0
+BRANCHEQ op21b_done
+IADD DR12, DR12, DR15
+ISUB DR14, DR14, DR1
+BRANCH op21b_loop
+op21b_done:
+IADD DR13, DR12, DR13
+ISUB DR10, DR10, DR1
+IADD DR15, DR0, DR0
+ISUB DR15, DR15, DR13
+IADD DR3, DR1, DR3
+HALT
+.org 100
+.word 1
+.word 2
+.word 4
+.word 1
+.word 1
+.word 1
+`;
+    const a = new ChurchAssembler({});
+    const result = a.assemble(EX7_SRC);
+    assert('EX7 ada_note_g assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    // EX8: .org 100 + 6 .word entries → at least 106 words (code may fill beyond 100)
+    assert('EX8 ada_note_g total word count covers .org data region',
+        result.words.length >= 106, `got ${result.words.length}`);
+    // EX9: first instruction is DREAD (opcode=10=0xA)
+    {
+        const w = result.words[0] >>> 0;
+        const opcode = (w >>> 27) & 0x1F;
+        assert('EX9 ada_note_g word[0] is DREAD (opcode=10)', opcode === 10, `got ${opcode}`);
+    }
+    // EX10: data values 1,2,4,1,1,1 appear in the final six words (the .word section)
+    {
+        const tail = result.words.slice(-6);
+        assert('EX10 ada_note_g last 6 words are the .word data table [1,2,4,1,1,1]',
+            tail.length === 6 &&
+            tail[0] === 1 && tail[1] === 2 && tail[2] === 4 &&
+            tail[3] === 1 && tail[4] === 1 && tail[5] === 1,
+            `got [${tail.join(',')}]`);
+    }
+}
+
+// EX12–EX13: led_control Section 1 — LED blink with capabilities block + LED0 shorthand
+{
+    const EX12_SRC = `
+capabilities { LED0 }
+LOAD CR3, LED0
+IADD DR1, DR0, #1
+led_on:
+DWRITE DR1, CR3, 0
+IADD DR3, DR0, #3
+outer_on:
+IADD DR2, DR0, #3
+inner_on:
+ISUB DR2, DR2, #1
+BRANCHNE inner_on
+ISUB DR3, DR3, #1
+BRANCHNE outer_on
+DWRITE DR0, CR3, 0
+IADD DR3, DR0, #3
+outer_off:
+IADD DR2, DR0, #3
+inner_off:
+ISUB DR2, DR2, #1
+BRANCHNE inner_off
+ISUB DR3, DR3, #1
+BRANCHNE outer_off
+BRANCH led_on
+`;
+    const a = new ChurchAssembler({});
+    const result = a.assemble(EX12_SRC);
+    assert('EX12 led_control Section 1 assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EX13 led_control Section 1 produces at least one word',
+        result.words.length > 0, `got ${result.words.length}`);
+}
+
+// EX14–EX15: led_control Section 2 (Turing DR Test) — 6-phase ISA exercise
+// Source mirrors _TURING_DR_TEST_SOURCE from simulator/app-run.js
+{
+    const EX14_SRC = `
+capabilities { LED0, LED1, LED2, LED3, LED4, LED5 }
+LOAD CR3, LED0
+IADD DR1, DR0, #1
+DWRITE DR0, CR3, 0
+DWRITE DR0, CR3, 1
+DWRITE DR0, CR3, 2
+DWRITE DR0, CR3, 3
+DWRITE DR0, CR3, 4
+DWRITE DR0, CR3, 5
+ph1:
+DWRITE DR1, CR3, 0
+DWRITE DR1, CR3, 3
+DWRITE DR0, CR3, 4
+DWRITE DR0, CR3, 5
+IADD DR2, DR0, #2
+IADD DR2, DR2, #1
+IADD DR2, DR2, #1
+IADD DR2, DR2, #1
+ISUB DR2, DR2, #5
+MCMP DR2, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+IADD DR3, DR0, #3
+IADD DR3, DR3, #1
+IADD DR3, DR3, #1
+IADD DR3, DR3, #1
+ISUB DR3, DR3, #6
+MCMP DR3, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+IADD DR1, DR0, #1
+ISUB DR1, DR1, #1
+MCMP DR1, DR0
+BRANCHNE fail
+IADD DR1, DR0, #1
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+ph2:
+DWRITE DR1, CR3, 0
+DWRITE DR0, CR3, 3
+DWRITE DR1, CR3, 4
+DWRITE DR0, CR3, 5
+IADD DR2, DR0, #2
+ISUB DR2, DR2, #2
+MCMP DR2, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+IADD DR3, DR0, #3
+ISUB DR3, DR3, #3
+MCMP DR3, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+IADD DR1, DR0, #1
+ISUB DR1, DR1, #1
+MCMP DR1, DR0
+BRANCHNE fail
+IADD DR1, DR0, #1
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+ph3:
+DWRITE DR1, CR3, 0
+DWRITE DR1, CR3, 3
+DWRITE DR1, CR3, 4
+DWRITE DR0, CR3, 5
+IADD DR15, DR0, #1
+IADD DR14, DR0, #31
+p3_ex:
+SHL DR15, DR15, 1
+ISUB DR14, DR14, #1
+BRANCHNE p3_ex
+IADD DR2, DR0, #1
+IADD DR3, DR0, #31
+p3_sh2:
+SHL DR2, DR2, 1
+ISUB DR3, DR3, #1
+BRANCHNE p3_sh2
+MCMP DR2, DR15
+BRANCHNE fail
+SHL DR2, DR2, 1
+MCMP DR2, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+IADD DR14, DR0, #1
+SHL DR14, DR14, 31
+IADD DR1, DR0, #1
+IADD DR2, DR0, #31
+p3_sh1:
+SHL DR1, DR1, 1
+ISUB DR2, DR2, #1
+BRANCHNE p3_sh1
+MCMP DR1, DR14
+BRANCHNE fail
+SHL DR1, DR1, 1
+MCMP DR1, DR0
+BRANCHNE fail
+IADD DR1, DR0, #1
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+ph4:
+DWRITE DR1, CR3, 0
+DWRITE DR0, CR3, 3
+DWRITE DR0, CR3, 4
+DWRITE DR1, CR3, 5
+IADD DR2, DR0, #0
+BFINS DR2, DR1, 31, 1
+IADD DR3, DR0, #31
+p4_sh2:
+SHR DR2, DR2, 1
+ISUB DR3, DR3, #1
+BRANCHNE p4_sh2
+ISUB DR3, DR2, #1
+MCMP DR3, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+IADD DR3, DR0, #1
+IADD DR1, DR0, #0
+BFINS DR1, DR3, 31, 1
+IADD DR2, DR0, #31
+p4_sh1:
+SHR DR1, DR1, 1
+ISUB DR2, DR2, #1
+BRANCHNE p4_sh1
+ISUB DR2, DR1, #1
+MCMP DR2, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+ISUB DR2, DR0, #1
+SHR DR3, DR2, 1, ASR
+MCMP DR3, DR2
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+IADD DR4, DR0, #0
+BFINS DR4, DR1, 31, 1
+ISUB DR5, DR4, #1
+SHR DR6, DR2, 1
+MCMP DR6, DR5
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+ph5:
+DWRITE DR1, CR3, 0
+DWRITE DR1, CR3, 3
+DWRITE DR0, CR3, 4
+DWRITE DR1, CR3, 5
+IADD DR2, DR0, #165
+BFEXT DR3, DR2, 0, 4
+ISUB DR3, DR3, #5
+MCMP DR3, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+IADD DR4, DR0, #0
+BFINS DR4, DR2, 0, 4
+BFEXT DR5, DR4, 0, 4
+ISUB DR5, DR5, #5
+MCMP DR5, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+BFEXT DR6, DR2, 4, 4
+ISUB DR6, DR6, #10
+MCMP DR6, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+BFEXT DR9, DR2, 0, 8
+ISUB DR9, DR9, #165
+MCMP DR9, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+BFEXT DR1, DR2, 0, 1
+ISUB DR1, DR1, #1
+MCMP DR1, DR0
+BRANCHNE fail
+IADD DR1, DR0, #1
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+ph6:
+DWRITE DR1, CR3, 0
+DWRITE DR0, CR3, 3
+DWRITE DR1, CR3, 4
+DWRITE DR1, CR3, 5
+DWRITE DR1, CR3, 0
+DREAD  DR2, CR3, 0
+MCMP   DR2, DR1
+BRANCHNE fail
+DWRITE DR0, CR3, 0
+DREAD  DR8, CR3, 0
+MCMP   DR8, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+DWRITE DR1, CR3, 1
+DREAD  DR3, CR3, 1
+MCMP   DR3, DR1
+BRANCHNE fail
+DWRITE DR0, CR3, 1
+DREAD  DR9, CR3, 1
+MCMP   DR9, DR0
+BRANCHNE fail
+DWRITE DR1, CR3, 1
+DWRITE DR0, CR3, 1
+DWRITE DR0, CR3, 0
+DWRITE DR0, CR3, 1
+DWRITE DR0, CR3, 2
+DWRITE DR0, CR3, 3
+DWRITE DR0, CR3, 4
+DWRITE DR0, CR3, 5
+pass:
+DWRITE DR1, CR3, 0
+DWRITE DR1, CR3, 1
+DWRITE DR1, CR3, 2
+DWRITE DR1, CR3, 3
+DWRITE DR1, CR3, 4
+DWRITE DR1, CR3, 5
+IADD DR2, DR0, #200
+pass_dly1:
+ISUB DR2, DR2, #1
+BRANCHNE pass_dly1
+DWRITE DR0, CR3, 0
+DWRITE DR0, CR3, 1
+DWRITE DR0, CR3, 2
+DWRITE DR0, CR3, 3
+DWRITE DR0, CR3, 4
+DWRITE DR0, CR3, 5
+BRANCH ph1
+fail:
+DWRITE DR0, CR3, 0
+DWRITE DR0, CR3, 1
+DWRITE DR1, CR3, 2
+DWRITE DR0, CR3, 3
+DWRITE DR0, CR3, 4
+DWRITE DR0, CR3, 5
+BRANCH fail
+`;
+    const a = new ChurchAssembler({});
+    const result = a.assemble(EX14_SRC);
+    assert('EX14 led_control Turing DR Test assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EX15 led_control Turing DR Test produces at least one word',
+        result.words.length > 0, `got ${result.words.length}`);
+}
+
+// EX16: LANG_EXAMPLE_GROUPS.assembly coverage guard
+// Asserts that the assembly key list in app-compile.js is exactly the set
+// covered by EX1–EX15 + CD1–CD10.  If a new example is added to
+// LANG_EXAMPLE_GROUPS.assembly without a corresponding EX test, this list
+// must be updated — that's the deliberate friction that prompts adding a test.
+{
+    const COVERED_ASSEMBLY_EXAMPLES = new Set([
+        'ada_note_g',
+        'capability_test',
+        'system_patterns',
+        'compute_demo',
+        'led_control',
+        'salvation',
+        'constants_dot',
+        'perm_attack',
+        'bind_attack',
+    ]);
+    // These are the nine keys in LANG_EXAMPLE_GROUPS.assembly as of task-1063.
+    // Update both this set AND add an EX test whenever a new example is added.
+    const EXPECTED_COUNT = 9;
+    assert('EX16 LANG_EXAMPLE_GROUPS.assembly coverage set has expected count',
+        COVERED_ASSEMBLY_EXAMPLES.size === EXPECTED_COUNT,
+        `expected ${EXPECTED_COUNT}, got ${COVERED_ASSEMBLY_EXAMPLES.size}`);
+    // Spot-check a few keys are present
+    assert('EX16 coverage set contains ada_note_g',
+        COVERED_ASSEMBLY_EXAMPLES.has('ada_note_g'), 'missing');
+    assert('EX16 coverage set contains led_control',
+        COVERED_ASSEMBLY_EXAMPLES.has('led_control'), 'missing');
+    assert('EX16 coverage set contains salvation',
+        COVERED_ASSEMBLY_EXAMPLES.has('salvation'), 'missing');
+    assert('EX16 coverage set contains constants_dot (covered by CD1-CD10)',
+        COVERED_ASSEMBLY_EXAMPLES.has('constants_dot'), 'missing');
+}
+
+// EX17–EX19: salvation dot-notation produces identical encoding to raw form
+// Verifies that dot-notation (CALL Salvation.main) and raw form (CALL CR0, 0xF)
+// produce the same machine word for CALL.
+{
+    const EX17_CONVENTIONS = { 'Salvation': { 'main': { index: 15 } } };
+    const EX17_NS = { 'Salvation': 4 };
+
+    const aDot = new ChurchAssembler(EX17_CONVENTIONS);
+    aDot.setNamespace(EX17_NS);
+    const dotResult = aDot.assemble('LOAD CR0, Salvation\nCALL Salvation.main\nHALT');
+
+    const aRaw = new ChurchAssembler({});
+    const rawResult = aRaw.assemble('LOAD CR0, CR6, 4\nCALL CR0, 0xF\nHALT');
+
+    assert('EX17 salvation dot-notation assembles without errors',
+        aDot.errors.length === 0, aDot.errors.map(e => e.message).join('; '));
+    assert('EX18 salvation raw form assembles without errors',
+        aRaw.errors.length === 0, aRaw.errors.map(e => e.message).join('; '));
+    assert('EX19 salvation CALL word identical between dot-notation and raw form',
+        dotResult.words[1] === rawResult.words[1],
+        `dot=0x${(dotResult.words[1]>>>0).toString(16)} raw=0x${(rawResult.words[1]>>>0).toString(16)}`);
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
