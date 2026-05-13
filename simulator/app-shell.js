@@ -163,6 +163,7 @@ function deleteUserTab(id) {
     }
     renderUserTabs();
     updateSaveUserTabBtn();
+    updateSavePseudoBtn();
 }
 
 function selectUserTab(id) {
@@ -184,6 +185,7 @@ function selectUserTab(id) {
     document.querySelectorAll('.example-tab:not(.user-tab)').forEach(t => t.classList.remove('active'));
     renderUserTabs();
     updateSaveUserTabBtn();
+    updateSavePseudoBtn();
     updateLineNumbers();
     const outputEl = document.getElementById('assemblyOutput');
     if (outputEl) outputEl.innerHTML = '';
@@ -207,6 +209,55 @@ function saveActiveUserTab() {
 function updateSaveUserTabBtn() {
     const btn = document.getElementById('btnSaveUserTab');
     if (btn) btn.disabled = !activeUserTabId || !userTabDirty;
+}
+
+function updateSavePseudoBtn() {
+    const btn = document.getElementById('btnSavePseudo');
+    if (!btn) return;
+    const ed = document.getElementById('asmEditor');
+    btn.disabled = !ed || !ed.value.trim();
+}
+
+function savePseudoCode() {
+    const ed = document.getElementById('asmEditor');
+    if (!ed || !ed.value.trim()) return;
+    const src = ed.value;
+
+    // 1. Try to extract abstraction name from source
+    var filename = 'program.cloomc';
+    var nameMatch = src.match(/^\s*abstraction\s+([A-Za-z_][A-Za-z0-9_]*)/m);
+    if (nameMatch) {
+        filename = nameMatch[1].toLowerCase() + '.cloomc';
+    } else {
+        // 2. Fall back to active user tab name
+        if (activeUserTabId) {
+            var tab = userTabs.find(function(t) { return t.id === activeUserTabId; });
+            if (tab && tab.name) {
+                filename = tab.name.replace(/[^A-Za-z0-9_\-]/g, '_').replace(/^_+|_+$/g, '').toLowerCase() + '.cloomc';
+                if (filename === '.cloomc') filename = 'program.cloomc';
+            }
+        }
+    }
+
+    var blob = new Blob([src], { type: 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Brief status in editor console
+    var outEl = document.getElementById('assemblyOutput');
+    if (outEl) {
+        var msg = document.createElement('div');
+        msg.style.cssText = 'color:#8f8;font-style:italic;padding:2px 0;';
+        msg.textContent = 'Saved ' + filename;
+        outEl.appendChild(msg);
+        setTimeout(function() { if (msg.parentNode) msg.parentNode.removeChild(msg); }, 1500);
+    }
 }
 
 function markUserTabDirty() {
@@ -435,13 +486,14 @@ function init() {
 
     loadUserTabs();
     loadEditorState();
+    updateSavePseudoBtn();
     renderUserTabs();
     initReplDivider();
     initEditorDivider();
     initConsoleAutoSwitch();
     const asmEd = document.getElementById('asmEditor');
     if (asmEd) {
-        asmEd.addEventListener('input', function() { updateLineNumbers(); markUserTabDirty(); });
+        asmEd.addEventListener('input', function() { updateLineNumbers(); markUserTabDirty(); updateSavePseudoBtn(); });
         asmEd.addEventListener('scroll', syncLineScroll);
         asmEd.addEventListener('keydown', function(e) {
             if (e.key === 'Tab') {

@@ -7387,6 +7387,7 @@ function loadEditorState() {
         sel.value = 'symbolic';
         onLangChange(false);
     }
+    if (typeof updateSavePseudoBtn === 'function') updateSavePseudoBtn();
 }
 
 function showCreateNamespace() {

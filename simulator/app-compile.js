@@ -2015,6 +2015,7 @@ function loadCLOOMCExample(name) {
                 editor.value = code;
                 saveEditorState();
                 updateLineNumbers();
+                if (typeof updateSavePseudoBtn === 'function') updateSavePseudoBtn();
                 // Activate the matching tab — data-example may have a 'cloomc_' prefix
                 document.querySelectorAll('.example-tab').forEach(t => {
                     const de = t.dataset.example || '';
@@ -4021,6 +4022,7 @@ abstraction DMABuffer {
 
     editor.value = examples[name] || examples['integer_ops'];
     updateLineNumbers();
+    if (typeof updateSavePseudoBtn === 'function') updateSavePseudoBtn();
     saveEditorState();
 
     document.querySelectorAll('.example-tab').forEach(t => {
