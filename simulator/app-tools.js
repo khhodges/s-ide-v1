@@ -528,8 +528,92 @@ function updateGateLog() {
         html += `</div>`;
     }
 
-    // Empty-state guidance — only when there is no fault banner and no audit entries.
-    if (faultLog.length === 0 && log.length === 0) {
+    // ── Fault Recovery Timeline ────────────────────────────────────────────────
+    // Shows the three-tier escalation history and IRQ sweep count.
+    // Visible whenever any fault has structured recovery fields, or whenever
+    // the scheduler has performed at least one IRQ sweep.
+    // sweepCount is hoisted so the empty-state guard below can also suppress
+    // the "No gates recorded" placeholder when there is live scheduler data.
+    const _frtSa = (sim && sim.systemAbstractions) ? sim.systemAbstractions : null;
+    const _frtSchedState = _frtSa ? _frtSa._schedulerState : null;
+    const _frtSweepCount = _frtSchedState ? (_frtSchedState._irqSweepCount || 0) : 0;
+    const _frtTieredFaults = faultLog.filter(f => f.tier != null || f.faultCode != null || f.faultingMnemonic != null);
+    {
+        const sweepCount = _frtSweepCount;
+        const tieredFaults = _frtTieredFaults;
+
+        if (tieredFaults.length > 0 || sweepCount > 0) {
+            const openAttr = faultLog.length > 0 ? ' open' : '';
+            html += `<details class="frt-details"${openAttr}>`;
+            html += `<summary class="frt-summary">&#x26A1; Fault Recovery Timeline`;
+            if (sweepCount > 0) {
+                html += ` <span class="frt-sweep-badge" title="Total Scheduler.IRQ sweep invocations since boot">IRQ sweeps: ${sweepCount}</span>`;
+            }
+            if (tieredFaults.length > 0) {
+                html += ` <span class="frt-count-badge">${tieredFaults.length} escalation${tieredFaults.length !== 1 ? 's' : ''}</span>`;
+            }
+            html += `</summary>`;
+
+            if (tieredFaults.length === 0) {
+                html += `<div class="frt-empty">No structured fault escalations yet. Fault escalations appear here when the three-tier recovery system is triggered.</div>`;
+            } else {
+                html += `<div class="frt-list">`;
+                for (let _fi = 0; _fi < tieredFaults.length; _fi++) {
+                    const _fe = tieredFaults[_fi];
+                    const _isLatest = (_fi === tieredFaults.length - 1);
+                    const _tierNum = _fe.tier;
+                    const _tierLabel = _tierNum === 1 ? 'Tier\u00a01 (.catch)'
+                        : _tierNum === 2 ? 'Tier\u00a02 (IRQ)'
+                        : _tierNum === 3 ? 'Tier\u00a03 (PP250)'
+                        : 'Unhandled';
+                    const _tierClass = _tierNum === 1 ? 'frt-tier-1'
+                        : _tierNum === 2 ? 'frt-tier-2'
+                        : _tierNum === 3 ? 'frt-tier-3'
+                        : 'frt-tier-x';
+                    const _step = _fe.step !== undefined ? _fe.step : '?';
+                    const _faultType = _fe.type || '?';
+                    const _feColor = (typeof _FAULT_COLORS !== 'undefined' && _FAULT_COLORS[_fe.type]) || '#e05555';
+                    const _fePCVal = (_fe.physicalPC !== undefined && _fe.physicalPC !== null) ? _fe.physicalPC : _fe.pc;
+                    const _fePCHex = '0x' + (_fePCVal >>> 0).toString(16).toUpperCase().padStart(4, '0');
+
+                    html += `<div class="frt-row${_isLatest ? ' frt-row-latest' : ''}" onclick="showFaultModal(sim.faultLog[${sim.faultLog.indexOf(_fe)}])" title="Open fault details">`;
+                    html += `<span class="frt-step">step&nbsp;${_step}</span>`;
+                    html += `<span class="frt-type-badge" style="background:${_feColor}22;border-color:${_feColor};color:${_feColor}">${_faultType}</span>`;
+                    html += `<span class="frt-pc"><code>${_fePCHex}</code></span>`;
+                    if (_fe.faultingMnemonic) {
+                        html += `<span class="frt-mnemonic"><code>${_fe.faultingMnemonic}</code></span>`;
+                    }
+                    if (_fe.pipelineStage) {
+                        html += `<span class="frt-pipeline">${_fe.pipelineStage}</span>`;
+                    }
+                    if (_tierNum != null) {
+                        html += `<span class="frt-tier-badge ${_tierClass}">${_tierLabel}</span>`;
+                    }
+                    if (_fe.catchInvoked) {
+                        html += `<span class="frt-flag frt-flag-catch">.catch</span>`;
+                    }
+                    if (_fe.irqInvoked) {
+                        html += `<span class="frt-flag frt-flag-irq">IRQ</span>`;
+                    }
+                    if (_fe.tier3Recovery) {
+                        html += `<span class="frt-flag frt-flag-tier3">PP250</span>`;
+                    }
+                    if (_fe.involvedGT != null) {
+                        const _gtHex = '0x' + (_fe.involvedGT >>> 0).toString(16).toUpperCase().padStart(8, '0');
+                        html += `<span class="frt-gt" title="Involved Golden Token">GT:${_gtHex}</span>`;
+                    }
+                    if (_isLatest) html += `<span class="fault-history-latest-mark">&#x25C4;&nbsp;latest</span>`;
+                    html += `</div>`;
+                }
+                html += `</div>`;
+            }
+            html += `</details>`;
+        }
+    }
+
+    // Empty-state guidance — only when there is no fault banner, no audit entries,
+    // and the scheduler has not yet performed any IRQ sweeps.
+    if (faultLog.length === 0 && log.length === 0 && _frtSweepCount === 0) {
         container.innerHTML = `<div class="gate-log-empty">
             <p>No gates recorded yet.</p>
             <ol class="audit-guide-steps">

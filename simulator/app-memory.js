@@ -1570,6 +1570,30 @@ function updateInfoDisplay() {
             const titleAttr = ts ? ` title="${new Date(ts).toLocaleString()}"` : '';
             return `<div class="info-item"><span class="info-label">IDE Connection</span><span class="info-value"><span class="info-ide-badge ${isOnline ? 'info-ide-online' : 'info-ide-offline'}">IDE: ${status}</span><span class="info-ide-time"${titleAttr}>${timeStr}</span></span></div>`;
         })()}
+        ${(() => {
+            if (!sim || !sim.bootComplete) return '';
+            const _irq = sim.irqState || {};
+            const _sa = sim.systemAbstractions || null;
+            const _ss = _sa ? _sa._schedulerState : null;
+            const _sweepCount = _ss ? (_ss._irqSweepCount || 0) : 0;
+            const _timerArmed = !!_irq.timerArmed;
+            const _timerDeadline = _irq.timerDeadline || 0;
+            const _timerDuration = _irq.timerDuration || 0;
+            const _countdown = _timerArmed ? Math.max(0, _timerDeadline - (sim.stepCount || 0)) : 0;
+            const _irqActive = !!_irq.irqActive;
+            const _threads = (_ss && Array.isArray(_ss.threads)) ? _ss.threads.length : 0;
+
+            const timerHtml = _timerArmed
+                ? `<span style="color:#66bb6a;font-weight:600;">&#x23F0; ARMED</span> &mdash; deadline&nbsp;${_timerDeadline}, ${_countdown}&nbsp;step${_countdown !== 1 ? 's' : ''} remaining (duration&nbsp;${_timerDuration})`
+                : `<span style="color:#555;">disarmed</span>`;
+
+            const irqHtml = _irqActive
+                ? `<span style="color:#ff9800;font-weight:600;">active</span>`
+                : `<span style="color:#555;">idle</span>`;
+
+            return `<div class="info-item"><span class="info-label">Scheduler Timer</span><span class="info-value">${timerHtml}</span></div>`
+                 + `<div class="info-item"><span class="info-label">Scheduler.IRQ</span><span class="info-value">${irqHtml} &mdash; <span style="color:#ffb74d;font-weight:600;">${_sweepCount}</span> sweep${_sweepCount !== 1 ? 's' : ''}, ${_threads} thread${_threads !== 1 ? 's' : ''} &mdash; <a href="#" onclick="event.preventDefault();switchView('abstractions');showAbstractionDetail(8);" style="color:#c89b3c;text-decoration:none;font-size:0.8rem;">view detail</a></span></div>`;
+        })()}
     `;
 }
 

@@ -594,6 +594,51 @@ function showAbstractionDetail(index) {
     html += '</tbody></table>';
     html += '</div>';
 
+    // ── Scheduler live runtime state (NS slot 8 only) ─────────────────────────
+    if (abs.index === 8) {
+        const _sa = (typeof sim !== 'undefined' && sim && sim.systemAbstractions) ? sim.systemAbstractions : null;
+        const _ss = _sa ? _sa._schedulerState : null;
+        const _irq = (typeof sim !== 'undefined' && sim) ? sim.irqState : null;
+
+        html += '<div class="abs-detail-section">';
+        html += '<div class="abs-detail-label">Live Scheduler State</div>';
+        html += '<div class="sched-state-section">';
+
+        if (!_ss && !_irq) {
+            html += '<div style="color:#666;font-size:0.8rem;font-style:italic;">Boot the simulator to see live scheduler state.</div>';
+        } else {
+            const _sweepCount = _ss ? (_ss._irqSweepCount || 0) : 0;
+            const _threads = (_ss && Array.isArray(_ss.threads)) ? _ss.threads : [];
+            const _timerArmed = _irq ? !!_irq.timerArmed : false;
+            const _timerDeadline = _irq ? (_irq.timerDeadline || 0) : 0;
+            const _timerDuration = _irq ? (_irq.timerDuration || 0) : 0;
+            const _stepCount = (typeof sim !== 'undefined' && sim) ? (sim.stepCount || 0) : 0;
+            const _irqActive = _irq ? !!_irq.irqActive : false;
+            const _countdown = _timerArmed ? Math.max(0, _timerDeadline - _stepCount) : 0;
+
+            html += '<table class="sched-state-table">';
+            html += `<tr><td>IRQ sweep count</td><td><span class="sched-sweep-count">${_sweepCount}</span></td></tr>`;
+            html += `<tr><td>Active threads</td><td><span class="sched-thread-count">${_threads.length}</span></td></tr>`;
+            html += `<tr><td>IRQ active</td><td>${_irqActive ? '<span style="color:#ff9800;font-weight:600;">yes</span>' : '<span style="color:#666;">no</span>'}</td></tr>`;
+            if (_timerArmed) {
+                html += `<tr><td>Timer</td><td><span class="sched-timer-armed">&#x23F0; ARMED</span> &mdash; fires at step&nbsp;${_timerDeadline} (${_countdown} step${_countdown !== 1 ? 's' : ''} remaining, duration&nbsp;${_timerDuration})</td></tr>`;
+            } else {
+                html += `<tr><td>Timer</td><td><span class="sched-timer-disarmed">disarmed</span></td></tr>`;
+            }
+            if (_threads.length > 0) {
+                html += `<tr><td style="vertical-align:top;">Threads</td><td>`;
+                for (const _t of _threads) {
+                    const _stateColor = _t.state === 'running' ? '#66bb6a' : _t.state === 'sleeping' ? '#ffb74d' : '#9ca3af';
+                    html += `<div style="margin-bottom:2px;"><span style="color:${_stateColor};font-weight:600;">${_t.state || '?'}</span>&nbsp;<span style="color:#a0a0c0;">${_t.name || ('thread-' + _t.id)}</span> <span style="color:#666;">#${_t.id}</span></div>`;
+                }
+                html += `</td></tr>`;
+            }
+            html += '</table>';
+        }
+        html += '</div>';
+        html += '</div>';
+    }
+
     html += '<div class="abs-detail-section">';
     html += '<div class="abs-detail-label">CR6/CR14 Canonical Form</div>';
     html += '<div class="abs-canonical">';
