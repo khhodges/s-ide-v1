@@ -2918,6 +2918,14 @@ const _ABSTRACTION_CONVENTIONS = {
         'Revoke':   { index: 1, input: 'DR1=nsIndex',                                  output: 'DR1' },
         'Transfer': { index: 2, input: 'CR2=target_GT, DR1=slot',                      output: 'DR1' },
     },
+    'Tunnel': {
+        'Register': { index: 0, input: 'DR1=boot_reason, DR2=last_fault, DR3=fault_NIA',                                                                  output: 'DR0=1 (IDE ACK) | \u22640 (offline)' },
+        'Send':     { index: 1, input: 'DR1=FourCC tag, DR2=word count, DR3=first payload',                                                                output: 'DR0=0 (queued) | 1 (TX overrun)' },
+        'Receive':  { index: 2, input: 'DR1=timeout steps (0=forever)',                                                                                    output: 'DR0=word count (0=timeout), DR1=FourCC tag, DR2\u2026=payload' },
+        'Fault':    { index: 3, input: 'DR1=fault_code, DR2=ns_idx, DR3=thread_gt, DR4=abstr_idx, DR5=method_idx, DR6=instr_offset',                       output: 'none (fire-and-forget)' },
+        'Fetch':    { index: 4, input: 'DR1=slot token, DR2=expected words, CR2=write-GT',                                                                 output: 'DR0=0 (installed) | error code' },
+        'Connect':  { index: 5, input: 'CR2=remote GT (Outform/far-end abstraction)',                                                                       output: 'DR0=far-end return value' },
+    },
 };
 
 // Register conventions class-wide so all ChurchAssembler instances created

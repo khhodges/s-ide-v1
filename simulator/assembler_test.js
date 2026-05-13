@@ -3794,6 +3794,171 @@ const SMM_NS_BC = {
     }
 }
 
+// ── BC61–BC72: Tunnel bare-calls via _ABSTRACTION_CONVENTIONS (task-1057) ────
+// Tunnel lives at NS slot 31.  Method indices match manifest order:
+//   Register=0 (1-based=1), Send=1 (1-based=2), Receive=2 (1-based=3),
+//   Fault=3 (1-based=4), Fetch=4 (1-based=5), Connect=5 (1-based=6).
+
+const TUNNEL_FULL_CONVENTIONS_BC = {
+    'Tunnel': {
+        'Register': { index: 0, input: 'DR1=boot_reason, DR2=last_fault, DR3=fault_NIA',                                                             output: 'DR0=1 (IDE ACK) | \u22640 (offline)' },
+        'Send':     { index: 1, input: 'DR1=FourCC tag, DR2=word count, DR3=first payload',                                                           output: 'DR0=0 (queued) | 1 (TX overrun)' },
+        'Receive':  { index: 2, input: 'DR1=timeout steps (0=forever)',                                                                               output: 'DR0=word count (0=timeout)' },
+        'Fault':    { index: 3, input: 'DR1=fault_code, DR2=ns_idx, DR3=thread_gt, DR4=abstr_idx, DR5=method_idx, DR6=instr_offset',                  output: 'none (fire-and-forget)' },
+        'Fetch':    { index: 4, input: 'DR1=slot token, DR2=expected words, CR2=write-GT',                                                            output: 'DR0=0 (installed) | error code' },
+        'Connect':  { index: 5, input: 'CR2=remote GT (Outform/far-end abstraction)',                                                                  output: 'DR0=far-end return value' },
+    },
+    'Mem': { },
+};
+const TUNNEL_FULL_NS_BC = { 'Tunnel': 31, 'Mem': 7 };
+
+{
+    // BC61–BC63: Tunnel.Connect(Mem) — CR2 arg → LOAD CR2 + ELOADCALL
+    //   LOAD CR2, Mem  — imm=7 (Mem NS slot)
+    //   ELOADCALL      — Connect index=5 → 1-based=6; Tunnel slot=31
+    const a = new ChurchAssembler(TUNNEL_FULL_CONVENTIONS_BC);
+    a.setNamespace(TUNNEL_FULL_NS_BC);
+    const result = a.assemble('Tunnel.Connect(Mem)\nHALT');
+
+    assert('BC61 Tunnel.Connect(Mem) assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('BC62 Tunnel.Connect(Mem) expands to 3 words (LOAD + ELOADCALL + HALT)',
+        result.words.length === 3, `got ${result.words.length}`);
+    {
+        const w      = result.words[1] >>> 0;
+        const opcode = (w >>> 27) & 0x1F;
+        const imm    = w & 0x7FFF;
+        const row    = imm & 0xFF;
+        const method = (imm >>> 8) & 0x7F;
+        assert('BC63 Tunnel.Connect(Mem) word[1] ELOADCALL — opcode=8',
+            opcode === 8, `got opcode=${opcode}`);
+        assert('BC63 Tunnel.Connect(Mem) word[1] ELOADCALL — row=31 (Tunnel NS slot)',
+            row === 31, `got row=${row}`);
+        assert('BC63 Tunnel.Connect(Mem) word[1] ELOADCALL — method=6 (Connect index 5, 1-based)',
+            method === 6, `got method=${method}`);
+    }
+}
+
+{
+    // BC64–BC65: Tunnel.Send() — no CR args → ELOADCALL only (2 words)
+    //   ELOADCALL — Send index=1 → 1-based=2; Tunnel slot=31; imm=(2<<8)|31=0x021F
+    const a = new ChurchAssembler(TUNNEL_FULL_CONVENTIONS_BC);
+    a.setNamespace(TUNNEL_FULL_NS_BC);
+    const result = a.assemble('Tunnel.Send()\nHALT');
+
+    assert('BC64 Tunnel.Send() assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('BC64 Tunnel.Send() emits 2 words (ELOADCALL + HALT)',
+        result.words.length === 2, `got ${result.words.length}`);
+    {
+        const w      = result.words[0] >>> 0;
+        const imm    = w & 0x7FFF;
+        const row    = imm & 0xFF;
+        const method = (imm >>> 8) & 0x7F;
+        assert('BC65 Tunnel.Send() ELOADCALL — row=31 (Tunnel NS slot)',
+            row === 31, `got row=${row}`);
+        assert('BC65 Tunnel.Send() ELOADCALL — method=2 (Send index 1, 1-based)',
+            method === 2, `got method=${method}`);
+    }
+}
+
+{
+    // BC66–BC67: Tunnel.Receive() — no CR args → ELOADCALL only (2 words)
+    //   ELOADCALL — Receive index=2 → 1-based=3; Tunnel slot=31; imm=(3<<8)|31=0x031F
+    const a = new ChurchAssembler(TUNNEL_FULL_CONVENTIONS_BC);
+    a.setNamespace(TUNNEL_FULL_NS_BC);
+    const result = a.assemble('Tunnel.Receive()\nHALT');
+
+    assert('BC66 Tunnel.Receive() assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('BC66 Tunnel.Receive() emits 2 words (ELOADCALL + HALT)',
+        result.words.length === 2, `got ${result.words.length}`);
+    {
+        const w      = result.words[0] >>> 0;
+        const imm    = w & 0x7FFF;
+        const row    = imm & 0xFF;
+        const method = (imm >>> 8) & 0x7F;
+        assert('BC67 Tunnel.Receive() ELOADCALL — row=31 (Tunnel NS slot)',
+            row === 31, `got row=${row}`);
+        assert('BC67 Tunnel.Receive() ELOADCALL — method=3 (Receive index 2, 1-based)',
+            method === 3, `got method=${method}`);
+    }
+}
+
+{
+    // BC68: Tunnel.Register() — no CR args → ELOADCALL only (2 words)
+    //   ELOADCALL — Register index=0 → 1-based=1; Tunnel slot=31; imm=(1<<8)|31=0x011F
+    const a = new ChurchAssembler(TUNNEL_FULL_CONVENTIONS_BC);
+    a.setNamespace(TUNNEL_FULL_NS_BC);
+    const result = a.assemble('Tunnel.Register()\nHALT');
+
+    assert('BC68 Tunnel.Register() assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('BC68 Tunnel.Register() emits 2 words (ELOADCALL + HALT)',
+        result.words.length === 2, `got ${result.words.length}`);
+    {
+        const w      = result.words[0] >>> 0;
+        const imm    = w & 0x7FFF;
+        const row    = imm & 0xFF;
+        const method = (imm >>> 8) & 0x7F;
+        assert('BC68 Tunnel.Register() ELOADCALL — row=31 (Tunnel NS slot)',
+            row === 31, `got row=${row}`);
+        assert('BC68 Tunnel.Register() ELOADCALL — method=1 (Register index 0, 1-based)',
+            method === 1, `got method=${method}`);
+    }
+}
+
+{
+    // BC69: Tunnel.Fault() — no CR args → ELOADCALL only (2 words)
+    //   ELOADCALL — Fault index=3 → 1-based=4; Tunnel slot=31; imm=(4<<8)|31=0x041F
+    const a = new ChurchAssembler(TUNNEL_FULL_CONVENTIONS_BC);
+    a.setNamespace(TUNNEL_FULL_NS_BC);
+    const result = a.assemble('Tunnel.Fault()\nHALT');
+
+    assert('BC69 Tunnel.Fault() assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('BC69 Tunnel.Fault() emits 2 words (ELOADCALL + HALT)',
+        result.words.length === 2, `got ${result.words.length}`);
+    {
+        const w      = result.words[0] >>> 0;
+        const imm    = w & 0x7FFF;
+        const row    = imm & 0xFF;
+        const method = (imm >>> 8) & 0x7F;
+        assert('BC69 Tunnel.Fault() ELOADCALL — row=31 (Tunnel NS slot)',
+            row === 31, `got row=${row}`);
+        assert('BC69 Tunnel.Fault() ELOADCALL — method=4 (Fault index 3, 1-based)',
+            method === 4, `got method=${method}`);
+    }
+}
+
+{
+    // BC70–BC72: Tunnel.Fetch() — no args (pre-load DR1/DR2 before call) → ELOADCALL only
+    //   Fetch has input 'DR1=slot token, DR2=expected words, CR2=write-GT'; DR args are
+    //   pre-loaded by the caller; CR2 is set separately.  Empty bare-call emits ELOADCALL.
+    //   ELOADCALL — Fetch index=4 → 1-based=5; Tunnel slot=31; imm=(5<<8)|31=0x051F
+    const a = new ChurchAssembler(TUNNEL_FULL_CONVENTIONS_BC);
+    a.setNamespace(TUNNEL_FULL_NS_BC);
+    const result = a.assemble('Tunnel.Fetch()\nHALT');
+
+    assert('BC70 Tunnel.Fetch() assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('BC71 Tunnel.Fetch() emits 2 words (ELOADCALL + HALT)',
+        result.words.length === 2, `got ${result.words.length}`);
+    {
+        const w      = result.words[0] >>> 0;
+        const opcode = (w >>> 27) & 0x1F;
+        const imm    = w & 0x7FFF;
+        const row    = imm & 0xFF;
+        const method = (imm >>> 8) & 0x7F;
+        assert('BC72 Tunnel.Fetch() ELOADCALL — opcode=8',
+            opcode === 8, `got opcode=${opcode}`);
+        assert('BC72 Tunnel.Fetch() ELOADCALL — row=31 (Tunnel NS slot)',
+            row === 31, `got row=${row}`);
+        assert('BC72 Tunnel.Fetch() ELOADCALL — method=5 (Fetch index 4, 1-based)',
+            method === 5, `got method=${method}`);
+    }
+}
+
 // ── Symbolic Math compiler — explicit Abs.Method(args) call form ─────────────
 // SC1–SC8 test compileSymbolic() in cloomc_compiler.js.
 //
