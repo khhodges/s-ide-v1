@@ -47,6 +47,10 @@ args = "e2e-tests"
 task = "workflow.run"
 args = "assembler-tests"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "lump-consistency"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -131,6 +135,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node simulator/assembler_test.js"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "lump-consistency"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest tests/lump/test_lump_consistency.py -v"
 
 [workflows.workflow.metadata]
 isValidation = true
