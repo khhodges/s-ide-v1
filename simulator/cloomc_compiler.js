@@ -157,7 +157,7 @@ class CLOOMCCompiler {
                 continue;
             }
             if (method.rawIsa) {
-                methods.push({ name: method.name, code: method.rawIsa, params: method.params || [], visibility: method.visibility || 'public' });
+                methods.push({ name: method.name, code: method.rawIsa, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 manifest.push({ name: method.name, mapping: [] });
                 continue;
             }
@@ -165,7 +165,7 @@ class CLOOMCCompiler {
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
-                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public' });
+                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 manifest.push({ name: method.name, mapping: result.manifest });
             }
         }
@@ -709,13 +709,19 @@ class CLOOMCCompiler {
     }
 
     _parseAbstractionBody(lines, i, result, errors) {
+        let _commentBlockStart = -1; // start of consecutive // comment block preceding a method
         while (i < lines.length) {
             const line = lines[i].trim();
-            if (!line || line.startsWith('//')) { i++; continue; }
+            if (!line) { _commentBlockStart = -1; i++; continue; }
+            if (line.startsWith('//')) {
+                if (_commentBlockStart < 0) _commentBlockStart = i;
+                i++; continue;
+            }
             if (line === '}') return i + 1;
 
             const capMatch = line.match(/^capabilities\s*\{/);
             if (capMatch) {
+                _commentBlockStart = -1;
                 const inlineMatch = line.match(/^capabilities\s*\{\s*(.*?)\s*\}$/);
                 if (inlineMatch) {
                     if (inlineMatch[1]) {
@@ -751,6 +757,7 @@ class CLOOMCCompiler {
             // method Name = aliasOf Target;  (explicit alias, no code body)
             const aliasMatch = cleanLine.match(/^method\s+(\w+)\s*(?:\([^)]*\))?\s*=\s*aliasOf\s+(\w+)\s*;/);
             if (aliasMatch) {
+                _commentBlockStart = -1;
                 result.methods.push({ name: aliasMatch[1], aliasOf: aliasMatch[2], params: [], body: [], startLine: i, visibility, explicitVisibility });
                 i++;
                 continue;
@@ -759,6 +766,7 @@ class CLOOMCCompiler {
             // method Name [RAW ISA] { 0xHEX ... }  (inline ISA words)
             const rawIsaMatch = cleanLine.match(/^method\s+(\w+)\s*(?:\([^)]*\))?\s*\[RAW ISA\]\s*\{/);
             if (rawIsaMatch) {
+                _commentBlockStart = -1;
                 const rawWords = [];
                 i++;
                 while (i < lines.length) {
@@ -778,6 +786,8 @@ class CLOOMCCompiler {
             // method Name(...) { ... }  or  method Name { ... }  (optional parens)
             const methodMatch = cleanLine.match(/^method\s+(\w+)\s*(?:\(([^)]*)\))?\s*\{/);
             if (methodMatch) {
+                const _srcStart = _commentBlockStart >= 0 ? _commentBlockStart : i;
+                _commentBlockStart = -1;
                 const method = { name: methodMatch[1], params: [], body: [], startLine: i, visibility, explicitVisibility };
                 if (methodMatch[2] && methodMatch[2].trim()) {
                     method.params = methodMatch[2].split(',').map(p => p.trim()).filter(Boolean);
@@ -811,10 +821,12 @@ class CLOOMCCompiler {
                     }
                     i++;
                 }
+                method.sourceLines = lines.slice(_srcStart, i).join('\n');
                 result.methods.push(method);
                 continue;
             }
 
+            _commentBlockStart = -1;
             i++;
         }
         return i;
@@ -2864,7 +2876,7 @@ class CLOOMCCompiler {
                 continue;
             }
             if (method.rawIsa) {
-                methods.push({ name: method.name, code: method.rawIsa, params: method.params || [], visibility: method.visibility || 'public' });
+                methods.push({ name: method.name, code: method.rawIsa, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 manifest.push({ name: method.name, mapping: [] });
                 continue;
             }
@@ -2872,7 +2884,7 @@ class CLOOMCCompiler {
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
-                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public' });
+                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 manifest.push({ name: method.name, mapping: result.manifest });
             }
         }
@@ -2963,6 +2975,13 @@ class CLOOMCCompiler {
         }
 
         if (currentMethod) result.methods.push(currentMethod);
+
+        // Assign sourceLines: raw source text from each method's start to the next method's start
+        for (let _mi = 0; _mi < result.methods.length; _mi++) {
+            const _m = result.methods[_mi];
+            const _end = _mi + 1 < result.methods.length ? result.methods[_mi + 1].startLine : lines.length;
+            _m.sourceLines = lines.slice(_m.startLine, _end).join('\n');
+        }
 
         if (!result.name) {
             if (result.methods.length > 0) {
@@ -3058,6 +3077,13 @@ class CLOOMCCompiler {
         }
 
         if (currentMethod) result.methods.push(currentMethod);
+
+        // Assign sourceLines: raw source text from each method's start to the next method's start
+        for (let _mi = 0; _mi < result.methods.length; _mi++) {
+            const _m = result.methods[_mi];
+            const _end = _mi + 1 < result.methods.length ? result.methods[_mi + 1].startLine : lines.length;
+            _m.sourceLines = lines.slice(_m.startLine, _end).join('\n');
+        }
 
         if (!result.name) {
             errors.push({ line: 0, message: 'No abstraction name found. Use: ENGLISH abstraction MyName {' });

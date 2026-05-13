@@ -4629,6 +4629,32 @@ a.next-step-link:hover {
     line-height: 1.5;
 }
 
+.snippet-ts {
+    display: block;
+    font-size: 0.62rem;
+    color: rgba(180, 200, 255, 0.45);
+    margin-bottom: 0.25rem;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.02em;
+}
+
+.snippet-history details {
+    margin-top: 0.4rem;
+}
+
+.snippet-history details summary {
+    font-size: 0.62rem;
+    color: rgba(180, 200, 255, 0.4);
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    user-select: none;
+    padding: 0.1rem 0;
+}
+
+.snippet-history details summary:hover {
+    color: rgba(180, 200, 255, 0.7);
+}
+
 .abs-method-empty {
     font-size: 0.78rem;
     color: var(--text-secondary);

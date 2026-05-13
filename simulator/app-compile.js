@@ -894,6 +894,14 @@ function compileDraft() {
         } catch (_aclCErr) { console.error('[ACL check] _checkCapAccessRights failed:', _aclCErr); }
         if (con && _aclExtraC) con.innerHTML += _capRightsHTML(_aclExtraC);
     }
+    // Push live snippet history for each method that carried source text
+    if (typeof ChurchAssembler !== 'undefined' && result.abstractionName) {
+        for (const _m of result.methods) {
+            if (_m.sourceLines) {
+                ChurchAssembler.pushLiveSnippet(result.abstractionName, _m.name, _m.sourceLines);
+            }
+        }
+    }
     showNextSteps('draft');
     trackAction('draft', { name: result.abstractionName, lang: result.language });
     appendOutput(`Draft: "${result.abstractionName}" — ${result.methods.length} methods, ${clistCount} caps, ${allocSize} alloc`, 'info');
@@ -1205,6 +1213,15 @@ function buildAndDownloadLump() {
         }
         methodMeta.push(entry);
         mOff += len;
+    }
+
+    // Push live snippet history for each method that carried source text
+    if (typeof ChurchAssembler !== 'undefined' && absName) {
+        for (const _m of result.methods) {
+            if (_m.sourceLines) {
+                ChurchAssembler.pushLiveSnippet(absName, _m.name, _m.sourceLines);
+            }
+        }
     }
 
     let resolvedNsSlot = null;

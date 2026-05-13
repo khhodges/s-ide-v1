@@ -279,6 +279,59 @@ class ChurchAssembler {
         Object.assign(this.methodConventions, map || {});
     }
 
+    // ── Live snippet history ─────────────────────────────────────────────────
+    // Per-method compile history: newest entry first, capped at 20.
+    // localStorage key: cm_snippet_<absName>_<methodName>
+    // Value: JSON array [{ ts: number, source: string }, …]
+    //
+    // pushLiveSnippet(absName, methodName, sourceText)
+    //   Prepends { ts: Date.now(), source: sourceText } to the stack.
+    //   Persists to localStorage (pruned to 20 entries).
+    //
+    // getLiveSnippets(absName, methodName)
+    //   Returns the stack array (newest first), or null if none exist.
+    //   Lazily loads from localStorage on first call for the session.
+
+    // localStorage key helper — used for both push and lazy-load
+    static _lsKey(absName, methodName) {
+        return `cm_snippet_${absName}_${methodName}`;
+    }
+
+    // _liveSnippets shape: { absName: { methodName: [{ ts, source }, …] } }
+    // Matches the design spec; access is always via pushLiveSnippet/getLiveSnippets.
+    static pushLiveSnippet(absName, methodName, sourceText) {
+        const lsKey = ChurchAssembler._lsKey(absName, methodName);
+        if (!ChurchAssembler._liveSnippets[absName]) {
+            ChurchAssembler._liveSnippets[absName] = {};
+        }
+        let stack = ChurchAssembler._liveSnippets[absName][methodName];
+        if (!stack) {
+            try { stack = JSON.parse(localStorage.getItem(lsKey) || 'null') || []; }
+            catch (_) { stack = []; }
+        }
+        stack.unshift({ ts: Date.now(), source: sourceText });
+        if (stack.length > 20) stack.length = 20;
+        ChurchAssembler._liveSnippets[absName][methodName] = stack;
+        try { localStorage.setItem(lsKey, JSON.stringify(stack)); } catch (_) {}
+    }
+
+    static getLiveSnippets(absName, methodName) {
+        const cached = ChurchAssembler._liveSnippets[absName];
+        if (!cached || !cached[methodName]) {
+            try {
+                const stored = JSON.parse(localStorage.getItem(ChurchAssembler._lsKey(absName, methodName)) || 'null');
+                if (stored && stored.length > 0) {
+                    if (!ChurchAssembler._liveSnippets[absName]) ChurchAssembler._liveSnippets[absName] = {};
+                    ChurchAssembler._liveSnippets[absName][methodName] = stored;
+                } else {
+                    return null;
+                }
+            } catch (_) { return null; }
+        }
+        const stack = ChurchAssembler._liveSnippets[absName][methodName];
+        return (stack && stack.length > 0) ? stack : null;
+    }
+
     setNamespace(map) {
         // Persist as a class-level default so any future ChurchAssembler() instance
         // created anywhere in the app inherits the same namespace automatically.
@@ -1761,6 +1814,8 @@ class ChurchAssembler {
         }
     }
 }
+
+ChurchAssembler._liveSnippets = {};
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ChurchAssembler;

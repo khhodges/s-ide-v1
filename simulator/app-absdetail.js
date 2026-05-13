@@ -537,7 +537,25 @@ function showAbstractionDetail(index) {
                     }
                     html += '</tbody></table>';
                 }
-                if (example) {
+                const liveSnips = (typeof ChurchAssembler !== 'undefined') ? ChurchAssembler.getLiveSnippets(abs.name, m) : null;
+                if (liveSnips && liveSnips.length > 0) {
+                    html += '<div class="snippet-history">';
+                    const _MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    const _fmtTs = ts => {
+                        const d = new Date(ts);
+                        const hh = String(d.getHours()).padStart(2, '0');
+                        const mm = String(d.getMinutes()).padStart(2, '0');
+                        return `${d.getDate()} ${_MONTHS[d.getMonth()]} ${d.getFullYear()} ${hh}:${mm}`;
+                    };
+                    html += `<span class="snippet-ts">compiled ${_fmtTs(liveSnips[0].ts)}</span>`;
+                    html += `<pre class="abs-method-panel-code">${_annotateAbsCodeHtml(liveSnips[0].source)}</pre>`;
+                    for (let _si = 1; _si < liveSnips.length; _si++) {
+                        html += `<details><summary>compiled ${_fmtTs(liveSnips[_si].ts)}</summary>`;
+                        html += `<pre class="abs-method-panel-code">${_annotateAbsCodeHtml(liveSnips[_si].source)}</pre>`;
+                        html += `</details>`;
+                    }
+                    html += '</div>';
+                } else if (example) {
                     html += `<pre class="abs-method-panel-code">${_annotateAbsCodeHtml(example)}</pre>`;
                 }
                 html += '</div>';
