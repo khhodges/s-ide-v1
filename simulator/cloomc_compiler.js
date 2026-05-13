@@ -213,11 +213,11 @@ class CLOOMCCompiler {
 
         for (const method of parsed.methods) {
             if (method.aliasOf) {
-                methods.push({ name: method.name, aliasOf: method.aliasOf, params: method.params || [], visibility: method.visibility || 'public' });
+                methods.push({ name: method.name, aliasOf: method.aliasOf, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 continue;
             }
             if (method.rawIsa) {
-                methods.push({ name: method.name, code: method.rawIsa, params: method.params || [], visibility: method.visibility || 'public' });
+                methods.push({ name: method.name, code: method.rawIsa, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 manifest.push({ name: method.name, mapping: [] });
                 continue;
             }
@@ -225,7 +225,7 @@ class CLOOMCCompiler {
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
-                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public' });
+                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 manifest.push({ name: method.name, mapping: result.manifest });
             }
         }
@@ -275,7 +275,7 @@ class CLOOMCCompiler {
         while (i < lines.length) {
             const line = lines[i].trim();
             if (!line || line.startsWith('--')) { i++; continue; }
-            if (line === '}') return i + 1;
+            if (line === '}') { i++; break; }
 
             const capMatch = line.match(/^capabilities\s*\{/);
             if (capMatch) {
@@ -356,6 +356,11 @@ class CLOOMCCompiler {
             }
 
             i++;
+        }
+        for (let _mi = 0; _mi < result.methods.length; _mi++) {
+            const _m = result.methods[_mi];
+            const _end = _mi + 1 < result.methods.length ? result.methods[_mi + 1].startLine : i;
+            _m.sourceLines = lines.slice(_m.startLine, _end).join('\n');
         }
         return i;
     }
@@ -1432,11 +1437,11 @@ class CLOOMCCompiler {
 
         for (const method of parsed.methods) {
             if (method.aliasOf) {
-                methods.push({ name: method.name, aliasOf: method.aliasOf, params: method.params || [], visibility: method.visibility || 'public' });
+                methods.push({ name: method.name, aliasOf: method.aliasOf, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 continue;
             }
             if (method.rawIsa) {
-                methods.push({ name: method.name, code: method.rawIsa, params: method.params || [], visibility: method.visibility || 'public' });
+                methods.push({ name: method.name, code: method.rawIsa, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 manifest.push({ name: method.name, mapping: [] });
                 continue;
             }
@@ -1444,7 +1449,7 @@ class CLOOMCCompiler {
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
-                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public' });
+                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 manifest.push({ name: method.name, mapping: result.manifest });
             }
         }
@@ -1494,7 +1499,7 @@ class CLOOMCCompiler {
         while (i < lines.length) {
             const line = lines[i].trim();
             if (!line || line.startsWith('--')) { i++; continue; }
-            if (line === '}') return i + 1;
+            if (line === '}') { i++; break; }
 
             const capMatch = line.match(/^capabilities\s*\{/);
             if (capMatch) {
@@ -1575,6 +1580,11 @@ class CLOOMCCompiler {
             }
 
             i++;
+        }
+        for (let _mi = 0; _mi < result.methods.length; _mi++) {
+            const _m = result.methods[_mi];
+            const _end = _mi + 1 < result.methods.length ? result.methods[_mi + 1].startLine : i;
+            _m.sourceLines = lines.slice(_m.startLine, _end).join('\n');
         }
         return i;
     }
@@ -2295,7 +2305,7 @@ class CLOOMCCompiler {
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
-                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public' });
+                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 manifest.push({ name: method.name, mapping: result.manifest });
             }
         }
@@ -2344,7 +2354,7 @@ class CLOOMCCompiler {
         while (i < lines.length) {
             const line = lines[i].trim();
             if (!line || line.startsWith('--') || line.startsWith('//') || line.startsWith(';')) { i++; continue; }
-            if (line === '}') return i + 1;
+            if (line === '}') { i++; break; }
 
             const capMatch = line.match(/^capabilities\s*\{/);
             if (capMatch) {
@@ -2375,7 +2385,7 @@ class CLOOMCCompiler {
 
             const methodMatch = cleanLine.match(/^method\s+(\w+)\s*(?:\(([^)]*)\))?\s*\{/);
             if (methodMatch) {
-                const method = { name: methodMatch[1], params: [], body: [], visibility, explicitVisibility };
+                const method = { name: methodMatch[1], params: [], body: [], startLine: i, visibility, explicitVisibility };
                 if (methodMatch[2]) {
                     method.params = methodMatch[2].split(',').map(s => s.trim()).filter(Boolean);
                 }
@@ -2395,6 +2405,12 @@ class CLOOMCCompiler {
             }
 
             i++;
+        }
+        for (let _mi = 0; _mi < result.methods.length; _mi++) {
+            const _m = result.methods[_mi];
+            if (_m.startLine === undefined) continue;
+            const _end = _mi + 1 < result.methods.length ? result.methods[_mi + 1].startLine : i;
+            _m.sourceLines = lines.slice(_m.startLine, _end).join('\n');
         }
         return i;
     }
