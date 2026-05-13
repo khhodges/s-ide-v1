@@ -189,6 +189,58 @@ class SlideRuleTutorial {
 <p>The c-list <em>is</em> the compiler's symbol table for external references. The capabilities declared in source are exactly those wired into the lump. There is no separate linking phase.</p>
 </div>`
             },
+            {
+                title: "Try It: Constants Dot-Notation",
+                type: "compiler",
+                content: `<p>The <strong>Constants</strong> abstraction (NS[18]) is always resident. It exposes five read-only mathematical values through named methods. Two calling styles are available — try both in the assembly editor.</p>
+<div class="sr-key-concept">
+<div class="sr-concept-title">Style A &mdash; LOAD then CALL dot-notation (two-step)</div>
+<p>Load the abstraction into a context register <em>once</em>, then call each method by name. The assembler resolves the method name to its numeric index automatically &mdash; no raw offsets needed.</p>
+<pre class="sr-encoding" style="text-align:left;font-size:0.82rem;line-height:1.6;">LOAD   CR11, Constants   <span style="color:#666">; CR11 = Constants E-GT (NS[18])</span>
+TPERM  CR11, E           <span style="color:#666">; verify E permission</span>
+CALL   Constants.Pi      <span style="color:#666">; DR1 &larr; 0x40490FDB  (&pi; &asymp; 3.14159)</span>
+CALL   Constants.E       <span style="color:#666">; DR1 &larr; 0x402DF854  (e &asymp; 2.71828)</span>
+CALL   Constants.Phi     <span style="color:#666">; DR1 &larr; 0x3FCFBE77  (&phi; &asymp; 1.61803)</span></pre>
+<p>Use Style A when you call the same abstraction several times in a row &mdash; the single <code>LOAD</code> amortises the namespace lookup cost.</p>
+</div>
+<div class="sr-key-concept">
+<div class="sr-concept-title">Style B &mdash; ELOADCALL (fused, recommended for one-off calls)</div>
+<p><code>ELOADCALL</code> fuses three operations &mdash; load, permission check, and call &mdash; into one instruction word. It is one instruction shorter than the two-step form and is the recommended style when you call a method only once.</p>
+<pre class="sr-encoding" style="text-align:left;font-size:0.82rem;line-height:1.6;">ELOADCALL CR8, Constants, Pi    <span style="color:#666">; DR1 &larr; &pi;  (load+check+call in 1 op)</span>
+ELOADCALL CR8, Constants, E     <span style="color:#666">; DR1 &larr; e</span>
+ELOADCALL CR8, Constants, Phi   <span style="color:#666">; DR1 &larr; &phi; (golden ratio)</span></pre>
+<p>Use CR0&ndash;CR11 as the destination; CR12&ndash;CR15 are reserved for microcode (Thread, Nucleus, Current-Lump, Namespace).</p>
+</div>
+<div class="sr-key-concept">
+<div class="sr-concept-title">Copy-pasteable example &mdash; run it now</div>
+<p>Switch to <strong>Assembly</strong> language, click the <strong>Constants Dot &starf;</strong> tab, then click <strong>Assemble &amp; Run</strong>. The simulator will trace each CALL through the Constants abstraction and display the returned IEEE&nbsp;754 value in DR1 at every step.</p>
+<p>The full source below can also be pasted directly into the editor:</p>
+<pre class="sr-encoding" style="text-align:left;font-size:0.78rem;line-height:1.6;"><span style="color:#f0c050">; Style A: LOAD then CALL dot-notation</span>
+LOAD   CR11, Constants   <span style="color:#666">; bind CR11 to Constants (E perm)</span>
+TPERM  CR11, E           <span style="color:#666">; verify E permission &rarr; Z=1</span>
+CALL   Constants.Pi      <span style="color:#666">; DR1 &larr; &pi;  (0x40490FDB)</span>
+CALL   Constants.E       <span style="color:#666">; DR1 &larr; e   (0x402DF854)</span>
+CALL   Constants.Phi     <span style="color:#666">; DR1 &larr; &phi;  (0x3FCFBE77)</span>
+CALL   Constants.Zero    <span style="color:#666">; DR1 &larr; 0.0 (0x00000000)</span>
+CALL   Constants.One     <span style="color:#666">; DR1 &larr; 1.0 (0x3F800000)</span>
+
+<span style="color:#f0c050">; Style B: fused ELOADCALL (one instruction per call)</span>
+ELOADCALL CR8, Constants, Pi    <span style="color:#666">; DR1 &larr; &pi;</span>
+ELOADCALL CR8, Constants, E     <span style="color:#666">; DR1 &larr; e</span>
+ELOADCALL CR8, Constants, Phi   <span style="color:#666">; DR1 &larr; &phi;</span>
+ELOADCALL CR8, Constants, Zero  <span style="color:#666">; DR1 &larr; 0.0</span>
+ELOADCALL CR8, Constants, One   <span style="color:#666">; DR1 &larr; 1.0</span>
+HALT</pre>
+</div>
+<table class="sr-table" style="margin-top:0.5rem">
+<tr><th>Method</th><th>Index</th><th>Value (IEEE 754 hex)</th><th>Decimal</th></tr>
+<tr><td><code>Constants.Pi</code></td><td>0</td><td><code>0x40490FDB</code></td><td>&pi; &asymp; 3.14159265</td></tr>
+<tr><td><code>Constants.E</code></td><td>1</td><td><code>0x402DF854</code></td><td>e &asymp; 2.71828183</td></tr>
+<tr><td><code>Constants.Phi</code></td><td>2</td><td><code>0x3FCFBE77</code></td><td>&phi; &asymp; 1.61803399</td></tr>
+<tr><td><code>Constants.Zero</code></td><td>3</td><td><code>0x00000000</code></td><td>0.0</td></tr>
+<tr><td><code>Constants.One</code></td><td>4</td><td><code>0x3F800000</code></td><td>1.0</td></tr>
+</table>`
+            },
         ];
     }
 
