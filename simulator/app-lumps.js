@@ -1566,7 +1566,12 @@ function _renderLumpCodeContent(bodyEl, lump, words, token) {
     for (let s = 0; s < cc; s++) {
         const wIdx = clistStart + s;
         const wVal = wIdx < words.length ? (words[wIdx] >>> 0) : 0;
-        if (!wVal) { clistSlotName[s] = '(empty)'; continue; }
+        if (!wVal) {
+            const _capMeta = lump.capabilities && lump.capabilities[s];
+            const _capName = _capMeta ? (_capMeta.name || (typeof _capMeta === 'string' ? _capMeta : '')) : '';
+            clistSlotName[s] = _capName || '(empty)';
+            continue;
+        }
         const _mfstName = _crPetNamesForCode[s] || _crPetNamesForCode[String(s)] || '';
         if (_mfstName) { clistSlotName[s] = _mfstName; continue; }
         const _gtType = (wVal >>> 23) & 0x3;
