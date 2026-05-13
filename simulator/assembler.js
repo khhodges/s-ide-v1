@@ -764,11 +764,24 @@ class ChurchAssembler {
                             }
                         } else {
                             // DR argument — data value, cannot be auto-loaded from a name.
-                            this.errors.push({ line: lineNum + 1, message:
-                                `Argument ${ai + 1} of ${absName}.${methodName}() maps to DR${reg.n}, which holds a data value. ` +
-                                `"${arg}" cannot be auto-loaded into a DR — pre-load it before the call:\n` +
-                                `  IADD  DR${reg.n}, DR${reg.n}, #${arg}   ; small literal (fits in 14 bits)\n` +
-                                `  ; — or — load a full 32-bit constant via a DREAD from an embedded constant` });
+                            const isNumericLiteral = /^-?\d+$/.test(arg) || /^0x[0-9a-fA-F]+$/i.test(arg);
+                            const isCharLiteral    = /^'.'$/.test(arg);
+                            if (isNumericLiteral || isCharLiteral) {
+                                // Literal value passed directly — give a targeted DWRITE hint.
+                                const rawValue = isCharLiteral ? arg.charCodeAt(1) : arg;
+                                const specDesc = (inputSpec.match(new RegExp(`\\bDR${reg.n}=(\\w+)`)) || [])[1] || 'val';
+                                this.errors.push({ line: lineNum + 1, message:
+                                    `${absName}.${methodName} uses DR${reg.n} for the ${specDesc} — ` +
+                                    `pre-load it with DWRITE DR${reg.n}, #${rawValue} before calling ${absName}.${methodName}()\n` +
+                                    `  DWRITE DR${reg.n}, #${rawValue}\n` +
+                                    `  ${absName}.${methodName}()` });
+                            } else {
+                                this.errors.push({ line: lineNum + 1, message:
+                                    `Argument ${ai + 1} of ${absName}.${methodName}() maps to DR${reg.n}, which holds a data value. ` +
+                                    `"${arg}" cannot be auto-loaded into a DR — pre-load it before the call:\n` +
+                                    `  IADD  DR${reg.n}, DR${reg.n}, #${arg}   ; small literal (fits in 14 bits)\n` +
+                                    `  ; — or — load a full 32-bit constant via a DREAD from an embedded constant` });
+                            }
                         }
                     }
                     instructions.push({ line: `ELOADCALL CR0, ${absName}, ${methodName}`, lineNum: lineNum + 1,

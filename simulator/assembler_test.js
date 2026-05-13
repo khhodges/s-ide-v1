@@ -3969,6 +3969,111 @@ function symCompile(body, caps) {
         r.errors.map(e => e.message).join('; '));
 }
 
+// ── BC61–BC65: targeted DWRITE hint for numeric/char literal DR args (task-1058) ─
+//
+// When a user writes e.g. UART.Send(65) or Display.Write('H'), the DR-arg error
+// path should produce a message that explicitly names the method, the DR register,
+// the human-readable slot description, and the corrected DWRITE instruction.
+
+{
+    // BC61: UART.Send(65) — numeric literal → targeted DWRITE hint
+    const a = new ChurchAssembler(NEW_ABS_CONVENTIONS_BC);
+    a.setNamespace(NEW_ABS_NS_BC);
+    a.assemble('UART.Send(65)');
+    assert('BC61 UART.Send(65) — error produced',
+        a.errors.length >= 1, 'expected at least one error');
+    assert('BC61 UART.Send(65) — error mentions DWRITE',
+        a.errors.length >= 1 && a.errors[0].message.includes('DWRITE'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC61 UART.Send(65) — error mentions DR1',
+        a.errors.length >= 1 && a.errors[0].message.includes('DR1'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC61 UART.Send(65) — error mentions the value 65',
+        a.errors.length >= 1 && a.errors[0].message.includes('65'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC61 UART.Send(65) — error mentions UART.Send',
+        a.errors.length >= 1 && a.errors[0].message.includes('UART.Send'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC61 UART.Send(65) — error phrase matches expected shape (method uses DRn for desc)',
+        a.errors.length >= 1 && /UART\.Send uses DR1 for the \w+ — pre-load it with DWRITE DR1, #65/.test(a.errors[0].message),
+        a.errors.map(e => e.message).join('; '));
+}
+
+{
+    // BC62: Display.Write('H') — char literal → targeted DWRITE hint with char code 72
+    const a = new ChurchAssembler(NEW_ABS_CONVENTIONS_BC);
+    a.setNamespace(NEW_ABS_NS_BC);
+    a.assemble("Display.Write('H')");
+    assert('BC62 Display.Write(\'H\') — error produced',
+        a.errors.length >= 1, 'expected at least one error');
+    assert('BC62 Display.Write(\'H\') — error mentions DWRITE',
+        a.errors.length >= 1 && a.errors[0].message.includes('DWRITE'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC62 Display.Write(\'H\') — error mentions DR1',
+        a.errors.length >= 1 && a.errors[0].message.includes('DR1'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC62 Display.Write(\'H\') — error mentions char code 72',
+        a.errors.length >= 1 && a.errors[0].message.includes('72'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC62 Display.Write(\'H\') — error mentions Display.Write',
+        a.errors.length >= 1 && a.errors[0].message.includes('Display.Write'),
+        a.errors.map(e => e.message).join('; '));
+}
+
+{
+    // BC63: UART.SetBaud(9600) — numeric literal → targeted DWRITE hint
+    const a = new ChurchAssembler(NEW_ABS_CONVENTIONS_BC);
+    a.setNamespace(NEW_ABS_NS_BC);
+    a.assemble('UART.SetBaud(9600)');
+    assert('BC63 UART.SetBaud(9600) — error produced',
+        a.errors.length >= 1, 'expected at least one error');
+    assert('BC63 UART.SetBaud(9600) — error mentions DWRITE',
+        a.errors.length >= 1 && a.errors[0].message.includes('DWRITE'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC63 UART.SetBaud(9600) — error mentions 9600',
+        a.errors.length >= 1 && a.errors[0].message.includes('9600'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC63 UART.SetBaud(9600) — error mentions UART.SetBaud',
+        a.errors.length >= 1 && a.errors[0].message.includes('UART.SetBaud'),
+        a.errors.map(e => e.message).join('; '));
+}
+
+{
+    // BC64: Display.Scroll(3) — numeric literal → targeted DWRITE hint
+    const a = new ChurchAssembler(NEW_ABS_CONVENTIONS_BC);
+    a.setNamespace(NEW_ABS_NS_BC);
+    a.assemble('Display.Scroll(3)');
+    assert('BC64 Display.Scroll(3) — error produced',
+        a.errors.length >= 1, 'expected at least one error');
+    assert('BC64 Display.Scroll(3) — error mentions DWRITE',
+        a.errors.length >= 1 && a.errors[0].message.includes('DWRITE'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC64 Display.Scroll(3) — error mentions 3',
+        a.errors.length >= 1 && a.errors[0].message.includes('#3'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC64 Display.Scroll(3) — error mentions Display.Scroll',
+        a.errors.length >= 1 && a.errors[0].message.includes('Display.Scroll'),
+        a.errors.map(e => e.message).join('; '));
+}
+
+{
+    // BC65: Stack.Push(42) — numeric literal → targeted DWRITE hint
+    const a = new ChurchAssembler(NEW_ABS_CONVENTIONS_BC);
+    a.setNamespace(NEW_ABS_NS_BC);
+    a.assemble('Stack.Push(42)');
+    assert('BC65 Stack.Push(42) — error produced',
+        a.errors.length >= 1, 'expected at least one error');
+    assert('BC65 Stack.Push(42) — error mentions DWRITE',
+        a.errors.length >= 1 && a.errors[0].message.includes('DWRITE'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC65 Stack.Push(42) — error mentions 42',
+        a.errors.length >= 1 && a.errors[0].message.includes('42'),
+        a.errors.map(e => e.message).join('; '));
+    assert('BC65 Stack.Push(42) — error mentions Stack.Push',
+        a.errors.length >= 1 && a.errors[0].message.includes('Stack.Push'),
+        a.errors.map(e => e.message).join('; '));
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
