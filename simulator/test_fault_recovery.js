@@ -404,6 +404,159 @@ console.log('\n--- T008-step: sim.step() executes Scheduler.pause (method index 
         stepThread && typeof stepThread.wakeStep === 'number' && stepThread.wakeStep > 0);
 }
 
+// ── T009: Full step()-level integration: assembler + loadProgram + timer fire ─
+//
+// Verifies the complete mid-execution pause flow as an end-to-end integration:
+//
+//   Phase A — Assembler encoding (prerequisite):
+//     The ChurchAssembler is used to encode Scheduler.pause() as an ELOADCALL
+//     instruction.  The encoded method index (0-based = 4, 1-based = 5) is
+//     extracted from the instruction word and used as the DR3 value for the
+//     subsequent CALL step, establishing a provable link between the assembler
+//     output and the runtime behaviour.
+//
+//   Phase B — loadProgram + step() → thread sleeps:
+//     A two-word program [CALL CR0 (legacy mode), HALT] is written into a fresh
+//     simulator via loadProgram() (pre-boot path: writes to memory[startAddr]).
+//     step() is called once; the CALL instruction is decoded and dispatched
+//     through _execCall → _dispatchAbstraction → Scheduler.pause.  The calling
+//     thread transitions to 'sleeping' and irqState.timerArmed is set.
+//
+//   Phase C — bootComplete + stepCount advance → step() fires timer IRQ:
+//     Setting bootComplete=true enables the hardware alarm check at the top of
+//     step() (the check is deliberately masked during pre-boot execution).
+//     stepCount is advanced to the timer deadline; the next step() call detects
+//     the expired alarm BEFORE fetching any instruction, injects a hidden
+//     Scheduler.IRQ, wakes the sleeping thread (state → 'ready'), and returns
+//     a timerResult sentinel without further execution.
+//
+// This test uniquely exercises the step() timer-injection path (Phase C) and
+// the loadProgram integration (Phase B), neither of which is covered by the
+// earlier registry-dispatch tests (T004) or the direct-memory CALL test (T008-step).
+console.log('\n--- T009: loadProgram + step() pause + step() timer wake ---');
+{
+    const { sim: t9sim, registry: t9reg, sysAbs: t9sys } = makeTestSim();
+
+    // ── Phase A: assembler produces ELOADCALL for Scheduler.pause() ──────────
+    // The same convention table used in T008 (mirrors SCHED_CONVENTIONS_BC).
+    const T9_CONV = {
+        'Scheduler': {
+            'Yield': { index: 0, input: '',              output: 'DR1' },
+            'Spawn': { index: 1, input: 'CR2=code_GT',  output: 'DR1=threadID' },
+            'Wait':  { index: 2, input: 'CR2=flag_GT',  output: 'DR1' },
+            'Stop':  { index: 3, input: 'DR1=threadID', output: 'DR1' },
+            'pause': { index: 4, input: 'DR1=ticks',    output: 'DR1' },
+        }
+    };
+    const T9_NS = { 'Scheduler': 8 };
+    const t9asm = new ChurchAssembler(T9_CONV);
+    t9asm.setNamespace(T9_NS);
+    const t9asmResult = t9asm.assemble('Scheduler.pause()\nHALT');
+
+    check('T009-A1: assembler produces no errors for Scheduler.pause()',
+        t9asmResult.errors.length === 0);
+
+    // Extract the 0-based method index from the ELOADCALL encoding:
+    //   imm15[7:0]  = c-list row = NS slot (8 for Scheduler)
+    //   imm15[14:8] = method index 1-based (5 for pause → 0-based = 4)
+    const t9eloadWord = (t9asmResult.words[0] || 0) >>> 0;
+    const t9Imm       = t9eloadWord & 0x7FFF;
+    const t9Method1   = (t9Imm >>> 8) & 0x7F;   // 1-based
+    const t9Method0   = t9Method1 - 1;            // 0-based index into methods[]
+
+    check('T009-A2: ELOADCALL encodes Scheduler NS slot 8 in imm[7:0]',
+        (t9Imm & 0xFF) === 8);
+    check('T009-A3: ELOADCALL encodes method index 5 (1-based) for pause',
+        t9Method1 === 5 && t9Method0 === 4);
+
+    // ── Phase B: loadProgram writes runnable code + step() pauses thread ─────
+    // Use pre-boot fetch mode (bootComplete=false) so step() reads instructions
+    // directly from memory[pc] without requiring a CR14 code capability.
+    // This keeps the setup minimal while still exercising the real
+    // _execCall → _dispatchAbstraction → dispatchMethod chain.
+    t9sim.bootComplete = false;
+
+    // Write a valid NS entry for Scheduler at slot 8.
+    // location=0, gtType=1 (Inform) → lumpIsResident=false triggers the
+    // system-abstraction fast path in _execCall rather than code execution.
+    t9sim.writeNSEntry(8, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0);
+
+    // Create an E-permission Inform GT for NS slot 8 (Scheduler) and put it in CR0.
+    const t9schedGT = t9sim.createGT(0, 8, { E: 1 }, 1);
+    t9sim.cr[0] = { word0: t9schedGT, word1: 0, word2: 0, word3: 0, m: 0 };
+
+    // Pre-load DR3 with the 0-based method index derived from the ELOADCALL word.
+    // Legacy CALL mode (imm=0) reads DR3 as the method selector: DR3=4 → pause.
+    const T9_DURATION = 15;
+    t9sim.dr[3] = t9Method0;      // method index proven by assembler encoding
+    t9sim.dr[1] = T9_DURATION;    // pause duration in simulation steps
+
+    // Encode: CALL CR0 (opcode=2, cond=AL=14, crDst=0, crSrc=0, imm=0 = legacy).
+    const T9_CALL_CR0 = ((2 << 27) | (14 << 23) | (0 << 19) | (0 << 15) | 0) >>> 0;
+
+    // Load a two-word program [CALL CR0, HALT] via loadProgram (pre-boot path).
+    // loadProgram with bootComplete=false writes words to memory[startAddr + i].
+    t9sim.loadProgram([T9_CALL_CR0, 0x00000000 /*HALT*/], 0);
+
+    // Execute the CALL instruction via step().
+    const t9stepResult1 = t9sim.step();
+
+    check('T009-B1: step() executed the CALL instruction (non-null result)',
+        t9stepResult1 !== null);
+    check('T009-B2: step() desc confirms Scheduler.pause was dispatched',
+        t9stepResult1 && t9stepResult1.desc &&
+        t9stepResult1.desc.includes('Scheduler') &&
+        t9stepResult1.desc.includes('pause'));
+    check('T009-B3: no faults after CALL (pause is not a fault path)',
+        t9sim.faultLog.length === 0);
+    check('T009-B4: machine did NOT halt (pause ≠ HALT instruction)',
+        !t9sim.halted);
+    check('T009-B5: irqState.timerArmed === true after pause call',
+        t9sim.irqState && t9sim.irqState.timerArmed === true);
+    check('T009-B6: timerDeadline = stepCount + T9_DURATION at call time',
+        t9sim.irqState && t9sim.irqState.timerDeadline === t9sim.stepCount + T9_DURATION);
+
+    const t9bootThread = t9sys._schedulerState.threads[t9sys._schedulerState.currentThread];
+    check('T009-B7: calling thread state === "sleeping" after pause',
+        t9bootThread && t9bootThread.state === 'sleeping');
+    check('T009-B8: thread.wakeStep is set to timerDeadline',
+        t9bootThread && t9bootThread.wakeStep === t9sim.irqState.timerDeadline);
+
+    // ── Phase C: enable timer check + advance stepCount → step() fires IRQ ───
+    // The timer check inside step() is gated on bootComplete===true.
+    // Setting it here enables the alarm without changing the already-armed
+    // timerArmed / timerDeadline (those were set by Scheduler.pause in Phase B).
+    t9sim.bootComplete = true;
+
+    // Advance stepCount to the deadline so the alarm has expired.
+    // step() will detect this BEFORE fetching any instruction and will inject
+    // a hidden Scheduler.IRQ (no CR14 is needed for this path).
+    t9sim.stepCount = t9sim.irqState.timerDeadline;
+
+    const t9irqSweepBefore = t9sys._schedulerState._irqSweepCount;
+    const t9stepResult2    = t9sim.step();
+
+    check('T009-C1: second step() returned a result (timer IRQ injected)',
+        t9stepResult2 !== null);
+    check('T009-C2: result carries timerIRQ=true sentinel',
+        t9stepResult2 && t9stepResult2.timerIRQ === true);
+    check('T009-C3: result desc mentions "Timer IRQ" or "Scheduler.IRQ"',
+        t9stepResult2 && t9stepResult2.desc &&
+        (t9stepResult2.desc.includes('Timer') || t9stepResult2.desc.includes('Scheduler.IRQ')));
+    check('T009-C4: irqState.timerArmed cleared to false after IRQ fires',
+        t9sim.irqState && !t9sim.irqState.timerArmed);
+    check('T009-C5: _irqSweepCount incremented (IRQ sweep ran)',
+        t9sys._schedulerState._irqSweepCount === t9irqSweepBefore + 1);
+    check('T009-C6: sleeping thread woken to "ready" state after timer IRQ',
+        t9bootThread && t9bootThread.state === 'ready');
+    check('T009-C7: thread.waitFlag cleared after wake',
+        !t9bootThread.waitFlag);
+    check('T009-C8: machine still NOT halted (timer IRQ is not a fault)',
+        !t9sim.halted);
+    check('T009-C9: no new faults logged during timer IRQ phase',
+        t9sim.faultLog.length === 0);
+}
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
