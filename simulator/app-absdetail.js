@@ -2833,3 +2833,48 @@ B:02  INIT_THRD
     return base;
 }
 
+// ── _ABSTRACTION_CONVENTIONS ───────────────────────────────────────────────
+// Bare-call method conventions for abstractions defined in the Reference view.
+// Register assignments are derived from the assembly snippets above.
+// Format: { AbsName: { MethodName: { index: N, input: '...', output: '...' } } }
+// index — 0-based method selector (ELOADCALL stores index+1 in imm[14:8]).
+// input — ordered CR/DR register specs parsed by ChurchAssembler bare-call
+//         expansion; pattern \b(CR|DR)(\d+)= drives the arg → register mapping.
+// output — informational only (not parsed by the assembler).
+//
+// Method order matches _methodDocs insertion order (which reflects the
+// abstraction's compiled method table).
+const _ABSTRACTION_CONVENTIONS = {
+    'Scheduler': {
+        'Yield':  { index: 0, input: '',                        output: 'DR1' },
+        'Spawn':  { index: 1, input: 'CR2=code_GT, DR1=entry',  output: 'DR1=threadID' },
+        'Wait':   { index: 2, input: 'CR2=flag_GT',             output: 'DR1' },
+        'Stop':   { index: 3, input: 'DR1=threadID',            output: 'DR1' },
+    },
+    'DijkstraFlag': {
+        'Wait':   { index: 0, input: '',  output: 'DR1' },
+        'Signal': { index: 1, input: '',  output: 'DR1' },
+        'Reset':  { index: 2, input: '',  output: 'DR1' },
+        'Test':   { index: 3, input: '',  output: 'DR1=1 signaled | 0 unsignaled' },
+    },
+    'Button': {
+        'Read':      { index: 0, input: '',  output: 'DR1=1 pressed | 0 released' },
+        'WaitPress': { index: 1, input: '',  output: 'DR1=1 pressed' },
+        'OnEvent':   { index: 2, input: '',  output: 'DR1=1 press | 2 release | 0 none' },
+    },
+    'Timer': {
+        'Start':    { index: 0, input: 'DR1=channel',  output: 'DR1' },
+        'Stop':     { index: 1, input: 'DR1=channel',  output: 'DR1' },
+        'Read':     { index: 2, input: '',             output: 'DR1=elapsed ticks' },
+        'SetAlarm': { index: 3, input: 'DR1=ticks',    output: 'DR1' },
+    },
+};
+
+// Register conventions class-wide so all ChurchAssembler instances created
+// anywhere in the app (compile, test, decompile paths) inherit them without
+// a page reload.  Guard against the script loading before assembler.js in
+// unusual environments (e.g. unit-test harnesses that load files out of order).
+if (typeof ChurchAssembler !== 'undefined') {
+    ChurchAssembler.setSharedMethodConventions(_ABSTRACTION_CONVENTIONS);
+}
+

@@ -198,7 +198,13 @@
 
 class ChurchAssembler {
     constructor(methodConventions = {}) {
-        this.methodConventions = methodConventions;
+        // Merge class-level shared conventions first, then any caller-supplied
+        // overrides.  This means all three instantiation sites (compile path,
+        // test assembler in app-run.js, and decompileWords) automatically pick
+        // up conventions registered via setSharedMethodConventions() without any
+        // change at each call site.
+        this.methodConventions = Object.assign(
+            {}, ChurchAssembler._sharedMethodConventions || {}, methodConventions);
         this.opcodes = {
             'LOAD': 0, 'SAVE': 1, 'CALL': 2, 'RETURN': 3,
             'CHANGE': 4, 'SWITCH': 5, 'TPERM': 6, 'LAMBDA': 7,
@@ -250,6 +256,27 @@ class ChurchAssembler {
     setClistSlots(nameToSlot) {
         ChurchAssembler._sharedClistSlots = Object.assign({}, nameToSlot || {});
         this._clistSlots = Object.assign({}, ChurchAssembler._sharedClistSlots);
+    }
+
+    // setSharedMethodConventions(map) — register bare-call method conventions
+    // class-wide so all subsequent new ChurchAssembler() instances (compile,
+    // test, decompile paths) inherit them automatically without a page reload.
+    //
+    // map format mirrors the constructor argument:
+    //   { 'AbsName': { 'MethodName': { index: N, input: 'CR2=arg', output: 'DR1' } } }
+    //
+    // Merges into any existing shared conventions (does not replace wholesale),
+    // so callers can register abstraction groups incrementally at startup.
+    // Also updates this.methodConventions on the instance that calls it so the
+    // conventions are available immediately (matching setNamespace() behaviour).
+    static setSharedMethodConventions(map) {
+        ChurchAssembler._sharedMethodConventions = Object.assign(
+            {}, ChurchAssembler._sharedMethodConventions || {}, map || {});
+    }
+
+    setSharedMethodConventions(map) {
+        ChurchAssembler.setSharedMethodConventions(map);
+        Object.assign(this.methodConventions, map || {});
     }
 
     setNamespace(map) {
