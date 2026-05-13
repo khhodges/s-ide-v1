@@ -83,7 +83,7 @@ def _cfg_step2_resident():
 
 def _cfg_step3_reservation():
     cfg = _cfg_default()
-    cfg["step3"] = {"emptySlotCount": 8, "baseNamedNsCount": 50}
+    cfg["step3"] = {"emptySlotCount": 8, "baseNamedNsCount": 51}
     return cfg
 
 

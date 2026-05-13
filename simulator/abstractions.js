@@ -515,7 +515,7 @@ class AbstractionRegistry {
         this.createAbstraction(50, 'Scheduler.IRQ.Thread', 9,
             [],
             'Hardware interrupt entry point — wakes sleeping threads on ALARM fire and handles Tier 2 fault recovery (Task #1077)',
-            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 0 } });
     }
 }
 

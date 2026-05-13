@@ -183,8 +183,9 @@ DEFAULT_ABSTRACTION_CATALOG = [
     ("Billing",       {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),   # NS[47] — P-GT quota enforcer (Task #760 Stage 1)
     ("TuringMemory",  {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),   # NS[48] — domain-separated code allocator (Task #760 Stage 1)
     ("ChurchMemory",  {"R":0,"W":0,"X":0,"L":0,"S":0,"E":1}, False),   # NS[49] — abstract handle allocator (Task #760 Stage 1)
+    ("Scheduler.IRQ.Thread", {"R":0,"W":0,"X":0,"L":0,"S":0,"E":0}, False), # NS[50] — fixed boot-image IRQ thread; zero perms, authority via M-register on CHANGE (Task #1077)
 ]
-assert len(DEFAULT_ABSTRACTION_CATALOG) == 50, "catalog drift vs simulator.js"
+assert len(DEFAULT_ABSTRACTION_CATALOG) == 51, "catalog drift vs simulator.js"
 
 # Service abstraction c-list capability table (Task #971).
 # Single-authority model:
