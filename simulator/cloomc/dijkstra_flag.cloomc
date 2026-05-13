@@ -55,12 +55,12 @@ abstraction FlagSync {
     //   6. Test  → 0  (flag cleared)
     // Returns final Test result (0 = cleared, 1 = still raised).
     method RunSequence() {
-        var before = call(DijkstraFlag.Test())
+        before     = call(DijkstraFlag.Test())
         call(DijkstraFlag.Signal())
-        var afterSignal = call(DijkstraFlag.Test())
-        var afterWait = call(DijkstraFlag.Wait())
+        afterSignal = call(DijkstraFlag.Test())
+        afterWait   = call(DijkstraFlag.Wait())
         call(DijkstraFlag.Reset())
-        var afterReset = call(DijkstraFlag.Test())
+        afterReset  = call(DijkstraFlag.Test())
         return(afterReset)
     }
 
@@ -68,7 +68,7 @@ abstraction FlagSync {
     // Call from the producer side to announce that data is ready.
     // Returns 1 if a waiter was woken, 0 if the flag was simply set.
     method Produce() {
-        var result = call(DijkstraFlag.Signal())
+        result = call(DijkstraFlag.Signal())
         return(result)
     }
 
@@ -77,7 +77,7 @@ abstraction FlagSync {
     // Resets the flag so the next Consume() call will also block.
     // Returns the Wait result (always 1 when the flag was signaled).
     method Consume() {
-        var waited = call(DijkstraFlag.Wait())
+        waited = call(DijkstraFlag.Wait())
         call(DijkstraFlag.Reset())
         return(waited)
     }
@@ -86,7 +86,7 @@ abstraction FlagSync {
     // Returns 1 if the flag is currently signaled, 0 otherwise.
     // Does not consume the signal — the flag is unchanged.
     method Peek() {
-        var state = call(DijkstraFlag.Test())
+        state = call(DijkstraFlag.Test())
         return(state)
     }
 }

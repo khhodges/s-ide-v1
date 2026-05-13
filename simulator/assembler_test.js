@@ -5607,6 +5607,123 @@ HALT
         /method\s+Peek\s*\(/.test(src), 'missing');
 }
 
+// EX-JDF-RUN: FlagSync — compile + Wait/Signal/Reset/Test trace
+// Three phases:
+//   Phase C — CLOOMCCompiler compiles dijkstra_flag.cloomc without errors;
+//              RunSequence method is present and contains exactly 6 ELOADCALL
+//              words (one per DijkstraFlag call in the method body).
+//   Phase B — DijkstraFlag JS binding (via SystemAbstractions at NS slot 10)
+//              produces the correct trace when driven in RunSequence order:
+//                Test→signaled=false, Signal, Test→signaled=true,
+//                Wait→waited=false (flag already up — consumed immediately),
+//                Reset, Test→signaled=false.
+//   Phase JS — cloomc_dijkstra_flag is listed in LANG_EXAMPLE_GROUPS.javascript
+//              in app-compile.js so the example tab is visible in JS mode.
+{
+    const fs               = require('fs');
+    const path             = require('path');
+    const CLOOMCCompiler   = require('./cloomc_compiler.js');
+    const ChurchSimulator  = require('./simulator.js');
+    const AbstractionReg   = require('./abstractions.js');
+    const SystemAbs        = require('./system_abstractions.js');
+
+    const src = fs.readFileSync(
+        path.join(__dirname, 'cloomc', 'dijkstra_flag.cloomc'), 'utf8');
+
+    // ── Phase C: compile ─────────────────────────────────────────────────────
+    // The CLOOMC++ compiler resolves call(Abs.Method()) using methodConventions,
+    // keyed by the uppercased abstraction name (matching how app-shell.js builds
+    // the map from the AbstractionRegistry).  DijkstraFlag's four methods match
+    // the order declared in abstractions.js: Wait(0), Signal(1), Reset(2), Test(3).
+    const compiler = new CLOOMCCompiler();
+    compiler.methodConventions['DIJKSTRAFLAG'] = {
+        Wait:   { index: 0 },
+        Signal: { index: 1 },
+        Reset:  { index: 2 },
+        Test:   { index: 3 },
+    };
+    const compiled = compiler.compile(src, []);
+
+    assert('EX-JDF-RUN-C1: CLOOMCCompiler compiles dijkstra_flag.cloomc without errors',
+        compiled.errors.length === 0,
+        compiled.errors.map(e => e.message || JSON.stringify(e)).join('; '));
+
+    assert('EX-JDF-RUN-C2: compiled abstraction name is FlagSync',
+        compiled.abstractionName === 'FlagSync',
+        `got "${compiled.abstractionName}"`);
+
+    const runSeqMethod = compiled.methods.find(m => m.name === 'RunSequence');
+    assert('EX-JDF-RUN-C3: RunSequence method is present in compiled output',
+        runSeqMethod !== undefined, 'RunSequence not found in compiled methods');
+
+    const ELOADCALL_OPCODE = 8;
+    const eloadWords = runSeqMethod
+        ? (runSeqMethod.code || []).filter(w => ((w >>> 27) & 0x1F) === ELOADCALL_OPCODE)
+        : [];
+    assert('EX-JDF-RUN-C4: RunSequence contains exactly 6 ELOADCALL words (one per DijkstraFlag call)',
+        eloadWords.length === 6,
+        `got ${eloadWords.length} ELOADCALL word(s)`);
+
+    // Verify each ELOADCALL targets C-list row 1 (DijkstraFlag is the sole capability)
+    const allRow1 = eloadWords.every(w => (w & 0xFF) === 1);
+    assert('EX-JDF-RUN-C5: all 6 ELOADCALL words target C-list row 1 (DijkstraFlag)',
+        allRow1,
+        `rows: ${eloadWords.map(w => w & 0xFF).join(', ')}`);
+
+    // ── Phase B: DijkstraFlag binding trace ──────────────────────────────────
+    // Create a minimal sim wired to SystemAbstractions (DijkstraFlag at slot 10).
+    // Call dispatchMethod() in the same order as RunSequence() and verify results
+    // match the expected Wait/Signal/Reset/Test trace.
+    const bSim = new ChurchSimulator();
+    const bReg = new AbstractionReg();
+    new SystemAbs(bReg);
+    bSim.abstractionRegistry = bReg;
+
+    // Step 1 — Test before Signal: flag is clear at boot
+    const t1 = bReg.dispatchMethod(10, 'Test', bSim, {});
+    assert('EX-JDF-RUN-B1: Test→0 (flag unsignaled at boot)',
+        t1.ok && t1.result.signaled === false,
+        `ok=${t1.ok} signaled=${t1.result && t1.result.signaled}`);
+
+    // Step 2 — Signal: raise the flag
+    const s1 = bReg.dispatchMethod(10, 'Signal', bSim, {});
+    assert('EX-JDF-RUN-B2: Signal succeeds',
+        s1.ok === true,
+        `ok=${s1.ok} message=${s1.message}`);
+
+    // Step 3 — Test after Signal: flag is raised
+    const t2 = bReg.dispatchMethod(10, 'Test', bSim, {});
+    assert('EX-JDF-RUN-B3: Test→1 (flag signaled after Signal)',
+        t2.ok && t2.result.signaled === true,
+        `ok=${t2.ok} signaled=${t2.result && t2.result.signaled}`);
+
+    // Step 4 — Wait: flag already up → consumed immediately (waited=false)
+    const w1 = bReg.dispatchMethod(10, 'Wait', bSim, {});
+    assert('EX-JDF-RUN-B4: Wait→1 (flag was up — consumed immediately, waited=false)',
+        w1.ok && w1.result.waited === false,
+        `ok=${w1.ok} waited=${w1.result && w1.result.waited}`);
+
+    // Step 5 — Reset: clear the flag unconditionally
+    const r1 = bReg.dispatchMethod(10, 'Reset', bSim, {});
+    assert('EX-JDF-RUN-B5: Reset succeeds',
+        r1.ok === true,
+        `ok=${r1.ok} message=${r1.message}`);
+
+    // Step 6 — Test after Reset: flag is cleared
+    const t3 = bReg.dispatchMethod(10, 'Test', bSim, {});
+    assert('EX-JDF-RUN-B6: Test→0 (flag cleared after Reset)',
+        t3.ok && t3.result.signaled === false,
+        `ok=${t3.ok} signaled=${t3.result && t3.result.signaled}`);
+
+    // ── Phase JS: example tab registration ───────────────────────────────────
+    // cloomc_dijkstra_flag must be listed in LANG_EXAMPLE_GROUPS.javascript in
+    // app-compile.js so the tab is visible when JS mode is active.
+    const appSrc = fs.readFileSync(path.join(__dirname, 'app-compile.js'), 'utf8');
+    assert('EX-JDF-RUN-JS: cloomc_dijkstra_flag in LANG_EXAMPLE_GROUPS.javascript',
+        /javascript\s*:\s*\[[^\]]*'cloomc_dijkstra_flag'[^\]]*\]/.test(appSrc),
+        'cloomc_dijkstra_flag not found in the javascript example group');
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
