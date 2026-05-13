@@ -674,10 +674,11 @@ class ChurchAssembler {
                                     : `CR6[0x…]   ; find "${arg}"'s slot in the C-List viewer`;
                                 this.errors.push({ line: lineNum + 1, message:
                                     `Argument ${ai + 1} of ${absName}.${methodName}() maps to CR${reg.n}, which holds a capability GT. ` +
-                                    `"${arg}" is not a known c-list name — name it in the C-List viewer first, then re-compile.\n` +
-                                    `If "${arg}" is already named there, load it before the call:\n` +
+                                    `"${arg}" is not declared as a capability — add it to your capabilities block:\n` +
+                                    `  capabilities { ${arg} }\n` +
+                                    `Then ${absName}.${methodName}(${arg}) will compile directly.\n` +
+                                    `Alternatively, if "${arg}" is already named in the C-List viewer, load it first:\n` +
                                     `  LOAD  CR${reg.n}, ${_slotHint}\n` +
-                                    `Then pass the register directly:\n` +
                                     `  ${absName}.${methodName}(CR${reg.n})` });
                             }
                         } else {
