@@ -5527,6 +5527,59 @@ SAVE CR0, CR6, 3       ; FAULT: B=0, cannot bind to empty slot 3
 
 ; --- If we get here, B-bit default failed ---
 HALT`,
+        'scheduler_pause': `; ============================================================
+; Abstraction:  SchedulerPause
+; Description:  Timer-sleep pattern — suspend calling thread for
+;               N ticks via Scheduler.pause; Scheduler.IRQ wakes it
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-13
+; Language:     Assembly
+; Dependencies: Scheduler (NS[8])
+; ============================================================
+; Methods demonstrated:
+;   Scheduler.pause(ticks)  — suspend thread for DR1 ticks
+;   Scheduler.Yield()       — voluntarily yield after waking
+; ============================================================
+;
+; ============================================================
+; Timer-sleep pattern
+; ============================================================
+;
+; Scheduler.pause(ticks) suspends the calling thread for a
+; fixed number of simulator steps.  When the deadline fires,
+; Scheduler.IRQ (a hidden ELOADCALL) wakes the thread and
+; execution resumes at the instruction after CALL Scheduler.pause.
+;
+; Input convention:
+;   DR1 = number of ticks to sleep (positive integer)
+;   CR0 = Scheduler capability (loaded below)
+;
+; How it works:
+;   1. CALL Scheduler.pause  — sets irqState.timerArmed=true,
+;      timerDeadline = stepCount + DR1, suspends thread.
+;   2. After deadline: Scheduler.IRQ is injected before the
+;      next instruction fetch — it wakes the sleeping thread.
+;   3. Execution resumes at the instruction following CALL.
+;
+; ── Load Scheduler capability ────────────────────────────
+LOAD CR0, Scheduler    ; CR0 = Scheduler capability (E, NS[8])
+TPERM CR0, E           ; Verify E permission  (Z=1 on success)
+
+; ── Section 1: sleep for 50 ticks ─────────────────────────────────────
+IADD DR1, DR0, #50     ; DR1 = 50  (tick count — tunable)
+CALL Scheduler.pause   ; arm timer, suspend thread
+;                       ; ─── woken by Scheduler.IRQ here ───
+
+; ── Section 2: shorter second sleep, then yield ────────────────────────
+IADD DR1, DR0, #10     ; DR1 = 10  (second, shorter sleep)
+CALL Scheduler.pause   ; arm timer again, suspend thread
+;                       ; ─── woken by Scheduler.IRQ here ───
+
+; ── Thread resumes — yield once to allow other threads to run ──────────
+CALL Scheduler.Yield   ; give up remaining time slice  (DR1 = 0)
+
+HALT`,
         'constants_dot': `; ============================================================
 ; Abstraction:  ConstantsDot
 ; Description:  Recommended dot-notation style — CALL AbstrName.Method
@@ -11340,7 +11393,7 @@ function showAbstractionRefDetail(id) {
        Fall back to an inline list only as a safety net if load order changes. */
     const asmKeys = (window._cloomcLangExampleGroups || {}).assembly ||
         ['ada_note_g', 'capability_test', 'system_patterns', 'compute_demo',
-         'led_control', 'salvation', 'constants_dot', 'perm_attack', 'bind_attack'];
+         'led_control', 'salvation', 'constants_dot', 'perm_attack', 'bind_attack', 'scheduler_pause'];
     const seed = {};
     for (const key of asmKeys) seed[key] = '';
     window._asmExampleSources = seed;

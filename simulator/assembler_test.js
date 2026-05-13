@@ -5239,9 +5239,39 @@ BRANCH fail
         result.words.length > 0, `got ${result.words.length}`);
 }
 
+// EX-SP: scheduler_pause — LOAD + TPERM + two pauses + Yield + HALT
+// Verifies that Scheduler.pause and Scheduler.Yield assemble correctly when
+// the Scheduler method conventions and NS slot are supplied.
+{
+    const EX_SP_CONVENTIONS = {
+        'Scheduler': {
+            'Yield':  { index: 0, input: '',           output: 'DR1' },
+            'pause':  { index: 4, input: 'DR1=ticks',  output: 'DR1' },
+        },
+    };
+    const EX_SP_NS = { 'Scheduler': 8 };
+    const EX_SP_SRC = `
+LOAD CR0, Scheduler
+TPERM CR0, E
+IADD DR1, DR0, #50
+CALL Scheduler.pause
+IADD DR1, DR0, #10
+CALL Scheduler.pause
+CALL Scheduler.Yield
+HALT
+`;
+    const a = new ChurchAssembler(EX_SP_CONVENTIONS);
+    a.setNamespace(EX_SP_NS);
+    const result = a.assemble(EX_SP_SRC);
+    assert('EX-SP scheduler_pause assembles without errors',
+        a.errors.length === 0, a.errors.map(e => e.message).join('; '));
+    assert('EX-SP scheduler_pause produces 8 words (LOAD+TPERM+IADD+CALL+IADD+CALL+CALL+HALT)',
+        result.words.length === 8, `got ${result.words.length}`);
+}
+
 // EX16: LANG_EXAMPLE_GROUPS.assembly coverage guard
 // Asserts that the assembly key list in app-compile.js is exactly the set
-// covered by EX1–EX15 + CD1–CD10.  If a new example is added to
+// covered by EX1–EX15 + CD1–CD10 + EX-SP.  If a new example is added to
 // LANG_EXAMPLE_GROUPS.assembly without a corresponding EX test, this list
 // must be updated — that's the deliberate friction that prompts adding a test.
 {
@@ -5255,10 +5285,11 @@ BRANCH fail
         'constants_dot',
         'perm_attack',
         'bind_attack',
+        'scheduler_pause',
     ]);
-    // These are the nine keys in LANG_EXAMPLE_GROUPS.assembly as of task-1063.
+    // These are the ten keys in LANG_EXAMPLE_GROUPS.assembly as of task-1093.
     // Update both this set AND add an EX test whenever a new example is added.
-    const EXPECTED_COUNT = 9;
+    const EXPECTED_COUNT = 10;
     assert('EX16 LANG_EXAMPLE_GROUPS.assembly coverage set has expected count',
         COVERED_ASSEMBLY_EXAMPLES.size === EXPECTED_COUNT,
         `expected ${EXPECTED_COUNT}, got ${COVERED_ASSEMBLY_EXAMPLES.size}`);
@@ -5271,6 +5302,8 @@ BRANCH fail
         COVERED_ASSEMBLY_EXAMPLES.has('salvation'), 'missing');
     assert('EX16 coverage set contains constants_dot (covered by CD1-CD10)',
         COVERED_ASSEMBLY_EXAMPLES.has('constants_dot'), 'missing');
+    assert('EX16 coverage set contains scheduler_pause (covered by EX-SP)',
+        COVERED_ASSEMBLY_EXAMPLES.has('scheduler_pause'), 'missing');
 }
 
 // EX17–EX19: salvation dot-notation produces identical encoding to raw form
