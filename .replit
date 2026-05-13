@@ -51,6 +51,10 @@ args = "assembler-tests"
 task = "workflow.run"
 args = "lump-consistency"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "fault-recovery-tests"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -146,6 +150,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python -m pytest tests/lump/test_lump_consistency.py -v"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "fault-recovery-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/test_fault_recovery.js"
 
 [workflows.workflow.metadata]
 isValidation = true
