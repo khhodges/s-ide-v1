@@ -878,13 +878,7 @@ class ChurchSimulator {
             { label: 'Billing',       perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },   // NS[47] — P-GT quota enforcer (Task #760 Stage 1)
             { label: 'TuringMemory',  perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },   // NS[48] — domain-separated code allocator (Task #760 Stage 1)
             { label: 'ChurchMemory',     perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false },   // NS[49] — abstract handle allocator (Task #760 Stage 1)
-            // NS[50] Scheduler.IRQ.Thread — predefined fixed-residency slot (Task #1077).
-            // In hardware this is a boot-image-resident IRQ thread (fixed address, burned in
-            // alongside Boot.Abstr/PP250). In simulation, _fireSchedulerIRQ sets
-            // irqState.irqThreadSlot = SCHEDULER_IRQ_NS_SLOT (50) to represent the hardware
-            // CHANGE to this slot, and dispatches the IRQ handler on Scheduler (NS[8]).
-            // The boot-image binary for this release does not yet carry the physical slot-50
-            // lump; FPGA peripheral timer hardware is out of scope for Task #1077 (sim-only).
+            { label: 'Scheduler.IRQ.Thread', perms: {R:0,W:0,X:0,L:0,S:0,E:1}, chainable: false }, // NS[50] — fixed boot-image IRQ entry point (Task #1077)
         ];
     }
 
