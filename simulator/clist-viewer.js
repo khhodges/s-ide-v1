@@ -372,11 +372,13 @@
             var capSrcRe = /capabilities\s*\{([^}]*)\}/;
             var capSrcM  = capSrcRe.exec(srcEd.value);
             if (capSrcM) {
-                // Parse line-by-line: each non-blank, non-comment line is ONE capability.
+                // Parse entry-by-entry: split on newlines AND commas so both
+                // single-line  capabilities { LED0 R W, LED1 R W }
+                // and multi-line block formats are supported.
                 // First token = name; remaining tokens = rights (R, W, X, L, S, E).
                 var KNOWN_RIGHTS = /^[RWXLSErwxlse]+$/;
-                var capSrcEntries = capSrcM[1].split('\n')
-                    .map(function (line) { return line.replace(/[;,].*$/, '').trim(); })
+                var capSrcEntries = capSrcM[1].split(/[\n,]/)
+                    .map(function (line) { return line.replace(/;.*$/, '').trim(); })
                     .filter(function (line) { return line && !/^[;/]/.test(line); })
                     .map(function (line) {
                         var tokens = line.split(/\s+/).filter(Boolean);
