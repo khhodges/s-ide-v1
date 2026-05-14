@@ -310,8 +310,9 @@ There are no other configuration parameters.
 
 - **Lump sizes** are powers of 2, minimum 64 words. The mLoad pipeline uses
   bit-shifts to find lump boundaries — not addition.
-- **NS table** sits at the top of memory: `NS_TABLE_BASE = totalRamWords − 1,024`.
-  The boot ROM computes this without a stored pointer — no chicken-and-egg.
+- **NS table** sits at the top of memory: `NS_TABLE_BASE = totalNamespaceWords − 1,024`.
+  `totalNamespaceWords` is the programmer's choice, encoded in the NS LUMP header.
+  The boot ROM reads it from there — no separate stored pointer, no chicken-and-egg.
 - **NS_TABLE_RESERVE** = 1,024 words (256 entries × 4 words per entry, wired
   into the boot ROM).
 - **cc field** (8 bits) limits c-list rows to 255 per lump. It does not limit
@@ -526,7 +527,7 @@ Ti60 F225:   65,536 − 1,024 = 64,512 = `0xFC00`
 XC7A100T: 131,072 − 1,024 = 130,048 = `0x1FC00`
 
 The boot ROM does not read this from a register. It computes it by
-subtracting 1,024 from the wired-in total RAM size. No stored pointer.
+subtracting 1,024 from `totalNamespaceWords` in the NS LUMP header. No stored pointer.
 No chicken-and-egg. No boot failure mode from a corrupted NS pointer.
 
 ---
