@@ -353,41 +353,37 @@ rewriting the boot ROM. The arithmetic is 256 entries × 4 words per entry =
 current design — not a consequence of the cc field (which governs c-list rows
 per lump, not NS slot count). The stride is 4 words per entry.
 
-### IDE (Programmer) Choices
+### The Programmer Makes Exactly Three LUMPs
 
-**totalNamespaceWords.**
-The programmer chooses this in the Boot Image Designer, constrained only
-by the target board's physical RAM. Larger values give more address space
-for lumps. The value must be a power of 2 (hardware constraint on the
-NS table address computation), but the specific power is the programmer's
-choice.
+The memory architecture is entirely defined by the three foundation LUMPs.
+There are no separate configuration parameters. The programmer's choices
+are the three LUMP sizes — nothing else.
 
-**namespaceLumpWords.**
-The size of the NS root lump (NS slot 0). The programmer chooses this based
-on how many NS entries the design will need over its lifetime — resident
-entries, lazy entries, reserved empty slots, and headroom for digital
-objects. The minimum is 64 words (hardware constraint). Larger NS lumps
-allow more catalogue entries to be pre-registered.
+**NS LUMP size** (NS slot 0, minimum 64 words).
+The NS LUMP header encodes `totalNamespaceWords` — the physical memory
+envelope for the board. This single value determines the NS table base
+(`totalNamespaceWords − 1,024`) and the pool ceiling
+(`totalNamespaceWords − 1,025`). The programmer chooses the LUMP size based
+on how many NS entries the design will need over its lifetime. Everything
+that describes the address space flows from this one header field.
 
-**threadLumpWords.**
-The size of the boot thread lump (NS slot 1). The programmer chooses this
-based on the expected stack depth, heap usage, and number of capability
-registers the boot thread will need. The minimum is 64 words.
+**Thread LUMP size** (NS slot 1, minimum 64 words).
+The boot execution context — PC, register file, call stack. Size chosen
+based on expected stack depth and number of capability registers the boot
+thread needs.
 
-**Application lump words.**
-The size of the first abstraction lump (NS slot 3 in the standard layout,
-or the board-appropriate first entry). Programmer-chosen based on the size
-of the boot entry point.
+**Application LUMP size** (NS slot 2, minimum 64 words).
+The first abstraction the thread calls — on XC7A100T this is the Ethernet
+Locator; on Tang Nano 20K this is the UART Locator. Size chosen based on
+the method body and c-list of that abstraction.
 
 ### Natural Consequences (Not Decisions)
 
 **foundation_end (dynamic pool base).**
-Once the programmer has chosen the sizes of the NS lump, Thread lump, and
-Application lump, `foundation_end` is determined arithmetically:
-`NS_LUMP_SIZE + THREAD_LUMP_SIZE + APP_LUMP_SIZE`. In the standard
-4-lump configuration (64 + 256 + 64 + 64 = 448 words), `foundation_end =
-0x01C0`. This is not a choice — it is the arithmetic consequence of the
-programmer's choices.
+Once the three LUMP sizes are known, `foundation_end` is determined
+arithmetically: `NS_LUMP_SIZE + THREAD_LUMP_SIZE + APP_LUMP_SIZE`.
+In the 3-LUMP starter kit (64 + 256 + 64 = 384 words), `foundation_end =
+0x0180`. This is not a choice — it is the sum of the three LUMPs.
 
 **Dynamic pool in the middle.**
 Once the top of memory is occupied by the NS table (hardware-forced) and the
