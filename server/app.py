@@ -4285,6 +4285,114 @@ import hashlib as _hashlib
 
 DEVICE_ONLINE_TIMEOUT = 90
 
+
+def _ingest_fault_entries(device_uid, entries, timestamp):
+    """Create FaultEvent rows from a list of fault dicts.
+
+    Each entry may contain the same fields as the body of /api/device/fault.
+    The device_uid is always taken from the caller-supplied argument; any
+    per-entry device_uid field is intentionally ignored to prevent a device
+    from logging faults against a different device's identity.
+
+    Returns the number of rows added (not yet committed).
+    """
+    count = 0
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            f_nia = int(entry.get("instruction_address", entry.get("fault_nia", 0))) & 0xFFFFFFFF
+        except (ValueError, TypeError):
+            f_nia = 0
+        try:
+            f_type = int(entry.get("fault_type", 0)) & 0xFF
+        except (ValueError, TypeError):
+            f_type = 0
+        try:
+            f_lump_version = int(entry.get("lump_version", 0))
+        except (ValueError, TypeError):
+            f_lump_version = 0
+        try:
+            f_recovery_tier = int(entry.get("recovery_tier", entry.get("tier", 0)))
+        except (ValueError, TypeError):
+            f_recovery_tier = 0
+        try:
+            f_step_count = int(entry.get("step_count", 0))
+        except (ValueError, TypeError):
+            f_step_count = 0
+        fe = FaultEvent(
+            device_uid=device_uid,
+            fault_type=f_type,
+            fault_nia=f_nia,
+            boot_reason=0,
+            timestamp=timestamp,
+            lump_token=entry.get("lump_token", None),
+            lump_version=f_lump_version,
+            fault_code=str(entry.get("fault_code", ""))[:32],
+            mnemonic=str(entry.get("mnemonic", ""))[:32],
+            pipeline_stage=str(entry.get("pipeline_stage", ""))[:32],
+            recovery_tier=f_recovery_tier,
+            step_count=f_step_count,
+        )
+        db.session.add(fe)
+        count += 1
+    return count
+
+
+def _ingest_lump_version_entries(device_uid, lump_versions, timestamp):
+    """Upsert device_lump_versions rows from a list or dict payload.
+
+    Accepts either:
+      - A list of {abstraction_name, lump_token, lump_version} dicts
+        (same format as /api/device/lump-versions lumps array), or
+      - A dict mapping abstraction_name -> {lump_token, lump_version}.
+
+    Returns the number of rows upserted (not yet committed).
+    """
+    from sqlalchemy import text as _sa_text_ingest
+    count = 0
+    _UPSERT_SQL = _sa_text_ingest("""
+        INSERT INTO device_lump_versions
+            (device_uid, abstraction_name, lump_token, lump_version, deployed_at)
+        VALUES (:uid, :abs, :tok, :ver, :ts)
+        ON CONFLICT(device_uid, abstraction_name) DO UPDATE SET
+            lump_token=excluded.lump_token,
+            lump_version=excluded.lump_version,
+            deployed_at=excluded.deployed_at
+    """)
+    if isinstance(lump_versions, dict):
+        for abs_name, entry in lump_versions.items():
+            abs_name = str(abs_name).strip()
+            if isinstance(entry, dict):
+                token = str(entry.get("lump_token", "")).strip()
+                try:
+                    ver = int(entry.get("lump_version", 0))
+                except (ValueError, TypeError):
+                    ver = 0
+            else:
+                token = str(entry).strip()
+                ver = 0
+            if not abs_name or not token:
+                continue
+            db.session.execute(_UPSERT_SQL, {"uid": device_uid, "abs": abs_name, "tok": token, "ver": ver, "ts": timestamp})
+            count += 1
+    elif isinstance(lump_versions, list):
+        for entry in lump_versions:
+            if not isinstance(entry, dict):
+                continue
+            abs_name = str(entry.get("abstraction_name", "")).strip()
+            token = str(entry.get("lump_token", "")).strip()
+            try:
+                ver = int(entry.get("lump_version", 0))
+            except (ValueError, TypeError):
+                ver = 0
+            if not abs_name or not token:
+                continue
+            db.session.execute(_UPSERT_SQL, {"uid": device_uid, "abs": abs_name, "tok": token, "ver": ver, "ts": timestamp})
+            count += 1
+    return count
+
+
 def _verify_build_sig(board_type, fw_major, fw_minor, sig_hex):
     key = os.environ.get("BUILD_SIGNING_KEY", "")
     if not key or not sig_hex or sig_hex == "00000000":
@@ -4619,6 +4727,145 @@ def device_heartbeat():
         )
 
     return jsonify({"ok": True, "tunnel_status": dev.tunnel_status or "pending"})
+
+
+@app.route("/api/device/call-home", methods=["POST"])
+def device_call_home():
+    """Combined call-home handshake: register + optional inline fault telemetry + lump versions.
+
+    This endpoint accepts the same fields as /api/device/register and additionally
+    processes two optional inline arrays so devices can submit everything in a single
+    POST, reducing round-trips and ensuring telemetry is captured even when a
+    secondary POST would be dropped.
+
+    Extra body fields (all optional):
+      faults        — list of fault records, each with the same fields accepted by
+                      /api/device/fault (device_uid is inherited from the top-level
+                      field and may be omitted per entry).
+      lump_versions — list of {abstraction_name, lump_token, lump_version} dicts
+                      (same format as /api/device/lump-versions lumps array), OR a
+                      dict mapping abstraction_name -> {lump_token, lump_version}.
+
+    Devices that omit faults and lump_versions behave exactly as if they called
+    /api/device/register directly — this endpoint is fully backwards-compatible.
+    """
+    data = request.get_json(silent=True) or {}
+    uid = data.get("device_uid", "").strip()
+    if not uid:
+        return jsonify({"ok": False, "error": "missing device_uid"}), 400
+
+    board_type = int(data.get("board_type", 0))
+    fw_major = int(data.get("fw_major", 1))
+    fw_minor = int(data.get("fw_minor", 0))
+    build_sig_hex = data.get("build_sig", "00000000")
+    profile = data.get("profile", "Full")
+    build_verified = _verify_build_sig(board_type, fw_major, fw_minor, build_sig_hex)
+    try:
+        boot_reason = max(0, min(255, int(data.get("boot_reason", 0))))
+    except (ValueError, TypeError):
+        boot_reason = 0
+    try:
+        last_fault = max(0, min(255, int(data.get("last_fault", 0))))
+    except (ValueError, TypeError):
+        last_fault = 0
+    try:
+        fault_nia = max(0, min(0xFFFFFFFF, int(data.get("fault_nia", 0))))
+    except (ValueError, TypeError):
+        fault_nia = 0
+    bridge_host = data.get("bridge_host", "")
+    bridge_port = int(data.get("bridge_port", 0))
+    bridge_scheme = data.get("bridge_scheme", "http")
+    if bridge_scheme not in ("http", "https"):
+        bridge_scheme = "http"
+    serial_port = data.get("serial_port", "")
+    now = _time.time()
+
+    dev = Device.query.filter_by(device_uid=uid).first()
+    if dev:
+        dev.board_type = board_type
+        dev.board_name = BOARD_TYPES.get(board_type, f"Unknown-0x{board_type:02X}")
+        dev.profile = profile
+        dev.fw_major = fw_major
+        dev.fw_minor = fw_minor
+        dev.build_sig = build_sig_hex
+        dev.build_verified = 1 if build_verified else 0
+        dev.boot_reason = boot_reason
+        dev.last_fault = last_fault
+        dev.fault_nia = fault_nia
+        dev.bridge_host = bridge_host
+        dev.bridge_port = bridge_port
+        dev.bridge_scheme = bridge_scheme
+        dev.serial_port = serial_port
+        dev.status = "online"
+        dev.last_seen = now
+        dev.boot_count = (dev.boot_count or 0) + 1
+    else:
+        dev = Device(
+            device_uid=uid,
+            board_type=board_type,
+            board_name=BOARD_TYPES.get(board_type, f"Unknown-0x{board_type:02X}"),
+            profile=profile,
+            fw_major=fw_major,
+            fw_minor=fw_minor,
+            build_sig=build_sig_hex,
+            build_verified=1 if build_verified else 0,
+            boot_reason=boot_reason,
+            last_fault=last_fault,
+            fault_nia=fault_nia,
+            bridge_host=bridge_host,
+            bridge_port=bridge_port,
+            bridge_scheme=bridge_scheme,
+            serial_port=serial_port,
+            status="online",
+            last_seen=now,
+            boot_count=1,
+        )
+        db.session.add(dev)
+    db.session.commit()
+
+    if boot_reason == 2 and last_fault:
+        fe = FaultEvent(
+            device_uid=uid,
+            fault_type=last_fault,
+            fault_nia=fault_nia,
+            boot_reason=boot_reason,
+            timestamp=now,
+        )
+        db.session.add(fe)
+        db.session.commit()
+        logging.info("Fault event logged: device=%s fault=0x%02X nia=0x%08X", uid, last_fault, fault_nia)
+
+    _auto_populate_boot_tests(uid, boot_reason, last_fault, now)
+    _run_hello_mum_flow(dev)
+    db.session.commit()
+
+    faults_inline = data.get("faults")
+    faults_recorded = 0
+    if isinstance(faults_inline, list):
+        faults_recorded = _ingest_fault_entries(uid, faults_inline, now)
+        if faults_recorded:
+            db.session.commit()
+            logging.info("Inline faults recorded for device=%s count=%d", uid, faults_recorded)
+
+    lump_versions_inline = data.get("lump_versions")
+    lump_versions_updated = 0
+    if lump_versions_inline is not None:
+        lump_versions_updated = _ingest_lump_version_entries(uid, lump_versions_inline, _time.time())
+        if lump_versions_updated:
+            db.session.commit()
+            logging.info("Inline lump_versions recorded for device=%s count=%d", uid, lump_versions_updated)
+
+    logging.info("Call-home: device=%s (%s) faults=%d lump_versions=%d tunnel=%s",
+                 uid, dev.board_name, faults_recorded, lump_versions_updated, dev.tunnel_status)
+    return jsonify({
+        "ok": True,
+        "device_id": dev.id,
+        "board_name": dev.board_name,
+        "boot_count": dev.boot_count,
+        "tunnel_status": dev.tunnel_status,
+        "faults_recorded": faults_recorded,
+        "lump_versions_updated": lump_versions_updated,
+    })
 
 
 @app.route("/api/device/list")
