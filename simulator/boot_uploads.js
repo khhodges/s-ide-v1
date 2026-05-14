@@ -378,8 +378,7 @@ const BOOT_UPLOADS = [
         index: 18,
         grants: ['E'],
         capabilities: [
-            { type: 'self-data-R' },
-            { type: 'pool-W' }
+            { type: 'self-data-R' }
         ],
         data_words: [
             0x40490FDB,
@@ -394,7 +393,8 @@ const BOOT_UPLOADS = [
             { name: 'Phi',  code: [0x07030000, 0x57000002, 0x1F000000] },
             { name: 'Zero', code: [0x07030000, 0x57000003, 0x1F000000] },
             { name: 'One',  code: [0x07030000, 0x57000004, 0x1F000000] },
-            { name: 'Add',  code: [0x070B0001, 0x5F008000, 0x1F000000] }
+            { name: 'Add',  code: [0x070B0000, 0x5F008000, 0x1F000000] },
+            { name: 'Get',  code: [0x070B0000, 0x57008001, 0x1F000000] }
         ]
     }
 ];

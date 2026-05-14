@@ -9696,7 +9696,7 @@ function handleNSImport(event) {
                         const idx = item.index !== undefined ? item.index : sim.nsCount;
                         const loc = idx * sim.SLOT_SIZE;
                         const lim17 = Math.min(words.length - 1, 0x1FFFF);
-                        const gtType = (item.entry && item.entry.gtType) || 0;
+                        const gtType = (item.entry && item.entry.gtType != null) ? item.entry.gtType : 1;
                         const chainable = (item.entry && item.entry.chainable) ? 1 : 0;
                         sim.writeNSEntry(idx, loc, lim17, 0, 0, 0, chainable, gtType, 0);
                         sim.nsLabels[idx] = item.label || (item.entry && item.entry.label) || `import_${idx}`;
@@ -9710,7 +9710,7 @@ function handleNSImport(event) {
                 const idx = sim.nsCount;
                 const loc = idx * sim.SLOT_SIZE;
                 const lim17 = Math.min(Math.max(words.length - 1, 0), 0x1FFFF);
-                const gtType = (data.entry && data.entry.gtType) || 0;
+                const gtType = (data.entry && data.entry.gtType != null) ? data.entry.gtType : 1;
                 const chainable = (data.entry && data.entry.chainable) ? 1 : 0;
                 sim.writeNSEntry(idx, loc, lim17, 0, 0, 0, chainable, gtType, 0);
                 sim.nsLabels[idx] = data.label;
@@ -9770,7 +9770,10 @@ function loadNamespaceState() {
             } else if (item.entry) {
                 const loc = item.entry.word0_location || (i * sim.SLOT_SIZE);
                 const lim = sim.parseNSWord1(item.entry.word1_limit || 0);
-                sim.writeNSEntry(i, loc, lim.limit, lim.b, lim.f, item.entry.gBit || 0, item.entry.chainable ? 1 : 0, item.entry.gtType || 0, 0);
+                const restoredGtType = (item.entry.gtType === 3)
+                    ? (console.warn(`[NS restore] slot ${i}: gtType=3 (Abstract) is not valid in NS table; treating as Inform (1)`), 1)
+                    : (item.entry.gtType != null ? item.entry.gtType : 1);
+                sim.writeNSEntry(i, loc, lim.limit, lim.b, lim.f, item.entry.gBit || 0, item.entry.chainable ? 1 : 0, restoredGtType, 0);
                 sim.nsLabels[i] = item.entry.label || '';
                 if (item.words && item.words.length > 0) {
                     for (let j = 0; j < item.words.length; j++) {

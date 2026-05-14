@@ -2,6 +2,60 @@
 
 ---
 
+## Release 1.2 — 2026-05-14
+
+### Summary
+
+NS table integrity fix. Removes illegal pool NS entries (slots 50-63) written
+by a previous task agent, rewrites Constants.Add() to return a plain data value
+(not a malformed GT), adds Constants.Get(), and introduces AbstractGTManager as
+the correct home for Abstract GT lifecycle tracking.
+
+### Foundational rules enforced
+
+1. NS table is **only** for Inform (gtType=1) and Outform (gtType=2) abstractions.
+2. GTs live in c-lists (CRs at runtime, lump c-list area at rest). Never in the NS table.
+3. Abstract GT pool memory is internal to AbstractGTManager; no NS entries pierce it.
+4. `writeNSEntry()` now rejects gtType=3 (Abstract GT) with a hard fault.
+
+### Changes
+
+#### Simulator JS (scope: no FPGA binaries touched)
+
+| File | Change |
+|---|---|
+| `simulator/boot_uploads.js` | Removed `pool-W` capability from Constants c-list boot entry; added `Get` method stub |
+| `simulator/simulator.js` | Removed pool block from `lazyLoad()` that wrote NS slots 50-63; added `writeNSEntry()` guard (rejects gtType=3); Node.js shim for `AbstractGTManager`; instantiates `abstractGTManager` in constructor |
+| `simulator/system_abstractions.js` | Rewrote `Constants.Add()` to Pi pattern (returns plain integer data value, not malformed GT); added `Constants.Get()` method |
+| `simulator/app-run.js` | Fixed two import-path field defaults (undefined → 0); clamped localStorage restore to valid range |
+| `simulator/app-lumps.js` | Updated pool display section for new Constants.Add/Get interface |
+| `simulator/abstract_gt_manager.js` | **New file.** `AbstractGTManager` class — Map keyed by 7-bit `gt_seq`; `createAtoken`, `get`, `release`, `live`, `GC` methods; never touches NS table |
+
+#### Metadata (00001200 / Constants)
+
+| File | Change |
+|---|---|
+| `server/lumps/00001200.json` | `Add`/`Get` method descriptions updated; `pool_w`/`pool_ns_base`/`pool_size` fields removed; `cc` stays 2 (matches binary header — slot 1 is NULL GT after boot) |
+| `server/lumps/manifest.json` | Same pool field removals; `Get` method entry added; `cc` stays 2 |
+
+#### Documentation
+
+| File | Change |
+|---|---|
+| `docs/plans/ns-table-integrity.md` | New plan doc — foundational rules, AbstractGTManager spec, all 9 fixes |
+
+### Test results
+
+| Suite | Before | After |
+|---|---|---|
+| lump-consistency | 106 passed | **106 passed** |
+| assembler-tests | 862 passed | **862 passed** |
+| boot-image-matches-sim | 6 passed | **6 passed** |
+| boot-image-loads-and-boots | **5 failed** (pool wrote NS slot 50, pushing nsCount to 51) | **5 passed** |
+| fault-recovery-tests | 192 passed | **192 passed** |
+
+---
+
 ## Release 1.1 — 2026-05-03
 
 ### Summary

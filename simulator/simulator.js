@@ -2,6 +2,14 @@
 // simulator.js — Church Machine CPU Simulator
 // =============================================================================
 //
+// Node.js compatibility shim: abstract_gt_manager.js is a separate file in
+// the browser but must be loaded here when running under Node.js (test harnesses).
+if (typeof module !== 'undefined' && typeof AbstractGTManager === 'undefined') {
+    const _agm = require('./abstract_gt_manager.js');
+    /* global AbstractGTManager */
+    global.AbstractGTManager = _agm.AbstractGTManager;
+}
+//
 // This is the heart of the browser-based Church Machine IDE.  It implements a
 // cycle-accurate (at the instruction level) simulation of the Church Machine
 // CPU — a capability-based computer architecture targeting the Efinix Ti60
@@ -142,6 +150,7 @@ class ChurchSimulator {
         this.abstractionRegistry = null;
         this.systemAbstractions = null;
         this.deviceAbstractions = null;
+        this.abstractGTManager = new AbstractGTManager();
 
         // Which NS slot the boot sequence jumps to at B:05/B:06.
         // Defaults to BOOT_ABSTR_NS_SLOT (3 = LED flash); overridden by app.js
@@ -391,8 +400,6 @@ class ChurchSimulator {
         if (cc > 0) {
             const capsList = bootUpload.capabilities || [];
             const selfDataRIdx = capsList.findIndex(c => c && c.type === 'self-data-R');
-            const poolWIdx     = capsList.findIndex(c => c && c.type === 'pool-W');
-
             if (selfDataRIdx >= 0) {
                 const dataBase   = (loc + 1 + totalCodeWords) >>> 0;
                 const dataLimit  = totalDataWords > 0 ? totalDataWords - 1 : 0;
@@ -404,29 +411,6 @@ class ChurchSimulator {
                 this.output += `[LOADER] ${label}: self-data-R → NS[${dataNsSlot}] base=0x${dataBase.toString(16).toUpperCase()} limit=${dataLimit} GT@lump+${lumpSize - cc + selfDataRIdx}\n`;
             }
 
-            if (poolWIdx >= 0) {
-                // Pool memory lives in the lump's free space, immediately after the data words.
-                // Convention: 14 pool words (NS slots 50–63) + 1 bitmap word.
-                const POOL_SIZE    = 14;
-                const POOL_NS_BASE = 50;
-                const poolBase     = (loc + 1 + totalCodeWords + totalDataWords) >>> 0;
-
-                // Aggregate pool NS entry (W-capable, covers the full 14-word region)
-                const poolAggNsSlot = 200 + slotIndex + 1;
-                this.writeNSEntry(poolAggNsSlot, poolBase, POOL_SIZE - 1, 0, 0, 0, 0, 1, 0, 0);
-                this.nsLabels[poolAggNsSlot] = `${label}.pool-W`;
-
-                // Individual R-only NS entries for each pool slot (callers read via Abstract GTs)
-                for (let i = 0; i < POOL_SIZE; i++) {
-                    this.writeNSEntry(POOL_NS_BASE + i, poolBase + i, 0, 0, 0, 0, 0, 1, 0, 0);
-                    this.nsLabels[POOL_NS_BASE + i] = `${label}.pool[${i}]`;
-                }
-
-                // Write pool-W GT into the lump c-list
-                const poolGT = this.createGT(0, poolAggNsSlot, {R:1,W:1,X:0,L:0,S:0,E:0}, 1);
-                this.memory[(loc + lumpSize - cc + poolWIdx) >>> 0] = poolGT;
-                this.output += `[LOADER] ${label}: pool-W → NS[${poolAggNsSlot}] poolBase=0x${poolBase.toString(16).toUpperCase()} indivSlots=${POOL_NS_BASE}..${POOL_NS_BASE+POOL_SIZE-1} GT@lump+${lumpSize - cc + poolWIdx}\n`;
-            }
         }
 
         // Update NS entry word0_location to the chosen physical address and
@@ -760,6 +744,13 @@ class ChurchSimulator {
     }
 
     writeNSEntry(idx, location, limit17, bFlag, fFlag, gBit, chainable, gtType, version, clistCount, abstract_gt) {
+        if (gtType === 3) {
+            throw new Error(
+                `writeNSEntry(slot ${idx}): Abstract GTs (gtType=3) must never have NS entries. ` +
+                `The NS table is only for Inform (1) and Outform (2) entries. ` +
+                `See docs/abstract-io-addressing.md.`
+            );
+        }
         const base = this.NS_TABLE_BASE + idx * this.NS_ENTRY_WORDS;
         this.memory[base + 0] = location >>> 0;
         this.memory[base + 1] = this.packNSWord1(limit17, bFlag, fFlag, gBit, chainable, gtType, clistCount || 0);

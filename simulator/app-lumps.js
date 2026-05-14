@@ -2015,15 +2015,16 @@ function _renderLumpCodeContent(bodyEl, lump, words, token) {
         html += '</div></div>';
     }
 
-    // User-constant pool section (Constants.Add pool)
-    const poolW      = lump.pool_w;
-    const poolNsBase = parseInt(lump.pool_ns_base) || 50;
-    const poolSize   = parseInt(lump.pool_size)    || 14;
-    if (poolW && dw > 0 && dataOffset > 0) {
+    // User-constant pool section — rendered inline inside the lump's data area.
+    // The pool is an internal implementation detail of the Constants abstraction.
+    // It has no c-list entry and is not exposed via the NS table; display it as
+    // plain memory rows following the builtin data words.
+    const poolSize = 14;
+    if (lump.abstraction === 'Constants' && dw > 0 && dataOffset > 0) {
         const poolOffset = dataOffset + dw;
         const bitmapIdx  = poolOffset + poolSize;
         const bitmap     = bitmapIdx < words.length ? (words[bitmapIdx] >>> 0) : 0;
-        html += `<div class="lump-clist-section"><div class="lump-clist-title">User Constant Pool — ${poolSize} slots (NS ${poolNsBase}–${poolNsBase + poolSize - 1})</div><div class="lump-clist-table">`;
+        html += `<div class="lump-clist-section"><div class="lump-clist-title">User Constant Pool — ${poolSize} slots (internal, no NS entry)</div><div class="lump-clist-table">`;
         for (let p = 0; p < poolSize; p++) {
             const wIdx     = poolOffset + p;
             const wVal     = wIdx < words.length ? (words[wIdx] >>> 0) : 0;

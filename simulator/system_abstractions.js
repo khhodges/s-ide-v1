@@ -2547,8 +2547,8 @@ class SystemAbstractions {
             });
         });
 
-        // Constants.Add(XYZ) — store a user-defined constant in the pool and return an Abstract GT
-        const POOL_NS_BASE = 50;
+        // Constants.Add(XYZ) — Pi pattern: store a value in lump pool memory, return slot index N in DR0.
+        // No NS entry. No GT. The caller holds integer N as their retrieval key.
         const POOL_SIZE    = 14;
         const BUILTIN_DATA = 5;
 
@@ -2560,14 +2560,14 @@ class SystemAbstractions {
                 return { ok: false, fault: 'FAULT', message: 'Constants: lump not resident' };
             }
 
-            // Pool memory is in free space immediately after the builtin data words
+            // Pool memory lives immediately after the builtin data words inside the lump.
             const poolBase   = (lumpBase + 1 + hdr.cw + BUILTIN_DATA) >>> 0;
-            // Bitmap word immediately follows the 14 pool words
+            // Bitmap word immediately follows the POOL_SIZE pool words.
             const bitmapAddr = (poolBase + POOL_SIZE) >>> 0;
 
             let bitmap = sim.memory[bitmapAddr] >>> 0;
 
-            // Find first free slot (bit 0 = pool slot 0 = NS slot 50)
+            // Find first free slot.
             let slotIdx = -1;
             for (let i = 0; i < POOL_SIZE; i++) {
                 if (!(bitmap & (1 << i))) { slotIdx = i; break; }
@@ -2576,38 +2576,51 @@ class SystemAbstractions {
                 return { ok: false, fault: 'FAULT', message: 'Constants.Add: pool full (14/14 slots used)' };
             }
 
-            // XYZ value comes from DR0 (the DWRITE source register in the ISA body)
+            // XYZ value comes from DR0.
             const xyz = sim.dr ? (sim.dr[0] >>> 0) : 0;
 
-            // Write XYZ into pool memory and mark the bitmap slot as used
+            // Write XYZ into pool memory and mark the bitmap slot as used.
             sim.memory[poolBase + slotIdx] = xyz;
             bitmap |= (1 << slotIdx);
             sim.memory[bitmapAddr] = bitmap;
 
-            // Verify the per-slot NS entry was initialised by the loader
-            const poolNsSlot  = POOL_NS_BASE + slotIdx;
-            const poolNsEntry = sim.readNSEntry(poolNsSlot);
-            if (!poolNsEntry || !poolNsEntry.word0_location) {
-                return { ok: false, fault: 'FAULT', message: `Constants.Add: NS[${poolNsSlot}] not initialised` };
-            }
-
-            // Construct a read-only Abstract GT (type=3) pointing to this pool slot.
-            // type=3 signals that this capability is a sealed value token, not a code lump.
-            const abstractGT = sim.createGT(0, poolNsSlot, { R:1, W:0, X:0, L:0, S:0, E:0 }, 3);
-
-            // Write GT directly into CR0 (no DR side-effect; result.result left undefined)
-            sim.cr[0] = {
-                word0: abstractGT,
-                word1: poolNsEntry.word0_location,
-                word2: poolNsEntry.word1_limit,
-                word3: poolNsEntry.word2_seals,
-                m: 0
-            };
-
             const hex = xyz.toString(16).toUpperCase().padStart(8, '0');
+            // Return slot index N in DR0. N is the caller's retrieval key for Constants.Get(N).
             return {
                 ok: true,
-                message: `Constants.Add(0x${hex}) \u2192 Abstract GT in CR0 [pool slot ${slotIdx}, NS[${poolNsSlot}]]`
+                result: slotIdx,
+                message: `Constants.Add(0x${hex}) \u2192 pool slot ${slotIdx} (DR0=${slotIdx})`
+            };
+        });
+
+        // Constants.Get(N) — read back a value stored by Constants.Add(). N comes from DR0.
+        this.registry.bindMethod(NS_SLOT, 'Get', function(sim, args) {
+            const nsBase   = sim.NS_TABLE_BASE + NS_SLOT * sim.NS_ENTRY_WORDS;
+            const lumpBase = sim.memory[nsBase];
+            const hdr      = sim.parseLumpHeader(sim.memory[lumpBase]);
+            if (!hdr.valid) {
+                return { ok: false, fault: 'FAULT', message: 'Constants: lump not resident' };
+            }
+
+            const poolBase   = (lumpBase + 1 + hdr.cw + BUILTIN_DATA) >>> 0;
+            const bitmapAddr = (poolBase + POOL_SIZE) >>> 0;
+            const bitmap     = sim.memory[bitmapAddr] >>> 0;
+
+            const n = sim.dr ? (sim.dr[0] >>> 0) : 0;
+
+            if (n >= POOL_SIZE) {
+                return { ok: false, fault: 'FAULT', message: `Constants.Get: slot ${n} out of range (max ${POOL_SIZE - 1})` };
+            }
+            if (!(bitmap & (1 << n))) {
+                return { ok: false, fault: 'FAULT', message: `Constants.Get: slot ${n} is not allocated` };
+            }
+
+            const val = sim.memory[poolBase + n] >>> 0;
+            const hex = val.toString(16).toUpperCase().padStart(8, '0');
+            return {
+                ok: true,
+                result: val,
+                message: `Constants.Get(${n}) \u2192 0x${hex} (DR0=0x${hex})`
             };
         });
     }
