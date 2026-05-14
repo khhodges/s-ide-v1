@@ -545,18 +545,22 @@ function showAbstractionDetail(index) {
                 const md = userMethodData[`${uid}:${m}`];
                 return md && (md.compiled || md.compileError);
             });
-            if (_anyCompiled) {
+            {
                 html += `<div class="abs-lump-assemble-bar">`;
-                if (_allCompiled) {
-                    html += `<span class="abs-lump-assemble-ready">\u2713 All methods compiled</span>`;
-                } else {
-                    const _nComp = methods.filter(function(m) {
-                        const md = userMethodData[`${uid}:${m}`];
-                        return md && md.compiled && md.compiled.length > 0;
-                    }).length;
-                    html += `<span class="abs-lump-assemble-partial">${_nComp}/${methods.length} methods compiled</span>`;
+                if (_anyCompiled) {
+                    if (_allCompiled) {
+                        html += `<span class="abs-lump-assemble-ready">\u2713 All methods compiled</span>`;
+                    } else {
+                        const _nComp = methods.filter(function(m) {
+                            const md = userMethodData[`${uid}:${m}`];
+                            return md && md.compiled && md.compiled.length > 0;
+                        }).length;
+                        html += `<span class="abs-lump-assemble-partial">${_nComp}/${methods.length} methods compiled</span>`;
+                    }
+                    html += `<button class="btn btn-sm abs-lump-assemble-btn" onclick="_assembleLumpFromCatalog(${uid})" title="Pack all compiled methods into a LUMP binary">Assemble LUMP</button>`;
                 }
-                html += `<button class="btn btn-sm abs-lump-assemble-btn" onclick="_assembleLumpFromCatalog(${uid})" title="Pack all compiled methods into a LUMP binary">Assemble LUMP</button>`;
+                html += `<button class="btn btn-sm abs-lump-export-btn" onclick="_exportAbsHistory(${uid})" title="Download compile history for all methods as JSON">Export history</button>`;
+                html += `<button class="btn btn-sm abs-lump-import-btn" onclick="_importAbsHistory(${uid})" title="Restore compile history from a previously exported JSON file">Import history</button>`;
                 html += `</div>`;
             }
 
@@ -1096,6 +1100,189 @@ function _loadCatalogLumpIntoSim() {
     if (con) {
         con.className = '';
         con.textContent = 'Loaded catalog LUMP \u201c' + name + '\u201d \u2014 ' + words.length + ' words \u2014 click Step or Run';
+    }
+}
+
+// ── Export / Import history (JSON roundtrip) ─────────────────────────────────
+
+/**
+ * Export compile history for all methods of an abstraction as a JSON file.
+ * Schema: { version:1, abstractionName, abstractionIndex, methods: { name: entry } }
+ */
+function _exportAbsHistory(absIdx) {
+    const abs = (typeof abstractionRegistry !== 'undefined' && abstractionRegistry)
+        ? abstractionRegistry.getAbstraction(absIdx) : null;
+    if (!abs) return;
+
+    const methods = abs.methods || [];
+    const exported = {};
+    for (const m of methods) {
+        exported[m] = userMethodData[`${absIdx}:${m}`] || {};
+    }
+
+    const payload = {
+        version: 1,
+        abstractionName: abs.name,
+        abstractionIndex: absIdx,
+        methods: exported
+    };
+
+    const json = JSON.stringify(payload, null, 2);
+    const filename = (abs.name || 'abstraction').toLowerCase().replace(/[^a-z0-9_]/g, '_') + '_history.json';
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+/**
+ * Import compile history from a JSON file produced by _exportAbsHistory.
+ * Merges into the current abstraction's userMethodData entries without
+ * touching any other abstraction's data.
+ */
+function _importAbsHistory(absIdx) {
+    const abs = (typeof abstractionRegistry !== 'undefined' && abstractionRegistry)
+        ? abstractionRegistry.getAbstraction(absIdx) : null;
+    if (!abs) return;
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    function _cleanupInput() {
+        if (input.parentNode) document.body.removeChild(input);
+    }
+
+    input.addEventListener('cancel', _cleanupInput);
+    window.addEventListener('focus', function _winFocus() {
+        window.removeEventListener('focus', _winFocus);
+        setTimeout(_cleanupInput, 500);
+    }, { once: true });
+
+    input.addEventListener('change', function() {
+        const file = input.files && input.files[0];
+        _cleanupInput();
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            let payload;
+            try {
+                payload = JSON.parse(e.target.result);
+            } catch (err) {
+                _absHistoryImportError(absIdx, 'Invalid JSON: ' + err.message);
+                return;
+            }
+
+            // Schema validation
+            if (!payload || typeof payload !== 'object') {
+                _absHistoryImportError(absIdx, 'File is not a valid history export (expected a JSON object).');
+                return;
+            }
+            if (payload.version !== 1) {
+                _absHistoryImportError(absIdx, 'Unsupported history version: ' + JSON.stringify(payload.version) + '. Expected 1.');
+                return;
+            }
+            if (typeof payload.abstractionName !== 'string') {
+                _absHistoryImportError(absIdx, 'Missing or invalid "abstractionName" field.');
+                return;
+            }
+            if (!payload.methods || typeof payload.methods !== 'object' || Array.isArray(payload.methods)) {
+                _absHistoryImportError(absIdx, 'Missing or invalid "methods" field (expected an object).');
+                return;
+            }
+
+            // Identity check: warn if the file came from a different abstraction
+            const nameMismatch = payload.abstractionName !== abs.name;
+            if (nameMismatch) {
+                const ok = confirm(
+                    'This history file is from "' + payload.abstractionName + '" but you are importing into "' + abs.name + '".\n\n' +
+                    'Only methods whose names match this abstraction will be imported. Continue?'
+                );
+                if (!ok) return;
+            }
+
+            const knownMethods = new Set(abs.methods || []);
+            const VALID_KEYS = new Set(['purpose', 'example', 'compiled', 'compiledLang', 'compiledAt', 'compileError', 'history']);
+            let importCount = 0;
+            let skipCount = 0;
+            for (const [mName, entry] of Object.entries(payload.methods)) {
+                if (!entry || typeof entry !== 'object') {
+                    _absHistoryImportError(absIdx, 'Method "' + mName + '" has an invalid entry (expected an object).');
+                    return;
+                }
+                // Skip methods not present in this abstraction's method list
+                if (!knownMethods.has(mName)) {
+                    skipCount++;
+                    continue;
+                }
+                const entryKeys = Object.keys(entry);
+                if (entryKeys.length === 0) continue;
+                const hasKnownKey = entryKeys.some(k => VALID_KEYS.has(k));
+                if (!hasKnownKey) {
+                    _absHistoryImportError(absIdx, 'Method "' + mName + '" entry has no recognised fields (expected at least one of: purpose, example, compiled, history).');
+                    return;
+                }
+                if (entry.compiled !== undefined && !Array.isArray(entry.compiled)) {
+                    _absHistoryImportError(absIdx, 'Method "' + mName + '": "compiled" must be an array.');
+                    return;
+                }
+                if (entry.history !== undefined && !Array.isArray(entry.history)) {
+                    _absHistoryImportError(absIdx, 'Method "' + mName + '": "history" must be an array.');
+                    return;
+                }
+
+                // Whitelist: only carry known fields into the merge
+                const safeEntry = {};
+                for (const k of VALID_KEYS) {
+                    if (Object.prototype.hasOwnProperty.call(entry, k)) safeEntry[k] = entry[k];
+                }
+
+                const key = `${absIdx}:${mName}`;
+                const prev = userMethodData[key] || {};
+                userMethodData[key] = Object.assign({}, prev, safeEntry);
+                importCount++;
+            }
+
+            _absMethodsSave();
+            showAbstractionDetail(absIdx);
+
+            const outEl = document.getElementById('assemblyOutput');
+            if (outEl) {
+                const msg = document.createElement('div');
+                msg.style.cssText = 'color:#8f8;font-weight:600;padding:2px 0;';
+                let summary = '\u2713 History imported from "' + payload.abstractionName + '" \u2014 ' +
+                    importCount + ' method' + (importCount !== 1 ? 's' : '') + ' merged';
+                if (skipCount > 0) summary += ', ' + skipCount + ' unknown skipped';
+                summary += '.';
+                msg.textContent = summary;
+                outEl.appendChild(msg);
+                setTimeout(function() { if (msg.parentNode) msg.parentNode.removeChild(msg); }, 4000);
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    input.click();
+}
+
+function _absHistoryImportError(absIdx, message) {
+    const outEl = document.getElementById('assemblyOutput');
+    if (outEl) {
+        const msg = document.createElement('div');
+        msg.style.cssText = 'color:#f87171;font-weight:600;padding:2px 0;';
+        msg.textContent = '\u2717 Import failed: ' + message;
+        outEl.appendChild(msg);
+        setTimeout(function() { if (msg.parentNode) msg.parentNode.removeChild(msg); }, 6000);
+    } else {
+        alert('History import failed: ' + message);
     }
 }
 

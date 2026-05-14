@@ -195,6 +195,27 @@
     cursor: pointer;
 }
 .abs-lump-assemble-btn:hover { background: rgba(74,222,128,0.25); }
+.abs-lump-export-btn {
+    font-size: 0.6rem;
+    padding: 2px 7px;
+    background: rgba(96,165,250,0.12);
+    color: #60a5fa;
+    border: 1px solid rgba(96,165,250,0.35);
+    border-radius: 4px;
+    cursor: pointer;
+}
+.abs-lump-export-btn:hover { background: rgba(96,165,250,0.22); }
+.abs-lump-import-btn {
+    margin-left: auto;
+    font-size: 0.6rem;
+    padding: 2px 7px;
+    background: rgba(167,139,250,0.12);
+    color: #a78bfa;
+    border: 1px solid rgba(167,139,250,0.35);
+    border-radius: 4px;
+    cursor: pointer;
+}
+.abs-lump-import-btn:hover { background: rgba(167,139,250,0.22); }
 
 /* Method panel action buttons row */
 .abs-method-panel-actions {
