@@ -310,11 +310,9 @@ There are no other configuration parameters.
 
 - **Lump sizes** are powers of 2, minimum 64 words. The mLoad pipeline uses
   bit-shifts to find lump boundaries — not addition.
-- **NS table** sits at the top of memory: `NS_TABLE_BASE = totalNamespaceWords − 1,024`.
-  `totalNamespaceWords` is the programmer's choice, encoded in the NS LUMP header.
-  The boot ROM reads it from there — no separate stored pointer, no chicken-and-egg.
-- **NS_TABLE_RESERVE** = 1,024 words (256 entries × 4 words per entry, wired
-  into the boot ROM).
+- **NS table** is the NS LUMP — it lives at address 0x0000, the start of
+  memory. `totalNamespaceWords` is the programmer's choice, encoded in the
+  NS LUMP header.
 - **cc field** (8 bits) limits c-list rows to 255 per lump. It does not limit
   NS slots — the GT `slot_id` field is 16 bits, allowing up to 65,535 slots.
 - **limit17** (17 bits) caps the pool at 131,071 words — enough headroom above
@@ -334,11 +332,11 @@ There are no other configuration parameters.
 foundation_end  = NS_LUMP_SIZE + THREAD_LUMP_SIZE + APP_LUMP_SIZE
                 = 64 + 256 + 64 = 384 words = 0x0180  (3-LUMP starter kit)
 
-Dynamic pool    = foundation_end  →  NS_TABLE_BASE − 1
+Dynamic pool    = foundation_end  →  totalNamespaceWords − 1
 
-Pool ceiling    = totalNamespaceWords − 1,025
-                = 64,511  (Ti60 F225)
-                = 130,047 (XC7A100T)
+Pool ceiling    = totalNamespaceWords − 1
+                = 65,535  (Ti60 F225)
+                = 131,071 (XC7A100T)
 ```
 
 Nothing else needs to be set. The programmer makes three LUMPs; the memory
@@ -475,13 +473,11 @@ network is the library.
 | Field | Ti60 F225 | XC7A100T |
 |-------|-----------|----------|
 | `totalNamespaceWords` | 65,536 | 131,072 |
-| NS_TABLE_BASE | `0xFC00` | `0x1FC00` |
-| `NS_TABLE_RESERVE` | 0x400 (1,024) | 0x400 (1,024) |
 | `foundation_end` (current 4-region demo) | 0x01C0 (448) | 0x01C0 (448) |
 | Pool base | 0x01C0 (448) | 0x01C0 (448) |
-| Pool ceiling | 64,511 (`0xFBFF`) | 130,047 (`0x1FBFF`) |
-| `limit17` (Memory pool GT) | `0x0FBFF` | `0x1FBFF` |
-| Allocatable pool words | ~64,063 (~250 KB) | ~129,599 (~507 KB) |
+| Pool ceiling | 65,535 (`0xFFFF`) | 131,071 (`0x1FFFF`) |
+| `limit17` (Memory pool GT) | `0x0FFFF` | `0x1FFFF` |
+| Allocatable pool words | ~65,087 (~254 KB) | ~130,623 (~511 KB) |
 
 > **Note:** `foundation_end` is identical on both boards for the current
 > 4-region demo layout (NS 64 w + Thread 256 w + free slot 2 64 w +
@@ -497,8 +493,7 @@ network is the library.
 `limit17` is the single value in the Memory Manager's pool GT that must
 change when retargeting to a new board. Everything else is either:
 
-- Hardware-forced (same on all boards): `NS_TABLE_RESERVE`, minimum lump
-  size, alignment rules
+- Hardware-forced (same on all boards): minimum lump size, alignment rules
 - Identical by programmer choice: `foundation_end`, lump sizes
 - Arithmetically derived: pool base, pool ceiling
 
@@ -509,26 +504,10 @@ On the Ti60 it is `0x0FBFF` (64,511). On the XC7A100T it is `0x1FBFF`
 this one value and the Memory Manager immediately sees the larger pool — no
 other change is required.
 
-This is the practical consequence of the hardware forcing: because the NS
-table is at a fixed offset from the top of memory (hardware-forced), and
-because lump sizes are powers of 2 (hardware-forced), the only variable is
-the total memory size — and `limit17` is exactly the field that encodes it.
-
-### NS_TABLE_BASE Computation
-
-On any board:
-
-```
-NS_TABLE_BASE = totalNamespaceWords − NS_TABLE_RESERVE
-              = totalNamespaceWords − 1,024
-```
-
-Ti60 F225:   65,536 − 1,024 = 64,512 = `0xFC00`
-XC7A100T: 131,072 − 1,024 = 130,048 = `0x1FC00`
-
-The boot ROM does not read this from a register. It computes it by
-subtracting 1,024 from `totalNamespaceWords` in the NS LUMP header. No stored pointer.
-No chicken-and-egg. No boot failure mode from a corrupted NS pointer.
+This is the practical consequence of the design: because lump sizes are
+powers of 2 (hardware-forced) and the pool runs to `totalNamespaceWords − 1`,
+the only variable when retargeting is the programmer's `totalNamespaceWords`
+choice — and `limit17` is exactly the field that encodes it.
 
 ---
 
