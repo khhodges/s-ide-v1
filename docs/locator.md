@@ -428,6 +428,7 @@ brings into existence objects that have never had a physical lump.
 
 ## See Also
 
+- [cloomc-foundation.md](cloomc-foundation.md) — **Authoritative architectural overview**: explains the 3-LUMP starter kit, the TSB principle, and why lazy load is the correct model for everything above the foundation.
 - [json-information.md](json-information.md) — The abstraction definition format (informational reference).
 - [golden-tokens.md](golden-tokens.md) — GT structure, typ field, and revocation.
 - [abstractions.md](abstractions.md) — Navana.Abstraction.Add and the lump lifecycle.

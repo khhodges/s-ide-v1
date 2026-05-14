@@ -21,6 +21,8 @@ The Church Machine is an educational platform providing a web-based IDE for lear
 ## System Architecture
 The system integrates an Amaranth HDL-based FPGA hardware with a web IDE (HTML/JS/CSS) and a Flask backend.
 
+**Authoritative Architectural Overview:** `docs/cloomc-foundation.md` is the single document explaining the CLOOMC ISA, the PP250 heritage, the capability model, the reliability model, the Trusted Security Base principle, memory architecture decisions (hardware-forced vs programmer choices vs natural consequences), the old 6-region boot layout and its problems, the 3-LUMP starter kit, and per-board profiles (Ti60 F225 vs XC7A100T). Read this document first when working on the boot image, the memory map, or the ISA.
+
 **UI/UX Decisions:**
 The web IDE features ten interactive views (Math, Code, Tutorial, Dashboard, Namespace, Abstractions, Pipeline, Reference, Builder, Docs). It includes educational tools like Pure Math calculator, HP-35 Calculator, Abacus, and Slide Rule, all with Church Machine trace. Learning aids comprise a "Math Challenge" sidebar, "History Tab," "Syntax Tab," and a "Visual Namespace Builder" for drag-and-drop deployment topology design. Documentation is presented as an interactive book with educational popups and a global CSS tooltip system. The design is responsive, and editor state, settings, and progress are persisted via localStorage.
 

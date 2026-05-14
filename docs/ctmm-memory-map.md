@@ -612,7 +612,95 @@ CALL-time computation.
 
 ---
 
-## 11. Summary of Findings
+## 11. XC7A100T Profile — 131,072-Word Configuration
+
+The QMTECH Wukong Artix-7 XC7A100T provides 4,860 Kb of block BRAM (≈607 KB
+total); 131,072 words (512 KB) are allocated to the Church Machine namespace.
+
+### 11.1 Top-Level Memory Regions — XC7A100T
+
+`NS_TABLE_RESERVE = 0x400` (1,024 words = 256 entries × 4 words per entry).
+
+| Start      | End        | Words   | Region |
+|:-----------|:-----------|--------:|:-------|
+| `0x00000`  | `0x1FAFE`  | 129,791 | **Lump area** — all object lumps |
+| `0x1FAFF`  | `0x1FAFF`  |       1 | **Format tag word** (`0xB0070229`) |
+| `0x1FB00`  | `0x1FBFF`  |     256 | **Reserved** (gap to NS table base alignment) |
+| `0x1FC00`  | `0x1FFFF`  |   1,024 | **NS table** — 256 × 4-word entries (`NS_TABLE_BASE = 0x1FC00`) |
+
+`NS_TABLE_BASE = 131,072 − 1,024 = 130,048 = 0x1FC00`
+
+> The boot ROM computes `NS_TABLE_BASE` by subtracting `NS_TABLE_RESERVE`
+> (1,024 words) from the wired-in total RAM size (131,072 words). No stored
+> pointer; no chicken-and-egg problem at cold boot.
+
+### 11.2 Foundation Layout (Standard 4-Region Boot Config)
+
+The foundation lump layout at the bottom of memory is identical between the
+Ti60 F225 and the XC7A100T. Lump sizes are programmer choices; the board
+does not change them. The current demo boot image uses four regions: NS lump
+(64 w), Thread lump (256 w), free slot 2 remnant (64 w), and Boot.Abstr
+(64 w). Their sum gives `foundation_end = 0x01C0`.
+
+| Start      | End        | Words | Region |
+|:-----------|:-----------|------:|:-------|
+| `0x00000`  | `0x0003F`  |    64 | NS root lump (Slot 0) |
+| `0x00040`  | `0x0013F`  |   256 | Boot.Thread lump (Slot 1) |
+| `0x00140`  | `0x0017F`  |    64 | Free slot 2 — historical remnant (Task #247) |
+| `0x00180`  | `0x001BF`  |    64 | Boot.Abstr lump (Slot 3) |
+| `0x001C0`  | `0x1FBFF`  | 129,088 | Dynamic pool (allocatable heap; ceiling = limit17) |
+
+`foundation_end = 0x01C0` — 64 + 256 + 64 + 64 = 448 words. This is
+arithmetic, not a board choice. It is identical to the Ti60 F225 value.
+
+The pool ceiling is `0x1FBFF` (limit17 = 130,047), which is the last word
+the Memory Manager's pool GT is permitted to address. The simulator's format
+tag word (`0x1FAFF`) and reserved region (`0x1FB00–0x1FBFF`) fall inside
+this range; they are present in the memory image but not used for lump
+allocation. The NS table base (`0x1FC00`) and everything above it are
+outside the pool GT's limit and cannot be reached by the allocator.
+
+> **Note on the 3-LUMP clean model:** Once Task #1159 removes free slot 2,
+> the true 3-LUMP foundation will be 64 + 256 + 64 = 384 words and
+> `foundation_end` will drop to `0x0180`. On both boards only the pool
+> ceiling (`limit17`) changes between Ti60 and XC7A100T; `foundation_end`
+> is identical because lump sizes are programmer choices, not board choices.
+
+### 11.3 Pool and limit17
+
+| Field | Ti60 F225 | XC7A100T |
+|:------|----------:|----------:|
+| `totalNamespaceWords` | 65,536 | 131,072 |
+| `NS_TABLE_BASE` | `0x0FC00` | `0x1FC00` |
+| Pool base | `0x001C0` | `0x001C0` |
+| Pool ceiling | `0x0FBFF` (64,511) | `0x1FBFF` (130,047) |
+| `limit17` (Memory pool GT) | `0x0FBFF` | `0x1FBFF` |
+| Allocatable pool (words) | ~64,063 (~250 KB) | ~129,599 (~507 KB) |
+
+`limit17` is the **only value that changes** when retargeting the Memory
+Manager from Ti60 F225 to XC7A100T. It is the upper bound of the dynamic
+pool — the largest word address the Memory Manager's pool GT permits
+allocation from. All other values are either hardware-forced (same on every
+board) or natural consequences of programmer-chosen lump sizes (also the
+same, for the standard configuration).
+
+The 17-bit width of `limit17` is hardware-forced: the mLoad pipeline adder
+is 17 bits wide, covering a maximum of 131,071 words. The XC7A100T pool
+ceiling of 130,047 fits within this range with headroom — confirming that
+the 17-bit choice was deliberate.
+
+### 11.4 Toolchain Note
+
+The XC7A100T is the only Church Machine target that uses the Xilinx/AMD
+Vivado toolchain (2020 or later required for place-and-route). The Ti60 F225
+uses the Efinix Efinity toolchain; the Tang Nano 20K uses the Gowin EDA
+toolchain. The CLOOMC ISA bitstream is the same across all three boards; only
+the toolchain, the pin constraints, and the `limit17` value in the boot image
+differ.
+
+---
+
+## 12. Summary of Findings
 
 | Finding | Status | Section |
 |:--------|:-------|:--------|

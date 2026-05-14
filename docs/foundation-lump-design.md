@@ -221,6 +221,7 @@ image is preserved as-is for now; the programmer-authored boot image work
 
 ## Cross-references
 
+- [`cloomc-foundation.md`](cloomc-foundation.md) — **Authoritative architectural overview**: heritage, capability model, reliability model, TSB principle, memory architecture decisions, the 3-LUMP starter kit, and board profiles. Start here for the full picture.
 - [`architecture.md`](architecture.md) — Overall Church Machine architecture
 - [`Lump-Architecture.md`](Lump-Architecture.md) — Accessible overview of the Lump object model
 - [`CM_LUMP_SPECIFICATION.md`](CM_LUMP_SPECIFICATION.md) — Authoritative binary encoding and field specification
