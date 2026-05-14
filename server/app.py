@@ -337,10 +337,10 @@ HARDWARE_PROFILES = {
     },
     "wukong-xc7a100t": {
         "label": "QMTECH Wukong Artix-7 XC7A100T",
-        "totalRamWords": 16384,
-        "addressBits": 14,
-        "addressRange": "0x0000_0000 – 0x0000_7FFF (32 KB byte-addressable)",
-        "notes": "Xilinx Artix-7 XC7A100T — 2048-word on-chip BRAM; Vivado 2020+ required for P&R",
+        "totalRamWords": 131072,
+        "addressBits": 17,
+        "addressRange": "0x0000_0000 – 0x0001_FFFF (512 KB byte-addressable)",
+        "notes": "Xilinx Artix-7 XC7A100T — 4,860 Kb BRAM (≈607 KB total); 512 KB allocated for namespace; Vivado 2020+ required for P&R",
     },
 }
 
