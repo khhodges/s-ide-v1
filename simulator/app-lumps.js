@@ -61,6 +61,7 @@ function showLumpDetail(token) {
     let _tabBar = `<div class="lump-tabs-bar" id="lumpTabBar_${_tk}">` +
         `<button class="lump-tab${isNamespace ? ' lump-tab-active' : ''}" onclick="_switchLumpTab('${_tk}','overview')">Overview</button>`;
     if (!isNamespace) {
+        _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','source')">Source</button>`;
         _tabBar += `<button class="lump-tab lump-tab-active" onclick="_switchLumpTab('${_tk}','content')">Content</button>`;
         _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','tokens')">Tokens</button>`;
         _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','versions')">Versions</button>`;
@@ -292,6 +293,72 @@ function showLumpDetail(token) {
     html += '</div></div>';
 
     if (!isNamespace) {
+        // ── Source tab: pseudo code + compile history from userMethodData ─────
+        const _srcAbs = (typeof abstractionRegistry !== 'undefined' && abstractionRegistry && lump.abstraction)
+            ? (abstractionRegistry.getByName
+                ? abstractionRegistry.getByName(lump.abstraction)
+                : (abstractionRegistry.abstractions
+                    ? Object.values(abstractionRegistry.abstractions).find(a => a.name === lump.abstraction)
+                    : null))
+            : null;
+        const _srcAbsIdx = _srcAbs ? _srcAbs.index : null;
+        const _srcMethods = _srcAbs ? (_srcAbs.methods || []) : [];
+        const _srcAnnotate = typeof _annotateAbsCodeHtml === 'function' ? _annotateAbsCodeHtml : e;
+        const _srcFmtTs = ts => {
+            if (!ts) return '\u2014';
+            const d = new Date(ts);
+            const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+            return `${d.getDate()} ${mo} ${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        };
+        let _srcHtml = `<div class="lump-tab-panel" id="lumpTabSource_${_tk}"><div class="lump-source-panel">`;
+        if (_srcAbsIdx !== null && _srcMethods.length > 0) {
+            const _umd = (typeof userMethodData !== 'undefined' && userMethodData) ? userMethodData : {};
+            for (const mName of _srcMethods) {
+                const mKey = `${_srcAbsIdx}:${mName}`;
+                const md = _umd[mKey] || {};
+                _srcHtml += `<div class="lump-source-method">`;
+                _srcHtml += `<div class="lump-source-method-name">${e(mName)}</div>`;
+                if (md.example) {
+                    _srcHtml += `<pre class="abs-method-panel-code">${_srcAnnotate(md.example)}</pre>`;
+                    _srcHtml += `<div class="lump-source-meta">`;
+                    if (md.compileError) {
+                        _srcHtml += `<span class="lump-source-status-error">\u2022Error</span> \u2014 ${e(md.compileError.split('\n')[0])}`;
+                    } else if (md.compiled && md.compiled.length > 0) {
+                        _srcHtml += `<span class="lump-source-status-compiled">\u2022Compiled</span> \u2014 ${md.compiled.length} word${md.compiled.length !== 1 ? 's' : ''}, ${e(md.compiledLang || 'unknown')}, ${e(_srcFmtTs(md.compiledAt))}`;
+                    } else {
+                        _srcHtml += `<span class="lump-source-status-pseudo">\u2022Pseudo</span> \u2014 source stored, not yet compiled`;
+                    }
+                    _srcHtml += `</div>`;
+                } else {
+                    _srcHtml += `<div class="lump-source-empty">No source yet \u2014 open this method in the editor to add code.</div>`;
+                }
+                const hist = md.history || [];
+                if (hist.length > 0) {
+                    _srcHtml += `<div class="lump-source-history-header">History (${hist.length})</div>`;
+                    _srcHtml += `<div class="lump-source-history-list">`;
+                    hist.forEach(hv => {
+                        const hvState = hv.compileError ? 'error' : (hv.compiled && hv.compiled.length > 0 ? 'compiled' : 'pseudo');
+                        const hvLabel = hvState === 'error' ? '\u2022Error' : hvState === 'compiled' ? '\u2022Compiled' : '\u2022Pseudo';
+                        const hvWords = hv.compiled ? hv.compiled.length : 0;
+                        _srcHtml += `<div class="lump-source-history-entry">`;
+                        _srcHtml += `<span class="abs-compile-state-badge abs-compile-state-${hvState}">${hvLabel}</span>`;
+                        _srcHtml += `<span class="lump-source-history-ts">${e(_srcFmtTs(hv.savedAt))}</span>`;
+                        if (hvWords > 0) _srcHtml += ` <span class="lump-source-history-words">${hvWords}w</span>`;
+                        if (hv.src) _srcHtml += `<pre class="abs-method-panel-code lump-source-history-code">${e(hv.src)}</pre>`;
+                        _srcHtml += `</div>`;
+                    });
+                    _srcHtml += `</div>`;
+                }
+                _srcHtml += `</div>`;
+            }
+        } else if (_srcAbsIdx === null) {
+            _srcHtml += `<div class="lump-source-empty lump-source-empty-pad">No abstraction registry entry found for \u201c${e(lump.abstraction || '')}\u201d \u2014 open the Abstractions view and add methods to see source here.</div>`;
+        } else {
+            _srcHtml += `<div class="lump-source-empty lump-source-empty-pad">No methods defined on this abstraction yet.</div>`;
+        }
+        _srcHtml += `</div></div>`;
+        html += _srcHtml;
+
         html += `<div class="lump-tab-panel${!isNamespace ? ' lump-tab-panel-active' : ''}" id="lumpTabContent_${_tk}">` +
                 `<div id="lumpContentBody_${_tk}" class="lump-hex-loading">Loading\u2026</div></div>`;
         html += `<div class="lump-tab-panel" id="lumpTabTokens_${_tk}">` +
@@ -922,6 +989,7 @@ function _switchLumpTab(tk, tab) {
     _lumpActiveTab[tk] = tab;
     const tabMap = {
         overview: `lumpTabOverview_${tk}`,
+        source: `lumpTabSource_${tk}`,
         content: `lumpTabContent_${tk}`,
         tokens: `lumpTabTokens_${tk}`,
         versions: `lumpTabVersions_${tk}`,
@@ -935,7 +1003,7 @@ function _switchLumpTab(tk, tab) {
     if (bar) {
         const btns = bar.querySelectorAll('.lump-tab');
         btns.forEach(btn => {
-            const labelMap = { overview: 'Overview', content: 'Content', tokens: 'Tokens', versions: 'Versions', hexdump: 'Hex Dump' };
+            const labelMap = { overview: 'Overview', source: 'Source', content: 'Content', tokens: 'Tokens', versions: 'Versions', hexdump: 'Hex Dump' };
             btn.classList.toggle('lump-tab-active', btn.textContent.trim() === labelMap[tab]);
         });
     }
