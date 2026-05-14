@@ -881,7 +881,7 @@ class CLOOMCCompiler {
         const labelRefs = [];
 
         for (const stmt of method.body) {
-            if (!stmt.text || stmt.text.startsWith('//')) continue;
+            if (!stmt.text || stmt.text.startsWith('//') || stmt.text.startsWith(';')) continue;
 
             const labelMatch = stmt.text.match(/^(\w+):$/);
             if (labelMatch) {

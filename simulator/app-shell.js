@@ -363,9 +363,12 @@ function _compileSaveToMethod(src, absIdx, methodName) {
         if (compileError) {
             msg.style.cssText = 'color:#f88;font-weight:600;padding:2px 0;';
             msg.textContent = '\u2717 Compile error in ' + methodName + ' \u2014 stored as \u2022Error';
+        } else if (!compiledWords || compiledWords.length === 0) {
+            msg.style.cssText = 'color:#fa8;font-weight:600;padding:2px 0;';
+            msg.textContent = '\u25cb Saved ' + methodName + ' as \u2022Pseudo \u2014 no instructions compiled yet';
         } else {
             msg.style.cssText = 'color:#8f8;font-weight:600;padding:2px 0;';
-            msg.textContent = '\u2713 Compiled & saved ' + methodName + ' (' + (compiledWords ? compiledWords.length : 0) + ' words, ' + lang + ')';
+            msg.textContent = '\u2713 Compiled & saved ' + methodName + ' (' + compiledWords.length + ' words, ' + lang + ')';
         }
         outEl.appendChild(msg);
         setTimeout(function() { if (msg.parentNode) msg.parentNode.removeChild(msg); }, 3000);
