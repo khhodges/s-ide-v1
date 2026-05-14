@@ -193,14 +193,22 @@ function assembleAndLoad() {
         const labels = {};
         // Layout: words[0..N-1] = method table entries; words[N..] = method bodies.
         // loadProgram writes words[k] at lump word k+1 (word 0 is lump header).
-        // Entry value = lump-word offset of body start (= codeOffset+1 for words[codeOffset]).
-        // imm = methodIndex+1 (1-based); dispatch reads lump word imm = words[imm-1] = entry.
-        // pc = entry - 1; fetchAddr = lump_base + 1 + pc = lump word entry = body start. ✓
-        let codeOffset = methodTableSize; // words[] index of next body (= pc value for BRANCH)
+        // Method-table entries are BRANCH instructions (opcode 17, 15-bit signed offset),
+        // matching _assembleLumpFromCatalog / _tryAutoAssembleLump (Tasks #1134, #1145).
+        // CALL dispatcher: pc = (methodIndex-1) + soff = i + (codeOffset-i) = codeOffset
+        // Fetch: physAddr = lumpBase + 1 + codeOffset → body first instruction. ✓
+        let codeOffset = methodTableSize; // lump-relative PC of first body (table = PCs 0..N-1)
         const methodTableEntries = [];
-        for (const m of methods) {
-            methodTableEntries.push(m.visibility === 'private' ? 0 : codeOffset + 1);
-            labels[m.name] = codeOffset;      // pc value: body at lump word codeOffset+1
+        // Emit BRANCH-encoded method-table entries (opcode 17, 15-bit signed offset).
+        // Matches _assembleLumpFromCatalog / _tryAutoAssembleLump (Task #1134 / #1145).
+        // Table entry i sits at lump word i+1, lump-relative PC = i.
+        // branchOffset = bodyOffset(=codeOffset) - i
+        // CALL dispatcher: pc = (methodIndex-1) + soff = i + (codeOffset-i) = codeOffset ✓
+        for (let i = 0; i < methods.length; i++) {
+            const m = methods[i];
+            const branchOffset = codeOffset - i;
+            methodTableEntries.push(m.visibility === 'private' ? 0 : (((17 << 27) | (branchOffset & 0x7FFF)) >>> 0));
+            labels[m.name] = codeOffset;      // lump-relative PC: body at lumpBase+1+codeOffset
             codeOffset += (m.code || []).length;
         }
         for (const entry of methodTableEntries) words.push(entry);
