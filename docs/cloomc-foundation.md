@@ -319,13 +319,13 @@ size = 2^6 = 64). This constraint propagates everywhere: every lump must
 be placed at an address that is a multiple of its size (power-of-2
 alignment).
 
-**cc field is 8 bits: maximum 255 NS slots per namespace.**
+**cc field is 8 bits: maximum 255 c-list rows per lump.**
 *Forcing reason:* The cc (c-list count) field in the lump header is 8 bits
 wide — 8 wires on the gate array. You cannot add a ninth wire without a
-silicon change. This is also why `NS_TABLE_RESERVE = 1,024 words`:
-256 entries × 4 words per entry = 1,024. (The current implementation uses
-3 words per entry; the reserve is sized for the hardware maximum of 4 words
-per entry to allow forward compatibility.)
+silicon change. This limits a single lump to 255 capability entries in its
+c-list — not the number of NS slots. NS slots are addressed by the GT
+`slot_id` field, which is 16 bits (bits [15:0]), allowing up to 65,535
+distinct NS slots. cc and NS slot count are independent quantities.
 
 **limit17 is 17 bits.**
 *Forcing reason:* The mLoad pipeline contains a 17-bit adder that computes
@@ -346,11 +346,13 @@ the pointer would have to live somewhere, and the processor would need a
 capability to reach it before the namespace is initialised.
 
 **NS_TABLE_RESERVE = 1,024 words.**
-*Forcing reason:* This is a hardware arithmetic consequence of two other
-hardware-forced values: 256 slots (8-bit cc ceiling) × 4 words per slot
-(hardware register width) = 1,024 words. The programmer cannot reduce this
-by using fewer slots — the reservation is fixed because the hardware always
-starts the NS table at `totalRamWords − 1024`.
+*Forcing reason:* The value 1,024 is a fixed constant wired into the boot
+ROM: `NS_TABLE_BASE = totalRamWords − 1,024`. This cannot be changed without
+rewriting the boot ROM. The arithmetic is 256 entries × 4 words per entry =
+1,024. The 256-entry limit is a fixed implementation constant chosen for the
+current design — not a consequence of the cc field (which governs c-list rows
+per lump, not NS slot count). The 4-words-per-entry reservation is sized for
+forward compatibility; the current implementation uses 3 words per entry.
 
 ### IDE (Programmer) Choices
 
