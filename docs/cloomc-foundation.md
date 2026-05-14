@@ -351,8 +351,7 @@ ROM: `NS_TABLE_BASE = totalRamWords − 1,024`. This cannot be changed without
 rewriting the boot ROM. The arithmetic is 256 entries × 4 words per entry =
 1,024. The 256-entry limit is a fixed implementation constant chosen for the
 current design — not a consequence of the cc field (which governs c-list rows
-per lump, not NS slot count). The 4-words-per-entry reservation is sized for
-forward compatibility; the current implementation uses 3 words per entry.
+per lump, not NS slot count). The stride is 4 words per entry.
 
 ### IDE (Programmer) Choices
 
