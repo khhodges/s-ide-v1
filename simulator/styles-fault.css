@@ -994,6 +994,22 @@
     margin-left: 0.4rem;
 }
 
+.le-thread-sync-note {
+    margin: 0.1rem 0 0.75rem 0;
+    padding: 0 0.15rem;
+}
+
+.le-thread-sync-badge {
+    display: inline-block;
+    background: rgba(218,165,32,0.10);
+    border: 1px solid rgba(218,165,32,0.35);
+    border-radius: 4px;
+    color: var(--church-gold);
+    font-size: 0.78rem;
+    padding: 0.25rem 0.6rem;
+    white-space: nowrap;
+}
+
 .le-rl-boot-select {
     background: rgba(218,165,32,0.08);
     border: 1px solid rgba(218,165,32,0.40);

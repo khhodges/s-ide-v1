@@ -794,6 +794,9 @@
                     '<select class="le-select" id="le-t-lump-sel" onchange="lumpEditorThreadLumpSize(this.value)">' + lumpOpts + '</select>' +
                 '</div>' +
             '</div>' +
+            '<div class="le-thread-sync-note">' +
+                '<span class="le-thread-sync-badge">Boot.Thread lump\u00a0= ' + esc(fmtWords(lumpSize)) + '\u00a0words\u00a0(2^' + lumpPow2 + ')\u00a0\u2014 reflected\u00a0in\u00a0Resident\u00a0Lumps\u00a0SIZE\u00a0column</span>' +
+            '</div>' +
             '<div class="le-field-row">' +
                 '<label class="le-label">Thread count<span class="le-range-hint">' + esc(countHint) + '</span></label>' +
                 '<div class="le-input-group">' +
