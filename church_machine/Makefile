@@ -38,7 +38,7 @@ TIMING   := $(BUILD)/$(PROJ)_timing.txt
 all: pack
 
 verilog:
-	cd .. && python -m church_machine.gen_verilog --uart-test
+	cd .. && python -m church_machine.gen_verilog
 
 synth: $(JSON)
 $(JSON): $(VERILOG) $(PCF)

@@ -12,7 +12,7 @@ Authoritative sources: `hardware/hw_types.py`, `hardware/layouts.py`, `hardware/
 
 | ID | Summary | Files corrected |
 |----|---------|-----------------|
-| C-1 | Integrity seal: FNV → CRC-16/CCITT (poly 0x1021, init 0xFFFF, 89-bit input) | `handbook.md`, `overview.md`, `getting-started.md`, `namespace-json.md`, `json-information.md`, `longevity.md`, `risks.md`, `boot-permission-rules.md`, `chipflow-technical-summary.md`, `church-machine-pico-ice.md`, `paper-sliderule-comparison.md`, `tunnel-messaging-example.md` |
+| C-1 | Integrity seal: FNV → CRC-16/CCITT (poly 0x1021, init 0xFFFF, 89-bit input) | `handbook.md`, `overview.md`, `getting-started.md`, `namespace-json.md`, `json-information.md`, `longevity.md`, `risks.md`, `boot-permission-rules.md`, `chipflow-technical-summary.md`, `paper-sliderule-comparison.md`, `tunnel-messaging-example.md` |
 | C-2 | Minimum lump size refs: 32 → 64 words in prose | `abstractions.md`, `longevity.md`, `json-information.md` |
 | C-3 | Permission bit ordering: E(30) S(29) L(28) X(27) W(26) R(25) | `CM_LUMP_SPECIFICATION.md` |
 | C-4 | GT type values: NULL=00, Inform=01 (were swapped) | `lambda-instruction.md` |

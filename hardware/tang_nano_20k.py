@@ -42,16 +42,13 @@ class GowinBSRAM(Elaboratable):
 
 class ChurchTangNano20K(Elaboratable):
     def __init__(self, clk_freq=27_000_000, baud=115200, sim_mode=False,
-                 iot_profile=False, build_sig=None, test_mode=False, board_id=None):
+                 iot_profile=True, build_sig=None, test_mode=False):
         self.clk_freq = clk_freq
         self.baud = baud
         self.sim_mode = sim_mode
         self.iot_profile = iot_profile
         self.test_mode = test_mode
         self.build_sig = build_sig or [0x00, 0x00, 0x00, 0x00]
-        # board_id overrides the default IoT/Full split so 9K can be 0x04
-        # while 20K-IoT stays 0x01.  None = use legacy default.
-        self._board_id = board_id
 
         self.uart_tx = Signal(init=1)
         self.uart_rx = Signal()
@@ -246,6 +243,12 @@ class ChurchTangNano20K(Elaboratable):
 
             dmem_init[511] = SLIDERULE_LUMP_HEADER
 
+            # NOTE: depth=2048 here is a simulation/testbench placeholder.
+            # Real synthesis on the Tang Nano 20K uses Gowin BSRAMs
+            # (GW2AR-18 provides 64 KB block SRAM) inferred by nextpnr from the
+            # Amaranth Memory declaration. The IoT profile (board_id=0x01)
+            # targets the full 64 KB budget via the BL702 call-home path.
+            #
             # Use LibMemory with domain='sync' (1-cycle read latency).
             # All FSMs using dmem gate on dmem_rd_valid; MINT FSMs use
             # explicit WAIT states to absorb the pipeline cycle.
@@ -524,21 +527,9 @@ class ChurchTangNano20K(Elaboratable):
 
         m.d.comb += core.gc_start.eq(0)
 
-        # board_id=0x04 → 9K-IoT; 0x01 → 20K-IoT; 0x02 → 20K-Full (legacy default)
-        if self._board_id is not None:
-            BOARD_TYPE_ID = self._board_id
-        else:
-            BOARD_TYPE_ID = 0x01 if self.iot_profile else 0x02
-
-        if BOARD_TYPE_ID == 0x04:
-            banner_str = "CHURCH TN9K-IoT v1.0\r\n"
-            DEVICE_UID = [0x54, 0x4E, 0x39, 0x4B, 0x00, 0x00, 0x00, 0x01]
-        elif self.iot_profile:
-            banner_str = "CHURCH TN20K-IoT v1.0\r\n"
-            DEVICE_UID = [0x54, 0x4E, 0x32, 0x30, 0x4B, 0x00, 0x00, 0x01]
-        else:
-            banner_str = "CHURCH TN20K v1.0\r\n"
-            DEVICE_UID = [0x54, 0x4E, 0x32, 0x30, 0x4B, 0x00, 0x00, 0x01]
+        BOARD_TYPE_ID = 0x01
+        banner_str = "CHURCH TN20K v1.0\r\n"
+        DEVICE_UID = [0x54, 0x4E, 0x32, 0x30, 0x4B, 0x00, 0x00, 0x01]
 
         BANNER = Array([C(ord(c), 8) for c in banner_str])
         banner_idx = Signal(range(len(BANNER) + 1))

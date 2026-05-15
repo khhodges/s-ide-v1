@@ -8391,8 +8391,7 @@ function getSelectedBoard() {
 
 function getBoardShortLabel(board) {
     if (board === 'ti60-f225') return 'Ti60 F225';
-    if (board === 'tang-nano-20k-iot') return 'Tang Nano IoT';
-    if (board === 'tang-nano-9k') return 'Tang Nano 9K';
+    if (board === 'tang-nano-20k-iot') return 'Tang Nano 20K';
     if (board === 'wukong-xc7a100t') return 'Wukong XC7A100T';
     return 'Tang Nano 20K';
 }
@@ -8411,8 +8410,7 @@ function setSelectedBoard(board) {
 
 function getBoardLabel(board) {
     if (board === 'ti60-f225') return 'Efinix Ti60 F225';
-    if (board === 'tang-nano-20k-iot') return 'Sipeed Tang Nano 20K IoT';
-    if (board === 'tang-nano-9k') return 'Sipeed Tang Nano 9K (IoT)';
+    if (board === 'tang-nano-20k-iot') return 'Sipeed Tang Nano 20K';
     if (board === 'wukong-xc7a100t') return 'QMTECH Wukong Artix-7 XC7A100T';
     return 'Sipeed Tang Nano 20K';
 }
@@ -8493,14 +8491,6 @@ function _renderBuildNextSteps(isTi60, board) {
             'Run Synthesis → P&R → Generate Bitstream',
             'Tool → Programmer → Program (JTAG / USB)',
         ];
-    } else if (board === 'tang-nano-9k') {
-        steps = [
-            'Install OSS CAD Suite with nextpnr-himbaechel + gowin_pack',
-            'Unzip church-nano-9k-package.zip',
-            'Connect Tang Nano 9K via USB',
-            'Run: chmod +x flash.sh && ./flash.sh',
-            'flash.sh runs yosys → nextpnr-himbaechel → gowin_pack → openFPGALoader',
-        ];
     } else if (board === 'wukong-xc7a100t') {
         steps = [
             'Install Vivado 2020.x or later (Xilinx / AMD)',
@@ -8546,9 +8536,6 @@ function updateHardwarePanelLabel() {
     if (!info) return;
     if (board === 'ti60-f225') {
         info.textContent = 'Output: church_ti60_f225.v + church_ti60_f225.edif + ti60_f225.isf  \u2014  open in Efinity IDE (Titanium project)';
-        if (buildBtn) buildBtn.dataset.tooltip = BASE_BUILD_TIP;
-    } else if (board === 'tang-nano-9k') {
-        info.textContent = 'Output: church_tang_nano_9k.il + tang_nano_9k.cst  \u2014  IoT profile (reduced ISA); run flash.sh with OSS CAD Suite';
         if (buildBtn) buildBtn.dataset.tooltip = BASE_BUILD_TIP;
     } else if (board === 'wukong-xc7a100t') {
         info.textContent = '';
@@ -9133,10 +9120,9 @@ const WHATS_NEW_FEATURES = [
             `over UART (including boot reason, last fault code, and faulting instruction address). The bridge detects this, sends an acknowledgment, and registers the board with the IDE. ` +
             `A 60-second heartbeat keeps the board marked as online.</p>` +
             `<p style="font-size:0.88rem;color:#bbb;line-height:1.6;margin-bottom:0.5rem;">` +
-            `Board type byte in the packet: <code>0x01</code> = Tang Nano 20K IoT &nbsp;·&nbsp; ` +
-            `<code>0x02</code> = Tang Nano 20K Full &nbsp;·&nbsp; ` +
+            `Board type byte in the packet: <code>0x01</code> = Tang Nano 20K &nbsp;·&nbsp; ` +
             `<code>0x03</code> = Ti60 F225 &nbsp;·&nbsp; ` +
-            `<code>0x04</code> = Tang Nano 9K IoT</p>` +
+            `<code>0x06</code> = Wukong XC7A100T</p>` +
             `<p style="font-size:0.88rem;color:#aaa;line-height:1.5;margin:0;">` +
             `No manual registration needed &mdash; plug in, flash, run bridge, done.</p>`
     }
@@ -9912,7 +9898,6 @@ async function downloadFPGAPackage() {
     const boardLabel = getBoardLabel(board);
     const isTi60 = (board === 'ti60-f225');
     const zipName = isTi60 ? 'church-ti60-package.zip'
-        : board === 'tang-nano-9k'    ? 'church-nano-9k-package.zip'
         : board === 'wukong-xc7a100t' ? 'church-wukong-package.zip'
         : 'church-nano-package.zip';
 
@@ -9966,31 +9951,6 @@ async function downloadFPGAPackage() {
                 '  5. Watch LEDs — walking pattern confirms boot OK\n' +
                 '\n' +
                 '  See BUILD.md inside the zip for full details.\n' +
-                '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-        } else if (board === 'tang-nano-9k') {
-            _buildLogAppend('  church_tang_nano_9k.il    — Amaranth RTLIL (authoritative)\n');
-            _buildLogAppend('  church_tang_nano_9k.v     — Synthesisable Verilog (if available)\n');
-            _buildLogAppend('  tang_nano_9k.cst          — Pin constraints (GW1NR-LV9QN88PC6/I5)\n');
-            _buildLogAppend('  flash.sh                  — One-command build + flash\n');
-            _buildLogAppend('  BUILD.md                  — Instructions\n');
-            _buildLogAppend('\n' +
-                '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-                '  NEXT STEPS — Tang Nano 9K\n' +
-                '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-                '  Requires OSS CAD Suite with nextpnr-himbaechel + gowin_pack.\n' +
-                '\n' +
-                '    cd ~/Downloads\n' +
-                '    unzip church-nano-9k-package.zip\n' +
-                '    cd church-nano-9k-package\n' +
-                '    chmod +x flash.sh\n' +
-                '    ./flash.sh\n' +
-                '\n' +
-                '  flash.sh runs: yosys → nextpnr-himbaechel → gowin_pack →\n' +
-                '  openFPGALoader (-b tangnano9k).\n' +
-                '  Plug in your Tang Nano 9K via USB before running.\n' +
-                '\n' +
-                '  LEDs: chase pattern = boot OK (IoT/reduced ISA profile).\n' +
-                '  See BUILD.md inside the zip for troubleshooting.\n' +
                 '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
         } else if (board === 'wukong-xc7a100t') {
             _buildLogAppend('  church_wukong_xc7a100t.il  — Amaranth RTLIL (authoritative)\n');

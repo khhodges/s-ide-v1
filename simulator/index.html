@@ -147,7 +147,7 @@
                                 <button class="ham-item" id="fpgaReadBRAMBtn" onclick="fpgaReadBRAM()" data-tooltip="Read BRAM — Dump words from FPGA BRAM over UART (0xBEAD)">BRAM</button>
                                 <button class="ham-item" id="hamItem-hw-wukong" onclick="setSelectedBoard('wukong-xc7a100t');switchView('builder');closeHamburger()">Wukong Artix-7 XC7A100T</button>
                                 <button class="ham-item" id="hamItem-hw-ti60" onclick="setSelectedBoard('ti60-f225');switchView('builder');closeHamburger()">Efinix Ti60 F225</button>
-                                <button class="ham-item" id="hamItem-hw-tang20k-iot" onclick="setSelectedBoard('tang-nano-20k-iot');switchView('builder');closeHamburger()">Tang Nano 20K IoT</button>
+                                <button class="ham-item" id="hamItem-hw-tang20k-iot" onclick="setSelectedBoard('tang-nano-20k-iot');switchView('builder');closeHamburger()">Tang Nano 20K</button>
                             </div>
                             <div class="ham-group">
                                 <div class="ham-group-title" title="Click to open" onclick="showHamCtxMenu(event,'configure','Open Devices')">Configure</div>
@@ -801,7 +801,7 @@
                 <label class="hardware-build-label" for="hardwareBoardSel">Target</label>
                 <select id="hardwareBoardSel" class="lang-selector" onchange="setSelectedBoard(this.value); updateHardwarePanelLabel()" title="Target FPGA board">
                     <option value="wukong-xc7a100t" selected>QMTECH Wukong Artix-7 XC7A100T (Vivado)</option>
-                    <option value="tang-nano-20k-iot">Sipeed Tang Nano 20K IoT (Gowin GW2AR-18)</option>
+                    <option value="tang-nano-20k-iot">Sipeed Tang Nano 20K (Gowin GW2AR-18)</option>
                     <option value="ti60-f225">Efinix Ti60 F225</option>
                 </select>
                 <button class="btn btn-deploy" id="btnHWBuild" onclick="buildFPGAOnly()" data-tooltip="Build — Run Amaranth elaboration + Yosys synthesis and save RTL artifacts to server">Build</button>
@@ -1377,13 +1377,13 @@
                         <label class="settings-label">FPGA Board
                             <select id="settingFPGABoard" class="modal-input">
                                 <option value="wukong-xc7a100t" selected>QMTECH Wukong Artix-7 XC7A100T (Vivado, 100 MHz)</option>
-                                <option value="tang-nano-20k-iot">Sipeed Tang Nano 20K IoT (Gowin GW2AR-18)</option>
+                                <option value="tang-nano-20k-iot">Sipeed Tang Nano 20K (Gowin GW2AR-18)</option>
                                 <option value="ti60-f225">Efinix Ti60 F225 (Titanium, 50 MHz)</option>
                             </select>
                         </label>
                         <div style="color:#888;font-size:0.78rem;margin-top:0.3rem;">
                             Selects the synthesis target for Download FPGA Package and Deploy to FPGA.
-                            QMTECH Wukong uses Vivado. Tang Nano 20K IoT uses Yosys/nextpnr + OSS CAD Suite.
+                            QMTECH Wukong uses Vivado. Tang Nano 20K uses Yosys/nextpnr + OSS CAD Suite.
                             Ti60 F225 uses Yosys synth_efinix + Efinity IDE for P&amp;R.
                         </div>
                     </div>

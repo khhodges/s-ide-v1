@@ -4,10 +4,7 @@ Regeneration command (run from workspace root):
     python3 -m ctmm_amaranth.testbench
 
 This produces ctmm_amaranth/sim_output.vcd.  The VCD captures abstract-level
-signal activity for the CTMM soft-core (CTMMCore).  For hardware-level stack
-frame write-address verification (thread_base + 17*4) see the pico-ice
-integration simulation:
-    python3 -m church_machine.test_pico_ice   → build/church_pico_ice_test.vcd
+signal activity for the CTMM soft-core (CTMMCore).
 """
 from amaranth import *
 from amaranth.sim import Simulator

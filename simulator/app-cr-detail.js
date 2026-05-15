@@ -589,7 +589,7 @@ async function injectCRCodeToFPGA(logEl) {
     if (!patch) return false;
 
     const board = getSelectedBoard();
-    if (board === 'tang-nano-20k' && typeof FULL_ONLY_OPCODES !== 'undefined') {
+    if (board === 'tang-nano-20k-iot' && typeof FULL_ONLY_OPCODES !== 'undefined') {
         const patchWords = patch.newWords || [];
         for (let i = 0; i < patchWords.length; i++) {
             const opcode = (patchWords[i] >>> 27) & 0x1F;
@@ -1042,7 +1042,7 @@ function exportPatchFile() {
     if (!patch) return;
 
     const board = getSelectedBoard();
-    if (board === 'tang-nano-20k' && typeof FULL_ONLY_OPCODES !== 'undefined') {
+    if (board === 'tang-nano-20k-iot' && typeof FULL_ONLY_OPCODES !== 'undefined') {
         const patchWords = patch.newWords || [];
         for (let i = 0; i < patchWords.length; i++) {
             const opcode = (patchWords[i] >>> 27) & 0x1F;

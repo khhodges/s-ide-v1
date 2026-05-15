@@ -72,7 +72,7 @@ def upload_image(port, image, timeout_s=15):
 
     print(f"Port open. Image: {len(image)} words ({len(data)} bytes)")
     print()
-    input("Press the pico-ice reset button NOW, then press Enter here: ")
+    input("Reset the FPGA board NOW, then press Enter here: ")
 
     ser.write(data)
     ser.flush()

@@ -97,6 +97,10 @@ class ChurchTi60F225(Elaboratable):
 
         dmem_init[511] = SLIDERULE_LUMP_HEADER
 
+        # NOTE: depth=2048 here is a simulation/testbench placeholder.
+        # Real synthesis on the Ti60 F225 uses Efinix EBR tiles (~256 KB)
+        # inferred by Efinity from the Amaranth Memory declaration; the actual
+        # on-chip capacity per the Ti60 F225 datasheet is 256 KB embedded BRAM.
         dmem = LibMemory(shape=unsigned(32), depth=2048, init=dmem_init)
         m.submodules.dmem = dmem
         dmem_rd = dmem.read_port(domain="sync")

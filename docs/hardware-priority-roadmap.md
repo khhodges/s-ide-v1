@@ -84,20 +84,18 @@ comment citing the primitive guide section and Efinity version number.
 
 **What to do:**
 
-Create `hardware/ti60_top.py` (or equivalent), modelled on
-`church_machine/pico_ice.py`, that:
+Create `hardware/ti60_top.py` (or equivalent) that:
 
 1. Instantiates `Ti60CallHome` and wires `uart_rx` / `uart_tx` to the FTDI
    UART pins defined in `hardware/ti60_f225.py`.
 2. Gates the normal boot FSM on `callhome.callhome_done` (see the integration
    example in `church_machine/ti60_callhome.py`, lines 36–45).
 3. Instantiates `ChurchCore` and connects instruction/data memory, namespaces,
-   and C-list using Efinix EBR tiles (not iCE40 SPRAM).
+   and C-list using Efinix EBR tiles.
 4. Drives `USER_LED[3:0]` with the standard boot/run/fault/halt colour scheme.
 5. Can be submitted to Efinity IDE for synthesis without modification.
 
 **Relevant files:**
-- `church_machine/pico_ice.py` — reference implementation for iCE40
 - `church_machine/ti60_callhome.py` — call-home module to integrate
 - `hardware/ti60_f225.py` — pin/clock definitions
 - `hardware/ti60_f225.isf`, `hardware/ti60_f225.sdc` — existing constraints

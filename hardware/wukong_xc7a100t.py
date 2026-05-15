@@ -105,6 +105,11 @@ class ChurchWukongXC7A100T(Elaboratable):
 
         dmem_init[511] = SLIDERULE_LUMP_HEADER
 
+        # NOTE: depth=2048 here is a simulation/testbench placeholder.
+        # Real synthesis on the Wukong XC7A100T uses Xilinx RAMB36 tiles
+        # (4,860 Kb total across the XC7A100T); Vivado infers these from the
+        # Amaranth Memory declaration. The namespace allocation is 512 KB per
+        # the QMTECH Wukong XC7A100T board profile.
         dmem = LibMemory(shape=unsigned(32), depth=2048, init=dmem_init)
         m.submodules.dmem = dmem
         dmem_rd = dmem.read_port(domain="comb")

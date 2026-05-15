@@ -607,9 +607,7 @@
     var MAX_EXP   = 13;   // 8192 words cap
 
     var BOARD_PROFILES = {
-        'tang-nano-20k':     { label: 'Tang Nano 20K',      totalRamWords: 16384,  singleThread: true  },
-        'tang-nano-20k-iot': { label: 'Tang Nano 20K IoT',  totalRamWords: 16384,  singleThread: true  },
-        'tang-nano-9k':      { label: 'Tang Nano 9K',       totalRamWords: 2048,   singleThread: true  },
+        'tang-nano-20k-iot': { label: 'Tang Nano 20K',      totalRamWords: 16384,  singleThread: true  },
         'ti60-f225':         { label: 'Ti60 F225',           totalRamWords: 65536,  singleThread: false },
         'wukong-xc7a100t':   { label: 'Wukong XC7A100T',    totalRamWords: 131072, singleThread: false }
     };

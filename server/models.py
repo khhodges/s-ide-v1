@@ -3,10 +3,7 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, Float, func
 
 BOARD_TYPES = {
     0x01: "TN20K-IoT",
-    0x02: "TN20K-Full",
     0x03: "Ti60-Full",
-    0x04: "TN9K-IoT",
-    0x05: "Zynq XC7Z010 (QMTECH ZYJZGW)",
     0x06: "Wukong XC7A100T (Artix-7)",
 }
 
