@@ -532,12 +532,14 @@
                 '<td class="le-rl-td le-rl-td-num">' + esc(String(nsSize)) + '</td>' +
                 '<td class="le-rl-td"><span class="le-rl-boot-badge">Boot</span></td>' +
                 '<td class="le-rl-td le-rl-addr-na">\u2014</td>' +
+                '<td class="le-rl-td le-rl-addr-na">\u2014</td>' +
             '</tr>' +
             '<tr class="le-rl-row le-rl-boot-row">' +
                 '<td class="le-rl-td">Boot.Thread <span class="le-rl-boot-note">Initial thread \u00b7 size set on Thread tab</span></td>' +
                 '<td class="le-rl-td le-rl-td-num">1</td>' +
                 '<td class="le-rl-td le-rl-td-num">' + esc(String(threadSize)) + '</td>' +
                 '<td class="le-rl-td"><span class="le-rl-boot-badge">Boot</span></td>' +
+                '<td class="le-rl-td le-rl-addr-na">\u2014</td>' +
                 '<td class="le-rl-td le-rl-addr-na">\u2014</td>' +
             '</tr>' +
             '<tr class="le-rl-row le-rl-boot-row">' +
@@ -546,6 +548,7 @@
                 '<td class="le-rl-td le-rl-td-num">' + esc(String(bootEntrySize)) + '</td>' +
                 '<td class="le-rl-td"><span class="le-rl-boot-badge">Boot</span></td>' +
                 '<td class="le-rl-td le-rl-addr-na">\u2014</td>' +
+                '<td class="le-rl-td le-rl-addr-na">\u2014</td>' +
             '</tr>';
 
         var addrRange    = _rlAddrRange();
@@ -553,8 +556,18 @@
                            '\u20130x' + addrRange.max.toString(16).toUpperCase() +
                            ' for ' + addrRange.boardLabel;
 
+        var _bootBadge = function (cat) {
+            if (cat.nsSlotPolicy === 'dynamic') {
+                return '<span class="le-rl-badge le-rl-badge-floating">\u2014 Floating</span>';
+            }
+            if (cat.hasExecutableMethods) {
+                return '<span class="le-rl-badge le-rl-badge-bootable">\u2713 Bootable</span>';
+            }
+            return '<span class="le-rl-badge le-rl-badge-data">\u2014 Data only</span>';
+        };
+
         if (!_rl.catalog.length) {
-            rows += '<tr><td colspan="5" class="le-rl-empty-msg">No catalog lumps available ' +
+            rows += '<tr><td colspan="6" class="le-rl-empty-msg">No catalog lumps available ' +
                    '(server/lumps/manifest.json has no assignable entries).</td></tr>';
         } else {
             for (var i = 0; i < _rl.catalog.length; i++) {
@@ -587,6 +600,7 @@
                         esc(addrHintText) +
                       '</div>' +
                     '</td>' +
+                    '<td class="le-rl-td le-rl-td-boot">' + _bootBadge(cat) + '</td>' +
                     '</tr>';
             }
         }
@@ -616,6 +630,7 @@
             '<th class="le-rl-th le-rl-th-narrow">Size&nbsp;(w)</th>' +
             '<th class="le-rl-th le-rl-th-mode">Mode</th>' +
             '<th class="le-rl-th">Phys addr&nbsp;(resident only)</th>' +
+            '<th class="le-rl-th le-rl-th-boot">Boot?</th>' +
             '</tr></thead>' +
             '<tbody>' + rows + '</tbody>' +
             '</table>' +

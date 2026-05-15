@@ -994,6 +994,45 @@
     margin-left: 0.4rem;
 }
 
+.le-rl-th-boot {
+    white-space: nowrap;
+    width: 7rem;
+    min-width: 7rem;
+}
+
+.le-rl-td-boot {
+    white-space: nowrap;
+    text-align: center;
+}
+
+.le-rl-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.le-rl-badge-bootable {
+    background: rgba(80,180,100,0.15);
+    border: 1px solid rgba(80,180,100,0.45);
+    color: #6dd68a;
+}
+
+.le-rl-badge-data {
+    background: rgba(140,140,140,0.10);
+    border: 1px solid rgba(140,140,140,0.30);
+    color: var(--text-secondary);
+}
+
+.le-rl-badge-floating {
+    background: rgba(100,140,200,0.12);
+    border: 1px solid rgba(100,140,200,0.35);
+    color: #8aaed4;
+}
+
 .le-thread-sync-note {
     margin: 0.1rem 0 0.75rem 0;
     padding: 0 0.15rem;
