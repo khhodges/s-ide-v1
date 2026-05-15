@@ -542,7 +542,7 @@
                 '<td class="le-rl-td le-rl-addr-na">\u2014</td>' +
                 '<td class="le-rl-td le-rl-addr-na">\u2014</td>' +
             '</tr>' +
-            '<tr class="le-rl-row le-rl-boot-row">' +
+            '<tr class="le-rl-row le-rl-boot-row le-rl-boot-entry-row">' +
                 bootEntryCell +
                 '<td class="le-rl-td le-rl-td-num">' + esc(String(bootEntryNsSlot)) + '</td>' +
                 '<td class="le-rl-td le-rl-td-num">' + esc(String(bootEntrySize)) + '</td>' +
@@ -561,7 +561,9 @@
                 return '<span class="le-rl-badge le-rl-badge-floating">\u2014 Floating</span>';
             }
             if (cat.hasExecutableMethods) {
-                return '<span class="le-rl-badge le-rl-badge-bootable">\u2713 Bootable</span>';
+                return '<span class="le-rl-badge le-rl-badge-bootable le-rl-badge-bootable-click"' +
+                    ' onclick="lumpEditorBootBadgeClick(' + cat.nsSlot + ')"' +
+                    ' title="Click to select as boot entry">\u2713 Bootable</span>';
             }
             return '<span class="le-rl-badge le-rl-badge-data">\u2014 Data only</span>';
         };
@@ -1097,6 +1099,17 @@
         } else {
             localStorage.setItem('bootEntrySlot', String(nsSlot));
             renderResidentPanel();
+        }
+    };
+
+    window.lumpEditorBootBadgeClick = function (nsSlot) {
+        lumpEditorBootEntryChange(nsSlot);
+        var targetRow = document.querySelector('.le-rl-boot-entry-row');
+        if (targetRow) {
+            targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            targetRow.classList.remove('le-rl-boot-row-flash');
+            void targetRow.offsetWidth;
+            targetRow.classList.add('le-rl-boot-row-flash');
         }
     };
 

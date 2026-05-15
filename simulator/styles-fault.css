@@ -1021,6 +1021,26 @@
     color: #6dd68a;
 }
 
+.le-rl-badge-bootable-click {
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.le-rl-badge-bootable-click:hover {
+    background: rgba(80,180,100,0.30);
+    border-color: rgba(80,180,100,0.75);
+}
+
+@keyframes le-rl-boot-flash {
+    0%   { background-color: rgba(80,180,100,0.25); }
+    60%  { background-color: rgba(80,180,100,0.18); }
+    100% { background-color: transparent; }
+}
+
+.le-rl-boot-row-flash {
+    animation: le-rl-boot-flash 1.1s ease-out forwards;
+}
+
 .le-rl-badge-data {
     background: rgba(140,140,140,0.10);
     border: 1px solid rgba(140,140,140,0.30);
