@@ -380,6 +380,16 @@
         var maxWords = Math.min(Math.floor(budget / count), 8192);
         var maxExp   = Math.max(MIN_EXP, Math.min(MAX_EXP, Math.floor(Math.log2(maxWords))));
         state.thread.lumpPow2 = clamp(exp, MIN_EXP, maxExp);
+
+        // Patch count slider max in-place so it reacts before the full re-render
+        var lumpSize = Math.pow(2, state.thread.lumpPow2);
+        var maxCount = profile.singleThread ? 1 : Math.min(10, Math.max(1, Math.floor(budget / lumpSize)));
+        state.thread.count = clamp(state.thread.count, 1, maxCount);
+        var sl  = document.getElementById('le-t-count-sl');
+        var num = document.getElementById('le-t-count-num');
+        if (sl)  { sl.max  = maxCount; sl.value  = state.thread.count; }
+        if (num) { num.max = maxCount; num.value = state.thread.count; }
+
         saveState();
         render();
     };
