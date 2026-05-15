@@ -130,17 +130,29 @@
 
     // ── Thread panel ──────────────────────────────────────────────────────────
 
+    var DR_WORDS  = 16;   // DR0–DR15, static
+    var CAP_WORDS = 12;   // CR0–CR11 GT home slots, static
+
     function renderThreadPanel() {
         var heap  = clamp(state.thread.heap,  1, 8191);
         var stack = clamp(state.thread.stack, 1, 255);
         var count = clamp(state.thread.count, 1, 10);
-        var needed    = 1 + heap + stack;
+        var needed    = 1 + DR_WORDS + heap + stack + CAP_WORDS;
         var lumpSize  = nextPow2(needed);
         var n         = log2Exact(lumpSize) - 6;
-        var free      = lumpSize - 1 - heap - stack;
+        var free      = lumpSize - 1 - DR_WORDS - heap - stack - CAP_WORDS;
         var totalMem  = lumpSize * count;
         var word      = packHdr(n, heap, stack, 2);
         var wordHex   = hex8(word);
+
+        var zones = [
+            { label: 'Header',      words: 1,         cls: 'le-zone-hdr'   },
+            { label: 'Data Regs',   words: DR_WORDS,  cls: 'le-zone-dr'    },
+            { label: 'Heap',        words: heap,       cls: 'le-zone-heap'  },
+            { label: 'Free',        words: free,       cls: 'le-zone-free'  },
+            { label: 'Stack',       words: stack,      cls: 'le-zone-stack' },
+            { label: 'Cap Regs',    words: CAP_WORDS,  cls: 'le-zone-caps'  }
+        ];
 
         var grid = renderGrid([
             ['Lump size',      esc(fmtWords(lumpSize) + ' words  (2^' + (n + 6) + ')'), 'le-val-gold'],
@@ -148,17 +160,13 @@
             ['Total memory',   esc(fmtWords(totalMem) + ' words  (' + count + ' × ' + fmtWords(lumpSize) + ')'), 'le-val-gold'],
             ['n_minus_6',      esc(String(n)), ''],
             ['typ field',      '10  (Thread)', ''],
+            ['Header',         '1 word', ''],
+            ['Data Regs',      esc(DR_WORDS + ' words  (DR0–DR15, static)'), ''],
             ['Heap (cw)',      esc(heap.toLocaleString() + ' words'), ''],
             ['Freespace',      esc(free.toLocaleString() + ' words'), ''],
             ['Stack (cc)',     esc(stack.toLocaleString() + ' frames'), ''],
+            ['Cap Regs',       esc(CAP_WORDS + ' words  (CR0–CR11 GT slots, static)'), ''],
             ['Header word',    '<span id="le-thread-hex" class="le-hex">' + esc(wordHex) + '</span>' + copyBtn('le-thread-hex'), 'le-val-mono']
-        ]);
-
-        var bar = renderBar([
-            { label: 'Header', words: 1,    cls: 'le-zone-hdr'   },
-            { label: 'Heap',   words: heap,  cls: 'le-zone-heap'  },
-            { label: 'Free',   words: free,  cls: 'le-zone-free'  },
-            { label: 'Stack',  words: stack, cls: 'le-zone-stack' }
         ]);
 
         return '<div class="le-panel">' +
@@ -185,13 +193,8 @@
                 '</div>' +
             '</div>' +
             '<div class="le-bar-label-row"><span>Single thread memory layout</span></div>' +
-            bar +
-            renderMagBar([
-                { label: 'Header', words: 1,    cls: 'le-zone-hdr'   },
-                { label: 'Heap',   words: heap,  cls: 'le-zone-heap'  },
-                { label: 'Free',   words: free,  cls: 'le-zone-free'  },
-                { label: 'Stack',  words: stack, cls: 'le-zone-stack' }
-            ]) +
+            renderBar(zones) +
+            renderMagBar(zones) +
             '<div class="le-divider"></div>' +
             grid +
         '</div>';
