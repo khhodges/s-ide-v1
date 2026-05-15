@@ -65,6 +65,35 @@
         { label: '512 M words (max, n=15)',         n: 15 }
     ];
 
+    // Returns only the NS_PRESETS that fit within the given board RAM (in words).
+    // Each preset requires 2^(n+14) words; presets larger than boardRam are excluded.
+    // Always returns at least one entry (the minimum 16 K preset) so the UI is never empty.
+    // Board RAM limits:
+    //   Tang Nano 9K          2,048 w  → no preset fits → fallback to min (shows warning)
+    //   Tang Nano 20K / IoT  16,384 w  → only n=0 (16 K) shown
+    //   Efinix Ti60 F225     65,536 w  → n=0–2 (16 K–64 K) shown
+    //   Wukong XC7A100T     131,072 w  → n=0–3 (16 K–128 K) shown
+    function getValidNSPresets(boardRam) {
+        var fits = NS_PRESETS.filter(function (p) {
+            return Math.pow(2, p.n + 14) <= boardRam;
+        });
+        return fits.length > 0 ? fits : [NS_PRESETS[0]];
+    }
+
+    // Clamps n_minus_6 to the maximum valid preset for the current board.
+    // Call this whenever the board selection changes to keep state consistent.
+    function clampNSStateToBoard() {
+        var profile = getBoardProfile();
+        var valid   = getValidNSPresets(profile.totalRamWords);
+        var maxN    = valid[valid.length - 1].n;
+        if (state.ns.n_minus_6 > maxN) {
+            state.ns.n_minus_6 = maxN;
+            var newMaxSl = Math.pow(2, maxN + 14) / 64;
+            if (state.ns.slots > newMaxSl) state.ns.slots = newMaxSl;
+            saveState();
+        }
+    }
+
     // state.thread.lumpPow2: exponent for lump size (e.g. 8 = 256 words)
     // state.thread.stackFrames: number of stack frames (each frame = 2 words)
     var state = {
@@ -145,10 +174,7 @@
         var board    = (typeof localStorage !== 'undefined' && localStorage.getItem('fpga_board_target')) || 'wukong-xc7a100t';
         var profile  = BOARD_PROFILES[board] || BOARD_PROFILES['wukong-xc7a100t'];
         var boardRam = profile.totalRamWords;
-        var validPresets = NS_PRESETS.filter(function(p) {
-            return Math.pow(2, p.n + 14) <= boardRam;
-        });
-        if (!validPresets.length) validPresets = [NS_PRESETS[0]];
+        var validPresets = getValidNSPresets(boardRam);
         var maxN               = validPresets[validPresets.length - 1].n;
         var n                  = clamp(state.ns.n_minus_6, 0, maxN);
         var totalNamespaceWords = Math.pow(2, n + 14);
@@ -665,11 +691,8 @@
         var profile    = getBoardProfile();
         var boardRam   = profile.totalRamWords;
         var budget     = Math.floor(boardRam / 2);
-        var validPresets = NS_PRESETS.filter(function (p) {
-            return Math.pow(2, p.n + 14) <= boardRam;
-        });
-        var noFit = validPresets.length === 0;
-        if (noFit) validPresets = [NS_PRESETS[0]];
+        var validPresets = getValidNSPresets(boardRam);
+        var noFit = (validPresets.length === 1 && Math.pow(2, validPresets[0].n + 14) > boardRam);
         var maxN   = validPresets[validPresets.length - 1].n;
         var n      = clamp(state.ns.n_minus_6, 0, maxN);
         var total  = Math.pow(2, n + 14);
@@ -849,7 +872,7 @@
         }
     };
 
-    window.lumpEditorRender = function () { render(); };
+    window.lumpEditorRender = function () { clampNSStateToBoard(); render(); };
     window.lumpEditorRenderResidentPanel = function () {
         var panel = document.getElementById('lumpResidentPanel');
         if (panel && panel.offsetParent !== null) renderResidentPanel();
@@ -977,6 +1000,8 @@
 
     window.addEventListener('storage', function (ev) {
         if (ev.key === 'fpga_board_target') {
+            clampNSStateToBoard();
+            render();
             var panel = document.getElementById('lumpResidentPanel');
             if (panel && panel.offsetParent !== null) {
                 renderResidentPanel();
