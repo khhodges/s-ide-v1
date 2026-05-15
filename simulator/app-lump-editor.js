@@ -158,6 +158,12 @@
 
         var profile   = getBoardProfile();
         var budget    = Math.floor(profile.totalRamWords / 2);
+        var maxHeap   = Math.max(1, budget - 1 - DR_WORDS - stack - CAP_WORDS);
+        heap  = clamp(heap, 1, maxHeap);
+        var needed2   = 1 + DR_WORDS + heap + stack + CAP_WORDS;
+        lumpSize  = nextPow2(needed2);
+        n         = log2Exact(lumpSize) - 6;
+        free      = lumpSize - 1 - DR_WORDS - heap - stack - CAP_WORDS;
         var maxCount  = profile.singleThread ? 1 : Math.min(10, Math.max(1, Math.floor(budget / lumpSize)));
         var count     = clamp(state.thread.count, 1, maxCount);
         var totalMem  = lumpSize * count;
@@ -206,10 +212,10 @@
                 '</div>' +
             '</div>' +
             '<div class="le-field-row">' +
-                '<label class="le-label">Heap words<span class="le-range-hint"> 1 – 8,191</span></label>' +
+                '<label class="le-label">Heap words<span class="le-range-hint"> 1\u2013' + maxHeap.toLocaleString() + '</span></label>' +
                 '<div class="le-input-group">' +
-                    '<input type="range"  class="le-slider" id="le-t-heap-sl"  min="1" max="8191" value="' + heap  + '" oninput="lumpEditorThreadHeap(this.value)">' +
-                    '<input type="number" class="le-number" id="le-t-heap-num" min="1" max="8191" value="' + heap  + '" oninput="lumpEditorThreadHeap(this.value)">' +
+                    '<input type="range"  class="le-slider" id="le-t-heap-sl"  min="1" max="' + maxHeap + '" value="' + heap  + '" oninput="lumpEditorThreadHeap(this.value)">' +
+                    '<input type="number" class="le-number" id="le-t-heap-num" min="1" max="' + maxHeap + '" value="' + heap  + '" oninput="lumpEditorThreadHeap(this.value)">' +
                 '</div>' +
             '</div>' +
             '<div class="le-field-row">' +
@@ -230,7 +236,15 @@
     // ── Namespace panel ───────────────────────────────────────────────────────
 
     function renderNSPanel() {
-        var n      = clamp(state.ns.n_minus_6, 0, 15);
+        var profile    = getBoardProfile();
+        var boardRam   = profile.totalRamWords;
+        var validPresets = NS_PRESETS.filter(function (p) {
+            return Math.pow(2, p.n + 14) <= boardRam;
+        });
+        var noFit = validPresets.length === 0;
+        if (noFit) validPresets = [NS_PRESETS[0]];
+        var maxN   = validPresets[validPresets.length - 1].n;
+        var n      = clamp(state.ns.n_minus_6, 0, maxN);
         var total  = Math.pow(2, n + 14);
         var maxSl  = total / 64;
         var slots  = clamp(state.ns.slots, 1, maxSl);
@@ -242,12 +256,17 @@
         var word    = packHdr(n, cw, cc, 1);
         var wordHex = hex8(word);
 
-        var presetOpts = NS_PRESETS.map(function (p) {
+        var presetOpts = validPresets.map(function (p) {
             return '<option value="' + p.n + '"' + (p.n === n ? ' selected' : '') + '>' + esc(p.label) + '</option>';
         }).join('');
 
+        var boardInfo = noFit
+            ? '<span class="le-overflow">⚠ ' + esc(profile.label + ' (' + boardRam.toLocaleString() + ' w) is smaller than the minimum NS LUMP (16,384 w)') + '</span>'
+            : esc(profile.label + '  (' + boardRam.toLocaleString() + ' words total)');
+
         var grid = renderGrid([
-            ['Total words',    esc(total.toLocaleString() + '  (2^' + (n + 14) + ')'), 'le-val-gold'],
+            ['Target board',   boardInfo, 'le-val-gold'],
+            ['Total words',    esc(total.toLocaleString() + '  (2^' + (n + 14) + ')'), noFit ? '' : 'le-val-gold'],
             ['n_minus_6',     esc(String(n)), ''],
             ['typ field',     '01  (Namespace, reserved)', ''],
             ['Max slots',      esc(maxSl.toLocaleString() + '  (total ÷ 64)'), ''],
