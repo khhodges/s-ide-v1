@@ -503,10 +503,17 @@ def _validate_step2(step2, step1, target_board):
             return (f"resident lump {cat.get('abstraction')} (NS slot {slot}) "
                     f"physAddr {phys} overlaps the foundational lump region "
                     f"(0..{foundation_end-1})")
+        hw_profile = HARDWARE_PROFILES.get(target_board, {})
+        board_total = hw_profile.get("totalRamWords", 0)
+        if board_total and phys + lump_size > board_total:
+            return (f"resident lump {cat.get('abstraction')} (NS slot {slot}) "
+                    f"of {lump_size} words at physAddr {phys} would extend past "
+                    f"the {hw_profile.get('label', target_board)} board RAM limit "
+                    f"of {board_total} words")
         if phys + lump_size > usable_end:
             return (f"resident lump {cat.get('abstraction')} (NS slot {slot}) "
                     f"of {lump_size} words at physAddr {phys} would extend past "
-                    f"the usable region (ends at {usable_end})")
+                    f"the usable namespace region (ends at {usable_end})")
         for (s, e, lbl) in occupied:
             if not (phys + lump_size <= s or phys >= e):
                 return (f"resident lump {cat.get('abstraction')} (NS slot {slot}) "

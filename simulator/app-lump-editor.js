@@ -264,9 +264,13 @@
     function _rlValidate() {
         var p    = _getStep1Payload();
         var s1   = p.step1;
-        var BOOT_ABSTR_SZ   = 64;
+        var board        = p.targetBoard || 'wukong-xc7a100t';
+        var boardProfile = BOARD_PROFILES[board] || BOARD_PROFILES['wukong-xc7a100t'];
+        var boardTotalWords = boardProfile.totalRamWords;
+        var BOOT_ABSTR_SZ    = 64;
+        var FREE_SLOT_SZ     = 64;  // free/null slot 2 — keep in sync with server FREE_SLOT_SIZE
         var NS_TABLE_RESERVE = 0x300;
-        var sum    = (s1.namespaceLumpWords || 0) + (s1.threadLumpWords || 0) + BOOT_ABSTR_SZ;
+        var sum    = (s1.namespaceLumpWords || 0) + (s1.threadLumpWords || 0) + FREE_SLOT_SZ + BOOT_ABSTR_SZ;
         var total  = s1.totalNamespaceWords || 0;
         var usable = total - NS_TABLE_RESERVE;
         var occ = [];
@@ -277,13 +281,21 @@
             if (!Number.isFinite(st.physAddr) || st.physAddr < 0) {
                 return lbl + ': physAddr is required for resident lumps.';
             }
+            if (st.physAddr !== Math.floor(st.physAddr)) {
+                return lbl + ': physAddr must be a whole-word address (got ' + st.physAddr + ').';
+            }
             var sz = st.lumpSize || 0;
             if (sz <= 0) return lbl + ': missing lumpSize.';
             if (st.physAddr < sum) {
                 return lbl + ': physAddr ' + st.physAddr + ' overlaps the foundational region (0\u2026' + (sum - 1) + ').';
             }
+            if (st.physAddr + sz > boardTotalWords) {
+                return lbl + ': ' + sz + '-word lump at physAddr ' + st.physAddr +
+                       ' extends past the ' + boardProfile.label + ' board RAM limit (' +
+                       boardTotalWords + ' words). Reduce physAddr or choose a larger board.';
+            }
             if (st.physAddr + sz > usable) {
-                return lbl + ': ' + sz + '-word lump at ' + st.physAddr + ' extends past usable region (' + usable + ').';
+                return lbl + ': ' + sz + '-word lump at ' + st.physAddr + ' extends past usable namespace region (' + usable + ' words).';
             }
             for (var k = 0; k < occ.length; k++) {
                 if (!(st.physAddr + sz <= occ[k].start || st.physAddr >= occ[k].end)) {
