@@ -563,7 +563,7 @@
             if (cat.hasExecutableMethods) {
                 return '<span class="le-rl-badge le-rl-badge-bootable le-rl-badge-bootable-click"' +
                     ' onclick="lumpEditorBootBadgeClick(' + cat.nsSlot + ')"' +
-                    ' title="Click to select as boot entry">\u2713 Bootable</span>';
+                    ' data-tooltip="Click to set as boot entry">\u2713 Bootable</span>';
             }
             return '<span class="le-rl-badge le-rl-badge-data">\u2014 Data only</span>';
         };
