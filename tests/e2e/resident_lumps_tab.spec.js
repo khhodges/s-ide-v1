@@ -109,10 +109,11 @@ test.describe('Resident Lumps tab — table loads', () => {
         // All three foundational lumps must be present.
         await expect(panel.locator('text=Boot.NS')).toBeVisible();
         await expect(panel.locator('text=Boot.Thread')).toBeVisible();
-        // Boot.Abstr row is dynamic: label comes from catalog (by nsSlot) or falls
-        // back to "Slot N". The stub catalog has no slot-3 entry so we get "Slot 3".
-        // The row is identified by its unique note text regardless of label.
-        await expect(panel.locator('text=Boot entry')).toBeVisible();
+        // Boot entry row now shows a <select> dropdown (or placeholder when catalog
+        // is loading). The stub catalog has an entry so the select must be visible.
+        const bootEntryRow = panel.locator('tr.le-rl-boot-row').nth(2);
+        await expect(bootEntryRow).toBeVisible();
+        await expect(bootEntryRow.locator('select.le-rl-boot-select')).toBeVisible();
     });
 
     test('shows catalog lumps returned by /api/boot-config', async ({ page }) => {

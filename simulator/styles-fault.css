@@ -994,6 +994,22 @@
     margin-left: 0.4rem;
 }
 
+.le-rl-boot-select {
+    background: rgba(218,165,32,0.08);
+    border: 1px solid rgba(218,165,32,0.40);
+    border-radius: 4px;
+    color: var(--church-gold);
+    font-size: 0.82rem;
+    padding: 2px 6px;
+    cursor: pointer;
+    max-width: 100%;
+}
+.le-rl-boot-select:focus {
+    outline: none;
+    border-color: rgba(218,165,32,0.75);
+    box-shadow: 0 0 0 2px rgba(218,165,32,0.15);
+}
+
 .le-rl-addr-na {
     color: var(--text-secondary);
     font-size: 0.82rem;

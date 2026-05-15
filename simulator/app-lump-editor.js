@@ -357,10 +357,15 @@
         var s1   = p.step1;
         var board        = p.targetBoard || 'wukong-xc7a100t';
         var boardProfile = BOARD_PROFILES[board] || BOARD_PROFILES['wukong-xc7a100t'];
-        var BOOT_ABSTR_SZ    = 64;
-        var FREE_SLOT_SZ     = 64;
+        var bootSlot = parseInt(localStorage.getItem('bootEntrySlot'), 10);
+        if (!Number.isFinite(bootSlot) || bootSlot < 0) bootSlot = 3;
+        var bootCatEntry = null;
+        for (var bi = 0; bi < _rl.catalog.length; bi++) {
+            if (_rl.catalog[bi].nsSlot === bootSlot) { bootCatEntry = _rl.catalog[bi]; break; }
+        }
+        var bootAbstrSz  = (bootCatEntry && bootCatEntry.lumpSize) ? bootCatEntry.lumpSize : 64;
         var NS_TABLE_RESERVE = 0x400;
-        var sum    = (s1.namespaceLumpWords || 0) + (s1.threadLumpWords || 0) + FREE_SLOT_SZ + BOOT_ABSTR_SZ;
+        var sum    = (s1.namespaceLumpWords || 0) + (s1.threadLumpWords || 0) + bootAbstrSz;
         var total  = s1.totalNamespaceWords || 0;
         var usable = total - NS_TABLE_RESERVE;
         var boardTotalWords = boardProfile.totalRamWords;
@@ -377,10 +382,15 @@
         var board        = p.targetBoard || 'wukong-xc7a100t';
         var boardProfile = BOARD_PROFILES[board] || BOARD_PROFILES['wukong-xc7a100t'];
         var boardTotalWords = boardProfile.totalRamWords;
-        var BOOT_ABSTR_SZ    = 64;
-        var FREE_SLOT_SZ     = 64;  // free/null slot 2 — keep in sync with server FREE_SLOT_SIZE
+        var bootSlotV = parseInt(localStorage.getItem('bootEntrySlot'), 10);
+        if (!Number.isFinite(bootSlotV) || bootSlotV < 0) bootSlotV = 3;
+        var bootCatEntryV = null;
+        for (var bvi = 0; bvi < _rl.catalog.length; bvi++) {
+            if (_rl.catalog[bvi].nsSlot === bootSlotV) { bootCatEntryV = _rl.catalog[bvi]; break; }
+        }
+        var bootAbstrSz  = (bootCatEntryV && bootCatEntryV.lumpSize) ? bootCatEntryV.lumpSize : 64;
         var NS_TABLE_RESERVE = 0x400;
-        var sum    = (s1.namespaceLumpWords || 0) + (s1.threadLumpWords || 0) + FREE_SLOT_SZ + BOOT_ABSTR_SZ;
+        var sum    = (s1.namespaceLumpWords || 0) + (s1.threadLumpWords || 0) + bootAbstrSz;
         var total  = s1.totalNamespaceWords || 0;
         var usable = total - NS_TABLE_RESERVE;
         var occ = [];
@@ -463,22 +473,52 @@
         for (var bi = 0; bi < _rl.catalog.length; bi++) {
             if (_rl.catalog[bi].nsSlot === bootSlot) { bootCatEntry = _rl.catalog[bi]; break; }
         }
-        var bootLabel = bootCatEntry ? (bootCatEntry.abstraction || 'Slot ' + bootSlot) : 'Slot ' + bootSlot;
-        var BOOT_STARTER = [
-            { label: 'Boot.NS',     nsSlot: 0,        note: 'Namespace root' },
-            { label: 'Boot.Thread', nsSlot: 1,        note: 'Initial thread' },
-            { label: bootLabel,     nsSlot: bootSlot, note: 'Boot entry \u00b7 change via \u26a1 in Namespace' }
-        ];
-        var rows = BOOT_STARTER.map(function(b) {
-            return '<tr class="le-rl-row le-rl-boot-row">' +
-                '<td class="le-rl-td">' + esc(b.label) +
-                    ' <span class="le-rl-boot-note">' + esc(b.note) + '</span></td>' +
-                '<td class="le-rl-td le-rl-td-num">' + esc(String(b.nsSlot)) + '</td>' +
-                '<td class="le-rl-td le-rl-td-num">64</td>' +
+
+        var p1 = _getStep1Payload();
+        var nsSize     = p1.step1.namespaceLumpWords || 64;
+        var threadSize = Math.pow(2, state.thread.lumpPow2);
+        var bootEntrySize = bootCatEntry ? (bootCatEntry.lumpSize != null ? bootCatEntry.lumpSize : '\u2014') : '\u2014';
+        var bootEntryNsSlot = bootCatEntry ? bootCatEntry.nsSlot : bootSlot;
+
+        var bootEntryCell;
+        if (!_rl.catalog.length) {
+            bootEntryCell = '<td class="le-rl-td"><span class="le-rl-boot-note">\u2014 loading catalog \u2014</span></td>';
+        } else {
+            var selectOpts = '';
+            for (var ci = 0; ci < _rl.catalog.length; ci++) {
+                var ce = _rl.catalog[ci];
+                var optLabel = esc((ce.abstraction || 'Slot ' + ce.nsSlot) +
+                    ' (NS slot ' + ce.nsSlot + ', ' + (ce.lumpSize != null ? ce.lumpSize : '?') + ' words)');
+                selectOpts += '<option value="' + ce.nsSlot + '"' +
+                    (ce.nsSlot === bootSlot ? ' selected' : '') + '>' + optLabel + '</option>';
+            }
+            bootEntryCell = '<td class="le-rl-td">' +
+                '<select class="le-rl-boot-select" onchange="lumpEditorBootEntryChange(parseInt(this.value,10))">' +
+                selectOpts + '</select></td>';
+        }
+
+        var rows =
+            '<tr class="le-rl-row le-rl-boot-row">' +
+                '<td class="le-rl-td">Boot.NS <span class="le-rl-boot-note">Namespace root</span></td>' +
+                '<td class="le-rl-td le-rl-td-num">0</td>' +
+                '<td class="le-rl-td le-rl-td-num">' + esc(String(nsSize)) + '</td>' +
                 '<td class="le-rl-td"><span class="le-rl-boot-badge">Boot</span></td>' +
                 '<td class="le-rl-td le-rl-addr-na">\u2014</td>' +
-                '</tr>';
-        }).join('');
+            '</tr>' +
+            '<tr class="le-rl-row le-rl-boot-row">' +
+                '<td class="le-rl-td">Boot.Thread <span class="le-rl-boot-note">Initial thread \u00b7 size set on Thread tab</span></td>' +
+                '<td class="le-rl-td le-rl-td-num">1</td>' +
+                '<td class="le-rl-td le-rl-td-num">' + esc(String(threadSize)) + '</td>' +
+                '<td class="le-rl-td"><span class="le-rl-boot-badge">Boot</span></td>' +
+                '<td class="le-rl-td le-rl-addr-na">\u2014</td>' +
+            '</tr>' +
+            '<tr class="le-rl-row le-rl-boot-row">' +
+                bootEntryCell +
+                '<td class="le-rl-td le-rl-td-num">' + esc(String(bootEntryNsSlot)) + '</td>' +
+                '<td class="le-rl-td le-rl-td-num">' + esc(String(bootEntrySize)) + '</td>' +
+                '<td class="le-rl-td"><span class="le-rl-boot-badge">Boot</span></td>' +
+                '<td class="le-rl-td le-rl-addr-na">\u2014</td>' +
+            '</tr>';
 
         var addrRange    = _rlAddrRange();
         var addrHintText = 'Valid range: 0x' + addrRange.min.toString(16).toUpperCase() +
@@ -1003,6 +1043,15 @@
     window.lumpEditorRenderResidentPanel = function () {
         var panel = document.getElementById('lumpResidentPanel');
         if (panel && panel.offsetParent !== null) renderResidentPanel();
+    };
+
+    window.lumpEditorBootEntryChange = function (nsSlot) {
+        if (typeof setBootEntrySlot === 'function') {
+            setBootEntrySlot(nsSlot);
+        } else {
+            localStorage.setItem('bootEntrySlot', String(nsSlot));
+            renderResidentPanel();
+        }
     };
 
     window.initLumpEditor = function () {
