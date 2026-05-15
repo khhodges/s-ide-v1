@@ -14,23 +14,24 @@ const HW_BOOT_PROGRAM = [
     0x0F308002, // PC=12 SAVE [CR6 + 2], CR1
 ];
 
+// HW_NAMESPACE: 4-word entries (loc, word1, word2, word3_reserved=0)
 const HW_NAMESPACE = [
-    0x0000FD00, 0x80000008, 0x00000000, // Slot 0: Boot.NS (NS_TABLE_BASE=0xFD00)
-    0x00000100, 0x80000008, 0x00000000, // Slot 1: Thread
-    0x00000200, 0x80000008, 0x00000000, // Slot 2: Boot.Abstraction
-    0x00000300, 0x80000008, 0x00000000, // Slot 3: Boot.CLOOMC
-    0x00000400, 0x80000008, 0x00000000, // Slot 4: Salvation (c-list root)
-    0x00000500, 0x80000008, 0x00000000, // Slot 5: Salvation.CLOOMC (code)
-    0x00000600, 0x80000008, 0x00000000, // Slot 6: Abstraction 6
-    0x00000700, 0x80000008, 0x00000000, // Slot 7: Abstraction 7
-    0x00000800, 0x80000008, 0x00000000, // Slot 8: Abstraction 8
-    0x00000900, 0x80000008, 0x00000000, // Slot 9: Abstraction 9
-    0x00000A00, 0x80000008, 0x00000000, // Slot 10: Abstraction 10
-    0x00000B00, 0x80000008, 0x00000000, // Slot 11: Abstraction 11
-    0x00000C00, 0x80000008, 0x00000000, // Slot 12: Abstraction 12
-    0x00000D00, 0x80000008, 0x00000000, // Slot 13: Abstraction 13
-    0x00000E00, 0x80000008, 0x00000000, // Slot 14: Abstraction 14
-    0x00000F00, 0x80000008, 0x00000000, // Slot 15: Abstraction 15
+    0x0000FC00, 0x80000008, 0x00000000, 0x00000000, // Slot 0: Boot.NS (NS_TABLE_BASE=0xFC00)
+    0x00000100, 0x80000008, 0x00000000, 0x00000000, // Slot 1: Thread
+    0x00000200, 0x80000008, 0x00000000, 0x00000000, // Slot 2: Boot.Abstraction
+    0x00000300, 0x80000008, 0x00000000, 0x00000000, // Slot 3: Boot.CLOOMC
+    0x00000400, 0x80000008, 0x00000000, 0x00000000, // Slot 4: Salvation (c-list root)
+    0x00000500, 0x80000008, 0x00000000, 0x00000000, // Slot 5: Salvation.CLOOMC (code)
+    0x00000600, 0x80000008, 0x00000000, 0x00000000, // Slot 6: Abstraction 6
+    0x00000700, 0x80000008, 0x00000000, 0x00000000, // Slot 7: Abstraction 7
+    0x00000800, 0x80000008, 0x00000000, 0x00000000, // Slot 8: Abstraction 8
+    0x00000900, 0x80000008, 0x00000000, 0x00000000, // Slot 9: Abstraction 9
+    0x00000A00, 0x80000008, 0x00000000, 0x00000000, // Slot 10: Abstraction 10
+    0x00000B00, 0x80000008, 0x00000000, 0x00000000, // Slot 11: Abstraction 11
+    0x00000C00, 0x80000008, 0x00000000, 0x00000000, // Slot 12: Abstraction 12
+    0x00000D00, 0x80000008, 0x00000000, 0x00000000, // Slot 13: Abstraction 13
+    0x00000E00, 0x80000008, 0x00000000, 0x00000000, // Slot 14: Abstraction 14
+    0x00000F00, 0x80000008, 0x00000000, 0x00000000, // Slot 15: Abstraction 15
 ];
 
 const HW_CLIST = [

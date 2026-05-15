@@ -202,7 +202,7 @@ data (NS Table entries), not GT slots.
 │  Words 1..NS_TABLE_START-1   Freespace (all-zero)       │
 ├─────────────────────────────────────────────────────────┤
 │  Words NS_TABLE_START..NS_TABLE_END                     │
-│                  NS Table  (N × 3-word entries)         │
+│                  NS Table  (N × 4-word entries)         │
 ├─────────────────────────────────────────────────────────┤
 │  Words NS_TABLE_END+1..lumpSize-1   Trailing zeros      │
 ├─────────────────────────────────────────────────────────┤
@@ -213,16 +213,20 @@ Several Namespace Applications can coexist (timeshare) in a single memory system
 
 **Example Namespace Slot values:**
 
-Each NS Table entry is three 32-bit words and carries one of three states:
+Each NS Table entry is four 32-bit words and carries one of three states:
 
-| State | Word 1 | Word 2 | Word 3 | Meaning |
-|-------|--------|--------|--------|---------|
-| **Live** | base address | `spare\|gt_seq\|limit_offset` | `spare\|G\|CRC-16` | Lump is resident in RAM |
-| **Outform** | SHA256 prefix [31:0] | SHA256 prefix [63:32] | `spare\|loc_idx\|flags\|0x1FF` | Lump absent — Locator fetch on first LOAD/CALL |
-| **NULL** | `0x00000000` | `0x00000000` | `0x00000000` | No capability installed |
+| State | Word 1 | Word 2 | Word 3 | Word 4 | Meaning |
+|-------|--------|--------|--------|--------|---------|
+| **Live** | base address | `spare\|gt_seq\|limit_offset` | `spare\|G\|CRC-16` | `0x00000000` (reserved) | Lump is resident in RAM |
+| **Outform** | SHA256 prefix [31:0] | SHA256 prefix [63:32] | `spare\|loc_idx\|flags\|0x1FF` | `0x00000000` (reserved) | Lump absent — Locator fetch on first LOAD/CALL |
+| **NULL** | `0x00000000` | `0x00000000` | `0x00000000` | `0x00000000` | No capability installed |
 
 The low 9 bits of NS Word 3 distinguish the three states: `000000000` =
 NULL, `111111111` (0x1FF) = Outform, anything else = Live (CRC-16).
+
+Word 4 is **reserved** — it is always written as zero and must not be
+executed. It is allocated for a future Navana per-slot capability Golden
+Token managed by the Navana Master Controller.
 
 The Boot.NS Lump (Slot 0) is the system root: it spans the entire physical
 address space and its NS Table covers every object in the machine. It is

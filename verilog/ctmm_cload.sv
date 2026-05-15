@@ -107,12 +107,13 @@ module ctmm_cload
     assign has_e_perm = e_gt_view.perms[PERM_E];
 
     // ========================================================================
-    // NS Entry Address (3-word entries, stride = 12 bytes)
+    // NS Entry Address (4-word entries, stride = 16 bytes)
+    // Word offsets: +0=location, +4=word1_w2(limit|gt_seq), +8=word2_w3(crc|gbit), +12=reserved
     // ========================================================================
 
     logic [31:0] ns_entry_addr;
     assign ns_entry_addr = cr15_namespace.word1_location +
-                           ({16'h0, e_gt_view.slot_id} * 32'd12);
+                           ({16'h0, e_gt_view.slot_id} * 32'd16);
 
     logic ns_bounds_ok;
     assign ns_bounds_ok = (e_gt_view.slot_id < cr15_namespace.word2_w2.limit_offset[15:0]);

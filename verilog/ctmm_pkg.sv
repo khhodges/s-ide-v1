@@ -134,13 +134,14 @@ package ctmm_pkg;
     localparam logic [3:0] CR_NAMESPACE = 4'd15;  // CR15: Namespace root
 
     // ========================================================================
-    // Namespace Entry - 3 x 32-bit words (96 bits) in memory
+    // Namespace Entry - 4 x 32-bit words (128 bits) in memory
     // ========================================================================
     // Word 0 (+0):  word0_location - code base address (32-bit pointer)
     // Word 1 (+4):  word1_w2       - gt_seq[6:0] | limit_offset[20:0]  (WORD2_T)
     // Word 2 (+8):  word2_w3       - spare[14:0] | g_bit | crc[15:0]   (WORD3_T)
+    // Word 3 (+12): reserved       - must be written 0; future Navana per-slot GT
     //
-    // Stride = slot_id * 12  (12 bytes per entry)
+    // Stride = slot_id * 16  (16 bytes per entry)
     // The lump header lives at Mem[slot_id × SLOT_SIZE] word 0 — it is NOT
     // a 4th word inside the NS table.
     //
@@ -156,8 +157,8 @@ package ctmm_pkg;
         logic [31:0] word0_location; // Code base address
     } namespace_entry_t;
 
-    // Namespace entry stride = 12 bytes (3 x 32-bit words)
-    localparam int NS_ENTRY_STRIDE = 12;
+    // Namespace entry stride = 16 bytes (4 x 32-bit words; word3 reserved for Navana per-slot GT)
+    localparam int NS_ENTRY_STRIDE = 16;
 
     // ========================================================================
     // LUMP Header structure — standalone type for decoding lump header words.

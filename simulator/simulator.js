@@ -21,19 +21,19 @@ if (typeof module !== 'undefined' && typeof AbstractGTManager === 'undefined') {
 //     IDE UI can re-render after every instruction or boot step.
 //
 // MEMORY MAP  (all addresses are word-addressed 32-bit words)
-//   0x0000 – 0xFCFF   Object lumps  (heap / stack / thread lumps)
-//   0xFD00 – 0xFDFF   Namespace (NS) table  — up to 256 × 3-word entries
-//   0xFE00 – 0xFEFF   I/O segment  — memory-mapped device registers
-//   0xFF00 – 0xFFFF   Boot ROM  — read-only; written during _bootStep()
+//   0x0000 – 0xFBFF   Object lumps  (heap / stack / thread lumps)
+//   0xFC00 – 0xFFFF   Namespace (NS) table  — up to 256 × 4-word entries (NS_TABLE_RESERVE=0x400)
+//   (I/O segment and Boot ROM are overlaid in the lump area at NS-registered addresses)
 //
 // NAMESPACE TABLE (NS)
-//   Each entry is 3 words wide:
+//   Each entry is 4 words wide (stride = 16 bytes); word3 at +12 is reserved (always zero):
 //     word0  location   — base address of the abstraction's lump (Golden Token)
 //     word1  limit/meta — bits[16:0] lump size in words; bits[25:17] c-list
 //                         count; bits[27:26] GT type (Null/Inform/Outform/
 //                         Abstract); bit[28] chainable; bit[29] f-flag;
 //                         bit[30] b-flag; bit[31] G-bit (GC liveness)
 //     word2  seals      — bits[31:25] version; bits[15:0] CRC-16 seal
+//     word3  reserved   — must be zero; reserved for future Navana per-slot GT
 //
 // THREAD LUMP LAYOUT  (256 words, NS[1] "Boot.Thread")
 //   +0        Header word
@@ -127,11 +127,10 @@ const BOOT_ROM_WORDS = [
 class ChurchSimulator {
     constructor() {
         this._listeners = {};
-        // NS_TABLE_BASE is recomputed in reset() (and in the binary loaders)
-        // so it always sits at the top of the allocated namespace memory window.
-        // For the historical 65536-word memory this evaluates to 0xFD00.
+        // NS_TABLE_BASE is recomputed in reset() (and in the binary loaders) to
+        // memory.length − NS_TABLE_RESERVE. For a 65536-word space: 0xFC00.
         this.NS_TABLE_RESERVE = 0x400;   // 256 entries × 4 words
-        this.NS_TABLE_BASE = 0xFD00;
+        this.NS_TABLE_BASE = 0xFC00;
         this.NS_ENTRY_WORDS = 4;
         this.MAX_NS_ENTRIES = 256;
         this.SLOT_SIZE = 0x40;   // 64 words — FPGA minimum slot allocation (boot_rom.py line 339)
@@ -5609,10 +5608,11 @@ class ChurchSimulator {
         this.nsCount = 0;
         this.nsClistMap = {};
 
-        const nsEntryCount = hwNamespace.length / 3;
+        // hwNamespace uses 4-word entries (loc, word1, word2, word3_reserved=0).
+        const nsEntryCount = hwNamespace.length / 4;
         for (let i = 0; i < nsEntryCount; i++) {
-            const loc  = hwNamespace[i * 3 + 0];
-            const w1   = hwNamespace[i * 3 + 1];
+            const loc  = hwNamespace[i * 4 + 0];
+            const w1   = hwNamespace[i * 4 + 1];
             const parsed1 = this.parseNSWord1(w1);
             const base = this.NS_TABLE_BASE + i * this.NS_ENTRY_WORDS;
             this.memory[base + 0] = loc >>> 0;
@@ -5755,18 +5755,19 @@ class ChurchSimulator {
         this.nsCount = 0;
         this.nsClistMap = {};
 
-        const NS_WORDS = 192;
+        const NS_WORDS = 256;  // 64 entries × 4 words
         const CLIST_WORDS = 64;
-        const nsEntryCount = Math.floor(Math.min(nsWords.length, NS_WORDS) / 3);
+        const nsEntryCount = Math.floor(Math.min(nsWords.length, NS_WORDS) / 4);
 
         for (let i = 0; i < nsEntryCount; i++) {
-            const loc = nsWords[i * 3 + 0] >>> 0;
-            const w1  = nsWords[i * 3 + 1] >>> 0;
-            const w2  = nsWords[i * 3 + 2] >>> 0;
+            const loc = nsWords[i * 4 + 0] >>> 0;
+            const w1  = nsWords[i * 4 + 1] >>> 0;
+            const w2  = nsWords[i * 4 + 2] >>> 0;
             const base = this.NS_TABLE_BASE + i * this.NS_ENTRY_WORDS;
             this.memory[base + 0] = loc;
             this.memory[base + 1] = w1;
             this.memory[base + 2] = w2;
+            // base + 3 (word3_reserved) stays zero
             this.nsLabels[i] = `Slot ${i}`;
             this.nsCount = i + 1;
         }
@@ -5856,16 +5857,17 @@ class ChurchSimulator {
     }
 
     exportHardwareImage() {
-        const NS_WORDS = 192;
+        const NS_WORDS = 256;  // 64 entries × 4 words
         const CLIST_WORDS = 64;
 
         const nsWords = new Uint32Array(NS_WORDS);
         const nsEntries = Math.min(this.nsCount || 16, 64);
         for (let i = 0; i < nsEntries; i++) {
             const base = this.NS_TABLE_BASE + i * this.NS_ENTRY_WORDS;
-            nsWords[i * 3 + 0] = this.memory[base + 0] >>> 0;
-            nsWords[i * 3 + 1] = this.memory[base + 1] >>> 0;
-            nsWords[i * 3 + 2] = this.memory[base + 2] >>> 0;
+            nsWords[i * 4 + 0] = this.memory[base + 0] >>> 0;
+            nsWords[i * 4 + 1] = this.memory[base + 1] >>> 0;
+            nsWords[i * 4 + 2] = this.memory[base + 2] >>> 0;
+            nsWords[i * 4 + 3] = 0;  // word3_reserved
         }
 
         const clistWords = new Uint32Array(CLIST_WORDS);

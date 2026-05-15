@@ -29,21 +29,21 @@ between them because lumps are allocated from address 0 upward.
 
 ### 1.1 Standard 65 536-word architectural configuration
 
-`NS_TABLE_RESERVE = 0x300` (768 words = 256 entries × 3 words).
+`NS_TABLE_RESERVE = 0x400` (1024 words = 256 entries × 4 words).
 
 | Start    | End      | Words  | Region |
 |:---------|:---------|-------:|:-------|
-| `0x0000` | `0xFCFE` | 64 767 | **Lump area** — all object lumps |
-| `0xFCFF` | `0xFCFF` |      1 | **Format tag word** (`0xB0070229`) — boot-image version sentinel |
-| `0xFD00` | `0xFFFF` |    768 | **NS table** — 256 × 3-word entries (`NS_TABLE_BASE = 0xFD00`) |
+| `0x0000` | `0xFBFE` | 64 511 | **Lump area** — all object lumps |
+| `0xFBFF` | `0xFBFF` |      1 | **Format tag word** (`0xB0070229`) — boot-image version sentinel |
+| `0xFC00` | `0xFFFF` |  1 024 | **NS table** — 256 × 4-word entries (`NS_TABLE_BASE = 0xFC00`) |
 
-`NS_TABLE_BASE = 65536 − NS_TABLE_RESERVE = 65536 − 768 = 0xFD00`
+`NS_TABLE_BASE = 65536 − NS_TABLE_RESERVE = 65536 − 1024 = 0xFC00`
 
 > The `simulator/simulator.js` header comment (lines 15–19) shows an older
 > layout that placed the NS table at `0xFD00–0xFDFF` (256 words), the IO
 > segment at `0xFE00–0xFEFF`, and Boot ROM at `0xFF00–0xFFFF`.  That reflected
-> an era when the NS table had 1 word per entry.  With `NS_TABLE_RESERVE = 0x300`
-> (3 words × 256 entries) the NS table now spans `0xFD00–0xFFFF` in the 65
+> an era when the NS table had 1 word per entry.  With `NS_TABLE_RESERVE = 0x400`
+> (4 words × 256 entries) the NS table now spans `0xFC00–0xFFFF` in the 65
 > 536-word window; there is no separate IO segment or Boot ROM region in the
 > current implementation's memory layout.
 
@@ -54,11 +54,11 @@ When `window.bootConfig.step1.totalNamespaceWords = 16384`:
 | Start    | End      | Words  | Region |
 |:---------|:---------|-------:|:-------|
 | `0x0000` | `0x0D3F` |  3 392 | **Lump area — occupied** (47 active NS slots at boot) |
-| `0x0D40` | `0x3CFE` | 12 223 | **Lump area — free** (unallocated heap space) |
-| `0x3CFF` | `0x3CFF` |      1 | **Format tag word** (`0xB0070229`) |
-| `0x3D00` | `0x3FFF` |    768 | **NS table** (`NS_TABLE_BASE = 0x3D00`) |
+| `0x0D40` | `0x3BFE` | 11 967 | **Lump area — free** (unallocated heap space) |
+| `0x3BFF` | `0x3BFF` |      1 | **Format tag word** (`0xB0070229`) |
+| `0x3C00` | `0x3FFF` |  1 024 | **NS table** — 256 × 4-word entries (`NS_TABLE_BASE = 0x3C00`) |
 
-`NS_TABLE_BASE = 16384 − 768 = 0x3D00`
+`NS_TABLE_BASE = 16384 − 1024 = 0x3C00`
 
 > In the 16 384-word profile there is no separate IO segment or Boot ROM shadow.
 > Device register windows (UART, LED, Button, Timer) sit inside the lump area
@@ -68,8 +68,8 @@ When `window.bootConfig.step1.totalNamespaceWords = 16384`:
 
 ## 2. Namespace (NS) Table
 
-Base address: `NS_TABLE_BASE`.  Entry `i` starts at `NS_TABLE_BASE + i × 3`.
-Each entry is exactly **3 consecutive 32-bit words**.
+Base address: `NS_TABLE_BASE`.  Entry `i` starts at `NS_TABLE_BASE + i × 4`.
+Each entry is exactly **4 consecutive 32-bit words**.
 
 ### 2.1 NS entry word layout
 
@@ -347,8 +347,8 @@ Per-slot interval listing (sorted by start address, 16 384-word profile):
 |  44  | GC           | `0x0C80` | `0x0CBF` |    64 |
 |  45  | Thread       | `0x0CC0` | `0x0CFF` |    64 |
 |  46  | Circle       | `0x0D00` | `0x0D3F` |    64 |
-| —    | Format tag   | `0x3CFF` | `0x3CFF` |     1 |
-| —    | NS table     | `0x3D00` | `0x3FFF` |   768 |
+| —    | Format tag   | `0x3BFF` | `0x3BFF` |     1 |
+| —    | NS table     | `0x3C00` | `0x3FFF` |  1024 |
 
 ---
 
@@ -535,7 +535,7 @@ These are the only authoritative CM state sources:
 |:-------------|:--------|
 | `memory[0 … NS_TABLE_BASE−2]` | All object lumps |
 | `memory[NS_TABLE_BASE−1]` | Boot-image format tag (`0xB0070229`) |
-| `memory[NS_TABLE_BASE … NS_TABLE_BASE + NS_TABLE_RESERVE − 1]` | NS table (256 × 3 words) |
+| `memory[NS_TABLE_BASE … NS_TABLE_BASE + NS_TABLE_RESERVE − 1]` | NS table (256 × 4 words) |
 
 ### 10.2 Legitimate hardware registers (not in DMEM by design)
 
@@ -571,8 +571,8 @@ cache or eliminate it entirely.
 #### Gap 2: CR word1 / word2 / word3 vs NS table
 
 **Specification:** Each CR's limit and seal should equal the NS table entry for
-the GT's slot index.  Ground truth: `memory[NS_TABLE_BASE + slot × 3 + 1]`
-and `memory[NS_TABLE_BASE + slot × 3 + 2]`.
+the GT's slot index.  Ground truth: `memory[NS_TABLE_BASE + slot × 4 + 1]`
+and `memory[NS_TABLE_BASE + slot × 4 + 2]`.
 
 **Current reality:** At CALL time the CALL microcode packs `cw − 1` into
 `cr[14].word2` and `cc − 1` into `cr[6].word2`, rather than copying the NS
@@ -704,7 +704,7 @@ differ.
 
 | Finding | Status | Section |
 |:--------|:-------|:--------|
-| **65 536-word NS table comment** — `simulator.js` lines 15–19 show an outdated layout where NS table was 256 words and IO/Boot ROM had separate regions.  With `NS_TABLE_RESERVE = 0x300`, the NS table is 768 words (0xFD00–0xFFFF in 65 536-word space). | Stale comment | §1.1 |
+| **65 536-word NS table comment** — `simulator.js` lines 15–19 show an outdated layout where NS table was 256 words and IO/Boot ROM had separate regions.  With `NS_TABLE_RESERVE = 0x400`, the NS table is 1 024 words (0xFC00–0xFFFF in 65 536-word space). | Stale comment | §1.1 |
 | **NS word1 bit comment** — `simulator.js` lines 24–28 have B and G flags described in wrong bit positions.  The code (`packNSWord1` / `parseNSWord1`) is correct. | Stale comment | §2.1 |
 | **Slot 0 Boot.NS** — `memory[0x0000]=0x00000000`, ABSENT (no standard lump header by design) | Expected | §7 |
 | **Slots 4–46** — all 43 lazy lumps INVALID (magic=0x0); body not yet loaded | Expected | §7 |

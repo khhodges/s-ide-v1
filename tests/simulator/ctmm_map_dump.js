@@ -41,9 +41,9 @@ while (iters < 64 && !sim.bootComplete && !sim.halted) {
 }
 
 const MEM_WORDS = sim.memory.length;           // 16384
-const NS_TABLE_BASE = sim.NS_TABLE_BASE;       // MEM_WORDS - 0x300
-const NS_ENTRY_WORDS = sim.NS_ENTRY_WORDS;     // 3
-const NS_TABLE_RESERVE = sim.NS_TABLE_RESERVE; // 0x300 = 768 words
+const NS_TABLE_BASE = sim.NS_TABLE_BASE;       // MEM_WORDS - 0x400
+const NS_ENTRY_WORDS = sim.NS_ENTRY_WORDS;     // 4
+const NS_TABLE_RESERVE = sim.NS_TABLE_RESERVE; // 0x400 = 1024 words
 const IO_BASE  = 0xFE00;   // historical 65536-word IO segment (not in 16384-word space)
 const SLOT_SIZE = sim.SLOT_SIZE;               // 64
 
@@ -52,7 +52,7 @@ const regions = [
     { name: 'Lump area',        start: 0,              end: NS_TABLE_BASE - 3,  notes: 'All object lumps (NS, thread, abstraction, entry, code lumps, etc.)' },
     { name: 'Boot-entry slot word', start: NS_TABLE_BASE - 2, end: NS_TABLE_BASE - 2, notes: 'boot_entry_slot — NS slot to boot from (Task #355)' },
     { name: 'Format tag word',  start: NS_TABLE_BASE - 1, end: NS_TABLE_BASE - 1, notes: 'BOOT_IMAGE_FORMAT_TAG (0xB0070355) — version sentinel' },
-    { name: 'NS table',         start: NS_TABLE_BASE,   end: NS_TABLE_BASE + NS_TABLE_RESERVE - 1, notes: `Up to ${NS_TABLE_RESERVE / NS_ENTRY_WORDS} × 3-word entries` },
+    { name: 'NS table',         start: NS_TABLE_BASE,   end: NS_TABLE_BASE + NS_TABLE_RESERVE - 1, notes: `Up to ${NS_TABLE_RESERVE / NS_ENTRY_WORDS} × 4-word entries` },
 ];
 // MMIO: only relevant in the historical 65536-word space; note it anyway
 const mmioNote = MEM_WORDS === 65536
@@ -250,7 +250,7 @@ const stateAudit = {
     inMemory: [
         { prop: 'memory[0 .. NS_TABLE_BASE-2]', desc: 'Object lumps (lump area)' },
         { prop: 'memory[NS_TABLE_BASE-1]', desc: 'Boot image format tag (0xB0070229)' },
-        { prop: 'memory[NS_TABLE_BASE .. NS_TABLE_BASE+NS_TABLE_RESERVE-1]', desc: 'NS table (3 words × up to 256 entries)' },
+        { prop: 'memory[NS_TABLE_BASE .. NS_TABLE_BASE+NS_TABLE_RESERVE-1]', desc: 'NS table (4 words × up to 256 entries)' },
         { prop: 'memory[threadBase+1 .. threadBase+16]', desc: 'DR zone — DR0–DR15 home slots in thread lump (FIXED: DREAD/DWRITE now write-through; RETURN syncs back)' },
         { prop: 'cr[i].word2 = nsEntry.word1_limit', desc: 'CR limit/meta field now stores raw NS entry word1 verbatim (FIXED: boot and CALL paths no longer pack cw−1/cc−1)' },
     ],

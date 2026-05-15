@@ -160,7 +160,7 @@
             <div class="step"><span class="step-num">1</span><span class="step-text"><span class="bus bus-reg">REG</span> Read GT from CR: parse Version(7) | Index(17) | Perms(6) | Type(2)</span></div>
             <div class="step"><span class="step-num">2</span><span class="step-text"><span class="bus bus-reg">REG</span> Permission check: GT perms has required bit (unless M-elevated; CR6-specific: LOAD from CR6 skips L check) <span class="step-fault">→ PERMISSION fault</span></span></div>
             <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-none">---</span> Bounds check: index &lt; nsCount <span class="step-fault">→ BOUNDS fault</span></span></div>
-            <div class="step"><span class="step-num">4</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Fetch NS entry (3 words: location, B|F|G|limit, version|seal)</span></div>
+            <div class="step"><span class="step-num">4</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Fetch NS entry (4 words: location, B|F|G|limit, version|seal, reserved)</span></div>
             <div class="step"><span class="step-num">5</span><span class="step-text"><span class="bus bus-none">---</span> Version match: GT.ver == NS.ver <span class="step-fault">→ VERSION fault</span></span></div>
             <div class="step"><span class="step-num">6</span><span class="step-text"><span class="bus bus-none">---</span> MAC/Seal validation: FNV-1a(location, limit) == stored seal <span class="step-fault">→ SEAL fault</span></span></div>
             <div class="step"><span class="step-num">7</span><span class="step-text"><span class="bus bus-wr">MEM WR</span> <span class="step-ok">G-bit reset — mark entry LIVE in NS word1</span></span></div>
@@ -204,7 +204,7 @@
             <div class="step"><span class="step-num">1</span><span class="step-text"><span class="bus bus-reg">REG</span> CR[src].word0 = c-list GT. Null? <span class="step-fault">→ NULL_CAP fault</span></span></div>
             <div class="step"><span class="step-num">2</span><span class="step-text"><span class="step-gate">mLoad(clistGT, crSrc===6 ? null : 'L', crSrc)</span> — <span class="bus bus-rd">MEM RD</span> NS entry + <span class="bus bus-wr">MEM WR</span> G-bit <span class="step-detail">(CR6 skips L check — CALL validated E)</span></span></div>
             <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-none">---</span> Bounds check: imm &lt; nsCount, entry valid <span class="step-fault">→ BOUNDS fault</span></span></div>
-            <div class="step"><span class="step-num">4</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read target NS entry (3 words) → FNV seal check <span class="step-fault">→ SEAL fault</span></span></div>
+            <div class="step"><span class="step-num">4</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read target NS entry (4 words) → FNV seal check <span class="step-fault">→ SEAL fault</span></span></div>
             <div class="step"><span class="step-num">5</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read GT word from entry's memory location</span></div>
             <div class="step"><span class="step-num">6</span><span class="step-text"><span class="bus bus-reg">REG</span> Write CR[dst] ← GT + location + limit + seals</span></div>
             <div class="step"><span class="step-num">7</span><span class="step-text"><span class="bus bus-none">---</span> <span class="step-ok">PC++</span></span></div>
@@ -218,7 +218,7 @@
             <div class="step"><span class="step-num">2</span><span class="step-text"><span class="step-gate">mSave(srcGT, targetIdx, crDst)</span> — <span class="bus bus-rd">MEM RD</span> src NS + tgt NS, <span class="bus bus-reg">REG</span> B check</span></div>
             <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-reg">REG</span> CR[src].word0 = c-list GT. Null? <span class="step-fault">→ NULL_CAP fault</span></span></div>
             <div class="step"><span class="step-num">4</span><span class="step-text"><span class="step-gate">mLoad(clistGT, 'S', crSrc)</span> — <span class="bus bus-rd">MEM RD</span> NS entry + <span class="bus bus-wr">MEM WR</span> G-bit</span></div>
-            <div class="step"><span class="step-num">5</span><span class="step-text"><span class="bus bus-wr">MEM WR</span> If target slot invalid → create dynamic NS entry (3 words)</span></div>
+            <div class="step"><span class="step-num">5</span><span class="step-text"><span class="bus bus-wr">MEM WR</span> If target slot invalid → create dynamic NS entry (4 words)</span></div>
             <div class="step"><span class="step-num">6</span><span class="step-text"><span class="bus bus-none">---</span> Register target in nsClistMap (GC reachability — in-memory map)</span></div>
             <div class="step"><span class="step-num">7</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read target slot location → <span class="bus bus-wr">MEM WR</span> Write source GT to memory</span></div>
             <div class="step"><span class="step-num">8</span><span class="step-text"><span class="bus bus-none">---</span> <span class="step-ok">PC++</span></span></div>
@@ -263,7 +263,7 @@
             <h3>4 — CHANGE CRd, CRs, imm</h3>
             <div class="step"><span class="step-num">1</span><span class="step-text"><span class="bus bus-reg">REG</span> CR[src].word0 = source GT. Null? <span class="step-fault">→ NULL_CAP fault</span></span></div>
             <div class="step"><span class="step-num">2</span><span class="step-text"><span class="bus bus-none">---</span> Bounds check: imm &lt; nsCount <span class="step-fault">→ BOUNDS fault</span></span></div>
-            <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read NS entry at index imm (3 words) <span class="step-fault">→ BOUNDS fault if null</span></span></div>
+            <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read NS entry at index imm (4 words) <span class="step-fault">→ BOUNDS fault if null</span></span></div>
             <div class="step"><span class="step-num">4</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read GT word from entry location → <span class="bus bus-reg">REG</span> Write CR[dst]</span></div>
             <div class="step"><span class="step-num">5</span><span class="step-text"><span class="bus bus-none">---</span> <span class="step-ok">PC++</span> <span class="step-detail">(re-aims register without mLoad — no permission check)</span></span></div>
             <div class="sep"></div>
@@ -311,7 +311,7 @@
             <h3>8 — ELOADCALL CRd, CRs, imm (Fused)</h3>
             <div class="step"><span class="step-num">1</span><span class="step-text"><span class="bus bus-reg">REG</span> CR[src].word0 = c-list GT. Null? <span class="step-fault">→ NULL_CAP fault</span></span></div>
             <div class="step"><span class="step-num">2</span><span class="step-text"><span class="step-gate">mLoad(clistGT, crSrc===6 ? null : 'L', crSrc)</span> — <span class="bus bus-rd">MEM RD</span> NS entry + <span class="bus bus-wr">MEM WR</span> G-bit <span class="step-detail">(CR6 skips L)</span></span></div>
-            <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read target NS entry (3 words) → bounds + seal check</span></div>
+            <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read target NS entry (4 words) → bounds + seal check</span></div>
             <div class="step"><span class="step-num">4</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read GT word from entry location → <span class="bus bus-reg">REG</span> Write CR[dst]</span></div>
             <div class="step"><span class="step-num">5</span><span class="step-text"><span class="step-gate">mLoad(loadedGT, 'E', crDst)</span> — <span class="bus bus-rd">MEM RD</span> NS entry + <span class="bus bus-wr">MEM WR</span> G-bit</span></div>
             <div class="step"><span class="step-num">6</span><span class="step-text"><span class="bus bus-reg">REG</span> Push call frame (all CRs, DRs, flags, returnPC)</span></div>
@@ -325,7 +325,7 @@
             <h3>9 — XLOADLAMBDA CRd, CRs, imm (Fused)</h3>
             <div class="step"><span class="step-num">1</span><span class="step-text"><span class="bus bus-reg">REG</span> CR[src].word0 = c-list GT. Null? <span class="step-fault">→ NULL_CAP fault</span></span></div>
             <div class="step"><span class="step-num">2</span><span class="step-text"><span class="step-gate">mLoad(clistGT, crSrc===6 ? null : 'L', crSrc)</span> — <span class="bus bus-rd">MEM RD</span> NS entry + <span class="bus bus-wr">MEM WR</span> G-bit <span class="step-detail">(CR6 skips L)</span></span></div>
-            <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read target NS entry (3 words) → bounds + seal check</span></div>
+            <div class="step"><span class="step-num">3</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read target NS entry (4 words) → bounds + seal check</span></div>
             <div class="step"><span class="step-num">4</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> Read GT word from entry location → <span class="bus bus-reg">REG</span> Write CR[dst]</span></div>
             <div class="step"><span class="step-num">5</span><span class="step-text"><span class="bus bus-reg">REG</span> Check X permission from loaded GT (CR[dst].word0) <span class="step-fault">→ PERMISSION fault</span></span></div>
             <div class="step"><span class="step-num">6</span><span class="step-text"><span class="bus bus-none">---</span> In-scope application (no context save)</span></div>
@@ -458,7 +458,7 @@
         <div class="sep"></div>
         <div class="step"><span class="step-num">S</span><span class="step-text"><span class="bus bus-rd">MEM RD</span> <b>Scan</b> — walk all NS entries, read G-bits (word1 bit 29). <span class="bus bus-reg">REG</span> Check CRs for live references</span></div>
         <div class="step"><span class="step-num">I</span><span class="step-text"><span class="bus bus-none">---</span> <b>Identify</b> — entries where G-bit ≠ polarity are unreachable (dead)</span></div>
-        <div class="step"><span class="step-num">C</span><span class="step-text"><span class="bus bus-wr">MEM WR</span> <b>Clear</b> — zero dead entries (3 words each) + zero backing memory. Increment version in word2. <span class="step-detail">Slot 0 (Boot.NS) is protected — always skipped.</span></span></div>
+        <div class="step"><span class="step-num">C</span><span class="step-text"><span class="bus bus-wr">MEM WR</span> <b>Clear</b> — zero dead entries (4 words each) + zero backing memory. Increment version in word2. <span class="step-detail">Slot 0 (Boot.NS) is protected — always skipped.</span></span></div>
         <div class="step"><span class="step-num">F</span><span class="step-text"><span class="bus bus-none">---</span> <b>Flip</b> — toggle GC polarity (0↔1) for next cycle</span></div>
         <div class="sep"></div>
         <div class="step"><span class="step-text"><span class="step-detail">Bus: N MEM RD (scan all entries) + M MEM WR (clear dead entries + backing). Bidirectional G-bit.</span></span></div>

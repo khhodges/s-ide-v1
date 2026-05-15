@@ -15,7 +15,7 @@
 //           gt_seq from word1_w2.gt_seq must match src_gt.gt_seq
 //   Step 5: Write GT to Destination.Location + index*4 (32-bit words)
 //
-// NS entry stride: slot_id * 12 (×12 bytes = 3 words)
+// NS entry stride: slot_id * 16 (×16 bytes = 4 words; word3 at +12 is reserved)
 //
 // FAULT conditions:
 //   - Destination lacks B flag (FAULT_BIND)
@@ -126,15 +126,16 @@ module ctmm_msave
     assign write_addr = dst_cap_reg.word1_location + {14'h0, index_reg, 2'b00};
 
     // ========================================================================
-    // Namespace entry address and 3-word entry validation
+    // Namespace entry address and 4-word entry validation
     // ========================================================================
-    // NS stride: slot_id * 12  (3 words × 4 bytes = 12 bytes per entry)
+    // NS stride: slot_id * 16  (4 words × 4 bytes = 16 bytes per entry)
+    // word3 at +12 is reserved (always zero; not validated here)
 
     logic [31:0] ns_entry_addr;
     assign ns_entry_addr = cr15_namespace.word1_location +
-                           ({16'h0, src_gt_reg.slot_id} * 32'd12);
+                           ({16'h0, src_gt_reg.slot_id} * 32'd16);
 
-    // NS entry registers (3 words needed for validation):
+    // NS entry registers (3 words read for validation; word3 reserved/skipped):
     //   ns_w0_reg: NS +0  = word0_location (code base address)
     //   ns_w1_reg: NS +4  = word1_w2       (limit_offset[20:0] | gt_seq[6:0] | spare[3:0])
     //   ns_w2_reg: NS +8  = word2_w3       (crc[15:0] | g_bit | spare[14:0])
@@ -246,8 +247,8 @@ module ctmm_msave
     assign sub_fault      = (state == SUB_FAULT);
     assign sub_fault_type = fault_type_reg;
 
-    // Memory read (NS entry validation — 3-word entry, stride ×12)
-    // NS layout: +0=location, +4=word1_w2(limit|gt_seq), +8=word2_w3(crc|gbit)
+    // Memory read (NS entry validation — 4-word entry, stride ×16)
+    // NS layout: +0=location, +4=word1_w2(limit|gt_seq), +8=word2_w3(crc|gbit), +12=reserved
     always_comb begin
         mem_rd_addr = 32'h0;
         mem_rd_en   = 1'b0;

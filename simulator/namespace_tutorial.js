@@ -3,7 +3,7 @@ class NamespaceTutorial {
         this.currentStep = -1;
         this.TOTAL_WORDS    = 65536;
         this.SLOT_SIZE      = 64;   // 64 words per slot — hardware minimum (Task #1205)
-        this.NS_ENTRY_WORDS = 3;
+        this.NS_ENTRY_WORDS = 4;
         // Zone 1 — Bootstrap: NS root (slot 0) + boot thread (slot 1)
         // First abstraction is loaded from Thread.CR0 — set via ⚡ in the Namespace table.
         // Slot 2 is null (freed); Boot.Abstr occupies slot 3 at physical address 0x0140.
@@ -13,8 +13,8 @@ class NamespaceTutorial {
         this.RESIDENT_SLOTS  = 10;
         this.RESIDENT_WORDS  = this.RESIDENT_SLOTS  * this.SLOT_SIZE;   // 640
         // Zone 4 — NS Table: sits at the top, grows downward
-        this.NS_TABLE_BASE   = 0xFD00;
-        this.NS_CW           = this.TOTAL_WORDS - this.NS_TABLE_BASE;   // 768 = 256 entries × 3 words
+        this.NS_TABLE_BASE   = 0xFC00;
+        this.NS_CW           = this.TOTAL_WORDS - this.NS_TABLE_BASE;   // 1024 = 256 entries × 4 words
         this.steps = this._buildSteps();
     }
 
@@ -24,7 +24,7 @@ class NamespaceTutorial {
         const fields = [
             { bits: '[31:27]', name: 'magic',  val: '0x1F', note: 'Trap-on-execute guard',                                  w: 5,  bg: '#2a2a2a', border: '#555',    text: '#888'    },
             { bits: '[26:23]', name: 'n\u22126', val: 'HW',    note: 'lumpSize = 2^(val+6) = full physical address space (n\u22126=10 for 65536 words)', w: 4,  bg: '#3a2000', border: '#c86000', text: '#f09040' },
-            { bits: '[22:10]', name: 'cw',     val: 'HW',    note: 'NS Table word count; NS Table base = 2^cc \u2212 cw (e.g. cw=768 \u2192 256 entries \u00d7 3 words)', w: 13, bg: '#002a40', border: '#2080c0', text: '#60b8f0' },
+            { bits: '[22:10]', name: 'cw',     val: 'HW',    note: 'NS Table word count; NS Table base = 2^cc \u2212 cw (e.g. cw=1024 \u2192 256 entries \u00d7 4 words)', w: 13, bg: '#002a40', border: '#2080c0', text: '#60b8f0' },
             { bits: '[9:8]',   name: 'typ',    val: '10',    note: 'clist-only \u2014 Namespace data lump (same as Thread)',   w: 2,  bg: '#2a2a2a', border: '#555',    text: '#888'    },
             { bits: '[7:0]',   name: 'cc',     val: 'HW',    note: 'Physical address space = 2^cc words (e.g. cc=16 \u2192 65\u202f536 total words); NS Table starts at 2^cc and grows \u2193', w: 8,  bg: '#1a1000', border: '#b07820', text: '#f0c050' },
         ];
@@ -130,7 +130,7 @@ ${this._memMap(null)}
 <tr><td><strong>\u2460 Bootstrap</strong></td><td><code>0x0000</code> \u2191</td><td>IDE-set</td><td>NS root (Slot\u202f0) \u00b7 Boot Thread (Slot\u202f1) \u2014 First Abstraction loaded from Thread.CR0 (set via \u26a1 in NS table)</td></tr>
 <tr><td><strong>\u2461 Resident Lumps</strong></td><td>${hex(this.BOOTSTRAP_WORDS)} \u2191</td><td>IDE-set</td><td>Always-loaded abstractions \u2014 never evicted</td></tr>
 <tr><td><strong>\u2462 Freespace</strong></td><td>${hex(this.BOOTSTRAP_WORDS + this.RESIDENT_WORDS)} \u2195</td><td>IDE-set</td><td>Cache for lazy-loaded lumps \u2014 dynamic, grows from both ends</td></tr>
-<tr><td><strong>\u2463 NS Table</strong></td><td>0xFFFF \u2191</td><td>cw words</td><td>3-word metadata entry per slot \u2014 slot\u202f1 at 0xFFFF, each new slot steps up toward freespace; base = 2^cc\u2212cw</td></tr>
+<tr><td><strong>\u2463 NS Table</strong></td><td>0xFFFF \u2191</td><td>cw words</td><td>4-word metadata entry per slot \u2014 slot\u202f0 at 0xFFFF\u22123, each new slot steps up toward freespace; base = 2^cc\u2212cw</td></tr>
 </table></div>`
             },
             {
@@ -142,7 +142,7 @@ ${this._memMap(null)}
 <tr><th>Field</th><th>Bits</th><th>Width</th><th>NS Slot\u202f0 value</th><th>Meaning</th></tr>
 <tr><td><code style="color:#888">magic</code></td><td>[31:27]</td><td>5&nbsp;b</td><td><code>0x1F</code></td><td>Trap-on-execute guard \u2014 executing word&nbsp;0 always faults</td></tr>
 <tr><td><code style="color:#f09040">n\u22126</code></td><td>[26:23]</td><td>4&nbsp;b</td><td>HW</td><td><code>lumpSize = 2^(n\u22126+6)</code> = full physical address space; for 65536-word NS: n\u22126=10</td></tr>
-<tr><td><code style="color:#60b8f0">cw</code></td><td>[22:10]</td><td>13&nbsp;b</td><td>HW</td><td><strong>NS Table word count</strong> (repurposed from code word count); NS Table base = 2^cc \u2212 cw \u2193; e.g. cw=768 = 256 entries \u00d7 3 words/entry</td></tr>
+<tr><td><code style="color:#60b8f0">cw</code></td><td>[22:10]</td><td>13&nbsp;b</td><td>HW</td><td><strong>NS Table word count</strong> (repurposed from code word count); NS Table base = 2^cc \u2212 cw \u2193; e.g. cw=1024 = 256 entries \u00d7 4 words/entry</td></tr>
 <tr><td><code style="color:#888">typ</code></td><td>[9:8]</td><td>2&nbsp;b</td><td><code>10</code></td><td>clist-only \u2014 same type code as Thread; marks NS as a data lump, not a callable</td></tr>
 <tr><td><code style="color:#f0c050">cc</code></td><td>[7:0]</td><td>8&nbsp;b</td><td>HW</td><td><strong>Physical address space = 2^cc words</strong> (repurposed from c-list count); e.g. cc=16 \u2192 2^16 = 65\u202f536 total words; NS Table starts at 2^cc and grows \u2193</td></tr>
 </table>
@@ -154,11 +154,11 @@ ${this._memMap(null)}
 <tr><td>\u2462 Freespace</td><td>Resident end + 1</td><td>2^cc\u2212cw\u22121</td><td>IDE-set (lazy-load cache)</td></tr>
 <tr><td>\u2463 NS Table</td><td><code>2^cc \u2212 cw</code></td><td><code>2^cc \u2212 1</code></td><td>cw words (IDE-set)</td></tr>
 </table>
-<p>The NS Table base: since the Table ends at <code>2^cc \u2212 1</code> and occupies <code>cw</code> words, its base = <code>(2^cc \u2212 1 + 1) \u2212 cw = 2^cc \u2212 cw</code>. Example: cc=16, cw=768 \u2192 base = 65\u202f536 \u2212 768 = <strong>0xFD00</strong>.</p></div>
+<p>The NS Table base: since the Table ends at <code>2^cc \u2212 1</code> and occupies <code>cw</code> words, its base = <code>(2^cc \u2212 1 + 1) \u2212 cw = 2^cc \u2212 cw</code>. Example: cc=16, cw=1024 \u2192 base = 65\u202f536 \u2212 1024 = <strong>0xFC00</strong>.</p></div>
 <div class="sr-key-concept"><div class="sr-concept-title">Encoding Formula</div>
 <p><code>(0x1F &lt;&lt; 27) | (n_minus_6 &lt;&lt; 23) | (cw &lt;&lt; 10) | (0b10 &lt;&lt; 8) | cc</code></p>
-<p>Example \u2014 65536-word namespace (cc=16, cw=768 NS Table words, n\u22126=10):</p>
-<p><code style="color:#f0c050;font-size:1rem;">0xFD0C_0210</code>&nbsp;&nbsp;(magic=0x1F, n\u22126=10, cw=768, typ=10, cc=16)</p></div>
+<p>Example \u2014 65536-word namespace (cc=16, cw=1024 NS Table words, n\u22126=10):</p>
+<p><code style="color:#f0c050;font-size:1rem;">0xFD10_0210</code>&nbsp;&nbsp;(magic=0x1F, n\u22126=10, cw=1024, typ=10, cc=16)</p></div>
 <div class="sr-key-concept"><div class="sr-concept-title">Three Lump Types \u2014 Same Header, Different Field Semantics</div>
 <p>All three lump types share the same 32-bit header format. The hardware uses <code>typ</code> to decide which interpretation applies:</p>
 <table class="sr-table" style="margin-top:6px;"><tr><th>Field</th><th>Programmed (typ=00)</th><th>Thread (typ=10)</th><th>Namespace (typ=10)</th></tr>
@@ -190,24 +190,25 @@ ${this._memMap(null)}
 <table class="sr-table"><tr><th>NS Slot 0 field</th><th>Value</th><th>Meaning</th></tr>
 <tr><td>word0_location</td><td>${hex(0)}</td><td>Physical memory base \u2014 the namespace starts at word\u202f0</td></tr>
 <tr><td>word1 limit</td><td>${this.TOTAL_WORDS - 1} (= ${hex(this.TOTAL_WORDS - 1)})</td><td>Total physical memory size \u2212\u202f1 \u2014 defines the full namespace extent</td></tr>
-<tr><td>word1 clistCount</td><td><em>N</em> (count of active NS entries)</td><td>NS Table size \u2014 how many 3-word entries exist</td></tr>
+<tr><td>word1 clistCount</td><td><em>N</em> (count of active NS entries)</td><td>NS Table size \u2014 how many 4-word entries exist</td></tr>
 <tr><td>word2 seal</td><td>CRC-16(0, ${this.TOTAL_WORDS - 1})</td><td>Hardware-verified at every mLoad of CR15</td></tr>
 </table>
 <p>At boot (B:01) the hardware loads Slot\u202f0 into <strong>CR15</strong> (the Namespace register). From that point on, <code>CR15.limit\u202f=\u202f${this.TOTAL_WORDS - 1}</code> tells every mLoad how large the physical namespace is, and <code>CR15.clistCount\u202f=\u202fN</code> tells the hardware how many NS entries are valid.</p>
 <div class="sr-key-concept"><div class="sr-concept-title">clistCount IS the NS Table Size</div>
-<p>The <code>clistCount</code> metadata field in Slot\u202f0 is repurposed as the NS Table entry count. The NS Table therefore occupies <code>N\u202f\u00d7\u202f${this.NS_ENTRY_WORDS}\u202fwords</code> starting at ${NS}. Every upload that creates a new slot increments this count; GC that frees a slot decrements it.</p></div>`
+<p>The <code>clistCount</code> metadata field in Slot\u202f0 is repurposed as the NS Table entry count. The NS Table therefore occupies <code>N\u202f\u00d7\u202f${this.NS_ENTRY_WORDS}\u202fwords</code> (${this.NS_ENTRY_WORDS} words per entry: W0\u202flocation, W1\u202fmetadata, W2\u202fseal, W3\u202freserved) starting at ${NS}. Every upload that creates a new slot increments this count; GC that frees a slot decrements it.</p></div>`
             },
             {
                 title: '\u2461 NS Table \u2014 One Entry per Slot',
                 type: 'nstable',
                 content: `${this._memMap('nstable')}
-<p>The NS Table occupies the top of physical memory from ${NS} to ${END}. It holds one <strong>3-word entry</strong> for every namespace slot. Entry\u202f<em>i</em> starts at address <code>${NS}\u202f+\u202fi\u202f\u00d7\u202f${this.NS_ENTRY_WORDS}</code>.</p>
+<p>The NS Table occupies the top of physical memory from ${NS} to ${END}. It holds one <strong>4-word entry</strong> for every namespace slot. Entry\u202f<em>i</em> starts at address <code>${NS}\u202f+\u202fi\u202f\u00d7\u202f${this.NS_ENTRY_WORDS}</code>.</p>
 <table class="sr-table"><tr><th>Offset within entry</th><th>Name</th><th>Contents</th></tr>
 <tr><td>+0</td><td>word0</td><td>Lump base address (<code>word0_location</code>)</td></tr>
 <tr><td>+1</td><td>word1</td><td>Packed metadata: limit, clistCount, flags (see next slide)</td></tr>
 <tr><td>+2</td><td>word2</td><td>GT Seq (gt_seq) + CRC-16 seal</td></tr>
+<tr><td>+3</td><td>word3</td><td><em>Reserved</em> \u2014 always zero; future Navana per-slot GT (must not be executed)</td></tr>
 </table>
-<p>The hardware reads these three words on every <strong>mLoad</strong>, every <strong>CALL</strong>, and every <strong>RETURN</strong>. The seal is re-verified on each use to detect stale or forged capabilities.</p>
+<p>The hardware reads these four words on every <strong>mLoad</strong>, every <strong>CALL</strong>, and every <strong>RETURN</strong>. The seal in word2 is re-verified on each use to detect stale or forged capabilities. Word3 is reserved and ignored by current hardware.</p>
 <div class="sr-key-concept"><div class="sr-concept-title">NS Table Capacity</div>
 <p>Up to <strong>256 entries</strong> fit in the ${hex(this.NS_TABLE_BASE)}\u202f\u2013\u202f${END} region (${this.TOTAL_WORDS - this.NS_TABLE_BASE} words \u00f7 ${this.NS_ENTRY_WORDS} words/entry). The first <em>N</em> entries (where <em>N</em> = Slot\u202f0 <code>clistCount</code>) are live. Entries above <em>N</em> are unallocated. GC may compact and reduce <em>N</em>.</p></div>`
             },
@@ -266,7 +267,7 @@ ${this._memMap(null)}
 <div class="sr-key-concept"><div class="sr-concept-title">Step 1 \u2014 LOAD CR11, Constants (NS[18] lookup + E-GT into CR11)</div>
 <p><code>LOAD CR11, Constants</code> triggers the <strong>mLoad pipeline</strong> against NS entry&nbsp;18:</p>
 <ol style="margin:4px 0 0 0;padding-left:1.2em;line-height:1.9;">
-<li>Hardware reads the 3-word NS entry at <code>${hex(this.NS_TABLE_BASE)}&nbsp;+&nbsp;18&nbsp;\u00d7&nbsp;3</code>.</li>
+<li>Hardware reads the 4-word NS entry at <code>${hex(this.NS_TABLE_BASE)}&nbsp;+&nbsp;18&nbsp;\u00d7&nbsp;4</code>.</li>
 <li>word2 <strong>CRC-16 seal</strong> is recomputed over <code>(word0_location, limit)</code> and compared to the stored seal &mdash; mismatch \u2192 <code>SEAL_MISMATCH</code> fault.</li>
 <li>word2 <strong>gt_seq</strong> is compared to the issuing sequence counter &mdash; mismatch \u2192 <code>VERSION</code> fault (capability revoked).</li>
 <li>The <strong>E (Execute)</strong> permission bit is checked; Constants holds only E. No R/W bits &mdash; it is a pure callable.</li>
@@ -347,7 +348,7 @@ ELOADCALL CR8, Constants, Phi   <span style="color:#666">; DR1 &larr; &phi; (gol
             html += '<div class="sr-step-container sr-type-intro">';
             html += '<div class="sr-step-title">Namespace Abstraction</div>';
             html += '<div class="sr-step-content">';
-            html += `<p>This tutorial covers the Church Machine\u2019s physical memory structure. Namespace Slot\u202f0 is the root entry: it defines the full physical address space (${this._hex(0)}\u202f\u2013\u202f${this._hex(this.TOTAL_WORDS - 1)}) and encodes the NS Table size in its metadata. The NS Table lives at the top of memory (${this._hex(this.NS_TABLE_BASE)}\u202f\u2013\u202f${this._hex(this.TOTAL_WORDS - 1)}), one 3-word entry per slot.</p>`;
+            html += `<p>This tutorial covers the Church Machine\u2019s physical memory structure. Namespace Slot\u202f0 is the root entry: it defines the full physical address space (${this._hex(0)}\u202f\u2013\u202f${this._hex(this.TOTAL_WORDS - 1)}) and encodes the NS Table size in its metadata. The NS Table lives at the top of memory (${this._hex(this.NS_TABLE_BASE)}\u202f\u2013\u202f${this._hex(this.TOTAL_WORDS - 1)}), one 4-word entry per slot (W0\u202flocation, W1\u202fmetadata, W2\u202fseal, W3\u202freserved).</p>`;
             html += '<p>Click <strong>Next</strong> to begin.</p>';
             html += '</div></div>';
         }

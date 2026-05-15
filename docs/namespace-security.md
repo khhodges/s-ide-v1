@@ -48,7 +48,7 @@ Word 2 holds the full 32-bit `integrity32` check value, computed over Word 0 and
 |---------|--------------|-------------|
 | [31:0]  | `integrity32` | 32-bit parallel integrity check over Word 0 and Word 1 (g_bit cleared) |
 
-**Note on B and F flags**: The B (Bind) flag lives in **bit [31] of GT Word 0** itself (`b_flag` in GT_LAYOUT) — it is a property of the token, not the NS entry. The F (Far/Foreign) concept is represented by the `gt_type` field in the GT (`gt_type=10` for Outform). Neither B nor F has a dedicated field in the 3-word NS entry.
+**Note on B and F flags**: The B (Bind) flag lives in **bit [31] of GT Word 0** itself (`b_flag` in GT_LAYOUT) — it is a property of the token, not the NS entry. The F (Far/Foreign) concept is represented by the `gt_type` field in the GT (`gt_type=10` for Outform). Neither B nor F has a dedicated field in the 4-word NS entry (word3 is reserved).
 
 ---
 

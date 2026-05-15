@@ -2412,7 +2412,7 @@ function handleBootImageUpload(input) {
 function updateNamespace() {
     const container = document.getElementById('namespaceTable');
     if (!container) return;
-    let html = '<div class="ns-layout-header">NS_ENTRY_LAYOUT: 3 words per entry (96 bits) \u2014 click a row to inspect memory</div>';
+    let html = '<div class="ns-layout-header">NS_ENTRY_LAYOUT: 4 words per entry (128 bits; word3 reserved) \u2014 click a row to inspect memory</div>';
     html += '<table class="ns-table"><thead><tr>';
     html += '<th>Idx</th><th class="ns-label-col">Label</th>';
     html += '<th>W0: Location</th>';

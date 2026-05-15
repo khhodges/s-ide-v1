@@ -437,7 +437,7 @@ by CHANGE, shared across all CALLs in the thread's lifetime).
 If CALL CR_s   (CR_s holds the E-GT for the target lump), if RETURN (E-GT found from stack frame), otherwise if CHANGE (E-GT is restored from CR6 of new thread)
   1. Validate E-GT CRC — FAULT if mismatch
   2. Read object_id and gt_seq from E-GT Word 0
-  3. Fetch NS[object_id] — 3 words: base, gt_seq_ns, limit_offset
+  3. Fetch NS[object_id] — 4 words: base, gt_seq_ns, limit_offset, reserved
      Read Mem[base] → lump header word:
        n_minus_6 = Mem[base][26:23]   (bits 26..23)
        cw        = Mem[base][22:10]   (bits 22..10)
@@ -1169,7 +1169,7 @@ issue GTs that reference addresses beyond the NS LUMP's limit.
 ┌─────────────────────────────────────────────────────────┐  ← base
 │  Word 0     NS LUMP header (typ=10, cw=0)               │
 │  Words 1..NS_TABLE_START-1  Freespace (all-zero)        │
-│  Words NS_TABLE_START..NS_TABLE_END  NS Table           │  ← N × 3 words (Binary Data)
+│  Words NS_TABLE_START..NS_TABLE_END  NS Table           │  ← N × 4 words (Binary Data)
 │  Words NS_TABLE_END+1..lumpSize-1  Trailing zeros       │
 └─────────────────────────────────────────────────────────┘  ← base + lumpSize - 1
 ```
@@ -1179,7 +1179,7 @@ issue GTs that reference addresses beyond the NS LUMP's limit.
 | Region | Start | End | Size | Contents |
 |--------|-------|-----|------|----------|
 | NS LUMP freespace | 0x0001 | 0xFCFF | variable | All zero — Mint verified by CRC scan per slot |
-| NS Table | 0xFD00 | 0xFD83 | 44 × 3 = 132 words | 44 NS slots × 3 words each (Binary Data) |
+| NS Table | 0xFC00 | 0xFCFF | 64 × 4 = 256 words | 64 NS slots × 4 words each (Binary Data) |
 
 The NS Table lives at a **hardware-known fixed offset** within Boot.NS.
 On Tang Nano 20 K, `NS_TABLE_BASE = 0xFD00` is wired in the decoder;
@@ -1189,7 +1189,7 @@ on Efinix Ti60 F225, the base is parameterised but fixed at synthesis time.
 
 ## Namespace Table — Entry Format
 
-The NS Table is a flat array of **N entries × 3 words**. N is the total
+The NS Table is a flat array of **N entries × 4 words** (word3 reserved/zero). N is the total
 number of object slots in the namespace. Only the object owner holds
 GT Word 0 (the per-holder credential) in their c-list — GT Word 0 is
 never stored in the NS Table.
@@ -1519,7 +1519,7 @@ already owns.
 | **Words 1..cw** | [CLOOMC](https://sipantic.blogspot.com/2025/03/xx.html) code (dispatcher + methods) | Absent — `cw = 0` | Boot / init microcode and SWITCH |
 | **Freespace zone** | Compile-time fixed · all-zero · immutable per release | Dynamic 131 words — Stack ↓ and Heap ↑ collide | Between init code and NS Table · all-zero |
 | **C-list zone** | Last `cc` words · list E-GTs · compiler-set | Last 12 words · CR0–CR11 + LIFO Stack | BINARY DATA |
-| **Unique body** | Code and C-List | 5 zones: Header · Caps · Stack · Free · Heap · DR | NS Table (N × 3-word entries: Inform GT) |
+| **Unique body** | Code and C-List | 5 zones: Header · Caps · Stack · Free · Heap · DR | NS Table (N × 4-word entries: Inform GT + reserved) |
 | **Physical scope · 2^n frame size** | One lump region | One 256/512/1024-word thread frames | Entire application address space |
 | **NS Table** | None — uses parent NS | None — uses parent NS | IS the NS Table |
 | **Outform support** | No — all deps must be Live at call time | No | Yes — Absent event → Locator fetch |

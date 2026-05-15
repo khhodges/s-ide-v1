@@ -359,7 +359,7 @@
         var boardProfile = BOARD_PROFILES[board] || BOARD_PROFILES['wukong-xc7a100t'];
         var BOOT_ABSTR_SZ    = 64;
         var FREE_SLOT_SZ     = 64;
-        var NS_TABLE_RESERVE = 0x300;
+        var NS_TABLE_RESERVE = 0x400;
         var sum    = (s1.namespaceLumpWords || 0) + (s1.threadLumpWords || 0) + FREE_SLOT_SZ + BOOT_ABSTR_SZ;
         var total  = s1.totalNamespaceWords || 0;
         var usable = total - NS_TABLE_RESERVE;
@@ -379,7 +379,7 @@
         var boardTotalWords = boardProfile.totalRamWords;
         var BOOT_ABSTR_SZ    = 64;
         var FREE_SLOT_SZ     = 64;  // free/null slot 2 — keep in sync with server FREE_SLOT_SIZE
-        var NS_TABLE_RESERVE = 0x300;
+        var NS_TABLE_RESERVE = 0x400;
         var sum    = (s1.namespaceLumpWords || 0) + (s1.threadLumpWords || 0) + FREE_SLOT_SZ + BOOT_ABSTR_SZ;
         var total  = s1.totalNamespaceWords || 0;
         var usable = total - NS_TABLE_RESERVE;

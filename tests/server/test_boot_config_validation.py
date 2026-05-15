@@ -104,10 +104,10 @@ def patch_catalog_and_lumps_dir(tmp_path):
 TANG_BOARD = "tang-nano-20k"
 TANG_RAM = HARDWARE_PROFILES[TANG_BOARD]["totalRamWords"]  # 16 384
 
-# Set totalNamespaceWords large enough that usable_end (= total - 0x300) > TANG_RAM,
+# Set totalNamespaceWords large enough that usable_end (= total - 0x400) > TANG_RAM,
 # so the board-RAM check is always the binding constraint in these tests.
-_NS_TABLE_RESERVE = 0x300  # 768 words
-TANG_TOTAL_NS = TANG_RAM + _NS_TABLE_RESERVE + 512  # 17 664
+_NS_TABLE_RESERVE = 0x400  # 1024 words (64 entries × 4 words)
+TANG_TOTAL_NS = TANG_RAM + _NS_TABLE_RESERVE + 512  # 17 920
 
 
 class TestTangNano20kBoardRamCeiling:
@@ -161,7 +161,7 @@ class TestTangNano20kBoardRamCeiling:
 WUKONG_BOARD = "wukong-xc7a100t"
 WUKONG_RAM = HARDWARE_PROFILES[WUKONG_BOARD]["totalRamWords"]  # 131 072
 
-WUKONG_TOTAL_NS = WUKONG_RAM + _NS_TABLE_RESERVE + 512  # 132 352
+WUKONG_TOTAL_NS = WUKONG_RAM + _NS_TABLE_RESERVE + 512  # 132 608
 
 
 class TestWukongXC7A100TBoardRamCeiling:
@@ -305,7 +305,7 @@ class TestValidateStep2General:
 # ---------------------------------------------------------------------------
 # Usable namespace region check (Task #1188)
 #
-# usable_end = totalNamespaceWords - NS_TABLE_RESERVE  (NS_TABLE_RESERVE = 0x300 = 768)
+# usable_end = totalNamespaceWords - NS_TABLE_RESERVE  (NS_TABLE_RESERVE = 0x400 = 1024)
 # A resident lump fails when:  phys + lump_size > usable_end
 #
 # Two distinct totalNamespaceWords values are exercised so the ceiling is
@@ -317,12 +317,12 @@ class TestValidateStep2General:
 
 # Profile A — small namespace window
 # usable_end_A = FOUNDATION_END + LUMP_SIZE + 100  = 448 + 64 + 100 = 612
-_SMALL_NS_TOTAL = FOUNDATION_END + LUMP_SIZE + 100 + _NS_TABLE_RESERVE   # 1380
+_SMALL_NS_TOTAL = FOUNDATION_END + LUMP_SIZE + 100 + _NS_TABLE_RESERVE   # 1636
 _USABLE_END_A   = _SMALL_NS_TOTAL - _NS_TABLE_RESERVE                    # 612
 
 # Profile B — medium namespace window (distinct totalNamespaceWords)
 # usable_end_B = FOUNDATION_END + LUMP_SIZE + 500  = 448 + 64 + 500 = 1012
-_MEDIUM_NS_TOTAL = FOUNDATION_END + LUMP_SIZE + 500 + _NS_TABLE_RESERVE  # 1780
+_MEDIUM_NS_TOTAL = FOUNDATION_END + LUMP_SIZE + 500 + _NS_TABLE_RESERVE  # 2036
 _USABLE_END_B    = _MEDIUM_NS_TOTAL - _NS_TABLE_RESERVE                  # 1012
 
 

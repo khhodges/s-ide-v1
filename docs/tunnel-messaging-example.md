@@ -182,7 +182,7 @@ CALL(Thread.Mint(R, Abstraction, 256))
 SAVE CR0, CR6, 7
 ```
 
-Each Thread.Mint internally validates domain purity (RWX or LSE, never both), checks the thread's memory budget, and delegates to Namespace.Mint which allocates the 3-word descriptor (Location, Limit, Seals), computes the MAC, and returns the GT in CR0.
+Each Thread.Mint internally validates domain purity (RWX or LSE, never both), checks the thread's memory budget, and delegates to Namespace.Mint which allocates the 4-word NS entry (Location, Limit, Seals, Reserved), computes the MAC, and returns the GT in CR0.
 
 ### "me" Namespace (Church Machine)
 
@@ -197,7 +197,7 @@ Each Thread.Mint internally validates domain purity (RWX or LSE, never both), ch
 | 6 | MessageBuffer | Inform | R,W | — | Thread.Mint | Local buffer for outgoing message payload |
 | 7 | ABI_Mum | Inform | R | B | FamilyRegistry | ABI descriptor for mymother's architecture |
 
-**Namespace entry format** (3 words per entry):
+**Namespace entry format** (4 words per entry; word3 reserved/zero):
 
 ```
 Entry[4] (TunnelKey_Mum):

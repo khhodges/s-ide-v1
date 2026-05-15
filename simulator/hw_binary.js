@@ -9,25 +9,26 @@ const HW_BOOT_PROGRAM = [
     0x17000000, // PC=7  CALL CR0 (Salvation — does not RETURN, transitions to Navana)
 ];
 
+// HW_NAMESPACE: 4-word entries (loc, word1, word2, word3_reserved=0)
 const HW_NAMESPACE = [
-    0x0000FD00, 0x84000008, 0x00000000, // Slot 0: Boot.NS (NS_TABLE_BASE=0xFD00) type=01 Inform
-    0x00000100, 0x84000008, 0x00000000, // Slot 1: Boot.Thread type=01 Inform
-    0x00000200, 0x841000FF, 0x00000000, // Slot 2: Boot.Abstr type=01 Inform, clistCount=8, limit=0xFF
-    0x00000000, 0x00000000, 0x00000000, // Slot 3: (empty)
-    0x00000400, 0x84000008, 0x00000000, // Slot 4: Salvation type=01 Inform
-    0x00000500, 0x84000008, 0x00000000, // Slot 5: Navana type=01 Inform
-    0x00000600, 0x84000008, 0x00000000, // Slot 6: Mint type=01 Inform
-    0x00000700, 0x84000008, 0x00000000, // Slot 7: Memory type=01 Inform
-    0x00000800, 0x84000008, 0x00000000, // Slot 8: Scheduler type=01 Inform
-    0x00000900, 0x84000008, 0x00000000, // Slot 9: Stack type=01 Inform
-    0x00000A00, 0x84000008, 0x00000000, // Slot 10: DijkstraFlag type=01 Inform
-    0x00000B00, 0x84000008, 0x00000000, // Slot 11: UART type=01 Inform
-    0x00000C00, 0x84000008, 0x00000000, // Slot 12: LED type=01 Inform
-    0x00000D00, 0x84000008, 0x00000000, // Slot 13: Button type=01 Inform
-    0x00000E00, 0x84000008, 0x00000000, // Slot 14: Timer type=01 Inform
-    0x00000F00, 0x84000008, 0x00000000, // Slot 15: Display type=01 Inform
-    0x00001000, 0x84000008, 0x00000000, // Slot 16: SlideRule type=01 Inform
-    0x00001100, 0x84000008, 0x00000000, // Slot 17: Abacus type=01 Inform
+    0x0000FC00, 0x84000008, 0x00000000, 0x00000000, // Slot 0: Boot.NS (NS_TABLE_BASE=0xFC00) type=01 Inform
+    0x00000100, 0x84000008, 0x00000000, 0x00000000, // Slot 1: Boot.Thread type=01 Inform
+    0x00000200, 0x841000FF, 0x00000000, 0x00000000, // Slot 2: Boot.Abstr type=01 Inform, clistCount=8, limit=0xFF
+    0x00000000, 0x00000000, 0x00000000, 0x00000000, // Slot 3: (empty)
+    0x00000400, 0x84000008, 0x00000000, 0x00000000, // Slot 4: Salvation type=01 Inform
+    0x00000500, 0x84000008, 0x00000000, 0x00000000, // Slot 5: Navana type=01 Inform
+    0x00000600, 0x84000008, 0x00000000, 0x00000000, // Slot 6: Mint type=01 Inform
+    0x00000700, 0x84000008, 0x00000000, 0x00000000, // Slot 7: Memory type=01 Inform
+    0x00000800, 0x84000008, 0x00000000, 0x00000000, // Slot 8: Scheduler type=01 Inform
+    0x00000900, 0x84000008, 0x00000000, 0x00000000, // Slot 9: Stack type=01 Inform
+    0x00000A00, 0x84000008, 0x00000000, 0x00000000, // Slot 10: DijkstraFlag type=01 Inform
+    0x00000B00, 0x84000008, 0x00000000, 0x00000000, // Slot 11: UART type=01 Inform
+    0x00000C00, 0x84000008, 0x00000000, 0x00000000, // Slot 12: LED type=01 Inform
+    0x00000D00, 0x84000008, 0x00000000, 0x00000000, // Slot 13: Button type=01 Inform
+    0x00000E00, 0x84000008, 0x00000000, 0x00000000, // Slot 14: Timer type=01 Inform
+    0x00000F00, 0x84000008, 0x00000000, 0x00000000, // Slot 15: Display type=01 Inform
+    0x00001000, 0x84000008, 0x00000000, 0x00000000, // Slot 16: SlideRule type=01 Inform
+    0x00001100, 0x84000008, 0x00000000, 0x00000000, // Slot 17: Abacus type=01 Inform
 ];
 
 const HW_CLIST = [

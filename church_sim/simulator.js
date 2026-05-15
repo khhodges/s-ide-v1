@@ -1,8 +1,8 @@
 class ChurchSimulator {
     constructor() {
         this._listeners = {};
-        this.NS_TABLE_BASE = 0xFD00;
-        this.NS_ENTRY_WORDS = 3;
+        this.NS_TABLE_BASE = 0xFC00;  // 65536 − 1024 (256 entries × 4 words)
+        this.NS_ENTRY_WORDS = 4;
         this.MAX_NS_ENTRIES = 256;
         this.SLOT_SIZE = 0x100;
         this.reset();
@@ -1732,10 +1732,11 @@ class ChurchSimulator {
         this.nsCount = 0;
         this.nsClistMap = {};
 
-        const nsEntryCount = hwNamespace.length / 3;
+        // hwNamespace uses 4-word entries (loc, word1, word2, word3_reserved=0).
+        const nsEntryCount = hwNamespace.length / 4;
         for (let i = 0; i < nsEntryCount; i++) {
-            const loc  = hwNamespace[i * 3 + 0];
-            const w1   = hwNamespace[i * 3 + 1];
+            const loc  = hwNamespace[i * 4 + 0];
+            const w1   = hwNamespace[i * 4 + 1];
             const parsed1 = this.parseNSWord1(w1);
             const base = this.NS_TABLE_BASE + i * this.NS_ENTRY_WORDS;
             this.memory[base + 0] = loc >>> 0;
@@ -1860,18 +1861,19 @@ class ChurchSimulator {
         this.nsCount = 0;
         this.nsClistMap = {};
 
-        const NS_WORDS = 192;
+        const NS_WORDS = 256;  // 64 entries × 4 words
         const CLIST_WORDS = 64;
-        const nsEntryCount = Math.floor(Math.min(nsWords.length, NS_WORDS) / 3);
+        const nsEntryCount = Math.floor(Math.min(nsWords.length, NS_WORDS) / 4);
 
         for (let i = 0; i < nsEntryCount; i++) {
-            const loc = nsWords[i * 3 + 0] >>> 0;
-            const w1  = nsWords[i * 3 + 1] >>> 0;
-            const w2  = nsWords[i * 3 + 2] >>> 0;
+            const loc = nsWords[i * 4 + 0] >>> 0;
+            const w1  = nsWords[i * 4 + 1] >>> 0;
+            const w2  = nsWords[i * 4 + 2] >>> 0;
             const base = this.NS_TABLE_BASE + i * this.NS_ENTRY_WORDS;
             this.memory[base + 0] = loc;
             this.memory[base + 1] = w1;
             this.memory[base + 2] = w2;
+            // base + 3 (word3_reserved) stays zero
             this.nsLabels[i] = `Slot ${i}`;
             this.nsCount = i + 1;
         }
@@ -1956,16 +1958,17 @@ class ChurchSimulator {
     }
 
     exportHardwareImage() {
-        const NS_WORDS = 192;
+        const NS_WORDS = 256;  // 64 entries × 4 words
         const CLIST_WORDS = 64;
 
         const nsWords = new Uint32Array(NS_WORDS);
         const nsEntries = Math.min(this.nsCount || 16, 64);
         for (let i = 0; i < nsEntries; i++) {
             const base = this.NS_TABLE_BASE + i * this.NS_ENTRY_WORDS;
-            nsWords[i * 3 + 0] = this.memory[base + 0] >>> 0;
-            nsWords[i * 3 + 1] = this.memory[base + 1] >>> 0;
-            nsWords[i * 3 + 2] = this.memory[base + 2] >>> 0;
+            nsWords[i * 4 + 0] = this.memory[base + 0] >>> 0;
+            nsWords[i * 4 + 1] = this.memory[base + 1] >>> 0;
+            nsWords[i * 4 + 2] = this.memory[base + 2] >>> 0;
+            nsWords[i * 4 + 3] = 0;  // word3_reserved
         }
 
         const clistWords = new Uint32Array(CLIST_WORDS);

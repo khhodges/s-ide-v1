@@ -352,7 +352,7 @@ DEFAULT_BOOT_CONFIG = {
 }
 
 # Hard ceiling on how many entries fit in the NS table (matches simulator
-# NS_TABLE_RESERVE / NS_ENTRY_WORDS = 0x300 / 3 = 256).
+# NS_TABLE_RESERVE / NS_ENTRY_WORDS = 0x400 / 4 = 256).
 MAX_NS_ENTRIES = 256
 # How many named NS entries the simulator's default abstraction catalog
 # writes during _initNamespaceTable() (Boot.NS, Boot.Thread, Boot.Abstr,
@@ -424,7 +424,7 @@ def _validate_step2(step2, step1, target_board):
     if not isinstance(lumps, list):
         return "step2.lumps must be a list"
     catalog = {e["nsSlot"]: e for e in _load_lump_catalog()}
-    NS_TABLE_RESERVE = 0x300  # keep in sync with simulator.js
+    NS_TABLE_RESERVE = 0x400  # keep in sync with simulator.js (64 entries × 4 words)
     total = step1["totalNamespaceWords"]
     # Determine actual Boot.Abstr size from saved 00000300.lump (Task #568).
     # A resident step-2 lump must not overlap whichever Boot.Abstr will actually be placed.
@@ -566,10 +566,10 @@ def _validate_step1(target_board, step1):
         return (f"Sum of foundational lump sizes ({foundation_sum}) exceeds "
                 f"totalNamespaceWords ({total})")
     # The simulator reserves the top NS_TABLE_RESERVE words of the namespace
-    # window for the namespace table itself (256 entries × 3 words = 768).
+    # window for the namespace table itself (256 entries × 4 words = 1024).
     # Foundational lumps grow upward from address 0 and must not collide
     # with the NS table.
-    NS_TABLE_RESERVE = 0x300  # keep in sync with simulator.js
+    NS_TABLE_RESERVE = 0x400  # keep in sync with simulator.js (64 entries × 4 words)
     usable = total - NS_TABLE_RESERVE
     if foundation_sum > usable:
         return (f"Sum of foundational lump sizes ({foundation_sum}) exceeds the "

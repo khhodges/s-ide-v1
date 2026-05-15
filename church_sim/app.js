@@ -739,7 +739,7 @@ function renderMemoryDump(location, limit) {
 function updateNamespace() {
     const container = document.getElementById('namespaceTable');
     if (!container) return;
-    let html = '<div class="ns-layout-header">NS_ENTRY_LAYOUT: 3 words per entry (96 bits) — click a row to inspect memory</div>';
+    let html = '<div class="ns-layout-header">NS_ENTRY_LAYOUT: 4 words per entry (128 bits) — click a row to inspect memory</div>';
     html += '<table class="ns-table"><thead><tr>';
     html += '<th>Idx</th><th class="ns-label-col">Label</th>';
     html += '<th>Type</th><th>Location</th>';
