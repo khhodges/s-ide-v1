@@ -23,11 +23,13 @@ complete and authoritative self-description.
 
 ## Lump Size Rule
 
-Lump size is always a power of 2, minimum 64 words, maximum 16 384 words:
+Lump size is always a power of 2, minimum 64 words, maximum 8 192 words (Release 1):
 
 ```
-lumpSize = 2^n   where 6 ≤ n ≤ 14
+lumpSize = 2^n   where 6 ≤ n ≤ 13 (Release 1)
 ```
+
+n = 14 (16 384 words) is architecturally valid but reserved for future releases.
 
 The size exponent `n` is encoded in the Header Word. The hardware derives
 the boundary of every internal zone — code section, freespace, capability
@@ -53,7 +55,7 @@ hardware traps rather than silently corrupting state.
 | Field | Bits  | Meaning |
 |-------|-------|---------|
 | magic | 31:27 | Always `11111` (0x1F). Causes a hardware trap if executed. |
-| n-6   | 26:23 | Size exponent. `lumpSize = 2^(val+6)`. Valid range 0–8 → 64–16 384 words. |
+| n-6   | 26:23 | Size exponent. `lumpSize = 2^(val+6)`. Valid range 0–7 → 64–8 192 words (Release 1; n = 14 architecturally reserved). |
 | cw    | 22:10 | Code Word count (0–8191). Words 1..cw are executable instructions. |
 | typ   | 9:8   | Object type — identifies which Lump type this is (see below). |
 | cc    | 7:0   | Capability-list slot count (0–255), or repurposed per Lump type. |
@@ -227,12 +229,23 @@ address space and its NS Table covers every object in the machine. It is
 the only Lump not issued by Mint — it is written directly into the FPGA
 block RAM at synthesis time.
 
-**Example header values:**
+**Example header values (Release 1 user namespaces):**
+
+| Lump   | n  | cw | cc | Header word   |
+|--------|----|----|----|----|
+| App.NS | 10 |  0 |  4 | `0xFA00_0004` |
+
+**System bootstrap namespace (pre-synthesised — not subject to the Release 1 user lump size limit):**
 
 | Lump    | n  | cw | cc | Header word   |
-|---------|----|----|----|---------------|
+|---------|----|----|----|----|
 | Boot.NS | 14 |  0 |  3 | `0xFF00_0003` |
-| App.NS  | 10 |  0 |  4 | `0xFA00_0004` |
+
+Boot.NS is the sole exception: it is written directly into FPGA block RAM at
+synthesis time and spans the full 16 384-word physical address space. It is
+not created by Mint and never passes through the Release 1 size gate. n = 14
+remains architecturally reserved for this class of system bootstrap object
+and for future user lump releases.
 
 ---
 
@@ -317,7 +330,7 @@ be used. Mint validates in strict order:
 ```
 Step 1  Read Mem[base] — the header word.
 Step 2  magic[31:27] == 0x1F — reject if not.
-Step 3  n-6[26:23] <= 8 — reject if lump would exceed 16 384 words.
+Step 3  n-6[26:23] <= 7 — reject if lump would exceed 8 192 words (Release 1 limit; n = 14 reserved).
 Step 4  lumpSize = 2^(n-6+6).
 Step 5  cw[22:10] <= lumpSize - cc - 2 — reject if header is self-contradictory.
 Step 6  cc[7:0] <= lumpSize - 2 — reject if c-list overflows lump.

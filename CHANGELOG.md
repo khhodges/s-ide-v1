@@ -2,6 +2,25 @@
 
 ---
 
+## Docs 1.2 — 2026-05-15
+
+### Documentation corrections (audit items H-2 and M-1)
+
+- **H-2 — Max lump size** (`docs/Lump-Architecture.md`): corrected Release 1
+  maximum from n ≤ 14 (16 384 words) to **n ≤ 13 (8 192 words)**, matching
+  `MAX_EXP = 13` in `simulator/app-lump-editor.js`. n = 14 is now explicitly
+  noted as architecturally reserved. Mint validation gate updated accordingly
+  (`n-6 ≤ 7`). Boot.NS (n = 14, pre-synthesised system lump) separated into
+  its own table as a system-level exception not subject to the user size gate.
+- **M-1 — mLoad step count** (`replit.md`, `docs/mload.md`): removed the
+  "8-step" fixed step count from `replit.md`; replaced with a functional
+  description. Added a supersession note to `docs/mload.md` stating that the
+  Release 1 PDF `ctmm-r1-10-mload.pdf` title "Five-step capability validation
+  pipeline" is superseded — no specific step count is part of the architecture
+  definition.
+
+---
+
 ## Release 1.2 — 2026-05-14
 
 ### Summary

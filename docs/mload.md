@@ -3,6 +3,12 @@
 **v1.0 — 2026-04-29**
 **CONFIDENTIAL**
 
+> **Note:** The Release 1 PDF `ctmm-r1-10-mload.pdf` carries the title
+> "Five-step capability validation pipeline". That title is superseded.
+> The authoritative position is that mLoad completes all necessary
+> capability checks as efficiently as possible; no specific step count
+> is part of the architecture definition.
+
 mLoad is the hardware micro-operation that every Church instruction uses to
 read a Golden Token from memory and make it live in a Capability Register.
 No GT can enter a CR by any other path. mLoad is not an instruction —
