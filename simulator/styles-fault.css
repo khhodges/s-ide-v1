@@ -764,6 +764,21 @@
     pointer-events: none;
 }
 
+.le-mag-caption {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+    margin-top: 0.45rem;
+    margin-bottom: 0.25rem;
+    opacity: 0.75;
+    letter-spacing: 0.2px;
+}
+
+.le-bar-mag {
+    height: 44px;
+    border-color: rgba(218,165,32,0.08);
+    opacity: 0.85;
+}
+
 /* ────────────────────────────────────────────────────────────────────────── */
 
 .builder-view-tab-row {

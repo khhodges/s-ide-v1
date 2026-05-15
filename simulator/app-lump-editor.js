@@ -100,6 +100,21 @@
         }).join('') + '</div>';
     }
 
+    function renderMagBar(zones) {
+        var total = zones.reduce(function (s, z) { return s + z.words; }, 0);
+        if (total <= 0) return '';
+        var floor = Math.max(1, Math.ceil(total * 0.08));
+        return '<div class="le-mag-caption">&#x1F50D; Magnified — small zones expanded to 8 % min</div>' +
+               '<div class="le-bar le-bar-mag">' + zones.map(function (z) {
+            if (z.words <= 0) return '';
+            var flex = Math.max(z.words, floor);
+            var realPct = (z.words / total * 100).toFixed(2);
+            return '<div class="le-bar-zone ' + esc(z.cls) + '" style="flex:' + flex + '" title="' + esc(z.label + ': ' + z.words.toLocaleString() + ' words  (' + realPct + '%)') + '">' +
+                   '<span class="le-bar-label">' + esc(z.label) + '</span>' +
+                   '<span class="le-bar-pct">' + esc(z.words.toLocaleString() + ' w') + '</span></div>';
+        }).join('') + '</div>';
+    }
+
     // ── summary grid ──────────────────────────────────────────────────────────
 
     function renderGrid(rows) {
@@ -171,6 +186,12 @@
             '</div>' +
             '<div class="le-bar-label-row"><span>Single thread memory layout</span></div>' +
             bar +
+            renderMagBar([
+                { label: 'Header', words: 1,    cls: 'le-zone-hdr'   },
+                { label: 'Heap',   words: heap,  cls: 'le-zone-heap'  },
+                { label: 'Free',   words: free,  cls: 'le-zone-free'  },
+                { label: 'Stack',  words: stack, cls: 'le-zone-stack' }
+            ]) +
             '<div class="le-divider"></div>' +
             grid +
         '</div>';
