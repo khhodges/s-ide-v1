@@ -8533,15 +8533,21 @@ function initHardwareBuildPanel() {
 function updateHardwarePanelLabel() {
     const board = getSelectedBoard();
     const info = document.getElementById('hwBuildInfoText');
+    const buildBtn = document.getElementById('btnHWBuild');
+    const BASE_BUILD_TIP = 'Build \u2014 Run Amaranth elaboration + Yosys synthesis and save RTL artifacts to server';
     if (!info) return;
     if (board === 'ti60-f225') {
         info.textContent = 'Output: church_ti60_f225.v + church_ti60_f225.edif + ti60_f225.isf  \u2014  open in Efinity IDE (Titanium project)';
+        if (buildBtn) buildBtn.dataset.tooltip = BASE_BUILD_TIP;
     } else if (board === 'tang-nano-9k') {
         info.textContent = 'Output: church_tang_nano_9k.il + tang_nano_9k.cst  \u2014  IoT profile (reduced ISA); run flash.sh with OSS CAD Suite';
+        if (buildBtn) buildBtn.dataset.tooltip = BASE_BUILD_TIP;
     } else if (board === 'wukong-xc7a100t') {
-        info.textContent = 'Output: church_wukong_xc7a100t.v + wukong_xc7a100t.xdc + wukong_xc7a100t.tcl  \u2014  source tcl in Vivado to build + program';
+        info.textContent = '';
+        if (buildBtn) buildBtn.dataset.tooltip = BASE_BUILD_TIP + '  |  Output: church_wukong_xc7a100t.v + wukong_xc7a100t.xdc + wukong_xc7a100t.tcl \u2014 source tcl in Vivado to build + program';
     } else {
         info.textContent = 'Output: church_tang_nano_20k.v + Makefile + tang_nano_20k.cst  \u2014  run make pnr pack, then make prog';
+        if (buildBtn) buildBtn.dataset.tooltip = BASE_BUILD_TIP;
     }
 }
 

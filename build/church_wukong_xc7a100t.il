@@ -1,9 +1,9 @@
 attribute \generator "Amaranth"
-attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:56"
+attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:65"
 attribute \top 1
 module \top
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:99"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:108"
   memory width 32 size 2048 \dmem
 
   attribute \src "/home/runner/workspace/hardware/uart_rx.py:19"
@@ -21,7 +21,7 @@ module \top
   attribute \src "/home/runner/workspace/hardware/boot_rom.py:591"
   wire width 32 \data
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:106"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:115"
   wire width 1 \any_ns_access
 
   attribute \src "/home/runner/workspace/hardware/core.py:63"
@@ -30,7 +30,7 @@ module \top
   attribute \src "/home/runner/workspace/hardware/core.py:66"
   wire width 1 \ns_wr_en
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:107"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:116"
   wire width 1 \any_clist_access
 
   attribute \src "/home/runner/workspace/hardware/core.py:69"
@@ -39,13 +39,13 @@ module \top
   attribute \src "/home/runner/workspace/hardware/core.py:72"
   wire width 1 \clist_wr_en
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:113"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:122"
   wire width 1 \rb_rd_en
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:104"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:113"
   wire width 11 \mem_addr
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:114"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:123"
   attribute \init 16'0000000000000000
   wire width 16 \rb_cur_addr
 
@@ -61,102 +61,168 @@ module \top
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:240"
   wire width 11 \dmem_rd__addr
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:124"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:133"
   wire width 32 \mem_rd_data
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:241"
   wire width 32 \dmem_rd__data
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:149"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:158"
   wire width 1 \is_mmio
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:151"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:160"
   wire width 4 \mmio_reg_sel
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:177"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:166"
+  wire width 1 \is_base_mmio
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:167"
+  wire width 1 \is_eth_mmio
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:194"
   wire width 1 \is_mmio_write
 
   attribute \src "/home/runner/workspace/hardware/core.py:60"
   wire width 1 \dmem_wr_en
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:155"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:172"
   wire width 1 \mmio_uart_tx_wr
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:156"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:173"
   wire width 8 \mmio_uart_tx_data
 
   attribute \src "/home/runner/workspace/hardware/core.py:59"
   wire width 32 \dmem_wr_data
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:200"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:217"
   wire width 1 \is_mmio_read
 
   attribute \src "/home/runner/workspace/hardware/core.py:56"
   wire width 1 \dmem_rd_en
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:203"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:220"
   wire width 32 \mmio_rd_data
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
   attribute \init 3'000
   wire width 3 \mmio_led0
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
   attribute \init 3'000
   wire width 3 \mmio_led1
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
   attribute \init 3'000
   wire width 3 \mmio_led2
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
   attribute \init 3'000
   wire width 3 \mmio_led3
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
   attribute \init 3'000
   wire width 3 \mmio_led4
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:93"
   wire width 1 \busy
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:159"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:176"
   attribute \init 1'0
   wire width 1 \mmio_rx_valid
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:158"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:175"
   attribute \init 8'00000000
   wire width 8 \mmio_rx_data
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:160"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:177"
   wire width 1 \mmio_rx_read
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:162"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:179"
   attribute \init 32'00000000000000000000000000000000
   wire width 32 \timer_lo
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:163"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:180"
   attribute \init 32'00000000000000000000000000000000
   wire width 32 \timer_hi
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:164"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:181"
   attribute \init 32'00000000000000000000000000000000
   wire width 32 \tod_epoch
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:165"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:182"
   attribute \init 32'00000000000000000000000000000000
   wire width 32 \alarm_cmp
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:166"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:183"
   attribute \init 1'0
   wire width 1 \alarm_armed
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:167"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:184"
   attribute \init 1'0
   wire width 1 \alarm_fired
 
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:249"
+  wire width 1 \is_eth_mmio_read
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:190"
+  wire width 4 \mmio_addr
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:191"
+  wire width 1 \mmio_rd_en
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:192"
+  wire width 1 \mmio_wr_en
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:193"
+  wire width 32 \mmio_wr_data
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:196"
+  wire width 1 \rmii_ref_clk
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:51"
+  wire width 1 \rmii_ref_clk$62
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:197"
+  wire width 1 \rmii_crs_dv
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:52"
+  wire width 1 \rmii_crs_dv$64
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:198"
+  wire width 2 \rmii_rxd
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:53"
+  wire width 2 \rmii_rxd$66
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:54"
+  wire width 1 \rmii_txen
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:199"
+  wire width 1 \rmii_txen$68
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:55"
+  wire width 2 \rmii_txd
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:200"
+  wire width 2 \rmii_txd$70
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:56"
+  wire width 1 \rmii_nrst
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:201"
+  wire width 1 \rmii_nrst$72
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:57"
+  wire width 1 \eth_irq
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:203"
+  wire width 1 \eth_irq$74
+
   attribute \src "/home/runner/workspace/hardware/core.py:57"
   wire width 32 \dmem_rd_data
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:194"
+  wire width 32 \mmio_rd_data$76
 
   attribute \src "/home/runner/workspace/hardware/core.py:64"
   wire width 96 \ns_rd_data
@@ -164,22 +230,22 @@ module \top
   attribute \src "/home/runner/workspace/hardware/core.py:70"
   wire width 32 \clist_rd_data
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:243"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:282"
   wire width 1 \pl_wr_en
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:244"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:283"
   wire width 11 \pl_wr_addr
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:245"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:284"
   wire width 32 \pl_wr_data
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:275"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:314"
   wire width 32 \cpu_wr_data
 
   attribute \src "/home/runner/workspace/hardware/core.py:65"
   wire width 96 \ns_wr_data
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:276"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:315"
   wire width 1 \cpu_wr_en
 
   attribute \src "/home/runner/workspace/hardware/core.py:71"
@@ -194,38 +260,38 @@ module \top
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:400"
   wire width 1 \dmem_wr__en
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:299"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:338"
   wire width 1 \nia_changed
 
   attribute \src "/home/runner/workspace/hardware/core.py:89"
   wire width 32 \nia
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:297"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:336"
   attribute \init 32'00000000000000000000000000000000
   wire width 32 \prev_nia
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:302"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:341"
   wire width 1 \step_complete
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:239"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:278"
   attribute \init 1'0
   wire width 1 \stepping
 
   attribute \src "/home/runner/workspace/hardware/core.py:53"
   wire width 1 \imem_valid
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:238"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:277"
   attribute \init 1'1
   wire width 1 \halted
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:316"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:355"
   wire width 1 \btn_press
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:309"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:348"
   attribute \init 1'0
   wire width 1 \btn_prev
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:308"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:347"
   attribute \init 3'000
   wire width 3 \btn_sync
 
@@ -238,10 +304,10 @@ module \top
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:94"
   wire width 1 \tx
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:340"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:379"
   wire width 1 \fsm_send_byte
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:338"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:377"
   attribute \init 1'0
   wire width 1 \mmio_uart_pending
 
@@ -251,63 +317,63 @@ module \top
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:92"
   wire width 8 \byte_data
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:341"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:380"
   wire width 8 \fsm_byte_data
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:339"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:378"
   attribute \init 8'00000000
   wire width 8 \mmio_uart_byte_reg
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:50"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:59"
   wire width 32 \dbg_nia
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:51"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:60"
   wire width 4 \dbg_fault
 
   attribute \src "/home/runner/workspace/hardware/core.py:82"
   wire width 5 \fault
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:52"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:61"
   wire width 1 \dbg_fault_valid
 
   attribute \src "/home/runner/workspace/hardware/core.py:83"
   wire width 1 \fault_valid
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:53"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:62"
   wire width 1 \dbg_boot_complete
 
   attribute \src "/home/runner/workspace/hardware/core.py:76"
   wire width 1 \boot_complete
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:379"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:418"
   wire width 1 \demo_led0
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:378"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:417"
   attribute \init 3'000
   wire width 3 \demo_phase
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:379"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:418"
   wire width 1 \demo_led1
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:379"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:418"
   wire width 1 \demo_led2
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:379"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:418"
   wire width 1 \demo_led3
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:240"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:279"
   attribute \init 1'0
   wire width 1 \fault_latched
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:363"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:402"
   attribute \init 1'0
   wire width 1 \heartbeat_blink
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:412"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:451"
   attribute \init 1'0
   wire width 1 \boot_triggered
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:411"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:450"
   attribute \init 4'0000
   wire width 4 \boot_delay
 
@@ -317,38 +383,38 @@ module \top
   attribute \src "/home/runner/workspace/hardware/core.py:78"
   wire width 1 \gc_start
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:425"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:464"
   wire width 8 \banner_byte
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:424"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:463"
   attribute \init 5'00000
   wire width 5 \banner_idx
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:438"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:477"
   wire width 8 \callhome_byte
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:437"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:476"
   attribute \init 5'00000
   wire width 5 \callhome_idx
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:443"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:482"
   wire width 8 \halt_byte
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:442"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:481"
   attribute \init 3'000
   wire width 3 \halt_idx
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:448"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:487"
   wire width 8 \step_byte
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:447"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:486"
   attribute \init 2'00
   wire width 2 \step_idx
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:453"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:492"
   wire width 8 \fault_byte
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:452"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:491"
   attribute \init 2'00
   wire width 2 \fault_msg_idx
 
@@ -356,24 +422,24 @@ module \top
   attribute \init 6'000000
   wire width 6 \debug_fsm_state
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:456"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:495"
   attribute \init 8'00000000
   wire width 8 \boot_reason
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:457"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:496"
   attribute \init 8'00000000
   wire width 8 \last_fault_code
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:459"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:498"
   attribute \init 2'00
   wire width 2 \fault_nia_idx
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:458"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:497"
   attribute \init 32'00000000000000000000000000000000
   wire width 32 \fault_nia
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:89"
-  wire width 32 \data$119
+  wire width 32 \data$141
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:90"
   wire width 1 \send
@@ -382,26 +448,26 @@ module \top
   wire width 1 \valid
 
   attribute \src "/home/runner/workspace/hardware/uart_rx.py:20"
-  wire width 8 \data$122
+  wire width 8 \data$144
 
   attribute \src "/home/runner/workspace/hardware/uart_crc16.py:18"
   wire width 1 \reset
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:321"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:360"
   attribute \init 1'0
   wire width 1 \btn_hold_done
 
   attribute \src "/home/runner/workspace/hardware/core.py:84"
   wire width 1 \halt_valid
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:461"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:500"
   attribute \init 32'00000000000000000000000000000000
   wire width 32 \step_nia
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:670"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:709"
   wire width 32 \fault_word
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:462"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:501"
   attribute \init 4'0000
   wire width 4 \step_fault
 
@@ -409,120 +475,120 @@ module \top
   wire width 8 \data_in
 
   attribute \src "/home/runner/workspace/hardware/uart_crc16.py:19"
-  wire width 1 \valid$130
+  wire width 1 \valid$152
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:251"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:290"
   attribute \init 16'0000000000000000
   wire width 16 \pl_cur_addr
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:250"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:289"
   attribute \init 32'00000000000000000000000000000000
   wire width 32 \pl_word
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:255"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:294"
   attribute \init 3'000
   wire width 3 \pl_ack_idx
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:254"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:293"
   attribute \init 8'00000000
   wire width 8 \pl_ack0
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:254"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:293"
   attribute \init 8'00000000
   wire width 8 \pl_ack1
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:254"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:293"
   attribute \init 8'00000000
   wire width 8 \pl_ack2
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:254"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:293"
   attribute \init 8'00000000
   wire width 8 \pl_ack3
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:273"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:312"
   attribute \init 32'00000000000000000000000000000000
   wire width 32 \rb_word
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:246"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:285"
   attribute \init 1'0
   wire width 1 \pl_active
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:320"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:359"
   attribute \init 27'000000000000000000000000000
   wire width 27 \btn_hold_ctr
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:362"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:401"
   attribute \init 27'000000000000000000000000000
   wire width 27 \heartbeat_ctr
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:377"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:416"
   attribute \init 26'00000000000000000000000000
   wire width 26 \demo_ctr
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:469"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:508"
   attribute \init 28'0000000000000000000000000000
   wire width 28 \startup_ctr
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:463"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:502"
   attribute \init 1'0
   wire width 1 \step_had_fault
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:247"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:286"
   attribute \init 16'0000000000000000
   wire width 16 \pl_addr
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:248"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:287"
   attribute \init 16'0000000000000000
   wire width 16 \pl_total_count
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:249"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:288"
   attribute \init 16'0000000000000000
   wire width 16 \pl_count
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:252"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:291"
   attribute \init 8'00000000
   wire width 8 \pl_crc_hi_buf
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:253"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:292"
   attribute \init 1'0
   wire width 1 \pl_crc_fail
 
   attribute \src "/home/runner/workspace/hardware/uart_crc16.py:21"
   wire width 16 \crc
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:271"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:310"
   attribute \init 16'0000000000000000
   wire width 16 \rb_addr
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:272"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:311"
   attribute \init 16'0000000000000000
   wire width 16 \rb_count
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:43"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:44"
   wire width 1 input 0  \clk_in
 
   attribute \src "/home/runner/workspace/hardware/uart_rx.py:19"
   wire width 1 input 1  \uart_rx
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:46"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:47"
   wire width 1 input 2  \push_button
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 3  \clk
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:94"
   wire width 1 output 4  \uart_tx
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:48"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:49"
   wire width 1 output 5  \led0
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:48"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:49"
   wire width 1 output 6  \led1
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:48"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:49"
   wire width 1 output 7  \led2
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:48"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:49"
   wire width 1 output 8  \led3
 
   wire width 1 $1
@@ -531,7 +597,7 @@ module \top
 
   wire width 1 $3
 
-  wire width 1 $4
+  wire width 32 $4
 
   wire width 1 $5
 
@@ -663,11 +729,11 @@ module \top
 
   wire width 1 $69
 
-  wire width 8 $70
+  wire width 1 $70
 
   wire width 1 $71
 
-  wire width 1 $72
+  wire width 8 $72
 
   wire width 1 $73
 
@@ -763,13 +829,13 @@ module \top
 
   wire width 1 $119
 
-  wire width 33 $120
+  wire width 1 $120
 
-  wire width 33 $121
+  wire width 1 $121
 
-  wire width 1 $122
+  wire width 33 $122
 
-  wire width 1 $123
+  wire width 33 $123
 
   wire width 1 $124
 
@@ -781,17 +847,17 @@ module \top
 
   wire width 1 $128
 
-  wire width 28 $129
+  wire width 1 $129
 
   wire width 1 $130
 
-  wire width 1 $131
+  wire width 28 $131
 
-  wire width 28 $132
+  wire width 1 $132
 
   wire width 1 $133
 
-  wire width 1 $134
+  wire width 28 $134
 
   wire width 1 $135
 
@@ -799,45 +865,45 @@ module \top
 
   wire width 1 $137
 
-  wire width 4 $138
+  wire width 1 $138
 
-  wire width 27 $139
+  wire width 1 $139
 
-  wire width 1 $140
+  wire width 4 $140
 
-  wire width 5 $141
+  wire width 27 $141
 
   wire width 1 $142
 
-  wire width 29 $143
+  wire width 5 $143
 
   wire width 1 $144
 
-  wire width 1 $145
+  wire width 29 $145
 
   wire width 1 $146
 
-  wire width 6 $147
+  wire width 1 $147
 
   wire width 1 $148
 
-  wire width 1 $149
+  wire width 6 $149
 
-  wire width 6 $150
+  wire width 1 $150
 
   wire width 1 $151
 
-  wire width 1 $152
+  wire width 6 $152
 
   wire width 1 $153
 
   wire width 1 $154
 
-  wire width 3 $155
+  wire width 1 $155
 
   wire width 1 $156
 
-  wire width 1 $157
+  wire width 3 $157
 
   wire width 1 $158
 
@@ -845,11 +911,11 @@ module \top
 
   wire width 1 $160
 
-  wire width 4 $161
+  wire width 1 $161
 
   wire width 1 $162
 
-  wire width 1 $163
+  wire width 4 $163
 
   wire width 1 $164
 
@@ -863,31 +929,31 @@ module \top
 
   wire width 1 $169
 
-  wire width 3 $170
+  wire width 1 $170
 
   wire width 1 $171
 
-  wire width 1 $172
+  wire width 3 $172
 
   wire width 1 $173
 
-  wire width 3 $174
+  wire width 1 $174
 
   wire width 1 $175
 
-  wire width 1 $176
+  wire width 3 $176
 
   wire width 1 $177
 
-  wire width 4 $178
+  wire width 1 $178
 
   wire width 1 $179
 
-  wire width 1 $180
+  wire width 4 $180
 
   wire width 1 $181
 
-  wire width 17 $182
+  wire width 1 $182
 
   wire width 1 $183
 
@@ -895,7 +961,7 @@ module \top
 
   wire width 1 $185
 
-  wire width 1 $186
+  wire width 17 $186
 
   wire width 1 $187
 
@@ -905,29 +971,29 @@ module \top
 
   wire width 1 $190
 
-  wire width 4 $191
+  wire width 1 $191
 
   wire width 1 $192
 
-  wire width 1 $193
+  wire width 4 $193
 
   wire width 1 $194
 
   wire width 1 $195
 
-  wire width 17 $196
+  wire width 1 $196
 
-  wire width 17 $197
+  wire width 1 $197
 
-  wire width 1 $198
+  wire width 17 $198
 
-  wire width 32 $199
+  wire width 17 $199
 
   wire width 1 $200
 
-  wire width 3 $201
+  wire width 32 $201
 
-  wire width 3 $202
+  wire width 1 $202
 
   wire width 3 $203
 
@@ -935,103 +1001,107 @@ module \top
 
   wire width 3 $205
 
-  wire width 32 $206
+  wire width 3 $206
 
-  wire width 32 $207
+  wire width 3 $207
 
-  wire width 1 $208
+  wire width 32 $208
 
-  wire width 8 $209
+  wire width 32 $209
 
   wire width 1 $210
 
-  wire width 3 $211
+  wire width 8 $211
 
-  wire width 27 $212
+  wire width 1 $212
 
-  wire width 1 $213
+  wire width 3 $213
 
-  wire width 1 $214
+  wire width 27 $214
 
-  wire width 8 $215
+  wire width 1 $215
 
-  wire width 27 $216
+  wire width 1 $216
 
-  wire width 1 $217
+  wire width 8 $217
 
-  wire width 26 $218
+  wire width 27 $218
 
-  wire width 3 $219
+  wire width 1 $219
 
-  wire width 4 $220
+  wire width 26 $220
 
-  wire width 1 $221
+  wire width 3 $221
 
-  wire width 28 $222
+  wire width 4 $222
 
-  wire width 6 $223
+  wire width 1 $223
 
-  wire width 5 $224
+  wire width 28 $224
 
-  wire width 1 $225
+  wire width 6 $225
 
   wire width 5 $226
 
-  wire width 2 $227
+  wire width 1 $227
 
-  wire width 1 $228
+  wire width 5 $228
 
-  wire width 3 $229
+  wire width 2 $229
 
   wire width 1 $230
 
-  wire width 8 $231
+  wire width 3 $231
 
-  wire width 8 $232
+  wire width 1 $232
 
-  wire width 32 $233
+  wire width 8 $233
 
-  wire width 32 $234
+  wire width 8 $234
 
-  wire width 4 $235
+  wire width 32 $235
 
-  wire width 1 $236
+  wire width 32 $236
 
-  wire width 2 $237
+  wire width 4 $237
 
-  wire width 2 $238
+  wire width 1 $238
 
-  wire width 16 $239
+  wire width 2 $239
 
-  wire width 16 $240
+  wire width 2 $240
 
   wire width 16 $241
 
   wire width 16 $242
 
-  wire width 32 $243
+  wire width 16 $243
 
-  wire width 8 $244
+  wire width 16 $244
 
-  wire width 1 $245
+  wire width 32 $245
 
   wire width 8 $246
 
-  wire width 8 $247
+  wire width 1 $247
 
   wire width 8 $248
 
   wire width 8 $249
 
-  wire width 3 $250
+  wire width 8 $250
 
-  wire width 16 $251
+  wire width 8 $251
 
-  wire width 16 $252
+  wire width 3 $252
 
   wire width 16 $253
 
-  wire width 32 $254
+  wire width 16 $254
+
+  wire width 16 $255
+
+  wire width 32 $256
 
   attribute \src "/home/runner/workspace/hardware/core.py:70"
   wire width 16 \clist_rd_data.slot_id
@@ -1063,14 +1133,14 @@ module \top
   attribute \src "/home/runner/workspace/hardware/core.py:71"
   wire width 1 \clist_wr_data.b_flag
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:61"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:70"
   cell \top.core \core
     connect \clk \clk [0]
     connect \mem_rd_data \dmem_rd_data [31:0]
     connect \imem_valid \imem_valid [0]
     connect \boot_complete \dbg_boot_complete [0]
     connect \halt_valid \halt_valid [0]
-    connect \port$4322$0 \mem_rd_data [31:0]
+    connect \port$4328$0 \mem_rd_data [31:0]
     connect \free_run_start \free_run_start [0]
     connect \free_run_nia \free_run_nia [31:0]
     connect \boot_start \boot_start [0]
@@ -1091,43 +1161,57 @@ module \top
     connect \instruction \imem_data [31:0]
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:64"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:73"
   cell \top.boot_rom \boot_rom
     connect \clk \clk [0]
     connect \addr \imem_addr [11:2]
     connect \data \imem_data [31:0]
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:76"
   cell \top.debug \debug
     connect \clk \clk [0]
     connect \send_byte \send_byte [0]
     connect \byte_data \byte_data [7:0]
-    connect \data$15 \data$119 [31:0]
+    connect \data$15 \data$141 [31:0]
     connect \send \send [0]
     connect \busy \busy [0]
     connect \tx \uart_tx [0]
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:70"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:79"
   cell \top.uart_rx_mod \uart_rx_mod
     connect \rx \uart_rx [0]
     connect \clk \clk [0]
-    connect \data \data$122 [7:0]
+    connect \data \data$144 [7:0]
     connect \valid \valid [0]
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:258"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:253"
+  cell \top.eth \eth
+    connect \clk \clk [0]
+    connect \mmio_rd_en \is_eth_mmio_read [0]
+    connect \mmio_wr_en \mmio_wr_en [0]
+    connect \mmio_addr \dmem_addr [5:2]
+    connect \mmio_wr_data \dmem_wr_data [31:0]
+    connect \mmio_rd_data \mmio_rd_data$76 [31:0]
+    connect \rx_ready \eth_irq [0]
+    connect \rmii_nrst \rmii_nrst [0]
+    connect \rmii_txen \rmii_txen [0]
+    connect \rmii_txd \rmii_txd [1:0]
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:297"
   cell \top.crc_mod \crc_mod
     connect \clk \clk [0]
     connect \reset \reset [0]
     connect \data_in \data_in [7:0]
-    connect \valid \valid$130 [0]
+    connect \valid \valid$152 [0]
     connect \crc \crc [15:0]
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:109"
-  cell $or $255
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:118"
+  cell $or $257
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1138,8 +1222,8 @@ module \top
     connect \Y \any_ns_access
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:110"
-  cell $or $256
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:119"
+  cell $or $258
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1150,8 +1234,8 @@ module \top
     connect \Y \any_clist_access
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:150"
-  cell $not $257
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:159"
+  cell $not $259
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -1159,8 +1243,8 @@ module \top
     connect \Y $1
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:150"
-  cell $and $258
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:159"
+  cell $and $260
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1171,59 +1255,125 @@ module \top
     connect \Y \is_mmio
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:178"
-  cell $and $259
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \is_mmio [0]
-    connect \B \dmem_wr_en [0]
-    connect \Y \is_mmio_write
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:201"
-  cell $and $260
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \is_mmio [0]
-    connect \B \dmem_rd_en [0]
-    connect \Y \is_mmio_read
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:211"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:168"
   cell $not $261
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
-    connect \A \busy [0]
+    connect \A \dmem_addr [12]
     connect \Y $2
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:232"
-  cell $mux $262
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:168"
+  cell $and $262
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \is_mmio [0]
+    connect \B $2 [0]
+    connect \Y \is_base_mmio
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:169"
+  cell $and $263
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \is_mmio [0]
+    connect \B \dmem_addr [12]
+    connect \Y \is_eth_mmio
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:195"
+  cell $and $264
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \is_base_mmio [0]
+    connect \B \dmem_wr_en [0]
+    connect \Y \is_mmio_write
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:218"
+  cell $and $265
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \is_base_mmio [0]
+    connect \B \dmem_rd_en [0]
+    connect \Y \is_mmio_read
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:228"
+  cell $not $266
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $3
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:250"
+  cell $and $267
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \is_eth_mmio [0]
+    connect \B \dmem_rd_en [0]
+    connect \Y \is_eth_mmio_read
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:257"
+  cell $and $268
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \is_eth_mmio [0]
+    connect \B \dmem_wr_en [0]
+    connect \Y \mmio_wr_en
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:270"
+  cell $mux $269
     parameter \WIDTH 32
     connect \S \is_mmio_read [0]
     connect \A \mem_rd_data [31:0]
     connect \B \mmio_rd_data [31:0]
+    connect \Y $4
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:269"
+  cell $mux $270
+    parameter \WIDTH 32
+    connect \S \is_eth_mmio_read [0]
+    connect \A $4 [31:0]
+    connect \B \mmio_rd_data$76 [31:0]
     connect \Y \dmem_rd_data
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:281"
-  cell $not $263
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:320"
+  cell $not $271
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \is_mmio [0]
-    connect \Y $3
+    connect \Y $5
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:300"
-  cell $ne $264
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:339"
+  cell $ne $272
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 32
@@ -1234,8 +1384,8 @@ module \top
     connect \Y \nia_changed
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:303"
-  cell $and $265
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:342"
+  cell $and $273
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1246,128 +1396,92 @@ module \top
     connect \Y \step_complete
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:305"
-  cell $not $266
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:344"
+  cell $not $274
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \halted [0]
-    connect \Y $4
+    connect \Y $6
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:305"
-  cell $not $267
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:344"
+  cell $not $275
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \step_complete [0]
-    connect \Y $5
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:305"
-  cell $and $268
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \stepping [0]
-    connect \B $5 [0]
-    connect \Y $6
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:305"
-  cell $or $269
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A $4 [0]
-    connect \B $6 [0]
-    connect \Y \imem_valid
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:317"
-  cell $not $270
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \btn_sync [2]
     connect \Y $7
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:317"
-  cell $and $271
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \btn_prev [0]
-    connect \B $7 [0]
-    connect \Y \btn_press
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:349"
-  cell $not $272
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $8
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:349"
-  cell $and $273
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \mmio_uart_pending [0]
-    connect \B $8 [0]
-    connect \Y $9
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:382"
-  cell $and $274
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \dbg_boot_complete [0]
-    connect \B \halted [0]
-    connect \Y $10
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:382"
-  cell $eq $275
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 3
-    parameter \B_WIDTH 0
-    parameter \Y_WIDTH 1
-    connect \A \demo_phase [2:0]
-    connect \B {  }
-    connect \Y $11
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:382"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:344"
   cell $and $276
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
-    connect \A $10 [0]
-    connect \B $11 [0]
-    connect \Y \demo_led0
+    connect \A \stepping [0]
+    connect \B $7 [0]
+    connect \Y $8
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:382"
-  cell $and $277
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:344"
+  cell $or $277
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A $6 [0]
+    connect \B $8 [0]
+    connect \Y \imem_valid
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:356"
+  cell $not $278
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \btn_sync [2]
+    connect \Y $9
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:356"
+  cell $and $279
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \btn_prev [0]
+    connect \B $9 [0]
+    connect \Y \btn_press
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:388"
+  cell $not $280
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $10
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:388"
+  cell $and $281
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \mmio_uart_pending [0]
+    connect \B $10 [0]
+    connect \Y $11
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:421"
+  cell $and $282
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1378,20 +1492,20 @@ module \top
     connect \Y $12
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:382"
-  cell $eq $278
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:421"
+  cell $eq $283
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
-    parameter \B_WIDTH 1
+    parameter \B_WIDTH 0
     parameter \Y_WIDTH 1
     connect \A \demo_phase [2:0]
-    connect \B 1'1
+    connect \B {  }
     connect \Y $13
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:382"
-  cell $and $279
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:421"
+  cell $and $284
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1399,11 +1513,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A $12 [0]
     connect \B $13 [0]
-    connect \Y \demo_led1
+    connect \Y \demo_led0
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:382"
-  cell $and $280
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:421"
+  cell $and $285
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1414,20 +1528,20 @@ module \top
     connect \Y $14
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:382"
-  cell $eq $281
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:421"
+  cell $eq $286
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
-    parameter \B_WIDTH 2
+    parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \demo_phase [2:0]
-    connect \B 2'10
+    connect \B 1'1
     connect \Y $15
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:382"
-  cell $and $282
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:421"
+  cell $and $287
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1435,11 +1549,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A $14 [0]
     connect \B $15 [0]
-    connect \Y \demo_led2
+    connect \Y \demo_led1
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:382"
-  cell $and $283
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:421"
+  cell $and $288
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1450,20 +1564,20 @@ module \top
     connect \Y $16
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:382"
-  cell $eq $284
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:421"
+  cell $eq $289
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
     parameter \B_WIDTH 2
     parameter \Y_WIDTH 1
     connect \A \demo_phase [2:0]
-    connect \B 2'11
+    connect \B 2'10
     connect \Y $17
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:382"
-  cell $and $285
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:421"
+  cell $and $290
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1471,11 +1585,47 @@ module \top
     parameter \Y_WIDTH 1
     connect \A $16 [0]
     connect \B $17 [0]
+    connect \Y \demo_led2
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:421"
+  cell $and $291
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \dbg_boot_complete [0]
+    connect \B \halted [0]
+    connect \Y $18
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:421"
+  cell $eq $292
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 3
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 1
+    connect \A \demo_phase [2:0]
+    connect \B 2'11
+    connect \Y $19
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:421"
+  cell $and $293
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A $18 [0]
+    connect \B $19 [0]
     connect \Y \demo_led3
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:398"
-  cell $or $286
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:437"
+  cell $or $294
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1483,29 +1633,29 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \mmio_led0 [0]
     connect \B \demo_led0 [0]
-    connect \Y $18
+    connect \Y $20
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:370"
-  cell $not $287
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:409"
+  cell $not $295
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \dbg_boot_complete [0]
-    connect \Y $19
+    connect \Y $21
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:397"
-  cell $mux $288
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:436"
+  cell $mux $296
     parameter \WIDTH 1
     connect \S \dbg_boot_complete [0]
-    connect \A $19 [0]
-    connect \B $18 [0]
+    connect \A $21 [0]
+    connect \B $20 [0]
     connect \Y \led0
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:401"
-  cell $or $289
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:440"
+  cell $or $297
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1513,106 +1663,19 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \mmio_led1 [0]
     connect \B \demo_led1 [0]
-    connect \Y $20
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:372"
-  cell $not $290
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \fault_latched [0]
-    connect \Y $21
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:372"
-  cell $and $291
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \halted [0]
-    connect \B $21 [0]
     connect \Y $22
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:372"
-  cell $and $292
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A $22 [0]
-    connect \B \heartbeat_blink [0]
-    connect \Y $23
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:401"
-  cell $or $293
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A $20 [0]
-    connect \B $23 [0]
-    connect \Y $24
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:371"
-  cell $not $294
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \fault_latched [0]
-    connect \Y $25
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:371"
-  cell $and $295
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \dbg_boot_complete [0]
-    connect \B $25 [0]
-    connect \Y $26
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:371"
-  cell $not $296
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \halted [0]
-    connect \Y $27
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:371"
-  cell $and $297
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A $26 [0]
-    connect \B $27 [0]
-    connect \Y $28
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:372"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:411"
   cell $not $298
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \fault_latched [0]
-    connect \Y $29
+    connect \Y $23
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:372"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:411"
   cell $and $299
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
@@ -1620,45 +1683,132 @@ module \top
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \halted [0]
-    connect \B $29 [0]
-    connect \Y $30
+    connect \B $23 [0]
+    connect \Y $24
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:372"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:411"
   cell $and $300
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
-    connect \A $30 [0]
+    connect \A $24 [0]
     connect \B \heartbeat_blink [0]
-    connect \Y $31
+    connect \Y $25
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:402"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:440"
   cell $or $301
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
+    connect \A $22 [0]
+    connect \B $25 [0]
+    connect \Y $26
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:410"
+  cell $not $302
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \fault_latched [0]
+    connect \Y $27
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:410"
+  cell $and $303
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \dbg_boot_complete [0]
+    connect \B $27 [0]
+    connect \Y $28
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:410"
+  cell $not $304
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \halted [0]
+    connect \Y $29
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:410"
+  cell $and $305
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
     connect \A $28 [0]
+    connect \B $29 [0]
+    connect \Y $30
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:411"
+  cell $not $306
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \fault_latched [0]
+    connect \Y $31
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:411"
+  cell $and $307
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \halted [0]
     connect \B $31 [0]
     connect \Y $32
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:400"
-  cell $mux $302
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:411"
+  cell $and $308
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A $32 [0]
+    connect \B \heartbeat_blink [0]
+    connect \Y $33
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:441"
+  cell $or $309
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A $30 [0]
+    connect \B $33 [0]
+    connect \Y $34
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:439"
+  cell $mux $310
     parameter \WIDTH 1
     connect \S \dbg_boot_complete [0]
-    connect \A $32 [0]
-    connect \B $24 [0]
+    connect \A $34 [0]
+    connect \B $26 [0]
     connect \Y \led1
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:404"
-  cell $or $303
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:443"
+  cell $or $311
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1666,32 +1816,32 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \mmio_led2 [0]
     connect \B \demo_led2 [0]
-    connect \Y $33
+    connect \Y $35
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:404"
-  cell $or $304
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:443"
+  cell $or $312
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
-    connect \A $33 [0]
+    connect \A $35 [0]
     connect \B \fault_latched [0]
-    connect \Y $34
+    connect \Y $36
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:403"
-  cell $mux $305
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:442"
+  cell $mux $313
     parameter \WIDTH 1
     connect \S \dbg_boot_complete [0]
     connect \A \fault_latched [0]
-    connect \B $34 [0]
+    connect \B $36 [0]
     connect \Y \led2
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:407"
-  cell $or $306
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:446"
+  cell $or $314
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -1699,29 +1849,29 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \mmio_led3 [0]
     connect \B \demo_led3 [0]
-    connect \Y $35
+    connect \Y $37
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:406"
-  cell $mux $307
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:445"
+  cell $mux $315
     parameter \WIDTH 1
     connect \S \dbg_boot_complete [0]
     connect \A \dbg_boot_complete [0]
-    connect \B $35 [0]
+    connect \B $37 [0]
     connect \Y \led3
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:413"
-  cell $not $308
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:452"
+  cell $not $316
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \boot_triggered [0]
-    connect \Y $36
+    connect \Y $38
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:415"
-  cell $eq $309
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:454"
+  cell $eq $317
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 4
@@ -1729,11 +1879,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \boot_delay [3:0]
     connect \B 4'1111
-    connect \Y $37
+    connect \Y $39
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:426"
-  process $310
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:465"
+  process $318
     assign \banner_byte [7:0] 8'00000000
     switch \banner_idx [4:0]
       case 5'00000
@@ -1797,8 +1947,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:439"
-  process $311
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:478"
+  process $319
     assign \callhome_byte [7:0] 8'00000000
     switch \callhome_idx [4:0]
       case 5'00000
@@ -1838,8 +1988,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:444"
-  process $312
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:483"
+  process $320
     assign \halt_byte [7:0] 8'00000000
     switch \halt_idx [2:0]
       case 3'000
@@ -1857,8 +2007,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:449"
-  process $313
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:488"
+  process $321
     assign \step_byte [7:0] 8'00000000
     switch \step_idx [1:0]
       case 2'00
@@ -1868,8 +2018,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:454"
-  process $314
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:493"
+  process $322
     assign \fault_byte [7:0] 8'00000000
     switch \fault_msg_idx [1:0]
       case 2'00
@@ -1879,29 +2029,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:483"
-  cell $not $315
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $38
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:484"
-  cell $lt $316
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 5
-    parameter \B_WIDTH 5
-    parameter \Y_WIDTH 1
-    connect \A \banner_idx [4:0]
-    connect \B 5'11101
-    connect \Y $39
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:495"
-  cell $not $317
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:522"
+  cell $not $323
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -1909,20 +2038,20 @@ module \top
     connect \Y $40
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:496"
-  cell $lt $318
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:523"
+  cell $lt $324
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 5
     parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
-    connect \A \callhome_idx [4:0]
-    connect \B 5'10001
+    connect \A \banner_idx [4:0]
+    connect \B 5'11101
     connect \Y $41
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:506"
-  cell $not $319
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:534"
+  cell $not $325
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -1930,17 +2059,20 @@ module \top
     connect \Y $42
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:514"
-  cell $not $320
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:535"
+  cell $lt $326
     parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 5
+    parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
-    connect \A \busy [0]
+    connect \A \callhome_idx [4:0]
+    connect \B 5'10001
     connect \Y $43
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:523"
-  cell $not $321
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:545"
+  cell $not $327
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -1948,8 +2080,8 @@ module \top
     connect \Y $44
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:540"
-  cell $not $322
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:553"
+  cell $not $328
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -1957,41 +2089,59 @@ module \top
     connect \Y $45
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:548"
-  cell $eq $323
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:562"
+  cell $not $329
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $46
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:579"
+  cell $not $330
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $47
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:587"
+  cell $eq $331
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 8
     parameter \B_WIDTH 8
     parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
+    connect \A \data$144 [7:0]
     connect \B 8'10111110
-    connect \Y $46
+    connect \Y $48
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:548"
-  cell $and $324
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:587"
+  cell $and $332
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \valid [0]
-    connect \B $46 [0]
-    connect \Y $47
+    connect \B $48 [0]
+    connect \Y $49
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:555"
-  cell $not $325
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:594"
+  cell $not $333
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $48
+    connect \Y $50
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:556"
-  cell $lt $326
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:595"
+  cell $lt $334
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -1999,47 +2149,23 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \halt_idx [2:0]
     connect \B 3'110
-    connect \Y $49
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:569"
-  cell $eq $327
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 8
-    parameter \B_WIDTH 8
-    parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
-    connect \B 8'10111110
-    connect \Y $50
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:569"
-  cell $and $328
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \valid [0]
-    connect \B $50 [0]
     connect \Y $51
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:597"
-  cell $eq $329
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:608"
+  cell $eq $335
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 8
     parameter \B_WIDTH 8
     parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
+    connect \A \data$144 [7:0]
     connect \B 8'10111110
     connect \Y $52
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:597"
-  cell $and $330
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:608"
+  cell $and $336
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -2050,20 +2176,20 @@ module \top
     connect \Y $53
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:607"
-  cell $eq $331
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:636"
+  cell $eq $337
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 8
     parameter \B_WIDTH 8
     parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
+    connect \A \data$144 [7:0]
     connect \B 8'10111110
     connect \Y $54
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:607"
-  cell $and $332
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:636"
+  cell $and $338
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -2074,29 +2200,32 @@ module \top
     connect \Y $55
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:632"
-  cell $not $333
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:646"
+  cell $eq $339
     parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 8
+    parameter \B_WIDTH 8
     parameter \Y_WIDTH 1
-    connect \A \busy [0]
+    connect \A \data$144 [7:0]
+    connect \B 8'10111110
     connect \Y $56
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:633"
-  cell $lt $334
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:646"
+  cell $and $340
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
-    parameter \A_WIDTH 2
-    parameter \B_WIDTH 2
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
-    connect \A \step_idx [1:0]
-    connect \B 2'10
+    connect \A \valid [0]
+    connect \B $56 [0]
     connect \Y $57
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:644"
-  cell $not $335
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:671"
+  cell $not $341
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -2104,29 +2233,29 @@ module \top
     connect \Y $58
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:657"
-  cell $not $336
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $59
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:658"
-  cell $lt $337
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:672"
+  cell $lt $342
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 2
     parameter \B_WIDTH 2
     parameter \Y_WIDTH 1
-    connect \A \fault_msg_idx [1:0]
+    connect \A \step_idx [1:0]
     connect \B 2'10
+    connect \Y $59
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:683"
+  cell $not $343
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
     connect \Y $60
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:669"
-  cell $not $338
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:696"
+  cell $not $344
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -2134,17 +2263,38 @@ module \top
     connect \Y $61
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:680"
-  cell $not $339
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:697"
+  cell $lt $345
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 1
+    connect \A \fault_msg_idx [1:0]
+    connect \B 2'10
+    connect \Y $62
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:708"
+  cell $not $346
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $62
+    connect \Y $63
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:681"
-  cell $lt $340
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:719"
+  cell $not $347
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $64
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:720"
+  cell $lt $348
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -2152,65 +2302,65 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \halt_idx [2:0]
     connect \B 3'110
-    connect \Y $63
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:694"
-  cell $eq $341
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 8
-    parameter \B_WIDTH 8
-    parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
-    connect \B 8'11101111
-    connect \Y $64
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:700"
-  cell $eq $342
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 8
-    parameter \B_WIDTH 8
-    parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
-    connect \B 8'10101101
     connect \Y $65
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:702"
-  cell $eq $343
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:733"
+  cell $eq $349
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 8
     parameter \B_WIDTH 8
     parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
-    connect \B 8'10101010
+    connect \A \data$144 [7:0]
+    connect \B 8'11101111
     connect \Y $66
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:814"
-  cell $not $344
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:739"
+  cell $eq $350
     parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 8
+    parameter \B_WIDTH 8
     parameter \Y_WIDTH 1
-    connect \A \busy [0]
+    connect \A \data$144 [7:0]
+    connect \B 8'10101101
     connect \Y $67
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:823"
-  cell $not $345
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:741"
+  cell $eq $351
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 8
+    parameter \B_WIDTH 8
+    parameter \Y_WIDTH 1
+    connect \A \data$144 [7:0]
+    connect \B 8'10101010
+    connect \Y $68
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:853"
+  cell $not $352
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $68
+    connect \Y $69
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:824"
-  cell $lt $346
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:862"
+  cell $not $353
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $70
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:863"
+  cell $lt $354
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -2218,44 +2368,26 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \pl_ack_idx [2:0]
     connect \B 3'100
-    connect \Y $69
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:826"
-  process $347
-    assign $70 [7:0] 8'00000000
-    switch \pl_ack_idx [2:0]
-      case 3'000
-        assign $70 [7:0] \pl_ack0 [7:0]
-      case 3'001
-        assign $70 [7:0] \pl_ack1 [7:0]
-      case 3'010
-        assign $70 [7:0] \pl_ack2 [7:0]
-      case 3'011
-        assign $70 [7:0] \pl_ack3 [7:0]
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:868"
-  cell $not $348
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
     connect \Y $71
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:873"
-  cell $not $349
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $72
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:865"
+  process $355
+    assign $72 [7:0] 8'00000000
+    switch \pl_ack_idx [2:0]
+      case 3'000
+        assign $72 [7:0] \pl_ack0 [7:0]
+      case 3'001
+        assign $72 [7:0] \pl_ack1 [7:0]
+      case 3'010
+        assign $72 [7:0] \pl_ack2 [7:0]
+      case 3'011
+        assign $72 [7:0] \pl_ack3 [7:0]
+    end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:878"
-  cell $not $350
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:907"
+  cell $not $356
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -2263,8 +2395,8 @@ module \top
     connect \Y $73
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:883"
-  cell $not $351
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:912"
+  cell $not $357
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -2272,100 +2404,22 @@ module \top
     connect \Y $74
   end
 
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $352
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:917"
+  cell $not $358
     parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 6
-    parameter \B_WIDTH 0
+    parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [5:0]
-    connect \B {  }
+    connect \A \busy [0]
     connect \Y $75
   end
 
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $353
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:922"
+  cell $not $359
     parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 6
-    parameter \B_WIDTH 1
+    parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [5:0]
-    connect \B 1'1
+    connect \A \busy [0]
     connect \Y $76
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $354
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 6
-    parameter \B_WIDTH 2
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [5:0]
-    connect \B 2'10
-    connect \Y $77
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $355
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 6
-    parameter \B_WIDTH 2
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [5:0]
-    connect \B 2'11
-    connect \Y $78
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $356
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 6
-    parameter \B_WIDTH 3
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [5:0]
-    connect \B 3'100
-    connect \Y $79
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $357
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 6
-    parameter \B_WIDTH 3
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [5:0]
-    connect \B 3'101
-    connect \Y $80
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $358
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 6
-    parameter \B_WIDTH 3
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [5:0]
-    connect \B 3'110
-    connect \Y $81
-  end
-
-  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
-  cell $eq $359
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 6
-    parameter \B_WIDTH 3
-    parameter \Y_WIDTH 1
-    connect \A \debug_fsm_state [5:0]
-    connect \B 3'111
-    connect \Y $82
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2373,11 +2427,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 4
+    parameter \B_WIDTH 0
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 4'1000
-    connect \Y $83
+    connect \B {  }
+    connect \Y $77
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2385,11 +2439,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 4
+    parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 4'1001
-    connect \Y $84
+    connect \B 1'1
+    connect \Y $78
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2397,11 +2451,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 4
+    parameter \B_WIDTH 2
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 4'1010
-    connect \Y $85
+    connect \B 2'10
+    connect \Y $79
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2409,11 +2463,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 4
+    parameter \B_WIDTH 2
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 4'1011
-    connect \Y $86
+    connect \B 2'11
+    connect \Y $80
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2421,11 +2475,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 4
+    parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 4'1100
-    connect \Y $87
+    connect \B 3'100
+    connect \Y $81
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2433,11 +2487,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 4
+    parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 4'1101
-    connect \Y $88
+    connect \B 3'101
+    connect \Y $82
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2445,11 +2499,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 4
+    parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 4'1110
-    connect \Y $89
+    connect \B 3'110
+    connect \Y $83
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2457,11 +2511,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 4
+    parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 4'1111
-    connect \Y $90
+    connect \B 3'111
+    connect \Y $84
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2469,11 +2523,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 5
+    parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'10000
-    connect \Y $91
+    connect \B 4'1000
+    connect \Y $85
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2481,11 +2535,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 5
+    parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'10001
-    connect \Y $92
+    connect \B 4'1001
+    connect \Y $86
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2493,11 +2547,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 5
+    parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'10010
-    connect \Y $93
+    connect \B 4'1010
+    connect \Y $87
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2505,11 +2559,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 5
+    parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'10011
-    connect \Y $94
+    connect \B 4'1011
+    connect \Y $88
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2517,11 +2571,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 5
+    parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'10100
-    connect \Y $95
+    connect \B 4'1100
+    connect \Y $89
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2529,11 +2583,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 5
+    parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'10101
-    connect \Y $96
+    connect \B 4'1101
+    connect \Y $90
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2541,11 +2595,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 5
+    parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'10110
-    connect \Y $97
+    connect \B 4'1110
+    connect \Y $91
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2553,11 +2607,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 5
+    parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'10111
-    connect \Y $98
+    connect \B 4'1111
+    connect \Y $92
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2568,8 +2622,8 @@ module \top
     parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'11000
-    connect \Y $99
+    connect \B 5'10000
+    connect \Y $93
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2580,8 +2634,8 @@ module \top
     parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'11001
-    connect \Y $100
+    connect \B 5'10001
+    connect \Y $94
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2592,8 +2646,8 @@ module \top
     parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'11010
-    connect \Y $101
+    connect \B 5'10010
+    connect \Y $95
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2604,8 +2658,8 @@ module \top
     parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'11011
-    connect \Y $102
+    connect \B 5'10011
+    connect \Y $96
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2616,8 +2670,8 @@ module \top
     parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'11100
-    connect \Y $103
+    connect \B 5'10100
+    connect \Y $97
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2628,8 +2682,8 @@ module \top
     parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'11101
-    connect \Y $104
+    connect \B 5'10101
+    connect \Y $98
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2640,8 +2694,8 @@ module \top
     parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'11110
-    connect \Y $105
+    connect \B 5'10110
+    connect \Y $99
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2652,8 +2706,8 @@ module \top
     parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 5'11111
-    connect \Y $106
+    connect \B 5'10111
+    connect \Y $100
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2661,11 +2715,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 6
+    parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 6'100000
-    connect \Y $107
+    connect \B 5'11000
+    connect \Y $101
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2673,11 +2727,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 6
+    parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 6'100001
-    connect \Y $108
+    connect \B 5'11001
+    connect \Y $102
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2685,11 +2739,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 6
+    parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 6'100010
-    connect \Y $109
+    connect \B 5'11010
+    connect \Y $103
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2697,11 +2751,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 6
+    parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 6'100011
-    connect \Y $110
+    connect \B 5'11011
+    connect \Y $104
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2709,11 +2763,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 6
+    parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 6'100100
-    connect \Y $111
+    connect \B 5'11100
+    connect \Y $105
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2721,11 +2775,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 6
+    parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 6'100101
-    connect \Y $112
+    connect \B 5'11101
+    connect \Y $106
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2733,11 +2787,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 6
+    parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 6'100110
-    connect \Y $113
+    connect \B 5'11110
+    connect \Y $107
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2745,11 +2799,11 @@ module \top
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 6
-    parameter \B_WIDTH 6
+    parameter \B_WIDTH 5
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 6'100111
-    connect \Y $114
+    connect \B 5'11111
+    connect \Y $108
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2760,8 +2814,8 @@ module \top
     parameter \B_WIDTH 6
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 6'101000
-    connect \Y $115
+    connect \B 6'100000
+    connect \Y $109
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2772,8 +2826,8 @@ module \top
     parameter \B_WIDTH 6
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 6'101001
-    connect \Y $116
+    connect \B 6'100001
+    connect \Y $110
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2784,8 +2838,8 @@ module \top
     parameter \B_WIDTH 6
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 6'101010
-    connect \Y $117
+    connect \B 6'100010
+    connect \Y $111
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
@@ -2796,12 +2850,108 @@ module \top
     parameter \B_WIDTH 6
     parameter \Y_WIDTH 1
     connect \A \debug_fsm_state [5:0]
-    connect \B 6'101011
+    connect \B 6'100011
+    connect \Y $112
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $396
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 6
+    parameter \B_WIDTH 6
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [5:0]
+    connect \B 6'100100
+    connect \Y $113
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $397
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 6
+    parameter \B_WIDTH 6
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [5:0]
+    connect \B 6'100101
+    connect \Y $114
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $398
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 6
+    parameter \B_WIDTH 6
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [5:0]
+    connect \B 6'100110
+    connect \Y $115
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $399
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 6
+    parameter \B_WIDTH 6
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [5:0]
+    connect \B 6'100111
+    connect \Y $116
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $400
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 6
+    parameter \B_WIDTH 6
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [5:0]
+    connect \B 6'101000
+    connect \Y $117
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $401
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 6
+    parameter \B_WIDTH 6
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [5:0]
+    connect \B 6'101001
     connect \Y $118
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:169"
-  cell $eq $396
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $402
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 6
+    parameter \B_WIDTH 6
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [5:0]
+    connect \B 6'101010
+    connect \Y $119
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486"
+  cell $eq $403
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 6
+    parameter \B_WIDTH 6
+    parameter \Y_WIDTH 1
+    connect \A \debug_fsm_state [5:0]
+    connect \B 6'101011
+    connect \Y $120
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:186"
+  cell $eq $404
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 32
@@ -2809,11 +2959,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \timer_lo [31:0]
     connect \B 32'11111111111111111111111111111111
-    connect \Y $119
+    connect \Y $121
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:170"
-  cell $add $397
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:187"
+  cell $add $405
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 32
@@ -2821,11 +2971,11 @@ module \top
     parameter \Y_WIDTH 33
     connect \A \timer_hi [31:0]
     connect \B 1'1
-    connect \Y $120
+    connect \Y $122
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
-  cell $add $398
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:188"
+  cell $add $406
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 32
@@ -2833,32 +2983,32 @@ module \top
     parameter \Y_WIDTH 33
     connect \A \timer_lo [31:0]
     connect \B 1'1
-    connect \Y $121
+    connect \Y $123
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:173"
-  cell $not $399
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:190"
+  cell $not $407
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \alarm_fired [0]
-    connect \Y $122
+    connect \Y $124
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:173"
-  cell $and $400
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:190"
+  cell $and $408
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \alarm_armed [0]
-    connect \B $122 [0]
-    connect \Y $123
+    connect \B $124 [0]
+    connect \Y $125
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:174"
-  cell $eq $401
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:191"
+  cell $eq $409
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 32
@@ -2866,41 +3016,41 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \timer_lo [31:0]
     connect \B \alarm_cmp [31:0]
-    connect \Y $124
+    connect \Y $126
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:260"
-  cell $not $402
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:299"
+  cell $not $410
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \pl_active [0]
-    connect \Y $125
+    connect \Y $127
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:260"
-  cell $and $403
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:299"
+  cell $and $411
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \valid [0]
-    connect \B $125 [0]
-    connect \Y $126
+    connect \B $127 [0]
+    connect \Y $128
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:322"
-  cell $not $404
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:361"
+  cell $not $412
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \btn_sync [2]
-    connect \Y $127
+    connect \Y $129
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:323"
-  cell $lt $405
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:362"
+  cell $lt $413
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 27
@@ -2908,11 +3058,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \btn_hold_ctr [26:0]
     connect \B 27'101111101011110000100000000
-    connect \Y $128
+    connect \Y $130
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:324"
-  cell $add $406
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:363"
+  cell $add $414
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 27
@@ -2920,32 +3070,32 @@ module \top
     parameter \Y_WIDTH 28
     connect \A \btn_hold_ctr [26:0]
     connect \B 1'1
-    connect \Y $129
+    connect \Y $131
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:349"
-  cell $not $407
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:388"
+  cell $not $415
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $130
+    connect \Y $132
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:349"
-  cell $and $408
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:388"
+  cell $and $416
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \mmio_uart_pending [0]
-    connect \B $130 [0]
-    connect \Y $131
+    connect \B $132 [0]
+    connect \Y $133
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:364"
-  cell $add $409
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:403"
+  cell $add $417
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 27
@@ -2953,11 +3103,11 @@ module \top
     parameter \Y_WIDTH 28
     connect \A \heartbeat_ctr [26:0]
     connect \B 1'1
-    connect \Y $132
+    connect \Y $134
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:365"
-  cell $eq $410
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:404"
+  cell $eq $418
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 27
@@ -2965,20 +3115,20 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \heartbeat_ctr [26:0]
     connect \B 27'101111101011110000011111111
-    connect \Y $133
+    connect \Y $135
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:366"
-  cell $not $411
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:405"
+  cell $not $419
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \heartbeat_blink [0]
-    connect \Y $134
+    connect \Y $136
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:368"
-  cell $or $412
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:407"
+  cell $or $420
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -2986,11 +3136,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \fault_latched [0]
     connect \B \dbg_fault_valid [0]
-    connect \Y $135
+    connect \Y $137
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:385"
-  cell $eq $413
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:424"
+  cell $eq $421
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 26
@@ -2998,11 +3148,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \demo_ctr [25:0]
     connect \B 26'10111110101111000001111111
-    connect \Y $136
+    connect \Y $138
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:387"
-  cell $eq $414
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:426"
+  cell $eq $422
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -3010,11 +3160,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \demo_phase [2:0]
     connect \B 3'100
-    connect \Y $137
+    connect \Y $139
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:390"
-  cell $add $415
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:429"
+  cell $add $423
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -3022,11 +3172,11 @@ module \top
     parameter \Y_WIDTH 4
     connect \A \demo_phase [2:0]
     connect \B 1'1
-    connect \Y $138
+    connect \Y $140
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:392"
-  cell $add $416
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:431"
+  cell $add $424
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 26
@@ -3034,20 +3184,20 @@ module \top
     parameter \Y_WIDTH 27
     connect \A \demo_ctr [25:0]
     connect \B 1'1
-    connect \Y $139
+    connect \Y $141
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:413"
-  cell $not $417
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:452"
+  cell $not $425
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \boot_triggered [0]
-    connect \Y $140
+    connect \Y $142
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:414"
-  cell $add $418
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:453"
+  cell $add $426
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 4
@@ -3055,11 +3205,11 @@ module \top
     parameter \Y_WIDTH 5
     connect \A \boot_delay [3:0]
     connect \B 1'1
-    connect \Y $141
+    connect \Y $143
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:415"
-  cell $eq $419
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:454"
+  cell $eq $427
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 4
@@ -3067,11 +3217,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \boot_delay [3:0]
     connect \B 4'1111
-    connect \Y $142
+    connect \Y $144
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:473"
-  cell $add $420
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:512"
+  cell $add $428
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 28
@@ -3079,11 +3229,11 @@ module \top
     parameter \Y_WIDTH 29
     connect \A \startup_ctr [27:0]
     connect \B 1'1
-    connect \Y $143
+    connect \Y $145
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:474"
-  cell $eq $421
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:513"
+  cell $eq $429
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 28
@@ -3091,20 +3241,20 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \startup_ctr [27:0]
     connect \B 29'10001111000011010001011111111
-    connect \Y $144
+    connect \Y $146
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:483"
-  cell $not $422
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:522"
+  cell $not $430
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $145
+    connect \Y $147
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:484"
-  cell $lt $423
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:523"
+  cell $lt $431
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 5
@@ -3112,11 +3262,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \banner_idx [4:0]
     connect \B 5'11101
-    connect \Y $146
+    connect \Y $148
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:489"
-  cell $add $424
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:528"
+  cell $add $432
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 5
@@ -3124,20 +3274,20 @@ module \top
     parameter \Y_WIDTH 6
     connect \A \banner_idx [4:0]
     connect \B 1'1
-    connect \Y $147
+    connect \Y $149
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:495"
-  cell $not $425
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:534"
+  cell $not $433
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $148
+    connect \Y $150
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:496"
-  cell $lt $426
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:535"
+  cell $lt $434
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 5
@@ -3145,11 +3295,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \callhome_idx [4:0]
     connect \B 5'10001
-    connect \Y $149
+    connect \Y $151
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:501"
-  cell $add $427
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:540"
+  cell $add $435
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 5
@@ -3157,29 +3307,11 @@ module \top
     parameter \Y_WIDTH 6
     connect \A \callhome_idx [4:0]
     connect \B 1'1
-    connect \Y $150
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:506"
-  cell $not $428
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $151
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:514"
-  cell $not $429
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
     connect \Y $152
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:523"
-  cell $not $430
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:545"
+  cell $not $436
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -3187,8 +3319,26 @@ module \top
     connect \Y $153
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:534"
-  cell $eq $431
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:553"
+  cell $not $437
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $154
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:562"
+  cell $not $438
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $155
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:573"
+  cell $eq $439
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 2
@@ -3196,11 +3346,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \fault_nia_idx [1:0]
     connect \B 2'11
-    connect \Y $154
+    connect \Y $156
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:537"
-  cell $add $432
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:576"
+  cell $add $440
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 2
@@ -3208,53 +3358,53 @@ module \top
     parameter \Y_WIDTH 3
     connect \A \fault_nia_idx [1:0]
     connect \B 1'1
-    connect \Y $155
+    connect \Y $157
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:540"
-  cell $not $433
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:579"
+  cell $not $441
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $156
+    connect \Y $158
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:548"
-  cell $eq $434
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:587"
+  cell $eq $442
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 8
     parameter \B_WIDTH 8
     parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
+    connect \A \data$144 [7:0]
     connect \B 8'10111110
-    connect \Y $157
+    connect \Y $159
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:548"
-  cell $and $435
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:587"
+  cell $and $443
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \valid [0]
-    connect \B $157 [0]
-    connect \Y $158
+    connect \B $159 [0]
+    connect \Y $160
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:555"
-  cell $not $436
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:594"
+  cell $not $444
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
-    connect \Y $159
+    connect \Y $161
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:556"
-  cell $lt $437
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:595"
+  cell $lt $445
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -3262,11 +3412,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \halt_idx [2:0]
     connect \B 3'110
-    connect \Y $160
+    connect \Y $162
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:561"
-  cell $add $438
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:600"
+  cell $add $446
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -3274,47 +3424,23 @@ module \top
     parameter \Y_WIDTH 4
     connect \A \halt_idx [2:0]
     connect \B 1'1
-    connect \Y $161
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:569"
-  cell $eq $439
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 8
-    parameter \B_WIDTH 8
-    parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
-    connect \B 8'10111110
-    connect \Y $162
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:569"
-  cell $and $440
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \valid [0]
-    connect \B $162 [0]
     connect \Y $163
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:597"
-  cell $eq $441
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:608"
+  cell $eq $447
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 8
     parameter \B_WIDTH 8
     parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
+    connect \A \data$144 [7:0]
     connect \B 8'10111110
     connect \Y $164
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:597"
-  cell $and $442
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:608"
+  cell $and $448
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -3325,20 +3451,20 @@ module \top
     connect \Y $165
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:607"
-  cell $eq $443
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:636"
+  cell $eq $449
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 8
     parameter \B_WIDTH 8
     parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
+    connect \A \data$144 [7:0]
     connect \B 8'10111110
     connect \Y $166
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:607"
-  cell $and $444
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:636"
+  cell $and $450
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
@@ -3349,101 +3475,125 @@ module \top
     connect \Y $167
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:632"
-  cell $not $445
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:646"
+  cell $eq $451
     parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 8
+    parameter \B_WIDTH 8
     parameter \Y_WIDTH 1
-    connect \A \busy [0]
+    connect \A \data$144 [7:0]
+    connect \B 8'10111110
     connect \Y $168
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:633"
-  cell $lt $446
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:646"
+  cell $and $452
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
-    parameter \A_WIDTH 2
-    parameter \B_WIDTH 2
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
-    connect \A \step_idx [1:0]
-    connect \B 2'10
+    connect \A \valid [0]
+    connect \B $168 [0]
     connect \Y $169
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:638"
-  cell $add $447
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 2
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 3
-    connect \A \step_idx [1:0]
-    connect \B 1'1
-    connect \Y $170
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:644"
-  cell $not $448
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $171
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:657"
-  cell $not $449
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $172
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:658"
-  cell $lt $450
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 2
-    parameter \B_WIDTH 2
-    parameter \Y_WIDTH 1
-    connect \A \fault_msg_idx [1:0]
-    connect \B 2'10
-    connect \Y $173
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:663"
-  cell $add $451
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 2
-    parameter \B_WIDTH 1
-    parameter \Y_WIDTH 3
-    connect \A \fault_msg_idx [1:0]
-    connect \B 1'1
-    connect \Y $174
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:669"
-  cell $not $452
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $175
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:680"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:671"
   cell $not $453
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \busy [0]
+    connect \Y $170
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:672"
+  cell $lt $454
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 1
+    connect \A \step_idx [1:0]
+    connect \B 2'10
+    connect \Y $171
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:677"
+  cell $add $455
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 3
+    connect \A \step_idx [1:0]
+    connect \B 1'1
+    connect \Y $172
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:683"
+  cell $not $456
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $173
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:696"
+  cell $not $457
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $174
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:697"
+  cell $lt $458
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 1
+    connect \A \fault_msg_idx [1:0]
+    connect \B 2'10
+    connect \Y $175
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:702"
+  cell $add $459
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 3
+    connect \A \fault_msg_idx [1:0]
+    connect \B 1'1
     connect \Y $176
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:681"
-  cell $lt $454
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:708"
+  cell $not $460
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $177
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:719"
+  cell $not $461
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $178
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:720"
+  cell $lt $462
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -3451,11 +3601,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \halt_idx [2:0]
     connect \B 3'110
-    connect \Y $177
+    connect \Y $179
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:686"
-  cell $add $455
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:725"
+  cell $add $463
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -3463,47 +3613,47 @@ module \top
     parameter \Y_WIDTH 4
     connect \A \halt_idx [2:0]
     connect \B 1'1
-    connect \Y $178
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:694"
-  cell $eq $456
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 8
-    parameter \B_WIDTH 8
-    parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
-    connect \B 8'11101111
-    connect \Y $179
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:700"
-  cell $eq $457
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 8
-    parameter \B_WIDTH 8
-    parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
-    connect \B 8'10101101
     connect \Y $180
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:702"
-  cell $eq $458
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:733"
+  cell $eq $464
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 8
     parameter \B_WIDTH 8
     parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
-    connect \B 8'10101010
+    connect \A \data$144 [7:0]
+    connect \B 8'11101111
     connect \Y $181
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:782"
-  cell $add $459
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:739"
+  cell $eq $465
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 8
+    parameter \B_WIDTH 8
+    parameter \Y_WIDTH 1
+    connect \A \data$144 [7:0]
+    connect \B 8'10101101
+    connect \Y $182
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:741"
+  cell $eq $466
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 8
+    parameter \B_WIDTH 8
+    parameter \Y_WIDTH 1
+    connect \A \data$144 [7:0]
+    connect \B 8'10101010
+    connect \Y $183
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:821"
+  cell $add $467
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 16
@@ -3511,11 +3661,11 @@ module \top
     parameter \Y_WIDTH 17
     connect \A \pl_cur_addr [15:0]
     connect \B 1'1
-    connect \Y $182
+    connect \Y $184
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:783"
-  cell $eq $460
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:822"
+  cell $eq $468
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 16
@@ -3523,11 +3673,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \pl_count [15:0]
     connect \B 1'1
-    connect \Y $183
+    connect \Y $185
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:787"
-  cell $sub $461
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:826"
+  cell $sub $469
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 16
@@ -3535,65 +3685,65 @@ module \top
     parameter \Y_WIDTH 17
     connect \A \pl_count [15:0]
     connect \B 1'1
-    connect \Y $184
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:794"
-  cell $ne $462
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 8
-    parameter \B_WIDTH 8
-    parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
-    connect \B \crc [15:8]
-    connect \Y $185
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:800"
-  cell $ne $463
-    parameter \A_SIGNED 0
-    parameter \B_SIGNED 0
-    parameter \A_WIDTH 8
-    parameter \B_WIDTH 8
-    parameter \Y_WIDTH 1
-    connect \A \data$122 [7:0]
-    connect \B \crc [7:0]
     connect \Y $186
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:800"
-  cell $or $464
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:833"
+  cell $ne $470
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 8
+    parameter \B_WIDTH 8
+    parameter \Y_WIDTH 1
+    connect \A \data$144 [7:0]
+    connect \B \crc [15:8]
+    connect \Y $187
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:839"
+  cell $ne $471
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 8
+    parameter \B_WIDTH 8
+    parameter \Y_WIDTH 1
+    connect \A \data$144 [7:0]
+    connect \B \crc [7:0]
+    connect \Y $188
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:839"
+  cell $or $472
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 1
     parameter \B_WIDTH 1
     parameter \Y_WIDTH 1
     connect \A \pl_crc_fail [0]
-    connect \B $186 [0]
-    connect \Y $187
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:814"
-  cell $not $465
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $188
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:823"
-  cell $not $466
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
+    connect \B $188 [0]
     connect \Y $189
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:824"
-  cell $lt $467
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:853"
+  cell $not $473
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $190
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:862"
+  cell $not $474
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $191
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:863"
+  cell $lt $475
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -3601,11 +3751,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \pl_ack_idx [2:0]
     connect \B 3'100
-    connect \Y $190
+    connect \Y $192
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:829"
-  cell $add $468
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:868"
+  cell $add $476
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 3
@@ -3613,29 +3763,11 @@ module \top
     parameter \Y_WIDTH 4
     connect \A \pl_ack_idx [2:0]
     connect \B 1'1
-    connect \Y $191
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:868"
-  cell $not $469
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
-    connect \Y $192
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:873"
-  cell $not $470
-    parameter \A_SIGNED 0
-    parameter \A_WIDTH 1
-    parameter \Y_WIDTH 1
-    connect \A \busy [0]
     connect \Y $193
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:878"
-  cell $not $471
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:907"
+  cell $not $477
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -3643,8 +3775,8 @@ module \top
     connect \Y $194
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:883"
-  cell $not $472
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:912"
+  cell $not $478
     parameter \A_SIGNED 0
     parameter \A_WIDTH 1
     parameter \Y_WIDTH 1
@@ -3652,8 +3784,26 @@ module \top
     connect \Y $195
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:886"
-  cell $sub $473
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:917"
+  cell $not $479
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $196
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:922"
+  cell $not $480
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \busy [0]
+    connect \Y $197
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:925"
+  cell $sub $481
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 16
@@ -3661,11 +3811,11 @@ module \top
     parameter \Y_WIDTH 17
     connect \A \rb_count [15:0]
     connect \B 1'1
-    connect \Y $196
+    connect \Y $198
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:887"
-  cell $add $474
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:926"
+  cell $add $482
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 16
@@ -3673,11 +3823,11 @@ module \top
     parameter \Y_WIDTH 17
     connect \A \rb_cur_addr [15:0]
     connect \B 1'1
-    connect \Y $197
+    connect \Y $199
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:889"
-  cell $eq $475
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:928"
+  cell $eq $483
     parameter \A_SIGNED 0
     parameter \B_SIGNED 0
     parameter \A_WIDTH 16
@@ -3685,11 +3835,11 @@ module \top
     parameter \Y_WIDTH 1
     connect \A \rb_count [15:0]
     connect \B 1'1
-    connect \Y $198
+    connect \Y $200
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:99"
-  cell $meminit_v2 $476
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:108"
+  cell $meminit_v2 $484
     parameter \MEMID "\\dmem"
     parameter \ABITS 0
     parameter \WIDTH 32
@@ -3701,7 +3851,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:402"
-  cell $memwr_v2 $477
+  cell $memwr_v2 $485
     parameter \MEMID "\\dmem"
     parameter \ABITS 11
     parameter \WIDTH 32
@@ -3716,7 +3866,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:241"
-  cell $memrd_v2 $478
+  cell $memrd_v2 $486
     parameter \MEMID "\\dmem"
     parameter \ABITS 11
     parameter \WIDTH 32
@@ -3736,8 +3886,8 @@ module \top
     connect \CLK 1'0
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:104"
-  process $479
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:113"
+  process $487
     assign \mem_addr [10:0] 11'00000000000
     switch { \any_clist_access [0] \any_ns_access [0] \rb_rd_en [0] }
       case 3'--1
@@ -3751,8 +3901,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:155"
-  process $480
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:172"
+  process $488
     assign \mmio_uart_tx_wr [0] 1'0
     switch \is_mmio_write [0]
       case 1'1
@@ -3771,8 +3921,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:156"
-  process $481
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:173"
+  process $489
     assign \mmio_uart_tx_data [7:0] 8'00000000
     switch \is_mmio_write [0]
       case 1'1
@@ -3791,8 +3941,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:203"
-  process $482
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:220"
+  process $490
     assign \mmio_rd_data [31:0] 32'00000000000000000000000000000000
     switch \dmem_addr [5:2]
       case 4'0000
@@ -3808,7 +3958,7 @@ module \top
       case 4'0101
         assign \mmio_rd_data [31:0] 32'00000000000000000000000000000000
       case 4'0110
-        assign \mmio_rd_data [31:0] { 30'000000000000000000000000000000 \mmio_rx_valid [0] $2 [0] }
+        assign \mmio_rd_data [31:0] { 30'000000000000000000000000000000 \mmio_rx_valid [0] $3 [0] }
       case 4'0111
         assign \mmio_rd_data [31:0] { 24'000000000000000000000000 \mmio_rx_data [7:0] }
       case 4'1010
@@ -3828,8 +3978,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:160"
-  process $483
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:177"
+  process $491
     assign \mmio_rx_read [0] 1'0
     switch \dmem_addr [5:2]
       case 4'0000
@@ -3851,8 +4001,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:243"
-  process $484
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:282"
+  process $492
     assign \pl_wr_en [0] 1'0
     switch \debug_fsm_state [5:0]
       case 6'000000
@@ -3903,8 +4053,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:244"
-  process $485
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:283"
+  process $493
     assign \pl_wr_addr [10:0] 11'00000000000
     switch \debug_fsm_state [5:0]
       case 6'000000
@@ -3955,8 +4105,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:245"
-  process $486
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:284"
+  process $494
     assign \pl_wr_data [31:0] 32'00000000000000000000000000000000
     switch \debug_fsm_state [5:0]
       case 6'000000
@@ -4007,10 +4157,10 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:275"
-  process $487
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:314"
+  process $495
     assign \cpu_wr_data [31:0] 32'00000000000000000000000000000000
-    switch { $3 [0] \clist_wr_en [0] \ns_wr_en [0] }
+    switch { $5 [0] \clist_wr_en [0] \ns_wr_en [0] }
       case 3'--1
         assign \cpu_wr_data [31:0] \ns_wr_data [31:0]
       case 3'-1-
@@ -4020,10 +4170,10 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:276"
-  process $488
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:315"
+  process $496
     assign \cpu_wr_en [0] 1'0
-    switch { $3 [0] \clist_wr_en [0] \ns_wr_en [0] }
+    switch { $5 [0] \clist_wr_en [0] \ns_wr_en [0] }
       case 3'--1
         assign \cpu_wr_en [0] 1'1
       case 3'-1-
@@ -4034,7 +4184,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:401"
-  process $489
+  process $497
     assign \dmem_wr__addr [10:0] 11'00000000000
     switch \pl_wr_en [0]
       case 1'1
@@ -4045,7 +4195,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:402"
-  process $490
+  process $498
     assign \dmem_wr__data [31:0] 32'00000000000000000000000000000000
     switch \pl_wr_en [0]
       case 1'1
@@ -4056,7 +4206,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:400"
-  process $491
+  process $499
     assign \dmem_wr__en [0] 1'0
     switch \pl_wr_en [0]
       case 1'1
@@ -4067,7 +4217,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:86"
-  process $492
+  process $500
     assign \free_run_start [0] 1'0
     switch \debug_fsm_state [5:0]
       case 6'000000
@@ -4093,7 +4243,7 @@ module \top
       case 6'001010
         switch \valid [0]
           case 1'1
-            switch { $66 [0] $65 [0] $64 [0] }
+            switch { $68 [0] $67 [0] $66 [0] }
               case 3'--1
               case 3'-1-
               case 3'1--
@@ -4129,7 +4279,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:87"
-  process $493
+  process $501
     assign \free_run_nia [31:0] 32'00000000000000000000000000000000
     switch \debug_fsm_state [5:0]
       case 6'000000
@@ -4155,7 +4305,7 @@ module \top
       case 6'001010
         switch \valid [0]
           case 1'1
-            switch { $66 [0] $65 [0] $64 [0] }
+            switch { $68 [0] $67 [0] $66 [0] }
               case 3'--1
               case 3'-1-
               case 3'1--
@@ -4191,9 +4341,9 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:91"
-  process $494
+  process $502
     assign \send_byte [0] 1'0
-    switch { $9 [0] \fsm_send_byte [0] }
+    switch { $11 [0] \fsm_send_byte [0] }
       case 2'-1
         assign \send_byte [0] 1'1
       case 2'1-
@@ -4202,9 +4352,9 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:92"
-  process $495
+  process $503
     assign \byte_data [7:0] 8'00000000
-    switch { $9 [0] \fsm_send_byte [0] }
+    switch { $11 [0] \fsm_send_byte [0] }
       case 2'-1
         assign \byte_data [7:0] \fsm_byte_data [7:0]
       case 2'1-
@@ -4213,11 +4363,11 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:74"
-  process $496
+  process $504
     assign \boot_start [0] 1'0
-    switch $36 [0]
+    switch $38 [0]
       case 1'1
-        switch $37 [0]
+        switch $39 [0]
           case 1'1
             assign \boot_start [0] 1'1
         end
@@ -4226,42 +4376,42 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:341"
-  process $497
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:380"
+  process $505
     assign \fsm_byte_data [7:0] 8'00000000
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
       case 6'000010
-        switch $38 [0]
+        switch $40 [0]
           case 1'1
-            switch $39 [0]
+            switch $41 [0]
               case 1'1
                 assign \fsm_byte_data [7:0] \banner_byte [7:0]
               case
             end
         end
       case 6'000011
-        switch $40 [0]
+        switch $42 [0]
           case 1'1
-            switch $41 [0]
+            switch $43 [0]
               case 1'1
                 assign \fsm_byte_data [7:0] \callhome_byte [7:0]
               case
             end
         end
       case 6'000100
-        switch $42 [0]
+        switch $44 [0]
           case 1'1
             assign \fsm_byte_data [7:0] \boot_reason [7:0]
         end
       case 6'000101
-        switch $43 [0]
+        switch $45 [0]
           case 1'1
             assign \fsm_byte_data [7:0] \last_fault_code [7:0]
         end
       case 6'000110
-        switch $44 [0]
+        switch $46 [0]
           case 1'1
             switch \fault_nia_idx [1:0]
               case 2'00
@@ -4276,10 +4426,10 @@ module \top
         end
       case 6'001000
       case 6'001001
-        switch { $48 [0] $47 [0] }
+        switch { $50 [0] $49 [0] }
           case 2'-1
           case 2'1-
-            switch $49 [0]
+            switch $51 [0]
               case 1'1
                 assign \fsm_byte_data [7:0] \halt_byte [7:0]
               case
@@ -4291,9 +4441,9 @@ module \top
       case 6'001110
       case 6'001100
       case 6'010000
-        switch $56 [0]
+        switch $58 [0]
           case 1'1
-            switch $57 [0]
+            switch $59 [0]
               case 1'1
                 assign \fsm_byte_data [7:0] \step_byte [7:0]
               case
@@ -4301,9 +4451,9 @@ module \top
         end
       case 6'010001
       case 6'010010
-        switch $59 [0]
+        switch $61 [0]
           case 1'1
-            switch $60 [0]
+            switch $62 [0]
               case 1'1
                 assign \fsm_byte_data [7:0] \fault_byte [7:0]
               case
@@ -4311,9 +4461,9 @@ module \top
         end
       case 6'010011
       case 6'001111
-        switch $62 [0]
+        switch $64 [0]
           case 1'1
-            switch $63 [0]
+            switch $65 [0]
               case 1'1
                 assign \fsm_byte_data [7:0] \halt_byte [7:0]
               case
@@ -4333,16 +4483,16 @@ module \top
       case 6'011111
       case 6'100000
       case 6'100001
-        switch $67 [0]
+        switch $69 [0]
           case 1'1
             assign \fsm_byte_data [7:0] 8'00010101
         end
       case 6'100010
-        switch $68 [0]
+        switch $70 [0]
           case 1'1
-            switch $69 [0]
+            switch $71 [0]
               case 1'1
-                assign \fsm_byte_data [7:0] $70 [7:0]
+                assign \fsm_byte_data [7:0] $72 [7:0]
               case
             end
         end
@@ -4353,44 +4503,35 @@ module \top
       case 6'100110
       case 6'100111
       case 6'101000
-        switch $71 [0]
+        switch $73 [0]
           case 1'1
             assign \fsm_byte_data [7:0] \rb_word [7:0]
         end
       case 6'101001
-        switch $72 [0]
+        switch $74 [0]
           case 1'1
             assign \fsm_byte_data [7:0] \rb_word [15:8]
         end
       case 6'101010
-        switch $73 [0]
+        switch $75 [0]
           case 1'1
             assign \fsm_byte_data [7:0] \rb_word [23:16]
         end
       case 6'101011
-        switch $74 [0]
+        switch $76 [0]
           case 1'1
             assign \fsm_byte_data [7:0] \rb_word [31:24]
         end
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:340"
-  process $498
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:379"
+  process $506
     assign \fsm_send_byte [0] 1'0
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
       case 6'000010
-        switch $38 [0]
-          case 1'1
-            switch $39 [0]
-              case 1'1
-                assign \fsm_send_byte [0] 1'1
-              case
-            end
-        end
-      case 6'000011
         switch $40 [0]
           case 1'1
             switch $41 [0]
@@ -4399,27 +4540,36 @@ module \top
               case
             end
         end
-      case 6'000100
+      case 6'000011
         switch $42 [0]
+          case 1'1
+            switch $43 [0]
+              case 1'1
+                assign \fsm_send_byte [0] 1'1
+              case
+            end
+        end
+      case 6'000100
+        switch $44 [0]
           case 1'1
             assign \fsm_send_byte [0] 1'1
         end
       case 6'000101
-        switch $43 [0]
+        switch $45 [0]
           case 1'1
             assign \fsm_send_byte [0] 1'1
         end
       case 6'000110
-        switch $44 [0]
+        switch $46 [0]
           case 1'1
             assign \fsm_send_byte [0] 1'1
         end
       case 6'001000
       case 6'001001
-        switch { $48 [0] $47 [0] }
+        switch { $50 [0] $49 [0] }
           case 2'-1
           case 2'1-
-            switch $49 [0]
+            switch $51 [0]
               case 1'1
                 assign \fsm_send_byte [0] 1'1
               case
@@ -4431,9 +4581,9 @@ module \top
       case 6'001110
       case 6'001100
       case 6'010000
-        switch $56 [0]
+        switch $58 [0]
           case 1'1
-            switch $57 [0]
+            switch $59 [0]
               case 1'1
                 assign \fsm_send_byte [0] 1'1
               case
@@ -4441,9 +4591,9 @@ module \top
         end
       case 6'010001
       case 6'010010
-        switch $59 [0]
+        switch $61 [0]
           case 1'1
-            switch $60 [0]
+            switch $62 [0]
               case 1'1
                 assign \fsm_send_byte [0] 1'1
               case
@@ -4451,9 +4601,9 @@ module \top
         end
       case 6'010011
       case 6'001111
-        switch $62 [0]
+        switch $64 [0]
           case 1'1
-            switch $63 [0]
+            switch $65 [0]
               case 1'1
                 assign \fsm_send_byte [0] 1'1
               case
@@ -4473,14 +4623,14 @@ module \top
       case 6'011111
       case 6'100000
       case 6'100001
-        switch $67 [0]
+        switch $69 [0]
           case 1'1
             assign \fsm_send_byte [0] 1'1
         end
       case 6'100010
-        switch $68 [0]
+        switch $70 [0]
           case 1'1
-            switch $69 [0]
+            switch $71 [0]
               case 1'1
                 assign \fsm_send_byte [0] 1'1
               case
@@ -4493,22 +4643,22 @@ module \top
       case 6'100110
       case 6'100111
       case 6'101000
-        switch $71 [0]
-          case 1'1
-            assign \fsm_send_byte [0] 1'1
-        end
-      case 6'101001
-        switch $72 [0]
-          case 1'1
-            assign \fsm_send_byte [0] 1'1
-        end
-      case 6'101010
         switch $73 [0]
           case 1'1
             assign \fsm_send_byte [0] 1'1
         end
-      case 6'101011
+      case 6'101001
         switch $74 [0]
+          case 1'1
+            assign \fsm_send_byte [0] 1'1
+        end
+      case 6'101010
+        switch $75 [0]
+          case 1'1
+            assign \fsm_send_byte [0] 1'1
+        end
+      case 6'101011
+        switch $76 [0]
           case 1'1
             assign \fsm_send_byte [0] 1'1
         end
@@ -4516,8 +4666,8 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:89"
-  process $499
-    assign \data$119 [31:0] 32'00000000000000000000000000000000
+  process $507
+    assign \data$141 [31:0] 32'00000000000000000000000000000000
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -4527,9 +4677,9 @@ module \top
       case 6'000101
       case 6'000110
       case 6'001000
-        switch $45 [0]
+        switch $47 [0]
           case 1'1
-            assign \data$119 [31:0] \imem_addr [31:0]
+            assign \data$141 [31:0] \imem_addr [31:0]
         end
       case 6'001001
       case 6'001011
@@ -4539,15 +4689,15 @@ module \top
       case 6'001100
       case 6'010000
       case 6'010001
-        switch $58 [0]
+        switch $60 [0]
           case 1'1
-            assign \data$119 [31:0] \step_nia [31:0]
+            assign \data$141 [31:0] \step_nia [31:0]
         end
       case 6'010010
       case 6'010011
-        switch $61 [0]
+        switch $63 [0]
           case 1'1
-            assign \data$119 [31:0] \fault_word [31:0]
+            assign \data$141 [31:0] \fault_word [31:0]
         end
       case 6'001111
       case 6'001010
@@ -4579,7 +4729,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:90"
-  process $500
+  process $508
     assign \send [0] 1'0
     switch \debug_fsm_state [5:0]
       case 6'000000
@@ -4590,7 +4740,7 @@ module \top
       case 6'000101
       case 6'000110
       case 6'001000
-        switch $45 [0]
+        switch $47 [0]
           case 1'1
             assign \send [0] 1'1
         end
@@ -4602,13 +4752,13 @@ module \top
       case 6'001100
       case 6'010000
       case 6'010001
-        switch $58 [0]
+        switch $60 [0]
           case 1'1
             assign \send [0] 1'1
         end
       case 6'010010
       case 6'010011
-        switch $61 [0]
+        switch $63 [0]
           case 1'1
             assign \send [0] 1'1
         end
@@ -4642,7 +4792,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/uart_crc16.py:18"
-  process $501
+  process $509
     assign \reset [0] 1'0
     switch \debug_fsm_state [5:0]
       case 6'000000
@@ -4654,13 +4804,13 @@ module \top
       case 6'000110
       case 6'001000
       case 6'001001
-        switch { $48 [0] $47 [0] }
+        switch { $50 [0] $49 [0] }
           case 2'-1
             assign \reset [0] 1'1
           case 2'1-
         end
       case 6'001011
-        switch { \btn_press [0] $51 [0] \btn_hold_done [0] }
+        switch { \btn_press [0] $53 [0] \btn_hold_done [0] }
           case 3'--1
           case 3'-1-
             assign \reset [0] 1'1
@@ -4668,7 +4818,7 @@ module \top
         end
       case 6'000111
       case 6'001101
-        switch { \btn_press [0] $53 [0] \halt_valid [0] \dbg_fault_valid [0] }
+        switch { \btn_press [0] $55 [0] \halt_valid [0] \dbg_fault_valid [0] }
           case 4'---1
           case 4'--1-
           case 4'-1--
@@ -4676,7 +4826,7 @@ module \top
           case 4'1---
         end
       case 6'001110
-        switch { \btn_press [0] $55 [0] }
+        switch { \btn_press [0] $57 [0] }
           case 2'-1
             assign \reset [0] 1'1
           case 2'1-
@@ -4715,8 +4865,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:670"
-  process $502
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:709"
+  process $510
     assign \fault_word [31:0] 32'00000000000000000000000000000000
     switch \debug_fsm_state [5:0]
       case 6'000000
@@ -4737,7 +4887,7 @@ module \top
       case 6'010001
       case 6'010010
       case 6'010011
-        switch $61 [0]
+        switch $63 [0]
           case 1'1
             assign \fault_word [31:0] { 28'0000000000000000000000000000 \step_fault [3:0] }
         end
@@ -4771,7 +4921,7 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/uart_crc16.py:20"
-  process $503
+  process $511
     assign \data_in [7:0] 8'00000000
     switch \debug_fsm_state [5:0]
       case 6'000000
@@ -4796,7 +4946,7 @@ module \top
       case 6'001010
         switch \valid [0]
           case 1'1
-            switch { $66 [0] $65 [0] $64 [0] }
+            switch { $68 [0] $67 [0] $66 [0] }
               case 3'--1
                 assign \data_in [7:0] 8'10111110
               case 3'-1-
@@ -4809,42 +4959,42 @@ module \top
       case 6'010110
         switch \valid [0]
           case 1'1
-            assign \data_in [7:0] \data$122 [7:0]
+            assign \data_in [7:0] \data$144 [7:0]
         end
       case 6'010111
         switch \valid [0]
           case 1'1
-            assign \data_in [7:0] \data$122 [7:0]
+            assign \data_in [7:0] \data$144 [7:0]
         end
       case 6'011000
         switch \valid [0]
           case 1'1
-            assign \data_in [7:0] \data$122 [7:0]
+            assign \data_in [7:0] \data$144 [7:0]
         end
       case 6'011001
         switch \valid [0]
           case 1'1
-            assign \data_in [7:0] \data$122 [7:0]
+            assign \data_in [7:0] \data$144 [7:0]
         end
       case 6'011010
         switch \valid [0]
           case 1'1
-            assign \data_in [7:0] \data$122 [7:0]
+            assign \data_in [7:0] \data$144 [7:0]
         end
       case 6'011011
         switch \valid [0]
           case 1'1
-            assign \data_in [7:0] \data$122 [7:0]
+            assign \data_in [7:0] \data$144 [7:0]
         end
       case 6'011100
         switch \valid [0]
           case 1'1
-            assign \data_in [7:0] \data$122 [7:0]
+            assign \data_in [7:0] \data$144 [7:0]
         end
       case 6'011101
         switch \valid [0]
           case 1'1
-            assign \data_in [7:0] \data$122 [7:0]
+            assign \data_in [7:0] \data$144 [7:0]
         end
       case 6'011110
       case 6'011111
@@ -4865,8 +5015,8 @@ module \top
   end
 
   attribute \src "/home/runner/workspace/hardware/uart_crc16.py:19"
-  process $504
-    assign \valid$130 [0] 1'0
+  process $512
+    assign \valid$152 [0] 1'0
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -4890,55 +5040,55 @@ module \top
       case 6'001010
         switch \valid [0]
           case 1'1
-            switch { $66 [0] $65 [0] $64 [0] }
+            switch { $68 [0] $67 [0] $66 [0] }
               case 3'--1
-                assign \valid$130 [0] 1'1
+                assign \valid$152 [0] 1'1
               case 3'-1-
               case 3'1--
               case
             end
         end
       case 6'010100
-        assign \valid$130 [0] 1'1
+        assign \valid$152 [0] 1'1
       case 6'010110
         switch \valid [0]
           case 1'1
-            assign \valid$130 [0] 1'1
+            assign \valid$152 [0] 1'1
         end
       case 6'010111
         switch \valid [0]
           case 1'1
-            assign \valid$130 [0] 1'1
+            assign \valid$152 [0] 1'1
         end
       case 6'011000
         switch \valid [0]
           case 1'1
-            assign \valid$130 [0] 1'1
+            assign \valid$152 [0] 1'1
         end
       case 6'011001
         switch \valid [0]
           case 1'1
-            assign \valid$130 [0] 1'1
+            assign \valid$152 [0] 1'1
         end
       case 6'011010
         switch \valid [0]
           case 1'1
-            assign \valid$130 [0] 1'1
+            assign \valid$152 [0] 1'1
         end
       case 6'011011
         switch \valid [0]
           case 1'1
-            assign \valid$130 [0] 1'1
+            assign \valid$152 [0] 1'1
         end
       case 6'011100
         switch \valid [0]
           case 1'1
-            assign \valid$130 [0] 1'1
+            assign \valid$152 [0] 1'1
         end
       case 6'011101
         switch \valid [0]
           case 1'1
-            assign \valid$130 [0] 1'1
+            assign \valid$152 [0] 1'1
         end
       case 6'011110
       case 6'011111
@@ -4958,8 +5108,8 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:113"
-  process $505
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:122"
+  process $513
     assign \rb_rd_en [0] 1'0
     switch \debug_fsm_state [5:0]
       case 6'000000
@@ -5011,41 +5161,41 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:163"
-  process $506
-    assign $199 [31:0] \timer_hi [31:0]
-    switch $119 [0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:180"
+  process $514
+    assign $201 [31:0] \timer_hi [31:0]
+    switch $121 [0]
       case 1'1
-        assign $199 [31:0] $120 [31:0]
+        assign $201 [31:0] $122 [31:0]
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:163"
-  cell $dff $507
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:180"
+  cell $dff $515
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $199 [31:0]
+    connect \D $201 [31:0]
     connect \CLK \clk [0]
     connect \Q \timer_hi
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:162"
-  cell $dff $508
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:179"
+  cell $dff $516
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $121 [31:0]
+    connect \D $123 [31:0]
     connect \CLK \clk [0]
     connect \Q \timer_lo
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:167"
-  process $509
-    assign $200 [0] \alarm_fired [0]
-    switch $123 [0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:184"
+  process $517
+    assign $202 [0] \alarm_fired [0]
+    switch $125 [0]
       case 1'1
-        switch $124 [0]
+        switch $126 [0]
           case 1'1
-            assign $200 [0] 1'1
+            assign $202 [0] 1'1
         end
     end
     switch \is_mmio_write [0]
@@ -5062,89 +5212,31 @@ module \top
           case 4'1111
             switch \dmem_wr_data [1]
               case 1'1
-                assign $200 [0] 1'0
+                assign $202 [0] 1'0
             end
         end
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:167"
-  cell $dff $510
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:184"
+  cell $dff $518
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $200 [0]
+    connect \D $202 [0]
     connect \CLK \clk [0]
     connect \Q \alarm_fired
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
-  process $511
-    assign $201 [2:0] \mmio_led0 [2:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
+  process $519
+    assign $203 [2:0] \mmio_led0 [2:0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
           case 4'0000
-            assign $201 [2:0] \dmem_wr_data [2:0]
-          case 4'0001
-          case 4'0010
-          case 4'0011
-          case 4'0100
-          case 4'0101
-          case 4'1101
-          case 4'1110
-          case 4'1111
-        end
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
-  cell $dff $512
-    parameter \WIDTH 3
-    parameter \CLK_POLARITY 1
-    connect \D $201 [2:0]
-    connect \CLK \clk [0]
-    connect \Q \mmio_led0
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
-  process $513
-    assign $202 [2:0] \mmio_led1 [2:0]
-    switch \is_mmio_write [0]
-      case 1'1
-        switch \dmem_addr [5:2]
-          case 4'0000
-          case 4'0001
-            assign $202 [2:0] \dmem_wr_data [2:0]
-          case 4'0010
-          case 4'0011
-          case 4'0100
-          case 4'0101
-          case 4'1101
-          case 4'1110
-          case 4'1111
-        end
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
-  cell $dff $514
-    parameter \WIDTH 3
-    parameter \CLK_POLARITY 1
-    connect \D $202 [2:0]
-    connect \CLK \clk [0]
-    connect \Q \mmio_led1
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
-  process $515
-    assign $203 [2:0] \mmio_led2 [2:0]
-    switch \is_mmio_write [0]
-      case 1'1
-        switch \dmem_addr [5:2]
-          case 4'0000
-          case 4'0001
-          case 4'0010
             assign $203 [2:0] \dmem_wr_data [2:0]
+          case 4'0001
+          case 4'0010
           case 4'0011
           case 4'0100
           case 4'0101
@@ -5155,26 +5247,26 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
-  cell $dff $516
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
+  cell $dff $520
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
     connect \D $203 [2:0]
     connect \CLK \clk [0]
-    connect \Q \mmio_led2
+    connect \Q \mmio_led0
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
-  process $517
-    assign $204 [2:0] \mmio_led3 [2:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
+  process $521
+    assign $204 [2:0] \mmio_led1 [2:0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
           case 4'0000
           case 4'0001
+            assign $204 [2:0] \dmem_wr_data [2:0]
           case 4'0010
           case 4'0011
-            assign $204 [2:0] \dmem_wr_data [2:0]
           case 4'0100
           case 4'0101
           case 4'1101
@@ -5184,27 +5276,27 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
-  cell $dff $518
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
+  cell $dff $522
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
     connect \D $204 [2:0]
     connect \CLK \clk [0]
-    connect \Q \mmio_led3
+    connect \Q \mmio_led1
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
-  process $519
-    assign $205 [2:0] \mmio_led4 [2:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
+  process $523
+    assign $205 [2:0] \mmio_led2 [2:0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
           case 4'0000
           case 4'0001
           case 4'0010
+            assign $205 [2:0] \dmem_wr_data [2:0]
           case 4'0011
           case 4'0100
-            assign $205 [2:0] \dmem_wr_data [2:0]
           case 4'0101
           case 4'1101
           case 4'1110
@@ -5213,18 +5305,76 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:154"
-  cell $dff $520
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
+  cell $dff $524
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
     connect \D $205 [2:0]
     connect \CLK \clk [0]
+    connect \Q \mmio_led2
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
+  process $525
+    assign $206 [2:0] \mmio_led3 [2:0]
+    switch \is_mmio_write [0]
+      case 1'1
+        switch \dmem_addr [5:2]
+          case 4'0000
+          case 4'0001
+          case 4'0010
+          case 4'0011
+            assign $206 [2:0] \dmem_wr_data [2:0]
+          case 4'0100
+          case 4'0101
+          case 4'1101
+          case 4'1110
+          case 4'1111
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
+  cell $dff $526
+    parameter \WIDTH 3
+    parameter \CLK_POLARITY 1
+    connect \D $206 [2:0]
+    connect \CLK \clk [0]
+    connect \Q \mmio_led3
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
+  process $527
+    assign $207 [2:0] \mmio_led4 [2:0]
+    switch \is_mmio_write [0]
+      case 1'1
+        switch \dmem_addr [5:2]
+          case 4'0000
+          case 4'0001
+          case 4'0010
+          case 4'0011
+          case 4'0100
+            assign $207 [2:0] \dmem_wr_data [2:0]
+          case 4'0101
+          case 4'1101
+          case 4'1110
+          case 4'1111
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:171"
+  cell $dff $528
+    parameter \WIDTH 3
+    parameter \CLK_POLARITY 1
+    connect \D $207 [2:0]
+    connect \CLK \clk [0]
     connect \Q \mmio_led4
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:164"
-  process $521
-    assign $206 [31:0] \tod_epoch [31:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:181"
+  process $529
+    assign $208 [31:0] \tod_epoch [31:0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
@@ -5235,25 +5385,25 @@ module \top
           case 4'0100
           case 4'0101
           case 4'1101
-            assign $206 [31:0] \dmem_wr_data [31:0]
+            assign $208 [31:0] \dmem_wr_data [31:0]
           case 4'1110
           case 4'1111
         end
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:164"
-  cell $dff $522
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:181"
+  cell $dff $530
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $206 [31:0]
+    connect \D $208 [31:0]
     connect \CLK \clk [0]
     connect \Q \tod_epoch
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:165"
-  process $523
-    assign $207 [31:0] \alarm_cmp [31:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:182"
+  process $531
+    assign $209 [31:0] \alarm_cmp [31:0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
@@ -5265,24 +5415,24 @@ module \top
           case 4'0101
           case 4'1101
           case 4'1110
-            assign $207 [31:0] \dmem_wr_data [31:0]
+            assign $209 [31:0] \dmem_wr_data [31:0]
           case 4'1111
         end
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:165"
-  cell $dff $524
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:182"
+  cell $dff $532
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $207 [31:0]
+    connect \D $209 [31:0]
     connect \CLK \clk [0]
     connect \Q \alarm_cmp
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:166"
-  process $525
-    assign $208 [0] \alarm_armed [0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:183"
+  process $533
+    assign $210 [0] \alarm_armed [0]
     switch \is_mmio_write [0]
       case 1'1
         switch \dmem_addr [5:2]
@@ -5297,62 +5447,62 @@ module \top
           case 4'1111
             switch \dmem_wr_data [0]
               case 1'1
-                assign $208 [0] 1'1
+                assign $210 [0] 1'1
             end
         end
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:166"
-  cell $dff $526
-    parameter \WIDTH 1
-    parameter \CLK_POLARITY 1
-    connect \D $208 [0]
-    connect \CLK \clk [0]
-    connect \Q \alarm_armed
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:158"
-  process $527
-    assign $209 [7:0] \mmio_rx_data [7:0]
-    switch { \mmio_rx_read [0] $126 [0] }
-      case 2'-1
-        assign $209 [7:0] \data$122 [7:0]
-      case 2'1-
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:158"
-  cell $dff $528
-    parameter \WIDTH 8
-    parameter \CLK_POLARITY 1
-    connect \D $209 [7:0]
-    connect \CLK \clk [0]
-    connect \Q \mmio_rx_data
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:159"
-  process $529
-    assign $210 [0] \mmio_rx_valid [0]
-    switch { \mmio_rx_read [0] $126 [0] }
-      case 2'-1
-        assign $210 [0] 1'1
-      case 2'1-
-        assign $210 [0] 1'0
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:159"
-  cell $dff $530
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:183"
+  cell $dff $534
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
     connect \D $210 [0]
     connect \CLK \clk [0]
+    connect \Q \alarm_armed
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:175"
+  process $535
+    assign $211 [7:0] \mmio_rx_data [7:0]
+    switch { \mmio_rx_read [0] $128 [0] }
+      case 2'-1
+        assign $211 [7:0] \data$144 [7:0]
+      case 2'1-
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:175"
+  cell $dff $536
+    parameter \WIDTH 8
+    parameter \CLK_POLARITY 1
+    connect \D $211 [7:0]
+    connect \CLK \clk [0]
+    connect \Q \mmio_rx_data
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:176"
+  process $537
+    assign $212 [0] \mmio_rx_valid [0]
+    switch { \mmio_rx_read [0] $128 [0] }
+      case 2'-1
+        assign $212 [0] 1'1
+      case 2'1-
+        assign $212 [0] 1'0
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:176"
+  cell $dff $538
+    parameter \WIDTH 1
+    parameter \CLK_POLARITY 1
+    connect \D $212 [0]
+    connect \CLK \clk [0]
     connect \Q \mmio_rx_valid
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:297"
-  cell $dff $531
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:336"
+  cell $dff $539
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
     connect \D \imem_addr [31:0]
@@ -5360,25 +5510,25 @@ module \top
     connect \Q \prev_nia
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:308"
-  process $532
-    assign $211 [2:0] \btn_sync [2:0]
-    assign $211 [0] \push_button [0]
-    assign $211 [1] \btn_sync [0]
-    assign $211 [2] \btn_sync [1]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:347"
+  process $540
+    assign $213 [2:0] \btn_sync [2:0]
+    assign $213 [0] \push_button [0]
+    assign $213 [1] \btn_sync [0]
+    assign $213 [2] \btn_sync [1]
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:308"
-  cell $dff $533
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:347"
+  cell $dff $541
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
-    connect \D $211 [2:0]
+    connect \D $213 [2:0]
     connect \CLK \clk [0]
     connect \Q \btn_sync
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:309"
-  cell $dff $534
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:348"
+  cell $dff $542
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
     connect \D \btn_sync [2]
@@ -5386,237 +5536,237 @@ module \top
     connect \Q \btn_prev
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:320"
-  process $535
-    assign $212 [26:0] \btn_hold_ctr [26:0]
-    switch $127 [0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:359"
+  process $543
+    assign $214 [26:0] \btn_hold_ctr [26:0]
+    switch $129 [0]
       case 1'1
-        switch $128 [0]
+        switch $130 [0]
           case 1'1
-            assign $212 [26:0] $129 [26:0]
+            assign $214 [26:0] $131 [26:0]
           case
         end
       case
-        assign $212 [26:0] 27'000000000000000000000000000
+        assign $214 [26:0] 27'000000000000000000000000000
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:320"
-  cell $dff $536
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:359"
+  cell $dff $544
     parameter \WIDTH 27
     parameter \CLK_POLARITY 1
-    connect \D $212 [26:0]
+    connect \D $214 [26:0]
     connect \CLK \clk [0]
     connect \Q \btn_hold_ctr
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:321"
-  process $537
-    assign $213 [0] \btn_hold_done [0]
-    switch $127 [0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:360"
+  process $545
+    assign $215 [0] \btn_hold_done [0]
+    switch $129 [0]
       case 1'1
-        switch $128 [0]
+        switch $130 [0]
           case 1'1
           case
-            assign $213 [0] 1'1
+            assign $215 [0] 1'1
         end
       case
-        assign $213 [0] 1'0
+        assign $215 [0] 1'0
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:321"
-  cell $dff $538
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:360"
+  cell $dff $546
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $213 [0]
+    connect \D $215 [0]
     connect \CLK \clk [0]
     connect \Q \btn_hold_done
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:338"
-  process $539
-    assign $214 [0] \mmio_uart_pending [0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:377"
+  process $547
+    assign $216 [0] \mmio_uart_pending [0]
     switch \mmio_uart_tx_wr [0]
       case 1'1
-        assign $214 [0] 1'1
+        assign $216 [0] 1'1
     end
-    switch { $131 [0] \fsm_send_byte [0] }
+    switch { $133 [0] \fsm_send_byte [0] }
       case 2'-1
       case 2'1-
-        assign $214 [0] 1'0
+        assign $216 [0] 1'0
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:338"
-  cell $dff $540
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:377"
+  cell $dff $548
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $214 [0]
+    connect \D $216 [0]
     connect \CLK \clk [0]
     connect \Q \mmio_uart_pending
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:339"
-  process $541
-    assign $215 [7:0] \mmio_uart_byte_reg [7:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:378"
+  process $549
+    assign $217 [7:0] \mmio_uart_byte_reg [7:0]
     switch \mmio_uart_tx_wr [0]
       case 1'1
-        assign $215 [7:0] \mmio_uart_tx_data [7:0]
+        assign $217 [7:0] \mmio_uart_tx_data [7:0]
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:339"
-  cell $dff $542
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:378"
+  cell $dff $550
     parameter \WIDTH 8
     parameter \CLK_POLARITY 1
-    connect \D $215 [7:0]
+    connect \D $217 [7:0]
     connect \CLK \clk [0]
     connect \Q \mmio_uart_byte_reg
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:362"
-  process $543
-    assign $216 [26:0] $132 [26:0]
-    switch $133 [0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:401"
+  process $551
+    assign $218 [26:0] $134 [26:0]
+    switch $135 [0]
       case 1'1
-        assign $216 [26:0] 27'000000000000000000000000000
+        assign $218 [26:0] 27'000000000000000000000000000
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:362"
-  cell $dff $544
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:401"
+  cell $dff $552
     parameter \WIDTH 27
     parameter \CLK_POLARITY 1
-    connect \D $216 [26:0]
+    connect \D $218 [26:0]
     connect \CLK \clk [0]
     connect \Q \heartbeat_ctr
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:363"
-  process $545
-    assign $217 [0] \heartbeat_blink [0]
-    switch $133 [0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:402"
+  process $553
+    assign $219 [0] \heartbeat_blink [0]
+    switch $135 [0]
       case 1'1
-        assign $217 [0] $134 [0]
+        assign $219 [0] $136 [0]
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:363"
-  cell $dff $546
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:402"
+  cell $dff $554
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $217 [0]
+    connect \D $219 [0]
     connect \CLK \clk [0]
     connect \Q \heartbeat_blink
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:240"
-  cell $dff $547
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:279"
+  cell $dff $555
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $135 [0]
+    connect \D $137 [0]
     connect \CLK \clk [0]
     connect \Q \fault_latched
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:377"
-  process $548
-    assign $218 [25:0] \demo_ctr [25:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:416"
+  process $556
+    assign $220 [25:0] \demo_ctr [25:0]
     switch \dbg_boot_complete [0]
       case 1'1
-        switch $136 [0]
+        switch $138 [0]
           case 1'1
-            assign $218 [25:0] 26'00000000000000000000000000
+            assign $220 [25:0] 26'00000000000000000000000000
           case
-            assign $218 [25:0] $139 [25:0]
+            assign $220 [25:0] $141 [25:0]
         end
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:377"
-  cell $dff $549
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:416"
+  cell $dff $557
     parameter \WIDTH 26
     parameter \CLK_POLARITY 1
-    connect \D $218 [25:0]
+    connect \D $220 [25:0]
     connect \CLK \clk [0]
     connect \Q \demo_ctr
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:378"
-  process $550
-    assign $219 [2:0] \demo_phase [2:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:417"
+  process $558
+    assign $221 [2:0] \demo_phase [2:0]
     switch \dbg_boot_complete [0]
       case 1'1
-        switch $136 [0]
+        switch $138 [0]
           case 1'1
-            switch $137 [0]
+            switch $139 [0]
               case 1'1
-                assign $219 [2:0] 3'000
+                assign $221 [2:0] 3'000
               case
-                assign $219 [2:0] $138 [2:0]
+                assign $221 [2:0] $140 [2:0]
             end
           case
         end
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:378"
-  cell $dff $551
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:417"
+  cell $dff $559
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
-    connect \D $219 [2:0]
+    connect \D $221 [2:0]
     connect \CLK \clk [0]
     connect \Q \demo_phase
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:411"
-  process $552
-    assign $220 [3:0] \boot_delay [3:0]
-    switch $140 [0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:450"
+  process $560
+    assign $222 [3:0] \boot_delay [3:0]
+    switch $142 [0]
       case 1'1
-        assign $220 [3:0] $141 [3:0]
+        assign $222 [3:0] $143 [3:0]
       case
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:411"
-  cell $dff $553
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:450"
+  cell $dff $561
     parameter \WIDTH 4
     parameter \CLK_POLARITY 1
-    connect \D $220 [3:0]
+    connect \D $222 [3:0]
     connect \CLK \clk [0]
     connect \Q \boot_delay
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:412"
-  process $554
-    assign $221 [0] \boot_triggered [0]
-    switch $140 [0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:451"
+  process $562
+    assign $223 [0] \boot_triggered [0]
+    switch $142 [0]
       case 1'1
-        switch $142 [0]
+        switch $144 [0]
           case 1'1
-            assign $221 [0] 1'1
+            assign $223 [0] 1'1
         end
       case
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:412"
-  cell $dff $555
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:451"
+  cell $dff $563
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $221 [0]
+    connect \D $223 [0]
     connect \CLK \clk [0]
     connect \Q \boot_triggered
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:469"
-  process $556
-    assign $222 [27:0] \startup_ctr [27:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:508"
+  process $564
+    assign $224 [27:0] \startup_ctr [27:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
-        assign $222 [27:0] $143 [27:0]
+        assign $224 [27:0] $145 [27:0]
       case 6'000001
       case 6'000010
       case 6'000011
@@ -5663,327 +5813,327 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:469"
-  cell $dff $557
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:508"
+  cell $dff $565
     parameter \WIDTH 28
     parameter \CLK_POLARITY 1
-    connect \D $222 [27:0]
+    connect \D $224 [27:0]
     connect \CLK \clk [0]
     connect \Q \startup_ctr
   end
 
   attribute \src "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144"
-  process $558
-    assign $223 [5:0] \debug_fsm_state [5:0]
+  process $566
+    assign $225 [5:0] \debug_fsm_state [5:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
-        switch $144 [0]
+        switch $146 [0]
           case 1'1
-            assign $223 [5:0] 6'000001
+            assign $225 [5:0] 6'000001
         end
       case 6'000001
         switch \dbg_boot_complete [0]
           case 1'1
-            assign $223 [5:0] 6'000010
+            assign $225 [5:0] 6'000010
         end
       case 6'000010
-        switch $145 [0]
+        switch $147 [0]
           case 1'1
-            switch $146 [0]
+            switch $148 [0]
               case 1'1
               case
-                assign $223 [5:0] 6'000011
+                assign $225 [5:0] 6'000011
             end
         end
       case 6'000011
-        switch $148 [0]
+        switch $150 [0]
           case 1'1
-            switch $149 [0]
+            switch $151 [0]
               case 1'1
               case
-                assign $223 [5:0] 6'000100
+                assign $225 [5:0] 6'000100
             end
         end
       case 6'000100
-        switch $151 [0]
-          case 1'1
-            assign $223 [5:0] 6'000101
-        end
-      case 6'000101
-        switch $152 [0]
-          case 1'1
-            assign $223 [5:0] 6'000110
-        end
-      case 6'000110
         switch $153 [0]
           case 1'1
-            switch $154 [0]
+            assign $225 [5:0] 6'000101
+        end
+      case 6'000101
+        switch $154 [0]
+          case 1'1
+            assign $225 [5:0] 6'000110
+        end
+      case 6'000110
+        switch $155 [0]
+          case 1'1
+            switch $156 [0]
               case 1'1
-                assign $223 [5:0] 6'000111
+                assign $225 [5:0] 6'000111
               case
             end
         end
       case 6'001000
-        switch $156 [0]
+        switch $158 [0]
           case 1'1
-            assign $223 [5:0] 6'001001
+            assign $225 [5:0] 6'001001
         end
       case 6'001001
-        switch { $159 [0] $158 [0] }
+        switch { $161 [0] $160 [0] }
           case 2'-1
-            assign $223 [5:0] 6'001010
+            assign $225 [5:0] 6'001010
           case 2'1-
-            switch $160 [0]
+            switch $162 [0]
               case 1'1
               case
-                assign $223 [5:0] 6'001011
+                assign $225 [5:0] 6'001011
             end
         end
       case 6'001011
-        switch { \btn_press [0] $163 [0] \btn_hold_done [0] }
+        switch { \btn_press [0] $165 [0] \btn_hold_done [0] }
           case 3'--1
-            assign $223 [5:0] 6'000111
+            assign $225 [5:0] 6'000111
           case 3'-1-
-            assign $223 [5:0] 6'001010
+            assign $225 [5:0] 6'001010
           case 3'1--
-            assign $223 [5:0] 6'001100
+            assign $225 [5:0] 6'001100
         end
       case 6'000111
-        assign $223 [5:0] 6'001101
+        assign $225 [5:0] 6'001101
       case 6'001101
-        switch { \btn_press [0] $165 [0] \halt_valid [0] \dbg_fault_valid [0] }
+        switch { \btn_press [0] $167 [0] \halt_valid [0] \dbg_fault_valid [0] }
           case 4'---1
-            assign $223 [5:0] 6'001110
+            assign $225 [5:0] 6'001110
           case 4'--1-
-            assign $223 [5:0] 6'001111
+            assign $225 [5:0] 6'001111
           case 4'-1--
-            assign $223 [5:0] 6'001010
+            assign $225 [5:0] 6'001010
           case 4'1---
-            assign $223 [5:0] 6'001011
+            assign $225 [5:0] 6'001011
         end
       case 6'001110
-        switch { \btn_press [0] $167 [0] }
+        switch { \btn_press [0] $169 [0] }
           case 2'-1
-            assign $223 [5:0] 6'001010
+            assign $225 [5:0] 6'001010
           case 2'1-
-            assign $223 [5:0] 6'001011
+            assign $225 [5:0] 6'001011
         end
       case 6'001100
         switch \step_complete [0]
           case 1'1
-            assign $223 [5:0] 6'010000
+            assign $225 [5:0] 6'010000
         end
       case 6'010000
-        switch $168 [0]
+        switch $170 [0]
           case 1'1
-            switch $169 [0]
+            switch $171 [0]
               case 1'1
               case
-                assign $223 [5:0] 6'010001
+                assign $225 [5:0] 6'010001
             end
         end
       case 6'010001
-        switch $171 [0]
+        switch $173 [0]
           case 1'1
             switch \step_had_fault [0]
               case 1'1
-                assign $223 [5:0] 6'010010
+                assign $225 [5:0] 6'010010
               case
-                assign $223 [5:0] 6'001001
+                assign $225 [5:0] 6'001001
             end
         end
       case 6'010010
-        switch $172 [0]
+        switch $174 [0]
           case 1'1
-            switch $173 [0]
+            switch $175 [0]
               case 1'1
               case
-                assign $223 [5:0] 6'010011
+                assign $225 [5:0] 6'010011
             end
         end
       case 6'010011
-        switch $175 [0]
+        switch $177 [0]
           case 1'1
-            assign $223 [5:0] 6'001001
+            assign $225 [5:0] 6'001001
         end
       case 6'001111
-        switch $176 [0]
+        switch $178 [0]
           case 1'1
-            switch $177 [0]
+            switch $179 [0]
               case 1'1
               case
-                assign $223 [5:0] 6'001011
+                assign $225 [5:0] 6'001011
             end
         end
       case 6'001010
         switch \valid [0]
           case 1'1
-            switch { $181 [0] $180 [0] $179 [0] }
+            switch { $183 [0] $182 [0] $181 [0] }
               case 3'--1
-                assign $223 [5:0] 6'010100
+                assign $225 [5:0] 6'010100
               case 3'-1-
-                assign $223 [5:0] 6'010101
+                assign $225 [5:0] 6'010101
               case 3'1--
-                assign $223 [5:0] 6'001101
+                assign $225 [5:0] 6'001101
               case
-                assign $223 [5:0] 6'001011
+                assign $225 [5:0] 6'001011
             end
         end
       case 6'010100
-        assign $223 [5:0] 6'010110
+        assign $225 [5:0] 6'010110
       case 6'010110
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'010111
+            assign $225 [5:0] 6'010111
         end
       case 6'010111
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'011000
+            assign $225 [5:0] 6'011000
         end
       case 6'011000
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'011001
+            assign $225 [5:0] 6'011001
         end
       case 6'011001
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'011010
+            assign $225 [5:0] 6'011010
         end
       case 6'011010
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'011011
+            assign $225 [5:0] 6'011011
         end
       case 6'011011
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'011100
+            assign $225 [5:0] 6'011100
         end
       case 6'011100
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'011101
+            assign $225 [5:0] 6'011101
         end
       case 6'011101
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'011110
+            assign $225 [5:0] 6'011110
         end
       case 6'011110
-        switch $183 [0]
+        switch $185 [0]
           case 1'1
-            assign $223 [5:0] 6'011111
+            assign $225 [5:0] 6'011111
           case
-            assign $223 [5:0] 6'011010
+            assign $225 [5:0] 6'011010
         end
       case 6'011111
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'100000
+            assign $225 [5:0] 6'100000
         end
       case 6'100000
         switch \valid [0]
           case 1'1
-            switch $187 [0]
+            switch $189 [0]
               case 1'1
-                assign $223 [5:0] 6'100001
+                assign $225 [5:0] 6'100001
               case
-                assign $223 [5:0] 6'100010
+                assign $225 [5:0] 6'100010
             end
         end
       case 6'100001
-        switch $188 [0]
+        switch $190 [0]
           case 1'1
-            assign $223 [5:0] 6'001011
+            assign $225 [5:0] 6'001011
         end
       case 6'100010
-        switch $189 [0]
+        switch $191 [0]
           case 1'1
-            switch $190 [0]
+            switch $192 [0]
               case 1'1
               case
-                assign $223 [5:0] 6'001011
+                assign $225 [5:0] 6'001011
             end
         end
       case 6'010101
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'100011
+            assign $225 [5:0] 6'100011
         end
       case 6'100011
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'100100
+            assign $225 [5:0] 6'100100
         end
       case 6'100100
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'100101
+            assign $225 [5:0] 6'100101
         end
       case 6'100101
         switch \valid [0]
           case 1'1
-            assign $223 [5:0] 6'100110
+            assign $225 [5:0] 6'100110
         end
       case 6'100110
-        assign $223 [5:0] 6'100111
+        assign $225 [5:0] 6'100111
       case 6'100111
-        assign $223 [5:0] 6'101000
+        assign $225 [5:0] 6'101000
       case 6'101000
-        switch $192 [0]
-          case 1'1
-            assign $223 [5:0] 6'101001
-        end
-      case 6'101001
-        switch $193 [0]
-          case 1'1
-            assign $223 [5:0] 6'101010
-        end
-      case 6'101010
         switch $194 [0]
           case 1'1
-            assign $223 [5:0] 6'101011
+            assign $225 [5:0] 6'101001
         end
-      case 6'101011
+      case 6'101001
         switch $195 [0]
           case 1'1
-            switch $198 [0]
+            assign $225 [5:0] 6'101010
+        end
+      case 6'101010
+        switch $196 [0]
+          case 1'1
+            assign $225 [5:0] 6'101011
+        end
+      case 6'101011
+        switch $197 [0]
+          case 1'1
+            switch $200 [0]
               case 1'1
-                assign $223 [5:0] 6'001011
+                assign $225 [5:0] 6'001011
               case
-                assign $223 [5:0] 6'100110
+                assign $225 [5:0] 6'100110
             end
         end
     end
   end
 
   attribute \src "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144"
-  cell $dff $559
+  cell $dff $567
     parameter \WIDTH 6
     parameter \CLK_POLARITY 1
-    connect \D $223 [5:0]
+    connect \D $225 [5:0]
     connect \CLK \clk [0]
     connect \Q \debug_fsm_state
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:424"
-  process $560
-    assign $224 [4:0] \banner_idx [4:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:463"
+  process $568
+    assign $226 [4:0] \banner_idx [4:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
         switch \dbg_boot_complete [0]
           case 1'1
-            assign $224 [4:0] 5'00000
+            assign $226 [4:0] 5'00000
         end
       case 6'000010
-        switch $145 [0]
+        switch $147 [0]
           case 1'1
-            switch $146 [0]
+            switch $148 [0]
               case 1'1
-                assign $224 [4:0] $147 [4:0]
+                assign $226 [4:0] $149 [4:0]
               case
             end
         end
@@ -6031,180 +6181,180 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:424"
-  cell $dff $561
-    parameter \WIDTH 5
-    parameter \CLK_POLARITY 1
-    connect \D $224 [4:0]
-    connect \CLK \clk [0]
-    connect \Q \banner_idx
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:238"
-  process $562
-    assign $225 [0] \halted [0]
-    switch \debug_fsm_state [5:0]
-      case 6'000000
-      case 6'000001
-        switch \dbg_boot_complete [0]
-          case 1'1
-            assign $225 [0] 1'1
-        end
-      case 6'000010
-      case 6'000011
-      case 6'000100
-      case 6'000101
-      case 6'000110
-      case 6'001000
-      case 6'001001
-      case 6'001011
-      case 6'000111
-        assign $225 [0] 1'0
-      case 6'001101
-        assign $225 [0] 1'0
-        switch { \btn_press [0] $165 [0] \halt_valid [0] \dbg_fault_valid [0] }
-          case 4'---1
-          case 4'--1-
-            assign $225 [0] 1'1
-          case 4'-1--
-            assign $225 [0] 1'1
-          case 4'1---
-            assign $225 [0] 1'1
-        end
-      case 6'001110
-        assign $225 [0] 1'1
-      case 6'001100
-      case 6'010000
-      case 6'010001
-      case 6'010010
-      case 6'010011
-      case 6'001111
-      case 6'001010
-        switch \valid [0]
-          case 1'1
-            switch { $181 [0] $180 [0] $179 [0] }
-              case 3'--1
-              case 3'-1-
-              case 3'1--
-                assign $225 [0] 1'0
-              case
-            end
-        end
-      case 6'010100
-      case 6'010110
-      case 6'010111
-      case 6'011000
-      case 6'011001
-      case 6'011010
-      case 6'011011
-      case 6'011100
-      case 6'011101
-      case 6'011110
-      case 6'011111
-      case 6'100000
-      case 6'100001
-      case 6'100010
-      case 6'010101
-      case 6'100011
-      case 6'100100
-      case 6'100101
-      case 6'100110
-      case 6'100111
-      case 6'101000
-      case 6'101001
-      case 6'101010
-      case 6'101011
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:238"
-  cell $dff $563
-    parameter \WIDTH 1
-    parameter \CLK_POLARITY 1
-    connect \D $225 [0]
-    connect \CLK \clk [0]
-    connect \Q \halted
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:437"
-  process $564
-    assign $226 [4:0] \callhome_idx [4:0]
-    switch \debug_fsm_state [5:0]
-      case 6'000000
-      case 6'000001
-      case 6'000010
-        switch $145 [0]
-          case 1'1
-            switch $146 [0]
-              case 1'1
-              case
-                assign $226 [4:0] 5'00000
-            end
-        end
-      case 6'000011
-        switch $148 [0]
-          case 1'1
-            switch $149 [0]
-              case 1'1
-                assign $226 [4:0] $150 [4:0]
-              case
-            end
-        end
-      case 6'000100
-      case 6'000101
-      case 6'000110
-      case 6'001000
-      case 6'001001
-      case 6'001011
-      case 6'000111
-      case 6'001101
-      case 6'001110
-      case 6'001100
-      case 6'010000
-      case 6'010001
-      case 6'010010
-      case 6'010011
-      case 6'001111
-      case 6'001010
-      case 6'010100
-      case 6'010110
-      case 6'010111
-      case 6'011000
-      case 6'011001
-      case 6'011010
-      case 6'011011
-      case 6'011100
-      case 6'011101
-      case 6'011110
-      case 6'011111
-      case 6'100000
-      case 6'100001
-      case 6'100010
-      case 6'010101
-      case 6'100011
-      case 6'100100
-      case 6'100101
-      case 6'100110
-      case 6'100111
-      case 6'101000
-      case 6'101001
-      case 6'101010
-      case 6'101011
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:437"
-  cell $dff $565
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:463"
+  cell $dff $569
     parameter \WIDTH 5
     parameter \CLK_POLARITY 1
     connect \D $226 [4:0]
     connect \CLK \clk [0]
+    connect \Q \banner_idx
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:277"
+  process $570
+    assign $227 [0] \halted [0]
+    switch \debug_fsm_state [5:0]
+      case 6'000000
+      case 6'000001
+        switch \dbg_boot_complete [0]
+          case 1'1
+            assign $227 [0] 1'1
+        end
+      case 6'000010
+      case 6'000011
+      case 6'000100
+      case 6'000101
+      case 6'000110
+      case 6'001000
+      case 6'001001
+      case 6'001011
+      case 6'000111
+        assign $227 [0] 1'0
+      case 6'001101
+        assign $227 [0] 1'0
+        switch { \btn_press [0] $167 [0] \halt_valid [0] \dbg_fault_valid [0] }
+          case 4'---1
+          case 4'--1-
+            assign $227 [0] 1'1
+          case 4'-1--
+            assign $227 [0] 1'1
+          case 4'1---
+            assign $227 [0] 1'1
+        end
+      case 6'001110
+        assign $227 [0] 1'1
+      case 6'001100
+      case 6'010000
+      case 6'010001
+      case 6'010010
+      case 6'010011
+      case 6'001111
+      case 6'001010
+        switch \valid [0]
+          case 1'1
+            switch { $183 [0] $182 [0] $181 [0] }
+              case 3'--1
+              case 3'-1-
+              case 3'1--
+                assign $227 [0] 1'0
+              case
+            end
+        end
+      case 6'010100
+      case 6'010110
+      case 6'010111
+      case 6'011000
+      case 6'011001
+      case 6'011010
+      case 6'011011
+      case 6'011100
+      case 6'011101
+      case 6'011110
+      case 6'011111
+      case 6'100000
+      case 6'100001
+      case 6'100010
+      case 6'010101
+      case 6'100011
+      case 6'100100
+      case 6'100101
+      case 6'100110
+      case 6'100111
+      case 6'101000
+      case 6'101001
+      case 6'101010
+      case 6'101011
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:277"
+  cell $dff $571
+    parameter \WIDTH 1
+    parameter \CLK_POLARITY 1
+    connect \D $227 [0]
+    connect \CLK \clk [0]
+    connect \Q \halted
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:476"
+  process $572
+    assign $228 [4:0] \callhome_idx [4:0]
+    switch \debug_fsm_state [5:0]
+      case 6'000000
+      case 6'000001
+      case 6'000010
+        switch $147 [0]
+          case 1'1
+            switch $148 [0]
+              case 1'1
+              case
+                assign $228 [4:0] 5'00000
+            end
+        end
+      case 6'000011
+        switch $150 [0]
+          case 1'1
+            switch $151 [0]
+              case 1'1
+                assign $228 [4:0] $152 [4:0]
+              case
+            end
+        end
+      case 6'000100
+      case 6'000101
+      case 6'000110
+      case 6'001000
+      case 6'001001
+      case 6'001011
+      case 6'000111
+      case 6'001101
+      case 6'001110
+      case 6'001100
+      case 6'010000
+      case 6'010001
+      case 6'010010
+      case 6'010011
+      case 6'001111
+      case 6'001010
+      case 6'010100
+      case 6'010110
+      case 6'010111
+      case 6'011000
+      case 6'011001
+      case 6'011010
+      case 6'011011
+      case 6'011100
+      case 6'011101
+      case 6'011110
+      case 6'011111
+      case 6'100000
+      case 6'100001
+      case 6'100010
+      case 6'010101
+      case 6'100011
+      case 6'100100
+      case 6'100101
+      case 6'100110
+      case 6'100111
+      case 6'101000
+      case 6'101001
+      case 6'101010
+      case 6'101011
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:476"
+  cell $dff $573
+    parameter \WIDTH 5
+    parameter \CLK_POLARITY 1
+    connect \D $228 [4:0]
+    connect \CLK \clk [0]
     connect \Q \callhome_idx
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:459"
-  process $566
-    assign $227 [1:0] \fault_nia_idx [1:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:498"
+  process $574
+    assign $229 [1:0] \fault_nia_idx [1:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -6212,17 +6362,17 @@ module \top
       case 6'000011
       case 6'000100
       case 6'000101
-        switch $152 [0]
+        switch $154 [0]
           case 1'1
-            assign $227 [1:0] 2'00
+            assign $229 [1:0] 2'00
         end
       case 6'000110
-        switch $153 [0]
+        switch $155 [0]
           case 1'1
-            switch $154 [0]
+            switch $156 [0]
               case 1'1
               case
-                assign $227 [1:0] $155 [1:0]
+                assign $229 [1:0] $157 [1:0]
             end
         end
       case 6'001000
@@ -6265,18 +6415,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:459"
-  cell $dff $567
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:498"
+  cell $dff $575
     parameter \WIDTH 2
     parameter \CLK_POLARITY 1
-    connect \D $227 [1:0]
+    connect \D $229 [1:0]
     connect \CLK \clk [0]
     connect \Q \fault_nia_idx
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:246"
-  process $568
-    assign $228 [0] \pl_active [0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:285"
+  process $576
+    assign $230 [0] \pl_active [0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -6287,31 +6437,31 @@ module \top
       case 6'000110
       case 6'001000
       case 6'001001
-        switch { $159 [0] $158 [0] }
+        switch { $161 [0] $160 [0] }
           case 2'-1
-            assign $228 [0] 1'1
+            assign $230 [0] 1'1
           case 2'1-
         end
       case 6'001011
-        switch { \btn_press [0] $163 [0] \btn_hold_done [0] }
+        switch { \btn_press [0] $165 [0] \btn_hold_done [0] }
           case 3'--1
           case 3'-1-
-            assign $228 [0] 1'1
+            assign $230 [0] 1'1
           case 3'1--
         end
       case 6'000111
       case 6'001101
-        switch { \btn_press [0] $165 [0] \halt_valid [0] \dbg_fault_valid [0] }
+        switch { \btn_press [0] $167 [0] \halt_valid [0] \dbg_fault_valid [0] }
           case 4'---1
           case 4'--1-
           case 4'-1--
-            assign $228 [0] 1'1
+            assign $230 [0] 1'1
           case 4'1---
         end
       case 6'001110
-        switch { \btn_press [0] $167 [0] }
+        switch { \btn_press [0] $169 [0] }
           case 2'-1
-            assign $228 [0] 1'1
+            assign $230 [0] 1'1
           case 2'1-
         end
       case 6'001100
@@ -6323,13 +6473,13 @@ module \top
       case 6'001010
         switch \valid [0]
           case 1'1
-            switch { $181 [0] $180 [0] $179 [0] }
+            switch { $183 [0] $182 [0] $181 [0] }
               case 3'--1
               case 3'-1-
               case 3'1--
-                assign $228 [0] 1'0
+                assign $230 [0] 1'0
               case
-                assign $228 [0] 1'0
+                assign $230 [0] 1'0
             end
         end
       case 6'010100
@@ -6346,207 +6496,26 @@ module \top
       case 6'100000
         switch \valid [0]
           case 1'1
-            switch $187 [0]
+            switch $189 [0]
               case 1'1
-                assign $228 [0] 1'0
+                assign $230 [0] 1'0
               case
             end
         end
       case 6'100001
-        switch $188 [0]
-          case 1'1
-            assign $228 [0] 1'0
-        end
-      case 6'100010
-        switch $189 [0]
-          case 1'1
-            switch $190 [0]
-              case 1'1
-              case
-                assign $228 [0] 1'0
-            end
-        end
-      case 6'010101
-      case 6'100011
-      case 6'100100
-      case 6'100101
-      case 6'100110
-      case 6'100111
-      case 6'101000
-      case 6'101001
-      case 6'101010
-      case 6'101011
-        switch $195 [0]
-          case 1'1
-            switch $198 [0]
-              case 1'1
-                assign $228 [0] 1'0
-              case
-            end
-        end
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:246"
-  cell $dff $569
-    parameter \WIDTH 1
-    parameter \CLK_POLARITY 1
-    connect \D $228 [0]
-    connect \CLK \clk [0]
-    connect \Q \pl_active
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:442"
-  process $570
-    assign $229 [2:0] \halt_idx [2:0]
-    switch \debug_fsm_state [5:0]
-      case 6'000000
-      case 6'000001
-      case 6'000010
-      case 6'000011
-      case 6'000100
-      case 6'000101
-      case 6'000110
-      case 6'001000
-      case 6'001001
-        switch { $159 [0] $158 [0] }
-          case 2'-1
-            assign $229 [2:0] 3'000
-          case 2'1-
-            switch $160 [0]
-              case 1'1
-                assign $229 [2:0] $161 [2:0]
-              case
-                assign $229 [2:0] 3'000
-            end
-        end
-      case 6'001011
-      case 6'000111
-      case 6'001101
-        switch { \btn_press [0] $165 [0] \halt_valid [0] \dbg_fault_valid [0] }
-          case 4'---1
-          case 4'--1-
-            assign $229 [2:0] 3'000
-          case 4'-1--
-          case 4'1---
-        end
-      case 6'001110
-      case 6'001100
-      case 6'010000
-      case 6'010001
-        switch $171 [0]
-          case 1'1
-            switch \step_had_fault [0]
-              case 1'1
-              case
-                assign $229 [2:0] 3'000
-            end
-        end
-      case 6'010010
-      case 6'010011
-        switch $175 [0]
-          case 1'1
-            assign $229 [2:0] 3'000
-        end
-      case 6'001111
-        switch $176 [0]
-          case 1'1
-            switch $177 [0]
-              case 1'1
-                assign $229 [2:0] $178 [2:0]
-              case
-                assign $229 [2:0] 3'000
-            end
-        end
-      case 6'001010
-      case 6'010100
-      case 6'010110
-      case 6'010111
-      case 6'011000
-      case 6'011001
-      case 6'011010
-      case 6'011011
-      case 6'011100
-      case 6'011101
-      case 6'011110
-      case 6'011111
-      case 6'100000
-      case 6'100001
-        switch $188 [0]
-          case 1'1
-            assign $229 [2:0] 3'000
-        end
-      case 6'100010
-      case 6'010101
-      case 6'100011
-      case 6'100100
-      case 6'100101
-      case 6'100110
-      case 6'100111
-      case 6'101000
-      case 6'101001
-      case 6'101010
-      case 6'101011
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:442"
-  cell $dff $571
-    parameter \WIDTH 3
-    parameter \CLK_POLARITY 1
-    connect \D $229 [2:0]
-    connect \CLK \clk [0]
-    connect \Q \halt_idx
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:239"
-  process $572
-    assign $230 [0] \stepping [0]
-    switch \debug_fsm_state [5:0]
-      case 6'000000
-      case 6'000001
-      case 6'000010
-      case 6'000011
-      case 6'000100
-      case 6'000101
-      case 6'000110
-      case 6'001000
-      case 6'001001
-      case 6'001011
-        switch { \btn_press [0] $163 [0] \btn_hold_done [0] }
-          case 3'--1
-          case 3'-1-
-          case 3'1--
-            assign $230 [0] 1'1
-        end
-      case 6'000111
-      case 6'001101
-      case 6'001110
-      case 6'001100
-        switch \step_complete [0]
+        switch $190 [0]
           case 1'1
             assign $230 [0] 1'0
         end
-      case 6'010000
-      case 6'010001
-      case 6'010010
-      case 6'010011
-      case 6'001111
-      case 6'001010
-      case 6'010100
-      case 6'010110
-      case 6'010111
-      case 6'011000
-      case 6'011001
-      case 6'011010
-      case 6'011011
-      case 6'011100
-      case 6'011101
-      case 6'011110
-      case 6'011111
-      case 6'100000
-      case 6'100001
       case 6'100010
+        switch $191 [0]
+          case 1'1
+            switch $192 [0]
+              case 1'1
+              case
+                assign $230 [0] 1'0
+            end
+        end
       case 6'010101
       case 6'100011
       case 6'100100
@@ -6557,21 +6526,202 @@ module \top
       case 6'101001
       case 6'101010
       case 6'101011
+        switch $197 [0]
+          case 1'1
+            switch $200 [0]
+              case 1'1
+                assign $230 [0] 1'0
+              case
+            end
+        end
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:239"
-  cell $dff $573
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:285"
+  cell $dff $577
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
     connect \D $230 [0]
     connect \CLK \clk [0]
+    connect \Q \pl_active
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:481"
+  process $578
+    assign $231 [2:0] \halt_idx [2:0]
+    switch \debug_fsm_state [5:0]
+      case 6'000000
+      case 6'000001
+      case 6'000010
+      case 6'000011
+      case 6'000100
+      case 6'000101
+      case 6'000110
+      case 6'001000
+      case 6'001001
+        switch { $161 [0] $160 [0] }
+          case 2'-1
+            assign $231 [2:0] 3'000
+          case 2'1-
+            switch $162 [0]
+              case 1'1
+                assign $231 [2:0] $163 [2:0]
+              case
+                assign $231 [2:0] 3'000
+            end
+        end
+      case 6'001011
+      case 6'000111
+      case 6'001101
+        switch { \btn_press [0] $167 [0] \halt_valid [0] \dbg_fault_valid [0] }
+          case 4'---1
+          case 4'--1-
+            assign $231 [2:0] 3'000
+          case 4'-1--
+          case 4'1---
+        end
+      case 6'001110
+      case 6'001100
+      case 6'010000
+      case 6'010001
+        switch $173 [0]
+          case 1'1
+            switch \step_had_fault [0]
+              case 1'1
+              case
+                assign $231 [2:0] 3'000
+            end
+        end
+      case 6'010010
+      case 6'010011
+        switch $177 [0]
+          case 1'1
+            assign $231 [2:0] 3'000
+        end
+      case 6'001111
+        switch $178 [0]
+          case 1'1
+            switch $179 [0]
+              case 1'1
+                assign $231 [2:0] $180 [2:0]
+              case
+                assign $231 [2:0] 3'000
+            end
+        end
+      case 6'001010
+      case 6'010100
+      case 6'010110
+      case 6'010111
+      case 6'011000
+      case 6'011001
+      case 6'011010
+      case 6'011011
+      case 6'011100
+      case 6'011101
+      case 6'011110
+      case 6'011111
+      case 6'100000
+      case 6'100001
+        switch $190 [0]
+          case 1'1
+            assign $231 [2:0] 3'000
+        end
+      case 6'100010
+      case 6'010101
+      case 6'100011
+      case 6'100100
+      case 6'100101
+      case 6'100110
+      case 6'100111
+      case 6'101000
+      case 6'101001
+      case 6'101010
+      case 6'101011
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:481"
+  cell $dff $579
+    parameter \WIDTH 3
+    parameter \CLK_POLARITY 1
+    connect \D $231 [2:0]
+    connect \CLK \clk [0]
+    connect \Q \halt_idx
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:278"
+  process $580
+    assign $232 [0] \stepping [0]
+    switch \debug_fsm_state [5:0]
+      case 6'000000
+      case 6'000001
+      case 6'000010
+      case 6'000011
+      case 6'000100
+      case 6'000101
+      case 6'000110
+      case 6'001000
+      case 6'001001
+      case 6'001011
+        switch { \btn_press [0] $165 [0] \btn_hold_done [0] }
+          case 3'--1
+          case 3'-1-
+          case 3'1--
+            assign $232 [0] 1'1
+        end
+      case 6'000111
+      case 6'001101
+      case 6'001110
+      case 6'001100
+        switch \step_complete [0]
+          case 1'1
+            assign $232 [0] 1'0
+        end
+      case 6'010000
+      case 6'010001
+      case 6'010010
+      case 6'010011
+      case 6'001111
+      case 6'001010
+      case 6'010100
+      case 6'010110
+      case 6'010111
+      case 6'011000
+      case 6'011001
+      case 6'011010
+      case 6'011011
+      case 6'011100
+      case 6'011101
+      case 6'011110
+      case 6'011111
+      case 6'100000
+      case 6'100001
+      case 6'100010
+      case 6'010101
+      case 6'100011
+      case 6'100100
+      case 6'100101
+      case 6'100110
+      case 6'100111
+      case 6'101000
+      case 6'101001
+      case 6'101010
+      case 6'101011
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:278"
+  cell $dff $581
+    parameter \WIDTH 1
+    parameter \CLK_POLARITY 1
+    connect \D $232 [0]
+    connect \CLK \clk [0]
     connect \Q \stepping
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:457"
-  process $574
-    assign $231 [7:0] \last_fault_code [7:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:496"
+  process $582
+    assign $233 [7:0] \last_fault_code [7:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -6585,9 +6735,9 @@ module \top
       case 6'001011
       case 6'000111
       case 6'001101
-        switch { \btn_press [0] $165 [0] \halt_valid [0] \dbg_fault_valid [0] }
+        switch { \btn_press [0] $167 [0] \halt_valid [0] \dbg_fault_valid [0] }
           case 4'---1
-            assign $231 [7:0] { 3'000 \fault [4:0] }
+            assign $233 [7:0] { 3'000 \fault [4:0] }
           case 4'--1-
           case 4'-1--
           case 4'1---
@@ -6598,7 +6748,7 @@ module \top
           case 1'1
             switch \dbg_fault_valid [0]
               case 1'1
-                assign $231 [7:0] { 3'000 \fault [4:0] }
+                assign $233 [7:0] { 3'000 \fault [4:0] }
             end
         end
       case 6'010000
@@ -6634,18 +6784,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:457"
-  cell $dff $575
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:496"
+  cell $dff $583
     parameter \WIDTH 8
     parameter \CLK_POLARITY 1
-    connect \D $231 [7:0]
+    connect \D $233 [7:0]
     connect \CLK \clk [0]
     connect \Q \last_fault_code
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:456"
-  process $576
-    assign $232 [7:0] \boot_reason [7:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:495"
+  process $584
+    assign $234 [7:0] \boot_reason [7:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -6659,9 +6809,9 @@ module \top
       case 6'001011
       case 6'000111
       case 6'001101
-        switch { \btn_press [0] $165 [0] \halt_valid [0] \dbg_fault_valid [0] }
+        switch { \btn_press [0] $167 [0] \halt_valid [0] \dbg_fault_valid [0] }
           case 4'---1
-            assign $232 [7:0] 8'00000010
+            assign $234 [7:0] 8'00000010
           case 4'--1-
           case 4'-1--
           case 4'1---
@@ -6672,7 +6822,7 @@ module \top
           case 1'1
             switch \dbg_fault_valid [0]
               case 1'1
-                assign $232 [7:0] 8'00000010
+                assign $234 [7:0] 8'00000010
             end
         end
       case 6'010000
@@ -6708,18 +6858,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:456"
-  cell $dff $577
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:495"
+  cell $dff $585
     parameter \WIDTH 8
     parameter \CLK_POLARITY 1
-    connect \D $232 [7:0]
+    connect \D $234 [7:0]
     connect \CLK \clk [0]
     connect \Q \boot_reason
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:458"
-  process $578
-    assign $233 [31:0] \fault_nia [31:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:497"
+  process $586
+    assign $235 [31:0] \fault_nia [31:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -6733,9 +6883,9 @@ module \top
       case 6'001011
       case 6'000111
       case 6'001101
-        switch { \btn_press [0] $165 [0] \halt_valid [0] \dbg_fault_valid [0] }
+        switch { \btn_press [0] $167 [0] \halt_valid [0] \dbg_fault_valid [0] }
           case 4'---1
-            assign $233 [31:0] \imem_addr [31:0]
+            assign $235 [31:0] \imem_addr [31:0]
           case 4'--1-
           case 4'-1--
           case 4'1---
@@ -6746,7 +6896,7 @@ module \top
           case 1'1
             switch \dbg_fault_valid [0]
               case 1'1
-                assign $233 [31:0] \imem_addr [31:0]
+                assign $235 [31:0] \imem_addr [31:0]
             end
         end
       case 6'010000
@@ -6782,18 +6932,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:458"
-  cell $dff $579
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:497"
+  cell $dff $587
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $233 [31:0]
+    connect \D $235 [31:0]
     connect \CLK \clk [0]
     connect \Q \fault_nia
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:461"
-  process $580
-    assign $234 [31:0] \step_nia [31:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:500"
+  process $588
+    assign $236 [31:0] \step_nia [31:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -6811,7 +6961,7 @@ module \top
       case 6'001100
         switch \step_complete [0]
           case 1'1
-            assign $234 [31:0] \imem_addr [31:0]
+            assign $236 [31:0] \imem_addr [31:0]
         end
       case 6'010000
       case 6'010001
@@ -6846,18 +6996,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:461"
-  cell $dff $581
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:500"
+  cell $dff $589
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $234 [31:0]
+    connect \D $236 [31:0]
     connect \CLK \clk [0]
     connect \Q \step_nia
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:462"
-  process $582
-    assign $235 [3:0] \step_fault [3:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:501"
+  process $590
+    assign $237 [3:0] \step_fault [3:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -6875,7 +7025,7 @@ module \top
       case 6'001100
         switch \step_complete [0]
           case 1'1
-            assign $235 [3:0] \fault [3:0]
+            assign $237 [3:0] \fault [3:0]
         end
       case 6'010000
       case 6'010001
@@ -6910,18 +7060,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:462"
-  cell $dff $583
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:501"
+  cell $dff $591
     parameter \WIDTH 4
     parameter \CLK_POLARITY 1
-    connect \D $235 [3:0]
+    connect \D $237 [3:0]
     connect \CLK \clk [0]
     connect \Q \step_fault
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:463"
-  process $584
-    assign $236 [0] \step_had_fault [0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:502"
+  process $592
+    assign $238 [0] \step_had_fault [0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -6939,7 +7089,7 @@ module \top
       case 6'001100
         switch \step_complete [0]
           case 1'1
-            assign $236 [0] \dbg_fault_valid [0]
+            assign $238 [0] \dbg_fault_valid [0]
         end
       case 6'010000
       case 6'010001
@@ -6974,18 +7124,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:463"
-  cell $dff $585
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:502"
+  cell $dff $593
     parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $236 [0]
+    connect \D $238 [0]
     connect \CLK \clk [0]
     connect \Q \step_had_fault
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:447"
-  process $586
-    assign $237 [1:0] \step_idx [1:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:486"
+  process $594
+    assign $239 [1:0] \step_idx [1:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -7003,16 +7153,16 @@ module \top
       case 6'001100
         switch \step_complete [0]
           case 1'1
-            assign $237 [1:0] 2'00
+            assign $239 [1:0] 2'00
         end
       case 6'010000
-        switch $168 [0]
+        switch $170 [0]
           case 1'1
-            switch $169 [0]
+            switch $171 [0]
               case 1'1
-                assign $237 [1:0] $170 [1:0]
+                assign $239 [1:0] $172 [1:0]
               case
-                assign $237 [1:0] 2'00
+                assign $239 [1:0] 2'00
             end
         end
       case 6'010001
@@ -7047,18 +7197,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:447"
-  cell $dff $587
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:486"
+  cell $dff $595
     parameter \WIDTH 2
     parameter \CLK_POLARITY 1
-    connect \D $237 [1:0]
+    connect \D $239 [1:0]
     connect \CLK \clk [0]
     connect \Q \step_idx
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:452"
-  process $588
-    assign $238 [1:0] \fault_msg_idx [1:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:491"
+  process $596
+    assign $240 [1:0] \fault_msg_idx [1:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -7076,22 +7226,22 @@ module \top
       case 6'001100
       case 6'010000
       case 6'010001
-        switch $171 [0]
+        switch $173 [0]
           case 1'1
             switch \step_had_fault [0]
               case 1'1
-                assign $238 [1:0] 2'00
+                assign $240 [1:0] 2'00
               case
             end
         end
       case 6'010010
-        switch $172 [0]
+        switch $174 [0]
           case 1'1
-            switch $173 [0]
+            switch $175 [0]
               case 1'1
-                assign $238 [1:0] $174 [1:0]
+                assign $240 [1:0] $176 [1:0]
               case
-                assign $238 [1:0] 2'00
+                assign $240 [1:0] 2'00
             end
         end
       case 6'010011
@@ -7124,18 +7274,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:452"
-  cell $dff $589
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:491"
+  cell $dff $597
     parameter \WIDTH 2
     parameter \CLK_POLARITY 1
-    connect \D $238 [1:0]
+    connect \D $240 [1:0]
     connect \CLK \clk [0]
     connect \Q \fault_msg_idx
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:247"
-  process $590
-    assign $239 [15:0] \pl_addr [15:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:286"
+  process $598
+    assign $241 [15:0] \pl_addr [15:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -7161,12 +7311,12 @@ module \top
       case 6'010110
         switch \valid [0]
           case 1'1
-            assign $239 [15:8] \data$122 [7:0]
+            assign $241 [15:8] \data$144 [7:0]
         end
       case 6'010111
         switch \valid [0]
           case 1'1
-            assign $239 [7:0] \data$122 [7:0]
+            assign $241 [7:0] \data$144 [7:0]
         end
       case 6'011000
       case 6'011001
@@ -7192,160 +7342,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:247"
-  cell $dff $591
-    parameter \WIDTH 16
-    parameter \CLK_POLARITY 1
-    connect \D $239 [15:0]
-    connect \CLK \clk [0]
-    connect \Q \pl_addr
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:248"
-  process $592
-    assign $240 [15:0] \pl_total_count [15:0]
-    switch \debug_fsm_state [5:0]
-      case 6'000000
-      case 6'000001
-      case 6'000010
-      case 6'000011
-      case 6'000100
-      case 6'000101
-      case 6'000110
-      case 6'001000
-      case 6'001001
-      case 6'001011
-      case 6'000111
-      case 6'001101
-      case 6'001110
-      case 6'001100
-      case 6'010000
-      case 6'010001
-      case 6'010010
-      case 6'010011
-      case 6'001111
-      case 6'001010
-      case 6'010100
-      case 6'010110
-      case 6'010111
-      case 6'011000
-        switch \valid [0]
-          case 1'1
-            assign $240 [15:8] \data$122 [7:0]
-        end
-      case 6'011001
-        switch \valid [0]
-          case 1'1
-            assign $240 [7:0] \data$122 [7:0]
-        end
-      case 6'011010
-      case 6'011011
-      case 6'011100
-      case 6'011101
-      case 6'011110
-      case 6'011111
-      case 6'100000
-      case 6'100001
-      case 6'100010
-      case 6'010101
-      case 6'100011
-      case 6'100100
-      case 6'100101
-      case 6'100110
-      case 6'100111
-      case 6'101000
-      case 6'101001
-      case 6'101010
-      case 6'101011
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:248"
-  cell $dff $593
-    parameter \WIDTH 16
-    parameter \CLK_POLARITY 1
-    connect \D $240 [15:0]
-    connect \CLK \clk [0]
-    connect \Q \pl_total_count
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:249"
-  process $594
-    assign $241 [15:0] \pl_count [15:0]
-    switch \debug_fsm_state [5:0]
-      case 6'000000
-      case 6'000001
-      case 6'000010
-      case 6'000011
-      case 6'000100
-      case 6'000101
-      case 6'000110
-      case 6'001000
-      case 6'001001
-      case 6'001011
-      case 6'000111
-      case 6'001101
-      case 6'001110
-      case 6'001100
-      case 6'010000
-      case 6'010001
-      case 6'010010
-      case 6'010011
-      case 6'001111
-      case 6'001010
-      case 6'010100
-      case 6'010110
-      case 6'010111
-      case 6'011000
-        switch \valid [0]
-          case 1'1
-            assign $241 [15:8] \data$122 [7:0]
-        end
-      case 6'011001
-        switch \valid [0]
-          case 1'1
-            assign $241 [7:0] \data$122 [7:0]
-        end
-      case 6'011010
-      case 6'011011
-      case 6'011100
-      case 6'011101
-      case 6'011110
-        switch $183 [0]
-          case 1'1
-            assign $241 [15:0] 16'0000000000000000
-          case
-            assign $241 [15:0] $184 [15:0]
-        end
-      case 6'011111
-      case 6'100000
-      case 6'100001
-      case 6'100010
-      case 6'010101
-      case 6'100011
-      case 6'100100
-      case 6'100101
-      case 6'100110
-      case 6'100111
-      case 6'101000
-      case 6'101001
-      case 6'101010
-      case 6'101011
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:249"
-  cell $dff $595
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:286"
+  cell $dff $599
     parameter \WIDTH 16
     parameter \CLK_POLARITY 1
     connect \D $241 [15:0]
     connect \CLK \clk [0]
-    connect \Q \pl_count
+    connect \Q \pl_addr
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:251"
-  process $596
-    assign $242 [15:0] \pl_cur_addr [15:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:287"
+  process $600
+    assign $242 [15:0] \pl_total_count [15:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -7371,17 +7379,20 @@ module \top
       case 6'010110
       case 6'010111
       case 6'011000
+        switch \valid [0]
+          case 1'1
+            assign $242 [15:8] \data$144 [7:0]
+        end
       case 6'011001
         switch \valid [0]
           case 1'1
-            assign $242 [15:0] \pl_addr [15:0]
+            assign $242 [7:0] \data$144 [7:0]
         end
       case 6'011010
       case 6'011011
       case 6'011100
       case 6'011101
       case 6'011110
-        assign $242 [15:0] $182 [15:0]
       case 6'011111
       case 6'100000
       case 6'100001
@@ -7399,18 +7410,157 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:251"
-  cell $dff $597
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:287"
+  cell $dff $601
     parameter \WIDTH 16
     parameter \CLK_POLARITY 1
     connect \D $242 [15:0]
     connect \CLK \clk [0]
+    connect \Q \pl_total_count
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:288"
+  process $602
+    assign $243 [15:0] \pl_count [15:0]
+    switch \debug_fsm_state [5:0]
+      case 6'000000
+      case 6'000001
+      case 6'000010
+      case 6'000011
+      case 6'000100
+      case 6'000101
+      case 6'000110
+      case 6'001000
+      case 6'001001
+      case 6'001011
+      case 6'000111
+      case 6'001101
+      case 6'001110
+      case 6'001100
+      case 6'010000
+      case 6'010001
+      case 6'010010
+      case 6'010011
+      case 6'001111
+      case 6'001010
+      case 6'010100
+      case 6'010110
+      case 6'010111
+      case 6'011000
+        switch \valid [0]
+          case 1'1
+            assign $243 [15:8] \data$144 [7:0]
+        end
+      case 6'011001
+        switch \valid [0]
+          case 1'1
+            assign $243 [7:0] \data$144 [7:0]
+        end
+      case 6'011010
+      case 6'011011
+      case 6'011100
+      case 6'011101
+      case 6'011110
+        switch $185 [0]
+          case 1'1
+            assign $243 [15:0] 16'0000000000000000
+          case
+            assign $243 [15:0] $186 [15:0]
+        end
+      case 6'011111
+      case 6'100000
+      case 6'100001
+      case 6'100010
+      case 6'010101
+      case 6'100011
+      case 6'100100
+      case 6'100101
+      case 6'100110
+      case 6'100111
+      case 6'101000
+      case 6'101001
+      case 6'101010
+      case 6'101011
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:288"
+  cell $dff $603
+    parameter \WIDTH 16
+    parameter \CLK_POLARITY 1
+    connect \D $243 [15:0]
+    connect \CLK \clk [0]
+    connect \Q \pl_count
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:290"
+  process $604
+    assign $244 [15:0] \pl_cur_addr [15:0]
+    switch \debug_fsm_state [5:0]
+      case 6'000000
+      case 6'000001
+      case 6'000010
+      case 6'000011
+      case 6'000100
+      case 6'000101
+      case 6'000110
+      case 6'001000
+      case 6'001001
+      case 6'001011
+      case 6'000111
+      case 6'001101
+      case 6'001110
+      case 6'001100
+      case 6'010000
+      case 6'010001
+      case 6'010010
+      case 6'010011
+      case 6'001111
+      case 6'001010
+      case 6'010100
+      case 6'010110
+      case 6'010111
+      case 6'011000
+      case 6'011001
+        switch \valid [0]
+          case 1'1
+            assign $244 [15:0] \pl_addr [15:0]
+        end
+      case 6'011010
+      case 6'011011
+      case 6'011100
+      case 6'011101
+      case 6'011110
+        assign $244 [15:0] $184 [15:0]
+      case 6'011111
+      case 6'100000
+      case 6'100001
+      case 6'100010
+      case 6'010101
+      case 6'100011
+      case 6'100100
+      case 6'100101
+      case 6'100110
+      case 6'100111
+      case 6'101000
+      case 6'101001
+      case 6'101010
+      case 6'101011
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:290"
+  cell $dff $605
+    parameter \WIDTH 16
+    parameter \CLK_POLARITY 1
+    connect \D $244 [15:0]
+    connect \CLK \clk [0]
     connect \Q \pl_cur_addr
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:250"
-  process $598
-    assign $243 [31:0] \pl_word [31:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:289"
+  process $606
+    assign $245 [31:0] \pl_word [31:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -7440,22 +7590,22 @@ module \top
       case 6'011010
         switch \valid [0]
           case 1'1
-            assign $243 [7:0] \data$122 [7:0]
+            assign $245 [7:0] \data$144 [7:0]
         end
       case 6'011011
         switch \valid [0]
           case 1'1
-            assign $243 [15:8] \data$122 [7:0]
+            assign $245 [15:8] \data$144 [7:0]
         end
       case 6'011100
         switch \valid [0]
           case 1'1
-            assign $243 [23:16] \data$122 [7:0]
+            assign $245 [23:16] \data$144 [7:0]
         end
       case 6'011101
         switch \valid [0]
           case 1'1
-            assign $243 [31:24] \data$122 [7:0]
+            assign $245 [31:24] \data$144 [7:0]
         end
       case 6'011110
       case 6'011111
@@ -7475,18 +7625,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:250"
-  cell $dff $599
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:289"
+  cell $dff $607
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $243 [31:0]
+    connect \D $245 [31:0]
     connect \CLK \clk [0]
     connect \Q \pl_word
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:252"
-  process $600
-    assign $244 [7:0] \pl_crc_hi_buf [7:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:291"
+  process $608
+    assign $246 [7:0] \pl_crc_hi_buf [7:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -7521,7 +7671,7 @@ module \top
       case 6'011111
         switch \valid [0]
           case 1'1
-            assign $244 [7:0] \data$122 [7:0]
+            assign $246 [7:0] \data$144 [7:0]
         end
       case 6'100000
       case 6'100001
@@ -7539,150 +7689,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:252"
-  cell $dff $601
-    parameter \WIDTH 8
-    parameter \CLK_POLARITY 1
-    connect \D $244 [7:0]
-    connect \CLK \clk [0]
-    connect \Q \pl_crc_hi_buf
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:253"
-  process $602
-    assign $245 [0] \pl_crc_fail [0]
-    switch \debug_fsm_state [5:0]
-      case 6'000000
-      case 6'000001
-      case 6'000010
-      case 6'000011
-      case 6'000100
-      case 6'000101
-      case 6'000110
-      case 6'001000
-      case 6'001001
-      case 6'001011
-      case 6'000111
-      case 6'001101
-      case 6'001110
-      case 6'001100
-      case 6'010000
-      case 6'010001
-      case 6'010010
-      case 6'010011
-      case 6'001111
-      case 6'001010
-      case 6'010100
-      case 6'010110
-      case 6'010111
-      case 6'011000
-      case 6'011001
-      case 6'011010
-      case 6'011011
-      case 6'011100
-      case 6'011101
-      case 6'011110
-      case 6'011111
-        switch \valid [0]
-          case 1'1
-            assign $245 [0] $185 [0]
-        end
-      case 6'100000
-      case 6'100001
-      case 6'100010
-      case 6'010101
-      case 6'100011
-      case 6'100100
-      case 6'100101
-      case 6'100110
-      case 6'100111
-      case 6'101000
-      case 6'101001
-      case 6'101010
-      case 6'101011
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:253"
-  cell $dff $603
-    parameter \WIDTH 1
-    parameter \CLK_POLARITY 1
-    connect \D $245 [0]
-    connect \CLK \clk [0]
-    connect \Q \pl_crc_fail
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:254"
-  process $604
-    assign $246 [7:0] \pl_ack0 [7:0]
-    switch \debug_fsm_state [5:0]
-      case 6'000000
-      case 6'000001
-      case 6'000010
-      case 6'000011
-      case 6'000100
-      case 6'000101
-      case 6'000110
-      case 6'001000
-      case 6'001001
-      case 6'001011
-      case 6'000111
-      case 6'001101
-      case 6'001110
-      case 6'001100
-      case 6'010000
-      case 6'010001
-      case 6'010010
-      case 6'010011
-      case 6'001111
-      case 6'001010
-      case 6'010100
-      case 6'010110
-      case 6'010111
-      case 6'011000
-      case 6'011001
-      case 6'011010
-      case 6'011011
-      case 6'011100
-      case 6'011101
-      case 6'011110
-      case 6'011111
-      case 6'100000
-        switch \valid [0]
-          case 1'1
-            switch $187 [0]
-              case 1'1
-              case
-                assign $246 [7:0] \pl_addr [15:8]
-            end
-        end
-      case 6'100001
-      case 6'100010
-      case 6'010101
-      case 6'100011
-      case 6'100100
-      case 6'100101
-      case 6'100110
-      case 6'100111
-      case 6'101000
-      case 6'101001
-      case 6'101010
-      case 6'101011
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:254"
-  cell $dff $605
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:291"
+  cell $dff $609
     parameter \WIDTH 8
     parameter \CLK_POLARITY 1
     connect \D $246 [7:0]
     connect \CLK \clk [0]
-    connect \Q \pl_ack0
+    connect \Q \pl_crc_hi_buf
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:254"
-  process $606
-    assign $247 [7:0] \pl_ack1 [7:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:292"
+  process $610
+    assign $247 [0] \pl_crc_fail [0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -7715,15 +7733,11 @@ module \top
       case 6'011101
       case 6'011110
       case 6'011111
-      case 6'100000
         switch \valid [0]
           case 1'1
-            switch $187 [0]
-              case 1'1
-              case
-                assign $247 [7:0] \pl_addr [7:0]
-            end
+            assign $247 [0] $187 [0]
         end
+      case 6'100000
       case 6'100001
       case 6'100010
       case 6'010101
@@ -7739,18 +7753,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:254"
-  cell $dff $607
-    parameter \WIDTH 8
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:292"
+  cell $dff $611
+    parameter \WIDTH 1
     parameter \CLK_POLARITY 1
-    connect \D $247 [7:0]
+    connect \D $247 [0]
     connect \CLK \clk [0]
-    connect \Q \pl_ack1
+    connect \Q \pl_crc_fail
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:254"
-  process $608
-    assign $248 [7:0] \pl_ack2 [7:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:293"
+  process $612
+    assign $248 [7:0] \pl_ack0 [7:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -7786,10 +7800,10 @@ module \top
       case 6'100000
         switch \valid [0]
           case 1'1
-            switch $187 [0]
+            switch $189 [0]
               case 1'1
               case
-                assign $248 [7:0] \pl_total_count [15:8]
+                assign $248 [7:0] \pl_addr [15:8]
             end
         end
       case 6'100001
@@ -7807,18 +7821,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:254"
-  cell $dff $609
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:293"
+  cell $dff $613
     parameter \WIDTH 8
     parameter \CLK_POLARITY 1
     connect \D $248 [7:0]
     connect \CLK \clk [0]
-    connect \Q \pl_ack2
+    connect \Q \pl_ack0
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:254"
-  process $610
-    assign $249 [7:0] \pl_ack3 [7:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:293"
+  process $614
+    assign $249 [7:0] \pl_ack1 [7:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -7854,10 +7868,10 @@ module \top
       case 6'100000
         switch \valid [0]
           case 1'1
-            switch $187 [0]
+            switch $189 [0]
               case 1'1
               case
-                assign $249 [7:0] \pl_total_count [7:0]
+                assign $249 [7:0] \pl_addr [7:0]
             end
         end
       case 6'100001
@@ -7875,18 +7889,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:254"
-  cell $dff $611
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:293"
+  cell $dff $615
     parameter \WIDTH 8
     parameter \CLK_POLARITY 1
     connect \D $249 [7:0]
     connect \CLK \clk [0]
-    connect \Q \pl_ack3
+    connect \Q \pl_ack1
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:255"
-  process $612
-    assign $250 [2:0] \pl_ack_idx [2:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:293"
+  process $616
+    assign $250 [7:0] \pl_ack2 [7:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -7922,19 +7936,155 @@ module \top
       case 6'100000
         switch \valid [0]
           case 1'1
-            switch $187 [0]
+            switch $189 [0]
               case 1'1
               case
-                assign $250 [2:0] 3'000
+                assign $250 [7:0] \pl_total_count [15:8]
             end
         end
       case 6'100001
       case 6'100010
-        switch $189 [0]
+      case 6'010101
+      case 6'100011
+      case 6'100100
+      case 6'100101
+      case 6'100110
+      case 6'100111
+      case 6'101000
+      case 6'101001
+      case 6'101010
+      case 6'101011
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:293"
+  cell $dff $617
+    parameter \WIDTH 8
+    parameter \CLK_POLARITY 1
+    connect \D $250 [7:0]
+    connect \CLK \clk [0]
+    connect \Q \pl_ack2
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:293"
+  process $618
+    assign $251 [7:0] \pl_ack3 [7:0]
+    switch \debug_fsm_state [5:0]
+      case 6'000000
+      case 6'000001
+      case 6'000010
+      case 6'000011
+      case 6'000100
+      case 6'000101
+      case 6'000110
+      case 6'001000
+      case 6'001001
+      case 6'001011
+      case 6'000111
+      case 6'001101
+      case 6'001110
+      case 6'001100
+      case 6'010000
+      case 6'010001
+      case 6'010010
+      case 6'010011
+      case 6'001111
+      case 6'001010
+      case 6'010100
+      case 6'010110
+      case 6'010111
+      case 6'011000
+      case 6'011001
+      case 6'011010
+      case 6'011011
+      case 6'011100
+      case 6'011101
+      case 6'011110
+      case 6'011111
+      case 6'100000
+        switch \valid [0]
           case 1'1
-            switch $190 [0]
+            switch $189 [0]
               case 1'1
-                assign $250 [2:0] $191 [2:0]
+              case
+                assign $251 [7:0] \pl_total_count [7:0]
+            end
+        end
+      case 6'100001
+      case 6'100010
+      case 6'010101
+      case 6'100011
+      case 6'100100
+      case 6'100101
+      case 6'100110
+      case 6'100111
+      case 6'101000
+      case 6'101001
+      case 6'101010
+      case 6'101011
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:293"
+  cell $dff $619
+    parameter \WIDTH 8
+    parameter \CLK_POLARITY 1
+    connect \D $251 [7:0]
+    connect \CLK \clk [0]
+    connect \Q \pl_ack3
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:294"
+  process $620
+    assign $252 [2:0] \pl_ack_idx [2:0]
+    switch \debug_fsm_state [5:0]
+      case 6'000000
+      case 6'000001
+      case 6'000010
+      case 6'000011
+      case 6'000100
+      case 6'000101
+      case 6'000110
+      case 6'001000
+      case 6'001001
+      case 6'001011
+      case 6'000111
+      case 6'001101
+      case 6'001110
+      case 6'001100
+      case 6'010000
+      case 6'010001
+      case 6'010010
+      case 6'010011
+      case 6'001111
+      case 6'001010
+      case 6'010100
+      case 6'010110
+      case 6'010111
+      case 6'011000
+      case 6'011001
+      case 6'011010
+      case 6'011011
+      case 6'011100
+      case 6'011101
+      case 6'011110
+      case 6'011111
+      case 6'100000
+        switch \valid [0]
+          case 1'1
+            switch $189 [0]
+              case 1'1
+              case
+                assign $252 [2:0] 3'000
+            end
+        end
+      case 6'100001
+      case 6'100010
+        switch $191 [0]
+          case 1'1
+            switch $192 [0]
+              case 1'1
+                assign $252 [2:0] $193 [2:0]
               case
             end
         end
@@ -7951,18 +8101,18 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:255"
-  cell $dff $613
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:294"
+  cell $dff $621
     parameter \WIDTH 3
     parameter \CLK_POLARITY 1
-    connect \D $250 [2:0]
+    connect \D $252 [2:0]
     connect \CLK \clk [0]
     connect \Q \pl_ack_idx
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:271"
-  process $614
-    assign $251 [15:0] \rb_addr [15:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:310"
+  process $622
+    assign $253 [15:0] \rb_addr [15:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -8001,12 +8151,12 @@ module \top
       case 6'010101
         switch \valid [0]
           case 1'1
-            assign $251 [15:8] \data$122 [7:0]
+            assign $253 [15:8] \data$144 [7:0]
         end
       case 6'100011
         switch \valid [0]
           case 1'1
-            assign $251 [7:0] \data$122 [7:0]
+            assign $253 [7:0] \data$144 [7:0]
         end
       case 6'100100
       case 6'100101
@@ -8019,158 +8169,158 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:271"
-  cell $dff $615
-    parameter \WIDTH 16
-    parameter \CLK_POLARITY 1
-    connect \D $251 [15:0]
-    connect \CLK \clk [0]
-    connect \Q \rb_addr
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:272"
-  process $616
-    assign $252 [15:0] \rb_count [15:0]
-    switch \debug_fsm_state [5:0]
-      case 6'000000
-      case 6'000001
-      case 6'000010
-      case 6'000011
-      case 6'000100
-      case 6'000101
-      case 6'000110
-      case 6'001000
-      case 6'001001
-      case 6'001011
-      case 6'000111
-      case 6'001101
-      case 6'001110
-      case 6'001100
-      case 6'010000
-      case 6'010001
-      case 6'010010
-      case 6'010011
-      case 6'001111
-      case 6'001010
-      case 6'010100
-      case 6'010110
-      case 6'010111
-      case 6'011000
-      case 6'011001
-      case 6'011010
-      case 6'011011
-      case 6'011100
-      case 6'011101
-      case 6'011110
-      case 6'011111
-      case 6'100000
-      case 6'100001
-      case 6'100010
-      case 6'010101
-      case 6'100011
-      case 6'100100
-        switch \valid [0]
-          case 1'1
-            assign $252 [15:8] \data$122 [7:0]
-        end
-      case 6'100101
-        switch \valid [0]
-          case 1'1
-            assign $252 [7:0] \data$122 [7:0]
-        end
-      case 6'100110
-      case 6'100111
-      case 6'101000
-      case 6'101001
-      case 6'101010
-      case 6'101011
-        switch $195 [0]
-          case 1'1
-            assign $252 [15:0] $196 [15:0]
-        end
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:272"
-  cell $dff $617
-    parameter \WIDTH 16
-    parameter \CLK_POLARITY 1
-    connect \D $252 [15:0]
-    connect \CLK \clk [0]
-    connect \Q \rb_count
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:114"
-  process $618
-    assign $253 [15:0] \rb_cur_addr [15:0]
-    switch \debug_fsm_state [5:0]
-      case 6'000000
-      case 6'000001
-      case 6'000010
-      case 6'000011
-      case 6'000100
-      case 6'000101
-      case 6'000110
-      case 6'001000
-      case 6'001001
-      case 6'001011
-      case 6'000111
-      case 6'001101
-      case 6'001110
-      case 6'001100
-      case 6'010000
-      case 6'010001
-      case 6'010010
-      case 6'010011
-      case 6'001111
-      case 6'001010
-      case 6'010100
-      case 6'010110
-      case 6'010111
-      case 6'011000
-      case 6'011001
-      case 6'011010
-      case 6'011011
-      case 6'011100
-      case 6'011101
-      case 6'011110
-      case 6'011111
-      case 6'100000
-      case 6'100001
-      case 6'100010
-      case 6'010101
-      case 6'100011
-      case 6'100100
-      case 6'100101
-        switch \valid [0]
-          case 1'1
-            assign $253 [15:0] \rb_addr [15:0]
-        end
-      case 6'100110
-      case 6'100111
-      case 6'101000
-      case 6'101001
-      case 6'101010
-      case 6'101011
-        switch $195 [0]
-          case 1'1
-            assign $253 [15:0] $197 [15:0]
-        end
-    end
-  end
-
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:114"
-  cell $dff $619
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:310"
+  cell $dff $623
     parameter \WIDTH 16
     parameter \CLK_POLARITY 1
     connect \D $253 [15:0]
     connect \CLK \clk [0]
+    connect \Q \rb_addr
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:311"
+  process $624
+    assign $254 [15:0] \rb_count [15:0]
+    switch \debug_fsm_state [5:0]
+      case 6'000000
+      case 6'000001
+      case 6'000010
+      case 6'000011
+      case 6'000100
+      case 6'000101
+      case 6'000110
+      case 6'001000
+      case 6'001001
+      case 6'001011
+      case 6'000111
+      case 6'001101
+      case 6'001110
+      case 6'001100
+      case 6'010000
+      case 6'010001
+      case 6'010010
+      case 6'010011
+      case 6'001111
+      case 6'001010
+      case 6'010100
+      case 6'010110
+      case 6'010111
+      case 6'011000
+      case 6'011001
+      case 6'011010
+      case 6'011011
+      case 6'011100
+      case 6'011101
+      case 6'011110
+      case 6'011111
+      case 6'100000
+      case 6'100001
+      case 6'100010
+      case 6'010101
+      case 6'100011
+      case 6'100100
+        switch \valid [0]
+          case 1'1
+            assign $254 [15:8] \data$144 [7:0]
+        end
+      case 6'100101
+        switch \valid [0]
+          case 1'1
+            assign $254 [7:0] \data$144 [7:0]
+        end
+      case 6'100110
+      case 6'100111
+      case 6'101000
+      case 6'101001
+      case 6'101010
+      case 6'101011
+        switch $197 [0]
+          case 1'1
+            assign $254 [15:0] $198 [15:0]
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:311"
+  cell $dff $625
+    parameter \WIDTH 16
+    parameter \CLK_POLARITY 1
+    connect \D $254 [15:0]
+    connect \CLK \clk [0]
+    connect \Q \rb_count
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:123"
+  process $626
+    assign $255 [15:0] \rb_cur_addr [15:0]
+    switch \debug_fsm_state [5:0]
+      case 6'000000
+      case 6'000001
+      case 6'000010
+      case 6'000011
+      case 6'000100
+      case 6'000101
+      case 6'000110
+      case 6'001000
+      case 6'001001
+      case 6'001011
+      case 6'000111
+      case 6'001101
+      case 6'001110
+      case 6'001100
+      case 6'010000
+      case 6'010001
+      case 6'010010
+      case 6'010011
+      case 6'001111
+      case 6'001010
+      case 6'010100
+      case 6'010110
+      case 6'010111
+      case 6'011000
+      case 6'011001
+      case 6'011010
+      case 6'011011
+      case 6'011100
+      case 6'011101
+      case 6'011110
+      case 6'011111
+      case 6'100000
+      case 6'100001
+      case 6'100010
+      case 6'010101
+      case 6'100011
+      case 6'100100
+      case 6'100101
+        switch \valid [0]
+          case 1'1
+            assign $255 [15:0] \rb_addr [15:0]
+        end
+      case 6'100110
+      case 6'100111
+      case 6'101000
+      case 6'101001
+      case 6'101010
+      case 6'101011
+        switch $197 [0]
+          case 1'1
+            assign $255 [15:0] $199 [15:0]
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:123"
+  cell $dff $627
+    parameter \WIDTH 16
+    parameter \CLK_POLARITY 1
+    connect \D $255 [15:0]
+    connect \CLK \clk [0]
     connect \Q \rb_cur_addr
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:273"
-  process $620
-    assign $254 [31:0] \rb_word [31:0]
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:312"
+  process $628
+    assign $256 [31:0] \rb_word [31:0]
     switch \debug_fsm_state [5:0]
       case 6'000000
       case 6'000001
@@ -8212,7 +8362,7 @@ module \top
       case 6'100101
       case 6'100110
       case 6'100111
-        assign $254 [31:0] \mem_rd_data [31:0]
+        assign $256 [31:0] \mem_rd_data [31:0]
       case 6'101000
       case 6'101001
       case 6'101010
@@ -8220,11 +8370,11 @@ module \top
     end
   end
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:273"
-  cell $dff $621
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:312"
+  cell $dff $629
     parameter \WIDTH 32
     parameter \CLK_POLARITY 1
-    connect \D $254 [31:0]
+    connect \D $256 [31:0]
     connect \CLK \clk [0]
     connect \Q \rb_word
   end
@@ -8236,6 +8386,19 @@ connect \clist_rd_en 1'0
 connect \dmem_rd__addr \mem_addr [10:0]
 connect \dmem_rd__data \mem_rd_data [31:0]
 connect \mmio_reg_sel \dmem_addr [5:2]
+connect \mmio_addr \dmem_addr [5:2]
+connect \mmio_rd_en \is_eth_mmio_read [0]
+connect \mmio_wr_data \dmem_wr_data [31:0]
+connect \rmii_ref_clk 1'0
+connect \rmii_ref_clk$62 1'0
+connect \rmii_crs_dv 1'0
+connect \rmii_crs_dv$64 1'0
+connect \rmii_rxd 2'00
+connect \rmii_rxd$66 2'00
+connect \rmii_txen$68 \rmii_txen [0]
+connect \rmii_txd$70 \rmii_txd [1:0]
+connect \rmii_nrst$72 \rmii_nrst [0]
+connect \eth_irq$74 \eth_irq [0]
 connect \ns_rd_data { 64'0000000000000000000000000000000000000000000000000000000000000000 \mem_rd_data [31:0] }
 connect \clist_rd_data \mem_rd_data [31:0]
 connect \nia \imem_addr [31:0]
@@ -10444,7 +10607,7 @@ module \top.core
   attribute \init 13'0000000000000
   wire width 13 \mint_cw_reg_ni
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/mload.py:60"
@@ -10459,7 +10622,7 @@ module \top.core
   attribute \src "/home/runner/workspace/hardware/core.py:84"
   wire width 1 output 4  \halt_valid
 
-  wire width 32 input 5  \port$4322$0
+  wire width 32 input 5  \port$4328$0
 
   attribute \src "/home/runner/workspace/hardware/core.py:86"
   wire width 1 input 6  \free_run_start
@@ -13530,7 +13693,7 @@ module \top.core
     connect \mgt_ns_seals \mgt_ns_seals [31:0]
     connect \mload_fault_type \fault_type$612 [4:0]
     connect \thread_hdr \thread_hdr [31:0]
-    connect \port$5505$0 \instruction [18:0]
+    connect \port$5634$0 \instruction [18:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:163"
@@ -13593,7 +13756,7 @@ module \top.core
     connect \mem_wr_en \mem_wr_en$674 [0]
     connect \mem_wr_addr \mem_wr_addr$687 [31:0]
     connect \mem_wr_data \mem_wr_data$688 [31:0]
-    connect \port$5505$0 \instruction [22:0]
+    connect \port$5634$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:166"
@@ -13608,7 +13771,7 @@ module \top.core
     connect \mload_done \mload_done [0]
     connect \mload_start \mload_start$646 [0]
     connect \fault_type \fault_type$612 [4:0]
-    connect \port$5505$0 \instruction [22:0]
+    connect \port$5634$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:168"
@@ -13650,7 +13813,7 @@ module \top.core
   cell \top.core.u_gc_unit \u_gc_unit
     connect \clk \clk [0]
     connect \gc_busy \gc_busy [0]
-    connect \port$4322$0 \port$4322$0 [31:0]
+    connect \port$4328$0 \port$4328$0 [31:0]
     connect \g_bit_reset \valid_key_access [0]
     connect \ns_addr \ns_addr$706 [31:0]
     connect \ns_rd_en \ns_rd_en$707 [0]
@@ -13697,7 +13860,7 @@ module \top.core
     connect \change_fault \change_fault [0]
     connect \fault_type \fault_type$613 [4:0]
     connect \thread_hdr_reg \thread_hdr [31:0]
-    connect \port$5505$0 \instruction [22:0]
+    connect \port$5634$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:188"
@@ -13714,7 +13877,7 @@ module \top.core
     connect \cr_wr_addr \cr_wr_addr$131 [3:0]
     connect \cr_wr_data \cr_wr_data$144 [95:0]
     connect \cr_wr_en \cr_wr_en$159 [0]
-    connect \port$5505$0 \instruction [17:0]
+    connect \port$5634$0 \instruction [17:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:189"
@@ -13733,7 +13896,7 @@ module \top.core
     connect \cr_wr_addr \cr_wr_addr$130 [3:0]
     connect \cr_wr_data \cr_wr_data$143 [95:0]
     connect \cr_wr_en \cr_wr_en$156 [0]
-    connect \port$5505$0 \instruction [22:0]
+    connect \port$5634$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:190"
@@ -13752,7 +13915,7 @@ module \top.core
     connect \cr_wr_addr \cr_wr_addr$129 [3:0]
     connect \cr_wr_data \cr_wr_data$142 [95:0]
     connect \cr_wr_en \cr_wr_en$157 [0]
-    connect \port$5505$0 \instruction [22:0]
+    connect \port$5634$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:192"
@@ -13770,7 +13933,7 @@ module \top.core
     connect \dr_wr_addr \dr_wr_addr$102 [3:0]
     connect \dr_wr_data \dr_wr_data$104 [31:0]
     connect \dr_wr_en \dr_wr_en [0]
-    connect \port$5505$0 \instruction [22:0]
+    connect \port$5634$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:193"
@@ -13787,7 +13950,7 @@ module \top.core
     connect \dmem_addr \dmem_addr$691 [31:0]
     connect \dmem_wr_data \dmem_wr_data$692 [31:0]
     connect \dmem_wr_en \dmem_wr_en$677 [0]
-    connect \port$5505$0 \instruction [22:0]
+    connect \port$5634$0 \instruction [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/core.py:194"
@@ -21489,8 +21652,8 @@ connect \gc_mark_en 1'1
 connect \gc_sweep_en 1'1
 connect \ns_start_index 16'0000000000000001
 connect \ns_end_index 16'0001000000000000
-connect \ns_rd_data { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$4322$0 [31:0] }
-connect \ns_rd_data$78 { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$4322$0 [31:0] }
+connect \ns_rd_data { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$4328$0 [31:0] }
+connect \ns_rd_data$78 { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$4328$0 [31:0] }
 connect \gc_busy$79 \gc_busy [0]
 connect \garbage_count \gc_garbage_count [31:0]
 connect \cr_rd_data_gt \cr_rd_data [31:0]
@@ -22636,7 +22799,7 @@ module \top.core.u_registers
   attribute \src "/home/runner/workspace/hardware/registers.py:29"
   wire width 32 \cr_word_wr_data
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/registers.py:58"
@@ -29138,7 +29301,7 @@ module \top.core.u_call
   attribute \init 4'0000
   wire width 4 \n_minus_6_reg
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/call.py:48"
@@ -29269,7 +29432,7 @@ module \top.core.u_call
   attribute \src "/home/runner/workspace/hardware/call.py:80"
   wire width 32 input 40  \thread_hdr
 
-  wire width 19 input 41  \port$5505$0
+  wire width 19 input 41  \port$5634$0
 
   wire width 5 $1
 
@@ -29904,7 +30067,7 @@ module \top.core.u_call
     parameter \A_WIDTH 4
     parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
-    connect \A \port$5505$0 [18:15]
+    connect \A \port$5634$0 [18:15]
     connect \B 4'1011
     connect \Y \src_in_range
   end
@@ -29913,7 +30076,7 @@ module \top.core.u_call
   cell $mux $114
     parameter \WIDTH 4
     connect \S \phase [0]
-    connect \A \port$5505$0 [18:15]
+    connect \A \port$5634$0 [18:15]
     connect \B 4'0110
     connect \Y \mload_src
   end
@@ -30926,9 +31089,9 @@ module \top.core.u_call
     switch \call_state [4:0]
       case 5'00000
       case 5'00001
-        assign \cr_rd_addr [3:0] \port$5505$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$5634$0 [18:15]
       case 5'00011
-        assign \cr_rd_addr [3:0] \port$5505$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$5634$0 [18:15]
       case 5'00100
       case 5'00110
       case 5'00111
@@ -31770,7 +31933,7 @@ module \top.core.u_call
       case 5'00000
         switch \call_start [0]
           case 1'1
-            assign $86 [14:0] \port$5505$0 [14:0]
+            assign $86 [14:0] \port$5634$0 [14:0]
         end
       case 5'00001
       case 5'00011
@@ -32733,7 +32896,7 @@ connect \sp_min_base $5 [14:0]
 connect \sp_min $6 [14:0]
 connect \frame_word { 1'1 $7 [14:0] \sp_latched [15:0] }
 connect \cr5_has_r \cr5_heap [25]
-connect \cr_src \port$5505$0 [18:15]
+connect \cr_src \port$5634$0 [18:15]
 connect \index 16'0000000000000000
 connect \sub_start_reg \mload_start [0]
 connect \mload_cr_src \mload_src [3:0]
@@ -32763,7 +32926,7 @@ connect \ns_auth_lat \mgt_ns_authority [31:0]
 connect \ns_int_lat \mgt_ns_integrity [31:0]
 connect \ns_seal_lat \mgt_ns_seals [31:0]
 connect \mask 16'0000000000000000
-connect \call_imm \port$5505$0 [14:0]
+connect \call_imm \port$5634$0 [14:0]
 connect \mem_rd_valid 1'0
 connect \nia_computed $19 [31:0]
 connect \code_lo_out $25 [31:0]
@@ -33006,7 +33169,7 @@ module \top.core.u_return
   attribute \src "/home/runner/workspace/hardware/ret.py:52"
   wire width 1 \mem_rd_valid
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/ret.py:51"
@@ -34424,7 +34587,7 @@ module \top.core.u_tperm
   attribute \init 4'0000
   wire width 4 \fault_latched
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/tperm.py:10"
@@ -35182,7 +35345,7 @@ module \top.core.u_save
   attribute \src "/home/runner/workspace/hardware/msave.py:20"
   wire width 4 \sub_fault_type
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/save.py:30"
@@ -35226,7 +35389,7 @@ module \top.core.u_save
   attribute \src "/home/runner/workspace/hardware/msave.py:23"
   wire width 32 output 13  \mem_wr_data
 
-  wire width 23 input 14  \port$5505$0
+  wire width 23 input 14  \port$5634$0
 
   wire width 1 $1
 
@@ -35416,7 +35579,7 @@ module \top.core.u_save
     connect \mem_wr_addr \mem_wr_addr [31:0]
     connect \mem_wr_data \mem_wr_data [31:0]
     connect \sub_fault_type \sub_fault_type [3:0]
-    connect \port$5505$0 \port$5505$0 [14:0]
+    connect \port$5634$0 \port$5634$0 [14:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/save.py:53"
@@ -35426,7 +35589,7 @@ module \top.core.u_save
     parameter \A_WIDTH 4
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$5505$0 [22:19]
+    connect \A \port$5634$0 [22:19]
     connect \B 3'110
     connect \Y \dst_in_range
   end
@@ -35527,11 +35690,11 @@ module \top.core.u_save
     switch \save_wrapper_state [2:0]
       case 3'000
       case 3'001
-        assign \cr_rd_addr [3:0] \port$5505$0 [22:19]
+        assign \cr_rd_addr [3:0] \port$5634$0 [22:19]
       case 3'010
-        assign \cr_rd_addr [3:0] \port$5505$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$5634$0 [18:15]
       case 3'011
-        assign \cr_rd_addr [3:0] \port$5505$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$5634$0 [18:15]
       case 3'100
     end
   end
@@ -35756,12 +35919,12 @@ module \top.core.u_save
     connect \Q \sub_start
   end
 
-connect \cr_dst \port$5505$0 [22:19]
+connect \cr_dst \port$5634$0 [22:19]
 connect \sub_start$3 \sub_start [0]
 connect \dst_reg_latched \sub_dst_cap [95:0]
 connect \sub_src_gt \src_reg_latched [31:0]
-connect \sub_index { 1'0 \port$5505$0 [14:0] }
-connect \index { 1'0 \port$5505$0 [14:0] }
+connect \sub_index { 1'0 \port$5634$0 [14:0] }
+connect \index { 1'0 \port$5634$0 [14:0] }
 connect \mem_wr_done 1'1
 connect \mem_wr_done$11 1'1
 connect \cr15_namespace$13 \cr15_namespace [95:0]
@@ -35774,7 +35937,7 @@ connect \mem_wr_en$23 \mem_wr_en [0]
 connect \mem_rd_addr$25 \mem_rd_addr [31:0]
 connect \mem_rd_en$27 \mem_rd_en [0]
 connect \sub_start_reg \sub_start [0]
-connect \cr_src \port$5505$0 [18:15]
+connect \cr_src \port$5634$0 [18:15]
 connect \fault_latched \save_fault [0]
 connect \fault_type_latched \fault_type [3:0]
 connect \sub_dst_cap.word0_gt \sub_dst_cap [31:0]
@@ -35903,7 +36066,7 @@ module \top.core.u_save.u_msave
   attribute \src "/home/runner/workspace/hardware/msave.py:25"
   wire width 1 \mem_wr_done
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/msave.py:29"
@@ -35946,7 +36109,7 @@ module \top.core.u_save.u_msave
   attribute \init 4'0000
   wire width 4 output 13  \sub_fault_type
 
-  wire width 15 input 14  \port$5505$0
+  wire width 15 input 14  \port$5634$0
 
   wire width 19 $1
 
@@ -36608,7 +36771,7 @@ module \top.core.u_save.u_msave
       case 4'0000
         switch \sub_start [0]
           case 1'1
-            assign $26 [15:0] { 1'0 \port$5505$0 [14:0] }
+            assign $26 [15:0] { 1'0 \port$5634$0 [14:0] }
         end
       case 4'0001
       case 4'0011
@@ -36875,7 +37038,7 @@ connect \ns_entry_addr $4 [31:0]
 connect \w0_rot { \ns_location_reg [24:0] \ns_location_reg [31:25] }
 connect \w1_rot { \w1_masked [18:0] \w1_masked [31:19] }
 connect \fault_type_reg \sub_fault_type [3:0]
-connect \sub_index { 1'0 \port$5505$0 [14:0] }
+connect \sub_index { 1'0 \port$5634$0 [14:0] }
 connect \mem_rd_valid 1'0
 connect \mem_wr_done 1'1
 connect \dst_cap_reg.word0_gt \dst_cap_reg [31:0]
@@ -36943,7 +37106,7 @@ module \top.core.u_load
   attribute \src "/home/runner/workspace/hardware/load.py:28"
   wire width 5 \mload_fault_type
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/load.py:8"
@@ -36973,7 +37136,7 @@ module \top.core.u_load
   attribute \src "/home/runner/workspace/hardware/load.py:28"
   wire width 5 input 9  \fault_type
 
-  wire width 23 input 10  \port$5505$0
+  wire width 23 input 10  \port$5634$0
 
   wire width 1 $1
 
@@ -36994,7 +37157,7 @@ module \top.core.u_load
     parameter \A_WIDTH 4
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$5505$0 [18:15]
+    connect \A \port$5634$0 [18:15]
     connect \B 3'110
     connect \Y \mload_m_elevated
   end
@@ -37138,12 +37301,12 @@ module \top.core.u_load
     connect \Q \load_wrapper_state
   end
 
-connect \mload_cr_src \port$5505$0 [18:15]
-connect \cr_src \port$5505$0 [18:15]
-connect \mload_cr_dst \port$5505$0 [22:19]
-connect \cr_dst \port$5505$0 [22:19]
-connect \mload_index { 1'0 \port$5505$0 [14:0] }
-connect \index { 1'0 \port$5505$0 [14:0] }
+connect \mload_cr_src \port$5634$0 [18:15]
+connect \cr_src \port$5634$0 [18:15]
+connect \mload_cr_dst \port$5634$0 [22:19]
+connect \cr_dst \port$5634$0 [22:19]
+connect \mload_index { 1'0 \port$5634$0 [14:0] }
+connect \index { 1'0 \port$5634$0 [14:0] }
 connect \mload_direct 1'0
 connect \mload_direct_gt 32'00000000000000000000000000000000
 connect \mload_fault_type \fault_type [4:0]
@@ -37300,7 +37463,7 @@ module \top.core.u_shared_mload
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:70"
   wire width 32 \raw_w2
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/mload.py:60"
@@ -39077,7 +39240,7 @@ module \top.core.u_shared_mload.u_ns_gate
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:72"
   wire width 32 \ns_entry_addr_out
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:76"
@@ -39801,13 +39964,13 @@ module \top.core.u_gc_unit
   attribute \src "/home/runner/workspace/hardware/gc_unit.py:23"
   wire width 16 \ns_end_index
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/gc_unit.py:13"
   wire width 1 output 1  \gc_busy
 
-  wire width 32 input 2  \port$4322$0
+  wire width 32 input 2  \port$4328$0
 
   attribute \src "/home/runner/workspace/hardware/gc_unit.py:28"
   wire width 1 input 3  \g_bit_reset
@@ -40409,10 +40572,10 @@ module \top.core.u_gc_unit
     switch \gc_state [2:0]
       case 3'000
       case 3'001
-        assign $25 [95:0] { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$4322$0 [31:0] }
+        assign $25 [95:0] { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$4328$0 [31:0] }
       case 3'011
       case 3'010
-        assign $25 [95:0] { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$4322$0 [31:0] }
+        assign $25 [95:0] { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$4328$0 [31:0] }
       case 3'101
       case 3'110
       case 3'100
@@ -40436,7 +40599,7 @@ connect \gc_start 1'0
 connect \gc_mark_en 1'1
 connect \gc_sweep_en 1'1
 connect \ns_start_index 16'0000000000000001
-connect \ns_rd_data { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$4322$0 [31:0] }
+connect \ns_rd_data { 64'0000000000000000000000000000000000000000000000000000000000000000 \port$4328$0 [31:0] }
 connect \ns_end_index 16'0001000000000000
 
 end
@@ -40464,7 +40627,7 @@ module \top.core.u_lambda
   attribute \init 4'0000
   wire width 4 \fault_latched
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/lambda_unit.py:10"
@@ -41087,7 +41250,7 @@ module \top.core.u_change
   attribute \init 32'00000000000000000000000000000000
   wire width 32 \fetched_gt_latched
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/change.py:34"
@@ -41153,7 +41316,7 @@ module \top.core.u_change
   attribute \init 32'00000000000000000000000000000000
   wire width 32 output 20  \thread_hdr_reg
 
-  wire width 23 input 21  \port$5505$0
+  wire width 23 input 21  \port$5634$0
 
   wire width 17 $1
 
@@ -41598,7 +41761,7 @@ module \top.core.u_change
     parameter \A_WIDTH 4
     parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
-    connect \A \port$5505$0 [22:19]
+    connect \A \port$5634$0 [22:19]
     connect \B 4'1100
     connect \Y $5
   end
@@ -42084,7 +42247,7 @@ module \top.core.u_change
     parameter \A_WIDTH 4
     parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
-    connect \A \port$5505$0 [22:19]
+    connect \A \port$5634$0 [22:19]
     connect \B 4'1100
     connect \Y $38
   end
@@ -42096,7 +42259,7 @@ module \top.core.u_change
     parameter \A_WIDTH 4
     parameter \B_WIDTH 4
     parameter \Y_WIDTH 1
-    connect \A \port$5505$0 [22:19]
+    connect \A \port$5634$0 [22:19]
     connect \B 4'1101
     connect \Y $39
   end
@@ -42293,11 +42456,11 @@ module \top.core.u_change
         assign \cr_rd_addr [3:0] 4'0111
       case 5'00010
         assign \cr_rd_addr [3:0] 4'0111
-        assign \cr_rd_addr [3:0] \port$5505$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$5634$0 [18:15]
       case 5'00011
-        assign \cr_rd_addr [3:0] \port$5505$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$5634$0 [18:15]
       case 5'00100
-        assign \cr_rd_addr [3:0] \port$5505$0 [18:15]
+        assign \cr_rd_addr [3:0] \port$5634$0 [18:15]
       case 5'00101
       case 5'01000
       case 5'00111
@@ -42327,12 +42490,12 @@ module \top.core.u_change
       case 5'00100
       case 5'00101
       case 5'01000
-        assign \sub_cr_src [3:0] \port$5505$0 [18:15]
+        assign \sub_cr_src [3:0] \port$5634$0 [18:15]
       case 5'00111
       case 5'01010
       case 5'01011
       case 5'01100
-        assign \sub_cr_src [3:0] \port$5505$0 [18:15]
+        assign \sub_cr_src [3:0] \port$5634$0 [18:15]
       case 5'01101
         assign \sub_cr_src [3:0] 4'1000
       case 5'01111
@@ -42357,7 +42520,7 @@ module \top.core.u_change
       case 5'00100
       case 5'00101
       case 5'01000
-        assign \sub_cr_dst [3:0] \port$5505$0 [22:19]
+        assign \sub_cr_dst [3:0] \port$5634$0 [22:19]
       case 5'00111
       case 5'01010
       case 5'01011
@@ -42903,7 +43066,7 @@ module \top.core.u_change
       case 5'00000
         switch \change_start [0]
           case 1'1
-            assign $54 [15:0] { 1'0 \port$5505$0 [14:0] }
+            assign $54 [15:0] { 1'0 \port$5634$0 [14:0] }
         end
       case 5'00001
       case 5'00010
@@ -43437,7 +43600,7 @@ module \top.core.u_change
   end
 
 connect \effective_mask $1 [15:0]
-connect \cr_dst \port$5505$0 [22:19]
+connect \cr_dst \port$5634$0 [22:19]
 connect \pc_offset $8 [31:0]
 connect \packed_pc_word { \flags [3:0] $8 [27:0] }
 connect \mload_start_reg \sub_start [0]
@@ -43459,10 +43622,10 @@ connect \thread_wr_en$58 \thread_wr_en [0]
 connect \thread_wr_idx$60 \thread_wr_idx [3:0]
 connect \thread_wr_data$62 \thread_wr_data [31:0]
 connect \thread_hdr_out \thread_hdr_reg [31:0]
-connect \cr_src \port$5505$0 [18:15]
+connect \cr_src \port$5634$0 [18:15]
 connect \fault_latched \change_fault [0]
 connect \fault_type_latched \fault_type [4:0]
-connect \index { 1'0 \port$5505$0 [14:0] }
+connect \index { 1'0 \port$5634$0 [14:0] }
 connect \change_mask 16'0000000000000000
 connect \mem_wr_done 1'1
 connect \crn_reg_latched.word0_gt \crn_reg_latched [31:0]
@@ -43733,7 +43896,7 @@ module \top.core.u_change.u_mload
   attribute \src "/home/runner/workspace/hardware/mload.py:83"
   wire width 5 \outform_fault_type_in
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/mload.py:60"
@@ -45477,7 +45640,7 @@ module \top.core.u_change.u_mload.u_ns_gate
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:72"
   wire width 32 \ns_entry_addr_out
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:76"
@@ -46289,7 +46452,7 @@ module \top.core.u_switch
   attribute \src "/home/runner/workspace/hardware/mload.py:47"
   wire width 5 \sub_fault_type
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/switch.py:29"
@@ -46327,7 +46490,7 @@ module \top.core.u_switch
   attribute \src "/home/runner/workspace/hardware/mload.py:54"
   wire width 1 output 11  \cr_wr_en
 
-  wire width 18 input 12  \port$5505$0
+  wire width 18 input 12  \port$5634$0
 
   wire width 5 $1
 
@@ -46562,7 +46725,7 @@ module \top.core.u_switch
     connect \cr_wr_data \cr_wr_data [95:0]
     connect \cr_wr_en \cr_wr_en [0]
     connect \sub_fault_type \sub_fault_type [4:0]
-    connect \port$5505$0 \port$5505$0 [17:0]
+    connect \port$5634$0 \port$5634$0 [17:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/switch.py:45"
@@ -46573,7 +46736,7 @@ module \top.core.u_switch
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 5
     connect \A 4'1000
-    connect \B \port$5505$0 [2:0]
+    connect \B \port$5634$0 [2:0]
     connect \Y $1
   end
 
@@ -46584,7 +46747,7 @@ module \top.core.u_switch
     parameter \A_WIDTH 3
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$5505$0 [17:15]
+    connect \A \port$5634$0 [17:15]
     connect \B 3'111
     connect \Y \src_in_range
   end
@@ -46608,7 +46771,7 @@ module \top.core.u_switch
     parameter \A_WIDTH 3
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$5505$0 [2:0]
+    connect \A \port$5634$0 [2:0]
     connect \B 3'101
     connect \Y $2
   end
@@ -46641,7 +46804,7 @@ module \top.core.u_switch
     parameter \A_WIDTH 3
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$5505$0 [2:0]
+    connect \A \port$5634$0 [2:0]
     connect \B 3'101
     connect \Y $3
   end
@@ -46653,7 +46816,7 @@ module \top.core.u_switch
     parameter \A_WIDTH 3
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$5505$0 [2:0]
+    connect \A \port$5634$0 [2:0]
     connect \B 3'111
     connect \Y $4
   end
@@ -46881,9 +47044,9 @@ module \top.core.u_switch
       case 4'0000
       case 4'0001
       case 4'0010
-        assign \local_cr_rd_addr [3:0] { 1'0 \port$5505$0 [17:15] }
+        assign \local_cr_rd_addr [3:0] { 1'0 \port$5634$0 [17:15] }
       case 4'0011
-        assign \local_cr_rd_addr [3:0] { 1'0 \port$5505$0 [17:15] }
+        assign \local_cr_rd_addr [3:0] { 1'0 \port$5634$0 [17:15] }
       case 4'0100
       case 4'0101
       case 4'0110
@@ -47100,13 +47263,13 @@ module \top.core.u_switch
   end
 
 connect \dest_cr $1 [3:0]
-connect \target \port$5505$0 [2:0]
-connect \cr_src \port$5505$0 [17:15]
+connect \target \port$5634$0 [2:0]
+connect \cr_src \port$5634$0 [17:15]
 connect \sub_start$10 \sub_start [0]
-connect \sub_cr_src { 1'0 \port$5505$0 [17:15] }
+connect \sub_cr_src { 1'0 \port$5634$0 [17:15] }
 connect \sub_cr_dst $1 [3:0]
-connect \sub_index { 1'0 \port$5505$0 [14:0] }
-connect \index { 1'0 \port$5505$0 [14:0] }
+connect \sub_index { 1'0 \port$5634$0 [14:0] }
+connect \index { 1'0 \port$5634$0 [14:0] }
 connect \sub_direct 1'0
 connect \sub_direct_gt 32'00000000000000000000000000000000
 connect \sub_m_elevated 1'1
@@ -47373,7 +47536,7 @@ module \top.core.u_switch.u_mload
   attribute \src "/home/runner/workspace/hardware/mload.py:83"
   wire width 5 \outform_fault_type_in
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/mload.py:60"
@@ -47431,7 +47594,7 @@ module \top.core.u_switch.u_mload
   attribute \init 5'00000
   wire width 5 output 18  \sub_fault_type
 
-  wire width 18 input 19  \port$5505$0
+  wire width 18 input 19  \port$5634$0
 
   wire width 19 $1
 
@@ -48406,7 +48569,7 @@ module \top.core.u_switch.u_mload
       case 4'0000
         switch \sub_start [0]
           case 1'1
-            assign $24 [3:0] { 1'0 \port$5505$0 [17:15] }
+            assign $24 [3:0] { 1'0 \port$5634$0 [17:15] }
         end
       case 4'0001
       case 4'0011
@@ -48474,7 +48637,7 @@ module \top.core.u_switch.u_mload
       case 4'0000
         switch \sub_start [0]
           case 1'1
-            assign $26 [15:0] { 1'0 \port$5505$0 [14:0] }
+            assign $26 [15:0] { 1'0 \port$5634$0 [14:0] }
         end
       case 4'0001
       case 4'0011
@@ -49009,8 +49172,8 @@ connect \fault_type_reg \sub_fault_type [4:0]
 connect \outform_gt_raw_reg \outform_gt_raw [31:0]
 connect \outform_slot_id_reg \outform_slot_id [15:0]
 connect \outform_clist_addr_reg \outform_clist_addr [31:0]
-connect \sub_cr_src { 1'0 \port$5505$0 [17:15] }
-connect \sub_index { 1'0 \port$5505$0 [14:0] }
+connect \sub_cr_src { 1'0 \port$5634$0 [17:15] }
+connect \sub_index { 1'0 \port$5634$0 [14:0] }
 connect \sub_direct 1'0
 connect \sub_direct_gt 32'00000000000000000000000000000000
 connect \sub_m_elevated 1'1
@@ -49121,7 +49284,7 @@ module \top.core.u_switch.u_mload.u_ns_gate
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:72"
   wire width 32 \ns_entry_addr_out
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:76"
@@ -49988,7 +50151,7 @@ module \top.core.u_eloadcall
   attribute \init 96'000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
   wire width 96 \loaded_cap
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/fused_unit.py:33"
@@ -50032,7 +50195,7 @@ module \top.core.u_eloadcall
   attribute \src "/home/runner/workspace/hardware/mload.py:54"
   wire width 1 output 13  \cr_wr_en
 
-  wire width 23 input 14  \port$5505$0
+  wire width 23 input 14  \port$5634$0
 
   wire width 5 $1
 
@@ -50338,7 +50501,7 @@ module \top.core.u_eloadcall
     parameter \A_WIDTH 4
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$5505$0 [18:15]
+    connect \A \port$5634$0 [18:15]
     connect \B 3'101
     connect \Y \src_in_range
   end
@@ -50750,9 +50913,9 @@ module \top.core.u_eloadcall
     assign \mload_src [3:0] 4'0000
     switch \phase [1:0]
       case 2'00
-        assign \mload_src [3:0] \port$5505$0 [18:15]
+        assign \mload_src [3:0] \port$5634$0 [18:15]
       case 2'01
-        assign \mload_src [3:0] \port$5505$0 [22:19]
+        assign \mload_src [3:0] \port$5634$0 [22:19]
       case
         assign \mload_src [3:0] 4'0110
     end
@@ -50763,7 +50926,7 @@ module \top.core.u_eloadcall
     assign \mload_dst [3:0] 4'0000
     switch \phase [1:0]
       case 2'00
-        assign \mload_dst [3:0] \port$5505$0 [22:19]
+        assign \mload_dst [3:0] \port$5634$0 [22:19]
       case 2'01
         assign \mload_dst [3:0] 4'0110
       case
@@ -50776,7 +50939,7 @@ module \top.core.u_eloadcall
     assign \mload_index [15:0] 16'0000000000000000
     switch \phase [1:0]
       case 2'00
-        assign \mload_index [15:0] { 8'00000000 \port$5505$0 [7:0] }
+        assign \mload_index [15:0] { 8'00000000 \port$5634$0 [7:0] }
       case 2'01
         assign \mload_index [15:0] 16'0000000000000000
       case
@@ -50814,7 +50977,7 @@ module \top.core.u_eloadcall
       case 4'0001
       case 4'0011
       case 4'0100
-        assign \local_cr_rd_addr [3:0] \port$5505$0 [22:19]
+        assign \local_cr_rd_addr [3:0] \port$5634$0 [22:19]
       case 4'0101
       case 4'0110
       case 4'0111
@@ -51172,7 +51335,7 @@ module \top.core.u_eloadcall
       case 4'0000
         switch \start [0]
           case 1'1
-            assign $35 [14:0] { 8'00000000 \port$5505$0 [14:8] }
+            assign $35 [14:0] { 8'00000000 \port$5634$0 [14:8] }
         end
       case 4'0001
       case 4'0011
@@ -51421,9 +51584,9 @@ module \top.core.u_eloadcall
     connect \Q \method_entry_reg
   end
 
-connect \cr_src \port$5505$0 [18:15]
-connect \cr_dst \port$5505$0 [22:19]
-connect \index { 8'00000000 \port$5505$0 [7:0] }
+connect \cr_src \port$5634$0 [18:15]
+connect \cr_dst \port$5634$0 [22:19]
+connect \index { 8'00000000 \port$5634$0 [7:0] }
 connect \sub_start$9 \sub_start [0]
 connect \sub_cr_src \mload_src [3:0]
 connect \sub_cr_dst \mload_dst [3:0]
@@ -51450,7 +51613,7 @@ connect \fault_type_latched \fault_type [3:0]
 connect \nia_set \complete [0]
 connect \nia_value $7 [31:0]
 connect \mask 16'0000000000000000
-connect \call_imm { 8'00000000 \port$5505$0 [14:8] }
+connect \call_imm { 8'00000000 \port$5634$0 [14:8] }
 connect \nia_computed $7 [31:0]
 connect \cr_rd_data.word0_gt \cr_rd_data [31:0]
 connect \cr_rd_data.word0_gt.slot_id \cr_rd_data [15:0]
@@ -51702,7 +51865,7 @@ module \top.core.u_eloadcall.u_mload
   attribute \src "/home/runner/workspace/hardware/mload.py:83"
   wire width 5 \outform_fault_type_in
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/mload.py:60"
@@ -53451,7 +53614,7 @@ module \top.core.u_eloadcall.u_mload.u_ns_gate
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:72"
   wire width 32 \ns_entry_addr_out
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:76"
@@ -54255,7 +54418,7 @@ module \top.core.u_xloadlambda
   attribute \src "/home/runner/workspace/hardware/mload.py:47"
   wire width 5 \sub_fault_type
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/fused_unit.py:323"
@@ -54299,7 +54462,7 @@ module \top.core.u_xloadlambda
   attribute \src "/home/runner/workspace/hardware/mload.py:54"
   wire width 1 output 13  \cr_wr_en
 
-  wire width 23 input 14  \port$5505$0
+  wire width 23 input 14  \port$5634$0
 
   wire width 1 $1
 
@@ -54517,7 +54680,7 @@ module \top.core.u_xloadlambda
     connect \cr_wr_data \cr_wr_data [95:0]
     connect \cr_wr_en \cr_wr_en [0]
     connect \sub_fault_type \sub_fault_type [4:0]
-    connect \port$5505$0 \port$5505$0 [22:0]
+    connect \port$5634$0 \port$5634$0 [22:0]
   end
 
   attribute \src "/home/runner/workspace/hardware/fused_unit.py:354"
@@ -54539,7 +54702,7 @@ module \top.core.u_xloadlambda
     parameter \A_WIDTH 4
     parameter \B_WIDTH 3
     parameter \Y_WIDTH 1
-    connect \A \port$5505$0 [18:15]
+    connect \A \port$5634$0 [18:15]
     connect \B 3'110
     connect \Y \sub_m_elevated
   end
@@ -54677,7 +54840,7 @@ module \top.core.u_xloadlambda
       case 3'000
       case 3'001
       case 3'011
-        assign \local_cr_rd_addr [3:0] \port$5505$0 [22:19]
+        assign \local_cr_rd_addr [3:0] \port$5634$0 [22:19]
       case 3'100
       case 3'101
       case 3'110
@@ -54939,12 +55102,12 @@ module \top.core.u_xloadlambda
   end
 
 connect \sub_start_reg \sub_start [0]
-connect \sub_cr_src \port$5505$0 [18:15]
-connect \cr_src \port$5505$0 [18:15]
-connect \sub_cr_dst \port$5505$0 [22:19]
-connect \cr_dst \port$5505$0 [22:19]
-connect \sub_index { 1'0 \port$5505$0 [14:0] }
-connect \index { 1'0 \port$5505$0 [14:0] }
+connect \sub_cr_src \port$5634$0 [18:15]
+connect \cr_src \port$5634$0 [18:15]
+connect \sub_cr_dst \port$5634$0 [22:19]
+connect \cr_dst \port$5634$0 [22:19]
+connect \sub_index { 1'0 \port$5634$0 [14:0] }
+connect \index { 1'0 \port$5634$0 [14:0] }
 connect \sub_direct 1'0
 connect \sub_direct_gt 32'00000000000000000000000000000000
 connect \cr_rd_data$14 \cr_rd_data [95:0]
@@ -55213,7 +55376,7 @@ module \top.core.u_xloadlambda.u_mload
   attribute \src "/home/runner/workspace/hardware/mload.py:83"
   wire width 5 \outform_fault_type_in
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/mload.py:60"
@@ -55268,7 +55431,7 @@ module \top.core.u_xloadlambda.u_mload
   attribute \init 5'00000
   wire width 5 output 17  \sub_fault_type
 
-  wire width 23 input 18  \port$5505$0
+  wire width 23 input 18  \port$5634$0
 
   wire width 19 $1
 
@@ -56243,7 +56406,7 @@ module \top.core.u_xloadlambda.u_mload
       case 4'0000
         switch \sub_start [0]
           case 1'1
-            assign $24 [3:0] \port$5505$0 [18:15]
+            assign $24 [3:0] \port$5634$0 [18:15]
         end
       case 4'0001
       case 4'0011
@@ -56277,7 +56440,7 @@ module \top.core.u_xloadlambda.u_mload
       case 4'0000
         switch \sub_start [0]
           case 1'1
-            assign $25 [3:0] \port$5505$0 [22:19]
+            assign $25 [3:0] \port$5634$0 [22:19]
         end
       case 4'0001
       case 4'0011
@@ -56311,7 +56474,7 @@ module \top.core.u_xloadlambda.u_mload
       case 4'0000
         switch \sub_start [0]
           case 1'1
-            assign $26 [15:0] { 1'0 \port$5505$0 [14:0] }
+            assign $26 [15:0] { 1'0 \port$5634$0 [14:0] }
         end
       case 4'0001
       case 4'0011
@@ -56846,9 +57009,9 @@ connect \fault_type_reg \sub_fault_type [4:0]
 connect \outform_gt_raw_reg \outform_gt_raw [31:0]
 connect \outform_slot_id_reg \outform_slot_id [15:0]
 connect \outform_clist_addr_reg \outform_clist_addr [31:0]
-connect \sub_cr_src \port$5505$0 [18:15]
-connect \sub_cr_dst \port$5505$0 [22:19]
-connect \sub_index { 1'0 \port$5505$0 [14:0] }
+connect \sub_cr_src \port$5634$0 [18:15]
+connect \sub_cr_dst \port$5634$0 [22:19]
+connect \sub_index { 1'0 \port$5634$0 [14:0] }
 connect \sub_direct 1'0
 connect \sub_direct_gt 32'00000000000000000000000000000000
 connect \outform_fault_in 1'0
@@ -56958,7 +57121,7 @@ module \top.core.u_xloadlambda.u_mload.u_ns_gate
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:72"
   wire width 32 \ns_entry_addr_out
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:76"
@@ -57669,7 +57832,7 @@ module \top.core.u_dread
   attribute \src "/home/runner/workspace/hardware/dread.py:35"
   wire width 15 \imm
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/dread.py:49"
@@ -57708,7 +57871,7 @@ module \top.core.u_dread
   attribute \src "/home/runner/workspace/hardware/dread.py:45"
   wire width 1 output 12  \dr_wr_en
 
-  wire width 23 input 13  \port$5505$0
+  wire width 23 input 13  \port$5634$0
 
   wire width 1 $1
 
@@ -57796,7 +57959,7 @@ module \top.core.u_dread
   cell $mux $20
     parameter \WIDTH 4
     connect \S \busy [0]
-    connect \A \port$5505$0 [18:15]
+    connect \A \port$5634$0 [18:15]
     connect \B \cr_src_reg [3:0]
     connect \Y \cr_rd_addr
   end
@@ -58070,7 +58233,7 @@ module \top.core.u_dread
       case 2'00
         switch \start [0]
           case 1'1
-            assign $13 [3:0] \port$5505$0 [18:15]
+            assign $13 [3:0] \port$5634$0 [18:15]
         end
       case 2'01
       case 2'10
@@ -58094,7 +58257,7 @@ module \top.core.u_dread
       case 2'00
         switch \start [0]
           case 1'1
-            assign $14 [3:0] \port$5505$0 [22:19]
+            assign $14 [3:0] \port$5634$0 [22:19]
         end
       case 2'01
       case 2'10
@@ -58118,7 +58281,7 @@ module \top.core.u_dread
       case 2'00
         switch \start [0]
           case 1'1
-            assign $15 [14:0] \port$5505$0 [14:0]
+            assign $15 [14:0] \port$5634$0 [14:0]
         end
       case 2'01
       case 2'10
@@ -58203,9 +58366,9 @@ module \top.core.u_dread
 
 connect \has_r \cr_rd_data [25]
 connect \limit \cr_rd_data [79:64]
-connect \cr_src \port$5505$0 [18:15]
-connect \dr_dst \port$5505$0 [22:19]
-connect \imm \port$5505$0 [14:0]
+connect \cr_src \port$5634$0 [18:15]
+connect \dr_dst \port$5634$0 [22:19]
+connect \imm \port$5634$0 [14:0]
 connect \cr_rd_data.word0_gt \cr_rd_data [31:0]
 connect \cr_rd_data.word0_gt.slot_id \cr_rd_data [15:0]
 connect \cr_rd_data.word0_gt.gt_seq \cr_rd_data [22:16]
@@ -58269,7 +58432,7 @@ module \top.core.u_dwrite
   attribute \src "/home/runner/workspace/hardware/dwrite.py:34"
   wire width 15 \imm
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/dwrite.py:28"
@@ -58305,7 +58468,7 @@ module \top.core.u_dwrite
   attribute \src "/home/runner/workspace/hardware/dwrite.py:47"
   wire width 1 output 11  \dmem_wr_en
 
-  wire width 23 input 12  \port$5505$0
+  wire width 23 input 12  \port$5634$0
 
   wire width 1 $1
 
@@ -58391,7 +58554,7 @@ module \top.core.u_dwrite
   cell $mux $19
     parameter \WIDTH 4
     connect \S \busy [0]
-    connect \A \port$5505$0 [18:15]
+    connect \A \port$5634$0 [18:15]
     connect \B \cr_src_reg [3:0]
     connect \Y \cr_rd_addr
   end
@@ -58400,7 +58563,7 @@ module \top.core.u_dwrite
   cell $mux $20
     parameter \WIDTH 4
     connect \S \busy [0]
-    connect \A \port$5505$0 [22:19]
+    connect \A \port$5634$0 [22:19]
     connect \B \dr_src_reg [3:0]
     connect \Y \dr_rd_addr
   end
@@ -58618,7 +58781,7 @@ module \top.core.u_dwrite
       case 2'00
         switch \start [0]
           case 1'1
-            assign $11 [3:0] \port$5505$0 [18:15]
+            assign $11 [3:0] \port$5634$0 [18:15]
         end
       case 2'01
       case 2'10
@@ -58641,7 +58804,7 @@ module \top.core.u_dwrite
       case 2'00
         switch \start [0]
           case 1'1
-            assign $12 [3:0] \port$5505$0 [22:19]
+            assign $12 [3:0] \port$5634$0 [22:19]
         end
       case 2'01
       case 2'10
@@ -58664,7 +58827,7 @@ module \top.core.u_dwrite
       case 2'00
         switch \start [0]
           case 1'1
-            assign $13 [14:0] \port$5505$0 [14:0]
+            assign $13 [14:0] \port$5634$0 [14:0]
         end
       case 2'01
       case 2'10
@@ -58772,9 +58935,9 @@ module \top.core.u_dwrite
 
 connect \has_w \cr_rd_data [26]
 connect \limit \cr_rd_data [79:64]
-connect \cr_src \port$5505$0 [18:15]
-connect \dr_src \port$5505$0 [22:19]
-connect \imm \port$5505$0 [14:0]
+connect \cr_src \port$5634$0 [18:15]
+connect \dr_src \port$5634$0 [22:19]
+connect \imm \port$5634$0 [14:0]
 connect \cr_rd_data.word0_gt \cr_rd_data [31:0]
 connect \cr_rd_data.word0_gt.slot_id \cr_rd_data [15:0]
 connect \cr_rd_data.word0_gt.gt_seq \cr_rd_data [22:16]
@@ -58892,7 +59055,7 @@ module \top.core.u_cload
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:70"
   wire width 32 \raw_w2$43
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/cload.py:71"
@@ -60066,7 +60229,7 @@ module \top.core.u_cload.u_ns_gate
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:72"
   wire width 32 \ns_entry_addr_out
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/ns_gate.py:76"
@@ -60999,7 +61162,7 @@ module \top.core.u_outform
   attribute \init 32'00000000000000000000000000000000
   wire width 32 \rle_rx_count
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/outform.py:79"
@@ -70627,7 +70790,7 @@ module \top.core.u_outform_fsm
   attribute \init 5'00000
   wire width 5 \fault_type_lat
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/church_outform.py:34"
@@ -71240,7 +71403,7 @@ module \top.boot_rom
   attribute \src "/home/runner/workspace/hardware/boot_rom.py:596"
   wire width 32 \rom_comb
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/boot_rom.py:590"
@@ -71695,7 +71858,7 @@ module \top.debug
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:22"
   wire width 1 \done
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:91"
@@ -72255,7 +72418,7 @@ module \top.debug.uart
   attribute \init 4'0000
   wire width 4 \bit_pos
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/uart_tx.py:19"
@@ -72581,7 +72744,7 @@ module \top.uart_rx_mod
   attribute \src "/home/runner/workspace/hardware/uart_rx.py:19"
   wire width 1 input 0  \rx
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 1  \clk
 
   attribute \src "/home/runner/workspace/hardware/uart_rx.py:20"
@@ -73075,6 +73238,1658 @@ module \top.uart_rx_mod
 end
 
 attribute \generator "Amaranth"
+attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:206"
+module \top.eth
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:224"
+  memory width 8 size 1518 \tx_buf
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:235"
+  memory width 8 size 1518 \rx_buf
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:84"
+  wire width 1 \rmii_ref_clk
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:196"
+  wire width 1 \rmii_ref_clk$1
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:85"
+  wire width 1 \rmii_crs_dv
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:197"
+  wire width 1 \rmii_crs_dv$3
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:86"
+  wire width 2 \rmii_rxd
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:198"
+  wire width 2 \rmii_rxd$5
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:87"
+  wire width 1 \rmii_txen$7
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:88"
+  wire width 2 \rmii_txd$9
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:89"
+  wire width 1 \rmii_nrst$11
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:400"
+  wire width 1 \tx_wr_port__en
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:401"
+  attribute \init 11'00000000000
+  wire width 11 \tx_wr_port__addr
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:229"
+  attribute \init 11'00000000000
+  wire width 11 \tx_wr_ptr
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:402"
+  wire width 8 \tx_wr_port__data
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:240"
+  attribute \init 11'00000000000
+  wire width 11 \tx_rd_port__addr
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:230"
+  attribute \init 11'00000000000
+  wire width 11 \tx_rd_ptr
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:400"
+  wire width 1 \rx_wr_port__en
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:401"
+  attribute \init 11'00000000000
+  wire width 11 \rx_wr_port__addr
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:240"
+  attribute \init 11'00000000000
+  wire width 11 \rx_wr_ptr
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:402"
+  wire width 8 \rx_wr_port__data
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:96"
+  wire width 8 \rx_byte
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:240"
+  attribute \init 11'00000000000
+  wire width 11 \rx_rd_port__addr
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:241"
+  attribute \init 11'00000000000
+  wire width 11 \rx_rd_ptr
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:232"
+  attribute \init 1'0
+  wire width 1 \tx_busy
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:91"
+  wire width 8 \tx_byte
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:241"
+  wire width 8 \tx_rd_port__data
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:92"
+  wire width 1 \tx_valid
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:233"
+  attribute \init 11'00000000000
+  wire width 11 \tx_bytes_out
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:231"
+  attribute \init 11'00000000000
+  wire width 11 \tx_len_reg
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:97"
+  wire width 1 \rx_valid
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:310"
+  wire width 1 \last_rx_read
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:242"
+  attribute \init 11'00000000000
+  wire width 11 \rx_len_reg
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:331"
+  wire width 1 \negotiating
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:220"
+  attribute \init 3'000
+  wire width 3 \ctrl_reg
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:100"
+  wire width 1 \link_up
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:334"
+  wire width 32 \status_word
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:221"
+  attribute \init 32'00000000000000000000000000000000
+  wire width 32 \ip_addr_reg
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:222"
+  attribute \init 16'0000000000000000
+  wire width 16 \port_reg
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:241"
+  wire width 8 \rx_rd_port__data
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:203"
+  attribute \init 1'0
+  wire width 1 \eth_irq
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:93"
+  wire width 1 \tx_ack
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:94"
+  wire width 1 \tx_done
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:98"
+  wire width 1 \rx_last
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
+  wire width 1 input 0  \clk
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:191"
+  wire width 1 input 1  \mmio_rd_en
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:192"
+  wire width 1 input 2  \mmio_wr_en
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:190"
+  wire width 4 input 3  \mmio_addr
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:193"
+  wire width 32 input 4  \mmio_wr_data
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:194"
+  wire width 32 output 5  \mmio_rd_data
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:203"
+  attribute \init 1'0
+  wire width 1 output 6  \rx_ready
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:89"
+  wire width 1 output 7  \rmii_nrst
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:87"
+  wire width 1 output 8  \rmii_txen
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:88"
+  wire width 2 output 9  \rmii_txd
+
+  wire width 1 $1
+
+  wire width 1 $2
+
+  wire width 1 $3
+
+  wire width 1 $4
+
+  wire width 1 $5
+
+  wire width 1 $6
+
+  wire width 1 $7
+
+  wire width 1 $8
+
+  wire width 1 $9
+
+  wire width 12 $10
+
+  wire width 1 $11
+
+  wire width 1 $12
+
+  wire width 1 $13
+
+  wire width 1 $14
+
+  wire width 1 $15
+
+  wire width 12 $16
+
+  wire width 12 $17
+
+  wire width 12 $18
+
+  wire width 1 $19
+
+  wire width 1 $20
+
+  wire width 1 $21
+
+  wire width 1 $22
+
+  wire width 1 $23
+
+  wire width 12 $24
+
+  wire width 1 $25
+
+  wire width 1 $26
+
+  wire width 1 $27
+
+  wire width 1 $28
+
+  wire width 1 $29
+
+  wire width 12 $30
+
+  wire width 3 $31
+
+  wire width 11 $32
+
+  wire width 11 $33
+
+  wire width 1 $34
+
+  wire width 11 $35
+
+  wire width 11 $36
+
+  wire width 32 $37
+
+  wire width 16 $38
+
+  wire width 11 $39
+
+  wire width 11 $40
+
+  wire width 1 $41
+
+  wire width 11 $42
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:209"
+  cell \top.eth.rmii \rmii
+    connect \clk \clk [0]
+    connect \tx_valid \tx_valid [0]
+    connect \tx_byte \tx_byte [7:0]
+    connect \link_up \link_up [0]
+    connect \rmii_nrst \rmii_nrst [0]
+    connect \rx_byte \rx_wr_port__data [7:0]
+    connect \rx_valid \rx_valid [0]
+    connect \rx_last \rx_last [0]
+    connect \tx_ack \tx_ack [0]
+    connect \rmii_txen \rmii_txen [0]
+    connect \rmii_txd \rmii_txd [1:0]
+    connect \tx_done \tx_done [0]
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:263"
+  cell $not $43
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \tx_busy [0]
+    connect \Y $1
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:263"
+  cell $lt $44
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 11
+    parameter \Y_WIDTH 1
+    connect \A \tx_wr_port__addr [10:0]
+    connect \B 11'10111101110
+    connect \Y $2
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:263"
+  cell $and $45
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A $1 [0]
+    connect \B $2 [0]
+    connect \Y $3
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:283"
+  cell $lt $46
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 11
+    parameter \Y_WIDTH 1
+    connect \A \tx_bytes_out [10:0]
+    connect \B \tx_len_reg [10:0]
+    connect \Y $4
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:283"
+  cell $and $47
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \tx_busy [0]
+    connect \B $4 [0]
+    connect \Y \tx_valid
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:298"
+  cell $not $48
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \rx_ready [0]
+    connect \Y $5
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:298"
+  cell $and $49
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \rx_valid [0]
+    connect \B $5 [0]
+    connect \Y $6
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:299"
+  cell $lt $50
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 11
+    parameter \Y_WIDTH 1
+    connect \A \rx_wr_port__addr [10:0]
+    connect \B 11'10111101110
+    connect \Y $7
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:313"
+  cell $eq $51
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 3
+    parameter \Y_WIDTH 1
+    connect \A \mmio_addr [3:0]
+    connect \B 3'111
+    connect \Y $8
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:312"
+  cell $and $52
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \mmio_rd_en [0]
+    connect \B $8 [0]
+    connect \Y $9
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:314"
+  cell $add $53
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 12
+    connect \A \rx_rd_port__addr [10:0]
+    connect \B 1'1
+    connect \Y $10
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:314"
+  cell $ge $54
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 12
+    parameter \B_WIDTH 11
+    parameter \Y_WIDTH 1
+    connect \A $10 [11:0]
+    connect \B \rx_len_reg [10:0]
+    connect \Y $11
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:312"
+  cell $and $55
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A $9 [0]
+    connect \B $11 [0]
+    connect \Y \last_rx_read
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:332"
+  cell $not $56
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \link_up [0]
+    connect \Y $12
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:332"
+  cell $and $57
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \ctrl_reg [1]
+    connect \B $12 [0]
+    connect \Y \negotiating
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:263"
+  cell $not $58
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \tx_busy [0]
+    connect \Y $13
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:263"
+  cell $lt $59
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 11
+    parameter \Y_WIDTH 1
+    connect \A \tx_wr_port__addr [10:0]
+    connect \B 11'10111101110
+    connect \Y $14
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:263"
+  cell $and $60
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A $13 [0]
+    connect \B $14 [0]
+    connect \Y $15
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:265"
+  cell $add $61
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 12
+    connect \A \tx_wr_port__addr [10:0]
+    connect \B 1'1
+    connect \Y $16
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:288"
+  cell $add $62
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 12
+    connect \A \tx_rd_port__addr [10:0]
+    connect \B 1'1
+    connect \Y $17
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:289"
+  cell $add $63
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 12
+    connect \A \tx_bytes_out [10:0]
+    connect \B 1'1
+    connect \Y $18
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:292"
+  cell $ge $64
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 11
+    parameter \Y_WIDTH 1
+    connect \A \tx_bytes_out [10:0]
+    connect \B \tx_len_reg [10:0]
+    connect \Y $19
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:292"
+  cell $and $65
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \tx_done [0]
+    connect \B $19 [0]
+    connect \Y $20
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:298"
+  cell $not $66
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \rx_ready [0]
+    connect \Y $21
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:298"
+  cell $and $67
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \rx_valid [0]
+    connect \B $21 [0]
+    connect \Y $22
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:299"
+  cell $lt $68
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 11
+    parameter \Y_WIDTH 1
+    connect \A \rx_wr_port__addr [10:0]
+    connect \B 11'10111101110
+    connect \Y $23
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:301"
+  cell $add $69
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 12
+    connect \A \rx_wr_port__addr [10:0]
+    connect \B 1'1
+    connect \Y $24
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:303"
+  cell $gt $70
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 0
+    parameter \Y_WIDTH 1
+    connect \A \rx_wr_port__addr [10:0]
+    connect \B {  }
+    connect \Y $25
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:303"
+  cell $and $71
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \rx_last [0]
+    connect \B $25 [0]
+    connect \Y $26
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:317"
+  cell $eq $72
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 4
+    parameter \B_WIDTH 3
+    parameter \Y_WIDTH 1
+    connect \A \mmio_addr [3:0]
+    connect \B 3'111
+    connect \Y $27
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:317"
+  cell $and $73
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \mmio_rd_en [0]
+    connect \B $27 [0]
+    connect \Y $28
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:318"
+  cell $lt $74
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 11
+    parameter \Y_WIDTH 1
+    connect \A \rx_rd_port__addr [10:0]
+    connect \B \rx_len_reg [10:0]
+    connect \Y $29
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:319"
+  cell $add $75
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 11
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 12
+    connect \A \rx_rd_port__addr [10:0]
+    connect \B 1'1
+    connect \Y $30
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:224"
+  cell $meminit_v2 $76
+    parameter \MEMID "\\tx_buf"
+    parameter \ABITS 0
+    parameter \WIDTH 8
+    parameter \WORDS 1518
+    parameter \PRIORITY 0
+    connect \ADDR {  }
+    connect \DATA 12144'000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    connect \EN 8'11111111
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:402"
+  cell $memwr_v2 $77
+    parameter \MEMID "\\tx_buf"
+    parameter \ABITS 11
+    parameter \WIDTH 8
+    parameter \CLK_ENABLE 1
+    parameter \CLK_POLARITY 1
+    parameter \PORTID 0
+    parameter \PRIORITY_MASK 0
+    connect \ADDR \tx_wr_port__addr [10:0]
+    connect \DATA \mmio_wr_data [7:0]
+    connect \EN { \tx_wr_port__en [0] \tx_wr_port__en [0] \tx_wr_port__en [0] \tx_wr_port__en [0] \tx_wr_port__en [0] \tx_wr_port__en [0] \tx_wr_port__en [0] \tx_wr_port__en [0] }
+    connect \CLK \clk [0]
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:241"
+  cell $memrd_v2 $78
+    parameter \MEMID "\\tx_buf"
+    parameter \ABITS 11
+    parameter \WIDTH 8
+    parameter \TRANSPARENCY_MASK 1'0
+    parameter \COLLISION_X_MASK 1'0
+    parameter \ARST_VALUE 8'xxxxxxxx
+    parameter \SRST_VALUE 8'xxxxxxxx
+    parameter \INIT_VALUE 8'xxxxxxxx
+    parameter \CE_OVER_SRST 0
+    parameter \CLK_ENABLE 0
+    parameter \CLK_POLARITY 1
+    connect \ADDR \tx_rd_port__addr [10:0]
+    connect \DATA \tx_byte
+    connect \ARST 1'0
+    connect \SRST 1'0
+    connect \EN 1'1
+    connect \CLK 1'0
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:235"
+  cell $meminit_v2 $79
+    parameter \MEMID "\\rx_buf"
+    parameter \ABITS 0
+    parameter \WIDTH 8
+    parameter \WORDS 1518
+    parameter \PRIORITY 0
+    connect \ADDR {  }
+    connect \DATA 12144'000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    connect \EN 8'11111111
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:402"
+  cell $memwr_v2 $80
+    parameter \MEMID "\\rx_buf"
+    parameter \ABITS 11
+    parameter \WIDTH 8
+    parameter \CLK_ENABLE 1
+    parameter \CLK_POLARITY 1
+    parameter \PORTID 0
+    parameter \PRIORITY_MASK 0
+    connect \ADDR \rx_wr_port__addr [10:0]
+    connect \DATA \rx_wr_port__data [7:0]
+    connect \EN { \rx_wr_port__en [0] \rx_wr_port__en [0] \rx_wr_port__en [0] \rx_wr_port__en [0] \rx_wr_port__en [0] \rx_wr_port__en [0] \rx_wr_port__en [0] \rx_wr_port__en [0] }
+    connect \CLK \clk [0]
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:241"
+  cell $memrd_v2 $81
+    parameter \MEMID "\\rx_buf"
+    parameter \ABITS 11
+    parameter \WIDTH 8
+    parameter \TRANSPARENCY_MASK 1'0
+    parameter \COLLISION_X_MASK 1'0
+    parameter \ARST_VALUE 8'xxxxxxxx
+    parameter \SRST_VALUE 8'xxxxxxxx
+    parameter \INIT_VALUE 8'xxxxxxxx
+    parameter \CE_OVER_SRST 0
+    parameter \CLK_ENABLE 0
+    parameter \CLK_POLARITY 1
+    connect \ADDR \rx_rd_port__addr [10:0]
+    connect \DATA \rx_rd_port__data
+    connect \ARST 1'0
+    connect \SRST 1'0
+    connect \EN 1'1
+    connect \CLK 1'0
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:400"
+  process $82
+    assign \tx_wr_port__en [0] 1'0
+    switch \mmio_wr_en [0]
+      case 1'1
+        switch \mmio_addr [3:0]
+          case 4'0000
+          case 4'0110
+            switch $3 [0]
+              case 1'1
+                assign \tx_wr_port__en [0] 1'1
+            end
+          case 4'0010
+          case 4'0100
+          case 4'0101
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/lib/memory.py:400"
+  process $83
+    assign \rx_wr_port__en [0] 1'0
+    switch $6 [0]
+      case 1'1
+        switch $7 [0]
+          case 1'1
+            assign \rx_wr_port__en [0] 1'1
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:334"
+  process $84
+    assign \status_word [31:0] 32'00000000000000000000000000000000
+    switch { \negotiating [0] \link_up [0] }
+      case 2'-1
+        assign \status_word [31:0] 32'00000000000000000000000000000001
+      case 2'1-
+        assign \status_word [31:0] 32'00000000000000000000000000000010
+      case
+        assign \status_word [31:0] 32'00000000000000000000000000000000
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:194"
+  process $85
+    assign \mmio_rd_data [31:0] 32'00000000000000000000000000000000
+    switch \mmio_rd_en [0]
+      case 1'1
+        switch \mmio_addr [3:0]
+          case 4'0000
+            assign \mmio_rd_data [31:0] { 29'00000000000000000000000000000 \ctrl_reg [2:0] }
+          case 4'0001
+            assign \mmio_rd_data [31:0] \status_word [31:0]
+          case 4'0010
+            assign \mmio_rd_data [31:0] { 21'000000000000000000000 \tx_len_reg [10:0] }
+          case 4'0011
+            assign \mmio_rd_data [31:0] { 21'000000000000000000000 \rx_len_reg [10:0] }
+          case 4'0100
+            assign \mmio_rd_data [31:0] \ip_addr_reg [31:0]
+          case 4'0101
+            assign \mmio_rd_data [31:0] { 16'0000000000000000 \port_reg [15:0] }
+          case 4'0111
+            assign \mmio_rd_data [31:0] { 24'000000000000000000000000 \rx_rd_port__data [7:0] }
+          case
+            assign \mmio_rd_data [31:0] 32'00000000000000000000000000000000
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:220"
+  process $86
+    assign $31 [2:0] \ctrl_reg [2:0]
+    switch \mmio_wr_en [0]
+      case 1'1
+        switch \mmio_addr [3:0]
+          case 4'0000
+            assign $31 [2:0] \mmio_wr_data [2:0]
+          case 4'0110
+          case 4'0010
+          case 4'0100
+          case 4'0101
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:220"
+  cell $dff $87
+    parameter \WIDTH 3
+    parameter \CLK_POLARITY 1
+    connect \D $31 [2:0]
+    connect \CLK \clk [0]
+    connect \Q \ctrl_reg
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:229"
+  process $88
+    assign $32 [10:0] \tx_wr_port__addr [10:0]
+    switch \mmio_wr_en [0]
+      case 1'1
+        switch \mmio_addr [3:0]
+          case 4'0000
+          case 4'0110
+            switch $15 [0]
+              case 1'1
+                assign $32 [10:0] $16 [10:0]
+            end
+          case 4'0010
+          case 4'0100
+          case 4'0101
+        end
+    end
+    switch $20 [0]
+      case 1'1
+        assign $32 [10:0] 11'00000000000
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:229"
+  cell $dff $89
+    parameter \WIDTH 11
+    parameter \CLK_POLARITY 1
+    connect \D $32 [10:0]
+    connect \CLK \clk [0]
+    connect \Q \tx_wr_port__addr
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:231"
+  process $90
+    assign $33 [10:0] \tx_len_reg [10:0]
+    switch \mmio_wr_en [0]
+      case 1'1
+        switch \mmio_addr [3:0]
+          case 4'0000
+          case 4'0110
+          case 4'0010
+            assign $33 [10:0] \mmio_wr_data [10:0]
+          case 4'0100
+          case 4'0101
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:231"
+  cell $dff $91
+    parameter \WIDTH 11
+    parameter \CLK_POLARITY 1
+    connect \D $33 [10:0]
+    connect \CLK \clk [0]
+    connect \Q \tx_len_reg
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:232"
+  process $92
+    assign $34 [0] \tx_busy [0]
+    switch \mmio_wr_en [0]
+      case 1'1
+        switch \mmio_addr [3:0]
+          case 4'0000
+          case 4'0110
+          case 4'0010
+            assign $34 [0] 1'1
+          case 4'0100
+          case 4'0101
+        end
+    end
+    switch $20 [0]
+      case 1'1
+        assign $34 [0] 1'0
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:232"
+  cell $dff $93
+    parameter \WIDTH 1
+    parameter \CLK_POLARITY 1
+    connect \D $34 [0]
+    connect \CLK \clk [0]
+    connect \Q \tx_busy
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:230"
+  process $94
+    assign $35 [10:0] \tx_rd_port__addr [10:0]
+    switch \mmio_wr_en [0]
+      case 1'1
+        switch \mmio_addr [3:0]
+          case 4'0000
+          case 4'0110
+          case 4'0010
+            assign $35 [10:0] 11'00000000000
+          case 4'0100
+          case 4'0101
+        end
+    end
+    switch \tx_ack [0]
+      case 1'1
+        assign $35 [10:0] $17 [10:0]
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:230"
+  cell $dff $95
+    parameter \WIDTH 11
+    parameter \CLK_POLARITY 1
+    connect \D $35 [10:0]
+    connect \CLK \clk [0]
+    connect \Q \tx_rd_port__addr
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:233"
+  process $96
+    assign $36 [10:0] \tx_bytes_out [10:0]
+    switch \mmio_wr_en [0]
+      case 1'1
+        switch \mmio_addr [3:0]
+          case 4'0000
+          case 4'0110
+          case 4'0010
+            assign $36 [10:0] 11'00000000000
+          case 4'0100
+          case 4'0101
+        end
+    end
+    switch \tx_ack [0]
+      case 1'1
+        assign $36 [10:0] $18 [10:0]
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:233"
+  cell $dff $97
+    parameter \WIDTH 11
+    parameter \CLK_POLARITY 1
+    connect \D $36 [10:0]
+    connect \CLK \clk [0]
+    connect \Q \tx_bytes_out
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:221"
+  process $98
+    assign $37 [31:0] \ip_addr_reg [31:0]
+    switch \mmio_wr_en [0]
+      case 1'1
+        switch \mmio_addr [3:0]
+          case 4'0000
+          case 4'0110
+          case 4'0010
+          case 4'0100
+            assign $37 [31:0] \mmio_wr_data [31:0]
+          case 4'0101
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:221"
+  cell $dff $99
+    parameter \WIDTH 32
+    parameter \CLK_POLARITY 1
+    connect \D $37 [31:0]
+    connect \CLK \clk [0]
+    connect \Q \ip_addr_reg
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:222"
+  process $100
+    assign $38 [15:0] \port_reg [15:0]
+    switch \mmio_wr_en [0]
+      case 1'1
+        switch \mmio_addr [3:0]
+          case 4'0000
+          case 4'0110
+          case 4'0010
+          case 4'0100
+          case 4'0101
+            assign $38 [15:0] \mmio_wr_data [15:0]
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:222"
+  cell $dff $101
+    parameter \WIDTH 16
+    parameter \CLK_POLARITY 1
+    connect \D $38 [15:0]
+    connect \CLK \clk [0]
+    connect \Q \port_reg
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:240"
+  process $102
+    assign $39 [10:0] \rx_wr_port__addr [10:0]
+    switch $22 [0]
+      case 1'1
+        switch $23 [0]
+          case 1'1
+            assign $39 [10:0] $24 [10:0]
+        end
+    end
+    switch \last_rx_read [0]
+      case 1'1
+        assign $39 [10:0] 11'00000000000
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:240"
+  cell $dff $103
+    parameter \WIDTH 11
+    parameter \CLK_POLARITY 1
+    connect \D $39 [10:0]
+    connect \CLK \clk [0]
+    connect \Q \rx_wr_port__addr
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:242"
+  process $104
+    assign $40 [10:0] \rx_len_reg [10:0]
+    switch $26 [0]
+      case 1'1
+        assign $40 [10:0] \rx_wr_port__addr [10:0]
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:242"
+  cell $dff $105
+    parameter \WIDTH 11
+    parameter \CLK_POLARITY 1
+    connect \D $40 [10:0]
+    connect \CLK \clk [0]
+    connect \Q \rx_len_reg
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:243"
+  process $106
+    assign $41 [0] \rx_ready [0]
+    switch $26 [0]
+      case 1'1
+        assign $41 [0] 1'1
+    end
+    switch \last_rx_read [0]
+      case 1'1
+        assign $41 [0] 1'0
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:243"
+  cell $dff $107
+    parameter \WIDTH 1
+    parameter \CLK_POLARITY 1
+    connect \D $41 [0]
+    connect \CLK \clk [0]
+    connect \Q \rx_ready
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:241"
+  process $108
+    assign $42 [10:0] \rx_rd_port__addr [10:0]
+    switch $26 [0]
+      case 1'1
+        assign $42 [10:0] 11'00000000000
+    end
+    switch $28 [0]
+      case 1'1
+        switch $29 [0]
+          case 1'1
+            assign $42 [10:0] $30 [10:0]
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:241"
+  cell $dff $109
+    parameter \WIDTH 11
+    parameter \CLK_POLARITY 1
+    connect \D $42 [10:0]
+    connect \CLK \clk [0]
+    connect \Q \rx_rd_port__addr
+  end
+
+connect \rmii_ref_clk 1'0
+connect \rmii_ref_clk$1 1'0
+connect \rmii_crs_dv 1'0
+connect \rmii_crs_dv$3 1'0
+connect \rmii_rxd 2'00
+connect \rmii_rxd$5 2'00
+connect \rmii_txen$7 \rmii_txen [0]
+connect \rmii_txd$9 \rmii_txd [1:0]
+connect \rmii_nrst$11 \rmii_nrst [0]
+connect \tx_wr_ptr \tx_wr_port__addr [10:0]
+connect \tx_wr_port__data \mmio_wr_data [7:0]
+connect \tx_rd_ptr \tx_rd_port__addr [10:0]
+connect \rx_wr_ptr \rx_wr_port__addr [10:0]
+connect \rx_byte \rx_wr_port__data [7:0]
+connect \rx_rd_ptr \rx_rd_port__addr [10:0]
+connect \tx_rd_port__data \tx_byte [7:0]
+connect \eth_irq \rx_ready [0]
+
+end
+
+attribute \generator "Amaranth"
+attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:103"
+module \top.eth.rmii
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:105"
+  attribute \init 17'00000000000000000
+  wire width 17 \phy_reset_cnt
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:85"
+  wire width 1 \rmii_crs_dv
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:116"
+  attribute \init 1'0
+  wire width 1 \rx_prev_crs
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:114"
+  attribute \init 2'00
+  wire width 2 \rx_dibit_cnt
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:115"
+  attribute \init 8'00000000
+  wire width 8 \rx_byte_acc
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:86"
+  wire width 2 \rmii_rxd
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:136"
+  attribute \init 1'0
+  wire width 1 \tx_active
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:137"
+  attribute \init 8'00000000
+  wire width 8 \tx_byte_r
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:138"
+  attribute \init 2'00
+  wire width 2 \tx_dibit
+
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
+  wire width 1 input 0  \clk
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:92"
+  wire width 1 input 1  \tx_valid
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:91"
+  wire width 8 input 2  \tx_byte
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:100"
+  attribute \init 1'0
+  wire width 1 output 3  \link_up
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:89"
+  wire width 1 output 4  \rmii_nrst
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:96"
+  wire width 8 output 5  \rx_byte
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:97"
+  wire width 1 output 6  \rx_valid
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:98"
+  wire width 1 output 7  \rx_last
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:93"
+  wire width 1 output 8  \tx_ack
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:87"
+  wire width 1 output 9  \rmii_txen
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:88"
+  wire width 2 output 10  \rmii_txd
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:94"
+  wire width 1 output 11  \tx_done
+
+  wire width 1 $1
+
+  wire width 18 $2
+
+  wire width 3 $3
+
+  wire width 1 $4
+
+  wire width 1 $5
+
+  wire width 3 $6
+
+  wire width 1 $7
+
+  wire width 1 $8
+
+  wire width 1 $9
+
+  wire width 1 $10
+
+  wire width 1 $11
+
+  wire width 17 $12
+
+  wire width 8 $13
+
+  wire width 2 $14
+
+  wire width 8 $15
+
+  wire width 1 $16
+
+  wire width 2 $17
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:106"
+  cell $lt $18
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 17
+    parameter \B_WIDTH 17
+    parameter \Y_WIDTH 1
+    connect \A \phy_reset_cnt [16:0]
+    connect \B 17'11000011010100000
+    connect \Y $1
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:107"
+  cell $add $19
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 17
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 18
+    connect \A \phy_reset_cnt [16:0]
+    connect \B 1'1
+    connect \Y $2
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:130"
+  cell $add $20
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 3
+    connect \A \rx_dibit_cnt [1:0]
+    connect \B 1'1
+    connect \Y $3
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:140"
+  cell $not $21
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \tx_active [0]
+    connect \Y $4
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:140"
+  cell $and $22
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \tx_valid [0]
+    connect \B $4 [0]
+    connect \Y $5
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:155"
+  cell $add $23
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 3
+    connect \A \tx_dibit [1:0]
+    connect \B 1'1
+    connect \Y $6
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:156"
+  cell $eq $24
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 1
+    connect \A \tx_dibit [1:0]
+    connect \B 2'11
+    connect \Y $7
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:106"
+  cell $lt $25
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 17
+    parameter \B_WIDTH 17
+    parameter \Y_WIDTH 1
+    connect \A \phy_reset_cnt [16:0]
+    connect \B 17'11000011010100000
+    connect \Y $8
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:140"
+  cell $not $26
+    parameter \A_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \tx_active [0]
+    connect \Y $9
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:140"
+  cell $and $27
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 1
+    parameter \B_WIDTH 1
+    parameter \Y_WIDTH 1
+    connect \A \tx_valid [0]
+    connect \B $9 [0]
+    connect \Y $10
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:156"
+  cell $eq $28
+    parameter \A_SIGNED 0
+    parameter \B_SIGNED 0
+    parameter \A_WIDTH 2
+    parameter \B_WIDTH 2
+    parameter \Y_WIDTH 1
+    connect \A \tx_dibit [1:0]
+    connect \B 2'11
+    connect \Y $11
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:105"
+  process $29
+    assign $12 [16:0] \phy_reset_cnt [16:0]
+    switch $1 [0]
+      case 1'1
+        assign $12 [16:0] $2 [16:0]
+      case
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:105"
+  cell $dff $30
+    parameter \WIDTH 17
+    parameter \CLK_POLARITY 1
+    connect \D $12 [16:0]
+    connect \CLK \clk [0]
+    connect \Q \phy_reset_cnt
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:100"
+  cell $dff $31
+    parameter \WIDTH 1
+    parameter \CLK_POLARITY 1
+    connect \D 1'0
+    connect \CLK \clk [0]
+    connect \Q \link_up
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:116"
+  cell $dff $32
+    parameter \WIDTH 1
+    parameter \CLK_POLARITY 1
+    connect \D 1'0
+    connect \CLK \clk [0]
+    connect \Q \rx_prev_crs
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:115"
+  process $33
+    assign $13 [7:0] \rx_byte_acc [7:0]
+    switch 1'0
+      case 1'1
+        switch \rx_dibit_cnt [1:0]
+          case 2'00
+            assign $13 [1:0] 2'00
+          case 2'01
+            assign $13 [3:2] 2'00
+          case 2'10
+            assign $13 [5:4] 2'00
+          case 2'11
+        end
+      case
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:115"
+  cell $dff $34
+    parameter \WIDTH 8
+    parameter \CLK_POLARITY 1
+    connect \D $13 [7:0]
+    connect \CLK \clk [0]
+    connect \Q \rx_byte_acc
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:114"
+  process $35
+    assign $14 [1:0] \rx_dibit_cnt [1:0]
+    switch 1'0
+      case 1'1
+        assign $14 [1:0] $3 [1:0]
+      case
+        assign $14 [1:0] 2'00
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:114"
+  cell $dff $36
+    parameter \WIDTH 2
+    parameter \CLK_POLARITY 1
+    connect \D $14 [1:0]
+    connect \CLK \clk [0]
+    connect \Q \rx_dibit_cnt
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:137"
+  process $37
+    assign $15 [7:0] \tx_byte_r [7:0]
+    switch $5 [0]
+      case 1'1
+        assign $15 [7:0] \tx_byte [7:0]
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:137"
+  cell $dff $38
+    parameter \WIDTH 8
+    parameter \CLK_POLARITY 1
+    connect \D $15 [7:0]
+    connect \CLK \clk [0]
+    connect \Q \tx_byte_r
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:136"
+  process $39
+    assign $16 [0] \tx_active [0]
+    switch $5 [0]
+      case 1'1
+        assign $16 [0] 1'1
+    end
+    switch \tx_active [0]
+      case 1'1
+        switch $7 [0]
+          case 1'1
+            assign $16 [0] 1'0
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:136"
+  cell $dff $40
+    parameter \WIDTH 1
+    parameter \CLK_POLARITY 1
+    connect \D $16 [0]
+    connect \CLK \clk [0]
+    connect \Q \tx_active
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:138"
+  process $41
+    assign $17 [1:0] \tx_dibit [1:0]
+    switch $5 [0]
+      case 1'1
+        assign $17 [1:0] 2'00
+    end
+    switch \tx_active [0]
+      case 1'1
+        assign $17 [1:0] $6 [1:0]
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:138"
+  cell $dff $42
+    parameter \WIDTH 2
+    parameter \CLK_POLARITY 1
+    connect \D $17 [1:0]
+    connect \CLK \clk [0]
+    connect \Q \tx_dibit
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:89"
+  process $43
+    assign \rmii_nrst [0] 1'1
+    switch $8 [0]
+      case 1'1
+        assign \rmii_nrst [0] 1'0
+      case
+        assign \rmii_nrst [0] 1'1
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:96"
+  process $44
+    assign \rx_byte [7:0] 8'00000000
+    switch 1'0
+      case 1'1
+        switch \rx_dibit_cnt [1:0]
+          case 2'00
+          case 2'01
+          case 2'10
+          case 2'11
+            assign \rx_byte [7:0] { 2'00 \rx_byte_acc [5:0] }
+        end
+      case
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:97"
+  process $45
+    assign \rx_valid [0] 1'0
+    switch 1'0
+      case 1'1
+        switch \rx_dibit_cnt [1:0]
+          case 2'00
+          case 2'01
+          case 2'10
+          case 2'11
+            assign \rx_valid [0] 1'1
+        end
+      case
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:98"
+  process $46
+    assign \rx_last [0] 1'0
+    switch 1'0
+      case 1'1
+      case
+        switch \rx_prev_crs [0]
+          case 1'1
+            assign \rx_last [0] 1'1
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:93"
+  process $47
+    assign \tx_ack [0] 1'0
+    switch $10 [0]
+      case 1'1
+        assign \tx_ack [0] 1'1
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:87"
+  process $48
+    assign \rmii_txen [0] 1'0
+    switch \tx_active [0]
+      case 1'1
+        assign \rmii_txen [0] 1'1
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:88"
+  process $49
+    assign \rmii_txd [1:0] 2'00
+    switch \tx_active [0]
+      case 1'1
+        switch \tx_dibit [1:0]
+          case 2'00
+            assign \rmii_txd [1:0] \tx_byte_r [1:0]
+          case 2'01
+            assign \rmii_txd [1:0] \tx_byte_r [3:2]
+          case 2'10
+            assign \rmii_txd [1:0] \tx_byte_r [5:4]
+          case 2'11
+            assign \rmii_txd [1:0] \tx_byte_r [7:6]
+        end
+    end
+  end
+
+  attribute \src "/home/runner/workspace/hardware/ethernet_xc7a100t.py:94"
+  process $50
+    assign \tx_done [0] 1'0
+    switch \tx_active [0]
+      case 1'1
+        switch $11 [0]
+          case 1'1
+            assign \tx_done [0] 1'1
+        end
+    end
+  end
+
+connect \rmii_crs_dv 1'0
+connect \rmii_rxd 2'00
+
+end
+
+attribute \generator "Amaranth"
 attribute \src "/home/runner/workspace/hardware/uart_crc16.py:24"
 module \top.crc_mod
 
@@ -73105,7 +74920,7 @@ module \top.crc_mod
   attribute \src "/home/runner/workspace/hardware/uart_crc16.py:26"
   wire width 16 \crc_next
 
-  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:58"
+  attribute \src "/home/runner/workspace/hardware/wukong_xc7a100t.py:67"
   wire width 1 input 0  \clk
 
   attribute \src "/home/runner/workspace/hardware/uart_crc16.py:18"
