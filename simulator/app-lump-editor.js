@@ -169,7 +169,6 @@
                     '<input type="number" class="le-number" id="le-t-stack-num" min="1" max="255" value="' + stack + '" oninput="lumpEditorThreadStack(this.value)">' +
                 '</div>' +
             '</div>' +
-            '<div class="le-divider"></div>' +
             '<div class="le-bar-label-row"><span>Single thread memory layout</span></div>' +
             bar +
             '<div class="le-divider"></div>' +
