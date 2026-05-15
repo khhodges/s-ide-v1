@@ -133,17 +133,35 @@
     var DR_WORDS  = 16;   // DR0–DR15, static
     var CAP_WORDS = 12;   // CR0–CR11 GT home slots, static
 
+    var BOARD_PROFILES = {
+        'tang-nano-20k':     { label: 'Tang Nano 20K',      totalRamWords: 16384,  singleThread: true  },
+        'tang-nano-20k-iot': { label: 'Tang Nano 20K IoT',  totalRamWords: 16384,  singleThread: true  },
+        'tang-nano-9k':      { label: 'Tang Nano 9K',       totalRamWords: 2048,   singleThread: true  },
+        'ti60-f225':         { label: 'Ti60 F225',           totalRamWords: 65536,  singleThread: false },
+        'wukong-xc7a100t':   { label: 'Wukong XC7A100T',    totalRamWords: 131072, singleThread: false }
+    };
+
+    function getBoardProfile() {
+        var board = (typeof localStorage !== 'undefined' && localStorage.getItem('fpga_board_target')) || 'tang-nano-20k';
+        return BOARD_PROFILES[board] || BOARD_PROFILES['tang-nano-20k'];
+    }
+
     function renderThreadPanel() {
         var heap  = clamp(state.thread.heap,  1, 8191);
         var stack = clamp(state.thread.stack, 1, 255);
-        var count = clamp(state.thread.count, 1, 10);
         var needed    = 1 + DR_WORDS + heap + stack + CAP_WORDS;
         var lumpSize  = nextPow2(needed);
         var n         = log2Exact(lumpSize) - 6;
         var free      = lumpSize - 1 - DR_WORDS - heap - stack - CAP_WORDS;
-        var totalMem  = lumpSize * count;
         var word      = packHdr(n, heap, stack, 2);
         var wordHex   = hex8(word);
+
+        var profile   = getBoardProfile();
+        var budget    = Math.floor(profile.totalRamWords / 2);
+        var maxCount  = profile.singleThread ? 1 : Math.min(10, Math.max(1, Math.floor(budget / lumpSize)));
+        var count     = clamp(state.thread.count, 1, maxCount);
+        var totalMem  = lumpSize * count;
+        var overBudget = totalMem > budget;
 
         var zones = [
             { label: 'Header',      words: 1,         cls: 'le-zone-hdr'   },
@@ -154,10 +172,17 @@
             { label: 'Cap Regs',    words: CAP_WORDS,  cls: 'le-zone-caps'  }
         ];
 
+        var memStatus = overBudget
+            ? '<span class="le-overflow">⚠ ' + esc(fmtWords(totalMem) + ' words — exceeds 50 % budget') + '</span>'
+            : esc(fmtWords(totalMem) + ' words  (' + count + ' × ' + fmtWords(lumpSize) + ')');
+
         var grid = renderGrid([
-            ['Lump size',      esc(fmtWords(lumpSize) + ' words  (2^' + (n + 6) + ')'), 'le-val-gold'],
-            ['Thread count',   esc(String(count)), ''],
-            ['Total memory',   esc(fmtWords(totalMem) + ' words  (' + count + ' × ' + fmtWords(lumpSize) + ')'), 'le-val-gold'],
+            ['Target board',   esc(profile.label), 'le-val-gold'],
+            ['Physical RAM',   esc(profile.totalRamWords.toLocaleString() + ' words'), ''],
+            ['Thread budget',  esc(fmtWords(budget) + ' words  (50 % of RAM)'), ''],
+            ['Lump size',      esc(fmtWords(lumpSize) + ' words  (2^' + (n + 6) + ')'), ''],
+            ['Thread count',   esc(String(count) + (profile.singleThread ? '  (max 1 — single-thread board)' : '  (max ' + maxCount + ')')), ''],
+            ['Total memory',   memStatus, overBudget ? '' : 'le-val-gold'],
             ['n_minus_6',      esc(String(n)), ''],
             ['typ field',      '10  (Thread)', ''],
             ['Header',         '1 word', ''],
@@ -169,13 +194,15 @@
             ['Header word',    '<span id="le-thread-hex" class="le-hex">' + esc(wordHex) + '</span>' + copyBtn('le-thread-hex'), 'le-val-mono']
         ]);
 
+        var countHint = profile.singleThread ? ' (single-thread board)' : ' 1\u2013' + maxCount;
+
         return '<div class="le-panel">' +
-            '<p class="le-panel-desc">Set heap and stack sizes. Lump allocation rounds up to the next power of two.</p>' +
+            '<p class="le-panel-desc">Set heap and stack sizes. Lump allocation rounds up to the next power of two. Thread budget = 50 % of board RAM.</p>' +
             '<div class="le-field-row">' +
-                '<label class="le-label">Thread count<span class="le-range-hint"> 1 – 10</span></label>' +
+                '<label class="le-label">Thread count<span class="le-range-hint">' + esc(countHint) + '</span></label>' +
                 '<div class="le-input-group">' +
-                    '<input type="range"  class="le-slider" id="le-t-count-sl"  min="1" max="10" value="' + count + '" oninput="lumpEditorThreadCount(this.value)">' +
-                    '<input type="number" class="le-number" id="le-t-count-num" min="1" max="10" value="' + count + '" oninput="lumpEditorThreadCount(this.value)">' +
+                    '<input type="range"  class="le-slider" id="le-t-count-sl"  min="1" max="' + maxCount + '" value="' + count + '" oninput="lumpEditorThreadCount(this.value)">' +
+                    '<input type="number" class="le-number" id="le-t-count-num" min="1" max="' + maxCount + '" value="' + count + '" oninput="lumpEditorThreadCount(this.value)">' +
                 '</div>' +
             '</div>' +
             '<div class="le-field-row">' +
