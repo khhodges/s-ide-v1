@@ -535,6 +535,7 @@ function _syncBootEntryFromSim() {
         renderAbstractions();
         if (currentView === 'namespace') updateNamespace();
         _refreshBootNSDetailIfOpen();
+        if (typeof window.lumpEditorRenderResidentPanel === 'function') window.lumpEditorRenderResidentPanel();
     }
 }
 
