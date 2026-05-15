@@ -8416,13 +8416,15 @@ function switchBuilderViewTab(tab) {
     document.querySelectorAll('.builder-view-tab').forEach(b => b.classList.remove('active'));
     const btn = document.getElementById('builderViewTab-' + tab);
     if (btn) btn.classList.add('active');
-    const cyberspace = document.getElementById('builderView');
-    const details    = document.getElementById('buildDetailsPanel');
-    const lumpEd     = document.getElementById('lumpEditorPanel');
-    if (cyberspace) cyberspace.style.display = (tab === 'cyberspace')  ? '' : 'none';
-    if (details)    details.style.display    = (tab === 'buildlog')    ? '' : 'none';
-    if (lumpEd)     lumpEd.style.display     = (tab === 'lumpeditor') ? '' : 'none';
-    if (tab === 'lumpeditor' && typeof initLumpEditor === 'function') initLumpEditor();
+    const cyberspace  = document.getElementById('builderView');
+    const details     = document.getElementById('buildDetailsPanel');
+    const lumpThread  = document.getElementById('lumpThreadPanel');
+    const lumpNS      = document.getElementById('lumpNSPanel');
+    if (cyberspace) cyberspace.style.display = (tab === 'cyberspace')   ? '' : 'none';
+    if (details)    details.style.display    = (tab === 'buildlog')     ? '' : 'none';
+    if (lumpThread) lumpThread.style.display = (tab === 'lump-thread')  ? '' : 'none';
+    if (lumpNS)     lumpNS.style.display     = (tab === 'lump-ns')      ? '' : 'none';
+    if ((tab === 'lump-thread' || tab === 'lump-ns') && typeof initLumpEditor === 'function') initLumpEditor();
 }
 
 function _setBuildStatus(state, label, board) {

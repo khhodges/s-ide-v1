@@ -66,7 +66,6 @@
     ];
 
     var state = {
-        activeType: 'thread',
         thread: { heap: 256, stack: 32, count: 1 },
         ns: { n_minus_6: 3, slots: 2000 }
     };
@@ -74,7 +73,6 @@
     function loadState() {
         try {
             var s = JSON.parse(localStorage.getItem('lump_editor_state') || '{}');
-            if (s.activeType) state.activeType = s.activeType;
             if (s.thread) {
                 state.thread.heap  = s.thread.heap  || 256;
                 state.thread.stack = s.thread.stack || 32;
@@ -243,24 +241,13 @@
     // ── top-level render ──────────────────────────────────────────────────────
 
     function render() {
-        var el = document.getElementById('lumpEditorPanel');
-        if (!el) return;
-        var isThread = (state.activeType === 'thread');
-        el.innerHTML =
-            '<div class="le-type-tab-row">' +
-                '<button class="le-type-tab' + (isThread ? ' active' : '') + '" onclick="lumpEditorSetType(\'thread\')">Thread LUMP</button>' +
-                '<button class="le-type-tab' + (!isThread ? ' active' : '') + '" onclick="lumpEditorSetType(\'namespace\')">Namespace LUMP</button>' +
-            '</div>' +
-            (isThread ? renderThreadPanel() : renderNSPanel());
+        var tEl = document.getElementById('lumpThreadPanel');
+        var nEl = document.getElementById('lumpNSPanel');
+        if (tEl) tEl.innerHTML = renderThreadPanel();
+        if (nEl) nEl.innerHTML = renderNSPanel();
     }
 
     // ── public handlers ───────────────────────────────────────────────────────
-
-    window.lumpEditorSetType = function (t) {
-        state.activeType = t;
-        saveState();
-        render();
-    };
 
     window.lumpEditorThreadCount = function (v) {
         state.thread.count = clamp(v, 1, 10);
