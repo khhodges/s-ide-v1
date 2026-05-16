@@ -226,6 +226,7 @@ class ChurchAssembler {
             'CLEAR': 0, 'R': 1, 'RW': 2, 'X': 3,
             'RX': 4, 'RWX': 5, 'L': 6, 'S': 7,
             'E': 8, 'LS': 9, 'W': 10,
+            'EXACT': 14,   // 32-bit identity check: CRd.word0 === CRs.word0 → Z=1
             'B': 0x10, 'RB': 0x11, 'RWB': 0x12, 'XB': 0x13,
             'RXB': 0x14, 'RWXB': 0x15, 'LB': 0x16, 'SB': 0x17,
             'EB': 0x18, 'LSB': 0x19, 'WB': 0x1A,
@@ -1175,6 +1176,12 @@ class ChurchAssembler {
                 } else {
                     imm = this._parseImm(parts[2], lineNum) & 0x1F;
                 }
+                // TPERM EXACT (preset 14): optional third CR operand — the reference GT.
+                // Syntax: TPERM CRd, EXACT, CRs  (compares CRd.word0 vs CRs.word0 → Z)
+                // If CRs is omitted, crSrc stays 0 (CR0); explicit CRd self-compare is fine.
+                if ((imm & 0xF) === 14 && parts[3]) {
+                    crSrc = this._parseCR(parts[3], lineNum);
+                }
                 break;
             }
             case 7: {
@@ -1797,9 +1804,14 @@ class ChurchAssembler {
             case 5: return `${mnemonic}  CR${crSrc}, CR${imm & 0x7}`;
             // TPERM CRd, preset[B]  — assert/attenuate permission
             case 6: {
-                const presetNames = ['CLEAR','R','RW','X','RX','RWX','L','S','E','LS','W','???','???','???','RSV','RSV'];
+                const presetNames = ['CLEAR','R','RW','X','RX','RWX','L','S','E','LS','W','???','???','???','EXACT','RSV'];
                 const bFlag    = (imm >>> 4) & 1;
-                const baseName = presetNames[imm & 0xF] || 'RSV';
+                const baseCode = imm & 0xF;
+                const baseName = presetNames[baseCode] || 'RSV';
+                if (baseCode === 14) {
+                    // EXACT mode: display reference CR (crSrc field)
+                    return `${mnemonic}  CR${crDst}, EXACT, CR${crSrc}`;
+                }
                 return `${mnemonic}  CR${crDst}, ${baseName}${bFlag ? 'B' : ''}`;
             }
             // LAMBDA CRd  — create closure from template
