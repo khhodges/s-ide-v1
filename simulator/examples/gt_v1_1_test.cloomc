@@ -41,9 +41,9 @@
 
     ISUB DR0, DR0, DR0
 
-    LOAD CR1, CR6, 7
-    LOAD CR2, CR6, 3
-    LOAD CR3, CR6, 7
+    LOAD CR1, Boot.Nucs
+    LOAD CR2, Boot.Abstr
+    LOAD CR3, Boot.Nucs
 
 ; ── Test 1: X-GT satisfies TPERM X ──────────────────────────────────────────
     TPERM CR1, X
