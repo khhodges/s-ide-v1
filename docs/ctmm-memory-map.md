@@ -79,21 +79,39 @@ Each entry is exactly **4 consecutive 32-bit words**.
 |:-------|:---------|:------------|
 | [31:0] | location | Base word address of the lump in `memory[]`. |
 
-**Word 1 — limit / metadata** (fields from `packNSWord1` / `parseNSWord1`)
+**Word 1 — limit / metadata**
+
+> **Two specifications exist — read carefully.**
+>
+> **Hardware canonical (`hardware/layouts.py`):** NS Word 1 uses `WORD2_LAYOUT` —
+> the same bit layout as CR Word 2.  Hardware derives B-flag, F-flag, GT type, and
+> c-list count from the lump header at dispatch time; they are never stored in Word 1.
+>
+> **Simulator extension (`packNSWord1` / `parseNSWord1`):** The simulator packs
+> additional fields into Word 1 so that its lazy-loader and GC can work without
+> re-parsing the lump header on every access.  `chainable` is intentionally NOT
+> stored in Word 1 — it lives in the `this.nsChainable[]` side-table.
+
+**Hardware Word 1 layout** (`hardware/layouts.py` `WORD2_LAYOUT`):
+
+| Bits    | Field        | Description |
+|:--------|:-------------|:------------|
+| [20:0]  | limit_offset | Addressable limit from lump base in words (21 bits). |
+| [27:21] | gt_seq       | GT version counter (7 bits); bumped each time the entry is reused. |
+| [28]    | g_bit        | GC liveness (1 = live, 0 = garbage suspect). |
+| [31:29] | spare        | Reserved (zero). |
+
+**Simulator Word 1 layout** (`packNSWord1` / `parseNSWord1`):
 
 | Bits    | Field      | Description |
 |:--------|:-----------|:------------|
 | [31]    | B-flag     | `bFlag` — bounds marker set by allocator |
 | [30]    | F-flag     | `fFlag` — Far-call flag |
-| [29]    | G-bit      | `gBit` — GC liveness (1 = live, 0 = garbage suspect) |
-| [28]    | chainable  | Capability chaining permitted |
+| [29]    | G-bit      | `gBit` — GC liveness (matches hardware g_bit position) |
+| [28]    | reserved   | Always zero. `chainable` is NOT stored here — see `this.nsChainable[]`. |
 | [27:26] | gtType     | Golden Token type: `00`=Null, `01`=Inform, `10`=Outform, `11`=Abstract |
 | [25:17] | clistCount | C-list slot count (9 bits, 0–511) |
 | [16:0]  | limit      | Addressable limit from lump base in words (17 bits). For a fully loaded lump: `lumpSize − cc − 1`. |
-
-> **Note:** The `simulator/simulator.js` header comment (lines 24–28) describes
-> these bits with G and B swapped.  The authoritative positions are those in
-> `packNSWord1` / `parseNSWord1`: B=[31], F=[30], G=[29].
 
 **Word 2 — seals**
 
