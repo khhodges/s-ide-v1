@@ -2161,9 +2161,10 @@ def _fpga_paths(board):
 
 
 def _make_fpga_zip(board, is_ti60, paths, zip_name, build_md):
-    """Zip up already-built FPGA artifacts and return (BytesIO, zip_name)."""
+    """Zip up already-built FPGA artifacts and return (BytesIO, zip_name, warnings)."""
     hw_dir = os.path.join(BASE_DIR, "hardware")
     buf = io.BytesIO()
+    warnings = []
     if board == "wukong-xc7a100t":
         bridge_path = os.path.join(BASE_DIR, "server", "local_bridge.py")
         with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -2175,8 +2176,12 @@ def _make_fpga_zip(board, is_ti60, paths, zip_name, build_md):
             zf.write(paths["tcl"], os.path.basename(paths["tcl"]))
             if os.path.isfile(bridge_path):
                 zf.write(bridge_path, "local_bridge.py")
+            else:
+                msg = "local_bridge.py not found — bridge.sh will not work until this file is present on the server"
+                logging.warning("FPGA zip: %s", msg)
+                warnings.append(msg)
             zf.writestr("BUILD.md", build_md)
-        return buf, zip_name
+        return buf, zip_name, warnings
     if is_ti60:
         with open(paths["project"], 'r') as f:
             project_xml = f.read()
@@ -2237,11 +2242,13 @@ def _make_fpga_zip(board, is_ti60, paths, zip_name, build_md):
             bridge_info.external_attr = 0o755 << 16
             zf.writestr(bridge_info, BRIDGE_SH.lstrip('\n'))
             if not os.path.isfile(bridge_path):
-                logging.warning("FPGA zip: local_bridge.py not found at %s", bridge_path)
+                msg = "local_bridge.py not found — bridge.sh will not work until this file is present on the server"
+                logging.warning("FPGA zip: %s", msg)
+                warnings.append(msg)
             else:
                 zf.write(bridge_path, "local_bridge.py")
             zf.writestr("BUILD.md", build_md)
-    return buf, zip_name
+    return buf, zip_name, warnings
 
 
 @app.route("/api/build/fpga")
@@ -2313,12 +2320,15 @@ def download_fpga_zip():
         return jsonify({"error": "No build found for this board. Run Build first."}), 404
 
     try:
-        buf, zip_name = _make_fpga_zip(board, is_ti60, paths, zip_name, build_md)
+        buf, zip_name, zip_warnings = _make_fpga_zip(board, is_ti60, paths, zip_name, build_md)
         zip_data = buf.getvalue()
         resp = make_response(zip_data)
         resp.headers['Content-Type'] = 'application/zip'
         resp.headers['Content-Disposition'] = f'attachment; filename="{zip_name}"'
         resp.headers['Content-Length'] = len(zip_data)
+        if zip_warnings:
+            resp.headers['X-Build-Warnings'] = ' | '.join(zip_warnings)
+            resp.headers['Access-Control-Expose-Headers'] = 'X-Build-Warnings'
         logging.info("FPGA zip download: %s (%d bytes)", zip_name, len(zip_data))
         return resp
     except Exception as e:

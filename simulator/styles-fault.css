@@ -1309,6 +1309,7 @@
 .build-status-dot.running { background: #f0a020; animation: pulse-dot 0.8s ease-in-out infinite; }
 .build-status-dot.ok      { background: var(--church-green); }
 .build-status-dot.error   { background: var(--accent); }
+.build-status-dot.warn    { background: #f0a020; }
 
 @keyframes pulse-dot {
     0%,100% { opacity: 1; } 50% { opacity: 0.3; }

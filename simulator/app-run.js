@@ -9942,6 +9942,7 @@ async function downloadFPGAPackage() {
             }
             return;
         }
+        const buildWarnings = resp.headers.get('X-Build-Warnings');
         const blob = await resp.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -9953,6 +9954,13 @@ async function downloadFPGAPackage() {
         URL.revokeObjectURL(url);
         const doneTs = new Date().toLocaleTimeString();
         _buildLogAppend(`[${doneTs}] Downloaded ${zipName} (${(blob.size / 1024).toFixed(0)} KB)\n`);
+        if (buildWarnings) {
+            const msgs = buildWarnings.split(' | ');
+            _buildLogAppend('\n⚠  BUILD WARNINGS:\n');
+            msgs.forEach(m => _buildLogAppend(`   • ${m}\n`));
+            _buildLogAppend('\n');
+            _setBuildStatus('warn', `Downloaded with warnings — ${boardLabel}`, boardLabel);
+        }
         _buildLogAppend('\nPackage contents:\n');
         if (isTi60) {
             _buildLogAppend('  church_ti60_f225.xml      — Efinity project file (open this in Efinity IDE)\n');
