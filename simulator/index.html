@@ -330,6 +330,7 @@
                                 <button class="ham-item" onclick="saveUploadJSON();closeEditorActions()" data-tooltip="Save Abstraction — Compile and save the abstraction definition file">Save Abstraction</button>
                                 <button class="ham-item" id="btnSaveUserTab" disabled onclick="saveActiveUserTab();closeEditorActions()" data-tooltip="Save Program — Save the current user program (C+S)">Save Program</button>
                                 <button class="ham-item" id="btnSaveNS" disabled onclick="showSaveToNamespace();closeEditorActions()" data-tooltip="Save to NS — Save the assembled program as a namespace entry">Save to NS</button>
+                                <button class="ham-item" id="btnExportLump" disabled onclick="buildLumpFromAssembly();closeEditorActions()" style="color:#66bb6a;" data-tooltip="Export LUMP — Package assembled instruction words as a floating .lump binary and download it">Export LUMP ↓</button>
                                 <div class="ham-divider"></div>
                                 <div class="ham-group-title">Keyboard Shortcuts</div>
                                 <div class="ham-item" style="pointer-events:none;display:flex;justify-content:space-between;gap:0.5rem;">Compile<kbd class="ham-kbd">C+Enter</kbd></div>
@@ -1567,7 +1568,7 @@
     <script async src="hw_binary.js"></script>
     <script src="abstract_gt_manager.js"></script>
     <script src="simulator.js?v=20260516d"></script>
-    <script src="assembler.js?v=20260516a"></script>
+    <script src="assembler.js?v=20260516b"></script>
     <script src="pipeline.js?v=20260510a"></script>
     <script src="repl.js"></script>
     <script src="hp35.js"></script>
@@ -1596,14 +1597,14 @@
     <script src="pet_name_audit.js"></script>
     <script src="app-memory.js?v=20260516e"></script>
     <script src="app-abstractions.js?v=20260515a"></script>
-    <script src="lump-audit.js?v=20260503a"></script>
+    <script src="lump-audit.js?v=20260516e"></script>
     <script src="app-lumps.js?v=20260514e"></script>
     <script src="app-absdetail.js?v=20260514b"></script>
     <!-- Load order matters: app-compile must precede app-run (exports LANG_EXAMPLE_GROUPS
          via window._cloomcLangExampleGroups); both must precede app-source-library. -->
-    <script src="app-compile.js?v=20260516c"></script>
-    <script src="app-lump-editor.js?v=20260516a"></script>
-    <script src="app-run.js?v=20260516b"></script>
+    <script src="app-compile.js?v=20260516d"></script>
+    <script src="app-lump-editor.js?v=20260516c"></script>
+    <script src="app-run.js?v=20260516d"></script>
     <script src="app-source-library.js?v=20260509d"></script>
     <script src="app-invoke.js?v=20260501a"></script>
     <script src="app-misc.js?v=20260512e"></script>

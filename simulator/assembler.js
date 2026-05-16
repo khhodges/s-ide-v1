@@ -424,6 +424,13 @@ class ChurchAssembler {
             if (n >= 0 && n <= 5) return 8 + n;
         }
 
+        // 3.5. Boot-image fixed capability names — always present in the boot c-list
+        //      regardless of which abstractions are installed.
+        //      Boot.Nucs  — Nucleus/Turing-domain X-GT  (slot 7, dom=0, perm=X)
+        //      Boot.Abstr — Abstraction E-GT             (slot 3, dom=1, perm=E)
+        if (name === 'Boot.Nucs')  return 7;
+        if (name === 'Boot.Abstr') return 3;
+
         // 4. Abstract registry (last resort — returns the abstraction's own index)
         const reg = ChurchAssembler._sharedRegistry;
         if (reg) {

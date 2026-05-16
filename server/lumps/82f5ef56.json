@@ -1,0 +1,20 @@
+{
+  "token": "82f5ef56",
+  "abstraction": "PostFlashSelftest",
+  "ns_slot": null,
+  "ns_slot_policy": "dynamic",
+  "lump_size": 1024,
+  "typ": 0,
+  "content_type": "code",
+  "cw": 512,
+  "cc": 0,
+  "profile": "IoT",
+  "language": "assembly",
+  "description": "Post-Flash Exhaustive Self-Test — 81 hardware correctness tests (DR independence, ALU, shifts, branches, BFEXT/BFINS, TPERM, CHANGE, LOAD). DR0=0 on full pass, DR0=N on first failure.",
+  "grants": [
+    "E"
+  ],
+  "author": "Church Machine",
+  "version": "1.1",
+  "lump_version": 0
+}

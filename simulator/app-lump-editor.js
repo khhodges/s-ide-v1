@@ -1216,6 +1216,90 @@
         if (typeof generateBootImage === 'function') generateBootImage();
     };
 
+    // ── buildLumpFromAssembly ──────────────────────────────────────────────
+    // Packages the most-recently assembled instruction words (lastAssembledWords)
+    // into a floating LUMP binary and triggers a browser download.
+    //
+    // Layout (big-endian 32-bit words):
+    //   Word 0       : header — magic(5)|n_minus_6(4)|cw(13)|typ(2)|cc(8)
+    //   Words 1..cw  : instruction words (from the assembler)
+    //   Words cw+1.. : zero-pad to lump_size
+    //
+    // cc    — derived from lastAssembledCapabilities.length (0 if none declared).
+    //         c-list slots are zero-initialised in the binary (null GTs filled at
+    //         load time); the ambient boot c-list is used when cc=0.
+    // typ=0 — standard code lump, not a Thread or Namespace header.
+    window.buildLumpFromAssembly = function () {
+        var words = (typeof lastAssembledWords !== 'undefined') ? lastAssembledWords : null;
+        if (!words || !words.length) {
+            alert('Nothing assembled yet — compile your assembly program first.');
+            return;
+        }
+
+        // Honour declared capabilities if present.  cc encodes the count in the
+        // LUMP header; the c-list slots themselves are zero-initialised in the
+        // binary (null GTs) and filled by the loader when the LUMP is installed.
+        var caps = (typeof lastAssembledCapabilities !== 'undefined' &&
+                    lastAssembledCapabilities) ? lastAssembledCapabilities : [];
+        var cw          = words.length;
+        var cc          = caps.length;
+        var totalNeeded = 1 + cw + cc;
+        var lumpSize    = 64;
+        while (lumpSize < totalNeeded) lumpSize <<= 1;
+
+        var n_minus_6 = Math.round(Math.log2(lumpSize)) - 6;
+        var hdr       = packHdr(n_minus_6, cw, cc, 0);
+
+        // Build big-endian byte array
+        var byteLen = lumpSize * 4;
+        var buf     = new Uint8Array(byteLen);
+
+        function writeU32BE(offset, val) {
+            val = val >>> 0;
+            buf[offset]     = (val >>> 24) & 0xFF;
+            buf[offset + 1] = (val >>> 16) & 0xFF;
+            buf[offset + 2] = (val >>>  8) & 0xFF;
+            buf[offset + 3] =  val         & 0xFF;
+        }
+
+        writeU32BE(0, hdr);
+        for (var i = 0; i < cw; i++) writeU32BE((1 + i) * 4, words[i]);
+
+        // Compute CRC-32 (IEEE 802.3) for the token
+        var crcTable = (function () {
+            var t = new Uint32Array(256);
+            for (var n = 0; n < 256; n++) {
+                var c = n;
+                for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                t[n] = c;
+            }
+            return t;
+        }());
+        var crc = 0xFFFFFFFF;
+        for (var b = 0; b < buf.length; b++) crc = crcTable[(crc ^ buf[b]) & 0xFF] ^ (crc >>> 8);
+        var token = ((crc ^ 0xFFFFFFFF) >>> 0).toString(16).toLowerCase().padStart(8, '0');
+
+        var filename = token + '.lump';
+        var blob     = new Blob([buf], { type: 'application/octet-stream' });
+        var url      = URL.createObjectURL(blob);
+        var a        = document.createElement('a');
+        a.href       = url;
+        a.download   = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        // Brief console confirmation
+        if (typeof appendCompileOutput === 'function') {
+            appendCompileOutput(
+                'LUMP exported: ' + filename +
+                '  (cw=' + cw + ' cc=0 lump_size=' + lumpSize + ')',
+                'info'
+            );
+        }
+    };
+
     window.lumpEditorRLUpload = function () {
         var inp = document.getElementById('le-rl-upload-input');
         if (inp) inp.click();

@@ -431,6 +431,8 @@ function onLangChange(restoring) {
     const lang = sel.value;
     const btnSaveNS = document.getElementById('btnSaveNS');
     if (btnSaveNS) btnSaveNS.disabled = (lang !== 'assembly' || !lastAssembledWords);
+    const btnExportLump = document.getElementById('btnExportLump');
+    if (btnExportLump) btnExportLump.disabled = (lang !== 'assembly' || !lastAssembledWords);
 
     const langExampleGroups = LANG_EXAMPLE_GROUPS;
 

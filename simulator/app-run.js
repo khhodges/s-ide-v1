@@ -386,6 +386,8 @@ function assembleAndLoad() {
         showNextSteps('assembled');
         const saveBtn = document.getElementById('btnSaveNS');
         if (saveBtn) saveBtn.disabled = false;
+        const _expBtn0 = document.getElementById('btnExportLump');
+        if (_expBtn0) _expBtn0.disabled = false;
         updateDashboard();
         return;
     }
@@ -413,6 +415,8 @@ function assembleAndLoad() {
         lastAssembledCapabilities = null;
         const _errSaveBtn = document.getElementById('btnSaveNS');
         if (_errSaveBtn) _errSaveBtn.disabled = true;
+        const _errExpBtn = document.getElementById('btnExportLump');
+        if (_errExpBtn) _errExpBtn.disabled = true;
         switchCodeTab('console');
         if (typeof _showAsmErrors === 'function') _showAsmErrors(result.errors);
         showNextSteps('error');
@@ -477,6 +481,8 @@ function assembleAndLoad() {
 
     const saveBtn = document.getElementById('btnSaveNS');
     if (saveBtn) saveBtn.disabled = false;
+    const _expBtn = document.getElementById('btnExportLump');
+    if (_expBtn) _expBtn.disabled = false;
 
     updateDashboard();
 }
@@ -5643,9 +5649,9 @@ HALT`,
 ; ── Initialise ───────────────────────────────────────────────────────────────
     ISUB DR0, DR0, DR0
 
-    LOAD CR1, CR6, 7
-    LOAD CR2, CR6, 3
-    LOAD CR3, CR6, 7
+    LOAD CR1, Boot.Nucs
+    LOAD CR2, Boot.Abstr
+    LOAD CR3, Boot.Nucs
 
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; SECTION A — Data register independence  (Tests 1-15)
@@ -6275,21 +6281,21 @@ tI70:
     RETURN
 tI71:
     ; Test 71: TPERM CLEAR always succeeds on a valid GT  (Z=1)
-    LOAD CR4, CR6, 7
+    LOAD CR4, Boot.Nucs
     TPERM CR4, CLEAR
     BRANCHEQ tI72
     IADD DR0, DR0, #71
     RETURN
 tI72:
     ; Test 72: TPERM RX on X-GT  → Z=0  (X-GT has X but not R)
-    LOAD CR4, CR6, 7
+    LOAD CR4, Boot.Nucs
     TPERM CR4, RX
     BRANCHNE tI73
     IADD DR0, DR0, #72
     RETURN
 tI73:
     ; Test 73: TPERM RWX on X-GT  → Z=0  (X-GT has only X; R and W absent)
-    LOAD CR4, CR6, 7
+    LOAD CR4, Boot.Nucs
     TPERM CR4, RWX
     BRANCHNE tJstart
     IADD DR0, DR0, #73
@@ -6315,14 +6321,14 @@ tJ75:
     RETURN
 tJ76:
     ; Test 76: Third load from slot 7 must be bit-identical
-    LOAD CR5, CR6, 7
+    LOAD CR5, Boot.Nucs
     TPERM CR1, EXACT, CR5
     BRANCHEQ tJ77
     IADD DR0, DR0, #76
     RETURN
 tJ77:
     ; Test 77: E-GT loaded twice from slot 3 must match
-    LOAD CR4, CR6, 3
+    LOAD CR4, Boot.Abstr
     TPERM CR2, EXACT, CR4
     BRANCHEQ tKstart
     IADD DR0, DR0, #77
@@ -6334,8 +6340,8 @@ tJ77:
 ; CHANGE swaps the full contents of two CRs.
 ; After swapping CR1 (X-GT) ↔ CR2 (E-GT), permission checks must reverse.
 tKstart:
-    LOAD CR1, CR6, 7
-    LOAD CR2, CR6, 3
+    LOAD CR1, Boot.Nucs
+    LOAD CR2, Boot.Abstr
     CHANGE CR1, CR2
 
     ; Test 78: CR1 is now E-GT → must satisfy TPERM E
@@ -6355,18 +6361,18 @@ tK79:
 ; ═══════════════════════════════════════════════════════════════════════════════
 ; Reload fresh and verify into different CRs to confirm LOAD coverage.
 tLstart:
-    LOAD CR1, CR6, 7
-    LOAD CR2, CR6, 3
+    LOAD CR1, Boot.Nucs
+    LOAD CR2, Boot.Abstr
 
     ; Test 80: fresh LOAD slot 7 into CR9 → must satisfy TPERM X
-    LOAD CR9, CR6, 7
+    LOAD CR9, Boot.Nucs
     TPERM CR9, X
     BRANCHEQ tL81
     IADD DR0, DR0, #80
     RETURN
 tL81:
     ; Test 81: fresh LOAD slot 3 into CR9 → must satisfy TPERM E
-    LOAD CR9, CR6, 3
+    LOAD CR9, Boot.Abstr
     TPERM CR9, E
     BRANCHEQ done
     IADD DR0, DR0, #81

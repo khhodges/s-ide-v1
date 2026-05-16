@@ -212,7 +212,10 @@ function lumpAudit(words, manifest) {
 
     // ── RCI — Church Instruction Range Check ──────────────────────────────────
     // For each code word in words[1..cw]:
-    //   LOAD/SAVE/ELOADCALL/XLOADLAMBDA (crSrc=6, c-list access): slot must be < cc.
+    //   LOAD/SAVE/ELOADCALL/XLOADLAMBDA (crSrc=6, c-list access): when the LUMP
+    //   carries its own c-list (cc > 0) the slot must be < cc.
+    //   When cc=0 the LUMP uses the ambient boot c-list at runtime, so no
+    //   per-LUMP slot-bounds check is possible or meaningful — slots are exempt.
     //   BRANCH (opcode 17): sign-extended 15-bit offset must land in [0, cw-1].
     // Skipped when binary size or bounds checks have already failed.
     if (actualWords === lumpSize && contentWords <= lumpSize && cw >= 1) {
@@ -228,7 +231,9 @@ function lumpAudit(words, manifest) {
             const slot   =  ww         & 0x7FFF;
             const codeIdx = wi - 1;   // 0-based index within the code section
 
-            if (_rciChurchOps.has(op) && crSrc === 6 && slot >= cc) {
+            // Slot-bounds check only applies when the LUMP has its own c-list.
+            // cc=0 means ambient-boot-c-list — slots are resolved at load time.
+            if (_rciChurchOps.has(op) && crSrc === 6 && cc > 0 && slot >= cc) {
                 _rciViolations.push(
                     `word[${wi}] ${_rciOpName[op]}: c-list slot ${slot} \u2265 cc=${cc}`
                 );
@@ -248,11 +253,14 @@ function lumpAudit(words, manifest) {
         }
 
         if (_rciViolations.length === 0) {
+            const _rciDetail = cc === 0
+                ? `All ${cw} code word${cw !== 1 ? 's' : ''} checked \u2014 cc=0 (ambient c-list; slot bounds not enforced) \u2713`
+                : `All ${cw} code word${cw !== 1 ? 's' : ''} checked \u2014 no range violations \u2713`;
             results.push({
                 ruleId: 'RCI',
                 severity: 'pass',
                 message: 'Church instructions in range',
-                detail: `All ${cw} code word${cw !== 1 ? 's' : ''} checked \u2014 no range violations \u2713`,
+                detail: _rciDetail,
             });
         } else {
             results.push({
