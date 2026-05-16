@@ -667,10 +667,10 @@ class ChurchSimulator {
         return (
             ((bFlag & 1) << 31) |
             ((fFlag & 1) << 30) |
-            ((chainable & 1) << 29) |
-            ((gBit & 1) << 28) |        // G-bit at bit[28] — matches hardware Word1[28].
-            ((gtType & 3) << 26) |      // Excluded from CRC-16 (seal covers location+limit17
-            (((clistCount || 0) & 0x1FF) << 17) | // only) so GC can flip it without resealing.
+            ((gBit & 1) << 29) |        // G-bit at bit[29] — matches server/boot_image.py pack_ns_word1 g→29.
+            ((chainable & 1) << 28) |   // chainable at bit[28] — matches server/boot_image.py chainable→28.
+            ((gtType & 3) << 26) |
+            (((clistCount || 0) & 0x1FF) << 17) |
             (limit17 & 0x1FFFF)
         ) >>> 0;
     }
@@ -679,8 +679,8 @@ class ChurchSimulator {
         return {
             b: (word1 >>> 31) & 1,
             f: (word1 >>> 30) & 1,
-            chainable: (word1 >>> 29) & 1,
-            g: (word1 >>> 28) & 1,      // G-bit at bit[28] — matches hardware Word1[28]
+            g: (word1 >>> 29) & 1,          // G-bit at bit[29] — matches packNSWord1 and boot_image.py.
+            chainable: (word1 >>> 28) & 1,  // chainable at bit[28] — matches packNSWord1 and boot_image.py.
             gtType: (word1 >>> 26) & 3,
             clistCount: (word1 >>> 17) & 0x1FF,
             limit: word1 & 0x1FFFF,
