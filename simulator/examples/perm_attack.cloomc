@@ -1,0 +1,78 @@
+; ============================================================
+; Abstraction:  PermAttack
+; Description:  Adversarial permission-violation and TPERM guard tests
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: None
+; ============================================================
+; Methods:
+;   1. attack_perm_violations — CALL/DREAD/DWRITE without required permissions → FAULT
+;   2. tperm_guard — TPERM E before CALL, failure path, recursive overflow
+; ============================================================
+;
+; ─────────────────────────────────────────────────
+; Method 1: attack_perm_violations
+; ─────────────────────────────────────────────────
+;
+; Boot C-List layout:
+;   [4] Salvation (E)  [5] Navana (E)
+;   [6] Mint (E)       [7] Memory (E)
+;   [8] LED (RW)       [9] UART (RW)
+;   [10] BTN (R)       [11] TIMER (RW)
+;
+
+; --- ATTACK 1: CALL device without E ---
+; LED (slot 8) has R+W but no E.
+; CALL requires E via mLoad. Should FAULT.
+LOAD CR0, CR6, 8       ; CR0 = LED (RW, no E)
+CALL CR0, 0xF          ; FAULT: LED lacks E permission
+
+; --- ATTACK 2: DREAD without R ---
+; Salvation (slot 4) has E but no R.
+; DREAD requires R. Should FAULT.
+LOAD CR1, CR6, 4       ; CR1 = Salvation (E only)
+DREAD DR1, CR1, 0      ; FAULT: Salvation lacks R permission
+
+; --- ATTACK 3: DWRITE without W ---
+; BTN (slot 10) has R only, no W.
+; DWRITE requires W. Should FAULT.
+LOAD CR2, CR6, 10      ; CR2 = BTN (R only)
+DWRITE DR1, CR2, 0     ; FAULT: BTN lacks W permission
+
+; --- If we get here, something is broken ---
+HALT
+
+; ─────────────────────────────────────────────────
+; Method 2: tperm_guard
+; ─────────────────────────────────────────────────
+;
+; Three tests in one run:
+;   1. CALL guard — TPERM checks E on Salvation. Z=1 → CALL; Z=0 → HALT.
+;   2. TPERM failure — check RW on Salvation (has E only). Z=0 confirms failure.
+;   3. Recursive CALL — self-call via Boot.Abstr (~15 frames → BOUNDS FAULT).
+;
+; NOTE: Salvation has handler methods so CALL dispatches atomically.
+; Boot.Abstr is our own code — CALL pushes a real 2-word stack frame.
+
+; --- TEST 1: CALL guard (TPERM E) ---
+LOAD CR0, CR6, 4
+TPERM CR0, E           ; Z=1 if Execute permitted
+BRANCHEQ tperm_ok
+HALT                   ; Fail: E permission missing
+tperm_ok:
+CALL CR0, 0            ; Call Salvation — handler, no frame pushed
+
+; --- TEST 2: TPERM failure (check RW on E-only token) ---
+TPERM CR0, RW          ; Z=0: Salvation has E only, not RW
+BRANCHEQ tperm_fail    ; If somehow Z=1, that is wrong → fall to test 3
+tperm_fail:
+
+; --- TEST 3: Recursive CALL overflow ---
+LOAD CR3, CR6, 2       ; Boot.Abstr (our own code, no handler)
+recurse:
+CALL CR3, 0            ; Push 2-word frame each time
+BRANCH recurse         ; Unreachable: BOUNDS FAULT terminates first
+
+HALT

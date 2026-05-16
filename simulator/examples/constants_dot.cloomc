@@ -1,0 +1,79 @@
+; ============================================================
+; Abstraction:  ConstantsDot
+; Description:  Recommended dot-notation style — CALL AbstrName.Method
+;               and ELOADCALL CRd, AbstrName, Method
+; Author:       Church Machine Educational Platform
+; Version:      1.1
+; Created:      2026-05-12
+; Language:     Assembly
+; Dependencies: Constants (NS[18])
+; ============================================================
+; TWO recommended calling styles are shown here:
+;
+;   Style A — two-step (LOAD then CALL dot-notation):
+;     LOAD   CR11, Constants      ; bind CR11 to the abstraction
+;     CALL   Constants.Pi         ; call method by name via CR11
+;
+;   Style B — fused single instruction (ELOADCALL dot-notation):
+;     ELOADCALL CR8, Constants, Pi    ; load + TPERM + call in one op
+;
+; Both styles resolve method names automatically from
+; METHOD_REGISTER_CONVENTIONS — no raw numeric offsets needed.
+;
+; Method table (0-based index):
+;   Pi   (0)  → DR1 = 0x40490FDB  (π  ≈ 3.14159265)
+;   E    (1)  → DR1 = 0x402DF854  (e  ≈ 2.71828183)
+;   Phi  (2)  → DR1 = 0x3FCFBE77  (φ  ≈ 1.61803399)
+;   Zero (3)  → DR1 = 0x00000000  (0.0 IEEE 754)
+;   One  (4)  → DR1 = 0x3F800000  (1.0 IEEE 754)
+; ============================================================
+
+; ══════════════════════════════════════════════════════════
+; Style A: LOAD then CALL AbstrName.Method  (two-step)
+; ══════════════════════════════════════════════════════════
+; Bind Constants into CR11 once, then call each method by
+; name. The assembler encodes CALL CR11, <index+1> for you.
+
+LOAD   CR11, Constants   ; CR11 = Constants (E perm, NS[18])
+TPERM  CR11, E           ; Verify E permission → Z=1
+
+CALL   Constants.Pi      ; DR1 <- 0x40490FDB  (π ≈ 3.14159265)
+CALL   Constants.E       ; DR1 <- 0x402DF854  (e ≈ 2.71828183)
+CALL   Constants.Phi     ; DR1 <- 0x3FCFBE77  (φ ≈ 1.61803399)
+CALL   Constants.Zero    ; DR1 <- 0x00000000  (IEEE 754 +0.0)
+CALL   Constants.One     ; DR1 <- 0x3F800000  (IEEE 754 1.0)
+
+; ── Verify π is non-zero (Z=0 after MCMP) ───────────────────
+CALL   Constants.Pi      ; DR1 <- π
+MCMP   DR1, DR0          ; DR1 vs 0 → Z=0 (π is non-zero)
+BRANCHNE style_b         ; take branch — π ≠ 0 confirmed
+
+; ══════════════════════════════════════════════════════════
+; Style B: ELOADCALL CRd, AbstrName, Method  (fused, recommended)
+; ══════════════════════════════════════════════════════════
+; ELOADCALL fuses three operations into one instruction:
+;   1. LOAD  — fetch the E-GT from the namespace by name
+;   2. TPERM — verify E permission (faults if absent)
+;   3. CALL  — enter the method's lambda body
+;
+; This is the recommended style when you call a method only
+; once and don't need to hold the capability in a CR register.
+; It is also one instruction shorter than the two-step form.
+;
+; Note: use CR0–CR11 as destination; CR12–CR15 are reserved
+; for microcode (Thread, Nucleus, Current-Lump, Namespace).
+
+style_b:
+ELOADCALL CR8, Constants, Pi    ; DR1 <- π  (load+check+call in 1 op)
+ELOADCALL CR8, Constants, E     ; DR1 <- e
+ELOADCALL CR8, Constants, Phi   ; DR1 <- φ  (golden ratio)
+ELOADCALL CR8, Constants, Zero  ; DR1 <- 0.0
+ELOADCALL CR8, Constants, One   ; DR1 <- 1.0
+
+; ── Confirm π from fused path equals π from two-step path ───
+ELOADCALL CR8, Constants, Pi    ; DR1 <- π  (fused path)
+MCMP   DR1, DR0                  ; Z=0 → π ≠ 0
+BRANCHNE done
+
+done:
+HALT

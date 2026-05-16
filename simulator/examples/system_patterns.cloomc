@@ -1,0 +1,51 @@
+; ============================================================
+; Abstraction:  SystemPatterns
+; Description:  System-level patterns: load/save, conditional, GC test
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: None
+; ============================================================
+; Methods:
+;   1. load_and_save — LOAD/TPERM/CALL sequence using boot C-List
+;   2. conditional — TPERM-conditioned LOAD and CALL patterns
+;   3. gc_test — PP250 GC cycle exercise with LOAD/TPERM/CALL
+; ============================================================
+
+; ── Section 1: Load and Save ──────────────────────────────
+; Boot C-List: [4]=Salvation(E) [5]=Navana(E) [8]=LED(RW)
+LOAD CR0, CR6, 4       ; CR0 = Salvation (E)
+TPERM CR0, E           ; Check E permission → Z=1
+LOAD CR1, CR6, 5       ; CR1 = Navana (E)
+TPERM CR1, E           ; Check E → Z=1
+LOAD CR2, CR6, 8       ; CR2 = LED (RW)
+TPERM CR2, RW          ; Check R+W → Z=1
+CALL CR0, 0xF          ; CALL Salvation (atomic dispatch)
+HALT
+
+; ── Section 2: Conditional Execution ──────────────────────
+; Boot C-List: [4]=Salvation(E) [5]=Navana(E) [8]=LED(RW)
+LOAD CR0, CR6, 4       ; Load Salvation (E)
+TPERM CR0, E           ; Check E — sets Z=1 (pass)
+LOADEQ CR1, CR6, 5    ; Load Navana only if equal (Z=1) → EXEC
+CALLNE CR0, 0xF       ; SKIP (Z=1, so NE is false)
+TPERM CR0, L           ; Salvation has L? FAIL → Z=0
+LOADEQ CR2, CR6, 6    ; SKIP (Z=0, not equal)
+LOADNE CR2, CR6, 7    ; EXEC (Z=0, is not-equal) → Memory
+HALT
+
+; ── Section 3: GC Test (PP250) ────────────────────────────
+; Boot C-List: [4]=Salvation(E) [5]=Navana(E) [6]=Mint(E) [7]=Memory(E)
+LOAD CR0, CR6, 4       ; CR0 = Salvation (E)
+LOAD CR1, CR6, 5       ; CR1 = Navana    (E)
+LOAD CR2, CR6, 6       ; CR2 = Mint      (E)
+LOAD CR3, CR6, 7       ; CR3 = Memory    (E)
+LOAD CR4, CR6, 8       ; CR4 = LED       (RW)
+TPERM CR0, E           ; Salvation has E? PASS
+TPERM CR1, E           ; Navana has E? PASS
+TPERM CR2, E           ; Mint has E? PASS
+TPERM CR3, E           ; Memory has E? PASS
+TPERM CR4, RW          ; LED has R+W? PASS
+CALL CR0, 0xF          ; Direct mode: enter Salvation (atomic dispatch)
+HALT

@@ -5965,6 +5965,146 @@ abstraction VlcTest {
                   `inline=0x${(inlineWords[firstMismatch] >>> 0).toString(16)} ` +
                   `canonical=0x${(fileWords[firstMismatch] >>> 0).toString(16)}`);
     }
+
+    // Helper: inline-vs-canonical comparison for a single key.
+    // opts.conventions — method conventions map (default: {})
+    // opts.ns          — namespace slot map (default: {})
+    // opts.skipErrors  — if true, skip the "assembles without errors" assertion
+    //                    (use for examples that reference named abstractions whose
+    //                     conventions are not registered in the bare test context,
+    //                     but whose word output is still correct)
+    function checkInlineVsCanonical(tag, key, opts) {
+        opts = opts || {};
+        const conventions = opts.conventions || {};
+        const ns          = opts.ns          || {};
+        const skipErrors  = opts.skipErrors  || false;
+
+        const inlineSrc = extractInline(key);
+
+        function asmWithOpts(src) {
+            const a = new ChurchAssembler(conventions);
+            if (Object.keys(ns).length) a.setNamespace(ns);
+            const result = a.assemble(src);
+            return { errors: a.errors, words: result.words || [] };
+        }
+
+        const { errors: inlineErr, words: inlineWords } = asmWithOpts(inlineSrc);
+        const fileSrc = fs.readFileSync(path.join(__dirname, 'examples/' + key + '.cloomc'), 'utf8');
+        const { errors: fileErr,   words: fileWords   } = asmWithOpts(fileSrc);
+
+        if (!skipErrors) {
+            assert(tag + ': inline source assembles without errors',
+                inlineErr.length === 0,
+                inlineErr.map(e => 'L' + e.line + ': ' + e.message).join('; '));
+        }
+
+        assert(tag + ': inline word count equals canonical word count',
+            inlineWords.length === fileWords.length,
+            `inline=${inlineWords.length} canonical=${fileWords.length}`);
+
+        const mm = inlineWords.findIndex((w, i) => w !== fileWords[i]);
+        assert(tag + ': every assembled word matches the canonical file',
+            mm === -1,
+            mm === -1
+                ? ''
+                : `first mismatch at word[${mm}]: ` +
+                  `inline=0x${(inlineWords[mm] >>> 0).toString(16)} ` +
+                  `canonical=0x${(fileWords[mm] >>> 0).toString(16)}`);
+    }
+
+    // Shared convention+namespace sets reused from the existing EX-DF/SP/SY/SW tests.
+    const DIJKSTRA_CONV = {
+        'DijkstraFlag': {
+            'Wait':   { index: 0, input: '',  output: 'DR1' },
+            'Signal': { index: 1, input: '',  output: 'DR1' },
+            'Reset':  { index: 2, input: '',  output: 'DR1' },
+            'Test':   { index: 3, input: '',  output: 'DR1=1 signaled | 0 unsignaled' },
+        },
+    };
+    const DIJKSTRA_NS   = { 'DijkstraFlag': 10 };
+    const SCHEDULER_CONV = {
+        'Scheduler': {
+            'Yield': { index: 0, input: '',                        output: 'DR1' },
+            'Spawn': { index: 1, input: 'CR2=code_GT, DR1=entry',  output: 'DR1=threadID' },
+            'Wait':  { index: 2, input: 'CR2=flag_GT',             output: 'DR1' },
+            'Stop':  { index: 3, input: 'DR1=threadID',            output: 'DR1' },
+            'pause': { index: 4, input: 'DR1=ticks',               output: 'DR1' },
+        },
+        'DijkstraFlag': {
+            'Wait':   { index: 0, input: '',  output: 'DR1' },
+            'Signal': { index: 1, input: '',  output: 'DR1' },
+            'Reset':  { index: 2, input: '',  output: 'DR1' },
+            'Test':   { index: 3, input: '',  output: 'DR1=1 signaled | 0 unsignaled' },
+        },
+    };
+    const SCHEDULER_NS  = { 'Scheduler': 8, 'DijkstraFlag': 10 };
+    const CONSTANTS_CONV = {
+        'Constants': {
+            'Pi':   { index: 0, input: '', output: 'DR1' },
+            'E':    { index: 1, input: '', output: 'DR1' },
+            'Phi':  { index: 2, input: '', output: 'DR1' },
+            'Zero': { index: 3, input: '', output: 'DR1' },
+            'One':  { index: 4, input: '', output: 'DR1' },
+        },
+    };
+    const CONSTANTS_NS  = { 'Constants': 18 };
+
+    // ── EX-ANG inline vs canonical (ada_note_g) ──────────────────────────────
+    checkInlineVsCanonical('EX-ANG-INLINE', 'ada_note_g');
+
+    // ── EX-CT inline vs canonical (capability_test) ──────────────────────────
+    // capability_test references several named abstractions (Navana, Mint, LED, etc.)
+    // that aren't registered in the bare test context; soft errors are expected but
+    // the word output is correct (verified by the word-match assertion below).
+    checkInlineVsCanonical('EX-CT-INLINE', 'capability_test', { skipErrors: true });
+
+    // ── EX-SPAT inline vs canonical (system_patterns) ────────────────────────
+    checkInlineVsCanonical('EX-SPAT-INLINE', 'system_patterns');
+
+    // ── EX-CDEMO inline vs canonical (compute_demo) ──────────────────────────
+    checkInlineVsCanonical('EX-CDEMO-INLINE', 'compute_demo');
+
+    // ── EX-SAL inline vs canonical (salvation) ───────────────────────────────
+    // salvation references Salvation.main which has no conventions in the bare context.
+    checkInlineVsCanonical('EX-SAL-INLINE', 'salvation', { skipErrors: true });
+
+    // ── EX-PA inline vs canonical (perm_attack) ──────────────────────────────
+    checkInlineVsCanonical('EX-PA-INLINE', 'perm_attack');
+
+    // ── EX-BA inline vs canonical (bind_attack) ──────────────────────────────
+    checkInlineVsCanonical('EX-BA-INLINE', 'bind_attack');
+
+    // ── EX-DFA inline vs canonical (dijkstra_flag assembly) ──────────────────
+    checkInlineVsCanonical('EX-DFA-INLINE', 'dijkstra_flag',
+        { conventions: DIJKSTRA_CONV, ns: DIJKSTRA_NS });
+
+    // ── EX-SYI inline vs canonical (scheduler_yield) ─────────────────────────
+    checkInlineVsCanonical('EX-SYI-INLINE', 'scheduler_yield',
+        { conventions: SCHEDULER_CONV, ns: SCHEDULER_NS });
+
+    // ── EX-SPI inline vs canonical (scheduler_pause) ─────────────────────────
+    checkInlineVsCanonical('EX-SPI-INLINE', 'scheduler_pause',
+        { conventions: SCHEDULER_CONV, ns: SCHEDULER_NS });
+
+    // ── EX-SWI inline vs canonical (scheduler_wait) ──────────────────────────
+    checkInlineVsCanonical('EX-SWI-INLINE', 'scheduler_wait',
+        { conventions: SCHEDULER_CONV, ns: SCHEDULER_NS });
+
+    // ── EX-CDT inline vs canonical (constants_dot) ───────────────────────────
+    checkInlineVsCanonical('EX-CDT-INLINE', 'constants_dot',
+        { conventions: CONSTANTS_CONV, ns: CONSTANTS_NS });
+
+    // ── led_control: excluded from inline-vs-canonical ───────────────────────
+    // led_control is NOT a simple backtick literal.  In app-run.js it is built
+    // via string concatenation:
+    //   'led_control': `...Section 1...` + '; Section 2 header\n' + _TURING_DR_TEST_SOURCE.slice(...)
+    // The extractInline() regex stops at the first ` followed by \s*,, which is
+    // not line 6802's closing ` (followed by +), so the regex over-captures and
+    // produces an incorrect fragment.  There is no single extractable backtick
+    // literal to compare against a canonical file.
+    //
+    // Section 2 (_TURING_DR_TEST_SOURCE) is a standalone backtick literal and
+    // is already assembled and verified by the EX-LED test suite (lines ~10943+).
 }
 
 // ── Summary ──────────────────────────────────────────────────────────────────

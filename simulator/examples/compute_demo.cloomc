@@ -1,0 +1,106 @@
+; ============================================================
+; Abstraction:  ComputeDemo
+; Description:  Bernoulli sum identity and Turing ISA exercise
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-05-09
+; Language:     Assembly
+; Dependencies: None
+; ============================================================
+; Methods:
+;   1. bernoulli_sum — Bernoulli sum S(n) = n(n+1)/2 (Ada's insight)
+;   2. turing_test — Exercise IADD, ISUB, MCMP, BRANCH, SHL, SHR
+; ============================================================
+
+; ── Section 1: Bernoulli Sum Identity ──────────────────────
+; Bernoulli Sum Identity — Pure Turing Arithmetic
+; Computes S(n) = 1 + 2 + ... + n = n(n+1)/2
+; Ada's insight: summation formulas ARE Bernoulli numbers
+; B0 = 1, and sum(k, k=1..n) = n²/2 + n*B0/1
+;
+; Uses only boot-level Turing instructions:
+; IADD, ISUB, MCMP, BRANCH, SHR
+
+; --- Setup ---
+IADD DR1, DR0, #10     ; n = 10
+IADD DR2, DR1, #1      ; DR2 = n + 1 = 11
+
+; --- Software multiply: DR3 = n * (n+1) ---
+IADD DR3, DR0, DR0     ; product = 0
+IADD DR4, DR2, DR0     ; counter = n + 1
+mul:
+MCMP DR4, DR0          ; counter == 0?
+BRANCHEQ div           ; → done with multiply
+IADD DR3, DR3, DR1     ; product += n
+ISUB DR4, DR4, #1      ; counter--
+BRANCH mul
+
+; --- Divide by 2 ---
+div:
+SHR DR3, DR3, 1        ; DR3 = n(n+1)/2 = 55
+
+; --- Verify by loop: DR5 = 1+2+...+n ---
+IADD DR5, DR0, DR0     ; sum = 0
+IADD DR6, DR0, #1      ; k = 1
+loop:
+MCMP DR6, DR1          ; k > n?
+BRANCHGT done          ; → finished
+IADD DR5, DR5, DR6     ; sum += k
+IADD DR6, DR6, #1      ; k++
+BRANCH loop
+
+done:
+; DR3 = 55 (formula), DR5 = 55 (loop) — match!
+
+; ── Section 2: Turing ISA Test ────────────────────────
+; Exercises IADD, ISUB, MCMP, BRANCH, SHL, SHR
+;
+; Turing ISA (11 instructions):
+;   DREAD, DWRITE, BFEXT, BFINS  (R/W via GT)
+;   MCMP, IADD, ISUB, BRANCH
+;   SHL, SHR (logical/arithmetic)
+;   RETURN (shared with Church)
+
+; --- Initialize DR1 = 0 ---
+IADD DR1, DR0, DR0     ; DR1 = 0 (Z=1)
+
+; --- Load system abstractions (boot C-List) ---
+LOAD CR0, CR6, 4       ; CR0 = Salvation (E)
+TPERM CR0, E           ; Verify E → Z=1
+
+; --- Integer arithmetic ---
+IADD DR3, DR1, DR2     ; DR3 = DR1 + DR2
+ISUB DR4, DR3, DR1     ; DR4 = DR3 - DR1
+
+; --- MCMP: compare DR4 vs DR2 ---
+MCMP DR4, DR2          ; Should be equal (Z=1)
+BRANCHEQ +2            ; Skip if equal
+IADD DR5, DR1, DR1     ; Skipped
+
+; --- MCMP: nonzero compare ---
+MCMP DR3, DR4          ; DR3 vs DR4
+BRANCHNE +2            ; Skip if not equal
+ISUB DR6, DR1, DR1     ; Skipped if equal
+
+; --- Zero flag test ---
+ISUB DR7, DR3, DR3     ; DR7 = 0 (Z=1)
+BRANCHEQ +2            ; Branch taken
+IADD DR8, DR1, DR1     ; Skipped
+
+; --- SHL: Shift left ---
+IADD DR9, DR3, DR0     ; DR9 = DR3 (copy)
+SHL DR10, DR9, 4       ; DR10 = DR9 << 4
+
+; --- SHR: Logical shift right ---
+SHR DR11, DR10, 2      ; DR11 = DR10 >> 2
+
+; --- SHR: Arithmetic shift right ---
+ISUB DR12, DR0, DR3    ; DR12 = negative
+SHR DR13, DR12, 1, ASR ; DR13 sign-extending
+
+; --- Verify: SHL then SHR restores ---
+SHL DR14, DR3, 8       ; DR14 = DR3 << 8
+SHR DR15, DR14, 8      ; DR15 = DR14 >> 8
+MCMP DR15, DR3         ; Should be equal (Z=1)
+
+HALT
