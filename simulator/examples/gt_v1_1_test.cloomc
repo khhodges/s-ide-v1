@@ -20,8 +20,9 @@
 ;   E/S/L bits, never X/W/R.  A Turing GT (dom=0) carries only X/W/R, never E.
 ;
 ;   TPERM EXACT (preset 14, new in v1.1) performs a 32-bit word-for-word
-;   comparison between two CRs — useful for credential-pinning and boot-path
-;   attestation.
+;   identity assertion between two CRs.  It is a credential-pinning instruction:
+;   match → Z=1; mismatch → BIND fault (same semantics as an mLoad failure).
+;   There is no Z=0 path — EXACT has no alternative meaning.
 ;
 ; C-list slots used (populated by boot image):
 ;
@@ -29,11 +30,11 @@
 ;   Slot 3  (Boot.Abstr) — E-GT: Church domain, dom=1, perm[2]=E=1
 ;
 ; Result protocol:
-;   DR14 = 0        → all six tests passed
-;   DR14 = 1..6     → test N was the first to fail
+;   DR14 = 0        → all five tests passed
+;   DR14 = 1..5     → test N was the first to fail
 ;
 ; To run: paste into the simulator Code tab and click Run.
-; All six assertions should complete without fault; DR14 stays 0.
+; All five assertions should complete without fault; DR14 stays 0.
 
 ; ── Load test GTs from the c-list ────────────────────────────────────────────
 ; CR6 is the active c-list capability (installed by boot sequence).
@@ -79,25 +80,18 @@ t4:
     DWRITE DR14, #4         ; Z=1 = FAIL — Church GT incorrectly passed Turing X check
     RETURN CR8
 
-; ── Test 5: TPERM EXACT — identical GTs match (Z=1) ─────────────────────────
+; ── Test 5: TPERM EXACT — identical GTs match (Z=1, no fault) ───────────────
 ; CR1 and CR3 both hold the same X-GT word (loaded from the same c-list slot).
-; TPERM EXACT does a 32-bit comparison of the raw GT words: CR1.word0 === CR3.word0.
+; TPERM EXACT is a credential-pinning assertion: 32-bit comparison of raw GT
+; words.  Identical credentials → Z=1 and execution continues.
+; A mismatch would raise a BIND fault — there is no Z=0 path.
 t5:
     TPERM CR1, EXACT, CR3
-    BRANCHEQ t6             ; Z=1 = correct → identical credentials match
-    DWRITE DR14, #5         ; Z=0 = FAIL — identical GTs did not match under EXACT
+    BRANCHEQ done           ; Z=1 = correct → identical credentials pinned successfully
+    DWRITE DR14, #5         ; Z=0 impossible by spec — EXACT has no alternative meaning
     RETURN CR8
 
-; ── Test 6: TPERM EXACT — different GTs do not match (Z=0) ──────────────────
-; CR1 (X-GT, dom=0) and CR2 (E-GT, dom=1) have different GT words.
-; TPERM EXACT must give Z=0 — the credentials are different tokens.
-t6:
-    TPERM CR1, EXACT, CR2
-    BRANCHNE done           ; Z=0 = correct → different credentials correctly rejected
-    DWRITE DR14, #6         ; Z=1 = FAIL — different GTs falsely matched under EXACT
-    RETURN CR8
-
-; ── All six tests passed ──────────────────────────────────────────────────────
+; ── All five tests passed ─────────────────────────────────────────────────────
 done:
     DWRITE DR14, #0         ; 0 = all passed — dom+perm encoding and EXACT are correct
     RETURN CR8

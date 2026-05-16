@@ -141,7 +141,7 @@ class ChurchSimulator {
         // Exposed as an instance property so tests can inject non-standard
         // presets to exercise the domain-purity fault path.
         // null  = reserved preset  → _execTperm faults TPERM_RSV.
-        // 'EXACT' = preset 14, identity check CRd.word0 === CRs.word0, sets Z=1 on match, Z=0 on mismatch, no fault.
+        // 'EXACT' = preset 14, identity check CRd.word0 === CRs.word0; faults BIND on mismatch (credential pinning assertion, not a comparison).
         // Codes 10-12 (LE, SE, LSE) are reserved E-isolation violations → null (TPERM_RSV).
         this.tpermPresetMasks = [
             [],            ['R'],         ['R','W'],       ['X'],
@@ -4338,16 +4338,19 @@ class ChurchSimulator {
         const presetCode = d.imm & 0xF;
         const presetMasks = this.tpermPresetMasks;
 
-        // TPERM EXACT (preset 14): 32-bit identity check CRd.word0 === CRs.word0.
-        // Sets Z=1 on match, Z=0 on mismatch. Never faults — pure comparison operator.
+        // TPERM EXACT (preset 14): credential-pinning assertion — 32-bit identity check CRd.word0 === CRs.word0.
+        // Match: sets Z=1 and continues (credential confirmed).
+        // Mismatch: hard fault BIND — same semantics as mLoad permission failure.
+        // There is no Z=0 path; EXACT has no alternative meaning.
         if (presetMasks[presetCode] === 'EXACT') {
             const crdGT = this.cr[d.crDst].word0 >>> 0;
             const crsGT = this.cr[d.crSrc].word0 >>> 0;
-            const match = (crdGT === crsGT);
-            this.flags.Z = match; this.flags.N = !match; this.flags.C = false; this.flags.V = false;
-            const descExact = match
-                ? `TPERM CR${d.crDst} EXACT [14]: credential match — Z=1`
-                : `TPERM CR${d.crDst} EXACT [14]: credential mismatch 0x${crdGT.toString(16).padStart(8,'0')} vs CR${d.crSrc} 0x${crsGT.toString(16).padStart(8,'0')} — Z=0`;
+            if (crdGT !== crsGT) {
+                this.fault('BIND', `TPERM CR${d.crDst} EXACT [14]: credential mismatch — 0x${crdGT.toString(16).padStart(8,'0')} vs CR${d.crSrc} 0x${crsGT.toString(16).padStart(8,'0')} — BIND fault`);
+                return null;
+            }
+            this.flags.Z = true; this.flags.N = false; this.flags.C = false; this.flags.V = false;
+            const descExact = `TPERM CR${d.crDst} EXACT [14]: credential match — Z=1`;
             this.output += descExact + '\n';
             this.pc++;
             return { pc: this.pc - 1, instr: d, desc: descExact };
