@@ -1663,6 +1663,7 @@
     "token": "ab3de4fd",
     "abstraction": "============================================================",
     "ns_slot": null,
+    "ns_slot_policy": "dynamic",
     "lump_size": 64,
     "cw": 28,
     "cc": 0,

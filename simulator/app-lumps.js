@@ -3443,6 +3443,162 @@ async function _loadLumpBinaryIntoSim(token, name, btn) {
 // ── Run Selftest shortcut ─────────────────────────────────────────────────────
 // Loads the PostFlashSelftest LUMP (token 82f5ef56) into the simulator, runs
 // it to completion, and reports DR0 (0 = all 81 tests passed).
+
+const _SELFTEST_SECTIONS = [
+    { letter: 'A', name: 'Register Independence', start:  1, end: 15, desc: 'DR1–DR15 each hold a distinct value — detects register-file aliasing' },
+    { letter: 'B', name: 'IADD Arithmetic',       start: 16, end: 23, desc: 'Integer add: zero identity, value sums, commutativity, Z/N flags, max immediate' },
+    { letter: 'C', name: 'ISUB Arithmetic',       start: 24, end: 30, desc: 'Integer subtract: zero result, value verify, negative result (N), borrow flag (C)' },
+    { letter: 'D', name: 'SHL Shift-Left',        start: 31, end: 36, desc: 'Shift left: identity, doubling, ×256, carry-out (C), sign bit (N), nibble pattern' },
+    { letter: 'E', name: 'SHR Logical (LSR)',     start: 37, end: 41, desc: 'Logical right shift: identity, halving, carry flag, large shift, no sign-extension' },
+    { letter: 'F', name: 'SHR Arithmetic (ASR)',  start: 42, end: 45, desc: 'Arithmetic right shift: sign-extension preserved, carry flag from bit 0' },
+    { letter: 'G', name: 'Branch Conditions',     start: 46, end: 57, desc: 'All 12 conditions: EQ NE CS CC MI PL GE LT GT LE HI LS' },
+    { letter: 'H', name: 'Bit-Field Ops',         start: 58, end: 62, desc: 'BFEXT and BFINS: nibble/byte extract, lower/upper insert, round-trip' },
+    { letter: 'I', name: 'TPERM Presets',         start: 63, end: 73, desc: 'Permission checks (X, R, E, L, S, RX, RWX, CLEAR) + domain purity enforcement' },
+    { letter: 'J', name: 'TPERM EXACT',           start: 74, end: 77, desc: 'TPERM EXACT credential-pinning: bit-identical GTs match; symmetry; multi-load' },
+    { letter: 'K', name: 'CHANGE (CR Swap)',      start: 78, end: 79, desc: 'CHANGE swaps two CRs; permission identity reverses correctly after swap' },
+    { letter: 'L', name: 'LOAD from C-List',      start: 80, end: 81, desc: 'LOAD from slot 7 and slot 3 into a fresh CR; correct permission on each' },
+];
+
+const _SELFTEST_TEST_DESCS = {
+     1: 'DR1 holds value 11 after all DR writes — no register aliasing',
+     2: 'DR2 holds value 22 after all DR writes',
+     3: 'DR3 holds value 33 after all DR writes',
+     4: 'DR4 holds value 44 after all DR writes',
+     5: 'DR5 holds value 55 after all DR writes',
+     6: 'DR6 holds value 66 after all DR writes',
+     7: 'DR7 holds value 77 after all DR writes',
+     8: 'DR8 holds value 88 after all DR writes',
+     9: 'DR9 holds value 99 after all DR writes',
+    10: 'DR10 holds value 110 after all DR writes',
+    11: 'DR11 holds value 121 after all DR writes',
+    12: 'DR12 holds value 132 after all DR writes',
+    13: 'DR13 holds value 143 after all DR writes',
+    14: 'DR14 holds value 154 after all DR writes',
+    15: 'DR15 holds value 165 after all DR writes',
+    16: 'IADD 0+0 = 0 (Z=1)',
+    17: 'IADD 5+3 = 8 (Z=0, value verify)',
+    18: 'IADD 100+155 = 255',
+    19: 'IADD identity: n+0 = n (immediate 0)',
+    20: 'IADD nonzero result sets Z=0',
+    21: 'IADD commutativity: a+b == b+a',
+    22: 'IADD with max 14-bit immediate (16383)',
+    23: 'IADD nonzero+nonzero gives Z=0',
+    24: 'ISUB N−N = 0 (Z=1)',
+    25: 'ISUB 10−3 = 7 (value verify)',
+    26: 'ISUB 3−10 gives signed negative result (N=1)',
+    27: 'ISUB 0−1 causes borrow (C=0, BRANCHCC)',
+    28: 'ISUB 5−3 produces no borrow (C=1, BRANCHCS)',
+    29: 'ISUB immediate: 200−200 = 0 (Z=1)',
+    30: 'ISUB nonzero result: 50−49 = 1 (Z=0)',
+    31: 'SHL by 0 leaves value unchanged',
+    32: 'SHL by 1 doubles value: 6 → 12',
+    33: 'SHL by 8 multiplies by 256: 1 → 256',
+    34: 'SHL carry-out: MSB shifted out sets C=1 (0x80000000 << 1 → 0)',
+    35: 'SHL sign bit: 1 << 31 = 0x80000000 sets N=1',
+    36: 'SHL by 4 on 0xF gives 0xF0 (240)',
+    37: 'SHR LSR by 0 leaves value unchanged',
+    38: 'SHR LSR by 1 halves an even value: 8 → 4',
+    39: 'SHR LSR carry: bit 0 shifted out sets C=1 (1 >> 1 → 0)',
+    40: 'SHR LSR by 8: 2048 >> 8 = 8',
+    41: 'SHR LSR does not sign-extend (0x80000000 >> 1 sets N=0)',
+    42: 'ASR −1 >> 1 = −1 (sign extended; Z=0, N=1)',
+    43: 'ASR −2 >> 1 gives C=0 (bit 0 of −2 was 0)',
+    44: 'ASR −1 >> 1 gives C=1 (bit 0 of −1 was 1)',
+    45: 'ASR preserves N=1 for any negative input (0x80000000 >> 4)',
+    46: 'BRANCHEQ taken when Z=1',
+    47: 'BRANCHNE taken when Z=0',
+    48: 'BRANCHCS taken when C=1 (no borrow: 5−3)',
+    49: 'BRANCHCC taken when C=0 (borrow: 0−1)',
+    50: 'BRANCHMI taken when N=1 (0−1 = 0xFFFFFFFF)',
+    51: 'BRANCHPL taken when N=0 (positive result)',
+    52: 'BRANCHGE taken when N=V (10−3=7, N=0, V=0)',
+    53: 'BRANCHLT taken when N≠V (3−10=−7, N=1, V=0)',
+    54: 'BRANCHGT taken when Z=0 and N=V (10−3=7)',
+    55: 'BRANCHLE taken when Z=1 or N≠V (5−5=0, Z=1)',
+    56: 'BRANCHHI taken when C=1 and Z=0 (8−3=5)',
+    57: 'BRANCHLS taken when C=0 or Z=1 (borrow: 0−1)',
+    58: 'BFEXT bits [3:0] from 0x(16383<<2|3) = 0xD = 13',
+    59: 'BFEXT 8-bit field at bit 0: 0xAB = 171',
+    60: 'BFINS lower nibble: insert 0xF into bits [3:0] of 0',
+    61: 'BFINS upper nibble: insert 0xA into bits [7:4] of 0 → 160',
+    62: 'BFEXT round-trip: insert 7 into bits [7:5], extract back',
+    63: 'X-GT satisfies TPERM X (Z=1)',
+    64: 'X-GT does NOT satisfy TPERM R — domain purity: X-GT has no R bit',
+    65: 'X-GT does NOT satisfy TPERM E — domain purity: dom=0 ≠ Church dom=1',
+    66: 'X-GT does NOT satisfy TPERM L',
+    67: 'X-GT does NOT satisfy TPERM S',
+    68: 'E-GT satisfies TPERM E (Z=1)',
+    69: 'E-GT does NOT satisfy TPERM X — domain purity: dom=1 ≠ Turing dom=0',
+    70: 'E-GT does NOT satisfy TPERM R',
+    71: 'TPERM CLEAR always succeeds on a valid GT (Z=1)',
+    72: 'TPERM RX on X-GT → Z=0 (X-GT has X but not R)',
+    73: 'TPERM RWX on X-GT → Z=0 (X-GT has only X; R and W absent)',
+    74: 'TPERM EXACT: CR1 vs CR3 both from slot 7 → bit-identical (Z=1)',
+    75: 'TPERM EXACT is symmetric: CR3 vs CR1 also matches',
+    76: 'Third load from slot 7 into CR5 must be bit-identical to CR1',
+    77: 'E-GT loaded twice from slot 3 into CR2 and CR4 must match',
+    78: 'After CHANGE CR1↔CR2: CR1 is now E-GT (satisfies TPERM E)',
+    79: 'After CHANGE CR1↔CR2: CR2 is now X-GT (satisfies TPERM X)',
+    80: 'Fresh LOAD slot 7 into CR9 → satisfies TPERM X',
+    81: 'Fresh LOAD slot 3 into CR9 → satisfies TPERM E',
+};
+
+function _buildSelftestPanel(dr0, passed) {
+    const total = 81;
+    const inconclusive = dr0 === null;
+    const failNum = (passed || inconclusive) ? 0 : (dr0 >>> 0);
+
+    const badgeClass = inconclusive ? 'selftest-badge-skip'
+                     : passed       ? 'selftest-badge-pass'
+                                    : 'selftest-badge-fail';
+    const badgeText  = inconclusive ? '???' : (passed ? 'PASS' : 'FAIL');
+    const dr0Str     = inconclusive ? 'unknown' : String(dr0 >>> 0);
+    const countStr   = inconclusive ? `Simulator halted before reading DR0`
+                     : passed       ? `All ${total} tests passed`
+                                    : `Failed at test #${failNum} of ${total}`;
+
+    let sectionsHtml = '';
+    for (const sec of _SELFTEST_SECTIONS) {
+        let rowClass, icon;
+        if (passed || failNum > sec.end) {
+            rowClass = 'selftest-sec-pass';
+            icon = '<span class="selftest-sec-icon selftest-sec-icon-pass">&#10003;</span>';
+        } else if (!passed && failNum >= sec.start && failNum <= sec.end) {
+            rowClass = 'selftest-sec-fail';
+            icon = '<span class="selftest-sec-icon selftest-sec-icon-fail">&#10007;</span>';
+        } else {
+            rowClass = 'selftest-sec-skip';
+            icon = '<span class="selftest-sec-icon selftest-sec-icon-skip">&#8212;</span>';
+        }
+
+        const rangeStr = sec.start === sec.end
+            ? `Test ${sec.start}`
+            : `Tests ${sec.start}\u2013${sec.end}`;
+
+        sectionsHtml += `<div class="selftest-sec-row ${rowClass}">
+            ${icon}
+            <span class="selftest-sec-letter">${sec.letter}</span>
+            <span class="selftest-sec-name">${sec.name}</span>
+            <span class="selftest-sec-range">${rangeStr}</span>
+        </div>`;
+
+        if (!passed && failNum >= sec.start && failNum <= sec.end) {
+            const testDesc = _SELFTEST_TEST_DESCS[failNum] || `Test #${failNum}`;
+            sectionsHtml += `<div class="selftest-test-detail">
+                <span class="selftest-test-num">Test #${failNum}</span>
+                <span class="selftest-test-desc">${testDesc}</span>
+            </div>`;
+        }
+    }
+
+    return `<div class="selftest-panel-header">
+        <span class="selftest-badge ${badgeClass}">${badgeText}</span>
+        <span class="selftest-panel-dr0">DR0 = ${dr0Str}</span>
+        <span class="selftest-panel-count">${countStr}</span>
+    </div>
+    <div class="selftest-sections">${sectionsHtml}</div>`;
+}
+
 async function runSelftestLump() {
     const SELFTEST_TOKEN = '82f5ef56';
     const SELFTEST_NAME  = 'PostFlashSelftest';
@@ -3482,16 +3638,8 @@ async function runSelftestLump() {
 
         const dr0 = (sim.DR && sim.DR[0] !== undefined) ? (sim.DR[0] >>> 0) : null;
         const passed = dr0 === 0;
-        const resultText = passed
-            ? 'PASS \u2014 all 81 tests passed (DR0=0)'
-            : (dr0 === null ? 'Could not read DR0' : `FAIL \u2014 first failing test: #${dr0} (DR0=${dr0})`);
-        const resultClass = passed ? 'selftest-pass' : 'selftest-fail';
 
-        const resultEl = document.getElementById('dashSelftestResult');
-        if (resultEl) {
-            resultEl.textContent = resultText;
-            resultEl.className = `dash-selftest-result ${resultClass}`;
-        }
+        window._lastSelftestResult = { dr0, passed };
 
         try {
             const mtbfResp = await fetch(`/api/lump/${SELFTEST_TOKEN}/mtbf`, {
@@ -3524,7 +3672,7 @@ async function runSelftestLump() {
 
         if (btn) { btn.disabled = false; btn.textContent = 'Run Selftest'; }
         if (typeof updateDisplay === 'function') updateDisplay();
-        switchDashTab('dr');
+        switchDashTab('state');
     } catch (err) {
         if (btn) { btn.disabled = false; btn.textContent = 'Run Selftest'; }
         alert(`Selftest failed: ${err.message}`);
