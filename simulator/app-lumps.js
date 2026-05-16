@@ -3493,6 +3493,35 @@ async function runSelftestLump() {
             resultEl.className = `dash-selftest-result ${resultClass}`;
         }
 
+        try {
+            const mtbfResp = await fetch(`/api/lump/${SELFTEST_TOKEN}/mtbf`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ passed })
+            });
+            if (mtbfResp.ok) {
+                const mtbfData = await mtbfResp.json();
+                if (mtbfData.ok && mtbfData.mtbf) {
+                    const cacheEntry = (typeof _lumpsCache !== 'undefined' ? _lumpsCache : [])
+                        .find(l => l.token === SELFTEST_TOKEN);
+                    if (cacheEntry) {
+                        cacheEntry.mtbf = mtbfData.mtbf;
+                        if (typeof _selectedLumpToken !== 'undefined' &&
+                            _selectedLumpToken === SELFTEST_TOKEN &&
+                            typeof showLumpDetail === 'function') {
+                            showLumpDetail(SELFTEST_TOKEN);
+                        }
+                    }
+                }
+            }
+        } catch (_mtbfErr) {
+            const warnEl = document.getElementById('dashSelftestResult');
+            if (warnEl) {
+                warnEl.textContent += ' \u2014 MTBF not saved (network error)';
+            }
+            console.warn('[runSelftestLump] MTBF record failed:', _mtbfErr);
+        }
+
         if (btn) { btn.disabled = false; btn.textContent = 'Run Selftest'; }
         if (typeof updateDisplay === 'function') updateDisplay();
         switchDashTab('dr');

@@ -3340,6 +3340,79 @@ def patch_lump_meta(token):
     return jsonify({"ok": True, "token": key8})
 
 
+@app.route("/api/lump/<token>/mtbf", methods=["POST"])
+def post_lump_mtbf(token):
+    """Record a selftest run outcome and update MTBF fields in the sidecar JSON.
+
+    Expects JSON body: { "passed": true | false }
+
+    Updates:
+      mtbf.total_runs         — incremented by 1 on every call
+      mtbf.consecutive_clean  — incremented on pass, reset to 0 on failure
+      mtbf.status             — "green" when consecutive_clean >= 5,
+                                "amber" when 1-4,
+                                "red"   when 0 and total_runs > 0
+
+    Returns {"ok": true, "token": token8, "mtbf": <updated mtbf object>}.
+    """
+    raw  = token.lower()
+    key8 = (raw[:8] if len(raw) >= 8 else raw).zfill(8)
+
+    lumps_dir    = os.path.join(os.path.dirname(__file__), 'lumps')
+    sidecar_path = os.path.join(lumps_dir, f'{key8}.json')
+
+    if not os.path.isfile(sidecar_path):
+        return jsonify({"error": "Lump sidecar not found"}), 404
+
+    payload = request.get_json(force=True, silent=True) or {}
+    if "passed" not in payload:
+        return jsonify({"error": "Missing required field: passed"}), 400
+
+    if not isinstance(payload["passed"], bool):
+        return jsonify({"error": "Field 'passed' must be a JSON boolean (true or false)"}), 400
+
+    passed = payload["passed"]
+
+    try:
+        with open(sidecar_path, 'r') as fh:
+            sidecar = json.load(fh)
+    except Exception as exc:
+        return jsonify({"error": f"Could not read sidecar: {exc}"}), 500
+
+    mtbf = sidecar.get("mtbf", {})
+    if not isinstance(mtbf, dict):
+        mtbf = {}
+
+    total_runs        = int(mtbf.get("total_runs", 0)) + 1
+    consecutive_clean = int(mtbf.get("consecutive_clean", 0))
+
+    if passed:
+        consecutive_clean += 1
+    else:
+        consecutive_clean = 0
+
+    if consecutive_clean >= 5:
+        status = "green"
+    elif consecutive_clean >= 1:
+        status = "amber"
+    else:
+        status = "red"
+
+    mtbf["total_runs"]        = total_runs
+    mtbf["consecutive_clean"] = consecutive_clean
+    mtbf["status"]            = status
+    sidecar["mtbf"]           = mtbf
+
+    try:
+        with open(sidecar_path, 'w') as fh:
+            json.dump(sidecar, fh, indent=2)
+    except Exception as exc:
+        return jsonify({"error": f"Could not write sidecar: {exc}"}), 500
+
+    print(f'[lumps/mtbf POST] {key8} passed={passed} consecutive_clean={consecutive_clean} total_runs={total_runs} status={status}', flush=True)
+    return jsonify({"ok": True, "token": key8, "mtbf": mtbf})
+
+
 @app.route("/api/lump/<token_hex>/clist/<int:slot_index>", methods=["PATCH"])
 def patch_lump_clist_slot(token_hex, slot_index):
     """Write a single GT word into a specific c-list slot of a standalone .lump binary.

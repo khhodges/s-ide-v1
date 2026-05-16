@@ -10,7 +10,7 @@
   "cc": 0,
   "profile": "IoT",
   "language": "assembly",
-  "description": "Post-Flash Exhaustive Self-Test — 81 hardware correctness tests (DR independence, ALU, shifts, branches, BFEXT/BFINS, TPERM, CHANGE, LOAD). DR0=0 on full pass, DR0=N on first failure.",
+  "description": "Post-Flash Exhaustive Self-Test \u2014 81 hardware correctness tests (DR independence, ALU, shifts, branches, BFEXT/BFINS, TPERM, CHANGE, LOAD). DR0=0 on full pass, DR0=N on first failure.",
   "grants": [
     "E"
   ],
