@@ -8562,7 +8562,7 @@ function openSettings() {
     renderProgressReport();
     renderFamilyIntroQR();
     const releaseEl = document.getElementById('settingsReleasePublishedAt');
-    if (releaseEl) releaseEl.textContent = '2026-05-02 UTC';
+    if (releaseEl) releaseEl.textContent = '2026-05-15 UTC';
     const anyPerm = hasAnyPopupDismissedPerm();
     const showAllCheck = document.getElementById('showAllPopupsCheck');
     if (showAllCheck) showAllCheck.checked = !anyPerm;
@@ -8629,6 +8629,14 @@ function closeSettings() {
 
 function showReleaseHistory() {
     const history = [
+        { date: '2026-05-15 UTC', title: 'Builder: 3-Board ZIP Downloads — Release 1.2', changes: [
+            'Builder "Download FPGA Package" build log now lists exactly what is inside each ZIP — no more phantom or missing filenames',
+            'Ti60 F225: removed stale <code>church_ti60_f225.edif</code> entry (never generated); added the actual files — <code>church_ti60_f225.xml</code>, <code>church_ti60_f225.sdc</code>, <code>church_ti60_f225.peri.xml</code>, <code>setup_ti60_peri.py</code>',
+            'Wukong XC7A100T: added <code>local_bridge.py</code> to the listing — it was silently included in the ZIP but never mentioned',
+            'Tang Nano 20K: added <code>church_tang_nano_20k.il</code> (RTLIL, always present) and <code>local_bridge.py</code>; marked <code>.v</code> and <code>.json</code> as conditional on Yosys synthesis succeeding',
+            'Build Details file-icon map expanded: <code>.isf</code>, <code>.xdc</code>, <code>.tcl</code>, <code>.xml</code>, <code>.sh</code>, <code>.py</code> all get meaningful icons',
+            'New test suite: <code>tests/builder/test_zip_contents.py</code> — 5 pytest cases verify each board\'s ZIP contains exactly the expected file set using stub artifacts, no toolchain required',
+        ] },
         { date: '2026-05-12 UTC', title: 'Capability Access Rights, Console Improvements & Navigation', changes: [
             'Access rights declarations in capabilities: write <code>capabilities { LED0 RW }</code> to declare R/W access — assembler and CLOOMC++ compiler parse rights tokens (R/W/X/E) and carry them as structured objects throughout the pipeline',
             'Cross-check in Draft output: declared rights are compared against sidecar grants; the draft shows a warning when declared rights exceed what the sidecar permits; fault-tolerant — a runtime error in the check can no longer prevent the draft from displaying',
@@ -9039,6 +9047,17 @@ function welcomeSkip() {
 }
 
 const WHATS_NEW_FEATURES = [
+    {
+        title: "Builder ZIP downloads fixed",
+        html: `<div style="font-weight:700;color:var(--church-gold);font-size:1.05rem;margin-bottom:0.75rem;">&#x1F4E6; Download FPGA Package &mdash; what you see is what you get</div>` +
+            `<p style="font-size:0.9rem;line-height:1.65;margin-bottom:0.75rem;">` +
+            `The build log printed after a ZIP download now exactly matches what is inside the file &mdash; for all three boards. ` +
+            `Ti60 F225 no longer lists a phantom <code style="background:#1a1a2e;padding:0.15rem 0.4rem;border-radius:3px;color:var(--church-gold);">.edif</code> that was never generated; ` +
+            `Wukong and Tang Nano now list <code style="background:#1a1a2e;padding:0.15rem 0.4rem;border-radius:3px;color:var(--church-gold);">local_bridge.py</code> which was silently included; ` +
+            `Tang Nano marks <code style="background:#1a1a2e;padding:0.15rem 0.4rem;border-radius:3px;color:var(--church-gold);">.v</code> and <code style="background:#1a1a2e;padding:0.15rem 0.4rem;border-radius:3px;color:var(--church-gold);">.json</code> as conditional.</p>` +
+            `<p style="font-size:0.88rem;color:#aaa;line-height:1.5;margin:0;">` +
+            `A new test suite enforces that ZIP contents and build log can never drift apart again.</p>`
+    },
     {
         title: "Capability access rights",
         html: `<div style="font-weight:700;color:var(--church-gold);font-size:1.05rem;margin-bottom:0.75rem;">&#x1F512; capabilities { LED0 RW } &mdash; declare what you need</div>` +

@@ -130,6 +130,7 @@ non-null `variant_group` string. Example: SlideRule + SlideRuleHS share
 
 | Release | Date | Key changes |
 |---|---|---|
+| 1.2 | 2026-05-15 | Builder ZIP downloads — build log listings now match ZIP contents exactly for all 3 boards (Ti60, Wukong, Tang Nano); stale .edif removed from Ti60 log; local_bridge.py added to Wukong and Tang Nano logs; .v/.json marked conditional for Tang Nano; file-icon map expanded; new zip-contents pytest suite (5 tests). |
 | 1.1 | 2026-05-03 | LUMP metadata overhaul — floating-lump pattern formalised, variant_group introduced, 11-rule consistency gate, Boot.Abstr corrected (cw=17, cc=1, 64 words), 4 test-lump cw/cc corrected, 6 missing sidecars created, orphan 00000003.json removed. |
 | 1.0 | 2026-04-29 | Initial documented release. |
 
