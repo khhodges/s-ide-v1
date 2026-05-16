@@ -986,6 +986,7 @@ class ChurchCore(Elaboratable):
         m.d.comb += [
             u_tperm.tperm_start.eq(tperm_start_sig),
             u_tperm.cr_target.eq(cr_dst),
+            u_tperm.cr_src.eq(cr_src),
             u_tperm.preset.eq(u_decoder.tperm_preset),
             u_tperm.cr_rd_data.eq(u_regs.cr_rd_data),
         ]
