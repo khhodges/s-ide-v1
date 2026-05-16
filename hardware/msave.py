@@ -46,7 +46,7 @@ class ChurchMSave(Elaboratable):
 
         ns_view = View(CAP_REG_LAYOUT, self.cr15_namespace)
 
-        dst_has_s_perm = dst_gt.perms[PERM_S]
+        dst_has_s_perm = dst_gt.dom & dst_gt.perm[1]   # Church dom=1, perm[1]=S
         dst_has_bind = dst_gt.b_flag
         index_in_bounds = Signal()
         m.d.comb += index_in_bounds.eq(index_reg < dst_w2.limit_offset[:16])

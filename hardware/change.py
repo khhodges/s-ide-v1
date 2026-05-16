@@ -98,8 +98,8 @@ class ChurchChange(Elaboratable):
 
         crn_view = View(CAP_REG_LAYOUT, crn_reg_latched)
         crn_gt = View(GT_LAYOUT, crn_view.word0_gt)
-        crn_has_l_perm = crn_gt.perms[PERM_L]
-        crn_has_s_perm = crn_gt.perms[PERM_S]
+        crn_has_l_perm = crn_gt.dom & crn_gt.perm[0]   # Church dom=1, perm[0]=L
+        crn_has_s_perm = crn_gt.dom & crn_gt.perm[1]   # Church dom=1, perm[1]=S
 
         # Authority check for CHANGE CR12/CR13: source cap location must equal
         # the corresponding CR port address in the Church Hardware Address Range.
@@ -167,7 +167,9 @@ class ChurchChange(Elaboratable):
             cr5_new_gt.slot_id.eq(0),
             cr5_new_gt.gt_seq.eq(0),
             cr5_new_gt.gt_type.eq(GT_TYPE_INFORM),
-            cr5_new_gt.perms.eq((1 << PERM_R) | (1 << PERM_W)),
+            # Turing domain (dom=0): perm=0b011 (R=perm[0]=1, W=perm[1]=1, X=perm[2]=0)
+            cr5_new_gt.dom.eq(0),
+            cr5_new_gt.perm.eq(0b011),   # R+W in Turing domain
             cr5_new_gt.b_flag.eq(0),
             cr5_cap_view.word1_location.eq(thread_base + (17 << 2)),
             cr5_cap_view.word2_w2.eq(thr_hdr_view.cc - 1),

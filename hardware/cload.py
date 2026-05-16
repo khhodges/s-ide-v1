@@ -115,7 +115,9 @@ class ChurchCLoad(Elaboratable):
             cr14_gt_view.slot_id.eq(e_gt_view.slot_id),
             cr14_gt_view.gt_seq.eq(e_gt_view.gt_seq),
             cr14_gt_view.gt_type.eq(e_gt_view.gt_type),
-            cr14_gt_view.perms.eq(PERM_MASK_R | PERM_MASK_X),
+            # Turing domain: dom=0, perm=0b101 (X=perm[2]=1, W=perm[1]=0, R=perm[0]=1)
+            cr14_gt_view.dom.eq(0),
+            cr14_gt_view.perm.eq(0b101),   # R+X in Turing domain
             cr14_gt_view.b_flag.eq(0),
             cr14_view.word1_location.eq(raw_base + 4),
             cr14_w2_view.limit_offset.eq(cw_reg - 1),    # cw-1 (inclusive last valid PC; cw from lump header, not allocation size)
@@ -181,7 +183,7 @@ class ChurchCLoad(Elaboratable):
                 with m.If(~is_valid_type):
                     m.d.sync += fault_type_reg.eq(FaultType.PERM_E)
                     m.next = "FAULT"
-                with m.Elif(~e_gt_view.perms[PERM_E]):
+                with m.Elif(~(e_gt_view.dom & e_gt_view.perm[2])):   # Church E = dom=1, perm[2]=1
                     m.d.sync += fault_type_reg.eq(FaultType.PERM_E)
                     m.next = "FAULT"
                 with m.Else():

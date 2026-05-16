@@ -106,7 +106,7 @@ Each entry is exactly **4 consecutive 32-bit words**.
 | Bits    | Field      | Description |
 |:--------|:-----------|:------------|
 | [31]    | B-flag     | `bFlag` — bounds marker set by allocator |
-| [30]    | F-flag     | `fFlag` — Far-call flag |
+| [30]    | reserved   | Always zero. **F-flag has moved to GT word bit [25]** (per-token, not per-NS-entry). |
 | [29]    | G-bit      | `gBit` — GC liveness (matches hardware g_bit position) |
 | [28]    | reserved   | Always zero. `chainable` is NOT stored here — see `this.nsChainable[]`. |
 | [27:26] | gtType     | Golden Token type: `00`=Null, `01`=Inform, `10`=Outform, `11`=Abstract |

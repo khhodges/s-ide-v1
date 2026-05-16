@@ -85,7 +85,8 @@ class ChurchOutformFSM(Elaboratable):
             prom_gt_view.slot_id.eq(src_lat_gt.slot_id),
             prom_gt_view.gt_seq.eq(result_gt_view.gt_seq),
             prom_gt_view.gt_type.eq(GT_TYPE_INFORM),
-            prom_gt_view.perms.eq(src_lat_gt.perms),
+            prom_gt_view.dom.eq(src_lat_gt.dom),    # copy dom+perm from source
+            prom_gt_view.perm.eq(src_lat_gt.perm),
             prom_gt_view.b_flag.eq(src_lat_gt.b_flag),
         ]
 

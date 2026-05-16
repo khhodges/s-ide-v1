@@ -45,7 +45,7 @@ class CMCapReturn(Elaboratable):
         ret_view = View(CAP_REG_LAYOUT, return_cap)
         ret_gt = View(GT_LAYOUT, ret_view.word0_gt)
 
-        has_e_perm = ret_gt.perms[PERM_E]
+        has_e_perm = ret_gt.dom & ret_gt.perm[2]   # Church dom=1, perm[2]=E
         is_null_cap = Signal()
         m.d.comb += is_null_cap.eq(ret_gt.gt_type == GT_TYPE_NULL)
 
@@ -56,7 +56,7 @@ class CMCapReturn(Elaboratable):
         saved_cr6_gt_view = View(GT_LAYOUT, saved_cr6_gt)
         saved_cr7_gt_view = View(GT_LAYOUT, saved_cr7_gt)
 
-        saved_cr6_has_e = saved_cr6_gt_view.perms[PERM_E]
+        saved_cr6_has_e = saved_cr6_gt_view.dom & saved_cr6_gt_view.perm[2]   # Church dom=1, perm[2]=E
 
         phase = Signal(2)
         fault_flag = Signal()

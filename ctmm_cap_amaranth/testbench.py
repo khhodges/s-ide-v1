@@ -8,7 +8,9 @@ from hardware.integrity32 import integrity32
 
 
 def build_gt(index, perms, gt_type=GT_TYPE_INFORM, version=0):
-    return (gt_type & 0x3) | ((perms & 0x3F) << 2) | ((index & 0x1FFFF) << 8) | ((version & 0x7F) << 25)
+    # New ctmm GT_LAYOUT: gt_type[1:0] | f_flag[2]=0 | spare[3]=0 | dom[4] | perm[7:5] | index[24:8] | version[31:25]
+    dom, perm3 = gt_encode_perm(perms)
+    return (gt_type & 0x3) | (dom << 4) | (perm3 << 5) | ((index & 0x1FFFF) << 8) | ((version & 0x7F) << 25)
 
 
 def build_seal(location, limit, version):
@@ -92,60 +94,56 @@ def run_testbench():
         assert gt_type_bits == GT_TYPE_ABSTRACT, f"Abstract type mismatch: {gt_type_bits}"
         print("  PASS: GT type field encodes Inform/Outform/NULL/Abstract correctly")
 
-        perms_field = (inform_gt >> 2) & 0x3F
-        assert perms_field == PERM_MASK_L, f"Perm mismatch: {perms_field}"
+        # New ctmm GT_LAYOUT: dom at bit GT_DOM_BIT (4), perm[2:0] at bits [7:5].
+        # L-perm (Church domain): dom=1, perm[0]=L=1 → perm=0b001.
+        dom_field   = (inform_gt >> GT_DOM_BIT) & 0x1
+        perm_field  = (inform_gt >> 5) & 0x7
         index_field = (inform_gt >> 8) & 0x1FFFF
+        assert dom_field  == 1,     f"L-perm GT should have dom=1, got {dom_field}"
+        assert perm_field == 0b001, f"L-perm GT perm mismatch: {perm_field} (expected 0b001=L)"
         assert index_field == 0x100, f"Index mismatch: {index_field}"
-        print("  PASS: GT layout fields (index, perms) at correct bit positions")
+        print("  PASS: GT layout fields (index, dom, perm) at correct bit positions")
 
-        print("\n[TEST 3] Domain Purity Validation")
+        print("\n[TEST 3] Domain Purity — Structurally Enforced by New Encoding")
         print("-" * 50)
-        turing_gt = build_gt(0, PERM_MASK_R | PERM_MASK_W | PERM_MASK_X)
-        church_gt = build_gt(0, PERM_MASK_L | PERM_MASK_S | PERM_MASK_E)
-        mixed_rl = build_gt(0, PERM_MASK_R | PERM_MASK_L)
-        mixed_xe = build_gt(0, PERM_MASK_X | PERM_MASK_E)
+        turing_gt  = build_gt(0, PERM_MASK_R | PERM_MASK_W | PERM_MASK_X)
+        church_gt  = build_gt(0, PERM_MASK_L | PERM_MASK_S | PERM_MASK_E)
+        # Mixed logical masks: gt_encode_perm clamps to Church side when any Church bit is set.
+        mixed_rl   = build_gt(0, PERM_MASK_R | PERM_MASK_L)
+        mixed_xe   = build_gt(0, PERM_MASK_X | PERM_MASK_E)
         mixed_rwxe = build_gt(0, PERM_MASK_R | PERM_MASK_W | PERM_MASK_X | PERM_MASK_E)
 
-        turing_perms = (turing_gt >> 2) & 0x3F
-        church_perms = (church_gt >> 2) & 0x3F
-        mixed_rl_perms = (mixed_rl >> 2) & 0x3F
-        mixed_xe_perms = (mixed_xe >> 2) & 0x3F
-        mixed_rwxe_perms = (mixed_rwxe >> 2) & 0x3F
+        # Extract dom bit directly (the structural domain-purity enforcer).
+        def _gt_dom(gt):  return (gt >> GT_DOM_BIT) & 0x1
+        def _gt_perm(gt): return (gt >> 5) & 0x7    # perm[2:0] at bits [7:5]
 
-        has_t = (turing_perms & DATA_PERMS) != 0
-        has_c = (turing_perms & CAP_PERMS) != 0
-        assert has_t and not has_c, "Turing GT should be domain-pure"
-        print("  PASS: Turing-only GT (RWX) is domain-pure")
+        assert _gt_dom(turing_gt) == 0, f"Turing GT dom={_gt_dom(turing_gt)}, expected 0"
+        assert _gt_perm(turing_gt) != 0, "Turing GT (RWX) should have non-zero perm"
+        print("  PASS: Pure Turing GT (RWX): dom=0, Turing perms in perm[2:0]")
 
-        has_t = (church_perms & DATA_PERMS) != 0
-        has_c = (church_perms & CAP_PERMS) != 0
-        assert not has_t and has_c, "Church GT should be domain-pure"
-        print("  PASS: Church-only GT (LSE) is domain-pure")
+        assert _gt_dom(church_gt) == 1, f"Church GT dom={_gt_dom(church_gt)}, expected 1"
+        assert _gt_perm(church_gt) != 0, "Church GT (LSE) should have non-zero perm"
+        print("  PASS: Pure Church GT (LSE): dom=1, Church perms in perm[2:0]")
 
-        has_t = (mixed_rl_perms & DATA_PERMS) != 0
-        has_c = (mixed_rl_perms & CAP_PERMS) != 0
-        assert has_t and has_c, "Mixed GT (R+L) should fail domain purity"
-        print("  PASS: Mixed GT (R+L) correctly detected as domain-impure")
-
-        has_t = (mixed_xe_perms & DATA_PERMS) != 0
-        has_c = (mixed_xe_perms & CAP_PERMS) != 0
-        assert has_t and has_c, "Mixed GT (X+E) should fail domain purity"
-        print("  PASS: Mixed GT (X+E) correctly detected as domain-impure")
-
-        has_t = (mixed_rwxe_perms & DATA_PERMS) != 0
-        has_c = (mixed_rwxe_perms & CAP_PERMS) != 0
-        assert has_t and has_c, "Mixed GT (RWXE) should fail domain purity"
-        print("  PASS: Mixed GT (RWXE) correctly detected as domain-impure")
+        # Mixed inputs: gt_encode_perm takes Church side (Church dominates over Turing).
+        assert _gt_dom(mixed_rl)   == 1, f"R+L input should clamp to dom=1 (Church)"
+        assert _gt_dom(mixed_xe)   == 1, f"X+E input should clamp to dom=1 (Church)"
+        assert _gt_dom(mixed_rwxe) == 1, f"RWXE input should clamp to dom=1 (Church)"
+        print("  PASS: Mixed logical inputs clamp to Church side (dom=1)")
+        print("  NOTE: dom bit structurally enforces mutual exclusion — mixed GTs impossible to encode")
 
         print("\n[TEST 4] M Permission Rules")
         print("-" * 50)
         assert PERM_M == 6, f"PERM_M should be bit 6, got {PERM_M}"
         assert PERM_MASK_M == 64, f"PERM_MASK_M should be 64, got {PERM_MASK_M}"
         no_perm_gt = build_gt(0, 0)
-        gt_perms = (no_perm_gt >> 2) & 0x3F
-        assert gt_perms == 0, "GT with no perms should have perms=0"
-        assert (gt_perms & PERM_MASK_M) == 0, "M should never be in GT perms"
-        print("  PASS: M permission (bit 6) exists but never stored in GT")
+        # New encoding: dom=0, perm3=0 for perms=0. Bits [30:27] of GT word all zero.
+        gt_dom_val  = (no_perm_gt >> GT_DOM_BIT) & 0x1
+        gt_perm_val = (no_perm_gt >> 5) & 0x7
+        assert gt_dom_val == 0 and gt_perm_val == 0, \
+            f"GT with no perms should have dom=0 perm=0, got dom={gt_dom_val} perm={gt_perm_val}"
+        assert (no_perm_gt & PERM_MASK_M) == 0, "M should never appear in a raw GT word"
+        print("  PASS: M permission (bit 6) exists but is never stored in GT (dom=perm=0)")
         print("  PASS: M is transient — elevated by microcode on CR only")
 
         print("\n[TEST 5] Boot CR Permission Rules")
@@ -188,15 +186,15 @@ def run_testbench():
         assert load_idx == 42, f"LOAD index mismatch: {load_idx}"
         print("  PASS: LOAD encoding preserves cr_src, cr_dst, and index independently")
 
-        print("\n[TEST 7] TPERM Domain Purity (Reserved Presets)")
+        print("\n[TEST 7] TPERM Preset Validation (Reserved Presets + EXACT)")
         print("-" * 50)
-        rsv0_mask = TPERM_MASKS[TpermPreset.RSV0]
-        rsv1_mask = TPERM_MASKS[TpermPreset.RSV1]
-        rsv2_mask = TPERM_MASKS[TpermPreset.RSV2]
-        assert rsv0_mask == 0, f"RSV0 should be reserved (0), got 0x{rsv0_mask:04x}"
-        assert rsv1_mask == 0, f"RSV1 should be reserved (0), got 0x{rsv1_mask:04x}"
-        assert rsv2_mask == 0, f"RSV2 should be reserved (0), got 0x{rsv2_mask:04x}"
-        print("  PASS: RSV0/RSV1/RSV2 presets are reserved (domain purity violation)")
+        rsv0_mask  = TPERM_MASKS[TpermPreset.RSV0]
+        rsv2_mask  = TPERM_MASKS[TpermPreset.RSV2]
+        exact_mask = TPERM_MASKS[TpermPreset.EXACT]
+        assert rsv0_mask  == 0,    f"RSV0 should be reserved (0), got 0x{rsv0_mask:04x}"
+        assert rsv2_mask  == 0,    f"RSV2 should be reserved (0), got 0x{rsv2_mask:04x}"
+        assert exact_mask is None, f"EXACT (14) should be None (comparison op, not a mask), got {exact_mask!r}"
+        print("  PASS: RSV0/RSV2 reserved; EXACT (preset 14) is comparison operator (mask=None)")
 
         print("\n[TEST 8] Sim-32 Instructions (ADDI, ADD)")
         print("-" * 50)
@@ -299,7 +297,7 @@ def run_testbench():
         ctx.set(dut.dbg_cap_wr_en,   1)
         ctx.set(dut.dbg_cap_wr_addr, 1)
         ctx.set(dut.dbg_cap_wr_data, {
-            "word0_gt":       {"gt_type": GT_TYPE_ABSTRACT, "perms": 0,
+            "word0_gt":       {"gt_type": GT_TYPE_ABSTRACT, "f_flag": 0, "spare": 0, "dom": 0, "perm": 0,
                                "index": A12_GT_INDEX, "version": A12_GT_VERSION},
             "word1_location": 0,
             "word2_limit":    0,
@@ -565,7 +563,7 @@ def run_testbench():
         ctx.set(dut.dbg_cap_wr_en,   1)
         ctx.set(dut.dbg_cap_wr_addr, 1)
         ctx.set(dut.dbg_cap_wr_data, {
-            "word0_gt":       {"gt_type": GT_TYPE_ABSTRACT, "perms": 0,
+            "word0_gt":       {"gt_type": GT_TYPE_ABSTRACT, "f_flag": 0, "spare": 0, "dom": 0, "perm": 0,
                                "index": CALL_GT_INDEX, "version": CALL_GT_VERSION},
             "word1_location": 0,
             "word2_limit":    0,
@@ -660,7 +658,7 @@ def run_testbench():
         ctx.set(dut.dbg_cap_wr_en,   1)
         ctx.set(dut.dbg_cap_wr_addr, 1)
         ctx.set(dut.dbg_cap_wr_data, {
-            "word0_gt":       {"gt_type": GT_TYPE_ABSTRACT, "perms": 0,
+            "word0_gt":       {"gt_type": GT_TYPE_ABSTRACT, "f_flag": 0, "spare": 0, "dom": 0, "perm": 0,
                                "index": I12_GT_INDEX, "version": I12_GT_VERSION},
             "word1_location": 0,
             "word2_limit":    0,
@@ -762,7 +760,7 @@ def run_testbench():
         ctx.set(dut.dbg_cap_wr_en,   1)
         ctx.set(dut.dbg_cap_wr_addr, 1)
         ctx.set(dut.dbg_cap_wr_data, {
-            "word0_gt":       {"gt_type": GT_TYPE_ABSTRACT, "perms": 0,
+            "word0_gt":       {"gt_type": GT_TYPE_ABSTRACT, "f_flag": 0, "spare": 0, "dom": 0, "perm": 0,
                                "index": J12_GT_INDEX, "version": J12_GT_VERSION},
             "word1_location": 0,
             "word2_limit":    0,
@@ -917,7 +915,7 @@ def test_msave_happy_path():
     LIMIT_WORD = LIMIT | (1 << 31)   # b_flag at bit 31 of u32
 
     DST_CAP = {
-        "word0_gt":       {"gt_type": 0, "perms": PERM_MASK_S, "index": 0, "version": 0},
+        "word0_gt":       {"gt_type": 0, "f_flag": 0, "spare": 0, "dom": 1, "perm": 2, "index": 0, "version": 0},
         "word1_location": LOCATION,
         "word2_limit":    LIMIT_WORD,
         "word3_seals":    0,
@@ -1000,16 +998,17 @@ def test_mload_direct_mode():
     GT_INDEX   = 5
     GT_VERSION = 3
     # sub_direct_gt is Signal(32) (plain unsigned), so a plain integer is correct.
-    # GT bit layout (GT_LAYOUT StructLayout used only for Amaranth elaboration;
-    # plain integer encoding: gt_type[0:2]=0, perms[2:8]=PERM_MASK_L, index[8:25], version[25:32])
-    DIRECT_GT = (GT_TYPE_INFORM) | (PERM_MASK_L << 2) | (GT_INDEX << 8) | (GT_VERSION << 25)
+    # New ctmm GT_LAYOUT integer encoding:
+    #   gt_type[1:0]=0 | f_flag[2]=0 | spare[3]=0 | dom[4] | perm[7:5] | index[24:8] | version[31:25]
+    # L-perm: Church domain (dom=1, perm[0]=L=1) → dom at bit 4, perm[0] at bit 5
+    DIRECT_GT = (GT_TYPE_INFORM) | (1 << GT_DOM_BIT) | (1 << 5) | (GT_INDEX << 8) | (GT_VERSION << 25)
 
     NS_BASE  = 0x200
     NS_LIMIT = 10   # 17-bit limit field; index=5 < 10 → in bounds
     # cr15_namespace is Signal(CAP_REG_LAYOUT) — must be a mapping.
     # word2_limit is unsigned(32), so NS_LIMIT (plain int, 17-bit limit at [0:17]) is fine.
     CR15_NS = {
-        "word0_gt":       {"gt_type": 0, "perms": 0, "index": 0, "version": 0},
+        "word0_gt":       {"gt_type": 0, "f_flag": 0, "spare": 0, "dom": 0, "perm": 0, "index": 0, "version": 0},
         "word1_location": NS_BASE,
         "word2_limit":    NS_LIMIT,   # bits [0:17] = limit
         "word3_seals":    0,
@@ -1091,17 +1090,18 @@ def test_mload_direct_mode():
         # cr_wr_data is Signal(CAP_REG_LAYOUT) — a structured Amaranth View.
         # Access individual scalar fields (unsigned) directly; ctx.get() returns int.
         loaded_index = ctx.get(dut.cr_wr_data.word0_gt.index)
-        loaded_perms = ctx.get(dut.cr_wr_data.word0_gt.perms)
+        loaded_dom   = ctx.get(dut.cr_wr_data.word0_gt.dom)
+        loaded_perm  = ctx.get(dut.cr_wr_data.word0_gt.perm)
         assert loaded_index == GT_INDEX, (
             f"mLoad cr_wr.index={loaded_index}  expected={GT_INDEX}"
         )
-        assert (loaded_perms >> PERM_L) & 1, (
-            f"mLoad cr_wr perms=0x{loaded_perms:02X} — L-bit (bit {PERM_L}) not set"
+        assert loaded_dom == 1 and (loaded_perm & 0x1), (
+            f"mLoad cr_wr dom={loaded_dom} perm={loaded_perm:#05b} — L-bit not set (expect dom=1, perm[0]=1)"
         )
 
         print(
             f"\n  mLoad (direct): loaded GT index={loaded_index}, "
-            f"perms=0x{loaded_perms:02X}, from NS entry @0x{NS_ENTRY_ADDR:X}"
+            f"dom={loaded_dom} perm={loaded_perm:#05b} (L-only), from NS entry @0x{NS_ENTRY_ADDR:X}"
         )
 
     sim = Simulator(dut)
@@ -1120,7 +1120,8 @@ def test_mload_msave_round_trip():
     mLoad (direct mode) is run second; its FETCH_LOC response comes from the dict
     and the loaded GT must equal the saved GT.
     """
-    CAP_GT     = (GT_TYPE_INFORM) | (PERM_MASK_L << 2) | (7 << 8) | (1 << 25)
+    # L-perm in new ctmm GT encoding: Church dom=1 (bit 4), perm[0]=L=1 (bit 5)
+    CAP_GT     = (GT_TYPE_INFORM) | (1 << GT_DOM_BIT) | (1 << 5) | (7 << 8) | (1 << 25)
     CLIST_BASE  = 0x500
     CLIST_LIMIT = 16
     INDEX       = 0
@@ -1129,7 +1130,7 @@ def test_mload_msave_round_trip():
     # mSave dst_cap: Signal(CAP_REG_LAYOUT) → must be a mapping.
     # NS_LIMIT_LAYOUT in word2_limit (u32): b_flag at bit 31, limit at bits [0:17].
     CLIST_DST_CAP = {
-        "word0_gt":       {"gt_type": 0, "perms": PERM_MASK_S, "index": 0, "version": 0},
+        "word0_gt":       {"gt_type": 0, "f_flag": 0, "spare": 0, "dom": 1, "perm": 2, "index": 0, "version": 0},
         "word1_location": CLIST_BASE,
         "word2_limit":    CLIST_LIMIT | (1 << 31),   # limit=16, b_flag=1
         "word3_seals":    0,
@@ -1182,7 +1183,7 @@ def test_mload_msave_round_trip():
     NS_LIMIT = 16
     # cr15_namespace is Signal(CAP_REG_LAYOUT) — must be a mapping.
     CR15_NS = {
-        "word0_gt":       {"gt_type": 0, "perms": 0, "index": 0, "version": 0},
+        "word0_gt":       {"gt_type": 0, "f_flag": 0, "spare": 0, "dom": 0, "perm": 0, "index": 0, "version": 0},
         "word1_location": NS_BASE,
         "word2_limit":    NS_LIMIT,   # bits [0:17] = limit
         "word3_seals":    0,
@@ -1249,25 +1250,28 @@ def test_mload_msave_round_trip():
                 break
         assert done_seen, "round-trip mLoad: timed out waiting for sub_done"
 
-        # Verify loaded GT index and type match the saved CAP_GT via field access.
+        # Verify loaded GT index, dom, perm, and type match the saved CAP_GT.
+        # New ctmm GT_LAYOUT: dom at bit 4 (GT_DOM_BIT), perm[2:0] at bits [7:5].
         loaded_index = ctx.get(dut_load.cr_wr_data.word0_gt.index)
-        loaded_perms = ctx.get(dut_load.cr_wr_data.word0_gt.perms)
+        loaded_dom   = ctx.get(dut_load.cr_wr_data.word0_gt.dom)
+        loaded_perm  = ctx.get(dut_load.cr_wr_data.word0_gt.perm)
         loaded_type  = ctx.get(dut_load.cr_wr_data.word0_gt.gt_type)
-        exp_index    = (CAP_GT >> 8) & 0x1FFFF
-        exp_perms    = (CAP_GT >> 2) & 0x3F
-        exp_type     = CAP_GT & 0x3
+        exp_index    = (CAP_GT >> 8) & 0x1FFFF        # index at bits [24:8]
+        exp_dom      = (CAP_GT >> GT_DOM_BIT) & 0x1   # dom at bit 4
+        exp_perm     = (CAP_GT >> 5) & 0x7            # perm[2:0] at bits [7:5]
+        exp_type     = CAP_GT & 0x3                    # gt_type at bits [1:0]
         assert loaded_index == exp_index, (
             f"round-trip: index={loaded_index}  expected={exp_index}"
         )
-        assert loaded_perms == exp_perms, (
-            f"round-trip: perms=0x{loaded_perms:02X}  expected=0x{exp_perms:02X}"
+        assert loaded_dom == exp_dom and loaded_perm == exp_perm, (
+            f"round-trip: dom={loaded_dom} perm={loaded_perm:#05b}  expected dom={exp_dom} perm={exp_perm:#05b}"
         )
         assert loaded_type == exp_type, (
             f"round-trip: gt_type={loaded_type}  expected={exp_type}"
         )
         print(
-            f"\n  round-trip: mSave wrote GT index={exp_index}, perms=0x{exp_perms:02X} → "
-            f"mLoad recovered index={loaded_index}, perms=0x{loaded_perms:02X} ✓"
+            f"\n  round-trip: mSave wrote GT index={exp_index}, dom={exp_dom} perm={exp_perm:#05b} → "
+            f"mLoad recovered index={loaded_index}, dom={loaded_dom} perm={loaded_perm:#05b} ✓"
         )
 
     sim_load = Simulator(dut_load)

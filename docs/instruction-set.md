@@ -237,21 +237,28 @@ ANDs the preset mask with CRd's current permissions. Permissions can only be rem
 
 #### Preset Table
 
-| Code | Name | Bits Checked |
-|------|------|--------------|
-| 0 | CLEAR | None (always Z=1 if GT is non-NULL) |
-| 1 | R | R |
-| 2 | RW | R, W |
-| 3 | X | X |
-| 4 | RX | R, X |
-| 5 | RWX | R, W, X |
-| 6 | L | L |
-| 7 | S | S |
-| 8 | E | E |
-| 9 | LS | L, S |
-| 10–15 | (reserved) | **FAULT** (`TPERM_RSV`) — hard fault, not Z=0 |
+| Code | Name  | Bits Checked / Operation |
+|------|-------|--------------------------|
+|  0   | CLEAR | None (always Z=1 if GT is non-NULL) |
+|  1   | R     | R |
+|  2   | RW    | R, W |
+|  3   | X     | X |
+|  4   | RX    | R, X |
+|  5   | RWX   | R, W, X |
+|  6   | L     | L |
+|  7   | S     | S |
+|  8   | E     | E |
+|  9   | LS    | L, S |
+| 10   | LE    | **FAULT** (`TPERM_RSV`) — E isolation: E may not combine with L |
+| 11   | SE    | **FAULT** (`TPERM_RSV`) — E isolation: E may not combine with S |
+| 12   | LSE   | **FAULT** (`TPERM_RSV`) — E isolation: E may not combine with L or S |
+| 13   | RSV2  | **FAULT** (`TPERM_RSV`) — reserved |
+| 14   | EXACT | Bit-exact identity check: Z=1 iff `CRd.word0 == CRs.word0` (all 32 bits). No fault on mismatch — sets Z=0. |
+| 15   | RSV1  | **FAULT** (`TPERM_RSV`) — reserved |
 
-**E isolation**: E permission must not be combined with L or S in a single GT. E grants entry into an abstraction as a black box; L or S grant c-list visibility. A holder of both could inspect or modify the abstraction's hidden implementation — violating encapsulation. Codes 10 (LE), 11 (SE), 12 (LSE) are therefore reserved. Codes 13–15 are reserved for cross-domain and other reasons.
+**E isolation**: E permission must not be combined with L or S in a single GT. E grants entry into an abstraction as a black box; L or S grant c-list visibility. A holder of both could inspect or modify the abstraction's hidden implementation — violating encapsulation. Codes 10 (LE), 11 (SE), 12 (LSE) are therefore reserved.
+
+**EXACT (preset 14)**: Credential identity check. Compares CRd.word0 (the 32-bit GT word) against CRs.word0 bit-for-bit. Sets Z=1 if they are identical, Z=0 otherwise. EXACT never faults — it is a pure comparison operator. Use it to verify that a credential has not been attenuated or substituted.
 
 **B-modifier** (bit 4 of preset code): Adding B (0x10) clears the B-bit in the GT on a passing check — e.g. `TPERM CR5, EB` (code 0x18) checks E permission and, if it passes, clears the Bind bit. Named B-variants: RB, RWB, XB, RXB, RWXB, LB, SB, EB, LSB.
 

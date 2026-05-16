@@ -21,15 +21,21 @@ def encode_turing(opcode, cond=CondCode.AL, dr_dst=0, dr_src=0, imm=0):
            ((dr_dst & 0xF) << 19) | ((dr_src & 0xF) << 15) | (imm & 0x7FFF)
 
 
-def make_gt(gt_type=GT_TYPE_NULL, perms=0, slot_id=0, gt_seq=0, b_flag=0):
-    """Encode a 32-bit Golden Token word.
+def make_gt(gt_type=GT_TYPE_NULL, perms=0, slot_id=0, gt_seq=0, b_flag=0, f_flag=0):
+    """Encode a 32-bit Golden Token word using the new dom+perm[2:0] format.
 
-    GT Word 0 field layout (current — matches CLOOMC listing in secure_boot_tutorial.js):
+    GT Word 0 field layout:
       [15:0]  slot_id   — 16-bit namespace slot index
       [22:16] gt_seq    — 7-bit revocation counter (must match NS entry word2[31:25])
-      [24:23] gt_type   — 00=NULL  01=Inform (GT_TYPE_INFORM)  10=Outform (GT_TYPE_OUTFORM)  11=Abstract (GT_TYPE_ABSTRACT)
-      [30:25] perms     — R W X L S E (one bit each, LSB=R)
-      [31]    b_flag    — bindable override (1=IDE-bound peripheral; excluded from CRC seal input)
+      [24:23] gt_type   — 00=NULL  01=Inform (GT_TYPE_INFORM)  10=Outform  11=Abstract
+      [25]    f_flag    — Far indicator (per-token; new — freed from old perms[5] spare)
+      [26]    spare     — reserved, zero
+      [27]    dom       — 0=Turing {X,W,R}, 1=Church {E,S,L}
+      [30:28] perm      — 3-bit payload (dom=0: X/W/R; dom=1: E/S/L)
+      [31]    b_flag    — bindable override (IO devices; excluded from CRC seal input)
+
+    perms: 6-bit logical mask using PERM_MASK_* constants (caller-facing, unchanged API).
+    The encoding converts automatically via gt_encode_perm().
 
     b_flag=1 for IO device GTs (LED, UART, BTN, TIMER): marks the GT as bound to a physical
     resource by the system configurator. Excluded from GT[24:0] CRC input so runtime/debugger
@@ -37,7 +43,9 @@ def make_gt(gt_type=GT_TYPE_NULL, perms=0, slot_id=0, gt_seq=0, b_flag=0):
 
     CLOOMC listing cross-ref: simulator/secure_boot_tutorial.js §"Secure Boot — Overview"
     """
-    return (b_flag << 31) | (perms << 25) | (gt_type << 23) | (gt_seq << 16) | slot_id
+    dom, perm3 = gt_encode_perm(perms)
+    return (b_flag << 31) | (perm3 << 28) | (dom << 27) | (f_flag << 25) | \
+           (gt_type << 23) | (gt_seq << 16) | slot_id
 
 
 # ---------------------------------------------------------------------------

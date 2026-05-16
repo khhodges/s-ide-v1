@@ -73,22 +73,33 @@ BOOT_ROM_WORDS = [
 ]
 
 
-def _abstract_gt_word(perms_dict):
-    """Encode a perms dict as an Abstract GT word (bits 30:25 = perms[5:0]).
+def _encode_perm(perms_dict):
+    """Encode {R,W,X,L,S,E} → (dom, perm3) using Turing/Church mutual exclusion.
 
-    Mirrors hardware/boot_rom.py _abstract_gt_word() and simulator.js
-    getPermBits() << 25.  Abstract GTs encode only the permission intent;
-    slot_id, gt_seq, gt_type, and b_flag are all zero.
+    Church side (L|S|E) dominates if any Church bit is set.
+    Mirrors hardware/hw_types.py gt_encode_perm() and simulator.js createGT().
+    Returns (dom: int 0–1, perm3: int 0–7).
     """
-    mask = (
-        (1  if perms_dict.get("R") else 0) |
-        (2  if perms_dict.get("W") else 0) |
-        (4  if perms_dict.get("X") else 0) |
-        (8  if perms_dict.get("L") else 0) |
-        (16 if perms_dict.get("S") else 0) |
-        (32 if perms_dict.get("E") else 0)
-    )
-    return (mask & 0x3F) << 25
+    E = 1 if perms_dict.get("E") else 0
+    S = 1 if perms_dict.get("S") else 0
+    L = 1 if perms_dict.get("L") else 0
+    if E or S or L:
+        return 1, (E << 2) | (S << 1) | L
+    X = 1 if perms_dict.get("X") else 0
+    W = 1 if perms_dict.get("W") else 0
+    R = 1 if perms_dict.get("R") else 0
+    return 0, (X << 2) | (W << 1) | R
+
+
+def _abstract_gt_word(perms_dict):
+    """Encode a perms dict as a GT word with slot_id=0, gt_seq=0, gt_type=0, b_flag=0.
+
+    New GT layout: dom[27], perm[30:28].
+    Mirrors hardware/boot_rom.py _abstract_gt_word() and simulator.js createGT().
+    """
+    dom, perm3 = _encode_perm(perms_dict)
+    return _u32(((dom   & 0x1) << 27) |
+                ((perm3 & 0x7) << 28))
 
 
 # Abstract GT device-class constants (Task #406) — must match simulator.js
@@ -234,6 +245,11 @@ def _u32(x):
 
 
 def perm_bits(perms):
+    """Return the 6-bit logical permission mask (for legacy callers only).
+
+    Bit layout: R=0, W=1, X=2, L=3, S=4, E=5.  B (bit 6) is NOT a GT perm.
+    Use _encode_perm() for new GT word construction.
+    """
     bits = 0
     if perms.get("R"): bits |= 1
     if perms.get("W"): bits |= 2
@@ -241,8 +257,7 @@ def perm_bits(perms):
     if perms.get("L"): bits |= 8
     if perms.get("S"): bits |= 16
     if perms.get("E"): bits |= 32
-    if perms.get("B"): bits |= 64
-    return bits & 0x7F
+    return bits & 0x3F
 
 
 def pack_ns_word1(limit17, b, f, g, gt_type, clist_count):
@@ -267,10 +282,17 @@ def pack_lump_header(n_minus_6, cw, cc, typ=0):
 
 
 def create_gt(gt_seq, slot_id, perms, gt_type):
-    p = (perm_bits(perms) << 25) & 0xFFFFFFFF
-    t = ((gt_type & 0x3) << 23) & 0xFFFFFFFF
+    """Encode a 32-bit GT word using the new GT layout.
+
+    New layout: slot_id[15:0] | gt_seq[22:16] | gt_type[24:23]
+                | f_flag[25]=0 | spare[26]=0 | dom[27] | perm[30:28] | b_flag[31]=0
+    """
+    dom, perm3 = _encode_perm(perms)
+    t = ((gt_type & 0x3)  << 23) & 0xFFFFFFFF
     s = ((gt_seq  & 0x7F) << 16) & 0xFFFFFFFF
-    return _u32(p | t | s | (slot_id & 0xFFFF))
+    d = ((dom     & 0x1)  << 27) & 0xFFFFFFFF
+    p = ((perm3   & 0x7)  << 28) & 0xFFFFFFFF
+    return _u32(d | p | t | s | (slot_id & 0xFFFF))
 
 
 def compute_seal(location, limit17):

@@ -38,8 +38,42 @@ CR_NAMESPACE = 15
 
 GT_VERSION_BITS = 7
 GT_INDEX_BITS   = 17
-GT_PERM_BITS    = 6
+GT_PERM_BITS    = 4    # dom(1) + perm[2:0](3) — was 6
 GT_TYPE_BITS    = 2
+
+GT_FFLAG_BIT    = 2    # bit position of f_flag in ctmm GT word
+GT_SPARE_BIT    = 3    # bit position of spare  in ctmm GT word
+GT_DOM_BIT      = 4    # bit position of dom    in ctmm GT word
+
+
+def gt_encode_perm(perms_mask: int) -> tuple:
+    """Encode 6-bit logical perms_mask → (dom, perm3) for the ctmm_cap_amaranth GT_LAYOUT."""
+    R = (perms_mask >> PERM_R) & 1
+    W = (perms_mask >> PERM_W) & 1
+    X = (perms_mask >> PERM_X) & 1
+    L = (perms_mask >> PERM_L) & 1
+    S = (perms_mask >> PERM_S) & 1
+    E = (perms_mask >> PERM_E) & 1
+    if L or S or E:
+        return 1, (E << 2) | (S << 1) | L
+    else:
+        return 0, (X << 2) | (W << 1) | R
+
+
+def gt_decode_perm(dom: int, perm3: int) -> int:
+    """Decode (dom, perm3) → 6-bit logical perms_mask."""
+    if dom:
+        L = (perm3 >> 0) & 1
+        S = (perm3 >> 1) & 1
+        E = (perm3 >> 2) & 1
+        return (L << PERM_L) | (S << PERM_S) | (E << PERM_E)
+    else:
+        R = (perm3 >> 0) & 1
+        W = (perm3 >> 1) & 1
+        X = (perm3 >> 2) & 1
+        return (R << PERM_R) | (W << PERM_W) | (X << PERM_X)
+
+
 GT_WIDTH        = 32
 
 CR_WIDTH        = 128
@@ -148,7 +182,7 @@ class TpermPreset(IntEnum):
     SE    = 11
     LSE   = 12
     RSV0  = 13
-    RSV1  = 14
+    EXACT = 14   # Credential identity check: CRd word0 == CRs word0 (32-bit); faults CRED_MISMATCH
     RSV2  = 15
 
 
@@ -167,7 +201,7 @@ TPERM_MASKS = {
     TpermPreset.SE:    PERM_MASK_S | PERM_MASK_E,
     TpermPreset.LSE:   PERM_MASK_L | PERM_MASK_S | PERM_MASK_E,
     TpermPreset.RSV0:  0x00,
-    TpermPreset.RSV1:  0x00,
+    TpermPreset.EXACT: None,   # EXACT is a comparison, not a restriction preset
     TpermPreset.RSV2:  0x00,
 }
 

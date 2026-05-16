@@ -511,7 +511,8 @@ class CMCapCore(Elaboratable):
                     ns_gt_view.index.eq(0),
                     ns_gt_view.version.eq(0),
                     ns_gt_view.gt_type.eq(GT_TYPE_INFORM),
-                    ns_gt_view.perms.eq(0),
+                    ns_gt_view.dom.eq(0),   # Turing, no perms (M-only, transient)
+                    ns_gt_view.perm.eq(0),
                 ]
                 m.d.comb += [boot_wr_en[15].eq(1), boot_wr_gt[15].eq(ns_gt)]
             with m.Case(BootState.INIT_THRD):
@@ -521,7 +522,8 @@ class CMCapCore(Elaboratable):
                     thrd_gt_view.index.eq(3),
                     thrd_gt_view.version.eq(0),
                     thrd_gt_view.gt_type.eq(GT_TYPE_INFORM),
-                    thrd_gt_view.perms.eq(0),
+                    thrd_gt_view.dom.eq(0),   # Turing, no perms (M-only, transient)
+                    thrd_gt_view.perm.eq(0),
                 ]
                 m.d.comb += [boot_wr_en[8].eq(1), boot_wr_gt[8].eq(thrd_gt)]
             with m.Case(BootState.LOAD_NUC):
@@ -531,7 +533,8 @@ class CMCapCore(Elaboratable):
                     cr6_gt_view.index.eq(2),
                     cr6_gt_view.version.eq(0),
                     cr6_gt_view.gt_type.eq(GT_TYPE_INFORM),
-                    cr6_gt_view.perms.eq(PERM_MASK_E),
+                    cr6_gt_view.dom.eq(1),     # Church domain
+                    cr6_gt_view.perm.eq(0b100),  # E = perm[2] in Church domain
                 ]
                 m.d.comb += [boot_wr_en[6].eq(1), boot_wr_gt[6].eq(cr6_gt)]
 
@@ -541,7 +544,8 @@ class CMCapCore(Elaboratable):
                     cr7_gt_view.index.eq(1),
                     cr7_gt_view.version.eq(0),
                     cr7_gt_view.gt_type.eq(GT_TYPE_INFORM),
-                    cr7_gt_view.perms.eq(PERM_MASK_X),
+                    cr7_gt_view.dom.eq(0),     # Turing domain
+                    cr7_gt_view.perm.eq(0b100),  # X = perm[2] in Turing domain
                 ]
                 m.d.comb += [boot_wr_en[7].eq(1), boot_wr_gt[7].eq(cr7_gt)]
 
@@ -551,7 +555,8 @@ class CMCapCore(Elaboratable):
                     cr5_gt_view.index.eq(4),
                     cr5_gt_view.version.eq(0),
                     cr5_gt_view.gt_type.eq(GT_TYPE_INFORM),
-                    cr5_gt_view.perms.eq(PERM_MASK_L | PERM_MASK_S),
+                    cr5_gt_view.dom.eq(1),     # Church domain
+                    cr5_gt_view.perm.eq(0b011),  # L+S: L=perm[0], S=perm[1] in Church domain
                 ]
                 m.d.comb += [boot_wr_en[5].eq(1), boot_wr_gt[5].eq(cr5_gt)]
 

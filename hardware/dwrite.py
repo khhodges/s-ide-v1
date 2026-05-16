@@ -66,7 +66,7 @@ class ChurchDWrite(Elaboratable):
 
         m.d.comb += [
             gt_null.eq(cr_view.word0_gt.as_value() == 0),
-            has_w.eq(cr_gt.perms[PERM_W]),
+            has_w.eq(~cr_gt.dom & cr_gt.perm[PERM_W]),   # Turing dom=0, perm[1]=W
             limit.eq(cr_w2.limit_offset[:16]),
             in_bounds.eq(imm_reg <= limit),
         ]

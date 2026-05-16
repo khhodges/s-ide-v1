@@ -6,16 +6,27 @@ from .layouts import GT_LAYOUT
 
 
 def perm_bit(gt_signal, perm_idx: int):
-    """Return an Amaranth expression that is 1 iff gt_signal's perm bit at perm_idx is set.
+    """Return an Amaranth expression: 1 iff gt_signal carries logical perm at perm_idx.
 
-    Single source of truth for inline single-perm-bit extraction.
-    Use ChurchPermCheck for full checks (null GT, bounds, version, seal).
+    perm_idx: PERM_R=0, PERM_W=1, PERM_X=2 (Turing); PERM_L=3, PERM_S=4, PERM_E=5 (Church).
 
-    Args:
-        gt_signal: Raw GT word signal (GT_LAYOUT shape or compatible).
-        perm_idx:  Bit index into the perms field — one of PERM_E, PERM_L, PERM_X, etc.
+    Uses the new dom+perm[2:0] GT encoding:
+      dom=0 (Turing): perm[2]=X, perm[1]=W, perm[0]=R
+      dom=1 (Church): perm[2]=E, perm[1]=S, perm[0]=L
+
+    Accepts a raw Signal (shape=GT_LAYOUT or 32-bit) or an existing View(GT_LAYOUT, ...).
     """
-    return View(GT_LAYOUT, gt_signal).perms[perm_idx]
+    try:
+        dom  = gt_signal.dom
+        perm = gt_signal.perm
+    except AttributeError:
+        v = View(GT_LAYOUT, gt_signal)
+        dom  = v.dom
+        perm = v.perm
+    if perm_idx < 3:   # Turing bit (R=0, W=1, X=2)
+        return ~dom & perm[perm_idx]
+    else:              # Church bit (L=3, S=4, E=5)
+        return dom & perm[perm_idx - 3]
 
 
 class ChurchPermCheck(Elaboratable):
@@ -51,7 +62,20 @@ class ChurchPermCheck(Elaboratable):
         m = Module()
 
         gt_view = View(GT_LAYOUT, self.gt_in)
-        gt_perms = gt_view.perms
+
+        # Decode dom+perm[2:0] → 6-bit logical perms (combinational):
+        #   Turing (dom=0): logical[2:0] = perm (X W R), logical[5:3] = 0
+        #   Church (dom=1): logical[5:3] = perm (E S L), logical[2:0] = 0
+        # Cat(a, b) places a at LSB, so:
+        #   Cat(gt_view.perm, C(0,3)) → perm at [2:0], zeros at [5:3]  (Turing)
+        #   Cat(C(0,3), gt_view.perm) → zeros at [2:0], perm at [5:3]  (Church)
+        gt_perms = Signal(6)
+        m.d.comb += gt_perms.eq(
+            Mux(gt_view.dom,
+                Cat(C(0, 3), gt_view.perm),   # Church: perm → [5:3]
+                Cat(gt_view.perm, C(0, 3))    # Turing: perm → [2:0]
+            )
+        )
 
         is_null_gt = Signal()
         perms_match = Signal()
@@ -62,13 +86,9 @@ class ChurchPermCheck(Elaboratable):
             self.perm_granted.eq(~is_null_gt & perms_match),
         ]
 
-        has_turing = Signal()
-        has_church = Signal()
-        m.d.comb += [
-            has_turing.eq((gt_perms & DATA_PERMS) != 0),
-            has_church.eq((gt_perms & CAP_PERMS) != 0),
-            self.domain_purity_ok.eq(~(has_turing & has_church)),
-        ]
+        # Domain purity is structurally enforced by the dom bit in the GT encoding.
+        # A GT can never carry both Turing and Church permissions simultaneously.
+        m.d.comb += self.domain_purity_ok.eq(1)
 
         m.d.comb += self.bounds_ok.eq(~self.check_bounds | (self.access_index < self.limit[:16]))
         m.d.comb += self.version_ok.eq(~self.check_version | (self.gt_seq == self.stored_gt_seq))
@@ -119,11 +139,6 @@ class ChurchPermCheck(Elaboratable):
                 m.d.comb += [
                     self.fault_valid.eq(1),
                     self.fault_type.eq(FaultType.SEAL),
-                ]
-            with m.Elif(self.check_domain_purity & ~self.domain_purity_ok):
-                m.d.comb += [
-                    self.fault_valid.eq(1),
-                    self.fault_type.eq(FaultType.DOMAIN_PURITY),
                 ]
 
         return m

@@ -1,6 +1,6 @@
 # Golden Tokens
 
-**v1.0 — 2026-04-29**
+**v1.1 — 2026-05-16**
 **CONFIDENTIAL**
 
 ## What Are Golden Tokens?
@@ -21,21 +21,23 @@ Without a valid Golden Token, no operation proceeds. Any attempt to use an inval
 The Church Machine uses a 32-bit Golden Token with a precisely defined bit layout:
 
 ```
-31      25 24  23 22      16 15           0
-┌─────────┬──────┬──────────┬─────────────┐
-│B R W X  │gt_type│  gt_seq │   slot_id   │
-│ L S E   │ [2]  │   [7]    │    [16]     │
-│  [7]    │      │          │             │
-└─────────┴──────┴──────────┴─────────────┘
+31  30 28 27  26  25 24  23 22      16 15           0
+┌────┬─────┬────┬────┬────┬──────┬──────────┬─────────────┐
+│ b  │perm │dom │spr │ f  │gt_typ│  gt_seq  │   slot_id   │
+│[1] │[3]  │[1] │[1] │[1] │ [2]  │   [7]    │    [16]     │
+└────┴─────┴────┴────┴────┴──────┴──────────┴─────────────┘
 ```
 
-| Bits  | Field      | Width | Description |
-|-------|-----------|-------|-------------|
-| [15:0]  | `slot_id`   | 16 | Namespace slot ID (0–65,535) |
-| [22:16] | `gt_seq`    | 7  | Revocation sequence counter; must match NS Entry Word 1 `gt_seq` |
-| [24:23] | `gt_type`   | 2  | GT class (NULL / Inform / Outform / Abstract) |
-| [30:25] | `perms`     | 6  | R, W, X, L, S, E (see below) |
-| [31]    | `b_flag`    | 1  | Bind flag — 1 = GT may be propagated via mSave |
+| Bits    | Field     | Width | Description |
+|---------|-----------|-------|-------------|
+| [15:0]  | `slot_id` | 16 | Namespace slot ID (0–65,535) |
+| [22:16] | `gt_seq`  | 7  | Revocation sequence counter; must match NS Entry Word 1 `gt_seq` |
+| [24:23] | `gt_type` | 2  | GT class (NULL / Inform / Outform / Abstract) |
+| [25]    | `f_flag`  | 1  | Far indicator — set when the GT targets a remote or far resource |
+| [26]    | `spare`   | 1  | Reserved, always zero |
+| [27]    | `dom`     | 1  | Domain: 0 = Turing {X, W, R}, 1 = Church {E, S, L} |
+| [30:28] | `perm`    | 3  | Permission payload (dom=0: perm[2]=X, perm[1]=W, perm[0]=R; dom=1: perm[2]=E, perm[1]=S, perm[0]=L) |
+| [31]    | `b_flag`  | 1  | Bind flag — 1 = GT may be propagated via mSave |
 
 Each capability register in Church Machine is 128 bits wide (4 x 32-bit words):
 
@@ -50,20 +52,22 @@ Each capability register in Church Machine is 128 bits wide (4 x 32-bit words):
 
 ## GT Permission Bits (Church Machine)
 
-The GT stores exactly 6 permission bits in bits [30:25]. These are the mutually exclusive access rights -- three for data operations (Turing domain) and three for capability operations (Church domain):
+The GT encodes permissions using a **1-bit domain selector (`dom`) and a 3-bit permission payload (`perm[2:0]`)** at bits [30:27]. Turing and Church permissions are mutually exclusive by construction — the `dom` bit selects which set the 3-bit payload refers to:
 
-| Bit (in perms field) | Absolute bit | Name | Domain | Description |
-|-----|------|------|--------|-------------|
-| 0 | 25 | R | Turing | Read data from the referenced resource |
-| 1 | 26 | W | Turing | Write data to the referenced resource |
-| 2 | 27 | X | Turing | Execute code at the referenced location |
-| 3 | 28 | L | Church | Load a Golden Token from a C-List via mLoad |
-| 4 | 29 | S | Church | Save a Golden Token to a C-List via mSave |
-| 5 | 30 | E | Church | Enter an abstraction (call a service) |
+```
+Encoding:  dom=0 (Turing): perm[2]=X, perm[1]=W, perm[0]=R
+           dom=1 (Church):  perm[2]=E, perm[1]=S, perm[0]=L
+```
+
+| perm bit | dom=0 (Turing) | dom=1 (Church) | Description |
+|----------|---------------|----------------|-------------|
+| perm[0]  | R | L | Turing: Read data. Church: Load a GT from C-List via mLoad |
+| perm[1]  | W | S | Turing: Write data. Church: Save a GT to C-List via mSave |
+| perm[2]  | X | E | Turing: Execute code. Church: Enter an abstraction |
 
 ### Domain Purity
 
-A GT may carry Turing permissions (R, W, X) **or** Church permissions (L, S, E), but **never both**. This is enforced in hardware at TPERM time — any attempt to create a mixed-domain GT raises a DOMAIN_PURITY fault.
+A GT carries **either** Turing permissions (R, W, X) **or** Church permissions (L, S, E) — never both. Domain purity is **structurally enforced by the encoding**: the `dom` bit selects which interpretation applies, making a mixed-domain GT impossible to represent. The encoder clamps to Church (dom=1) when any Church bit (L, S, E) is present.
 
 ### E Isolation
 

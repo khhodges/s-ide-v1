@@ -183,7 +183,7 @@ class ChurchCall(Elaboratable):
         cr5_has_r = Signal()
         m.d.comb += [
             cr5_null.eq(cr5_gt.gt_type == GT_TYPE_NULL),
-            cr5_has_r.eq(cr5_gt.perms[PERM_R]),
+            cr5_has_r.eq(~cr5_gt.dom & cr5_gt.perm[PERM_R]),   # Turing dom=0, perm[0]=R
         ]
 
         cr12_cap_view = View(CAP_REG_LAYOUT, self.cr12_thread)
@@ -267,7 +267,10 @@ class ChurchCall(Elaboratable):
             cr14_wm_gt.slot_id.eq(cr14_lat_gt.slot_id),
             cr14_wm_gt.gt_seq.eq(cr14_lat_gt.gt_seq),
             cr14_wm_gt.gt_type.eq(cr14_lat_gt.gt_type),
-            cr14_wm_gt.perms.eq((cr14_lat_gt.perms & PERM_MASK_R) | PERM_MASK_X),
+            # Turing domain (dom=0), force X=1, preserve R from source, W=0.
+            # Source CR14 is always Turing (code cap), so cr14_lat_gt.perm[0] = R bit.
+            cr14_wm_gt.dom.eq(0),
+            cr14_wm_gt.perm.eq(Cat(cr14_lat_gt.perm[0], C(0, 1), C(1, 1))),  # {X=1, W=0, R=src}
             cr14_wm_gt.b_flag.eq(cr14_lat_gt.b_flag),
             cr14_wm_view.word1_location.eq(cr14_lat_view.word1_location + 4),
             cr14_wm_view.word2_w2.eq(cr14_lat_view.word2_w2),
@@ -301,7 +304,8 @@ class ChurchCall(Elaboratable):
             cr14_wl_gt.slot_id.eq(cr14_wm_gt.slot_id),
             cr14_wl_gt.gt_seq.eq(cr14_wm_gt.gt_seq),
             cr14_wl_gt.gt_type.eq(cr14_wm_gt.gt_type),
-            cr14_wl_gt.perms.eq(cr14_wm_gt.perms),        # includes PERM_X (M=1)
+            cr14_wl_gt.dom.eq(cr14_wm_gt.dom),    # copy dom+perm (includes PERM_X / M=1)
+            cr14_wl_gt.perm.eq(cr14_wm_gt.perm),
             cr14_wl_gt.b_flag.eq(cr14_wm_gt.b_flag),
             cr14_wl_view.word1_location.eq(cr14_wm_view.word1_location),  # NS_base+4
             cr14_wl_w2.limit_offset.eq(cw_reg - 1),                       # cw-1 (inclusive last valid PC; matches NS format convention)
@@ -329,7 +333,10 @@ class ChurchCall(Elaboratable):
             cr6_adj_gt.slot_id.eq(cr6_lat_gt.slot_id),
             cr6_adj_gt.gt_seq.eq(cr6_lat_gt.gt_seq),
             cr6_adj_gt.gt_type.eq(cr6_lat_gt.gt_type),
-            cr6_adj_gt.perms.eq(PERM_MASK_E),   # fixed E-only — CR6 always carries E (recursive CALL; matches boot LOAD_NUC)
+            # Fixed E-only — CR6 always carries E (recursive CALL; matches boot LOAD_NUC).
+            # Church domain (dom=1), perm[2]=E.
+            cr6_adj_gt.dom.eq(1),
+            cr6_adj_gt.perm.eq(0b100),   # E = perm[2] in Church domain
             cr6_adj_gt.b_flag.eq(cr6_lat_gt.b_flag),
             # base = NS_base + (lumpSize − cc) × 4  (byte address of c-list word 0)
             cr6_adj_view.word1_location.eq(

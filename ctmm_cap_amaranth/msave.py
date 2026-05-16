@@ -34,7 +34,7 @@ class CMCapMSave(Elaboratable):
         dst_limit = View(NS_LIMIT_LAYOUT, dst_view.word2_limit)
         src_gt_view = View(GT_LAYOUT, src_gt_reg)
 
-        dst_has_s_perm = dst_gt.perms[PERM_S]
+        dst_has_s_perm = dst_gt.dom & dst_gt.perm[1]   # Church dom=1, perm[1]=S
         dst_has_bind = dst_limit.b_flag
         index_in_bounds = Signal()
         m.d.comb += index_in_bounds.eq(index_reg < dst_limit.limit)

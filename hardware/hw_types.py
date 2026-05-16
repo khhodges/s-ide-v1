@@ -35,9 +35,46 @@ CR_NAMESPACE    = 15
 
 GT_SEQ_BITS     = 7
 GT_SLOT_ID_BITS = 16
-GT_PERM_BITS    = 6
+GT_PERM_BITS    = 4    # dom(1) + perm[2:0](3) — was 6; compressed via Turing/Church mutual exclusion
 GT_TYPE_BITS    = 2
 GT_WIDTH        = 32
+
+GT_FFLAG_BIT    = 25   # bit position of f_flag in GT word
+GT_SPARE_BIT    = 26   # bit position of spare in GT word
+GT_DOM_BIT      = 27   # bit position of dom   in GT word
+
+
+def gt_encode_perm(perms_mask: int) -> tuple:
+    """Encode 6-bit logical perms_mask → (dom: int, perm3: int) for the new GT_LAYOUT.
+
+    perms_mask bit indices: R=0, W=1, X=2, L=3, S=4, E=5 (PERM_MASK_* constants).
+    Returns (dom, perm3) where dom=0 means Turing {X,W,R}, dom=1 means Church {E,S,L}.
+    Church bits take priority if any are set (domain-purity is caller's responsibility).
+    """
+    R = (perms_mask >> PERM_R) & 1
+    W = (perms_mask >> PERM_W) & 1
+    X = (perms_mask >> PERM_X) & 1
+    L = (perms_mask >> PERM_L) & 1
+    S = (perms_mask >> PERM_S) & 1
+    E = (perms_mask >> PERM_E) & 1
+    if L or S or E:
+        return 1, (E << 2) | (S << 1) | L
+    else:
+        return 0, (X << 2) | (W << 1) | R
+
+
+def gt_decode_perm(dom: int, perm3: int) -> int:
+    """Decode (dom, perm3) back to the 6-bit logical perms_mask used by PERM_MASK_* constants."""
+    if dom:
+        L = (perm3 >> 0) & 1
+        S = (perm3 >> 1) & 1
+        E = (perm3 >> 2) & 1
+        return (L << PERM_L) | (S << PERM_S) | (E << PERM_E)
+    else:
+        R = (perm3 >> 0) & 1
+        W = (perm3 >> 1) & 1
+        X = (perm3 >> 2) & 1
+        return (R << PERM_R) | (W << PERM_W) | (X << PERM_X)
 
 CR_WIDTH        = 96
 WORD_WIDTH      = 32
@@ -197,12 +234,12 @@ class TpermPreset(IntEnum):
     S     = 7
     E     = 8
     LS    = 9
-    RSV3   = 10
-    RSV4   = 11
-    RSV5   = 12
-    RSV2   = 13
-    RSV0   = 14
-    RSV1   = 15
+    RSV3  = 10
+    RSV4  = 11
+    RSV5  = 12
+    RSV2  = 13
+    EXACT = 14   # Credential identity check: CRd word0 == CRs word0 (all 32 bits); faults CRED_MISMATCH if not equal
+    RSV1  = 15
 
 
 TPERM_MASKS = {
@@ -220,7 +257,7 @@ TPERM_MASKS = {
     TpermPreset.RSV4:  0x00,
     TpermPreset.RSV5:  0x00,
     TpermPreset.RSV2:  0x00,
-    TpermPreset.RSV0:  0x00,
+    TpermPreset.EXACT: None,   # EXACT is a comparison, not a restriction preset
     TpermPreset.RSV1:  0x00,
 }
 

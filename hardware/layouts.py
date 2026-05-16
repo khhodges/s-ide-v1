@@ -2,12 +2,23 @@ from amaranth import *
 from amaranth.lib.data import StructLayout
 
 GT_LAYOUT = StructLayout({
-    "slot_id": unsigned(16),
-    "gt_seq":  unsigned(7),
-    "gt_type": unsigned(2),
-    "perms":   unsigned(6),
-    "b_flag":  unsigned(1),
+    "slot_id": unsigned(16),   # [15:0]  — namespace slot index
+    "gt_seq":  unsigned(7),    # [22:16] — revocation counter
+    "gt_type": unsigned(2),    # [24:23] — 00=NULL 01=Inform 10=Outform 11=Abstract
+    "f_flag":  unsigned(1),    # [25]    — Far indicator (per-token; replaces NS Word-1 f_flag)
+    "spare":   unsigned(1),    # [26]    — reserved/zero
+    "dom":     unsigned(1),    # [27]    — domain: 0=Turing {X,W,R}, 1=Church {E,S,L}
+    "perm":    unsigned(3),    # [30:28] — 3-bit payload (dom=0: X/W/R; dom=1: E/S/L)
+    "b_flag":  unsigned(1),    # [31]    — bindable override (I/O devices; excluded from CRC)
 })
+
+# GT encoding reference:
+#   Turing domain (dom=0): perm[2]=X, perm[1]=W, perm[0]=R
+#   Church  domain (dom=1): perm[2]=E, perm[1]=S, perm[0]=L
+#
+# Hardcoded GT word cross-ref (slot=2, INFORM, E-perm):
+#   Old: 0x40800002 (perms[5:0]@[30:25], E=bit30)
+#   New: 0x48800002 (dom=1@[27], perm=0b100(E)@[30:28])
 
 CAP_REG_LAYOUT = StructLayout({
     "word0_gt":       GT_LAYOUT,
@@ -37,8 +48,8 @@ LUMP_HEADER_LAYOUT = StructLayout({
 #                            invalidating W2 (integrity32 masks g_bit before computing the check).
 #   word2_integrity   (+8):  integrity32(W0, W1 with g_bit cleared) — 32-bit parallel check.
 #   word3_abstract_gt (+12): Abstract GT — advisory annotation for the NS abstraction only.
-#                            Encodes the permission profile expected for this slot (perms[30:25];
-#                            slot_id, gt_seq, gt_type, b_flag are all zero in this word).
+#                            Uses full GT_LAYOUT encoding (dom+perm[2:0] at [30:27], f_flag at [25]);
+#                            slot_id=0, gt_seq=0, gt_type=0b00 (NULL), b_flag=0 in this advisory word.
 #                            NOT covered by integrity32 (advisory; NS abstraction trusts it,
 #                            user-mode LOAD cannot observe it — ChurchMLoad gates on M-bit).
 #

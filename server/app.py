@@ -850,15 +850,15 @@ def namespace_lump_json():
         if not label:
             label = "(free)" if (w0 == 0 and w1 == 0) else f"slot{i}"
 
-        perm_mask = (w3 >> 25) & 0x3F
-        perms = {
-            "R": bool(perm_mask & 1),
-            "W": bool(perm_mask & 2),
-            "X": bool(perm_mask & 4),
-            "L": bool(perm_mask & 8),
-            "S": bool(perm_mask & 16),
-            "E": bool(perm_mask & 32),
-        }
+        # New GT layout: dom[27], perm[30:28]; dom=0→Turing{X,W,R}, dom=1→Church{E,S,L}
+        _dom   = (w3 >> 27) & 0x1
+        _perm3 = (w3 >> 28) & 0x7
+        if _dom == 1:
+            perms = {"R": False, "W": False, "X": False,
+                     "L": bool(_perm3 & 1), "S": bool(_perm3 & 2), "E": bool(_perm3 & 4)}
+        else:
+            perms = {"R": bool(_perm3 & 1), "W": bool(_perm3 & 2), "X": bool(_perm3 & 4),
+                     "L": False, "S": False, "E": False}
 
         lump_base       = w0 if i != 0 else 0
         lump_size_words = 0

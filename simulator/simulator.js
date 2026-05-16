@@ -139,13 +139,14 @@ class ChurchSimulator {
 
         // TPERM preset → required-permission array.
         // Exposed as an instance property so tests can inject non-standard
-        // presets to exercise the X⊕LSE domain-purity fault path.
-        // Null entries (codes 11–15) are reserved presets — _execTperm faults TPERM_RSV.
+        // presets to exercise the domain-purity fault path.
+        // null  = reserved preset  → _execTperm faults TPERM_RSV.
+        // 'EXACT' = preset 14, identity check CRd.word0 === CRs.word0, faults BIND on mismatch.
         this.tpermPresetMasks = [
-            [],                ['R'],           ['R','W'],       ['X'],
-            ['R','X'],         ['R','W','X'],   ['L'],           ['S'],
-            ['E'],             ['L','S'],       ['W'],           null,
-            null,              null,  null,  null,
+            [],            ['R'],         ['R','W'],       ['X'],
+            ['R','X'],     ['R','W','X'], ['L'],           ['S'],
+            ['E'],         ['L','S'],     ['L','E'],       ['S','E'],
+            ['L','S','E'], null,          'EXACT',         null,
         ];
 
         this.abstractionRegistry = null;
@@ -963,7 +964,13 @@ class ChurchSimulator {
                         : (DEVICE_REG_LIMITS[i] !== undefined ? DEVICE_REG_LIMITS[i]
                         : (mySize - 1));
             const nsTableCount = (i === 0) ? abstractions.length : 0;
-            const abstractGtWord = (this.getPermBits(a.perms) << 25) >>> 0;
+            // New GT layout: [31]=b_flag [30:28]=perm[2:0] [27]=dom [26]=spare [25]=f_flag ...
+            const _ap   = a.perms || {};
+            const _dom  = (_ap.L || _ap.S || _ap.E) ? 1 : 0;
+            const _p3   = _dom === 0
+                ? (((_ap.X?1:0)<<2)|((_ap.W?1:0)<<1)|(_ap.R?1:0))
+                : (((_ap.E?1:0)<<2)|((_ap.S?1:0)<<1)|(_ap.L?1:0));
+            const abstractGtWord = ((_p3 << 28) | (_dom << 27)) >>> 0;
             this.writeNSEntry(i, loc, lim17, 0, 0, 0, 1, 0, nsTableCount, abstractGtWord);
             this.nsChainable[i] = a.chainable || false;
             this.nsLabels[i] = a.label;
@@ -1704,42 +1711,37 @@ class ChurchSimulator {
     }
 
     parseGT(gt32) {
+        // New GT layout: [31]=b_flag [30:28]=perm[2:0] [27]=dom [26]=spare [25]=f_flag
+        //               [24:23]=gt_type [22:16]=gt_seq [15:0]=slot_id
         gt32 = gt32 >>> 0;
-        const permBits = (gt32 >>> 25) & 0x7F;
-        const type    = (gt32 >>> 23) & 0x3;
-        const gt_seq  = (gt32 >>> 16) & 0x7F;
-        const index   =  gt32         & 0xFFFF;
-        const permissions = {
-            B: (permBits >>> 6) & 1,
-            E: (permBits >>> 5) & 1,
-            S: (permBits >>> 4) & 1,
-            L: (permBits >>> 3) & 1,
-            X: (permBits >>> 2) & 1,
-            W: (permBits >>> 1) & 1,
-            R: (permBits >>> 0) & 1,
-        };
-        // Defence-in-depth: flag GTs with malformed permissions at decode time so
-        // that callers reading raw GT words from memory can detect tampering before
-        // the GT reaches any CR.  Abstract GTs (type===3) repurpose bits 31:27 as
-        // ab_type, so standard perm checks do not apply to them.
+        const b_flag = (gt32 >>> 31) & 1;
+        const perm3  = (gt32 >>> 28) & 0x7;
+        const dom    = (gt32 >>> 27) & 0x1;
+        const f_flag = (gt32 >>> 25) & 0x1;
+        const type   = (gt32 >>> 23) & 0x3;
+        const gt_seq = (gt32 >>> 16) & 0x7F;
+        const index  =  gt32         & 0xFFFF;
+        // Decode permissions from dom+perm3 (mutual exclusion enforced by dom bit).
+        const permissions = dom === 0
+            ? { B: b_flag, R: (perm3>>>0)&1, W: (perm3>>>1)&1, X: (perm3>>>2)&1,
+                           L: 0, S: 0, E: 0 }
+            : { B: b_flag, R: 0, W: 0, X: 0,
+                           L: (perm3>>>0)&1, S: (perm3>>>1)&1, E: (perm3>>>2)&1 };
+        // Domain purity is now structurally guaranteed by the dom bit (0=Turing, 1=Church).
+        // Only check single-Church-perm rule (CLOOMC security model).
         let malformed = false;
         let malformedReason = null;
         if (type !== 3) {
-            const purity = ChurchSimulator.isDomainPure(permissions);
-            if (!purity.ok) {
+            const single = ChurchSimulator.isSinglePerm(permissions);
+            if (!single.ok) {
                 malformed = true;
-                malformedReason = `domain-impure permissions (${purity.bits})`;
-            } else {
-                const single = ChurchSimulator.isSinglePerm(permissions);
-                if (!single.ok) {
-                    malformed = true;
-                    malformedReason = `multi-Church permissions (${single.bits})`;
-                }
+                malformedReason = `multi-Church permissions (${single.bits})`;
             }
         }
         return {
             gt_seq, index,
             permissions,
+            f_flag,
             type,
             typeName: ['NULL','Inform','Outform','Abstract'][type & 3],
             malformed,
@@ -1781,7 +1783,15 @@ class ChurchSimulator {
         if (!single.ok) {
             throw new Error(`createGT: single-Church-perm violation (${single.bits}) — slot ${slotId} must carry exactly one Church permission`);
         }
-        const p = (this.getPermBits(perms) << 25) >>> 0;
+        // New GT layout: [31]=b_flag [30:28]=perm[2:0] [27]=dom [26]=spare=0 [25]=f_flag=0
+        //               [24:23]=gt_type [22:16]=gt_seq [15:0]=slot_id
+        const hasChurch = perms.L || perms.S || perms.E;
+        const dom   = hasChurch ? 1 : 0;
+        const perm3 = dom === 0
+            ? (((perms.X ? 1 : 0) << 2) | ((perms.W ? 1 : 0) << 1) | (perms.R ? 1 : 0))
+            : (((perms.E ? 1 : 0) << 2) | ((perms.S ? 1 : 0) << 1) | (perms.L ? 1 : 0));
+        const b = (perms.B ? 1 : 0);
+        const p = ((b << 31) | (perm3 << 28) | (dom << 27)) >>> 0;
         const t = ((type   & 0x3)  << 23) >>> 0;
         const s = ((gt_seq & 0x7F) << 16) >>> 0;
         const i = (slotId  & 0xFFFF)      >>> 0;
@@ -1837,15 +1847,15 @@ class ChurchSimulator {
     // ──────────────────────────────────────────────────────────────────────────
 
     getPermBits(permsObj) {
-        let bits = 0;
-        if (permsObj.R) bits |= 1;
-        if (permsObj.W) bits |= 2;
-        if (permsObj.X) bits |= 4;
-        if (permsObj.L) bits |= 8;
-        if (permsObj.S) bits |= 16;
-        if (permsObj.E) bits |= 32;
-        if (permsObj.B) bits |= 64;
-        return bits & 0x7F;
+        // Returns the 4-bit dom+perm encoding packed as (perm3 << 1) | dom.
+        // Turing (dom=0): perm[2]=X, perm[1]=W, perm[0]=R.
+        // Church  (dom=1): perm[2]=E, perm[1]=S, perm[0]=L.
+        const hasChurch = permsObj.L || permsObj.S || permsObj.E;
+        const dom   = hasChurch ? 1 : 0;
+        const perm3 = dom === 0
+            ? (((permsObj.X ? 1 : 0) << 2) | ((permsObj.W ? 1 : 0) << 1) | (permsObj.R ? 1 : 0))
+            : (((permsObj.E ? 1 : 0) << 2) | ((permsObj.S ? 1 : 0) << 1) | (permsObj.L ? 1 : 0));
+        return (perm3 << 1) | dom;   // 4-bit: [3:1]=perm3, [0]=dom
     }
 
     computeSeal(location, limit17) {
@@ -4326,6 +4336,22 @@ class ChurchSimulator {
         const bSet = (d.imm >>> 4) & 1;
         const presetCode = d.imm & 0xF;
         const presetMasks = this.tpermPresetMasks;
+
+        // TPERM EXACT (preset 14): 32-bit identity check CRd.word0 === CRs.word0.
+        // Faults BIND on mismatch (credential verification failure).
+        if (presetMasks[presetCode] === 'EXACT') {
+            const crdGT = this.cr[d.crDst].word0 >>> 0;
+            const crsGT = this.cr[d.crSrc].word0 >>> 0;
+            if (crdGT !== crsGT) {
+                this.fault('BIND', `TPERM CR${d.crDst} EXACT [14]: credential mismatch 0x${crdGT.toString(16).padStart(8,'0')} vs CR${d.crSrc} 0x${crsGT.toString(16).padStart(8,'0')}`);
+                return null;
+            }
+            this.flags.Z = true; this.flags.N = false; this.flags.C = false; this.flags.V = false;
+            const descExact = `TPERM CR${d.crDst} EXACT [14]: credential match — Z=1`;
+            this.output += descExact + '\n';
+            this.pc++;
+            return { pc: this.pc - 1, instr: d, desc: descExact };
+        }
 
         if (presetMasks[presetCode] === null) {
             this.fault('TPERM_RSV', `TPERM CR${d.crDst}: reserved preset code ${presetCode} — hardware fault`);

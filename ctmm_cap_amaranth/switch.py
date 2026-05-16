@@ -57,7 +57,7 @@ class CMCapSwitch(Elaboratable):
 
         src_view = View(CAP_REG_LAYOUT, src_reg_latched)
         src_gt = View(GT_LAYOUT, src_view.word0_gt)
-        src_has_l_perm = src_gt.perms[PERM_L]
+        src_has_l_perm = src_gt.dom & src_gt.perm[0]   # Church dom=1, perm[0]=L
 
         m.d.comb += [
             u_mload.sub_start.eq(sub_start),

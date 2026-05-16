@@ -5,6 +5,28 @@ from .types import *
 from .layouts import GT_LAYOUT
 
 
+def perm_bit(gt_signal, perm_idx: int):
+    """Return an Amaranth expression: 1 iff gt_signal carries logical perm at perm_idx.
+
+    perm_idx: PERM_R=0, PERM_W=1, PERM_X=2 (Turing); PERM_L=3, PERM_S=4, PERM_E=5 (Church).
+
+    Uses the new dom+perm[2:0] encoding (ctmm_cap_amaranth variant):
+      dom=0 (Turing): perm[2]=X, perm[1]=W, perm[0]=R
+      dom=1 (Church): perm[2]=E, perm[1]=S, perm[0]=L
+    """
+    try:
+        dom  = gt_signal.dom
+        perm = gt_signal.perm
+    except AttributeError:
+        v = View(GT_LAYOUT, gt_signal)
+        dom  = v.dom
+        perm = v.perm
+    if perm_idx < 3:   # Turing bit (R=0, W=1, X=2)
+        return ~dom & perm[perm_idx]
+    else:              # Church bit (L=3, S=4, E=5)
+        return dom & perm[perm_idx - 3]
+
+
 class CMCapPermCheck(Elaboratable):
     def __init__(self):
         self.gt_in = Signal(GT_LAYOUT)
@@ -38,7 +60,17 @@ class CMCapPermCheck(Elaboratable):
         m = Module()
 
         gt_view = View(GT_LAYOUT, self.gt_in)
-        gt_perms = gt_view.perms
+
+        # Decode dom+perm[2:0] → 6-bit logical perms:
+        #   Turing (dom=0): logical[2:0] = perm (XWR), logical[5:3] = 0
+        #   Church (dom=1): logical[5:3] = perm (ESL), logical[2:0] = 0
+        gt_perms = Signal(6)
+        m.d.comb += gt_perms.eq(
+            Mux(gt_view.dom,
+                Cat(C(0, 3), gt_view.perm),   # Church: perm → [5:3]
+                Cat(gt_view.perm, C(0, 3))    # Turing: perm → [2:0]
+            )
+        )
 
         is_null_gt = Signal()
         perms_match = Signal()
@@ -49,13 +81,8 @@ class CMCapPermCheck(Elaboratable):
             self.perm_granted.eq(~is_null_gt & perms_match),
         ]
 
-        has_turing = Signal()
-        has_church = Signal()
-        m.d.comb += [
-            has_turing.eq((gt_perms & DATA_PERMS) != 0),
-            has_church.eq((gt_perms & CAP_PERMS) != 0),
-            self.domain_purity_ok.eq(~(has_turing & has_church)),
-        ]
+        # Domain purity is structurally enforced by the dom bit — always satisfied.
+        m.d.comb += self.domain_purity_ok.eq(1)
 
         m.d.comb += self.bounds_ok.eq(~self.check_bounds | (self.access_index < self.limit[:17]))
         m.d.comb += self.version_ok.eq(~self.check_version | (self.gt_version == self.stored_version))
@@ -106,11 +133,6 @@ class CMCapPermCheck(Elaboratable):
                 m.d.comb += [
                     self.fault_valid.eq(1),
                     self.fault_type.eq(FaultType.SEAL),
-                ]
-            with m.Elif(self.check_domain_purity & ~self.domain_purity_ok):
-                m.d.comb += [
-                    self.fault_valid.eq(1),
-                    self.fault_type.eq(FaultType.DOMAIN_PURITY),
                 ]
 
         return m

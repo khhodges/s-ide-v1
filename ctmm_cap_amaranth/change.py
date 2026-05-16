@@ -79,7 +79,7 @@ class CMCapChange(Elaboratable):
 
         crn_view = View(CAP_REG_LAYOUT, crn_reg_latched)
         crn_gt = View(GT_LAYOUT, crn_view.word0_gt)
-        crn_has_l_perm = crn_gt.perms[PERM_L]
+        crn_has_l_perm = crn_gt.dom & crn_gt.perm[0]   # Church dom=1, perm[0]=L
 
         cr8_view = View(CAP_REG_LAYOUT, self.cr8_thread)
         cr8_gt = View(GT_LAYOUT, cr8_view.word0_gt)

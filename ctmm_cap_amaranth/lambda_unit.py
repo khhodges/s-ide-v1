@@ -28,7 +28,7 @@ class CMCapLambda(Elaboratable):
         target_view = View(CAP_REG_LAYOUT, target_cap)
         target_gt = View(GT_LAYOUT, target_view.word0_gt)
 
-        has_x_perm = target_gt.perms[PERM_X]
+        has_x_perm = ~target_gt.dom & target_gt.perm[PERM_X]   # Turing dom=0, perm[2]=X
         is_null = Signal()
         m.d.comb += is_null.eq(target_gt.gt_type == GT_TYPE_NULL)
 

@@ -77,8 +77,8 @@ class ChurchReturn(Elaboratable):
         cr5_has_w = Signal()
         m.d.comb += [
             cr5_null.eq(cr5_gt.gt_type == GT_TYPE_NULL),
-            cr5_has_r.eq(cr5_gt.perms[PERM_R]),
-            cr5_has_w.eq(cr5_gt.perms[PERM_W]),
+            cr5_has_r.eq(~cr5_gt.dom & cr5_gt.perm[PERM_R]),   # Turing dom=0, perm[0]=R
+            cr5_has_w.eq(~cr5_gt.dom & cr5_gt.perm[PERM_W]),   # Turing dom=0, perm[1]=W
         ]
 
         cr12_view = View(CAP_REG_LAYOUT, self.cr12_thread)

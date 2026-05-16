@@ -2,11 +2,18 @@ from amaranth import *
 from amaranth.lib.data import StructLayout
 
 GT_LAYOUT = StructLayout({
-    "gt_type": unsigned(2),
-    "perms":   unsigned(6),
-    "index":   unsigned(17),
-    "version": unsigned(7),
+    "gt_type": unsigned(2),   # [1:0]  — 00=NULL 01=Inform 10=Outform 11=Abstract
+    "f_flag":  unsigned(1),   # [2]    — Far indicator (per-token; was in NS_LIMIT_LAYOUT)
+    "spare":   unsigned(1),   # [3]    — reserved/zero
+    "dom":     unsigned(1),   # [4]    — domain: 0=Turing {X,W,R}, 1=Church {E,S,L}
+    "perm":    unsigned(3),   # [7:5]  — 3-bit payload (dom=0: X/W/R; dom=1: E/S/L)
+    "index":   unsigned(17),  # [24:8] — namespace slot index
+    "version": unsigned(7),   # [31:25]— revocation counter
 })
+
+# GT encoding reference (ctmm_cap_amaranth variant):
+#   Turing domain (dom=0): perm[2]=X, perm[1]=W, perm[0]=R
+#   Church  domain (dom=1): perm[2]=E, perm[1]=S, perm[0]=L
 
 CAP_REG_LAYOUT = StructLayout({
     "word0_gt":       GT_LAYOUT,
@@ -33,9 +40,8 @@ NS_ENTRY_LAYOUT = StructLayout({
 
 NS_LIMIT_LAYOUT = StructLayout({
     "limit":    unsigned(17),
-    "reserved": unsigned(12),
+    "reserved": unsigned(13),  # was 12; +1 absorbed from former f_flag (now in GT word)
     "g_bit":    unsigned(1),
-    "f_flag":   unsigned(1),
     "b_flag":   unsigned(1),
 })
 

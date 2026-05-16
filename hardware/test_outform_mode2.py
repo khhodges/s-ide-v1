@@ -41,7 +41,8 @@ MINTED_SEQ        = 1
 SRC_CR_ADDR       = 3
 
 _NULL_GT_DICT     = {
-    "slot_id": 0, "gt_seq": 0, "gt_type": 0, "perms": 0, "b_flag": 0,
+    "slot_id": 0, "gt_seq": 0, "gt_type": 0,
+    "f_flag": 0, "spare": 0, "dom": 0, "perm": 0, "b_flag": 0,
 }
 _NULL_CAP_DICT    = {
     "word0_gt": _NULL_GT_DICT,
@@ -52,7 +53,10 @@ _OUTFORM_GT_DICT  = {
     "slot_id": OUTFORM_SLOT_ID,
     "gt_seq":  OUTFORM_GT_SEQ,
     "gt_type": GT_TYPE_OUTFORM,
-    "perms":   OUTFORM_PERMS,
+    "f_flag":  0,
+    "spare":   0,
+    "dom":     1,              # Church domain (E-perm)
+    "perm":    OUTFORM_PERMS,  # perm[2]=E=1 → 0b100=4
     "b_flag":  OUTFORM_B_FLAG,
 }
 _OUTFORM_CAP_DICT = {
@@ -62,13 +66,17 @@ _OUTFORM_CAP_DICT = {
 }
 
 
-def _pack_word0_gt(gt_type, slot_id, gt_seq=0, perms=0, b_flag=0):
-    """Pack a 32-bit GT word using GT_LAYOUT bit positions."""
+def _pack_word0_gt(gt_type, slot_id, gt_seq=0, dom=0, perm=0, b_flag=0):
+    """Pack a 32-bit GT word using new GT_LAYOUT bit positions.
+    New layout: slot_id[15:0] | gt_seq[22:16] | gt_type[24:23] | f_flag[25]=0
+                | spare[26]=0 | dom[27] | perm[30:28] | b_flag[31]
+    """
     return (
           (slot_id  & 0xFFFF)
         | ((gt_seq  & 0x7F)  << 16)
         | ((gt_type & 0x3)   << 23)
-        | ((perms   & 0x3F)  << 25)
+        | ((dom     & 0x1)   << 27)
+        | ((perm    & 0x7)   << 28)
         | ((b_flag  & 0x1)   << 31)
     )
 
@@ -77,14 +85,16 @@ OUTFORM_WORD0 = _pack_word0_gt(
     gt_type=GT_TYPE_OUTFORM,
     slot_id=OUTFORM_SLOT_ID,
     gt_seq=OUTFORM_GT_SEQ,
-    perms=OUTFORM_PERMS,
+    dom=1,                  # Church domain (E-perm)
+    perm=OUTFORM_PERMS,     # perm[2]=E=1 → 0b100=4
     b_flag=OUTFORM_B_FLAG,
 )
 MINTED_WORD0 = _pack_word0_gt(
     gt_type=GT_TYPE_INFORM,
     slot_id=OUTFORM_SLOT_ID,
     gt_seq=MINTED_SEQ,
-    perms=OUTFORM_PERMS,
+    dom=1,                  # Church domain (E-perm)
+    perm=OUTFORM_PERMS,     # perm[2]=E=1 → 0b100=4
     b_flag=OUTFORM_B_FLAG,
 )
 
@@ -201,7 +211,9 @@ def test_mode2_success():
     prom_gt_type  = (prom_word0 >> 23) & 0x3
     prom_slot_id  = prom_word0 & 0xFFFF
     prom_gt_seq   = (prom_word0 >> 16) & 0x7F
-    prom_perms    = (prom_word0 >> 25) & 0x3F
+    # New GT layout: f_flag[25], spare[26], dom[27], perm[30:28]
+    prom_dom      = (prom_word0 >> 27) & 0x1
+    prom_perm     = (prom_word0 >> 28) & 0x7
     prom_b_flag   = (prom_word0 >> 31) & 0x1
     prom_word1    = (cr_wr_val >> 32) & 0xFFFFFFFF
     prom_word2    = (cr_wr_val >> 64) & 0xFFFFFFFF
@@ -215,8 +227,8 @@ def test_mode2_success():
     if prom_gt_seq != MINTED_SEQ:
         print(f"FAIL: promoted gt_seq={prom_gt_seq}, expected {MINTED_SEQ}")
         ok = False
-    if prom_perms != OUTFORM_PERMS:
-        print(f"FAIL: promoted perms={prom_perms:#010b}, expected {OUTFORM_PERMS:#010b}")
+    if prom_dom != 1 or prom_perm != OUTFORM_PERMS:
+        print(f"FAIL: promoted dom={prom_dom}, perm={prom_perm:#05b}, expected dom=1, perm={OUTFORM_PERMS:#05b}")
         ok = False
     if prom_b_flag != OUTFORM_B_FLAG:
         print(f"FAIL: promoted b_flag={prom_b_flag}, expected {OUTFORM_B_FLAG}")
@@ -406,10 +418,10 @@ def test_mode2_core_integration():
     PERMS   = 0b000100  # PERM_E bit
 
     OUTFORM_WORD0 = _pack_word0_gt(
-        gt_type=GT_TYPE_OUTFORM, slot_id=SLOT_ID, perms=PERMS
+        gt_type=GT_TYPE_OUTFORM, slot_id=SLOT_ID, dom=1, perm=PERMS
     )
     MINTED_WORD0 = _pack_word0_gt(
-        gt_type=GT_TYPE_INFORM, slot_id=SLOT_ID, gt_seq=1, perms=PERMS
+        gt_type=GT_TYPE_INFORM, slot_id=SLOT_ID, gt_seq=1, dom=1, perm=PERMS
     )
 
     # Outform CAP: 96-bit integer (word0 | word1<<32 | word2<<64)
@@ -418,7 +430,7 @@ def test_mode2_core_integration():
     _NULL_CR = {"word0_gt": _NULL_GT_DICT, "word1_location": 0, "word2_w2": 0}
     _OUTFORM_CR = {
         "word0_gt":       {"slot_id": SLOT_ID, "gt_seq": 0, "gt_type": GT_TYPE_OUTFORM,
-                           "perms": PERMS, "b_flag": 0},
+                           "f_flag": 0, "spare": 0, "dom": 1, "perm": PERMS, "b_flag": 0},
         "word1_location": 0xDEAD_0000,
         "word2_w2":       0,
     }

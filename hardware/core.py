@@ -802,20 +802,22 @@ class ChurchCore(Elaboratable):
                     thrd_gt_view.slot_id.eq(1),
                     thrd_gt_view.gt_seq.eq(0),
                     thrd_gt_view.gt_type.eq(GT_TYPE_INFORM),
-                    thrd_gt_view.perms.eq(0),
+                    thrd_gt_view.dom.eq(0),   # Turing, no perms (M-only, transient)
+                    thrd_gt_view.perm.eq(0),
                 ]
                 m.d.comb += [boot_wr_en[8].eq(1), boot_wr_gt[8].eq(thrd_gt)]
             with m.Case(BootState.INIT_CLIST):
                 # CR6 (c-list cap): full 96-bit write to include word1_location=0x400
                 # (DEMO_CLIST at dmem byte 0x400 = word 256) and word2_w2=63
                 # (limit: indices 0..63 accessible).
-                # cr6_gt: slot_id=2, GT_TYPE_INFORM, perms=PERM_MASK_E, gt_seq=0
-                # word0_gt = (PERM_MASK_E<<25) | (GT_TYPE_INFORM<<23) | 2 = 0x40800002
+                # cr6_gt: slot_id=2, GT_TYPE_INFORM, E-perm (Church dom=1, perm=0b100), gt_seq=0
+                # New GT word layout: b_flag[31] | perm[30:28] | dom[27] | f_flag[25] | gt_type[24:23] | gt_seq[22:16] | slot[15:0]
+                # word0_gt = (0b100<<28)|(1<<27)|(GT_TYPE_INFORM<<23)|2 = 0x48800002
                 m.d.comb += [
                     boot_cap_wr_en.eq(1),
                     boot_cap_wr_addr.eq(6),
                     boot_cap_wr_data.eq(Cat(
-                        C(0x40800002, 32),  # word0_gt: PERM_MASK_E, GT_TYPE_INFORM, slot=2
+                        C(0x48800002, 32),  # word0_gt: Church E-perm (dom=1,perm=0b100), GT_TYPE_INFORM, slot=2
                         C(0x400,      32),  # word1_location = 0x400 (DEMO_CLIST base)
                         C(63,         32),  # word2_w2: limit_offset=63 (64 entries)
                     )),
@@ -827,7 +829,8 @@ class ChurchCore(Elaboratable):
                     slot3_gt_view.slot_id.eq(2),
                     slot3_gt_view.gt_seq.eq(0),
                     slot3_gt_view.gt_type.eq(GT_TYPE_INFORM),
-                    slot3_gt_view.perms.eq(PERM_MASK_E),
+                    slot3_gt_view.dom.eq(1),       # Church domain
+                    slot3_gt_view.perm.eq(0b100),  # E = perm[2] in Church domain
                 ]
 
                 cr14_gt = Signal(GT_LAYOUT)
@@ -836,7 +839,8 @@ class ChurchCore(Elaboratable):
                     cr14_gt_view.slot_id.eq(3),
                     cr14_gt_view.gt_seq.eq(0),
                     cr14_gt_view.gt_type.eq(GT_TYPE_INFORM),
-                    cr14_gt_view.perms.eq(PERM_MASK_X),
+                    cr14_gt_view.dom.eq(0),        # Turing domain
+                    cr14_gt_view.perm.eq(0b100),   # X = perm[2] in Turing domain
                 ]
                 m.d.comb += [boot_wr_en[14].eq(1), boot_wr_gt[14].eq(cr14_gt)]
 

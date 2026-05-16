@@ -110,21 +110,25 @@ Sixteen 32-bit integer registers.
 
 ### 3.3 Permission Bits (GT word0)
 
-The permission field of a GT encodes the following access rights:
+The GT encodes permissions using a 1-bit **domain selector** (`dom`, bit 27) and a 3-bit **permission payload** (`perm[2:0]`, bits [30:28]). The `dom` bit selects which of two domains the payload refers to:
 
-| Bit | Symbol | Meaning                                      |
-|-----|--------|----------------------------------------------|
-|  30 | E      | Execute — may call the abstraction            |
-|  29 | S      | Save — may store a GT into this object's c-list |
-|  28 | L      | Load — may load a GT from this object's c-list |
-|  27 | X      | Code — execute raw instructions from lump memory |
-|  26 | W      | Write — may write data words into lump memory |
-|  25 | R      | Read — may read data words from lump memory   |
-|  31 | B      | Busy — object lock; clearable by TPERM B-modifier |
+```
+dom=0 (Turing):  perm[2]=X, perm[1]=W, perm[0]=R
+dom=1 (Church):  perm[2]=E, perm[1]=S, perm[0]=L
+```
 
-**Domain purity rule**: X may not coexist with L, S, or E in the same GT's
-effective permission set. A GT that would combine X with any of L/S/E is invalid
-and causes TPERM to fault with `TPERM_RSV` when the combination is tested.
+| Bits    | Symbol | Meaning                                               |
+|---------|--------|-------------------------------------------------------|
+| [30:28] | perm   | 3-bit permission payload (meaning depends on `dom`)   |
+| perm[2] | X / E  | Turing: execute code. Church: enter an abstraction    |
+| perm[1] | W / S  | Turing: write data. Church: save a GT to c-list       |
+| perm[0] | R / L  | Turing: read data. Church: load a GT from c-list      |
+| [27]    | dom    | Domain selector: 0=Turing {X,W,R}, 1=Church {E,S,L}  |
+| [26]    | spare  | Reserved, always zero                                 |
+| [25]    | f_flag | Far indicator — set for remote/far GTs                |
+| [31]    | B      | Busy — object lock; clearable by TPERM B-modifier     |
+
+**Domain purity**: Turing and Church bits are mutually exclusive by construction — `dom` determines the meaning of `perm[2:0]`, making a mixed-domain GT impossible to represent. TPERM still faults with `TPERM_RSV` for reserved preset codes that would imply cross-domain combinations.
 
 ---
 
@@ -310,23 +314,27 @@ Flag-writing summary across all 20 instructions:
 >
 > Bit 4 = B-modifier (see A.11). Bits [3:0] = preset code (0–15).
 >
-> | Code | Mnemonic | Permissions required | Reserved? |
-> |------|----------|----------------------|-----------|
-> | 0x00 | CLEAR    | none                 | No |
-> | 0x01 | R        | R                    | No |
-> | 0x02 | RW       | R, W                 | No |
-> | 0x03 | X        | X                    | No |
-> | 0x04 | RX       | R, X                 | No |
-> | 0x05 | RWX      | R, W, X              | No |
-> | 0x06 | L        | L                    | No |
-> | 0x07 | S        | S                    | No |
-> | 0x08 | E        | E                    | No |
-> | 0x09 | LS       | L, S                 | No |
-> | 0x0A | W        | W only (no R)        | No |
-> | 0x0B–0x0F | — | —                   | **Reserved** |
+> | Code | Mnemonic | Permissions required / Operation | Reserved? |
+> |------|----------|------------------------------------|-----------|
+> | 0x00 | CLEAR    | none (Z=1 for any non-NULL GT)     | No |
+> | 0x01 | R        | R                                  | No |
+> | 0x02 | RW       | R, W                               | No |
+> | 0x03 | X        | X                                  | No |
+> | 0x04 | RX       | R, X                               | No |
+> | 0x05 | RWX      | R, W, X                            | No |
+> | 0x06 | L        | L                                  | No |
+> | 0x07 | S        | S                                  | No |
+> | 0x08 | E        | E                                  | No |
+> | 0x09 | LS       | L, S                               | No |
+> | 0x0A | —        | — (E isolation: LE)                | **Reserved** — FAULT(`TPERM_RSV`) |
+> | 0x0B | —        | — (E isolation: SE)                | **Reserved** — FAULT(`TPERM_RSV`) |
+> | 0x0C | —        | — (E isolation: LSE)               | **Reserved** — FAULT(`TPERM_RSV`) |
+> | 0x0D | —        | — (cross-domain)                   | **Reserved** — FAULT(`TPERM_RSV`) |
+> | 0x0E | EXACT    | Bit-exact identity: Z=1 iff `CRd.word0 == CRs.word0` | No |
+> | 0x0F | —        | — (reserved)                       | **Reserved** — FAULT(`TPERM_RSV`) |
 >
 > Adding 0x10 to any valid code sets the B-modifier: `TPERM CRd, RB` = code 0x11.
-> All B-modifier variants of 0x0B–0x0F are also reserved.
+> All B-modifier variants of reserved codes are also reserved.
 
 > **A.7 — CLEAR (preset 0) always passes for any non-NULL, non-reserved GT.**
 >

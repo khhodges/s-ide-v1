@@ -59,7 +59,7 @@ class CMCapMLoad(Elaboratable):
         src_gt = View(GT_LAYOUT, src_view.word0_gt)
         result_gt = View(GT_LAYOUT, result_view.word0_gt)
 
-        has_l_perm = src_gt.perms[PERM_L]
+        has_l_perm = src_gt.dom & src_gt.perm[0]   # Church dom=1, perm[0]=L
         src_is_null = Signal()
         m.d.comb += src_is_null.eq(src_gt.gt_type == GT_TYPE_NULL)
 
