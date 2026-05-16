@@ -83,10 +83,11 @@ A Golden Token is not merely an access key. It is a symbolic expression of
 functionality. The 32-bit GT word encodes:
 
 - **What** can be accessed (`slot_id`, 16 bits — the namespace index)
-- **How** it can be accessed (`perms`, 6 bits — R, W, X, L, S, E)
+- **How** it can be accessed (`dom` + `perm[2:0]`, 4 bits — domain selector (0=Turing {X,W,R}, 1=Church {E,S,L}) plus 3-bit permission payload; Turing/Church mutual exclusion is structurally enforced by the `dom` bit)
 - **Whether** this instance is current (`gt_seq`, 7 bits — revocation counter)
 - **What kind** of resource it is (`gt_type`, 2 bits — Null, Inform, Outform, Abstract)
 - **Whether** it can be propagated (`b_flag`, 1 bit — bind permission)
+- **Whether** it targets a far/remote resource (`f_flag`, 1 bit — Far indicator, per-token)
 
 The permissions are not advisory. The hardware reads the permission bits
 before permitting any instruction to proceed. A program that holds only an

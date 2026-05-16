@@ -2,6 +2,43 @@
 
 ---
 
+## Release 1.3 — 2026-05-16
+
+### GT format — dom+perm3 compression, f_flag per-token, TPERM EXACT
+
+- **GT bit layout** — compressed 6-bit logical perms (`perms[5:0]`) into 4 bits using
+  Turing/Church mutual exclusion: `dom[27]` (0=Turing, 1=Church) + `perm[30:28]` (3-bit payload).
+  Freed bits allocated to `f_flag[25]` (Far indicator, per-token) and `spare[26]` (reserved zero).
+  Old hardcoded word `0x40800002` → `0x48800002` (`dom=1`, Church E-perm).
+- **TPERM EXACT** (preset 14) — bit-exact 32-bit identity check: `CRd.word0 == CRs.word0`.
+  Sets Z=1 on match, Z=0 on mismatch. Never faults — pure comparison operator for credential
+  pinning. Documented in `docs/instruction-set.md` and `docs/isa_reference.md`.
+- **NS Word 1 f_flag removed** — `packNSWord1` / `writeNSEntry` / `packLimitWord` in
+  `simulator/simulator.js` no longer carry or set the f_flag bit (bit[30]); it is now
+  permanently reserved (always 0) in NS Word 1, matching hardware `ctmm_cap_amaranth/layouts.py`
+  (`reserved: unsigned(13)` absorbing the former f_flag). Per-token f_flag lives exclusively
+  in the GT word at bit[25].
+- **Files changed**: `hardware/layouts.py`, `hardware/hw_types.py`, `hardware/boot_rom.py`,
+  `hardware/core.py`, `hardware/perm_check.py`, `ctmm_cap_amaranth/layouts.py`,
+  `ctmm_cap_amaranth/types.py`, `ctmm_cap_amaranth/perm_check.py`, `ctmm_cap_amaranth/tperm.py`,
+  `simulator/simulator.js`, `server/boot_image.py`, `docs/golden-tokens.md`,
+  `docs/isa_reference.md`, `docs/instruction-set.md`, `docs/ctmm-memory-map.md`,
+  `docs/cloomc-foundation.md`.
+
+### PostFlashSelfTest lump (token `5e1f0081`)
+
+- **New floating lump**: `server/lumps/5e1f0081.lump` — 1024-word lump packaging all 81
+  post-flash hardware self-tests (Sections A–L of `simulator/examples/post_flash_selftest.cloomc`).
+  Token `5e1f0081`, `ns_slot: null`, `ns_slot_policy: "dynamic"`, `cw=512`, `cc=8`.
+- **C-list**: slot 3 = E-GT (`0x48810000`, Church dom=1 E-perm), slot 7 = X-GT (`0x40810000`,
+  Turing dom=0 X-perm). Matches `LOAD CR2, CR6, 3` and `LOAD CR1, CR6, 7` in the assembly.
+- **Method**: `Run()` (offset 0, length 512 words). Returns DR0=0 on full pass; DR0=N (1–81)
+  identifies first failing test.
+- **Sidecar**: `server/lumps/5e1f0081.json`. Manifest entry added to `server/lumps/manifest.json`.
+- **Consistency gate**: lump-consistency 126/126 passed (R1–R12 including the new token).
+
+---
+
 ## Docs 1.2 — 2026-05-15
 
 ### Documentation corrections (audit items H-2 and M-1)
