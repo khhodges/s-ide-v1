@@ -362,7 +362,8 @@ console.log('\n--- T008-step: sim.step() executes Scheduler.pause (method index 
     stepSim.writeNSEntry(8, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0);
 
     // Create an E-permission Inform GT for NS slot 8 (Scheduler).
-    const schedGT = stepSim.createGT(0, 8, {E:1}, 1);
+    // gt_seq=1 matches version=1 written by writeNSEntry above (mLoad VERSION check).
+    const schedGT = stepSim.createGT(1, 8, {E:1}, 1);
 
     // CR0 holds the Scheduler GT (crDst=0 in CALL instruction).
     stepSim.cr[0] = {word0: schedGT, word1: 0, word2: 0, word3: 0, m: 0};
@@ -486,7 +487,8 @@ console.log('\n--- T009: loadProgram + step() pause + step() timer wake ---');
     t9sim.writeNSEntry(8, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0);
 
     // Create an E-permission Inform GT for NS slot 8 (Scheduler) and put it in CR0.
-    const t9schedGT = t9sim.createGT(0, 8, { E: 1 }, 1);
+    // gt_seq=1 matches version=1 written by writeNSEntry above (mLoad VERSION check).
+    const t9schedGT = t9sim.createGT(1, 8, { E: 1 }, 1);
     t9sim.cr[0] = { word0: t9schedGT, word1: 0, word2: 0, word3: 0, m: 0 };
 
     // Pre-load DR3 with the 0-based method index derived from the ELOADCALL word.
@@ -604,7 +606,8 @@ console.log('\n--- T010: continuous step() loop — timer fires without manual s
     // ── Phase A: write program into memory and set up Scheduler in CR0 ────────
     // Slot 8 (Scheduler): no code lump → system-abstraction fast path in _execCall.
     t10sim.writeNSEntry(8, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0);
-    const t10schedGT = t10sim.createGT(0, 8, { E: 1 }, 1);
+    // gt_seq=1 matches version=1 written by writeNSEntry above (mLoad VERSION check).
+    const t10schedGT = t10sim.createGT(1, 8, { E: 1 }, 1);
     t10sim.cr[0] = { word0: t10schedGT, word1: 0, word2: 0, word3: 0, m: 0 };
 
     // DR3 = 0-based method index 4 (pause).  DR1 = duration.
