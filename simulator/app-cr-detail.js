@@ -522,12 +522,50 @@ function _highlightAsmWarningLines(warnings) {
 }
 
 function _showAsmWarnings(warnings) {
+    var panel = document.getElementById('asmWarningPanel');
     if (!warnings || warnings.length === 0) { _clearAsmWarnings(); return; }
     _activeAsmWarnings = warnings.slice();
     _highlightAsmWarningLines(warnings);
+    if (!panel) return;
+    var count = warnings.length;
+    var title = 'Warning' + (count > 1 ? 's' : '') + ' \u2014 ' + count + ' issue' + (count > 1 ? 's' : '') + ' to review';
+    var html = '<div class="asm-warning-panel-header">'
+             + '<span class="asm-warning-panel-icon">&#x26A0;</span>'
+             + '<span class="asm-warning-panel-title">' + _escHtml(title) + '</span>'
+             + '</div>'
+             + '<ul class="asm-warning-panel-list">';
+    warnings.forEach(function(w) {
+        var hasLine = w.line != null && !isNaN(w.line);
+        if (hasLine) {
+            html += '<li>'
+                  + '<button type="button" class="asm-warning-item" data-line="' + w.line + '" title="Jump to line ' + w.line + '">'
+                  + '<span class="asm-warning-line-label">Line ' + w.line + ':</span>' + _escHtml(w.message)
+                  + '</button>'
+                  + '</li>';
+        } else {
+            html += '<li>'
+                  + '<span class="asm-warning-item asm-warning-item-noline">'
+                  + _escHtml(w.message)
+                  + '</span>'
+                  + '</li>';
+        }
+    });
+    html += '</ul>';
+    panel.innerHTML = html;
+    panel.querySelectorAll('.asm-warning-item[data-line]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            _jumpToAsmLine(parseInt(btn.getAttribute('data-line'), 10));
+        });
+    });
+    panel.style.display = 'flex';
 }
 
 function _clearAsmWarnings() {
+    var panel = document.getElementById('asmWarningPanel');
+    if (panel) {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+    }
     _activeAsmWarnings = [];
     _highlightAsmWarningLines([]);
 }
