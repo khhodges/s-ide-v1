@@ -7706,6 +7706,44 @@ Add a method called Run
         capErrs.map(e => e.message).join('; '));
 }
 
+// ── CAP-V12/13: duplicate capability name → warning (task-1355) ──────────────
+
+// CAP-V12: single duplicate name in inline capabilities block → exactly one warning.
+{
+    const a = new ChurchAssembler({});
+    a.assemble('capabilities { Salvation E, Salvation RX }\nRETURN');
+    assert('CAP-V12: duplicate name in inline block produces at least one warning',
+        a.warnings.length > 0,
+        'expected at least one warning, got ' + a.warnings.length);
+    const dupWarn = a.warnings.find(w => w.message.includes('Salvation') && w.message.includes('uplicate'));
+    assert('CAP-V12: warning mentions "Salvation" and "duplicate"',
+        dupWarn != null,
+        a.warnings.map(w => w.message).join('; '));
+    assert('CAP-V12: warning suggests removing the duplicate',
+        dupWarn != null && dupWarn.message.toLowerCase().includes('remove'),
+        dupWarn ? dupWarn.message : '(no matching warning)');
+    assert('CAP-V12: assembly still succeeds (no fatal errors from the duplicate)',
+        a.errors.filter(e => e.message.includes('uplicate')).length === 0,
+        a.errors.map(e => e.message).join('; '));
+}
+
+// CAP-V13: two different names, each duplicated, in a multi-line block → two warnings.
+{
+    const a = new ChurchAssembler({});
+    a.assemble('capabilities {\n  Alpha E\n  Beta E\n  Alpha RX\n  Beta RX\n}\nRETURN');
+    const alphaWarn = a.warnings.find(w => w.message.includes('Alpha') && w.message.includes('uplicate'));
+    const betaWarn  = a.warnings.find(w => w.message.includes('Beta')  && w.message.includes('uplicate'));
+    assert('CAP-V13: duplicate "Alpha" in multi-line block produces warning',
+        alphaWarn != null,
+        a.warnings.map(w => w.message).join('; '));
+    assert('CAP-V13: duplicate "Beta" in multi-line block produces warning',
+        betaWarn != null,
+        a.warnings.map(w => w.message).join('; '));
+    assert('CAP-V13: exactly two duplicate warnings (one per duplicated name)',
+        a.warnings.filter(w => w.message.includes('uplicate')).length === 2,
+        'got ' + a.warnings.filter(w => w.message.includes('uplicate')).length);
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);

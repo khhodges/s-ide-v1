@@ -618,6 +618,7 @@ class ChurchAssembler {
         this.warnings = [];
         this.capabilities = [];   // names declared in capabilities { } header (if present)
         this._hasCapBlock = false; // true when any capabilities { } block is present in source
+        const _seenCapNames = new Set(); // duplicate-name guard for capabilities { } block
         // Reset to shared conventions — local .pet directives for this lump are
         // re-collected by _parsePetDirectives below and shadow these.
         this._drAliases = Object.assign({}, ChurchAssembler._sharedDrAliases || {});
@@ -660,6 +661,12 @@ class ChurchAssembler {
                                 this.errors.push({ line: lineNum + 1, ...this._tokenCols(this._currentLineText, cap.name),
                                     message: `Capability "${cap.name}" has no permission letters — add at least one of E, R, W, X after the name.\n  Example: capabilities { ${cap.name} E }` });
                             }
+                            if (_seenCapNames.has(cap.name)) {
+                                this.warnings.push({ line: lineNum + 1, ...this._tokenCols(this._currentLineText, cap.name),
+                                    message: `Duplicate capability name "${cap.name}" in capabilities block — remove the second declaration.` });
+                            } else {
+                                _seenCapNames.add(cap.name);
+                            }
                             this.capabilities.push(cap);
                         }
                     }
@@ -673,6 +680,12 @@ class ChurchAssembler {
                                 if (cap.rights.length === 0 && !ChurchAssembler._isHardwareCapName(cap.name)) {
                                     this.errors.push({ line: lineNum + 1, ...this._tokenCols(this._currentLineText, cap.name),
                                         message: `Capability "${cap.name}" has no permission letters — add at least one of E, R, W, X after the name.\n  Example: capabilities { ${cap.name} E }` });
+                                }
+                                if (_seenCapNames.has(cap.name)) {
+                                    this.warnings.push({ line: lineNum + 1, ...this._tokenCols(this._currentLineText, cap.name),
+                                        message: `Duplicate capability name "${cap.name}" in capabilities block — remove the second declaration.` });
+                                } else {
+                                    _seenCapNames.add(cap.name);
                                 }
                                 this.capabilities.push(cap);
                             }
@@ -690,6 +703,12 @@ class ChurchAssembler {
                             if (cap.rights.length === 0 && !ChurchAssembler._isHardwareCapName(cap.name)) {
                                 this.errors.push({ line: lineNum + 1, ...this._tokenCols(this._currentLineText, cap.name),
                                     message: `Capability "${cap.name}" has no permission letters — add at least one of E, R, W, X after the name.\n  Example: capabilities { ${cap.name} E }` });
+                            }
+                            if (_seenCapNames.has(cap.name)) {
+                                this.warnings.push({ line: lineNum + 1, ...this._tokenCols(this._currentLineText, cap.name),
+                                    message: `Duplicate capability name "${cap.name}" in capabilities block — remove the second declaration.` });
+                            } else {
+                                _seenCapNames.add(cap.name);
                             }
                             this.capabilities.push(cap);
                         }
