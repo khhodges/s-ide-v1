@@ -1,6 +1,7 @@
 function showLumpDetail(token) {
     _lumpEditDirty = false;
     _selectedLumpToken = token;
+    if (typeof _lumpRecordView === 'function') _lumpRecordView(token);
     const listEl = document.getElementById('lumpsListContent');
     if (listEl) {
         listEl.querySelectorAll('.lump-item').forEach(el => el.classList.remove('active'));

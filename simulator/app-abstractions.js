@@ -494,6 +494,22 @@ let _selectedLumpToken = null;
 let _pendingLumpAbstractionName = null;
 let _nsdgTooltipData = {};
 let _lumpEditDirty = false;
+let _lumpSortOrder = localStorage.getItem('lumpSortOrder') || 'name';
+
+function _lumpRecordView(token) {
+    if (!token) return;
+    let map = {};
+    try { map = JSON.parse(localStorage.getItem('lumpLastViewed') || '{}'); } catch(e) {}
+    map[token] = Date.now();
+    try { localStorage.setItem('lumpLastViewed', JSON.stringify(map)); } catch(e) {}
+}
+
+function _lumpGetLastViewed(token) {
+    try {
+        const map = JSON.parse(localStorage.getItem('lumpLastViewed') || '{}');
+        return map[token] || 0;
+    } catch(e) { return 0; }
+}
 
 window.addEventListener('beforeunload', function (e) {
     if (_lumpEditDirty) {
@@ -542,9 +558,20 @@ async function renderLumps() {
         if (!lumps || lumps.length === 0) {
             html = '<div class="lumps-placeholder">No lumps saved yet. Use Build LUMP in the editor to compile and save an abstraction.</div>';
         } else {
+            const _sortedLumps = _lumpsSorted(lumps);
+            const _sortOptName     = _lumpSortOrder === 'name'     ? ' selected' : '';
+            const _sortOptRecent   = _lumpSortOrder === 'recent'   ? ' selected' : '';
+            const _sortOptCompiled = _lumpSortOrder === 'compiled'  ? ' selected' : '';
+            html += `<div class="lump-sort-bar">`;
+            html += `<label class="lump-sort-label" for="lumpSortSelect">Sort</label>`;
+            html += `<select id="lumpSortSelect" class="lump-sort-select" onchange="_lumpSortChanged(this.value)">`;
+            html += `<option value="name"${_sortOptName}>Name (A\u2013Z)</option>`;
+            html += `<option value="recent"${_sortOptRecent}>Most Recent</option>`;
+            html += `<option value="compiled"${_sortOptCompiled}>Newest Compile</option>`;
+            html += `</select></div>`;
             html += `<select id="lumpPickerSelect" class="lump-picker-select" onchange="lumpPickerChanged(this.value)">`;
             html += `<option value="">— pick a lump —</option>`;
-            for (const lump of lumps) {
+            for (const lump of _sortedLumps) {
                 const token = lump.token || '????????';
                 const name  = lump.abstraction || 'Unknown';
                 const lt    = (lump.lump_type    || '').toLowerCase();
@@ -665,7 +692,55 @@ async function renderLumps() {
 window.lumpPickerChanged = function(token) {
     if (!token) return;
     _selectedLumpToken = token;
+    _lumpRecordView(token);
     showLumpDetail(token);
+};
+
+// Returns a sorted copy of the lumps array according to _lumpSortOrder.
+function _lumpsSorted(lumps) {
+    const arr = lumps.slice();
+    if (_lumpSortOrder === 'recent') {
+        arr.sort((a, b) => _lumpGetLastViewed(b.token) - _lumpGetLastViewed(a.token));
+    } else if (_lumpSortOrder === 'compiled') {
+        arr.sort((a, b) => (b.compiled_at || 0) - (a.compiled_at || 0));
+    } else {
+        arr.sort((a, b) =>
+            (a.abstraction || a.token || '').localeCompare(b.abstraction || b.token || ''));
+    }
+    return arr;
+}
+
+// Called by the sort <select> when the user changes sort order.
+window._lumpSortChanged = function(val) {
+    _lumpSortOrder = val;
+    try { localStorage.setItem('lumpSortOrder', val); } catch(e) {}
+    const sel = document.getElementById('lumpPickerSelect');
+    if (!sel || !_lumpsCache || !_lumpsCache.length) return;
+    const sorted = _lumpsSorted(_lumpsCache);
+    const e = _escHtml;
+    let opts = `<option value="">— pick a lump —</option>`;
+    for (const lump of sorted) {
+        const token   = lump.token || '????????';
+        const name    = lump.abstraction || 'Unknown';
+        const lt      = (lump.lump_type    || '').toLowerCase();
+        const ct      = (lump.content_type || '').toLowerCase();
+        const typ     = lump.typ;
+        const isFloat = (lump.ns_slot === null || lump.ns_slot === undefined);
+        const badge   = lt === 'boot'                     ? '[BOOT]'
+                      : lt === 'namespace' || typ === 10  ? '[NS]'
+                      : ct === 'outform'   || typ === 3   ? '[OTF]'
+                      : ct === 'thread'    || typ === 2   ? '[THR]'
+                      : ct === 'inform'                   ? '[INF]'
+                      : isFloat && lt !== 'boot'          ? '[SAVED]'
+                      : '';
+        const nsSlot  = !isFloat ? `NS ${lump.ns_slot}` : '';
+        const ver     = lump.version   ? `v${lump.version}`    : '';
+        const size    = lump.lump_size ? `${lump.lump_size}w`  : '';
+        const label   = [name, ver, badge, nsSlot, size].filter(Boolean).join('  ');
+        const chosen  = _selectedLumpToken === token ? ' selected' : '';
+        opts += `<option value="${e(token)}"${chosen}>${e(label)}</option>`;
+    }
+    sel.innerHTML = opts;
 };
 
 // ── Live Lump Banner ─────────────────────────────────────────────────────────
