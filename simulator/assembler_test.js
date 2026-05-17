@@ -6443,6 +6443,110 @@ abstraction VlcTest {
             }
         }
 
+        // ── Symbolic Math: EX-ANGB-INLINE — NoteGPublishedBug ────────────────────
+        // Verifies that the NoteGPublishedBug inline example in app-compile.js
+        // compiles to the same word-for-word bytecode as the canonical
+        // ada_note_g_published_bug.cloomc source file.
+        checkInlineVsCanonicalClomc(
+            'EX-ANGB-INLINE', 'ada_note_g_published_bug',
+            'ada_note_g_published_bug.cloomc');
+
+        // ── Symbolic Math: EX-ANGB-BUG — Op 4 operand order verification ────────
+        // Structural check: compiles the canonical file and inspects the manifest
+        // to confirm that Ada's published (buggy) Op 4 emits
+        //   SlideRule.Divide(DR5, DR4) -> DR11   (= V5 / V4 = 9/7, WRONG)
+        // rather than the corrected
+        //   SlideRule.Divide(DR4, DR5) -> DR11   (= V4 / V5 = 7/9, correct).
+        //
+        // Note: full end-to-end simulation of this program requires the SlideRule
+        // abstraction in the namespace (divide/multiply compile to CALL CR0 via
+        // emitSlideRuleCall), so runtime register verification is not feasible in
+        // this unit-test harness.  The manifest check below confirms the compiler
+        // correctly encodes Ada's published bug.
+        {
+            const canonPath = path.join(__dirname, 'cloomc', 'ada_note_g_published_bug.cloomc');
+            const canonSrc  = fs.readFileSync(canonPath, 'utf8');
+            const bugResult = new CLOOMCCompiler().compile(canonSrc);
+            const mmap = bugResult.manifest && bugResult.manifest.find(x => x.name === 'compute');
+            const entries = mmap ? (mmap.mapping || []) : [];
+            // Op 4 is `let V11 = V5 / V4` which compiles to
+            // SlideRule.Divide(DR5, DR4) → DR11.
+            // V1–V15 map directly to DR1–DR15 in the symbolic frontend (V-regs ≤ 15).
+            // Search for the specific DR5/DR4 operand pattern — not just the first Divide.
+            const op4 = entries.find(e =>
+                e.comment && /SlideRule\.Divide\(DR5,\s*DR4\)/.test(e.comment));
+            // Collect all Divide comments to aid failure diagnosis
+            const allDivCmnts = entries
+                .filter(e => e.comment && e.comment.includes('Divide'))
+                .map(e => e.comment);
+            assert('EX-ANGB-BUG: Op 4 Divide with buggy V5/V4 order (DR5,DR4) present',
+                !!op4,
+                'No SlideRule.Divide(DR5, DR4) found. All Divide entries: ' +
+                JSON.stringify(allDivCmnts));
+            // The corrected version (ada_note_g_symbolic.cloomc) has V4/V5 = DR4/DR5.
+            // Verify the corrected file does NOT contain the buggy DR5/DR4 pattern.
+            const corrSrc = fs.readFileSync(
+                path.join(__dirname, 'cloomc', 'ada_note_g_symbolic.cloomc'), 'utf8');
+            const corrResult = new CLOOMCCompiler().compile(corrSrc);
+            const corrMmap = corrResult.manifest &&
+                corrResult.manifest.find(x => x.name === 'compute');
+            const corrEntries = corrMmap ? (corrMmap.mapping || []) : [];
+            const corrOp4 = corrEntries.find(e =>
+                e.comment && /SlideRule\.Divide\(DR5,\s*DR4\)/.test(e.comment));
+            assert('EX-ANGB-BUG: corrected NoteG does NOT have buggy V5/V4 order',
+                !corrOp4,
+                'Corrected file unexpectedly contains SlideRule.Divide(DR5, DR4)');
+        }
+
+        // ── EX-ANGB-RUN — NoteGPublishedBug inline in app-run.js ─────────────────
+        // Verifies that the NoteGPublishedBug inline source registered in
+        // app-run.js loadExample() is present and compiles to the same word-for-word
+        // bytecode as the canonical ada_note_g_published_bug.cloomc file.
+        {
+            function extractInlineFromRun(key) {
+                const re = new RegExp("'" + key + "'\\s*:\\s*`([\\s\\S]*?)`\\s*,");
+                const m  = appRunSrc.match(re);
+                if (!m) throw new Error(
+                    'Could not find inline source for key in app-run.js: ' + key);
+                return (new Function('return `' + m[1] + '`'))();
+            }
+            const inlineSrc    = extractInlineFromRun('ada_note_g_published_bug');
+            const canonicalSrc = readClomc('ada_note_g_published_bug.cloomc');
+            const inlineR    = new CLOOMCCompiler().compile(inlineSrc,    []);
+            const canonicalR = new CLOOMCCompiler().compile(canonicalSrc, []);
+            assert('EX-ANGB-RUN: app-run.js inline compiles without errors',
+                inlineR.errors.length === 0,
+                inlineR.errors.map(e => 'L' + e.line + ': ' + e.message).join('; '));
+            assert('EX-ANGB-RUN: canonical compiles without errors',
+                canonicalR.errors.length === 0,
+                canonicalR.errors.map(e => 'L' + e.line + ': ' + e.message).join('; '));
+            assert('EX-ANGB-RUN: same method count as canonical',
+                inlineR.methods.length === canonicalR.methods.length,
+                'inline=' + inlineR.methods.length +
+                ' canonical=' + canonicalR.methods.length);
+            for (const cm of canonicalR.methods) {
+                const im = inlineR.methods.find(m => m.name === cm.name);
+                assert('EX-ANGB-RUN: method ' + cm.name + ' present in app-run.js inline',
+                    im !== undefined, cm.name + ' missing from inline compiled output');
+                if (!im) continue;
+                const cw = cm.code || [];
+                const iw = im.code || [];
+                assert('EX-ANGB-RUN: ' + cm.name +
+                       ' word count (inline=' + iw.length +
+                       ' canonical=' + cw.length + ')',
+                    iw.length === cw.length,
+                    'inline ' + iw.length + ' vs canonical ' + cw.length);
+                const diff = iw.findIndex((w, j) => w !== cw[j]);
+                assert('EX-ANGB-RUN: ' + cm.name + ' all words match',
+                    diff === -1,
+                    diff >= 0
+                        ? 'word[' + diff + ']: inline=0x' +
+                          (iw[diff] >>> 0).toString(16) +
+                          ' canonical=0x' + (cw[diff] >>> 0).toString(16)
+                        : '');
+            }
+        }
+
         // ── File-backed: EX-SRHS — sliderule_hs compile-integrity ────────────────
         {
             const appPath = extractFilePath('sliderule_hs');

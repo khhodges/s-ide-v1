@@ -2296,6 +2296,131 @@ abstraction BernoulliNumbers {
         halt
     }
 }`,
+        'ada_note_g_published_bug': `-- ============================================================
+-- Abstraction:  NoteGPublishedBug
+-- Description:  Ada's Note G with Op 4 operand order as published (incorrect)
+-- Author:       Church Machine Educational Platform
+-- Version:      1.0
+-- Created:      2026-05-09
+-- Language:     Symbolic Math
+-- Dependencies: None
+-- ============================================================
+-- Methods:
+--   1. compute() — 25 operations with Ada's published (buggy) Op 4; result ≠ -1/30
+-- ============================================================
+-- Ada Lovelace — Note G (1843)
+-- The First Computer Program — PUBLISHED (BUGGY) VERSION
+-- Computes B7 with Ada's original (incorrect) Op 4 operand order.
+--
+-- Op 4 is left exactly as Ada published it: V5 / V4 (= 9/7) instead of
+-- the corrected V4 / V5 (= 7/9). Every other operation is identical to
+-- simulator/cloomc/ada_note_g.cloomc.
+--
+-- Expected result in DR24: 139/630 ≈ 0.2206  (NOT -1/30)
+
+abstraction NoteGPublishedBug {
+    capabilities {
+    }
+
+    method compute() {
+        -- Initialize Ada's Store columns
+        let V1 = 1
+        let V2 = 2
+        let V3 = 4
+
+        -- Pre-load previously computed Bernoulli numbers into Ada's Store
+        let V21 = 1 / 6       -- B1
+        let V22 = -1 / 30     -- B3
+        let V23 = 1 / 42      -- B5
+
+        -- Operation 1: multiply V2 * V3 -> V4, V5, V6
+        let V4, V5, V6 = V2 * V3
+
+        -- Operation 2: subtract V4 - V1 -> V4
+        let V4 = V4 - V1
+
+        -- Operation 3: add V5 + V1 -> V5
+        let V5 = V5 + V1
+
+        -- Operation 4: divide V5 / V4 -> V11
+        -- BUG: Ada's published table lists V5 as dividend and V4 as divisor.
+        -- This gives (2n+1)/(2n-1) = 9/7 instead of the intended 7/9.
+        let V11 = V5 / V4
+
+        -- Operation 5: divide V11 / V2 -> V11
+        let V11 = V11 / V2
+
+        -- Operation 6: subtract V13 - V11 -> V13
+        let V13 = 0
+        let V13 = V13 - V11
+
+        -- Operation 7: subtract V3 - V1 -> V10
+        let V10 = V3 - V1
+
+        -- Operation 8: add V2 + V7 -> V7
+        let V7 = V2
+
+        -- Operation 9: divide V6 / V7 -> V11
+        let V11 = V6 / V7
+
+        -- Operation 10: multiply B1 * V11 -> V12
+        let V12 = V21 * V11
+
+        -- Operation 11: add V12 + V13 -> V13
+        let V13 = V12 + V13
+
+        -- Operation 12: subtract V10 - V1 -> V10
+        let V10 = V10 - V1
+
+        -- Operations 13-23: Loop body
+        repeat V10 as V10
+
+            -- Operation 13: subtract V6 - V1 -> V6
+            let V6 = V6 - V1
+
+            -- Operation 14: add V1 + V7 -> V7
+            let V7 = V1 + V7
+
+            -- Operation 15: divide V6 / V7 -> V8
+            let V8 = V6 / V7
+
+            -- Operation 16: multiply V8 * V11 -> V11
+            let V11 = V8 * V11
+
+            -- Operation 17: subtract V6 - V1 -> V6
+            let V6 = V6 - V1
+
+            -- Operation 18: add V1 + V7 -> V7
+            let V7 = V1 + V7
+
+            -- Operation 19: divide V6 / V7 -> V9
+            let V9 = V6 / V7
+
+            -- Operation 20: multiply V9 * V11 -> V11
+            let V11 = V9 * V11
+
+            -- Operation 21: multiply Bk * V11 -> V12
+            let V12 = V22 * V11
+
+            -- Operation 22: add V12 + V13 -> V13
+            let V13 = V12 + V13
+
+            -- Advance Bk register
+            let V22 = V23
+
+        end
+
+        -- Operation 24: subtract 0 - V13 -> V24
+        let V24 = 0
+        let V24 = V24 - V13
+
+        -- Operation 25: add V1 + V3 -> V3
+        let V3 = V1 + V3
+
+        -- Result: V24 = 139/630 (WRONG — confirms the Bug Propagation Table)
+        halt
+    }
+}`,
         'english_contact': `-- ============================================================
 -- Abstraction:  Contact
 -- Description:  Stage 3 Contact abstraction in plain-English CLOOMC++
