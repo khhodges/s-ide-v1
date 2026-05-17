@@ -695,10 +695,15 @@ class CLOOMCCompiler {
         if (headerMatch) {
             absName = headerMatch[1].trim();
         } else {
-            // First non-empty ; comment line — strip leading ; and whitespace, truncate to 64 chars
-            const firstCommentMatch = source.match(/^;\s*(.+?)\s*$/m);
-            if (firstCommentMatch) {
-                absName = firstCommentMatch[1].slice(0, 64).trim();
+            // First meaningful ; comment line — skip separator-only lines (===, ---, ***, etc.)
+            // and lines whose content is entirely non-alphanumeric punctuation/whitespace.
+            const commentLines = [];
+            const commentRe = /^;\s*(.+?)\s*$/mg;
+            let cm;
+            while ((cm = commentRe.exec(source)) !== null) { commentLines.push(cm[1]); }
+            const meaningfulComment = commentLines.find(c => /[A-Za-z0-9]/.test(c));
+            if (meaningfulComment) {
+                absName = meaningfulComment.slice(0, 64).trim();
             } else {
                 const firstLabel = Object.keys(result.labels || {})[0];
                 if (firstLabel) absName = firstLabel;

@@ -1,23 +1,23 @@
 {
   "token": "ab3de4fd",
-  "abstraction": "============================================================",
+  "abstraction": "Salvation",
   "ns_slot": null,
   "ns_slot_policy": "dynamic",
-  "lump_size": 64,
+  "lump_size": 256,
   "typ": 0,
   "content_type": "code",
-  "cw": 28,
+  "cw": 141,
   "cc": 0,
   "profile": "IoT",
   "language": "assembly",
   "author": "",
-  "version": "2026.05.16",
+  "version": "2026.05.17",
   "release_notes": "",
   "methods": [
     {
       "name": "run",
       "offset": 0,
-      "length": 28
+      "length": 141
     }
   ],
   "capabilities": [],
@@ -29,17 +29,17 @@
     "consecutive_clean": 0,
     "total_runs": 0,
     "status": "unknown",
-    "source_hash": "9cf75ef4"
+    "source_hash": "8e4928a9"
   },
   "deployment": {
     "target_board": "ti60-f225",
     "profile": "IoT",
-    "built_at": "2026-05-16T23:22:02.975873Z",
+    "built_at": "2026-05-17T11:16:00.485927Z",
     "builder": "CLOOMC++ IDE v1.0"
   },
   "grants": [
     "E"
   ],
   "lump_version": 1,
-  "compiled_at": 1778973722.976584
+  "compiled_at": 1779016560.4863155
 }

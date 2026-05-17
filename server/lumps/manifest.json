@@ -1661,21 +1661,21 @@
   },
   {
     "token": "ab3de4fd",
-    "abstraction": "============================================================",
+    "abstraction": "Salvation",
     "ns_slot": null,
     "ns_slot_policy": "dynamic",
-    "lump_size": 64,
-    "cw": 28,
+    "lump_size": 256,
+    "cw": 141,
     "cc": 0,
     "author": "",
-    "version": "2026.05.16",
+    "version": "2026.05.17",
     "lump_version": 1,
-    "compiled_at": 1778973722.976584,
+    "compiled_at": 1779016560.4863155,
     "methods": [
       {
         "name": "run",
         "offset": 0,
-        "length": 28
+        "length": 141
       }
     ],
     "grants": [
