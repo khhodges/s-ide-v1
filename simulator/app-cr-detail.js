@@ -532,6 +532,13 @@ function _updateAsmWarnBadge(count) {
         badge.style.display = 'none';
         if (badgeCount) badgeCount.textContent = '';
     }
+    if (!badge._warnClickBound) {
+        badge._warnClickBound = true;
+        badge.addEventListener('click', function() {
+            var panel = document.getElementById('asmWarningPanel');
+            if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+    }
 }
 
 function _showAsmWarnings(warnings) {
