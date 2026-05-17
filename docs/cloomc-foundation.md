@@ -16,10 +16,10 @@ This document records the design session held in May 2026 between the original P
 
 ## 1. Heritage and Distinction
 
-### The PP250 — First Immersive Capability Computer
+### The First Immersive Capability Computer (PP250)
 
 The PP250 (Plessey UK, 1972) was the first immersive capability computer to
-be fielded commercially. It operated for two decades without a single
+be sucessfully fielded commercially. It operated for two decades without a single
 security breach attributable to the capability model. Every object in the
 PP250 was accessed through a hardware-validated descriptor; no program could
 reach memory it did not hold a descriptor for. The system survived in
