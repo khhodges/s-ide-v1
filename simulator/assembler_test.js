@@ -6852,6 +6852,81 @@ abstraction VlcTest {
     assert('CR-COL-11: colEnd covers label name', e && e.colEnd === expectedStart + 'myLabel'.length, e ? 'colEnd=' + e.colEnd : 'no error');
 }
 
+// ── CR-WARN-COL: warning objects carry colStart/colEnd for .pet redefinitions ─
+// Verifies that every this.warnings.push() path in _parsePetBlock produces a
+// warning with a correct line number and column range pointing exactly at the
+// alias token — so that underline rendering never regresses silently.
+
+// CR-WARN-COL-1: DR-DR redefinition — warning points at the alias on line 2.
+{
+    const a = new ChurchAssembler({});
+    a.assemble('.pet myReg DR0\n.pet myReg DR1\nRETURN');
+    const ws = a.warnings;
+    const rawLine = '.pet myReg DR1';
+    const expectedStart = rawLine.indexOf('myReg');
+    const w = ws.find(x => x.message.includes('myReg') && x.message.includes('DR0') && x.message.includes('DR1'));
+    assert('CR-WARN-COL-1: DR-DR redef produces a warning', w != null);
+    assert('CR-WARN-COL-1: warning references line 2', w && w.line === 2, w ? 'line=' + w.line : 'no warning');
+    assert('CR-WARN-COL-1: colStart points at alias token', w && w.colStart === expectedStart, w ? 'colStart=' + w.colStart : 'no warning');
+    assert('CR-WARN-COL-1: colEnd covers alias token', w && w.colEnd === expectedStart + 'myReg'.length, w ? 'colEnd=' + w.colEnd : 'no warning');
+}
+
+// CR-WARN-COL-2: CR-CR redefinition — warning points at the alias on line 2.
+{
+    const a = new ChurchAssembler({});
+    a.assemble('.pet myReg CR0\n.pet myReg CR1\nRETURN');
+    const ws = a.warnings;
+    const rawLine = '.pet myReg CR1';
+    const expectedStart = rawLine.indexOf('myReg');
+    const w = ws.find(x => x.message.includes('myReg') && x.message.includes('CR0') && x.message.includes('CR1'));
+    assert('CR-WARN-COL-2: CR-CR redef produces a warning', w != null);
+    assert('CR-WARN-COL-2: warning references line 2', w && w.line === 2, w ? 'line=' + w.line : 'no warning');
+    assert('CR-WARN-COL-2: colStart points at alias token', w && w.colStart === expectedStart, w ? 'colStart=' + w.colStart : 'no warning');
+    assert('CR-WARN-COL-2: colEnd covers alias token', w && w.colEnd === expectedStart + 'myReg'.length, w ? 'colEnd=' + w.colEnd : 'no warning');
+}
+
+// CR-WARN-COL-3: cross-type DR→CR redefinition — alias was DR, now declared as CR.
+{
+    const a = new ChurchAssembler({});
+    a.assemble('.pet myReg DR0\n.pet myReg CR1\nRETURN');
+    const ws = a.warnings;
+    const rawLine = '.pet myReg CR1';
+    const expectedStart = rawLine.indexOf('myReg');
+    const w = ws.find(x => x.message.includes('myReg') && x.message.includes('DR alias'));
+    assert('CR-WARN-COL-3: DR→CR cross-type redef produces a warning', w != null);
+    assert('CR-WARN-COL-3: warning references line 2', w && w.line === 2, w ? 'line=' + w.line : 'no warning');
+    assert('CR-WARN-COL-3: colStart points at alias token', w && w.colStart === expectedStart, w ? 'colStart=' + w.colStart : 'no warning');
+    assert('CR-WARN-COL-3: colEnd covers alias token', w && w.colEnd === expectedStart + 'myReg'.length, w ? 'colEnd=' + w.colEnd : 'no warning');
+}
+
+// CR-WARN-COL-4: cross-type CR→DR redefinition — alias was CR, now declared as DR.
+{
+    const a = new ChurchAssembler({});
+    a.assemble('.pet myReg CR0\n.pet myReg DR1\nRETURN');
+    const ws = a.warnings;
+    const rawLine = '.pet myReg DR1';
+    const expectedStart = rawLine.indexOf('myReg');
+    const w = ws.find(x => x.message.includes('myReg') && x.message.includes('CR alias'));
+    assert('CR-WARN-COL-4: CR→DR cross-type redef produces a warning', w != null);
+    assert('CR-WARN-COL-4: warning references line 2', w && w.line === 2, w ? 'line=' + w.line : 'no warning');
+    assert('CR-WARN-COL-4: colStart points at alias token', w && w.colStart === expectedStart, w ? 'colStart=' + w.colStart : 'no warning');
+    assert('CR-WARN-COL-4: colEnd covers alias token', w && w.colEnd === expectedStart + 'myReg'.length, w ? 'colEnd=' + w.colEnd : 'no warning');
+}
+
+// CR-WARN-COL-5: indented DR-DR redefinition — colStart accounts for leading whitespace.
+{
+    const a = new ChurchAssembler({});
+    a.assemble('.pet myReg DR0\n  .pet myReg DR1\nRETURN');
+    const ws = a.warnings;
+    const rawLine = '  .pet myReg DR1';
+    const expectedStart = rawLine.indexOf('myReg');
+    const w = ws.find(x => x.message.includes('myReg') && x.message.includes('DR0') && x.message.includes('DR1'));
+    assert('CR-WARN-COL-5: indented DR-DR redef produces a warning', w != null);
+    assert('CR-WARN-COL-5: warning references line 2', w && w.line === 2, w ? 'line=' + w.line : 'no warning');
+    assert('CR-WARN-COL-5: colStart accounts for leading spaces', w && w.colStart === expectedStart, w ? 'colStart=' + w.colStart : 'no warning');
+    assert('CR-WARN-COL-5: colEnd covers alias token', w && w.colEnd === expectedStart + 'myReg'.length, w ? 'colEnd=' + w.colEnd : 'no warning');
+}
+
 // ── CC-COL: compiler error objects carry colStart/colEnd ─────────────────────
 // Verifies that CLOOMCCompiler errors on lines with identifiable tokens carry
 // correct column ranges so that _highlightAsmErrorLines can underline exactly
