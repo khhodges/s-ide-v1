@@ -597,12 +597,27 @@ function init() {
     initReplDivider();
     initEditorDivider();
     initConsoleAutoSwitch();
+    // Debounced recalculation of error underlines — called whenever the editor
+    // dimensions change (browser zoom, future font-size setting, window resize).
+    // 150 ms debounce avoids rapid recomputes during continuous zoom steps.
+    var _errorRecalcTimer = null;
+    function _debouncedErrorRecalc() {
+        clearTimeout(_errorRecalcTimer);
+        _errorRecalcTimer = setTimeout(function() {
+            if (typeof _highlightAsmErrorLines === 'function' &&
+                    typeof _activeAsmErrors !== 'undefined' &&
+                    _activeAsmErrors.length > 0) {
+                _highlightAsmErrorLines(_activeAsmErrors);
+            }
+        }, 150);
+    }
+
     const asmEd = document.getElementById('asmEditor');
     if (asmEd) {
         asmEd.addEventListener('input', function() { updateLineNumbers(); markUserTabDirty(); updateSavePseudoBtn(); });
         asmEd.addEventListener('scroll', syncLineScroll);
         if (typeof ResizeObserver !== 'undefined') {
-            new ResizeObserver(syncLineScroll).observe(asmEd);
+            new ResizeObserver(function() { syncLineScroll(); _debouncedErrorRecalc(); }).observe(asmEd);
         }
         asmEd.addEventListener('keydown', function(e) {
             if (e.key === 'Tab') {
@@ -619,7 +634,7 @@ function init() {
             }
         });
     }
-    window.addEventListener('resize', syncLineScroll);
+    window.addEventListener('resize', function() { syncLineScroll(); _debouncedErrorRecalc(); });
     const asmOverlay = document.getElementById('asmErrorOverlay');
     if (asmOverlay && typeof MutationObserver !== 'undefined') {
         new MutationObserver(syncLineScroll).observe(asmOverlay, { childList: true });
