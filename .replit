@@ -79,6 +79,10 @@ args = "boot-layout-regression"
 task = "workflow.run"
 args = "lump-binary-tests"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "selftest-lump-runs"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -251,6 +255,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node simulator/test_load_lump_binary.js"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "selftest-lump-runs"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest tests/simulator/test_selftest_lump_runs.py -v"
 
 [workflows.workflow.metadata]
 isValidation = true
