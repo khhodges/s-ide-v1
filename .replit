@@ -91,6 +91,10 @@ args = "check-selftest-lump-stale"
 task = "workflow.run"
 args = "warning-panel-tests"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "check-capabilities-blocks"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -308,6 +312,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node simulator/test_asm_warning_panel.js"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "check-capabilities-blocks"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node scripts/check-capabilities-blocks.js"
 
 [workflows.workflow.metadata]
 isValidation = true
