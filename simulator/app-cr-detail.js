@@ -509,9 +509,38 @@ function _highlightAsmWarningLines(warnings) {
         warnings.forEach(function(w) {
             if (!w.line || !charWidth || w.line > sourceLines.length) return;
 
+            var lineText = sourceLines[w.line - 1] || '';
             var lineTop = paddingTop + (w.line - 1) * lineHeight;
-            var colStart = (w.colStart !== undefined) ? w.colStart : 0;
-            var colEnd   = (w.colEnd   !== undefined) ? w.colEnd   : 0;
+            var colStart = 0, colEnd = 0;
+
+            if (w.colStart !== undefined && w.colEnd !== undefined) {
+                // Assembler-supplied precise column range — use directly.
+                colStart = w.colStart;
+                colEnd   = w.colEnd;
+            } else {
+                // Fallback: try to locate the quoted token from the warning message.
+                var tokenFound = false;
+                if (w.message) {
+                    var qm = w.message.match(/"([^"]+)"/);
+                    if (qm) {
+                        var tok = qm[1];
+                        var idx = lineText.indexOf(tok);
+                        if (idx < 0) idx = lineText.toUpperCase().indexOf(tok.toUpperCase());
+                        if (idx >= 0) {
+                            colStart = idx;
+                            colEnd = idx + tok.length;
+                            tokenFound = true;
+                        }
+                    }
+                }
+                if (!tokenFound) {
+                    // Last resort: underline from first non-whitespace to end of non-comment content.
+                    var strippedLine = lineText.replace(/;.*$/, '').replace(/\s+$/, '');
+                    var firstNonWs = strippedLine.search(/\S/);
+                    colStart = firstNonWs >= 0 ? firstNonWs : 0;
+                    colEnd = strippedLine.length;
+                }
+            }
 
             if (colEnd > colStart) {
                 var ulDiv = document.createElement('div');
