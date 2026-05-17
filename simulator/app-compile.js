@@ -1644,7 +1644,18 @@ function loadCLOOMCExample(name) {
                 }
                 if (typeof historySetCodeExample === 'function') historySetCodeExample(name);
                 const nb = document.getElementById('presetNoticeBar');
-                if (nb) nb.style.display = 'none';
+                if (nb) {
+                    const nbText = nb.querySelector('.preset-notice-text');
+                    if (name === 'ada_note_g') {
+                        if (nbText) nbText.textContent = 'Integer arithmetic only \u2014 load the CLOOMC preset for exact fractions.';
+                        nb.style.display = 'flex';
+                    } else if (name === 'ada_note_g_published_bug') {
+                        if (nbText) nbText.textContent = 'Ada\u2019s published Op\u00a04 has the dividend and divisor swapped. Expected result: DR24\u00a0=\u00a0139/630 (not \u22121/30). Compare with \u201cAda: Note G (corrected)\u201d to see the difference.';
+                        nb.style.display = 'flex';
+                    } else {
+                        nb.style.display = 'none';
+                    }
+                }
             })
             .catch(err => console.error('Failed to load example:', err));
         return;
@@ -3761,7 +3772,18 @@ abstraction DMABuffer {
 
     if (typeof historySetCodeExample === 'function') historySetCodeExample(name);
     const noticeBar = document.getElementById('presetNoticeBar');
-    if (noticeBar) noticeBar.style.display = 'none';
+    if (noticeBar) {
+        const noticeText = noticeBar.querySelector('.preset-notice-text');
+        if (name === 'ada_note_g') {
+            if (noticeText) noticeText.textContent = 'Integer arithmetic only \u2014 load the CLOOMC preset for exact fractions.';
+            noticeBar.style.display = 'flex';
+        } else if (name === 'ada_note_g_published_bug') {
+            if (noticeText) noticeText.textContent = 'Ada\u2019s published Op\u00a04 has the dividend and divisor swapped. Expected result: DR24\u00a0=\u00a0139/630 (not \u22121/30). Compare with \u201cAda: Note G (corrected)\u201d to see the difference.';
+            noticeBar.style.display = 'flex';
+        } else {
+            noticeBar.style.display = 'none';
+        }
+    }
 }
 
 /* ── Initialize structural example globals at script load time ───────────── *
