@@ -1277,6 +1277,7 @@ function auditLumpOnly() {
     if (result.errors.length > 0) {
         const errText = result.errors.map(e => `Line ${e.line || '?'}: ${e.message}`).join('\n');
         if (con) { con.textContent = `Audit LUMP — compilation errors:\n${errText}`; con.scrollTop = 0; }
+        const _ae = result.errors.length; if (typeof _showAsmErrors === 'function') _showAsmErrors(result.errors, 'Audit LUMP — compile error' + (_ae > 1 ? 's' : ''));
         return;
     }
 
@@ -1500,6 +1501,7 @@ function compileAndCreateAbstraction() {
         const errText = result.errors.map(e => `Line ${e.line || '?'}: ${e.message}`).join('\n');
         const _cab2Src = _getActiveSourceLabel(); const _cab2SrcH = _cab2Src ? ` · ${_cab2Src}` : '';
         if (con) con.textContent = `CLOOMC++ compilation errors${_cab2SrcH}:\n${errText}`;
+        const _cae = result.errors.length; if (typeof _showAsmErrors === 'function') _showAsmErrors(result.errors, 'Compile error' + (_cae > 1 ? 's' : '') + ' \u2014 abstraction not created');
         showNextSteps('error');
         return;
     }
