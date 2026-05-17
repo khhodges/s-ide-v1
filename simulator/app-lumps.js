@@ -3431,9 +3431,11 @@ async function _gtPickCommit(lumpToken, slotIndex) {
 }
 
 // ── Load a saved LUMP binary into the simulator ───────────────────────────────
-// Fetches raw words from /api/lump/<token>/words, calls sim.loadProgram(),
-// then syncs the boot-entry UI so the Resident panel stays consistent.
-// Works for any code-type LUMP (assembly, cloomc, etc.).
+// Fetches the full LUMP binary from /api/lump/<token>/words and loads it
+// atomically into the simulator via sim.loadLumpBinary().  The entire binary
+// (header + code + c-list + padding) is written verbatim — no header stripping,
+// no reconstruction.  NS slot 3 and CR14 are updated from the lump header's own
+// cw/cc/n-6 fields.  The assembler path (loadProgram) is unaffected.
 async function _loadLumpBinaryIntoSim(token, name, btn) {
     if (!token) return;
     if (btn) { btn.disabled = true; btn.textContent = 'Loading\u2026'; }
@@ -3444,38 +3446,32 @@ async function _loadLumpBinaryIntoSim(token, name, btn) {
         const rawWords = data.words || [];
         if (!rawWords.length) throw new Error('Empty LUMP \u2014 no words returned');
 
-        // The /words endpoint returns the full LUMP binary: header word (index 0) +
-        // code words + c-list.  loadProgram() expects pure code words and writes its
-        // own header at baseAddr, so passing rawWords[0] (the LUMP header) causes it
-        // to land in the first code slot and appear as a duplicate .header in Code View.
-        // Strip the header and extract only the cw code words.
-        let words = rawWords;
-        if (((rawWords[0] >>> 0) >>> 27) === 0x1F) {
-            const hdrWord = rawWords[0] >>> 0;
-            const cw      = (hdrWord >>> 10) & 0x1FFF;
-            words = rawWords.slice(1, 1 + Math.min(cw, rawWords.length - 1));
-        }
-
         if (typeof sim === 'undefined' || !sim) throw new Error('Simulator not ready');
         if (!sim.bootComplete && typeof instantBoot === 'function') instantBoot();
 
-        sim.loadProgram(words, 0);
+        const loaded = sim.loadLumpBinary(rawWords);
+        if (!loaded) throw new Error('loadLumpBinary rejected the binary — check the console output for details');
+
         if (typeof _syncBootEntryFromSim === 'function') _syncBootEntryFromSim();
-        if (typeof lastAssembledWords !== 'undefined') lastAssembledWords = words.slice();
+        // Do NOT set lastAssembledWords: that variable is for assembler-path programs.
+        // Setting it to a full lump binary would cause _autoLoadDefaultProgram() to feed
+        // the binary (including header word) into loadProgram() on every subsequent reset.
         if (typeof _defaultProgramLoaded !== 'undefined') window._defaultProgramLoaded = true;
-        if (typeof _injectClistNow === 'function') {
-            _injectClistNow();
-            if (typeof _pendingSimLoad !== 'undefined') window._pendingSimLoad = false;
-        } else {
-            if (typeof _pendingSimLoad !== 'undefined') window._pendingSimLoad = true;
-        }
+        // Do NOT call _injectClistNow(): the c-list is already loaded verbatim inside the
+        // lump binary by loadLumpBinary(), and CR6 has been updated to point to it.
+        // Calling _injectClistNow() here would overwrite the loaded c-list and mutate the
+        // header's cc field, destroying the LUMP integrity that this function now preserves.
+        if (typeof _pendingSimLoad !== 'undefined') window._pendingSimLoad = false;
         if (sim.programName !== undefined) sim.programName = name || token;
+
+        const hdr = rawWords.length ? sim.parseLumpHeader(rawWords[0] >>> 0) : null;
+        const wordCount = (hdr && hdr.valid) ? hdr.cw : rawWords.length;
 
         if (btn) { btn.textContent = 'Loaded \u2713'; }
         const con = document.getElementById('editorConsole');
         if (con) {
             con.className = '';
-            con.textContent = `Loaded LUMP \u201c${name || token}\u201d \u2014 ${words.length} words \u2014 click Step or Run`;
+            con.textContent = `Loaded LUMP \u201c${name || token}\u201d \u2014 cw=${wordCount}${hdr && hdr.valid ? ' cc=' + hdr.cc : ''} \u2014 click Step or Run`;
         }
         switchView('dashboard');
     } catch (err) {

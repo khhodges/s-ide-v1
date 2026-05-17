@@ -1109,6 +1109,139 @@ def release_r1_pdf(filename):
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return resp
 
+@app.route("/release/r12/")
+@app.route("/release/r12")
+def release_r12_index():
+    html = """<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CM Release 1.2 — 3-Board ZIP Downloads</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#0a0e17;color:#c8d6e5;padding:32px;max-width:900px;margin:0 auto}
+  h1{color:#a78bfa;margin-bottom:4px}
+  h2{color:#daa520;font-size:1rem;margin:2rem 0 0.6rem}
+  .sub{color:#64748b;margin-bottom:28px;font-size:.9rem}
+  .tag{font-size:.75rem;color:#64748b;font-family:monospace;margin-bottom:1.6rem}
+  .board-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:2rem}
+  @media(max-width:700px){.board-cards{grid-template-columns:1fr}}
+  .board-card{background:#0d1117;border:1px solid #2d1f4e;border-radius:8px;padding:18px 16px}
+  .board-card h3{color:#a78bfa;font-size:.95rem;margin-bottom:.3rem}
+  .board-card .board-tag{font-size:.7rem;color:#64748b;font-family:monospace;margin-bottom:.8rem}
+  .board-card ul{margin:0;padding-left:1.2rem;font-size:.8rem;color:#8892a4;line-height:1.7}
+  .board-card code{background:#1a0e28;padding:.1rem .3rem;border-radius:3px;font-size:.78rem}
+  .dl-btn{display:inline-block;margin-top:1rem;padding:.45rem 1rem;background:#1a0e28;border:1px solid #a78bfa;
+          border-radius:5px;color:#a78bfa;text-decoration:none;font-size:.82rem;transition:background .15s,color .15s}
+  .dl-btn:hover{background:#a78bfa;color:#0a0e17}
+  .note{background:#0d1117;border-left:3px solid #a78bfa;padding:.7rem 1rem;font-size:.8rem;
+        color:#8892a4;border-radius:0 4px 4px 0;margin-bottom:1.5rem}
+  .changes{font-size:.82rem;color:#8892a4;line-height:1.7}
+  .changes li{margin-bottom:.3rem}
+  .changes code{background:#1a0e28;padding:.1rem .3rem;border-radius:3px}
+  table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:.5rem}
+  th{text-align:left;padding:7px 10px;background:#111827;color:#daa520;border-bottom:2px solid #1e2a3a}
+  td{padding:6px 10px;border-bottom:1px solid #1e2a3a;vertical-align:middle}
+  a.doc-link{color:#4ade80;text-decoration:none} a.doc-link:hover{text-decoration:underline}
+  .back{margin-top:2rem;font-size:.8rem;color:#4a5568}
+  .back a{color:#64748b;text-decoration:none} .back a:hover{color:#a78bfa}
+</style></head><body>
+<h1>CM Release 1.2</h1>
+<div class="tag">15 May 2026 &middot; Builder &middot; 3-Board FPGA ZIP Downloads</div>
+<div class="note">
+  The Release 1 document set (14 PDFs) remains the definitive hardware specification.
+  Release 1.2 adds verified FPGA package downloads for all three supported boards.
+  Use the <strong>Builder</strong> view in the simulator IDE to synthesise RTL and then
+  click <em>Download FPGA Package</em> for your target board.
+</div>
+
+<h2 id="ti60">&#x2B21; FPGA Package Downloads</h2>
+<div class="board-cards">
+  <div class="board-card" id="ti60-card">
+    <h3>Efinix Ti60 F225</h3>
+    <div class="board-tag">Efinity toolchain &middot; JTAG</div>
+    <ul>
+      <li><code>church_ti60_f225.xml</code> — Efinity project</li>
+      <li><code>church_ti60_f225.v</code> — Synthesisable Verilog</li>
+      <li><code>church_ti60_f225.sdc</code> — Timing constraints</li>
+      <li><code>church_ti60_f225.peri.xml</code> — Periphery I/O</li>
+      <li><code>setup_ti60_peri.py</code> — DesignAPI PLL script</li>
+      <li><code>ti60_f225.isf</code> — Pin constraints</li>
+      <li><code>BUILD.md</code> — Instructions</li>
+    </ul>
+    <a class="dl-btn" href="/api/download/fpga-zip?board=ti60-f225">Download church-ti60-package.zip</a>
+  </div>
+  <div class="board-card" id="wukong-card">
+    <h3>QMTECH Wukong XC7A100T</h3>
+    <div class="board-tag">Vivado 2020.x+ &middot; JTAG</div>
+    <ul>
+      <li><code>church_wukong_xc7a100t.il</code> — Amaranth RTLIL</li>
+      <li><code>church_wukong_xc7a100t.v</code> — Verilog (Yosys)</li>
+      <li><code>wukong_xc7a100t.xdc</code> — Vivado pin constraints</li>
+      <li><code>wukong_xc7a100t.tcl</code> — Project + build script</li>
+      <li><code>local_bridge.py</code> — Serial bridge server</li>
+      <li><code>BUILD.md</code> — Instructions</li>
+    </ul>
+    <a class="dl-btn" href="/api/download/fpga-zip?board=wukong-xc7a100t">Download church-wukong-package.zip</a>
+  </div>
+  <div class="board-card" id="tang-card">
+    <h3>Sipeed Tang Nano 20K</h3>
+    <div class="board-tag">OSS CAD Suite &middot; Gowin GW2AR-18</div>
+    <ul>
+      <li><code>church_tang_nano_20k.il</code> — Amaranth RTLIL</li>
+      <li><code>church_tang_nano_20k.v</code> — Verilog (Yosys, optional)</li>
+      <li><code>church_tang_nano_20k.json</code> — Yosys JSON (optional)</li>
+      <li><code>local_bridge.py</code> — Serial bridge server</li>
+      <li><code>Makefile</code> — <code>make pnr pack prog</code></li>
+      <li><code>BUILD.md</code> — Instructions</li>
+    </ul>
+    <a class="dl-btn" href="/api/download/fpga-zip?board=tang-nano-20k-iot">Download church-nano-package.zip</a>
+  </div>
+</div>
+<div class="note" style="margin-bottom:2rem;">
+  <strong>To generate a ZIP:</strong> open the <a href="/simulator" style="color:#a78bfa">Church Machine IDE</a>,
+  go to <em>Builder &rarr; Hardware Build</em>, select your target board, click <strong>Build</strong>,
+  then click <strong>Download FPGA Package</strong>. The download links above serve the last-built package from the server.
+</div>
+
+<h2 id="changes">&#x1F4CB; What Changed in Release 1.2</h2>
+<ul class="changes">
+  <li>Build log now lists exactly what is inside each ZIP — no phantom or missing filenames.</li>
+  <li>Ti60 F225: removed stale <code>.edif</code> entry; added <code>.xml</code>, <code>.sdc</code>, <code>.peri.xml</code>, <code>setup_ti60_peri.py</code>.</li>
+  <li>Wukong XC7A100T: added missing <code>local_bridge.py</code> to the listing.</li>
+  <li>Tang Nano 20K: added <code>.il</code> and <code>local_bridge.py</code>; marked <code>.v</code>/<code>.json</code> as conditional on Yosys.</li>
+  <li>File-icon map expanded: <code>.isf</code>, <code>.xdc</code>, <code>.tcl</code>, <code>.xml</code>, <code>.sh</code>, <code>.py</code> all get icons in the build log panel.</li>
+  <li>New <code>test_zip_contents.py</code>: 5 pytest cases verify each board&rsquo;s ZIP file set, no toolchain required.</li>
+</ul>
+
+<h2>&#x1F4C4; Release 1 Document Set</h2>
+<p style="font-size:.82rem;color:#8892a4;margin-bottom:.8rem">
+  The following 14 documents from Release 1 remain the definitive hardware specification.
+  <a class="doc-link" href="/release/r1">Browse all Release 1 PDFs &rarr;</a>
+</p>
+<table>
+<thead><tr><th>Document</th><th>Download</th></tr></thead>
+<tbody>
+  <tr><td>ISA Reference</td><td><a class="doc-link" href="/release/r1/ctmm-r1-01-isa-reference.pdf">PDF</a></td></tr>
+  <tr><td>ISA Encoding</td><td><a class="doc-link" href="/release/r1/ctmm-r1-02-isa-encoding.pdf">PDF</a></td></tr>
+  <tr><td>Architecture Overview</td><td><a class="doc-link" href="/release/r1/ctmm-r1-03-architecture.pdf">PDF</a></td></tr>
+  <tr><td>Church Instructions</td><td><a class="doc-link" href="/release/r1/ctmm-r1-04-church-instructions.pdf">PDF</a></td></tr>
+  <tr><td>Full Instruction Set</td><td><a class="doc-link" href="/release/r1/ctmm-r1-05-instruction-set.pdf">PDF</a></td></tr>
+  <tr><td>Golden Tokens</td><td><a class="doc-link" href="/release/r1/ctmm-r1-06-golden-tokens.pdf">PDF</a></td></tr>
+  <tr><td>Abstract Golden Token</td><td><a class="doc-link" href="/release/r1/ctmm-r1-07-abstract-gt.pdf">PDF</a></td></tr>
+  <tr><td>Namespace Security</td><td><a class="doc-link" href="/release/r1/ctmm-r1-08-namespace-security.pdf">PDF</a></td></tr>
+  <tr><td>Mint &amp; PassKey Issuance</td><td><a class="doc-link" href="/release/r1/ctmm-r1-09-mint.pdf">PDF</a></td></tr>
+  <tr><td>Machine Load (mLoad)</td><td><a class="doc-link" href="/release/r1/ctmm-r1-10-mload.pdf">PDF</a></td></tr>
+  <tr><td>SWITCH Lifecycle &amp; PassKey Install</td><td><a class="doc-link" href="/release/r1/ctmm-r1-11-switch-lifecycle.pdf">PDF</a></td></tr>
+  <tr><td>Boot ROM Layout</td><td><a class="doc-link" href="/release/r1/ctmm-r1-12-boot-rom-layout.pdf">PDF</a></td></tr>
+  <tr><td>Boot Permission Rules</td><td><a class="doc-link" href="/release/r1/ctmm-r1-13-boot-permission-rules.pdf">PDF</a></td></tr>
+  <tr><td>Hardware Deviations &mdash; All Closed</td><td><a class="doc-link" href="/release/r1/ctmm-r1-14-hardware-deviations.pdf">PDF</a></td></tr>
+</tbody>
+</table>
+
+<p class="back"><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/release/r1">Release 1 Documents</a></p>
+</body></html>"""
+    return html
+
 _SIMULATOR_HTML_VERSION = "r20260501k"
 
 @app.route("/simulator")

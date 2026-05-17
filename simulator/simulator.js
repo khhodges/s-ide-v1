@@ -5656,6 +5656,89 @@ class ChurchSimulator {
         this.emit('stateChange', this.getState());
     }
 
+    loadLumpBinary(words) {
+        const EXTENDED_BASE  = 0x0400;
+        const abstrSlot      = BOOT_ABSTR_NS_SLOT;
+
+        if (!words || !words.length) {
+            this.output += '[loadLumpBinary] ERROR: empty words array.\n';
+            return false;
+        }
+
+        const hdrWord = words[0] >>> 0;
+        const hdr     = this.parseLumpHeader(hdrWord);
+        if (!hdr.valid) {
+            this.output += `[loadLumpBinary] ERROR: word 0 (0x${hdrWord.toString(16)}) is not a valid LUMP header (magic != 0x1F).\n`;
+            return false;
+        }
+
+        const lumpSize = hdr.lumpSize;
+
+        if (EXTENDED_BASE + lumpSize > this.NS_TABLE_BASE) {
+            this.output += `[loadLumpBinary] ERROR: LUMP (${lumpSize} words) would overflow memory at 0x${EXTENDED_BASE.toString(16)}.\n`;
+            return false;
+        }
+
+        for (let i = 0; i < lumpSize; i++) {
+            this.memory[EXTENDED_BASE + i] = (i < words.length ? words[i] : 0) >>> 0;
+        }
+
+        const nsBase       = this.NS_TABLE_BASE + abstrSlot * this.NS_ENTRY_WORDS;
+        const oldW1        = this.memory[nsBase + 1] >>> 0;
+        const oldW2        = this.memory[nsBase + 2] >>> 0;
+        const w1f          = this.parseNSWord1(oldW1);
+        const existingGtSeq = (oldW2 >>> 25) & 0x7F;
+
+        this.memory[nsBase + 0] = EXTENDED_BASE >>> 0;
+        this.memory[nsBase + 1] = this.packNSWord1(hdr.cw, w1f.b, w1f.g, w1f.gtType, hdr.cc);
+        this.memory[nsBase + 2] = this.makeVersionSeals(existingGtSeq, EXTENDED_BASE, hdr.cw);
+
+        const cr14 = this.cr[14];
+        if (cr14) {
+            cr14.word1 = EXTENDED_BASE >>> 0;
+            cr14.word2 = this.memory[nsBase + 1];
+            cr14.word3 = this.memory[nsBase + 2];
+        }
+
+        // Set CR6 to point to the c-list that is already embedded in the lump.
+        // The c-list occupies the last cc words of the lump slot:
+        //   clistBase = EXTENDED_BASE + lumpSize - cc
+        // When cc = 0 zero CR6 so any downstream lazy-injection path can take over.
+        if (this.cr[6]) {
+            if (hdr.cc > 0) {
+                const clistBase = EXTENDED_BASE + lumpSize - hdr.cc;
+                const cr6GT = this.createGT(0, abstrSlot, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
+                this.cr[6] = {
+                    word0: cr6GT,
+                    word1: clistBase >>> 0,
+                    word2: this.memory[nsBase + 1],
+                    word3: this.memory[nsBase + 2],
+                    m: 0,
+                };
+            } else {
+                this.cr[6] = { word0: 0, word1: 0, word2: 0, word3: 0, m: 0 };
+            }
+        }
+
+        this.pc              = 0;
+        this.halted          = false;
+        this.running         = false;
+        this.sto             = 243;
+        this.callStack       = [];
+        this.stepCount       = 0;
+        this.lambdaActive    = false;
+        this.lambdaReturnPC  = 0;
+        this.lambdaCachedFrame = null;
+        this.faultLog        = [];
+        this._instrHistory   = [];
+
+        this.output += `[loadLumpBinary] LUMP loaded at 0x${EXTENDED_BASE.toString(16)}: lumpSize=${lumpSize} cw=${hdr.cw} cc=${hdr.cc}.\n`;
+
+        this.emit('programLoaded', { addr: EXTENDED_BASE, length: hdr.cw });
+        this.emit('stateChange', this.getState());
+        return true;
+    }
+
     loadHardwareBinary(hwProgram, hwNamespace, hwClist, hwLabels, abstractions) {
         this.reset();
 
