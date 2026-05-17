@@ -390,6 +390,25 @@ class ChurchAssembler {
         return null;
     }
 
+    // _checkCapDeclared(name, lineNum)
+    // When a capabilities { } block is present in the source (_hasCapBlock is true),
+    // every named abstraction used in LOAD / ELOADCALL / CALL dot-notation must appear
+    // in that block.  If it is absent, emit a clear error pointing to the missing entry.
+    // No-op when no capabilities block was declared (backward-compatible with programs
+    // that rely entirely on the DEMO_CLIST or namespace auto-resolution).
+    _checkCapDeclared(name, lineNum) {
+        if (!this._hasCapBlock) return;
+        const cleanName = (name || '').replace(/,/g, '').trim();
+        if (!cleanName) return;
+        if (this._capBlockSlots[cleanName] === undefined) {
+            this.errors.push({
+                line: lineNum,
+                ...this._tokenCols(this._currentLineText, cleanName),
+                message: `"${cleanName}" is used but not declared in the capabilities block. Add it with a permission letter:\n  capabilities { ${cleanName} E }`
+            });
+        }
+    }
+
     _resolveNSName(token) {
         if (!token) return null;
         const name = token.replace(/,/g, '').trim();
@@ -598,6 +617,7 @@ class ChurchAssembler {
         this.errors = [];
         this.warnings = [];
         this.capabilities = [];   // names declared in capabilities { } header (if present)
+        this._hasCapBlock = false; // true when any capabilities { } block is present in source
         // Reset to shared conventions — local .pet directives for this lump are
         // re-collected by _parsePetDirectives below and shadow these.
         this._drAliases = Object.assign({}, ChurchAssembler._sharedDrAliases || {});
@@ -630,11 +650,18 @@ class ChurchAssembler {
             // Accepts single-line  capabilities { LED0, SlideRule }
             // or multi-line        capabilities {\n  LED0\n  SlideRule\n}
             if (!_inCapBlock && !_inConstBlock && /^capabilities\s*\{/i.test(line)) {
+                this._hasCapBlock = true;
                 const inline = line.match(/^capabilities\s*\{\s*(.*?)\s*\}\s*$/i);
                 if (inline) {
                     for (const item of inline[1].split(',')) {
                         const cap = ChurchAssembler._parseCapItem(item);
-                        if (cap) this.capabilities.push(cap);
+                        if (cap) {
+                            if (cap.rights.length === 0 && !ChurchAssembler._isHardwareCapName(cap.name)) {
+                                this.errors.push({ line: lineNum + 1, ...this._tokenCols(this._currentLineText, cap.name),
+                                    message: `Capability "${cap.name}" has no permission letters — add at least one of E, R, W, X after the name.\n  Example: capabilities { ${cap.name} E }` });
+                            }
+                            this.capabilities.push(cap);
+                        }
                     }
                 } else {
                     _inCapBlock = true;
@@ -642,7 +669,13 @@ class ChurchAssembler {
                     if (tail) {
                         for (const item of tail.split(',')) {
                             const cap = ChurchAssembler._parseCapItem(item);
-                            if (cap) this.capabilities.push(cap);
+                            if (cap) {
+                                if (cap.rights.length === 0 && !ChurchAssembler._isHardwareCapName(cap.name)) {
+                                    this.errors.push({ line: lineNum + 1, ...this._tokenCols(this._currentLineText, cap.name),
+                                        message: `Capability "${cap.name}" has no permission letters — add at least one of E, R, W, X after the name.\n  Example: capabilities { ${cap.name} E }` });
+                                }
+                                this.capabilities.push(cap);
+                            }
                         }
                     }
                 }
@@ -653,7 +686,13 @@ class ChurchAssembler {
                 else {
                     for (const item of line.split(',')) {
                         const cap = ChurchAssembler._parseCapItem(item);
-                        if (cap) this.capabilities.push(cap);
+                        if (cap) {
+                            if (cap.rights.length === 0 && !ChurchAssembler._isHardwareCapName(cap.name)) {
+                                this.errors.push({ line: lineNum + 1, ...this._tokenCols(this._currentLineText, cap.name),
+                                    message: `Capability "${cap.name}" has no permission letters — add at least one of E, R, W, X after the name.\n  Example: capabilities { ${cap.name} E }` });
+                            }
+                            this.capabilities.push(cap);
+                        }
                     }
                 }
                 continue;
@@ -965,6 +1004,7 @@ class ChurchAssembler {
                 this._checkPrivCR(crDst, 'LOAD', lineNum);
                 const res0 = this._resolveNSNameBracket(parts[2], parts[3]);
                 if (res0 !== null && (!parts[3] || res0.consumed)) {
+                    this._checkCapDeclared(res0.key, lineNum);
                     crSrc = 6;   // CR6 = c-list root by convention
                     imm   = res0.slot;
                     this.nsLoaded[res0.key] = crDst;
@@ -1030,6 +1070,7 @@ class ChurchAssembler {
                         break;
                     }
                     const dotMethodName = dotMethodRaw;
+                    this._checkCapDeclared(dotAbsName, lineNum);
                     const crSlot = this.nsLoaded[dotAbsName];
                     if (crSlot !== undefined) {
                         crDst = crSlot;
@@ -1220,6 +1261,7 @@ class ChurchAssembler {
                 if (res8 !== null && (!parts[3] || res8.consumed)) {
                     // Simple form: ELOADCALL CRdst, Name  (or ELOADCALL CRdst, LED[N])
                     // imm15[7:0] = c-list row; imm15[14:8] = 0 (fast-path, NIA = lump word 1)
+                    this._checkCapDeclared(res8.key, lineNum);
                     crSrc = 6;
                     if (res8.slot < 0 || res8.slot > 255) {
                         this.errors.push({ line: lineNum, ...this._tokenCols(this._currentLineText, res8.key), message: `ELOADCALL c-list row ${res8.slot} is out of range (0–255 allowed).` });
@@ -1228,6 +1270,7 @@ class ChurchAssembler {
                 } else if (res8 !== null && parts[3] && !res8.consumed) {
                     // Method-indexed form: ELOADCALL CRdst, Name, MethodName  or  ELOADCALL CRdst, Name, 0
                     // imm15[14:8] = method index (1-based, 1–127); imm15[7:0] = c-list row
+                    this._checkCapDeclared(res8.key, lineNum);
                     crSrc = 6;
                     const rawSlot8v = res8.slot;
                     if (rawSlot8v < 0 || rawSlot8v > 255) {
@@ -1655,16 +1698,28 @@ class ChurchAssembler {
     //     the numeric offset form produced by disassemble().
     //   • Word 0x00000000 is emitted as "NOP".
 
+    // _isHardwareCapName(name)
+    // Returns true for hardware-fixed capability names whose permissions are defined
+    // by the boot image and do not need to be spelled out in the source.
+    // These names are exempt from the bare-name (no rights letters) validation.
+    static _isHardwareCapName(name) {
+        return /^LED[0-5]$/i.test(name) ||
+               /^(UART|BTN|SlideRule|Timer|Display|Boot\.Nucs|Boot\.Abstr)$/.test(name);
+    }
+
     // Parse a single "NAME [RIGHTS]" capability item from a capabilities { } block.
     // Examples: "LED0 RW" → {name:'LED0', rights:['R','W']}
     //           "SlideRule E" → {name:'SlideRule', rights:['E']}
     //           "LED0" → {name:'LED0', rights:[]}
+    //           "Boot.Nucs E" → {name:'Boot.Nucs', rights:['E']}
+    // Dotted names (e.g. Boot.Nucs, Boot.Abstr) are accepted; each segment must
+    // start with a letter and contain only letters, digits, and underscores.
     // Rights tokens contain ONLY letters from the set {R, W, X, E} (no digits/underscores).
     static _parseCapItem(itemStr) {
         const tokens = itemStr.trim().split(/\s+/).filter(Boolean);
         if (!tokens.length) return null;
         const name = tokens[0];
-        if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name)) return null;
+        if (!/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*$/.test(name)) return null;
         const rights = [];
         for (const t of tokens.slice(1)) {
             if (/^[RWXErwxe]+$/.test(t)) {

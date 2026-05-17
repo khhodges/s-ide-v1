@@ -7565,6 +7565,147 @@ Add a method called Run
         e ? 'colEnd=' + e.colEnd : 'no error');
 }
 
+// ── CAP-V: capabilities block validation (task-1352) ─────────────────────────
+// Four error cases and one regression (no-error) case.
+
+// CAP-V1: bare-name entry with no permission letters (inline block) → error.
+{
+    const a = new ChurchAssembler({});
+    a.assemble('capabilities { Salvation }\nRETURN');
+    assert('CAP-V1: bare-name entry (no rights) produces an error',
+        a.errors.length > 0,
+        'expected at least one error');
+    assert('CAP-V1: error message mentions "Salvation" and permission letters',
+        a.errors.length > 0 &&
+        a.errors[0].message.includes('Salvation') &&
+        a.errors[0].message.includes('permission'),
+        a.errors.length > 0 ? a.errors[0].message : '(no error)');
+}
+
+// CAP-V2: bare-name entry with no permission letters (multi-line block) → error.
+{
+    const a = new ChurchAssembler({});
+    a.assemble('capabilities {\n  Salvation\n}\nRETURN');
+    assert('CAP-V2: multi-line bare-name entry produces an error',
+        a.errors.length > 0,
+        'expected at least one error');
+    assert('CAP-V2: error mentions "Salvation"',
+        a.errors.length > 0 && a.errors[0].message.includes('Salvation'),
+        a.errors.length > 0 ? a.errors[0].message : '(no error)');
+}
+
+// CAP-V3: LOAD using a name absent from the declared capabilities block → error.
+{
+    const NS = { 'Salvation': 5 };
+    const a = new ChurchAssembler({});
+    a.setNamespace(NS);
+    // capabilities block declares nothing; LOAD Salvation should error.
+    a.assemble('capabilities { }\nLOAD CR0, Salvation');
+    const capErr = a.errors.find(e => e.message.includes('Salvation') && e.message.includes('not declared'));
+    assert('CAP-V3: LOAD with name absent from capabilities block produces error',
+        capErr != null,
+        a.errors.length > 0 ? a.errors.map(e => e.message).join('; ') : '(no error)');
+}
+
+// CAP-V4: ELOADCALL using a name absent from the declared capabilities block → error.
+{
+    const CONV = { 'Salvation': { run: { index: 0 } } };
+    const NS = { 'Salvation': 5 };
+    const a = new ChurchAssembler(CONV);
+    a.setNamespace(NS);
+    // capabilities block declares Navana E but NOT Salvation.
+    a.assemble('capabilities { Navana E }\nELOADCALL CR0, Salvation, run');
+    const capErr = a.errors.find(e => e.message.includes('Salvation') && e.message.includes('not declared'));
+    assert('CAP-V4: ELOADCALL with name absent from capabilities block produces error',
+        capErr != null,
+        a.errors.length > 0 ? a.errors.map(e => e.message).join('; ') : '(no error)');
+}
+
+// CAP-V5: valid capabilities block — name declared with rights + LOAD uses it → no cap error.
+{
+    const NS = { 'Salvation': 5 };
+    const a = new ChurchAssembler({});
+    a.setNamespace(NS);
+    a.assemble('capabilities { Salvation E }\nLOAD CR0, Salvation\nRETURN');
+    const capErrs = a.errors.filter(e => e.message.includes('not declared') || e.message.includes('permission'));
+    assert('CAP-V5: declared capability with rights produces no validation error',
+        capErrs.length === 0,
+        capErrs.map(e => e.message).join('; '));
+}
+
+// CAP-V6: hardware device bare-names (LED0) are exempt from the rights requirement.
+{
+    const a = new ChurchAssembler({});
+    a.assemble('capabilities { LED0 }\nLOAD CR3, LED0\nRETURN');
+    const capErrs = a.errors.filter(e => e.message.includes('permission') || e.message.includes('not declared'));
+    assert('CAP-V6: LED0 bare-name in capabilities block is exempt from rights check',
+        capErrs.length === 0,
+        capErrs.map(e => e.message).join('; '));
+}
+
+// CAP-V7: no capabilities block at all — LOAD with a namespace name → no cap error.
+// (Backward-compatibility: programs without a capabilities block are not affected.)
+{
+    const NS = { 'Salvation': 5 };
+    const a = new ChurchAssembler({});
+    a.setNamespace(NS);
+    a.assemble('LOAD CR0, Salvation\nRETURN');
+    const capErrs = a.errors.filter(e => e.message.includes('not declared'));
+    assert('CAP-V7: no capabilities block — LOAD with namespace name has no cap error',
+        capErrs.length === 0,
+        capErrs.map(e => e.message).join('; '));
+}
+
+// CAP-V8: CALL Foo.method — Foo absent from capabilities block → error.
+// Uses LOAD first to bind SlideRule into a CR (populates nsLoaded), then CALL Foo.method.
+{
+    const CONV = { 'SlideRule': { 'Multiply': { index: 0 } } };
+    const NS = { 'SlideRule': 3 };
+    const a = new ChurchAssembler(CONV);
+    a.setNamespace(NS);
+    // capabilities block is present but does not include SlideRule.
+    // LOAD will produce a not-declared error; CALL SlideRule.Multiply also fires it.
+    a.assemble('capabilities { Salvation E }\nLOAD CR0, SlideRule\nCALL SlideRule.Multiply');
+    const capErr = a.errors.find(e => e.message.includes('SlideRule') && e.message.includes('not declared'));
+    assert('CAP-V8: CALL dot-notation with name absent from capabilities block produces error',
+        capErr != null,
+        a.errors.length > 0 ? a.errors.map(e => e.message).join('; ') : '(no error)');
+}
+
+// CAP-V9: CALL Foo.method — Foo declared in capabilities block → no cap error.
+{
+    const CONV = { 'SlideRule': { 'Multiply': { index: 0 } } };
+    const NS = { 'SlideRule': 3 };
+    const a = new ChurchAssembler(CONV);
+    a.setNamespace(NS);
+    a.assemble('capabilities { SlideRule E }\nLOAD CR0, SlideRule\nCALL SlideRule.Multiply');
+    const capErrs = a.errors.filter(e => e.message.includes('not declared'));
+    assert('CAP-V9: CALL dot-notation with declared capability produces no cap error',
+        capErrs.length === 0,
+        capErrs.map(e => e.message).join('; '));
+}
+
+// CAP-V10: dotted name Boot.Nucs E can be declared and used without error.
+// Verifies _parseCapItem accepts dotted names so the cap-block roundtrip works.
+{
+    const a = new ChurchAssembler({});
+    a.assemble('capabilities { Boot.Nucs E }\nLOAD CR0, Boot.Nucs\nRETURN');
+    const capErrs = a.errors.filter(e => e.message.includes('not declared') || e.message.includes('permission'));
+    assert('CAP-V10: Boot.Nucs declared with rights — no cap validation error',
+        capErrs.length === 0,
+        capErrs.map(e => e.message).join('; '));
+}
+
+// CAP-V11: dotted name Boot.Abstr E can be declared and used without error.
+{
+    const a = new ChurchAssembler({});
+    a.assemble('capabilities { Boot.Abstr E }\nLOAD CR0, Boot.Abstr\nRETURN');
+    const capErrs = a.errors.filter(e => e.message.includes('not declared') || e.message.includes('permission'));
+    assert('CAP-V11: Boot.Abstr declared with rights — no cap validation error',
+        capErrs.length === 0,
+        capErrs.map(e => e.message).join('; '));
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
