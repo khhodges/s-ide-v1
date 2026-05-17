@@ -2102,12 +2102,7 @@
     }
 
     .lumps-layout {
-        grid-template-columns: 1fr;
         height: auto;
-    }
-
-    .lumps-list-panel {
-        max-height: 40vh;
     }
 
     .modal-dialog {
