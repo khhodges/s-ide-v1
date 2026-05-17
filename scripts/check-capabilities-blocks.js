@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // scripts/check-capabilities-blocks.js
 //
-// Scans every simulator/examples/*.cloomc file.
+// Scans every .cloomc file in one or more directories (searched recursively).
 // For any file that uses dot-notation operands (named LOAD, CALL Name.method,
 // or ELOADCALL CRd, Name, method), the script verifies:
 //
@@ -19,8 +19,9 @@
 // Boot.Abstr) are pre-qualified boot-level references and are exempt.
 //
 // Usage:
-//   node scripts/check-capabilities-blocks.js          # report violations
-//   node scripts/check-capabilities-blocks.js --help   # show this message
+//   node scripts/check-capabilities-blocks.js                   # scan simulator/examples (default)
+//   node scripts/check-capabilities-blocks.js dir1 dir2 ...     # scan specific directories
+//   node scripts/check-capabilities-blocks.js --help            # show this message
 //
 // Exit codes:
 //   0  — all files pass
@@ -39,10 +40,32 @@ if (process.argv.includes('--help')) {
     process.exit(0);
 }
 
-const ROOT         = path.resolve(__dirname, '..');
-const EXAMPLES_DIR = path.join(ROOT, 'simulator', 'examples');
+const ROOT = path.resolve(__dirname, '..');
+
+// Collect directory arguments from the command line (positional, non-flag args).
+const argDirs = process.argv.slice(2).filter(a => !a.startsWith('-'));
+
+// Default to simulator/examples when no directories are provided.
+const scanDirs = argDirs.length > 0
+    ? argDirs.map(d => path.resolve(ROOT, d))
+    : [path.join(ROOT, 'simulator', 'examples')];
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+
+// Recursively collect all .cloomc files under a directory.
+function collectCloomcFiles(dir) {
+    const results = [];
+    if (!fs.existsSync(dir)) return results;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            results.push(...collectCloomcFiles(full));
+        } else if (entry.isFile() && entry.name.endsWith('.cloomc')) {
+            results.push(full);
+        }
+    }
+    return results;
+}
 
 // Strip trailing inline comments and trim whitespace from a source line.
 function stripComment(line) {
@@ -113,26 +136,31 @@ function extractReferencedNames(src) {
 
 // ── main ─────────────────────────────────────────────────────────────────────
 
-const files = fs.readdirSync(EXAMPLES_DIR)
-    .filter(f => f.endsWith('.cloomc'))
-    .sort();
+// Collect all .cloomc files across all scan directories, sorted for stable output.
+const allFiles = [];
+for (const dir of scanDirs) {
+    const found = collectCloomcFiles(dir);
+    allFiles.push(...found);
+}
+allFiles.sort();
+
+// Deduplicate in case directories overlap.
+const files = [...new Set(allFiles)];
 
 let violations = 0;
 
-for (const filename of files) {
-    const filepath = path.join(EXAMPLES_DIR, filename);
-    const src      = fs.readFileSync(filepath, 'utf8');
+for (const filepath of files) {
+    const relpath = path.relative(ROOT, filepath);
+    const src     = fs.readFileSync(filepath, 'utf8');
 
     const referenced = extractReferencedNames(src);
     if (referenced.size === 0) {
-        // No dot-notation usage — no capabilities block required.
-        console.log(`  ok   (no dot-notation)  ${filename}`);
+        console.log(`  ok   (no dot-notation)  ${relpath}`);
         continue;
     }
 
     const caps = parseCapabilities(src);
 
-    // Collect missing names: either no block at all, or a name absent from it.
     const missing = [];
     for (const name of referenced) {
         if (!caps || !caps.has(name)) {
@@ -141,9 +169,9 @@ for (const filename of files) {
     }
 
     if (missing.length === 0) {
-        console.log(`  ok   ${filename}`);
+        console.log(`  ok   ${relpath}`);
     } else {
-        console.error(`  FAIL ${filename}`);
+        console.error(`  FAIL ${relpath}`);
         if (!caps) {
             console.error(`       missing capabilities block entirely`);
             console.error(`       referenced names: ${[...referenced].join(', ')}`);

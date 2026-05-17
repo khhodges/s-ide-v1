@@ -8,9 +8,9 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "node simulator/assembler_test.js && node scripts/check-capabilities-blocks.js",
+    "test": "node simulator/assembler_test.js && node scripts/check-capabilities-blocks.js simulator/examples simulator/cloomc tests",
     "test:e2e": "npx playwright test",
-    "check:capabilities": "node scripts/check-capabilities-blocks.js",
+    "check:capabilities": "node scripts/check-capabilities-blocks.js simulator/examples simulator/cloomc tests",
     "check:selftest-lump": "node scripts/check_selftest_lump_stale.js"
   },
   "keywords": [],
