@@ -2549,7 +2549,7 @@ class CLOOMCCompiler {
             expr = expr.trim();
             if (expr === '0') return { type: 'zero' };
             const num = parseInt(expr);
-            if (!isNaN(num) && num > 0) return { type: 'const', value: num };
+            if (!isNaN(num) && Number.isInteger(num)) return { type: 'const', value: num };
             const vMatch = expr.match(/^V(\d+)$/);
             if (vMatch) return { type: 'var', name: expr };
             if (expr.match(/^[a-zA-Z_]\w*$/)) return { type: 'var', name: expr };
@@ -2557,8 +2557,16 @@ class CLOOMCCompiler {
         };
 
         const emitLoadConst = (dr, value) => {
-            code.push(this.encode(this.opcodes.IADD, 14, dr, 0, value | 0x4000));
-            manifest.push({ line: 0, instr: `IADD DR${dr}, DR0, #${value}`, comment: `load constant ${value}` });
+            if (value < 0) {
+                const absVal = -value;
+                code.push(this.encode(this.opcodes.IADD, 14, dr, 0, absVal | 0x4000));
+                manifest.push({ line: 0, instr: `IADD DR${dr}, DR0, #${absVal}`, comment: `load magnitude ${absVal}` });
+                code.push(this.encode(this.opcodes.ISUB, 14, dr, 0, dr));
+                manifest.push({ line: 0, instr: `ISUB DR${dr}, DR0, DR${dr}`, comment: `negate → ${value}` });
+            } else {
+                code.push(this.encode(this.opcodes.IADD, 14, dr, 0, value | 0x4000));
+                manifest.push({ line: 0, instr: `IADD DR${dr}, DR0, #${value}`, comment: `load constant ${value}` });
+            }
         };
 
         const slideRuleMethodIndex = { Multiply: 0, Divide: 1, Sqrt: 2, Mod: 3, Bernoulli: 12, Abs: 13, Pow: 14, Min: 15, Max: 16, GCD: 17, Factorial: 18, Log2: 19, Atan2: 20, Signum: 21 };

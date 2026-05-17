@@ -6260,6 +6260,39 @@ abstraction VlcTest {
         checkInlineVsCanonicalClomc(
             'EX-BN-INLINE', 'bernoulli_numbers', 'bernoulli_numbers.cloomc');
 
+        // ── Symbolic Math: EX-NEG-LIT — negative integer literals ────────────────
+        // Regression test for stack-overflow bug: negative literals in Symbolic
+        // method bodies previously fell through to { type:'expr' }, causing
+        // emitExpr → loadToReg → emitExpr infinite recursion.
+        {
+            const src = [
+                'abstraction NegLitTest {',
+                '    capabilities {}',
+                '    method compute() {',
+                '        let V1 = -1',
+                '        let V2 = -30',
+                '        let V3 = V1 / V2',
+                '        halt',
+                '    }',
+                '}'
+            ].join('\n');
+            const result = new CLOOMCCompiler().compile(src);
+            assert('EX-NEG-LIT: compiles without errors',
+                result.errors.length === 0,
+                result.errors.map(e => 'L' + e.line + ': ' + e.message).join('; '));
+            const m = result.methods && result.methods.find(x => x.name === 'compute');
+            assert('EX-NEG-LIT: method compute is present', !!m, 'compute method not found');
+            assert('EX-NEG-LIT: method compute has at least 1 compiled word',
+                m && (m.code || []).length > 0, 'compiled to 0 words');
+            // Verify the negate sequence is emitted: negative literal loading must
+            // include an ISUB DRx, DR0, DRx instruction in the manifest.
+            const mmap = result.manifest && result.manifest.find(x => x.name === 'compute');
+            const hasIsub = mmap && (mmap.mapping || []).some(e => e.instr && e.instr.startsWith('ISUB'));
+            assert('EX-NEG-LIT: negate step (ISUB DRx, DR0, DRx) present in manifest',
+                !!hasIsub,
+                mmap ? JSON.stringify((mmap.mapping||[]).map(e=>e.instr)) : 'manifest entry not found');
+        }
+
         // ── File-backed: EX-SRHS — sliderule_hs compile-integrity ────────────────
         {
             const appPath = extractFilePath('sliderule_hs');
