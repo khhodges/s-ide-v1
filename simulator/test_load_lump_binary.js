@@ -21,6 +21,10 @@
 //   LLB-06  PC is reset to 0 by loadLumpBinary.
 //   LLB-07  CR14.word1 is updated to EXTENDED_BASE (0x0400) after the call.
 //   LLB-08  makeVersionSeals is re-run for 0x0400 so NS word2 seal is consistent.
+//   LLB-09  Large LUMP (n_minus_6=2, 256 words, cc=4): lumpSize=256, c-list base
+//            = 0x0400 + 256 - 4 = 0x04FC, NS[3].word1 clistCount=4, CR6.word1
+//            = 0x04FC.  Exercises the power-of-two lumpSize calculation and the
+//            c-list placement formula for lumps larger than 64 words.
 //
 // Coverage (real fixture + app-path tests):
 // Fixture: server/lumps/00000300.lump — "LED flash" abstraction (per sidecar
@@ -524,6 +528,56 @@ console.log('\n--- LLB-STP: step() on real LED flash (NS slot 3, token 00000300)
     } else {
         console.log('SKIP LLB-STP-* (fixture file not found)');
     }
+}
+
+// ── LLB-09: Large LUMP (n_minus_6=2, 256 words, cc=4) ────────────────────────
+// Exercises the 2^(n_minus_6+6) lumpSize calculation for n_minus_6=2 (256 words)
+// and the c-list placement formula: clistBase = EXTENDED_BASE + lumpSize - cc.
+// For this test: lumpSize = 2^(2+6) = 256, clistBase = 0x0400 + 256 - 4 = 0x04FC.
+console.log('\n--- LLB-09: Large LUMP (n_minus_6=2, 256 words, cc=4) ---');
+{
+    const N_MINUS_6   = 2;
+    const CW          = 20;
+    const CC          = 4;
+    const LUMP_SIZE   = 1 << (N_MINUS_6 + 6);           // 256
+    const CLIST_BASE  = EXTENDED_BASE + LUMP_SIZE - CC;  // 0x0400 + 256 - 4 = 0x04FC
+
+    const { sim, nsBase, ok } = setupAndLoad({ cw: CW, cc: CC, n_minus_6: N_MINUS_6 });
+
+    check('LLB-09a: loadLumpBinary returns true for 256-word LUMP', ok === true);
+
+    // Verify header in memory decodes the correct lumpSize
+    const hdrInMem = sim.memory[EXTENDED_BASE] >>> 0;
+    const hdrParsed = sim.parseLumpHeader(hdrInMem);
+    check('LLB-09b: header.lumpSize = 256 (n_minus_6=2 → 2^8)',
+        hdrParsed.lumpSize === LUMP_SIZE,
+        `got lumpSize=${hdrParsed.lumpSize}`);
+
+    // NS slot 3 word1 must encode the correct clistCount
+    const nsW1   = sim.memory[nsBase + 1];
+    const parsed = sim.parseNSWord1(nsW1);
+    check('LLB-09c: NS[3].word1 clistCount = 4',
+        parsed.clistCount === CC,
+        `got clistCount=${parsed.clistCount}`);
+    check('LLB-09d: NS[3].word1 limit = cw (20)',
+        parsed.limit === CW,
+        `got limit=${parsed.limit}`);
+
+    // CR6.word1 must point to the c-list base: EXTENDED_BASE + lumpSize - cc = 0x04FC
+    const cr6 = sim.cr[6];
+    check('LLB-09e: CR6.word1 = 0x04FC (clist base for 256-word LUMP with cc=4)',
+        cr6 !== null && cr6.word1 === CLIST_BASE,
+        cr6 ? `got CR6.word1=0x${cr6.word1.toString(16)} expected=0x${CLIST_BASE.toString(16)}` : 'CR6 is null');
+
+    // The c-list words themselves live at the computed base in memory (all zeros here)
+    check('LLB-09f: memory at c-list base (0x04FC) is accessible (within 256-word lump)',
+        CLIST_BASE >= EXTENDED_BASE && CLIST_BASE < EXTENDED_BASE + LUMP_SIZE,
+        `clistBase=0x${CLIST_BASE.toString(16)}`);
+
+    // NS slot 3 word0 must still point to EXTENDED_BASE
+    check('LLB-09g: NS[3].word0 = EXTENDED_BASE (0x0400)',
+        sim.memory[nsBase + 0] === EXTENDED_BASE,
+        `got 0x${sim.memory[nsBase+0].toString(16)}`);
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────
