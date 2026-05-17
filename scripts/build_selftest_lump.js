@@ -11,6 +11,16 @@
 // The token is the CRC-32 of all binary bytes, lower-cased 8-hex-char string.
 // The manifest.json entry is printed to stdout for manual insertion or patch.
 //
+// C-List (cc=8) — tail of the lump, slots 0..7:
+//   Slot 0  0x00000000       unused (reserved)
+//   Slot 1  0x48800001  E    Boot.Thread   (NS slot 1)  — Church domain enter
+//   Slot 2  0x48800006  E    Mint          (NS slot 6)  — GT lifecycle manager
+//   Slot 3  0x48800003  E    Boot.Abstr    (NS slot 3)  — Section I/J/K/L TPERM E tests
+//   Slot 4  0x48800004  E    Salvation     (NS slot 4)  — Church domain enter
+//   Slot 5  0x48800005  E    Navana        (NS slot 5)  — Church domain enter
+//   Slot 6  0x00000000       unused (reserved)
+//   Slot 7  0x40800001  X    Boot.Nucs     (NS slot 1)  — Turing domain; Section I/J TPERM X tests
+//
 // Usage:
 //   node scripts/build_selftest_lump.js
 
@@ -60,20 +70,40 @@ if (result.errors.length > 0) {
 const words = result.words;
 console.log(`Assembled ${words.length} instruction words.`);
 
+// ── C-List definition ─────────────────────────────────────────────────────────
+//
+// cc=8 slots placed at the lump TAIL (words lumpSize-cc .. lumpSize-1).
+// Preserving these values on every recompile is the purpose of this script.
+//
+// GT format: magic(5)|n(4)|...|perm(8)  — see ISA reference for full encoding.
+//
+const CLIST = [
+    // slot  GT value      name           grants  NS slot  note
+    { gt: 0x00000000 }, // 0  null        —       —        reserved
+    { gt: 0x48800001 }, // 1  Boot.Thread E       1        Church domain enter
+    { gt: 0x48800006 }, // 2  Mint        E       6        GT lifecycle manager
+    { gt: 0x48800003 }, // 3  Boot.Abstr  E       3        TPERM E tests (Sections I/J/K/L)
+    { gt: 0x48800004 }, // 4  Salvation   E       4        Church domain enter
+    { gt: 0x48800005 }, // 5  Navana      E       5        Church domain enter
+    { gt: 0x00000000 }, // 6  null        —       —        reserved
+    { gt: 0x40800001 }, // 7  Boot.Nucs   X       1        Turing domain; TPERM X tests (Sections I/J)
+];
+
 // ── Pack LUMP binary ─────────────────────────────────────────────────────────
 //
 // Layout (all big-endian 32-bit words):
-//   Word 0       : header  — magic(5)|n_minus_6(4)|cw(13)|typ(2)|cc(8)
-//   Words 1..cw  : instruction words
-//   Words cw+1.. : zero-pad to lump_size
+//   Word 0           : header  — magic(5)|n_minus_6(4)|cw(13)|typ(2)|cc(8)
+//   Words 1..cw      : instruction words
+//   Words cw+1..     : zero-pad
+//   Words lumpSize-cc..lumpSize-1 : c-list (cc GT words, at lump tail)
 //
 // cw  = instruction word count (len(words))
-// cc  = 0  (no dedicated c-list; uses ambient boot c-list)
+// cc  = 8  (8 GT slots at lump tail; see CLIST above)
 // typ = 0  (standard lump, not thread/outform)
 // lump_size = next power-of-2 >= (1 + cw + cc)
 
 const cw = words.length;
-const cc = 0;
+const cc = CLIST.length;   // 8
 const totalNeeded = 1 + cw + cc;
 
 let lumpSize = 64;
@@ -97,11 +127,17 @@ const headerWord = (
 const padded = new Uint32Array(lumpSize);
 padded[0] = headerWord;
 for (let i = 0; i < cw; i++) padded[1 + i] = words[i] >>> 0;
-// rest is already zero-padded
+
+// Write c-list GT values at the lump tail (words lumpSize-cc .. lumpSize-1)
+const clistBase = lumpSize - cc;
+for (let i = 0; i < CLIST.length; i++) {
+    padded[clistBase + i] = CLIST[i].gt >>> 0;
+}
 
 console.log(`LUMP header: 0x${headerWord.toString(16).toUpperCase().padStart(8,'0')}`);
 console.log(`  n_minus_6=${n_minus_6} → lump_size=${lumpSize}`);
 console.log(`  cw=${cw}  cc=${cc}  typ=0`);
+console.log(`  c-list base word index: ${clistBase}`);
 
 // ── Convert to big-endian bytes ──────────────────────────────────────────────
 const bytes = Buffer.alloc(lumpSize * 4);
@@ -141,6 +177,17 @@ fs.writeFileSync(lumpPath, bytes);
 console.log(`Written: ${lumpPath} (${bytes.length} bytes)`);
 
 // ── Write sidecar .json ───────────────────────────────────────────────────────
+const capabilities = [
+    { name: 'null',         grants: [],    gt: '0x00000000',                  note: 'unused (slot 0 reserved)' },
+    { name: 'Boot.Thread',  grants: ['E'], gt: '0x48800001', ns_slot: 1,      note: 'Boot.Thread E-GT — Church domain enter' },
+    { name: 'Mint',         grants: ['E'], gt: '0x48800006', ns_slot: 6,      note: 'Mint E-GT — Church domain enter; GT lifecycle manager (NS slot 2 freed, Mint fills this position)' },
+    { name: 'Boot.Abstr',   grants: ['E'], gt: '0x48800003', ns_slot: 3,      note: 'Boot.Abstr E-GT — Church domain enter; Section I/J/K/L TPERM E tests' },
+    { name: 'Salvation',    grants: ['E'], gt: '0x48800004', ns_slot: 4,      note: 'Salvation E-GT — Church domain enter' },
+    { name: 'Navana',       grants: ['E'], gt: '0x48800005', ns_slot: 5,      note: 'Navana E-GT — Church domain enter' },
+    { name: 'null',         grants: [],    gt: '0x00000000',                  note: 'unused (slot 6 reserved)' },
+    { name: 'Boot.Nucs',    grants: ['X'], gt: '0x40800001', ns_slot: 1,      note: 'Boot.Nucs X-GT (nucleus execute) — Turing domain; Section I/J TPERM X tests' },
+];
+
 const sidecar = {
     token,
     abstraction: 'PostFlashSelftest',
@@ -154,6 +201,7 @@ const sidecar = {
     profile: 'IoT',
     language: 'assembly',
     description: 'Post-Flash Exhaustive Self-Test — 81 hardware correctness tests (DR independence, ALU, shifts, branches, BFEXT/BFINS, TPERM, CHANGE, LOAD). DR0=0 on full pass, DR0=N on first failure.',
+    capabilities,
     grants: ['E'],
     author: 'Church Machine',
     version: '1.1',
@@ -162,6 +210,23 @@ const sidecar = {
 
 fs.writeFileSync(sidecarPath, JSON.stringify(sidecar, null, 2) + '\n');
 console.log(`Written: ${sidecarPath}`);
+
+// ── Print c-list note ─────────────────────────────────────────────────────────
+console.log('\nC-List GT slot assignments (cc=8, tail-packed):');
+const slotNames = [
+    'null (reserved)',
+    'Boot.Thread  E  NS-slot 1  — Church domain enter',
+    'Mint         E  NS-slot 6  — GT lifecycle manager',
+    'Boot.Abstr   E  NS-slot 3  — Section I/J/K/L TPERM E tests',
+    'Salvation    E  NS-slot 4  — Church domain enter',
+    'Navana       E  NS-slot 5  — Church domain enter',
+    'null (reserved)',
+    'Boot.Nucs    X  NS-slot 1  — Turing domain; Section I/J TPERM X tests',
+];
+for (let i = 0; i < CLIST.length; i++) {
+    const gt = '0x' + CLIST[i].gt.toString(16).padStart(8, '0');
+    console.log(`  slot ${i}  ${gt}  ${slotNames[i]}`);
+}
 
 // ── Suggest manifest entry ───────────────────────────────────────────────────
 const manifestEntry = {
