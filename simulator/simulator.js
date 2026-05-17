@@ -5672,10 +5672,18 @@ class ChurchSimulator {
             return false;
         }
 
+        const MAX_LUMP_WORDS = 32768;   // n_minus_6=9 → 2^15; values 10–15 are unsupported
+
         const hdrWord = words[0] >>> 0;
         const hdr     = this.parseLumpHeader(hdrWord);
         if (!hdr.valid) {
             this.output += `[loadLumpBinary] ERROR: word 0 (0x${hdrWord.toString(16)}) is not a valid LUMP header (magic != 0x1F).\n`;
+            return false;
+        }
+
+        if (hdr.n_minus_6 > 9 || hdr.lumpSize > MAX_LUMP_WORDS) {
+            console.warn(`[loadLumpBinary] WARNING: n_minus_6=${hdr.n_minus_6} is out of range (max 9, lumpSize would be ${hdr.lumpSize} words). LUMP rejected.`);
+            this.output += `[loadLumpBinary] ERROR: n_minus_6=${hdr.n_minus_6} is out of range (max 9); lumpSize ${hdr.lumpSize} exceeds MAX_LUMP_WORDS ${MAX_LUMP_WORDS}.\n`;
             return false;
         }
 

@@ -974,6 +974,60 @@ console.log('\n--- LLB-17: Large LUMP (n_minus_6=9, 32768 words, cc=11) ---');
         `got 0x${sim.memory[nsBase+0].toString(16)}`);
 }
 
+// ── LLB-18: n_minus_6=10 (out of range) — loadLumpBinary must return false ────
+// n_minus_6 values > 9 produce lumpSizes > 32768 words, which exceed the maximum
+// supported by any Church Machine board.  loadLumpBinary must reject the header
+// and leave NS slot 3 unchanged.
+console.log('\n--- LLB-18: n_minus_6=10 (out of range) — loadLumpBinary returns false ---');
+{
+    const N_MINUS_6_INVALID = 10;
+    const CW                = 10;
+    const CC                = 2;
+
+    const sim = new ChurchSimulator();
+    sim.bootComplete = true;
+
+    const GT_SEQ    = 7;
+    const INIT_BASE = 0x80;
+    const INIT_CW   = 64;
+    const nsBase = sim.NS_TABLE_BASE + BOOT_ABSTR_NS_SLOT * sim.NS_ENTRY_WORDS;
+
+    const sentinelW0 = INIT_BASE >>> 0;
+    const sentinelW1 = sim.packNSWord1(INIT_CW, 0, 0, 0, 0);
+    const sentinelW2 = sim.makeVersionSeals(GT_SEQ, INIT_BASE, INIT_CW);
+    sim.memory[nsBase + 0] = sentinelW0;
+    sim.memory[nsBase + 1] = sentinelW1;
+    sim.memory[nsBase + 2] = sentinelW2;
+
+    sim.cr[14] = {
+        word0: sim.createGT(GT_SEQ, BOOT_ABSTR_NS_SLOT, {R:1,W:0,X:1,L:0,S:0,E:0}, 1),
+        word1: INIT_BASE,
+        word2: sentinelW1,
+        word3: sentinelW2,
+        m: 0,
+    };
+    sim.cr[12] = { word0: 0, word1: 0, word2: 0, word3: 0, m: 0 };
+
+    const invalidHdr = makeHdr(CW, CC, N_MINUS_6_INVALID);
+    const words = [invalidHdr, 0];
+
+    const ok = sim.loadLumpBinary(words);
+
+    check('LLB-18a: loadLumpBinary returns false for n_minus_6=10', ok === false);
+
+    check('LLB-18b: NS slot 3 word0 unchanged after rejection',
+        sim.memory[nsBase + 0] === sentinelW0,
+        `got 0x${sim.memory[nsBase+0].toString(16)} expected 0x${sentinelW0.toString(16)}`);
+
+    check('LLB-18c: NS slot 3 word1 unchanged after rejection',
+        sim.memory[nsBase + 1] === sentinelW1,
+        `got 0x${sim.memory[nsBase+1].toString(16)} expected 0x${sentinelW1.toString(16)}`);
+
+    check('LLB-18d: NS slot 3 word2 unchanged after rejection',
+        sim.memory[nsBase + 2] === sentinelW2,
+        `got 0x${sim.memory[nsBase+2].toString(16)} expected 0x${sentinelW2.toString(16)}`);
+}
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log('\n══════════════════════════════════════');
 console.log(`Results: ${pass} passed, ${fail} failed`);
