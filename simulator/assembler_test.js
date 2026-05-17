@@ -6579,6 +6579,64 @@ abstraction VlcTest {
             }
         }
 
+        // ── JS front-end: EX-OOB-JS-LIT — out-of-range literals produce a compile error ──
+        // Literals > INT_MAX in the JS _resolveExpr path must be rejected at compile
+        // time with a clear error message, not silently truncated.
+        {
+            const oobJsCases = [
+                { val: 2147483648,  label: 'INT_MAX + 1 (positive overflow)' },
+                { val: 4294967295,  label: '0xFFFFFFFF (UINT_MAX)'           },
+            ];
+            for (const { val, label } of oobJsCases) {
+                const src = [
+                    'abstraction OobJsTest {',
+                    '    capabilities {}',
+                    '    method run() {',
+                    `        let x = ${val}`,
+                    '        halt',
+                    '    }',
+                    '}'
+                ].join('\n');
+                const result = new CLOOMCCompiler().compileJS(src);
+                assert(`EX-OOB-JS-LIT: ${label} produces a compile error`,
+                    result.errors.length > 0,
+                    'Expected a compile error but got none');
+                const hasRangeMsg = result.errors.some(e =>
+                    e.message && e.message.toLowerCase().includes('out of range'));
+                assert(`EX-OOB-JS-LIT: ${label} error mentions "out of range"`,
+                    hasRangeMsg,
+                    result.errors.map(e => e.message).join('; '));
+            }
+        }
+
+        // ── Haskell front-end: EX-OOB-HS-LIT — out-of-range literals produce a compile error ──
+        // Literals outside [-2147483648, 2147483647] in the Haskell _emitHaskellExpr
+        // literal path must be rejected at compile time with a clear error message.
+        {
+            const oobHsCases = [
+                { val: 2147483648,  label: 'INT_MAX + 1 (positive overflow)' },
+                { val: 4294967295,  label: '0xFFFFFFFF (UINT_MAX)'           },
+                { val: -2147483649, label: 'INT_MIN - 1 (negative overflow)' },
+            ];
+            for (const { val, label } of oobHsCases) {
+                const src = [
+                    'abstraction OobHsTest {',
+                    '    capabilities {}',
+                    `    method compute() = ${val}`,
+                    '}'
+                ].join('\n');
+                const result = new CLOOMCCompiler().compileHaskell(src);
+                assert(`EX-OOB-HS-LIT: ${label} produces a compile error`,
+                    result.errors.length > 0,
+                    'Expected a compile error but got none');
+                const hasRangeMsg = result.errors.some(e =>
+                    e.message && e.message.toLowerCase().includes('out of range'));
+                assert(`EX-OOB-HS-LIT: ${label} error mentions "out of range"`,
+                    hasRangeMsg,
+                    result.errors.map(e => e.message).join('; '));
+            }
+        }
+
         // ── File-backed: EX-SRHS — sliderule_hs compile-integrity ────────────────
         {
             const appPath = extractFilePath('sliderule_hs');

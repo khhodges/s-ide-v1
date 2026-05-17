@@ -1026,6 +1026,10 @@ class CLOOMCCompiler {
         const numMatch = expr.match(/^(0x[0-9a-fA-F]+|\d+)$/);
         if (numMatch) {
             const val = parseInt(numMatch[1]);
+            if (val > 2147483647) {
+                errors.push({ line: lineNum, message: `Literal ${val} is out of range for a 32-bit Church Machine register (must be between -2147483648 and 2147483647)` });
+                return this._allocTemp(locals);
+            }
             const dr = this._allocTemp(locals);
             if (val === 0) {
                 code.push(this.encode(this.opcodes.IADD, 14, dr, 0, 0));
@@ -1973,6 +1977,10 @@ class CLOOMCCompiler {
         switch (node.type) {
             case 'literal': {
                 const dr = this._allocTemp(locals);
+                if (node.value > 2147483647 || node.value < -2147483648) {
+                    errors.push({ line: lineNum, message: `Literal ${node.value} is out of range for a 32-bit Church Machine register (must be between -2147483648 and 2147483647)` });
+                    return dr;
+                }
                 const val = node.value & 0x7FFF;
                 manifest.push({ src: lineNum, addr: code.length, desc: `literal ${node.value}` });
                 code.push(this.encode(this.opcodes.IADD, 14, dr, 0, val));
