@@ -2455,7 +2455,7 @@ class CLOOMCCompiler {
             for (let j = 0; j < lines.length; j++) {
                 const line = lines[j].trim();
                 if (!line || line.startsWith('--') || line.startsWith('//') || line.startsWith(';')) continue;
-                stmts.push({ line: j + 1, text: line });
+                stmts.push({ line: j + 1, text: line, rawLine: lines[j] });
             }
             if (stmts.length > 0) {
                 result.methods.push({ name: 'compute', params: [], body: stmts });
@@ -2509,9 +2509,9 @@ class CLOOMCCompiler {
                     const bodyLine = lines[i].trim();
                     if (bodyLine === '}') { i++; break; }
                     if (bodyLine && !bodyLine.startsWith('--') && !bodyLine.startsWith('//')) {
-                        method.body.push({ line: i + 1, text: bodyLine });
+                        method.body.push({ line: i + 1, text: bodyLine, rawLine: lines[i] });
                     } else if (bodyLine.startsWith('--') || bodyLine.startsWith('//')) {
-                        method.body.push({ line: i + 1, text: bodyLine, comment: true });
+                        method.body.push({ line: i + 1, text: bodyLine, comment: true, rawLine: lines[i] });
                     }
                     i++;
                 }
@@ -2538,6 +2538,7 @@ class CLOOMCCompiler {
         let nextLocal = this.DR_LOCALS_START;
         const constants = [];
         const loopStack = [];
+        let currentRawLine = '';
 
         for (const param of method.params) {
             const paramIdx = method.params.indexOf(param);
@@ -2665,7 +2666,7 @@ class CLOOMCCompiler {
                 const srArgStr = slideRuleMatch[2];
                 const srMethodKey = srMethod.charAt(0).toUpperCase() + srMethod.slice(1);
                 if (slideRuleMethodIndex[srMethodKey] === undefined) {
-                    errors.push({ line: lineNum, message: `Unknown SlideRule method: ${srMethod}. Available: ${Object.keys(slideRuleMethodIndex).join(', ')}` });
+                    errors.push({ line: lineNum, message: `Unknown SlideRule method: ${srMethod}. Available: ${Object.keys(slideRuleMethodIndex).join(', ')}`, ...CLOOMCCompiler._tokenCols(currentRawLine, srMethod) });
                     return dstDR;
                 }
                     const srNaturalOps = { Multiply: '*', Divide: '/', Add: '+', Subtract: '-' };
@@ -2695,19 +2696,19 @@ class CLOOMCCompiler {
                 const argsStr = anyAbsCallMatch[3];
                 const convEntry = this.methodConventions[absName] || this.methodConventions[absName.toUpperCase()];
                 if (!convEntry) {
-                    errors.push({ line: lineNum, message: `No method conventions registered for "${absName}". Is it declared in capabilities {}?` });
+                    errors.push({ line: lineNum, message: `No method conventions registered for "${absName}". Is it declared in capabilities {}?`, ...CLOOMCCompiler._tokenCols(currentRawLine, absName) });
                     return dstDR;
                 }
                 const methodEntry = convEntry[mName];
                 if (methodEntry === undefined) {
                     const known = Object.keys(convEntry).join(', ');
-                    errors.push({ line: lineNum, message: `Unknown method "${mName}" on "${absName}". Known: ${known}` });
+                    errors.push({ line: lineNum, message: `Unknown method "${mName}" on "${absName}". Known: ${known}`, ...CLOOMCCompiler._tokenCols(currentRawLine, mName) });
                     return dstDR;
                 }
                 const methodIdx = typeof methodEntry === 'object' ? (methodEntry.index != null ? methodEntry.index : 0) : methodEntry;
                 const clistSlot = rom[absName.toUpperCase()];
                 if (clistSlot === undefined) {
-                    errors.push({ line: lineNum, message: `"${absName}" is not in the c-list — add it to capabilities {}.` });
+                    errors.push({ line: lineNum, message: `"${absName}" is not in the c-list — add it to capabilities {}.`, ...CLOOMCCompiler._tokenCols(currentRawLine, absName) });
                     return dstDR;
                 }
                 const inputSpec = (typeof methodEntry === 'object' && methodEntry.input) ? methodEntry.input : '';
@@ -2764,7 +2765,7 @@ class CLOOMCCompiler {
                         }
                     }
                     if (!routed) {
-                        errors.push({ line: lineNum, message: `${absName}(${innerExpr}): cannot infer method — no operator found. Use ${absName}.Sqrt(${innerExpr}) or similar.` });
+                        errors.push({ line: lineNum, message: `${absName}(${innerExpr}): cannot infer method — no operator found. Use ${absName}.Sqrt(${innerExpr}) or similar.`, ...CLOOMCCompiler._tokenCols(currentRawLine, absName) });
                         return dstDR;
                     }
                 }
@@ -2911,6 +2912,7 @@ class CLOOMCCompiler {
         for (const stmt of method.body) {
             if (stmt.comment) continue;
             const lineNum = stmt.line;
+            currentRawLine = stmt.rawLine || stmt.text || '';
             let text = stmt.text.trim();
 
             let commentIdx = text.indexOf('--');
@@ -2976,7 +2978,7 @@ class CLOOMCCompiler {
 
             if (text.match(/^end$/i)) {
                 if (loopStack.length === 0) {
-                    errors.push({ line: lineNum, message: `'end' without matching 'repeat'` });
+                    errors.push({ line: lineNum, message: `'end' without matching 'repeat'`, ...CLOOMCCompiler._tokenCols(currentRawLine, text.match(/^end$/i)[0]) });
                     continue;
                 }
                 const loop = loopStack.pop();
@@ -3002,7 +3004,7 @@ class CLOOMCCompiler {
                 continue;
             }
 
-            errors.push({ line: lineNum, message: `Cannot parse symbolic statement: ${text}` });
+            errors.push({ line: lineNum, message: `Cannot parse symbolic statement: ${text}`, ...CLOOMCCompiler._tokenCols(currentRawLine, text.split(/\s+/)[0]) });
         }
 
         if (loopStack.length > 0) {
@@ -3716,7 +3718,7 @@ class CLOOMCCompiler {
                     emitAbsCall(constFunc.nsSlot, constFunc.abs, constFunc.methodIndex, lineNum);
                     return saveResult(lineNum, constFunc.outputDR);
                 }
-                errors.push({ line: lineNum, message: `Unknown variable '${expr}' — assign it first (e.g. ${expr} = 5)` });
+                errors.push({ line: lineNum, message: `Unknown variable '${expr}' — assign it first (e.g. ${expr} = 5)`, ...CLOOMCCompiler._tokenCols(lines[lineNum], expr) });
                 return 0;
             }
 
@@ -3725,12 +3727,12 @@ class CLOOMCCompiler {
                 const funcName = funcMatch[1].toLowerCase();
                 const func = FUNC_TABLE[funcName];
                 if (!func) {
-                    errors.push({ line: lineNum, message: `Unknown function '${funcMatch[1]}' — available: ${FUNC_NAMES}` });
+                    errors.push({ line: lineNum, message: `Unknown function '${funcMatch[1]}' — available: ${FUNC_NAMES}`, ...CLOOMCCompiler._tokenCols(lines[lineNum], funcMatch[1]) });
                     return 0;
                 }
                 const rawArgs = this._splitFuncArgs(funcMatch[2]);
                 if (rawArgs.length < func.args) {
-                    errors.push({ line: lineNum, message: `${funcMatch[1]}() expects ${func.args} argument(s), got ${rawArgs.length}` });
+                    errors.push({ line: lineNum, message: `${funcMatch[1]}() expects ${func.args} argument(s), got ${rawArgs.length}`, ...CLOOMCCompiler._tokenCols(lines[lineNum], funcMatch[1]) });
                     return 0;
                 }
                 const argDRs = [];
@@ -3793,7 +3795,7 @@ class CLOOMCCompiler {
                 return compileExpr(expr.substring(1, expr.length - 1), lineNum);
             }
 
-            errors.push({ line: lineNum, message: `Cannot parse expression: "${expr}"` });
+            errors.push({ line: lineNum, message: `Cannot parse expression: "${expr}"`, ...CLOOMCCompiler._tokenCols(lines[lineNum], expr.trim().split(/\s+/)[0]) });
             return 0;
         };
 
@@ -3885,7 +3887,7 @@ class CLOOMCCompiler {
                 flushAsmBlock();
                 const capEntry = CAP_NAMES[petName.toLowerCase()];
                 if (!capEntry) {
-                    errors.push({ line: i, message: `LOAD ${petName}: "${petName}" is not a known capability in the c-list — access denied` });
+                    errors.push({ line: i, message: `LOAD ${petName}: "${petName}" is not a known capability in the c-list — access denied`, ...CLOOMCCompiler._tokenCols(lines[i], petName) });
                     continue;
                 }
                 const canonName = capEntry.abs;
@@ -3918,7 +3920,7 @@ class CLOOMCCompiler {
                 if (func) {
                     const rawArgs = this._splitFuncArgs(bareFunc[2]);
                     if (rawArgs.length < func.args) {
-                        errors.push({ line: i, message: `${bareFunc[1]}() expects ${func.args} argument(s), got ${rawArgs.length}` });
+                        errors.push({ line: i, message: `${bareFunc[1]}() expects ${func.args} argument(s), got ${rawArgs.length}`, ...CLOOMCCompiler._tokenCols(lines[i], bareFunc[1]) });
                         continue;
                     }
                     const argDRs = [];
@@ -3950,7 +3952,7 @@ class CLOOMCCompiler {
                 continue;
             }
 
-            errors.push({ line: i, message: `Cannot parse pet-name expression: "${t}"` });
+            errors.push({ line: i, message: `Cannot parse pet-name expression: "${t}"`, ...CLOOMCCompiler._tokenCols(lines[i], t.split(/\s+/)[0]) });
         }
 
         flushAsmBlock();

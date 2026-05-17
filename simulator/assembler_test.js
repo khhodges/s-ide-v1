@@ -7016,6 +7016,87 @@ abstraction VlcTest {
         e && e.colEnd === absOccurrence + 'Math'.length, e ? 'colEnd=' + e.colEnd : 'no error');
 }
 
+// ── SC-COL: Symbolic Math compiler errors carry colStart/colEnd ──────────────
+// Verifies that compileSymbolic errors on identifiable tokens carry correct
+// column ranges so that _highlightAsmErrorLines can underline exactly the
+// right token — same precision as assembler and JS-compiler errors.
+
+// SC-COL-1: unknown SlideRule method — colStart/colEnd point at method name.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'SlideRule.BadMethod(3, 4)';
+    const result = cc.compileSymbolic(src);
+    const e = result.errors.find(x => x.message.includes('BadMethod'));
+    assert('SC-COL-1: unknown SlideRule method produces an error', e != null);
+    const expectedStart = src.indexOf('BadMethod');
+    assert('SC-COL-1: colStart points at BadMethod', e && e.colStart === expectedStart, e ? 'colStart=' + e.colStart : 'no error');
+    assert('SC-COL-1: colEnd covers BadMethod', e && e.colEnd === expectedStart + 'BadMethod'.length, e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// SC-COL-2: 'end' without matching 'repeat' — colStart/colEnd point at 'end'.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'end';
+    const result = cc.compileSymbolic(src);
+    const e = result.errors.find(x => x.message.includes("'end' without"));
+    assert('SC-COL-2: end-without-repeat produces an error', e != null);
+    assert('SC-COL-2: colStart is 0', e && e.colStart === 0, e ? 'colStart=' + e.colStart : 'no error');
+    assert('SC-COL-2: colEnd is 3 (length of "end")', e && e.colEnd === 3, e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// SC-COL-3: cannot parse symbolic statement — colStart/colEnd point at first token.
+{
+    const cc = new CLOOMCCompiler();
+    const src = '    @bad@statement';
+    const result = cc.compileSymbolic(src);
+    const e = result.errors.find(x => x.message.includes('Cannot parse symbolic'));
+    assert('SC-COL-3: bad symbolic statement produces an error', e != null);
+    const token = '@bad@statement';
+    const expectedStart = src.indexOf(token);
+    assert('SC-COL-3: colStart accounts for indentation', e && e.colStart === expectedStart, e ? 'colStart=' + e.colStart : 'no error');
+    assert('SC-COL-3: colEnd covers first token', e && e.colEnd === expectedStart + token.length, e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// ── PN-COL: Pet-Name compiler errors carry colStart/colEnd ───────────────────
+// Verifies that compilePetName errors on identifiable tokens carry correct
+// column ranges.
+
+// PN-COL-1: unknown variable in expression — colStart/colEnd point at variable name.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'x = unknownVar';
+    const result = cc.compilePetName(src);
+    const e = result.errors.find(x => x.message.includes('unknownVar'));
+    assert('PN-COL-1: unknown variable produces an error', e != null);
+    const expectedStart = src.indexOf('unknownVar');
+    assert('PN-COL-1: colStart points at unknownVar', e && e.colStart === expectedStart, e ? 'colStart=' + e.colStart : 'no error');
+    assert('PN-COL-1: colEnd covers unknownVar', e && e.colEnd === expectedStart + 'unknownVar'.length, e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// PN-COL-2: unknown function call — colStart/colEnd point at function name.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'y = BadFunc(5)';
+    const result = cc.compilePetName(src);
+    const e = result.errors.find(x => x.message.includes('BadFunc'));
+    assert('PN-COL-2: unknown function produces an error', e != null);
+    const expectedStart = src.indexOf('BadFunc');
+    assert('PN-COL-2: colStart points at BadFunc', e && e.colStart === expectedStart, e ? 'colStart=' + e.colStart : 'no error');
+    assert('PN-COL-2: colEnd covers BadFunc', e && e.colEnd === expectedStart + 'BadFunc'.length, e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// PN-COL-3: LOAD of unknown capability — colStart/colEnd point at capability name.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'LOAD GhostCap';
+    const result = cc.compilePetName(src);
+    const e = result.errors.find(x => x.message.includes('GhostCap'));
+    assert('PN-COL-3: LOAD unknown capability produces an error', e != null);
+    const expectedStart = src.indexOf('GhostCap');
+    assert('PN-COL-3: colStart points at GhostCap', e && e.colStart === expectedStart, e ? 'colStart=' + e.colStart : 'no error');
+    assert('PN-COL-3: colEnd covers GhostCap', e && e.colEnd === expectedStart + 'GhostCap'.length, e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
