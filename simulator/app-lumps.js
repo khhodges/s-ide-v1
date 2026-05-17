@@ -2335,36 +2335,6 @@ function _renderLumpCodeContent(bodyEl, lump, words, token) {
         html += '</div></div>';
     }
 
-    // User-constant pool section — rendered inline inside the lump's data area.
-    // The pool is an internal implementation detail of the Constants abstraction.
-    // It has no c-list entry and is not exposed via the NS table; display it as
-    // plain memory rows following the builtin data words.
-    const poolSize = 14;
-    if (lump.abstraction === 'Constants' && dw > 0 && dataOffset > 0) {
-        const poolOffset = dataOffset + dw;
-        const bitmapIdx  = poolOffset + poolSize;
-        const bitmap     = bitmapIdx < words.length ? (words[bitmapIdx] >>> 0) : 0;
-        html += `<div class="lump-clist-section"><div class="lump-clist-title">User Constant Pool — ${poolSize} slots (internal, no NS entry)</div><div class="lump-clist-table">`;
-        for (let p = 0; p < poolSize; p++) {
-            const wIdx     = poolOffset + p;
-            const wVal     = wIdx < words.length ? (words[wIdx] >>> 0) : 0;
-            const hexW     = wVal.toString(16).toUpperCase().padStart(8, '0');
-            const occupied = !!(bitmap & (1 << p));
-            const stateSpan = occupied
-                ? `<span style="color:var(--accent-green,#4caf50)">\u25cf occupied</span>`
-                : `<span style="color:var(--text-secondary,#888)">\u25cb free</span>`;
-            html += `<div class="lump-clist-row">` +
-                    `<span class="lump-clist-idx">pool[${p}]</span>` +
-                    `<span class="lump-clist-tok">0x${hexW}</span>` +
-                    `<span class="lump-clist-name">${stateSpan}</span>` +
-                    `</div>`;
-        }
-        const occupiedCount = bitmap === 0 ? 0 : bitmap.toString(2).split('').filter(b => b === '1').length;
-        const freeCount = poolSize - occupiedCount;
-        html += `<div class="lump-clist-row" style="font-size:0.7rem;color:var(--text-secondary,#888);padding:2px 4px">bitmap 0x${bitmap.toString(16).toUpperCase().padStart(4,'0')} \u2022 ${freeCount}/${poolSize} free</div>`;
-        html += '</div></div>';
-    }
-
     bodyEl.innerHTML = html;
     bodyEl.className = '';
 }
