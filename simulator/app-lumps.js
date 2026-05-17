@@ -76,7 +76,9 @@ function showLumpDetail(token) {
         _actionBar += `<button class="btn lump-audit-btn" data-audit-token="${_e(token)}" title="Audit \u2014 Run pre-save consistency checks on this LUMP binary">\u2699 Audit</button>`;
         const _isCodeLump = lump.content_type === 'code' || lump.language === 'assembly' || lump.language === 'cloomc';
         if (_isCodeLump) {
-            _actionBar += `<button class="btn lump-loadsim-btn" id="lumpLoadSimBtn_${_e(token)}" onclick="_loadLumpBinaryIntoSim('${_e(token)}','${_e((lump.abstraction || token).replace(/'/g,''))}',this)" title="Load into Sim \u2014 Fetch this LUMP binary and load it into the simulator">Load into Sim &#x25b6;</button>`;
+            const _lumpNsSlotParsed = (lump.ns_slot !== null && lump.ns_slot !== undefined) ? Number(lump.ns_slot) : NaN;
+            const _lumpNsSlot = Number.isInteger(_lumpNsSlotParsed) ? _lumpNsSlotParsed : null;
+            _actionBar += `<button class="btn lump-loadsim-btn" id="lumpLoadSimBtn_${_e(token)}" onclick="_loadLumpBinaryIntoSim('${_e(token)}','${_e((lump.abstraction || token).replace(/'/g,''))}',this,${_lumpNsSlot === null ? 'null' : _lumpNsSlot})" title="Load into Sim \u2014 Fetch this LUMP binary and load it into the simulator">Load into Sim &#x25b6;</button>`;
         }
     }
     _actionBar += `<button class="btn lump-delete-btn lump-delete-top-btn" data-delete-token="${_e(token)}" title="Delete this lump">Delete</button>`;
@@ -3434,9 +3436,11 @@ async function _gtPickCommit(lumpToken, slotIndex) {
 // Fetches the full LUMP binary from /api/lump/<token>/words and loads it
 // atomically into the simulator via sim.loadLumpBinary().  The entire binary
 // (header + code + c-list + padding) is written verbatim — no header stripping,
-// no reconstruction.  NS slot 3 and CR14 are updated from the lump header's own
-// cw/cc/n-6 fields.  The assembler path (loadProgram) is unaffected.
-async function _loadLumpBinaryIntoSim(token, name, btn) {
+// no reconstruction.  The NS slot targeted is taken from the lump's manifest
+// ns_slot field (passed as the optional nsSlot argument); when absent it falls
+// back to BOOT_ABSTR_NS_SLOT (slot 3) for backwards compatibility.  CR14 is
+// updated to match the chosen slot.  The assembler path (loadProgram) is unaffected.
+async function _loadLumpBinaryIntoSim(token, name, btn, nsSlot) {
     if (!token) return;
     if (btn) { btn.disabled = true; btn.textContent = 'Loading\u2026'; }
     try {
@@ -3449,7 +3453,7 @@ async function _loadLumpBinaryIntoSim(token, name, btn) {
         if (typeof sim === 'undefined' || !sim) throw new Error('Simulator not ready');
         if (!sim.bootComplete && typeof instantBoot === 'function') instantBoot();
 
-        const loaded = sim.loadLumpBinary(rawWords);
+        const loaded = sim.loadLumpBinary(rawWords, (nsSlot !== null && nsSlot !== undefined) ? nsSlot : undefined);
         if (!loaded) throw new Error('loadLumpBinary rejected the binary — check the console output for details');
 
         if (typeof _syncBootEntryFromSim === 'function') _syncBootEntryFromSim();

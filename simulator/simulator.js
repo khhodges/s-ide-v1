@@ -5656,12 +5656,19 @@ class ChurchSimulator {
         this.emit('stateChange', this.getState());
     }
 
-    loadLumpBinary(words) {
+    loadLumpBinary(words, nsSlot) {
         const EXTENDED_BASE  = 0x0400;
-        const abstrSlot      = BOOT_ABSTR_NS_SLOT;
+        const _nsSlotRaw     = (nsSlot !== undefined && nsSlot !== null) ? Number(nsSlot) : NaN;
+        const abstrSlot      = Number.isInteger(_nsSlotRaw) ? _nsSlotRaw : BOOT_ABSTR_NS_SLOT;
 
         if (!words || !words.length) {
             this.output += '[loadLumpBinary] ERROR: empty words array.\n';
+            return false;
+        }
+
+        const _maxNsSlot = Math.floor(this.NS_TABLE_RESERVE / this.NS_ENTRY_WORDS) - 1;
+        if (abstrSlot < 0 || abstrSlot > _maxNsSlot) {
+            this.output += `[loadLumpBinary] ERROR: nsSlot ${abstrSlot} is out of range (0–${_maxNsSlot}).\n`;
             return false;
         }
 
