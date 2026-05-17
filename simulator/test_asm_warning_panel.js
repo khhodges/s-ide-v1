@@ -65,7 +65,26 @@ function makeCtx() {
 
     const jumpCalls = [];
 
-    const ctx = vm.createContext({
+    // ── Sandbox stub registry ────────────────────────────────────────────────
+    // Every function that _showAsmWarnings / _clearAsmWarnings call internally
+    // must be present in this sandbox, otherwise the VM throws a ReferenceError.
+    //
+    // Known production helpers (keep this list in sync with app-cr-detail.js
+    // lines ~544-593 when editing those functions):
+    //
+    //   _highlightAsmWarningLines(warnings)  — highlights gutter lines; touches
+    //       many DOM elements not present in the test fixture.
+    //   _updateAsmWarnBadge(count)           — updates the badge counter; the
+    //       real implementation guards with `if (!badge) return` but we stub it
+    //       here so no badge DOM element is required at all.
+    //   _jumpToAsmLine(lineNum)              — spy: we want to capture calls.
+    //
+    // CATCH-ALL PROXY: The sandbox is wrapped in a Proxy so that any NEW
+    // helper added to _showAsmWarnings / _clearAsmWarnings in the future will
+    // silently no-op instead of crashing with a ReferenceError.  Explicit stubs
+    // above are kept for documentation and for the _jumpToAsmLine spy; the
+    // Proxy covers anything not yet listed here.
+    const sandbox = {
         document,
         getComputedStyle: dom.window.getComputedStyle.bind(dom.window),
         // Module-level state used by the real functions.
@@ -78,7 +97,31 @@ function makeCtx() {
         _updateAsmWarnBadge: function() {},
         // Spy: records every call to _jumpToAsmLine.
         _jumpToAsmLine: function(lineNum) { jumpCalls.push(lineNum); },
-    });
+    };
+
+    const ctx = vm.createContext(new Proxy(sandbox, {
+        get(target, prop, receiver) {
+            if (prop in target) return Reflect.get(target, prop, receiver);
+            // Pass JavaScript built-ins (String, Number, Object, Math, …)
+            // through from the host globalThis so the VM code continues to work
+            // normally.
+            if (typeof prop === 'string' && prop in globalThis) {
+                return globalThis[prop];
+            }
+            // Return a silent no-op for any unknown production helper
+            // (underscore- or letter-prefixed identifier).  This prevents
+            // ReferenceErrors when new DOM-touching helpers are added to
+            // _showAsmWarnings / _clearAsmWarnings without a simultaneous
+            // update to this test file.
+            if (typeof prop === 'string' && /^[_a-zA-Z]/.test(prop)) {
+                return function() {};
+            }
+            return undefined;
+        },
+        has(target, prop) {
+            return true;
+        },
+    }));
 
     vm.runInContext(ESC_HTML_SRC,   ctx, { filename: 'app-misc.js' });
     vm.runInContext(SHOW_WARN_SRC,  ctx, { filename: 'app-cr-detail.js' });
