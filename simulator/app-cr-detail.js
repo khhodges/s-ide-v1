@@ -1,4 +1,5 @@
 var _activeAsmErrors = [];
+var _activeAsmWarnings = [];
 
 // ── Sticky Patches ────────────────────────────────────────────────────────
 // Keyed by nsIdx. Each entry: { words, newCW, nsIdx, crIdx, src }.
@@ -117,6 +118,11 @@ function _jumpToAsmLine(lineNum) {
     if (overlay) {
         overlay.scrollTop = editor.scrollTop;
         overlay.scrollLeft = editor.scrollLeft;
+    }
+    var warnOverlay = document.getElementById('asmWarningOverlay');
+    if (warnOverlay) {
+        warnOverlay.scrollTop = editor.scrollTop;
+        warnOverlay.scrollLeft = editor.scrollLeft;
     }
 }
 
@@ -431,7 +437,99 @@ function _highlightAsmErrorLines(errors) {
             overlay.scrollTop = editor.scrollTop;
             overlay.scrollLeft = editor.scrollLeft;
         }
+        var warnOvl2 = document.getElementById('asmWarningOverlay');
+        if (warnOvl2) {
+            warnOvl2.scrollTop = editor.scrollTop;
+            warnOvl2.scrollLeft = editor.scrollLeft;
+        }
     }
+}
+
+function _highlightAsmWarningLines(warnings) {
+    document.querySelectorAll('#lineNumbers span.line-num-warning').forEach(function(el) {
+        el.classList.remove('line-num-warning');
+    });
+
+    var overlay = document.getElementById('asmWarningOverlay');
+    if (overlay) overlay.innerHTML = '';
+
+    if (!warnings || warnings.length === 0) return;
+
+    warnings.forEach(function(w) {
+        if (!w.line) return;
+        var span = document.getElementById('ln-' + w.line);
+        if (span) span.classList.add('line-num-warning');
+    });
+
+    var editor = document.getElementById('asmEditor');
+    if (editor && overlay) {
+        var style = getComputedStyle(editor);
+        var lineHeight = parseFloat(style.lineHeight) || 19.2;
+        var paddingTop = parseFloat(style.paddingTop) || 0;
+        var paddingLeft = parseFloat(style.paddingLeft) || 0;
+        var totalLines = editor.value.split('\n').length;
+        var sourceLines = editor.value.split('\n');
+
+        var charWidth = 0;
+        try {
+            var _cvs = document.createElement('canvas');
+            var _ctx = _cvs.getContext('2d');
+            _ctx.font = style.fontSize + ' ' + (style.fontFamily || "'Courier New', monospace");
+            charWidth = _ctx.measureText('M').width;
+        } catch (_ex) { charWidth = 0; }
+
+        var maxLineLen = 0;
+        sourceLines.forEach(function(l) { if (l.length > maxLineLen) maxLineLen = l.length; });
+        var innerMinWidth = paddingLeft + maxLineLen * charWidth + paddingLeft;
+
+        var inner = document.createElement('div');
+        inner.className = 'asm-warning-overlay-inner';
+        inner.style.height = (paddingTop * 2 + totalLines * lineHeight) + 'px';
+        if (charWidth > 0) inner.style.minWidth = innerMinWidth + 'px';
+
+        var seenLines = {};
+        warnings.forEach(function(w) {
+            if (!w.line || seenLines[w.line]) return;
+            seenLines[w.line] = true;
+            var bgDiv = document.createElement('div');
+            bgDiv.className = 'asm-warning-line-bg';
+            bgDiv.style.top = (paddingTop + (w.line - 1) * lineHeight) + 'px';
+            bgDiv.style.height = lineHeight + 'px';
+            inner.appendChild(bgDiv);
+        });
+
+        warnings.forEach(function(w) {
+            if (!w.line || !charWidth || w.line > sourceLines.length) return;
+
+            var lineTop = paddingTop + (w.line - 1) * lineHeight;
+            var colStart = (w.colStart !== undefined) ? w.colStart : 0;
+            var colEnd   = (w.colEnd   !== undefined) ? w.colEnd   : 0;
+
+            if (colEnd > colStart) {
+                var ulDiv = document.createElement('div');
+                ulDiv.className = 'asm-warning-underline';
+                ulDiv.style.top = (lineTop + lineHeight - 3) + 'px';
+                ulDiv.style.left = (paddingLeft + colStart * charWidth) + 'px';
+                ulDiv.style.width = ((colEnd - colStart) * charWidth) + 'px';
+                inner.appendChild(ulDiv);
+            }
+        });
+
+        overlay.appendChild(inner);
+        overlay.scrollTop = editor.scrollTop;
+        overlay.scrollLeft = editor.scrollLeft;
+    }
+}
+
+function _showAsmWarnings(warnings) {
+    if (!warnings || warnings.length === 0) { _clearAsmWarnings(); return; }
+    _activeAsmWarnings = warnings.slice();
+    _highlightAsmWarningLines(warnings);
+}
+
+function _clearAsmWarnings() {
+    _activeAsmWarnings = [];
+    _highlightAsmWarningLines([]);
 }
 
 function _updateEditorPatchBar() {
@@ -451,6 +549,7 @@ function clearEditorCREdit() {
     _editorCREditCR = null;
     _editorCREditNS = null;
     _clearAsmErrors();
+    _clearAsmWarnings();
     _updateEditorPatchBar();
     var asmEd = document.getElementById('asmEditor');
     if (asmEd) asmEd.value = '';

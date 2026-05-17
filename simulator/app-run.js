@@ -375,6 +375,7 @@ function assembleAndLoad() {
         }
         if (con) con.innerHTML = _capRightsHTML(listing);
         if (typeof _clearAsmErrors === 'function') _clearAsmErrors();
+        if (typeof _clearAsmWarnings === 'function') _clearAsmWarnings();
         // Push live snippet history for each method that carried source text
         if (typeof ChurchAssembler !== 'undefined' && result.abstractionName) {
             for (const _m of result.methods) {
@@ -419,10 +420,12 @@ function assembleAndLoad() {
         if (_errExpBtn) _errExpBtn.disabled = true;
         switchCodeTab('console');
         if (typeof _showAsmErrors === 'function') _showAsmErrors(result.errors);
+        if (typeof _clearAsmWarnings === 'function') _clearAsmWarnings();
         showNextSteps('error');
         return;
     }
     if (typeof _clearAsmErrors === 'function') _clearAsmErrors();
+    if (typeof _showAsmWarnings === 'function') _showAsmWarnings(result.warnings || []);
 
     lastAssembledWords = result.words.slice();
     lastAssembledCapabilities = (result.capabilities && result.capabilities.length > 0)
@@ -7064,6 +7067,11 @@ function syncLineScroll() {
         if (overlay) {
             overlay.scrollTop = editor.scrollTop;
             overlay.scrollLeft = editor.scrollLeft;
+        }
+        const warnOverlay = document.getElementById('asmWarningOverlay');
+        if (warnOverlay) {
+            warnOverlay.scrollTop = editor.scrollTop;
+            warnOverlay.scrollLeft = editor.scrollLeft;
         }
     }
 }

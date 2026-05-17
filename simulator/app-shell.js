@@ -597,8 +597,8 @@ function init() {
     initReplDivider();
     initEditorDivider();
     initConsoleAutoSwitch();
-    // Debounced recalculation of error underlines — called whenever the editor
-    // dimensions change (browser zoom, future font-size setting, window resize).
+    // Debounced recalculation of error/warning underlines — called whenever the
+    // editor dimensions change (browser zoom, future font-size setting, window resize).
     // 150 ms debounce avoids rapid recomputes during continuous zoom steps.
     var _errorRecalcTimer = null;
     function _debouncedErrorRecalc() {
@@ -608,6 +608,11 @@ function init() {
                     typeof _activeAsmErrors !== 'undefined' &&
                     _activeAsmErrors.length > 0) {
                 _highlightAsmErrorLines(_activeAsmErrors);
+            }
+            if (typeof _highlightAsmWarningLines === 'function' &&
+                    typeof _activeAsmWarnings !== 'undefined' &&
+                    _activeAsmWarnings.length > 0) {
+                _highlightAsmWarningLines(_activeAsmWarnings);
             }
         }, 150);
     }
@@ -638,6 +643,10 @@ function init() {
     const asmOverlay = document.getElementById('asmErrorOverlay');
     if (asmOverlay && typeof MutationObserver !== 'undefined') {
         new MutationObserver(syncLineScroll).observe(asmOverlay, { childList: true });
+    }
+    const asmWarnOverlay = document.getElementById('asmWarningOverlay');
+    if (asmWarnOverlay && typeof MutationObserver !== 'undefined') {
+        new MutationObserver(syncLineScroll).observe(asmWarnOverlay, { childList: true });
     }
     updateLineNumbers();
     loadNamespaceState();

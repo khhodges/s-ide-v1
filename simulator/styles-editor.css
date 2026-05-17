@@ -69,6 +69,49 @@
     pointer-events: none;
 }
 
+/* ── Warning line number highlight ───────────────────────────────────────── */
+#lineNumbers span.line-num-warning {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.22);
+    border-radius: 2px;
+    font-weight: 700;
+    outline: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+/* ── Warning line body highlight overlay ─────────────────────────────────── */
+.asm-warning-overlay {
+    position: absolute;
+    left: calc(3.5rem + 1px);
+    right: 0;
+    top: 0;
+    bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.asm-warning-overlay-inner {
+    position: relative;
+    width: 100%;
+}
+
+.asm-warning-line-bg {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: rgba(245, 158, 11, 0.10);
+    border-left: 3px solid rgba(245, 158, 11, 0.45);
+    box-sizing: border-box;
+}
+
+.asm-warning-underline {
+    position: absolute;
+    height: 2px;
+    background: #f59e0b;
+    border-radius: 1px;
+    pointer-events: none;
+}
+
 /* ── Breakpoint button ───────────────────────────────────────────────────── */
 .btn-break {
     background: #1c1a1a;
