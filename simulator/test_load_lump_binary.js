@@ -31,6 +31,24 @@
 //   LLB-11  Large LUMP (n_minus_6=3, 512 words, cc=5): lumpSize=512, c-list base
 //            = 0x0400 + 512 - 5 = 0x05FB, NS[3].word1 clistCount=5, CR6.word1
 //            = 0x05FB.
+//   LLB-12  Large LUMP (n_minus_6=4, 1024 words, cc=6): lumpSize=1024, c-list base
+//            = 0x0400 + 1024 - 6 = 0x07FA, NS[3].word1 clistCount=6, CR6.word1
+//            = 0x07FA.
+//   LLB-13  Large LUMP (n_minus_6=5, 2048 words, cc=7): lumpSize=2048, c-list base
+//            = 0x0400 + 2048 - 7 = 0x0BF9, NS[3].word1 clistCount=7, CR6.word1
+//            = 0x0BF9.
+//   LLB-14  Large LUMP (n_minus_6=6, 4096 words, cc=8): lumpSize=4096, c-list base
+//            = 0x0400 + 4096 - 8 = 0x13F8, NS[3].word1 clistCount=8, CR6.word1
+//            = 0x13F8.
+//   LLB-15  Large LUMP (n_minus_6=7, 8192 words, cc=9): lumpSize=8192, c-list base
+//            = 0x0400 + 8192 - 9 = 0x23F7, NS[3].word1 clistCount=9, CR6.word1
+//            = 0x23F7.
+//   LLB-16  Large LUMP (n_minus_6=8, 16384 words, cc=10): lumpSize=16384, c-list base
+//            = 0x0400 + 16384 - 10 = 0x43F6, NS[3].word1 clistCount=10, CR6.word1
+//            = 0x43F6.
+//   LLB-17  Large LUMP (n_minus_6=9, 32768 words, cc=11): lumpSize=32768, c-list base
+//            = 0x0400 + 32768 - 11 = 0x83F5, NS[3].word1 clistCount=11, CR6.word1
+//            = 0x83F5.
 //
 // Coverage (real fixture + app-path tests):
 // Fixture: server/lumps/00000300.lump — "LED flash" abstraction (per sidecar
@@ -682,6 +700,276 @@ console.log('\n--- LLB-11: Large LUMP (n_minus_6=3, 512 words, cc=5) ---');
 
     // NS slot 3 word0 must still point to EXTENDED_BASE
     check('LLB-11g: NS[3].word0 = EXTENDED_BASE (0x0400)',
+        sim.memory[nsBase + 0] === EXTENDED_BASE,
+        `got 0x${sim.memory[nsBase+0].toString(16)}`);
+}
+
+// ── LLB-12: Large LUMP (n_minus_6=4, 1024 words, cc=6) ───────────────────────
+// Exercises the 2^(n_minus_6+6) lumpSize calculation for n_minus_6=4 (1024 words)
+// and the c-list placement formula: clistBase = EXTENDED_BASE + lumpSize - cc.
+// For this test: lumpSize = 2^(4+6) = 1024, clistBase = 0x0400 + 1024 - 6 = 0x07FA.
+console.log('\n--- LLB-12: Large LUMP (n_minus_6=4, 1024 words, cc=6) ---');
+{
+    const N_MINUS_6   = 4;
+    const CW          = 30;
+    const CC          = 6;
+    const LUMP_SIZE   = 1 << (N_MINUS_6 + 6);           // 1024
+    const CLIST_BASE  = EXTENDED_BASE + LUMP_SIZE - CC;  // 0x0400 + 1024 - 6 = 0x07FA
+
+    const { sim, nsBase, ok } = setupAndLoad({ cw: CW, cc: CC, n_minus_6: N_MINUS_6 });
+
+    check('LLB-12a: loadLumpBinary returns true for 1024-word LUMP', ok === true);
+
+    const hdrInMem = sim.memory[EXTENDED_BASE] >>> 0;
+    const hdrParsed = sim.parseLumpHeader(hdrInMem);
+    check('LLB-12b: header.lumpSize = 1024 (n_minus_6=4 → 2^10)',
+        hdrParsed.lumpSize === LUMP_SIZE,
+        `got lumpSize=${hdrParsed.lumpSize}`);
+
+    const nsW1   = sim.memory[nsBase + 1];
+    const parsed = sim.parseNSWord1(nsW1);
+    check('LLB-12c: NS[3].word1 clistCount = 6',
+        parsed.clistCount === CC,
+        `got clistCount=${parsed.clistCount}`);
+    check('LLB-12d: NS[3].word1 limit = cw (30)',
+        parsed.limit === CW,
+        `got limit=${parsed.limit}`);
+
+    const cr6 = sim.cr[6];
+    check('LLB-12e: CR6.word1 = 0x07FA (clist base for 1024-word LUMP with cc=6)',
+        cr6 !== null && cr6.word1 === CLIST_BASE,
+        cr6 ? `got CR6.word1=0x${cr6.word1.toString(16)} expected=0x${CLIST_BASE.toString(16)}` : 'CR6 is null');
+
+    check('LLB-12f: memory at c-list base (0x07FA) is accessible (within 1024-word lump)',
+        CLIST_BASE >= EXTENDED_BASE && CLIST_BASE < EXTENDED_BASE + LUMP_SIZE,
+        `clistBase=0x${CLIST_BASE.toString(16)}`);
+
+    check('LLB-12g: NS[3].word0 = EXTENDED_BASE (0x0400)',
+        sim.memory[nsBase + 0] === EXTENDED_BASE,
+        `got 0x${sim.memory[nsBase+0].toString(16)}`);
+}
+
+// ── LLB-13: Large LUMP (n_minus_6=5, 2048 words, cc=7) ───────────────────────
+// Exercises the 2^(n_minus_6+6) lumpSize calculation for n_minus_6=5 (2048 words)
+// and the c-list placement formula: clistBase = EXTENDED_BASE + lumpSize - cc.
+// For this test: lumpSize = 2^(5+6) = 2048, clistBase = 0x0400 + 2048 - 7 = 0x0BF9.
+console.log('\n--- LLB-13: Large LUMP (n_minus_6=5, 2048 words, cc=7) ---');
+{
+    const N_MINUS_6   = 5;
+    const CW          = 35;
+    const CC          = 7;
+    const LUMP_SIZE   = 1 << (N_MINUS_6 + 6);           // 2048
+    const CLIST_BASE  = EXTENDED_BASE + LUMP_SIZE - CC;  // 0x0400 + 2048 - 7 = 0x0BF9
+
+    const { sim, nsBase, ok } = setupAndLoad({ cw: CW, cc: CC, n_minus_6: N_MINUS_6 });
+
+    check('LLB-13a: loadLumpBinary returns true for 2048-word LUMP', ok === true);
+
+    const hdrInMem = sim.memory[EXTENDED_BASE] >>> 0;
+    const hdrParsed = sim.parseLumpHeader(hdrInMem);
+    check('LLB-13b: header.lumpSize = 2048 (n_minus_6=5 → 2^11)',
+        hdrParsed.lumpSize === LUMP_SIZE,
+        `got lumpSize=${hdrParsed.lumpSize}`);
+
+    const nsW1   = sim.memory[nsBase + 1];
+    const parsed = sim.parseNSWord1(nsW1);
+    check('LLB-13c: NS[3].word1 clistCount = 7',
+        parsed.clistCount === CC,
+        `got clistCount=${parsed.clistCount}`);
+    check('LLB-13d: NS[3].word1 limit = cw (35)',
+        parsed.limit === CW,
+        `got limit=${parsed.limit}`);
+
+    const cr6 = sim.cr[6];
+    check('LLB-13e: CR6.word1 = 0x0BF9 (clist base for 2048-word LUMP with cc=7)',
+        cr6 !== null && cr6.word1 === CLIST_BASE,
+        cr6 ? `got CR6.word1=0x${cr6.word1.toString(16)} expected=0x${CLIST_BASE.toString(16)}` : 'CR6 is null');
+
+    check('LLB-13f: memory at c-list base (0x0BF9) is accessible (within 2048-word lump)',
+        CLIST_BASE >= EXTENDED_BASE && CLIST_BASE < EXTENDED_BASE + LUMP_SIZE,
+        `clistBase=0x${CLIST_BASE.toString(16)}`);
+
+    check('LLB-13g: NS[3].word0 = EXTENDED_BASE (0x0400)',
+        sim.memory[nsBase + 0] === EXTENDED_BASE,
+        `got 0x${sim.memory[nsBase+0].toString(16)}`);
+}
+
+// ── LLB-14: Large LUMP (n_minus_6=6, 4096 words, cc=8) ───────────────────────
+// Exercises the 2^(n_minus_6+6) lumpSize calculation for n_minus_6=6 (4096 words)
+// and the c-list placement formula: clistBase = EXTENDED_BASE + lumpSize - cc.
+// For this test: lumpSize = 2^(6+6) = 4096, clistBase = 0x0400 + 4096 - 8 = 0x13F8.
+console.log('\n--- LLB-14: Large LUMP (n_minus_6=6, 4096 words, cc=8) ---');
+{
+    const N_MINUS_6   = 6;
+    const CW          = 40;
+    const CC          = 8;
+    const LUMP_SIZE   = 1 << (N_MINUS_6 + 6);           // 4096
+    const CLIST_BASE  = EXTENDED_BASE + LUMP_SIZE - CC;  // 0x0400 + 4096 - 8 = 0x13F8
+
+    const { sim, nsBase, ok } = setupAndLoad({ cw: CW, cc: CC, n_minus_6: N_MINUS_6 });
+
+    check('LLB-14a: loadLumpBinary returns true for 4096-word LUMP', ok === true);
+
+    const hdrInMem = sim.memory[EXTENDED_BASE] >>> 0;
+    const hdrParsed = sim.parseLumpHeader(hdrInMem);
+    check('LLB-14b: header.lumpSize = 4096 (n_minus_6=6 → 2^12)',
+        hdrParsed.lumpSize === LUMP_SIZE,
+        `got lumpSize=${hdrParsed.lumpSize}`);
+
+    const nsW1   = sim.memory[nsBase + 1];
+    const parsed = sim.parseNSWord1(nsW1);
+    check('LLB-14c: NS[3].word1 clistCount = 8',
+        parsed.clistCount === CC,
+        `got clistCount=${parsed.clistCount}`);
+    check('LLB-14d: NS[3].word1 limit = cw (40)',
+        parsed.limit === CW,
+        `got limit=${parsed.limit}`);
+
+    const cr6 = sim.cr[6];
+    check('LLB-14e: CR6.word1 = 0x13F8 (clist base for 4096-word LUMP with cc=8)',
+        cr6 !== null && cr6.word1 === CLIST_BASE,
+        cr6 ? `got CR6.word1=0x${cr6.word1.toString(16)} expected=0x${CLIST_BASE.toString(16)}` : 'CR6 is null');
+
+    check('LLB-14f: memory at c-list base (0x13F8) is accessible (within 4096-word lump)',
+        CLIST_BASE >= EXTENDED_BASE && CLIST_BASE < EXTENDED_BASE + LUMP_SIZE,
+        `clistBase=0x${CLIST_BASE.toString(16)}`);
+
+    check('LLB-14g: NS[3].word0 = EXTENDED_BASE (0x0400)',
+        sim.memory[nsBase + 0] === EXTENDED_BASE,
+        `got 0x${sim.memory[nsBase+0].toString(16)}`);
+}
+
+// ── LLB-15: Large LUMP (n_minus_6=7, 8192 words, cc=9) ───────────────────────
+// Exercises the 2^(n_minus_6+6) lumpSize calculation for n_minus_6=7 (8192 words)
+// and the c-list placement formula: clistBase = EXTENDED_BASE + lumpSize - cc.
+// For this test: lumpSize = 2^(7+6) = 8192, clistBase = 0x0400 + 8192 - 9 = 0x23F7.
+console.log('\n--- LLB-15: Large LUMP (n_minus_6=7, 8192 words, cc=9) ---');
+{
+    const N_MINUS_6   = 7;
+    const CW          = 45;
+    const CC          = 9;
+    const LUMP_SIZE   = 1 << (N_MINUS_6 + 6);           // 8192
+    const CLIST_BASE  = EXTENDED_BASE + LUMP_SIZE - CC;  // 0x0400 + 8192 - 9 = 0x23F7
+
+    const { sim, nsBase, ok } = setupAndLoad({ cw: CW, cc: CC, n_minus_6: N_MINUS_6 });
+
+    check('LLB-15a: loadLumpBinary returns true for 8192-word LUMP', ok === true);
+
+    const hdrInMem = sim.memory[EXTENDED_BASE] >>> 0;
+    const hdrParsed = sim.parseLumpHeader(hdrInMem);
+    check('LLB-15b: header.lumpSize = 8192 (n_minus_6=7 → 2^13)',
+        hdrParsed.lumpSize === LUMP_SIZE,
+        `got lumpSize=${hdrParsed.lumpSize}`);
+
+    const nsW1   = sim.memory[nsBase + 1];
+    const parsed = sim.parseNSWord1(nsW1);
+    check('LLB-15c: NS[3].word1 clistCount = 9',
+        parsed.clistCount === CC,
+        `got clistCount=${parsed.clistCount}`);
+    check('LLB-15d: NS[3].word1 limit = cw (45)',
+        parsed.limit === CW,
+        `got limit=${parsed.limit}`);
+
+    const cr6 = sim.cr[6];
+    check('LLB-15e: CR6.word1 = 0x23F7 (clist base for 8192-word LUMP with cc=9)',
+        cr6 !== null && cr6.word1 === CLIST_BASE,
+        cr6 ? `got CR6.word1=0x${cr6.word1.toString(16)} expected=0x${CLIST_BASE.toString(16)}` : 'CR6 is null');
+
+    check('LLB-15f: memory at c-list base (0x23F7) is accessible (within 8192-word lump)',
+        CLIST_BASE >= EXTENDED_BASE && CLIST_BASE < EXTENDED_BASE + LUMP_SIZE,
+        `clistBase=0x${CLIST_BASE.toString(16)}`);
+
+    check('LLB-15g: NS[3].word0 = EXTENDED_BASE (0x0400)',
+        sim.memory[nsBase + 0] === EXTENDED_BASE,
+        `got 0x${sim.memory[nsBase+0].toString(16)}`);
+}
+
+// ── LLB-16: Large LUMP (n_minus_6=8, 16384 words, cc=10) ─────────────────────
+// Exercises the 2^(n_minus_6+6) lumpSize calculation for n_minus_6=8 (16384 words)
+// and the c-list placement formula: clistBase = EXTENDED_BASE + lumpSize - cc.
+// For this test: lumpSize = 2^(8+6) = 16384, clistBase = 0x0400 + 16384 - 10 = 0x43F6.
+console.log('\n--- LLB-16: Large LUMP (n_minus_6=8, 16384 words, cc=10) ---');
+{
+    const N_MINUS_6   = 8;
+    const CW          = 50;
+    const CC          = 10;
+    const LUMP_SIZE   = 1 << (N_MINUS_6 + 6);           // 16384
+    const CLIST_BASE  = EXTENDED_BASE + LUMP_SIZE - CC;  // 0x0400 + 16384 - 10 = 0x43F6
+
+    const { sim, nsBase, ok } = setupAndLoad({ cw: CW, cc: CC, n_minus_6: N_MINUS_6 });
+
+    check('LLB-16a: loadLumpBinary returns true for 16384-word LUMP', ok === true);
+
+    const hdrInMem = sim.memory[EXTENDED_BASE] >>> 0;
+    const hdrParsed = sim.parseLumpHeader(hdrInMem);
+    check('LLB-16b: header.lumpSize = 16384 (n_minus_6=8 → 2^14)',
+        hdrParsed.lumpSize === LUMP_SIZE,
+        `got lumpSize=${hdrParsed.lumpSize}`);
+
+    const nsW1   = sim.memory[nsBase + 1];
+    const parsed = sim.parseNSWord1(nsW1);
+    check('LLB-16c: NS[3].word1 clistCount = 10',
+        parsed.clistCount === CC,
+        `got clistCount=${parsed.clistCount}`);
+    check('LLB-16d: NS[3].word1 limit = cw (50)',
+        parsed.limit === CW,
+        `got limit=${parsed.limit}`);
+
+    const cr6 = sim.cr[6];
+    check('LLB-16e: CR6.word1 = 0x43F6 (clist base for 16384-word LUMP with cc=10)',
+        cr6 !== null && cr6.word1 === CLIST_BASE,
+        cr6 ? `got CR6.word1=0x${cr6.word1.toString(16)} expected=0x${CLIST_BASE.toString(16)}` : 'CR6 is null');
+
+    check('LLB-16f: memory at c-list base (0x43F6) is accessible (within 16384-word lump)',
+        CLIST_BASE >= EXTENDED_BASE && CLIST_BASE < EXTENDED_BASE + LUMP_SIZE,
+        `clistBase=0x${CLIST_BASE.toString(16)}`);
+
+    check('LLB-16g: NS[3].word0 = EXTENDED_BASE (0x0400)',
+        sim.memory[nsBase + 0] === EXTENDED_BASE,
+        `got 0x${sim.memory[nsBase+0].toString(16)}`);
+}
+
+// ── LLB-17: Large LUMP (n_minus_6=9, 32768 words, cc=11) ─────────────────────
+// Exercises the 2^(n_minus_6+6) lumpSize calculation for n_minus_6=9 (32768 words)
+// and the c-list placement formula: clistBase = EXTENDED_BASE + lumpSize - cc.
+// For this test: lumpSize = 2^(9+6) = 32768, clistBase = 0x0400 + 32768 - 11 = 0x83F5.
+console.log('\n--- LLB-17: Large LUMP (n_minus_6=9, 32768 words, cc=11) ---');
+{
+    const N_MINUS_6   = 9;
+    const CW          = 55;
+    const CC          = 11;
+    const LUMP_SIZE   = 1 << (N_MINUS_6 + 6);           // 32768
+    const CLIST_BASE  = EXTENDED_BASE + LUMP_SIZE - CC;  // 0x0400 + 32768 - 11 = 0x83F5
+
+    const { sim, nsBase, ok } = setupAndLoad({ cw: CW, cc: CC, n_minus_6: N_MINUS_6 });
+
+    check('LLB-17a: loadLumpBinary returns true for 32768-word LUMP', ok === true);
+
+    const hdrInMem = sim.memory[EXTENDED_BASE] >>> 0;
+    const hdrParsed = sim.parseLumpHeader(hdrInMem);
+    check('LLB-17b: header.lumpSize = 32768 (n_minus_6=9 → 2^15)',
+        hdrParsed.lumpSize === LUMP_SIZE,
+        `got lumpSize=${hdrParsed.lumpSize}`);
+
+    const nsW1   = sim.memory[nsBase + 1];
+    const parsed = sim.parseNSWord1(nsW1);
+    check('LLB-17c: NS[3].word1 clistCount = 11',
+        parsed.clistCount === CC,
+        `got clistCount=${parsed.clistCount}`);
+    check('LLB-17d: NS[3].word1 limit = cw (55)',
+        parsed.limit === CW,
+        `got limit=${parsed.limit}`);
+
+    const cr6 = sim.cr[6];
+    check('LLB-17e: CR6.word1 = 0x83F5 (clist base for 32768-word LUMP with cc=11)',
+        cr6 !== null && cr6.word1 === CLIST_BASE,
+        cr6 ? `got CR6.word1=0x${cr6.word1.toString(16)} expected=0x${CLIST_BASE.toString(16)}` : 'CR6 is null');
+
+    check('LLB-17f: memory at c-list base (0x83F5) is accessible (within 32768-word lump)',
+        CLIST_BASE >= EXTENDED_BASE && CLIST_BASE < EXTENDED_BASE + LUMP_SIZE,
+        `clistBase=0x${CLIST_BASE.toString(16)}`);
+
+    check('LLB-17g: NS[3].word0 = EXTENDED_BASE (0x0400)',
         sim.memory[nsBase + 0] === EXTENDED_BASE,
         `got 0x${sim.memory[nsBase+0].toString(16)}`);
 }
