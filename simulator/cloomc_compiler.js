@@ -3165,9 +3165,10 @@ class CLOOMCCompiler {
 
             const stmt = this._translateEnglishStatement(t, i);
             if (stmt) {
-                currentMethod.body.push({ text: stmt, lineNum: i });
+                currentMethod.body.push({ text: stmt, lineNum: i, rawLine: raw });
             } else {
-                errors.push({ line: i + 1, message: `Cannot understand: "${t}"` });
+                const _firstWord = t.split(/\s+/)[0];
+                errors.push({ line: i + 1, message: `Cannot understand: "${t}"`, ...CLOOMCCompiler._tokenCols(raw, _firstWord) });
             }
         }
 
@@ -3268,7 +3269,7 @@ class CLOOMCCompiler {
             const stmts = this._translateEnglishBlockStatement(t, i);
             if (stmts) {
                 for (const s of stmts) {
-                    currentMethod.body.push({ text: s, lineNum: i });
+                    currentMethod.body.push({ text: s, lineNum: i, rawLine: lines[i] });
                 }
             }
         }
@@ -3295,7 +3296,7 @@ class CLOOMCCompiler {
     _translateEnglishBlockStatement(text, lineNum) {
         const lo = text.toLowerCase().replace(/\.$/, '').trim();
 
-        const returnMatch = lo.match(/^(?:return|give back|send back)\s+(?:the\s+)?(.+)/);
+        const returnMatch = text.match(/^(?:return|give back|send back)\s+(?:the\s+)?(.+)/i);
         if (returnMatch) {
             const val = this._translateEnglishExpr(returnMatch[1]);
             return [`return(${val})`];
@@ -3352,7 +3353,7 @@ class CLOOMCCompiler {
     _translateEnglishStatement(text, lineNum) {
         const lo = text.toLowerCase().replace(/\.$/, '').trim();
 
-        const returnMatch = lo.match(/^(?:return|give back|send back)\s+(?:the\s+)?(.+)/);
+        const returnMatch = text.match(/^(?:return|give back|send back)\s+(?:the\s+)?(.+)/i);
         if (returnMatch) {
             const val = this._translateEnglishExpr(returnMatch[1]);
             return `return(${val})`;
@@ -3361,8 +3362,9 @@ class CLOOMCCompiler {
         const resultCallMatch = lo.match(/^(?:set|store|put)\s+(\w+)\s+(?:to|as)\s+(?:the\s+)?(?:result of\s+)?(?:call(?:ing)?)\s+(\w+)\.(\w+)\s*(?:\(([^)]*)\)|with\s+(.+))?/);
         if (resultCallMatch) {
             const varName = resultCallMatch[1];
-            const abs = resultCallMatch[2];
-            const meth = resultCallMatch[3];
+            const _rcOrig = text.match(/^(?:set|store|put)\s+(\w+)\s+(?:to|as)\s+(?:the\s+)?(?:result of\s+)?(?:call(?:ing)?)\s+(\w+)\.(\w+)\s*(?:\(([^)]*)\)|with\s+(.+))?/i);
+            const abs = _rcOrig ? _rcOrig[2] : resultCallMatch[2];
+            const meth = _rcOrig ? _rcOrig[3] : resultCallMatch[3];
             const argsStr = resultCallMatch[4] || resultCallMatch[5] || '';
             const args = argsStr ? argsStr.replace(/\band\b/g, ',').split(',').map(s => s.trim()).filter(Boolean).join(', ') : '';
             return `${varName} = call(${abs}.${meth}(${args}))`;
@@ -3389,8 +3391,9 @@ class CLOOMCCompiler {
 
         const callMatch = lo.match(/^(?:call|run|execute|invoke)\s+(\w+)\.(\w+)\s*(?:\(([^)]*)\)|with\s+(.+))?/);
         if (callMatch) {
-            const abs = callMatch[1];
-            const meth = callMatch[2];
+            const _cmOrig = text.match(/^(?:call|run|execute|invoke)\s+(\w+)\.(\w+)/i);
+            const abs = _cmOrig ? _cmOrig[1] : callMatch[1];
+            const meth = _cmOrig ? _cmOrig[2] : callMatch[2];
             const argsStr = callMatch[3] || callMatch[4] || '';
             const args = argsStr ? argsStr.replace(/\band\b/g, ',').split(',').map(s => s.trim()).filter(Boolean).join(', ') : '';
             return `call(${abs}.${meth}(${args}))`;

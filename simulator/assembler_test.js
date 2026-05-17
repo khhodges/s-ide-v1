@@ -7097,6 +7097,75 @@ abstraction VlcTest {
     assert('PN-COL-3: colEnd covers GhostCap', e && e.colEnd === expectedStart + 'GhostCap'.length, e ? 'colEnd=' + e.colEnd : 'no error');
 }
 
+// ── EN-COL: English front-end errors carry colStart/colEnd ───────────────────
+//
+// EN-COL-1: Unknown keyword/statement (sentence form) — colStart/colEnd point
+//           at the first word of the unrecognised line.
+{
+    const cc = new CLOOMCCompiler();
+    const src =
+`Create an abstraction called Test
+Add a method called Run
+  frobulate the thing`;
+    const result = cc.compileEnglish(src);
+    const e = result.errors.find(x => x.message.includes('frobulate'));
+    assert('EN-COL-1: "Cannot understand" error is produced', e != null,
+        'errors: ' + result.errors.map(x => x.message).join('; '));
+    const rawLine = '  frobulate the thing';
+    const expectedStart = rawLine.indexOf('frobulate');
+    assert('EN-COL-1: colStart points at "frobulate"',
+        e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart + ' expected=' + expectedStart : 'no error');
+    assert('EN-COL-1: colEnd covers "frobulate"',
+        e && e.colEnd === expectedStart + 'frobulate'.length,
+        e ? 'colEnd=' + e.colEnd + ' expected=' + (expectedStart + 'frobulate'.length) : 'no error');
+}
+
+// EN-COL-2: Unknown abstraction in call (sentence form) — colStart/colEnd point
+//           at the abstraction name in the original source line.
+{
+    const cc = new CLOOMCCompiler();
+    const src =
+`Create an abstraction called Test
+Add a method called Run
+  call GhostAbs.Method()`;
+    const result = cc.compileEnglish(src);
+    const e = result.errors.find(x => x.message.includes('GhostAbs'));
+    assert('EN-COL-2: "Unknown abstraction" error is produced', e != null,
+        'errors: ' + result.errors.map(x => x.message).join('; '));
+    const rawLine = '  call GhostAbs.Method()';
+    const expectedStart = rawLine.indexOf('GhostAbs');
+    assert('EN-COL-2: colStart points at "GhostAbs"',
+        e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart + ' expected=' + expectedStart : 'no error');
+    assert('EN-COL-2: colEnd covers "GhostAbs"',
+        e && e.colEnd === expectedStart + 'GhostAbs'.length,
+        e ? 'colEnd=' + e.colEnd + ' expected=' + (expectedStart + 'GhostAbs'.length) : 'no error');
+}
+
+// EN-COL-3: Bad expression / unknown variable in return (block form) —
+//           colStart/colEnd point at the unresolvable token in the source line.
+{
+    const cc = new CLOOMCCompiler();
+    const src =
+`abstraction Test {
+    run():
+        return unknownVar
+}`;
+    const result = cc.compileEnglish(src);
+    const e = result.errors.find(x => x.message.includes('unknownVar'));
+    assert('EN-COL-3: "Cannot resolve expression" error is produced', e != null,
+        'errors: ' + result.errors.map(x => x.message).join('; '));
+    const rawLine = '        return unknownVar';
+    const expectedStart = rawLine.indexOf('unknownVar');
+    assert('EN-COL-3: colStart points at "unknownVar"',
+        e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart + ' expected=' + expectedStart : 'no error');
+    assert('EN-COL-3: colEnd covers "unknownVar"',
+        e && e.colEnd === expectedStart + 'unknownVar'.length,
+        e ? 'colEnd=' + e.colEnd + ' expected=' + (expectedStart + 'unknownVar'.length) : 'no error');
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
