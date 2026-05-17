@@ -21,14 +21,14 @@
     }
   ],
   "capabilities": [
-    {"name": "cap0", "grants": ["E"]},
-    {"name": "cap1", "grants": ["E"]},
-    {"name": "cap2", "grants": ["E"]},
-    {"name": "cap3", "grants": ["E"]},
-    {"name": "cap4", "grants": ["E"]},
-    {"name": "cap5", "grants": ["E"]},
-    {"name": "cap6", "grants": ["E"]},
-    {"name": "cap7", "grants": ["E"]}
+    {"name": "null", "grants": [], "gt": "0x00000000", "note": "unused"},
+    {"name": "null", "grants": [], "gt": "0x00000000", "note": "unused"},
+    {"name": "null", "grants": [], "gt": "0x00000000", "note": "null GT (NS slot 2 freed)"},
+    {"name": "Boot.Abstr", "grants": ["E"], "gt": "0x48800003", "ns_slot": 3, "note": "Boot.Abstr E-GT — Church domain enter; TPERM E tests (Tests 3, 4)"},
+    {"name": "null", "grants": [], "gt": "0x00000000", "note": "unused"},
+    {"name": "null", "grants": [], "gt": "0x00000000", "note": "unused"},
+    {"name": "null", "grants": [], "gt": "0x00000000", "note": "unused"},
+    {"name": "Boot.Nucs", "grants": ["X"], "gt": "0x40800001", "ns_slot": 1, "note": "Boot.Thread X-GT (nucleus execute) — Turing domain; TPERM X tests (Tests 1, 2, 5)"}
   ],
   "pet_names": {
     "DR": {},
