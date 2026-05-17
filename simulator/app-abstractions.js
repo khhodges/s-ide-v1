@@ -695,7 +695,8 @@ window._lumpSortChanged = function(val) {
         const ver     = lump.version   ? `v${lump.version}`    : '';
         const size    = lump.lump_size ? `${lump.lump_size}w`  : '';
         const label   = [name, ver, badge, nsSlot, size].filter(Boolean).join('  ');
-        opts += `<option value="${e(token)}">${e(label)}</option>`;
+        const chosen  = _selectedLumpToken === token ? ' selected' : '';
+        opts += `<option value="${e(token)}"${chosen}>${e(label)}</option>`;
     }
     sel.innerHTML = opts;
 };
