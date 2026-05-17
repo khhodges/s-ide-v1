@@ -7,7 +7,7 @@
   "typ": 0,
   "content_type": "code",
   "cw": 26,
-  "cc": 0,
+  "cc": 8,
   "profile": "IoT",
   "language": "assembly",
   "author": "",
@@ -20,7 +20,16 @@
       "length": 26
     }
   ],
-  "capabilities": [],
+  "capabilities": [
+    {"name": "cap0", "grants": ["E"]},
+    {"name": "cap1", "grants": ["E"]},
+    {"name": "cap2", "grants": ["E"]},
+    {"name": "cap3", "grants": ["E"]},
+    {"name": "cap4", "grants": ["E"]},
+    {"name": "cap5", "grants": ["E"]},
+    {"name": "cap6", "grants": ["E"]},
+    {"name": "cap7", "grants": ["E"]}
+  ],
   "pet_names": {
     "DR": {},
     "CR": {}

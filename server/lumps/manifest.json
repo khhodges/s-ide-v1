@@ -1630,7 +1630,7 @@
     "variant_group": null,
     "lump_size": 1024,
     "cw": 512,
-    "cc": 0,
+    "cc": 8,
     "grants": [
       "E"
     ],
@@ -1643,7 +1643,7 @@
     "ns_slot_policy": "dynamic",
     "lump_size": 64,
     "cw": 26,
-    "cc": 0,
+    "cc": 8,
     "author": "",
     "version": "2026.05.16",
     "lump_version": 1,

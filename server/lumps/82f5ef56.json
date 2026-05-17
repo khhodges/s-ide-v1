@@ -7,10 +7,20 @@
   "typ": 0,
   "content_type": "code",
   "cw": 512,
-  "cc": 0,
+  "cc": 8,
   "profile": "IoT",
   "language": "assembly",
   "description": "Post-Flash Exhaustive Self-Test \u2014 81 hardware correctness tests (DR independence, ALU, shifts, branches, BFEXT/BFINS, TPERM, CHANGE, LOAD). DR0=0 on full pass, DR0=N on first failure.",
+  "capabilities": [
+    {"name": "cap0", "grants": ["E"]},
+    {"name": "cap1", "grants": ["E"]},
+    {"name": "cap2", "grants": ["E"]},
+    {"name": "cap3", "grants": ["E"]},
+    {"name": "cap4", "grants": ["E"]},
+    {"name": "cap5", "grants": ["E"]},
+    {"name": "cap6", "grants": ["E"]},
+    {"name": "cap7", "grants": ["E"]}
+  ],
   "grants": [
     "E"
   ],
