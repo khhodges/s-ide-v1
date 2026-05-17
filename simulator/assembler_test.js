@@ -6547,6 +6547,38 @@ abstraction VlcTest {
             }
         }
 
+        // ── Symbolic Math: EX-OOB-LIT — out-of-range literals produce a compile error ──
+        // Values outside the signed 32-bit range (> INT_MAX or < INT_MIN) must be
+        // rejected at compile time with a clear error message, not silently truncated.
+        {
+            const oobCases = [
+                { val: 2147483648,   label: 'INT_MAX + 1 (positive overflow)'   },
+                { val: 4294967295,   label: '0xFFFFFFFF (UINT_MAX)'             },
+                { val: -2147483649,  label: 'INT_MIN - 1 (negative overflow)'   },
+            ];
+            for (const { val, label } of oobCases) {
+                const src = [
+                    'abstraction OobLitTest {',
+                    '    capabilities {}',
+                    '    method compute() {',
+                    `        let V1 = ${val}`,
+                    '        let V2 = V1',
+                    '        halt',
+                    '    }',
+                    '}'
+                ].join('\n');
+                const result = new CLOOMCCompiler().compile(src);
+                assert(`EX-OOB-LIT: ${label} produces a compile error`,
+                    result.errors.length > 0,
+                    'Expected a compile error but got none');
+                const hasRangeMsg = result.errors.some(e =>
+                    e.message && e.message.toLowerCase().includes('out of range'));
+                assert(`EX-OOB-LIT: ${label} error mentions "out of range"`,
+                    hasRangeMsg,
+                    result.errors.map(e => e.message).join('; '));
+            }
+        }
+
         // ── File-backed: EX-SRHS — sliderule_hs compile-integrity ────────────────
         {
             const appPath = extractFilePath('sliderule_hs');

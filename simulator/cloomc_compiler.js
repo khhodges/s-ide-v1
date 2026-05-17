@@ -2557,6 +2557,10 @@ class CLOOMCCompiler {
         };
 
         const emitLoadConst = (dr, value) => {
+            if (value > 2147483647 || value < -2147483648) {
+                errors.push({ line: 0, message: `Literal ${value} is out of range for a 32-bit Church Machine register (must be between -2147483648 and 2147483647)` });
+                return;
+            }
             if (value < 0) {
                 const absVal = (-value) >>> 0;
                 if (absVal >= 0x4000) {
