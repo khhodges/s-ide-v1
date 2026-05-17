@@ -45,5 +45,5 @@ abstraction ChurchPair {
     method double_succ(n) = succ (succ n)
 
     -- Let binding example
-    method letExample(x) = let a = x + 1 in a + a
+    method letExample(x) = let a == x + 1 in a + a
 }

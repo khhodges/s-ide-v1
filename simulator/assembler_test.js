@@ -7211,6 +7211,7 @@ Add a method called Run
 // ── LC-COL: Lambda Calculus compiler errors carry colStart/colEnd ─────────────
 // Same precision requirement for the Lambda Calculus front-end, which shares
 // _emitHaskellExpr but feeds it AST nodes from _parseLambdaExpr.
+// colStart/colEnd are method-line-local (include leading spaces + method signature).
 
 // LC-COL-1: undefined variable in Lambda Calculus method — colStart/colEnd point at the variable.
 {
@@ -7373,6 +7374,196 @@ Add a method called Run
     assert('SM-PARSE-COL-2: colStart points at zapwidget', e && e.colStart === expectedStart, e ? 'colStart=' + e.colStart + ' expected=' + expectedStart : 'no error');
     assert('SM-PARSE-COL-2: colEnd covers zapwidget only', e && e.colEnd === expectedStart + 'zapwidget'.length, e ? 'colEnd=' + e.colEnd : 'no error');
 >>>>>>> 33bfd94a (Task #1341: Extend exact token underlines to Pure Math (Ada) parse-phase errors)
+}
+
+// LC-COL-3: unknown variable at start of indented method expression.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'abstraction Foo {\n  method bar() = unknownVar\n}';
+    const result = cc.compileLambda(src);
+    const e = result.errors.find(x => x.message.includes('unknownVar'));
+    assert('LC-COL-3: unknown variable produces error', e != null);
+    const rawMethodLine = '  method bar() = unknownVar';
+    const expectedStart = rawMethodLine.indexOf('unknownVar');
+    assert('LC-COL-3: colStart points at unknownVar (method-line-local)', e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart + ' expected=' + expectedStart : 'no error');
+    assert('LC-COL-3: colEnd covers unknownVar', e && e.colEnd === expectedStart + 'unknownVar'.length,
+        e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// LC-COL-4: unknown variable with offset — colStart points past the method signature.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'abstraction Foo {\n  method bar(x) = x + badVar\n}';
+    const result = cc.compileLambda(src);
+    const e = result.errors.find(x => x.message.includes('badVar'));
+    assert('LC-COL-4: unknown variable with offset produces error', e != null);
+    const rawMethodLine = '  method bar(x) = x + badVar';
+    const expectedStart = rawMethodLine.indexOf('badVar');
+    assert('LC-COL-4: colStart points at badVar (method-line-local)', e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart + ' expected=' + expectedStart : 'no error');
+    assert('LC-COL-4: colEnd covers badVar', e && e.colEnd === expectedStart + 'badVar'.length,
+        e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// LC-COL-5: unknown abstraction (dotted name) — colStart/colEnd span the full token.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'abstraction Foo {\n  method bar(x) = BadAbs.method x\n}';
+    const result = cc.compileLambda(src);
+    const e = result.errors.find(x => x.message.includes('BadAbs.method'));
+    assert('LC-COL-5: unknown abstraction produces error', e != null);
+    const rawMethodLine = '  method bar(x) = BadAbs.method x';
+    const expectedStart = rawMethodLine.indexOf('BadAbs.method');
+    assert('LC-COL-5: colStart points at BadAbs.method (method-line-local)', e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart + ' expected=' + expectedStart : 'no error');
+    assert('LC-COL-5: colEnd covers full dotted token', e && e.colEnd === expectedStart + 'BadAbs.method'.length,
+        e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// ── HS-COL: Haskell compiler errors carry colStart/colEnd ─────────────────────
+// Verifies that compileHaskell errors on identifiable tokens carry correct
+// column ranges (method-line-local: include leading spaces + method signature).
+
+// HS-COL-1: unknown variable at start of indented method expression.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'abstraction Bar {\n  method run() = ghostVar\n}';
+    const result = cc.compileHaskell(src);
+    const e = result.errors.find(x => x.message.includes('ghostVar'));
+    assert('HS-COL-1: unknown variable produces error', e != null);
+    const rawMethodLine = '  method run() = ghostVar';
+    const expectedStart = rawMethodLine.indexOf('ghostVar');
+    assert('HS-COL-1: colStart points at ghostVar (method-line-local)', e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart + ' expected=' + expectedStart : 'no error');
+    assert('HS-COL-1: colEnd covers ghostVar', e && e.colEnd === expectedStart + 'ghostVar'.length,
+        e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// HS-COL-2: unknown variable with offset — colStart points past method signature.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'abstraction Bar {\n  method run(n) = n + missingX\n}';
+    const result = cc.compileHaskell(src);
+    const e = result.errors.find(x => x.message.includes('missingX'));
+    assert('HS-COL-2: unknown variable with offset produces error', e != null);
+    const rawMethodLine = '  method run(n) = n + missingX';
+    const expectedStart = rawMethodLine.indexOf('missingX');
+    assert('HS-COL-2: colStart points at missingX (method-line-local)', e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart + ' expected=' + expectedStart : 'no error');
+    assert('HS-COL-2: colEnd covers missingX', e && e.colEnd === expectedStart + 'missingX'.length,
+        e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// HS-COL-3: unknown abstraction (dotted name) — colStart/colEnd span full token.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'abstraction Bar {\n  method run(x) = GhostAbs.call x\n}';
+    const result = cc.compileHaskell(src);
+    const e = result.errors.find(x => x.message.includes('GhostAbs.call'));
+    assert('HS-COL-3: unknown abstraction produces error', e != null);
+    const rawMethodLine = '  method run(x) = GhostAbs.call x';
+    const expectedStart = rawMethodLine.indexOf('GhostAbs.call');
+    assert('HS-COL-3: colStart points at GhostAbs.call (method-line-local)', e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart + ' expected=' + expectedStart : 'no error');
+    assert('HS-COL-3: colEnd covers full dotted token', e && e.colEnd === expectedStart + 'GhostAbs.call'.length,
+        e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// ── LC-PARSE-FAIL: parse-failure errors carry colStart/colEnd ────────────────
+// When compileLambda cannot find an abstraction declaration, the error points
+// at the first meaningful token on the bad line.
+
+// LC-PARSE-FAIL-1: source with no abstraction — colStart/colEnd at first token.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'badstuff';
+    const result = cc.compileLambda(src);
+    const e = result.errors.find(x => x.message.includes('No abstraction'));
+    assert('LC-PARSE-FAIL-1: parse failure produces error', e != null);
+    const token = 'badstuff';
+    assert('LC-PARSE-FAIL-1: colStart is 0 (token at start of line)', e && e.colStart === 0,
+        e ? 'colStart=' + e.colStart : 'no error');
+    assert('LC-PARSE-FAIL-1: colEnd covers token', e && e.colEnd === token.length,
+        e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// LC-PARSE-FAIL-2: indented bad source — colStart accounts for leading spaces.
+{
+    const cc = new CLOOMCCompiler();
+    const src = '  badstuff';
+    const result = cc.compileLambda(src);
+    const e = result.errors.find(x => x.message.includes('No abstraction'));
+    assert('LC-PARSE-FAIL-2: parse failure produces error', e != null);
+    const expectedStart = src.indexOf('badstuff');
+    assert('LC-PARSE-FAIL-2: colStart accounts for indentation', e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart : 'no error');
+    assert('LC-PARSE-FAIL-2: colEnd covers token', e && e.colEnd === expectedStart + 'badstuff'.length,
+        e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// ── HS-PARSE-FAIL: Haskell parse-failure errors carry colStart/colEnd ─────────
+
+// HS-PARSE-FAIL-1: source with no abstraction — colStart/colEnd at first token.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'notanabs';
+    const result = cc.compileHaskell(src);
+    const e = result.errors.find(x => x.message.includes('No abstraction'));
+    assert('HS-PARSE-FAIL-1: parse failure produces error', e != null);
+    const token = 'notanabs';
+    assert('HS-PARSE-FAIL-1: colStart is 0 (token at start of line)', e && e.colStart === 0,
+        e ? 'colStart=' + e.colStart : 'no error');
+    assert('HS-PARSE-FAIL-1: colEnd covers token', e && e.colEnd === token.length,
+        e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// HS-PARSE-FAIL-2: indented bad source — colStart accounts for leading spaces.
+{
+    const cc = new CLOOMCCompiler();
+    const src = '  notanabs';
+    const result = cc.compileHaskell(src);
+    const e = result.errors.find(x => x.message.includes('No abstraction'));
+    assert('HS-PARSE-FAIL-2: parse failure produces error', e != null);
+    const expectedStart = src.indexOf('notanabs');
+    assert('HS-PARSE-FAIL-2: colStart accounts for indentation', e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart : 'no error');
+    assert('HS-PARSE-FAIL-2: colEnd covers token', e && e.colEnd === expectedStart + 'notanabs'.length,
+        e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// ── HS-BAD-BIND: Haskell bad let-binding (= instead of ==) carries colStart/colEnd
+// Verifies the bad-binding error produced when a let-binding uses = rather
+// than == points at the offending = token in the expression string.
+
+// HS-BAD-BIND-1: let y = n in y — colStart/colEnd point at the bare =.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'abstraction Foo {\n  method run(n) = let y = n in y\n}';
+    const result = cc.compileHaskell(src);
+    const e = result.errors.find(x => x.message.includes('let binding'));
+    assert('HS-BAD-BIND-1: bad let binding produces error', e != null);
+    const expr = 'let y = n in y';
+    const expectedStart = expr.indexOf('=');
+    assert('HS-BAD-BIND-1: colStart points at = token', e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart : 'no error');
+    assert('HS-BAD-BIND-1: colEnd covers = token', e && e.colEnd === expectedStart + 1,
+        e ? 'colEnd=' + e.colEnd : 'no error');
+}
+
+// HS-BAD-BIND-2: let with offset — the = sign is not at the start.
+{
+    const cc = new CLOOMCCompiler();
+    const src = 'abstraction Foo {\n  method run(a, b) = let result = a + b in result\n}';
+    const result = cc.compileHaskell(src);
+    const e = result.errors.find(x => x.message.includes('let binding'));
+    assert('HS-BAD-BIND-2: bad let binding with offset produces error', e != null);
+    const expr = 'let result = a + b in result';
+    const expectedStart = expr.indexOf('=');
+    assert('HS-BAD-BIND-2: colStart points at = token', e && e.colStart === expectedStart,
+        e ? 'colStart=' + e.colStart : 'no error');
+    assert('HS-BAD-BIND-2: colEnd is colStart + 1', e && e.colEnd === expectedStart + 1,
+        e ? 'colEnd=' + e.colEnd : 'no error');
 }
 
 // ── Summary ──────────────────────────────────────────────────────────────────

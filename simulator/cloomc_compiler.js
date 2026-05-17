@@ -268,7 +268,14 @@ class CLOOMCCompiler {
         }
 
         if (!result.name) {
-            errors.push({ line: 0, message: 'No abstraction declaration found. Expected: abstraction Name { ... }' });
+            let _firstBadLine = '';
+            for (const l of lines) {
+                const t = l.trim();
+                if (t && !t.startsWith('--')) { _firstBadLine = l; break; }
+            }
+            const _firstTok = _firstBadLine.trim().split(/\s+/)[0] || '';
+            const _col = _firstTok ? CLOOMCCompiler._tokenCols(_firstBadLine, _firstTok) : {};
+            errors.push({ line: 0, message: 'No abstraction declaration found. Expected: abstraction Name { ... }', ..._col });
         }
         return result;
     }
@@ -409,6 +416,7 @@ class CLOOMCCompiler {
             if (input.substring(i, i + 2) === '>=') { tokens.push({ type: 'op', value: '>=', pos: i }); i += 2; continue; }
             if (input[i] === '<') { tokens.push({ type: 'op', value: '<', pos: i }); i++; continue; }
             if (input[i] === '>') { tokens.push({ type: 'op', value: '>', pos: i }); i++; continue; }
+            if (input[i] === '=' && (i + 1 >= input.length || input[i + 1] !== '=')) { tokens.push({ type: 'op', value: '=', pos: i }); i++; continue; }
 
             if (/\d/.test(input[i])) {
                 let num = '';
@@ -1605,7 +1613,14 @@ class CLOOMCCompiler {
         }
 
         if (!result.name) {
-            errors.push({ line: 0, message: 'No abstraction declaration found. Expected: abstraction Name { ... }' });
+            let _firstBadLine = '';
+            for (const l of lines) {
+                const t = l.trim();
+                if (t && !t.startsWith('--')) { _firstBadLine = l; break; }
+            }
+            const _firstTok = _firstBadLine.trim().split(/\s+/)[0] || '';
+            const _col = _firstTok ? CLOOMCCompiler._tokenCols(_firstBadLine, _firstTok) : {};
+            errors.push({ line: 0, message: 'No abstraction declaration found. Expected: abstraction Name { ... }', ..._col });
         }
         return result;
     }
@@ -1708,10 +1723,10 @@ class CLOOMCCompiler {
         return i;
     }
 
-    _parseHaskellExpr(input) {
+    _parseHaskellExpr(input, errors = []) {
         const tokens = this._tokenizeHaskell(input.trim());
         if (tokens.length === 0) return { type: 'literal', value: 0 };
-        return this._parseHaskellExprFromTokens(tokens, 0).node;
+        return this._parseHaskellExprFromTokens(tokens, 0, errors).node;
     }
 
     _tokenizeHaskell(input) {
@@ -1744,6 +1759,7 @@ class CLOOMCCompiler {
             if (input.substring(i, i + 2) === '>=') { tokens.push({ type: 'op', value: '>=', pos: i }); i += 2; continue; }
             if (input[i] === '<') { tokens.push({ type: 'op', value: '<', pos: i }); i++; continue; }
             if (input[i] === '>') { tokens.push({ type: 'op', value: '>', pos: i }); i++; continue; }
+            if (input[i] === '=' && (i + 1 >= input.length || input[i + 1] !== '=')) { tokens.push({ type: 'op', value: '=', pos: i }); i++; continue; }
 
             if (/\d/.test(input[i]) || (input[i] === '0' && input[i + 1] === 'x')) {
                 let num = '';
@@ -1775,14 +1791,14 @@ class CLOOMCCompiler {
                 continue;
             }
 
-            if (input[i] === '_') { tokens.push({ type: 'ident', value: '_', pos: i }); i++; continue; }
+            if (input[i] === '_') { tokens.push({ type: 'ident', value: '_', pos: i, startPos: i }); i++; continue; }
 
             i++;
         }
         return tokens;
     }
 
-    _parseHaskellExprFromTokens(tokens, pos) {
+    _parseHaskellExprFromTokens(tokens, pos, errors = []) {
         if (pos >= tokens.length) return { node: { type: 'literal', value: 0 }, pos: pos };
 
         const t = tokens[pos];
@@ -1795,7 +1811,7 @@ class CLOOMCCompiler {
                 pos++;
             }
             if (pos < tokens.length && tokens[pos].type === 'arrow') pos++;
-            const body = this._parseHaskellExprFromTokens(tokens, pos);
+            const body = this._parseHaskellExprFromTokens(tokens, pos, errors);
             return { node: { type: 'lambda', params: params, body: body.node }, pos: body.pos };
         }
 
@@ -1807,10 +1823,11 @@ class CLOOMCCompiler {
                     const name = tokens[pos].value;
                     pos++;
                     if (pos < tokens.length && tokens[pos].type === 'op' && tokens[pos].value === '=') {
-                        errors.push({ line: 0, message: 'let binding uses = not ==' });
+                        const _eqTok = tokens[pos];
+                        errors.push({ line: 0, message: 'let binding uses = not ==', colStart: _eqTok.pos, colEnd: _eqTok.pos + 1 });
                     }
                     if (pos < tokens.length && ((tokens[pos].type === 'op' && tokens[pos].value === '==') || (tokens[pos].type === 'op' && tokens[pos].value === '='))) pos++;
-                    const val = this._parseHaskellSimpleExpr(tokens, pos);
+                    const val = this._parseHaskellSimpleExpr(tokens, pos, errors);
                     bindings.push({ name: name, value: val.node });
                     pos = val.pos;
                 } else {
@@ -1818,13 +1835,13 @@ class CLOOMCCompiler {
                 }
             }
             if (pos < tokens.length && tokens[pos].type === 'in') pos++;
-            const body = this._parseHaskellExprFromTokens(tokens, pos);
+            const body = this._parseHaskellExprFromTokens(tokens, pos, errors);
             return { node: { type: 'let', bindings: bindings, body: body.node }, pos: body.pos };
         }
 
         if (t.type === 'case') {
             pos++;
-            const scrut = this._parseHaskellSimpleExpr(tokens, pos);
+            const scrut = this._parseHaskellSimpleExpr(tokens, pos, errors);
             pos = scrut.pos;
             if (pos < tokens.length && tokens[pos].type === 'of') pos++;
             const branches = [];
@@ -1833,7 +1850,7 @@ class CLOOMCCompiler {
                 const pat = this._parseHaskellPattern(tokens, pos);
                 pos = pat.pos;
                 if (pos < tokens.length && tokens[pos].type === 'arrow') pos++;
-                const body = this._parseHaskellSimpleExpr(tokens, pos);
+                const body = this._parseHaskellSimpleExpr(tokens, pos, errors);
                 branches.push({ pattern: pat.node, body: body.node });
                 pos = body.pos;
                 if (pos < tokens.length && tokens[pos].type === 'comma') pos++;
@@ -1843,34 +1860,34 @@ class CLOOMCCompiler {
 
         if (t.type === 'hif') {
             pos++;
-            const cond = this._parseHaskellSimpleExpr(tokens, pos);
+            const cond = this._parseHaskellSimpleExpr(tokens, pos, errors);
             pos = cond.pos;
             if (pos < tokens.length && tokens[pos].type === 'then') pos++;
-            const thenExpr = this._parseHaskellSimpleExpr(tokens, pos);
+            const thenExpr = this._parseHaskellSimpleExpr(tokens, pos, errors);
             pos = thenExpr.pos;
             if (pos < tokens.length && tokens[pos].type === 'helse') pos++;
-            const elseExpr = this._parseHaskellExprFromTokens(tokens, pos);
+            const elseExpr = this._parseHaskellExprFromTokens(tokens, pos, errors);
             return { node: { type: 'ifExpr', cond: cond.node, thenBranch: thenExpr.node, elseBranch: elseExpr.node }, pos: elseExpr.pos };
         }
 
         if (t.type === 'pure') {
             pos++;
-            const val = this._parseHaskellSimpleExpr(tokens, pos);
+            const val = this._parseHaskellSimpleExpr(tokens, pos, errors);
             return { node: { type: 'pure', value: val.node }, pos: val.pos };
         }
 
-        return this._parseHaskellBinOp(tokens, pos);
+        return this._parseHaskellBinOp(tokens, pos, errors);
     }
 
-    _parseHaskellBinOp(tokens, pos) {
-        let left = this._parseHaskellApp(tokens, pos);
+    _parseHaskellBinOp(tokens, pos, errors = []) {
+        let left = this._parseHaskellApp(tokens, pos, errors);
         pos = left.pos;
 
         while (pos < tokens.length && tokens[pos].type === 'op') {
             const op = tokens[pos].value;
             const opPos = tokens[pos].pos;
             pos++;
-            const right = this._parseHaskellApp(tokens, pos);
+            const right = this._parseHaskellApp(tokens, pos, errors);
             left = { node: { type: 'binop', op: op, opPos: opPos, left: left.node, right: right.node }, pos: right.pos };
             pos = right.pos;
         }
@@ -1878,14 +1895,14 @@ class CLOOMCCompiler {
         return left;
     }
 
-    _parseHaskellApp(tokens, pos) {
-        let func = this._parseHaskellAtom(tokens, pos);
+    _parseHaskellApp(tokens, pos, errors = []) {
+        let func = this._parseHaskellAtom(tokens, pos, errors);
         pos = func.pos;
 
         while (pos < tokens.length) {
             const t = tokens[pos];
             if (t.type === 'number' || t.type === 'ident' || t.type === 'lparen') {
-                const arg = this._parseHaskellAtom(tokens, pos);
+                const arg = this._parseHaskellAtom(tokens, pos, errors);
                 func = { node: { type: 'app', func: func.node, arg: arg.node }, pos: arg.pos };
                 pos = arg.pos;
             } else {
@@ -1896,7 +1913,7 @@ class CLOOMCCompiler {
         return func;
     }
 
-    _parseHaskellAtom(tokens, pos) {
+    _parseHaskellAtom(tokens, pos, errors = []) {
         if (pos >= tokens.length) return { node: { type: 'literal', value: 0 }, pos: pos };
 
         const t = tokens[pos];
@@ -1915,12 +1932,12 @@ class CLOOMCCompiler {
                 return { node: { type: 'literal', value: 0 }, pos: pos + 1 };
             }
 
-            const inner = this._parseHaskellExprFromTokens(tokens, pos);
+            const inner = this._parseHaskellExprFromTokens(tokens, pos, errors);
             pos = inner.pos;
 
             if (pos < tokens.length && tokens[pos].type === 'comma') {
                 pos++;
-                const second = this._parseHaskellExprFromTokens(tokens, pos);
+                const second = this._parseHaskellExprFromTokens(tokens, pos, errors);
                 pos = second.pos;
                 if (pos < tokens.length && tokens[pos].type === 'rparen') pos++;
                 return { node: { type: 'pair', fst: inner.node, snd: second.node }, pos: pos };
@@ -1947,24 +1964,24 @@ class CLOOMCCompiler {
         return { node: { type: 'wildcard' }, pos: pos + 1 };
     }
 
-    _parseHaskellSimpleExpr(tokens, pos) {
+    _parseHaskellSimpleExpr(tokens, pos, errors = []) {
         if (pos >= tokens.length) return { node: { type: 'literal', value: 0 }, pos: pos };
 
         const t = tokens[pos];
 
         if (t.type === 'lambda') {
-            return this._parseHaskellExprFromTokens(tokens, pos);
+            return this._parseHaskellExprFromTokens(tokens, pos, errors);
         }
 
         if (t.type === 'let') {
-            return this._parseHaskellExprFromTokens(tokens, pos);
+            return this._parseHaskellExprFromTokens(tokens, pos, errors);
         }
 
         if (t.type === 'hif') {
-            return this._parseHaskellExprFromTokens(tokens, pos);
+            return this._parseHaskellExprFromTokens(tokens, pos, errors);
         }
 
-        return this._parseHaskellBinOp(tokens, pos);
+        return this._parseHaskellBinOp(tokens, pos, errors);
     }
 
     _compileHaskellMethod(method, rom, capNames, outerErrors) {
@@ -1986,7 +2003,7 @@ class CLOOMCCompiler {
             }
         }
 
-        const ast = this._parseHaskellExpr(method.expr);
+        const ast = this._parseHaskellExpr(method.expr, errors);
         const resultReg = this._emitHaskellExpr(ast, code, locals, rom, capNames, errors, manifest, method.startLine, method.exprOffset || 0);
 
         if (errors.length > 0) {

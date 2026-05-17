@@ -2074,8 +2074,8 @@ abstraction ChurchMath {
     -- Church isZero via lambda: \\n -> isZero n
     method churchIsZero() = \\n -> isZero n
 
-    -- Let binding with lambda: let id = \\x -> x in id 42
-    method letLambda() = let id = \\x -> x in id 42
+    -- Let binding with lambda: let id == \\x -> x in id 42
+    method letLambda() = let id == \\x -> x in id 42
 
     -- Pair via lambda: \\a -> \\b -> (a, b)
     method pairLambda() = \\a -> \\b -> (a, b)
@@ -2130,7 +2130,7 @@ abstraction ChurchPair {
     method double_succ(n) = succ (succ n)
 
     -- Let binding example
-    method letExample(x) = let a = x + 1 in a + a
+    method letExample(x) = let a == x + 1 in a + a
 }`,
         'church_case': `-- ============================================================
 -- Abstraction:  ChurchCase
