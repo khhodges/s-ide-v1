@@ -6293,6 +6293,84 @@ abstraction VlcTest {
                 mmap ? JSON.stringify((mmap.mapping||[]).map(e=>e.instr)) : 'manifest entry not found');
         }
 
+        // ── Symbolic Math: EX-NEG-LIT-LARGE — large negative literals (absVal >= 0x4000) ──
+        // Regression test for large negatives that previously clobbered bit 14 by
+        // OR-ing the magnitude with 0x4000, producing the wrong value.
+        // Also covers full-32-bit values (absVal > 2^28) using the 3-chunk sequence.
+        //
+        // Semantic check: mini-simulator decodes the compiled code words and verifies
+        // the register ends up holding the expected two's-complement value.
+        {
+            // Mini-simulator: executes IADD/ISUB/SHL, ignores everything else.
+            // Returns a Uint32Array of DR0-DR15 after running all words.
+            function runMiniSim(words) {
+                const IADD_OP = 15, ISUB_OP = 16, SHL_OP = 18;
+                const regs = new Uint32Array(16); // DR0 stays 0
+                for (const w of words) {
+                    const op   = (w >>> 27) & 0x1F;
+                    const dst  = (w >>> 19) & 0xF;
+                    const srcA = (w >>> 15) & 0xF;
+                    const immF = w & 0x7FFF;
+                    const isImm = (immF >>> 14) & 1;
+                    if (op === IADD_OP) {
+                        const b = isImm ? (immF & 0x3FFF) : regs[immF & 0xF];
+                        regs[dst] = (regs[srcA] + b) >>> 0;
+                    } else if (op === ISUB_OP) {
+                        const b = isImm ? (immF & 0x3FFF) : regs[immF & 0xF];
+                        regs[dst] = (regs[srcA] - b) >>> 0;
+                    } else if (op === SHL_OP) {
+                        regs[dst] = (regs[srcA] << (immF & 0x1F)) >>> 0;
+                    }
+                }
+                return regs;
+            }
+
+            const cases = [
+                { val: -16384,      label: '-16384 (exact boundary)'         },
+                { val: -32768,      label: '-32768 (15-bit magnitude)'        },
+                { val: -65535,      label: '-65535 (16-bit magnitude)'        },
+                { val: -268435456,  label: '-268435456 (28-bit, high=0)'      },
+                { val: -2147483648, label: '-2147483648 (INT_MIN, 3 chunks)'  },
+            ];
+
+            for (const { val, label } of cases) {
+                // Note: _detectSymbolic requires adaVars >= 2 (at least 2 lines
+                // with V\d+ and =). Include a second V-assignment to ensure the
+                // Symbolic Math front-end is selected by auto-detection.
+                const src = [
+                    'abstraction LargeNegLitTest {',
+                    '    capabilities {}',
+                    '    method compute() {',
+                    `        let V1 = ${val}`,
+                    '        let V2 = V1',
+                    '        halt',
+                    '    }',
+                    '}'
+                ].join('\n');
+                const result = new CLOOMCCompiler().compile(src);
+                assert(`EX-NEG-LIT-LARGE: ${label} compiles without errors`,
+                    result.errors.length === 0,
+                    result.errors.map(e => 'L' + e.line + ': ' + e.message).join('; '));
+                const m = result.methods && result.methods.find(x => x.name === 'compute');
+                assert(`EX-NEG-LIT-LARGE: ${label} method compute is present`, !!m, 'compute method not found');
+                const mmap = result.manifest && result.manifest.find(x => x.name === 'compute');
+                const hasShl = mmap && (mmap.mapping || []).some(e => e.instr && e.instr.startsWith('SHL'));
+                assert(`EX-NEG-LIT-LARGE: ${label} SHL present (multi-word load sequence)`,
+                    !!hasShl,
+                    mmap ? JSON.stringify((mmap.mapping||[]).map(e=>e.instr)) : 'manifest entry not found');
+                const hasIsub = mmap && (mmap.mapping || []).some(e => e.instr && e.instr.startsWith('ISUB'));
+                assert(`EX-NEG-LIT-LARGE: ${label} ISUB negate step present`,
+                    !!hasIsub,
+                    mmap ? JSON.stringify((mmap.mapping||[]).map(e=>e.instr)) : 'manifest entry not found');
+                // Semantic check: simulate and verify DR1 holds the correct signed value
+                const regs = runMiniSim(m ? (m.code || []) : []);
+                const got = regs[1] | 0; // signed interpretation of DR1
+                assert(`EX-NEG-LIT-LARGE: ${label} DR1 === ${val} after simulation`,
+                    got === val,
+                    `DR1 = ${got} (0x${(regs[1]>>>0).toString(16)}), expected ${val}`);
+            }
+        }
+
         // ── File-backed: EX-SRHS — sliderule_hs compile-integrity ────────────────
         {
             const appPath = extractFilePath('sliderule_hs');
