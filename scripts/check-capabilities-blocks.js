@@ -19,9 +19,15 @@
 // Boot.Abstr) are pre-qualified boot-level references and are exempt.
 //
 // Usage:
-//   node scripts/check-capabilities-blocks.js                   # scan simulator/examples (default)
-//   node scripts/check-capabilities-blocks.js dir1 dir2 ...     # scan specific directories
-//   node scripts/check-capabilities-blocks.js --help            # show this message
+//   node scripts/check-capabilities-blocks.js                        # scan simulator/examples (default)
+//   node scripts/check-capabilities-blocks.js dir1 dir2 ...          # scan specific directories
+//   node scripts/check-capabilities-blocks.js --glob '**/*.cloomc'   # scan whole repo tree
+//   node scripts/check-capabilities-blocks.js --help                 # show this message
+//
+// Exclusions:
+//   Paths matching any pattern in .capabilitiesignore (repo root) are skipped.
+//   Each line is a glob pattern matched against the path relative to the repo root.
+//   Blank lines and lines starting with # are ignored.
 //
 // Exit codes:
 //   0  — all files pass
@@ -42,15 +48,57 @@ if (process.argv.includes('--help')) {
 
 const ROOT = path.resolve(__dirname, '..');
 
-// Collect directory arguments from the command line (positional, non-flag args).
-const argDirs = process.argv.slice(2).filter(a => !a.startsWith('-'));
+// ── glob / ignore helpers ─────────────────────────────────────────────────────
 
-// Default to simulator/examples when no directories are provided.
-const scanDirs = argDirs.length > 0
-    ? argDirs.map(d => path.resolve(ROOT, d))
-    : [path.join(ROOT, 'simulator', 'examples')];
+// Convert a glob pattern (supporting * and **) to a RegExp.
+// The pattern is matched against a forward-slash path relative to repo root.
+function globToRegex(pattern) {
+    const norm = pattern.split(path.sep).join('/').trim();
+    let re = '';
+    let i  = 0;
+    while (i < norm.length) {
+        if (norm[i] === '*' && norm[i + 1] === '*') {
+            // **/ matches zero or more path segments
+            if (norm[i + 2] === '/') {
+                re += '(?:.+/)?';
+                i += 3;
+            } else {
+                re += '.*';
+                i += 2;
+            }
+        } else if (norm[i] === '*') {
+            re += '[^/]*';
+            i++;
+        } else if (norm[i] === '?') {
+            re += '[^/]';
+            i++;
+        } else {
+            // Escape regex special chars
+            re += norm[i].replace(/[.+^${}()|[\]\\]/g, '\\$&');
+            i++;
+        }
+    }
+    return new RegExp('^' + re + '$');
+}
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// Load ignore patterns from .capabilitiesignore at repo root.
+function loadIgnorePatterns() {
+    const ignorePath = path.join(ROOT, '.capabilitiesignore');
+    if (!fs.existsSync(ignorePath)) return [];
+    return fs.readFileSync(ignorePath, 'utf8')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l && !l.startsWith('#'))
+        .map(globToRegex);
+}
+
+// Return true if the relative path (forward-slash) matches any ignore pattern.
+function isIgnored(relpath, ignorePatterns) {
+    const fwd = relpath.split(path.sep).join('/');
+    return ignorePatterns.some(rx => rx.test(fwd));
+}
+
+// ── file collection ───────────────────────────────────────────────────────────
 
 // Recursively collect all .cloomc files under a directory.
 function collectCloomcFiles(dir) {
@@ -66,6 +114,63 @@ function collectCloomcFiles(dir) {
     }
     return results;
 }
+
+// ── argument parsing ──────────────────────────────────────────────────────────
+
+const argv = process.argv.slice(2);
+
+// Extract --glob <pattern> if present.
+let globPattern = null;
+const globIdx = argv.indexOf('--glob');
+if (globIdx !== -1) {
+    if (globIdx + 1 >= argv.length) {
+        console.error('check-capabilities-blocks: --glob requires a pattern argument');
+        process.exit(1);
+    }
+    globPattern = argv[globIdx + 1];
+}
+
+// Positional (non-flag) arguments are explicit directory paths.
+const argDirs = argv.filter((a, i) => {
+    if (a.startsWith('-')) return false;
+    if (i > 0 && argv[i - 1] === '--glob') return false;
+    return true;
+});
+
+// ── resolve scan set ──────────────────────────────────────────────────────────
+
+const ignorePatterns = loadIgnorePatterns();
+
+let allFiles;
+
+if (globPattern !== null) {
+    // Glob mode: collect every .cloomc in the whole repo, then filter by pattern.
+    const globRx = globToRegex(globPattern);
+    const repoFiles = collectCloomcFiles(ROOT);
+    allFiles = repoFiles.filter(f => {
+        const rel = path.relative(ROOT, f).split(path.sep).join('/');
+        return globRx.test(rel);
+    });
+} else {
+    // Directory mode: scan specific (or default) directories.
+    const scanDirs = argDirs.length > 0
+        ? argDirs.map(d => path.resolve(ROOT, d))
+        : [path.join(ROOT, 'simulator', 'examples')];
+
+    allFiles = [];
+    for (const dir of scanDirs) {
+        allFiles.push(...collectCloomcFiles(dir));
+    }
+}
+
+// Apply ignore patterns and deduplicate, then sort for stable output.
+const files = [...new Set(
+    allFiles
+        .filter(f => !isIgnored(path.relative(ROOT, f), ignorePatterns))
+        .sort()
+)];
+
+// ── analysis helpers ──────────────────────────────────────────────────────────
 
 // Strip trailing inline comments and trim whitespace from a source line.
 function stripComment(line) {
@@ -134,18 +239,7 @@ function extractReferencedNames(src) {
     return names;
 }
 
-// ── main ─────────────────────────────────────────────────────────────────────
-
-// Collect all .cloomc files across all scan directories, sorted for stable output.
-const allFiles = [];
-for (const dir of scanDirs) {
-    const found = collectCloomcFiles(dir);
-    allFiles.push(...found);
-}
-allFiles.sort();
-
-// Deduplicate in case directories overlap.
-const files = [...new Set(allFiles)];
+// ── main ──────────────────────────────────────────────────────────────────────
 
 let violations = 0;
 

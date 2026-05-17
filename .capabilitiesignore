@@ -1,0 +1,10 @@
+# .capabilitiesignore
+# Glob patterns (one per line) for .cloomc files that should be skipped by
+# check-capabilities-blocks.js when running in --glob mode.
+# Blank lines and lines beginning with # are ignored.
+# Patterns are matched against the path relative to the repo root,
+# using forward slashes on all platforms.
+# Supports * (any segment chars) and ** (any path depth).
+
+# Third-party or vendored sources that are not maintained by this project
+# node_modules/**
