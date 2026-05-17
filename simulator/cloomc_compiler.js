@@ -2591,8 +2591,33 @@ class CLOOMCCompiler {
                     manifest.push({ line: 0, instr: `ISUB DR${dr}, DR0, DR${dr}`, comment: `negate → ${value}` });
                 }
             } else {
-                code.push(this.encode(this.opcodes.IADD, 14, dr, 0, value | 0x4000));
-                manifest.push({ line: 0, instr: `IADD DR${dr}, DR0, #${value}`, comment: `load constant ${value}` });
+                if (value >= 0x4000) {
+                    const low  = value & 0x3FFF;
+                    const mid  = (value >>> 14) & 0x3FFF;
+                    const high = (value >>> 28) & 0xF;
+                    const t2   = (dr === this.DR_TEMP_START) ? this.DR_TEMP_START + 1 : this.DR_TEMP_START;
+                    code.push(this.encode(this.opcodes.IADD, 14, dr, 0, low | 0x4000));
+                    manifest.push({ line: 0, instr: `IADD DR${dr}, DR0, #${low}`, comment: `load low 14 bits of ${value}` });
+                    if (mid > 0 || high > 0) {
+                        code.push(this.encode(this.opcodes.IADD, 14, t2, 0, mid | 0x4000));
+                        manifest.push({ line: 0, instr: `IADD DR${t2}, DR0, #${mid}`, comment: `load mid 14 bits of ${value}` });
+                        code.push(this.encode(this.opcodes.SHL, 14, t2, t2, 14));
+                        manifest.push({ line: 0, instr: `SHL DR${t2}, DR${t2}, #14`, comment: `shift mid bits into position` });
+                        code.push(this.encode(this.opcodes.IADD, 14, dr, dr, t2));
+                        manifest.push({ line: 0, instr: `IADD DR${dr}, DR${dr}, DR${t2}`, comment: `combine low+mid` });
+                        if (high > 0) {
+                            code.push(this.encode(this.opcodes.IADD, 14, t2, 0, high | 0x4000));
+                            manifest.push({ line: 0, instr: `IADD DR${t2}, DR0, #${high}`, comment: `load top 4 bits of ${value}` });
+                            code.push(this.encode(this.opcodes.SHL, 14, t2, t2, 28));
+                            manifest.push({ line: 0, instr: `SHL DR${t2}, DR${t2}, #28`, comment: `shift top bits into position` });
+                            code.push(this.encode(this.opcodes.IADD, 14, dr, dr, t2));
+                            manifest.push({ line: 0, instr: `IADD DR${dr}, DR${dr}, DR${t2}`, comment: `combine with top 4 bits` });
+                        }
+                    }
+                } else {
+                    code.push(this.encode(this.opcodes.IADD, 14, dr, 0, value | 0x4000));
+                    manifest.push({ line: 0, instr: `IADD DR${dr}, DR0, #${value}`, comment: `load constant ${value}` });
+                }
             }
         };
 
