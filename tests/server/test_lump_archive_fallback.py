@@ -213,3 +213,58 @@ class TestArchiveFallbackVersionSelection:
                 assert field in sc, f"Archive sidecar missing required field: {field}"
         finally:
             _cleanup(token)
+
+
+class TestArchiveFilesCreatedOnSave:
+    """Two saves for the same token must produce exactly one archived v1 pair on disk,
+    with the current file reflecting the second binary."""
+
+    def test_archive_pair_created_and_history_correct(self, client):
+        """POST binary A then binary B for same token.
+
+        After two saves:
+        - history endpoint returns exactly one entry at version 1
+        - <token>-v1.lump and <token>-v1.json exist on disk
+        - <token>.lump contains binary B, not binary A
+        """
+        token = "fa110007"
+        raw_a = _pack_lump(_BINARY_A)
+        raw_b = _pack_lump(_BINARY_B)
+        try:
+            resp1 = client.post("/api/lumps/save", json={"binary": _BINARY_A, "metadata": _meta(token)})
+            data1 = resp1.get_json()
+            assert data1.get("ok"), f"First save failed: {data1}"
+
+            resp2 = client.post("/api/lumps/save", json={"binary": _BINARY_B, "metadata": _meta(token)})
+            data2 = resp2.get_json()
+            assert data2.get("ok"), f"Second save failed: {data2}"
+
+            hist_resp = client.get(f"/api/lumps/{token}/history")
+            assert hist_resp.status_code == 200, f"History endpoint returned {hist_resp.status_code}"
+            hist_data = hist_resp.get_json()
+            history = hist_data.get("history", [])
+            assert len(history) == 1, (
+                f"Expected exactly 1 history entry after two saves, got {len(history)}: {history}"
+            )
+            assert history[0]["version"] == 1, (
+                f"Expected history entry version=1, got {history[0]['version']}"
+            )
+
+            v1_lump = os.path.join(LUMPS_DIR, f"{token}-v1.lump")
+            v1_json = os.path.join(LUMPS_DIR, f"{token}-v1.json")
+            assert os.path.isfile(v1_lump), f"Archived lump {token}-v1.lump must exist on disk"
+            assert os.path.isfile(v1_json), f"Archived sidecar {token}-v1.json must exist on disk"
+
+            current_lump = os.path.join(LUMPS_DIR, f"{token}.lump")
+            with open(current_lump, "rb") as fh:
+                current_bytes = fh.read()
+            assert current_bytes == raw_b, (
+                "Current lump must contain binary B (the second save), not binary A"
+            )
+            with open(v1_lump, "rb") as fh:
+                archived_bytes = fh.read()
+            assert archived_bytes == raw_a, (
+                "Archived v1.lump must contain binary A (the first save)"
+            )
+        finally:
+            _cleanup(token)
