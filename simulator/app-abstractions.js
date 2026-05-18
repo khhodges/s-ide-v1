@@ -616,7 +616,6 @@ async function renderLumps() {
                 html += `<option value="${_escHtml(token)}"${sel}>${_escHtml(label)}</option>`;
             }
             html += `</select>`;
-            html += `<div id="lumpViewingLabel" class="lump-viewing-label"></div>`;
         }
 
         // XC7A100T Hardware section — Ethernet LUMP catalog entry

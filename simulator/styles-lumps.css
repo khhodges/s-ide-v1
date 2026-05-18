@@ -222,11 +222,7 @@
 
 /* ── LUMP workspace outer tabs (Logic / Source / Binary) ─────────────────── */
 .lump-ws-tabbar {
-    display: flex;
-    gap: 2px;
-    padding: 6px 10px 0 10px;
-    border-bottom: 2px solid rgba(100, 160, 255, 0.12);
-    background: rgba(12, 12, 22, 0.4);
+    display: none;
 }
 
 .lump-ws-tab {
@@ -700,6 +696,58 @@
 .lump-ct-doc    { background: #2a2a4a; color: #b0b8ff; }
 .lump-ct-boot   { background: #3a1e1e; color: #ff9f7e; }
 
+/* ── Inline actions group in header strip ────────────────── */
+.lump-hs-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.lump-hs-btn {
+    font-family: inherit;
+    font-size: 0.66rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary, #8888aa);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.14s, border-color 0.14s, color 0.14s;
+}
+.lump-hs-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.22);
+    color: var(--text-primary, #e0e0f0);
+}
+.lump-hs-btn-run {
+    background: rgba(74, 222, 128, 0.08);
+    border-color: rgba(74, 222, 128, 0.3);
+    color: #4ade80;
+}
+.lump-hs-btn-run:hover {
+    background: rgba(74, 222, 128, 0.18);
+    border-color: rgba(74, 222, 128, 0.55);
+    color: #86efac;
+}
+.lump-hs-btn-run:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+.lump-hs-delete-btn {
+    background: rgba(120, 20, 20, 0.35);
+    border-color: rgba(180, 50, 50, 0.35);
+    color: #ff9999;
+    padding: 2px 6px;
+}
+.lump-hs-delete-btn:hover {
+    background: rgba(180, 30, 30, 0.55);
+    border-color: rgba(220, 70, 70, 0.55);
+    color: #ffbbbb;
+}
+
 /* ── Lump header strip (between title and tabs) ─────────── */
 .lump-header-strip {
     display: flex;
@@ -733,7 +781,6 @@
     margin-right: 1px;
 }
 .lump-hs-resize-btn {
-    margin-left: auto;
     flex-shrink: 0;
     font-size: 0.63rem;
     font-family: 'Courier New', monospace;

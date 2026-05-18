@@ -29,8 +29,9 @@ function showLumpDetail(token) {
     delete _lumpHexLoaded[_tk];
     delete _lumpTokensLoaded[_tk];
 
-    // ── Lump header strip (shown between title and tabs, always visible) ──────
+    // ── Lump header strip — chips + inline action buttons ─────────────────────
     const _e = _escHtml;
+    const _isCodeLump = !isNamespace && (lump.content_type === 'code' || lump.language === 'assembly' || lump.language === 'cloomc');
     let _headerStrip = `<div class="lump-header-strip">`;
     _headerStrip += _lumpTypeBadge(lump);
     _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">Token</span>0x${_e(lump.token || '')}</span>`;
@@ -42,7 +43,16 @@ function showLumpDetail(token) {
         _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">CW</span>${parseInt(lump.cw)}</span>`;
     if (lump.cc !== undefined && lump.cc !== null)
         _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">CC</span>${parseInt(lump.cc)}</span>`;
-    // Resize button — always shown; disabled when already at minimum size
+    // ── Inline actions group (pushed right by margin-left:auto) ───────────────
+    _headerStrip += `<div class="lump-hs-actions">`;
+    if (!isNamespace) {
+        _headerStrip += `<button class="lump-hs-btn lump-edit-btn" data-edit-token="${_e(token)}" title="Edit \u2014 Open the code editor">&#9998; Edit</button>`;
+        _headerStrip += `<button class="lump-hs-btn lump-audit-btn" data-audit-token="${_e(token)}" title="Audit \u2014 Run pre-save consistency checks">\u2699 Audit</button>`;
+        if (_isCodeLump) {
+            _headerStrip += `<button class="lump-hs-btn lump-hs-btn-run" id="lumpWsRunBtn" onclick="_runSelectedLumpInSim(this)" title="Run in Simulator \u2014 Load binary into simulator">&#x25b6; Run</button>`;
+        }
+    }
+    // Shrink button
     {
         const _curSize  = parseInt(lump.lump_size) || 0;
         const _cw       = parseInt(lump.cw) || 0;
@@ -58,10 +68,18 @@ function showLumpDetail(token) {
             `title="${_canShrink ? `Remove unused freespace — shrink from ${_curSize}w to ${_minSize}w (save ${_saved}w)` : `Already at minimum size (${_curSize}w)`}">` +
             `Shrink to ${_minSize}w ▼</button>`;
     }
+    _headerStrip += `<button class="btn lump-delete-btn lump-hs-delete-btn" data-delete-token="${_e(token)}" title="Delete this lump">&#128465;</button>`;
     _headerStrip += `</div>`;
+    _headerStrip += `</div>`;
+    _headerStrip += `<div class="lump-audit-results-wrap" id="lumpAuditResults_${_tk}"></div>`;
 
-    let _tabBar = `<div class="lump-tabs-bar" id="lumpTabBar_${_tk}">` +
-        `<button class="lump-tab${isNamespace ? ' lump-tab-active' : ''}" onclick="_switchLumpTab('${_tk}','overview')">Overview</button>`;
+    // ── Single merged tab bar: Logic + CLOOMC + binary detail tabs ─────────────
+    let _tabBar = `<div class="lump-tabs-bar" id="lumpTabBar_${_tk}">`;
+    if (!isNamespace) {
+        _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','logic')">Logic</button>`;
+        _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','clooms')">CLOOMC</button>`;
+    }
+    _tabBar += `<button class="lump-tab${isNamespace ? ' lump-tab-active' : ''}" onclick="_switchLumpTab('${_tk}','overview')">Overview</button>`;
     if (!isNamespace) {
         _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','source')">Source</button>`;
         _tabBar += `<button class="lump-tab lump-tab-active" onclick="_switchLumpTab('${_tk}','content')">Content</button>`;
@@ -71,23 +89,10 @@ function showLumpDetail(token) {
     }
     _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','hexdump')">Hex Dump</button></div>`;
 
-    // ── Action bar (Edit + Audit + Load into Sim + Delete) shown below the header strip ──────
-    let _actionBar = `<div class="lump-action-bar">`;
-    if (!isNamespace) {
-        _actionBar += `<button class="btn lump-edit-btn" data-edit-token="${_e(token)}" title="Edit \u2014 Open the code editor (Create page)">&#9998; Edit</button>`;
-        _actionBar += `<button class="btn lump-audit-btn" data-audit-token="${_e(token)}" title="Audit \u2014 Run pre-save consistency checks on this LUMP binary">\u2699 Audit</button>`;
-        const _isCodeLump = lump.content_type === 'code' || lump.language === 'assembly' || lump.language === 'cloomc';
-        if (_isCodeLump) {
-            const _lumpNsSlotParsed = (lump.ns_slot !== null && lump.ns_slot !== undefined) ? Number(lump.ns_slot) : NaN;
-            const _lumpNsSlot = Number.isInteger(_lumpNsSlotParsed) ? _lumpNsSlotParsed : null;
-            _actionBar += `<button class="btn lump-loadsim-btn" id="lumpLoadSimBtn_${_e(token)}" onclick="_loadLumpBinaryIntoSim('${_e(token)}','${_e((lump.abstraction || token).replace(/'/g,''))}',this,${_lumpNsSlot === null ? 'null' : _lumpNsSlot})" title="Load into Sim \u2014 Fetch this LUMP binary and load it into the simulator">Load into Sim &#x25b6;</button>`;
-        }
-    }
-    _actionBar += `<button class="btn lump-delete-btn lump-delete-top-btn" data-delete-token="${_e(token)}" title="Delete this lump">Delete</button>`;
-    _actionBar += `</div>`;
-    _actionBar += `<div class="lump-audit-results-wrap" id="lumpAuditResults_${_tk}"></div>`;
-
-    let html = _headerStrip + _actionBar + _tabBar + `<div class="lump-tab-panel${isNamespace ? ' lump-tab-panel-active' : ''}" id="lumpTabOverview_${_tk}"><div class="lump-detail-sections">`;
+    let html = _headerStrip + _tabBar +
+        `<div class="lump-tab-panel" id="lumpTabLogic_${_tk}"></div>` +
+        `<div class="lump-tab-panel" id="lumpTabClooms_${_tk}"></div>` +
+        `<div class="lump-tab-panel${isNamespace ? ' lump-tab-panel-active' : ''}" id="lumpTabOverview_${_tk}"><div class="lump-detail-sections">`;
 
     const e = _escHtml;
 
@@ -447,17 +452,8 @@ function showLumpDetail(token) {
     const restoreTab = (_lumpEditorOpen[_tk] && !isNamespace) ? 'content' : (_prevTab && _prevTab !== 'overview' ? _prevTab : _defaultTab);
     _switchLumpTab(_tk, restoreTab);
 
-    // ── Workspace outer tabs (Logic / Source / Binary) ──────────────────
-    if (!isNamespace) {
-        const srcEl = document.getElementById('lumpWsSourceContent');
-        if (srcEl) srcEl.__sourceLoaded = false;
-        _populateLumpLogicTab(lump);
-        // Always default to Binary tab when a lump is selected
-        _lumpWsActiveTab = 'binary';
-        _showLumpWorkspaceTabs();
-    } else {
-        _hideLumpWorkspaceTabs();
-    }
+    // Outer workspace tab bar is collapsed into the inner tab bar — always hide it
+    _hideLumpWorkspaceTabs();
 }
 
 async function _fetchAndShowLumpBinary(token, lump) {
@@ -690,8 +686,8 @@ function _populateLumpLogicCatalog() {
     if (q) document.getElementById('lumpLogicCatalogSearch')?.focus();
 }
 
-function _populateLumpLogicTab(lump) {
-    const el = document.getElementById('lumpWsLogicContent');
+function _populateLumpLogicTab(lump, targetId) {
+    const el = document.getElementById(targetId || 'lumpWsLogicContent');
     if (!el) return;
     const e = _escHtml;
     const absName = lump.abstraction || '';
@@ -836,8 +832,8 @@ function _isRawISASource(src) {
     return hasRawAnnotation || hasRawMarker || hasMacroPattern || hasHexOpcodes || hasISAInstructions;
 }
 
-async function _populateLumpSourceTab(lump) {
-    const el = document.getElementById('lumpWsSourceContent');
+async function _populateLumpSourceTab(lump, targetId) {
+    const el = document.getElementById(targetId || 'lumpWsSourceContent');
     if (!el) return;
     el.__sourceLoaded = true;
     const absName = lump.abstraction || '';
@@ -1127,6 +1123,8 @@ const _lumpHistoryLoaded  = {};
 function _switchLumpTab(tk, tab) {
     _lumpActiveTab[tk] = tab;
     const tabMap = {
+        logic: `lumpTabLogic_${tk}`,
+        clooms: `lumpTabClooms_${tk}`,
         overview: `lumpTabOverview_${tk}`,
         source: `lumpTabSource_${tk}`,
         content: `lumpTabContent_${tk}`,
@@ -1143,12 +1141,18 @@ function _switchLumpTab(tk, tab) {
     if (bar) {
         const btns = bar.querySelectorAll('.lump-tab');
         btns.forEach(btn => {
-            const labelMap = { overview: 'Overview', source: 'Source', content: 'Content', tokens: 'Tokens', versions: 'Versions', history: 'History', hexdump: 'Hex Dump' };
+            const labelMap = { logic: 'Logic', clooms: 'CLOOMC', overview: 'Overview', source: 'Source', content: 'Content', tokens: 'Tokens', versions: 'Versions', history: 'History', hexdump: 'Hex Dump' };
             btn.classList.toggle('lump-tab-active', btn.textContent.trim() === labelMap[tab]);
         });
     }
     const lump = _lumpsCache.find(l => (l.token || '').replace(/[^a-z0-9]/gi, '') === tk);
     const token = lump ? lump.token : tk;
+    if (tab === 'logic' && lump) {
+        _populateLumpLogicTab(lump, `lumpTabLogic_${tk}`);
+    }
+    if (tab === 'clooms' && lump) {
+        _populateLumpSourceTab(lump, `lumpTabClooms_${tk}`);
+    }
     if (tab === 'content' && !_lumpContentLoaded[tk] && lump) {
         _lumpContentLoaded[tk] = true;
         _loadLumpContent(token, lump);
