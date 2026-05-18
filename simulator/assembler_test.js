@@ -7955,6 +7955,35 @@ Add a method called Run
             marks.length === 0,
             'got ' + marks.length + ' mark(s)');
     }
+
+    // ABS-H7: CSS class .abs-search-highlight must be defined in the stylesheet
+    // Prevents invisible highlights when the class name drifts in the CSS.
+    {
+        const fs   = require('fs');
+        const path = require('path');
+        const cssPath = path.join(__dirname, 'styles-dashboard.css');
+        let cssText;
+        try {
+            cssText = fs.readFileSync(cssPath, 'utf8');
+        } catch (e) {
+            assert('ABS-H7: styles-dashboard.css is readable', false,
+                'Could not read ' + cssPath + ': ' + e.message);
+            cssText = '';
+        }
+        // Strip block comments before checking so a commented-out selector
+        // cannot produce a false pass.
+        const strippedCss = cssText.replace(/\/\*[\s\S]*?\*\//g, '');
+        // Match a CSS rule selector that targets .abs-search-highlight,
+        // e.g. "mark.abs-search-highlight {" or ".abs-search-highlight {"
+        const rulePresent = /\.abs-search-highlight\s*\{/.test(strippedCss) ||
+                            /\.abs-search-highlight[\s,{]/.test(strippedCss);
+        assert(
+            'ABS-H7: styles-dashboard.css defines a CSS rule for .abs-search-highlight',
+            rulePresent,
+            'Class .abs-search-highlight not found in ' + cssPath +
+            ' — rename or removal would make search highlights invisible'
+        );
+    }
 }
 
 // ── Summary ──────────────────────────────────────────────────────────────────
