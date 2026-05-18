@@ -144,12 +144,13 @@ class ChurchSimulator {
         // presets to exercise the domain-purity fault path.
         // null  = reserved preset  → _execTperm faults TPERM_RSV.
         // 'EXACT' = preset 14, identity check CRd.word0 === CRs.word0; faults BIND on mismatch (credential pinning assertion, not a comparison).
+        // 'FRAME' = preset 13, call-stack query: Z=1 if a real return frame exists (RETURN would not underflow). No GT is read.
         // Codes 10-12 (LE, SE, LSE) are reserved E-isolation violations → null (TPERM_RSV).
         this.tpermPresetMasks = [
             [],            ['R'],         ['R','W'],       ['X'],
             ['R','X'],     ['R','W','X'], ['L'],           ['S'],
             ['E'],         ['L','S'],     null,            null,
-            null,          null,          'EXACT',         null,
+            null,          'FRAME',       'EXACT',         null,
         ];
 
         this.abstractionRegistry = null;
@@ -4374,6 +4375,23 @@ class ChurchSimulator {
             this.output += descExact + '\n';
             this.pc++;
             return { pc: this.pc - 1, instr: d, desc: descExact };
+        }
+
+        // TPERM FRAME (preset 13): call-stack query — does a real return frame exist?
+        // Z=1 if the top of the call stack is a genuine caller frame (RETURN would succeed).
+        // Z=0 if the stack is empty or only the boot sentinel remains.
+        // crDst is ignored; no GT is read; no frame is pushed.
+        if (presetMasks[presetCode] === 'FRAME') {
+            const hasFrame = this.callStack.length > 0 &&
+                             this.callStack[this.callStack.length - 1].returnPC !== 0x7FFF;
+            this.flags.Z = hasFrame;
+            this.flags.N = !hasFrame;
+            this.flags.C = false;
+            this.flags.V = false;
+            const descFrame = `TPERM CR${d.crDst} FRAME [13]: ${hasFrame ? 'frame exists' : 'no frame'} (depth=${this.callStack.length}) — Z=${hasFrame ? 1 : 0}`;
+            this.output += descFrame + '\n';
+            this.pc++;
+            return { pc: this.pc - 1, instr: d, desc: descFrame };
         }
 
         if (presetMasks[presetCode] === null) {

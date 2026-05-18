@@ -226,6 +226,7 @@ class ChurchAssembler {
             'CLEAR': 0, 'R': 1, 'RW': 2, 'X': 3,
             'RX': 4, 'RWX': 5, 'L': 6, 'S': 7,
             'E': 8, 'LS': 9, 'W': 10,
+            'FRAME': 13,   // call-stack query: Z=1 if a real return frame exists (RETURN would not underflow)
             'EXACT': 14,   // 32-bit identity check: CRd.word0 === CRs.word0 → Z=1
             'B': 0x10, 'RB': 0x11, 'RWB': 0x12, 'XB': 0x13,
             'RXB': 0x14, 'RWXB': 0x15, 'LB': 0x16, 'SB': 0x17,
@@ -1920,7 +1921,7 @@ class ChurchAssembler {
             case 5: return `${mnemonic}  CR${crSrc}, CR${imm & 0x7}`;
             // TPERM CRd, preset[B]  — assert/attenuate permission
             case 6: {
-                const presetNames = ['CLEAR','R','RW','X','RX','RWX','L','S','E','LS','W','???','???','???','EXACT','RSV'];
+                const presetNames = ['CLEAR','R','RW','X','RX','RWX','L','S','E','LS','W','???','???','FRAME','EXACT','RSV'];
                 const bFlag    = (imm >>> 4) & 1;
                 const baseCode = imm & 0xF;
                 const baseName = presetNames[baseCode] || 'RSV';
