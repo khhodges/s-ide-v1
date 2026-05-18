@@ -9816,14 +9816,6 @@ function closeSettings() {
 
 function showReleaseHistory() {
     const history = [
-        { date: '2026-05-15 UTC', title: 'Builder: 3-Board ZIP Downloads — Release 1.2', changes: [
-            'Build log now lists exactly what is inside each ZIP — no phantom or missing filenames',
-            'Ti60 F225: removed stale <code>.edif</code> entry; added <code>.xml</code>, <code>.sdc</code>, <code>.peri.xml</code>, <code>setup_ti60_peri.py</code>',
-            'Wukong XC7A100T: added missing <code>local_bridge.py</code> to the listing',
-            'Tang Nano 20K: added <code>.il</code> and <code>local_bridge.py</code>; marked <code>.v</code>/<code>.json</code> as conditional on Yosys',
-            'File-icon map expanded: <code>.isf</code>, <code>.xdc</code>, <code>.tcl</code>, <code>.xml</code>, <code>.sh</code>, <code>.py</code> all get icons',
-            'New <code>test_zip_contents.py</code>: 5 pytest cases verify each board\'s ZIP file set, no toolchain required',
-        ] },
         { date: '2026-05-12 UTC', title: 'Capability Access Rights, Console Improvements & Navigation', changes: [
             'Access rights declarations in capabilities: write <code>capabilities { LED0 RW }</code> to declare R/W access — assembler and CLOOMC++ compiler parse rights tokens (R/W/X/E) and carry them as structured objects throughout the pipeline',
             'Cross-check in Draft output: declared rights are compared against sidecar grants; the draft shows a warning when declared rights exceed what the sidecar permits; fault-tolerant — a runtime error in the check can no longer prevent the draft from displaying',
