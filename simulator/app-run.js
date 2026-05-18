@@ -9816,6 +9816,11 @@ function closeSettings() {
 
 function showReleaseHistory() {
     const history = [
+        { date: '2026-05-15 UTC', title: 'Builder: 3-Board ZIP Downloads — Release 1.2', changes: [
+            'Builder "Download FPGA Package" supports the ZIP for all three boards',
+            'New <code>test_zip_contents.py</code> suite enforces the contract',
+            'Release 1 document set (14 PDFs) remains the definitive hardware specification',
+        ] },
         { date: '2026-05-12 UTC', title: 'Capability Access Rights, Console Improvements & Navigation', changes: [
             'Access rights declarations in capabilities: write <code>capabilities { LED0 RW }</code> to declare R/W access — assembler and CLOOMC++ compiler parse rights tokens (R/W/X/E) and carry them as structured objects throughout the pipeline',
             'Cross-check in Draft output: declared rights are compared against sidecar grants; the draft shows a warning when declared rights exceed what the sidecar permits; fault-tolerant — a runtime error in the check can no longer prevent the draft from displaying',
