@@ -1,0 +1,215 @@
+"""
+tests/server/test_lump_archive_fallback.py
+
+Regression tests for the archive-on-save fallback version-selection logic.
+
+The critical invariant: when a lump's sidecar and manifest entry are both
+unreadable (corrupt-metadata scenario), the disk-scan fallback must pick
+`max(existing_archive_versions) + 1` — never an existing slot — so no prior
+archive is ever overwritten.
+"""
+
+import json
+import os
+import struct
+import sys
+
+import pytest
+
+ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+
+import server.app as _app_module
+
+LUMPS_DIR = os.path.join(os.path.dirname(_app_module.__file__), "lumps")
+
+_HEADER = (0x1F << 27) | 1
+_BINARY_A = [_HEADER] + [0xAAAAAAAA] + [0] * 62
+_BINARY_B = [_HEADER] + [0xBBBBBBBB] + [0] * 62
+
+
+def _pack_lump(words):
+    return struct.pack(f">{len(words)}I", *words)
+
+
+def _meta(token):
+    return {
+        "token":           token,
+        "abstraction":     "FallbackRegressionAbs",
+        "ns_slot":         None,
+        "cw":              1,
+        "cc":              0,
+        "profile":         "IoT",
+        "language":        "assembly",
+        "author":          "",
+        "version":         "",
+        "methods":         [],
+        "capabilities":    [],
+        "grants":          ["E"],
+        "content_type":    "code",
+        "pet_names_dr":    {},
+        "pet_names_cr":    {},
+        "mtbf_clean_runs": 0,
+        "mtbf_total_runs": 0,
+        "mtbf_status":     "unknown",
+    }
+
+
+def _cleanup(token):
+    manifest_path = os.path.join(LUMPS_DIR, "manifest.json")
+    for fn in os.listdir(LUMPS_DIR):
+        if fn.startswith(token):
+            try:
+                os.remove(os.path.join(LUMPS_DIR, fn))
+            except OSError:
+                pass
+    try:
+        man = json.load(open(manifest_path))
+        json.dump(
+            [e for e in man if e.get("token") != token],
+            open(manifest_path, "w"),
+            indent=2,
+        )
+    except Exception:
+        pass
+
+
+@pytest.fixture()
+def client():
+    _app_module.app.config["TESTING"] = True
+    with _app_module.app.test_client() as c:
+        yield c
+
+
+class TestArchiveFallbackVersionSelection:
+    """Fallback: corrupt sidecar+manifest → disk scan → max+1 (never overwrite)."""
+
+    def test_fallback_skips_existing_versions(self, client):
+        """Pre-existing archives v1,v2,v3 on disk → fallback must create v4, not v3."""
+        token = "fa110001"
+        try:
+            raw_a = _pack_lump(_BINARY_A)
+            for v in [1, 2, 3]:
+                with open(os.path.join(LUMPS_DIR, f"{token}-v{v}.lump"), "wb") as f:
+                    f.write(raw_a)
+                with open(os.path.join(LUMPS_DIR, f"{token}-v{v}.json"), "w") as f:
+                    json.dump({"lump_version": v}, f)
+            with open(os.path.join(LUMPS_DIR, f"{token}.lump"), "wb") as f:
+                f.write(raw_a)
+
+            resp = client.post("/api/lumps/save", json={"binary": _BINARY_B, "metadata": _meta(token)})
+            data = resp.get_json()
+            assert data.get("ok"), f"Save failed: {data}"
+
+            assert os.path.isfile(os.path.join(LUMPS_DIR, f"{token}-v4.lump")), \
+                "Fallback must create -v4.lump (not overwrite -v3.lump)"
+
+            with open(os.path.join(LUMPS_DIR, f"{token}-v3.lump"), "rb") as f:
+                v3_bytes = f.read()
+            assert v3_bytes == raw_a, "-v3.lump must not be overwritten by the fallback"
+        finally:
+            _cleanup(token)
+
+    def test_fallback_no_existing_archives_creates_v0(self, client):
+        """When no archives exist at all, fallback must start at v0."""
+        token = "fa110002"
+        try:
+            raw_a = _pack_lump(_BINARY_A)
+            with open(os.path.join(LUMPS_DIR, f"{token}.lump"), "wb") as f:
+                f.write(raw_a)
+
+            resp = client.post("/api/lumps/save", json={"binary": _BINARY_B, "metadata": _meta(token)})
+            data = resp.get_json()
+            assert data.get("ok"), f"Save failed: {data}"
+
+            assert os.path.isfile(os.path.join(LUMPS_DIR, f"{token}-v0.lump")), \
+                "With no prior archives, fallback must create -v0.lump"
+        finally:
+            _cleanup(token)
+
+    def test_sidecar_missing_lump_version_falls_through_to_manifest(self, client):
+        """Sidecar exists but lacks lump_version → must fall through to manifest/disk, not archive as v0."""
+        token = "fa110005"
+        try:
+            raw_a = _pack_lump(_BINARY_A)
+            # Write current lump + sidecar WITHOUT lump_version key
+            with open(os.path.join(LUMPS_DIR, f"{token}.lump"), "wb") as f:
+                f.write(raw_a)
+            with open(os.path.join(LUMPS_DIR, f"{token}.json"), "w") as f:
+                json.dump({"abstraction": "NoVerField", "cw": 1, "cc": 0}, f)
+
+            # Pre-seed manifest with a known lump_version so the fallback picks it up
+            manifest_path = os.path.join(LUMPS_DIR, "manifest.json")
+            man = json.load(open(manifest_path))
+            man.append({"token": token, "lump_version": 7, "abstraction": "NoVerField"})
+            json.dump(man, open(manifest_path, "w"), indent=2)
+
+            resp = client.post("/api/lumps/save", json={"binary": _BINARY_B, "metadata": _meta(token)})
+            data = resp.get_json()
+            assert data.get("ok"), f"Save failed: {data}"
+
+            # Fallback should have used manifest's v7, so archive is -v7.lump
+            assert os.path.isfile(os.path.join(LUMPS_DIR, f"{token}-v7.lump")), \
+                "Fallback must use manifest lump_version (v7) when sidecar lacks lump_version"
+            # And NOT create -v0.lump
+            assert not os.path.isfile(os.path.join(LUMPS_DIR, f"{token}-v0.lump")), \
+                "-v0.lump must NOT be created when manifest provides a valid version"
+        finally:
+            _cleanup(token)
+
+    def test_words_endpoint_fallback_header_decode(self, client):
+        """words/<version> endpoint must extract cw/cc from binary header when sidecar lacks them."""
+        token = "fa110004"
+        try:
+            # Build a header with known cw=5, cc=3 using canonical layout:
+            # bits[22:10] = cw, bits[7:0] = cc
+            cw_expected = 5
+            cc_expected = 3
+            h0 = (0x1F << 27) | (cw_expected << 10) | cc_expected
+            binary = [h0] + [0] * 63
+            raw = _pack_lump(binary)
+
+            # Write only the archive lump — no sidecar — so fallback header decode fires
+            arch_lump = os.path.join(LUMPS_DIR, f"{token}-v1.lump")
+            with open(arch_lump, "wb") as f:
+                f.write(raw)
+
+            resp = client.get(f"/api/lumps/{token}/words/1")
+            assert resp.status_code == 200, f"Unexpected status: {resp.status_code}"
+            data = resp.get_json()
+            assert data["cw"] == cw_expected, f"Expected cw={cw_expected}, got {data['cw']}"
+            assert data["cc"] == cc_expected, f"Expected cc={cc_expected}, got {data['cc']}"
+        finally:
+            _cleanup(token)
+
+    def test_normal_path_monotonic_increment(self, client):
+        """Normal path (sidecar present): version numbers increase 1 → 2 → 3."""
+        token = "fa110003"
+        try:
+            results = []
+            for binary in [_BINARY_A, _BINARY_B, _BINARY_A]:
+                resp = client.post("/api/lumps/save", json={"binary": binary, "metadata": _meta(token)})
+                data = resp.get_json()
+                assert data.get("ok"), f"Save failed: {data}"
+                results.append(data.get("lump_version"))
+            assert results == [1, 2, 3], f"Expected [1,2,3], got {results}"
+        finally:
+            _cleanup(token)
+
+    def test_archive_sidecar_field_completeness_normal_path(self, client):
+        """Archive sidecar written on normal save must contain essential metadata fields."""
+        token = "fa110006"
+        try:
+            resp = client.post("/api/lumps/save", json={"binary": _BINARY_A, "metadata": _meta(token)})
+            assert resp.get_json().get("ok"), "First save failed"
+            resp2 = client.post("/api/lumps/save", json={"binary": _BINARY_B, "metadata": _meta(token)})
+            assert resp2.get_json().get("ok"), "Second save failed"
+
+            sc_path = os.path.join(LUMPS_DIR, f"{token}-v1.json")
+            assert os.path.isfile(sc_path), "Archive sidecar -v1.json must exist after second save"
+            sc = json.load(open(sc_path))
+            for field in ("lump_version", "cw", "cc", "abstraction"):
+                assert field in sc, f"Archive sidecar missing required field: {field}"
+        finally:
+            _cleanup(token)

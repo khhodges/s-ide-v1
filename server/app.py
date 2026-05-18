@@ -3083,6 +3083,68 @@ def save_lump():
     os.makedirs(lumps_dir, exist_ok=True)
 
     lump_path = os.path.join(lumps_dir, f'{token8}.lump')
+
+    # ── Archive existing binary before overwriting ─────────────────────────────
+    # When archiving we must find the current lump_version so we can name the
+    # archive file correctly (<token>-v<N>.lump).  We try three sources in order:
+    #   1. Per-lump sidecar JSON  →  most authoritative
+    #   2. manifest.json entry    →  fallback when sidecar is missing
+    #   3. Existing -v*.lump names on disk → last-resort (sidecar+manifest both unreadable)
+    # If all three fail we still proceed with a safe fallback version number rather
+    # than silently skipping the archive step.
+    import re as _re_arch
+    _arch_ver = None
+    if os.path.isfile(lump_path):
+        _existing_sc_path = os.path.join(lumps_dir, f'{token8}.json')
+        _arch_sc = {}
+        if os.path.isfile(_existing_sc_path):
+            try:
+                with open(_existing_sc_path, 'r') as _sfh:
+                    _arch_sc = json.load(_sfh)
+                _raw_ver = _arch_sc.get('lump_version')
+                if _raw_ver is not None:
+                    _arch_ver = int(_raw_ver)
+                # If lump_version is absent, leave _arch_ver=None so
+                # manifest/disk-scan fallback still runs.
+            except Exception:
+                pass
+        if _arch_ver is None:
+            _man_path = os.path.join(lumps_dir, 'manifest.json')
+            if os.path.isfile(_man_path):
+                try:
+                    with open(_man_path, 'r') as _mfh:
+                        _man_tmp = json.load(_mfh)
+                    for _me in _man_tmp:
+                        if _me.get('token') == token8:
+                            _arch_ver = int(_me.get('lump_version', 0))
+                            if not _arch_sc:
+                                _arch_sc = dict(_me)
+                            break
+                except Exception:
+                    pass
+        if _arch_ver is None:
+            # Last resort: scan existing -v*.lump files to pick the NEXT unused version.
+            # Using max+1 (not max) ensures we never overwrite an existing archive.
+            _arch_pat = _re_arch.compile(rf'^{_re_arch.escape(token8)}-v(\d+)\.lump$')
+            _existing_vers = [
+                int(_m.group(1))
+                for _fn in os.listdir(lumps_dir)
+                for _m in [_arch_pat.match(_fn)] if _m
+            ]
+            _arch_ver = (max(_existing_vers) + 1) if _existing_vers else 0
+            logging.warning(
+                '[lumps] %s: sidecar and manifest unreadable; deriving archive version from disk (%d)',
+                token8, _arch_ver
+            )
+        import shutil as _shutil
+        _arch_lump = os.path.join(lumps_dir, f'{token8}-v{_arch_ver}.lump')
+        _arch_json = os.path.join(lumps_dir, f'{token8}-v{_arch_ver}.json')
+        _shutil.copy2(lump_path, _arch_lump)
+        _arch_sc['archived_version'] = _arch_ver
+        with open(_arch_json, 'w') as _afh:
+            json.dump(_arch_sc, _afh, indent=2)
+        print(f'[lumps] Archived {token8}.lump → {token8}-v{_arch_ver}.lump', flush=True)
+
     lump_bytes = _struct.pack(f'>{len(words)}I',
                               *[int(w) & 0xFFFFFFFF for w in words])
     with open(lump_path, 'wb') as fh:
@@ -3137,12 +3199,18 @@ def save_lump():
 
     manifest = [e for e in manifest if e.get('token') != token8]
 
-    existing_versions_for_abs = [
-        int(e.get("lump_version", 0))
-        for e in manifest
-        if e.get("abstraction") == abs_name and e.get("lump_version") is not None
-    ]
-    next_lump_version = (max(existing_versions_for_abs) + 1) if existing_versions_for_abs else 1
+    # Derive next_lump_version from the archive step when possible, so repeated
+    # saves of the same token monotonically increment (v1, v2, v3 …).
+    # Fallback: scan remaining manifest entries for any same-abstraction version.
+    if _arch_ver is not None:
+        next_lump_version = _arch_ver + 1
+    else:
+        existing_versions_for_abs = [
+            int(e.get("lump_version", 0))
+            for e in manifest
+            if e.get("abstraction") == abs_name and e.get("lump_version") is not None
+        ]
+        next_lump_version = (max(existing_versions_for_abs) + 1) if existing_versions_for_abs else 1
 
     sidecar["lump_version"] = next_lump_version
 
@@ -3208,12 +3276,13 @@ def save_lump():
             logging.warning('[lumps] boot-image.bin regeneration failed: %s', _bie)
 
     resp: dict = {
-        "ok":          True,
-        "token":       token8,
-        "lump":        f'{token8}.lump',
-        "lump_path":   f'server/lumps/{token8}.lump',
-        "sidecar":     f'{token8}.json',
-        "size_bytes":  len(lump_bytes),
+        "ok":           True,
+        "token":        token8,
+        "lump":         f'{token8}.lump',
+        "lump_path":    f'server/lumps/{token8}.lump',
+        "sidecar":      f'{token8}.json',
+        "size_bytes":   len(lump_bytes),
+        "lump_version": next_lump_version,
         "boot_image_refreshed": boot_refreshed,
     }
     if boot_refresh_note:
@@ -3278,6 +3347,125 @@ def get_lump_words(token_hex):
     num_words = len(data) // 4
     words = list(_struct.unpack(f'>{num_words}I', data[:num_words * 4]))
     return jsonify({"token": key8, "words": words, "count": num_words})
+
+
+@app.route("/api/lumps/<token>/history")
+def get_lump_history(token):
+    """Return archived versions for a LUMP token, newest-first.
+
+    Response shape (wrapped object — intentional):
+        { "token": "<8-char>", "history": [ <entry>, ... ] }
+
+    Each entry: { version, compiled_at, cw, cc, lump_size }
+    Archived files live alongside the current lump as <token>-v<N>.lump + sidecar.
+
+    Note: the response is a wrapped object (not a bare JSON array) so that
+    callers can distinguish an empty-history success from a 404 / error response.
+    """
+    import re as _re
+    raw = token.lower()
+    key8 = (raw[:8] if len(raw) >= 8 else raw).zfill(8)
+    if not _re.fullmatch(r'[0-9a-f]{8}', key8):
+        return jsonify({"error": "Invalid token"}), 400
+    lumps_dir = os.path.join(os.path.dirname(__file__), 'lumps')
+    pattern = _re.compile(rf'^{_re.escape(key8)}-v(\d+)\.lump$')
+    entries = []
+    for fn in (os.listdir(lumps_dir) if os.path.isdir(lumps_dir) else []):
+        m = pattern.match(fn)
+        if not m:
+            continue
+        ver = int(m.group(1))
+        lump_path_v = os.path.join(lumps_dir, fn)
+        sc_path_v   = os.path.join(lumps_dir, f'{key8}-v{ver}.json')
+        size_words  = os.path.getsize(lump_path_v) // 4
+        entry = {
+            "version":     ver,
+            "lump_size":   size_words,
+            "compiled_at": None,
+            "cw":          None,
+            "cc":          None,
+        }
+        if os.path.isfile(sc_path_v):
+            try:
+                with open(sc_path_v, 'r') as fh:
+                    sc = json.load(fh)
+                entry["compiled_at"]  = sc.get("compiled_at")
+                entry["cw"]           = sc.get("cw")
+                entry["cc"]           = sc.get("cc")
+                entry["abstraction"]  = sc.get("abstraction")
+                entry["lump_size"]    = sc.get("lump_size") or size_words
+            except Exception:
+                pass
+        entries.append(entry)
+    entries.sort(key=lambda e: e["version"], reverse=True)
+    return jsonify({"token": key8, "history": entries})
+
+
+@app.route("/api/lumps/<token>/words/<int:version>")
+def get_lump_version_words(token, version):
+    """Return the raw uint32 word array for an archived version of a LUMP.
+
+    Reads <token>-v<version>.lump and its companion sidecar <token>-v<version>.json.
+    Returns: { token, version, words, count, cw, cc, lump_size, abstraction, compiled_at }
+    The metadata fields are populated from the sidecar when present, and fall back
+    to values derived from the binary header.
+    """
+    import re as _re
+    raw = token.lower()
+    key8 = (raw[:8] if len(raw) >= 8 else raw).zfill(8)
+    if not _re.fullmatch(r'[0-9a-f]{8}', key8):
+        return jsonify({"error": "Invalid token"}), 400
+    lumps_dir = os.path.join(os.path.dirname(__file__), 'lumps')
+    lump_path_v = os.path.join(lumps_dir, f'{key8}-v{version}.lump')
+    if not os.path.isfile(lump_path_v):
+        return jsonify({"error": f"No archived version v{version} for token 0x{key8}"}), 404
+    with open(lump_path_v, 'rb') as fh:
+        data = fh.read()
+    num_words = len(data) // 4
+    words = list(_struct.unpack(f'>{num_words}I', data[:num_words * 4]))
+
+    sc = {}
+    sc_path_v = os.path.join(lumps_dir, f'{key8}-v{version}.json')
+    if os.path.isfile(sc_path_v):
+        try:
+            with open(sc_path_v, 'r') as fh:
+                sc = json.load(fh)
+        except Exception:
+            pass
+
+    hdr_cw  = sc.get('cw')
+    hdr_cc  = sc.get('cc')
+    if hdr_cw is None or hdr_cc is None:
+        if num_words > 0:
+            h0 = words[0]
+            hdr_cw = (h0 >> 10) & 0x1FFF
+            hdr_cc = h0 & 0xFF
+
+    return jsonify({
+        "token":         key8,
+        "version":       version,
+        "words":         words,
+        "count":         num_words,
+        "cw":            hdr_cw,
+        "cc":            hdr_cc,
+        "lump_size":     sc.get('lump_size') or num_words,
+        "ns_slot":       sc.get('ns_slot'),
+        "abstraction":   sc.get('abstraction'),
+        "compiled_at":   sc.get('compiled_at'),
+        "methods":       sc.get('methods', []),
+        "capabilities":  sc.get('capabilities', []),
+        "language":      sc.get('language'),
+        "profile":       sc.get('profile'),
+        "author":        sc.get('author', ''),
+        "version_str":   sc.get('version', ''),
+        "release_notes": sc.get('release_notes', ''),
+        "grants":        sc.get('grants', ['E']),
+        "content_type":  sc.get('content_type', 'code'),
+        "pet_names":     sc.get('pet_names', {"DR": {}, "CR": {}}),
+        "mtbf":          sc.get('mtbf', {}),
+        "deployment":    sc.get('deployment', {}),
+        "source_hash":   sc.get('mtbf', {}).get('source_hash', ''),
+    })
 
 
 @app.route("/api/lump-source/<name>")

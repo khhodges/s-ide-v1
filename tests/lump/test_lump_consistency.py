@@ -15,6 +15,7 @@ R8   No duplicate ns_slot values unless all claimants share the same non-null va
 R9   RETIRED — ns_slot=null is implicitly dynamic; ns_slot_policy is optional/informational only.
 R10  Every manifest entry with lump_size declared has a .lump file on disk.
 R11  Every manifest entry with lump_size declared has a sidecar .json on disk.
+R14  Every archive binary <token>-v<N>.lump has a matching <token>-v<N>.json sidecar.
 
 Failure messages are written to be self-diagnosing: they state what was found,
 what was expected, and which file to correct.
@@ -68,11 +69,17 @@ def _load_sidecar(token):
         return json.load(f)
 
 
+def _is_archive_filename(basename):
+    """Return True if basename matches the archive pattern <token>-v<N>."""
+    import re as _re
+    return bool(_re.match(r'^[0-9a-f]{8}-v\d+$', basename.lower()))
+
+
 def _lump_tokens():
     return sorted(
         fn[:-5].lower()
         for fn in os.listdir(LUMPS_DIR)
-        if fn.endswith(".lump")
+        if fn.endswith(".lump") and not _is_archive_filename(fn[:-5])
     )
 
 
@@ -80,7 +87,20 @@ def _json_tokens():
     return sorted(
         fn[:-5].lower()
         for fn in os.listdir(LUMPS_DIR)
-        if fn.endswith(".json") and fn != "manifest.json"
+        if fn.endswith(".json")
+        and fn != "manifest.json"
+        and not _is_archive_filename(fn[:-5])
+    )
+
+
+def _archive_lump_basenames():
+    """Return every <token>-v<N> base name (without extension) found on disk."""
+    import re as _re
+    pattern = _re.compile(r'^[0-9a-f]{8}-v\d+$')
+    return sorted(
+        fn[:-5].lower()
+        for fn in os.listdir(LUMPS_DIR)
+        if fn.endswith(".lump") and pattern.match(fn[:-5].lower())
     )
 
 
@@ -88,6 +108,7 @@ MANIFEST = _load_manifest()
 LUMP_TOKENS = _lump_tokens()
 JSON_TOKENS = _json_tokens()
 MANIFEST_ENTRIES_WITH_SIZE = [e for e in MANIFEST if e.get("lump_size")]
+ARCHIVE_LUMP_BASENAMES = _archive_lump_basenames()
 
 
 class TestR1_ValidMagic:
@@ -491,4 +512,28 @@ class TestR13_SelftestClistGTs:
             f"{token} ({label}): c-list[7] = {word:#010x}: unexpected R or W permission "
             f"set alongside X (perm3={gt['perm3']:#05b}).\n"
             "  Boot.Nucs X-GT must carry exactly X permission."
+        )
+
+
+class TestR14_ArchiveSidecarsExist:
+    """R14: Every archive binary <token>-v<N>.lump has a matching <token>-v<N>.json sidecar.
+
+    The LUMP version-history feature (Task #1394) writes a sidecar alongside every
+    archived binary.  An orphan archive binary (no sidecar) means the archive logic
+    failed mid-write and would leave the IDE history tab with incomplete metadata.
+    """
+
+    def test_archive_lumps_have_sidecars(self):
+        missing = []
+        for basename in ARCHIVE_LUMP_BASENAMES:
+            sidecar = os.path.join(LUMPS_DIR, f"{basename}.json")
+            if not os.path.exists(sidecar):
+                missing.append(
+                    f"{basename}.lump — no matching {basename}.json sidecar.\n"
+                    "  Every archived LUMP binary must have a companion sidecar recording\n"
+                    "  cw/cc/lump_size/compiled_at for that snapshot. Re-run the archive\n"
+                    "  step or create the sidecar manually."
+                )
+        assert not missing, (
+            "Archive binaries missing their sidecar .json:\n  " + "\n  ".join(missing)
         )

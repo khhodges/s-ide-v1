@@ -67,6 +67,7 @@ function showLumpDetail(token) {
         _tabBar += `<button class="lump-tab lump-tab-active" onclick="_switchLumpTab('${_tk}','content')">Content</button>`;
         _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','tokens')">Tokens</button>`;
         _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','versions')">Versions</button>`;
+        _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','history')">History</button>`;
     }
     _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','hexdump')">Hex Dump</button></div>`;
 
@@ -399,6 +400,8 @@ function showLumpDetail(token) {
                 `<div id="lumpTokensBody_${_tk}" class="lump-hex-loading">Loading\u2026</div></div>`;
         html += `<div class="lump-tab-panel" id="lumpTabVersions_${_tk}">` +
                 `<div id="lumpVersionsBody_${_tk}" class="lump-hex-loading">Loading\u2026</div></div>`;
+        html += `<div class="lump-tab-panel" id="lumpTabHistory_${_tk}">` +
+                `<div id="lumpHistoryBody_${_tk}" class="lump-hex-loading">Loading\u2026</div></div>`;
     }
     html += `<div class="lump-tab-panel" id="lumpTabHexdump_${_tk}">` +
             `<div id="lumpBinBody_${_tk}" class="lump-hex-loading">Loading\u2026</div></div>`;
@@ -1119,6 +1122,7 @@ function _lumpTypeBadge(lump) {
 }
 
 const _lumpVersionsLoaded = {};
+const _lumpHistoryLoaded  = {};
 
 function _switchLumpTab(tk, tab) {
     _lumpActiveTab[tk] = tab;
@@ -1128,6 +1132,7 @@ function _switchLumpTab(tk, tab) {
         content: `lumpTabContent_${tk}`,
         tokens: `lumpTabTokens_${tk}`,
         versions: `lumpTabVersions_${tk}`,
+        history: `lumpTabHistory_${tk}`,
         hexdump: `lumpTabHexdump_${tk}`,
     };
     Object.entries(tabMap).forEach(([t, id]) => {
@@ -1138,7 +1143,7 @@ function _switchLumpTab(tk, tab) {
     if (bar) {
         const btns = bar.querySelectorAll('.lump-tab');
         btns.forEach(btn => {
-            const labelMap = { overview: 'Overview', source: 'Source', content: 'Content', tokens: 'Tokens', versions: 'Versions', hexdump: 'Hex Dump' };
+            const labelMap = { overview: 'Overview', source: 'Source', content: 'Content', tokens: 'Tokens', versions: 'Versions', history: 'History', hexdump: 'Hex Dump' };
             btn.classList.toggle('lump-tab-active', btn.textContent.trim() === labelMap[tab]);
         });
     }
@@ -1159,6 +1164,10 @@ function _switchLumpTab(tk, tab) {
     if (tab === 'versions' && !_lumpVersionsLoaded[tk] && lump) {
         _lumpVersionsLoaded[tk] = true;
         _fetchAndShowLumpVersions(token, lump);
+    }
+    if (tab === 'history' && !_lumpHistoryLoaded[tk] && lump) {
+        _lumpHistoryLoaded[tk] = true;
+        _fetchAndShowLumpHistory(token, lump);
     }
 }
 
@@ -1286,6 +1295,176 @@ async function _promptUpgradeLump(absName, fromToken, fromVersion, toToken, toVe
         }
     } catch (err) {
         alert('Bulk upgrade request failed: ' + err.message);
+    }
+}
+
+async function _fetchAndShowLumpHistory(token, lump) {
+    const tk = (token || '').replace(/[^a-z0-9]/gi, '');
+    const bodyEl = document.getElementById(`lumpHistoryBody_${tk}`);
+    if (!bodyEl) return;
+    const e = _escHtml;
+
+    const fmtDate = ts => {
+        if (!ts) return '\u2014';
+        const d = new Date(ts * 1000);
+        const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+        return `${d.getDate()} ${mo} ${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    };
+
+    try {
+        bodyEl.innerHTML = '<div class="lump-hex-loading">Loading history\u2026</div>';
+        const resp = await fetch(`/api/lumps/${token}/history`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const history = data.history || [];
+
+        let html = '<div class="lump-detail-section">';
+        html += '<div class="lump-section-title">Binary Version Archive</div>';
+        html += '<div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.5rem;">Every saved version of this LUMP is kept on disk. Click a row to preview the binary. Use Restore to make that version current.</div>';
+
+        if (history.length === 0) {
+            html += '<div style="color:var(--text-secondary);font-style:italic;padding:0.5rem 0;">No archived versions yet. Each time you save a LUMP, the previous binary is automatically archived here.</div>';
+        } else {
+            html += '<table class="lump-detail-table" id="lumpHistoryTable_' + tk + '"><thead><tr>';
+            html += '<th>Version</th><th>Compiled</th><th>CW</th><th>CC</th><th>Size</th><th></th><th></th>';
+            html += '</tr></thead><tbody>';
+            for (const v of history) {
+                const compiledStr = fmtDate(v.compiled_at);
+                const cwStr  = v.cw  != null ? v.cw  : '\u2014';
+                const ccStr  = v.cc  != null ? v.cc  : '\u2014';
+                const szStr  = v.lump_size != null ? `${v.lump_size}w` : '\u2014';
+                html += `<tr class="lump-history-row" data-version="${v.version}" style="cursor:pointer;" onclick="_lumpHistorySelectRow(this,'${e(token)}',${v.version},${v.cw || 0},${v.cc || 0},${v.lump_size || 0},'${tk}')">`;
+                html += `<td><strong>v${v.version}</strong></td>`;
+                html += `<td style="font-size:0.75rem;">${e(compiledStr)}</td>`;
+                html += `<td>${e(String(cwStr))}</td>`;
+                html += `<td>${e(String(ccStr))}</td>`;
+                html += `<td>${e(szStr)}</td>`;
+                html += `<td><button class="btn" style="font-size:0.7rem;padding:2px 8px;" onclick="event.stopPropagation();_lumpHistoryPreview('${e(token)}',${v.version},${v.cw || 0},${v.cc || 0},${v.lump_size || 0},'${tk}')" title="Preview hex dump of v${v.version}">Preview</button></td>`;
+                html += `<td><button class="btn lump-history-restore-btn" style="font-size:0.7rem;padding:2px 8px;" onclick="event.stopPropagation();_restoreLumpFromHistory('${e(token)}',${v.version})" title="Restore v${v.version} as the current LUMP">Restore</button></td>`;
+                html += `</tr>`;
+            }
+            html += '</tbody></table>';
+        }
+        html += '</div>';
+        html += '<div id="lumpHistoryHexPreview_' + tk + '" style="margin-top:0.5rem;"></div>';
+        bodyEl.innerHTML = html;
+        bodyEl.className = '';
+    } catch (err) {
+        bodyEl.innerHTML = `<div class="lump-detail-section" style="color:#ef4444;">Failed to load history: ${e(err.message)}</div>`;
+    }
+}
+
+function _lumpHistorySelectRow(rowEl, token, version, cw, cc, lumpSize, tk) {
+    const table = document.getElementById(`lumpHistoryTable_${tk}`);
+    if (table) table.querySelectorAll('tr').forEach(r => r.classList.remove('lump-hex-hdr-row'));
+    rowEl.classList.add('lump-hex-hdr-row');
+    _lumpHistoryPreview(token, version, cw, cc, lumpSize, tk);
+}
+
+async function _lumpHistoryPreview(token, version, cw, cc, lumpSize, tk) {
+    const previewEl = document.getElementById(`lumpHistoryHexPreview_${tk}`);
+    if (!previewEl) return;
+    const e = _escHtml;
+    const hexw = w => (w >>> 0).toString(16).padStart(8, '0').toUpperCase().replace(/(.{2})/g, '$1 ').trim();
+    const pack4ascii = w => {
+        let s = '';
+        for (let sh = 24; sh >= 0; sh -= 8) {
+            const b = (w >>> sh) & 0xFF;
+            s += (b >= 32 && b < 127) ? String.fromCharCode(b) : '.';
+        }
+        return s;
+    };
+    previewEl.innerHTML = `<div class="lump-hex-loading">Loading v${version} binary\u2026</div>`;
+    try {
+        const resp = await fetch(`/api/lumps/${token}/words/${version}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const words = data.words || [];
+        const numWords = words.length;
+        if (!numWords) throw new Error('Empty lump');
+        const COLS = 8;
+        const rowCount = Math.ceil(numWords / COLS);
+        let t = `<div class="lump-detail-section"><div class="lump-section-title">Hex Preview \u2014 v${version}</div>`;
+        t += '<table class="lump-hex-table lump-hex-table-wide"><thead><tr><th>Addr</th>';
+        for (let c = 0; c < COLS; c++) t += `<th>+${c}</th>`;
+        t += '<th>Pack4 ASCII</th></tr></thead><tbody>';
+        for (let row = 0; row < rowCount; row++) {
+            const baseIdx  = row * COLS;
+            const baseAddr = (baseIdx * 4).toString(16).toUpperCase().padStart(6, '0');
+            let rowHex = '', rowAsc = '', rowClass = '';
+            if (baseIdx === 0)                          rowClass = 'lump-hex-hdr-row';
+            else if (cc > 0 && baseIdx >= lumpSize - cc) rowClass = 'lump-hex-clist-row';
+            else if (baseIdx >= cw + 1)                  rowClass = 'lump-hex-pad-row';
+            for (let c = 0; c < COLS; c++) {
+                const i = baseIdx + c;
+                if (i < numWords) {
+                    rowHex += `<td>${hexw(words[i])}</td>`;
+                    rowAsc += pack4ascii(words[i]);
+                } else {
+                    rowHex += '<td class="lump-hex-empty"></td>';
+                }
+            }
+            t += `<tr class="${rowClass}"><td class="lump-hex-addr">0x${baseAddr}</td>${rowHex}<td class="lump-hex-ascii">${e(rowAsc)}</td></tr>`;
+        }
+        t += '</tbody></table></div>';
+        previewEl.innerHTML = t;
+    } catch (err) {
+        previewEl.innerHTML = `<div style="color:#ef4444;padding:0.5rem;">Failed to load binary: ${err.message}</div>`;
+    }
+}
+
+async function _restoreLumpFromHistory(token, version) {
+    const lump = _lumpsCache.find(l => l.token === token);
+    const displayName = (lump && lump.abstraction) || token;
+    if (!confirm(`Restore v${version} of "${displayName}" as the current LUMP?\n\nThe current version will be archived first.`)) return;
+
+    try {
+        const wordsResp = await fetch(`/api/lumps/${token}/words/${version}`);
+        if (!wordsResp.ok) throw new Error(`Failed to fetch archived binary: HTTP ${wordsResp.status}`);
+        const wordsData = await wordsResp.json();
+        const words = wordsData.words;
+        if (!words || !words.length) throw new Error('Archived binary is empty');
+
+        const metadata = {
+            token:           token,
+            abstraction:     wordsData.abstraction   ?? (lump?.abstraction   ?? ''),
+            ns_slot:         wordsData.ns_slot       ?? (lump?.ns_slot       ?? null),
+            cw:              wordsData.cw            ?? (lump?.cw            ?? 0),
+            cc:              wordsData.cc            ?? (lump?.cc            ?? 0),
+            profile:         wordsData.profile       || lump?.profile || lump?.deployment?.profile || 'IoT',
+            language:        wordsData.language      || lump?.language      || 'unknown',
+            author:          wordsData.author        || lump?.author        || '',
+            version:         wordsData.version_str   || lump?.version       || '',
+            release_notes:   wordsData.release_notes || lump?.release_notes || '',
+            methods:         wordsData.methods       || lump?.methods       || [],
+            capabilities:    wordsData.capabilities  || lump?.capabilities  || [],
+            grants:          wordsData.grants        || lump?.grants        || ['E'],
+            content_type:    wordsData.content_type  || lump?.content_type  || 'code',
+            pet_names_dr:    (wordsData.pet_names || lump?.pet_names || {}).DR || {},
+            pet_names_cr:    (wordsData.pet_names || lump?.pet_names || {}).CR || {},
+            mtbf_clean_runs: (wordsData.mtbf || {}).consecutive_clean || 0,
+            mtbf_total_runs: (wordsData.mtbf || {}).total_runs        || 0,
+            mtbf_status:     (wordsData.mtbf || {}).status            || 'unknown',
+            source_hash:     wordsData.source_hash   || (lump?.mtbf || {}).source_hash || '',
+        };
+
+        const saveResp = await fetch('/api/lumps/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ binary: words, metadata }),
+        });
+        const saveData = await saveResp.json();
+        if (!saveResp.ok || !saveData.ok) throw new Error(saveData.error || `HTTP ${saveResp.status}`);
+
+        if (typeof _showFpgaToast === 'function') {
+            _showFpgaToast('Restored', `v${version} of "${displayName}" is now the current LUMP.`, 'ok', 4000);
+        }
+
+        const tk = token.replace(/[^a-z0-9]/gi, '');
+        delete _lumpHistoryLoaded[tk];
+        if (typeof refreshLumps === 'function') refreshLumps();
+    } catch (err) {
+        alert(`Restore failed: ${err.message}`);
     }
 }
 
