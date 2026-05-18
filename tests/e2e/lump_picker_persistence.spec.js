@@ -179,3 +179,78 @@ test.describe('LUMP picker — selection survives sort-order change', () => {
     });
 
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suite 4 — last-selected lump is restored after a page reload
+// ─────────────────────────────────────────────────────────────────────────────
+
+test.describe('LUMP picker — selection restored after page reload', () => {
+
+    test('picker pre-selects the last-viewed lump and shows the Viewing label after reload', async ({ page }) => {
+        test.setTimeout(60000);
+
+        // ── First load: pick a lump so localStorage gets written ──────────────
+        const picker = await setupLumpsView(page);
+
+        // Verify the placeholder is shown initially (clean state).
+        await expect(picker).toHaveValue('');
+
+        // Pick STUB_TOKEN_A — this persists it to localStorage via lumpPickerChanged.
+        await picker.selectOption({ value: STUB_TOKEN_A });
+        await expect(picker).toHaveValue(STUB_TOKEN_A);
+
+        // Confirm the Viewing label appeared on the first load.
+        const label = page.locator('#lumpViewingLabel');
+        await expect(label).toBeVisible();
+        await expect(label).toContainText('Viewing:');
+        await expect(label).toContainText('LED');
+
+        // Verify localStorage was written (sanity check before reload).
+        const storedToken = await page.evaluate(() => localStorage.getItem('lastSelectedLumpToken'));
+        expect(storedToken).toBe(STUB_TOKEN_A);
+
+        // ── Reload: API stubs must be re-installed before navigation ──────────
+        // Re-install intercepts (they are cleared by reload/navigation).
+        await page.route('**/api/lumps/list', async route => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify(STUB_LUMPS),
+            });
+        });
+        await page.route('**/api/lumps/detail/**', async route => {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/json',
+                body: JSON.stringify({ token: STUB_TOKEN_A, abstraction: 'LED' }),
+            });
+        });
+
+        await page.reload();
+        await page.waitForLoadState('networkidle');
+
+        // Switch to the LUMP Repository view after reload.
+        await page.evaluate(() => {
+            if (typeof window.switchView === 'function') window.switchView('lumps');
+        });
+
+        await expect(page.locator('#lumps')).toBeVisible();
+        const pickerAfter = page.locator('#lumpPickerSelect');
+        await pickerAfter.waitFor({ state: 'visible' });
+
+        // ── Post-reload assertions ─────────────────────────────────────────────
+        // The picker must show the previously-selected token, not the placeholder.
+        await expect(pickerAfter).toHaveValue(STUB_TOKEN_A,
+            { message: 'Picker should restore the last-viewed lump after reload' });
+
+        // The selected option must include the abstraction name.
+        await expect(pickerAfter.locator('option:checked')).toContainText('LED');
+
+        // The Viewing label must be visible and contain the correct name.
+        const labelAfter = page.locator('#lumpViewingLabel');
+        await expect(labelAfter).toBeVisible();
+        await expect(labelAfter).toContainText('Viewing:');
+        await expect(labelAfter).toContainText('LED');
+    });
+
+});

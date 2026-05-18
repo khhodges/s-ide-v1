@@ -566,6 +566,15 @@ async function renderLumps() {
             if (_liveMatch) _selectedLumpToken = _liveMatch.token;
         }
 
+        // Restore last-viewed lump from localStorage (e.g. after a page reload)
+        // only when nothing else (pending name or live lump) has already set a token.
+        if (!_selectedLumpToken) {
+            const _saved = localStorage.getItem('lastSelectedLumpToken');
+            if (_saved && lumps.find(l => l.token === _saved)) {
+                _selectedLumpToken = _saved;
+            }
+        }
+
         let html = '';
         if (!lumps || lumps.length === 0) {
             html = '<div class="lumps-placeholder">No lumps saved yet. Use Build LUMP in the editor to compile and save an abstraction.</div>';
@@ -651,6 +660,7 @@ window.lumpPickerChanged = function(token) {
     if (!token) { _updateLumpViewingLabel(''); return; }
     _selectedLumpToken = token;
     _lumpRecordView(token);
+    try { localStorage.setItem('lastSelectedLumpToken', token); } catch(e) {}
     showLumpDetail(token);
 };
 
