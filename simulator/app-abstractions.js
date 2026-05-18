@@ -674,7 +674,7 @@ function _updateLumpViewingLabel(token) {
                   : '';
     const name = lump.abstraction || 'Unknown';
     el.textContent = 'Viewing: ' + name + (badge ? ' ' + badge : '');
-    el.style.display = '';
+    el.style.display = 'block';
 }
 
 // Refreshes the text of a single picker <option> after an in-place metadata
