@@ -7774,6 +7774,189 @@ Add a method called Run
         capErrs.map(e => e.message).join('; '));
 }
 
+// ── ABS-H: Abstractions panel search-highlight regression (task-1379) ────────
+// Tests for _absHighlightText / _absHighlightNodes as called by renderAbstractions().
+//
+// Strategy: extract the REAL function source from app-compile.js and
+// app-abstractions.js, then eval them inside a jsdom window together with the
+// minimum globals renderAbstractions() needs.  If someone removes the
+// _absHighlightText() calls from renderAbstractions(), or renames the element
+// classes, these tests will fail immediately.
+//
+// Line ranges (1-indexed) extracted below must be kept in sync with source:
+//   app-compile.js      _absHighlightNodes  lines  94–117
+//   app-compile.js      _absHighlightText   lines 122–133
+//   app-abstractions.js renderAbstractions  lines 387–452
+{
+    const { JSDOM } = require('jsdom');
+    const fs   = require('fs');
+    const path = require('path');
+
+    const compileLines = fs.readFileSync(
+        path.join(__dirname, 'app-compile.js'), 'utf8').split('\n');
+    const absLines = fs.readFileSync(
+        path.join(__dirname, 'app-abstractions.js'), 'utf8').split('\n');
+
+    // Extract real function source text (slice uses 0-based indices).
+    const highlightNodesSrc = compileLines.slice(93, 117).join('\n');
+    const highlightTextSrc  = compileLines.slice(121, 133).join('\n');
+    const renderAbsSrc      = absLines.slice(386, 452).join('\n');
+
+    // Verify extraction found the right functions — fail fast rather than giving
+    // misleading results if line numbers drift after a refactor.
+    assert('ABS-H-SRC1: extracted _absHighlightNodes from app-compile.js',
+        highlightNodesSrc.includes('function _absHighlightNodes('),
+        'Line range 94-117 no longer contains _absHighlightNodes — update the slice');
+    assert('ABS-H-SRC2: extracted _absHighlightText from app-compile.js',
+        highlightTextSrc.includes('function _absHighlightText('),
+        'Line range 122-133 no longer contains _absHighlightText — update the slice');
+    assert('ABS-H-SRC3: extracted renderAbstractions from app-abstractions.js',
+        renderAbsSrc.includes('function renderAbstractions('),
+        'Line range 387-452 no longer contains renderAbstractions — update the slice');
+
+    // Build a jsdom window to provide real DOM APIs.
+    const dom  = new JSDOM('<!DOCTYPE html><body><div id="absLayerList"></div></body>');
+    const jsDom  = dom.window.document;
+    const jsNode = dom.window.Node;
+
+    // Use the Function constructor so that `document` and `Node` can be passed
+    // explicitly from the jsdom window.  This avoids any jsdom eval-scope issues
+    // while still running the REAL function source extracted from the source files.
+    // All other free variables (abstractionRegistry, _lumpsCache, etc.) are
+    // declared as let bindings in the function body so renderAbstractions() finds
+    // them through closure — not through a global lookup that would fail in Node.js.
+    const factory = new Function('document', 'Node',
+        `
+        "use strict";
+        // ── State controlled by the test harness ─────────────────────────────
+        let _absSearchQuery = '';
+        let abstractionRegistry = {
+            abstractions: {
+                'SlideRule': {
+                    index: 5,
+                    name: 'SlideRule',
+                    description: 'Analog slide rule for multiplication and division',
+                    impl: {},
+                },
+                'Scheduler': {
+                    index: 8,
+                    name: 'Scheduler',
+                    description: 'Cooperative thread scheduler for the Church Machine',
+                    impl: {},
+                },
+            }
+        };
+
+        // ── Stubs for every other free variable renderAbstractions() touches ─
+        let _lumpsCache            = [];
+        let selectedAbsIndex       = -1;
+        let bootEntrySlot          = 3;
+        let IMPL_STATUS_COLORS     = {};
+        let IMPL_STATUS_LABELS     = {};
+        function _implStatusBest()        { return 'unknown'; }
+        function _getAbstractionProfile() { return 'IoT'; }
+        function _implLegendHtml()        { return ''; }
+
+        // ── Real source extracted verbatim from app-compile.js ───────────────
+        ${highlightNodesSrc}
+        ${highlightTextSrc}
+
+        // ── Real source extracted verbatim from app-abstractions.js ─────────
+        ${renderAbsSrc}
+
+        // ── Public API for the test harness ──────────────────────────────────
+        return {
+            render: function(q) { _absSearchQuery = q; renderAbstractions(); },
+        };
+        `
+    );
+
+    const mod  = factory(jsDom, jsNode);
+    const render = mod.render;
+    const listEl = jsDom.getElementById('absLayerList');
+
+    // ABS-H1: non-empty query → .abs-item-name contains <mark class="abs-search-highlight">
+    {
+        render('slide');
+        const nameEls = listEl.querySelectorAll('.abs-item-name');
+        assert('ABS-H1: renderAbstractions renders at least one .abs-item-name',
+            nameEls.length > 0,
+            'got ' + nameEls.length);
+        const matchingName = Array.from(nameEls).find(
+            el => el.textContent.toLowerCase().includes('slide'));
+        const marks = matchingName
+            ? matchingName.querySelectorAll('mark.abs-search-highlight') : [];
+        assert('ABS-H1: .abs-item-name for "SlideRule" contains mark.abs-search-highlight',
+            marks.length > 0,
+            'got ' + marks.length + ' mark(s); nameEls=' + nameEls.length);
+        assert('ABS-H1: mark text equals the matched query text (case-insensitive)',
+            marks.length > 0 && marks[0].textContent.toLowerCase() === 'slide',
+            marks.length > 0 ? marks[0].textContent : '(no mark)');
+    }
+
+    // ABS-H2: non-empty query → .abs-item-desc contains <mark class="abs-search-highlight">
+    {
+        render('slide');
+        const descEls = listEl.querySelectorAll('.abs-item-desc');
+        assert('ABS-H2: renderAbstractions renders at least one .abs-item-desc',
+            descEls.length > 0,
+            'got ' + descEls.length);
+        const matchingDesc = Array.from(descEls).find(
+            el => el.textContent.toLowerCase().includes('slide'));
+        const marks = matchingDesc
+            ? matchingDesc.querySelectorAll('mark.abs-search-highlight') : [];
+        assert('ABS-H2: .abs-item-desc for "slide rule" contains mark.abs-search-highlight',
+            marks.length > 0,
+            'got ' + marks.length + ' mark(s)');
+    }
+
+    // ABS-H3: empty query → no <mark> nodes anywhere in the rendered list
+    {
+        render('');
+        const marks = listEl.querySelectorAll('mark.abs-search-highlight');
+        assert('ABS-H3: empty query produces no mark.abs-search-highlight nodes',
+            marks.length === 0,
+            'got ' + marks.length + ' mark(s)');
+    }
+
+    // ABS-H4: DOM-rebuild path — calling render twice with the same query must
+    // not double-wrap marks (exactly one mark per match after the second render).
+    {
+        render('scheduler');
+        render('scheduler');
+        const nameEls = listEl.querySelectorAll('.abs-item-name');
+        const schedulerName = Array.from(nameEls).find(
+            el => el.textContent.toLowerCase().includes('scheduler'));
+        const marks = schedulerName
+            ? schedulerName.querySelectorAll('mark.abs-search-highlight') : [];
+        assert('ABS-H4: after two renders with same query, Scheduler .abs-item-name has marks',
+            marks.length > 0,
+            'got ' + marks.length + ' mark(s)');
+        assert('ABS-H4: marks do not double-wrap — exactly one mark per match after rebuild',
+            marks.length === 1,
+            'got ' + marks.length + ' mark(s)');
+    }
+
+    // ABS-H5: switching from a query to empty removes all marks
+    {
+        render('slide');
+        render('');
+        const marks = listEl.querySelectorAll('mark.abs-search-highlight');
+        assert('ABS-H5: clearing query after a highlight render leaves no marks',
+            marks.length === 0,
+            'got ' + marks.length + ' mark(s)');
+    }
+
+    // ABS-H6: query that matches nothing → no marks created
+    {
+        render('zzznomatch');
+        const marks = listEl.querySelectorAll('mark.abs-search-highlight');
+        assert('ABS-H6: non-matching query produces no marks',
+            marks.length === 0,
+            'got ' + marks.length + ' mark(s)');
+    }
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
