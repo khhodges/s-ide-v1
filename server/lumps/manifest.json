@@ -1890,44 +1890,6 @@
     ]
   },
   {
-    "token": "19d3e599",
-    "abstraction": "IntegerOps",
-    "ns_slot": null,
-    "lump_size": 64,
-    "cw": 20,
-    "cc": 0,
-    "author": "",
-    "version": "2026.05.19",
-    "lump_version": 2,
-    "compiled_at": 1779199055.0618427,
-    "methods": [
-      {
-        "name": "Greet",
-        "offset": 0,
-        "length": 5
-      },
-      {
-        "name": "Increment",
-        "offset": 5,
-        "length": 5,
-        "aliasOf": "Greet"
-      },
-      {
-        "name": "Add",
-        "offset": 10,
-        "length": 5
-      },
-      {
-        "name": "Double",
-        "offset": 15,
-        "length": 5
-      }
-    ],
-    "grants": [
-      "E"
-    ]
-  },
-  {
     "token": "50ce4c64",
     "abstraction": "StringOps",
     "ns_slot": null,
@@ -1936,8 +1898,8 @@
     "cc": 0,
     "author": "",
     "version": "2026.05.19",
-    "lump_version": 2,
-    "compiled_at": 1779199062.4992201,
+    "lump_version": 1,
+    "compiled_at": 1779196739.8008907,
     "methods": [
       {
         "name": "Pack4",
@@ -2023,8 +1985,8 @@
     "cc": 0,
     "author": "",
     "version": "2026.05.19",
-    "lump_version": 2,
-    "compiled_at": 1779199069.389551,
+    "lump_version": 1,
+    "compiled_at": 1779196746.7156434,
     "methods": [
       {
         "name": "WhileSum",
@@ -2040,6 +2002,44 @@
         "name": "LambdaSum",
         "offset": 24,
         "length": 11
+      }
+    ],
+    "grants": [
+      "E"
+    ]
+  },
+  {
+    "token": "19d3e599",
+    "abstraction": "IntegerOps",
+    "ns_slot": null,
+    "lump_size": 64,
+    "cw": 20,
+    "cc": 0,
+    "author": "",
+    "version": "2026.05.19",
+    "lump_version": 3,
+    "compiled_at": 1779207354.5611417,
+    "methods": [
+      {
+        "name": "Greet",
+        "offset": 0,
+        "length": 5
+      },
+      {
+        "name": "Increment",
+        "offset": 5,
+        "length": 5,
+        "aliasOf": "Greet"
+      },
+      {
+        "name": "Add",
+        "offset": 10,
+        "length": 5
+      },
+      {
+        "name": "Double",
+        "offset": 15,
+        "length": 5
       }
     ],
     "grants": [

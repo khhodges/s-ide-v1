@@ -228,8 +228,8 @@ function lumpAudit(words, manifest, lineNums) {
         const _rciPetNames = manifest && manifest.pet_names && manifest.pet_names.CR
             ? manifest.pet_names.CR : {};
         const _rciDefinedSlots = [];
-        for (let _s = 0; _s < cc; _s++) {
-            const _n = _rciPetNames[String(_s)];
+        for (let _s = 1; _s <= cc; _s++) {
+            const _n = _rciPetNames[String(_s - 1)];
             _rciDefinedSlots.push(_n ? `[${_s}]='${_n}'` : `[${_s}]`);
         }
         const _rciSlotHint = _rciDefinedSlots.length > 0
@@ -247,7 +247,7 @@ function lumpAudit(words, manifest, lineNums) {
 
             // Slot-bounds check only applies when the LUMP has its own c-list.
             // cc=0 means ambient-boot-c-list — slots are resolved at load time.
-            if (_rciChurchOps.has(op) && crSrc === 6 && cc > 0 && slot >= cc) {
+            if (_rciChurchOps.has(op) && crSrc === 6 && cc > 0 && (slot === 0 || slot > cc)) {
                 const _rciMsg = `word[${wi}] ${_rciOpName[op]}: c-list slot ${slot} out of range` +
                     ` (cc=${cc}${_rciSlotHint})`;
                 const _rciSrcLine = lineNums && lineNums[wi] != null ? lineNums[wi] : null;
@@ -323,13 +323,13 @@ function lumpAudit(words, manifest, lineNums) {
             if (_rpnHasPetCR) {
                 for (const [k, v] of Object.entries(manifest.pet_names.CR)) {
                     const s = parseInt(k, 10);
-                    if (!isNaN(s) && s >= 0 && s < cc) _rpnSlotName[s] = String(v);
+                    if (!isNaN(s) && s >= 0 && (s + 1) <= cc) _rpnSlotName[s + 1] = String(v);
                 }
             }
             if (_rpnHasCaps) {
-                for (let i = 0; i < manifest.capabilities.length && i < cc; i++) {
+                for (let i = 0; i < manifest.capabilities.length && i + 1 <= cc; i++) {
                     const cap = manifest.capabilities[i];
-                    if (!_rpnSlotName[i] && cap && cap.name) _rpnSlotName[i] = String(cap.name);
+                    if (!_rpnSlotName[i + 1] && cap && cap.name) _rpnSlotName[i + 1] = String(cap.name);
                 }
             }
 
@@ -341,13 +341,13 @@ function lumpAudit(words, manifest, lineNums) {
                 const op    = (ww >>> 27) & 0x1F;
                 const crSrc = (ww >>> 15) & 0xF;
                 const slot  =  ww         & 0x7FFF;
-                if (!_rpnChurchOps.has(op) || crSrc !== 6 || slot >= cc) continue;
+                if (!_rpnChurchOps.has(op) || crSrc !== 6 || slot === 0 || slot > cc) continue;
                 if (!_rpnSlotName[slot]) _rpnUnnamedReferenced.add(slot);
             }
 
             // Check coverage of all allocated slots (even unreferenced ones).
             const _rpnUnnamedAny = [];
-            for (let s = 0; s < cc; s++) {
+            for (let s = 1; s <= cc; s++) {
                 if (!_rpnSlotName[s]) _rpnUnnamedAny.push(s);
             }
 
@@ -370,7 +370,7 @@ function lumpAudit(words, manifest, lineNums) {
                 });
             } else {
                 const nameList = Array.from({ length: cc }, (_, i) =>
-                    `[${i}]\u202F"${_rpnSlotName[i]}"`
+                    `[${i + 1}]\u202F"${_rpnSlotName[i + 1]}"`
                 ).join(', ');
                 results.push({
                     ruleId: 'RPN',

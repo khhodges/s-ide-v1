@@ -1,32 +1,38 @@
 {
-  "token": "d9454529",
-  "abstraction": "EnglishLoops",
+  "token": "19d3e599",
+  "abstraction": "IntegerOps",
   "ns_slot": null,
   "lump_size": 64,
   "typ": 0,
   "content_type": "code",
-  "cw": 35,
+  "cw": 20,
   "cc": 0,
-  "profile": "Full",
+  "profile": "IoT",
   "language": "english",
   "author": "",
   "version": "2026.05.19",
   "release_notes": "",
   "methods": [
     {
-      "name": "WhileSum",
+      "name": "Greet",
       "offset": 0,
-      "length": 13
+      "length": 5
     },
     {
-      "name": "RecurseSum",
-      "offset": 13,
-      "length": 11
+      "name": "Increment",
+      "offset": 5,
+      "length": 5,
+      "aliasOf": "Greet"
     },
     {
-      "name": "LambdaSum",
-      "offset": 24,
-      "length": 11
+      "name": "Add",
+      "offset": 10,
+      "length": 5
+    },
+    {
+      "name": "Double",
+      "offset": 15,
+      "length": 5
     }
   ],
   "capabilities": [],
@@ -38,18 +44,18 @@
     "consecutive_clean": 0,
     "total_runs": 0,
     "status": "unknown",
-    "source_hash": "89ead93f"
+    "source_hash": "ba0b98af"
   },
   "deployment": {
     "target_board": "ti60-f225",
-    "profile": "Full",
-    "built_at": "2026-05-19T13:19:06.715178Z",
+    "profile": "IoT",
+    "built_at": "2026-05-19T16:15:26.556591Z",
     "builder": "CLOOMC++ IDE v1.0"
   },
   "grants": [
     "E"
   ],
-  "lump_version": 1,
-  "compiled_at": 1779196746.7156434,
-  "archived_version": 1
+  "lump_version": 2,
+  "compiled_at": 1779207326.5570908,
+  "archived_version": 2
 }

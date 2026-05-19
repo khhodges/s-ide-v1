@@ -1250,7 +1250,12 @@ class ChurchAssembler {
                 if (crSrc > 7 && crSrc < 12) {
                     this.errors.push({ line: lineNum, ...this._tokenCols(this._currentLineText, 'CR' + crSrc), message: `SWITCH: CR${crSrc} is out of range — source must be CR0–CR7 (hardware uses a 3-bit crSrc field; CR8–CR11 silently truncate to CR0–CR3)` });
                 }
-                imm = this._parseImm(parts[2], lineNum) & 0x7;
+                // Accept "CRn" as shorthand for "n" in the target-index field so
+                // "SWITCH CR0, CR1" is equivalent to "SWITCH CR0, 1".
+                const _swTgt = /^CR(\d+)$/i.test(parts[2] || '')
+                    ? (parts[2] || '').replace(/^CR/i, '')
+                    : parts[2];
+                imm = this._parseImm(_swTgt, lineNum) & 0x7;
                 break;
             }
             case 6: {

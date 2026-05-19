@@ -83,8 +83,8 @@ function loadViaSlot(slot) {
 
 // ── RCI1: lumpAudit with lineNums → violations carry correct sourceLine ───────
 {
-    // cc=1 means only slot 0 is valid; accessing slot 1 is a violation.
-    const words = buildLump64([loadViaSlot(1), RETURN_AL], 1);
+    // cc=1 means valid slots are [1]; slot 2 (> cc) is a range violation.
+    const words = buildLump64([loadViaSlot(2), RETURN_AL], 1);
     // lineNums is indexed by word position in the lump binary (0=header, 1=first code word, …)
     const lineNums = [null, 7, 8]; // word[1] came from source line 7
     const results  = lumpAudit(words, null, lineNums);
@@ -103,7 +103,7 @@ function loadViaSlot(slot) {
 
 // ── RCI2: lumpAudit without lineNums → violation sourceLine is null ───────────
 {
-    const words   = buildLump64([loadViaSlot(1), RETURN_AL], 1);
+    const words   = buildLump64([loadViaSlot(2), RETURN_AL], 1);
     const results = lumpAudit(words, null /*, no lineNums */);
     const rci = results.find(r => r.ruleId === 'RCI');
 
@@ -116,7 +116,7 @@ function loadViaSlot(slot) {
 
 // ── RCI3: partial lineNums (entry missing for the violating word) → null ──────
 {
-    const words    = buildLump64([loadViaSlot(1), RETURN_AL], 1);
+    const words    = buildLump64([loadViaSlot(2), RETURN_AL], 1);
     // lineNums[1] is explicitly undefined (sparse array) — treat as null
     const lineNums = [null]; // length 1, so lineNums[1] is undefined
     const results  = lumpAudit(words, null, lineNums);
@@ -219,8 +219,8 @@ function loadViaSlot(slot) {
 
 // ── RCI clean-pass: lumpAudit with lineNums but no violations ─────────────────
 {
-    // cc=1 and the single LOAD accesses slot 0 (in range)
-    const words   = buildLump64([loadViaSlot(0), RETURN_AL], 1);
+    // cc=1 and the single LOAD accesses slot 1 (the only valid 1-based slot)
+    const words   = buildLump64([loadViaSlot(1), RETURN_AL], 1);
     const lineNums = [null, 3, 4];
     const results  = lumpAudit(words, null, lineNums);
     const rci = results.find(r => r.ruleId === 'RCI');
@@ -246,7 +246,7 @@ function loadViaSlot(slot) {
 
 // DSP1: single violation with sourceLine → line set
 {
-    const words    = buildLump64([loadViaSlot(1), RETURN_AL], 1);
+    const words    = buildLump64([loadViaSlot(2), RETURN_AL], 1);
     const lineNums = [null, 12, 13];
     const errors   = lumpAudit(words, null, lineNums).filter(r => r.severity === 'error');
     const show     = mapRciAuditErrorsToShowErrs(errors);
@@ -260,7 +260,7 @@ function loadViaSlot(slot) {
 
 // DSP2: single violation without lineNums → line: null
 {
-    const words  = buildLump64([loadViaSlot(1), RETURN_AL], 1);
+    const words  = buildLump64([loadViaSlot(2), RETURN_AL], 1);
     const errors = lumpAudit(words, null).filter(r => r.severity === 'error');
     const show   = mapRciAuditErrorsToShowErrs(errors);
 

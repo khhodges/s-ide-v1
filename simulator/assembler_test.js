@@ -573,6 +573,17 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
     assert('P12v SWITCH CR7: no error (CR7 is the valid boundary)',
         v.errors.length === 0,
         v.errors.map(e => e.message).join('; '));
+
+    // P12w: SWITCH CR0, CR1 → same word as SWITCH CR0, 1 (CRn shorthand)
+    const w1 = new ChurchAssembler();
+    const r12w1 = w1.assemble('SWITCH CR0, 1');
+    const w2 = new ChurchAssembler();
+    const r12w2 = w2.assemble('SWITCH CR0, CR1');
+    assert('P12w SWITCH CR0, CR1: no error', w2.errors.length === 0,
+        w2.errors.map(e => e.message).join('; '));
+    assert('P12w SWITCH CR0, CR1: same word as SWITCH CR0, 1',
+        r12w2.words[0] === r12w1.words[0],
+        `got 0x${(r12w2.words[0]>>>0).toString(16)} vs 0x${(r12w1.words[0]>>>0).toString(16)}`);
 }
 
 // ── LED[N] Abstract GT bracket syntax ────────────────────────────────────────
