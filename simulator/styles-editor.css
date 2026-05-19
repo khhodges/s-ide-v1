@@ -1,3 +1,11 @@
+/* ── Sealed editor — read-only state after a clean compile ───────────────── */
+#asmEditor.cm-editor-sealed {
+    opacity: 0.72;
+    background: #141414;
+    cursor: not-allowed;
+    border-color: var(--church-gold, #C89B3C);
+}
+
 /* ── Editor code name label (shown next to language dropdown) ────────────── */
 .editor-code-name {
     display: inline-block;

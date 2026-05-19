@@ -1423,6 +1423,18 @@ function compileAndBuild() {
         con.insertBefore(_loadDiv, con.firstChild);
     }
     showNextSteps('compiled');
+    _applySealedLumpState(absName);
+}
+
+function _applySealedLumpState(absName) {
+    const editor = document.getElementById('asmEditor');
+    if (editor) {
+        editor.readOnly = true;
+        editor.classList.add('cm-editor-sealed');
+    }
+    const tabsRow = document.querySelector('.example-tabs-row');
+    if (tabsRow) tabsRow.style.display = 'none';
+    localStorage.setItem('cm_sealed_lump', JSON.stringify({ abstraction: absName || 'Unnamed', sealedAt: Date.now() }));
 }
 
 function auditLumpOnly() {
