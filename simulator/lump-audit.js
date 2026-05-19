@@ -483,6 +483,10 @@ function lumpAuditRenderPanel(container, results, opts) {
  * container — DOM element to render into (existing children are cleared first)
  * opts      — forwarded to lumpAuditRenderPanel
  */
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { lumpAudit, lumpAuditHasErrors, lumpAuditHasWarnings };
+}
+
 async function lumpAuditFromServer(token, manifest, container, opts) {
     container.innerHTML = '';
     const loadingEl = document.createElement('div');

@@ -99,6 +99,10 @@ args = "check-capabilities-blocks"
 task = "workflow.run"
 args = "check-api-reference-stale"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "rci-threading-tests"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -341,6 +345,17 @@ args = "node scripts/gen-api-reference.js --check"
 
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow]]
+name = "rci-threading-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/test_rci_threading.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [[ports]]
 localPort = 5000
