@@ -2425,15 +2425,21 @@ function updateNamespace() {
     if (!container) return;
     // Lazily warm _lumpsCache so Source buttons appear even on first NS view load,
     // before the user has visited the Repository view.
-    // The in-flight guard (window._lumpsCacheWarmPending) prevents repeated fetches
-    // when _lumpsCache is empty due to no lumps or a transient failure.
+    // _lumpsCacheWarmPending  — in-flight guard; cleared on settle.
+    // _lumpsCacheWarmAttempted — set after the first settled fetch so a genuinely
+    //   empty repository (zero lumps) does not trigger a fetch on every render.
     if ((typeof _lumpsCache === 'undefined' || !Array.isArray(_lumpsCache) || _lumpsCache.length === 0)
-            && !window._lumpsCacheWarmPending) {
+            && !window._lumpsCacheWarmPending
+            && !window._lumpsCacheWarmAttempted) {
         window._lumpsCacheWarmPending = true;
         fetch('/api/lumps/list').then(r => r.ok ? r.json() : null).then(lumps => {
-            window._lumpsCacheWarmPending = false;
+            window._lumpsCacheWarmPending  = false;
+            window._lumpsCacheWarmAttempted = true;
             if (lumps && lumps.length > 0) { _lumpsCache = lumps; updateNamespace(); }
-        }).catch(() => { window._lumpsCacheWarmPending = false; });
+        }).catch(() => {
+            window._lumpsCacheWarmPending  = false;
+            window._lumpsCacheWarmAttempted = true;
+        });
     }
     let html = '<div class="ns-layout-header">NS_ENTRY_LAYOUT: 4 words per entry (128 bits; word3 reserved) \u2014 click a row to inspect memory</div>';
     html += '<table class="ns-table"><thead><tr>';
