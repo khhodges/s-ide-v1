@@ -1441,7 +1441,7 @@ function _applySealedLumpState(absName) {
     // Only hide example-tabs-row in Assembly mode — English / JS / Haskell /
     // Lambda / Ada all use the same row for their own example selectors, and
     // hiding it there would make every non-assembly example tab disappear.
-    const langSel = document.getElementById('langSelect');
+    const langSel = document.getElementById('langSelector');
     const curLang = langSel ? langSel.value : 'assembly';
     if (curLang === 'assembly') {
         const tabsRow = document.querySelector('.example-tabs-row');
