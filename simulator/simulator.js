@@ -6464,6 +6464,20 @@ ChurchSimulator.SCHEDULER_IRQ_NS_SLOT = SCHEDULER_IRQ_NS_SLOT;
 ChurchSimulator.PENDING_GT_TAG   = 0xFEED;  // upper 16 bits of any pending sentinel
 ChurchSimulator.PENDING_GT_NAMES = [];       // static registry: index → pet name string
 
+// Restore PENDING_GT_NAMES from localStorage so pet names survive page reloads.
+// The sentinel format (0xFEED____) is unchanged; only the name lookup table is
+// re-populated from the persisted JSON string.
+(function () {
+    if (typeof localStorage === 'undefined') return;
+    try {
+        const saved = localStorage.getItem('church_pending_gt_names');
+        if (saved) {
+            const arr = JSON.parse(saved);
+            if (Array.isArray(arr)) ChurchSimulator.PENDING_GT_NAMES = arr;
+        }
+    } catch (e) { /* ignore parse errors */ }
+})();
+
 ChurchSimulator.isPendingGT = function (word) {
     return ((word >>> 0) >>> 16) === 0xFEED;
 };
@@ -6471,7 +6485,15 @@ ChurchSimulator.isPendingGT = function (word) {
 ChurchSimulator.makePendingGT = function (petName) {
     const names = ChurchSimulator.PENDING_GT_NAMES;
     let idx = names.indexOf(petName);
-    if (idx < 0) { idx = names.length; names.push(petName); }
+    if (idx < 0) {
+        idx = names.length;
+        names.push(petName);
+        // Persist the updated registry so pet names survive page reloads.
+        if (typeof localStorage !== 'undefined') {
+            try { localStorage.setItem('church_pending_gt_names', JSON.stringify(names)); }
+            catch (e) { /* storage full or private-mode — non-fatal */ }
+        }
+    }
     if (idx > 0xFFFF) idx = 0xFFFF;  // clamp (won't happen in practice)
     return (0xFEED0000 | (idx & 0xFFFF)) >>> 0;
 };
