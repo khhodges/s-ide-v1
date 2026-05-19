@@ -1822,5 +1822,27 @@
     "grants": [
       "E"
     ]
+  },
+  {
+    "token": "95a651e7",
+    "abstraction": "NoteG",
+    "ns_slot": null,
+    "lump_size": 64,
+    "cw": 38,
+    "cc": 1,
+    "author": "",
+    "version": "2026.05.19",
+    "lump_version": 1,
+    "compiled_at": 1779196409.3199875,
+    "methods": [
+      {
+        "name": "compute",
+        "offset": 0,
+        "length": 38
+      }
+    ],
+    "grants": [
+      "E"
+    ]
   }
 ]
