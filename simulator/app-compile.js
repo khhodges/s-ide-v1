@@ -588,10 +588,13 @@ function onLangChange(restoring) {
     if (scroll) {
         const allowedSet = langExampleGroups[lang] || [];
         // If this language has tabs, ensure the row container is visible — it may
-        // have been hidden by _applySealedLumpState while in Assembly mode.
+        // have been hidden by _applySealedLumpState.  Keep it hidden while a
+        // sealed lump is active (the editor is read-only so example tabs are
+        // irrelevant until the user unseals).
         if (allowedSet.length > 0) {
             const tabsRow = document.querySelector('.example-tabs-row');
-            if (tabsRow) tabsRow.style.display = '';
+            const _isSealed = !!localStorage.getItem('cm_sealed_lump');
+            if (tabsRow && !_isSealed) tabsRow.style.display = '';
         }
         // Built-in example tabs: hide all when in personal mode, else show only this lang's set
         const tabs = scroll.querySelectorAll('.example-tab:not(.user-tab)');
@@ -1438,15 +1441,15 @@ function _applySealedLumpState(absName) {
         editor.readOnly = true;
         editor.classList.add('cm-editor-sealed');
     }
-    // Only hide example-tabs-row in Assembly mode — English / JS / Haskell /
-    // Lambda / Ada all use the same row for their own example selectors, and
-    // hiding it there would make every non-assembly example tab disappear.
-    const langSel = document.getElementById('langSelector');
-    const curLang = langSel ? langSel.value : 'assembly';
-    if (curLang === 'assembly') {
-        const tabsRow = document.querySelector('.example-tabs-row');
-        if (tabsRow) tabsRow.style.display = 'none';
-    }
+    // Always hide the example-tabs-row when sealing.  Sealing only ever
+    // happens after compiling in Assembly mode, so hiding example tabs (which
+    // are only useful when the editor is editable) is always correct here.
+    // Previously this only hid the row when curLang==='assembly', but on page
+    // reload the language selector may have been restored to a different value
+    // by loadEditorState() before _applySealedLumpState() runs, causing the
+    // row to remain visible despite the seal.
+    const tabsRow = document.querySelector('.example-tabs-row');
+    if (tabsRow) tabsRow.style.display = 'none';
     localStorage.setItem('cm_sealed_lump', JSON.stringify({ abstraction: absName || 'Unnamed', sealedAt: Date.now() }));
 }
 

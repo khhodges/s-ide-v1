@@ -1202,6 +1202,50 @@ console.log('\n--- T_RESOLVE: resolvePendingSlot ---');
         check('T_RESOLVE_F5: [RESOLVE] line contains the pet name',
               sim.output.includes(PET_NAME));
     }
+
+    // ── T_RESOLVE_G: CR6 absent (cr[6]=null) → ok=false ──────────────────────
+    {
+        const { sim } = makeResolveSim();
+        sim.cr[6] = null;
+        const result = sim.resolvePendingSlot(PENDING_SLOT, NS_SLOT);
+
+        check('T_RESOLVE_G1: null CR6 returns ok=false', result.ok === false);
+        check('T_RESOLVE_G2: error mentions "CR6" or "c-list"',
+              typeof result.error === 'string' &&
+              (result.error.toLowerCase().includes('cr6') ||
+               result.error.toLowerCase().includes('c-list')));
+    }
+
+    // ── T_RESOLVE_H: CR6 present but word0=0 → ok=false (same path as null) ──
+    {
+        const { sim } = makeResolveSim();
+        sim.cr[6] = { word0: 0, word1: CLIST_BASE, word2: 0, word3: 0 };
+        const result = sim.resolvePendingSlot(PENDING_SLOT, NS_SLOT);
+
+        check('T_RESOLVE_H1: CR6 word0=0 returns ok=false', result.ok === false);
+        check('T_RESOLVE_H2: error mentions "CR6" or "c-list"',
+              typeof result.error === 'string' &&
+              (result.error.toLowerCase().includes('cr6') ||
+               result.error.toLowerCase().includes('c-list')));
+    }
+
+    // ── T_RESOLVE_I: CR6 present, clistCount=0 in word2 → slotIdx 0 rejected ─
+    {
+        const { sim } = makeResolveSim();
+        // Encode clistCount=0 into word2 by packing with count=0
+        sim.cr[6].word2 = sim.packNSWord1(0, 0, 0, 0, 0);
+        const result = sim.resolvePendingSlot(0, NS_SLOT);
+
+        check('T_RESOLVE_I1: clistCount=0 causes slotIdx=0 to return ok=false',
+              result.ok === false);
+        check('T_RESOLVE_I2: error mentions "out of range" or "range"',
+              typeof result.error === 'string' &&
+              (result.error.toLowerCase().includes('range') ||
+               result.error.toLowerCase().includes('out')));
+        check('T_RESOLVE_I3: error reports clistCount as 0',
+              typeof result.error === 'string' &&
+              result.error.includes('0'));
+    }
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────
