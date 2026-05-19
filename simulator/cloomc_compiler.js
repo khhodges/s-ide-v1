@@ -746,13 +746,13 @@ class CLOOMCCompiler {
         const rom = {};
         const capNames = declaredCaps || [];
         for (let i = 0; i < capNames.length; i++) {
-            rom[(typeof capNames[i] === 'string' ? capNames[i] : capNames[i].name || '').toUpperCase()] = i + 1;
+            rom[(typeof capNames[i] === 'string' ? capNames[i] : capNames[i].name || '').toUpperCase()] = i;
         }
         if (uploadCaps && uploadCaps.length > 0) {
             for (let i = 0; i < uploadCaps.length; i++) {
                 const name = uploadCaps[i].name || uploadCaps[i].target;
                 if (typeof name === 'string') {
-                    rom[name.toUpperCase()] = i + 1;
+                    rom[name.toUpperCase()] = i;
                 }
             }
         }
@@ -1542,6 +1542,12 @@ class CLOOMCCompiler {
             code.push(this.encode(this.opcodes.BRANCH, this.conditions.AL, 0, 0, 0));
             labelRefs.push({ addr: branchAddr, label: gotoMatch[1], lineNum: stmt.lineNum, rawLine: stmt.rawLine });
             manifest.push({ src: stmt.lineNum, addr: branchAddr, desc: `goto ${gotoMatch[1]}` });
+            return;
+        }
+
+        if (text.match(/^halt$/i) || text.match(/^stop$/i)) {
+            code.push(0);
+            manifest.push({ src: stmt.lineNum, addr: code.length - 1, desc: 'HALT' });
             return;
         }
 
