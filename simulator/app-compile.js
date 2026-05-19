@@ -1432,8 +1432,15 @@ function _applySealedLumpState(absName) {
         editor.readOnly = true;
         editor.classList.add('cm-editor-sealed');
     }
-    const tabsRow = document.querySelector('.example-tabs-row');
-    if (tabsRow) tabsRow.style.display = 'none';
+    // Only hide example-tabs-row in Assembly mode — English / JS / Haskell /
+    // Lambda / Ada all use the same row for their own example selectors, and
+    // hiding it there would make every non-assembly example tab disappear.
+    const langSel = document.getElementById('langSelect');
+    const curLang = langSel ? langSel.value : 'assembly';
+    if (curLang === 'assembly') {
+        const tabsRow = document.querySelector('.example-tabs-row');
+        if (tabsRow) tabsRow.style.display = 'none';
+    }
     localStorage.setItem('cm_sealed_lump', JSON.stringify({ abstraction: absName || 'Unnamed', sealedAt: Date.now() }));
 }
 

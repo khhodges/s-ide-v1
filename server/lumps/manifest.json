@@ -2017,8 +2017,8 @@
     "cc": 0,
     "author": "",
     "version": "2026.05.19",
-    "lump_version": 3,
-    "compiled_at": 1779207354.5611417,
+    "lump_version": 4,
+    "compiled_at": 1779210075.2721748,
     "methods": [
       {
         "name": "Greet",
