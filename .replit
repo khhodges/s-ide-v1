@@ -103,6 +103,10 @@ args = "check-api-reference-stale"
 task = "workflow.run"
 args = "rci-threading-tests"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "pending-gt-tests"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -353,6 +357,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node simulator/test_rci_threading.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "pending-gt-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/test_lazy_resolve_pending.js"
 
 [workflows.workflow.metadata]
 outputType = "console"
