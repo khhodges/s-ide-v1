@@ -1,5 +1,21 @@
 var _crDetailHighlightPC = null;
 
+// _findSrcLump(slotIdx, slotLabel)
+// Primary:   fixed-slot match — lump manifest carries a non-null ns_slot equal to slotIdx.
+// Secondary: floating-lump match — ns_slot is null/undefined but the lump's abstraction
+//            name matches the live NS entry's label (set when the Loader dynamically places
+//            the lump into slotIdx at runtime).
+// Returns the matching lump cache entry, or null.
+function _findSrcLump(slotIdx, slotLabel) {
+    if (typeof _lumpsCache === 'undefined' || !Array.isArray(_lumpsCache)) return null;
+    const bySlot = _lumpsCache.find(l => l.ns_slot !== null && l.ns_slot !== undefined && parseInt(l.ns_slot) === slotIdx);
+    if (bySlot) return bySlot;
+    if (slotLabel) {
+        return _lumpsCache.find(l => (l.ns_slot === null || l.ns_slot === undefined) && l.abstraction === slotLabel) || null;
+    }
+    return null;
+}
+
 function _resolveCListPetName(gtWord) {
     if (!gtWord || gtWord === 0) return null;
     try {
@@ -796,9 +812,7 @@ function updateCRDetail() {
     {
         const _mfst = _lumpManifests[nsIdx];
         const _owAbs = sim.abstractionRegistry && sim.abstractionRegistry.getAbstraction && sim.abstractionRegistry.getAbstraction(nsIdx);
-        const _owSidecar = (typeof _lumpsCache !== 'undefined')
-            ? _lumpsCache.find(l => l.ns_slot !== null && l.ns_slot !== undefined && parseInt(l.ns_slot) === nsIdx)
-            : null;
+        const _owSidecar = _findSrcLump(nsIdx, _absName);
         html += '<div class="crd-lump-section">';
         html += '<div class="crd-lump-section-label">Ownership</div>';
         if (_mfst) {
@@ -2503,9 +2517,7 @@ function updateNamespace() {
         html += `<td style="${warmStyle}">${ver}</td>`;
         html += `<td style="${warmStyle}">0x${seal.toString(16).toUpperCase().padStart(4, '0')}</td>`;
         {
-            const _srcLump = (typeof _lumpsCache !== 'undefined' && Array.isArray(_lumpsCache))
-                ? _lumpsCache.find(l => l.ns_slot !== null && l.ns_slot !== undefined && parseInt(l.ns_slot) === i)
-                : null;
+            const _srcLump = _findSrcLump(i, e.label);
             const _srcToken = _srcLump ? _srcLump.token : null;
             if (codeNotResident) {
                 html += `<td class="ns-entry-actions"><span style="${warmStyle}">not resident</span></td>`;
@@ -2728,9 +2740,7 @@ function showNSEntryTooltip(evt, idx) {
     if (e.chainable) flags.push('<span class="ns-tt-flag">Chainable</span>');
     if (flags.length) html += `<div class="ns-tt-row" style="flex-wrap:wrap;gap:4px;"><b>Flags</b> ${flags.join(' ')}</div>`;
 
-    const _ttSrcLump = (typeof _lumpsCache !== 'undefined' && Array.isArray(_lumpsCache))
-        ? _lumpsCache.find(l => l.ns_slot !== null && l.ns_slot !== undefined && parseInt(l.ns_slot) === idx)
-        : null;
+    const _ttSrcLump = _findSrcLump(idx, e.label);
     const _ttSrcToken = _ttSrcLump ? _ttSrcLump.token : null;
     if (_ttSrcToken && !codeNotResident) {
         html += `<div style="margin-top:0.5rem;text-align:right;"><a href="#" style="color:#4ec9b0;font-size:0.72rem;text-decoration:none;" onclick="event.preventDefault();hideNSEntryTooltip();_openLumpSource('${_ttSrcToken}')">View Source \u2192</a></div>`;
