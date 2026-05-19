@@ -2045,5 +2045,27 @@
     "grants": [
       "E"
     ]
+  },
+  {
+    "token": "50789581",
+    "abstraction": "Keystone  (22 words, cc=2, 39 free)",
+    "ns_slot": null,
+    "lump_size": 64,
+    "cw": 22,
+    "cc": 0,
+    "author": "",
+    "version": "2026.05.19",
+    "lump_version": 1,
+    "compiled_at": 1779218046.6886916,
+    "methods": [
+      {
+        "name": "run",
+        "offset": 0,
+        "length": 22
+      }
+    ],
+    "grants": [
+      "E"
+    ]
   }
 ]
