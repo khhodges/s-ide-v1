@@ -2423,6 +2423,18 @@ function handleBootImageUpload(input) {
 function updateNamespace() {
     const container = document.getElementById('namespaceTable');
     if (!container) return;
+    // Lazily warm _lumpsCache so Source buttons appear even on first NS view load,
+    // before the user has visited the Repository view.
+    // The in-flight guard (window._lumpsCacheWarmPending) prevents repeated fetches
+    // when _lumpsCache is empty due to no lumps or a transient failure.
+    if ((typeof _lumpsCache === 'undefined' || !Array.isArray(_lumpsCache) || _lumpsCache.length === 0)
+            && !window._lumpsCacheWarmPending) {
+        window._lumpsCacheWarmPending = true;
+        fetch('/api/lumps/list').then(r => r.ok ? r.json() : null).then(lumps => {
+            window._lumpsCacheWarmPending = false;
+            if (lumps && lumps.length > 0) { _lumpsCache = lumps; updateNamespace(); }
+        }).catch(() => { window._lumpsCacheWarmPending = false; });
+    }
     let html = '<div class="ns-layout-header">NS_ENTRY_LAYOUT: 4 words per entry (128 bits; word3 reserved) \u2014 click a row to inspect memory</div>';
     html += '<table class="ns-table"><thead><tr>';
     html += '<th>Idx</th><th class="ns-label-col">Label</th>';
@@ -2484,10 +2496,19 @@ function updateNamespace() {
         html += `<td style="${warmStyle}">0x${lim.limit.toString(16).toUpperCase().padStart(5, '0')}</td>`;
         html += `<td style="${warmStyle}">${ver}</td>`;
         html += `<td style="${warmStyle}">0x${seal.toString(16).toUpperCase().padStart(4, '0')}</td>`;
-        if (codeNotResident) {
-            html += `<td class="ns-entry-actions"><span style="${warmStyle}">not resident</span></td>`;
-        } else {
-            html += `<td class="ns-entry-actions"><button class="btn btn-primary btn-xs" onclick="event.stopPropagation();exportEntryMemory(${i})">Export</button> <button class="btn btn-xs" onclick="event.stopPropagation();importEntryMemory(${i})" style="background:#3a86ff;color:#fff;border:none;">Import</button></td>`;
+        {
+            const _srcLump = (typeof _lumpsCache !== 'undefined' && Array.isArray(_lumpsCache))
+                ? _lumpsCache.find(l => l.ns_slot !== null && l.ns_slot !== undefined && parseInt(l.ns_slot) === i)
+                : null;
+            const _srcToken = _srcLump ? _srcLump.token : null;
+            if (codeNotResident) {
+                html += `<td class="ns-entry-actions"><span style="${warmStyle}">not resident</span></td>`;
+            } else {
+                const _srcBtn = _srcToken
+                    ? ` <button class="btn btn-xs" onclick="event.stopPropagation();_openLumpSource('${_srcToken}')" style="background:#2d4a3e;color:#4ec9b0;border:1px solid rgba(78,201,176,0.35);" title="Open source in Repository view">Source</button>`
+                    : '';
+                html += `<td class="ns-entry-actions"><button class="btn btn-primary btn-xs" onclick="event.stopPropagation();exportEntryMemory(${i})">Export</button> <button class="btn btn-xs" onclick="event.stopPropagation();importEntryMemory(${i})" style="background:#3a86ff;color:#fff;border:none;">Import</button>${_srcBtn}</td>`;
+            }
         }
         html += '</tr>';
         if (isExpanded) {
@@ -2547,6 +2568,15 @@ function updateNamespace() {
 // ── Memory dump view ──────────────────────────────────────────────────────────
 
 window.memoryViewAddr = 0;
+
+function _openLumpSource(token) {
+    // Pass a pending-token and pending-tab to renderLumps() via window properties.
+    // renderLumps() reads these after all auto-select logic runs, so the user's
+    // explicit slot click always wins over the live CR14 auto-select.
+    window._pendingLumpToken = token;
+    window._pendingLumpTab = 'clooms';
+    if (typeof switchView === 'function') switchView('lumps');
+}
 
 function jumpToMemory(addr) {
     if (isNaN(addr) || addr < 0) addr = 0;

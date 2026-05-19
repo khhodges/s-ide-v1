@@ -575,6 +575,20 @@ async function renderLumps() {
             }
         }
 
+        // Pending NS→Source navigation (_openLumpSource) — takes final priority so the
+        // live auto-select above cannot override the user's explicit slot click.
+        // _pendingLumpTab is only honoured when the token resolves successfully;
+        // a stale/missing token clears both to avoid applying a tab to the wrong lump.
+        if (window._pendingLumpToken) {
+            const _ptMatch = lumps.find(l => l.token === window._pendingLumpToken);
+            if (_ptMatch) {
+                _selectedLumpToken = _ptMatch.token;
+            } else {
+                window._pendingLumpTab = null;
+            }
+            window._pendingLumpToken = null;
+        }
+
         let html = '';
         if (!lumps || lumps.length === 0) {
             html = '<div class="lumps-placeholder">No lumps saved yet. Use Build LUMP in the editor to compile and save an abstraction.</div>';
@@ -614,6 +628,13 @@ async function renderLumps() {
             // Always re-render the detail panel so compress/POLA/save changes
             // (lump_size, cc, etc.) are reflected without a manual click.
             showLumpDetail(_selectedLumpToken);
+        }
+        // If a pending tab was requested (e.g. from _openLumpSource), apply it now
+        // after showLumpDetail has built the tab panels.
+        if (window._pendingLumpTab) {
+            const _ptk = (_selectedLumpToken || '').replace(/[^a-z0-9]/gi, '');
+            if (typeof _switchLumpTab === 'function') _switchLumpTab(_ptk, window._pendingLumpTab);
+            window._pendingLumpTab = null;
         }
         updateLiveLumpBanner();
     } catch (err) {
