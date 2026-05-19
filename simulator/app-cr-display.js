@@ -1305,6 +1305,13 @@ function editCRCodeInEditor() {
     const asmEd = document.getElementById('asmEditor');
     if (asmEd) {
         asmEd.value = lines.join('\n');
+        // Title must match the code module name — look up the abstraction for this NS slot.
+        if (typeof _updateEditorCodeName === 'function') {
+            const _crLumpMeta = (typeof _lumpsCache !== 'undefined' && Array.isArray(_lumpsCache))
+                ? _lumpsCache.find(l => l.ns_slot !== null && l.ns_slot !== undefined && parseInt(l.ns_slot) === nsIdx)
+                : null;
+            _updateEditorCodeName(_crLumpMeta ? (_crLumpMeta.abstraction || `CR${crIdx}`) : `CR${crIdx}`);
+        }
         if (!asmEd._mtbfListenerAttached) {
             asmEd.addEventListener('input', function() {
                 if (_simRunHash && _currentEditorHash() !== _simRunHash) {

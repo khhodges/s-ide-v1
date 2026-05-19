@@ -3097,6 +3097,7 @@ def save_lump():
     # than silently skipping the archive step.
     import re as _re_arch
     _arch_ver = None
+    _is_forked_save = False
     if os.path.isfile(lump_path):
         _existing_sc_path = os.path.join(lumps_dir, f'{token8}.json')
         _arch_sc = {}
@@ -3111,42 +3112,50 @@ def save_lump():
                 # manifest/disk-scan fallback still runs.
             except Exception:
                 pass
-        if _arch_ver is None:
-            _man_path = os.path.join(lumps_dir, 'manifest.json')
-            if os.path.isfile(_man_path):
-                try:
-                    with open(_man_path, 'r') as _mfh:
-                        _man_tmp = json.load(_mfh)
-                    for _me in _man_tmp:
-                        if _me.get('token') == token8:
-                            _arch_ver = int(_me.get('lump_version', 0))
-                            if not _arch_sc:
-                                _arch_sc = dict(_me)
-                            break
-                except Exception:
-                    pass
-        if _arch_ver is None:
-            # Last resort: scan existing -v*.lump files to pick the NEXT unused version.
-            # Using max+1 (not max) ensures we never overwrite an existing archive.
-            _arch_pat = _re_arch.compile(rf'^{_re_arch.escape(token8)}-v(\d+)\.lump$')
-            _existing_vers = [
-                int(_m.group(1))
-                for _fn in os.listdir(lumps_dir)
-                for _m in [_arch_pat.match(_fn)] if _m
-            ]
-            _arch_ver = (max(_existing_vers) + 1) if _existing_vers else 0
-            logging.warning(
-                '[lumps] %s: sidecar and manifest unreadable; deriving archive version from disk (%d)',
-                token8, _arch_ver
-            )
-        import shutil as _shutil
-        _arch_lump = os.path.join(lumps_dir, f'{token8}-v{_arch_ver}.lump')
-        _arch_json = os.path.join(lumps_dir, f'{token8}-v{_arch_ver}.json')
-        _shutil.copy2(lump_path, _arch_lump)
-        _arch_sc['archived_version'] = _arch_ver
-        with open(_arch_json, 'w') as _afh:
-            json.dump(_arch_sc, _afh, indent=2)
-        print(f'[lumps] Archived {token8}.lump → {token8}-v{_arch_ver}.lump', flush=True)
+        if _arch_sc.get('forked'):
+            # fork-version already archived the old binary as v<N> and
+            # wrote lump_version=N+1 to the sidecar.  The new compiled
+            # binary IS v<N+1> — do not re-archive or the sequence skips.
+            _is_forked_save = True
+            print(f'[lumps] Forked compile: skipping re-archive for {token8}'
+                  f' (already archived by fork-version)', flush=True)
+        else:
+            if _arch_ver is None:
+                _man_path = os.path.join(lumps_dir, 'manifest.json')
+                if os.path.isfile(_man_path):
+                    try:
+                        with open(_man_path, 'r') as _mfh:
+                            _man_tmp = json.load(_mfh)
+                        for _me in _man_tmp:
+                            if _me.get('token') == token8:
+                                _arch_ver = int(_me.get('lump_version', 0))
+                                if not _arch_sc:
+                                    _arch_sc = dict(_me)
+                                break
+                    except Exception:
+                        pass
+            if _arch_ver is None:
+                # Last resort: scan existing -v*.lump files to pick the NEXT unused version.
+                # Using max+1 (not max) ensures we never overwrite an existing archive.
+                _arch_pat = _re_arch.compile(rf'^{_re_arch.escape(token8)}-v(\d+)\.lump$')
+                _existing_vers = [
+                    int(_m.group(1))
+                    for _fn in os.listdir(lumps_dir)
+                    for _m in [_arch_pat.match(_fn)] if _m
+                ]
+                _arch_ver = (max(_existing_vers) + 1) if _existing_vers else 0
+                logging.warning(
+                    '[lumps] %s: sidecar and manifest unreadable; deriving archive version from disk (%d)',
+                    token8, _arch_ver
+                )
+            import shutil as _shutil
+            _arch_lump = os.path.join(lumps_dir, f'{token8}-v{_arch_ver}.lump')
+            _arch_json = os.path.join(lumps_dir, f'{token8}-v{_arch_ver}.json')
+            _shutil.copy2(lump_path, _arch_lump)
+            _arch_sc['archived_version'] = _arch_ver
+            with open(_arch_json, 'w') as _afh:
+                json.dump(_arch_sc, _afh, indent=2)
+            print(f'[lumps] Archived {token8}.lump → {token8}-v{_arch_ver}.lump', flush=True)
 
         # ── Prune oldest archives beyond LUMP_MAX_ARCHIVE_VERSIONS ────────────
         _prune_pat = _re_arch.compile(rf'^{_re_arch.escape(token8)}-v(\d+)\.lump$')
@@ -3228,7 +3237,12 @@ def save_lump():
     # Derive next_lump_version from the archive step when possible, so repeated
     # saves of the same token monotonically increment (v1, v2, v3 …).
     # Fallback: scan remaining manifest entries for any same-abstraction version.
-    if _arch_ver is not None:
+    # Special case: when compiling after a fork, fork-version already set
+    # lump_version=N+1 in the sidecar and archived the old binary as v<N>.
+    # The new binary IS v<N+1> — use _arch_ver directly, not _arch_ver+1.
+    if _is_forked_save and _arch_ver is not None:
+        next_lump_version = _arch_ver
+    elif _arch_ver is not None:
         next_lump_version = _arch_ver + 1
     else:
         existing_versions_for_abs = [
@@ -3425,6 +3439,80 @@ def get_lump_history(token):
         entries.append(entry)
     entries.sort(key=lambda e: e["version"], reverse=True)
     return jsonify({"token": key8, "history": entries})
+
+
+@app.route("/api/lump/<token>/fork-version", methods=["POST"])
+def lump_fork_version(token):
+    """Fork a sealed LUMP: archive the current compiled binary as v<N> so it is
+    visible in the History tab, then return new_version=N+1 to the browser.
+
+    The live binary (<token>.lump) is NOT replaced — the next compile-and-save
+    will write v<N+1>.  This is the analogue of the archive-on-save step in
+    /api/lumps/save but without actually writing a new binary.
+
+    Response: { ok: true, new_version: N+1, prev_version: N }
+    """
+    import re as _re_fv
+    raw = token.lower()
+    key8 = (raw[:8] if len(raw) >= 8 else raw).zfill(8)
+    if not _re_fv.fullmatch(r'[0-9a-f]{8}', key8):
+        return jsonify({"error": "Invalid token"}), 400
+
+    lumps_dir = os.path.join(os.path.dirname(__file__), 'lumps')
+    lump_path = os.path.join(lumps_dir, f'{key8}.lump')
+    if not os.path.isfile(lump_path):
+        return jsonify({"error": "No compiled binary for this token — cannot fork"}), 404
+
+    sc_path = os.path.join(lumps_dir, f'{key8}.json')
+    sc = {}
+    if os.path.isfile(sc_path):
+        try:
+            with open(sc_path, 'r') as fh:
+                sc = json.load(fh)
+        except Exception:
+            pass
+
+    cur_version = sc.get('lump_version')
+    if cur_version is None:
+        _arch_pat = _re_fv.compile(rf'^{_re_fv.escape(key8)}-v(\d+)\.lump$')
+        _existing = [
+            int(m.group(1))
+            for fn in (os.listdir(lumps_dir) if os.path.isdir(lumps_dir) else [])
+            for m in [_arch_pat.match(fn)] if m
+        ]
+        cur_version = (max(_existing) + 1) if _existing else 0
+    else:
+        cur_version = int(cur_version)
+
+    # If already forked (sidecar has forked=True and no new compiled_at set),
+    # re-forking would overwrite the archive. Idempotently return current state.
+    # Note: when forked=True, cur_version is already N+1 (fork wrote it), so
+    # new_version = cur_version (not cur_version+1) to avoid a double-increment.
+    if sc.get('forked'):
+        return jsonify({"ok": True, "new_version": cur_version, "prev_version": cur_version - 1, "already_forked": True})
+
+    import shutil as _shutil_fv
+    arch_lump = os.path.join(lumps_dir, f'{key8}-v{cur_version}.lump')
+    arch_json = os.path.join(lumps_dir, f'{key8}-v{cur_version}.json')
+    _shutil_fv.copy2(lump_path, arch_lump)
+    arch_sc = dict(sc)
+    arch_sc['archived_version'] = cur_version
+    with open(arch_json, 'w') as fh:
+        json.dump(arch_sc, fh, indent=2)
+
+    # Persist the forked state to the live sidecar so that:
+    # 1) Reloading the page won't trigger another fork on the same binary.
+    # 2) _lumpIsSealed() (client) sees forked=True and skips re-fork.
+    # 3) lump_version is incremented server-side; save detects forked=True
+    #    and uses this value directly (not +1) so the new binary lands at N+1.
+    # The next compile-and-save rewrites the sidecar completely, clearing forked.
+    sc['forked'] = True
+    sc['lump_version'] = cur_version + 1
+    with open(sc_path, 'w') as fh:
+        json.dump(sc, fh, indent=2)
+
+    logging.info('[lumps] Fork: archived %s.lump → %s-v%d.lump (sidecar forked=True written)', key8, key8, cur_version)
+    return jsonify({"ok": True, "new_version": cur_version + 1, "prev_version": cur_version})
 
 
 @app.route("/api/lumps/<token>/words/<int:version>")

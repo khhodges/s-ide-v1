@@ -595,6 +595,18 @@
     background: #0b0b18;
 }
 
+.lump-fork-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 5px 14px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #f9a825;
+    background: rgba(249, 168, 37, 0.08);
+    border-bottom: 1px solid rgba(249, 168, 37, 0.2);
+}
+
 .lump-source-status {
     padding: 5px 14px;
     font-size: 0.72rem;
@@ -772,6 +784,12 @@
     color: var(--text-primary, #e0e0f0);
     white-space: nowrap;
 }
+.lump-version-badge {
+    background: rgba(251, 191, 36, 0.12);
+    border-color: rgba(251, 191, 36, 0.28);
+    color: #fbbf24;
+}
+
 .lump-hs-label {
     font-size: 0.6rem;
     font-family: inherit;

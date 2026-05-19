@@ -1828,6 +1828,11 @@ function loadCLOOMCExample(name) {
                     t.classList.toggle('active',
                         de === name || de === 'cloomc_' + name);
                 });
+                // Title must always follow the active tab label without exception.
+                if (typeof _updateEditorCodeName === 'function') {
+                    const _activeBtn = document.querySelector('.example-tab.active');
+                    _updateEditorCodeName(_activeBtn ? _activeBtn.textContent.trim() : name);
+                }
                 // Set the correct language for this file
                 const sel = document.getElementById('langSelector');
                 const fileLang = fileLanguages[name] || 'javascript';
@@ -3961,6 +3966,11 @@ abstraction DMABuffer {
     document.querySelectorAll('.example-tab').forEach(t => {
         t.classList.toggle('active', t.dataset.example === 'cloomc_' + name);
     });
+    // Title must always follow the active tab label without exception.
+    if (typeof _updateEditorCodeName === 'function') {
+        const _activeBtn = document.querySelector('.example-tab.active');
+        _updateEditorCodeName(_activeBtn ? _activeBtn.textContent.trim() : name);
+    }
 
     const sel = document.getElementById('langSelector');
     if (sel) {

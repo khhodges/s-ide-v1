@@ -37,6 +37,11 @@ function showLumpDetail(token) {
     _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">Token</span>0x${_e(lump.token || '')}</span>`;
     if (lump.ns_slot !== null && lump.ns_slot !== undefined)
         _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">NS</span>${parseInt(lump.ns_slot)}</span>`;
+    {
+        const _verNum = lump.lump_version != null ? parseInt(lump.lump_version) : null;
+        if (_verNum != null)
+            _headerStrip += `<span class="lump-hs-chip lump-version-badge" id="lumpVersionBadge_${_tk}"><span class="lump-hs-label">Ver</span>v${_verNum}</span>`;
+    }
     if (lump.lump_size)
         _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">Size</span>${parseInt(lump.lump_size)}w</span>`;
     if (lump.cw !== undefined && lump.cw !== null)
@@ -832,6 +837,15 @@ function _isRawISASource(src) {
     return hasRawAnnotation || hasRawMarker || hasMacroPattern || hasHexOpcodes || hasISAInstructions;
 }
 
+function _lumpIsSealed(lump) {
+    // A lump is sealed when it has a compiled binary on the server.
+    // Prefer lump_version as the canonical indicator (set by the save path alongside
+    // writing the binary). Fall back to compiled_at for legacy/imported lumps that
+    // pre-date lump_version tracking. Either field present → binary exists.
+    return !!(lump && lump.token && !lump.forked &&
+              (lump.lump_version != null || lump.compiled_at != null));
+}
+
 async function _populateLumpSourceTab(lump, targetId) {
     const el = document.getElementById(targetId || 'lumpWsSourceContent');
     if (!el) return;
@@ -887,9 +901,65 @@ async function _populateLumpSourceTab(lump, targetId) {
             html += `</div></div>`;
             html += `<button class="lump-source-btn" onclick="_lumpSourceCompile()" title="Compile \u2014 Compile source and update Binary tab">&#9654; Compile</button>`;
             html += '</div>';
+            html += `<div class="lump-fork-banner" id="lumpForkBanner" style="display:none"></div>`;
             html += `<textarea class="lump-source-textarea" id="lumpSourceEditor" spellcheck="false" autocorrect="off" autocapitalize="off">${e(src)}</textarea>`;
             html += `<div class="lump-source-status" id="lumpSourceStatus"></div>`;
             el.innerHTML = html;
+            const _textarea = el.querySelector('#lumpSourceEditor');
+            const _banner   = el.querySelector('#lumpForkBanner');
+            if (lump.forked && lump.lump_version != null) {
+                // Already forked (tab reopened in-session, or page reloaded with forked sidecar).
+                // Show the banner immediately — no keystroke required.
+                if (_banner) {
+                    const _prevVer = lump.lump_version - 1;
+                    _banner.style.display = '';
+                    _banner.textContent = `Editing v${lump.lump_version} \u2014 v${_prevVer} compiled binary preserved in Versions tab`;
+                }
+                const _tk = (lump.token || '').replace(/[^a-z0-9]/gi, '');
+                const _badge = document.getElementById(`lumpVersionBadge_${_tk}`);
+                if (_badge) _badge.innerHTML = `<span class="lump-hs-label">Ver</span>v${lump.lump_version}`;
+            } else if (_lumpIsSealed(lump)) {
+                // Sealed and not yet forked — arm the one-shot first-edit listener.
+                if (_textarea && _banner) {
+                    let _forked = false;
+                    const _onFirstEdit = async () => {
+                        if (_forked) return;
+                        _forked = true;
+                        // Defer listener removal until after a successful fork so that
+                        // a transient network failure does not permanently disable forking.
+                        try {
+                            const _resp = await fetch(`/api/lump/${lump.token}/fork-version`, { method: 'POST' });
+                            const _fd = await _resp.json();
+                            if (!_fd.ok) throw new Error(_fd.error || 'fork failed');
+                            // Success — remove listener now that fork is committed.
+                            _textarea.removeEventListener('input', _onFirstEdit);
+                            const _newVer = _fd.new_version;
+                            const _prevVer = _fd.prev_version;
+                            _banner.style.display = '';
+                            _banner.textContent = `Editing v${_newVer} \u2014 v${_prevVer} compiled binary preserved in Versions tab`;
+                            const _tk = (lump.token || '').replace(/[^a-z0-9]/gi, '');
+                            const _badge = document.getElementById(`lumpVersionBadge_${_tk}`);
+                            if (_badge) _badge.innerHTML = `<span class="lump-hs-label">Ver</span>v${_newVer}`;
+                            // Update both the local reference and the cache entry so that
+                            // (a) _lumpIsSealed returns false, preventing re-fork on tab reopen,
+                            // (b) the already-forked branch shows the banner correctly on reopen.
+                            lump.forked = true;
+                            lump.lump_version = _newVer;
+                            const _lumpIdx = _lumpsCache.findIndex(l => l.token === lump.token);
+                            if (_lumpIdx !== -1) {
+                                _lumpsCache[_lumpIdx].forked = true;
+                                _lumpsCache[_lumpIdx].lump_version = _newVer;
+                            }
+                            delete _lumpVersionsLoaded[_tk];
+                        } catch (_err) {
+                            // Network/server failure — reset so the next keystroke retries.
+                            _forked = false;
+                            console.warn('[lump fork] fork-version failed, will retry on next edit:', _err);
+                        }
+                    };
+                    _textarea.addEventListener('input', _onFirstEdit);
+                }
+            }
         } else {
             _showBinaryOnly('was compiled from RAW ISA or assembly and has no CLOOMC++ pet-name source on file. The Binary tab shows the compiled form.');
         }
@@ -988,6 +1058,8 @@ function _lumpSourceCompile() {
         }
 
         if (status) { status.textContent = 'Compiled \u2014 Binary tab updated.'; status.className = 'lump-source-status ok'; }
+        const _forkBanner = document.getElementById('lumpForkBanner');
+        if (_forkBanner) _forkBanner.style.display = 'none';
         _lumpSourceShowCompiledBinary(result, null);
         switchLumpWsTab('binary');
 
@@ -3481,6 +3553,8 @@ async function openLumpInEditor(token) {
                           '\n; Boot the machine to edit live code\n';
         }
         if (typeof updateLineNumbers === 'function') updateLineNumbers();
+        // Title must always follow the code module name without exception.
+        if (typeof _updateEditorCodeName === 'function') _updateEditorCodeName(lumpName);
     }
 
     if (typeof _updateEditorPatchBar   === 'function') _updateEditorPatchBar();
