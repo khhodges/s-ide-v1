@@ -293,7 +293,7 @@ function _showAsmErrors(errors, titleOverride) {
                   + '</span>';
         }
         if (sugg) {
-            var absMatch = e.message.match(/on ['"]([^'"]+)['"]/i);
+            var absMatch = e.message.match(/(?:on|for) ['"]([^'"]+)['"]/i);
             var absName = absMatch ? absMatch[1] : null;
             var pickBtn = '';
             if (absName && typeof apiLookupByName !== 'undefined' && apiLookupByName(absName)) {
