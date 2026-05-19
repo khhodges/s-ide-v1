@@ -2722,6 +2722,14 @@ function showNSEntryTooltip(evt, idx) {
     if (e.chainable) flags.push('<span class="ns-tt-flag">Chainable</span>');
     if (flags.length) html += `<div class="ns-tt-row" style="flex-wrap:wrap;gap:4px;"><b>Flags</b> ${flags.join(' ')}</div>`;
 
+    const _ttSrcLump = (typeof _lumpsCache !== 'undefined' && Array.isArray(_lumpsCache))
+        ? _lumpsCache.find(l => l.ns_slot !== null && l.ns_slot !== undefined && parseInt(l.ns_slot) === idx)
+        : null;
+    const _ttSrcToken = _ttSrcLump ? _ttSrcLump.token : null;
+    if (_ttSrcToken && !codeNotResident) {
+        html += `<div style="margin-top:0.5rem;text-align:right;"><a href="#" style="color:#4ec9b0;font-size:0.72rem;text-decoration:none;" onclick="event.preventDefault();hideNSEntryTooltip();_openLumpSource('${_ttSrcToken}')">View Source \u2192</a></div>`;
+    }
+
     tt.innerHTML = html;
     tt.classList.add('visible');
     // Anchor to the left edge of the 3rd column (W0: Location) of the hovered row
