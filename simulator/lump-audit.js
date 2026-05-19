@@ -42,15 +42,15 @@ function lumpAudit(words, manifest, lineNums) {
         results.push({
             ruleId: 'R1',
             severity: 'pass',
-            message: 'Magic OK',
-            detail: `bits[31:27] = 0x${magic.toString(16).toUpperCase()} \u2713`,
+            message: 'Format recognised \u2014 valid Church Machine file header \u2713',
+            detail: `Header identifier 0x${magic.toString(16).toUpperCase()} matches the Church Machine format \u2713`,
         });
     } else {
         results.push({
             ruleId: 'R1',
             severity: 'error',
-            message: 'Bad magic',
-            detail: `bits[31:27] = 0x${magic.toString(16).toUpperCase()}, expected 0x1F — repack the binary with a correct header word.`,
+            message: 'Unrecognised file \u2014 this doesn\u2019t look like a Church Machine lump. Try re-exporting from the editor.',
+            detail: `Header identifier is 0x${magic.toString(16).toUpperCase()} but a Church Machine lump must start with 0x1F. The file may be corrupt or the wrong format.`,
         });
     }
 
@@ -59,15 +59,15 @@ function lumpAudit(words, manifest, lineNums) {
         results.push({
             ruleId: 'R2',
             severity: 'pass',
-            message: 'Size match',
-            detail: `${actualWords} words == declared lump_size ${lumpSize} \u2713`,
+            message: 'File size correct \u2713',
+            detail: `File contains ${actualWords} words, matching the declared size \u2713`,
         });
     } else {
         results.push({
             ruleId: 'R2',
             severity: 'error',
-            message: 'Size mismatch',
-            detail: `Binary has ${actualWords} words but header declares lump_size=${lumpSize} (n_m6=${nMinus6} \u2192 2^${nMinus6 + 6}).`,
+            message: `File size wrong \u2014 expected ${lumpSize} words but found ${actualWords}. Re-export the lump.`,
+            detail: `The file has ${actualWords} words but the header says it should be ${lumpSize} words. Re-export the lump from the editor.`,
         });
     }
 
@@ -75,15 +75,15 @@ function lumpAudit(words, manifest, lineNums) {
         results.push({
             ruleId: 'RB1',
             severity: 'pass',
-            message: 'cw \u2265 1',
-            detail: `cw=${cw} — at least one code word \u2713`,
+            message: `Has code \u2014 contains ${cw} code word${cw !== 1 ? 's' : ''} \u2713`,
+            detail: `${cw} code word${cw !== 1 ? 's' : ''} found in the file \u2713`,
         });
     } else {
         results.push({
             ruleId: 'RB1',
             severity: 'error',
-            message: 'cw = 0',
-            detail: 'cw must be \u2265 1 — the lump must contain at least one code word.',
+            message: 'No code found \u2014 a valid lump needs at least one code word.',
+            detail: 'The code word count is zero. Every Church Machine lump must contain at least one instruction.',
         });
     }
 
@@ -92,15 +92,15 @@ function lumpAudit(words, manifest, lineNums) {
         results.push({
             ruleId: 'RB2',
             severity: 'pass',
-            message: 'Bounds OK',
-            detail: `1 + cw(${cw}) + cc(${cc}) = ${contentWords} \u2264 lump_size=${lumpSize} \u2713`,
+            message: 'Layout fits \u2014 header + code + capability list all fit within the file \u2713',
+            detail: `1 header + ${cw} code word${cw !== 1 ? 's' : ''} + ${cc} capability slot${cc !== 1 ? 's' : ''} = ${contentWords} words, within the ${lumpSize}-word file \u2713`,
         });
     } else {
         results.push({
             ruleId: 'RB2',
             severity: 'error',
-            message: 'Header bounds overflow',
-            detail: `1 + cw(${cw}) + cc(${cc}) = ${contentWords} exceeds lump_size=${lumpSize} — cw or cc is too large for this lump size.`,
+            message: 'Layout too big \u2014 the declared sizes don\u2019t fit within the file. The lump may be corrupted.',
+            detail: `1 header + ${cw} code word${cw !== 1 ? 's' : ''} + ${cc} capability slot${cc !== 1 ? 's' : ''} = ${contentWords} words, but the file is only ${lumpSize} words. Re-export the lump.`,
         });
     }
 
@@ -113,8 +113,8 @@ function lumpAudit(words, manifest, lineNums) {
             results.push({
                 ruleId: 'RFS',
                 severity: 'pass',
-                message: 'Freespace (none)',
-                detail: 'No freespace zone — lump is fully packed \u2713',
+                message: 'No padding \u2014 lump is fully packed \u2713',
+                detail: 'No padding zone \u2014 lump is fully packed \u2713',
             });
         } else {
             let dirtyWords = 0;
@@ -133,15 +133,15 @@ function lumpAudit(words, manifest, lineNums) {
                 results.push({
                     ruleId: 'RFS',
                     severity: 'pass',
-                    message: 'Freespace clean',
-                    detail: `${fsCount} freespace word${fsCount !== 1 ? 's' : ''} (words[${fsStart}\u2013${fsEnd - 1}]) are all zero \u2713`,
+                    message: 'Padding is zeroed \u2713',
+                    detail: `${fsCount} padding word${fsCount !== 1 ? 's' : ''} are all zero \u2713`,
                 });
             } else {
                 results.push({
                     ruleId: 'RFS',
                     severity: 'warn',
-                    message: 'Dirty freespace',
-                    detail: `${dirtyWords} non-zero word${dirtyWords !== 1 ? 's' : ''} in freespace zone (first at word[${firstDirtyIdx}] = 0x${firstDirtyVal.toString(16).toUpperCase().padStart(8, '0')}).`,
+                    message: `Non-zero padding \u2014 ${dirtyWords} unexpected word${dirtyWords !== 1 ? 's' : ''} found in the padding area.`,
+                    detail: `${dirtyWords} non-zero word${dirtyWords !== 1 ? 's' : ''} in the padding area (first at position ${firstDirtyIdx}: 0x${firstDirtyVal.toString(16).toUpperCase().padStart(8, '0')}).`,
                 });
             }
         }
@@ -149,8 +149,8 @@ function lumpAudit(words, manifest, lineNums) {
         results.push({
             ruleId: 'RFS',
             severity: 'warn',
-            message: 'Freespace skipped',
-            detail: 'Freespace check skipped — fix size/bounds errors above first.',
+            message: 'Padding check skipped \u2014 fix size/bounds errors above first.',
+            detail: 'Cannot check padding until the file size and layout errors above are resolved.',
         });
     }
 
@@ -161,27 +161,27 @@ function lumpAudit(words, manifest, lineNums) {
         if (manifest.cw !== undefined && manifest.cw !== null) {
             const mCw = parseInt(manifest.cw);
             if (mCw === cw) {
-                checks.push(`cw: ${cw} \u2713`);
+                checks.push(`code words: ${cw} \u2713`);
             } else {
-                checks.push(`cw: manifest=${mCw} \u2260 binary=${cw}`);
+                checks.push(`code words: record says ${mCw} but file has ${cw}`);
                 mCoherent = false;
             }
         }
         if (manifest.cc !== undefined && manifest.cc !== null) {
             const mCc = parseInt(manifest.cc);
             if (mCc === cc) {
-                checks.push(`cc: ${cc} \u2713`);
+                checks.push(`capability count: ${cc} \u2713`);
             } else {
-                checks.push(`cc: manifest=${mCc} \u2260 binary=${cc}`);
+                checks.push(`capability count: record says ${mCc} but file has ${cc}`);
                 mCoherent = false;
             }
         }
         if (manifest.lump_size !== undefined && manifest.lump_size !== null) {
             const mSz = parseInt(manifest.lump_size);
             if (mSz === lumpSize) {
-                checks.push(`lump_size: ${lumpSize} \u2713`);
+                checks.push(`file size: ${lumpSize} words \u2713`);
             } else {
-                checks.push(`lump_size: manifest=${mSz} \u2260 binary=${lumpSize}`);
+                checks.push(`file size: record says ${mSz} words but file is ${lumpSize} words`);
                 mCoherent = false;
             }
         }
@@ -190,22 +190,22 @@ function lumpAudit(words, manifest, lineNums) {
             results.push({
                 ruleId: 'RMC',
                 severity: 'pass',
-                message: 'Manifest present',
-                detail: 'Manifest has no cw/cc/lump_size fields to compare.',
+                message: 'Repository record found (no size fields to compare).',
+                detail: 'A repository record exists but contains no code word count, capability count, or file size to verify against.',
             });
         } else if (mCoherent) {
             results.push({
                 ruleId: 'RMC',
                 severity: 'pass',
-                message: 'Manifest coherent',
-                detail: checks.join(', '),
+                message: 'Repository record matches \u2713',
+                detail: 'Code words, capability count, and file size all agree: ' + checks.join(', '),
             });
         } else {
             results.push({
                 ruleId: 'RMC',
                 severity: 'error',
-                message: 'Manifest mismatch',
-                detail: checks.join(', ') + ' — update the manifest or re-assemble.',
+                message: 'Repository record mismatch \u2014 re-compile the lump or update the record.',
+                detail: checks.join(', ') + ' \u2014 update the repository record or re-assemble the lump.',
             });
         }
     }
@@ -248,10 +248,13 @@ function lumpAudit(words, manifest, lineNums) {
             // Slot-bounds check only applies when the LUMP has its own c-list.
             // cc=0 means ambient-boot-c-list — slots are resolved at load time.
             if (_rciChurchOps.has(op) && crSrc === 6 && cc > 0 && (slot === 0 || slot > cc)) {
-                const _rciMsg = `word[${wi}] ${_rciOpName[op]}: c-list slot ${slot} out of range` +
-                    ` (cc=${cc}${_rciSlotHint})`;
+                const _slotNameHint = _rciPetNames[String(slot - 1)]
+                    ? ` ("\u2026${_rciPetNames[String(slot - 1)]}\u2026" is not in this lump\u2019s capability list)`
+                    : '';
+                const _rciMsg = `Instruction ${wi} (${_rciOpName[op]}) tries to access capability slot ${slot}` +
+                    `, but this lump only has ${cc} capability slot${cc !== 1 ? 's' : ''}${_slotNameHint}.`;
                 const _rciSrcLine = lineNums && lineNums[wi] != null ? lineNums[wi] : null;
-                _rciViolations.push({ msg: _rciMsg, sourceLine: _rciSrcLine });
+                _rciViolations.push({ msg: _rciMsg, sourceLine: _rciSrcLine, slot });
             }
 
             if (op === _rciBranchOp) {
@@ -259,8 +262,8 @@ function lumpAudit(words, manifest, lineNums) {
                 if (off & 0x4000) off = off - 0x8000;   // sign-extend 15-bit
                 const target = codeIdx + off;
                 if (target < 0 || target >= cw) {
-                    const _branchMsg = `word[${wi}] BRANCH: offset ${off} \u2192 target code[${target}] ` +
-                        `out of range [0\u2013${cw - 1}]`;
+                    const _branchMsg = `Instruction ${wi} (BRANCH) jumps to position ${target}, ` +
+                        `which is outside the code section (valid range: 0 to ${cw - 1}).`;
                     const _branchSrcLine = lineNums && lineNums[wi] != null ? lineNums[wi] : null;
                     _rciViolations.push({ msg: _branchMsg, sourceLine: _branchSrcLine });
                 }
@@ -269,20 +272,29 @@ function lumpAudit(words, manifest, lineNums) {
 
         if (_rciViolations.length === 0) {
             const _rciDetail = cc === 0
-                ? `All ${cw} code word${cw !== 1 ? 's' : ''} checked \u2014 cc=0 (ambient c-list; slot bounds not enforced) \u2713`
-                : `All ${cw} code word${cw !== 1 ? 's' : ''} checked \u2014 no range violations \u2713`;
+                ? `All ${cw} instruction${cw !== 1 ? 's' : ''} checked \u2014 no private capability list (ambient slots used at runtime) \u2713`
+                : `All ${cw} instruction${cw !== 1 ? 's' : ''} checked \u2014 all capability slot accesses are in range \u2713`;
             results.push({
                 ruleId: 'RCI',
                 severity: 'pass',
-                message: 'Church instructions in range',
+                message: 'Capability slots in range \u2014 all accesses within allocated slots \u2713',
                 detail: _rciDetail,
             });
         } else {
+            const _badSlots = [...new Set(_rciViolations.filter(v => v.slot != null).map(v => v.slot))].sort((a, b) => a - b);
+            const _hasBranchOnly = _badSlots.length === 0;
+            let _rciErrMsg;
+            if (_hasBranchOnly) {
+                _rciErrMsg = `Instruction jump out of range \u2014 ${_rciViolations.length} jump${_rciViolations.length !== 1 ? 's' : ''} land${_rciViolations.length === 1 ? 's' : ''} outside the code section.`;
+            } else {
+                const _slotList = ` \u2014 slot${_badSlots.length !== 1 ? 's' : ''} [${_badSlots.join(', ')}] accessed but this lump only allocates ${cc} slot${cc !== 1 ? 's' : ''}`;
+                _rciErrMsg = `Capability slot out of range${_slotList}.`;
+            }
             results.push({
                 ruleId: 'RCI',
                 severity: 'error',
-                message: `${_rciViolations.length} range violation${_rciViolations.length !== 1 ? 's' : ''}`,
-                detail: _rciViolations.map(v => v.msg).join('; '),
+                message: _rciErrMsg,
+                detail: _rciViolations.map(v => v.msg).join(' '),
                 violations: _rciViolations,
             });
         }
@@ -290,8 +302,8 @@ function lumpAudit(words, manifest, lineNums) {
         results.push({
             ruleId: 'RCI',
             severity: 'warn',
-            message: 'Church instruction check skipped',
-            detail: 'Fix size or bounds errors above first.',
+            message: 'Capability slot check skipped \u2014 fix size or bounds errors above first.',
+            detail: 'Cannot check capability slot ranges until the file size and layout errors above are resolved.',
         });
     }
 
@@ -313,9 +325,8 @@ function lumpAudit(words, manifest, lineNums) {
             results.push({
                 ruleId: 'RPN',
                 severity: 'warn',
-                message: 'Pet names not verifiable',
-                detail: `cc=${cc} but no pet_names or capabilities in manifest \u2014 ` +
-                        'pass the full sidecar to verify pet name coverage.',
+                message: `Capability names not checked \u2014 this lump uses ${cc} capability slot${cc !== 1 ? 's' : ''} but the repository record doesn\u2019t say what they are. Add capability names to enable this check.`,
+                detail: `${cc} capability slot${cc !== 1 ? 's' : ''} allocated but the repository record has no capability names. Add capability names to the record to enable this check.`,
             });
         } else {
             // Build slot → best name map from manifest sources.
@@ -356,17 +367,15 @@ function lumpAudit(words, manifest, lineNums) {
                 results.push({
                     ruleId: 'RPN',
                     severity: 'warn',
-                    message: `${refs.length} unnamed slot${refs.length !== 1 ? 's' : ''} in Church instructions`,
-                    detail: `Slot${refs.length !== 1 ? 's' : ''} [${refs.join(', ')}] used by Church ` +
-                            'instructions have no pet name \u2014 add .pet declarations for these capabilities.',
+                    message: `Unnamed capability slot${refs.length !== 1 ? 's' : ''} \u2014 slot${refs.length !== 1 ? 's' : ''} [${refs.join(', ')}] are used but not identified in the record.`,
+                    detail: `Capability slot${refs.length !== 1 ? 's' : ''} [${refs.join(', ')}] ${refs.length !== 1 ? 'are' : 'is'} referenced by instructions but ha${refs.length !== 1 ? 've' : 's'} no name in the repository record. Add capability names to identify them.`,
                 });
             } else if (_rpnUnnamedAny.length > 0) {
                 results.push({
                     ruleId: 'RPN',
                     severity: 'warn',
-                    message: `${_rpnUnnamedAny.length} unnamed c-list slot${_rpnUnnamedAny.length !== 1 ? 's' : ''}`,
-                    detail: `Slot${_rpnUnnamedAny.length !== 1 ? 's' : ''} [${_rpnUnnamedAny.join(', ')}] ` +
-                            'allocated but unnamed \u2014 add .pet declarations.',
+                    message: `Unnamed capability slot${_rpnUnnamedAny.length !== 1 ? 's' : ''} \u2014 slot${_rpnUnnamedAny.length !== 1 ? 's' : ''} [${_rpnUnnamedAny.join(', ')}] ${_rpnUnnamedAny.length !== 1 ? 'are' : 'is'} allocated but not identified in the record.`,
+                    detail: `Capability slot${_rpnUnnamedAny.length !== 1 ? 's' : ''} [${_rpnUnnamedAny.join(', ')}] ${_rpnUnnamedAny.length !== 1 ? 'are' : 'is'} allocated but unnamed in the repository record. Add capability names to identify them.`,
                 });
             } else {
                 const nameList = Array.from({ length: cc }, (_, i) =>
@@ -375,8 +384,8 @@ function lumpAudit(words, manifest, lineNums) {
                 results.push({
                     ruleId: 'RPN',
                     severity: 'pass',
-                    message: 'Pet names complete',
-                    detail: `All ${cc} slot${cc !== 1 ? 's' : ''} named: ${nameList} \u2713`,
+                    message: `All capabilities named \u2713 \u2014 all ${cc} slot${cc !== 1 ? 's' : ''} identified.`,
+                    detail: `All ${cc} capability slot${cc !== 1 ? 's' : ''} named: ${nameList} \u2713`,
                 });
             }
         }
@@ -447,6 +456,8 @@ function lumpAuditRenderPanel(container, results, opts) {
         const ruleSpan = document.createElement('span');
         ruleSpan.className = 'lump-audit-rule-id';
         ruleSpan.textContent = r.ruleId;
+        ruleSpan.style.fontSize = '0.72em';
+        ruleSpan.style.opacity = '0.4';
 
         const msgSpan = document.createElement('span');
         msgSpan.className = 'lump-audit-msg';
