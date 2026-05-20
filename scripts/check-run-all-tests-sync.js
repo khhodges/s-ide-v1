@@ -28,15 +28,17 @@ const ROOT = path.resolve(__dirname, '..');
 
 // ---------------------------------------------------------------------------
 // Infrastructure workflows that are NOT test suites.
-// Extend this list only when adding a new non-test workflow (app servers,
-// orchestrators, design previews, etc.).
+// The list lives in scripts/test-workflow-config.json — edit that file
+// (not this one) when adding a new non-test workflow.
 // ---------------------------------------------------------------------------
-const INFRASTRUCTURE_WORKFLOWS = new Set([
-    'Project',
-    'Church Machine IDE',
-    'all-tests',
-    'artifacts/mockup-sandbox: Component Preview Server',
-]);
+const configPath = path.join(__dirname, 'test-workflow-config.json');
+if (!fs.existsSync(configPath)) {
+    console.error('ERROR: scripts/test-workflow-config.json not found at', configPath);
+    process.exit(1);
+}
+const INFRASTRUCTURE_WORKFLOWS = new Set(
+    JSON.parse(fs.readFileSync(configPath, 'utf8')).infrastructureWorkflows
+);
 
 // ---------------------------------------------------------------------------
 // Parse .replit — extract names of all [[workflows.workflow]] entries
@@ -53,16 +55,19 @@ function parseAllWorkflowNames(replitPath) {
 }
 
 // ---------------------------------------------------------------------------
-// Parse run-all-tests.sh — extract the first arg of every launch_suite call
-// (previously run_suite; supports both for backwards compatibility)
+// Parse run-all-tests.sh — extract the first arg of every register_suite call.
+// Supports legacy launch_suite/run_suite literals for backwards compatibility.
 // ---------------------------------------------------------------------------
 function parseRunAllSuites(scriptPath) {
     const text  = fs.readFileSync(scriptPath, 'utf8');
     const names = new Set();
-    const re    = /^\s*(?:launch_suite|run_suite)\s+"([^"]+)"/gm;
+    const re    = /^\s*(?:register_suite|launch_suite|run_suite)\s+"([^"]+)"/gm;
     let m;
     while ((m = re.exec(text)) !== null) {
-        names.add(m[1]);
+        // Skip bash variable expansions like ${SUITE_NAMES[$i]}
+        if (!m[1].includes('$')) {
+            names.add(m[1]);
+        }
     }
     return names;
 }
@@ -107,7 +112,7 @@ if (missingFromScript.length > 0) {
     console.error('');
     console.error('Add a run_suite entry for each missing workflow, then re-run.');
     console.error('If the workflow is infrastructure (not a test), add it to');
-    console.error('INFRASTRUCTURE_WORKFLOWS in scripts/check-run-all-tests-sync.js.');
+    console.error('the infrastructureWorkflows array in scripts/test-workflow-config.json.');
 }
 
 if (orphanInScript.length > 0) {
