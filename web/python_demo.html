@@ -760,6 +760,7 @@ function copySource() {
 // ── Pyodide run demo ────────────────────────────────────────────────────────
 
 let _pyodide = null;
+let _pyodidePromise = null;
 
 function _setRunStatus(msg, isErr) {
     const el = document.getElementById('runStatus');
@@ -774,18 +775,34 @@ function _setRunBtn(loading) {
     icon.textContent = loading ? '⟳' : '▶';
 }
 
-async function _loadPyodide() {
-    if (_pyodide) return _pyodide;
-    _setRunStatus('Loading Python runtime…');
+// Starts the Pyodide load once; subsequent calls return the same promise.
+// Called silently during pre-warm and re-used by _loadPyodide() on button click.
+// On failure the cached promise is cleared so the next click can retry.
+function _startPyodideLoad() {
+    if (_pyodidePromise) return _pyodidePromise;
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js';
     document.head.appendChild(script);
-    await new Promise((res, rej) => { script.onload = res; script.onerror = rej; });
-    _setRunStatus('Initialising Pyodide…');
-    _pyodide = await loadPyodide();
-    _setRunStatus('');
-    return _pyodide;
+    _pyodidePromise = new Promise((res, rej) => { script.onload = res; script.onerror = rej; })
+        .then(() => loadPyodide())
+        .then(py => { _pyodide = py; return py; })
+        .catch(err => { _pyodidePromise = null; throw err; });
+    return _pyodidePromise;
 }
+
+// Called by runDemo(). Shows status text while the user waits.
+async function _loadPyodide() {
+    if (_pyodide) return _pyodide;
+    _setRunStatus('Loading Python runtime…');
+    return _startPyodideLoad();
+}
+
+// Pre-warm: inject the Pyodide script shortly after the page has painted so
+// that the first "Run demo" click feels instant on a normal connection.
+// Errors are swallowed here; runDemo() will surface them to the user if needed.
+window.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () { _startPyodideLoad().catch(function () {}); }, 200);
+});
 
 async function runDemo() {
     const runBtn = document.getElementById('runBtn');
