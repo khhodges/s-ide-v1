@@ -193,6 +193,10 @@ launch_suite() {
     local out="$WORK_DIR/${name}.out"
     local pid_file="$WORK_DIR/${name}.pid"
 
+    # Record wall-clock start time so the progress loop can show elapsed seconds
+    date +%s > "$WORK_DIR/${name}.start"
+
+
     {
         echo ""
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -225,23 +229,34 @@ echo ""
 PROGRESS_PID=""
 if [ "$SHOW_PROGRESS" -eq 1 ]; then
     (
+        SPINNER_FRAMES=('|' '/' '-' '\')
+        spin_idx=0
         while [ ! -f "$WORK_DIR/all_done" ]; do
             sleep "$PROGRESS_INTERVAL"
             [ -f "$WORK_DIR/all_done" ] && break
 
+            now=$(date +%s)
             done_count=0
             waiting=()
             for n in "${SUITE_NAMES[@]}"; do
                 if [ -f "$WORK_DIR/${n}.done" ]; then
                     done_count=$((done_count + 1))
                 else
-                    waiting+=("$n")
+                    # Compute elapsed seconds since suite was launched
+                    elapsed=0
+                    if [ -f "$WORK_DIR/${n}.start" ]; then
+                        started=$(cat "$WORK_DIR/${n}.start")
+                        elapsed=$((now - started))
+                    fi
+                    waiting+=("${n} (${elapsed}s)")
                 fi
             done
 
             if [ "${#waiting[@]}" -gt 0 ]; then
+                spin="${SPINNER_FRAMES[$spin_idx]}"
+                spin_idx=$(( (spin_idx + 1) % 4 ))
                 waiting_str=$(IFS=", "; echo "${waiting[*]}")
-                echo "  [${done_count}/${TOTAL} done — waiting on: ${waiting_str}]" >&2
+                echo "  ${spin} [${done_count}/${TOTAL} done — waiting on: ${waiting_str}]" >&2
             fi
         done
     ) &
