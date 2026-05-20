@@ -5668,3 +5668,27 @@ pre:hover .code-copy-btn {
     cursor: default;
 }
 
+
+/* ── LUMP Repository x/y health counter ─────────────────────────────────── */
+.lump-repo-count {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #7ec8a4;
+    background: rgba(126, 200, 164, 0.12);
+    border: 1px solid rgba(126, 200, 164, 0.28);
+    border-radius: 10px;
+    padding: 1px 7px;
+    margin-left: 7px;
+    letter-spacing: 0.03em;
+    vertical-align: middle;
+    display: inline-block;
+    line-height: 1.5;
+}
+.lump-repo-count:empty {
+    display: none;
+}
+.lump-repo-count-warn {
+    color: #e8b84b;
+    background: rgba(232, 184, 75, 0.12);
+    border-color: rgba(232, 184, 75, 0.28);
+}

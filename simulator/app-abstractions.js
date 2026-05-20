@@ -637,9 +637,28 @@ async function renderLumps() {
             window._pendingLumpTab = null;
         }
         updateLiveLumpBanner();
+
+        // x/y health counter — x = lumps with a valid binary, y = total
+        const _rcTotal   = lumps.length;
+        const _rcHealthy = lumps.filter(l => l.binary_valid !== false).length;
+        _updateLumpRepoCount(_rcHealthy, _rcTotal);
     } catch (err) {
         listEl.innerHTML = `<div class="lumps-placeholder">Error loading lumps: ${_escHtml(err.message)}</div>`;
     }
+}
+
+// Updates the x/y health counter in the "LUMP Repository" panel header.
+// x = lumps whose binary_valid field is not false, y = total.
+// Shows a warning colour when x < y.
+function _updateLumpRepoCount(x, y) {
+    const el = document.getElementById('lumpRepoCount');
+    if (!el) return;
+    if (!y) { el.textContent = ''; el.title = ''; el.className = 'lump-repo-count'; return; }
+    el.textContent = `${x}/${y}`;
+    el.title = x === y
+        ? `All ${y} LUMP${y === 1 ? '' : 's'} have a valid binary`
+        : `${y - x} of ${y} LUMP${y === 1 ? '' : 's'} ${y - x === 1 ? 'has' : 'have'} a missing or invalid binary`;
+    el.className = 'lump-repo-count' + (x < y ? ' lump-repo-count-warn' : '');
 }
 
 // Called by the lump picker <select> when the user chooses a different lump.

@@ -3365,6 +3365,28 @@ def list_lumps():
         result = [e for e in result if e.get('token') not in ('00000300', '00000003')]
         result = [dict(_BOOT_ABSTR_META)] + result
 
+    # Add binary_valid: True when the .lump binary has a valid header magic
+    # (bits [31:27] of word 0 == 0x1F).  Boot.Abstr (token "00000003") is
+    # always valid — it is the live in-memory copy from boot-image.bin.
+    for _e in result:
+        _tk = _e.get('token', '')
+        if _tk == '00000003':
+            _e['binary_valid'] = True
+        elif _tk:
+            _lp = os.path.join(lumps_dir, f'{_tk}.lump')
+            _e['binary_valid'] = False
+            if os.path.isfile(_lp):
+                try:
+                    with open(_lp, 'rb') as _fh:
+                        _b = _fh.read(4)
+                    if len(_b) == 4:
+                        _w0 = int.from_bytes(_b, 'big')
+                        _e['binary_valid'] = ((_w0 >> 27) & 0x1F) == 0x1F
+                except Exception:
+                    pass
+        else:
+            _e['binary_valid'] = False
+
     return jsonify(result)
 
 
