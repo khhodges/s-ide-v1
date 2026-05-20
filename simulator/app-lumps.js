@@ -48,6 +48,8 @@ function showLumpDetail(token) {
         _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">CW</span>${parseInt(lump.cw)}</span>`;
     if (lump.cc !== undefined && lump.cc !== null)
         _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">CC</span>${parseInt(lump.cc)}</span>`;
+    if (!isNamespace)
+        _headerStrip += `<span class="lump-malformed-chip" id="lumpMalformedChip_${_tk}" style="display:none" title="Click Edit to repair with canonical source">\u26a0 Binary may be malformed<button class="lump-malformed-chip-dismiss" onclick="this.parentElement.style.display='none'" title="Dismiss">\u00d7</button></span>`;
     // ── Inline actions group (pushed right by margin-left:auto) ───────────────
     _headerStrip += `<div class="lump-hs-actions">`;
     if (!isNamespace) {
@@ -457,6 +459,9 @@ function showLumpDetail(token) {
     const restoreTab = (_lumpEditorOpen[_tk] && !isNamespace) ? 'content' : (_prevTab && _prevTab !== 'overview' ? _prevTab : _defaultTab);
     _switchLumpTab(_tk, restoreTab);
 
+    // Passive malformed-binary check — shows amber chip in header without requiring Edit click.
+    if (!isNamespace) _checkLumpBinaryHealth(token, lump, _tk);
+
     // Outer workspace tab bar is collapsed into the inner tab bar — always hide it
     _hideLumpWorkspaceTabs();
 }
@@ -533,6 +538,29 @@ async function _fetchAndShowLumpBinary(token, lump) {
     } catch (err) {
         bodyEl.textContent = `Failed to load hex dump: ${err.message}`;
     }
+}
+
+// Fetches the lump's words and reveals the amber "Binary may be malformed" chip
+// in the card header if parseLumpHeader reports invalid or the array is empty.
+// Fires passively on every showLumpDetail so the user sees the warning without
+// having to click Edit.
+async function _checkLumpBinaryHealth(token, lump, tk) {
+    try {
+        const resp = await fetch('/api/lump/' + token + '/words', { cache: 'no-store' });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const words = data.words || [];
+        let malformed = words.length === 0;
+        if (!malformed) {
+            const hdr = (typeof sim !== 'undefined' && sim && sim.parseLumpHeader)
+                ? sim.parseLumpHeader(words[0] >>> 0) : null;
+            if (hdr && !hdr.valid) malformed = true;
+        }
+        if (malformed) {
+            const chip = document.getElementById('lumpMalformedChip_' + tk);
+            if (chip) chip.style.display = '';
+        }
+    } catch (_err) {}
 }
 
 // Set to false to disable the automatic audit that runs whenever a lump is selected.
