@@ -4,6 +4,7 @@ from amaranth.sim import Simulator
 from .types import *
 from .layouts import GT_LAYOUT, CAP_REG_LAYOUT, COND_FLAGS_LAYOUT
 from .core import CMCapCore
+from .tperm import CMCapTperm
 from hardware.integrity32 import integrity32
 
 
@@ -186,15 +187,27 @@ def run_testbench():
         assert load_idx == 42, f"LOAD index mismatch: {load_idx}"
         print("  PASS: LOAD encoding preserves cr_src, cr_dst, and index independently")
 
-        print("\n[TEST 7] TPERM Preset Validation (Reserved Presets + EXACT)")
+        print("\n[TEST 7] TPERM Preset Validation (Reserved Presets + FRAME + EXACT)")
         print("-" * 50)
-        rsv0_mask  = TPERM_MASKS[TpermPreset.RSV0]
-        rsv2_mask  = TPERM_MASKS[TpermPreset.RSV2]
+        rsv3_mask  = TPERM_MASKS[TpermPreset.RSV3]
+        rsv4_mask  = TPERM_MASKS[TpermPreset.RSV4]
+        rsv5_mask  = TPERM_MASKS[TpermPreset.RSV5]
+        rsv1_mask  = TPERM_MASKS[TpermPreset.RSV1]
+        frame_mask = TPERM_MASKS[TpermPreset.FRAME]
         exact_mask = TPERM_MASKS[TpermPreset.EXACT]
-        assert rsv0_mask  == 0,    f"RSV0 should be reserved (0), got 0x{rsv0_mask:04x}"
-        assert rsv2_mask  == 0,    f"RSV2 should be reserved (0), got 0x{rsv2_mask:04x}"
+        assert rsv3_mask  == 0,    f"RSV3 should be reserved (0), got 0x{rsv3_mask:04x}"
+        assert rsv4_mask  == 0,    f"RSV4 should be reserved (0), got 0x{rsv4_mask:04x}"
+        assert rsv5_mask  == 0,    f"RSV5 should be reserved (0), got 0x{rsv5_mask:04x}"
+        assert rsv1_mask  == 0,    f"RSV1 should be reserved (0), got 0x{rsv1_mask:04x}"
+        assert frame_mask is None, f"FRAME (13) should be None (stack query, not a mask), got {frame_mask!r}"
         assert exact_mask is None, f"EXACT (14) should be None (comparison op, not a mask), got {exact_mask!r}"
-        print("  PASS: RSV0/RSV2 reserved; EXACT (preset 14) is comparison operator (mask=None)")
+        assert TpermPreset.RSV3 == 10, f"RSV3 must be preset 10, got {int(TpermPreset.RSV3)}"
+        assert TpermPreset.RSV4 == 11, f"RSV4 must be preset 11, got {int(TpermPreset.RSV4)}"
+        assert TpermPreset.RSV5 == 12, f"RSV5 must be preset 12, got {int(TpermPreset.RSV5)}"
+        assert TpermPreset.FRAME == 13, f"FRAME must be preset 13, got {int(TpermPreset.FRAME)}"
+        assert TpermPreset.EXACT == 14, f"EXACT must be preset 14, got {int(TpermPreset.EXACT)}"
+        assert TpermPreset.RSV1 == 15, f"RSV1 must be preset 15, got {int(TpermPreset.RSV1)}"
+        print("  PASS: RSV3/RSV4/RSV5 (10-12) and RSV1 (15) reserved; FRAME (13) stack-query (mask=None); EXACT (14) comparison operator (mask=None)")
 
         print("\n[TEST 8] Sim-32 Instructions (ADDI, ADD)")
         print("-" * 50)
@@ -1280,3 +1293,113 @@ def test_mload_msave_round_trip():
     with sim_load.write_vcd("/tmp/round_trip_load.vcd"):
         sim_load.run()
     print("PASS: test_mload_msave_round_trip")
+
+
+def test_tperm_frame_exact():
+    """Hardware simulation for CMCapTperm FRAME, EXACT, and RSV3/4/5 presets.
+
+    CAP_REG_LAYOUT is 128 bits: word0_gt (GT_LAYOUT, 32 bits) at bits [31:0].
+    For EXACT, the comparison is on all 32 bits of word0_gt.
+    cr_mem maps CR address → CAP_REG_LAYOUT dict (word0_gt nested dict).
+    """
+    dut = CMCapTperm()
+
+    def _make_cap(index):
+        """Build a CAP_REG_LAYOUT mapping with a unique index in word0_gt."""
+        return {
+            "word0_gt": {
+                "gt_type": 1, "f_flag": 0, "spare": 0,
+                "dom": 0, "perm": 0, "index": index, "version": 0,
+            },
+            "word1_location": 0,
+            "word2_limit": 0,
+            "word3_seals": 0,
+        }
+
+    cr_mem = {
+        0: _make_cap(0x10),   # CR0 — index=0x10
+        1: _make_cap(0x10),   # CR1 — same index as CR0 → EXACT match
+        2: _make_cap(0x20),   # CR2 — different index → EXACT mismatch
+    }
+
+    async def tperm_testbench(ctx):
+        async def run_tperm(preset, cr_tgt, cr_src, stack_has_frame_val, max_ticks=12):
+            ctx.set(dut.preset, preset)
+            ctx.set(dut.cr_target, cr_tgt)
+            ctx.set(dut.cr_src, cr_src)
+            ctx.set(dut.stack_has_frame, stack_has_frame_val)
+            ctx.set(dut.cr_rd_data, cr_mem.get(ctx.get(dut.cr_rd_addr), 0))
+            ctx.set(dut.tperm_start, 1)
+            await ctx.tick()
+            ctx.set(dut.tperm_start, 0)
+            for _ in range(max_ticks):
+                ctx.set(dut.cr_rd_data, cr_mem.get(ctx.get(dut.cr_rd_addr), 0))
+                if ctx.get(dut.tperm_complete):
+                    result = (True, False, 0, ctx.get(dut.tperm_z_result))
+                    await ctx.tick()   # drain: COMPLETE → IDLE for next test
+                    return result
+                if ctx.get(dut.tperm_fault):
+                    result = (False, True, ctx.get(dut.fault_type), 0)
+                    await ctx.tick()   # drain: FAULT → IDLE for next test
+                    return result
+                await ctx.tick()
+            return (False, False, 0, 0)
+
+        print("\n=== CMCapTperm Unit Tests (FRAME / EXACT / RSV) ===")
+
+        complete, fault, _, z = await run_tperm(
+            int(TpermPreset.FRAME), cr_tgt=0, cr_src=0, stack_has_frame_val=1
+        )
+        assert complete, "FRAME(stack=1): expected COMPLETE"
+        assert z == 1, f"FRAME(stack=1): expected Z=1, got Z={z}"
+        print("  PASS: FRAME with stack_has_frame=1 → Z=1")
+
+        complete, fault, _, z = await run_tperm(
+            int(TpermPreset.FRAME), cr_tgt=0, cr_src=0, stack_has_frame_val=0
+        )
+        assert complete, "FRAME(stack=0): expected COMPLETE"
+        assert z == 0, f"FRAME(stack=0): expected Z=0, got Z={z}"
+        print("  PASS: FRAME with stack_has_frame=0 → Z=0")
+
+        complete, fault, _, z = await run_tperm(
+            int(TpermPreset.EXACT), cr_tgt=0, cr_src=1, stack_has_frame_val=0
+        )
+        assert complete, "EXACT(match): expected COMPLETE"
+        assert z == 1, f"EXACT(match): expected Z=1, got Z={z}"
+        print("  PASS: EXACT match (CR0==CR1) → Z=1")
+
+        complete, fault, fault_type, _ = await run_tperm(
+            int(TpermPreset.EXACT), cr_tgt=0, cr_src=2, stack_has_frame_val=0
+        )
+        assert fault, "EXACT(mismatch): expected FAULT BIND"
+        assert fault_type == int(FaultType.BIND), (
+            f"EXACT(mismatch): expected BIND ({int(FaultType.BIND)}), got {fault_type}"
+        )
+        print("  PASS: EXACT mismatch (CR0≠CR2) → FAULT BIND")
+
+        for preset_enum, name in [
+            (TpermPreset.RSV3, "RSV3"),
+            (TpermPreset.RSV4, "RSV4"),
+            (TpermPreset.RSV5, "RSV5"),
+        ]:
+            complete, fault, fault_type, _ = await run_tperm(
+                int(preset_enum), cr_tgt=0, cr_src=0, stack_has_frame_val=0
+            )
+            assert fault, f"{name}: expected FAULT TPERM_RSV"
+            assert fault_type == int(FaultType.TPERM_RSV), (
+                f"{name}: expected TPERM_RSV ({int(FaultType.TPERM_RSV)}), got {fault_type}"
+            )
+            print(f"  PASS: {name} → FAULT TPERM_RSV")
+
+        print("=== CMCapTperm Unit Tests PASSED ===")
+
+    sim_tperm = Simulator(dut)
+    sim_tperm.add_clock(1e-6)
+    sim_tperm.add_testbench(tperm_testbench)
+    with sim_tperm.write_vcd("/tmp/tperm_frame_exact.vcd"):
+        sim_tperm.run()
+    print("PASS: test_tperm_frame_exact")
+
+
+if __name__ == "__main__":
+    test_tperm_frame_exact()

@@ -432,12 +432,19 @@ class CMCapCore(Elaboratable):
             self.dmem_wr_en.eq(dmem_wr_en_sig),
         ]
 
+        # TPERM completes multiple cycles after dispatch; its Z result is delivered
+        # via tperm_z_result when tperm_complete fires.  We merge it into the
+        # flags path here using a Mux so only one driver exists for each signal.
+        tperm_flags = Signal(COND_FLAGS_LAYOUT)
+        tperm_flags_view = View(COND_FLAGS_LAYOUT, tperm_flags)
+        m.d.comb += tperm_flags_view.Z.eq(u_tperm.tperm_z_result)
+
         m.d.comb += [
             u_regs.xr_wr_addr.eq(rd),
             u_regs.xr_wr_data.eq(xr_wr_data),
             u_regs.xr_wr_en.eq(xr_wr_en),
-            u_regs.flags_in.eq(flags_in),
-            u_regs.flags_wr_en.eq(flags_wr_en),
+            u_regs.flags_in.eq(Mux(u_tperm.tperm_complete, tperm_flags, flags_in)),
+            u_regs.flags_wr_en.eq(flags_wr_en | u_tperm.tperm_complete),
             u_regs.clear_all.eq(clear_all),
         ]
 
@@ -625,8 +632,12 @@ class CMCapCore(Elaboratable):
         m.d.comb += [
             u_tperm.tperm_start.eq(tperm_start_sig),
             u_tperm.cr_target.eq(cr_dst),
+            u_tperm.cr_src.eq(cr_src),
             u_tperm.preset.eq(u_decoder.tperm_preset),
             u_tperm.cr_rd_data.eq(u_regs.cr_rd_data),
+            # TODO: drive from STO < sp_max when call-stack depth tracking is added.
+            # Until then, FRAME always returns Z=0 (no return frame visible to hardware).
+            u_tperm.stack_has_frame.eq(0),
         ]
 
         save_start_sig = Signal()

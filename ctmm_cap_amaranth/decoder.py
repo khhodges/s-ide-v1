@@ -97,7 +97,7 @@ class CMCapDecoder(Elaboratable):
             self.cr_dst.eq(instr[7:11]),
             self.cr_src.eq(instr[15:19]),
             self.cap_index.eq(Cat(instr[20:25], instr[25:32])),
-            self.tperm_preset.eq(instr[20:24]),
+            self.tperm_preset.eq(instr[20:24]),   # TODO: field is 4 bits; B-modifier (bit 4 of 5-bit preset) is decoded by the assembler and simulator but is NOT synthesised to silicon — hardware ignores bit 4 until the preset field is widened to 5 bits in a future revision
             self.call_mask.eq(Cat(instr[20:25], instr[25:32])),
             self.switch_target.eq(instr[20:24]),
         ]

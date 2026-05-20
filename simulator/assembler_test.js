@@ -584,6 +584,37 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
     assert('P12w SWITCH CR0, CR1: same word as SWITCH CR0, 1',
         r12w2.words[0] === r12w1.words[0],
         `got 0x${(r12w2.words[0]>>>0).toString(16)} vs 0x${(r12w1.words[0]>>>0).toString(16)}`);
+
+    // P12x: TPERM reserved presets (10/11/12/15) → compile-time error naming RSVn
+    for (const [code, rsvName] of [[10,'RSV3'],[11,'RSV4'],[12,'RSV5'],[15,'RSV1']]) {
+        const ax = new ChurchAssembler();
+        ax.assemble(`TPERM CR0, ${code}`);
+        assert(`P12x TPERM CR0,${code} (${rsvName}): error emitted`,
+            ax.errors.length > 0, `expected a reserved-preset error for code ${code}`);
+        assert(`P12x TPERM CR0,${code} (${rsvName}): error names ${rsvName}`,
+            ax.errors.some(e => e.message.includes(rsvName)),
+            ax.errors.map(e => e.message).join('; '));
+    }
+
+    // P12y: TPERM B-modifier reserved variants (26=RSV3B, 27=RSV4B, 28=RSV5B, 31=RSV1B) → error
+    for (const [code, rsvName] of [[26,'RSV3'],[27,'RSV4'],[28,'RSV5'],[31,'RSV1']]) {
+        const ay = new ChurchAssembler();
+        ay.assemble(`TPERM CR0, ${code}`);
+        assert(`P12y TPERM CR0,${code} (${rsvName}B): error emitted`,
+            ay.errors.length > 0, `expected a reserved-preset error for B-variant code ${code}`);
+        assert(`P12y TPERM CR0,${code} (${rsvName}B): error names ${rsvName}`,
+            ay.errors.some(e => e.message.includes(rsvName)),
+            ay.errors.map(e => e.message).join('; '));
+    }
+
+    // P12z: TPERM valid presets near reserved range → no reserved-preset error
+    for (const preset of ['FRAME', 'EXACT', '9', '13', '14']) {
+        const az = new ChurchAssembler();
+        az.assemble(`TPERM CR0, ${preset}`);
+        const rsvErr = az.errors.filter(e => e.message && e.message.includes('reserved'));
+        assert(`P12z TPERM CR0,${preset}: no reserved-preset error`,
+            rsvErr.length === 0, rsvErr.map(e => e.message).join('; '));
+    }
 }
 
 // ── LED[N] Abstract GT bracket syntax ────────────────────────────────────────

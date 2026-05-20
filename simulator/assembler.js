@@ -225,12 +225,12 @@ class ChurchAssembler {
         this.tpermPresets = {
             'CLEAR': 0, 'R': 1, 'RW': 2, 'X': 3,
             'RX': 4, 'RWX': 5, 'L': 6, 'S': 7,
-            'E': 8, 'LS': 9, 'W': 10,
+            'E': 8, 'LS': 9,
             'FRAME': 13,   // call-stack query: Z=1 if a real return frame exists (RETURN would not underflow)
             'EXACT': 14,   // 32-bit identity check: CRd.word0 === CRs.word0 → Z=1
             'B': 0x10, 'RB': 0x11, 'RWB': 0x12, 'XB': 0x13,
             'RXB': 0x14, 'RWXB': 0x15, 'LB': 0x16, 'SB': 0x17,
-            'EB': 0x18, 'LSB': 0x19, 'WB': 0x1A,
+            'EB': 0x18, 'LSB': 0x19,
         };
         this.labels = {};
         this.errors = [];
@@ -1267,6 +1267,16 @@ class ChurchAssembler {
                 } else {
                     imm = this._parseImm(parts[2], lineNum) & 0x1F;
                 }
+                // Guard: presets 10 (RSV3), 11 (RSV4), 12 (RSV5), 15 (RSV1) and their
+                // B-modifier variants (26, 27, 28, 31) are hardware-reserved.  Assembling
+                // them would produce a TPERM_RSV fault at runtime with no diagnostic.
+                const _RSV_NAMES = { 10: 'RSV3', 11: 'RSV4', 12: 'RSV5', 15: 'RSV1' };
+                const _baseCode = imm & 0xF;
+                if (_RSV_NAMES[_baseCode] !== undefined) {
+                    this.errors.push({ line: lineNum,
+                        ...this._tokenCols(this._currentLineText, parts[2] || '0'),
+                        message: `TPERM preset ${_RSV_NAMES[_baseCode]} (code ${_baseCode}) is reserved — using it causes a TPERM_RSV fault on hardware. Valid presets are CLEAR..LS (0-9), FRAME (13), EXACT (14), and their B-modifier variants.` });
+                }
                 // TPERM EXACT (preset 14): optional third CR operand — the reference GT.
                 // Syntax: TPERM CRd, EXACT, CRs  (compares CRd.word0 vs CRs.word0 → Z)
                 // If CRs is omitted, crSrc stays 0 (CR0); explicit CRd self-compare is fine.
@@ -1926,7 +1936,7 @@ class ChurchAssembler {
             case 5: return `${mnemonic}  CR${crSrc}, CR${imm & 0x7}`;
             // TPERM CRd, preset[B]  — assert/attenuate permission
             case 6: {
-                const presetNames = ['CLEAR','R','RW','X','RX','RWX','L','S','E','LS','W','???','???','FRAME','EXACT','RSV'];
+                const presetNames = ['CLEAR','R','RW','X','RX','RWX','L','S','E','LS','RSV3','RSV4','RSV5','FRAME','EXACT','RSV1'];
                 const bFlag    = (imm >>> 4) & 1;
                 const baseCode = imm & 0xF;
                 const baseName = presetNames[baseCode] || 'RSV';

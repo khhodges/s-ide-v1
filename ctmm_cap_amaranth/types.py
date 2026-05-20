@@ -178,12 +178,12 @@ class TpermPreset(IntEnum):
     S     = 7
     E     = 8
     LS    = 9
-    LE    = 10
-    SE    = 11
-    LSE   = 12
-    RSV0  = 13
-    EXACT = 14   # Credential identity check: CRd word0 == CRs word0 (32-bit); faults CRED_MISMATCH
-    RSV2  = 15
+    RSV3  = 10   # FAULT (TPERM_RSV) — unconditionally reserved
+    RSV4  = 11   # FAULT (TPERM_RSV) — unconditionally reserved
+    RSV5  = 12   # FAULT (TPERM_RSV) — unconditionally reserved
+    FRAME = 13   # Call-stack query: Z=1 if a real return frame exists (RETURN would not underflow). No GT read.
+    EXACT = 14   # Credential identity check: CRd word0 == CRs word0 (all 32 bits); faults BIND if not equal.
+    RSV1  = 15   # FAULT (TPERM_RSV) — unconditionally reserved
 
 
 TPERM_MASKS = {
@@ -197,12 +197,12 @@ TPERM_MASKS = {
     TpermPreset.S:     PERM_MASK_S,
     TpermPreset.E:     PERM_MASK_E,
     TpermPreset.LS:    PERM_MASK_L | PERM_MASK_S,
-    TpermPreset.LE:    PERM_MASK_L | PERM_MASK_E,
-    TpermPreset.SE:    PERM_MASK_S | PERM_MASK_E,
-    TpermPreset.LSE:   PERM_MASK_L | PERM_MASK_S | PERM_MASK_E,
-    TpermPreset.RSV0:  0x00,
+    TpermPreset.RSV3:  0x00,
+    TpermPreset.RSV4:  0x00,
+    TpermPreset.RSV5:  0x00,
+    TpermPreset.FRAME: None,   # FRAME is a call-stack query, not a permission preset
     TpermPreset.EXACT: None,   # EXACT is a comparison, not a restriction preset
-    TpermPreset.RSV2:  0x00,
+    TpermPreset.RSV1:  0x00,
 }
 
 

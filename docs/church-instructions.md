@@ -218,7 +218,7 @@ TPERM CRs, #preset [, offset]
 
 **Faulting**: TPERM faults with `TPERM_RSV` if the preset code is reserved (codes 10–12 and 15, and their B-modifier variants 0x1A–0x1C and 0x1F). Codes 13 (FRAME) and 14 (EXACT) are valid non-permission presets and never fault. For all valid presets, TPERM does not fault — if a permission check fails the Z flag says so and software decides what to do via conditional execution. The actual LOAD/SAVE/CALL instructions that follow enforce safety. TPERM is the "ask first" instruction.
 
-**B-modifier hardware gap**: The B-modifier (bit 4 of the 5-bit preset field) is recognised by the assembler and simulator — it clears the GT B-bit (Busy bit, word0[31]) in the cached CR when the permission test passes. However, the hardware decoder currently reads only the lower 4 bits of the preset field; bit 4 is not yet synthesised to silicon. The B-modifier therefore operates in software only until the hardware field is widened in a future release.
+**B-modifier hardware gap**: The B-modifier (bit 4 of the 5-bit preset field) is recognised by the assembler and simulator — it clears the GT B-bit (Busy bit, word0[31]) in the cached CR when the permission test passes. However, the hardware decoder (`ctmm_cap_amaranth/decoder.py`, `hardware/decoder.py`) currently reads only the lower 4 bits of the preset field (`instr[20:24]`); bit 4 is not yet decoded on real silicon. The B-modifier therefore operates in software only until the hardware field is widened from 4 bits to 5 bits in a future release.
 
 No namespace access occurs — TPERM is a register-local read-only operation. No G-bit reset.
 

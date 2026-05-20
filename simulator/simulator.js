@@ -145,7 +145,7 @@ class ChurchSimulator {
         // null  = reserved preset  → _execTperm faults TPERM_RSV.
         // 'EXACT' = preset 14, identity check CRd.word0 === CRs.word0; faults BIND on mismatch (credential pinning assertion, not a comparison).
         // 'FRAME' = preset 13, call-stack query: Z=1 if a real return frame exists (RETURN would not underflow). No GT is read.
-        // Codes 10-12 (LE, SE, LSE) are reserved E-isolation violations → null (TPERM_RSV).
+        // Codes 10-12 (RSV3, RSV4, RSV5) are unconditionally reserved → null (TPERM_RSV).
         this.tpermPresetMasks = [
             [],            ['R'],         ['R','W'],       ['X'],
             ['R','X'],     ['R','W','X'], ['L'],           ['S'],
