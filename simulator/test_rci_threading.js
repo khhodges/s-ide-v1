@@ -83,7 +83,7 @@ function loadViaSlot(slot) {
 
 // ── RCI1: lumpAudit with lineNums → violations carry correct sourceLine ───────
 {
-    // cc=1 means valid slots are [1]; slot 2 (> cc) is a range violation.
+    // cc=1 means valid slots are [0] (0-based); slot 2 (>= cc=1) is a range violation.
     const words = buildLump64([loadViaSlot(2), RETURN_AL], 1);
     // lineNums is indexed by word position in the lump binary (0=header, 1=first code word, …)
     const lineNums = [null, 7, 8]; // word[1] came from source line 7
@@ -219,8 +219,8 @@ function loadViaSlot(slot) {
 
 // ── RCI clean-pass: lumpAudit with lineNums but no violations ─────────────────
 {
-    // cc=1 and the single LOAD accesses slot 1 (the only valid 1-based slot)
-    const words   = buildLump64([loadViaSlot(1), RETURN_AL], 1);
+    // cc=1 and the single LOAD accesses slot 0 (the only valid 0-based slot, range 0..cc-1)
+    const words   = buildLump64([loadViaSlot(0), RETURN_AL], 1);
     const lineNums = [null, 3, 4];
     const results  = lumpAudit(words, null, lineNums);
     const rci = results.find(r => r.ruleId === 'RCI');
@@ -230,6 +230,36 @@ function loadViaSlot(slot) {
     assert('RCI-pass violations array absent or empty on pass',
         !rci || !rci.violations || rci.violations.length === 0,
         rci && rci.violations ? String(rci.violations.length) : 'ok');
+}
+
+// ── RCI8: slot 0 is valid for a 1-slot lump (regression for off-by-one bug) ──
+{
+    // cc=1: valid range is 0..cc-1 = 0..0. Slot 0 must pass RCI.
+    const words   = buildLump64([loadViaSlot(0), RETURN_AL], 1);
+    const results = lumpAudit(words, null);
+    const rci = results.find(r => r.ruleId === 'RCI');
+
+    assert('RCI8 slot 0 with cc=1: RCI result present', !!rci, 'no RCI entry');
+    assert('RCI8 slot 0 with cc=1: severity is pass (not a violation)',
+        rci && rci.severity === 'pass', rci ? rci.severity : '–');
+    assert('RCI8 slot 0 with cc=1: no violations array',
+        !rci || !rci.violations || rci.violations.length === 0,
+        rci && rci.violations ? String(rci.violations.length) : 'ok');
+}
+
+// ── RCI9: slot 1 is out of range for a 1-slot lump (0-based boundary check) ──
+{
+    // cc=1: valid range is 0..0. Slot 1 >= cc=1 must be flagged as a violation.
+    const words   = buildLump64([loadViaSlot(1), RETURN_AL], 1);
+    const results = lumpAudit(words, null);
+    const rci = results.find(r => r.ruleId === 'RCI');
+
+    assert('RCI9 slot 1 with cc=1: RCI result present', !!rci, 'no RCI entry');
+    assert('RCI9 slot 1 with cc=1: severity is error',
+        rci && rci.severity === 'error', rci ? rci.severity : '–');
+    assert('RCI9 slot 1 with cc=1: violation references slot 1',
+        rci && Array.isArray(rci.violations) && rci.violations.some(v => v.slot === 1),
+        rci && rci.violations ? JSON.stringify(rci.violations.map(v => v.slot)) : '–');
 }
 
 // ── Display-layer mapping (Task #1417) ───────────────────────────────────────

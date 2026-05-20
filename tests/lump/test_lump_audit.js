@@ -200,25 +200,25 @@ console.log('\nTest 11: RCI pass (no Church c-list instructions)');
     assertRule(results, 'RCI', 'pass', 'RCI pass with non-c-list code words');
 }
 
-// ─── Test 12: RCI pass — LOAD via CR6 slot 1 with cc=1 (1-based) ─────────
-console.log('\nTest 12: RCI pass (in-range LOAD via CR6, 1-based)');
+// ─── Test 12: RCI pass — LOAD via CR6 slot 0 with cc=1 (0-based) ─────────
+console.log('\nTest 12: RCI pass (in-range LOAD via CR6, 0-based)');
 {
     const words   = makeWellFormed({ cw: 2, cc: 1, nMinus6: 0 });
-    words[1]      = churchWord(0, 1);   // LOAD CR6, slot=1 — within cc=1 (1-based: valid)
+    words[1]      = churchWord(0, 0);   // LOAD CR6, slot=0 — within cc=1 (0-based: valid range 0..0)
     const results = lumpAudit(words, null);
-    assertRule(results, 'RCI', 'pass', 'RCI pass: LOAD slot 1, cc=1');
+    assertRule(results, 'RCI', 'pass', 'RCI pass: LOAD slot 0, cc=1');
     assert(!lumpAuditHasErrors(results), 'no errors');
 }
 
-// ─── Test 12b: RCI error — slot 0 is invalid (ISA uses 1-based indexing) ─
-console.log('\nTest 12b: RCI error (slot 0 is always invalid in 1-based ISA)');
+// ─── Test 12b: RCI error — slot 1 is out of range for cc=1 (0-based) ─────
+console.log('\nTest 12b: RCI error (slot 1 out of range for cc=1, 0-based ISA)');
 {
     const words   = makeWellFormed({ cw: 2, cc: 1, nMinus6: 0 });
-    words[1]      = churchWord(0, 0);   // LOAD CR6, slot=0 — invalid (no slot 0 in 1-based ISA)
+    words[1]      = churchWord(0, 1);   // LOAD CR6, slot=1 — invalid (0-based: only slot 0 in cc=1 lump)
     const results = lumpAudit(words, null);
-    assertRule(results, 'RCI', 'error', 'RCI error: slot 0 always invalid');
+    assertRule(results, 'RCI', 'error', 'RCI error: slot 1 out of range for cc=1');
     assert(lumpAuditHasErrors(results), 'has errors');
-    assert(results.find(r => r.ruleId === 'RCI').detail.includes('slot 0'), 'detail mentions slot 0');
+    assert(results.find(r => r.ruleId === 'RCI').detail.includes('slot 1'), 'detail mentions slot 1');
 }
 
 // ─── Test 13: RCI error — LOAD via CR6 slot out of range ─────────────────
@@ -299,30 +299,30 @@ console.log('\nTest 19: RCI pass (BRANCH backward one step)');
 console.log('\nTest 20: RPN pass (all slots named in manifest, 0-based keys)');
 {
     const words    = makeWellFormed({ cw: 2, cc: 1, nMinus6: 0 });
-    words[1]       = churchWord(0, 1);   // LOAD via slot 1 (1-based: valid)
+    words[1]       = churchWord(0, 0);   // LOAD via slot 0 (0-based: valid range 0..0)
     const manifest = { cw: 2, cc: 1, lump_size: 64, pet_names: { CR: { '0': 'LED0' } } };
     const results  = lumpAudit(words, manifest);
-    assertRule(results, 'RPN', 'pass', 'RPN pass: slot 1 named "LED0"');
+    assertRule(results, 'RPN', 'pass', 'RPN pass: slot 0 named "LED0"');
     assert(!lumpAuditHasErrors(results),   'no errors');
     assert(!lumpAuditHasWarnings(results), 'no warnings');
     assert(results.find(r => r.ruleId === 'RPN').detail.includes('LED0'), 'detail mentions LED0');
 }
 
-// ─── Test 21: RPN pass — name via capabilities[] fallback (1-based) ──────
-console.log('\nTest 21: RPN pass (name via capabilities array, 1-based)');
+// ─── Test 21: RPN pass — name via capabilities[] fallback (0-based) ──────
+console.log('\nTest 21: RPN pass (name via capabilities array, 0-based)');
 {
     const words    = makeWellFormed({ cw: 2, cc: 1, nMinus6: 0 });
-    words[1]       = churchWord(0, 1);   // LOAD via slot 1 (1-based: valid)
+    words[1]       = churchWord(0, 0);   // LOAD via slot 0 (0-based: valid range 0..0)
     const manifest = { cw: 2, cc: 1, lump_size: 64, capabilities: [{ name: 'LED0' }] };
     const results  = lumpAudit(words, manifest);
-    assertRule(results, 'RPN', 'pass', 'RPN pass: slot 1 named via capabilities[0]');
+    assertRule(results, 'RPN', 'pass', 'RPN pass: slot 0 named via capabilities[0]');
 }
 
-// ─── Test 22: RPN warn — Church instruction uses unnamed slot (1-based) ───
-console.log('\nTest 22: RPN warn (Church instruction uses unnamed slot, 1-based)');
+// ─── Test 22: RPN warn — Church instruction uses unnamed slot (0-based) ───
+console.log('\nTest 22: RPN warn (Church instruction uses unnamed slot, 0-based)');
 {
     const words    = makeWellFormed({ cw: 2, cc: 1, nMinus6: 0 });
-    words[1]       = churchWord(0, 1);   // LOAD via slot 1 — but no name for slot 1
+    words[1]       = churchWord(0, 0);   // LOAD via slot 0 — but no name for slot 0
     const manifest = { cw: 2, cc: 1, lump_size: 64, pet_names: { CR: {} } };
     const results  = lumpAudit(words, manifest);
     assertRule(results, 'RPN', 'warn', 'RPN warn: unnamed slot in Church instruction');
@@ -330,11 +330,11 @@ console.log('\nTest 22: RPN warn (Church instruction uses unnamed slot, 1-based)
     assert(!lumpAuditHasErrors(results),  'no errors');
 }
 
-// ─── Test 23: RPN warn — no pet_names in manifest at all (1-based) ───────
-console.log('\nTest 23: RPN warn (no pet_names in manifest, 1-based)');
+// ─── Test 23: RPN warn — no pet_names in manifest at all (0-based) ───────
+console.log('\nTest 23: RPN warn (no pet_names in manifest, 0-based)');
 {
     const words    = makeWellFormed({ cw: 2, cc: 1, nMinus6: 0 });
-    words[1]       = churchWord(0, 1);   // LOAD via slot 1 (1-based: valid)
+    words[1]       = churchWord(0, 0);   // LOAD via slot 0 (0-based: valid range 0..0)
     const manifest = { cw: 2, cc: 1, lump_size: 64 };   // no pet_names, no capabilities
     const results  = lumpAudit(words, manifest);
     assertRule(results, 'RPN', 'warn', 'RPN warn: no pet_names data in manifest');
@@ -353,8 +353,8 @@ console.log('\nTest 24: RPN skipped (cc=0)');
 console.log('\nTest 25: RPN pass (cc=2, both slots named, 0-based keys)');
 {
     const words    = makeWellFormed({ cw: 3, cc: 2, nMinus6: 0 });
-    words[1]       = churchWord(0, 1);   // LOAD slot 1 (1-based: valid)
-    words[2]       = churchWord(8, 2);   // ELOADCALL slot 2 (1-based: valid)
+    words[1]       = churchWord(0, 0);   // LOAD slot 0 (0-based: valid range 0..1)
+    words[2]       = churchWord(8, 1);   // ELOADCALL slot 1 (0-based: valid range 0..1)
     const manifest = {
         cw: 3, cc: 2, lump_size: 64,
         pet_names: { CR: { '0': 'LED0', '1': 'UART0' } },
