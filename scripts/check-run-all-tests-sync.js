@@ -30,15 +30,41 @@ const ROOT = path.resolve(__dirname, '..');
 // Infrastructure workflows that are NOT test suites.
 // The list lives in scripts/test-workflow-config.json — edit that file
 // (not this one) when adding a new non-test workflow.
+//
+// Missing-file behaviour: if test-workflow-config.json cannot be found, the
+// guard falls back to the built-in DEFAULT_INFRASTRUCTURE_WORKFLOWS list below
+// and prints a warning.  The check still runs rather than aborting, so CI is
+// not silently broken by an accidentally deleted config file.  Restore the
+// file (or add the new workflow to the default list here) to suppress the
+// warning.
 // ---------------------------------------------------------------------------
+
+/** Fallback used when test-workflow-config.json is absent. */
+const DEFAULT_INFRASTRUCTURE_WORKFLOWS = [
+    'Project',
+    'Church Machine IDE',
+    'all-tests',
+    'artifacts/mockup-sandbox: Component Preview Server',
+];
+
 const configPath = path.join(__dirname, 'test-workflow-config.json');
+let INFRASTRUCTURE_WORKFLOWS;
 if (!fs.existsSync(configPath)) {
-    console.error('ERROR: scripts/test-workflow-config.json not found at', configPath);
-    process.exit(1);
+    console.warn('WARNING: scripts/test-workflow-config.json not found at', configPath);
+    console.warn('Falling back to built-in default infrastructure-workflow list.');
+    console.warn('Restore the file to suppress this warning.\n');
+    INFRASTRUCTURE_WORKFLOWS = new Set(DEFAULT_INFRASTRUCTURE_WORKFLOWS);
+} else {
+    let parsed;
+    try {
+        parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    } catch (e) {
+        console.warn('WARNING: scripts/test-workflow-config.json could not be parsed:', e.message);
+        console.warn('Falling back to built-in default infrastructure-workflow list.\n');
+        parsed = { infrastructureWorkflows: DEFAULT_INFRASTRUCTURE_WORKFLOWS };
+    }
+    INFRASTRUCTURE_WORKFLOWS = new Set(parsed.infrastructureWorkflows);
 }
-const INFRASTRUCTURE_WORKFLOWS = new Set(
-    JSON.parse(fs.readFileSync(configPath, 'utf8')).infrastructureWorkflows
-);
 
 // ---------------------------------------------------------------------------
 // Parse .replit — extract names of all [[workflows.workflow]] entries
