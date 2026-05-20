@@ -1524,7 +1524,7 @@ function runSim() {
             if (stopReason === 'faultFreeLimit') {
                 lines[lines.length - 1] = `Boot complete. Ran ${totalSteps} steps.`;
                 lines.push('\u2B50 1,000 fault-free instructions \u2014 LUMP unlocked.');
-                lines.push('\uD83D\uDCBE Click \u201CSave as LUMP\u201D in Next Steps to download.');
+                lines.push('\uD83D\uDCBE Click \u201COpen Lump\u201D in Next Steps to view your LUMP.');
             } else {
                 lines[lines.length - 1] = `Boot complete. Ran ${totalSteps} steps. ${status}`;
             }

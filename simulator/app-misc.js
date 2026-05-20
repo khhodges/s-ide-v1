@@ -623,39 +623,33 @@ function showNextSteps(context) {
     const link = (label, view) => `<a class="next-step-link" href="#" onclick="event.preventDefault();switchView('${view}')">${label}</a>`;
     const btn  = (icon, label, fn, extra) =>
         `<button class="next-step-btn${extra ? ' ' + extra : ''}" onclick="${fn}" title="${label}">${icon} ${label}</button>`;
-    const lumpBtn = () => {
-        const _ffi = (typeof _faultFreeInstrTotal !== 'undefined') ? _faultFreeInstrTotal : 0;
-        return _ffi >= 1000
-            ? btn('\uD83D\uDCBE', 'Save as LUMP', 'compileAndBuild()', 'ns-btn-lump')
-            : `<button class="next-step-btn ns-btn-lump ns-btn-lump-locked" disabled title="Run 1,000 fault-free instructions to unlock">\uD83D\uDCBE Save as LUMP</button>`;
-    };
     const steps = {
         'compiled': `
             <div class="next-step-actions">
                 ${btn('\uD83D\uDC63', 'Step', 'stepSim()')}
                 ${btn('\uD83D\uDEB6', 'Walk', 'walkToggle()', 'ns-btn-walk')}
-                ${lumpBtn()}
+                ${link('Open Lump', 'lumps')}
             </div>`,
         'assembled': `
             <div class="next-step-actions">
                 ${btn('\uD83D\uDC63', 'Step', 'stepSim()')}
                 ${btn('\uD83D\uDEB6', 'Walk', 'walkToggle()', 'ns-btn-walk')}
                 ${btn('\uD83C\uDFC3', 'Run', 'onRunBtnClick()', 'ns-btn-run')}
-                ${lumpBtn()}
+                ${link('Open Lump', 'lumps')}
             </div>`,
         'ran-clean': `
             <div class="next-step-actions">
                 ${btn('\uD83D\uDC63', 'Step', 'stepSim()')}
                 ${btn('\uD83D\uDEB6', 'Walk', 'walkToggle()', 'ns-btn-walk')}
                 ${btn('\uD83C\uDFC3', 'Run', 'onRunBtnClick()', 'ns-btn-run')}
-                ${lumpBtn()}
+                ${link('Open Lump', 'lumps')}
             </div>`,
         'ran-fault': `
             <div class="next-step-actions">
                 ${btn('\uD83D\uDC63', 'Step', 'stepSim()')}
                 ${btn('\uD83D\uDEB6', 'Walk', 'walkToggle()', 'ns-btn-walk')}
                 ${btn('\uD83C\uDFC3', 'Run', 'onRunBtnClick()', 'ns-btn-run')}
-                ${lumpBtn()}
+                ${link('Open Lump', 'lumps')}
             </div>`,
         'created': ``,
         'error': ``,
