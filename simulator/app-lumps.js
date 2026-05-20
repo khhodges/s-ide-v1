@@ -45,9 +45,9 @@ function showLumpDetail(token) {
     if (lump.lump_size)
         _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">Size</span>${parseInt(lump.lump_size)}w</span>`;
     if (lump.cw !== undefined && lump.cw !== null)
-        _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">CW</span>${parseInt(lump.cw)}</span>`;
+        _headerStrip += `<span class="lump-hs-chip" id="lumpCwChip_${_tk}"><span class="lump-hs-label">CW</span>${parseInt(lump.cw)}</span>`;
     if (lump.cc !== undefined && lump.cc !== null)
-        _headerStrip += `<span class="lump-hs-chip"><span class="lump-hs-label">CC</span>${parseInt(lump.cc)}</span>`;
+        _headerStrip += `<span class="lump-hs-chip" id="lumpCcChip_${_tk}"><span class="lump-hs-label">CC</span>${parseInt(lump.cc)}</span>`;
     if (!isNamespace)
         _headerStrip += `<span class="lump-malformed-chip" id="lumpMalformedChip_${_tk}" style="display:none" title="Click Edit to repair with canonical source">\u26a0 Binary may be malformed<button class="lump-malformed-chip-dismiss" onclick="this.parentElement.style.display='none'" title="Dismiss">\u00d7</button></span>`;
     // ── Inline actions group (pushed right by margin-left:auto) ───────────────
@@ -554,7 +554,17 @@ async function _checkLumpBinaryHealth(token, lump, tk) {
         if (!malformed) {
             const hdr = (typeof sim !== 'undefined' && sim && sim.parseLumpHeader)
                 ? sim.parseLumpHeader(words[0] >>> 0) : null;
-            if (hdr && !hdr.valid) malformed = true;
+            if (hdr && !hdr.valid) {
+                malformed = true;
+            } else if (hdr) {
+                // Overwrite CW / CC chips with values from the authoritative binary header,
+                // so the header strip always reflects the binary even when the manifest cache
+                // is stale (e.g. after an in-place recompile that changed cc or cw).
+                const cwChip = document.getElementById('lumpCwChip_' + tk);
+                const ccChip = document.getElementById('lumpCcChip_' + tk);
+                if (cwChip) cwChip.innerHTML = '<span class="lump-hs-label">CW</span>' + hdr.cw;
+                if (ccChip) ccChip.innerHTML = '<span class="lump-hs-label">CC</span>' + hdr.cc;
+            }
         }
         if (malformed) {
             const chip = document.getElementById('lumpMalformedChip_' + tk);
@@ -2185,9 +2195,14 @@ function _colorizeComment(text) {
 function _renderLumpCodeContent(bodyEl, lump, words, token) {
     const e = _escHtml;
     const methods   = lump.methods  || [];
-    const cw        = parseInt(lump.cw)        || 0;
-    const cc        = parseInt(lump.cc)        || 0;
-    const lumpSize  = parseInt(lump.lump_size) || words.length;
+    // Prefer binary-header values — they are the authoritative source and will
+    // differ from the manifest when the lump was recompiled but the manifest
+    // cache was not yet refreshed (the classic "stale manifest" conflict).
+    const _binaryHdr = (words.length > 0 && typeof sim !== 'undefined' && sim && sim.parseLumpHeader)
+        ? sim.parseLumpHeader(words[0] >>> 0) : null;
+    const cw        = (_binaryHdr && _binaryHdr.valid) ? _binaryHdr.cw       : (parseInt(lump.cw)        || 0);
+    const cc        = (_binaryHdr && _binaryHdr.valid) ? _binaryHdr.cc       : (parseInt(lump.cc)        || 0);
+    const lumpSize  = (_binaryHdr && _binaryHdr.valid) ? _binaryHdr.lumpSize : (parseInt(lump.lump_size) || words.length);
     const abstName  = lump.abstraction || 'Lump';
 
     // Build per-method DR pet-name lookup (numeric key → label).
@@ -2749,8 +2764,9 @@ async function _loadLumpTokens(token, lump) {
     if (!bodyEl) return;
 
     const e         = _escHtml;
-    const cc        = parseInt(lump.cc) || 0;
-    const lumpSize  = parseInt(lump.lump_size) || 0;
+    // Start with manifest values; will be overwritten from binary header after the fetch.
+    let cc        = parseInt(lump.cc) || 0;
+    let lumpSize  = parseInt(lump.lump_size) || 0;
     const nsIdx     = (lump.ns_slot !== null && lump.ns_slot !== undefined) ? parseInt(lump.ns_slot) : null;
 
     // ── POLA action strip ────────────────────────────────────────────────────
@@ -2792,6 +2808,11 @@ async function _loadLumpTokens(token, lump) {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         words = data.words || [];
+        // Override manifest cc/lumpSize with authoritative binary-header values.
+        if (words.length > 0 && typeof sim !== 'undefined' && sim && sim.parseLumpHeader) {
+            const _bh = sim.parseLumpHeader(words[0] >>> 0);
+            if (_bh && _bh.valid) { cc = _bh.cc; lumpSize = _bh.lumpSize; }
+        }
     } catch (err) {
         html += `<div class="lump-clist-section"><div style="color:#f87171;font-size:0.8rem;padding:0.4rem 0;">` +
             `Failed to load token words: ${e(err.message)}</div></div>`;
