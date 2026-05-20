@@ -5788,16 +5788,35 @@ class ChurchSimulator {
         this.memory[nsBase + 1] = this.packNSWord1(hdr.cw, w1f.b, w1f.g, w1f.gtType, hdr.cc);
         this.memory[nsBase + 2] = this.makeVersionSeals(existingGtSeq, EXTENDED_BASE, hdr.cw);
 
-        // Only update CR14 when the target slot is the boot-entry slot.
-        // CR14.word0 encodes the NS-slot index used for every subsequent
-        // instruction fetch (mLoad 'X' check).  If we updated CR14 for a
-        // non-boot-entry slot the GT would still reference slot 3, but
-        // CR14.word1 would point to EXTENDED_BASE — and the first fetch would
-        // fail the RANGE check because NS slot 3 still points at the original
-        // LED-flash lump location.  Guard on bootEntrySlot so "Load into Sim"
-        // on a service-abstraction lump (ns_slot ≠ 3) installs it at the
-        // correct NS slot without poisoning the code-register state.
-        if (abstrSlot === this.bootEntrySlot) {
+        // CR14 update strategy depends on the target slot:
+        //
+        // • abstrSlot === BOOT_ABSTR_NS_SLOT (3) — interactive execution path
+        //   ("▶ Run" on a LUMP).  Always rebuild CR14 completely, including
+        //   word0 (the R+X GT), so that mLoad's bounds check uses NS[3]'s
+        //   limits regardless of what bootEntrySlot was before this call.
+        //   If bootEntrySlot was previously some other slot (e.g. 7=Memory)
+        //   the old word0 GT referenced that slot; leaving it unchanged while
+        //   pointing word1 at EXTENDED_BASE would make every fetch fail a
+        //   RANGE check against the old slot's narrower bounds — the
+        //   "boots wrong slot / LUMP_MAGIC" bug (Task #1495).
+        //   Also reset bootEntrySlot so _syncBootEntryFromSim() keeps the UI
+        //   consistent.
+        //
+        // • abstrSlot === bootEntrySlot (non-3 service install) — only update
+        //   word1/word2/word3; word0 already encodes the correct NS slot GT.
+        if (abstrSlot === BOOT_ABSTR_NS_SLOT) {
+            const cr14 = this.cr[14];
+            if (cr14) {
+                cr14.word0 = this.createGT(0, BOOT_ABSTR_NS_SLOT, {R:1,W:0,X:1,L:0,S:0,E:0}, 1);
+                cr14.word1 = EXTENDED_BASE >>> 0;
+                cr14.word2 = this.memory[nsBase + 1];
+                cr14.word3 = this.memory[nsBase + 2];
+            }
+            this.bootEntrySlot = BOOT_ABSTR_NS_SLOT;
+        } else if (abstrSlot === this.bootEntrySlot) {
+            // Service-abstraction install into the current boot-entry slot:
+            // word0 already encodes that slot's GT correctly — only refresh
+            // word1/word2/word3 so the lump pointer and limits stay current.
             const cr14 = this.cr[14];
             if (cr14) {
                 cr14.word1 = EXTENDED_BASE >>> 0;
