@@ -65,17 +65,6 @@ unset _args _i _arg
 
 cd "$(dirname "$0")/.."
 
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  PRE-FLIGHT: checking run-all-tests.sh is in sync"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-node scripts/check-run-all-tests-sync.js || {
-    echo ""
-    echo "STOPPING: run-all-tests.sh is out of sync with .replit workflows."
-    echo "Fix the sync issues reported above, then re-run."
-    exit 1
-}
-
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
@@ -183,6 +172,56 @@ ALL_GROUPS["checks"]="check-stale-cr7 check-selftest-lump-stale check-capabiliti
 ALL_GROUPS["hardware"]="hardware-sim"
 
 ALL_GROUPS["e2e"]="e2e-tests"
+
+# ---------------------------------------------------------------------------
+# Group membership validation — catch typos before launching anything
+# ---------------------------------------------------------------------------
+_group_errors=()
+for _grp in "${!ALL_GROUPS[@]}"; do
+    # shellcheck disable=SC2206
+    read -r -a _members <<< "${ALL_GROUPS[$_grp]}"
+    for _member in "${_members[@]}"; do
+        _found=0
+        for _registered in "${ALL_SUITE_NAMES[@]}"; do
+            if [ "$_member" = "$_registered" ]; then
+                _found=1
+                break
+            fi
+        done
+        if [ "$_found" -eq 0 ]; then
+            _group_errors+=("group '$_grp' references unknown suite '$_member'")
+        fi
+    done
+done
+unset _grp _members _member _registered _found
+
+if [ "${#_group_errors[@]}" -gt 0 ]; then
+    echo "ERROR: group registry contains unrecognised suite name(s):" >&2
+    for _err in "${_group_errors[@]}"; do
+        echo "  $_err" >&2
+    done
+    echo "" >&2
+    echo "Valid suite names:" >&2
+    for _registered in "${ALL_SUITE_NAMES[@]}"; do
+        echo "  $_registered" >&2
+    done
+    exit 1
+fi
+unset _group_errors _err
+
+# ---------------------------------------------------------------------------
+# Pre-flight sync check
+# ---------------------------------------------------------------------------
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  PRE-FLIGHT: checking run-all-tests.sh is in sync"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+node scripts/check-run-all-tests-sync.js || {
+    echo ""
+    echo "STOPPING: run-all-tests.sh is out of sync with .replit workflows."
+    echo "Fix the sync issues reported above, then re-run."
+    exit 1
+}
 
 # ---------------------------------------------------------------------------
 # Filter suites based on command-line arguments
