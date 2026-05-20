@@ -166,6 +166,7 @@ def sitemap_xml():
         '  <url><loc>https://haskell-main-1.replit.app/</loc><priority>1.0</priority></url>\n'
         '  <url><loc>https://haskell-main-1.replit.app/simulator/</loc><priority>0.9</priority></url>\n'
         '  <url><loc>https://haskell-main-1.replit.app/docs/</loc><priority>0.7</priority></url>\n'
+        '  <url><loc>https://haskell-main-1.replit.app/python-demo/</loc><priority>0.6</priority></url>\n'
         '</urlset>\n'
     )
     return make_response(content, 200, {"Content-Type": "application/xml; charset=utf-8"})
