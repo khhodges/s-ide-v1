@@ -248,11 +248,19 @@ function lumpAudit(words, manifest, lineNums) {
             // Slot-bounds check only applies when the LUMP has its own c-list.
             // cc=0 means ambient-boot-c-list — slots are resolved at load time.
             if (_rciChurchOps.has(op) && crSrc === 6 && cc > 0 && slot >= cc) {
-                const _slotNameHint = _rciPetNames[String(slot)]
-                    ? ` ("\u2026${_rciPetNames[String(slot)]}\u2026" is not in this lump\u2019s capability list)`
+                // Resolve a name for the missing slot:
+                //   1. pet_names.CR (populated for declared slots)
+                //   2. manifest.capabilities[slot].name (may exist even when slot > cc,
+                //      e.g. when the source declares the capability but cc is too small)
+                const _capName = _rciPetNames[String(slot)] ||
+                    (manifest && Array.isArray(manifest.capabilities) &&
+                     manifest.capabilities[slot] && manifest.capabilities[slot].name) || null;
+                const _slotNameHint = _capName
+                    ? ` \u2014 "${_capName}" is referenced but not declared in this lump\u2019s c-list`
                     : '';
+                const _fixHint = ` Increase cc to at least ${slot + 1} to add slot [${slot}].`;
                 const _rciMsg = `Instruction ${wi} (${_rciOpName[op]}) tries to access capability slot ${slot}` +
-                    `, but this lump only has ${cc} capability slot${cc !== 1 ? 's' : ''}${_slotNameHint}.`;
+                    `, but this lump only has ${cc} capability slot${cc !== 1 ? 's' : ''}${_slotNameHint}.${_fixHint}`;
                 const _rciSrcLine = lineNums && lineNums[wi] != null ? lineNums[wi] : null;
                 _rciViolations.push({ msg: _rciMsg, sourceLine: _rciSrcLine, slot });
             }
