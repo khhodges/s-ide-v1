@@ -387,28 +387,25 @@ def _make_ns_entry(gt_type, perms, slot_id, gt_seq, location, alloc_size, cw=0, 
 # Church Hardware Address Range capability slots (slots 19–22).
 #
 # These S-perm authority caps govern privileged CR12/CR13 writes.
-# They are deliberately NOT included in DEMO_CLIST: the Thread Manager
-# and IRQ Manager abstractions (future work) are the only permitted
-# recipients. Distributing them into those manager C-lists is covered
-# by a separate task.
-#
-# Until that task is complete, these NS entries exist so the capability
-# objects are present in the namespace and the simulator/hardware can
-# validate authority during CHANGE CR12/CR13; they are simply unreachable
-# from user-space because no DEMO_CLIST entry grants them.
+# They are NOT included in DEMO_CLIST (user-space boot c-list).
+# Scheduler.IRQ (NS slot 8) is the only current recipient; it receives
+# E-perm GTs pointing at each of these four authority objects so it can
+# invoke the CHANGE CR12/CR13 and M-bit-set operations.  Thread Manager
+# will receive separate capability copies in a future task.
+# See SCHEDULER_IRQ_CLIST below for the four E-perm GT words.
 #
 #   Slot 19: CR12_PORT_CAP  — 0xFFFFFF0C, S-perm, limit=0
 #             Authority to CHANGE CR12 (thread stack).
-#             Intended recipient: Thread Manager C-list only.
+#             Distributed to: Scheduler.IRQ c-list (E-perm GT).
 #   Slot 20: CR13_PORT_CAP  — 0xFFFFFF0D, S-perm, limit=0
 #             Authority to CHANGE CR13 (interrupt handler).
-#             Intended recipient: IRQ Manager C-list only.
+#             Distributed to: Scheduler.IRQ c-list (E-perm GT).
 #   Slot 21: CR12_MBIT_CAP  — 0xFFFFFF1C, S-perm, limit=0
 #             Authority to set the M bit on a GT installed into CR12.
-#             Intended recipient: Thread Manager C-list only.
+#             Distributed to: Scheduler.IRQ c-list (E-perm GT).
 #   Slot 22: CR13_MBIT_CAP  — 0xFFFFFF1D, S-perm, limit=0
 #             Authority to set the M bit on a GT installed into CR13.
-#             Intended recipient: IRQ Manager C-list only.
+#             Distributed to: Scheduler.IRQ c-list (E-perm GT).
 #
 # Physical LED mapping (R bit = bit 0 of each word):
 #   Ti60 F225 (4 LEDs active-HIGH):
@@ -422,11 +419,38 @@ MMIO_BTN_SLOT   = 13
 MMIO_TIMER_SLOT = 14
 
 # Church Hardware Address Range NS slot assignments
-# S-perm caps restricted to Thread Manager and IRQ Manager C-lists only.
+# S-perm caps distributed to Scheduler.IRQ c-list (E-perm GTs); Thread Manager future.
 CHURCH_HW_CR12_PORT_SLOT  = 19   # authority to CHANGE CR12  (0xFFFFFF0C, S-perm)
 CHURCH_HW_CR13_PORT_SLOT  = 20   # authority to CHANGE CR13  (0xFFFFFF0D, S-perm)
 CHURCH_HW_CR12_MBIT_SLOT  = 21   # authority for CR12 M-bit  (0xFFFFFF1C, S-perm)
 CHURCH_HW_CR13_MBIT_SLOT  = 22   # authority for CR13 M-bit  (0xFFFFFF1D, S-perm)
+
+# ---------------------------------------------------------------------------
+# SCHEDULER_IRQ_CLIST — capability list for the Scheduler.IRQ lump (NS slot 8)
+#
+# Scheduler.IRQ is the sole hardware IRQ dispatcher (Task #1523 / #1525).
+# Its c-list grants E-perm access to the four S-perm authority objects at
+# NS slots 19–22 so that the IRQ handler can perform:
+#   CHANGE CR12  — install a new thread-stack capability
+#   CHANGE CR13  — install a new IRQ-handler capability
+#   SET M-BIT    — mark a GT as M-elevated before installing into CR12/CR13
+#
+# The GT words use E-perm (dom=Church, perm3=0b100) because Scheduler.IRQ
+# holds a restricted delegate copy of the authority; the NS entries
+# themselves carry S-perm (the full authority over CHANGE operations).
+#
+# Layout (cc = 4; lump tail words [lump_size-4 .. lump_size-1]):
+#   idx 0: E-perm GT → NS slot 19  CR12_PORT_CAP  (authority to CHANGE CR12)
+#   idx 1: E-perm GT → NS slot 20  CR13_PORT_CAP  (authority to CHANGE CR13)
+#   idx 2: E-perm GT → NS slot 21  CR12_MBIT_CAP  (authority for CR12 M-bit)
+#   idx 3: E-perm GT → NS slot 22  CR13_MBIT_CAP  (authority for CR13 M-bit)
+# ---------------------------------------------------------------------------
+SCHEDULER_IRQ_CLIST = [
+    make_gt(GT_TYPE_INFORM, PERM_MASK_E, CHURCH_HW_CR12_PORT_SLOT, 0),  # idx 0: CR12_PORT E-GT → NS[19]
+    make_gt(GT_TYPE_INFORM, PERM_MASK_E, CHURCH_HW_CR13_PORT_SLOT, 0),  # idx 1: CR13_PORT E-GT → NS[20]
+    make_gt(GT_TYPE_INFORM, PERM_MASK_E, CHURCH_HW_CR12_MBIT_SLOT, 0),  # idx 2: CR12_MBIT E-GT → NS[21]
+    make_gt(GT_TYPE_INFORM, PERM_MASK_E, CHURCH_HW_CR13_MBIT_SLOT, 0),  # idx 3: CR13_MBIT E-GT → NS[22]
+]
 
 MMIO_LED_ADDR   = 0x40000000   # offsets 0–4: LED0–LED4, bits[2:0]={B,G,R}
 MMIO_UART_ADDR  = 0x40000014   # TX=+0, STATUS=+4, RX=+8 bytes → offsets 0,1,2 words

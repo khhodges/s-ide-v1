@@ -235,7 +235,11 @@ SERVICE_CLIST_DEFS = {
     6:  [("inform", 5,  {"E":1})],                                     # Mint:         Navana E
     7:  [("inform", 44, {"E":1})],                                     # Memory:       GC E
     8:  [("inform", 45, {"E":1}),                                      # Scheduler:    Thread E
-         ("inform", 7,  {"E":1})],                                     #               Memory E
+         ("inform", 7,  {"E":1}),                                      #               Memory E
+         ("inform", 19, {"E":1}),                                      #               CR12_PORT_CAP E-GT (CHANGE CR12 authority; NS slot 19)
+         ("inform", 20, {"E":1}),                                      #               CR13_PORT_CAP E-GT (CHANGE CR13 authority; NS slot 20)
+         ("inform", 21, {"E":1}),                                      #               CR12_MBIT_CAP E-GT (CR12 M-bit authority; NS slot 21)
+         ("inform", 22, {"E":1})],                                     #               CR13_MBIT_CAP E-GT (CR13 M-bit authority; NS slot 22)
     9:  [("inform", 7,  {"E":1})],                                     # Stack:        Memory E
     10: [("inform", 8,  {"E":1})],                                     # DijkstraFlag: Scheduler E
     15: [("abstract", AB_TYPE_IO, {"R":1,"W":1},                       # Display:      Abstract I/O GT (device_class=DISPLAY)

@@ -1271,7 +1271,11 @@ class ChurchSimulator {
             [ 6, [{ type:'inform', ref:5,  perms:{E:1} }]],                                                    // Mint:         Navana E
             [ 7, [{ type:'inform', ref:44, perms:{E:1} }]],                                                    // Memory:       GC E
             [ 8, [{ type:'inform', ref:45, perms:{E:1} },                                                      // Scheduler:    Thread E
-                  { type:'inform', ref:7,  perms:{E:1} }]],                                                    //               Memory E
+                  { type:'inform', ref:7,  perms:{E:1} },                                                      //               Memory E
+                  { type:'inform', ref:19, perms:{E:1} },                                                      //               CR12_PORT_CAP E-GT (CHANGE CR12 authority; hw NS slot 19)
+                  { type:'inform', ref:20, perms:{E:1} },                                                      //               CR13_PORT_CAP E-GT (CHANGE CR13 authority; hw NS slot 20)
+                  { type:'inform', ref:21, perms:{E:1} },                                                      //               CR12_MBIT_CAP E-GT (CR12 M-bit authority; hw NS slot 21)
+                  { type:'inform', ref:22, perms:{E:1} }]],                                                    //               CR13_MBIT_CAP E-GT (CR13 M-bit authority; hw NS slot 22)
             [ 9, [{ type:'inform', ref:7,  perms:{E:1} }]],                                                    // Stack:        Memory E
             [10, [{ type:'inform', ref:8,  perms:{E:1} }]],                                                    // DijkstraFlag: Scheduler E
             [15, [{ type:'abstract', abType:ChurchSimulator.AB_TYPE_IO, rwPerms:{R:1,W:1},                     // Display:      Abstract I/O GT
