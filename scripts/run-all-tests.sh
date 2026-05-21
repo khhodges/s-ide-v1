@@ -150,6 +150,9 @@ register_suite "rci-threading-tests" \
 register_suite "pending-gt-tests" \
     'node simulator/test_lazy_resolve_pending.js'
 
+register_suite "pet-name-mem-tests" \
+    'node simulator/test_pet_name_mem.js'
+
 register_suite "selftest-lump-runs" \
     'python -m pytest tests/simulator/test_selftest_lump_runs.py tests/simulator/test_run_lump_boots_slot3.py -v'
 
@@ -194,7 +197,7 @@ ALL_GROUPS["boot"]="boot-image-matches-sim boot-image-loads-and-boots boot-image
 
 ALL_GROUPS["lump"]="lump-consistency lump-binary-tests lump-roundtrip"
 
-ALL_GROUPS["simulator"]="fault-recovery-tests assembler-tests catalog-compile-tests rci-threading-tests pending-gt-tests warning-panel-tests boot-entry-sync-tests selftest-lump-runs pet-name-memory-tests"
+ALL_GROUPS["simulator"]="fault-recovery-tests assembler-tests catalog-compile-tests rci-threading-tests pending-gt-tests pet-name-mem-tests warning-panel-tests boot-entry-sync-tests selftest-lump-runs pet-name-memory-tests"
 
 ALL_GROUPS["checks"]="check-stale-cr7 check-selftest-lump-stale check-capabilities-blocks check-api-reference-stale"
 

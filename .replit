@@ -119,6 +119,10 @@ args = "sync-guard-tests"
 task = "workflow.run"
 args = "pet-name-memory-tests"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "pet-name-mem-tests"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -413,6 +417,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node simulator/test_pet_name_memory.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "pet-name-mem-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/test_pet_name_mem.js"
 
 [workflows.workflow.metadata]
 outputType = "console"
