@@ -22,7 +22,7 @@ if (typeof module !== 'undefined' && typeof AbstractGTManager === 'undefined') {
 //
 // MEMORY MAP  (all addresses are word-addressed 32-bit words)
 //   0x0000 – 0xFBFF   Object lumps  (heap / stack / thread lumps)
-//   0xFC00 – 0xFFFF   Namespace (NS) table  — up to 256 × 4-word entries (NS_TABLE_RESERVE=0x400)
+//   0xF000 – 0xFFFF   Namespace (NS) table  — up to 1024 × 4-word entries (NS_TABLE_RESERVE=0x1000)
 //   (I/O segment and Boot ROM are overlaid in the lump area at NS-registered addresses)
 //
 // NAMESPACE TABLE (NS)

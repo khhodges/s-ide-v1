@@ -37,6 +37,7 @@ function _resolveCListPetName(gtWord) {
 }
 
 function updateCRDetail() {
+    if (!sim) return;
     if (selectedCR === null) return;
     const titleEl = document.getElementById('crDetailTitle');
     const contentEl = document.getElementById('crDetailContent');
@@ -1491,6 +1492,7 @@ function updateCRDetail() {
 }
 
 function updateDRDisplay() {
+    if (!sim) return;
     const container = document.getElementById('drRegs');
     if (!container) return;
     let html = '';
@@ -1534,6 +1536,7 @@ function _initFlagsHover() {
 }
 
 function updateFlagsDisplay() {
+    if (!sim) return;
     const container = document.getElementById('flagsDisplay');
     if (!container) return;
     _initFlagsHover();
