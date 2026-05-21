@@ -333,6 +333,16 @@
         return { ab_type, device_class, device_data, ab_data };
     }
 
+    // ── Named-slot badge HTML ─────────────────────────────────────────────────
+    // Returns a small teal badge when the slot is registered in petNameMemory
+    // (i.e. a NULL access will trigger LAZY_RESOLVE instead of a hard fault).
+    function _namedBadgeHtml(s, slotIdx) {
+        if (s && s.isNamedSlot && s.isNamedSlot(slotIdx)) {
+            return '<span class="clist-named-badge" title="named: LAZY_RESOLVE on first access">named</span>';
+        }
+        return '';
+    }
+
     // ── Build rows HTML from a flat array of raw GT words ────────────────────
     function _buildRowsFromWords(gtWords, petMap, nsLabels, nsTable, s) {
         var DC = { 1: 'LED', 2: 'UART', 3: 'Button', 4: 'Timer', 5: 'Display' };
@@ -352,6 +362,7 @@
                     'title="' + escHtml(_pendingName) + ' \u2014 declared but not yet introduced to a live GT.' +
                     (_canResolve ? ' Click to resolve.' : ' Boot the program first to resolve.') + '">' +
                     '<span class="clist-slot">CR' + i + '</span>' +
+                    _namedBadgeHtml(s, i) +
                     '<span class="clist-pending-name">' + escHtml(_pendingName) + '</span>' +
                     '<span class="clist-pending-badge">not yet introduced</span>' +
                     '<button class="clist-resolve-btn' + (_canResolve ? '' : ' clist-resolve-btn--disabled') + '" ' +
@@ -371,12 +382,14 @@
                 if (_nullPet) {
                     html += '<div class="clist-row clist-row--null clist-row--named" data-slot="' + i + '" tabindex="-1" title="Click to rename \u2018' + escHtml(_nullPet) + '\u2019 (placeholder, not yet populated)">' +
                         '<span class="clist-slot">CR' + i + '</span>' +
+                        _namedBadgeHtml(s, i) +
                         '<span class="clist-null-pet">' + escHtml(_nullPet) + '</span>' +
                         '<span class="clist-null-edit-hint">\u270e</span>' +
                         '</div>';
                 } else {
                     html += '<div class="clist-row clist-row--null" data-slot="' + i + '" tabindex="-1" title="Click to add a placeholder name for this empty slot">' +
                         '<span class="clist-slot">CR' + i + '</span>' +
+                        _namedBadgeHtml(s, i) +
                         '<span class="clist-null-label">\u2014 null \u2014<span class="clist-null-hint">\u2295 name</span></span>' +
                         '</div>';
                 }
@@ -407,6 +420,7 @@
             html += '<div class="clist-row" data-slot="' + i + '" tabindex="-1">' +
                 '<span class="clist-slot">CR' + i + '</span>' +
                 '<span class="clist-perms">' + permChipsHtml(gt.permissions) + '</span>' +
+                _namedBadgeHtml(s, i) +
                 '<span class="clist-b-badge' + (bFlag ? ' clist-b-badge--on' : '') + '" title="Bind bit">B</span>' +
                 '<span class="clist-f-badge' + (fFlag ? ' clist-f-badge--on' : '') + '" title="Fault-on-use bit">F</span>' +
                 '<span class="clist-name">' + escHtml(displayName) + '</span>' +
@@ -458,6 +472,7 @@
                     .filter(Boolean);
                 if (capSrcEntries.length > 0) {
                     var srcRows = '';
+                    var _srcSim = (typeof sim !== 'undefined') ? sim : null;
                     for (var si = 0; si < capSrcEntries.length; si++) {
                         var se = capSrcEntries[si];
                         var rightsHtml = se.rights.length > 0
@@ -471,6 +486,7 @@
                         srcRows += '<div class="clist-row" data-slot="' + si + '" tabindex="-1">' +
                             '<span class="clist-slot" title="slot ' + si + ' \u2014 declared in source (not yet compiled)">CR' + si + '</span>' +
                             rightsHtml +
+                            _namedBadgeHtml(_srcSim, si) +
                             '<span class="clist-name">' + escHtml(se.name) + '</span>' +
                             '</div>';
                     }

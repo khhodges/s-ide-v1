@@ -1980,6 +1980,21 @@
     flex-shrink: 0;
     white-space: nowrap;
 }
+
+/* ── Named-slot badge: slot is in petNameMemory → LAZY_RESOLVE on NULL access ── */
+.clist-named-badge {
+    font-size: 0.57rem;
+    font-weight: 700;
+    color: #3ec9c9;
+    background: rgba(62, 201, 201, 0.12);
+    border: 1px solid rgba(62, 201, 201, 0.35);
+    border-radius: 3px;
+    padding: 1px 5px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    cursor: help;
+    letter-spacing: 0.02em;
+}
 .clist-resolve-btn {
     font-size: 0.6rem;
     padding: 1px 6px;
