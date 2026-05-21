@@ -4715,6 +4715,30 @@ pre:hover .code-copy-btn {
     line-height: 1.4;
 }
 
+/* Pseudo-instruction mnemonic tooltip — used in the Assembly Syntax Reference
+   panel to annotate directive-style mnemonics like .petname.
+   Positions the tooltip below the element (consistent with sr-instr-tip). */
+.church-tooltip {
+    position: relative;
+    cursor: help;
+    color: var(--church-gold);
+    font-weight: bold;
+    font-family: inherit;
+    border-bottom: 1px dotted rgba(200, 155, 60, 0.4);
+}
+
+.church-tooltip[data-tooltip]::after {
+    bottom: auto;
+    top: calc(100% + 6px);
+    left: 0;
+    transform: none;
+    text-align: left;
+    max-width: 340px;
+    white-space: normal;
+    font-weight: normal;
+    line-height: 1.4;
+}
+
 /* ── Live Lump Banner ──────────────────────────────────────────────────────── */
 
 .live-lump-banner {

@@ -87,6 +87,22 @@ function renderReference() {
     returnCard.onclick = () => { _refTipHide(); _selectedAbstraction = null; showInstructionDetail(3); };
     _attachRefTip(returnCard, 'Shared \u2014 exit from Turing abstraction');
     turingList.appendChild(returnCard);
+
+    const pseudoList = document.getElementById('instrListPseudo');
+    if (pseudoList) {
+        pseudoList.innerHTML = '';
+        PSEUDO_INSTR_DATA.forEach(pi => {
+            const card = document.createElement('div');
+            card.className = 'instr-card' + (selectedPseudoInstr === pi.id ? ' active' : '');
+            card.innerHTML = `
+                <span class="instr-mnemonic">${pi.mnemonic}</span>
+                <span class="instr-brief">${pi.brief}</span>
+            `;
+            card.onclick = () => { _refTipHide(); _selectedAbstraction = null; showPseudoInstrDetail(pi.id); };
+            _attachRefTip(card, pi.brief);
+            pseudoList.appendChild(card);
+        });
+    }
 }
 
 // Walk text nodes inside `node` and wrap matches of `re` in <mark> elements.
@@ -213,6 +229,7 @@ function _mStateBadgeHtml(instr) {
 
 function showInstructionDetail(opcode) {
     selectedInstr = opcode;
+    selectedPseudoInstr = null;
     const instr = INSTRUCTION_DATA.find(i => i.opcode === opcode);
     if (!instr) return;
 
@@ -281,6 +298,58 @@ function showInstructionDetail(opcode) {
         <div class="instr-detail-section">
             <div class="instr-detail-label">Example</div>
             <pre class="instr-detail-example">${instr.example}</pre>
+        </div>
+    `;
+}
+
+function showPseudoInstrDetail(id) {
+    selectedInstr = null;
+    selectedPseudoInstr = id;
+    const pi = PSEUDO_INSTR_DATA.find(p => p.id === id);
+    if (!pi) return;
+
+    renderReference();
+
+    const title = document.getElementById('instrDetailTitle');
+    const content = document.getElementById('instrDetailContent');
+    if (!title || !content) return;
+
+    title.textContent = pi.mnemonic + ' \u2014 Pseudo-Instruction';
+
+    content.innerHTML = `
+        <div class="instr-detail-section">
+            <div class="instr-detail-badge turing">Pseudo-Instruction</div>
+            <div class="instr-detail-desc">${pi.brief}</div>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Syntax</div>
+            <pre class="instr-detail-code">${_escHtml(pi.syntax)}</pre>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Valid Range</div>
+            <div class="instr-detail-value">${_escHtml(pi.range)}</div>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Registers Clobbered</div>
+            <div class="instr-detail-value">${_escHtml(pi.clobbers)}</div>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Expands To (3 instructions)</div>
+            <pre class="instr-detail-text">${_escHtml(pi.expansion)}</pre>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Description</div>
+            <pre class="instr-detail-text">${_escHtml(pi.details)}</pre>
+        </div>
+
+        <div class="instr-detail-section">
+            <div class="instr-detail-label">Example</div>
+            <pre class="instr-detail-example">${_escHtml(pi.example)}</pre>
         </div>
     `;
 }
@@ -459,6 +528,9 @@ const SYNTAX_REF = {
             { heading: "Encoding (32-bit)", items: [
                 { syntax: "opcode[5] | cond[4] | dst[4] | src[4] | imm[15]", desc: "All instructions share this fixed-width format" },
                 { syntax: "0x00000000", desc: "NOP (opcode=0, LOAD with zero everything)" },
+            ]},
+            { heading: "Pseudo-Instructions", items: [
+                { syntax: '<span class="church-tooltip" data-tooltip=".petname &lt;n&gt; — Registers c-list slot n (0–63) with PetNameMemory so a NULL access suspends the thread for lazy demand-loading instead of faulting. Expands to 3 instructions: LOAD CR11 / IADD DR1 / DWRITE. Clobbers CR11 and DR1.">.petname</span> &lt;<em>n</em>&gt;', desc: "Register c-list slot n (0–63) for lazy demand-load; PETNAME &lt;n&gt; is an accepted alias" },
             ]},
         ]
     },

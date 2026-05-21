@@ -7925,8 +7925,8 @@ Add a method called Run
 // classes, these tests will fail immediately.
 //
 // Line ranges (1-indexed) extracted below must be kept in sync with source:
-//   app-compile.js      _absHighlightNodes  lines  94–117
-//   app-compile.js      _absHighlightText   lines 122–133
+//   app-compile.js      _absHighlightNodes  lines 110–133
+//   app-compile.js      _absHighlightText   lines 138–149
 //   app-abstractions.js renderAbstractions  lines 387–452
 {
     const { JSDOM } = require('jsdom');
@@ -7939,8 +7939,8 @@ Add a method called Run
         path.join(__dirname, 'app-abstractions.js'), 'utf8').split('\n');
 
     // Extract real function source text (slice uses 0-based indices).
-    const highlightNodesSrc = compileLines.slice(93, 117).join('\n');
-    const highlightTextSrc  = compileLines.slice(121, 133).join('\n');
+    const highlightNodesSrc = compileLines.slice(109, 133).join('\n');
+    const highlightTextSrc  = compileLines.slice(137, 149).join('\n');
     const renderAbsSrc      = absLines.slice(386, 452).join('\n');
 
     // Verify extraction found the right functions — fail fast rather than giving

@@ -12582,7 +12582,40 @@ const INSTRUCTION_DATA = [
     },
 ];
 
+const PSEUDO_INSTR_DATA = [
+    {
+        id: 'petname',
+        mnemonic: '.petname',
+        brief: 'Register a c-list slot for lazy demand-loading via PetNameMemory',
+        syntax: '.petname <n>      ; preferred directive form\nPETNAME  <n>      ; alternative uppercase form\n.petname #<n>     ; # prefix on immediate also accepted',
+        range: '0–63 (c-list slot index)',
+        clobbers: 'CR11 (ChurchHW capability), DR1 (slot number)',
+        expansion:
+            'LOAD  CR11, CR6, 18   ; fetch ChurchHW device cap (boot c-list slot 18)\n'
+          + 'IADD  DR1,  DR0, #n   ; load slot number n into DR1\n'
+          + 'DWRITE DR1, CR11, 0   ; register slot n with PetNameMemory',
+        details:
+            'Marks c-list slot n as "named" (demand-loadable) in PetNameMemory.\n\n'
+          + 'By default, accessing a NULL c-list slot triggers a NULL_CAP fault\n'
+          + 'and halts the thread. After .petname n is called, the simulator\n'
+          + 'intercepts the NULL access and fires Scheduler.IRQ(LAZY_RESOLVE)\n'
+          + 'instead, suspending the thread gracefully until the abstraction is\n'
+          + 'delivered by the Tunnel fetch pipeline.\n\n'
+          + 'This is the demand-loading pattern used throughout the Church Machine\n'
+          + 'namespace: slots are registered before they are populated, so code\n'
+          + 'can reference them without knowing when they will arrive.\n\n'
+          + 'Implementation: .petname is a three-instruction pseudo-instruction\n'
+          + '(assembler macro). The three emitted instructions use ChurchHW\n'
+          + '(NS boot c-list slot 18), a hardware-control Abstract GT added in\n'
+          + 'Task #1542. A DWRITE through it invokes _dispatchAbstractDwrite\n'
+          + 'with DEVICE_CLASS_CHURCHHW, which calls _petNamedSlots.add(n).\n\n'
+          + 'Slot n must be in range 0–63.',
+        example: '.petname 5          ; slot 5 — lazy-resolved; NULL access suspends, not faults\nPETNAME 10          ; same effect using the uppercase form',
+    },
+];
+
 let selectedInstr = null;
+let selectedPseudoInstr = null;
 
 function _refTipShow(text, e) {
     let tip = document.getElementById('_refBriefTip');
@@ -12880,6 +12913,8 @@ function switchRefTab(tab) {
 
 function showAbstractionRefDetail(id) {
     _selectedAbstraction = id;
+    selectedPseudoInstr = null;
+    selectedInstr = null;
     const item = ABSTRACTION_DATA.find(a => a.id === id);
     if (!item) return;
     renderReference();
@@ -12906,6 +12941,8 @@ function showAbstractionRefDetail(id) {
 function showApiAbstractionDetail(slot) {
     if (typeof API_DATA === 'undefined') return;
     _selectedAbstraction = 'api:' + slot;
+    selectedPseudoInstr = null;
+    selectedInstr = null;
     renderReference();
     const title = document.getElementById('instrDetailTitle');
     const body = document.getElementById('instrDetailContent');
