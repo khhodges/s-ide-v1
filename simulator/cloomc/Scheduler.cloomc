@@ -1,0 +1,175 @@
+// Scheduler — cooperative thread scheduler and hardware IRQ entry point.
+//
+// NS slot 8.  The Scheduler manages the run queue, sleep timers, flag waits,
+// and the three hardware IRQ reason codes defined in hw_types.py:
+//
+//   IRQ_REASON_TIMER        = 0  — hardware alarm fired
+//   IRQ_REASON_LAZY_LOAD    = 1  — lump evicted (cw=0 in CALL pipeline)
+//   IRQ_REASON_LAZY_RESOLVE = 2  — NULL/pending GT in c-list slot
+//
+// Capabilities (c-list, entered via ELOADCALL):
+//   c-list[0] (CR7) = Loader abstraction (NS[19]) — E permission; used by IRQ
+
+abstraction Scheduler {
+    capabilities {
+        Loader
+    }
+
+    // Yield() — cooperative context switch to the next ready thread.
+    //
+    // Marks the calling thread as 'ready' and switches to the next thread in
+    // the run queue.  If no other thread is ready, the caller keeps running.
+    //
+    //   DR1 ← new currentThread index on return
+    public method Yield() {
+        var nextThread = findNextReady()
+        if (nextThread == -1) {
+            return currentThread
+        }
+        currentThread = nextThread
+        return currentThread
+    }
+
+    // Spawn(code_GT) → threadID
+    //
+    // Create a new thread whose initial PC is the entry point encoded in code_GT.
+    // The new thread starts in the 'ready' state.
+    //
+    //   CR2 = code_GT  (E-permission GT for the thread's starting lump)
+    //   DR1 ← new thread ID on return
+    public method Spawn(code_GT) {
+        var newId = allocThreadId()
+        createThread(newId, code_GT)
+        return newId
+    }
+
+    // Wait(flag_GT) — suspend calling thread until a named flag is signalled.
+    //
+    // The thread transitions to 'sleeping' and registers the flag in
+    // irqState.waitingOnFlags.  The next Scheduler.IRQ TIMER sweep that finds
+    // the flag in pendingWakeFlags will wake it.
+    //
+    //   DR1 = flag identifier (integer or name index)
+    public method Wait(flag_GT) {
+        sleepCurrentThread(flag_GT)
+        return 0
+    }
+
+    // Stop(threadID) — terminate a thread.
+    //
+    //   DR1 = threadID to stop (pass currentThread to stop self)
+    public method Stop(threadID) {
+        markThreadStopped(threadID)
+        return threadID
+    }
+
+    // pause(ticks) — arm the hardware timer and suspend the calling thread.
+    //
+    // Sets irqState.timerArmed = true, irqState.timerDeadline = stepCount + ticks.
+    // The calling thread is moved to 'sleeping'; the next Scheduler.IRQ TIMER
+    // sweep at or after the deadline wakes it to 'ready'.
+    //
+    // When multiple threads call pause() concurrently, the shared timerDeadline
+    // is the minimum of all pending deadlines (nearest-deadline-first policy).
+    //
+    //   DR1 = duration in simulation steps (must be > 0)
+    //   DR1 ← effective deadline step on return
+    public method pause(ticks) {
+        if (ticks <= 0) {
+            fault(INVALID_OP)
+        }
+        var deadline = stepCount + ticks
+        armTimer(deadline)
+        sleepCurrentThread(0)
+        setWakeStep(currentThread, deadline)
+        return deadline
+    }
+
+    // IRQ(reason, slot) — hardware interrupt entry point (NOT user-callable).
+    //
+    // Dispatched exclusively by the hardware timer circuit or the CALL/ELOADCALL
+    // pipelines.  User CLOOMC code must never invoke this method directly; the
+    // mLoad gate for slot 8 method 5 is masked to user-mode callers in hardware.
+    //
+    // Three reason codes are handled, corresponding to DR0 at hardware IRQ entry:
+    //
+    //   reason = 0 (TIMER):
+    //     Sweep the run queue.  Wake every sleeping thread whose wakeStep has been
+    //     reached (stepCount >= wakeStep).  Also consume pendingWakeFlags, waking
+    //     any thread whose waitFlag matches a signalled flag.  Re-arm the timer to
+    //     the earliest remaining wakeStep if any threads are still sleeping.
+    //
+    //   reason = 1 (LAZY_LOAD):
+    //     DR1 = NS slot whose lump was evicted (cw=0 detected in CALL pipeline).
+    //     Call Loader.Load(slot) to restore the lump from the boot image or Mum
+    //     Tunnel.  On success, CHANGE back to the interrupted thread so the CALL
+    //     instruction can be re-tried from the beginning.
+    //
+    //   reason = 2 (LAZY_RESOLVE):
+    //     DR1 = c-list slot index that holds a NULL or pending GT.
+    //     Read the pet name from the pending sentinel at memory[CR6.word1 + DR1].
+    //     Emit an IDE UART diagnostic message naming the unresolved capability.
+    //     Suspend the calling thread by registering waitFlag='lazy_resolve:<slot>'
+    //     in irqState.waitingOnFlags.  The thread will be woken by the IDE when
+    //     the operator calls resolvePendingSlot(slot, nsIdx).
+    //
+    //   DR0 = reason code (0=TIMER, 1=LAZY_LOAD, 2=LAZY_RESOLVE)
+    //   DR1 = associated NS/c-list slot (used by LAZY_LOAD and LAZY_RESOLVE)
+    public method IRQ(reason, slot) {
+
+        // ── reason 0: TIMER sweep ─────────────────────────────────────────────
+        if (reason == 0) {
+            var woken = 0
+            foreach thread in runQueue {
+                if (thread.state == sleeping && thread.wakeStep <= stepCount) {
+                    thread.state = ready
+                    woken = woken + 1
+                }
+            }
+            foreach (tid, flag) in waitingOnFlags {
+                if (flag in pendingWakeFlags) {
+                    wakeThread(tid)
+                    consumeFlag(flag)
+                    woken = woken + 1
+                }
+            }
+            rearmTimerToNextDeadline()
+            irqSweepCount = irqSweepCount + 1
+            return woken
+        }
+
+        // ── reason 1: LAZY_LOAD — restore evicted lump ───────────────────────
+        if (reason == 1) {
+            // Delegate to Loader abstraction in c-list slot 0 (CR7 = Loader GT).
+            // Loader.Load checks the lazy manifest and calls sim.lazyLoad(slot).
+            ELOADCALL CR7, Load(slot)
+            // On return: if the load succeeded the interrupted CALL can be
+            // re-tried.  CHANGE back to the suspended thread (hardware automatic).
+            return slot
+        }
+
+        // ── reason 2: LAZY_RESOLVE — pending c-list slot ──────────────────────
+        if (reason == 2) {
+            // Read the pending sentinel from the c-list at CR6.word1 + slot.
+            // Extract the pet name index from bits [15:0] of the sentinel word
+            // (upper 16 bits = 0xFEED identifies a pending GT).
+            var clistWord = read(CR6, slot)
+            var petNameIdx = clistWord & 0xFFFF
+
+            // Emit an IDE UART diagnostic so the operator knows which capability
+            // to resolve.  UART output is captured in sim.output.
+            UART_WRITE("LAZY_RESOLVE slot=")
+            UART_WRITE(slot)
+            UART_WRITE(" petName=")
+            UART_WRITE(petNameIdx)
+
+            // Suspend the calling thread.  It will be woken when the IDE calls
+            // resolvePendingSlot(slot, nsIdx) which signals 'lazy_resolve:<slot>'.
+            sleepCurrentThread("lazy_resolve:" + slot)
+            return slot
+        }
+
+        // Unknown reason — should never happen in a correct hardware implementation.
+        fault(UNKNOWN_IRQ)
+    }
+}

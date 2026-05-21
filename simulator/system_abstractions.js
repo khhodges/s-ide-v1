@@ -2057,6 +2057,89 @@ class SystemAbstractions {
                 };
             }
 
+            if (reason === 'LAZY_LOAD') {
+                // Hardware reason code 1 (IRQ_REASON_LAZY_LOAD):
+                // A CALL pipeline detected cw=0 (CODE_NOT_RESIDENT) in the target lump header.
+                // Restore the evicted lump via Loader.Load(slot), then CHANGE back to the
+                // interrupted thread (implicit: IRQ returns ok=true and the caller resumes).
+                const slot = (args && args.slot != null) ? args.slot
+                             : (sim.dr ? (sim.dr[1] >>> 0) : 0);
+                if (!sim.abstractionRegistry) {
+                    return {
+                        ok: false,
+                        fault: 'LAZY_LOAD',
+                        message: `Scheduler.IRQ: LAZY_LOAD — no abstraction registry (slot ${slot})`
+                    };
+                }
+                const loaderResult = sim.abstractionRegistry.dispatchMethod(
+                    19, 'Load', sim, { dr1: slot }
+                );
+                if (loaderResult && loaderResult.ok) {
+                    const label = (sim.nsLabels && sim.nsLabels[slot]) || `slot_${slot}`;
+                    return {
+                        ok: true,
+                        result: { slot, label, loaded: true },
+                        message: `Scheduler.IRQ: LAZY_LOAD — slot ${slot} (${label}) restored; resuming interrupted thread`
+                    };
+                }
+                return {
+                    ok: false,
+                    fault: 'LAZY_LOAD',
+                    message: `Scheduler.IRQ: LAZY_LOAD — Loader.Load(${slot}) failed: ${loaderResult ? loaderResult.message : 'dispatch failed'}`
+                };
+            }
+
+            if (reason === 'LAZY_RESOLVE') {
+                // Hardware reason code 2 (IRQ_REASON_LAZY_RESOLVE):
+                // ELOADCALL/XLOADLAMBDA found a NULL (or pending) GT in a c-list slot.
+                // Emit an IDE UART message naming the unresolved capability, then suspend
+                // the calling thread.  The operator resolves the slot via resolvePendingSlot();
+                // that call signals the thread's lazy_resolve flag to wake it.
+                const slot = (args && args.slot != null) ? args.slot
+                             : (sim.dr ? (sim.dr[1] >>> 0) : 0);
+
+                // Derive the pet name from the pending GT in the c-list via CR6
+                let petName = `pending#${slot}`;
+                if (sim.cr && sim.cr[6] && sim.memory) {
+                    const clistBase = (sim.cr[6].word1 != null) ? sim.cr[6].word1 : 0;
+                    if (clistBase) {
+                        const gt32 = (sim.memory[clistBase + slot] >>> 0);
+                        const SimCtor = sim.constructor;
+                        const isPending = SimCtor && SimCtor.isPendingGT
+                            ? SimCtor.isPendingGT(gt32)
+                            : ((gt32 >>> 16) === 0xFEED);
+                        if (isPending) {
+                            petName = (SimCtor && SimCtor.pendingGTName)
+                                ? SimCtor.pendingGTName(gt32)
+                                : `pending#${gt32 & 0xFFFF}`;
+                        }
+                    }
+                }
+
+                // Emit IDE UART diagnostic so the operator knows which capability to wire
+                sim.output += `[IRQ] LAZY_RESOLVE: c-list slot CR${slot} — ` +
+                              `pending capability '${petName}' unresolved; thread ${state.currentThread} suspended\n`;
+
+                // Suspend the calling thread; woken when resolvePendingSlot() signals the flag
+                const resolveFlag = `lazy_resolve:${slot}`;
+                const current = state.threads[state.currentThread];
+                if (current) {
+                    current.state   = 'sleeping';
+                    current.waitFlag = resolveFlag;
+                }
+                if (sim.irqState) {
+                    const tid = String(state.currentThread);
+                    sim.irqState.waitingOnFlags = sim.irqState.waitingOnFlags || {};
+                    sim.irqState.waitingOnFlags[tid] = resolveFlag;
+                }
+
+                return {
+                    ok: true,
+                    result: { slot, petName, suspended: true },
+                    message: `Scheduler.IRQ: LAZY_RESOLVE — c-list slot ${slot} ('${petName}') unresolved; thread ${state.currentThread} suspended`
+                };
+            }
+
             return {
                 ok: false,
                 fault: 'UNKNOWN_IRQ',

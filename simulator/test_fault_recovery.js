@@ -1248,6 +1248,237 @@ console.log('\n--- T_RESOLVE: resolvePendingSlot ---');
     }
 }
 
+// ── T013: Scheduler.IRQ LAZY_LOAD reason code ────────────────────────────────
+//
+// Verifies that reason='LAZY_LOAD' (hardware IRQ_REASON_LAZY_LOAD = 1):
+//   (a) Delegates to Loader.Load for the specified slot.
+//   (b) Returns ok=true when the slot is in the lazy manifest and loads correctly.
+//   (c) Returns ok=false when the slot is not in the manifest (Loader.Load fails).
+//   (d) args.slot takes precedence over DR1; DR1 fallback also works.
+//
+// The Loader abstraction is registered at NS slot 19.  The test wires a minimal
+// lazy manifest so Loader.Load can proceed without a full lump binary.
+console.log('\n--- T013: Scheduler.IRQ LAZY_LOAD reason code ---');
+{
+    // ── T013-A: happy path — slot is in the lazy manifest, loads ok ───────────
+    {
+        const { sim, registry } = makeTestSim();
+
+        // Install a minimal lazy manifest entry.  The real Loader.Load checks
+        // sim.lazyManifest[slot].loaded and, if false, calls sim.lazyLoad(slot).
+        // We stub sim.lazyLoad to record invocation without real memory writes.
+        let lazyLoadCalled = false;
+        let lazyLoadSlot   = null;
+        sim.lazyManifest = {
+            20: { loaded: false, label: 'TestAbstraction', priority: 'cold' }
+        };
+        sim.lazyLoad = function(slotIdx) {
+            lazyLoadCalled = true;
+            lazyLoadSlot   = slotIdx;
+            sim.lazyManifest[slotIdx].loaded = true;
+            return true;
+        };
+        sim.nsLabels = sim.nsLabels || {};
+        sim.nsLabels[20] = 'TestAbstraction';
+
+        const result = registry.dispatchMethod(8, 'IRQ', sim, {
+            reason: 'LAZY_LOAD', slot: 20, faultRecord: null, savedContext: null
+        });
+
+        check('T013-A1: LAZY_LOAD (happy) returns ok=true',
+            result && result.ok === true);
+        check('T013-A2: Loader.Load was called (lazyLoad stub invoked)',
+            lazyLoadCalled === true);
+        check('T013-A3: correct slot (20) was passed to lazyLoad',
+            lazyLoadSlot === 20);
+        check('T013-A4: result.slot matches the requested slot',
+            result && result.result && result.result.slot === 20);
+        check('T013-A5: message mentions "LAZY_LOAD"',
+            result && typeof result.message === 'string' &&
+            result.message.includes('LAZY_LOAD'));
+        check('T013-A6: machine NOT halted after LAZY_LOAD recovery',
+            !sim.halted);
+    }
+
+    // ── T013-B: slot not in manifest — Loader.Load fails, ok=false ───────────
+    {
+        const { sim, registry } = makeTestSim();
+        sim.lazyManifest = {};  // empty — slot 99 has no entry
+
+        const result = registry.dispatchMethod(8, 'IRQ', sim, {
+            reason: 'LAZY_LOAD', slot: 99, faultRecord: null, savedContext: null
+        });
+
+        check('T013-B1: LAZY_LOAD (unknown slot) returns ok=false',
+            result && result.ok === false);
+        check('T013-B2: fault field is "LAZY_LOAD"',
+            result && result.fault === 'LAZY_LOAD');
+        check('T013-B3: message mentions "LAZY_LOAD"',
+            result && typeof result.message === 'string' &&
+            result.message.includes('LAZY_LOAD'));
+        check('T013-B4: machine NOT halted (the IRQ handler is not a halt path)',
+            !sim.halted);
+    }
+
+    // ── T013-C: DR1 fallback — no args.slot, reads sim.dr[1] ────────────────
+    {
+        const { sim, registry } = makeTestSim();
+        let drSlotSeen = null;
+        sim.lazyManifest = {
+            33: { loaded: false, label: 'DrFallbackAbs', priority: 'cold' }
+        };
+        sim.lazyLoad = function(slotIdx) {
+            drSlotSeen = slotIdx;
+            sim.lazyManifest[slotIdx].loaded = true;
+            return true;
+        };
+        sim.dr = sim.dr || new Array(8).fill(0);
+        sim.dr[1] = 33;  // DR1 holds the slot when no args.slot is passed
+
+        const result = registry.dispatchMethod(8, 'IRQ', sim, {
+            reason: 'LAZY_LOAD', faultRecord: null, savedContext: null
+            // no args.slot — handler should fall back to sim.dr[1]
+        });
+
+        check('T013-C1: DR1 fallback returns ok=true', result && result.ok === true);
+        check('T013-C2: DR1 slot (33) used when args.slot absent', drSlotSeen === 33);
+    }
+}
+
+// ── T014: Scheduler.IRQ LAZY_RESOLVE reason code ─────────────────────────────
+//
+// Verifies that reason='LAZY_RESOLVE' (hardware IRQ_REASON_LAZY_RESOLVE = 2):
+//   (a) Emits a [IRQ] LAZY_RESOLVE message to sim.output.
+//   (b) Suspends the calling thread with waitFlag='lazy_resolve:<slot>'.
+//   (c) Registers the flag in irqState.waitingOnFlags.
+//   (d) Reads the pet name from the pending GT via CR6 when CR6 is present.
+//   (e) Falls back gracefully when CR6 is absent (word1=0).
+//   (f) Returns ok=true so the IRQ frame exits cleanly.
+//   (g) The suspended thread can be woken by signalling the lazy_resolve flag.
+console.log('\n--- T014: Scheduler.IRQ LAZY_RESOLVE reason code ---');
+{
+    // ── T014-A: happy path — CR6 present, pending GT readable ────────────────
+    {
+        const { sim, registry, sysAbs } = makeTestSim();
+        const state = sysAbs._schedulerState;
+
+        const CLIST_BASE = 0x0400;
+        const C_SLOT     = 2;
+        const PET_NAME   = 'MyCapability';
+
+        // Build a pending GT and place it in the c-list at C_SLOT
+        const pendingGT = ChurchSimulator.makePendingGT(PET_NAME);
+        if (!sim.memory) sim.memory = new Array(0x1000).fill(0);
+        sim.memory[CLIST_BASE + C_SLOT] = pendingGT;
+
+        // CR6 = c-list header: word0 non-zero (valid), word1 = c-list base address
+        if (!sim.cr) sim.cr = new Array(16).fill(null);
+        sim.cr[6] = { word0: 1, word1: CLIST_BASE, word2: 0, word3: 0 };
+
+        // Ensure the calling thread starts as 'running'
+        state.threads[state.currentThread].state = 'running';
+
+        const outputBefore = sim.output;
+        const result = registry.dispatchMethod(8, 'IRQ', sim, {
+            reason: 'LAZY_RESOLVE', slot: C_SLOT, faultRecord: null, savedContext: null
+        });
+
+        check('T014-A1: LAZY_RESOLVE returns ok=true',
+            result && result.ok === true);
+        check('T014-A2: result.slot matches requested slot',
+            result && result.result && result.result.slot === C_SLOT);
+        check('T014-A3: result.petName matches the pending GT pet name',
+            result && result.result && result.result.petName === PET_NAME);
+        check('T014-A4: result.suspended === true',
+            result && result.result && result.result.suspended === true);
+
+        const callerThread = state.threads[state.currentThread];
+        check('T014-A5: calling thread state === "sleeping"',
+            callerThread && callerThread.state === 'sleeping');
+        check('T014-A6: calling thread waitFlag === "lazy_resolve:2"',
+            callerThread && callerThread.waitFlag === `lazy_resolve:${C_SLOT}`);
+
+        check('T014-A7: irqState.waitingOnFlags[currentThread] set correctly',
+            sim.irqState &&
+            sim.irqState.waitingOnFlags &&
+            sim.irqState.waitingOnFlags[String(state.currentThread)] === `lazy_resolve:${C_SLOT}`);
+
+        check('T014-A8: sim.output grew (UART message emitted)',
+            sim.output.length > outputBefore.length);
+        check('T014-A9: output contains [IRQ] LAZY_RESOLVE tag',
+            sim.output.includes('[IRQ] LAZY_RESOLVE'));
+        check('T014-A10: output mentions the pet name',
+            sim.output.includes(PET_NAME));
+        check('T014-A11: machine NOT halted after LAZY_RESOLVE',
+            !sim.halted);
+    }
+
+    // ── T014-B: no CR6 — graceful fallback to generic petName ────────────────
+    {
+        const { sim, registry, sysAbs } = makeTestSim();
+        const state = sysAbs._schedulerState;
+
+        // Leave CR6 null — handler should not crash and should use a fallback name
+        if (!sim.cr) sim.cr = new Array(16).fill(null);
+        sim.cr[6] = null;
+
+        state.threads[state.currentThread].state = 'running';
+
+        const result = registry.dispatchMethod(8, 'IRQ', sim, {
+            reason: 'LAZY_RESOLVE', slot: 5, faultRecord: null, savedContext: null
+        });
+
+        check('T014-B1: LAZY_RESOLVE (no CR6) still returns ok=true',
+            result && result.ok === true);
+        check('T014-B2: thread still suspended when CR6 absent',
+            state.threads[state.currentThread].state === 'sleeping');
+        check('T014-B3: output still contains [IRQ] LAZY_RESOLVE tag',
+            sim.output.includes('[IRQ] LAZY_RESOLVE'));
+        check('T014-B4: message still present in result',
+            result && typeof result.message === 'string' &&
+            result.message.includes('LAZY_RESOLVE'));
+    }
+
+    // ── T014-C: suspended thread woken by signalling lazy_resolve flag ────────
+    {
+        const { sim, registry, sysAbs } = makeTestSim();
+        const state = sysAbs._schedulerState;
+        const C_SLOT = 3;
+
+        // Set up minimal LAZY_RESOLVE scenario (no CR6 needed for wake test)
+        if (!sim.cr) sim.cr = new Array(16).fill(null);
+        sim.cr[6] = null;
+        state.threads[state.currentThread].state = 'running';
+
+        // Fire LAZY_RESOLVE — suspends the thread
+        registry.dispatchMethod(8, 'IRQ', sim, {
+            reason: 'LAZY_RESOLVE', slot: C_SLOT, faultRecord: null, savedContext: null
+        });
+
+        check('T014-C1: thread is sleeping after LAZY_RESOLVE',
+            state.threads[state.currentThread].state === 'sleeping');
+
+        // Signal the lazy_resolve flag (simulates IDE calling resolvePendingSlot)
+        const resolveFlag = `lazy_resolve:${C_SLOT}`;
+        sim.irqState.pendingWakeFlags = [resolveFlag];
+
+        // Fire a TIMER IRQ sweep — should consume the flag and wake the thread
+        const sweepResult = registry.dispatchMethod(8, 'IRQ', sim, {
+            reason: 'TIMER', faultRecord: null, savedContext: null
+        });
+
+        check('T014-C2: TIMER sweep after resolve-flag signal returns ok=true',
+            sweepResult && sweepResult.ok === true);
+        check('T014-C3: thread woken to "ready" after flag consumed',
+            state.threads[state.currentThread].state === 'ready');
+        check('T014-C4: waitFlag cleared from thread after wake',
+            !state.threads[state.currentThread].waitFlag);
+        check('T014-C5: lazy_resolve flag consumed from pendingWakeFlags',
+            !(sim.irqState.pendingWakeFlags || []).includes(resolveFlag));
+        check('T014-C6: machine NOT halted throughout', !sim.halted);
+    }
+}
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
