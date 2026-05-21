@@ -223,6 +223,7 @@ function lumpAudit(words, manifest, lineNums) {
         const _rciOpName    = { 0: 'LOAD', 1: 'SAVE', 8: 'ELOADCALL', 9: 'XLOADLAMBDA' };
         const _rciBranchOp  = 17;
         const _rciViolations = [];
+        const _rncViolations = [];  // RNC — NULL GT in a valid c-list slot (warning)
 
         // Build capability-name context for violation messages (e.g. "[0]='SlideRule'")
         const _rciPetNames = manifest && manifest.pet_names && manifest.pet_names.CR
@@ -247,7 +248,22 @@ function lumpAudit(words, manifest, lineNums) {
 
             // Slot-bounds check only applies when the LUMP has its own c-list.
             // cc=0 means ambient-boot-c-list — slots are resolved at load time.
-            if (_rciChurchOps.has(op) && crSrc === 6 && cc > 0 && slot >= cc) {
+            if (_rciChurchOps.has(op) && crSrc === 6 && cc > 0 && slot < cc) {
+                // Slot is within range — check whether the c-list word is NULL (0x00000000).
+                // c-list occupies words[lumpSize - cc] through words[lumpSize - 1].
+                const _clistWord = (words[lumpSize - cc + slot] >>> 0);
+                if (_clistWord === 0) {
+                    const _nullCapName = _rciPetNames[String(slot)] ||
+                        (manifest && Array.isArray(manifest.capabilities) &&
+                         manifest.capabilities[slot] && manifest.capabilities[slot].name) || null;
+                    const _nullNameHint = _nullCapName ? ` ("${_nullCapName}")` : '';
+                    const _nullMsg = `Instruction ${wi} (${_rciOpName[op]}) accesses capability slot ${slot}${_nullNameHint},` +
+                        ` but that slot contains a NULL GT (0x00000000).` +
+                        ` The ${_nullCapName || 'capability'} GT was not written into the c-list.`;
+                    const _nullSrcLine = lineNums && lineNums[wi] != null ? lineNums[wi] : null;
+                    _rncViolations.push({ msg: _nullMsg, sourceLine: _nullSrcLine, slot });
+                }
+            } else if (_rciChurchOps.has(op) && crSrc === 6 && cc > 0 && slot >= cc) {
                 // Resolve a name for the missing slot:
                 //   1. pet_names.CR (populated for declared slots)
                 //   2. manifest.capabilities[slot].name (may exist even when slot > cc,
@@ -304,6 +320,28 @@ function lumpAudit(words, manifest, lineNums) {
                 message: _rciErrMsg,
                 detail: _rciViolations.map(v => v.msg).join(' '),
                 violations: _rciViolations,
+            });
+        }
+
+        // ── RNC — NULL GT in c-list (warning) ────────────────────────────────
+        if (_rncViolations.length === 0) {
+            if (cc > 0) {
+                results.push({
+                    ruleId: 'RNC',
+                    severity: 'pass',
+                    message: 'No NULL GTs \u2014 all accessed c-list slots contain non-zero GT values \u2713',
+                    detail: `Every c-list slot accessed by code contains a non-null GT \u2713`,
+                });
+            }
+        } else {
+            const _nullSlots = [...new Set(_rncViolations.map(v => v.slot))].sort((a, b) => a - b);
+            const _slotLabel = `slot${_nullSlots.length !== 1 ? 's' : ''} [${_nullSlots.join(', ')}]`;
+            results.push({
+                ruleId: 'RNC',
+                severity: 'warn',
+                message: `NULL GT in c-list \u2014 ${_slotLabel} contain${_nullSlots.length === 1 ? 's' : ''} a NULL GT (0x00000000).`,
+                detail: _rncViolations.map(v => v.msg).join(' '),
+                violations: _rncViolations,
             });
         }
     } else {
