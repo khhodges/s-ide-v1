@@ -6114,3 +6114,95 @@ mark.abs-search-highlight {
     cursor: pointer;
 }
 .api-popup-ref-link:hover { text-decoration: underline; }
+
+/* ── Pending Capability Badges — Task #1528 ─────────────────────────────── */
+.lr-pending-value {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.lr-pending-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    background: #2a1800;
+    border: 1px solid #c8820c;
+    border-radius: 4px;
+    color: #f5c842;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+
+.lr-pending-badge:hover {
+    background: #3d2200;
+    border-color: #f5a623;
+    color: #ffd166;
+}
+
+.clist-pending-row {
+    background: rgba(245, 200, 66, 0.05);
+}
+
+.clist-pending-highlight {
+    background: rgba(245, 160, 35, 0.18) !important;
+    outline: 2px solid #f5a623;
+    outline-offset: -2px;
+    animation: lr-pulse 1.2s ease-in-out 3;
+}
+
+@keyframes lr-pulse {
+    0%   { background: rgba(245, 160, 35, 0.18); }
+    50%  { background: rgba(245, 160, 35, 0.38); }
+    100% { background: rgba(245, 160, 35, 0.18); }
+}
+
+.clist-pending-type-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    border-radius: 3px;
+    color: #f59e0b;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+.clist-pending-badge-inline {
+    display: inline-block;
+    padding: 1px 6px;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 3px;
+    color: #f59e0b;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+/* Inline c-list table shown in NS expanded detail when pending highlight is active */
+.ns-clist-section {
+    margin-top: 12px;
+    border-top: 1px solid rgba(245, 158, 11, 0.25);
+    padding-top: 8px;
+}
+
+.ns-clist-title {
+    font-size: 0.78rem;
+    color: #f59e0b;
+    font-weight: 600;
+    margin-bottom: 6px;
+    letter-spacing: 0.04em;
+}
+
+.ns-clist-inline-table {
+    width: 100%;
+    font-size: 0.76rem;
+}

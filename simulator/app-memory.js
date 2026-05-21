@@ -528,6 +528,23 @@ function updateCRDetail() {
         for (let i = 0; i < _clistCount; i++) {
             const addr = _clistBase + i;
             const gtWord = (addr < sim.memory.length) ? (sim.memory[addr] >>> 0) : 0;
+            const isPending = (typeof ChurchSimulator !== 'undefined' && ChurchSimulator.isPendingGT) ? ChurchSimulator.isPendingGT(gtWord) : false;
+            const isHighlighted = (window._pendingHighlightCListSlot === i);
+            if (isPending) {
+                const _pendingName = (typeof ChurchSimulator !== 'undefined' && ChurchSimulator.pendingGTName) ? ChurchSimulator.pendingGTName(gtWord) : `slot${i}`;
+                const _hlClass = isHighlighted ? ' clist-pending-highlight' : '';
+                const _pendingId = isHighlighted ? ` id="clist-pending-slot-${i}"` : '';
+                html += `<tr class="clist-pending-row${_hlClass}"${_pendingId}>`;
+                html += `<td class="cr-idx">${i}</td>`;
+                html += `<td class="abs-clist-gt" style="color:#f59e0b;">0x${gtWord.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+                html += `<td>\u2014</td>`;
+                html += `<td><span class="clist-pending-type-badge">Pending</span></td>`;
+                html += `<td>\u2014</td>`;
+                html += `<td class="abs-clist-name" style="color:#f59e0b;">\u201C${_pendingName}\u201D</td>`;
+                html += `<td><span class="clist-pending-badge-inline">\u26A1\u202FUnresolved</span></td>`;
+                html += `</tr>`;
+                continue;
+            }
             const parsed = sim.parseGT(gtWord);
             let nsLabel = '';
             if (parsed.type === 3 && gtWord !== 0) {
@@ -559,7 +576,9 @@ function updateCRDetail() {
             const nameStr1 = hasGT
                 ? (isAbstract ? nsLabel : (nsLabel ? `NS[${parsed.index}] \u2014 ${nsLabel}` : `NS[${parsed.index}]`))
                 : '\u2014';
-            html += `<tr class="${hasGT ? 'cr-active clist-clickable' : ''}${isExpanded ? ' clist-selected' : ''}${isUnref ? ' clist-unref-row' : ''}${isIndirect ? ' clist-indirect-row' : ''}" `;
+            const _hlClass2 = isHighlighted ? ' clist-pending-highlight' : '';
+            const _hlId2 = isHighlighted ? ` id="clist-pending-slot-${i}"` : '';
+            html += `<tr class="${hasGT ? 'cr-active clist-clickable' : ''}${isExpanded ? ' clist-selected' : ''}${isUnref ? ' clist-unref-row' : ''}${isIndirect ? ' clist-indirect-row' : ''}${_hlClass2}"${_hlId2} `;
             html += hasGT ? `onclick="toggleCListEntry(${i})" title="${isAbstract ? nsLabel + ' (Abstract GT \u2014 no NS slot)' : 'Click to inspect NS[' + parsed.index + ']'}"` : '';
             html += '>';
             html += `<td class="cr-idx">${i}</td>`;
@@ -1605,8 +1624,26 @@ function updateInfoDisplay() {
                 ? `<span style="color:#ff9800;font-weight:600;">active</span>`
                 : `<span style="color:#555;">idle</span>`;
 
+            const _waitingOnFlags = _irq.waitingOnFlags || {};
+            const _lazyWaiters = Object.entries(_waitingOnFlags).filter(([, flag]) => flag && flag.startsWith('lazy_resolve:'));
+            let _pendingCapHtml = '';
+            if (_lazyWaiters.length > 0) {
+                _pendingCapHtml = '<div class="info-item">' +
+                    '<span class="info-label">Pending Capabilities</span>' +
+                    '<span class="info-value lr-pending-value">';
+                for (const [tid, flag] of _lazyWaiters) {
+                    const _slotIdx = parseInt(flag.split(':')[1], 10);
+                    const _resolveInfo = sim._pendingResolves && sim._pendingResolves.get(_slotIdx);
+                    const _petName = (_resolveInfo && _resolveInfo.petName) ? _resolveInfo.petName : `slot\u00a0${_slotIdx}`;
+                    _pendingCapHtml += `<button class="lr-pending-badge" onclick="_openPendingCListInNS(${_slotIdx})" title="Thread ${tid} suspended\u2014click to navigate to c-list slot ${_slotIdx} in the Namespace view">` +
+                        `\u23F8\u202FPending: \u201C${_petName}\u201D \u2192 view slot</button> `;
+                }
+                _pendingCapHtml += '</span></div>';
+            }
+
             return `<div class="info-item"><span class="info-label">Scheduler Timer</span><span class="info-value">${timerHtml}</span></div>`
-                 + `<div class="info-item"><span class="info-label">Scheduler.IRQ</span><span class="info-value">${irqHtml} &mdash; <span style="color:#ffb74d;font-weight:600;">${_sweepCount}</span> sweep${_sweepCount !== 1 ? 's' : ''}, ${_threads} thread${_threads !== 1 ? 's' : ''} &mdash; <a href="#" onclick="event.preventDefault();switchView('abstractions');showAbstractionDetail(8);" style="color:#c89b3c;text-decoration:none;font-size:0.8rem;">view detail</a></span></div>`;
+                 + `<div class="info-item"><span class="info-label">Scheduler.IRQ</span><span class="info-value">${irqHtml} &mdash; <span style="color:#ffb74d;font-weight:600;">${_sweepCount}</span> sweep${_sweepCount !== 1 ? 's' : ''}, ${_threads} thread${_threads !== 1 ? 's' : ''} &mdash; <a href="#" onclick="event.preventDefault();switchView('abstractions');showAbstractionDetail(8);" style="color:#c89b3c;text-decoration:none;font-size:0.8rem;">view detail</a></span></div>`
+                 + _pendingCapHtml;
         })()}
         <div class="info-item info-item-selftest">
             <span class="info-label">Post-Flash Selftest</span>
@@ -2535,6 +2572,43 @@ function updateNamespace() {
             html += `<div class="ns-detail-panel">`;
             html += `<div class="ns-detail-title">Memory at 0x${e.word0_location.toString(16).toUpperCase().padStart(4, '0')} \u2014 ${e.label || 'Slot '+i} (${lim.limit + 1} words)</div>`;
             html += renderMemoryDump(e.word0_location, lim.limit + 1, i);
+            if (lim.clistCount > 0) {
+                const _nsClistBase = (e.word0_location >>> 0) + lim.limit + 1 - lim.clistCount;
+                const _hlSlot = window._pendingHighlightCListSlot;
+                html += `<div class="ns-clist-section">`;
+                html += `<div class="ns-clist-title">C-List &mdash; ${lim.clistCount} slot${lim.clistCount !== 1 ? 's' : ''} &mdash; base 0x${_nsClistBase.toString(16).toUpperCase().padStart(4,'0')}</div>`;
+                html += `<table class="cr-table ns-clist-inline-table"><thead><tr>`;
+                html += `<th>Slot</th><th>GT Word</th><th>NS Idx</th><th>Type</th><th>Pet Name</th></tr></thead><tbody>`;
+                for (let _ci = 0; _ci < lim.clistCount; _ci++) {
+                    const _cAddr = _nsClistBase + _ci;
+                    const _cGT = (sim.memory && _cAddr < sim.memory.length) ? (sim.memory[_cAddr] >>> 0) : 0;
+                    const _isHL = (_hlSlot === _ci);
+                    const _isPend = (typeof ChurchSimulator !== 'undefined' && ChurchSimulator.isPendingGT) ? ChurchSimulator.isPendingGT(_cGT) : false;
+                    const _hlCls = _isHL ? ' clist-pending-highlight' : '';
+                    const _hlId  = _isHL ? ` id="ns-clist-pending-slot-${_ci}"` : '';
+                    if (_isPend) {
+                        const _pName = (typeof ChurchSimulator !== 'undefined' && ChurchSimulator.pendingGTName) ? ChurchSimulator.pendingGTName(_cGT) : `slot${_ci}`;
+                        html += `<tr class="clist-pending-row${_hlCls}"${_hlId}>`;
+                        html += `<td class="cr-idx">${_ci}</td>`;
+                        html += `<td class="abs-clist-gt" style="color:#f59e0b;">0x${_cGT.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+                        html += `<td>\u2014</td>`;
+                        html += `<td><span class="clist-pending-type-badge">Pending</span></td>`;
+                        html += `<td class="abs-clist-name" style="color:#f59e0b;">\u201C${_pName}\u201D <span class="clist-pending-badge-inline">\u26A1\u202FUnresolved</span></td>`;
+                        html += `</tr>`;
+                    } else {
+                        const _cParsed = sim.parseGT(_cGT);
+                        const _cLabel = (_cGT !== 0) ? ((sim.nsLabels && sim.nsLabels[_cParsed.index]) ? `NS[${_cParsed.index}] \u2014 ${sim.nsLabels[_cParsed.index]}` : `NS[${_cParsed.index}]`) : '\u2014';
+                        html += `<tr class="${_isHL ? 'clist-pending-highlight' : ''}${_cGT !== 0 ? ' cr-active' : ''}"${_hlId}>`;
+                        html += `<td class="cr-idx">${_ci}</td>`;
+                        html += `<td class="abs-clist-gt">0x${_cGT.toString(16).toUpperCase().padStart(8,'0')}</td>`;
+                        html += `<td>${_cGT !== 0 ? _cParsed.index : '\u2014'}</td>`;
+                        html += `<td>${_cGT !== 0 ? _cParsed.typeName : '\u2014'}</td>`;
+                        html += `<td class="abs-clist-name">${_cLabel}</td>`;
+                        html += `</tr>`;
+                    }
+                }
+                html += `</tbody></table></div>`;
+            }
             html += `</div></td></tr>`;
         }
     }
@@ -2604,6 +2678,85 @@ function jumpToMemory(addr) {
     const inp = document.getElementById('memAddrInput');
     if (inp) inp.value = '0x' + addr.toString(16).toUpperCase().padStart(4, '0');
     switchView('memory');
+}
+
+// ── Pending Capability Navigation (Task #1528) ────────────────────────────────
+// Called when the user clicks a "Pending" badge in the Dashboard info panel.
+// Finds the NS entry whose lump contains the c-list slot, switches to the
+// Namespace view, expands that row, and scrolls to/highlights the pending slot.
+window._pendingHighlightCListSlot = null;
+
+function _openPendingCListInNS(slotIdx) {
+    if (!sim || !sim.bootComplete) return;
+
+    // Resolve c-list base address: prefer the saved CR6 from the pending resolve
+    // record (present when _lazySuspended is true), fall back to live CR6.
+    let clistBase = null;
+    if (sim._pendingResolves && sim._pendingResolves.has(slotIdx)) {
+        const _ctx = sim._pendingResolves.get(slotIdx);
+        if (_ctx.savedCRs && _ctx.savedCRs[6] && _ctx.savedCRs[6].word1) {
+            clistBase = _ctx.savedCRs[6].word1 >>> 0;
+        }
+    }
+    if (clistBase === null && sim.cr && sim.cr[6] && sim.cr[6].word1) {
+        clistBase = sim.cr[6].word1 >>> 0;
+    }
+    // Also try irqState.waitingOnFlags to get c-list info from Scheduler suspend path
+    if (clistBase === null) {
+        const _wof = (sim.irqState && sim.irqState.waitingOnFlags) || {};
+        for (const [, flag] of Object.entries(_wof)) {
+            if (flag === `lazy_resolve:${slotIdx}` && sim.cr && sim.cr[6] && sim.cr[6].word1) {
+                clistBase = sim.cr[6].word1 >>> 0;
+                break;
+            }
+        }
+    }
+
+    // Search the NS table for the entry whose c-list region contains clistBase + slotIdx
+    let targetNSIdx = -1;
+    if (clistBase !== null && clistBase > 0) {
+        const slotAddr = clistBase + slotIdx;
+        for (let _ni = 0; _ni < sim.nsCount; _ni++) {
+            const _ne = sim.readNSEntry(_ni);
+            if (!_ne || !_ne.word0_location) continue;
+            const _lumpBase = _ne.word0_location >>> 0;
+            const _lim = sim.parseNSWord1(_ne.word1_limit);
+            if (!_lim || _lim.clistCount === 0) continue;
+            const _clistStart = _lumpBase + _lim.limit + 1 - _lim.clistCount;
+            const _clistEnd   = _lumpBase + _lim.limit + 1;
+            if (slotAddr >= _clistStart && slotAddr < _clistEnd) {
+                targetNSIdx = _ni;
+                break;
+            }
+        }
+    }
+
+    // Set the highlight slot so the c-list renderers can mark it
+    window._pendingHighlightCListSlot = slotIdx;
+
+    // Navigate to the Namespace view
+    if (typeof switchView === 'function') switchView('namespace');
+
+    if (targetNSIdx >= 0) {
+        if (typeof nsExpandedSlot !== 'undefined') {
+            nsExpandedSlot = targetNSIdx;
+        } else {
+            window.nsExpandedSlot = targetNSIdx;
+        }
+        if (typeof updateNamespace === 'function') updateNamespace();
+        // Scroll the NS row into view and then scroll to the highlighted c-list slot
+        setTimeout(() => {
+            const _nsRow = document.getElementById('ns-row-' + targetNSIdx);
+            if (_nsRow) _nsRow.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setTimeout(() => {
+                const _slotEl = document.getElementById('ns-clist-pending-slot-' + slotIdx)
+                    || document.getElementById('clist-pending-slot-' + slotIdx);
+                if (_slotEl) _slotEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 200);
+        }, 100);
+    } else if (typeof updateNamespace === 'function') {
+        updateNamespace();
+    }
 }
 
 function renderMemoryView() {
