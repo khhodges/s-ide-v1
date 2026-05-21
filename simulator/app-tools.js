@@ -404,6 +404,7 @@ function updateToolbarIdeBadge() {
 }
 
 function updateGateLog() {
+    if (!sim) return;
     const container = document.getElementById('gateLogContent');
     if (!container) return;
     const log = sim.auditLog || [];
