@@ -20,6 +20,7 @@ from .mload import ChurchMLoad
 from .change import ChurchChange
 from .switch import ChurchSwitch
 from .fused_unit import ChurchELoadCall, ChurchXLoadLambda
+from .irq_dispatch import ChurchIRQDispatch
 from .dread import ChurchDRead
 from .dwrite import ChurchDWrite
 from .cload import ChurchCLoad
@@ -125,6 +126,12 @@ class ChurchCore(Elaboratable):
         self.dbg_outform_done_inject    = Signal()
         self.dbg_outform_result_gt      = Signal(32)
 
+        # Hardware IRQ dispatch (Task #1523, non-IoT only).
+        # Driven high for one cycle by the platform timer peripheral when its
+        # compare register fires.  All other trigger conditions (LAZY_LOAD,
+        # LAZY_RESOLVE) are detected internally; this is the only external port.
+        self.timer_alarm = Signal()
+
         # outform_fsm_busy — combinatorial read of ChurchOutformFSM.busy.
         #   Useful for integration tests to observe intercept FSM state without
         #   relying on the download engine's outform_busy (which lags by 1 cycle).
@@ -182,12 +189,14 @@ class ChurchCore(Elaboratable):
             u_switch = ChurchSwitch()
             u_eloadcall = ChurchELoadCall()
             u_xloadlambda = ChurchXLoadLambda()
+            u_irq_dispatch = ChurchIRQDispatch()
             m.submodules.u_gc_unit = u_gc
             m.submodules.u_lambda = u_lambda
             m.submodules.u_change = u_change
             m.submodules.u_switch = u_switch
             m.submodules.u_eloadcall = u_eloadcall
             m.submodules.u_xloadlambda = u_xloadlambda
+            m.submodules.u_irq_dispatch = u_irq_dispatch
 
         m.submodules.u_dread = u_dread
         m.submodules.u_dwrite = u_dwrite
@@ -328,7 +337,8 @@ class ChurchCore(Elaboratable):
             busy_expr = busy_expr | (
                 u_lambda.lambda_busy | u_gc.gc_busy |
                 u_change.change_busy | u_switch.switch_busy |
-                u_eloadcall.busy | u_xloadlambda.busy
+                u_eloadcall.busy | u_xloadlambda.busy |
+                u_irq_dispatch.busy
             )
         m.d.comb += any_unit_busy.eq(busy_expr)
 
@@ -581,6 +591,22 @@ class ChurchCore(Elaboratable):
                 u_regs.dr_wr_en.eq(0),
             ]
 
+        # IRQ dispatch DR writes — last-write-wins: override the chain above
+        # for the one cycle that u_irq_dispatch fires each write pulse.
+        if not self.iot_profile:
+            with m.If(u_irq_dispatch.dr_wr_en):
+                m.d.comb += [
+                    u_regs.dr_wr_addr.eq(u_irq_dispatch.dr_wr_addr),
+                    u_regs.dr_wr_data.eq(u_irq_dispatch.dr_wr_data),
+                    u_regs.dr_wr_en.eq(1),
+                ]
+            with m.If(u_irq_dispatch.dr1_wr_en):
+                m.d.comb += [
+                    u_regs.dr_wr_addr.eq(1),
+                    u_regs.dr_wr_data.eq(u_irq_dispatch.dr1_wr_data),
+                    u_regs.dr_wr_en.eq(1),
+                ]
+
         # boot_cap_wr: full 96-bit CR write during boot initialization.
         # Used to set word1_location and word2_w2 (e.g. CR6/CR15) in one cycle.
         # Defaults to 0; driven from the boot state switch below.
@@ -713,6 +739,8 @@ class ChurchCore(Elaboratable):
         if not self.iot_profile:
             with m.Elif(u_eloadcall.nia_set):
                 m.d.sync += nia_reg.eq(u_eloadcall.nia_value)
+            with m.Elif(u_irq_dispatch.nia_set):
+                m.d.sync += nia_reg.eq(u_irq_dispatch.nia_value)
         with m.Elif(branch_taken & ~fetch_bounds_fault):
             # PC-relative branch: nia += sign_extend(imm) * 4.
             # Gated by ~fetch_bounds_fault: if the *current* nia is already out-of-range
@@ -773,7 +801,7 @@ class ChurchCore(Elaboratable):
                 ),
             ]
         if not self.iot_profile:
-            with m.Elif(u_lambda.nia_set | u_eloadcall.nia_set | u_xloadlambda.nia_set):
+            with m.Elif(u_lambda.nia_set | u_eloadcall.nia_set | u_xloadlambda.nia_set | u_irq_dispatch.nia_set):
                 m.d.sync += [code_lo_reg.eq(0), code_hi_reg.eq(0)]
         with m.Elif(u_call.call_normal_complete):
             # Normal CALL completed — establish callee fence from CALL unit byte-address outputs.
@@ -1350,6 +1378,43 @@ class ChurchCore(Elaboratable):
                 u_xloadlambda.cr15_namespace.eq(u_regs.cr15_namespace),
                 u_xloadlambda.mem_rd_data.eq(self.dmem_rd_data),
                 u_xloadlambda.mem_rd_valid.eq(self.dmem_rd_valid),
+            ]
+
+            # ── ChurchIRQDispatch wiring (Task #1523) ────────────────────────
+            from .hw_types import IRQ_REASON_TIMER, IRQ_REASON_LAZY_LOAD, IRQ_REASON_LAZY_RESOLVE
+
+            irq_dispatch_start  = Signal()
+            irq_dispatch_reason = Signal(2)
+            irq_dispatch_slot   = Signal(16)
+
+            # Priority: TIMER > LAZY_LOAD > LAZY_RESOLVE.
+            # All three are mutually exclusive in practice (one per instruction
+            # boundary), but the priority chain makes it deterministic.
+            m.d.comb += [
+                irq_dispatch_reason.eq(
+                    Mux(self.timer_alarm,        IRQ_REASON_TIMER,
+                    Mux(u_call.lazy_load_irq,    IRQ_REASON_LAZY_LOAD,
+                                                 IRQ_REASON_LAZY_RESOLVE))
+                ),
+                irq_dispatch_slot.eq(
+                    Mux(self.timer_alarm,        0,
+                    Mux(u_call.lazy_load_irq,    u_call.lazy_load_ns_slot,
+                    Mux(u_eloadcall.lazy_resolve_irq, u_eloadcall.lazy_resolve_slot,
+                                                 u_xloadlambda.lazy_resolve_slot)))
+                ),
+                irq_dispatch_start.eq(
+                    (self.timer_alarm | u_call.lazy_load_irq |
+                     u_eloadcall.lazy_resolve_irq | u_xloadlambda.lazy_resolve_irq)
+                    & ~u_irq_dispatch.busy
+                ),
+                u_irq_dispatch.start.eq(irq_dispatch_start),
+                u_irq_dispatch.irq_reason.eq(irq_dispatch_reason),
+                u_irq_dispatch.irq_slot.eq(irq_dispatch_slot),
+                u_irq_dispatch.cr15_namespace.eq(u_regs.cr15_namespace),
+                u_irq_dispatch.mem_rd_data.eq(self.dmem_rd_data),
+                u_irq_dispatch.mem_rd_valid.eq(self.dmem_rd_valid),
+            ]
+            m.d.comb += [  # re-open bracket to match trailing close below
                 u_xloadlambda.saved_nia.eq(nia_reg + 4),
             ]
 
@@ -2222,6 +2287,12 @@ class ChurchCore(Elaboratable):
                 self.dmem_wr_data.eq(u_return.mem_wr_data),
                 self.dmem_wr_en.eq(1),
             ]
+        if not self.iot_profile:
+            with m.Elif(u_irq_dispatch.mem_rd_en):
+                m.d.comb += [
+                    self.dmem_addr.eq(u_irq_dispatch.mem_rd_addr),
+                    self.dmem_rd_en.eq(1),
+                ]
 
         if not self.iot_profile:
             m.d.comb += [

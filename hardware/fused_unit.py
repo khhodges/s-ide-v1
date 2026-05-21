@@ -42,6 +42,12 @@ class ChurchELoadCall(Elaboratable):
         self.dr_clear_mask = Signal(16)
         self.cr_clear_mask = Signal(16)
 
+        # Lazy-resolve IRQ outputs (Task #1523): pulsed when CHECK_E detects
+        # a NULL GT in the loaded c-list slot.  Core uses these to trigger
+        # ChurchIRQDispatch with reason=IRQ_REASON_LAZY_RESOLVE.
+        self.lazy_resolve_irq  = Signal()
+        self.lazy_resolve_slot = Signal(16)   # c-list row index of the NULL GT
+
     def elaborate(self, platform):
         m = Module()
 
@@ -74,6 +80,10 @@ class ChurchELoadCall(Elaboratable):
         loaded_view = View(CAP_REG_LAYOUT, loaded_cap)
         loaded_gt = View(GT_LAYOUT, loaded_view.word0_gt)
         has_e_perm = perm_bit(loaded_view.word0_gt, PERM_E)
+        is_null = Signal()
+        m.d.comb += is_null.eq(loaded_gt.gt_type == GT_TYPE_NULL)
+
+        index_latched = Signal(16)
 
         src_in_range = Signal()
         m.d.comb += src_in_range.eq(self.cr_src <= MAX_SRC_REG)
@@ -163,6 +173,7 @@ class ChurchELoadCall(Elaboratable):
                     m.d.sync += [
                         mask_latched.eq(self.mask),
                         call_imm_latched.eq(self.call_imm),
+                        index_latched.eq(self.index),
                     ]
                     m.next = "CHECK_SRC"
 
@@ -197,7 +208,10 @@ class ChurchELoadCall(Elaboratable):
                 m.next = "CHECK_E"
 
             with m.State("CHECK_E"):
-                with m.If(~has_e_perm):
+                with m.If(is_null):
+                    # NULL GT in c-list slot: route to Scheduler.IRQ (Task #1523).
+                    m.next = "LAZY_RESOLVE_ABORT"
+                with m.Elif(~has_e_perm):
                     m.d.sync += [
                         fault_latched.eq(1),
                         fault_type_latched.eq(FaultType.PERM_E),
@@ -286,6 +300,12 @@ class ChurchELoadCall(Elaboratable):
             with m.State("FAULT"):
                 m.next = "IDLE"
 
+            with m.State("LAZY_RESOLVE_ABORT"):
+                # NULL GT in c-list slot: abort silently; core dispatches to
+                # Scheduler.IRQ via ChurchIRQDispatch (Task #1523,
+                # IRQ_REASON_LAZY_RESOLVE).
+                m.next = "IDLE"
+
         m.d.comb += [
             self.busy.eq(~fsm.ongoing("IDLE")),
             self.complete.eq(fsm.ongoing("COMPLETE")),
@@ -295,6 +315,8 @@ class ChurchELoadCall(Elaboratable):
             self.nia_value.eq(nia_computed),
             self.dr_clear_mask.eq(Mux(fsm.ongoing("COMPLETE"), dr_clear_computed, 0)),
             self.cr_clear_mask.eq(Mux(fsm.ongoing("COMPLETE"), cr_clear_computed, 0)),
+            self.lazy_resolve_irq.eq(fsm.ongoing("LAZY_RESOLVE_ABORT")),
+            self.lazy_resolve_slot.eq(index_latched),
         ]
 
         return m
@@ -331,6 +353,11 @@ class ChurchXLoadLambda(Elaboratable):
         self.nia_value = Signal(32)
         self.saved_nia = Signal(32)
 
+        # Lazy-resolve IRQ outputs (Task #1523): pulsed when CHECK_X detects
+        # a NULL GT.  Core triggers ChurchIRQDispatch with reason=LAZY_RESOLVE.
+        self.lazy_resolve_irq  = Signal()
+        self.lazy_resolve_slot = Signal(16)   # c-list row index of the NULL GT
+
     def elaborate(self, platform):
         m = Module()
 
@@ -343,6 +370,7 @@ class ChurchXLoadLambda(Elaboratable):
         sub_start_reg = Signal()
         sub_done_latched = Signal()
         sub_fault_latched = Signal()
+        index_latched = Signal(16)
 
         local_cr_rd_en = Signal()
         local_cr_rd_addr = Signal(4)
@@ -390,7 +418,7 @@ class ChurchXLoadLambda(Elaboratable):
                     sub_done_latched.eq(0), sub_fault_latched.eq(0),
                 ]
                 with m.If(self.start):
-                    m.d.sync += sub_start_reg.eq(1)
+                    m.d.sync += [sub_start_reg.eq(1), index_latched.eq(self.index)]
                     m.next = "LOAD_PHASE"
 
             with m.State("LOAD_PHASE"):
@@ -414,11 +442,9 @@ class ChurchXLoadLambda(Elaboratable):
 
             with m.State("CHECK_X"):
                 with m.If(is_null):
-                    m.d.sync += [
-                        fault_latched.eq(1),
-                        fault_type_latched.eq(FaultType.NULL_CAP),
-                    ]
-                    m.next = "FAULT"
+                    # NULL GT: route to Scheduler.IRQ instead of hard NULL_CAP
+                    # fault (Task #1523, IRQ_REASON_LAZY_RESOLVE).
+                    m.next = "LAZY_RESOLVE_ABORT"
                 with m.Elif(~has_x_perm):
                     m.d.sync += [
                         fault_latched.eq(1),
@@ -441,11 +467,19 @@ class ChurchXLoadLambda(Elaboratable):
             with m.State("FAULT"):
                 m.next = "IDLE"
 
+            with m.State("LAZY_RESOLVE_ABORT"):
+                # NULL GT in c-list slot: abort silently; core dispatches to
+                # Scheduler.IRQ via ChurchIRQDispatch (Task #1523,
+                # IRQ_REASON_LAZY_RESOLVE).
+                m.next = "IDLE"
+
         m.d.comb += [
             self.busy.eq(~fsm.ongoing("IDLE")),
             self.complete.eq(fsm.ongoing("COMPLETE")),
             self.fault.eq(fault_latched),
             self.fault_type.eq(fault_type_latched),
+            self.lazy_resolve_irq.eq(fsm.ongoing("LAZY_RESOLVE_ABORT")),
+            self.lazy_resolve_slot.eq(index_latched),
         ]
 
         return m

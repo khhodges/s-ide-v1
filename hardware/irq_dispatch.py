@@ -1,0 +1,128 @@
+from amaranth import *
+from amaranth.lib.data import View
+
+from .hw_types import SCHEDULER_IRQ_NS_SLOT
+from .layouts import CAP_REG_LAYOUT
+
+# Method-table slot for the 'IRQ' entry inside the Scheduler abstraction.
+# Index 5 matches the JS simulator definition in Task #1077.
+SCHEDULER_IRQ_METHOD_IDX = 5
+
+
+class ChurchIRQDispatch(Elaboratable):
+    """Transparent IRQ dispatch to Scheduler.IRQ (NS slot 8, method 5).
+
+    On start: reads NS[SCHEDULER_IRQ_NS_SLOT].word0_location (Scheduler lump
+    base), reads the method-table entry at lump_base + method_idx * 4, writes
+    DR0 = irq_reason and DR1 = irq_slot, then sets NIA to the handler entry.
+
+    Three trigger conditions (Task #1523):
+      IRQ_REASON_TIMER        — hardware timer alarm fired between instructions
+      IRQ_REASON_LAZY_LOAD    — CALL pipeline detected cw=0 (CODE_NOT_RESIDENT)
+      IRQ_REASON_LAZY_RESOLVE — NULL GT read from c-list slot
+
+    The unit contributes to any_unit_busy while active, preventing nested
+    injection.  No stack frame is pushed; Scheduler.IRQ manages thread context
+    via CHANGE (see Task #1077 transparent-suspension design).
+    """
+
+    def __init__(self):
+        self.start      = Signal()
+        self.irq_reason = Signal(2)
+        self.irq_slot   = Signal(16)
+        self.busy       = Signal()
+        self.complete   = Signal()
+
+        self.cr15_namespace = Signal(CAP_REG_LAYOUT)
+
+        self.mem_rd_addr  = Signal(32)
+        self.mem_rd_en    = Signal()
+        self.mem_rd_data  = Signal(32)
+        self.mem_rd_valid = Signal()
+
+        # DR0 write (irq_reason) — one-cycle pulse in WRITE_DR0 state
+        self.dr_wr_en   = Signal()
+        self.dr_wr_addr = Signal(4)
+        self.dr_wr_data = Signal(32)
+
+        # DR1 write (irq_slot) — one-cycle pulse in WRITE_DR1 state
+        self.dr1_wr_en   = Signal()
+        self.dr1_wr_data = Signal(32)
+
+        self.nia_set   = Signal()
+        self.nia_value = Signal(32)
+
+    def elaborate(self, platform):
+        m = Module()
+
+        reason_lat   = Signal(2)
+        slot_lat     = Signal(16)
+        ns_base      = Signal(32)
+        method_entry = Signal(32)
+
+        cr15_view = View(CAP_REG_LAYOUT, self.cr15_namespace)
+
+        # Byte address of NS[SCHEDULER_IRQ_NS_SLOT].word0_location.
+        # Each NS entry occupies 16 bytes (stride = slot_id << 4).
+        irq_ns_addr = Signal(32)
+        m.d.comb += irq_ns_addr.eq(
+            cr15_view.word1_location[:32] + (SCHEDULER_IRQ_NS_SLOT * 16)
+        )
+
+        m.d.comb += [
+            self.dr_wr_addr.eq(0),              # DR0 carries irq_reason
+            self.dr_wr_data.eq(reason_lat),
+            self.dr1_wr_data.eq(slot_lat),
+            self.nia_value.eq(ns_base + (method_entry << 2)),
+        ]
+
+        with m.FSM(name="irq_dispatch") as fsm:
+            with m.State("IDLE"):
+                with m.If(self.start):
+                    m.d.sync += [
+                        reason_lat.eq(self.irq_reason),
+                        slot_lat.eq(self.irq_slot),
+                    ]
+                    m.next = "FETCH_NS"
+
+            with m.State("FETCH_NS"):
+                # Read NS[SCHEDULER_IRQ_NS_SLOT].word0_location = Scheduler lump base
+                m.d.comb += [
+                    self.mem_rd_addr.eq(irq_ns_addr),
+                    self.mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
+                    m.d.sync += ns_base.eq(self.mem_rd_data)
+                    m.next = "FETCH_METHOD"
+
+            with m.State("FETCH_METHOD"):
+                # Read method-table entry: mem[ns_base + SCHEDULER_IRQ_METHOD_IDX * 4]
+                # The word value is a lump-base-relative word offset; NIA = ns_base + entry*4.
+                m.d.comb += [
+                    self.mem_rd_addr.eq(ns_base + (SCHEDULER_IRQ_METHOD_IDX * 4)),
+                    self.mem_rd_en.eq(1),
+                ]
+                with m.If(self.mem_rd_valid):
+                    m.d.sync += method_entry.eq(self.mem_rd_data)
+                    m.next = "WRITE_DR0"
+
+            with m.State("WRITE_DR0"):
+                # Pulse dr_wr_en to write DR0 = irq_reason
+                m.d.comb += self.dr_wr_en.eq(1)
+                m.next = "WRITE_DR1"
+
+            with m.State("WRITE_DR1"):
+                # Pulse dr1_wr_en to write DR1 = irq_slot
+                m.d.comb += self.dr1_wr_en.eq(1)
+                m.next = "COMPLETE"
+
+            with m.State("COMPLETE"):
+                m.next = "IDLE"
+
+        m.d.comb += [
+            self.busy.eq(~fsm.ongoing("IDLE")),
+            self.complete.eq(fsm.ongoing("COMPLETE")),
+            self.nia_set.eq(fsm.ongoing("COMPLETE")),
+        ]
+
+        return m

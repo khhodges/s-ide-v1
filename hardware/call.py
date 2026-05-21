@@ -102,6 +102,12 @@ class ChurchCall(Elaboratable):
         self.mgt_ns_integrity = Signal(32)   # NS entry word2_integrity
         self.mgt_ns_seals     = Signal(32)   # NS entry word3_abstract_gt (advisory seals)
 
+        # Lazy-load IRQ outputs (Task #1523): pulsed when FETCH_LUMP detects cw=0
+        # (CODE_NOT_RESIDENT).  No stack frame has been pushed at this point in
+        # the CALL pipeline.  Core uses these to trigger ChurchIRQDispatch.
+        self.lazy_load_irq     = Signal()     # 1-cycle pulse: evicted lump detected
+        self.lazy_load_ns_slot = Signal(16)   # NS slot of the evicted lump
+
     def elaborate(self, platform):
         m = Module()
 
@@ -476,7 +482,9 @@ class ChurchCall(Elaboratable):
                     ]
                     # If method index > 0, read the method table before setting CR14 limit.
                     # Index 0 = single entry point (NIA = lump_base + 4); skip table fetch.
-                    with m.If(call_imm_latched > 0):
+                    with m.If(_hdr.cw == 0):
+                        m.next = "LAZY_LOAD_ABORT"
+                    with m.Elif(call_imm_latched > 0):
                         m.next = "FETCH_METHOD_ENTRY"
                     with m.Else():
                         m.next = "SET_CR14_LIMIT_WRITE"
@@ -678,6 +686,13 @@ class ChurchCall(Elaboratable):
                 # The FSM returns to IDLE on the next cycle.
                 m.next = "IDLE"
 
+            with m.State("LAZY_LOAD_ABORT"):
+                # cw=0 detected in FETCH_LUMP: lump is CODE_NOT_RESIDENT.
+                # No stack frame has been pushed at this point in the pipeline.
+                # Abort the CALL silently; core dispatches to Scheduler.IRQ
+                # via ChurchIRQDispatch (Task #1523, IRQ_REASON_LAZY_LOAD).
+                m.next = "IDLE"
+
         m.d.comb += [
             self.call_busy.eq(~fsm.ongoing("IDLE")),
             self.call_complete.eq(fsm.ongoing("COMPLETE") | fsm.ongoing("M_FETCH_DONE")),
@@ -692,6 +707,8 @@ class ChurchCall(Elaboratable):
             self.mgt_ns_authority.eq(ns_auth_lat),
             self.mgt_ns_integrity.eq(ns_int_lat),
             self.mgt_ns_seals.eq(ns_seal_lat),
+            self.lazy_load_irq.eq(fsm.ongoing("LAZY_LOAD_ABORT")),
+            self.lazy_load_ns_slot.eq(View(GT_LAYOUT, callee_egt_latched).slot_id),
         ]
 
         return m

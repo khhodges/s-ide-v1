@@ -856,7 +856,7 @@ class ChurchSimulator {
             : (hasLazyEntry ? this._pendingResolves.get(slotIdx).petName : `slot${slotIdx}`);
         const newGT = this.createGT(0, nsIdx, { R:0, W:0, X:0, L:0, S:0, E:1 }, 1);
         this.memory[addr] = newGT >>> 0;
-        this.output += `[RESOLVE] Slot ${slotIdx} "${pendingName}" \u2192 NS[${nsIdx}] introduced interactively.\n`;
+        this.output += `[RESOLVE] CR${slotIdx} "${pendingName}" \u2192 NS[${nsIdx}] introduced interactively.\n`;
 
         // Resume suspended thread if this slot was the cause of a lazy-suspend.
         if (this._lazySuspended && hasLazyEntry) {

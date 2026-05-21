@@ -165,6 +165,14 @@ SWITCH_PASSKEY_SENTINEL_CR13 = 0xFFFFFFFE
 SWITCH_TGT_CR13 = 5   # 101₂  →  CR13  (IRQ Thread)
 SWITCH_TGT_CR15 = 7   # 111₂  →  CR15  (Namespace)
 
+# ── Hardware IRQ dispatch — Task #1523 ───────────────────────────────────────
+# Three conditions route to Scheduler.IRQ (NS slot 8) via ChurchIRQDispatch.
+# DR0 = reason code; DR1 = associated slot index when the IRQ fires.
+SCHEDULER_IRQ_NS_SLOT   = 8   # NS slot of the Scheduler.IRQ abstraction
+IRQ_REASON_TIMER        = 0   # hardware timer alarm fired between instructions
+IRQ_REASON_LAZY_LOAD    = 1   # lump header cw=0 (CODE_NOT_RESIDENT) in CALL pipeline
+IRQ_REASON_LAZY_RESOLVE = 2   # NULL GT in c-list slot (ELOADCALL / XLOADLAMBDA)
+
 
 class ChurchOpcode(IntEnum):
     LOAD        = 0b0000
