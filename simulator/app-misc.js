@@ -929,8 +929,8 @@ function adjustViewTop() {
 }
 
 window.addEventListener('resize', adjustViewTop);
-window.addEventListener('beforeunload', () => { if (activeUserTabId && userTabDirty) saveActiveUserTab(); });
-window.addEventListener('pagehide', () => { if (activeUserTabId && userTabDirty) saveActiveUserTab(); });
+window.addEventListener('beforeunload', () => { if (typeof activeUserTabId !== 'undefined' && activeUserTabId && typeof userTabDirty !== 'undefined' && userTabDirty && typeof saveActiveUserTab === 'function') saveActiveUserTab(); });
+window.addEventListener('pagehide', () => { if (typeof activeUserTabId !== 'undefined' && activeUserTabId && typeof userTabDirty !== 'undefined' && userTabDirty && typeof saveActiveUserTab === 'function') saveActiveUserTab(); });
 
 (function initPullToRefresh() {
     let startY = 0;
@@ -1023,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(err => { console.warn('[bootConfig] prefetch failed:', err); });
     _bootCfgReady.finally(() => {
-        init();
+        window.init();
         // Restore the fault log from the previous session so the Gate Log still
         // shows old faults (with the correct lump-name snapshot) after a reload.
         // Do NOT call faultAlertOn() here — stale faults from a prior session

@@ -1269,3 +1269,9 @@ function _initDefaultViewBolt() {
     _refreshDefaultBadges();
 }
 
+// Expose init() on window so cross-script callers (app-misc.js DOMContentLoaded)
+// can reliably reach it regardless of how the browser resolves global identifiers
+// across classic <script> tags.  Function declarations are technically on window
+// already, but being explicit guarantees it survives any caching or realm edge-cases.
+window.init = init;
+
