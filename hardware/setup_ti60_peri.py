@@ -116,6 +116,24 @@ design.assign_pkg_pin("led3",        "J14")
 design.save()
 print(f"  DesignAPI save done → {PERI_XML}")
 
+# ── Post-process: strip CLK/CDI suffixes from gpio_def ───────────────────────
+# Efinity's DesignAPI stores the full pad_name (e.g. "GPIOR_P_11_CLK8_P") as
+# gpio_def, but the GPIO resource validator only recognises the base instance
+# name (e.g. "GPIOR_P_11").  Strip _CLK*/CDI*/EXTFB* suffixes from every
+# comp_gpio gpio_def so the validator accepts CLK8-capable GPIOR pins.
+with open(PERI_XML, encoding="UTF-8") as f:
+    xml = f.read()
+
+xml = re.sub(
+    r'(gpio_def="GPIOR_[PN]_\d+)_[A-Z0-9_]+"',
+    r'\1"',
+    xml
+)
+
+with open(PERI_XML, "w", encoding="UTF-8") as f:
+    f.write(xml)
+print("  gpio_def CLK/CDI suffixes stripped")
+
 # ── Post-process: route clk through CLKMUX_T ROUTE0 ──────────────────────────
 # Efinity 2025.2 does not allow dedicated GCLK pins (B2 = GPIOT_P_07_CLK4_P)
 # as plain gpio_info entries.  The working solution is to assign the clock
