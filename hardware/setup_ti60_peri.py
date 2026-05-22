@@ -9,7 +9,7 @@ Usage (from the Efinity project directory that contains church_ti60_f225.peri.xm
     <path-to-this-script>/setup_ti60_peri.py
 
 Pin map (confirmed from Ti60F225_kit.isf reference designs):
-  clk         B2  = 25 MHz on-board crystal  → direct "clk" input (Phase A, no PLL)
+  clk         B2  = 25 MHz on-board crystal  → CLKMUX_T ROUTE0 (Phase A, no PLL)
   uart_tx     H14 = GPIOR_P_11  (external header, not FT4232H)
   uart_rx     M14 = GPIOR_P_02  (external header, not FT4232H)
   push_button A7  = GPIOT_N_06  USER_PB active-low (weak pull-up)
@@ -23,15 +23,20 @@ NOTE: The Ti60F225 devkit has NO UART path to the FT4232H.
       uart_tx/rx are routed to GPIO pins for use with an external
       USB-UART adapter if needed.
 
-Clock: Phase A — B2 25 MHz crystal → direct GPIO input "clk" (no PLL).
-       Efinity 2025.2 requires a TITANIUMPLL RTL primitive for peri-only
-       PLL configuration; without it check_design crashes.  The core runs
-       at 25 MHz; UART baud will be 57600 instead of 115200.  The SDC
-       (ti60_f225.sdc) Phase A constraint (period 40 ns) is already active.
+Clock: Phase A — B2 25 MHz crystal → CLKMUX_T ROUTE0 (no PLL).
+       Efinity 2025.2 does NOT support create_input_clock_gpio for dedicated
+       GCLK pins (B2 = GPIOT_P_07_CLK4_P).  The correct approach is to route
+       the clock through the CLKMUX_T block's ROUTE0 output.  This is done by
+       a post-processing XML edit after DesignAPI save().
+       The SDC (ti60_f225.sdc) Phase A constraint (period 40 ns) is active.
+
+Efinity 2025.2 patches required (apply once to your Efinity install):
+  See hardware/efinity_2025_2_patches/ for all patch scripts and README.
 """
 
 import sys
 import os
+import re
 
 sys.path.insert(0, os.path.join(os.environ.get("EFXPT_HOME", ""), "bin"))
 
@@ -40,16 +45,11 @@ from api_service.design import DesignAPI
 PERI_XML = "church_ti60_f225.peri.xml"
 
 # ── Create a fresh schema-valid peri.xml via the DesignAPI itself.
-# Hand-crafted XML is always rejected ("corrupted") because the schema is strict;
-# design.create() is the only way to produce a file the API will accept.
 design = DesignAPI(is_verbose=True)
 if hasattr(design, "create"):
     design.create(PERI_XML, "Ti60F225")
     print(f"  created fresh design → {PERI_XML}")
 else:
-    # Older Efinity builds that lack create() — load a schema-valid seed file
-    # produced by saving an empty Ti60F225 project via the Interface Designer.
-    # We reconstruct one here using the known-good attribute set from the schema.
     _SEED = '''<?xml version="1.0" encoding="UTF-8"?>
 <efxpt:design_db name="church_ti60_f225" device_def="Ti60F225"
   version="2025.2.0" db_version="20241001"
@@ -93,16 +93,7 @@ for bank in ["BL", "BR", "TL", "TR"]:
     design.set_mode_sel_name(bank, f"{bank}_MODE_SEL", bank)
     design.set_device_property(bank, "VOLTAGE", "3.3", "IOBANK")
 
-# ── Clock: 25 MHz crystal at B2 → direct GCLK input "clk" (Phase A) ─────────
-# No PLL instantiated here.  Efinity 2025.2 requires a TITANIUMPLL RTL cell
-# to configure a peri-only PLL via check_design; without it the tool crashes
-# with a null-dereference.  Phase A runs the core at 25 MHz directly.
-# The SDC (ti60_f225.sdc) already has Phase A active (create_clock period 40).
-design.create_input_clock_gpio("clk")   # conn_type="gclk" — GPIOT_P_07_CLK4_P
-design.assign_pkg_pin("clk", "B2")
-# ─────────────────────────────────────────────────────────────────────────────
-
-# ── GPIO signals ──────────────────────────────────────────────────────────────
+# ── GPIO signals (NOT clk — clock goes through CLKMUX, not gpio_info) ─────────
 design.create_output_gpio("uart_tx")
 design.create_input_gpio("uart_rx")
 design.create_input_gpio("push_button")
@@ -123,4 +114,39 @@ design.assign_pkg_pin("led3",        "J14")
 # ─────────────────────────────────────────────────────────────────────────────
 
 design.save()
+print(f"  DesignAPI save done → {PERI_XML}")
+
+# ── Post-process: route clk through CLKMUX_T ROUTE0 ──────────────────────────
+# Efinity 2025.2 does not allow dedicated GCLK pins (B2 = GPIOT_P_07_CLK4_P)
+# as plain gpio_info entries.  The working solution is to assign the clock
+# signal name "clk" to the CLKMUX_T block's ROUTE0 output pin.  The physical
+# pin B2 is implicitly the CLKMUX_T source — no assign_pkg_pin needed.
+#
+# clkmux_rule_core_clock_pin and clkmux_rule_core_clock_static_mux are bypassed
+# in the patched Efinity 2025.2 install (see hardware/efinity_2025_2_patches/).
+with open(PERI_XML, encoding="UTF-8") as f:
+    xml = f.read()
+
+# Find the CLKMUX_T block and set the first ROUTE0 pin name to "clk"
+# The schema produces: <efxpt:pin name="" type_name="ROUTE0" .../>
+# We want:             <efxpt:pin name="clk" type_name="ROUTE0" .../>
+clkmux_start = xml.find('<efxpt:clkmux name="CLKMUX_T"')
+if clkmux_start == -1:
+    print("WARNING: CLKMUX_T block not found — cannot set clock route")
+else:
+    clkmux_end = xml.find('</efxpt:clkmux>', clkmux_start) + len('</efxpt:clkmux>')
+    section = xml[clkmux_start:clkmux_end]
+
+    # Set clk on ROUTE0 (first occurrence of ROUTE0 in this section)
+    section = re.sub(
+        r'(<efxpt:pin name=")("  type_name="ROUTE0"|" type_name="ROUTE0")',
+        r'\1clk\2',
+        section, count=1
+    )
+    xml = xml[:clkmux_start] + section + xml[clkmux_end:]
+
+    with open(PERI_XML, "w", encoding="UTF-8") as f:
+        f.write(xml)
+    print(f"  CLKMUX_T ROUTE0 set to 'clk' → {PERI_XML}")
+
 print(f"SUCCESS — {PERI_XML} written")
