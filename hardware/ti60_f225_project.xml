@@ -12,7 +12,7 @@
     </efx:design_info>
     <efx:constraint_info>
         <efx:sdc_file name="church_ti60_f225.sdc"/>
-        <efx:inter_file name="ti60_f225.peri.xml"/>
+        <efx:inter_file name=""/>
     </efx:constraint_info>
     <efx:sim_info/>
     <efx:misc_info/>
