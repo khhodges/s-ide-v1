@@ -116,4 +116,5 @@
         </efxpt:comp_gpio>
         <efxpt:global_unused_config state="input with weak pulldown"/>
     </efxpt:gpio_info>
+    <efxpt:mipi_dphy_info/>
 </efxpt:design_db>
