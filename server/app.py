@@ -150,7 +150,7 @@ def add_cache_control(response):
 
 @app.route("/dl/ti60v")
 def download_ti60v():
-    v_path = os.path.join(BASE_DIR, "..", "build", "church_ti60_f225.v")
+    v_path = os.path.join(os.path.dirname(__file__), "..", "build", "church_ti60_f225.v")
     return send_file(os.path.abspath(v_path),
                      as_attachment=True,
                      download_name="church_ti60_f225.v",
