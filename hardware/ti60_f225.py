@@ -657,10 +657,15 @@ class ChurchTi60F225(Elaboratable):
                     m.d.sync += [halted.eq(1), pl_active.eq(1)]
                     m.d.comb += crc_mod.reset.eq(1)
                     m.next = "PL_WAIT_EF"
-                with m.Elif(btn_press):
-                    # Button press: pause into single-step mode.
+                with m.Elif(btn_hold_done):
+                    # Long hold (1 s): pause into single-step / debug mode.
                     m.d.sync += halted.eq(1)
                     m.next = "HALTED"
+                with m.Elif(btn_press):
+                    # Short press: retransmit call-home banner immediately.
+                    # Useful when picocom is opened after boot already sent.
+                    m.d.sync += [banner_idx.eq(0), halted.eq(0)]
+                    m.next = "SEND_BANNER"
 
             with m.State("FAULT_HALT"):
                 m.d.sync += halted.eq(1)
