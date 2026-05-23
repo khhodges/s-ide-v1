@@ -86,12 +86,12 @@
         <efxpt:comp_gpio name="clk" gpio_def="GPIOT_P_07_CLK4_P" mode="input" bus_name="" io_standard="1.8 V LVCMOS">
             <efxpt:input_config name="clk" name_ddio_lo="" conn_type="clkin" is_register="false" clock_name="" is_clock_inverted="false" pull_option="none" is_schmitt_trigger="false" ddio_type="none" is_bus_hold="false" delay="0" is_serial="false" is_dyn_delay="false" fastclk_name="" pullup_ena_name="clk_PULL_UP_ENA" dyn_delay_en_name="clk_DLY_ENA" dyn_delay_reset_name="clk_DLY_RST" dyn_delay_ctrl_name="clk_DLY_CTRL" clkmux_buf_name="CLKMUX_T"/>
         </efxpt:comp_gpio>
-        <!-- UART TX at ball R5 = GPIOL_03  P3 pin 32  (3.3V bank BL — CP2102 RXD) -->
-        <efxpt:comp_gpio name="uart_tx" gpio_def="GPIOL_03" mode="output" bus_name="" io_standard="3.3 V LVCMOS">
+        <!-- UART TX → GPIOL_02: on-board PCB trace to FT4232H interface 2 (ttyUSB2), 3.3V -->
+        <efxpt:comp_gpio name="uart_tx" gpio_def="GPIOL_02" mode="output" bus_name="" io_standard="3.3 V LVCMOS">
             <efxpt:output_config name="uart_tx" name_ddio_lo="" register_option="none" clock_name="" is_clock_inverted="false" is_slew_rate="false" tied_option="none" ddio_type="none" delay="0" is_serial="false" drive_strength="4" fastclk_name=""/>
         </efxpt:comp_gpio>
-        <!-- UART RX at ball R6 = GPIOL_04  P3 pin 34  (3.3V bank BL — CP2102 TXD) -->
-        <efxpt:comp_gpio name="uart_rx" gpio_def="GPIOL_04" mode="input" bus_name="" io_standard="3.3 V LVCMOS">
+        <!-- UART RX ← GPIOL_01: on-board PCB trace to FT4232H interface 2 (ttyUSB2), 3.3V -->
+        <efxpt:comp_gpio name="uart_rx" gpio_def="GPIOL_01" mode="input" bus_name="" io_standard="3.3 V LVCMOS">
             <efxpt:input_config name="uart_rx" name_ddio_lo="" conn_type="normal" is_register="false" clock_name="" is_clock_inverted="false" pull_option="none" is_schmitt_trigger="false" ddio_type="none" is_bus_hold="false" delay="0" is_serial="false" is_dyn_delay="false" fastclk_name="" pullup_ena_name="uart_rx_PULL_UP_ENA" dyn_delay_en_name="uart_rx_DLY_ENA" dyn_delay_reset_name="uart_rx_DLY_RST" dyn_delay_ctrl_name="uart_rx_DLY_CTRL" clkmux_buf_name=""/>
         </efxpt:comp_gpio>
         <!-- Push button (active-low, weak pull-up) at ball A7 = GPIOT_N_06 -->

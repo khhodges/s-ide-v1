@@ -10,21 +10,23 @@ Usage (from the Efinity project directory that contains church_ti60_f225.peri.xm
 
 Pin map (confirmed from Ti60F225_kit.isf reference designs):
   clk         B2  = 25 MHz on-board crystal  → CLKMUX_T ROUTE0 (Phase A, no PLL)
-  uart_tx     R5  = GPIOL_03   P3 pin 32  (3.3V bank BL — works with CP2102)
-  uart_rx     R6  = GPIOL_04   P3 pin 34  (3.3V bank BL — works with CP2102)
+  uart_tx     GPIOL_02  — on-board trace to FT4232H interface 2 (ttyUSB2) — 3.3V
+  uart_rx     GPIOL_01  — on-board trace to FT4232H interface 2 (ttyUSB2) — 3.3V
   push_button A7  = GPIOT_N_06  USER_PB active-low (weak pull-up)
   led0        K14 = USER_LED[0]
   led1        J15 = USER_LED[1]
   led2        H10 = USER_LED[2]
   led3        J14 = USER_LED[3]
 
-NOTE: The Ti60F225 devkit has NO UART path to the FT4232H.
-      The FT4232H is used only for JTAG/SPI programming; ttyUSB2 is NOT
-      wired to any FPGA GPIO.  uart_tx/rx use P3 expansion header pins:
-        P3 pin 32 (GPIOL_03, R5) → CP2102 RXD
-        P3 pin 34 (GPIOL_04, R6) → CP2102 TXD
-        P3 pin 35 (GND)          → CP2102 GND
-      Both pins are 3.3V LVCMOS (bank BL) — compatible with CP2102 directly.
+NOTE: GPIOL_01 and GPIOL_02 are hardwired on the devkit PCB to FT4232H interface 2.
+      FT4232H interface 2 appears as ttyUSB2 on the connected computer.
+      No external USB-UART adapter is needed — use the J12 USB-C cable.
+      picocom -b 115200 /dev/ttyUSB2   (or the appropriate ttyUSB number)
+
+      GPIOL_01/02 have no standard BGA ball coordinate accessible via
+      assign_pkg_pin.  They are injected directly by XML post-processing
+      below, matching the approach used in the Efinix TEMAC example for
+      this devkit (efinity/2025.2/ipm/ip/efx_tsemac/fpga/Ti60F225_devkit).
 
 Clock: Phase A — B2 25 MHz crystal → CLKMUX_T ROUTE0 (no PLL).
        Efinity 2025.2 does NOT support create_input_clock_gpio for dedicated
@@ -107,8 +109,8 @@ design.create_output_gpio("led3")
 
 design.set_property("push_button", "PULL_OPTION", "WEAK_PULLUP")
 
-design.assign_pkg_pin("uart_tx",     "R5")
-design.assign_pkg_pin("uart_rx",     "R6")
+design.assign_pkg_pin("uart_tx",     "H14")  # placeholder — overridden below to GPIOL_02
+design.assign_pkg_pin("uart_rx",     "G13")  # placeholder — overridden below to GPIOL_01
 design.assign_pkg_pin("push_button", "A7")
 design.assign_pkg_pin("led0",        "K14")
 design.assign_pkg_pin("led1",        "J15")
@@ -136,6 +138,30 @@ xml = re.sub(
 with open(PERI_XML, "w", encoding="UTF-8") as f:
     f.write(xml)
 print("  gpio_def CLK/CDI suffixes stripped")
+
+# ── Post-process: override uart_tx/rx to GPIOL_02/01 (FT4232H on-board UART) ─
+# GPIOL_01 (uart_rx) and GPIOL_02 (uart_tx) are hardwired on the devkit PCB to
+# FT4232H interface 2 (ttyUSB2).  They have no BGA ball coordinate usable with
+# assign_pkg_pin — they are assigned here by direct XML substitution, exactly as
+# the Efinix TEMAC example does for the same devkit.
+# io_standard is 3.3 V LVCMOS to match the FT4232H signal levels.
+with open(PERI_XML, encoding="UTF-8") as f:
+    xml = f.read()
+
+xml = re.sub(
+    r'(<efxpt:comp_gpio name="uart_tx" gpio_def=")[^"]*(" mode="output"[^>]*io_standard=")[^"]*"',
+    r'\1GPIOL_02\23.3 V LVCMOS"',
+    xml,
+)
+xml = re.sub(
+    r'(<efxpt:comp_gpio name="uart_rx" gpio_def=")[^"]*(" mode="input"[^>]*io_standard=")[^"]*"',
+    r'\1GPIOL_01\23.3 V LVCMOS"',
+    xml,
+)
+
+with open(PERI_XML, "w", encoding="UTF-8") as f:
+    f.write(xml)
+print("  uart_tx/rx overridden to GPIOL_02/01 (FT4232H interface 2, 3.3 V LVCMOS)")
 
 # ── Post-process: route clk through CLKMUX_T ROUTE0 ──────────────────────────
 # Efinity 2025.2 does not allow dedicated GCLK pins (B2 = GPIOT_P_07_CLK4_P)

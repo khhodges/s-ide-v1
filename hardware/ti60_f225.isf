@@ -12,8 +12,8 @@
 #
 # Church Machine signals:
 #   clk         B2  = GPIOT_P_07_CLK4_P  25 MHz crystal → CLKMUX_T (Phase A, no PLL)
-#   uart_tx     R5  = GPIOL_03           P3 pin 32  (3.3V bank BL — CP2102 RXD)
-#   uart_rx     R6  = GPIOL_04           P3 pin 34  (3.3V bank BL — CP2102 TXD)
+#   uart_tx     GPIOL_02  on-board PCB trace → FT4232H interface 2 (ttyUSB2) 3.3V
+#   uart_rx     GPIOL_01  on-board PCB trace → FT4232H interface 2 (ttyUSB2) 3.3V
 #   push_button A7  = GPIOT_N_06         USER_PB, active-low, ext pull-up
 #   led0        R7  = USER_LED[0], active-HIGH
 #   led1        P8  = USER_LED[1], active-HIGH

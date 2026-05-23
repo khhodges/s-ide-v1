@@ -21,11 +21,11 @@ class ChurchTi60F225(Elaboratable):
            Phase B (future): PLL_TL0 M=4 N=1 O=2 → 50 MHz — requires adding PLL
            to setup_ti60_peri.py and switching SDC to Phase B constraint.
 
-    NOTE: The Ti60F225 devkit has NO UART path to the FT4232H USB chip.
-          The FT4232H is used only for JTAG/SPI programming (ttyUSB0-3 are NOT
-          wired to FPGA GPIO for user UART).
-          uart_tx (R5, GPIOL_03, P3 pin 32) and uart_rx (R6, GPIOL_04, P3 pin 34)
-          are 3.3V bank BL GPIO on P3 expansion header — use CP2102 there.
+    NOTE: UART uses FT4232H interface 2 — the J12 USB-C cable already connected
+          for programming.  GPIOL_01 (uart_rx) and GPIOL_02 (uart_tx) are
+          hardwired on the devkit PCB to FT4232H interface 2, which appears as
+          ttyUSB2 on the host.  No external USB-UART adapter is needed.
+          Use: picocom -b 115200 /dev/ttyUSB2
 
     Differences from Tang Nano 20K:
       - clk_freq = 25 MHz (direct crystal via CLKMUX_T, Phase A)
