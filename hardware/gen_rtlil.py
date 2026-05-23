@@ -279,7 +279,7 @@ def _decode_alu_block(block):
     return "".join(lines_out)
 
 
-def _rtlil_to_verilog(il_path, v_path):
+def _rtlil_to_verilog(il_path, v_path, module_name=None):
     """Convert Amaranth RTLIL to Verilog via Yosys for use in Efinity IDE.
 
     The `techmap` pass before write_verilog is essential: it expands Yosys
@@ -287,7 +287,12 @@ def _rtlil_to_verilog(il_path, v_path):
     efx_map synthesiser recognises.  Without it, write_verilog emits these
     as module instantiations of unknown modules and Efinity fails with
     "instantiating unknown module '$alu'" / "$macc" errors.
+
+    If module_name is given, the Amaranth-generated 'top' module is renamed
+    to that name before writing Verilog, so Efinity's project top_module
+    setting matches the generated output.
     """
+    rename_pass = f"rename top {module_name}; " if module_name else ""
     script = (
         f"read_rtlil {il_path}; "
         f"hierarchy -top top; "
@@ -300,6 +305,7 @@ def _rtlil_to_verilog(il_path, v_path):
         f"opt -fast; "
         f"techmap; "
         f"clean; "
+        f"{rename_pass}"
         f"write_verilog -noattr {v_path}"
     )
     try:
@@ -364,7 +370,7 @@ def generate_rtlil_ti60(output_dir="build"):
     print(f"  Lines: {rtlil_text.count(chr(10)):,}")
 
     v_path = os.path.join(output_dir, "church_ti60_f225.v")
-    _rtlil_to_verilog(il_path, v_path)
+    _rtlil_to_verilog(il_path, v_path, module_name="church_ti60_f225")
 
     return il_path
 
