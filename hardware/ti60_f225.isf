@@ -11,9 +11,9 @@
 # Timing Model: C3 (final)
 #
 # Church Machine signals:
-#   clk         B2  = GPIOT_P_07_CLK4_P  25 MHz crystal → PLL → 50 MHz
-#   uart_tx     H14 = GPIOR_P_11_CLK8_P  UART TX (FPGA→host, external adapter)
-#   uart_rx     M14 = GPIOR_P_02_CDI24   UART RX (host→FPGA, external adapter)
+#   clk         B2  = GPIOT_P_07_CLK4_P  25 MHz crystal → CLKMUX_T (Phase A, no PLL)
+#   uart_tx     R5  = GPIOL_03           P3 pin 32  (3.3V bank BL — CP2102 RXD)
+#   uart_rx     R6  = GPIOL_04           P3 pin 34  (3.3V bank BL — CP2102 TXD)
 #   push_button A7  = GPIOT_N_06         USER_PB, active-low, ext pull-up
 #   led0        R7  = USER_LED[0], active-HIGH
 #   led1        P8  = USER_LED[1], active-HIGH
@@ -91,11 +91,11 @@ design.set_device_property("Top","DYN_MUX0_EN","0","CLKMUX")
 design.set_device_property("Top","DYN_MUX7_EN","0","CLKMUX")
 
 # Create GPIO instances
-# Clock — 25 MHz crystal at ball B2 → PLL → 50 MHz, routed as global clock
+# Clock — 25 MHz crystal at ball B2 → CLKMUX_T ROUTE0, routed as global clock (Phase A)
 design.create_input_gpio("clk")
-# UART TX — FPGA → FTDI FT232H RX, ball H14
+# UART TX — FPGA → CP2102 RXD, ball R5 = GPIOL_03, P3 pin 32  (3.3V bank BL)
 design.create_output_gpio("uart_tx")
-# UART RX — FTDI FT232H TX → FPGA, ball M14
+# UART RX — CP2102 TXD → FPGA, ball R6 = GPIOL_04, P3 pin 34  (3.3V bank BL)
 design.create_input_gpio("uart_rx")
 # Push button — active-low, ball A7
 design.create_input_gpio("push_button")
@@ -111,8 +111,8 @@ design.set_property("push_button","PULL_OPTION","WEAK_PULLUP")
 
 # Pin assignments (ball locations from Ti60 F225 Dev Kit schematic)
 design.assign_pkg_pin("clk","B2")
-design.assign_pkg_pin("uart_tx","H14")
-design.assign_pkg_pin("uart_rx","M14")
+design.assign_pkg_pin("uart_tx","R5")
+design.assign_pkg_pin("uart_rx","R6")
 design.assign_pkg_pin("push_button","A7")
 design.assign_pkg_pin("led0","R7")
 design.assign_pkg_pin("led1","P8")

@@ -10,8 +10,8 @@ Usage (from the Efinity project directory that contains church_ti60_f225.peri.xm
 
 Pin map (confirmed from Ti60F225_kit.isf reference designs):
   clk         B2  = 25 MHz on-board crystal  → CLKMUX_T ROUTE0 (Phase A, no PLL)
-  uart_tx     H14 = GPIOR_P_11  (external header, not FT4232H)
-  uart_rx     G13 = GPIOR_P_12  (external header, plain GPIOR, bank 3A, adj to H14)
+  uart_tx     R5  = GPIOL_03   P3 pin 32  (3.3V bank BL — works with CP2102)
+  uart_rx     R6  = GPIOL_04   P3 pin 34  (3.3V bank BL — works with CP2102)
   push_button A7  = GPIOT_N_06  USER_PB active-low (weak pull-up)
   led0        K14 = USER_LED[0]
   led1        J15 = USER_LED[1]
@@ -19,9 +19,12 @@ Pin map (confirmed from Ti60F225_kit.isf reference designs):
   led3        J14 = USER_LED[3]
 
 NOTE: The Ti60F225 devkit has NO UART path to the FT4232H.
-      The FT4232H is used only for JTAG programming/debug.
-      uart_tx/rx are routed to GPIO pins for use with an external
-      USB-UART adapter if needed.
+      The FT4232H is used only for JTAG/SPI programming; ttyUSB2 is NOT
+      wired to any FPGA GPIO.  uart_tx/rx use P3 expansion header pins:
+        P3 pin 32 (GPIOL_03, R5) → CP2102 RXD
+        P3 pin 34 (GPIOL_04, R6) → CP2102 TXD
+        P3 pin 35 (GND)          → CP2102 GND
+      Both pins are 3.3V LVCMOS (bank BL) — compatible with CP2102 directly.
 
 Clock: Phase A — B2 25 MHz crystal → CLKMUX_T ROUTE0 (no PLL).
        Efinity 2025.2 does NOT support create_input_clock_gpio for dedicated
@@ -104,8 +107,8 @@ design.create_output_gpio("led3")
 
 design.set_property("push_button", "PULL_OPTION", "WEAK_PULLUP")
 
-design.assign_pkg_pin("uart_tx",     "H14")
-design.assign_pkg_pin("uart_rx",     "G13")
+design.assign_pkg_pin("uart_tx",     "R5")
+design.assign_pkg_pin("uart_rx",     "R6")
 design.assign_pkg_pin("push_button", "A7")
 design.assign_pkg_pin("led0",        "K14")
 design.assign_pkg_pin("led1",        "J15")

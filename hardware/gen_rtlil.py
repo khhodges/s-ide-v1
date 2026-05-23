@@ -346,7 +346,7 @@ def generate_rtlil_tang_nano(output_dir="build"):
 def generate_rtlil_ti60(output_dir="build"):
     os.makedirs(output_dir, exist_ok=True)
 
-    top = ChurchTi60F225(clk_freq=50_000_000, baud=115200, sim_mode=False)
+    top = ChurchTi60F225(clk_freq=25_000_000, baud=115200, sim_mode=False)
 
     ports = [
         top.uart_tx, top.uart_rx, top.push_button,
