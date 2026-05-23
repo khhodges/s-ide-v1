@@ -148,6 +148,14 @@ def add_cache_control(response):
     response.headers["Permissions-Policy"] = "serial=(self)"
     return response
 
+@app.route("/dl/ti60v")
+def download_ti60v():
+    v_path = os.path.join(BASE_DIR, "..", "build", "church_ti60_f225.v")
+    return send_file(os.path.abspath(v_path),
+                     as_attachment=True,
+                     download_name="church_ti60_f225.v",
+                     mimetype="text/plain")
+
 @app.route("/")
 def index():
     landing_path = os.path.join(BASE_DIR, "landing.html")
