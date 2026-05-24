@@ -419,6 +419,26 @@ def _get_version_telemetry(db_path):
     return summaries
 
 
+def _get_github_sync_status() -> dict:
+    """Return the last recorded GitHub sync status from github-sync-status.json."""
+    import json as _json
+    status_file = os.path.join(_SERVER_DIR, "github-sync-status.json")
+    try:
+        with open(status_file, "r", encoding="utf-8") as fh:
+            data = _json.load(fh)
+        ts = data.get("timestamp", 0)
+        if ts:
+            data["timestamp_str"] = (
+                datetime.datetime.utcfromtimestamp(ts).strftime("%Y-%m-%d %H:%M UTC")
+            )
+        else:
+            data["timestamp_str"] = "unknown"
+        return data
+    except (OSError, _json.JSONDecodeError):
+        return {"status": "never", "branch": "", "sha": "", "error": "",
+                "timestamp": 0, "timestamp_str": "never"}
+
+
 def _get_ti60_status(db_path):
     """Return Ti60 call-home status from the devices table."""
     try:
@@ -567,10 +587,28 @@ def generate_report(db_path):
     ti60 = _get_ti60_status(db_path)
     cost = _get_cost_summary(db_path)
     version_telemetry = _get_version_telemetry(db_path)
+    gh_sync = _get_github_sync_status()
 
     cost_today = cost["cost_today"]
     cost_month = cost["cost_month"]
     runs_today = cost["runs_today"]
+
+    def _github_sync_plain(gs):
+        status = gs.get("status", "never")
+        ts = gs.get("timestamp_str", "never")
+        branch = gs.get("branch", "")
+        sha = gs.get("sha", "")
+        error = gs.get("error", "")
+        if status == "never":
+            return "  No sync recorded yet (first merge will populate this)."
+        if status == "ok":
+            return f"  OK — pushed {branch} ({sha}) at {ts}"
+        lines = [f"  FAILED — attempted {branch} ({sha}) at {ts}"]
+        if error:
+            for line in error.strip().splitlines():
+                lines.append(f"    {line}")
+        lines.append("  Check that the GITHUB_PAT Replit secret is valid and has not expired.")
+        return "\n".join(lines)
 
     def _task_line(t):
         deps = t.get("deps", [])
@@ -629,6 +667,9 @@ Generated: {now_utc.strftime('%Y-%m-%d %H:%M')} UTC
 
 7. LUMP VERSION SUMMARY
 {_format_version_telemetry_plain(version_telemetry)}
+
+8. GITHUB SYNC STATUS
+{_github_sync_plain(gh_sync)}
 
 {'='*60}
 This report is sent automatically at 05:00 UTC every day.
@@ -717,6 +758,32 @@ This report is sent automatically at 05:00 UTC every day.
         )
         return header + "\n".join(rows) + "</tbody></table>"
 
+    def _github_sync_html(gs, h):
+        status = gs.get("status", "never")
+        ts = h(gs.get("timestamp_str", "never"))
+        branch = h(gs.get("branch", ""))
+        sha = h(gs.get("sha", ""))
+        error = h(gs.get("error", ""))
+        if status == "never":
+            return "<p><em>No sync recorded yet (first merge will populate this).</em></p>"
+        if status == "ok":
+            return (
+                f"<p style='color:#2e7d32;font-weight:600'>&#10003; OK</p>"
+                f"<p>Pushed <code>{branch}</code> ({sha}) at {ts}</p>"
+            )
+        error_block = (
+            f"<pre style='background:#fbe9e7;padding:8px;border-radius:4px;"
+            f"white-space:pre-wrap;font-size:0.85em'>{error}</pre>"
+            if error else ""
+        )
+        return (
+            f"<p style='color:#c62828;font-weight:600'>&#10007; FAILED</p>"
+            f"<p>Attempted <code>{branch}</code> ({sha}) at {ts}</p>"
+            f"{error_block}"
+            f"<p style='color:#555'>Check that the <code>GITHUB_PAT</code> "
+            f"Replit secret is valid and has not expired.</p>"
+        )
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -784,6 +851,9 @@ This report is sent automatically at 05:00 UTC every day.
 
 <h2>7. LUMP Version Summary</h2>
 {_version_telemetry_html(version_telemetry, _h)}
+
+<h2>8. GitHub Sync Status</h2>
+{_github_sync_html(gh_sync, _h)}
 
 <div class="footer">
   This report is sent automatically at 05:00 UTC every day.
