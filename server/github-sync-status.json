@@ -1,0 +1,7 @@
+{
+  "status": "fail",
+  "branch": "main",
+  "sha": "4ff9c08f",
+  "error": "GITHUB_PAT secret is not set",
+  "timestamp": 1779640340.6426878
+}
