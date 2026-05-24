@@ -436,6 +436,10 @@ class ChurchTi60F225(Elaboratable):
         # Pre-boot:  show hardware status (boot, run, fault, heartbeat).
         # Post-boot: MMIO registers (CPU DWRITE) OR demo_led OR heartbeat drive each LED.
         # Each LED word is bits[2:0]={B,G,R}; only bit 0 (R) drives the physical pin.
+        # Visual diagnostic: latches to 1 on first SEND_BANNER entry, stays on.
+        # LED3 lights permanently after any banner transmission attempt.
+        banner_ever_sent = Signal()
+
         # Ti60 has 4 physical LEDs (led0–led3); LED[4] register exists but has no pin.
         m.d.comb += [
             self.led[0].eq(Mux(core.boot_complete,
@@ -448,8 +452,8 @@ class ChurchTi60F225(Elaboratable):
                                mmio_led_reg[2][0] | demo_led[2] | fault_latched,
                                led_fault)),
             self.led[3].eq(Mux(core.boot_complete,
-                               mmio_led_reg[3][0] | demo_led[3],
-                               core.boot_complete)),
+                               mmio_led_reg[3][0] | demo_led[3] | banner_ever_sent | debug.busy,
+                               core.boot_complete | banner_ever_sent | debug.busy)),
         ]
 
         boot_delay = Signal(4, init=0)
@@ -528,6 +532,7 @@ class ChurchTi60F225(Elaboratable):
                     m.next = "SEND_BANNER"
 
             with m.State("SEND_BANNER"):
+                m.d.sync += banner_ever_sent.eq(1)
                 with m.If(~debug.busy):
                     with m.If(banner_idx < len(BANNER)):
                         m.d.comb += [
