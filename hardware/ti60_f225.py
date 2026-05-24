@@ -449,11 +449,11 @@ class ChurchTi60F225(Elaboratable):
                                mmio_led_reg[1][0] | demo_led[1] | led_halted_blink,
                                led_run | led_halted_blink)),
             self.led[2].eq(Mux(core.boot_complete,
-                               mmio_led_reg[2][0] | demo_led[2] | fault_latched,
-                               led_fault)),
+                               mmio_led_reg[2][0] | demo_led[2] | fault_latched | banner_ever_sent,
+                               led_fault | banner_ever_sent)),
             self.led[3].eq(Mux(core.boot_complete,
-                               mmio_led_reg[3][0] | demo_led[3] | banner_ever_sent | debug.busy,
-                               core.boot_complete | banner_ever_sent | debug.busy)),
+                               mmio_led_reg[3][0] | demo_led[3],
+                               core.boot_complete)),
         ]
 
         boot_delay = Signal(4, init=0)
