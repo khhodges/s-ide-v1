@@ -27,3 +27,4 @@ server/scheduler.db
 # Mum private key (Stage 3 — Keystone Hello Mum; generated on first run)
 server/mum_key.pem
 server/church_machine.db
+server/github-sync-status.json
