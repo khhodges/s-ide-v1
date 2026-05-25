@@ -6,11 +6,9 @@ A combined Efinix Ti60F225 bitstream that places the Sapphire RISC-V SoC and the
 Church Machine RTL side-by-side in a single Efinity project.
 
 On power-on:
-- The Sapphire SoC boots its firmware and sends `CHURCH Ti60 SoC+CM v1.0\r\n`
+- The Sapphire SoC boots its firmware and sends `CHURCH Ti60 SoC+CM v1.1\r\n`
   over **ttyUSB2** (115200 baud, GPIOL_02 → FT4232H interface 2).
-- The Church Machine streams NIA traces, fault codes, and call-home packets
-  over **ttyUSB3** (115200 baud, GPIOL_P_03 → FT4232H interface 3).
-- The Church Machine boots its internal boot sequence automatically.
+- The Church Machine streams NIA traces, fault codes, and call-home packets.
 - LED0 lights when the SoC is out of reset.
 - LED1 lights when the CM completes its boot sequence.
 - LED2 lights if the CM raises a fault.
@@ -18,6 +16,30 @@ On power-on:
 
 The SoC firmware controls the CM via an APB3 register bridge.
 See **APB3 register map** below.
+
+---
+
+## ⚠️  Critical: how firmware gets into the bitstream on Ti60
+
+**EFX_MAP on Efinix Titanium completely ignores `$readmemb`.**
+It is treated as simulation-only regardless of where the `.bin` files are placed.
+
+The `$readmemb` calls in `sapphire.v` do NOT embed firmware into the bitstream.
+Copying symbol files to `work_syn/` does NOT help.
+
+The correct flow is:
+
+1. Build firmware → generates four byte-lane `.bin` symbol files.
+2. **Run `scripts/patch_sapphire_init.py`** to replace the `$readmemb` calls in
+   `sapphire.v` with explicit inline `initial` block assignments.
+3. Set `optimize-zero-init-rom = 0` in `church_soc_cm.xml` (if EFX_MAP eliminates
+   a sparse BRAM it believes is zero, the firmware never executes).
+4. Synthesise → 64 EFX_RAM10 BRAM instances for system_ramA appear in `map.v`.
+5. **Run `scripts/patch_mapv_init.py`** to inject firmware bytes directly into the
+   `INIT_` defparam statements of those 64 instances.
+6. Place & route on the patched `map.v` → bitstream → flash.
+
+Steps 2 and 5 are performed by scripts in `scripts/`. See **Steps** below.
 
 ---
 
@@ -30,6 +52,7 @@ See **APB3 register map** below.
 | Sapphire SoC IP | Ships with Efinity — path given in Step 1 |
 | Python 3 + Amaranth | Required to generate CM RTL in Step 2 |
 | `pyserial` | `pip install pyserial` — for the test step |
+| `openFPGALoader` | `~/oss-cad-suite/bin/openFPGALoader` — for flashing |
 
 ---
 
@@ -54,464 +77,267 @@ cp ~/efinity/2025.2/ipm/ip/efx_tsemac/fpga/Ti60F225_devkit/ip/sapphire/sapphire_
 
 ### Step 2 — Generate the Church Machine RTL
 
-The CM Verilog is generated from `hardware/ti60_f225.py` (Amaranth HDL):
-
 ```bash
 python hardware/gen_verilog.py --ti60
-```
-
-This writes `build/church_ti60_f225.v` (module name `church_ti60f225`).
-Copy it into the project directory:
-
-```bash
 cp build/church_ti60_f225.v hardware/soc_combined/
 ```
 
-> **Why a separate copy step?**  Efinity requires all source files to sit in or
-> near the project directory.  The `build/` directory is `.gitignore`d so the
-> generated RTL is not committed to the repository.
+---
+
+### Step 3 — Build the SoC firmware
+
+```bash
+make -C hardware/soc_combined/firmware
+```
+
+This produces:
+- `firmware/firmware.bin` — raw binary
+- `firmware/firmware.hex` — plain hex
+- Four byte-lane symbol files in `hardware/soc_combined/`:
+  ```
+  EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin
+  EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin
+  EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin
+  EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin
+  ```
+
+Verify:
+```bash
+ls -lh hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol*.bin
+# Expect four files of ~1.2 MB each (131 072 words × 9 chars/line)
+```
 
 ---
 
-### Step 3 — Verify Sapphire addresses (optional but recommended)
+### Step 4 — Patch sapphire.v (replace $readmemb with inline initial block)
 
-Check the Efinix-generated `bsp/efinix/EfxSapphireSoc/include/soc.h` (from
-the sapphire_backup path) and confirm the addresses used by the SoC firmware.
-`sapphire_define.vh` does **not** contain address defines — addresses come from
-`soc.h`:
+EFX_MAP ignores `$readmemb` entirely. Replace each call with explicit Verilog
+initial assignments so EFX_MAP creates the BRAM instances:
+
+```bash
+cd hardware/soc_combined
+python3 ../../scripts/patch_sapphire_init.py \
+  sapphire.v \
+  EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin \
+  EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin \
+  EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin \
+  EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin
+```
+
+**Re-run this step every time the firmware is rebuilt** before re-synthesising.
+
+> **Why?** EFX_MAP's `optimize-zero-init-rom` option eliminates a BRAM that
+> appears zero-initialised. Replacing `$readmemb` with inline assignments
+> makes EFX_MAP produce the 64 EFX_RAM10 instances needed for system_ramA
+> (even though it still does not propagate the initial values to `INIT_` params).
+
+---
+
+### Step 5 — Ensure optimize-zero-init-rom is off
+
+In `hardware/soc_combined/church_soc_cm.xml`, the synthesis section must have:
+
+```xml
+<efx:param name="optimize-zero-init-rom" value="0" value_type="e_option"/>
+```
+
+Set it if needed:
+```bash
+grep "optimize-zero-init-rom" hardware/soc_combined/church_soc_cm.xml
+# If value="1", change to value="0"
+```
+
+---
+
+### Step 6 — Synthesise
+
+```bash
+bash hardware/soc_combined/work_syn/run_efx_map.sh 2>&1 | tail -5
+```
+
+After synthesis, verify the 64 system_ramA BRAM instances are present:
+
+```bash
+grep "EFX_RAM10" hardware/soc_combined/outflow/church_soc_cm.map.v \
+  | grep -v "u_cm" | grep -c "system_ram\|ram_sym"
+# Must be > 0 (expect ~64)
+```
+
+---
+
+### Step 7 — Patch map.v with firmware INIT_ values
+
+EFX_MAP creates the system_ramA EFX_RAM10 instances but leaves their `INIT_`
+parameters at zero. Inject the firmware bytes directly:
+
+```bash
+python3 scripts/patch_mapv_init.py \
+  hardware/soc_combined/outflow/church_soc_cm.map.v \
+  hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin \
+  hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin \
+  hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin \
+  hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin
+```
+
+Verify non-zero INIT_ values now exist for system_ramA:
+```bash
+grep -A 50 "EFX_RAM10.*ram_sym" \
+  hardware/soc_combined/outflow/church_soc_cm.map.v | \
+  grep "INIT_" | grep -v "= 256'h0000" | head -5
+# Must show non-zero hex values
+```
+
+> **Note:** `scripts/patch_mapv_init.py` is the next script to be written.
+> See **Troubleshooting** for current status.
+
+---
+
+### Step 8 — Place & Route
+
+```bash
+bash hardware/soc_combined/work_pnr/run_efx_pnr.sh 2>&1 | tail -5
+```
+
+---
+
+### Step 9 — Generate bitstream
+
+```bash
+~/efinity/2025.2/bin/efx_pgm \
+  --project church_soc_cm \
+  --device Ti60F225 \
+  --family Titanium \
+  --active \
+  --bit_width 1 \
+  --spi_low_power_mode on \
+  --io_weak_pullup on \
+  --oscillator_clock_divider DIV8 \
+  --enable_roms smart \
+  2>&1 | tail -5
+
+ls -lh hardware/soc_combined/outflow/church_soc_cm.hex
+```
+
+---
+
+### Step 10 — Flash and test
+
+```bash
+sudo ~/oss-cad-suite/bin/openFPGALoader \
+  -b titanium_ti60_f225_jtag \
+  -f hardware/soc_combined/outflow/church_soc_cm.hex
+
+sleep 5 && python3 scripts/test_ti60_uart.py \
+  --port=/dev/ttyUSB2 --timeout=30 --verbose
+```
+
+---
+
+## FT4232H port layout
+
+| Device | FT4232H interface | Purpose |
+|---|---|---|
+| ttyUSB0 | Interface 0 | FPGA JTAG |
+| ttyUSB1 | Interface 1 | CPU debug JTAG (tied off in hardware) |
+| ttyUSB2 | Interface 2 | **Sapphire SoC UART** (smoke-test target) |
+| ttyUSB3 | Interface 3 | Church Machine debug UART |
+
+---
+
+## Firmware addresses (from BSP `soc.h`)
 
 | Symbol | Value | Used by |
 |---|---|---|
 | `SYSTEM_UART_0_IO_CTRL` | `0xF8010000` | `firmware/main.c` `UART_BASE` |
 | APB slave 0 (CM bridge) | `0xF0040000` | `firmware/main.c` `CM_APB_BASE` |
+| Boot ROM base | `0xF9000000` | CPU reset vector, `link.ld` |
 
-If the values in your `soc.h` differ, update `firmware/main.c` accordingly.
-
----
-
-### Step 4 — Build the SoC firmware and ROM initialisation files
-
-```bash
-make -C hardware/soc_combined/firmware
-cp hardware/soc_combined/firmware/firmware.hex hardware/soc_combined/
-```
-
-`make` builds the ELF, strips it to a raw binary (`firmware.bin`), converts
-it to a plain hex file (`firmware.hex`), and then generates **four byte-lane
-binary files** required by `sapphire.v`:
-
-```
-hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin
-hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin
-hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin
-hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin
-```
-
-> **Why four `.bin` files?**  `sapphire.v` initialises the on-chip ROM with
-> four `$readmemb(...)` calls — one per byte lane of the 32-bit data bus.
-> The `FIRMWARE_INIT_FILE` parameter visible in `top.v` is a **simulation-only**
-> artefact and is ignored by Efinity synthesis.  The `$readmemb` files are the
-> only mechanism that actually embeds firmware into the bitstream.
-
-Verify they were created:
-
-```bash
-ls -lh hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol*.bin
-```
-
-You should see four files of ~1.2 MB each (131 072 words × 9 chars/line).
-
-> **Critical — copy symbol files into `work_syn/` before synthesis.**
-> EFX_MAP resolves `$readmemb` relative to its own working directory (`work_syn/`),
-> not the project root.  If the files are only in `hardware/soc_combined/` the
-> BRAM is silently zero-initialised and the CPU executes NOPs forever.
->
-> ```bash
-> cp hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol*.bin \
->    hardware/soc_combined/work_syn/
-> ```
->
-> Run this copy every time you rebuild the firmware, before re-running synthesis.
-
-The firmware:
-1. Sends the boot greeting over UART.
-2. Polls `CM_APB_BASE + 0x04` (STATUS register) until `boot_complete` is set.
-3. Writes `0x00000000` to `CM_APB_BASE + 0x00` (CTRL) — pulls CM push_button
-   LOW for 25 000 000 cycles (1 s @ 25 MHz) — to enter free-run mode.
-4. Writes `0x00000001` (released) after 1 s to stop pulling.
-5. Loops, printing CM NIA (`CM_APB_BASE + 0x08`) every second.
-
----
-
-### Step 5 — Open the project in Efinity
-
-1. Launch Efinity 2025.2.
-2. **File → Open Project** → navigate to `hardware/soc_combined/church_soc_cm.xml`.
-3. In **Project Settings** confirm:
-   - Top module: `top`
-   - Device: `Ti60F225`
-4. Confirm five source files are listed:
-   - `top.v`
-   - `apb3_cm_bridge.v`
-   - `church_ti60_f225.v`
-   - `sapphire.v`
-   - `sapphire_define.vh`
-
----
-
-### Step 6 — Compile (Synthesis → Place & Route → Bitstream)
-
-Click **Compile** (or run all three flows sequentially).
-
-Efinity will:
-1. Read the four `*_symbol{0..3}.bin` files via `$readmemb` and embed the firmware in the SoC on-chip ROM.
-2. Synthesise both the Sapphire SoC and the Church Machine in a single pass.
-3. Place and route the combined design onto the Ti60F225 fabric.
-4. Generate the bitstream.
-
-> **Resource expectation**: The combined design uses significantly more fabric
-> resources than either block alone.  The Ti60F225 has ≈ 60K logic elements
-> and 256 KB embedded BRAM.  Synthesis will report utilisation figures in the
-> `work_syn/` directory after mapping.
-
----
-
-### Step 7 — Program the board
-
-1. Connect the Ti60F225 devkit via USB.
-2. Open the **Programmer** tool in Efinity.
-3. Select the `.hex` bitstream from `outflow/`.
-4. Click **Program**.
-
----
-
-### Step 8 — Test
-
-#### 8a — Run the automated smoke-test
-
-After flashing, open a terminal and run the UART smoke-test:
-
-```bash
-python3 scripts/test_ti60_uart.py --port=/dev/ttyUSB2 --timeout=15
-```
-
-The script opens ttyUSB2 (the Sapphire SoC UART on FT4232H interface 2),
-waits up to 15 seconds, and checks five items:
-
-| Check | What it looks for |
-|---|---|
-| GREETING | `CHURCH Ti60 SoC+CM` in the first output |
-| BOOT_COMPLETE | `CM boot_complete: 1` line |
-| NIA_LINES | At least one `NIA=0x...` line |
-| CALLHOME_JSON | At least one valid `CALLHOME:{...}` JSON line |
-| ACK (optional) | IDE device list contains `Ti60F225` (requires `--ide=URL`) |
-
-Exit code 0 = PASS; exit code 1 = FAIL (check per-check lines for diagnosis).
-
-To also verify IDE call-home registration:
-
-```bash
-python3 scripts/test_ti60_uart.py --port=/dev/ttyUSB2 --timeout=15 \
-    --ide=http://localhost:5000
-```
-
-To also report the result to the IDE Dashboard launch-test tracker (TEST-09 —
-UART), add `--report-launch=TEST-09`:
-
-```bash
-python3 scripts/test_ti60_uart.py --port=/dev/ttyUSB2 --timeout=15 \
-    --ide=http://localhost:5000 \
-    --report-launch=TEST-09
-```
-
-The script will POST the overall PASS/FAIL result to
-`/api/launch-tests/TEST-09` so the IDE Dashboard reflects real Ti60 hardware
-test status alongside the other boards.  **TEST-09** is the correct launch-test
-ID for this smoke-test (UART).
-
-> **No hardware?** Run with `--dry-run` to validate the parser logic against a
-> canned transcript without a serial port:
-> ```bash
-> python3 scripts/test_ti60_uart.py --dry-run
-> ```
-
-#### 8b — Start the call-home bridge (background)
-
-To forward call-home packets from the Ti60 to the Church Machine IDE, start
-the bridge in a separate terminal (or background it with `&`):
-
-```bash
-./hardware/soc_combined/bridge.sh --ide=http://localhost:5000
-```
-
-`bridge.sh` auto-detects ttyUSB2, validates that `pyserial` is installed, and
-launches `hardware/soc_combined/local_bridge.py`.  Once running, the Ti60
-will appear in the IDE Dashboard device list as **Ti60F225**.
-
-To specify the port explicitly:
-
-```bash
-./hardware/soc_combined/bridge.sh --port=/dev/ttyUSB3 --ide=http://localhost:5000
-```
-
-#### 8c — Verify LED pattern
-
-After ~3 seconds the LEDs should show:
-
-| LED | Expected | Meaning |
-|---|---|---|
-| LED0 | ON | SoC out of reset |
-| LED1 | ON | CM boot complete |
-| LED2 | OFF | No CM fault |
-| LED3 | Blinking | CM heartbeat |
-
-#### 8d — CM debug UART (ttyUSB3)
-
-The Church Machine's own debug UART is on ttyUSB3 (FT4232H interface 3).
-To inspect it manually:
-
-```bash
-python3 -c "
-import serial
-s = serial.Serial('/dev/ttyUSB3', 115200, timeout=5)
-s.setRTS(False)
-s.setDTR(False)
-print(s.read(400).decode(errors='replace'))
-"
-```
-
-Expected output: NIA trace lines and any fault codes emitted by the Church
-Machine during boot and free-run.  A silent ttyUSB3 after boot is normal
-(heartbeat only visible on LED3).
-
-#### Troubleshooting — FT4232H port layout
-
-The Ti60F225 devkit FT4232H exposes four USB-UART interfaces:
-
-| Device | FT4232H interface | Purpose |
-|---|---|---|
-| ttyUSB0 | Interface 0 | JTAG |
-| ttyUSB1 | Interface 1 | SPI / debug |
-| ttyUSB2 | Interface 2 | **Sapphire SoC UART** (bridge + smoke-test) |
-| ttyUSB3 | Interface 3 | Church Machine debug UART |
-
-If other USB-serial devices are present the numbers may be offset.  Use
-`ls /dev/ttyUSB*` to confirm, then pass `--port=/dev/ttyUSBN` explicitly to
-both `test_ti60_uart.py` and `bridge.sh`.
+> `sapphire_define.vh` does **not** contain address constants — addresses come
+> from the BSP `soc.h`, not from any Verilog header.
 
 ---
 
 ## APB3 register map
 
-The SoC accesses the CM bridge at base address `APB_APB_SLAVE_0_BASE`
-(default `0xF0040000`).
+The SoC accesses the CM bridge at `0xF0040000`.
 
-| Offset | Name   | Access | Bits | Description |
-|---|---|---|---|---|
-| 0x00 | CTRL   | R/W | [0] | `cm_pb` — push-button drive. **1** = released (default). **0** = pressed (active-low). Hold 0 for ≥ 1 s to enter free-run; brief pulse for single-step. |
-| 0x04 | STATUS | RO  | [0] | `boot_complete` — CM boot sequence finished. |
-| 0x04 | STATUS | RO  | [1] | `fault_valid` — CM raised a fault this cycle. |
-| 0x04 | STATUS | RO  | [2] | `fault_latched` — sticky; any past fault since reset. |
-| 0x08 | NIA    | RO  | [31:0] | CM next-instruction address. |
-| 0x0C | FAULT  | RO  | [4:0] | CM fault code (valid when `fault_valid` or `fault_latched`). |
-| 0x10 | UID_LO | R/W | [31:0] | Lower 32 bits of 64-bit device UID. Written by firmware at boot; reads back the written value. Reset: 0x00000000. |
-| 0x14 | UID_HI | R/W | [31:0] | Upper 32 bits of 64-bit device UID. Written by firmware at boot; reads back the written value. Reset: 0x00000000. |
+| Offset | Name   | Access | Description |
+|---|---|---|---|
+| 0x00 | CTRL   | R/W | `[0]` = cm_pb: 1=released (default), 0=pressed (active-low). Hold 0 for ≥ 1 s to enter free-run. |
+| 0x04 | STATUS | RO  | `[0]` boot_complete · `[1]` fault_valid · `[2]` fault_latched |
+| 0x08 | NIA    | RO  | CM next-instruction address |
+| 0x0C | FAULT  | RO  | `[4:0]` fault code |
+| 0x10 | UID_LO | R/W | Lower 32 bits of 64-bit device UID |
+| 0x14 | UID_HI | R/W | Upper 32 bits of 64-bit device UID |
 
-`UID_HI:UID_LO` together form a 64-bit device identity emitted as 16 lowercase
-hex digits in every `CALLHOME` JSON packet.  When multiple Ti60 boards share
-the same IDE server, each board must be compiled with a distinct UID pair so
-the server can distinguish them.  See **Per-board UID** below.
+---
 
-### Per-board UID
-
-The firmware default is `BOARD_UID_HI=0xC0FFEE01` / `BOARD_UID_LO=0x00000001`.
-Override at compile time for each additional board:
+## Per-board UID
 
 ```bash
-# Board #1 (default — already built)
+# Board #1 (default)
 make -C hardware/soc_combined/firmware
 
 # Board #2
 make -C hardware/soc_combined/firmware \
     CFLAGS="-DBOARD_UID_HI=0xC0FFEE01 -DBOARD_UID_LO=0x00000002"
-
-# Board #3
-make -C hardware/soc_combined/firmware \
-    CFLAGS="-DBOARD_UID_HI=0xC0FFEE01 -DBOARD_UID_LO=0x00000003"
 ```
-
-Any non-zero, per-board-unique 64-bit value is valid.
-
-**Example C access:**
-
-```c
-#define CM_APB_BASE  0xF0040000UL
-#define CM_CTRL      (*(volatile uint32_t *)(CM_APB_BASE + 0x00))
-#define CM_STATUS    (*(volatile uint32_t *)(CM_APB_BASE + 0x04))
-#define CM_NIA       (*(volatile uint32_t *)(CM_APB_BASE + 0x08))
-#define CM_FAULT     (*(volatile uint32_t *)(CM_APB_BASE + 0x0C))
-#define CM_UID_LO    (*(volatile uint32_t *)(CM_APB_BASE + 0x10))
-#define CM_UID_HI    (*(volatile uint32_t *)(CM_APB_BASE + 0x14))
-
-/* Write device UID before waiting for CM boot */
-CM_UID_LO = BOARD_UID_LO;
-CM_UID_HI = BOARD_UID_HI;
-
-/* Wait for CM boot */
-while (!(CM_STATUS & 0x1));
-
-/* Enter CM free-run: assert push-button for 1 s @ 25 MHz */
-CM_CTRL = 0x0;
-for (volatile uint32_t i = 0; i < 25000000; i++) __asm__("nop");
-CM_CTRL = 0x1;
-```
-
----
-
-## What each file does
-
-| File | Purpose |
-|---|---|
-| `top.v` | Top-level — instantiates Sapphire SoC, `church_ti60f225`, and APB3 bridge |
-| `apb3_cm_bridge.v` | APB3 slave register bank — SoC ↔ CM control and status |
-| `church_ti60_f225.v` | **(generated — not in repo)** Church Machine RTL for Ti60F225 |
-| `church_soc_cm.xml` | Efinity project file |
-| `church_soc_cm.peri.xml` | Pin assignments — clock, SoC UART (ttyUSB2), CM UART (ttyUSB3), push button, 4 LEDs |
-| `sapphire.v` | **(copy from Efinity IP — not in repo)** Sapphire SoC RTL |
-| `sapphire_define.vh` | **(copy from Efinity IP — not in repo)** Sapphire SoC defines |
-| `firmware/` | SoC bare-metal C firmware (adapts `soc_minimal` firmware) |
-| `firmware.hex` | **(generated by make — not in repo)** ROM init file for synthesis |
-
----
-
-## Resource Utilisation Check (CI guard)
-
-A lightweight CI script enforces that the combined SoC+CM bitstream never
-silently exceeds Ti60F225 capacity.
-
-### Thresholds
-
-| Resource | Ti60F225 total | Failure threshold |
-|---|---|---|
-| Logic Elements (LE) | 59 904 | > 90 % (≥ 53 914 LE used) |
-| Block RAM (BRAM) | 256 KB | > 90 % (≥ 231 KB used) |
-
-If either metric exceeds 90 % the script exits non-zero, blocking the CI step.
-
-### Report location
-
-Efinity writes synthesis resource data to the `work_syn/` subdirectory of the
-project after a successful **Synthesis** run.  The script scans all `.rpt`,
-`.log`, and `.txt` files in that directory automatically:
-
-```
-hardware/soc_combined/work_syn/
-    church_soc_cm.map.rpt        ← primary resource report
-    church_soc_cm.timing.rpt     ← timing report (not used by the check)
-    ...
-```
-
-### Running the check manually
-
-```bash
-python scripts/check_ti60_utilisation.py
-```
-
-The script defaults to `--report-dir hardware/soc_combined/work_syn`.
-Use `--missing-ok` to suppress exit code 2 when no synthesis has been run yet
-(useful for CI runs that skip hardware synthesis):
-
-```bash
-python scripts/check_ti60_utilisation.py --missing-ok
-```
-
-Additional options:
-
-| Flag | Default | Description |
-|---|---|---|
-| `--report-dir PATH` | `hardware/soc_combined/work_syn` | Directory containing Efinity `.rpt` files |
-| `--report-file PATH` | — | Parse a single named file instead of scanning the directory |
-| `--le-threshold N` | `90` | Fail if LE utilisation exceeds N % |
-| `--bram-threshold N` | `90` | Fail if BRAM utilisation exceeds N % |
-| `--le-total N` | `59904` | Override total LE count (Ti60F225 default) |
-| `--bram-total-kb N` | `256` | Override total BRAM in KB (Ti60F225 default) |
-| `--missing-ok` | off | Exit 0 with a warning instead of exit 2 when no reports found |
-
-### CI wiring (Replit validation)
-
-The check is registered as the `ti60-utilisation` validation step.  It uses
-`--missing-ok` so the step is a no-op in pull-request runs that skip hardware
-synthesis:
-
-```bash
-python scripts/check_ti60_utilisation.py --missing-ok
-```
-
-To run it (and all other validation steps) via the Replit validation UI, trigger
-the `ti60-utilisation` step.
-
-### Makefile target
-
-A convenience `make` target is available from `hardware/soc_combined/`:
-
-```bash
-make check-util        # exits non-zero if thresholds exceeded
-make check-util-ci     # same but --missing-ok (safe for CI)
-```
-
----
-
-## Scope / Out of scope
-
-**In scope for this integration milestone:**
-- Single shared 25 MHz clock for both SoC and CM.
-- APB3 bridge exposing kick register and CM status.
-- Push-button emulation for free-run trigger.
-- LED status indicators for both SoC and CM health.
-
-**Out of scope (future milestones):**
-- FreeRTOS on the SoC.
-- SPI flash boot for SoC firmware.
-- JTAG debugging of either core.
-- DMA path from SoC to CM data BRAM (PATCH_LUMP over APB3).
-- PLL upclocking to 50 MHz (Phase B clock plan).
 
 ---
 
 ## Troubleshooting
 
-**`church_ti60_f225.v` not found during synthesis**
-→ Re-run Step 2.  Ensure the file is in `hardware/soc_combined/`.
+**UART silent — 0 bytes received**
 
-**`sapphire.v` not found during synthesis**
-→ Re-run Step 1.
+Most likely cause: firmware is not in the bitstream. Check in order:
 
-**`firmware.hex` not found during synthesis**
-→ Re-run Step 4.
+1. Did Step 4 (patch_sapphire_init.py) run successfully?
+   ```bash
+   grep -c "ram_symbol0\[" hardware/soc_combined/sapphire.v
+   # Must be >> 2 (hundreds of assignments, not just 2 behavioural accesses)
+   ```
 
-**SoC UART silent after flashing / LED0 never lights**
-→ The four `*_symbol{0..3}.bin` files must be in **`work_syn/`** (not just
-`hardware/soc_combined/`) when synthesis runs.  EFX_MAP resolves `$readmemb`
-paths relative to its own working directory (`work_syn/`); files only in the
-project root are silently ignored, leaving the BRAM zero-initialised.
+2. Is optimize-zero-init-rom set to 0?
+   ```bash
+   grep "optimize-zero-init-rom" hardware/soc_combined/church_soc_cm.xml
+   # Must show value="0"
+   ```
 
-```bash
-cp hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol*.bin \
-   hardware/soc_combined/work_syn/
-# then re-run synthesis
-bash hardware/soc_combined/work_syn/run_efx_map.sh
-```
+3. After synthesis, do the 64 system_ramA EFX_RAM10 instances exist?
+   ```bash
+   grep "EFX_RAM10" hardware/soc_combined/outflow/church_soc_cm.map.v \
+     | grep -v "u_cm" | grep -c "system_ram\|ram_sym"
+   # Must be > 0
+   ```
+
+4. Do those instances have non-zero INIT_ values?
+   ```bash
+   grep -A 50 "EFX_RAM10.*ram_sym" \
+     hardware/soc_combined/outflow/church_soc_cm.map.v | \
+     grep "INIT_" | grep -v "= 256'h0000" | head -3
+   # Must show non-zero hex — if empty, Step 7 (patch_mapv_init.py) is needed
+   ```
+
+**`work_pgm/run_efx_pgm.sh` not found**
+→ Use `~/efinity/2025.2/bin/efx_pgm` directly (see Step 9 above).
+
+**`openFPGALoader` not found**
+→ Use full path: `sudo ~/oss-cad-suite/bin/openFPGALoader`
 
 **LED1 never lights (CM boot_complete stays 0)**
-→ Check that `church_ti60_f225.v` was generated without errors.  Confirm the
-CM's `dbg_boot_complete` port name matches the instantiation in `top.v`.
+→ CM RTL issue. Confirm `church_ti60_f225.v` was generated without errors.
 
 **LED2 lights immediately (CM fault at startup)**
-→ This may indicate a boot ROM or namespace consistency issue.  Re-generate
-the Verilog and confirm the boot ROM constants in `hardware/boot_rom.py` are
-up to date.
+→ Boot ROM or namespace issue. Re-generate the Verilog.
 
-**P&R fails with "resource overuse"**
-→ The Ti60F225 has ample fabric, but using both the SoC and CM together is
-resource-intensive.  Try reducing `fanout_limit` in `church_soc_cm.xml` or
-enable `logic_opting`.  Contact the team if the utilisation report exceeds 90%.
+---
+
+## Resource utilisation
+
+The Ti60F225 has ~60K logic elements and ~220 KB BRAM (176 EFX_RAM10 blocks).
+The combined SoC+CM design uses ~180 EFX_RAM10 blocks (CPU caches, register file,
+CM token store, system_ramA). Check utilisation after synthesis:
+
+```bash
+python scripts/check_ti60_utilisation.py --missing-ok
+```
