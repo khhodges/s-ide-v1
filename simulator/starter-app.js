@@ -210,8 +210,14 @@ function starterRun() {
     // Build output
     var out = '';
     if (sim.output) {
-        out += '<span class="out-dim">── machine output ──</span>\n'
-            + '<span class="out-gold">' + _esc(sim.output) + '</span>\n';
+        // Strip internal [PP250] HALT lines — they're simulator housekeeping, not user output
+        var traceLines = sim.output.split('\n').filter(function(l) {
+            return l.length > 0 && !l.startsWith('[PP250]') && !l.startsWith('[Boot]') && !l.startsWith('[BOOT]') && !l.startsWith('[loadProgram]');
+        });
+        if (traceLines.length > 0) {
+            out += '<span class="out-dim">── trace ──</span>\n'
+                + '<span class="out-gold">' + _esc(traceLines.join('\n')) + '</span>\n\n';
+        }
     }
 
     if (faulted) {
@@ -222,8 +228,8 @@ function starterRun() {
     } else if (sim.halted) {
         _setBadge('HALTED');
         _el('haltedMsg').style.display = '';
-        out += '<span class="out-green">✓ Halted after ' + steps + ' step(s)</span>\n';
-        out += _registerDump();
+        out += '<span class="out-green">✓ Done — ' + steps + ' instruction(s)</span>\n';
+        out += _registerResult();
     } else {
         _setBadge('RUNNING');
         out += '<span class="out-dim">Reached step limit (' + MAX_STEPS + '). '
@@ -275,7 +281,7 @@ function starterStep() {
     } else if (sim.halted) {
         _setBadge('HALTED');
         _el('haltedMsg').style.display = '';
-        _appendOutput('<span class="out-green">✓ HALT — PC=' + sim.pc + '</span>\n' + _registerDump());
+        _appendOutput('<span class="out-green">✓ Done</span>\n' + _registerResult());
     } else {
         _setBadge('RUNNING');
         var instr = (r && r.mnemonic) ? r.mnemonic : '(step)';
@@ -305,6 +311,26 @@ function _esc(s) {
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+}
+
+function _registerResult() {
+    if (!sim || !sim.dr) return '';
+    var out = '';
+    var anyNonZero = false;
+    for (var i = 0; i < 4; i++) {
+        var v = sim.dr[i] >>> 0;
+        if (v !== 0) {
+            anyNonZero = true;
+            var signed = v | 0;
+            var hex = '0x' + v.toString(16).toUpperCase().padStart(8, '0');
+            out += '<span class="out-green" style="font-size:1.1em;font-weight:bold;">DR' + i + ' = ' + signed + '</span>'
+                + ' <span class="out-dim">(' + hex + ')</span>\n';
+        }
+    }
+    if (!anyNonZero) {
+        out += '<span class="out-dim">All registers are zero.</span>\n';
+    }
+    return out;
 }
 
 function _registerDump() {
