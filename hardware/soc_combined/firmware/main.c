@@ -205,8 +205,10 @@ void main(void)
      * Done after the greeting so the greeting is visible even if the
      * APB3 peripheral address causes a RISC-V bus exception.
      */
+    uart_puts("APB_WRITE_START\r\n");
     CM_UID_LO = BOARD_UID_LO;
     CM_UID_HI = BOARD_UID_HI;
+    uart_puts("APB_WRITE_DONE\r\n");
 
     /* Read back for subsequent CALLHOME packets */
     uint32_t uid_lo = CM_UID_LO;
