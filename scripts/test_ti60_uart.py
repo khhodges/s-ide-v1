@@ -189,6 +189,14 @@ def process_lines(lines, checks, verbose=False):
         if "CHURCH Ti60 SoC+CM" in line:
             checks_by_name["GREETING"].mark_pass(f"saw: {line!r}")
 
+        if line.startswith("CALLHOME:"):
+            _g = parse_callhome(line)
+            if _g and "Ti60" in _g.get("board", ""):
+                if not checks_by_name["GREETING"].passed:
+                    checks_by_name["GREETING"].mark_pass(
+                        f"inferred from CALLHOME board={_g['board']!r}"
+                    )
+
         if "CM boot_complete: 1" in line:
             checks_by_name["BOOT_COMPLETE"].mark_pass()
 
