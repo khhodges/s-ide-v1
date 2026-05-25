@@ -46,7 +46,7 @@
         /* ── Nav bar ────────────────────────────────────────────── */
         .ide-nav {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
+            grid-template-columns: repeat(7, 1fr);
             width: 100%;
             max-width: 1280px;
             background: #111827;
@@ -57,6 +57,18 @@
             position: relative;
             z-index: 100;
         }
+        /* START HERE column — gold accent */
+        .nav-col-start .nav-col-header {
+            color: #f0b830;
+        }
+        .nav-col-start {
+            background: rgba(218,165,32,0.04);
+        }
+        .nav-col-start .nav-item-start {
+            color: #daa520;
+            font-weight: 600;
+        }
+        .nav-col-start .nav-item-start:hover { color: #f0b830; }
         .nav-col {
             position: relative;
             border-right: 1px solid #1e2a3a;
@@ -144,15 +156,16 @@
         }
 
         /* Responsive */
-        @media (max-width: 900px) {
-            .ide-nav { grid-template-columns: repeat(3, 1fr); }
-            .nav-col:nth-child(3) { border-right: none; }
+        @media (max-width: 1060px) {
+            .ide-nav { grid-template-columns: repeat(4, 1fr); }
+            .nav-col:nth-child(4) { border-right: none; }
+            .nav-col:nth-child(3) { border-right: 1px solid #1e2a3a; }
             .site-title { border-radius: 8px 8px 0 0; }
         }
-        @media (max-width: 600px) {
+        @media (max-width: 700px) {
             .ide-nav { grid-template-columns: repeat(2, 1fr); }
             .nav-col:nth-child(2) { border-right: none; }
-            .nav-col:nth-child(3) { border-right: 1px solid #1e2a3a; }
+            .nav-col:nth-child(4) { border-right: 1px solid #1e2a3a; }
         }
 
         /* ── Cards ──────────────────────────────────────────────── */
@@ -252,6 +265,15 @@
 <body>
     <div class="site-title"><span class="lambda">λ</span> Church Machine</div>
     <nav class="ide-nav">
+        <div class="nav-col nav-col-start">
+            <div class="nav-col-header" title="Double-click to open Starter IDE" ondblclick="window.location='/start'">START HERE</div>
+            <div class="nav-dropdown">
+                <a class="nav-item nav-item-start" href="/start">First Program →</a>
+                <a class="nav-item nav-item-start" href="/start?go=1">Boot &amp; Run</a>
+                <a class="nav-item" href="/docs/quick-start">Getting Started</a>
+                <a class="nav-item" href="/start?challenge=1">⚡ Challenge</a>
+            </div>
+        </div>
         <div class="nav-col">
             <div class="nav-col-header" title="Double-click to open Programs" ondblclick="window.location='/simulator/#editor'">DEVELOP</div>
             <div class="nav-dropdown">
