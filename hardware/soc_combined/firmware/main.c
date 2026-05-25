@@ -11,7 +11,7 @@
  *   4. Triggers CM free-run by asserting push_button LOW for 1 second.
  *   5. Loops, printing the CM NIA every second via UART.
  *
- * UART:    Sapphire UART0 at 0xF8010000, 115200 baud, 25 MHz clock.
+ * UART:    Sapphire UART0 at 0xF8010000, 115200 baud, 50 MHz clock.
  * APB3:    Church Machine bridge at APB_SLAVE_0_BASE (0xF0040000).
  *
  * APB3 CM bridge register map:
@@ -54,13 +54,9 @@
 #define UART_DATA       (*(volatile uint32_t *)(UART_BASE + 0x00))
 #define UART_STATUS     (*(volatile uint32_t *)(UART_BASE + 0x04))
 #define UART_CLOCKDIV   (*(volatile uint32_t *)(UART_BASE + 0x08))
-/* STATUS bit layout — checked at runtime by uart_putc (see below):
- *   bit 0       : TX write-available (some Sapphire IP configs)
- *   bits [23:16]: TX FIFO available count (SpinalHDL FIFO config)
- * uart_putc polls both and times-out safely if neither is set. */
-/* Clock = 25 MHz, 8x oversampling: divider = 25M/(8*115200)-1 = 26
- * (The SoC default 0x35=53 is for a 50 MHz devkit; our crystal is 25 MHz.) */
-#define UART_CLOCKDIV_115200  26u
+/* Ti60F225 devkit crystal: 50 MHz at GPIOL_P_18.
+ * sapphire.v resets clockDivider to 0x35 = 53.
+ * 50 MHz / (8 × 54) = 115,740 baud ≈ 115,200.  No override needed. */
 
 /* ── Church Machine APB3 bridge registers ─────────────────────────────────── */
 #define CM_APB_BASE     0xF0040000UL
@@ -79,10 +75,10 @@
 #define CM_CTRL_PRESSED   0u   /* push_button asserted */
 
 /* ── Timing ──────────────────────────────────────────────────────────────────
- * Clock: 25 MHz.  One NOP loop iteration ≈ 4 cycles (addi + bne overhead).
+ * Clock: 50 MHz.  One NOP loop iteration ≈ 4 cycles (addi + bne overhead).
  * LOOPS_PER_SECOND is a conservative estimate; adjust if timing is critical.
  */
-#define CLK_HZ          25000000UL
+#define CLK_HZ          50000000UL
 #define LOOPS_PER_SECOND (CLK_HZ / 4)
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -97,9 +93,9 @@ static void uart_putc(char c)
      * than guess, we write immediately and wait long enough for the transmitter
      * to finish before the next byte is written.
      *
-     * 115200 baud, 10 bits/char (8N1): 1 char = 86.8 µs = ~2170 cycles @ 25 MHz.
-     * 3000 NOPs ≈ 120 µs — 38 % margin over worst-case char time.  The UART
-     * TX FIFO therefore never overflows at this rate.
+     * 115200 baud, 10 bits/char (8N1): 1 char = 86.8 µs = ~4340 cycles @ 50 MHz.
+     * 3000 loop iterations ≈ 240 µs @ 50 MHz — 2.8× margin.  The UART TX FIFO
+     * (128 entries deep) therefore never overflows at this rate.
      */
     UART_DATA = (uint32_t)(unsigned char)c;
     for (volatile uint32_t i = 0; i < 3000u; i++) __asm__("nop");
@@ -189,11 +185,10 @@ static void uart_emit_callhome(uint32_t nia, uint32_t status,
 void main(void)
 {
     /*
-     * Step 1 — Set UART baud rate.
-     * sapphire.v resets the clockDivider to 0x35 (≈ 463 kbaud).
-     * Override it to 216 (= 25 MHz / 115200 - 1) before any UART use.
+     * Step 1 — UART baud rate.
+     * Ti60F225 crystal: 50 MHz.  sapphire.v resets clockDivider to 0x35 = 53.
+     * 50 MHz / (8 × 54) = 115,740 baud ≈ 115,200 — no override required.
      */
-    UART_CLOCKDIV = UART_CLOCKDIV_115200;
 
     /*
      * Step 2 — Greeting (uses compile-time UID constants so APB3 is not
@@ -239,12 +234,12 @@ void main(void)
     /*
      * Trigger CM free-run by asserting push_button LOW for ≥ 1 s.
      * ChurchTi60F225 btn_hold_done fires when the button is held for
-     * clk_freq cycles (25 000 000 @ 25 MHz).  We hold for 26 000 000
-     * loop iterations (≈ 1.04 s with NOP padding) to ensure it triggers.
+     * clk_freq cycles (50 000 000 @ 50 MHz).  We hold for ~1.04 s
+     * using LOOPS_PER_SECOND (= CLK_HZ / 4 = 12.5 M iterations @ 50 MHz).
      */
     uart_puts("Asserting CM free-run kick...\r\n");
     CM_CTRL = CM_CTRL_PRESSED;
-    delay_loops((uint32_t)(CLK_HZ + CLK_HZ / 25)); /* ~1.04 s */
+    delay_loops(LOOPS_PER_SECOND + LOOPS_PER_SECOND / 25); /* ~1.04 s */
     CM_CTRL = CM_CTRL_RELEASED;
     uart_puts("CM free-run kick released.\r\n");
 

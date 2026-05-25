@@ -246,14 +246,15 @@ python3 scripts/test_ti60_uart.py \
 | `UART_BASE` | `0xF8010000` | `firmware/main.c` |
 | `UART_DATA` | `0xF8010000` | write = TX, read = RX |
 | `UART_STATUS` | `0xF8010004` | bits[23:16] = TX avail (Sapphire UART) |
-| `UART_CLOCKDIV` | `0xF8010008` | 25 MHz / (8 × (div+1)) = baud rate |
+| `UART_CLOCKDIV` | `0xF8010008` | 50 MHz / (8 × (div+1)) = baud rate |
 | APB slave 0 (CM bridge) | `0xF0040000` | `firmware/main.c` `CM_APB_BASE` |
 | Boot ROM base | `0xF9000000` | CPU reset vector, `link.ld` |
 
-UART baud rate: `CLOCKDIV = 26` → 25 000 000 / (8 × 27) = 115 741 baud (≈115200).
+UART baud rate: reset `CLOCKDIV = 53` → 50 000 000 / (8 × 54) = 115 740 baud (≈115200).
+Firmware leaves `CLOCKDIV` at its reset value — no override needed.
 
 **uart_putc design:** Uses unconditional write + 3000-NOP inter-character delay
-(~120 µs @ 25 MHz) rather than polling STATUS. This avoids infinite spins if
+(~240 µs @ 50 MHz) rather than polling STATUS. This avoids infinite spins if
 the STATUS register bit layout differs between Sapphire IP versions.
 
 ---
@@ -331,7 +332,7 @@ grep -n "ram_symbol\|readmemb" hardware/soc_combined/sapphire.v | head -20
 ### LED0 never lights after flash
 
 The SoC is stuck in reset. Check that `io_asyncReset` in `top.v` is tied to
-`1'b0` (not floating) and that the 25 MHz clock is reaching `CLKMUX_T ROUTE0`.
+`1'b0` (not floating) and that the 50 MHz clock is reaching `CLKMUX_T ROUTE0`.
 
 ---
 

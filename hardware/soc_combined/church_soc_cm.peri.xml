@@ -11,7 +11,7 @@
     TR  1.8 V LVCMOS  (declared for completeness)
 
   Pin mapping (matches Ti60F225 devkit schematic):
-    clk         — GPIOL_P_18   25 MHz crystal → CLKMUX_T ROUTE0
+    clk         — GPIOL_P_18   50 MHz crystal → CLKMUX_T ROUTE0
     uart_tx     — GPIOL_02     FT4232H interface 2 TX (ttyUSB2)
     uart_rx     — GPIOL_01     FT4232H interface 2 RX
     cm_uart_tx  — GPIOL_P_03   FT4232H interface 3 TX (ttyUSB3) — CM debug UART
@@ -118,7 +118,7 @@
 
     <efxpt:gpio_info>
 
-        <!-- Clock: 25 MHz crystal at GPIOL_P_18 → CLKMUX_T ROUTE0 -->
+        <!-- Clock: 50 MHz crystal at GPIOL_P_18 → CLKMUX_T ROUTE0 -->
         <efxpt:comp_gpio name="clk" gpio_def="GPIOL_P_18" mode="input" bus_name="" io_standard="1.8 V LVCMOS">
             <efxpt:input_config
                 name="clk"
