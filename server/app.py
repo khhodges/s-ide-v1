@@ -1311,7 +1311,7 @@ def release_r12_index():
     return html
 
 _SIMULATOR_HTML_VERSION = "r20260501k"
-_STARTER_HTML_VERSION   = "r20260525c"
+_STARTER_HTML_VERSION   = "r20260525d"
 
 @app.route("/start")
 @app.route("/start/")

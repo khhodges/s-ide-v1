@@ -393,9 +393,9 @@
 ;
 ; Let's count up to 42 — the answer to everything.
 
-    IADD  DR0, DR0, #12 ; DR0 = 0 + 12  →  DR0 = 12
-    IADD  DR0, DR0, #30 ; DR0 = 12 + 30 →  DR0 = 42
-    HALT                ; done — result is in DR0
+    IADD  DR1, DR1, #12 ; DR1 = 0 + 12  →  DR1 = 12
+    IADD  DR1, DR1, #30 ; DR1 = 12 + 30 →  DR1 = 42
+    HALT                ; done — result is in DR1
 </textarea>
         <div class="s-annotation">
             ↑ Edit this freely. Click <strong>Run</strong> to see what happens.
@@ -456,7 +456,7 @@
 <script src="simulator.js?v=20260521c"></script>
 <script src="assembler.js?v=20260521a"></script>
 <script src="cloomc_compiler.js?v=20260519c"></script>
-<script src="starter-app.js?v=20260525c"></script>
+<script src="starter-app.js?v=20260525d"></script>
 
 </body>
 </html>
