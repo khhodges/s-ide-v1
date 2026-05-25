@@ -11,7 +11,7 @@
  *   4. Triggers CM free-run by asserting push_button LOW for 1 second.
  *   5. Loops, printing the CM NIA every second via UART.
  *
- * UART:    Sapphire UART0 at 0xF0010000, 115200 baud, 25 MHz clock.
+ * UART:    Sapphire UART0 at 0xF8010000, 115200 baud, 25 MHz clock.
  * APB3:    Church Machine bridge at APB_SLAVE_0_BASE (0xF0040000).
  *
  * APB3 CM bridge register map:
@@ -54,8 +54,10 @@
 #define UART_DATA       (*(volatile uint32_t *)(UART_BASE + 0x00))
 #define UART_STATUS     (*(volatile uint32_t *)(UART_BASE + 0x04))
 #define UART_CLOCKDIV   (*(volatile uint32_t *)(UART_BASE + 0x08))
-/* STATUS bits [23:16] = TX write-available count (Efinix Sapphire UART) */
-#define UART_TX_AVAIL   (((UART_STATUS) >> 16) & 0xFFu)
+/* STATUS bit layout — checked at runtime by uart_putc (see below):
+ *   bit 0       : TX write-available (some Sapphire IP configs)
+ *   bits [23:16]: TX FIFO available count (SpinalHDL FIFO config)
+ * uart_putc polls both and times-out safely if neither is set. */
 /* Clock = 25 MHz, 8x oversampling: divider = 25M/(8*115200)-1 = 26
  * (The SoC default 0x35=53 is for a 50 MHz devkit; our crystal is 25 MHz.) */
 #define UART_CLOCKDIV_115200  26u
@@ -87,8 +89,21 @@
 
 static void uart_putc(char c)
 {
-    while (UART_TX_AVAIL == 0)  /* wait until STATUS bits [23:16] > 0 */
-        ;
+    /*
+     * Poll for TX-ready using whichever STATUS layout this Sapphire IP uses:
+     *   bit 0       — TX write-available (simple UART config)
+     *   bits[23:16] — TX FIFO available count (SpinalHDL FIFO config)
+     *
+     * If neither bit is ever set, the 5000-cycle timeout prevents an infinite
+     * spin.  One char at 115200 baud = ~86 µs = ~2150 cycles @ 25 MHz; 5000
+     * cycles (~200 µs) is plenty of slack.  The write happens regardless so
+     * the first character is never silently dropped.
+     */
+    for (volatile uint32_t i = 0; i < 5000u; i++) {
+        uint32_t st = UART_STATUS;
+        if ((st & 0x1u) || ((st >> 16) & 0xFFu))
+            break;
+    }
     UART_DATA = (uint32_t)(unsigned char)c;
 }
 
