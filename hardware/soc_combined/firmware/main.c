@@ -53,7 +53,8 @@
 #define UART_DATA       (*(volatile uint32_t *)(UART_BASE + 0x00))
 #define UART_STATUS     (*(volatile uint32_t *)(UART_BASE + 0x04))
 #define UART_CLOCKDIV   (*(volatile uint32_t *)(UART_BASE + 0x08))
-#define UART_TX_EMPTY   (1u << 16)  /* bit 16 of STATUS: TX write-available (SpinalHDL VexRiscv UART) */
+/* STATUS bits [23:16] = TX write-available count (Efinix Sapphire UART) */
+#define UART_TX_AVAIL   (((UART_STATUS) >> 16) & 0xFFu)
 /* UART_CLOCKDIV = clk_hz / baud - 1; for 115200 @ 25 MHz = 216 (0xD8) */
 #define UART_CLOCKDIV_115200  216u
 
@@ -84,7 +85,7 @@
 
 static void uart_putc(char c)
 {
-    while (!(UART_STATUS & UART_TX_EMPTY))
+    while (UART_TX_AVAIL == 0)  /* wait until STATUS bits [23:16] > 0 */
         ;
     UART_DATA = (uint32_t)(unsigned char)c;
 }
