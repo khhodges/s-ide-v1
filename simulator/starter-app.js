@@ -136,6 +136,7 @@ function starterBoot() {
         }
         var ok = _runBootSequence();
         if (!ok) throw new Error('Boot sequence did not complete');
+        sim.output = '';
         _booted = true;
         sim._programLoaded = false;
         _enableControls(true);
@@ -185,9 +186,10 @@ function starterRun() {
         return;
     }
 
-    // Re-boot clean then load
+    // Re-boot clean then load; clear boot log before running user program
     sim.reset();
     _runBootSequence();
+    sim.output = '';
     sim.loadProgram(words);
 
     // Run to halt or fault (max 50 000 steps to avoid infinite loops)
@@ -251,6 +253,7 @@ function starterStep() {
         }
         sim.reset();
         _runBootSequence();
+        sim.output = '';
         sim.loadProgram(result.words || result);
         sim._programLoaded = true;
         _setOutput('<span class="out-dim">Program loaded. Stepping…</span>\n');
