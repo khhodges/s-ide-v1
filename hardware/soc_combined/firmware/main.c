@@ -90,21 +90,19 @@
 static void uart_putc(char c)
 {
     /*
-     * Poll for TX-ready using whichever STATUS layout this Sapphire IP uses:
-     *   bit 0       — TX write-available (simple UART config)
-     *   bits[23:16] — TX FIFO available count (SpinalHDL FIFO config)
+     * Unconditional write + fixed inter-character delay.
      *
-     * If neither bit is ever set, the 5000-cycle timeout prevents an infinite
-     * spin.  One char at 115200 baud = ~86 µs = ~2150 cycles @ 25 MHz; 5000
-     * cycles (~200 µs) is plenty of slack.  The write happens regardless so
-     * the first character is never silently dropped.
+     * Rationale: the Sapphire UART STATUS register layout varies between
+     * Efinix IP configurations (bit 0 vs bits[23:16] for TX-ready).  Rather
+     * than guess, we write immediately and wait long enough for the transmitter
+     * to finish before the next byte is written.
+     *
+     * 115200 baud, 10 bits/char (8N1): 1 char = 86.8 µs = ~2170 cycles @ 25 MHz.
+     * 3000 NOPs ≈ 120 µs — 38 % margin over worst-case char time.  The UART
+     * TX FIFO therefore never overflows at this rate.
      */
-    for (volatile uint32_t i = 0; i < 5000u; i++) {
-        uint32_t st = UART_STATUS;
-        if ((st & 0x1u) || ((st >> 16) & 0xFFu))
-            break;
-    }
     UART_DATA = (uint32_t)(unsigned char)c;
+    for (volatile uint32_t i = 0; i < 3000u; i++) __asm__("nop");
 }
 
 static void uart_puts(const char *s)
