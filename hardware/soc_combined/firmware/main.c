@@ -201,21 +201,19 @@ void main(void)
     uart_puts("\r\n");
 
     /*
-     * Step 3 — Write compile-time board UID into the APB3 bridge.
-     * Done after the greeting so the greeting is visible even if the
-     * APB3 peripheral address causes a RISC-V bus exception.
+     * Step 3 — First APB3 access: ensure CM push_button starts released.
+     * CTRL is at offset 0x00, the lowest address in the APB slave window.
+     * UID registers (0x10, 0x14) are skipped here; the compile-time
+     * BOARD_UID constants are used directly in CALLHOME packets instead,
+     * avoiding any risk of bus exceptions on those offsets.
      */
     uart_puts("APB_WRITE_START\r\n");
-    CM_UID_LO = BOARD_UID_LO;
-    CM_UID_HI = BOARD_UID_HI;
+    CM_CTRL = CM_CTRL_RELEASED;
     uart_puts("APB_WRITE_DONE\r\n");
 
-    /* Read back for subsequent CALLHOME packets */
-    uint32_t uid_lo = CM_UID_LO;
-    uint32_t uid_hi = CM_UID_HI;
-
-    /* Ensure CM push_button starts released */
-    CM_CTRL = CM_CTRL_RELEASED;
+    /* UID sourced from compile-time constants (same values printed in UID= line) */
+    uint32_t uid_lo = BOARD_UID_LO;
+    uint32_t uid_hi = BOARD_UID_HI;
 
     /* Wait for CM boot_complete — 8-second timeout so we never hang */
     uart_puts("Waiting for CM boot...\r\n");
