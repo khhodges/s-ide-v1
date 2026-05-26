@@ -242,7 +242,13 @@ function starterStep() {
     }
 
     if (sim.halted) {
-        _appendOutput('<span class="out-dim">Already halted. Click ⟳ Start to begin again.</span>\n');
+        sim.reset();
+        _runBootSequence();
+        sim._programLoaded = false;
+        _hideHexListing();
+        _el('haltedMsg').style.display = 'none';
+        _setBadge('HALTED');
+        _updateRegisters();
         return;
     }
 
