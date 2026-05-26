@@ -9710,7 +9710,11 @@ function setSelectedBoard(board) {
     const lbl = document.getElementById('hwLedBoardLabel');
     if (lbl) lbl.textContent = getBoardShortLabel(board);
     const ti60Btn = document.getElementById('toolbarTi60ConnectBtn');
-    if (ti60Btn) ti60Btn.classList.toggle('ti60-connect-active', board === 'ti60-f225');
+    if (ti60Btn) {
+        const _boardShort = {'ti60-f225': 'Ti60', 'tang-nano-20k-iot': 'Tang 20K', 'wukong-xc7a100t': 'Wukong'};
+        ti60Btn.innerHTML = '&#x1F50C; ' + (_boardShort[board] || 'Board');
+        ti60Btn.classList.add('ti60-connect-active');
+    }
     if (typeof window.lumpEditorRender === 'function') window.lumpEditorRender();
     if (typeof window.lumpEditorRenderResidentPanel === 'function') window.lumpEditorRenderResidentPanel();
 }
@@ -9860,7 +9864,12 @@ function initHardwareBuildPanel() {
     const lbl = document.getElementById('hwLedBoardLabel');
     if (lbl) lbl.textContent = getBoardShortLabel(getSelectedBoard());
     const ti60Btn = document.getElementById('toolbarTi60ConnectBtn');
-    if (ti60Btn) ti60Btn.classList.toggle('ti60-connect-active', getSelectedBoard() === 'ti60-f225');
+    if (ti60Btn) {
+        const _board = getSelectedBoard();
+        const _boardShort = {'ti60-f225': 'Ti60', 'tang-nano-20k-iot': 'Tang 20K', 'wukong-xc7a100t': 'Wukong'};
+        ti60Btn.innerHTML = '&#x1F50C; ' + (_boardShort[_board] || 'Board');
+        ti60Btn.classList.add('ti60-connect-active');
+    }
     updateHardwarePanelLabel();
 }
 
