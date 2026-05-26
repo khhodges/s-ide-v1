@@ -98,8 +98,7 @@ function _enableControls(booted) {
 }
 
 function _showHexListing(src, result) {
-    var el = _el('hexListing');
-    if (!el || !result || !result.words) return;
+    if (!result || !result.words) return;
     var words    = result.words;
     var lineNums = result.lineNums || [];
     var srcLines = src.split('\n');
@@ -125,13 +124,11 @@ function _showHexListing(src, result) {
         }
         html += '<div class="s-hex-row">' + row + '</div>';
     }
-    el.innerHTML = html;
-    el.classList.remove('hidden');
+    _setOutput(html);
 }
 
 function _hideHexListing() {
-    var el = _el('hexListing');
-    if (el) { el.innerHTML = ''; el.classList.add('hidden'); }
+    _setOutput('<span class="out-dim">— click Start to begin —</span>');
 }
 
 // ── Session start (from welcome card) ───────────────────────────────────────
@@ -212,7 +209,6 @@ function starterStep() {
         sim.loadProgram(result.words || result);
         sim._programLoaded = true;
         _showHexListing(src, result);
-        _setOutput('<span class="out-dim">Program loaded. Stepping…</span>\n');
     }
 
     if (sim.halted) {
@@ -234,8 +230,6 @@ function starterStep() {
         _appendOutput('<span class="out-green">✓ Done</span>\n' + _registerResult());
     } else {
         _setBadge('RUNNING');
-        var instr = (r && r.mnemonic) ? r.mnemonic : '(step)';
-        _appendOutput('<span class="out-dim">PC=' + sim.pc + '  ' + _esc(instr) + '</span>\n');
     }
 }
 
