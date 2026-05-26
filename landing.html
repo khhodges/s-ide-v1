@@ -59,17 +59,23 @@
         }
         .nav-col:last-child { border-right: none; }
 
+        /* Gold header — direct link */
         .nav-col-header {
             font-size: 0.65rem;
             font-weight: 700;
             letter-spacing: 0.06em;
             color: #daa520;
             padding: 12px 10px;
-            display: block;
+            display: flex;
+            align-items: center;
             text-decoration: none;
             text-align: center;
+            user-select: none;
             border-radius: 4px;
             transition: color 0.15s, background 0.15s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .nav-col-header:hover {
             color: #f0c040;
