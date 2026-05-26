@@ -1215,6 +1215,15 @@ def release_r12_index():
 </style></head><body>
 <h1>CM Release 1.2</h1>
 <div class="tag">15 May 2026 &middot; Builder &middot; 3-Board FPGA ZIP Downloads</div>
+<div class="note" style="border-left-color:#daa520;margin-bottom:1rem">
+  <strong style="color:#daa520">Getting started</strong><br>
+  <ol style="margin:.5rem 0 0 0;padding-left:1.3rem;line-height:2.1;color:#c8d6e5">
+    <li><a href="/simulator/#tutorial" style="color:#a78bfa">Learn in the simulator</a> — no hardware needed, runs in the browser</li>
+    <li><a href="/api/bitstream/download/ti60-f225" style="color:#a78bfa">Download the Ti60 bitstream</a> and flash once with Efinity Programmer</li>
+    <li>Power on the Ti60, plug in the USB cable</li>
+    <li><a href="/simulator/#builder?tab=ti60-connect" style="color:#a78bfa">Open Builder &#x2192; Connect tab</a> — click Connect, four steps light up green</li>
+  </ol>
+</div>
 <div class="note">
   The Release 1 document set (14 PDFs) remains the definitive hardware specification.
   Release 1.2 adds verified FPGA package downloads for all three supported boards.
