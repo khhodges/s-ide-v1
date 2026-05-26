@@ -388,14 +388,13 @@
         <div class="s-panel-label">Your program</div>
         <textarea class="s-editor" id="codeEditor" spellcheck="false">; Welcome to the Church Machine
 ; ─────────────────────────────────────────────────────
-; Every line below runs inside a capability-secured lump.
-; The hardware checks every memory access before it happens.
-;
-; Let's count up to 42 — the answer to everything.
+; This is a simple A + B program.
+; DR0 = A,  DR1 = B,  DR0 = A + B
 
-    IADD  DR1, DR1, #12 ; DR1 = 0 + 12  →  DR1 = 12
-    IADD  DR1, DR1, #30 ; DR1 = 12 + 30 →  DR1 = 42
-    HALT                ; done — result is in DR1
+    MOVI  DR0, #12      ; A = 12
+    MOVI  DR1, #30      ; B = 30
+    ADD   DR0, DR0, DR1 ; A + B  →  DR0 = 42
+    HALT                ; done — result is in DR0
 </textarea>
         <div class="s-annotation">
             ↑ Edit this freely. Click <strong>Run</strong> to see what happens.
