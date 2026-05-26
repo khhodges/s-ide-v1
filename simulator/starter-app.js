@@ -125,8 +125,8 @@ function starterNext() {
         caps.classList.add('active');
         _el('statusPanel').classList.add('s-panel-lit');
         _el('outputPanel').classList.add('s-panel-lit');
-        _el('lessonLabel').textContent = '\u2014 Lesson 2 of 3';
-        _el('btnNext').textContent = 'Lesson 2 \u2192';
+        _el('lessonLabel').textContent = '\u2014 Lesson 2 of 4';
+        _el('btnNext').textContent = 'Next Lesson \u2192';
         _lessonPhase = 2;
         _setOutput('<span class="out-dim">This simple example is a terminal atomic abstraction that needs nothing other than machine registers. The next lesson demonstrates local (private) memory access.</span>');
         _updateRegisters();
@@ -134,7 +134,7 @@ function starterNext() {
         // Lesson 2 → 3: full swap to myScratchPad lesson
         _switchLesson('lesson1Code', 'lesson3Code', 'Lesson 3 of 4',
             '<span class="out-dim">The programmer adds new capability defined objects using Pet Names. <strong>myScratchPad RW</strong> grants this abstraction read/write access to a private memory region. The <strong>LOAD</strong> instruction fetches that capability from the c-list ready for use.</span>\n\n<span class="out-dim">Symbolic addressing allows readable pet names in machine code statements!</span>',
-            3, false, 'Lesson 3 \u2192');
+            3, false, 'Next Lesson \u2192');
     } else if (_lessonPhase === 3) {
         // Lesson 3 → 4: full swap to LUMPs lesson
         _switchLesson('lesson3Code', 'lesson4Code', 'Lesson 4 of 4',
