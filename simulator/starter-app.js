@@ -76,12 +76,16 @@ function _updateRegisters() {
     _el('regDR3').textContent = sim.dr ? hex(sim.dr[3]) : '—';
 }
 
-function _switchLesson(fromId, toId, label, outputHtml, nextPhase, disableNext) {
+function _switchLesson(fromId, toId, label, outputHtml, nextPhase, disableNext, btnText) {
     _el(fromId).classList.add('hidden');
     _el(toId).classList.remove('hidden');
     _el('lessonLabel').textContent = '\u2014 ' + label;
+    var btn = _el('btnNext');
     if (disableNext) {
-        _el('btnNext').disabled = true;
+        btn.disabled = true;
+    } else {
+        btn.disabled = false;
+        btn.textContent = btnText || 'Next Lesson \u2192';
     }
     var caps = _el('capsSection');
     caps.classList.remove('hidden');
@@ -130,12 +134,12 @@ function starterNext() {
         // Lesson 2 → 3: full swap to myScratchPad lesson
         _switchLesson('lesson1Code', 'lesson3Code', 'Lesson 3 of 4',
             '<span class="out-dim">The programmer adds new capability defined objects using Pet Names. <strong>myScratchPad RW</strong> grants this abstraction read/write access to a private memory region. The <strong>LOAD</strong> instruction fetches that capability from the c-list ready for use.</span>\n\n<span class="out-dim">Symbolic addressing allows readable pet names in machine code statements!</span>',
-            3, false);
+            3, false, 'Lesson 3 \u2192');
     } else if (_lessonPhase === 3) {
         // Lesson 3 → 4: full swap to LUMPs lesson
         _switchLesson('lesson3Code', 'lesson4Code', 'Lesson 4 of 4',
             '<span class="out-dim">The CLOOMC++ compiler understands Pet Names and makes machine code as readable as <strong>CONNECT (Me, MyMother)</strong></span>',
-            4, true);
+            4, true, '');
     }
 }
 
