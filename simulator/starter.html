@@ -406,12 +406,12 @@
         <textarea class="s-editor" id="codeEditor" spellcheck="false">; Traditional 'procedural programs execute binary machine code'
 ; ─────────────────────────────────────────────────────
 ; A simple A + B program.
-; DR0 holds A, DR1 holds B, result goes into DR0.
+; DR1 holds A, DR2 holds B, result goes into DR1.
 
-    IADD  DR0, DR0, #12  ; A = 12
-    IADD  DR1, DR1, #30  ; B = 30
-    IADD  DR0, DR0, DR1  ; A + B  →  DR0 = 42
-    HALT                 ; done — result is in DR0
+    IADD  DR1, DR1, #12  ; A = 12
+    IADD  DR2, DR2, #30  ; B = 30
+    IADD  DR1, DR1, DR2  ; A + B  →  DR1 = 42
+    HALT                 ; done — result is in DR1
 </textarea>
         <div class="s-annotation">
             ↑ Edit freely. Use <strong>› Step</strong> to walk through each instruction.
