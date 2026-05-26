@@ -209,13 +209,11 @@ function starterStep() {
 
     // If not yet loaded, assemble and load first
     if (sim.pc === 0 && !sim._programLoaded) {
-        var capsVisible = _el('capsInline') && !_el('capsInline').classList.contains('hidden');
         var src =
             '; The Church Machine adds hardened symbolic addressing\n' +
             '; \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n' +
             '; Simple A + B programs are unchanged\n' +
             '; DR1 holds A, DR2 holds B, result goes into DR1.\n' +
-            (capsVisible ? '\nMyCode capabilities {\n    (none)\n}\n' : '') +
             '\n' +
             '    IADD  DR1, DR1, #12  ; A = 12\n' +
             '    IADD  DR2, DR2, #30  ; B = 30\n' +
