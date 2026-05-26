@@ -1717,6 +1717,18 @@ async function fpgaConnectToggle() {
         updateFPGAStatusBtn();
         return;
     }
+    // Guard: remind the user to plug in the board before the browser port picker opens
+    const _ready = window.confirm(
+        'Before connecting:\n\n' +
+        '1. Plug your FPGA board into a USB port\n' +
+        '2. Wait for the OS to recognise the device\n' +
+        '3. Click OK — then select the serial port in the browser dialog\n\n' +
+        'Click Cancel if the board is not yet connected.'
+    );
+    if (!_ready) {
+        updateFPGAStatusBtn();
+        return;
+    }
     if (btn) {
         btn.className = 'ham-item';
         btn.textContent = '\u2B21 FPGA \u2026';
