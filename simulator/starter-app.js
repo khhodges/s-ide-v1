@@ -8,7 +8,6 @@ var sim        = null;
 var assembler  = null;
 var _booted    = false;
 var _lastFault = null;
-var _stepCount = 0;
 
 // ── Friendly fault explanations ────────────────────────────────────────────
 
@@ -98,14 +97,6 @@ function _enableControls(booted) {
     _el('btnReset').disabled = !booted;
 }
 
-function _updateSteps(n) {
-    for (var i = 1; i <= 3; i++) {
-        var row = _el('step' + i);
-        if (!row) continue;
-        row.classList.toggle('active', i === n);
-    }
-}
-
 function _showHexListing(src, result) {
     var el = _el('hexListing');
     if (!el || !result || !result.words) return;
@@ -183,13 +174,11 @@ function starterBoot() {
         if (!ok) throw new Error('Boot sequence did not complete');
         sim.output = '';
         _booted = true;
-        _stepCount = 0;
         sim._programLoaded = false;
         _hideHexListing();
         _enableControls(true);
         _setBadge('HALTED');
         _updateRegisters();
-        _updateSteps(0);
         _setOutput('<span class="out-green">✓ Church Machine started</span>\n'
             + '<span class="out-dim">Capability registers initialised. Namespace loaded.\n'
             + 'Press › Step to walk through each instruction.</span>');
@@ -232,19 +221,15 @@ function starterStep() {
     }
 
     var r = sim.step();
-    _stepCount++;
-    _updateSteps(_stepCount);
     _updateRegisters();
 
     if (sim.faultLog && sim.faultLog.length > 0) {
         var entry = sim.faultLog[sim.faultLog.length - 1];
         _showFault(entry);
         _setBadge('FAULT');
-        _updateSteps(0);
         _appendOutput('<span class="out-red">⚡ Capability fault at PC=' + sim.pc + '</span>\n');
     } else if (sim.halted) {
         _setBadge('HALTED');
-        _updateSteps(0);
         _el('haltedMsg').style.display = '';
         _appendOutput('<span class="out-green">✓ Done</span>\n' + _registerResult());
     } else {
@@ -264,11 +249,9 @@ function starterReset() {
         _runBootSequence();
         sim._programLoaded = false;
     }
-    _stepCount = 0;
     _hideHexListing();
     _setBadge('HALTED');
     _updateRegisters();
-    _updateSteps(0);
     _setOutput('<span class="out-dim">— reset — program cleared, machine re-booted —</span>');
 }
 

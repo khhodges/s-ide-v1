@@ -346,37 +346,6 @@
         .s-hex-src  { color: #7080a0; }
         .s-hex-cmt  { color: #4a5a6a; }
 
-        /* ── Step-by-step panel ── */
-        .s-steps-panel {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 0.9rem 1rem;
-        }
-        .s-step-row {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.45rem 0.6rem;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.82rem;
-            color: var(--text-dim);
-            transition: background 0.15s, color 0.15s;
-            border: 1px solid transparent;
-        }
-        .s-step-row.active {
-            background: var(--gold-glow);
-            color: var(--text);
-            border-color: var(--gold-dim);
-        }
-        .s-step-pc {
-            color: var(--gold-dim);
-            font-weight: 700;
-            min-width: 3.6rem;
-        }
-        .s-step-row.active .s-step-pc { color: var(--gold); }
-        .s-step-done { color: #3a6a4a; }
 
         /* ── Mobile ── */
         @media (max-width: 700px) {
@@ -470,22 +439,6 @@
         </div>
     </div>
 
-    <div class="s-steps-panel" id="stepsPanel">
-        <div class="s-panel-label" style="margin-bottom:0.5rem;">Step by step</div>
-        <div class="s-step-row" id="step1">
-            <span class="s-step-pc">PC = 1</span>
-            <span>load value A</span>
-        </div>
-        <div class="s-step-row" id="step2">
-            <span class="s-step-pc">PC = 2</span>
-            <span>load value B</span>
-        </div>
-        <div class="s-step-row" id="step3">
-            <span class="s-step-pc">PC = 3</span>
-            <span>Return A + B</span>
-        </div>
-    </div>
-
     <div class="s-output-panel" id="outputPanel">
         <div class="s-panel-label">Output</div>
         <div class="s-output" id="outputArea">
@@ -519,7 +472,7 @@
 <script src="simulator.js?v=20260521c"></script>
 <script src="assembler.js?v=20260521a"></script>
 <script src="cloomc_compiler.js?v=20260519c"></script>
-<script src="starter-app.js?v=20260526i"></script>
+<script src="starter-app.js?v=20260526j"></script>
 
 </body>
 </html>
