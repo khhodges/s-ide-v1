@@ -350,14 +350,40 @@
         /* ── Capabilities section (tutorial step 2) ── */
         .s-caps-section { margin-top: 0.55rem; }
         .s-caps-section.hidden { display: none; }
+        .s-caps-section.active {
+            background: rgba(218,165,32,0.07);
+            border: 1px solid var(--gold-dim);
+            border-radius: 5px;
+            padding: 0.45rem 0.65rem;
+            margin-top: 0.55rem;
+        }
         .s-caps-label {
             font-size: 0.68rem;
             text-transform: uppercase;
             letter-spacing: 0.12em;
-            color: var(--gold-dim);
+            color: var(--gold);
             padding: 0 0.1rem 0.25rem;
+            font-weight: 700;
         }
         .s-reg-sub { font-size: 0.72rem; color: #556; margin: 0 0.15rem; }
+
+        /* ── Highlighted capabilities code block ── */
+        .s-caps-code {
+            background: rgba(218,165,32,0.07);
+            border: 1px solid var(--gold-dim);
+            border-left: 3px solid var(--gold);
+            border-radius: var(--radius);
+            padding: 0.6rem 1rem;
+            font-family: 'Courier New', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: var(--gold);
+            line-height: 1.65;
+            white-space: pre;
+        }
+        .s-caps-code.hidden { display: none; }
+
+        /* ── White-border panel variant ── */
+        .s-panel-lit { border-color: rgba(255,255,255,0.28) !important; }
 
         /* ── Mobile ── */
         @media (max-width: 700px) {
@@ -428,6 +454,9 @@
         <div class="s-annotation">
             ↑ Edit freely. Use <strong>› Step</strong> to walk through each instruction.
         </div>
+        <div id="capsCodeBlock" class="s-caps-code hidden">MyCode capabilities {
+    (none)
+}</div>
         <div class="s-toolbar">
             <button class="s-btn"  id="btnStep"  onclick="starterStep()" disabled>› Step</button>
             <button class="s-btn"  id="btnReset" onclick="starterReset()" disabled>↺ Reset</button>
@@ -490,7 +519,7 @@
 <script src="simulator.js?v=20260521c"></script>
 <script src="assembler.js?v=20260521a"></script>
 <script src="cloomc_compiler.js?v=20260519c"></script>
-<script src="starter-app.js?v=20260526m"></script>
+<script src="starter-app.js?v=20260526n"></script>
 
 </body>
 </html>

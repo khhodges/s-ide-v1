@@ -81,20 +81,19 @@ function _updateRegisters() {
 }
 
 function starterNext() {
-    // Insert capabilities block into editor below the comment block
-    var ta  = _el('codeEditor');
-    var src = ta.value;
-    var capsBlock = 'MyCode capabilities {\n    (none)\n}\n';
-    // Find the blank line that precedes the first instruction
-    var idx = src.indexOf('\n    IADD');
-    if (idx < 0) idx = src.indexOf('\n    ');
-    if (idx >= 0) {
-        ta.value = src.slice(0, idx + 1) + capsBlock + '\n' + src.slice(idx + 1);
-    } else {
-        ta.value = capsBlock + '\n' + src;
-    }
-    // Reveal capabilities section and disable Next
-    _el('capsSection').classList.remove('hidden');
+    // Show highlighted capabilities code block below the editor annotation
+    _el('capsCodeBlock').classList.remove('hidden');
+
+    // Reveal capabilities section with active (highlighted) style
+    var caps = _el('capsSection');
+    caps.classList.remove('hidden');
+    caps.classList.add('active');
+
+    // Add white border to registers panel, capabilities section, and output panel
+    _el('statusPanel').classList.add('s-panel-lit');
+    _el('outputPanel').classList.add('s-panel-lit');
+
+    // Disable Next (one-way tutorial step)
     _el('btnNext').disabled = true;
     _updateRegisters();
 }
