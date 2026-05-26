@@ -8,6 +8,7 @@ var sim        = null;
 var assembler  = null;
 var _booted    = false;
 var _lastFault = null;
+var _stepCount = 0;
 
 // ── Friendly fault explanations ────────────────────────────────────────────
 
@@ -93,9 +94,16 @@ function _hideFault() {
 }
 
 function _enableControls(booted) {
-    _el('btnRun').disabled   = !booted;
     _el('btnStep').disabled  = !booted;
     _el('btnReset').disabled = !booted;
+}
+
+function _updateSteps(n) {
+    for (var i = 1; i <= 3; i++) {
+        var row = _el('step' + i);
+        if (!row) continue;
+        row.classList.toggle('active', i === n);
+    }
 }
 
 // ── Session start (from welcome card) ───────────────────────────────────────
@@ -138,105 +146,19 @@ function starterBoot() {
         if (!ok) throw new Error('Boot sequence did not complete');
         sim.output = '';
         _booted = true;
+        _stepCount = 0;
         sim._programLoaded = false;
         _enableControls(true);
         _setBadge('HALTED');
         _updateRegisters();
-        _setOutput('<span class="out-green">✓ Church Machine booted</span>\n'
+        _updateSteps(0);
+        _setOutput('<span class="out-green">✓ Church Machine started</span>\n'
             + '<span class="out-dim">Capability registers initialised. Namespace loaded.\n'
-            + 'Click Run to assemble and execute your program.</span>');
+            + 'Press › Step to walk through each instruction.</span>');
     } catch (e) {
         _setBadge('FAULT');
         _setOutput('<span class="out-red">Boot failed: ' + e.message + '</span>');
     }
-}
-
-// ── Assemble + load + run ───────────────────────────────────────────────────
-
-function starterRun() {
-    if (!sim || !_booted) return;
-    _hideFault();
-    _el('haltedMsg').style.display = 'none';
-
-    var src = _el('codeEditor').value;
-
-    // Assemble
-    var result;
-    try {
-        result = assembler.assemble(src);
-    } catch (e) {
-        _setBadge('FAULT');
-        _setOutput('<span class="out-red">Assembler error: ' + e.message + '</span>');
-        return;
-    }
-
-    if (result.errors && result.errors.length > 0) {
-        _setBadge('FAULT');
-        var errHtml = '<span class="out-red">Assembler errors:</span>\n';
-        result.errors.forEach(function(e) {
-            errHtml += '<span class="out-red">  Line ' + (e.line || '?') + ': ' + _esc(e.message || e) + '</span>\n';
-        });
-        _setOutput(errHtml);
-        return;
-    }
-
-    var words = result.words || result;
-    if (!words || !words.length) {
-        _setOutput('<span class="out-dim">Nothing to run — write some code first.</span>');
-        return;
-    }
-
-    // Re-boot clean then load; clear boot log before running user program
-    sim.reset();
-    _runBootSequence();
-    sim.output = '';
-    sim.loadProgram(words);
-
-    // Run to halt or fault (max 50 000 steps to avoid infinite loops)
-    _setBadge('RUNNING');
-    var MAX_STEPS = 50000;
-    var steps = 0;
-    var faulted = false;
-
-    while (!sim.halted && steps < MAX_STEPS) {
-        var r = sim.step();
-        steps++;
-        if (!r) break;
-        if (sim.faultLog && sim.faultLog.length > 0) { faulted = true; break; }
-    }
-
-    _updateRegisters();
-
-    // Build output
-    var out = '';
-    if (sim.output) {
-        // Strip internal [PP250] HALT lines — they're simulator housekeeping, not user output
-        var traceLines = sim.output.split('\n').filter(function(l) {
-            return l.length > 0 && !l.startsWith('[PP250]') && !l.startsWith('[Boot]') && !l.startsWith('[BOOT]') && !l.startsWith('[loadProgram]');
-        });
-        if (traceLines.length > 0) {
-            out += '<span class="out-dim">── trace ──</span>\n'
-                + '<span class="out-gold">' + _esc(traceLines.join('\n')) + '</span>\n\n';
-        }
-    }
-
-    if (faulted) {
-        var entry = sim.faultLog[sim.faultLog.length - 1];
-        _setBadge('FAULT');
-        _showFault(entry);
-        out += '<span class="out-red">⚡ Capability fault after ' + steps + ' step(s)</span>\n';
-    } else if (sim.halted) {
-        _setBadge('HALTED');
-        _el('haltedMsg').style.display = '';
-        out += '<span class="out-green">✓ Done — ' + steps + ' instruction(s)</span>\n';
-        out += _registerResult();
-    } else {
-        _setBadge('RUNNING');
-        out += '<span class="out-dim">Reached step limit (' + MAX_STEPS + '). '
-            + 'Check your program for an infinite loop.</span>\n';
-    }
-
-    _setOutput(out);
 }
 
 // ── Single step ─────────────────────────────────────────────────────────────
@@ -266,20 +188,24 @@ function starterStep() {
     }
 
     if (sim.halted) {
-        _appendOutput('<span class="out-dim">Already halted. Click Boot to start again.</span>\n');
+        _appendOutput('<span class="out-dim">Already halted. Click ⟳ Start to begin again.</span>\n');
         return;
     }
 
     var r = sim.step();
+    _stepCount++;
+    _updateSteps(_stepCount);
     _updateRegisters();
 
     if (sim.faultLog && sim.faultLog.length > 0) {
         var entry = sim.faultLog[sim.faultLog.length - 1];
         _showFault(entry);
         _setBadge('FAULT');
+        _updateSteps(0);
         _appendOutput('<span class="out-red">⚡ Capability fault at PC=' + sim.pc + '</span>\n');
     } else if (sim.halted) {
         _setBadge('HALTED');
+        _updateSteps(0);
         _el('haltedMsg').style.display = '';
         _appendOutput('<span class="out-green">✓ Done</span>\n' + _registerResult());
     } else {
@@ -299,8 +225,10 @@ function starterReset() {
         _runBootSequence();
         sim._programLoaded = false;
     }
+    _stepCount = 0;
     _setBadge('HALTED');
     _updateRegisters();
+    _updateSteps(0);
     _setOutput('<span class="out-dim">— reset — program cleared, machine re-booted —</span>');
 }
 
