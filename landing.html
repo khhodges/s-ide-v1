@@ -46,7 +46,7 @@
         /* ── Nav bar ────────────────────────────────────────────── */
         .ide-nav {
             display: grid;
-            grid-template-columns: repeat(7, 1fr);
+            grid-template-columns: repeat(6, 1fr);
             width: 100%;
             max-width: 1280px;
             background: #111827;
@@ -57,18 +57,6 @@
             position: relative;
             z-index: 100;
         }
-        /* START HERE column — gold accent */
-        .nav-col-start .nav-col-header {
-            color: #f0b830;
-        }
-        .nav-col-start {
-            background: rgba(218,165,32,0.04);
-        }
-        .nav-col-start .nav-item-start {
-            color: #daa520;
-            font-weight: 600;
-        }
-        .nav-col-start .nav-item-start:hover { color: #f0b830; }
         .nav-col {
             position: relative;
             border-right: 1px solid #1e2a3a;
@@ -265,15 +253,6 @@
 <body>
     <div class="site-title"><span class="lambda">λ</span> Church Machine</div>
     <nav class="ide-nav">
-        <div class="nav-col nav-col-start">
-            <div class="nav-col-header" title="Double-click to open Starter IDE" ondblclick="window.location='/start'">START HERE</div>
-            <div class="nav-dropdown">
-                <a class="nav-item nav-item-start" href="/start">First Program →</a>
-                <a class="nav-item nav-item-start" href="/start?go=1">Boot &amp; Run</a>
-                <a class="nav-item" href="/docs/quick-start">Getting Started</a>
-                <a class="nav-item" href="/start?challenge=1">⚡ Challenge</a>
-            </div>
-        </div>
         <div class="nav-col">
             <div class="nav-col-header" title="Double-click to open Programs" ondblclick="window.location='/simulator/#editor'">DEVELOP</div>
             <div class="nav-dropdown">
@@ -331,6 +310,23 @@
         </div>
     </nav>
     <div class="cards">
+
+        <!-- Start Here (formerly CM Release) -->
+        <div class="card" style="background: linear-gradient(135deg, #1a1228 0%, #0e1020 100%); border-color: #a78bfa;" onclick="window.location='/release/r12'">
+            <h2>Start Here</h2>
+            <div class="tag" style="color: #a78bfa;">Release 1.2 &middot; 15 May 2026 &middot; 3-Board ZIP Downloads</div>
+            <p>
+                New zip-contents test suite enforces the contract. Release 1 document set (14 PDFs) remains the definitive hardware specification for 3 FPGA boards.
+            </p>
+            <div class="features">
+                <a class="feature" href="/release/r12#ti60" style="background: rgba(167,139,250,0.1); color: #a78bfa; border-color: rgba(167,139,250,0.2);" onclick="event.stopPropagation()">Ti60 F225 ZIP</a>
+                <a class="feature" href="/release/r12#wukong" style="background: rgba(167,139,250,0.1); color: #a78bfa; border-color: rgba(167,139,250,0.2);" onclick="event.stopPropagation()">Wukong ZIP</a>
+                <a class="feature" href="/release/r12#tang" style="background: rgba(167,139,250,0.1); color: #a78bfa; border-color: rgba(167,139,250,0.2);" onclick="event.stopPropagation()">Tang Nano ZIP</a>
+                <a class="feature" href="/release/r1" style="background: rgba(167,139,250,0.1); color: #a78bfa; border-color: rgba(167,139,250,0.2);" onclick="event.stopPropagation()">Release 1</a>
+                <a class="feature" href="/release/r12#changes" style="background: rgba(167,139,250,0.1); color: #a78bfa; border-color: rgba(167,139,250,0.2);" onclick="event.stopPropagation()">Changelog</a>
+            </div>
+            <a class="arrow" href="/release/r12" style="color: #a78bfa;" onclick="event.stopPropagation()">Browse Release &rarr;</a>
+        </div>
 
         <!-- CM Introduction -->
         <div class="card card-ctmm" style="background: linear-gradient(135deg, #141e2e 0%, #0e1428 100%); border-color: #60a5fa;">
@@ -441,22 +437,6 @@
             <a class="arrow" href="/python-demo/" style="color: #22d3ee;" onclick="event.stopPropagation()">Explore Python Model &rarr;</a>
         </div>
 
-        <!-- Release 1.2 -->
-        <div class="card" style="background: linear-gradient(135deg, #1a1228 0%, #0e1020 100%); border-color: #a78bfa;" onclick="window.location='/release/r12'">
-            <h2>Release 1.2</h2>
-            <div class="tag" style="color: #a78bfa;">15 May 2026 &middot; Builder &middot; 3-Board ZIP Downloads</div>
-            <p>
-                New zip-contents test suite enforces the contract. Release 1 document set (14 PDFs) remains the definitive hardware specification for 3 FPGA boards.
-            </p>
-            <div class="features">
-                <a class="feature" href="/release/r12#ti60" style="background: rgba(167,139,250,0.1); color: #a78bfa; border-color: rgba(167,139,250,0.2);" onclick="event.stopPropagation()">Ti60 F225 ZIP</a>
-                <a class="feature" href="/release/r12#wukong" style="background: rgba(167,139,250,0.1); color: #a78bfa; border-color: rgba(167,139,250,0.2);" onclick="event.stopPropagation()">Wukong ZIP</a>
-                <a class="feature" href="/release/r12#tang" style="background: rgba(167,139,250,0.1); color: #a78bfa; border-color: rgba(167,139,250,0.2);" onclick="event.stopPropagation()">Tang Nano ZIP</a>
-                <a class="feature" href="/release/r1" style="background: rgba(167,139,250,0.1); color: #a78bfa; border-color: rgba(167,139,250,0.2);" onclick="event.stopPropagation()">R1 Docs</a>
-                <a class="feature" href="/release/r12#changes" style="background: rgba(167,139,250,0.1); color: #a78bfa; border-color: rgba(167,139,250,0.2);" onclick="event.stopPropagation()">Changelog</a>
-            </div>
-            <a class="arrow" href="/release/r12" style="color: #a78bfa;" onclick="event.stopPropagation()">Browse Release &rarr;</a>
-        </div>
 
     </div>
     <footer>
