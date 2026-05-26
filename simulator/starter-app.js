@@ -72,6 +72,31 @@ function _updateRegisters() {
     _el('regDR1').textContent = sim.dr ? hex(sim.dr[1]) : '—';
     _el('regDR2').textContent = sim.dr ? hex(sim.dr[2]) : '—';
     _el('regDR3').textContent = sim.dr ? hex(sim.dr[3]) : '—';
+    var cr6El  = _el('capCR6');
+    var cr14El = _el('capCR14');
+    if (cr6El && cr14El && sim.cr) {
+        cr6El.textContent  = sim.cr[6]  ? hex(sim.cr[6].word0)  : '—';
+        cr14El.textContent = sim.cr[14] ? hex(sim.cr[14].word0) : '—';
+    }
+}
+
+function starterNext() {
+    // Insert capabilities block into editor below the comment block
+    var ta  = _el('codeEditor');
+    var src = ta.value;
+    var capsBlock = 'MyCode capabilities {\n    (none)\n}\n';
+    // Find the blank line that precedes the first instruction
+    var idx = src.indexOf('\n    IADD');
+    if (idx < 0) idx = src.indexOf('\n    ');
+    if (idx >= 0) {
+        ta.value = src.slice(0, idx + 1) + capsBlock + '\n' + src.slice(idx + 1);
+    } else {
+        ta.value = capsBlock + '\n' + src;
+    }
+    // Reveal capabilities section and disable Next
+    _el('capsSection').classList.remove('hidden');
+    _el('btnNext').disabled = true;
+    _updateRegisters();
 }
 
 function _showFault(entry) {

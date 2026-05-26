@@ -347,6 +347,18 @@
         .s-hex-cmt  { color: #4a5a6a; }
 
 
+        /* ── Capabilities section (tutorial step 2) ── */
+        .s-caps-section { margin-top: 0.55rem; }
+        .s-caps-section.hidden { display: none; }
+        .s-caps-label {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--gold-dim);
+            padding: 0 0.1rem 0.25rem;
+        }
+        .s-reg-sub { font-size: 0.72rem; color: #556; margin: 0 0.15rem; }
+
         /* ── Mobile ── */
         @media (max-width: 700px) {
             .s-main {
@@ -419,6 +431,7 @@
         <div class="s-toolbar">
             <button class="s-btn"  id="btnStep"  onclick="starterStep()" disabled>› Step</button>
             <button class="s-btn"  id="btnReset" onclick="starterReset()" disabled>↺ Reset</button>
+            <button class="s-btn"  id="btnNext"  onclick="starterNext()">Next →</button>
         </div>
     </div>
 
@@ -434,6 +447,13 @@
             <span class="s-reg" id="haltedMsg" style="display:none; color: #daa520;">
                 ✓ Halted — program finished
             </span>
+        </div>
+        <div class="s-caps-section hidden" id="capsSection">
+            <div class="s-caps-label">Capabilities</div>
+            <div class="s-status-row">
+                <span class="s-reg">CR6 <span class="s-reg-sub">(context)</span> <span id="capCR6">—</span></span>
+                <span class="s-reg">CR14 <span class="s-reg-sub">(program)</span> <span id="capCR14">—</span></span>
+            </div>
         </div>
     </div>
 
@@ -470,7 +490,7 @@
 <script src="simulator.js?v=20260521c"></script>
 <script src="assembler.js?v=20260521a"></script>
 <script src="cloomc_compiler.js?v=20260519c"></script>
-<script src="starter-app.js?v=20260526l"></script>
+<script src="starter-app.js?v=20260526m"></script>
 
 </body>
 </html>
