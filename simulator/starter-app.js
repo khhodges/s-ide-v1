@@ -7,10 +7,11 @@
 var sim           = null;
 var assembler     = null;
 var cloomcCompiler = null;
-var _booted    = false;
-var _lastFault = null;
-var _hexRows   = [];
-var _hexRowIdx = 0;
+var _booted      = false;
+var _lastFault   = null;
+var _hexRows     = [];
+var _hexRowIdx   = 0;
+var _lessonPhase = 1;
 
 // ── Friendly fault explanations ────────────────────────────────────────────
 
@@ -76,15 +77,33 @@ function _updateRegisters() {
 }
 
 function starterNext() {
-    _el('capsInline').classList.remove('hidden');
-    var caps = _el('capsSection');
-    caps.classList.remove('hidden');
-    caps.classList.add('active');
-    _el('statusPanel').classList.add('s-panel-lit');
-    _el('outputPanel').classList.add('s-panel-lit');
-    _el('btnNext').disabled = true;
-    _setOutput('<span class="out-dim">This simple example is a terminal atomic abstraction that needs nothing other than machine registers. The next lesson demonstrates local (private) memory access.</span>');
-    _updateRegisters();
+    if (_lessonPhase === 1) {
+        _el('capsInline').classList.remove('hidden');
+        var caps = _el('capsSection');
+        caps.classList.remove('hidden');
+        caps.classList.add('active');
+        _el('statusPanel').classList.add('s-panel-lit');
+        _el('outputPanel').classList.add('s-panel-lit');
+        _el('btnNext').textContent = 'Lesson 2 \u2192';
+        _lessonPhase = 2;
+        _setOutput('<span class="out-dim">This simple example is a terminal atomic abstraction that needs nothing other than machine registers. The next lesson demonstrates local (private) memory access.</span>');
+        _updateRegisters();
+    } else if (_lessonPhase === 2) {
+        _el('lesson1Code').classList.add('hidden');
+        _el('lesson2Code').classList.remove('hidden');
+        _el('btnNext').disabled = true;
+        if (sim) {
+            sim.reset();
+            _runBootSequence();
+            sim._programLoaded = false;
+        }
+        _hideHexListing();
+        _el('haltedMsg').style.display = 'none';
+        _setBadge('IDLE');
+        _updateRegisters();
+        _lessonPhase = 3;
+        _setOutput('<span class="out-dim">The programmer adds new capability defined objects using Pet Names. <strong>myScratchPad RW</strong> grants this abstraction read/write access to a private memory region. The <strong>LOAD</strong> instruction fetches that capability from the c-list ready for use.</span>');
+    }
 }
 
 function _showFault(entry) {
@@ -209,16 +228,32 @@ function starterStep() {
 
     // If not yet loaded, assemble and load first
     if (sim.pc === 0 && !sim._programLoaded) {
-        var src =
-            '; The Church Machine adds hardened symbolic addressing\n' +
-            '; \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n' +
-            '; Simple A + B programs are unchanged\n' +
-            '; DR1 holds A, DR2 holds B, result goes into DR1.\n' +
-            '\n' +
-            '    IADD  DR1, DR1, #12  ; A = 12\n' +
-            '    IADD  DR2, DR2, #30  ; B = 30\n' +
-            '    IADD  DR1, DR1, DR2  ; A + B  \u2192  DR1 = 42\n' +
-            '    HALT                 ; done \u2014 result is in DR1\n';
+        var src;
+        if (_lessonPhase >= 3) {
+            // Lesson 2 — strip caps block and LOAD (display-only, pet name not wired in sim)
+            src =
+                '; The programmer adds new capability defined objects using Pet Names\n' +
+                '; \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n' +
+                '; Simple A + B programs are unchanged\n' +
+                '; DR1 holds A, DR2 holds B, result goes into DR1.\n' +
+                '\n' +
+                '    IADD  DR1, DR1, #12  ; A = 12\n' +
+                '    IADD  DR2, DR2, #30  ; B = 30\n' +
+                '    IADD  DR1, DR1, DR2  ; A + B  \u2192  DR1 = 42\n' +
+                '    HALT                 ; done \u2014 result is in DR1\n';
+        } else {
+            // Lesson 1
+            src =
+                '; The Church Machine adds hardened symbolic addressing\n' +
+                '; \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n' +
+                '; Simple A + B programs are unchanged\n' +
+                '; DR1 holds A, DR2 holds B, result goes into DR1.\n' +
+                '\n' +
+                '    IADD  DR1, DR1, #12  ; A = 12\n' +
+                '    IADD  DR2, DR2, #30  ; B = 30\n' +
+                '    IADD  DR1, DR1, DR2  ; A + B  \u2192  DR1 = 42\n' +
+                '    HALT                 ; done \u2014 result is in DR1\n';
+        }
         var result;
         try { result = cloomcCompiler.compile(src, []); } catch (e) {
             _setOutput('<span class="out-red">Compiler error: ' + e.message + '</span>');
