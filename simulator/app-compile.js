@@ -1125,19 +1125,20 @@ function _confirmLumpRelease() {
     data.savePayload.metadata.version = ver;
     if (notes) data.savePayload.metadata.release_notes = notes;
 
-    const dlUrl = URL.createObjectURL(new Blob([data.binaryBuf], { type: 'application/octet-stream' }));
-    const a = document.createElement('a');
-    a.href = dlUrl; a.download = data.absName + '.lump';
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(dlUrl);
-
     fetch('/api/lumps/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data.savePayload)
     }).then(r => r.json()).then(resp => {
         if (resp.ok) {
+            const _lumpVer = resp.lump_version != null ? resp.lump_version : ver;
+            const _dlName = `${data.absName}_v${_lumpVer}.lump`;
+            const dlUrl = URL.createObjectURL(new Blob([data.binaryBuf], { type: 'application/octet-stream' }));
+            const a = document.createElement('a');
+            a.href = dlUrl; a.download = _dlName;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(dlUrl);
             appendOutput(`Saved to library: lumps/${resp.lump} \u2014 token 0x${resp.token} \u00b7 v${ver}`, 'info');
             if (_compileDraftToken && typeof _draftLsDel === 'function') { _draftLsDel(_compileDraftToken); _compileDraftToken = null; }
             window._editorLastSavedToken = resp.token;
@@ -1150,19 +1151,18 @@ function _confirmLumpRelease() {
                     if (item) { item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); showLumpDetail(savedToken); }
                 }
             }, 400);
+            let listing = data.listing;
+            listing += `  Version:   v${ver}\n`;
+            if (notes) listing += `  Notes:     ${notes}\n`;
+            listing += `\n  Downloaded: ${_dlName} (${data.sizeBytes} bytes)\n`;
+            listing += `  Saved to: server/lumps/ (binary + metadata sidecar)\n`;
+            if (data.con) { data.con.innerHTML = _capRightsHTML(listing); data.con.scrollTop = 0; }
+            if (data.trackKey) trackAction(data.trackKey, data.trackData);
+            if (data.appendMsg) appendOutput(data.appendMsg + ` \u00b7 v${ver}`, 'info');
         } else {
             appendOutput(`Server save failed: ${resp.error || 'unknown error'}`, 'error');
         }
     }).catch(err => { appendOutput(`Server save error: ${err.message}`, 'error'); });
-
-    let listing = data.listing;
-    listing += `  Version:   v${ver}\n`;
-    if (notes) listing += `  Notes:     ${notes}\n`;
-    listing += `\n  Downloaded: ${data.absName}.lump (${data.sizeBytes} bytes)\n`;
-    listing += `  Saved to: server/lumps/ (binary + metadata sidecar)\n`;
-    if (data.con) { data.con.innerHTML = _capRightsHTML(listing); data.con.scrollTop = 0; }
-    if (data.trackKey) trackAction(data.trackKey, data.trackData);
-    if (data.appendMsg) appendOutput(data.appendMsg + ` \u00b7 v${ver}`, 'info');
 }
 
 function compileAndBuild() {
@@ -1485,19 +1485,20 @@ function compileAndBuild() {
     })();
     savePayload.metadata.version = _autoVer;
 
-    const dlUrl = URL.createObjectURL(new Blob([binaryBuf], { type: 'application/octet-stream' }));
-    const _a = document.createElement('a');
-    _a.href = dlUrl; _a.download = absName + '.lump';
-    document.body.appendChild(_a); _a.click();
-    document.body.removeChild(_a);
-    URL.revokeObjectURL(dlUrl);
-
     fetch('/api/lumps/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(savePayload)
     }).then(r => r.json()).then(resp => {
         if (resp.ok) {
+            const _lumpVer = resp.lump_version != null ? resp.lump_version : _autoVer;
+            const _dlName = `${absName}_v${_lumpVer}.lump`;
+            const _dlUrl = URL.createObjectURL(new Blob([binaryBuf], { type: 'application/octet-stream' }));
+            const _a = document.createElement('a');
+            _a.href = _dlUrl; _a.download = _dlName;
+            document.body.appendChild(_a); _a.click();
+            document.body.removeChild(_a);
+            URL.revokeObjectURL(_dlUrl);
             appendOutput(`Saved to library: lumps/${resp.lump} \u2014 token 0x${resp.token} \u00b7 v${_autoVer}`, 'info');
             if (_compileDraftToken && typeof _draftLsDel === 'function') { _draftLsDel(_compileDraftToken); _compileDraftToken = null; }
             window._editorLastSavedToken = resp.token;
@@ -1510,28 +1511,25 @@ function compileAndBuild() {
                     if (_item) { _item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); showLumpDetail && showLumpDetail(_savedToken); }
                 }
             }, 400);
+            let _finalListing = listing;
+            _finalListing += `  Version:    v${_autoVer} (auto)\n`;
+            _finalListing += `\n  Downloaded: ${_dlName} (${sizeBytes} bytes)\n`;
+            _finalListing += `  Saved to:   server/lumps/ (binary + metadata sidecar)\n`;
+            if (con) {
+                con.innerHTML = _capRightsHTML(_finalListing);
+                con.scrollTop = 0;
+                const _loadDiv = document.createElement('div');
+                _loadDiv.className = 'cmp-load-toolbar';
+                _loadDiv.innerHTML = `<button id="btnLoadIntoSim" class="cmp-load-sim-btn" onclick="loadCLOOMCIntoSim()" data-tooltip="Load compiled program into the simulator to Step or Walk through every instruction">Load into Sim \u25b6</button>`;
+                con.insertBefore(_loadDiv, con.firstChild);
+            }
         } else {
             appendOutput(`Server save failed: ${resp.error || 'unknown error'}`, 'error');
         }
     }).catch(err => { appendOutput(`Server save error: ${err.message}`, 'error'); });
 
-    let _finalListing = listing;
-    _finalListing += `  Version:    v${_autoVer} (auto)\n`;
-    _finalListing += `\n  Downloaded: ${absName}.lump (${sizeBytes} bytes)\n`;
-    _finalListing += `  Saved to:   server/lumps/ (binary + metadata sidecar)\n`;
-
     trackAction('build_lump', { name: absName, lang: result.language, size: lumpSize });
     appendOutput(`Built LUMP: "${absName}" [${langLabel}] \u2014 ${cw} words, cc=${cc}, ${sizeBytes} bytes \u00b7 v${_autoVer}`, 'info');
-
-    // Prepend "Load into Sim" button so it is immediately visible at the top of the console
-    if (con) {
-        con.innerHTML = _capRightsHTML(_finalListing);
-        con.scrollTop = 0;
-        const _loadDiv = document.createElement('div');
-        _loadDiv.className = 'cmp-load-toolbar';
-        _loadDiv.innerHTML = `<button id="btnLoadIntoSim" class="cmp-load-sim-btn" onclick="loadCLOOMCIntoSim()" data-tooltip="Load compiled program into the simulator to Step or Walk through every instruction">Load into Sim \u25b6</button>`;
-        con.insertBefore(_loadDiv, con.firstChild);
-    }
     showNextSteps('compiled');
     _applySealedLumpState(absName);
 }
