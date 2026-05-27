@@ -485,6 +485,30 @@ header h1 a:hover {
     color: rgba(248,113,113,1);
 }
 
+/* ── Active port indicator ─────────────────────────────────────────────── */
+.ti60-active-port-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.3rem 0.55rem;
+    background: rgba(218,165,32,0.08);
+    border: 1px solid rgba(218,165,32,0.25);
+    border-radius: 5px;
+}
+.ti60-active-port-label {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.ti60-active-port-value {
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #daa520;
+    font-weight: 600;
+}
+
 /* ── Bridge setup guide panel ──────────────────────────────────────────── */
 .ti60-bridge-setup-panel {
     margin-bottom: 0.9rem;

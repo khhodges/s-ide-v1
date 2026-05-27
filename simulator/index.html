@@ -930,6 +930,10 @@ You should see: {"ok": true, "open": true, ...}</pre>
                         title="Edit if your bridge runs on a different port or host" />
                     <button class="ti60-forget-bridge-btn" onclick="Ti60Connect.resetBridgeCert()" title="Clears the remembered cert-accepted flag so the setup guide reappears on the next connection attempt">&#x1F504; Re-run setup</button>
                 </div>
+                <div id="ti60ActivePortRow" class="ti60-active-port-row" style="display:none;">
+                    <span class="ti60-active-port-label">Active port</span>
+                    <span id="ti60ActivePortValue" class="ti60-active-port-value"></span>
+                </div>
                 <div id="ti60ConnectLog" class="ti60-connect-log"></div>
             </div>
             <div id="ti60BridgeSetupPanel" class="ti60-bridge-setup-panel" style="display:none;">

@@ -94,8 +94,22 @@ window.Ti60Connect = (function () {
         if (detail) _log(detail, state === 'pass' ? 'log-pass' : state === 'fail' ? 'log-fail' : '');
     }
 
+    function _setActivePort(port) {
+        const row = document.getElementById('ti60ActivePortRow');
+        const val = document.getElementById('ti60ActivePortValue');
+        if (!row || !val) return;
+        if (port) {
+            val.textContent = port;
+            row.style.display = '';
+        } else {
+            val.textContent = '';
+            row.style.display = 'none';
+        }
+    }
+
     function _reset() {
         STEPS.forEach(s => _setStep(s, 'pending'));
+        _setActivePort(null);
         const log = document.getElementById('ti60ConnectLog');
         if (log) log.innerHTML = '';
         const sBanner = document.getElementById('ti60SuccessBanner');
@@ -313,6 +327,7 @@ window.Ti60Connect = (function () {
         try { if (_port)   await _port.close();    }  catch (e) {}
         _port   = null;
         _reader = null;
+        _setActivePort(null);
         _log('Disconnected.');
         const btn  = document.getElementById('ti60ConnectBtn');
         const bBtn = document.getElementById('ti60BridgeBtn');
@@ -438,6 +453,7 @@ window.Ti60Connect = (function () {
         localStorage.setItem('ti60BridgeUrl', url);
         _updateForgetBtnVisibility();
         _hideBridgeSetup();
+        _setActivePort(connectedPort);
         _setStep('uart', 'pass', 'Bridge connected — ' + connectedPort + ' @ ' + (status.baud || BAUD));
         _setStep('callhome', 'active');
         _log('Waiting for firmware CALLHOME packet (up to 30 s) — power-cycle the board now if needed…');
