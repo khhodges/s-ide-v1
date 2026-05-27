@@ -1142,15 +1142,12 @@ function _confirmLumpRelease() {
             appendOutput(`Saved to library: lumps/${resp.lump} \u2014 token 0x${resp.token} \u00b7 v${ver}`, 'info');
             if (_compileDraftToken && typeof _draftLsDel === 'function') { _draftLsDel(_compileDraftToken); _compileDraftToken = null; }
             window._editorLastSavedToken = resp.token;
-            renderLumps();
             const savedToken = resp.token;
-            setTimeout(() => {
-                const listEl = document.getElementById('lumpsListContent');
-                if (listEl && savedToken) {
-                    const item = listEl.querySelector(`.lump-item[data-token="${savedToken}"]`);
-                    if (item) { item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); showLumpDetail(savedToken); }
-                }
-            }, 400);
+            window._pendingLumpToken = savedToken;
+            const _rlProm = renderLumps ? renderLumps() : Promise.resolve();
+            (_rlProm && _rlProm.then ? _rlProm : Promise.resolve()).then(() => {
+                if (typeof showLumpDetail === 'function') showLumpDetail(savedToken);
+            });
             let listing = data.listing;
             listing += `  Version:   v${ver}\n`;
             if (notes) listing += `  Notes:     ${notes}\n`;
@@ -1502,15 +1499,12 @@ function compileAndBuild() {
             appendOutput(`Saved to library: lumps/${resp.lump} \u2014 token 0x${resp.token} \u00b7 v${_autoVer}`, 'info');
             if (_compileDraftToken && typeof _draftLsDel === 'function') { _draftLsDel(_compileDraftToken); _compileDraftToken = null; }
             window._editorLastSavedToken = resp.token;
-            renderLumps && renderLumps();
             const _savedToken = resp.token;
-            setTimeout(() => {
-                const _listEl = document.getElementById('lumpsListContent');
-                if (_listEl && _savedToken) {
-                    const _item = _listEl.querySelector(`.lump-item[data-token="${_savedToken}"]`);
-                    if (_item) { _item.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); showLumpDetail && showLumpDetail(_savedToken); }
-                }
-            }, 400);
+            window._pendingLumpToken = _savedToken;
+            const _rlProm2 = renderLumps ? renderLumps() : Promise.resolve();
+            (_rlProm2 && _rlProm2.then ? _rlProm2 : Promise.resolve()).then(() => {
+                if (typeof showLumpDetail === 'function') showLumpDetail(_savedToken);
+            });
             let _finalListing = listing;
             _finalListing += `  Version:    v${_autoVer} (auto)\n`;
             _finalListing += `\n  Downloaded: ${_dlName} (${sizeBytes} bytes)\n`;

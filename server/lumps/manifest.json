@@ -2055,8 +2055,8 @@
     "cc": 1,
     "author": "",
     "version": "2026.05.27",
-    "lump_version": 3,
-    "compiled_at": 1779883755.3057475,
+    "lump_version": 4,
+    "compiled_at": 1779883770.630295,
     "methods": [
       {
         "name": "compute",
