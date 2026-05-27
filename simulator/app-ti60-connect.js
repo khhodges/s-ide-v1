@@ -337,6 +337,7 @@ window.Ti60Connect = (function () {
             if (d.ok) {
                 _bridgeEverConfirmed = true;
                 localStorage.setItem('ti60BridgeCertAccepted', '1');
+                localStorage.setItem('ti60BridgeUrl', url);
                 _updateForgetBtnVisibility();
                 const ports = await _fetchPorts(url);
                 const best = _pickBestPort(ports);
@@ -427,6 +428,7 @@ window.Ti60Connect = (function () {
 
         _bridgeEverConfirmed = true;
         localStorage.setItem('ti60BridgeCertAccepted', '1');
+        localStorage.setItem('ti60BridgeUrl', url);
         _updateForgetBtnVisibility();
         _hideBridgeSetup();
         _setStep('uart', 'pass', 'Bridge connected — ' + connectedPort + ' @ ' + (status.baud || BAUD));
@@ -488,6 +490,12 @@ window.Ti60Connect = (function () {
 
     function onTabOpen() {
         _updateForgetBtnVisibility();
+
+        // Pre-fill bridge URL input from localStorage (if saved from a previous session)
+        const savedUrl = localStorage.getItem('ti60BridgeUrl');
+        const inp = document.getElementById('ti60BridgeUrl');
+        if (inp && savedUrl) inp.value = savedUrl;
+
         const origin = window.location.origin;
         ['ti60PolUrl', 'ti60PolUrl2'].forEach(id => {
             const el = document.getElementById(id);
