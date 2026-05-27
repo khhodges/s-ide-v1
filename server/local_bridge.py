@@ -683,7 +683,6 @@ if __name__ == '__main__':
 
     if _IDE_SERVER_URL:
         _prefetch_device_uid()
-        global _tunnel_drain_running
         if not _tunnel_drain_running:
             _tunnel_drain_running = True
             td = threading.Thread(target=_tunnel_drain_thread, daemon=True)
