@@ -8,6 +8,31 @@ window.Ti60Connect = (function () {
     let _running = false;
     let _bridgeRunning = false;
     let _bridgeEverConfirmed = localStorage.getItem('ti60BridgeCertAccepted') === '1';
+    let _detectedPort = null;
+
+    // ── port detection ─────────────────────────────────────────────────────
+    async function _fetchPorts(url) {
+        try {
+            const r = await fetch(url + '/ports', { signal: AbortSignal.timeout(3000) });
+            const d = await r.json();
+            if (d.ok && Array.isArray(d.ports) && d.ports.length > 0) return d.ports;
+        } catch (e) {}
+        return null;
+    }
+
+    function _pickBestPort(ports) {
+        if (!ports || ports.length === 0) return null;
+        const preferred = ports.find(p => p === '/dev/ttyUSB2');
+        return preferred || ports[0];
+    }
+
+    function _updateRunCmds(port) {
+        const p = port || '/dev/ttyUSB2';
+        ['ti60SetupBridgeCmd', 'ti60BridgeCmd'].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = 'python3 server/local_bridge.py ' + p + ' 115200 8766';
+        });
+    }
 
     // ── bridge setup panel ─────────────────────────────────────────────────
     function _showBridgeSetup() {
@@ -309,9 +334,19 @@ window.Ti60Connect = (function () {
             if (d.ok) {
                 _bridgeEverConfirmed = true;
                 localStorage.setItem('ti60BridgeCertAccepted', '1');
+                const ports = await _fetchPorts(url);
+                const best = _pickBestPort(ports);
+                if (best) {
+                    _detectedPort = best;
+                    _updateRunCmds(best);
+                }
                 _hideBridgeSetup();
                 _log('✓ Bridge is reachable. Port open: ' + d.open +
                      (d.port ? '  (' + d.port + ')' : ''), 'log-pass');
+                if (ports && ports.length > 0) {
+                    _log('Available serial ports: ' + ports.join(', ') +
+                         (best ? '  → will use ' + best : ''), '');
+                }
                 if (!d.open) {
                     _log('Port is not open — bridge will try to open it when you click Via Bridge.', '');
                 }
@@ -359,17 +394,26 @@ window.Ti60Connect = (function () {
         }
 
         if (!status.open) {
-            _log('Bridge running but port closed — opening /dev/ttyUSB2 …');
+            if (!_detectedPort) {
+                const ports = await _fetchPorts(url);
+                const best = _pickBestPort(ports);
+                if (best) {
+                    _detectedPort = best;
+                    _updateRunCmds(best);
+                }
+            }
+            const autoPort = _detectedPort || '/dev/ttyUSB2';
+            _log('Bridge running but port closed — opening ' + autoPort + ' …');
             try {
                 const r2 = await fetch(url + '/connect', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ port: '/dev/ttyUSB2', baud: BAUD }),
+                    body: JSON.stringify({ port: autoPort, baud: BAUD }),
                 });
                 const d2 = await r2.json();
                 if (!d2.ok) throw new Error(d2.error || 'connect failed');
             } catch (e) {
-                _setStep('uart', 'fail', 'Could not open /dev/ttyUSB2: ' + e.message);
+                _setStep('uart', 'fail', 'Could not open ' + autoPort + ': ' + e.message);
                 if (bBtn) { bBtn.disabled = false; bBtn.textContent = '🌉 Via Bridge'; }
                 return;
             }

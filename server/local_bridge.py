@@ -308,6 +308,16 @@ class Handler(BaseHTTPRequestHandler):
                 _rx_buf.clear()
             self._json_resp({'ok': True, 'bytes': list(data)})
 
+        elif self.path == '/ports':
+            import glob as _glob
+            found = (
+                sorted(_glob.glob('/dev/ttyUSB*')) +
+                sorted(_glob.glob('/dev/ttyACM*')) +
+                sorted(_glob.glob('/dev/cu.usbserial*')) +
+                sorted(_glob.glob('/dev/cu.usbmodem*'))
+            )
+            self._json_resp({'ok': True, 'ports': found})
+
         else:
             self._json_resp({'ok': False, 'error': 'not found'}, 404)
 
