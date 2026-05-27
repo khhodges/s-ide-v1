@@ -530,7 +530,7 @@ window.Ti60Connect = (function () {
             await new Promise(r => setTimeout(r, 400));
             try {
                 const dr = await fetch('/api/device/pull-drain/' + uid,
-                    { signal: AbortSignal.timeout(3000) });
+                    { signal: AbortSignal.timeout(10000) });
                 const dd = await dr.json();
                 if (dd.bytes && dd.bytes.length) {
                     buf += String.fromCharCode(...dd.bytes);
@@ -564,7 +564,14 @@ window.Ti60Connect = (function () {
                     }
                 }
             } catch (e) {
-                if (_bridgeRunning) _log('⚠ Stream error: ' + e.message, 'log-warn');
+                if (!_bridgeRunning) break;
+                const transient = e.name === 'TimeoutError' || e.name === 'AbortError' ||
+                                  e.name === 'TypeError' || e.name === 'NetworkError';
+                if (transient) {
+                    await new Promise(r => setTimeout(r, 1000));
+                    continue;
+                }
+                _log('⚠ Stream stopped: ' + e.message, 'log-warn');
                 break;
             }
         }
