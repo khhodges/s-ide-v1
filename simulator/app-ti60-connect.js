@@ -9,6 +9,7 @@ window.Ti60Connect = (function () {
     let _bridgeRunning = false;
     let _tunnelMode = false;
     let _streamLineCount = 0;
+    let _bootLump = null;
     let _bridgeEverConfirmed = localStorage.getItem('ti60BridgeCertAccepted') === '1';
     let _detectedPort = null;
     let _activeBaud = BAUD;
@@ -520,11 +521,80 @@ window.Ti60Connect = (function () {
         await _niaTunnelStream(pkt.uid, bBtn, dBtn);
     }
 
+    // ── Boot LUMP disassembler helpers ────────────────────────────────────────
+
+    async function _fetchBootLump() {
+        try {
+            const r = await fetch('/api/boot-lump-words', { signal: AbortSignal.timeout(5000) });
+            const d = await r.json();
+            if (d.ok) { _bootLump = d; return d; }
+        } catch (_e) {}
+        _bootLump = null;
+        return null;
+    }
+
+    // Decode the instruction at NIA niaNum from lump and return a one-line annotation,
+    // e.g. "[0x1A004001]  ELOADCALL CR0, CR6[0x0001]   GT[1]: 0xFF803F01 Inform(E)"
+    // Returns null if the NIA is out of range or lump is unavailable.
+    function _decodeNIA(niaNum, lump) {
+        if (!lump || niaNum < 0 || niaNum >= lump.code.length) return null;
+        const word = lump.code[niaNum] >>> 0;
+        let mnemonic;
+        try {
+            const asm = new ChurchAssembler();
+            mnemonic = asm.disassemble(word);
+        } catch (_e) {
+            mnemonic = '???';
+        }
+        // Find which c-list slot this instruction accesses (if any)
+        const opcode = (word >>> 27) & 0x1F;
+        const crSrc  = (word >>> 15) & 0xF;
+        const imm    = word & 0x7FFF;
+        let clSlot = null;
+        if (crSrc === 6) {
+            if (opcode === 0 || opcode === 1 || opcode === 4 || opcode === 9) {
+                // LOAD / SAVE / CHANGE / XLOADLAMBDA — imm is the c-list row
+                clSlot = imm & 0xFF;
+            } else if (opcode === 8) {
+                // ELOADCALL — bits[7:0] of imm are the c-list row
+                clSlot = imm & 0xFF;
+            }
+        }
+        let gtStr = '';
+        if (clSlot !== null && lump.clist && clSlot < lump.clist.length) {
+            const gt = lump.clist[clSlot] >>> 0;
+            const bFlag  = (gt >>> 31) & 1;
+            const perm3  = (gt >>> 28) & 0x7;
+            const dom    = (gt >>> 27) & 0x1;
+            const gtType = (gt >>> 23) & 0x3;
+            const typeName = ['NULL', 'Inform', 'Outform', 'Abstract'][gtType];
+            let permStr = '';
+            if (gt === 0) {
+                permStr = 'NULL';
+            } else if (dom === 0) {
+                if ((perm3 >> 0) & 1) permStr += 'R';
+                if ((perm3 >> 1) & 1) permStr += 'W';
+                if ((perm3 >> 2) & 1) permStr += 'X';
+            } else {
+                if ((perm3 >> 0) & 1) permStr += 'L';
+                if ((perm3 >> 1) & 1) permStr += 'S';
+                if ((perm3 >> 2) & 1) permStr += 'E';
+            }
+            if (bFlag) permStr += 'B';
+            const gtHex = '0x' + gt.toString(16).toUpperCase().padStart(8, '0');
+            gtStr = '   GT[' + clSlot + ']: ' + gtHex + ' ' + typeName +
+                    (permStr ? '(' + permStr + ')' : '');
+        }
+        return '[0x' + word.toString(16).toUpperCase().padStart(8, '0') + ']  ' +
+               mnemonic + gtStr;
+    }
+
     async function _niaTunnelStream(uid, bBtn, dBtn) {
         let buf     = '';
         let lastNia = null;
         _log('— Live NIA stream active via server tunnel — (Disconnect to stop)', 'log-pass');
         _log('💡 No output yet? Power-cycle the board (unplug/replug USB) to capture the boot stream.', 'log-warn');
+        _fetchBootLump();
         _showStreamPanel();
         while (_bridgeRunning) {
             await new Promise(r => setTimeout(r, 400));
@@ -541,11 +611,15 @@ window.Ti60Connect = (function () {
                         if (!line) continue;
                         const niaMatch = line.match(/\bNIA=0x([0-9A-Fa-f]+)/i);
                         if (niaMatch) {
-                            const nia = '0x' + niaMatch[1].toUpperCase().padStart(8, '0');
-                            _streamLog('NIA → ' + nia, 'sl-nia');
+                            const nia    = '0x' + niaMatch[1].toUpperCase().padStart(8, '0');
+                            const niaNum = parseInt(niaMatch[1], 16);
+                            const anno   = _decodeNIA(niaNum, _bootLump);
+                            const label  = anno ? 'NIA → ' + nia + '  ' + anno
+                                                : 'NIA → ' + nia;
+                            _streamLog(label, 'sl-nia');
                             if (nia !== lastNia) {
                                 lastNia = nia;
-                                _log('NIA → ' + nia, 'log-nia');
+                                _log('NIA → ' + nia + (anno ? '  ' + anno : ''), 'log-nia');
                             }
                             continue;
                         }

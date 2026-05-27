@@ -5940,6 +5940,67 @@ def device_pull_drain(uid):
     return jsonify({"ok": True, "bytes": list(data)})
 
 
+@app.route("/api/boot-lump-words")
+def boot_lump_words():
+    """Return c-list and code words for Boot.Abstr (NS slot 3) from the boot image.
+
+    Used by the Connect tab stream panel to disassemble NIA lines and display
+    the Golden Token (GT) value the instruction would access in the c-list.
+    """
+    import struct as _struct
+    boot_img = os.path.join(os.path.dirname(__file__), "lumps", "boot-image.bin")
+    if not os.path.exists(boot_img):
+        return jsonify({"ok": False, "error": "no boot image available"})
+    with open(boot_img, "rb") as _f:
+        _img = _f.read()
+    n_words = len(_img) // 4
+    if n_words < 16:
+        return jsonify({"ok": False, "error": "boot image too small"})
+    words = _struct.unpack_from(f'<{n_words}I', _img)
+    BOOT_TAG        = _boot_image_gen.BOOT_IMAGE_FORMAT_TAG
+    NS_ENTRY_WORDS  = _boot_image_gen.NS_ENTRY_WORDS
+    BOOT_ABSTR_SLOT = _boot_image_gen.BOOT_ABSTR_NS_SLOT
+    tag_idx = None
+    for _i in range(n_words - 1, max(n_words - 8192, -1), -1):
+        if words[_i] == BOOT_TAG:
+            tag_idx = _i
+            break
+    if tag_idx is None:
+        return jsonify({"ok": False, "error": "BOOT_IMAGE_FORMAT_TAG not found"})
+    ns_table_base   = tag_idx + 1
+    slot_entry_base = ns_table_base + BOOT_ABSTR_SLOT * NS_ENTRY_WORDS
+    if slot_entry_base + 3 >= n_words:
+        return jsonify({"ok": False, "error": "NS slot 3 entry out of range"})
+    lump_base = int(words[slot_entry_base])
+    if lump_base == 0 or lump_base + 1 >= n_words:
+        return jsonify({"ok": False, "error": f"invalid lump base {lump_base}"})
+    hdr = words[lump_base]
+    magic = (hdr >> 27) & 0x1F
+    if magic != 0x1F:
+        return jsonify({"ok": False,
+                        "error": f"bad LUMP magic at word {lump_base}: 0x{hdr:08X}"})
+    n_minus_6 = (hdr >> 23) & 0xF
+    cw        = (hdr >> 10) & 0x1FFF
+    cc        = hdr & 0xFF
+    lump_size = 1 << (n_minus_6 + 6)
+    code_end  = lump_base + 1 + cw
+    clist_start = lump_base + lump_size - cc
+    if code_end > n_words or (cc > 0 and clist_start + cc > n_words):
+        return jsonify({"ok": False, "error": "LUMP words extend past image boundary"})
+    code  = [int(words[lump_base + 1 + _j]) for _j in range(cw)]
+    clist = [int(words[clist_start + _j]) for _j in range(cc)] if cc > 0 else []
+    return jsonify({
+        "ok":        True,
+        "slot":      BOOT_ABSTR_SLOT,
+        "lump_base": lump_base,
+        "lump_size": lump_size,
+        "cw":        cw,
+        "cc":        cc,
+        "code":      code,
+        "clist":     clist,
+    })
+
+
 @app.route("/api/device/latest-callhome")
 def device_latest_callhome():
     """Return the most-recent CALLHOME entry newer than ?since=<unix_ts>."""
