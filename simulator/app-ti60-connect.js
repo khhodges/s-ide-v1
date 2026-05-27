@@ -149,8 +149,7 @@ window.Ti60Connect = (function () {
                 fault_nia:   0,
             }),
         });
-        const d = await r.json();
-        return d.ok === true;
+        return await r.json();
     }
 
     async function _reportLaunchTest(status, notes) {
@@ -185,9 +184,10 @@ window.Ti60Connect = (function () {
         _setStep('register', 'active');
 
         try {
-            const ok = await _registerWithIDE(pkt);
-            if (ok) {
-                _setStep('register', 'pass', 'Device registered in IDE (uid=' + pkt.uid + ')');
+            const reg = await _registerWithIDE(pkt);
+            if (reg.ok) {
+                const bootNum = reg.boot_count != null ? '  boot #' + reg.boot_count : '';
+                _setStep('register', 'pass', 'Device registered in IDE (uid=' + pkt.uid + ')' + bootNum);
                 const sBanner = document.getElementById('ti60SuccessBanner');
                 if (sBanner) sBanner.style.display = '';
                 _setStep('release', 'active');
