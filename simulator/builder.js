@@ -1281,3 +1281,21 @@ function closeBuilderHelp() {
     var modal = document.getElementById('builderHelpModal');
     if (modal) modal.style.display = 'none';
 }
+
+// ── Hardware Actions dropdown ─────────────────────────────────────────────────
+
+function toggleHwActions(e) {
+    e.stopPropagation();
+    var dd = document.getElementById('hwActionsDropdown');
+    if (dd) dd.classList.toggle('open');
+}
+
+function closeHwActions() {
+    var dd = document.getElementById('hwActionsDropdown');
+    if (dd) dd.classList.remove('open');
+}
+
+document.addEventListener('click', function(e) {
+    var menu = document.getElementById('hwActionsMenu');
+    if (menu && !menu.contains(e.target)) closeHwActions();
+});

@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="styles-dashboard.css?v=20260518e">
     <link rel="stylesheet" href="styles-lumps.css?v=20260521b">
     <link rel="stylesheet" href="styles-gatelog.css?v=20260513a">
-    <link rel="stylesheet" href="styles-fault.css?v=20260516b">
+    <link rel="stylesheet" href="styles-fault.css?v=20260527a">
     <link rel="stylesheet" href="styles-tools.css?v=20260527f">
     <style>
         .app-loading {
@@ -832,25 +832,25 @@
 
     <div id="builder" class="view">
         <div id="hardwareBuildPanel" class="hardware-build-panel">
-            <div class="hardware-build-header">
-                <span class="hardware-build-title">&#x2B21; Hardware Build</span>
-                <span class="hardware-build-subtitle">Generate synthesisable RTL for your target FPGA</span>
-            </div>
             <div class="hardware-build-controls">
+                <span class="hardware-build-title">&#x2B21;</span>
                 <label class="hardware-build-label" for="hardwareBoardSel">Target</label>
                 <select id="hardwareBoardSel" class="lang-selector" onchange="setSelectedBoard(this.value); updateHardwarePanelLabel()" title="Target FPGA board">
                     <option value="wukong-xc7a100t" selected>QMTECH Wukong Artix-7 XC7A100T (Vivado)</option>
                     <option value="tang-nano-20k-iot">Sipeed Tang Nano 20K (Gowin GW2AR-18)</option>
                     <option value="ti60-f225">Efinix Ti60 F225</option>
                 </select>
-                <button class="btn btn-deploy" id="btnHWBuild" onclick="buildFPGAOnly()" data-tooltip="Build — Run Amaranth elaboration + Yosys synthesis and save RTL artifacts to server">Build</button>
-                <button class="btn btn-deploy" id="btnFPGAPkg" onclick="downloadFPGAPackage()" data-tooltip="Download FPGA Package — Download the last-built Verilog + netlist + constraints ZIP">Download FPGA Package</button>
-                <button class="btn btn-deploy" onclick="downloadHardwareImage()" data-tooltip="Download .bin — Download binary memory image from the current simulator state">Download .bin</button>
-                <button class="btn btn-deploy" onclick="uploadToTang()" data-tooltip="Deploy to FPGA — Upload .bin to the selected FPGA board via WebSerial (Chrome/Edge)">Deploy to FPGA</button>
-                <button class="btn btn-deploy" onclick="testUART()" data-tooltip="Test UART — Open the serial port and send a 4-byte probe to confirm the USB-UART link is alive (Chrome/Edge)">Test UART</button>
-            </div>
-            <div class="hardware-build-info" id="hardwareBuildInfo">
-                <span id="hwBuildInfoText"></span>
+                <div class="hw-actions-menu" id="hwActionsMenu">
+                    <button class="hw-actions-toggle" onclick="toggleHwActions(event)" data-tooltip="Hardware actions — Build, Download, Deploy, Test UART">&#x2630; Actions &#x25BE;</button>
+                    <div class="hw-actions-dropdown" id="hwActionsDropdown">
+                        <button id="btnHWBuild" onclick="buildFPGAOnly();closeHwActions()" data-tooltip="Build — Run Amaranth elaboration + Yosys synthesis and save RTL artifacts to server">&#x1F6E0; Build</button>
+                        <button id="btnFPGAPkg" onclick="downloadFPGAPackage();closeHwActions()" data-tooltip="Download the last-built Verilog + netlist + constraints ZIP">&#x1F4E6; Download FPGA Package</button>
+                        <button onclick="downloadHardwareImage();closeHwActions()" data-tooltip="Download binary memory image from the current simulator state">&#x1F4BE; Download .bin</button>
+                        <button onclick="uploadToTang();closeHwActions()" data-tooltip="Deploy to FPGA — Upload .bin to the selected FPGA board via WebSerial (Chrome/Edge)">&#x1F4E1; Deploy to FPGA</button>
+                        <button onclick="testUART();closeHwActions()" data-tooltip="Test UART — Open the serial port and send a 4-byte probe to confirm the USB-UART link is alive (Chrome/Edge)">&#x1F50C; Test UART</button>
+                    </div>
+                </div>
+                <span class="hardware-build-info" id="hardwareBuildInfo"><span id="hwBuildInfoText"></span></span>
             </div>
         </div>
         <div class="builder-view-tab-row">
