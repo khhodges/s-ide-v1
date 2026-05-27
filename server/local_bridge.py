@@ -682,6 +682,20 @@ if __name__ == '__main__':
         print()
 
     if _IDE_SERVER_URL:
+        # Auto-open serial port so the reader captures UART without needing /connect
+        try:
+            with _ser_lock:
+                _ser = serial.Serial(SERIAL_PORT, BAUD, timeout=0)
+            _active_baud = BAUD
+            if not _reader_running:
+                _reader_running = True
+                rt = threading.Thread(target=_reader, daemon=True)
+                rt.start()
+            print(f'  [bridge] Serial port {SERIAL_PORT} opened — reader active.')
+        except Exception as _se:
+            print(f'  [bridge] WARNING: Could not open {SERIAL_PORT}: {_se}')
+            print(f'           UART stream will not work until the port is available.')
+
         _prefetch_device_uid()
         if not _tunnel_drain_running:
             _tunnel_drain_running = True
