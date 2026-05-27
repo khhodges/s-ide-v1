@@ -337,6 +337,7 @@ window.Ti60Connect = (function () {
             if (d.ok) {
                 _bridgeEverConfirmed = true;
                 localStorage.setItem('ti60BridgeCertAccepted', '1');
+                _updateForgetBtnVisibility();
                 const ports = await _fetchPorts(url);
                 const best = _pickBestPort(ports);
                 if (best) {
@@ -426,6 +427,7 @@ window.Ti60Connect = (function () {
 
         _bridgeEverConfirmed = true;
         localStorage.setItem('ti60BridgeCertAccepted', '1');
+        _updateForgetBtnVisibility();
         _hideBridgeSetup();
         _setStep('uart', 'pass', 'Bridge connected — ' + connectedPort + ' @ ' + (status.baud || BAUD));
         _setStep('callhome', 'active');
@@ -485,6 +487,7 @@ window.Ti60Connect = (function () {
     }
 
     function onTabOpen() {
+        _updateForgetBtnVisibility();
         const origin = window.location.origin;
         ['ti60PolUrl', 'ti60PolUrl2'].forEach(id => {
             const el = document.getElementById(id);
@@ -505,9 +508,15 @@ window.Ti60Connect = (function () {
         }
     }
 
+    function _updateForgetBtnVisibility() {
+        const btn = document.querySelector('.ti60-forget-bridge-btn');
+        if (btn) btn.style.display = _bridgeEverConfirmed ? '' : 'none';
+    }
+
     function resetBridgeCert() {
         localStorage.removeItem('ti60BridgeCertAccepted');
         _bridgeEverConfirmed = false;
+        _updateForgetBtnVisibility();
         _log('Bridge cert memory cleared — setup guide will reappear on next connection attempt.');
     }
 

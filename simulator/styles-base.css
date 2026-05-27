@@ -467,6 +467,7 @@ header h1 a:hover {
     background: rgba(96,165,250,0.05);
 }
 .ti60-forget-bridge-btn {
+    display: none;
     font-size: 0.75rem;
     padding: 0.25rem 0.6rem;
     background: transparent;
