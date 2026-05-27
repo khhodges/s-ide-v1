@@ -34,7 +34,7 @@
     </script>
     <style>html,body{background:#08080f;color:#d0d0e8}</style>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a1a'/%3E%3Ctext x='16' y='23' font-family='serif' font-size='22' font-weight='bold' fill='%23daa520' text-anchor='middle'%3E%CE%BB%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles-base.css?v=20260527a">
+    <link rel="stylesheet" href="styles-base.css?v=20260527b">
     <link rel="stylesheet" href="styles-toolbar.css?v=20260526c">
     <link rel="stylesheet" href="styles-editor.css?v=20260521a">
     <link rel="stylesheet" href="styles-dashboard.css?v=20260518e">
@@ -956,7 +956,7 @@ You should see: {"ok": true, "open": true, ...}</pre>
                     <div class="ti60-step-icon">&#x26A1;</div>
                     <div class="ti60-step-body">
                         <div class="ti60-step-title">Connect</div>
-                        <div class="ti60-step-desc">UART open &amp; <code>CHURCH Ti60 SoC+CM</code> greeting received</div>
+                        <div class="ti60-step-desc">Board found — it said hello over the USB cable</div>
                     </div>
                     <div class="ti60-step-status" id="ti60StepStatus-uart">&#x2014;</div>
                 </div>
@@ -964,7 +964,7 @@ You should see: {"ok": true, "open": true, ...}</pre>
                     <div class="ti60-step-icon">&#x1F4E1;</div>
                     <div class="ti60-step-body">
                         <div class="ti60-step-title">Call Home</div>
-                        <div class="ti60-step-desc"><code>CALLHOME:</code> JSON packet validated &mdash; <code>boot_ok&nbsp;=&nbsp;1</code></div>
+                        <div class="ti60-step-desc">Board reported boot OK — your first capability-secured program ran</div>
                     </div>
                     <div class="ti60-step-status" id="ti60StepStatus-callhome">&#x2014;</div>
                 </div>
@@ -972,7 +972,7 @@ You should see: {"ok": true, "open": true, ...}</pre>
                     <div class="ti60-step-icon">&#x1F517;</div>
                     <div class="ti60-step-body">
                         <div class="ti60-step-title">Register</div>
-                        <div class="ti60-step-desc">Device UID stored in IDE &mdash; <code>POST /api/device/call-home</code></div>
+                        <div class="ti60-step-desc">Board saved to your IDE — you'll see it in the Devices tab</div>
                     </div>
                     <div class="ti60-step-status" id="ti60StepStatus-register">&#x2014;</div>
                 </div>
@@ -980,10 +980,17 @@ You should see: {"ok": true, "open": true, ...}</pre>
                     <div class="ti60-step-icon">&#x2705;</div>
                     <div class="ti60-step-body">
                         <div class="ti60-step-title">Release</div>
-                        <div class="ti60-step-desc">TEST-09 confirmed <em>passing</em> in IDE database</div>
+                        <div class="ti60-step-desc">Board is verified and production-ready</div>
                     </div>
                     <div class="ti60-step-status" id="ti60StepStatus-release">&#x2014;</div>
                 </div>
+            </div>
+            <div id="ti60SuccessBanner" class="ti60-success-banner" style="display:none;">
+                <span class="ti60-success-icon">&#x1F389;</span>
+                <div class="ti60-success-text">
+                    <strong>Your Ti60 is registered!</strong> It's now listed in the Devices tab — you can deploy programs to it.
+                </div>
+                <button class="ti60-success-view-btn" onclick="switchView('devices');switchDevicesTab('devices')">View Devices &#x2192;</button>
             </div>
         </div>
         <div id="buildDetailsPanel" style="display:none;" class="build-details-panel">
@@ -1758,7 +1765,7 @@ You should see: {"ok": true, "open": true, ...}</pre>
     <script async src="english_string_tutorial.js"></script>
     <script async src="english_contact_tutorial.js"></script>
     <script async src="builder.js"></script>
-    <script async src="app-ti60-connect.js?v=20260527g"></script>
+    <script async src="app-ti60-connect.js?v=20260527h"></script>
     <script src="app-shell.js?v=20260526d"></script>
     <script src="app-tools.js?v=20260521a"></script>
     <script src="app-cr-display.js?v=20260521a"></script>

@@ -73,6 +73,8 @@ window.Ti60Connect = (function () {
         STEPS.forEach(s => _setStep(s, 'pending'));
         const log = document.getElementById('ti60ConnectLog');
         if (log) log.innerHTML = '';
+        const sBanner = document.getElementById('ti60SuccessBanner');
+        if (sBanner) sBanner.style.display = 'none';
         const btn  = document.getElementById('ti60ConnectBtn');
         const bBtn = document.getElementById('ti60BridgeBtn');
         const tBtn = document.getElementById('ti60TestBridgeBtn');
@@ -146,6 +148,8 @@ window.Ti60Connect = (function () {
             const ok = await _registerWithIDE(pkt);
             if (ok) {
                 _setStep('register', 'pass', 'Device registered in IDE (uid=' + pkt.uid + ')');
+                const sBanner = document.getElementById('ti60SuccessBanner');
+                if (sBanner) sBanner.style.display = '';
                 _setStep('release', 'active');
                 await _reportLaunchTest('passing', 'Ti60 CALLHOME confirmed');
                 const confirmed = await _confirmLaunchTest();
