@@ -611,6 +611,16 @@ function init() {
     loadEditorState();
     updateSavePseudoBtn();
     renderUserTabs();
+    // Show "Resume Draft" in hamburger if a Lesson 5 draft is saved
+    (function() {
+        try {
+            var draft = localStorage.getItem('church_l5_draft');
+            if (draft) {
+                var btn = document.getElementById('hamItem-resume-draft');
+                if (btn) btn.style.display = '';
+            }
+        } catch(e) {}
+    })();
     initReplDivider();
     initEditorDivider();
     initConsoleAutoSwitch();
