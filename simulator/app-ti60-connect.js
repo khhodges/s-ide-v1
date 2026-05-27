@@ -324,13 +324,25 @@ window.Ti60Connect = (function () {
 
     async function disconnect() {
         _running = false;
+        const wasBridge = _bridgeRunning;
         _bridgeRunning = false;
         try { if (_reader) await _reader.cancel(); }  catch (e) {}
         try { if (_port)   await _port.close();    }  catch (e) {}
         _port   = null;
         _reader = null;
         _setActivePort(null);
-        _log('Disconnected (was ' + _activeBaud + ' baud).');
+        if (wasBridge) {
+            let confirmedBaud = _activeBaud;
+            try {
+                const r = await fetch(_bridgeUrl() + '/disconnect',
+                    { method: 'POST', signal: AbortSignal.timeout(3000) });
+                const d = await r.json();
+                if (d && typeof d.baud === 'number') confirmedBaud = d.baud;
+            } catch (e) {}
+            _log('Disconnected from bridge (was ' + confirmedBaud + ' baud).');
+        } else {
+            _log('Disconnected (was ' + _activeBaud + ' baud).');
+        }
         const btn  = document.getElementById('ti60ConnectBtn');
         const bBtn = document.getElementById('ti60BridgeBtn');
         if (btn)  { btn.disabled  = false; btn.textContent  = '🔌 Connect'; }
