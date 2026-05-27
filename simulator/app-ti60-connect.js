@@ -544,6 +544,51 @@ window.Ti60Connect = (function () {
         }
 
         await _finishSteps(pkt, greetingSeen);
+        await _niaBridgeStream(url, bBtn, dBtn);
+    }
+
+    async function _niaBridgeStream(url, bBtn, dBtn) {
+        let buf     = '';
+        let lastNia = null;
+        _log('— Live NIA stream active — (Disconnect to stop)', 'log-pass');
+        while (_bridgeRunning) {
+            await new Promise(r => setTimeout(r, 400));
+            try {
+                const dr = await fetch(url + '/drain', { signal: AbortSignal.timeout(3000) });
+                const dd = await dr.json();
+                if (dd.bytes && dd.bytes.length) {
+                    buf += String.fromCharCode(...dd.bytes);
+                    const lines = buf.split('\n');
+                    buf = lines.pop();
+                    for (const raw of lines) {
+                        const line = raw.replace(/\r$/, '').trim();
+                        if (!line) continue;
+                        const niaMatch = line.match(/\bNIA=0x([0-9A-Fa-f]+)/i);
+                        if (niaMatch) {
+                            const nia = '0x' + niaMatch[1].toUpperCase().padStart(8, '0');
+                            if (nia !== lastNia) {
+                                lastNia = nia;
+                                _log('NIA → ' + nia, 'log-nia');
+                            }
+                            continue;
+                        }
+                        if (line.startsWith('CALLHOME:')) {
+                            const newPkt = _parseCallhome(line);
+                            if (newPkt) {
+                                _log('⟳ Board reboot detected', 'log-warn');
+                                lastNia = null;
+                                await _finishSteps(newPkt, true);
+                            }
+                        } else {
+                            _log('← ' + line);
+                        }
+                    }
+                }
+            } catch (e) {
+                if (_bridgeRunning) _log('⚠ Stream error: ' + e.message, 'log-warn');
+                break;
+            }
+        }
         _bridgeRunning = false;
         if (bBtn) { bBtn.disabled = false; bBtn.textContent = '🌉 Via Bridge'; }
         if (dBtn) dBtn.style.display = 'none';

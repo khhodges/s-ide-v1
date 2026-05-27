@@ -502,6 +502,7 @@ header h1 a:hover {
 .ti60-log-line.log-pass { color: var(--success); }
 .ti60-log-line.log-fail { color: var(--error); }
 .ti60-log-line.log-warn { color: var(--warning, #e6a817); }
+.ti60-log-line.log-nia  { color: var(--gold, #daa520); font-family: monospace; }
 
 .ti60-bridge-btn {
     font-size: 0.95rem;
