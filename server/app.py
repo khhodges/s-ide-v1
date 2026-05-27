@@ -6746,6 +6746,28 @@ with app.app_context():
     db.session.commit()
     logging.info("Launch tests seeded/migrated")
 
+    # Pre-load existing devices into the tunnel callhome cache so "Via Bridge"
+    # works even if the server restarted after the bridge last sent CALLHOME.
+    _preload_count = 0
+    for _dev in Device.query.all():
+        if _dev.device_uid:
+            with _latest_callhome_lock:
+                _latest_callhome_data[_dev.device_uid] = {
+                    "board":      _dev.board_name or "Unknown",
+                    "uid":        _dev.device_uid,
+                    "nia":        "0x{:08X}".format(_dev.fault_nia or 0),
+                    "boot_ok":    0 if (_dev.boot_reason or 0) == 2 else 1,
+                    "fault":      _dev.last_fault or 0,
+                    "fault_code": _dev.last_fault or 0,
+                    "fw_major":   _dev.fw_major or 1,
+                    "fw_minor":   _dev.fw_minor or 0,
+                    "boot_count": _dev.boot_count or 1,
+                    "ts":         _dev.last_seen or 0,
+                }
+            _preload_count += 1
+    if _preload_count:
+        logging.info("Tunnel: pre-loaded %d device(s) into latest-callhome cache", _preload_count)
+
     logging.info("Database tables created")
 
     from daily_report import _ensure_tracking_table as _dr_ensure_table, get_report_token as _get_report_token, check_github_pat_lfs_scope as _check_pat_lfs

@@ -443,16 +443,27 @@ window.Ti60Connect = (function () {
         _log('(If the board has already booted, power-cycle it now to resend CALLHOME)');
 
         _bridgeRunning = true;
-        // Accept any CALLHOME registered in the last 30 s (catches boards
-        // that already booted before the user clicked), or a new one.
-        const since    = (Date.now() / 1000) - 30;
-        const deadline = Date.now() + 90000;
-        let pkt = null;
 
+        // First: check immediately for any existing CALLHOME (board already booted).
+        let pkt = null;
+        try {
+            const r = await fetch('/api/device/latest-callhome?since=0');
+            const d = await r.json();
+            if (d.ok && d.callhome) {
+                pkt = d.callhome;
+                const age = Math.round((Date.now() / 1000) - (pkt.ts || 0));
+                const ageStr = age < 60 ? age + ' s' : Math.round(age / 60) + ' min';
+                _log('✓ Board already registered — last CALLHOME ' + ageStr + ' ago (uid=' + pkt.uid + ')');
+            }
+        } catch (e) { /* will fall through to polling loop */ }
+
+        // If nothing yet, poll for up to 90 s waiting for the board to reboot.
+        const deadline = Date.now() + 90000;
+        if (!pkt) _log('No existing registration — waiting for board to send CALLHOME (power-cycle the board)…');
         while (_bridgeRunning && Date.now() < deadline && !pkt) {
             await new Promise(r => setTimeout(r, 500));
             try {
-                const r = await fetch('/api/device/latest-callhome?since=' + since);
+                const r = await fetch('/api/device/latest-callhome?since=0');
                 const d = await r.json();
                 if (d.ok && d.callhome) pkt = d.callhome;
             } catch (e) {
