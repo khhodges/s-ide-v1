@@ -885,6 +885,27 @@
                         </ul>
                     </div>
                 </div>
+                <div class="ti60-help-menu" id="ti60HelpMenu">
+                    <button class="ti60-help-toggle" onclick="(function(){var d=document.getElementById('ti60HelpDropdown');d.classList.toggle('open');})()">&#x2630; Help</button>
+                    <div class="ti60-help-dropdown" id="ti60HelpDropdown">
+                        <div class="ti60-help-section">
+                            <div class="ti60-help-section-title">&#x2139;&#xFE0F; What to expect from the firmware</div>
+                            <p>When the board boots correctly it sends two lines over UART:</p>
+                            <pre class="ti60-help-pre">CHURCH Ti60 SoC+CM v1.0 ready
+CALLHOME:{"board":"ti60-f225","uid":"AABBCCDD","nia":0,"boot_ok":1,"fault":0,"fault_code":0}</pre>
+                            <p><strong>Step 1 — Connect</strong> passes when the greeting line arrives. If nothing appears: wrong port, wrong baud, or board not booted — power-cycle and retry.</p>
+                            <p><strong>Step 2 — Call Home</strong> passes when <code>boot_ok = 1</code>. If 0: firmware fault on boot — check <code>fault_code</code> in the log.</p>
+                            <p><strong>Step 3 — Register</strong> passes when the IDE server stores the device UID. If it fails: server may be unreachable.</p>
+                            <p><strong>Step 4 — Release</strong> passes when TEST-09 is confirmed passing in the launch-test database.</p>
+                        </div>
+                        <div class="ti60-help-section">
+                            <div class="ti60-help-section-title">&#x1F309; Using Via Bridge</div>
+                            <p>Works on ChromeOS and from <strong>lab.cloomcy.org</strong>. Run in your Linux terminal:</p>
+                            <pre class="ti60-help-pre" id="ti60BridgeCmd">python3 server/local_bridge.py /dev/ttyUSB2 115200 8766</pre>
+                            <p>First time only — accept the self-signed cert: open <code>https://penguin.linux.test:8766/status</code> in Chrome and click <em>Advanced → Proceed</em>. Then click <strong>&#x1F309; Via Bridge</strong>.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div id="ti60IframeBanner" class="ti60-iframe-banner" style="display:none;">
                 <span>&#x26A0;&#xFE0F; <strong>USB WebSerial requires a full browser tab.</strong> It is blocked inside the Replit preview pane.</span>
