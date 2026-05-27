@@ -576,7 +576,7 @@ class NamespaceBuilder {
                 var so = (st % 3 === 0) ? '0.9' : '0.6';
                 svg += '<circle cx="' + stars[st][0] + '" cy="' + stars[st][1] + '" r="' + sr + '" fill="white" opacity="' + so + '"/>';
             }
-            svg += '<text x="10" y="492" fill="rgba(255,255,255,0.15)" font-size="9" font-family="sans-serif">Universal Cyberspace</text>';
+            svg += '<text x="10" y="492" fill="rgba(255,255,255,0.15)" font-size="9" font-family="sans-serif">Topology</text>';
         }
         return svg;
     }
@@ -915,7 +915,7 @@ class NamespaceBuilder {
         var html = '<div class="builder-layout">';
         html += '<div class="builder-canvas-area">';
         html += '<div class="builder-toolbar">';
-        html += '<span class="builder-title">Universal Cyberspace</span>';
+        html += '<span class="builder-title">Topology</span>';
         html += '<div class="builder-toolbar-actions">';
         html += '<div class="builder-map-btns">';
         html += '<button class="btn btn-sm builder-map-btn' + (ms==='space'?' active':'') + '" onclick="builder.setMapStyle(\'space\')" title="Space">🔭</button>';
