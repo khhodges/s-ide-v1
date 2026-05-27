@@ -2460,8 +2460,12 @@ class CLOOMCCompiler {
         }
 
         const needsSlideRule = this._sourceNeedsSlideRule(parsed);
-        if (needsSlideRule && !parsed.capabilities.map(c => c.toUpperCase()).includes('SLIDERULE')) {
-            parsed.capabilities.push('SlideRule');
+        if (needsSlideRule) {
+            const alreadyDeclared = parsed.capabilities.some(c =>
+                (typeof c === 'string' ? c : (c.name || '')).toUpperCase() === 'SLIDERULE');
+            if (!alreadyDeclared) {
+                parsed.capabilities.push({ name: 'SlideRule', rights: ['E'] });
+            }
         }
 
         const rom = this._buildROM(parsed.capabilities, capabilities || []);
