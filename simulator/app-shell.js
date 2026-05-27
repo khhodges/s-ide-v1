@@ -611,16 +611,6 @@ function init() {
     loadEditorState();
     updateSavePseudoBtn();
     renderUserTabs();
-    // Show "Resume Draft" in hamburger if a Lesson 5 draft is saved
-    (function() {
-        try {
-            var draft = localStorage.getItem('church_l5_draft');
-            if (draft) {
-                var btn = document.getElementById('hamItem-resume-draft');
-                if (btn) btn.style.display = '';
-            }
-        } catch(e) {}
-    })();
     initReplDivider();
     initEditorDivider();
     initConsoleAutoSwitch();
@@ -1323,4 +1313,15 @@ function _initDefaultViewBolt() {
 // across classic <script> tags.  Function declarations are technically on window
 // already, but being explicit guarantees it survives any caching or realm edge-cases.
 window.init = init;
+
+// ── Resume Draft hamburger button ─────────────────────────────────────────────
+// Runs independently of init() so it fires on every hard load regardless of
+// whether the full IDE init sequence has completed.
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        var draft = localStorage.getItem('church_l5_draft');
+        var btn = document.getElementById('hamItem-resume-draft');
+        if (btn) btn.style.display = draft ? '' : 'none';
+    } catch(e) {}
+});
 
