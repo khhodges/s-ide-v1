@@ -672,7 +672,10 @@ function onLangChange(restoring) {
         const tabs = scroll.querySelectorAll('.example-tab:not(.user-tab)');
         tabs.forEach(tab => {
             const ex = tab.getAttribute('data-example');
-            tab.style.display = allowedSet.includes(ex) ? '' : 'none';
+            const visible = allowedSet.includes(ex);
+            tab.style.display = visible ? '' : 'none';
+            // Deactivate tabs that are being hidden (belong to a different language)
+            if (!visible) tab.classList.remove('active');
         });
         // User tabs container: only visible in personal mode
         const userTabsCont = document.getElementById('userTabsContainer');
@@ -691,27 +694,9 @@ function onLangChange(restoring) {
         if (typeof clearPseudoEditContext === 'function') clearPseudoEditContext();
 
         if (!activeUserTabId && lang !== 'personal') {
-            // If the editor holds a wizard-generated scaffold, preserve it across
-            // language switches so the user can write method bodies in any language.
-            // The scaffold is only discarded when the user explicitly picks an example tab.
-            if (!window._wizardScaffoldActive) {
-                const defaults = {
-                    english: 'english_integer_ops',
-                    assembly: 'capability_test',
-                    javascript: 'integer_ops',
-                    haskell: 'church_math',
-                    symbolic: 'ada_note_g',
-                    lambda: 'lambda_church_numerals'
-                };
-                const defaultExample = defaults[lang];
-                if (defaultExample) {
-                    if (lang === 'assembly') {
-                        loadExample(defaultExample);
-                    } else {
-                        loadCLOOMCExample(defaultExample);
-                    }
-                }
-            }
+            // Language switch only filters the example tabs; it does NOT replace
+            // the editor content.  The user picks an example tab explicitly when
+            // they want to load one.
             showIntro(lang);
         }
         if (lang !== 'personal' && typeof historyShowLanguageStory === 'function') historyShowLanguageStory(lang);
