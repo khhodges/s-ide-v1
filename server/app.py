@@ -2169,6 +2169,7 @@ def download_build_file(filename):
     return resp
 
 @app.route("/local_bridge.py")
+@app.route("/download/local_bridge.py")
 def download_local_bridge():
     """Serve the local serial bridge script for download."""
     bridge_path = os.path.join(os.path.dirname(__file__), "local_bridge.py")
