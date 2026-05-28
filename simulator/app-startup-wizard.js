@@ -464,7 +464,11 @@ const StartupWizard = (function () {
         _watchTi60Steps();
     }
 
-    document.addEventListener('DOMContentLoaded', init);
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
 
     return { advance, back, reset, toggle, open, clickConnect, clickDirect, clickBridge, markStepDone, markStepFail, toggleTrouble, confirmStep, retryStep, startDemo, exitDemo, demoSimulate };
 })();
