@@ -34,7 +34,7 @@
     </script>
     <style>html,body{background:#08080f;color:#d0d0e8}</style>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a1a'/%3E%3Ctext x='16' y='23' font-family='serif' font-size='22' font-weight='bold' fill='%23daa520' text-anchor='middle'%3E%CE%BB%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles-base.css?v=20260527d">
+    <link rel="stylesheet" href="styles-base.css?v=20260528b">
     <link rel="stylesheet" href="styles-toolbar.css?v=20260526c">
     <link rel="stylesheet" href="styles-editor.css?v=20260521a">
     <link rel="stylesheet" href="styles-dashboard.css?v=20260518e">
@@ -874,7 +874,9 @@
                     <span class="sw-header-icon">🧙</span>
                     <span class="sw-header-title">Startup Wizard</span>
                     <span class="sw-version-badge" id="swVersionBadge"></span>
+                    <span class="sw-demo-badge" id="swDemoBadge" style="display:none;">DEMO</span>
                     <span class="sw-header-hint">First time? Follow these steps ↓</span>
+                    <a class="sw-exit-tour" id="swExitTour" href="#" style="display:none;" onclick="StartupWizard.exitDemo(); event.stopPropagation(); return false;">× Exit tour</a>
                     <span class="sw-chevron" id="swChevron">▸</span>
                 </div>
                 <div id="swWizardBody" style="display:none;">
@@ -900,6 +902,11 @@
                         <div class="sw-strip-step sw-step-pending" id="swStep4"><span class="sw-step-icon">○</span><span class="sw-strip-label">Upload</span></div>
                         <div class="sw-strip-sep">›</div>
                         <div class="sw-strip-step sw-step-pending" id="swStep5"><span class="sw-step-icon">○</span><span class="sw-strip-label">Running</span></div>
+                    </div>
+
+                    <!-- "No board yet?" tour entry point (step 0 only, hidden in demo mode) -->
+                    <div id="swNoBoardRow" class="sw-no-board-row">
+                        <button class="sw-btn sw-btn-tour" onclick="StartupWizard.startDemo()">No board yet? Take a tour →</button>
                     </div>
 
                     <!-- ── Step 0: Get Bitstream ── -->
@@ -1161,6 +1168,34 @@
                             <button class="sw-btn sw-btn-back" onclick="StartupWizard.back()">← Back</button>
                             <button class="sw-btn sw-btn-stuck" onclick="StartupWizard.toggleTrouble(5)">🔧 Something wrong?</button>
                             <button class="sw-btn sw-btn-reset" onclick="StartupWizard.reset()">⟳ Start over</button>
+                        </div>
+                    </div>
+
+                    <!-- Shared demo-mode simulate bar (replaces per-step footer in demo mode) -->
+                    <div id="swDemoBar" class="sw-demo-bar" style="display:none;">
+                        <button class="sw-btn sw-btn-demo-sim" onclick="StartupWizard.demoSimulate()">▶ Simulate this step →</button>
+                        <span class="sw-demo-bar-hint">Auto-advances in 3 s — or click to skip ahead</span>
+                    </div>
+
+                    <!-- Tour complete card (shown after all 6 demo steps) -->
+                    <div id="swTourComplete" class="sw-tour-complete" style="display:none;">
+                        <div class="sw-tour-complete-title">🎓 Tour Complete!</div>
+                        <div class="sw-tour-complete-body">
+                            <p class="sw-tour-complete-intro">You've walked through all 6 setup steps. Here's a quick summary of what the real flow involves:</p>
+                            <ol class="sw-tour-summary">
+                                <li><strong>Get Bitstream</strong> — Download the Church Machine Verilog source and synthesise it in Efinity to produce a <code>.bit</code> flash file.</li>
+                                <li><strong>Flash</strong> — Use Efinity Programmer over JTAG to flash the <code>.bit</code> file onto the Ti60 F225 board.</li>
+                                <li><strong>Power Cycle</strong> — Unplug and replug the board; the LED pattern confirms the Church Machine core is healthy and waiting.</li>
+                                <li><strong>Connect</strong> — Click "Connect" in the IDE; the board's CALLHOME greeting is automatically detected and the wizard advances.</li>
+                                <li><strong>Upload</strong> — The IDE sends the boot image over UART (~1 second); each frame is CRC-checked and ACK'd by the FPGA.</li>
+                                <li><strong>Running</strong> — Your capability-secured abstraction is live on real FPGA hardware, LEDs cycling as the demo sequencer runs.</li>
+                            </ol>
+                            <div class="sw-tour-buy-row">
+                                <a class="sw-tour-link" href="https://www.efinixinc.com/products-trion-t60.html" target="_blank" rel="noopener noreferrer">🛒 Order a Ti60 F225 board →</a>
+                            </div>
+                        </div>
+                        <div class="sw-footer-row">
+                            <button class="sw-btn sw-btn-primary" onclick="StartupWizard.exitDemo()">Start the real setup →</button>
                         </div>
                     </div>
 
@@ -2080,7 +2115,7 @@ CALLHOME:{"board":"ti60-f225","uid":"AABBCCDD","nia":0,"boot_ok":1,"fault":0,"fa
     <script async src="english_contact_tutorial.js"></script>
     <script async src="builder.js"></script>
     <script async src="app-ti60-connect.js?v=20260528a"></script>
-    <script async src="app-startup-wizard.js?v=20260528a"></script>
+    <script async src="app-startup-wizard.js?v=20260528b"></script>
     <script src="app-shell.js?v=20260527p"></script>
     <script src="app-tools.js?v=20260521a"></script>
     <script src="app-cr-display.js?v=20260521a"></script>

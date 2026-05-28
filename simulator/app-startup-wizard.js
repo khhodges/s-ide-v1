@@ -14,6 +14,12 @@ const StartupWizard = (function () {
     let _releaseData  = null;
     let _pollTimer    = null;
 
+    // ── Demo mode ─────────────────────────────────────────────────────────────
+    let _demoMode  = false;
+    let _demoTimer = null;
+    let _tourDone  = false;
+    const DEMO_DWELL_MS = 3000;
+
     // ── DOM helpers ──────────────────────────────────────────────────────────
 
     function _el(id) { return document.getElementById(id); }
@@ -47,6 +53,24 @@ const StartupWizard = (function () {
             const body = _el('swBody' + i);
             if (body) body.style.display = (i === _currentStep) ? '' : 'none';
         }
+
+        // "No board yet?" row — only at step 0, not in demo mode, and only if
+        // the wizard has never been completed before
+        const noBoardRow = _el('swNoBoardRow');
+        if (noBoardRow) {
+            const show = _currentStep === 0 && !_demoMode && !_wizardEverCompleted();
+            noBoardRow.style.display = show ? '' : 'none';
+        }
+
+        // Demo mode: hide per-step footers, show shared demo bar
+        const demoBar = _el('swDemoBar');
+        for (let i = 0; i < TOTAL; i++) {
+            const body = _el('swBody' + i);
+            if (!body) continue;
+            const footer = body.querySelector('.sw-footer-row');
+            if (footer) footer.style.display = _demoMode ? 'none' : '';
+        }
+        if (demoBar) demoBar.style.display = _demoMode ? '' : 'none';
     }
 
     function _save() {
@@ -58,6 +82,12 @@ const StartupWizard = (function () {
             const s = parseInt(localStorage.getItem(LS_KEY), 10);
             if (!isNaN(s) && s >= 0 && s < TOTAL) _currentStep = s;
         } catch (_) {}
+    }
+
+    function _wizardEverCompleted() {
+        try {
+            return localStorage.getItem(LS_DONE + (TOTAL - 1)) === '1';
+        } catch (_) { return false; }
     }
 
     // ── Success / failure / stuck state helpers ───────────────────────────────
@@ -217,6 +247,7 @@ const StartupWizard = (function () {
 
     function _watchTi60Steps() {
         _pollTimer = setInterval(function () {
+            if (_demoMode) return;
             if (_currentStep < 3) return;
 
             const uartStep = _el('ti60Step-uart');
@@ -254,6 +285,98 @@ const StartupWizard = (function () {
         }, 800);
     }
 
+    // ── Demo tour ─────────────────────────────────────────────────────────────
+
+    function startDemo() {
+        _demoMode = true;
+        _tourDone = false;
+        _currentStep = 0;
+
+        // Show wizard if collapsed
+        const body = _el('swWizardBody');
+        const chev = _el('swChevron');
+        if (body && !_open) {
+            _open = true;
+            body.style.display = '';
+            if (chev) chev.textContent = '▾';
+        }
+
+        // Show DEMO badge and exit link
+        const demoBadge = _el('swDemoBadge');
+        if (demoBadge) demoBadge.style.display = '';
+        const exitTour = _el('swExitTour');
+        if (exitTour) exitTour.style.display = '';
+
+        // Hide tour-complete card (in case re-entering)
+        const tourComplete = _el('swTourComplete');
+        if (tourComplete) tourComplete.style.display = 'none';
+
+        _renderProgress();
+        _scheduleDemoTick();
+    }
+
+    function _scheduleDemoTick() {
+        if (_demoTimer) clearTimeout(_demoTimer);
+        if (_demoMode && !_tourDone) {
+            _demoTimer = setTimeout(_demoTick, DEMO_DWELL_MS);
+        }
+    }
+
+    function _demoTick() {
+        if (!_demoMode) return;
+        if (_currentStep < TOTAL - 1) {
+            _currentStep++;
+            _renderProgress();
+            _scheduleDemoTick();
+        } else {
+            _showTourComplete();
+        }
+    }
+
+    function demoSimulate() {
+        if (!_demoMode || _tourDone) return;
+        if (_demoTimer) clearTimeout(_demoTimer);
+        _demoTick();
+    }
+
+    function _showTourComplete() {
+        _tourDone = true;
+        if (_demoTimer) { clearTimeout(_demoTimer); _demoTimer = null; }
+
+        // Hide all step bodies and demo bar
+        for (let i = 0; i < TOTAL; i++) {
+            const body = _el('swBody' + i);
+            if (body) body.style.display = 'none';
+        }
+        const demoBar = _el('swDemoBar');
+        if (demoBar) demoBar.style.display = 'none';
+
+        // Show tour-complete card
+        const tourComplete = _el('swTourComplete');
+        if (tourComplete) tourComplete.style.display = '';
+    }
+
+    function exitDemo() {
+        _demoMode = false;
+        _tourDone = false;
+        if (_demoTimer) { clearTimeout(_demoTimer); _demoTimer = null; }
+
+        // Hide DEMO badge and exit link
+        const demoBadge = _el('swDemoBadge');
+        if (demoBadge) demoBadge.style.display = 'none';
+        const exitTour = _el('swExitTour');
+        if (exitTour) exitTour.style.display = 'none';
+
+        // Hide tour-complete card
+        const tourComplete = _el('swTourComplete');
+        if (tourComplete) tourComplete.style.display = 'none';
+
+        // Reset to step 0 in real mode
+        _currentStep = 0;
+        _save();
+        _renderProgress();
+    }
+
     // ── Init ─────────────────────────────────────────────────────────────────
 
     function init() {
@@ -284,5 +407,5 @@ const StartupWizard = (function () {
 
     document.addEventListener('DOMContentLoaded', init);
 
-    return { advance, back, reset, toggle, open, clickConnect, markStepDone, markStepFail, toggleTrouble, confirmStep };
+    return { advance, back, reset, toggle, open, clickConnect, markStepDone, markStepFail, toggleTrouble, confirmStep, startDemo, exitDemo, demoSimulate };
 })();
