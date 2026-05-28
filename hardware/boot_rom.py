@@ -362,9 +362,10 @@ def _make_ns_entry(gt_type, perms, slot_id, gt_seq, location, alloc_size, cw=0, 
 #
 #   Slot 0:  Boot.NS (NS root)
 #   Slot 1:  Boot.Thread
-#   Slot 2:  (freed — Startup.Config removed, Task #989; boot via Thread.CR[0] directly)
-#   Slot 3:  (empty)
-#   Slot 4:  Salvation (E)     — first user abstraction; NUC_PROGRAM on hardware
+#   Slot 2:  (first available catalog slot — null NS entry; no physical lump)
+#   Slot 3:  Boot code domain — hardware-privileged; CR14 points here during
+#             BOOT_PROGRAM execution; no user-visible NS table entry.
+#   Slot 4:  Salvation (E)     — Application LUMP; NUC_PROGRAM on hardware demo
 #   Slot 5:  Navana (E)        — namespace controller
 #   Slot 6:  Mint (E)          — capability minting
 #   Slot 7:  Memory (E)        — memory management

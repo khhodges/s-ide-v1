@@ -6,7 +6,7 @@ class NamespaceTutorial {
         this.NS_ENTRY_WORDS = 4;
         // Zone 1 — Bootstrap: NS root (slot 0) + boot thread (slot 1)
         // First abstraction is loaded from Thread.CR0 — set via ⚡ in the Namespace table.
-        // Slot 2 is null (freed); Boot.Abstr occupies slot 3 at physical address 0x0140.
+        // Slot 2 = first catalog slot (null NS entry). Slot 3 = boot code domain (hardware-privileged).
         this.BOOTSTRAP_SLOTS = 2;
         this.BOOTSTRAP_WORDS = this.BOOTSTRAP_SLOTS * this.SLOT_SIZE;   // 2 × 64 = 128
         // Zone 2 — Resident: always-loaded IDE abstractions (IDE-set count)
@@ -308,7 +308,7 @@ ELOADCALL CR8, Constants, Phi   <span style="color:#666">; DR1 &larr; &phi; (gol
                 type: 'lifecycle',
                 content: `<p>The namespace evolves through a sequence of operations from system boot to runtime:</p>
 <div class="sr-security-list">
-<div class="sr-sec-item"><span class="sr-sec-num">1</span><strong>Initialisation.</strong> The simulator calls <code>_initNamespaceTable()</code> on hard reset. It writes all built-in abstraction entries into the NS Table at ${NS}, sets Slot\u202f0 with <code>location=${hex(0)}</code>, <code>limit=${this.TOTAL_WORDS - 1}</code>, and <code>clistCount=N</code> (number of entries). Boot.Abstr GTs are packed into the Boot.Thread lump c-list; Slot\u202f2 is null (available for catalog abstractions).</div>
+<div class="sr-sec-item"><span class="sr-sec-num">1</span><strong>Initialisation.</strong> The simulator calls <code>_initNamespaceTable()</code> on hard reset. It writes all built-in abstraction entries into the NS Table at ${NS}, sets Slot\u202f0 with <code>location=${hex(0)}</code>, <code>limit=${this.TOTAL_WORDS - 1}</code>, and <code>clistCount=N</code> (number of entries). The hardware boot ROM (3 instructions: LOAD → CHANGE → CALL) runs from IMEM, not from a LUMP. Slot\u202f2 is the first catalog slot (null NS entry, available for user abstractions).</div>
 <div class="sr-sec-item"><span class="sr-sec-num">2</span><strong>Boot B:01 \u2014 LOAD_NS.</strong> <code>sim._bootStep()</code> calls mLoad on a zero-perm GT for Slot\u202f0. The result is written into <strong>CR15</strong>: the thread now knows the full physical namespace extent and the live entry count.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">3</span><strong>Upload.</strong> When the user uploads a new abstraction via the IDE, a new NS entry is written at index <em>N</em>, the lump is placed at <code>N\u202f\u00d7\u202f${SLOT}</code>, and Slot\u202f0\u2019s <code>clistCount</code> is incremented to <em>N+1</em>. An E-GT for the new slot is issued and can be bound into any c-list that holds an S-permissioned GT for the target c-list.</div>
 <div class="sr-sec-item"><span class="sr-sec-num">4</span><strong>mLoad (at runtime).</strong> Any instruction that loads a capability reads the NS entry, verifies the seal and version, then derives the correct GT fields. CR15\u2019s version and seal are re-checked on every use to ensure the namespace root has not been tampered with.</div>

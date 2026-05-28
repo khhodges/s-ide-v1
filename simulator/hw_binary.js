@@ -1,21 +1,16 @@
 const HW_BOOT_PROGRAM = [
-    0x27660001, // PC=0  CHANGE CR12, CR12, 1
-    0x070B0003, // PC=1  LOAD CR1, [CR6 + 3]  (Boot.Abstr E-GT — self-reference)
-    0x07130001, // PC=2  LOAD CR2, [CR6 + 1]
-    0x37100003, // PC=3  TPERM CR2, X
-    0x3F100000, // PC=4  LAMBDA CR2
-    0x07030006, // PC=5  LOAD CR0, [CR6 + 6]
-    0x37000008, // PC=6  TPERM CR0, E
-    0x17000000, // PC=7  CALL CR0 (Salvation — does not RETURN, transitions to Navana)
+    0x077F8000, // PC=0  LOAD   AL, CR15, CR15[0]   — refresh Namespace cap from slot 0 into CR15
+    0x27678001, // PC=1  CHANGE AL, CR12, CR15, #1  — load Boot.Thread (slot 1); establishes CR0–CR11
+    0x17000000, // PC=2  CALL   AL, CR0,  CR0       — enter Thread.CR0 (IDE-configured Application LUMP)
 ];
 
 // HW_NAMESPACE: 4-word entries (loc, word1, word2, word3_reserved=0)
 const HW_NAMESPACE = [
     0x0000FC00, 0x84000008, 0x00000000, 0x00000000, // Slot 0: Boot.NS (NS_TABLE_BASE=0xFC00) type=01 Inform
     0x00000100, 0x84000008, 0x00000000, 0x00000000, // Slot 1: Boot.Thread type=01 Inform
-    0x00000200, 0x841000FF, 0x00000000, 0x00000000, // Slot 2: Boot.Abstr type=01 Inform, clistCount=8, limit=0xFF
-    0x00000000, 0x00000000, 0x00000000, 0x00000000, // Slot 3: (empty)
-    0x00000400, 0x84000008, 0x00000000, 0x00000000, // Slot 4: Salvation type=01 Inform
+    0x00000000, 0x00000000, 0x00000000, 0x00000000, // Slot 2: (first catalog slot — null NS entry; no lump)
+    0x00000000, 0x00000000, 0x00000000, 0x00000000, // Slot 3: boot code domain (hardware-privileged; no NS entry)
+    0x00000400, 0x84000008, 0x00000000, 0x00000000, // Slot 4: Salvation — Application LUMP (hardware demo)
     0x00000500, 0x84000008, 0x00000000, 0x00000000, // Slot 5: Navana type=01 Inform
     0x00000600, 0x84000008, 0x00000000, 0x00000000, // Slot 6: Mint type=01 Inform
     0x00000700, 0x84000008, 0x00000000, 0x00000000, // Slot 7: Memory type=01 Inform
@@ -32,10 +27,10 @@ const HW_NAMESPACE = [
 ];
 
 const HW_CLIST = [
-    0x00000000, // CList[0] NULL (was Boot.CLOOMC — now merged into Boot.Abstr)
+    0x00000000, // CList[0] NULL
     0x00000411, // CList[1] Inform X   -> NS idx 4 (Salvation) type=01
-    0x00000000, // CList[2] NULL       (SAVE target) type=00
-    0x00000281, // CList[3] Inform E   -> NS idx 2 (Boot.Abstr) type=01
+    0x00000000, // CList[2] NULL
+    0x00000281, // CList[3] Inform E   -> NS idx 2 (first catalog slot)
     0x00000681, // CList[4] Inform E   -> NS idx 6 (Mint) type=01
     0x00000721, // CList[5] Inform L   -> NS idx 7 (Memory) type=01
     0x00000481, // CList[6] Inform E   -> NS idx 4 (Salvation CALL target) type=01
@@ -60,8 +55,8 @@ const HW_SALVATION_CODE = [
 const HW_NS_LABELS = {
     0: 'Boot.NS',
     1: 'Boot.Thread',
-    2: 'Boot.Abstr',
-    3: '(empty)',
+    2: '(catalog)',
+    3: '(boot-code)',
     4: 'Salvation',
     5: 'Navana',
     6: 'Mint',

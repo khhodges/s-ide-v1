@@ -873,16 +873,10 @@ class ChurchCore(Elaboratable):
                     )),
                 ]
             with m.Case(BootState.LOAD_NUC):
-                slot3_gt = Signal(GT_LAYOUT)
-                slot3_gt_view = View(GT_LAYOUT, slot3_gt)
-                m.d.comb += [
-                    slot3_gt_view.slot_id.eq(2),
-                    slot3_gt_view.gt_seq.eq(0),
-                    slot3_gt_view.gt_type.eq(GT_TYPE_INFORM),
-                    slot3_gt_view.dom.eq(1),       # Church domain
-                    slot3_gt_view.perm.eq(0b100),  # E = perm[2] in Church domain
-                ]
-
+                # CR14 (code cap): boot code domain — slot 3, Turing X-perm.
+                # Slot 3 is the hardware-privileged boot code domain; no user-visible
+                # NS table entry. After the BOOT_PROGRAM CALL, CR14 is reloaded by
+                # cload with the Application LUMP's code capability.
                 cr14_gt = Signal(GT_LAYOUT)
                 cr14_gt_view = View(GT_LAYOUT, cr14_gt)
                 m.d.comb += [

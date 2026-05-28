@@ -324,87 +324,85 @@ The `typ` field (bits [9:8] of the header word) identifies one of three LUMP typ
 
 ### The Three Foundation LUMPs
 
-One of each type, in slot order:
+| # | LUMP | NS Slot | Role | Must be in ROM? |
+|---|------|---------|------|-----------------|
+| 1 | **NS LUMP** | 0 | `totalNamespaceWords` — the board's physical memory envelope; everything else follows from this one value | Yes — logically prior to everything |
+| 2 | **Thread LUMP** | 1 | Any stack and heap size desired; `Thread.CR0` holds the E-GT for the Application LUMP | Yes — logically prior to first instruction |
+| 3 | **Application LUMP** | IDE-configured (slot 4 = Salvation on hardware demo) | First abstraction the thread calls via `Thread.CR0`; content is board- and IDE-dependent | Yes — the entry point |
 
-| Slot | `typ` | LUMP | Programmer decides |
-|------|-------|------|--------------------|
-| 0 | `00` *(01 reserved)* | **NS LUMP** | `totalNamespaceWords` — the board's physical memory envelope; everything else follows from this one value |
-| 1 | `10` | **Thread LUMP** | Any stack and heap size desired; `Thread.CR0` holds the E-GT for Boot.Abstr |
-| 3 | `00` | **Boot.Abstr** | First abstraction called via `Thread.CR0`; a 3-instruction boot trampoline (CHANGE → TPERM → CALL). Physical address 0x0140 (immediately after Boot.Thread, no gap). |
-
-Slot 2 is the first available catalog slot. Boot.Abstr occupies slot 3 (NS
-entry generated automatically by the boot image builder).
+Slot 2 is the first available catalog slot. Slot 3 is the hardware boot
+code domain (privileged; no user-visible NS table entry). Slot 4 onward is
+the dynamic pool; the IDE writes the Application LUMP slot into
+`Thread.CR0` via `setBootEntrySlot()`.
 
 ### What Follows Automatically
 
 ```
 foundation_end  = NS_LUMP_SIZE + THREAD_LUMP_SIZE
-                = 64 + 256 = 320 words = 0x0140  (2-lump boot overhead)
+                = 64 + 256 = 320 words = 0x0140  (2-LUMP boot overhead)
 
-Boot.Abstr base = foundation_end (Thread.CR0 points here; NS slot 3)
-
-Dynamic pool    = Boot.Abstr end  →  totalNamespaceWords − 1
+Dynamic pool    = foundation_end  →  totalNamespaceWords − 1
 
 Pool ceiling    = totalNamespaceWords − 1
                 = 65,535  (Ti60 F225)
                 = 131,071 (XC7A100T)
 ```
 
-Nothing else needs to be set. The programmer makes the NS LUMP and Thread
-LUMP; the Boot.Abstr LUMP (slot 3) is generated automatically. Slot 2 is the
-first available catalog slot; slot 3 is reserved for Boot.Abstr; slot 4
-onward is the dynamic pool.
+Nothing else needs to be set. The programmer supplies the NS LUMP and
+Thread LUMP. The hardware boot ROM (3 instructions, see Section 6) handles
+the rest. Slot 2 is the first available catalog slot; slot 4 onward is
+the dynamic pool.
 
 ---
 
-## 6. The Boot Layout — Rationalized (Task #1205)
+## 6. The Boot Layout
 
-The boot image now uses a 5-region layout. Null slot 2 has been removed:
+The DMEM image uses a 4-region layout:
 
 ```
-Address     Region              Words   Status
+Address     Region          Words   Status
 ────────────────────────────────────────────────────────────
-0x0000      NS Lump              64     Necessary — NS root
-0x0040      Thread Lump         256     Necessary — boot thread
-0x0140      Boot.Abstr           64     Necessary — first abstraction (NS slot 3)
-0x0180      Dynamic Pool          ∞     Necessary — allocatable heap
-top−0x400   NS Table          1,024     Necessary — capability table
+0x0000      NS Lump          64     Necessary — NS root (slot 0)
+0x0040      Thread Lump     256     Necessary — boot thread (slot 1)
+0x0140      Dynamic Pool      ∞     Necessary — allocatable heap
+top−0x400   NS Table      1,024     Necessary — capability table
 ────────────────────────────────────────────────────────────
 ```
 
-NS slot 2 is null (NS entry all-zeros; no physical lump reservation). The
-first user-authored abstraction is placed at slot 2 by the IDE or Navana.
+The 3-instruction boot ROM program lives in IMEM (separate from DMEM),
+starting at byte address 0x0000. It is hardware — not a LUMP, not in the
+NS table, not user-visible.
+
+NS slot 2 is null (NS entry all-zeros; no physical lump reservation).
+NS slot 3 is the boot code domain: hardware-privileged, CR14 points here
+during BOOT_PROGRAM execution, no user-visible NS table entry.
+Slot 4 = Salvation (the hardware demo Application LUMP; NUC_PROGRAM).
+The first user-authored abstraction is placed at slot 2 onward by the IDE
+or Navana.
+
+### The 3-Instruction Hardware Boot ROM
+
+The hardware executes exactly three instructions from IMEM on every reset
+(`hardware/boot_rom.py`, `BOOT_PROGRAM`):
+
+```
+[0] LOAD   AL, CR15, CR15[0]   — refresh Namespace cap from slot 0 into CR15
+[1] CHANGE AL, CR12, CR15, #1  — load Boot.Thread (slot 1); establishes CR0–CR11
+[2] CALL   AL, CR0,  CR0       — enter Thread.CR0 (IDE-configured Application LUMP)
+```
+
+This is the complete boot sequence. There is no intermediate state, no
+privilege escalation, and no code outside the capability model. The IDE
+configures `Thread.CR0` (via `setBootEntrySlot()`) before power-on; the
+hardware demo pre-loads it with an E-GT for Salvation (slot 4).
 
 ### What Was Removed and Why
 
 **Free slot 2 failed the TSB test.**
-Slot 2 (formerly address range 0x0140–0x017F) was dead space left behind when
-Startup.Config was removed (Task #247). It contained no code or data the
-boot sequence needed and had no c-list, no method table, and no meaningful
-lump header. It failed the TSB test on both counts. Removing it eliminates
-64 words of dead space from the boot image and gives slot 2 back as the
-first available catalog slot.
-
-**The three hardware boot steps are:**
-1. Load Namespace lump from slot 0 into CR15 (Boot.NS).
-2. Load Thread lump from slot 1 (Boot.Thread).
-3. Load first abstraction from Thread.CR0 — whichever slot the IDE has set
-   via ⚡ in the Namespace table.
-
-**The NUC_PROGRAM conflates boot sequence with application demo.**
-Boot.Abstr (slot 3) currently contains 3 instructions: CHANGE (switch to
-thread context), TPERM (restrict permissions), and CALL (enter the first
-user abstraction). These instructions are needed, but they are implemented
-as a fixed boot ROM program. The NUC_PROGRAM in the hardware boot ROM
-conflates the boot sequence with an application demo (the LED blink program
-lives in the same NUC_PROGRAM region). These concerns should be separated in
-future work.
-
-### Path to Correctness (remaining)
-
-- The boot sequence becomes part of the ROM image, not a CLOOMC program
-- The application LUMP is separately authored, cleanly separated from the
-  hardware boot logic (see Section 7)
+Slot 2 (formerly Startup.Config, address range 0x0140–0x017F) was dead
+space with no code, no c-list, and no meaningful lump header. Removing it
+eliminates 64 words of dead space and gives slot 2 back as the first
+available catalog slot.
 
 ---
 
@@ -420,19 +418,22 @@ Silicon is silicon.
 
 | # | LUMP | NS Slot | Role | Must be in ROM? |
 |---|------|---------|------|-----------------|
-| 1 | Namespace LUMP | 0 | Total physical memory envelope; start + size; owned under M authority | Yes — logically prior to everything |
-| 2 | Thread LUMP | 1 | Boot execution context; PC, register file, call stack; `Thread.CR0` = E-GT for Boot.Abstr | Yes — logically prior to first instruction |
-| 3 | Boot.Abstr | 3 | First thing the thread calls (via `Thread.CR0`); 3-instruction trampoline at 0x0140; content is board-dependent | Yes — the entry point |
+| 1 | Namespace LUMP | 0 | Total physical memory envelope; owned under M authority | Yes — logically prior to everything |
+| 2 | Thread LUMP | 1 | Boot execution context; register file, call stack; `Thread.CR0` = E-GT for the Application LUMP | Yes — logically prior to first instruction |
+| 3 | Application LUMP | IDE-configured (slot 4 = Salvation on hardware demo) | First thing the thread calls via `Thread.CR0`; board- and IDE-dependent | Yes — the entry point |
 
-**Boot sequence (three hardware steps):**
-1. Load Namespace lump from NS slot 0 into CR15 (defines physical memory).
-2. Load Thread lump from NS slot 1 (establishes execution context).
-3. Load first abstraction from Thread.CR0 — the IDE sets this via ⚡ in the
-   Namespace table; currently points to Boot.Abstr (NS slot 3).
+**Boot sequence — three hardware ROM instructions then one CALL:**
+1. `LOAD AL, CR15, CR15[0]` — refresh Namespace cap (slot 0) into CR15.
+2. `CHANGE AL, CR12, CR15, #1` — load Thread LUMP (slot 1); establishes CR0–CR11 including `Thread.CR0`.
+3. `CALL AL, CR0, CR0` — enter `Thread.CR0`, the IDE-configured Application LUMP.
 
-**Slot 2 onward is available for catalog abstractions** (Boot.Abstr at slot 3
-is the only reserved slot above slot 1). Boot.Abstr sits at physical address
-0x0140 immediately after Boot.Thread — no gap.
+The IDE writes the chosen slot into `Thread.CR0` via `setBootEntrySlot()`
+before flashing. The hardware demo pre-loads Salvation (slot 4).
+
+**Slot 2 onward is available for catalog abstractions.** Slot 3 is the
+hardware boot code domain (privileged, no NS table entry). Slot 4 = Salvation
+(hardware demo Application LUMP). The dynamic pool starts at 0x0140
+immediately after Boot.Thread — no gap.
 
 On the **XC7A100T** the Application LUMP is the **Locator** — a CLOOMC
 abstraction that runs on the FPGA itself, not on the IDE server. The Locator

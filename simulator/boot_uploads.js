@@ -103,15 +103,7 @@ const BOOT_UPLOADS = [
         methods: []
     },
     {
-        abstraction: 'Boot.Abstr',
-        type: 'boot',
-        index: 3,
-        grants: ['E'],
-        capabilities: [],
-        methods: []
-    },
-    {
-        abstraction: '(empty)',
+        abstraction: '(boot-code)',
         type: 'boot',
         index: 3,
         grants: [],

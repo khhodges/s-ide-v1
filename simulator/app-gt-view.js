@@ -79,11 +79,10 @@ function renderGTView() {
         }
     }
 
-    // 2. demoClistGTs — Boot.Abstr DEMO c-list (available even before first run)
+    // 2. demoClistGTs — hardware DEMO c-list (boot bootstrap; loaded at INIT_CLIST)
     if (sim.demoClistGTs) {
-        const owner = slotLabel(3);
         sim.demoClistGTs.forEach((gtWord, ci) => {
-            if (gtWord) addGT(gtWord, `${owner} c-list[${ci}]`);
+            if (gtWord) addGT(gtWord, `DEMO c-list[${ci}]`);
         });
     }
 
