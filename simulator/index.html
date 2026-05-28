@@ -956,22 +956,52 @@
 
                     <!-- ── Step 1: Flash ── -->
                     <div class="sw-body-step" id="swBody1">
-                        <div class="sw-step-heading">⚡ Step 2 — Program the Board <span class="sw-time-badge">~5 min</span></div>
-                        <p class="sw-step-desc">Use <strong>Efinity Programmer</strong> to write the built file onto your board via the cable. This stores the Church Machine permanently — the board will keep it even after you unplug it.</p>
-                        <div class="sw-led-guide">
-                            <span class="sw-led-label">LEDs right now:</span>
-                            <span class="sw-led sw-led-off" title="LED0">0</span>
-                            <span class="sw-led sw-led-off" title="LED1">1</span>
-                            <span class="sw-led sw-led-off" title="LED2">2</span>
-                            <span class="sw-led sw-led-off" title="LED3">3</span>
-                            <span class="sw-led-note">Board is being programmed</span>
+
+                        <!-- Prepackaged path — download pre-built bitstream + flash -->
+                        <div id="swFlashPrepack" style="display:none;">
+                            <div class="sw-step-heading">⚡ Step 2 — Flash the Prepackaged Bitstream <span class="sw-time-badge">~3 min</span></div>
+                            <p class="sw-step-desc">The approved Church Machine bitstream is ready to download — one file, no 30-minute synthesis needed. Download it, load it in Efinity Programmer, and click <strong>Program</strong>.</p>
+                            <div class="sw-prepack-dl-row">
+                                <a id="swBitstreamBtn" class="sw-btn sw-btn-primary sw-btn-dl-disabled" href="/api/bitstream/download/ti60-f225" download="church_ti60_f225.hex">⬇ Download Bitstream</a>
+                                <span id="swBitstreamStatus" class="sw-bitstream-status sw-bitstream-checking">checking…</span>
+                            </div>
+                            <ol class="sw-list">
+                                <li>Click <strong>⬇ Download Bitstream</strong> above — saves <code>church_ti60_f225.hex</code> to your Downloads folder</li>
+                                <li>Open <strong>Efinity Programmer</strong> (standalone — <em>no IDE or synthesis needed</em>)</li>
+                                <li>Select mode: <strong>JTAG</strong>, click <strong>Open Bit File</strong> → select the downloaded <code>church_ti60_f225.hex</code></li>
+                                <li>Click <strong>Program</strong> and wait for <em>"Programming Done"</em></li>
+                            </ol>
+                            <div class="sw-led-guide">
+                                <span class="sw-led-label">LEDs right now:</span>
+                                <span class="sw-led sw-led-off" title="LED0">0</span>
+                                <span class="sw-led sw-led-off" title="LED1">1</span>
+                                <span class="sw-led sw-led-off" title="LED2">2</span>
+                                <span class="sw-led sw-led-off" title="LED3">3</span>
+                                <span class="sw-led-note">Board is being programmed</span>
+                            </div>
                         </div>
-                        <ol class="sw-list">
-                            <li>Open <strong>Efinity Programmer</strong> (from the Efinity IDE toolbar)</li>
-                            <li>Select mode: <strong>JTAG</strong></li>
-                            <li>Click <strong>Open Bit File</strong> → navigate to <code>outflow/church_ti60_f225.bit</code></li>
-                            <li>Click <strong>Program</strong> and wait for <em>"Programming Done"</em></li>
-                        </ol>
+
+                        <!-- Scratch path — user compiled their own bitstream -->
+                        <div id="swFlashScratch">
+                            <div class="sw-step-heading">⚡ Step 2 — Program the Board <span class="sw-time-badge">~5 min</span></div>
+                            <p class="sw-step-desc">Use <strong>Efinity Programmer</strong> to write the built file onto your board via the cable. This stores the Church Machine permanently — the board will keep it even after you unplug it.</p>
+                            <div class="sw-led-guide">
+                                <span class="sw-led-label">LEDs right now:</span>
+                                <span class="sw-led sw-led-off" title="LED0">0</span>
+                                <span class="sw-led sw-led-off" title="LED1">1</span>
+                                <span class="sw-led sw-led-off" title="LED2">2</span>
+                                <span class="sw-led sw-led-off" title="LED3">3</span>
+                                <span class="sw-led-note">Board is being programmed</span>
+                            </div>
+                            <ol class="sw-list">
+                                <li>Open <strong>Efinity Programmer</strong> (from the Efinity IDE toolbar)</li>
+                                <li>Select mode: <strong>JTAG</strong></li>
+                                <li>Click <strong>Open Bit File</strong> → navigate to <code>outflow/church_ti60_f225.bit</code></li>
+                                <li>Click <strong>Program</strong> and wait for <em>"Programming Done"</em></li>
+                            </ol>
+                        </div>
+
+                        <!-- Shared: trouble panel, success banner, footer -->
                         <div class="sw-trouble-panel" id="swTrouble1">
                             <div class="sw-trouble-title">⚠ Common problems — Flash</div>
                             <ul class="sw-trouble-list">
@@ -2140,7 +2170,7 @@ CALLHOME:{"board":"ti60-f225","uid":"AABBCCDD","nia":0,"boot_ok":1,"fault":0,"fa
     <script async src="english_contact_tutorial.js"></script>
     <script async src="builder.js"></script>
     <script async src="app-ti60-connect.js?v=20260528b"></script>
-    <script defer src="app-startup-wizard.js?v=20260528e"></script>
+    <script defer src="app-startup-wizard.js?v=20260528g"></script>
     <script src="app-shell.js?v=20260527p"></script>
     <script src="app-tools.js?v=20260521a"></script>
     <script src="app-cr-display.js?v=20260521a"></script>

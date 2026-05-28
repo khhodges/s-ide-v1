@@ -2,10 +2,11 @@
 
 const StartupWizard = (function () {
 
-    const LS_KEY   = 'sw_step_ti60';
-    const LS_VER   = 'sw_version_ti60';
-    const LS_FAIL  = 'sw_fail_';
-    const LS_DONE  = 'sw_done_';
+    const LS_KEY    = 'sw_step_ti60';
+    const LS_VER    = 'sw_version_ti60';
+    const LS_FAIL   = 'sw_fail_';
+    const LS_DONE   = 'sw_done_';
+    const LS_CHOICE = 'sw_choice_ti60';
     const STEPS    = ['bitstream', 'flash', 'powercycle', 'connect', 'upload', 'running'];
     const TOTAL    = STEPS.length;
 
@@ -73,6 +74,15 @@ const StartupWizard = (function () {
             choiceRow.style.display = show ? '' : 'none';
         }
 
+        // Flash step: show prepackaged or scratch variant
+        const flashPrepack = _el('swFlashPrepack');
+        const flashScratch = _el('swFlashScratch');
+        if (flashPrepack && flashScratch) {
+            const isPrepack = _choiceMade === 'prepackaged';
+            flashPrepack.style.display = isPrepack ? '' : 'none';
+            flashScratch.style.display = isPrepack ? 'none' : '';
+        }
+
         // Demo mode: hide per-step footers, show shared demo bar
         const demoBar = _el('swDemoBar');
         for (let i = 0; i < TOTAL; i++) {
@@ -93,6 +103,38 @@ const StartupWizard = (function () {
             const s = parseInt(localStorage.getItem(LS_KEY), 10);
             if (!isNaN(s) && s >= 0 && s < TOTAL) _currentStep = s;
         } catch (_) {}
+        try {
+            const c = localStorage.getItem(LS_CHOICE);
+            if (c === 'prepackaged' || c === 'scratch') _choiceMade = c;
+        } catch (_) {}
+    }
+
+    function _checkBitstream() {
+        const btn    = _el('swBitstreamBtn');
+        const status = _el('swBitstreamStatus');
+        if (!status) return;
+        status.textContent = 'checking…';
+        status.className   = 'sw-bitstream-status sw-bitstream-checking';
+        if (btn) btn.classList.add('sw-btn-dl-disabled');
+        fetch('/api/bitstream/list')
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                const entry = d.bitstreams && d.bitstreams.find(function (b) { return b.board === 'ti60-f225'; });
+                if (entry && entry.available) {
+                    const mb = (entry.size / 1048576).toFixed(2);
+                    status.textContent = '✓ Ready — ' + mb + ' MB';
+                    status.className   = 'sw-bitstream-status sw-bitstream-ready';
+                    if (btn) btn.classList.remove('sw-btn-dl-disabled');
+                } else {
+                    status.textContent = '✗ Not yet uploaded — contact admin';
+                    status.className   = 'sw-bitstream-status sw-bitstream-unavail';
+                }
+            })
+            .catch(function () {
+                status.textContent = '? Server unreachable';
+                status.className   = 'sw-bitstream-status sw-bitstream-err';
+                if (btn) btn.classList.remove('sw-btn-dl-disabled');
+            });
     }
 
     function _wizardEverCompleted() {
@@ -155,6 +197,7 @@ const StartupWizard = (function () {
             _currentStep++;
             _save();
             _renderProgress();
+            if (_currentStep === 1 && _choiceMade === 'prepackaged') _checkBitstream();
         }
     }
 
@@ -171,6 +214,8 @@ const StartupWizard = (function () {
             try { localStorage.removeItem(LS_FAIL + i); } catch (_) {}
             try { localStorage.removeItem(LS_DONE + i); } catch (_) {}
         }
+        _choiceMade = null;
+        try { localStorage.removeItem(LS_CHOICE); } catch (_) {}
         _currentStep = 0;
         _save();
         _renderProgress();
@@ -359,13 +404,16 @@ const StartupWizard = (function () {
 
     function choicePrepackaged() {
         _choiceMade = 'prepackaged';
+        try { localStorage.setItem(LS_CHOICE, 'prepackaged'); } catch (_) {}
         _renderProgress();
         // Skip the "build" step — mark step 0 done and jump to step 1 (flash)
+        // _checkBitstream() fires via advance() → step 1 reached
         confirmStep(0);
     }
 
     function choiceScratch() {
         _choiceMade = 'scratch';
+        try { localStorage.setItem(LS_CHOICE, 'scratch'); } catch (_) {}
         _renderProgress(); // hides the choice row, step 0 content stays visible
     }
 
@@ -485,6 +533,8 @@ const StartupWizard = (function () {
 
         _loadRelease();
         _watchTi60Steps();
+        // If restored into step 1 on the prepackaged path, check bitstream now
+        if (_currentStep === 1 && _choiceMade === 'prepackaged') _checkBitstream();
     }
 
     if (document.readyState === 'loading') {
