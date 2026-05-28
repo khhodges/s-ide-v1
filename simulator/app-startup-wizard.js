@@ -4,6 +4,8 @@ const StartupWizard = (function () {
 
     const LS_KEY   = 'sw_step_ti60';
     const LS_VER   = 'sw_version_ti60';
+    const LS_FAIL  = 'sw_fail_';
+    const LS_DONE  = 'sw_done_';
     const STEPS    = ['bitstream', 'flash', 'powercycle', 'connect', 'upload', 'running'];
     const TOTAL    = STEPS.length;
 
@@ -19,7 +21,7 @@ const StartupWizard = (function () {
     function _setStepState(idx, state) {
         const el = _el('swStep' + idx);
         if (!el) return;
-        el.className = 'sw-step sw-step-' + state;
+        el.className = 'sw-strip-step sw-step-' + state;
         const icon = el.querySelector('.sw-step-icon');
         if (icon) {
             icon.textContent = state === 'done'    ? '✓'
@@ -31,7 +33,7 @@ const StartupWizard = (function () {
 
     function _renderProgress() {
         for (let i = 0; i < TOTAL; i++) {
-            if (i < _currentStep)      _setStepState(i, 'done');
+            if (i < _currentStep)        _setStepState(i, 'done');
             else if (i === _currentStep) _setStepState(i, 'active');
             else                         _setStepState(i, 'pending');
         }
@@ -58,10 +60,51 @@ const StartupWizard = (function () {
         } catch (_) {}
     }
 
+    // ── Success / failure / stuck state helpers ───────────────────────────────
+
+    function markStepDone(idx) {
+        _setStepState(idx, 'done');
+        _clearFail(idx);
+        const succ = _el('swSuccess' + idx);
+        if (succ) succ.classList.add('sw-visible');
+        try { localStorage.setItem(LS_DONE + idx, '1'); } catch (_) {}
+    }
+
+    // confirmStep — used by "✓ Done" buttons on steps 0–2.
+    // Shows the success banner then auto-advances after a short pause so
+    // the user can see the green confirmation before the step transitions.
+    // The "→ Next step" button in the banner lets them skip the wait.
+    function confirmStep(idx) {
+        markStepDone(idx);
+        setTimeout(function () {
+            if (_currentStep === idx) advance();
+        }, 700);
+    }
+
+    function markStepFail(idx, silent) {
+        _setStepState(idx, 'fail');
+        const trouble = _el('swTrouble' + idx);
+        if (trouble) trouble.classList.add('sw-visible');
+        if (!silent) {
+            try { localStorage.setItem(LS_FAIL + idx, '1'); } catch (_) {}
+        }
+    }
+
+    function toggleTrouble(idx) {
+        const trouble = _el('swTrouble' + idx);
+        if (!trouble) return;
+        trouble.classList.toggle('sw-visible');
+    }
+
+    function _clearFail(idx) {
+        try { localStorage.removeItem(LS_FAIL + idx); } catch (_) {}
+    }
+
     // ── Public ───────────────────────────────────────────────────────────────
 
     function advance() {
         if (_currentStep < TOTAL - 1) {
+            _clearFail(_currentStep);
             _currentStep++;
             _save();
             _renderProgress();
@@ -77,9 +120,19 @@ const StartupWizard = (function () {
     }
 
     function reset() {
+        for (let i = 0; i < TOTAL; i++) {
+            try { localStorage.removeItem(LS_FAIL + i); } catch (_) {}
+            try { localStorage.removeItem(LS_DONE + i); } catch (_) {}
+        }
         _currentStep = 0;
         _save();
         _renderProgress();
+        for (let i = 0; i < TOTAL; i++) {
+            const succ = _el('swSuccess' + i);
+            if (succ) succ.classList.remove('sw-visible');
+            const trouble = _el('swTrouble' + i);
+            if (trouble) trouble.classList.remove('sw-visible');
+        }
     }
 
     function toggle() {
@@ -167,18 +220,36 @@ const StartupWizard = (function () {
             if (_currentStep < 3) return;
 
             const uartStep = _el('ti60Step-uart');
-            if (_currentStep === 3 && uartStep && uartStep.classList.contains('ti60-step-pass')) {
-                _currentStep = 4;
-                _save();
-                _renderProgress();
+            if (_currentStep === 3 && uartStep) {
+                if (uartStep.classList.contains('ti60-step-pass')) {
+                    markStepDone(3);
+                    setTimeout(function () {
+                        if (_currentStep === 3) {
+                            _currentStep = 4;
+                            _save();
+                            _renderProgress();
+                        }
+                    }, 700);
+                } else if (uartStep.classList.contains('ti60-step-fail')) {
+                    markStepFail(3);
+                }
             }
 
             const relStep = _el('ti60Step-release');
-            if (_currentStep >= 4 && relStep && relStep.classList.contains('ti60-step-pass')) {
-                _currentStep = 5;
-                _save();
-                _renderProgress();
-                clearInterval(_pollTimer);
+            if (_currentStep >= 4 && relStep) {
+                if (relStep.classList.contains('ti60-step-pass')) {
+                    markStepDone(4);
+                    setTimeout(function () {
+                        if (_currentStep === 4) {
+                            _currentStep = 5;
+                            _save();
+                            _renderProgress();
+                            clearInterval(_pollTimer);
+                        }
+                    }, 700);
+                } else if (relStep.classList.contains('ti60-step-fail')) {
+                    markStepFail(4);
+                }
             }
         }, 800);
     }
@@ -188,11 +259,30 @@ const StartupWizard = (function () {
     function init() {
         _load();
         _renderProgress();
+
+        // Restore persisted done banners for steps before current
+        for (let i = 0; i < _currentStep; i++) {
+            try {
+                if (localStorage.getItem(LS_DONE + i) === '1') {
+                    const succ = _el('swSuccess' + i);
+                    if (succ) succ.classList.add('sw-visible');
+                }
+            } catch (_) {}
+        }
+
+        // Restore fail state for current step — open troubleshoot panel,
+        // but don't re-save (silent=true) so it is cleared on next visit
+        try {
+            if (localStorage.getItem(LS_FAIL + _currentStep) === '1') {
+                markStepFail(_currentStep, true);
+            }
+        } catch (_) {}
+
         _loadRelease();
         _watchTi60Steps();
     }
 
     document.addEventListener('DOMContentLoaded', init);
 
-    return { advance, back, reset, toggle, open, clickConnect };
+    return { advance, back, reset, toggle, open, clickConnect, markStepDone, markStepFail, toggleTrouble, confirmStep };
 })();

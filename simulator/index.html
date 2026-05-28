@@ -919,8 +919,22 @@
                             <a id="swZipBtn" class="sw-btn sw-btn-secondary" href="/dl/ti60zip">📦 Full project (.zip)</a>
                         </div>
                         <div class="sw-release-note" id="swReleaseNote">Download the <code>church_ti60_f225.v</code> file, then synthesise in Efinity 2024.1+. The <code>.bit</code> file appears in <code>outflow/church_ti60_f225.bit</code>.</div>
+                        <div class="sw-trouble-panel" id="swTrouble0">
+                            <div class="sw-trouble-title">⚠ Common problems — Get Bitstream</div>
+                            <ul class="sw-trouble-list">
+                                <li><strong>Download link not loading</strong> — hard-refresh the page (Ctrl+Shift+R / Cmd+Shift+R).</li>
+                                <li><strong>No network access</strong> — copy the direct GitHub URL shown in the release badge and open it in a new tab.</li>
+                                <li><strong>Wrong board selected</strong> — verify you chose the <strong>Ti60 F225 / F225C</strong> variant; the Wukong and Tang Nano use different bit files.</li>
+                            </ul>
+                        </div>
+                        <div class="sw-step-success" id="swSuccess0">
+                            <span class="sw-step-success-icon">✅</span>
+                            <span class="sw-step-success-text"><strong>Got it!</strong> Bitstream downloaded and ready to flash.</span>
+                            <button class="sw-btn sw-btn-next" onclick="StartupWizard.advance()">→ Next step</button>
+                        </div>
                         <div class="sw-footer-row">
-                            <button class="sw-btn sw-btn-next" onclick="StartupWizard.advance()">Done — I have a .bit file →</button>
+                            <button class="sw-btn sw-btn-stuck" onclick="StartupWizard.toggleTrouble(0)">⚑ I'm stuck</button>
+                            <button class="sw-btn sw-btn-done" onclick="StartupWizard.confirmStep(0)">✓ Done</button>
                         </div>
                     </div>
 
@@ -942,9 +956,23 @@
                             <li>Click <strong>Open Bit File</strong> → navigate to <code>outflow/church_ti60_f225.bit</code></li>
                             <li>Click <strong>Program</strong> and wait for <em>"Programming Done"</em></li>
                         </ol>
+                        <div class="sw-trouble-panel" id="swTrouble1">
+                            <div class="sw-trouble-title">⚠ Common problems — Flash</div>
+                            <ul class="sw-trouble-list">
+                                <li><strong>Efinity Programmer can't find the board</strong> — check the JTAG cable is fully seated, try a different USB port, confirm 12 V power is connected.</li>
+                                <li><strong>"Unknown device" error</strong> — install or reinstall the Efinix FT4232H JTAG driver from the Efinity installer.</li>
+                                <li><strong>Bit file rejected / wrong device</strong> — re-download the bit file and verify its SHA against the release notes; do not use a bit file built for a different board variant.</li>
+                            </ul>
+                        </div>
+                        <div class="sw-step-success" id="swSuccess1">
+                            <span class="sw-step-success-icon">✅</span>
+                            <span class="sw-step-success-text"><strong>Board flashed!</strong> Efinity Programmer reported "Programming Done".</span>
+                            <button class="sw-btn sw-btn-next" onclick="StartupWizard.advance()">→ Next step</button>
+                        </div>
                         <div class="sw-footer-row">
                             <button class="sw-btn sw-btn-back" onclick="StartupWizard.back()">← Back</button>
-                            <button class="sw-btn sw-btn-next" onclick="StartupWizard.advance()">Done — board is flashed →</button>
+                            <button class="sw-btn sw-btn-stuck" onclick="StartupWizard.toggleTrouble(1)">⚑ I'm stuck</button>
+                            <button class="sw-btn sw-btn-done" onclick="StartupWizard.confirmStep(1)">✓ Done</button>
                         </div>
                     </div>
 
@@ -988,9 +1016,24 @@
                             </div>
                         </div>
 
+                        <div class="sw-trouble-panel" id="swTrouble2">
+                            <div class="sw-trouble-title">⚠ Common problems — Power Cycle</div>
+                            <ul class="sw-trouble-list">
+                                <li><strong>LED0 is not solid amber after power-up</strong> — the board may not have been flashed successfully; go back and re-flash.</li>
+                                <li><strong>LED blink pattern is wrong</strong> — compare against the LED table in <code>StartupCM.md</code>; a different pattern usually means the wrong bit file was flashed.</li>
+                                <li><strong>Fault LED (LED2) lights immediately</strong> — check the UART cable is connected, then re-flash; if the fault persists, inspect the CALLHOME log for a fault_code.</li>
+                                <li><strong>No LEDs at all</strong> — power issue; confirm USB cable supports data+power, and check the USB port power rating (board needs ≥ 500 mA).</li>
+                            </ul>
+                        </div>
+                        <div class="sw-step-success" id="swSuccess2">
+                            <span class="sw-step-success-icon">✅</span>
+                            <span class="sw-step-success-text"><strong>LED0 ON + LED1 blinking</strong> — board is healthy and waiting for the IDE.</span>
+                            <button class="sw-btn sw-btn-next" onclick="StartupWizard.advance()">→ Next step</button>
+                        </div>
                         <div class="sw-footer-row">
                             <button class="sw-btn sw-btn-back" onclick="StartupWizard.back()">← Back</button>
-                            <button class="sw-btn sw-btn-next" onclick="StartupWizard.advance()">I see LED0 ON + LED1 blinking →</button>
+                            <button class="sw-btn sw-btn-stuck" onclick="StartupWizard.toggleTrouble(2)">⚑ I'm stuck</button>
+                            <button class="sw-btn sw-btn-done" onclick="StartupWizard.confirmStep(2)">✓ Done</button>
                         </div>
                     </div>
 
@@ -1015,8 +1058,22 @@
                             <button class="sw-btn sw-btn-primary" onclick="StartupWizard.clickConnect()">Open Connect Menu ↓</button>
                         </div>
                         <div class="sw-auto-note">This step advances automatically when the board is detected.</div>
+                        <div class="sw-trouble-panel" id="swTrouble3">
+                            <div class="sw-trouble-title">⚠ Common problems — Connect</div>
+                            <ul class="sw-trouble-list">
+                                <li><strong>No serial port listed in the browser picker</strong> — WebSerial requires Chrome or Edge 89+; try a different USB cable; confirm the FT4232H driver is installed.</li>
+                                <li><strong>Port opens but no CALLHOME message arrives</strong> — board not powered or wrong baud rate; power-cycle the board and try again.</li>
+                                <li><strong>Port immediately closes after opening</strong> — power-cycle the board and retry; another program (screen, minicom, Arduino IDE) may have claimed the port.</li>
+                                <li><strong>ChromeOS / Crostini users</strong> — go to <em>Settings → Linux → USB devices</em> and turn <strong>off</strong> Linux sharing for the FT4232H; Chrome needs exclusive access.</li>
+                            </ul>
+                        </div>
+                        <div class="sw-step-success" id="swSuccess3">
+                            <span class="sw-step-success-icon">✅</span>
+                            <span class="sw-step-success-text"><strong>Connected!</strong> CALLHOME received — moving to upload.</span>
+                        </div>
                         <div class="sw-footer-row">
                             <button class="sw-btn sw-btn-back" onclick="StartupWizard.back()">← Back</button>
+                            <button class="sw-btn sw-btn-stuck" onclick="StartupWizard.toggleTrouble(3)">⚑ I'm stuck</button>
                         </div>
                     </div>
 
@@ -1039,8 +1096,21 @@
                             Then IDE sends: <code>[0xBE][0xAA]</code> — FREE_RUN — and the CM is released.
                         </div>
                         <div class="sw-auto-note">This step advances automatically when the board calls home successfully.</div>
+                        <div class="sw-trouble-panel" id="swTrouble4">
+                            <div class="sw-trouble-title">⚠ Common problems — Upload</div>
+                            <ul class="sw-trouble-list">
+                                <li><strong>Upload starts then stalls mid-way</strong> — check USB cable quality (some cables drop bytes at 115200 baud); power-cycle the board and retry.</li>
+                                <li><strong>CRC errors in the log</strong> — close any other program that may be reading the same serial port, then reconnect and re-upload.</li>
+                                <li><strong>Upload completes but CM does not start</strong> — wrong boot image version for this firmware; try re-flashing the board, then reconnect.</li>
+                            </ul>
+                        </div>
+                        <div class="sw-step-success" id="swSuccess4">
+                            <span class="sw-step-success-icon">✅</span>
+                            <span class="sw-step-success-text"><strong>Upload complete!</strong> Boot image loaded — CM is running.</span>
+                        </div>
                         <div class="sw-footer-row">
                             <button class="sw-btn sw-btn-back" onclick="StartupWizard.back()">← Back</button>
+                            <button class="sw-btn sw-btn-stuck" onclick="StartupWizard.toggleTrouble(4)">⚑ I'm stuck</button>
                         </div>
                     </div>
 
@@ -1078,8 +1148,18 @@
                             ✅ Your Church Machine is running capability-secured code on real FPGA hardware.<br>
                             Use the <strong>NIA stream</strong> in the Live UART panel below to see every instruction live.
                         </div>
+                        <div class="sw-trouble-panel" id="swTrouble5">
+                            <div class="sw-trouble-title">🔧 Something wrong?</div>
+                            <ul class="sw-trouble-list">
+                                <li><strong>Demo sequencer not cycling LEDs</strong> — all LEDs off is normal if your abstraction has taken over; check the NIA stream to confirm instructions are executing.</li>
+                                <li><strong>CALL faults immediately on boot</strong> — verify the namespace upload completed without errors; if in doubt, disconnect, re-flash the board, then reconnect and re-upload.</li>
+                                <li><strong>Need to reset</strong> — power-cycle the board; the IDE will re-upload the boot image automatically on the next CALLHOME.</li>
+                                <li><strong>MMIO LED debug</strong> — send a <code>DWRITE 0x40000000 1</code> instruction to force LED0 on; use <code>0x40000004</code>, <code>0x40000008</code>, <code>0x4000000C</code> for LED1–3.</li>
+                            </ul>
+                        </div>
                         <div class="sw-footer-row">
                             <button class="sw-btn sw-btn-back" onclick="StartupWizard.back()">← Back</button>
+                            <button class="sw-btn sw-btn-stuck" onclick="StartupWizard.toggleTrouble(5)">🔧 Something wrong?</button>
                             <button class="sw-btn sw-btn-reset" onclick="StartupWizard.reset()">⟳ Start over</button>
                         </div>
                     </div>

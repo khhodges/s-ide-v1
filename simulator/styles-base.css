@@ -929,3 +929,67 @@ header h1 a:hover {
     line-height: 1.6;
     margin-top: 0.5rem;
 }
+
+/* per-step success banner */
+.sw-step-success {
+    display: none;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.85rem;
+    background: rgba(74,222,128,0.12);
+    border: 1px solid rgba(74,222,128,0.4);
+    border-radius: 6px;
+    margin-top: 0.6rem;
+    font-size: 0.82rem;
+    color: #4ade80;
+    line-height: 1.5;
+}
+.sw-step-success.sw-visible { display: flex; }
+.sw-step-success-icon { font-size: 1.1rem; flex-shrink: 0; }
+.sw-step-success-text { flex: 1; }
+
+/* troubleshoot / "I'm stuck" panel */
+.sw-trouble-panel {
+    display: none;
+    padding: 0.6rem 0.85rem;
+    background: rgba(251,146,60,0.08);
+    border: 1px solid rgba(251,146,60,0.38);
+    border-radius: 6px;
+    margin-top: 0.55rem;
+    font-size: 0.79rem;
+    color: var(--text-secondary,#9ca3af);
+    line-height: 1.65;
+}
+.sw-trouble-panel.sw-visible { display: block; }
+.sw-trouble-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #fb923c;
+    margin-bottom: 0.45rem;
+}
+.sw-trouble-list {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+.sw-trouble-list li { margin-bottom: 0.2rem; }
+
+/* "I'm stuck" toggle button */
+.sw-btn-stuck {
+    background: rgba(251,146,60,0.1);
+    border-color: rgba(251,146,60,0.4);
+    color: #fb923c;
+}
+.sw-btn-stuck:hover { background: rgba(251,146,60,0.2); border-color: rgba(251,146,60,0.7); }
+
+/* "✓ Done" manual-confirm button */
+.sw-btn-done {
+    background: rgba(74,222,128,0.14);
+    border-color: rgba(74,222,128,0.5);
+    color: #4ade80;
+    font-weight: 600;
+}
+.sw-btn-done:hover { background: rgba(74,222,128,0.26); }
+
+/* fail state in step strip */
+.sw-strip-step.sw-step-fail { background: rgba(248,113,113,0.12); }
+.sw-strip-step.sw-step-fail .sw-step-icon { color: #f87171; }
