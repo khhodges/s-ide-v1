@@ -1056,25 +1056,19 @@
                             <span class="sw-led sw-led-off"  title="LED3: OFF">3</span>
                             <span class="sw-led-note">Waiting for IDE to connect</span>
                         </div>
-                        <div class="sw-connect-choice">
-                            <div class="sw-choice-title">Which connection method should I use?</div>
-                            <div class="sw-choice-row">
-                                <div class="sw-choice-card sw-choice-direct">
-                                    <div class="sw-choice-label">🖥️ Use <strong>Connect</strong></div>
-                                    <div class="sw-choice-when">if you are on a <strong>Windows, Mac, or Linux PC</strong> using <strong>Chrome or Edge</strong></div>
-                                    <div class="sw-choice-note">The browser talks to the board directly. Most common setup.</div>
-                                </div>
-                                <div class="sw-choice-card sw-choice-bridge">
-                                    <div class="sw-choice-label">🔵 Use <strong>Via Bridge</strong></div>
-                                    <div class="sw-choice-when">if you are on a <strong>Chromebook</strong> (ChromeOS)</div>
-                                    <div class="sw-choice-note">ChromeOS blocks direct USB access from the browser, so a small helper app bridges the gap.</div>
-                                </div>
-                            </div>
-                            <div class="sw-choice-footer">Not sure? If the board doesn't appear in the picker after clicking Connect, try Via Bridge instead. · Firefox and Safari are not supported — switch to Chrome or Edge.</div>
+                        <div class="sw-connect-2btn">
+                            <button class="sw-btn sw-btn-connect-direct" onclick="StartupWizard.clickDirect()">
+                                <span class="sw-c2b-icon">🖥️</span>
+                                <span class="sw-c2b-main">Connect</span>
+                                <span class="sw-c2b-sub">Windows · Mac · Linux</span>
+                            </button>
+                            <button class="sw-btn sw-btn-connect-bridge" onclick="StartupWizard.clickBridge()">
+                                <span class="sw-c2b-icon">🔵</span>
+                                <span class="sw-c2b-main">Via Bridge</span>
+                                <span class="sw-c2b-sub">Chromebook only</span>
+                            </button>
                         </div>
-                        <div class="sw-action-row">
-                            <button class="sw-btn sw-btn-primary" onclick="StartupWizard.clickConnect()">Open Connect Menu ↓</button>
-                        </div>
+                        <div class="sw-choice-footer">Both need Chrome or Edge. Not sure which? Try Connect first — if the board doesn't appear, use Via Bridge.</div>
                         <div class="sw-auto-note">This step advances automatically when the board is detected.</div>
                         <div class="sw-trouble-panel" id="swTrouble3">
                             <div class="sw-trouble-title">⚠ Common problems — Connect</div>
@@ -2131,7 +2125,7 @@ CALLHOME:{"board":"ti60-f225","uid":"AABBCCDD","nia":0,"boot_ok":1,"fault":0,"fa
     <script async src="english_contact_tutorial.js"></script>
     <script async src="builder.js"></script>
     <script async src="app-ti60-connect.js?v=20260528a"></script>
-    <script async src="app-startup-wizard.js?v=20260528b"></script>
+    <script async src="app-startup-wizard.js?v=20260528c"></script>
     <script src="app-shell.js?v=20260527p"></script>
     <script src="app-tools.js?v=20260521a"></script>
     <script src="app-cr-display.js?v=20260521a"></script>

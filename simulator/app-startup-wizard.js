@@ -189,14 +189,31 @@ const StartupWizard = (function () {
         if (chev) chev.textContent = '▾';
     }
 
-    // ── Connect button shortcut ───────────────────────────────────────────────
+    // ── Connect button shortcuts ──────────────────────────────────────────────
+
+    function _scrollToConnect() {
+        const panel = document.getElementById('ti60ConnectPanel');
+        if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        const menu = document.getElementById('ti60ConnectMenu');
+        if (menu) menu.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 
     function clickConnect() {
         const menu = document.getElementById('ti60ConnectMenu');
         if (!menu) return;
         const toggle = menu.querySelector('.ti60-connect-menu-toggle');
         if (toggle) toggle.click();
-        menu.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        _scrollToConnect();
+    }
+
+    function clickDirect() {
+        _scrollToConnect();
+        if (typeof Ti60Connect !== 'undefined') Ti60Connect.connect();
+    }
+
+    function clickBridge() {
+        _scrollToConnect();
+        if (typeof Ti60Connect !== 'undefined') Ti60Connect.connectViaBridge();
     }
 
     // ── Release version check ────────────────────────────────────────────────
@@ -449,5 +466,5 @@ const StartupWizard = (function () {
 
     document.addEventListener('DOMContentLoaded', init);
 
-    return { advance, back, reset, toggle, open, clickConnect, markStepDone, markStepFail, toggleTrouble, confirmStep, retryStep, startDemo, exitDemo, demoSimulate };
+    return { advance, back, reset, toggle, open, clickConnect, clickDirect, clickBridge, markStepDone, markStepFail, toggleTrouble, confirmStep, retryStep, startDemo, exitDemo, demoSimulate };
 })();
