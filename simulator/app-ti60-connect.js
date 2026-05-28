@@ -92,7 +92,17 @@ window.Ti60Connect = (function () {
         if (cnt) cnt.textContent = _streamLineCount + ' line' + (_streamLineCount === 1 ? '' : 's');
     }
 
+    function _expandPolBody() {
+        const body = document.getElementById('ti60PolBody');
+        const chev = document.getElementById('ti60PolChev');
+        if (body && body.style.display === 'none') {
+            body.style.display = '';
+            if (chev) chev.textContent = '▾';
+        }
+    }
+
     function _showStreamPanel() {
+        _expandPolBody();
         const p = document.getElementById('ti60NiaStreamPanel');
         if (p) p.style.display = '';
     }

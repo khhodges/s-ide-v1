@@ -143,6 +143,28 @@ header h1 a:hover {
     margin-bottom: 0.4rem;
 }
 
+/* Collapsible Proof-of-Life toggle row */
+.ti60-pol-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.2rem 0 0.5rem;
+}
+.ti60-pol-toggle-row:hover .ti60-pol-h2 { color: #e5c070; }
+.ti60-pol-h2 {
+    font-size: 1.1rem;
+    color: var(--church-gold);
+    margin: 0;
+    transition: color 0.15s;
+}
+.ti60-pol-chev {
+    color: rgba(156,163,175,0.7);
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
 .ti60-connect-header p {
     color: var(--text-secondary);
     font-size: 0.88rem;

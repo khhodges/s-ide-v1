@@ -34,7 +34,7 @@
     </script>
     <style>html,body{background:#08080f;color:#d0d0e8}</style>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a1a'/%3E%3Ctext x='16' y='23' font-family='serif' font-size='22' font-weight='bold' fill='%23daa520' text-anchor='middle'%3E%CE%BB%3C/text%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles-base.css?v=20260528e">
+    <link rel="stylesheet" href="styles-base.css?v=20260528f">
     <link rel="stylesheet" href="styles-toolbar.css?v=20260526c">
     <link rel="stylesheet" href="styles-editor.css?v=20260521a">
     <link rel="stylesheet" href="styles-dashboard.css?v=20260518e">
@@ -1221,145 +1221,151 @@
                 </div><!-- /swWizardBody -->
             </div><!-- /sw-panel -->
 
-            <div class="ti60-connect-header">
-                <div class="ti60-pol-heading">
-                    <h2>Ti60 Proof-of-Life <span class="ti60-pol-hint-icon">&#x1F4CC;</span></h2>
-                    <div class="ti60-port-hint">
-                        &#x1F4CC; The FT4232H exposes <strong>4 ports</strong> &#x2014; you want the <strong>3rd one</strong> (SoC UART, interface&nbsp;2):
-                        <ul class="ti60-port-os-list">
-                            <li><strong>Linux:</strong> <code>/dev/ttyUSB2</code> &mdash; confirm with <code>ls /dev/ttyUSB*</code> (should show 0&ndash;3)</li>
-                            <li><strong>Windows:</strong> look for <em>USB Serial Port (COM&thinsp;N)</em> &mdash; the 3rd entry in Device Manager under FT4232H</li>
-                            <li><strong>Mac:</strong> <code>/dev/cu.usbserial-&lt;id&gt;2</code></li>
-                        </ul>
-                        If nothing appears in the browser picker:
-                        <ul class="ti60-port-os-list">
-                            <li><strong>ChromeOS / Crostini:</strong> go to <em>Settings → Linux → USB devices</em> and <strong>turn off</strong> sharing for the FT4232H — Chrome needs exclusive access; once Linux claims the device, Chrome WebSerial can't see it.</li>
-                            <li><strong>Linux desktop:</strong> run <code>sudo chmod a+rw /dev/ttyUSB2</code> then refresh.</li>
-                            <li>Try a different USB cable or port, then power-cycle the board and refresh.</li>
-                        </ul>
+            <!-- Ti60 Proof-of-Life — click to expand -->
+            <div class="ti60-pol-toggle-row" onclick="(function(){var b=document.getElementById('ti60PolBody');var c=document.getElementById('ti60PolChev');var open=b.style.display!=='none';b.style.display=open?'none':'';c.textContent=open?'▸':'▾';})()">
+                <h2 class="ti60-pol-h2">Ti60 Proof-of-Life <span class="ti60-pol-hint-icon">&#x1F4CC;</span></h2>
+                <span id="ti60PolChev" class="ti60-pol-chev">▸</span>
+            </div>
+            <div id="ti60PolBody" style="display:none;">
+                <div class="ti60-connect-header">
+                    <div class="ti60-pol-heading">
+                        <div class="ti60-port-hint">
+                            &#x1F4CC; The FT4232H exposes <strong>4 ports</strong> &#x2014; you want the <strong>3rd one</strong> (SoC UART, interface&nbsp;2):
+                            <ul class="ti60-port-os-list">
+                                <li><strong>Linux:</strong> <code>/dev/ttyUSB2</code> &mdash; confirm with <code>ls /dev/ttyUSB*</code> (should show 0&ndash;3)</li>
+                                <li><strong>Windows:</strong> look for <em>USB Serial Port (COM&thinsp;N)</em> &mdash; the 3rd entry in Device Manager under FT4232H</li>
+                                <li><strong>Mac:</strong> <code>/dev/cu.usbserial-&lt;id&gt;2</code></li>
+                            </ul>
+                            If nothing appears in the browser picker:
+                            <ul class="ti60-port-os-list">
+                                <li><strong>ChromeOS / Crostini:</strong> go to <em>Settings → Linux → USB devices</em> and <strong>turn off</strong> sharing for the FT4232H — Chrome needs exclusive access; once Linux claims the device, Chrome WebSerial can't see it.</li>
+                                <li><strong>Linux desktop:</strong> run <code>sudo chmod a+rw /dev/ttyUSB2</code> then refresh.</li>
+                                <li>Try a different USB cable or port, then power-cycle the board and refresh.</li>
+                            </ul>
+                        </div>
                     </div>
-                </div>
-                <div class="ti60-help-menu" id="ti60HelpMenu">
-                    <button class="ti60-help-toggle" onclick="(function(){var d=document.getElementById('ti60HelpDropdown');d.classList.toggle('open');})()">&#x2630; Help</button>
-                    <div class="ti60-help-dropdown" id="ti60HelpDropdown">
-                        <div class="ti60-help-section">
-                            <div class="ti60-help-section-title">&#x2139;&#xFE0F; What to expect from the firmware</div>
-                            <p>When the board boots correctly it sends two lines over UART:</p>
-                            <pre class="ti60-help-pre">CHURCH Ti60 SoC+CM v1.0 ready
+                    <div class="ti60-help-menu" id="ti60HelpMenu">
+                        <button class="ti60-help-toggle" onclick="(function(){var d=document.getElementById('ti60HelpDropdown');d.classList.toggle('open');})()">&#x2630; Help</button>
+                        <div class="ti60-help-dropdown" id="ti60HelpDropdown">
+                            <div class="ti60-help-section">
+                                <div class="ti60-help-section-title">&#x2139;&#xFE0F; What to expect from the firmware</div>
+                                <p>When the board boots correctly it sends two lines over UART:</p>
+                                <pre class="ti60-help-pre">CHURCH Ti60 SoC+CM v1.0 ready
 CALLHOME:{"board":"ti60-f225","uid":"AABBCCDD","nia":0,"boot_ok":1,"fault":0,"fault_code":0}</pre>
-                            <p><strong>Step 1 — Connect</strong> passes when the greeting line arrives. If nothing appears: wrong port, wrong baud, or board not booted — power-cycle and retry.</p>
-                            <p><strong>Step 2 — Call Home</strong> passes when <code>boot_ok = 1</code>. If 0: firmware fault on boot — check <code>fault_code</code> in the log.</p>
-                            <p><strong>Step 3 — Register</strong> passes when the IDE server stores the device UID. If it fails: server may be unreachable.</p>
-                            <p><strong>Step 4 — Release</strong> passes when TEST-09 is confirmed passing in the launch-test database.</p>
-                        </div>
-                        <div class="ti60-help-section">
-                            <div class="ti60-help-section-title">&#x1F309; Using Via Bridge</div>
-                            <p>Works on ChromeOS and from <strong>lab.cloomcy.org</strong>. Run in your Linux terminal:</p>
-                            <pre class="ti60-help-pre" id="ti60BridgeCmd">python3 server/local_bridge.py /dev/ttyUSB2 115200 8766</pre>
-                            <p>First time only — accept the self-signed cert: open <code>https://penguin.linux.test:8766/status</code> in Chrome and click <em>Advanced → Proceed</em>. Then click <strong>&#x1F309; Via Bridge</strong>.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div id="ti60IframeBanner" class="ti60-iframe-banner" style="display:none;">
-                <span>&#x26A0;&#xFE0F; <strong>USB WebSerial requires a full browser tab.</strong> It is blocked inside the Replit preview pane.</span>
-                <a href="/simulator/" target="_blank" class="ti60-open-tab-btn">Open in full browser tab &#x2192;</a>
-            </div>
-            <div class="ti60-action-row">
-                <div class="ti60-action-bar">
-                    <div class="ti60-connect-menu" id="ti60ConnectMenu">
-                        <button class="ti60-connect-menu-toggle" onclick="(function(b){document.getElementById('ti60ConnectDropdown').classList.toggle('open');})(this)">&#x2630; Connect &#x25BE;</button>
-                        <div class="ti60-connect-dropdown" id="ti60ConnectDropdown">
-                            <button id="ti60ConnectBtn" class="ti60-connect-btn" onclick="Ti60Connect.connect();document.getElementById('ti60ConnectDropdown').classList.remove('open')">&#x1F50C; Connect</button>
-                            <button id="ti60BridgeBtn" class="ti60-bridge-btn" onclick="Ti60Connect.connectViaBridge();document.getElementById('ti60ConnectDropdown').classList.remove('open')">&#x1F309; Via Bridge</button>
-                            <button id="ti60TestBridgeBtn" class="ti60-test-bridge-btn" onclick="Ti60Connect.testBridge();document.getElementById('ti60ConnectDropdown').classList.remove('open')" title="Check if the bridge is reachable and the cert is accepted">&#x1F50D; Test Bridge</button>
-                            <button id="ti60DisconnectBtn" class="ti60-disconnect-btn" onclick="Ti60Connect.disconnect();document.getElementById('ti60ConnectDropdown').classList.remove('open')" style="display:none;">&#x2715; Stop</button>
+                                <p><strong>Step 1 — Connect</strong> passes when the greeting line arrives. If nothing appears: wrong port, wrong baud, or board not booted — power-cycle and retry.</p>
+                                <p><strong>Step 2 — Call Home</strong> passes when <code>boot_ok = 1</code>. If 0: firmware fault on boot — check <code>fault_code</code> in the log.</p>
+                                <p><strong>Step 3 — Register</strong> passes when the IDE server stores the device UID. If it fails: server may be unreachable.</p>
+                                <p><strong>Step 4 — Release</strong> passes when TEST-09 is confirmed passing in the launch-test database.</p>
+                            </div>
+                            <div class="ti60-help-section">
+                                <div class="ti60-help-section-title">&#x1F309; Using Via Bridge</div>
+                                <p>Works on ChromeOS and from <strong>lab.cloomcy.org</strong>. Run in your Linux terminal:</p>
+                                <pre class="ti60-help-pre" id="ti60BridgeCmd">python3 server/local_bridge.py /dev/ttyUSB2 115200 8766</pre>
+                                <p>First time only — accept the self-signed cert: open <code>https://penguin.linux.test:8766/status</code> in Chrome and click <em>Advanced → Proceed</em>. Then click <strong>&#x1F309; Via Bridge</strong>.</p>
+                            </div>
                         </div>
                     </div>
-                    <div class="ti60-bridge-url-row">
-                        <label class="ti60-bridge-url-label">Bridge URL</label>
-                        <input id="ti60BridgeUrl" class="ti60-bridge-url-input" type="text"
-                            value="https://penguin.linux.test:8766"
-                            placeholder="https://penguin.linux.test:8766"
-                            title="Edit if your bridge runs on a different port or host" />
-                        <button class="ti60-forget-bridge-btn" onclick="Ti60Connect.resetBridgeCert()" title="Clears the remembered cert-accepted flag so the setup guide reappears on the next connection attempt">&#x1F504; Re-run setup</button>
+                </div>
+                <div id="ti60IframeBanner" class="ti60-iframe-banner" style="display:none;">
+                    <span>&#x26A0;&#xFE0F; <strong>USB WebSerial requires a full browser tab.</strong> It is blocked inside the Replit preview pane.</span>
+                    <a href="/simulator/" target="_blank" class="ti60-open-tab-btn">Open in full browser tab &#x2192;</a>
+                </div>
+                <div class="ti60-action-row">
+                    <div class="ti60-action-bar">
+                        <div class="ti60-connect-menu" id="ti60ConnectMenu">
+                            <button class="ti60-connect-menu-toggle" onclick="(function(b){document.getElementById('ti60ConnectDropdown').classList.toggle('open');})(this)">&#x2630; Connect &#x25BE;</button>
+                            <div class="ti60-connect-dropdown" id="ti60ConnectDropdown">
+                                <button id="ti60ConnectBtn" class="ti60-connect-btn" onclick="Ti60Connect.connect();document.getElementById('ti60ConnectDropdown').classList.remove('open')">&#x1F50C; Connect</button>
+                                <button id="ti60BridgeBtn" class="ti60-bridge-btn" onclick="Ti60Connect.connectViaBridge();document.getElementById('ti60ConnectDropdown').classList.remove('open')">&#x1F309; Via Bridge</button>
+                                <button id="ti60TestBridgeBtn" class="ti60-test-bridge-btn" onclick="Ti60Connect.testBridge();document.getElementById('ti60ConnectDropdown').classList.remove('open')" title="Check if the bridge is reachable and the cert is accepted">&#x1F50D; Test Bridge</button>
+                                <button id="ti60DisconnectBtn" class="ti60-disconnect-btn" onclick="Ti60Connect.disconnect();document.getElementById('ti60ConnectDropdown').classList.remove('open')" style="display:none;">&#x2715; Stop</button>
+                            </div>
+                        </div>
+                        <div class="ti60-bridge-url-row">
+                            <label class="ti60-bridge-url-label">Bridge URL</label>
+                            <input id="ti60BridgeUrl" class="ti60-bridge-url-input" type="text"
+                                value="https://penguin.linux.test:8766"
+                                placeholder="https://penguin.linux.test:8766"
+                                title="Edit if your bridge runs on a different port or host" />
+                            <button class="ti60-forget-bridge-btn" onclick="Ti60Connect.resetBridgeCert()" title="Clears the remembered cert-accepted flag so the setup guide reappears on the next connection attempt">&#x1F504; Re-run setup</button>
+                        </div>
+                        <div id="ti60ActivePortRow" class="ti60-active-port-row" style="display:none;">
+                            <span class="ti60-active-port-label">Active port</span>
+                            <span id="ti60ActivePortValue" class="ti60-active-port-value"></span>
+                        </div>
                     </div>
-                    <div id="ti60ActivePortRow" class="ti60-active-port-row" style="display:none;">
-                        <span class="ti60-active-port-label">Active port</span>
-                        <span id="ti60ActivePortValue" class="ti60-active-port-value"></span>
+                    <div id="ti60ConnectLog" class="ti60-connect-log"></div>
+                </div>
+                <div id="ti60NiaStreamPanel" class="ti60-nia-stream-panel" style="display:none;">
+                    <div class="ti60-nia-stream-header">
+                        <span class="ti60-nia-stream-title">&#x1F4E1; Live UART Stream</span>
+                        <span id="ti60NiaStreamCount" class="ti60-nia-stream-count">0 lines</span>
+                        <button class="ti60-nia-stream-clear" onclick="document.getElementById('ti60NiaStreamBody').innerHTML='';document.getElementById('ti60NiaStreamCount').textContent='0 lines';Ti60Connect._streamLineCount=0;">&#x239A; Clear</button>
+                    </div>
+                    <div id="ti60NiaStreamBody" class="ti60-nia-stream-body"></div>
+                </div>
+                <div id="ti60BridgeSetupPanel" class="ti60-bridge-setup-panel" style="display:none;">
+                    <div class="ti60-bridge-setup-header">
+                        <span class="ti60-bridge-setup-title">🔧 Bridge not running — setup guide</span>
+                        <button class="ti60-bridge-setup-close" onclick="Ti60Connect.hideBridgeSetup()" title="Dismiss">✕</button>
+                    </div>
+                    <ol class="ti60-bridge-setup-steps">
+                        <li>
+                            <strong>Download the bridge script</strong> — <a href="/local_bridge.py" download="local_bridge.py" style="color:#daa520;">local_bridge.py &#x2193;</a> — then run it in your Linux terminal:
+                            <pre class="ti60-help-pre" id="ti60SetupBridgeCmd">python3 local_bridge.py /dev/ttyUSB2 115200 8766</pre>
+                        </li>
+                        <li>
+                            <strong>Accept the self-signed cert</strong> — open this URL in Chrome and click <em>Advanced&nbsp;→&nbsp;Proceed</em>:
+                            <pre class="ti60-help-pre"><a id="ti60SetupCertLink" href="https://penguin.linux.test:8766/status" target="_blank" style="color:#a0d4a0;">https://penguin.linux.test:8766/status</a></pre>
+                        </li>
+                        <li class="ti60-bridge-setup-retry-row">
+                            <button class="ti60-bridge-retry-btn" onclick="Ti60Connect.retryBridge()">🔁 Retry</button>
+                            <span>Re-runs the bridge test when you're ready.</span>
+                        </li>
+                    </ol>
+                </div>
+                <div class="ti60-steps">
+                    <div class="ti60-step ti60-step-pending" id="ti60Step-uart">
+                        <div class="ti60-step-icon">&#x26A1;</div>
+                        <div class="ti60-step-body">
+                            <div class="ti60-step-title">Connect</div>
+                            <div class="ti60-step-desc">Board found — it said hello over the USB cable</div>
+                        </div>
+                        <div class="ti60-step-status" id="ti60StepStatus-uart">&#x2014;</div>
+                    </div>
+                    <div class="ti60-step ti60-step-pending" id="ti60Step-callhome">
+                        <div class="ti60-step-icon">&#x1F4E1;</div>
+                        <div class="ti60-step-body">
+                            <div class="ti60-step-title">Call Home</div>
+                            <div class="ti60-step-desc">Board reported boot OK — your first capability-secured program ran</div>
+                        </div>
+                        <div class="ti60-step-status" id="ti60StepStatus-callhome">&#x2014;</div>
+                    </div>
+                    <div class="ti60-step ti60-step-pending" id="ti60Step-register">
+                        <div class="ti60-step-icon">&#x1F517;</div>
+                        <div class="ti60-step-body">
+                            <div class="ti60-step-title">Register</div>
+                            <div class="ti60-step-desc">Board saved to your IDE — you'll see it in the Devices tab</div>
+                        </div>
+                        <div class="ti60-step-status" id="ti60StepStatus-register">&#x2014;</div>
+                    </div>
+                    <div class="ti60-step ti60-step-pending" id="ti60Step-release">
+                        <div class="ti60-step-icon">&#x2705;</div>
+                        <div class="ti60-step-body">
+                            <div class="ti60-step-title">Release</div>
+                            <div class="ti60-step-desc">Board is verified and production-ready</div>
+                        </div>
+                        <div class="ti60-step-status" id="ti60StepStatus-release">&#x2014;</div>
                     </div>
                 </div>
-                <div id="ti60ConnectLog" class="ti60-connect-log"></div>
-            </div>
-            <div id="ti60NiaStreamPanel" class="ti60-nia-stream-panel" style="display:none;">
-                <div class="ti60-nia-stream-header">
-                    <span class="ti60-nia-stream-title">&#x1F4E1; Live UART Stream</span>
-                    <span id="ti60NiaStreamCount" class="ti60-nia-stream-count">0 lines</span>
-                    <button class="ti60-nia-stream-clear" onclick="document.getElementById('ti60NiaStreamBody').innerHTML='';document.getElementById('ti60NiaStreamCount').textContent='0 lines';Ti60Connect._streamLineCount=0;">&#x239A; Clear</button>
-                </div>
-                <div id="ti60NiaStreamBody" class="ti60-nia-stream-body"></div>
-            </div>
-            <div id="ti60BridgeSetupPanel" class="ti60-bridge-setup-panel" style="display:none;">
-                <div class="ti60-bridge-setup-header">
-                    <span class="ti60-bridge-setup-title">🔧 Bridge not running — setup guide</span>
-                    <button class="ti60-bridge-setup-close" onclick="Ti60Connect.hideBridgeSetup()" title="Dismiss">✕</button>
-                </div>
-                <ol class="ti60-bridge-setup-steps">
-                    <li>
-                        <strong>Download the bridge script</strong> — <a href="/local_bridge.py" download="local_bridge.py" style="color:#daa520;">local_bridge.py &#x2193;</a> — then run it in your Linux terminal:
-                        <pre class="ti60-help-pre" id="ti60SetupBridgeCmd">python3 local_bridge.py /dev/ttyUSB2 115200 8766</pre>
-                    </li>
-                    <li>
-                        <strong>Accept the self-signed cert</strong> — open this URL in Chrome and click <em>Advanced&nbsp;→&nbsp;Proceed</em>:
-                        <pre class="ti60-help-pre"><a id="ti60SetupCertLink" href="https://penguin.linux.test:8766/status" target="_blank" style="color:#a0d4a0;">https://penguin.linux.test:8766/status</a></pre>
-                    </li>
-                    <li class="ti60-bridge-setup-retry-row">
-                        <button class="ti60-bridge-retry-btn" onclick="Ti60Connect.retryBridge()">🔁 Retry</button>
-                        <span>Re-runs the bridge test when you're ready.</span>
-                    </li>
-                </ol>
-            </div>
-            <div class="ti60-steps">
-                <div class="ti60-step ti60-step-pending" id="ti60Step-uart">
-                    <div class="ti60-step-icon">&#x26A1;</div>
-                    <div class="ti60-step-body">
-                        <div class="ti60-step-title">Connect</div>
-                        <div class="ti60-step-desc">Board found — it said hello over the USB cable</div>
+                <div id="ti60SuccessBanner" class="ti60-success-banner" style="display:none;">
+                    <span class="ti60-success-icon">&#x1F389;</span>
+                    <div class="ti60-success-text">
+                        <strong>Your Ti60 is registered!</strong> It's now listed in the Devices tab — you can deploy programs to it.
                     </div>
-                    <div class="ti60-step-status" id="ti60StepStatus-uart">&#x2014;</div>
+                    <button class="ti60-success-view-btn" onclick="switchView('devices');switchDevicesTab('devices')">View Devices &#x2192;</button>
                 </div>
-                <div class="ti60-step ti60-step-pending" id="ti60Step-callhome">
-                    <div class="ti60-step-icon">&#x1F4E1;</div>
-                    <div class="ti60-step-body">
-                        <div class="ti60-step-title">Call Home</div>
-                        <div class="ti60-step-desc">Board reported boot OK — your first capability-secured program ran</div>
-                    </div>
-                    <div class="ti60-step-status" id="ti60StepStatus-callhome">&#x2014;</div>
-                </div>
-                <div class="ti60-step ti60-step-pending" id="ti60Step-register">
-                    <div class="ti60-step-icon">&#x1F517;</div>
-                    <div class="ti60-step-body">
-                        <div class="ti60-step-title">Register</div>
-                        <div class="ti60-step-desc">Board saved to your IDE — you'll see it in the Devices tab</div>
-                    </div>
-                    <div class="ti60-step-status" id="ti60StepStatus-register">&#x2014;</div>
-                </div>
-                <div class="ti60-step ti60-step-pending" id="ti60Step-release">
-                    <div class="ti60-step-icon">&#x2705;</div>
-                    <div class="ti60-step-body">
-                        <div class="ti60-step-title">Release</div>
-                        <div class="ti60-step-desc">Board is verified and production-ready</div>
-                    </div>
-                    <div class="ti60-step-status" id="ti60StepStatus-release">&#x2014;</div>
-                </div>
-            </div>
-            <div id="ti60SuccessBanner" class="ti60-success-banner" style="display:none;">
-                <span class="ti60-success-icon">&#x1F389;</span>
-                <div class="ti60-success-text">
-                    <strong>Your Ti60 is registered!</strong> It's now listed in the Devices tab — you can deploy programs to it.
-                </div>
-                <button class="ti60-success-view-btn" onclick="switchView('devices');switchDevicesTab('devices')">View Devices &#x2192;</button>
-            </div>
+            </div><!-- /ti60PolBody -->
         </div>
         <div id="buildDetailsPanel" style="display:none;" class="build-details-panel">
             <div class="build-details-status-bar">
@@ -2133,7 +2139,7 @@ CALLHOME:{"board":"ti60-f225","uid":"AABBCCDD","nia":0,"boot_ok":1,"fault":0,"fa
     <script async src="english_string_tutorial.js"></script>
     <script async src="english_contact_tutorial.js"></script>
     <script async src="builder.js"></script>
-    <script async src="app-ti60-connect.js?v=20260528a"></script>
+    <script async src="app-ti60-connect.js?v=20260528b"></script>
     <script defer src="app-startup-wizard.js?v=20260528e"></script>
     <script src="app-shell.js?v=20260527p"></script>
     <script src="app-tools.js?v=20260521a"></script>
