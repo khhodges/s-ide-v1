@@ -867,7 +867,7 @@ class ChurchAssembler {
                             if (/^CR\d+$/i.test(arg)) {
                                 // Explicit CRn supplied — caller pre-loaded it; no LOAD needed.
                             } else if (this._resolveNSName(arg) !== null) {
-                                // Known namespace abstraction or LED shorthand — Level-1 LOAD works.
+                                // Known namespace abstraction or LED shorthand — two-operand LOAD shorthand applies.
                                 instructions.push({ line: `LOAD CR${reg.n}, ${arg}`, lineNum: lineNum + 1,
                                     comment: `${absName}.${methodName}(${argsStr}) \u2190 LOAD ${arg}` });
                             } else {

@@ -27,7 +27,7 @@ const CONVENTIONS = {
 
 const NS_SYMBOLS = { 'SlideRule': 3 };
 
-// ── CALL CR<n>, MethodName  (task-478) ──────────────────────────────────────
+// ── Named method selectors — CALL CR<n>, MethodName ─────────────────────────
 
 // T1: CALL CR11, Multiply succeeds when CR11 is bound to SlideRule via a prior LOAD.
 {
@@ -99,7 +99,7 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
         errors.length > 0 ? errors[0].message : '(no error)');
 }
 
-// ── CALL SlideRule, MethodName  (abstraction-name comma form) ───────────────
+// ── Loaded-CR resolution + named method selectors — CALL AbsName, MethodName ─
 
 // T9: CALL SlideRule, Multiply succeeds when SlideRule was bound via LOAD.
 //     crDst should resolve to 11 (SlideRule's CR), imm=1 (Multiply index 0 → 1-based).
@@ -147,7 +147,7 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
     assert('T11 imm=1 (numeric 0 → 1-based imm)', imm === 1, 'got ' + imm);
 }
 
-// ── CALL SlideRule.MethodName  (dot-notation form) ───────────────────────────
+// ── Loaded-CR resolution + named method selectors — CALL AbsName.MethodName ──
 
 // T12: CALL SlideRule.Multiply succeeds and encodes crDst=11, imm=1.
 {
@@ -939,7 +939,7 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
     ChurchAssembler.setSharedAliases({}, {});
 }
 
-// ── ELOADCALL method-index encoding ──────────────────────────────────────────
+// ── Method index in ELOADCALL ─────────────────────────────────────────────────
 // SlideRule is at c-list slot 3 (NS_SYMBOLS = { 'SlideRule': 3 }).
 // imm15 layout: bits[14:8] = method index (1-based, 0 = fast-path / no method)
 //               bits[7:0]  = c-list row.
