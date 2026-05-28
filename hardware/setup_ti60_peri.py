@@ -167,12 +167,12 @@ with open(PERI_XML, encoding="UTF-8") as f:
 
 xml = re.sub(
     r'(<efxpt:comp_gpio name="uart_tx" gpio_def=")[^"]*(" mode="output"[^>]*io_standard=")[^"]*"',
-    r'\1GPIOL_02\23.3 V LVCMOS"',
+    r'\g<1>GPIOL_02\g<2>3.3 V LVCMOS"',
     xml,
 )
 xml = re.sub(
     r'(<efxpt:comp_gpio name="uart_rx" gpio_def=")[^"]*(" mode="input"[^>]*io_standard=")[^"]*"',
-    r'\1GPIOL_01\23.3 V LVCMOS"',
+    r'\g<1>GPIOL_01\g<2>3.3 V LVCMOS"',
     xml,
 )
 
