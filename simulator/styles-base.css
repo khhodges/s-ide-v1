@@ -842,9 +842,11 @@ header h1 a:hover {
     min-width: 3rem;
     transition: background 0.2s;
 }
-.sw-strip-step.sw-step-done    { background: rgba(74,222,128,0.12); }
-.sw-strip-step.sw-step-active  { background: rgba(218,165,32,0.15); }
-.sw-strip-step.sw-step-pending { opacity: 0.4; }
+.sw-strip-step.sw-step-done    { background: rgba(74,222,128,0.12); cursor: pointer; }
+.sw-strip-step.sw-step-active  { background: rgba(218,165,32,0.15); cursor: pointer; }
+.sw-strip-step.sw-step-pending { opacity: 0.4; cursor: default; }
+.sw-strip-step.sw-step-done:hover  { background: rgba(74,222,128,0.25); outline: 1px solid rgba(74,222,128,0.4); }
+.sw-strip-step.sw-step-active:hover { background: rgba(218,165,32,0.28); outline: 1px solid rgba(218,165,32,0.45); }
 .sw-strip-step .sw-step-icon   { font-size: 0.9rem; }
 .sw-strip-step.sw-step-done .sw-step-icon   { color: #4ade80; }
 .sw-strip-step.sw-step-active .sw-step-icon { color: var(--church-gold, #daa520); }

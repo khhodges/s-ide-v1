@@ -207,6 +207,15 @@ const StartupWizard = (function () {
         }
     }
 
+    function goToStep(idx) {
+        if (idx < 0 || idx >= TOTAL) return;
+        if (idx > _currentStep) return; // can only go back, not skip ahead
+        _currentStep = idx;
+        _save();
+        _renderProgress();
+        if (_currentStep === 1 && _choiceMade === 'prepackaged') _checkBitstream();
+    }
+
     function reset() {
         for (let i = 0; i < TOTAL; i++) {
             try { localStorage.removeItem(LS_FAIL + i); } catch (_) {}
@@ -511,6 +520,14 @@ const StartupWizard = (function () {
         _load();
         _renderProgress();
 
+        // Wire step strip as navigation buttons — clicking a done/active step jumps back to it
+        for (let i = 0; i < TOTAL; i++) {
+            (function (idx) {
+                const el = _el('swStep' + idx);
+                if (el) el.addEventListener('click', function () { goToStep(idx); });
+            })(i);
+        }
+
         // Restore persisted done banners for steps before current
         for (let i = 0; i < _currentStep; i++) {
             try {
@@ -541,5 +558,5 @@ const StartupWizard = (function () {
         init();
     }
 
-    return { advance, back, reset, toggle, open, clickConnect, clickDirect, clickBridge, markStepDone, markStepFail, toggleTrouble, confirmStep, retryStep, startDemo, exitDemo, demoSimulate, choicePrepackaged, choiceScratch };
+    return { advance, back, goToStep, reset, toggle, open, clickConnect, clickDirect, clickBridge, markStepDone, markStepFail, toggleTrouble, confirmStep, retryStep, startDemo, exitDemo, demoSimulate, choicePrepackaged, choiceScratch };
 })();
