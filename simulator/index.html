@@ -930,11 +930,17 @@
 
                             <span class="sw-led-note">Board not connected</span>
                         </div>
-                        <div class="sw-action-row">
-                            <a id="swDownloadBtn" class="sw-btn sw-btn-primary" href="/dl/ti60v" download="church_ti60_f225.v">⬇ Verilog source (.v)</a>
-                            <a id="swZipBtn" class="sw-btn sw-btn-secondary" href="/dl/ti60zip">📦 Full project (.zip)</a>
+                        <div class="sw-action-row" style="align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+                            <div style="display:flex;flex-direction:column;gap:0.25rem;max-width:220px;">
+                                <a id="swZipBtn" class="sw-btn sw-btn-primary" href="/dl/ti60zip">📦 Full project (.zip) — <em>Recommended</em></a>
+                                <span style="font-size:0.75rem;color:var(--text-secondary,#9ca3af);padding:0 0.25rem;">Includes the Efinity project file, constraints, and I/O config — just open <code>church_ti60_f225.xml</code> and click <strong>Synthesize</strong>.</span>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:0.25rem;max-width:200px;">
+                                <a id="swDownloadBtn" class="sw-btn sw-btn-secondary" href="/dl/ti60v" download="church_ti60_f225.v">⬇ Verilog only (.v)</a>
+                                <span style="font-size:0.75rem;color:var(--text-secondary,#9ca3af);padding:0 0.25rem;">Just the RTL source — use this if you already have an Efinity project set up.</span>
+                            </div>
                         </div>
-                        <div class="sw-release-note" id="swReleaseNote">Download <code>church_ti60_f225.v</code>, open it in Efinity 2024.1 or later, and click <strong>Synthesize</strong>. When it finishes, the built file appears at <code>outflow/church_ti60_f225.bit</code>.</div>
+                        <div class="sw-release-note" id="swReleaseNote">After synthesis completes (~30 min), the programming file appears at <code>outflow/church_ti60_f225.hex</code>.</div>
                         <div class="sw-trouble-panel" id="swTrouble0">
                             <div class="sw-trouble-title">⚠ Common problems — Get Bitstream</div>
                             <ul class="sw-trouble-list">
