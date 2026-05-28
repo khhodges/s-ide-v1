@@ -184,6 +184,62 @@ def download_ti60peri():
                      download_name="church_ti60_f225.peri.xml",
                      mimetype="text/xml")
 
+@app.route("/api/releases")
+def api_releases():
+    import hashlib as _hashlib
+    manifest_path = os.path.join(os.path.dirname(__file__), "releases", "manifest.json")
+    verilog_path  = os.path.join(os.path.dirname(__file__), "..", "build", "church_ti60_f225.v")
+    try:
+        with open(manifest_path) as _f:
+            manifest = json.load(_f)
+    except Exception as _e:
+        return jsonify({"ok": False, "error": str(_e)}), 500
+    latest_ver = manifest.get("latest")
+    release = next((r for r in manifest.get("releases", []) if r["version"] == latest_ver), None)
+    stale = False
+    if release and os.path.exists(verilog_path):
+        try:
+            with open(verilog_path, "rb") as _f:
+                sha = _hashlib.sha256(_f.read()).hexdigest()
+            stale = (sha != release.get("verilog_sha256", ""))
+        except Exception:
+            pass
+    return jsonify({"ok": True, "release": release, "stale": stale})
+
+@app.route("/api/releases/publish", methods=["POST"])
+def api_releases_publish():
+    import hashlib as _hashlib, datetime as _dt
+    data = request.get_json(silent=True) or {}
+    manifest_path = os.path.join(os.path.dirname(__file__), "releases", "manifest.json")
+    verilog_path  = os.path.join(os.path.dirname(__file__), "..", "build", "church_ti60_f225.v")
+    if not os.path.exists(verilog_path):
+        return jsonify({"ok": False, "error": "Verilog file not found"}), 404
+    with open(verilog_path, "rb") as _f:
+        sha = _hashlib.sha256(_f.read()).hexdigest()
+    try:
+        with open(manifest_path) as _f:
+            manifest = json.load(_f)
+    except Exception:
+        manifest = {"latest": None, "releases": []}
+    version = data.get("version") or (_dt.date.today().strftime("0.%Y%m%d"))
+    new_entry = {
+        "version":         version,
+        "date":            _dt.date.today().isoformat(),
+        "board":           "ti60-f225",
+        "description":     data.get("description", ""),
+        "boot_rom_words":  data.get("boot_rom_words", []),
+        "verilog_sha256":  sha,
+        "verilog_download": "/dl/ti60v",
+        "zip_download":     "/dl/ti60zip",
+        "notes":           data.get("notes", ""),
+    }
+    manifest["releases"] = [r for r in manifest.get("releases", []) if r["version"] != version]
+    manifest["releases"].insert(0, new_entry)
+    manifest["latest"] = version
+    with open(manifest_path, "w") as _f:
+        json.dump(manifest, _f, indent=2)
+    return jsonify({"ok": True, "version": version, "sha256": sha})
+
 @app.route("/")
 def index():
     landing_path = os.path.join(BASE_DIR, "landing.html")

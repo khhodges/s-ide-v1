@@ -1,0 +1,16 @@
+{
+  "latest": "1.2.0",
+  "releases": [
+    {
+      "version": "1.2.0",
+      "date": "2026-05-28",
+      "board": "ti60-f225",
+      "description": "Boot ROM corrected — LOAD AL,CR15,CR15[0] → CHANGE AL,CR12,CR15,#1 → CALL AL,CR0 (cr_src=15 on CHANGE, was 12). Builder ZIP downloads fixed for all 3 boards.",
+      "boot_rom_words": ["0x077F8000", "0x27678001", "0x17000000"],
+      "verilog_sha256": "2f01c40334c89bbfa434f68d81fe458578d46ac2c50db2ec62e56575a32a70a0",
+      "verilog_download": "/dl/ti60v",
+      "zip_download": "/dl/ti60zip",
+      "notes": "Download the Verilog source and synthesise with Efinity 2024.1 or later. The .bit file lands in outflow/church_ti60_f225.bit."
+    }
+  ]
+}

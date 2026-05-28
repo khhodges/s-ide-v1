@@ -867,6 +867,226 @@
         <div id="lumpNSPanel"       style="display:none;" class="lump-editor-wrap"></div>
         <div id="lumpResidentPanel" style="display:none;" class="lump-editor-wrap"></div>
         <div id="ti60ConnectPanel" style="display:none;" class="ti60-connect-panel">
+
+            <!-- ── Startup Wizard ─────────────────────────────────────── -->
+            <div class="sw-panel" id="swPanel">
+                <div class="sw-header" onclick="StartupWizard.toggle()">
+                    <span class="sw-header-icon">🧙</span>
+                    <span class="sw-header-title">Startup Wizard</span>
+                    <span class="sw-version-badge" id="swVersionBadge"></span>
+                    <span class="sw-header-hint">First time? Follow these steps ↓</span>
+                    <span class="sw-chevron" id="swChevron">▸</span>
+                </div>
+                <div id="swWizardBody" style="display:none;">
+                    <div id="swStaleWarning"  class="sw-alert sw-alert-warn"   style="display:none;"></div>
+                    <div id="swUpdateWarning" class="sw-alert sw-alert-update" style="display:none;"></div>
+
+                    <!-- progress bar -->
+                    <div class="sw-progress-row">
+                        <div class="sw-progress-bar"><div class="sw-progress-fill" id="swProgressFill" style="width:0%"></div></div>
+                        <span class="sw-progress-label" id="swProgressLabel">Step 1 of 6</span>
+                    </div>
+
+                    <!-- step icons strip -->
+                    <div class="sw-steps-strip">
+                        <div class="sw-strip-step sw-step-active" id="swStep0"><span class="sw-step-icon">○</span><span class="sw-strip-label">Get</span></div>
+                        <div class="sw-strip-sep">›</div>
+                        <div class="sw-strip-step sw-step-pending" id="swStep1"><span class="sw-step-icon">○</span><span class="sw-strip-label">Flash</span></div>
+                        <div class="sw-strip-sep">›</div>
+                        <div class="sw-strip-step sw-step-pending" id="swStep2"><span class="sw-step-icon">○</span><span class="sw-strip-label">Power</span></div>
+                        <div class="sw-strip-sep">›</div>
+                        <div class="sw-strip-step sw-step-pending" id="swStep3"><span class="sw-step-icon">○</span><span class="sw-strip-label">Connect</span></div>
+                        <div class="sw-strip-sep">›</div>
+                        <div class="sw-strip-step sw-step-pending" id="swStep4"><span class="sw-step-icon">○</span><span class="sw-strip-label">Upload</span></div>
+                        <div class="sw-strip-sep">›</div>
+                        <div class="sw-strip-step sw-step-pending" id="swStep5"><span class="sw-step-icon">○</span><span class="sw-strip-label">Running</span></div>
+                    </div>
+
+                    <!-- ── Step 0: Get Bitstream ── -->
+                    <div class="sw-body-step" id="swBody0">
+                        <div class="sw-step-heading">📦 Step 1 — Get the Bitstream</div>
+                        <p class="sw-step-desc">Download the approved Church Machine source for your board. You will synthesise this in Efinity to produce the <code>.bit</code> flash file.</p>
+                        <div class="sw-led-guide">
+                            <span class="sw-led-label">LEDs right now:</span>
+                            <span class="sw-led sw-led-off" title="LED0">0</span>
+                            <span class="sw-led sw-led-off" title="LED1">1</span>
+                            <span class="sw-led sw-led-off" title="LED2">2</span>
+                            <span class="sw-led sw-led-off" title="LED3">3</span>
+                            <span class="sw-led-note">Board not connected</span>
+                        </div>
+                        <div class="sw-action-row">
+                            <a id="swDownloadBtn" class="sw-btn sw-btn-primary" href="/dl/ti60v" download="church_ti60_f225.v">⬇ Verilog source (.v)</a>
+                            <a id="swZipBtn" class="sw-btn sw-btn-secondary" href="/dl/ti60zip">📦 Full project (.zip)</a>
+                        </div>
+                        <div class="sw-release-note" id="swReleaseNote">Download the <code>church_ti60_f225.v</code> file, then synthesise in Efinity 2024.1+. The <code>.bit</code> file appears in <code>outflow/church_ti60_f225.bit</code>.</div>
+                        <div class="sw-footer-row">
+                            <button class="sw-btn sw-btn-next" onclick="StartupWizard.advance()">Done — I have a .bit file →</button>
+                        </div>
+                    </div>
+
+                    <!-- ── Step 1: Flash ── -->
+                    <div class="sw-body-step" id="swBody1">
+                        <div class="sw-step-heading">⚡ Step 2 — Flash the Board</div>
+                        <p class="sw-step-desc">Open <strong>Efinity Programmer</strong> and flash your <code>.bit</code> file to the Ti60 F225 over JTAG.</p>
+                        <div class="sw-led-guide">
+                            <span class="sw-led-label">LEDs right now:</span>
+                            <span class="sw-led sw-led-off" title="LED0">0</span>
+                            <span class="sw-led sw-led-off" title="LED1">1</span>
+                            <span class="sw-led sw-led-off" title="LED2">2</span>
+                            <span class="sw-led sw-led-off" title="LED3">3</span>
+                            <span class="sw-led-note">Board is being flashed</span>
+                        </div>
+                        <ol class="sw-list">
+                            <li>Open <strong>Efinity Programmer</strong> (from the Efinity IDE toolbar)</li>
+                            <li>Select mode: <strong>JTAG</strong></li>
+                            <li>Click <strong>Open Bit File</strong> → navigate to <code>outflow/church_ti60_f225.bit</code></li>
+                            <li>Click <strong>Program</strong> and wait for <em>"Programming Done"</em></li>
+                        </ol>
+                        <div class="sw-footer-row">
+                            <button class="sw-btn sw-btn-back" onclick="StartupWizard.back()">← Back</button>
+                            <button class="sw-btn sw-btn-next" onclick="StartupWizard.advance()">Done — board is flashed →</button>
+                        </div>
+                    </div>
+
+                    <!-- ── Step 2: Power Cycle ── -->
+                    <div class="sw-body-step" id="swBody2">
+                        <div class="sw-step-heading">🔌 Step 3 — Power Cycle</div>
+                        <p class="sw-step-desc">Unplug the USB cable, wait 2 seconds, then plug it back in. Watch the LEDs — they tell you exactly what's happening inside.</p>
+
+                        <div class="sw-led-timeline">
+                            <div class="sw-led-row">
+                                <span class="sw-led-moment">Immediately</span>
+                                <span class="sw-led sw-led-on"   title="LED0: ON — Sapphire RISC-V is running, CM not yet booted">0</span>
+                                <span class="sw-led sw-led-off"  title="LED1: OFF briefly">1</span>
+                                <span class="sw-led sw-led-off"  title="LED2: OFF">2</span>
+                                <span class="sw-led sw-led-off"  title="LED3: OFF">3</span>
+                                <span class="sw-led-note">LED0 solid ON — Sapphire RISC-V starting up</span>
+                            </div>
+                            <div class="sw-led-row">
+                                <span class="sw-led-moment">After ~0.1 s</span>
+                                <span class="sw-led sw-led-on"    title="LED0: ON — CM not yet booted">0</span>
+                                <span class="sw-led sw-led-blink" title="LED1: 1 Hz blink — CM core healthy, halted, waiting for boot image">1</span>
+                                <span class="sw-led sw-led-off"   title="LED2: OFF">2</span>
+                                <span class="sw-led sw-led-off"   title="LED3: OFF">3</span>
+                                <span class="sw-led-note">LED1 slow 1 Hz blink — CM core healthy &amp; halted, waiting for the IDE to load the boot image</span>
+                            </div>
+                            <div class="sw-led-row">
+                                <span class="sw-led-moment">After ~0.5 s</span>
+                                <span class="sw-led sw-led-on"   title="LED0: ON">0</span>
+                                <span class="sw-led sw-led-blink" title="LED1: still blinking">1</span>
+                                <span class="sw-led sw-led-on"   title="LED2: ON — CALLHOME packet sent to IDE (banner_ever_sent latched)">2</span>
+                                <span class="sw-led sw-led-off"  title="LED3: OFF">3</span>
+                                <span class="sw-led-note">LED2 turns ON — board sent CALLHOME to IDE (stays ON permanently)</span>
+                            </div>
+                            <div class="sw-led-row sw-led-fault-row">
+                                <span class="sw-led-moment">⚠ If fault</span>
+                                <span class="sw-led sw-led-on"  title="LED0: ON">0</span>
+                                <span class="sw-led sw-led-off" title="LED1: OFF (fault stops heartbeat)">1</span>
+                                <span class="sw-led sw-led-on"  title="LED2: ON from fault_latched">2</span>
+                                <span class="sw-led sw-led-off" title="LED3: OFF">3</span>
+                                <span class="sw-led-note">LED1 goes OFF, LED2 stays ON — fault latched. Power-cycle to clear</span>
+                            </div>
+                        </div>
+
+                        <div class="sw-footer-row">
+                            <button class="sw-btn sw-btn-back" onclick="StartupWizard.back()">← Back</button>
+                            <button class="sw-btn sw-btn-next" onclick="StartupWizard.advance()">I see LED0 ON + LED1 blinking →</button>
+                        </div>
+                    </div>
+
+                    <!-- ── Step 3: Connect ── -->
+                    <div class="sw-body-step" id="swBody3">
+                        <div class="sw-step-heading">🔗 Step 4 — Connect to the IDE</div>
+                        <p class="sw-step-desc">Click the connect button below. The IDE will detect the board's CALLHOME greeting and advance automatically.</p>
+                        <div class="sw-led-guide">
+                            <span class="sw-led-label">LEDs now:</span>
+                            <span class="sw-led sw-led-on"   title="LED0: ON">0</span>
+                            <span class="sw-led sw-led-blink" title="LED1: 1 Hz blink">1</span>
+                            <span class="sw-led sw-led-on"   title="LED2: ON — CALLHOME sent">2</span>
+                            <span class="sw-led sw-led-off"  title="LED3: OFF">3</span>
+                            <span class="sw-led-note">Waiting for IDE to connect</span>
+                        </div>
+                        <div class="sw-connect-hint">
+                            <strong>ChromeOS / Crostini:</strong> use <em>Via Bridge</em> below.<br>
+                            <strong>Chrome / Edge desktop:</strong> use <em>Connect</em> (direct WebSerial).<br>
+                            After clicking, scroll down to the Connect section ↓
+                        </div>
+                        <div class="sw-action-row">
+                            <button class="sw-btn sw-btn-primary" onclick="StartupWizard.clickConnect()">Open Connect Menu ↓</button>
+                        </div>
+                        <div class="sw-auto-note">This step advances automatically when the board is detected.</div>
+                        <div class="sw-footer-row">
+                            <button class="sw-btn sw-btn-back" onclick="StartupWizard.back()">← Back</button>
+                        </div>
+                    </div>
+
+                    <!-- ── Step 4: Upload ── -->
+                    <div class="sw-body-step" id="swBody4">
+                        <div class="sw-step-heading">📡 Step 5 — Boot Image Uploading</div>
+                        <p class="sw-step-desc">The IDE is loading the namespace table and LUMP binaries into the board's DMEM over UART. This takes about one second per frame.</p>
+                        <div class="sw-led-guide">
+                            <span class="sw-led-label">LEDs now:</span>
+                            <span class="sw-led sw-led-on"    title="LED0: ON — CM still not booted (boot_complete=0)">0</span>
+                            <span class="sw-led sw-led-blink" title="LED1: 1 Hz blink — CM halted, pl_active=1 during each frame">1</span>
+                            <span class="sw-led sw-led-on"    title="LED2: ON — CALLHOME sent">2</span>
+                            <span class="sw-led sw-led-off"   title="LED3: OFF">3</span>
+                            <span class="sw-led-note">LEDs unchanged during upload — IDE sends PATCH_LUMP frames, each ACK'd by FPGA</span>
+                        </div>
+                        <div class="sw-protocol-detail">
+                            <strong>What's happening:</strong><br>
+                            IDE → FPGA: <code>[0xBE][0xEF] addr count [N×4 bytes] [CRC16]</code><br>
+                            FPGA → IDE: <code>[addrHi][addrLo][countHi][countLo]</code> ACK<br>
+                            Then IDE sends: <code>[0xBE][0xAA]</code> — FREE_RUN — and the CM is released.
+                        </div>
+                        <div class="sw-auto-note">This step advances automatically when the board calls home successfully.</div>
+                        <div class="sw-footer-row">
+                            <button class="sw-btn sw-btn-back" onclick="StartupWizard.back()">← Back</button>
+                        </div>
+                    </div>
+
+                    <!-- ── Step 5: Running ── -->
+                    <div class="sw-body-step" id="swBody5">
+                        <div class="sw-step-heading">🎉 Church Machine Running!</div>
+                        <p class="sw-step-desc">The 3 boot ROM instructions have executed. Your abstraction is live on real FPGA hardware.</p>
+                        <div class="sw-led-timeline">
+                            <div class="sw-led-row">
+                                <span class="sw-led-moment">3 boot instr.</span>
+                                <span class="sw-led sw-led-on"  title="LED0: still ON — boot_complete not set until CALL returns">0</span>
+                                <span class="sw-led sw-led-off" title="LED1: briefly OFF while CM executes (halted=0, not yet boot_complete)">1</span>
+                                <span class="sw-led sw-led-on"  title="LED2: ON">2</span>
+                                <span class="sw-led sw-led-off" title="LED3: OFF">3</span>
+                                <span class="sw-led-note">LOAD → CHANGE → CALL executing at NIA 0x000–0x008</span>
+                            </div>
+                            <div class="sw-led-row">
+                                <span class="sw-led-moment">CALL completes</span>
+                                <span class="sw-led sw-led-demo" title="LED0: demo sequencer cycling 0.5 s each">0</span>
+                                <span class="sw-led sw-led-demo" title="LED1: demo sequencer + 1 Hz heartbeat">1</span>
+                                <span class="sw-led sw-led-demo" title="LED2: demo sequencer (fault_latched OR'd in)">2</span>
+                                <span class="sw-led sw-led-demo" title="LED3: demo sequencer">3</span>
+                                <span class="sw-led-note">boot_complete=1 — demo sequencer: LED0→1→2→3→off, 0.5 s each, repeating</span>
+                            </div>
+                            <div class="sw-led-row">
+                                <span class="sw-led-moment">Abstraction runs</span>
+                                <span class="sw-led sw-led-cpu" title="LED0: CPU-driven via MMIO 0x40000000">0</span>
+                                <span class="sw-led sw-led-cpu" title="LED1: CPU-driven via MMIO 0x40000004">1</span>
+                                <span class="sw-led sw-led-cpu" title="LED2: CPU-driven (fault_latched OR'd in)">2</span>
+                                <span class="sw-led sw-led-cpu" title="LED3: CPU-driven via MMIO 0x4000000C">3</span>
+                                <span class="sw-led-note">LEDs driven by your abstraction via MMIO — Boot.Abstr cycles through patterns</span>
+                            </div>
+                        </div>
+                        <div class="sw-success-box">
+                            ✅ Your Church Machine is running capability-secured code on real FPGA hardware.<br>
+                            Use the <strong>NIA stream</strong> in the Live UART panel below to see every instruction live.
+                        </div>
+                        <div class="sw-footer-row">
+                            <button class="sw-btn sw-btn-back" onclick="StartupWizard.back()">← Back</button>
+                            <button class="sw-btn sw-btn-reset" onclick="StartupWizard.reset()">⟳ Start over</button>
+                        </div>
+                    </div>
+
+                </div><!-- /swWizardBody -->
+            </div><!-- /sw-panel -->
+
             <div class="ti60-connect-header">
                 <div class="ti60-pol-heading">
                     <h2>Ti60 Proof-of-Life <span class="ti60-pol-hint-icon">&#x1F4CC;</span></h2>
@@ -1780,6 +2000,7 @@ CALLHOME:{"board":"ti60-f225","uid":"AABBCCDD","nia":0,"boot_ok":1,"fault":0,"fa
     <script async src="english_contact_tutorial.js"></script>
     <script async src="builder.js"></script>
     <script async src="app-ti60-connect.js?v=20260528a"></script>
+    <script async src="app-startup-wizard.js?v=20260528a"></script>
     <script src="app-shell.js?v=20260527p"></script>
     <script src="app-tools.js?v=20260521a"></script>
     <script src="app-cr-display.js?v=20260521a"></script>

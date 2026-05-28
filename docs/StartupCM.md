@@ -244,6 +244,65 @@ raises NULL_CAP and the board loops.
 
 ---
 
+## LED Status at Every Step
+
+The Ti60 F225 has **4 physical LEDs** (LED0–LED3), active-HIGH.
+Only the **R (bit 0)** of each 3-bit RGB register drives a physical pin.
+Source: `hardware/ti60_f225.py` lines 404–456.
+
+### Pre-boot signal definitions
+
+```python
+led_boot         = ~boot_complete               # ON while CM has never completed a CALL
+led_run          = boot_complete & ~fault & ~halted   # ON when running post-boot
+led_halted_blink = halted & ~fault & heartbeat_blink  # 1 Hz blink when paused & healthy
+led_fault        = fault_latched                # sticky — stays ON until power-cycle
+```
+
+### Step-by-step LED guide
+
+| Step | LED0 | LED1 | LED2 | LED3 | What it means |
+|---|---|---|---|---|---|
+| Power on | 🟡 solid | ⚫ off | ⚫ off | ⚫ off | Sapphire RISC-V starting up (`boot_complete=0`) |
+| Sapphire running, CM halted & healthy | 🟡 solid | 💫 1 Hz blink | ⚫ off | ⚫ off | CM core live, waiting for boot image over UART |
+| CALLHOME sent (~0.5 s after power-on) | 🟡 solid | 💫 1 Hz blink | 🟡 solid | ⚫ off | `banner_ever_sent` latched — stays ON from here on |
+| IDE sends PATCH_LUMP frames | 🟡 solid | 💫 1 Hz blink | 🟡 solid | ⚫ off | Unchanged — CM still halted, DMEM being written |
+| FREE_RUN (0xBE 0xAA) sent | 🟡 solid | ⚫ brief off | 🟡 solid | ⚫ off | `halted=0`, CM executes 3 boot ROM instructions; LED1 off briefly during execution |
+| CALL completes (`boot_complete=1`) | 🔵 demo | 🔵 demo+💫 | 🟡+demo | 🔵 demo | Demo sequencer: LED0→1→2→3 each 0.5 s, then all off, repeat |
+| Abstraction running (CPU-driven) | 🟢 CPU | 🟢 CPU | 🟢 CPU | 🟢 CPU | MMIO writes from your abstraction drive the LEDs |
+
+**🟡** = gold solid ON  **💫** = 1 Hz blink  **🔵** = blue demo sequencer  **🟢** = CPU/MMIO
+
+### Fault indicator
+
+If the CM faults (NULL_CAP, bounds, bad CRC, etc.) at any stage:
+
+| LED0 | LED1 | LED2 | LED3 | What it means |
+|---|---|---|---|---|
+| 🟡 solid | ⚫ OFF | 🟡 solid (bright) | ⚫ off | `fault_latched=1` — CM halted by fault; power-cycle to clear |
+
+LED1 goes dark because `led_halted_blink` is gated by `~fault_latched`.
+LED2 stays ON permanently from `fault_latched` (or `banner_ever_sent`, whichever lit it first).
+
+### Post-boot demo sequencer
+
+After `boot_complete=1`, while the CM is still halted (e.g. IDE holds it), the
+hardware cycles a demo pattern to prove every LED in the chain works:
+
+```
+LED0 ON  →  0.5 s
+LED1 ON  →  0.5 s  (+ 1 Hz heartbeat blink superimposed)
+LED2 ON  →  0.5 s
+LED3 ON  →  0.5 s
+All OFF  →  0.5 s
+repeat
+```
+
+The demo stops as soon as the CM is free-running (`halted=0`) — at that point
+the CPU owns all 4 LEDs via MMIO at `0x40000000`–`0x4000000C`.
+
+---
+
 ## IDE Options During / After Boot
 
 ### NIA stream — live instruction trace
