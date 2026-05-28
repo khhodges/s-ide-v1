@@ -83,7 +83,7 @@ BOOT_IMAGE_FORMAT_TAG = 0xB0070563  # "BOOT 0563" — must match simulator.js; b
 # Must stay in sync with simulator.js BOOT_ROM_WORDS and hardware/boot_rom.py BOOT_PROGRAM.
 BOOT_ROM_WORDS = [
     0x077F8000, # [0]  LOAD   AL, CR15, CR15[0]   — load namespace cap from NS slot 0 into CR15
-    0x27660001, # [1]  CHANGE AL, CR12, CR12, #1  — switch to Boot.Thread; RESTORE loads CR0 from thread[+244]
+    0x27678001, # [1]  CHANGE AL, CR12, CR15, #1  — switch to Boot.Thread via CR15 namespace; RESTORE loads CR0 from thread[+244]
     0x17000000, # [2]  CALL   AL, CR0,  CR0        — enter IDE-chosen first abstraction (lightning bolt)
 ]
 

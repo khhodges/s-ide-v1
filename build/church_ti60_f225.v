@@ -7107,7 +7107,7 @@ module \top.boot_rom (clk, data, addr);
       10'h000:
           rom_comb = 32'd125796352;
       10'h001:
-          rom_comb = 32'd660996097;
+          rom_comb = 32'd661094401;
       10'h002:
           rom_comb = 32'd385875968;
       10'h100:

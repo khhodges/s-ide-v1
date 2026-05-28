@@ -71,7 +71,7 @@ def make_gt(gt_type=GT_TYPE_NULL, perms=0, slot_id=0, gt_seq=0, b_flag=0, f_flag
 # ---------------------------------------------------------------------------
 BOOT_PROGRAM = [
     encode_church(ChurchOpcode.LOAD,   CondCode.AL, cr_dst=15, cr_src=15, imm=0),
-    encode_church(ChurchOpcode.CHANGE, CondCode.AL, cr_dst=12, cr_src=12, imm=1),
+    encode_church(ChurchOpcode.CHANGE, CondCode.AL, cr_dst=12, cr_src=15, imm=1),
     encode_church(ChurchOpcode.CALL,   CondCode.AL, cr_dst=0,  cr_src=0),
 ]
 
