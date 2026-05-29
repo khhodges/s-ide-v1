@@ -1861,7 +1861,11 @@ def release_r12_index():
 </style></head><body>
 
 <h1>&#x2B21; Church Machine — Ti60 F225</h1>
-<div class="tag">Efinix Ti60 F225 &middot; JTAG &middot; Everything in one ZIP</div>
+<div class="tag">Efinix Ti60 F225 &middot; JTAG &middot; Everything in one ZIP &nbsp;&middot;&nbsp;
+  <a href="https://www.digikey.com/en/products/detail/efinix-inc./TI60F225C-DK/15672425"
+     target="_blank" rel="noopener"
+     style="color:#4ade80;text-decoration:none;">&#x1F6D2; Buy the Ti60 F225 Dev Kit on Digi-Key</a>
+</div>
 
 <div class="hero">
   <div class="hero-title">Complete build package &amp; pre-built bitstream</div>
