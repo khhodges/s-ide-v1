@@ -3034,33 +3034,36 @@ BUILD_MD_TI60 = """# Church Machine — Efinix Ti60 F225 Build Package
 - `church_ti60_f225.sdc`      — Timing constraints (see Phase A / Phase B notes inside)
 - `church_ti60_f225.peri.xml` — Periphery I/O configuration (GPIO banks, UART pins)
 - `setup_ti60_peri.py`        — Efinity DesignAPI script to add the PLL (run once before first build)
-- `ti60_f225.isf`             — Pin constraints (Interface Setup File)
+- `Makefile`                  — Convenience targets: `make peri`, `make efinity`, `make flash`, `make clean`
+- `outflow/church_ti60_f225.hex` — **Pre-built bitstream** (flash this immediately, no synthesis needed)
 - `BUILD.md`                  — This file
 - `docs/`                     — PDF documentation bundle (read while synthesis runs)
 
 ---
 
-## Case 1 — Flash the preloaded bitstream (no toolchain needed)
+## Case 1 — Flash the pre-built bitstream (no toolchain needed)
 
-### Step 1 — Download the pre-built bitstream
+The official bitstream is already included in this ZIP at `outflow/church_ti60_f225.hex`.
+No synthesis required — just extract the ZIP and flash:
 
-Download the official pre-synthesised bitstream from the Church Machine IDE server:
-
-```
-GET /api/bitstream/download/ti60-f225  →  church_ti60_f225.hex
-```
-
-### Step 2 — Launch Efinity IDE
+### Step 1 — Extract the ZIP and open a terminal in the folder
 
 ```bash
-QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 ~/efinity/2025.2/bin/efinity &
+cd /path/to/church_ti60_f225_project
 ```
 
-### Step 3 — Flash the board
+### Step 2 — Flash the board
 
-Go to **Tool → Programmer**.
-Select **Efinix USB2.0 Device**, JTAG mode.
-Load `church_ti60_f225.hex` and click **Program**.
+```bash
+make flash
+```
+
+This runs `openFPGALoader` from `~/oss-cad-suite/bin/` using the included
+`outflow/church_ti60_f225.hex`.
+
+Alternatively, via Efinity IDE: **Tool → Programmer**, select
+**Efinix USB2.0 Device**, JTAG mode, load `outflow/church_ti60_f225.hex`,
+click **Program**.
 
 ---
 
