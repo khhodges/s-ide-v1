@@ -3026,6 +3026,9 @@ BUILD_MD_TI60 = """# Church Machine — Efinix Ti60 F225 Build Package
   - `local_bridge.py`         — Alternative bridge for the SoC+CM configuration
   - `bridge.sh`               — Auto-detects port and launches `local_bridge.py`
   - `Makefile`                — `make firmware` builds the RISC-V firmware
+  - `build_soc_cm.sh`         — **One-step script** for Steps 1–5 (IP copy, firmware build, patch)
+  - `run_efx_map.sh`          — Run synthesis (`efx_map`) with `work_syn/` auto-created
+  - `run_efx_pnr.sh`          — Run place & route (`efx_pnr`) with `work_pnr/` auto-created
 
 ### Documentation
 - `BUILD.md`                  — This file (you are reading it)
@@ -3127,7 +3130,23 @@ A condensed summary follows:
 - `pyserial` (`pip install pyserial`)
 - `openFPGALoader` (`~/oss-cad-suite/bin/openFPGALoader`)
 
-### Step 1 — Copy the Sapphire SoC IP files
+### Quick Start — Run the all-in-one script
+
+The ZIP includes a convenience script that does Steps 1–5 in one command:
+
+```bash
+cd /path/to/church_ti60_f225_project
+bash SoC/build_soc_cm.sh
+```
+
+This copies IP files, builds the firmware, patches `sapphire.v`, and verifies
+`optimize-zero-init-rom`. After it finishes, continue with Step 6 below.
+
+---
+
+### Manual Steps (for reference or debugging)
+
+#### Step 1 — Copy the Sapphire SoC IP files
 
 ```bash
 cp ~/efinity/2025.2/ipm/ip/efx_tsemac/fpga/Ti60F225_devkit/ip/sapphire/sapphire.v \
