@@ -50,8 +50,8 @@
     <efx:ip_info/>
 
     <efx:synthesis tool_name="efx_map">
-        <efx:param name="work-dir"             value="work_syn"  value_type="e_string"/>
-        <efx:param name="write-efx-verilog"    value="on"        value_type="e_bool"/>
+        <efx:param name="work_dir"             value="work_syn"  value_type="e_string"/>
+        <efx:param name="write_efx_verilog"    value="on"        value_type="e_bool"/>
         <efx:param name="mode"                 value="speed"     value_type="e_option"/>
         <efx:param name="max_ram"              value="-1"        value_type="e_integer"/>
         <efx:param name="max_mult"             value="-1"        value_type="e_integer"/>
