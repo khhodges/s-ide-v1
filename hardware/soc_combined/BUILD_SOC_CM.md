@@ -166,9 +166,23 @@ done
 
 ### Step 7 — Place & Route
 
+**Option A — Command-line (preferred):**
 ```bash
 bash hardware/soc_combined/work_pnr/run_efx_pnr.sh 2>&1 | tail -5
 ```
+
+**Option B — GUI (if command-line crashes):**
+Some Efinity 2025.2 installations on Chromebook/Linux crash with `efx_pnr` command-line. If you see:
+```
+ERROR: [Internal] Error: Unsupported value for family=
+```
+Use the GUI instead:
+1. Open Efinity GUI
+2. File → Open Project → select `church_soc_cm.xml`
+3. Project → Place & Route
+4. Project → Generate Bitstream
+
+Both paths produce the same `outflow/church_soc_cm.bit` and `outflow/church_soc_cm.hex`.
 
 ---
 
