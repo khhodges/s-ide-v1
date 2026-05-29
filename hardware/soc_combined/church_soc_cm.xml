@@ -41,7 +41,7 @@
     <!-- No SDC: design runs at 25 MHz directly from crystal -->
     <efx:constraint_info>
         <efx:sdc_file name=""/>
-        <efx:inter_file name=""/>
+        <efx:inter_file name="church_soc_cm.peri.xml"/>
     </efx:constraint_info>
 
     <efx:sim_info/>

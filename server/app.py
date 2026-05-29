@@ -3237,19 +3237,18 @@ cd /path/to/church_ti60_f225_project
 bash SoC/run_efx_pnr.sh
 ```
 
-This runs `~/efinity/2025.2/bin/efx_pnr --project-xml SoC/church_soc_cm.xml` and creates `work_pnr/` automatically.
+This runs `~/efinity/2025.2/bin/efx_pnr SoC/church_soc_cm.xml` (from the `SoC/` directory) and creates `work_pnr/` automatically.
 
 ### Step 8 — Generate the SPI flash hex (`efx_pgm`)
 
 ```bash
 cd SoC
-~/efinity/2025.2/bin/efx_pgm --project-xml church_soc_cm.xml 2>&1 | tail -5
+~/efinity/2025.2/bin/efx_pgm church_soc_cm.xml 2>&1 | tail -5
 ls -lh outflow/church_soc_cm.hex outflow/church_soc_cm.bit
 # Timestamps must be NEWER than the P&R run above
 ```
 
-> **Note:** The flag is `--project-xml`, NOT `--project`.
-> P&R does **not** generate the hex; `efx_pgm` does.
+> **Note:** P&R does **not** generate the hex; `efx_pgm` does.
 
 ### Step 9 — Flash and test
 

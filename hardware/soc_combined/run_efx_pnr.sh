@@ -18,6 +18,7 @@ echo "    Project: $PROJECT"
 echo ""
 
 mkdir -p "$PROJECT_ROOT/SoC/work_pnr"
-$EFX_PNR --project-xml "$PROJECT" 2>&1 | tee "$PROJECT_ROOT/SoC/work_pnr/pnr.log"
+cd "$PROJECT_ROOT/SoC"
+$EFX_PNR "$PROJECT" 2>&1 | tee "$PROJECT_ROOT/SoC/work_pnr/pnr.log"
 echo ""
 echo "==> Place & Route complete. Output in SoC/work_pnr/"
