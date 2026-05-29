@@ -222,6 +222,14 @@ def download_ti60zip():
         bridge = os.path.join(base, "local_bridge.py")
         if os.path.exists(bridge):
             zf.write(bridge, "local_bridge.py")
+        # SoC+CM combined source (full rebuild path — see Case 3 in BUILD.md)
+        soc_combined = os.path.join(hw, "soc_combined")
+        if os.path.isdir(soc_combined):
+            for root, _dirs, files in os.walk(soc_combined):
+                for fn in files:
+                    full = os.path.join(root, fn)
+                    arc = os.path.join("SoC", os.path.relpath(full, soc_combined))
+                    zf.write(full, arc)
         # PDFs
         for pdf, arc in [
             ("introducing-cloomc.pdf",  "docs/Introducing CLOOMC.pdf"),
@@ -2996,15 +3004,32 @@ BUILD_MD_TI60 = """# Church Machine — Efinix Ti60 F225 Build Package
 
 ## What's Inside
 
+### Quick-start (CM-only, no toolchain needed)
+- `outflow/church_ti60_f225.hex` — **Pre-built bitstream** (flash immediately with `make flash`)
+- `Makefile`                  — `make flash` runs openFPGALoader; `make clean` removes outflow
+
+### Full rebuild (CM-only, Efinity toolchain required)
 - `church_ti60_f225.xml`      — Efinity project file (open this in Efinity IDE)
 - `church_ti60_f225.v`        — RTL Verilog (Yosys from Amaranth RTLIL, no vendor cells)
 - `church_ti60_f225.sdc`      — Timing constraints (see Phase A / Phase B notes inside)
 - `church_ti60_f225.peri.xml` — Periphery I/O configuration (GPIO banks, UART pins)
 - `setup_ti60_peri.py`        — Efinity DesignAPI script to add the PLL (run once before first build)
-- `Makefile`                  — Convenience targets: `make peri`, `make efinity`, `make flash`, `make clean`
-- `outflow/church_ti60_f225.hex` — **Pre-built bitstream** (flash this immediately, no synthesis needed)
-- `BUILD.md`                  — This file
-- `docs/`                     — PDF documentation bundle (read while synthesis runs)
+- `local_bridge.py`           — Serial bridge to connect the board to the IDE
+
+### SoC+CM combined rebuild (SoC firmware + Efinity toolchain required)
+- `SoC/`                      — Full source for the Sapphire RISC-V SoC + Church Machine combined bitstream
+  - `church_soc_cm.xml`       — Efinity project for the combined SoC+CM build
+  - `top.v`                   — Top-level wrapper (SoC + CM + APB3 bridge)
+  - `apb3_cm_bridge.v`        — APB3 register bridge (SoC firmware controls CM)
+  - `firmware/`               — RISC-V firmware source (`main.c`, `crt0.S`, `link.ld`, `Makefile`)
+  - `BUILD_SOC_CM.md`         — Authoritative step-by-step SoC+CM build guide
+  - `local_bridge.py`         — Alternative bridge for the SoC+CM configuration
+  - `bridge.sh`               — Auto-detects port and launches `local_bridge.py`
+  - `Makefile`                — `make firmware` builds the RISC-V firmware
+
+### Documentation
+- `BUILD.md`                  — This file (you are reading it)
+- `docs/`                     — PDF documentation bundle
 
 ---
 
@@ -3034,7 +3059,7 @@ click **Program**.
 
 ---
 
-## Case 2 — Rebuild the bitstream from this ZIP (Efinity toolchain required)
+## Case 2 — Rebuild the CM-only bitstream from this ZIP (Efinity toolchain required)
 
 ### Step 1 — Extract the ZIP
 
@@ -3081,7 +3106,157 @@ Go to **Tool → Programmer**.
 Select **Efinix USB2.0 Device**, JTAG mode.
 Load `outflow/church_ti60_f225.hex` and click **Program**.
 
-## Resource Usage (synthesis result)
+---
+
+## Case 3 — Rebuild the SoC+CM combined bitstream from source (Efinity + RISC-V toolchain required)
+
+This produces a combined bitstream that includes the Sapphire RISC-V SoC
+running firmware alongside the Church Machine.  On boot, the SoC sends
+`CHURCH Ti60 SoC+CM v1.1` over **ttyUSB2** (115200 baud) and the CM streams
+NIA traces over **ttyUSB3**.
+
+The full authoritative guide is **`SoC/BUILD_SOC_CM.md`** inside this ZIP.
+A condensed summary follows:
+
+### Prerequisites
+
+- Efinity 2025.2 (installed at `~/efinity/2025.2`)
+- Efinity RISC-V IDE 2025.2 (toolchain at `~/efinity/efinity-riscv-ide-2025.2/toolchain/bin`)
+- Sapphire SoC IP (ships with Efinity)
+- Python 3 + Amaranth (to generate CM RTL)
+- `pyserial` (`pip install pyserial`)
+- `openFPGALoader` (`~/oss-cad-suite/bin/openFPGALoader`)
+
+### Step 1 — Copy the Sapphire SoC IP files
+
+```bash
+cp ~/efinity/2025.2/ipm/ip/efx_tsemac/fpga/Ti60F225_devkit/ip/sapphire/sapphire.v \
+   SoC/
+cp ~/efinity/2025.2/ipm/ip/efx_tsemac/fpga/Ti60F225_devkit/ip/sapphire/sapphire_define.vh \
+   SoC/
+```
+
+> If the path does not exist: `find ~/efinity -name "sapphire.v" 2>/dev/null`
+
+### Step 2 — Generate the Church Machine RTL
+
+```bash
+python hardware/gen_verilog.py --ti60
+cp build/church_ti60_f225.v SoC/
+```
+
+### Step 3 — Build the SoC firmware
+
+```bash
+make -C SoC/firmware
+```
+
+Produces four byte-lane symbol files in `SoC/`:
+```
+EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol{0,1,2,3}.bin
+```
+
+### Step 4 — Patch `sapphire.v` with firmware (MUST re-run on every firmware change)
+
+```bash
+cd /path/to/church_ti60_f225_project
+python3 ../../scripts/patch_sapphire_init.py \
+  SoC/sapphire.v \
+  SoC/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin \
+  SoC/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin \
+  SoC/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin \
+  SoC/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin
+```
+
+Expected output:
+```
+symbol0: 131072 entries, NNN non-zero, [0]=0xXX
+  -> replaced $readmemb          ← first run
+  OR
+  -> updated N inline block(s)   ← subsequent runs
+...
+sapphire.v OK (+N chars, M total)
+```
+
+### Step 5 — Ensure `optimize-zero-init-rom` is off
+
+```bash
+grep "optimize-zero-init-rom" SoC/church_soc_cm.xml
+# Must show value="0"
+```
+
+If it shows `value="1"`:
+```bash
+sed -i 's/optimize-zero-init-rom" value="1"/optimize-zero-init-rom" value="0"/' \
+  SoC/church_soc_cm.xml
+```
+
+### Step 6 — Synthesise
+
+```bash
+bash SoC/work_syn/run_efx_map.sh 2>&1 | tail -5
+```
+
+Verify all 4 BRAM lanes have non-zero `INIT_0` (firmware confirmed embedded):
+```bash
+for sym in 0 1 2 3; do
+  LINENUM=$(grep -n "EFX_RAM10" SoC/outflow/church_soc_cm.map.v \\
+    | grep "ram_symbol${sym}__D\\$g1" | head -1 | cut -d: -f1)
+  echo "symbol${sym}: $(sed -n "${LINENUM},$((LINENUM+3))p" \\
+    SoC/outflow/church_soc_cm.map.v | grep INIT_0)"
+done
+# All four must show non-zero hex strings
+```
+
+### Step 7 — Place & Route
+
+```bash
+bash SoC/work_pnr/run_efx_pnr.sh 2>&1 | tail -5
+```
+
+### Step 8 — Generate the SPI flash hex (`efx_pgm`)
+
+```bash
+cd SoC
+~/efinity/2025.2/bin/efx_pgm --project-xml church_soc_cm.xml 2>&1 | tail -5
+ls -lh outflow/church_soc_cm.hex outflow/church_soc_cm.bit
+# Timestamps must be NEWER than the P&R run above
+```
+
+> **Note:** The flag is `--project-xml`, NOT `--project`.
+> P&R does **not** generate the hex; `efx_pgm` does.
+
+### Step 9 — Flash and test
+
+```bash
+cd /path/to/church_ti60_f225_project
+sudo ~/oss-cad-suite/bin/openFPGALoader \
+  -b titanium_ti60_f225_jtag \
+  -f SoC/outflow/church_soc_cm.hex
+
+sleep 5 && python3 scripts/test_ti60_uart.py \
+  --port=/dev/ttyUSB2 --timeout=30 --verbose
+```
+
+If the SoC boots correctly, the test script will show:
+```
+Connected to /dev/ttyUSB2 @ 115200 baud
+Waiting for greeting...
+← CHURCH Ti60 SoC+CM v1.1
+Greeting received!
+```
+
+### Step 10 — Connect the board to the IDE
+
+```bash
+./SoC/bridge.sh --ide=http://localhost:5000
+```
+
+The Ti60 will appear in the Dashboard device list as **Ti60F225**.
+
+---
+
+## Resource Usage (CM-only synthesis result)
 
 - **10,269 LUTs + 5,686 FFs + 970 adders** → **14,323 XLRs placed** (~24% of Ti60)
 - `win_mem` (16 KB DEFLATE history window) → EBR block RAM ✓

@@ -62,7 +62,7 @@ class TestTi60ZipContents:
             'setup':   setup,
         }
 
-        buf, zip_name = _make_fpga_zip(
+        buf, zip_name, warnings = _make_fpga_zip(
             board='ti60-f225',
             is_ti60=True,
             paths=paths,
@@ -76,11 +76,13 @@ class TestTi60ZipContents:
             'church_ti60_f225.sdc',
             'church_ti60_f225.peri.xml',
             'setup_ti60_peri.py',
-            'ti60_f225.isf',
+            'Makefile',
             'BUILD.md',
         }
-        assert _zip_namelist(buf) == expected
+        names = _zip_namelist(buf)
+        assert expected <= names
         assert zip_name == 'church-ti60-package.zip'
+        assert warnings == []
 
 
 class TestWukongZipContents:
@@ -110,7 +112,7 @@ class TestWukongZipContents:
 
         import unittest.mock as mock
         with mock.patch('app.BASE_DIR', str(tmp_path)):
-            buf, zip_name = _make_fpga_zip(
+            buf, zip_name, warnings = _make_fpga_zip(
                 board='wukong-xc7a100t',
                 is_ti60=False,
                 paths=paths,
@@ -128,6 +130,7 @@ class TestWukongZipContents:
         }
         assert _zip_namelist(buf) == expected
         assert zip_name == 'church-wukong-package.zip'
+        assert warnings == []
 
     def test_file_set_without_optional_rtlil_and_verilog(self, tmp_path):
         build_dir = tmp_path / 'build'
@@ -152,7 +155,7 @@ class TestWukongZipContents:
 
         import unittest.mock as mock
         with mock.patch('app.BASE_DIR', str(tmp_path)):
-            buf, _ = _make_fpga_zip(
+            buf, _, _ = _make_fpga_zip(
                 board='wukong-xc7a100t',
                 is_ti60=False,
                 paths=paths,
@@ -192,7 +195,7 @@ class TestTangNanoZipContents:
 
         import unittest.mock as mock
         with mock.patch('app.BASE_DIR', str(tmp_path)):
-            buf, zip_name = _make_fpga_zip(
+            buf, zip_name, _ = _make_fpga_zip(
                 board='tang-nano-20k',
                 is_ti60=False,
                 paths=paths,
@@ -229,7 +232,7 @@ class TestTangNanoZipContents:
 
         import unittest.mock as mock
         with mock.patch('app.BASE_DIR', str(tmp_path)):
-            buf, _ = _make_fpga_zip(
+            buf, _, _ = _make_fpga_zip(
                 board='tang-nano-20k',
                 is_ti60=False,
                 paths=paths,

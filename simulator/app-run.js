@@ -9808,7 +9808,7 @@ function _renderBuildFiles(files, isTi60, board) {
         list.innerHTML = '<div class="build-file-empty">No files reported.</div>';
         return;
     }
-    const iconMap = { v: '📄', edif: '🔌', il: '⚙️', json: '📋', cst: '📍', makefile: '🛠️', md: '📖', isf: '📌', xdc: '📌', tcl: '📜', xml: '🗂️', sh: '🖥️', py: '🐍' };
+    const iconMap = { v: '📄', edif: '🔌', il: '⚙️', json: '📋', cst: '📍', makefile: '🛠️', md: '📖', isf: '📌', xdc: '📌', tcl: '📜', xml: '🗂️', sh: '🖥️', py: '🐍', c: '🔧', s: '⚙️', h: '📋', ld: '📍' };
 
     const optionalByBoard = {
         'tang-nano-20k-iot': [
