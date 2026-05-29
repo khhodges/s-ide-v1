@@ -1799,221 +1799,180 @@ def release_r12_index():
 <html lang="en"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CM Release 1.2 — 3-Board ZIP Downloads</title>
+<title>Church Machine — Ti60 F225 Download</title>
 <style>
-  body{font-family:system-ui,sans-serif;background:#0a0e17;color:#c8d6e5;padding:32px;max-width:900px;margin:0 auto}
-  h1{color:#a78bfa;margin-bottom:4px}
-  h2{color:#daa520;font-size:1rem;margin:2rem 0 0.6rem}
-  .sub{color:#64748b;margin-bottom:28px;font-size:.9rem}
-  .tag{font-size:.75rem;color:#64748b;font-family:monospace;margin-bottom:1.6rem}
-  .board-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:2rem}
-  @media(max-width:700px){.board-cards{grid-template-columns:1fr}}
-  .board-card{background:#0d1117;border:1px solid #2d1f4e;border-radius:8px;padding:18px 16px}
-  .board-card h3{color:#a78bfa;font-size:.95rem;margin-bottom:.3rem}
-  .board-card .board-tag{font-size:.7rem;color:#64748b;font-family:monospace;margin-bottom:.8rem}
-  .board-card ul{margin:0;padding-left:1.2rem;font-size:.8rem;color:#8892a4;line-height:1.7}
-  .board-card code{background:#1a0e28;padding:.1rem .3rem;border-radius:3px;font-size:.78rem}
-  .dl-btn{display:inline-block;margin-top:1rem;padding:.45rem 1rem;background:#1a0e28;border:1px solid #a78bfa;
-          border-radius:5px;color:#a78bfa;text-decoration:none;font-size:.82rem;transition:background .15s,color .15s}
-  .dl-btn:hover{background:#a78bfa;color:#0a0e17}
-  .note{background:#0d1117;border-left:3px solid #a78bfa;padding:.7rem 1rem;font-size:.8rem;
-        color:#8892a4;border-radius:0 4px 4px 0;margin-bottom:1.5rem}
-  .changes{font-size:.82rem;color:#8892a4;line-height:1.7}
-  .changes li{margin-bottom:.3rem}
-  .changes code{background:#1a0e28;padding:.1rem .3rem;border-radius:3px}
-  table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:.5rem}
-  th{text-align:left;padding:7px 10px;background:#111827;color:#daa520;border-bottom:2px solid #1e2a3a}
-  td{padding:6px 10px;border-bottom:1px solid #1e2a3a;vertical-align:middle}
-  a.doc-link{color:#4ade80;text-decoration:none} a.doc-link:hover{text-decoration:underline}
-  .back{margin-top:2rem;font-size:.8rem;color:#4a5568}
-  .back a{color:#64748b;text-decoration:none} .back a:hover{color:#a78bfa}
-  .gs-section{margin-top:2rem;margin-bottom:1.5rem}
-  .gs-section h2{color:#a78bfa;font-size:1rem;margin-bottom:.8rem}
-  .gs-tabs{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
-  .gs-tab{padding:.4rem 1rem;border:1px solid #2d1f4e;border-radius:5px;background:#0d1117;
-          color:#8892a4;font-size:.82rem;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
-  .gs-tab.active{background:#1a0e28;border-color:#a78bfa;color:#a78bfa}
-  .gs-tab:hover:not(.active){border-color:#4a3070;color:#c4b5fd}
-  .gs-panel{display:none}
-  .gs-panel.active{display:block}
-  .gs-panel ol{margin:0;padding-left:1.4rem;font-size:.82rem;color:#8892a4;line-height:1.85}
-  .gs-panel ol li{margin-bottom:.6rem}
-  .gs-panel ol li strong{color:#c4b5fd}
-  .gs-panel pre{background:#0a0e17;border:1px solid #1e2a3a;border-radius:5px;padding:.65rem .9rem;
-               font-size:.78rem;color:#a3e635;margin:.4rem 0;overflow-x:auto;white-space:pre}
-  .gs-panel a{color:#a78bfa;text-decoration:none}
-  .gs-panel a:hover{text-decoration:underline}
-  .gs-panel code{background:#1a0e28;padding:.1rem .3rem;border-radius:3px;font-size:.78rem}
+  *{box-sizing:border-box}
+  body{font-family:system-ui,sans-serif;background:#0a0e17;color:#c8d6e5;padding:24px 20px;max-width:720px;margin:0 auto}
+  h1{color:#a78bfa;font-size:1.5rem;margin:0 0 4px}
+  .tag{font-size:.75rem;color:#64748b;font-family:monospace;margin-bottom:1.8rem}
+  /* ── Hero download block ── */
+  .hero{background:#0d1117;border:1px solid #2d1f4e;border-radius:10px;padding:24px;margin-bottom:1.6rem;text-align:center}
+  .hero-title{color:#daa520;font-size:1rem;font-weight:600;margin-bottom:.3rem}
+  .hero-sub{font-size:.8rem;color:#64748b;margin-bottom:1.2rem}
+  .dl-btn{display:inline-block;padding:.65rem 1.8rem;background:#a78bfa;border-radius:6px;
+          color:#0a0e17;text-decoration:none;font-size:.95rem;font-weight:700;
+          transition:background .15s;letter-spacing:.01em}
+  .dl-btn:hover{background:#c4b5fd}
+  .dl-btn-icon{margin-right:.4rem}
+  .hero-meta{margin-top:1rem;font-size:.75rem;color:#4a5568}
+  /* ── What's inside ── */
+  .box-title{color:#daa520;font-size:.78rem;font-weight:700;text-transform:uppercase;
+             letter-spacing:.06em;margin-bottom:.5rem}
+  .contents-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;
+                 font-size:.78rem;color:#8892a4;margin-bottom:1.6rem}
+  @media(max-width:480px){.contents-grid{grid-template-columns:1fr}}
+  .contents-grid .file{font-family:monospace;color:#c4b5fd}
+  .contents-grid .highlight .file{color:#4ade80}
+  .contents-grid .note{color:#64748b;font-size:.72rem}
+  /* ── Steps ── */
+  .steps{margin-bottom:1.6rem}
+  .step{display:flex;gap:14px;margin-bottom:1rem;align-items:flex-start}
+  .step-num{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:#1a0e28;
+            border:2px solid #a78bfa;color:#a78bfa;font-size:.8rem;font-weight:700;
+            display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .step-body{flex:1}
+  .step-body strong{color:#e2e8f0;display:block;margin-bottom:.25rem;font-size:.88rem}
+  .step-body p{margin:0;font-size:.8rem;color:#8892a4;line-height:1.55}
+  .step-body code{background:#1a0e28;padding:.1rem .35rem;border-radius:3px;font-family:monospace;font-size:.78rem;color:#c4b5fd}
+  .step-body pre{background:#0a0e17;border:1px solid #1e2a3a;border-radius:5px;
+                 padding:.55rem .8rem;font-size:.76rem;color:#a3e635;margin:.4rem 0;
+                 overflow-x:auto;white-space:pre}
+  .step-body .alt{margin-top:.4rem;font-size:.76rem;color:#4a5568}
+  .step-divider{border:none;border-top:1px solid #1e2a3a;margin:1.2rem 0}
+  /* ── Rebuild section (collapsed) ── */
+  details{margin-bottom:1.6rem}
+  summary{cursor:pointer;color:#64748b;font-size:.82rem;padding:.4rem 0;
+          list-style:none;display:flex;align-items:center;gap:.5rem}
+  summary::before{content:"▶";font-size:.65rem;transition:transform .15s}
+  details[open] summary::before{transform:rotate(90deg)}
+  summary:hover{color:#a78bfa}
+  /* ── Other boards ── */
+  .other-boards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.6rem}
+  @media(max-width:480px){.other-boards{grid-template-columns:1fr}}
+  .board-card{background:#0d1117;border:1px solid #1e2a3a;border-radius:7px;padding:14px}
+  .board-card h3{color:#8892a4;font-size:.82rem;margin:0 0 .2rem}
+  .board-card .board-tag{font-size:.7rem;color:#4a5568;margin-bottom:.7rem}
+  .board-card a{display:inline-block;padding:.3rem .75rem;background:#0a0e17;border:1px solid #2d1f4e;
+                border-radius:4px;color:#64748b;text-decoration:none;font-size:.76rem}
+  .board-card a:hover{border-color:#a78bfa;color:#a78bfa}
+  .back{margin-top:1.5rem;font-size:.78rem;color:#4a5568}
+  .back a{color:#64748b;text-decoration:none}
+  .back a:hover{color:#a78bfa}
 </style></head><body>
-<h1>CM Release 1.2</h1>
-<div class="tag">15 May 2026 &middot; Builder &middot; 3-Board FPGA ZIP Downloads</div>
-<div class="note">
-  The Release 1 document set (14 PDFs) remains the definitive hardware specification.
-  Release 1.2 adds verified FPGA package downloads for all three supported boards.
-  Use the <strong>Builder</strong> view in the simulator IDE to synthesise RTL and then
-  click <em>Download FPGA Package</em> for your target board.
+
+<h1>&#x2B21; Church Machine — Ti60 F225</h1>
+<div class="tag">Efinix Ti60 F225 &middot; JTAG &middot; Everything in one ZIP</div>
+
+<div class="hero">
+  <div class="hero-title">Complete build package &amp; pre-built bitstream</div>
+  <div class="hero-sub">One download. Extract, then <code>make flash</code> — board running in under a minute.</div>
+  <a class="dl-btn" href="/dl/ti60zip"><span class="dl-btn-icon">&#x2B07;</span>Download church_ti60_f225_project.zip</a>
+  <div class="hero-meta">Includes Verilog source &middot; Efinity project &middot; pre-built .hex &middot; Makefile &middot; PDFs</div>
 </div>
 
-<h2 id="ti60">&#x2B21; FPGA Package Downloads</h2>
-<div class="board-cards">
-  <div class="board-card" id="ti60-card">
-    <h3>Efinix Ti60 F225</h3>
-    <div class="board-tag">Efinity toolchain &middot; JTAG</div>
-    <ul>
-      <li><code>church_ti60_f225.xml</code> — Efinity project</li>
-      <li><code>church_ti60_f225.v</code> — Synthesisable Verilog</li>
-      <li><code>church_ti60_f225.sdc</code> — Timing constraints</li>
-      <li><code>church_ti60_f225.peri.xml</code> — Periphery I/O</li>
-      <li><code>setup_ti60_peri.py</code> — DesignAPI PLL script</li>
-      <li><code>ti60_f225.isf</code> — Pin constraints</li>
-      <li><code>BUILD.md</code> — Instructions</li>
-    </ul>
-    <a class="dl-btn" href="/api/download/fpga-zip?board=ti60-f225">Download church-ti60-package.zip</a>
+<div class="box-title">&#x1F4E6; What&rsquo;s inside the ZIP</div>
+<div class="contents-grid">
+  <div class="highlight"><span class="file">outflow/church_ti60_f225.hex</span><span class="note"> — pre-built bitstream ✓</span></div>
+  <div><span class="file">church_ti60_f225.xml</span><span class="note"> — Efinity project</span></div>
+  <div><span class="file">church_ti60_f225.v</span><span class="note"> — Verilog source</span></div>
+  <div><span class="file">church_ti60_f225.sdc</span><span class="note"> — timing constraints</span></div>
+  <div><span class="file">church_ti60_f225.peri.xml</span><span class="note"> — periphery I/O</span></div>
+  <div><span class="file">setup_ti60_peri.py</span><span class="note"> — DesignAPI PLL script</span></div>
+  <div><span class="file">Makefile</span><span class="note"> — peri / efinity / flash / clean</span></div>
+  <div><span class="file">BUILD.md</span><span class="note"> — full instructions</span></div>
+  <div><span class="file">docs/</span><span class="note"> — PDF documentation bundle</span></div>
+</div>
+
+<div class="box-title">&#x26A1; Flash the pre-built bitstream</div>
+<div class="steps">
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <strong>Extract the ZIP</strong>
+      <p>Unzip into a folder and open a terminal there.</p>
+    </div>
   </div>
-  <div class="board-card" id="wukong-card">
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <strong>Flash the board</strong>
+      <pre>make flash</pre>
+      <p>Uses <code>~/oss-cad-suite/bin/openFPGALoader</code> with the included <code>outflow/church_ti60_f225.hex</code>.<br>
+      No Efinity IDE or synthesis needed.</p>
+      <p class="alt">Or via Efinity: <strong>Tool → Programmer</strong> → Efinix USB2.0 Device → JTAG → load <code>outflow/church_ti60_f225.hex</code> → Program.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <strong>Power-cycle the board</strong>
+      <p>Unplug and re-plug the USB cable. The board stores the bitstream permanently.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <strong>Connect to the IDE</strong>
+      <p>Open the <a href="/simulator" style="color:#a78bfa">Church Machine IDE</a> → click <strong>&#x1F50C; Connect Ti60</strong> → pick your board from the list. The IDE uploads the boot image automatically and the Church Machine starts running.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="step-divider">
+
+<details>
+  <summary>&#x1F527; Rebuild the bitstream from source (Efinity toolchain required)</summary>
+  <div class="steps" style="margin-top:1rem">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Generate the periphery XML</strong>
+        <pre>make peri</pre>
+        <p>Runs <code>setup_ti60_peri.py</code> via Efinity&rsquo;s Python. You should see <em>SUCCESS — church_ti60_f225.peri.xml written</em>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Open Efinity IDE</strong>
+        <pre>make efinity</pre>
+        <p>Then <strong>File → Open Project → <code>church_ti60_f225.xml</code></strong></p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Synthesise &amp; generate bitstream</strong>
+        <p>Run <strong>Synthesis → Place &amp; Route → Generate Bitstream</strong> (~30 min). Efinity writes <code>outflow/church_ti60_f225.hex</code> when done.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Flash</strong>
+        <pre>make flash</pre>
+      </div>
+    </div>
+  </div>
+</details>
+
+<hr class="step-divider">
+
+<div class="box-title" style="margin-bottom:.8rem">&#x1F4BB; Other boards</div>
+<div class="other-boards">
+  <div class="board-card">
     <h3>QMTECH Wukong XC7A100T</h3>
     <div class="board-tag">Vivado 2020.x+ &middot; JTAG</div>
-    <ul>
-      <li><code>church_wukong_xc7a100t.il</code> — Amaranth RTLIL</li>
-      <li><code>church_wukong_xc7a100t.v</code> — Verilog (Yosys)</li>
-      <li><code>wukong_xc7a100t.xdc</code> — Vivado pin constraints</li>
-      <li><code>wukong_xc7a100t.tcl</code> — Project + build script</li>
-      <li><code>local_bridge.py</code> — Serial bridge server</li>
-      <li><code>BUILD.md</code> — Instructions</li>
-    </ul>
-    <a class="dl-btn" href="/api/download/fpga-zip?board=wukong-xc7a100t">Download church-wukong-package.zip</a>
+    <a href="/api/download/fpga-zip?board=wukong-xc7a100t">&#x2B07; Download ZIP</a>
   </div>
-  <div class="board-card" id="tang-card">
+  <div class="board-card">
     <h3>Sipeed Tang Nano 20K</h3>
-    <div class="board-tag">OSS CAD Suite &middot; Gowin GW2AR-18</div>
-    <ul>
-      <li><code>church_tang_nano_20k.il</code> — Amaranth RTLIL</li>
-      <li><code>church_tang_nano_20k.v</code> — Verilog (Yosys, optional)</li>
-      <li><code>church_tang_nano_20k.json</code> — Yosys JSON (optional)</li>
-      <li><code>local_bridge.py</code> — Serial bridge server</li>
-      <li><code>Makefile</code> — <code>make pnr pack prog</code></li>
-      <li><code>BUILD.md</code> — Instructions</li>
-    </ul>
-    <a class="dl-btn" href="/api/download/fpga-zip?board=tang-nano-20k-iot">Download church-nano-package.zip</a>
+    <div class="board-tag">OSS CAD Suite &middot; Gowin</div>
+    <a href="/api/download/fpga-zip?board=tang-nano-20k-iot">&#x2B07; Download ZIP</a>
   </div>
 </div>
-<div class="note" style="margin-bottom:2rem;">
-  <strong>To generate a ZIP:</strong> open the <a href="/simulator" style="color:#a78bfa">Church Machine IDE</a>,
-  go to <em>Builder &rarr; Hardware Build</em>, select your target board, click <strong>Build</strong>,
-  then click <strong>Download FPGA Package</strong>. The download links above serve the last-built package from the server.
-</div>
 
-<div class="gs-section">
-  <h2>&#x26A1; Getting started &mdash; Ti60 F225</h2>
-  <div class="gs-tabs">
-    <button class="gs-tab active" onclick="gsSwitch(event,'gs-flash')">&#x26A1; Flash preloaded bitstream</button>
-    <button class="gs-tab" onclick="gsSwitch(event,'gs-rebuild')">&#x1F527; Rebuild from ZIP</button>
-  </div>
-
-  <div id="gs-flash" class="gs-panel active">
-    <ol>
-      <li>
-        <strong>Download the pre-built bitstream</strong><br>
-        <a href="/api/bitstream/download/ti60-f225"><code>church_ti60_f225.hex</code></a>
-        &mdash; official bitstream, no toolchain required.
-      </li>
-      <li>
-        <strong>Launch Efinity IDE</strong>
-<pre>QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 ~/efinity/2025.2/bin/efinity &amp;</pre>
-      </li>
-      <li>
-        <strong>Flash the board</strong><br>
-        Go to <strong>Tool &rarr; Programmer</strong>.
-        Select <strong>Efinix USB2.0 Device</strong>, JTAG mode.
-        Load <code>church_ti60_f225.hex</code> and click <strong>Program</strong>.
-      </li>
-    </ol>
-  </div>
-
-  <div id="gs-rebuild" class="gs-panel">
-    <ol>
-      <li>
-        <strong>Extract the downloaded ZIP</strong><br>
-        Unzip <code>church-ti60-package.zip</code> into a working folder.
-      </li>
-      <li>
-        <strong>Run <code>setup_ti60_peri.py</code></strong> (required once before first build)<br>
-        This regenerates <code>church_ti60_f225.peri.xml</code> using Efinity&rsquo;s DesignAPI:
-<pre>cd /path/to/church-ti60-package
-
-PYTHONPATH=$HOME/efinity/2025.2/lib:$HOME/efinity/2025.2/pt/bin \
-EFXPT_HOME=$HOME/efinity/2025.2/pt \
-  $HOME/efinity/2025.2/bin/python3.11 setup_ti60_peri.py</pre>
-        You should see <em>SUCCESS &mdash; church_ti60_f225.peri.xml written</em>.
-      </li>
-      <li>
-        <strong>Launch Efinity IDE</strong>
-<pre>QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 ~/efinity/2025.2/bin/efinity &amp;</pre>
-      </li>
-      <li>
-        <strong>Open the project</strong><br>
-        <strong>File &rarr; Open Project &rarr;</strong> <code>church_ti60_f225.xml</code>
-      </li>
-      <li>
-        <strong>Build the bitstream</strong><br>
-        Run <strong>Synthesis &rarr; Place &amp; Route &rarr; Generate Bitstream</strong>.
-        Efinity writes the output to the <code>outflow/</code> folder:
-        <code>outflow/church_ti60_f225.hex</code> and <code>outflow/church_ti60_f225.bit</code>.
-      </li>
-      <li>
-        <strong>Flash the board</strong><br>
-        Go to <strong>Tool &rarr; Programmer</strong>.
-        Select <strong>Efinix USB2.0 Device</strong>, JTAG mode.
-        Load <code>outflow/church_ti60_f225.hex</code> and click <strong>Program</strong>.
-      </li>
-    </ol>
-  </div>
-</div>
-<script>
-function gsSwitch(e,id){
-  document.querySelectorAll('.gs-tab').forEach(function(t){t.classList.remove('active')});
-  document.querySelectorAll('.gs-panel').forEach(function(p){p.classList.remove('active')});
-  e.currentTarget.classList.add('active');
-  document.getElementById(id).classList.add('active');
-}
-</script>
-
-<h2 id="changes">&#x1F4CB; What Changed in Release 1.2</h2>
-<ul class="changes">
-  <li>Build log now lists exactly what is inside each ZIP — no phantom or missing filenames.</li>
-  <li>Ti60 F225: removed stale <code>.edif</code> entry; added <code>.xml</code>, <code>.sdc</code>, <code>.peri.xml</code>, <code>setup_ti60_peri.py</code>.</li>
-  <li>Wukong XC7A100T: added missing <code>local_bridge.py</code> to the listing.</li>
-  <li>Tang Nano 20K: added <code>.il</code> and <code>local_bridge.py</code>; marked <code>.v</code>/<code>.json</code> as conditional on Yosys.</li>
-  <li>File-icon map expanded: <code>.isf</code>, <code>.xdc</code>, <code>.tcl</code>, <code>.xml</code>, <code>.sh</code>, <code>.py</code> all get icons in the build log panel.</li>
-  <li>New <code>test_zip_contents.py</code>: 5 pytest cases verify each board&rsquo;s ZIP file set, no toolchain required.</li>
-</ul>
-
-<h2>&#x1F4C4; Release 1 Document Set</h2>
-<p style="font-size:.82rem;color:#8892a4;margin-bottom:.8rem">
-  The following 14 documents from Release 1 remain the definitive hardware specification.
-  <a class="doc-link" href="/release/r1">Browse all Release 1 PDFs &rarr;</a>
-</p>
-<table>
-<thead><tr><th>Document</th><th>Download</th></tr></thead>
-<tbody>
-  <tr><td>ISA Reference</td><td><a class="doc-link" href="/release/r1/ctmm-r1-01-isa-reference.pdf">PDF</a></td></tr>
-  <tr><td>ISA Encoding</td><td><a class="doc-link" href="/release/r1/ctmm-r1-02-isa-encoding.pdf">PDF</a></td></tr>
-  <tr><td>Architecture Overview</td><td><a class="doc-link" href="/release/r1/ctmm-r1-03-architecture.pdf">PDF</a></td></tr>
-  <tr><td>Church Instructions</td><td><a class="doc-link" href="/release/r1/ctmm-r1-04-church-instructions.pdf">PDF</a></td></tr>
-  <tr><td>Full Instruction Set</td><td><a class="doc-link" href="/release/r1/ctmm-r1-05-instruction-set.pdf">PDF</a></td></tr>
-  <tr><td>Golden Tokens</td><td><a class="doc-link" href="/release/r1/ctmm-r1-06-golden-tokens.pdf">PDF</a></td></tr>
-  <tr><td>Abstract Golden Token</td><td><a class="doc-link" href="/release/r1/ctmm-r1-07-abstract-gt.pdf">PDF</a></td></tr>
-  <tr><td>Namespace Security</td><td><a class="doc-link" href="/release/r1/ctmm-r1-08-namespace-security.pdf">PDF</a></td></tr>
-  <tr><td>Mint &amp; PassKey Issuance</td><td><a class="doc-link" href="/release/r1/ctmm-r1-09-mint.pdf">PDF</a></td></tr>
-  <tr><td>Machine Load (mLoad)</td><td><a class="doc-link" href="/release/r1/ctmm-r1-10-mload.pdf">PDF</a></td></tr>
-  <tr><td>SWITCH Lifecycle &amp; PassKey Install</td><td><a class="doc-link" href="/release/r1/ctmm-r1-11-switch-lifecycle.pdf">PDF</a></td></tr>
-  <tr><td>Boot ROM Layout</td><td><a class="doc-link" href="/release/r1/ctmm-r1-12-boot-rom-layout.pdf">PDF</a></td></tr>
-  <tr><td>Boot Permission Rules</td><td><a class="doc-link" href="/release/r1/ctmm-r1-13-boot-permission-rules.pdf">PDF</a></td></tr>
-  <tr><td>Hardware Deviations &mdash; All Closed</td><td><a class="doc-link" href="/release/r1/ctmm-r1-14-hardware-deviations.pdf">PDF</a></td></tr>
-</tbody>
-</table>
-
-<p class="back"><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/release/r1">Release 1 Documents</a></p>
+<p class="back"><a href="/">&larr; Home</a> &nbsp;&middot;&nbsp; <a href="/release/r1">Release 1 Documents</a> &nbsp;&middot;&nbsp; <a href="/simulator">IDE</a></p>
 </body></html>"""
     return html
 
