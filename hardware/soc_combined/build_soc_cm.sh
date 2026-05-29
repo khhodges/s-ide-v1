@@ -43,6 +43,15 @@ else
 fi
 
 # ---- Step 1b: Copy pre-built CM RTL ----
+# ---- Step 1c: Copy peri.xml (periphery constraints) ----
+if [ -f "$PROJECT_ROOT/church_ti60_f225.peri.xml" ]; then
+    cp "$PROJECT_ROOT/church_ti60_f225.peri.xml" "$SOC_DIR/church_soc_cm.peri.xml"
+    echo "    OK — copied peri.xml to church_soc_cm.peri.xml"
+else
+    echo "    WARNING: church_ti60_f225.peri.xml not found at project root"
+fi
+
+# ---- Step 1d: Copy pre-built CM RTL ----
 echo ""
 echo "==> Step 1b: Copy pre-built CM RTL"
 if [ -f "$PROJECT_ROOT/church_ti60_f225.v" ]; then
