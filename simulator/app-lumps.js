@@ -942,10 +942,14 @@ const _CLOOMC_HL_KEYWORDS = new Set([
 ]);
 
 const _ASM_HL_MNEMONICS = new Set([
-    'mLoad','mSave','ELOADCALL','XLOADLAMBDA','TPERM','LAMBDA',
-    'CALL','RETURN','JUMP','BEQ','BNE','BLT','BGE','BGT','BLE',
-    'MASK','MOVI','ADDI','ADD','SUB','AND','OR','XOR','NOT','SHL','SHR',
-    'NOP','HALT','mLoadI','mSaveI','ELOAD','XLOAD','CALLR','JUMPR',
+    // Church Machine ISA mnemonics (disassembler output)
+    'LOAD','SAVE','CALL','RETURN','CHANGE','SWITCH','TPERM','LAMBDA',
+    'ELOADCALL','XLOADLAMBDA','DREAD','DWRITE','BFEXT','BFINS','MCMP',
+    'IADD','ISUB','BRANCH','SHL','SHR','HALT','WORD',
+    // Legacy / assembler macro mnemonics
+    'mLoad','mSave','JUMP','BEQ','BNE','BLT','BGE','BGT','BLE',
+    'MASK','MOVI','ADDI','ADD','SUB','AND','OR','XOR','NOT',
+    'NOP','mLoadI','mSaveI','ELOAD','XLOAD','CALLR','JUMPR',
     'PUSH','POP','MOV','CMP','TEST'
 ]);
 
@@ -2882,6 +2886,18 @@ function _renderLumpCodeContent(bodyEl, lump, words, token) {
             (m, prefix, ca, tail) => `${prefix}${_condSpan(ca, condCode)}${tail}`
         );
     };
+    // Inject condition-code tooltip inside an already-highlighted mnemonic span.
+    // e.g. <span class="lump-hl-mnemonic">LOADEQ</span> →
+    //      <span class="lump-hl-mnemonic">LOAD<span class="cond-abbr" …>EQ</span></span>
+    const _injectCondTooltipInHighlighted = (hlHtml, condCode) => {
+        if (condCode === 14) return hlHtml;
+        const abbr = _lumpCondAbbr[condCode];
+        if (!abbr) return hlHtml;
+        return hlHtml.replace(
+            new RegExp(`(<span class="lump-hl-mnemonic">)([A-Z]+)(${abbr})(</span>)`),
+            (_, open, prefix, ca, close) => `${open}${prefix}${_condSpan(ca, condCode)}${close}`
+        );
+    };
     const _lumpCodeWords = [];
     for (let _ci = 1; _ci < effEnd; _ci++) _lumpCodeWords.push(words[_ci] >>> 0);
 
@@ -3016,8 +3032,8 @@ function _renderLumpCodeContent(bodyEl, lump, words, token) {
                     const _bcond = _lumpCondAbbr[cond];
                     disText     = `BRANCH${_bcond}  ${_blabel}`;
                     disHtml     = cond === 14
-                        ? `BRANCH\u00A0\u00A0${_blabel}`
-                        : `BRANCH${_condSpan(_bcond, cond)}\u00A0\u00A0${_blabel}`;
+                        ? `<span class="lump-hl-mnemonic">BRANCH</span>\u00A0\u00A0<span class="lump-hl-label">${_blabel}</span>`
+                        : `<span class="lump-hl-mnemonic">BRANCH</span>${_condSpan(_bcond, cond)}\u00A0\u00A0<span class="lump-hl-label">${_blabel}</span>`;
                     commentText = staticCmt || `branch → ${_blabel}${cond !== 14 ? ` [if ${_bcond}]` : ''}`;
                 }
             }
@@ -3035,7 +3051,7 @@ function _renderLumpCodeContent(bodyEl, lump, words, token) {
             html += `<div class="lump-code-row">` +
                     `<span class="lump-code-left-group">` +
                     _brSvgHtml +
-                    `<span class="lump-code-instr">${disHtml !== null ? disHtml : _injectCondTooltip(e(disText), cond)}${ann ? ' ' + ann : ''}</span>` +
+                    `<span class="lump-code-instr">${disHtml !== null ? disHtml : _injectCondTooltipInHighlighted(_highlightCLOOMCSource(disText, 'assembly'), cond)}${ann ? ' ' + ann : ''}</span>` +
                     `<span class="lump-code-comment">${_colorizeComment(commentText)}</span>` +
                     `</span>` +
                     `<span class="lump-code-binary-group">` +
