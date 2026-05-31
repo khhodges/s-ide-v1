@@ -728,7 +728,7 @@ function smartCompile() {
 
     if (lang === 'assembly') {
         const src = (document.getElementById('asmEditor') || {}).value || '';
-        if (/^\s*abstraction\s+\w+/m.test(src) || /^\s*method\s+\w+/m.test(src)) {
+        if (/^\s*abstraction\s+\w+/im.test(src) || /^\s*method\s+\w+/im.test(src)) {
             lang = 'javascript';
             if (sel) sel.value = 'javascript';
             onLangChange(true);

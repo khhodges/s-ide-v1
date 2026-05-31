@@ -257,7 +257,7 @@ class CLOOMCCompiler {
             const line = lines[i].trim();
             if (!line || line.startsWith('--')) { i++; continue; }
 
-            const absMatch = line.match(/^abstraction\s+(\w+)\s*\{/);
+            const absMatch = line.match(/^abstraction\s+(\w+)\s*\{/i);
             if (absMatch) {
                 result.name = absMatch[1];
                 i++;
@@ -800,7 +800,7 @@ class CLOOMCCompiler {
             const line = lines[i].trim();
             if (!line || line.startsWith('//')) { i++; continue; }
 
-            const absMatch = line.match(/^abstraction\s+(\w+)\s*\{/);
+            const absMatch = line.match(/^abstraction\s+(\w+)\s*\{/i);
             if (absMatch) {
                 result.name = absMatch[1];
                 i++;
@@ -1618,7 +1618,7 @@ class CLOOMCCompiler {
             const line = lines[i].trim();
             if (!line || line.startsWith('--')) { i++; continue; }
 
-            const absMatch = line.match(/^abstraction\s+(\w+)\s*\{/);
+            const absMatch = line.match(/^abstraction\s+(\w+)\s*\{/i);
             if (absMatch) {
                 result.name = absMatch[1];
                 i++;
@@ -2495,7 +2495,7 @@ class CLOOMCCompiler {
             const line = lines[i].trim();
             if (!line || line.startsWith('--') || line.startsWith('//') || line.startsWith(';')) { i++; continue; }
 
-            const absMatch = line.match(/^abstraction\s+(\w+)\s*\{/);
+            const absMatch = line.match(/^abstraction\s+(\w+)\s*\{/i);
             if (absMatch) {
                 result.name = absMatch[1];
                 hasAbstraction = true;
