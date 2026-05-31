@@ -23,19 +23,36 @@ function _annotateNsRefInCode(html) {
 }
 
 /**
- * HTML-escape raw assembly text, annotate NS[N] namespace references and
- * register tokens with hover tooltips.
+ * Syntax-highlight and annotate raw assembly / CLOOMC source text.
+ * Delegates to _highlightCLOOMCSource (app-lumps.js) for keyword, mnemonic,
+ * directive, comment, string, number, register, and label colouring.
+ * _highlightCLOOMCSource calls _annotateNsRefInCode internally, so NS[N]
+ * hover tooltips are preserved.  _wrapRegHover is applied afterwards to add
+ * CR/DR hover popups on top of the colour spans.
+ *
+ * @param {string} rawText  Raw source text (not HTML-escaped).
+ * @param {string} [language]  'assembly' enables mnemonic/label/directive
+ *     colours; any other value (or omitted) gives keyword/comment colouring
+ *     only.  Defaults to 'assembly'.
  * Used for <pre class="abs-method-panel-code"> blocks in the Abstraction view.
  */
-function _annotateAbsCodeHtml(rawText) {
+function _annotateAbsCodeHtml(rawText, language) {
     if (!rawText) return '';
-    let html = rawText
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-    // Annotate NS[N] references before wrapping registers
-    html = _annotateNsRefInCode(html);
-    // Wrap CRN / DRN tokens with hover spans (reuses cr-detail helpers)
+    let html;
+    if (typeof _highlightCLOOMCSource === 'function') {
+        html = _highlightCLOOMCSource(rawText, language || 'assembly');
+    } else {
+        // Fallback when app-lumps.js is not loaded
+        html = rawText
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        html = _annotateNsRefInCode(html);
+    }
+    // Wrap CRN / DRN tokens with hover spans (reuses cr-detail helpers).
+    // Safe to apply after highlight spans — the register text sits inside its
+    // lump-hl-register span and _wrapRegHover nests a cr/dr-hover-target span
+    // around it, giving both colour and interactive tooltip.
     if (typeof _wrapRegHover === 'function') html = _wrapRegHover(html);
     return html;
 }
@@ -640,7 +657,7 @@ function showAbstractionDetail(index) {
                         html += `<button class="btn btn-sm abs-method-history-restore" onclick="absRestoreMethodVersion(${uid},'${m.replace(/'/g,"\\'")}',${hi})" title="Load this version into the editor">Restore</button>`;
                         html += `</div>`;
                         if (hv.src) {
-                            html += `<details class="abs-method-history-src-details"><summary>Source</summary><pre class="abs-method-panel-code abs-method-history-pre">${hv.src.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre></details>`;
+                            html += `<details class="abs-method-history-src-details"><summary>Source</summary><pre class="abs-method-panel-code abs-method-history-pre">${_annotateAbsCodeHtml(hv.src, hv.lang)}</pre></details>`;
                         }
                     }
                     html += `</div></details>`;
