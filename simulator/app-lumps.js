@@ -90,7 +90,7 @@ function showLumpDetail(token) {
     }
     _tabBar += `<button class="lump-tab${isNamespace ? ' lump-tab-active' : ''}" onclick="_switchLumpTab('${_tk}','overview')">Overview</button>`;
     if (!isNamespace) {
-        _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','source')">Source</button>`;
+        _tabBar += `<button class="lump-tab${(lump.source || lump.source_hash) ? '' : ' lump-tab-dim'}" onclick="_switchLumpTab('${_tk}','source')" title="${(lump.source || lump.source_hash) ? 'View original CLOOMC++ source' : 'No compiled source stored \u2014 LUMP predates source persistence'}">Source</button>`;
         _tabBar += `<button class="lump-tab${!lump.forked ? ' lump-tab-active' : ''}" onclick="_switchLumpTab('${_tk}','content')">Content</button>`;
         _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','tokens')">Tokens</button>`;
         _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','versions')">Versions</button>`;
@@ -644,10 +644,10 @@ async function _checkLumpBinaryHealth(token, lump, tk) {
 let _lumpAutoAuditEnabled = true;
 
 const _lumpActiveTab      = {};
-const _lumpContentLoaded  = {};
-const _lumpHexLoaded      = {};
-const _lumpTokensLoaded   = {};
-const _lumpEditorOpen     = {};
+const _lumpContentLoaded      = {};
+const _lumpHexLoaded          = {};
+const _lumpTokensLoaded       = {};
+const _lumpEditorOpen         = {};
 const _lumpEditorDraftText = {};
 // Cache of binary-derived lump header info, keyed by token.
 // Populated by _patchCcFromBinary and reused by _renderLumpCodeContent / _loadLumpTokens.

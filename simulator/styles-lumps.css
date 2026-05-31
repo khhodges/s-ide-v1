@@ -1048,6 +1048,74 @@
     opacity: 0.8;
 }
 
+/* ── Dimmed tab (no source stored) ────────────────────── */
+.lump-tab.lump-tab-dim {
+    opacity: 0.45;
+    cursor: default;
+}
+.lump-tab.lump-tab-dim:hover {
+    color: var(--text-secondary);
+}
+
+/* ── Stored compiled CLOOMC++ source section ───────────── */
+.lump-stored-src-section {
+    border-bottom: 1px solid rgba(100, 160, 255, 0.12);
+    padding-bottom: 0.25rem;
+    margin-bottom: 0.1rem;
+}
+.lump-stored-src-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 1rem 0.35rem;
+}
+.lump-stored-src-title {
+    font-size: 0.73rem;
+    font-weight: 700;
+    color: var(--church-gold, #c8a84b);
+    letter-spacing: 0.3px;
+    flex: 1;
+}
+.lump-stored-src-lang {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: rgba(100, 160, 255, 0.10);
+    border-radius: 3px;
+    padding: 1px 6px;
+    text-transform: lowercase;
+    letter-spacing: 0.2px;
+}
+.lump-stored-src-pre {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.72rem;
+    line-height: 1.55;
+    color: #c8d4e8;
+    background: rgba(10, 14, 30, 0.55);
+    border: 1px solid rgba(100, 160, 255, 0.12);
+    border-radius: 4px;
+    margin: 0 1rem 0.75rem;
+    padding: 0.7rem 0.85rem;
+    overflow-x: auto;
+    white-space: pre;
+    tab-size: 4;
+    user-select: text;
+    cursor: text;
+}
+.lump-stored-src-empty {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem 0.75rem;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+.lump-stored-src-empty-icon {
+    font-style: normal;
+    opacity: 0.6;
+}
+
 /* ── LUMP code content viewer ──────────────────────────── */
 .lump-content-code {
     font-family: 'Courier New', monospace;
