@@ -1904,13 +1904,13 @@
     font-size: 0.82rem;
 }
 .lump-draft-restore-banner span { flex: 1; }
-/* ── Saved source block inside the Source tab ──────────── */
-.lump-saved-src-section {
+/* ── Stored source block inside the Source tab ──────────── */
+.lump-stored-src-section {
     border-bottom: 1px solid var(--border-color, #2a2a4a);
     padding-bottom: 0.75rem;
     margin-bottom: 0.75rem;
 }
-.lump-saved-src-pre {
+.lump-stored-src-pre {
     background: var(--editor-bg, #0d0d1a);
     color: var(--editor-fg, #c0c0d0);
     padding: 0.75rem 1rem;
@@ -1923,13 +1923,19 @@
     margin: 0.4rem 0 0;
     max-height: 60vh;
 }
-.lump-saved-src-meta {
+.lump-stored-src-meta {
     font-size: 0.65rem;
     font-weight: 400;
     color: var(--text-secondary);
     margin-left: 0.4rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+}
+.lump-stored-src-empty {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 0.5rem 0;
 }
 
 .lump-source-restored-banner {

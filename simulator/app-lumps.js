@@ -342,7 +342,7 @@ function showLumpDetail(token) {
         };
         let _srcHtml = `<div class="lump-tab-panel" id="lumpTabSource_${_tk}"><div class="lump-source-panel">`;
         // Placeholder filled lazily when the tab is clicked (see _switchLumpTab → source)
-        _srcHtml += `<div id="lumpSavedSrc_${_tk}" class="lump-saved-src-placeholder"></div>`;
+        _srcHtml += `<div id="lumpStoredSourceBody_${_tk}" class="lump-stored-src-placeholder"></div>`;
         if (_srcAbsIdx !== null && _srcMethods.length > 0) {
             const _umd = (typeof userMethodData !== 'undefined' && userMethodData) ? userMethodData : {};
             _srcMethods.forEach((mName, _mi) => {
@@ -1515,7 +1515,7 @@ async function _fetchAndShowLumpSavedSource(token, lump, tk) {
     const _tk = (tk || token || '').replace(/[^a-z0-9]/gi, '');
     if (_lumpSavedSrcLoaded[_tk]) return;
     _lumpSavedSrcLoaded[_tk] = true;
-    const el = document.getElementById(`lumpSavedSrc_${_tk}`);
+    const el = document.getElementById(`lumpStoredSourceBody_${_tk}`);
     if (!el) return;
     const e = _escHtml;
     try {
@@ -1533,14 +1533,15 @@ async function _fetchAndShowLumpSavedSource(token, lump, tk) {
                 })()
                 : null;
             el.innerHTML =
-                `<div class="lump-saved-src-section">` +
+                `<div class="lump-stored-src-section">` +
                 `<div class="lump-section-title">Saved Source ` +
-                `<span class="lump-saved-src-meta">${_lang}${_compiledAt ? ' \u00b7 compiled ' + _compiledAt : ''}</span>` +
+                `<span class="lump-stored-src-meta">${_lang}${_compiledAt ? ' \u00b7 compiled ' + _compiledAt : ''}</span>` +
                 `</div>` +
-                `<pre class="lump-saved-src-pre">${e(data.source)}</pre>` +
+                `<pre class="lump-stored-src-pre">${e(data.source)}</pre>` +
                 `</div>`;
+        } else {
+            el.innerHTML = `<div class="lump-stored-src-empty">No stored source.</div>`;
         }
-        // If no source field, leave el empty — no noise for older LUMPs
     } catch (_) {
         // Fail silently; Source tab still shows per-method breakdown below
     }
