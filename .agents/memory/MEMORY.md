@@ -1,2 +1,3 @@
 - [EFX_MAP $readmemb working directory](efx-map-readmemb.md) — symbol files must be in work_syn/ not project root or BRAM is silently zero-initialised
 - [Startup Wizard E2E setup](wizard-e2e-setup.md) — wizard is in #builder>#ti60ConnectPanel; needs switchView+switchBuilderViewTab; display:'' vs 'block' matters; use defer not async
+- [CLOOMC detection ordering](cloomc-detection-order.md) — _detectCLOOMC() matches keywords (abstraction, method, capabilities) that overlap all CLOOMC++ variants; must run AFTER specific detectors (Symbolic, Lambda, Haskell) or those languages break

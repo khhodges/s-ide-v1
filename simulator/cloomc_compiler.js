@@ -86,16 +86,16 @@ class CLOOMCCompiler {
             result = this.compilePetName(cleanSource, capabilities);
         } else if (this._detectEnglish(cleanSource)) {
             result = this.compileEnglish(cleanSource, capabilities);
+        } else if (this._detectSymbolic(cleanSource)) {
+            result = this.compileSymbolic(cleanSource, capabilities);
+        } else if (this._detectLambda(cleanSource)) {
+            result = this.compileLambda(cleanSource, capabilities);
+        } else if (this._detectHaskell(cleanSource)) {
+            result = this.compileHaskell(cleanSource, capabilities);
         } else if (this._detectCLOOMC(cleanSource)) {
             result = this.compileJS(cleanSource, capabilities);
         } else if (this._detectAssembly(cleanSource)) {
             result = this.compileAssembly(cleanSource, capabilities);
-        } else if (this._detectLambda(cleanSource)) {
-            result = this.compileLambda(cleanSource, capabilities);
-        } else if (this._detectSymbolic(cleanSource)) {
-            result = this.compileSymbolic(cleanSource, capabilities);
-        } else if (this._detectHaskell(cleanSource)) {
-            result = this.compileHaskell(cleanSource, capabilities);
         } else {
             result = this.compileJS(cleanSource, capabilities);
         }
