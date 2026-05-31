@@ -430,11 +430,18 @@ function updateCRDetail() {
                     ? 'BRANCH'
                     : `BRANCH<span class="cond-abbr" title="${_condAbbr}\u00A0\u2014\u00A0${_brCondLong[_condCode]}">${_condAbbr}</span>`;
                 const _labelName = _brLabelMap.get(_tgt);
+                const _disHl = (w2) => typeof _highlightCLOOMCSource === 'function'
+                    ? _highlightCLOOMCSource(asm.disassemble(w2), 'assembly')
+                    : asm.disassemble(w2);
                 decoded = _labelName !== undefined
                     ? _wrapRegHover(`${_mnemonicHtml}\u00A0\u00A0${_labelName}`)
-                    : _injectCondTooltip(_wrapRegHover(asm.disassemble(word)), _condCode);
+                    : _injectCondTooltip(_wrapRegHover(_disHl(word)), _condCode);
             } else {
-                decoded = _injectCondTooltip(_wrapRegHover(asm.disassemble(word)), (word >>> 23) & 0xF);
+                decoded = _injectCondTooltip(_wrapRegHover(
+                    typeof _highlightCLOOMCSource === 'function'
+                        ? _highlightCLOOMCSource(asm.disassemble(word), 'assembly')
+                        : asm.disassemble(word)
+                ), (word >>> 23) & 0xF);
             }
             if (_lumpClistBase > 0 && typeof _wrapCListHover === 'function') {
                 decoded = _wrapCListHover(decoded, _lumpClistBase, _lumpHdr.cc || 0);
@@ -2164,7 +2171,8 @@ function renderMemoryDump(location, limit, nsIndex) {
                 if (addr >= sim.memory.length) break;
                 const word = sim.memory[addr] || 0;
                 const hex = '0x' + (word >>> 0).toString(16).toUpperCase().padStart(8, '0');
-                let decoded = word === 0 ? '<span style="color:#666;">0 (empty)</span>' : asm.disassemble(word);
+                let decoded = word === 0 ? '<span style="color:#666;">0 (empty)</span>'
+                    : (typeof _highlightCLOOMCSource === 'function' ? _highlightCLOOMCSource(asm.disassemble(word), 'assembly') : asm.disassemble(word));
                 const addrHex = '0x' + addr.toString(16).toUpperCase().padStart(4, '0');
                 html += `<tr><td style="color:#666;">+${1 + i}</td><td>${addrHex}</td><td style="color:rgba(206,145,120,0.6);">${hex}</td><td>${decoded}</td></tr>`;
             }
@@ -2244,7 +2252,8 @@ function renderMemoryDump(location, limit, nsIndex) {
                     if (addr >= sim.memory.length) break;
                     const word = sim.memory[addr] || 0;
                     const hex = '0x' + (word >>> 0).toString(16).toUpperCase().padStart(8, '0');
-                    const decoded = word === 0 ? '<span style="color:#666;">0 (empty)</span>' : asm2.disassemble(word);
+                    const decoded = word === 0 ? '<span style="color:#666;">0 (empty)</span>'
+                        : (typeof _highlightCLOOMCSource === 'function' ? _highlightCLOOMCSource(asm2.disassemble(word), 'assembly') : asm2.disassemble(word));
                     const addrHex = '0x' + addr.toString(16).toUpperCase().padStart(4, '0');
                     html += `<tr><td style="color:#666;">+${i}</td><td>${addrHex}</td><td style="color:rgba(206,145,120,0.6);">${hex}</td><td>${decoded}</td></tr>`;
                 }
@@ -2270,7 +2279,8 @@ function renderMemoryDump(location, limit, nsIndex) {
                 const addr = location + i;
                 const word = sim.memory[addr] || 0;
                 const hex = '0x' + (word >>> 0).toString(16).toUpperCase().padStart(8, '0');
-                let decoded = word === 0 ? '<span style="color:#666;">0 (empty)</span>' : asm.disassemble(word);
+                let decoded = word === 0 ? '<span style="color:#666;">0 (empty)</span>'
+                    : (typeof _highlightCLOOMCSource === 'function' ? _highlightCLOOMCSource(asm.disassemble(word), 'assembly') : asm.disassemble(word));
                 const addrHex = '0x' + addr.toString(16).toUpperCase().padStart(4, '0');
                 html += `<tr><td style="color:#666;">+${i}</td><td>${addrHex}</td><td style="color:rgba(206,145,120,0.6);">${hex}</td><td>${decoded}</td></tr>`;
             }
