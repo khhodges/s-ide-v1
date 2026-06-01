@@ -84,13 +84,13 @@ function showLumpDetail(token) {
     // ── Single merged tab bar: Logic + CLOOMC + binary detail tabs ─────────────
     let _tabBar = `<div class="lump-tabs-bar" id="lumpTabBar_${_tk}">`;
     if (!isNamespace) {
-        _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','api')">API</button>`;
-        _tabBar += `<button class="lump-tab${lump.forked ? ' lump-tab-active' : ''}" id="lumpTabBtnClooms_${_tk}" onclick="_switchLumpTab('${_tk}','clooms')">CLOOMC<span class="lump-tab-fork-dot" id="lumpTabForkDot_${_tk}" style="display:${lump.forked ? 'inline' : 'none'}" title="Uncompiled — fork in progress"></span></button>`;
+        _tabBar += `<button class="lump-tab lump-tab-active" onclick="_switchLumpTab('${_tk}','api')">API</button>`;
+        _tabBar += `<button class="lump-tab" id="lumpTabBtnClooms_${_tk}" onclick="_switchLumpTab('${_tk}','clooms')">CLOOMC<span class="lump-tab-fork-dot" id="lumpTabForkDot_${_tk}" style="display:${lump.forked ? 'inline' : 'none'}" title="Uncompiled — fork in progress"></span></button>`;
     }
     _tabBar += `<button class="lump-tab${isNamespace ? ' lump-tab-active' : ''}" onclick="_switchLumpTab('${_tk}','overview')">Overview</button>`;
     if (!isNamespace) {
         _tabBar += `<button class="lump-tab${(lump.source || lump.source_hash) ? '' : ' lump-tab-dim'}" onclick="_switchLumpTab('${_tk}','source')" title="${(lump.source || lump.source_hash) ? 'View original CLOOMC++ source' : 'No compiled source stored \u2014 LUMP predates source persistence'}">Source</button>`;
-        _tabBar += `<button class="lump-tab${!lump.forked ? ' lump-tab-active' : ''}" onclick="_switchLumpTab('${_tk}','content')">Content</button>`;
+        _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','content')">Content</button>`;
         _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','tokens')">Tokens</button>`;
         _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','versions')">Versions</button>`;
         _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','history')">History</button>`;
@@ -98,8 +98,8 @@ function showLumpDetail(token) {
     _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','hexdump')">Hex Dump</button></div>`;
 
     let html = _headerStrip + _tabBar +
-        `<div class="lump-tab-panel" id="lumpTabApi_${_tk}"></div>` +
-        `<div class="lump-tab-panel${lump.forked && !isNamespace ? ' lump-tab-panel-active' : ''}" id="lumpTabClooms_${_tk}"></div>` +
+        `<div class="lump-tab-panel${!isNamespace ? ' lump-tab-panel-active' : ''}" id="lumpTabApi_${_tk}"></div>` +
+        `<div class="lump-tab-panel" id="lumpTabClooms_${_tk}"></div>` +
         `<div class="lump-tab-panel${isNamespace ? ' lump-tab-panel-active' : ''}" id="lumpTabOverview_${_tk}"><div class="lump-detail-sections">`;
 
     const e = _escHtml;
