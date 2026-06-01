@@ -67,10 +67,10 @@ Bits 31:27 are always `11111` (opcode 0x1F — an invalid instruction), so the h
 | typ   | 9:8   | Object type (see §3). |
 | cc    | 7:0   | **C-List count.** Number of GT rows at the lump's tail (0–255). |
 
-The hardware Church Instructions Call/Return/Change all derive two root Capability Registers from these fields dynamically at run time:
+On every `CALL`, the hardware derives two root Capability Registers from the lump header fields:
 
-- **CR6** (C-List Root): `base = NS_base + (lump_size − cc) × 4`, `limit = cc − 1` and register permission code E (enter).
-- **CR14** (Code Root): `base = NS_base + 4`, `limit = cw − 1`and register permission code X (execute).
+- **CR6** (C-List Root): Word 0 retains the caller's E-type GT unchanged. Words 1–3 are set to `base = NS_base + (lump_size − cc) × 4`, `limit = cc − 1`, covering the physical C-List window. Used by `LOAD`, `SAVE`, and `ELOADCALL`.
+- **CR14** (Code Root): Built fresh with **R+X** (Turing domain) permissions. `base = NS_base + 4`, `limit = cw − 1`, covering the code section. Used by `BRANCH` and in-lump `CALL` targets.
 
 ---
 
