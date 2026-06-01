@@ -3921,6 +3921,7 @@ _load_bundled_lumps()
 # standalone .lump file.  Extract it at startup so the Lump Repository can show it.
 
 _BOOT_ABSTR_META = {}   # populated by _load_boot_abstr_lump(); empty means not found
+_BOOT_NS_META    = {}   # populated by _load_boot_ns_lump();    empty means not found
 
 def _load_boot_abstr_lump():
     """Parse boot-image.bin, extract Boot.Abstr (NS slot 3) and cache in LAZY_LUMPS.
@@ -4038,6 +4039,100 @@ def _load_boot_abstr_lump():
         print(f'[boot] Failed to extract Boot.Abstr lump: {exc}', flush=True)
 
 _load_boot_abstr_lump()
+
+
+def _load_boot_ns_lump():
+    """Parse boot-image.bin, extract Boot.NS (NS slot 0) metadata and cache in _BOOT_NS_META.
+
+    Boot.NS (typ=1, Namespace LUMP) lives at word[0] of the image.  We extract its
+    header and walk the NS table to build the namespace_meta.entries array that the
+    Lump Repository panel uses to render the SVG dependency graph and NS Table view.
+    """
+    boot_path = os.path.join(os.path.dirname(__file__), 'lumps', 'boot-image.bin')
+    if not os.path.isfile(boot_path):
+        return
+    try:
+        with open(boot_path, 'rb') as fh:
+            raw = fh.read()
+        n_words = len(raw) // 4
+        if n_words < 1024:
+            return
+        mem = list(_struct.unpack(f'<{n_words}I', raw[:n_words * 4]))
+        _NS_ENTRY_WORDS = _boot_image_gen.NS_ENTRY_WORDS
+
+        # Read the boot config to get the correct nsSlotsMax (same logic as
+        # namespace_lump_json).  Fall back to MAX_NS_ENTRIES so we always find
+        # the NS table even when the config is unavailable.
+        _cfg_ns, _err_ns = _read_saved_boot_config()
+        _step1_ns = (_cfg_ns or {}).get("step1", {})
+        _ns_slots_max = int(_step1_ns.get("nsSlotsMax") or _boot_image_gen.MAX_NS_ENTRIES)
+        _ns_table_reserve = _boot_image_gen.ns_table_reserve_words(_ns_slots_max)
+        ns_table_base = n_words - _ns_table_reserve
+
+        hdr = mem[0]
+        if ((hdr >> 27) & 0x1F) != 0x1F:
+            return
+        n_minus_6 = (hdr >> 23) & 0xF
+        cw        = (hdr >> 10) & 0x1FFF
+        cc        = hdr & 0xFF
+        lump_size = 1 << (n_minus_6 + 6)
+
+        catalog    = _boot_image_gen.DEFAULT_ABSTRACTION_CATALOG
+        slot_count = max(cc, len(catalog))
+        entries    = []
+        for i in range(min(slot_count, _ns_table_reserve // _NS_ENTRY_WORDS)):
+            ns_base = ns_table_base + i * _NS_ENTRY_WORDS
+            if ns_base + _NS_ENTRY_WORDS > n_words:
+                break
+            w0, w1, w2, w3 = mem[ns_base], mem[ns_base+1], mem[ns_base+2], mem[ns_base+3]
+            is_null = (w0 == 0 and w1 == 0 and w2 == 0 and w3 == 0)
+
+            label = ""
+            if i < len(catalog):
+                cat_e = catalog[i]
+                if cat_e is not None:
+                    label = cat_e[0] if isinstance(cat_e, tuple) else (cat_e.get("label") or "")
+            if not label:
+                label = "" if is_null else f"slot{i}"
+
+            if is_null:
+                entries.append({"slot": i, "label": label, "state": "null"})
+            else:
+                entries.append({"slot": i, "label": label, "state": "bundled",
+                                 "file": "boot-image.bin"})
+
+        _BOOT_NS_META.update({
+            "token":       "00000000",
+            "abstraction": "Boot.NS",
+            "ns_slot":     0,
+            "lump_size":   lump_size,
+            "cw":          cw,
+            "cc":          cc,
+            "typ":         1,
+            "lump_type":   "namespace",
+            "language":    "namespace",
+            "description": (
+                "Boot Namespace LUMP (Boot.NS) — NS slot 0.  The physical namespace "
+                "memory block.  Its tail contains the NS table (4 words × slot count).  "
+                "All abstractions are addressed via GTs rooted here."
+            ),
+            "methods": [],
+            "namespace_meta": {
+                "app_id":         "Boot.NS",
+                "base":           "0x00000000",
+                "n":              n_minus_6 + 6,
+                "cc":             cc,
+                "ns_table_start": ns_table_base,
+                "entries":        entries,
+            },
+        })
+        print(f'[boot] Boot.NS extracted: {lump_size}w, cw={cw}, cc={cc}, '
+              f'{len(entries)} NS table entries', flush=True)
+    except Exception as exc:
+        print(f'[boot] Failed to extract Boot.NS lump: {exc}', flush=True)
+
+
+_load_boot_ns_lump()
 
 # ── Mum Tunnel Library fallback ─────────────────────────────────────────────────
 def _fetch_lump_from_library(token_hex):
@@ -4518,6 +4613,7 @@ def save_lump():
                 boot_refreshed = True
                 print(f'[lumps] boot-image.bin regenerated ({len(blob_bi)} bytes)', flush=True)
                 _load_boot_abstr_lump()   # refresh _BOOT_ABSTR_META / LAZY_LUMPS['00000003']
+                _load_boot_ns_lump()      # refresh _BOOT_NS_META from updated boot-image.bin
             else:
                 boot_refresh_note = f'boot config unavailable: {err_bi}'
         except Exception as _bie:
@@ -4577,20 +4673,22 @@ def list_lumps():
                 pass
         result.append(entry)
 
-    # Prepend the Boot Abstraction (NS slot 3, "LED flash") as a synthetic entry
-    # extracted live from boot-image.bin.  Any manifest entry with token "00000300"
-    # (written by /api/lumps/save when POLA/compress edits Boot.Abstr) would
-    # duplicate it, so filter those out first.
+    # Prepend system LUMPs extracted live from boot-image.bin.
+    # Boot.NS (slot 0, typ=1) comes first so it heads the list; Boot.Abstr (slot 3)
+    # follows immediately after.  Filter any stale manifest duplicates first.
     if _BOOT_ABSTR_META:
         result = [e for e in result if e.get('token') not in ('00000300', '00000003')]
         result = [dict(_BOOT_ABSTR_META)] + result
+    if _BOOT_NS_META:
+        result = [e for e in result if e.get('token') != '00000000']
+        result = [dict(_BOOT_NS_META)] + result
 
     # Add binary_valid: True when the .lump binary has a valid header magic
-    # (bits [31:27] of word 0 == 0x1F).  Boot.Abstr (token "00000003") is
-    # always valid — it is the live in-memory copy from boot-image.bin.
+    # (bits [31:27] of word 0 == 0x1F).  Boot.Abstr and Boot.NS are always
+    # valid — they are live in-memory copies from boot-image.bin.
     for _e in result:
         _tk = _e.get('token', '')
-        if _tk == '00000003':
+        if _tk in ('00000003', '00000000'):
             _e['binary_valid'] = True
         elif _tk:
             _lp = os.path.join(lumps_dir, f'{_tk}.lump')
@@ -5406,8 +5504,9 @@ def resize_lump(token_hex):
         with open(boot_path, 'wb') as fh:
             fh.write(new_bytes)
 
-        # Refresh LAZY_LUMPS and _BOOT_ABSTR_META from the updated file
+        # Refresh LAZY_LUMPS and _BOOT_ABSTR_META / _BOOT_NS_META from the updated file
         _load_boot_abstr_lump()
+        _load_boot_ns_lump()
 
         # Sanity check: validate the updated image
         try:
