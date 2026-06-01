@@ -72,10 +72,16 @@
         @keyframes app-pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
         @keyframes app-slide { 0%{transform:translateX(-200%)} 100%{transform:translateX(450%)} }
         /* hamburger mega-menu — inline to bypass CSS file cache */
-        #hamDropdown { display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:9999; background:var(--bg-panel,#12121f); border:1px solid var(--border,#2a2a4a); border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,0.5); padding:0.35rem 0; grid-template-columns:repeat(6,max-content); max-height:calc(100vh - 60px); overflow-y:auto; }
+        #hamDropdown { display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:9999; background:var(--bg-panel,#12121f); border:1px solid var(--border,#2a2a4a); border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,0.5); padding:0.35rem 0; grid-template-columns:repeat(4,max-content); max-height:calc(100vh - 60px); overflow-y:auto; }
         #hamDropdown.ham-open { display:grid !important; }
         .ham-group { display:flex; flex-direction:column; border-right:1px solid var(--border,#2a2a4a); padding:0.2rem 0; }
         .ham-group:last-child { border-right:none; }
+        #ham-grp-develop  { grid-column:1; grid-row:2; }
+        #ham-grp-review   { grid-column:2; grid-row:2/span 2; }
+        #ham-grp-hardware { grid-column:3; grid-row:2/span 2; }
+        #ham-grp-configure { grid-column:4; grid-row:2; border-right:none; }
+        #ham-grp-inspect  { grid-column:1; grid-row:3; }
+        #ham-grp-install  { grid-column:4; grid-row:3; border-right:none; }
         .ham-item { width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:space-between; gap:0.75rem; }
         .ham-kbd { font-family:'Courier New',monospace; font-size:0.62rem; color:#555577; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:3px; padding:1px 4px; letter-spacing:0.2px; flex-shrink:0; }
         .ham-bolt-row { grid-column:1/-1; padding:0.35rem 0.75rem 0.3rem; border-bottom:1px solid var(--border,#2a2a4a); display:flex; align-items:center; gap:0.5rem; }
@@ -119,7 +125,7 @@
                                 <span class="ham-bolt-hint">Drag to set default page</span>
                                 <button id="hamDefaultClear" class="ham-bolt-clear" style="display:none;" onclick="_clearDefaultView()" data-tooltip="Remove default page — next load will resume the last visited page">✕ clear default</button>
                             </div>
-                            <div class="ham-group">
+                            <div class="ham-group" id="ham-grp-develop">
                                 <div class="ham-group-title" title="Click to open" onclick="showHamCtxMenu(event,'develop','Open Programs')">Develop</div>
                                 <button class="ham-item" id="hamItem-editor" onclick="switchView('editor');closeHamburger()">Programs</button>
                                 <button class="ham-item" id="hamItem-repl" onclick="switchView('repl');closeHamburger()">Math<kbd class="ham-kbd">C+M</kbd></button>
@@ -128,7 +134,7 @@
                                 <button class="ham-item" id="hamItem-abstraction" onclick="window.location='/start?abstraction=1';closeHamburger()" data-tooltip="Abstraction — Open the Create Abstraction planning form (Lesson 5) and restore any saved draft">&#x03BB; Abstraction</button>
                                 <button class="ham-item" id="hamItem-resume-draft" style="display:none;color:#daa520;" onclick="window.location='/start';closeHamburger()" data-tooltip="Resume Draft — Return to your Lesson 5 abstraction draft">&#x270F;&#xFE0F; Resume Draft</button>
                             </div>
-                            <div class="ham-group">
+                            <div class="ham-group" id="ham-grp-inspect">
                                 <div class="ham-group-title" title="Click to open" onclick="showHamCtxMenu(event,'test','Open Inspect Panel')">Inspect</div>
                                 <button class="ham-item" id="hamItem-dashboard" onclick="openSimulatorFromMenu()">Cap Registers<kbd class="ham-kbd">C+D</kbd></button>
                                 <button class="ham-item" id="hamItem-dashboard-dr" onclick="switchView('dashboard');switchDashTab('dr');closeHamburger()">Data Registers</button>
@@ -138,7 +144,7 @@
                                 <button class="ham-item" id="hamItem-gc" onclick="switchView('gc');closeHamburger()">GC<kbd class="ham-kbd">C+G</kbd></button>
                                 <button class="ham-item" id="hamItem-gt-view" onclick="switchView('gt-view');closeHamburger()">GT Inspector</button>
                             </div>
-                            <div class="ham-group">
+                            <div class="ham-group" id="ham-grp-review">
                                 <div class="ham-group-title" title="Click to open" onclick="showHamCtxMenu(event,'review','Open Logic Catalog')">Review</div>
                                 <button class="ham-item" id="hamItem-abstractions" onclick="switchView('abstractions');closeHamburger()">Logic Catalog<kbd class="ham-kbd">C+A</kbd></button>
                                 <button class="ham-item" id="hamItem-source-library" onclick="switchView('abstractions');switchAbsSubtab('sources');closeHamburger()">Source Library<kbd class="ham-kbd">C+⇧+L</kbd></button>
@@ -152,7 +158,7 @@
                                 <button class="ham-item" id="hamItem-docs-api" onclick="openDocAnchor('api-reference.md');closeHamburger()">API Reference</button>
                                 <button class="ham-item" id="hamItem-sitemap" onclick="switchView('sitemap');closeHamburger()">Site Map</button>
                             </div>
-                            <div class="ham-group">
+                            <div class="ham-group" id="ham-grp-hardware">
                                 <div class="ham-group-title" title="Click to open" onclick="switchView('memory');closeHamburger()" oncontextmenu="showHamCtxMenu(event,'hardware','Open Memory Dump')">Hardware</div>
                                 <button class="ham-item" id="fpgaConnBtn" onclick="fpgaConnectToggle()" data-tooltip="FPGA — Click to connect or reconnect hardware via WebSerial">FPGA</button>
                                 <button class="ham-item" id="fpgaBridgeBtn" onclick="fpgaBridgeConnect()" data-tooltip="FPGA Bridge — Connect via local bridge script (use this on ChromeOS)">Bridge</button>
@@ -163,13 +169,13 @@
                                 <button class="ham-item" id="hamItem-hw-tang20k-iot" onclick="setSelectedBoard('tang-nano-20k-iot');switchView('builder');closeHamburger()">Tang Nano 20K</button>
                                 <button class="ham-item" id="hamItem-memory" onclick="switchView('memory');closeHamburger()">Memory Dump</button>
                             </div>
-                            <div class="ham-group">
+                            <div class="ham-group" id="ham-grp-configure">
                                 <div class="ham-group-title" title="Click to open" onclick="showHamCtxMenu(event,'configure','Open Devices')">Configure</div>
                                 <button class="ham-item" id="hamItem-devices" onclick="switchView('devices');switchDevicesTab('devices');closeHamburger()">Devices<kbd class="ham-kbd">C+V</kbd></button>
                                 <button class="ham-item" id="hamItem-launch" onclick="switchView('devices');switchDevicesTab('launch');closeHamburger()">Launch Readiness</button>
                                 <button class="ham-item" id="hamItem-github" onclick="switchView('github');closeHamburger()">GitHub</button>
                             </div>
-                            <div class="ham-group">
+                            <div class="ham-group" id="ham-grp-install">
                                 <div class="ham-group-title" title="Click to open" onclick="showHamCtxMenu(event,'install','Open Builder')">Install</div>
                                 <button class="ham-item" id="hamItem-builder" onclick="switchView('builder');closeHamburger()">Builder<kbd class="ham-kbd">C+B</kbd></button>
                                 <button class="ham-item" id="hamItem-lumps" onclick="switchView('lumps');closeHamburger()">LUMP<kbd class="ham-kbd">C+L</kbd></button>
