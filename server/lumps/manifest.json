@@ -2073,51 +2073,51 @@
   {
     "token": "97cc8047",
     "abstraction": "Human_Hand",
-    "filename": "Human_Hand_v4.lump",
-    "sidecar_file": "Human_Hand_v4.json",
+    "filename": "Human_Hand_v5.lump",
+    "sidecar_file": "Human_Hand_v5.json",
     "ns_slot": null,
     "lump_size": 64,
     "cw": 12,
     "cc": 1,
     "author": "",
     "version": "2026.05.31",
-    "lump_version": 4,
-    "compiled_at": 1780255669.036714,
+    "lump_version": 5,
+    "compiled_at": 1780317678.392944,
     "methods": [
       {
+        "length": 2,
         "name": "Status",
-        "offset": 0,
-        "length": 2
+        "offset": 0
       },
       {
+        "aliasOf": "Status",
+        "length": 2,
         "name": "Close_Fist",
-        "offset": 2,
-        "length": 2,
-        "aliasOf": "Status"
+        "offset": 2
       },
       {
+        "aliasOf": "Status",
+        "length": 2,
         "name": "Open_Hand",
-        "offset": 4,
-        "length": 2,
-        "aliasOf": "Status"
+        "offset": 4
       },
       {
+        "aliasOf": "Status",
+        "length": 2,
         "name": "Grip",
-        "offset": 6,
-        "length": 2,
-        "aliasOf": "Status"
+        "offset": 6
       },
       {
+        "aliasOf": "Status",
+        "length": 2,
         "name": "Point",
-        "offset": 8,
-        "length": 2,
-        "aliasOf": "Status"
+        "offset": 8
       },
       {
-        "name": "Count",
-        "offset": 10,
+        "aliasOf": "Status",
         "length": 2,
-        "aliasOf": "Status"
+        "name": "Count",
+        "offset": 10
       }
     ],
     "grants": [

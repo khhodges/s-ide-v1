@@ -1959,6 +1959,7 @@ async function _restoreLumpFromHistory(token, version) {
             mtbf_total_runs: (wordsData.mtbf || {}).total_runs        || 0,
             mtbf_status:     (wordsData.mtbf || {}).status            || 'unknown',
             source_hash:     wordsData.source_hash   || (lump?.mtbf || {}).source_hash || '',
+            source:          wordsData.source        || '',
         };
 
         const saveResp = await fetch('/api/lumps/save', {

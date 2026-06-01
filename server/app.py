@@ -4941,6 +4941,7 @@ def get_lump_version_words(token, version):
         "mtbf":          sc.get('mtbf', {}),
         "deployment":    sc.get('deployment', {}),
         "source_hash":   sc.get('mtbf', {}).get('source_hash', ''),
+        "source":        sc.get('source', ''),
     })
 
 
