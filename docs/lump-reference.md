@@ -11,7 +11,7 @@
 3. [Object Types (`typ`)](#3-object-types-typ)
 4. [Golden Token & Context Register Structure](#4-golden-token--context-register-structure)
 5. [Permission Bits](#5-permission-bits)
-6. [Sidecar JSON — Complete Field Reference](#6-sidecar-json--complete-field-reference)
+6. [Sidecar JSON — Relationship, Definition, and Field Reference](#6-sidecar-json--relationship-definition-and-field-reference)
 7. [Manifest Entry Fields](#7-manifest-entry-fields)
 8. [NS Slot Policy & Variant Groups](#8-ns-slot-policy--variant-groups)
 9. [IDE Views](#9-ide-views)
@@ -76,14 +76,14 @@ The hardware Church Instructions Call/Return/Change all derive two root Capabili
 
 ## 3. Object Types (`typ`)
 
-There are exactly **three** LUMP types (per `docs/cloomc-foundation.md`). The `typ` bit-pattern `11` is undefined — Outform is a **GT type and NS slot state**, not a LUMP binary type. There is no physical Outform LUMP; the slot is simply absent and the Locator fetches the real LUMP on demand.
+There are exactly **three** valid LUMP types (per `docs/cloomc-foundation.md`). `typ=11` is undefined — Outform is a **GT type and NS slot state**, not a LUMP binary type (see §4 and §8).
 
-| `typ` | Name              | Description |
-|:------|:------------------|:------------|
-| `00`  | Abstraction       | Executable CLOOMC code body — instructions, freespace, and a GT C-List tail. |
-| `01`  | Namespace         | Namespace configuration object. Encodes `totalNamespaceWords` (the board's physical memory envelope). *(Reserved — not user-authored.)* |
-| `10`  | Thread            | Execution context: PC, register file, call stack. Encodes stack/heap sizing. |
-| `11`  | *(undefined)*     | Not a valid LUMP type. Outform is a GT type (`gt_type` bits 24:23 of GT Word 0) and NS slot state — see §4. |
+| `typ` | Name          | Description |
+|:------|:--------------|:------------|
+| `00`  | Abstraction   | Executable CLOOMC code body — instructions, freespace, and a GT C-List tail. |
+| `01`  | Namespace     | Namespace configuration object. Encodes `totalNamespaceWords` (the board's physical memory envelope). *(Reserved — not user-authored.)* |
+| `10`  | Thread        | Execution context: PC, register file, call stack. Encodes stack/heap sizing. |
+| `11`  | *(undefined)* | Not a valid LUMP type. Do not use. |
 
 The `content_type` sidecar field further sub-classifies `typ=00` Abstraction lumps into `"text"`, `"markdown"`, `"image"`, `"grayscale"`, etc. The `lump_type` sidecar field carries the semantic label (e.g. `"application_namespace"` for Namespace lumps).
 
@@ -138,9 +138,69 @@ Permissions divide strictly into two non-overlapping groups. A single capability
 
 ---
 
-## 6. Sidecar JSON — Complete Field Reference
+## 6. Sidecar JSON — Relationship, Definition, and Field Reference
 
-Every LUMP has a companion `.json` sidecar in `server/lumps/`. The sidecar is the authoritative metadata record; the binary header only encodes `cw`, `cc`, `lump_size`, and `typ`.
+### 6.0 What a Sidecar Is and Why It Exists
+
+A **sidecar** is a JSON file that lives alongside every LUMP binary and carries all the metadata that cannot fit inside the binary itself.
+
+The LUMP header word is exactly 32 bits. It encodes only four structural numbers:
+
+| Header field | Bits  | What it carries |
+|:-------------|:------|:----------------|
+| `magic`      | 31:27 | Trap guard — always `0x1F` |
+| `n-6`        | 26:23 | Size exponent (derives `lump_size`) |
+| `cw`         | 22:10 | Code word count |
+| `typ`        | 9:8   | Object type (Abstraction / Namespace / Thread) |
+| `cc`         | 7:0   | C-List row count |
+
+Everything else — the abstraction name, method descriptions, C-List row names, pet-name register aliases, authorship, version history, source code, reliability telemetry, hardware deployment profile — lives in the sidecar.
+
+### 6.0.1 File Naming and Location
+
+Both files share the same 8-hex-digit token as their base name:
+
+```
+server/lumps/<token>.lump    — the binary (power-of-two 32-bit words)
+server/lumps/<token>.json    — the sidecar (all metadata)
+```
+
+A third file, `server/lumps/manifest.json`, is a JSON array that contains one lean entry per LUMP (the sidecar minus the `source` field). The three together are called the **three-file set** — a LUMP is incomplete without all three.
+
+### 6.0.2 Trust Hierarchy
+
+The binary header is **ground truth** for the four structural fields. The sidecar must agree with the binary on `cw`, `cc`, and `lump_size`; if they disagree the consistency gate (rule RMC) blocks the merge. Everything beyond those three numbers is owned entirely by the sidecar.
+
+```
+Binary header  →  authoritative for: cw, cc, lump_size, typ
+Sidecar        →  extends the binary; must agree on cw/cc/lump_size
+Manifest       →  lean projection of the sidecar (no source field)
+               →  authoritative list for /api/lumps/list and boot builder
+```
+
+### 6.0.3 Lifecycle
+
+Sidecars are **never written by hand**. They are produced and maintained by:
+
+| Operation | How the sidecar changes |
+|:----------|:------------------------|
+| `POST /api/lumps/save` | Creates or replaces the sidecar from `metadata` in the request body; bumps `lump_version`. |
+| `PATCH /api/lump/<token>/meta` | Updates selected fields in-place (author, version, pet_names, etc.). |
+| `POST /api/lump/<token>/fork-version` | Archives the old binary as `<token>-vN.lump`; writes a fresh sidecar for the promoted version. |
+| `DELETE /api/lumps/<token>` | Removes both the binary and the sidecar (and the manifest entry). |
+
+The consistency gate (`tests/lump/test_lump_consistency.py`) validates every sidecar before merge: it checks that `cw`, `cc`, and `lump_size` in the sidecar exactly match the binary header (rule RMC), that no manifest entry is missing its sidecar or binary (rules R3, R4), and eight further structural rules (see §11).
+
+### 6.0.4 Relationship to the Manifest
+
+`server/lumps/manifest.json` is a cached, source-stripped projection of all sidecars, kept in sync by the save/delete API. It serves two purposes:
+
+1. **Fast listing** — `/api/lumps/list` serves the manifest directly; callers never need to read individual sidecar files.
+2. **Boot-image building** — the boot-image builder reads `boot_resident: true` entries from the manifest to assemble the initial NS image.
+
+The `source` field is the only sidecar field intentionally excluded from the manifest; full source is available via `/api/lumps/<token>/detail`.
+
+---
 
 ### 6.1 Top-Level Fields
 
@@ -158,8 +218,8 @@ Every LUMP has a companion `.json` sidecar in `server/lumps/`. The sidecar is th
 | `dw` | `integer` | — | Data word count embedded inside the code section. |
 | `data_offset` | `integer` | — | Word index (relative to lump base) of the first data word. |
 | `data_word_names` | `string[]` | — | Human names for each data word in order. |
-| `typ` | `integer` | — | Header `typ` field: 0=code, 1=data, 2=thread, 3=outform. |
-| `content_type` | `string` | — | Semantic refinement of `typ=1`: `"text"`, `"markdown"`, `"image"`, `"grayscale"`, `"code"`, etc. |
+| `typ` | `integer` | — | Header `typ` field: 0=Abstraction, 1=Namespace, 2=Thread. 3 is undefined (see §3). |
+| `content_type` | `string` | — | Semantic sub-classification of `typ=0` Abstraction lumps: `"text"`, `"markdown"`, `"image"`, `"grayscale"`, `"code"`, etc. |
 | `lump_type` | `string` | — | Alternative type label used by some import flows. |
 | `profile` | `string` | — | Target hardware profile (e.g. `"IoT"`, `"ti60-f225"`). |
 | `language` | `string` | — | Source language: `"cloomc"`, `"assembly"`, `"haskell"`, `"lambda"`, `"unknown"`. |
