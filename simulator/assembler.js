@@ -1917,14 +1917,14 @@ class ChurchAssembler {
         }
 
         // Lump header: magic=0x1F in top 5 bits — format: magic(5)|n_minus_6(4)|cw(13)|typ(2)|cc(8)
-        // typ: 00=abstraction, 01=namespace, 10=thread, 11=outform
+        // typ: 00=abstraction, 01=namespace, 10=thread, 11=undefined (Outform is a GT/NS-slot state, not a LUMP type)
         if (opcode === 0x1F) {
             const n_minus_6 = (word >>> 23) & 0xF;
             const cw        = (word >>> 10) & 0x1FFF;
             const typ       = (word >>>  8) & 0x3;
             const cc        = word & 0xFF;
             const lumpSize  = 1 << (n_minus_6 + 6);
-            const typNames  = ['lump', 'namespace', 'thread', 'outform'];
+            const typNames  = ['lump', 'namespace', 'thread', '?'];
             return `.header ${typNames[typ]||'?'} n-6=${n_minus_6}\u2192${lumpSize}w cw=${cw} cc=${cc}`;
         }
 
