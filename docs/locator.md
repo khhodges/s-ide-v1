@@ -30,8 +30,8 @@ without pre-loading them all.
 | Term | Definition |
 |------|------------|
 | **Outform GT** | A c-list slot Word 0 with `typ=10`. Signals that the lump is registered but not yet resident. The `object_id` field identifies which NS slot holds the recovery token. |
-| **Outform NS slot** | The three NS words for the object hold a **96-bit opaque IDE token** (Words 1–3). Hardware passes this token to the Locator when the Absent event fires. |
-| **Live NS slot** | The three NS words hold the real lump descriptor: `base` (Word 1), `gt_seq + limit_offset` (Word 2), `CRC-16` (Word 3). `LOAD` succeeds against a Live slot. |
+| **Outform NS slot** | Each NS slot is 4 words. Words 1–3 hold a **96-bit opaque IDE token**; Word 0 carries the Outform GT type. Hardware passes this token to the Locator when the Absent event fires. |
+| **Live NS slot** | Each NS slot is 4 words. Word 0 is the live GT; Words 1–3 hold the real lump descriptor: `base` (Word 1), `gt_seq + limit_offset` (Word 2), `CRC-16` (Word 3). `LOAD` succeeds against a Live slot. |
 | **Locator** | A ROM-resident or namespace-installed lump invoked as a secure `CALL`. It owns the fetch-inflate-validate sequence and holds `NetworkIO`, `Mint`, and `NamespaceWrite` capabilities in its c-list. |
 | **IDE token** | The 96-bit value stored in the Outform NS slot (Words 1–3). Opaque to hardware; interpreted by the Locator to identify and authenticate the lump source. |
 | **Absent event** | The hardware condition raised when `LOAD` encounters an Outform GT. Invokes the Locator as a subroutine; does not suspend the thread. |
