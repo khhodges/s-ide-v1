@@ -369,7 +369,7 @@ Shows identity and authorship metadata.
 - **MTBF Reliability** — status badge, consecutive-clean count, total runs
 - **Deployment** — target board, profile, builder, build timestamp
 
-**For the Namespace LUMP (Boot.Abstr):**
+**For the Namespace LUMP (Boot.NS, slot 0, `typ=1`):**
 - SVG dependency graph of the namespace hierarchy
 - NS Table: slot index, label, state, and hash/file for each resident abstraction
 
