@@ -492,6 +492,46 @@
             transition: border-color 0.15s, color 0.15s;
         }
         .s-btn-add-method:hover { border-color: var(--gold-dim); color: var(--gold); }
+        /* ── Lesson 5: LUMP import picker ── */
+        .s-lump-import-section {
+            padding: 0.55rem 0.7rem 0.6rem;
+            background: rgba(218,165,32,0.04);
+            border: 1px solid rgba(218,165,32,0.2);
+            border-radius: var(--radius);
+        }
+        .s-opt-label {
+            font-size: 0.65rem;
+            font-weight: 400;
+            color: var(--text-dim);
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .s-lump-import-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-top: 0.35rem;
+        }
+        .s-lump-select {
+            flex: 1;
+            min-width: 0;
+        }
+        .s-btn-import-lump {
+            flex-shrink: 0;
+            background: rgba(218,165,32,0.12);
+            border: 1px solid var(--gold-dim);
+            border-radius: var(--radius);
+            color: var(--gold);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 0.38rem 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+        .s-btn-import-lump:hover:not(:disabled) { background: rgba(218,165,32,0.25); }
+        .s-btn-import-lump:disabled { opacity: 0.35; cursor: default; }
         .s-lesson5-actions {
             display: flex;
             justify-content: flex-end;
@@ -674,6 +714,15 @@
 
             <!-- ── Lesson 5: Create Abstraction — planning form ── -->
             <div id="lesson5Form" class="hidden s-lesson5-form">
+                <div class="s-lump-import-section">
+                    <div class="s-form-section-title">0 &middot; Start from an existing abstraction <span class="s-opt-label">(optional)</span></div>
+                    <div class="s-lump-import-row">
+                        <select id="l5LumpSelect" class="s-form-input s-lump-select" disabled onchange="document.getElementById('l5ImportBtn').disabled = !this.value">
+                            <option value="">— loading abstractions&hellip; —</option>
+                        </select>
+                        <button class="s-btn-import-lump" id="l5ImportBtn" onclick="starterImportLump()" disabled>Import &darr;</button>
+                    </div>
+                </div>
                 <div>
                     <div class="s-form-section-title">1 &middot; Your Idea</div>
                     <label class="s-form-label">What is the name of your abstraction?</label>
@@ -758,7 +807,7 @@
 <script src="simulator.js?v=20260521c"></script>
 <script src="assembler.js?v=20260521a"></script>
 <script src="cloomc_compiler.js?v=20260527q"></script>
-<script src="starter-app.js?v=20260531e"></script>
+<script src="starter-app.js?v=20260601a"></script>
 
 </body>
 </html>

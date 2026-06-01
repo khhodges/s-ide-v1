@@ -205,6 +205,8 @@ function starterNext() {
         if (ann) ann.innerHTML = 'Fill in the details, then click <strong>Save Draft</strong>. When ready, click <strong>Code Edit \u2192</strong> to open the editor with your framework.';
         _setOutput('<span class="out-dim">Plan your abstraction above. Click <strong style="color:#daa520">Save Draft</strong> to save your plan, then <strong style="color:#daa520">Code Edit \u2192</strong> when you\'re ready to start coding \u2014 the editor will open with your framework pre-filled.</span>');
         _lessonPhase = 5;
+        // Load LUMP catalog into the "start from existing" picker
+        _loadLumpCatalog();
         // Restore any saved draft first; if nothing saved, add the first blank row
         var restored = _restoreL5Draft();
         if (!restored && _methodCount === 0) starterAddMethod();
@@ -466,6 +468,110 @@ function _registerDump() {
     }
     out += '</span>\n';
     return out;
+}
+
+// ── Lesson 5: LUMP catalog loader ────────────────────────────────────────────
+
+var _l5LumpCatalog = null;  // cached list from /api/lumps
+
+function _loadLumpCatalog() {
+    var sel = _el('l5LumpSelect');
+    var btn = _el('l5ImportBtn');
+    if (!sel) return;
+    fetch('/api/lumps/list')
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function(lumps) {
+            _l5LumpCatalog = Array.isArray(lumps) ? lumps : (lumps.lumps || []);
+            sel.innerHTML = '<option value="">\u2014 pick an abstraction to start from \u2014</option>';
+            _l5LumpCatalog.forEach(function(l, i) {
+                if (!l.abstraction) return;
+                var mc = l.methods && l.methods.length ? l.methods.length : 0;
+                var opt = document.createElement('option');
+                opt.value = String(i);
+                opt.textContent = l.abstraction +
+                    (mc ? ' (' + mc + ' method' + (mc !== 1 ? 's' : '') + ')' : '') +
+                    (l.language ? ' \u2014 ' + l.language : '');
+                sel.appendChild(opt);
+            });
+            sel.disabled = false;
+        })
+        .catch(function() {
+            sel.innerHTML = '<option value="">\u2014 could not load abstractions \u2014</option>';
+        });
+}
+
+function starterImportLump() {
+    var sel = _el('l5LumpSelect');
+    var btn = _el('l5ImportBtn');
+    if (!sel || !sel.value || !_l5LumpCatalog) return;
+    var lump = _l5LumpCatalog[parseInt(sel.value, 10)];
+    if (!lump) return;
+
+    // Name
+    var nameEl = _el('absName');
+    if (nameEl) nameEl.value = lump.abstraction || '';
+
+    // Description
+    var descEl = _el('absDesc');
+    if (descEl) {
+        var desc = lump.description || '';
+        if (!desc && lump.methods && lump.methods.length) {
+            // Build a one-liner from method names as fallback
+            var names = lump.methods.map(function(m) { return m.name; }).filter(Boolean);
+            if (names.length) desc = 'Provides: ' + names.join(', ');
+        }
+        descEl.value = desc;
+    }
+
+    // Methods
+    var ml = _el('methodList');
+    if (ml && lump.methods && lump.methods.length) {
+        ml.innerHTML = '';
+        _methodCount = 0;
+        lump.methods.forEach(function(m) {
+            if (m.aliasOf) return;  // skip aliases — they share a body
+            starterAddMethod();
+            var row = ml.lastElementChild;
+            if (!row) return;
+            row.querySelector('.s-method-name').value = m.name || '';
+            var d = m.description || '';
+            if (!d && m.inputs && m.inputs.length)  d = 'in: '  + m.inputs.join(', ');
+            if (!d && m.outputs && m.outputs.length) d = 'out: ' + m.outputs.join(', ');
+            row.querySelector('.s-method-desc').value = d;
+            // Deps: extract unique abstraction names from lump-level capabilities,
+            // skipping self-references (caps whose prefix matches this lump's name).
+            var deps = '';
+            if (lump.capabilities && lump.capabilities.length) {
+                var selfLower = (lump.abstraction || '').toLowerCase();
+                var depSet = [];
+                lump.capabilities.forEach(function(c) {
+                    var capName = (typeof c === 'string') ? c : (c.name || '');
+                    var prefix = capName.split('.')[0];
+                    if (prefix && prefix.toLowerCase() !== selfLower && depSet.indexOf(prefix) === -1) {
+                        depSet.push(prefix);
+                    }
+                });
+                deps = depSet.join(', ');
+            }
+            row.querySelector('.s-method-deps').value = deps;
+        });
+    } else if (ml && _methodCount === 0) {
+        starterAddMethod();
+    }
+
+    _saveL5Draft();
+
+    // Flash button confirmation
+    if (btn) {
+        var orig = btn.textContent;
+        btn.textContent = '\u2713 Imported';
+        btn.style.color = '#5de28a';
+        setTimeout(function() { btn.textContent = orig; btn.style.color = ''; }, 1600);
+    }
+
+    // Scroll to name field and focus it
+    var nEl = _el('absName');
+    if (nEl) { nEl.focus(); nEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 }
 
 // ── Lesson 5 helpers ─────────────────────────────────────────────────────────
