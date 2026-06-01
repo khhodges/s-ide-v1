@@ -15,6 +15,7 @@
  *   RB2 — 1 + cw + cc <= lump_size (bounds)
  *   RFS — all words in the freespace zone are zero
  *   RMC — if a manifest is supplied, its cw / cc / lump_size agree with the binary header
+ *   RSM — no stub methods (bare RETURN with no real code body — compiler error)
  */
 
 function lumpAudit(words, manifest, lineNums) {
@@ -452,6 +453,83 @@ function lumpAudit(words, manifest, lineNums) {
                     detail: `All ${cc} capability slot${cc !== 1 ? 's' : ''} named: ${nameList} \u2713`,
                 });
             }
+        }
+    }
+
+    // ── RSM — Return Stub Method ──────────────────────────────────────────────
+    // Detects methods whose entire body is a bare RETURN with no real code.
+    // This is a compiler error: the method declaration was emitted but the body
+    // is missing, producing a "RETURN followed by RETURN" pattern in the binary.
+    //
+    // Two detection modes:
+    //   1. Manifest-guided  — uses manifest.methods[].offset to delineate ranges
+    //   2. Binary-only      — scans for consecutive RETURNs (only zeros between)
+    if (actualWords === lumpSize && contentWords <= lumpSize && cw >= 1) {
+        const _RETURN_OP = 3;
+        const _rsmStubs = [];  // { name?, wordIndex }
+
+        if (manifest && Array.isArray(manifest.methods) && manifest.methods.length > 0) {
+            // Manifest-guided: use explicit method offsets to scan each method's range.
+            const _rsmMethods = manifest.methods
+                .filter(m => !m.aliasOf && typeof m.offset === 'number')
+                .sort((a, b) => a.offset - b.offset);
+            for (let _mi = 0; _mi < _rsmMethods.length; _mi++) {
+                const _mStart = 1 + _rsmMethods[_mi].offset;  // word index in binary
+                const _mEnd   = _mi + 1 < _rsmMethods.length
+                    ? 1 + _rsmMethods[_mi + 1].offset
+                    : 1 + cw;
+                let _hasReal   = false;
+                let _hasReturn = false;
+                for (let _j = _mStart; _j < _mEnd && _j < actualWords; _j++) {
+                    const _jw  = words[_j] >>> 0;
+                    if (_jw === 0) continue;
+                    const _jop = (_jw >>> 27) & 0x1F;
+                    if (_jop === _RETURN_OP) { _hasReturn = true; continue; }
+                    _hasReal = true;
+                    break;
+                }
+                if (!_hasReal && _hasReturn) {
+                    _rsmStubs.push({ name: _rsmMethods[_mi].name, wordIndex: _mStart });
+                }
+            }
+        } else {
+            // Binary-only: two RETURNs separated only by zero/padding words signal
+            // an empty method body between them.
+            let _lastReturnIdx = -1;
+            for (let _wi = 1; _wi <= cw && _wi < actualWords; _wi++) {
+                const _wv  = words[_wi] >>> 0;
+                if (_wv === 0) continue;                          // padding — skip
+                const _wop = (_wv >>> 27) & 0x1F;
+                if (_wop === _RETURN_OP) {
+                    if (_lastReturnIdx >= 0) {
+                        // Previous RETURN seen and nothing real between them → stub
+                        _rsmStubs.push({ wordIndex: _wi });
+                    }
+                    _lastReturnIdx = _wi;
+                } else {
+                    _lastReturnIdx = -1;  // real instruction resets the chain
+                }
+            }
+        }
+
+        if (_rsmStubs.length === 0) {
+            results.push({
+                ruleId: 'RSM',
+                severity: 'pass',
+                message: 'No stub methods \u2014 all methods contain real code \u2713',
+                detail: 'All method bodies contain at least one instruction beyond RETURN \u2713',
+            });
+        } else {
+            const _n = _rsmStubs.length;
+            const _stubNames = _rsmStubs
+                .map(s => s.name ? `\u201c${s.name}\u201d` : `word\u202f${s.wordIndex}`)
+                .join(', ');
+            results.push({
+                ruleId: 'RSM',
+                severity: 'error',
+                message: `Stub method${_n !== 1 ? 's' : ''} \u2014 ${_n} method${_n !== 1 ? 's' : ''} ha${_n !== 1 ? 've' : 's'} no code body (bare RETURN).`,
+                detail: `Compiler error: ${_stubNames} ${_n !== 1 ? 'are' : 'is a'} bare RETURN stub${_n !== 1 ? 's' : ''} with no code body. Re-compile the abstraction to fix the missing method implementation.`,
+            });
         }
     }
 
