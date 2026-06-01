@@ -79,8 +79,8 @@ The hardware Church Instructions Call/Return/Change all derive two root Capabili
 | `typ` | Name         | Description |
 |:------|:-------------|:------------|
 | `00`  | Code / Lump  | Standard executable abstraction. |
-| `01`  | Namespace    | Opaque data block (image, text, binary blob). No instructions. |
-| `10`  | Thread       | Captured thread state (PC + 16 DRs + call stack). |
+| `01`  | Namespace    | Opaque namespace block (Slot Table, no instructions. |
+| `10`  | Thread       | Captured thread state (PC + 16 DR/CRs + call stack). |
 | `11`  | Outform      | Placeholder. Triggers an "Absent" event on first `LOAD`; the loader fetches the real lump from the Home Base. |
 
 The `content_type` field in the sidecar further refines `typ=01` into `"text"`, `"markdown"`, `"image"`, `"grayscale"`, etc.
