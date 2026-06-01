@@ -209,8 +209,8 @@ The `source` field is the only sidecar field intentionally excluded from the man
 | `token` | `string` | ✓ | 8-character hex token (e.g. `"00001200"`). Primary identity. |
 | `abstraction` | `string` | ✓ | Human-readable name (e.g. `"Constants"`, `"SlideRule"`). |
 | `lump_version` | `integer` | ✓ | Monotonically incrementing compile counter. Bumped by `/api/lumps/save`. |
-| `ns_slot` | `integer\|null` | ✓ | Fixed Namespace slot, or `null` for floating lumps (see §8). |
-| `ns_slot_policy` | `string` | — | `"static"` (fixed slot) \| `"dynamic"` (floating). Absent = static. |
+| `ns_slot` | `integer\|null` | ✓ | Assigned Namespace slot for Resident and Lazy-load LUMPs, or `null` for Dynamic LUMPs (see §8). |
+| `ns_slot_policy` | `string` | — | `"static"` (assigned slot — Resident or Lazy-load) \| `"dynamic"` (top free slot on demand). Absent = `"static"`. |
 | `variant_group` | `string` | — | Shared string that allows multiple lumps to claim the same `ns_slot` (see §8). |
 | `lump_size` | `integer` | ✓ | Total word count. Must equal `2^(n-6+6)` and match header. |
 | `cw` | `integer` | ✓ | Code word count. Must match header bits 22:10. |
@@ -324,12 +324,15 @@ server/lumps/manifest.json    — contains this entry
 
 ## 8. NS Slot Policy & Variant Groups
 
-### `ns_slot_policy`
+### NS slot assignment — three categories
 
-| Value | Behaviour |
-|:------|:----------|
-| `"static"` (default) | The LUMP is always loaded into the specific `ns_slot`. Required for lumps on the cold-boot critical path. |
-| `"dynamic"` | **Floating lump.** `ns_slot` is `null`. Mint allocates an ephemeral slot on first use via the Loader/Tunnel fetch path. The slot may change between reboots; callers hold a GT, not a slot index. Correct default for any abstraction not needed at boot. |
+Only **Resident** and **Lazy-load** LUMPs have an assigned slot in the Namespace table. All other LUMPs receive the top free slot case-by-case on demand and have no fixed position.
+
+| Category | `ns_slot` | `boot_resident` | `ns_slot_policy` | Behaviour |
+|:---------|:----------|:----------------|:-----------------|:----------|
+| **Resident** | integer | `true` | `"static"` | Slot is part of the boot image. Present in the NS table from power-on. |
+| **Lazy-load** | integer | `false` / absent | `"static"` | Slot is reserved but the LUMP is not in the boot image. Loaded into that specific slot on first demand (via Loader/Tunnel). |
+| **Dynamic** | `null` | — | `"dynamic"` | No assigned slot. The runtime allocates the next free slot from the top of the NS table at the moment of first use. Slot number may differ between reboots; callers hold a GT, not a slot index. Correct default for any abstraction not on the cold-boot critical path. |
 
 ### `variant_group`
 
@@ -348,7 +351,7 @@ Always visible. Shows:
 | Element | Description |
 |:--------|:------------|
 | Token | 8-hex token, copyable. |
-| NS Slot | Fixed slot number, or `—` for floating lumps. |
+| NS Slot | Assigned slot number (Resident or Lazy-load), or `—` for Dynamic LUMPs. |
 | Version | `lump_version` integer. |
 | Size | `lump_size` in words. |
 | CW / CC | Code word count / C-List count. |

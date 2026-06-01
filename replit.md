@@ -102,13 +102,23 @@ variant_group uniqueness, and ns_slot_policy.
 python -m pytest tests/lump/test_lump_consistency.py -v
 ```
 
-### Floating Lump Pattern
+### NS Slot Assignment — Three Categories
 
-A **floating lump** sets `ns_slot: null` and `ns_slot_policy: "dynamic"` in
-manifest.json. Mint allocates an ephemeral NS slot on first use via the
-Loader/Tunnel fetch path. The slot number may change between runs but is
-invisible to callers (who hold a GT, not a slot index). Floating is the correct
-default for any abstraction not on the cold-boot critical path.
+Only **Resident** and **Lazy-load** LUMPs have an assigned slot in the
+Namespace table. All other LUMPs take the next free slot from the top of the NS
+table case-by-case on demand.
+
+| Category | `ns_slot` | `boot_resident` | `ns_slot_policy` |
+|:---------|:----------|:----------------|:-----------------|
+| **Resident** | integer | `true` | `"static"` |
+| **Lazy-load** | integer | `false`/absent | `"static"` |
+| **Dynamic** | `null` | — | `"dynamic"` |
+
+A **Dynamic lump** sets `ns_slot: null` and `ns_slot_policy: "dynamic"`.
+The runtime allocates the next free slot at first use; the slot may change
+between reboots, but callers hold a GT (not a slot index) so it is invisible
+to them. Dynamic is the correct default for any abstraction not on the
+cold-boot critical path.
 
 Canonical example: WordString (ab1e86af).
 
