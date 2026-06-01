@@ -84,7 +84,6 @@ function showLumpDetail(token) {
     // ── Single merged tab bar: Logic + CLOOMC + binary detail tabs ─────────────
     let _tabBar = `<div class="lump-tabs-bar" id="lumpTabBar_${_tk}">`;
     if (!isNamespace) {
-        _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','logic')">Logic</button>`;
         _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','api')">API</button>`;
         _tabBar += `<button class="lump-tab${lump.forked ? ' lump-tab-active' : ''}" id="lumpTabBtnClooms_${_tk}" onclick="_switchLumpTab('${_tk}','clooms')">CLOOMC<span class="lump-tab-fork-dot" id="lumpTabForkDot_${_tk}" style="display:${lump.forked ? 'inline' : 'none'}" title="Uncompiled — fork in progress"></span></button>`;
     }
@@ -99,7 +98,6 @@ function showLumpDetail(token) {
     _tabBar += `<button class="lump-tab" onclick="_switchLumpTab('${_tk}','hexdump')">Hex Dump</button></div>`;
 
     let html = _headerStrip + _tabBar +
-        `<div class="lump-tab-panel" id="lumpTabLogic_${_tk}"></div>` +
         `<div class="lump-tab-panel" id="lumpTabApi_${_tk}"></div>` +
         `<div class="lump-tab-panel${lump.forked && !isNamespace ? ' lump-tab-panel-active' : ''}" id="lumpTabClooms_${_tk}"></div>` +
         `<div class="lump-tab-panel${isNamespace ? ' lump-tab-panel-active' : ''}" id="lumpTabOverview_${_tk}"><div class="lump-detail-sections">`;
@@ -1510,7 +1508,6 @@ const _lumpHistoryLoaded  = {};
 function _switchLumpTab(tk, tab) {
     _lumpActiveTab[tk] = tab;
     const tabMap = {
-        logic: `lumpTabLogic_${tk}`,
         api: `lumpTabApi_${tk}`,
         clooms: `lumpTabClooms_${tk}`,
         overview: `lumpTabOverview_${tk}`,
@@ -1529,15 +1526,12 @@ function _switchLumpTab(tk, tab) {
     if (bar) {
         const btns = bar.querySelectorAll('.lump-tab');
         btns.forEach(btn => {
-            const labelMap = { logic: 'Logic', api: 'API', clooms: 'CLOOMC', overview: 'Overview', source: 'Source', content: 'Content', tokens: 'Tokens', versions: 'Versions', history: 'History', hexdump: 'Hex Dump' };
+            const labelMap = { api: 'API', clooms: 'CLOOMC', overview: 'Overview', source: 'Source', content: 'Content', tokens: 'Tokens', versions: 'Versions', history: 'History', hexdump: 'Hex Dump' };
             btn.classList.toggle('lump-tab-active', btn.textContent.trim() === labelMap[tab]);
         });
     }
     const lump = _lumpsCache.find(l => (l.token || '').replace(/[^a-z0-9]/gi, '') === tk);
     const token = lump ? lump.token : tk;
-    if (tab === 'logic' && lump) {
-        _populateLumpLogicTab(lump, `lumpTabLogic_${tk}`);
-    }
     if (tab === 'api' && lump) {
         _populateLumpApiTab(lump, `lumpTabApi_${tk}`);
     }
