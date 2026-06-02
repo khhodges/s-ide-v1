@@ -21,31 +21,26 @@
       "offset": 0
     },
     {
-      "aliasOf": "Status",
       "length": 2,
       "name": "Close_Fist",
       "offset": 2
     },
     {
-      "aliasOf": "Status",
       "length": 2,
       "name": "Open_Hand",
       "offset": 4
     },
     {
-      "aliasOf": "Status",
       "length": 2,
       "name": "Grip",
       "offset": 6
     },
     {
-      "aliasOf": "Status",
       "length": 2,
       "name": "Point",
       "offset": 8
     },
     {
-      "aliasOf": "Status",
       "length": 2,
       "name": "Count",
       "offset": 10

@@ -23,32 +23,27 @@
     {
       "name": "Close_Fist",
       "offset": 2,
-      "length": 2,
-      "aliasOf": "Status"
+      "length": 2
     },
     {
       "name": "Open_Hand",
       "offset": 4,
-      "length": 2,
-      "aliasOf": "Status"
+      "length": 2
     },
     {
       "name": "Grip",
       "offset": 6,
-      "length": 2,
-      "aliasOf": "Status"
+      "length": 2
     },
     {
       "name": "Point",
       "offset": 8,
-      "length": 2,
-      "aliasOf": "Status"
+      "length": 2
     },
     {
       "name": "Count",
       "offset": 10,
-      "length": 2,
-      "aliasOf": "Status"
+      "length": 2
     }
   ],
   "capabilities": [
