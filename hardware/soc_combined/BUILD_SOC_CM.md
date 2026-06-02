@@ -195,15 +195,30 @@ Both paths produce the same `outflow/church_soc_cm.bit` and `outflow/church_soc_
 ### Step 8 — Generate the SPI flash hex (efx_pgm)
 
 ```bash
-cd hardware/soc_combined
-~/efinity/2025.2/bin/efx_pgm --project-xml church_soc_cm.xml 2>&1 | tail -5
-ls -lh outflow/church_soc_cm.hex outflow/church_soc_cm.bit
-# Timestamps must be NEWER than the P&R run above
+cd ~/church_project/SoC
+export EFINITY_HOME=~/efinity/2026.1
+source $EFINITY_HOME/bin/setup.sh 2>/dev/null
+
+$EFINITY_HOME/bin/efx_pgm \
+    --source       work_pnr/church_soc_cm.lbf \
+    --family       Titanium \
+    --device       Ti60F225 \
+    --mode         active \
+    --width        1 \
+    --enable_roms  smart \
+    --spi_low_power_mode  on \
+    --io_weak_pullup      on \
+    --oscillator_clock_divider DIV8 \
+    --bitstream_compression   on \
+    2>&1 | tail -10
+
+ls -lh outflow/church_soc_cm.hex
+# Timestamp must be NEWER than the P&R run above
 ```
 
-> **Note:** The flag is `--project-xml`, NOT `--project`.
-> There is no `work_pgm/run_efx_pgm.sh` in this project — call efx_pgm directly.
-> P&R does **not** generate the hex; efx_pgm does.
+> **Note (Efinity 2026.1):** Must pass `--family Titanium` explicitly — the tool does NOT read family from the project XML or `--device` alone. Omitting it gives `ERROR: Unknown device family ""`.
+> The input is the `.lbf` written by `efx_pnr` to `work_pnr/`; output `.hex` goes to `outflow/`.
+> Or use the companion script: `bash hardware/soc_combined/run_efx_pgm.sh`
 
 ---
 
@@ -234,14 +249,12 @@ python3 scripts/patch_sapphire_init.py \                  # Step 4 — MUST NOT 
   hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin \
   hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin \
   hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin
-bash hardware/soc_combined/work_syn/run_efx_map.sh        # Step 6  (~10-15 min)
-bash hardware/soc_combined/work_pnr/run_efx_pnr.sh        # Step 7  (~5-10 min)
-cd hardware/soc_combined && \
-  ~/efinity/2025.2/bin/efx_pgm --project-xml church_soc_cm.xml  # Step 8  (~2 min)
-cd ~/church-machine && \
-  sudo ~/oss-cad-suite/bin/openFPGALoader \
+bash hardware/soc_combined/run_efx_map.sh                  # Step 6  (~4 min)
+bash hardware/soc_combined/run_efx_pnr.sh                  # Step 7  (~5 min)
+bash hardware/soc_combined/run_efx_pgm.sh                  # Step 8  (~30 s)
+sudo ~/oss-cad-suite/bin/openFPGALoader \
     -b titanium_ti60_f225_jtag \
-    -f hardware/soc_combined/outflow/church_soc_cm.hex     # Step 9a
+    -f ~/church_project/SoC/outflow/church_soc_cm.hex      # Step 9a
 python3 scripts/test_ti60_uart.py \
   --port=/dev/ttyUSB2 --timeout=30 --verbose               # Step 9b
 ```
@@ -333,12 +346,23 @@ Check in order:
    Both ports should show 0x00 glitch bytes on open; ttyUSB2 should have actual
    ASCII text once the SoC firmware boots.
 
-### `efx_pgm` fails with "unrecognised option"
+### `efx_pgm` fails with `ERROR: Unknown device family ""`
 
-Use `--project-xml`, not `--project`:
+**Efinity 2026.1 does not read family from the project XML or `--device` alone.**  
+Always pass `--family Titanium` explicitly:
+
 ```bash
-~/efinity/2025.2/bin/efx_pgm --project-xml church_soc_cm.xml
+cd ~/church_project/SoC
+export EFINITY_HOME=~/efinity/2026.1
+$EFINITY_HOME/bin/efx_pgm \
+    --source work_pnr/church_soc_cm.lbf \
+    --family Titanium --device Ti60F225 \
+    --mode active --width 1 --enable_roms smart \
+    --spi_low_power_mode on --io_weak_pullup on \
+    --oscillator_clock_divider DIV8 --bitstream_compression on
 ```
+
+Or simply: `bash hardware/soc_combined/run_efx_pgm.sh`
 
 ### patch_sapphire_init.py prints `ERROR: no pattern found`
 
@@ -404,14 +428,12 @@ python3 scripts/patch_sapphire_init.py \                  # Step 4 — MUST NOT 
   hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol1.bin \
   hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol2.bin \
   hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol3.bin
-bash hardware/soc_combined/work_syn/run_efx_map.sh        # Step 6
-bash hardware/soc_combined/work_pnr/run_efx_pnr.sh        # Step 7
-cd hardware/soc_combined && \
-  ~/efinity/2025.2/bin/efx_pgm --project-xml church_soc_cm.xml  # Step 8
-cd ~/church-machine && \
-  sudo ~/oss-cad-suite/bin/openFPGALoader \
+bash hardware/soc_combined/run_efx_map.sh                  # Step 6
+bash hardware/soc_combined/run_efx_pnr.sh                  # Step 7
+bash hardware/soc_combined/run_efx_pgm.sh                  # Step 8
+sudo ~/oss-cad-suite/bin/openFPGALoader \
     -b titanium_ti60_f225_jtag \
-    -f hardware/soc_combined/outflow/church_soc_cm.hex     # Step 9
+    -f ~/church_project/SoC/outflow/church_soc_cm.hex      # Step 9
 ```
 
 After a successful flash the stream panel should show:

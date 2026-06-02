@@ -41,3 +41,29 @@ $EFINITY_HOME/bin/efx_pnr \
 - Bitstream (.lbf) written to work_pnr/; convert to .hex with efx_pgm
 
 **Why:** Efinix 2026.1 changed VDB semantics vs 2025.2; these lessons were learned through >10 crash/fix cycles on a live Chromebook Penguin system.
+
+# efx_pgm (2026.1) — Generate SPI flash hex
+
+## Required flags
+```bash
+$EFINITY_HOME/bin/efx_pgm \
+    --source       work_pnr/church_soc_cm.lbf \
+    --family       Titanium \
+    --device       Ti60F225 \
+    --mode         active \
+    --width        1 \
+    --enable_roms  smart \
+    --spi_low_power_mode  on \
+    --io_weak_pullup      on \
+    --oscillator_clock_divider DIV8 \
+    --bitstream_compression   on
+```
+
+## Key gotcha
+`--family Titanium` is REQUIRED. Without it: `ERROR: Unknown device family ""`.
+The tool does NOT read family from the project XML or from `--device` alone.
+Same pattern as efx_pnr — every Efinix 2026.1 CLI tool needs `--family` explicit.
+
+Output: `outflow/church_soc_cm.hex`
+Companion script: `hardware/soc_combined/run_efx_pgm.sh`
+Download from IDE server: `wget .../dl/pgm-sh`
