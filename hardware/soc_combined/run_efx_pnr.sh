@@ -25,7 +25,7 @@ PROJECT="${1:-$SOC_DIR/church_soc_cm.xml}"
 CIRCUIT="church_soc_cm"
 FAMILY="Titanium"
 DEVICE="Ti60F225"
-OPCOND="C4"
+OPCOND="C3"
 
 echo "==> Place & Route $PROJECT with EFX_PNR..."
 echo "    EFX_PNR:  $EFX_PNR"
@@ -47,7 +47,7 @@ cd "$SOC_DIR"
     --device         "$DEVICE" \
     --operating_conditions "$OPCOND" \
     --pack --place --route \
-    --vdb_file       "outflow/${CIRCUIT}.vdb" \
+    --vdb_file       "work_syn/${CIRCUIT}.vdb" \
     --use_vdb_file   "on" \
     --place_file     "outflow/${CIRCUIT}.place" \
     --route_file     "outflow/${CIRCUIT}.troutingtraces" \
