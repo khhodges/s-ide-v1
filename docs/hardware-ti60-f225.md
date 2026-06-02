@@ -45,7 +45,7 @@ Efinity crashes on startup under Crostini due to GPU/OpenGL unavailability.
 Launch with X11 platform forced and software rendering:
 
 ```bash
-QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 /home/$USER/efinity/2025.2/bin/efinity &
+QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 /home/$USER/efinity/2026.1/bin/efinity &
 ```
 
 Create a permanent launcher so you never have to remember the flags:
@@ -53,7 +53,7 @@ Create a permanent launcher so you never have to remember the flags:
 ```bash
 cat > ~/efinity.sh << 'EOF'
 #!/bin/bash
-QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 /home/$USER/efinity/2025.2/bin/efinity "$@"
+QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 /home/$USER/efinity/2026.1/bin/efinity "$@"
 EOF
 chmod +x ~/efinity.sh
 ```
@@ -126,7 +126,7 @@ The generator pipeline is:
    built-in multiplier primitives.
 
 The output Verilog contains **zero `\$macc` instantiations** and imports
-cleanly into Efinity 2025.2.
+cleanly into Efinity 2026.1.
 
 Quick module-load check:
 ```bash
