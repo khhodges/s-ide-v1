@@ -1117,9 +1117,16 @@ Then in Chrome:
    (on native Linux: `https://localhost:8766/status`)
 
 > **Efinity on Crostini:** if Efinity IDE crashes on startup, launch it with
-> `QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 ~/efinity/2025.2/bin/efinity &`
+> `QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 ~/efinity/2026.1/bin/efinity &`
 > — this forces X11 + software rendering, which is required in the ChromeOS
 > Linux container. See `docs/hardware-ti60-f225.md` for a permanent launcher script.
+>
+> **Efinity GUI on Chromebook Penguin (Debian container):** the GUI splash
+> screen crashes immediately — this is a known Qt/X11 limitation of the Penguin
+> container and is not supported by Efinix. Use headless CLI tools only
+> (`efx_map`, `efx_pnr`, `efx_pgm`) — synthesis and programming work correctly
+> without the GUI. Upgrade to Efinity v2026.1 full release (do not apply
+> 2025.2 patches on top of 2025.2 base) to avoid the EFX_PNR SIGSEGV crash.
 2. Hard refresh the IDE (Ctrl+Shift+R)
 3. Click **Bridge** in the toolbar, accept the default URL
 4. Use **Patch FPGA** instead of Export Patch — it sends code directly

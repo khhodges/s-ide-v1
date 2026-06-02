@@ -39,10 +39,22 @@ production synthesis on EFT90A silicon.
    efinity --version
    ```
 
-#### ChromeOS / Crostini (Linux container on Chromebook)
+#### ChromeOS / Crostini / Penguin (Linux container on Chromebook)
 
-Efinity crashes on startup under Crostini due to GPU/OpenGL unavailability.
-Launch with X11 platform forced and software rendering:
+> **Known issue — GUI not supported on Chromebook Penguin (Debian container):**
+> The Efinity GUI splash screen crashes immediately even with the xcb workaround
+> below. This affects Efinity 2025.2 (confirmed) and may persist in 2026.1.
+> **Use headless CLI tools only** (`efx_map`, `efx_pnr`, `efx_pgm`) — synthesis
+> and programming work correctly without the GUI.
+>
+> **Separate known issue — EFX_PNR SIGSEGV with 2025.2 patch:**
+> Applying patch `2025.2.288.4.15` on top of base `2025.2.288.2.10` causes
+> EFX_PNR to crash with `Unsupported value for family=` + SIGSEGV on every
+> P&R run. Upgrade to **Efinity v2026.1 full release** — do not layer patches
+> on the 2025.2 base. See the Troubleshooting table below.
+
+If you want to try the GUI anyway (may work on some Crostini configurations
+with v2026.1), launch with X11 platform forced and software rendering:
 
 ```bash
 QT_QPA_PLATFORM=xcb LIBGL_ALWAYS_SOFTWARE=1 /home/$USER/efinity/2026.1/bin/efinity &
@@ -483,5 +495,7 @@ Available peripheral candidates for future integration:
 | UART outputs nothing | TX/RX swapped, or wrong baud | Verify `uart_tx`/`uart_rx` pins in constraint file; confirm 115200 |
 | LEDs don't respond post-boot | DWRITE offset wrong | Confirm offset 0–3 for Ti60; offset 4 has no physical pin |
 | Button read always 0 | Debounce sync | Hold button down; the register is level (not pulse) |
+| EFX_PNR crashes: `Unsupported value for family=` + SIGSEGV | Patch `2025.2.288.4.15` applied over base `2025.2.288.2.10` — incompatible combination | Upgrade to Efinity v2026.1 full release. Do **not** layer a `2025.2` patch on a `2025.2` base — they are not compatible. Synthesis (`efx_map`) succeeds but PNR hard-crashes at launch. |
+| Efinity GUI splash crashes immediately on Chromebook Penguin | Qt/X11 not supported in the Penguin Debian container | Use headless CLI only: `efx_map` (synthesis), `efx_pnr` (place & route), `efx_pgm` (programming). The GUI is not supported on Penguin — this is confirmed by Efinix. `LIBGL_ALWAYS_SOFTWARE=1` works in Crostini but not Penguin. |
 ---
 *Confidential — Kenneth Hamer-Hodges — April 2026*

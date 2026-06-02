@@ -34,7 +34,7 @@ The script edits map.v in-place and prints a summary.  Then run P&R as normal.
 AFTER THIS SCRIPT
 -----------------
     bash hardware/soc_combined/work_pnr/run_efx_pnr.sh
-    ~/efinity/2025.2/bin/efx_pgm --project church_soc_cm --device Ti60F225 \\
+    ~/efinity/2026.1/bin/efx_pgm --project church_soc_cm --device Ti60F225 \\
         --family Titanium --active --bit_width 1 --spi_low_power_mode on \\
         --io_weak_pullup on --oscillator_clock_divider DIV8 --enable_roms smart
     sudo ~/oss-cad-suite/bin/openFPGALoader -b titanium_ti60_f225_jtag \\
@@ -263,7 +263,7 @@ def main():
     print(
         "\nNext steps:\n"
         "  bash hardware/soc_combined/work_pnr/run_efx_pnr.sh\n"
-        "  ~/efinity/2025.2/bin/efx_pgm --project church_soc_cm "
+        "  ~/efinity/2026.1/bin/efx_pgm --project church_soc_cm "
         "--device Ti60F225 --family Titanium --active --bit_width 1 "
         "--spi_low_power_mode on --io_weak_pullup on "
         "--oscillator_clock_divider DIV8 --enable_roms smart\n"
