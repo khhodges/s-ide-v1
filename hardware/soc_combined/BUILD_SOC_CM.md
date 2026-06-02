@@ -340,6 +340,21 @@ Check in order:
    Both ports should show 0x00 glitch bytes on open; ttyUSB2 should have actual
    ASCII text once the SoC firmware boots.
 
+### Interface Designer fails: `ERROR encountered running Interface Designer`
+
+The peri.xml is in the wrong format. Efinity 2026.1 Interface Designer requires:
+- All 12 IO banks declared (`1A`–`4B` plus `BL`/`BR`/`TL`/`TR`) — missing banks → silent failure
+- `version="2025.2.288.4.15"` and `db_version="20252999"` (not the old `20241999` format)
+
+The Replit `hardware/soc_combined/church_soc_cm.peri.xml` is already corrected. If the file on the Penguin is stale, re-download it:
+
+```bash
+wget -O ~/church_project/SoC/church_soc_cm.peri.xml \
+  https://31592a69-0a64-402e-9237-89b7ce66a127-00-1hr1bt2ealopt.kirk.replit.dev/dl/peri-xml
+```
+
+---
+
 ### `efx_pgm` fails with `ERROR: Unknown device family ""`
 
 **Efinity 2026.1 does not read family from the project XML or `--device` alone.**  

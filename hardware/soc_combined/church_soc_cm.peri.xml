@@ -1,45 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  hardware/soc_combined/church_soc_cm.peri.xml
-  Pin assignments for the combined Sapphire SoC + Church Machine bitstream — Ti60F225.
-
-  IO bank voltage assignments:
-    BL  3.3 V LVCMOS  (UART TX/RX lines → FT4232H)
-    BR  1.8 V LVCMOS  (LED outputs)
-    TL  1.8 V LVCMOS  (push button)
-    2A  1.8 V LVCMOS  (declared for completeness)
-    TR  1.8 V LVCMOS  (declared for completeness)
-
-  Pin mapping (matches Ti60F225 devkit schematic):
-    clk         — GPIOL_P_18   50 MHz crystal → CLKMUX_T ROUTE0
-    uart_tx     — GPIOL_02     FT4232H interface 2 TX (ttyUSB2)
-    uart_rx     — GPIOL_01     FT4232H interface 2 RX
-    cm_uart_tx  — GPIOL_P_03   FT4232H interface 3 TX (ttyUSB3) — CM debug UART
-    push_button — GPIOT_N_06   USER_PB, active-low, weak pull-up
-    led0        — GPIOR_P_07   USER_LED0: SoC out of reset
-    led1        — GPIOR_P_08   USER_LED1: CM boot complete
-    led2        — GPIOR_P_09   USER_LED2: CM fault latched
-    led3        — GPIOR_P_10   USER_LED3: CM heartbeat
-
-  Generated for Efinity 2025.2.
--->
-<efxpt:design_db
-    name="church_soc_cm"
-    device_def="Ti60F225"
-    version="2025.2.0"
-    db_version="20241999"
-    last_change_date="Sat May 24 00:00:00 2026"
-    xmlns:efxpt="http://www.efinixinc.com/peri_design_db"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.efinixinc.com/peri_design_db peri_design_db.xsd">
+<efxpt:design_db name="church_soc_cm" device_def="Ti60F225" version="2025.2.288.4.15" db_version="20252999" last_change_date="Sun Jun  1 00:00:00 2026" xmlns:efxpt="http://www.efinixinc.com/peri_design_db" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/peri_design_db peri_design_db.xsd ">
 
     <efxpt:device_info>
         <efxpt:iobank_info>
+            <efxpt:iobank name="1A" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="1A_MODE_SEL"/>
+            <efxpt:iobank name="1B" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="1B_MODE_SEL"/>
+            <efxpt:iobank name="2A" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="2A_MODE_SEL"/>
+            <efxpt:iobank name="2B" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="2B_MODE_SEL"/>
+            <efxpt:iobank name="3A" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="3A_MODE_SEL"/>
+            <efxpt:iobank name="3B" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="3B_MODE_SEL"/>
+            <efxpt:iobank name="4A" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="4A_MODE_SEL"/>
+            <efxpt:iobank name="4B" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="4B_MODE_SEL"/>
             <efxpt:iobank name="BL" iostd="3.3 V LVCMOS" is_dyn_voltage="false" mode_sel_name="BL_MODE_SEL"/>
             <efxpt:iobank name="BR" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="BR_MODE_SEL"/>
             <efxpt:iobank name="TL" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="TL_MODE_SEL"/>
             <efxpt:iobank name="TR" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="TR_MODE_SEL"/>
-            <efxpt:iobank name="2A" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="2A_MODE_SEL"/>
         </efxpt:iobank_info>
 
         <efxpt:ctrl_info>

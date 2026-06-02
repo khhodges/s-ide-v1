@@ -98,3 +98,32 @@ map, interface, pnr, pgm, compile, program, rtlsim, mapsim, pnrsim, full
 
 **Why:** Efinix 2026.1 separated Interface Designer into an explicit step. Prior versions (2025.2)
 ran this implicitly. On headless Penguin (no GUI), efx_run is the only way to drive it.
+
+# peri.xml format for Efinity 2026.1 Interface Designer
+
+## Root cause of "ERROR encountered running Interface Designer"
+The `church_soc_cm.peri.xml` was hand-crafted with:
+- `version="2025.2.0"` / `db_version="20241999"` — too old, rejected by 2026.1 Interface Designer
+- Only 5 IO banks declared (BL, BR, TL, TR, 2A) — Ti60F225 requires all 12 banks
+
+## Correct format (from GUI-generated 2025.2.288 peri.xml):
+```xml
+<efxpt:design_db name="church_soc_cm" device_def="Ti60F225"
+    version="2025.2.288.4.15" db_version="20252999" ...>
+  <efxpt:iobank_info>
+    <efxpt:iobank name="1A" iostd="1.8 V LVCMOS" .../>
+    <efxpt:iobank name="1B" iostd="1.8 V LVCMOS" .../>
+    <efxpt:iobank name="2A" iostd="1.8 V LVCMOS" .../>
+    <efxpt:iobank name="2B" iostd="1.8 V LVCMOS" .../>
+    <efxpt:iobank name="3A" iostd="1.8 V LVCMOS" .../>
+    <efxpt:iobank name="3B" iostd="1.8 V LVCMOS" .../>
+    <efxpt:iobank name="4A" iostd="1.8 V LVCMOS" .../>
+    <efxpt:iobank name="4B" iostd="1.8 V LKCMOS" .../>
+    <efxpt:iobank name="BL" iostd="3.3 V LVCMOS" .../>  <!-- UART TX/RX -->
+    <efxpt:iobank name="BR" iostd="1.8 V LVCMOS" .../>  <!-- LEDs -->
+    <efxpt:iobank name="TL" iostd="1.8 V LVCMOS" .../>  <!-- push button -->
+    <efxpt:iobank name="TR" iostd="1.8 V LVCMOS" .../>
+  </efxpt:iobank_info>
+```
+
+**Why:** Interface Designer validates that ALL device IO banks are present in the peri.xml before processing pin assignments. Missing banks = silent failure. The Replit peri.xml now has all 12 banks and correct version strings.

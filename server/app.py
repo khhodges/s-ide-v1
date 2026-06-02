@@ -192,6 +192,14 @@ def download_pgm_sh():
                      download_name="run_efx_pgm.sh",
                      mimetype="text/plain")
 
+@app.route("/dl/peri-xml")
+def download_peri_xml():
+    p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_combined", "church_soc_cm.peri.xml")
+    return send_file(os.path.abspath(p),
+                     as_attachment=True,
+                     download_name="church_soc_cm.peri.xml",
+                     mimetype="text/xml")
+
 @app.route("/dl/ti60zip")
 def download_ti60zip():
     import zipfile, io, re as _re
