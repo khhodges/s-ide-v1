@@ -1238,6 +1238,30 @@ class CLOOMCCompiler {
         return { colStart: idx, colEnd: idx + token.length };
     }
 
+    // Return the closest key in `candidates` to `name` (case-insensitive),
+    // or null if the best distance exceeds `maxDist` (default 3).
+    static _closestMatch(name, candidates, maxDist = 3) {
+        const a = name.toUpperCase();
+        let best = null, bestDist = maxDist + 1;
+        for (const c of candidates) {
+            const b = c.toUpperCase();
+            // Levenshtein
+            const m = a.length, n = b.length;
+            const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+            for (let j = 0; j <= n; j++) dp[0][j] = j;
+            for (let i = 1; i <= m; i++) {
+                for (let j = 1; j <= n; j++) {
+                    dp[i][j] = a[i-1] === b[j-1]
+                        ? dp[i-1][j-1]
+                        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+                }
+            }
+            const dist = dp[m][n];
+            if (dist < bestDist) { bestDist = dist; best = c; }
+        }
+        return best;
+    }
+
     _compileStatement(stmt, code, locals, rom, capNames, labels, labelRefs, errors, manifest, method) {
         const text = stmt.text.trim().replace(/;$/, '');
         if (!text || text.startsWith('//')) return;
@@ -1323,7 +1347,9 @@ class CLOOMCCompiler {
             const _methodOffset  = _leadingWS + (text.indexOf(callDotMatch[1] + '.' + callDotMatch[2]) + callDotMatch[1].length + 1);
             const clistOffset = rom[absName];
             if (clistOffset === undefined) {
-                errors.push({ line: stmt.lineNum, message: `Unknown abstraction '${callDotMatch[1]}' — not in capabilities list. Available: ${Object.keys(rom).join(', ')}`, ...CLOOMCCompiler._tokenCols(stmt.rawLine, callDotMatch[1], _absNameOffset) });
+                const _suggest = CLOOMCCompiler._closestMatch(callDotMatch[1], Object.keys(rom));
+                const _hint = _suggest ? ` Did you mean '${_suggest}'?` : '';
+                errors.push({ line: stmt.lineNum, message: `Unknown abstraction '${callDotMatch[1]}' — not in capabilities list.${_hint} Available: ${Object.keys(rom).join(', ')}`, ...CLOOMCCompiler._tokenCols(stmt.rawLine, callDotMatch[1], _absNameOffset) });
                 return;
             }
             if (argStr) {
@@ -1373,7 +1399,9 @@ class CLOOMCCompiler {
             const _methodOffset  = _leadingWS + (text.indexOf(bareDotMatch[1] + '.' + bareDotMatch[2]) + bareDotMatch[1].length + 1);
             const clistOffset = rom[absName];
             if (clistOffset === undefined) {
-                errors.push({ line: stmt.lineNum, message: `Unknown abstraction '${bareDotMatch[1]}' — not in capabilities list. Available: ${Object.keys(rom).join(', ')}`, ...CLOOMCCompiler._tokenCols(stmt.rawLine, bareDotMatch[1], _absNameOffset) });
+                const _suggest = CLOOMCCompiler._closestMatch(bareDotMatch[1], Object.keys(rom));
+                const _hint = _suggest ? ` Did you mean '${_suggest}'?` : '';
+                errors.push({ line: stmt.lineNum, message: `Unknown abstraction '${bareDotMatch[1]}' — not in capabilities list.${_hint} Available: ${Object.keys(rom).join(', ')}`, ...CLOOMCCompiler._tokenCols(stmt.rawLine, bareDotMatch[1], _absNameOffset) });
                 return;
             }
             if (argStr) {
@@ -1474,7 +1502,9 @@ class CLOOMCCompiler {
 
             const clistOffset = rom[absName];
             if (clistOffset === undefined) {
-                errors.push({ line: stmt.lineNum, message: `Unknown abstraction '${callMatch[2]}' — not in capabilities list. Available: ${Object.keys(rom).join(', ')}`, ...CLOOMCCompiler._tokenCols(stmt.rawLine, callMatch[2], _absNameOffset) });
+                const _suggest = CLOOMCCompiler._closestMatch(callMatch[2], Object.keys(rom));
+                const _hint = _suggest ? ` Did you mean '${_suggest}'?` : '';
+                errors.push({ line: stmt.lineNum, message: `Unknown abstraction '${callMatch[2]}' — not in capabilities list.${_hint} Available: ${Object.keys(rom).join(', ')}`, ...CLOOMCCompiler._tokenCols(stmt.rawLine, callMatch[2], _absNameOffset) });
                 return;
             }
 
