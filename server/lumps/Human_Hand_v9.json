@@ -10,7 +10,7 @@
   "cw": 6,
   "cc": 1,
   "status": "wip",
-  "source": "; Provides: Status, Close_Fist\n; \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nabstraction Human_Hand {\n    capabilities {\n        ; (none \u2014 add capability grants here)\n    }\n\n    method Status {\n        ; Return the status\n        ; Depends on: self\n        ; \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n        ; TODO: write your code here\n\n        RETURN\n    }\n\n    method Close_Fist {\n        ; Close all fingers\n        ; Depends on: self\n        ; \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n        ; TODO: write your code here\n\n        RETURN\n    }\n\n    method Open_Hand {\n        ; Extend all fingers\n        ; Depends on: self\n        ; \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n        ; TODO: write your code here\n\n        RETURN\n    }\n\n    method Grip {\n        ; Close as a fist\n        ; Depends on: self\n        ; \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n        ; TODO: write your code here\n\n        RETURN\n    }\n\n    method Point {\n        ; Point with forefinger\n        ; Depends on: self\n        ; \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n        ; TODO: write your code here\n\n        RETURN\n    }\n\n    method Count {\n        ; Display fingers as a number\n        ; Depends on: self\n        ; \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n        ; TODO: write your code here\n\n        RETURN\n    }\n}",
+  "source": "-- auto-save test\nStatus : () { RETURN }",
   "description": "Provides: Status, Close_Fist",
   "methods": [
     {
@@ -72,5 +72,6 @@
     "status": "unknown"
   },
   "lump_version": 9,
-  "compiled_at": 1780399266.361252
+  "compiled_at": 1780399266.361252,
+  "last_edited_at": 1780400319.806499
 }

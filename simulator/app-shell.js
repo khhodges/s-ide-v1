@@ -642,6 +642,25 @@ function init() {
             clearTimeout(_editorAutoSaveTimer);
             _editorAutoSaveTimer = setTimeout(saveEditorState, 800);
         });
+        // ── WIP source auto-save (debounced 3 s) ─────────────────────────────
+        // When a WIP abstraction token is stored in localStorage (set by the
+        // /start page 'Code Edit →' flow), every edit is patched back to the
+        // server sidecar so the source is never lost between sessions.
+        var _wipSrcSaveTimer = null;
+        asmEd.addEventListener('input', function() {
+            clearTimeout(_wipSrcSaveTimer);
+            _wipSrcSaveTimer = setTimeout(function() {
+                try {
+                    var _tok = localStorage.getItem('church_wip_token');
+                    if (!_tok) return;
+                    fetch('/api/lump/' + _tok + '/wip-source', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ source: asmEd.value })
+                    }).catch(function() {});
+                } catch (_e) {}
+            }, 3000);
+        });
         asmEd.addEventListener('scroll', syncLineScroll);
         if (typeof ResizeObserver !== 'undefined') {
             new ResizeObserver(function() { syncLineScroll(); _debouncedErrorRecalc(); }).observe(asmEd);

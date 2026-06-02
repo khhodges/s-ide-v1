@@ -1035,6 +1035,113 @@ let _pendingLumpRelease = null;
 // delete the draft on compile success regardless of which success path runs.
 let _compileDraftToken = null;
 
+// ── WIP version gate ──────────────────────────────────────────────────────
+// When the programmer compiles a WIP abstraction (imported from /start),
+// the version save is deferred until every declared method has been ticked
+// as tested.  _pendingWipSave holds the build artefacts; _wipTestedMethods
+// is the Set of method names the programmer has checked off.
+let _pendingWipSave    = null;
+let _wipTestedMethods  = null;
+
+function _escHtmlCmp(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function _renderWipMethodGate(con, methodMeta, listing) {
+    if (!con) return;
+    let html = '<pre style="white-space:pre-wrap;font-family:inherit;margin:0 0 10px">' + _escHtmlCmp(listing) + '</pre>';
+    html += '<div style="padding:10px;border:1px solid #daa520;border-radius:4px;background:#1a1500">';
+    html += '<div style="color:#daa520;font-weight:bold;margin-bottom:8px">&#9881; Test every method in the simulator before creating a new version:</div>';
+    for (const m of methodMeta) {
+        const mn = _escHtmlCmp(m.name);
+        html += `<label style="display:block;cursor:pointer;margin:4px 0;color:#ccc">`;
+        html += `<input type="checkbox" data-wip-method="${mn}" onchange="_wipMethodChecked('${mn}',this.checked)" style="margin-right:6px;cursor:pointer">`;
+        html += `<span>${mn}</span></label>`;
+    }
+    html += '<div style="margin-top:10px">';
+    html += '<button id="wipSaveVersionBtn" disabled onclick="_doWipVersionSave()" ';
+    html += 'style="padding:5px 18px;background:#444;color:#777;border:1px solid #555;border-radius:3px;cursor:not-allowed;font-size:13px">Save New Version</button>';
+    html += '<span id="wipGateStatus" style="margin-left:10px;font-size:12px;color:#888">Tick all methods above to unlock</span>';
+    html += '</div></div>';
+    con.innerHTML = html;
+    con.classList.add('cmp-html');
+    con.scrollTop = 0;
+}
+
+function _wipMethodChecked(methodName, checked) {
+    if (!_wipTestedMethods) _wipTestedMethods = new Set();
+    if (checked) _wipTestedMethods.add(methodName);
+    else _wipTestedMethods.delete(methodName);
+    if (!_pendingWipSave) return;
+    const allDone = _pendingWipSave.methodMeta.every(m => _wipTestedMethods.has(m.name));
+    const btn    = document.getElementById('wipSaveVersionBtn');
+    const status = document.getElementById('wipGateStatus');
+    if (btn) {
+        btn.disabled = !allDone;
+        btn.style.background  = allDone ? '#daa520' : '#444';
+        btn.style.color       = allDone ? '#000'    : '#777';
+        btn.style.borderColor = allDone ? '#daa520' : '#555';
+        btn.style.cursor      = allDone ? 'pointer' : 'not-allowed';
+    }
+    if (status) {
+        const remaining = _pendingWipSave.methodMeta.filter(m => !_wipTestedMethods.has(m.name)).length;
+        status.textContent = allDone
+            ? '\u2713 All methods tested \u2014 ready to save'
+            : `${remaining} method${remaining !== 1 ? 's' : ''} still to test`;
+        status.style.color = allDone ? '#7f7' : '#888';
+    }
+}
+
+function _doWipVersionSave() {
+    if (!_pendingWipSave) return;
+    const { savePayload, listing, con, binaryBuf, sizeBytes, absName, _autoVer } = _pendingWipSave;
+    _pendingWipSave   = null;
+    _wipTestedMethods = null;
+    // Clear WIP token — this abstraction is now a proper released version
+    try { localStorage.removeItem('church_wip_token'); } catch (_e) {}
+
+    fetch('/api/lumps/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(savePayload)
+    }).then(r => r.json()).then(resp => {
+        if (resp.ok) {
+            const _lv  = resp.lump_version != null ? resp.lump_version : _autoVer;
+            const _dlN = `${absName}_v${_lv}.lump`;
+            const _dlU = URL.createObjectURL(new Blob([binaryBuf], { type: 'application/octet-stream' }));
+            const _a   = document.createElement('a');
+            _a.href = _dlU; _a.download = _dlN;
+            document.body.appendChild(_a); _a.click();
+            document.body.removeChild(_a);
+            URL.revokeObjectURL(_dlU);
+            appendOutput(`Saved to library: lumps/${resp.lump} \u2014 token 0x${resp.token} \u00b7 v${_autoVer}`, 'info');
+            if (_compileDraftToken && typeof _draftLsDel === 'function') { _draftLsDel(_compileDraftToken); _compileDraftToken = null; }
+            window._editorLastSavedToken = resp.token;
+            window._pendingLumpToken = resp.token;
+            if (typeof switchView === 'function') switchView('lumps');
+            const _rlP = typeof renderLumps === 'function' ? renderLumps() : Promise.resolve();
+            (_rlP && _rlP.then ? _rlP : Promise.resolve()).then(() => {
+                if (typeof showLumpDetail === 'function') showLumpDetail(resp.token);
+            });
+            let _fl = listing;
+            _fl += `  Version:    v${_autoVer} (auto)\n`;
+            _fl += `\n  Downloaded: ${_dlN} (${sizeBytes} bytes)\n`;
+            _fl += `  Saved to:   server/lumps/ (binary + metadata sidecar)\n`;
+            if (con) {
+                con.innerHTML = _capRightsHTML(_fl);
+                con.classList.remove('cmp-html');
+                con.scrollTop = 0;
+                const _ld = document.createElement('div');
+                _ld.className = 'cmp-load-toolbar';
+                _ld.innerHTML = `<button id="btnLoadIntoSim" class="cmp-load-sim-btn" onclick="loadCLOOMCIntoSim()" data-tooltip="Load compiled program into the simulator">Load into Sim \u25b6</button>`;
+                con.insertBefore(_ld, con.firstChild);
+            }
+        } else {
+            appendOutput(`Server save failed: ${resp.error || 'unknown error'}`, 'error');
+        }
+    }).catch(err => { appendOutput(`Server save error: ${err.message}`, 'error'); });
+}
+
 function _queueLumpRelease(data) {
     _pendingLumpRelease = data;
     if (data.con) {
@@ -1476,6 +1583,20 @@ function compileAndBuild() {
         return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
     })();
     savePayload.metadata.version = _autoVer;
+
+    // ── WIP version gate ──────────────────────────────────────────────────────
+    // If a WIP token is stored (programmer came from the /start page), defer
+    // the permanent version save until every method has been ticked as tested.
+    const _wipTokNow = (() => { try { return localStorage.getItem('church_wip_token') || ''; } catch (_e) { return ''; } })();
+    if (_wipTokNow) {
+        _pendingWipSave   = { savePayload, listing, con, binaryBuf, sizeBytes, absName, methodMeta, _autoVer };
+        _wipTestedMethods = new Set();
+        _renderWipMethodGate(con, methodMeta, listing);
+        trackAction('build_lump', { name: absName, lang: result.language, size: lumpSize });
+        appendOutput(`Built LUMP: "${absName}" [${langLabel}] \u2014 ${cw} words, cc=${cc}, ${sizeBytes} bytes \u00b7 v${_autoVer} \u2014 test all methods to unlock version save`, 'info');
+        showNextSteps('compiled');
+        return;
+    }
 
     fetch('/api/lumps/save', {
         method: 'POST',

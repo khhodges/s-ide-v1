@@ -4902,6 +4902,67 @@ def save_lump_wip():
     })
 
 
+@app.route("/api/lump/<token>/wip-source", methods=["PATCH"])
+def patch_wip_source(token):
+    """Patch the source field in a WIP sidecar JSON.
+
+    Called by the editor's debounced auto-save (every ~3 s) while the
+    programmer is typing.  Only updates `source` and `last_edited_at` —
+    no version bump, no new binary, no manifest change.
+
+    Body: { source: <string> }
+    Response: { ok: true }
+    """
+    import re as _re_ps
+    import datetime as _dt_ps
+
+    raw = (token or '').strip().lower()
+    key8 = raw[:8].zfill(8) if len(raw) >= 8 else raw.zfill(8)
+    if not _re_ps.fullmatch(r'[0-9a-f]{8}', key8):
+        return jsonify({'error': 'Invalid token'}), 400
+
+    payload = request.get_json(force=True, silent=True) or {}
+    source  = payload.get('source', '')
+
+    lumps_dir     = os.path.join(os.path.dirname(__file__), 'lumps')
+    manifest_path = os.path.join(lumps_dir, 'manifest.json')
+
+    # Resolve the sidecar file path via manifest first, fall back to bare token
+    sidecar_path = None
+    try:
+        with open(manifest_path) as _fh:
+            _manifest = json.load(_fh)
+        _entry = next((e for e in _manifest if e.get('token') == key8), None)
+        if _entry:
+            _sfn = _entry.get('sidecar_file', f'{key8}.json')
+            sidecar_path = os.path.join(lumps_dir, _sfn)
+    except Exception:
+        pass
+
+    if sidecar_path is None:
+        sidecar_path = os.path.join(lumps_dir, f'{key8}.json')
+
+    if not os.path.isfile(sidecar_path):
+        return jsonify({'error': 'WIP sidecar not found'}), 404
+
+    try:
+        with open(sidecar_path) as _fh:
+            sc = json.load(_fh)
+    except Exception as exc:
+        return jsonify({'error': f'Could not read sidecar: {exc}'}), 500
+
+    sc['source']         = source
+    sc['last_edited_at'] = _dt_ps.datetime.utcnow().timestamp()
+
+    try:
+        with open(sidecar_path, 'w') as _fh:
+            json.dump(sc, _fh, indent=2)
+    except Exception as exc:
+        return jsonify({'error': f'Could not write sidecar: {exc}'}), 500
+
+    return jsonify({'ok': True})
+
+
 @app.route("/api/lumps/list")
 def list_lumps():
     """Return JSON array of all saved lumps with lean sidecar metadata.
