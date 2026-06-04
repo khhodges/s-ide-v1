@@ -7,7 +7,7 @@ Church Machine RTL side-by-side in a single Efinity project.
 
 On power-on:
 - The Sapphire SoC boots its firmware and sends `CHURCH Ti60 SoC+CM v1.1\r\n`
-  over **ttyUSB2** (115200 baud, GPIOL_02 → FT4232H interface 2).
+  over **ttyUSB2** (230400 baud, GPIOL_02 → FT4232H interface 2).
 - The Church Machine streams NIA traces, fault codes, and call-home packets.
 - LED0 lights when the SoC is out of reset.
 - LED1 lights when the CM completes its boot sequence.
@@ -273,15 +273,17 @@ python3 scripts/test_ti60_uart.py \
 | `UART_BASE` | `0xF8010000` | `firmware/main.c` |
 | `UART_DATA` | `0xF8010000` | write = TX, read = RX |
 | `UART_STATUS` | `0xF8010004` | bits[23:16] = TX avail (Sapphire UART) |
-| `UART_CLOCKDIV` | `0xF8010008` | 50 MHz / (8 × (div+1)) = baud rate |
+| `UART_CLOCKDIV` | `0xF8010008` | 100 MHz / (8 × (div+1)) = baud rate |
 | APB slave 0 (CM bridge) | `0xF8100000` | `firmware/main.c` `CM_APB_BASE` |
 | Boot ROM base | `0xF9000000` | CPU reset vector, `link.ld` |
 
-UART baud rate: reset `CLOCKDIV = 53` → 50 000 000 / (8 × 54) = 115 740 baud (≈115200).
-Firmware leaves `CLOCKDIV` at its reset value — no override needed.
+UART baud rate: firmware writes `CLOCKDIV = 53` → 100 000 000 / (8 × 54) = 231 481 baud (≈230400).
+The Sapphire SoC UART resets `CLOCKDIV` to **0x00** on power-up (not 53); firmware **must** write it
+explicitly before the first `uart_puts` call, or the UART runs at 100 MHz / 8 = 12.5 Mbaud and
+produces silence on any standard terminal.
 
 **uart_putc design:** Uses unconditional write + 3000-NOP inter-character delay
-(~240 µs @ 50 MHz) rather than polling STATUS. This avoids infinite spins if
+(~120 µs @ 100 MHz) rather than polling STATUS. This avoids infinite spins if
 the STATUS register bit layout differs between Sapphire IP versions.
 
 ---
