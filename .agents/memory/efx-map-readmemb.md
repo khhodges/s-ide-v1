@@ -123,10 +123,10 @@ static void uart_putc(char c) {
 
 - UART base: 0xF8010000 (from BSP soc.h). DATA=+0x00, STATUS=+0x04, CLOCKDIV=+0x08
 - CLOCKDIV=26 → 25 MHz / (8×27) = 115,741 baud ≈ 115200 ✓
-- UART port mapping is NOT fixed — depends on how many other USB devices are connected.
-  The Ti60F225 FTDI FT2232H creates 2 channels: channel A = JTAG, channel B = Sapphire UART.
-  After a fresh flash+reset, the two fresh ttyUSB* entries (newest mtime) are the Ti60 ports.
-  Channel B (higher ttyUSB number of the two) = Sapphire SoC UART.
-  `ls -lt /dev/ttyUSB*` after flash to identify which are fresh.
+- UART port: Ti60F225 devkit uses FT4232H (4-channel USB bridge), NOT FT2232H.
+  ttyUSB2 = Sapphire SoC UART (GPIOL_02, 3.3V LVCMOS, confirmed in peri.xml).
+  ttyUSB3 = CM debug UART (GPIOL_P_03). ttyUSB0/1 = JTAG channels A/B.
+  Port numbers may shift if other USB devices are connected before the board.
+  `ls -lt /dev/ttyUSB*` after flash — the SoC UART is the 3rd-lowest ttyUSB.
 - flash command: `sudo /usr/bin/openFPGALoader -b titanium_ti60_f225_jtag -f outflow/church_soc_cm.hex`
   (`~/oss-cad-suite/bin/openFPGALoader` does NOT exist on Penguin)
