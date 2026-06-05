@@ -37,7 +37,7 @@
 `default_nettype none
 
 module top (
-    input  wire clk,           // 50 MHz crystal — see peri.xml for GPIO assignment
+    input  wire clk,           // 50 MHz from PLL_TL0 (25 MHz osc → ×20 VCO → ÷10)
     output wire uart_tx,       // GPIOL_02 → FT4232H interface 2 → ttyUSB2
     input  wire uart_rx,       // GPIOL_01 ← FT4232H interface 2
     output wire cm_uart_tx,    // GPIOL_P_03 → FT4232H interface 3 → ttyUSB3
