@@ -4,6 +4,7 @@
 The Church Machine is an educational platform providing a web-based IDE for learning programming, computer architecture, and secure computing using capability-based security with Golden Tokens. It targets the Tang Nano 20K FPGA and supports the Efinix Ti60 F225 and QMTECH Wukong Artix-7 XC7A100T, aiming to make advanced computational concepts accessible to children and various educational contexts through hands-on experience. The project envisions a future where capability-secured processor architectures become mainstream, making this platform a foundational tool for training future developers in secure computing.
 
 ## User Preferences
+- **Core design principle**: Every improvement must logically abstract implementation details — hide complexity, expose only what matters, make the system easy to understand and use. Raw technical values (addresses, hex words, register numbers) should always be translated into human-readable pet names, labels, or plain-English descriptions wherever they appear in the UI.
 - Church Gold dark theme
 - Mobile-responsive for parent mode on handsets
 - All feature flags True for Tang build
