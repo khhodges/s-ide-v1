@@ -2477,7 +2477,19 @@ var _callhomeLogSince = 0;
 var _callhomeLogTimer = null;
 var _callhomeLogRowCount = 0;
 var _selectedMachineUid = '';
+var _callhomeLatestTs = 0;    // Unix seconds of most-recent entry (callhome or UART)
 var _deviceLabelCache = {};   // uid.toUpperCase() → pet name || board_name
+
+function _updateLogSubtitle() {
+    var sub = document.getElementById('callhomeLogSubtitle');
+    if (!sub) return;
+    if (!_callhomeLatestTs) { sub.textContent = 'live \u00b7 polling every 3 s'; return; }
+    var d = new Date(_callhomeLatestTs * 1000);
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var label = d.getDate() + ' ' + months[d.getMonth()] +
+                ' \u00b7 ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    sub.textContent = label;
+}
 
 function _niaPetName(nia, niaLabel) {
     if (niaLabel) return niaLabel;
@@ -2526,6 +2538,7 @@ function _onMachineSelectChange() {
     _callhomeLogSince = 0;
     _uartLogSince = 0;
     _callhomeLogRowCount = 0;
+    _callhomeLatestTs = 0;
 
     var panel = document.getElementById('callhomeLogEntries');
     if (panel) {
@@ -2556,6 +2569,7 @@ function _pollCallhomeLog() {
                 if (empty) empty.remove();
                 data.entries.slice().reverse().forEach(function(e) {
                     if (e.ts > _callhomeLogSince) _callhomeLogSince = e.ts;
+                    if (e.ts > _callhomeLatestTs) _callhomeLatestTs = e.ts;
                     var d = new Date(e.ts * 1000);
                     var hh = String(d.getUTCHours()).padStart(2,'0');
                     var mm = String(d.getUTCMinutes()).padStart(2,'0');
@@ -2608,16 +2622,10 @@ function _pollCallhomeLog() {
                     while (panel.children.length > 100) panel.removeChild(panel.lastChild);
                 });
             }
-            var now = new Date();
-            var hh = String(now.getHours()).padStart(2,'0');
-            var mm = String(now.getMinutes()).padStart(2,'0');
-            var ss = String(now.getSeconds()).padStart(2,'0');
-            var sub = document.getElementById('callhomeLogSubtitle');
-            if (sub) sub.textContent = _callhomeLogRowCount + ' packet' + (_callhomeLogRowCount === 1 ? '' : 's') + ' · checked ' + hh + ':' + mm + ':' + ss;
+            _updateLogSubtitle();
         })
         .catch(function() {
-            var sub = document.getElementById('callhomeLogSubtitle');
-            if (sub) sub.textContent = _callhomeLogRowCount + ' packets · poll error';
+            _updateLogSubtitle();
         })
         .finally(function() {
             if (document.getElementById('callhomeLogPanel')) {
@@ -2630,6 +2638,7 @@ function clearCallhomeLog() {
     _callhomeLogSince = 0;
     _callhomeLogRowCount = 0;
     _uartLogSince = 0;
+    _callhomeLatestTs = 0;
     var panel = document.getElementById('callhomeLogEntries');
     if (panel) {
         var header = panel.querySelector('.callhome-log-col-heads');
@@ -2668,6 +2677,7 @@ function _pollUartLog() {
                 if (empty) empty.remove();
                 data.entries.slice().reverse().forEach(function(e) {
                     if (e.ts > _uartLogSince) _uartLogSince = e.ts;
+                    if (e.ts > _callhomeLatestTs) _callhomeLatestTs = e.ts;
                     var d = new Date(e.ts * 1000);
                     var dateStr =
                         d.getUTCFullYear() + '-' +
@@ -2691,6 +2701,7 @@ function _pollUartLog() {
             }
         })
         .catch(function() { })
+        .finally(function() { _updateLogSubtitle(); })
         .finally(function() {
             if (document.getElementById('callhomeLogPanel')) {
                 _uartLogTimer = setTimeout(_pollUartLog, 2000);
