@@ -82,11 +82,12 @@
 #define CM_CTRL_PRESSED   0u   /* push_button asserted */
 
 /* ── Timing ──────────────────────────────────────────────────────────────────
- * Clock: 100 MHz (50 MHz crystal × 2 via Sapphire SoC PLL).
+ * Clock: 25 MHz (raw crystal — PLL_TL0 not configured in current peri.xml).
+ * If PLL_TL0 is added later (×2 → 50 MHz), change CLK_HZ to 50000000UL.
  * One NOP loop iteration ≈ 4 cycles (addi + bne overhead).
  * LOOPS_PER_SECOND is a conservative estimate; adjust if timing is critical.
  */
-#define CLK_HZ          100000000UL
+#define CLK_HZ          25000000UL
 #define LOOPS_PER_SECOND (CLK_HZ / 4)
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
