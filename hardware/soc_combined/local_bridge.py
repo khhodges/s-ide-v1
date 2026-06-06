@@ -17,7 +17,7 @@ Usage:
 
 Flags:
     --port=PATH    Serial port to open (default: /dev/ttyUSB2)
-    --baud=N       Baud rate (default: 115200)
+    --baud=N       Baud rate (default: 57600 — 25 MHz crystal, CLOCKDIV=53)
     --ide=URL      IDE server base URL, e.g. http://localhost:5000
                    Enables call-home POSTs to /api/device/call-home.
     --reconnect    Automatically reconnect on serial errors (default: on)
@@ -42,7 +42,7 @@ except ImportError:
 # Argument parsing
 # ---------------------------------------------------------------------------
 _SERIAL_PORT = '/dev/ttyUSB2'
-_BAUD = 115200
+_BAUD = 57600
 _IDE_SERVER_URL = None
 _AUTO_RECONNECT = True
 _REPORT_LAUNCH = False

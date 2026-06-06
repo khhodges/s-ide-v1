@@ -122,7 +122,7 @@ This saves `local_bridge.py` to your home folder.
 Replace `/dev/ttyUSB2` with your port from Step 4 if different.
 
 ```bash
-python3 local_bridge.py /dev/ttyUSB2 115200 8766 --http --ide=https://31592a69-0a64-402e-9237-89b7ce66a127-00-1hr1bt2ealopt.kirk.replit.dev
+python3 local_bridge.py /dev/ttyUSB2 57600 8766 --http --ide=https://31592a69-0a64-402e-9237-89b7ce66a127-00-1hr1bt2ealopt.kirk.replit.dev
 ```
 
 **Leave this terminal open.** The bridge must keep running while you use the IDE.
