@@ -2476,10 +2476,52 @@ function _openNiaPanel(row, nia, cr14, cr12, cr15) {
 var _callhomeLogSince = 0;
 var _callhomeLogTimer = null;
 var _callhomeLogRowCount = 0;
+var _selectedMachineUid = '';
 
 function _startCallhomeLog() {
     if (_callhomeLogTimer) return;
+    _refreshMachineDropdown();
     _callhomeLogTimer = setTimeout(_pollCallhomeLog, 400);
+}
+
+function _refreshMachineDropdown() {
+    var sel = document.getElementById('callhomeMachineSelect');
+    if (!sel) return;
+    fetch('/api/device/list')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.ok || !data.devices) return;
+            var current = sel.value;
+            while (sel.options.length > 1) sel.remove(1);
+            data.devices.forEach(function(dev) {
+                var opt = document.createElement('option');
+                opt.value = dev.device_uid;
+                var shortUid = (dev.device_uid || '').toUpperCase().slice(-8);
+                var dot = dev.status === 'online' ? '● ' : '○ ';
+                opt.textContent = dot + dev.board_name + ' · ' + shortUid;
+                opt.dataset.status = dev.status;
+                sel.appendChild(opt);
+            });
+            var stillExists = Array.from(sel.options).some(function(o) { return o.value === current; });
+            sel.value = stillExists ? current : '';
+            if (!stillExists) _selectedMachineUid = '';
+        })
+        .catch(function() {});
+}
+
+function _onMachineSelectChange() {
+    var sel = document.getElementById('callhomeMachineSelect');
+    _selectedMachineUid = sel ? sel.value : '';
+    var panel = document.getElementById('callhomeLogEntries');
+    if (!panel) return;
+    panel.querySelectorAll('.callhome-log-row, .callhome-uart-row').forEach(function(row) {
+        if (!_selectedMachineUid) {
+            row.style.display = '';
+        } else {
+            var uid = row.dataset.uid || '';
+            row.style.display = (!uid || uid === _selectedMachineUid) ? '' : 'none';
+        }
+    });
 }
 
 function _stopCallhomeLog() {
@@ -2513,8 +2555,10 @@ function _pollCallhomeLog() {
                     var typeDisp = (e.type === 'register') ? '<span class="chlog-type-reg">register</span>' : '<span class="chlog-type-ch">callhome</span>';
                     var row = document.createElement('div');
                     row.className = 'callhome-log-row';
+                    row.dataset.uid = uid;
                     row.title = 'Click to disassemble';
                     row.style.cursor = 'pointer';
+                    if (_selectedMachineUid && uid !== _selectedMachineUid) row.style.display = 'none';
                     row.setAttribute('data-nia',  e.nia  || '0x0');
                     row.setAttribute('data-cr14', e.cr14 != null ? String(e.cr14) : 'null');
                     row.setAttribute('data-cr12', e.cr12 != null ? String(e.cr12) : 'null');
@@ -2542,6 +2586,7 @@ function _pollCallhomeLog() {
                     var insertAfter = colHeads ? colHeads.nextSibling : panel.firstChild;
                     panel.insertBefore(row, insertAfter);
                     _callhomeLogRowCount++;
+                    _refreshMachineDropdown();
                     while (panel.children.length > 100) panel.removeChild(panel.lastChild);
                 });
             }

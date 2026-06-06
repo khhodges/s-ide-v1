@@ -1873,6 +1873,24 @@
     letter-spacing: 0.03em;
     flex: 0 0 auto;
 }
+.callhome-machine-select {
+    background: #0d0d12;
+    border: 1px solid #374151;
+    border-radius: 4px;
+    color: #c8a84b;
+    font-size: 0.75rem;
+    font-family: 'Courier New', Courier, monospace;
+    padding: 0.1rem 0.4rem;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 26ch;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+}
+.callhome-machine-select:hover { border-color: #c8a84b55; }
+.callhome-machine-select:focus { border-color: #c8a84b; }
+.callhome-machine-select option { background: #111118; color: #d1d5db; }
 .callhome-log-subtitle {
     font-size: 0.7rem;
     color: #4b5563;
