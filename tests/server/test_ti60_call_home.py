@@ -200,3 +200,62 @@ class TestTi60CallHome:
         assert ti60.get("fw_version") == "1.1", (
             f"Expected fw_version='1.1', got {ti60.get('fw_version')!r}"
         )
+
+    def test_nia_field_flows_to_callhome_log(self, client):
+        """NIA from the bridge POST must appear in the callhome-log, not fault_nia (which is 0 for normal events)."""
+        payload = dict(_TI60_PAYLOAD, nia="0x00000014")
+        client.post(
+            "/api/device/call-home",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        resp = client.get("/api/device/callhome-log?limit=10")
+        assert resp.status_code == 200
+        body = json.loads(resp.data)
+        assert body.get("ok") is True, f"callhome-log not ok: {body}"
+        entries = body.get("entries", [])
+        entry = next((e for e in entries if e.get("uid", "").lower() == _TI60_UID.lower()), None)
+        assert entry is not None, f"No callhome-log entry found for uid={_TI60_UID}"
+        assert entry.get("nia") == "0x00000014", (
+            f"Expected nia='0x00000014' in log entry, got {entry.get('nia')!r}. "
+            "Likely the server is using fault_nia (0) instead of the bridge-supplied nia."
+        )
+
+    def test_cr14_cr12_cr15_stored_in_log(self, client):
+        """CR14/CR12/CR15 from the bridge POST must appear in the callhome-log when present."""
+        payload = dict(
+            _TI60_PAYLOAD,
+            cr14="0xAB123456",
+            cr12="0x00000001",
+            cr15="0x00000002",
+        )
+        client.post(
+            "/api/device/call-home",
+            data=json.dumps(payload),
+            content_type="application/json",
+        )
+        resp = client.get("/api/device/callhome-log?limit=10")
+        body = json.loads(resp.data)
+        entries = body.get("entries", [])
+        entry = next((e for e in entries if e.get("uid", "").lower() == _TI60_UID.lower()), None)
+        assert entry is not None, "No callhome-log entry found"
+        assert entry.get("cr14") == "0xAB123456", f"cr14 mismatch: {entry.get('cr14')!r}"
+        assert entry.get("cr12") == "0x00000001", f"cr12 mismatch: {entry.get('cr12')!r}"
+        assert entry.get("cr15") == "0x00000002", f"cr15 mismatch: {entry.get('cr15')!r}"
+
+    def test_cr_fields_null_when_absent(self, client):
+        """CR14/CR12/CR15 must be None in the log when the bridge omits them."""
+        client.post(
+            "/api/device/call-home",
+            data=json.dumps(_TI60_PAYLOAD),
+            content_type="application/json",
+        )
+        resp = client.get("/api/device/callhome-log?limit=10")
+        body = json.loads(resp.data)
+        entries = body.get("entries", [])
+        entry = next((e for e in entries if e.get("uid", "").lower() == _TI60_UID.lower()), None)
+        assert entry is not None, "No callhome-log entry found"
+        assert "cr14" in entry, "cr14 key missing from log entry"
+        assert entry.get("cr14") is None, f"Expected cr14=None, got {entry.get('cr14')!r}"
+        assert entry.get("cr12") is None, f"Expected cr12=None, got {entry.get('cr12')!r}"
+        assert entry.get("cr15") is None, f"Expected cr15=None, got {entry.get('cr15')!r}"

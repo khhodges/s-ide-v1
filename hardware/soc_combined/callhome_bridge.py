@@ -173,11 +173,15 @@ def _handle_callhome_json(line):
     fault_code = int(pkt.get("fault_code", 0))
     fw_major   = int(pkt.get("fw_major", 1))
     fw_minor   = int(pkt.get("fw_minor", 0))
+    cr14       = pkt.get("cr14", None)   # GT of active LUMP — None if firmware omits it
+    cr12       = pkt.get("cr12", None)   # namespace chain root — None if firmware omits it
+    cr15       = pkt.get("cr15", None)   # namespace root — None if firmware omits it
 
     _last_uid = uid
 
     fault_str = f"  FAULT={fault_code}" if fault else ""
-    print(f"  [CALL HOME] {board}  UID={uid}  NIA={nia}  boot_ok={boot_ok}  FW={fw_major}.{fw_minor}{fault_str}")
+    cr_str = f"  CR14={cr14}" if cr14 is not None else ""
+    print(f"  [CALL HOME] {board}  UID={uid}  NIA={nia}  boot_ok={boot_ok}  FW={fw_major}.{fw_minor}{fault_str}{cr_str}")
 
     if _REPORT_LAUNCH and boot_ok and _IDE_SERVER_URL:
         threading.Thread(
@@ -188,18 +192,25 @@ def _handle_callhome_json(line):
         ).start()
 
     if _IDE_SERVER_URL:
+        payload = {
+            "board_type":    board,
+            "device_uid":    uid,
+            "nia":           nia,
+            "boot_complete": boot_ok,
+            "fault_latched": fault,
+            "fault_code":    fault_code,
+            "fw_major":      fw_major,
+            "fw_minor":      fw_minor,
+        }
+        if cr14 is not None:
+            payload["cr14"] = cr14
+        if cr12 is not None:
+            payload["cr12"] = cr12
+        if cr15 is not None:
+            payload["cr15"] = cr15
         threading.Thread(
             target=_post_callhome,
-            args=({
-                "board_type":    board,
-                "device_uid":    uid,
-                "nia":           nia,
-                "boot_complete": boot_ok,
-                "fault_latched": fault,
-                "fault_code":    fault_code,
-                "fw_major":      fw_major,
-                "fw_minor":      fw_minor,
-            },),
+            args=(payload,),
             daemon=True,
         ).start()
 

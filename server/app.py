@@ -7363,11 +7363,29 @@ def device_call_home():
             db.session.commit()
             logging.info("Inline lump_versions recorded for device=%s count=%d", uid, lump_versions_updated)
 
+    cr14_raw = data.get("cr14")
+    cr12_raw = data.get("cr12")
+    cr15_raw = data.get("cr15")
+
+    # Resolve the NIA to display in the log.
+    # The bridge posts "nia" as a hex string (e.g. "0x00000014") taken directly
+    # from the firmware's CALLHOME JSON.  fault_nia is only set when boot_reason==2
+    # (fault boot) and defaults to 0 for normal call-home events, so we prefer the
+    # bridge-supplied "nia" and fall back to fault_nia only when absent.
+    nia_raw = data.get("nia")
+    if nia_raw is not None:
+        try:
+            reported_nia = max(0, min(0xFFFFFFFF, int(str(nia_raw), 16)))
+        except (ValueError, TypeError):
+            reported_nia = fault_nia
+    else:
+        reported_nia = fault_nia
+
     with _latest_callhome_lock:
         _latest_callhome_data[uid] = {
             "board":      dev.board_name,
             "uid":        uid,
-            "nia":        f"0x{fault_nia:08X}",
+            "nia":        f"0x{reported_nia:08X}",
             "boot_ok":    0 if boot_reason == 2 else 1,
             "fault":      last_fault,
             "fault_code": last_fault,
@@ -7375,6 +7393,9 @@ def device_call_home():
             "fw_minor":   fw_minor,
             "boot_count": dev.boot_count,
             "ts":         now,
+            "cr14":       cr14_raw,
+            "cr12":       cr12_raw,
+            "cr15":       cr15_raw,
         }
         _append_callhome_log(dict(_latest_callhome_data[uid], type="callhome"))
     logging.info("Call-home: device=%s (%s) faults=%d lump_versions=%d tunnel=%s",

@@ -2287,6 +2287,191 @@ function deployAll() {
 
 var _currentDevicesTab = 'devices';
 
+// ── Church Machine Instruction Decoder ────────────────────────────────────
+var CM_MNEMONICS = [
+    'LOAD', 'SAVE', 'CALL', 'RETURN', 'CHANGE',
+    'SWITCH', 'TPERM', 'LAMBDA', 'ELOADCALL', 'XLOADLAMBDA',
+    'DREAD', 'DWRITE', 'BFEXT', 'BFINS', 'MCMP',
+    'IADD', 'ISUB', 'BRANCH', 'SHL', 'SHR'
+];
+
+var CM_CONDS = [
+    'EQ', 'NE', 'CS', 'CC', 'MI', 'PL', 'VS', 'VC',
+    'HI', 'LS', 'GE', 'LT', 'GT', 'LE', 'AL', 'NV'
+];
+
+function _cmDecodeWord(word, wordAddr) {
+    var hexStr = (word >>> 0).toString(16).toUpperCase().padStart(8, '0');
+    if (word === 0) {
+        return { addr: wordAddr, hex: hexStr, mnemonic: 'HALT', cond: 'AL', condSuffix: '', dst: null, src: null, imm: null, text: 'HALT' };
+    }
+    var opcode = (word >>> 27) & 0x1F;
+    var cond   = (word >>> 23) & 0x0F;
+    var dst    = (word >>> 19) & 0x0F;
+    var src    = (word >>> 15) & 0x0F;
+    var imm15  = word & 0x7FFF;
+
+    if (opcode > 19) {
+        return { addr: wordAddr, hex: hexStr, mnemonic: '?', cond: 'AL', condSuffix: '', dst: null, src: null, imm: null, text: '? 0x' + hexStr };
+    }
+
+    var mnemonic   = CM_MNEMONICS[opcode];
+    var condStr    = CM_CONDS[cond];
+    var condSuffix = (cond === 14) ? '' : ('.' + condStr);
+
+    var operands = '';
+    switch (opcode) {
+        case 0:  operands = 'CR'+dst+', CR'+src+', #'+imm15; break;
+        case 1:  operands = 'CR'+dst+', CR'+src+', #'+imm15; break;
+        case 2:  operands = imm15 ? 'CR'+src+', #'+imm15 : 'CR'+src; break;
+        case 3:  operands = imm15 ? '#0x'+(imm15).toString(16).toUpperCase() : ''; break;
+        case 4:  operands = 'CR'+dst+', CR'+src+', #'+imm15; break;
+        case 5:  operands = 'CR'+dst+', CR'+src; break;
+        case 6:  operands = 'CR'+dst+', CR'+src+', #'+imm15; break;
+        case 7:  operands = 'CR'+dst; break;
+        case 8:  operands = 'CR'+dst+', CR'+src+', #'+imm15; break;
+        case 9:  operands = 'CR'+dst+', CR'+src+', #'+imm15; break;
+        case 10: operands = 'DR'+dst+', CR'+src+', #'+imm15; break;
+        case 11: operands = 'CR'+dst+', #'+imm15+', DR'+src; break;
+        case 12: case 13: case 15: case 16: case 18: case 19:
+            operands = 'DR'+dst+', DR'+src+', #'+imm15; break;
+        case 14: operands = 'DR'+dst+', DR'+src; break;
+        case 17: {
+            var signedOff = (imm15 & 0x4000) ? (imm15 - 0x8000) : imm15;
+            var target    = (wordAddr + signedOff) >>> 0;
+            operands = (signedOff >= 0 ? '+' : '') + signedOff + ' (→ 0x' + target.toString(16).toUpperCase() + ')';
+            break;
+        }
+        default: operands = 'CR'+dst+', CR'+src+', #'+imm15;
+    }
+
+    var text = mnemonic + condSuffix + (operands ? ' ' + operands : '');
+    return { addr: wordAddr, hex: hexStr, mnemonic: mnemonic, cond: condStr, condSuffix: condSuffix, dst: dst, src: src, imm: imm15, text: text };
+}
+
+// ── Boot ROM / Boot.Abstr Word Cache ─────────────────────────────────────
+var _cmRomCache  = null;   // flat array of 32-bit words, index = word address
+var _cmLumpCache = null;   // { lump_base: N, code: [...] }
+
+function _cmFetchWordCaches() {
+    if (!_cmRomCache) {
+        fetch('/api/boot-rom-words')
+            .then(function(r) { return r.json(); })
+            .then(function(d) { if (d.ok && d.rom) _cmRomCache = d.rom; })
+            .catch(function() {});
+    }
+    if (!_cmLumpCache) {
+        fetch('/api/boot-lump-words')
+            .then(function(r) { return r.json(); })
+            .then(function(d) { if (d.ok && d.code) _cmLumpCache = { lump_base: d.lump_base, code: d.code }; })
+            .catch(function() {});
+    }
+}
+
+function _cmLookupWord(wordAddr) {
+    if (_cmRomCache && wordAddr >= 0 && wordAddr < _cmRomCache.length) {
+        return _cmRomCache[wordAddr];
+    }
+    if (_cmLumpCache) {
+        var off = wordAddr - (_cmLumpCache.lump_base + 1);
+        if (off >= 0 && off < _cmLumpCache.code.length) {
+            return _cmLumpCache.code[off];
+        }
+    }
+    return null;
+}
+
+function _cmWordsAround(centreNia, radius) {
+    var results = [];
+    for (var i = centreNia - radius; i <= centreNia + radius; i++) {
+        var w = _cmLookupWord(i);
+        results.push({ wordAddr: i, word: (w === null || w === undefined) ? null : (w >>> 0) });
+    }
+    return results;
+}
+
+// ── Disassembly Panel ─────────────────────────────────────────────────────
+var _niaPanelOpenRow = null;
+
+function _openNiaPanel(row, nia, cr14, cr12, cr15) {
+    var container = document.getElementById('callhomeLogEntries');
+    if (!container) return;
+
+    var existing = container.querySelector('.nia-disasm-panel');
+    if (existing) existing.remove();
+
+    if (_niaPanelOpenRow === row) {
+        _niaPanelOpenRow = null;
+        row.classList.remove('nia-row-active');
+        return;
+    }
+    if (_niaPanelOpenRow) _niaPanelOpenRow.classList.remove('nia-row-active');
+    _niaPanelOpenRow = row;
+    row.classList.add('nia-row-active');
+
+    var niaInt = parseInt(nia, 16);
+    if (isNaN(niaInt)) niaInt = 0;
+
+    var cr14Str = (cr14 !== null && cr14 !== undefined && cr14 !== 'null') ? String(cr14) : 'n/a';
+    var cr12Str = (cr12 !== null && cr12 !== undefined && cr12 !== 'null') ? String(cr12) : 'n/a';
+    var cr15Str = (cr15 !== null && cr15 !== undefined && cr15 !== 'null') ? String(cr15) : 'n/a';
+
+    var RADIUS = 6;
+    var words = _cmWordsAround(niaInt, RADIUS);
+
+    var panel = document.createElement('div');
+    panel.className = 'nia-disasm-panel';
+
+    var headerHtml =
+        '<div class="nia-disasm-header">' +
+            '<span class="nia-disasm-triple">NIA=<span class="nia-val">0x' + niaInt.toString(16).toUpperCase().padStart(4,'0') + '</span>' +
+            '&nbsp;&nbsp;CR14=<span class="nia-val">' + _escHtml(cr14Str) + '</span>' +
+            '&nbsp;&nbsp;CR12=<span class="nia-val">' + _escHtml(cr12Str) + '</span>' +
+            '&nbsp;&nbsp;CR15=<span class="nia-val">' + _escHtml(cr15Str) + '</span>' +
+            '</span>' +
+            '<button class="nia-disasm-close" title="Close">✕</button>' +
+        '</div>';
+
+    var rowsHtml = '<div class="nia-disasm-body">';
+    words.forEach(function(entry) {
+        var rel = entry.wordAddr - niaInt;
+        var isCurrent = (rel === 0);
+        var relStr = rel === 0 ? '▶' : (rel > 0 ? '+' + rel : String(rel));
+        var rowCls = 'nia-disasm-row' + (isCurrent ? ' nia-disasm-current' : '');
+
+        var decoded;
+        if (entry.word === null) {
+            decoded = { hex: '????????', text: '(no data)' };
+        } else {
+            decoded = _cmDecodeWord(entry.word, entry.wordAddr);
+        }
+
+        var addrStr = '0x' + entry.wordAddr.toString(16).toUpperCase().padStart(4, '0');
+
+        rowsHtml +=
+            '<div class="' + rowCls + '">' +
+                '<span class="nia-col-rel">' + _escHtml(relStr) + '</span>' +
+                '<span class="nia-col-addr">' + _escHtml(addrStr) + '</span>' +
+                '<span class="nia-col-hex">' + _escHtml(decoded.hex) + '</span>' +
+                '<span class="nia-col-text">' + _escHtml(decoded.text) + '</span>' +
+            '</div>';
+    });
+    rowsHtml += '</div>';
+
+    panel.innerHTML = headerHtml + rowsHtml;
+
+    var closeBtn = panel.querySelector('.nia-disasm-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            panel.remove();
+            if (_niaPanelOpenRow) { _niaPanelOpenRow.classList.remove('nia-row-active'); _niaPanelOpenRow = null; }
+        });
+    }
+
+    row.parentNode.insertBefore(panel, row.nextSibling);
+}
+
 // ── Live Call-Home Log ─────────────────────────────────────────────────────
 var _callhomeLogSince = 0;
 var _callhomeLogTimer = null;
@@ -2325,6 +2510,12 @@ function _pollCallhomeLog() {
                     var typeDisp = (e.type === 'register') ? '<span class="chlog-type-reg">register</span>' : '<span class="chlog-type-ch">callhome</span>';
                     var row = document.createElement('div');
                     row.className = 'callhome-log-row';
+                    row.title = 'Click to disassemble';
+                    row.style.cursor = 'pointer';
+                    row.setAttribute('data-nia',  e.nia  || '0x0');
+                    row.setAttribute('data-cr14', e.cr14 != null ? String(e.cr14) : 'null');
+                    row.setAttribute('data-cr12', e.cr12 != null ? String(e.cr12) : 'null');
+                    row.setAttribute('data-cr15', e.cr15 != null ? String(e.cr15) : 'null');
                     row.innerHTML =
                         '<span class="chlog-time">' + timeStr + '</span>' +
                         '<span class="' + dotCls + '">●</span>' +
@@ -2335,6 +2526,15 @@ function _pollCallhomeLog() {
                         '<span class="chlog-boot">' + _escHtml(String(e.boot_count || 1)) + '</span>' +
                         '<span class="chlog-fault">' + faultDisp + '</span>' +
                         '<span class="chlog-type">' + typeDisp + '</span>';
+                    row.addEventListener('click', function() {
+                        _openNiaPanel(
+                            this,
+                            this.getAttribute('data-nia'),
+                            this.getAttribute('data-cr14'),
+                            this.getAttribute('data-cr12'),
+                            this.getAttribute('data-cr15')
+                        );
+                    });
                     var colHeads = panel.querySelector('.callhome-log-col-heads');
                     var insertAfter = colHeads ? colHeads.nextSibling : panel.firstChild;
                     panel.insertBefore(row, insertAfter);

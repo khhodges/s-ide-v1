@@ -1952,3 +1952,70 @@
 .chlog-type      { }
 .chlog-type-ch   { color: #374151; font-size: 0.65rem; }
 .chlog-type-reg  { color: #22c55e; font-size: 0.65rem; }
+.callhome-log-row.nia-row-active { background: #1a1a28; border-left: 2px solid #c8a84b55; }
+
+/* ── NIA Disassembly Panel ───────────────────────────────────────────────── */
+.nia-disasm-panel {
+    background: #111820;
+    border-left: 3px solid #c8a84b44;
+    border-bottom: 1px solid #2a2a3a;
+    margin: 0;
+    padding: 0;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.71rem;
+    animation: nia-panel-in 0.12s ease;
+}
+@keyframes nia-panel-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.nia-disasm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.3rem 0.8rem;
+    background: #161d2a;
+    border-bottom: 1px solid #2a2a3a;
+    color: #94a3b8;
+    font-size: 0.69rem;
+    letter-spacing: 0.02em;
+}
+.nia-disasm-triple { flex: 1; }
+.nia-val { color: #c8a84b; font-weight: 600; }
+.nia-disasm-close {
+    background: none;
+    border: 1px solid #374151;
+    border-radius: 3px;
+    color: #6b7280;
+    font-size: 0.65rem;
+    padding: 0.05rem 0.35rem;
+    cursor: pointer;
+    margin-left: 0.6rem;
+    transition: color 0.12s, border-color 0.12s;
+}
+.nia-disasm-close:hover { color: #d1d5db; border-color: #6b7280; }
+.nia-disasm-body { padding: 0.2rem 0; }
+.nia-disasm-row {
+    display: grid;
+    grid-template-columns: 2.5ch 6ch 9ch 1fr;
+    gap: 0.5rem;
+    padding: 0.12rem 0.8rem;
+    color: #4b5563;
+    border-bottom: 1px solid #0d0d1200;
+    line-height: 1.4;
+}
+.nia-disasm-row:hover { background: #151e2a; color: #6b7280; }
+.nia-disasm-current {
+    background: #2a1e00;
+    border-left: 3px solid #daa520;
+    padding-left: calc(0.8rem - 3px);
+    color: #daa520;
+    font-weight: 600;
+}
+.nia-disasm-current:hover { background: #2f2200; }
+.nia-col-rel   { color: inherit; text-align: right; }
+.nia-col-addr  { color: #374151; }
+.nia-disasm-current .nia-col-addr { color: #b8860b; }
+.nia-col-hex   { color: #334155; letter-spacing: 0.04em; }
+.nia-disasm-current .nia-col-hex  { color: #92681a; }
+.nia-col-text  { color: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
