@@ -2495,7 +2495,7 @@ function _pollCallhomeLog() {
             if (data.ok && data.entries && data.entries.length > 0 && panel) {
                 var empty = panel.querySelector('.callhome-log-empty');
                 if (empty) empty.remove();
-                data.entries.forEach(function(e) {
+                data.entries.slice().reverse().forEach(function(e) {
                     if (e.ts > _callhomeLogSince) _callhomeLogSince = e.ts;
                     var d = new Date(e.ts * 1000);
                     var hh = String(d.getHours()).padStart(2,'0');
