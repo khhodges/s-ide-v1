@@ -1840,3 +1840,74 @@
     font-style: italic;
     font-family: sans-serif;
 }
+
+/* ── Live Call-Home Log panel ───────────────────────────────────────────── */
+.callhome-log-panel {
+    margin: 1rem 1.25rem 1.25rem;
+    border: 1px solid #2a2a3a;
+    border-radius: 6px;
+    background: #0d0d12;
+    overflow: hidden;
+}
+.callhome-log-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.45rem 0.8rem;
+    background: #161622;
+    border-bottom: 1px solid #2a2a3a;
+}
+.callhome-log-title {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #c8a84b;
+    letter-spacing: 0.03em;
+    flex: 0 0 auto;
+}
+.callhome-log-subtitle {
+    font-size: 0.7rem;
+    color: #4b5563;
+    flex: 1;
+}
+.callhome-log-clear-btn {
+    background: none;
+    border: 1px solid #374151;
+    border-radius: 4px;
+    color: #6b7280;
+    font-size: 0.68rem;
+    padding: 0.1rem 0.5rem;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+.callhome-log-clear-btn:hover { color: #d1d5db; border-color: #6b7280; }
+.callhome-log-entries {
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 0.3rem 0;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.72rem;
+}
+.callhome-log-empty {
+    padding: 0.6rem 0.8rem;
+    color: #4b5563;
+    font-style: italic;
+    font-family: sans-serif;
+    font-size: 0.75rem;
+}
+.callhome-log-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.18rem 0.8rem;
+    border-bottom: 1px solid #111118;
+    transition: background 0.1s;
+}
+.callhome-log-row:hover { background: #161622; }
+.chlog-time   { color: #6b7280; min-width: 6ch; flex: 0 0 auto; }
+.chlog-dot-ok    { color: #22c55e; flex: 0 0 auto; }
+.chlog-dot-fault { color: #ef4444; flex: 0 0 auto; }
+.chlog-board  { color: #c8a84b; font-weight: 600; flex: 0 0 auto; }
+.chlog-uid    { color: #818cf8; flex: 0 0 auto; }
+.chlog-nia    { color: #94a3b8; flex: 0 0 auto; }
+.chlog-fw     { color: #4b5563; flex: 0 0 auto; }
+.chlog-fault  { color: #ef4444; }

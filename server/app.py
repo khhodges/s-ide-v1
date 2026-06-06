@@ -6847,6 +6847,15 @@ _tunnel_drain      = {}          # uid -> bytearray of serial bytes pushed by br
 _tunnel_drain_lock = threading.Lock()
 _latest_callhome_data = {}       # uid -> dict {board,uid,nia,boot_ok,fault,fault_code,fw_major,fw_minor,boot_count,ts}
 _latest_callhome_lock = threading.Lock()
+_callhome_log = []               # rolling list of last 200 CALLHOME/register events (newest appended last)
+_CALLHOME_LOG_MAX = 200
+
+def _append_callhome_log(entry):
+    """Append a CALLHOME event to the rolling log under _latest_callhome_lock."""
+    global _callhome_log
+    _callhome_log.append(entry)
+    if len(_callhome_log) > _CALLHOME_LOG_MAX:
+        _callhome_log = _callhome_log[-_CALLHOME_LOG_MAX:]
 
 
 @app.route("/api/device/register", methods=["POST"])
@@ -6979,6 +6988,7 @@ def device_register():
             "boot_count": dev.boot_count,
             "ts":         now,
         }
+        _append_callhome_log(dict(_latest_callhome_data[uid], type="register"))
     logging.info("Device registered: %s (%s) via %s:%s tunnel=%s",
                  uid, dev.board_name, bridge_host, bridge_port, dev.tunnel_status)
     return jsonify({
@@ -7181,6 +7191,24 @@ def boot_lump_words():
     })
 
 
+@app.route("/api/device/callhome-log")
+def device_callhome_log():
+    """Return recent CALLHOME/register events newer than ?since=<unix_ts>, newest first."""
+    try:
+        since = float(request.args.get("since") or 0)
+    except (ValueError, TypeError):
+        since = 0.0
+    try:
+        limit = min(int(request.args.get("limit") or 100), 200)
+    except (ValueError, TypeError):
+        limit = 100
+    with _latest_callhome_lock:
+        entries = [e for e in _callhome_log if e.get("ts", 0) > since]
+    entries_out = entries[-limit:]
+    entries_out.reverse()
+    return jsonify({"ok": True, "entries": entries_out})
+
+
 @app.route("/api/device/latest-callhome")
 def device_latest_callhome():
     """Return the most-recent CALLHOME entry newer than ?since=<unix_ts>."""
@@ -7348,6 +7376,7 @@ def device_call_home():
             "boot_count": dev.boot_count,
             "ts":         now,
         }
+        _append_callhome_log(dict(_latest_callhome_data[uid], type="callhome"))
     logging.info("Call-home: device=%s (%s) faults=%d lump_versions=%d tunnel=%s",
                  uid, dev.board_name, faults_recorded, lump_versions_updated, dev.tunnel_status)
 

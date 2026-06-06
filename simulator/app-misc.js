@@ -2287,6 +2287,77 @@ function deployAll() {
 
 var _currentDevicesTab = 'devices';
 
+// ── Live Call-Home Log ─────────────────────────────────────────────────────
+var _callhomeLogSince = 0;
+var _callhomeLogTimer = null;
+var _callhomeLogRowCount = 0;
+
+function _startCallhomeLog() {
+    if (_callhomeLogTimer) return;
+    _callhomeLogTimer = setTimeout(_pollCallhomeLog, 400);
+}
+
+function _stopCallhomeLog() {
+    if (_callhomeLogTimer) { clearTimeout(_callhomeLogTimer); _callhomeLogTimer = null; }
+}
+
+function _pollCallhomeLog() {
+    _callhomeLogTimer = null;
+    fetch('/api/device/callhome-log?since=' + _callhomeLogSince + '&limit=50')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.ok && data.entries && data.entries.length > 0) {
+                var panel = document.getElementById('callhomeLogEntries');
+                if (panel) {
+                    var empty = panel.querySelector('.callhome-log-empty');
+                    if (empty) empty.remove();
+                    data.entries.forEach(function(e) {
+                        if (e.ts > _callhomeLogSince) _callhomeLogSince = e.ts;
+                        var d = new Date(e.ts * 1000);
+                        var hh = String(d.getHours()).padStart(2,'0');
+                        var mm = String(d.getMinutes()).padStart(2,'0');
+                        var ss = String(d.getSeconds()).padStart(2,'0');
+                        var timeStr = hh + ':' + mm + ':' + ss;
+                        var ok = e.boot_ok === 1 || e.boot_ok === true;
+                        var dot = ok ? '<span class="chlog-dot-ok">●</span>' : '<span class="chlog-dot-fault">●</span>';
+                        var uid8 = (e.uid || '').slice(-8).toUpperCase();
+                        var faultStr = e.fault ? ' <span class="chlog-fault">fault=' + _escHtml(String(e.fault)) + '</span>' : '';
+                        var row = document.createElement('div');
+                        row.className = 'callhome-log-row';
+                        row.innerHTML =
+                            '<span class="chlog-time">' + timeStr + '</span>' +
+                            dot +
+                            '<span class="chlog-board">' + _escHtml(e.board || '?') + '</span>' +
+                            '<span class="chlog-uid">#' + uid8 + '</span>' +
+                            '<span class="chlog-nia">NIA=' + _escHtml(e.nia || '?') + '</span>' +
+                            '<span class="chlog-fw">fw=' + (e.fw_major||1) + '.' + (e.fw_minor||0) + '</span>' +
+                            faultStr;
+                        panel.insertBefore(row, panel.firstChild);
+                        _callhomeLogRowCount++;
+                        while (panel.children.length > 100) panel.removeChild(panel.lastChild);
+                    });
+                    var sub = document.getElementById('callhomeLogSubtitle');
+                    if (sub) sub.textContent = _callhomeLogRowCount + ' packet' + (_callhomeLogRowCount === 1 ? '' : 's') + ' · live';
+                }
+            }
+        })
+        .catch(function() {})
+        .finally(function() {
+            if (document.getElementById('callhomeLogPanel')) {
+                _callhomeLogTimer = setTimeout(_pollCallhomeLog, 3000);
+            }
+        });
+}
+
+function clearCallhomeLog() {
+    _callhomeLogSince = 0;
+    _callhomeLogRowCount = 0;
+    var panel = document.getElementById('callhomeLogEntries');
+    if (panel) panel.innerHTML = '<div class="callhome-log-empty">Cleared — waiting for next call-home&hellip;</div>';
+    var sub = document.getElementById('callhomeLogSubtitle');
+    if (sub) sub.textContent = 'live · polling every 3 s';
+}
+
 function switchDevicesTab(tab) {
     _currentDevicesTab = tab;
     var isLaunch = (tab === 'launch');
