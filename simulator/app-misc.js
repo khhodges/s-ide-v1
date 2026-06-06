@@ -2574,10 +2574,7 @@ function _pollCallhomeLog() {
                     var hh = String(d.getUTCHours()).padStart(2,'0');
                     var mm = String(d.getUTCMinutes()).padStart(2,'0');
                     var ss = String(d.getUTCSeconds()).padStart(2,'0');
-                    var timeStr = d.getUTCFullYear() + '-' +
-                        String(d.getUTCMonth() + 1).padStart(2,'0') + '-' +
-                        String(d.getUTCDate()).padStart(2,'0') + ' ' +
-                        hh + ':' + mm + ':' + ss + ' UTC';
+                    var timeStr = mm + ':' + ss;
                     var ok = e.boot_ok === 1 || e.boot_ok === true;
                     var dotCls = ok ? 'chlog-dot-ok' : 'chlog-dot-fault';
                     var uid = (e.uid || '').toUpperCase();
@@ -2679,13 +2676,8 @@ function _pollUartLog() {
                     if (e.ts > _uartLogSince) _uartLogSince = e.ts;
                     if (e.ts > _callhomeLatestTs) _callhomeLatestTs = e.ts;
                     var d = new Date(e.ts * 1000);
-                    var dateStr =
-                        d.getUTCFullYear() + '-' +
-                        String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
-                        String(d.getUTCDate()).padStart(2, '0') + ' ' +
-                        String(d.getUTCHours()).padStart(2, '0') + ':' +
-                        String(d.getUTCMinutes()).padStart(2, '0') + ':' +
-                        String(d.getUTCSeconds()).padStart(2, '0') + ' UTC';
+                    var dateStr = String(d.getUTCMinutes()).padStart(2,'0') + ':' +
+                        String(d.getUTCSeconds()).padStart(2,'0');
                     var rowUid = (e.uid || '').toUpperCase();
                     var row = document.createElement('div');
                     row.className = 'callhome-uart-row';
