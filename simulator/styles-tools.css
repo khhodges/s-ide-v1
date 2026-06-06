@@ -2057,20 +2057,20 @@
 }
 .callhome-log-row:hover { background: #161622; }
 
-.chlog-time      { color: #6b7280; }
+.chlog-time      { color: #c8cdd8; }
 .chlog-dot-ok    { color: #22c55e; }
 .chlog-dot-fault { color: #ef4444; }
 .chlog-board     { color: #c8a84b; font-weight: 600; }
-.chlog-ctx       { color: #94a3b8; font-size: 0.68rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chlog-ctx       { color: #c8cdd8; font-size: 0.68rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chlog-uid       { color: #818cf8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chlog-nia       { color: #94a3b8; }
-.chlog-fw        { color: #6b7280; }
-.chlog-boot      { color: #6b7280; text-align: right; }
+.chlog-nia       { color: #c8cdd8; }
+.chlog-fw        { color: #c8cdd8; }
+.chlog-boot      { color: #c8cdd8; text-align: right; }
 .chlog-fault     { }
 .chlog-fault-val { color: #ef4444; }
-.chlog-ok-dash   { color: #1f2937; }
+.chlog-ok-dash   { color: #6b7280; }
 .chlog-type      { }
-.chlog-type-ch   { color: #374151; font-size: 0.65rem; }
+.chlog-type-ch   { color: #9ca3af; font-size: 0.65rem; }
 .chlog-type-reg  { color: #22c55e; font-size: 0.65rem; }
 .callhome-log-row.nia-row-active { background: #1a1a28; border-left: 2px solid #c8a84b55; }
 
@@ -2087,7 +2087,7 @@
     background: #080810;
 }
 .callhome-uart-row:hover { background: #0f0f1a; }
-.callhome-uart-row .uart-ts   { color: #374151; }
+.callhome-uart-row .uart-ts   { color: #c8cdd8; }
 .callhome-uart-row .uart-text {
     grid-column: 2 / -1;
     color: #6b7280;
