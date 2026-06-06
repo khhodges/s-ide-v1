@@ -41,7 +41,7 @@
     <link rel="stylesheet" href="styles-lumps.css?v=20260601b">
     <link rel="stylesheet" href="styles-gatelog.css?v=20260513a">
     <link rel="stylesheet" href="styles-fault.css?v=20260527a">
-    <link rel="stylesheet" href="styles-tools.css?v=20260527f">
+    <link rel="stylesheet" href="styles-tools.css?v=20260606a">
     <style>
         .app-loading {
             position: fixed; inset: 0; z-index: 99999;
@@ -1883,6 +1883,7 @@ CALLHOME:{"board":"ti60-f225","uid":"AABBCCDD","nia":0,"boot_ok":1,"fault":0,"fa
                     <div class="dev-view-tabs">
                         <button class="dev-view-tab active" id="devTabDevices" onclick="switchDevicesTab('devices')">FPGA Devices</button>
                         <button class="dev-view-tab" id="devTabLaunch" onclick="switchDevicesTab('launch')">Launch Readiness</button>
+                        <button class="dev-view-tab" id="devTabReliability" onclick="switchDevicesTab('reliability')">Reliability</button>
                     </div>
                 </div>
                 <span id="devTabActionsDevices">
@@ -1894,6 +1895,12 @@ CALLHOME:{"board":"ti60-f225","uid":"AABBCCDD","nia":0,"boot_ok":1,"fault":0,"fa
                     <button class="dev-launch-reset-btn" onclick="confirmResetLaunchTests()" title="Reset all tests to not-run">Reset All</button>
                     <button class="gh-refresh-btn" onclick="loadLaunchTests()" title="Refresh launch test status">&#x21BB;</button>
                 </span>
+                <span id="devTabActionsReliability" style="display:none;">
+                    <select class="rel-board-filter" id="relBoardFilter" onchange="loadReliabilityPanel()" title="Filter by board">
+                        <option value="">All boards</option>
+                    </select>
+                    <button class="gh-refresh-btn" onclick="loadReliabilityPanel()" title="Refresh reliability data">&#x21BB;</button>
+                </span>
             </div>
             <div id="devPaneDevices">
                 <div class="dev-grid" id="devGrid">
@@ -1903,6 +1910,18 @@ CALLHOME:{"board":"ti60-f225","uid":"AABBCCDD","nia":0,"boot_ok":1,"fault":0,"fa
             <div id="devPaneLaunch" style="display:none;">
                 <div id="launchTestGrid" class="launch-test-grid">
                     <div class="dev-empty">Loading...</div>
+                </div>
+            </div>
+            <div id="devPaneReliability" style="display:none;">
+                <div class="rel-panel">
+                    <div class="rel-toolbar">
+                        <span class="rel-sort-label">Sort by MTBF:</span>
+                        <button class="rel-sort-btn active" id="relSortAsc" onclick="setReliabilitySort('asc')">&#x25B2; Least reliable first</button>
+                        <button class="rel-sort-btn" id="relSortDesc" onclick="setReliabilitySort('desc')">&#x25BC; Most reliable first</button>
+                    </div>
+                    <div id="relTableWrap">
+                        <div class="dev-empty">Select the Reliability tab to load data.</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2327,7 +2346,7 @@ CALLHOME:{"board":"ti60-f225","uid":"AABBCCDD","nia":0,"boot_ok":1,"fault":0,"fa
     <script src="app-run.js?v=20260606a"></script>
     <script src="app-source-library.js?v=20260509d"></script>
     <script src="app-invoke.js?v=20260521a"></script>
-    <script src="app-misc.js?v=20260606i"></script>
+    <script src="app-misc.js?v=20260606j"></script>
     <script src="asm-instruction-picker.js?v=20260602e"></script>
     <script src="asm-method-popup.js?v=20260518b"></script>
     <script src="clist-viewer.js?v=20260602c"></script>

@@ -2682,23 +2682,168 @@ function _pollUartLog() {
 
 function switchDevicesTab(tab) {
     _currentDevicesTab = tab;
-    var isLaunch = (tab === 'launch');
+    var isDevices     = (tab === 'devices');
+    var isLaunch      = (tab === 'launch');
+    var isReliability = (tab === 'reliability');
 
-    var tabDevices = document.getElementById('devTabDevices');
-    var tabLaunch = document.getElementById('devTabLaunch');
-    var paneDevices = document.getElementById('devPaneDevices');
-    var paneLaunch = document.getElementById('devPaneLaunch');
-    var actionsDevices = document.getElementById('devTabActionsDevices');
-    var actionsLaunch = document.getElementById('devTabActionsLaunch');
+    var tabDevices      = document.getElementById('devTabDevices');
+    var tabLaunch       = document.getElementById('devTabLaunch');
+    var tabReliability  = document.getElementById('devTabReliability');
+    var paneDevices     = document.getElementById('devPaneDevices');
+    var paneLaunch      = document.getElementById('devPaneLaunch');
+    var paneReliability = document.getElementById('devPaneReliability');
+    var actionsDevices     = document.getElementById('devTabActionsDevices');
+    var actionsLaunch      = document.getElementById('devTabActionsLaunch');
+    var actionsReliability = document.getElementById('devTabActionsReliability');
 
-    if (tabDevices) tabDevices.classList.toggle('active', !isLaunch);
-    if (tabLaunch) tabLaunch.classList.toggle('active', isLaunch);
-    if (paneDevices) paneDevices.style.display = isLaunch ? 'none' : '';
-    if (paneLaunch) paneLaunch.style.display = isLaunch ? '' : 'none';
-    if (actionsDevices) actionsDevices.style.display = isLaunch ? 'none' : '';
-    if (actionsLaunch) actionsLaunch.style.display = isLaunch ? '' : 'none';
+    if (tabDevices)      tabDevices.classList.toggle('active', isDevices);
+    if (tabLaunch)       tabLaunch.classList.toggle('active', isLaunch);
+    if (tabReliability)  tabReliability.classList.toggle('active', isReliability);
 
-    if (isLaunch) loadLaunchTests();
+    if (paneDevices)     paneDevices.style.display     = isDevices     ? '' : 'none';
+    if (paneLaunch)      paneLaunch.style.display      = isLaunch      ? '' : 'none';
+    if (paneReliability) paneReliability.style.display = isReliability ? '' : 'none';
+
+    if (actionsDevices)     actionsDevices.style.display     = isDevices     ? '' : 'none';
+    if (actionsLaunch)      actionsLaunch.style.display      = isLaunch      ? '' : 'none';
+    if (actionsReliability) actionsReliability.style.display = isReliability ? '' : 'none';
+
+    if (isLaunch)       loadLaunchTests();
+    if (isReliability)  loadReliabilityPanel();
+}
+
+// ── Reliability Dashboard ──────────────────────────────────────────────────
+var _relRows       = [];
+var _relSortDir    = 'asc';
+
+function setReliabilitySort(dir) {
+    _relSortDir = dir;
+    var btnAsc  = document.getElementById('relSortAsc');
+    var btnDesc = document.getElementById('relSortDesc');
+    if (btnAsc)  btnAsc.classList.toggle('active',  dir === 'asc');
+    if (btnDesc) btnDesc.classList.toggle('active', dir === 'desc');
+    _renderReliabilityTable(_relRows);
+}
+
+function loadReliabilityPanel() {
+    var wrap = document.getElementById('relTableWrap');
+    if (!wrap) return;
+    wrap.innerHTML = '<div class="rel-empty">Loading&hellip;</div>';
+
+    var uidFilter = (document.getElementById('relBoardFilter') || {}).value || '';
+    var url = '/api/device/mtbf' + (uidFilter ? '?uid=' + encodeURIComponent(uidFilter) : '');
+
+    fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.ok) {
+                wrap.innerHTML = '<div class="rel-empty">Failed to load reliability data.</div>';
+                return;
+            }
+            _relRows = data.rows || [];
+            _populateRelBoardFilter(_relRows);
+            _renderReliabilityTable(_relRows);
+        })
+        .catch(function() {
+            wrap.innerHTML = '<div class="rel-empty">Could not reach server.</div>';
+        });
+}
+
+function _populateRelBoardFilter(rows) {
+    var sel = document.getElementById('relBoardFilter');
+    if (!sel) return;
+    var seen = {};
+    var currentVal = sel.value;
+    var options = '<option value="">All boards</option>';
+    rows.forEach(function(r) {
+        var uid = r.machine_uid || '';
+        var label = (r.board_name || uid || 'Unknown');
+        if (uid && !seen[uid]) {
+            seen[uid] = true;
+            options += '<option value="' + _escHtml(uid) + '">' + _escHtml(label) + '</option>';
+        }
+    });
+    sel.innerHTML = options;
+    if (currentVal) sel.value = currentVal;
+}
+
+function _mtbfHoursClass(mtbfHours) {
+    if (mtbfHours === null || mtbfHours === undefined) return 'mtbf-none';
+    if (mtbfHours >= 24)  return 'mtbf-green';
+    if (mtbfHours >= 1)   return 'mtbf-amber';
+    return 'mtbf-red';
+}
+
+function _formatMTBFHours(mtbfHours) {
+    if (mtbfHours === null || mtbfHours === undefined) return '—';
+    if (mtbfHours >= 24)   return (mtbfHours / 24).toFixed(1) + 'd';
+    if (mtbfHours >= 1)    return mtbfHours.toFixed(1) + 'h';
+    if (mtbfHours >= 1/60) return (mtbfHours * 60).toFixed(1) + 'm';
+    return (mtbfHours * 3600).toFixed(1) + 's';
+}
+
+function _renderReliabilityTable(rows) {
+    var wrap = document.getElementById('relTableWrap');
+    if (!wrap) return;
+
+    var uidFilter = (document.getElementById('relBoardFilter') || {}).value || '';
+    var filtered = uidFilter
+        ? rows.filter(function(r) { return (r.machine_uid || '') === uidFilter; })
+        : rows;
+
+    if (filtered.length === 0) {
+        wrap.innerHTML = '<div class="rel-empty">No fault history recorded for this selection.<br>' +
+            'Faults are logged when an FPGA board calls home after a capability fault.</div>';
+        return;
+    }
+
+    var sorted = filtered.slice().sort(function(a, b) {
+        var aH = a.mtbf_hours, bH = b.mtbf_hours;
+        var aNone = (aH === null || aH === undefined);
+        var bNone = (bH === null || bH === undefined);
+        if (aNone && bNone) return 0;
+        if (aNone) return 1;
+        if (bNone) return -1;
+        return _relSortDir === 'asc' ? (aH - bH) : (bH - aH);
+    });
+
+    var sortArrow = _relSortDir === 'asc' ? '&#x25B2;' : '&#x25BC;';
+    var html = '<div class="rel-table-wrap"><table class="rel-table"><thead><tr>' +
+        '<th>Abstraction</th>' +
+        '<th>Board</th>' +
+        '<th>Mnemonic</th>' +
+        '<th style="text-align:center">Slot</th>' +
+        '<th style="text-align:center">Faults</th>' +
+        '<th style="text-align:right" onclick="setReliabilitySort(_relSortDir===\'asc\'?\'desc\':\'asc\')">' +
+            'MTBF <span class="rel-th-sort">' + sortArrow + '</span></th>' +
+        '</tr></thead><tbody>';
+
+    sorted.forEach(function(r) {
+        var abstrLabel = r.abstraction_label || ('Slot ' + (r.ns_slot !== null ? r.ns_slot : '?'));
+        var boardLabel = r.board_name || r.machine_uid || '—';
+        var mnemonic   = r.mnemonic || '—';
+        var slotStr    = (r.ns_slot !== null && r.ns_slot !== undefined) ? String(r.ns_slot) : '—';
+        var mtbfClass  = _mtbfHoursClass(r.mtbf_hours);
+        var mtbfStr    = _formatMTBFHours(r.mtbf_hours);
+
+        html += '<tr>' +
+            '<td class="rel-td-abstr">' + _escHtml(abstrLabel) + '</td>' +
+            '<td class="rel-td-board">' + _escHtml(boardLabel) + '</td>' +
+            '<td class="rel-td-mnemonic">' + _escHtml(mnemonic) + '</td>' +
+            '<td class="rel-td-slot">' + _escHtml(slotStr) + '</td>' +
+            '<td class="rel-td-faults">' + r.fault_count + '</td>' +
+            '<td class="rel-td-mtbf ' + mtbfClass + '">' + mtbfStr + '</td>' +
+            '</tr>';
+    });
+
+    html += '</tbody></table></div>' +
+        '<div class="rel-legend">' +
+        '<span class="rel-legend-item"><span class="rel-legend-dot green"></span> &ge; 24 h — stable</span>' +
+        '<span class="rel-legend-item"><span class="rel-legend-dot amber"></span> 1–24 h — watch</span>' +
+        '<span class="rel-legend-item"><span class="rel-legend-dot red"></span> &lt; 1 h — critical</span>' +
+        '</div>';
+
+    wrap.innerHTML = html;
 }
 
 var _LAUNCH_AUTO_IDS = new Set(['TEST-01', 'TEST-02']);
