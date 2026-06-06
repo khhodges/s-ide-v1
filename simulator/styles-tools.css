@@ -1954,7 +1954,22 @@
 .chlog-type-reg  { color: #22c55e; font-size: 0.65rem; }
 .callhome-log-row.nia-row-active { background: #1a1a28; border-left: 2px solid #c8a84b55; }
 
-/* ── UART Console ────────────────────────────────────────────────────────── */
+/* Plain UART text lines interleaved in the callhome log */
+.callhome-uart-row {
+    display: flex;
+    gap: 1rem;
+    padding: 0.15rem 0.8rem;
+    border-bottom: 1px solid #0d0d12;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.72rem;
+    background: #080810;
+    white-space: pre;
+}
+.callhome-uart-row:hover { background: #0f0f1a; }
+.callhome-uart-row .uart-ts   { color: #374151; flex: 0 0 auto; }
+.callhome-uart-row .uart-text { color: #6b7280; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── UART Console (standalone panel — kept for future use) ───────────────── */
 .uart-log-panel {
     margin: 0 0 1.2rem;
     border: 1px solid #2a2a3a;
