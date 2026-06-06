@@ -2306,48 +2306,53 @@ function _pollCallhomeLog() {
     fetch('/api/device/callhome-log?since=' + _callhomeLogSince + '&limit=50')
         .then(function(r) { return r.json(); })
         .then(function(data) {
-            if (data.ok && data.entries && data.entries.length > 0) {
-                var panel = document.getElementById('callhomeLogEntries');
-                if (panel) {
-                    var empty = panel.querySelector('.callhome-log-empty');
-                    if (empty) empty.remove();
-                    data.entries.forEach(function(e) {
-                        if (e.ts > _callhomeLogSince) _callhomeLogSince = e.ts;
-                        var d = new Date(e.ts * 1000);
-                        var hh = String(d.getHours()).padStart(2,'0');
-                        var mm = String(d.getMinutes()).padStart(2,'0');
-                        var ss = String(d.getSeconds()).padStart(2,'0');
-                        var timeStr = hh + ':' + mm + ':' + ss;
-                        var ok = e.boot_ok === 1 || e.boot_ok === true;
-                        var dotCls = ok ? 'chlog-dot-ok' : 'chlog-dot-fault';
-                        var uid = (e.uid || '').toUpperCase();
-                        var faultVal = e.fault || e.fault_code || 0;
-                        var faultDisp = faultVal ? '<span class="chlog-fault-val">' + _escHtml(String(faultVal)) + '</span>' : '<span class="chlog-ok-dash">—</span>';
-                        var typeDisp = (e.type === 'register') ? '<span class="chlog-type-reg">register</span>' : '<span class="chlog-type-ch">callhome</span>';
-                        var row = document.createElement('div');
-                        row.className = 'callhome-log-row';
-                        row.innerHTML =
-                            '<span class="chlog-time">' + timeStr + '</span>' +
-                            '<span class="' + dotCls + '">●</span>' +
-                            '<span class="chlog-board">' + _escHtml(e.board || '?') + '</span>' +
-                            '<span class="chlog-uid">' + _escHtml(uid) + '</span>' +
-                            '<span class="chlog-nia">' + _escHtml(e.nia || '?') + '</span>' +
-                            '<span class="chlog-fw">' + (e.fw_major||1) + '.' + (e.fw_minor||0) + '</span>' +
-                            '<span class="chlog-boot">' + _escHtml(String(e.boot_count || 1)) + '</span>' +
-                            '<span class="chlog-fault">' + faultDisp + '</span>' +
-                            '<span class="chlog-type">' + typeDisp + '</span>';
-                        var colHeads = panel.querySelector('.callhome-log-col-heads');
-                        var insertAfter = colHeads ? colHeads.nextSibling : panel.firstChild;
-                        panel.insertBefore(row, insertAfter);
-                        _callhomeLogRowCount++;
-                        while (panel.children.length > 100) panel.removeChild(panel.lastChild);
-                    });
-                    var sub = document.getElementById('callhomeLogSubtitle');
-                    if (sub) sub.textContent = _callhomeLogRowCount + ' packet' + (_callhomeLogRowCount === 1 ? '' : 's') + ' · live';
-                }
+            var panel = document.getElementById('callhomeLogEntries');
+            if (data.ok && data.entries && data.entries.length > 0 && panel) {
+                var empty = panel.querySelector('.callhome-log-empty');
+                if (empty) empty.remove();
+                data.entries.forEach(function(e) {
+                    if (e.ts > _callhomeLogSince) _callhomeLogSince = e.ts;
+                    var d = new Date(e.ts * 1000);
+                    var hh = String(d.getHours()).padStart(2,'0');
+                    var mm = String(d.getMinutes()).padStart(2,'0');
+                    var ss = String(d.getSeconds()).padStart(2,'0');
+                    var timeStr = hh + ':' + mm + ':' + ss;
+                    var ok = e.boot_ok === 1 || e.boot_ok === true;
+                    var dotCls = ok ? 'chlog-dot-ok' : 'chlog-dot-fault';
+                    var uid = (e.uid || '').toUpperCase();
+                    var faultVal = e.fault || e.fault_code || 0;
+                    var faultDisp = faultVal ? '<span class="chlog-fault-val">' + _escHtml(String(faultVal)) + '</span>' : '<span class="chlog-ok-dash">—</span>';
+                    var typeDisp = (e.type === 'register') ? '<span class="chlog-type-reg">register</span>' : '<span class="chlog-type-ch">callhome</span>';
+                    var row = document.createElement('div');
+                    row.className = 'callhome-log-row';
+                    row.innerHTML =
+                        '<span class="chlog-time">' + timeStr + '</span>' +
+                        '<span class="' + dotCls + '">●</span>' +
+                        '<span class="chlog-board">' + _escHtml(e.board || '?') + '</span>' +
+                        '<span class="chlog-uid">' + _escHtml(uid) + '</span>' +
+                        '<span class="chlog-nia">' + _escHtml(e.nia || '?') + '</span>' +
+                        '<span class="chlog-fw">' + (e.fw_major||1) + '.' + (e.fw_minor||0) + '</span>' +
+                        '<span class="chlog-boot">' + _escHtml(String(e.boot_count || 1)) + '</span>' +
+                        '<span class="chlog-fault">' + faultDisp + '</span>' +
+                        '<span class="chlog-type">' + typeDisp + '</span>';
+                    var colHeads = panel.querySelector('.callhome-log-col-heads');
+                    var insertAfter = colHeads ? colHeads.nextSibling : panel.firstChild;
+                    panel.insertBefore(row, insertAfter);
+                    _callhomeLogRowCount++;
+                    while (panel.children.length > 100) panel.removeChild(panel.lastChild);
+                });
             }
+            var now = new Date();
+            var hh = String(now.getHours()).padStart(2,'0');
+            var mm = String(now.getMinutes()).padStart(2,'0');
+            var ss = String(now.getSeconds()).padStart(2,'0');
+            var sub = document.getElementById('callhomeLogSubtitle');
+            if (sub) sub.textContent = _callhomeLogRowCount + ' packet' + (_callhomeLogRowCount === 1 ? '' : 's') + ' · checked ' + hh + ':' + mm + ':' + ss;
         })
-        .catch(function() {})
+        .catch(function() {
+            var sub = document.getElementById('callhomeLogSubtitle');
+            if (sub) sub.textContent = _callhomeLogRowCount + ' packets · poll error';
+        })
         .finally(function() {
             if (document.getElementById('callhomeLogPanel')) {
                 _callhomeLogTimer = setTimeout(_pollCallhomeLog, 3000);
