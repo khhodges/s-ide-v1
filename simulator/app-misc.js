@@ -2498,7 +2498,7 @@ function _refreshMachineDropdown() {
                 opt.value = dev.device_uid;
                 var shortUid = (dev.device_uid || '').toUpperCase().slice(-8);
                 var dot = dev.status === 'online' ? '● ' : '○ ';
-                opt.textContent = dot + dev.board_name + ' · ' + shortUid;
+                opt.textContent = dot + (dev.label || dev.board_name || shortUid);
                 opt.dataset.status = dev.status;
                 sel.appendChild(opt);
             });
