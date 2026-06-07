@@ -2597,55 +2597,13 @@ function _chlogMakeDraggable(modal) {
     obs.observe(document.body, { childList: true, subtree: true });
 }
 
-function _openCallhomeModal(row) {
-    var entryUid    = row.dataset.uid || (row.getAttribute('data-nia') || '0x0');
-    var nia         = row.getAttribute('data-nia') || '0x0';
-    var cr14        = row.getAttribute('data-cr14') || 'null';
-    var cr12        = row.getAttribute('data-cr12') || 'null';
-    var cr15        = row.getAttribute('data-cr15') || 'null';
-    var niaLabel    = row.dataset.niaLabel  || '';
-    var faultName   = row.dataset.faultName || '';
-    var machLabel   = row.dataset.machineLabel || '?';
-    var timeStr     = row.dataset.timeStr   || '';
-    var fwStr       = row.dataset.fwStr     || '';
-    var bootStr     = row.dataset.bootStr   || '';
-
-    var niaInt = parseInt(nia, 16);
-    if (isNaN(niaInt)) niaInt = 0;
-
-    var cr14Str = (cr14 !== 'null' && cr14 !== '') ? cr14 : '\u2014';
-    var cr12Str = (cr12 !== 'null' && cr12 !== '') ? cr12 : '\u2014';
-    var cr15Str = (cr15 !== 'null' && cr15 !== '') ? cr15 : '\u2014';
-    // Resolve NS slot indices → human pet names (GT > CR6 > Namespace table)
-    var cr14Name = _chlogNsSlotName(cr14Str);   // ⚡ abstraction cap
-    var cr12Name = _chlogNsSlotName(cr12Str);   // return cap
-    var cr15Name = _chlogNsSlotName(cr15Str);   // data cap
-
-    var petName = _chlogPetNameFromContext(niaInt, niaLabel);
-
-    var seq  = ++_chlogModalSeq;
-    var step = (seq - 1) % 8;
-    var left = _chlogModalBaseLeft + step * 22;
-    var top  = _chlogModalBaseTop  + step * 22;
-
-    var modal = document.createElement('div');
-    modal.className = 'chlog-modal';
-    modal.id = 'chlog-modal-' + seq;
-    modal.style.left = left + 'px';
-    modal.style.top  = top  + 'px';
-
-    var faultHtml = '';
-    if (faultName) {
-        faultHtml =
-            '<div class="chlog-modal-fault">' +
-                '<span class="chlog-fault-val">' + _escHtml(faultName) + '</span>' +
-                ' <span class="chlog-recovery-tag">RECOVERY</span>' +
-            '</div>';
-    }
-
-    var RADIUS = 8;
-    var words = _cmWordsAround(niaInt, RADIUS);
-
+// ── _cmBuildDisasmHtml ────────────────────────────────────────────────────────
+// Builds the disassembly rows HTML and spotlight block HTML from a NIA address
+// and a words array (each element: { wordAddr: int, word: int|null }).
+// Returns { rowsHtml, spotlightHtml }.
+// Extracted as a standalone function so it can be unit-tested independently of
+// the modal scaffolding in _openCallhomeModal.
+function _cmBuildDisasmHtml(niaInt, words) {
     // Collapse leading no-data rows into a single separator line
     var firstRealIdx = 0;
     while (firstRealIdx < words.length && words[firstRealIdx].word === null && words[firstRealIdx].wordAddr < niaInt) {
@@ -2662,7 +2620,7 @@ function _openCallhomeModal(row) {
     if (hasLeadingNoData) {
         rowsHtml += '<div class="nia-nodata-sep">\u2500\u2500 nothing before this address \u2500\u2500</div>';
     }
-    words.forEach(function(entry, idx) {
+    words.forEach(function(entry) {
         if (entry.word === null && entry.wordAddr < niaInt) return; // collapsed above
         var rel = entry.wordAddr - niaInt;
         var isCurrent = (rel === 0);
@@ -2713,6 +2671,61 @@ function _openCallhomeModal(row) {
                 (plainEng ? '<div class="chlog-modal-spotlight-english">' + _escHtml(plainEng) + '</div>' : '') +
             '</div>';
     }
+
+    return { rowsHtml: rowsHtml, spotlightHtml: spotlightHtml };
+}
+
+function _openCallhomeModal(row) {
+    var entryUid    = row.dataset.uid || (row.getAttribute('data-nia') || '0x0');
+    var nia         = row.getAttribute('data-nia') || '0x0';
+    var cr14        = row.getAttribute('data-cr14') || 'null';
+    var cr12        = row.getAttribute('data-cr12') || 'null';
+    var cr15        = row.getAttribute('data-cr15') || 'null';
+    var niaLabel    = row.dataset.niaLabel  || '';
+    var faultName   = row.dataset.faultName || '';
+    var machLabel   = row.dataset.machineLabel || '?';
+    var timeStr     = row.dataset.timeStr   || '';
+    var fwStr       = row.dataset.fwStr     || '';
+    var bootStr     = row.dataset.bootStr   || '';
+
+    var niaInt = parseInt(nia, 16);
+    if (isNaN(niaInt)) niaInt = 0;
+
+    var cr14Str = (cr14 !== 'null' && cr14 !== '') ? cr14 : '\u2014';
+    var cr12Str = (cr12 !== 'null' && cr12 !== '') ? cr12 : '\u2014';
+    var cr15Str = (cr15 !== 'null' && cr15 !== '') ? cr15 : '\u2014';
+    // Resolve NS slot indices → human pet names (GT > CR6 > Namespace table)
+    var cr14Name = _chlogNsSlotName(cr14Str);   // ⚡ abstraction cap
+    var cr12Name = _chlogNsSlotName(cr12Str);   // return cap
+    var cr15Name = _chlogNsSlotName(cr15Str);   // data cap
+
+    var petName = _chlogPetNameFromContext(niaInt, niaLabel);
+
+    var seq  = ++_chlogModalSeq;
+    var step = (seq - 1) % 8;
+    var left = _chlogModalBaseLeft + step * 22;
+    var top  = _chlogModalBaseTop  + step * 22;
+
+    var modal = document.createElement('div');
+    modal.className = 'chlog-modal';
+    modal.id = 'chlog-modal-' + seq;
+    modal.style.left = left + 'px';
+    modal.style.top  = top  + 'px';
+
+    var faultHtml = '';
+    if (faultName) {
+        faultHtml =
+            '<div class="chlog-modal-fault">' +
+                '<span class="chlog-fault-val">' + _escHtml(faultName) + '</span>' +
+                ' <span class="chlog-recovery-tag">RECOVERY</span>' +
+            '</div>';
+    }
+
+    var RADIUS = 8;
+    var words = _cmWordsAround(niaInt, RADIUS);
+    var _built = _cmBuildDisasmHtml(niaInt, words);
+    var rowsHtml     = _built.rowsHtml;
+    var spotlightHtml = _built.spotlightHtml;
 
     modal.innerHTML =
         '<div class="chlog-modal-header">' +

@@ -252,6 +252,167 @@ function assert(label, condition, detail) {
         desc ? JSON.stringify(desc.textContent) : '(no desc)');
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DB tests: _cmBuildDisasmHtml HTML layout
+//
+//   DB-1  Current row has .nia-disasm-current; its inline desc has
+//          .nia-disasm-desc-current immediately after it
+//   DB-2  Null-word rows before the NIA are collapsed (no DOM node rendered);
+//          the leading separator .nia-nodata-sep appears; null-word rows AFTER
+//          the NIA are rendered with .nia-no-data
+//   DB-3  Spotlight block (.chlog-modal-spotlight) is rendered when the current
+//          word decodes to a known mnemonic
+//   DB-4  Spotlight HTML is empty when the word at the NIA is null
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Source extraction ─────────────────────────────────────────────────────────
+
+function extractBuildDisasmHtml(srcPath) {
+    const src = fs.readFileSync(path.resolve(__dirname, srcPath), 'utf8');
+    const marker = 'function _cmBuildDisasmHtml(';
+    const startIdx = src.indexOf(marker);
+    if (startIdx === -1) {
+        throw new Error('_cmBuildDisasmHtml not found in ' + srcPath);
+    }
+    // Walk forward matching braces to find the closing brace of the function.
+    let depth = 0;
+    let end   = -1;
+    for (let i = startIdx; i < src.length; i++) {
+        if (src[i] === '{') depth++;
+        else if (src[i] === '}') {
+            if (--depth === 0) { end = i; break; }
+        }
+    }
+    if (end === -1) throw new Error('Could not find end of _cmBuildDisasmHtml');
+    return src.slice(startIdx, end + 1);
+}
+
+const BUILD_HTML_SRC = extractBuildDisasmHtml('app-misc.js');
+
+// ── Fixture helpers ───────────────────────────────────────────────────────────
+
+// Minimal HTML-escape matching what _escHtml does in production.
+function _escHtmlMock(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+// Run _cmBuildDisasmHtml in an isolated vm context with mock dependencies.
+// opts may override: decodeWord(word,addr), roleAnnotation(d), plainEnglish(d).
+function runBuildDisasmHtml(niaInt, words, opts) {
+    opts = opts || {};
+    const mockDecodeWord = opts.decodeWord || function(word, addr) {
+        return {
+            addr: addr,
+            hex:  (word >>> 0).toString(16).toUpperCase().padStart(8, '0'),
+            mnemonic: 'MOCK',
+            text: 'MOCK ' + addr,
+            dst: 1, src: 2, imm: 0,
+        };
+    };
+    const mockRoleAnnotation = opts.roleAnnotation || function() { return ''; };
+    const mockPlainEnglish   = opts.plainEnglish   || function() { return 'mock plain english'; };
+
+    const sandbox = {
+        _cmDecodeWord:        mockDecodeWord,
+        _instrRoleAnnotation: mockRoleAnnotation,
+        _instrPlainEnglish:   mockPlainEnglish,
+        _escHtml:             _escHtmlMock,
+        _cmBuildDisasmHtml:   undefined,
+    };
+    const ctx = vm.createContext(new Proxy(sandbox, {
+        get(target, prop, receiver) {
+            if (prop in target) return Reflect.get(target, prop, receiver);
+            if (typeof prop === 'string' && prop in globalThis) return globalThis[prop];
+            return undefined;
+        },
+        has() { return true; },
+    }));
+    vm.runInContext(BUILD_HTML_SRC, ctx, { filename: 'app-misc.js' });
+    return ctx._cmBuildDisasmHtml(niaInt, words);
+}
+
+// Parse an HTML string and return the body element for querying.
+function parseFragment(html) {
+    const dom = new JSDOM('<!DOCTYPE html><body>' + html + '</body>');
+    return dom.window.document.body;
+}
+
+// ── DB-1: current row and its inline desc ────────────────────────────────────
+{
+    const words = [{ wordAddr: 100, word: 0x00000001 }];
+    const result = runBuildDisasmHtml(100, words);
+    const body   = parseFragment(result.rowsHtml);
+
+    const currentRow  = body.querySelector('.nia-disasm-current');
+    const currentDesc = body.querySelector('.nia-disasm-desc-current');
+
+    assert('DB-1: current row has .nia-disasm-current',
+        currentRow !== null, 'querySelector returned null');
+    assert('DB-1: inline desc after current row has .nia-disasm-desc-current',
+        currentDesc !== null, 'querySelector returned null');
+    assert('DB-1: .nia-disasm-desc-current is immediate sibling after current row',
+        currentRow !== null && currentDesc !== null &&
+        currentRow.nextElementSibling === currentDesc,
+        'sibling mismatch');
+}
+
+// ── DB-2: leading no-data collapse and post-NIA no-data rows ─────────────────
+{
+    const words = [
+        { wordAddr: 98,  word: null },   // before NIA — must be collapsed
+        { wordAddr: 99,  word: null },   // before NIA — must be collapsed
+        { wordAddr: 100, word: 0x00000001 }, // NIA — always rendered
+        { wordAddr: 101, word: null },   // after NIA — rendered with .nia-no-data
+    ];
+    const result = runBuildDisasmHtml(100, words);
+    const body   = parseFragment(result.rowsHtml);
+
+    assert('DB-2: leading .nia-nodata-sep separator is present',
+        body.querySelector('.nia-nodata-sep') !== null,
+        'separator element not found');
+
+    assert('DB-2: null row at addr 98 (before NIA) is not rendered',
+        body.querySelector('[data-addr="98"]') === null,
+        'found row with data-addr=98');
+    assert('DB-2: null row at addr 99 (before NIA) is not rendered',
+        body.querySelector('[data-addr="99"]') === null,
+        'found row with data-addr=99');
+
+    const niаRow = body.querySelector('[data-addr="100"]');
+    assert('DB-2: current row (addr 100) is rendered',
+        niаRow !== null, 'NIA row not found');
+
+    const postRow = body.querySelector('[data-addr="101"]');
+    assert('DB-2: null row after NIA (addr 101) is rendered with .nia-no-data',
+        postRow !== null && postRow.classList.contains('nia-no-data'),
+        postRow ? 'classList=' + postRow.className : 'row not found');
+}
+
+// ── DB-3: spotlight block rendered when mnemonic is known ────────────────────
+{
+    const words = [{ wordAddr: 100, word: 0x00000001 }];
+    const result = runBuildDisasmHtml(100, words, {
+        plainEnglish: function() { return 'Load capability from namespace'; },
+    });
+    const body = parseFragment(result.spotlightHtml);
+    assert('DB-3: spotlight block present when current word has a mnemonic',
+        body.querySelector('.chlog-modal-spotlight') !== null,
+        'spotlight element not found');
+}
+
+// ── DB-4: spotlight absent when current word is null ─────────────────────────
+{
+    const words = [{ wordAddr: 100, word: null }];
+    const result = runBuildDisasmHtml(100, words);
+    assert('DB-4: spotlight HTML is empty string when current word is null',
+        result.spotlightHtml === '',
+        'spotlightHtml=' + JSON.stringify(result.spotlightHtml));
+}
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
