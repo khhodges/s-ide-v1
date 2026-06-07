@@ -2579,8 +2579,12 @@ function _pollCallhomeLog() {
                     var ok = e.boot_ok === 1 || e.boot_ok === true;
                     var dotCls = ok ? 'chlog-dot-ok' : 'chlog-dot-fault';
                     var uid = (e.uid || '').toUpperCase();
-                    var faultVal = e.fault || e.fault_code || 0;
-                    var faultDisp = faultVal ? '<span class="chlog-fault-val">' + _escHtml(String(faultVal)) + '</span>' : '<span class="chlog-ok-dash">—</span>';
+                    var faultName = e.fault_name || (e.fault_code ? (_faultTypeNames[e.fault_code] || ('0x' + (e.fault_code >>> 0).toString(16))) : '');
+                    var isRecovery = !ok && faultName;
+                    var faultDisp = faultName
+                        ? '<span class="chlog-fault-val">' + _escHtml(faultName) + '</span>'
+                          + (isRecovery ? ' <span class="chlog-recovery-tag">RECOVERY</span>' : '')
+                        : '<span class="chlog-ok-dash">—</span>';
                     var typeDisp = (e.type === 'register') ? '<span class="chlog-type-reg">register</span>' : '<span class="chlog-type-ch">callhome</span>';
                     var row = document.createElement('div');
                     row.className = 'callhome-log-row';

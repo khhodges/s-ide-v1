@@ -7300,21 +7300,31 @@ def device_callhome_log():
                     .order_by(CallhomeLog.ts.desc())
                     .limit(limit)
                     .all())
+            _CH_FAULT_NAMES = {
+                1:'PERM_R',2:'PERM_W',3:'PERM_X',4:'PERM_L',5:'PERM_S',
+                6:'PERM_E',7:'NULL_CAP',8:'BOUNDS',9:'VERSION',10:'SEAL',
+                11:'INVALID_OP',12:'TPERM_RSV',13:'DOMAIN_PURITY',14:'BIND',
+                15:'F_BIT',16:'STACK_OVERFLOW',17:'ABSENT_OUTFORM',
+                18:'STACK_CORRUPT',19:'STACK_UNDERFLOW',
+                21:'OUTFORM_CRC',22:'OUTFORM_ALLOC',23:'OUTFORM_MINT',24:'OUTFORM_HDR',
+            }
             entries = [{
-                "ts":         r.ts,
-                "uid":        r.uid,
-                "board":      r.board,
-                "nia":        r.nia,
-                "boot_ok":    r.boot_ok,
-                "fault":      r.fault,
-                "fault_code": r.fault_code,
-                "fw_major":   r.fw_major,
-                "fw_minor":   r.fw_minor,
-                "boot_count": r.boot_count,
-                "type":       r.event_type,
-                "cr12":       r.cr12,
-                "cr14":       r.cr14,
-                "cr15":       r.cr15,
+                "ts":          r.ts,
+                "uid":         r.uid,
+                "board":       r.board,
+                "nia":         r.nia,
+                "boot_ok":     r.boot_ok,
+                "fault":       r.fault,
+                "fault_code":  r.fault_code,
+                "fault_name":  _CH_FAULT_NAMES.get(r.fault_code or 0, ""),
+                "fault_stage": None,
+                "fw_major":    r.fw_major,
+                "fw_minor":    r.fw_minor,
+                "boot_count":  r.boot_count,
+                "type":        r.event_type,
+                "cr12":        r.cr12,
+                "cr14":        r.cr14,
+                "cr15":        r.cr15,
             } for r in rows]
             return jsonify({"ok": True, "entries": entries})
         except Exception as _db_err:
@@ -7628,6 +7638,17 @@ def device_call_home():
     cr12_raw = data.get("cr12")
     cr15_raw = data.get("cr15")
 
+    # fault_name: human-readable string from bridge v1.1+; blank for older bridges.
+    fault_name = str(data.get("fault_name", "") or "").strip()
+    # fault_stage: pipeline stage index 0-7 (APB3 FAULT_STAGE register, new bitstream only).
+    fault_stage_raw = data.get("fault_stage")
+    fault_stage = None
+    if fault_stage_raw is not None:
+        try:
+            fault_stage = max(0, min(7, int(fault_stage_raw)))
+        except (ValueError, TypeError):
+            pass
+
     # Resolve the NIA to display in the log.
     # The bridge posts "nia" as a hex string (e.g. "0x00000014") taken directly
     # from the firmware's CALLHOME JSON.  fault_nia is only set when boot_reason==2
@@ -7644,19 +7665,22 @@ def device_call_home():
 
     with _latest_callhome_lock:
         _latest_callhome_data[uid] = {
-            "board":      dev.board_name,
-            "uid":        uid,
-            "nia":        f"0x{reported_nia:08X}",
-            "boot_ok":    0 if boot_reason == 2 else 1,
-            "fault":      last_fault,
-            "fault_code": last_fault,
-            "fw_major":   fw_major,
-            "fw_minor":   fw_minor,
-            "boot_count": dev.boot_count,
-            "ts":         now,
-            "cr14":       cr14_raw,
-            "cr12":       cr12_raw,
-            "cr15":       cr15_raw,
+            "board":       dev.board_name,
+            "uid":         uid,
+            "nia":         f"0x{reported_nia:08X}",
+            "boot_ok":     0 if boot_reason == 2 else 1,
+            "boot_reason": boot_reason,
+            "fault":       last_fault,
+            "fault_code":  last_fault,
+            "fault_name":  fault_name,
+            "fault_stage": fault_stage,
+            "fw_major":    fw_major,
+            "fw_minor":    fw_minor,
+            "boot_count":  dev.boot_count,
+            "ts":          now,
+            "cr14":        cr14_raw,
+            "cr12":        cr12_raw,
+            "cr15":        cr15_raw,
         }
         _append_callhome_log(dict(_latest_callhome_data[uid], type="callhome"))
     logging.info("Call-home: device=%s (%s) faults=%d lump_versions=%d tunnel=%s",

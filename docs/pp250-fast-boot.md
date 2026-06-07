@@ -12,7 +12,7 @@
 | T4-B — Bridge GT forwarding | `callhome_bridge.py` | ✅ Done | Extracts + forwards `fault_gt/instr/cr14/stage`; stage decoded to name in console |
 | T4-C — APB3 GT registers | `apb3_cm_bridge.v`, `core.py` | ✅ Done (source) | 4 new RO registers +0x18–+0x24; `fault_instr`+`fault_stage` latched; needs re-synthesis |
 | T4-C — top.v wiring | `soc_combined/top.v` | ✅ Done (source) | New wires declared; tied to 0 until CM Verilog regenerated |
-| T4-D — IDE Devices panel | `simulator/index.html` + JS | Pending | GT badge / pet-name decode in Devices panel (future task) |
+| T4-D — IDE Devices panel | `simulator/app-misc.js`, `server/app.py` | ✅ Done | Callhome log shows fault name (e.g. `NULL_CAP`) + amber RECOVERY badge; server stores `fault_name`/`fault_stage` from bridge; DB path derives name from fault_code |
 
 **New bitstream required for T3 + T4-C:** Re-synthesise in Efinix Efinity, flash via `run_efx_pgm.sh`.
 Until then, `cm_fault_valid`, `cm_fault`, `cm_nia`, and the four GT telemetry wires are tied to zero in `top.v` (the CM's Amaranth-generated Verilog doesn't yet expose those as output ports).
@@ -763,3 +763,87 @@ The parser was fixed: both forms now work for `--port`, `--baud`, and
 
 If CALLHOME packets appear in the terminal but the Devices panel in the IDE
 stays blank, re-check the `--ide` argument — it is the most likely culprit.
+
+---
+
+## Firmware v1.1 — Re-synthesis Build Prep
+
+> **Key constraint:** Firmware is **not a separate flash step**.  It is initialised
+> via `$readmemb` at Efinity synthesis time — the compiled binary is baked into
+> the FPGA bitstream.  You cannot update firmware alone; every firmware change
+> requires a full Efinity re-synthesis run and a new bitstream flash.
+
+### What changed in v1.1
+
+| Change | Location | Purpose |
+|--------|----------|---------|
+| 5 ms kick pulse (not countdown) | `main.c` `reset_cm()` | PP250-style fault recovery — CM released in nanoseconds |
+| Removed 3 s countdown | `main.c` `main()` | No delay before normal boot |
+| `CM_FAULT_GT/INSTR/CR14/STAGE` reads | `main.c` `main()` | GT telemetry in CALLHOME fault packet |
+| CALLHOME `fault_name` / `fault_stage` fields | `main.c` | IDE now shows name not raw code |
+
+### Build prerequisites
+
+The firmware Makefile requires the Efinix RISC-V IDE 2025.2 toolchain:
+
+```
+riscv-none-embed-gcc   (from Efinix RISC-V IDE 2025.2 — NOT riscv64-unknown-elf-gcc)
+```
+
+**This toolchain is not available in the Replit environment.**  Build must be
+done on a machine that has the Efinix RISC-V IDE installed, or use a Docker
+image containing it.  The compiled output (`firmware.bin` and the four
+`*.symtab.bin` / `*.data.bin` symbol files) must then be committed to the repo
+before running Efinity synthesis.
+
+### Synthesis + flash procedure
+
+```bash
+# 1. Build firmware (on a machine with riscv-none-embed-gcc):
+cd hardware/soc_combined/firmware
+make clean && make
+
+# 2. Verify four symbol files were written alongside firmware.bin:
+ls firmware.bin firmware.symtab.bin firmware.data.bin   # check these exist
+
+# 3. Open Efinix Efinity and synthesise the Ti60 F225 project:
+#    File → Open Project → hardware/soc_combined/soc_combined.xml
+#    Run → Synthesis + Place & Route
+#    (This is when $readmemb picks up the new firmware.bin)
+
+# 4. Flash the new bitstream:
+bash hardware/soc_combined/run_efx_pgm.sh
+
+# 5. Reconnect the bridge and confirm FW version:
+#    curl http://localhost:5000/api/devices
+#    Look for fw_major=1, fw_minor=1 in the response.
+```
+
+### Why firmware and hardware changes must be synthesised together
+
+T3 (hardware auto-reboot on fault) and T4-C (APB3 GT registers) are both
+source-complete but require a new bitstream.  The firmware v1.1 `CM_FAULT_*`
+reads target those new APB3 registers — combining them in the **same synthesis
+run** is mandatory.  Running firmware v1.1 against the old bitstream (which
+lacks the APB3 GT registers) is safe but will read zeros for all GT fields.
+
+### Expected CALLHOME payload after successful flash
+
+```json
+{
+  "device_uid": "c0ffee0100000001",
+  "fw_major": 1,
+  "fw_minor": 1,
+  "boot_reason": 2,
+  "last_fault": 7,
+  "fault_name": "NULL_CAP",
+  "fault_stage": 5,
+  "fault_gt": "0x...",
+  "fault_instr": "0x...",
+  "fault_cr14": "0x..."
+}
+```
+
+The IDE Devices panel will decode `fault_name` = `"NULL_CAP"`, show the amber
+**RECOVERY** badge, and display the GT fields as pet names once the new
+bitstream is running.
