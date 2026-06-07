@@ -2831,17 +2831,26 @@ function _pollUartLog() {
                 data.entries.slice().reverse().forEach(function(e) {
                     if (e.ts > _uartLogSince) _uartLogSince = e.ts;
                     if (e.ts > _callhomeLatestTs) _callhomeLatestTs = e.ts;
+                    // Drop firmware countdown ticks — T-1 … T-N are internal noise
+                    if (/^T-\d+\s*$/.test(e.line)) return;
                     var d = new Date(e.ts * 1000);
                     var dateStr = String(d.getUTCMinutes()).padStart(2,'0') + ':' +
                         String(d.getUTCSeconds()).padStart(2,'0');
                     var rowUid = (e.uid || '').toUpperCase();
+                    // Classify line: boot marker (red), recovery/init context (orange), normal
+                    var uartTextCls = 'uart-text';
+                    if (/^CHURCH\b/i.test(e.line)) {
+                        uartTextCls = 'uart-text uart-text-boot';      // always RED
+                    } else if (/^CONNECT NOW\b|^UID=|^\[CALL HOME\]|^APB3\b/i.test(e.line)) {
+                        uartTextCls = 'uart-text uart-text-init';      // orange
+                    }
                     var row = document.createElement('div');
                     row.className = 'callhome-uart-row';
                     row.dataset.uid = rowUid;
                     if (_selectedMachineUid && rowUid !== _selectedMachineUid) row.style.display = 'none';
                     row.innerHTML =
                         '<span class="uart-ts">' + _escHtml(dateStr) + '</span>' +
-                        '<span class="uart-text">' + _escHtml(e.line) + '</span>';
+                        '<span class="' + uartTextCls + '">' + _escHtml(e.line) + '</span>';
                     if (_callhomeFilter === 'cloomc') row.style.display = 'none';
                     var colHeads = panel.querySelector('.callhome-log-col-heads');
                     panel.insertBefore(row, colHeads ? colHeads.nextSibling : panel.firstChild);

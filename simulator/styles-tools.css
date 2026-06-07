@@ -2176,8 +2176,10 @@
     white-space: pre;
 }
 .uart-log-line:hover { background: #161622; }
-.uart-ts   { color: #eceef3; flex: 0 0 auto; }
-.uart-text { color: #eceef3; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.uart-ts        { color: #eceef3; flex: 0 0 auto; }
+.uart-text      { color: #eceef3; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.uart-text-boot { color: #ef4444; font-weight: 700; }
+.uart-text-init { color: #f59e0b; }
 
 /* ── NIA Disassembly Panel ───────────────────────────────────────────────── */
 /* ── Callhome Row Detail Modals ────────────────────────────────────────── */
