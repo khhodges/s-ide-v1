@@ -100,11 +100,15 @@
 /* ── Timing ──────────────────────────────────────────────────────────────────
  * Clock: 25 MHz (raw crystal — PLL_TL0 not configured in current peri.xml).
  * If PLL_TL0 is added later (×2 → 50 MHz), change CLK_HZ to 50000000UL.
- * One NOP loop iteration ≈ 4 cycles (addi + bne overhead).
- * LOOPS_PER_SECOND is a conservative estimate; adjust if timing is critical.
+ *
+ * MEASURED on board: delay_loops(CLK_HZ/4) took ~5.75 s, not 1 s.
+ * Root cause: volatile uint32_t loop with nop compiles to 6 instructions
+ * (load i, addi, store i, nop, compare, bne) on the Sapphire RISC-V in-order
+ * pipeline, ≈23 cycles per iteration — not the assumed 4.
+ * Calibrated: CLK_HZ / 25 ≈ 1,000,000 iterations × 23 cycles / 25 MHz ≈ 0.92 s.
  */
 #define CLK_HZ          25000000UL
-#define LOOPS_PER_SECOND (CLK_HZ / 4)
+#define LOOPS_PER_SECOND (CLK_HZ / 25)
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
@@ -163,7 +167,7 @@ static void delay_loops(uint32_t loops)
 
 /* ── Firmware version ─────────────────────────────────────────────────────── */
 #define FW_MAJOR 1
-#define FW_MINOR 1   /* bumped: PP250 fast boot + fault telemetry */
+#define FW_MINOR 2   /* bumped: LOOPS_PER_SECOND calibrated (was /4, now /25) */
 
 /* ── Fault name lookup table ─────────────────────────────────────────────── */
 /*
@@ -292,7 +296,7 @@ void main(void)
      * Step 2 — Greeting (uses compile-time UID constants so APB3 is not
      * touched yet; this line appears even if the APB3 address is wrong).
      */
-    uart_puts("CHURCH Ti60 SoC+CM v1.1\r\n");
+    uart_puts("CHURCH Ti60 SoC+CM v1.2\r\n");
     uart_puts("UID=");
     uart_puthex64_raw(BOARD_UID_HI, BOARD_UID_LO);
     uart_puts("\r\nCONNECT NOW\r\n");
@@ -307,9 +311,9 @@ void main(void)
     uint32_t uid_lo = BOARD_UID_LO;
     uint32_t uid_hi = BOARD_UID_HI;
 
-    /* Wait for CM boot_complete — 8-second timeout so we never hang */
+    /* Wait for CM boot_complete — 3-second timeout (3 × ~0.92 s ≈ 2.75 s) */
     uart_puts("Waiting for CM boot...\r\n");
-    for (uint32_t t = 0; t < 8; t++) {
+    for (uint32_t t = 0; t < 3; t++) {
         if (CM_STATUS & CM_STATUS_BOOT_COMPLETE) {
             uart_puts("CM boot_complete: 1\r\n");
             break;
@@ -344,7 +348,7 @@ void main(void)
     uint32_t iter = 0;
     for (;;) {
         if ((iter % 20) == 0)
-            uart_puts("CHURCH Ti60 SoC+CM v1.1\r\n");
+            uart_puts("CHURCH Ti60 SoC+CM v1.2\r\n");
         iter++;
 
         uart_puts("HB=");
