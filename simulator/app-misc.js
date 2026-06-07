@@ -2516,7 +2516,7 @@ var _CHLOG_NS_SLOT_NAMES = {
 };
 
 function _chlogNsSlotName(rawStr) {
-    if (!rawStr || rawStr === 'n/a' || rawStr === 'null' || rawStr === '') return 'n/a';
+    if (!rawStr || rawStr === '\u2014' || rawStr === 'null' || rawStr === '') return '\u2014';
     var idx = parseInt(rawStr, 10);
     if (isNaN(idx)) return rawStr;
     // 1. Fixed boot-image table
@@ -2613,9 +2613,9 @@ function _openCallhomeModal(row) {
     var niaInt = parseInt(nia, 16);
     if (isNaN(niaInt)) niaInt = 0;
 
-    var cr14Str = (cr14 !== 'null' && cr14 !== '') ? cr14 : 'n/a';
-    var cr12Str = (cr12 !== 'null' && cr12 !== '') ? cr12 : 'n/a';
-    var cr15Str = (cr15 !== 'null' && cr15 !== '') ? cr15 : 'n/a';
+    var cr14Str = (cr14 !== 'null' && cr14 !== '') ? cr14 : '\u2014';
+    var cr12Str = (cr12 !== 'null' && cr12 !== '') ? cr12 : '\u2014';
+    var cr15Str = (cr15 !== 'null' && cr15 !== '') ? cr15 : '\u2014';
     // Resolve NS slot indices → human pet names (GT > CR6 > Namespace table)
     var cr14Name = _chlogNsSlotName(cr14Str);   // ⚡ abstraction cap
     var cr12Name = _chlogNsSlotName(cr12Str);   // return cap
@@ -2696,9 +2696,12 @@ function _openCallhomeModal(row) {
     });
     rowsHtml += '</div>';
 
-    // Spotlight block (shown when current instruction word is known)
+    // Spotlight block (shown when current instruction word is known).
+    // Suppress HALT in the boot ROM NS-table region (addr < 0x100):
+    // word=0 there is an unloaded NS slot entry, not a real HALT instruction.
     var spotlightHtml = '';
-    if (currentDecoded && currentDecoded.mnemonic) {
+    var _isSpuriousHalt = currentDecoded && currentDecoded.mnemonic === 'HALT' && niaInt < 0x100;
+    if (currentDecoded && currentDecoded.mnemonic && !_isSpuriousHalt) {
         var roleAnnot = _instrRoleAnnotation(currentDecoded);
         var plainEng  = _instrPlainEnglish(currentDecoded);
         spotlightHtml =
