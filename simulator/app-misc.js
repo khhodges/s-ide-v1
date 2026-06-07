@@ -2598,6 +2598,7 @@ function _chlogMakeDraggable(modal) {
 }
 
 function _openCallhomeModal(row) {
+    var entryUid    = row.dataset.uid || (row.getAttribute('data-nia') || '0x0');
     var nia         = row.getAttribute('data-nia') || '0x0';
     var cr14        = row.getAttribute('data-cr14') || 'null';
     var cr12        = row.getAttribute('data-cr12') || 'null';
@@ -2746,20 +2747,20 @@ function _openCallhomeModal(row) {
     // Highlight source row
     row.classList.add('nia-row-active');
 
-    // Close button
+    // Close button — pin is kept in _disasmPinnedMap so reopening restores it
     modal.querySelector('.chlog-modal-close').addEventListener('click', function(e) {
         e.stopPropagation();
         modal.remove();
         row.classList.remove('nia-row-active');
-        _disasmPinnedAddr = null;
     });
 
     // Click-to-expand: any non-current disassembly row with a description
     var disasmBody = modal.querySelector('.nia-disasm-body');
     if (disasmBody) {
-        // Auto-restore pinned row if present in this render
-        if (_disasmPinnedAddr !== null) {
-            var pinnedRow = disasmBody.querySelector('.nia-disasm-row[data-addr="' + _disasmPinnedAddr + '"]');
+        // Auto-restore pinned row if this entry was previously opened
+        var savedAddr = _disasmPinnedMap.has(entryUid) ? _disasmPinnedMap.get(entryUid) : null;
+        if (savedAddr !== null) {
+            var pinnedRow = disasmBody.querySelector('.nia-disasm-row[data-addr="' + savedAddr + '"]');
             if (pinnedRow && !pinnedRow.classList.contains('nia-disasm-current') && pinnedRow.dataset.desc) {
                 var autoDesc = document.createElement('div');
                 autoDesc.className = 'nia-disasm-desc';
@@ -2786,10 +2787,10 @@ function _openCallhomeModal(row) {
                 descEl.textContent = clickedRow.dataset.desc;
                 clickedRow.insertAdjacentElement('afterend', descEl);
                 clickedRow.classList.add('nia-row-expanded');
-                _disasmPinnedAddr = parseInt(clickedRow.dataset.addr, 10);
+                _disasmPinnedMap.set(entryUid, parseInt(clickedRow.dataset.addr, 10));
             } else {
-                // User toggled the same row off — clear the pin
-                _disasmPinnedAddr = null;
+                // User toggled the same row off — clear the pin for this entry
+                _disasmPinnedMap.delete(entryUid);
             }
         });
     }
@@ -2802,7 +2803,9 @@ function _openCallhomeModal(row) {
 }
 
 // ── Disassembly pinned-row state ────────────────────────────────────────────
-var _disasmPinnedAddr = null; // address (integer) of the user-expanded row; null = none
+// Keyed by log-entry uid → pinned word address (integer).
+// Survives modal close so reopening the same entry restores the last-opened row.
+var _disasmPinnedMap = new Map();
 
 // ── Live Call-Home Log ─────────────────────────────────────────────────────
 var _callhomeLogSince = 0;
