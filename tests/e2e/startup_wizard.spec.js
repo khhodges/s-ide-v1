@@ -51,11 +51,13 @@ const { test, expect } = require('@playwright/test');
 async function loadFreshWizard(page) {
     await page.goto('/simulator/');
     await page.waitForLoadState('networkidle');
-    // Clear any wizard localStorage left by a prior test.
+    // Clear any wizard localStorage left by a prior test, and suppress the
+    // "What's New" modal so it cannot block clicks during Group 9 (demo tour).
     await page.evaluate(() => {
         for (const key of Object.keys(localStorage)) {
             if (key.startsWith('sw_')) localStorage.removeItem(key);
         }
+        localStorage.setItem('church_whatsnew_dismissed_perm', '1');
     });
     await page.reload();
     await page.waitForLoadState('networkidle');
