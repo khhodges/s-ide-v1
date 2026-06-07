@@ -109,12 +109,15 @@ console.log('\n--- T003: Tier 3 (double-fault) ---');
     // Simulate: fault fires while Scheduler.IRQ is already executing
     sim.irqState.irqActive = true;
 
-    // Spy on _returnToBoot so we can verify it's called without running the full boot
-    let tier3Called = false;
-    const origReturn = sim._returnToBoot ? sim._returnToBoot.bind(sim) : null;
-    sim._returnToBoot = () => {
-        tier3Called = true;
-        if (origReturn) origReturn();
+    // Spy on _fastBoot so we can verify it's called without running the full boot sequence.
+    // _fastBoot(2) is the PP250 fast-boot entry point; it calls _returnToBoot() internally.
+    let fastBootCalled = false;
+    let fastBootReason = null;
+    const origFastBoot = sim._fastBoot ? sim._fastBoot.bind(sim) : null;
+    sim._fastBoot = (reason) => {
+        fastBootCalled = true;
+        fastBootReason = reason;
+        if (origFastBoot) origFastBoot(reason);
     };
 
     sim.fault('NULL_CAP', 'Test Tier 3 double-fault');
@@ -122,7 +125,8 @@ console.log('\n--- T003: Tier 3 (double-fault) ---');
     check('T003a: faultLog has exactly one entry', sim.faultLog.length === 1);
     check('T003b: fault entry tier === 3', sim.faultLog[0].tier === 3);
     check('T003c: fault entry tier3Recovery === true', sim.faultLog[0].tier3Recovery === true);
-    check('T003d: _returnToBoot was called', tier3Called === true);
+    check('T003d: _fastBoot was called (PP250 instant re-boot path)', fastBootCalled === true);
+    check('T003d2: _fastBoot called with reason=2 (fault-recovery)', fastBootReason === 2);
     check('T003e: irqActive cleared after Tier 3 recovery', !sim.irqState.irqActive);
     check('T003f: machine is NOT permanently halted (Tier 3 resets to boot)', !sim.halted);
 }

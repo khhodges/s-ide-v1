@@ -725,6 +725,40 @@ class ChurchSimulator {
         this.emit('stateChange', this.getState());
     }
 
+    /*
+     * _fastBoot(reason)
+     *
+     * PP250-style instant re-boot on fault.  On real hardware the boot FSM
+     * runs three transitions (IDLE→FAULT_RST→LOAD_NS→COMPLETE) in 240 ns —
+     * the programmer never sees the delay.  In the simulator this translates
+     * to calling _returnToBoot() (which clears CRs/DRs and resets bootStep=0)
+     * and then letting the normal _bootStep() loop re-run all eight boot
+     * phases from the top — including B:04 CALL_HOME which reads faultLog and
+     * automatically sets boot_reason=2 whenever the log is non-empty.
+     *
+     * reason — 0 = cold boot  2 = fault-recovery re-boot (matches firmware
+     *          boot_reason field and simulator Tunnel.Register DR1 convention)
+     *
+     * Called by _tier3Recovery() on double-fault escalation.
+     */
+    _fastBoot(reason) {
+        const tag = reason === 2 ? 'FAULT-RST' : 'COLD-RST';
+        this.output += `[PP250] Fast boot — reason=${reason} (${tag}). ` +
+            `Hardware FSM: 3 transitions × 240 ns. Simulator: full boot reset.\n`;
+        this.auditLog.push({
+            gate: 'PP250',
+            desc:  `_fastBoot(reason=${reason}) — ${tag} — _returnToBoot() invoked`,
+            label: `PP250 fast boot (reason=${reason})`,
+            nsIndex: null,
+            requiredPerm: null,
+            checks: {},
+            b: 0, f: 0,
+            result: 'pass',
+            stepCtx: 'PP250_FAST_BOOT',
+        });
+        this._returnToBoot();
+    }
+
     packNSWord1(limit17, bFlag, gBit, gtType, clistCount) {
         return (
             ((bFlag & 1) << 31) |
@@ -3025,13 +3059,13 @@ class ChurchSimulator {
     }
 
     // Tier 3: double-fault — CHANGE directly to GT burned into CR13 by PP250.
-    // Simulated as a clean restart (reset to boot state without permanent halt).
+    // Simulated as an instant re-boot via _fastBoot(2) — no permanent halt.
     _tier3Recovery(faultRecord) {
         const cr13GT = (this.cr && this.cr[13] && this.cr[13].word0)
             ? (this.cr[13].word0 >>> 0) : 0;
-        this.output += `TIER 3 RECOVERY: double-fault \u2014 CHANGE to CR13 GT=0x${cr13GT.toString(16).toUpperCase().padStart(8, '0')} (PP250 recovery)\n`;
+        this.output += `TIER 3 RECOVERY: double-fault \u2014 CHANGE to CR13 GT=0x${cr13GT.toString(16).toUpperCase().padStart(8, '0')} (PP250 fast-boot recovery)\n`;
         if (this.irqState) this.irqState.irqActive = false;
-        this._returnToBoot();
+        this._fastBoot(2);
         this.halted = false;
         this.running = false;
     }

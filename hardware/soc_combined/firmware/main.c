@@ -5,13 +5,18 @@
  * bitstream on the Ti60F225 devkit.
  *
  * On boot:
- *   1. Writes the compile-time board UID to the APB3 UID registers.
+ *   1. Writes UART_CLOCKDIV=53 (57,600 baud at 25 MHz).
  *   2. Sends greeting over UART.
  *   3. Waits for the CM to complete its boot sequence (polls STATUS register).
- *   4. Triggers CM free-run by asserting push_button LOW for 1 second.
- *   5. Loops, printing the CM NIA every second via UART.
+ *   4. Triggers CM free-run by asserting push_button LOW for 5 ms.
+ *   5. Loops, emitting a CALLHOME JSON line every second.
+ *      On fault: pulses boot_start immediately (PP250 recovery), then continues.
  *
- * UART:    Sapphire UART0 at 0xF8010000, 115200 baud, 50 MHz clock.
+ * UART:    Sapphire UART0 at 0xF8010000, 57,600 baud (25 MHz crystal, CLOCKDIV=53).
+ *          NOTE: The formula is baudRate = clkFreq / (8 × (CLOCKDIV + 1)).
+ *          At 25 MHz, CLOCKDIV=53 → 25_000_000 / (8×54) = 57,870 ≈ 57,600 baud.
+ *          CONFIRMED WORKING on /dev/ttyUSB2. Do NOT use 115200.
+ *
  * APB3:    Church Machine bridge at APB_SLAVE_0_BASE (0xF8100000).
  *
  * APB3 CM bridge register map:
@@ -21,6 +26,11 @@
  *   +0x0C FAULT  RO   [4:0]=fault code
  *   +0x10 UID_LO R/W  [31:0]=lower 32 bits of 64-bit device UID
  *   +0x14 UID_HI R/W  [31:0]=upper 32 bits of 64-bit device UID
+ *   -- Track 4-C (new bitstream only) --
+ *   +0x18 FAULT_GT    RO  [31:0] GT word0 that caused the fault
+ *   +0x1C FAULT_INSTR RO  [31:0] instruction word at fault NIA
+ *   +0x20 FAULT_CR14  RO  [31:0] CR14 word0 at fault time
+ *   +0x24 FAULT_STAGE RO  [3:0]  pipeline stage (0=Decode…7=Data R/W)
  *
  * Per-board UID configuration
  * ===========================
@@ -73,6 +83,12 @@
 #define CM_FAULT        (*(volatile uint32_t *)(CM_APB_BASE + 0x0C))
 #define CM_UID_LO       (*(volatile uint32_t *)(CM_APB_BASE + 0x10))
 #define CM_UID_HI       (*(volatile uint32_t *)(CM_APB_BASE + 0x14))
+/* Track 4-C APB3 telemetry registers — present only with the Track 4-C bitstream.
+ * On older bitstreams all four registers read 0x00000000 (harmless). */
+#define CM_FAULT_GT     (*(volatile uint32_t *)(CM_APB_BASE + 0x18))
+#define CM_FAULT_INSTR  (*(volatile uint32_t *)(CM_APB_BASE + 0x1C))
+#define CM_FAULT_CR14   (*(volatile uint32_t *)(CM_APB_BASE + 0x20))
+#define CM_FAULT_STAGE  (*(volatile uint32_t *)(CM_APB_BASE + 0x24))
 
 #define CM_STATUS_BOOT_COMPLETE  (1u << 0)
 #define CM_STATUS_FAULT_VALID    (1u << 1)
@@ -102,9 +118,8 @@ static void uart_putc(char c)
      * than guess, we write immediately and wait long enough for the transmitter
      * to finish before the next byte is written.
      *
-     * 230400 baud, 10 bits/char (8N1): 1 char = 43.4 µs = ~4340 cycles @ 100 MHz.
-     * 3000 loop iterations ≈ 12000 cycles @ 100 MHz = 120 µs — 2.76× margin.
-     * The UART TX FIFO (128 entries deep) therefore never overflows at this rate.
+     * 57600 baud, 10 bits/char (8N1): 1 char = 173.6 µs.
+     * 3000 NOP iterations ≈ 48000 cycles @ 25 MHz = 1.92 ms — 11× margin.
      */
     UART_DATA = (1u << 8) | (uint32_t)(unsigned char)c;
     for (volatile uint32_t i = 0; i < 3000u; i++) __asm__("nop");
@@ -148,24 +163,55 @@ static void delay_loops(uint32_t loops)
 
 /* ── Firmware version ─────────────────────────────────────────────────────── */
 #define FW_MAJOR 1
-#define FW_MINOR 0
+#define FW_MINOR 1   /* bumped: PP250 fast boot + fault telemetry */
+
+/* ── Fault name lookup table ─────────────────────────────────────────────── */
+/*
+ * Maps CM_FAULT[4:0] codes to human-readable names.
+ * Must stay in sync with ChurchSimulator.FAULT_CODES in simulator/simulator.js
+ * and _FAULT_NAMES in hardware/soc_combined/callhome_bridge.py.
+ */
+static const char * const _fault_names[] = {
+    /* 0x00 */ "UNKNOWN",
+    /* 0x01 */ "PERM_R",        /* 0x02 */ "PERM_W",
+    /* 0x03 */ "PERM_X",        /* 0x04 */ "PERM_L",
+    /* 0x05 */ "PERM_S",        /* 0x06 */ "PERM_E",
+    /* 0x07 */ "NULL_CAP",      /* 0x08 */ "BOUNDS",
+    /* 0x09 */ "VERSION",       /* 0x0A */ "SEAL",
+    /* 0x0B */ "INVALID_OP",    /* 0x0C */ "TPERM_RSV",
+    /* 0x0D */ "DOMAIN_PURITY", /* 0x0E */ "PERM_B",
+    /* 0x0F */ "F_BIT",         /* 0x10 */ "STACK_OVERFLOW",
+    /* 0x11 */ "ABSENT_OUTFORM",/* 0x12 */ "STACK_CORRUPT",
+    /* 0x13 */ "STACK_UNDERFLOW",/* 0x14 */ "UNKNOWN",
+    /* 0x15 */ "OUTFORM_CRC",   /* 0x16 */ "OUTFORM_ALLOC",
+    /* 0x17 */ "OUTFORM_MINT",  /* 0x18 */ "OUTFORM_HDR",
+};
+#define FAULT_NAMES_COUNT ((uint32_t)(sizeof(_fault_names) / sizeof(_fault_names[0])))
+
+static const char *fault_code_name(uint32_t code)
+{
+    if (code < FAULT_NAMES_COUNT)
+        return _fault_names[code];
+    return "UNKNOWN";
+}
 
 /*
- * Emit a machine-parseable CALLHOME JSON line:
- *   CALLHOME:{"board":"Ti60F225","uid":"HHHHHHHHHHHHHHHH","nia":"0xNNNNNNNN","boot_ok":1,"fault":F,"fault_code":C,"fw_major":1,"fw_minor":0}\r\n
+ * Emit a machine-parseable CALLHOME JSON line.
+ *
+ * Format:
+ *   CALLHOME:{"board":"Ti60F225","uid":"HHHH...","nia":"0xNNNN",
+ *             "boot_ok":1,"boot_reason":R,"fault":F,"fault_code":C,
+ *             "fault_name":"NAME","fw_major":1,"fw_minor":1}\r\n
  *
  * Fields:
- *   board      — fixed "Ti60F225"
- *   uid        — 16 lowercase hex digits from the APB3 UID registers
- *   nia        — current CM next-instruction address as 0x hex string
- *   boot_ok    — 1 (always 1 in monitor loop; we only reach here after boot_complete)
- *   fault      — 1 if fault_latched sticky bit is set, 0 otherwise
- *   fault_code — fault code (0..31); valid when fault==1
- *   fw_major   — firmware major version (FW_MAJOR)
- *   fw_minor   — firmware minor version (FW_MINOR)
+ *   boot_reason  — 0=cold boot, 2=fault-recovery re-boot (matches simulator)
+ *   fault        — 1 if fault_latched sticky bit is set, 0 otherwise
+ *   fault_code   — fault code (0..31); valid when fault==1
+ *   fault_name   — human-readable code name from _fault_names[]
  */
 static void uart_emit_callhome(uint32_t nia, uint32_t status,
-                               uint32_t uid_hi, uint32_t uid_lo)
+                               uint32_t uid_hi, uint32_t uid_lo,
+                               uint32_t boot_reason)
 {
     uint32_t fault_latched = (status & CM_STATUS_FAULT_LATCHED) ? 1u : 0u;
     uint32_t fault_code    = fault_latched ? (CM_FAULT & 0x1Fu) : 0u;
@@ -174,19 +220,59 @@ static void uart_emit_callhome(uint32_t nia, uint32_t status,
     uart_puthex64_raw(uid_hi, uid_lo);
     uart_puts("\",\"nia\":\"");
     uart_puthex32(nia);
-    uart_puts("\",\"boot_ok\":1,\"fault\":");
+    uart_puts("\",\"boot_ok\":1,\"boot_reason\":");
+    uart_putc('0' + (char)(boot_reason & 0xFu));
+    uart_puts(",\"fault\":");
     uart_putc(fault_latched ? '1' : '0');
     uart_puts(",\"fault_code\":");
-    /* emit fault_code as decimal (0-31, at most 2 digits) */
-    if (fault_code >= 10u) {
+    if (fault_code >= 10u)
         uart_putc('0' + (char)(fault_code / 10u));
-    }
     uart_putc('0' + (char)(fault_code % 10u));
+    uart_puts(",\"fault_name\":\"");
+    uart_puts(fault_code_name(fault_code));
+    uart_puts("\"");
+    if (fault_latched) {
+        /* Track 4-C: GT telemetry registers (read 0x00 on old bitstreams — harmless) */
+        uart_puts(",\"fault_gt\":\"");
+        uart_puthex32(CM_FAULT_GT);
+        uart_puts("\",\"fault_instr\":\"");
+        uart_puthex32(CM_FAULT_INSTR);
+        uart_puts("\",\"fault_cr14\":\"");
+        uart_puthex32(CM_FAULT_CR14);
+        uart_puts("\",\"fault_stage\":");
+        uint32_t stage = CM_FAULT_STAGE & 0xFu;
+        if (stage >= 10u)
+            uart_putc('0' + (char)(stage / 10u));
+        uart_putc('0' + (char)(stage % 10u));
+    }
     uart_puts(",\"fw_major\":");
     uart_putc('0' + FW_MAJOR);
     uart_puts(",\"fw_minor\":");
     uart_putc('0' + FW_MINOR);
     uart_puts("}\r\n");
+}
+
+/* ── PP250 fault recovery ────────────────────────────────────────────────────
+ * Pulse CM_CTRL_PRESSED for 5 ms to fire boot_start.
+ * The hardware boot FSM (IDLE→FAULT_RST→...→COMPLETE) takes 6 clock cycles
+ * = 240 ns at 25 MHz.  We poll for boot_complete up to 10 ms after release.
+ * Returns 1 if boot_complete re-asserted, 0 if timed out.
+ */
+static uint32_t pp250_fault_recovery(void)
+{
+    uart_puts("[PP250] FAULT_RST — pulsing boot_start\r\n");
+    CM_CTRL = CM_CTRL_PRESSED;
+    delay_loops(CLK_HZ / 200);    /* 5 ms */
+    CM_CTRL = CM_CTRL_RELEASED;
+    for (uint32_t t = 0; t < 10; t++) {
+        if (CM_STATUS & CM_STATUS_BOOT_COMPLETE) {
+            uart_puts("[PP250] boot_complete restored\r\n");
+            return 1u;
+        }
+        delay_loops(CLK_HZ / 1000);   /* 1 ms per poll, 10 ms max */
+    }
+    uart_puts("[PP250] WARNING: boot_complete not seen after 10 ms\r\n");
+    return 0u;
 }
 
 /* ── Entry point ──────────────────────────────────────────────────────────── */
@@ -195,14 +281,10 @@ void main(void)
 {
     /*
      * Step 1 — UART baud rate.
-     * Ti60F225 crystal: 50 MHz; Sapphire SoC PLL doubles to 100 MHz.
-     * Formula: baudRate = ClkIn / (8 × (clockDivider + 1))
-     *   → clockDivider = (100 000 000 / (8 × 230 400)) − 1 = 53.25 → 53
-     *   → actual baud  = 100 000 000 / (8 × 54) = 231 481 ≈ 230 400
-     *
-     * The Sapphire SoC UART resets clockDivider to 0x00 on power-up.
-     * Without this write the UART runs at 100 MHz / 8 = 12.5 Mbaud and
-     * produces complete silence on any standard terminal.
+     * The Sapphire SoC UART resets CLOCKDIV to 0x00 on power-up.
+     * Without this write the UART runs at clkFreq/8 (3.125 Mbaud at 25 MHz)
+     * and produces garbage or silence on any standard terminal.
+     * CLOCKDIV=53 → 57,600 baud at 25 MHz.  CONFIRMED WORKING.
      */
     UART_CLOCKDIV = 53;
 
@@ -213,34 +295,15 @@ void main(void)
     uart_puts("CHURCH Ti60 SoC+CM v1.1\r\n");
     uart_puts("UID=");
     uart_puthex64_raw(BOARD_UID_HI, BOARD_UID_LO);
-    uart_puts("\r\n");
-
-    /*
-     * Step 2b — 5-second hold so a late-connecting terminal can open
-     * before the first APB3 access.  Prints a countdown every second.
-     * This is pure UART; no APB3 is touched until Step 3.
-     */
-    uart_puts("CONNECT NOW — APB3 init in 5s\r\n");
-    for (uint32_t cd = 5; cd > 0; cd--) {
-        uart_puts("  T-");
-        uart_putc('0' + (char)cd);
-        uart_puts("\r\n");
-        delay_loops(LOOPS_PER_SECOND);
-    }
-    uart_puts("GO\r\n");
+    uart_puts("\r\nCONNECT NOW\r\n");
 
     /*
      * Step 3 — First APB3 access: ensure CM push_button starts released.
-     * CTRL is at offset 0x00, the lowest address in the APB slave window.
-     * UID registers (0x10, 0x14) are skipped here; the compile-time
-     * BOARD_UID constants are used directly in CALLHOME packets instead,
-     * avoiding any risk of bus exceptions on those offsets.
      */
     uart_puts("APB_WRITE_START\r\n");
     CM_CTRL = CM_CTRL_RELEASED;
     uart_puts("APB_WRITE_DONE\r\n");
 
-    /* UID sourced from compile-time constants (same values printed in UID= line) */
     uint32_t uid_lo = BOARD_UID_LO;
     uint32_t uid_hi = BOARD_UID_HI;
 
@@ -254,35 +317,36 @@ void main(void)
         delay_loops(LOOPS_PER_SECOND);
     }
 
-    /* Check for immediate fault */
+    /* Check for immediate fault at boot */
     if (CM_STATUS & CM_STATUS_FAULT_LATCHED) {
         uart_puts("CM fault at boot! code=");
         uart_puthex32(CM_FAULT & 0x1F);
+        uart_puts(" name=");
+        uart_puts(fault_code_name(CM_FAULT & 0x1F));
         uart_puts("\r\n");
     }
 
     /*
-     * Trigger CM free-run by asserting push_button LOW for ≥ 1 s.
-     * ChurchTi60F225 btn_hold_done fires when the button is held for
-     * clk_freq cycles (50 000 000 @ 50 MHz).  We hold for ~1.04 s
-     * using LOOPS_PER_SECOND (= CLK_HZ / 4 = 12.5 M iterations @ 50 MHz).
+     * Trigger CM free-run by asserting push_button LOW for 5 ms.
+     * boot_start only needs a few clock cycles; 5 ms is ample margin.
      */
     uart_puts("Asserting CM free-run kick...\r\n");
     CM_CTRL = CM_CTRL_PRESSED;
-    delay_loops(LOOPS_PER_SECOND + LOOPS_PER_SECOND / 25); /* ~1.04 s */
+    delay_loops(CLK_HZ / 200);    /* 5 ms */
     CM_CTRL = CM_CTRL_RELEASED;
     uart_puts("CM free-run kick released.\r\n");
 
-    /* Monitor loop: print CM NIA every second */
+    /* boot_reason: 0=cold, 2=fault-recovery (matches simulator Tunnel.Register) */
+    uint32_t boot_reason = 0u;
+
+    /* Monitor loop: emit CALLHOME every second */
     uart_puts("Monitoring CM NIA (Ctrl+C to stop host terminal):\r\n");
     uint32_t iter = 0;
     for (;;) {
-        /* Re-announce every 20 s so late-connecting listeners see greeting */
         if ((iter % 20) == 0)
             uart_puts("CHURCH Ti60 SoC+CM v1.1\r\n");
         iter++;
 
-        /* Heartbeat BEFORE APB3 reads — visible even if reads hang */
         uart_puts("HB=");
         uart_puthex32(iter - 1);
         uart_puts("\r\n");
@@ -292,18 +356,30 @@ void main(void)
         uint32_t status = CM_STATUS;
         uart_puts("STATUS_READ_OK\r\n");
 
-        /* Human-readable NIA line (ttyUSB2 terminal) */
         uart_puts("NIA=");
         uart_puthex32(nia);
 
         if (status & CM_STATUS_FAULT_LATCHED) {
+            uint32_t fc = CM_FAULT & 0x1Fu;
             uart_puts(" FAULT=");
-            uart_puthex32(CM_FAULT & 0x1F);
-        }
-        uart_puts("\r\n");
+            uart_puthex32(fc);
+            uart_puts(" (");
+            uart_puts(fault_code_name(fc));
+            uart_puts(")\r\n");
 
-        /* Machine-parseable call-home line for local_bridge.py */
-        uart_emit_callhome(nia, status, uid_hi, uid_lo);
+            /* PP250 instant recovery: pulse boot_start, CM re-runs 3 boot
+             * instructions in 240 ns, boot_complete re-asserts.            */
+            if (pp250_fault_recovery()) {
+                boot_reason = 2u;
+                /* Re-read NIA and status after recovery */
+                nia    = CM_NIA;
+                status = CM_STATUS;
+            }
+        } else {
+            uart_puts("\r\n");
+        }
+
+        uart_emit_callhome(nia, status, uid_hi, uid_lo, boot_reason);
 
         delay_loops(LOOPS_PER_SECOND);
     }

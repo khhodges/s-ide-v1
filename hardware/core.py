@@ -85,6 +85,14 @@ class ChurchCore(Elaboratable):
         self.fault_valid = Signal()
         self.halt_valid = Signal()   # pulses when a zero instruction word is fetched post-boot
 
+        # GT fault telemetry — latched when fault_valid fires; held until FAULT_RST.
+        # Exposed via APB3 registers +0x18..+0x24 for CALLHOME GT diagnostics.
+        # fault_gt / fault_cr14 reserved: sub-unit wiring added in a future pass.
+        self.fault_gt    = Signal(32)  # GT word0 of the cap that faulted (APB3 +0x18)
+        self.fault_instr = Signal(32)  # instruction word at fault NIA     (APB3 +0x1C)
+        self.fault_cr14  = Signal(32)  # CR14 word0 at fault time          (APB3 +0x20)
+        self.fault_stage = Signal(4)   # 0=Fetch 1=Decode 2=Perm 3=Lambda 4=TPERM 5=Call 6=Return 7=DataRW  (APB3 +0x24)
+
         self.free_run_start = Signal()   # pulse high for 1 cycle to jump to free_run_nia
         self.free_run_nia   = Signal(32) # target byte address when free_run_start fires
 
@@ -730,7 +738,7 @@ class ChurchCore(Elaboratable):
             ),
         ]
 
-        with m.If(u_return.reboot_request):
+        with m.If(u_return.reboot_request | (self.fault_valid & self.boot_complete)):
             m.d.sync += [boot_state_reg.eq(BootState.FAULT_RST), nia_reg.eq(0)]
         with m.Elif(clear_all):
             m.d.sync += nia_reg.eq(0)
@@ -2173,6 +2181,50 @@ class ChurchCore(Elaboratable):
             m.d.comb += [self.fault.eq(FaultType.INVALID_OP), self.fault_valid.eq(1)]
         with m.Else():
             m.d.comb += [self.fault.eq(FaultType.NONE), self.fault_valid.eq(0)]
+
+        # ── fault telemetry stage encoder ─────────────────────────────────────
+        # 4-bit stage index that mirrors the fault priority chain above.
+        # Stage IDs: 0=Fetch/BOUNDS 1=Decode 2=PermCheck 3=Lambda
+        #            4=TPERM 5=Call 6=Return 7=DataRW/Other
+        fault_stage_w = Signal(4)
+        with m.If(fetch_bounds_fault):
+            m.d.comb += fault_stage_w.eq(0)
+        with m.Elif(u_decoder.fault_valid):
+            m.d.comb += fault_stage_w.eq(1)
+        with m.Elif(u_perm.fault_valid):
+            m.d.comb += fault_stage_w.eq(2)
+        if not self.iot_profile:
+            with m.Elif(u_lambda.lambda_fault):
+                m.d.comb += fault_stage_w.eq(3)
+            with m.Elif(nested_lambda_fault):
+                m.d.comb += fault_stage_w.eq(3)
+        with m.Elif(u_tperm.tperm_fault):
+            m.d.comb += fault_stage_w.eq(4)
+        with m.Elif(u_call.call_fault):
+            m.d.comb += fault_stage_w.eq(5)
+        with m.Elif(u_return.fault_valid):
+            m.d.comb += fault_stage_w.eq(6)
+        with m.Else():
+            m.d.comb += fault_stage_w.eq(7)
+
+        # ── fault telemetry latch registers ────────────────────────────────────
+        # Latched when fault_valid fires; cleared on FAULT_RST (clear_all).
+        # fault_gt / fault_cr14 reserved (zero) — sub-unit wiring in future pass.
+        fault_instr_latch = Signal(32)
+        fault_stage_latch = Signal(4)
+        with m.If(self.fault_valid):
+            m.d.sync += [
+                fault_instr_latch.eq(self.imem_data),
+                fault_stage_latch.eq(fault_stage_w),
+            ]
+        with m.Elif(clear_all):
+            m.d.sync += [fault_instr_latch.eq(0), fault_stage_latch.eq(0)]
+        m.d.comb += [
+            self.fault_gt.eq(0),
+            self.fault_instr.eq(fault_instr_latch),
+            self.fault_cr14.eq(0),
+            self.fault_stage.eq(fault_stage_latch),
+        ]
 
         m.d.comb += [
             u_shared_mload.cr_rd_data.eq(u_regs.cr_rd_data),

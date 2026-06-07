@@ -1,5 +1,27 @@
 # PP250 Fast Boot — Design & Implementation Plan
 
+## Implementation Status (2026-06-07)
+
+| Track | File(s) | Status | Notes |
+|-------|---------|--------|-------|
+| T1 — Firmware fast boot | `firmware/main.c` | ✅ Done | Countdown removed; kick=5 ms; PP250 fault recovery pulse; v1.1 |
+| T2 — Simulator `_fastBoot` | `simulator/simulator.js` | ✅ Done | `_fastBoot(reason)` added; `_tier3Recovery` updated; T003 + T003d2 pass |
+| T3 — Hardware auto-reboot | `hardware/core.py` | ✅ Done (source) | `fault_valid & boot_complete` added to reboot trigger; needs re-synthesis |
+| T4-A — Bridge fault names | `callhome_bridge.py` | ✅ Done | `_FAULT_NAMES` dict; `fault_name` in payload; UNKNOWN fallback |
+| T4-B — Firmware GT telemetry | `firmware/main.c` | ✅ Done | `CM_FAULT_GT/INSTR/CR14/STAGE` macros; emitted in CALLHOME when fault |
+| T4-B — Bridge GT forwarding | `callhome_bridge.py` | ✅ Done | Extracts + forwards `fault_gt/instr/cr14/stage`; stage decoded to name in console |
+| T4-C — APB3 GT registers | `apb3_cm_bridge.v`, `core.py` | ✅ Done (source) | 4 new RO registers +0x18–+0x24; `fault_instr`+`fault_stage` latched; needs re-synthesis |
+| T4-C — top.v wiring | `soc_combined/top.v` | ✅ Done (source) | New wires declared; tied to 0 until CM Verilog regenerated |
+| T4-D — IDE Devices panel | `simulator/index.html` + JS | Pending | GT badge / pet-name decode in Devices panel (future task) |
+
+**New bitstream required for T3 + T4-C:** Re-synthesise in Efinix Efinity, flash via `run_efx_pgm.sh`.
+Until then, `cm_fault_valid`, `cm_fault`, `cm_nia`, and the four GT telemetry wires are tied to zero in `top.v` (the CM's Amaranth-generated Verilog doesn't yet expose those as output ports).
+
+**Fault stage encoding (implemented in `core.py`, exposed at APB3 +0x24):**
+`0=Fetch/BOUNDS  1=Decode  2=PermCheck  3=Lambda  4=TPERM  5=Call  6=Return  7=DataRW/Other`
+
+---
+
 ## Background
 
 The PP250 (Plessey UK, 1972) responded to any fault with a hardware-enforced

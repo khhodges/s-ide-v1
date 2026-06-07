@@ -20,10 +20,14 @@
 //                       (ttyUSB3).  115200 baud, 3.3 V LVCMOS.
 //
 // APB3 bridge register map (see apb3_cm_bridge.v for full description):
-//   0x00  CTRL   [0]=cm_pb  (0=button pressed → step/free-run, 1=released)
-//   0x04  STATUS [2:0]={fault_latched, fault_valid, boot_complete}
-//   0x08  NIA    [31:0]=CM next-instruction address
-//   0x0C  FAULT  [4:0]=CM fault code
+//   0x00  CTRL        [0]=cm_pb  (0=button pressed → step/free-run, 1=released)
+//   0x04  STATUS      [2:0]={fault_latched, fault_valid, boot_complete}
+//   0x08  NIA         [31:0]=CM next-instruction address
+//   0x0C  FAULT       [4:0]=CM fault code
+//   0x18  FAULT_GT    [31:0]=GT word0 of faulting capability (Track 4-C)
+//   0x1C  FAULT_INSTR [31:0]=instruction word at fault NIA (Track 4-C)
+//   0x20  FAULT_CR14  [31:0]=CR14 word0 at fault time (Track 4-C, reserved=0)
+//   0x24  FAULT_STAGE [3:0]=pipeline stage index (Track 4-C)
 //
 // LED assignment
 //   led0 — SoC out-of-reset (mirrors soc_minimal behaviour)
@@ -69,6 +73,12 @@ module top (
     wire        cm_fault_valid;
     wire [31:0] cm_nia;
     wire [4:0]  cm_fault;
+
+    // GT fault telemetry (Track 4-C — tied to 0 until CM Verilog is regenerated)
+    wire [31:0] cm_fault_gt;
+    wire [31:0] cm_fault_instr;
+    wire [31:0] cm_fault_cr14;
+    wire [3:0]  cm_fault_stage;
 
     // CM LED outputs (raw from church_ti60f225)
     wire cm_led0, cm_led1, cm_led2, cm_led3;
@@ -154,7 +164,13 @@ module top (
         .cm_boot_complete(cm_boot_complete),
         .cm_fault_valid  (cm_fault_valid),
         .cm_nia          (cm_nia),
-        .cm_fault        (cm_fault)
+        .cm_fault        (cm_fault),
+
+        // GT fault telemetry (Track 4-C)
+        .cm_fault_gt     (cm_fault_gt),
+        .cm_fault_instr  (cm_fault_instr),
+        .cm_fault_cr14   (cm_fault_cr14),
+        .cm_fault_stage  (cm_fault_stage)
     );
 
     // ----------------------------------------------------------------
@@ -189,10 +205,16 @@ module top (
 
     // Generated CM does not expose debug ports — derive status from LEDs.
     // cm_led1 = boot_complete indicator in the CM RTL.
+    // Track 4-C: cm_fault_valid/fault/nia/telemetry tied to 0 until CM Verilog
+    // is regenerated with the new fault_gt/instr/cr14/stage output ports.
     assign cm_boot_complete = cm_led1;
     assign cm_fault_valid   = 1'b0;
     assign cm_fault         = 5'b0;
     assign cm_nia           = 32'b0;
+    assign cm_fault_gt      = 32'b0;
+    assign cm_fault_instr   = 32'b0;
+    assign cm_fault_cr14    = 32'b0;
+    assign cm_fault_stage   = 4'b0;
 
     // ----------------------------------------------------------------
     // LED logic

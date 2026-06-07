@@ -25,6 +25,16 @@ Flags:
     --report-launch  After the first CALLHOME with boot_ok=1, PUT
                    TEST-09 as passing to /api/launch-tests/TEST-09.
                    Requires --ide=URL.
+
+IMPORTANT — confirmed hardware gotchas
+---------------------------------------
+  Baud rate: ALWAYS use --baud 57600.  The firmware header comment says
+  115200 but the actual working rate is 57600 (25 MHz crystal, CLOCKDIV=53).
+  Connecting at 115200 produces garbage or silence.
+
+  --ide flag: both --ide=URL (equals) and --ide URL (space) are accepted.
+  The original parser only accepted the equals form; space form was silently
+  ignored, leaving _IDE_SERVER_URL=None and suppressing all IDE forwarding.
 """
 
 import sys
@@ -75,6 +85,30 @@ while _i < len(_argv):
     elif _a.startswith('--'):
         print(f"WARNING: unknown flag {_a!r} ignored", file=sys.stderr)
     _i += 1
+
+# ---------------------------------------------------------------------------
+# Fault code name lookup
+# Must stay in sync with ChurchSimulator.FAULT_CODES (simulator/simulator.js)
+# and _fault_names[] in hardware/soc_combined/firmware/main.c.
+# ---------------------------------------------------------------------------
+_FAULT_NAMES = {
+    0x00: "UNKNOWN",
+    0x01: "PERM_R",       0x02: "PERM_W",       0x03: "PERM_X",
+    0x04: "PERM_L",       0x05: "PERM_S",       0x06: "PERM_E",
+    0x07: "NULL_CAP",     0x08: "BOUNDS",       0x09: "VERSION",
+    0x0A: "SEAL",         0x0B: "INVALID_OP",   0x0C: "TPERM_RSV",
+    0x0D: "DOMAIN_PURITY",0x0E: "PERM_B",       0x0F: "F_BIT",
+    0x10: "STACK_OVERFLOW",0x11: "ABSENT_OUTFORM",
+    0x12: "STACK_CORRUPT", 0x13: "STACK_UNDERFLOW",
+    # 0x14 unassigned
+    0x15: "OUTFORM_CRC",  0x16: "OUTFORM_ALLOC",
+    0x17: "OUTFORM_MINT", 0x18: "OUTFORM_HDR",
+    0x19: "INT_OVERFLOW",   # proposed — Track 3 bitstream
+}
+
+def _fault_name(code: int) -> str:
+    """Return the human-readable fault name for a numeric fault code."""
+    return _FAULT_NAMES.get(code, "UNKNOWN")
 
 # ---------------------------------------------------------------------------
 # Globals
@@ -170,14 +204,17 @@ def _handle_callhome_json(line):
     Parse a CALLHOME:{...} line, print a human summary, and POST to the IDE.
 
     Expected JSON fields (from firmware/main.c uart_emit_callhome):
-        board       str   e.g. "Ti60F225"
-        uid         str   16-hex-char device UID
-        nia         str   e.g. "0x00001234"
-        boot_ok     int   1 if boot complete
-        fault       int   1 if fault_latched
-        fault_code  int   fault code (0-31)
-        fw_major    int   firmware major version (default 1)
-        fw_minor    int   firmware minor version (default 0)
+        board        str   e.g. "Ti60F225"
+        uid          str   16-hex-char device UID
+        nia          str   e.g. "0x00001234"
+        boot_ok      int   1 if boot complete
+        boot_reason  int   0=cold boot, 2=fault-recovery re-boot
+        fault        int   1 if fault_latched
+        fault_code   int   fault code (0-31)
+        fault_name   str   human-readable name (firmware v1.1+); bridge fills
+                           it from _FAULT_NAMES if firmware omits it
+        fw_major     int   firmware major version
+        fw_minor     int   firmware minor version
     """
     global _last_uid
     json_str = line[len("CALLHOME:"):].strip()
@@ -187,23 +224,39 @@ def _handle_callhome_json(line):
         print(f"  [CALL HOME] JSON parse error: {e}  raw={json_str!r}")
         return
 
-    board      = pkt.get("board", "?")
-    uid        = pkt.get("uid", "0" * 16)
-    nia        = pkt.get("nia", "0x0")
-    boot_ok    = int(pkt.get("boot_ok", 0))
-    fault      = int(pkt.get("fault", 0))
-    fault_code = int(pkt.get("fault_code", 0))
-    fw_major   = int(pkt.get("fw_major", 1))
-    fw_minor   = int(pkt.get("fw_minor", 0))
-    cr14       = pkt.get("cr14", None)   # GT of active LUMP — None if firmware omits it
-    cr12       = pkt.get("cr12", None)   # namespace chain root — None if firmware omits it
-    cr15       = pkt.get("cr15", None)   # namespace root — None if firmware omits it
+    board        = pkt.get("board", "?")
+    uid          = pkt.get("uid", "0" * 16)
+    nia          = pkt.get("nia", "0x0")
+    boot_ok      = int(pkt.get("boot_ok", 0))
+    boot_reason  = int(pkt.get("boot_reason", 0))
+    fault        = int(pkt.get("fault", 0))
+    fault_code   = int(pkt.get("fault_code", 0))
+    fw_major     = int(pkt.get("fw_major", 1))
+    fw_minor     = int(pkt.get("fw_minor", 0))
+    cr14         = pkt.get("cr14", None)   # GT of active LUMP (Track 4-B+)
+    cr12         = pkt.get("cr12", None)
+    cr15         = pkt.get("cr15", None)
+
+    # fault_name: use firmware-provided value if present, else look up locally
+    fname = pkt.get("fault_name") or (_fault_name(fault_code) if fault else "")
+
+    # GT fault telemetry — Track 4-C (firmware v1.1+ with new bitstream)
+    fault_gt    = pkt.get("fault_gt",    None)   # GT word0 hex str, e.g. "0x01800003"
+    fault_instr = pkt.get("fault_instr", None)   # instruction word hex str
+    fault_cr14  = pkt.get("fault_cr14",  None)   # CR14 word0 hex str
+    fault_stage = pkt.get("fault_stage", None)   # int 0-7 pipeline stage
 
     _last_uid = uid
 
-    fault_str = f"  FAULT={fault_code}" if fault else ""
-    cr_str = f"  CR14={cr14}" if cr14 is not None else ""
-    print(f"  [CALL HOME] {board}  UID={uid}  NIA={nia}  boot_ok={boot_ok}  FW={fw_major}.{fw_minor}{fault_str}{cr_str}")
+    boot_tag   = " [RECOVERY]" if boot_reason == 2 else ""
+    fault_str  = f"  FAULT={fname}" if fault else ""
+    gt_str     = f"  GT={fault_gt}" if fault_gt is not None else ""
+    instr_str  = f"  INSTR={fault_instr}" if fault_instr is not None else ""
+    cr14_str   = f"  CR14={cr14}" if cr14 is not None else ""
+    stage_names = ("Fetch", "Decode", "Perm", "Lambda", "TPERM", "Call", "Return", "DataRW")
+    stage_str  = (f"  STAGE={stage_names[int(fault_stage)] if int(fault_stage) < len(stage_names) else fault_stage}"
+                  if fault_stage is not None else "")
+    print(f"  [CALL HOME] {board}  UID={uid}  NIA={nia}  boot_ok={boot_ok}{boot_tag}  FW={fw_major}.{fw_minor}{fault_str}{gt_str}{instr_str}{cr14_str}{stage_str}")
 
     if _REPORT_LAUNCH and boot_ok and _IDE_SERVER_URL:
         threading.Thread(
@@ -219,8 +272,10 @@ def _handle_callhome_json(line):
             "device_uid":    uid,
             "nia":           nia,
             "boot_complete": boot_ok,
+            "boot_reason":   boot_reason,
             "fault_latched": fault,
             "fault_code":    fault_code,
+            "fault_name":    fname,
             "fw_major":      fw_major,
             "fw_minor":      fw_minor,
         }
@@ -230,6 +285,15 @@ def _handle_callhome_json(line):
             payload["cr12"] = cr12
         if cr15 is not None:
             payload["cr15"] = cr15
+        # Track 4-C GT telemetry (present when firmware reads new APB3 registers)
+        if fault_gt is not None:
+            payload["fault_gt"] = fault_gt
+        if fault_instr is not None:
+            payload["fault_instr"] = fault_instr
+        if fault_cr14 is not None:
+            payload["fault_cr14"] = fault_cr14
+        if fault_stage is not None:
+            payload["fault_stage"] = fault_stage
         threading.Thread(
             target=_post_callhome,
             args=(payload,),
@@ -260,8 +324,6 @@ def _flush_uart_buffer():
             urllib.request.urlopen(req, timeout=5)
         except Exception as e:
             print(f"  [bridge] uart-log POST failed: {e}")
-            # Re-queue the failed batch so messages are not silently dropped.
-            # Cap at 500 to avoid unbounded growth if the server is down.
             with _uart_buffer_lock:
                 combined = batch + list(_uart_buffer)
                 _uart_buffer.clear()
@@ -353,6 +415,8 @@ def main():
     global _ser
     print("Church Machine Ti60 Call-Home Bridge")
     print(f"  Port   : {_SERIAL_PORT} @ {_BAUD} baud")
+    if _BAUD != 57600:
+        print(f"  WARNING: expected 57600 baud (25 MHz crystal, CLOCKDIV=53); got {_BAUD}")
     if _IDE_SERVER_URL:
         print(f"  IDE    : {_IDE_SERVER_URL}")
     else:

@@ -25,6 +25,18 @@
 //                              the last written value.  Reset value: 0x00000000.
 //  0x14    UID_HI      R/W     [31:0] upper 32 bits of 64-bit device UID.
 //                              Written by firmware at boot.  Reset value: 0x00000000.
+//  0x18    FAULT_GT    RO      [31:0] GT word0 of the capability that caused the
+//                              fault.  Latched on fault_valid; held until next
+//                              boot_start pulse (FAULT_RST).  Requires Track 4-C
+//                              bitstream; reads 0x00000000 on earlier bitstreams.
+//  0x1C    FAULT_INSTR RO      [31:0] instruction word at the faulting NIA.
+//                              Latched on fault_valid; held until FAULT_RST.
+//  0x20    FAULT_CR14  RO      [31:0] CR14 word0 at fault time (active abstraction
+//                              GT; bits[15:0] = NS slot).  Reserved in current
+//                              bitstream; reads 0x00000000.
+//  0x24    FAULT_STAGE RO      [3:0] pipeline stage that detected the fault:
+//                              0=Fetch/BOUNDS 1=Decode 2=PermCheck 3=Lambda
+//                              4=TPERM 5=Call 6=Return 7=DataRW/Other.
 //
 // Together UID_HI:UID_LO form a 64-bit value printed as 16 hex digits in every
 // CALLHOME JSON packet so the IDE can distinguish multiple boards of the same
@@ -69,7 +81,13 @@ module apb3_cm_bridge #(
     input  wire        cm_boot_complete,
     input  wire        cm_fault_valid,
     input  wire [31:0] cm_nia,
-    input  wire [4:0]  cm_fault
+    input  wire [4:0]  cm_fault,
+
+    // GT fault telemetry inputs (Track 4-C — latched by core on fault_valid)
+    input  wire [31:0] cm_fault_gt,    // +0x18 FAULT_GT
+    input  wire [31:0] cm_fault_instr, // +0x1C FAULT_INSTR
+    input  wire [31:0] cm_fault_cr14,  // +0x20 FAULT_CR14
+    input  wire [3:0]  cm_fault_stage  // +0x24 FAULT_STAGE
 );
 
     // ----------------------------------------------------------------
@@ -104,6 +122,30 @@ module apb3_cm_bridge #(
             fault_code_r <= 5'h0;
         else if (cm_fault_valid)
             fault_code_r <= cm_fault;
+    end
+
+    // ----------------------------------------------------------------
+    // GT fault telemetry latches (+0x18..+0x24)
+    // Inputs cm_fault_gt/instr/cr14/stage are already latched by the
+    // CM core on fault_valid; we simply register them here for timing
+    // safety across the APB3 boundary.
+    // ----------------------------------------------------------------
+    reg [31:0] fault_gt_r;
+    reg [31:0] fault_instr_r;
+    reg [31:0] fault_cr14_r;
+    reg [3:0]  fault_stage_r;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            fault_gt_r    <= 32'h0;
+            fault_instr_r <= 32'h0;
+            fault_cr14_r  <= 32'h0;
+            fault_stage_r <= 4'h0;
+        end else if (cm_fault_valid) begin
+            fault_gt_r    <= cm_fault_gt;
+            fault_instr_r <= cm_fault_instr;
+            fault_cr14_r  <= cm_fault_cr14;
+            fault_stage_r <= cm_fault_stage;
+        end
     end
 
     // ----------------------------------------------------------------
@@ -148,6 +190,10 @@ module apb3_cm_bridge #(
             4'h3: PRDATA = {27'h0, fault_code_r};                    // FAULT
             4'h4: PRDATA = uid_lo_r;                                  // UID_LO
             4'h5: PRDATA = uid_hi_r;                                  // UID_HI
+            4'h6: PRDATA = fault_gt_r;                                // FAULT_GT   (+0x18)
+            4'h7: PRDATA = fault_instr_r;                             // FAULT_INSTR (+0x1C)
+            4'h8: PRDATA = fault_cr14_r;                              // FAULT_CR14  (+0x20)
+            4'h9: PRDATA = {28'h0, fault_stage_r};                   // FAULT_STAGE (+0x24)
             default: PRDATA = 32'h0;
         endcase
     end
