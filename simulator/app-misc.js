@@ -2776,11 +2776,16 @@ function toggleCallhomeFilter() {
     var panel = document.getElementById('callhomeLogEntries');
     if (!panel) return;
     panel.querySelectorAll('.callhome-uart-row').forEach(function(r) {
+        var uid = (r.dataset.uid || '').toUpperCase();
+        var uidHidden = _selectedMachineUid && uid !== _selectedMachineUid;
+        if (uidHidden) { r.style.display = 'none'; return; }
         if (_callhomeFilter === 'cloomc') {
-            r.style.display = 'none';
+            var txt = r.querySelector('.uart-text');
+            var isBoot = txt && txt.classList.contains('uart-text-boot');
+            var isInit = txt && txt.classList.contains('uart-text-init');
+            r.style.display = (isBoot || isInit) ? '' : 'none';
         } else {
-            var uid = (r.dataset.uid || '').toUpperCase();
-            r.style.display = (_selectedMachineUid && uid !== _selectedMachineUid) ? 'none' : '';
+            r.style.display = '';
         }
     });
 }
