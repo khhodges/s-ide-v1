@@ -2180,6 +2180,8 @@
 .uart-text      { color: #eceef3; flex: 1; overflow: hidden; text-overflow: ellipsis; }
 .uart-text-boot { color: #ef4444; font-weight: 700; }
 .uart-text-init { color: #f59e0b; }
+.callhome-uart-row .uart-text-boot { color: #ef4444; font-weight: 700; }
+.callhome-uart-row .uart-text-init { color: #f59e0b; }
 
 /* ── NIA Disassembly Panel ───────────────────────────────────────────────── */
 /* ── Callhome Row Detail Modals ────────────────────────────────────────── */
