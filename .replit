@@ -139,6 +139,10 @@ args = "port-collision-test"
 task = "workflow.run"
 args = "playwright-port-wiring"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "disasm-panel-tests"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -488,6 +492,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node scripts/test_playwright_port_wiring.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "disasm-panel-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/disasm_panel_test.js"
 
 [workflows.workflow.metadata]
 outputType = "console"
