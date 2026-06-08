@@ -79,7 +79,7 @@ module top (
         .jtagCtrl_capture (1'b0),
         .jtagCtrl_shift   (1'b0),
         .jtagCtrl_update  (1'b0),
-        .jtagCtrl_reset   (1'b0),
+        .jtagCtrl_reset   (1'b1),   // 1 = TAP not in reset; 0 freezes io_systemReset HIGH
         .jtagCtrl_tdo     (),
         .jtagCtrl_tck     (1'b0)
     );
