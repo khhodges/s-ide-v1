@@ -6,3 +6,4 @@
 - [Ti60F225 hardware facts](ti60f225-hardware.md) — board has exactly 3 user LEDs; top.v debug ports were unconnected causing wrong boot/NIA/fault signals
 - [Sapphire SoC jtagCtrl_reset polarity](sapphire-jtag-reset.md) — jtagCtrl_reset=0 keeps debug domain in permanent reset → io_systemReset stuck HIGH → LED0 OFF; must tie to 1'b1
 - [Ti60 headless build — IO placement and LPF](ti60-headless-lpf.md) — 5-patch Efinity flow: Patch4 must CALL check_design() (ignore return) not bypass it; efx_run --flow pgm/pnr not efx_pgm/efx_pnr direct; peri.xml must have clk GPIO or IO pins all randomly placed
+- [Efinity clkin duplicate net](efinity-clkin-duplicate-net.md) — PnR "Unassigned Core Pins=1 + Missing Interface Pins=1" = clk net named on BOTH clkin GPIO input_config AND clkmux ROUTE0; blank the GPIO input_config name=""
