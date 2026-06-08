@@ -1,20 +1,17 @@
 #!/bin/bash
-# run_efx_pgm.sh — Generate SPI flash hex from the P&R bitstream (Efinity 2026.1)
+# run_efx_pgm.sh — Generate SPI flash hex from the P&R bitstream
 #
-# Run from the church_project/SoC/ directory, AFTER run_efx_pnr.sh has completed.
+# Usage (from any directory):
+#   bash ~/church-machine/hardware/soc_combined/run_efx_pgm.sh [PROJECT_XML]
 #
-# Usage:
-#   cd ~/church_project/SoC
-#   bash run_efx_pgm.sh
+# PROJECT_XML defaults to ~/church_project/SoC/church_soc_cm.xml.
+# Requires Efinity 2026.1 (efx_pgm / efx_run from 2026.1 unified flow).
 #
-# Output: outflow/church_soc_cm.hex
-#
-# Efinity 2026.1 note: --family Titanium must be passed explicitly.
-# Omitting it yields: ERROR: Unknown device family ""
+# Run AFTER run_efx_pnr.sh has completed successfully.
+# Output: outflow/church_soc_cm.hex  (in the same directory as PROJECT_XML)
 
 set -euo pipefail
 
-# ── Locate Efinity ─────────────────────────────────────────────────────────────
 EFINITY="${EFINITY_HOME:-$HOME/efinity/2026.1}"
 export EFINITY_HOME="$EFINITY"
 
@@ -24,25 +21,22 @@ if [ ! -x "$EFINITY/bin/efx_pgm" ]; then
     exit 1
 fi
 
-# Source Efinity environment (suppresses noisy libstdc++ warning)
+# Source Efinity environment so tools can find shared libraries
 # shellcheck disable=SC1091
 source "$EFINITY/bin/setup.sh" 2>/dev/null || true
 
-# ── Project paths ───────────────────────────────────────────────────────────────
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SOC_DIR="$SCRIPT_DIR"
-
-cd "$SOC_DIR"
-
+# Default project: actual Efinity project in church_project/SoC/
+PROJECT="${1:-$HOME/church_project/SoC/church_soc_cm.xml}"
+SOC_DIR="$(dirname "$PROJECT")"
 CIRCUIT="church_soc_cm"
 FAMILY="Titanium"
 DEVICE="Ti60F225"
-LBF_FILE="work_pnr/${CIRCUIT}.lbf"
-OUTDIR="outflow"
+LBF_FILE="$SOC_DIR/work_pnr/${CIRCUIT}.lbf"
+OUTDIR="$SOC_DIR/outflow"
 
 mkdir -p "$OUTDIR"
+cd "$SOC_DIR"
 
-# ── Verify input exists ─────────────────────────────────────────────────────────
 if [ ! -f "$LBF_FILE" ]; then
     echo "ERROR: Bitstream file not found: $LBF_FILE"
     echo "       Run run_efx_pnr.sh first to generate it."
@@ -50,16 +44,13 @@ if [ ! -f "$LBF_FILE" ]; then
 fi
 
 echo "========================================"
-echo "efx_pgm — Generate SPI flash hex (2026.1 unified flow)"
+echo "efx_pgm — Generate SPI flash hex (Efinity 2026.1)"
 echo "========================================"
 echo "  Input : $LBF_FILE ($(ls -lh "$LBF_FILE" | awk '{print $5}'))"
 echo "  Device: $FAMILY $DEVICE"
 echo "  Output: $OUTDIR/${CIRCUIT}.hex"
 echo ""
 
-# Step 1: Interface Designer — processes peri.xml, writes the LPF that efx_pgm needs.
-# In 2026.1, efx_pgm refuses to run without the Interface Designer LPF constraint file.
-# efx_run --flow interface generates it headlessly from the project XML + peri.xml.
 echo "==> Step 1/2: Interface Designer (generates LPF from peri.xml) ..."
 "$EFINITY/bin/efx_run" "$CIRCUIT" \
     --prj \
@@ -70,7 +61,6 @@ echo "==> Step 1/2: Interface Designer (generates LPF from peri.xml) ..."
 
 echo ""
 echo "==> Step 2/2: Bitstream generation ..."
-# Step 2: Bitstream generation — now that the LPF exists efx_run calls efx_pgm internally.
 "$EFINITY/bin/efx_run" "$CIRCUIT" \
     --prj \
     --flow   pgm \
@@ -80,13 +70,11 @@ echo "==> Step 2/2: Bitstream generation ..."
 
 echo ""
 if [ -f "$OUTDIR/${CIRCUIT}.hex" ]; then
-    echo "==> Bitstream hex generated successfully:"
+    echo "==> SUCCESS: Bitstream hex generated:"
     ls -lh "$OUTDIR/${CIRCUIT}.hex"
     echo ""
     echo "Flash with:"
-    echo "  sudo ~/oss-cad-suite/bin/openFPGALoader \\"
-    echo "       -b titanium_ti60_f225_jtag \\"
-    echo "       -f $SOC_DIR/$OUTDIR/${CIRCUIT}.hex"
+    echo "  sudo openFPGALoader -b titanium_ti60_f225_jtag -f $OUTDIR/${CIRCUIT}.hex"
 else
     echo "ERROR: $OUTDIR/${CIRCUIT}.hex not found — check $OUTDIR/pgm.log"
     exit 1
