@@ -3,31 +3,34 @@
   hardware/soc_minimal/church_soc.peri.xml
   Pin assignments for the Sapphire SoC minimal UART gate test — Ti60F225.
 
-  IO bank voltage assignments:
-    BL  3.3 V LVCMOS  (UART TX/RX lines → FT4232H)
-    BR  1.8 V LVCMOS  (LED outputs)
-    2A  1.8 V LVCMOS  (general — not used in this project but declared for
-                       completeness; Efinity requires bank voltage for any
-                       pin in that bank, even unused ones)
+  db_version="20252999" / version="2025.2.288.4.15": required for 2026.1
+  efx_run interface + efx_pnr to read this file without aborting.
 
-  Generated for Efinity 2025.2.
+  Clock config: conn_type="normal" + clkmux_buf_name="" (all CLKMUX ROUTE0
+  name="").  This is the proven-safe config; conn_type="clkin"+named ROUTE0
+  causes PnR packing failure ("Failed to read core interface constraints").
+
+  IO bank voltage assignments (all 12 banks must be declared):
+    BL  3.3 V LVCMOS  (UART TX/RX → FT4232H)
+    BR  1.8 V LVCMOS  (LED outputs)
+    TL  1.8 V LVCMOS  (push button GPIOT_N_06)
+    TR  1.8 V LVCMOS
+    1A–4B  1.8 V LVCMOS  (unused but declared — required by 2026.1 tools)
 -->
-<efxpt:design_db
-    name="church_soc"
-    device_def="Ti60F225"
-    version="2025.2.0"
-    db_version="20241999"
-    last_change_date="Sat May 24 00:00:00 2026"
-    xmlns:efxpt="http://www.efinixinc.com/peri_design_db"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.efinixinc.com/peri_design_db peri_design_db.xsd">
+<efxpt:design_db name="church_soc" device_def="Ti60F225" version="2025.2.288.4.15" db_version="20252999" last_change_date="Sun Jun  8 00:00:00 2026" xmlns:efxpt="http://www.efinixinc.com/peri_design_db" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.efinixinc.com/peri_design_db peri_design_db.xsd ">
 
     <efxpt:device_info>
         <efxpt:iobank_info>
-            <!-- Only banks actually used by this design are declared -->
+            <efxpt:iobank name="1A" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="1A_MODE_SEL"/>
+            <efxpt:iobank name="1B" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="1B_MODE_SEL"/>
+            <efxpt:iobank name="2A" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="2A_MODE_SEL"/>
+            <efxpt:iobank name="2B" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="2B_MODE_SEL"/>
+            <efxpt:iobank name="3A" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="3A_MODE_SEL"/>
+            <efxpt:iobank name="3B" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="3B_MODE_SEL"/>
+            <efxpt:iobank name="4A" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="4A_MODE_SEL"/>
+            <efxpt:iobank name="4B" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="4B_MODE_SEL"/>
             <efxpt:iobank name="BL" iostd="3.3 V LVCMOS" is_dyn_voltage="false" mode_sel_name="BL_MODE_SEL"/>
             <efxpt:iobank name="BR" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="BR_MODE_SEL"/>
-            <efxpt:iobank name="2A" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="2A_MODE_SEL"/>
             <efxpt:iobank name="TL" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="TL_MODE_SEL"/>
             <efxpt:iobank name="TR" iostd="1.8 V LVCMOS" is_dyn_voltage="false" mode_sel_name="TR_MODE_SEL"/>
         </efxpt:iobank_info>
@@ -56,10 +59,10 @@
         <efxpt:clkmux_info>
             <efxpt:clkmux name="CLKMUX_B" block_def="CLKMUX_B" is_mux_bot0_dyn="false" is_mux_bot7_dyn="false">
                 <efxpt:gen_pin>
-                    <efxpt:pin name="" type_name="ROUTE0"      is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name="" type_name="ROUTE1"      is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name="" type_name="ROUTE2"      is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name="" type_name="ROUTE3"      is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE0"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE1"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE2"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE3"        is_bus="false" is_clk="true" is_clk_invert="false"/>
                     <efxpt:pin name="" type_name="DYN_MUX_OUT_0" is_bus="false"/>
                     <efxpt:pin name="" type_name="DYN_MUX_OUT_7" is_bus="false"/>
                     <efxpt:pin name="" type_name="DYN_MUX_SEL_0" is_bus="true"/>
@@ -68,10 +71,10 @@
             </efxpt:clkmux>
             <efxpt:clkmux name="CLKMUX_L" block_def="CLKMUX_L" is_mux_bot0_dyn="false" is_mux_bot7_dyn="false">
                 <efxpt:gen_pin>
-                    <efxpt:pin name="" type_name="ROUTE0"      is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name="" type_name="ROUTE1"      is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name="" type_name="ROUTE2"      is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name="" type_name="ROUTE3"      is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE0"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE1"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE2"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE3"        is_bus="false" is_clk="true" is_clk_invert="false"/>
                     <efxpt:pin name="" type_name="DYN_MUX_OUT_0" is_bus="false"/>
                     <efxpt:pin name="" type_name="DYN_MUX_OUT_7" is_bus="false"/>
                     <efxpt:pin name="" type_name="DYN_MUX_SEL_0" is_bus="true"/>
@@ -80,10 +83,10 @@
             </efxpt:clkmux>
             <efxpt:clkmux name="CLKMUX_R" block_def="CLKMUX_R" is_mux_bot0_dyn="false" is_mux_bot7_dyn="false">
                 <efxpt:gen_pin>
-                    <efxpt:pin name="" type_name="ROUTE0"      is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name="" type_name="ROUTE1"      is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name="" type_name="ROUTE2"      is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name="" type_name="ROUTE3"      is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE0"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE1"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE2"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE3"        is_bus="false" is_clk="true" is_clk_invert="false"/>
                     <efxpt:pin name="" type_name="DYN_MUX_OUT_0" is_bus="false"/>
                     <efxpt:pin name="" type_name="DYN_MUX_OUT_7" is_bus="false"/>
                     <efxpt:pin name="" type_name="DYN_MUX_SEL_0" is_bus="true"/>
@@ -92,15 +95,14 @@
             </efxpt:clkmux>
             <efxpt:clkmux name="CLKMUX_T" block_def="CLKMUX_T" is_mux_bot0_dyn="false" is_mux_bot7_dyn="false">
                 <efxpt:gen_pin>
-                    <!-- clk feeds ROUTE0 of CLKMUX_T (25 MHz crystal at GPIOL_P_18) -->
-                    <efxpt:pin name="clk" type_name="ROUTE0"   is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name=""    type_name="ROUTE1"   is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name=""    type_name="ROUTE2"   is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name=""    type_name="ROUTE3"   is_bus="false" is_clk="true" is_clk_invert="false"/>
-                    <efxpt:pin name=""    type_name="DYN_MUX_OUT_0" is_bus="false"/>
-                    <efxpt:pin name=""    type_name="DYN_MUX_OUT_7" is_bus="false"/>
-                    <efxpt:pin name=""    type_name="DYN_MUX_SEL_0" is_bus="true"/>
-                    <efxpt:pin name=""    type_name="DYN_MUX_SEL_7" is_bus="true"/>
+                    <efxpt:pin name="" type_name="ROUTE0"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE1"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE2"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="ROUTE3"        is_bus="false" is_clk="true" is_clk_invert="false"/>
+                    <efxpt:pin name="" type_name="DYN_MUX_OUT_0" is_bus="false"/>
+                    <efxpt:pin name="" type_name="DYN_MUX_OUT_7" is_bus="false"/>
+                    <efxpt:pin name="" type_name="DYN_MUX_SEL_0" is_bus="true"/>
+                    <efxpt:pin name="" type_name="DYN_MUX_SEL_7" is_bus="true"/>
                 </efxpt:gen_pin>
             </efxpt:clkmux>
         </efxpt:clkmux_info>
@@ -108,12 +110,15 @@
 
     <efxpt:gpio_info>
 
-        <!-- Clock: 25 MHz crystal at GPIOL_P_18 → CLKMUX_T ROUTE0 → io_systemClk -->
+        <!-- Clock: 25 MHz crystal at GPIOL_P_18.
+             conn_type="normal" + clkmux_buf_name="" is the proven-safe config.
+             DO NOT change to conn_type="clkin" or add a named CLKMUX ROUTE0 —
+             that combination causes PnR packing failure. -->
         <efxpt:comp_gpio name="clk" gpio_def="GPIOL_P_18" mode="input" bus_name="" io_standard="1.8 V LVCMOS">
             <efxpt:input_config
                 name="clk"
                 name_ddio_lo=""
-                conn_type="clkin"
+                conn_type="normal"
                 is_register="false"
                 clock_name=""
                 is_clock_inverted="false"
@@ -129,7 +134,7 @@
                 dyn_delay_en_name="clk_DLY_ENA"
                 dyn_delay_reset_name="clk_DLY_RST"
                 dyn_delay_ctrl_name="clk_DLY_CTRL"
-                clkmux_buf_name="CLKMUX_T"/>
+                clkmux_buf_name=""/>
         </efxpt:comp_gpio>
 
         <!-- UART TX → GPIOL_02: PCB trace to FT4232H interface 2 (ttyUSB2), 3.3 V -->
@@ -214,7 +219,7 @@
                 fastclk_name=""/>
         </efxpt:comp_gpio>
 
-        <!-- LED1: USER_LED1 at GPIOR_P_08, active-HIGH, 1.8 V -->
+        <!-- LED1: USER_LED1 at GPIOR_P_08, active-HIGH, 1.8 V (reserved, off) -->
         <efxpt:comp_gpio name="led1" gpio_def="GPIOR_P_08" mode="output" bus_name="" io_standard="1.8 V LVCMOS">
             <efxpt:output_config
                 name="led1"
@@ -231,7 +236,7 @@
                 fastclk_name=""/>
         </efxpt:comp_gpio>
 
-        <!-- LED2: USER_LED2 at GPIOR_P_09, active-HIGH, 1.8 V -->
+        <!-- LED2: USER_LED2 at GPIOR_P_09, active-HIGH, 1.8 V (reserved, off) -->
         <efxpt:comp_gpio name="led2" gpio_def="GPIOR_P_09" mode="output" bus_name="" io_standard="1.8 V LVCMOS">
             <efxpt:output_config
                 name="led2"

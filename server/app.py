@@ -226,6 +226,46 @@ def download_flash_all():
                      download_name="flash_all.sh",
                      mimetype="text/plain")
 
+@app.route("/dl/flash-soc")
+def download_flash_soc():
+    p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "flash_soc.sh")
+    return send_file(os.path.abspath(p), as_attachment=True, download_name="flash_soc.sh", mimetype="text/plain")
+
+@app.route("/dl/soc-top-v")
+def download_soc_top_v():
+    p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "top.v")
+    return send_file(os.path.abspath(p), as_attachment=True, download_name="top.v", mimetype="text/plain")
+
+@app.route("/dl/soc-xml")
+def download_soc_xml():
+    p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "church_soc.xml")
+    return send_file(os.path.abspath(p), as_attachment=True, download_name="church_soc.xml", mimetype="text/xml")
+
+@app.route("/dl/soc-peri-xml")
+def download_soc_peri_xml():
+    p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "church_soc.peri.xml")
+    return send_file(os.path.abspath(p), as_attachment=True, download_name="church_soc.peri.xml", mimetype="text/xml")
+
+@app.route("/dl/soc-fw-main")
+def download_soc_fw_main():
+    p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "firmware", "main.c")
+    return send_file(os.path.abspath(p), as_attachment=True, download_name="main.c", mimetype="text/plain")
+
+@app.route("/dl/soc-fw-crt0")
+def download_soc_fw_crt0():
+    p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "firmware", "crt0.S")
+    return send_file(os.path.abspath(p), as_attachment=True, download_name="crt0.S", mimetype="text/plain")
+
+@app.route("/dl/soc-fw-link")
+def download_soc_fw_link():
+    p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "firmware", "link.ld")
+    return send_file(os.path.abspath(p), as_attachment=True, download_name="link.ld", mimetype="text/plain")
+
+@app.route("/dl/soc-fw-make")
+def download_soc_fw_make():
+    p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "firmware", "Makefile")
+    return send_file(os.path.abspath(p), as_attachment=True, download_name="Makefile", mimetype="text/plain")
+
 @app.route("/dl/ti60zip")
 def download_ti60zip():
     import zipfile, io, re as _re
