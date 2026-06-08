@@ -9,10 +9,12 @@ on:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # JavaScript test suites
+  # FAST tier — pure JS + shell; no Python; target < 60 s.
+  # Set this job as the required status check in branch-protection rules so
+  # that PRs get a green/red signal before the slow tier finishes.
   # ---------------------------------------------------------------------------
-  js-tests:
-    name: JS Tests
+  fast:
+    name: Fast (JS + checks)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +28,7 @@ jobs:
       - name: Install JS dependencies
         run: npm install
 
+      # --- JS simulator tests ---
       - name: Assembler tests
         run: npm test
 
@@ -71,12 +74,28 @@ jobs:
       - name: Playwright port wiring
         run: node scripts/test_playwright_port_wiring.js
 
+      # --- Stale / consistency checks (JS + bash only; no Python required) ---
+      - name: Check stale CR7
+        run: bash scripts/check_stale_cr7.sh
+
+      - name: Check selftest LUMP stale
+        run: node scripts/check_selftest_lump_stale.js
+
+      - name: Check capabilities blocks
+        run: node scripts/check-capabilities-blocks.js
+
+      - name: Check API reference stale
+        run: node scripts/gen-api-reference.js --check
+
   # ---------------------------------------------------------------------------
-  # Python test suites
+  # SLOW tier — Python pytest suites, Python checks, and Playwright E2E.
+  # Runs only after the fast job passes; keeps heavy waits out of the
+  # critical-path feedback loop.
   # ---------------------------------------------------------------------------
-  python-tests:
-    name: Python Tests
+  slow:
+    name: Slow (Python + E2E)
     runs-on: ubuntu-latest
+    needs: fast
     steps:
       - uses: actions/checkout@v4
 
@@ -88,7 +107,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
-      - name: Set up Node.js (required by Python boot tests)
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -97,6 +116,7 @@ jobs:
       - name: Install JS dependencies
         run: npm install
 
+      # --- Python test suites ---
       - name: LUMP consistency
         run: python -m pytest tests/lump/test_lump_consistency.py -v
 
@@ -121,76 +141,14 @@ jobs:
       - name: Version telemetry tests
         run: python3 -m pytest tests/server/test_version_telemetry.py -v
 
-  # ---------------------------------------------------------------------------
-  # Stale / consistency checks
-  # ---------------------------------------------------------------------------
-  checks:
-    name: Stale & Consistency Checks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install JS dependencies
-        run: npm install
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt
-
-      - name: Check stale CR7
-        run: bash scripts/check_stale_cr7.sh
-
-      - name: Check selftest LUMP stale
-        run: node scripts/check_selftest_lump_stale.js
-
-      - name: Check capabilities blocks
-        run: node scripts/check-capabilities-blocks.js
-
-      - name: Check API reference stale
-        run: node scripts/gen-api-reference.js --check
-
+      # --- Python stale / hardware checks ---
       - name: Ti60 utilisation check
         run: python scripts/check_ti60_utilisation.py --missing-ok
 
       - name: Ti60 UART dry-run
         run: python3 scripts/test_ti60_uart.py --dry-run
 
-  # ---------------------------------------------------------------------------
-  # End-to-end (Playwright) — runs against a live server
-  # ---------------------------------------------------------------------------
-  e2e:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install JS dependencies
-        run: npm install
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt
-
+      # --- End-to-end (Playwright) — runs against a live server ---
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
