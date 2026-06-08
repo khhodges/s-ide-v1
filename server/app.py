@@ -218,6 +218,14 @@ def download_peri_xml():
                      download_name="church_soc_cm.peri.xml",
                      mimetype="text/xml")
 
+@app.route("/dl/flash-all")
+def download_flash_all():
+    p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_combined", "flash_all.sh")
+    return send_file(os.path.abspath(p),
+                     as_attachment=True,
+                     download_name="flash_all.sh",
+                     mimetype="text/plain")
+
 @app.route("/dl/ti60zip")
 def download_ti60zip():
     import zipfile, io, re as _re
