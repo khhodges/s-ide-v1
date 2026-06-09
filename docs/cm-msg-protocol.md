@@ -1,6 +1,6 @@
 # CM_MSG — Church Machine UART Messaging Protocol
 
-**Status:** Design specification — v0.2  
+**Status:** Design specification — v0.3  
 **Date:** 2026-06-09  
 **Scope:** Ti60 F225 (initial target); architecture applies to all CM-connected boards
 
@@ -8,13 +8,21 @@
 
 ## Guiding Principle
 
-**No message is trusted unless it is authorized by a Golden Token.**
+**No message is trusted unless it is authorized, authenticated, and encrypted by a Golden Token pair.**
 
 The Church Machine is built on capability-based security. Every memory access is
 GT-validated in hardware. Every call is GT-validated in the ISA. This protocol
-extends that same guarantee to the UART channel: every message — in both directions
-— carries implicit authorization via a Golden Token pair. A board that does not hold
-a GT for a capability cannot exercise it, even over UART. The bridge is the enforcer.
+extends that same guarantee to the UART channel — with encryption as a first-class
+property, not an afterthought:
+
+- **Authorization** — A board that does not hold a GT for a capability cannot exercise
+  it, even over UART. The bridge enforces this on every frame.
+- **Authentication** — Every frame carries an HMAC tag derived from the GT key pair.
+  A forged or tampered frame is rejected before any handler is called.
+- **Encryption** — Every payload is encrypted with a session key derived from the
+  OGT key pair. A message in transit reveals nothing about its content to an
+  observer on the wire.
+
 This is not an add-on. It is the protocol's reason for existing.
 
 ---
@@ -24,47 +32,57 @@ This is not an add-on. It is the protocol's reason for existing.
 ### 1.1 The chain of trust
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                    FPGA Board (Ti60 F225)                 │
-│                                                          │
-│  CALLHOME sends:  board_uid + gt_manifest                │
-│  (list of GT global names the board claims to hold)      │
-└────────────────────────┬─────────────────────────────────┘
-                         │  UART  [0xCE][0xAA][type][seq][len][payload][crc16]
-                         ▼
-┌──────────────────────────────────────────────────────────┐
-│                  Bridge (callhome_bridge.py)              │
-│                                                          │
-│  1. Parses frame — verifies magic + CRC                  │
-│  2. Looks up board's GT record by board_uid              │
-│  3. Checks: does board hold the Source GT for msg.type?  │
-│  4. On pass → routes to handler                          │
-│  5. On fail → sends ACK(GT_ERROR) + logs rejection       │
-└────────────────────────┬─────────────────────────────────┘
-                         │  HTTP POST / SSE
-                         ▼
-┌──────────────────────────────────────────────────────────┐
-│                  IDE Server (app.py)                     │
-│                                                          │
-│  Stores GT records per board in church_machine.db        │
-│  Mints, grants, and revokes GTs via admin/family panel   │
-│  Destination GTs live here — never on the FPGA           │
-└──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                    FPGA Board (Ti60 F225)                     │
+│                                                              │
+│  GT bundle in protected BRAM:                                │
+│    { gt_name → (token_32, K_enc_128, K_mac_128, nonce_ctr) } │
+│                                                              │
+│  CALLHOME (0x01): board_uid + fpga_nonce + gt_manifest       │
+│  All subsequent frames: OGT-encrypted + HMAC-authenticated   │
+└──────────────────────────┬───────────────────────────────────┘
+                           │  UART
+                           │  [0xCE][0xAA][type][seq][flags][len]
+                           │  [nonce:4][ChaCha20(payload)][HMAC-8]
+                           ▼
+┌──────────────────────────────────────────────────────────────┐
+│                  Bridge (callhome_bridge.py)                  │
+│                                                              │
+│  1. Parse frame header — verify magic                        │
+│  2. Look up board's GT record by board_uid                   │
+│  3. Verify HMAC tag  (reject + log on failure)               │
+│  4. Verify nonce > last_seen  (replay protection)            │
+│  5. Decrypt payload using K_enc for this GT pair             │
+│  6. Validate Source GT for msg.type                          │
+│  7. On pass → route to handler                               │
+│  8. On fail → send ACK(GT_ERROR) + log rejection             │
+└──────────────────────────┬───────────────────────────────────┘
+                           │  HTTP POST / SSE  (plaintext inside server)
+                           ▼
+┌──────────────────────────────────────────────────────────────┐
+│                  IDE Server (app.py)                         │
+│                                                              │
+│  Mints GT records with keys:  token_32 + K_enc + K_mac       │
+│  Deploys key bundles to FPGA via LUMP_DATA (0x80)            │
+│  Revokes GTs + keys server-side; no FPGA reflash needed      │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 GT validation at the bridge
+### 1.2 GT validation and encryption at the bridge
 
-GT validation is intentionally in the bridge, not the firmware. This is by design:
+GT validation and decryption are intentionally in the bridge, not the firmware. This is by design:
 
-- **Firmware stays frozen.** New GT types, new revocations, new domain rules — all
-  applied on the IDE side. The FPGA never needs to be reflashed to change permissions.
+- **Firmware stays frozen.** New GT types, new revocations, new domain rules, new
+  cipher algorithms — all applied on the IDE side. The FPGA never needs reflashing
+  to change permissions or upgrade crypto.
 - **Point-to-point channel.** The UART bridge is a 1:1 connection to one board. Once
-  CALLHOME establishes the board's identity, every subsequent message is evaluated
-  against that board's GT record.
-- **No GT tokens in the wire frame.** Adding a 4-byte GT token to every frame would
-  require the firmware to know its own tokens and pass them in every call. Instead,
-  the bridge holds the mapping: `board_uid → {gt_name → token}`. The firmware just
-  calls `cm_send_msg(type, seq, payload, len)`. The bridge does the rest.
+  CALLHOME establishes the board's identity and completes the nonce handshake, every
+  subsequent message is decrypted and validated against that board's GT record.
+- **Keys, not tokens, in the wire.** The 32-bit GT token is a hardware capability
+  handle — too short for cryptography. Each GT is extended with a 128-bit `K_enc`
+  and `K_mac`. These keys live in the FPGA's protected BRAM and the IDE's GT record.
+  The wire carries the encrypted payload and HMAC tag, not the token itself. The
+  bridge recovers the plaintext and then validates the GT type map.
 
 ### 1.3 Trust states
 
@@ -77,17 +95,15 @@ GT validation is intentionally in the bridge, not the firmware. This is by desig
 
 ### 1.4 Security properties guaranteed by this protocol
 
-1. **Identity** — Every board is identified by a unique SHA-32 of its UID, minted once.
-2. **Least privilege** — Each capability is a separate GT. A board doing callhome cannot
-   browse the web unless Browse.Client was explicitly granted.
-3. **Capability confinement** — `CM.Browse.Client` confines browsing to a parent-approved
-   domain C-list. The hardware token IS the permission list.
-4. **Revocability** — Any GT is removed server-side; takes effect on next bridge connect.
-5. **Integrity** — CRC-16 on every frame. A corrupted or replayed frame is dropped.
-6. **Unforgeability** — GT tokens are SHA-32 hashes. A board cannot fabricate a GT it
-   was not granted.
-7. **Non-escalation** — A board cannot request a GT it doesn't hold. The bridge never
-   grants on demand — only the admin/family panel can mint new GTs.
+1. **Identity** — Every board is identified by a unique SHA-32 of its UID, minted once at registration.
+2. **Confidentiality** — Every payload is ChaCha20-encrypted using a per-GT-pair 128-bit key. An observer on the UART wire sees only ciphertext.
+3. **Integrity + Authentication** — Every frame carries an 8-byte HMAC-SHA256 tag keyed with `K_mac`. A tampered frame is rejected before decryption.
+4. **Replay protection** — Every frame includes a 32-bit monotonic nonce counter per GT pair. The bridge rejects any frame whose nonce ≤ `last_seen_nonce`.
+5. **Least privilege** — Each capability is a separate GT with its own key pair. A board doing callhome cannot browse unless `Browse.Client` was explicitly granted — and its key was deployed.
+6. **Capability confinement** — `CM.Browse.Client` confines browsing to a parent-approved domain C-list. The hardware token IS the permission list.
+7. **Revocability** — Any GT and its associated keys are removed server-side. Takes effect on next bridge connect. No FPGA reflash needed.
+8. **Unforgeability** — GT tokens are SHA-32 hashes; GT keys are 128-bit secrets. A board cannot fabricate a GT it was not granted, nor derive a key it was not deployed.
+9. **Non-escalation** — A board cannot request a GT it doesn't hold. The bridge never grants on demand — only the admin/family panel mints GTs.
 
 ---
 
@@ -147,50 +163,126 @@ Bridge enforcement on `BROWSE_REQ (0x10)`:
 3. **Match** → fetch and render
 4. **No match** → `BROWSE_STATUS(GT_DOMAIN_NOT_PERMITTED)`, log attempt
 
-### 2.4 GT validation error codes
+### 2.4 GT validation and crypto error codes
 
 | Code | Name | Meaning |
 |------|------|---------|
-| `0x00` | `GT_OK` | Authorized |
+| `0x00` | `GT_OK` | Authorized, authenticated, decrypted |
 | `0x01` | `GT_UNKNOWN` | Board UID not in server record |
 | `0x02` | `GT_NOT_HELD` | Board doesn't hold this GT type |
-| `0x03` | `GT_REVOKED` | GT was revoked by IDE admin |
+| `0x03` | `GT_REVOKED` | GT was revoked; keys invalidated |
 | `0x04` | `GT_DOMAIN_NOT_PERMITTED` | Browse domain not in C-list |
 | `0x05` | `GT_INSUFFICIENT_PERMS` | GT exists but lacks required permission |
 | `0x06` | `GT_TYPE_MISMATCH` | Source GT type incompatible with message |
+| `0x07` | `GT_HMAC_FAIL` | HMAC tag verification failed — reject + alert |
+| `0x08` | `GT_REPLAY` | Nonce ≤ last_seen — replay attack detected |
+| `0x09` | `GT_DECRYPT_FAIL` | ChaCha20 decryption error |
+| `0x0A` | `GT_NO_KEY` | GT held but key bundle not yet deployed |
 
 ### 2.5 GT lifecycle
 
 ```
 REGISTRATION (first CALLHOME from new board)
-  Bridge receives CALLHOME with board_uid
-  → Server mints CM.Board.Identity (token = SHA32(uid))
-  → Server grants default set:
-      CM.Heartbeat, CM.Fault.Reporter, CM.Perf.Reporter, CM.Lump.Loader
-  → GT record persisted in church_machine.db
+  Bridge receives CALLHOME with board_uid + fpga_nonce_32
+  → Server mints CM.Board.Identity:
+       token_32  = SHA32(uid)
+       K_enc_128 = HKDF-SHA256(IKM=SHA256(uid), salt="CM_ENC_v1", info=gt_name)
+       K_mac_128 = HKDF-SHA256(IKM=SHA256(uid), salt="CM_MAC_v1", info=gt_name)
+  → Server grants default set with keys:
+       CM.Heartbeat, CM.Fault.Reporter, CM.Perf.Reporter, CM.Lump.Loader
+  → GT record + keys persisted in church_machine.db (keys stored encrypted at rest)
+  → Bridge sends ACK with ide_nonce_32 + HMAC(K_mac, ide_nonce || fpga_nonce)
+  → From this point all frames are OGT-encrypted
 
 CAPABILITY EXPANSION (admin panel)
-  Admin enables tracing  → grants CM.Trace.Emitter
-  Admin grants media     → grants CM.Media.Consumer
+  Admin enables tracing  → mints CM.Trace.Emitter (new K_enc, K_mac)
+  Admin grants media     → mints CM.Media.Consumer (new K_enc, K_mac)
+  → New GT bundle (token + keys) queued for LUMP_DATA deploy
 
 FAMILY BROWSE SETUP (Family panel)
   Parent adds "bbc.co.uk"
   → Server mints CM.Domain.BBCNews (token = SHA32("bbc.co.uk"))
   → Server builds/updates CM.Browse.Client with new domain in C-list
-  → GT bundle deployed to FPGA via LUMP_DATA (0x80) at next connect
+  → Full GT bundle redeployed to FPGA via LUMP_DATA (0x80) at next connect
 
 REVOCATION
   Admin removes a GT from device record
-  → Next bridge connect: bridge rejects that message type with GT_REVOKED
+  → Keys for that GT deleted from server DB immediately
+  → Next bridge connect: bridge sends GT_REVOKED for messages of that type
   → FPGA logs rejection; gracefully disables the capability
   → No firmware change, no reflash required
 ```
+
+### 2.6 OGT-Encryption — key structure
+
+Each GT is a **triple**: the hardware token, an encryption key, and an authentication key.
+
+```
+OGT = {
+    gt_name:   "CM.Fault.Reporter",       // global human-readable name
+    token_32:  0xA3F1C28E,                // 32-bit hardware capability handle
+    K_enc:     <128-bit secret>,          // ChaCha20 stream cipher key
+    K_mac:     <128-bit secret>,          // HMAC-SHA256 authentication key
+    nonce_ctr: 0,                         // monotonic per-GT-pair counter
+}
+```
+
+**Key derivation** (at GT mint time, server-side only):
+
+```python
+import hashlib, hmac
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives import hashes
+
+def mint_ogt_keys(board_uid: bytes, gt_name: str) -> tuple[bytes, bytes]:
+    ikm = hashlib.sha256(board_uid).digest()
+    K_enc = HKDF(hashes.SHA256(), 16, salt=b"CM_ENC_v1", info=gt_name.encode()).derive(ikm)
+    K_mac = HKDF(hashes.SHA256(), 16, salt=b"CM_MAC_v1", info=gt_name.encode()).derive(ikm)
+    return K_enc, K_mac
+```
+
+Every GT for a given board gets a unique key pair. Revoking a GT invalidates only
+that GT's keys — other capabilities on the same board are unaffected.
+
+**Key deployment**: The IDE packages all active GT keys for a board into a
+protected LUMP (type=keystore, NULL policy, no NS slot). This LUMP is
+transmitted as a `LUMP_DATA (0x80)` frame — which is itself encrypted with
+`CM.IDE.Deployer`'s key before the key bundle is inside. The FPGA writes the
+bundle to protected BRAM. Firmware reads keys from BRAM via `cm_get_key()`.
+
+**Session nonce handshake** (on every bridge connect):
+
+```
+FPGA  →  CALLHOME(fpga_nonce)  →  Bridge
+FPGA  ←  ACK(ide_nonce, HMAC(K_mac, ide_nonce||fpga_nonce))  ←  Bridge
+
+Session nonce base = SHA32(fpga_nonce XOR ide_nonce)
+Per-frame nonce    = session_nonce_base + frame_counter (monotonically increasing)
+```
+
+The XOR-then-hash of both nonces means neither party can pre-determine nonces,
+preventing an attacker who controls one side from forcing nonce reuse.
+
+**Implementation tiers** (phased rollout):
+
+| Tier | Frame protection | When | Notes |
+|------|-----------------|------|-------|
+| 0 — Plain | CRC-16 only | Phase 1 | Today's format; no encryption |
+| 1 — Authenticated | HMAC-8, no encryption | Phase 2 | Add `flags` byte; HMAC replaces CRC |
+| 2 — Encrypted | ChaCha20 + HMAC-8 | Phase 3 | Full OGT-Encryption |
+
+Tier is negotiated in the CALLHOME payload (`"enc":0/1/2`). The bridge accepts
+the highest tier the FPGA supports. Old firmware always sends `"enc":0` (Tier 0)
+and the bridge falls back gracefully.
 
 ---
 
 ## 3. Wire Format
 
-Every message — in both directions — uses the same trusted envelope:
+### 3.1 Tier 0 — Plain (Phase 1, no encryption)
+
+Used only for the initial `CALLHOME (0x01)` and `PING (0x06)` before the key
+bundle has been deployed. This is the bootstrap frame format.
 
 ```
 [0xCE][0xAA][type:1][seq:2][len:2][payload: len bytes][crc16:2]
@@ -198,51 +290,106 @@ Every message — in both directions — uses the same trusted envelope:
 
 | Field | Bytes | Description |
 |-------|-------|-------------|
-| `0xCE 0xAA` | 2 | Magic sync bytes — re-synchronises parser after noise or reset |
+| `0xCE 0xAA` | 2 | Magic sync bytes — re-synchronises parser after noise |
 | `type` | 1 | Message type (0x00–0x7F = FPGA→IDE; 0x80–0xFF = IDE→FPGA) |
-| `seq` | 2 | Sequence number — pairs requests with responses (little-endian) |
-| `len` | 2 | Payload length in bytes (little-endian; max 65535) |
-| `payload` | len | Type-specific data (see Section 5) |
-| `crc16` | 2 | CRC-16/CCITT over `type + seq + len + payload` (little-endian) |
+| `seq` | 2 | Sequence number, little-endian |
+| `len` | 2 | Payload length, little-endian |
+| `payload` | len | Plaintext type-specific data |
+| `crc16` | 2 | CRC-16/CCITT over `type+seq+len+payload` |
 
-Minimum frame size: 9 bytes (zero-length payload).  
-The parser scans for `0xCE 0xAA` to re-sync after any corruption.  
-A frame with a bad CRC is silently dropped and counted in the bridge's error log.
+### 3.2 Tier 1 — Authenticated (Phase 2, HMAC only)
 
-**GT authorization is implicit in the type byte.** The bridge maps `type → required
-Source GT` (Section 2.3 table) and validates against the board's current GT record
-before the handler is ever called.
+Tier 0 with CRC replaced by an 8-byte HMAC-SHA256 tag. Payload still plaintext.
+Used when the key bundle has been deployed but the firmware hasn't enabled ChaCha20.
 
-### Firmware API (frozen after first flash)
+```
+[0xCE][0xAA][type:1][seq:2][flags:1][len:2][payload: len bytes][hmac8:8]
+```
 
-The entire protocol surface exposed to firmware is three functions:
+| Field | Bytes | Description |
+|-------|-------|-------------|
+| `flags` | 1 | Bit 0=AUTH, Bit 1=ENC, Bits 2–7 reserved (0) |
+| `hmac8` | 8 | First 8 bytes of HMAC-SHA256(K_mac, type\|\|seq\|\|flags\|\|len\|\|payload) |
+
+### 3.3 Tier 2 — OGT-Encrypted (Phase 3, full protection)
+
+The canonical secure frame. Every payload is encrypted with ChaCha20 keyed by
+the source GT's `K_enc`. The HMAC covers the ciphertext, not the plaintext
+(encrypt-then-MAC). The nonce is the per-GT-pair monotonic counter, preventing
+replay.
+
+```
+[0xCE][0xAA][type:1][seq:2][flags:1][len:2][nonce:4][ciphertext: len bytes][hmac8:8]
+```
+
+| Field | Bytes | Description |
+|-------|-------|-------------|
+| `flags` | 1 | `0x03` = AUTH\|ENC |
+| `nonce` | 4 | Per-GT-pair counter (little-endian, monotonically increasing) |
+| `ciphertext` | len | ChaCha20(K_enc, nonce\|\|seq, plaintext_payload) |
+| `hmac8` | 8 | HMAC-SHA256(K_mac, type\|\|seq\|\|flags\|\|len\|\|nonce\|\|ciphertext)[0:8] |
+
+**Decryption order at bridge:**
+1. Verify magic `0xCE 0xAA`
+2. Read `flags` — determine tier
+3. Verify HMAC-8 over ciphertext (reject immediately on failure → `GT_HMAC_FAIL`)
+4. Verify `nonce > last_nonce[board_uid][gt_name]` (reject → `GT_REPLAY`)
+5. Decrypt ciphertext → plaintext payload
+6. Validate Source GT for `type` → route to handler
+
+**The HMAC check always comes before decryption.** This is the standard
+encrypt-then-MAC ordering: it prevents padding oracle and length-extension attacks.
+
+Minimum Tier 2 frame size: 9 + 4 + 8 = **21 bytes** (zero-length payload).
+
+### 3.4 Tier negotiation
+
+The `CALLHOME (0x01)` payload includes `"enc": N` where N = 0, 1, or 2:
+- N=0 → Tier 0 only (old firmware, no keys)
+- N=1 → Tier 1 (keys deployed, no ChaCha20)
+- N=2 → Tier 2 (full OGT-Encryption)
+
+The bridge responds with `ACK` carrying the agreed tier. Both sides use that tier
+for all subsequent frames in the session.
+
+### 3.5 Firmware API (frozen after first flash)
+
+The entire protocol surface exposed to firmware — encryption included — is four
+functions. Encryption is transparent to the caller:
 
 ```c
-/* Send any message. GT validation happens in the bridge, not here. */
+/* Send a message. Encryption tier selected automatically from BRAM key bundle. */
 void cm_send_msg(uint8_t type, uint16_t seq,
                  const uint8_t *payload, uint16_t len);
 
-/* Receive loop — call from main loop or UART ISR. */
+/* Receive loop — call from main loop or UART ISR. Decrypts transparently. */
 void cm_poll_rx(void);
 
-/* Handle incoming messages from the IDE. Override as needed. */
+/* Called with decrypted plaintext payload after auth + replay checks pass. */
 __attribute__((weak))
 void cm_on_msg(uint8_t type, uint16_t seq,
                const uint8_t *payload, uint16_t len);
+
+/* Internal — reads K_enc/K_mac for a GT from protected BRAM keystore. */
+static void cm_get_key(uint8_t msg_type, uint8_t *k_enc, uint8_t *k_mac);
 ```
 
-The firmware never handles GT logic. This is intentional. Firmware is frozen once
-these three functions are working. Every future capability — media, browsing, tracing
-— is added on the bridge and IDE side only.
+The firmware never handles key derivation, HMAC verification, or nonce management.
+Those are `cm_send_msg` / `cm_poll_rx` internals. Application code calls
+`cm_send_msg` and receives decrypted plaintext in `cm_on_msg`. Encryption is
+invisible to every layer above it — exactly as capability enforcement is invisible
+to application code in the Church Machine ISA.
 
 ---
 
 ## 4. Bridge — Trusted Router
 
-`callhome_bridge.py` is the trust enforcement point. No message reaches the IDE
-server without passing through it.
+`callhome_bridge.py` is the **only** trust enforcement point. No message reaches the
+IDE server without passing through its full verification pipeline:
+**magic → HMAC → replay → decrypt → GT check → handler**.
 
 ```python
+# Maps message type → required Source GT global name
 CM_MSG_TYPE_GT = {
     0x01: "CM.Board.Identity",
     0x02: "CM.Fault.Reporter",
@@ -274,26 +421,61 @@ CM_HANDLERS = {
     # New types added here — no firmware change ever needed
 }
 
-def on_frame(msg_type, seq, payload):
-    required_gt = CM_MSG_TYPE_GT.get(msg_type)
-    if required_gt:
-        err = validate_gt(board_uid, required_gt, msg_type)
+def on_raw_frame(msg_type, seq, flags, nonce, raw_payload):
+    """
+    Full OGT verification pipeline. Called with raw (possibly encrypted) bytes.
+    Steps run in this exact order — never rearranged.
+    """
+    gt_name = CM_MSG_TYPE_GT.get(msg_type)
+
+    # --- Step 1: HMAC verification (encrypt-then-MAC — check before decrypt) ---
+    if flags & FLAG_AUTH:
+        err = verify_hmac(board_uid, gt_name, msg_type, seq, flags, nonce, raw_payload)
         if err != GT_OK:
-            send_ack_error(seq, err)
-            log.warning("GT rejected: type=0x%02X board=%s err=%s",
-                        msg_type, board_uid, err)
+            send_ack_error(seq, GT_HMAC_FAIL)
+            log.critical("HMAC FAIL type=0x%02X board=%s — possible tampering", msg_type, board_uid)
             return
 
+    # --- Step 2: Replay protection ---
+    if flags & FLAG_AUTH:
+        if nonce <= last_nonce.get((board_uid, gt_name), -1):
+            send_ack_error(seq, GT_REPLAY)
+            log.critical("REPLAY type=0x%02X board=%s nonce=%d", msg_type, board_uid, nonce)
+            return
+        last_nonce[(board_uid, gt_name)] = nonce
+
+    # --- Step 3: Decrypt ---
+    if flags & FLAG_ENC:
+        payload = chacha20_decrypt(board_uid, gt_name, nonce, raw_payload)
+        if payload is None:
+            send_ack_error(seq, GT_DECRYPT_FAIL)
+            return
+    else:
+        payload = raw_payload  # Tier 0 / Tier 1 — plaintext
+
+    # --- Step 4: GT authorization ---
+    if gt_name:
+        err = validate_gt(board_uid, gt_name, msg_type)
+        if err != GT_OK:
+            send_ack_error(seq, err)
+            log.warning("GT rejected: type=0x%02X board=%s err=%s", msg_type, board_uid, err)
+            return
+
+    # --- Step 5: Dispatch ---
     handler = CM_HANDLERS.get(msg_type)
     if handler:
         handler(seq, payload)
     else:
-        log.info("Unhandled CM_MSG type=0x%02X seq=%d len=%d "
-                 "(future type — ignored)", msg_type, seq, len(payload))
+        log.info("Unhandled CM_MSG type=0x%02X seq=%d (future type — ignored)",
+                 msg_type, seq)
 ```
 
-Unknown type bytes are **logged and ignored** — a future firmware that emits a new
-type works against an old bridge without crashing or triggering a security alert.
+**The pipeline order is not negotiable:** HMAC before replay before decrypt before
+GT check. Swapping any two steps opens an attack vector. HMAC first ensures the
+bridge never spends compute on decrypting a frame it will reject.
+
+Unknown type bytes pass the crypto pipeline and are then **logged and ignored** —
+a future firmware emitting a new type works against an old bridge safely.
 
 ---
 
@@ -503,6 +685,9 @@ Future versions increment `proto`; firmware never changes.
 
 ---
 
-*The security model in Sections 1 and 2 is not optional infrastructure — it is the
-point of this protocol. Every implementation decision must preserve the seven
-security properties in Section 1.4. When in doubt, enforce at the bridge.*
+*The security model in Sections 1–3 is not optional infrastructure — it is the
+point of this protocol. Every implementation decision must preserve the nine
+security properties in Section 1.4. The bridge pipeline order in Section 4
+(HMAC → replay → decrypt → GT → dispatch) is invariant and must never be reordered.
+When in doubt, enforce at the bridge. When adding a new GT, mint its K_enc and K_mac
+at the same time as its token_32 — a GT without keys is incomplete.*
