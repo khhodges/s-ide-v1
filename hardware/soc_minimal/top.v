@@ -1,20 +1,19 @@
 // hardware/soc_minimal/top.v
 //
 // Top-level Verilog for the Sapphire SoC minimal UART gate test.
-// Device: Efinix Ti60F225   Clock: 25 MHz (no PLL)   Baud: 115200
+// Device: Efinix Ti60F225   Clock: 25 MHz via PLL_TL0   Baud: 115200
 //
 // NOTE: sapphire.v and sapphire_define.vh must be copied into this
 // directory by the user before synthesis — see BUILD_SOC.md.
 //
-// The FIRMWARE_INIT_FILE parameter tells the Sapphire SoC to pre-load
-// its on-chip ROM from firmware.hex at elaboration time ($readmemh).
-// Efinity requires firmware.hex to be in the project working directory
-// (hardware/soc_minimal/) when you open and compile the project.
+// clk is NOT a top-level IO port — it is produced by PLL_TL0 defined
+// in church_soc.peri.xml.  GPIOL_P_18 (pll_refclk) feeds the PLL
+// reference; the PLL output named "clk" (25 MHz, gclk) drives fabric.
 
 `default_nettype none
 
 module top (
-    input  wire clk,           // 25 MHz crystal — GPIOL_P_18 via CLKMUX_T
+    // clk provided by PLL_TL0 in church_soc.peri.xml — not an IO port
     output wire uart_tx,       // GPIOL_02 → FT4232H interface 2 → ttyUSB2
     input  wire uart_rx,       // GPIOL_01 ← FT4232H interface 2
     input  wire push_button,   // GPIOT_N_06, active-low, weak pull-up
@@ -26,6 +25,7 @@ module top (
     // ----------------------------------------------------------------
     // Internal signals
     // ----------------------------------------------------------------
+    wire clk;                  // 25 MHz — driven by PLL_TL0 output in peri.xml
     wire system_reset;         // active-HIGH reset driven by Sapphire SoC
 
     // ----------------------------------------------------------------
