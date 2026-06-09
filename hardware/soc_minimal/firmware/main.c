@@ -44,7 +44,7 @@
 /*   25 MHz, 115200 baud:  clockDivider = 26                           */
 /*     → 25,000,000 / (8 × 27) = 115,741 ≈ 115,200 ✓                 */
 /* ------------------------------------------------------------------ */
-#define UART_BASE      0xF0010000UL
+#define UART_BASE      0xF8010000UL
 #define UART_DATA      (*(volatile unsigned int *)(UART_BASE + 0x00))
 #define UART_STATUS    (*(volatile unsigned int *)(UART_BASE + 0x04))
 #define UART_CLOCKDIV  (*(volatile unsigned int *)(UART_BASE + 0x08))
@@ -58,7 +58,7 @@
 /*   Typical Sapphire SoC value: APB_GPIO_BASE = 0xF0020000            */
 /*   Verify against sapphire_define.vh before synthesis.               */
 /* ------------------------------------------------------------------ */
-#define GPIO_BASE      0xF0020000UL
+#define GPIO_BASE      0xF8020000UL
 #define GPIO_INPUT     (*(volatile unsigned int *)(GPIO_BASE + 0x00))
 
 /* GPIOT_N_06 → bit 6 of GPIO_INPUT; active-low (0 = pressed) */

@@ -3,18 +3,21 @@
  *
  * Linker script for Sapphire SoC bare-metal firmware.
  *
- * Memory map (standard Efinix Sapphire SoC defaults):
- *   ROM  0x00000000  512 KB  (on-chip ROM, holds .text + .rodata)
- *   RAM  0x00080000  128 KB  (on-chip RAM, holds .data + .bss + stack)
+ * Memory map for this Sapphire SoC IP (from sapphire.v address decoder):
+ *   ROM  0xF9000000  16 KB  (.text + .rodata; CPU reset vector = 0xF9000000)
+ *   RAM  0xF9004000  16 KB  (.data + .bss + stack)
  *
- * Confirm ROM_BASE and RAM_BASE against sapphire_define.vh on your machine.
- * If they differ, update the MEMORY section below before building.
+ * Total on-chip SRAM = 32 KB (0xF9000000 – 0xF9007FFF).
+ *
+ * Peripheral bus base: 0xF8000000
+ *   UART0:  0xF8010000
+ *   GPIO0:  0xF8020000
  */
 
 MEMORY
 {
-    ROM (rx)  : ORIGIN = 0x00000000, LENGTH = 512K
-    RAM (rwx) : ORIGIN = 0x00080000, LENGTH = 128K
+    ROM (rx)  : ORIGIN = 0xF9000000, LENGTH = 16K
+    RAM (rwx) : ORIGIN = 0xF9004000, LENGTH = 16K
 }
 
 ENTRY(_start)
