@@ -163,21 +163,56 @@ Bridge enforcement on `BROWSE_REQ (0x10)`:
 3. **Match** → fetch and render
 4. **No match** → `BROWSE_STATUS(GT_DOMAIN_NOT_PERMITTED)`, log attempt
 
-### 2.4 GT validation and crypto error codes
+### 2.4 Response policy — attacks vs. protocol failures
 
-| Code | Name | Meaning |
-|------|------|---------|
-| `0x00` | `GT_OK` | Authorized, authenticated, decrypted |
-| `0x01` | `GT_UNKNOWN` | Board UID not in server record |
-| `0x02` | `GT_NOT_HELD` | Board doesn't hold this GT type |
-| `0x03` | `GT_REVOKED` | GT was revoked; keys invalidated |
-| `0x04` | `GT_DOMAIN_NOT_PERMITTED` | Browse domain not in C-list |
-| `0x05` | `GT_INSUFFICIENT_PERMS` | GT exists but lacks required permission |
-| `0x06` | `GT_TYPE_MISMATCH` | Source GT type incompatible with message |
-| `0x07` | `GT_HMAC_FAIL` | HMAC tag verification failed — reject + alert |
-| `0x08` | `GT_REPLAY` | Nonce ≤ last_seen — replay attack detected |
-| `0x09` | `GT_DECRYPT_FAIL` | ChaCha20 decryption error |
-| `0x0A` | `GT_NO_KEY` | GT held but key bundle not yet deployed |
+The best network security is **no reply on error** for attack indicators.
+Responding to a cryptographic failure gives an attacker:
+
+- Confirmation their frame was received and parsed
+- Knowledge of which check failed (an oracle)
+- A timing signal distinguishing accepted from rejected frames
+
+Legitimate boards with valid keys **never** trigger cryptographic failures. Any
+frame that fails HMAC, replay, or decryption is either an attack or catastrophic
+hardware corruption. Either way, silence is the correct response.
+
+Authorization failures are different — they happen to legitimate boards that simply
+lack a capability. The board needs the error code to degrade gracefully (disable the
+feature, wait for a key bundle, show the user a "not permitted" message). Silence
+there would cause the board to hang waiting for a response that never comes.
+
+#### Attack indicators — SILENT DROP (no ACK, no error, no response of any kind)
+
+| Code | Name | Trigger | Bridge action |
+|------|------|---------|---------------|
+| `0x07` | `GT_HMAC_FAIL` | HMAC-8 tag mismatch | Drop + `log.critical` + rate-alert |
+| `0x08` | `GT_REPLAY` | Nonce ≤ last_seen | Drop + `log.critical` + rate-alert |
+| `0x09` | `GT_DECRYPT_FAIL` | ChaCha20 failed | Drop + `log.critical` + rate-alert |
+| `0x01` | `GT_UNKNOWN` | board_uid not in DB | Drop silently (don't confirm existence) |
+| —      | Bad magic | Bytes ≠ `0xCE 0xAA` | Drop silently (noise or probe) |
+| —      | Bad CRC (Tier 0) | CRC-16 mismatch | Drop silently |
+| —      | Frame oversize | `len` > max | Drop silently (buffer overflow probe) |
+
+Rate alerting: if any attack indicator from the same `board_uid` (or same source
+IP for the bridge HTTP side) exceeds **5 events in 60 seconds**, the bridge sends
+an alert email and logs a server-side `SECURITY_ALERT` event. The board is never
+told it has been flagged — it continues receiving silence.
+
+Timing consistency: the silent drop path must return in **constant time** relative
+to the HMAC check, regardless of which byte failed. Vary-on-failure timing leaks
+the index of the first bad byte, enabling byte-at-a-time key recovery.
+
+#### Protocol failures — ACK with error code (board can handle gracefully)
+
+| Code | Name | Trigger | Board action |
+|------|------|---------|--------------|
+| `0x00` | `GT_OK` | All checks passed | Normal operation |
+| `0x02` | `GT_NOT_HELD` | GT type not in board's record | Log + disable capability |
+| `0x03` | `GT_REVOKED` | GT was revoked, keys gone | Log + disable + await re-grant |
+| `0x04` | `GT_DOMAIN_NOT_PERMITTED` | Browse domain not in C-list | Show "not permitted" to user |
+| `0x05` | `GT_INSUFFICIENT_PERMS` | GT lacks required R/W/X/E | Log + disable capability |
+| `0x06` | `GT_TYPE_MISMATCH` | GT type wrong for msg type | Log + firmware bug report |
+| `0x0A` | `GT_NO_KEY` | GT held but key bundle pending | Wait for next LUMP_DATA deploy |
 
 ### 2.5 GT lifecycle
 
@@ -425,40 +460,55 @@ def on_raw_frame(msg_type, seq, flags, nonce, raw_payload):
     """
     Full OGT verification pipeline. Called with raw (possibly encrypted) bytes.
     Steps run in this exact order — never rearranged.
+
+    RESPONSE POLICY (see Section 2.4):
+      Attack indicators  → SILENT DROP.  No ACK, no error, no response at all.
+      Protocol failures  → ACK(err).     Board can degrade gracefully.
+
+    Returning None from this function = silent drop (caller sends nothing).
+    Calling send_ack_error() = explicit protocol error to a legitimate board.
+    Never call send_ack_error() from Steps 1–3.
     """
     gt_name = CM_MSG_TYPE_GT.get(msg_type)
 
-    # --- Step 1: HMAC verification (encrypt-then-MAC — check before decrypt) ---
+    # --- Step 1: HMAC verification (encrypt-then-MAC — always before decrypt) ---
+    # ATTACK INDICATOR: silent drop + rate-alert. No ACK ever.
+    # Constant-time comparison mandatory — timing difference leaks key bytes.
     if flags & FLAG_AUTH:
-        err = verify_hmac(board_uid, gt_name, msg_type, seq, flags, nonce, raw_payload)
-        if err != GT_OK:
-            send_ack_error(seq, GT_HMAC_FAIL)
-            log.critical("HMAC FAIL type=0x%02X board=%s — possible tampering", msg_type, board_uid)
-            return
+        if not verify_hmac_constant_time(board_uid, gt_name,
+                                         msg_type, seq, flags, nonce, raw_payload):
+            _silent_drop(board_uid, "GT_HMAC_FAIL", msg_type)
+            return   # ← nothing sent to the wire
 
     # --- Step 2: Replay protection ---
+    # ATTACK INDICATOR: silent drop. Telling attacker their nonce was "too old"
+    # confirms the replay window and helps them calibrate the next attempt.
     if flags & FLAG_AUTH:
         if nonce <= last_nonce.get((board_uid, gt_name), -1):
-            send_ack_error(seq, GT_REPLAY)
-            log.critical("REPLAY type=0x%02X board=%s nonce=%d", msg_type, board_uid, nonce)
-            return
+            _silent_drop(board_uid, "GT_REPLAY", msg_type, nonce=nonce)
+            return   # ← nothing sent to the wire
         last_nonce[(board_uid, gt_name)] = nonce
 
     # --- Step 3: Decrypt ---
+    # ATTACK INDICATOR: silent drop. A decrypt failure with a valid HMAC is
+    # impossible for a legitimate board — it signals key tampering or corruption.
     if flags & FLAG_ENC:
         payload = chacha20_decrypt(board_uid, gt_name, nonce, raw_payload)
         if payload is None:
-            send_ack_error(seq, GT_DECRYPT_FAIL)
-            return
+            _silent_drop(board_uid, "GT_DECRYPT_FAIL", msg_type)
+            return   # ← nothing sent to the wire
     else:
         payload = raw_payload  # Tier 0 / Tier 1 — plaintext
 
     # --- Step 4: GT authorization ---
+    # PROTOCOL FAILURE: ACK with code. Legitimate board missing a capability.
+    # It needs the error code to disable the feature and wait for a grant.
     if gt_name:
         err = validate_gt(board_uid, gt_name, msg_type)
         if err != GT_OK:
-            send_ack_error(seq, err)
-            log.warning("GT rejected: type=0x%02X board=%s err=%s", msg_type, board_uid, err)
+            send_ack_error(seq, err)   # ← only place send_ack_error is called
+            log.warning("GT protocol failure: type=0x%02X board=%s err=%s",
+                        msg_type, board_uid, err)
             return
 
     # --- Step 5: Dispatch ---
@@ -466,16 +516,38 @@ def on_raw_frame(msg_type, seq, flags, nonce, raw_payload):
     if handler:
         handler(seq, payload)
     else:
-        log.info("Unhandled CM_MSG type=0x%02X seq=%d (future type — ignored)",
-                 msg_type, seq)
+        # Future type — unknown to this bridge version.
+        # Has already passed crypto checks so it came from a legitimate board.
+        # Log and ignore; do not ACK (board doesn't expect one for unknown types).
+        log.info("Unknown CM_MSG type=0x%02X seq=%d len=%d "
+                 "(future type, ignored safely)", msg_type, seq, len(payload))
+
+
+def _silent_drop(board_uid, reason, msg_type, **extra):
+    """
+    Log a security event and return without sending anything to the wire.
+    Rate-alert if the same board exceeds the threshold.
+    Never call send_ack_error() from here.
+    """
+    log.critical("SILENT DROP %s type=0x%02X board=%s %s",
+                 reason, msg_type, board_uid, extra)
+    _rate_alert(board_uid, reason)
 ```
 
-**The pipeline order is not negotiable:** HMAC before replay before decrypt before
-GT check. Swapping any two steps opens an attack vector. HMAC first ensures the
-bridge never spends compute on decrypting a frame it will reject.
+**The pipeline order is not negotiable:** HMAC → replay → decrypt → GT → dispatch.
+Swapping any two steps opens an attack vector.
 
-Unknown type bytes pass the crypto pipeline and are then **logged and ignored** —
-a future firmware emitting a new type works against an old bridge safely.
+**`send_ack_error` is called in exactly one place** — Step 4 (GT authorization).
+Every other exit path is a silent drop. Code review should treat any
+`send_ack_error` call outside Step 4 as a security defect.
+
+**Constant-time HMAC comparison is mandatory** in Step 1. Python's `hmac.compare_digest`
+satisfies this. A byte-by-byte `==` comparison leaks the index of the first wrong
+byte via timing and enables iterative key recovery at UART speeds.
+
+Unknown type bytes that **pass** the crypto pipeline are logged and ignored — a
+future firmware type arriving at an older bridge is handled safely without
+revealing anything to a potential attacker on the wire.
 
 ---
 
@@ -685,9 +757,21 @@ Future versions increment `proto`; firmware never changes.
 
 ---
 
-*The security model in Sections 1–3 is not optional infrastructure — it is the
+*The security model in Sections 1–4 is not optional infrastructure — it is the
 point of this protocol. Every implementation decision must preserve the nine
-security properties in Section 1.4. The bridge pipeline order in Section 4
-(HMAC → replay → decrypt → GT → dispatch) is invariant and must never be reordered.
-When in doubt, enforce at the bridge. When adding a new GT, mint its K_enc and K_mac
-at the same time as its token_32 — a GT without keys is incomplete.*
+security properties in Section 1.4.*
+
+*Three invariants that must never be violated:*
+
+*1. **Pipeline order** (Section 4): HMAC → replay → decrypt → GT → dispatch.
+   Swapping any two steps opens an attack vector.*
+
+*2. **Silent drop for attack indicators** (Section 2.4): Steps 1–3 never send
+   anything to the wire on failure. `send_ack_error` is called in exactly one
+   place — Step 4. Any deviation is a security defect.*
+
+*3. **Constant-time HMAC** (Section 4, Step 1): Use `hmac.compare_digest`.
+   Never use `==` on MAC tags. Timing side-channels enable iterative key recovery.*
+
+*When adding a new GT: mint K_enc and K_mac at the same time as token_32 — a GT
+without keys is incomplete and will block the board with GT_NO_KEY.*
