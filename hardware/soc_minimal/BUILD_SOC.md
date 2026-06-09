@@ -74,7 +74,7 @@ No changes needed if the defaults match.
 
 ---
 
-### Step 3 — Build the firmware
+### Step 3 — Build the firmware and generate BRAM symbol files
 
 ```bash
 make -C hardware/soc_minimal/firmware
@@ -87,12 +87,36 @@ If the toolchain is installed elsewhere, override `TOOLCHAIN`:
 make -C hardware/soc_minimal/firmware TOOLCHAIN=/path/to/riscv-none-embed/bin
 ```
 
-Copy `firmware.hex` into the project directory so Efinity can find it during
-elaboration:
+**sapphire.v uses `$readmemb` with 4 byte-lane `.bin` files** (NOT firmware.hex).
+Generate them and copy to `work_syn/` so synthesis can find them:
 
 ```bash
-cp hardware/soc_minimal/firmware/firmware.hex hardware/soc_minimal/
+TOOLCHAIN=~/efinity/efinity-riscv-ide-2025.2/toolchain/bin
+
+# Extract raw binary from ELF
+$TOOLCHAIN/riscv-none-embed-objcopy \
+    -O binary hardware/soc_minimal/firmware/firmware.elf \
+    hardware/soc_minimal/firmware/firmware.raw
+
+# Split into 4 byte-lane $readmemb files and copy to work_syn/
+python3 -c "
+import os
+data = open('hardware/soc_minimal/firmware/firmware.raw','rb').read()
+data = data.ljust(8192*4, b'\x00')
+dest = 'hardware/soc_minimal/work_syn'
+os.makedirs(dest, exist_ok=True)
+for lane in range(4):
+    fname = f'EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol{lane}.bin'
+    with open(os.path.join(dest, fname), 'w') as f:
+        for i in range(8192):
+            f.write(format(data[i*4+lane], '08b') + '\n')
+    print('Written', fname)
+"
 ```
+
+> **Important:** These `.bin` files must be present in `work_syn/` **before**
+> synthesis runs. If you recompile the firmware, regenerate and re-copy the
+> `.bin` files, then re-synthesize (Clean All → Compile).
 
 ---
 
