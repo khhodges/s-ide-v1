@@ -231,6 +231,11 @@ def download_flash_soc():
     p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "flash_soc.sh")
     return send_file(os.path.abspath(p), as_attachment=True, download_name="flash_soc.sh", mimetype="text/plain")
 
+@app.route("/dl/firmware-setup")
+def download_firmware_setup():
+    p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "firmware", "setup.sh")
+    return send_file(os.path.abspath(p), as_attachment=False, download_name="setup.sh", mimetype="text/plain")
+
 @app.route("/dl/soc-top-v")
 def download_soc_top_v():
     p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "top.v")
