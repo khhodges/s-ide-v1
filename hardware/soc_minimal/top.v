@@ -30,8 +30,23 @@ module top (
     // ----------------------------------------------------------------
     wire system_reset;         // active-HIGH reset driven by Sapphire SoC
 
+    // ----------------------------------------------------------------
+    // Power-on-reset pulse for Sapphire SoC
+    //
+    // The Sapphire reset sequencer requires io_asyncReset to pulse
+    // HIGH then LOW to start its internal countdown.  Without this,
+    // io_systemReset stays stuck HIGH indefinitely (SoC never boots).
+    //
+    // An 8-bit shift register (initialized 0xFF) shifts in 0s on each
+    // rising clock edge.  bit[7] is HIGH for exactly 8 cycles (~320 ns
+    // at 25 MHz), then goes LOW permanently.  Efinity efx_map honours
+    // the Verilog initial value for fabric FFs on Titanium devices.
+    // ----------------------------------------------------------------
+    (* keep = "true" *) reg [7:0] por_sr = 8'hFF;
+    always @(posedge clk) por_sr <= {por_sr[6:0], 1'b0};
+    wire por_reset = por_sr[7];   // HIGH for first 8 cycles, then LOW
+
     // 25-bit blink counter: at 25 MHz, bit[24] toggles at ~0.75 Hz
-    // LED0 blinks while SoC is in reset, stays solid ON when running.
     reg [24:0] blink_cnt;
     always @(posedge clk) blink_cnt <= blink_cnt + 1'b1;
 
@@ -45,7 +60,7 @@ module top (
     sapphire u_sapphire (
         // Clocks and resets
         .io_systemClk           (clk),
-        .io_asyncReset          (1'b0),
+        .io_asyncReset          (por_reset),  // POR pulse: HIGH 8 cycles then LOW
         .io_systemReset         (system_reset),
 
         // UART0 — wired to FT4232H interface 2 (ttyUSB2)
