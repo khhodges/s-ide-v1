@@ -324,5 +324,138 @@ Future versions increment the `proto` field; the firmware never changes.
 
 ---
 
+## 11. Outform Golden Tokens
+
+Every CM_MSG transmission is authorized by a pair of Outform Golden Tokens:
+
+- **Source GT** — held by the sender; authorizes emitting this message type
+- **Destination GT** — names the target service; the bridge verifies the sender holds a GT pointing to it
+
+This preserves the Church Machine capability model at the protocol layer. A device
+that does not hold `CM.Browse.Client` cannot send browse requests. A device without
+`CM.Trace.Emitter` cannot stream trace events. The bridge enforces this at every
+connection — no firmware logic required.
+
+### FPGA-side GTs (held by the board, sent in CALLHOME on registration)
+
+| Global Name | Permissions | Default | Description |
+|-------------|-------------|---------|-------------|
+| `CM.Board.Identity` | E | Always | Minted at first registration; token = board UID hash |
+| `CM.Heartbeat` | E | Always | Lowest privilege — ping only |
+| `CM.Fault.Reporter` | E | Always | Fault + boot log emission |
+| `CM.Perf.Reporter` | E | Always | Performance counter emission |
+| `CM.Lump.Loader` | E | Always | Lazy-Load requests to the IDE LUMP store |
+| `CM.Trace.Emitter` | E | Debug builds only | Instruction trace streaming |
+| `CM.NS.Inspector` | R | Admin grant | Read-only namespace authority view |
+| `CM.Media.Consumer` | E | On request | Media asset fetch (images, audio, documents) |
+| `CM.Browse.Client` | E | Family panel | Web browsing; C-list holds permitted domains |
+
+### IDE-side GTs (held by bridge/server)
+
+| Global Name | Permissions | Description |
+|-------------|-------------|-------------|
+| `CM.IDE.CallhomeService` | X | Receives registrations; validates Board.Identity |
+| `CM.IDE.HeartbeatService` | X | Returns PONG with server timestamp |
+| `CM.IDE.FaultReceiver` | X | Logs fault events; triggers alerts + MTBF recalc |
+| `CM.IDE.TraceReceiver` | X | Feeds live Pipeline view in IDE |
+| `CM.IDE.LumpServer` | RX | Serves LUMP_DATA on LUMP_REQ; checks Lump.Loader |
+| `CM.IDE.NSAuthority` | RX | Namespace source of truth |
+| `CM.IDE.MediaServer` | RX | Serves media chunks; checks Media.Consumer |
+| `CM.IDE.BrowseProxy` | RX | Fetches + renders URLs; enforces Browse GT C-list |
+| `CM.IDE.Deployer` | X | Pushes LUMP_DATA to FPGA; signs frames |
+| `CM.IDE.Commander` | X | Sends CMD (pause/step/resume/reset); requires admin session |
+
+### Per-message GT pair — complete table
+
+| Type | Message | Source GT | Destination GT |
+|------|---------|-----------|----------------|
+| `0x01` | `CALLHOME` | `CM.Board.Identity` | `CM.IDE.CallhomeService` |
+| `0x02` | `FAULT` | `CM.Fault.Reporter` | `CM.IDE.FaultReceiver` |
+| `0x03` | `TRACE` | `CM.Trace.Emitter` | `CM.IDE.TraceReceiver` |
+| `0x04` | `LUMP_REQ` | `CM.Lump.Loader` | `CM.IDE.LumpServer` |
+| `0x05` | `NS_DUMP` | `CM.NS.Inspector` | `CM.IDE.NSAuthority` |
+| `0x06` | `PING` | `CM.Heartbeat` | `CM.IDE.HeartbeatService` |
+| `0x07` | `BOOT_LOG` | `CM.Fault.Reporter` | `CM.IDE.FaultReceiver` |
+| `0x08` | `PERF` | `CM.Perf.Reporter` | `CM.IDE.FaultReceiver` |
+| `0x09` | `MEDIA_REQ` | `CM.Media.Consumer` | `CM.IDE.MediaServer` |
+| `0x0A` | `MEDIA_ACK` | `CM.Media.Consumer` | `CM.IDE.MediaServer` |
+| `0x10` | `BROWSE_REQ` | `CM.Browse.Client` | `CM.IDE.BrowseProxy` |
+| `0x11` | `BROWSE_NAV` | `CM.Browse.Client` | `CM.IDE.BrowseProxy` |
+| `0x12` | `BROWSE_CLICK` | `CM.Browse.Client` | `CM.IDE.BrowseProxy` |
+| `0x13` | `BROWSE_SCROLL` | `CM.Browse.Client` | `CM.IDE.BrowseProxy` |
+| `0x14` | `BROWSE_INPUT` | `CM.Browse.Client` | `CM.IDE.BrowseProxy` |
+| `0x80` | `LUMP_DATA` | `CM.IDE.Deployer` | `CM.Lump.Loader` |
+| `0x81` | `CMD` | `CM.IDE.Commander` | `CM.Board.Identity` |
+| `0x82` | `ACK` | *(mirrors source of acked msg)* | *(mirrors dest of acked msg)* |
+| `0x83` | `PONG` | `CM.IDE.HeartbeatService` | `CM.Heartbeat` |
+| `0x84` | `MEDIA_META` | `CM.IDE.MediaServer` | `CM.Media.Consumer` |
+| `0x85` | `MEDIA_CHUNK` | `CM.IDE.MediaServer` | `CM.Media.Consumer` |
+| `0x86` | `AUDIO_STREAM` | `CM.IDE.MediaServer` | `CM.Media.Consumer` |
+| `0x88` | `BROWSE_META` | `CM.IDE.BrowseProxy` | `CM.Browse.Client` |
+| `0x89` | `BROWSE_FRAME` | `CM.IDE.BrowseProxy` | `CM.Browse.Client` |
+| `0x8A` | `BROWSE_TEXT` | `CM.IDE.BrowseProxy` | `CM.Browse.Client` |
+| `0x8B` | `BROWSE_LINKS` | `CM.IDE.BrowseProxy` | `CM.Browse.Client` |
+| `0x8C` | `BROWSE_STATUS` | `CM.IDE.BrowseProxy` | `CM.Browse.Client` |
+
+### Browse GT C-list structure
+
+`CM.Browse.Client` is a **per-device** GT. Its C-list slots hold domain GTs
+minted by parents in the IDE Family panel:
+
+```
+CM.Browse.Client  (device c0ffee0100000001)  [E]
+  C-list slot 0:  CM.Domain.BBCNews      [E]  →  bbc.co.uk
+  C-list slot 1:  CM.Domain.Wikipedia    [E]  →  wikipedia.org
+  C-list slot 2:  CM.Domain.KhanAcademy  [E]  →  khanacademy.org
+```
+
+Bridge enforcement on `BROWSE_REQ`:
+1. Extract hostname from requested URL
+2. Look up `CM.Domain.<X>` GT for that hostname in the device's Browse.Client C-list
+3. **Found** → fetch and render
+4. **Not found** → return `BROWSE_STATUS(0x02, "GT_DOMAIN_NOT_PERMITTED")`
+
+Domain GTs are deployed in the next LUMP install. No firmware change needed.
+Revoke the Browse GT entirely = no web access at all.
+
+### Bridge GT validation — error codes
+
+| Code | Name | Meaning |
+|------|------|---------|
+| `0x00` | `GT_OK` | Authorized |
+| `0x01` | `GT_UNKNOWN` | Source GT not in device record |
+| `0x02` | `GT_REVOKED` | GT was revoked by IDE admin |
+| `0x03` | `GT_DOMAIN_NOT_PERMITTED` | Browse domain not in C-list |
+| `0x04` | `GT_INSUFFICIENT_PERMS` | GT exists but lacks required permission |
+| `0x05` | `GT_TYPE_MISMATCH` | Source GT type wrong for this message |
+
+On validation failure the bridge sends an `ACK` with the error code in the payload
+and discards the message. The FPGA logs the rejection; it does not retry.
+
+### GT lifecycle
+
+```
+1. Board first boots → sends CALLHOME (0x01) with no GT in payload
+   → Bridge mints CM.Board.Identity  (token = SHA32(board_uid))
+   → Bridge grants default set:  Heartbeat, Fault.Reporter, Perf.Reporter, Lump.Loader
+   → Bridge persists GT record in server DB against board UID
+
+2. Admin enables tracing  → grants CM.Trace.Emitter
+   Admin grants media     → grants CM.Media.Consumer
+
+3. Parent opens Family panel
+   → adds domain "bbc.co.uk"   → IDE mints CM.Domain.BBCNews
+   → IDE builds CM.Browse.Client C-list with approved domain GTs
+   → GT bundle deployed to FPGA via LUMP_DATA (0x80) at next connect
+
+4. GT revocation
+   → Admin removes GT in IDE
+   → Next CALLHOME: bridge sends ACK(GT_REVOKED) for any message of that type
+   → FPGA disables the corresponding capability gracefully
+```
+
+---
+
 *This document is the authoritative spec for CM_MSG. All bridge and IDE implementation
-decisions should reference it. Update Section 4 when adding new type codes.*
+decisions should reference it. Update Section 4 when adding new type codes; update
+Section 11 when adding or modifying GTs.*
