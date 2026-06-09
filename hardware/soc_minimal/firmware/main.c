@@ -39,7 +39,7 @@
 #endif
 
 #define FW_MAJOR  1u
-#define FW_MINOR  0u
+#define FW_MINOR  1u
 #define BOARD_TYPE_TI60  0x03u
 
 /* ------------------------------------------------------------------ */
@@ -129,7 +129,11 @@ int main(void)
     UART_CLOCKDIV = UART_DIV_115200;
 
     /* Boot banner */
-    uart_puts("CHURCH Ti60 v1.0\r\n");
+    uart_puts("CHURCH Ti60 v");
+    uart_putdec1(FW_MAJOR);
+    uart_putc('.');
+    uart_putdec1(FW_MINOR);
+    uart_puts("\r\n");
     uart_puts("UID=");
     uart_puthex32_lower(BOARD_UID_HI);
     uart_puthex32_lower(BOARD_UID_LO);
