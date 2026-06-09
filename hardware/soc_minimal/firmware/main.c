@@ -129,11 +129,7 @@ int main(void)
     UART_CLOCKDIV = UART_DIV_115200;
 
     /* Boot banner */
-    uart_puts("CHURCH Ti60 v");
-    uart_putdec1(FW_MAJOR);
-    uart_putc('.');
-    uart_putdec1(FW_MINOR);
-    uart_puts("\r\n");
+    uart_puts("CHURCH Ti60\r\n");
     uart_puts("UID=");
     uart_puthex32_lower(BOARD_UID_HI);
     uart_puthex32_lower(BOARD_UID_LO);
