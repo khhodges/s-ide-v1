@@ -6,10 +6,10 @@ gunicorn==25.1.0
 psycopg2-binary==2.9.11
 resend==2.21.0
 Werkzeug==3.1.5
-markdown
-waitress
-fpdf2
+markdown>=3.10.2,<4
+waitress>=3.0.2,<4
+fpdf2>=2.8.7,<3
 apscheduler>=3.11.0,<4
-cryptography
-qrcode[pil]
-Pillow
+cryptography>=48.0.0,<49
+qrcode[pil]>=8.2,<9
+Pillow>=12.2.0,<13
