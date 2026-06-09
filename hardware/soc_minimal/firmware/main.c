@@ -11,8 +11,10 @@
  * No libc, no OS.
  *
  * Sapphire SoC UART0 register map (SpinalHDL UART, standard Efinix addresses):
- *   0xF0010000 + 0x00  TX/RX data  (write = transmit byte)
- *   0xF0010000 + 0x04  Status      (bit 0 = TX not full / ready to accept byte)
+ *   0xF0010000 + 0x00  TX/RX data    (write = transmit byte)
+ *   0xF0010000 + 0x04  Status        (bit 0 = TX not full / ready to accept byte)
+ *   0xF0010000 + 0x08  clockDivider  (resets to 0x00 = clk/8; MUST be written
+ *                                     before first TX; 26 = 115200 @ 25 MHz)
  *
  * Sapphire SoC GPIO register map (SpinalHDL GPIO, standard Efinix addresses):
  *   0xF0020000 + 0x00  GPIO input register (read: current pin levels)
@@ -33,11 +35,23 @@
 
 /* ------------------------------------------------------------------ */
 /* UART0                                                               */
+/*                                                                     */
+/* The Sapphire SoC UART clockDivider register resets to 0x00, which  */
+/* makes the UART run at clk/8 = 3.125 Mbaud (silence).  Firmware     */
+/* MUST write UART_CLOCKDIV before the first uart_puts() call.         */
+/*                                                                     */
+/* Baud rate formula:  baudRate = clk / (8 × (clockDivider + 1))      */
+/*   25 MHz, 115200 baud:  clockDivider = 26                           */
+/*     → 25,000,000 / (8 × 27) = 115,741 ≈ 115,200 ✓                 */
 /* ------------------------------------------------------------------ */
-#define UART_BASE     0xF0010000UL
-#define UART_DATA     (*(volatile unsigned int *)(UART_BASE + 0x00))
-#define UART_STATUS   (*(volatile unsigned int *)(UART_BASE + 0x04))
-#define UART_TX_READY (UART_STATUS & 1u)
+#define UART_BASE      0xF0010000UL
+#define UART_DATA      (*(volatile unsigned int *)(UART_BASE + 0x00))
+#define UART_STATUS    (*(volatile unsigned int *)(UART_BASE + 0x04))
+#define UART_CLOCKDIV  (*(volatile unsigned int *)(UART_BASE + 0x08))
+#define UART_TX_READY  (UART_STATUS & 1u)
+
+/* clockDivider value for 115200 baud at 25 MHz (no PLL) */
+#define UART_DIV_115200  26u
 
 /* ------------------------------------------------------------------ */
 /* GPIO                                                                */
@@ -103,6 +117,11 @@ static void wait_for_release(void)
 /* ------------------------------------------------------------------ */
 int main(void)
 {
+    /* Set baud rate — MUST happen before any uart_puts().
+     * The UART clockDivider register resets to 0x00 (clk/8 = 3.125 Mbaud).
+     * Writing 26 gives 115200 baud at the 25 MHz system clock (no PLL).  */
+    UART_CLOCKDIV = UART_DIV_115200;
+
     /* Boot greeting — sent once unconditionally at startup */
     uart_puts("CHURCH Ti60 v1.0\r\n");
 

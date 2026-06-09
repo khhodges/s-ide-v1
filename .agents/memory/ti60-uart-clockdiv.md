@@ -46,23 +46,25 @@ all clock failures.
 ## UART CLOCKDIV rule
 
 The Sapphire SoC UART `clockDivider` register resets to **0x00** on power-up.
-Firmware **must** write `UART_CLOCKDIV = 53` before the first `uart_puts()` call.
+Firmware **must** write `UART_CLOCKDIV` before the first `uart_puts()` call.
 
-```c
-#define UART_CLOCKDIV  (*(volatile uint32_t *)(0xF8010000UL + 0x08))
-```
+**Without CLOCKDIV write:** UART runs at reset default (CLOCKDIV=0) = clk/8 = 3.125 Mbaud → silence.
 
 Baud rate formula: `baudRate = ClkIn / (8 × (clockDivider + 1))`
 
-With current builds (no PLL, 25 MHz clock):
-```
-clockDivider = 53  →  actual baud = 25_000_000 / (8 × 54) ≈ 57_600
-```
+### soc_minimal project (hardware/soc_minimal/firmware/main.c)
+- UART_BASE = `0xF0010000` (standard Sapphire SoC minimal)
+- UART_CLOCKDIV = `*(0xF0010000 + 0x08)`
+- **Target: 115200 baud at 25 MHz → `clockDivider = 26`**
+  - 25,000,000 / (8 × 27) = 115,741 ≈ 115,200 ✓
 
-To target 115200 at 25 MHz: `clockDivider = 26` (25_000_000 / (8×27) = 115_741)
-To target 57600 at 50 MHz (with PLL): `clockDivider = 107` (50_000_000 / (8×108) = 57_870)
-
-**Without CLOCKDIV write:** UART runs at reset default (CLOCKDIV=0) = clk/8 = 3.125 Mbaud → silence.
+### church_soc_cm project (full SoC+CM)
+- UART_BASE = `0xF8010000`
+- UART_CLOCKDIV = `*(0xF8010000 + 0x08)`
+- **Target: 57,600 baud at 25 MHz (no PLL) → `clockDivider = 53`**
+  - 25,000,000 / (8 × 54) = 57,870 ≈ 57,600 ✓
+- With PLL (50 MHz) → 115,200 baud: `clockDivider = 53`
+  - 50,000,000 / (8 × 54) = 115,741 ≈ 115,200 ✓
 
 ## Efinity build flow — CONFIRMED WORKING sequence (Penguin, Jun 2026)
 

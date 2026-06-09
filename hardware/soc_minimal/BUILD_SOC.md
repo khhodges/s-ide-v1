@@ -200,7 +200,18 @@ Press `Ctrl+A Ctrl+X` to exit picocom.
 four interfaces; interface 2 (index 0) is the UART.  On some hosts it appears
 as `/dev/ttyUSB0` if no other FTDI devices are connected — adjust accordingly.
 
-**No output after programming**
+**No output after programming (LED0 lit but ttyUSB2 silent)**
+→ The Sapphire SoC UART `clockDivider` register resets to `0x00` on power-up,
+making the UART run at clk/8 = 3.125 Mbaud — silence on any terminal.
+Firmware must write `UART_CLOCKDIV = 26` (for 115200 baud at 25 MHz) before
+the first `uart_puts()`.  Verify this line is present in `firmware/main.c`:
+```c
+UART_CLOCKDIV = UART_DIV_115200;   /* must come before uart_puts() */
+```
+If the line is missing, add it, rebuild the firmware, and re-synthesize
+(the firmware is baked into the bitstream BRAM at synthesis time).
+
+**No output after programming (LED0 off)**
 → Confirm LED0 lights (SoC out of reset).  If it does not light, the SoC is
 still in reset; check that `io_asyncReset` is tied to `1'b0` in `top.v`.
 
