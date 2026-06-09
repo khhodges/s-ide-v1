@@ -68,7 +68,7 @@ This is not an add-on. It is the protocol's reason for existing.
 │   global.Core.BoardIdentity.boot               │  ●    │  ●    │     n      │
 │   global.Core.FaultReporter.boot               │  ●    │  ●    │     n      │
 │   global.Core.LumpLoader.boot                  │  ●    │  ●    │     n      │
-│   global.Telecommunications.mymother.family-hub│  ●    │  ●    │     n      │
+│   global.Telecommunications.MargaretHodges.family-hub  │  ●  │  ●  │  n  │
 │   …                                            │  …    │  …    │     n      │
 │                                                                  │
 │  token_32 = SHA32(ogt) — hardware register value, derived only  │
@@ -164,7 +164,7 @@ against its global abstraction registry (Section 2.7) and builds the
 `msg_type → ogt` lookup for the session.
 
 **The `token` field is the OGT** — the full hierarchical capability path:
-`global.namespace.abstraction.instance`. It is a name, not a number.
+`global.namespace.abstraction.instance`. It is a canonical name, not a number.
 The 32-bit hardware register value `token_32 = SHA32(ogt)` — derived from the
 name, never invented.  **Slot numbers are not in the manifest** — firmware-private.
 
@@ -178,9 +178,17 @@ name, never invented.  **Slot numbers are not in the manifest** — firmware-pri
 
 | Field | Meaning |
 |-------|---------|
-| `token` | The OGT — `global.<ns_type>.<abstraction>.<ns_instance>`. This is the identity. The bridge keys everything by this value. |
-| `label` | Human-readable display form — `"Fault.Reporter"`, `"mymother"`, … Used only for UI; never for crypto or routing. |
+| `token` | The OGT — `global.<ns_type>.<canonical_name>.<ns_instance>`. Permanent global identity. The bridge keys everything by this value. |
+| `label` | **Local pet name** — the user's personal name for this abstraction. Can differ between users, can be renamed without affecting the OGT. Never used for routing or crypto. |
 | `mobile` | `true` = this abstraction can migrate to another board |
+
+**Labels are pet names. OGTs use canonical names.**
+The same Contact abstraction might be labelled `"mymother"` by one user, `"wife"`
+by another, and `"Mum"` by a third — but all three point to the same OGT,
+`global.Telecommunications.MargaretHodges.family-hub`, where `MargaretHodges` is
+the formal name registered when the abstraction was created. Renaming a label never
+changes the OGT. The bridge ignores labels entirely — it routes and authenticates
+by OGT alone.
 
 `ns_type` and `ns_instance` are encoded in the OGT path and need not be separate
 manifest fields — the bridge parses them from position 1 and 3 of the OGT.
@@ -202,23 +210,35 @@ encryption service."* The bridge never needs to know which BRAM slot it occupies
 | `global.Core.MediaConsumer.boot` | `Media.Consumer` | E | `0x09 0x0A` | Media asset fetch |
 | `global.Core.BrowseClient.boot` | `Browse.Client` | E | `0x10–0x14` | Web browsing |
 
-**Application namespace abstractions** — OGT encodes the full hierarchy:
+**Application namespace abstractions** — OGT uses canonical names, label carries the pet name:
 
 ```
 ns_type="Telecommunications", ns_instance="family-hub":
-  token="global.Telecommunications.mymother.family-hub",    label="mymother",    mobile=true
-  token="global.Telecommunications.workoffice.family-hub",  label="workoffice",  mobile=true
-  token="global.Telecommunications.CallHistory.family-hub", label="CallHistory", mobile=false
+
+  token="global.Telecommunications.MargaretHodges.family-hub"
+    label="mymother"      ← one user's pet name for MargaretHodges
+    label="Mum"           ← another user's pet name for the SAME OGT
+    label="wife"          ← yet another — same OGT, different label
+    mobile=true
+
+  token="global.Telecommunications.GlobalWorkspaceLtd.family-hub"
+    label="workoffice"    ← pet name for the canonical GlobalWorkspaceLtd contact
+    mobile=true
+
+  token="global.Telecommunications.CallHistory.family-hub"
+    label="CallHistory"   ← here canonical name and label happen to match
+    mobile=false
 
 ns_type="Telecommunications", ns_instance="mums-mobile":
-  token="global.Telecommunications.mymother.mums-mobile",   label="mymother",    mobile=true
-  token="global.Telecommunications.workoffice.mums-mobile", label="workoffice",  mobile=true
+  token="global.Telecommunications.MargaretHodges.mums-mobile"
+    label="mymother"      ← same canonical person, different board instance
+    mobile=true
 ```
 
-The OGT `global.Telecommunications.mymother.family-hub` is stable and globally
-unique. When "mymother" migrates to a new board, the OGT path is unchanged — only
-the deployment (board_uid, K_enc, K_mac) changes. This is why OGT is the identity
-and not any derived hardware value.
+The OGT `global.Telecommunications.MargaretHodges.family-hub` is stable and globally
+unique. It uses `MargaretHodges` — her real name — not any single user's pet name
+for her. When this abstraction migrates to a new board, the OGT is unchanged;
+only the deployment (board_uid, K_enc, K_mac) changes.
 
 **Encryption service per abstraction** — every OGT has its own `K_enc`, `K_mac`,
 and `nonce_ctr`. No two abstractions share a key. The keystore LUMP (Section 2.6)
@@ -542,7 +562,7 @@ ABSTRACTION_REGISTRY: dict[str, AbstractionRecord] = {}
 class AbstractionRecord:
     ogt:          str    # global.namespace.abstraction.instance — THE identity
     token_32:     int    # SHA32(ogt) — hardware register value, derived, never stored as identity
-    label:        str    # human-readable display form — UI only, never used for routing or crypto
+    label:        str    # local pet name — user-specific, changeable, never used for routing or crypto
     mobile:       bool
     residency:    str    # "exclusive" or "replicated"
 
@@ -593,9 +613,11 @@ target board, then revoking the slot on the source board.
 #### Key invariants for mobile abstractions
 
 1. **OGT permanence** — `global.namespace.abstraction.instance` is minted once and
-   never changes. It is the global identity of the abstraction across all substrates,
-   all time, and all slot assignments. The OGT is the fact. `token_32 = SHA32(ogt)` is
-   a derived hardware convenience value — it is not the identity.
+   never changes. The `abstraction` segment is the canonical formal name — never a
+   local pet name. Different users may hold different labels for the same OGT; the
+   OGT itself is independent of all of them. Renaming a label does not change the
+   OGT. `token_32 = SHA32(ogt)` is a derived hardware convenience value — not the
+   identity.
 2. **Per-deployment keys** — `K_enc` and `K_mac` are derived from
    `SHA256(board_uid || ogt_bytes)`. They are specific to one board. Migrating =
    re-deriving on the new substrate with the new `board_uid`. Slot assignments on
