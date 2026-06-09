@@ -10,8 +10,9 @@
 #   curl https://<IDE-URL>/dl/firmware-setup | bash
 
 set -e
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd 2>/dev/null || cd "$(pwd)/hardware/soc_minimal/.." 2>/dev/null || pwd)"
+# When run via "curl | bash", BASH_SOURCE is empty, so always use PWD.
+# Run this script from the project root (~/Downloads/church_ti60_f225_project).
+PROJECT_ROOT="$PWD"
 FW_DIR="$PROJECT_ROOT/hardware/soc_minimal/firmware"
 mkdir -p "$FW_DIR"
 echo "[setup] Writing firmware files to $FW_DIR"
