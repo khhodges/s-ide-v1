@@ -74,11 +74,22 @@
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
+/*
+ * uart_putc — two confirmed requirements (SpinalHDL UART on Titanium):
+ *
+ *   1. Do NOT poll UART_STATUS.  The TX-ready bit position differs between
+ *      Efinix IP configs; polling the wrong bit causes infinite spin and
+ *      silent output.  Use a fixed NOP delay instead (3000 NOPs ≈ 120 µs @
+ *      25 MHz = 1.38× margin over the 86.8 µs character time at 115200 baud).
+ *
+ *   2. Bit 8 of UART_DATA is the SpinalHDL write-valid flag and MUST be set.
+ *      Writing only bits[7:0] is silently ignored — no TX, no error.
+ */
 static void uart_putc(char c)
 {
-    while (!UART_TX_READY)
-        ;
-    UART_DATA = (unsigned int)(unsigned char)c;
+    UART_DATA = (1u << 8) | (unsigned int)(unsigned char)c;
+    for (volatile unsigned int i = 0; i < 3000u; i++)
+        __asm__("nop");
 }
 
 static void uart_puts(const char *s)

@@ -120,29 +120,70 @@ for lane in range(4):
 
 ---
 
-### Step 4 — Open the project in Efinity
+### Step 3b — Patch sapphire.v (inline firmware before synthesis)
 
-1. Launch Efinity 2025.2.
-2. **File → Open Project** → navigate to `hardware/soc_minimal/church_soc.xml`.
-3. In **Project Settings** confirm:
-   - Top module: `top`
-   - Device: `Ti60F225`
-4. Confirm the three source files are listed (`top.v`, `sapphire.v`,
-   `sapphire_define.vh`).
+**Critical:** EFX_MAP on Titanium ignores `$readmemb` entirely (simulation-only).
+The firmware must be inlined as explicit `ram_symbol[i] = 8'hXX;` assignments
+before synthesis runs.  Run the patch script from `hardware/soc_minimal/`:
+
+```bash
+cd hardware/soc_minimal
+python3 scripts/patch_sapphire_init.py sapphire.v work_syn
+```
+
+Expected output:
+```
+  Loaded EfxSapphireSoc...symbol0.bin: 8192 entries
+  ...
+  Replaced $readmemb ram_symbol0 → 8192 assignments
+  Replaced $readmemb ram_symbol1 → 8192 assignments
+  Replaced $readmemb ram_symbol2 → 8192 assignments
+  Replaced $readmemb ram_symbol3 → 8192 assignments
+  Confirmed: 0 $readmemb calls remain in sapphire.v.
+```
+
+Verify: `grep -c readmemb sapphire.v` must print `0`.
+
+> **Note:** A backup is saved as `sapphire.v.bak`. If you need to patch again
+> (after a firmware rebuild), restore the backup first:
+> `cp sapphire.v.bak sapphire.v`
+> then regenerate the .bin files and re-run the patch script.
+
+---
+
+### Step 4 — Open the project in Efinity **2026.1** (not 2025.2)
+
+**Critical:** Efinity 2025.2 efx_map silently zero-initialises BRAM even with
+inline initial blocks.  Only Efinity 2026.1 correctly propagates inline initial
+values to the EFX_RAM10 INIT_ parameters.
+
+Source 2026.1 before launching:
+```bash
+source ~/efinity/2026.1/bin/setup.sh
+efinity &
+```
+
+Then: **File → Open Project** → navigate to `hardware/soc_minimal/church_soc.xml`.
+
+Confirm:
+- Top module: `top`
+- Device: `Ti60F225`
+- Three source files listed: `top.v`, `sapphire.v`, `sapphire_define.vh`
 
 ---
 
 ### Step 5 — Compile (Synthesis → Place & Route → Bitstream)
 
-Click the **Compile** button (or run all three flows sequentially).
+Click **Compile** (or run Clean All → Compile).
 
-Efinity will:
-1. Read `firmware.hex` and embed it in the on-chip ROM during synthesis.
+Efinity 2026.1 will:
+1. Elaborate the patched `sapphire.v` — inline initial values are embedded in
+   EFX_RAM10 INIT_ parameters (watch for
+   `INFO: ...extracting RAM for identifier 'ram_symbol0'` in the log).
 2. Place and route the Sapphire SoC on the Ti60F225 fabric.
 3. Generate the programming bitstream.
 
-No SDC file is needed — the design runs at 25 MHz directly from the crystal
-and Efinity's default timing constraints are sufficient.
+No SDC file is needed — the design runs at 25 MHz directly from the crystal.
 
 ---
 

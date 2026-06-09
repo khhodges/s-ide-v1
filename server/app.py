@@ -276,6 +276,11 @@ def download_soc_fw_make():
     p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "firmware", "Makefile")
     return send_file(os.path.abspath(p), as_attachment=True, download_name="Makefile", mimetype="text/plain")
 
+@app.route("/dl/soc-patch-script")
+def download_soc_patch_script():
+    p = os.path.join(os.path.dirname(__file__), "..", "hardware", "soc_minimal", "scripts", "patch_sapphire_init.py")
+    return send_file(os.path.abspath(p), as_attachment=True, download_name="patch_sapphire_init.py", mimetype="text/plain")
+
 @app.route("/dl/ti60-hex")
 def download_ti60_hex():
     """Serve the pre-built Ti60 F225 bitstream hex as a binary download.
