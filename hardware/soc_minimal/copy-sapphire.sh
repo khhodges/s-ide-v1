@@ -57,6 +57,31 @@ echo ""
 echo "[sapphire] Copied:"
 echo "  $DEST/sapphire.v"
 echo "  $DEST/sapphire_define.vh"
+
+# Copy all .bin files that sapphire.v needs for RAM initialisation
+BIN_COUNT=0
+for f in "$SAPPHIRE_DIR"/*.bin; do
+    [ -f "$f" ] || continue
+    cp "$f" "$DEST/"
+    BIN_COUNT=$((BIN_COUNT + 1))
+done
+if [ "$BIN_COUNT" -gt 0 ]; then
+    echo "  + $BIN_COUNT .bin RAM init files"
+else
+    # .bin files may be one level up or in a sibling directory
+    PARENT_DIR=$(dirname "$SAPPHIRE_DIR")
+    for f in "$PARENT_DIR"/*.bin; do
+        [ -f "$f" ] || continue
+        cp "$f" "$DEST/"
+        BIN_COUNT=$((BIN_COUNT + 1))
+    done
+    if [ "$BIN_COUNT" -gt 0 ]; then
+        echo "  + $BIN_COUNT .bin RAM init files (from parent dir)"
+    else
+        echo "  WARNING: no .bin files found — synthesis may fail with 'cannot open .bin' errors"
+        echo "  Search manually: find ~/efinity -name '*.bin' | grep -i sapphire | head -10"
+    fi
+fi
 echo ""
 
 # Check addresses match what firmware expects

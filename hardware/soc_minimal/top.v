@@ -35,9 +35,7 @@ module top (
     // SPI and APB slave ports are not used in this minimal design.
     // JTAG ports are tied off (no JTAG debugging).
     // ----------------------------------------------------------------
-    sapphire #(
-        .FIRMWARE_INIT_FILE("firmware.hex")
-    ) u_sapphire (
+    sapphire u_sapphire (
         // Clocks and resets
         .io_systemClk           (clk),
         .io_asyncReset          (1'b0),
