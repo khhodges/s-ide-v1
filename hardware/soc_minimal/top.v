@@ -3,17 +3,20 @@
 // Top-level Verilog for the Sapphire SoC minimal UART gate test.
 // Device: Efinix Ti60F225   Clock: 25 MHz via PLL_TL0   Baud: 115200
 //
+// Clock strategy (Efinix correct flow):
+//   GPIOL_P_18 (pll_refclk) is defined in church_soc.peri.xml with
+//   conn_type="pll_clkin" — it feeds PLL_TL0 reference input directly.
+//   PLL_TL0 output "clk" has conn_type="gclk" — it drives a global clock
+//   network.  The RTL declares clk as an input port; synthesis sees it as
+//   externally driven.  NO EFX_PLL_V1 in RTL — that causes EFX-0814.
+//
 // NOTE: sapphire.v and sapphire_define.vh must be copied into this
 // directory by the user before synthesis — see BUILD_SOC.md.
-//
-// clk is NOT a top-level IO port — it is produced by PLL_TL0 defined
-// in church_soc.peri.xml.  GPIOL_P_18 (pll_refclk) feeds the PLL
-// reference; the PLL output named "clk" (25 MHz, gclk) drives fabric.
 
 `default_nettype none
 
 module top (
-    input  wire pll_refclk,    // 25 MHz crystal — GPIOL_P_18, conn_type=pll_clkin
+    input  wire clk,           // 25 MHz — GCLK from PLL_TL0 (peri.xml)
     output wire uart_tx,       // GPIOL_02 → FT4232H interface 2 → ttyUSB2
     input  wire uart_rx,       // GPIOL_01 ← FT4232H interface 2
     input  wire push_button,   // GPIOT_N_06, active-low, weak pull-up
@@ -25,31 +28,7 @@ module top (
     // ----------------------------------------------------------------
     // Internal signals
     // ----------------------------------------------------------------
-    wire clk;                  // 25 MHz — CLKOUT0 of EFX_PLL_V1 below
-    wire pll_locked;           // not used for gating — is_bypass_lock=true
     wire system_reset;         // active-HIGH reset driven by Sapphire SoC
-
-    // ----------------------------------------------------------------
-    // PLL: 25 MHz crystal → 25 MHz fabric clock
-    //   CLKIN  = pll_refclk (GPIOL_P_18, pll_clkin in peri.xml)
-    //   VCO    = 25 MHz × M/N = 25 × 10/1 = 250 MHz
-    //   CLKOUT0= VCO / O / CLKOUT0_DIV = 250 / 1 / 10 = 25 MHz
-    //   RSTN   = 1 (active-LOW; 1 = PLL running)
-    // ----------------------------------------------------------------
-    EFX_PLL_V1 #(
-        .N          (1),
-        .M          (10),
-        .O          (1),
-        .CLKOUT0_DIV(10),
-        .REFCLK_FREQ(25.0)
-    ) pll_inst (
-        .CLKIN  (pll_refclk),
-        .CLKOUT0(clk),
-        .CLKOUT1(),
-        .CLKOUT2(),
-        .LOCKED (pll_locked),
-        .RSTN   (1'b1)
-    );
 
     // ----------------------------------------------------------------
     // Sapphire SoC instantiation
@@ -82,7 +61,7 @@ module top (
         .system_spi_0_io_data_3_write       (),
         .system_spi_0_io_data_3_writeEnable (),
         .system_spi_0_io_sclk_write         (),
-        .system_spi_0_io_ss                 (),       // SPI not used — leave unconnected
+        .system_spi_0_io_ss                 (),
 
         // APB slave 0 — not used; always-ready, no error, no read data
         .io_apbSlave_0_PADDR    (),
