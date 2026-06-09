@@ -259,6 +259,9 @@
     <!-- No PLL: 25 MHz crystal drives fabric directly via conn_type="normal" GPIO -->
     <efxpt:pll_info/>
 
+    <!-- OSC section required even when unused — get_all_osc() crashes if absent -->
+    <efxpt:osc_info/>
+
     <efxpt:mipi_dphy_info/>
 
 </efxpt:design_db>
