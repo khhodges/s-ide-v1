@@ -124,7 +124,6 @@ static void uart_emit_callhome(unsigned int boot_reason)
 int main(void)
 {
     unsigned int boot_reason = 0u;   /* 0 = cold boot */
-    unsigned int iter = 0u;
 
     /* Baud rate — MUST write before any uart_puts */
     UART_CLOCKDIV = UART_DIV_115200;
@@ -142,14 +141,8 @@ int main(void)
     for (;;) {
         /* Periodic NIA heartbeat + call-home every ~1 second */
         delay_loops(LOOPS_PER_SECOND);
-        iter++;
-
         uart_puts("NIA=0x00000000\r\n");
         uart_emit_callhome(boot_reason);
-
-        /* Re-send banner every 20 seconds (~20 × 1s heartbeats) */
-        if ((iter % 20u) == 0u)
-            uart_puts("CHURCH Ti60 v1.0\r\n");
     }
 
     return 0;
