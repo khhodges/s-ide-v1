@@ -10,3 +10,4 @@
 - [Sapphire SoC memory map](sapphire-soc-memory-map.md) — ROM=0xF9000000, UART=0xF8010000, GPIO=0xF8020000; sapphire_define.vh is empty in 2026.1; grep sapphire.v for addresses
 - [Sapphire POR asyncReset pulse required](sapphire-por-asyncreset.md) — io_asyncReset=1'b0 constant leaves io_systemReset stuck HIGH forever; must use 8-bit shift-reg POR (init=0xFF) to pulse it
 - [Efinity 2026.1 illegal synthesis params](efinity-2026-synth-params.md) — infer_set_reset/infer_clk_enable cause EFX-0002; Efinity re-injects them on every save; strip with sed before each compile
+- [Chromebook call-home bridge workflow](chromebook-callhome-workflow.md) — confirmed working 10-step flow; needs --insecure + --baud=115200; make MUST run after git pull; close+reopen Efinity non-negotiable
