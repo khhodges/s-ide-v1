@@ -3420,12 +3420,32 @@ function _onDeviceOnline(evt) {
     }
 }
 
+function getNotifPrefs() {
+    try {
+        var s = JSON.parse(localStorage.getItem('church_student_settings') || '{}');
+        var n = s.notif || {};
+        return {
+            boardNew:       n.boardNew       !== false,
+            boardReconnect: n.boardReconnect !== false,
+            fault:          n.fault          !== false,
+            compile:        n.compile        !== false
+        };
+    } catch (e) {
+        return { boardNew: true, boardReconnect: true, fault: true, compile: true };
+    }
+}
+
 function _showDeviceToast(evt) {
     var container = document.getElementById('deviceToastContainer');
     if (!container) return;
 
     var isNew = !!evt.is_new;
     var name  = evt.board_name || 'Ti60 F225';
+
+    // Respect notification preferences
+    var prefs = getNotifPrefs();
+    if (isNew && !prefs.boardNew) return;
+    if (!isNew && !prefs.boardReconnect) return;
 
     // For reconnect toasts, reuse any existing one rather than stacking
     if (!isNew) {

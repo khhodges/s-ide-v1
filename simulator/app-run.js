@@ -9971,6 +9971,11 @@ function openSettings() {
     if (osCb) osCb.checked = !!settings.openSource;
     const boardSel = document.getElementById('settingFPGABoard');
     if (boardSel) boardSel.value = getSelectedBoard();
+    const notifPrefs = getNotifPrefs();
+    const nb = document.getElementById('notifBoardNew');       if (nb) nb.checked = notifPrefs.boardNew;
+    const nr = document.getElementById('notifBoardReconnect'); if (nr) nr.checked = notifPrefs.boardReconnect;
+    const nf = document.getElementById('notifFault');          if (nf) nf.checked = notifPrefs.fault;
+    const nc = document.getElementById('notifCompile');        if (nc) nc.checked = notifPrefs.compile;
     document.getElementById('settingsModal').style.display = 'flex';
 }
 
@@ -10123,7 +10128,13 @@ function saveSettings() {
         ageTier: document.getElementById('settingAgeTier')?.value || '13-17',
         fpgaBoard: document.getElementById('settingFPGABoard')?.value || 'wukong-xc7a100t',
         openSource: !!document.getElementById('settingOpenSource')?.checked,
-        selectedSubjects: getSelectedSubjects()
+        selectedSubjects: getSelectedSubjects(),
+        notif: {
+            boardNew:       !!document.getElementById('notifBoardNew')?.checked,
+            boardReconnect: !!document.getElementById('notifBoardReconnect')?.checked,
+            fault:          !!document.getElementById('notifFault')?.checked,
+            compile:        !!document.getElementById('notifCompile')?.checked
+        }
     };
     localStorage.setItem('church_student_settings', JSON.stringify(settings));
 
