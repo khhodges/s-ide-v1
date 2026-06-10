@@ -1174,3 +1174,188 @@ security properties in Section 1.4.*
 
 *When adding a new GT: mint K_enc and K_mac at the same time as token_32 — a GT
 without keys is incomplete and will block the board with GT_NO_KEY.*
+
+---
+
+## Appendix A — Security Overhead and Dynamic Creation
+
+### A.1 What K_enc and K_mac are
+
+Every abstraction has two independent 128-bit keys derived from a shared root:
+
+```
+IKM    = SHA256( board_uid ‖ ogt_bytes )
+K_enc  = HKDF-SHA256( IKM, salt="CM_ENC_v3", info=ogt_bytes )   — AES-128-CTR
+K_mac  = HKDF-SHA256( IKM, salt="CM_MAC_v3", info=ogt_bytes )   — HMAC-SHA256
+```
+
+**K_enc** encrypts the payload. Nobody on the wire can read the message without it.
+
+**K_mac** authenticates the message. Nobody can forge, tamper with, or replay a
+frame without breaking the tag. The bridge checks the tag before touching the
+plaintext — a bad tag is a silent drop, not an error response.
+
+**Why two separate keys from one root?** Using the same key for both encryption
+and authentication opens a class of attacks where MAC observations leak information
+about the cipher. The two HKDF derivations with different salts produce
+cryptographically independent keys from the same IKM, closing that gap at no extra
+secret-management cost.
+
+**Why per-abstraction keys?** If all abstractions on a board shared one key pair,
+compromising any one abstraction would compromise every message on that board.
+Per-abstraction keys contain the blast radius: revoking `CallHistory` touches
+nothing belonging to `MargaretHodges`.
+
+---
+
+### A.2 Security overhead per operation
+
+#### Per-session (one CALLHOME handshake)
+
+For each abstraction in the `ns_manifest`:
+
+| Step | Operation | IDE-side cost | Firmware-side cost |
+|---|---|---|---|
+| OGT → token_32 | SHA-256 truncated to 32 bits | ~1 μs | ~100 μs (VexRiscv SW SHA-256) |
+| IKM derivation | `SHA256(board_uid ‖ ogt_bytes)` | ~1 μs | ~100 μs |
+| K_enc derivation | HKDF-SHA256, salt `CM_ENC_v3` | ~2 μs | ~100 μs |
+| K_mac derivation | HKDF-SHA256, salt `CM_MAC_v3` | ~2 μs | ~100 μs |
+| **Per abstraction total** | | **~6 μs** | **~400 μs** |
+
+Ten abstractions: ~60 μs IDE-side, ~4 ms firmware-side. This runs once at connect
+time, not per message — completely invisible in practice.
+
+#### Per-message (every UART frame)
+
+| Step | Operation | Cost |
+|---|---|---|
+| msg_type → OGT lookup | dictionary lookup | nanoseconds |
+| Nonce check | compare + increment | nanoseconds |
+| AES-128-CTR decrypt | ~1 cycle/byte | ~1 μs (64-byte payload) |
+| HMAC-SHA256 tag verify | ~1 cycle/byte | ~2 μs |
+| **Per message total** | | **~3–5 μs IDE-side** |
+
+At 115,200 baud a 64-byte frame takes ~5.6 ms to arrive on the wire. The crypto
+is invisible — the wire is always the bottleneck.
+
+At 3 Mbaud (Ti60 Sapphire SoC capability): ~170 μs per frame. Crypto still
+invisible.
+
+#### Fail-safe drop policy
+
+Every dropped message — bad tag, replayed nonce, unknown OGT — costs the same as
+an accepted message. The HMAC check runs to completion before the decision to drop
+is made. This is intentional: constant-time rejection prevents timing oracles where
+an attacker iteratively recovers K_mac by measuring how long the bridge takes to
+reject forged frames.
+
+There is no cheaper path for bad messages. The overhead is identical whether the
+frame is legitimate or an attack.
+
+---
+
+### A.3 Dynamic creation overhead
+
+A dynamic abstraction (`ns_slot_policy: "dynamic"`) is created at runtime. The
+full creation sequence:
+
+```
+1. IDE mints new OGT                         →  ~6 μs   (HKDF, IDE-side)
+2. IDE packages keystore update LUMP         →  encrypt + MAC the payload
+3. IDE sends LUMP_UPDATE over UART           →  wire bottleneck (see below)
+4. Firmware validates LUMP seal              →  ~200 μs  (CRC + bounds, VexRiscv)
+5. Firmware runs HKDF, installs K_enc/K_mac  →  ~400 μs  (two SHA-256, VexRiscv)
+6. Firmware allocates next free BRAM slot    →  nanoseconds
+7. Firmware sends LUMP_ACK with token_32     →  ~1 ms   (UART round-trip)
+```
+
+Wire cost dominates everything:
+
+| Baud rate | 64-byte LUMP delivery | Full round-trip (with ACK) |
+|---|---|---|
+| 115,200 | ~5.6 ms | ~12–15 ms |
+| 3 Mbaud | ~170 μs | ~500 μs |
+
+At 115,200 baud, creating one dynamic abstraction costs roughly **15 ms** — almost
+entirely wire latency, with ~600 μs of firmware crypto in the middle. After
+creation, calling it is a nanosecond BRAM lookup — exactly the same as any
+compile-time abstraction.
+
+---
+
+### A.4 Compile-time vs. dynamic creation — cost structure
+
+**Compile-time abstractions** (resident and lazy-load LUMPs) pay their creation
+cost exactly once — at build time, off the critical path. Their OGTs are known,
+K_enc/K_mac are pre-derived, and everything is packaged into the boot keystore
+LUMP delivered at first connection. After that, calling one is a BRAM slot lookup.
+Zero runtime creation overhead.
+
+**Dynamic abstractions** pay a one-time creation spike on first use: one HKDF
+round on the firmware (~400 μs) plus one UART round-trip (~15 ms at 115,200 baud).
+After that first payment the abstraction is as cheap to call as any compile-time one.
+The creation cost is a spike, not an ongoing tax.
+
+The system's cost structure is correct by design: **pay once to establish the
+secure channel, then use it for free.**
+
+---
+
+### A.5 Pool pre-allocation — eliminating creation spikes under pressure
+
+Pre-allocating a pool of dynamic slots at boot time moves the creation cost off
+the hot path entirely.
+
+**How it works:**
+
+At startup — when there is no latency pressure — the IDE provisions a batch of
+pool slots using *ephemeral OGTs*:
+
+```
+global.Pool.Ephemeral.session-0
+global.Pool.Ephemeral.session-1
+…
+global.Pool.Ephemeral.session-N
+```
+
+Keys are derived and the entire batch is delivered in a single LUMP. Under
+pressure, issuing an abstraction from the pool requires no UART round-trip and no
+HKDF delay — the slot is already warm. Only the OGT binding needs to happen, which
+is a local registry update on both sides.
+
+**The one constraint:** pool slots use pre-minted ephemeral OGTs — they are not
+globally stable canonical identities. They suit short-lived or session-scoped
+abstractions: active connections, temporary working contexts, transient state.
+Long-lived abstractions with durable identity (a Contact, a CallHistory, a Lesson)
+should always be compile-time provisioned with their real canonical OGT.
+
+**When to pool and when not to:**
+
+| Abstraction type | Creation cost | Call cost | Pool candidate? |
+|---|---|---|---|
+| Resident / lazy-load | At build time — zero runtime | Nanoseconds | No — already free |
+| Dynamic, latency-tolerant | ~15 ms first use (wire + HKDF) | Nanoseconds after | Only if creation is in a hot path |
+| Dynamic, latency-sensitive | ~15 ms first use | Nanoseconds after | Yes — pre-warm pool at boot |
+| Session-scoped ephemeral | ~15 ms first use (or pooled) | Nanoseconds after | Yes — natural fit |
+
+**Batch creation at boot** — if a set of dynamic abstractions is predictable at
+startup, request them all in one LUMP payload. One UART round-trip, not N. Even
+without a pool, batching reduces total creation time from `N × 15 ms` to
+approximately `15 ms + N × 600 μs` (one wire round-trip, then N firmware HKDF
+rounds overlapped with the next batch segment).
+
+---
+
+### A.6 Summary
+
+The security overhead of CM_MSG is almost entirely front-loaded:
+
+- **Key derivation:** paid once per abstraction at session establishment. Negligible
+  in absolute terms (microseconds IDE-side, low milliseconds firmware-side).
+- **Per-message crypto:** invisible — the wire is 100–1000× slower than the
+  AES+HMAC operations on every frame.
+- **Fail-safe drops:** constant-time by design. No cheaper path for attackers.
+- **Dynamic creation:** the only meaningful runtime cost — a one-time ~15 ms spike
+  per abstraction at 115,200 baud, dropping to ~500 μs at 3 Mbaud.
+- **Pool pre-allocation:** eliminates creation spikes from the hot path for
+  session-scoped abstractions by paying the cost at boot time when margin exists.
