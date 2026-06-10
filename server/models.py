@@ -83,6 +83,17 @@ def register_models(db):
         cr15 = Column(String(32), default="")
         boot_count_at_fault = Column(Integer, default=0)
         raw_type = Column(String(16), default="")
+        fault_gt = Column(String(32), default="")
+        fault_instr = Column(String(32), default="")
+
+    class NiaTrace(db.Model):
+        __tablename__ = "nia_traces"
+
+        id = Column(Integer, primary_key=True)
+        device_uid = Column(String(16), nullable=False, index=True)
+        ts = Column(Float, nullable=False, default=0.0, index=True)
+        nia_trace = Column(Text, default="[]")
+        trace_len = Column(Integer, default=0)
 
     class LaunchTest(db.Model):
         __tablename__ = "launch_tests"
@@ -123,4 +134,4 @@ def register_models(db):
         uid = Column(String(16), default="")
         line = Column(Text, default="")
 
-    return Project, TutorialProgress, Device, FaultEvent, LaunchTest, CallhomeLog, UartLog
+    return Project, TutorialProgress, Device, FaultEvent, NiaTrace, LaunchTest, CallhomeLog, UartLog

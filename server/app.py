@@ -8036,24 +8036,51 @@ def device_list():
 def device_fault_submit():
     """Accept a detailed fault telemetry record from a device.
 
+    Accepts both legacy simulator payloads and FAULT_EVENT records from the
+    firmware v2.0 bridge (hardware/soc_combined/callhome_bridge.py).
+
     Body fields (all optional except device_uid):
-      device_uid, lump_token, lump_version, fault_code, mnemonic,
-      pipeline_stage, recovery_tier, instruction_address (=fault_nia),
-      step_count
+      device_uid     — required; 16-hex device UID
+      nia            — faulting NIA as hex string, e.g. "0x00000042" (bridge)
+      instruction_address / fault_nia  — faulting NIA as int (legacy)
+      fault_code     — fault code (int or string)
+      fault_name     — human-readable fault name, e.g. "PERM_X" (bridge)
+      mnemonic       — instruction mnemonic (legacy/simulator)
+      fault_gt       — GT word0 hex string, e.g. "0x01800003" (bridge)
+      fault_instr    — instruction word hex string (bridge)
+      fault_cr14     — CR14 word0 hex string (bridge)
+      fault_stage    — pipeline stage as int 0-7 (bridge) or string (legacy)
+      pipeline_stage — pipeline stage as string (legacy)
+      lump_token, lump_version, recovery_tier, step_count  — optional extras
     """
+    _STAGE_NAMES = ("Fetch", "Decode", "Perm", "Lambda", "TPERM", "Call", "Return", "DataRW")
     data = request.get_json(silent=True) or {}
     uid = data.get("device_uid", "").strip()
     if not uid:
         return jsonify({"ok": False, "error": "missing device_uid"}), 400
     now = _time.time()
+
+    # NIA — accept "nia" hex string (bridge) or integer fields (legacy)
+    nia_raw = data.get("nia")
+    if nia_raw is not None:
+        nia_hex_str = str(nia_raw).strip()
+        try:
+            fault_nia = int(nia_hex_str, 16) & 0xFFFFFFFF
+        except (ValueError, TypeError):
+            fault_nia = 0
+    else:
+        nia_hex_str = ""
+        try:
+            fault_nia = int(data.get("instruction_address", data.get("fault_nia", 0))) & 0xFFFFFFFF
+        except (ValueError, TypeError):
+            fault_nia = 0
+
+    # fault_type — numeric fault code used as the indexed type column
     try:
-        fault_nia = int(data.get("instruction_address", data.get("fault_nia", 0))) & 0xFFFFFFFF
-    except (ValueError, TypeError):
-        fault_nia = 0
-    try:
-        fault_type = int(data.get("fault_type", 0)) & 0xFF
+        fault_type = int(data.get("fault_code", data.get("fault_type", 0))) & 0xFF
     except (ValueError, TypeError):
         fault_type = 0
+
     try:
         lump_version = int(data.get("lump_version", 0))
     except (ValueError, TypeError):
@@ -8066,6 +8093,18 @@ def device_fault_submit():
         step_count = int(data.get("step_count", 0))
     except (ValueError, TypeError):
         step_count = 0
+
+    # pipeline_stage — accept int (bridge) or string (legacy/simulator)
+    stage_raw = data.get("fault_stage", data.get("pipeline_stage", ""))
+    try:
+        stage_int = int(stage_raw)
+        pipeline_stage = _STAGE_NAMES[stage_int] if stage_int < len(_STAGE_NAMES) else str(stage_int)
+    except (ValueError, TypeError):
+        pipeline_stage = str(stage_raw)[:32]
+
+    # fault_name used as mnemonic when present (bridge); fall back to mnemonic field
+    fault_name = str(data.get("fault_name", data.get("mnemonic", "")))[:32]
+
     fe = FaultEvent(
         device_uid=uid,
         fault_type=fault_type,
@@ -8075,16 +8114,76 @@ def device_fault_submit():
         lump_token=data.get("lump_token", None),
         lump_version=lump_version,
         fault_code=str(data.get("fault_code", ""))[:32],
-        mnemonic=str(data.get("mnemonic", ""))[:32],
-        pipeline_stage=str(data.get("pipeline_stage", ""))[:32],
+        mnemonic=fault_name,
+        pipeline_stage=pipeline_stage,
         recovery_tier=recovery_tier,
         step_count=step_count,
+        nia_hex=nia_hex_str[:12] if nia_hex_str else "",
+        cr14=str(data.get("fault_cr14", data.get("cr14", "")))[:32],
+        cr12=str(data.get("cr12", ""))[:32],
+        cr15=str(data.get("cr15", ""))[:32],
+        fault_gt=str(data.get("fault_gt", ""))[:32],
+        fault_instr=str(data.get("fault_instr", ""))[:32],
+        raw_type="FAULT_EVENT" if data.get("fault_latched") is not None else "fault",
     )
     db.session.add(fe)
     db.session.commit()
-    logging.info("Fault telemetry: device=%s token=%s ver=%s tier=%s nia=0x%08X",
-                 uid, fe.lump_token, lump_version, recovery_tier, fault_nia)
+    logging.info("Fault telemetry: device=%s code=%s (%s) stage=%s nia=%s gt=%s",
+                 uid, fault_type, fault_name, pipeline_stage,
+                 nia_hex_str or hex(fault_nia), fe.fault_gt)
     return jsonify({"ok": True, "id": fe.id})
+
+
+@app.route("/api/device/trace", methods=["POST"])
+def device_trace_submit():
+    """Accept a NIA trace buffer from a device.
+
+    Body: { "device_uid": "...", "nia_trace": ["0x01", "0x02", ...], "ts": <float> }
+
+    Stores a rolling window of the last 200 trace records per device in the
+    nia_traces table (older records for the same device are pruned).
+    Returns {"ok": true, "id": <row_id>}.
+    """
+    import json as _json
+    data = request.get_json(silent=True) or {}
+    uid = data.get("device_uid", "").strip()
+    if not uid:
+        return jsonify({"ok": False, "error": "missing device_uid"}), 400
+
+    nia_trace = data.get("nia_trace", [])
+    if not isinstance(nia_trace, list):
+        nia_trace = []
+    try:
+        ts = float(data.get("ts", _time.time()))
+    except (ValueError, TypeError):
+        ts = _time.time()
+
+    row = NiaTrace(
+        device_uid=uid,
+        ts=ts,
+        nia_trace=_json.dumps(nia_trace),
+        trace_len=len(nia_trace),
+    )
+    db.session.add(row)
+    db.session.flush()   # obtain row.id before pruning
+
+    # Rolling window: keep only the most recent 200 trace records per device.
+    _TRACE_KEEP = 200
+    from sqlalchemy import text as _sa_text_tr
+    db.session.execute(_sa_text_tr("""
+        DELETE FROM nia_traces
+        WHERE device_uid = :uid
+          AND id NOT IN (
+              SELECT id FROM nia_traces
+              WHERE device_uid = :uid
+              ORDER BY ts DESC
+              LIMIT :keep
+          )
+    """), {"uid": uid, "keep": _TRACE_KEEP})
+    db.session.commit()
+
+    logging.debug("NIA trace stored: device=%s len=%d id=%d", uid, len(nia_trace), row.id)
+    return jsonify({"ok": True, "id": row.id})
 
 
 @app.route("/api/device/lump-versions", methods=["POST"])
@@ -8509,6 +8608,7 @@ Device = None
 Project = None
 TutorialProgress = None
 FaultEvent = None
+NiaTrace = None
 LaunchTest = None
 CallhomeLog = None
 UartLog = None
@@ -8559,7 +8659,7 @@ with app.app_context():
     import sys
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from server.models import register_models, BOARD_TYPES, PROFILE_NAMES
-    Project, TutorialProgress, Device, FaultEvent, LaunchTest, CallhomeLog, UartLog = register_models(db)
+    Project, TutorialProgress, Device, FaultEvent, NiaTrace, LaunchTest, CallhomeLog, UartLog = register_models(db)
     db.create_all()
 
     from sqlalchemy import inspect as _sa_inspect, text as _sa_text
@@ -8604,11 +8704,31 @@ with app.app_context():
         ("cr15",              "VARCHAR(32) DEFAULT ''"),
         ("boot_count_at_fault", "INTEGER DEFAULT 0"),
         ("raw_type",          "VARCHAR(16) DEFAULT ''"),
+        ("fault_gt",          "VARCHAR(32) DEFAULT ''"),
+        ("fault_instr",       "VARCHAR(32) DEFAULT ''"),
     ]:
         if _fe_col not in _existing_fe_cols:
             db.session.execute(_sa_text(f"ALTER TABLE fault_events ADD COLUMN {_fe_col} {_fe_def}"))
             db.session.commit()
             logging.info("Migrated: added %s column to fault_events table", _fe_col)
+
+    db.session.execute(_sa_text("""
+        CREATE TABLE IF NOT EXISTS nia_traces (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_uid TEXT    NOT NULL,
+            ts         REAL    NOT NULL DEFAULT 0.0,
+            nia_trace  TEXT    NOT NULL DEFAULT '[]',
+            trace_len  INTEGER NOT NULL DEFAULT 0
+        )
+    """))
+    db.session.execute(_sa_text(
+        "CREATE INDEX IF NOT EXISTS ix_nia_traces_device_uid ON nia_traces (device_uid)"
+    ))
+    db.session.execute(_sa_text(
+        "CREATE INDEX IF NOT EXISTS ix_nia_traces_ts ON nia_traces (ts)"
+    ))
+    db.session.commit()
+    logging.info("nia_traces table ready")
 
     db.session.execute(_sa_text("""
         CREATE TABLE IF NOT EXISTS device_lump_versions (
