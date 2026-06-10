@@ -17,11 +17,55 @@ args = "Church Machine IDE"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "check-stale-cr7"
+args = "hardware-sim"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "hardware-sim"
+args = "rci-threading-tests"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "pending-gt-tests"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "all-tests"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "check-api-reference-stale"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "sync-guard-tests"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "pet-name-memory-tests"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "pet-name-mem-tests"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "ti60-uart-dry-run"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "port-collision-test"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "playwright-port-wiring"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "disasm-panel-tests"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "check-stale-cr7"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
@@ -97,51 +141,7 @@ args = "check-capabilities-blocks"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "rci-threading-tests"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "pending-gt-tests"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "all-tests"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "check-api-reference-stale"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "sync-guard-tests"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "pet-name-memory-tests"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "pet-name-mem-tests"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "ti60-utilisation"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "ti60-uart-dry-run"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "port-collision-test"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "playwright-port-wiring"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "disasm-panel-tests"
 
 [[workflows.workflow]]
 name = "Church Machine IDE"
@@ -156,17 +156,6 @@ waitForPort = 5000
 outputType = "webview"
 
 [[workflows.workflow]]
-name = "check-stale-cr7"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "bash scripts/check_stale_cr7.sh"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
 name = "hardware-sim"
 author = "agent"
 
@@ -176,204 +165,6 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python -m ctmm_cap_amaranth.testbench && python -m hardware.test_mwin_seal && python -m hardware.test_outform_mode2 && python -m hardware.test_shift_ops"
-
-[[workflows.workflow]]
-name = "assembler-tests"
-author = "agent"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm test"
-
-[[workflows.workflow]]
-name = "lump-consistency"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m pytest tests/lump/test_lump_consistency.py -v"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "fault-recovery-tests"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node simulator/test_fault_recovery.js"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "lump-binary-tests"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node simulator/test_load_lump_binary.js"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "selftest-lump-runs"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m pytest tests/simulator/test_selftest_lump_runs.py -v"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "boot-image-matches-sim"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python3 -m pytest tests/boot/test_boot_image_matches_simulator.py -v"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "boot-image-loads-and-boots"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m pytest tests/boot/test_boot_image_loads_and_boots.py -v"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "boot-image-upload-endpoint"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m pytest tests/boot/test_boot_image_upload_endpoint.py -v"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "boot-image-serve-endpoints"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m pytest tests/boot/test_boot_image_serve_endpoints.py -v"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "catalog-compile-tests"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node simulator/test_catalog_compile.js"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "version-telemetry-tests"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python3 -m pytest tests/server/test_version_telemetry.py -v"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "lump-roundtrip"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node simulator/test_lump_roundtrip.js"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "boot-entry-sync-tests"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node simulator/test_boot_entry_sync.js"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "boot-layout-regression"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python -m pytest tests/boot/test_boot_layout_no_null_slot2.py -v"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "e2e-tests"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "CHROMIUM=$(which chromium) && mkdir -p .cache/ms-playwright/chromium-1217/chrome-linux64 && ln -sf \"$CHROMIUM\" .cache/ms-playwright/chromium-1217/chrome-linux64/chrome && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npx --yes playwright test"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "check-selftest-lump-stale"
-author = "agent"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node scripts/check_selftest_lump_stale.js && node scripts/test_check_selftest_lump_stale.js"
-
-[[workflows.workflow]]
-name = "warning-panel-tests"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node simulator/test_asm_warning_panel.js"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
-name = "check-capabilities-blocks"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node scripts/check-capabilities-blocks.js"
-
-[workflows.workflow.metadata]
-isValidation = true
 
 [[workflows.workflow]]
 name = "rci-threading-tests"
@@ -453,17 +244,6 @@ args = "node simulator/test_pet_name_mem.js"
 outputType = "console"
 
 [[workflows.workflow]]
-name = "ti60-utilisation"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python scripts/check_ti60_utilisation.py --missing-ok"
-
-[workflows.workflow.metadata]
-isValidation = true
-
-[[workflows.workflow]]
 name = "ti60-uart-dry-run"
 author = "agent"
 
@@ -503,6 +283,226 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node simulator/disasm_panel_test.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "check-stale-cr7"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash scripts/check_stale_cr7.sh"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "assembler-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm test"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "lump-consistency"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest tests/lump/test_lump_consistency.py -v"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "fault-recovery-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/test_fault_recovery.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "lump-binary-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/test_load_lump_binary.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "selftest-lump-runs"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest tests/simulator/test_selftest_lump_runs.py -v"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "boot-image-matches-sim"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 -m pytest tests/boot/test_boot_image_matches_simulator.py -v"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "boot-image-loads-and-boots"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest tests/boot/test_boot_image_loads_and_boots.py -v"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "boot-image-upload-endpoint"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest tests/boot/test_boot_image_upload_endpoint.py -v"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "boot-image-serve-endpoints"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest tests/boot/test_boot_image_serve_endpoints.py -v"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "catalog-compile-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/test_catalog_compile.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "version-telemetry-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 -m pytest tests/server/test_version_telemetry.py -v"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "lump-roundtrip"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/test_lump_roundtrip.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "boot-entry-sync-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/test_boot_entry_sync.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "boot-layout-regression"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest tests/boot/test_boot_layout_no_null_slot2.py -v"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "e2e-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "CHROMIUM=$(which chromium) && mkdir -p .cache/ms-playwright/chromium-1217/chrome-linux64 && ln -sf \"$CHROMIUM\" .cache/ms-playwright/chromium-1217/chrome-linux64/chrome && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npx --yes playwright test"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "check-selftest-lump-stale"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node scripts/check_selftest_lump_stale.js && node scripts/test_check_selftest_lump_stale.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "warning-panel-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node simulator/test_asm_warning_panel.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "check-capabilities-blocks"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node scripts/check-capabilities-blocks.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "ti60-utilisation"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python scripts/check_ti60_utilisation.py --missing-ok"
 
 [workflows.workflow.metadata]
 outputType = "console"

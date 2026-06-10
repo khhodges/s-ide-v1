@@ -1,12 +1,13 @@
-"""CI gate completeness guard (Task #1286).
+"""CI gate completeness guard.
 
-Parses .replit and asserts that every required validation workflow:
+Parses .replit and asserts that every required test workflow:
   1. Exists as a named ``[[workflows.workflow]]`` block.
-  2. Has ``isValidation = true`` in its ``[workflows.workflow.metadata]`` block.
-  3. Is referenced by the ``Project`` parallel workflow so it runs
-     automatically before every merge.
+  2. Is referenced by the ``Project`` parallel workflow so it can be run
+     via the Run button.
 
-Adding a new mandatory CI check?  Add its name to REQUIRED_VALIDATIONS.
+Tests are intentionally manual — ``isValidation = true`` has been removed
+from all test workflows so they no longer fire automatically on merge.
+Adding a new test workflow?  Add its name to REQUIRED_VALIDATIONS.
 Removing one?  Remove it from the list (and justify the removal in the PR).
 """
 
@@ -71,18 +72,13 @@ def test_required_validations_are_defined():
     )
 
 
-def test_required_validations_have_is_validation_true():
-    """Every required validation block contains isValidation = true."""
+def test_no_workflow_has_is_validation_true():
+    """No workflow should have isValidation = true — tests are manual-only."""
     text = _parse_replit()
-    blocks = _workflow_blocks(text)
-    not_flagged = []
-    for name in REQUIRED_VALIDATIONS:
-        block = blocks.get(name, '')
-        if not re.search(r'isValidation\s*=\s*true', block):
-            not_flagged.append(name)
-    assert not not_flagged, (
-        f'Required CI validations missing isValidation = true: {not_flagged}. '
-        'Add [workflows.workflow.metadata] isValidation = true to each.'
+    flagged = re.findall(r'isValidation\s*=\s*true', text)
+    assert not flagged, (
+        f'Found {len(flagged)} workflow(s) with isValidation = true. '
+        'Tests must be manual — remove isValidation = true from all test workflows.'
     )
 
 
