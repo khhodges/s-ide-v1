@@ -257,6 +257,72 @@ only the deployment (board_uid, K_enc, K_mac) changes.
 and `nonce_ctr`. No two abstractions share a key. The keystore LUMP (Section 2.6)
 is indexed by OGT path.
 
+#### sha32 identity primitive — CALLHOME worked example
+
+Every namespace entry announced in `ns_manifest` carries a `token_32` field.
+`token_32 = sha32(ogt)` — the first 4 bytes of SHA-256 over the OGT string,
+interpreted big-endian. This is the 32-bit hardware register value the Church
+Machine uses to match a LUMP or C-list entry to a namespace slot. It is
+**derived from the name** — never invented, never negotiated.
+
+```
+sha32("global.Core.FaultReporter.boot")
+  = SHA-256("global.Core.FaultReporter.boot")[0:4]
+  = 0x677d36a7
+```
+
+Full ns_manifest CALLHOME JSON fragment (firmware v1.2+):
+
+```json
+CALLHOME:{
+  "board":"Ti60F225",
+  "uid":"c0ffee0100000001",
+  "boot_ok":1,
+  "fw_major":1,"fw_minor":2,
+  "ns_manifest":[
+    {"ogt":"global.Core.BoardIdentity.boot", "token_32":"0x68706247","label":"Board.Identity","resident":true},
+    {"ogt":"global.Core.Heartbeat.boot",      "token_32":"0x416d6848","label":"Heartbeat",     "resident":true},
+    {"ogt":"global.Core.FaultReporter.boot", "token_32":"0x677d36a7","label":"Fault.Reporter","resident":true},
+    {"ogt":"global.Core.PerfReporter.boot",  "token_32":"0xeb2b7554","label":"Perf.Reporter", "resident":true},
+    {"ogt":"global.Core.LumpLoader.boot",    "token_32":"0xd728290d","label":"Lump.Loader",   "resident":true},
+    {"ogt":"global.Core.TraceEmitter.boot",  "token_32":"0xa7ce2b32","label":"Trace.Emitter", "resident":true},
+    {"ogt":"global.Core.NSInspector.boot",   "token_32":"0x404c79d5","label":"NS.Inspector",  "resident":true},
+    {"ogt":"global.Core.MediaConsumer.boot", "token_32":"0xe400ec35","label":"Media.Consumer","resident":true},
+    {"ogt":"global.Core.BrowseClient.boot",  "token_32":"0xe7eed989","label":"Browse.Client", "resident":true}
+  ]
+}
+```
+
+**Bridge processing** (`_handle_callhome_json` in `callhome_bridge.py`):
+
+1. For each entry the bridge independently recomputes `sha32(ogt)` and
+   cross-checks it against the firmware-provided `token_32`.  A mismatch is
+   logged as a warning (firmware/bridge version skew or bit-flip).
+2. The bridge populates `_token32_to_ogt` — a session-scoped dict mapping
+   `token_32 (int) → ogt (str)`.  T0.4 key derivation reads this dict to
+   look up which OGT to derive keys for.
+3. Collision detection: if two OGTs hash to the same `token_32`, the bridge
+   logs `COLLISION` and drops the duplicate.  The canonical collision scan is
+   `scripts/check_sha32_collisions.py`; it must exit 0 before any release.
+
+**C implementation** (`hardware/sha256.h`):
+
+```c
+#include "sha256.h"
+uint32_t t = sha32("global.Core.FaultReporter.boot");
+// t == 0x677d36a7u
+```
+
+**Python implementation** (`callhome_bridge.py`):
+
+```python
+from callhome_bridge import sha32
+assert sha32("global.Core.FaultReporter.boot") == 0x677d36a7
+```
+
+Both implementations are tested against the same hard-coded vector table
+in `scripts/test_sha32_vectors.py`.
+
 ### 2.2 IDE-side GTs (held by bridge/server)
 
 These GTs never leave the server. They name the services the FPGA invokes.

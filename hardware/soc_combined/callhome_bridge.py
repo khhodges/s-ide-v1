@@ -42,6 +42,8 @@ import json
 import time
 import threading
 import ssl
+import hashlib
+import hmac as _hmac_mod
 
 try:
     import serial
@@ -113,6 +115,50 @@ _FAULT_NAMES = {
 def _fault_name(code: int) -> str:
     """Return the human-readable fault name for a numeric fault code."""
     return _FAULT_NAMES.get(code, "UNKNOWN")
+
+# ---------------------------------------------------------------------------
+# sha32 identity primitive and HKDF helper
+#
+# sha32(ogt) — first 4 bytes of SHA-256(ogt) as big-endian uint32.
+#   This is the token_32 hardware register value for a namespace entry.
+#   Matches the C implementation in hardware/sha256.h exactly.
+#
+# hkdf_sha256(ikm, salt, info, length) — RFC 5869 HKDF using HMAC-SHA256.
+#   Used by T0.4 key derivation: K_enc = hkdf_sha256(IKM, b"CM_ENC_v2", ...)
+#   Both implementations (bridge + firmware) must produce identical output.
+#
+# Canonical test vectors: scripts/test_sha32_vectors.py
+# ---------------------------------------------------------------------------
+
+def sha32(ogt: str) -> int:
+    """Return sha32(ogt): first 4 bytes of SHA-256 over the OGT string, big-endian uint32."""
+    d = hashlib.sha256(ogt.encode("utf-8")).digest()
+    return int.from_bytes(d[:4], "big")
+
+
+def hkdf_sha256(ikm: bytes, salt: bytes, info: bytes, length: int) -> bytes:
+    """RFC 5869 HKDF-SHA256.  Matches hardware/sha256.h hkdf_sha256() exactly."""
+    # Extract: PRK = HMAC-SHA256(salt, IKM)
+    prk = _hmac_mod.new(salt, ikm, hashlib.sha256).digest()
+    # Expand: T(i) = HMAC-SHA256(PRK, T(i-1) || info || i)
+    t, okm = b"", b""
+    for i in range(1, (length // 32) + 2):
+        t = _hmac_mod.new(prk, t + info + bytes([i]), hashlib.sha256).digest()
+        okm += t
+    return okm[:length]
+
+
+# ---------------------------------------------------------------------------
+# ns_manifest state — populated from CALLHOME ns_manifest field (fw v1.2+)
+#
+# _token32_to_ogt: maps token_32 (int) → ogt string, for every entry the
+#   board reported in its last ns_manifest.  Used by T0.4 key lookup.
+#
+# _ogt_to_keys: maps ogt string → {"k_enc": bytes, "k_mac": bytes}.
+#   Populated by T0.4 key derivation after CALLHOME.  Stub until then.
+# ---------------------------------------------------------------------------
+_token32_to_ogt: dict = {}
+_ogt_to_keys: dict = {}
 
 # ---------------------------------------------------------------------------
 # Globals
@@ -260,6 +306,31 @@ def _handle_callhome_json(line):
     fault_cr14  = pkt.get("fault_cr14",  None)   # CR14 word0 hex str
     fault_stage = pkt.get("fault_stage", None)   # int 0-7 pipeline stage
 
+    # NS manifest — present from firmware v1.2+ (Task #1766)
+    # Each entry: {"ogt": str, "token_32": "0x...", "label": str, "resident": bool}
+    ns_manifest = pkt.get("ns_manifest", None)
+    if ns_manifest is not None:
+        _token32_to_ogt.clear()
+        collision_count = 0
+        for entry in ns_manifest:
+            ogt       = entry.get("ogt", "")
+            t32_str   = entry.get("token_32", "0x0")
+            t32_fw    = int(t32_str, 16)
+            t32_local = sha32(ogt)
+            if t32_fw != t32_local:
+                print(f"  [CALLHOME] WARN token_32 mismatch for {ogt!r}: "
+                      f"fw={t32_fw:#010x} local={t32_local:#010x}")
+            if t32_local in _token32_to_ogt:
+                existing = _token32_to_ogt[t32_local]
+                if existing != ogt:
+                    print(f"  [CALLHOME] COLLISION token_32={t32_local:#010x}: "
+                          f"{existing!r} vs {ogt!r}")
+                    collision_count += 1
+            else:
+                _token32_to_ogt[t32_local] = ogt
+        print(f"  [CALLHOME] ns_manifest: {len(_token32_to_ogt)} abstractions registered"
+              + (f"  WARN {collision_count} collision(s)" if collision_count else ""))
+
     _last_uid = uid
 
     boot_tag   = " [RECOVERY]" if boot_reason == 2 else ""
@@ -308,6 +379,8 @@ def _handle_callhome_json(line):
             payload["fault_cr14"] = fault_cr14
         if fault_stage is not None:
             payload["fault_stage"] = fault_stage
+        if ns_manifest is not None:
+            payload["ns_manifest"] = ns_manifest
         threading.Thread(
             target=_post_callhome,
             args=(payload,),

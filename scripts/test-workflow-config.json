@@ -6,5 +6,10 @@
     "Church Machine IDE",
     "all-tests",
     "artifacts/mockup-sandbox: Component Preview Server"
+  ],
+  "_scriptOnlySuites_comment": "scriptOnlySuites are test suites registered in run-all-tests.sh that run as direct shell/Python scripts. They have no dedicated workflow entry in .replit (and do not need one). Add a suite here when the workflow limit is reached or when a suite is too lightweight to warrant a persistent workflow.",
+  "scriptOnlySuites": [
+    "sha32-vectors",
+    "check-sha32-collisions"
   ]
 }

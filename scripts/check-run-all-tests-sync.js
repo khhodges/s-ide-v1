@@ -47,6 +47,16 @@ const DEFAULT_INFRASTRUCTURE_WORKFLOWS = [
     'artifacts/mockup-sandbox: Component Preview Server',
 ];
 
+/**
+ * Suites that are registered in run-all-tests.sh but have no dedicated
+ * workflow entry (they run as direct scripts).  Keep this in sync with
+ * the scriptOnlySuites array in test-workflow-config.json.
+ */
+const DEFAULT_SCRIPT_ONLY_SUITES = [
+    'sha32-vectors',
+    'check-sha32-collisions',
+];
+
 const configPath = path.join(__dirname, 'test-workflow-config.json');
 let INFRASTRUCTURE_WORKFLOWS;
 if (!fs.existsSync(configPath)) {
@@ -64,6 +74,21 @@ if (!fs.existsSync(configPath)) {
         parsed = { infrastructureWorkflows: DEFAULT_INFRASTRUCTURE_WORKFLOWS };
     }
     INFRASTRUCTURE_WORKFLOWS = new Set(parsed.infrastructureWorkflows);
+}
+
+// Script-only suites: registered in run-all-tests.sh but intentionally have
+// no dedicated workflow entry (too lightweight, or workflow limit reached).
+let SCRIPT_ONLY_SUITES;
+if (!fs.existsSync(configPath)) {
+    SCRIPT_ONLY_SUITES = new Set(DEFAULT_SCRIPT_ONLY_SUITES);
+} else {
+    let parsed2;
+    try {
+        parsed2 = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    } catch (e) {
+        parsed2 = { scriptOnlySuites: DEFAULT_SCRIPT_ONLY_SUITES };
+    }
+    SCRIPT_ONLY_SUITES = new Set(parsed2.scriptOnlySuites || DEFAULT_SCRIPT_ONLY_SUITES);
 }
 
 // ---------------------------------------------------------------------------
@@ -123,7 +148,10 @@ const suiteNames = parseRunAllSuites(scriptPath);
 const missingFromScript = [...testWorkflowNames].filter(n => !suiteNames.has(n)).sort();
 
 // Suite names in run-all-tests.sh that have no matching workflow in .replit
-const orphanInScript = [...suiteNames].filter(n => !testWorkflowNames.has(n)).sort();
+// (script-only suites are intentionally exempt)
+const orphanInScript = [...suiteNames]
+    .filter(n => !testWorkflowNames.has(n) && !SCRIPT_ONLY_SUITES.has(n))
+    .sort();
 
 let ok = true;
 

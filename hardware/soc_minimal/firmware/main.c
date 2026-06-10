@@ -29,6 +29,12 @@
  */
 
 /* ------------------------------------------------------------------ */
+/* SHA-256 / sha32 / HKDF — token identity primitive                  */
+/* ------------------------------------------------------------------  */
+#include <stdint.h>
+#include "../../sha256.h"
+
+/* ------------------------------------------------------------------ */
 /* Board identity                                                      */
 /* ------------------------------------------------------------------ */
 #ifndef BOARD_UID_HI
@@ -97,14 +103,41 @@ static void delay_loops(unsigned int loops)
 }
 
 /* ------------------------------------------------------------------ */
+/* NS manifest — 9 Core abstractions always present on every board.   */
+/*                                                                     */
+/* token_32 = sha32(ogt) — computed at runtime via hardware/sha256.h. */
+/* Parsed by callhome_bridge.py _handle_callhome_json() (fw v1.2+).  */
+/* ------------------------------------------------------------------ */
+static const struct {
+    const char *ogt;
+    const char *label;
+} _NS_MANIFEST[9] = {
+    { "global.Core.BoardIdentity.boot",  "Board.Identity"  },
+    { "global.Core.Heartbeat.boot",       "Heartbeat"        },
+    { "global.Core.FaultReporter.boot",  "Fault.Reporter"  },
+    { "global.Core.PerfReporter.boot",   "Perf.Reporter"   },
+    { "global.Core.LumpLoader.boot",     "Lump.Loader"     },
+    { "global.Core.TraceEmitter.boot",   "Trace.Emitter"   },
+    { "global.Core.NSInspector.boot",    "NS.Inspector"    },
+    { "global.Core.MediaConsumer.boot",  "Media.Consumer"  },
+    { "global.Core.BrowseClient.boot",   "Browse.Client"   },
+};
+
+/* ------------------------------------------------------------------ */
 /* CALLHOME emitter                                                    */
 /*                                                                     */
 /* Emits one ASCII JSON line parsed by callhome_bridge.py.            */
 /* NIA is fixed at 0 — no Church Machine core in this soc_minimal     */
 /* build; this provides IDE registration and heartbeat only.          */
+/*                                                                     */
+/* ns_manifest: sha32() runs 9 SHA-256 computations at runtime,       */
+/* taking ~10 ms total at 25 MHz rv32im.  One-shot on cold boot;      */
+/* repeated each heartbeat (~1 s interval) for bridge re-sync.        */
 /* ------------------------------------------------------------------ */
 static void uart_emit_callhome(unsigned int boot_reason)
 {
+    unsigned int i;
+
     uart_puts("CALLHOME:{\"board\":\"Ti60F225\",\"uid\":\"");
     uart_puthex32_lower(BOARD_UID_HI);
     uart_puthex32_lower(BOARD_UID_LO);
@@ -115,7 +148,21 @@ static void uart_emit_callhome(unsigned int boot_reason)
     uart_putdec1(FW_MAJOR);
     uart_puts(",\"fw_minor\":");
     uart_putdec1(FW_MINOR);
-    uart_puts("}\r\n");
+
+    /* ns_manifest: list of 9 Core OGTs with runtime-computed token_32 */
+    uart_puts(",\"ns_manifest\":[");
+    for (i = 0u; i < 9u; i++) {
+        uint32_t t32 = sha32(_NS_MANIFEST[i].ogt);
+        if (i > 0u) uart_putc(',');
+        uart_puts("{\"ogt\":\"");
+        uart_puts(_NS_MANIFEST[i].ogt);
+        uart_puts("\",\"token_32\":\"0x");
+        uart_puthex32_lower(t32);
+        uart_puts("\",\"label\":\"");
+        uart_puts(_NS_MANIFEST[i].label);
+        uart_puts("\",\"resident\":true}");
+    }
+    uart_puts("]}\r\n");
 }
 
 /* ------------------------------------------------------------------ */

@@ -12,3 +12,4 @@
 - [Efinity 2026.1 illegal synthesis params](efinity-2026-synth-params.md) — infer_set_reset/infer_clk_enable cause EFX-0002; Efinity re-injects them on every save; strip with sed before each compile
 - [Chromebook call-home bridge workflow](chromebook-callhome-workflow.md) — confirmed working 10-step flow; needs --insecure + --baud=115200; make MUST run after git pull; close+reopen Efinity non-negotiable
 - [Sapphire SoC as Trusted Security Base](sapphire-soc-tsb.md) — RISC-V private RAM is the keystore; APB3 register map; 5 free capabilities; FAULT_RST gap; FP verdict; SHA32 commissioning impact
+- [Makefile tab rule](makefile-tab-rule.md) — edit tool converts tabs→spaces in recipe lines, breaking make; always use write tool for Makefile changes

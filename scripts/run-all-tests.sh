@@ -123,6 +123,12 @@ register_suite "check-api-reference-stale" \
 register_suite "lump-consistency" \
     'python -m pytest tests/lump/test_lump_consistency.py -v'
 
+register_suite "sha32-vectors" \
+    'python -m pytest scripts/test_sha32_vectors.py -v'
+
+register_suite "check-sha32-collisions" \
+    'python3 scripts/check_sha32_collisions.py'
+
 register_suite "assembler-tests" \
     'npm test'
 
