@@ -1359,3 +1359,250 @@ The security overhead of CM_MSG is almost entirely front-loaded:
   per abstraction at 115,200 baud, dropping to ~500 μs at 3 Mbaud.
 - **Pool pre-allocation:** eliminates creation spikes from the hot path for
   session-scoped abstractions by paying the cost at boot time when margin exists.
+
+---
+
+## Appendix B — Design Critique Q&A
+
+This appendix addresses the questions a hostile reviewer, security auditor, or
+protocol implementor is most likely to raise. Each question is answered honestly:
+some critiques are wrong; some identify genuine gaps; some identify deliberate
+trade-offs that deserve explicit acknowledgement.
+
+---
+
+### B.1 "SHA32 is not a standard primitive — what exactly is it?"
+
+**The critic is right.**
+
+The spec uses `token_32 = SHA32(ogt)` without defining SHA32. This is ambiguous.
+
+**Definition:** `token_32` is the first four bytes of `SHA-256(ogt_bytes)`,
+interpreted as a big-endian unsigned 32-bit integer.
+
+**Additional concern:** The 32-bit token space holds ~4 billion values. With N
+abstractions on one board, collision probability is `N² / 2³²`. At N=100 this is
+~0.1%. Two abstractions sharing the same `token_32` would cause the bridge to
+route messages to the wrong handler. **The bridge must detect and reject
+`token_32` collisions at manifest load time** — if any two entries in an
+`ns_manifest` produce the same `token_32`, the CALLHOME must be rejected with
+an error.
+
+---
+
+### B.2 "Compromising board_uid breaks every key on the board"
+
+**The critic is right.**
+
+`IKM = SHA256(board_uid ‖ ogt_bytes)`. If `board_uid` leaks, an attacker
+derives IKM for every abstraction on that board, then derives all K_enc and
+K_mac. One value lost = every secure channel on that board broken.
+
+The spec does not state where `board_uid` lives or how it is protected.
+
+**Required statement:** `board_uid` must be a write-once hardware secret (eFuse
+or equivalent). It must never appear in UART output, never in a readable firmware
+variable, and never in any diagnostic endpoint. If `board_uid` is ever exposed,
+every abstraction on that board must be treated as compromised — all deployments
+must be revoked and re-provisioned with a new `board_uid`.
+
+---
+
+### B.3 "There is no key rotation without full revocation"
+
+**The critic is right — this is a deliberate limitation.**
+
+`mint_abstraction_keys(board_uid, ogt)` is deterministic. The same inputs always
+produce the same K_enc and K_mac. The spec describes revocation (destroy the
+deployment, reissue a new one) but not rotation (new keys, same abstraction,
+same board, same OGT, live continuity).
+
+**Acknowledged constraint:** Key rotation without revocation would require
+introducing a per-abstraction epoch counter into the IKM. This is not in v1.
+
+**Recommended workaround:** If a key is suspected compromised, revoke the
+abstraction (broadcast `GT_REVOKED`), re-provision it as a new deployment with
+the same OGT. The keystore LUMP is re-derived and re-delivered. Callers holding
+the OGT experience a brief interruption; they resume transparently after
+re-provisioning because the OGT is unchanged.
+
+---
+
+### B.4 "The HKDF construction is non-standard"
+
+**The critic has a technical point — the construction is sound but should be
+documented as deliberate.**
+
+Standard HKDF usage: `HKDF(IKM=raw_secret, salt=random_or_fixed, info=context)`.
+This spec uses `HKDF(IKM=SHA256(board_uid ‖ ogt_bytes), salt="CM_ENC_v3",
+info=ogt_bytes)`. The IKM is pre-mixed via SHA-256 before being passed to HKDF,
+which bypasses the intended HKDF Extract phase.
+
+**Why this is sound:** SHA-256 is a collision-resistant PRF. Pre-mixing
+`board_uid` and `ogt_bytes` through SHA-256 produces a uniformly distributed
+32-byte value with no detectable structure. Passing this to HKDF Expand is
+cryptographically equivalent to a compliant Extract-then-Expand construction.
+
+**Equivalent standard construction:** `IKM = board_uid`, `salt = SHA-256(ogt_bytes)`,
+`info = ogt_bytes`. The current construction binds both inputs at the IKM stage
+instead; the resulting output keys are indistinguishable.
+
+**Why the current construction was chosen:** The firmware does not perform a
+separate Extract phase; the SHA-256 pre-mix is the Extract. This reduces the
+number of distinct SHA-256 invocations in constrained firmware without weakening
+security.
+
+---
+
+### B.5 "Proto=1 fallback is a downgrade attack vector"
+
+**The critic is right.**
+
+An active attacker between the board and the IDE can strip the `proto` field from
+a CALLHOME message and force a proto=2-capable bridge into proto=1 mode — which
+uses weaker security (no per-abstraction encryption, name-based GT lookup only).
+
+**Required rule:** A bridge that has previously observed `proto: 2` from a given
+`board_uid` must never accept `proto: 1` from that same `board_uid`. Downgrade
+is treated as an attack indicator: the CALLHOME is silently dropped and an alert
+is raised. The bridge should persist a `min_proto[board_uid]` table across
+sessions.
+
+---
+
+### B.6 "There is no forward secrecy — recorded traffic can be decrypted later"
+
+**The critic is correct. This is a deliberate, scoped trade-off.**
+
+K_enc is static per deployment. An adversary who records all UART traffic and
+later obtains K_enc (for example, via `board_uid` exposure) can decrypt every
+past message. No ephemeral session keys are negotiated.
+
+**Why forward secrecy is out of scope for v1:** Forward secrecy requires an
+ephemeral key exchange (ECDH or equivalent) on every session establishment. The
+firmware target is a VexRiscv at ~50 MHz with ~32 KB ROM — a full ECDH
+handshake is feasible but consumes a significant fraction of the firmware budget.
+More importantly, the threat model for this protocol is a physical-access USB
+UART connection. An adversary with sufficient physical access to record UART
+traffic over an extended period also has sufficient access to extract `board_uid`
+from the hardware directly. Forward secrecy does not meaningfully raise the
+attacker's cost in this threat model.
+
+**If the threat model changes** (e.g. the UART is routed over a network), forward
+secrecy must be added and this statement revisited.
+
+---
+
+### B.7 "Nonce size is not defined — overflow enables replay"
+
+**The critic is right.**
+
+The spec mentions `nonce_ctr` and `last_nonce[(board_uid, ogt)]` but never states
+the nonce width. A 32-bit nonce exhausts in approximately `2³² × 5.6 ms ≈ 277 days`
+of continuous traffic at 115,200 baud — after which it wraps and every subsequent
+message is a replay.
+
+**Required definition:** `nonce_ctr` is a **64-bit unsigned integer**. Wrap at
+2⁶⁴ is physically unreachable at any UART baud rate within any plausible hardware
+lifetime. The bridge must reject any frame where `nonce ≤ last_nonce[(board_uid,
+ogt)]` — strict greater-than only, not equality-only.
+
+---
+
+### B.8 "Who mints OGTs? There is no canonical name authority"
+
+**The critic is right — this is the deepest architectural gap.**
+
+The spec states that the OGT abstraction segment uses the canonical formal name
+(`MargaretHodges`, `GlobalWorkspaceLtd`). But it does not specify who decides
+what that canonical name is, who prevents two systems from independently minting
+the same OGT for different entities, or how naming disputes are resolved.
+
+**Scope boundary for v1:** CM_MSG v1 operates within a single IDE instance with a
+single Namespace Authority (NS[8] / `CM.IDE.NSAuthority`). Within that scope,
+OGT uniqueness is enforced by the NS Authority at mint time — the Authority
+registers the OGT on first creation and rejects duplicates. Cross-IDE OGT
+collision (two independent IDE instances minting the same OGT path) is
+**out of scope for v1**.
+
+**Note:** The `ns_instance` component (`family-hub`, `mums-mobile`, `alice-year3`)
+already provides practical namespace isolation between independent deployments.
+Cross-IDE collision requires deliberately choosing the same `ns_type`,
+`canonical_name`, and `ns_instance` — accidental collision is unlikely in
+practice.
+
+**Future work:** A global OGT registry or a self-sovereign naming scheme (e.g.
+`global.<did>.<abstraction>.<instance>` where `<did>` is a decentralised
+identifier) would close this gap.
+
+---
+
+### B.9 "Replicated spread — nonce handling across boards is ambiguous"
+
+**The critic is right.**
+
+For `spread: "replicated"` (same abstraction deployed on multiple boards
+simultaneously), the spec does not explicitly state whether boards share a nonce
+space. Two boards sending `nonce = 5` for the same OGT would produce two frames
+with the same (ogt, nonce) tuple at the bridge.
+
+**Explicit rule:** For replicated deployments, `nonce_ctr` is tracked per
+`(board_uid, ogt)` pair. Each board has its own fully independent nonce counter.
+The bridge never cross-checks nonces between different `board_uid` values for the
+same OGT. `last_nonce[(board_uid, ogt)]` is the authoritative key — board_uid is
+always part of the lookup.
+
+---
+
+### B.10 "Ephemeral pool OGTs have no defined lifecycle — keys persist indefinitely"
+
+**The critic is right.**
+
+Appendix A.5 describes pre-allocating pool slots with ephemeral OGTs at boot.
+It does not specify when those keys are destroyed, what happens on board reboot,
+or whether an attacker who knows the ephemeral OGT naming pattern can pre-compute
+keys across sessions.
+
+**Required rules:**
+
+1. **Session-scoped revocation:** The IDE must broadcast `GT_REVOKED` for all
+   pool deployments on board disconnect or board reboot. Pool keys must be
+   destroyed server-side at the same time.
+
+2. **Session nonce in ephemeral OGTs:** Ephemeral OGT names must include a fresh
+   random session nonce generated at each boot:
+   `global.Pool.Ephemeral.<session_nonce>.session-N`
+   This ensures that an attacker who observes one session's pool OGTs cannot
+   pre-compute keys for future sessions. The `session_nonce` should be a 64-bit
+   random value formatted as a hex string.
+
+---
+
+### B.11 Critiques that are wrong — and why
+
+| Critique | Why it is wrong |
+|---|---|
+| "AES without authentication" | Wrong — the pipeline is MAC-first (Section 4: HMAC → replay → decrypt). Authentication is verified before any decryption occurs. |
+| "Shared keys mean one breach breaks everything" | Wrong — every abstraction has independent K_enc and K_mac. Revoking `CallHistory` touches nothing belonging to `MargaretHodges`. |
+| "8-byte HMAC tag is too short" | 64-bit MACs are standard practice (TLS uses truncated MACs). Combined with strict nonce-ctr replay rejection, the forgery attack surface is negligible. |
+| "AES-CTR produces distinguishable traffic patterns" | AES-CTR with a monotone nonce produces effectively random ciphertext. Traffic analysis can reveal frame timing and size, but not content or abstraction identity. |
+| "`resident` flag can be bypassed by the firmware" | True — but the firmware is in the Trusted Security Base. `resident` is an IDE deployment policy, not a hardware capability constraint. The spec is explicit about this distinction. |
+| "Per-abstraction keys are expensive to manage" | Key management cost is paid once at session establishment (~6 μs per abstraction IDE-side). There is no per-message key management overhead. See Appendix A.2. |
+
+---
+
+### B.12 Summary of gaps requiring spec additions
+
+| Gap | Severity | Fix location |
+|---|---|---|
+| SHA32 undefined | Must fix | Section 2.1 — define as SHA-256 first 4 bytes, big-endian |
+| token_32 collision detection absent | Must fix | Section 2.1 — bridge rejects manifest on collision |
+| board_uid confidentiality not stated | Must fix | Section 2.6 — add hardware secret requirement |
+| Nonce size not specified | Must fix | Section 3/4 — 64-bit, strict greater-than check |
+| Proto downgrade not prevented | Must fix | Section 5 — min_proto rule per board_uid |
+| Replicated nonce semantics ambiguous | Must fix | Section 2.7 — per-(board_uid, ogt) explicit |
+| Ephemeral pool lifecycle undefined | Must fix | Appendix A.5 — session revocation + session nonce |
+| No key rotation path | Acknowledged | Appendix A or B — deliberate limitation, workaround stated |
+| Forward secrecy absent | Acknowledged | Section 1.4 / Appendix B — explicit out-of-scope |
+| HKDF construction non-standard | Acknowledged | Section 2.6 — document as deliberate |
+| OGT minting authority undefined | Scoped | Section 2.1 / future work — v1 scope boundary stated |
