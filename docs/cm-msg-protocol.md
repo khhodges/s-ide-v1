@@ -1,7 +1,7 @@
 # CM_MSG — Church Machine UART Messaging Protocol
 
-**Status:** Design specification — v0.6  
-**Date:** 2026-06-09  
+**Status:** V1 — Released for distribution and review  
+**Date:** 2026-06-10  
 **Scope:** Ti60 F225 (initial target); architecture applies to all CM-connected boards
 
 ---
@@ -944,7 +944,7 @@ revealing anything to a potential attacker on the wire.
 
 | Type | Name | Source GT | Destination GT | Priority | Payload |
 |------|------|-----------|----------------|----------|---------|
-| `0x01` | `CALLHOME` | `Board.Identity` | `CM.IDE.CallhomeService` | ✅ Done | JSON: board, uid, nia, fw, boot_ok, fault, proto, enc, ns_manifest[{slot,label,token}] |
+| `0x01` | `CALLHOME` | `Board.Identity` | `CM.IDE.CallhomeService` | Done | JSON: board, uid, nia, fw, boot_ok, fault, proto, enc, ns_manifest[{slot,label,token}] |
 | `0x02` | `FAULT` | `CM.Fault.Reporter` | `CM.IDE.FaultReceiver` | P1 | JSON: code, mnemonic, nia, gt, stage, tier, catch_invoked |
 | `0x03` | `TRACE` | `CM.Trace.Emitter` | `CM.IDE.TraceReceiver` | P2 | Binary: nia(4)+opcode(1)+dr0(4)+dr1(4) |
 | `0x04` | `LUMP_REQ` | `CM.Lump.Loader` | `CM.IDE.LumpServer` | P2 | token(8)+hint_ns_slot(2) |
@@ -1050,15 +1050,15 @@ At 115200 baud the usable payload throughput is approximately **10 KB/s**.
 
 | Use case | Bandwidth | Fits at 115200? |
 |----------|-----------|-----------------|
-| CALLHOME (1 Hz) | ~200 B/s | ✅ |
-| FAULT events | burst only | ✅ |
-| TRACE (sampled 10 Hz) | ~130 B/s | ✅ |
-| Speech µ-law 8kHz | 8 KB/s | ✅ just fits |
-| ADPCM 22 kHz | ~5.5 KB/s | ✅ comfortable |
-| LUMP deploy 16 KB | ~1.6 s one-shot | ✅ |
-| JPEG image 100 KB | ~10 s one-shot | ✅ with tile cache |
-| HTML TEXT page | <1 s | ✅ |
-| HiFi music 44.1kHz | 176 KB/s | ❌ needs 921600 baud |
+| CALLHOME (1 Hz) | ~200 B/s | Yes |
+| FAULT events | burst only | Yes |
+| TRACE (sampled 10 Hz) | ~130 B/s | Yes |
+| Speech µ-law 8kHz | 8 KB/s | Yes — just fits |
+| ADPCM 22 kHz | ~5.5 KB/s | Yes — comfortable |
+| LUMP deploy 16 KB | ~1.6 s one-shot | Yes |
+| JPEG image 100 KB | ~10 s one-shot | Yes — with tile cache |
+| HTML TEXT page | <1 s | Yes |
+| HiFi music 44.1kHz | 176 KB/s | No — needs 921600 baud |
 
 For HiFi: `UART_CLOCKDIV = 25_000_000 / (8 × 921600) ≈ 3`.  
 A `CMD (0x81)` sub-command `5=set_baud` negotiates higher rates at runtime without

@@ -222,3 +222,9 @@ id = "JsG90LKLaoGsbHxudxz39"
 uri = "file://docs/lump-reference.md"
 type = "text"
 title = "LUMP Reference"
+
+[[outputs]]
+id = "LV5-7eokTftIsW9fpKKm9"
+uri = "file://docs/dist/cm-msg-protocol-v1.pdf"
+type = "pdf"
+title = "CM_MSG Protocol — V1 for Distribution and Review"
