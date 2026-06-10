@@ -1558,6 +1558,17 @@ function loadDeviceList() {
                 wrap.className = 'dev-entry';
                 wrap.id = 'devEntry_' + dev.id;
 
+                const fwMajor = dev.fw_major || 1;
+                const fwBadgeClass = fwMajor >= 2 ? 'dev-fw-badge dev-fw-badge-v2' : 'dev-fw-badge dev-fw-badge-v1';
+                const fwBadgeHtml = '<span class="' + fwBadgeClass + '" title="Firmware version">v' + _escHtml(dev.fw_version) + '</span>';
+                const faultCount = dev.fault_count || 0;
+                const faultCountHtml = faultCount > 0
+                    ? '<button class="dev-fault-count-link" data-uid="' + _escHtml(dev.device_uid) + '" title="View fault log for this board">' + faultCount + ' fault' + (faultCount === 1 ? '' : 's') + '</button>'
+                    : '<span class="dev-fault-count-none">no faults</span>';
+                const lastSeenStr = dev.last_seen
+                    ? new Date(dev.last_seen * 1000).toLocaleString()
+                    : '—';
+
                 const row = document.createElement('div');
                 row.className = 'dev-row';
                 row.innerHTML =
@@ -1565,6 +1576,7 @@ function loadDeviceList() {
                     '<span class="dev-row-name" id="devRowName_' + dev.id + '" data-board-name="' + _escHtml(dev.board_name) + '">' + _escHtml(petName) + '</span>' +
                     '<span class="dev-status-chip ' + (isOnline ? 'chip-online' : 'chip-offline') + '" id="devStatusChip_' + dev.id + '">' + _escHtml(statusChip) + '</span>' +
                     (tunnelBadge || '') +
+                    fwBadgeHtml +
                     '<span class="dev-badge ' + profileClass + '">' + _escHtml(dev.profile) + '</span>' +
                     '<span class="dev-chevron">&#x25B6;</span>';
 
@@ -1574,7 +1586,9 @@ function loadDeviceList() {
                 detail.innerHTML =
                     '<div class="dev-detail-grid">' +
                         '<div class="dev-detail-item"><span class="dev-detail-label">UID</span><span class="dev-detail-val">' + _escHtml(dev.device_uid) + '</span></div>' +
-                        '<div class="dev-detail-item"><span class="dev-detail-label">FW</span><span class="dev-detail-val">' + _escHtml(dev.fw_version) + '</span></div>' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">FW</span><span class="dev-detail-val">' + fwBadgeHtml + '</span></div>' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">Last seen</span><span class="dev-detail-val">' + _escHtml(lastSeenStr) + '</span></div>' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">Faults</span><span class="dev-detail-val">' + faultCountHtml + '</span></div>' +
                         '<div class="dev-detail-item"><span class="dev-detail-label">Boots</span><span class="dev-detail-val">' + dev.boot_count + '</span></div>' +
                         '<div class="dev-detail-item"><span class="dev-detail-label">Boot reason</span><span class="dev-detail-val">' + _escHtml(bootReasonStr) + (faultBadge ? ' ' + faultBadge : '') + '</span></div>' +
                         '<div class="dev-detail-item"><span class="dev-detail-label">Tunnel</span><span class="dev-detail-val">' + _tunnelBadgeHtml(_ts, 'devTunnelDetail_' + dev.id) + '</span></div>' +
@@ -1592,6 +1606,13 @@ function loadDeviceList() {
                     '</div>';
 
                 detail.style.display = 'none';
+                var faultCountBtn = detail.querySelector('.dev-fault-count-link');
+                if (faultCountBtn) {
+                    faultCountBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        showDeviceFaultLog(dev.device_uid);
+                    });
+                }
                 row.addEventListener('click', function() {
                     const isOpen = row.classList.contains('dev-row-open');
                     document.querySelectorAll('.dev-detail').forEach(d => { d.style.display = 'none'; });

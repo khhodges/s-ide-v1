@@ -7999,20 +7999,31 @@ def device_events():
 
 @app.route("/api/device/list")
 def device_list():
+    from sqlalchemy import func as _sqlfunc
     now = _time.time()
     devs = Device.query.order_by(Device.last_seen.desc()).all()
+    fault_counts = {
+        row.device_uid: row.cnt
+        for row in db.session.query(
+            FaultEvent.device_uid,
+            _sqlfunc.count(FaultEvent.id).label("cnt")
+        ).group_by(FaultEvent.device_uid).all()
+    }
     result = []
     for d in devs:
         is_online = (now - (d.last_seen or 0)) < DEVICE_ONLINE_TIMEOUT
         if d.status == "online" and not is_online:
             d.status = "offline"
+        fw_major = getattr(d, 'fw_major', 1) or 1
+        fw_minor = getattr(d, 'fw_minor', 0) or 0
         result.append({
             "id": d.id,
             "device_uid": d.device_uid,
             "board_type": d.board_type,
             "board_name": d.board_name,
             "profile": d.profile,
-            "fw_version": f"{d.fw_major}.{d.fw_minor}",
+            "fw_version": f"{fw_major}.{fw_minor}",
+            "fw_major": fw_major,
             "bridge_host": d.bridge_host,
             "bridge_port": d.bridge_port,
             "serial_port": d.serial_port,
@@ -8027,6 +8038,7 @@ def device_list():
             "label": d.label or "",
             "tunnel_status": getattr(d, 'tunnel_status', 'pending') or 'pending',
             "is_newcomer": (d.boot_count or 0) <= 2,
+            "fault_count": fault_counts.get(d.device_uid, 0),
         })
     db.session.commit()
     return jsonify({"ok": True, "devices": result})
