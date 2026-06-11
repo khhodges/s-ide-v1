@@ -93,6 +93,15 @@ module top (
     // cm_uart_tx is a top-level output port (GPIOL_P_03 → ttyUSB3)
 
     // ----------------------------------------------------------------
+    // Power-on reset — 8-bit shift register, init=0xFF.
+    // Drives io_asyncReset HIGH for 8 clock cycles then LOW permanently.
+    // Sapphire SoC requires this pulse; tying asyncReset to 0 leaves
+    // io_systemReset stuck HIGH and the SoC never starts.
+    // ----------------------------------------------------------------
+    reg [7:0] por_sr = 8'hFF;
+    always @(posedge clk) por_sr <= {por_sr[6:0], 1'b0};
+
+    // ----------------------------------------------------------------
     // Sapphire SoC instantiation
     //
     // Port list from sapphire_tmpl.v (Efinix IP 2025.2).
@@ -101,7 +110,7 @@ module top (
     sapphire u_sapphire (
         // Clocks and resets
         .io_systemClk           (clk),
-        .io_asyncReset          (1'b0),
+        .io_asyncReset          (por_sr[7]),   // POR pulse: HIGH 8 cycles → LOW
         .io_systemReset         (system_reset),
 
         // UART0 — SoC console to FT4232H interface 2
