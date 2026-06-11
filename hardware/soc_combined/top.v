@@ -93,13 +93,17 @@ module top (
     // cm_uart_tx is a top-level output port (GPIOL_P_03 → ttyUSB3)
 
     // ----------------------------------------------------------------
-    // Power-on reset — 8-bit shift register, init=0xFF.
-    // Drives io_asyncReset HIGH for 8 clock cycles then LOW permanently.
-    // Sapphire SoC requires this pulse; tying asyncReset to 0 leaves
-    // io_systemReset stuck HIGH and the SoC never starts.
+    // Power-on reset — counter counts UP from 0 (Efinity Ti60 FFs
+    // power up to 0 on silicon, ignoring RTL initial values).
+    // por_reset = HIGH (~system_reset asserted) for 128 cycles (~5 µs
+    // at 25 MHz), then LOW forever once por_cnt[7] sets.
+    // Sapphire SoC requires this HIGH→LOW pulse on io_asyncReset;
+    // tying it to 0 permanently leaves io_systemReset stuck HIGH.
     // ----------------------------------------------------------------
-    reg [7:0] por_sr = 8'hFF;
-    always @(posedge clk) por_sr <= {por_sr[6:0], 1'b0};
+    (* keep = "true" *) reg [7:0] por_cnt = 8'h00;
+    always @(posedge clk)
+        if (!por_cnt[7]) por_cnt <= por_cnt + 1'b1;
+    wire por_reset = ~por_cnt[7];   // HIGH until bit 7 sets, then LOW
 
     // ----------------------------------------------------------------
     // Sapphire SoC instantiation
@@ -110,7 +114,7 @@ module top (
     sapphire u_sapphire (
         // Clocks and resets
         .io_systemClk           (clk),
-        .io_asyncReset          (por_sr[7]),   // POR pulse: HIGH 8 cycles → LOW
+        .io_asyncReset          (por_reset),   // POR: HIGH 128 cycles → LOW
         .io_systemReset         (system_reset),
 
         // UART0 — SoC console to FT4232H interface 2

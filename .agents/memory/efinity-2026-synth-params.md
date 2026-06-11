@@ -19,6 +19,7 @@ All confirmed by running against a real Ti60 project (church_soc.xml):
 | `cpe_ins_register`    | Removed entirely                         |
 | `use_cpe_for_const_0` | Removed entirely                         |
 | `use_cpe_for_const_1` | Removed entirely                         |
+| `fanout_limit`        | Renamed → `--fanout-limit` (hyphens)     |
 
 **Problem:** Efinity GUI rewrites `church_soc.xml` with these stale options on every project open/save, so they return even after manual removal.
 
