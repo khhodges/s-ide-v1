@@ -9,7 +9,9 @@
 # strips them automatically before invoking efx_map.
 #
 # Known banned params (cause EFX-0002 in 2026.1):
-#   infer_clk_enable, infer_set_reset, calc_mcw, split_input_buf
+#   infer_clk_enable, infer_set_reset, calc_mcw, split_input_buf,
+#   no_fanout_override, get_names_method, logic_opting, pack_lut_into_ram,
+#   cpe_ins_register, use_cpe_for_const_0, use_cpe_for_const_1
 
 set -euo pipefail
 
@@ -25,10 +27,17 @@ PROJECT="${1:-$HOME/church_project/SoC_minimal/church_soc.xml}"
 SOC_DIR="$(dirname "$PROJECT")"
 
 echo "==> Stripping banned XML params from $PROJECT ..."
-sed -i '/<efx:param name="infer_clk_enable"/d' "$PROJECT"
-sed -i '/<efx:param name="infer_set_reset"/d'  "$PROJECT"
-sed -i '/<efx:param name="calc_mcw"/d'         "$PROJECT"
-sed -i '/<efx:param name="split_input_buf"/d'  "$PROJECT"
+sed -i '/<efx:param name="infer_clk_enable"/d'    "$PROJECT"
+sed -i '/<efx:param name="infer_set_reset"/d'     "$PROJECT"
+sed -i '/<efx:param name="calc_mcw"/d'            "$PROJECT"
+sed -i '/<efx:param name="split_input_buf"/d'     "$PROJECT"
+sed -i '/<efx:param name="no_fanout_override"/d'  "$PROJECT"
+sed -i '/<efx:param name="get_names_method"/d'    "$PROJECT"
+sed -i '/<efx:param name="logic_opting"/d'        "$PROJECT"
+sed -i '/<efx:param name="pack_lut_into_ram"/d'   "$PROJECT"
+sed -i '/<efx:param name="cpe_ins_register"/d'    "$PROJECT"
+sed -i '/<efx:param name="use_cpe_for_const_0"/d' "$PROJECT"
+sed -i '/<efx:param name="use_cpe_for_const_1"/d' "$PROJECT"
 echo "    Done."
 echo ""
 
