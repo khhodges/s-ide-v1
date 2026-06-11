@@ -19,8 +19,8 @@ EFX_MAP="$EFINITY/bin/efx_map"
 # shellcheck disable=SC1091
 source "$EFINITY/bin/setup.sh" 2>/dev/null || true
 
-# Default project: actual Efinity project in church_project/SoC/
-PROJECT="${1:-$HOME/church_project/SoC/church_soc_cm.xml}"
+# Default project: actual Efinity project in church_project/SoC_minimal/
+PROJECT="${1:-$HOME/church_project/SoC_minimal/church_soc_cm.xml}"
 SOC_DIR="$(dirname "$PROJECT")"
 
 echo "==> Synthesising $PROJECT with EFX_MAP..."
