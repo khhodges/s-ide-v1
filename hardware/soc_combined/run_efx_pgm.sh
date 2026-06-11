@@ -22,8 +22,12 @@ if [ ! -x "$EFINITY/bin/efx_pgm" ]; then
 fi
 
 # Source Efinity environment so tools can find shared libraries
+# set -e temporarily disabled so a failing command inside setup.sh
+# does not kill this script silently.
 # shellcheck disable=SC1091
-source "$EFINITY/bin/setup.sh" 2>/dev/null || true
+set +e
+source "$EFINITY/bin/setup.sh" 2>/dev/null
+set -e
 
 # Default project: actual Efinity project in church_project/SoC_minimal/
 PROJECT="${1:-$HOME/church_project/SoC_minimal/church_soc.xml}"
