@@ -25,6 +25,15 @@ Flags:
     --report-launch  After the first CALLHOME with boot_ok=1, PUT
                    TEST-09 as passing to /api/launch-tests/TEST-09.
                    Requires --ide=URL.
+    --upload       Fetch the current boot image from the IDE and write it to
+                   the Church Machine's BRAM via the PATCH_LUMP (0xBEEF)
+                   protocol on the CM debug UART (default: /dev/ttyUSB3,
+                   115200 baud).  After ACK, the CM is halted — hold the
+                   push button for ~1 s to retransmit the banner and reboot
+                   the CM from NIA=0 with the patched namespace.
+                   Requires --ide=URL.  Bridge continues normally after upload.
+    --upload-port=PATH  CM debug serial port for --upload (default: /dev/ttyUSB3)
+    --upload-baud=N     CM debug baud rate for --upload   (default: 115200)
 
 IMPORTANT — confirmed hardware gotchas
 ---------------------------------------
@@ -62,6 +71,9 @@ _IDE_SERVER_URL = None
 _AUTO_RECONNECT = True
 _REPORT_LAUNCH = False
 _INSECURE = False
+_UPLOAD_MODE = False
+_UPLOAD_PORT = '/dev/ttyUSB3'
+_UPLOAD_BAUD = 115200
 
 _argv = sys.argv[1:]
 _i = 0
@@ -90,6 +102,12 @@ while _i < len(_argv):
         _REPORT_LAUNCH = True
     elif _a == '--insecure':
         _INSECURE = True
+    elif _a == '--upload':
+        _UPLOAD_MODE = True
+    elif _a.startswith('--upload-port'):
+        _UPLOAD_PORT = _next_val(_a)
+    elif _a.startswith('--upload-baud'):
+        _UPLOAD_BAUD = int(_next_val(_a))
     elif _a.startswith('--'):
         print(f"WARNING: unknown flag {_a!r} ignored", file=sys.stderr)
     _i += 1
@@ -378,6 +396,142 @@ _last_uid = None
 
 _uart_buffer = []
 _uart_buffer_lock = threading.Lock()
+
+# ---------------------------------------------------------------------------
+# PATCH_LUMP upload helpers
+# ---------------------------------------------------------------------------
+
+def _crc16_ccitt(data: bytes) -> int:
+    """CRC-16/CCITT-FALSE: poly=0x1021, init=0xFFFF, MSB-first, no reflection.
+    Matches the CRC16_CCITT Amaranth module in hardware/uart_crc16.py.
+    """
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte << 8
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x1021) if (crc & 0x8000) else (crc << 1)
+        crc &= 0xFFFF
+    return crc
+
+
+def _upload_boot_image() -> bool:
+    """Fetch the current boot image from the IDE and push it to the Church
+    Machine's BRAM via the PATCH_LUMP (0xBEEF) protocol on the CM debug UART
+    (ttyUSB3, 115200 baud — separate from the SoC call-home UART on ttyUSB2).
+
+    Protocol frame:
+      [0xBE][0xEF][addrHi][addrLo][cntHi][cntLo]  ← header (6 bytes)
+      [N × 4 bytes, little-endian words]            ← data
+      [crcHi][crcLo]                               ← CRC-16/CCITT-FALSE over data
+
+    ACK (success): [addrHi][addrLo][cntHi][cntLo]  ← echoes addr + count
+    NAK (failure): [0x15]
+
+    After a successful upload the CM debug FSM is in HALTED state.  Hold the
+    push button for ~1 s to retransmit the banner and restart the CM from
+    NIA=0 with the patched namespace.
+    """
+    if not _IDE_SERVER_URL:
+        print("ERROR: --upload requires --ide=URL so the boot image can be fetched",
+              file=sys.stderr)
+        return False
+
+    import urllib.request as _urllib_req
+
+    print(f"  [upload] Fetching boot image from {_IDE_SERVER_URL}/api/boot-image/binary …")
+    try:
+        req = _urllib_req.Request(f"{_IDE_SERVER_URL}/api/boot-image/binary")
+        resp = _urllib_req.urlopen(req, timeout=15, context=_ssl_ctx())
+        img_bytes = resp.read()
+    except Exception as e:
+        print(f"ERROR: could not fetch boot image: {e}", file=sys.stderr)
+        return False
+
+    if len(img_bytes) == 0:
+        print("ERROR: boot image is empty — generate it first via the IDE", file=sys.stderr)
+        return False
+    if len(img_bytes) % 4 != 0:
+        print(f"ERROR: boot image size {len(img_bytes)} is not a multiple of 4",
+              file=sys.stderr)
+        return False
+
+    n_words = len(img_bytes) // 4
+    print(f"  [upload] {n_words} words ({len(img_bytes)} bytes), CRC computing …")
+
+    crc  = _crc16_ccitt(img_bytes)
+    addr = 0x0000
+    frame = bytes([
+        0xBE, 0xEF,
+        (addr   >> 8) & 0xFF,   addr   & 0xFF,
+        (n_words >> 8) & 0xFF,  n_words & 0xFF,
+    ]) + img_bytes + bytes([(crc >> 8) & 0xFF, crc & 0xFF])
+
+    print(f"  [upload] Opening CM debug port {_UPLOAD_PORT} @ {_UPLOAD_BAUD} baud …")
+    if not _SERIAL_AVAILABLE:
+        print("ERROR: pyserial not installed — run: pip install pyserial", file=sys.stderr)
+        return False
+
+    try:
+        import serial as _serial_mod
+        cm_ser = _serial_mod.Serial(_UPLOAD_PORT, _UPLOAD_BAUD, timeout=10)
+        cm_ser.setRTS(False)
+        cm_ser.setDTR(False)
+    except Exception as e:
+        print(f"ERROR: could not open {_UPLOAD_PORT}: {e}", file=sys.stderr)
+        print("  Hint: PATCH_LUMP uses the CM debug UART (ttyUSB3, 115200 baud),")
+        print("        not the SoC call-home UART (ttyUSB2, 57600 baud).")
+        print("        Use --upload-port=/dev/ttyUSBx to override.")
+        return False
+
+    try:
+        print(f"  [upload] Sending {len(frame)} bytes ({n_words} words + 8 header + 2 CRC) …")
+        cm_ser.write(frame)
+        cm_ser.flush()
+
+        print("  [upload] Waiting for ACK …")
+        deadline = time.time() + 10.0
+        resp = b''
+        while time.time() < deadline:
+            chunk = cm_ser.read(max(1, 4 - len(resp)))
+            if chunk:
+                resp += chunk
+            if len(resp) >= 1 and resp[0] == 0x15:
+                print("ERROR: FPGA sent NAK (0x15) — CRC mismatch or framing error",
+                      file=sys.stderr)
+                print("  Check that the CM debug UART is on the correct port and baud rate.")
+                return False
+            if len(resp) >= 4:
+                break
+            time.sleep(0.005)
+
+        if len(resp) < 4:
+            print(f"ERROR: timed out waiting for ACK (got {len(resp)} byte(s): {resp.hex() or 'none'})",
+                  file=sys.stderr)
+            print("  Is the Ti60 powered on?  Is the CM debug UART on ttyUSB3?")
+            return False
+
+        ack_addr = (resp[0] << 8) | resp[1]
+        ack_cnt  = (resp[2] << 8) | resp[3]
+        if ack_addr != addr or ack_cnt != n_words:
+            print(f"ERROR: unexpected ACK bytes: addr=0x{ack_addr:04X} cnt={ack_cnt} "
+                  f"(expected addr=0x{addr:04X} cnt={n_words})", file=sys.stderr)
+            return False
+
+        print(f"  [upload] ✓ ACK — {n_words} words written to BRAM at 0x{addr:04X}")
+        print()
+        print("  ┌──────────────────────────────────────────────────────────────┐")
+        print("  │  Boot image uploaded.  CM is now halted.                     │")
+        print("  │                                                               │")
+        print("  │  HOLD the Ti60 push button for ~1 second.                    │")
+        print("  │  The banner retransmits, then the CM reboots from NIA=0      │")
+        print("  │  with the patched namespace — LED should start flashing.     │")
+        print("  └──────────────────────────────────────────────────────────────┘")
+        print()
+        return True
+
+    finally:
+        cm_ser.close()
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -950,9 +1104,18 @@ def main():
             print("  Launch : TEST-09 will be reported passing on first boot_ok=1 CALLHOME")
         else:
             print("  Launch : --report-launch set but --ide=URL missing; reporting disabled")
+    if _UPLOAD_MODE:
+        print(f"  Upload : boot image → {_UPLOAD_PORT} @ {_UPLOAD_BAUD} baud (PATCH_LUMP)")
+        if not _IDE_SERVER_URL:
+            print("  Upload : ERROR — --ide=URL required for --upload mode")
     print()
     print("Press Ctrl+C to stop.")
     print()
+
+    if _UPLOAD_MODE:
+        ok = _upload_boot_image()
+        if not ok:
+            sys.exit(1)
 
     try:
         s = _open_port(_SERIAL_PORT, _BAUD)
