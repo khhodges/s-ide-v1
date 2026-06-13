@@ -1221,12 +1221,14 @@ class ChurchSimulator {
         const threadLoc = this.memory[this.NS_TABLE_BASE + 1 * this.NS_ENTRY_WORDS];
         this.memory[threadLoc] = this.packLumpHeader(THREAD_N_MINUS_6, THREAD_SW, THREAD_CC, 2);
 
-        // Thread caps zone — CR0 home slot at word offset +244 is NULL (0x00000000) at boot.
-        // The programmable Entry E-GT is written here only by explicit configuration:
-        //   • setBootEntrySlot(slot) in the simulator UI → writes E-GT for the chosen boot entry
-        // The 3-instruction Boot.Abstr program reads this slot via CHANGE's caps-zone restore,
-        // loading it into CR0.  If it remains NULL, CALL CR0 produces a NULL_CAP fault (intended
-        // behaviour when no entry has been configured).  NEVER pre-populate this here.
+        // Thread caps zone — CR0 home slot at word offset +244 is pre-set to an E-GT
+        // for bootEntrySlot (default: slot 3, LED flash) so the board boots standalone
+        // without needing setBootEntrySlot() from the IDE.  Mirrors server/boot_image.py
+        // which writes create_gt(0, boot_entry_slot, {"E":1}, 1) at thread_loc+244.
+        // The IDE overwrites this when the user picks a different entry.  The "if empty"
+        // guard in the INIT_ABSTR boot path (line ~1688) becomes a harmless no-op.
+        this.memory[threadLoc + THREAD_CAPS_OFFSET] =
+            this.createGT(0, this.bootEntrySlot, {E: 1}, 1);
 
         // DEMO_CLIST hardware alignment: slots 8–16 hold device GTs so
         // hardware code "LOAD CR3, CR6, 8" picks up the LED device, exactly as on Ti60 F225.
