@@ -291,17 +291,17 @@ python3 scripts/test_ti60_uart.py \
 | `UART_BASE` | `0xF8010000` | `firmware/main.c` |
 | `UART_DATA` | `0xF8010000` | write = TX, read = RX |
 | `UART_STATUS` | `0xF8010004` | bits[23:16] = TX avail (Sapphire UART) |
-| `UART_CLOCKDIV` | `0xF8010008` | 100 MHz / (8 × (div+1)) = baud rate |
+| `UART_CLOCKDIV` | `0xF8010008` | 25 MHz / (8 × (div+1)) = baud rate |
 | APB slave 0 (CM bridge) | `0xF8100000` | `firmware/main.c` `CM_APB_BASE` |
 | Boot ROM base | `0xF9000000` | CPU reset vector, `link.ld` |
 
-UART baud rate: firmware writes `CLOCKDIV = 53` → 100 000 000 / (8 × 54) = 231 481 baud (≈230400).
+UART baud rate: firmware writes `CLOCKDIV = 53` → 25 000 000 / (8 × 54) = 57,870 ≈ 57,600 baud.
 The Sapphire SoC UART resets `CLOCKDIV` to **0x00** on power-up (not 53); firmware **must** write it
-explicitly before the first `uart_puts` call, or the UART runs at 100 MHz / 8 = 12.5 Mbaud and
+explicitly before the first `uart_puts` call, or the UART runs at 25 MHz / 8 = 3.125 Mbaud and
 produces silence on any standard terminal.
 
 **uart_putc design:** Uses unconditional write + 3000-NOP inter-character delay
-(~120 µs @ 100 MHz) rather than polling STATUS. This avoids infinite spins if
+(~120 µs @ 25 MHz) rather than polling STATUS. This avoids infinite spins if
 the STATUS register bit layout differs between Sapphire IP versions.
 
 ---

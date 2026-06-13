@@ -33,7 +33,7 @@
  *
  * Run the bridge on the Chromebook to forward to the IDE:
  *   python3 hardware/soc_combined/callhome_bridge.py \
- *       --port=/dev/ttyUSB2 --baud=115200 --ide=http://localhost:5000
+ *       --port=/dev/ttyUSB2 --baud=57600 --ide=http://localhost:5000
  *
  * UART commands accepted over ttyUSB2 (non-blocking receive):
  *   RESET\r\n   — pulse CTRL=0 for 1 s, reboots CM core

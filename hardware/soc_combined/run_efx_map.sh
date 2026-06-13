@@ -29,6 +29,7 @@ fi
 # Default project: actual Efinity project in church_project/SoC_minimal/
 PROJECT="${1:-$HOME/church_project/SoC_minimal/church_soc.xml}"
 SOC_DIR="$(dirname "$PROJECT")"
+CIRCUIT="$(basename "$PROJECT" .xml)"
 
 echo "==> Stripping banned XML params from $PROJECT ..."
 sed -i '/<efx:param name="infer_clk_enable"/d'    "$PROJECT"
@@ -58,4 +59,4 @@ cd "$SOC_DIR"
 echo ""
 echo "==> Synthesis complete. Output in $SOC_DIR/work_syn/"
 echo "    Verify firmware embedded in BRAM:"
-echo "    grep 'ram_symbol0__D\$g1' $SOC_DIR/work_syn/church_soc.map.v | head -1"
+echo "    grep -m1 'INIT_0' \$(ls $SOC_DIR/outflow/${CIRCUIT}.map.v $SOC_DIR/work_syn/${CIRCUIT}.map.v 2>/dev/null | head -1)"
