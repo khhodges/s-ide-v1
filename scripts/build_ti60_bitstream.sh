@@ -209,10 +209,14 @@ echo ""
 # ── Step 7: Flash + smoke-test (optional, --flash flag) ─────────────────────
 if [ "$DO_FLASH" -eq 1 ]; then
     _info "Step 7/7: Flash board with openFPGALoader"
+    # Find openFPGALoader: prefer oss-cad-suite bundle, fall back to system install
     OFLPGM="${OSS_CAD_SUITE:-$HOME/oss-cad-suite}/bin/openFPGALoader"
     if [ ! -x "$OFLPGM" ]; then
-        _warn "openFPGALoader not found at $OFLPGM — skipping flash."
-        _warn "Set OSS_CAD_SUITE to override or install oss-cad-suite."
+        OFLPGM="$(which openFPGALoader 2>/dev/null || true)"
+    fi
+    if [ -z "$OFLPGM" ] || [ ! -x "$OFLPGM" ]; then
+        _warn "openFPGALoader not found — skipping flash."
+        _warn "Install with: sudo apt install openFPGALoader   or set OSS_CAD_SUITE."
     else
         sudo "$OFLPGM" -b titanium_ti60_f225_jtag -f "$BITSTREAMS/church_ti60_f225.hex"
         _ok "Flash complete"
