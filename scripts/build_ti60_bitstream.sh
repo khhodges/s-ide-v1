@@ -106,7 +106,7 @@ echo ""
 
 # ── Step 3: Synthesis (EFX_MAP, Efinity 2025.2) ─────────────────────────────
 _info "Step 3/7: Synthesis (efx_map — Efinity 2025.2, ~4 min)"
-bash "$HW/run_efx_map.sh" "$SOC_DIR/church_soc_cm.xml" 2>&1 | tee /tmp/build_map.log | tail -8
+EFINITY_HOME="$EFINITY_MAP" bash "$HW/run_efx_map.sh" "$SOC_DIR/church_soc_cm.xml" 2>&1 | tee /tmp/build_map.log | tail -8
 
 # Verify firmware baked in
 _info "  Verifying BRAM INIT_0 lanes are non-zero..."
