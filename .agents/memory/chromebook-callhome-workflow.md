@@ -17,6 +17,24 @@ python3 hardware/soc_combined/callhome_bridge.py \
 
 **Why --baud=115200:** soc_minimal firmware uses CLOCKDIV=26 (115200 baud). The bridge defaults to 57600. Must match firmware.
 
+## PATCH_LUMP upload (confirmed working June 2026)
+
+CM debug UART (PATCH_LUMP) is on **ttyUSB2 at 115200 baud** — the SAME port as the
+call-home bridge, NOT ttyUSB3. Stop the bridge before uploading.
+
+Use `upload_boot.py` (in repo root) which:
+1. Fetches the first 2048 words (8192 bytes) from `/api/boot-image/binary`
+2. Sends PATCH_LUMP frame: `BE EF addrHi addrLo cntHi cntLo [data] [crcHi crcLo]`
+3. **CRC covers the FULL frame including header bytes** (BE EF addrHi addrLo cntHi cntLo then data) — NOT data-only
+4. BRAM write address is 11-bit masked (max 2048 words) — only send first 2048 words
+
+```bash
+python3 upload_boot.py   # stop the bridge first; uses /dev/ttyUSB2 @ 115200
+```
+
+After ACK: hold push button ~1 s → CM reboots with patched BRAM. PATCH_LUMP is
+volatile (survives CM reset, wiped on power cycle).
+
 ## Firmware → flash sequence (strict order)
 
 These steps must run in this exact order. Any step out of order silently bakes old code into BRAM.
