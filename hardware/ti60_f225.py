@@ -94,21 +94,21 @@ class ChurchTi60F225(Elaboratable):
             clist_init.append(0)
 
         dmem_init = ns_init + clist_init
-        while len(dmem_init) < 2048:
+        while len(dmem_init) < 16384:
             dmem_init.append(0)
 
         dmem_init[511] = SLIDERULE_LUMP_HEADER
 
-        # NOTE: depth=2048 here is a simulation/testbench placeholder.
-        # Real synthesis on the Ti60 F225 uses Efinix EBR tiles (~256 KB)
-        # inferred by Efinity from the Amaranth Memory declaration; the actual
-        # on-chip capacity per the Ti60 F225 datasheet is 256 KB embedded BRAM.
-        dmem = LibMemory(shape=unsigned(32), depth=2048, init=dmem_init)
+        # depth=16384 (64 KB, 14-bit address) — matches the full boot image size
+        # (totalNamespaceWords=16384).  The Ti60 F225 has 256 KB embedded BRAM so
+        # Efinity infers 4× EBR tiles with no resource pressure.
+        # PATCH_LUMP can now write any word in the full namespace/NS-table range.
+        dmem = LibMemory(shape=unsigned(32), depth=16384, init=dmem_init)
         m.submodules.dmem = dmem
         dmem_rd = dmem.read_port(domain="sync")
         dmem_wr = dmem.write_port()
 
-        mem_addr = Signal(11)
+        mem_addr = Signal(14)
 
         any_ns_access = Signal()
         any_clist_access = Signal()
@@ -122,13 +122,13 @@ class ChurchTi60F225(Elaboratable):
         rb_rd_en    = Signal()   # comb: override mem_addr with rb_cur_addr
         rb_cur_addr = Signal(16) # current BRAM word address for READ_BRAM
         with m.If(rb_rd_en):
-            m.d.comb += mem_addr.eq(rb_cur_addr[:11])
+            m.d.comb += mem_addr.eq(rb_cur_addr[:14])
         with m.Elif(any_ns_access):
-            m.d.comb += mem_addr.eq(core.ns_addr[2:13])
+            m.d.comb += mem_addr.eq(core.ns_addr[2:16])
         with m.Elif(any_clist_access):
-            m.d.comb += mem_addr.eq(core.clist_addr[2:13])
+            m.d.comb += mem_addr.eq(core.clist_addr[2:16])
         with m.Else():
-            m.d.comb += mem_addr.eq(core.dmem_addr[2:13])
+            m.d.comb += mem_addr.eq(core.dmem_addr[2:16])
 
         mem_rd_data = Signal(32)
         m.d.comb += [
@@ -265,7 +265,7 @@ class ChurchTi60F225(Elaboratable):
         # currently modifies NS / c-list entries in BRAM.  Patching executing code
         # requires routing imem to BRAM post-boot (future work).
         pl_wr_en       = Signal()         # comb: asserted for 1 cycle to write a word
-        pl_wr_addr     = Signal(11)       # BRAM word address for current write
+        pl_wr_addr     = Signal(14)       # BRAM word address for current write
         pl_wr_data     = Signal(32)       # data for current write
         pl_active      = Signal()         # held while patch is in progress
         pl_addr        = Signal(16)       # base word address from protocol header
@@ -853,7 +853,7 @@ class ChurchTi60F225(Elaboratable):
                 # Write assembled word to BRAM, then advance to next word or CRC.
                 m.d.comb += [
                     pl_wr_en.eq(1),
-                    pl_wr_addr.eq(pl_cur_addr[:11]),
+                    pl_wr_addr.eq(pl_cur_addr[:14]),
                     pl_wr_data.eq(pl_word),
                 ]
                 m.d.sync += pl_cur_addr.eq(pl_cur_addr + 1)
