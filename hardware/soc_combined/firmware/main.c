@@ -541,15 +541,17 @@ int main(void)
          * Hung-program watchdog
          * Track NIA unchanged-samples.  3 unchanged 1-s samples = 3 s hang.
          * Only trigger if no fault is latched (known fault ≠ hung).
-         * NIA within NUC code range (≤ NUC_CODE_END) is exempt: the LED
-         * blink inner loop is the hot path and appears "stuck" to the
-         * sampler even while running correctly.
+         * NIA=0 always fires (stuck-at-boot / BRAM zeroed).
+         * NIA 1..NUC_CODE_END is exempt: the LED blink inner delay loop
+         * dominates ~99.9% of execution time and appears "stuck" to the
+         * 1-Hz sampler even while running correctly.
+         * NIA > NUC_CODE_END fires (genuinely hung post-NUC code).
          * ------------------------------------------------------------ */
         uint32_t nia    = CM_NIA;
         uint32_t status = CM_STATUS;
 
         if (!(status & CM_STATUS_FAULT_LATCHED)) {
-            if (nia == last_nia && nia > NUC_CODE_END) {
+            if (nia == last_nia && (nia == 0u || nia > NUC_CODE_END)) {
                 nia_unchanged++;
                 if (nia_unchanged >= 3u) {
                     uart_emit_hung(nia, nia_unchanged);
