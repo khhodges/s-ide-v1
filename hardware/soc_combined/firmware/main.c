@@ -142,6 +142,12 @@
 #define CM_FAULT_STAGE   (*(volatile uint32_t *)(CM_APB_BASE + 0x24))
 #define CM_FAULT_RST     (*(volatile uint32_t *)(CM_APB_BASE + 0x28))
 
+/* NUC_CODE_END: NUC_PROGRAM is 17 words (bytes 0x00–0x40).  The inner
+ * delay loop keeps NIA at one hot instruction for seconds at a time —
+ * that is correct behaviour, not a hang.  Skip the hung counter while
+ * NIA is inside this range; only fire HUNG for addresses beyond it. */
+#define NUC_CODE_END     0x00000044u
+
 #define CM_STATUS_BOOT_COMPLETE  (1u << 0)
 #define CM_STATUS_FAULT_VALID    (1u << 1)
 #define CM_STATUS_FAULT_LATCHED  (1u << 2)
@@ -535,12 +541,15 @@ int main(void)
          * Hung-program watchdog
          * Track NIA unchanged-samples.  3 unchanged 1-s samples = 3 s hang.
          * Only trigger if no fault is latched (known fault ≠ hung).
+         * NIA within NUC code range (≤ NUC_CODE_END) is exempt: the LED
+         * blink inner loop is the hot path and appears "stuck" to the
+         * sampler even while running correctly.
          * ------------------------------------------------------------ */
         uint32_t nia    = CM_NIA;
         uint32_t status = CM_STATUS;
 
         if (!(status & CM_STATUS_FAULT_LATCHED)) {
-            if (nia == last_nia) {
+            if (nia == last_nia && nia > NUC_CODE_END) {
                 nia_unchanged++;
                 if (nia_unchanged >= 3u) {
                     uart_emit_hung(nia, nia_unchanged);

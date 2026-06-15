@@ -76,14 +76,16 @@ _check_pat_lfs_scope() {
         return 0
     fi
 
-    # Check that 'lfs' appears as a discrete scope token (not as a substring).
-    if echo "$scopes" | tr ',' '\n' | sed 's/^[[:space:]]*//' | grep -qx 'lfs'; then
-        echo "sync-lfs-to-github: PAT scope check passed — 'lfs' scope confirmed. (scopes: ${scopes})"
+    # GitHub classic PATs with 'repo' scope have full LFS access.
+    # 'lfs' is NOT listed as a separate scope in X-OAuth-Scopes — it is
+    # covered by 'repo'.  Accept either 'lfs' or 'repo' as sufficient.
+    if echo "$scopes" | tr ',' '\n' | sed 's/^[[:space:]]*//' | grep -qxE 'lfs|repo'; then
+        echo "sync-lfs-to-github: PAT scope check passed — LFS access confirmed via repo/lfs scope. (scopes: ${scopes})"
     else
-        echo "sync-lfs-to-github: PAT is missing the 'lfs' scope — aborting."
+        echo "sync-lfs-to-github: PAT is missing 'repo' (or 'lfs') scope — aborting."
         echo "  Current scopes: ${scopes}"
         echo "  Create a new classic GitHub PAT at https://github.com/settings/tokens"
-        echo "  and enable both 'repo' and 'lfs' scopes, then update the GITHUB_PAT Replit secret."
+        echo "  and enable 'repo' scope (covers LFS), then update the GITHUB_PAT Replit secret."
         exit 1
     fi
 }
