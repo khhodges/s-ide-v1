@@ -98,10 +98,12 @@
              config per BUILD_SOC_CM.md: it avoids the PLL writer assertion and the
              "duplicate pin name" error.  All CLKMUX ROUTE0 pins are name="" — the
              clk net is driven directly, not through a named clkmux ROUTE0.
+             input_config name="clk" (not "") — required for headless design check to
+             recognise the net name and not report it as undriven.
              Do NOT re-introduce conn_type="clkin"/CLKMUX_L (that re-breaks PnR). -->
         <efxpt:comp_gpio name="clk" gpio_def="GPIOL_P_18" mode="input" bus_name="" io_standard="1.8 V LVCMOS">
             <efxpt:input_config
-                name=""
+                name="clk"
                 name_ddio_lo=""
                 conn_type="normal"
                 is_register="false"

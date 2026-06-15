@@ -22,7 +22,7 @@ A combined Efinix Ti60F225 bitstream that places the Sapphire RISC-V SoC and the
 Church Machine RTL side-by-side in a single Efinity project.
 
 On power-on:
-- The Sapphire SoC boots its firmware and sends `CHURCH Ti60 SoC+CM v1.3\r\n`
+- The Sapphire SoC boots its firmware and sends `CHURCH Ti60 SoC+CM v2.0\r\n`
   over **ttyUSB2** (57600 baud, GPIOL_02 → FT4232H interface 2).
 - The Church Machine streams NIA traces, fault codes, and call-home packets
   over **ttyUSB3** (115200 baud, GPIOL_P_03 → FT4232H interface 3).
@@ -79,6 +79,7 @@ present) and the already-patched case (inline assignments already there).
 | Python 3 + Amaranth | Required to generate CM RTL in Step 2 |
 | `pyserial` | `pip install pyserial` — for the smoke test |
 | `openFPGALoader` | `~/oss-cad-suite/bin/openFPGALoader` — for flashing |
+| `libnss3` | Required by Efinity 2026.1 Interface Designer on Chromebook/headless Linux: `sudo apt-get install -y libnss3` |
 
 ---
 
@@ -163,6 +164,23 @@ sed -i 's/optimize-zero-init-rom" value="1"/optimize-zero-init-rom" value="0"/' 
 
 ---
 
+### Step 5b — Copy symbol files to work_syn/ (optional but safe)
+
+```bash
+bash hardware/soc_combined/scripts/prep_syn.sh
+```
+
+This copies the four BRAM symbol `.bin` files from the project root into `work_syn/`.
+It aborts with a clear error if any file is missing or empty — catching a failed
+firmware build before synthesis wastes time on a 4-minute synth run.
+
+> **Note:** On Efinix Titanium, EFX_MAP ignores `$readmemb` regardless of where
+> the `.bin` files are placed. The real firmware embedding is done by
+> `patch_sapphire_init.py` (Step 4). `prep_syn.sh` is a safety net and is also
+> required if a future Efinity version restores `$readmemb` support.
+
+---
+
 ### Step 6 — Synthesise
 
 ```bash
@@ -210,18 +228,25 @@ Both paths produce the same `outflow/church_soc_cm.bit` and `outflow/church_soc_
 
 ---
 
-### Step 8 — Generate the SPI flash hex (efx_pgm)
+### Step 8 — Generate the SPI flash hex (Interface Designer + efx_pgm)
+
+This is the **verified 2026-06-15 headless flow** (CALLHOME telemetry confirmed):
 
 ```bash
 cd ~/church_project/SoC
 export EFINITY_HOME=~/efinity/2026.1
 source $EFINITY_HOME/bin/setup.sh 2>/dev/null
 
-# Step 1: Interface Designer — generates the LPF that efx_pgm requires in 2026.1
-$EFINITY_HOME/bin/efx_run church_soc_cm --prj \
-    --flow interface --family Titanium --device Ti60F225 2>&1
+# Step 8a: Interface Designer — generates the LPF that efx_pgm requires
+# --timing_model C3 is required; without it the run silently produces a wrong LPF
+python3 $EFINITY_HOME/scripts/efx_run_pt_unified.py \
+    --project church_soc_cm \
+    --flow interface \
+    --family Titanium \
+    --device Ti60F225 \
+    --timing_model C3 2>&1
 
-# Step 2: Bitstream generation — efx_run calls efx_pgm with the LPF in place
+# Step 8b: Bitstream generation
 $EFINITY_HOME/bin/efx_run church_soc_cm --prj \
     --flow pgm --family Titanium --device Ti60F225 2>&1
 
@@ -229,7 +254,9 @@ ls -lh outflow/church_soc_cm.hex
 ```
 
 > **Note (Efinity 2026.1):** `efx_pgm` alone gives `Missing Interface Designer LPF constraint file`.
-> The two-step `efx_run` approach above generates the LPF from `peri.xml` first (via `--flow interface`), then runs the bitstream generator (`--flow pgm`). `--prj` reads `church_soc_cm.xml` from the current directory.
+> The two-step approach above generates the LPF from `peri.xml` (via Interface Designer), then
+> runs the bitstream generator.  `--timing_model C3` is required for the Ti60F225 speed grade —
+> omitting it produces a degenerate LPF that causes silent flash failures.
 > Or use the companion script: `bash hardware/soc_combined/run_efx_pgm.sh`
 
 ---
@@ -250,11 +277,17 @@ sleep 5 && python3 scripts/test_ti60_uart.py \
 
 ## Rebuild-from-firmware-change checklist
 
-When only the firmware changes (no RTL changes), you can skip Steps 1–2:
+When only the firmware changes (no RTL changes), you can skip Steps 1–2.
+
+> **After any firmware change:** the four `.bin` symbol files in `hardware/soc_combined/`
+> must be regenerated (by `make -C hardware/soc_combined/firmware`), then both
+> `prep_syn.sh` and `patch_sapphire_init.py` must be re-run before synthesis.
+> Skipping either step leaves the BRAM initialised with stale or zeroed firmware.
 
 ```bash
 cd ~/church-machine
-make -C hardware/soc_combined/firmware                    # Step 3
+make -C hardware/soc_combined/firmware                    # Step 3 — regenerates .bin files
+bash hardware/soc_combined/scripts/prep_syn.sh            # Step 5b — copies .bin to work_syn/
 python3 scripts/patch_sapphire_init.py \                  # Step 4 — MUST NOT SKIP
   hardware/soc_combined/sapphire.v \
   hardware/soc_combined/EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol0.bin \
@@ -268,7 +301,7 @@ sudo ~/oss-cad-suite/bin/openFPGALoader \
     -b titanium_ti60_f225_jtag \
     -f ~/church_project/SoC/outflow/church_soc_cm.hex      # Step 9a
 python3 scripts/test_ti60_uart.py \
-  --port=/dev/ttyUSB2 --timeout=30 --verbose               # Step 9b
+  --port=/dev/ttyUSB2 --timeout=30 --verbose               # Step 9b (57600 baud)
 ```
 
 ---
