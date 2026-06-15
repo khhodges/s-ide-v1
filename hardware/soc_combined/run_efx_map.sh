@@ -26,8 +26,9 @@ if [ -d "$EFINITY/lib" ]; then
     export LD_LIBRARY_PATH="$EFINITY/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 fi
 
-# Default project: actual Efinity project in church_project/SoC_minimal/
-PROJECT="${1:-$HOME/church_project/SoC_minimal/church_soc.xml}"
+# Default project: church_soc_cm.xml in the same directory as this script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT="${1:-$SCRIPT_DIR/church_soc_cm.xml}"
 SOC_DIR="$(dirname "$PROJECT")"
 CIRCUIT="$(basename "$PROJECT" .xml)"
 

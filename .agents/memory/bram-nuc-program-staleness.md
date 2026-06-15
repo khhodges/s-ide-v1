@@ -46,8 +46,20 @@ python3 hardware/soc_combined/patch_cm_bram.py hardware/soc_combined
 The NIA the APB3 bridge reports is a **byte offset from the LUMP base**.  The
 LUMP base for Boot.Abstr is at `dmem[255]` = byte `0x3FC`.
 
-**Old layout (pre-"Update embedded program" commit) — what the Chromebook's
-church_dmem.mem currently contains:**
+**CONFIRMED (2026-06-15): church_ti60_f225.v in repo has NEW layout.**
+Verified by reading `dmem[255] = 0xF8004400` = NUC_LUMP_HEADER with cw=17
+(no embedded c-list). Code starts at dmem[256] = NIA=0x004.
+
+**New layout (current church_ti60_f225.v in soc_combined repo):**
+
+| Region         | dmem[]       | NIA offset |
+|:---------------|:-------------|:-----------|
+| LUMP header    | 255          | 0x000      |
+| NUC code word 0 | 256         | 0x004      |
+| NUC inner delay (word 11) | 267 | **0x030** |
+| NUC last word (word 16)   | 272 | 0x044      |
+
+**Old layout (pre-"Update embedded program" commit) — historical reference:**
 
 | Region         | dmem[]       | NIA offset |
 |:---------------|:-------------|:-----------|
@@ -57,29 +69,29 @@ church_dmem.mem currently contains:**
 | NUC inner delay (word 11) | 356 | **0x194** |
 | NUC last word (word 16)   | 361 | 0x1A8      |
 
-**New layout (post-"Update embedded program" commit, current Replit repo):**
-
-| Region         | dmem[]       | NIA offset |
-|:---------------|:-------------|:-----------|
-| LUMP header    | 255          | 0x000      |
-| NUC code word 0 | 256         | 0x004      |
-| NUC inner delay (word 11) | 267 | **0x030** |
-| NUC last word (word 16)   | 272 | 0x044      |
-
 **Why this matters for the firmware hung-watchdog:**
 `NUC_CODE_START` / `NUC_CODE_END` in `main.c` must match the layout that is
-actually in `church_dmem.mem` on the Chromebook.  If the stale old layout is
-used, the inner delay loop at NIA=0x194 fires HUNG every 3 s (LED never blinks)
-because 0x194 > old `NUC_CODE_END=0x44`.
+actually synthesised.  Mismatch → HUNG fires during the delay loop → LED
+blinks once then stops.
 
-Current firmware `v2.1` sets `NUC_CODE_START=0x160` / `NUC_CODE_END=0x1B0`
-to match the **old layout**.  Once `church_dmem.mem` is rebuilt from the
-current initial begin (new layout), update both constants: `0x000` / `0x044`.
+**Current correct values (firmware v2.2, new layout):**
+```c
+#define NUC_CODE_START   0x00000000u   /* floor: code starts at NIA=0x004 */
+#define NUC_CODE_END     0x00000044u   /* ceiling: last instr at NIA=0x044 */
+```
+
+## Script targets — soc_combined, not SoC_minimal
+
+All three synthesis scripts (`run_efx_map.sh`, `run_efx_pnr.sh`,
+`run_efx_pgm.sh`) now default to `church_soc_cm.xml` in their own directory
+(`hardware/soc_combined/`).  The Makefile `bitstream-flash` target also
+derives PROJECT from its own directory.  Do NOT override to
+`~/church_project/SoC_minimal/` — that is a stale GUI project.
 
 ## Diagnostic signature
 
 If BRAM is stale or the NUC_CODE range is wrong, the firmware CALLHOME shows:
 - `boot_ok:1` (CM hardware boot did complete)
 - NIA stuck at one value for 3 consecutive 1-s samples (HUNG fires)
-- If NIA=0x194: old-layout BRAM, NUC_CODE_END too small (update to 0x1B0)
-- If NIA=0x02C or 0x030: new-layout BRAM, NUC_CODE_END=0x44 is correct
+- If NIA=0x030: new-layout BRAM, fix is NUC_CODE_START=0x000/END=0x044 ✓
+- If NIA=0x194: old-layout BRAM, fix is NUC_CODE_START=0x160/END=0x1B0

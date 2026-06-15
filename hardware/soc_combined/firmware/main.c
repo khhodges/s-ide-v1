@@ -4,7 +4,7 @@
  * Bare-metal RISC-V firmware for the combined Sapphire SoC + Church Machine
  * bitstream on the Ti60F225 devkit.
  *
- * FIRMWARE v2.1 — fix HUNG false-positive (NUC_CODE range 0x160..0x1B0)
+ * FIRMWARE v2.2 — fix HUNG false-positive (NUC_CODE range 0x000..0x044, new BRAM layout)
  * =====================================================
  * Every CALLHOME now reports real NIA, real fault state, and real UID from
  * the APB3 bridge registers (no hardcoded zeros).  New record types:
@@ -146,16 +146,14 @@
  * from the hung-program watchdog.  The inner delay keeps NIA at one hot
  * instruction for seconds at a time — that is correct behaviour, not a hang.
  *
- * The church_dmem.mem currently in use was built from the pre-"Update
- * embedded program" initial begin, which embeds a 89-word c-list before
- * the code inside the Boot.Abstr LUMP.  The code section therefore starts
- * at NIA=0x168 and the inner-delay-loop hotspot lands at NIA=0x194.
- * (New-layout code starts at NIA=0x04; once church_dmem.mem is rebuilt
- * from the current initial begin, update both constants to 0x00/0x44.)
+ * NEW BRAM layout (church_ti60_f225.v, cw=17, no embedded c-list):
+ *   NUC code word  0 → NIA=0x004
+ *   NUC inner delay (word 11, outer-loop-top OFF phase) → NIA=0x030
+ *   NUC last word (word 16, branch-back) → NIA=0x044
  *
  * Fire HUNG only when NIA is *outside* [NUC_CODE_START, NUC_CODE_END]. */
-#define NUC_CODE_START   0x00000160u   /* 8-byte margin before first NUC instr */
-#define NUC_CODE_END     0x000001B0u   /* 8-byte margin after last NUC instr   */
+#define NUC_CODE_START   0x00000000u   /* floor: code starts at NIA=0x004      */
+#define NUC_CODE_END     0x00000044u   /* ceiling: last instr at NIA=0x044     */
 
 #define CM_STATUS_BOOT_COMPLETE  (1u << 0)
 #define CM_STATUS_FAULT_VALID    (1u << 1)

@@ -77,11 +77,14 @@ bitstream:
 # bitstream-flash — flash the generated hex to the Ti60 via JTAG.
 #
 # Depends on bitstream so a plain 'make bitstream-flash' always rebuilds first.
-# Override PROJECT to point at a different Efinity project XML if needed.
+# PROJECT defaults to church_soc_cm.xml in this directory (soc_combined).
+# Override on the command line:
+#   make bitstream-flash PROJECT=/path/to/other/church_soc_cm.xml
 # ---------------------------------------------------------------------------
-PROJECT ?= $(HOME)/church_project/SoC_minimal/church_soc.xml
-CIRCUIT := $(basename $(notdir $(PROJECT)))
-HEX     := $(dir $(PROJECT))outflow/$(CIRCUIT).hex
+SCRIPT_DIR := $(shell cd "$(dir $(abspath $(lastword $(MAKEFILE_LIST))))" && pwd)
+PROJECT    ?= $(SCRIPT_DIR)/church_soc_cm.xml
+CIRCUIT    := $(basename $(notdir $(PROJECT)))
+HEX        := $(dir $(PROJECT))outflow/$(CIRCUIT).hex
 
 bitstream-flash: bitstream
 	@echo "==> Flashing $(HEX) to Ti60F225 ..."
