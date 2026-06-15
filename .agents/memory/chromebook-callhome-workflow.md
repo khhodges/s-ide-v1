@@ -8,32 +8,32 @@ description: Confirmed working flow for firmware→BRAM→Efinity→flash→brid
 ## Confirmed working bridge command
 ```bash
 python3 hardware/soc_combined/callhome_bridge.py \
-    --port=/dev/ttyUSB2 --baud=115200 \
+    --port=/dev/ttyUSB2 \
     --ide=https://31592a69-0a64-402e-9237-89b7ce66a127-00-1hr1bt2ealopt.kirk.replit.dev \
     --insecure
 ```
 
-**Why --insecure:** The Chromebook Linux container (Debian) does not have Replit's SSL CA in its trust store. Without `--insecure`, every POST fails with `CERTIFICATE_VERIFY_FAILED`. This flag only skips cert verification — the connection is still encrypted.
+**Why no --baud:** The bridge defaults to 57600 (hardcoded `_BAUD = 57600`). Do NOT pass `--baud=115200` — the soc_combined firmware uses CLOCKDIV=53 → 57,870 ≈ 57,600 baud at 25 MHz. Connecting at 115200 produces garbage or silence.
 
-**Why --baud=115200:** soc_minimal firmware uses CLOCKDIV=26 (115200 baud). The bridge defaults to 57600. Must match firmware.
+**Why --insecure:** The Chromebook Linux container (Debian) does not have Replit's SSL CA in its trust store.
 
-## PATCH_LUMP upload (confirmed working June 2026)
+**Baud rate table:**
+- ttyUSB2 (SoC UART / callhome_bridge): **57,600 baud** — CLOCKDIV=53, 25 MHz / (8×54) = 57,870 baud
+- ttyUSB3 (CM debug UART / PATCH_LUMP --upload): **115,200 baud** — separate CM debug port
 
-CM debug UART (PATCH_LUMP) is on **ttyUSB2 at 115200 baud** — the SAME port as the
-call-home bridge, NOT ttyUSB3. Stop the bridge before uploading.
+## PATCH_LUMP upload (via callhome_bridge --upload flag)
 
-Use `upload_boot.py` (in repo root) which:
-1. Fetches the first 2048 words (8192 bytes) from `/api/boot-image/binary`
-2. Sends PATCH_LUMP frame: `BE EF addrHi addrLo cntHi cntLo [data] [crcHi crcLo]`
-3. **CRC covers the FULL frame including header bytes** (BE EF addrHi addrLo cntHi cntLo then data) — NOT data-only
-4. BRAM write address is 11-bit masked (max 2048 words) — only send first 2048 words
+`upload_boot.py` does NOT exist as a standalone script. Use `--upload` on the bridge:
 
 ```bash
-python3 upload_boot.py   # stop the bridge first; uses /dev/ttyUSB2 @ 115200
+python3 hardware/soc_combined/callhome_bridge.py \
+    --port=/dev/ttyUSB2 \
+    --ide=https://31592a69-0a64-402e-9237-89b7ce66a127-00-1hr1bt2ealopt.kirk.replit.dev \
+    --insecure --upload
 ```
 
-After ACK: hold push button ~1 s → CM reboots with patched BRAM. PATCH_LUMP is
-volatile (survives CM reset, wiped on power cycle).
+CM debug UART (PATCH_LUMP) is on **ttyUSB3 at 115,200 baud** (bridge `--upload-port` default).
+After ACK: hold push button ~1 s → CM reboots with patched BRAM. Volatile — wiped on power cycle.
 
 ## Firmware → flash sequence (strict order)
 
