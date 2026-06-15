@@ -4,7 +4,7 @@
  * Bare-metal RISC-V firmware for the combined Sapphire SoC + Church Machine
  * bitstream on the Ti60F225 devkit.
  *
- * FIRMWARE v2.0 — production-stable hardware telemetry
+ * FIRMWARE v2.1 — fix HUNG false-positive (NUC_CODE range 0x160..0x1B0)
  * =====================================================
  * Every CALLHOME now reports real NIA, real fault state, and real UID from
  * the APB3 bridge registers (no hardcoded zeros).  New record types:
@@ -56,7 +56,7 @@
  *
  * ⑤ State 0x07: free_run_start = 1.  CM begins executing from NIA = 0.
  *
- * HOW CM FAULT RECOVERY WORKS (v2.0)
+ * HOW CM FAULT RECOVERY WORKS (v2.1)
  * ====================================
  * APB3_FAULT_RST (0x28) is a write-1-to-clear register added in soc_combined
  * apb3_cm_bridge.v.  On fault:
@@ -142,11 +142,20 @@
 #define CM_FAULT_STAGE   (*(volatile uint32_t *)(CM_APB_BASE + 0x24))
 #define CM_FAULT_RST     (*(volatile uint32_t *)(CM_APB_BASE + 0x28))
 
-/* NUC_CODE_END: NUC_PROGRAM is 17 words (bytes 0x00–0x40).  The inner
- * delay loop keeps NIA at one hot instruction for seconds at a time —
- * that is correct behaviour, not a hang.  Skip the hung counter while
- * NIA is inside this range; only fire HUNG for addresses beyond it. */
-#define NUC_CODE_END     0x00000044u
+/* NUC_CODE_START / NUC_CODE_END: exempt the NUC_PROGRAM inner delay loop
+ * from the hung-program watchdog.  The inner delay keeps NIA at one hot
+ * instruction for seconds at a time — that is correct behaviour, not a hang.
+ *
+ * The church_dmem.mem currently in use was built from the pre-"Update
+ * embedded program" initial begin, which embeds a 89-word c-list before
+ * the code inside the Boot.Abstr LUMP.  The code section therefore starts
+ * at NIA=0x168 and the inner-delay-loop hotspot lands at NIA=0x194.
+ * (New-layout code starts at NIA=0x04; once church_dmem.mem is rebuilt
+ * from the current initial begin, update both constants to 0x00/0x44.)
+ *
+ * Fire HUNG only when NIA is *outside* [NUC_CODE_START, NUC_CODE_END]. */
+#define NUC_CODE_START   0x00000160u   /* 8-byte margin before first NUC instr */
+#define NUC_CODE_END     0x000001B0u   /* 8-byte margin after last NUC instr   */
 
 #define CM_STATUS_BOOT_COMPLETE  (1u << 0)
 #define CM_STATUS_FAULT_VALID    (1u << 1)
@@ -465,7 +474,7 @@ int main(void)
     CM_CTRL = CM_CTRL_RELEASED;
 
     /* ---- Step 4: Boot banner ---- */
-    uart_puts("CHURCH Ti60 SoC+CM v2.0\r\n");
+    uart_puts("CHURCH Ti60 SoC+CM v2.1\r\n");
     uart_puts("UID=");
     emit_uid();
     uart_puts("\r\n");
@@ -541,17 +550,17 @@ int main(void)
          * Hung-program watchdog
          * Track NIA unchanged-samples.  3 unchanged 1-s samples = 3 s hang.
          * Only trigger if no fault is latched (known fault ≠ hung).
-         * NIA=0 always fires (stuck-at-boot / BRAM zeroed).
-         * NIA 1..NUC_CODE_END is exempt: the LED blink inner delay loop
-         * dominates ~99.9% of execution time and appears "stuck" to the
-         * 1-Hz sampler even while running correctly.
+         * Exempt NIA in [NUC_CODE_START, NUC_CODE_END]: the LED blink inner
+         * delay loop dominates ~99.9% of execution time and appears "stuck"
+         * to the 1-Hz sampler even while running correctly.
+         * NIA < NUC_CODE_START fires (stuck-at-boot / BRAM zeroed / wrong PC).
          * NIA > NUC_CODE_END fires (genuinely hung post-NUC code).
          * ------------------------------------------------------------ */
         uint32_t nia    = CM_NIA;
         uint32_t status = CM_STATUS;
 
         if (!(status & CM_STATUS_FAULT_LATCHED)) {
-            if (nia == last_nia && (nia == 0u || nia > NUC_CODE_END)) {
+            if (nia == last_nia && (nia < NUC_CODE_START || nia > NUC_CODE_END)) {
                 nia_unchanged++;
                 if (nia_unchanged >= 3u) {
                     uart_emit_hung(nia, nia_unchanged);
