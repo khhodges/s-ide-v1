@@ -1844,8 +1844,8 @@ function _showBridgeModal() {
     dialog.className = 'modal-dialog';
     dialog.innerHTML =
         '<div class="modal-title">FPGA Bridge Connect</div>' +
-        '<p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 0.4rem">1\ufe0f\u20e3  Run this in your Linux terminal (Crostini):</p>' +
-        '<pre style="background:var(--bg-input);padding:0.5rem;border-radius:4px;font-size:0.78rem;color:#22c55e;margin:0 0 0.75rem;white-space:pre-wrap;overflow-x:auto">python3 server/local_bridge.py /dev/ttyUSB2 115200 8766</pre>' +
+        '<p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 0.4rem">1\ufe0f\u20e3  Run this from the <strong>church-machine/</strong> project root (Crostini):</p>' +
+        '<pre style="background:var(--bg-input);padding:0.5rem;border-radius:4px;font-size:0.78rem;color:#22c55e;margin:0 0 0.75rem;white-space:pre-wrap;overflow-x:auto">cd ~/church_project/SoC/church-machine\npython3 server/local_bridge.py /dev/ttyUSB2 115200 8766</pre>' +
         '<p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 0.4rem">2\ufe0f\u20e3  First time only \u2014 accept the self-signed cert:</p>' +
         '<p style="font-size:0.78rem;margin:0 0 0.75rem">Open <a href="https://penguin.linux.test:8766/status" target="_blank" rel="noopener" ' +
             'style="color:#a0d4a0">https://penguin.linux.test:8766/status</a> in a new Chrome tab and click <em>Advanced \u2192 Proceed</em>.</p>' +
