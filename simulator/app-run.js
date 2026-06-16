@@ -1647,6 +1647,27 @@ function runSim() {
     setTimeout(runBatch, 0);
 }
 
+// ── S-IDE v1 "Try demo program" one-click path ───────────────────────────────
+// Loads the led_control example, assembles it, and immediately runs it so
+// users can complete Step 3 without a real Ti60.  Called by the
+// "Try demo program →" button on the Step 3 card.
+window._r1TryDemoProgram = function() {
+    if (typeof switchView === 'function') switchView('editor');
+    if (typeof closeHamburger === 'function') closeHamburger();
+    // Give the view a tick to render before touching the editor.
+    setTimeout(function() {
+        loadExample('led_control');
+        // assembleAndLoad needs the editor value to be set — another tick.
+        setTimeout(function() {
+            if (typeof assembleAndLoad === 'function') assembleAndLoad();
+            // runSimGo needs the program to be loaded — another tick.
+            setTimeout(function() {
+                if (typeof runSimGo === 'function') runSimGo();
+            }, 120);
+        }, 60);
+    }, 60);
+};
+
 // ── FPGA connection status indicator ─────────────────────────────────────────
 
 function updateFPGAStatusBtn() {
