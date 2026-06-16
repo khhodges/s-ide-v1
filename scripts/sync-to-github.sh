@@ -115,25 +115,15 @@ _push_code() {
     local repo="$2"
     local remote_url="$3"
 
-    # Add or update the remote (safe to re-run)
-    if git remote get-url "$remote_name" &>/dev/null; then
-        git remote set-url "$remote_name" "$remote_url"
-    else
-        git remote add "$remote_name" "$remote_url"
-    fi
-
-    # Disable LFS for this remote so we only push regular git objects.
-    git config "remote.${remote_name}.lfsurl" "https://github.com/${repo}.git/info/lfs" 2>/dev/null || true
-    git config "lfs.${remote_url}/info/lfs.locksverify" "false" 2>/dev/null || true
-
     echo "sync-to-github: pushing ${BRANCH} (${HEAD_SHA}) → github.com/${repo} (LFS skipped) ..."
 
+    # Push directly to URL — avoids git remote set-url (which writes .git/config
+    # and can be blocked by a stale .git/config.lock from a prior killed run).
     local push_output push_exit
     push_output=$(
         GIT_LFS_SKIP_PUSH=1 \
         GIT_TRACE=0 \
-            git -c "lfs.${remote_url}.locksverify=false" \
-                push "$remote_name" "HEAD:refs/heads/${BRANCH}" --force 2>&1
+            git push "$remote_url" "HEAD:refs/heads/${BRANCH}" --force 2>&1
     )
     push_exit=$?
 
