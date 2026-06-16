@@ -434,6 +434,21 @@ function renderAbstractions() {
         html += `<span class="abs-item-dot" style="background:${dotColor};box-shadow:0 0 4px ${dotColor}80" title="${dotTitle}"></span>`;
         html += `</div>`;
         html += `<div class="abs-item-desc">${abs.description}</div>`;
+        if (abs.methods && abs.methods.length > 0) {
+            html += `<div class="abs-item-methods">`;
+            for (let mi = 0; mi < abs.methods.length; mi++) {
+                const _m = abs.methods[mi];
+                const _isMain = _m.toLowerCase() === 'main';
+                const _absNameEsc = abs.name.replace(/'/g, "\\'");
+                const _mEsc = _m.replace(/'/g, "\\'");
+                html += `<span class="abs-item-method-pill${_isMain ? ' abs-item-method-main' : ''}"`;
+                html += ` title="Selector #${mi + 1} \u2014 click to copy: CALL ${abs.name}.${_m}"`;
+                html += ` onclick="event.stopPropagation();_absCopyCall('${_absNameEsc}','${_mEsc}',this)">`;
+                html += `<span class="abs-item-method-sel">#${mi + 1}</span>${_m}`;
+                html += `</span>`;
+            }
+            html += `</div>`;
+        }
         html += `</div>`;
     }
     html += `</div>`;

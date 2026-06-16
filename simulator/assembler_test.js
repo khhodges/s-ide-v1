@@ -8451,7 +8451,7 @@ Add a method called Run
 // Line ranges (1-indexed) extracted below must be kept in sync with source:
 //   app-compile.js      _absHighlightNodes  lines 110–133
 //   app-compile.js      _absHighlightText   lines 138–149
-//   app-abstractions.js renderAbstractions  lines 387–452
+//   app-abstractions.js renderAbstractions  lines 387–467
 {
     const { JSDOM } = require('jsdom');
     const fs   = require('fs');
@@ -8465,7 +8465,7 @@ Add a method called Run
     // Extract real function source text (slice uses 0-based indices).
     const highlightNodesSrc = compileLines.slice(109, 133).join('\n');
     const highlightTextSrc  = compileLines.slice(137, 149).join('\n');
-    const renderAbsSrc      = absLines.slice(386, 452).join('\n');
+    const renderAbsSrc      = absLines.slice(386, 467).join('\n');
 
     // Verify extraction found the right functions — fail fast rather than giving
     // misleading results if line numbers drift after a refactor.
@@ -8477,7 +8477,7 @@ Add a method called Run
         'Line range 122-133 no longer contains _absHighlightText — update the slice');
     assert('ABS-H-SRC3: extracted renderAbstractions from app-abstractions.js',
         renderAbsSrc.includes('function renderAbstractions('),
-        'Line range 387-452 no longer contains renderAbstractions — update the slice');
+        'Line range 387-467 no longer contains renderAbstractions — update the slice');
 
     // Build a jsdom window to provide real DOM APIs.
     const dom  = new JSDOM('<!DOCTYPE html><body><div id="absLayerList"></div></body>');
@@ -8521,6 +8521,7 @@ Add a method called Run
         function _implStatusBest()        { return 'unknown'; }
         function _getAbstractionProfile() { return 'IoT'; }
         function _implLegendHtml()        { return ''; }
+        function _absCopyCall()           {}
 
         // ── Real source extracted verbatim from app-compile.js ───────────────
         ${highlightNodesSrc}

@@ -540,8 +540,12 @@ function showAbstractionDetail(index) {
                 const mKey = `${uid}:${m}`;
                 const compileState = _getCompileState(mKey);
                 const csLabel = compileState === 'compiled' ? '\u2022Compiled' : compileState === 'error' ? '\u2022Error' : '\u2022Pseudo';
-                html += `<span class="abs-method-tab${active}" onclick="absOpenMethodInEditor(${uid},'${m}',this,'abs-panel-${uid}-${mi}')">`;
+                const isMain = m.toLowerCase() === 'main';
+                const mainTabClass = isMain ? ' abs-method-tab-main' : '';
+                html += `<span class="abs-method-tab${active}${mainTabClass}" onclick="absOpenMethodInEditor(${uid},'${m}',this,'abs-panel-${uid}-${mi}')">`;
+                html += `<span class="abs-method-selector-num" title="Selector ${mi + 1}">#${mi + 1}</span>`;
                 html += `${m}`;
+                if (isMain) html += `<span class="abs-method-main-badge" title="Primary entry point \u2014 CALL enters here with no selector">entry</span>`;
                 html += `<span class="abs-compile-state-badge abs-compile-state-${compileState}" title="Compile state: ${csLabel}">${csLabel}</span>`;
                 html += `<span class="abs-method-status-badge abs-method-status-badge-${mStatus}" onclick="event.stopPropagation();absToggleStatusDropdown(${uid},${mi},event)" title="Status: ${IMPL_STATUS_LABELS[mStatus]} — click to change">`;
                 html += `<span class="abs-method-status-badge-dot"></span>${badgeLabel}`;
@@ -589,9 +593,15 @@ function showAbstractionDetail(index) {
                 const display = mi === 0 ? '' : ' style="display:none"';
                 const mKey2 = `${uid}:${m}`;
                 const md = userMethodData[mKey2] || {};
+                const isMainPanel = m.toLowerCase() === 'main';
                 html += `<div class="abs-method-panel-item" id="abs-panel-${uid}-${mi}"${display}>`;
                 html += `<div class="abs-method-panel-header">`;
-                html += `<div class="abs-method-panel-name">${abs.name}.${m}</div>`;
+                html += `<div class="abs-method-panel-name">`;
+                html += `<span class="abs-method-panel-selector" title="Selector ${mi + 1}">#${mi + 1}</span>`;
+                html += `${abs.name}.${m}`;
+                if (isMainPanel) html += ` <span class="abs-method-main-badge abs-method-main-badge-lg" title="Primary entry point \u2014 CALL without a selector goes here">primary entry point</span>`;
+                html += ` <button class="btn btn-xs abs-method-copy-call-btn" title="Copy: CALL ${abs.name}.${m}" onclick="event.stopPropagation();_absCopyCall('${abs.name.replace(/'/g,"\\'")}','${m.replace(/'/g,"\\'")}',this)">copy CALL</button>`;
+                html += `</div>`;
                 html += `<div class="abs-method-panel-actions">`;
                 // Generate button (hidden if no OPENAI_API_KEY)
                 if (window._hasOpenAIKey !== false) {
@@ -3637,5 +3647,36 @@ const _ABSTRACTION_CONVENTIONS = {
 // unusual environments (e.g. unit-test harnesses that load files out of order).
 if (typeof ChurchAssembler !== 'undefined') {
     ChurchAssembler.setSharedMethodConventions(_ABSTRACTION_CONVENTIONS);
+}
+
+function _absCopyCall(absName, methodName, btnEl) {
+    const text = `CALL ${absName}.${methodName}`;
+    const _flash = (el, msg) => {
+        if (!el) return;
+        const orig = el.textContent;
+        el.textContent = msg;
+        setTimeout(() => { if (el) el.textContent = orig; }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            _flash(btnEl, 'copied!');
+        }).catch(() => {
+            _absCopyCallFallback(text);
+            _flash(btnEl, 'copied!');
+        });
+    } else {
+        _absCopyCallFallback(text);
+        _flash(btnEl, 'copied!');
+    }
+}
+
+function _absCopyCallFallback(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch(e) {}
+    document.body.removeChild(ta);
 }
 

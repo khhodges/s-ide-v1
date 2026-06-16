@@ -6206,3 +6206,126 @@ mark.abs-search-highlight {
     width: 100%;
     font-size: 0.76rem;
 }
+
+/* ── Method selector numbers & main badge ─────────────────────────────── */
+.abs-method-selector-num {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: rgba(180, 200, 255, 0.55);
+    letter-spacing: 0.03em;
+    margin-right: 0.22rem;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    vertical-align: middle;
+}
+
+.abs-method-tab-main {
+    border-color: rgba(196, 160, 80, 0.5) !important;
+    background: rgba(50, 38, 8, 0.35) !important;
+}
+
+.abs-method-tab-main.abs-method-tab-active {
+    background: rgba(60, 45, 5, 0.7) !important;
+    border-color: var(--church-gold) !important;
+}
+
+.abs-method-main-badge {
+    display: inline-block;
+    font-size: 0.55rem;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--church-gold);
+    background: rgba(196, 160, 40, 0.18);
+    border: 1px solid rgba(196, 160, 40, 0.4);
+    border-radius: 3px;
+    padding: 0.05rem 0.3rem;
+    margin-left: 0.3rem;
+    vertical-align: middle;
+}
+
+.abs-method-main-badge-lg {
+    font-size: 0.62rem;
+    padding: 0.1rem 0.4rem;
+    margin-left: 0.4rem;
+}
+
+.abs-method-panel-selector {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: rgba(180, 200, 255, 0.45);
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    margin-right: 0.3rem;
+    vertical-align: middle;
+}
+
+.abs-method-copy-call-btn {
+    font-size: 0.6rem !important;
+    padding: 0.1rem 0.35rem !important;
+    opacity: 0.45;
+    transition: opacity 0.15s;
+    margin-left: 0.35rem;
+    vertical-align: middle;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+.abs-method-copy-call-btn:hover {
+    opacity: 1;
+    color: var(--church-gold);
+    border-color: var(--church-gold);
+}
+
+/* ── Method pills row in list cards ──────────────────────────────────── */
+.abs-item-methods {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.3rem;
+}
+
+.abs-item-method-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: rgba(30, 55, 110, 0.3);
+    border: 1px solid rgba(100, 140, 220, 0.2);
+    border-radius: 3px;
+    padding: 0.1rem 0.35rem;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    user-select: none;
+}
+
+.abs-item-method-pill:hover {
+    background: rgba(50, 90, 180, 0.35);
+    border-color: rgba(120, 170, 255, 0.45);
+    color: var(--text-primary);
+}
+
+.abs-item-method-pill:active {
+    background: rgba(70, 110, 200, 0.5);
+}
+
+.abs-item-method-main {
+    border-color: rgba(196, 160, 40, 0.4) !important;
+    background: rgba(50, 38, 8, 0.3) !important;
+    color: var(--church-gold) !important;
+}
+
+.abs-item-method-main:hover {
+    background: rgba(70, 52, 10, 0.45) !important;
+    border-color: rgba(196, 160, 40, 0.7) !important;
+}
+
+.abs-item-method-sel {
+    font-size: 0.55rem;
+    font-weight: 700;
+    color: rgba(180, 200, 255, 0.45);
+    margin-right: 0.08rem;
+}
