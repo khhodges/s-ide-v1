@@ -32,15 +32,17 @@ HEAD_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 _record_status() {
     local status="$1"
     local error_msg="$2"
+    local side_status="${3:-$status}"
+    local cm_status="${4:-$status}"
     if [ -f "server/github_sync_alert.py" ]; then
-        python3 server/github_sync_alert.py "$status" "$BRANCH" "$HEAD_SHA" "$error_msg" || true
+        python3 server/github_sync_alert.py "$status" "$BRANCH" "$HEAD_SHA" "$error_msg" "$side_status" "$cm_status" || true
     fi
 }
 
 if [ -z "${GITHUB_PAT:-}" ]; then
     echo "sync-to-github: GITHUB_PAT secret is not set — skipping GitHub sync."
     echo "  Set a classic GitHub PAT with 'repo' scope and no expiry in Replit Secrets."
-    _record_status "fail" "GITHUB_PAT secret is not set"
+    _record_status "fail" "GITHUB_PAT secret is not set" "fail" "fail"
     exit 0
 fi
 
@@ -221,12 +223,15 @@ else
 fi
 
 # Record combined status
+SIDE_STATUS="ok"; [ "$SIDE_EXIT" -ne 0 ] && SIDE_STATUS="fail"
+CM_STATUS="ok";   [ "$CM_EXIT"   -ne 0 ] && CM_STATUS="fail"
+
 if [ "$SIDE_EXIT" -ne 0 ] || [ "$CM_EXIT" -ne 0 ]; then
     FAIL_REPOS=""
     [ "$SIDE_EXIT" -ne 0 ] && FAIL_REPOS="${FAIL_REPOS} ${REPO_SIDE}"
     [ "$CM_EXIT" -ne 0 ]   && FAIL_REPOS="${FAIL_REPOS} ${REPO_CM}"
-    _record_status "fail" "Push failed for:${FAIL_REPOS}"
+    _record_status "fail" "Push failed for:${FAIL_REPOS}" "$SIDE_STATUS" "$CM_STATUS"
     exit 1
 fi
 
-_record_status "ok" ""
+_record_status "ok" "" "ok" "ok"

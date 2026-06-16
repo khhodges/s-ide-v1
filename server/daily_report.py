@@ -806,6 +806,7 @@ def generate_report(db_path):
         history_ok = gs.get("history_ok", 0)
         history_fail = gs.get("history_fail", 0)
         history_since = gs.get("history_since")
+        repos = gs.get("repos")
 
         if status == "never":
             return "  No sync recorded yet (first merge will populate this)."
@@ -819,6 +820,13 @@ def generate_report(db_path):
                     lines.append(f"    {line}")
             lines.append("  Check that the GITHUB_PAT Replit secret is valid and has not expired.")
             recent_line = "\n".join(lines)
+
+        if repos:
+            repo_lines = []
+            for repo_name, info in repos.items():
+                icon = "OK  " if info.get("status") == "ok" else "FAIL"
+                repo_lines.append(f"    khhodges/{repo_name:<18} {icon}")
+            recent_line += "\n" + "\n".join(repo_lines)
 
         if history_count > 0 and success_rate is not None:
             window = f" since {history_since}" if history_since else ""
@@ -993,6 +1001,7 @@ This report is sent automatically at 05:00 UTC every day.
         history_ok = gs.get("history_ok", 0)
         history_fail = gs.get("history_fail", 0)
         history_since = h(gs.get("history_since") or "")
+        repos = gs.get("repos")
 
         if status == "never":
             return "<p><em>No sync recorded yet (first merge will populate this).</em></p>"
@@ -1014,6 +1023,30 @@ This report is sent automatically at 05:00 UTC every day.
                 f"{error_block}"
                 f"<p style='color:#555'>Check that the <code>GITHUB_PAT</code> "
                 f"Replit secret is valid and has not expired.</p>"
+            )
+
+        if repos:
+            rows = ""
+            for repo_name, info in repos.items():
+                r_status = info.get("status", "unknown")
+                if r_status == "ok":
+                    badge = "<span style='color:#2e7d32;font-weight:600'>&#10003; OK</span>"
+                else:
+                    badge = "<span style='color:#c62828;font-weight:600'>&#10007; FAIL</span>"
+                rows += (
+                    f"<tr>"
+                    f"<td style='padding:3px 12px 3px 0'>"
+                    f"<a href='https://github.com/khhodges/{h(repo_name)}' style='font-family:monospace'>"
+                    f"khhodges/{h(repo_name)}</a></td>"
+                    f"<td style='padding:3px 0'>{badge}</td>"
+                    f"</tr>"
+                )
+            recent_html += (
+                f"<table style='border-collapse:collapse;margin-top:6px'>"
+                f"<thead><tr>"
+                f"<th style='text-align:left;padding:3px 12px 3px 0;color:#555;font-size:0.9em'>Repository</th>"
+                f"<th style='text-align:left;padding:3px 0;color:#555;font-size:0.9em'>Status</th>"
+                f"</tr></thead><tbody>{rows}</tbody></table>"
             )
 
         if history_count > 0 and success_rate is not None:
