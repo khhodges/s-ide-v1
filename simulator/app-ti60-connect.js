@@ -294,52 +294,80 @@ window.Ti60Connect = (function () {
     }
 
     async function _readLoop() {
-        const decoder = new TextDecoderStream();
-        _port.readable.pipeTo(decoder.writable).catch(() => {});
-        _reader = decoder.readable.getReader();
-
-        let buf          = '';
         let greetingSeen = false;
         let registered   = false;
 
-        try {
-            while (_running) {
-                const { value, done } = await _reader.read();
-                if (done) {
-                    if (_running) {
-                        _log('⚠ Serial port closed unexpectedly — port may still be held open.', 'log-warn');
-                        _running = false;
-                        _reset();
+        while (_running) {
+            const decoder = new TextDecoderStream();
+            _port.readable.pipeTo(decoder.writable).catch(() => {});
+            _reader = decoder.readable.getReader();
+
+            let buf          = '';
+            let hitBreak     = false;
+
+            try {
+                while (_running) {
+                    const { value, done } = await _reader.read();
+                    if (done) {
+                        if (_running) {
+                            _log('⚠ Serial port closed unexpectedly — port may still be held open.', 'log-warn');
+                            _running = false;
+                            _reset();
+                        }
+                        break;
                     }
-                    break;
-                }
-                buf += value;
-                const lines = buf.split('\n');
-                buf = lines.pop();
+                    buf += value;
+                    const lines = buf.split('\n');
+                    buf = lines.pop();
 
-                for (const raw of lines) {
-                    const line = raw.replace(/\r$/, '').trim();
-                    if (!line) continue;
+                    for (const raw of lines) {
+                        const line = raw.replace(/\r$/, '').trim();
+                        if (!line) continue;
 
-                    if (line.includes('CHURCH Ti60 SoC+CM') && !greetingSeen) {
-                        greetingSeen = true;
-                        _setStep('uart', 'pass', 'Greeting: ' + line);
-                        _setStep('callhome', 'active');
-                    }
+                        if (line.includes('CHURCH Ti60 SoC+CM') && !greetingSeen) {
+                            greetingSeen = true;
+                            _setStep('uart', 'pass', 'Greeting: ' + line);
+                            _setStep('callhome', 'active');
+                        }
 
-                    if (line.startsWith('CALLHOME:') && !registered) {
-                        const pkt = _parseCallhome(line);
-                        if (pkt) {
-                            registered = true;
-                            await _finishSteps(pkt, greetingSeen);
+                        if (line.startsWith('CALLHOME:') && !registered) {
+                            const pkt = _parseCallhome(line);
+                            if (pkt) {
+                                registered = true;
+                                await _finishSteps(pkt, greetingSeen);
+                            }
                         }
                     }
                 }
+            } catch (e) {
+                if (!_running) break;
+                const isBreak = e.message && /break/i.test(e.message);
+                if (isBreak) {
+                    _log('Board reset detected — waiting for firmware…', 'log-warn');
+                    greetingSeen = false;
+                    registered   = false;
+                    hitBreak     = true;
+                } else {
+                    _log('Read error: ' + e.message, 'log-fail');
+                }
+            } finally {
+                try { _reader.releaseLock(); } catch (_) {}
+                _reader = null;
             }
-        } catch (e) {
-            if (_running) _log('Read error: ' + e.message, 'log-fail');
-        } finally {
-            try { _reader.releaseLock(); } catch (e) {}
+
+            if (!_running || !hitBreak) break;
+
+            // Close and reopen the port to get a fresh readable stream after Break
+            try {
+                await _port.close();
+                await new Promise(r => setTimeout(r, 400));
+                await _port.open({ baudRate: _activeBaud || BAUD });
+            } catch (reErr) {
+                _log('Reconnect failed: ' + reErr.message, 'log-fail');
+                _running = false;
+                _reset();
+                break;
+            }
         }
     }
 
