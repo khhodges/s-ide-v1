@@ -1471,8 +1471,8 @@ CALLHOME:{"board":"ti60-f225","uid":"AABBCCDD","nia":0,"boot_ok":1,"fault":0,"fa
                                 <div class="ti60-help-section-title">&#x1F309; Using Via Bridge</div>
                                 <p>Works on ChromeOS and from <strong>lab.cloomcy.org</strong>. Run in your Linux terminal:</p>
                                 <pre class="ti60-help-pre" id="ti60BridgeCmd">cd ~/church_project/SoC/church-machine
-python3 server/local_bridge.py /dev/ttyUSB2 115200 8766 --ide=https://lab.cloomc.org</pre>
-                                <p>The <code>--ide=</code> flag is required — it tells the bridge where to forward UART packets so the IDE can display them. First time only: open <code>https://penguin.linux.test:8766/status</code> in Chrome → <em>Advanced → Proceed</em>. Then click <strong>&#x1F309; Via Bridge</strong>.</p>
+python3 server/local_bridge.py /dev/ttyUSB2 115200 8766 --ide=https://lab.cloomc.org --insecure</pre>
+                                <p>The <code>--ide=</code> flag tells the bridge where to forward UART packets. The <code>--insecure</code> flag is needed on ChromeOS because the Linux container can't verify external certificates. First time only: open <code>https://penguin.linux.test:8766/status</code> in Chrome → <em>Advanced → Proceed</em>. Then click <strong>&#x1F309; Via Bridge</strong>.</p>
                             </div>
                         </div>
                     </div>
@@ -1523,7 +1523,7 @@ python3 server/local_bridge.py /dev/ttyUSB2 115200 8766 --ide=https://lab.cloomc
                     <ol class="ti60-bridge-setup-steps">
                         <li>
                             <strong>Download the bridge script</strong> — <a href="/local_bridge.py" download="local_bridge.py" style="color:#daa520;">local_bridge.py &#x2193;</a> — then run it in your Linux terminal (<code>--ide=</code> is required for UART traffic to appear in the IDE):
-                            <pre class="ti60-help-pre" id="ti60SetupBridgeCmd">python3 local_bridge.py /dev/ttyUSB2 115200 8766 --ide=https://lab.cloomc.org</pre>
+                            <pre class="ti60-help-pre" id="ti60SetupBridgeCmd">python3 local_bridge.py /dev/ttyUSB2 115200 8766 --ide=https://lab.cloomc.org --insecure</pre>
                         </li>
                         <li>
                             <strong>Accept the self-signed cert</strong> — open this URL in Chrome and click <em>Advanced&nbsp;→&nbsp;Proceed</em>:
@@ -2425,7 +2425,7 @@ python3 server/local_bridge.py /dev/ttyUSB2 115200 8766 --ide=https://lab.cloomc
     <script async src="english_string_tutorial.js"></script>
     <script async src="english_contact_tutorial.js"></script>
     <script async src="builder.js"></script>
-    <script async src="app-ti60-connect.js?v=20260616f"></script>
+    <script async src="app-ti60-connect.js?v=20260616g"></script>
     <script defer src="app-startup-wizard.js?v=20260609a"></script>
     <script src="app-shell.js?v=20260606a"></script>
     <script src="app-tools.js?v=20260521a"></script>

@@ -34,7 +34,7 @@ window.Ti60Connect = (function () {
     function _updateRunCmds(port) {
         const p    = port || '/dev/ttyUSB2';
         const ide  = window.location.origin;
-        const cmd  = 'cd ~/church_project/SoC/church-machine\npython3 server/local_bridge.py ' + p + ' 115200 8766 --ide=' + ide;
+        const cmd  = 'cd ~/church_project/SoC/church-machine\npython3 server/local_bridge.py ' + p + ' 115200 8766 --ide=' + ide + ' --insecure';
         ['ti60SetupBridgeCmd', 'ti60BridgeCmd'].forEach(function (id) {
             const el = document.getElementById(id);
             if (el) el.textContent = cmd;

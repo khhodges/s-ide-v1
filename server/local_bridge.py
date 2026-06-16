@@ -56,6 +56,19 @@ _heartbeat_running = False
 _tunnel_drain_running = False
 _REPORT_LAUNCH = False
 _launch_test_reported = set()
+_INSECURE = False
+
+
+def _ide_urlopen(req, timeout=10):
+    """urllib.request.urlopen wrapper — skips SSL verification when --insecure."""
+    import urllib.request as _ureq
+    if _INSECURE:
+        import ssl as _ssl
+        ctx = _ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = _ssl.CERT_NONE
+        return _ureq.urlopen(req, timeout=timeout, context=ctx)
+    return _ureq.urlopen(req, timeout=timeout)
 
 BOARD_TYPES = {
     0x01: ("TN20K-IoT", "IoT"),
@@ -133,7 +146,7 @@ def _register_with_ide(uid, board_type, board_name, profile, fw_major, fw_minor,
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        resp = urllib.request.urlopen(req, timeout=10)
+        resp = _ide_urlopen(req, timeout=10)
         result = json.loads(resp.read())
         if result.get("ok"):
             tunnel = result.get("tunnel_status", "pending")
@@ -154,7 +167,7 @@ def _prefetch_device_uid():
     try:
         import urllib.request as _ureq
         req = _ureq.Request(f"{_IDE_SERVER_URL}/api/device/latest-callhome", method="GET")
-        resp = _ureq.urlopen(req, timeout=5)
+        resp = _ide_urlopen(req, timeout=5)
         result = json.loads(resp.read())
         ch = result.get("callhome") or {}
         uid = ch.get("uid") or ch.get("device_uid")
@@ -189,7 +202,7 @@ def _tunnel_drain_thread():
                         headers={"Content-Type": "application/json"},
                         method="POST",
                     )
-                    _ureq.urlopen(req, timeout=4)
+                    _ide_urlopen(req, timeout=4)
                 except Exception:
                     pass
             time.sleep(0.2)
@@ -209,7 +222,7 @@ def _heartbeat_thread():
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            urllib.request.urlopen(req, timeout=10)
+            _ide_urlopen(req, timeout=10)
         except Exception:
             pass
         if _REPORT_LAUNCH:
@@ -228,7 +241,7 @@ def _fetch_launch_summary():
             headers={"Content-Type": "application/json"},
             method="GET",
         )
-        resp = urllib.request.urlopen(req, timeout=10)
+        resp = _ide_urlopen(req, timeout=10)
         data = json.loads(resp.read())
         tests = data if isinstance(data, list) else data.get("tests", [])
         total = len(tests)
@@ -269,7 +282,7 @@ def _report_launch_test(test_id, status="passing", notes=""):
             headers={"Content-Type": "application/json"},
             method="PUT",
         )
-        resp = urllib.request.urlopen(req, timeout=10)
+        resp = _ide_urlopen(req, timeout=10)
         result = json.loads(resp.read())
         if result.get("ok"):
             print(f'  [LAUNCH] {test_id} reported as {status}')
@@ -631,6 +644,8 @@ if __name__ == '__main__':
             _REPORT_LAUNCH = True
         elif a == '--http':
             force_http = True
+        elif a == '--insecure':
+            _INSECURE = True
 
     if force_http:
         cert_path, key_path = None, None
@@ -654,7 +669,8 @@ if __name__ == '__main__':
     else:
         print(f'  ChromeOS bridge URL: {scheme}://penguin.linux.test:{HTTP_PORT}')
     if _IDE_SERVER_URL:
-        print(f'  IDE Server: {_IDE_SERVER_URL}')
+        insecure_note = ' (SSL verification disabled — --insecure)' if _INSECURE else ''
+        print(f'  IDE Server: {_IDE_SERVER_URL}{insecure_note}')
     else:
         print(f'  IDE Server: (not configured — use --ide=URL to enable call-home)')
     if _REPORT_LAUNCH:
