@@ -1839,14 +1839,19 @@ function _showBridgeModal() {
     overlay.id = 'bridgeModalOverlay';
     overlay.className = 'modal-overlay';
 
+    var savedUrl = localStorage.getItem('ti60BridgeUrl') || 'https://penguin.linux.test:8766';
     var dialog = document.createElement('div');
     dialog.className = 'modal-dialog';
     dialog.innerHTML =
         '<div class="modal-title">FPGA Bridge Connect</div>' +
-        '<p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 0.75rem">Run this in your Linux terminal first:</p>' +
-        '<pre style="background:var(--bg-input);padding:0.5rem;border-radius:4px;font-size:0.78rem;color:#22c55e;margin:0 0 1rem;white-space:pre-wrap">python3 server/local_bridge.py</pre>' +
+        '<p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 0.4rem">1\ufe0f\u20e3  Run this in your Linux terminal (Crostini):</p>' +
+        '<pre style="background:var(--bg-input);padding:0.5rem;border-radius:4px;font-size:0.78rem;color:#22c55e;margin:0 0 0.75rem;white-space:pre-wrap;overflow-x:auto">python3 server/local_bridge.py /dev/ttyUSB2 115200 8766</pre>' +
+        '<p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 0.4rem">2\ufe0f\u20e3  First time only \u2014 accept the self-signed cert:</p>' +
+        '<p style="font-size:0.78rem;margin:0 0 0.75rem">Open <a href="https://penguin.linux.test:8766/status" target="_blank" rel="noopener" ' +
+            'style="color:#a0d4a0">https://penguin.linux.test:8766/status</a> in a new Chrome tab and click <em>Advanced \u2192 Proceed</em>.</p>' +
+        '<p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 0.4rem">3\ufe0f\u20e3  Enter bridge URL and click Connect:</p>' +
         '<label class="modal-label">Bridge URL' +
-            '<input id="bridgeUrlInput" class="modal-input" type="text" value="https://penguin.linux.test:8766">' +
+            '<input id="bridgeUrlInput" class="modal-input" type="text" value="' + savedUrl + '" placeholder="https://penguin.linux.test:8766">' +
         '</label>' +
         '<div class="modal-buttons">' +
             '<button id="bridgeModalCancel" class="btn">Cancel</button>' +
@@ -1886,11 +1891,14 @@ function _showBridgeModal() {
             _showFpgaToast('Bridge Connected', 'Using local bridge at ' + url, 'ok', 4000);
             _fpgaLog('FPGA Bridge: Connected \u2713  (using local bridge, not WebSerial)');
         } catch(e) {
+            var _bridgeCmd = 'python3 server/local_bridge.py /dev/ttyUSB2 115200 8766';
             _showFpgaToast('Bridge Connect Failed',
-                (e.message || String(e)) + '\n\nMake sure the bridge script is running:\npython3 server/local_bridge.py',
-                'err', 8000);
+                (e.message || String(e)) + '\n\nIs the bridge running?\n' + _bridgeCmd +
+                '\n\nAlso accept the self-signed cert first:\nhttps://penguin.linux.test:8766/status',
+                'err', 10000);
             _fpgaLog('FPGA Bridge connect failed: ' + (e.message || String(e)) +
-                '\n\nMake sure the bridge script is running:\n  python3 server/local_bridge.py');
+                '\n\nMake sure the bridge is running:\n  ' + _bridgeCmd +
+                '\n\nFirst-time cert setup: open https://penguin.linux.test:8766/status in Chrome \u2192 Advanced \u2192 Proceed');
         }
         updateFPGAStatusBtn();
     }
