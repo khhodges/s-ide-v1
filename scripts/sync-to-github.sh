@@ -200,6 +200,10 @@ CM_URL="https://x-access-token:${GITHUB_PAT}@github.com/${REPO_CM}.git"
 SIDE_EXIT=0
 CM_EXIT=0
 
+# Always validate the PAT before attempting any push — catches expired/revoked
+# tokens with a clear error message instead of a confusing git auth failure.
+_require_pat_scope "repo" "sync-to-github"
+
 if [ "$WITH_LFS" -eq 1 ]; then
     _require_pat_scope "lfs" "sync-to-github"
 
