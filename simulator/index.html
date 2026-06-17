@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>S-IDE v1 — Church Machine Capability-Secured Computing</title>
-    <meta name="description" content="S-IDE v1: simplified Church Machine IDE for learning capability-based secure computing with the Ti60 FPGA. Flash, connect, and run your first CLOOMC program in three steps.">
+    <title>Church Machine IDE — Capability-Based Secure Computing</title>
+    <meta name="description" content="Church Machine IDE: browser-based FPGA simulator, assembler, and CLOOMC compiler with capability-based secure computing. Supports English, JavaScript, Haskell, and Lambda Calculus front-ends.">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="/simulator/">
     <meta property="og:title" content="Church Machine IDE — Capability-Based Secure Computing">
@@ -71,7 +71,7 @@
         }
         @keyframes app-pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
         @keyframes app-slide { 0%{transform:translateX(-200%)} 100%{transform:translateX(450%)} }
-        /* hamburger menu — S-IDE v1 flat list */
+        /* hamburger menu — flat list */
         #hamDropdown { display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:9999; background:var(--bg-panel,#12121f); border:1px solid var(--border,#2a2a4a); border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,0.5); padding:0.35rem 0; min-width:200px; max-height:calc(100vh - 60px); overflow-y:auto; }
         #hamDropdown.ham-open { display:flex !important; flex-direction:column; }
         .ham-group { display:flex; flex-direction:column; padding:0.2rem 0; }
@@ -90,7 +90,7 @@
         .ham-separator { height:1px; background:var(--border,#2a2a4a); margin:0.3rem 0; }
         .ham-debug-section { display:none; flex-direction:column; }
         body.r1-debug-mode .ham-debug-section { display:flex; }
-        /* S-IDE v1: 3-step tutorial cards */
+        /* tutorial cards */
         .r1-tutorial-wrap { padding:1.5rem; max-width:720px; margin:0 auto; }
         .r1-tutorial-heading { font-family:Georgia,serif; font-size:1.4rem; color:#daa520; margin-bottom:0.4rem; }
         .r1-tutorial-sub { color:#888; font-size:0.9rem; margin-bottom:1.8rem; }
@@ -135,7 +135,7 @@
                                 <span class="ham-bolt-hint">Drag to set default page</span>
                                 <button id="hamDefaultClear" class="ham-bolt-clear" style="display:none;" onclick="_clearDefaultView()" data-tooltip="Remove default page — next load will resume the last visited page">✕ clear default</button>
                             </div>
-                            <!-- S-IDE v1 flat menu — always visible -->
+                            <!-- flat menu — always visible -->
                             <div class="ham-group" id="ham-grp-main">
                                 <button class="ham-item" id="hamItem-editor" onclick="switchView('editor');closeHamburger()">Programs</button>
                                 <button class="ham-item" id="hamItem-ti60-connect" onclick="switchView('builder');switchBuilderViewTab('ti60-connect');closeHamburger()">&#x1F50C; Connect Ti60</button>
