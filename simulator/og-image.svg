@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#08080f"/>
+      <stop offset="100%" stop-color="#0d0d22"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#daa520" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#daa520" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="softshadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="18" flood-color="#daa520" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Subtle gold border -->
+  <rect x="2" y="2" width="1196" height="626" rx="12" fill="none" stroke="#daa520" stroke-width="2" stroke-opacity="0.3"/>
+
+  <!-- Top glow band -->
+  <rect x="0" y="0" width="1200" height="200" fill="url(#glow)"/>
+
+  <!-- Large lambda mark -->
+  <text x="600" y="310" font-family="Georgia,Times New Roman,serif" font-size="260" font-weight="bold"
+        fill="#daa520" fill-opacity="0.08" text-anchor="middle" dominant-baseline="middle">λ</text>
+
+  <!-- Accent lambda (sharp) -->
+  <text x="600" y="295" font-family="Georgia,Times New Roman,serif" font-size="180" font-weight="bold"
+        fill="#daa520" text-anchor="middle" dominant-baseline="middle" filter="url(#softshadow)">λ</text>
+
+  <!-- Primary title -->
+  <text x="600" y="462" font-family="Georgia,Times New Roman,serif" font-size="58" font-weight="bold"
+        fill="#daa520" text-anchor="middle" letter-spacing="2">Church Machine IDE</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="524" font-family="Arial,Helvetica,sans-serif" font-size="28"
+        fill="#8888aa" text-anchor="middle" letter-spacing="1">Capability-Based Secure Computing</text>
+
+  <!-- Bottom rule -->
+  <line x1="320" y1="556" x2="880" y2="556" stroke="#daa520" stroke-width="1" stroke-opacity="0.3"/>
+
+  <!-- Tagline -->
+  <text x="600" y="590" font-family="Arial,Helvetica,sans-serif" font-size="20"
+        fill="#555577" text-anchor="middle" letter-spacing="1">CLOOMC · FPGA Simulator · Assembler · Multi-Language Compiler</text>
+</svg>
