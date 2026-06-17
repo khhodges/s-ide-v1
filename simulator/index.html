@@ -44,7 +44,7 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="icon" type="image/svg+xml" sizes="32x32" href="favicon.svg">
     <link rel="icon" type="image/svg+xml" sizes="16x16" href="favicon.svg">
-    <link rel="stylesheet" href="styles-base.css?v=20260617d">
+    <link rel="stylesheet" href="styles-base.css?v=20260617e">
     <link rel="stylesheet" href="styles-toolbar.css?v=20260526c">
     <link rel="stylesheet" href="styles-editor.css?v=20260521a">
     <link rel="stylesheet" href="styles-dashboard.css?v=20260616b">
@@ -1605,11 +1605,11 @@ python3 server/local_bridge.py /dev/ttyUSB2 57600 8766 --ide=https://lab.cloomc.
                     </div>
                 </div>
                 <div id="ti60SuccessBanner" class="ti60-success-banner" style="display:none;">
-                    <span class="ti60-success-icon">&#x1F389;</span>
+                    <span class="ti60-success-icon">&#x2705;</span>
                     <div class="ti60-success-text">
-                        <strong>Your Ti60 is registered!</strong> It's now listed in the Devices tab — you can deploy programs to it.
+                        <strong>Board is live</strong> — you can now write and run programs from the Code tab.
                     </div>
-                    <button class="ti60-success-view-btn" onclick="switchView('devices');switchDevicesTab('devices')">View Devices &#x2192;</button>
+                    <button class="ti60-success-view-btn" onclick="switchView('editor')">Write your first program &#x2192;</button>
                 </div>
             </div><!-- /ti60PolBody -->
         </div>

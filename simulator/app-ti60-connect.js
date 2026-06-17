@@ -244,13 +244,13 @@ window.Ti60Connect = (function () {
                 _setStep('register', 'pass', 'Device registered in IDE (uid=' + pkt.uid + ')' + bootNum);
                 // S-IDE v1 auto-progress: Step 2 — device registered
                 if (typeof window._r1SetStep === 'function') window._r1SetStep(2);
-                const sBanner = document.getElementById('ti60SuccessBanner');
-                if (sBanner) sBanner.style.display = '';
                 _setStep('release', 'active');
                 await _reportLaunchTest('passing', 'Ti60 CALLHOME confirmed');
                 const confirmed = await _confirmLaunchTest();
                 if (confirmed) {
                     _setStep('release', 'pass', 'TEST-09 confirmed passing in IDE ✅');
+                    const sBanner = document.getElementById('ti60SuccessBanner');
+                    if (sBanner) sBanner.style.display = '';
                 } else {
                     _setStep('release', 'fail', 'TEST-09 not confirmed in IDE DB');
                 }
