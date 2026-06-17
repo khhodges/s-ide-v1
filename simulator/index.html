@@ -100,6 +100,7 @@
         .ham-separator { height:1px; background:var(--border,#2a2a4a); margin:0.3rem 0; }
         .ham-debug-section { display:none; flex-direction:column; }
         html.r1-debug-mode .ham-debug-section { display:flex; }
+        .ham-subhead { font-size:0.6rem; font-weight:700; letter-spacing:0.09em; color:#44446a; text-transform:uppercase; padding:0.5rem 0.75rem 0.05rem; }
         /* tutorial cards */
         .r1-tutorial-wrap { padding:1.5rem; max-width:720px; margin:0 auto; }
         .r1-tutorial-heading { font-family:Georgia,serif; font-size:1.4rem; color:#daa520; margin-bottom:0.4rem; }
@@ -145,39 +146,50 @@
                                 <span class="ham-bolt-hint">Drag to set default page</span>
                                 <button id="hamDefaultClear" class="ham-bolt-clear" style="display:none;" onclick="_clearDefaultView()" data-tooltip="Remove default page — next load will resume the last visited page">✕ clear default</button>
                             </div>
-                            <!-- flat menu — always visible -->
+                            <!-- Develop -->
+                            <div class="ham-subhead">Develop</div>
                             <div class="ham-group" id="ham-grp-main">
                                 <button class="ham-item" id="hamItem-editor" onclick="switchView('editor');closeHamburger()">Programs</button>
-                                <button class="ham-item" id="hamItem-ti60-connect" onclick="switchView('builder');switchBuilderViewTab('ti60-connect');closeHamburger()">&#x1F50C; Connect Ti60</button>
-                                <button class="ham-item" id="hamItem-devices" onclick="switchView('devices');switchDevicesTab('devices');closeHamburger()">Devices</button>
-                                <button class="ham-item" id="hamItem-tutorial" onclick="switchView('tutorial');closeHamburger()">Tutorial</button>
+                                <button class="ham-item" id="hamItem-abstraction" onclick="window.location='/start?abstraction=1';closeHamburger()">&#x03BB; Abstraction</button>
+                                <button class="ham-item" id="hamItem-resume-draft" style="display:none;color:#daa520;" onclick="window.location='/start';closeHamburger()">&#x270F;&#xFE0F; Resume Draft</button>
                             </div>
-                            <!-- Debug section -->
-                            <div class="ham-debug-section">
-                                <div class="ham-separator"></div>
-                                <div class="ham-group">
-                                    <button class="ham-item" id="hamItem-repl" onclick="switchView('repl');closeHamburger()">Math<kbd class="ham-kbd">C+M</kbd></button>
-                                    <button class="ham-item" id="hamItem-namespace" onclick="switchView('namespace');closeHamburger()">Namespace<kbd class="ham-kbd">C+N</kbd></button>
-                                    <button class="ham-item" id="hamItem-hello-mum" onclick="switchView('hello-mum');closeHamburger()">Hello Mum</button>
-                                    <button class="ham-item" id="hamItem-dashboard" onclick="openSimulatorFromMenu()">Cap Registers<kbd class="ham-kbd">C+D</kbd></button>
-                                    <button class="ham-item" id="hamItem-pipeline" onclick="switchView('pipeline');closeHamburger()">Pipeline<kbd class="ham-kbd">C+P</kbd></button>
-                                    <button class="ham-item" id="hamItem-trace" onclick="switchView('trace');closeHamburger()">Trace<kbd class="ham-kbd">C+T</kbd></button>
-                                    <button class="ham-item" id="hamItem-gc" onclick="switchView('gc');closeHamburger()">GC<kbd class="ham-kbd">C+G</kbd></button>
-                                    <button class="ham-item" id="hamItem-abstractions" onclick="switchView('abstractions');closeHamburger()">Logic Catalog<kbd class="ham-kbd">C+A</kbd></button>
-                                    <button class="ham-item" id="hamItem-reference" onclick="switchView('reference');closeHamburger()">Reference<kbd class="ham-kbd">C+F</kbd></button>
-                                    <button class="ham-item" id="hamItem-docs" onclick="openDocAnchor('quick-start.md');closeHamburger()">Docs<kbd class="ham-kbd">C+Y</kbd></button>
-                                    <button class="ham-item" id="hamItem-lumps" onclick="switchView('lumps');closeHamburger()">LUMP<kbd class="ham-kbd">C+L</kbd></button>
-                                    <button class="ham-item" id="hamItem-github" onclick="switchView('github');closeHamburger()">GitHub</button>
-                                    <button class="ham-item" id="hamItem-memory" onclick="switchView('memory');closeHamburger()">Memory Dump</button>
-                                    <button class="ham-item" id="hamItem-builder" onclick="switchView('builder');closeHamburger()">Builder<kbd class="ham-kbd">C+B</kbd></button>
-                                    <button class="ham-item" id="hamItem-abstraction" onclick="window.location='/start?abstraction=1';closeHamburger()">&#x03BB; Abstraction</button>
-                                    <button class="ham-item" id="hamItem-resume-draft" style="display:none;color:#daa520;" onclick="window.location='/start';closeHamburger()">&#x270F;&#xFE0F; Resume Draft</button>
-                                    <button class="ham-item" id="fpgaConnBtn" onclick="fpgaConnectToggle()">FPGA</button>
-                                    <button class="ham-item" id="fpgaBridgeBtn" onclick="fpgaBridgeConnect()">Bridge</button>
-                                    <button class="ham-item" id="fpgaReadBRAMBtn" onclick="fpgaReadBRAM()">BRAM</button>
-                                    <button class="ham-item" id="hamItem-launch" onclick="switchView('devices');switchDevicesTab('launch');closeHamburger()">Launch Readiness</button>
-                                    <button class="ham-item" id="hamItem-github2" onclick="switchView('github');closeHamburger()">GitHub Community</button>
-                                </div>
+                            <!-- Hardware -->
+                            <div class="ham-subhead">Hardware</div>
+                            <div class="ham-group">
+                                <button class="ham-item" id="hamItem-ti60-connect" onclick="switchView('builder');switchBuilderViewTab('ti60-connect');closeHamburger()">&#x1F50C; Connect Ti60</button>
+                                <button class="ham-item" id="hamItem-builder" onclick="switchView('builder');closeHamburger()">Builder<kbd class="ham-kbd">C+B</kbd></button>
+                                <button class="ham-item" id="fpgaConnBtn" onclick="fpgaConnectToggle()">FPGA</button>
+                                <button class="ham-item" id="fpgaBridgeBtn" onclick="fpgaBridgeConnect()">Bridge</button>
+                                <button class="ham-item" id="fpgaReadBRAMBtn" onclick="fpgaReadBRAM()">BRAM</button>
+                            </div>
+                            <!-- Learn -->
+                            <div class="ham-subhead">Learn</div>
+                            <div class="ham-group">
+                                <button class="ham-item" id="hamItem-tutorial" onclick="switchView('tutorial');closeHamburger()">Tutorial</button>
+                                <button class="ham-item" id="hamItem-docs" onclick="openDocAnchor('quick-start.md');closeHamburger()">Docs<kbd class="ham-kbd">C+Y</kbd></button>
+                                <button class="ham-item" id="hamItem-reference" onclick="switchView('reference');closeHamburger()">Reference<kbd class="ham-kbd">C+F</kbd></button>
+                                <button class="ham-item" id="hamItem-hello-mum" onclick="switchView('hello-mum');closeHamburger()">Hello Mum</button>
+                            </div>
+                            <!-- Inspect -->
+                            <div class="ham-subhead">Inspect</div>
+                            <div class="ham-group">
+                                <button class="ham-item" id="hamItem-repl" onclick="switchView('repl');closeHamburger()">Math<kbd class="ham-kbd">C+M</kbd></button>
+                                <button class="ham-item" id="hamItem-dashboard" onclick="openSimulatorFromMenu()">Cap Registers<kbd class="ham-kbd">C+D</kbd></button>
+                                <button class="ham-item" id="hamItem-namespace" onclick="switchView('namespace');closeHamburger()">Namespace<kbd class="ham-kbd">C+N</kbd></button>
+                                <button class="ham-item" id="hamItem-abstractions" onclick="switchView('abstractions');closeHamburger()">Logic Catalog<kbd class="ham-kbd">C+A</kbd></button>
+                                <button class="ham-item" id="hamItem-pipeline" onclick="switchView('pipeline');closeHamburger()">Pipeline<kbd class="ham-kbd">C+P</kbd></button>
+                                <button class="ham-item" id="hamItem-trace" onclick="switchView('trace');closeHamburger()">Trace<kbd class="ham-kbd">C+T</kbd></button>
+                                <button class="ham-item" id="hamItem-gc" onclick="switchView('gc');closeHamburger()">GC<kbd class="ham-kbd">C+G</kbd></button>
+                                <button class="ham-item" id="hamItem-memory" onclick="switchView('memory');closeHamburger()">Memory Dump</button>
+                                <button class="ham-item" id="hamItem-lumps" onclick="switchView('lumps');closeHamburger()">LUMP<kbd class="ham-kbd">C+L</kbd></button>
+                            </div>
+                            <!-- Deploy -->
+                            <div class="ham-subhead">Deploy</div>
+                            <div class="ham-group">
+                                <button class="ham-item" id="hamItem-devices" onclick="switchView('devices');switchDevicesTab('devices');closeHamburger()">Devices</button>
+                                <button class="ham-item" id="hamItem-launch" onclick="switchView('devices');switchDevicesTab('launch');closeHamburger()">Launch Readiness</button>
+                                <button class="ham-item" id="hamItem-github" onclick="switchView('github');closeHamburger()">GitHub</button>
+                                <button class="ham-item" id="hamItem-github2" onclick="switchView('github');closeHamburger()">GitHub Community</button>
                             </div>
                         </div>
                     </div>
