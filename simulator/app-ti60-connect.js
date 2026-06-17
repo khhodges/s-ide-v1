@@ -1,5 +1,5 @@
 window.Ti60Connect = (function () {
-    const BAUD         = 115200;
+    const BAUD         = 57600;
     const STEPS        = ['uart', 'callhome', 'register', 'release'];
     const DEFAULT_BRIDGE = 'https://penguin.linux.test:8766';
 
@@ -34,7 +34,7 @@ window.Ti60Connect = (function () {
     function _updateRunCmds(port) {
         const p    = port || '/dev/ttyUSB2';
         const ide  = window.location.origin;
-        const cmd  = 'cd ~/church_project/SoC/church-machine\npython3 server/local_bridge.py ' + p + ' 115200 8766 --ide=' + ide + ' --insecure';
+        const cmd  = 'cd ~/church_project/SoC/church-machine\npython3 server/local_bridge.py ' + p + ' 57600 8766 --ide=' + ide + ' --insecure';
         ['ti60SetupBridgeCmd', 'ti60BridgeCmd'].forEach(function (id) {
             const el = document.getElementById(id);
             if (el) el.textContent = cmd;
@@ -410,7 +410,7 @@ window.Ti60Connect = (function () {
 
         _activeBaud = BAUD;
         _setStep('uart', 'active');
-        _log('Port open at 115200 baud — waiting for firmware…');
+        _log('Port open at 57600 baud — waiting for firmware…');
         const dBtn = document.getElementById('ti60DisconnectBtn');
         if (dBtn) dBtn.style.display = '';
 
@@ -557,7 +557,7 @@ window.Ti60Connect = (function () {
             _setStep('callhome', 'fail',
                 'No CALLHOME received in 90 s — is the bridge running with --ide=<URL>?');
             _log('Start the bridge with:', 'log-warn');
-            _log('  python3 local_bridge.py /dev/ttyUSB2 115200 8766 --ide=' + window.location.origin, 'log-warn');
+            _log('  python3 local_bridge.py /dev/ttyUSB2 57600 8766 --ide=' + window.location.origin, 'log-warn');
             _bridgeRunning = false;
             if (bBtn) { bBtn.disabled = false; bBtn.textContent = '🌉 Via Bridge'; }
             if (dBtn) dBtn.style.display = 'none';

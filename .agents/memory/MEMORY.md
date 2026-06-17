@@ -10,7 +10,7 @@
 - [Sapphire SoC memory map](sapphire-soc-memory-map.md) — ROM=0xF9000000, UART=0xF8010000, GPIO=0xF8020000; sapphire_define.vh is empty in 2026.1; grep sapphire.v for addresses
 - [Sapphire POR asyncReset pulse required](sapphire-por-asyncreset.md) — io_asyncReset=1'b0 constant leaves io_systemReset stuck HIGH forever; must use 8-bit shift-reg POR (init=0xFF) to pulse it
 - [Efinity 2026.1 illegal synthesis params](efinity-2026-synth-params.md) — infer_set_reset/infer_clk_enable cause EFX-0002; Efinity re-injects them on every save; strip with sed before each compile
-- [Chromebook call-home bridge workflow](chromebook-callhome-workflow.md) — confirmed working 10-step flow; needs --insecure + --baud=115200; make MUST run after git pull; close+reopen Efinity non-negotiable
+- [Chromebook call-home bridge workflow](chromebook-callhome-workflow.md) — confirmed working flow; bridge baud=57600 (CLOCKDIV=53, 25 MHz, no PLL); --insecure required; make MUST run after git pull
 - [Sapphire SoC as Trusted Security Base](sapphire-soc-tsb.md) — RISC-V private RAM is the keystore; APB3 register map; 5 free capabilities; FAULT_RST gap; FP verdict; SHA32 commissioning impact
 - [Makefile tab rule](makefile-tab-rule.md) — edit tool converts tabs→spaces in recipe lines, breaking make; always use write tool for Makefile changes
 - [NS entry stride is 4 words](ns-entry-stride.md) — each NS slot is 4 words (16 bytes): [location, word1_authority, word2_integrity, abstract_gt]; slot N starts at byte N×16; never 3
