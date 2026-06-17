@@ -161,6 +161,7 @@ window.Ti60Connect = (function () {
         if (log) log.innerHTML = '';
         const sBanner = document.getElementById('ti60SuccessBanner');
         if (sBanner) sBanner.style.display = 'none';
+        _hideStreamPanel();
         const btn  = document.getElementById('ti60ConnectBtn');
         const bBtn = document.getElementById('ti60BridgeBtn');
         const tBtn = document.getElementById('ti60TestBridgeBtn');
@@ -296,6 +297,7 @@ window.Ti60Connect = (function () {
     async function _readLoop() {
         let greetingSeen = false;
         let registered   = false;
+        let lastNia      = null;
 
         while (_running) {
             const decoder = new TextDecoderStream();
@@ -335,6 +337,34 @@ window.Ti60Connect = (function () {
                             if (pkt) {
                                 registered = true;
                                 await _finishSteps(pkt, greetingSeen);
+                                _showStreamPanel();
+                                _fetchBootLump();
+                                _fetchBootRom();
+                            }
+                        } else if (registered) {
+                            const niaMatch = line.match(/\bNIA=0x([0-9A-Fa-f]+)/i);
+                            if (niaMatch) {
+                                const nia    = '0x' + niaMatch[1].toUpperCase().padStart(8, '0');
+                                const niaNum = parseInt(niaMatch[1], 16);
+                                const anno   = _decodeNIA(niaNum, _bootRom, _bootLump);
+                                const label  = anno ? 'NIA → ' + nia + '  ' + anno
+                                                    : 'NIA → ' + nia;
+                                _streamLog(label, 'sl-nia');
+                                if (nia !== lastNia) {
+                                    lastNia = nia;
+                                    _log('NIA → ' + nia + (anno ? '  ' + anno : ''), 'log-nia');
+                                }
+                            } else if (line.startsWith('CALLHOME:')) {
+                                const newPkt = _parseCallhome(line);
+                                if (newPkt) {
+                                    _log('⟳ Board reboot detected', 'log-warn');
+                                    _streamLog('── REBOOT ──', 'sl-boot');
+                                    lastNia = null;
+                                    await _finishSteps(newPkt, true, true);
+                                }
+                            } else {
+                                _streamLog('← ' + line);
+                                _log('← ' + line);
                             }
                         }
                     }
@@ -346,6 +376,7 @@ window.Ti60Connect = (function () {
                     _log('Board reset detected — waiting for firmware…', 'log-warn');
                     greetingSeen = false;
                     registered   = false;
+                    lastNia      = null;
                     hitBreak     = true;
                 } else {
                     _log('Read error: ' + e.message, 'log-fail');
