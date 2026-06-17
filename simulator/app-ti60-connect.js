@@ -300,9 +300,11 @@ window.Ti60Connect = (function () {
         let lastNia      = null;
 
         while (_running) {
-            const decoder = new TextDecoderStream();
-            _port.readable.pipeTo(decoder.writable).catch(() => {});
-            _reader = decoder.readable.getReader();
+            // Direct reader — no pipeTo so the readable lock is held only by
+            // _reader, which means _reader.cancel() fully releases it and
+            // _port.close() works reliably on every subsequent connect attempt.
+            const _textDecoder = new TextDecoder();
+            _reader = _port.readable.getReader();
 
             let buf          = '';
             let hitBreak     = false;
@@ -318,7 +320,7 @@ window.Ti60Connect = (function () {
                         }
                         break;
                     }
-                    buf += value;
+                    buf += _textDecoder.decode(value, { stream: true });
                     const lines = buf.split('\n');
                     buf = lines.pop();
 
@@ -452,6 +454,16 @@ window.Ti60Connect = (function () {
             }
             return;
         }
+        // Close any lingering session first — this is what causes "port busy" on
+        // the second connect attempt. The browser returns the same port object
+        // from requestPort(); if it's still marked open, open() throws.
+        if (_port) {
+            _running = false;
+            try { if (_reader) { await _reader.cancel(); } } catch (e) {}
+            _reader = null;
+            try { await _port.close(); } catch (e) {}
+            _port = null;
+        }
         _reset();
         if (!('serial' in navigator)) { _noSerial(); return; }
         const btn = document.getElementById('ti60ConnectBtn');
@@ -499,9 +511,9 @@ window.Ti60Connect = (function () {
         _bridgeRunning = false;
         _tunnelMode    = false;
         try { if (_reader) await _reader.cancel(); }  catch (e) {}
+        _reader = null;   // null before close so _readLoop finally can't race us
         try { if (_port)   await _port.close();    }  catch (e) {}
         _port   = null;
-        _reader = null;
         _setActivePort(null);
         if (wasBridge && !wasTunnel) {
             // Direct bridge mode — tell the bridge to release the serial port
