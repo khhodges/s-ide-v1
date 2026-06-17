@@ -380,13 +380,16 @@ window.Ti60Connect = (function () {
     }
 
     async function connect() {
-        _reset();
         if (_isIframe()) {
             _showIframeBanner();
-            _log('WebSerial is not available inside a preview iframe.', 'log-warn');
-            _log('Open the IDE in its own tab at /simulator/ and click Connect there, or use 🌉 Via Bridge instead.', 'log-warn');
+            const log = document.getElementById('ti60ConnectLog');
+            if (!log || !log.textContent.includes('not available inside a preview')) {
+                _log('WebSerial is not available inside a preview iframe.', 'log-warn');
+                _log('Open the IDE in its own tab at /simulator/ and click Connect there, or use 🌉 Via Bridge instead.', 'log-warn');
+            }
             return;
         }
+        _reset();
         if (!('serial' in navigator)) { _noSerial(); return; }
         const btn = document.getElementById('ti60ConnectBtn');
         if (btn) { btn.disabled = true; btn.textContent = 'Connecting…'; }
