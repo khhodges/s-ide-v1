@@ -1478,14 +1478,54 @@ class ChurchAssembler {
                 // embedded data constants.  All other privilege-zone registers
                 // (CR12, CR13, CR15) remain blocked.
                 if (crSrc !== 14) this._checkPrivCR(crSrc, 'DREAD', lineNum);
-                imm = this._parseImm(parts[3], lineNum);
+                // 4-operand indexed form: DREAD DRd, CRs, #base, DRx
+                // bit14=0: imm = (base & 0x3FF) << 4 | (DRx & 0xF)
+                // 3-operand immediate form: DREAD DRd, CRs, #offset
+                // bit14=1: imm = 0x4000 | (offset & 0x3FFF)
+                const dreadDRxTok = (parts[4] || '').replace(/,/g, '').trim();
+                if (dreadDRxTok && /^DR\d+$/i.test(dreadDRxTok)) {
+                    const dreadBase = this._parseImm(parts[3], lineNum);
+                    if (dreadBase > 1023) {
+                        const _btok = (parts[3] || '').replace(/,/g, '').trim();
+                        this.errors.push({ line: lineNum, ...this._tokenCols(this._currentLineText, _btok), message: `DREAD indexed: base offset must be 0–1023 (got ${dreadBase})` });
+                    }
+                    const dreadDRx = this._parseDR(parts[4], lineNum);
+                    imm = ((dreadBase & 0x3FF) << 4) | (dreadDRx & 0xF);
+                } else {
+                    const dreadOff = this._parseImm(parts[3], lineNum);
+                    if (dreadOff > 16383) {
+                        const _otok = (parts[3] || '').replace(/,/g, '').trim();
+                        this.errors.push({ line: lineNum, ...this._tokenCols(this._currentLineText, _otok), message: `DREAD: immediate offset must be 0–16383 (got ${dreadOff})` });
+                    }
+                    imm = 0x4000 | (dreadOff & 0x3FFF);
+                }
                 break;
             }
             case 11: {
                 crDst = this._parseDR(parts[1], lineNum);
                 crSrc = this._parseCR(parts[2], lineNum);
                 this._checkPrivCR(crSrc, 'DWRITE', lineNum);
-                imm = this._parseImm(parts[3], lineNum);
+                // 4-operand indexed form: DWRITE DRd, CRs, #base, DRx
+                // bit14=0: imm = (base & 0x3FF) << 4 | (DRx & 0xF)
+                // 3-operand immediate form: DWRITE DRd, CRs, #offset
+                // bit14=1: imm = 0x4000 | (offset & 0x3FFF)
+                const dwriteDRxTok = (parts[4] || '').replace(/,/g, '').trim();
+                if (dwriteDRxTok && /^DR\d+$/i.test(dwriteDRxTok)) {
+                    const dwriteBase = this._parseImm(parts[3], lineNum);
+                    if (dwriteBase > 1023) {
+                        const _btok = (parts[3] || '').replace(/,/g, '').trim();
+                        this.errors.push({ line: lineNum, ...this._tokenCols(this._currentLineText, _btok), message: `DWRITE indexed: base offset must be 0–1023 (got ${dwriteBase})` });
+                    }
+                    const dwriteDRx = this._parseDR(parts[4], lineNum);
+                    imm = ((dwriteBase & 0x3FF) << 4) | (dwriteDRx & 0xF);
+                } else {
+                    const dwriteOff = this._parseImm(parts[3], lineNum);
+                    if (dwriteOff > 16383) {
+                        const _otok = (parts[3] || '').replace(/,/g, '').trim();
+                        this.errors.push({ line: lineNum, ...this._tokenCols(this._currentLineText, _otok), message: `DWRITE: immediate offset must be 0–16383 (got ${dwriteOff})` });
+                    }
+                    imm = 0x4000 | (dwriteOff & 0x3FFF);
+                }
                 break;
             }
             case 12: {
@@ -2048,10 +2088,14 @@ class ChurchAssembler {
                 if (crSrc === 6) return `${mnemonic}  CR${crDst}, ${cdOff(imm)}`;
                 return `${mnemonic}  CR${crDst}, CR${crSrc}[${hexOff(imm)}]`;
             }
-            // DREAD DRd, CRs[offset]  — read data word from capability
-            case 10: return `${mnemonic}  DR${crDst}, CR${crSrc}[${hexOff(imm)}]`;
-            // DWRITE DRd, CRs[offset]  — write data word via capability
-            case 11: return `${mnemonic}  DR${crDst}, CR${crSrc}[${hexOff(imm)}]`;
+            // DREAD DRd, CRs, #offset  (bit14=1, immediate) or DRd, CRs, #base, DRx (bit14=0, indexed)
+            case 10:
+                if (imm & 0x4000) return `${mnemonic}  DR${crDst}, CR${crSrc}, #${imm & 0x3FFF}`;
+                return `${mnemonic}  DR${crDst}, CR${crSrc}, #${(imm >> 4) & 0x3FF}, DR${imm & 0xF}`;
+            // DWRITE DRd, CRs, #offset  (bit14=1, immediate) or DRd, CRs, #base, DRx (bit14=0, indexed)
+            case 11:
+                if (imm & 0x4000) return `${mnemonic}  DR${crDst}, CR${crSrc}, #${imm & 0x3FFF}`;
+                return `${mnemonic}  DR${crDst}, CR${crSrc}, #${(imm >> 4) & 0x3FF}, DR${imm & 0xF}`;
             // BFEXT DRd, DRs, pos, w  — bit-field extract
             case 12: {
                 const pos   = (imm >>> 5) & 0x1F;

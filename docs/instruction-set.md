@@ -317,18 +317,20 @@ These instructions process data. They operate on Data Registers (DR0–DR15) and
 ### DREAD (opcode 10)
 
 ```
-DREAD DRd, CRs, #offset
+DREAD DRd, CRs, #offset              ; immediate mode — imm15[14]=1, offset 0–16383
+DREAD DRd, CRs, #base, DRx           ; indexed mode  — imm15[14]=0, effective_offset = base + DR[DRx]
 ```
 
-Reads a 32-bit word from the DATA object referenced by CRs at the given offset into DRd. Requires R (read) permission.
+Reads a 32-bit word from the DATA object referenced by CRs at `effective_offset` into DRd. In immediate mode the offset is a 14-bit compile-time constant; in indexed mode a 10-bit base is combined with a runtime DR value. Requires R (read) permission. DR0 as DRx is hardwired zero.
 
 ### DWRITE (opcode 11)
 
 ```
-DWRITE CRd, DRs, #offset
+DWRITE DRd, CRs, #offset             ; immediate mode — imm15[14]=1, offset 0–16383
+DWRITE DRd, CRs, #base, DRx          ; indexed mode  — imm15[14]=0, effective_offset = base + DR[DRx]
 ```
 
-Writes DRs to the DATA object referenced by CRd at the given offset. Requires W (write) permission.
+Writes DR[DRd] to the DATA object referenced by CRs at `effective_offset`. Same two addressing modes as DREAD. Requires W (write) permission.
 
 ### BFEXT (opcode 12)
 

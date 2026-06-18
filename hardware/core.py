@@ -1076,6 +1076,8 @@ class ChurchCore(Elaboratable):
             u_dread.imm.eq(u_decoder.immediate),
             u_dread.cr_rd_data.eq(u_regs.cr_rd_data),
             u_dread.dmem_rd_data.eq(self.dmem_rd_data),
+            # DR read port for indexed-mode DRx: feed from register port 1
+            u_dread.dr_rd_data.eq(u_regs.dr_rd_data1),
         ]
 
         dwrite_start_sig = Signal()
@@ -1088,13 +1090,18 @@ class ChurchCore(Elaboratable):
             u_dwrite.dr_src.eq(cr_dst),
             u_dwrite.imm.eq(u_decoder.immediate),
             u_dwrite.cr_rd_data.eq(u_regs.cr_rd_data),
+            # Port 1: source data DR[dr_src] — still via register port 2
             u_dwrite.dr_rd_data.eq(u_regs.dr_rd_data2),
+            # Port 2 (DRx for indexed mode): read via register port 1
+            u_dwrite.dr_rd_data2.eq(u_regs.dr_rd_data1),
         ]
-        # dr_rd_addr2: BFINS needs the existing DR[cr_dst] value on port 2
+        # dr_rd_addr2: dwrite source data and BFINS use port 2
         m.d.comb += u_regs.dr_rd_addr2.eq(
             Mux(u_dwrite.busy, u_dwrite.dr_rd_addr,
                 Mux(bfins_start_sig, cr_dst, 0))
         )
+        # dr_rd_addr1: dread DRx, dwrite DRx, IADD/ISUB/SHL/SHR/BFEXT/BFINS/MCMP/CHANGE
+        # (dread/dwrite busy is mutually exclusive with the arithmetic ops via any_unit_busy)
 
         # ── IADD / ISUB ──────────────────────────────────────────────────────
         # Immediate arithmetic on data registers.
@@ -1121,12 +1128,16 @@ class ChurchCore(Elaboratable):
             Cat(u_decoder.immediate, u_decoder.immediate[14].replicate(17))
         )
 
-        # Source DR read port 1 — shared by IADD/ISUB/SHL/SHR/BFEXT/BFINS/MCMP
+        # Source DR read port 1 — shared by DREAD/DWRITE (indexed DRx), IADD/ISUB,
+        # SHL/SHR/BFEXT/BFINS/MCMP.  dread/dwrite busy is mutually exclusive with
+        # all arithmetic ops (any_unit_busy prevents their simultaneous dispatch).
         m.d.comb += u_regs.dr_rd_addr1.eq(
-            Mux(iadd_start_sig | isub_start_sig |
-                shl_start_sig | shr_start_sig |
-                bfext_start_sig | bfins_start_sig | mcmp_start_sig,
-                cr_src, 0)
+            Mux(u_dread.busy, u_dread.dr_rd_addr,
+                Mux(u_dwrite.busy, u_dwrite.dr_rd_addr2,
+                    Mux(iadd_start_sig | isub_start_sig |
+                        shl_start_sig | shr_start_sig |
+                        bfext_start_sig | bfins_start_sig | mcmp_start_sig,
+                        cr_src, 0)))
         )
 
         # 33-bit results (bit 32 = carry for IADD, borrow for ISUB)

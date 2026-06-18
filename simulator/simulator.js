@@ -5525,7 +5525,21 @@ class ChurchSimulator {
         }
         const srcCR = this.cr[d.crSrc];
         const loc = srcCR.word1;
-        const offset = d.imm;
+        // Decode mode bit: imm[14]=1 → immediate; imm[14]=0 → indexed
+        let offset;
+        if (d.imm & 0x4000) {
+            offset = d.imm & 0x3FFF;
+        } else {
+            const dreadBase = (d.imm >> 4) & 0x3FF;
+            const dreadDRx  = d.imm & 0xF;
+            // Use plain JS Number (no >>> 0) so the sum is not truncated to 32 bits.
+            // Saturate at 0xFFFFFFFF to prevent wrap-around past the bounds check:
+            // base=1, DRx=0xFFFFFFFF would otherwise give (1+4294967295)>>>0 = 0,
+            // which could appear in-bounds. Saturating gives 0xFFFFFFFF which always
+            // exceeds any 17-bit lump limit and correctly raises BOUNDS.
+            const rawOff = dreadBase + (this.dr[dreadDRx] >>> 0);
+            offset = rawOff > 0xFFFFFFFF ? 0xFFFFFFFF : rawOff;
+        }
         const absAddr = (loc + offset) >>> 0;
         // CR14 exception: code register is X-only; permit DREAD with X permission in place of R.
         const dreadPerm = (d.crSrc === 14) ? 'X' : 'R';
@@ -5572,7 +5586,17 @@ class ChurchSimulator {
         }
         const srcCR = this.cr[d.crSrc];
         const loc = srcCR.word1;
-        const offset = d.imm;
+        // Decode mode bit: imm[14]=1 → immediate; imm[14]=0 → indexed
+        let offset;
+        if (d.imm & 0x4000) {
+            offset = d.imm & 0x3FFF;
+        } else {
+            const dwriteBase = (d.imm >> 4) & 0x3FF;
+            const dwriteDRx  = d.imm & 0xF;
+            // Saturating sum prevents 32-bit wrap before bounds check (see _execDread).
+            const rawOff = dwriteBase + (this.dr[dwriteDRx] >>> 0);
+            offset = rawOff > 0xFFFFFFFF ? 0xFFFFFFFF : rawOff;
+        }
         const absAddr = (loc + offset) >>> 0;
 
         // IO_PORT_PET_NAME_WR intercept (Tasks #1531/#1532): a DWRITE whose computed address

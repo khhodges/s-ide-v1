@@ -949,17 +949,36 @@ XLOADLAMBDA AL, CR1, CR6, #7  ; opcode=9, cond=14, fld_a=1, fld_b=6, imm=7
 
 ### DREAD — Data Read (opcode 10, 0x0A)
 
+DREAD supports two addressing modes selected by **imm15[14]** (the mode bit), following the same precedent as IADD/ISUB.
+
+#### Immediate mode — imm15[14] = 1
+
 ```
-Syntax:  DREAD DRd, CRs, #offset
-Encoding: op[4:0]=0x0A | cond[4] | DRd[4] | CRs[4] | offset[15]
+Syntax:    DREAD DRd, CRs, #offset
+Encoding:  op[4:0]=0x0A | cond[4] | DRd[4] | CRs[4] | 1 | offset[13:0]
+
+imm15 field:  bit14=1 (immediate) | bits[13:0] = offset  (range 0–16383)
 ```
 
-**Semantics:** Read a 32-bit word from the data object referenced by CRs at word offset `offset` into `DRd`.
+#### Indexed mode — imm15[14] = 0
+
+```
+Syntax:    DREAD DRd, CRs, #base, DRx
+Encoding:  op[4:0]=0x0A | cond[4] | DRd[4] | CRs[4] | 0 | base[9:0] | DRx[3:0]
+
+imm15 field:  bit14=0 (indexed) | bits[13:4] = base (0–1023) | bits[3:0] = DRx index
+effective_offset = base + DR[DRx]   (bounds-checked on the combined sum)
+```
+
+DR0 is hardwired zero, so `DRx=0` makes indexed mode equivalent to a pure-base immediate.
+
+**Semantics:** Read a 32-bit word from the data object referenced by CRs at word `effective_offset` into `DRd`.
 
 - **CRs requires R permission** (exception: when CRs = CR14, X permission is accepted in place of R — this allows reading embedded `WORD` constants from the current code lump via the code register).
-- mLoad validates: permission, version, CRC seal, and that `lump_base + offset` lies within the GT's bounds.
+- mLoad validates: permission, version, CRC seal, and that `lump_base + effective_offset` lies within the GT's bounds.
 - `DRd` is written via `_writeDR`, which enforces the DR0 hardwired-zero rule (A.1).
 - **Abstract GT intercept**: if CRs holds an Abstract GT (type = 0b11), the read is routed to the Abstract Manager — MMIO device registers (LED, UART, TIMER, BUTTON) are accessed this way.
+- **Encoding note**: the assembler always emits bit14=1 for the 3-operand form. The 10-bit base ceiling (1023) and 14-bit offset ceiling (16383) are both far larger than any lump that fits in a Church Machine BRAM tier.
 
 **Flags:** N — Z — C — V (no flag writes)
 
@@ -968,32 +987,56 @@ Encoding: op[4:0]=0x0A | cond[4] | DRd[4] | CRs[4] | offset[15]
 |-------|-----------|
 | `NULL_CAP` | CRs is NULL |
 | `PERM` | CRs lacks R permission (or X when CRs = CR14) |
-| `BOUNDS` | `lump_base + offset` is outside the GT's allowed range |
+| `BOUNDS` | `lump_base + effective_offset` is outside the GT's allowed range |
 | `SEAL` | NS entry CRC fails |
 
-**Example:** Read word 3 from the data object in CR2 into DR1.
+**Examples:**
+
+Immediate mode — read word 3 from the data object in CR2 into DR1:
 ```
-DREAD AL, DR1, CR2, #3   ; opcode=10, cond=14, fld_a=1, fld_b=2, imm=3
-                           ; encoding: 0x57090003
+DREAD DR1, CR2, #3   ; imm15 = 0x4003 (bit14=1, offset=3)
+                     ; encoding: op=0x0A cond=AL crDst=1 crSrc=2 imm=0x4003
+```
+
+Indexed mode — read table row indexed by DR3 with base 10, using CR0 as the table cap:
+```
+DREAD DR1, CR0, #10, DR3   ; effective_offset = 10 + DR3
+                            ; imm15 = (10 << 4) | 3 = 0x00A3 (bit14=0)
 ```
 
 Read inline data constant from current lump (CR14 path):
 ```
 data_val:  WORD 0x1234
 ; ...
-DREAD AL, DR0, CR14, #data_val   ; offset = label word index; X permission accepted
+DREAD DR0, CR14, #data_val   ; offset = label word index; X permission accepted; bit14=1
 ```
 
 ---
 
 ### DWRITE — Data Write (opcode 11, 0x0B)
 
+DWRITE supports the same two addressing modes as DREAD, using **imm15[14]** as the mode bit.
+
+#### Immediate mode — imm15[14] = 1
+
 ```
-Syntax:  DWRITE DRd, CRs, #offset
-Encoding: op[4:0]=0x0B | cond[4] | DRd[4] | CRs[4] | offset[15]
+Syntax:    DWRITE DRd, CRs, #offset
+Encoding:  op[4:0]=0x0B | cond[4] | DRd[4] | CRs[4] | 1 | offset[13:0]
+
+imm15 field:  bit14=1 (immediate) | bits[13:0] = offset  (range 0–16383)
 ```
 
-**Semantics:** Write the 32-bit value in `DRd` to the data object referenced by CRs at word offset `offset`.
+#### Indexed mode — imm15[14] = 0
+
+```
+Syntax:    DWRITE DRd, CRs, #base, DRx
+Encoding:  op[4:0]=0x0B | cond[4] | DRd[4] | CRs[4] | 0 | base[9:0] | DRx[3:0]
+
+imm15 field:  bit14=0 (indexed) | bits[13:4] = base (0–1023) | bits[3:0] = DRx index
+effective_offset = base + DR[DRx]
+```
+
+**Semantics:** Write the 32-bit value in `DRd` to the data object referenced by CRs at word `effective_offset`.
 
 - **CRs requires W permission**. mLoad validates: W permission, version, CRC, bounds.
 - The value written is `DR[DRd] >>> 0` (unsigned 32-bit).
@@ -1008,14 +1051,22 @@ Encoding: op[4:0]=0x0B | cond[4] | DRd[4] | CRs[4] | offset[15]
 |-------|-----------|
 | `NULL_CAP` | CRs is NULL |
 | `PERM` | CRs lacks W permission |
-| `BOUNDS` | `lump_base + offset` outside GT's allowed range |
+| `BOUNDS` | `lump_base + effective_offset` outside GT's allowed range |
 | `SEAL` | NS entry CRC fails |
 | `NULL_CAP` | CR12 (thread stack) is NULL when `DRd < 16` (cannot sync DR home) |
 
-**Example:** Write DR0 to offset 0 of the data object in CR1.
+**Examples:**
+
+Immediate mode — write DR0 to offset 0 of the data object in CR1:
 ```
-DWRITE AL, DR0, CR1, #0   ; opcode=11, cond=14, fld_a=0, fld_b=1, imm=0
-                            ; encoding: 0x5F008000
+DWRITE DR0, CR1, #0   ; imm15 = 0x4000 (bit14=1, offset=0)
+                       ; encoding: op=0x0B cond=AL crDst=0 crSrc=1 imm=0x4000
+```
+
+Indexed mode — write DR1 to table row indexed by DR2 with base 5, using CR3 as the table cap:
+```
+DWRITE DR1, CR3, #5, DR2   ; effective_offset = 5 + DR2
+                            ; imm15 = (5 << 4) | 2 = 0x0052 (bit14=0)
 ```
 
 ---

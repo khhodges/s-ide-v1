@@ -809,7 +809,7 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
 {
     const a = new ChurchAssembler();
     const r = a.assemble([
-        '  DREAD DR1, CR14, #V1',    // word 0 → imm should be 2
+        '  DREAD DR1, CR14, #V1',    // word 0 → imm should be 0x4002 (bit14=1, offset=2)
         '  RETURN',                   // word 1
         'V1:',
         '  WORD 99',                  // word 2
@@ -817,15 +817,15 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
     assert('DL2 DREAD #label: no errors', a.errors.length === 0,
         a.errors.map(e => e.message).join('; '));
     const dImm = r.words[0] & 0x7FFF;
-    assert('DL2 DREAD #label: imm = 2 (absolute offset of V1)', dImm === 2,
-        `imm=${dImm}`);
+    assert('DL2 DREAD #label: imm = 0x4002 (bit14=1 immediate, offset=2)', dImm === 0x4002,
+        `imm=0x${dImm.toString(16)}`);
 }
 
 // DL3: DREAD encodes label without hash prefix — V1 (no #)
 {
     const a = new ChurchAssembler();
     const r = a.assemble([
-        '  DREAD DR1, CR14, V1',     // word 0 → imm should be 2
+        '  DREAD DR1, CR14, V1',     // word 0 → imm should be 0x4002 (bit14=1, offset=2)
         '  RETURN',                   // word 1
         'V1:',
         '  WORD 99',                  // word 2
@@ -833,7 +833,7 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
     assert('DL3 DREAD label (no #): no errors', a.errors.length === 0,
         a.errors.map(e => e.message).join('; '));
     const dImm2 = r.words[0] & 0x7FFF;
-    assert('DL3 DREAD label (no #): imm = 2', dImm2 === 2, `imm=${dImm2}`);
+    assert('DL3 DREAD label (no #): imm = 0x4002 (bit14=1, offset=2)', dImm2 === 0x4002, `imm=0x${dImm2.toString(16)}`);
 }
 
 // DL4: DREAD undefined label → error
@@ -851,8 +851,8 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
 {
     const a = new ChurchAssembler();
     const r = a.assemble([
-        '  DREAD DR1, CR14, V1',     // word 0 → imm=3
-        '  DREAD DR2, CR14, V2',     // word 1 → imm=4
+        '  DREAD DR1, CR14, V1',     // word 0 → imm=0x4003 (bit14=1, offset=3)
+        '  DREAD DR2, CR14, V2',     // word 1 → imm=0x4004 (bit14=1, offset=4)
         '  RETURN',                   // word 2
         'V1:',
         '  WORD 10',                  // word 3
@@ -861,10 +861,78 @@ const NS_SYMBOLS = { 'SlideRule': 3 };
     ].join('\n'));
     assert('DL5 multi WORD labels: no errors', a.errors.length === 0,
         a.errors.map(e => e.message).join('; '));
-    assert('DL5 V1 offset = 3', (r.words[0] & 0x7FFF) === 3,
-        `imm0=${r.words[0]&0x7FFF}`);
-    assert('DL5 V2 offset = 4', (r.words[1] & 0x7FFF) === 4,
-        `imm1=${r.words[1]&0x7FFF}`);
+    assert('DL5 V1 offset = 0x4003 (bit14=1, offset=3)', (r.words[0] & 0x7FFF) === 0x4003,
+        `imm0=0x${(r.words[0]&0x7FFF).toString(16)}`);
+    assert('DL5 V2 offset = 0x4004 (bit14=1, offset=4)', (r.words[1] & 0x7FFF) === 0x4004,
+        `imm1=0x${(r.words[1]&0x7FFF).toString(16)}`);
+}
+
+// DL6: indexed DREAD — 4-operand form encodes base and DRx, bit14=0
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('DREAD DR2, CR0, #10, DR3');
+    assert('DL6 indexed DREAD: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    const w = r.words[0];
+    const opcode6 = (w >>> 27) & 0x1F;
+    const imm6    = w & 0x7FFF;
+    assert('DL6 indexed DREAD: opcode=10', opcode6 === 10, `opcode=${opcode6}`);
+    assert('DL6 indexed DREAD: bit14=0 (indexed mode)', (imm6 & 0x4000) === 0, `imm=0x${imm6.toString(16)}`);
+    assert('DL6 indexed DREAD: base=10 in bits[13:4]', ((imm6 >> 4) & 0x3FF) === 10,
+        `base=${(imm6>>4)&0x3FF}`);
+    assert('DL6 indexed DREAD: DRx=3 in bits[3:0]', (imm6 & 0xF) === 3, `DRx=${imm6&0xF}`);
+}
+
+// DL7: indexed DWRITE — same encoding pattern
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('DWRITE DR1, CR3, #5, DR2');
+    assert('DL7 indexed DWRITE: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    const w = r.words[0];
+    const opcode7 = (w >>> 27) & 0x1F;
+    const imm7    = w & 0x7FFF;
+    assert('DL7 indexed DWRITE: opcode=11', opcode7 === 11, `opcode=${opcode7}`);
+    assert('DL7 indexed DWRITE: bit14=0 (indexed mode)', (imm7 & 0x4000) === 0, `imm=0x${imm7.toString(16)}`);
+    assert('DL7 indexed DWRITE: base=5 in bits[13:4]', ((imm7 >> 4) & 0x3FF) === 5,
+        `base=${(imm7>>4)&0x3FF}`);
+    assert('DL7 indexed DWRITE: DRx=2 in bits[3:0]', (imm7 & 0xF) === 2, `DRx=${imm7&0xF}`);
+}
+
+// DL8: indexed DREAD disassembles to 4-operand form
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('DREAD DR2, CR0, #10, DR3');
+    const dis = a.disassemble(r.words[0]);
+    assert('DL8 indexed DREAD disassembly: contains #10', dis.includes('#10'), `got: ${dis}`);
+    assert('DL8 indexed DREAD disassembly: contains DR3', dis.includes('DR3'), `got: ${dis}`);
+}
+
+// DL9: immediate DREAD disassembles to 3-operand form with # prefix
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('DREAD DR1, CR2, #7');
+    const dis = a.disassemble(r.words[0]);
+    assert('DL9 immediate DREAD disassembly: contains #7', dis.includes('#7'), `got: ${dis}`);
+    assert('DL9 immediate DREAD disassembly: no DR index', !/ DR\d+$/.test(dis.trim()), `got: ${dis}`);
+}
+
+// DL10: indexed base out-of-range error
+{
+    const a = new ChurchAssembler();
+    a.assemble('DREAD DR1, CR0, #1024, DR2');
+    assert('DL10 indexed DREAD base >1023: error', a.errors.length > 0, 'expected an error');
+    assert('DL10 error mentions base offset', a.errors.some(e => e.message.includes('base offset')),
+        a.errors.map(e => e.message).join('; '));
+}
+
+// DL11: immediate offset out-of-range error
+{
+    const a = new ChurchAssembler();
+    a.assemble('DREAD DR1, CR0, #16384');
+    assert('DL11 DREAD imm >16383: error', a.errors.length > 0, 'expected an error');
+    assert('DL11 error mentions immediate offset', a.errors.some(e => e.message.includes('immediate offset')),
+        a.errors.map(e => e.message).join('; '));
 }
 
 // ── Shared alias inheritance (setSharedAliases) ───────────────────────────────

@@ -251,9 +251,10 @@ function assertDR0Zero(sim, label) {
     // to memory[pc=0], which would clobber the data at memory[0].
     sim.memory[5] = 0xDEAD >>> 0;
 
-    // DREAD opcode=10, cond=AL, crDst(drIdx)=1, crSrc=1, imm=5
+    // DREAD opcode=10, cond=AL, crDst(drIdx)=1, crSrc=1, imm=0x4005
+    // bit14=1 → immediate mode, offset=5.
     // Reads memory[cr[1].word1 + 5] = memory[0 + 5] = memory[5] = 0xDEAD.
-    const instr = enc(10, AL, 1, 1, 5);
+    const instr = enc(10, AL, 1, 1, 0x4005);
     const r = stepPreBoot(sim, instr);
     if (!r) {
         fail(label, `step() returned null (fault): ${(sim.faultLog.slice(-1)[0]||{}).message}`);
@@ -475,6 +476,106 @@ function makeCallLEDSim(dr1Method) {
         if (sim.cr[i].m !== 0) {
             fail(label, `cr[${i}].m=${sim.cr[i].m} expected 0 after CALL`); return;
         }
+    }
+    pass(label);
+})();
+
+// ─── DREAD indexed mode — bounds overflow tests ──────────────────────────────
+// These tests verify that large DRx values do NOT wrap around the 32-bit boundary
+// and falsely appear in-bounds. The saturating-sum fix (rawOff > 0xFFFFFFFF →
+// clamped to 0xFFFFFFFF before mLoad) must trigger a BOUNDS fault, not a silent
+// pass.  All three cases were vulnerable before the fix:
+//
+//   base=0, DRx=0xFFFFFFFF → rawOff=0xFFFFFFFF (saturated; mLoad sees huge absAddr)
+//   base=1, DRx=0xFFFFFFFF → rawOff=2^32   → saturated → 0xFFFFFFFF
+//   base=2, DRx=0xFFFFFFFE → rawOff=2^32   → saturated → 0xFFFFFFFF
+
+(function testDreadIndexedOverflowBase0() {
+    const label = 'DREAD indexed — base=0 DRx=0xFFFFFFFF must BOUNDS fault';
+    const sim = makeSim();
+    sim.cr[12].word1 = 0x40;  // required: non-zero thread base for DR write-back
+    const dataGT = sim.createGT(0, 0, {R:1, W:0, X:0, L:0, S:0, E:0}, 1);
+    sim.cr[1].word0 = dataGT;
+    sim.cr[1].word1 = 0;
+    // Indexed mode: imm[14]=0, base[13:4]=0, DRx[3:0]=2  (imm = 0x0002)
+    sim.dr[2] = 0xFFFFFFFF | 0;               // rawOff = 0 + 0xFFFFFFFF = 0xFFFFFFFF
+    const imm = (0 << 4) | 2;
+    const instr = enc(10, AL, 1, 1, imm);
+    const r = stepPreBoot(sim, instr);
+    if (r !== null) { fail(label, 'step() did not fault — overflow wraps to in-bounds'); return; }
+    const fl = sim.faultLog.slice(-1)[0] || {};
+    // faultCode is numeric (RANGE=0x10=16, BOUNDS=0x08=8); accept either
+    const RANGE = ChurchSimulator.FAULT_CODES.RANGE;
+    const BOUNDS = ChurchSimulator.FAULT_CODES.BOUNDS;
+    if (fl.faultCode !== RANGE && fl.faultCode !== BOUNDS) {
+        fail(label, `expected BOUNDS/RANGE fault, got: ${fl.faultCode} — ${fl.message}`); return;
+    }
+    pass(label);
+})();
+
+(function testDreadIndexedOverflowBase1() {
+    const label = 'DREAD indexed — base=1 DRx=0xFFFFFFFF must BOUNDS fault (sum=2^32)';
+    const sim = makeSim();
+    sim.cr[12].word1 = 0x40;
+    const dataGT = sim.createGT(0, 0, {R:1, W:0, X:0, L:0, S:0, E:0}, 1);
+    sim.cr[1].word0 = dataGT;
+    sim.cr[1].word1 = 0;
+    // base=1, DR3=0xFFFFFFFF → rawOff = 1 + 4294967295 = 4294967296 > 0xFFFFFFFF → saturated
+    sim.dr[3] = 0xFFFFFFFF | 0;
+    const imm = (1 << 4) | 3;
+    const instr = enc(10, AL, 1, 1, imm);
+    const r = stepPreBoot(sim, instr);
+    if (r !== null) { fail(label, 'step() did not fault — overflow must saturate and fault BOUNDS'); return; }
+    const fl = sim.faultLog.slice(-1)[0] || {};
+    const RANGE = ChurchSimulator.FAULT_CODES.RANGE;
+    const BOUNDS = ChurchSimulator.FAULT_CODES.BOUNDS;
+    if (fl.faultCode !== RANGE && fl.faultCode !== BOUNDS) {
+        fail(label, `expected BOUNDS/RANGE fault, got: ${fl.faultCode} — ${fl.message}`); return;
+    }
+    pass(label);
+})();
+
+(function testDreadIndexedOverflowBase2() {
+    const label = 'DREAD indexed — base=2 DRx=0xFFFFFFFE must BOUNDS fault (sum=2^32)';
+    const sim = makeSim();
+    sim.cr[12].word1 = 0x40;
+    const dataGT = sim.createGT(0, 0, {R:1, W:0, X:0, L:0, S:0, E:0}, 1);
+    sim.cr[1].word0 = dataGT;
+    sim.cr[1].word1 = 0;
+    // base=2, DR4=0xFFFFFFFE → rawOff = 2 + 4294967294 = 4294967296 > 0xFFFFFFFF → saturated
+    sim.dr[4] = 0xFFFFFFFE | 0;
+    const imm = (2 << 4) | 4;
+    const instr = enc(10, AL, 1, 1, imm);
+    const r = stepPreBoot(sim, instr);
+    if (r !== null) { fail(label, 'step() did not fault — sum=2^32 must not wrap to 0'); return; }
+    const fl = sim.faultLog.slice(-1)[0] || {};
+    const RANGE = ChurchSimulator.FAULT_CODES.RANGE;
+    const BOUNDS = ChurchSimulator.FAULT_CODES.BOUNDS;
+    if (fl.faultCode !== RANGE && fl.faultCode !== BOUNDS) {
+        fail(label, `expected BOUNDS/RANGE fault, got: ${fl.faultCode} — ${fl.message}`); return;
+    }
+    pass(label);
+})();
+
+(function testDreadIndexedInBounds() {
+    const label = 'DREAD indexed — base=0 DRx=5 in-bounds succeeds';
+    const sim = makeSim();
+    sim.cr[12].word1 = 0x40;  // required for DR write-back (see existing DREAD test)
+    const dataGT = sim.createGT(0, 0, {R:1, W:0, X:0, L:0, S:0, E:0}, 1);
+    sim.cr[1].word0 = dataGT;
+    sim.cr[1].word1 = 0;
+    sim.memory[5] = 0xBEEF >>> 0;
+    // DR5=5, base=0 → rawOff=5 → in-bounds; should load memory[5]=0xBEEF into DR1
+    sim.dr[5] = 5 >>> 0;
+    const imm = (0 << 4) | 5;                  // base=0, DRx=DR5 → imm14=0 (indexed)
+    const instr = enc(10, AL, 1, 1, imm);
+    const r = stepPreBoot(sim, instr);
+    if (!r) {
+        const fl = sim.faultLog.slice(-1)[0] || {};
+        fail(label, `step() faulted unexpectedly: ${fl.faultCode} — ${fl.message}`); return;
+    }
+    if ((sim.dr[1] >>> 0) !== 0xBEEF) {
+        fail(label, `DR1=0x${sim.dr[1].toString(16)} expected 0xBEEF`); return;
     }
     pass(label);
 })();
