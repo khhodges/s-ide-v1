@@ -165,11 +165,11 @@ console.log('\n--- T011–T014: DWRITE to IO_PORT_PET_NAME_WR ---');
     // T011 — basic DWRITE intercept marks the correct slot
     const sim = makeSim();
     // Set CR5.word0 = non-null, non-abstract GT; word1 = 0xFFFFFF38 so that
-    // (loc + offset) >>> 0 = 0xFFFFFF38 with imm = 0.
+    // (loc + offset) >>> 0 = 0xFFFFFF38 with imm = 0x4000 (immediate mode, offset 0).
     sim.cr[5] = { word0: 1, word1: IO_PORT_PET_NAME_WR, word2: 0, word3: 0, m: 0 };
     sim.dr[0] = 22; // slot index to register
     const beforePC = sim.pc;
-    const result = sim._execDwrite({ crDst: 0, crSrc: 5, imm: 0 });
+    const result = sim._execDwrite({ crDst: 0, crSrc: 5, imm: 0x4000 });
     check('T011a: _execDwrite returns a result (not null/undefined)', !!result);
     check('T011b: slot 22 now named after DWRITE intercept', sim.isNamedSlot(22));
     check('T011c: pc advanced by 1', sim.pc === beforePC + 1);
@@ -180,7 +180,7 @@ console.log('\n--- T011–T014: DWRITE to IO_PORT_PET_NAME_WR ---');
     sim.cr[5] = { word0: 1, word1: IO_PORT_PET_NAME_WR, word2: 0, word3: 0, m: 0 };
     // DR value 0x80 | 15 = 143; 143 & 0x3F = 15
     sim.dr[1] = 0x8F; // 0x8F & 0x3F = 0x0F = 15
-    sim._execDwrite({ crDst: 1, crSrc: 5, imm: 0 });
+    sim._execDwrite({ crDst: 1, crSrc: 5, imm: 0x4000 });
     check('T012a: slot 15 marked (0x8F & 0x3F = 15)', sim.isNamedSlot(15));
     check('T012b: slot 0x8F (143) not marked (out of 6-bit range)',
         !sim.isNamedSlot(0x8F));
@@ -196,7 +196,7 @@ console.log('\n--- T011–T014: DWRITE to IO_PORT_PET_NAME_WR ---');
     let threw = false;
     let result = null;
     try {
-        result = sim._execDwrite({ crDst: 0, crSrc: 5, imm: 0 });
+        result = sim._execDwrite({ crDst: 0, crSrc: 5, imm: 0x4000 });
     } catch (e) {
         threw = true;
     }
@@ -209,7 +209,7 @@ console.log('\n--- T011–T014: DWRITE to IO_PORT_PET_NAME_WR ---');
     const sim = makeSim();
     sim.cr[5] = { word0: 1, word1: IO_PORT_PET_NAME_WR, word2: 0, word3: 0, m: 0 };
     sim.dr[0] = 33;
-    sim._execDwrite({ crDst: 0, crSrc: 5, imm: 0 });
+    sim._execDwrite({ crDst: 0, crSrc: 5, imm: 0x4000 });
     check('T014a: output contains "IO_PORT_PET_NAME_WR"',
         sim.output.includes('IO_PORT_PET_NAME_WR'));
     check('T014b: output mentions the slot index (33)',
@@ -260,7 +260,7 @@ console.log('\n--- T015–T019: getState().petNameMemory ---');
     const sim = makeSim();
     sim.cr[5] = { word0: 1, word1: IO_PORT_PET_NAME_WR, word2: 0, word3: 0, m: 0 };
     sim.dr[0] = 47;
-    sim._execDwrite({ crDst: 0, crSrc: 5, imm: 0 });
+    sim._execDwrite({ crDst: 0, crSrc: 5, imm: 0x4000 });
     const mem = sim.getState().petNameMemory;
     check('T019: slot 47 reflected in getState() after DWRITE intercept',
         new Set(mem).has(47));
