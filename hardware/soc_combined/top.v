@@ -72,14 +72,10 @@ module top (
     wire [31:0] cm_nia;
     wire [4:0]  cm_fault;
 
-    // CM debug ports — connected directly from church_ti60_f225 outputs
-    // NOTE: dbg_fault in the CM RTL is [3:0]; the APB3 bridge expects [4:0].
-    //       The assign below zero-extends bit 4 (no currently defined fault code
-    //       uses the 5th bit, so the top bit is always 0).
-    wire        cm_dbg_boot_complete;   // HIGH once boot ROM completes; stays HIGH
-    wire [31:0] cm_dbg_nia;             // live next-instruction address
-    wire [3:0]  cm_dbg_fault;           // fault code [3:0] from CM RTL
-    wire        cm_dbg_fault_valid;     // pulse on fault
+    // CM debug signals — tied to 0 until the RTL is regenerated with
+    // dedicated debug output ports (dbg_boot_complete, dbg_nia, dbg_fault,
+    // dbg_fault_valid).  The pre-built bitstream in outflow/ was built from
+    // the full debug-port RTL; use 'make bitstream' to rebuild with debug ports.
 
     // GT fault telemetry (Track 4-C — tied to 0 until CM Verilog is regenerated)
     wire [31:0] cm_fault_gt;
@@ -219,14 +215,6 @@ module top (
         .uart_rx          (1'b1),                // CM UART RX — idle (no host driver)
         .push_button      (cm_push_button_driven),
 
-        // CM debug outputs — wired directly to APB3 bridge signals
-        // (previously left unconnected, causing cm_boot_complete / cm_nia / fault to be
-        //  incorrectly derived from the LED outputs or tied to 0)
-        .dbg_boot_complete(cm_dbg_boot_complete),
-        .dbg_nia          (cm_dbg_nia),
-        .dbg_fault        (cm_dbg_fault),
-        .dbg_fault_valid  (cm_dbg_fault_valid),
-
         // CM LEDs — individual 1-bit outputs from generated Verilog
         .led0        (cm_led0),
         .led1        (cm_led1),
@@ -234,22 +222,14 @@ module top (
         .led3        (cm_led3)
     );
 
-    // Route CM debug signals to APB3 bridge inputs.
-    //
-    // cm_dbg_boot_complete: HIGH once the CM boot ROM finishes; sticky forever.
-    //   Previously this was wired to cm_led1, which is the halted-heartbeat
-    //   signal — it blinks while the CM is waiting and goes LOW when free-run
-    //   starts, so the firmware NEVER reliably saw boot_complete = 1.
-    //
-    // cm_dbg_nia:          live NIA from the CM core; was tied to 0x00000000.
-    // cm_dbg_fault_valid:  fault pulse from the CM core; was tied to 0.
-    // cm_dbg_fault:        fault code; was tied to 0.
-    assign cm_boot_complete = cm_dbg_boot_complete;
-    assign cm_fault_valid   = cm_dbg_fault_valid;
-    assign cm_fault         = {1'b0, cm_dbg_fault};  // zero-extend [3:0] → [4:0]
-    assign cm_nia           = cm_dbg_nia;
-    // GT fault telemetry (Track 4-C) — tied to 0 until CM Verilog is
-    // regenerated with the new fault_gt/instr/cr14/stage output ports.
+    // Route CM signals to APB3 bridge inputs.
+    // Debug ports (dbg_boot_complete, dbg_nia, dbg_fault, dbg_fault_valid)
+    // are not present in the current generated RTL — tied to 0 here.
+    // Rebuild with 'make bitstream' to get the full debug-instrumented bitstream.
+    assign cm_boot_complete = 1'b0;
+    assign cm_fault_valid   = 1'b0;
+    assign cm_fault         = 5'b0;
+    assign cm_nia           = 32'b0;
     assign cm_fault_gt      = 32'b0;
     assign cm_fault_instr   = 32'b0;
     assign cm_fault_cr14    = 32'b0;
