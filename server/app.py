@@ -3779,6 +3779,20 @@ def _make_fpga_zip(board, is_ti60, paths, zip_name, build_md):
             '<efx:inter_file name="church_ti60_f225.peri.xml"/>',
             project_xml
         )
+        # Strip synthesis params that cause EFX-0002 in Efinity 2026.1.
+        # Efinity GUI re-injects these on every save; remove them here so the
+        # downloaded XML works whether the user opens it in the GUI or runs
+        # efx_map directly.  run_efx_map.sh does the same via sed for the
+        # soc_combined path.
+        project_xml = re.sub(
+            r'[ \t]*<efx:param name="(?:'
+            r'infer_clk_enable|infer_set_reset|calc_mcw|split_input_buf|'
+            r'no_fanout_override|get_names_method|logic_opting|pack_lut_into_ram|'
+            r'cpe_ins_register|use_cpe_for_const_0|use_cpe_for_const_1|fanout_limit'
+            r')"[^>]*/>\n?',
+            '',
+            project_xml
+        )
         docs_dir = os.path.join(BASE_DIR, "docs")
         _doc_pdfs = [
             ("introducing-cloomc.pdf",  "docs/Introducing CLOOMC.pdf"),
