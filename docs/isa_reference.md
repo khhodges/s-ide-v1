@@ -1,6 +1,6 @@
 # Church Machine ISA Reference
 
-**Version 1.0 — May 2026**
+**Version 1.1 — June 2026**
 **Authoritative sources: `simulator/simulator.js`, `simulator/assembler.js`, `hardware/*.py`**
 
 This document is the single definitive specification for all 20 Church Machine
@@ -15,19 +15,18 @@ explicitly; see `docs/HARDWARE-DEVIATIONS.md` for the full deviation register.
 Every instruction is a 32-bit word with a fixed layout:
 
 ```
- 31      28 27    24 23    20 19    16 15             1 0
-┌──────────┬─────────┬────────┬────────┬────────────────┬───┐
-│  opcode  │  cond   │  fld_a │  fld_b │     imm15      │ 0 │
-│  (4 b)   │  (4 b)  │  (4 b) │  (4 b) │    (15 b)      │(1)│
-└──────────┴─────────┴────────┴────────┴────────────────┴───┘
+ 31    27 26   23 22   19 18   15 14              0
+┌────────┬───────┬───────┬───────┬────────────────┐
+│ opcode │ cond  │ fld_a │ fld_b │     imm15      │
+│  (5 b) │ (4 b) │ (4 b) │ (4 b) │    (15 b)      │
+└────────┴───────┴───────┴───────┴────────────────┘
 ```
 
-- **Bit 0** is always 0 (word-aligned; a 1 here is a FAULT).
-- **opcode** (bits 31:28): selects one of the 20 instructions (0–19). Values 20–15 are reserved and fault.
-- **cond** (bits 27:24): condition under which the instruction executes (see §2).
-- **fld_a** (bits 23:20): first register operand — CR or DR index depending on instruction.
-- **fld_b** (bits 19:16): second register operand — CR or DR index depending on instruction.
-- **imm15** (bits 15:1): 15-bit immediate; interpretation varies per instruction.
+- **opcode** (bits 31:27): selects one of the 20 instructions (0–19). The opcode is a 5-bit field (values 0–31); values 20–31 are currently unassigned (no per-instruction fault-on-use guarantee is specified).
+- **cond** (bits 26:23): condition under which the instruction executes (see §2).
+- **fld_a** (bits 22:19): first register operand — CR or DR index depending on instruction.
+- **fld_b** (bits 18:15): second register operand — CR or DR index depending on instruction.
+- **imm15** (bits 14:0): 15-bit immediate; interpretation varies per instruction.
 
 The **all-zero word** `0x00000000` (opcode=LOAD, cond=EQ, all fields zero) is
 accepted by the assembler as `HALT` or `NOP`. The simulator treats an all-zero
@@ -915,8 +914,8 @@ Backward compatibility: programs that encode `imm15[14:8] = 0` get the fast-path
 **Example:** Load abstraction from c-list row 2 of CR6 into CR0, then call it via fast path.
 ```
 ELOADCALL AL, CR0, CR6, #2    ; row=2, method=0 (fast path)
-                                ; opcode=8, cond=14, fld_a=0, fld_b=6, imm=0x0002
-                                ; encoding: 0x43030002
+                                ; opcode=8, cond=14(AL), fld_a=0, fld_b=6, imm=2
+                                ; encoding: 0x47030002
 ```
 
 ---
