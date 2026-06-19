@@ -92,14 +92,6 @@ class TestParseBoardType:
     def test_ti60_full_name(self):
         assert _parse_board_type("Ti60-Full") == 0x03
 
-    def test_tn20k(self):
-        assert _parse_board_type("TN20K-IoT") == 0x01
-        assert _parse_board_type("TN20K") == 0x01
-
-    def test_wukong(self):
-        assert _parse_board_type("Wukong XC7A100T (Artix-7)") == 0x06
-        assert _parse_board_type("Wukong") == 0x06
-
     def test_unknown_string_returns_zero(self):
         assert _parse_board_type("SomeUnknownBoard") == 0
 

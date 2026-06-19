@@ -18,7 +18,7 @@ if [ "$#" -gt 0 ]; then
 else
     VERILOG_FILES=(
         "verilog/church_core.v"
-        "verilog/church_tang_nano_20k.v"
+        "verilog/church_ti60_f225.v"
     )
 fi
 

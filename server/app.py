@@ -2522,7 +2522,6 @@ BOOK_CHAPTERS = [
         "boot-rom-layout.md",
         "chipflow-cover-letter.md",
         "chipflow-technical-summary.md",
-        "hardware-tang-nano-20k.md",
         "production_silicon_todo.md",
     ]),
     ("Part X: IDE Design Guide", [

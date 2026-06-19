@@ -1,7 +1,7 @@
 """
 Simulation test: outform UART TX mux cannot glitch mid-byte (task #273).
 
-The outform mux in tang_nano_20k.py guards uart_tx with:
+The outform mux guards uart_tx with:
     outform_uart_active = outform_busy | outform_uart.busy
     uart_tx = outform_uart.tx  if outform_uart_active else debug.tx
 
@@ -25,7 +25,7 @@ from amaranth.sim import Simulator
 
 
 # ---------------------------------------------------------------------------
-# Minimal harness — reproduces the mux formula from tang_nano_20k.py verbatim
+# Minimal harness — reproduces the outform UART mux formula verbatim
 # ---------------------------------------------------------------------------
 
 class _UartMuxHarness(Elaboratable):

@@ -699,6 +699,8 @@ def test_iot_lazy_load_integrated():
     print("PASS: test_iot_lazy_load_integrated")
 
 
+import pytest as _pytest_iot
+@_pytest_iot.mark.skip(reason="Tang Nano 20K hardware removed — ChurchTangNano20K no longer available")
 def test_iot_lazy_load_toplevel():
     """
     Top-level integration test: drives ChurchTangNano20K(iot_profile=True,

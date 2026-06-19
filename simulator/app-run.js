@@ -1781,10 +1781,8 @@ async function fpgaConnectToggle() {
     const _board = getSelectedBoard();
     const _boardHints = {
         'ti60-f225':          { chip: 'FTDI FT2232H',  look: 'look for "Dual RS232-HS" or "USB Serial Port"',      driver: 'install the FTDI VCP driver from ftdichip.com' },
-        'tang-nano-20k-iot':  { chip: 'CH340 / CH341', look: 'look for "USB-SERIAL CH340" or "CH341 USB Bridge"',  driver: 'install the CH340 driver from wch-ic.com' },
-        'wukong-xc7a100t':    { chip: 'FTDI FT232',    look: 'look for "USB Serial Port" or "FT232R USB UART"',    driver: 'install the FTDI VCP driver from ftdichip.com' },
     };
-    const _h = _boardHints[_board] || _boardHints['wukong-xc7a100t'];
+    const _h = _boardHints[_board] || _boardHints['ti60-f225'];
     const _label = getBoardLabel(_board);
     const _ready = window.confirm(
         'Connecting to ' + _label + '\n' +
@@ -9671,7 +9669,7 @@ function getStudentSettings() {
         language: 'english',
         nationality: 'us',
         ageTier: '13-17',
-        fpgaBoard: 'wukong-xc7a100t',
+        fpgaBoard: 'ti60-f225',
         selectedSubjects: []
     };
 }
@@ -9780,13 +9778,11 @@ function nativeShare() {
 }
 
 function getSelectedBoard() {
-    return localStorage.getItem('fpga_board_target') || 'wukong-xc7a100t';
+    return localStorage.getItem('fpga_board_target') || 'ti60-f225';
 }
 
 function getBoardShortLabel(board) {
     if (board === 'ti60-f225') return 'Ti60 F225';
-    if (board === 'tang-nano-20k-iot') return 'Tang Nano 20K';
-    if (board === 'wukong-xc7a100t') return 'Wukong XC7A100T';
     return 'Tang Nano 20K';
 }
 
@@ -9800,7 +9796,7 @@ function setSelectedBoard(board) {
     if (lbl) lbl.textContent = getBoardShortLabel(board);
     const ti60Btn = document.getElementById('toolbarTi60ConnectBtn');
     if (ti60Btn) {
-        const _boardShort = {'ti60-f225': 'Ti60', 'tang-nano-20k-iot': 'Tang 20K', 'wukong-xc7a100t': 'Wukong'};
+        const _boardShort = {'ti60-f225': 'Ti60'};
         ti60Btn.innerHTML = '&#x1F50C; ' + (_boardShort[board] || 'Board');
         ti60Btn.classList.add('ti60-connect-active');
     }
@@ -9810,8 +9806,6 @@ function setSelectedBoard(board) {
 
 function getBoardLabel(board) {
     if (board === 'ti60-f225') return 'Efinix Ti60 F225';
-    if (board === 'tang-nano-20k-iot') return 'Sipeed Tang Nano 20K';
-    if (board === 'wukong-xc7a100t') return 'QMTECH Wukong Artix-7 XC7A100T';
     return 'Sipeed Tang Nano 20K';
 }
 
@@ -9876,15 +9870,8 @@ function _renderBuildFiles(files, isTi60, board) {
     const iconMap = { v: '📄', edif: '🔌', il: '⚙️', json: '📋', cst: '📍', makefile: '🛠️', md: '📖', isf: '📌', xdc: '📌', tcl: '📜', xml: '🗂️', sh: '🖥️', py: '🐍', c: '🔧', s: '⚙️', h: '📋', ld: '📍' };
 
     const optionalByBoard = {
-        'tang-nano-20k-iot': [
-            { name: 'church_tang_nano_20k.v',    reason: 'Yosys synthesis' },
-            { name: 'church_tang_nano_20k.json',  reason: 'Yosys synthesis' },
-        ],
-        'wukong-xc7a100t': [
-            { name: 'church_wukong_xc7a100t.v',  reason: 'Yosys synthesis' },
-        ],
     };
-    const boardKey = board || (isTi60 ? 'ti60-f225' : 'tang-nano-20k-iot');
+    const boardKey = board || 'ti60-f225';
     const optionalDefs = optionalByBoard[boardKey] || [];
 
     const presentSet = new Set(files);
@@ -9918,21 +9905,8 @@ function _renderBuildNextSteps(isTi60, board) {
             'Run Synthesis → P&R → Generate Bitstream',
             'Tool → Programmer → Program (JTAG / USB)',
         ];
-    } else if (board === 'wukong-xc7a100t') {
-        steps = [
-            'Install Vivado 2020.x or later (Xilinx / AMD)',
-            'Extract church-wukong-package.zip to any folder',
-            'In the Vivado Tcl Console: cd /path/to/extracted && source wukong_xc7a100t.tcl',
-            'The script creates the project, runs synthesis + implementation, writes the bitstream',
-            'Tools \u2192 Hardware Manager \u2192 Open Target \u2192 Program Device \u2192 select church_wukong_xc7a100t.bit',
-        ];
     } else {
-        steps = [
-            'Install OSS CAD Suite (oss-cad-suite-build on GitHub)',
-            'Unzip the package, then run: make pnr pack',
-            'Connect Tang Nano 20K via USB',
-            'Run: make prog  — or use the Deploy to FPGA button',
-        ];
+        steps = [];
     }
     el.innerHTML = steps.map((s, i) =>
         `<div class="build-step-row"><span class="build-step-num">${i + 1}</span><span>${s}</span></div>`
