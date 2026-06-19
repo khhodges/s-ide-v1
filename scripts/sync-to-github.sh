@@ -155,20 +155,7 @@ _push_with_lfs() {
         git remote add "$remote_name" "$remote_url"
     fi
 
-    echo "sync-to-github: pushing ${BRANCH} (${HEAD_SHA}) + LFS objects → github.com/${repo} ..."
-
-    local push_output push_exit
-    push_output=$(GIT_LFS_SKIP_PUSH=1 GIT_TRACE=0 \
-        git push "$remote_name" "HEAD:refs/heads/${BRANCH}" --force 2>&1)
-    push_exit=$?
-    echo "$push_output"
-
-    if [ "$push_exit" -ne 0 ]; then
-        echo "sync-to-github: push to ${repo} FAILED (exit ${push_exit})."
-        return "$push_exit"
-    fi
-
-    echo "sync-to-github: uploading LFS objects to ${repo} ..."
+    echo "sync-to-github: uploading LFS objects to ${repo} (must happen before code push) ..."
     local lfs_output lfs_exit
     lfs_output=$(GIT_TRACE=0 git lfs push "$remote_name" "HEAD" 2>&1)
     lfs_exit=$?
@@ -179,7 +166,19 @@ _push_with_lfs() {
         return "$lfs_exit"
     fi
 
-    echo "sync-to-github: push + LFS upload to ${repo} succeeded."
+    echo "sync-to-github: pushing ${BRANCH} (${HEAD_SHA}) → github.com/${repo} ..."
+    local push_output push_exit
+    push_output=$(GIT_TRACE=0 \
+        git push "$remote_name" "HEAD:refs/heads/${BRANCH}" --force 2>&1)
+    push_exit=$?
+    echo "$push_output"
+
+    if [ "$push_exit" -ne 0 ]; then
+        echo "sync-to-github: push to ${repo} FAILED (exit ${push_exit})."
+        return "$push_exit"
+    fi
+
+    echo "sync-to-github: LFS upload + push to ${repo} succeeded."
     return 0
 }
 
