@@ -22,15 +22,22 @@ node_modules/
 fpga_output/build/
 
 # ── Build artefacts not served by the app ────────────────────────────────────
-# Keep:  church_ti60_f225.{il,v}  church_wukong_xc7a100t.{il,v}
-#        church_tang_nano_20k.{il,v,json}   (Builder ZIP endpoints need these)
-# Drop everything else in build/:
+# Only the Ti60 F225 board is supported. All Tang Nano and Wukong build
+# artefacts are excluded.
 
-# Large JSON synthesis netlists for boards the app doesn't serve:
+# Tang Nano 20K — all variants:
+build/church_tang_nano_20k.il
+build/church_tang_nano_20k.v
+build/church_tang_nano_20k.json
 build/church_tang_nano_20k_iot.json
-build/church_tang_nano_9k.json
-build/church_tang_nano_9k.v
+build/church_tang_nano_20k_iot.v
 build/church_tang_nano_9k.il
+build/church_tang_nano_9k.v
+build/church_tang_nano_9k.json
+
+# Wukong Artix-7:
+build/church_wukong_xc7a100t.il
+build/church_wukong_xc7a100t.v
 
 # Yosys netlists not referenced by any download endpoint:
 build/core_only.json

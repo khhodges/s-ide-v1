@@ -884,9 +884,7 @@
                 <span class="hardware-build-title">&#x2B21;</span>
                 <label class="hardware-build-label" for="hardwareBoardSel">Target</label>
                 <select id="hardwareBoardSel" class="lang-selector" onchange="setSelectedBoard(this.value); updateHardwarePanelLabel()" title="Target FPGA board">
-                    <option value="wukong-xc7a100t" selected>QMTECH Wukong Artix-7 XC7A100T (Vivado)</option>
-                    <option value="tang-nano-20k-iot">Sipeed Tang Nano 20K (Gowin GW2AR-18)</option>
-                    <option value="ti60-f225">Efinix Ti60 F225</option>
+                    <option value="ti60-f225" selected>Efinix Ti60 F225</option>
                 </select>
                 <div class="hw-actions-menu" id="hwActionsMenu">
                     <button class="hw-actions-toggle" onclick="toggleHwActions(event)" data-tooltip="Hardware actions — Build, Download, Deploy, Test UART">&#x2630; Actions &#x25BE;</button>
@@ -1038,7 +1036,7 @@
                             <ul class="sw-trouble-list">
                                 <li><strong>Download link not loading</strong> — hard-refresh the page (Ctrl+Shift+R / Cmd+Shift+R).</li>
                                 <li><strong>No network access</strong> — copy the direct GitHub URL shown in the release badge and open it in a new tab.</li>
-                                <li><strong>Wrong board selected</strong> — verify you chose the <strong>Ti60 F225 / F225C</strong> variant; the Wukong and Tang Nano use different bit files.</li>
+                                <li><strong>Wrong board selected</strong> — verify you chose the <strong>Ti60 F225 / F225C</strong> variant.</li>
                             </ul>
                         </div>
                         <div class="sw-footer-row">
@@ -2134,7 +2132,7 @@ python3 server/local_bridge.py /dev/ttyUSB2 57600 8766 --ide=https://lab.cloomc.
                     <div class="settings-section-title">Release Update</div>
                     <button class="btn btn-sm" onclick="showReleaseHistory()" data-tooltip="View all releases — See the complete release history and changelog">History</button>
                 </div>
-                <div class="settings-release-note" id="settingsReleaseNote">Builder ZIP downloads: build log now matches ZIP contents exactly for all 3 boards (Ti60 F225, Wukong XC7A100T, Tang Nano 20K). Stale .edif entry removed; missing files added; new zip-contents test suite.</div>
+                <div class="settings-release-note" id="settingsReleaseNote">Ti60 F225 only — Tang Nano 20K and Wukong XC7A100T board support removed. Builder ZIP and all download endpoints now target the Ti60 F225 exclusively.</div>
                 <div class="settings-release-meta">Published: <span id="settingsReleasePublishedAt"></span></div>
             </div>
             <div class="settings-page-grid">
@@ -2204,14 +2202,11 @@ python3 server/local_bridge.py /dev/ttyUSB2 57600 8766 --ide=https://lab.cloomc.
                         <div class="settings-section-title">Hardware Target</div>
                         <label class="settings-label">FPGA Board
                             <select id="settingFPGABoard" class="modal-input">
-                                <option value="wukong-xc7a100t" selected>QMTECH Wukong Artix-7 XC7A100T (Vivado, 100 MHz)</option>
-                                <option value="tang-nano-20k-iot">Sipeed Tang Nano 20K (Gowin GW2AR-18)</option>
-                                <option value="ti60-f225">Efinix Ti60 F225 (Titanium, 50 MHz)</option>
+                                <option value="ti60-f225" selected>Efinix Ti60 F225 (Titanium, 50 MHz)</option>
                             </select>
                         </label>
                         <div style="color:#888;font-size:0.78rem;margin-top:0.3rem;">
                             Selects the synthesis target for Download FPGA Package and Deploy to FPGA.
-                            QMTECH Wukong uses Vivado. Tang Nano 20K uses Yosys/nextpnr + OSS CAD Suite.
                             Ti60 F225 uses Yosys synth_efinix + Efinity IDE for P&amp;R.
                         </div>
                     </div>
