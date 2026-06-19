@@ -2078,7 +2078,7 @@
 /* Column header row */
 .callhome-log-col-heads {
     display: grid;
-    grid-template-columns: 6ch 1.2ch 16ch 12ch 5ch 6ch 6ch 9ch;
+    grid-template-columns: 6ch 1.2ch 14ch 12ch 4ch 6ch 13ch 9ch;
     gap: 0.6rem;
     padding: 0.25rem 0.8rem;
     background: #111118;
@@ -2114,7 +2114,7 @@
 }
 .callhome-log-row {
     display: grid;
-    grid-template-columns: 6ch 1.2ch 16ch 12ch 5ch 6ch 6ch 9ch;
+    grid-template-columns: 6ch 1.2ch 14ch 12ch 4ch 6ch 13ch 9ch;
     gap: 0.6rem;
     align-items: center;
     padding: 0.2rem 0.8rem;
@@ -2133,7 +2133,7 @@
 .chlog-nia       { color: #eceef3; }
 .chlog-fw        { color: #eceef3; }
 .chlog-boot      { color: #eceef3; text-align: right; }
-.chlog-fault     { }
+.chlog-fault     { white-space: nowrap; overflow: hidden; }
 .chlog-fault-val    { color: #ef4444; }
 .chlog-ok-dash      { color: #6b7280; }
 .chlog-recovery-tag {
@@ -2157,7 +2157,7 @@
 /* Plain UART text lines interleaved in the callhome log — same grid as callhome rows */
 .callhome-uart-row {
     display: grid;
-    grid-template-columns: 6ch 1.2ch 16ch 12ch 5ch 6ch 6ch 9ch;
+    grid-template-columns: 6ch 1.2ch 14ch 12ch 4ch 6ch 13ch 9ch;
     gap: 0.6rem;
     align-items: center;
     padding: 0.2rem 0.8rem;

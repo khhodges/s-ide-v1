@@ -28,3 +28,6 @@ server/scheduler.db
 server/mum_key.pem
 server/church_machine.db
 server/github-sync-status.json
+
+# Agent screenshot attachments — LFS-tracked by Replit internally; exclude from pushes
+attached_assets/
