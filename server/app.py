@@ -9113,33 +9113,25 @@ def api_compile():
     POST /api/compile
     Content-Type: application/json
 
-    Request body (all fields except source/language/target are optional):
+    Request body:
       {
-        "source":           "<raw .cloomc source text>",
-        "language":         "assembly" | "cloomc++" | "english" | "symbolic_math" |
-                            "js_cloomc++" | "haskell_cloomc++" | "lambda_calculus" |
-                            "abstraction",
-        "target":           "simulator" | "ti60_f225" | "wukong_xc7a100t" | "tang_nano_20k",
-        "abstraction_name": "MyAbstraction",          // optional override
-        "namespace_hint":   {                          // optional
+        "source":           "<raw .cloomc source text>",   // required
+        "language":         "english" | "javascript" | "haskell" |
+                            "symbolic" | "lambda" | "assembly",  // optional — auto-detected
+        "abstraction_name": "MyAbstraction",               // optional override
+        "namespace_hint":   {                              // optional
           "gt_type":          "inform",
           "allocation_words": 64,
           "clist_slots":      4
-        },
-        "options": {                                   // optional
-          "strict_mode":   false,   // default: false
-          "warn_as_error": false    // default: false
         }
       }
 
-    Response (status always 200 even on compile_failed — check JSON status field):
-      {
-        "status":         "ok" | "ok_with_warnings" | "compile_failed",
-        "lump":           { ... },     // absent on compile_failed
-        "console_output": [ ... ],
-        "warnings":       [ ... ],     // present when ok_with_warnings
-        "errors":         [ ... ]      // present when compile_failed
-      }
+    Response (HTTP 200 always — check the `ok` field):
+      Success:
+        { "ok": true,  "language": "assembly",
+          "words": [uint32, ...], "lump_binary": "<base64>", "warnings": [] }
+      Failure:
+        { "ok": false, "language": "assembly", "error": "<description>" }
 
     Auth: if the COMPILE_API_TOKEN environment variable / secret is set,
     callers must supply it via:
@@ -9149,7 +9141,7 @@ def api_compile():
     If COMPILE_API_TOKEN is unset the endpoint is open (no auth required),
     matching the IDE's own no-login default.
     """
-    from compile_api import run_compile, VALID_LANGUAGES, VALID_TARGETS
+    from compile_api import run_compile, VALID_LANGUAGES
 
     if _COMPILE_API_TOKEN:
         auth_header  = request.headers.get('Authorization', '')
@@ -9163,15 +9155,12 @@ def api_compile():
         return jsonify({'error': 'Request body must be application/json'}), 400
 
     source   = body.get('source',   '')
-    language = body.get('language', '')
-    target   = body.get('target',   '')
+    language = body.get('language', '') or ''
 
     if not isinstance(source, str) or not source.strip():
         return jsonify({'error': '`source` is required and must be a non-empty string'}), 400
-    if language not in VALID_LANGUAGES:
+    if language and language not in VALID_LANGUAGES:
         return jsonify({'error': f'`language` must be one of: {", ".join(sorted(VALID_LANGUAGES))}'}), 400
-    if target not in VALID_TARGETS:
-        return jsonify({'error': f'`target` must be one of: {", ".join(sorted(VALID_TARGETS))}'}), 400
 
     result = run_compile(body)
     return jsonify(result), 200

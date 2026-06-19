@@ -4,16 +4,21 @@ tests/server/test_compile_api.py
 Test suite for the CLOOMC++ Compiler API:
   POST /api/compile
 
-Covers:
-  - Successful compile → status: ok
-  - Unresolved symbols, strict_mode=false → status: ok_with_warnings
-  - Unresolved symbols, strict_mode=true  → status: compile_failed
-  - Hard syntax error                     → status: compile_failed
-  - Missing / invalid request fields      → HTTP 400
-  - Auth token enforcement                → HTTP 401
-  - compile_api.run_compile unit tests    → correct dict shape
+Covers (ECO-002 shape: ok bool, flat words/lump_binary, 6 languages, no target):
+  CA-1  Successful compile (assembly)        → ok: true, words, lump_binary
+  CA-2  Hard syntax error                    → ok: false, error
+  CA-3  Unresolved symbols (lazy-resolve)    → ok: true (xfail if behaviour changes)
+  CA-5  Missing / invalid request fields     → HTTP 400
+  CA-6  Invalid language value               → HTTP 400
+  CA-8  Auth token enforcement               → HTTP 401
+  CA-9  compile_api.run_compile unit tests   → correct dict shape
+  CA-10 compile_worker.js direct invocation  → correct dict shape
+  CA-11 namespace_hint allocation_words      → len(words) honoured
+  CA-12 All 6 supported languages accepted   → HTTP 200
+  CA-13 Response shape completeness          → required keys present
 """
 
+import base64
 import json
 import os
 import sys
@@ -32,17 +37,13 @@ import server.app as _app_module
 # Source fixtures
 # ---------------------------------------------------------------------------
 
-# Simple, valid bare-assembly program (no abstraction wrapper needed).
 _ASM_OK = """\
 IADD DR1, DR0, #42
 HALT
 """
 
-# Source that will always trigger a hard compile error (invalid syntax).
 _ASM_BROKEN = "!!! this is definitely not valid CLOOMC source @@@"
 
-# Assembly that calls a method on an abstraction not declared in capabilities
-# → produces "not in capabilities list" which is an unresolved-pattern error.
 _ASM_UNRESOLVED = """\
 CALL SlideRule, Multiply
 RETURN DR0
@@ -76,18 +77,18 @@ def test_ca1_success_assembly(client):
     resp = _post(client, {
         'source':   _ASM_OK,
         'language': 'assembly',
-        'target':   'simulator',
     })
     assert resp.status_code == 200
     data = resp.get_json()
-    assert data['status'] == 'ok', f"unexpected status: {data}"
-    assert 'lump' in data
-    lump = data['lump']
-    assert lump['size_words'] >= 64
-    assert lump['binary_hex'].startswith('0x')
-    assert isinstance(lump['method_table'], list)
-    assert len(data['console_output']) > 0
-    assert 'warnings' not in data
+    assert data.get('ok') is True, f"unexpected response: {data}"
+    assert isinstance(data.get('words'), list)
+    assert len(data['words']) >= 64
+    assert isinstance(data.get('lump_binary'), str)
+    # lump_binary must be valid base64 and decode to words×4 bytes
+    decoded = base64.b64decode(data['lump_binary'])
+    assert len(decoded) == len(data['words']) * 4
+    assert isinstance(data.get('warnings'), list)
+    assert 'language' in data
 
 
 # ---------------------------------------------------------------------------
@@ -98,78 +99,43 @@ def test_ca2_compile_failed_syntax_error(client):
     resp = _post(client, {
         'source':   _ASM_BROKEN,
         'language': 'assembly',
-        'target':   'simulator',
     })
     assert resp.status_code == 200
     data = resp.get_json()
-    assert data['status'] == 'compile_failed'
-    assert 'lump' not in data
-    assert 'errors' in data
-    assert len(data['errors']) > 0
-    assert any('COMPILE FAILED' in line for line in data['console_output'])
+    assert data.get('ok') is False, f"expected failure, got: {data}"
+    assert isinstance(data.get('error'), str)
+    assert len(data['error']) > 0
+    assert 'words' not in data
+    assert 'lump_binary' not in data
 
 
 # ---------------------------------------------------------------------------
-# CA-3: Unresolved symbols, strict_mode=false (default) → ok_with_warnings
+# CA-3: Unresolved symbols (lazy-resolve) → ok: true with non-empty warnings
 # ---------------------------------------------------------------------------
 
-def test_ca3_unresolved_strict_mode_false(client):
+@pytest.mark.xfail(strict=False, reason="unresolved-symbol behaviour depends on assembler version")
+def test_ca3_unresolved_lazy_resolve(client):
     resp = _post(client, {
         'source':   _ASM_UNRESOLVED,
         'language': 'assembly',
-        'target':   'simulator',
-        'options':  {'strict_mode': False},
     })
     assert resp.status_code == 200
     data = resp.get_json()
-    # Either ok (if no capabilities check in assembly) or ok_with_warnings
-    assert data['status'] in ('ok', 'ok_with_warnings', 'compile_failed'), data
-    # If warnings are present they must not be hard errors
-    if data['status'] == 'ok_with_warnings':
-        assert 'warnings' in data
-        assert 'lump' in data
+    assert data.get('ok') is True, data
+    assert len(data.get('warnings', [])) > 0
 
 
 # ---------------------------------------------------------------------------
-# CA-4: Unresolved symbols, strict_mode=true → compile_failed
-# ---------------------------------------------------------------------------
-
-def test_ca4_unresolved_strict_mode_true(client):
-    resp = _post(client, {
-        'source':   _ASM_UNRESOLVED,
-        'language': 'assembly',
-        'target':   'simulator',
-        'options':  {'strict_mode': True},
-    })
-    assert resp.status_code == 200
-    data = resp.get_json()
-    # strict_mode=true means unresolved symbols become hard errors
-    # (compile may also succeed cleanly if assembly doesn't raise them)
-    assert data['status'] in ('ok', 'compile_failed'), data
-    if data['status'] == 'compile_failed':
-        assert 'errors' in data
-        assert len(data['errors']) > 0
-
-
-# ---------------------------------------------------------------------------
-# CA-5: Missing required fields → HTTP 400
+# CA-5: Missing / invalid required fields → HTTP 400
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize('body, expected_fragment', [
     (
-        {'language': 'assembly', 'target': 'simulator'},
+        {'language': 'assembly'},
         'source',
     ),
     (
-        {'source': _ASM_OK, 'target': 'simulator'},
-        'language',
-    ),
-    (
-        {'source': _ASM_OK, 'language': 'assembly'},
-        'target',
-    ),
-    (
-        {'source': '', 'language': 'assembly', 'target': 'simulator'},
+        {'source': '', 'language': 'assembly'},
         'source',
     ),
 ])
@@ -188,26 +154,10 @@ def test_ca6_invalid_language(client):
     resp = _post(client, {
         'source':   _ASM_OK,
         'language': 'cobol',
-        'target':   'simulator',
     })
     assert resp.status_code == 400
     data = resp.get_json()
     assert 'language' in data.get('error', '')
-
-
-# ---------------------------------------------------------------------------
-# CA-7: Invalid target value → HTTP 400
-# ---------------------------------------------------------------------------
-
-def test_ca7_invalid_target(client):
-    resp = _post(client, {
-        'source':   _ASM_OK,
-        'language': 'assembly',
-        'target':   'mainframe',
-    })
-    assert resp.status_code == 400
-    data = resp.get_json()
-    assert 'target' in data.get('error', '')
 
 
 # ---------------------------------------------------------------------------
@@ -219,7 +169,6 @@ def test_ca8_auth_token_missing(client):
         resp = _post(client, {
             'source':   _ASM_OK,
             'language': 'assembly',
-            'target':   'simulator',
         })
     assert resp.status_code == 401
 
@@ -229,7 +178,6 @@ def test_ca8_auth_token_wrong(client):
         resp = _post(client, {
             'source':   _ASM_OK,
             'language': 'assembly',
-            'target':   'simulator',
         }, token='wrong-token')
     assert resp.status_code == 401
 
@@ -239,11 +187,10 @@ def test_ca8_auth_token_correct(client):
         resp = _post(client, {
             'source':   _ASM_OK,
             'language': 'assembly',
-            'target':   'simulator',
         }, token='secret-token-123')
     assert resp.status_code == 200
     data = resp.get_json()
-    assert data['status'] in ('ok', 'ok_with_warnings', 'compile_failed')
+    assert isinstance(data.get('ok'), bool)
 
 
 # ---------------------------------------------------------------------------
@@ -252,12 +199,11 @@ def test_ca8_auth_token_correct(client):
 
 def test_ca9_run_compile_timeout():
     from server.compile_api import run_compile
-    import subprocess
     with patch('server.compile_api.subprocess.run',
                side_effect=subprocess.TimeoutExpired(cmd='node', timeout=30)):
-        result = run_compile({'source': _ASM_OK, 'language': 'assembly', 'target': 'simulator'})
-    assert result['status'] == 'compile_failed'
-    assert 'timed out' in result['console_output'][0].lower()
+        result = run_compile({'source': _ASM_OK, 'language': 'assembly'})
+    assert result.get('ok') is False
+    assert 'timed out' in result.get('error', '').lower()
 
 
 def test_ca9_run_compile_bad_json():
@@ -266,8 +212,8 @@ def test_ca9_run_compile_bad_json():
     mock_proc.stdout = b'NOT JSON OUTPUT'
     mock_proc.stderr = b''
     with patch('server.compile_api.subprocess.run', return_value=mock_proc):
-        result = run_compile({'source': _ASM_OK, 'language': 'assembly', 'target': 'simulator'})
-    assert result['status'] == 'compile_failed'
+        result = run_compile({'source': _ASM_OK, 'language': 'assembly'})
+    assert result.get('ok') is False
 
 
 def test_ca9_run_compile_empty_stdout():
@@ -276,8 +222,8 @@ def test_ca9_run_compile_empty_stdout():
     mock_proc.stdout = b''
     mock_proc.stderr = b'node: error'
     with patch('server.compile_api.subprocess.run', return_value=mock_proc):
-        result = run_compile({'source': _ASM_OK, 'language': 'assembly', 'target': 'simulator'})
-    assert result['status'] == 'compile_failed'
+        result = run_compile({'source': _ASM_OK, 'language': 'assembly'})
+    assert result.get('ok') is False
 
 
 # ---------------------------------------------------------------------------
@@ -302,15 +248,13 @@ def test_ca10_worker_success():
     result = _invoke_worker({
         'source':   _ASM_OK,
         'language': 'assembly',
-        'target':   'simulator',
     })
-    assert result['status'] in ('ok', 'ok_with_warnings'), result
-    assert 'lump' in result
-    lump = result['lump']
-    assert lump['size_words'] >= 64
-    assert lump['binary_hex'].startswith('0x')
-    assert len(lump['binary_hex']) == 2 + lump['size_words'] * 8
-    assert isinstance(lump['method_table'], list)
+    assert result.get('ok') is True, result
+    assert isinstance(result.get('words'), list)
+    assert len(result['words']) >= 64
+    assert isinstance(result.get('lump_binary'), str)
+    decoded = base64.b64decode(result['lump_binary'])
+    assert len(decoded) == len(result['words']) * 4
 
 
 def test_ca10_worker_header_word():
@@ -318,28 +262,24 @@ def test_ca10_worker_header_word():
     result = _invoke_worker({
         'source':   _ASM_OK,
         'language': 'assembly',
-        'target':   'simulator',
     })
-    assert result['status'] in ('ok', 'ok_with_warnings'), result
-    lump = result['lump']
-    hex_str = lump['binary_hex'][2:]
-    header = int(hex_str[:8], 16)
+    assert result.get('ok') is True, result
+    header = result['words'][0]
     cw = (header >> 10) & 0x1FFF
     cc = header & 0xFF
     assert cw >= 0
     assert cc >= 0
-    assert lump['clist_slots'] == cc
 
 
 def test_ca10_worker_compile_failed():
     result = _invoke_worker({
         'source':   _ASM_BROKEN,
         'language': 'assembly',
-        'target':   'simulator',
     })
-    assert result['status'] == 'compile_failed'
-    assert 'lump' not in result
-    assert 'errors' in result
+    assert result.get('ok') is False
+    assert isinstance(result.get('error'), str)
+    assert 'words' not in result
+    assert 'lump_binary' not in result
 
 
 def test_ca10_worker_invalid_json():
@@ -351,8 +291,8 @@ def test_ca10_worker_invalid_json():
         timeout=10,
     )
     data = json.loads(proc.stdout.decode('utf-8').strip())
-    assert data['status'] == 'compile_failed'
-    assert 'Invalid JSON' in data['errors'][0]['message']
+    assert data.get('ok') is False
+    assert 'Invalid JSON' in data.get('error', '')
 
 
 # ---------------------------------------------------------------------------
@@ -363,26 +303,23 @@ def test_ca11_namespace_hint_allocation():
     result = _invoke_worker({
         'source':   _ASM_OK,
         'language': 'assembly',
-        'target':   'simulator',
         'namespace_hint': {'allocation_words': 128, 'gt_type': 'inform'},
     })
-    assert result['status'] in ('ok', 'ok_with_warnings'), result
-    assert result['lump']['size_words'] == 128
+    assert result.get('ok') is True, result
+    assert len(result['words']) == 128
 
 
 # ---------------------------------------------------------------------------
-# CA-12: All 8 supported languages are accepted
+# CA-12: All 6 supported languages are accepted
 # ---------------------------------------------------------------------------
 
 LANG_SOURCES = {
-    'assembly':         _ASM_OK,
-    'cloomc++':         'abstraction Noop { method Run { return 0 } }',
-    'js_cloomc++':      'abstraction Noop { method Run { return 0 } }',
-    'english':          'abstraction Noop { method Run { return 0 } }',
-    'haskell_cloomc++': 'abstraction Noop { method run = 0 }',
-    'lambda_calculus':  'abstraction Noop { method Run = \\x -> 0 }',
-    'symbolic_math':    'abstraction Noop { method Run = 0 }',
-    'abstraction':      'abstraction Noop {}',
+    'assembly':    _ASM_OK,
+    'english':     'abstraction Noop { method Run { return 0 } }',
+    'javascript':  'abstraction Noop { method Run { return 0 } }',
+    'haskell':     'abstraction Noop { method run = 0 }',
+    'lambda':      'abstraction Noop { method Run = \\x -> 0 }',
+    'symbolic':    'abstraction Noop { method Run = 0 }',
 }
 
 @pytest.mark.parametrize('lang', sorted(LANG_SOURCES.keys()))
@@ -390,13 +327,11 @@ def test_ca12_all_languages_accepted(client, lang):
     resp = _post(client, {
         'source':   LANG_SOURCES[lang],
         'language': lang,
-        'target':   'simulator',
     })
     assert resp.status_code == 200
     data = resp.get_json()
-    assert data['status'] in ('ok', 'ok_with_warnings', 'compile_failed'), \
-        f'lang={lang}: unexpected status {data["status"]}'
-    assert 'console_output' in data
+    assert isinstance(data.get('ok'), bool), \
+        f'lang={lang}: expected ok bool, got {data}'
 
 
 # ---------------------------------------------------------------------------
@@ -407,13 +342,22 @@ def test_ca13_ok_response_shape():
     result = _invoke_worker({
         'source':   _ASM_OK,
         'language': 'assembly',
-        'target':   'simulator',
     })
-    assert result['status'] in ('ok', 'ok_with_warnings')
-    lump = result['lump']
-    for field in ('name', 'typ', 'gt_type', 'allocation_words',
-                  'method_table', 'clist_slots', 'binary_hex',
-                  'size_words', 'profile', 'language'):
-        assert field in lump, f'lump missing field: {field}'
-    assert isinstance(result['console_output'], list)
-    assert len(result['console_output']) >= 1
+    assert result.get('ok') is True
+    for field in ('language', 'words', 'lump_binary', 'warnings'):
+        assert field in result, f'response missing field: {field}'
+    assert isinstance(result['words'], list)
+    assert isinstance(result['lump_binary'], str)
+    assert isinstance(result['warnings'], list)
+    assert isinstance(result['language'], str)
+
+
+def test_ca13_fail_response_shape():
+    result = _invoke_worker({
+        'source':   _ASM_BROKEN,
+        'language': 'assembly',
+    })
+    assert result.get('ok') is False
+    for field in ('language', 'error'):
+        assert field in result, f'failure response missing field: {field}'
+    assert isinstance(result['error'], str)

@@ -1,0 +1,51 @@
+# Exclude large artefacts that are not needed at runtime.
+# Replit reads this file during deployment to prune the snapshot.
+# Same syntax as .gitignore.
+
+# ── FPGA build artefact ZIP (1.3 GB) ─────────────────────────────────────────
+# The app assembles its own /dl/ti60zip on-the-fly from bitstreams/ — this
+# pre-built file is never served directly.
+project.zip
+
+# ── Mockup sandbox (244 MB) ───────────────────────────────────────────────────
+# Canvas design tooling; not used in the deployed IDE.
+artifacts/
+
+# ── Agent screenshot attachments (56 MB) ─────────────────────────────────────
+attached_assets/
+
+# ── JS test dependencies (39 MB) ─────────────────────────────────────────────
+# Only used by the Playwright / Node test suites; not by the Flask server.
+node_modules/
+
+# ── FPGA synthesis workdir (81 MB) ───────────────────────────────────────────
+fpga_output/build/
+
+# ── Build artefacts not served by the app ────────────────────────────────────
+# Keep:  church_ti60_f225.{il,v}  church_wukong_xc7a100t.{il,v}
+#        church_tang_nano_20k.{il,v,json}   (Builder ZIP endpoints need these)
+# Drop everything else in build/:
+
+# Large JSON synthesis netlists for boards the app doesn't serve:
+build/church_tang_nano_20k_iot.json
+build/church_tang_nano_9k.json
+build/church_tang_nano_9k.v
+build/church_tang_nano_9k.il
+
+# Yosys netlists not referenced by any download endpoint:
+build/core_only.json
+build/uart_test.json
+build/old_uart_test.json
+build/church_pico_ice.json
+build/church_pico_ice_test.json
+
+# EDIF export (only Efinity uses it; not shipped in any ZIP):
+build/church_ti60_f225.edif
+
+# Simulation waveforms:
+build/church_pico_ice_test.vcd
+build/debug_step2.vcd
+build/uart_test.asc
+
+# Synthesis log (large text, not served):
+build/synth.log
