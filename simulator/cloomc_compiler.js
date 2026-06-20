@@ -2567,10 +2567,10 @@ class CLOOMCCompiler {
                         const exitAddr = code.length;
                         code.push(this.encode(this.opcodes.BRANCH, this.conditions.EQ, 0, 0, 0));
                         code.push(this.encode(this.opcodes.IADD, 14, dr, dr, leftReg));
-                        code.push(this.encode(this.opcodes.ISUB, 14, cntReg, cntReg, 1));
-                        code.push(this.encode(this.opcodes.BRANCH, 14, 0, 0, loopAddr & 0x7FFF));
+                        code.push(this.encode(this.opcodes.ISUB, 14, cntReg, cntReg, 0x4001));
+                        code.push(this.encode(this.opcodes.BRANCH, 14, 0, 0, (loopAddr - code.length) & 0x7FFF));
                         const exitTarget = code.length;
-                        code[exitAddr] = (code[exitAddr] & ~0x7FFF) | (exitTarget & 0x7FFF);
+                        code[exitAddr] = (code[exitAddr] & ~0x7FFF) | ((exitTarget - exitAddr) & 0x7FFF);
                         code[exitAddr] = code[exitAddr] >>> 0;
                         break;
                     }
@@ -2584,49 +2584,35 @@ class CLOOMCCompiler {
                         const divExit = code.length;
                         code.push(this.encode(this.opcodes.BRANCH, this.conditions.LT, 0, 0, 0));
                         code.push(this.encode(this.opcodes.ISUB, 14, remDR, remDR, rightReg));
-                        code.push(this.encode(this.opcodes.IADD, 14, dr, dr, 1));
-                        code.push(this.encode(this.opcodes.BRANCH, 14, 0, 0, divLoop & 0x7FFF));
+                        code.push(this.encode(this.opcodes.IADD, 14, dr, dr, 0x4001));
+                        code.push(this.encode(this.opcodes.BRANCH, 14, 0, 0, (divLoop - code.length) & 0x7FFF));
                         const divExitTarget = code.length;
-                        code[divExit] = (code[divExit] & ~0x7FFF) | (divExitTarget & 0x7FFF);
+                        code[divExit] = (code[divExit] & ~0x7FFF) | ((divExitTarget - divExit) & 0x7FFF);
                         code[divExit] = code[divExit] >>> 0;
                         break;
                     }
                     case '==':
-                        manifest.push({ src: lineNum, addr: code.length, desc: 'equals' });
-                        code.push(this.encode(this.opcodes.MCMP, 14, leftReg, rightReg, 0));
-                        code.push(this.encode(this.opcodes.IADD, this.conditions.EQ, dr, 0, 1));
-                        code.push(this.encode(this.opcodes.IADD, this.conditions.NE, dr, 0, 0));
-                        break;
                     case '/=':
-                        manifest.push({ src: lineNum, addr: code.length, desc: 'not equals' });
-                        code.push(this.encode(this.opcodes.MCMP, 14, leftReg, rightReg, 0));
-                        code.push(this.encode(this.opcodes.IADD, this.conditions.NE, dr, 0, 1));
-                        code.push(this.encode(this.opcodes.IADD, this.conditions.EQ, dr, 0, 0));
-                        break;
                     case '<':
-                        manifest.push({ src: lineNum, addr: code.length, desc: 'less than' });
-                        code.push(this.encode(this.opcodes.MCMP, 14, leftReg, rightReg, 0));
-                        code.push(this.encode(this.opcodes.IADD, this.conditions.LT, dr, 0, 1));
-                        code.push(this.encode(this.opcodes.IADD, this.conditions.GE, dr, 0, 0));
-                        break;
                     case '>':
-                        manifest.push({ src: lineNum, addr: code.length, desc: 'greater than' });
-                        code.push(this.encode(this.opcodes.MCMP, 14, leftReg, rightReg, 0));
-                        code.push(this.encode(this.opcodes.IADD, this.conditions.GT, dr, 0, 1));
-                        code.push(this.encode(this.opcodes.IADD, this.conditions.LE, dr, 0, 0));
-                        break;
                     case '<=':
-                        manifest.push({ src: lineNum, addr: code.length, desc: 'less or equal' });
+                    case '>=': {
+                        const skipCond = { '==': this.conditions.NE, '/=': this.conditions.EQ, '<': this.conditions.GE, '>': this.conditions.LE, '<=': this.conditions.GT, '>=': this.conditions.LT };
+                        const opDesc = { '==': 'equals', '/=': 'not equals', '<': 'less than', '>': 'greater than', '<=': 'less or equal', '>=': 'greater or equal' };
+                        manifest.push({ src: lineNum, addr: code.length, desc: opDesc[node.op] });
                         code.push(this.encode(this.opcodes.MCMP, 14, leftReg, rightReg, 0));
-                        code.push(this.encode(this.opcodes.IADD, this.conditions.LE, dr, 0, 1));
-                        code.push(this.encode(this.opcodes.IADD, this.conditions.GT, dr, 0, 0));
+                        const skipTrue = code.length;
+                        code.push(this.encode(this.opcodes.BRANCH, skipCond[node.op], 0, 0, 0));
+                        code.push(this.encode(this.opcodes.IADD, 14, dr, 0, 0x4001));
+                        const skipFalse = code.length;
+                        code.push(this.encode(this.opcodes.BRANCH, 14, 0, 0, 0));
+                        const falseAddr = code.length;
+                        code[skipTrue] = ((code[skipTrue] & ~0x7FFF) | ((falseAddr - skipTrue) & 0x7FFF)) >>> 0;
+                        code.push(this.encode(this.opcodes.IADD, 14, dr, 0, 0));
+                        const doneAddr = code.length;
+                        code[skipFalse] = ((code[skipFalse] & ~0x7FFF) | ((doneAddr - skipFalse) & 0x7FFF)) >>> 0;
                         break;
-                    case '>=':
-                        manifest.push({ src: lineNum, addr: code.length, desc: 'greater or equal' });
-                        code.push(this.encode(this.opcodes.MCMP, 14, leftReg, rightReg, 0));
-                        code.push(this.encode(this.opcodes.IADD, this.conditions.GE, dr, 0, 1));
-                        code.push(this.encode(this.opcodes.IADD, this.conditions.LT, dr, 0, 0));
-                        break;
+                    }
                     default:
                         const _opStart = (exprOffset || 0) + (node.opPos !== undefined ? node.opPos : 0);
                         errors.push({ line: lineNum, message: `Unknown operator: ${node.op}`, colStart: _opStart, colEnd: _opStart + node.op.length });
@@ -2720,13 +2706,13 @@ class CLOOMCCompiler {
                 const skipElse = code.length;
                 code.push(this.encode(this.opcodes.BRANCH, 14, 0, 0, 0));
 
-                code[skipThen] = (code[skipThen] & ~0x7FFF) | (code.length & 0x7FFF);
+                code[skipThen] = (code[skipThen] & ~0x7FFF) | ((code.length - skipThen) & 0x7FFF);
                 code[skipThen] = code[skipThen] >>> 0;
 
                 const elseReg = this._emitHaskellExpr(node.elseBranch, code, locals, rom, capNames, errors, manifest, lineNum, exprOffset);
                 code.push(this.encode(this.opcodes.IADD, 14, resultDR, elseReg, 0));
 
-                code[skipElse] = (code[skipElse] & ~0x7FFF) | (code.length & 0x7FFF);
+                code[skipElse] = (code[skipElse] & ~0x7FFF) | ((code.length - skipElse) & 0x7FFF);
                 code[skipElse] = code[skipElse] >>> 0;
 
                 return resultDR;
