@@ -19,6 +19,8 @@
 //   DT10 — Symbolic front-end compile → buildLump
 //   DT11 — cross-method BRANCH patching (intra-LUMP private helper)
 //   DT12 — alias methods point to the same body as the original
+//   DT13 — Haskell 3-method abstraction: exact dispatch table entries + private = 0
+//   DT14 — Symbolic Math 3-method abstraction: exact dispatch table entries + private = 0
 
 const path = require('path');
 
@@ -300,6 +302,94 @@ console.log('\n--- DT12: alias method shares body with original ---');
     check('DT12b: Run entry non-zero', words[1] !== 0, 'words[1]=' + words[1]);
     check('DT12c: Execute entry = Run entry (same body)', words[2] === words[1],
         'Run=' + words[1] + ' Execute=' + words[2]);
+}
+
+// ── DT13: Haskell multi-method dispatch table ─────────────────────────────────
+console.log('\n--- DT13: Haskell 3-method dispatch table layout ---');
+{
+    const c = new CLOOMCCompiler();
+    // 3-method abstraction: Add (public, 4 words), Sub (public, 3 words),
+    // Helper (private, 4 words).  N=3, total body=11, expected cw=14.
+    const src = `abstraction Arithmetic {
+    public method Add(x, y) = x + y
+    public method Sub(x, y) = x - y
+    private method Helper(x) = x + 1
+}`;
+    const result = c.compileHaskell(src, []);
+    check('DT13a: Haskell compiles without errors', result.errors.length === 0,
+        result.errors.map(e => e.message).join('; '));
+    check('DT13b: exactly 3 methods emitted', result.methods.length === 3,
+        'methods=' + result.methods.length);
+    if (result.errors.length === 0 && result.methods.length === 3) {
+        const { words, cw } = buildLump(result);
+        // N=3 dispatch entries + 4+3+4 body words = 14
+        check('DT13c: cw = 14 (3 entries + 11 body words)', cw === 14, 'cw=' + cw);
+        // Add body at word index 4 → entry = 4
+        check('DT13d: words[1] = 4 (Add dispatch entry)', words[1] === 4, 'words[1]=' + words[1]);
+        // Sub body at word index 8 → entry = 8
+        check('DT13e: words[2] = 8 (Sub dispatch entry)', words[2] === 8, 'words[2]=' + words[2]);
+        // Helper is private → entry = 0
+        check('DT13f: words[3] = 0 (Helper private entry)', words[3] === 0, 'words[3]=' + words[3]);
+        // Verify Add body is reachable via the dispatch entry
+        check('DT13g: words[words[1]] non-zero (Add body present)',
+            words[words[1]] !== 0 && words[words[1]] !== undefined,
+            'words[' + words[1] + ']=0x' + (words[words[1]] || 0).toString(16));
+        // Verify Sub body is reachable via the dispatch entry
+        check('DT13h: words[words[2]] non-zero (Sub body present)',
+            words[words[2]] !== 0 && words[words[2]] !== undefined,
+            'words[' + words[2] + ']=0x' + (words[words[2]] || 0).toString(16));
+        // Dispatch entries are in ascending order (Add precedes Sub in the lump)
+        check('DT13i: Add entry < Sub entry (correct body order)',
+            words[1] < words[2], 'Add=' + words[1] + ' Sub=' + words[2]);
+    }
+}
+
+// ── DT14: Symbolic Math multi-method dispatch table ───────────────────────────
+console.log('\n--- DT14: Symbolic Math 3-method dispatch table layout ---');
+{
+    const c = new CLOOMCCompiler();
+    // 3-method abstraction: Add (public, 3 words), Square (public, 3 words),
+    // Helper (private, 2 words).  N=3, total body=8, expected cw=11.
+    const src = `abstraction Calculator {
+    public method Add(x, y) {
+        let result = x + y
+        return result
+    }
+    public method Square(x) {
+        let r = x + x
+        return r
+    }
+    private method Helper(x) {
+        return x
+    }
+}`;
+    const result = c.compileSymbolic(src, []);
+    check('DT14a: Symbolic compiles without errors', result.errors.length === 0,
+        result.errors.map(e => e.message).join('; '));
+    check('DT14b: exactly 3 methods emitted', result.methods.length === 3,
+        'methods=' + result.methods.length);
+    if (result.errors.length === 0 && result.methods.length === 3) {
+        const { words, cw } = buildLump(result);
+        // N=3 dispatch entries + 3+3+2 body words = 11
+        check('DT14c: cw = 11 (3 entries + 8 body words)', cw === 11, 'cw=' + cw);
+        // Add body at word index 4 → entry = 4
+        check('DT14d: words[1] = 4 (Add dispatch entry)', words[1] === 4, 'words[1]=' + words[1]);
+        // Square body at word index 7 → entry = 7
+        check('DT14e: words[2] = 7 (Square dispatch entry)', words[2] === 7, 'words[2]=' + words[2]);
+        // Helper is private → entry = 0
+        check('DT14f: words[3] = 0 (Helper private entry)', words[3] === 0, 'words[3]=' + words[3]);
+        // Verify Add body is reachable via the dispatch entry
+        check('DT14g: words[words[1]] non-zero (Add body present)',
+            words[words[1]] !== 0 && words[words[1]] !== undefined,
+            'words[' + words[1] + ']=0x' + (words[words[1]] || 0).toString(16));
+        // Verify Square body is reachable via the dispatch entry
+        check('DT14h: words[words[2]] non-zero (Square body present)',
+            words[words[2]] !== 0 && words[words[2]] !== undefined,
+            'words[' + words[2] + ']=0x' + (words[words[2]] || 0).toString(16));
+        // Dispatch entries are in ascending order (Add precedes Square in the lump)
+        check('DT14i: Add entry < Square entry (correct body order)',
+            words[1] < words[2], 'Add=' + words[1] + ' Square=' + words[2]);
+    }
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────────
