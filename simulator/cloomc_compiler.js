@@ -226,6 +226,7 @@ class CLOOMCCompiler {
         const methods = [];
         const manifest = [];
 
+        const warnings = [];
         for (const method of parsed.methods) {
             if (method.aliasOf) {
                 methods.push({ name: method.name, aliasOf: method.aliasOf, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
@@ -237,6 +238,7 @@ class CLOOMCCompiler {
                 continue;
             }
             const result = this._compileLambdaMethod(method, rom, parsed.capabilities, errors);
+            if (result.warnings && result.warnings.length > 0) warnings.push(...result.warnings);
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
@@ -258,7 +260,7 @@ class CLOOMCCompiler {
             }
         }
 
-        return { methods, errors, manifest, abstractionName: parsed.name, capabilities: parsed.capabilities || [], language: 'lambda' };
+        return { methods, errors, warnings, manifest, abstractionName: parsed.name, capabilities: parsed.capabilities || [], language: 'lambda' };
     }
 
     _parseLambdaAbstraction(source, errors) {
@@ -663,6 +665,12 @@ class CLOOMCCompiler {
         const locals = {};
         let nextLocal = this.DR_LOCALS_START;
 
+        // Expose warning context so _allocTemp can emit a diagnostic on exhaustion.
+        const warnings = [];
+        this._currentWarnings = warnings;
+        this._currentLineNum = method.startLine;
+        this._tempExhausted = false;
+
         const paramRegs = [];
         for (let pi = 0; pi < method.params.length; pi++) {
             if (pi + this.DR_ARGS_START <= this.DR_ARGS_END) {
@@ -671,7 +679,7 @@ class CLOOMCCompiler {
             } else {
                 if (nextLocal > this.DR_LOCALS_END) {
                     errors.push({ line: method.startLine, message: 'Too many parameters' });
-                    return { code: [], errors, manifest: [] };
+                    return { code: [], errors, warnings, manifest: [] };
                 }
                 locals[method.params[pi]] = nextLocal;
                 paramRegs.push(nextLocal);
@@ -690,7 +698,7 @@ class CLOOMCCompiler {
         this._selfTailCallCtx = prevSelfCtx;
 
         if (errors.length > 0) {
-            return { code: [], errors, manifest: [] };
+            return { code: [], errors, warnings, manifest: [] };
         }
 
         if (resultReg !== this.DR_ARGS_START) {
@@ -699,7 +707,7 @@ class CLOOMCCompiler {
         manifest.push({ src: method.startLine, addr: code.length, desc: 'RETURN (implicit)' });
         code.push(this.encode(this.opcodes.RETURN, 14, 0, 0, 0));
 
-        return { code, errors, manifest };
+        return { code, errors, warnings, manifest };
     }
 
     _detectHaskell(source) {
@@ -1111,6 +1119,12 @@ class CLOOMCCompiler {
         this._crAlloc = { next: 7 };
         this._crCompileMethod = method;
 
+        // Expose warning context so _allocTemp can emit a diagnostic on exhaustion.
+        const warnings = [];
+        this._currentWarnings = warnings;
+        this._currentLineNum = method.startLine;
+        this._tempExhausted = false;
+
         for (const param of method.params) {
             const paramIdx = method.params.indexOf(param);
             if (paramIdx + this.DR_ARGS_START <= this.DR_ARGS_END) {
@@ -1162,13 +1176,26 @@ class CLOOMCCompiler {
 
         const crossMethodRefs = this._crossMethodRefs;
         this._crossMethodRefs = null;
-        return { code, errors, manifest, crossMethodRefs };
+        return { code, errors, warnings, manifest, crossMethodRefs };
     }
 
     _allocTemp(locals) {
         for (let r = this.DR_TEMP_START; r <= this.DR_TEMP_END; r++) {
             const used = Object.values(locals).includes(r);
             if (!used) return r;
+        }
+        // All 4 temp registers (DR12–DR15) are exhausted.  Emit a compiler
+        // warning once so the programmer learns about it rather than silently
+        // getting a wrong answer from the DR12 fallback.  This is a warning
+        // (not an error) so that compilation can still succeed — the generated
+        // code will use DR12 as a fallback but may produce wrong results for
+        // expressions that have 5+ simultaneous live temporaries.
+        if (!this._tempExhausted && this._currentWarnings) {
+            this._tempExhausted = true;
+            this._currentWarnings.push({
+                line: this._currentLineNum || 0,
+                message: 'Register exhaustion: all 4 temp registers (DR12\u2013DR15) are in use \u2014 expression is too complex; split into named let-bindings to reduce simultaneous temporaries',
+            });
         }
         return this.DR_TEMP_START;
     }
@@ -1899,6 +1926,7 @@ class CLOOMCCompiler {
         const methods = [];
         const manifest = [];
 
+        const warnings = [];
         for (const method of parsed.methods) {
             if (method.aliasOf) {
                 methods.push({ name: method.name, aliasOf: method.aliasOf, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
@@ -1910,6 +1938,7 @@ class CLOOMCCompiler {
                 continue;
             }
             const result = this._compileHaskellMethod(method, rom, parsed.capabilities, errors);
+            if (result.warnings && result.warnings.length > 0) warnings.push(...result.warnings);
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
@@ -1931,7 +1960,7 @@ class CLOOMCCompiler {
             }
         }
 
-        return { methods, errors, manifest, abstractionName: parsed.name, capabilities: parsed.capabilities || [], language: 'haskell' };
+        return { methods, errors, warnings, manifest, abstractionName: parsed.name, capabilities: parsed.capabilities || [], language: 'haskell' };
     }
 
     _parseHaskellAbstraction(source, errors) {
@@ -2376,13 +2405,19 @@ class CLOOMCCompiler {
         const locals = {};
         let nextLocal = this.DR_LOCALS_START;
 
+        // Expose warning context so _allocTemp can emit a diagnostic on exhaustion.
+        const warnings = [];
+        this._currentWarnings = warnings;
+        this._currentLineNum = method.startLine;
+        this._tempExhausted = false;
+
         for (let pi = 0; pi < method.params.length; pi++) {
             if (pi + this.DR_ARGS_START <= this.DR_ARGS_END) {
                 locals[method.params[pi]] = pi + this.DR_ARGS_START;
             } else {
                 if (nextLocal > this.DR_LOCALS_END) {
                     errors.push({ line: method.startLine, message: 'Too many parameters' });
-                    return { code: [], errors, manifest: [] };
+                    return { code: [], errors, warnings, manifest: [] };
                 }
                 locals[method.params[pi]] = nextLocal++;
             }
@@ -2392,7 +2427,7 @@ class CLOOMCCompiler {
         const resultReg = this._emitHaskellExpr(ast, code, locals, rom, capNames, errors, manifest, method.startLine, method.exprOffset || 0);
 
         if (errors.length > 0) {
-            return { code: [], errors, manifest: [] };
+            return { code: [], errors, warnings, manifest: [] };
         }
 
         if (resultReg !== this.DR_ARGS_START) {
@@ -2401,7 +2436,7 @@ class CLOOMCCompiler {
         manifest.push({ src: method.startLine, addr: code.length, desc: 'RETURN (implicit)' });
         code.push(this.encode(this.opcodes.RETURN, 14, 0, 0, 0));
 
-        return { code, errors, manifest };
+        return { code, errors, warnings, manifest };
     }
 
     _emitHaskellExpr(node, code, locals, rom, capNames, errors, manifest, lineNum, exprOffset = 0) {
@@ -2422,7 +2457,10 @@ class CLOOMCCompiler {
                 }
                 const val = node.value & 0x7FFF;
                 manifest.push({ src: lineNum, addr: code.length, desc: `literal ${node.value}` });
-                code.push(this.encode(this.opcodes.IADD, 14, dr, 0, val));
+                // Bit 14 of the immediate field must be set to indicate a literal
+                // constant.  Without it the field is interpreted as a register
+                // index (e.g. val=1 → DR1, silently reading the first argument).
+                code.push(this.encode(this.opcodes.IADD, 14, dr, 0, val | 0x4000));
                 return dr;
             }
 
