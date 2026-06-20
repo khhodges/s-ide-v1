@@ -1319,10 +1319,15 @@ class ChurchAssembler {
                 // destination and source must be CR12, so CR12 is exempted from
                 // the normal privilege-zone block.  All other privilege-zone
                 // registers (CR13, CR14, CR15) remain blocked.
+                // 1-arg form: CHANGE CRx → CHANGE CRx, CRx, 0  (src defaults to dst)
                 crDst = this._parseCR(parts[1], lineNum);
                 if (crDst !== 12) this._checkPrivCR(crDst, 'CHANGE', lineNum);
-                crSrc = this._parseCR(parts[2], lineNum);
-                if (crSrc !== 12) this._checkPrivCR(crSrc, 'CHANGE', lineNum);
+                if (parts[2] !== undefined) {
+                    crSrc = this._parseCR(parts[2], lineNum);
+                    if (crSrc !== 12) this._checkPrivCR(crSrc, 'CHANGE', lineNum);
+                } else {
+                    crSrc = crDst;
+                }
                 imm = this._parseImm(parts[3], lineNum);
                 break;
             }
@@ -1567,47 +1572,91 @@ class ChurchAssembler {
             }
             case 15: {
                 crDst = this._parseDR(parts[1], lineNum);
-                crSrc = this._parseDR(parts[2], lineNum);
                 {
-                    const p3 = (parts[3] || '').replace(/,/g, '').trim();
-                    if (p3.startsWith('#')) {
-                        const immVal = parseInt(p3.substring(1), 10);
-                        imm = 0x4000 | ((isNaN(immVal) ? 0 : immVal) & 0x3FFF);
+                    const _p2 = (parts[2] || '').replace(/,/g, '').trim();
+                    const _p2isImm = parts[3] === undefined && _p2 !== '' && (
+                        _p2.startsWith('#') ||
+                        /^-?\d+$/.test(_p2) ||
+                        /^0[xX][0-9a-fA-F]+$/.test(_p2) ||
+                        /^0[bB][01]+$/.test(_p2)
+                    );
+                    if (_p2isImm) {
+                        crSrc = crDst;
+                        const _immStr = _p2.startsWith('#') ? _p2.substring(1) : _p2;
+                        let _immVal;
+                        if (_immStr.startsWith('0x') || _immStr.startsWith('0X')) _immVal = parseInt(_immStr, 16);
+                        else if (_immStr.startsWith('0b') || _immStr.startsWith('0B')) _immVal = parseInt(_immStr.substring(2), 2);
+                        else _immVal = parseInt(_immStr, 10);
+                        imm = 0x4000 | ((isNaN(_immVal) ? 0 : _immVal) & 0x3FFF);
                     } else {
-                        imm = this._parseDR(parts[3], lineNum);
+                        crSrc = this._parseDR(parts[2], lineNum);
+                        const p3 = (parts[3] || '').replace(/,/g, '').trim();
+                        if (p3.startsWith('#')) {
+                            const immVal = parseInt(p3.substring(1), 10);
+                            imm = 0x4000 | ((isNaN(immVal) ? 0 : immVal) & 0x3FFF);
+                        } else {
+                            imm = this._parseDR(parts[3], lineNum);
+                        }
                     }
                 }
                 break;
             }
             case 16: {
                 crDst = this._parseDR(parts[1], lineNum);
-                crSrc = this._parseDR(parts[2], lineNum);
                 {
-                    const p3 = (parts[3] || '').replace(/,/g, '').trim();
-                    if (p3.startsWith('#')) {
-                        const immVal = parseInt(p3.substring(1), 10);
-                        imm = 0x4000 | ((isNaN(immVal) ? 0 : immVal) & 0x3FFF);
+                    const _p2 = (parts[2] || '').replace(/,/g, '').trim();
+                    const _p2isImm = parts[3] === undefined && _p2 !== '' && (
+                        _p2.startsWith('#') ||
+                        /^-?\d+$/.test(_p2) ||
+                        /^0[xX][0-9a-fA-F]+$/.test(_p2) ||
+                        /^0[bB][01]+$/.test(_p2)
+                    );
+                    if (_p2isImm) {
+                        crSrc = crDst;
+                        const _immStr = _p2.startsWith('#') ? _p2.substring(1) : _p2;
+                        let _immVal;
+                        if (_immStr.startsWith('0x') || _immStr.startsWith('0X')) _immVal = parseInt(_immStr, 16);
+                        else if (_immStr.startsWith('0b') || _immStr.startsWith('0B')) _immVal = parseInt(_immStr.substring(2), 2);
+                        else _immVal = parseInt(_immStr, 10);
+                        imm = 0x4000 | ((isNaN(_immVal) ? 0 : _immVal) & 0x3FFF);
                     } else {
-                        imm = this._parseDR(parts[3], lineNum);
+                        crSrc = this._parseDR(parts[2], lineNum);
+                        const p3 = (parts[3] || '').replace(/,/g, '').trim();
+                        if (p3.startsWith('#')) {
+                            const immVal = parseInt(p3.substring(1), 10);
+                            imm = 0x4000 | ((isNaN(immVal) ? 0 : immVal) & 0x3FFF);
+                        } else {
+                            imm = this._parseDR(parts[3], lineNum);
+                        }
                     }
                 }
                 break;
             }
             case 17: {
-                // BRANCH operand may be a label name or a raw signed integer offset.
-                // Labels are resolved to a signed PC-relative offset: label_word - current_word.
-                const branchToken = (parts[1] || '').replace(/,/g, '').trim();
-                if (branchToken && /^[a-zA-Z_]/.test(branchToken)) {
+                // BRANCH supports three operand forms:
+                //   BRANCH label        — unconditional jump to label
+                //   BRANCH offset       — unconditional jump by signed integer offset
+                //   BRANCH CC, label    — conditional jump (space-separated condition code)
+                //                         e.g. BRANCH EQ, done — same as BRANCHEQ done
+                //                         Single-token form BRANCH EQ (no target) → offset 0
+                let branchTarget = (parts[1] || '').replace(/,/g, '').trim();
+                if (branchTarget && this.conditions[branchTarget.toUpperCase()] !== undefined) {
+                    cond = this.conditions[branchTarget.toUpperCase()];
+                    branchTarget = (parts[2] || '').replace(/,/g, '').trim();
+                }
+                if (!branchTarget) {
+                    imm = 0;
+                } else if (/^[a-zA-Z_]/.test(branchTarget)) {
                     // Identifier-like token → treat as label name
-                    if (this.labels[branchToken] !== undefined) {
-                        imm = this.labels[branchToken] - addr;   // signed relative offset
+                    if (this.labels[branchTarget] !== undefined) {
+                        imm = this.labels[branchTarget] - addr;   // signed relative offset
                     } else {
-                        this.errors.push({ line: lineNum, ...this._tokenCols(this._currentLineText, branchToken), message: `Label "${branchToken}" is not defined. Define it with "${branchToken}:" on its own line before the target instruction.` });
+                        this.errors.push({ line: lineNum, ...this._tokenCols(this._currentLineText, branchTarget), message: `Label "${branchTarget}" is not defined. Define it with "${branchTarget}:" on its own line before the target instruction.` });
                         imm = 0;
                     }
                 } else {
                     // Numeric literal (decimal, hex, binary, or signed integer)
-                    imm = this._parseImm(parts[1], lineNum);
+                    imm = this._parseImm(branchTarget, lineNum);
                 }
                 break;
             }

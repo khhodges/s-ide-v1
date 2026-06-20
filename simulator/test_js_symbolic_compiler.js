@@ -698,6 +698,33 @@ console.log('\n--- JSN2: JS single-line method body (method keyword, inline {…
     }
 }
 
+// ── SY7: Pure equation at top level must error (no abstraction block) ─────────
+console.log('\n--- SY7: Symbolic pure equation without abstraction block must error ---');
+{
+    const c = new CLOOMCCompiler();
+    const r = c.compileSymbolic('x = 1', []);
+    check('SY7a: pure equation produces an error', r.errors.length > 0, errMsg(r));
+    check('SY7b: pure equation: methods array is empty', r.methods.length === 0,
+        'methods=' + r.methods.length);
+}
+
+// SY7c: verify normal abstraction+let still compiles fine (no regression)
+console.log('\n--- SY7c: abstraction+let still compiles after pure-equation fix ---');
+{
+    const c = new CLOOMCCompiler();
+    const r = c.compileSymbolic('abstraction Math {\n  let add x y = x + y\n}', []);
+    check('SY7c: abstraction+let still compiles', r.errors.length === 0, errMsg(r));
+    check('SY7c: exactly 1 method', r.methods.length === 1, 'methods=' + r.methods.length);
+}
+
+// SY7d: verify bare assignment x = y also errors (not just x = literal)
+console.log('\n--- SY7d: bare assignment (x = y) without abstraction also errors ---');
+{
+    const c = new CLOOMCCompiler();
+    const r = c.compileSymbolic('result = x + y', []);
+    check('SY7d: bare assignment produces an error', r.errors.length > 0, errMsg(r));
+}
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log('\n═══════════════════════════════════════');
 console.log('Results: ' + pass + ' passed, ' + fail + ' failed');

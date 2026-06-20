@@ -2874,7 +2874,12 @@ class CLOOMCCompiler {
                 stmts.push({ line: j + 1, text: line, rawLine: lines[j] });
             }
             if (stmts.length > 0) {
-                result.methods.push({ name: 'compute', params: [], body: stmts });
+                const hasKeyword = stmts.some(s => /^(let|method|public|private)\s/.test(s.text));
+                if (!hasKeyword) {
+                    errors.push({ line: stmts[0].line, message: 'Symbolic programs need an abstraction { } block. For example:\n  abstraction MyName {\n    let add x y = x + y\n  }' });
+                } else {
+                    result.methods.push({ name: 'compute', params: [], body: stmts });
+                }
             }
         }
 

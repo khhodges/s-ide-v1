@@ -8789,6 +8789,177 @@ Add a method called Run
     }
 }
 
+// ── SYN1: BRANCH CC, label  — space-separated condition code ─────────────────
+// Regression tests for the probe-identified syntax gap.
+
+// SYN1-a: BRANCH EQ, label (with comma) assembles as BRANCHEQ
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('NOP\nBRANCH EQ, done\ndone:\nNOP');
+    assert('SYN1-a BRANCH EQ, label: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    assert('SYN1-a BRANCH EQ, label: word count = 3', r.words.length === 3,
+        'words=' + r.words.length);
+    const dis = a.disassemble(r.words[1]);
+    assert('SYN1-a BRANCH EQ, label: disassembles as BRANCHEQ', dis.includes('BRANCHEQ'),
+        'got: ' + dis);
+    assert('SYN1-a BRANCH EQ, label: offset is +1', dis.includes('+1'),
+        'got: ' + dis);
+}
+
+// SYN1-b: BRANCH NE label (no comma) also works
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('NOP\nBRANCH NE loop\nloop:\nNOP');
+    assert('SYN1-b BRANCH NE label (no comma): no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    const dis = a.disassemble(r.words[1]);
+    assert('SYN1-b BRANCH NE label: disassembles as BRANCHNE', dis.includes('BRANCHNE'),
+        'got: ' + dis);
+}
+
+// SYN1-c: BRANCH EQ (no target) → branch-to-self (offset 0), no error
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('BRANCH EQ');
+    assert('SYN1-c BRANCH EQ (no target): no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    assert('SYN1-c BRANCH EQ (no target): 1 word emitted', r.words.length === 1,
+        'words=' + r.words.length);
+    const dis = a.disassemble(r.words[0]);
+    assert('SYN1-c BRANCH EQ (no target): offset is +0', dis.includes('+0'),
+        'got: ' + dis);
+}
+
+// SYN1-d: BRANCH LT, target round-trips correctly (cond=11)
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('NOP\nBRANCH LT, end\nend:\nNOP');
+    assert('SYN1-d BRANCH LT, end: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    const dis = a.disassemble(r.words[1]);
+    assert('SYN1-d BRANCH LT: disassembles as BRANCHLT', dis.includes('BRANCHLT'),
+        'got: ' + dis);
+}
+
+// SYN1-e: existing BRANCHEQ suffix form still works (no regression)
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('NOP\nBRANCHEQ done\ndone:\nNOP');
+    assert('SYN1-e BRANCHEQ (suffix form): no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    const dis = a.disassemble(r.words[1]);
+    assert('SYN1-e BRANCHEQ (suffix): disassembles as BRANCHEQ', dis.includes('BRANCHEQ'),
+        'got: ' + dis);
+}
+
+// SYN1-f: BRANCH followed by an unknown condition code → still treated as a label name
+{
+    const a = new ChurchAssembler();
+    a.assemble('BRANCH DONE');
+    // 'DONE' is not a condition code name; should produce a "label not defined" error
+    assert('SYN1-f BRANCH DONE (not a CC): produces label-not-defined error',
+        a.errors.length > 0 && a.errors[0].message.includes('"DONE"'),
+        a.errors.map(e => e.message).join('; '));
+}
+
+// ── SYN2: CHANGE CRx (1-arg) — source defaults to destination ────────────────
+
+// SYN2-a: CHANGE CR12 (1-arg) encodes same word as CHANGE CR12, CR12, 0
+{
+    const a1 = new ChurchAssembler();
+    const r1 = a1.assemble('CHANGE CR12');
+    assert('SYN2-a CHANGE CR12 (1-arg): no errors', a1.errors.length === 0,
+        a1.errors.map(e => e.message).join('; '));
+
+    const a3 = new ChurchAssembler();
+    const r3 = a3.assemble('CHANGE CR12, CR12, 0');
+    assert('SYN2-a CHANGE CR12 (1-arg) === CHANGE CR12,CR12,0',
+        r1.words[0] === r3.words[0],
+        `1arg=0x${(r1.words[0]>>>0).toString(16)} 3arg=0x${(r3.words[0]>>>0).toString(16)}`);
+}
+
+// SYN2-b: 2-arg form CHANGE CR12, CR12 (no imm) still works as before
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('CHANGE CR12, CR12, 0');
+    assert('SYN2-b CHANGE CR12,CR12,0 (3-arg): no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    assert('SYN2-b 3-arg: exactly 1 word', r.words.length === 1, 'words=' + r.words.length);
+}
+
+// ── SYN3: IADD / ISUB 2-arg immediate shorthand ───────────────────────────────
+
+// SYN3-a: IADD DR1, #5 → same as IADD DR1, DR1, #5
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('IADD DR1, #5');
+    assert('SYN3-a IADD DR1, #5: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    const dis = a.disassemble(r.words[0]);
+    assert('SYN3-a IADD DR1, #5: disassembles as IADD DR1, DR1, #5',
+        dis.includes('DR1, DR1, #5'), 'got: ' + dis);
+}
+
+// SYN3-b: IADD DR1, #5 produces same word as IADD DR1, DR1, #5 (explicit)
+{
+    const a1 = new ChurchAssembler();
+    const r1 = a1.assemble('IADD DR1, #5');
+
+    const a3 = new ChurchAssembler();
+    const r3 = a3.assemble('IADD DR1, DR1, #5');
+
+    assert('SYN3-b IADD DR1, #5 === IADD DR1, DR1, #5',
+        r1.words[0] === r3.words[0],
+        `2arg=0x${(r1.words[0]>>>0).toString(16)} 3arg=0x${(r3.words[0]>>>0).toString(16)}`);
+}
+
+// SYN3-c: ISUB DR3, #10 → same as ISUB DR3, DR3, #10
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('ISUB DR3, #10');
+    assert('SYN3-c ISUB DR3, #10: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    const dis = a.disassemble(r.words[0]);
+    assert('SYN3-c ISUB DR3, #10: disassembles as ISUB DR3, DR3, #10',
+        dis.includes('DR3, DR3, #10'), 'got: ' + dis);
+}
+
+// SYN3-d: IADD DR0, 5 (bare decimal, no # prefix) also works
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('IADD DR0, 5');
+    assert('SYN3-d IADD DR0, 5 (bare decimal): no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    const a1 = new ChurchAssembler();
+    const r1 = a1.assemble('IADD DR0, #5');
+    assert('SYN3-d IADD DR0, 5 === IADD DR0, #5',
+        r.words[0] === r1.words[0],
+        `bare=0x${(r.words[0]>>>0).toString(16)} hash=0x${(r1.words[0]>>>0).toString(16)}`);
+}
+
+// SYN3-e: 3-arg register form IADD DR1, DR2, DR3 is not broken (no regression)
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('IADD DR1, DR2, DR3');
+    assert('SYN3-e IADD DR1, DR2, DR3 (3-arg reg): no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    const dis = a.disassemble(r.words[0]);
+    assert('SYN3-e IADD DR1, DR2, DR3: disassembles correctly',
+        dis.includes('DR1, DR2, DR3'), 'got: ' + dis);
+}
+
+// SYN3-f: 3-arg immediate form IADD DR1, DR2, #7 is not broken (no regression)
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('IADD DR1, DR2, #7');
+    assert('SYN3-f IADD DR1, DR2, #7 (3-arg imm): no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    const dis = a.disassemble(r.words[0]);
+    assert('SYN3-f IADD DR1, DR2, #7: disassembles correctly',
+        dis.includes('DR1, DR2, #7'), 'got: ' + dis);
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
