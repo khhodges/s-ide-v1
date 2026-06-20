@@ -138,6 +138,56 @@ console.log('\n--- JS5: JS bare return (no expression) still emits RETURN ---');
     }
 }
 
+// ── JS6: explicit return — no implicit RETURN double-append ───────────────────
+console.log('\n--- JS6: explicit return does not double-append RETURN ---');
+{
+    const c = new CLOOMCCompiler();
+    const src = `abstraction Counter {
+    public method Inc(x) {
+        let r = x + 1
+        return r
+    }
+}`;
+    const result = c.compileJS(src, []);
+    check('JS6a: compiles without errors', result.errors.length === 0, errMsg(result));
+    if (result.errors.length === 0 && result.methods.length === 1) {
+        const code = result.methods[0].code;
+        const RETURN_OP = c.opcodes.RETURN;
+        const lastOpcode  = code[code.length - 1] >>> 27;
+        const secondLast  = code.length >= 2 ? (code[code.length - 2] >>> 27) : -1;
+        check('JS6b: last instruction is RETURN', lastOpcode === RETURN_OP,
+            'lastOpcode=' + lastOpcode + ' (expected ' + RETURN_OP + ')');
+        check('JS6c: no duplicate RETURN (second-to-last is not RETURN)',
+            secondLast !== RETURN_OP,
+            'second-to-last opcode=' + secondLast + ' (should not be ' + RETURN_OP + ')');
+    }
+}
+
+// ── SY0: explicit return — no implicit RETURN double-append (Symbolic) ────────
+console.log('\n--- SY0: Symbolic explicit return does not double-append RETURN ---');
+{
+    const c = new CLOOMCCompiler();
+    const src = `abstraction Arith {
+    public method Double(x) {
+        let r = x + x
+        return r
+    }
+}`;
+    const result = c.compileSymbolic(src, []);
+    check('SY0a: compiles without errors', result.errors.length === 0, errMsg(result));
+    if (result.errors.length === 0 && result.methods.length === 1) {
+        const code = result.methods[0].code;
+        const RETURN_OP = c.opcodes.RETURN;
+        const lastOpcode = code[code.length - 1] >>> 27;
+        const secondLast = code.length >= 2 ? (code[code.length - 2] >>> 27) : -1;
+        check('SY0b: last instruction is RETURN', lastOpcode === RETURN_OP,
+            'lastOpcode=' + lastOpcode + ' (expected ' + RETURN_OP + ')');
+        check('SY0c: no duplicate RETURN (second-to-last is not RETURN)',
+            secondLast !== RETURN_OP,
+            'second-to-last opcode=' + secondLast + ' (should not be ' + RETURN_OP + ')');
+    }
+}
+
 // ── SY1: single let binding (multi-line abstraction) ─────────────────────────
 console.log('\n--- SY1: Symbolic single let binding ---');
 {

@@ -1033,7 +1033,7 @@ class CLOOMCCompiler {
         }
 
         if (errors.length === 0) {
-            const lastOpcode = code.length > 0 ? (code[code.length - 1] >>> 29) : -1;
+            const lastOpcode = code.length > 0 ? (code[code.length - 1] >>> 27) : -1;
             if (lastOpcode !== this.opcodes.RETURN) {
                 manifest.push({ src: method.startLine, addr: code.length, desc: 'RETURN (implicit)' });
                 code.push(this.encode(this.opcodes.RETURN, 14, 0, 0, 0));
