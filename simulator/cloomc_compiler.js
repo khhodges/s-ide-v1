@@ -2542,31 +2542,18 @@ class CLOOMCCompiler {
                 switch (node.op) {
                     case '+':
                         manifest.push({ src: lineNum, addr: code.length, desc: 'add' });
-                        code.push(this.encode(this.opcodes.IADD, 14, dr, leftReg, 0));
-                        code.push(this.encode(this.opcodes.IADD, 14, dr, dr, 0));
-                        if (rightReg !== dr) {
-                            code[code.length - 1] = this.encode(this.opcodes.IADD, 14, dr, leftReg, 0);
-                            code.push(this.encode(this.opcodes.IADD, 14, dr, dr, 0));
-                        }
-                        code.length -= 2;
-                        code.push(this.encode(this.opcodes.IADD, 14, dr, leftReg, 0));
-                        if (leftReg !== rightReg) {
-                            const t2 = this._allocTemp(locals);
-                            code[code.length - 1] = this.encode(this.opcodes.IADD, 14, dr, leftReg, 0);
-                        }
-                        code.length--;
-                        if (node.right.type === 'literal' && node.right.value <= 0x7FFF) {
-                            code.push(this.encode(this.opcodes.IADD, 14, dr, leftReg, node.right.value & 0x7FFF));
+                        if (node.right.type === 'literal' && node.right.value <= 0x3FFF) {
+                            code.push(this.encode(this.opcodes.IADD, 14, dr, leftReg, 0x4000 | (node.right.value & 0x3FFF)));
                         } else {
-                            code.push(this.encode(this.opcodes.IADD, 14, dr, leftReg, 0));
+                            code.push(this.encode(this.opcodes.IADD, 14, dr, leftReg, rightReg));
                         }
                         break;
                     case '-':
                         manifest.push({ src: lineNum, addr: code.length, desc: 'subtract' });
-                        if (node.right.type === 'literal' && node.right.value <= 0x7FFF) {
-                            code.push(this.encode(this.opcodes.ISUB, 14, dr, leftReg, node.right.value & 0x7FFF));
+                        if (node.right.type === 'literal' && node.right.value <= 0x3FFF) {
+                            code.push(this.encode(this.opcodes.ISUB, 14, dr, leftReg, 0x4000 | (node.right.value & 0x3FFF)));
                         } else {
-                            code.push(this.encode(this.opcodes.ISUB, 14, dr, leftReg, 0));
+                            code.push(this.encode(this.opcodes.ISUB, 14, dr, leftReg, rightReg));
                         }
                         break;
                     case '*': {
