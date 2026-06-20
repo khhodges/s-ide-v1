@@ -1624,6 +1624,12 @@ class CLOOMCCompiler {
             }
         }
 
+        // `const` is treated identically to `let`/`var` — locals are allocated in the
+        // same DR pool and there is no immutability enforcement at the compiler level.
+        // This is an intentional passthrough: the Church Machine ISA has no read-only
+        // data-register concept, so enforcing const semantics would require a separate
+        // write-check pass.  For now, `const` is accepted without error and the
+        // programmer's intent is documented in the source only.
         const assignMatch = text.match(/^(?:(?:var|let|const)\s+)?(\w+)\s*=\s*(.+)$/);
         if (assignMatch) {
             const varName = assignMatch[1];

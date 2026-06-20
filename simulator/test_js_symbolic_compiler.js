@@ -409,6 +409,73 @@ console.log('\n--- JS8: JS let binding and bare assignment coexist in same body 
     }
 }
 
+// ── JS9: const binding (single) in a JS method body ──────────────────────────
+console.log('\n--- JS9: JS method body with const binding (single) ---');
+{
+    const c = new CLOOMCCompiler();
+    const src = `abstraction Square {
+    public method Compute(x) {
+        const r = x + x
+        return r
+    }
+}`;
+    const result = c.compileJS(src, []);
+    check('JS9a: compiles without errors', result.errors.length === 0, errMsg(result));
+    check('JS9b: exactly 1 method', result.methods.length === 1, 'methods=' + result.methods.length);
+    if (result.errors.length === 0 && result.methods.length === 1) {
+        check('JS9c: method code is non-empty', result.methods[0].code.length > 0,
+            'code.length=' + result.methods[0].code.length);
+        const { cw } = buildLump(result);
+        check('JS9d: cw > 0', cw > 0, 'cw=' + cw);
+    }
+}
+
+// ── JS10: multiple const bindings in a JS method body ────────────────────────
+console.log('\n--- JS10: JS method body with multiple const bindings ---');
+{
+    const c = new CLOOMCCompiler();
+    const src = `abstraction Calc {
+    public method Run(x) {
+        const a = x + 1
+        const b = a + a
+        return b
+    }
+}`;
+    const result = c.compileJS(src, []);
+    check('JS10a: compiles without errors', result.errors.length === 0, errMsg(result));
+    check('JS10b: exactly 1 method', result.methods.length === 1, 'methods=' + result.methods.length);
+    if (result.errors.length === 0 && result.methods.length === 1) {
+        check('JS10c: method has at least 3 instructions (2 adds + RETURN)',
+            result.methods[0].code.length >= 3,
+            'code.length=' + result.methods[0].code.length);
+        const { cw } = buildLump(result);
+        check('JS10d: cw > 0', cw > 0, 'cw=' + cw);
+    }
+}
+
+// ── JS11: const binding interleaved with let and var in same body ─────────────
+console.log('\n--- JS11: const, let, and var bindings coexist in same body ---');
+{
+    const c = new CLOOMCCompiler();
+    const src = `abstraction Mixed2 {
+    public method Run(x) {
+        const a = x + 1
+        let b = a + a
+        var c = b + 1
+        return c
+    }
+}`;
+    const result = c.compileJS(src, []);
+    check('JS11a: compiles without errors', result.errors.length === 0, errMsg(result));
+    check('JS11b: exactly 1 method', result.methods.length === 1, 'methods=' + result.methods.length);
+    if (result.errors.length === 0 && result.methods.length === 1) {
+        check('JS11c: method code is non-empty', result.methods[0].code.length > 0,
+            'code.length=' + result.methods[0].code.length);
+        const { cw } = buildLump(result);
+        check('JS11d: cw > 0', cw > 0, 'cw=' + cw);
+    }
+}
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log('\n═══════════════════════════════════════');
 console.log('Results: ' + pass + ' passed, ' + fail + ' failed');
