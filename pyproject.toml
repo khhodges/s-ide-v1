@@ -22,3 +22,6 @@ dependencies = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "live: Live HTTP tests against the deployed API (requires network and CLOOMC_API_BASE env var)",
+]

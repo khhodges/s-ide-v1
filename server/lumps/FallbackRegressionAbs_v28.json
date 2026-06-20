@@ -1,8 +1,8 @@
 {
-  "token": "fa110005",
+  "token": "fa110006",
   "abstraction": "FallbackRegressionAbs",
-  "filename": "FallbackRegressionAbs_v8.lump",
-  "sidecar_file": "FallbackRegressionAbs_v8.json",
+  "filename": "FallbackRegressionAbs_v28.lump",
+  "sidecar_file": "FallbackRegressionAbs_v28.json",
   "ns_slot": null,
   "lump_size": 64,
   "typ": 0,
@@ -29,13 +29,13 @@
   "deployment": {
     "target_board": "ti60-f225",
     "profile": "IoT",
-    "built_at": "2026-06-20T14:22:32.880942Z",
+    "built_at": "2026-06-20T14:22:33.914874Z",
     "builder": "CLOOMC++ IDE v1.0"
   },
   "grants": [
     "E"
   ],
   "source": "",
-  "lump_version": 8,
-  "compiled_at": 1781965352.880959
+  "lump_version": 28,
+  "compiled_at": 1781965353.9148908
 }
