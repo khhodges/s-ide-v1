@@ -8,6 +8,9 @@
 //   JS3  — JS method body: return arithmetic (return x + y)
 //   JS4  — JS method body: parenthesised return still works (return(x))
 //   JS5  — JS bare return (no expression) still works
+//   JS6  — JS method body: single let binding (let r = x + x)
+//   JS7  — JS method body: multiple let bindings chained, then return
+//   JS8  — JS method body: let binding and bare assignment coexist in same body
 //   SY1  — Symbolic let-form: single let binding (one-liner abstraction)
 //   SY2  — Symbolic let-form: multi-line abstraction with several let bindings
 //   SY3  — Symbolic let-form: private let (name starts with _)
@@ -336,6 +339,73 @@ console.log('\n--- SY6: Symbolic multi-let dispatch entries are ascending ---');
             'entries=' + entries.join(','));
         check('SY6e: cw > 4 (4 entries + at least 1 body word each)',
             cw > 4, 'cw=' + cw);
+    }
+}
+
+// ── JS6: let binding (single) in a JS method body ────────────────────────────
+console.log('\n--- JS6: JS method body with let binding (single) ---');
+{
+    const c = new CLOOMCCompiler();
+    const src = `abstraction Calc {
+    public method Double(x) {
+        let r = x + x
+        return r
+    }
+}`;
+    const result = c.compileJS(src, []);
+    check('JS6a: compiles without errors', result.errors.length === 0, errMsg(result));
+    check('JS6b: exactly 1 method', result.methods.length === 1, 'methods=' + result.methods.length);
+    if (result.errors.length === 0 && result.methods.length === 1) {
+        check('JS6c: method code is non-empty', result.methods[0].code.length > 0,
+            'code.length=' + result.methods[0].code.length);
+        const { words, cw } = buildLump(result);
+        check('JS6d: cw > 0', cw > 0, 'cw=' + cw);
+        check('JS6e: dispatch entry non-zero', words[1] !== 0, 'words[1]=' + words[1]);
+    }
+}
+
+// ── JS7: multiple let bindings + return in a JS method body ──────────────────
+console.log('\n--- JS7: JS method body with multiple let bindings ---');
+{
+    const c = new CLOOMCCompiler();
+    const src = `abstraction Arith {
+    public method Compute(x, y) {
+        let a = x + y
+        let b = a + x
+        return b
+    }
+}`;
+    const result = c.compileJS(src, []);
+    check('JS7a: compiles without errors', result.errors.length === 0, errMsg(result));
+    check('JS7b: exactly 1 method', result.methods.length === 1, 'methods=' + result.methods.length);
+    if (result.errors.length === 0 && result.methods.length === 1) {
+        check('JS7c: method has at least 3 instructions (2 adds + RETURN)',
+            result.methods[0].code.length >= 3,
+            'code.length=' + result.methods[0].code.length);
+        const { cw } = buildLump(result);
+        check('JS7d: cw > 0', cw > 0, 'cw=' + cw);
+    }
+}
+
+// ── JS8: let binding interleaved with bare assignment in JS body ──────────────
+console.log('\n--- JS8: JS let binding and bare assignment coexist in same body ---');
+{
+    const c = new CLOOMCCompiler();
+    const src = `abstraction Mixed {
+    public method Run(x) {
+        let a = x + 1
+        b = a + a
+        return b
+    }
+}`;
+    const result = c.compileJS(src, []);
+    check('JS8a: compiles without errors', result.errors.length === 0, errMsg(result));
+    check('JS8b: exactly 1 method', result.methods.length === 1, 'methods=' + result.methods.length);
+    if (result.errors.length === 0 && result.methods.length === 1) {
+        check('JS8c: method code is non-empty', result.methods[0].code.length > 0,
+            'code.length=' + result.methods[0].code.length);
+        const { cw } = buildLump(result);
+        check('JS8d: cw > 0', cw > 0, 'cw=' + cw);
     }
 }
 
