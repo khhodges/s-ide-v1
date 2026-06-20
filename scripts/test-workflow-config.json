@@ -11,6 +11,7 @@
   "scriptOnlySuites": [
     "sha32-vectors",
     "check-sha32-collisions",
-    "compile-api-tests"
+    "compile-api-tests",
+    "lump-builder-dispatch-tests"
   ]
 }

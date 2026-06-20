@@ -142,6 +142,9 @@ register_suite "lump-binary-tests" \
 register_suite "lump-roundtrip" \
     'node simulator/test_lump_roundtrip.js'
 
+register_suite "lump-builder-dispatch-tests" \
+    'node simulator/test_lump_builder_dispatch.js'
+
 register_suite "catalog-compile-tests" \
     'node simulator/test_catalog_compile.js'
 
@@ -222,7 +225,7 @@ ALL_GROUPS["boot"]="boot-image-matches-sim boot-image-loads-and-boots boot-image
 
 ALL_GROUPS["lump"]="lump-consistency lump-binary-tests lump-roundtrip"
 
-ALL_GROUPS["simulator"]="fault-recovery-tests assembler-tests catalog-compile-tests rci-threading-tests pending-gt-tests pet-name-mem-tests warning-panel-tests disasm-panel-tests boot-entry-sync-tests selftest-lump-runs pet-name-memory-tests"
+ALL_GROUPS["simulator"]="fault-recovery-tests assembler-tests catalog-compile-tests rci-threading-tests pending-gt-tests pet-name-mem-tests warning-panel-tests disasm-panel-tests boot-entry-sync-tests selftest-lump-runs pet-name-memory-tests lump-builder-dispatch-tests"
 
 ALL_GROUPS["checks"]="check-stale-cr7 check-selftest-lump-stale check-capabilities-blocks check-api-reference-stale ti60-utilisation ti60-uart-dry-run"
 

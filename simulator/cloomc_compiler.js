@@ -155,6 +155,15 @@ class CLOOMCCompiler {
         const methods = [];
         const manifest = [];
 
+        // Expose private method names to _compileStatement so calls to same-abstraction
+        // private methods compile to intra-LUMP BRANCH instructions rather than
+        // ELOADCALL (which would fault with PRIVATE_METHOD at runtime).
+        this._privateMethodNames = new Set(
+            parsed.methods
+                .filter(m => (m.visibility === 'private') && !m.aliasOf && !m.rawIsa)
+                .map(m => m.name)
+        );
+
         for (const method of parsed.methods) {
             if (method.aliasOf) {
                 methods.push({ name: method.name, aliasOf: method.aliasOf, params: method.params || [], visibility: method.visibility || 'public' });
@@ -169,10 +178,12 @@ class CLOOMCCompiler {
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
-                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
+                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public', crossMethodRefs: result.crossMethodRefs, ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 manifest.push({ name: method.name, mapping: result.manifest });
             }
         }
+
+        this._privateMethodNames = null;
 
         if (errors.length === 0) {
             const _bodyIndex = new Map();
@@ -995,6 +1006,7 @@ class CLOOMCCompiler {
 
         const labels = {};
         const labelRefs = [];
+        this._crossMethodRefs = [];
 
         for (const stmt of method.body) {
             if (!stmt.text || stmt.text.startsWith('//') || stmt.text.startsWith(';')) continue;
@@ -1028,7 +1040,9 @@ class CLOOMCCompiler {
             }
         }
 
-        return { code, errors, manifest };
+        const crossMethodRefs = this._crossMethodRefs;
+        this._crossMethodRefs = null;
+        return { code, errors, manifest, crossMethodRefs };
     }
 
     _allocTemp(locals) {
@@ -1572,6 +1586,41 @@ class CLOOMCCompiler {
             manifest.push({ src: stmt.lineNum, addr: code.length, desc: `LOAD CR${destCR}, CR${srcCR}[${offset}] (${varName})` });
             code.push(this.encode(this.opcodes.LOAD, 14, destCR, srcCR, offset & 0x7FFF));
             return;
+        }
+
+        // Private-method tail-call: [var =] privateMethodName(arg0, arg1, ...)
+        // Compiles to intra-LUMP BRANCH AL (offset resolved by lump_builder.js Pass4).
+        // This runs before the generic assignMatch so the call is not misinterpreted
+        // as a right-hand-side expression.
+        if (this._privateMethodNames && this._privateMethodNames.size > 0) {
+            const privCallPat = /^(?:(?:var|let|const)\s+)?(?:(\w+)\s*=\s*)?(\w+)\s*\(\s*(.*?)\s*\)$/;
+            const privCallMatch = text.match(privCallPat);
+            if (privCallMatch && this._privateMethodNames.has(privCallMatch[2])) {
+                const resultVar  = privCallMatch[1] || null;
+                const targetName = privCallMatch[2];
+                const argsStr    = privCallMatch[3];
+                const argList    = argsStr ? argsStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+                for (let i = 0; i < argList.length; i++) {
+                    const argDR  = this._resolveExpr(argList[i], code, locals, rom, errors, stmt.lineNum, method, stmt.rawLine);
+                    const destDR = this.DR_ARGS_START + i;
+                    if (argDR !== destDR) {
+                        code.push(this.encode(this.opcodes.IADD, 14, destDR, argDR, 0));
+                    }
+                }
+                const branchAddr = code.length;
+                code.push(this.encode(this.opcodes.BRANCH, this.conditions.AL, 0, 0, 0));
+                manifest.push({ src: stmt.lineNum, addr: branchAddr, desc: `BRANCH → ${targetName} (private tail-call)` });
+                if (this._crossMethodRefs) {
+                    this._crossMethodRefs.push({ addr: branchAddr, target: targetName });
+                }
+                if (resultVar) {
+                    const dr = this._allocLocal(resultVar, locals, errors, stmt.lineNum);
+                    if (dr !== this.DR_ARGS_START) {
+                        code.push(this.encode(this.opcodes.IADD, 14, dr, this.DR_ARGS_START, 0));
+                    }
+                }
+                return;
+            }
         }
 
         const assignMatch = text.match(/^(?:(?:var|let|const)\s+)?(\w+)\s*=\s*(.+)$/);
@@ -3275,6 +3324,15 @@ class CLOOMCCompiler {
         const methods = [];
         const manifest = [];
 
+        // Expose private method names to _compileStatement so calls to same-abstraction
+        // private methods compile to intra-LUMP BRANCH instructions rather than
+        // ELOADCALL (which would fault with PRIVATE_METHOD at runtime).
+        this._privateMethodNames = new Set(
+            parsed.methods
+                .filter(m => (m.visibility === 'private') && !m.aliasOf && !m.rawIsa)
+                .map(m => m.name)
+        );
+
         for (const method of parsed.methods) {
             if (method.aliasOf) {
                 methods.push({ name: method.name, aliasOf: method.aliasOf, params: method.params || [], visibility: method.visibility || 'public' });
@@ -3289,10 +3347,12 @@ class CLOOMCCompiler {
             if (result.errors.length > 0) {
                 errors.push(...result.errors);
             } else {
-                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public', ...(method.sourceLines && { sourceLines: method.sourceLines }) });
+                methods.push({ name: method.name, code: result.code, params: method.params || [], visibility: method.visibility || 'public', crossMethodRefs: result.crossMethodRefs, ...(method.sourceLines && { sourceLines: method.sourceLines }) });
                 manifest.push({ name: method.name, mapping: result.manifest });
             }
         }
+
+        this._privateMethodNames = null;
 
         if (errors.length === 0) {
             const _bodyIndex = new Map();

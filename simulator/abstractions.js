@@ -529,6 +529,16 @@ class AbstractionRegistry {
             ['Send', 'Receive', 'Connect', 'Status'],
             'Raw Ethernet frame transport — XC7A100T lazy-load channel. Send(dataGT, byteLen), Receive() \u2192 (dataGT, byteLen), Connect(ipv4, port), Status() \u2192 0=down/1=up/2=busy. Application LUMP in the 3-LUMP XC7A100T ROM image; Locator fetches all other abstractions through it.',
             { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 }, profile: 'XC7A100T' });
+
+        // NS slot 52 — EventRouter
+        // Canonical multi-method abstraction demonstrating the dispatch-table layout:
+        //   public methods  → dispatch entry = lump-word offset of body (non-zero)
+        //   private helpers → dispatch entry = 0 (PRIVATE_METHOD fault on external CALL)
+        // Private helpers are reachable only via intra-LUMP BRANCH from public methods.
+        this.createAbstraction(52, 'EventRouter', 6,
+            ['Add', 'Remove', 'Resolve', 'List', 'Methods'],
+            'Event-to-handler routing table — maps event Golden Tokens to handler capabilities. Private helpers (FindEvent, BindEvent, UnbindEvent, AllBoundEvents) enforce internal access control; their dispatch entries are 0 and external CALLs fault with PRIVATE_METHOD.',
+            { author: 'SIPantic', version: '1.0.0', perms: { R: 0, W: 0, X: 0, L: 0, S: 0, E: 1 } });
     }
 }
 

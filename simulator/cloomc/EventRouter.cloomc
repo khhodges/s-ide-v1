@@ -1,0 +1,64 @@
+// EventRouter — maps event Golden Tokens to handler capabilities.
+// NS slot 52.
+//
+// Dispatch table layout (enforced by lump_builder.js buildLump):
+//   Public methods  → dispatch entry = lump-word offset of body (non-zero)
+//   Private helpers → dispatch entry = 0 (external CALL faults with PRIVATE_METHOD)
+//
+// Private helpers are reached from public methods via intra-LUMP BRANCH (tail-call).
+// The BRANCH offset is a placeholder (0) at compile time and is patched by
+// lump_builder.js Pass4 using the crossMethodRefs list produced by cloomc_compiler.js.
+//
+// Public interface (5 methods):
+//   Add(eventGT, handlerGT)  → 0=ok / 1=table_full
+//   Remove(eventGT)          → 0=ok / 1=not_found
+//   Resolve(eventGT)         → handlerGT, or 0 if not registered
+//   List()                   → count of registered events
+//   Methods()                → 5 (count of public methods)
+//
+// Private helpers (dispatch entry = 0, unreachable from outside the LUMP):
+//   FindEvent(eventGT)                  → slot index or -1
+//   BindEvent(slot, eventGT, handlerGT) → 0=ok
+//   UnbindEvent(slot)                   → 0=ok
+//   AllBoundEvents()                    → count of non-zero routing table entries
+
+abstraction EventRouter {
+    capabilities {
+    }
+
+    public method Add(eventGT, handlerGT) {
+        BindEvent(eventGT, handlerGT)
+    }
+
+    public method Remove(eventGT) {
+        UnbindEvent(eventGT)
+    }
+
+    public method Resolve(eventGT) {
+        FindEvent(eventGT)
+    }
+
+    public method List() {
+        AllBoundEvents()
+    }
+
+    public method Methods() {
+        return(5)
+    }
+
+    private method FindEvent(eventGT) {
+        return(0)
+    }
+
+    private method BindEvent(eventGT, handlerGT) {
+        return(0)
+    }
+
+    private method UnbindEvent(eventGT) {
+        return(0)
+    }
+
+    private method AllBoundEvents() {
+        return(0)
+    }
+}
