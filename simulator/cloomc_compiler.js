@@ -456,6 +456,8 @@ class CLOOMCCompiler {
                 tokens.push({ type: 'op', value: '-', pos: i }); i++; continue;
             }
             if (input[i] === '*') { tokens.push({ type: 'op', value: '*', pos: i }); i++; continue; }
+            if (input[i] === '%') { tokens.push({ type: 'op', value: '%', pos: i }); i++; continue; }
+            if (input.substring(i, i + 2) === '//') { tokens.push({ type: 'op', value: '//', pos: i }); i += 2; continue; }
             if (input[i] === '/') { tokens.push({ type: 'op', value: '/', pos: i }); i++; continue; }
             if (input.substring(i, i + 2) === '==') { tokens.push({ type: 'op', value: '==', pos: i }); i += 2; continue; }
             if (input.substring(i, i + 2) === '<=') { tokens.push({ type: 'op', value: '<=', pos: i }); i += 2; continue; }
@@ -2574,7 +2576,8 @@ class CLOOMCCompiler {
                         code[exitAddr] = code[exitAddr] >>> 0;
                         break;
                     }
-                    case '/': {
+                    case '/':
+                    case '//': {
                         manifest.push({ src: lineNum, addr: code.length, desc: 'divide (repeated subtraction)' });
                         const remDR = this._allocTemp(locals);
                         code.push(this.encode(this.opcodes.IADD, 14, dr, 0, 0));
@@ -2589,6 +2592,24 @@ class CLOOMCCompiler {
                         const divExitTarget = code.length;
                         code[divExit] = (code[divExit] & ~0x7FFF) | ((divExitTarget - divExit) & 0x7FFF);
                         code[divExit] = code[divExit] >>> 0;
+                        break;
+                    }
+                    case '%': {
+                        manifest.push({ src: lineNum, addr: code.length, desc: 'modulo (repeated subtraction)' });
+                        const modRemDR = this._allocTemp(locals);
+                        code.push(this.encode(this.opcodes.IADD, 14, dr, 0, 0));
+                        code.push(this.encode(this.opcodes.IADD, 14, modRemDR, leftReg, 0));
+                        const modLoop = code.length;
+                        code.push(this.encode(this.opcodes.MCMP, 14, modRemDR, rightReg, 0));
+                        const modExit = code.length;
+                        code.push(this.encode(this.opcodes.BRANCH, this.conditions.LT, 0, 0, 0));
+                        code.push(this.encode(this.opcodes.ISUB, 14, modRemDR, modRemDR, rightReg));
+                        code.push(this.encode(this.opcodes.IADD, 14, dr, dr, 0x4001));
+                        code.push(this.encode(this.opcodes.BRANCH, 14, 0, 0, (modLoop - code.length) & 0x7FFF));
+                        const modExitTarget = code.length;
+                        code[modExit] = (code[modExit] & ~0x7FFF) | ((modExitTarget - modExit) & 0x7FFF);
+                        code[modExit] = code[modExit] >>> 0;
+                        code.push(this.encode(this.opcodes.IADD, 14, dr, modRemDR, 0));
                         break;
                     }
                     case '==':

@@ -27,6 +27,8 @@ abstraction RationalArithmetic {
     method mulNum(n1, n2) = n1 * n2
     method divNum(n, d) = n / d
     method divDen(a, b) = b / a
+    method modNum(a, b) = a % b
+    method idivNum(a, b) = a // b
     method isEqual(n1, d1, n2, d2) =
         if (n1 * d2) == (n2 * d1) then 1 else 0
 }`;
@@ -149,6 +151,16 @@ assert('COMP6 divDen method compiled',
         return m.name === 'divDen' && m.code && m.code.length > 0;
     })));
 
+assert('COMP7 modNum method compiled',
+    !!(compiled.methods && compiled.methods.find(function (m) {
+        return m.name === 'modNum' && m.code && m.code.length > 0;
+    })));
+
+assert('COMP8 idivNum method compiled',
+    !!(compiled.methods && compiled.methods.find(function (m) {
+        return m.name === 'idivNum' && m.code && m.code.length > 0;
+    })));
+
 // ── Runtime: addDen ───────────────────────────────────────────────────────────
 console.log('\n--- Runtime: addDen ---');
 {
@@ -182,6 +194,30 @@ console.log('\n--- Runtime: divDen ---');
     const r = runMethod('divDen', [3, 6]);
     assert('EXEC7 divDen(3,6) runs without error', !r.error, r.error);
     assert('EXEC8 divDen(3,6) = 2', !r.error && r.result === 2,
+        'got ' + r.result + ' in ' + r.steps + ' steps');
+}
+
+// ── Runtime: modNum ───────────────────────────────────────────────────────────
+console.log('\n--- Runtime: modNum ---');
+{
+    const r = runMethod('modNum', [10, 3]);
+    assert('EXEC13 modNum(10,3) runs without error', !r.error, r.error);
+    assert('EXEC14 modNum(10,3) = 1', !r.error && r.result === 1,
+        'got ' + r.result + ' in ' + r.steps + ' steps');
+}
+{
+    const r = runMethod('modNum', [9, 3]);
+    assert('EXEC15 modNum(9,3) runs without error', !r.error, r.error);
+    assert('EXEC16 modNum(9,3) = 0', !r.error && r.result === 0,
+        'got ' + r.result + ' in ' + r.steps + ' steps');
+}
+
+// ── Runtime: idivNum ──────────────────────────────────────────────────────────
+console.log('\n--- Runtime: idivNum ---');
+{
+    const r = runMethod('idivNum', [10, 3]);
+    assert('EXEC17 idivNum(10,3) runs without error', !r.error, r.error);
+    assert('EXEC18 idivNum(10,3) = 3', !r.error && r.result === 3,
         'got ' + r.result + ' in ' + r.steps + ' steps');
 }
 
