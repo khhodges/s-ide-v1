@@ -6000,9 +6000,71 @@ HALT
     }
 }
 
+// EX-PH: private_helpers — two public methods sharing a private BRANCH helper
+// Verifies that the canonical private_helpers.cloomc assembles cleanly and
+// produces exactly 6 words:
+//   IADD  (add_and_double body)
+//   BRANCH _double_result  (from Method 1)
+//   ISUB  (sub_and_double body)
+//   BRANCH _double_result  (from Method 2)
+//   SHL   (_double_result helper)
+//   HALT
+{
+    const fs   = require('fs');
+    const path = require('path');
+    const src  = fs.readFileSync(
+        path.join(__dirname, 'examples', 'private_helpers.cloomc'), 'utf8');
+    const aPH = new ChurchAssembler();
+    const phResult = aPH.assemble(src);
+    assert('EX-PH private_helpers.cloomc assembles without errors',
+        aPH.errors.length === 0, aPH.errors.map(e => e.message).join('; '));
+    assert('EX-PH private_helpers.cloomc produces 6 words (IADD+BRANCH+ISUB+BRANCH+SHL+HALT)',
+        phResult.words.length === 6, `got ${phResult.words.length}`);
+
+    // Word 0: IADD (opcode 15 = 0b01111) — add_and_double body
+    assert('EX-PH word[0] is IADD (opcode 15)',
+        ((phResult.words[0] >>> 27) & 0x1F) === 15,
+        `got opcode ${(phResult.words[0] >>> 27) & 0x1F}`);
+
+    // Word 1: BRANCH (opcode 17 = 0b10001) — forward to _double_result
+    assert('EX-PH word[1] is BRANCH (opcode 17)',
+        ((phResult.words[1] >>> 27) & 0x1F) === 17,
+        `got opcode ${(phResult.words[1] >>> 27) & 0x1F}`);
+
+    // Word 2: ISUB (opcode 16 = 0b10000) — sub_and_double body
+    assert('EX-PH word[2] is ISUB (opcode 16)',
+        ((phResult.words[2] >>> 27) & 0x1F) === 16,
+        `got opcode ${(phResult.words[2] >>> 27) & 0x1F}`);
+
+    // Word 3: BRANCH (opcode 17) — from Method 2 to _double_result
+    assert('EX-PH word[3] is BRANCH (opcode 17)',
+        ((phResult.words[3] >>> 27) & 0x1F) === 17,
+        `got opcode ${(phResult.words[3] >>> 27) & 0x1F}`);
+
+    // Word 4: SHL (opcode 18 = 0b10010) — private helper body
+    assert('EX-PH word[4] is SHL (opcode 18)',
+        ((phResult.words[4] >>> 27) & 0x1F) === 18,
+        `got opcode ${(phResult.words[4] >>> 27) & 0x1F}`);
+
+    // Word 5: HALT — the assembler encodes HALT with opcode 0 (LOAD form)
+    // We verify the last word is not a BRANCH (opcode 17) so the program halts.
+    assert('EX-PH word[5] is not BRANCH (program terminates after _double_result)',
+        ((phResult.words[5] >>> 27) & 0x1F) !== 17,
+        `word[5] unexpectedly encoded as BRANCH`);
+
+    // Both BRANCHes use relative offsets and therefore have different imm values,
+    // but they must resolve to the same absolute target (word index 4 = _double_result).
+    // BRANCH encodes imm as a relative forward offset from the current word position.
+    const branch1Target = 1 + (phResult.words[1] & 0x7FFF);  // word[1] + imm = 1+3 = 4
+    const branch2Target = 3 + (phResult.words[3] & 0x7FFF);  // word[3] + imm = 3+1 = 4
+    assert('EX-PH both BRANCHes resolve to the same absolute word (_double_result at word 4)',
+        branch1Target === branch2Target && branch1Target === 4,
+        `branch1→word${branch1Target}, branch2→word${branch2Target} (expected both → word4)`);
+}
+
 // EX16: LANG_EXAMPLE_GROUPS.assembly coverage guard
 // Asserts that the assembly key list in app-compile.js is exactly the set
-// covered by EX1–EX15 + CD1–CD10 + EX-SP + EX-SY + EX-SW + EX-DF + EX-PN.
+// covered by EX1–EX15 + CD1–CD10 + EX-SP + EX-SY + EX-SW + EX-DF + EX-PN + EX-PH.
 // If a new example is added to LANG_EXAMPLE_GROUPS.assembly without a
 // corresponding EX test, this list must be updated — that's the deliberate
 // friction that prompts adding a test.
@@ -6023,10 +6085,11 @@ HALT
         'scheduler_wait',
         'dijkstra_flag',
         'petname_demo',
+        'private_helpers',
     ]);
-    // These are the fifteen keys covered by EX tests as of the petname_demo addition.
+    // These are the sixteen keys covered by EX tests as of the private_helpers addition.
     // Update both this set AND add an EX test whenever a new example is added.
-    const EXPECTED_COUNT = 15;
+    const EXPECTED_COUNT = 16;
     assert('EX16 LANG_EXAMPLE_GROUPS.assembly coverage set has expected count',
         COVERED_ASSEMBLY_EXAMPLES.size === EXPECTED_COUNT,
         `expected ${EXPECTED_COUNT}, got ${COVERED_ASSEMBLY_EXAMPLES.size}`);
@@ -6540,8 +6603,9 @@ abstraction VlcTest {
 
 // ── Inline-vs-canonical round-trip: app-run.js ↔ examples/ ──────────────────
 // Verifies that the inline source strings embedded in app-run.js for
-// post_flash_selftest and gt_v1_1_test assemble to exactly the same word
-// array as the canonical .cloomc source files in simulator/examples/.
+// post_flash_selftest, gt_v1_1_test, private_helpers, and other assembly
+// examples assemble to exactly the same word array as the canonical .cloomc
+// source files in simulator/examples/.
 // A divergence here means the two copies have silently drifted apart.
 {
     const path = require('path');
@@ -6748,6 +6812,11 @@ abstraction VlcTest {
     // ── EX-LED-INLINE inline vs canonical (led_control) ──────────────────────
     // led_control is now a simple backtick literal in app-run.js (no concatenation).
     checkInlineVsCanonical('EX-LED-INLINE', 'led_control');
+
+    // ── EX-PH-INLINE inline vs canonical (private_helpers) ───────────────────
+    // private_helpers uses only bare IADD/ISUB/BRANCH/SHL/HALT — no named
+    // abstractions — so it assembles cleanly without any convention or NS opts.
+    checkInlineVsCanonical('EX-PH-INLINE', 'private_helpers');
 
     // ── led_dr_test: excluded from inline-vs-canonical ───────────────────────
     // led_dr_test is NOT a backtick literal in app-run.js.  It is a variable

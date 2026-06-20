@@ -7260,6 +7260,70 @@ BRANCHNE outer_off
 BRANCH led_on             ; loop forever
 `,
         'led_dr_test': _TURING_DR_TEST_SOURCE,
+        'private_helpers': `; ============================================================
+; Abstraction:  PrivateHelpers
+; Description:  Two public methods sharing a private helper via BRANCH
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-06-20
+; Language:     Assembly
+; Dependencies: None
+; ============================================================
+; Methods:
+;   1. add_and_double — adds DR1+DR2, then calls _double_result
+;   2. sub_and_double — subtracts DR1-DR2, then calls _double_result
+; Private helpers:
+;   _double_result    — doubles DR3 (SHL 1); shared by both methods
+; ============================================================
+;
+; BACKGROUND
+; ----------
+; In a Church Machine LUMP, all code lives inside one flat word
+; array.  A "private helper" is just a labeled block that public
+; methods reach by BRANCH.  The helper is unreachable from outside
+; the LUMP — it has no NS slot and no capability — so it stays
+; truly private.
+;
+; HOW BRANCH-BASED HELPERS WORK
+; ------------------------------
+; Both methods compute an intermediate result into DR3, then:
+;
+;   BRANCH _double_result   ; jump to shared private helper
+;
+; _double_result does SHL DR3, DR3, 1 (× 2) then HALTs.
+; Without the helper each method would duplicate those lines.
+; With the helper there is only one copy to maintain.
+;
+; CONVENTIONS
+; -----------
+; - DR1, DR2  input registers (set by the caller before CALL)
+; - DR3       intermediate / output register
+; - Labels starting with _ are private (not exported as methods)
+;
+; ============================================================
+
+; ── Method 1: add_and_double ─────────────────────────────────
+; Inputs : DR1, DR2  (set before CALL)
+; Output : DR3 = (DR1 + DR2) × 2
+IADD DR3, DR1, DR2     ; DR3 = DR1 + DR2
+BRANCH _double_result  ; → private helper doubles DR3
+
+; ── Method 2: sub_and_double ─────────────────────────────────
+; Inputs : DR1, DR2  (set before CALL)
+; Output : DR3 = (DR1 − DR2) × 2
+ISUB DR3, DR1, DR2     ; DR3 = DR1 − DR2
+BRANCH _double_result  ; → private helper doubles DR3
+
+; ── Private helper: _double_result ───────────────────────────
+; Input  : DR3 (any integer)
+; Output : DR3 = DR3 × 2
+;
+; Shared by add_and_double and sub_and_double.
+; Unreachable from outside the LUMP — no NS slot, no capability.
+_double_result:
+SHL DR3, DR3, 1        ; DR3 = DR3 × 2 (logical shift left 1)
+HALT
+`,
     };
 
     window._asmExampleSources      = examples;
