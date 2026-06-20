@@ -8888,6 +8888,36 @@ Add a method called Run
     assert('SYN2-b 3-arg: exactly 1 word', r.words.length === 1, 'words=' + r.words.length);
 }
 
+// SYN2-c: CHANGE CR12, CR12, #0x0A (hex literal) assembles and equals CHANGE CR12, CR12, #10
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('CHANGE CR12, CR12, #0x0A');
+    assert('SYN2-c CHANGE CR12,CR12,#0x0A: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    assert('SYN2-c CHANGE CR12,CR12,#0x0A: exactly 1 word', r.words.length === 1,
+        'got ' + r.words.length + ' words');
+    const a2 = new ChurchAssembler();
+    const r2 = a2.assemble('CHANGE CR12, CR12, #10');
+    assert('SYN2-c CHANGE CR12,CR12,#0x0A === CHANGE CR12,CR12,#10',
+        r.words[0] === r2.words[0],
+        'hex=0x' + r.words[0].toString(16) + ' dec=0x' + r2.words[0].toString(16));
+}
+
+// SYN2-d: CHANGE CR12, CR12, #0b1010 (binary literal) assembles and equals CHANGE CR12, CR12, #10
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('CHANGE CR12, CR12, #0b1010');
+    assert('SYN2-d CHANGE CR12,CR12,#0b1010: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    assert('SYN2-d CHANGE CR12,CR12,#0b1010: exactly 1 word', r.words.length === 1,
+        'got ' + r.words.length + ' words');
+    const a2 = new ChurchAssembler();
+    const r2 = a2.assemble('CHANGE CR12, CR12, #10');
+    assert('SYN2-d CHANGE CR12,CR12,#0b1010 === CHANGE CR12,CR12,#10',
+        r.words[0] === r2.words[0],
+        'bin=0x' + r.words[0].toString(16) + ' dec=0x' + r2.words[0].toString(16));
+}
+
 // ── SYN3: IADD / ISUB 2-arg immediate shorthand ───────────────────────────────
 
 // SYN3-a: IADD DR1, #5 → same as IADD DR1, DR1, #5
@@ -9192,6 +9222,68 @@ Add a method called Run
     const a2 = new ChurchAssembler();
     const r2 = a2.assemble('ISUB DR0, #10');
     assert('SYN6-d ISUB DR0, #0b1010 === ISUB DR0, #10',
+        r.words[0] === r2.words[0],
+        'bin=0x' + r.words[0].toString(16) + ' dec=0x' + r2.words[0].toString(16));
+}
+
+// ── LOAD / SAVE hex and binary immediate offset literals (SYN7) ──────────────
+
+// SYN7-a: LOAD CR2, CR6, #0x05 (hex literal) assembles and equals LOAD CR2, CR6, #5.
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('LOAD CR2, CR6, #0x05');
+    assert('SYN7-a LOAD CR2,CR6,#0x05: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    assert('SYN7-a LOAD CR2,CR6,#0x05: exactly 1 word emitted', r.words.length === 1,
+        'got ' + r.words.length + ' words');
+    const a2 = new ChurchAssembler();
+    const r2 = a2.assemble('LOAD CR2, CR6, #5');
+    assert('SYN7-a LOAD CR2,CR6,#0x05 === LOAD CR2,CR6,#5',
+        r.words[0] === r2.words[0],
+        'hex=0x' + r.words[0].toString(16) + ' dec=0x' + r2.words[0].toString(16));
+}
+
+// SYN7-b: LOAD CR2, CR6, #0b00101 (binary literal) assembles and equals LOAD CR2, CR6, #5.
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('LOAD CR2, CR6, #0b00101');
+    assert('SYN7-b LOAD CR2,CR6,#0b00101: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    assert('SYN7-b LOAD CR2,CR6,#0b00101: exactly 1 word emitted', r.words.length === 1,
+        'got ' + r.words.length + ' words');
+    const a2 = new ChurchAssembler();
+    const r2 = a2.assemble('LOAD CR2, CR6, #5');
+    assert('SYN7-b LOAD CR2,CR6,#0b00101 === LOAD CR2,CR6,#5',
+        r.words[0] === r2.words[0],
+        'bin=0x' + r.words[0].toString(16) + ' dec=0x' + r2.words[0].toString(16));
+}
+
+// SYN7-c: SAVE CR2, CR6, #0x05 (hex literal) assembles and equals SAVE CR2, CR6, #5.
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('SAVE CR2, CR6, #0x05');
+    assert('SYN7-c SAVE CR2,CR6,#0x05: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    assert('SYN7-c SAVE CR2,CR6,#0x05: exactly 1 word emitted', r.words.length === 1,
+        'got ' + r.words.length + ' words');
+    const a2 = new ChurchAssembler();
+    const r2 = a2.assemble('SAVE CR2, CR6, #5');
+    assert('SYN7-c SAVE CR2,CR6,#0x05 === SAVE CR2,CR6,#5',
+        r.words[0] === r2.words[0],
+        'hex=0x' + r.words[0].toString(16) + ' dec=0x' + r2.words[0].toString(16));
+}
+
+// SYN7-d: SAVE CR2, CR6, #0b00101 (binary literal) assembles and equals SAVE CR2, CR6, #5.
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('SAVE CR2, CR6, #0b00101');
+    assert('SYN7-d SAVE CR2,CR6,#0b00101: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    assert('SYN7-d SAVE CR2,CR6,#0b00101: exactly 1 word emitted', r.words.length === 1,
+        'got ' + r.words.length + ' words');
+    const a2 = new ChurchAssembler();
+    const r2 = a2.assemble('SAVE CR2, CR6, #5');
+    assert('SYN7-d SAVE CR2,CR6,#0b00101 === SAVE CR2,CR6,#5',
         r.words[0] === r2.words[0],
         'bin=0x' + r.words[0].toString(16) + ' dec=0x' + r2.words[0].toString(16));
 }
