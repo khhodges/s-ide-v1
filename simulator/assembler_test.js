@@ -9104,6 +9104,36 @@ Add a method called Run
     assert('SYN5-e register form crSrc = 1 (DR1)', crSrc === 1, 'got crSrc ' + crSrc);
 }
 
+// SYN5-f: MCMP DR0, #0x0A (hex literal) assembles and equals MCMP DR0, #10.
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('MCMP DR0, #0x0A');
+    assert('SYN5-f MCMP DR0, #0x0A: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    assert('SYN5-f MCMP DR0, #0x0A: exactly 1 word emitted', r.words.length === 1,
+        'got ' + r.words.length + ' words');
+    const a2 = new ChurchAssembler();
+    const r2 = a2.assemble('MCMP DR0, #10');
+    assert('SYN5-f MCMP DR0, #0x0A === MCMP DR0, #10',
+        r.words[0] === r2.words[0],
+        'hex=0x' + r.words[0].toString(16) + ' dec=0x' + r2.words[0].toString(16));
+}
+
+// SYN5-g: MCMP DR0, #0b1010 (binary literal) assembles and equals MCMP DR0, #10.
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('MCMP DR0, #0b1010');
+    assert('SYN5-g MCMP DR0, #0b1010: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    assert('SYN5-g MCMP DR0, #0b1010: exactly 1 word emitted', r.words.length === 1,
+        'got ' + r.words.length + ' words');
+    const a2 = new ChurchAssembler();
+    const r2 = a2.assemble('MCMP DR0, #10');
+    assert('SYN5-g MCMP DR0, #0b1010 === MCMP DR0, #10',
+        r.words[0] === r2.words[0],
+        'bin=0x' + r.words[0].toString(16) + ' dec=0x' + r2.words[0].toString(16));
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log('\n' + passed + ' passed, ' + failed + ' failed');
 if (failed > 0) process.exit(1);
