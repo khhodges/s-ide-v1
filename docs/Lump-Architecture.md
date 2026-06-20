@@ -1,6 +1,6 @@
 # Church Machine — Lump Architecture
 
-**v1.1 — May 2026**
+**v1.2 — June 2026**
 **CONFIDENTIAL**
 
 ---
@@ -23,13 +23,13 @@ complete and authoritative self-description.
 
 ## Lump Size Rule
 
-Lump size is always a power of 2, minimum 64 words, maximum 8 192 words (Release 1):
+Lump size is always a power of 2, minimum 64 words, maximum 32 768 words:
 
 ```
-lumpSize = 2^n   where 6 ≤ n ≤ 13 (Release 1)
+lumpSize = 2^n   where 6 ≤ n ≤ 15
 ```
 
-n = 14 (16 384 words) is architecturally valid but reserved for future releases.
+Values of n-6 above 9 (lumpSize > 32 768 words) are rejected by Mint.
 
 The size exponent `n` is encoded in the Header Word. The hardware derives
 the boundary of every internal zone — code section, freespace, capability
@@ -55,7 +55,7 @@ hardware traps rather than silently corrupting state.
 | Field | Bits  | Meaning |
 |-------|-------|---------|
 | magic | 31:27 | Always `11111` (0x1F). Causes a hardware trap if executed. |
-| n-6   | 26:23 | Size exponent. `lumpSize = 2^(val+6)`. Valid range 0–7 → 64–8 192 words (Release 1; n = 14 architecturally reserved). |
+| n-6   | 26:23 | Size exponent. `lumpSize = 2^(val+6)`. Valid range 0–9 → 64–32 768 words. Values 10–15 rejected by Mint. |
 | cw    | 22:10 | Code Word count (0–8191). Words 1..cw are executable instructions. |
 | typ   | 9:8   | Object type — identifies which Lump type this is (see below). |
 | cc    | 7:0   | Capability-list slot count (0–255), or repurposed per Lump type. |
@@ -283,29 +283,19 @@ binary carries it.
 
 ---
 
-## NS Slot Assignment — Boot-Resident and Floating Lumps
+## NS Slot Assignment — Four Categories
 
-Release 1.1 formalises two classes of Abstraction Lump by how they receive a
-Namespace (NS) slot.
+Release 1.1 formalises four categories of Abstraction Lump by how they receive
+a Namespace (NS) slot. Only **Resident** and **Lazy-load** lumps have an
+assigned slot in the Namespace table. Dynamic lumps receive the next free slot
+on demand. NULL lumps never enter the Namespace table at all.
 
-### Boot-Resident
-
-`ns_slot` is a fixed integer in manifest.json. The boot image generator places
-the binary at the declared NS slot before any thread executes. The NS entry is
-`Live` at cold boot.
-
-Examples: Boot.Abstr (NS[3]), LED (NS[12]), Constants (NS[18]), Loader (NS[19]),
-Tunnel (NS[31]), Keystone (NS[32]).
-
-### Floating
-
-`ns_slot: null` with `ns_slot_policy: "dynamic"`. No fixed slot. The Loader
-fetches the binary on first demand, Mint installs it at an ephemerally allocated
-NS slot. The slot number is invisible to callers — they hold a GT, not an index.
-
-Floating is the correct default for any abstraction not on the cold-boot
-critical path. As the library grows, most lumps should be floating. The
-canonical example is WordString (ab1e86af).
+| Category | `ns_slot` | `boot_resident` | `ns_slot_policy` | Behaviour |
+|:---------|:----------|:----------------|:-----------------|:----------|
+| **Resident** | integer | `true` | `"static"` | Slot is part of the boot image. NS entry is `Live` at cold boot. |
+| **Lazy-load** | integer | `false` / absent | `"static"` | Slot is reserved but the lump body is absent from the boot image. Loaded into that specific slot on first demand via Loader/Tunnel. |
+| **Dynamic** | `null` | — | `"dynamic"` | No assigned slot. The runtime allocates the next free slot at first use. Slot number may differ between reboots; callers hold a GT, not a slot index. |
+| **NULL** | `null` | — | absent / `"static"` | Never enters the Namespace table. Fetched directly by token via Loader/Tunnel when needed. Correct for data, media, and library lumps that require no callable NS slot. |
 
 ### Variant Group
 
@@ -317,8 +307,8 @@ Example: SlideRule (00001000) and SlideRuleHS (00001001) both have
 
 | `ns_slot` | `ns_slot_policy` | Classification |
 |---|---|---|
-| integer | absent | Boot-resident |
-| `null` | `"dynamic"` | Floating |
+| integer | absent / `"static"` | Resident or Lazy-load — fixed assigned slot |
+| `null` | `"dynamic"` | Dynamic — allocated by Mint on first use |
 | `null` | absent | **Error** — caught by consistency gate R9 |
 
 Enforcement: `tests/lump/test_lump_consistency.py` — R8 (variant_group),
@@ -334,7 +324,7 @@ be used. Mint validates in strict order:
 ```
 Step 1  Read Mem[base] — the header word.
 Step 2  magic[31:27] == 0x1F — reject if not.
-Step 3  n-6[26:23] <= 7 — reject if lump would exceed 8 192 words (Release 1 limit; n = 14 reserved).
+Step 3  n-6[26:23] <= 9 — reject if lump would exceed 32 768 words.
 Step 4  lumpSize = 2^(n-6+6).
 Step 5  cw[22:10] <= lumpSize - cc - 2 — reject if header is self-contradictory.
 Step 6  cc[7:0] <= lumpSize - 2 — reject if c-list overflows lump.
@@ -391,6 +381,7 @@ memory accordingly. ZIP files where bit 3 is `1` are rejected.
 
 | Version | Date | Summary |
 |---|---|---|
+| v1.2 | 2026-06-20 | Maximum lump size updated to 32 768 words (n-6 max = 9); Mint Step 3 updated accordingly; NS slot categories expanded from two (Boot-Resident / Floating) to four (Resident / Lazy-load / Dynamic / NULL) matching `manifest.json` schema and `replit.md`; GT permission bit layout corrected to dom+perm3 scheme; Abstract GT typ corrected to `11`; manifest entry count updated to 30. |
 | v1.1 | 2026-05-03 | Floating-lump concept formalised; `variant_group` introduced; Boot.Abstr example corrected (n=6, cw=17, cc=1, `0xF800_4401`); automated LUMP consistency gate (`tests/lump/test_lump_consistency.py`). |
 | v1.0 | 2026-04-29 | Initial documented release. |
 

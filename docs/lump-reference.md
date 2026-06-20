@@ -1,6 +1,6 @@
 # LUMP Reference
 
-**LUMP** — *Lazy Unit of Memory Placement* — is a self defined the fundamental deployable unit of the Church Machine. A LUMP is always a power-of-two block of 32-bit words that bundles executable code, embedded data, and a private Capability List into a single, cryptographically sealed object that can be independently loaded into memory by the Namespace manager. Every abstraction on the Church Machine is compiled to a LUMP and given a unique 32-bit token Golden Token with user specific access rights managed by the Church-Turing Meta Machine (RWX/LSE+FBG).
+**LUMP** — *Lazy Unit of Memory Placement* — is the fundamental deployable unit of the Church Machine. A LUMP is always a power-of-two block of 32-bit words that bundles executable code, embedded data, and a private Capability List into a single, cryptographically sealed object that can be independently loaded into memory by the Namespace manager. Every abstraction on the Church Machine is compiled to a LUMP and given a unique 32-bit Golden Token with access rights managed by the Church-Turing Meta Machine (RWX/LSE+FBG).
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## 1. Binary Layout
 
-A LUMP is always `2^n` words long (`n ∈ 6..14`, i.e. 64–16 384 words).
+A LUMP is always `2^n` words long (`n ∈ 6..15`, i.e. 64–32 768 words).
 
 ```
 ┌──────────────────────────────────────────┐  Word 0
@@ -62,7 +62,7 @@ Bits 31:27 are always `11111` (opcode 0x1F — an invalid instruction), so the h
 | Field | Bits  | Meaning |
 |:------|:------|:--------|
 | magic | 31:27 | Always `0x1F`. Identifies word 0 as a LUMP header. |
-| n-6   | 26:23 | Size exponent minus 6. `lump_size = 2^(n-6 + 6)`. Range 0–8 → 64–16,384 words. |
+| n-6   | 26:23 | Size exponent minus 6. `lump_size = 2^(n-6 + 6)`. Range 0–9 → 64–32,768 words. Values 10–15 are rejected by Mint. |
 | cw    | 22:10 | **Code Word count.** Number of 32-bit instructions (max 8 191). |
 | typ   | 9:8   | Object type (see §3). |
 | cc    | 7:0   | **C-List count.** Number of GT rows at the lump's tail (0–255). |
@@ -70,7 +70,7 @@ Bits 31:27 are always `11111` (opcode 0x1F — an invalid instruction), so the h
 On every `CALL`, the hardware derives two root Capability Registers from the lump header fields:
 
 - **CR6** (C-List Root): Word 0 retains the caller's E-type GT unchanged. Words 1–3 are set to `base = NS_base + (lump_size − cc) × 4`, `limit = cc − 1`, covering the physical C-List window. Used by `LOAD`, `SAVE`, and `ELOADCALL`.
-- **CR14** (Code Root): Built fresh with **R+X** (Turing domain) permissions. `base = NS_base + 4`, `limit = cw − 1`, covering the code section. Used by `BRANCH` and in-lump `CALL` targets.
+- **CR14** (Code Root): Built fresh with **X** (execute-only, Turing domain) permissions. `base = NS_base + 4`, `limit = cw − 1`, covering the code section. Used by `BRANCH` and in-lump `CALL` targets. Code is intentionally execute-only — `DREAD` cannot reach the code section.
 
 ---
 
@@ -96,16 +96,20 @@ A **Context Register (CR)** is 128 bits — four 32-bit words. **Word 0 is the G
 ### GT Word 0 (sharable)
 
 ```
- 31   25 24  23 22    16 15               0
- ┌──────┬─────┬────────┬──────────────────┐
- │ perm │ typ │ gt_seq │    object_id     │
- │ 7 b  │ 2 b │  7 b   │    16 bits       │
- └──────┴─────┴────────┴──────────────────┘
+ 31  31 30 29 28 27 26 25 24  23 22    16 15               0
+ ┌────┬──┬──┬──┬───┬──┬──┬─────┬────────┬──────────────────┐
+ │ B  │p2│p1│p0│dom│ 0│ f│ typ │ gt_seq │    object_id     │
+ │ 1b │        4b perm+dom      │ 2b  │   7b    │    16 bits       │
+ └────┴──┴──┴──┴───┴──┴──┴─────┴────────┴──────────────────┘
 ```
 
 | Sub-field  | Bits  | Meaning |
 |:-----------|:------|:--------|
-| perm       | 31:25 | Permission bits: B R W X L S E (MSB→LSB). |
+| B          | 31    | **Bind.** Must be 1 for `SAVE` to succeed. Auto-cleared by `CALL`. |
+| perm[2:0]  | 30:28 | 3-bit permission field. Meaning depends on `dom`: Turing → `X` (bit30) `W` (bit29) `R` (bit28); Church → `E` (bit30) `S` (bit29) `L` (bit28). |
+| dom        | 27    | Domain select. `0` = Turing {R, W, X}. `1` = Church {L, S, E}. |
+| spare      | 26    | Reserved; always `0`. |
+| f_flag     | 25    | Per-token flag (reserved for future use). |
 | typ        | 24:23 | `00`=NULL, `01`=Inform, `10`=Outform, `11`=Abstract. |
 | gt_seq     | 22:16 | Revocation sequence number. Stale tokens are rejected. |
 | object_id  | 15:0  | Namespace slot index of the referred-to object. |
@@ -124,17 +128,19 @@ A **Context Register (CR)** is 128 bits — four 32-bit words. **Word 0 is the G
 
 Permissions divide strictly into two non-overlapping groups. A single capability can never hold permissions from both groups simultaneously — this enforces the "Red-to-Green" barrier.
 
-| Bit | Symbol | Group  | Meaning |
-|:----|:-------|:-------|:--------|
-| 31  | B      | —      | **Bind.** Must be set for a GT to be stored in a C-List row. Defaults to 0; auto-cleared by `CALL`. |
-| 30  | R      | Turing | Read raw data. |
-| 29  | W      | Turing | Write raw data. |
-| 28  | X      | Turing | Execute (branch into). |
-| 27  | L      | Church | Load a GT from a C-List. |
-| 26  | S      | Church | Store a GT into a C-List. |
-| 25  | E      | Church | Enter / Call an abstraction. |
+The permission encoding uses a **dom+perm3** scheme. Bit 31 is the standalone **B** (Bind) flag. Bits 30:28 are a 3-bit field whose meaning depends on the **dom** bit at position 27:
 
-**C-Lists may only hold E permission.** `CLOOMC` capabilities are limited to `E` or `RX`.
+| Bit(s) | Symbol | Domain | Meaning |
+|:-------|:-------|:-------|:--------|
+| 31     | B      | —      | **Bind.** Must be set for a GT to be stored in a C-List row. Defaults to 0; auto-cleared by `CALL`. |
+| 30     | X / E  | Turing / Church | **Turing:** Execute (branch into). **Church:** Enter / Call an abstraction. |
+| 29     | W / S  | Turing / Church | **Turing:** Write raw data. **Church:** Store a GT into a C-List. |
+| 28     | R / L  | Turing / Church | **Turing:** Read raw data. **Church:** Load a GT from a C-List. |
+| 27     | dom    | —      | Domain select: `0` = Turing {R, W, X}; `1` = Church {L, S, E}. |
+| 26     | spare  | —      | Reserved; always `0`. |
+| 25     | f_flag | —      | Per-token flag (reserved for future use). |
+
+**C-Lists may only hold E permission.** `CLOOMC` capabilities are limited to `X` or `RX`.
 
 ---
 
@@ -301,7 +307,7 @@ Populated by the FPGA call-home system and the simulator fault logger.
 
 ## 7. Manifest Entry Fields
 
-`server/lumps/manifest.json` is a JSON array of 29 entries (as of Release 1.2). Each entry is a lean copy of the sidecar — the `source` field is always omitted. The manifest is the authoritative list for `/api/lumps/list` and the boot-image builder.
+`server/lumps/manifest.json` is a JSON array of 30 entries (as of Release 1.2). Each entry is a lean copy of the sidecar — the `source` field is always omitted. The manifest is the authoritative list for `/api/lumps/list` and the boot-image builder.
 
 Fields present in manifest entries (superset of what every entry uses):
 

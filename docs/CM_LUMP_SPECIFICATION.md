@@ -1,6 +1,6 @@
 # Church Machine — Lump Specification
 
-**v1.1 — 2026-05-03**
+**v1.2 — 2026-06-20**
 **CONFIDENTIAL**
 
 ## Overview
@@ -22,17 +22,17 @@ compiles to exactly one lump.
 
 ## Lump Size Rule
 
-Lump size is always a power of 2, minimum 64 words, maximum 16 384 words
+Lump size is always a power of 2, minimum 64 words, maximum 32 768 words
 (32-bit each):
 
 ```
-lumpSize = 2^n   where 6 ≤ n ≤ 14
+lumpSize = 2^n   where 6 ≤ n ≤ 15
 freespace = lumpSize - 1 - cw - cc   (must be all-zero; Mint verifies at load time)
 ```
 
-The maximum is 2^14 = 16 384 words. The header `cw` field (13 bits, max 8 191)
+The maximum is 2^15 = 32 768 words. The header `cw` field (13 bits, max 8 191)
 and `cc` field (8 bits, max 255) together cap the maximum useful payload at
-1 + 8 191 + 255 = 8 447 words. Mint hard-rejects n-6 > 8 (lumpSize > 16 K).
+1 + 8 191 + 255 = 8 447 words. Mint hard-rejects n-6 > 9 (lumpSize > 32 K).
 
 | Abstraction | Code words (cw) | C-list slots (cc) | Lump size         | Freespace  |
 |-------------|-----------------|-------------------|-------------------|------------|
@@ -43,39 +43,28 @@ and `cc` field (8 bits, max 255) together cap the maximum useful payload at
 
 ---
 
-## NS Slot Assignment — Boot-Resident and Floating Lumps
+## NS Slot Assignment — Four Categories
 
-From Release 1.1 the manifest.json schema distinguishes two classes of lump by
-how they receive a Namespace (NS) slot.
+From Release 1.1 the manifest.json schema formally distinguishes four categories
+of lump by how they receive a Namespace (NS) slot.
 
-### Boot-Resident Lump
+Only **Resident** and **Lazy-load** lumps have an assigned slot in the NS table.
+Dynamic lumps receive the next free slot on demand. NULL lumps never enter the
+NS table at all.
 
-`ns_slot` is a fixed integer. The boot image generator places this lump at the
-declared physical address before any user thread runs. Its NS entry is `Live`
-from the first machine cycle.
-
-This is the correct classification for any abstraction that must be
-unconditionally reachable at cold-boot time: Boot.Abstr (NS[3]), LED (NS[12]),
-Constants (NS[18]), Loader (NS[19]), Tunnel (NS[31]), Keystone (NS[32]).
-
-### Floating Lump
-
-`ns_slot` is `null` with `ns_slot_policy: "dynamic"`. This lump has no fixed
-NS slot. Mint allocates an ephemeral slot on first use via the Loader/Tunnel
-fetch path. The slot number may differ between runs. Callers hold a GT — not
-a slot number — so the ephemerality is invisible to them.
-
-Floating lumps are the correct default for any abstraction not on the cold-boot
-critical path. As the library grows, the majority of lumps should be floating.
-
-WordString (ab1e86af) is the canonical example.
+| Category | `ns_slot` | `boot_resident` | `ns_slot_policy` | Behaviour |
+|:---------|:----------|:----------------|:-----------------|:----------|
+| **Resident** | integer | `true` | `"static"` | Slot is part of the boot image. NS entry is `Live` at cold boot. |
+| **Lazy-load** | integer | `false` / absent | `"static"` | Slot is reserved but the lump is not in the boot image. Loaded into that specific slot on first demand via Loader/Tunnel. |
+| **Dynamic** | `null` | — | `"dynamic"` | No assigned slot. Runtime allocates the next free slot at first use. Slot number may differ between reboots; callers hold a GT, not an index. |
+| **NULL** | `null` | — | absent / `"static"` | Never enters the NS table. Fetched directly by token via Loader/Tunnel. Correct for data, media, and library lumps that require no callable NS slot. |
 
 Machine-readable rule (enforced by `tests/lump/test_lump_consistency.py` R9):
 
 | `ns_slot` | `ns_slot_policy` | Classification |
 |---|---|---|
-| integer | absent | Boot-resident — fixed slot, placed at boot |
-| `null` | `"dynamic"` | Floating — allocated by Mint on first use |
+| integer | absent / `"static"` | Resident or Lazy-load — fixed assigned slot |
+| `null` | `"dynamic"` | Dynamic — allocated by Mint on first use |
 | `null` | absent | **Error** — caught by consistency gate R9 |
 
 ### Variant Group
@@ -87,6 +76,9 @@ implementations of the same abstraction; the boot image installs exactly one.
 Example: SlideRule (00001000) and SlideRuleHS (00001001) both declare
 `"ns_slot": 16` and `"variant_group": "sliderule"`. Exactly one is active per
 boot image. This constraint is enforced by consistency gate rule R8.
+
+Canonical examples: Boot.Abstr (NS[3], Resident), Loader (NS[19], Resident),
+Tunnel (NS[31], Resident), WordString (ab1e86af, NULL — no NS slot required).
 
 ---
 
@@ -130,7 +122,7 @@ corrupting state.
 | Field | Bits  | Meaning |
 |-------|-------|---------|
 | magic | 31:27 | Always `11111` (0x1F). Traps if executed. |
-| n-6   | 26:23 | lumpSize = 2^(val+6). Valid range 0..8 → 64..16 384 words. Values 9..15 rejected by Mint. |
+| n-6   | 26:23 | lumpSize = 2^(val+6). Valid range 0..9 → 64..32 768 words. Values 10..15 rejected by Mint. |
 | cw    | 22:10 | Code word count (0..8191). Words 1..cw are code; words cw+1..lumpSize-cc-1 must be zero. |
 | typ   | 9:8   | Object type: `00`=lump, `01`=data, `10`=clist-only, `11`=Outform. |
 | cc    | 7:0   | C-list slot count (0..255). |
@@ -181,7 +173,7 @@ The PC and NIA counters operate in **word offsets** (one unit = one 32-bit word 
 **Word-alignment guarantee**: the lump allocator always places a lump at an address whose low two bits are zero.  Implementors may rely on this without a runtime check.
 
 **Derived sizes**:
-- `lumpSize` (words) = `1 << (n_minus_6 + 6)` — always a power of two, 64..16384
+- `lumpSize` (words) = `1 << (n_minus_6 + 6)` — always a power of two, 64..32768
 - `freespace` (words) = `lumpSize − 1 − cw − cc` — words between the last code word and the c-list; must be zero-filled
 - `CR14.base` = `NS_base + 4` (skips lump header word)
 - `CR14.limit_offset` = `lumpSize − cc − 2`
@@ -198,7 +190,7 @@ It validates the header and binary before issuing any GT.
 ```
 Step 1  Read Mem[base] — the header word.
 Step 2  magic[31:27] == 0x1F — reject if not.
-Step 3  n-6[26:23] <= 8   — reject if n-6 > 8 (lump would exceed 16 K words).
+Step 3  n-6[26:23] <= 9   — reject if n-6 > 9 (lump would exceed 32 K words).
 Step 4  lumpSize = 2^(n-6+6).
 Step 5  cw[22:10] <= lumpSize - cc - 2  — reject if header is self-contradictory.
 Step 6  cc[7:0]   <= lumpSize - 2       — reject if c-list overflows lump.
@@ -240,22 +232,27 @@ instruction-decode level, not by software policy.
 
 ### Permission Bit Definitions
 
-Word 0 of every GT encodes the TPERM-controllable permission bits at [31:25],
-the GT class at [24:23], and identity fields below that:
+Word 0 of every GT encodes the permission+domain field at [31:25], the GT
+class at [24:23], and identity fields below that.
 
-| Bits  | Field | Side   | Instruction | Meaning |
-|-------|-------|--------|-------------|---------|
-| 31    | B     | Church | SAVE        | Bind — B=1 allows SAVE; B=0 causes SAVE to fault |
-| 30    | E     | Church | CALL        | This GT is a valid CALL target |
-| 29    | S     | Church | SAVE        | Save a capability into this region |
-| 28    | L     | Church | LOAD        | Load a capability out of this region |
-| 27    | X     | Turing | —           | Region is executable (PC may enter) |
-| 26    | W     | Turing | DWRITE      | Write data words to this region |
-| 25    | R     | Turing | DREAD       | Read data words from this region |
-| 24:23 | typ   | —      | —           | GT class: 00=NULL, 01=Inform, 10=Outform, 11=Abstract — CRC covered |
+The encoding uses a **dom+perm3** scheme: bit 31 is the standalone **B** flag;
+bits 30:28 are a 3-bit permission field (`perm3`) whose meaning depends on the
+**dom** bit at position 27 (0 = Turing, 1 = Church):
 
-**R, W, X and L, S, E are mutually exclusive groups.** Any GT with bits from
-more than one group is rejected by Mint as malformed.
+| Bits  | Field   | Domain        | Instruction   | Meaning |
+|-------|---------|---------------|---------------|---------|
+| 31    | B       | —             | SAVE          | Bind — B=1 allows SAVE; B=0 causes SAVE to fault |
+| 30    | X / E   | Turing/Church | — / CALL      | perm[2]: Turing = Execute (PC may enter). Church = Enter / Call an abstraction. |
+| 29    | W / S   | Turing/Church | DWRITE / SAVE | perm[1]: Turing = Write data words. Church = Save a capability into this region. |
+| 28    | R / L   | Turing/Church | DREAD / LOAD  | perm[0]: Turing = Read data words. Church = Load a capability out of this region. |
+| 27    | dom     | —             | —             | Domain select: `0` = Turing {R, W, X}; `1` = Church {L, S, E}. |
+| 26    | spare   | —             | —             | Reserved; always `0`. |
+| 25    | f_flag  | —             | —             | Per-token flag (reserved for future use). |
+| 24:23 | typ     | —             | —             | GT class: 00=NULL, 01=Inform, 10=Outform, 11=Abstract — CRC covered. |
+
+**{R, W, X} and {L, S, E} are mutually exclusive groups.** The dom bit enforces
+this: a GT cannot mix Turing and Church permissions. Any GT with perm3 ≠ 0 and
+dom-inconsistent bits is rejected by Mint as malformed.
 
 ### Standard GT Combinations
 
@@ -293,14 +290,6 @@ LOAD, or DREAD on that register to fault.
 Issued by Mint. References a physical memory region. The R/W/X or L/S/E
 permission bits describe what the holder may do with that region.
 
-### Abstract GT (typ = 10)
-
-Self-defining. No memory region, no Object NS slot. Hardware maps
-`object_id → value` internally. Covers physical constants (DREAD returns a
-fixed value) and PassKey credentials (opaque identity tokens). Abstract GTs
-are distributed by writing the full CR directly into c-list slots — no NS
-slot consumed.
-
 ### Outform GT (typ = 10)
 
 A GT issued by the IDE as a dependency placeholder. The GT itself (Word 0
@@ -311,6 +300,14 @@ metadata from the header word, and then allocates an NS slot and calls
 `Mint.Lump` to promote the slot to Live (typ = 01). The IDE may issue many
 Outform GTs for the same lump; they all resolve to the same Live slot when
 inflated.
+
+### Abstract GT (typ = 11)
+
+Self-defining. No memory region, no Object NS slot. Hardware maps
+`object_id → value` internally. Covers physical constants (DREAD returns a
+fixed value) and PassKey credentials (opaque identity tokens). Abstract GTs
+are distributed by writing the full CR directly into c-list slots — no NS
+slot consumed.
 
 ---
 
@@ -336,20 +333,25 @@ thread).
 ### Word 0 — The Golden Token (per-holder credential)
 
 ```
-31      25 24  23 22      16 15            0
-+─────────┬──────┬──────────┬──────────────+
-│B R W X  │ typ  │  gt_seq  │  object_id   │
-│ L S E   │ [2]  │   [7]    │    [16]      │
-│  [7]    │      │          │              │
-+─────────┴──────┴──────────┴──────────────+
+31  30 29 28 27 26 25 24  23 22      16 15            0
++───┬──┬──┬──┬───┬──┬──┬──────┬──────────┬──────────────+
+│ B │p2│p1│p0│dom│ 0│ f│ typ  │  gt_seq  │  object_id   │
+│1b │  3b perm3  │  2b  │ 2b  │   [7]    │    [16]      │
++───┴──┴──┴──┴───┴──┴──┴──────┴──────────┴──────────────+
 ```
+
+The permission field at bits [31:25] uses a **dom+perm3** encoding:
 
 | Field         | Bits  | Meaning |
 |---------------|-------|---------|
-| B R W X L S E | 31:25 | Permissions — TPERM-changeable, **excluded from CRC** |
-| typ           | 24:23 | GT class: 00=NULL, 01=Inform, 10=Outform, 11=Abstract — CRC covered |
-| gt_seq        | 22:16 | Revocation sequence number — CRC covered |
-| object_id     | 15:0  | Object index, unique per lump issuance — CRC covered |
+| B             | 31    | Bind — TPERM-changeable, **excluded from CRC**. Must be 1 for SAVE. |
+| perm[2:0]     | 30:28 | 3-bit permission field (TPERM-changeable, **excluded from CRC**). Turing (dom=0): bit30=X, bit29=W, bit28=R. Church (dom=1): bit30=E, bit29=S, bit28=L. |
+| dom           | 27    | Domain select (TPERM-changeable, **excluded from CRC**): `0`=Turing {R,W,X}; `1`=Church {L,S,E}. |
+| spare         | 26    | Reserved; always `0`. |
+| f_flag        | 25    | Per-token flag (TPERM-changeable, excluded from CRC). |
+| typ           | 24:23 | GT class: 00=NULL, 01=Inform, 10=Outform, 11=Abstract — **CRC covered** |
+| gt_seq        | 22:16 | Revocation sequence number — **CRC covered** |
+| object_id     | 15:0  | Object index, unique per lump issuance — **CRC covered** |
 
 TPERM clears any subset of bits [31:25] to produce a weaker GT. Permission
 escalation is architecturally impossible.
@@ -607,19 +609,19 @@ NS Slot (gt_seq=0x01, base=0x10000000):
   Word 3:  0x000048F3  (E-GT CRC — illustrative)
 ```
 
-### Boot.Abstr (n=8, cw=0, cc=46) — simulator boot-time lump
+### Boot.Abstr (n=6, cw=17, cc=1) — simulator boot-time abstraction lump
 
 ```
-Header:  0xF900_002E
-  magic=0x1F  n-6=2 (2^8=256)  cw=0  typ=00  cc=46
+Header:  0xF800_4401
+  magic=0x1F  n-6=0 (2^6=64)  cw=17  typ=00  cc=1
 
-Layout (256 words):
-  Word 0:          0xF900_002E  [header]
-  Words 1..0:      (no code — cw=0)
-  Words 1..209:    freespace    [209 zeros]
-  Words 210..255:  c-list       [46 GT words, one per NS slot 0..45]
+Layout (64 words):
+  Word 0:         0xF800_4401  [header]
+  Words 1..17:    CLOOMC code  [17 words — dispatcher + boot entry]
+  Words 18..62:   freespace    [45 zeros]
+  Word 63:        c-list       [1 GT word — self-referential E-GT]
 
-Note: clistStart = lumpSize - cc = 256 - 46 = 210
+Note: clistStart = lumpSize - cc = 64 - 1 = 63
 ```
 
 ---
