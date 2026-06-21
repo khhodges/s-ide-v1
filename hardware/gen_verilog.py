@@ -3,7 +3,6 @@ import re
 import sys
 from amaranth.back.verilog import convert
 from .core import ChurchCore
-from .tang_nano_20k import ChurchTangNano20K
 from .ti60_f225 import ChurchTi60F225
 
 
@@ -162,6 +161,7 @@ def generate_core_verilog(output_dir="build"):
 
 
 def generate_tang_nano_20k_verilog(output_dir="build"):
+    from .tang_nano_20k import ChurchTangNano20K
     os.makedirs(output_dir, exist_ok=True)
 
     top = ChurchTangNano20K(clk_freq=27_000_000, baud=115200, sim_mode=False)
@@ -225,6 +225,7 @@ def generate_core_iot_verilog(output_dir="build"):
 
 
 def generate_tang_nano_20k_iot_verilog(output_dir="build"):
+    from .tang_nano_20k import ChurchTangNano20K
     os.makedirs(output_dir, exist_ok=True)
 
     top = ChurchTangNano20K(clk_freq=27_000_000, baud=115200, sim_mode=False, iot_profile=True)
@@ -297,7 +298,7 @@ def generate_ti60_f225_verilog(output_dir="build"):
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    top = ChurchTi60F225(clk_freq=25_000_000, baud=115200, sim_mode=False)
+    top = ChurchTi60F225(clk_freq=25_000_000, baud=57600, sim_mode=False)
 
     ports = [
         top.uart_tx,
