@@ -17,7 +17,9 @@
 //                       Sapphire SoC UART0; SoC firmware talks to the host.
 //   cm_uart_tx        — Church Machine UART debug output (NIA, fault codes,
 //                       call-home packets) → GPIOL_P_03 → FT4232H interface 3
-//                       (ttyUSB3).  115200 baud, 3.3 V LVCMOS.
+//                       (ttyUSB3).  115200 baud, 1.8 V LVCMOS.
+//   cm_uart_rx        — PATCH_LUMP receive ← GPIOL_N_03 ← FT4232H interface 3
+//                       (ttyUSB3).  115200 baud.  Previously tied 1'b1 (idle).
 //
 // APB3 bridge register map (see apb3_cm_bridge.v for full description):
 //   0x00  CTRL        [0]=cm_pb  (0=button pressed → step/free-run, 1=released)
@@ -44,6 +46,7 @@ module top (
     output wire uart_tx,       // GPIOL_02 → FT4232H interface 2 → ttyUSB2
     input  wire uart_rx,       // GPIOL_01 ← FT4232H interface 2
     output wire cm_uart_tx,    // GPIOL_P_03 → FT4232H interface 3 → ttyUSB3
+    input  wire cm_uart_rx,    // GPIOL_N_03 ← FT4232H interface 3 → ttyUSB3 (PATCH_LUMP RX)
     input  wire push_button,   // GPIOT_N_06, active-low, weak pull-up (to SoC GPIO)
     output wire led0,          // GPIOR_P_07  SoC out of reset
     output wire led1,          // GPIOR_P_08  CM boot complete
@@ -212,7 +215,7 @@ module top (
     church_ti60_f225 u_cm (
         .clk              (clk),
         .uart_tx          (cm_uart_tx),          // CM debug UART → GPIOL_P_03 → ttyUSB3
-        .uart_rx          (1'b1),                // CM UART RX — idle (no host driver)
+        .uart_rx          (cm_uart_rx),          // CM debug UART ← GPIOL_N_03 ← ttyUSB3 (PATCH_LUMP)
         .push_button      (cm_push_button_driven),
 
         // CM LEDs — individual 1-bit outputs from generated Verilog

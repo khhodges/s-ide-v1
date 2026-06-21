@@ -182,6 +182,30 @@
                 fastclk_name=""/>
         </efxpt:comp_gpio>
 
+        <!-- CM UART RX ← GPIOL_N_03 (FT4232H interface 3, ttyUSB3) — PATCH_LUMP receive -->
+        <efxpt:comp_gpio name="cm_uart_rx" gpio_def="GPIOL_N_03" mode="input" bus_name="" io_standard="1.8 V LVCMOS">
+            <efxpt:input_config
+                name="cm_uart_rx"
+                name_ddio_lo=""
+                conn_type="normal"
+                is_register="false"
+                clock_name=""
+                is_clock_inverted="false"
+                pull_option="none"
+                is_schmitt_trigger="false"
+                ddio_type="none"
+                is_bus_hold="false"
+                delay="0"
+                is_serial="false"
+                is_dyn_delay="false"
+                fastclk_name=""
+                pullup_ena_name="cm_uart_rx_PULL_UP_ENA"
+                dyn_delay_en_name="cm_uart_rx_DLY_ENA"
+                dyn_delay_reset_name="cm_uart_rx_DLY_RST"
+                dyn_delay_ctrl_name="cm_uart_rx_DLY_CTRL"
+                clkmux_buf_name=""/>
+        </efxpt:comp_gpio>
+
         <!-- Push button (active-low, weak pull-up) at GPIOT_N_06, 1.8 V -->
         <efxpt:comp_gpio name="push_button" gpio_def="GPIOT_N_06" mode="input" bus_name="" io_standard="1.8 V LVCMOS">
             <efxpt:input_config
