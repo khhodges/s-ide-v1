@@ -174,18 +174,21 @@ else
     _info "  Verifying BRAM INIT_0 lanes are non-zero..."
     ALL_NONZERO=1
     for SYM in 0 1 2 3; do
-        LINENUM=$(grep -n "EFX_RAM10" "$MAP_V" | grep "ram_symbol${SYM}__D\\\$g1" | head -1 | cut -d: -f1)
+        LINENUM=$(grep -n "EFX_RAM10" "$MAP_V" | grep "ram_symbol${SYM}" | head -1 | cut -d: -f1 || true)
         if [ -z "$LINENUM" ]; then
-            _warn "  Could not locate ram_symbol${SYM} instance in map.v"
+            _warn "  Could not locate ram_symbol${SYM} instance in map.v (naming may differ in 2026.1)"
             ALL_NONZERO=0
             continue
         fi
-        INIT0=$(sed -n "${LINENUM},$((LINENUM+4))p" "$MAP_V" | grep "INIT_0" | head -1)
-        if echo "$INIT0" | grep -qE 'INIT_0.*"[0-9a-fA-F]*0{8}"'; then
+        INIT0=$(sed -n "${LINENUM},$((LINENUM+4))p" "$MAP_V" | grep "INIT_0" | head -1 || true)
+        if [ -z "$INIT0" ]; then
+            _warn "  No INIT_0 param found near ram_symbol${SYM} — check map.v manually"
+            ALL_NONZERO=0
+        elif echo "$INIT0" | grep -qE 'INIT_0.*"[0-9a-fA-F]*0{8}"'; then
             _warn "  INIT_0 for ram_symbol${SYM} looks zero — firmware may not be embedded!"
             ALL_NONZERO=0
         else
-            _ok "  ram_symbol${SYM} INIT_0: $(echo "$INIT0" | grep -o '"[^"]*"' | head -1)"
+            _ok "  ram_symbol${SYM} INIT_0: $(echo "$INIT0" | grep -o '"[^"]*"' | head -1 || true)"
         fi
     done
     if [ "$ALL_NONZERO" -eq 0 ]; then
