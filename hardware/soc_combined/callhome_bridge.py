@@ -416,6 +416,7 @@ _uart_buffer_lock = threading.Lock()
 # LUMP auto-push coordination
 _lump_done_event = threading.Event()
 _lump_done_ok    = [False]   # mutable slot set by _handle_lump_done()
+_lump_push_lock  = threading.Lock()  # only one push thread at a time
 
 # ---------------------------------------------------------------------------
 # PATCH_LUMP upload helpers
@@ -871,9 +872,22 @@ def _try_push_lump(uid):
     Runs in a background daemon thread so the reader loop is not blocked.
     The reader loop continues; it will catch LUMP_DONE and signal _lump_done_event.
     Up to 3 attempts per CALLHOME; stops immediately on success or permanent error.
+    At most one push thread runs at a time (_lump_push_lock); extra callhome-triggered
+    threads exit immediately rather than corrupting the ttyUSB2 stream.
     """
     if not _IDE_SERVER_URL:
         return
+    if not _lump_push_lock.acquire(blocking=False):
+        return  # another push is already in flight
+    import urllib.request
+    try:
+        _try_push_lump_inner(uid)
+    finally:
+        _lump_push_lock.release()
+
+
+def _try_push_lump_inner(uid):
+    """Inner implementation of _try_push_lump; called with _lump_push_lock held."""
     import urllib.request
 
     for attempt in range(1, 4):
@@ -921,8 +935,9 @@ def _try_push_lump(uid):
             time.sleep(2)
             continue
 
-        # 4. Wait up to 12 s for the reader thread to catch LUMP_DONE
-        if not _lump_done_event.wait(timeout=12.0):
+        # 4. Wait up to 30 s for the reader thread to catch LUMP_DONE
+        # (65544 bytes @ 57600 baud = ~11.4 s raw + 2 s CM processing + 3 s reboot = ~17 s)
+        if not _lump_done_event.wait(timeout=30.0):
             print(f"  [LUMP] LUMP_DONE timeout (attempt {attempt}/3)")
             ok = False
         else:

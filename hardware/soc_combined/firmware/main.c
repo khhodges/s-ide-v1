@@ -21,7 +21,7 @@
  *   CALLHOME:{"board":"Ti60F225","uid":"<16 hex>","nia":"0x<8 hex>",
  *             "boot_ok":<0|1>,"boot_reason":<0|2>,"fault":<0|1>,
  *             "fault_code":<0-31>,"fault_name":"<str>",
- *             "fw_major":2,"fw_minor":2,
+ *             "fw_major":2,"fw_minor":3,
  *             "ns_manifest":[...]}\r\n
  *
  *   FAULT_EVENT:{"uid":"<16hex>","nia":"0x<8hex>","fault_code":<N>,
@@ -118,7 +118,7 @@
 /* Firmware version                                                    */
 /* ------------------------------------------------------------------ */
 #define FW_MAJOR  2u
-#define FW_MINOR  2u
+#define FW_MINOR  3u
 
 /* ------------------------------------------------------------------ */
 /* Sapphire UART0 registers                                            */
@@ -549,7 +549,7 @@ int main(void)
     CM_CTRL = CM_CTRL_RELEASED;
 
     /* ---- Step 4: Boot banner ---- */
-    uart_puts("CHURCH Ti60 SoC+CM v2.1\r\n");
+    uart_puts("CHURCH Ti60 SoC+CM v2.3\r\n");
     uart_puts("UID=");
     emit_uid();
     uart_puts("\r\n");

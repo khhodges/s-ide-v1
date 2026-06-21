@@ -55,15 +55,14 @@ Replit auto-syncs to GitHub every 30 minutes. If a firmware change was just comm
 ```bash
 grep "NUC_CODE_START\|NUC_CODE_END\|FW_MINOR\|FIRMWARE v" firmware/main.c
 ```
-Expected (v2.2, new BRAM layout): `NUC_CODE_START=0x00000000u`, `NUC_CODE_END=0x00000044u`, `FW_MINOR=2u`.
+Expected (v2.3, new BRAM layout): `NUC_CODE_START=0x00000000u`, `NUC_CODE_END=0x00000044u`, `FW_MINOR=3u`.
 
 If the pull is stale, patch directly on the Chromebook:
 ```bash
-sed -i 's/#define NUC_CODE_START   0x00000160u/#define NUC_CODE_START   0x00000000u/' firmware/main.c
 sed -i 's/#define NUC_CODE_END     0x000001B0u/#define NUC_CODE_END     0x00000044u/' firmware/main.c
-sed -i 's/#define FW_MINOR  0u/#define FW_MINOR  2u/' firmware/main.c
-sed -i 's/FIRMWARE v2\.1/FIRMWARE v2.2/' firmware/main.c
-grep "NUC_CODE\|FW_MINOR\|FIRMWARE v2" firmware/main.c  # verify all four
+sed -i 's/#define FW_MINOR  [012]u/#define FW_MINOR  3u/' firmware/main.c
+sed -i 's/FIRMWARE v2\.[012]/FIRMWARE v2.3/' firmware/main.c
+grep "NUC_CODE\|FW_MINOR\|FIRMWARE v2" firmware/main.c  # verify all three
 ```
 
 ## Firmware → flash sequence (scripted CLI, strict order)
