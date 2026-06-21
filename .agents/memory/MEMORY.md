@@ -17,3 +17,4 @@
 - [BRAM NUC_PROGRAM staleness trap](bram-nuc-program-staleness.md) — church_ti60_f225.v BRAM goes stale when boot_rom.py NUC_PROGRAM changes; patch_cm_bram.py alone cannot fix it
 - [Verilog/RTLIL regeneration procedure](verilog-regen-procedure.md) — 9 gen commands for all actively-synthesised targets; legacy-frozen files; builder tab visibility trap
 - [ChurchAssembler Node global shim](church-assembler-node-shim.md) — compileAssembly() checks typeof global; set global.ChurchAssembler before requiring CLOOMCCompiler in Node subprocesses
+- [app.py raw SQL pattern](app-py-raw-sql.md) — server/app.py has no sqlite3 import; all DB access must use db.session.execute(_sa_text(...)); never _sqlite3.connect()

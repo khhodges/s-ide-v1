@@ -413,6 +413,10 @@ _last_uid = None
 _uart_buffer = []
 _uart_buffer_lock = threading.Lock()
 
+# LUMP auto-push coordination
+_lump_done_event = threading.Event()
+_lump_done_ok    = [False]   # mutable slot set by _handle_lump_done()
+
 # ---------------------------------------------------------------------------
 # PATCH_LUMP upload helpers
 # ---------------------------------------------------------------------------
@@ -837,6 +841,116 @@ def _handle_callhome_json(line):
             daemon=True,
         ).start()
 
+    # Auto-push: after each CALLHOME where the CM has booted, check for a
+    # pending LUMP and deliver it via the ttyUSB2 relay.  Runs in a daemon
+    # thread so the reader loop is never blocked.
+    if _IDE_SERVER_URL and uid and boot_ok:
+        threading.Thread(
+            target=_try_push_lump,
+            args=(uid,),
+            daemon=True,
+        ).start()
+
+
+def _handle_lump_done(line):
+    """Called by the reader thread when LUMP_DONE:{...} arrives from firmware."""
+    json_str = line[len("LUMP_DONE:"):].strip()
+    try:
+        pkt = json.loads(json_str)
+        ok = bool(pkt.get("ok", 0))
+    except (json.JSONDecodeError, ValueError):
+        ok = False
+    _lump_done_ok[0] = ok
+    _lump_done_event.set()
+    print(f"  [LUMP] LUMP_DONE: {'OK' if ok else 'FAIL'}")
+
+
+def _try_push_lump(uid):
+    """Fetch a pending LUMP from the IDE and deliver it via the ttyUSB2 relay.
+
+    Runs in a background daemon thread so the reader loop is not blocked.
+    The reader loop continues; it will catch LUMP_DONE and signal _lump_done_event.
+    Up to 3 attempts per CALLHOME; stops immediately on success or permanent error.
+    """
+    if not _IDE_SERVER_URL:
+        return
+    import urllib.request
+
+    for attempt in range(1, 4):
+        # 1. Check for pending lump
+        try:
+            req = urllib.request.Request(
+                f"{_IDE_SERVER_URL}/api/device/{uid}/pending-lump",
+            )
+            resp = urllib.request.urlopen(req, timeout=10, context=_ssl_ctx())
+            info = json.loads(resp.read())
+        except Exception as e:
+            print(f"  [LUMP] pending-lump check failed: {e}")
+            return
+
+        if not info.get("pending"):
+            return  # nothing to push
+
+        framed_hex = info.get("framed_hex", "")
+        lump_seq   = int(info.get("lump_seq", 0))
+        try:
+            frame = bytes.fromhex(framed_hex)
+        except ValueError as e:
+            print(f"  [LUMP] invalid framed_hex from server: {e}")
+            return
+        n = len(frame)
+
+        print(f"  [LUMP] attempt {attempt}/3 — pushing {n} bytes (seq={lump_seq}) via relay …")
+
+        # 2. Get a safe reference to the open serial port
+        with _ser_lock:
+            s = _ser
+        if s is None or not s.is_open:
+            print("  [LUMP] serial not open — skipping push")
+            return
+
+        # 3. Send LUMP_START:<n>\r\n followed immediately by frame bytes
+        _lump_done_event.clear()
+        _lump_done_ok[0] = False
+        try:
+            s.write(f"LUMP_START:{n}\r\n".encode())
+            s.write(frame)
+            s.flush()
+        except Exception as e:
+            print(f"  [LUMP] serial write error: {e}")
+            time.sleep(2)
+            continue
+
+        # 4. Wait up to 12 s for the reader thread to catch LUMP_DONE
+        if not _lump_done_event.wait(timeout=12.0):
+            print(f"  [LUMP] LUMP_DONE timeout (attempt {attempt}/3)")
+            ok = False
+        else:
+            ok = _lump_done_ok[0]
+
+        # 5. POST lump-ack to IDE regardless of outcome
+        try:
+            body = json.dumps({"seq": lump_seq, "ok": ok}).encode()
+            ack_req = urllib.request.Request(
+                f"{_IDE_SERVER_URL}/api/device/{uid}/lump-ack",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            urllib.request.urlopen(ack_req, timeout=10, context=_ssl_ctx())
+        except Exception as e:
+            print(f"  [LUMP] lump-ack POST failed: {e}")
+
+        if ok:
+            print(f"  [LUMP] delivery confirmed (seq={lump_seq}) — no further pushes until next stage")
+            return
+        else:
+            if attempt < 3:
+                print(f"  [LUMP] retrying in 1 s …")
+                time.sleep(1)
+            else:
+                print("  [LUMP] all 3 attempts failed — will retry on next CALLHOME")
+
 
 def _flush_uart_buffer():
     """Background thread: POST buffered plain-text UART lines to the IDE every 500 ms."""
@@ -1060,6 +1174,10 @@ def _process_line(line):
         _handle_hung_line(line)
     elif line.startswith("TRACE:"):
         _handle_trace_line(line)
+    elif line.startswith("LUMP_DONE:"):
+        _handle_lump_done(line)
+    elif line.startswith("LUMP_PUSH_START:"):
+        print(f"  [LUMP] {line}")
     else:
         print(f"  {line}")
         if _IDE_SERVER_URL:

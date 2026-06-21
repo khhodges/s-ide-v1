@@ -1305,6 +1305,114 @@ def boot_image_exists():
     return jsonify({"exists": os.path.isfile(BOOT_IMAGE_PATH)})
 
 
+def _crc16_ccitt(data: bytes) -> int:
+    """CRC-16/CCITT-FALSE: poly=0x1021, init=0xFFFF, MSB-first, no reflection.
+    Matches callhome_bridge.py _crc16_ccitt() and hardware/uart_crc16.py exactly.
+    """
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte << 8
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x1021) if (crc & 0x8000) else (crc << 1)
+        crc &= 0xFFFF
+    return crc
+
+
+@app.route("/api/device/<uid>/pending-lump", methods=["GET"])
+def device_pending_lump(uid):
+    """Return whether this device has a pending LUMP delivery.
+
+    Response: {pending: bool, lump_seq: int, framed_hex: str}
+
+    framed_hex is the complete PATCH_LUMP frame (6-byte header + boot-image
+    bytes + 2-byte CRC16/CCITT-FALSE) encoded as a hex string.  Empty string
+    when pending=false or no boot image exists.
+
+    lump_seq=0 means Stage 0 (LED-flash boot image) has not yet been
+    delivered.  After a successful lump-ack the seq advances to 1 and
+    subsequent calls return pending=false.
+    """
+    row = db.session.execute(
+        _sa_text("SELECT lump_seq FROM device_lump_state WHERE uid=:uid"),
+        {"uid": uid}
+    ).fetchone()
+
+    lump_seq = row[0] if row else 0
+
+    if lump_seq > 0:
+        return jsonify({"pending": False, "lump_seq": lump_seq, "framed_hex": ""})
+
+    if not os.path.isfile(BOOT_IMAGE_PATH):
+        return jsonify({"pending": False, "lump_seq": 0, "framed_hex": "",
+                        "error": "no boot-image.bin — generate it first"})
+
+    try:
+        with open(BOOT_IMAGE_PATH, "rb") as _f:
+            img_bytes = _f.read()
+    except OSError as e:
+        return jsonify({"pending": False, "lump_seq": 0, "framed_hex": "",
+                        "error": f"could not read boot image: {e}"}), 500
+
+    if len(img_bytes) == 0 or len(img_bytes) % 4 != 0:
+        return jsonify({"pending": False, "lump_seq": 0, "framed_hex": "",
+                        "error": "boot image is empty or not 4-byte aligned"}), 500
+
+    import struct as _struct_lump
+    w0 = _struct_lump.unpack_from("<I", img_bytes, 0)[0]
+    if (w0 >> 27) & 0x1F != 0x1F:
+        return jsonify({"pending": False, "lump_seq": 0, "framed_hex": "",
+                        "error": "boot image LUMP magic invalid — regenerate"}), 500
+
+    n_words = len(img_bytes) // 4
+    crc  = _crc16_ccitt(img_bytes)
+    addr = 0x0000
+    frame = bytes([
+        0xBE, 0xEF,
+        (addr    >> 8) & 0xFF, addr    & 0xFF,
+        (n_words >> 8) & 0xFF, n_words & 0xFF,
+    ]) + img_bytes + bytes([(crc >> 8) & 0xFF, crc & 0xFF])
+
+    return jsonify({
+        "pending":    True,
+        "lump_seq":   0,
+        "framed_hex": frame.hex(),
+    })
+
+
+@app.route("/api/device/<uid>/lump-ack", methods=["POST"])
+def device_lump_ack(uid):
+    """Acknowledge a LUMP delivery attempt.
+
+    Body: {seq: int, ok: bool}
+
+    On ok=true the device's lump_seq is advanced to seq+1 so the next
+    call to pending-lump returns pending=false.
+    On ok=false the seq is left unchanged so the next CALLHOME retries.
+    """
+    import time as _ack_time
+    data = request.get_json(silent=True) or {}
+    try:
+        seq = int(data.get("seq", 0))
+    except (TypeError, ValueError):
+        seq = 0
+    ok = bool(data.get("ok", False))
+
+    if ok:
+        db.session.execute(
+            _sa_text(
+                "INSERT OR REPLACE INTO device_lump_state (uid, lump_seq, delivered_at)"
+                " VALUES (:uid, :seq, :delivered_at)"
+            ),
+            {"uid": uid, "seq": seq + 1, "delivered_at": _ack_time.time()}
+        )
+        db.session.commit()
+        logging.info("lump-ack: device=%s seq=%d advanced to %d", uid, seq, seq + 1)
+    else:
+        logging.info("lump-ack: device=%s seq=%d failed — will retry on next CALLHOME", uid, seq)
+
+    return jsonify({"ok": True, "seq": seq, "advanced": ok})
+
+
 @app.route("/api/namespace-lump.json", methods=["GET"])
 def namespace_lump_json():
     """Return a self-describing JSON manifest of the NS lump (NS Slot 0).
@@ -8203,6 +8311,16 @@ with app.app_context():
     """))
     db.session.commit()
     logging.info("device_lump_versions table ready")
+
+    db.session.execute(_sa_text("""
+        CREATE TABLE IF NOT EXISTS device_lump_state (
+            uid          TEXT PRIMARY KEY,
+            lump_seq     INTEGER NOT NULL DEFAULT 0,
+            delivered_at REAL    NOT NULL DEFAULT 0.0
+        )
+    """))
+    db.session.commit()
+    logging.info("device_lump_state table ready")
 
     db.session.execute(_sa_text("""
         CREATE TABLE IF NOT EXISTS ns_keystore (
