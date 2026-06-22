@@ -80,26 +80,7 @@ READ_PAT = re.compile(
     re.MULTILINE,
 )
 
-BRAM_PAT = re.compile(
-    r'  (?:reg \[7:0\] dmem_b\d \[0:\d+\];\n'
-    r'  initial \$readmemb\("[^"]*", dmem_b\d\);\n)+'
-    r'  always @\(posedge clk\) begin\n'
-    r'    if \(dmem_wr__en\) begin\n'
-    r'      dmem_b0\[dmem_wr__addr\] <= dmem_wr__data\[7:0\];\n'
-    r'      dmem_b1\[dmem_wr__addr\] <= dmem_wr__data\[15:8\];\n'
-    r'      dmem_b2\[dmem_wr__addr\] <= dmem_wr__data\[23:16\];\n'
-    r'      dmem_b3\[dmem_wr__addr\] <= dmem_wr__data\[31:24\];\n'
-    r'    end\n'
-    r'  end\n'
-    r'  reg \[31:0\] _0_;\n'
-    r'  always @\(posedge clk\) begin\n'
-    r'    _0_ <= \{dmem_b3\[mem_addr\], dmem_b2\[mem_addr\],\n'
-    r'            dmem_b1\[mem_addr\], dmem_b0\[mem_addr\]\};\n'
-    r'  end\n'
-    r'  assign mem_rd_data = _0_;\n',
-    re.MULTILINE,
-)
-
+# $readmemb form: declarations (separate from write/read blocks below)
 DECL_BRAM_PAT = re.compile(
     r'  reg \[7:0\] dmem_b0 \[0:\d+\];\n'
     r'  reg \[7:0\] dmem_b1 \[0:\d+\];\n'
@@ -109,6 +90,30 @@ DECL_BRAM_PAT = re.compile(
     r'  initial \$readmemb\("[^"]*", dmem_b1\);\n'
     r'  initial \$readmemb\("[^"]*", dmem_b2\);\n'
     r'  initial \$readmemb\("[^"]*", dmem_b3\);\n',
+    re.MULTILINE,
+)
+
+# $readmemb form: write always block (byte-lane version)
+WRITE_BRAM_PAT = re.compile(
+    r'  always @\(posedge clk\) begin\n'
+    r'    if \(dmem_wr__en\) begin\n'
+    r'      dmem_b0\[dmem_wr__addr\] <= dmem_wr__data\[7:0\];\n'
+    r'      dmem_b1\[dmem_wr__addr\] <= dmem_wr__data\[15:8\];\n'
+    r'      dmem_b2\[dmem_wr__addr\] <= dmem_wr__data\[23:16\];\n'
+    r'      dmem_b3\[dmem_wr__addr\] <= dmem_wr__data\[31:24\];\n'
+    r'    end\n'
+    r'  end\n',
+    re.MULTILINE,
+)
+
+# $readmemb form: read always block (byte-lane version)
+READ_BRAM_PAT = re.compile(
+    r'  reg \[31:0\] _0_;\n'
+    r'  always @\(posedge clk\) begin\n'
+    r'    _0_ <= \{dmem_b3\[mem_addr\], dmem_b2\[mem_addr\],\n'
+    r'            dmem_b1\[mem_addr\], dmem_b0\[mem_addr\]\};\n'
+    r'  end\n'
+    r'  assign mem_rd_data = _0_;\n',
     re.MULTILINE,
 )
 
@@ -288,18 +293,40 @@ def patch_top(src: str, depth: int) -> str:
             return out
         raise RuntimeError(f'Substitution failed: n1={n1} n2={n2} n3={n3} n4={n4}')
 
-    # ── Case 2: already patched with $readmemb form ──────────────────────────
-    decl_m = DECL_BRAM_PAT.search(src)
-    bram_m = BRAM_PAT.search(src)
+    # ── Case 2: already patched with $readmemb form (3 separate regions) ───────
+    decl_m  = DECL_BRAM_PAT.search(src)
+    write_m = WRITE_BRAM_PAT.search(src)
+    read_m  = READ_BRAM_PAT.search(src)
 
-    if decl_m and bram_m:
-        print('  Patching: $readmemb byte-lane form (replacing)')
+    if decl_m and write_m and read_m:
+        print('  Patching: $readmemb byte-lane form (replacing 3 regions)')
         out = src
         out, n1 = DECL_BRAM_PAT.subn('', out, count=1)
-        out, n2 = BRAM_PAT.subn(NEW_INSTANTIATION, out, count=1)
-        if n1 == 1 and n2 == 1:
+        out, n2 = WRITE_BRAM_PAT.subn(NEW_INSTANTIATION, out, count=1)
+        out, n3 = READ_BRAM_PAT.subn('', out, count=1)
+        if n1 == n2 == n3 == 1:
             return out
-        raise RuntimeError(f'BRAM substitution failed: n1={n1} n2={n2}')
+        raise RuntimeError(f'BRAM substitution failed: n1={n1} n2={n2} n3={n3}')
+
+    # ── Case 2b: partial $readmemb (decl present but write/read vary) ────────
+    if decl_m:
+        print('  Patching: $readmemb decl found; write/read blocks may vary.')
+        print(f'    DECL={bool(decl_m)} WRITE={bool(write_m)} READ={bool(read_m)}')
+        # Show surrounding context to help diagnose
+        if not write_m:
+            # Search for any dmem_b0 write to report what we see
+            ctx = re.search(r'dmem_b0\[dmem_wr__addr\][^\n]*', src)
+            print(f'    write context: {ctx.group(0)[:80] if ctx else "not found"}')
+        if not read_m:
+            ctx = re.search(r'dmem_b3\[mem_addr\][^\n]*', src)
+            print(f'    read context:  {ctx.group(0)[:80] if ctx else "not found"}')
+        raise RuntimeError(
+            '$readmemb form detected but write or read pattern did not match.\n'
+            'Paste the output of:\n'
+            '  grep -n "dmem_b\\|mem_rd_data\\|_0_ <=\\|dmem_wr__en" '
+            '~/church_project/SoC/church_ti60_f225.v | head -40\n'
+            'so the patterns can be corrected.'
+        )
 
     # ── Case 3: already patched with cm_dmem_bram ────────────────────────────
     if 'cm_dmem_bram' in src:
