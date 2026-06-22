@@ -466,46 +466,32 @@ def main():
     else:
         print(f'\n{vpath} already uses cm_dmem_bram — not re-patched.')
 
-    # ── Add cm_dmem_bram.v to project XML if not already present ─────────────
-    xml_path = os.path.join(soc_dir, 'church_soc_cm.xml')
-    if os.path.isfile(xml_path):
-        xml = open(xml_path).read()
-        if 'cm_dmem_bram.v' not in xml:
-            # Insert after the church_ti60_f225.v entry
-            xml2 = xml.replace(
-                '<File Path="church_ti60_f225.v"',
-                '<File Path="church_ti60_f225.v"',
-                1
-            )
-            # Try to add cm_dmem_bram.v after the first .v file entry
-            xml2 = re.sub(
-                r'(<File Path="church_ti60_f225\.v"[^/]*/>\s*\n)',
-                r'\1    <File Path="cm_dmem_bram.v" Type="VERILOG" Version="VERILOG_2K" />\n'
-                r'      <Options/>\n'
-                r'    </File>\n',
-                xml,
-                count=1
-            )
-            if xml2 != xml:
-                shutil.copy2(xml_path, xml_path + '.bak')
-                with open(xml_path, 'w') as f:
-                    f.write(xml2)
-                print(f'\nAdded cm_dmem_bram.v to {xml_path}')
-            else:
-                print(f'\nNOTE: could not auto-add cm_dmem_bram.v to {xml_path}')
-                print('  Add it manually: in Efinity, add cm_dmem_bram.v to the project source list.')
-        else:
-            print(f'\ncm_dmem_bram.v already in {xml_path}')
+    # ── Embed cm_dmem_bram module into church_ti60_f225.v ────────────────────
+    # Appending the module to the same file is more reliable than XML injection
+    # because Efinity elaborates all modules in every source file it knows about.
+    bram_module_text = open(bram_path).read()
+    top_text = open(vpath).read()
+    if 'module cm_dmem_bram' not in top_text:
+        with open(vpath, 'a') as f:
+            f.write('\n')
+            f.write(bram_module_text)
+        print(f'\n  Appended cm_dmem_bram module to {vpath}')
     else:
-        print(f'\nNOTE: {xml_path} not found — add cm_dmem_bram.v to your Efinity project manually.')
+        print(f'\n  cm_dmem_bram already embedded in {vpath} — skipped.')
 
     # ── Summary ───────────────────────────────────────────────────────────────
     print('\n' + '=' * 70)
     print('Done. Now run:')
     print()
     print('  cd ~/church_project/SoC')
-    print('  bash work_syn/run_efx_map.sh    # ~30 min synthesis')
-    print('  bash work_pnr/run_efx_pnr.sh    # ~18 min P&R')
+    print('  nohup bash church-machine/hardware/soc_combined/run_efx_map.sh \\')
+    print('       ~/church_project/SoC/church_soc_cm.xml > syn.log 2>&1 &')
+    print('  tail -f syn.log    # ~30 min synthesis')
+    print()
+    print('  nohup bash church-machine/hardware/soc_combined/run_efx_pnr.sh \\')
+    print('       ~/church_project/SoC/church_soc_cm.xml > pnr.log 2>&1 &')
+    print('  tail -f pnr.log    # ~18 min P&R')
+    print()
     print('  sudo openFPGALoader -b titanium_ti60_f225_jtag \\')
     print('       -f outflow/church_soc_cm.hex')
     print()
