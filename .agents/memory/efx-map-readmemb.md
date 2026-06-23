@@ -3,24 +3,35 @@ name: EFX_MAP $readmemb path resolution
 description: Where Efinity EFX_MAP looks for $readmemb binary files, BRAM init bug (defparam vs verific comment), and the full patch workflow.
 ---
 
-## CRITICAL: $readmemb BRAM init lands in defparam — efx_pnr ignores it
+## CRITICAL: All `initial begin` and `$readmemb` forms are BROKEN for inferred CM DMEM BRAMs
 
-EFX_MAP 2026.1 bug (confirmed on command-line flow):
-- `$readmemb` with ABSOLUTE PATHS: synthesis passes, no VERI error, INIT values
-  computed correctly and stored in `defparam \u_cm/dmem_bX__<INST> .INIT_N = 256'h...`
+Confirmed Jun 22 2026 (synthesis on borrowed 8 GB machine, EFX_MAP 2026.1):
+
+| Form | Result |
+|---|---|
+| `initial begin` on `reg [31:0] dmem` | ❌ Silently dropped, INIT_0=0 |
+| `initial begin` on `reg [7:0] dmem_bN` byte lanes | ❌ Silently dropped, INIT_0=0 |
+| `$readmemb` absolute paths on byte-lane arrays | ❌ INIT in `defparam` only; P&R reads `verific` comments → BRAM zero |
+| **Explicit EFX_RAM10 instantiation with INIT params** | ✅ Only confirmed working path |
+
+**Why Sapphire ROM works:** Sapphire uses Efinity IP generator which produces native
+EFX_RAM10 instances — not inferred BRAM. `patch_sapphire_init.py` patches inline
+assignments that EFX_MAP handles correctly because they are already EFX_RAM10 instances.
+
+**The fix: `gen_cm_dmem_direct.py`** — generates a `cm_dmem_bram` module with 64
+explicit EFX_RAM10 instantiations and hardcoded `INIT_N` parameters from the boot ROM.
+Synthesis correctly propagates these to the VDB/bitstream.
+Requires 4+ GB RAM to synthesize the full SoC design (Chromebook has 2.8 GB, no swap).
+
+## $readmemb specific bug (EFX_MAP 2026.1)
+
+- `$readmemb` with ABSOLUTE PATHS: synthesis passes, INIT values computed and stored
+  in `defparam \u_cm/dmem_bX__<INST> .INIT_N = 256'h...`
 - BUT efx_pnr reads BRAM init from `/* verific ... INIT_N=256'h... */` inline
   attribute comments, NOT from defparam.
 - $readmemb-initialised instances get NO INIT_N attrs in their verific comment.
 - Zero-init instances DO get `INIT_N=256'h0...0` attrs in their verific comment.
 - Result: BRAM stays zero in the bitstream despite correct defparam values.
-
-**Evidence:** D$02 (bit-0 instance, addr 0-1023) has defparam INIT_0=non-zero
-but verific comment has 0 INIT attrs. FAULT_INSTR=0x00000000 at runtime confirms
-BRAM is zero even after synthesis+P&R with $readmemb absolute paths.
-
-**Confirmed:** fault code changes from NULL_CAP → PERM_L when $readmemb files
-are found (partial initialization of NS table), so EFX_MAP DOES read the files —
-it just puts the result in the wrong place.
 
 ## EFX_RAM10 instance structure for dmem byte lanes
 
@@ -31,100 +42,31 @@ The 4 byte-lane arrays (`reg [7:0] dmem_b0..3 [0:16383]`) are synthesized as
 - INIT_0..INIT_3 (4×256 = 1024 bits) cover all 1024 addresses for that bit-plane
 - Instance suffix D$02, D$32, D$3f12, etc. are synthesis hash IDs, NOT address offsets
 
-D$02 INIT_0 bit encoding confirmed correct:
-  0x66 = 0b01100110 = bit-0 of dmem[7..0] at addresses 0-7 ✓
-
-## FIX: patch_cm_map.py (post-synthesis map.v patcher)
-
-Script: `hardware/soc_combined/patch_cm_map.py`
-
-```bash
-# On Chromebook — run AFTER synthesis, BEFORE P&R
-cd ~/church_project/SoC/church-machine && git pull
-python3 hardware/soc_combined/patch_cm_map.py \
-    ~/church_project/SoC/outflow/church_soc_cm.map.v
-# Then re-run only P&R (no re-synthesis):
-cd ~/church_project/SoC && bash work_pnr/run_efx_pnr.sh
-```
-
-The script:
-1. Collects defparam INIT_N values for all dmem_b? EFX_RAM10 instances
-2. Finds instances with non-zero INIT (those initialised by $readmemb)
-3. Copies those INIT values into the `/* verific */` comment on the instance line
-   (Case A: existing INIT attrs → update zeros; Case B: verific comment, no INIT →
-   insert before */; Case C: no comment → add full comment before ;)
-
-## $readmemb path rules
+## $readmemb path rules (historical, now superseded by gen_cm_dmem_direct.py)
 
 EFX_MAP does NOT resolve bare filenames for $readmemb.
-Only ABSOLUTE PATHS work:
-```verilog
-initial $readmemb("/home/sipantichijk/.../cm_dmem_b0.bin", dmem_b0);
-```
+Only ABSOLUTE PATHS work. But even with absolute paths, INIT goes to defparam only.
+This entire approach is abandoned in favour of explicit EFX_RAM10 instantiation.
 
-Tested and failed (VERI-1012):
-- Bare filename regardless of where file is placed
+## Chromebook synthesis constraints
 
-Tested: synthesis passes but BRAM zero in bitstream (see bug above):
-- Absolute path `$readmemb` → correct defparam INIT but not in verific comment
+- RAM: 2.8 GB physical, no swap (swapfile=EINVAL, zram module not found in kernel 6.6.99)
+- Full SoC synthesis (Sapphire + CM + all logic) peaks at ~2.6 GB RSS → OOM-killed
+- Efinity 2025.2 cannot parse 2026.1 project XML format
+- Only Efinity 2026.1 works, only on a machine with 4+ GB RAM
+- Solution: DigitalOcean 8 GB droplet ($0.08/hr, destroy after push)
 
-## CRITICAL: $readmemb requires absolute paths — generates byte-lane binary files
+## Flash issue (openFPGALoader on Chromebook)
 
-`patch_cm_bram.py` in `hardware/soc_combined/` splits dmem into 4 byte-lane
-binary files and patches church_ti60_f225.v with absolute-path $readmemb calls.
-
-Run on Chromebook before every synthesis:
-```bash
-python3 ~/church_project/SoC/church-machine/hardware/soc_combined/patch_cm_bram.py \
-        ~/church_project/SoC/church-machine/hardware/soc_combined
-```
-
-## CRITICAL: EFX_MAP also ignores `initial begin` blocks entirely
-
-The `initial begin` block in church_ti60_f225.v is silently discarded.
-→ BRAM comes up all-zeros → CM reads 0x00000000 → NIA stuck at 0x00000000
-→ Sapphire fires HUNG watchdog every 3 s with nia=0x00000000.
-
-**Symptom of unpacked BRAM (NIA=0x0):**
-  `CALLHOME: nia=0x00000000, boot_ok=0, fault=0`
-  `HUNG: {"nia":"0x00000000","loops":3}`
-  NO FAULT_EVENT
-
-**Symptom of correct boot namespace loaded (NIA=0x4):**
-  `FAULT_EVENT: fault_name='PERM_S', nia=0x00000004` — real boot fault to diagnose.
-
-## Firmware update workflow (Efinity GUI on Chromebook)
-
-```bash
-cd ~/church_project/SoC/church-machine/hardware/soc_minimal
-
-TOOLCHAIN=~/efinity/efinity-riscv-ide-2025.2/toolchain/bin
-make -C firmware TOOLCHAIN=$TOOLCHAIN
-$TOOLCHAIN/riscv-none-embed-objcopy -O binary firmware/firmware.elf firmware/firmware.raw
-
-python3 - <<'EOF'
-raw = open('firmware/firmware.raw','rb').read()
-raw += b'\x00' * (16384 - len(raw))
-prefix = 'EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol'
-for lane in range(4):
-    with open(f'{prefix}{lane}.bin','w') as f:
-        for i in range(4096):
-            f.write(f'{raw[i*4+lane]:08b}\n')
-EOF
-
-cp sapphire.v.bak sapphire.v
-PROJ='/home/sipantichijk/church_project/SoC/church-machine/hardware/soc_minimal'
-for LANE in 0 1 2 3; do
-  OLD="EfxSapphireSoc.v_toplevel_system_ramA_logic_ram_symbol${LANE}.bin"
-  sed -i "s|\"${OLD}\"|\"${PROJ}/${OLD}\"|g" sapphire.v
-done
-```
+openFPGALoader fails with "Read ID failed" / flash ID `097f0000` when writing to
+SPI flash on this Ti60 board. spiOverJtag loads fine but SPI flash doesn't respond.
+Workaround: Use Efinity Programmer GUI in **"JTAG to SPI Active Flash"** mode with
+the `.hex` file (NOT SRAM mode which takes `.bit` and is lost on power-cycle).
 
 ## Other confirmed facts
 
 - UART port: ttyUSB2 = Sapphire SoC UART (baud 57600)
-- Bridge: `python3 hardware/soc_combined/callhome_bridge.py --port=/dev/ttyUSB2 --ide=<URL> --insecure`
-- Flash: `sudo /usr/bin/openFPGALoader -b titanium_ti60_f225_jtag -f outflow/church_soc.hex`
+- Bridge: `python3 hardware/soc_combined/callhome_bridge.py --port=/dev/ttyUSB2 --insecure`
 - Device UID: c0ffee0100000001, board_type=3 (Ti60-Full)
-- UART write-valid: bit 8 of UART_DATA must be set; CLOCKDIV=53 before first puts
-- Must use Efinity 2026.1 GUI (not 2025.2) for synthesis
+- UART CLOCKDIV=53 must be written before first uart_puts
+- Project XML (church_soc_cm.xml) uses relative paths — run scripts from hardware/soc_combined/
