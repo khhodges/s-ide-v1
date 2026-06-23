@@ -7504,6 +7504,12 @@ def device_list():
             _sqlfunc.count(FaultEvent.id).label("cnt")
         ).group_by(FaultEvent.device_uid).all()
     }
+    lump_seqs = {
+        row[0]: row[1]
+        for row in db.session.execute(
+            _sa_text("SELECT uid, lump_seq FROM device_lump_state")
+        ).fetchall()
+    }
     result = []
     for d in devs:
         is_online = (now - (d.last_seen or 0)) < DEVICE_ONLINE_TIMEOUT
@@ -7534,6 +7540,7 @@ def device_list():
             "tunnel_status": getattr(d, 'tunnel_status', 'pending') or 'pending',
             "is_newcomer": (d.boot_count or 0) <= 2,
             "fault_count": fault_counts.get(d.device_uid, 0),
+            "lump_seq": lump_seqs.get(d.device_uid, 0),
         })
     db.session.commit()
     return jsonify({"ok": True, "devices": result})

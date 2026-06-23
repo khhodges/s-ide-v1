@@ -1590,6 +1590,7 @@ function loadDeviceList() {
                         '<div class="dev-detail-item"><span class="dev-detail-label">Last seen</span><span class="dev-detail-val">' + _escHtml(lastSeenStr) + '</span></div>' +
                         '<div class="dev-detail-item"><span class="dev-detail-label">Faults</span><span class="dev-detail-val">' + faultCountHtml + '</span></div>' +
                         '<div class="dev-detail-item"><span class="dev-detail-label">Boots</span><span class="dev-detail-val">' + dev.boot_count + '</span></div>' +
+                        '<div class="dev-detail-item"><span class="dev-detail-label">Lump stage</span><span class="dev-detail-val">' + (dev.lump_seq > 0 ? 'Stage ' + (dev.lump_seq - 1) + ' \u2713' : 'Stage 0 \u2014 pending') + '</span></div>' +
                         '<div class="dev-detail-item"><span class="dev-detail-label">Boot reason</span><span class="dev-detail-val">' + _escHtml(bootReasonStr) + (faultBadge ? ' ' + faultBadge : '') + '</span></div>' +
                         '<div class="dev-detail-item"><span class="dev-detail-label">Tunnel</span><span class="dev-detail-val">' + _tunnelBadgeHtml(_ts, 'devTunnelDetail_' + dev.id) + '</span></div>' +
                         (dev.bridge_host ? '<div class="dev-detail-item"><span class="dev-detail-label">Bridge</span><span class="dev-detail-val">' + _escHtml(dev.bridge_host) + ':' + _escHtml(String(dev.bridge_port || '')) + '</span></div>' : '') +
