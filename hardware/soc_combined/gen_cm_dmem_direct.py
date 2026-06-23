@@ -469,7 +469,7 @@ def main():
     # ── Embed cm_dmem_bram module into church_ti60_f225.v ────────────────────
     # Appending the module to the same file is more reliable than XML injection
     # because Efinity elaborates all modules in every source file it knows about.
-    bram_module_text = open(bram_path).read()
+    bram_module_text = open(vmod_path).read()
     top_text = open(vpath).read()
     if 'module cm_dmem_bram' not in top_text:
         with open(vpath, 'a') as f:
