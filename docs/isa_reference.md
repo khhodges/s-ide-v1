@@ -1,6 +1,6 @@
 # Church Machine ISA Reference
 
-**Version 1.1 — June 2026**
+**Version 2.0 — June 2026**
 **Authoritative sources: `simulator/simulator.js`, `simulator/assembler.js`, `hardware/*.py`**
 
 This document is the single definitive specification for all 20 Church Machine
@@ -22,16 +22,16 @@ Every instruction is a 32-bit word with a fixed layout:
 └────────┴───────┴───────┴───────┴────────────────┘
 ```
 
-- **opcode** (bits 31:27): selects one of the 20 instructions (0–19). The opcode is a 5-bit field (values 0–31); values 20–31 are currently unassigned (no per-instruction fault-on-use guarantee is specified).
+- **opcode** (bits 31:27): 5-bit field. Values 0–9 = Church opcodes. Values 10–15 = unassigned → FAULT. Values 16–25 = Turing opcodes. Values 26–29 = unassigned → FAULT. Value 30 = inline data word → FAULT. Value 31 = LUMP magic → FAULT.
 - **cond** (bits 26:23): condition under which the instruction executes (see §2).
 - **fld_a** (bits 22:19): first register operand — CR or DR index depending on instruction.
 - **fld_b** (bits 18:15): second register operand — CR or DR index depending on instruction.
 - **imm15** (bits 14:0): 15-bit immediate; interpretation varies per instruction.
 
-The **all-zero word** `0x00000000` (opcode=LOAD, cond=EQ, all fields zero) is
-accepted by the assembler as `HALT` or `NOP`. The simulator treats an all-zero
-instruction word encountered during normal execution as a warm reboot (not a halt
-and not a fault). See §4 (HALT/NOP note) for implications.
+The **all-zero word** `0x00000000` encodes `LOAD EQ, CR0, CR0, #0`. The simulator
+treats an all-zero instruction word encountered during normal execution as a warm
+reboot. **HALT does not exist as an instruction** — programs terminate by fault,
+by entering an infinite loop, or by not returning from a top-level CALL.
 
 ---
 
@@ -39,25 +39,26 @@ and not a fault). See §4 (HALT/NOP note) for implications.
 
 The `cond` field gates execution on the current flag state. If the condition is
 false, the instruction is skipped (PC advances, no side effects, no faults).
+The encoding is ARM-compatible (authoritative source: `hw_types.py` `CondCode` enum).
 
-| Code | Mnemonic | Meaning                    | Flags tested        |
-|------|----------|----------------------------|---------------------|
-|  0   | EQ       | Equal / Zero               | Z = 1               |
-|  1   | NE       | Not equal / Non-zero       | Z = 0               |
-|  2   | LT       | Less than (signed)         | N ≠ V               |
-|  3   | LE       | Less than or equal (signed)| Z = 1 or N ≠ V      |
-|  4   | GT       | Greater than (signed)      | Z = 0 and N = V     |
-|  5   | GE       | Greater than or equal      | N = V               |
-|  6   | CS / CC  | Carry set                  | C = 1               |
-|  7   | CC       | Carry clear                | C = 0               |
-|  8   | MI       | Minus / Negative           | N = 1               |
-|  9   | PL       | Plus / Non-negative        | N = 0               |
-| 10   | VS       | Overflow set               | V = 1               |
-| 11   | VC       | Overflow clear             | V = 0               |
-| 12   | HI       | Unsigned higher            | C = 1 and Z = 0     |
-| 13   | LS       | Unsigned lower or same     | C = 0 or Z = 1      |
-| 14   | AL       | Always (unconditional)     | (none)              |
-| 15   | NV       | Never (no-op)              | (none — always skip)|
+| Code | Mnemonic | Meaning                       | Flags tested        |
+|------|----------|-------------------------------|---------------------|
+|  0   | EQ       | Equal / Zero                  | Z = 1               |
+|  1   | NE       | Not equal / Non-zero          | Z = 0               |
+|  2   | CS       | Carry set (unsigned ≥)        | C = 1               |
+|  3   | CC       | Carry clear (unsigned <)      | C = 0               |
+|  4   | MI       | Minus / Negative              | N = 1               |
+|  5   | PL       | Plus / Non-negative           | N = 0               |
+|  6   | VS       | Overflow set                  | V = 1               |
+|  7   | VC       | Overflow clear                | V = 0               |
+|  8   | HI       | Unsigned higher               | C = 1 and Z = 0     |
+|  9   | LS       | Unsigned lower or same        | C = 0 or Z = 1      |
+| 10   | GE       | Signed greater or equal       | N = V               |
+| 11   | LT       | Signed less than              | N ≠ V               |
+| 12   | GT       | Signed greater than           | Z = 0 and N = V     |
+| 13   | LE       | Signed less than or equal     | Z = 1 or N ≠ V      |
+| 14   | AL       | Always (unconditional)        | (none)              |
+| 15   | NV       | Never (no-op)                 | (none — always skip)|
 
 `AL` (always) is the normal unconditional form. `NV` is a no-op regardless of flags.
 
@@ -67,8 +68,9 @@ false, the instruction is skipped (PC advances, no side effects, no faults).
 
 ### 3.1 Capability Registers (CR0–CR15)
 
-Sixteen 64-bit capability registers. Each holds a **Guard Token (GT)**: a
-type-tagged, permission-bearing, hardware-verified reference to an object.
+Sixteen **96-bit (3 × 32-bit word)** capability registers (CAP_REGs). Each holds
+a **Golden Token (GT)** and the NS SLOT fields fetched by LOAD — but not integrity32,
+which is verified inline and discarded.
 
 | Range    | Name                 | Notes                                          |
 |----------|----------------------|------------------------------------------------|
@@ -123,31 +125,28 @@ dom=1 (Church):  perm[2]=E, perm[1]=S, perm[0]=L
 | perm[1] | W / S  | Turing: write data. Church: save a GT to c-list       |
 | perm[0] | R / L  | Turing: read data. Church: load a GT from c-list      |
 | [27]    | dom    | Domain selector: 0=Turing {X,W,R}, 1=Church {E,S,L}  |
-| [26]    | spare  | Reserved, always zero                                 |
-| [25]    | f_flag | Far indicator — set for remote/far GTs                |
-| [31]    | B      | Busy — object lock; clearable by TPERM B-modifier     |
+| [26:25] | gt_type | GT class (NULL/Inform/Outform/Abstract)              |
+| [24:16] | gt_seq | 9-bit revocation counter                              |
+| [31]    | B      | Bind — GT propagation via mSave allowed when set      |
 
 **Domain purity**: Turing and Church bits are mutually exclusive by construction — `dom` determines the meaning of `perm[2:0]`, making a mixed-domain GT impossible to represent. TPERM still faults with `TPERM_RSV` for reserved preset codes that would imply cross-domain combinations.
 
----
-
-## 4. HALT / NOP (all-zero word)
-
-```
-Encoding: 0x00000000
-Assembler aliases: HALT, NOP
-```
-
-The all-zero word is architecturally the instruction `LOAD AL, CR0, CR0, #0`
-— a conditional LOAD that would load CR0 from `CR0[0]`. In practice, an
-all-zero instruction word is used to mark the end of a code region.
-
-**Simulator behaviour:** an all-zero word encountered during execution triggers
-a warm reboot sequence, not a halt. Execution does not pause cleanly; the boot
-ROM re-runs. Writers of code lumps should never allow execution to fall through
-to an all-zero word unless a reboot is the intended outcome.
+> **Note:** `f_flag` (Far indicator) is **not** a GT word field. It is stored in NS SLOT Word 1 bit [31] — a property of the namespace slot, not the token.
 
 ---
+
+## 4. Program Termination
+
+**HALT does not exist** as an instruction in the Church Machine ISA.
+
+Programs end in one of three ways:
+- **By fault** — an invalid operation, permission failure, or LUMP magic word fetched as an instruction triggers the three-tier fault recovery chain.
+- **By infinite loop** — the program branches back to itself indefinitely (`BRANCH AL, #0`).
+- **By not returning** — execution reaches the end of a top-level CALL and does not issue a RETURN.
+
+Any instruction with `cond = NV (15)` acts as a **NOP** — the condition is never true, so the instruction is always skipped. This is the standard way to write a no-op.
+
+An all-zero word (`0x00000000`) is architecturally `LOAD EQ, CR0, CR0, #0`. In the simulator, encountering it during execution triggers a warm reboot sequence (boot ROM re-runs). Code lumps should never allow execution to fall through to an all-zero word unless a reboot is the intended outcome.
 
 ---
 
@@ -547,7 +546,7 @@ Flag-writing summary across all 20 instructions:
 > **Encoding note**: The 32-bit word layout used throughout this section is:
 >
 > ```
-> bits[31:27]  op     (5 bits)  — opcode 0–19; 20–30 reserved; 31=lump header
+> bits[31:27]  op     (5 bits)  — Church 0–9; unassigned 10–15 (FAULT); Turing 16–25; unassigned 26–29 (FAULT); data 30 (FAULT); lump magic 31 (FAULT)
 > bits[26:23]  cond   (4 bits)  — condition code (see §2)
 > bits[22:19]  fld_a  (4 bits)  — first operand register (CR or DR)
 > bits[18:15]  fld_b  (4 bits)  — second operand register (CR or DR)
@@ -1395,16 +1394,20 @@ SHR AL, DR1, DR2, #3, ASR   ; ASR, mode=1; imm = (1 << 5) | 3 = 0x23
 | 7   | 0x07 | LAMBDA      | Church  | CRn    | 0      | 0 (unused)                             | —             | NULL, PERM, BOUNDS    | —           |
 | 8   | 0x08 | ELOADCALL   | Church  | CRd    | CRs    | method[14:8] \| row[7:0]              | —             | NULL, PERM, SEAL, BOUNDS | —        |
 | 9   | 0x09 | XLOADLAMBDA | Church  | CRd    | CRs    | c-list row (0–32767)                   | —             | NULL, PERM, SEAL, BOUNDS | —        |
-| 10  | 0x0A | DREAD       | Turing  | DRd    | CRs    | word offset (0–32767)                  | —             | NULL, PERM, BOUNDS    | —           |
-| 11  | 0x0B | DWRITE      | Turing  | DRd    | CRs    | word offset (0–32767)                  | —             | NULL, PERM, BOUNDS    | —           |
-| 12  | 0x0C | BFEXT       | Turing  | DRd    | DRs    | pos[9:5] \| width[4:0]                | N Z C=0 V=0   | BOUNDS (pos+width>32) | —           |
-| 13  | 0x0D | BFINS       | Turing  | DRd    | DRs    | pos[9:5] \| width[4:0]                | N Z C=0 V=0   | BOUNDS (pos+width>32) | —           |
-| 14  | 0x0E | MCMP        | Turing  | DRd    | DRs    | 0 (unused)                             | N Z C V       | —                     | —           |
-| 15  | 0x0F | IADD        | Turing  | DRd    | DRs    | bit14=0→DRt[3:0]; bit14=1→imm[13:0]   | N Z C V       | —                     | —           |
-| 16  | 0x10 | ISUB        | Turing  | DRd    | DRs    | bit14=0→DRt[3:0]; bit14=1→imm[13:0]   | N Z C V       | —                     | —           |
-| 17  | 0x11 | BRANCH      | Turing  | 0      | 0      | signed offset (−16384..+16383)         | —             | BOUNDS                | —           |
-| 18  | 0x12 | SHL         | Turing  | DRd    | DRs    | shamt[4:0] (0–31)                      | N Z C V=0     | —                     | —           |
-| 19  | 0x13 | SHR         | Turing  | DRd    | DRs    | mode[5] \| shamt[4:0] (mode: 0=LSR, 1=ASR) | N Z C V=0 | —                   | D-12 closed |
+| 10–15 | 0x0A–0x0F | *unassigned* | — | —  | —      | —                                      | —             | → **FAULT**           | —           |
+| 16  | 0x10 | DREAD       | Turing  | DRd    | CRs    | word offset (0–32767)                  | —             | NULL, PERM, BOUNDS    | —           |
+| 17  | 0x11 | DWRITE      | Turing  | CRs    | DRs    | word offset (0–32767)                  | —             | NULL, PERM, BOUNDS    | —           |
+| 18  | 0x12 | BFEXT       | Turing  | DRd    | DRs    | pos[9:5] \| width[4:0]                | N Z C=0 V=0   | BOUNDS (pos+width>32) | —           |
+| 19  | 0x13 | BFINS       | Turing  | DRd    | DRs    | pos[9:5] \| width[4:0]                | N Z C=0 V=0   | BOUNDS (pos+width>32) | —           |
+| 20  | 0x14 | MCMP        | Turing  | DRd    | DRs    | 0 (unused)                             | N Z C V       | —                     | —           |
+| 21  | 0x15 | IADD        | Turing  | DRd    | DRs    | bit14=0→DRt[3:0]; bit14=1→imm[13:0]   | N Z C V       | —                     | —           |
+| 22  | 0x16 | ISUB        | Turing  | DRd    | DRs    | bit14=0→DRt[3:0]; bit14=1→imm[13:0]   | N Z C V       | —                     | —           |
+| 23  | 0x17 | BRANCH      | Turing  | 0      | 0      | signed offset (−16384..+16383)         | —             | BOUNDS                | —           |
+| 24  | 0x18 | SHL         | Turing  | DRd    | DRs    | shamt[4:0] (0–31)                      | N Z C V=0     | —                     | —           |
+| 25  | 0x19 | SHR         | Turing  | DRd    | DRs    | mode[5] \| shamt[4:0] (mode: 0=LSR, 1=ASR) | N Z C V=0 | —                   | D-12 closed |
+| 26–29 | 0x1A–0x1D | *unassigned* | — | —  | —      | —                                      | —             | → **FAULT**           | —           |
+| 30  | 0x1E | *data word* | —       | —      | —      | inline data constant                   | —             | → **FAULT** if executed | —         |
+| 31  | 0x1F | *LUMP magic*| —       | —      | —      | LUMP header sentinel                   | —             | → **FAULT**           | —           |
 
 ### 8.2 Assembler Encoding Formula
 
@@ -1418,22 +1421,24 @@ word = ((opcode & 0x1F) << 27)
 
 ### 8.3 Flag Conditions (for BRANCH and conditional suffixes)
 
+ARM-compatible encoding — matches §2 exactly.
+
 | Condition | Code | Flags tested         | Use after        |
 |-----------|------|----------------------|------------------|
 | EQ        | 0    | Z = 1                | MCMP, ISUB, IADD |
 | NE        | 1    | Z = 0                | MCMP, ISUB, IADD |
-| LT        | 2    | N ≠ V                | MCMP signed      |
-| LE        | 3    | Z=1 or N≠V           | MCMP signed      |
-| GT        | 4    | Z=0 and N=V          | MCMP signed      |
-| GE        | 5    | N = V                | MCMP signed      |
-| CS/HS     | 6    | C = 1                | IADD carry       |
-| CC/LO     | 7    | C = 0                | ISUB borrow      |
-| MI        | 8    | N = 1                | IADD/ISUB        |
-| PL        | 9    | N = 0                | IADD/ISUB        |
-| VS        | 10   | V = 1                | IADD/ISUB        |
-| VC        | 11   | V = 0                | IADD/ISUB        |
-| HI        | 12   | C=1 and Z=0          | ISUB unsigned    |
-| LS        | 13   | C=0 or Z=1           | ISUB unsigned    |
+| CS/HS     | 2    | C = 1                | IADD carry       |
+| CC/LO     | 3    | C = 0                | ISUB borrow      |
+| MI        | 4    | N = 1                | IADD/ISUB        |
+| PL        | 5    | N = 0                | IADD/ISUB        |
+| VS        | 6    | V = 1                | IADD/ISUB        |
+| VC        | 7    | V = 0                | IADD/ISUB        |
+| HI        | 8    | C=1 and Z=0          | ISUB unsigned    |
+| LS        | 9    | C=0 or Z=1           | ISUB unsigned    |
+| GE        | 10   | N = V                | MCMP signed      |
+| LT        | 11   | N ≠ V                | MCMP signed      |
+| GT        | 12   | Z=0 and N=V          | MCMP signed      |
+| LE        | 13   | Z=1 or N≠V           | MCMP signed      |
 | AL        | 14   | (always)             | unconditional    |
 | NV        | 15   | (never)              | static no-op     |
 

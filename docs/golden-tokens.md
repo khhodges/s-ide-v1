@@ -1,6 +1,6 @@
 # Golden Tokens
 
-**v1.1 — 2026-05-16**
+**v2.0 — 2026-06-25**
 **CONFIDENTIAL**
 
 ## What Are Golden Tokens?
@@ -21,32 +21,31 @@ Without a valid Golden Token, no operation proceeds. Any attempt to use an inval
 The Church Machine uses a 32-bit Golden Token with a precisely defined bit layout:
 
 ```
-31  30 28 27  26  25 24  23 22      16 15           0
-┌────┬─────┬────┬────┬────┬──────┬──────────┬─────────────┐
-│ b  │perm │dom │spr │ f  │gt_typ│  gt_seq  │   slot_id   │
-│[1] │[3]  │[1] │[1] │[1] │ [2]  │   [7]    │    [16]     │
-└────┴─────┴────┴────┴────┴──────┴──────────┴─────────────┘
+31  30 28 27  26  25 24       16 15           0
+┌────┬─────┬────┬──────────┬───────────┬─────────────┐
+│ b  │perm │dom │ gt_type  │  gt_seq   │   slot_id   │
+│[1] │[3]  │[1] │   [2]    │   [9]     │    [16]     │
+└────┴─────┴────┴──────────┴───────────┴─────────────┘
 ```
 
 | Bits    | Field     | Width | Description |
 |---------|-----------|-------|-------------|
 | [15:0]  | `slot_id` | 16 | Namespace slot ID (0–65,535) |
-| [22:16] | `gt_seq`  | 7  | Revocation sequence counter; must match NS Entry Word 1 `gt_seq` |
-| [24:23] | `gt_type` | 2  | GT class (NULL / Inform / Outform / Abstract) |
-| [25]    | `f_flag`  | 1  | Far indicator — set when the GT targets a remote or far resource |
-| [26]    | `spare`   | 1  | Reserved, always zero |
+| [24:16] | `gt_seq`  | 9  | Revocation sequence counter (0–511); must match NS SLOT Word 1 `gt_seq` |
+| [26:25] | `gt_type` | 2  | GT class (NULL / Inform / Outform / Abstract) |
 | [27]    | `dom`     | 1  | Domain: 0 = Turing {X, W, R}, 1 = Church {E, S, L} |
 | [30:28] | `perm`    | 3  | Permission payload (dom=0: perm[2]=X, perm[1]=W, perm[0]=R; dom=1: perm[2]=E, perm[1]=S, perm[0]=L) |
 | [31]    | `b_flag`  | 1  | Bind flag — 1 = GT may be propagated via mSave |
 
-Each capability register in Church Machine is 128 bits wide (4 x 32-bit words):
+Each capability register in Church Machine is **96 bits wide (3 × 32-bit words)**:
 
 | Word  | Content |
 |-------|---------|
-| word0 | The 32-bit Golden Token |
-| word1 | Lump base address (from NS Entry Word 0) |
-| word2 | NS Entry Word 1: `spare[31:29] \| g_bit[28] \| gt_seq[27:21] \| limit_offset[20:0]` |
-| word3 | NS Entry Word 2: integrity32 check (32-bit parallel check) |
+| word0 | The 32-bit Golden Token (GT_LAYOUT) |
+| word1 | Lump base address (from NS SLOT Word 0) |
+| word2 | NS SLOT Word 1 (WORD2_LAYOUT): `f_flag[31] \| g_bit[30] \| gt_seq[29:21] \| limit_offset[20:0]` |
+
+integrity32 is verified during LOAD but is **not stored** in the capability register.
 
 ---
 
@@ -95,68 +94,74 @@ M is **not stored in the GT**. It exists only as a transient signal (`sub_m_elev
 
 ---
 
-## GT Type Field (`gt_type`, bits [24:23])
+## GT Type Field (`gt_type`, bits [26:25])
 
 The Church Machine includes a 2-bit type field classifying the nature of the referenced resource:
 
 | Value | Type | Description |
 |-------|------|-------------|
 | 00 | NULL | Empty / invalid — always faults on use |
-| 01 | Inform | GT points to a lump or data object in local memory via an NS entry |
-| 10 | Outform | GT references an IDE-managed dependency (lazy-loaded via Locator) |
+| 01 | Inform | GT points to a lump or data object in local memory via an NS SLOT |
+| 10 | Outform | GT references an IDE-managed dependency (lazy-loaded via Locator). Whether the resolving IDE node is local or far is determined by `f_flag` in the NS SLOT Word 1, not by the GT word itself. |
 | 11 | Abstract | GT IS the value — constants, immutable credentials, PassKey tokens |
 
 NULL is architecturally distinct from all valid reference types. Any GT with `gt_type=00` immediately faults at ChurchNSGate before any NS lookup is performed.
 
 ---
 
-## gt_seq Field (bits [22:16])
+## gt_seq Field (bits [24:16])
 
-Church Machine includes a 7-bit `gt_seq` field in bits [22:16] of the Golden Token. This revocation counter is critical for namespace integrity and garbage collection safety:
+Church Machine includes a 9-bit `gt_seq` field in bits [24:16] of the Golden Token. This revocation counter is critical for namespace integrity and garbage collection safety:
 
-- Each namespace entry stores a corresponding `gt_seq` value in NS Entry Word 1 bits [27:21].
-- When a GT is used (LOAD or CALL), ChurchNSGate compares `gt_word0.gt_seq` against the NS entry's `gt_seq`. A mismatch means the GT has been revoked — access FAULTs immediately.
+- Each NS SLOT stores a corresponding `gt_seq` value in SLOT Word 1 bits [29:21].
+- When a GT is used (LOAD or CALL), ChurchNSGate compares `gt_word0.gt_seq` against the NS SLOT's `gt_seq`. A mismatch means the GT has been revoked — access FAULTs immediately.
 - During garbage collection, reclaimed entries have their `gt_seq` incremented. All outstanding GTs referencing that entry become stale instantly.
-- 7 bits gives 128 revocation generations before wraparound.
+- 9 bits gives 512 revocation generations before wraparound.
 
 ---
 
-## Namespace Entry Format
+## Namespace Entry Format (NS SLOT)
 
-Each namespace entry occupies **3 consecutive 32-bit words** (12 bytes). The slot byte address is `slot_id × 12` (or equivalently `slot_id × 3` words) from the NS table base. The NS table supports up to **65,536 entries** (bounded by the 16-bit `slot_id` field).
+Each namespace entry (NS SLOT) occupies **4 consecutive 32-bit words** (16 bytes). The slot byte address is `slot_id × 16` from the NS table base. The NS table supports up to **65,536 entries** (bounded by the 16-bit `slot_id` field).
 
-### Word 0 — Base Address
+### Word 0 — lump_base
 
-The 32-bit lump base byte address.
+The 32-bit lump base byte address in DMEM.
 
-### Word 1 — Limit + gt_seq (WORD2_LAYOUT)
+### Word 1 — authority (WORD2_LAYOUT)
 
 ```
-31   29 28 27      21 20                  0
-┌──────┬───┬──────────┬────────────────────┐
-│spare │ G │  gt_seq  │   limit_offset     │
-│[2:0] │   │  [6:0]   │     [20:0]         │
-└──────┴───┴──────────┴────────────────────┘
+31       30      29       21 20                  0
+┌────────┬───────┬──────────┬────────────────────┐
+│f_flag  │ g_bit │  gt_seq  │   limit_offset     │
+│  [1]   │  [1]  │  [9]     │     [20:0]         │
+└────────┴───────┴──────────┴────────────────────┘
 ```
 
-| Bits  | Field          | Description |
-|-------|---------------|-------------|
+| Bits    | Field          | Description |
+|---------|---------------|-------------|
 | [20:0]  | `limit_offset` | Object size in words minus 1 (21-bit) |
-| [27:21] | `gt_seq`       | Revocation counter; compared against GT `gt_seq` by ChurchNSGate |
-| [28]    | `g_bit`        | GC mark bit — may be set by GC; masked before integrity32 check |
-| [31:29] | spare          | Reserved |
+| [29:21] | `gt_seq`       | 9-bit revocation counter; compared against GT `gt_seq` by ChurchNSGate |
+| [30]    | `g_bit`        | GC mark bit — may be set by GC; masked to 0 before integrity32 check |
+| [31]    | `f_flag`       | Far indicator — 0 = local node; 1 = remote IDE node resolves this SLOT. This is a **SLOT property**, not stored in the GT word. Both `g_bit` and `f_flag` are masked to 0 before integrity32 is computed. |
 
 ### Word 2 — integrity32 Check
 
-The 32-bit integrity32 parallel check result, computed over NS Entry Word 0 and Word 1 (with `g_bit` masked to zero before the check).
+The 32-bit integrity32 parallel check result, computed over NS SLOT Word 0 and Word 1 (with both `g_bit[30]` and `f_flag[31]` masked to zero before the check).
+
+### Word 3 — abstract_gt (advisory)
+
+An optional GT annotation used by the IDE namespace viewer. Not covered by integrity32. Used by the hardware only when the M-bit elevation path is active.
 
 ### integrity32 Integrity
 
-ChurchNSGate recomputes integrity32 over NS Entry Word 0 and Word 1 (`g_bit` cleared) and compares against NS Entry Word 2. A mismatch faults with `SEAL` error, preventing use of any tampered NS entry.
+ChurchNSGate recomputes integrity32 over NS SLOT Word 0 and Word 1 (`g_bit` and `f_flag` both cleared) and compares against NS SLOT Word 2. A mismatch faults with `SEAL` error, preventing use of any tampered NS SLOT.
 
 ---
 
-## Capability Registers
+## Capability Registers (CAP_REG)
+
+Each capability register (CAP_REG) is **96 bits wide (3 × 32-bit words)**. The programmer cannot read the internal words directly — they interact with CRs only through LOAD, SAVE, CALL, RETURN, CHANGE, SWITCH, TPERM, LAMBDA, ELOADCALL, and XLOADLAMBDA. integrity32 is verified by LOAD (ChurchNSGate pipeline) but is **not stored** in the register.
 
 The Church Machine provides 16 capability registers (CR0–CR15), divided into two groups:
 
