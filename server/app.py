@@ -8523,9 +8523,46 @@ with app.app_context():
                 entry.get("src_addr"),
             )
 
+        def _wukong_lump_lookup(token):
+            """Serve a LUMP by token for an incoming Wukong UDP lump-serve request.
+
+            Looks up ``<token:08x>.lump`` under LUMPS_DIR and returns the file
+            contents as a list of 32-bit big-endian words.  Returns None if the
+            lump is not found or cannot be read.
+
+            Called on the WukongUdpListener thread — LUMPS_DIR is read-only here
+            so no locking is required.
+            """
+            import struct as _struct
+            fname = "{:08x}.lump".format(token)
+            fpath = os.path.join(LUMPS_DIR, fname)
+            try:
+                with open(fpath, "rb") as _fh:
+                    raw = _fh.read()
+                # LUMP files are a flat array of 32-bit big-endian words
+                n_words = len(raw) // 4
+                if n_words == 0:
+                    return None
+                words = list(_struct.unpack_from(f">{n_words}I", raw))
+                logging.info(
+                    "Wukong lump lookup: token=0x%08X → %s (%d words)",
+                    token, fpath, n_words)
+                return words
+            except FileNotFoundError:
+                logging.debug(
+                    "Wukong lump lookup: token=0x%08X not found (no %s)",
+                    token, fname)
+                return None
+            except Exception as _lookup_exc:
+                logging.warning(
+                    "Wukong lump lookup: token=0x%08X error reading %s: %s",
+                    token, fname, _lookup_exc)
+                return None
+
         try:
             _wukong_listener = _wukong_udp.WukongUdpListener(
-                on_callhome=_on_wukong_callhome)
+                on_callhome=_on_wukong_callhome,
+                lump_lookup=_wukong_lump_lookup)
             _wukong_listener.start()
         except Exception as _wudp_exc:
             logging.warning("Wukong UDP listener could not start: %s", _wudp_exc)

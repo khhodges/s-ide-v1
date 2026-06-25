@@ -226,45 +226,148 @@ class WukongXC7A100T(Elaboratable):
             mac.busy, busy_sync, o_domain="sync")
         m.d.comb += self.eth_busy.eq(busy_sync)
 
-        # rx_done and rx_len cross from eth → sync for MMIO reads
-        rx_done_sync = Signal()
-        m.submodules.sync_rx_done = FFSynchronizer(
-            mac.rx_done, rx_done_sync, o_domain="sync")
+        # ── RX FIFO: eth-domain byte assembler + word FIFO ────────────────────
+        # mac.rx_valid/rx_data fire in the 'eth' clock domain.
+        # We assemble 4-byte groups into 32-bit big-endian words and store them
+        # in a 64-word FIFO (eth-domain write pointer, sync-domain read pointer).
+        # A frame-ready flag is synchronized to 'sync' so the CM can poll ETH_RX_LEN.
+        RX_FIFO_WORDS = 64
+        rx_fifo = Array(Signal(32, name=f"rxf{i}") for i in range(RX_FIFO_WORDS))
 
-        rx_len_sync = Signal(11)
-        # rx_len is multi-bit; use a simple registered sample (safe because
-        # rx_len is updated only when rx_done fires, which is stable for many cycles)
-        m.d.sync += rx_len_sync.eq(mac.rx_len)
+        # eth domain: byte phase + word accumulator + write pointer
+        rx_byte_phase = Signal(2)    # 0-3: byte position within current word
+        rx_word_acc   = Signal(32)   # partial word accumulator
+        rx_wptr       = Signal(6)    # FIFO write pointer (counts words written)
+        rx_len_words  = Signal(7)    # words in most-recently completed frame
+        rx_frame_rdy_eth = Signal()  # set on rx_done, cleared on drain-ack
+
+        # Byte → word assembly in eth domain
+        with m.If(mac.rx_valid):
+            m.d.eth += rx_byte_phase.eq(rx_byte_phase + 1)
+            with m.Switch(rx_byte_phase):
+                with m.Case(0):
+                    m.d.eth += rx_word_acc[24:32].eq(mac.rx_data)
+                with m.Case(1):
+                    m.d.eth += rx_word_acc[16:24].eq(mac.rx_data)
+                with m.Case(2):
+                    m.d.eth += rx_word_acc[8:16].eq(mac.rx_data)
+                with m.Case(3):
+                    # Write completed word (byte 3 = mac.rx_data; bytes 0-2 in rx_word_acc)
+                    m.d.eth += [
+                        rx_fifo[rx_wptr].eq(
+                            Cat(mac.rx_data,
+                                rx_word_acc[8:16],
+                                rx_word_acc[16:24],
+                                rx_word_acc[24:32])),
+                        rx_wptr.eq(rx_wptr + 1),
+                    ]
+
+        # Frame done: latch word count and set ready flag
+        with m.If(mac.rx_done):
+            m.d.eth += [
+                # If the last partial word has any bytes accumulated, flush it
+                rx_len_words.eq(
+                    Mux(rx_byte_phase != 0,
+                        rx_wptr + 1,     # partial word pending
+                        rx_wptr)),
+                rx_frame_rdy_eth.eq(1),
+                rx_byte_phase.eq(0),
+                rx_wptr.eq(0),
+            ]
+            # Flush any partial word (less than 4 bytes) as a zero-padded word
+            with m.If(rx_byte_phase != 0):
+                m.d.eth += rx_fifo[rx_wptr].eq(
+                    Cat(Const(0, 8),
+                        rx_word_acc[8:16],
+                        rx_word_acc[16:24],
+                        rx_word_acc[24:32]))
+
+        # sync domain: FFSynchronizer for frame-ready flag
+        rx_frame_rdy_sync = Signal()
+        m.submodules.sync_rx_frame_rdy = FFSynchronizer(
+            rx_frame_rdy_eth, rx_frame_rdy_sync, o_domain="sync")
+
+        # sync domain: latch word count when frame_rdy arrives (safe: rx_len_words
+        # is stable ≥3 'eth' cycles before rx_frame_rdy_sync rises in 'sync')
+        rx_len_words_sync  = Signal(7)
+        rx_rptr            = Signal(6)    # read pointer (CM drains via ETH_RX_DATA)
+        rx_words_remaining = Signal(7)    # = rx_len_words_sync - rx_rptr
+
+        m.d.comb += rx_words_remaining.eq(rx_len_words_sync - rx_rptr)
+
+        # Latch word count on first cycle frame_rdy_sync is high
+        rx_frame_rdy_prev = Signal()
+        m.d.sync += rx_frame_rdy_prev.eq(rx_frame_rdy_sync)
+        with m.If(rx_frame_rdy_sync & ~rx_frame_rdy_prev):
+            m.d.sync += [rx_len_words_sync.eq(rx_len_words), rx_rptr.eq(0)]
+
+        # Drain-ack: once rptr reaches len, signal eth domain to clear ready flag
+        rx_drain_done = Signal()
+        m.d.comb += rx_drain_done.eq(
+            rx_frame_rdy_sync & (rx_rptr >= rx_len_words_sync))
+        # Propagate drain-done from sync → eth domain so rx_frame_rdy_eth is cleared
+        rx_drain_done_eth = Signal()
+        m.submodules.sync_drain_done = FFSynchronizer(
+            rx_drain_done, rx_drain_done_eth, o_domain="eth")
+        with m.If(rx_drain_done_eth):
+            m.d.eth += rx_frame_rdy_eth.eq(0)
 
         # ── MMIO register block (EthernetDevice capability, CM 'sync' domain) ─
         # The CM core accesses these registers via DREAD/DWRITE to the
         # EthernetDevice capability GT (MMIO base 0x40001000).
-        #
-        # Registers that cross to the 'eth' domain use a simple 2-cycle
-        # request/acknowledge; at 100 Mbps latency is not critical.
-        eth_ctrl_reg   = Signal(32)   # ETH_CTRL  (sync→eth via FFSynchronizer)
-        eth_ip_reg     = Signal(32)   # ETH_IP_ADDR
-        eth_port_reg   = Signal(16)   # ETH_PORT
-        eth_tx_len_reg = Signal(11)   # ETH_TX_LEN  (writing this triggers TX)
+        eth_ctrl_reg     = Signal(32)   # ETH_CTRL
+        eth_ip_reg       = Signal(32)   # ETH_IP_ADDR
+        eth_port_reg     = Signal(16)   # ETH_PORT
+        eth_tx_len_reg   = Signal(11)   # ETH_TX_LEN (byte count, triggers TX)
+        tx_wptr          = Signal(7)    # TX word FIFO write pointer
+        tx_use_buf_reg   = Signal()     # registered tx_use_buf flag
+        tx_buf_nibs_reg  = Signal(12)   # registered nibble count
+        tx_req_sync      = Signal()     # TX trigger pulse
+        tx_trigger       = Signal()
 
-        tx_req_sync = Signal()   # sync→eth: pulse to trigger mac.send
+        # Connect registered TX-buffer ports to mac (combinational pass-through)
+        m.d.comb += [
+            mac.tx_use_buf.eq(tx_use_buf_reg),
+            mac.tx_buf_nibs.eq(tx_buf_nibs_reg),
+        ]
+
+        # TX request: FFSynchronizer converts single-cycle sync pulse to eth trigger
         m.submodules.sync_tx_req = FFSynchronizer(
             tx_req_sync, mac.send, o_domain="eth")
 
-        tx_trigger = Signal()
+        # Default: mac.tx_buf_we is 0 unless overridden in MMIO write handler
+        m.d.comb += [
+            mac.tx_buf_we.eq(0),
+            mac.tx_buf_waddr.eq(0),
+            mac.tx_buf_wdata.eq(0),
+        ]
 
         # MMIO write
         with m.If(self.mmio_we):
             with m.Switch(self.mmio_addr):
                 with m.Case(0):   # ETH_CTRL
                     m.d.sync += eth_ctrl_reg.eq(self.mmio_wdata)
-                with m.Case(2):   # ETH_TX_LEN — triggers TX
-                    m.d.sync += [eth_tx_len_reg.eq(self.mmio_wdata[:11]),
-                                 tx_trigger.eq(1)]
+                with m.Case(2):   # ETH_TX_LEN — byte count; triggers TX
+                    m.d.sync += [
+                        eth_tx_len_reg.eq(self.mmio_wdata[:11]),
+                        tx_trigger.eq(1),
+                        tx_wptr.eq(0),            # reset write pointer for next frame
+                        tx_use_buf_reg.eq(1),
+                        # nibs = byte_count << 1 (2 nibbles per byte)
+                        tx_buf_nibs_reg.eq(self.mmio_wdata[:11] << 1),
+                    ]
                 with m.Case(4):   # ETH_IP_ADDR
                     m.d.sync += eth_ip_reg.eq(self.mmio_wdata)
                 with m.Case(5):   # ETH_PORT
                     m.d.sync += eth_port_reg.eq(self.mmio_wdata[:16])
+                with m.Case(6):   # ETH_TX_DATA — write word to TX buffer, advance ptr
+                    # Write this word to the MAC's runtime TX word buffer
+                    m.d.comb += [
+                        mac.tx_buf_we.eq(1),
+                        mac.tx_buf_waddr.eq(tx_wptr),
+                        mac.tx_buf_wdata.eq(self.mmio_wdata),
+                    ]
+                    m.d.sync += tx_wptr.eq(tx_wptr + 1)
 
         # One-cycle TX request pulse when ETH_TX_LEN is written
         with m.If(tx_trigger):
@@ -272,21 +375,34 @@ class WukongXC7A100T(Elaboratable):
         with m.Else():
             m.d.sync += tx_req_sync.eq(0)
 
+        # Clear tx_use_buf once tx_req pulse has fired (one cycle after tx_trigger)
+        with m.If(tx_req_sync):
+            m.d.sync += tx_use_buf_reg.eq(0)
+
         # MMIO read (combinational)
         with m.Switch(self.mmio_addr):
             with m.Case(0):
                 m.d.comb += self.mmio_rdata.eq(eth_ctrl_reg)
-            with m.Case(1):   # ETH_STATUS
-                m.d.comb += self.mmio_rdata.eq(
-                    Mux(link_up_sync, 1, 0))
+            with m.Case(1):   # ETH_STATUS: 0=down, 1=up
+                m.d.comb += self.mmio_rdata.eq(Mux(link_up_sync, 1, 0))
             with m.Case(2):
                 m.d.comb += self.mmio_rdata.eq(eth_tx_len_reg)
-            with m.Case(3):   # ETH_RX_LEN
-                m.d.comb += self.mmio_rdata.eq(rx_len_sync)
+            with m.Case(3):   # ETH_RX_LEN: words remaining in current RX frame
+                m.d.comb += self.mmio_rdata.eq(
+                    Mux(rx_frame_rdy_sync, rx_words_remaining, 0))
             with m.Case(4):
                 m.d.comb += self.mmio_rdata.eq(eth_ip_reg)
             with m.Case(5):
                 m.d.comb += self.mmio_rdata.eq(eth_port_reg)
+            with m.Case(7):   # ETH_RX_DATA: drain one word from RX FIFO per read
+                m.d.comb += self.mmio_rdata.eq(
+                    Mux(rx_frame_rdy_sync & (rx_rptr < rx_len_words_sync),
+                        rx_fifo[rx_rptr],
+                        0))
+                # Advance read pointer when CM reads this register
+                with m.If(self.mmio_re & rx_frame_rdy_sync &
+                          (rx_rptr < rx_len_words_sync)):
+                    m.d.sync += rx_rptr.eq(rx_rptr + 1)
             with m.Default():
                 m.d.comb += self.mmio_rdata.eq(0)
 

@@ -162,9 +162,13 @@ class WukongUdpListener:
         def handle(entry):
             print("Wukong callhome from", entry['src_addr'])
 
+        def lookup(token):
+            # Return list[int] of 32-bit LUMP words for the given token, or None
+            return my_lump_db.get(token)
+
         listener = WukongUdpListener(
             on_callhome=handle,
-            lump_store={0x00003300: [0xABCD0001, ...]},
+            lump_lookup=lookup,
         )
         listener.start()
         ...
@@ -178,15 +182,21 @@ class WukongUdpListener:
         Called on the listener thread for each valid callhome frame.
         ``entry`` is the dict returned by parse_callhome_frame() augmented
         with ``'src_addr'`` (host, port) and ``'ts'`` (Unix timestamp).
+    lump_lookup : callable(token: int) -> list[int] | None
+        Called for each token in the callhome ``requests`` list.  Should
+        return the LUMP data words for that token, or ``None`` if not found.
+        Called on the listener thread — implementations must be thread-safe.
+        Takes precedence over ``lump_store`` when both are provided.
     lump_store : dict[int, list[int]] | None
-        token → word-list mapping.  For each token requested in a callhome
-        frame that is present in lump_store, the listener replies with a
-        lump-serve response Frame B automatically.
+        Static token → word-list mapping used when ``lump_lookup`` is not
+        provided or returns ``None``.  Useful for tests and fixed boot lumps.
     """
 
-    def __init__(self, port=WUKONG_PORT, on_callhome=None, lump_store=None):
+    def __init__(self, port=WUKONG_PORT, on_callhome=None,
+                 lump_lookup=None, lump_store=None):
         self.port        = port
         self.on_callhome = on_callhome
+        self.lump_lookup = lump_lookup
         self.lump_store  = lump_store or {}
         self._sock       = None
         self._thread     = None
@@ -242,11 +252,31 @@ class WukongUdpListener:
                     logging.error(
                         "WukongUdpListener on_callhome callback error: %s", exc)
             for req_token in entry.get('requests', []):
-                words = self.lump_store.get(req_token)
+                words = None
+                # Try lump_lookup callable first (dynamic, e.g. from server manifest)
+                if self.lump_lookup is not None:
+                    try:
+                        words = self.lump_lookup(req_token)
+                    except Exception as exc:
+                        logging.warning(
+                            "WukongUdpListener: lump_lookup error for token "
+                            "0x%08X: %s", req_token, exc)
+                # Fall back to static lump_store
+                if words is None:
+                    words = self.lump_store.get(req_token)
                 if words is not None:
                     response = build_lump_serve_response(req_token, words)
                     try:
                         self._sock.sendto(response, addr)
+                        logging.info(
+                            "WukongUdpListener: served lump token=0x%08X "
+                            "words=%d to %s",
+                            req_token, len(words), addr)
                     except Exception as exc:
                         logging.warning(
-                            "WukongUdpListener: reply send error: %s", exc)
+                            "WukongUdpListener: reply send error for token "
+                            "0x%08X: %s", req_token, exc)
+                else:
+                    logging.warning(
+                        "WukongUdpListener: requested token 0x%08X not found "
+                        "in lump_lookup or lump_store", req_token)
