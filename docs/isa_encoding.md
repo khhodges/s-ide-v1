@@ -35,7 +35,7 @@ There is **no mode-select bit** separating "register" from "immediate" in the
 last field. Semantics are fixed per opcode — determined entirely by the opcode
 number, not by any flag bit in the word.
 
-Special case: `HALT` and `NOP` both assemble to the all-zero word `0x00000000`.
+Special case: `NOP` assembles to the all-zero word `0x00000000`. `HALT` is accepted as an alias for `NOP` (same encoding). At runtime the all-zeros word executes as `LOADEQ CR0, CR0, #0` — it skips when Z=0 (normal case) and is a no-op. HALT is **not** a real opcode; programs terminate by faulting or by reaching the boot sentinel RETURN.
 
 ---
 
@@ -64,7 +64,7 @@ Special case: `HALT` and `NOP` both assemble to the all-zero word `0x00000000`.
 | 18  | 0x12 | SHL         |
 | 19  | 0x13 | SHR         |
 
-Opcodes 20–31 are undefined (disassembler emits `???`).
+Opcodes 20–29 are unassigned — the simulator faults with `INVALID_OP`. Opcode 30 (`0x1E`) is the **WORD** sentinel (inline data constant); executing it faults with `INVALID_OP` and a message "WORD is an inline data constant — check your RETURN placement". Opcode 31 (`0x1F`) is the **LUMP magic** header word; executing it faults with `INVALID_OP`. The disassembler labels all three as `???`.
 
 ---
 
@@ -107,7 +107,7 @@ Example: `IADDLT DR4, DR1, DR2` encodes opcode=0x0F, cond=11.
 |  0 | LOAD        | CR dst    | CR base   | unsigned word offset into c-list (0–32767)   |
 |  1 | SAVE        | CR dst (c-list, S perm) | CR src (GT, B=1) | unsigned word offset into c-list (0–32767) |
 |  2 | CALL        | CR src    | 0         | method index (15 bits; see note below)       |
-|  3 | RETURN      | 0          | 0          | 12-bit mask in bits [11:0] — bit N=1 clears CR_N to NULL after frame pop; bit 6 reserved (must be 0); mask=0 → no scrub |
+|  3 | RETURN      | 0          | 0          | 12-bit mask in bits [11:0] — bit N=1 **preserves** CR_N (return value to caller); bit N=0 restores caller's saved CR_N or scrubs to NULL; bit 6 reserved (must be 0); mask=0 → secure default (restore all caller CRs) |
 |  4 | CHANGE      | CR dst    | 0         | NS slot index (unsigned)                     |
 |  5 | SWITCH      | 0         | CR src    | new permission — lower 3 bits (0–7)          |
 |  6 | TPERM       | CR dst    | 0         | 5-bit preset code (see §6)                   |

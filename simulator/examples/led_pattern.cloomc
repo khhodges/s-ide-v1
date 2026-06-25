@@ -1,0 +1,95 @@
+; ============================================================
+; Abstraction:  LedPattern
+; Description:  LED chaser pattern — walks a single lit LED
+;               across LED0 → LED1 → LED2 → LED0 … indefinitely
+; Author:       Church Machine Educational Platform
+; Version:      1.0
+; Created:      2026-06-25
+; Language:     Assembly
+; Dependencies: LED device (Abstract GT — boot C-List slot 8)
+; ============================================================
+; Capabilities required by this lump:
+capabilities { LED0 RW }
+; Methods:
+;   1. chase — chaser: one lit LED cycles across all three positions
+; ============================================================
+;
+; LED CHASER PATTERN
+; ══════════════════
+;
+; Cycles one lit LED across three positions:
+;   Step 1: LED0 ON,  LED1 OFF, LED2 OFF
+;   Step 2: LED0 OFF, LED1 ON,  LED2 OFF
+;   Step 3: LED0 OFF, LED1 OFF, LED2 ON
+;   (repeat)
+;
+; HOW TO WATCH THIS IN THE SIMULATOR:
+; 1. Boot the machine (click Boot, or Step × 6).
+; 2. Assemble this code, then click Run.
+; 3. Switch to Ti60 255 IDE — watch the LED strip:
+;    one LED lights at a time, walking left to right.
+;
+; This demonstrates DWRITE to three consecutive MMIO
+; registers (offsets 0, 1, 2) of the LED device GT.
+; Each offset maps to one physical LED (active HIGH).
+;
+; Load LED0 device GT from the boot C-List.
+; All three LED registers live at offsets 0, 1, 2
+; of this single GT — they share the same base address.
+;
+LOAD CR3, LED0            ; LED0 device GT → CR3  (boot C-List slot 8)
+
+; DR1 = 1 (the "lit" value)
+IADD DR1, DR0, #1
+
+; ══════════════════════════════════════════════
+; Phase 1: LED0 lit, LED1 off, LED2 off
+; ══════════════════════════════════════════════
+chase:
+DWRITE DR1, CR3, 0        ; LED0 = 1  (offset 0)
+DWRITE DR0, CR3, 1        ; LED1 = 0  (offset 1)
+DWRITE DR0, CR3, 2        ; LED2 = 0  (offset 2)
+
+; Short delay  (FPGA: ~0.17 s at 50 MHz)
+IADD DR3, DR0, #2         ; outer count
+p1_outer:
+IADD DR2, DR0, #3         ; inner count
+p1_inner:
+ISUB DR2, DR2, #1
+BRANCHNE p1_inner
+ISUB DR3, DR3, #1
+BRANCHNE p1_outer
+
+; ══════════════════════════════════════════════
+; Phase 2: LED0 off, LED1 lit, LED2 off
+; ══════════════════════════════════════════════
+DWRITE DR0, CR3, 0        ; LED0 = 0
+DWRITE DR1, CR3, 1        ; LED1 = 1  (offset 1)
+DWRITE DR0, CR3, 2        ; LED2 = 0
+
+IADD DR3, DR0, #2
+p2_outer:
+IADD DR2, DR0, #3
+p2_inner:
+ISUB DR2, DR2, #1
+BRANCHNE p2_inner
+ISUB DR3, DR3, #1
+BRANCHNE p2_outer
+
+; ══════════════════════════════════════════════
+; Phase 3: LED0 off, LED1 off, LED2 lit
+; ══════════════════════════════════════════════
+DWRITE DR0, CR3, 0        ; LED0 = 0
+DWRITE DR0, CR3, 1        ; LED1 = 0
+DWRITE DR1, CR3, 2        ; LED2 = 1  (offset 2)
+
+IADD DR3, DR0, #2
+p3_outer:
+IADD DR2, DR0, #3
+p3_inner:
+ISUB DR2, DR2, #1
+BRANCHNE p3_inner
+ISUB DR3, DR3, #1
+BRANCHNE p3_outer
+
+BRANCH chase              ; loop forever

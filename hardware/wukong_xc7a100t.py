@@ -500,3 +500,96 @@ class WukongXC7A100T(Elaboratable):
                 m.d.comb += self.mmio_rdata.eq(0)
 
         return m
+
+
+class WukongLedDevice(Elaboratable):
+    """LED MMIO register block for QMTECH Wukong XC7A100T.
+
+    Matches the Ti60 F225 LED MMIO convention so the same CLOOMC program can
+    drive LEDs on both boards without modification.
+
+    MMIO base: 0x40000000  (capability token 0x00003200, slot 2 — same as Ti60)
+
+    Register map (DREAD/DWRITE word offsets, each 32-bit):
+    ─────────────────────────────────────────────────────
+      Offset  Reg       Bits   Description
+      ──────  ───       ────   ───────────────────────────────────────────────
+         0    LED0_RGB  [2:0]  {B, G, R}  bit 0 = R → drives led[0] (active HIGH)
+         1    LED1_RGB  [2:0]  {B, G, R}  bit 0 = R → drives led[1]
+         2    LED2_RGB  [2:0]  {B, G, R}  bit 0 = R → drives led[2]
+         3    LED_CTRL  [0]    Master enable: 0 = all LEDs forced off
+
+    Physical LED outputs are: led[i] = mmio_led_reg[i][0] | status_led[i]
+    when LED_CTRL enable is set.  status_led[i] allows the CM core to assert
+    LEDs as status indicators independent of MMIO writes (e.g. boot / fault /
+    halt overlays).
+
+    Pin assignments are fixed in the board XDC file, not here.
+
+    Note: QMTECH Wukong v1.1 has 2 user LEDs (D1, D2 — active HIGH).
+    The block provisions 3 slots for forward-compatibility; led[2] is
+    currently unconnected at the board level.
+
+    Ports
+    ─────
+    mmio_addr   in   4-bit register offset (0–3)
+    mmio_wdata  in   32-bit write data
+    mmio_we     in   Write enable
+    mmio_rdata  out  32-bit read data (combinational)
+    mmio_re     in   Read enable (unused; present for interface symmetry)
+    status_led  in   [3] hardware-asserted overlay bits (boot/fault/halt)
+    led         out  [3] physical LED drive signals (active HIGH)
+    """
+
+    N_LEDS = 3
+
+    def __init__(self):
+        # MMIO interface (same style as WukongXC7A100T Ethernet block)
+        self.mmio_addr  = Signal(4)
+        self.mmio_wdata = Signal(32)
+        self.mmio_we    = Signal()
+        self.mmio_rdata = Signal(32)
+        self.mmio_re    = Signal()
+
+        # Status overlay inputs from CM core (boot=0, fault=1, halt=2)
+        self.status_led = [Signal(name=f"status_led{i}") for i in range(self.N_LEDS)]
+
+        # Physical LED outputs
+        self.led = [Signal(name=f"led{i}") for i in range(self.N_LEDS)]
+
+    def elaborate(self, platform):
+        m = Module()
+
+        # MMIO-writable LED registers: bits[2:0] = {B, G, R}
+        mmio_led_reg = [Signal(3, name=f"mmio_led{i}") for i in range(self.N_LEDS)]
+        # Master enable: 1 = LEDs active (default off until CLOOMC initialises)
+        led_ctrl_en = Signal()
+
+        # ── MMIO write ────────────────────────────────────────────────────────
+        with m.If(self.mmio_we):
+            with m.Switch(self.mmio_addr):
+                for i in range(self.N_LEDS):
+                    with m.Case(i):
+                        m.d.sync += mmio_led_reg[i].eq(self.mmio_wdata[:3])
+                with m.Case(3):   # LED_CTRL
+                    m.d.sync += led_ctrl_en.eq(self.mmio_wdata[0])
+
+        # ── MMIO read (combinational) ─────────────────────────────────────────
+        with m.Switch(self.mmio_addr):
+            for i in range(self.N_LEDS):
+                with m.Case(i):
+                    m.d.comb += self.mmio_rdata.eq(mmio_led_reg[i])
+            with m.Case(3):
+                m.d.comb += self.mmio_rdata.eq(led_ctrl_en)
+            with m.Default():
+                m.d.comb += self.mmio_rdata.eq(0)
+
+        # ── Physical LED outputs ──────────────────────────────────────────────
+        # Each LED = (MMIO R-bit OR status overlay) AND master enable.
+        # status_led[i] lets the CM core assert boot/fault/halt indicators
+        # even before CLOOMC has written to the LED registers.
+        for i in range(self.N_LEDS):
+            m.d.comb += self.led[i].eq(
+                led_ctrl_en & (mmio_led_reg[i][0] | self.status_led[i]))
+
+        return m

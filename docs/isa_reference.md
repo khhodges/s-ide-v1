@@ -682,17 +682,20 @@ Syntax:  RETURN [#mask]
 Encoding: op[4:0]=0x03 | cond[4] | 0[4] | 0[4] | mask[12] | 0[3]
 ```
 
-`mask` is a 12-bit field in `imm15[11:0]`. Bit N = 1 → CR_N is cleared to NULL after context restore. Bit 6 is architecturally reserved (CR6 is always restored from the frame E-GT; clearing it via mask is undefined). Bare `RETURN` (mask = 0) is fully backward-compatible.
+`mask` is a 12-bit field in `imm15[11:0]`. **Bit N = 1 → preserve CR_N** (callee's value is kept as a return value to the caller). Bit N = 0 → restore the caller's saved CR_N, or scrub to NULL if not saved. Bit 6 is architecturally reserved (CR6 is always re-derived from the E-GT; the mask bit is ignored). Bare `RETURN` (mask = 0) is the secure default — all callee CRs revert to the caller's context.
 
 **Semantics** (see A.12, A.13):
 1. M-window writeback fires; faults `INVALID_OP` if writeback fails.
 2. Call stack is checked; empty stack or sentinel frame → `STACK_UNDERFLOW`.
 3. All M-bits are reset across all CRs (`_resetAllMBits`).
-4. Frame is popped:
-   - **SZ = 1 (CALL frame):** caller's CRs and DRs are restored from the saved snapshot; returnPC comes from the frame word.
+4. For each CR0–CR11 in one combined pass:
+   - **bit set (preserve):** callee's CR_N is kept — it carries a return value.
+   - **bit clear + saved:** caller's saved CR_N is restored from the frame snapshot.
+   - **bit clear + not saved:** CR_N is scrubbed to NULL.
+5. DRs are always restored from the caller's saved snapshot.
+6. Caller's FLAGS and STO are restored from the frame.
+7. PC ← returnPC.
    - **SZ = 0 (LAMBDA frame):** PC is restored from `lambdaReturnPC` cache without a memory read (O(1) fast path). `lambdaActive` is cleared.
-5. mask is applied: each bit-N=1 CRs is written to NULL in one parallel operation.
-6. PC ← returnPC.
 
 **Flags:** N — Z — C — V (no flag writes; caller's flags are restored from the saved snapshot)
 
@@ -702,15 +705,15 @@ Encoding: op[4:0]=0x03 | cond[4] | 0[4] | 0[4] | mask[12] | 0[3]
 | `STACK_UNDERFLOW` | Call stack empty, or RETURN through boot sentinel frame (NIA = 0x7FFF) |
 | `INVALID_OP` | M-window writeback failed before frame pop |
 
-**Example:** Return, clearing CR0 and CR1 (mask = 0b000000000011 = 0x003).
+**Example:** Return a capability in CR0 (preserve CR0; mask = 0b000000000001 = 0x001).
 ```
-RETURN AL, #0x003        ; mask bits 0 and 1 set → CR0, CR1 ← NULL
-                          ; opcode=3, cond=14, fld_a=0, fld_b=0, imm=3
-                          ; encoding: 0x1F000003
+RETURN 0x001             ; bit 0 set → CR0 preserved (return value)
+                          ; all other CRs restored from caller's saved snapshot
+                          ; opcode=3, cond=14, fld_a=0, fld_b=0, imm=1
 ```
 Bare return (no clearing):
 ```
-RETURN AL                 ; mask=0 → no CRs cleared
+RETURN AL                 ; mask=0 → restore all caller CRs (secure default, no callee CRs preserved)
                           ; encoding: 0x1F000000
 ```
 

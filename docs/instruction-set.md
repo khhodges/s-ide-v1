@@ -104,19 +104,21 @@ RETURN [mask]
 
 **Encoding**: `opcode[5]=00011 | cond[4] | 0[11] | mask[12]`
 
-`mask` is a 12-bit literal in bits [11:0]. The mask field is currently **not implemented** in hardware — all bits are ignored. Bit 6 is **reserved and must be 0**: CR6 is always re-derived unconditionally by cload regardless of the mask. All other mask bits (0–5, 7–11) are also unimplemented and must be 0. Use bare `RETURN` (mask=0). Encoding a non-zero mask will produce no error on current hardware but the clearing does not occur.
+`mask` is a 12-bit field in bits [11:0]. **Set bit = PRESERVE that CR** (keep the callee's value as a return value to the caller). Clear bit = restore the caller's saved state, or scrub to NULL if the caller had nothing saved. Bare `RETURN` (mask=0) is the secure default — all callee CRs are scrubbed and the caller's saved state is fully restored. Bit 6 is **reserved and must be 0**: CR6 is always re-derived from the E-GT regardless of the mask.
+
+**The mask is computed automatically by the toolchain** — programmers never write it manually:
+- **CLOOMC++ compiler**: derives the mask from the method's return type (`void` → mask=0; returns one capability → mask=0b000000000001; etc.)
+- **Raw assembler**: emits the programmer-supplied literal (e.g. `RETURN 0b000000000001`); bare `RETURN` emits mask=0 (secure default, clear all)
 
 **Execution order**:
 1. Pop 2-word frame
 2. mLoad caller's E-GT (Word 0) — version + MAC + G-bit reset; NS split re-derives CR6 and CR14
 3. Restore PC from NIA and machine indicators from Word 1
-4. Apply mask — all marked CRs written to NULL in **one parallel clock edge** (mask bits fan into CR register-file write enables; zero overhead regardless of how many bits are set)
+4. For each CR0–CR11: if mask bit set → preserve callee's value (return value); else → restore caller's saved snapshot, or scrub to NULL if not saved
 
-Note: CR5 is a thread-bound capability installed by CHANGE from Zone④ bounds when a thread is resumed; it is not saved or restored by CALL/RETURN.
+Note: CR5 is a thread-bound capability installed by CHANGE from Zone④ bounds when a thread is resumed; it is not saved or restored by CALL/RETURN. DRs are always restored from the caller's saved snapshot unconditionally.
 
-**Why the mask is programmer-declared**: GTs are first-class values — a callee may legitimately return a GT in CR0. Only the programmer knows which CRs carry return values vs. internal working state. The mask is emitted as a compile-time literal by the [CLOOMC](https://sipantic.blogspot.com/2025/03/xx.html) compiler from a `clear:` annotation.
-
-DRs and non-masked CRs retain whatever values the callee left. Shared between Church and Turing domains.
+**Why set=preserve**: GTs are first-class values — a callee may legitimately return a GT in CR0. The bit marks which CRs carry outbound return values. All others revert to the caller's context or are scrubbed, so callee-internal GTs can never leak to the caller by accident. Shared between Church and Turing domains.
 
 If the call stack is empty, or if RETURN unwinds through the boot sentinel frame (NIA = 0x7FFF), RETURN faults with `STACK_UNDERFLOW` — not a reboot, not a halt. The "warm reboot" description in older documents is incorrect.
 

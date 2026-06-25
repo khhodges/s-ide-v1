@@ -1902,6 +1902,34 @@ class ChurchSimulator {
                 this._resetAllMBits();              // clear M-bits set on CRs during boot init;
                                                     // prevents stale m=1 from triggering writeback gate
                                                     // on the first CALL after boot completes.
+
+                // ── Navana.Init (NS slot 5) ────────────────────────────────────────
+                // Called exactly once at boot completion, after M-elevation is off and
+                // all boot NS entries are in place.  Navana performs Stage-1 memory
+                // allocation (SlideRule/Constants code regions, scheduler/stack/flag
+                // buffers), discovers devices, mints LED PassKey, and wires Keystone.
+                // A failure here is logged as a warning — the boot does not abort.
+                if (this.abstractionRegistry) {
+                    const navaInit = this.abstractionRegistry.dispatchMethod(5, 'Init', this, {});
+                    const navaOk   = !!(navaInit && navaInit.ok);
+                    this.output += navaOk
+                        ? `[BOOT] Navana.Init — complete (${navaInit.message || 'OK'})\n`
+                        : `[BOOT] Navana.Init — warning: ${(navaInit && navaInit.error) || 'no abstractionRegistry response'}\n`;
+                    this.auditLog.push({
+                        gate: 'Navana.Init',
+                        desc: navaOk
+                            ? `Navana.Init complete — ${navaInit.message || 'OK'}`
+                            : `Navana.Init warning — ${(navaInit && navaInit.error) || 'no response'}`,
+                        label: 'Navana',
+                        nsIndex: 5,
+                        requiredPerm: null,
+                        checks: { init: { pass: navaOk } },
+                        b: 0, f: 0,
+                        result: navaOk ? 'pass' : 'warn',
+                        stepCtx: 'NAVANA_INIT',
+                    });
+                }
+
                 this.bootComplete = true;           // signal the step-loop to start dispatching instructions
                 this.ledBits = 0b111111;            // all 6 LEDs on = boot complete
                 this.ledMode = 'boot';              // LED display stays in boot-progress mode until first user toggle
@@ -4307,15 +4335,30 @@ class ChurchSimulator {
         }
 
         this._resetAllMBits();   // RETURN boundary: M is reset on all CRs (architecture rule)
-        if (frame.savedCRs) {
-            const tnBaseRet = this.cr[12] && this.cr[12].word1;
-            for (let i = 0; i < frame.savedCRs.length; i++) {
+
+        // Mask semantics: set bit = PRESERVE callee's CR (return value); clear bit = restore caller's.
+        // One combined pass ensures callee internal GTs are never visible to the caller
+        // unless explicitly preserved as return values.
+        const tnBaseRet = this.cr[12] && this.cr[12].word1;
+        const clearedCRs = [];
+        const preservedCRs = [];
+        for (let i = 0; i < 12; i++) {
+            if (mask & (1 << i)) {
+                // Preserve callee's CR_i — it carries a return value to the caller
+                preservedCRs.push(`CR${i}`);
+            } else if (frame.savedCRs && frame.savedCRs[i] !== undefined) {
+                // Not a return value — restore the caller's saved state
                 this.cr[i] = {...frame.savedCRs[i]};
-                if (i <= 11 && i !== 6 && tnBaseRet) {
+                if (i !== 6 && tnBaseRet) {
                     this._threadWrite(tnBaseRet + THREAD_CAPS_OFFSET + i, this.cr[i].word0 >>> 0, `RETURN CR${i}-restore`);
                 }
+            } else {
+                // Not a return value and caller had nothing saved — scrub
+                this._clearCR(i);
+                clearedCRs.push(`CR${i}`);
             }
         }
+
         if (frame.savedDRs) {
             for (let di = 0; di < 16; di++) {
                 this._writeDR(di, frame.savedDRs[di]);
@@ -4323,13 +4366,6 @@ class ChurchSimulator {
         }
         if (frame.savedFlags) this.flags = {...frame.savedFlags};
         if (typeof frame.savedSTO === 'number') this.sto = frame.savedSTO;
-        const clearedCRs = [];
-        for (let i = 0; i < 12; i++) {
-            if (mask & (1 << i)) {
-                this._clearCR(i);
-                clearedCRs.push(`CR${i}`);
-            }
-        }
         const frameTag = frame.sz === 0 ? 'LAMBDA' : 'CALL';
         const isLeafLambda = frame.sz === 0 && this.lambdaActive && this.lambdaCachedFrame;
         if (isLeafLambda) {
@@ -4345,12 +4381,12 @@ class ChurchSimulator {
                     this.physicalPC = entry.word0_location + 1 + cachedReturnPC;
                 }
             }
-            const maskDesc = mask ? ` MASK=0b${mask.toString(2).padStart(12, '0')} cleared[${clearedCRs.join(',')}]` : '';
+            const maskDesc = mask ? ` MASK=0b${mask.toString(2).padStart(12, '0')} preserved[${preservedCRs.join(',')||'none'}]` : '';
             const desc = `RETURN (LAMBDA/SZ=0) PC→${cachedReturnPC} [leaf — NIA cache, no memory read]${maskDesc}`;
             this.output += desc + '\n';
             return { pc: cachedReturnPC, instr: d, desc, pipeline: this._returnPipeline(d, frame, mask) };
         }
-        const maskDesc = mask ? ` MASK=0b${mask.toString(2).padStart(12, '0')} cleared[${clearedCRs.join(',')}]` : '';
+        const maskDesc = mask ? ` MASK=0b${mask.toString(2).padStart(12, '0')} preserved[${preservedCRs.join(',')||'none'}]` : '';
         const desc = `RETURN (${frameTag}/SZ=${frame.sz}) PC→${frame.returnPC}${maskDesc}`;
         this.output += desc + '\n';
         this.pc = frame.returnPC;
@@ -5937,7 +5973,7 @@ class ChurchSimulator {
         if (frame.sz === 1) {
             stages.push({ stage: 'E-GT', desc: 'Revalidate caller E-GT → re-derive CR6/CR14', perm: 'E', status: 'pass' });
         }
-        stages.push({ stage: 'RETURN', desc: `PC→${frame.returnPC}${mask ? `, MASK clears ${mask.toString(2).padStart(12,'0')}` : ''}`, status: 'pass' });
+        stages.push({ stage: 'RETURN', desc: `PC→${frame.returnPC}${mask ? `, MASK=0b${mask.toString(2).padStart(12,'0')} (set=preserve)` : ''}`, status: 'pass' });
         return stages;
     }
 

@@ -2752,60 +2752,43 @@ validateGTConstant('SM_GT_RWX_IDX1', SM_GT_RWX_IDX1);
     assert('RM1 bare RETURN: mask field = 0', mask === 0, 'got ' + mask);
 }
 
-// RM2: RETURN with non-zero mask (bit 5 set, decimal 32) produces exactly one warning
-//      mentioning the mask, and still encodes the instruction (no error).
+// RM2: RETURN with non-zero mask (bit 5 set, decimal 32) encodes silently — no warning, no error.
+//      set bit = PRESERVE that CR (return value to caller).
 {
     const a = new ChurchAssembler();
     const r = a.assemble('RETURN 32');
-    assert('RM2 RETURN 32: no errors (encoding still emitted)', a.errors.length === 0,
+    assert('RM2 RETURN 32: no errors', a.errors.length === 0,
         a.errors.map(e => e.message).join('; '));
-    assert('RM2 RETURN 32: exactly one warning', a.warnings.length === 1,
+    assert('RM2 RETURN 32: no warnings (mask is implemented — no warning needed)', a.warnings.length === 0,
         'got ' + a.warnings.length + ': ' + a.warnings.map(w => w.message).join('; '));
-    assert('RM2 RETURN 32: warning mentions mask',
-        a.warnings.length > 0 && a.warnings[0].message.includes('mask'),
-        a.warnings.length > 0 ? a.warnings[0].message : '(no warning)');
-    assert('RM2 RETURN 32: warning mentions bit 5',
-        a.warnings.length > 0 && a.warnings[0].message.includes('5'),
-        a.warnings.length > 0 ? a.warnings[0].message : '(no warning)');
-    assert('RM2 RETURN 32: warning mentions not implemented',
-        a.warnings.length > 0 && a.warnings[0].message.toLowerCase().includes('not implemented'),
-        a.warnings.length > 0 ? a.warnings[0].message : '(no warning)');
+    assert('RM2 RETURN 32: word count = 1', r.words.length === 1, 'got ' + r.words.length);
     const mask = r.words[0] & 0xFFF;
-    assert('RM2 RETURN 32: mask field = 32 in encoded word', mask === 32, 'got ' + mask);
-    // column-range assertions (task-1315): 'RETURN 32' — '32' at index 7, length 2
-    assert('RM2 RETURN 32: warning has colStart', typeof a.warnings[0].colStart === 'number',
-        'colStart = ' + a.warnings[0].colStart);
-    assert('RM2 RETURN 32: warning has colEnd', typeof a.warnings[0].colEnd === 'number',
-        'colEnd = ' + a.warnings[0].colEnd);
-    assert('RM2 RETURN 32: warning colStart points to mask token', a.warnings[0].colStart === 7,
-        'expected colStart=7, got ' + a.warnings[0].colStart);
-    assert('RM2 RETURN 32: warning colEnd = colStart + 2', a.warnings[0].colEnd === 9,
-        'expected colEnd=9, got ' + a.warnings[0].colEnd);
+    assert('RM2 RETURN 32: mask field = 32 in encoded word (bit 5 = preserve CR5)', mask === 32, 'got ' + mask);
 }
 
-// RM3: RETURN with multiple mask bits set lists all set bit positions in warning
+// RM3: RETURN 0xFFF preserves all CR0–CR11 (all return values) — no warning, no error.
 {
     const a = new ChurchAssembler();
-    a.assemble('RETURN 0xFFF');
-    assert('RM3 RETURN 0xFFF: exactly one warning', a.warnings.length === 1,
-        'got ' + a.warnings.length);
-    assert('RM3 RETURN 0xFFF: warning mentions bit 0',
-        a.warnings.length > 0 && a.warnings[0].message.includes('0'),
-        a.warnings.length > 0 ? a.warnings[0].message : '(no warning)');
-    assert('RM3 RETURN 0xFFF: warning mentions bit 11',
-        a.warnings.length > 0 && a.warnings[0].message.includes('11'),
-        a.warnings.length > 0 ? a.warnings[0].message : '(no warning)');
+    const r = a.assemble('RETURN 0xFFF');
     assert('RM3 RETURN 0xFFF: no errors', a.errors.length === 0,
         a.errors.map(e => e.message).join('; '));
-    // column-range assertions (task-1315): 'RETURN 0xFFF' — '0xFFF' at index 7, length 5
-    assert('RM3 RETURN 0xFFF: warning has colStart', typeof a.warnings[0].colStart === 'number',
-        'colStart = ' + a.warnings[0].colStart);
-    assert('RM3 RETURN 0xFFF: warning has colEnd', typeof a.warnings[0].colEnd === 'number',
-        'colEnd = ' + a.warnings[0].colEnd);
-    assert('RM3 RETURN 0xFFF: warning colStart points to mask token', a.warnings[0].colStart === 7,
-        'expected colStart=7, got ' + a.warnings[0].colStart);
-    assert('RM3 RETURN 0xFFF: warning colEnd = colStart + 5', a.warnings[0].colEnd === 12,
-        'expected colEnd=12, got ' + a.warnings[0].colEnd);
+    assert('RM3 RETURN 0xFFF: no warnings', a.warnings.length === 0,
+        'got ' + a.warnings.length);
+    assert('RM3 RETURN 0xFFF: word count = 1', r.words.length === 1, 'got ' + r.words.length);
+    const mask = r.words[0] & 0xFFF;
+    assert('RM3 RETURN 0xFFF: mask field = 0xFFF (preserve all CR0–CR11)', mask === 0xFFF, 'got 0x' + mask.toString(16));
+}
+
+// RM4: RETURN 0b000000000001 — preserve only CR0 (single capability return value)
+{
+    const a = new ChurchAssembler();
+    const r = a.assemble('RETURN 0b000000000001');
+    assert('RM4 RETURN 0b1: no errors', a.errors.length === 0,
+        a.errors.map(e => e.message).join('; '));
+    assert('RM4 RETURN 0b1: no warnings', a.warnings.length === 0,
+        'got ' + a.warnings.length);
+    const mask = r.words[0] & 0xFFF;
+    assert('RM4 RETURN 0b1: mask field = 1 (preserve CR0)', mask === 1, 'got ' + mask);
 }
 
 // ── SWITCH simulator tests (D-11 fix) ────────────────────────────────────────
