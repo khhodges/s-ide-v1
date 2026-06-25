@@ -19,7 +19,7 @@ annotated with which machine creates it, which machine reads it, and whether it
 is programmer-visible.
 
 | Tag | Machine | Role |
-|-----|---------|------|
+|:----|:--------------------|:---------------------------------------------------------------------------|
 | **[CM]** | Church Machine | The hardware execution engine (Ti60 F225 silicon; JS simulator). Enforces capability security at the instruction level. Fetches, decodes, and executes INSTR words. Validates GT rows on every access via the mLoad pipeline. |
 | **[IDE]** | Integrated Development Environment | The web-based namespace manager. Compiles CLOOMC source to INSTR words. Assembles LUMP binaries including the LUMP_HEADER. Builds the boot image. Resolves Pet-Names (Outform cw.cc). Manages NS SLOT assignments. Distributes lumps to boards via Tunnel. |
 

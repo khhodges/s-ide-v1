@@ -1,8 +1,27 @@
 /* GoldenDetails PDF stylesheet — compact tables, tight margins */
 
 @page {
-    margin: 1.8cm 1.6cm 1.8cm 1.6cm;
+    margin: 1.8cm 1.6cm 2.4cm 1.6cm;
     size: A4;
+
+    @bottom-left {
+        content: "CONFIDENTIAL — Patents Applied For";
+        font-family: 'DejaVu Sans', Arial, sans-serif;
+        font-size: 7pt;
+        color: #555;
+    }
+    @bottom-center {
+        content: "2026-06-25";
+        font-family: 'DejaVu Sans', Arial, sans-serif;
+        font-size: 7pt;
+        color: #555;
+    }
+    @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: 'DejaVu Sans', Arial, sans-serif;
+        font-size: 7pt;
+        color: #555;
+    }
 }
 
 body {
@@ -89,3 +108,6 @@ pre code {
 /* ── Strong / em ─────────────────────────────────────────── */
 strong { font-weight: bold; }
 em     { font-style: italic; }
+
+/* ── Suppress pandoc-generated title block (H1 in markdown serves as title) */
+header#title-block-header { display: none; }
