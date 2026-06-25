@@ -146,26 +146,28 @@ decodes, and executes them.
 | `[18:15]` | `fld_b` | 4 | Second operand: CR or DR index depending on opcode. |
 | `[22:19]` | `fld_a` | 4 | First operand: CR or DR index depending on opcode. |
 | `[26:23]` | `cond` | 4 | Condition gate. Instruction executes only when condition is true against current flags. |
-| `[31:27]` | `opcode` | 5 | Instruction selector. Values 0–19 are valid. Values 20–30 are undefined → FAULT. Value 31 (0x1F) is the LUMP magic → FAULT. |
+| `[31:27]` | `opcode` | 5 | Instruction selector. Values 0–9 = Church opcodes. Values 10–15 = unassigned → FAULT. Values 16–25 = Turing opcodes. Values 26–29 = unassigned → FAULT. Value 30 (0x1E) = inline data word → FAULT if fetched as instruction. Value 31 (0x1F) = LUMP magic → FAULT. |
 
 ### Condition Codes (`cond`)
+
+ARM-compatible encoding. Authoritative source: `hw_types.py` `CondCode` enum and `simulator/assembler.js`.
 
 | Code | Mnemonic | Condition | Flags |
 |------|----------|-----------|-------|
 | 0 | EQ | Equal / Zero | Z=1 |
-| 1 | NE | Not equal | Z=0 |
-| 2 | LT | Signed less than | N≠V |
-| 3 | LE | Signed less or equal | Z=1 or N≠V |
-| 4 | GT | Signed greater than | Z=0 and N=V |
-| 5 | GE | Signed greater or equal | N=V |
-| 6 | CS | Carry set | C=1 |
-| 7 | CC | Carry clear | C=0 |
-| 8 | MI | Minus / Negative | N=1 |
-| 9 | PL | Plus / Non-negative | N=0 |
-| 10 | VS | Overflow set | V=1 |
-| 11 | VC | Overflow clear | V=0 |
-| 12 | HI | Unsigned higher | C=1 and Z=0 |
-| 13 | LS | Unsigned lower or same | C=0 or Z=1 |
+| 1 | NE | Not equal / Non-zero | Z=0 |
+| 2 | CS | Carry set (unsigned ≥) | C=1 |
+| 3 | CC | Carry clear (unsigned <) | C=0 |
+| 4 | MI | Minus / Negative | N=1 |
+| 5 | PL | Plus / Non-negative | N=0 |
+| 6 | VS | Overflow set | V=1 |
+| 7 | VC | Overflow clear | V=0 |
+| 8 | HI | Unsigned higher | C=1 and Z=0 |
+| 9 | LS | Unsigned lower or same | C=0 or Z=1 |
+| 10 | GE | Signed greater or equal | N=V |
+| 11 | LT | Signed less than | N≠V |
+| 12 | GT | Signed greater than | Z=0 and N=V |
+| 13 | LE | Signed less or equal | Z=1 or N≠V |
 | 14 | AL | Always (unconditional) | — |
 | 15 | NV | Never — **NOP** | — |
 
@@ -184,6 +186,8 @@ decodes, and executes them.
 
 ### Opcode Table
 
+Authoritative source: `hw_types.py` `ChurchOpcode` and `TuringOpcode` enums.
+
 | Dec | Hex | Mnemonic | Domain | fld_a | fld_b | imm15 |
 |-----|-----|----------|--------|-------|-------|-------|
 | 0 | 0x00 | LOAD | Church | CR dest | CR src (c-list) | row index |
@@ -196,18 +200,20 @@ decodes, and executes them.
 | 7 | 0x07 | LAMBDA | Church | CR (X-GT) | — | — |
 | 8 | 0x08 | ELOADCALL | Church | CR dest | CR src (c-list) | row + selector |
 | 9 | 0x09 | XLOADLAMBDA | Church | CR dest | CR src (c-list) | row |
-| 10 | 0x0A | DREAD | Turing | DR dest | CR (R-GT) | offset |
-| 11 | 0x0B | DWRITE | Turing | CR (W-GT) | DR src | offset |
-| 12 | 0x0C | BFEXT | Turing | DR dest | DR src | pos + width |
-| 13 | 0x0D | BFINS | Turing | DR dest | DR src | pos + width |
-| 14 | 0x0E | MCMP | Turing | DR dest | DR src | — |
-| 15 | 0x0F | IADD | Turing | DR dest | DR src | imm or — |
-| 16 | 0x10 | ISUB | Turing | DR dest | DR src | imm or — |
-| 17 | 0x11 | BRANCH | Turing | — | — | offset |
-| 18 | 0x12 | SHL | Turing | DR dest | DR src | shift |
-| 19 | 0x13 | SHR | Turing | DR dest | DR src | shift |
-| 20–30 | 0x14–0x1E | *unassigned* | — | — | — | — → **FAULT** |
-| 31 | 0x1F | *LUMP magic* | — | — | — | — → **FAULT** |
+| 10–15 | 0x0A–0x0F | *unassigned — Church extension reserved* | — | — | — | → **FAULT** |
+| 16 | 0x10 | DREAD | Turing | DR dest | CR (R-GT) | offset |
+| 17 | 0x11 | DWRITE | Turing | CR (W-GT) | DR src | offset |
+| 18 | 0x12 | BFEXT | Turing | DR dest | DR src | pos + width |
+| 19 | 0x13 | BFINS | Turing | DR dest | DR src | pos + width |
+| 20 | 0x14 | MCMP | Turing | DR dest | DR src | — |
+| 21 | 0x15 | IADD | Turing | DR dest | DR src | imm or — |
+| 22 | 0x16 | ISUB | Turing | DR dest | DR src | imm or — |
+| 23 | 0x17 | BRANCH | Turing | — | — | signed offset |
+| 24 | 0x18 | SHL | Turing | DR dest | DR src | shift amount |
+| 25 | 0x19 | SHR | Turing | DR dest | DR src | shift amount |
+| 26–29 | 0x1A–0x1D | *unassigned* | — | — | — | → **FAULT** |
+| 30 | 0x1E | *data word* | — | — | — | inline data constant → **FAULT** if executed |
+| 31 | 0x1F | *LUMP magic* | — | — | — | → **FAULT** |
 
 ---
 
@@ -275,9 +281,9 @@ updated by the Loader when a lazy-load LUMP is fetched from the Tunnel.
 
 ```
  ┌────────────────────────────────────────────────────────────────┐
- │  CRC-16/CCITT (poly 0x1021, init 0xFFFF)                      │
- │  Input: Word 0 ‖ Word 1 (g_bit[30] and f_flag[31] = 0)        │
- │                        32 bits                                 │
+ │  integrity32 — 32-bit parallel check                           │
+ │  Formula:  ROL32(W0, 7) ^ ROL32(W1_masked, 13) ^ 0xDEADBEEF  │
+ │  W1_masked = W1 with g_bit[30] and f_flag[31] zeroed           │
  └────────────────────────────────────────────────────────────────┘
 ```
 
