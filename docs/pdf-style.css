@@ -30,12 +30,12 @@ blockquote {
 /* ── Tables ──────────────────────────────────────────────── */
 table {
     width: 100%;
+    max-width: 100%;
     border-collapse: collapse;
     font-size: 8.5pt;
     table-layout: auto;
     margin: 0.35em 0 0.6em;
     overflow-wrap: break-word;
-    word-break: break-word;
 }
 
 th, td {
@@ -43,7 +43,6 @@ th, td {
     padding: 2px 5px;
     vertical-align: top;
     overflow-wrap: break-word;
-    word-break: break-word;
     line-height: 1.35;
 }
 
@@ -54,23 +53,11 @@ th {
     white-space: nowrap;
 }
 
-/* Bit-range / short code columns stay narrow */
-td:first-child, th:first-child {
-    white-space: nowrap;
-    width: 1%;
-}
-
-/* Second column (Field / Name) also short */
-td:nth-child(2), th:nth-child(2) {
-    white-space: nowrap;
-    width: 1%;
-}
-
-/* Width column (3rd) on bit-field tables */
-td:nth-child(3), th:nth-child(3) {
-    white-space: nowrap;
-    width: 1%;
-}
+/* Short header-only columns (Bits, Field, Width, Dec, Hex…) */
+/* width:1% hints the column narrow; nowrap only on th, never td */
+th:first-child  { width: 1%; }
+th:nth-child(2) { width: 1%; }
+th:nth-child(3) { width: 1%; }
 
 /* ── Code / pre ──────────────────────────────────────────── */
 code {
