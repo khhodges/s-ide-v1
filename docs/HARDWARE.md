@@ -2,6 +2,8 @@
 
 Single source of truth for every hardware-setup fact about the Efinix Ti60 F225 devkit. When one value changes, update it here — all other docs point here.
 
+For the end-to-end hardware validation runbook (callhome → lump push → board reboot), see **[docs/RUNBOOK.md](RUNBOOK.md)** or `/docs/runbook` in the IDE.
+
 For Wukong-specific wire protocol, see § 8 below.
 
 ---

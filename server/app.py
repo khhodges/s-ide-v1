@@ -2541,6 +2541,11 @@ def ctmm_static(path):
 def docs_figures(path):
     return send_from_directory(os.path.join(DOCS_DIR, "figures"), path)
 
+@app.route("/docs/runbook")
+def docs_runbook():
+    """Serve docs/RUNBOOK.md as plain text (the hardware integration runbook)."""
+    return send_from_directory(DOCS_DIR, "RUNBOOK.md", mimetype="text/plain")
+
 @app.route("/docs/<path:filename>")
 def docs_raw(filename):
     if '..' in filename or filename.startswith('/'):
