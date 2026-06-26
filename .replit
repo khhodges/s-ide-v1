@@ -147,6 +147,10 @@ args = "ti60-utilisation"
 task = "workflow.run"
 args = "lambda-exec-tests"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "callhome-parser-tests"
+
 [[workflows.workflow]]
 name = "Church Machine IDE"
 author = "agent"
@@ -518,6 +522,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node simulator/test_lambda_exec.js"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "callhome-parser-tests"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m pytest scripts/test_callhome_parser.py -v"
 
 [workflows.workflow.metadata]
 outputType = "console"

@@ -1,0 +1,111 @@
+# Ti60 SoC UART canned transcript — used by test_callhome_parser.py dry-run tests.
+#
+# Each non-blank, non-comment line is fed to the parser exactly as the firmware
+# would emit it over the SoC UART.  Lines are grouped by protocol line type so
+# the test suite can locate them easily.
+#
+# Protocol line types covered
+# ---------------------------
+#   GREETING     — SoC boot banner; contains "CHURCH Ti60"
+#   NIA          — NIA=0x... live program-counter sample
+#   CALLHOME     — CALLHOME:{...} JSON heartbeat (with and without ns_manifest)
+#   TRACE        — TRACE:[...] JSON NIA-sample array (10-Hz sampler)
+#   FAULT_EVENT  — FAULT_EVENT:{...} JSON structured fault record
+#   HUNG         — HUNG:{...} JSON hung-CM watchdog report
+#
+# Negative cases (must be rejected by all parsers)
+# ------------------------------------------------
+#   MALFORMED_JSON   — syntactically invalid JSON after a known prefix
+#   UNKNOWN_PREFIX   — completely unrecognised line type
+#   MISSING_FIELDS   — valid JSON but required fields omitted
+#   WRONG_TYPES      — required fields present but wrong value types
+
+# ---------------------------------------------------------------------------
+# GREETING
+# ---------------------------------------------------------------------------
+CHURCH Ti60 SoC+CM v2.0
+UID=c0ffee0100000001
+Waiting for CM boot_complete...
+
+# ---------------------------------------------------------------------------
+# NIA (live APB3 sample)
+# ---------------------------------------------------------------------------
+NIA=0x00000042
+NIA=0x0000004c
+
+# ---------------------------------------------------------------------------
+# CALLHOME — first boot, with full ns_manifest
+# ---------------------------------------------------------------------------
+CALLHOME:{"board":"Ti60F225","uid":"c0ffee0100000001","nia":"0x00000042","boot_ok":1,"boot_reason":0,"fault":0,"fault_code":0,"fault_name":"UNKNOWN","fw_major":2,"fw_minor":0,"ns_manifest":[{"ogt":"global.Core.BoardIdentity.boot","token_32":"0x68706247","label":"Board.Identity","resident":true},{"ogt":"global.Core.Heartbeat.boot","token_32":"0x416d6848","label":"Heartbeat","resident":true}]}
+
+# ---------------------------------------------------------------------------
+# CALLHOME — second heartbeat, no ns_manifest (bridge re-sync on first boot only)
+# ---------------------------------------------------------------------------
+CALLHOME:{"board":"Ti60F225","uid":"c0ffee0100000001","nia":"0x0000004c","boot_ok":1,"boot_reason":0,"fault":0,"fault_code":0,"fault_name":"UNKNOWN","fw_major":2,"fw_minor":0}
+
+# ---------------------------------------------------------------------------
+# CALLHOME — boot_ok=0 (fault raised)
+# ---------------------------------------------------------------------------
+CALLHOME:{"board":"Ti60F225","uid":"c0ffee0100000001","nia":"0x0000004c","boot_ok":1,"boot_reason":0,"fault":1,"fault_code":3,"fault_name":"PERM_X","fw_major":2,"fw_minor":0}
+
+# ---------------------------------------------------------------------------
+# TRACE — 10-Hz NIA sampler, 10-sample window
+# ---------------------------------------------------------------------------
+TRACE:["0x00000042","0x00000043","0x00000044","0x00000045","0x00000046","0x00000047","0x00000048","0x00000049","0x0000004a","0x0000004b"]
+
+# ---------------------------------------------------------------------------
+# FAULT_EVENT — CM raised PERM_X; firmware reads APB3 GT/INSTR/CR14/STAGE
+# ---------------------------------------------------------------------------
+FAULT_EVENT:{"uid":"c0ffee0100000001","nia":"0x0000004c","fault_code":3,"fault_name":"PERM_X","fault_gt":"0x01800003","fault_instr":"0x12345678","fault_cr14":"0x00000010","fault_stage":2}
+
+# ---------------------------------------------------------------------------
+# FAULT_EVENT — minimal mandatory fields only (optional APB3 fields absent)
+# ---------------------------------------------------------------------------
+FAULT_EVENT:{"uid":"c0ffee0100000001","nia":"0x00000099","fault_code":1,"fault_name":"BOUNDS"}
+
+# ---------------------------------------------------------------------------
+# HUNG — NIA unchanged for 3 consecutive 1-second samples → CM reset
+# ---------------------------------------------------------------------------
+HUNG:{"uid":"c0ffee0100000001","nia":"0x0000abcd","loops":3}
+
+# ---------------------------------------------------------------------------
+# NEGATIVE: malformed JSON after known prefixes
+# ---------------------------------------------------------------------------
+CALLHOME:{not valid json at all
+TRACE:[1,2,missing-quote
+FAULT_EVENT:{uid: missing_quotes}
+HUNG:{uid:no_quotes}
+
+# ---------------------------------------------------------------------------
+# NEGATIVE: unknown / unrecognised line types (must be ignored)
+# ---------------------------------------------------------------------------
+UNKNOWN:{"some":"data"}
+DEBUG: internal message
+  leading whitespace line
+raw text with no prefix
+
+# ---------------------------------------------------------------------------
+# NEGATIVE: CALLHOME with missing required fields
+# ---------------------------------------------------------------------------
+CALLHOME:{"board":"Ti60F225","uid":"c0ffee0100000001"}
+
+# ---------------------------------------------------------------------------
+# NEGATIVE: CALLHOME with wrong value types
+# ---------------------------------------------------------------------------
+CALLHOME:{"board":"Ti60F225","uid":"c0ffee0100000001","nia":"0x00000042","boot_ok":"yes","fault":0,"fault_code":0}
+CALLHOME:{"board":"Ti60F225","uid":"c0ffee0100000001","nia":"0x00000042","boot_ok":1,"fault":0,"fault_code":99}
+
+# ---------------------------------------------------------------------------
+# NEGATIVE: FAULT_EVENT with missing required fields
+# ---------------------------------------------------------------------------
+FAULT_EVENT:{"uid":"c0ffee0100000001","nia":"0x00000042"}
+
+# ---------------------------------------------------------------------------
+# NEGATIVE: HUNG with missing required fields
+# ---------------------------------------------------------------------------
+HUNG:{"uid":"c0ffee0100000001"}
+
+# ---------------------------------------------------------------------------
+# NEGATIVE: TRACE with empty array
+# ---------------------------------------------------------------------------
+TRACE:[]
