@@ -465,6 +465,55 @@ def download_ti60zip():
                      download_name="church-ti60-package.zip",
                      mimetype="application/zip")
 
+@app.route("/dl/wukong-zip")
+def download_wukong_zip():
+    """Download the QMTECH Wukong XC7A100T build package.
+
+    ZIP contains:
+      church_wukong_xc7a100t.il  — Amaranth RTLIL (optional, for inspection)
+      church_wukong_xc7a100t.v   — Verilog netlist (add to Vivado project)
+      wukong_xc7a100t.xdc        — Vivado pin constraints
+      wukong_xc7a100t.tcl        — Vivado batch build script
+      local_bridge.py            — UART bridge helper (reserved for future use)
+
+    If the Verilog has not been generated yet, returns 404 with instructions.
+    """
+    import zipfile, io
+    BASE = os.path.dirname(__file__)
+    BUILD_DIR = os.path.abspath(os.path.join(BASE, "..", "build"))
+    HW_DIR    = os.path.abspath(os.path.join(BASE, "..", "hardware"))
+
+    v_path  = os.path.join(BUILD_DIR, "church_wukong_xc7a100t.v")
+    il_path = os.path.join(BUILD_DIR, "church_wukong_xc7a100t.il")
+
+    if not os.path.exists(v_path):
+        return (
+            "Wukong Verilog not yet generated.\n"
+            "Run:  python -m hardware.gen_rtlil --wukong build\n"
+            "Then restart the server and try again.",
+            404,
+        )
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.write(v_path,  "church_wukong_xc7a100t.v")
+        if os.path.exists(il_path):
+            zf.write(il_path, "church_wukong_xc7a100t.il")
+        xdc = os.path.join(HW_DIR, "wukong_xc7a100t.xdc")
+        tcl = os.path.join(HW_DIR, "wukong_xc7a100t.tcl")
+        bridge = os.path.join(BASE, "local_bridge.py")
+        if os.path.exists(xdc):
+            zf.write(xdc, "wukong_xc7a100t.xdc")
+        if os.path.exists(tcl):
+            zf.write(tcl, "wukong_xc7a100t.tcl")
+        if os.path.exists(bridge):
+            zf.write(bridge, "local_bridge.py")
+    buf.seek(0)
+    return send_file(buf, as_attachment=True,
+                     download_name="church-wukong-package.zip",
+                     mimetype="application/zip")
+
+
 @app.route("/dl/ti60peri")
 def download_ti60peri():
     peri_path = os.path.join(os.path.dirname(__file__), "..", "hardware", "ti60_f225.peri.xml")

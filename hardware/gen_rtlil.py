@@ -4,9 +4,6 @@ import sys
 import subprocess
 from amaranth import ClockSignal
 from amaranth.back.rtlil import convert
-from .tang_nano_20k import ChurchTangNano20K
-from .ti60_f225 import ChurchTi60F225
-from .wukong_xc7a100t import ChurchWukongXC7A100T
 
 
 def _extract_port_body(text, start):
@@ -327,6 +324,7 @@ def _rtlil_to_verilog(il_path, v_path, module_name=None):
 
 
 def generate_rtlil_tang_nano(output_dir="build"):
+    from .tang_nano_20k import ChurchTangNano20K
     os.makedirs(output_dir, exist_ok=True)
 
     top = ChurchTangNano20K(clk_freq=27_000_000, baud=115200, sim_mode=False)
@@ -350,6 +348,7 @@ def generate_rtlil_tang_nano(output_dir="build"):
 
 
 def generate_rtlil_ti60(output_dir="build"):
+    from .ti60_f225 import ChurchTi60F225
     os.makedirs(output_dir, exist_ok=True)
 
     top = ChurchTi60F225(clk_freq=25_000_000, baud=57600, sim_mode=False)
@@ -381,14 +380,12 @@ def generate_rtlil_wukong(output_dir="build"):
     The Verilog output is generic (no Xilinx vendor cells) and is fed into
     Vivado for Artix-7 synthesis, place-and-route, and bitstream generation.
     """
+    from .wukong_top import ChurchWukongXC7A100T
     os.makedirs(output_dir, exist_ok=True)
 
-    top = ChurchWukongXC7A100T(clk_freq=100_000_000, baud=115200, sim_mode=False)
+    top = ChurchWukongXC7A100T(clk_freq=50_000_000, baud=115200, sim_mode=False)
 
-    ports = [
-        top.clk_in, top.uart_tx, top.uart_rx, top.push_button,
-        ClockSignal("sync"),
-    ] + list(top.led)
+    ports = [top.clk, top.rst_n] + list(top.led)
 
     rtlil_text = convert(top, ports=ports)
 
@@ -401,7 +398,7 @@ def generate_rtlil_wukong(output_dir="build"):
     print(f"  Lines: {rtlil_text.count(chr(10)):,}")
 
     v_path = os.path.join(output_dir, "church_wukong_xc7a100t.v")
-    _rtlil_to_verilog(il_path, v_path)
+    _rtlil_to_verilog(il_path, v_path, module_name="church_wukong_xc7a100t")
 
     return il_path
 
