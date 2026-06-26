@@ -9847,6 +9847,7 @@ function getSelectedBoard() {
 
 function getBoardShortLabel(board) {
     if (board === 'ti60-f225') return 'Ti60 F225';
+    if (board === 'wukong-xc7a100t') return 'Wukong XC7A100T';
     return 'Tang Nano 20K';
 }
 
