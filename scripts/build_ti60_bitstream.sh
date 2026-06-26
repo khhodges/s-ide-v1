@@ -170,6 +170,20 @@ else
 fi
 echo ""
 
+# ── Pre-synthesis mtime guard ───────────────────────────────────────────────
+# Verify that patch_sapphire_init.py was just run (or is still fresh) before
+# spending 4+ minutes on synthesis.  In normal operation Step 2 always patches,
+# so this guard catches only edge-cases such as:
+#   • manual efx_map invocation that bypasses the build script
+#   • git operations (stash/pull) that reset mtime on firmware sources
+# Guard exits non-zero with a remediation hint if any .c/.h is newer than
+# sapphire.v — which would mean synthesis will embed stale/zeroed firmware.
+_info "Pre-synthesis patch guard: verifying sapphire.v is up-to-date"
+bash "$SCRIPTS/check_sapphire_patch_fresh.sh" "$SAPPHIRE_V" "$HW/firmware" || {
+    _fail "sapphire.v patch is stale — re-run 'python3 scripts/patch_sapphire_init.py' then retry."
+}
+echo ""
+
 # ── Step 3: Synthesis (EFX_MAP, Efinity 2026.1) ─────────────────────────────
 _info "Step 3/8: Synthesis (efx_map — Efinity 2026.1, ~4 min)"
 
@@ -188,41 +202,26 @@ EFINITY_HOME="$EFINITY_MAP" bash "$HW/run_efx_map.sh" "$SOC_DIR/church_soc_cm.xm
 CIRCUIT="$(basename "$SOC_DIR/church_soc_cm.xml" .xml)"
 _ok "  Circuit: $CIRCUIT"
 
-# Optional BRAM sanity-check via map.v — Efinity 2025.2 sometimes writes it to
-# outflow/, sometimes work_syn/, sometimes a subdirectory.  If it cannot be
-# found we warn and continue; P&R will fail with a clear error if synthesis
-# actually produced bad output.
+# Post-synthesis INIT_0 guard — must pass before P&R starts.
+# Efinity 2025.2/2026.1 sometimes writes map.v to outflow/, sometimes work_syn/.
+# If map.v is not found, skip with a warning (the guard cannot run but P&R will
+# fail fast on its own if synthesis actually produced missing output).
 MAP_V="$(find "$SOC_DIR/outflow" "$SOC_DIR/work_syn" -maxdepth 3 -name "*.map.v" 2>/dev/null | head -1)"
 if [ -z "$MAP_V" ] || [ ! -f "$MAP_V" ]; then
-    _warn "  map.v not found under $SOC_DIR/outflow or work_syn — skipping BRAM check"
+    _warn "  map.v not found under $SOC_DIR/outflow or work_syn — skipping BRAM INIT_0 guard"
     _warn "  (This is normal for some Efinity 2025.2 project layouts.)"
     _warn "  P&R will proceed; it will fail if synthesis output is missing."
 else
     _ok "  map.v: $MAP_V"
-    _info "  Verifying BRAM INIT_0 lanes are non-zero..."
-    ALL_NONZERO=1
-    for SYM in 0 1 2 3; do
-        LINENUM=$(grep -n "EFX_RAM10" "$MAP_V" | grep "ram_symbol${SYM}" | head -1 | cut -d: -f1 || true)
-        if [ -z "$LINENUM" ]; then
-            _warn "  Could not locate ram_symbol${SYM} instance in map.v (naming may differ in 2026.1)"
-            ALL_NONZERO=0
-            continue
-        fi
-        INIT0=$(sed -n "${LINENUM},$((LINENUM+4))p" "$MAP_V" | grep "INIT_0" | head -1 || true)
-        if [ -z "$INIT0" ]; then
-            _warn "  No INIT_0 param found near ram_symbol${SYM} — check map.v manually"
-            ALL_NONZERO=0
-        elif echo "$INIT0" | grep -qE 'INIT_0.*"[0-9a-fA-F]*0{8}"'; then
-            _warn "  INIT_0 for ram_symbol${SYM} looks zero — firmware may not be embedded!"
-            ALL_NONZERO=0
-        else
-            _ok "  ram_symbol${SYM} INIT_0: $(echo "$INIT0" | grep -o '"[^"]*"' | head -1 || true)"
-        fi
-    done
-    if [ "$ALL_NONZERO" -eq 0 ]; then
-        _warn "One or more BRAM lanes have zero INIT_0."
-        _warn "If the board boots but firmware is silent, re-run patch_sapphire_init.py"
-        _warn "and ensure optimize-zero-init-rom=0 in church_soc_cm.xml."
+    _info "  Running post-synthesis BRAM INIT_0 guard..."
+    BRAM_GUARD_RC=0
+    bash "$SCRIPTS/check_bram_init_zero.sh" "$MAP_V" || BRAM_GUARD_RC=$?
+    if [ "$BRAM_GUARD_RC" -eq 1 ]; then
+        _fail "BRAM INIT_0 guard failed — all lanes zero. Aborting before P&R.
+  Run: python3 scripts/patch_sapphire_init.py"
+    elif [ "$BRAM_GUARD_RC" -eq 2 ]; then
+        _warn "  BRAM INIT_0 guard returned inconclusive (instance names differ) — continuing."
+        _warn "  Verify BRAM manually after P&R: grep INIT_0 $MAP_V | grep ram_symbol | head -4"
     else
         _ok "All 4 BRAM INIT_0 lanes non-zero — firmware embedded"
     fi

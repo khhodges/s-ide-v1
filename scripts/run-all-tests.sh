@@ -220,6 +220,9 @@ register_suite "pet-name-memory-tests" \
 register_suite "wukong-protocol-tests" \
     'python -m pytest scripts/test_wukong_protocol.py -v'
 
+register_suite "build-guard-tests" \
+    'bash scripts/test_build_guard.sh'
+
 # ---------------------------------------------------------------------------
 # Group registry — map a short group name to a list of suite names
 # ---------------------------------------------------------------------------

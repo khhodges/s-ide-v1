@@ -13,6 +13,7 @@
     "check-sha32-collisions",
     "compile-api-tests",
     "lump-builder-dispatch-tests",
-    "wukong-protocol-tests"
+    "wukong-protocol-tests",
+    "build-guard-tests"
   ]
 }
