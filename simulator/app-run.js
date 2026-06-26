@@ -9860,7 +9860,7 @@ function setSelectedBoard(board) {
     if (lbl) lbl.textContent = getBoardShortLabel(board);
     const ti60Btn = document.getElementById('toolbarTi60ConnectBtn');
     if (ti60Btn) {
-        const _boardShort = {'ti60-f225': 'Ti60'};
+        const _boardShort = {'ti60-f225': 'Ti60', 'wukong-xc7a100t': 'Wukong'};
         ti60Btn.innerHTML = '&#x1F50C; ' + (_boardShort[board] || 'Board');
         ti60Btn.classList.add('ti60-connect-active');
     }
@@ -9870,6 +9870,7 @@ function setSelectedBoard(board) {
 
 function getBoardLabel(board) {
     if (board === 'ti60-f225') return 'Efinix Ti60 F225';
+    if (board === 'wukong-xc7a100t') return 'QMTECH Wukong (Artix-7)';
     return 'Sipeed Tang Nano 20K';
 }
 

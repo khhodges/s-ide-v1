@@ -3167,6 +3167,55 @@ See [LICENSE](../LICENSE) for details.
 
 BUILD_MD_TANG = ""  # removed — Tang Nano 20K no longer supported
 
+BUILD_MD_WUKONG = """# Church Machine — QMTECH Wukong XC7A100T Build Package
+
+## What's Inside
+
+Vivado project files for the QMTECH Wukong (Artix-7 XC7A100T-1FGG676C).
+Synthesise on any machine with Vivado 2020.x or later (WebPACK edition — free).
+
+### Files
+- `church_wukong_xc7a100t.v`  — Church Machine Verilog (Amaranth → Yosys)
+- `church_wukong_xc7a100t.il` — Amaranth RTLIL (authoritative source)
+- `wukong_xc7a100t.xdc`       — Vivado XDC pin constraints
+- `wukong_xc7a100t.tcl`       — Vivado project creation + build script
+- `local_bridge.py`           — Serial bridge server (used by bridge.sh)
+
+## Build Steps
+
+```
+unzip church-wukong-package.zip
+cd church-wukong-package
+vivado -mode batch -source wukong_xc7a100t.tcl
+```
+
+This creates the Vivado project, runs synthesis + implementation, and
+generates `church_wukong_xc7a100t.bit` (20–40 min depending on CPU).
+
+## Cloud Synthesis (DigitalOcean)
+
+A CPU-Optimized droplet (8 vCPU / 16 GB) runs the full build in ~25 min:
+1. Create droplet — Ubuntu 22.04, CPU-Optimized 8vCPU/16GB/160GB (~$0.15/hr)
+2. Install Vivado 2023.2 WebPACK (free AMD account, ~45 GB install, ~40 min)
+3. scp church-wukong-package.zip root@<droplet-ip>:~
+4. SSH in and run: vivado -mode batch -source wukong_xc7a100t.tcl
+5. scp root@<droplet-ip>:~/church-wukong-package/church_wukong_xc7a100t.bit .
+6. Destroy the droplet. Total cost: ~$0.50–$1.00 per synthesis run.
+
+## Programming
+
+Open Vivado Hardware Manager → Connect → Open Target → Program Device →
+select `church_wukong_xc7a100t.bit`.
+
+Requires a JTAG adapter (Digilent JTAG-HS2 or compatible) connected
+to the Wukong board's 14-pin JTAG header.
+
+## Expected LED Behaviour After Programming
+
+- D1 (J4): solid ON during boot (~microseconds), then blinks ~1 Hz
+- D2 (H6): 1 Hz heartbeat during boot, then OFF (lit = fault latched)
+"""
+
 
 
 
@@ -3286,9 +3335,35 @@ sudo ~/oss-cad-suite/bin/openFPGALoader \\\\
 
 
 def _fpga_paths(board):
-    """Return (is_ti60, paths_dict, zip_name, build_md, gen_args, synth_cmd_tpl) for Ti60 F225."""
+    """Return (is_ti60, paths_dict, zip_name, build_md, gen_args, synth_cmd_tpl).
+
+    is_ti60=True   → Efinix Ti60 F225 (Efinity toolchain)
+    is_ti60=False  → QMTECH Wukong XC7A100T (Vivado toolchain)
+    """
     build_dir = os.path.join(BASE_DIR, "build")
     hw_dir = os.path.join(BASE_DIR, "hardware")
+
+    if board == "wukong-xc7a100t":
+        paths = {
+            "rtlil":   os.path.join(build_dir, "church_wukong_xc7a100t.il"),
+            "verilog": os.path.join(build_dir, "church_wukong_xc7a100t.v"),
+            "xdc":     os.path.join(hw_dir,    "wukong_xc7a100t.xdc"),
+            "tcl":     os.path.join(hw_dir,    "wukong_xc7a100t.tcl"),
+        }
+        zip_name = "church-wukong-package.zip"
+        build_md = BUILD_MD_WUKONG
+        gen_args = ["python3", "-m", "hardware.gen_rtlil", "build", "--wukong"]
+        synth_cmd_tpl = (
+            "read_rtlil {rtlil}; "
+            "hierarchy -top church_wukong_xc7a100t; "
+            "proc; flatten; "
+            "opt -mux_undef -undriven; opt; opt_reduce; opt_clean; opt -fast; "
+            "techmap; clean; "
+            "write_verilog -noattr {verilog}"
+        )
+        return False, paths, zip_name, build_md, gen_args, synth_cmd_tpl
+
+    # Default: Ti60 F225
     paths = {
         "rtlil":   os.path.join(build_dir, "church_ti60_f225.il"),
         "verilog": os.path.join(build_dir, "church_ti60_f225.v"),
@@ -3376,6 +3451,25 @@ def _make_fpga_zip(board, is_ti60, paths, zip_name, build_md):
                 src_path = os.path.join(docs_dir, src_name)
                 if os.path.isfile(src_path):
                     zf.write(src_path, arc_name)
+    else:
+        # Wukong Artix-7 — Vivado flow; no soc_combined directory needed
+        build_dir = os.path.join(BASE_DIR, "build")
+        server_dir = os.path.join(BASE_DIR, "server")
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for key in ('verilog', 'rtlil'):
+                p = paths.get(key)
+                if p and os.path.isfile(p):
+                    zf.write(p, os.path.basename(p))
+                elif p:
+                    warnings.append(f"{os.path.basename(p)} not found — run Build first")
+            for key in ('xdc', 'tcl'):
+                p = paths.get(key)
+                if p and os.path.isfile(p):
+                    zf.write(p, os.path.basename(p))
+            bridge = os.path.join(server_dir, "local_bridge.py")
+            if os.path.isfile(bridge):
+                zf.write(bridge, "local_bridge.py")
+            zf.writestr("BUILD.md", build_md)
     return buf, zip_name, warnings
 
 
@@ -3444,9 +3538,16 @@ def download_fpga_zip():
     board = request.args.get("board", "ti60-f225").strip().lower()
     is_ti60, paths, zip_name, build_md, _, _ = _fpga_paths(board)
 
-    soc_dir = os.path.join(BASE_DIR, "hardware", "soc_combined")
-    if not os.path.isdir(soc_dir):
-        return jsonify({"error": "SoC combined source directory not found."}), 404
+    if is_ti60:
+        soc_dir = os.path.join(BASE_DIR, "hardware", "soc_combined")
+        if not os.path.isdir(soc_dir):
+            return jsonify({"error": "SoC combined source directory not found."}), 404
+    else:
+        v_path = paths.get("verilog", "")
+        if not os.path.isfile(v_path):
+            return jsonify({
+                "error": f"No build found for {board}. Click Build first to generate the Verilog."
+            }), 404
 
     try:
         buf, zip_name, zip_warnings = _make_fpga_zip(board, is_ti60, paths, zip_name, build_md)
