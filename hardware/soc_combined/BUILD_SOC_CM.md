@@ -308,12 +308,7 @@ python3 scripts/test_ti60_uart.py \
 
 ## FT4232H port layout
 
-| Device | FT4232H interface | Purpose |
-|---|---|---|
-| ttyUSB0 | Interface 0 | FPGA JTAG |
-| ttyUSB1 | Interface 1 | CPU debug JTAG (tied off in hardware) |
-| ttyUSB2 | Interface 2 | **Sapphire SoC UART** (smoke-test target) |
-| ttyUSB3 | Interface 3 | Church Machine debug UART |
+The Ti60 F225 USB port assignments (ttyUSB0–3, baud rates, and the ChromeOS ttyUSB3 console trap) are documented in the canonical table at **[docs/HARDWARE.md § 2. USB Port Map](../../docs/HARDWARE.md#2-usb-port-map)**. In brief: ttyUSB2 = Sapphire SoC UART (57,600 baud, smoke-test target); ttyUSB3 = CM debug UART (115,200 baud).
 
 ---
 
@@ -341,16 +336,7 @@ the STATUS register bit layout differs between Sapphire IP versions.
 
 ## APB3 register map
 
-The SoC accesses the CM bridge at `0xF8100000` (`IO_APB_SLAVE_0_INPUT` per generated `soc.h`).
-
-| Offset | Name   | Access | Description |
-|---|---|---|---|
-| 0x00 | CTRL   | R/W | `[0]` = cm_pb: 1=released (default), 0=pressed (active-low). Hold 0 for ≥ 1 s to enter free-run. |
-| 0x04 | STATUS | RO  | `[0]` boot_complete · `[1]` fault_valid · `[2]` fault_latched |
-| 0x08 | NIA    | RO  | CM next-instruction address |
-| 0x0C | FAULT  | RO  | `[4:0]` fault code |
-| 0x10 | UID_LO | R/W | Lower 32 bits of 64-bit device UID |
-| 0x14 | UID_HI | R/W | Upper 32 bits of 64-bit device UID |
+The full APB3 bridge register table (CTRL, STATUS, NIA, FAULT, UID_LO/HI, FAULT_GT, FAULT_INSTR, FAULT_CR14, FAULT_STAGE) is documented canonically at **[docs/HARDWARE.md § 4. APB3 Register Map](../../docs/HARDWARE.md#4-apb3-register-map)**. The SoC accesses the bridge at `0xF8100000` (`IO_APB_SLAVE_0_INPUT`, `CM_APB_BASE` in `firmware/main.c`).
 
 ---
 

@@ -2,6 +2,8 @@
 
 This guide connects your Ti60 F225 FPGA board to the Church Machine IDE when you are on a Chromebook (ChromeOS / Crostini Linux).
 
+> **Port assignments:** For the canonical USB port map (ttyUSB0–3, baud rates, and the ChromeOS ttyUSB3 console trap), see **[docs/HARDWARE.md § 2. USB Port Map](HARDWARE.md#2-usb-port-map)**.
+
 ---
 
 ## What you need

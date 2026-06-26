@@ -22,7 +22,7 @@ S-IDE v1 is a simplified entry-point IDE built on the Church Machine codebase, p
 ## System Architecture
 The system integrates an Amaranth HDL-based FPGA hardware with a web IDE (HTML/JS/CSS) and a Flask backend.
 
-**Authoritative Architectural Overview:** `docs/cloomc-foundation.md` is the single document explaining the CLOOMC ISA, the PP250 heritage, the capability model, the reliability model, the Trusted Security Base principle, memory architecture decisions (hardware-forced vs programmer choices vs natural consequences), the old 6-region boot layout and its problems, the 3-LUMP starter kit, and the Ti60 F225 board profile. Read this document first when working on the boot image, the memory map, or the ISA.
+**Authoritative Architectural Overview:** `docs/cloomc-foundation.md` is the single document explaining the CLOOMC ISA, the PP250 heritage, the capability model, the reliability model, the Trusted Security Base principle, memory architecture decisions (hardware-forced vs programmer choices vs natural consequences), the old 6-region boot layout and its problems, the 3-LUMP starter kit, and the Ti60 F225 board profile. Read this document first when working on the boot image, the memory map, or the ISA. For all Ti60 F225 hardware setup facts (USB port map, LED pin assignments, APB3 register map, firmware build steps, callhome bridge usage), see `docs/HARDWARE.md`.
 
 **UI/UX Decisions:**
 The web IDE features ten interactive views (Math, Code, Tutorial, Dashboard, Namespace, Abstractions, Pipeline, Reference, Builder, Docs). It includes educational tools like Pure Math calculator, HP-35 Calculator, Abacus, and Slide Rule, all with Church Machine trace. Learning aids comprise a "Math Challenge" sidebar, "History Tab," "Syntax Tab," and a "Visual Namespace Builder" for drag-and-drop deployment topology design. Documentation is presented as an interactive book with educational popups and a global CSS tooltip system. The design is responsive, and editor state, settings, and progress are persisted via localStorage.
@@ -81,23 +81,9 @@ An automated daily report emails `sipanticinc@gmail.com` at **05:00 UTC** every 
 
 ## Sapphire SoC — Trusted Security Base & APB3 Bridge
 
-The Sapphire SoC (RISC-V rv32im soft-core, 16 KB ROM / 16 KB RAM) runs alongside
-the Church Machine core on the Ti60. Its private RAM is inaccessible to the CM
-core — making it the natural hardware security module for CM_MSG keys.
+The Sapphire SoC (RISC-V rv32im soft-core, 16 KB ROM / 16 KB RAM) runs alongside the Church Machine core on the Ti60. Its private RAM is inaccessible to the CM core — making it the natural hardware security module for CM_MSG keys.
 
-**APB3 bridge registers** (firmware address base: Sapphire APB slave 0):
-
-| Offset | Name | What the firmware can do |
-|---|---|---|
-| `0x00` | CTRL | Write 0 to pulse CM push_button (reset/single-step) |
-| `0x04` | STATUS | Poll `boot_complete`, `fault_latched` |
-| `0x08` | NIA | Read live CM program counter (hung-program detection) |
-| `0x0C` | FAULT | Read fault code [4:0] |
-| `0x10/14` | UID_LO/HI | Written by firmware at boot; echoed in CALLHOME |
-| `0x18` | FAULT_GT | GT word0 of faulting capability (latched on fault) |
-| `0x1C` | FAULT_INSTR | Instruction word at fault NIA |
-| `0x20` | FAULT_CR14 | Active abstraction slot at fault |
-| `0x24` | FAULT_STAGE | Pipeline stage: 0=Fetch 1=Decode 2=Perm 3=Lambda 4=TPERM 5=Call 6=Return 7=DataRW |
+**APB3 bridge registers:** The full register table (CTRL, STATUS, NIA, FAULT, UID_LO/HI, FAULT_GT, FAULT_INSTR, FAULT_CR14, FAULT_STAGE) with access types and firmware address reference is at **`docs/HARDWARE.md § 4. APB3 Register Map`** — that is the authoritative copy.
 
 **Key architectural decisions:**
 - FAULT_GT / FAULT_INSTR / FAULT_CR14 / FAULT_STAGE are already latched in hardware on every fault but the current `uart_emit_callhome()` never reads them — adding ~20 lines emits full telemetry with no FPGA changes.

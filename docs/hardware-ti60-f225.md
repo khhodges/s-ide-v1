@@ -5,18 +5,7 @@
 
 ## Board specifications
 
-| Feature | Value |
-|:--------|:------|
-| **Device** | Efinix Titanium EFT90A |
-| **Board** | Sipeed Ti60 F225 Development Kit |
-| **Process** | 90 nm |
-| **Clock** | 50 MHz on-board crystal (pin B8) |
-| **LEDs** | 4 × active-HIGH (USER_LED[3:0]) |
-| **Button** | 1 × active-LOW USER_PB (external pull-up on board) |
-| **UART bridge** | FTDI FT232H USB-UART (115200 baud, USB-C connector J4) |
-| **Memory** | 256 KB SRAM via Efinix EBR tiles (2 × 128 KB blocks) |
-| **I/O banks** | Bank 3 (LVCMOS33) |
-| **Synthesis toolchain** | Efinity IDE (official Efinix toolchain) |
+Board identity facts (device part number, FPGA family, LED count, USB bridge, BRAM size, synthesis toolchain) are documented canonically at **[docs/HARDWARE.md § 1. Board Identity](HARDWARE.md#1-board-identity)**. In brief: Efinix Titanium EFT90A, 3 user LEDs (GPIOR_P_07/08/09), FT4232H USB bridge (4 interfaces), Efinity 2026.1 toolchain.
 
 ---
 
@@ -172,94 +161,21 @@ python3 -c "from hardware.ti60_f225 import ChurchTi60F225; print('OK')"
 
 ## Build and flash
 
-All Efinity commands must run on your local machine (Efinity IDE is not available in Replit).
+The full 9-step build sequence (including `patch_sapphire_init.py`, INIT_0 verification, Place & Route, and flash commands) is documented in **[hardware/soc_combined/BUILD_SOC_CM.md](../hardware/soc_combined/BUILD_SOC_CM.md)**. A short-form checklist is at **[docs/HARDWARE.md § 5. Firmware Build Steps](HARDWARE.md#5-firmware-build-steps)**.
 
-### Step 1 — Synthesis
-
-```bash
-efinity -t build/church_ti60_f225.rtlil -d EFT90A -p pinout.csv -o build/church_ti60_f225.edf
-```
-
-Expected output: `build/church_ti60_f225.edf` (~500 KB Edif netlist, no errors)
-
-Timing target: **50 MHz** (20 ns period). If synthesis fails to close timing, try lowering
-the target to 25 MHz:
-```bash
-efinity -t build/church_ti60_f225.rtlil -d EFT90A --freq 25 -p pinout.csv -o build/church_ti60_f225.edf
-```
-
-### Step 2 — Place and route
-
-```bash
-efinity --pnr build/church_ti60_f225.edf -p pinout.csv -o build/church_ti60_f225_pnr.edf
-```
-
-Expected output: `build/church_ti60_f225_pnr.edf` + timing report.
-
-### Step 3 — Bitstream
-
-```bash
-efinity --bitstream build/church_ti60_f225_pnr.edf -o build/church_ti60_f225.fs
-```
-
-Expected output: `build/church_ti60_f225.fs` (~1–2 MB binary bitstream)
-
-### Step 4 — Flash
-
-**CLI (openFPGALoader):**
-```bash
-openFPGALoader -b ti60f225 build/church_ti60_f225.fs
-```
-
-**GUI (Efinity Programmer):**
-```bash
-efinity --program build/church_ti60_f225.fs
-```
-
-Troubleshooting:
-- `lsusb | grep -i efinix` — confirm the FTDI bridge is enumerated
-- If programming times out, try `openFPGALoader -b ti60f225 --verbose build/church_ti60_f225.fs`
+Note: All Efinity synthesis commands must run on your local machine — the Efinity IDE is not available in Replit.
 
 ---
 
 ## UART serial console
 
-Connect USB-C to J4. The FTDI FT232H bridge enumerates as `/dev/ttyUSB0` (Linux) or
-`COM<N>` (Windows).
-
-```bash
-picocom -b 115200 /dev/ttyUSB0
-# or
-minicom -D /dev/ttyUSB0 -b 115200
-```
-
-Protocol: 8N1, 115200 baud, no flow control.
-
-On boot, the firmware prints:
-```
-CHURCH Ti60 v1.0
-<NIA as hex>HALT
-```
-
-On each button press (single-step):
-```
-S:<NIA as hex>HALT
-```
-
-On fault:
-```
-S:<NIA as hex>F:<fault code as hex>HALT
-```
+USB port assignments and baud rates for the FT4232H interfaces are documented canonically at **[docs/HARDWARE.md § 2. USB Port Map](HARDWARE.md#2-usb-port-map)**. In summary: connect to `/dev/ttyUSB2` at 57,600 baud for the Sapphire SoC UART (CALLHOME output).
 
 ---
 
 ## Boot sequence
 
-1. 16-cycle boot delay on power-up
-2. Boot ROM initialises CR6 (c-list), CR14 ([CLOOMC](https://sipantic.blogspot.com/2025/03/xx.html)/code), CR8, CR15
-3. Boot namespace (NS) and c-list entries written to EBR at init time
-4. 3-second startup delay (hardware) → UART banner sent
-5. Machine enters HALTED state; press USER_PB to single-step
+The Ti60 F225 boot sequence (Phase A synthesis, Phase B DMEM load, Phase C boot ROM execution) is documented in detail in **[docs/StartupCM.md](StartupCM.md)**. LED meanings at each boot step are at **[docs/HARDWARE.md § 3. LED Pin Assignments](HARDWARE.md#3-led-pin-assignments)**.
 
 ---
 
@@ -316,25 +232,23 @@ CRC seals shown are the NS entry `word2_w3` values (CRC-16/CCITT over GT[24:0] +
 | 3 | `0x4000000C` | `LED[3]` | `[2:0]={B,G,R}` | `led3` | HIGH |
 | 4 | `0x40000010` | `LED[4]` | `[2:0]={B,G,R}` | *(no pin)* | — |
 
-Only bit 0 (R) drives a physical pin. The Ti60 F225 has 4 physical LEDs; offset 4 is
-a register-only placeholder with no pin. Bits `[31:3]` ignored on write, read as zero.
+Only bit 0 (R) drives a physical pin. The Ti60 F225 has **3 physical LEDs** (offsets 0–2, pins GPIOR_P_07/08/09); offsets 3 and 4 are register-only placeholders with no physical pin. Bits `[31:3]` ignored on write, read as zero.
 
 **Usage:**
 ```
-DWRITE DR_src, [CR_led + N]   ; N = 0..4, DR_src[0] = R (1 = LED on)
+DWRITE DR_src, [CR_led + N]   ; N = 0..2 (physical LEDs), DR_src[0] = R (1 = LED on)
 DREAD  DR_dst, [CR_led + N]   ; read back register value
 ```
 
-**Pre-boot LED meanings (hardware status display):**
+**Pre-boot LED meanings (hardware status display):** See **[docs/HARDWARE.md § 3. LED Pin Assignments](HARDWARE.md#3-led-pin-assignments)** for the authoritative step-by-step guide. In summary:
 
-| LED | Pre-boot meaning |
-|:----|:----------------|
-| led0 | ON while booting, OFF when boot complete |
-| led1 | ON when running; blinks at 1 Hz when halted |
-| led2 | ON when fault detected |
-| led3 | ON until boot complete |
+| LED | GPIO pin | Pre-boot meaning |
+|:----|:---------|:-----------------|
+| led0 | GPIOR_P_07 | ON when Sapphire SoC is out of reset |
+| led1 | GPIOR_P_08 | ON within ~1 ms when CM boot ROM completes (sticky) |
+| led2 | GPIOR_P_09 | ON ~3 s after power-on when CM banner is sent; also ON on fault |
 
-Post-boot: software controls all four LEDs via DWRITE to offsets 0–3.
+Post-boot: software controls all three physical LEDs via DWRITE to offsets 0–2.
 
 ---
 
@@ -351,7 +265,7 @@ Post-boot: software controls all four LEDs via DWRITE to offsets 0–3.
 | `b_flag` | 1 |
 | GT word 0 | `0x86800008` |
 | CRC seal | `0x43A4` |
-| Physical bridge | FTDI FT232H, 115200 baud, USB-C J4 |
+| Physical bridge | FTDI FT4232H interface 2, 57,600 baud — see [docs/HARDWARE.md § 2](HARDWARE.md#2-usb-port-map) |
 
 **Register map:**
 
