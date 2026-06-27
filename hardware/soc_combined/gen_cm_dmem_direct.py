@@ -72,11 +72,11 @@ WRITE_PAT = re.compile(
 )
 
 READ_PAT = re.compile(
-    r'  reg \[31:0\] _0_;\n'
+    r'  reg \[31:0\] (_\d+_);\n'
     r'  always @\(posedge clk\) begin\n'
-    r'    _0_ <= dmem\[mem_addr\];\n'
+    r'    (_\d+_) <= dmem\[mem_addr\];\n'
     r'  end\n'
-    r'  assign mem_rd_data = _0_;\n',
+    r'  assign mem_rd_data = (_\d+_);\n',
     re.MULTILINE,
 )
 
