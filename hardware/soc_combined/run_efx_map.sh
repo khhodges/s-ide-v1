@@ -56,7 +56,7 @@ echo ""
 
 mkdir -p "$SOC_DIR/work_syn"
 cd "$SOC_DIR"
-"$EFX_MAP" --project-xml "$PROJECT" 2>&1 | tee "$SOC_DIR/work_syn/synthesis.log"
+"$EFX_MAP" --project-xml "$PROJECT" --max_threads 4 2>&1 | tee "$SOC_DIR/work_syn/synthesis.log"
 echo ""
 echo "==> Synthesis complete. Output in $SOC_DIR/work_syn/"
 echo "    Verify firmware embedded in BRAM:"
