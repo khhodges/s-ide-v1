@@ -10,20 +10,27 @@ Never use `efx_run.py` on a headless server — it requires PyQt6 and fails with
 
 ## Correct sequence (headless)
 
-1. **Synthesis** — `efx_map --project-xml <proj>.xml --max_threads 4`
-   - Writes synthesised netlist to `outflow/<circuit>.netlist`
+1. **Synthesis** — `efx_map --project-xml <proj>.xml`
+   - Do NOT pass `--work_dir` or `--output_dir` — those flags use hyphens and the underscore form causes efx_map to print help and exit 0
+   - The XML already specifies `work_dir` and `write_efx_verilog`; pass `--project-xml` only
    - Writes VDB to `<SOC_DIR>/top.vdb` (named after Verilog `module top`, NOT `outflow/<circuit>.vdb`)
-   - Does NOT write `outflow/<circuit>.vdb` — that only happens via `efx_run.py --flow map`
+   - Also writes `top.res.csv` — **this is a resource utilization report, NOT an IO sync file**
 
-2. **Interface Designer** — `efx_run <circuit> --prj --flow interface --family Titanium -d Ti60F225`
-   - (`efx_run` binary, not `efx_run.py` script)
-   - Writes IO placement CSV to `<SOC_DIR>/top.res.csv` (named after top module, not `outflow/<circuit>.interface.csv`)
-   - Throws `'EFINITY_USER_DIR_INI'` and `'EFXPT_HOME'` KeyErrors on headless but still writes the CSV — use `|| true` to continue
+2. **Interface Designer / sync file** — BROKEN headlessly
+   - `efx_run.py` interface step does not generate any file on headless (PyQt6 missing)
+   - `top.res.csv` produced by efx_map is a resource report; passing it as `--sync_file` crashes efx_pnr with "unknown escape sequence" on the `sep=\t` header
+   - **Workaround**: omit `--sync_file` entirely. efx_pnr reads peri.xml from the project XML (`<efx:inter_file>`). IO cell names in peri.xml must exactly match top-level Verilog port names. If they match, placement works; if not, IO cells are randomly placed (logic still routed correctly — just wrong physical pins).
 
-3. **Place & Route** — `efx_pnr --prj <proj>.xml --circuit <circuit> --family Titanium --device Ti60F225 --operating_conditions C3 --pack --place --route --vdb_file top.vdb --sync_file top.res.csv --work_dir work_pnr --output_dir outflow --max_threads 4`
+3. **Place & Route** — omit `--sync_file`:
+   ```
+   efx_pnr --prj <proj>.xml --circuit <circuit> \
+     --family Titanium --device Ti60F225 --operating_conditions C3 \
+     --pack --place --route \
+     --vdb_file top.vdb \
+     --work_dir work_pnr --output_dir outflow --max_threads 4
+   ```
    - `--vdb_file top.vdb` (project root, not outflow/)
-   - `--sync_file top.res.csv` (project root)
-   - `--max_threads 4` for placement/routing parallelism
+   - Do NOT pass `--sync_file` — the resource CSV will crash it
    - EFINITY_HOME must be exported before calling efx_pnr
 
 ## Required env vars (set before any step)
@@ -36,8 +43,14 @@ export LD_LIBRARY_PATH=$EFINITY_HOME/lib:${LD_LIBRARY_PATH:-}
 mkdir -p $EFINITY_USER_DIR_INI
 ```
 
-## Timing (4-vCPU / 8 GB DigitalOcean droplet, Ti60 SoC+CM design)
-- Synthesis (`efx_map`): ~2.6 hours (nearly single-threaded LUT mapping)
+## upper_mem / BRAM sizing trap
+The gen_cm_dmem_direct.py script previously declared `reg [31:0] upper_mem [2048:16383]` for
+addresses above the EFX_RAM10 range. Efinity synthesises this as 458K flip-flops (not BRAM),
+causing 468K clock loads and making the design 16× too large for Ti60. The fix is to return
+`32'h0` for addresses ≥ 2048 rather than declaring a large reg array. Fixed in HEAD.
+
+## Timing (4-vCPU / 8 GB DigitalOcean droplet, Ti60 SoC+CM design — 66K-line Verilog)
+- Synthesis (`efx_map`): ~45 min (10K clock loads after upper_mem fix)
 - PnR (`efx_pnr`): expect 30–90 min with 4 threads
 - libstdc++ version warning (system v34 > bundled v32) is harmless
 
