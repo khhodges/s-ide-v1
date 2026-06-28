@@ -1,4 +1,5 @@
 - [EFX_MAP $readmemb working directory](efx-map-readmemb.md) — symbol files must be in work_syn/ not project root or BRAM is silently zero-initialised
+- [Sapphire BRAM init — Variant B stub block](sapphire-bram-init-variant.md) — Efinity 2026.1 IP has stub initial begin (4 zeros) not $readmemb; depth=8192 words; patch_sapphire_init.py handles both variants
 - [Startup Wizard E2E setup](wizard-e2e-setup.md) — wizard is in #builder>#ti60ConnectPanel; needs switchView+switchBuilderViewTab; display:'' vs 'block' matters; use defer not async
 - [CLOOMC detection ordering](cloomc-detection-order.md) — _detectCLOOMC() matches keywords (abstraction, method, capabilities) that overlap all CLOOMC++ variants; must run AFTER specific detectors (Symbolic, Lambda, Haskell) or those languages break
 - [Ti60 SoC UART clockDivider](ti60-uart-clockdiv.md) — Sapphire SoC UART resets clockDivider to 0x00 (not 0x35); firmware MUST write UART_CLOCKDIV=53 before first uart_puts or output is 6.25 Mbaud silence
