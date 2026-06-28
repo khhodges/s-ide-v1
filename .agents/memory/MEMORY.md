@@ -20,3 +20,4 @@
 - [app.py raw SQL pattern](app-py-raw-sql.md) — server/app.py has no sqlite3 import; all DB access must use db.session.execute(_sa_text(...)); never _sqlite3.connect()
 - [church_ti60f225 module name](church-module-name.md) — Amaranth/Yosys generates module church_ti60f225 (no underscore); top.v must instantiate without underscore or efx_map hard-crashes with bare STACK TRACE
 - [v2.0 hardware format audit](v2-format-audit.md) — cond codes ARM order (CS=2 not LT=2); Turing opcodes at 16-25 not 10-19; integrity32=ROL-XOR not CRC; g_bit is toggle not set/clear; simulator NS format incompatible with hardware WORD2_LAYOUT
+- [Efinity headless PnR flow](efinity-headless-pnr.md) — efx_run.py needs PyQt6 (unavailable headless); VDB=top.vdb, sync=top.res.csv; set EFINITY_USER_DIR_INI+EFXPT_HOME; always use tmux

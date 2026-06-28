@@ -46,8 +46,11 @@ DEVICE="Ti60F225"
 OPCOND="C3"
 
 mkdir -p "$SOC_DIR/work_pnr" "$SOC_DIR/outflow"
-# EFINITY_USER_DIR_INI must exist; headless servers throw a KeyError without it.
+# Headless servers throw KeyError for these vars if unset.
+# EFINITY_USER_DIR_INI — user settings dir
+# EFXPT_HOME           — Efinity platform tools home (defaults to EFINITY_HOME)
 export EFINITY_USER_DIR_INI="${EFINITY_USER_DIR_INI:-$HOME/.efinity}"
+export EFXPT_HOME="${EFXPT_HOME:-$EFINITY}"
 mkdir -p "$EFINITY_USER_DIR_INI"
 cd "$SOC_DIR"
 
