@@ -100,17 +100,20 @@ module top (
     assign cm_uart_rx_int = relay_tx | cm_uart_rx;
 
     // ----------------------------------------------------------------
-    // Power-on reset — counter counts UP from 0 (Efinity Ti60 FFs
-    // power up to 0 on silicon, ignoring RTL initial values).
-    // por_reset = HIGH (~system_reset asserted) for 128 cycles (~5 µs
-    // at 25 MHz), then LOW forever once por_cnt[7] sets.
-    // Sapphire SoC requires this HIGH→LOW pulse on io_asyncReset;
-    // tying it to 0 permanently leaves io_systemReset stuck HIGH.
+    // Power-on reset — down-counter from 0xFF → 0x00 (~255 cycles, ~10 µs
+    // at 25 MHz).  por_reset is HIGH while any bit is set, then LOW forever.
+    //
+    // (* syn_keep = "true" *) is the Efinity attribute (NOT Xilinx's "keep").
+    // Without it efx_map proves por_reset constant and folds it to 0, which
+    // ties io_asyncReset=0 permanently → io_systemReset stuck HIGH → LED0 OFF.
+    //
+    // init=8'hFF is robust against Efinity FF power-up state: whether EFX_FF
+    // initialises to 0 or 1, the Verilog initial value forces the correct start.
     // ----------------------------------------------------------------
-    (* keep = "true" *) reg [7:0] por_cnt = 8'h00;
+    (* syn_keep = "true" *) reg [7:0] por_cnt = 8'hFF;
     always @(posedge clk)
-        if (!por_cnt[7]) por_cnt <= por_cnt + 1'b1;
-    wire por_reset = ~por_cnt[7];   // HIGH until bit 7 sets, then LOW
+        if (|por_cnt) por_cnt <= por_cnt - 1'b1;
+    wire por_reset = (|por_cnt);    // HIGH for 255 cycles then LOW forever
 
     // ----------------------------------------------------------------
     // Sapphire SoC instantiation
