@@ -239,7 +239,7 @@ static cm_key_entry_t cm_key_table[9];  /* zero-initialised at reset */
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
-static void uart_putc(char c)
+static inline __attribute__((always_inline)) void uart_putc(char c)
 {
     UART_DATA = (1u << 8) | (uint32_t)(unsigned char)c;
     /* Register-only delay — loop counter stays in a CPU register.
