@@ -130,22 +130,24 @@ def patch_variant_b(src, sym_values, bram_depth):
         r'\1end\n'
     )
 
-    # Build the new full-firmware block
+    # Build 4 SEPARATE initial blocks — one per lane so Efinity can recognise
+    # each reg array + its own initial block as a single-port BRAM and infer
+    # EFX_BRAM with non-zero INIT values.  A single combined block containing
+    # all four arrays is NOT recognised as BRAM init by EFX_MAP 2026.1 and
+    # causes the tool to synthesise the arrays as 262K flip-flops instead.
     outer_indent = "  "   # two spaces — matches "  initial begin" / "  end"
-    new_assignments = ""
+    new_blocks = ""
     for idx, ram_name in enumerate(RAM_NAMES):
         vals = sym_values[idx][:bram_depth]
-        # Zero-pad to bram_depth if symbol file is shorter
         vals += [0] * (bram_depth - len(vals))
-        new_assignments += "".join(make_assignments(ram_name, vals, indent))
+        assignments = "".join(make_assignments(ram_name, vals, indent))
+        new_blocks += f"{outer_indent}initial begin\n{assignments}{outer_indent}end\n"
 
-    new_block = f"{outer_indent}initial begin\n{new_assignments}{outer_indent}end\n"
-
-    new_src, n = re.subn(stub_pattern, new_block, src)
+    new_src, n = re.subn(stub_pattern, new_blocks, src)
     if n:
         total_assignments = len(RAM_NAMES) * bram_depth
-        print(f"  Replaced stub initial block → {total_assignments} assignments "
-              f"({bram_depth} words × {len(RAM_NAMES)} lanes)")
+        print(f"  Replaced stub initial block → 4 separate blocks, "
+              f"{total_assignments} assignments ({bram_depth} words × {len(RAM_NAMES)} lanes)")
         return new_src, n
     return src, 0
 
