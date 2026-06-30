@@ -119,7 +119,7 @@ There are two bridge scripts — make sure you get the right one:
 | `webserial_bridge.py` | WebSerial HTTP proxy for Chrome's built-in serial API. Not needed here. |
 
 ```bash
-curl -sL "https://31592a69-0a64-402e-9237-89b7ce66a127-00-1hr1bt2ealopt.kirk.replit.dev/callhome_bridge.py" \
+curl -sL "https://lab.cloomc.org/callhome_bridge.py" \
   -o ~/callhome_bridge.py
 ```
 
@@ -133,7 +133,7 @@ Replace `/dev/ttyUSB2` with your port from Step 4 if different.
 python3 ~/callhome_bridge.py \
   --port=/dev/ttyUSB2 \
   --baud=57600 \
-  --ide=https://31592a69-0a64-402e-9237-89b7ce66a127-00-1hr1bt2ealopt.kirk.replit.dev
+  --ide=https://lab.cloomc.org
 ```
 
 **Leave this terminal open.** The bridge must keep running while you use the IDE.

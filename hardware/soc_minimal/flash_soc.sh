@@ -12,7 +12,7 @@
 
 set -uo pipefail
 
-B="${IDE_URL:-https://31592a69-0a64-402e-9237-89b7ce66a127-00-1hr1bt2ealopt.kirk.replit.dev}"
+B="${IDE_URL:-https://lab.cloomc.org}"
 WORK="$HOME/church_project/SoC_minimal"
 MAP_HOME="${EFX_MAP_HOME:-$HOME/efinity/2025.2}"
 PNR_HOME="${EFX_PNR_HOME:-$HOME/efinity/2026.1}"

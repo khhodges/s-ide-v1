@@ -388,7 +388,7 @@ The peri.xml is in the wrong format. Efinity 2026.1 Interface Designer requires:
 The Replit `hardware/soc_combined/church_soc_cm.peri.xml` is already corrected. If the file on the Penguin is stale, re-download it:
 
 ```bash
-curl -s "https://31592a69-0a64-402e-9237-89b7ce66a127-00-1hr1bt2ealopt.kirk.replit.dev/dl/peri-xml" \
+curl -s "https://lab.cloomc.org/dl/peri-xml" \
   -o ~/church_project/SoC/church_soc_cm.peri.xml
 ```
 

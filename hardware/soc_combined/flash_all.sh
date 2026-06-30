@@ -6,7 +6,7 @@
 
 set -uo pipefail
 
-B="${IDE_URL:-https://31592a69-0a64-402e-9237-89b7ce66a127-00-1hr1bt2ealopt.kirk.replit.dev}"
+B="${IDE_URL:-https://lab.cloomc.org}"
 SOC="$HOME/church_project/SoC"
 export EFINITY_HOME="$HOME/efinity/2026.1"
 EFX="$EFINITY_HOME/bin/efx_run"
