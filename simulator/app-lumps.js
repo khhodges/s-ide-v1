@@ -4438,19 +4438,21 @@ async function _loadLumpBinaryIntoSim(token, name, btn, nsSlot) {
 
         if (typeof sim === 'undefined' || !sim) throw new Error('Simulator not ready');
 
-        // Guard: when nsSlot is null/undefined we force the lump into
-        // BOOT_ABSTR_NS_SLOT (slot 3 — Boot.Abstr, the only slot CR14
-        // references after boot).  But sim.bootEntrySlot may still hold a
-        // previously-selected slot (e.g. the Ethernet abstraction, identified
-        // by token 00003300, whose slot is assigned at load time) from a
-        // boot-entry badge click.  instantBoot() runs NUC_CLIST which does an mLoad on
-        // sim.bootEntrySlot; if that slot has no installed lump the mLoad
-        // faults with LUMP_MAGIC before we ever write our binary.
-        // Fix: temporarily force both sim.bootEntrySlot and the module-level
-        // bootEntrySlot (declared in app-memory.js) to BOOT_ABSTR_NS_SLOT for
-        // the instantBoot call.  We restore unconditionally — on success and on
-        // any error — so the user's boot-entry UI selection is always preserved.
-        const _BOOT_SLOT = (typeof BOOT_ABSTR_NS_SLOT !== 'undefined') ? BOOT_ABSTR_NS_SLOT : 3;
+        // Guard: when nsSlot is null/undefined we force the lump into the
+        // canonical Boot.Abstr slot (the only slot CR14 references after boot).
+        // sim._bootAbstrSlot is set once in the constructor from bootEntrySlot
+        // and NEVER mutated — it is the stable architectural identity for
+        // Boot.Abstr regardless of user boot-entry badge selections or lump
+        // loading that overwrites display labels in nsLabels.
+        //
+        // Without this guard, sim.bootEntrySlot may hold a user-selected slot
+        // (e.g. 7, Ethernet) from a boot-entry badge click.  instantBoot() runs
+        // NUC_CLIST which mLoads from sim.bootEntrySlot; if that slot has no
+        // installed lump the mLoad faults with LUMP_MAGIC before the binary is
+        // written.  Temporarily forcing to the canonical Boot.Abstr slot before
+        // instantBoot() prevents that fault.  We restore unconditionally on
+        // success and error so the user's UI selection is preserved.
+        const _BOOT_SLOT = sim._bootAbstrSlot;
         const _forcingBootSlot = (nsSlot === null || nsSlot === undefined);
         const _savedSimBootEntry = sim.bootEntrySlot;
         // bootEntrySlot is a let-declared cross-file global in app-memory.js.
@@ -4485,7 +4487,7 @@ async function _loadLumpBinaryIntoSim(token, name, btn, nsSlot) {
         // (before restore) so it correctly evaluates to slot 3 on the forced path.
         const _resolvedSlot = (nsSlot !== null && nsSlot !== undefined)
             ? Number(nsSlot)
-            : (sim.bootEntrySlot || _BOOT_SLOT);
+            : _BOOT_SLOT;
         if (sim.nsLabels) sim.nsLabels[_resolvedSlot] = name || token;
 
         // Restore the user's prior boot-entry selection now that the lump is

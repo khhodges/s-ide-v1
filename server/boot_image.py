@@ -69,7 +69,10 @@ def ns_table_reserve_words(ns_slots_max):
 # DEVICE_REG_LIMITS and hardware/boot_rom.py _MMIO_ENTRIES).
 DEVICE_REG_LIMITS = {}  # slots 11 (UART), 12 (LED), 13 (Button), 14 (Timer) freed — Tasks #406 and #431
 
-BOOT_ABSTR_NS_SLOT   = 3   # NS slot holding the Boot Abstraction lump (Boot.Abstr)
+try:
+    from hardware.hw_types import BOOT_ABSTR_NS_SLOT
+except ImportError:
+    BOOT_ABSTR_NS_SLOT = 3   # fallback: hardware.hw_types not on path (standalone runner)
 
 # Mandatory NS slots — every valid boot image must have a non-zero entry here.
 # Slot 2 freed (Startup.Config removed); foundational trio is slots 0, 1, 3.

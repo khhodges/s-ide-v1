@@ -117,11 +117,6 @@ const IO_PORT_PET_NAME_WR     = 0xFFFFFF38; // DWRITE to this addr marks c-list 
 // in a subsequent program that never declared those slots.
 const BOOT_NAMED_SLOTS = Object.freeze([0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
 
-// Module-scope boot constants — referenced by loadProgram, _bootStep, etc.
-const BOOT_ABSTR_NS_SLOT      = 3;  // NS slot of the Boot Abstraction lump (Boot.Abstr)
-const TUNNEL_NS_SLOT          = 31; // NS slot of the Tunnel abstraction (call-home I/O channel)
-const SCHEDULER_NS_SLOT       = 8;  // NS slot of the Scheduler abstraction (Task #1077)
-const SCHEDULER_IRQ_NS_SLOT   = 50; // NS slot of the Scheduler.IRQ thread (fixed boot-image slot, Task #1077)
 
 // SCHEDULER_IRQ_CLIST — simulated c-list for the Scheduler abstraction (NS slot 8).
 // Mirrors hardware/boot_rom.py SCHEDULER_IRQ_CLIST (Task #1530).
@@ -181,12 +176,36 @@ class ChurchSimulator {
         this.abstractGTManager = new AbstractGTManager();
 
         // Which NS slot the boot sequence jumps to at B:05/B:06.
-        // Defaults to BOOT_ABSTR_NS_SLOT (3 = LED flash); overridden by app.js
+        // Defaults to 3 (Boot.Abstr / LED flash); overridden by app.js
         // when the user selects a different boot-entry abstraction.
         // Intentionally NOT reset by reset() — persists across soft resets.
-        this.bootEntrySlot = BOOT_ABSTR_NS_SLOT;
+        this.bootEntrySlot = 3;
+
+        // Immutable architectural identity: the canonical Boot.Abstr slot.
+        // Captured once at construction from bootEntrySlot and NEVER mutated
+        // afterwards — not by UI selection, not by lump loading, not by reset.
+        // Use this (not bootEntrySlot) when you need the architectural slot
+        // identity rather than the current UI selection.
+        this._bootAbstrSlot = this.bootEntrySlot;
 
         this.reset();
+    }
+
+    // ── Pet-name slot resolver ────────────────────────────────────────────────
+    // Searches nsLabels for a label matching `name` and returns its slot index.
+    // Throws when not found and no fallback is given (programming error).
+    // NS slot integer constants must not appear in application-layer JS; use
+    // this helper instead so renaming an NS slot in the boot image propagates
+    // automatically to all runtime code that refers to it by name.
+    _slotByPetName(name, fallback = undefined) {
+        if (this.nsLabels) {
+            for (const [idx, label] of Object.entries(this.nsLabels)) {
+                if (label === name) return parseInt(idx, 10);
+            }
+        }
+        if (fallback !== undefined) return fallback;
+        // No fallback supplied — missing pet-name is a programming error.
+        throw new Error(`[_slotByPetName] no NS slot found for '${name}' and no fallback given`);
     }
 
     // Boot Image Designer Step 1 (Task #214): the size of the namespace memory
@@ -1110,12 +1129,12 @@ class ChurchSimulator {
         // keeps this path consistent with server/boot_image.py BOOT_ABSTR_DEFAULT_SIZE.
         const BOOT_ABSTR_LUMP_SIZE = 64;
         const NS_LUMP_SIZE         = (_bcStep1 && _bcStep1.namespaceLumpWords) || this.SLOT_SIZE;
-        // BOOT_ABSTR_NS_SLOT — module-level constant; slot 2 is freed (Startup.Config removed).
+        // Boot.Abstr at bootEntrySlot (default 3); slot 2 is freed (Startup.Config removed).
         const slotSizes = {};
         slotSizes[0] = NS_LUMP_SIZE;
         slotSizes[1] = THREAD_LUMP_SIZE;
         // Slot 2 freed — no override needed.
-        slotSizes[BOOT_ABSTR_NS_SLOT] = BOOT_ABSTR_LUMP_SIZE;  // Boot.Abstr: 64w default
+        slotSizes[this.bootEntrySlot] = BOOT_ABSTR_LUMP_SIZE;  // Boot.Abstr: 64w default
 
         // Boot Image Designer Step 2 (Task #215): per-slot physAddr overrides
         // for programmer-declared resident lumps. NS entries for those slots
@@ -1308,7 +1327,7 @@ class ChurchSimulator {
         //   Word  0: Lump header (n_minus_6, cw=3, cc=0)
         //   Words 1–3: Code region
         //   Words 4..63: Free (no c-list — cc=0 means no c-list register)
-        const bootEntryLoc     = this.memory[this.NS_TABLE_BASE + BOOT_ABSTR_NS_SLOT * this.NS_ENTRY_WORDS];
+        const bootEntryLoc     = this.memory[this.NS_TABLE_BASE + this.bootEntrySlot * this.NS_ENTRY_WORDS];
         const entryN_MINUS_6   = Math.max(0, Math.ceil(Math.log2(BOOT_ABSTR_LUMP_SIZE)) - 6);
         const entryLumpSize    = BOOT_ABSTR_LUMP_SIZE;
         this.memory[bootEntryLoc] = this.packLumpHeader(entryN_MINUS_6, NUC_CODE_WORDS, 0, 0);
@@ -1318,10 +1337,10 @@ class ChurchSimulator {
         }
         // cc=0: no c-list region. All words after code region are freespace (already zero).
         const entryCRLimit     = entryLumpSize - 1;
-        const entryNSBase      = this.NS_TABLE_BASE + BOOT_ABSTR_NS_SLOT * this.NS_ENTRY_WORDS;
+        const entryNSBase      = this.NS_TABLE_BASE + this.bootEntrySlot * this.NS_ENTRY_WORDS;
         this.memory[entryNSBase + 1] = this.packNSWord1(entryCRLimit, 0, 0, 1, 0);
         this.memory[entryNSBase + 2] = this.makeVersionSeals(0, bootEntryLoc, entryCRLimit);
-        this.nsClistMap[BOOT_ABSTR_NS_SLOT] = [];                     // Boot.Abstr has no c-list (cc=0)
+        this.nsClistMap[this.bootEntrySlot] = [];                     // Boot.Abstr has no c-list (cc=0)
 
         // Slot 2 freed — Startup.Config removed. The hardware ISA owns M-state per CR
         // register. CALL through a non-M E-GT drops M automatically (BOOT_ROM_WORDS[2]).
@@ -1616,7 +1635,7 @@ class ChurchSimulator {
 
                 if (this.abstractionRegistry) {
                     const _chResult = this.abstractionRegistry.dispatchMethod(
-                        TUNNEL_NS_SLOT, 'Register', this,
+                        this._slotByPetName('Tunnel', 31), 'Register', this,
                         { dr1: _bootReason, dr2: _lastFault, dr3: _faultNIA }
                     );
                     if (_chResult && _chResult.ok !== false) {
@@ -3013,6 +3032,10 @@ class ChurchSimulator {
         if (!this.abstractionRegistry) return null;
         if (!this.irqState || this.irqState.irqActive) return null;
 
+        // Resolve pet names to slot indices at call time (nsLabels is live here).
+        const _schedulerSlot   = this._slotByPetName('Scheduler', 8);
+        const _irqThreadSlot   = this._slotByPetName('Scheduler.IRQ.Thread', 50);
+
         // Clear the alarm flag immediately on TIMER fire so timerArmed is false
         // whether this is called from step() (which pre-clears it) or directly.
         if (reason === 'TIMER' && this.irqState.timerArmed) {
@@ -3021,11 +3044,11 @@ class ChurchSimulator {
 
         // ── Authority check (Task #1530) ──────────────────────────────────────
         // Before performing the simulated CHANGE CR12/CR13 thread-stack swap,
-        // verify that the Scheduler abstraction (NS slot 8) holds E-perm GTs
+        // verify that the Scheduler abstraction holds E-perm GTs
         // for CR12_PORT (→ NS[19]) and CR13_PORT (→ NS[20]) in its c-list.
         // Mirrors the hardware mLoad pipeline's capability validation for CHANGE.
         // Cross-reference: hardware/boot_rom.py SCHEDULER_IRQ_CLIST (Task #1530).
-        const _schedulerAbs = this.abstractionRegistry.getAbstraction(SCHEDULER_NS_SLOT);
+        const _schedulerAbs = this.abstractionRegistry.getAbstraction(_schedulerSlot);
         const _clist = _schedulerAbs ? (_schedulerAbs.capabilities || []) : [];
         if (_clist.length > 0) {
             const _cr12Auth = _clist[0];
@@ -3056,16 +3079,16 @@ class ChurchSimulator {
         this.irqState.suspendedStep = this.stepCount;
 
         // Simulate CHANGE to the predefined IRQ thread (NS slot 50, Task #1077 §3).
-        // In hardware, Scheduler.IRQ performs CHANGE to the fixed boot-image IRQ thread
-        // at SCHEDULER_IRQ_NS_SLOT; we track this here for auditability.
-        this.irqState.irqThreadSlot = SCHEDULER_IRQ_NS_SLOT;
-        this.output += `  [IRQ] CHANGE \u2192 NS[${SCHEDULER_IRQ_NS_SLOT}] (Scheduler.IRQ.Thread) — context saved at step ${this.stepCount}\n`;
+        // In hardware, Scheduler.IRQ performs CHANGE to the fixed boot-image IRQ thread;
+        // we track this here for auditability.
+        this.irqState.irqThreadSlot = _irqThreadSlot;
+        this.output += `  [IRQ] CHANGE \u2192 NS[${_irqThreadSlot}] (Scheduler.IRQ.Thread) — context saved at step ${this.stepCount}\n`;
 
-        // Dispatch the IRQ handler on the Scheduler abstraction (NS slot 8).
+        // Dispatch the IRQ handler on the Scheduler abstraction.
         // The handler represents the IRQ thread's sweep logic (wake sleeping threads,
         // process pending flags, and optionally handle Tier 2 fault recovery).
         const result = this.abstractionRegistry.dispatchMethod(
-            SCHEDULER_NS_SLOT, 'IRQ', this, { reason, faultRecord, slot, savedContext: this.irqState.savedContext }
+            _schedulerSlot, 'IRQ', this, { reason, faultRecord, slot, savedContext: this.irqState.savedContext }
         );
 
         // CHANGE back to the suspended thread's context (Task #1077 §3 restore).
@@ -6086,7 +6109,7 @@ class ChurchSimulator {
     }
 
     loadProgram(words, startAddr) {
-        const abstrSlot = BOOT_ABSTR_NS_SLOT;  // Boot.Abstr is NS slot 3 (Task #247)
+        const abstrSlot = this.bootEntrySlot;  // active boot-entry slot (default 3 = Boot.Abstr, Task #247)
         const abstrBase = this.NS_TABLE_BASE + abstrSlot * this.NS_ENTRY_WORDS;
         const codeLoc = this.memory[abstrBase] || (abstrSlot * this.SLOT_SIZE);
         const baseAddr = this.bootComplete ? codeLoc : (startAddr || 0);
@@ -6237,7 +6260,7 @@ class ChurchSimulator {
     loadLumpBinary(words, nsSlot) {
         const EXTENDED_BASE  = 0x0400;
         const _nsSlotRaw     = (nsSlot !== undefined && nsSlot !== null) ? Number(nsSlot) : NaN;
-        const abstrSlot      = Number.isInteger(_nsSlotRaw) ? _nsSlotRaw : BOOT_ABSTR_NS_SLOT;
+        const abstrSlot      = Number.isInteger(_nsSlotRaw) ? _nsSlotRaw : this.bootEntrySlot;
 
         if (!words || !words.length) {
             this.output += '[loadLumpBinary] ERROR: empty words array.\n';
@@ -6288,39 +6311,27 @@ class ChurchSimulator {
 
         // CR14 update strategy depends on the target slot:
         //
-        // • abstrSlot === BOOT_ABSTR_NS_SLOT (3) — interactive execution path
+        // • abstrSlot === this.bootEntrySlot — interactive execution path
         //   ("▶ Run" on a LUMP).  Always rebuild CR14 completely, including
-        //   word0 (the R+X GT), so that mLoad's bounds check uses NS[3]'s
-        //   limits regardless of what bootEntrySlot was before this call.
-        //   If bootEntrySlot was previously some other slot (e.g. 7=Memory)
-        //   the old word0 GT referenced that slot; leaving it unchanged while
-        //   pointing word1 at EXTENDED_BASE would make every fetch fail a
-        //   RANGE check against the old slot's narrower bounds — the
-        //   "boots wrong slot / LUMP_MAGIC" bug (Task #1495).
-        //   Also reset bootEntrySlot so _syncBootEntryFromSim() keeps the UI
-        //   consistent.
+        //   word0 (the R+X GT), so that mLoad's bounds check uses the correct
+        //   NS slot limits regardless of what bootEntrySlot was before this call.
+        //   If bootEntrySlot previously referenced a different slot the old word0
+        //   GT would fail bounds checks — the "boots wrong slot / LUMP_MAGIC" bug.
         //
-        // • abstrSlot === bootEntrySlot (non-3 service install) — only update
-        //   word1/word2/word3; word0 already encodes the correct NS slot GT.
-        if (abstrSlot === BOOT_ABSTR_NS_SLOT) {
+        // • abstrSlot !== this.bootEntrySlot (service install into another slot) —
+        //   only update word1/word2/word3; word0 already encodes the correct GT.
+        if (abstrSlot === this.bootEntrySlot) {
+            // Interactive execution path ("▶ Run" on a LUMP, or any load into the
+            // current boot-entry slot).  Rebuild CR14 word0 completely so mLoad's
+            // bounds check uses this slot's limits, then confirm bootEntrySlot.
             const cr14 = this.cr[14];
             if (cr14) {
-                cr14.word0 = this.createGT(0, BOOT_ABSTR_NS_SLOT, {R:1,W:0,X:1,L:0,S:0,E:0}, 1);
+                cr14.word0 = this.createGT(0, this.bootEntrySlot, {R:1,W:0,X:1,L:0,S:0,E:0}, 1);
                 cr14.word1 = EXTENDED_BASE >>> 0;
                 cr14.word2 = this.memory[nsBase + 1];
                 cr14.word3 = this.memory[nsBase + 2];
             }
-            this.bootEntrySlot = BOOT_ABSTR_NS_SLOT;
-        } else if (abstrSlot === this.bootEntrySlot) {
-            // Service-abstraction install into the current boot-entry slot:
-            // word0 already encodes that slot's GT correctly — only refresh
-            // word1/word2/word3 so the lump pointer and limits stay current.
-            const cr14 = this.cr[14];
-            if (cr14) {
-                cr14.word1 = EXTENDED_BASE >>> 0;
-                cr14.word2 = this.memory[nsBase + 1];
-                cr14.word3 = this.memory[nsBase + 2];
-            }
+            this.bootEntrySlot = abstrSlot;
         }
 
         // Set CR6 to point to the c-list that is already embedded in the lump.
@@ -7032,11 +7043,6 @@ ChurchSimulator.FAULT_CODES = {
     NO_CODE: null, PRIVATE_METHOD: null, CODE_NOT_RESIDENT: null, PRIV_REG: null,
     LAZY_RESOLVE_PENDING: null,
 };
-
-// Task #1077: Scheduler NS slot constants (also available as module-scope consts
-// above, but exposed on the class for external test code).
-ChurchSimulator.SCHEDULER_NS_SLOT     = SCHEDULER_NS_SLOT;
-ChurchSimulator.SCHEDULER_IRQ_NS_SLOT = SCHEDULER_IRQ_NS_SLOT;
 
 // Task #1530: Scheduler IRQ c-list — exposed for external test code.
 // Mirrors hardware/boot_rom.py SCHEDULER_IRQ_CLIST.

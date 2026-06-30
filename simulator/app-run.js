@@ -1295,7 +1295,7 @@ function _autoLoadDefaultProgram() {
             // Restore the namespace label for Boot.Abstr (sim.reset() clears
             // nsLabels) so the CR detail heading shows the abstraction name
             // rather than the boot-image default after reset.
-            const _bSlot = (typeof BOOT_ABSTR_NS_SLOT !== 'undefined') ? BOOT_ABSTR_NS_SLOT : 3;
+            const _bSlot = sim.bootEntrySlot;
             if (sim.nsLabels && sim.programName) sim.nsLabels[_bSlot] = sim.programName;
             _injectClistNow();
         }
@@ -11614,7 +11614,6 @@ async function downloadFPGAPackage() {
 // never hit within MAX_GATE_STEPS the test is considered passing.
 // The fresh sim runs independently of the IDE's live simulator state.
 function runTuringSimGate() {
-    const BOOT_ABSTR_NS_SLOT = 3;   // Boot.Abstr — see simulator.js constant
     const MAX_GATE_STEPS     = 50000;
 
     if (typeof ChurchSimulator === 'undefined') {
@@ -11657,7 +11656,7 @@ function runTuringSimGate() {
     // place the c-list at lumpBase+progWords+1 (well past the last code word).
     // Re-seal the NS entry so mLoad version/seal checks still pass.
     {
-        const _nsBase     = testSim.NS_TABLE_BASE + BOOT_ABSTR_NS_SLOT * testSim.NS_ENTRY_WORDS;
+        const _nsBase     = testSim.NS_TABLE_BASE + testSim.bootEntrySlot * testSim.NS_ENTRY_WORDS;
         const _lumpBase   = testSim.memory[_nsBase] >>> 0;
         const _progWords  = asmResult.words.length;          // 863
         const _newLimit17 = _progWords;                      // fetchAddr for pc=progWords-1 is lumpBase+progWords = lumpBase+limit17
@@ -11694,7 +11693,7 @@ function runTuringSimGate() {
             const _cr6W1 = testSim.packNSWord1(
                 _newLimit17, _oldW1f.b, _oldW1f.g, _oldW1f.chainable, _oldW1f.gtType, _cc
             );
-            const _cr6GT = testSim.createGT(0, BOOT_ABSTR_NS_SLOT, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
+            const _cr6GT = testSim.createGT(0, testSim.bootEntrySlot, {R:0,W:0,X:0,L:0,S:0,E:1}, 1);
             testSim.cr[6] = {
                 word0: _cr6GT,
                 word1: _clistBase >>> 0,
@@ -11713,8 +11712,8 @@ function runTuringSimGate() {
 
     // Compute the physical address of 'fail'.
     // _nextPhysicalAddr() returns  entry.word0_location + 1 + pc
-    // where entry = readNSEntry(BOOT_ABSTR_NS_SLOT).
-    const nsEntry = testSim.readNSEntry(BOOT_ABSTR_NS_SLOT);
+    // where entry = readNSEntry(bootEntrySlot).
+    const nsEntry = testSim.readNSEntry(testSim.bootEntrySlot);
     if (!nsEntry) {
         return { passed: false, error: 'Simulation gate: Boot.Abstr NS entry not found' };
     }

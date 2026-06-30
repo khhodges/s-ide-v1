@@ -173,6 +173,28 @@ IRQ_REASON_TIMER        = 0   # hardware timer alarm fired between instructions
 IRQ_REASON_LAZY_LOAD    = 1   # lump header cw=0 (CODE_NOT_RESIDENT) in CALL pipeline
 IRQ_REASON_LAZY_RESOLVE = 2   # NULL GT in c-list slot (ELOADCALL / XLOADLAMBDA)
 
+# ---------------------------------------------------------------------------
+# Boot image NS slot assignments — SINGLE SOURCE OF TRUTH for boot slot indices.
+# These constants exist only so the boot image layer (hardware/boot_rom.py,
+# server/boot_image.py) can build the binary.  They must not be imported by
+# runtime JS or general server code.  JS resolves slot names at runtime via
+# sim._slotByPetName() / sim.nsLabels.
+# ---------------------------------------------------------------------------
+BOOT_ABSTR_NS_SLOT           = 3    # Boot.Abstr (first application entry point)
+TUNNEL_NS_SLOT               = 31   # Tunnel (call-home I/O channel)
+SLIDERULE_SLOT               = 16   # SlideRule (Layer 3 Mathematics abstraction)
+CONSTANTS_SLOT               = 18   # Constants (Layer 3 read-only)
+MMIO_UART_SLOT               = 11   # UART device
+MMIO_LED_SLOT                = 12   # LED device
+MMIO_BTN_SLOT                = 13   # Button device
+MMIO_TIMER_SLOT              = 14   # Timer device
+CHURCH_HW_CR12_PORT_SLOT     = 19   # authority to CHANGE CR12 (0xFFFFFF0C, S-perm)
+CHURCH_HW_CR13_PORT_SLOT     = 20   # authority to CHANGE CR13 (0xFFFFFF0D, S-perm)
+CHURCH_HW_CR12_MBIT_SLOT     = 21   # authority for CR12 M-bit (0xFFFFFF1C, S-perm)
+CHURCH_HW_CR13_MBIT_SLOT     = 22   # authority for CR13 M-bit (0xFFFFFF1D, S-perm)
+SCHEDULER_NS_SLOT            = SCHEDULER_IRQ_NS_SLOT   # alias: Scheduler at NS slot 8
+SCHEDULER_IRQ_THREAD_NS_SLOT = 50   # Scheduler.IRQ.Thread (fixed boot-image IRQ thread)
+
 
 class ChurchOpcode(IntEnum):
     LOAD        = 0b0000

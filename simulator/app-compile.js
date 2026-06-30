@@ -1861,7 +1861,7 @@ function loadCLOOMCIntoSim() {
 
     // ── Update namespace label so the CR detail heading shows the abstraction name
     // rather than the boot-image occupant of that slot ("LED flash", etc.).
-    const _bootSlot = (typeof BOOT_ABSTR_NS_SLOT !== 'undefined') ? BOOT_ABSTR_NS_SLOT : 3;
+    const _bootSlot = sim.bootEntrySlot;
     if (sim && sim.nsLabels) {
         sim.nsLabels[_bootSlot] = result.abstractionName || sim.programName;
     }

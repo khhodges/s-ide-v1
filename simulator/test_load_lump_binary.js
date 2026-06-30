@@ -52,7 +52,7 @@
 //
 // Coverage (real fixture + app-path tests):
 // Fixture: server/lumps/00000300.lump — "LED flash" abstraction (per sidecar
-// JSON), loaded into NS slot 3 (BOOT_ABSTR_NS_SLOT) at runtime.  cw=17, cc=1.
+// JSON), loaded into NS slot 3 (sim.bootEntrySlot) at runtime.  cw=17, cc=1.
 // Note: the original task description referenced token "00000003"; the actual
 // Boot.Abstr slot fixture on disk is "00000300" (canonical per sidecar JSON).
 //
@@ -85,9 +85,10 @@ function check(label, cond, detail) {
     }
 }
 
-// ── Constants (must match simulator.js) ───────────────────────────────────────
-const EXTENDED_BASE      = 0x0400;
-const BOOT_ABSTR_NS_SLOT = 3;
+// ── Constants ────────────────────────────────────────────────────────────────
+const EXTENDED_BASE = 0x0400;
+// Note: Boot.Abstr slot is accessed via sim.bootEntrySlot (default 3).
+// Do not hardcode a named NS slot constant here — use sim.bootEntrySlot instead.
 
 // ── Helper: build a valid LUMP header word ────────────────────────────────────
 // magic=0x1F fixed; n_minus_6 defaults to 0 (lumpSize=64); typ defaults to 0.
@@ -127,7 +128,7 @@ function setupAndLoad({ cw, cc, codeWord = 0, n_minus_6 = 0 }) {
     const GT_SEQ   = 5;
     const INIT_BASE = 0x80;
     const INIT_CW   = 64;
-    const nsBase = sim.NS_TABLE_BASE + BOOT_ABSTR_NS_SLOT * sim.NS_ENTRY_WORDS;
+    const nsBase = sim.NS_TABLE_BASE + sim.bootEntrySlot * sim.NS_ENTRY_WORDS;
     sim.memory[nsBase + 0] = INIT_BASE;
     sim.memory[nsBase + 1] = sim.packNSWord1(INIT_CW, 0, 0, 0, 0);
     sim.memory[nsBase + 2] = sim.makeVersionSeals(GT_SEQ, INIT_BASE, INIT_CW);
@@ -135,7 +136,7 @@ function setupAndLoad({ cw, cc, codeWord = 0, n_minus_6 = 0 }) {
     // Pre-seed CR14 with a valid GT so loadLumpBinary can update word1/2/3.
     // (loadLumpBinary only updates word1/2/3; word0 must be non-null beforehand.)
     sim.cr[14] = {
-        word0: sim.createGT(GT_SEQ, BOOT_ABSTR_NS_SLOT, {R:1,W:0,X:1,L:0,S:0,E:0}, 1),
+        word0: sim.createGT(GT_SEQ, sim.bootEntrySlot, {R:1,W:0,X:1,L:0,S:0,E:0}, 1),
         word1: INIT_BASE,
         word2: sim.memory[nsBase + 1],
         word3: sim.memory[nsBase + 2],
@@ -174,12 +175,12 @@ function setupSimForBinary() {
     const GT_SEQ    = 1;
     const INIT_BASE = 0x80;
     const INIT_CW   = 64;
-    const nsBase = sim.NS_TABLE_BASE + BOOT_ABSTR_NS_SLOT * sim.NS_ENTRY_WORDS;
+    const nsBase = sim.NS_TABLE_BASE + sim.bootEntrySlot * sim.NS_ENTRY_WORDS;
     sim.memory[nsBase + 0] = INIT_BASE;
     sim.memory[nsBase + 1] = sim.packNSWord1(INIT_CW, 0, 0, 0, 0);
     sim.memory[nsBase + 2] = sim.makeVersionSeals(GT_SEQ, INIT_BASE, INIT_CW);
     sim.cr[14] = {
-        word0: sim.createGT(GT_SEQ, BOOT_ABSTR_NS_SLOT, {R:1,W:0,X:1,L:0,S:0,E:0}, 1),
+        word0: sim.createGT(GT_SEQ, sim.bootEntrySlot, {R:1,W:0,X:1,L:0,S:0,E:0}, 1),
         word1: INIT_BASE,
         word2: sim.memory[nsBase + 1],
         word3: sim.memory[nsBase + 2],
@@ -235,7 +236,7 @@ console.log('\n--- LLB-02: step() fetches first code word without fault ---');
     // Rebuild CR14.word0 with the gt_seq that loadLumpBinary preserved in NS[3].word2
     const gtSeqAfter = (sim.memory[nsBase + 2] >>> 25) & 0x7F;
     sim.cr[14] = {
-        word0: sim.createGT(gtSeqAfter, BOOT_ABSTR_NS_SLOT, {R:1,W:0,X:1,L:0,S:0,E:0}, 1),
+        word0: sim.createGT(gtSeqAfter, sim.bootEntrySlot, {R:1,W:0,X:1,L:0,S:0,E:0}, 1),
         word1: sim.cr[14].word1,
         word2: sim.cr[14].word2,
         word3: sim.cr[14].word3,
@@ -370,7 +371,7 @@ console.log('\n--- LLB-08: NS[3].word2 seal consistent with EXTENDED_BASE and cw
 // ── LLB-RBA: Real LED flash binary (00000300.lump, NS slot 3) ────────────────
 // Fixture: server/lumps/00000300.lump — canonical abstraction name "LED flash"
 // per sidecar JSON (server/lumps/00000300.json), loaded into NS slot 3
-// (BOOT_ABSTR_NS_SLOT) at runtime.  cw=17, cc=1.
+// (sim.bootEntrySlot) at runtime.  cw=17, cc=1.
 // Note: the original task description referenced token "00000003"; the actual
 // fixture file on disk is "00000300" (confirmed by sidecar JSON "token" field).
 // Reads the file as big-endian uint32 words — the same format served by the
@@ -516,7 +517,7 @@ console.log('\n--- LLB-STP: step() on real LED flash (NS slot 3, token 00000300)
         // Rebuild CR14.word0 with an RX GT matching the preserved gt_seq
         const gtSeqAfter = (sim.memory[nsBase + 2] >>> 25) & 0x7F;
         sim.cr[14] = {
-            word0: sim.createGT(gtSeqAfter, BOOT_ABSTR_NS_SLOT, {R:1,W:0,X:1,L:0,S:0,E:0}, 1),
+            word0: sim.createGT(gtSeqAfter, sim.bootEntrySlot, {R:1,W:0,X:1,L:0,S:0,E:0}, 1),
             word1: sim.cr[14].word1,
             word2: sim.cr[14].word2,
             word3: sim.cr[14].word3,
@@ -990,7 +991,7 @@ console.log('\n--- LLB-18: n_minus_6=10 (out of range) — loadLumpBinary return
     const GT_SEQ    = 7;
     const INIT_BASE = 0x80;
     const INIT_CW   = 64;
-    const nsBase = sim.NS_TABLE_BASE + BOOT_ABSTR_NS_SLOT * sim.NS_ENTRY_WORDS;
+    const nsBase = sim.NS_TABLE_BASE + sim.bootEntrySlot * sim.NS_ENTRY_WORDS;
 
     const sentinelW0 = INIT_BASE >>> 0;
     const sentinelW1 = sim.packNSWord1(INIT_CW, 0, 0, 0, 0);
@@ -1000,7 +1001,7 @@ console.log('\n--- LLB-18: n_minus_6=10 (out of range) — loadLumpBinary return
     sim.memory[nsBase + 2] = sentinelW2;
 
     sim.cr[14] = {
-        word0: sim.createGT(GT_SEQ, BOOT_ABSTR_NS_SLOT, {R:1,W:0,X:1,L:0,S:0,E:0}, 1),
+        word0: sim.createGT(GT_SEQ, sim.bootEntrySlot, {R:1,W:0,X:1,L:0,S:0,E:0}, 1),
         word1: INIT_BASE,
         word2: sentinelW1,
         word3: sentinelW2,

@@ -192,8 +192,6 @@ while len(_NUC_PADDED) < 256:
 #   [256:511] NUC_PROGRAM (padded)
 #   [512:680] SlideRule dispatch table (16) + method code (153) = 169 words
 # ---------------------------------------------------------------------------
-SLIDERULE_SLOT    = 16
-CONSTANTS_SLOT    = 18
 
 _SR_ADD  = [0x7f600000, 0x7f660000, 0x7f260000, 0x7f020000, 0x1f000000]
 _SR_SUB  = [0x87600000, 0x7f260000, 0x7f020000, 0x1f000000]
@@ -418,18 +416,10 @@ def _make_ns_entry(gt_type, perms, slot_id, gt_seq, location, alloc_size, cw=0, 
 #   Tang Nano 20K (6 LEDs active-LOW, led3 pin absent):
 #     offset 0→led0, 1→led1, 2→led2, 3→led4, 4→led5; led3 pin not connected
 # ---------------------------------------------------------------------------
-MMIO_LED_SLOT   = 12
-MMIO_UART_SLOT  = 11
-MMIO_BTN_SLOT   = 13
-MMIO_TIMER_SLOT = 14
 
 # Church Hardware Address Range NS slot assignments
 # CR12 caps (slots 19, 21) distributed to Scheduler.IRQ AND Thread Manager c-lists.
 # CR13 caps (slots 20, 22) distributed to Scheduler.IRQ c-list only (IRQ-manager territory).
-CHURCH_HW_CR12_PORT_SLOT  = 19   # authority to CHANGE CR12  (0xFFFFFF0C, S-perm)
-CHURCH_HW_CR13_PORT_SLOT  = 20   # authority to CHANGE CR13  (0xFFFFFF0D, S-perm)
-CHURCH_HW_CR12_MBIT_SLOT  = 21   # authority for CR12 M-bit  (0xFFFFFF1C, S-perm)
-CHURCH_HW_CR13_MBIT_SLOT  = 22   # authority for CR13 M-bit  (0xFFFFFF1D, S-perm)
 
 # ---------------------------------------------------------------------------
 # SCHEDULER_IRQ_CLIST — capability list for the Scheduler.IRQ lump (NS slot 8)

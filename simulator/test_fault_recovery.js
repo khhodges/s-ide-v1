@@ -215,10 +215,10 @@ console.log('\n--- T006: Structured fault record (unhandled) ---');
     check('T006e: irqInvoked=true (Scheduler.IRQ always dispatched before halt)', entry.irqInvoked === true);
     check('T006f: tier3Recovery=false', entry.tier3Recovery === false);
     check('T006g: machine halted', sim.halted === true);
-    check('T006h: ChurchSimulator.SCHEDULER_NS_SLOT === 8',
-        ChurchSimulator.SCHEDULER_NS_SLOT === 8);
-    check('T006i: ChurchSimulator.SCHEDULER_IRQ_NS_SLOT === 50',
-        ChurchSimulator.SCHEDULER_IRQ_NS_SLOT === 50);
+    check('T006h: "Scheduler" pet name maps to NS slot 8',
+        sim.nsLabels && sim.nsLabels[8] === 'Scheduler');
+    check('T006i: "Scheduler.IRQ.Thread" pet name maps to NS slot 50',
+        sim.nsLabels && sim.nsLabels[50] === 'Scheduler.IRQ.Thread');
     check('T006j: FAULT_CODES object has PERM_R key',
         ChurchSimulator.FAULT_CODES.PERM_R === 0x01);
     check('T006k: FAULT_CODES object has NULL_CAP key',
