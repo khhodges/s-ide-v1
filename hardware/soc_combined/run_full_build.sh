@@ -4,17 +4,38 @@
 # Run from anywhere on the droplet:
 #   bash ~/church-machine/hardware/soc_combined/run_full_build.sh
 #
+# First time on a fresh droplet (repo not yet cloned):
+#   git clone https://github.com/khhodges/church-machine.git ~/church-machine \
+#     && bash ~/church-machine/hardware/soc_combined/run_full_build.sh
+#
 # Takes ~75 min total (MAP 45 min + PNR 30 min + PGM <5 min).
 # When done, the .hex is served on port 8888 ready to download and flash.
 
 set -euo pipefail
 
-# ── Locate repo root ──────────────────────────────────────────────────────
+# ── Self-bootstrap ────────────────────────────────────────────────────────────
+# If this script is stale, pull latest from GitHub and re-exec the new version
+# before touching Efinity.  The guard variable prevents an infinite re-exec loop.
+if [ "${_CHURCH_BOOTSTRAPPED:-0}" = "0" ]; then
+    _SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+    _ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+    echo "==> Bootstrap: pulling latest code from GitHub ..."
+    cd "$_ROOT"
+    git fetch origin
+    git reset --hard origin/main
+    echo "    Repo is now at: $(git log -1 --oneline)"
+    echo "==> Re-launching updated script ..."
+    echo ""
+    export _CHURCH_BOOTSTRAPPED=1
+    exec bash "$_SELF" "$@"
+fi
+
+# ── Locate repo root ──────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SOC_DIR="$SCRIPT_DIR"
 
-# ── Efinity environment (all vars needed by MAP / PNR / PGM) ─────────────
+# ── Efinity environment (all vars needed by MAP / PNR / PGM) ─────────────────
 EFINITY="${EFINITY_HOME:-$HOME/efinity/2026.1}"
 export EFINITY_HOME="$EFINITY"
 export EFINITY_USER_DIR_INI="${EFINITY_USER_DIR_INI:-$HOME/.efinity}"
@@ -32,17 +53,11 @@ echo "╔═══════════════════════�
 echo "║   Church Machine — Full Build            ║"
 echo "║   $(date)   ║"
 echo "╚══════════════════════════════════════════╝"
+echo "    Repo: $(cd "$REPO_ROOT" && git log -1 --oneline)"
 echo ""
 
-# ── Step 1: Sync to GitHub (force — discards local Efinity GUI junk) ─────
-# Plain 'git pull' fails when Efinity has written back modified XML files
-# (banned params, interface changes).  We fetch + hard-reset to origin/main
-# so the build always uses exactly what is on GitHub, no merge conflicts.
-echo "==> [1/5] Syncing to GitHub (git fetch + reset --hard origin/main) ..."
-cd "$REPO_ROOT"
-git fetch origin
-git reset --hard origin/main
-echo "    Done. Repo is clean at: $(git log -1 --oneline)"
+# ── Step 1: Confirm repo state (bootstrap already synced above) ───────────────
+echo "==> [1/5] Repo synced in bootstrap — $(cd "$REPO_ROOT" && git log -1 --oneline)"
 echo ""
 
 # ── Step 2: Firmware (always clean rebuild — avoids git-pull timestamp trap) ──
@@ -51,7 +66,7 @@ make -C "$SOC_DIR/firmware" clean all
 echo "    Done."
 echo ""
 
-# ── Step 3: MAP — synthesis (~45 min) ────────────────────────────────────
+# ── Step 3: MAP — synthesis (~45 min) ────────────────────────────────────────
 # run_efx_map.sh bakes in:
 #   • patch_cm_bram.py  (CM DMEM via $readmemb — EFX_MAP ignores initial begin)
 #   • strips banned XML params (infer_clk_enable etc.)
@@ -59,7 +74,7 @@ echo "==> [3/5] MAP — synthesis (~45 min) ..."
 bash "$SOC_DIR/run_efx_map.sh"
 echo ""
 
-# ── Step 4: PNR — place & route (~30 min) ────────────────────────────────
+# ── Step 4: PNR — place & route (~30 min) ────────────────────────────────────
 # run_efx_pnr.sh bakes in:
 #   • gen_sapphire_symbol_bins.py  (firmware ELF → byte-lane .bin files)
 #   • patch_mapv_init.py           (Sapphire BRAM INIT_ injection into map.v)
@@ -69,12 +84,12 @@ echo "==> [4/5] PNR — place & route (~30 min) ..."
 bash "$SOC_DIR/run_efx_pnr.sh"
 echo ""
 
-# ── Step 5: PGM — bitstream hex ──────────────────────────────────────────
+# ── Step 5: PGM — bitstream hex ──────────────────────────────────────────────
 echo "==> [5/5] PGM — generate hex ..."
 bash "$SOC_DIR/run_efx_pgm.sh"
 echo ""
 
-# ── Done ──────────────────────────────────────────────────────────────────
+# ── Done ──────────────────────────────────────────────────────────────────────
 END_TIME=$(date +%s)
 ELAPSED=$(( END_TIME - START_TIME ))
 echo "╔══════════════════════════════════════════╗"
@@ -85,16 +100,16 @@ HEX="$SOC_DIR/outflow/church_soc_cm.hex"
 ls -lh "$HEX"
 echo ""
 
-# ── Serve hex on port 8888 ────────────────────────────────────────────────
+# ── Serve hex on port 8888 ────────────────────────────────────────────────────
 echo "==> Serving hex on port 8888 ..."
 pkill -f "http.server 8888" 2>/dev/null || true
 cd "$SOC_DIR/outflow"
 python3 -m http.server 8888 &
 SERVER_PID=$!
-echo "    Hex server PID $SERVER_PID — http://$(hostname -I | awk '{print $1}'):8888/"
+DROPLET_IP="$(hostname -I | awk '{print $1}')"
+echo "    Hex server PID $SERVER_PID — http://${DROPLET_IP}:8888/"
 echo ""
 echo "On your local machine — ONE command flashes and connects to the IDE:"
-DROPLET_IP="$(hostname -I | awk '{print $1}')"
 echo ""
 echo "  bash ~/church-machine/hardware/soc_combined/flash_and_monitor.sh"
 echo ""
