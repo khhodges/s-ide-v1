@@ -264,53 +264,53 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
   wire \$97 ;
   wire \$98 ;
   wire \$99 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:252" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:257" *)
   reg _dmem_rd_valid_r = 1'h0;
   (* src = "/home/runner/workspace/hardware/boot_rom.py:669" *)
   wire [9:0] addr;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:176" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:181" *)
   reg alarm_armed = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:175" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:180" *)
   reg [31:0] alarm_cmp = 32'd0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:177" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:182" *)
   reg alarm_fired = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:114" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:119" *)
   wire any_clist_access;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:113" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:118" *)
   wire any_ns_access;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:474" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:479" *)
   reg [7:0] banner_byte;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:441" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:446" *)
   reg banner_ever_sent = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:473" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:478" *)
   reg [4:0] banner_idx = 5'h00;
   (* src = "/home/runner/workspace/hardware/core.py:78" *)
   wire boot_complete;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:459" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:464" *)
   reg [3:0] boot_delay = 4'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:505" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:510" *)
   reg [7:0] boot_reason = 8'h00;
   (* src = "/home/runner/workspace/hardware/core.py:76" *)
   reg boot_start;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:460" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:465" *)
   reg boot_triggered = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:349" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:354" *)
   reg [24:0] btn_hold_ctr = 25'h0000000;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:350" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:355" *)
   reg btn_hold_done = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:344" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:349" *)
   wire btn_press;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:337" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:342" *)
   reg btn_prev = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:336" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:341" *)
   reg [2:0] btn_sync = 3'h0;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:93" *)
   wire busy;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:92" *)
   reg [7:0] byte_data;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:487" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:492" *)
   reg [7:0] callhome_byte;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:486" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:491" *)
   reg [4:0] callhome_idx = 5'h00;
   (* src = "/home/runner/workspace/hardware/core.py:70" *)
   wire [31:0] clist_addr;
@@ -348,9 +348,9 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
   wire clist_wr_en;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:58" *)
   input clk;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:303" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:308" *)
   reg [31:0] cpu_wr_data;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:304" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:309" *)
   reg cpu_wr_en;
   (* src = "/home/runner/workspace/hardware/uart_crc16.py:21" *)
   wire [15:0] crc;
@@ -376,17 +376,17 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
   wire [31:0] dbg_nia;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
   reg [5:0] debug_fsm_state = 6'h00;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:417" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:422" *)
   reg [23:0] demo_ctr = 24'h000000;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:419" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *)
   wire demo_led0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:419" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *)
   wire demo_led1;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:419" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *)
   wire demo_led2;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:419" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *)
   wire demo_led3;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:418" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:423" *)
   reg [2:0] demo_phase = 3'h0;
   (* src = "/home/runner/workspace/hardware/core.py:57" *)
   wire [31:0] dmem_addr;
@@ -412,41 +412,41 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
   wire dmem_wr_en;
   (* src = "/home/runner/workspace/hardware/core.py:84" *)
   wire [4:0] fault;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:502" *)
-  reg [7:0] fault_byte;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:258" *)
-  reg fault_latched = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:501" *)
-  reg [1:0] fault_msg_idx = 2'h0;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:507" *)
+  reg [7:0] fault_byte;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:263" *)
+  reg fault_latched = 1'h0;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:506" *)
+  reg [1:0] fault_msg_idx = 2'h0;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:512" *)
   reg [31:0] fault_nia = 32'd0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:508" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:513" *)
   reg [1:0] fault_nia_idx = 2'h0;
   (* src = "/home/runner/workspace/hardware/core.py:85" *)
   wire fault_valid;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:740" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:745" *)
   reg [31:0] fault_word;
   (* src = "/home/runner/workspace/hardware/core.py:97" *)
   reg [31:0] free_run_nia;
   (* src = "/home/runner/workspace/hardware/core.py:96" *)
   reg free_run_start;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:374" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:379" *)
   reg [7:0] fsm_byte_data;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:373" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:378" *)
   reg fsm_send_byte;
   (* src = "/home/runner/workspace/hardware/core.py:80" *)
   wire gc_start;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:492" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:497" *)
   reg [7:0] halt_byte;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:491" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:496" *)
   reg [2:0] halt_idx = 3'h0;
   (* src = "/home/runner/workspace/hardware/core.py:86" *)
   wire halt_valid;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:256" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:261" *)
   reg halted = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:396" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:401" *)
   reg heartbeat_blink = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:395" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:400" *)
   reg [24:0] heartbeat_ctr = 25'h0000000;
   (* src = "/home/runner/workspace/hardware/core.py:53" *)
   wire [31:0] imem_addr;
@@ -454,13 +454,13 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
   wire [31:0] imem_data;
   (* src = "/home/runner/workspace/hardware/core.py:55" *)
   wire imem_valid;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:158" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:163" *)
   wire is_mmio;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:210" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:215" *)
   wire is_mmio_read;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:187" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:192" *)
   wire is_mmio_write;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:506" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:511" *)
   reg [7:0] last_fault_code = 8'h00;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:48" *)
   output led0;
@@ -474,41 +474,41 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:48" *)
   output led3;
   wire led3;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:111" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:116" *)
   reg [13:0] mem_addr;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:133" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:138" *)
   wire [31:0] mem_rd_data;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:164" *)
-  reg [2:0] mmio_led0 = 3'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:164" *)
-  reg [2:0] mmio_led1 = 3'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:164" *)
-  reg [2:0] mmio_led2 = 3'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:164" *)
-  reg [2:0] mmio_led3 = 3'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:164" *)
-  reg [2:0] mmio_led4 = 3'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:213" *)
-  reg [31:0] mmio_rd_data;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:160" *)
-  wire [3:0] mmio_reg_sel;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:168" *)
-  reg [7:0] mmio_rx_data = 8'h00;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:170" *)
-  reg mmio_rx_read;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:169" *)
-  reg mmio_rx_valid = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:372" *)
-  reg [7:0] mmio_uart_byte_reg = 8'h00;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:371" *)
-  reg mmio_uart_pending = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:166" *)
-  reg [7:0] mmio_uart_tx_data;
+  reg [2:0] mmio_led0 = 3'h0;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:169" *)
+  reg [2:0] mmio_led1 = 3'h0;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:169" *)
+  reg [2:0] mmio_led2 = 3'h0;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:169" *)
+  reg [2:0] mmio_led3 = 3'h0;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:169" *)
+  reg [2:0] mmio_led4 = 3'h0;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:218" *)
+  reg [31:0] mmio_rd_data;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:165" *)
+  wire [3:0] mmio_reg_sel;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:173" *)
+  reg [7:0] mmio_rx_data = 8'h00;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:175" *)
+  reg mmio_rx_read;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:174" *)
+  reg mmio_rx_valid = 1'h0;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:377" *)
+  reg [7:0] mmio_uart_byte_reg = 8'h00;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:376" *)
+  reg mmio_uart_pending = 1'h0;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:171" *)
+  reg [7:0] mmio_uart_tx_data;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:170" *)
   reg mmio_uart_tx_wr;
   (* src = "/home/runner/workspace/hardware/core.py:99" *)
   wire [31:0] nia;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:328" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:333" *)
   wire nia_changed;
   (* src = "/home/runner/workspace/hardware/core.py:64" *)
   wire [31:0] ns_addr;
@@ -520,52 +520,52 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
   wire [95:0] ns_wr_data;
   (* src = "/home/runner/workspace/hardware/core.py:68" *)
   wire ns_wr_en;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:278" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:283" *)
   reg [7:0] pl_ack0 = 8'h00;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:278" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:283" *)
   reg [7:0] pl_ack1 = 8'h00;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:278" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:283" *)
   reg [7:0] pl_ack2 = 8'h00;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:278" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:283" *)
   reg [7:0] pl_ack3 = 8'h00;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:279" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:284" *)
   reg [2:0] pl_ack_idx = 3'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:270" *)
-  reg pl_active = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:271" *)
-  reg [15:0] pl_addr = 16'h0000;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:273" *)
-  reg [15:0] pl_count = 16'h0000;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:277" *)
-  reg pl_crc_fail = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:276" *)
-  reg [7:0] pl_crc_hi_buf = 8'h00;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:275" *)
+  reg pl_active = 1'h0;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:276" *)
+  reg [15:0] pl_addr = 16'h0000;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:278" *)
+  reg [15:0] pl_count = 16'h0000;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:282" *)
+  reg pl_crc_fail = 1'h0;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:281" *)
+  reg [7:0] pl_crc_hi_buf = 8'h00;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:280" *)
   reg [15:0] pl_cur_addr = 16'h0000;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:272" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:277" *)
   reg [15:0] pl_total_count = 16'h0000;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:274" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:279" *)
   reg [31:0] pl_word = 32'd0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:268" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:273" *)
   reg [13:0] pl_wr_addr;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:269" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:274" *)
   reg [31:0] pl_wr_data;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:267" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:272" *)
   reg pl_wr_en;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:326" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:331" *)
   reg [31:0] prev_nia = 32'd0;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:46" *)
   input push_button;
   wire push_button;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:299" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:304" *)
   reg [15:0] rb_addr = 16'h0000;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:300" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:305" *)
   reg [15:0] rb_count = 16'h0000;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:123" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:128" *)
   reg [15:0] rb_cur_addr = 16'h0000;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:122" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:127" *)
   reg rb_rd_en;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:301" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:306" *)
   reg [31:0] rb_word = 32'd0;
   (* src = "/home/runner/workspace/hardware/uart_crc16.py:18" *)
   reg reset;
@@ -575,27 +575,27 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
   reg send;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:91" *)
   reg send_byte;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:518" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:523" *)
   reg [27:0] startup_ctr = 28'h0000000;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:497" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:502" *)
   reg [7:0] step_byte;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:331" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:336" *)
   wire step_complete;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:511" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:516" *)
   reg [3:0] step_fault = 4'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:512" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:517" *)
   reg step_had_fault = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:496" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:501" *)
   reg [1:0] step_idx = 2'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:510" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:515" *)
   reg [31:0] step_nia = 32'd0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:257" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:262" *)
   reg stepping = 1'h0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:173" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:178" *)
   reg [31:0] timer_hi = 32'd0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:172" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:177" *)
   reg [31:0] timer_lo = 32'd0;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:174" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:179" *)
   reg [31:0] tod_epoch = 32'd0;
   (* src = "/home/runner/workspace/hardware/uart_tx.py:94" *)
   wire tx;
@@ -609,7 +609,7 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
   wire valid;
   (* src = "/home/runner/workspace/hardware/uart_crc16.py:19" *)
   reg \valid$131 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:106" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:111" *)
   reg [31:0] dmem [16383:0];
   initial begin
     dmem[0] = 32'd64768;
@@ -737,7 +737,7 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
     dmem[122] = 32'd0;
     dmem[123] = 32'd0;
     dmem[124] = 32'd0;
-    dmem[125] = 32'd0;
+    dmem[125] = 32'd1241513988;
     dmem[126] = 32'd0;
     dmem[127] = 32'd0;
     dmem[128] = 32'd0;
@@ -17006,99 +17006,99 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
     _0_ <= dmem[mem_addr];
   end
   assign mem_rd_data = _0_;
-  assign any_ns_access = ns_rd_en | (* src = "/home/runner/workspace/hardware/ti60_f225.py:116" *) ns_wr_en;
-  assign \$1  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:159" *) dmem_addr[31];
-  assign is_mmio = dmem_addr[30] & (* src = "/home/runner/workspace/hardware/ti60_f225.py:159" *) \$1 ;
-  assign is_mmio_write = is_mmio & (* src = "/home/runner/workspace/hardware/ti60_f225.py:188" *) dmem_wr_en;
-  assign is_mmio_read = is_mmio & (* src = "/home/runner/workspace/hardware/ti60_f225.py:211" *) dmem_rd_en;
-  assign \$2  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:221" *) busy;
-  assign dmem_rd_data = is_mmio_read ? (* src = "/home/runner/workspace/hardware/ti60_f225.py:243" *) mmio_rd_data : mem_rd_data;
-  assign dmem_rd_valid = _dmem_rd_valid_r | (* src = "/home/runner/workspace/hardware/ti60_f225.py:254" *) is_mmio_read;
-  assign \$3  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:309" *) is_mmio;
-  assign nia_changed = dbg_nia != (* src = "/home/runner/workspace/hardware/ti60_f225.py:329" *) prev_nia;
-  assign step_complete = stepping & (* src = "/home/runner/workspace/hardware/ti60_f225.py:332" *) nia_changed;
-  assign \$4  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:334" *) halted;
-  assign \$5  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:334" *) step_complete;
-  assign \$6  = stepping & (* src = "/home/runner/workspace/hardware/ti60_f225.py:334" *) \$5 ;
-  assign imem_valid = \$4  | (* src = "/home/runner/workspace/hardware/ti60_f225.py:334" *) \$6 ;
-  assign \$7  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:345" *) btn_sync[2];
-  assign btn_press = btn_prev & (* src = "/home/runner/workspace/hardware/ti60_f225.py:345" *) \$7 ;
-  assign \$8  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:382" *) busy;
-  assign \$9  = mmio_uart_pending & (* src = "/home/runner/workspace/hardware/ti60_f225.py:382" *) \$8 ;
-  assign \$10  = dbg_boot_complete & (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *) halted;
-  assign \$11  = ! (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *) demo_phase;
-  assign demo_led0 = \$10  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *) \$11 ;
-  assign \$12  = dbg_boot_complete & (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *) halted;
-  assign \$13  = demo_phase == (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *) 1'h1;
-  assign demo_led1 = \$12  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *) \$13 ;
-  assign \$14  = dbg_boot_complete & (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *) halted;
-  assign \$15  = demo_phase == (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *) 2'h2;
-  assign demo_led2 = \$14  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *) \$15 ;
-  assign \$16  = dbg_boot_complete & (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *) halted;
-  assign \$17  = demo_phase == (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *) 2'h3;
-  assign demo_led3 = \$16  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:424" *) \$17 ;
-  assign \$18  = mmio_led0[0] | (* src = "/home/runner/workspace/hardware/ti60_f225.py:446" *) demo_led0;
-  assign \$19  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:404" *) dbg_boot_complete;
-  assign led0 = dbg_boot_complete ? (* src = "/home/runner/workspace/hardware/ti60_f225.py:445" *) \$18  : \$19 ;
-  assign \$20  = mmio_led1[0] | (* src = "/home/runner/workspace/hardware/ti60_f225.py:449" *) demo_led1;
-  assign \$21  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:407" *) fault_latched;
-  assign \$22  = halted & (* src = "/home/runner/workspace/hardware/ti60_f225.py:407" *) \$21 ;
-  assign \$23  = \$22  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:407" *) heartbeat_blink;
-  assign \$24  = \$20  | (* src = "/home/runner/workspace/hardware/ti60_f225.py:449" *) \$23 ;
-  assign \$25  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:405" *) fault_latched;
-  assign \$26  = dbg_boot_complete & (* src = "/home/runner/workspace/hardware/ti60_f225.py:405" *) \$25 ;
-  assign \$27  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:405" *) halted;
-  assign \$28  = \$26  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:405" *) \$27 ;
-  assign \$29  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:407" *) fault_latched;
-  assign \$30  = halted & (* src = "/home/runner/workspace/hardware/ti60_f225.py:407" *) \$29 ;
-  assign \$31  = \$30  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:407" *) heartbeat_blink;
-  assign \$32  = \$28  | (* src = "/home/runner/workspace/hardware/ti60_f225.py:450" *) \$31 ;
-  assign led1 = dbg_boot_complete ? (* src = "/home/runner/workspace/hardware/ti60_f225.py:448" *) \$24  : \$32 ;
-  assign \$33  = mmio_led2[0] | (* src = "/home/runner/workspace/hardware/ti60_f225.py:452" *) demo_led2;
-  assign \$34  = \$33  | (* src = "/home/runner/workspace/hardware/ti60_f225.py:452" *) fault_latched;
-  assign \$35  = \$34  | (* src = "/home/runner/workspace/hardware/ti60_f225.py:452" *) banner_ever_sent;
-  assign \$36  = fault_latched | (* src = "/home/runner/workspace/hardware/ti60_f225.py:453" *) banner_ever_sent;
-  assign led2 = dbg_boot_complete ? (* src = "/home/runner/workspace/hardware/ti60_f225.py:451" *) \$35  : \$36 ;
-  assign \$37  = mmio_led3[0] | (* src = "/home/runner/workspace/hardware/ti60_f225.py:455" *) demo_led3;
-  assign led3 = dbg_boot_complete ? (* src = "/home/runner/workspace/hardware/ti60_f225.py:454" *) \$37  : dbg_boot_complete;
-  assign \$38  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:462" *) boot_triggered;
-  assign \$39  = boot_delay == (* src = "/home/runner/workspace/hardware/ti60_f225.py:464" *) 4'hf;
-  assign \$40  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:536" *) busy;
-  assign \$41  = banner_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:537" *) 5'h12;
-  assign \$42  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:548" *) busy;
-  assign \$43  = callhome_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:549" *) 5'h11;
-  assign \$44  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:559" *) busy;
-  assign \$45  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:567" *) busy;
-  assign \$46  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:576" *) busy;
-  assign \$47  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:593" *) busy;
-  assign \$48  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:601" *) 8'hbe;
-  assign \$49  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:601" *) \$48 ;
-  assign \$50  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:608" *) busy;
-  assign \$51  = halt_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:609" *) 3'h6;
-  assign \$52  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:625" *) 8'hbe;
-  assign \$53  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:625" *) \$52 ;
-  assign \$54  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:661" *) 8'hbe;
-  assign \$55  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:661" *) \$54 ;
-  assign \$56  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:677" *) 8'hbe;
-  assign \$57  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:677" *) \$56 ;
-  assign \$58  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:702" *) busy;
-  assign \$59  = step_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:703" *) 2'h2;
-  assign \$60  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:714" *) busy;
-  assign \$61  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:727" *) busy;
-  assign \$62  = fault_msg_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:728" *) 2'h2;
-  assign \$63  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:739" *) busy;
-  assign \$64  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:752" *) busy;
-  assign \$65  = halt_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:753" *) 3'h6;
-  assign \$66  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:770" *) 8'hef;
-  assign \$67  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:776" *) 8'had;
-  assign \$68  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:778" *) 8'haa;
-  assign \$69  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:891" *) busy;
-  assign \$70  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:901" *) busy;
-  assign \$71  = pl_ack_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:902" *) 3'h4;
-  assign \$73  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:954" *) busy;
-  assign \$74  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:959" *) busy;
-  assign \$75  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:964" *) busy;
-  assign \$76  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:969" *) busy;
+  assign any_ns_access = ns_rd_en | (* src = "/home/runner/workspace/hardware/ti60_f225.py:121" *) ns_wr_en;
+  assign \$1  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:164" *) dmem_addr[31];
+  assign is_mmio = dmem_addr[30] & (* src = "/home/runner/workspace/hardware/ti60_f225.py:164" *) \$1 ;
+  assign is_mmio_write = is_mmio & (* src = "/home/runner/workspace/hardware/ti60_f225.py:193" *) dmem_wr_en;
+  assign is_mmio_read = is_mmio & (* src = "/home/runner/workspace/hardware/ti60_f225.py:216" *) dmem_rd_en;
+  assign \$2  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:226" *) busy;
+  assign dmem_rd_data = is_mmio_read ? (* src = "/home/runner/workspace/hardware/ti60_f225.py:248" *) mmio_rd_data : mem_rd_data;
+  assign dmem_rd_valid = _dmem_rd_valid_r | (* src = "/home/runner/workspace/hardware/ti60_f225.py:259" *) is_mmio_read;
+  assign \$3  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:314" *) is_mmio;
+  assign nia_changed = dbg_nia != (* src = "/home/runner/workspace/hardware/ti60_f225.py:334" *) prev_nia;
+  assign step_complete = stepping & (* src = "/home/runner/workspace/hardware/ti60_f225.py:337" *) nia_changed;
+  assign \$4  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:339" *) halted;
+  assign \$5  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:339" *) step_complete;
+  assign \$6  = stepping & (* src = "/home/runner/workspace/hardware/ti60_f225.py:339" *) \$5 ;
+  assign imem_valid = \$4  | (* src = "/home/runner/workspace/hardware/ti60_f225.py:339" *) \$6 ;
+  assign \$7  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:350" *) btn_sync[2];
+  assign btn_press = btn_prev & (* src = "/home/runner/workspace/hardware/ti60_f225.py:350" *) \$7 ;
+  assign \$8  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:387" *) busy;
+  assign \$9  = mmio_uart_pending & (* src = "/home/runner/workspace/hardware/ti60_f225.py:387" *) \$8 ;
+  assign \$10  = dbg_boot_complete & (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) halted;
+  assign \$11  = ! (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) demo_phase;
+  assign demo_led0 = \$10  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) \$11 ;
+  assign \$12  = dbg_boot_complete & (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) halted;
+  assign \$13  = demo_phase == (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) 1'h1;
+  assign demo_led1 = \$12  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) \$13 ;
+  assign \$14  = dbg_boot_complete & (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) halted;
+  assign \$15  = demo_phase == (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) 2'h2;
+  assign demo_led2 = \$14  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) \$15 ;
+  assign \$16  = dbg_boot_complete & (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) halted;
+  assign \$17  = demo_phase == (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) 2'h3;
+  assign demo_led3 = \$16  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) \$17 ;
+  assign \$18  = mmio_led0[0] | (* src = "/home/runner/workspace/hardware/ti60_f225.py:451" *) demo_led0;
+  assign \$19  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:409" *) dbg_boot_complete;
+  assign led0 = dbg_boot_complete ? (* src = "/home/runner/workspace/hardware/ti60_f225.py:450" *) \$18  : \$19 ;
+  assign \$20  = mmio_led1[0] | (* src = "/home/runner/workspace/hardware/ti60_f225.py:454" *) demo_led1;
+  assign \$21  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:412" *) fault_latched;
+  assign \$22  = halted & (* src = "/home/runner/workspace/hardware/ti60_f225.py:412" *) \$21 ;
+  assign \$23  = \$22  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:412" *) heartbeat_blink;
+  assign \$24  = \$20  | (* src = "/home/runner/workspace/hardware/ti60_f225.py:454" *) \$23 ;
+  assign \$25  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:410" *) fault_latched;
+  assign \$26  = dbg_boot_complete & (* src = "/home/runner/workspace/hardware/ti60_f225.py:410" *) \$25 ;
+  assign \$27  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:410" *) halted;
+  assign \$28  = \$26  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:410" *) \$27 ;
+  assign \$29  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:412" *) fault_latched;
+  assign \$30  = halted & (* src = "/home/runner/workspace/hardware/ti60_f225.py:412" *) \$29 ;
+  assign \$31  = \$30  & (* src = "/home/runner/workspace/hardware/ti60_f225.py:412" *) heartbeat_blink;
+  assign \$32  = \$28  | (* src = "/home/runner/workspace/hardware/ti60_f225.py:455" *) \$31 ;
+  assign led1 = dbg_boot_complete ? (* src = "/home/runner/workspace/hardware/ti60_f225.py:453" *) \$24  : \$32 ;
+  assign \$33  = mmio_led2[0] | (* src = "/home/runner/workspace/hardware/ti60_f225.py:457" *) demo_led2;
+  assign \$34  = \$33  | (* src = "/home/runner/workspace/hardware/ti60_f225.py:457" *) fault_latched;
+  assign \$35  = \$34  | (* src = "/home/runner/workspace/hardware/ti60_f225.py:457" *) banner_ever_sent;
+  assign \$36  = fault_latched | (* src = "/home/runner/workspace/hardware/ti60_f225.py:458" *) banner_ever_sent;
+  assign led2 = dbg_boot_complete ? (* src = "/home/runner/workspace/hardware/ti60_f225.py:456" *) \$35  : \$36 ;
+  assign \$37  = mmio_led3[0] | (* src = "/home/runner/workspace/hardware/ti60_f225.py:460" *) demo_led3;
+  assign led3 = dbg_boot_complete ? (* src = "/home/runner/workspace/hardware/ti60_f225.py:459" *) \$37  : dbg_boot_complete;
+  assign \$38  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:467" *) boot_triggered;
+  assign \$39  = boot_delay == (* src = "/home/runner/workspace/hardware/ti60_f225.py:469" *) 4'hf;
+  assign \$40  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:541" *) busy;
+  assign \$41  = banner_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:542" *) 5'h12;
+  assign \$42  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:553" *) busy;
+  assign \$43  = callhome_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:554" *) 5'h11;
+  assign \$44  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:564" *) busy;
+  assign \$45  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:572" *) busy;
+  assign \$46  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:581" *) busy;
+  assign \$47  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:598" *) busy;
+  assign \$48  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:606" *) 8'hbe;
+  assign \$49  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:606" *) \$48 ;
+  assign \$50  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:613" *) busy;
+  assign \$51  = halt_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:614" *) 3'h6;
+  assign \$52  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:630" *) 8'hbe;
+  assign \$53  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:630" *) \$52 ;
+  assign \$54  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:666" *) 8'hbe;
+  assign \$55  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:666" *) \$54 ;
+  assign \$56  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:682" *) 8'hbe;
+  assign \$57  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:682" *) \$56 ;
+  assign \$58  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:707" *) busy;
+  assign \$59  = step_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:708" *) 2'h2;
+  assign \$60  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:719" *) busy;
+  assign \$61  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:732" *) busy;
+  assign \$62  = fault_msg_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:733" *) 2'h2;
+  assign \$63  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:744" *) busy;
+  assign \$64  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:757" *) busy;
+  assign \$65  = halt_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:758" *) 3'h6;
+  assign \$66  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:775" *) 8'hef;
+  assign \$67  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:781" *) 8'had;
+  assign \$68  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:783" *) 8'haa;
+  assign \$69  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:896" *) busy;
+  assign \$70  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:906" *) busy;
+  assign \$71  = pl_ack_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:907" *) 3'h4;
+  assign \$73  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:959" *) busy;
+  assign \$74  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:964" *) busy;
+  assign \$75  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:969" *) busy;
+  assign \$76  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:974" *) busy;
   assign \$77  = ! (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) debug_fsm_state;
   assign \$78  = debug_fsm_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 1'h1;
   assign \$79  = debug_fsm_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 2'h2;
@@ -17143,272 +17143,272 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
   assign \$118  = debug_fsm_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 6'h29;
   assign \$119  = debug_fsm_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 6'h2a;
   assign \$120  = debug_fsm_state == (* src = "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/amaranth/hdl/_dsl.py:486" *) 6'h2b;
-  assign \$121  = timer_lo == (* src = "/home/runner/workspace/hardware/ti60_f225.py:179" *) 32'd4294967295;
-  assign \$122  = timer_hi + (* src = "/home/runner/workspace/hardware/ti60_f225.py:180" *) 1'h1;
-  assign \$123  = timer_lo + (* src = "/home/runner/workspace/hardware/ti60_f225.py:181" *) 1'h1;
-  assign \$124  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:183" *) alarm_fired;
-  assign \$125  = alarm_armed & (* src = "/home/runner/workspace/hardware/ti60_f225.py:183" *) \$124 ;
-  assign \$126  = timer_lo == (* src = "/home/runner/workspace/hardware/ti60_f225.py:184" *) alarm_cmp;
-  assign \$127  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:253" *) is_mmio;
-  assign \$128  = dmem_rd_en & (* src = "/home/runner/workspace/hardware/ti60_f225.py:253" *) \$127 ;
-  assign \$129  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:284" *) pl_active;
-  assign \$130  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:284" *) \$129 ;
-  assign \$131  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:351" *) btn_sync[2];
-  assign \$132  = btn_hold_ctr < (* src = "/home/runner/workspace/hardware/ti60_f225.py:352" *) 25'h17d7840;
-  assign \$133  = btn_hold_ctr + (* src = "/home/runner/workspace/hardware/ti60_f225.py:353" *) 1'h1;
-  assign \$134  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:382" *) busy;
-  assign \$135  = mmio_uart_pending & (* src = "/home/runner/workspace/hardware/ti60_f225.py:382" *) \$134 ;
-  assign \$136  = heartbeat_ctr + (* src = "/home/runner/workspace/hardware/ti60_f225.py:397" *) 1'h1;
-  assign \$137  = heartbeat_ctr == (* src = "/home/runner/workspace/hardware/ti60_f225.py:398" *) 25'h17d783f;
-  assign \$138  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:399" *) heartbeat_blink;
-  assign \$139  = fault_latched | (* src = "/home/runner/workspace/hardware/ti60_f225.py:402" *) dbg_fault_valid;
-  assign \$140  = demo_ctr == (* src = "/home/runner/workspace/hardware/ti60_f225.py:427" *) 24'hbebc1f;
-  assign \$141  = demo_phase == (* src = "/home/runner/workspace/hardware/ti60_f225.py:429" *) 3'h4;
-  assign \$142  = demo_phase + (* src = "/home/runner/workspace/hardware/ti60_f225.py:432" *) 1'h1;
-  assign \$143  = demo_ctr + (* src = "/home/runner/workspace/hardware/ti60_f225.py:434" *) 1'h1;
-  assign \$144  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:462" *) boot_triggered;
-  assign \$145  = boot_delay + (* src = "/home/runner/workspace/hardware/ti60_f225.py:463" *) 1'h1;
-  assign \$146  = boot_delay == (* src = "/home/runner/workspace/hardware/ti60_f225.py:464" *) 4'hf;
-  assign \$147  = startup_ctr + (* src = "/home/runner/workspace/hardware/ti60_f225.py:522" *) 1'h1;
-  assign \$148  = startup_ctr == (* src = "/home/runner/workspace/hardware/ti60_f225.py:523" *) 27'h47868bf;
-  assign \$149  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:536" *) busy;
-  assign \$150  = banner_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:537" *) 5'h12;
-  assign \$151  = banner_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:542" *) 1'h1;
-  assign \$152  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:548" *) busy;
-  assign \$153  = callhome_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:549" *) 5'h11;
-  assign \$154  = callhome_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:554" *) 1'h1;
-  assign \$155  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:559" *) busy;
-  assign \$156  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:567" *) busy;
-  assign \$157  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:576" *) busy;
-  assign \$158  = fault_nia_idx == (* src = "/home/runner/workspace/hardware/ti60_f225.py:587" *) 2'h3;
-  assign \$159  = fault_nia_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:590" *) 1'h1;
-  assign \$160  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:593" *) busy;
-  assign \$161  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:601" *) 8'hbe;
-  assign \$162  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:601" *) \$161 ;
-  assign \$163  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:608" *) busy;
-  assign \$164  = halt_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:609" *) 3'h6;
-  assign \$165  = halt_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:614" *) 1'h1;
-  assign \$166  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:625" *) 8'hbe;
-  assign \$167  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:625" *) \$166 ;
-  assign \$168  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:661" *) 8'hbe;
-  assign \$169  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:661" *) \$168 ;
-  assign \$170  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:677" *) 8'hbe;
-  assign \$171  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:677" *) \$170 ;
-  assign \$172  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:702" *) busy;
-  assign \$173  = step_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:703" *) 2'h2;
-  assign \$174  = step_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:708" *) 1'h1;
-  assign \$175  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:714" *) busy;
-  assign \$176  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:727" *) busy;
-  assign \$177  = fault_msg_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:728" *) 2'h2;
-  assign \$178  = fault_msg_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:733" *) 1'h1;
-  assign \$179  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:739" *) busy;
-  assign \$180  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:752" *) busy;
-  assign \$181  = halt_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:753" *) 3'h6;
-  assign \$182  = halt_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:758" *) 1'h1;
-  assign \$183  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:770" *) 8'hef;
-  assign \$184  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:776" *) 8'had;
-  assign \$185  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:778" *) 8'haa;
-  assign \$186  = pl_cur_addr + (* src = "/home/runner/workspace/hardware/ti60_f225.py:859" *) 1'h1;
-  assign \$187  = pl_count == (* src = "/home/runner/workspace/hardware/ti60_f225.py:860" *) 1'h1;
-  assign \$188  = pl_count - (* src = "/home/runner/workspace/hardware/ti60_f225.py:864" *) 1'h1;
-  assign \$189  = \data$123  != (* src = "/home/runner/workspace/hardware/ti60_f225.py:871" *) crc[15:8];
-  assign \$190  = \data$123  != (* src = "/home/runner/workspace/hardware/ti60_f225.py:877" *) crc[7:0];
-  assign \$191  = pl_crc_fail | (* src = "/home/runner/workspace/hardware/ti60_f225.py:877" *) \$190 ;
-  assign \$192  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:891" *) busy;
-  assign \$193  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:901" *) busy;
-  assign \$194  = pl_ack_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:902" *) 3'h4;
-  assign \$195  = pl_ack_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:907" *) 1'h1;
-  assign \$196  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:954" *) busy;
-  assign \$197  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:959" *) busy;
-  assign \$198  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:964" *) busy;
-  assign \$199  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:969" *) busy;
-  assign \$200  = rb_count - (* src = "/home/runner/workspace/hardware/ti60_f225.py:972" *) 1'h1;
-  assign \$201  = rb_cur_addr + (* src = "/home/runner/workspace/hardware/ti60_f225.py:973" *) 1'h1;
-  assign \$202  = rb_count == (* src = "/home/runner/workspace/hardware/ti60_f225.py:975" *) 1'h1;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:173" *)
+  assign \$121  = timer_lo == (* src = "/home/runner/workspace/hardware/ti60_f225.py:184" *) 32'd4294967295;
+  assign \$122  = timer_hi + (* src = "/home/runner/workspace/hardware/ti60_f225.py:185" *) 1'h1;
+  assign \$123  = timer_lo + (* src = "/home/runner/workspace/hardware/ti60_f225.py:186" *) 1'h1;
+  assign \$124  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:188" *) alarm_fired;
+  assign \$125  = alarm_armed & (* src = "/home/runner/workspace/hardware/ti60_f225.py:188" *) \$124 ;
+  assign \$126  = timer_lo == (* src = "/home/runner/workspace/hardware/ti60_f225.py:189" *) alarm_cmp;
+  assign \$127  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:258" *) is_mmio;
+  assign \$128  = dmem_rd_en & (* src = "/home/runner/workspace/hardware/ti60_f225.py:258" *) \$127 ;
+  assign \$129  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:289" *) pl_active;
+  assign \$130  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:289" *) \$129 ;
+  assign \$131  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:356" *) btn_sync[2];
+  assign \$132  = btn_hold_ctr < (* src = "/home/runner/workspace/hardware/ti60_f225.py:357" *) 25'h17d7840;
+  assign \$133  = btn_hold_ctr + (* src = "/home/runner/workspace/hardware/ti60_f225.py:358" *) 1'h1;
+  assign \$134  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:387" *) busy;
+  assign \$135  = mmio_uart_pending & (* src = "/home/runner/workspace/hardware/ti60_f225.py:387" *) \$134 ;
+  assign \$136  = heartbeat_ctr + (* src = "/home/runner/workspace/hardware/ti60_f225.py:402" *) 1'h1;
+  assign \$137  = heartbeat_ctr == (* src = "/home/runner/workspace/hardware/ti60_f225.py:403" *) 25'h17d783f;
+  assign \$138  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:404" *) heartbeat_blink;
+  assign \$139  = fault_latched | (* src = "/home/runner/workspace/hardware/ti60_f225.py:407" *) dbg_fault_valid;
+  assign \$140  = demo_ctr == (* src = "/home/runner/workspace/hardware/ti60_f225.py:432" *) 24'hbebc1f;
+  assign \$141  = demo_phase == (* src = "/home/runner/workspace/hardware/ti60_f225.py:434" *) 3'h4;
+  assign \$142  = demo_phase + (* src = "/home/runner/workspace/hardware/ti60_f225.py:437" *) 1'h1;
+  assign \$143  = demo_ctr + (* src = "/home/runner/workspace/hardware/ti60_f225.py:439" *) 1'h1;
+  assign \$144  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:467" *) boot_triggered;
+  assign \$145  = boot_delay + (* src = "/home/runner/workspace/hardware/ti60_f225.py:468" *) 1'h1;
+  assign \$146  = boot_delay == (* src = "/home/runner/workspace/hardware/ti60_f225.py:469" *) 4'hf;
+  assign \$147  = startup_ctr + (* src = "/home/runner/workspace/hardware/ti60_f225.py:527" *) 1'h1;
+  assign \$148  = startup_ctr == (* src = "/home/runner/workspace/hardware/ti60_f225.py:528" *) 27'h47868bf;
+  assign \$149  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:541" *) busy;
+  assign \$150  = banner_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:542" *) 5'h12;
+  assign \$151  = banner_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:547" *) 1'h1;
+  assign \$152  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:553" *) busy;
+  assign \$153  = callhome_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:554" *) 5'h11;
+  assign \$154  = callhome_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:559" *) 1'h1;
+  assign \$155  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:564" *) busy;
+  assign \$156  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:572" *) busy;
+  assign \$157  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:581" *) busy;
+  assign \$158  = fault_nia_idx == (* src = "/home/runner/workspace/hardware/ti60_f225.py:592" *) 2'h3;
+  assign \$159  = fault_nia_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:595" *) 1'h1;
+  assign \$160  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:598" *) busy;
+  assign \$161  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:606" *) 8'hbe;
+  assign \$162  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:606" *) \$161 ;
+  assign \$163  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:613" *) busy;
+  assign \$164  = halt_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:614" *) 3'h6;
+  assign \$165  = halt_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:619" *) 1'h1;
+  assign \$166  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:630" *) 8'hbe;
+  assign \$167  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:630" *) \$166 ;
+  assign \$168  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:666" *) 8'hbe;
+  assign \$169  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:666" *) \$168 ;
+  assign \$170  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:682" *) 8'hbe;
+  assign \$171  = valid & (* src = "/home/runner/workspace/hardware/ti60_f225.py:682" *) \$170 ;
+  assign \$172  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:707" *) busy;
+  assign \$173  = step_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:708" *) 2'h2;
+  assign \$174  = step_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:713" *) 1'h1;
+  assign \$175  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:719" *) busy;
+  assign \$176  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:732" *) busy;
+  assign \$177  = fault_msg_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:733" *) 2'h2;
+  assign \$178  = fault_msg_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:738" *) 1'h1;
+  assign \$179  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:744" *) busy;
+  assign \$180  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:757" *) busy;
+  assign \$181  = halt_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:758" *) 3'h6;
+  assign \$182  = halt_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:763" *) 1'h1;
+  assign \$183  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:775" *) 8'hef;
+  assign \$184  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:781" *) 8'had;
+  assign \$185  = \data$123  == (* src = "/home/runner/workspace/hardware/ti60_f225.py:783" *) 8'haa;
+  assign \$186  = pl_cur_addr + (* src = "/home/runner/workspace/hardware/ti60_f225.py:864" *) 1'h1;
+  assign \$187  = pl_count == (* src = "/home/runner/workspace/hardware/ti60_f225.py:865" *) 1'h1;
+  assign \$188  = pl_count - (* src = "/home/runner/workspace/hardware/ti60_f225.py:869" *) 1'h1;
+  assign \$189  = \data$123  != (* src = "/home/runner/workspace/hardware/ti60_f225.py:876" *) crc[15:8];
+  assign \$190  = \data$123  != (* src = "/home/runner/workspace/hardware/ti60_f225.py:882" *) crc[7:0];
+  assign \$191  = pl_crc_fail | (* src = "/home/runner/workspace/hardware/ti60_f225.py:882" *) \$190 ;
+  assign \$192  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:896" *) busy;
+  assign \$193  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:906" *) busy;
+  assign \$194  = pl_ack_idx < (* src = "/home/runner/workspace/hardware/ti60_f225.py:907" *) 3'h4;
+  assign \$195  = pl_ack_idx + (* src = "/home/runner/workspace/hardware/ti60_f225.py:912" *) 1'h1;
+  assign \$196  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:959" *) busy;
+  assign \$197  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:964" *) busy;
+  assign \$198  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:969" *) busy;
+  assign \$199  = ~ (* src = "/home/runner/workspace/hardware/ti60_f225.py:974" *) busy;
+  assign \$200  = rb_count - (* src = "/home/runner/workspace/hardware/ti60_f225.py:977" *) 1'h1;
+  assign \$201  = rb_cur_addr + (* src = "/home/runner/workspace/hardware/ti60_f225.py:978" *) 1'h1;
+  assign \$202  = rb_count == (* src = "/home/runner/workspace/hardware/ti60_f225.py:980" *) 1'h1;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:178" *)
   always @(posedge clk)
     timer_hi <= \$203 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:172" *)
-  always @(posedge clk)
-    timer_lo <= \$123 [31:0];
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:177" *)
   always @(posedge clk)
+    timer_lo <= \$123 [31:0];
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:182" *)
+  always @(posedge clk)
     alarm_fired <= \$204 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:164" *)
-  always @(posedge clk)
-    mmio_led0 <= \$205 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:164" *)
-  always @(posedge clk)
-    mmio_led1 <= \$206 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:164" *)
-  always @(posedge clk)
-    mmio_led2 <= \$207 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:164" *)
-  always @(posedge clk)
-    mmio_led3 <= \$208 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:164" *)
-  always @(posedge clk)
-    mmio_led4 <= \$209 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:174" *)
-  always @(posedge clk)
-    tod_epoch <= \$210 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:175" *)
-  always @(posedge clk)
-    alarm_cmp <= \$211 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:176" *)
-  always @(posedge clk)
-    alarm_armed <= \$212 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:252" *)
-  always @(posedge clk)
-    _dmem_rd_valid_r <= \$128 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:168" *)
-  always @(posedge clk)
-    mmio_rx_data <= \$213 ;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:169" *)
   always @(posedge clk)
+    mmio_led0 <= \$205 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:169" *)
+  always @(posedge clk)
+    mmio_led1 <= \$206 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:169" *)
+  always @(posedge clk)
+    mmio_led2 <= \$207 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:169" *)
+  always @(posedge clk)
+    mmio_led3 <= \$208 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:169" *)
+  always @(posedge clk)
+    mmio_led4 <= \$209 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:179" *)
+  always @(posedge clk)
+    tod_epoch <= \$210 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:180" *)
+  always @(posedge clk)
+    alarm_cmp <= \$211 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:181" *)
+  always @(posedge clk)
+    alarm_armed <= \$212 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:257" *)
+  always @(posedge clk)
+    _dmem_rd_valid_r <= \$128 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:173" *)
+  always @(posedge clk)
+    mmio_rx_data <= \$213 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:174" *)
+  always @(posedge clk)
     mmio_rx_valid <= \$214 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:326" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:331" *)
   always @(posedge clk)
     prev_nia <= dbg_nia;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:336" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:341" *)
   always @(posedge clk)
     btn_sync <= \$215 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:337" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:342" *)
   always @(posedge clk)
     btn_prev <= btn_sync[2];
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:349" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:354" *)
   always @(posedge clk)
     btn_hold_ctr <= \$216 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:350" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:355" *)
   always @(posedge clk)
     btn_hold_done <= \$217 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:371" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:376" *)
   always @(posedge clk)
     mmio_uart_pending <= \$218 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:372" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:377" *)
   always @(posedge clk)
     mmio_uart_byte_reg <= \$219 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:395" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:400" *)
   always @(posedge clk)
     heartbeat_ctr <= \$220 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:396" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:401" *)
   always @(posedge clk)
     heartbeat_blink <= \$221 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:258" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:263" *)
   always @(posedge clk)
     fault_latched <= \$139 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:417" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:422" *)
   always @(posedge clk)
     demo_ctr <= \$222 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:418" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:423" *)
   always @(posedge clk)
     demo_phase <= \$223 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:459" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:464" *)
   always @(posedge clk)
     boot_delay <= \$224 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:460" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:465" *)
   always @(posedge clk)
     boot_triggered <= \$225 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:518" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:523" *)
   always @(posedge clk)
     startup_ctr <= \$226 ;
   (* src = "/nix/store/h097imm3w6dpx10qynrd2sz9fks2wbq8-python3-3.12.11/lib/python3.12/contextlib.py:144" *)
   always @(posedge clk)
     debug_fsm_state <= \$227 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:473" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:478" *)
   always @(posedge clk)
     banner_idx <= \$228 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:256" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:261" *)
   always @(posedge clk)
     halted <= \$229 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:441" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:446" *)
   always @(posedge clk)
     banner_ever_sent <= \$230 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:486" *)
-  always @(posedge clk)
-    callhome_idx <= \$231 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:508" *)
-  always @(posedge clk)
-    fault_nia_idx <= \$232 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:270" *)
-  always @(posedge clk)
-    pl_active <= \$233 ;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:491" *)
   always @(posedge clk)
-    halt_idx <= \$234 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:257" *)
+    callhome_idx <= \$231 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:513" *)
   always @(posedge clk)
-    stepping <= \$235 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:506" *)
-  always @(posedge clk)
-    last_fault_code <= \$236 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:505" *)
-  always @(posedge clk)
-    boot_reason <= \$237 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:507" *)
-  always @(posedge clk)
-    fault_nia <= \$238 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:510" *)
-  always @(posedge clk)
-    step_nia <= \$239 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:511" *)
-  always @(posedge clk)
-    step_fault <= \$240 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:512" *)
-  always @(posedge clk)
-    step_had_fault <= \$241 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:496" *)
-  always @(posedge clk)
-    step_idx <= \$242 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:501" *)
-  always @(posedge clk)
-    fault_msg_idx <= \$243 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:271" *)
-  always @(posedge clk)
-    pl_addr <= \$244 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:272" *)
-  always @(posedge clk)
-    pl_total_count <= \$245 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:273" *)
-  always @(posedge clk)
-    pl_count <= \$246 ;
+    fault_nia_idx <= \$232 ;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:275" *)
   always @(posedge clk)
-    pl_cur_addr <= \$247 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:274" *)
+    pl_active <= \$233 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:496" *)
   always @(posedge clk)
-    pl_word <= \$248 ;
+    halt_idx <= \$234 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:262" *)
+  always @(posedge clk)
+    stepping <= \$235 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:511" *)
+  always @(posedge clk)
+    last_fault_code <= \$236 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:510" *)
+  always @(posedge clk)
+    boot_reason <= \$237 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:512" *)
+  always @(posedge clk)
+    fault_nia <= \$238 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:515" *)
+  always @(posedge clk)
+    step_nia <= \$239 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:516" *)
+  always @(posedge clk)
+    step_fault <= \$240 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:517" *)
+  always @(posedge clk)
+    step_had_fault <= \$241 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:501" *)
+  always @(posedge clk)
+    step_idx <= \$242 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:506" *)
+  always @(posedge clk)
+    fault_msg_idx <= \$243 ;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:276" *)
   always @(posedge clk)
-    pl_crc_hi_buf <= \$249 ;
+    pl_addr <= \$244 ;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:277" *)
   always @(posedge clk)
-    pl_crc_fail <= \$250 ;
+    pl_total_count <= \$245 ;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:278" *)
   always @(posedge clk)
-    pl_ack0 <= \$251 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:278" *)
+    pl_count <= \$246 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:280" *)
   always @(posedge clk)
-    pl_ack1 <= \$252 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:278" *)
-  always @(posedge clk)
-    pl_ack2 <= \$253 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:278" *)
-  always @(posedge clk)
-    pl_ack3 <= \$254 ;
+    pl_cur_addr <= \$247 ;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:279" *)
   always @(posedge clk)
+    pl_word <= \$248 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:281" *)
+  always @(posedge clk)
+    pl_crc_hi_buf <= \$249 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:282" *)
+  always @(posedge clk)
+    pl_crc_fail <= \$250 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:283" *)
+  always @(posedge clk)
+    pl_ack0 <= \$251 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:283" *)
+  always @(posedge clk)
+    pl_ack1 <= \$252 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:283" *)
+  always @(posedge clk)
+    pl_ack2 <= \$253 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:283" *)
+  always @(posedge clk)
+    pl_ack3 <= \$254 ;
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:284" *)
+  always @(posedge clk)
     pl_ack_idx <= \$255 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:299" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:304" *)
   always @(posedge clk)
     rb_addr <= \$256 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:300" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:305" *)
   always @(posedge clk)
     rb_count <= \$257 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:123" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:128" *)
   always @(posedge clk)
     rb_cur_addr <= \$258 ;
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:301" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:306" *)
   always @(posedge clk)
     rb_word <= \$259 ;
   (* src = "/home/runner/workspace/hardware/ti60_f225.py:68" *)
@@ -17445,7 +17445,7 @@ module church_ti60f225(clk, push_button, uart_tx, dbg_nia, dbg_fault, dbg_fault_
     .ns_wr_en(ns_wr_en),
     .\port$4577$0 (mem_rd_data)
   );
-  (* src = "/home/runner/workspace/hardware/ti60_f225.py:282" *)
+  (* src = "/home/runner/workspace/hardware/ti60_f225.py:287" *)
   \top.crc_mod  crc_mod (
     .clk(clk),
     .crc(crc),

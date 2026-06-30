@@ -26,3 +26,4 @@
 - [Sapphire firmware uart_putdec hang](sapphire-uart-putdec-hang.md) — uart_putdec using divu/remu hangs at runtime even with always_inline uart_putc; replaced with uart_puthex32_lower+uart_putc in callhome path
 - [Sapphire BRAM byte-store hang](sapphire-bram-byte-store-hang.md) — ANY sb to 0xF9007xxx hangs CPU; sha256.h/hkdf all use sb; precompute tokens or stub; only sw/lw safe in firmware
 - [top.res.csv wrong sync file](top-res-csv-backslash.md) — Interface Designer writes outflow/<circuit>.interface.csv NOT top.res.csv; top.res.csv is MAP resource report; passing it to efx_pnr crashes "unknown escape sequence" on \t
+- [CM DMEM Thread.caps[0] boot fix](cm-dmem-thread-caps.md) — DMEM word 125 = Thread.caps[0]; must be 0x4A000004 (E-GT→Salvation/NUC_PROGRAM slot 4); run_efx_map.sh now auto-calls patch_cm_bram.py before MAP

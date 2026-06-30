@@ -583,7 +583,7 @@ int main(void)
     CM_CTRL = CM_CTRL_RELEASED;
 
     /* ---- Step 4: Boot banner ---- */
-    uart_puts("CHURCH Ti60 SoC+CM v2.3\r\n");
+    uart_puts("CHURCH Ti60 SoC+CM v2.4\r\n");
     uart_puts("UID=");
     emit_uid();
     uart_puts("\r\n");

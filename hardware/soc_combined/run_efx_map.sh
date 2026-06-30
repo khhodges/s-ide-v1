@@ -62,6 +62,18 @@ echo ""
 mkdir -p "$SOC_DIR/work_syn"
 cd "$SOC_DIR"
 
+# ----------------------------------------------------------------
+# Step 0: CM DMEM BRAM patch
+# EFX_MAP ignores Verilog 'initial begin' assignments on inferred arrays.
+# patch_cm_bram.py converts the dmem array to four byte-lane $readmemb
+# declarations and writes cm_dmem_b0..b3.bin into work_syn/ so MAP reads
+# the correct initial values.  Must run BEFORE efx_run.py.
+# ----------------------------------------------------------------
+echo "==> Step 0: Patching CM DMEM BRAM init (patch_cm_bram.py) ..."
+python3 "$SCRIPT_DIR/patch_cm_bram.py" "$SOC_DIR"
+echo "    Done."
+echo ""
+
 # efx_run.py --flow map runs synthesis AND writes outflow/*.vdb (required by efx_pnr).
 # --work_dir sets the scratch directory; output lands in outflow/ as per the project XML.
 python3 "$EFX_RUN_PY" \

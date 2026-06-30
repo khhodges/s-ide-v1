@@ -98,6 +98,11 @@ class ChurchTi60F225(Elaboratable):
             dmem_init.append(0)
 
         dmem_init[511] = SLIDERULE_LUMP_HEADER
+        # Thread.caps[0] must be an E-GT → Salvation (NS slot 4 / NUC_PROGRAM) for
+        # standalone FPGA boot.  Thread lump is at DMEM byte 0x100 (word 64);
+        # caps zone is at byte offset +244 = DMEM word 125.
+        # make_gt(GT_TYPE_INFORM, PERM_MASK_E, slot_id=4, gt_seq=0) = 0x4A000004
+        dmem_init[125] = 0x4A000004
 
         # depth=16384 (64 KB, 14-bit address) — matches the full boot image size
         # (totalNamespaceWords=16384).  The Ti60 F225 has 256 KB embedded BRAM so
