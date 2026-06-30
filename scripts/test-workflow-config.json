@@ -15,6 +15,7 @@
     "lump-builder-dispatch-tests",
     "wukong-protocol-tests",
     "build-guard-tests",
-    "update-lump-tests"
+    "update-lump-tests",
+    "check-slot-index-leak"
   ]
 }
