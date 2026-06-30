@@ -60,8 +60,8 @@ cd "$SOC_DIR"
 # firmware.bin must exist — run `make -C firmware` first.
 # ----------------------------------------------------------------
 FIRMWARE_BIN="$SOC_DIR/firmware/firmware.bin"
-echo "==> Step 0a: Building Sapphire firmware (make -C firmware) ..."
-make -C "$SOC_DIR/firmware"
+echo "==> Step 0a: Building Sapphire firmware (make -C firmware clean all) ..."
+make -C "$SOC_DIR/firmware" clean all
 echo "    Done."
 echo ""
 echo "==> Step 0a: Generating Sapphire symbol bins from firmware ..."

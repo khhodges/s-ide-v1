@@ -42,8 +42,8 @@ echo "========================================"
 echo ""
 
 # ── Step 1: Firmware ──────────────────────────────────────────────────────
-echo "==> [1/4] Building Sapphire firmware ..."
-make -C "$SCRIPT_DIR/firmware"
+echo "==> [1/4] Building Sapphire firmware (clean rebuild) ..."
+make -C "$SCRIPT_DIR/firmware" clean all
 echo "    Done."
 echo ""
 
