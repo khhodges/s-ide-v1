@@ -52,6 +52,13 @@ if ! python3 -c "import serial" 2>/dev/null; then
     exit 1
 fi
 
+LOADER="$(command -v openFPGALoader || echo "$HOME/oss-cad-suite/bin/openFPGALoader")"
+if [ ! -x "$LOADER" ]; then
+    echo "ERROR: openFPGALoader not found."
+    echo "       Install oss-cad-suite or set PATH so openFPGALoader is visible."
+    exit 1
+fi
+
 # ── Download hex ──────────────────────────────────────────────────────────
 echo "==> [1/3] Downloading hex from droplet ..."
 curl --fail -# -o "$HEX_FILE" "$HEX_URL"
@@ -73,7 +80,7 @@ sleep 2
 
 # ── Flash ─────────────────────────────────────────────────────────────────
 echo "==> [3/3] Flashing Ti60 ..."
-sudo openFPGALoader -b titanium_ti60_f225_jtag --external-flash -f "$HEX_FILE"
+sudo "$LOADER" -b titanium_ti60_f225_jtag --external-flash -f "$HEX_FILE"
 echo ""
 
 # ── Done — auto-open IDE on the Devices / callhome console page ───────────
@@ -104,6 +111,8 @@ echo ""
 echo "  Bridge is running (PID $BRIDGE_PID). Press Ctrl+C to stop."
 echo ""
 
-# ── Keep bridge alive — Ctrl+C cleans up ─────────────────────────────────
-trap "echo ''; echo 'Stopping bridge...'; kill $BRIDGE_PID 2>/dev/null; exit 0" INT TERM
+# ── Keep bridge alive — always clean up on exit (Ctrl+C, error, or normal end)
+_cleanup() { kill $BRIDGE_PID 2>/dev/null; echo "Bridge stopped."; }
+trap '_cleanup' EXIT
+trap 'echo ""; echo "Stopping..."; exit 0' INT TERM
 wait $BRIDGE_PID
