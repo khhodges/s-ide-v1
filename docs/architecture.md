@@ -540,6 +540,128 @@ Both languages prove the Church Machine is a universal computation target — th
 
 DR0 is hardwired to zero — it reads as 0 unconditionally after every instruction.
 
+## Boot Namespace Architecture
+
+### The Minimal Boot Principle
+
+The Church Machine boot namespace contains only what the ISA mandates and what the hardware
+requires to reach the first programmable abstraction. Nothing is reserved speculatively. No slot
+is allocated until a real, callable LUMP exists behind it.
+
+The namespace has three distinct layers:
+
+**Layer 1 — Universal (ISA-mandated, every board, every build)**
+
+Two slots only. Fixed by the boot program in silicon.
+
+| Name | Why hardwired |
+|------|--------------|
+| Boot.NS | First instruction: `LOAD CR15, CR15[0]` — namespace root |
+| Boot.Thread | Second instruction: `CHANGE CR12, CR15[1]` — thread stack; loads CR0 from Thread.caps[0] |
+
+These are the only two slots ever addressed by number. Every other slot in the system is
+addressed exclusively by pet name — a Golden Token held in a c-list.
+
+**Layer 2 — Board Profile (hardware-specific, defined by the boot image generator)**
+
+MMIO device capabilities for the target board. The addresses, count, and permissions vary per
+board. For the Ti60 F225:
+
+| Pet Name | What |
+|----------|------|
+| UART_DEV | Serial I/O |
+| LED_DEV | Status LEDs |
+| BTN_DEV | User button |
+| TIMER_DEV | Hardware timer |
+
+A different board produces a different profile. Board profile slots are always resident — MMIO
+capabilities have no lump to load; the NS entry is the capability.
+
+**Layer 3 — Programmable (lazy-load, programmer-defined)**
+
+Two lazy-load slots above the board profile:
+
+| Pet Name | Role |
+|----------|------|
+| SelfTest | Recovery abstraction — runs at every boot, ends with CALL CR0 or loops if CR0 is null |
+| *(programmer's name)* | First user abstraction — what it does, how it loads, and what it calls are entirely the programmer's design |
+
+The second slot has no fixed name and no fixed function. The boot system's contract ends at:
+*SelfTest ran, CR0 holds a valid E-GT, CALL is dispatched.* The programmer names the
+abstraction, decides whether it fetches a lump over CallHome, reads from flash, or does
+something else entirely.
+
+### The Namespace Liveness Rule
+
+A slot must not exist in the namespace until its LUMP exists and its methods are callable.
+Names are not capabilities. A GT pointing at an empty address will fault the moment anything
+calls it — which is exactly what the ISA and hardware enforce. Placeholder slots are prohibited.
+
+### Authority Capabilities Are Not Namespace Entries
+
+Structural authority — the permission to execute `CHANGE CR12`, `CHANGE CR13`, or set the
+M-elevation bit — is represented as an **Abstract Golden Token** (type=3), not as a namespace
+entry.
+
+An Abstract GT encodes authority directly in the token itself. It references no physical lump,
+no NS slot, no address. The mLoad pipeline validates it by reading the GT word alone:
+type=Abstract, S-perm set. No namespace table lookup is required.
+
+This is the correct representation for authority. The namespace is a loader registry — it exists
+to locate and load lumps. Authority is orthogonal to loading. These two concerns must not share
+the same table.
+
+The Abstract S-perm GT for structural authority is pre-baked into the boot image as a literal
+word in the trusted abstraction's c-list. No namespace manager is required to mint it at boot.
+Once a dynamic namespace manager is online it can mint further delegate copies for abstractions
+that need CHANGE authority.
+
+### Dynamic Namespace Extension
+
+All slots above the boot boundary are allocated at runtime. The mechanism is a method —
+**AllocSlot** or equivalent — on whichever trusted abstraction the programmer installs in the
+second lazy-load slot. That abstraction holds the Abstract S-perm GT in its c-list, which
+authorises the low-level M-elevated write that creates and seals a new NS entry.
+
+The result of AllocSlot is a Golden Token — a pet-named, typed capability handle. The caller
+never sees or stores the slot number. From the programmer's perspective the namespace grows by
+named capability, not by index.
+
+What that trusted abstraction does beyond AllocSlot — how it fetches lumps, whether it verifies
+signatures, whether it communicates over CallHome before loading — is entirely the programmer's
+domain. The ISA provides the mechanism. The programmer provides the policy.
+
+### The SelfTest Recovery Pattern
+
+SelfTest ends with the following logic rather than a bare RETURN:
+
+```
+done:
+    ISUB DR0, DR0, DR0      ; DR0 = 0 (all tests passed)
+    TPERM CR0, E            ; is CR0 a valid E-GT?
+    BRANCHEQ launch         ; yes — hand off
+    BRANCH AL, start        ; CR0 is null — loop and re-run
+launch:
+    CALL CR0                ; enter programmer's first abstraction
+```
+
+If `Thread.caps[0]` has not been configured the machine loops indefinitely in the self-test,
+keeping the hardware alive and visibly running. The moment a valid E-GT is written into
+`Thread.caps[0]` the next loop iteration dispatches cleanly. No fault. No halt.
+
+### The IDE as a Telescope
+
+The IDE is not an independent entity with its own boot logic. It is the Church Machine ISA
+running in JavaScript — a transparent implementation of the same rules the hardware enforces in
+silicon. Every capability check, every mLoad pipeline stage, every GT validation, every boot FSM
+state is identical in both. The substrate differs (FPGA logic vs JavaScript); the rules do not.
+
+When the IDE flags a capability violation, that is not a simulation artefact. That is the Church
+Machine architecture saying the same operation would fault on hardware. A program that passes the
+IDE without faults is correct according to the CM ISA and will behave identically on the FPGA.
+The IDE makes hidden hardware steps visible, nameable, pauseable, and auditable. It is a
+telescope into the hardware, not a replacement for it.
+
 ## Cross-references
 
 - [Lump-Architecture.md](./Lump-Architecture.md) — Lump header format, lump split mechanics, and

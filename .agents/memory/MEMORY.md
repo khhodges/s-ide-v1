@@ -28,3 +28,4 @@
 - [top.res.csv wrong sync file](top-res-csv-backslash.md) — Interface Designer writes outflow/<circuit>.interface.csv NOT top.res.csv; top.res.csv is MAP resource report; passing it to efx_pnr crashes "unknown escape sequence" on \t
 - [CM DMEM Thread.caps[0] boot fix](cm-dmem-thread-caps.md) — DMEM word 125 = Thread.caps[0]; must be 0x4A000004 (E-GT→Salvation/NUC_PROGRAM slot 4); run_efx_map.sh now auto-calls patch_cm_bram.py before MAP
 - [Ti60 one-button build](ti60-one-button-build.md) — run_full_build.sh does git pull→firmware clean all→MAP→PNR→PGM→serve hex; all env vars baked in; firmware MUST be clean all (make skips after git pull due to equal timestamps)
+- [Boot namespace architecture rules](boot-namespace-rules.md) — 2 hardwired slots only; namespace liveness rule; authority = Abstract GT not NS entry; 3-layer boot model; SelfTest loop/CALL pattern
