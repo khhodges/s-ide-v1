@@ -1,82 +1,99 @@
 #!/bin/bash
-# run_full_build.sh — One-command full build: firmware → MAP → PNR → PGM
+# run_full_build.sh — ONE command: git pull → firmware → MAP → PNR → PGM → serve hex
 #
-# Usage:
+# Run from anywhere on the droplet:
 #   bash ~/church-machine/hardware/soc_combined/run_full_build.sh
 #
-# What this does (in order, encoding every hard-won lesson):
-#
-#   1. Builds Sapphire firmware (make -C firmware)          [always fresh]
-#   2. MAP: patch_cm_bram.py → efx_run --flow map           [CM DMEM via $readmemb]
-#   3. PNR: gen_sapphire_symbol_bins.py → patch_mapv_init.py → efx_pnr
-#                                                           [Sapphire BRAM injected]
-#   4. PGM: efx_run --flow pgm                              [.hex for flash]
-#
-# Lessons encoded here so they are never forgotten:
-#   - EFX_MAP silently ignores 'initial begin' on inferred arrays.
-#     patch_cm_bram.py converts CM DMEM to $readmemb before MAP.
-#   - EFX_MAP also silently ignores $readmemb on Sapphire system_ramA.
-#     patch_mapv_init.py injects firmware bytes into INIT_ in map.v before PNR.
-#   - Firmware MUST be rebuilt before gen_sapphire_symbol_bins.py runs or
-#     the Sapphire BRAM gets stale code.
-#   - EFINITY_USER_DIR_INI / EFXPT_HOME / EFXPGM_HOME must be exported or
-#     efx_run_pgm.py throws a bare KeyError and aborts.
-#   - run_efx_map.sh strips banned XML params (infer_clk_enable etc.) automatically.
-#   - PNR sync file is outflow/<circuit>.interface.csv NOT top.res.csv.
+# Takes ~75 min total (MAP 45 min + PNR 30 min + PGM <5 min).
+# When done, the .hex is served on port 8888 ready to download and flash.
 
 set -euo pipefail
 
+# ── Locate repo root ──────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SOC_DIR="$SCRIPT_DIR"
+
+# ── Efinity environment (all vars needed by MAP / PNR / PGM) ─────────────
 EFINITY="${EFINITY_HOME:-$HOME/efinity/2026.1}"
 export EFINITY_HOME="$EFINITY"
 export EFINITY_USER_DIR_INI="${EFINITY_USER_DIR_INI:-$HOME/.efinity}"
 export EFXPT_HOME="${EFXPT_HOME:-$EFINITY}"
 export EFXPGM_HOME="${EFXPGM_HOME:-$EFINITY}"
+export PATH="$EFINITY/bin:${PATH:-}"
+if [ -d "$EFINITY/lib" ]; then
+    export LD_LIBRARY_PATH="$EFINITY/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
 mkdir -p "$EFINITY_USER_DIR_INI"
 
 START_TIME=$(date +%s)
-echo "========================================"
-echo "  Church Machine Full Build"
-echo "  $(date)"
-echo "========================================"
+echo ""
+echo "╔══════════════════════════════════════════╗"
+echo "║   Church Machine — Full Build            ║"
+echo "║   $(date)   ║"
+echo "╚══════════════════════════════════════════╝"
 echo ""
 
-# ── Step 1: Firmware ──────────────────────────────────────────────────────
-echo "==> [1/4] Building Sapphire firmware (clean rebuild) ..."
-make -C "$SCRIPT_DIR/firmware" clean all
+# ── Step 1: Git pull ──────────────────────────────────────────────────────
+echo "==> [1/5] Git pull (latest code from GitHub) ..."
+cd "$REPO_ROOT"
+git pull
 echo "    Done."
 echo ""
 
-# ── Step 2: MAP (includes patch_cm_bram.py) ───────────────────────────────
-echo "==> [2/4] MAP (synthesis) — this takes ~45 minutes ..."
-bash "$SCRIPT_DIR/run_efx_map.sh"
+# ── Step 2: Firmware (always clean rebuild — avoids git-pull timestamp trap) ──
+echo "==> [2/5] Firmware — clean rebuild ..."
+make -C "$SOC_DIR/firmware" clean all
+echo "    Done."
 echo ""
 
-# ── Step 3: PNR (includes gen_symbol_bins + patch_mapv_init) ─────────────
-echo "==> [3/4] PNR (place & route) — this takes ~30 minutes ..."
-bash "$SCRIPT_DIR/run_efx_pnr.sh"
+# ── Step 3: MAP — synthesis (~45 min) ────────────────────────────────────
+# run_efx_map.sh bakes in:
+#   • patch_cm_bram.py  (CM DMEM via $readmemb — EFX_MAP ignores initial begin)
+#   • strips banned XML params (infer_clk_enable etc.)
+echo "==> [3/5] MAP — synthesis (~45 min) ..."
+bash "$SOC_DIR/run_efx_map.sh"
 echo ""
 
-# ── Step 4: PGM ──────────────────────────────────────────────────────────
-echo "==> [4/4] PGM (bitstream generation) ..."
-bash "$SCRIPT_DIR/run_efx_pgm.sh"
+# ── Step 4: PNR — place & route (~30 min) ────────────────────────────────
+# run_efx_pnr.sh bakes in:
+#   • gen_sapphire_symbol_bins.py  (firmware ELF → byte-lane .bin files)
+#   • patch_mapv_init.py           (Sapphire BRAM INIT_ injection into map.v)
+#   • Interface Designer           (IO placement from peri.xml)
+#   • efx_pnr
+echo "==> [4/5] PNR — place & route (~30 min) ..."
+bash "$SOC_DIR/run_efx_pnr.sh"
 echo ""
 
+# ── Step 5: PGM — bitstream hex ──────────────────────────────────────────
+echo "==> [5/5] PGM — generate hex ..."
+bash "$SOC_DIR/run_efx_pgm.sh"
+echo ""
+
+# ── Done ──────────────────────────────────────────────────────────────────
 END_TIME=$(date +%s)
 ELAPSED=$(( END_TIME - START_TIME ))
-MINS=$(( ELAPSED / 60 ))
-SECS=$(( ELAPSED % 60 ))
+echo "╔══════════════════════════════════════════╗"
+printf "║   BUILD COMPLETE in %dm %ds              ║\n" $(( ELAPSED/60 )) $(( ELAPSED%60 ))
+echo "╚══════════════════════════════════════════╝"
+echo ""
+HEX="$SOC_DIR/outflow/church_soc_cm.hex"
+ls -lh "$HEX"
+echo ""
 
-echo "========================================"
-echo "  FULL BUILD COMPLETE in ${MINS}m ${SECS}s"
-echo "========================================"
+# ── Serve hex on port 8888 ────────────────────────────────────────────────
+echo "==> Serving hex on port 8888 ..."
+pkill -f "http.server 8888" 2>/dev/null || true
+cd "$SOC_DIR/outflow"
+python3 -m http.server 8888 &
+SERVER_PID=$!
+echo "    Hex server PID $SERVER_PID — http://$(hostname -I | awk '{print $1}'):8888/"
 echo ""
-echo "  Hex: $SCRIPT_DIR/outflow/church_soc_cm.hex"
+echo "On your local machine:"
+DROPLET_IP="$(hostname -I | awk '{print $1}')"
+echo "  curl -O http://${DROPLET_IP}:8888/church_soc_cm.hex"
+echo "  sudo openFPGALoader -b titanium_ti60_f225_jtag --external-flash -f church_soc_cm.hex"
 echo ""
-echo "Flash:"
-echo "  Download: curl -O http://$(hostname -I | awk '{print $1}'):8888/church_soc_cm.hex"
-echo "  Flash:    sudo openFPGALoader -b titanium_ti60_f225_jtag --external-flash -f church_soc_cm.hex"
-echo ""
-echo "Monitor UART after flash:"
+echo "Then listen on UART (start BEFORE power-cycling the board):"
 echo "  stty -F /dev/ttyUSB2 57600 raw && cat /dev/ttyUSB2"
 echo ""
