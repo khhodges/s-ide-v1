@@ -60,10 +60,10 @@ cd "$SOC_DIR"
 # firmware.bin must exist — run `make -C firmware` first.
 # ----------------------------------------------------------------
 FIRMWARE_BIN="$SOC_DIR/firmware/firmware.bin"
-if [ ! -f "$FIRMWARE_BIN" ]; then
-    echo "ERROR: $FIRMWARE_BIN not found — run: make -C $SOC_DIR/firmware"
-    exit 1
-fi
+echo "==> Step 0a: Building Sapphire firmware (make -C firmware) ..."
+make -C "$SOC_DIR/firmware"
+echo "    Done."
+echo ""
 echo "==> Step 0a: Generating Sapphire symbol bins from firmware ..."
 python3 "$SCRIPT_DIR/../../scripts/gen_sapphire_symbol_bins.py" \
     "$FIRMWARE_BIN" --out-dir "$SOC_DIR"
