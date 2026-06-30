@@ -76,20 +76,32 @@ echo "==> [3/3] Flashing Ti60 ..."
 sudo openFPGALoader -b titanium_ti60_f225_jtag --external-flash -f "$HEX_FILE"
 echo ""
 
-# ── Done — point user at IDE ──────────────────────────────────────────────
+# ── Done — auto-open IDE on the Devices / callhome console page ───────────
+CONSOLE_URL="${IDE_URL}/simulator/?view=devices"
+
 echo "╔══════════════════════════════════════════╗"
 echo "║   FLASH COMPLETE                         ║"
 echo "╚══════════════════════════════════════════╝"
 echo ""
-echo "  The board is booting. Open the IDE to watch:"
+echo "  Opening IDE callhome console..."
+echo "  ➜  $CONSOLE_URL"
 echo ""
-echo "  ➜  $IDE_URL"
-echo ""
-echo "  Dashboard → your Ti60 will appear automatically."
+
+# Try to open a browser (Linux/Crostini: xdg-open; ChromeOS shell: garcon-url-handler)
+if command -v xdg-open &>/dev/null; then
+    xdg-open "$CONSOLE_URL" 2>/dev/null &
+elif command -v garcon-url-handler &>/dev/null; then
+    garcon-url-handler "$CONSOLE_URL" 2>/dev/null &
+elif command -v google-chrome &>/dev/null; then
+    google-chrome "$CONSOLE_URL" 2>/dev/null &
+else
+    echo "  (Cannot auto-open browser — paste the URL above into Chrome manually)"
+fi
+
+echo "  Your Ti60 will appear in the callhome console when it boots."
 echo "  LED2 lights when the CALLHOME is received."
 echo ""
-echo "  Bridge is running in the background (PID $BRIDGE_PID)."
-echo "  Press Ctrl+C to stop monitoring."
+echo "  Bridge is running (PID $BRIDGE_PID). Press Ctrl+C to stop."
 echo ""
 
 # ── Keep bridge alive — Ctrl+C cleans up ─────────────────────────────────

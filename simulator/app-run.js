@@ -13206,3 +13206,25 @@ function showApiAbstractionDetail(slot) {
     for (const key of asmKeys) seed[key] = '';
     window._asmExampleSources = seed;
 })();
+
+// ── URL param routing (?view=devices, ?view=builder&tab=ti60-connect, etc.) ──
+// Allows external scripts (flash_and_monitor.sh) to deep-link directly to a
+// specific view on page load without requiring a user click.
+(function _applyUrlViewParam() {
+    window.addEventListener('load', function() {
+        try {
+            const p = new URLSearchParams(window.location.search);
+            const view = p.get('view');
+            if (view && typeof switchView === 'function') {
+                switchView(view);
+                const tab = p.get('tab');
+                if (tab && typeof switchBuilderViewTab === 'function' && view === 'builder') {
+                    switchBuilderViewTab(tab);
+                }
+                if (tab && typeof switchDevicesTab === 'function' && view === 'devices') {
+                    switchDevicesTab(tab);
+                }
+            }
+        } catch(e) {}
+    });
+})();
