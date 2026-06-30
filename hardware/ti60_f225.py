@@ -445,7 +445,7 @@ class ChurchTi60F225(Elaboratable):
         # LED3 lights permanently after any banner transmission attempt.
         banner_ever_sent = Signal()
 
-        # Ti60 has 4 physical LEDs (led0–led3); LED[4] register exists but has no pin.
+        # Ti60 F225 has 3 physical LEDs (led0–led2); led3 register exists but has NO physical pin.
         m.d.comb += [
             self.led[0].eq(Mux(core.boot_complete,
                                mmio_led_reg[0][0] | demo_led[0],
