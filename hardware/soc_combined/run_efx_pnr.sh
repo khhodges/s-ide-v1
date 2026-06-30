@@ -76,7 +76,11 @@ if [ ! -f "$SYNC_FILE" ]; then
     echo "ERROR: Interface Designer did not produce top.res.csv — cannot proceed."
     exit 1
 fi
-echo "    Sync file: $SYNC_FILE"
+# efx_pnr's CSV parser treats backslash as a C escape prefix and crashes with
+# "unknown escape sequence" when it sees Verilog escaped identifiers like \sig .
+# Strip all backslashes from the sync file before passing it to efx_pnr.
+sed -i 's/\\//g' "$SYNC_FILE"
+echo "    Sync file: $SYNC_FILE (backslashes stripped)"
 echo ""
 
 # ----------------------------------------------------------------
