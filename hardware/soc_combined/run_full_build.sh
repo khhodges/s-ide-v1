@@ -34,11 +34,15 @@ echo "║   $(date)   ║"
 echo "╚══════════════════════════════════════════╝"
 echo ""
 
-# ── Step 1: Git pull ──────────────────────────────────────────────────────
-echo "==> [1/5] Git pull (latest code from GitHub) ..."
+# ── Step 1: Sync to GitHub (force — discards local Efinity GUI junk) ─────
+# Plain 'git pull' fails when Efinity has written back modified XML files
+# (banned params, interface changes).  We fetch + hard-reset to origin/main
+# so the build always uses exactly what is on GitHub, no merge conflicts.
+echo "==> [1/5] Syncing to GitHub (git fetch + reset --hard origin/main) ..."
 cd "$REPO_ROOT"
-git pull
-echo "    Done."
+git fetch origin
+git reset --hard origin/main
+echo "    Done. Repo is clean at: $(git log -1 --oneline)"
 echo ""
 
 # ── Step 2: Firmware (always clean rebuild — avoids git-pull timestamp trap) ──
