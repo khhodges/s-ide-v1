@@ -46,7 +46,7 @@
         /* ── Nav bar ────────────────────────────────────────────── */
         .ide-nav {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
+            grid-template-columns: repeat(8, 1fr);
             width: 100%;
             max-width: 1280px;
             background: #111827;
@@ -61,13 +61,14 @@
 
         /* Gold header — direct link */
         .nav-col-header {
-            font-size: 0.65rem;
+            font-size: 0.62rem;
             font-weight: 700;
             letter-spacing: 0.06em;
             color: #daa520;
-            padding: 12px 10px;
+            padding: 12px 8px;
             display: flex;
             align-items: center;
+            justify-content: center;
             text-decoration: none;
             text-align: center;
             user-select: none;
@@ -84,8 +85,8 @@
 
         /* Responsive */
         @media (max-width: 1060px) {
-            .ide-nav { grid-template-columns: repeat(3, 1fr); }
-            .nav-col:nth-child(3) { border-right: none; }
+            .ide-nav { grid-template-columns: repeat(4, 1fr); }
+            .nav-col:nth-child(4) { border-right: none; }
             .site-title { border-radius: 8px 8px 0 0; }
         }
         @media (max-width: 700px) {
@@ -93,20 +94,21 @@
             .nav-col:nth-child(2) { border-right: none; }
             .nav-col:nth-child(4) { border-right: none; }
             .nav-col:nth-child(6) { border-right: none; }
+            .nav-col:nth-child(8) { border-right: none; }
         }
 
         /* ── Cards ──────────────────────────────────────────────── */
         .cards {
             display: grid;
-            grid-template-columns: repeat(6, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 14px;
             width: 100%;
             max-width: 1280px;
         }
-        @media (max-width: 1200px) {
-            .cards { grid-template-columns: repeat(3, 1fr); }
+        @media (max-width: 1100px) {
+            .cards { grid-template-columns: repeat(2, 1fr); }
         }
-        @media (max-width: 700px) {
+        @media (max-width: 600px) {
             .cards { grid-template-columns: 1fr; }
         }
         .card {
@@ -192,132 +194,136 @@
 <body>
     <div class="site-title"><span class="lambda">λ</span> Church Machine</div>
     <nav class="ide-nav">
-        <div class="nav-col">
-            <a class="nav-col-header" href="/simulator/#editor">DEVELOP</a>
-        </div>
-        <div class="nav-col">
-            <a class="nav-col-header" href="/simulator/#dashboard">TEST</a>
-        </div>
-        <div class="nav-col">
-            <a class="nav-col-header" href="/simulator/#docs">REVIEW</a>
-        </div>
-        <div class="nav-col">
-            <a class="nav-col-header" href="/simulator/#devices">HARDWARE</a>
-        </div>
-        <div class="nav-col">
-            <a class="nav-col-header" href="/simulator/#devices">CONFIGURE</a>
-        </div>
-        <div class="nav-col">
-            <a class="nav-col-header" href="/simulator/#builder">INSTALL</a>
-        </div>
+        <div class="nav-col"><a class="nav-col-header" href="/simulator/#editor">CODE</a></div>
+        <div class="nav-col"><a class="nav-col-header" href="/simulator/#builder?tab=ti60-connect">BUILDER</a></div>
+        <div class="nav-col"><a class="nav-col-header" href="/simulator/#tutorial">TUTORIAL</a></div>
+        <div class="nav-col"><a class="nav-col-header" href="/simulator/#namespace">NAMESPACE</a></div>
+        <div class="nav-col"><a class="nav-col-header" href="/simulator/#dashboard">DASHBOARD</a></div>
+        <div class="nav-col"><a class="nav-col-header" href="/simulator/#abstractions">ABSTRACTIONS</a></div>
+        <div class="nav-col"><a class="nav-col-header" href="/simulator/#reference">REFERENCE</a></div>
+        <div class="nav-col"><a class="nav-col-header" href="/simulator/#docs">DOCS</a></div>
     </nav>
     <div class="cards">
 
-        <!-- Start Here — Red -->
-        <div class="card" style="background: linear-gradient(135deg, #2e1a1a 0%, #1a0e0e 100%); border-color: #f87171;" onclick="window.location='/start'">
-            <h2>Start Here</h2>
-            <div class="tag" style="color: #f87171;">Release 1.2 &middot; 15 May 2026 &middot; 3-Board ZIP Downloads</div>
+        <!-- Code — Indigo -->
+        <div class="card" style="background: linear-gradient(135deg, #131526 0%, #0d0f1e 100%); border-color: #6366f1;" onclick="window.location='/simulator/#editor'">
+            <h2>Code</h2>
+            <div class="tag" style="color: #6366f1;">CLOOMC &middot; Assembly &middot; Multi-Language</div>
             <p>
-                New zip-contents test suite enforces the contract. Release 1 document set (14 PDFs) remains the definitive hardware specification for 3 FPGA boards.
+                The primary workspace. Write and compile CLOOMC programs in English, Haskell, Symbolic Math, Lambda Calculus, or assembly. Every instruction is capability-checked by the hardware.
             </p>
             <div class="features">
-                <a class="feature" href="/start-guide" style="background: rgba(248,113,113,0.2); color: #fca5a5; border-color: rgba(248,113,113,0.5); font-weight: 600;" onclick="event.stopPropagation()">Connect Ti60 &rarr;</a>
-                <a class="feature" href="/release/r12#ti60" style="background: rgba(248,113,113,0.1); color: #f87171; border-color: rgba(248,113,113,0.2);" onclick="event.stopPropagation()">Ti60 F225 ZIP</a>
-                <a class="feature" href="/release/r12#wukong" style="background: rgba(248,113,113,0.1); color: #f87171; border-color: rgba(248,113,113,0.2);" onclick="event.stopPropagation()">Wukong ZIP</a>
-                <a class="feature" href="/release/r12#tang" style="background: rgba(248,113,113,0.1); color: #f87171; border-color: rgba(248,113,113,0.2);" onclick="event.stopPropagation()">Tang Nano ZIP</a>
-                <a class="feature" href="/release/r1" style="background: rgba(248,113,113,0.1); color: #f87171; border-color: rgba(248,113,113,0.2);" onclick="event.stopPropagation()">Release 1</a>
-                <a class="feature" href="/release/r12#changes" style="background: rgba(248,113,113,0.1); color: #f87171; border-color: rgba(248,113,113,0.2);" onclick="event.stopPropagation()">Changelog</a>
+                <a class="feature" href="/simulator/#editor" style="background:rgba(99,102,241,0.15);color:#818cf8;border-color:rgba(99,102,241,0.4);font-weight:600;" onclick="event.stopPropagation()">Open Editor &rarr;</a>
+                <a class="feature" href="/simulator/#reference" style="background:rgba(99,102,241,0.1);color:#6366f1;border-color:rgba(99,102,241,0.2);" onclick="event.stopPropagation()">ISA Ref</a>
+                <a class="feature" href="/simulator/#tutorial" style="background:rgba(99,102,241,0.1);color:#6366f1;border-color:rgba(99,102,241,0.2);" onclick="event.stopPropagation()">Tutorial</a>
             </div>
-            <a class="arrow" href="/start" style="color: #f87171;" onclick="event.stopPropagation()">Getting Started &rarr;</a>
+            <a class="arrow" href="/simulator/#editor" style="color:#6366f1;" onclick="event.stopPropagation()">Open Code Editor &rarr;</a>
         </div>
 
-        <!-- Connect Hardware — Orange -->
+        <!-- Builder — Orange -->
         <div class="card" style="background: linear-gradient(135deg, #2e1e0e 0%, #1a1208 100%); border-color: #fb923c;" onclick="window.location='/simulator/#builder?tab=ti60-connect'">
-            <h2>Connect Hardware</h2>
-            <div class="tag" style="color: #fb923c;">Ti60 F225 &middot; WebSerial &middot; One-Click Proof-of-Life</div>
+            <h2>Builder</h2>
+            <div class="tag" style="color: #fb923c;">Ti60 F225 &middot; WebSerial &middot; One-Click Flash</div>
             <p>
-                Power on your FPGA, plug in the USB cable, and click Connect. The IDE verifies the full program&nbsp;&rarr;&nbsp;test&nbsp;&rarr;&nbsp;release loop automatically — no terminal needed.
+                The only way to get code onto silicon. Flash the pre-built bitstream to your Ti60 F225 and connect via WebSerial. The IDE verifies the full program&nbsp;&rarr;&nbsp;test&nbsp;&rarr;&nbsp;release loop automatically.
             </p>
             <div class="features">
-                <a class="feature" href="/start-guide" style="background: rgba(251,146,60,0.2); color: #fdba74; border-color: rgba(251,146,60,0.6); font-weight: 600;" onclick="event.stopPropagation()">Connect Ti60 &rarr;</a>
-                <a class="feature" href="/api/bitstream/download/ti60-f225" style="background: rgba(251,146,60,0.1); color: #fb923c; border-color: rgba(251,146,60,0.3);" onclick="event.stopPropagation()">Ti60 Bitstream</a>
-                <span class="feature" style="background: rgba(100,100,100,0.1); color: #6b7280; border-color: rgba(100,100,100,0.2); cursor: default;" title="Wukong XC7A100T — hardware integration in final test">Wukong &mdash; Final Test</span>
-                <span class="feature" style="background: rgba(100,100,100,0.1); color: #6b7280; border-color: rgba(100,100,100,0.2); cursor: default;" title="Tang Nano 20K — hardware integration in final test">Tang Nano &mdash; Final Test</span>
+                <a class="feature" href="/simulator/#builder?tab=ti60-connect" style="background:rgba(251,146,60,0.2);color:#fdba74;border-color:rgba(251,146,60,0.6);font-weight:600;" onclick="event.stopPropagation()">Connect Ti60 &rarr;</a>
+                <a class="feature" href="/api/bitstream/download/ti60-f225" style="background:rgba(251,146,60,0.1);color:#fb923c;border-color:rgba(251,146,60,0.3);" onclick="event.stopPropagation()">Ti60 Bitstream</a>
+                <a class="feature" href="/simulator/#builder" style="background:rgba(251,146,60,0.1);color:#fb923c;border-color:rgba(251,146,60,0.3);" onclick="event.stopPropagation()">Build Log</a>
             </div>
-            <a class="arrow" href="/simulator/#builder?tab=ti60-connect" style="color: #fb923c;" onclick="event.stopPropagation()">Open Connect Tab &rarr;</a>
+            <a class="arrow" href="/simulator/#builder?tab=ti60-connect" style="color:#fb923c;" onclick="event.stopPropagation()">Open Builder &rarr;</a>
         </div>
 
-        <!-- CM Introduction — Yellow -->
-        <div class="card card-ctmm" style="background: linear-gradient(135deg, #2a2210 0%, #181408 100%); border-color: #fbbf24;">
-            <h2>CM Introduction</h2>
-            <div class="tag" style="color: #fbbf24;">Sim-64 &middot; Custom ISA &middot; 32-bit Golden Tokens</div>
+        <!-- Tutorial — Emerald -->
+        <div class="card" style="background: linear-gradient(135deg, #0d1e14 0%, #071410 100%); border-color: #10b981;" onclick="window.location='/simulator/#tutorial'">
+            <h2>Tutorial</h2>
+            <div class="tag" style="color: #10b981;">Step-by-Step &middot; Capability Security &middot; Quizzes</div>
             <p>
-                The Church-Turing Meta-Machine with custom instruction set,
-                namespace browser, assembly editor, capability explorer, and
-                interactive tutorials. Full authentication and state persistence.
+                First thing a new user touches. Guided lessons from Golden Token basics through capability-based security, CLOOMC assembly programming, and hardware-enforced isolation.
             </p>
             <div class="features">
-                <a class="feature" href="/ctmm/#instructions" target="_blank" rel="noopener" style="background:rgba(251,191,36,0.1);color:#fbbf24;border-color:rgba(251,191,36,0.2);">Custom ISA</a>
-                <a class="feature" href="/ctmm/#capabilities" target="_blank" rel="noopener" style="background:rgba(251,191,36,0.1);color:#fbbf24;border-color:rgba(251,191,36,0.2);">32-bit GTs</a>
-                <a class="feature" href="/ctmm/#namespace" target="_blank" rel="noopener" style="background:rgba(251,191,36,0.1);color:#fbbf24;border-color:rgba(251,191,36,0.2);">Namespace Browser</a>
-                <a class="feature" href="/ctmm/#editor" target="_blank" rel="noopener" style="background:rgba(251,191,36,0.1);color:#fbbf24;border-color:rgba(251,191,36,0.2);">Assembly Editor</a>
-                <a class="feature" href="/ctmm/#tutorial" target="_blank" rel="noopener" style="background:rgba(251,191,36,0.1);color:#fbbf24;border-color:rgba(251,191,36,0.2);">Tutorials</a>
-                <a class="feature" href="/ctmm/#dashboard" target="_blank" rel="noopener" style="background:rgba(251,191,36,0.1);color:#fbbf24;border-color:rgba(251,191,36,0.2);">Auth &amp; Save</a>
+                <a class="feature" href="/simulator/#tutorial" style="background:rgba(16,185,129,0.2);color:#34d399;border-color:rgba(16,185,129,0.5);font-weight:600;" onclick="event.stopPropagation()">Get Started &rarr;</a>
+                <a class="feature" href="/start" style="background:rgba(16,185,129,0.1);color:#10b981;border-color:rgba(16,185,129,0.2);" onclick="event.stopPropagation()">Quick Start</a>
+                <a class="feature" href="/simulator/#docs" style="background:rgba(16,185,129,0.1);color:#10b981;border-color:rgba(16,185,129,0.2);" onclick="event.stopPropagation()">Docs</a>
             </div>
-            <a class="arrow" href="/simulator/#docs" style="color:#fbbf24;">Quick Start Docs &rarr;</a>
+            <a class="arrow" href="/simulator/#tutorial" style="color:#10b981;" onclick="event.stopPropagation()">Open Tutorials &rarr;</a>
         </div>
 
-        <!-- Church Machine IDE -->
-        <div class="card" style="background: linear-gradient(135deg, #1a2e1e 0%, #0e1a28 100%); border-color: #4ade80;">
-            <h2>Simulator &amp; IDE</h2>
-            <div class="tag" style="color: #4ade80;">Pure Church &middot; 8 Opcodes &middot; Zero Turing Instructions</div>
+        <!-- Namespace — Teal -->
+        <div class="card" style="background: linear-gradient(135deg, #0d1e1e 0%, #071414 100%); border-color: #2dd4bf;" onclick="window.location='/simulator/#namespace'">
+            <h2>Namespace</h2>
+            <div class="tag" style="color: #2dd4bf;">8 Boot Slots &middot; Live View &middot; Hardware Mirror</div>
             <p>
-                The Pure Church Lambda Machine — computational completeness
-                with only capability instructions. 7-step security pipeline,
-                symbolic math REPL, and Bernoulli tutorial proving lambda
-                calculus is all you need.
+                The runtime mirror of what's actually running on the FPGA. The 8-slot boot namespace matches the hardware bitstream exactly — every Golden Token, load status, and capability entry shown in real time.
             </p>
             <div class="features">
-                <a class="feature" href="/simulator/#reference" target="_blank" rel="noopener" style="background: rgba(74,222,128,0.1); color: #4ade80; border-color: rgba(74,222,128,0.2);">8 Opcodes</a>
-                <a class="feature" href="/simulator/#pipeline" target="_blank" rel="noopener" style="background: rgba(74,222,128,0.1); color: #4ade80; border-color: rgba(74,222,128,0.2);">Pipeline Viz</a>
-                <a class="feature" href="/simulator/#repl" target="_blank" rel="noopener" style="background: rgba(74,222,128,0.1); color: #4ade80; border-color: rgba(74,222,128,0.2);">REPL</a>
-                <a class="feature" href="/simulator/#tutorial" target="_blank" rel="noopener" style="background: rgba(74,222,128,0.1); color: #4ade80; border-color: rgba(74,222,128,0.2);">Bernoulli Tutorial</a>
-                <a class="feature" href="/simulator/#editor" target="_blank" rel="noopener" style="background: rgba(74,222,128,0.1); color: #4ade80; border-color: rgba(74,222,128,0.2);">Assembler</a>
+                <a class="feature" href="/simulator/#namespace" style="background:rgba(45,212,191,0.2);color:#5eead4;border-color:rgba(45,212,191,0.5);font-weight:600;" onclick="event.stopPropagation()">View Namespace &rarr;</a>
+                <a class="feature" href="/simulator/#abstractions" style="background:rgba(45,212,191,0.1);color:#2dd4bf;border-color:rgba(45,212,191,0.2);" onclick="event.stopPropagation()">Abstractions</a>
+                <a class="feature" href="/simulator/#lumps" style="background:rgba(45,212,191,0.1);color:#2dd4bf;border-color:rgba(45,212,191,0.2);" onclick="event.stopPropagation()">LUMP Browser</a>
             </div>
-            <a class="arrow" href="/simulator/#dashboard" style="color: #4ade80;">Open Church Machine &rarr;</a>
+            <a class="arrow" href="/simulator/#namespace" style="color:#2dd4bf;" onclick="event.stopPropagation()">Open Namespace &rarr;</a>
         </div>
 
-
-        <!-- Simple Demos — Blue -->
-        <div class="card" style="background: linear-gradient(135deg, #0e1e2e 0%, #091420 100%); border-color: #60a5fa;">
-            <h2>Simple Demos</h2>
-            <div class="tag" style="color: #60a5fa;">Live Demos &middot; Capability Model in Action</div>
-
-            <p style="font-size:.82rem;color:#94a3b8;margin:0 0 .9rem;">Capability model in action — personal identity without accounts, and pure-Python security primitives you can run today.</p>
-            <div class="features">
-                <a class="feature" href="/simulator/#hello-mum" style="background:rgba(34,197,94,0.15);color:#22c55e;border-color:rgba(34,197,94,0.4);font-weight:600;" onclick="event.stopPropagation()">Hello Mum &rarr;</a>
-                <a class="feature" href="/python-demo/" style="background:rgba(34,211,238,0.15);color:#22d3ee;border-color:rgba(34,211,238,0.4);font-weight:600;" onclick="event.stopPropagation()">Python Capability Demo &rarr;</a>
-            </div>
-        </div>
-
-        <!-- Six Laws Review — Violet -->
-        <div class="card" style="background: linear-gradient(135deg, #1e1228 0%, #12081e 100%); border-color: #c084fc;">
-            <h2>Six Laws Review</h2>
-            <div class="tag" style="color: #c084fc;">Broadsheet &middot; PDF &middot; Downloadable</div>
+        <!-- Dashboard — Amber -->
+        <div class="card" style="background: linear-gradient(135deg, #2a1e08 0%, #1a1408 100%); border-color: #f59e0b;" onclick="window.location='/simulator/#dashboard'">
+            <h2>Dashboard</h2>
+            <div class="tag" style="color: #f59e0b;">Call-Home &middot; MTBF &middot; Fault Log</div>
             <p>
-                The Six Laws of Failsafe Capability Security — a broadsheet
-                summarising the foundational principles behind the Church-Turing
-                Meta-Machine and Golden Token architecture.
+                Live telemetry from the Ti60. Fault records decoded by instruction address, per-slot MTBF scores, and capability register state after every step. Tells you if the board is alive.
             </p>
             <div class="features">
-                <a class="feature" href="/six-laws/" target="_blank" rel="noopener" style="background: rgba(192,132,252,0.1); color: #c084fc; border-color: rgba(192,132,252,0.2);">Broadsheet</a>
-                <a class="feature" href="/six-laws/" target="_blank" rel="noopener" style="background: rgba(192,132,252,0.1); color: #c084fc; border-color: rgba(192,132,252,0.2);">Print-Ready</a>
-                <a class="feature" href="/six-laws-review.pdf" download="six-laws-review.pdf" target="_blank" rel="noopener" style="background: rgba(192,132,252,0.1); color: #c084fc; border-color: rgba(192,132,252,0.2);">PDF</a>
+                <a class="feature" href="/simulator/#dashboard" style="background:rgba(245,158,11,0.2);color:#fbbf24;border-color:rgba(245,158,11,0.5);font-weight:600;" onclick="event.stopPropagation()">Open Dashboard &rarr;</a>
+                <a class="feature" href="/simulator/#devices" style="background:rgba(245,158,11,0.1);color:#f59e0b;border-color:rgba(245,158,11,0.2);" onclick="event.stopPropagation()">Devices</a>
+                <a class="feature" href="/simulator/#pipeline" style="background:rgba(245,158,11,0.1);color:#f59e0b;border-color:rgba(245,158,11,0.2);" onclick="event.stopPropagation()">Pipeline</a>
             </div>
-            <a class="arrow" href="/six-laws/" style="color: #c084fc;">View Broadsheet &rarr;</a>
+            <a class="arrow" href="/simulator/#dashboard" style="color:#f59e0b;" onclick="event.stopPropagation()">Open Dashboard &rarr;</a>
         </div>
 
+        <!-- Abstractions — Violet -->
+        <div class="card" style="background: linear-gradient(135deg, #1a1228 0%, #10081e 100%); border-color: #8b5cf6;" onclick="window.location='/simulator/#abstractions'">
+            <h2>Abstractions</h2>
+            <div class="tag" style="color: #8b5cf6;">47 Abstractions &middot; 9 Layers &middot; LUMP Catalog</div>
+            <p>
+                The catalog of what can be deployed. 9 security layers, 47 abstractions, from Boot primitives to application logic. Lazy-load any LUMP to the FPGA on demand via Golden Token approval.
+            </p>
+            <div class="features">
+                <a class="feature" href="/simulator/#abstractions" style="background:rgba(139,92,246,0.2);color:#a78bfa;border-color:rgba(139,92,246,0.5);font-weight:600;" onclick="event.stopPropagation()">Browse Catalog &rarr;</a>
+                <a class="feature" href="/simulator/#lumps" style="background:rgba(139,92,246,0.1);color:#8b5cf6;border-color:rgba(139,92,246,0.2);" onclick="event.stopPropagation()">LUMP Browser</a>
+                <a class="feature" href="/simulator/#namespace" style="background:rgba(139,92,246,0.1);color:#8b5cf6;border-color:rgba(139,92,246,0.2);" onclick="event.stopPropagation()">Namespace</a>
+            </div>
+            <a class="arrow" href="/simulator/#abstractions" style="color:#8b5cf6;" onclick="event.stopPropagation()">Open Abstractions &rarr;</a>
+        </div>
 
+        <!-- Reference — Sky -->
+        <div class="card" style="background: linear-gradient(135deg, #0a1e2e 0%, #061418 100%); border-color: #0ea5e9;" onclick="window.location='/simulator/#reference'">
+            <h2>Reference</h2>
+            <div class="tag" style="color: #0ea5e9;">20 Instructions &middot; Capability Model &middot; CLOOMC ISA</div>
+            <p>
+                The complete 20-instruction Church Machine ISA — opcodes, encoding, permission bits, fault codes, and the seven-step security pipeline. The definitive reference for every CLOOMC programmer.
+            </p>
+            <div class="features">
+                <a class="feature" href="/simulator/#reference" style="background:rgba(14,165,233,0.2);color:#38bdf8;border-color:rgba(14,165,233,0.5);font-weight:600;" onclick="event.stopPropagation()">Open Reference &rarr;</a>
+                <a class="feature" href="/simulator/#pipeline" style="background:rgba(14,165,233,0.1);color:#0ea5e9;border-color:rgba(14,165,233,0.2);" onclick="event.stopPropagation()">Pipeline</a>
+                <a class="feature" href="/simulator/#docs" style="background:rgba(14,165,233,0.1);color:#0ea5e9;border-color:rgba(14,165,233,0.2);" onclick="event.stopPropagation()">Docs</a>
+            </div>
+            <a class="arrow" href="/simulator/#reference" style="color:#0ea5e9;" onclick="event.stopPropagation()">Open Reference &rarr;</a>
+        </div>
+
+        <!-- Docs — Rose -->
+        <div class="card" style="background: linear-gradient(135deg, #2e0e14 0%, #1e080c 100%); border-color: #f43f5e;" onclick="window.location='/simulator/#docs'">
+            <h2>Docs</h2>
+            <div class="tag" style="color: #f43f5e;">Interactive &middot; Architecture &middot; Six Laws</div>
+            <p>
+                The book that anchors everything. CLOOMC foundation, capability model, boot sequence, and the Six Laws of Failsafe Security. Read first, build second.
+            </p>
+            <div class="features">
+                <a class="feature" href="/simulator/#docs" style="background:rgba(244,63,94,0.2);color:#fb7185;border-color:rgba(244,63,94,0.5);font-weight:600;" onclick="event.stopPropagation()">Open Docs &rarr;</a>
+                <a class="feature" href="/six-laws/" target="_blank" rel="noopener" style="background:rgba(244,63,94,0.1);color:#f43f5e;border-color:rgba(244,63,94,0.2);" onclick="event.stopPropagation()">Six Laws</a>
+                <a class="feature" href="/six-laws-review.pdf" download="six-laws-review.pdf" target="_blank" rel="noopener" style="background:rgba(244,63,94,0.1);color:#f43f5e;border-color:rgba(244,63,94,0.2);" onclick="event.stopPropagation()">PDF</a>
+            </div>
+            <a class="arrow" href="/simulator/#docs" style="color:#f43f5e;" onclick="event.stopPropagation()">Open Docs &rarr;</a>
+        </div>
 
     </div>
     <footer>
